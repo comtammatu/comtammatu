@@ -19,7 +19,6 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -37,7 +36,11 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import { MoneyVndInput, NumberPadSheet, QuantityInput } from "@/components/form";
+import {
+  MoneyVndInput,
+  NumberPadSheet,
+  QuantityInput,
+} from "@/components/form";
 import { matchesSearch } from "@lib/search";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
@@ -128,7 +131,6 @@ type EditState = {
   line: GrnDraftLine | null;
   quantity: number;
   unit: string;
-  // Purchase-role unit the qty is entered in. NULL = free-text/base unit.
   entryUnitId: number | null;
   unitCost: number;
   note: string;
@@ -250,7 +252,7 @@ export function GrnCreateClient({
       ingredient,
       line: existing ?? null,
       quantity: existing?.quantity ?? 0,
-      unit: existing?.unit ?? defaultUnit?.code ?? ingredient.unit,
+      unit: existing?.unit ?? defaultUnit?.label ?? ingredient.unit,
       entryUnitId: existing
         ? (existing.entryUnitId ?? null)
         : (defaultUnit?.unitId ?? null),
@@ -275,7 +277,6 @@ export function GrnCreateClient({
         grnId,
         ingredientId: edit.ingredient.id,
         receivedQuantity: edit.quantity,
-        unit: edit.unit,
         entryUnitId: edit.entryUnitId,
         unitCost: edit.unitCost,
         qualityStatus: "accepted",
@@ -695,8 +696,8 @@ function LineEditFields({
         options={getPurchaseUnitOptions(edit.ingredient)}
         entryUnitId={edit.entryUnitId}
         unit={edit.unit}
-        onUnitChange={(unitId, code) =>
-          onPatch({ entryUnitId: unitId, unit: code })
+        onUnitChange={(unitId, label) =>
+          onPatch({ entryUnitId: unitId, unit: label })
         }
       />
       <div className="grid grid-cols-2 gap-3">
@@ -968,12 +969,7 @@ function LineValueField({
   );
 }
 
-// Purchase-role unit picker for the GRN line, matching the PO create flow's
-// UnitField (new-po-client.tsx): dropdown when the ingredient carries
-// purchase-role ingredient_units. No allow_purchase+is_active unit means
-// entryUnitId stays null (qty is already base per inv_to_base), so the field
-// shows the ingredient's own base/measure unit code read-only instead of a
-// free-text input the user could set to a unit inv_to_base doesn't recognize.
+// Unit picker for the GRN line, matching the PO create flow's UnitField.
 function UnitField({
   options,
   entryUnitId,
@@ -983,7 +979,7 @@ function UnitField({
   options: PurchaseUnitOption[];
   entryUnitId: number | null;
   unit: string;
-  onUnitChange: (unitId: number, code: string) => void;
+  onUnitChange: (unitId: number, label: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -995,7 +991,7 @@ function UnitField({
           value={entryUnitId != null ? String(entryUnitId) : ""}
           onValueChange={(value) => {
             const opt = options.find((o) => String(o.unitId) === value);
-            if (opt) onUnitChange(opt.unitId, opt.code);
+            if (opt) onUnitChange(opt.unitId, opt.label);
           }}
         >
           <SelectTrigger className="h-9 w-full text-sm" aria-label={unit}>
@@ -1006,13 +1002,20 @@ function UnitField({
           <SelectContent>
             {options.map((o) => (
               <SelectItem key={o.unitId} value={String(o.unitId)}>
-                {o.code}
+                {o.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       ) : (
-        <Input value={unit} readOnly disabled className="h-9 text-sm" />
+        <Select disabled value="">
+          <SelectTrigger className="h-9 w-full text-sm" aria-label={unit}>
+            <SelectValue
+              placeholder={messages.inventory.grn.addDialog.selectUnit}
+            />
+          </SelectTrigger>
+          <SelectContent />
+        </Select>
       )}
     </div>
   );

@@ -7364,10 +7364,10 @@ $$;
 
 
 --
--- Name: create_expiry_writeoff(bigint, bigint, bigint, numeric, text, bigint, text, text[]); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_expiry_writeoff(bigint, bigint, bigint, numeric, bigint, text, text[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text, p_photo_urls text[] DEFAULT ARRAY[]::text[]) RETURNS jsonb
+CREATE FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_grn_item_id bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text, p_photo_urls text[] DEFAULT ARRAY[]::text[]) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
@@ -7378,6 +7378,8 @@ DECLARE
   v_shift_key text; v_issue_id bigint; v_issue_no text; v_approval text;
   v_seed_cost numeric(15, 2);
   v_source_ref jsonb := jsonb_build_object('kind', 'expiry');
+  v_entry_unit_id bigint;
+  v_unit text;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000'; END IF;
   IF NOT public.has_permission(p_branch_id, 'inventory:writeoff') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
@@ -7391,7 +7393,7 @@ BEGIN
   END IF;
 
   IF p_grn_item_id IS NOT NULL THEN
-    SELECT gi.id, gi.batch_number, gi.expiry_date, gi.grn_id INTO v_grn
+    SELECT gi.id, gi.batch_number, gi.expiry_date, gi.grn_id, gi.entry_unit_id INTO v_grn
       FROM public.grn_items gi
       JOIN public.goods_received_notes g ON g.id = gi.grn_id AND g.tenant_id = gi.tenant_id
      WHERE gi.id = p_grn_item_id AND gi.tenant_id = v_tenant
@@ -7399,10 +7401,13 @@ BEGIN
     IF NOT FOUND THEN
       RAISE EXCEPTION 'grn_item_not_found' USING ERRCODE = '22023';
     END IF;
+    v_entry_unit_id := v_grn.entry_unit_id;
     v_source_ref := v_source_ref || jsonb_build_object(
       'grn_item_id', v_grn.id, 'grn_id', v_grn.grn_id,
       'batch_number', v_grn.batch_number, 'expiry_date', v_grn.expiry_date);
   END IF;
+
+  v_unit := public.inventory_entry_unit_code(v_tenant, p_ingredient_id, v_entry_unit_id);
 
   v_shift_key := public.inventory_shift_key(p_branch_id, now());
   v_issue_no := 'WO-' || to_char(now(), 'YYMMDDHH24MISS') || '-' || substr(gen_random_uuid()::text, 1, 4);
@@ -7418,21 +7423,23 @@ BEGIN
    WHERE tenant_id = v_tenant AND branch_id = p_branch_id
      AND location_id = p_location_id AND ingredient_id = p_ingredient_id;
 
-  INSERT INTO public.stock_issue_items (tenant_id, issue_id, ingredient_id, quantity, unit, unit_cost,
+  INSERT INTO public.stock_issue_items (tenant_id, issue_id, ingredient_id, quantity, unit, entry_unit_id, unit_cost,
     reason_code, photo_urls, reason)
-  VALUES (v_tenant, v_issue_id, p_ingredient_id, p_quantity, COALESCE(p_unit, 'kg'),
+  VALUES (v_tenant, v_issue_id, p_ingredient_id, p_quantity, v_unit, v_entry_unit_id,
     COALESCE(v_seed_cost, 0),
     'expired', COALESCE(p_photo_urls, ARRAY[]::text[]), p_note);
 
   SELECT approval_status INTO v_approval FROM public.stock_issues WHERE id = v_issue_id;
-  IF v_approval = 'pending' THEN
-    RETURN jsonb_build_object('issue_id', v_issue_id, 'issue_number', v_issue_no,
-      'requires_approval', true, 'stock_decremented', false);
+  IF v_approval = 'not_required' THEN
+    PERFORM public._post_writeoff_movements(v_issue_id);
   END IF;
 
-  PERFORM public._post_writeoff_movements(v_issue_id);
-  RETURN jsonb_build_object('issue_id', v_issue_id, 'issue_number', v_issue_no,
-    'requires_approval', false, 'stock_decremented', true);
+  RETURN jsonb_build_object(
+    'issue_id', v_issue_id,
+    'issue_number', v_issue_no,
+    'requires_approval', v_approval = 'pending',
+    'stock_decremented', v_approval = 'not_required'
+  );
 END;
 $$;
 
@@ -8114,10 +8121,14 @@ BEGIN
     SELECT v_tenant, v_order_id,
       (line->>'finishedGoodId')::BIGINT,
       (line->>'quantity')::NUMERIC(15,3),
-      NULLIF(btrim(line->>'unit'), ''),
+      public.inventory_entry_unit_code(
+        v_tenant,
+        (line->>'finishedGoodId')::BIGINT,
+        NULLIF(line->>'entryUnitId', '')::BIGINT
+      ),
       NULLIF(line->>'entryUnitId', '')::BIGINT
     FROM jsonb_array_elements(p_items) AS line
-    WHERE line ? 'finishedGoodId' AND line ? 'quantity' AND line ? 'unit'
+    WHERE line ? 'finishedGoodId' AND line ? 'quantity'
     ON CONFLICT (production_order_id, finished_good_id, tenant_id)
     DO UPDATE SET
       quantity = EXCLUDED.quantity,
@@ -8188,13 +8199,18 @@ BEGIN
     tenant_id, po_id, ingredient_id, quantity, unit, entry_unit_id, unit_price_est, line_total
   )
   SELECT
-    v_tenant_id, v_po_id, x.ingredient_id, x.quantity, x.unit, x.entry_unit_id, x.unit_price_est,
+    v_tenant_id,
+    v_po_id,
+    x.ingredient_id,
+    x.quantity,
+    public.inventory_entry_unit_code(v_tenant_id, x.ingredient_id, x.entry_unit_id),
+    x.entry_unit_id,
+    x.unit_price_est,
     CASE WHEN x.unit_price_est IS NULL THEN NULL
          ELSE round(x.quantity * x.unit_price_est, 2) END
   FROM jsonb_to_recordset(p_lines) AS x(
     ingredient_id  bigint,
     quantity       numeric,
-    unit           text,
     entry_unit_id  bigint,
     unit_price_est numeric
   )
@@ -8430,9 +8446,7 @@ BEGIN
      AND i.tenant_id = v_tenant
     WHERE NOT (line.value ? 'ingredientId')
        OR NOT (line.value ? 'quantity')
-       OR NOT (line.value ? 'unit')
        OR (line.value->>'quantity')::NUMERIC <= 0
-       OR NULLIF(BTRIM(line.value->>'unit'), '') IS NULL
        OR i.id IS NULL
   ) THEN
     RAISE EXCEPTION 'transfer_lines_invalid' USING ERRCODE = '22023';
@@ -8477,7 +8491,11 @@ BEGIN
     v_transfer_id,
     (line.value->>'ingredientId')::BIGINT,
     (line.value->>'quantity')::NUMERIC(15,3),
-    NULLIF(BTRIM(line.value->>'unit'), ''),
+    public.inventory_entry_unit_code(
+      v_tenant,
+      (line.value->>'ingredientId')::BIGINT,
+      NULLIF(line.value->>'entryUnitId', '')::BIGINT
+    ),
     NULLIF(line.value->>'entryUnitId', '')::BIGINT,
     (
       SELECT sl.avg_unit_cost
@@ -8824,7 +8842,11 @@ BEGIN
     INSERT INTO public.stock_issue_items (tenant_id, issue_id, ingredient_id, quantity, unit, entry_unit_id, unit_cost,
       reason_code, photo_urls, reason)
     VALUES (v_tenant, v_issue_id, (v_item->>'ingredient_id')::BIGINT, (v_item->>'quantity')::NUMERIC,
-      COALESCE(v_item->>'unit', 'kg'), NULLIF(v_item->>'entry_unit_id','')::BIGINT, NULLIF(v_item->>'unit_cost','')::NUMERIC,
+      public.inventory_entry_unit_code(
+        v_tenant,
+        (v_item->>'ingredient_id')::BIGINT,
+        NULLIF(v_item->>'entry_unit_id','')::BIGINT
+      ), NULLIF(v_item->>'entry_unit_id','')::BIGINT, NULLIF(v_item->>'unit_cost','')::NUMERIC,
       v_item->>'reason_code', v_photos, v_item->>'note');
     v_created := v_created + 1;
   END LOOP;
@@ -14786,6 +14808,75 @@ $$;
 --
 
 COMMENT ON FUNCTION public.inv_to_base_for_tenant(p_tenant_id bigint, p_ingredient_id bigint, p_unit_id bigint, p_qty numeric) IS 'Tenant-explicit unit conversion for SECURITY DEFINER and service-role stock posting paths.';
+
+
+--
+-- Name: inventory_entry_unit_code(bigint, bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.inventory_entry_unit_code(p_tenant_id bigint, p_ingredient_id bigint, p_entry_unit_id bigint DEFAULT NULL::bigint) RETURNS text
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_code text;
+BEGIN
+  IF p_tenant_id IS NULL THEN
+    RAISE EXCEPTION 'tenant_required' USING ERRCODE = '22023';
+  END IF;
+
+  IF auth.role() IS DISTINCT FROM 'service_role'
+     AND p_tenant_id IS DISTINCT FROM public.auth_tenant_id() THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_ingredient_id IS NULL THEN
+    RAISE EXCEPTION 'ingredient_required' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_entry_unit_id IS NOT NULL THEN
+    SELECT u.code
+    INTO v_code
+    FROM public.ingredient_units iu
+    JOIN public.units u
+      ON u.id = iu.unit_id
+     AND u.tenant_id = iu.tenant_id
+    WHERE iu.tenant_id = p_tenant_id
+      AND iu.ingredient_id = p_ingredient_id
+      AND iu.unit_id = p_entry_unit_id
+      AND iu.is_active = TRUE
+      AND u.is_active = TRUE;
+  ELSE
+    SELECT u.code
+    INTO v_code
+    FROM public.ingredient_units iu
+    JOIN public.units u
+      ON u.id = iu.unit_id
+     AND u.tenant_id = iu.tenant_id
+    WHERE iu.tenant_id = p_tenant_id
+      AND iu.ingredient_id = p_ingredient_id
+      AND iu.is_base = TRUE
+      AND iu.is_active = TRUE
+      AND u.is_active = TRUE
+    ORDER BY iu.sort_order ASC, iu.id ASC
+    LIMIT 1;
+  END IF;
+
+  IF NULLIF(btrim(v_code), '') IS NULL THEN
+    RAISE EXCEPTION 'entry_unit_not_found:%', p_ingredient_id
+      USING ERRCODE = '23503';
+  END IF;
+
+  RETURN btrim(v_code);
+END;
+$$;
+
+
+--
+-- Name: FUNCTION inventory_entry_unit_code(p_tenant_id bigint, p_ingredient_id bigint, p_entry_unit_id bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.inventory_entry_unit_code(p_tenant_id bigint, p_ingredient_id bigint, p_entry_unit_id bigint) IS 'Returns the persisted unit code for an ingredient entry_unit_id. NULL entry_unit_id resolves to the ingredient base unit.';
 
 
 --
@@ -26124,6 +26215,7 @@ DECLARE
   v_kept          BIGINT[] := ARRAY[]::BIGINT[];
   v_line          JSONB;
   v_ingredient_id BIGINT;
+  v_entry_unit_id BIGINT;
   v_quantity      NUMERIC;
   v_yield_factor  NUMERIC;
 BEGIN
@@ -26155,12 +26247,12 @@ BEGIN
   END IF;
 
   FOR v_line IN SELECT * FROM jsonb_array_elements(p_lines) LOOP
-    IF (v_line->>'ingredient_id') IS NULL OR (v_line->>'quantity') IS NULL
-       OR (v_line->>'unit') IS NULL OR btrim(v_line->>'unit') = '' THEN
+    IF (v_line->>'ingredient_id') IS NULL OR (v_line->>'quantity') IS NULL THEN
       RAISE EXCEPTION 'invalid_line_shape' USING ERRCODE = '22023';
     END IF;
 
     v_ingredient_id := (v_line->>'ingredient_id')::BIGINT;
+    v_entry_unit_id := NULLIF(v_line->>'entry_unit_id', '')::BIGINT;
     v_quantity := (v_line->>'quantity')::NUMERIC;
     v_yield_factor := COALESCE(NULLIF(v_line->>'yield_factor', '')::NUMERIC, 1.000);
 
@@ -26186,8 +26278,9 @@ BEGIN
     )
     VALUES (
       v_tenant, p_finished_good_id, v_ingredient_id,
-      v_quantity, btrim(v_line->>'unit'),
-      NULLIF(v_line->>'entry_unit_id', '')::BIGINT,
+      v_quantity,
+      public.inventory_entry_unit_code(v_tenant, v_ingredient_id, v_entry_unit_id),
+      v_entry_unit_id,
       NULLIF(v_line->>'note', ''), v_yield_factor
     )
     ON CONFLICT (finished_good_id, ingredient_id, tenant_id)
@@ -26232,6 +26325,8 @@ DECLARE
   v_tenant BIGINT := public.auth_tenant_id();
   v_kept   BIGINT[] := ARRAY[]::BIGINT[];
   v_line   JSONB;
+  v_ingredient_id BIGINT;
+  v_entry_unit_id BIGINT;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000'; END IF;
   IF NOT public.has_permission_any('menu:write') THEN
@@ -26244,19 +26339,23 @@ BEGIN
   IF jsonb_typeof(p_lines) <> 'array' THEN RAISE EXCEPTION 'lines_must_be_array' USING ERRCODE = '22023'; END IF;
 
   FOR v_line IN SELECT * FROM jsonb_array_elements(p_lines) LOOP
-    IF (v_line->>'ingredient_id') IS NULL OR (v_line->>'quantity') IS NULL OR (v_line->>'unit') IS NULL THEN
+    IF (v_line->>'ingredient_id') IS NULL OR (v_line->>'quantity') IS NULL THEN
       RAISE EXCEPTION 'invalid_line_shape' USING ERRCODE = '22023';
     END IF;
+    v_ingredient_id := (v_line->>'ingredient_id')::BIGINT;
+    v_entry_unit_id := NULLIF(v_line->>'entry_unit_id', '')::BIGINT;
+
     INSERT INTO public.recipes (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, note, yield_factor)
-    VALUES (v_tenant, p_menu_item_id, (v_line->>'ingredient_id')::BIGINT,
-            (v_line->>'quantity')::NUMERIC, v_line->>'unit',
-            NULLIF(v_line->>'entry_unit_id', '')::BIGINT,
-            NULLIF(v_line->>'note',''), COALESCE((v_line->>'yield_factor')::NUMERIC, 1.000))
+    VALUES (v_tenant, p_menu_item_id, v_ingredient_id,
+            (v_line->>'quantity')::NUMERIC,
+            public.inventory_entry_unit_code(v_tenant, v_ingredient_id, v_entry_unit_id),
+            v_entry_unit_id,
+            NULLIF(v_line->>'note',''), COALESCE(NULLIF(v_line->>'yield_factor', '')::NUMERIC, 1.000))
     ON CONFLICT (menu_item_id, ingredient_id, tenant_id)
     DO UPDATE SET quantity = EXCLUDED.quantity, unit = EXCLUDED.unit,
                   entry_unit_id = EXCLUDED.entry_unit_id,
                   note = EXCLUDED.note, yield_factor = EXCLUDED.yield_factor;
-    v_kept := v_kept || (v_line->>'ingredient_id')::BIGINT;
+    v_kept := v_kept || v_ingredient_id;
   END LOOP;
 
   DELETE FROM public.recipes r
@@ -43021,12 +43120,12 @@ GRANT ALL ON FUNCTION public.count_unread_notifications() TO service_role;
 
 
 --
--- Name: FUNCTION create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_grn_item_id bigint, p_note text, p_photo_urls text[]); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]) TO authenticated;
-GRANT ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]) TO service_role;
+REVOKE ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_grn_item_id bigint, p_note text, p_photo_urls text[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_grn_item_id bigint, p_note text, p_photo_urls text[]) TO authenticated;
+GRANT ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_grn_item_id bigint, p_note text, p_photo_urls text[]) TO service_role;
 
 
 --
@@ -43746,6 +43845,14 @@ GRANT ALL ON FUNCTION public.inv_to_base(p_ingredient_id bigint, p_unit_id bigin
 
 REVOKE ALL ON FUNCTION public.inv_to_base_for_tenant(p_tenant_id bigint, p_ingredient_id bigint, p_unit_id bigint, p_qty numeric) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.inv_to_base_for_tenant(p_tenant_id bigint, p_ingredient_id bigint, p_unit_id bigint, p_qty numeric) TO service_role;
+
+
+--
+-- Name: FUNCTION inventory_entry_unit_code(p_tenant_id bigint, p_ingredient_id bigint, p_entry_unit_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.inventory_entry_unit_code(p_tenant_id bigint, p_ingredient_id bigint, p_entry_unit_id bigint) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.inventory_entry_unit_code(p_tenant_id bigint, p_ingredient_id bigint, p_entry_unit_id bigint) TO service_role;
 
 
 --

@@ -12,7 +12,7 @@ import {
   type JwtClaims,
   type StaffRole,
 } from "../types";
-import { canAccess } from "../module-acl";
+import { canAccess, MODULE_ACL } from "../module-acl";
 import {
   resolveDiscoveredAppGroups,
   resolveDiscoveredApps,
@@ -21,7 +21,6 @@ import { resolveRoleHomeLink } from "../nav-resolution";
 import { resolveRouteFamilyContract } from "../route-map";
 import {
   isPublicAppPath,
-  resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
   isRunnerPublicDisplayPath,
 } from "../route-resolution";
@@ -38,8 +37,8 @@ function makeClaims(
   };
 }
 
-test("getDefaultRedirect → owner lands on /admin/dashboard", () => {
-  assert.equal(getDefaultRedirect(makeClaims("owner")), "/admin/dashboard");
+test("getDefaultRedirect → owner lands on finance workspace", () => {
+  assert.equal(getDefaultRedirect(makeClaims("owner")), "/finance");
 });
 
 test("getDefaultRedirect → branch_manager lands on /employee", () => {
@@ -67,13 +66,13 @@ test("getDefaultRedirect → other non-admin roles land on /employee", () => {
 
 test("resolveRoleHomeLink → shell home link follows role-accessible landing", () => {
   assert.deepEqual(resolveRoleHomeLink("owner"), {
-    label: "Quản trị",
-    href: "/admin/dashboard",
+    label: "Tài chính",
+    href: "/finance",
   });
   // Owner stays on the office plane even when a branch is in scope.
   assert.deepEqual(resolveRoleHomeLink("owner", 3), {
-    label: "Quản trị",
-    href: "/admin/dashboard",
+    label: "Tài chính",
+    href: "/finance",
   });
   assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
     label: "Ca của tôi",
@@ -157,15 +156,8 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
     resolveRouteFamilyContract("/br/3/settings/menu-limits")?.primaryNav,
     "operator-bottom-nav",
   );
-  // The old top-level path now legacy-redirects into the settings hub.
-  assert.equal(
-    resolveRouteFamilyContract("/br/3/menu-limits")?.id,
-    "branch-menu-limits",
-  );
-  assert.equal(
-    resolveRouteFamilyContract("/admin/finance/revenue")?.id,
-    "finance",
-  );
+  assert.equal(resolveRouteFamilyContract("/br/3/menu-limits"), null);
+  assert.equal(resolveRouteFamilyContract("/admin/finance/revenue"), null);
   assert.equal(
     resolveRouteFamilyContract("/inventory/grn/123")?.id,
     "inventory",
@@ -198,7 +190,7 @@ test("unknown inventory paths are not active route contracts", () => {
 test("resolvePostLoginRedirect → null returnTo → default", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), null),
-    "/admin/dashboard",
+    "/finance",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), null),
@@ -221,32 +213,35 @@ test("resolvePostLoginRedirect → valid returnTo for accessible module → keep
   );
 });
 
-test("resolvePostLoginRedirect → legacy admin finance returnTo canonicalizes to finance workspace", () => {
-  assert.equal(
-    resolvePostLoginRedirect(
-      makeClaims("owner"),
-      "/admin/finance/revenue?range=today",
-    ),
-    "/finance/revenue?range=today",
-  );
+test("resolvePostLoginRedirect → removed admin aliases fall back", () => {
+  for (const returnTo of [
+    "/admin/dashboard",
+    "/admin/finance/revenue?range=today",
+    "/admin/reports",
+    "/admin/reports/stock-movement",
+    "/admin/inventory",
+    "/admin/staff",
+  ]) {
+    assert.equal(
+      resolvePostLoginRedirect(makeClaims("owner"), returnTo),
+      "/finance",
+    );
+    assert.equal(
+      resolvePostLoginRedirect(makeClaims("cashier", 3), returnTo),
+      "/employee",
+    );
+  }
 });
 
-test("resolvePostLoginRedirect → returnTo to disallowed module → fallback", () => {
-  assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/admin/dashboard"),
-    "/employee",
-  );
-});
-
-test("resolvePostLoginRedirect → admin returnTo to employee portal falls back to Admin", () => {
+test("resolvePostLoginRedirect → admin returnTo to employee portal falls back to Finance", () => {
   for (const role of ADMIN_ROLES) {
     assert.equal(
       resolvePostLoginRedirect(makeClaims(role), "/employee"),
-      "/admin/dashboard",
+      "/finance",
     );
     assert.equal(
       resolvePostLoginRedirect(makeClaims(role), "/employee/profile"),
-      "/admin/dashboard",
+      "/finance",
     );
   }
 });
@@ -263,17 +258,17 @@ test("resolvePostLoginRedirect → admin returnTo to checkout approvals is prese
   }
 });
 
-test("resolvePostLoginRedirect → retired admin inventory returnTo is not preserved", () => {
+test("resolvePostLoginRedirect → removed admin inventory returnTo is not preserved", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/admin/inventory"),
-    "/admin/dashboard",
+    "/finance",
   );
   assert.equal(
     resolvePostLoginRedirect(
       makeClaims("owner"),
       "/admin/inventory/trust?branchId=1",
     ),
-    "/admin/dashboard",
+    "/finance",
   );
 });
 
@@ -331,18 +326,18 @@ test("resolvePostLoginRedirect → preserves query + hash", () => {
 test("resolvePostLoginRedirect → returnTo = /login is ignored", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/login"),
-    "/admin/dashboard",
+    "/finance",
   );
 });
 
 test("resolvePostLoginRedirect → external URL is rejected", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "//evil.com"),
-    "/admin/dashboard",
+    "/finance",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "http://evil"),
-    "/admin/dashboard",
+    "/finance",
   );
 });
 
@@ -498,15 +493,6 @@ test("isPublicAppPath PWA manifests and Runner display bypass auth proxy", () =>
   assert.equal(isPublicAppPath("/br/abc/kds/manifest.webmanifest"), false);
 });
 
-test("resolveLegacyRouteRedirectPath → admin finance redirects to canonical finance", () => {
-  assert.equal(resolveLegacyRouteRedirectPath("/admin/finance"), "/finance");
-  assert.equal(
-    resolveLegacyRouteRedirectPath("/admin/finance/revenue"),
-    "/finance/revenue",
-  );
-  assert.equal(resolveLegacyRouteRedirectPath("/admin/dashboard"), null);
-});
-
 test("resolveModuleFromPath → branch menu limits and finance workspace map to modules", () => {
   assert.equal(resolveModuleFromPath("/finance/revenue"), "finance");
   assert.equal(resolveModuleFromPath("/hr"), "hr");
@@ -540,13 +526,12 @@ test("resolvePostLoginRedirect → branch settings follows branch scope", () => 
 });
 
 test("resolvePostLoginRedirect → branch menu limits follows branch scope", () => {
-  // Legacy /menu-limits paths normalize into the settings hub before scope check.
   assert.equal(
     resolvePostLoginRedirect(
       makeClaims("branch_manager", 3),
       "/br/3/menu-limits",
     ),
-    "/br/3/settings/menu-limits",
+    "/employee",
   );
   assert.equal(
     resolvePostLoginRedirect(
@@ -578,7 +563,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
 });
 
 test("canAccess → only owner can access tenant admin modules", () => {
-  const adminModules = ["dashboard", "staff", "settings"] as const;
+  const adminModules = ["staff", "settings"] as const;
   for (const moduleKey of adminModules) {
     assert.equal(canAccess("owner", moduleKey), true);
     for (const role of [
@@ -696,10 +681,8 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
       (app) => app.moduleKey === "settings" && app.href === "/admin/settings",
     ),
   );
-  assert.equal(
-    ownerApps.some((app) => app.moduleKey === "inventory_admin"),
-    false,
-  );
+  assert.equal(Object.hasOwn(MODULE_ACL, "dashboard"), false);
+  assert.equal(Object.hasOwn(MODULE_ACL, "inventory_admin"), false);
   assert.ok(
     ownerApps.some((app) => app.moduleKey === "hr" && app.href === "/hr"),
   );
@@ -797,14 +780,8 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   );
 });
 
-test("canAccess → retired inventory_admin module is unavailable to every role", () => {
-  for (const role of STAFF_ROLES) {
-    assert.equal(canAccess(role, "inventory_admin"), false);
-  }
-});
-
 test("getSafeInternalReturnTo → accepts internal paths", () => {
-  assert.equal(getSafeInternalReturnTo("/admin/dashboard"), "/admin/dashboard");
+  assert.equal(getSafeInternalReturnTo("/finance"), "/finance");
   assert.equal(getSafeInternalReturnTo("/orders?x=1#y"), "/orders?x=1#y");
 });
 
@@ -819,8 +796,8 @@ test("getSafeInternalReturnTo → rejects unsafe paths", () => {
 
 test("buildAccessDeniedPath → encodes reason + from", () => {
   assert.equal(
-    buildAccessDeniedPath("insufficient-permission", { from: "/admin/staff" }),
-    "/access-denied?reason=insufficient-permission&from=%2Fadmin%2Fstaff",
+    buildAccessDeniedPath("insufficient-permission", { from: "/hr/staff" }),
+    "/access-denied?reason=insufficient-permission&from=%2Fhr%2Fstaff",
   );
 });
 

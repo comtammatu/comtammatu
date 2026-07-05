@@ -6,8 +6,11 @@ import { useRouter } from "next/navigation";
 import { STOCKTAKE_SESSION_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppPageHeader, AppSection } from "@/components/surface";
-import { InventoryPageContent } from "../../../_components/inventory-page-layout";
+import {
+  AppPageHeader,
+  AppSection,
+  DocumentFormFrame,
+} from "@/components/surface";
 import {
   BlindCountingGrid,
   BlindCountingGridToolbar,
@@ -140,13 +143,16 @@ export function StocktakeCountClient({
     });
   }
 
+  const header = (
+    <AppPageHeader
+      eyebrow={messages.inventory.stocktake.title}
+      title={`${messages.inventory.stocktake.startCounting} #${sessionId}`}
+      description={`CN #${branchId} · Round R${currentRound}`}
+    />
+  );
+
   const content = (
     <>
-      <AppPageHeader
-        eyebrow={messages.inventory.stocktake.title}
-        title={`${messages.inventory.stocktake.startCounting} #${sessionId}`}
-        description={`CN #${branchId} · Round R${currentRound}`}
-      />
       <div className="flex flex-wrap items-center gap-3">
         <StocktakeDraftSaverBadge
           status={saveStatus}
@@ -202,11 +208,7 @@ export function StocktakeCountClient({
             </Link>
           </Button>
           {!editable ? (
-            <Button
-              variant="outline"
-              size={embedded ? "touch" : "sm"}
-              disabled
-            >
+            <Button variant="outline" size={embedded ? "touch" : "sm"} disabled>
               {status === "completed"
                 ? STOCKTAKE_SESSION_STATUS_LABELS_VI.completed
                 : messages.inventory.stocktake.detail.updateFailed}
@@ -222,8 +224,8 @@ export function StocktakeCountClient({
   }
 
   return (
-    <InventoryPageContent>
+    <DocumentFormFrame header={header} scroll>
       {content}
-    </InventoryPageContent>
+    </DocumentFormFrame>
   );
 }

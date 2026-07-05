@@ -105,7 +105,7 @@ export async function WasteNewPageContent({
     supabase
       .from("ingredients")
       .select(
-        "id, name, unit, purchase_unit, unit_cost, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, allow_issue, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
+        "id, name, unit, purchase_unit, unit_cost, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, allow_issue, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -139,12 +139,18 @@ export async function WasteNewPageContent({
         .map((u) => ({
           unitId: u.unit_id,
           code: u.units?.code ?? "",
+          label: u.units?.name ?? u.units?.code ?? "",
           isBase: u.is_base,
         }));
       return {
         id: i.id,
         name: i.name,
-        unit: i.purchase_unit ?? i.unit ?? "kg",
+        unit:
+          issueUnits.find((unit) => unit.isBase)?.label ??
+          issueUnits[0]?.label ??
+          i.purchase_unit ??
+          i.unit ??
+          "kg",
         unitCost: i.unit_cost === null ? null : Number(i.unit_cost),
         issueUnits,
       };

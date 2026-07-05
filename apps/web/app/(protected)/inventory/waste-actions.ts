@@ -37,7 +37,6 @@ const WASTE_SOURCE_TYPES = [
 const wasteItemSchema = z.object({
   ingredient_id: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().min(1),
   // Issue-role unit the qty was entered in. NULL = already base;
   // the writeoff decrement converts to base via inv_to_base().
   entry_unit_id: z.coerce.number().int().positive().nullable().optional(),
@@ -136,7 +135,6 @@ const createExpiryWriteoffSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().min(1),
   grnItemId: z.coerce.number().int().positive().optional(),
   note: z.string().max(500).optional(),
   photoUrls: z.array(z.string().url()).max(10).optional(),
@@ -193,7 +191,6 @@ export async function createExpiryWriteoff(
     p_location_id: locationId,
     p_ingredient_id: parsed.data.ingredientId,
     p_quantity: parsed.data.quantity,
-    p_unit: parsed.data.unit,
     p_grn_item_id: parsed.data.grnItemId ?? undefined,
     p_note: parsed.data.note ?? undefined,
     p_photo_urls: parsed.data.photoUrls ?? undefined,
@@ -201,21 +198,31 @@ export async function createExpiryWriteoff(
 
   if (error) {
     if (error.code === "42501") {
-      return { success: false, error: "Không có quyền xóa sổ tại chi nhánh này." };
+      return {
+        success: false,
+        error: "Không có quyền xóa sổ tại chi nhánh này.",
+      };
     }
     if (error.code === "22023") {
       const msg = error.message ?? "";
       if (msg.includes("photo")) {
-        return { success: false, error: "Cần chụp ảnh bằng chứng để xóa sổ lô này." };
+        return {
+          success: false,
+          error: "Cần chụp ảnh bằng chứng để xóa sổ lô này.",
+        };
       }
       if (msg.includes("wac_not_ready")) {
         return {
           success: false,
-          error: "Chưa có giá vốn cho nguyên liệu tại kho. Cần nhập/định giá trước.",
+          error:
+            "Chưa có giá vốn cho nguyên liệu tại kho. Cần nhập/định giá trước.",
         };
       }
       if (msg.includes("insufficient_stock")) {
-        return { success: false, error: "Tồn kho tại kho không đủ để xóa sổ số lượng này." };
+        return {
+          success: false,
+          error: "Tồn kho tại kho không đủ để xóa sổ số lượng này.",
+        };
       }
       return { success: false, error: "Dữ liệu xóa sổ không hợp lệ." };
     }

@@ -3,6 +3,7 @@
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
+import { Item } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
@@ -73,7 +74,7 @@ export function LineRow({
 
   if (!isDraft) {
     return (
-      <div className="rounded-md border bg-muted/30 p-3">
+      <Item variant="outline" className="flex-col items-stretch gap-3 p-3">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-bold">{line.name}</p>
@@ -135,13 +136,13 @@ export function LineRow({
             {grnCopy.line.reviewNeeded}
           </Badge>
         ) : null}
-      </div>
+      </Item>
     );
   }
 
   // Draft mode — editable
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
+    <Item variant="outline" className="flex-col items-stretch gap-3 p-4">
         <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="font-bold">{line.name}</p>
@@ -335,7 +336,7 @@ export function LineRow({
             onChange={(e) => onChange({ lot: e.target.value })}
           />
         </Field>
-    </div>
+    </Item>
   );
 }
 

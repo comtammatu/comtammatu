@@ -6,7 +6,6 @@ import {
 } from "./branch-hub";
 import {
   isRunnerPublicDisplayPath,
-  resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
 } from "./route-resolution";
 import type { JwtClaims, StaffRole } from "./types";
@@ -142,10 +141,6 @@ export function resolvePostLoginRedirect(
   }
 
   const targetUrl = new URL(safeReturnTo, "http://localhost");
-  const legacyRedirectPath = resolveLegacyRouteRedirectPath(targetUrl.pathname);
-  if (legacyRedirectPath) {
-    targetUrl.pathname = legacyRedirectPath;
-  }
 
   // Guard against bouncing the user back to the login route itself.
   if (targetUrl.pathname === "/login") {

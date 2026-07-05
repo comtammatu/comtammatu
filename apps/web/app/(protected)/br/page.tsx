@@ -3,14 +3,10 @@ import { unstable_cache } from "next/cache";
 import {
   Building2 as IconBuilding2,
   ChefHat as IconChefHat,
-  LayoutDashboard as IconLayoutDashboard,
+  Wallet as IconWallet,
   Warehouse as IconWarehouse,
 } from "lucide-react";
-import {
-  canAccess,
-  MODULE_ACL,
-  OPERATOR_TILE_GROUP_TITLES,
-} from "@comtammatu/shared/auth";
+import { canAccess, MODULE_ACL } from "@comtammatu/shared/auth";
 import { resolveSiteKind, type SiteKind } from "@comtammatu/shared/labels";
 import { createServiceClient } from "@comtammatu/database";
 import {
@@ -78,7 +74,7 @@ export default async function BranchPickerPage() {
   }
 
   const { allowedBranches } = selectOperatorBranchScope(claims, data, null);
-  const showOfficeCard = canAccess(claims.user_role, "dashboard");
+  const showOfficeCard = canAccess(claims.user_role, "finance");
   const orderedSites = [...allowedBranches].sort(
     (a, b) =>
       SITE_KIND_ORDER[resolveSiteKind(a)] - SITE_KIND_ORDER[resolveSiteKind(b)] ||
@@ -100,9 +96,9 @@ export default async function BranchPickerPage() {
           ))}
           {showOfficeCard ? (
             <AppLinkCard
-              href={MODULE_ACL.dashboard.path}
-              title={OPERATOR_TILE_GROUP_TITLES.office_bridge}
-              icon={<IconLayoutDashboard />}
+              href={MODULE_ACL.finance.path}
+              title={MODULE_ACL.finance.label}
+              icon={<IconWallet />}
               tone="secondary"
             />
           ) : null}

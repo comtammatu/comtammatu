@@ -1,6 +1,16 @@
 # T3 Debate — Menu Sale-Limit / Stock-Deduction Semantics Redesign (2026-07-04)
 
 > Reconciled-through `d69a0a48`
+> STATUS: PROGRAM COMPLETE 2026-07-04 — PR-1 #231 / PR-2 #233 / PR-3 #234 /
+> PR-4 #238 merged; all seven migrations applied to prod (owner-delegated).
+> D065 amends this contract's two-switch model: owner chose ONE switch
+> ("Trừ tồn khi bán" = deduct + hard DB gate, never negative, out = locked
+> until restocked; OFF = unlimited) — the advisory-gate resolution in
+> §Conflicts #1 and the two-switch §Concept model are superseded by D065
+> in docs/plan/decisions.md. Owner decision the same day (PR #232):
+> deduction stays OFF, GRN re-entry cancelled — the switch is
+> dormant-but-ready. Open tails tracked in tasks/todo.md (db:types
+> reconcile, e2e tz fix, stock_consumed_status reader cleanup).
 
 Tier: **T3**. Trigger surface: SECURITY DEFINER RPC rewrites on the POS hot
 path, order-write trigger semantics, per-branch feature-flag rollout that can

@@ -67,7 +67,7 @@ export function useGrnLineActions({
           grnId: grn.id,
           ingredientId: l.ingredientId,
           receivedQuantity: l.actual,
-          unit: l.unit,
+          entryUnitId: l.entryUnitId,
           unitCost: l.cost,
           qualityStatus: l.qualityStatus,
           rejectedQuantity: l.rejected,

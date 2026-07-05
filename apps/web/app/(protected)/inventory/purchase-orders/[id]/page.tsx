@@ -4,6 +4,7 @@ import { fetchIngredients } from "../../ingredient-actions";
 import { fetchPurchaseOrderDetail } from "../../procurement-actions";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { formatDate, formatDateTime } from "../../_lib/format";
+import { getIngredientUnitDisplayName } from "../../_lib/unit-display";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { PODetailClient } from "./po-detail-client";
 import type { PODetail } from "./po-detail-client";
@@ -55,6 +56,7 @@ export async function PODetailPageContent({
       ingredient_id: number;
       quantity: number;
       unit: string;
+      entry_unit_id: number | null;
       unit_price_est: number | null;
       line_total: number | null;
       ingredients: {
@@ -74,6 +76,12 @@ export async function PODetailPageContent({
   if (routeBranchId != null && d.po.branch_id !== routeBranchId) notFound();
 
   const supplier = d.po.suppliers as { id: number; name: string } | null;
+  const catalogIngredients = ingredientsRes.success
+    ? ((ingredientsRes.data ?? []) as IngredientRow[])
+    : [];
+  const ingredientById = new Map(
+    catalogIngredients.map((ingredient) => [ingredient.id, ingredient]),
+  );
 
   const items: PODetail["items"] = (d.lines ?? []).map((l) => {
     const ing = l.ingredients as {
@@ -84,13 +92,21 @@ export async function PODetailPageContent({
     } | null;
     const price = l.unit_price_est != null ? Number(l.unit_price_est) : null;
     const total = Number(l.line_total ?? 0);
+    const entryUnitId = l.entry_unit_id ?? null;
+    const catalogIngredient = ingredientById.get(l.ingredient_id ?? ing?.id ?? 0);
+    const fallbackUnit = l.unit || ing?.purchase_unit || ing?.unit || "";
     return {
       lineId: l.id,
       ingredientId: l.ingredient_id ?? ing?.id ?? 0,
       name: ing?.name ?? "—",
       sku: "",
       qty: Number(l.quantity ?? 0),
-      unit: ing?.purchase_unit || l.unit || ing?.unit || "",
+      unit: getIngredientUnitDisplayName(
+        catalogIngredient?.units,
+        entryUnitId,
+        fallbackUnit,
+      ),
+      entryUnitId,
       price,
       total,
       variance: 0,
@@ -126,14 +142,10 @@ export async function PODetailPageContent({
     grns,
   };
 
-  const ingredients: IngredientRow[] = ingredientsRes.success
-    ? ((ingredientsRes.data ?? []) as IngredientRow[])
-    : [];
-
   return (
     <PODetailClient
       po={po}
-      ingredients={ingredients}
+      ingredients={catalogIngredients}
       isOwner={isOwner}
       auditLogs={auditLogs}
       purchaseOrdersBasePath={purchaseOrdersBasePath}

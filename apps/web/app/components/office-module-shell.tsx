@@ -69,8 +69,8 @@ const OFFICE_MODULE_CHROME: Record<OfficeModuleId, ModuleChrome> = {
   admin: {
     icon: IconShieldCheck,
     subLabel: "Cơm Tấm Má Tư",
-    mainLabel: "Quản trị",
-    defaultPageTitle: APP_COPY_VI.adminSurface,
+    mainLabel: APP_COPY_VI.settingsLabel,
+    defaultPageTitle: APP_COPY_VI.settingsLabel,
     crumbLabel: APP_COPY_VI.storeManagement,
     showBackLink: false,
     breadcrumbFromNav: true,
@@ -124,7 +124,7 @@ function buildBreadcrumbTrail(
   groups: ShellNavGroup[],
 ): Array<{ label: string; href?: string }> {
   const active = findActiveNavItem(groups, pathname);
-  if (!active) return [{ label: APP_COPY_VI.adminSurface }];
+  if (!active) return [{ label: APP_COPY_VI.settingsLabel }];
   const tailSegments = pathname
     .slice(active.href.length)
     .split("/")
@@ -135,7 +135,7 @@ function buildBreadcrumbTrail(
     return { label: formatPathSegment(segment), href: accumulatedHref };
   });
   return [
-    { label: APP_COPY_VI.adminSurface, href: "/admin/dashboard" },
+    { label: APP_COPY_VI.settingsLabel, href: "/admin/settings" },
     { label: active.label, href: active.href },
     ...pathTail,
   ];

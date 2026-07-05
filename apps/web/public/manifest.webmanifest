@@ -5,7 +5,6 @@
   "description": "Trang nhân viên Cơm Tấm Má Tư",
   "lang": "vi",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "portrait",
   "start_url": "/employee",
   "scope": "/employee",

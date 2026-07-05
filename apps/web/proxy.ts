@@ -9,7 +9,6 @@ import {
   isAdminRoutePath,
   isPublicAppPath,
   PERMISSION_KEYS,
-  resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
   type BlockedStateReasonCode,
@@ -157,13 +156,6 @@ export async function proxy(request: NextRequest) {
   // lives in Server Actions via getAuthContext (apps/web/app/_lib/auth.ts).
   const { session, response, supabase } = await updateSession(request);
   const claims = extractClaimsFromAccessToken(session?.access_token);
-
-  const legacyRedirectPath = resolveLegacyRouteRedirectPath(pathname);
-  if (legacyRedirectPath) {
-    const url = request.nextUrl.clone();
-    url.pathname = legacyRedirectPath;
-    return redirectWithCookies(url, response);
-  }
 
   // Login page: special handling.
   if (pathname === "/login") {

@@ -38,22 +38,25 @@ import {
   NumberField,
   SelectField,
   TextareaField,
-  TextField,
 } from "@/components/form";
-import { AppEmptyState, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  AppToolbar,
+} from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import {
-  InventoryFilterBar,
-  InventoryPageContent,
-} from "../_components/inventory-page-layout";
 import { StatusBadge } from "@/components/status-badge";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
+import { getDefaultIssueUnit, getIssueUnitOptions } from "../_lib/issue-units";
+import type { IngredientUnitRow } from "../_lib/types";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 import { StockMobileGrid } from "./stock-mobile-grid";
 import {
@@ -72,6 +75,7 @@ export type StockIngredient = {
   name: string;
   sku: string;
   unit: string;
+  units?: IngredientUnitRow[];
   category: string;
   qty: number;
   cost: number;
@@ -163,10 +167,7 @@ function createQuickIssueSchema(maxQuantity: number) {
       .refine((value) => Number(value) <= maxQuantity, {
         error: stockCopy.quickIssue.quantityExceedsStock,
       }),
-    unit: z
-      .string()
-      .trim()
-      .min(1, { error: stockCopy.quickIssue.unitRequired }),
+    entryUnitId: z.string().optional(),
     reason: z
       .string()
       .trim()
@@ -320,6 +321,14 @@ function QuickStockIssueDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const issueUnitOptions = useMemo(
+    () => getIssueUnitOptions(target.ingredient),
+    [target.ingredient],
+  );
+  const defaultIssueUnit = useMemo(
+    () => getDefaultIssueUnit(target.ingredient),
+    [target.ingredient],
+  );
   const schema = useMemo(
     () => createQuickIssueSchema(target.ingredient.qty),
     [target.ingredient.qty],
@@ -328,10 +337,10 @@ function QuickStockIssueDialog({
     () => ({
       issueType: target.issueType,
       quantity: "",
-      unit: target.ingredient.unit,
+      entryUnitId: defaultIssueUnit ? String(defaultIssueUnit.unitId) : "",
       reason: "",
     }),
-    [target.ingredient.unit, target.issueType],
+    [defaultIssueUnit, target.issueType],
   );
   const title =
     target.issueType === "writeoff"
@@ -339,6 +348,9 @@ function QuickStockIssueDialog({
       : stockCopy.quickIssue.issueTitle;
 
   async function handleSubmit(values: QuickIssueFormValues) {
+    const selectedIssueUnit = issueUnitOptions.find(
+      (option) => String(option.unitId) === values.entryUnitId,
+    );
     const draftRes = await createStockIssueDraft({
       branchId,
       issueType: values.issueType,
@@ -356,7 +368,7 @@ function QuickStockIssueDialog({
       issueId,
       ingredientId: target.ingredient.id,
       quantity: Number(values.quantity),
-      unit: values.unit.trim(),
+      entryUnitId: selectedIssueUnit?.unitId ?? null,
       reason: values.reason.trim(),
     });
     if (!lineRes.success) {
@@ -412,13 +424,28 @@ function QuickStockIssueDialog({
                 placeholder="0"
                 required
               />
-              <TextField
-                control={form.control}
-                name="unit"
-                label={FORM_VI.unit}
-                readOnly
-                aria-readonly="true"
-              />
+              {issueUnitOptions.length > 0 ? (
+                <SelectField
+                  control={form.control}
+                  name="entryUnitId"
+                  label={FORM_VI.unit}
+                  options={issueUnitOptions.map((option) => ({
+                    value: String(option.unitId),
+                    label: option.label,
+                  }))}
+                  required
+                />
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium">{FORM_VI.unit}</span>
+                  <Select disabled value="">
+                    <SelectTrigger>
+                      <SelectValue placeholder={FORM_VI.unit} />
+                    </SelectTrigger>
+                    <SelectContent />
+                  </Select>
+                </div>
+              )}
             </div>
 
             <SelectField
@@ -1121,7 +1148,7 @@ export function StockClient({
         </AppSection>
       ) : null}
 
-      <InventoryFilterBar
+      <AppToolbar
         search={searchControl}
         filters={!isCompactLayout ? filterControls : undefined}
         actions={
@@ -1276,13 +1303,13 @@ export function StockClient({
   }
 
   return (
-    <InventoryPageContent
+    <AppPage
       width={isCompactLayout ? "narrow" : "wide"}
       className={isCompactLayout ? undefined : "p-3"}
       contentClassName={isCompactLayout ? undefined : "max-w-none gap-3"}
       scroll
     >
       {content}
-    </InventoryPageContent>
+    </AppPage>
   );
 }

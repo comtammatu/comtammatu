@@ -51,6 +51,7 @@ interface FilterBarProps {
   ranges?: ReadonlyArray<FinanceRange>;
   /** Hide controls that don't apply to a given route. Default: all visible. */
   hide?: ReadonlyArray<FilterBarControl>;
+  compact?: boolean;
   className?: string;
 }
 
@@ -104,6 +105,7 @@ export function FilterBar({
   basePath,
   ranges = FINANCE_RANGES,
   hide = [],
+  compact = false,
   className,
 }: FilterBarProps) {
   const router = useRouter();
@@ -171,6 +173,81 @@ export function FilterBar({
   const showGranularity = !hide.includes("granularity");
   const showCompare = !hide.includes("compare");
   const showPayment = !hide.includes("payment");
+  const rangeSummary = (
+    <>
+      {filterCopy.rangeSummary}{" "}
+      <span className="font-medium tabular-nums text-foreground">
+        {presetRange.start} → {presetRange.end}
+      </span>
+      {showCompare && params.compare !== "none" ? (
+        <span> · {COMPARE_LABEL[params.compare]}</span>
+      ) : null}
+      {showPayment && params.payment !== "all" ? (
+        <span> · {PAYMENT_LABEL[params.payment]}</span>
+      ) : null}
+    </>
+  );
+
+  if (compact && params.range !== "custom") {
+    return (
+      <AppToolbar
+        variant="inline"
+        className={cn(
+          "flex-col items-stretch gap-2 rounded-md border bg-card p-2 sm:flex-row sm:items-center",
+          className,
+        )}
+      >
+        <div className="grid gap-2 sm:grid-cols-2">
+          {showBranch && (
+            <Select
+              value={branchValue}
+              onValueChange={handleBranchChange}
+              disabled={isPending}
+            >
+              <SelectTrigger
+                aria-label={filterCopy.branch}
+                className="w-full sm:w-48"
+              >
+                <SelectValue placeholder={filterCopy.branchPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_BRANCHES_VALUE}>
+                  {messages.finance.common.allBranches}
+                </SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {showRange && (
+            <Select
+              value={params.range}
+              onValueChange={(v) => handleRangeChange(v as FinanceRange)}
+              disabled={isPending}
+            >
+              <SelectTrigger aria-label={filterCopy.range} className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ranges.map((range) => (
+                  <SelectItem key={range} value={range}>
+                    {RANGE_LABEL[range]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground sm:ml-auto">
+          {rangeSummary}
+        </p>
+      </AppToolbar>
+    );
+  }
 
   return (
     <AppToolbar className={cn("flex-col items-stretch", className)}>
@@ -337,19 +414,8 @@ export function FilterBar({
           </div>
         ) : null}
 
-        {/* Resolved range summary — gives owner instant confirmation
-            of what window they're looking at */}
         <p className="border-t pt-3 text-xs text-muted-foreground">
-          {filterCopy.rangeSummary}{" "}
-          <span className="font-medium tabular-nums text-foreground">
-            {presetRange.start} → {presetRange.end}
-          </span>
-          {showCompare && params.compare !== "none" ? (
-            <span> · {COMPARE_LABEL[params.compare]}</span>
-          ) : null}
-          {showPayment && params.payment !== "all" ? (
-            <span> · {PAYMENT_LABEL[params.payment]}</span>
-          ) : null}
+          {rangeSummary}
         </p>
     </AppToolbar>
   );

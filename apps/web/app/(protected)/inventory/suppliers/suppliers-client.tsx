@@ -19,15 +19,11 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
-import { AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import {
-  InventoryFilterBar,
-  InventoryPageContent,
-} from "../_components/inventory-page-layout";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
@@ -274,7 +270,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
 
   return (
     <>
-      <InventoryPageContent width="wide">
+      <AppPage width="wide" scroll>
         <AppPageHeader
           title={suppliersCopy.title}
           actions={
@@ -284,7 +280,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             </Button>
           }
         />
-        <InventoryFilterBar>
+        <AppToolbar>
           <InputGroup className="h-12 flex-1 basis-full sm:h-10 sm:basis-auto">
             <InputGroupAddon>
               <IconSearch />
@@ -300,7 +296,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
           <Badge variant="outline" className="rounded-full">
             {filtered.length}/{rows.length}
           </Badge>
-        </InventoryFilterBar>
+        </AppToolbar>
 
         <DataTable
           columns={columns}
@@ -326,7 +322,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             />
           )}
         />
-      </InventoryPageContent>
+      </AppPage>
 
       <SupplierDialog
         open={dialogOpen}

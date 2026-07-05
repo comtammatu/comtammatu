@@ -141,8 +141,9 @@ test("operator stock landing keeps inventory logic without nesting desktop page 
   assert.match(stockClientSource, embeddedContentWrapperPattern);
   assert.match(
     stockClientSource,
-    /return \(\s*<InventoryPageContent[\s\S]*>\s*\{content\}\s*<\/InventoryPageContent>\s*\);/,
+    /return \(\s*<AppPage[\s\S]*width=\{isCompactLayout \? "narrow" : "wide"\}[\s\S]*scroll[\s\S]*>\s*\{content\}\s*<\/AppPage>\s*\);/,
   );
+  assert.doesNotMatch(stockClientSource, /InventoryPageContent/);
 });
 
 test("operator stock on-hand alias and detail stay inside the branch operator shell", () => {
@@ -183,8 +184,9 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(stockDetailPageSource, embeddedContentWrapperPattern);
   assert.match(
     stockDetailPageSource,
-    /<InventoryPageContent width="wide" scroll>\s*\{content\}\s*<\/InventoryPageContent>/,
+    /<AppPage width="wide" scroll>\s*\{content\}\s*<\/AppPage>/,
   );
+  assert.doesNotMatch(stockDetailPageSource, /InventoryPageContent/);
   assert.match(
     stockDetailPageSource,
     /scope\.outOfScope/,
@@ -766,8 +768,9 @@ test("operator stocktake routes use branch stocktake, not employee count", () =>
   assert.match(stocktakeNewClient, /routeBase = "\/inventory\/stocktake"/);
   assert.match(
     stocktakeNewClient,
-    /<InventoryPageContent>\s*\{content\}\s*<\/InventoryPageContent>/,
+    /<DocumentFormFrame header=\{header\} scroll>\s*\{content\}\s*<\/DocumentFormFrame>/,
   );
+  assert.doesNotMatch(stocktakeNewClient, /InventoryPageContent/);
   assert.match(
     stocktakeDetailClient,
     /<AppPage width="wide" density="compact">\s*\{content\}\s*<\/AppPage>/,
@@ -779,8 +782,9 @@ test("operator stocktake routes use branch stocktake, not employee count", () =>
   assert.match(stocktakeCountClient, /routeBase = "\/inventory\/stocktake"/);
   assert.match(
     stocktakeCountClient,
-    /<InventoryPageContent>\s*\{content\}\s*<\/InventoryPageContent>/,
+    /<DocumentFormFrame header=\{header\} scroll>\s*\{content\}\s*<\/DocumentFormFrame>/,
   );
+  assert.doesNotMatch(stocktakeCountClient, /InventoryPageContent/);
   assert.match(
     stocktakeCountClient,
     /href=\{`\$\{routeBase\}\/\$\{sessionId\}\?branchId=\$\{branchId\}&view=detail`\}/,

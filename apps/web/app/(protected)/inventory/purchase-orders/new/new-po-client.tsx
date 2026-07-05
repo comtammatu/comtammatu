@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
   ItemActions,
@@ -76,7 +75,6 @@ interface LocalLine {
   ingredientName: string;
   quantity: number;
   unit: string;
-  // Purchase-role unit id the qty was entered in. NULL = free-text unit.
   entryUnitId: number | null;
   unitPriceEst: number | null;
 }
@@ -202,7 +200,7 @@ export function NewPoClient({
         ingredientId: s.ingredient_id,
         ingredientName: s.ingredient_name,
         quantity: s.suggested_qty,
-        unit: defaultUnit?.code ?? s.unit,
+        unit: defaultUnit?.label ?? s.unit,
         entryUnitId: defaultUnit?.unitId ?? null,
         unitPriceEst: ing?.unit_cost ?? null,
       },
@@ -227,7 +225,7 @@ export function NewPoClient({
           ingredientId: s.ingredient_id,
           ingredientName: s.ingredient_name,
           quantity: s.suggested_qty,
-          unit: defaultUnit?.code ?? s.unit,
+          unit: defaultUnit?.label ?? s.unit,
           entryUnitId: defaultUnit?.unitId ?? null,
           unitPriceEst: ing?.unit_cost ?? null,
         };
@@ -271,7 +269,6 @@ export function NewPoClient({
         lines: lines.map((l) => ({
           ingredientId: l.ingredientId,
           quantity: l.quantity,
-          unit: l.unit,
           entryUnitId: l.entryUnitId,
           unitPriceEst: l.unitPriceEst,
         })),
@@ -688,7 +685,7 @@ function LineItemsSection({
     setAddRowDeviation(null);
     const ing = ingredients.find((x) => String(x.id) === val);
     const defaultUnit = getDefaultPurchaseUnit(ing);
-    setUnit(defaultUnit?.code ?? ing?.purchase_unit ?? ing?.unit ?? "");
+    setUnit(defaultUnit?.label ?? ing?.purchase_unit ?? ing?.unit ?? "");
     setEntryUnitId(defaultUnit?.unitId ?? null);
     setTimeout(() => qtyRef.current?.focus(), 0);
   }
@@ -698,7 +695,7 @@ function LineItemsSection({
     const opt = purchaseUnitOptions.find(
       (o) => String(o.unitId) === unitIdValue,
     );
-    if (opt) setUnit(opt.code);
+    if (opt) setUnit(opt.label);
   }
 
   function handleAddLine(e: React.FormEvent<HTMLFormElement>) {
@@ -930,14 +927,16 @@ function LineItemsSection({
           <Combobox
             value={ingredientId}
             onValueChange={handleIngredientChange}
-            options={ingredients.map((i) => ({
-              value: String(i.id),
-              label: i.name,
-              hint: i.purchase_unit ?? i.unit,
-              keywords: [i.sku ?? "", i.category ?? ""],
-            }))}
+              options={ingredients.map((i) => ({
+                value: String(i.id),
+                label: i.name,
+                hint: getDefaultPurchaseUnit(i)?.label ?? i.purchase_unit ?? i.unit,
+                keywords: [i.sku ?? "", i.category ?? ""],
+              }))}
             placeholder={messages.inventory.po.ingredientPlaceholder}
-            searchPlaceholder={messages.inventory.po.ingredientSearchPlaceholder}
+            searchPlaceholder={
+              messages.inventory.po.ingredientSearchPlaceholder
+            }
             triggerClassName="border-dashed"
           />
         </div>
@@ -958,7 +957,6 @@ function LineItemsSection({
             entryUnitId={entryUnitId}
             unit={unit}
             onUnitChange={handleUnitChange}
-            onFreeTextChange={setUnit}
           />
         </div>
         <div className="lg:col-span-2">
@@ -996,31 +994,27 @@ function LineItemsSection({
 }
 
 // ---------------------------------------------------------------------------
-// UnitField — purchase-role unit dropdown; falls back to free-text when the
-// selected ingredient carries no purchase units.
+// UnitField — unit dropdown.
 // ---------------------------------------------------------------------------
 function UnitField({
   options,
   entryUnitId,
   unit,
   onUnitChange,
-  onFreeTextChange,
 }: {
   options: PurchaseUnitOption[];
   entryUnitId: number | null;
   unit: string;
   onUnitChange: (unitId: string) => void;
-  onFreeTextChange: (value: string) => void;
 }) {
   if (options.length === 0) {
     return (
-      <Input
-        name="unit"
-        placeholder={messages.inventory.po.unitShort}
-        value={unit}
-        onChange={(e) => onFreeTextChange(e.target.value)}
-        required
-      />
+      <Select disabled value="">
+        <SelectTrigger className="w-full" aria-label={unit}>
+          <SelectValue placeholder={messages.inventory.po.selectUnit} />
+        </SelectTrigger>
+        <SelectContent />
+      </Select>
     );
   }
   return (
@@ -1034,7 +1028,7 @@ function UnitField({
       <SelectContent>
         {options.map((o) => (
           <SelectItem key={o.unitId} value={String(o.unitId)}>
-            {o.code}
+            {o.label}
           </SelectItem>
         ))}
       </SelectContent>

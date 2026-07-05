@@ -13,6 +13,7 @@ import type {
   StockIngredient,
   StockWorkSummary,
 } from "./stock-client";
+import type { IngredientUnitRow } from "../_lib/types";
 
 function computeStatus(
   qty: number,
@@ -139,6 +140,7 @@ export async function StockPageContent({
         max_stock_level: number | null;
         reorder_point: number | null;
         storage_type: string | null;
+        units?: IngredientUnitRow[];
       }>)
     : [];
 
@@ -196,6 +198,7 @@ export async function StockPageContent({
       name: row.name,
       sku: row.sku ?? "",
       unit: row.purchase_unit || row.unit,
+      units: row.units,
       category: row.category ?? "",
       qty,
       cost,

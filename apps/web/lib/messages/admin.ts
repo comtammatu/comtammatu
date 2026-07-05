@@ -9,57 +9,6 @@ export const admin = {
     finance: "Tài chính",
     modules: "Mô-đun",
   },
-  dashboard: {
-    pageTitle: "Tổng quan vận hành",
-    pageDescription:
-      "Theo dõi tiền đã thu, chi vận hành, tồn kho và việc cần chủ xử lý.",
-    pageBadge: "Tháng này",
-    revenueLabel: "Tiền đã thu tháng này",
-    revenueHelper: "Tổng thanh toán hoàn tất trong tháng.",
-    operatingExpenseLabel: "Chi vận hành đã ghi nhận",
-    operatingExpenseHelper: "Chi vận hành đã ghi nhận trong tháng.",
-    inventoryValueLabel: "Giá trị tồn kho",
-    inventoryValueHelper: "Tồn kho hiện tại theo phạm vi quản trị.",
-    compareHint: "so với cùng kỳ tháng trước",
-    financeSnapshotTitle: "Sức khoẻ tài chính tháng này",
-    financeSnapshotDescription:
-      "Ba số chính để chủ nhìn nhanh tiền đã thu, chi vận hành và tiền đang nằm trong kho.",
-    workQueueTitle: "Việc cần xử lý trước",
-    workQueueDescription:
-      "Ưu tiên lỗi chặn vận hành, sau đó tới cảnh báo tiền, hóa đơn và dữ liệu giá vốn.",
-    workQueueBadge: (count: number) => (count > 0 ? `${count} việc` : "Đã ổn"),
-    workQueueEmptyTitle: "Đã ổn",
-    workQueueEmptyDescription:
-      "Chưa có lỗi vận hành hoặc hàng việc tài chính cần xử lý theo dữ liệu hiện có.",
-    queueSeverityDestructive: "Khẩn cấp",
-    queueSeverityWarning: "Cần xem",
-    queueSeverityNeutral: "Theo dõi",
-    queuePosClosedTitle: "Chi nhánh chưa mở POS",
-    queuePosClosedDescription: (count: number) =>
-      `${count.toLocaleString("vi-VN")} chi nhánh chưa mở ca bán hàng hôm nay.`,
-    queuePrinterFailedTitle: "Lỗi in trong 24 giờ",
-    queuePrinterFailedDescription: (count: number) =>
-      `${count.toLocaleString("vi-VN")} lệnh in lỗi hoặc quá hạn, kiểm tra máy in chi nhánh.`,
-    queuePrinterOfflineTitle: "Máy in mất kết nối",
-    queuePrinterOfflineDescription: (count: number) =>
-      `${count.toLocaleString("vi-VN")} chi nhánh có bộ in mất kết nối hoặc chưa đăng ký.`,
-    openWorkItem: "Mở xử lý",
-    branchStatusTitle: "Tình trạng chi nhánh hôm nay",
-    branchStatusDescription:
-      "POS đã mở, máy in, lỗi in 24h, đơn đã thanh toán và tiền đã thu trong tháng.",
-    branchSales: (orders: string, revenue: string) =>
-      `${orders} đơn đã thanh toán · ${revenue}`,
-    branchPosOpenBadge: (time: string) => `POS mở từ ${time}`,
-    branchPosClosedBadge: "POS chưa mở",
-    branchPrinterOnlineBadge: "In sẵn sàng",
-    branchPrinterOfflineBadge: "In mất kết nối",
-    branchPrinterNoAgentBadge: "Chưa đăng ký in",
-    branchPrinterFailedBadge: (count: number) => `${String(count)} lỗi in 24h`,
-    branchOpenCta: "Mở chi nhánh",
-    branchStatusEmptyTitle: "Chưa có chi nhánh hoạt động",
-    branchStatusEmptyDescription:
-      "Khai báo chi nhánh trong Thiết lập hệ thống để bắt đầu vận hành.",
-  },
   printTemplates: {
     loadErrorTitle: "Không thể tải mẫu phiếu in",
     loadErrorTemplates: "Không tải được danh sách mẫu phiếu in. Vui lòng thử lại.",

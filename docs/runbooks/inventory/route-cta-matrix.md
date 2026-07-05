@@ -83,6 +83,5 @@ Updated: `2026-06-19`
 
 | Route | Expected behavior | Severity |
 | --- | --- | --- |
-| `/admin/inventory*` | Bị chặn qua `inventory_admin` ACL với `allowedRoles: []` | `P0` |
 | Unknown `/inventory/*` | Không tự được coi là route live nếu chưa có contract | `P1` |
 | Placeholder CTA | Phải ghi rõ placeholder hoặc bỏ khỏi daily UI | `P1` |

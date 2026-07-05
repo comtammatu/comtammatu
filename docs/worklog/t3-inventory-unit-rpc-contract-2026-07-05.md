@@ -1,0 +1,112 @@
+# T3 Inventory Unit RPC Contract - 2026-07-05
+
+> Reconciled-through 9beaea23 plus the 2026-07-05 follow-up cleanup.
+
+## Scope
+
+Remove Inventory RPC dependence on client-supplied unit text/code. Transaction writes use `entry_unit_id`; persisted legacy `unit` text is derived server-side from the unit catalog only where existing tables still store it.
+
+## Debate
+
+- PM: Unit catalog is already the product source of truth. Forms must not send legacy `unit` for transaction writes; saved Inventory rows must derive it from `entry_unit_id` and ingredient unit configuration.
+- BA: If `entry_unit_id` is missing, the valid default is the ingredient base unit, not an arbitrary client fallback. Invalid or inactive ingredient/unit pairs must fail loudly.
+- Senior Dev: Add one tenant-explicit SQL helper that maps `ingredient_units.unit_id` to `units.code`, then replace affected RPC bodies. Drop the remaining live `create_expiry_writeoff(p_unit text, ...)` argument in a dedicated migration; deploy/apply in the same release window as the server action change.
+- QA: Static tests must assert RPCs no longer validate/insert client `unit` text and that helper uses `unit_id`, not `ingredient_units.id`.
+
+## Decision
+
+Implement a new migration plus baseline mirror for the helper and affected RPC bodies. The first helper/RPC migration has already been applied and typed. The closeout path used a short optional-argument bridge for the deployment window, then removed the remaining expiry-writeoff `p_unit` argument after the compatible app deploy reached production.
+
+## Apply And Verification State
+
+- `written`: yes. `supabase/migrations/20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql` drops the old `create_expiry_writeoff(..., p_unit text, ...)` signature and recreates the RPC without the unit argument.
+- `deployment bridge`: prod-applied. `supabase/migrations/20260704214448_inventory_expiry_writeoff_optional_unit_bridge.sql` made the old `p_unit` argument optional only when that old signature still existed, so old and new callers both worked during deploy; fresh schemas that already have the no-`p_unit` function no-op through it.
+- `baseline mirrored`: yes. `00000000000000_baseline.sql` now contains the no-`p_unit` signature for fresh installs.
+- `prod-applied`: yes. Production `iexwsuaqqenyjiskawoj` now has `inventory_expiry_writeoff_optional_unit_bridge` and `inventory_drop_expiry_writeoff_unit_arg` in `supabase_migrations.schema_migrations`, and only the no-`p_unit` signature remains: `create_expiry_writeoff(bigint,bigint,bigint,numeric,bigint,text,text[])`.
+- `types generated`: yes. `corepack pnpm db:types` regenerated `packages/database/src/types/database.types.ts` from the post-drop production schema; `create_expiry_writeoff.Args` no longer includes `p_unit`, and `waste-actions.ts` now calls the typed `supabase.rpc` directly.
+- `prod function check`: yes. The live function is `SECURITY DEFINER`, has `search_path=public`, grants execute to `authenticated`, and does not grant execute to `anon`.
+- `local baseline replay`: blocked by local Docker availability (`Cannot connect to the Docker daemon at unix:///Users/luongthebinh/.docker/run/docker.sock`).
+- `preview branch replay`: attempted on branch `inventory-unit-contract-closeout-20260705` (`xvuurourqhiaunigdjof`) after cost confirmation `$0.01344/hour`; Supabase branch replay ended `MIGRATIONS_FAILED` before the helper/RPC existed, so it could not validate this closeout migration. The branch was deleted.
+- `prod apply order`: completed. The optional-argument bridge was applied first, the compatible app deploy reached production, then the destructive drop migration was applied, followed by `corepack pnpm db:types` and shim removal.
+
+## Closeout Delta
+
+- Removed `unit` from transaction write schemas: PO, GRN, stock issue, waste, transfer, menu recipe, production order, production recipe.
+- Removed client payload `unit` from transaction callers, including expiry writeoff and quick stock issue.
+- Kept UI-local `unit` state only where it drives picker display/draft row rendering; those values now use catalog labels (`unit_name`) rather than unit codes when a catalog option exists.
+- Removed leftover action-side `unit` derivation from RPC-backed writes whose SQL now calls `inventory_entry_unit_code`: PO create, transfer create, waste create, production order, menu recipes, and production recipes. Direct table writes still derive `unit` in the server action until the legacy columns are removed.
+- Added static tests that reject legacy `unit` in transaction action schemas/callers.
+- Added migration `20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql` and baseline mirror to drop `create_expiry_writeoff(..., p_unit text, ...)`.
+- Removed the final action-side expiry-writeoff RPC shim after generated types matched the dropped production signature.
+
+## Inventory Shell Census
+
+Legend: `ok` means route is already backed by approved primitives or delegates to another route content; `watch` means custom detail/form composition remains but is currently inside approved primitives; `layout` means wrapped by `inventory/settings/layout.tsx`.
+
+| route | surface | primitives / owner | status |
+| --- | --- | --- | --- |
+| `/inventory` | dashboard hub | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog` | ok |
+| `/inventory/dashboard` | redirect | delegates to `/inventory` | ok |
+| `/inventory/drafts` | redirect | delegates to `/inventory/grn?tab=drafts` | ok |
+| `/inventory/consumption` | issue list alias | delegates to `IssuesPageContent` | ok |
+| `/inventory/consumption/[id]` | issue detail alias | delegates to `IssueDetailPageContent` | ok |
+| `/inventory/count-assignments` | count management | `AppPage`, `AppPageHeader`, `AppSection` | ok |
+| `/inventory/count-slips` | count slips | `AppPage`, `AppPageHeader`, item primitives | ok |
+| `/inventory/expiry` | expiry alerts | `AppPage`, `AppPageHeader`, `DataTable`, `FormDialog` | ok |
+| `/inventory/grn` | GRN list | `AppPage`, `AppPageHeader`, `DataTable`, `AppPageTabs` | ok |
+| `/inventory/grn/new` | GRN entry selector | `DocumentFormFrame`, `AppPageHeader` | ok |
+| `/inventory/grn/new/[supplierId]` | GRN form | `DocumentFormFrame`, `AppPageHeader`, `AppSection` | ok |
+| `/inventory/grn/[id]` | GRN detail | `AppPage`, `AppPageHeader`, `AppSection`, `AppDetailFooter`, `AppPageTabs`, `Item`, `DescriptionList`, `DataTable` | ok |
+| `/inventory/ingredients` | catalog | `AppPage`, `AppPageHeader`, `DataTable`, `FormDialog` | ok |
+| `/inventory/issues` | issue list | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog` | ok |
+| `/inventory/issues/[id]` | issue detail | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog`, `AppPageTabs` | ok |
+| `/inventory/production` | production hub | `ProductionHubClient` uses `AppPage`, `AppPageHeader` | ok |
+| `/inventory/purchase-orders` | PO list | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable` | ok |
+| `/inventory/purchase-orders/new` | PO form | `DocumentFormFrame`, `AppPageHeader`, `AppSection`, `DataTable` | ok |
+| `/inventory/purchase-orders/[id]` | PO detail | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `AppDetailFooter`, `AppPageTabs`, `Item`, `DescriptionList` | ok |
+| `/inventory/recipes` | menu recipes | `AppPage`, `AppPageHeader`, `DataTable`, `FormDialog` | ok |
+| `/inventory/reports` | reporting | `AppPage`, `AppPageHeader`, `AppSection` | ok |
+| `/inventory/settings` | redirect | delegates to `/inventory/settings/expiry` | layout |
+| `/inventory/settings/expiry` | settings child | wrapped by settings `AppPage`; embeds `ExpiryListClient` | layout |
+| `/inventory/settings/categories` | settings child | `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog` inside settings layout | layout |
+| `/inventory/settings/qc` | settings child | `AppPageHeader`, `AppSection` inside settings layout | layout |
+| `/inventory/settings/thresholds` | settings child | `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog` inside settings layout | layout |
+| `/inventory/settings/units` | settings child | `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog` inside settings layout | layout |
+| `/inventory/stock` | stock list | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog` | ok |
+| `/inventory/stock/[ingredientId]` | stock detail | `AppPage`, `AppPageHeader`, `AppSection` | ok |
+| `/inventory/stocktake` | stocktake list | `AppPage`, `AppPageHeader`, `DataTable`, `FormDialog` | ok |
+| `/inventory/stocktake/new` | stocktake form | `DocumentFormFrame`, `AppPageHeader`, `AppSection` | ok |
+| `/inventory/stocktake/[id]` | stocktake detail | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `AppPageTabs` | ok |
+| `/inventory/stocktake/[id]/count` | count surface | `DocumentFormFrame`, `AppPageHeader`, `AppSection` | ok |
+| `/inventory/supplier-invoices` | invoices | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog` | ok |
+| `/inventory/supplier-returns` | returns list | `AppPage`, `AppPageHeader`, `DataTable` | ok |
+| `/inventory/supplier-returns/new` | return form | `DocumentFormFrame`, `AppPageHeader` | ok |
+| `/inventory/supplier-returns/[id]` | return detail | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `AppPageTabs` | ok |
+| `/inventory/suppliers` | supplier catalog | `AppPage`, `AppPageHeader`, `DataTable`, `FormDialog` | ok |
+| `/inventory/transfers` | transfer list | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable` | ok |
+| `/inventory/transfers/new` | transfer form | `DocumentFormFrame`, `AppPageHeader` | ok |
+| `/inventory/transfers/[id]` | transfer detail | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `AppDetailFooter`, `AppPageTabs`, `Item`, `DescriptionList` | ok |
+| `/inventory/waste/approvals` | waste approvals | `AppPage`, `AppPageHeader`, item primitives | ok |
+| `/inventory/waste/new` | waste form | `DocumentFormFrame`, `AppPageHeader`, `AppSection` | ok |
+
+Current census has no `watch` rows. Settings children intentionally share `inventory/settings/layout.tsx`; rich detail/form surfaces use approved route frames and local composition only where no broader shared primitive exists.
+
+## Shell Closeout Delta
+
+- Shrank the DOC-WORKFLOW frame baseline for `/inventory/grn/new/[supplierId]`
+  and `/inventory/purchase-orders/new`. Both already render the office plane
+  through `DocumentFormFrame` in the direct client owner while preserving the
+  embedded operator branch as a bare flex container.
+- Migrated `/inventory/stocktake/new`, `/inventory/stocktake/[id]/count`, and
+  `/inventory/waste/new` to the same contract: office renders through
+  `DocumentFormFrame`, embedded returns the shared body without a nested
+  `AppPageHeader`.
+- Migrated `/inventory/grn/new` and `/inventory/supplier-returns/new` to
+  `DocumentFormFrame`, bringing the Inventory DOC-WORKFLOW frame baseline to
+  zero. The only remaining baseline entry is `employee/count`, outside this
+  Inventory goal.
+- Updated the page-archetype guard to accept `DocumentFormFrame` in a route's
+  direct client owner, so the guard tracks the real office/embedded split
+  instead of forcing fake imports into `page.tsx`.
+- Replaced remaining GRN, PO, and Transfer detail row/card clones with existing
+  `Item` and `DescriptionList` primitives where those primitives already fit.

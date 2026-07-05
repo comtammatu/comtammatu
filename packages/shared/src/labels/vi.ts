@@ -1,11 +1,9 @@
 export type SiteKind = "branch" | "central_supply" | "central_kitchen";
 
 export type ModuleLabelKey =
-  | "dashboard"
   | "menu"
   | "inventory"
   | "inventory_procurement"
-  | "inventory_admin"
   | "orders"
   | "staff"
   | "hr"
@@ -32,11 +30,9 @@ type SiteLike = {
 };
 
 export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
-  dashboard: "Điều hành hôm nay",
   menu: "Thực đơn",
   inventory: "Kho hàng",
   inventory_procurement: "Kho hàng — NCC & công thức",
-  inventory_admin: "Cấu hình kho",
   orders: "Đơn hàng bán",
   staff: "Nhân viên",
   hr: "Nhân sự",

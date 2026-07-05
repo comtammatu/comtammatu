@@ -1,14 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
-import {
-  canAccess,
-  PROCUREMENT_ROLES,
-} from "@comtammatu/shared/auth";
+import { canAccess, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import { resolveInventoryListScope } from "../../../_lib/inventory-scope";
 import { fetchProcurementBranches } from "../../../_lib/procurement-branches";
 import { fetchGrnDetail, loadActiveGrnDraft } from "../../../grn-actions";
 import type { GrnDraftLine } from "../../../_lib/grn-draft";
 import type { IngredientUnitRow } from "../../../_lib/types";
+import { getIngredientUnitDisplayName } from "../../../_lib/unit-display";
 import { GrnCreateClient } from "./grn-create-client";
 
 type IngredientUnitJoinRow = {
@@ -21,7 +19,7 @@ type IngredientUnitJoinRow = {
   allow_issue: boolean;
   allow_production: boolean;
   sort_order: number;
-  units: { code: string } | null;
+  units: { code: string; name: string | null } | null;
 };
 
 type Ingredient = {
@@ -81,7 +79,7 @@ export async function GrnCreatePageContent({
     supabase
       .from("ingredients")
       .select(
-        "id, name, sku, unit, purchase_unit, unit_cost, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
+        "id, name, sku, unit, purchase_unit, unit_cost, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -96,9 +94,9 @@ export async function GrnCreatePageContent({
     scope.selectedBranchId != null &&
     branches.some((b) => b.id === scope.selectedBranchId)
       ? scope.selectedBranchId
-      : (claims.branch_id && branches.some((b) => b.id === claims.branch_id)
-          ? claims.branch_id
-          : (branches[0]?.id ?? null));
+      : claims.branch_id && branches.some((b) => b.id === claims.branch_id)
+        ? claims.branch_id
+        : (branches[0]?.id ?? null);
 
   type IngredientJoinRow = Omit<Ingredient, "units"> & {
     ingredient_units: IngredientUnitJoinRow[] | null;
@@ -112,6 +110,7 @@ export async function GrnCreatePageContent({
           id: u.id,
           unit_id: u.unit_id,
           unit_code: u.units?.code ?? "",
+          unit_name: u.units?.name ?? u.units?.code ?? "",
           to_base_factor: Number(u.to_base_factor ?? 1),
           is_base: u.is_base,
           is_active: u.is_active,
@@ -159,7 +158,12 @@ export async function GrnCreatePageContent({
           lineId: l.id,
           ingredientId: l.ingredient_id,
           ingredientName: l.ingredients?.name ?? "",
-          unit: l.unit,
+          unit: getIngredientUnitDisplayName(
+            ingredients.find((ingredient) => ingredient.id === l.ingredient_id)
+              ?.units,
+            l.entry_unit_id,
+            l.unit,
+          ),
           entryUnitId: l.entry_unit_id,
           quantity: Number(l.received_quantity ?? 0),
           unitCost: Number(l.unit_cost ?? 0),

@@ -12,6 +12,7 @@ import {
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Item } from "@comtammatu/ui/components/item";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import {
   DataTable,
@@ -28,6 +29,7 @@ import {
   AppPage,
   AppPageHeader,
   AppSection,
+  DescriptionList,
 } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
@@ -367,52 +369,54 @@ export function TransferDetailClient({
                   </div>
                 </AppSection>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  {[
-                    {
-                      label: copy.totalValue,
-                      value: formatVND(transfer.total),
-                      icon: null,
-                    },
-                    {
-                      label: copy.totalItems,
-                      value: String(transfer.items.length).padStart(2, "0"),
-                      icon: null,
-                    },
-                    {
-                      label: tTerm("fromWarehouse"),
-                      value: transfer.fromBranch,
-                      icon: <IconMapPin className="size-3 text-primary" />,
-                    },
-                    {
-                      label: tTerm("toWarehouse"),
-                      value: transfer.toBranch,
-                      icon: <IconMapPin className="size-3 text-info" />,
-                    },
-                    {
-                      label: copy.recorded,
-                      value: `${String(receivedCount).padStart(2, "0")}/${String(transfer.items.length).padStart(2, "0")}`,
-                      icon: null,
-                    },
-                  ].map((info) => (
-                    <div key={info.label} className="rounded-md border bg-card p-4">
-                      <Badge variant="secondary">{info.label}</Badge>
-                      <p className="mt-3 flex items-center gap-1 text-lg font-semibold">
-                        {info.icon} {info.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <AppSection title={copy.totalTransferValue}>
+                  <DescriptionList
+                    className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+                    descriptionClassName="flex items-center gap-1 font-semibold"
+                    items={[
+                      {
+                        term: copy.totalValue,
+                        description: formatVND(transfer.total),
+                      },
+                      {
+                        term: copy.totalItems,
+                        description: String(transfer.items.length).padStart(
+                          2,
+                          "0",
+                        ),
+                      },
+                      {
+                        term: tTerm("fromWarehouse"),
+                        description: (
+                          <>
+                            <IconMapPin className="size-3 text-primary" />
+                            {transfer.fromBranch}
+                          </>
+                        ),
+                      },
+                      {
+                        term: tTerm("toWarehouse"),
+                        description: (
+                          <>
+                            <IconMapPin className="size-3 text-info" />
+                            {transfer.toBranch}
+                          </>
+                        ),
+                      },
+                      {
+                        term: copy.recorded,
+                        description: `${String(receivedCount).padStart(2, "0")}/${String(transfer.items.length).padStart(2, "0")}`,
+                      },
+                    ]}
+                  />
+                </AppSection>
 
                 {transfer.note && (
-                  <div className="rounded-md border bg-card p-4">
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      {copy.transportNote}
-                    </p>
-                    <p className="mt-1 line-clamp-3 break-words text-sm italic">
+                  <AppSection title={copy.transportNote}>
+                    <p className="line-clamp-3 break-words text-sm italic">
                       &ldquo;{transfer.note}&rdquo;
                     </p>
-                  </div>
+                  </AppSection>
                 )}
               </div>
             </TabsContent>
@@ -452,7 +456,10 @@ export function TransferDetailClient({
                           />
                         )}
                         mobileFooter={
-                          <div className="rounded-md border bg-muted/20 p-3 text-sm">
+                          <Item
+                            variant="outline"
+                            className="flex-col items-stretch gap-2 p-3 text-sm"
+                          >
                             <div className="flex items-center justify-between gap-3">
                               <span className="text-muted-foreground">
                                 {copy.totalValue}
@@ -463,7 +470,7 @@ export function TransferDetailClient({
                                 )}
                               </span>
                             </div>
-                          </div>
+                          </Item>
                         }
                         desktopFooterRows={[
                           {
@@ -546,14 +553,18 @@ export function TransferDetailClient({
                           formatVND(transfer.total),
                         )}
                       </p>
-                      <div className="rounded-md border bg-background/70 p-3">
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                          {copy.totalItems}
-                        </p>
-                        <p className="text-lg font-bold tabular-nums">
-                          {String(transfer.items.length).padStart(2, "0")}
-                        </p>
-                      </div>
+                      <DescriptionList
+                        descriptionClassName="font-bold tabular-nums"
+                        items={[
+                          {
+                            term: copy.totalItems,
+                            description: String(transfer.items.length).padStart(
+                              2,
+                              "0",
+                            ),
+                          },
+                        ]}
+                      />
                     </div>
                   </AppSection>
                 </div>
@@ -660,7 +671,7 @@ function TransferLineMobileCard({
 }) {
   const copy = messages.inventory.transfer;
   return (
-    <div className="rounded-md border bg-muted/30 p-4">
+    <Item variant="outline" className="flex-col items-stretch gap-4 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-bold">{item.name}</p>
@@ -703,6 +714,6 @@ function TransferLineMobileCard({
           <p className="font-semibold text-primary">{formatVND(item.total)}</p>
         </div>
       </div>
-    </div>
+    </Item>
   );
 }

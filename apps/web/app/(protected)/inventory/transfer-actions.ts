@@ -232,10 +232,13 @@ export async function fetchStockTransferDetail(
     ...new Set((lines ?? []).map((l) => l.ingredient_id as number)),
   ];
   let toBaseFactorByKey = new Map<string, number>();
+  let unitLabelByKey = new Map<string, string>();
   if (entryUnitIds.length > 0 && ingredientIds.length > 0) {
     const { data: unitRows } = await supabase
       .from("ingredient_units")
-      .select("ingredient_id, unit_id, to_base_factor")
+      .select(
+        "ingredient_id, unit_id, to_base_factor, units!ingredient_units_unit_tenant_fkey(code, name)",
+      )
       .eq("tenant_id", claims.tenant_id)
       .in("ingredient_id", ingredientIds)
       .in("unit_id", entryUnitIds);
@@ -245,6 +248,15 @@ export async function fetchStockTransferDetail(
         Number(row.to_base_factor),
       ]),
     );
+    unitLabelByKey = new Map(
+      (unitRows ?? []).map((row) => {
+        const unit = row.units as { code: string | null; name: string | null };
+        return [
+          `${row.ingredient_id}:${row.unit_id}`,
+          unit.name?.trim() || unit.code || "",
+        ] as const;
+      }),
+    );
   }
   const linesWithFactor = (lines ?? []).map((l) => ({
     ...l,
@@ -252,6 +264,11 @@ export async function fetchStockTransferDetail(
       l.entry_unit_id == null
         ? null
         : (toBaseFactorByKey.get(`${l.ingredient_id}:${l.entry_unit_id}`) ??
+          null),
+    unit_label:
+      l.entry_unit_id == null
+        ? null
+        : (unitLabelByKey.get(`${l.ingredient_id}:${l.entry_unit_id}`) ??
           null),
   }));
 
@@ -312,7 +329,6 @@ export async function fetchStockTransfers(
 const transferLineInputSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().min(1),
   // Issue-role unit the qty was entered in. NULL = already base;
   // stock_transfer_confirm_ship converts to base via inv_to_base().
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
@@ -468,11 +484,10 @@ export async function createStockTransfer(
   }
 
   const transferLines = (parsed.data.lines ?? []).map((line) => ({
-    ingredientId: line.ingredientId,
-    quantity: line.quantity,
-    unit: line.unit,
-    entryUnitId: line.entryUnitId ?? null,
-  }));
+      ingredientId: line.ingredientId,
+      quantity: line.quantity,
+      entryUnitId: line.entryUnitId ?? null,
+    }));
 
   const { data, error } = await supabase.rpc("create_stock_transfer_draft", {
     p_from_branch_id: fromBranchId,

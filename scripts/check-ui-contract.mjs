@@ -49,6 +49,31 @@ function countMatches(content, pattern) {
   return [...content.matchAll(pattern)].length;
 }
 
+function resolveRelativeTsxImport(fromFile, specifier) {
+  if (!specifier.startsWith(".")) return null;
+  const importerDir = path.dirname(path.join(REPO_ROOT, fromFile));
+  const absolute = path.resolve(importerDir, specifier);
+  const candidates = [`${absolute}.tsx`, path.join(absolute, "index.tsx")];
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
+function pageOrDirectClientUsesDocumentFormFrame(file) {
+  const absoluteFile = path.join(REPO_ROOT, file);
+  const content = fs.readFileSync(absoluteFile, "utf8");
+  if (content.includes("DocumentFormFrame")) return true;
+
+  const importPattern = /from\s+["'](\.{1,2}\/[^"']+)["']/g;
+  for (const match of content.matchAll(importPattern)) {
+    const imported = resolveRelativeTsxImport(file, match[1]);
+    if (!imported) continue;
+    if (fs.readFileSync(imported, "utf8").includes("DocumentFormFrame")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // Extract JSX opening tags for a component, brace/paren/bracket/string aware so
 // that `=>` arrows and `{...}` expression props (which contain `>`) do not
 // terminate the tag. Lets a gate inspect a whole opening tag — including a
@@ -1094,14 +1119,10 @@ const ACL_PATHS = [
 // Redirect shims legitimately resolve to no family (they only call redirect()).
 const ROUTE_MANIFEST_SHIM_ROUTES = new Set([
   "/admin",
-  "/admin/finance/[[...slug]]",
-  "/admin/reports",
-  "/admin/reports/stock-movement",
-  "/admin/reports/inventory-value",
   "/inventory/drafts",
 ]);
 // ACL family roots without a landing page still resolve through shared ACL.
-const ROUTE_MANIFEST_NO_PAGE_ACL = new Set(["/admin/inventory"]);
+const ROUTE_MANIFEST_NO_PAGE_ACL = new Set();
 
 function routePathFromPageFile(normalizedFile) {
   const segments = normalizedFile
@@ -1221,13 +1242,6 @@ const VALID_ARCHETYPES = new Set([
 // Baseline: DOC-WORKFLOW pages that pre-date the DocumentFormFrame mandate
 // (docs/spec/page-archetypes.md § DOC-WORKFLOW). Only shrinks as pages migrate.
 const DOC_WORKFLOW_FRAME_BASELINE = new Set([
-  "apps/web/app/(protected)/inventory/grn/new/page.tsx",
-  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx",
-  "apps/web/app/(protected)/inventory/stocktake/new/page.tsx",
-  "apps/web/app/(protected)/inventory/stocktake/[id]/count/page.tsx",
-  "apps/web/app/(protected)/inventory/purchase-orders/new/page.tsx",
-  "apps/web/app/(protected)/inventory/supplier-returns/new/page.tsx",
-  "apps/web/app/(protected)/inventory/waste/new/page.tsx",
   "apps/web/app/(protected)/employee/count/page.tsx",
 ]);
 
@@ -1282,13 +1296,12 @@ for (const file of allPageFiles) {
 
 for (const file of allPageFiles) {
   if (PAGE_ARCHETYPES[file] !== "DOC-WORKFLOW") continue;
-  const content = fs.readFileSync(path.join(REPO_ROOT, file), "utf8");
   if (
-    !content.includes("DocumentFormFrame") &&
+    !pageOrDirectClientUsesDocumentFormFrame(file) &&
     !DOC_WORKFLOW_FRAME_BASELINE.has(file)
   ) {
     failures.push(
-      `page-archetype: ${file} is a new DOC-WORKFLOW page without DocumentFormFrame. DocumentFormFrame is mandatory for new DOC-WORKFLOW pages (docs/spec/page-archetypes.md § DOC-WORKFLOW); the hand-rolled baseline is frozen and only shrinks.`,
+      `page-archetype: ${file} is a DOC-WORKFLOW page without DocumentFormFrame in the page or its direct client owner. DocumentFormFrame is mandatory for new DOC-WORKFLOW pages (docs/spec/page-archetypes.md § DOC-WORKFLOW); the hand-rolled baseline is frozen and only shrinks.`,
     );
   }
 }

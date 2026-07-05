@@ -20,7 +20,7 @@ test("isOperationalToastRoute matches only POS/KDS branch routes", () => {
   assert.equal(isOperationalToastRoute("/br/7/kds"), true);
   assert.equal(isOperationalToastRoute("/br/7/kds/"), true);
 
-  assert.equal(isOperationalToastRoute("/admin/finance"), false);
+  assert.equal(isOperationalToastRoute("/finance"), false);
   assert.equal(isOperationalToastRoute("/br/12/menu"), false);
   // "possible" starts with "pos" but is not the pos segment boundary.
   assert.equal(isOperationalToastRoute("/br/12/possible"), false);
@@ -54,7 +54,7 @@ test("POS and KDS routes use the compact operational toaster preset", () => {
 test("mobile uses the compact operational toaster preset on any route", () => {
   const preset = selectToasterPreset({
     isMobile: true,
-    pathname: "/admin/finance",
+    pathname: "/finance",
   });
   assert.equal(preset, COMPACT_TOAST_PRESET);
   assert.equal(preset.position, "top-center");
@@ -64,7 +64,7 @@ test("mobile uses the compact operational toaster preset on any route", () => {
 test("non-operational desktop routes keep the desktop toaster preset", () => {
   const preset = selectToasterPreset({
     isMobile: false,
-    pathname: "/admin/finance",
+    pathname: "/finance",
   });
   assert.equal(preset, DESKTOP_TOAST_PRESET);
   assert.equal(preset.position, "top-right");

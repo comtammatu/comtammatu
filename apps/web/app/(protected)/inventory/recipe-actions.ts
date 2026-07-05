@@ -15,7 +15,6 @@ const branchIdSchema = z.coerce.number().int().positive();
 const recipeLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().min(1),
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   note: z.string().optional().nullable(),
   yieldFactor: z.coerce.number().positive().default(1.0),
@@ -149,16 +148,17 @@ export const upsertRecipeLines = withAction(
     permission: PERMISSION_KEYS.MENU_WRITE,
   },
   async (data, { supabase }) => {
+    const lines = data.lines.map((line) => ({
+        ingredient_id: line.ingredientId,
+        quantity: line.quantity,
+        entry_unit_id: line.entryUnitId ?? null,
+        note: line.note ?? null,
+        yield_factor: line.yieldFactor,
+      }));
+
     const { error } = await supabase.rpc("upsert_recipe_lines", {
       p_menu_item_id: data.menuItemId,
-      p_lines: data.lines.map((l) => ({
-        ingredient_id: l.ingredientId,
-        quantity: l.quantity,
-        unit: l.unit,
-        entry_unit_id: l.entryUnitId ?? null,
-        note: l.note ?? null,
-        yield_factor: l.yieldFactor,
-      })),
+      p_lines: lines,
     });
     if (error) {
       console.error("inventory.recipe.upsert_recipe_lines_failed", {

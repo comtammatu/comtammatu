@@ -6,10 +6,6 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-const ADMIN_PAGE = "apps/web/app/(protected)/admin/dashboard/page.tsx";
-const ADMIN_ACTIONS = "apps/web/app/(protected)/admin/dashboard/actions.ts";
-const ADMIN_WORK_QUEUE =
-  "apps/web/app/(protected)/admin/dashboard/_components/owner-work-queue.tsx";
 const ADMIN_COPY = "apps/web/lib/messages/admin.ts";
 const FINANCE_PAGE = "apps/web/app/(protected)/finance/page.tsx";
 const FINANCE_CASH_PANEL =
@@ -32,37 +28,6 @@ function literalWith(pattern: string, flags = "i"): RegExp {
     flags,
   );
 }
-
-test("admin dashboard uses canonical KpiCard, not a page-local stat card", () => {
-  const page = read(ADMIN_PAGE);
-
-  assert.match(page, /from "@\/components\/kpi\/kpi-card"/);
-  assert.match(page, /buildCompareDelta/);
-  assert.doesNotMatch(page, /\b(?:function|const)\s+StatCard\b/);
-  assert.doesNotMatch(page, /\bDashboardFocus\b/);
-});
-
-test("admin dashboard only promotes finance metrics with direct contracts", () => {
-  const page = read(ADMIN_PAGE);
-  const copy = read(ADMIN_COPY);
-
-  assert.match(page, /label=\{ADMIN_DASHBOARD_COPY\.revenueLabel\}/);
-  assert.match(page, /label=\{ADMIN_DASHBOARD_COPY\.operatingExpenseLabel\}/);
-  assert.match(page, /label=\{ADMIN_DASHBOARD_COPY\.inventoryValueLabel\}/);
-  assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.cashCollectedLabel\}/);
-  assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.transferCollectedLabel\}/);
-  assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.cashOnHandLabel\}/);
-  assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.grossProfitLabel\}/);
-  assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.netProfitLabel\}/);
-  assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.kitchenCostLabel\}/);
-  assert.doesNotMatch(page, /financeKpis\.netProfit/);
-  assert.doesNotMatch(copy, /cashCollectedLabel/);
-  assert.doesNotMatch(copy, /transferCollectedLabel/);
-  assert.doesNotMatch(copy, /cashOnHandLabel/);
-  assert.doesNotMatch(copy, /grossProfitLabel/);
-  assert.doesNotMatch(copy, /netProfitLabel/);
-  assert.doesNotMatch(copy, /kitchenCostLabel/);
-});
 
 test("finance basic landing only promotes direct-contract KPI cards", () => {
   const page = read(FINANCE_PAGE);
@@ -165,36 +130,7 @@ test("inventory copy uses Vietnamese operational labels on active surfaces", () 
   assert.match(copy, /Phiếu hao hụt \/ hủy hàng/);
 });
 
-test("admin dashboard is the L0 tenant command surface (D017 step 4)", () => {
-  const page = read(ADMIN_PAGE);
-  // Owner work-queue rendering (incl. the per-branch command links) is
-  // extracted into the co-located component; assert links against both.
-  const surface = page + read(ADMIN_WORK_QUEUE);
-
-  assert.match(page, /fetchBranchOperatingStatus/);
-  assert.match(page, /branchStatusTitle/);
-  assert.match(page, /workQueueTitle/);
-  assert.match(page, /owner-work-queue/);
-  assert.doesNotMatch(page, /SurfaceLinkCard/);
-  assert.doesNotMatch(page, /buildSetupCards/);
-  assert.doesNotMatch(page, /buildDomainCards/);
-  assert.match(surface, /\/admin\/settings\/printers\/jobs\?branch=/);
-  assert.match(surface, /status=needs_attention/);
-  assert.match(surface, /\/br\/\$\{String\(row\.branchId\)\}\/dashboard/);
-});
-
-test("admin dashboard actions stay scoped to the dashboard audience", () => {
-  const actions = read(ADMIN_ACTIONS);
-
-  assert.match(
-    actions,
-    /DASHBOARD_ROLES: readonly StaffRole\[\] = \["owner"\]/,
-  );
-  assert.match(actions, /export async function fetchBranchOperatingStatus/);
-  assert.doesNotMatch(actions, /fetchAdminOverview/);
-});
-
-test("print job monitor supports the owner recovery filter from admin dashboard", () => {
+test("print job monitor keeps the owner recovery filter", () => {
   const page = read(PRINT_JOBS_PAGE);
   const client = read(PRINT_JOBS_CLIENT);
 

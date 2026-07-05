@@ -8,6 +8,18 @@
 
 ## 0. Nguyên tắc (khoá)
 
+- **Mở rộng + reprioritize (owner 2026-07-05):** (a) **cả 3 hub** Branch /
+  Kho Tổng / Bếp TT phải mobile-first — không chỉ 2 site trung tâm (chúng
+  chung `(operator)/layout.tsx` + route `stock/*` nên 1 component native
+  chung phục vụ cả 3); (b) **dùng đúng primitive mobile sẵn có** cho từng
+  việc (Sheet · NumberPadSheet · Item · InteractiveCard…), KHÔNG ép 1 kiểu
+  cứng gây thao tác bất tiện; (c) **ưu tiên gỡ trùng lặp tính năng** giữa các
+  page; (d) **PWA fix vượt lên trước** (install fail + vuốt/chạm stuck +
+  "Chrome bọc" mất không gian) — vỏ PWA kẹt thì mọi màn vô nghĩa. Slice PWA:
+  manifest hub `scope:"/"` (in-app nav ra route chia sẻ không rớt về browser
+  tab) + bỏ `window-controls-overlay` + 1 scroll container tường minh
+  (`#main-content`) + safe-area. Verify install/standalone trên Vercel
+  preview (local không HTTPS/device được).
 - **"Nhìn là thấy, chạm là biết làm gì tiếp" (owner 2026-07-04, sau khi xem
   `/br/16/stock/production`):** mọi màn operator tuyên bố primary job; viewport-1
   = next action + hàng đợi sống. CẤM dashboard thẻ KPI trên surface operator

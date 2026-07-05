@@ -30,6 +30,7 @@ export default async function OperatorProductionRecipesPage({
         canManageCatalog={data.canManageCatalog}
         canManageRecipes={data.canManageRecipes}
         finishedGoods={data.finishedGoods}
+        unitOptions={data.unitOptions}
         ingredients={data.ingredients}
         recipes={data.recipes}
       />

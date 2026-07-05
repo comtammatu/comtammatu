@@ -40,7 +40,7 @@ test("resolveBranchHubDestination -> desktop owner stays on office plane", () =>
       standaloneStation: null,
       isDesktop: true,
     }),
-    "/admin/dashboard",
+    "/finance",
   );
 });
 

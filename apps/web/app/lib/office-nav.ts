@@ -6,6 +6,7 @@ import {
   Key as IconKey,
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
+  Printer as IconPrinter,
   ScrollText as IconScrollText,
   Settings as IconSettings,
   Users as IconUsers,
@@ -18,19 +19,17 @@ import {
   MODULE_ACL,
   resolveAdminNavGroups,
   resolveWorkspaceItems,
-  type ResolvedNavGroup,
   type ResolvedNavLink,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI, MODULE_LABELS_VI } from "@comtammatu/shared/labels";
 import type { ShellNavGroup, ShellNavItem } from "./shell-primitives";
+import { messages } from "@lib/messages";
 
-// Unified office sidebar (D019 § A/D). Every Management route renders the same
-// role/scope-filtered office nav — admin command groups + the cross-workspace
-// "Công việc" group — so the owner can move across the whole back office from
-// any module. Module-specific deep nav is appended by the module shell. Built
-// on the shared `resolveAdminNavGroups` / `resolveWorkspaceItems` resolvers so
-// access filtering stays single-sourced in MODULE_ACL.
+// Unified office sidebar. Every Management route renders the same
+// role/scope-filtered office nav: admin-scoped settings plus domain workspaces.
+// Module-specific deep nav is appended by the module shell. Built on the shared
+// resolvers so access filtering stays single-sourced in MODULE_ACL.
 
 const OFFICE_ICON_MAP: Record<string, ElementType> = {
   LayoutDashboard: IconLayoutDashboard,
@@ -64,29 +63,48 @@ function dedupeByHref(items: ShellNavItem[]): ShellNavItem[] {
   return result;
 }
 
-// Primary sidebar tabs. Admin command routes collapse into one "Quản trị" tab;
-// branch-scoped routes are owned by the Branch Hub, not the office sidebar.
+// Primary sidebar tabs. Admin dashboard is not a workspace; admin-scoped
+// settings render as a normal office tab beside the domain modules.
 export function resolveOfficePrimaryTabs(
   role: StaffRole,
   _branchId?: number | null,
 ): ShellNavItem[] {
-  const adminGroups = resolveAdminNavGroups(role);
-  const adminTab: ShellNavItem[] =
-    adminGroups.length > 0
-      ? [
-          {
-            href: "/admin/dashboard",
-            label: APP_COPY_VI.adminSurface,
-            icon: IconLayoutDashboard,
-            matchPrefixes: ["/admin"],
-          },
-        ]
-      : [];
+  const adminItems = resolveAdminNavGroups(role)
+    .flatMap((group) => group.items)
+    .map(mapItem);
 
   return dedupeByHref([
-    ...adminTab,
+    ...adminItems,
     ...resolveWorkspaceItems(role).map(mapItem),
   ]);
+}
+
+function resolveAdminDeepNav(role: StaffRole): ShellNavGroup[] {
+  if (!canAccess(role, "settings")) return [];
+
+  const settingsCopy = messages.settings.nav;
+  return [
+    {
+      title: APP_COPY_VI.settingsLabel,
+      items: [
+        {
+          href: "/admin/settings/general",
+          label: settingsCopy.general,
+          icon: IconSettings,
+        },
+        {
+          href: "/admin/settings/payments",
+          label: settingsCopy.payments,
+          icon: IconWallet,
+        },
+        {
+          href: "/admin/settings/printers",
+          label: settingsCopy.printers,
+          icon: IconPrinter,
+        },
+      ],
+    },
+  ];
 }
 
 // People deep nav for the HR workspace. The "Nhân sự" landing + payroll come
@@ -133,8 +151,8 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
   return groups;
 }
 
-// Sub-nav for office modules. Admin renders command groups; HR renders the
-// People + account-administration groups; menu/orders/branches are flat
+// Sub-nav for office modules. Settings renders foundation sub-pages; HR renders
+// the People + account-administration groups; menu/orders/branches are flat
 // single-page modules with no sub-routes — their own primary tab already
 // links to the module, so no deep-nav group is emitted (a group titled after
 // its only child duplicated the tab and rendered nothing new, since the
@@ -145,10 +163,7 @@ export function resolveOfficeDeepNav(
   _branchId?: number | null,
 ): ShellNavGroup[] {
   if (module === "admin") {
-    return resolveAdminNavGroups(role).map((group: ResolvedNavGroup) => ({
-      title: group.title,
-      items: group.items.map(mapItem),
-    }));
+    return resolveAdminDeepNav(role);
   }
 
   if (module === "hr") {

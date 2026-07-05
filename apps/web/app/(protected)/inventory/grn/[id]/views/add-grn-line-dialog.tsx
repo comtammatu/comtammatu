@@ -82,7 +82,7 @@ export function AddGrnLineDialog({
     const ingredient = ingredients.find((item) => item.id === Number(value));
     const defaultUnit = getDefaultPurchaseUnit(ingredient);
     setUnit(
-      defaultUnit?.code ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
+      defaultUnit?.label ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
     );
     setEntryUnitId(defaultUnit?.unitId ?? null);
     setUnitCost(
@@ -95,7 +95,7 @@ export function AddGrnLineDialog({
     const opt = purchaseUnitOptions.find(
       (o) => String(o.unitId) === unitIdValue,
     );
-    if (opt) setUnit(opt.code);
+    if (opt) setUnit(opt.label);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -129,7 +129,6 @@ export function AddGrnLineDialog({
         grnId: grn.id,
         ingredientId: parsedIngredientId,
         receivedQuantity: parsedQuantity,
-        unit: unit.trim(),
         entryUnitId,
         unitCost: parsedUnitCost,
         qualityStatus: "accepted",
@@ -167,6 +166,7 @@ export function AddGrnLineDialog({
         requiresReview: false,
         shortDeliveryAction: null,
         unit: unit.trim(),
+        entryUnitId,
         cost: parsedUnitCost,
         lot: batchNumber.trim(),
         expiry: expiryDate,
@@ -194,7 +194,10 @@ export function AddGrnLineDialog({
         <SheetHeader>
           <SheetTitle>{grnCopy.addDialog.title}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 p-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-1 flex-col gap-4 p-4"
+        >
           <div className="flex flex-col gap-1.5">
             <Label>{grnCopy.addDialog.ingredientLabel}</Label>
             <Combobox
@@ -205,7 +208,10 @@ export function AddGrnLineDialog({
                 .map((ingredient) => ({
                   value: String(ingredient.id),
                   label: ingredient.name,
-                  hint: ingredient.purchase_unit ?? ingredient.unit,
+                  hint:
+                    getDefaultPurchaseUnit(ingredient)?.label ??
+                    ingredient.purchase_unit ??
+                    ingredient.unit,
                   keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
                 }))}
               placeholder={grnCopy.addDialog.ingredientPlaceholder}
@@ -236,14 +242,12 @@ export function AddGrnLineDialog({
                   onValueChange={handleUnitChange}
                 >
                   <SelectTrigger id="grn-line-unit" aria-label={unit}>
-                    <SelectValue
-                      placeholder={grnCopy.addDialog.selectUnit}
-                    />
+                    <SelectValue placeholder={grnCopy.addDialog.selectUnit} />
                   </SelectTrigger>
                   <SelectContent>
                     {purchaseUnitOptions.map((o) => (
                       <SelectItem key={o.unitId} value={String(o.unitId)}>
-                        {o.code}
+                        {o.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -252,7 +256,8 @@ export function AddGrnLineDialog({
                 <Input
                   id="grn-line-unit"
                   value={unit}
-                  onChange={(event) => setUnit(event.target.value)}
+                  readOnly
+                  aria-readonly="true"
                   placeholder="kg"
                 />
               )}
