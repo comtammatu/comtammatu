@@ -32,6 +32,8 @@ import {
 } from "../../_lib/format";
 import { resolveInventoryListScope } from "../../_lib/inventory-scope";
 import { fetchStockBearingLocationIds } from "../../_lib/stock-bearing-locations";
+import { formatStockUnits } from "../../_lib/stock-unit-format";
+import type { IngredientUnitRow } from "../../_lib/types";
 
 const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
@@ -39,6 +41,16 @@ const detailCopy = stockCopy.detail;
 
 type StockStatus = "normal" | "low" | "out" | "over";
 type MovementBadgeVariant = "success" | "destructive" | "secondary";
+
+type UnitRef = { code: string };
+
+type IngredientUnitJoin = {
+  unit_id: number;
+  to_base_factor: number | null;
+  is_base: boolean;
+  is_active: boolean;
+  units: UnitRef | UnitRef[] | null;
+};
 
 type IngredientRow = {
   id: number;
@@ -52,6 +64,7 @@ type IngredientRow = {
   max_stock_level: number | null;
   reorder_point: number | null;
   storage_type: string | null;
+  ingredient_units: IngredientUnitJoin[] | null;
 };
 
 type LocationRef = {
@@ -217,13 +230,26 @@ function movementReferenceHref({
   return branchHref(branchId, "/inventory/reports");
 }
 
-function StockMetric({ label, value }: { label: string; value: string }) {
+function StockMetric({
+  label,
+  value,
+  subValue,
+}: {
+  label: string;
+  value: string;
+  subValue?: string | null;
+}) {
   return (
     <AppSection size="sm" contentClassName="gap-1">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="font-mono text-lg font-semibold tabular-nums">
         {value}
       </span>
+      {subValue ? (
+        <span className="font-mono text-xs font-normal text-muted-foreground tabular-nums">
+          {subValue}
+        </span>
+      ) : null}
     </AppSection>
   );
 }
@@ -285,7 +311,7 @@ export async function StockIngredientDetailPageContent({
     supabase
       .from("ingredients")
       .select(
-        "id, name, sku, unit, purchase_unit, category, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type",
+        "id, name, sku, unit, purchase_unit, category, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, is_active, units!ingredient_units_unit_tenant_fkey(code))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("id", ingredientId)
@@ -305,6 +331,20 @@ export async function StockIngredientDetailPageContent({
 
   if (ingredientRes.error || !ingredientRes.data) notFound();
   const ingredient = ingredientRes.data as IngredientRow;
+  const units: IngredientUnitRow[] = (ingredient.ingredient_units ?? []).map(
+    (u) => ({
+      id: 0,
+      unit_id: u.unit_id,
+      unit_code: relatedOne(u.units)?.code ?? "",
+      to_base_factor: Number(u.to_base_factor ?? 1),
+      is_base: u.is_base,
+      is_active: u.is_active,
+      allow_purchase: false,
+      allow_issue: false,
+      allow_production: false,
+      sort_order: 0,
+    }),
+  );
 
   const [stockRes, movementRes, expiryRes] = await Promise.all([
     stockBearingLocationIds.length > 0
@@ -351,6 +391,7 @@ export async function StockIngredientDetailPageContent({
     (sum, row) => sum + Number(row.current_quantity ?? 0),
     0,
   );
+  const totalStockUnits = formatStockUnits(totalQty, units, formatQty);
   const totalValue = stockRows.reduce((sum, row) => {
     const qty = Number(row.current_quantity ?? 0);
     const cost = Number(row.avg_unit_cost ?? ingredient.unit_cost ?? 0);
@@ -402,7 +443,10 @@ export async function StockIngredientDetailPageContent({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StockMetric
               label={stockCopy.table.currentStock}
-              value={`${formatQty(totalQty)} ${unit}`}
+              value={totalStockUnits.big ?? totalStockUnits.base}
+              subValue={
+                totalStockUnits.big !== null ? totalStockUnits.base : null
+              }
             />
             <StockMetric
               label={stockCopy.table.stockValue}
@@ -440,6 +484,7 @@ export async function StockIngredientDetailPageContent({
                   const cost = Number(
                     row.avg_unit_cost ?? ingredient.unit_cost ?? 0,
                   );
+                  const rowStockUnits = formatStockUnits(qty, units, formatQty);
 
                   return (
                     <Item
@@ -464,8 +509,13 @@ export async function StockIngredientDetailPageContent({
                             {FORM_VI.quantity}
                           </p>
                           <p className="font-mono font-semibold tabular-nums">
-                            {formatQty(qty)} {unit}
+                            {rowStockUnits.big ?? rowStockUnits.base}
                           </p>
+                          {rowStockUnits.big !== null ? (
+                            <p className="font-mono text-xs font-normal text-muted-foreground tabular-nums">
+                              {rowStockUnits.base}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">
