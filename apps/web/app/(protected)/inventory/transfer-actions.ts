@@ -10,6 +10,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { resolveCentralSiteHomeBranchId } from "@/_lib/branch-hub-device";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import type { TenantSupabase } from "./_lib/types";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
@@ -56,15 +57,22 @@ function isAllowedInterSiteDirection(
   );
 }
 
-function enforceTransferActionScope(
+async function enforceTransferActionScope(
+  supabase: Parameters<typeof resolveCentralSiteHomeBranchId>[0],
   claims: JwtClaims,
   transfer: TransferPermissionRow,
   side: "from" | "to",
   requiredPermission: string,
-): string | null {
+): Promise<string | null> {
   if (!isBranchScopedTransferRole(claims.user_role)) return null;
 
-  const ownBranchId = claims.branch_id;
+  // Central-site operators (warehouse_manager, production_manager) carry
+  // branch_id null in claims (D055 §1); resolve their central home before the
+  // scope comparison. Pinned branch roles keep the strict claim value. Only a
+  // genuinely unassigned account (no claim, no resolvable home) is rejected.
+  const ownBranchId =
+    claims.branch_id ??
+    (await resolveCentralSiteHomeBranchId(supabase, claims));
   if (ownBranchId == null) {
     return "Tài khoản cần gắn với kho vận hành.";
   }
@@ -141,7 +149,8 @@ async function loadTransferForPermission(
     side === "from" ? transfer.from_branch_id : transfer.to_branch_id;
   const requiredPermission =
     typeof permission === "function" ? permission(transfer) : permission;
-  const scopeError = enforceTransferActionScope(
+  const scopeError = await enforceTransferActionScope(
+    supabase,
     claims,
     transfer,
     side,
@@ -384,14 +393,21 @@ export async function createStockTransfer(
   }
 
   if (
-    (claims.user_role === "warehouse_manager" ||
-      claims.user_role === "production_manager") &&
-    (claims.branch_id == null || fromBranchId !== claims.branch_id)
+    claims.user_role === "warehouse_manager" ||
+    claims.user_role === "production_manager"
   ) {
-    return {
-      success: false,
-      error: "Bạn chỉ được tạo phiếu xuất từ kho của mình.",
-    };
+    // Central-site operators carry branch_id null (D055 §1); resolve their
+    // central home before comparing against the source branch so they can
+    // issue transfers from their own Kho Tổng / Bếp Trung Tâm.
+    const effectiveFromBranchId =
+      claims.branch_id ??
+      (await resolveCentralSiteHomeBranchId(supabase, claims));
+    if (effectiveFromBranchId == null || fromBranchId !== effectiveFromBranchId) {
+      return {
+        success: false,
+        error: "Bạn chỉ được tạo phiếu xuất từ kho của mình.",
+      };
+    }
   }
 
   const fromKind = await loadBranchKind(
