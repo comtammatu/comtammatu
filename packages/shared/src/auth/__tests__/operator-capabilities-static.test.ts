@@ -220,6 +220,7 @@ test("resolveOperatorTiles -> central-site stock groups are curated whitelists (
       "Trả hàng NCC",
       "Phiếu nhập",
       "Đơn đặt hàng",
+      "Danh mục",
     ],
   );
 

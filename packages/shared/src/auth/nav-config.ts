@@ -299,6 +299,14 @@ export const OPERATOR_TILE_ITEMS = [
   },
   {
     moduleKey: "inventory",
+    icon: "Tags",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/catalog",
+    label: "Danh mục",
+    kinds: ["central_supply"],
+  },
+  {
+    moduleKey: "inventory",
     icon: "ClipboardList",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/consumption",
