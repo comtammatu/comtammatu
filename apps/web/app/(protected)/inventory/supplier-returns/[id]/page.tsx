@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { fetchSupplierReturnDetail } from "@/(protected)/inventory/supplier-return-actions";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
-import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
+import { currentUserHasPermission } from "@/_lib/permissions";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "@/(protected)/inventory/_components/audit-history-list";
@@ -22,10 +22,9 @@ export async function SupplierReturnDetailPageContent({
 }: SupplierReturnDetailPageContentProps) {
   if (!returnId || returnId <= 0) notFound();
 
-  const [result, auditLogs, canConfirm] = await Promise.all([
+  const [result, auditLogs] = await Promise.all([
     fetchSupplierReturnDetail(returnId),
     fetchEntityAuditLogs("supplier_return", returnId, 50),
-    currentUserHasAnyPermissionAny([PERMISSION_KEYS.SUPPLIER_RETURN_CONFIRM]),
   ]);
 
   if (!result.success || !result.data) notFound();
@@ -53,7 +52,7 @@ export async function SupplierReturnDetailPageContent({
       quantity: number;
       unit: string;
       unit_cost: number;
-      line_total: number;
+      total_cost: number;
       reason_detail: string | null;
       photo_url: string | null;
       ingredients: { id: number; name: string; unit: string } | null;
@@ -63,6 +62,11 @@ export async function SupplierReturnDetailPageContent({
   const { header, lines } = detail;
 
   if (routeBranchId != null && header.branch_id !== routeBranchId) notFound();
+
+  const canConfirm = await currentUserHasPermission(
+    header.branch_id,
+    PERMISSION_KEYS.SUPPLIER_RETURN_CONFIRM,
+  );
 
   const content = (
     <>
