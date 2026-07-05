@@ -90,6 +90,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/finance/expenses/page.tsx": "REPORT",
   "apps/web/app/(protected)/finance/food-cost/page.tsx": "REPORT",
   "apps/web/app/(protected)/finance/inventory-value/page.tsx": "REPORT",
+  "apps/web/app/(protected)/finance/invoices/orphans/page.tsx": "LIST",
   "apps/web/app/(protected)/finance/invoices/page.tsx": "LIST",
   "apps/web/app/(protected)/finance/page.tsx": "DASHBOARD",
   "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": "REPORT",

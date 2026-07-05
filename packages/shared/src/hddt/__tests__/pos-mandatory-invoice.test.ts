@@ -74,6 +74,11 @@ test("POS invoice buyer form is available for cash and VietQR confirmation", () 
 
 test("createTaxInvoice does not create new not_required/skipped rows", () => {
   const src = read("apps/web/app/(protected)/finance/actions.ts");
+  // Buyer-field normalization (default name, buyerNotGetInvoice, email guard)
+  // lives in the extracted resolveInvoiceBuyerFields seam.
+  const buyerFields = read(
+    "apps/web/app/(protected)/finance/_lib/invoice-buyer-fields.ts",
+  );
 
   assert.ok(
     !/status:\s*"not_required"/.test(src),
@@ -84,11 +89,12 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
     "new no-MST sales must call the provider instead of provider='skipped'",
   );
   assert.ok(
-    src.includes("BUYER_NOT_GET_INVOICE_NAME"),
+    buyerFields.includes("BUYER_NOT_GET_INVOICE_NAME"),
     "missing default buyer name for no-MST provider calls",
   );
   assert.ok(
-    src.includes("buyerNotGetInvoice"),
+    src.includes("resolveInvoiceBuyerFields(parsed.data)") &&
+      buyerFields.includes("buyerNotGetInvoice"),
     "missing buyerNotGetInvoice pass-through to provider calls",
   );
   assert.ok(

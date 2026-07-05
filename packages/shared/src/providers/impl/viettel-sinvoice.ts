@@ -601,7 +601,7 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         buyerTaxCode: request.buyerTaxCode ?? null,
         buyerAddressLine: request.buyerAddress ?? null,
         buyerPhoneNumber: null,
-        buyerEmail: null,
+        buyerEmail: buyerNotGetInvoice ? null : (request.buyerEmail ?? null),
         buyerIdNo: null,
         buyerIdType: null,
         buyerNotGetInvoice: buyerNotGetInvoice ? "1" : "0",

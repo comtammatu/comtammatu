@@ -178,6 +178,10 @@ backfill hoặc khi chủ trương vận hành chuyển sang template tổng h�
       "Bán cho người tiêu dùng" (thay wording "Người mua không lấy hóa đơn" của NĐ
       70/2025 đã hết hiệu lực). Text do app truyền (const `BUYER_NOT_GET_INVOICE_NAME`);
       Viettel KHÔNG tự điền — xác minh sandbox 2026-07-04, XML `<NMua>` rỗng khi gửi rỗng.
+- Email người mua (`buyerInfo.buyerEmail`): tùy chọn, chỉ để provider gửi bản
+  HĐĐT cho khách — KHÔNG phải nội dung pháp lý của hóa đơn. NULL với khách lẻ /
+  `buyerNotGetInvoice` (server ép null, không bao giờ gắn email lên HĐ "Bán cho
+  người tiêu dùng").
 - Số thứ tự hóa đơn (do CQT cấp / provider cấp)
 - Ngày lập hóa đơn
 - Tên hàng hóa, đơn vị, số lượng, đơn giá

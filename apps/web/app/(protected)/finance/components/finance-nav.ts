@@ -5,6 +5,7 @@ import {
   FileText as IconFileText,
   Landmark as IconLandmark,
   Receipt as IconReceipt,
+  ReceiptText as IconReceiptText,
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
 } from "lucide-react";
@@ -68,6 +69,11 @@ export function resolveFinanceNav({
             href: "/finance/invoices",
             label: financeNav.items.invoices,
             icon: IconFileText,
+          },
+          {
+            href: "/finance/invoices/orphans",
+            label: financeNav.items.orphans,
+            icon: IconReceiptText,
           },
         ]
       : []),

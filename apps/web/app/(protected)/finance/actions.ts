@@ -4,10 +4,7 @@ import { z } from "zod";
 import { randomUUID as _randomUUID } from "crypto";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import {
-  BUYER_NOT_GET_INVOICE_NAME,
-  getInvoiceProvider,
-} from "@comtammatu/shared/providers";
+import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import { resolveSalesTaxProfile } from "@comtammatu/shared/tax";
 import {
   applyInvoiceLineDiscount,
@@ -22,6 +19,15 @@ import {
   queryActiveInvoiceForOrder,
   type InvoiceQueryClient,
 } from "./_lib/invoice-queries";
+import {
+  queryOrphanPaidOrders,
+  type OrphanOrderRow,
+  type OrphanQueryClient,
+} from "./_lib/orphan-orders";
+import {
+  buyerEmailSchema,
+  resolveInvoiceBuyerFields,
+} from "./_lib/invoice-buyer-fields";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
 const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
@@ -48,6 +54,7 @@ const createInvoiceSchema = z
       .regex(MST_REGEX, { error: "MST phải có dạng 10 số hoặc 10-3 số" })
       .optional(),
     buyerAddress: z.string().trim().max(500).optional(),
+    buyerEmail: buyerEmailSchema,
     buyerNotGetInvoice: z.boolean().optional(),
   })
   .refine((v) => !v.buyerTaxCode || (v.buyerName && v.buyerName.length > 0), {
@@ -90,6 +97,43 @@ export async function resolveExistingInvoiceForOrder(
     supabase as unknown as InvoiceQueryClient,
     claims.tenant_id,
     parsed.data,
+  );
+}
+
+/**
+ * List paid orders that still have no active HĐĐT — the manual issue worklist
+ * ("Xuất HĐ" per row). Interim visibility for the SePay-webhook orphan gap; the
+ * systemic fix is PR2 (rule HDDT-VIETQR-WEBHOOK-NO-AUTO-ISSUE-INTERIM-MANUAL).
+ * Gated by the SAME auth as createTaxInvoice (INVOICE_CREATE_ROLES +
+ * ORDERS_WRITE) so a row only appears to someone who can act on it. Owners see
+ * every branch; branch-scoped users see only their own branch. The eligible
+ * predicate + two-query set-difference live in the tested orphan-orders seam.
+ */
+export async function fetchOrphanPaidOrders(): Promise<
+  ActionResult<OrphanOrderRow[]>
+> {
+  const ctx = await getAuthContextWithPermission(
+    INVOICE_CREATE_ROLES,
+    PERMISSION_KEYS.ORDERS_WRITE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+  const branchScope =
+    claims.user_role === "owner" ? null : (claims.branch_id ?? null);
+
+  // Branch-scoped user without a branch claim can act on nothing.
+  if (claims.user_role !== "owner" && branchScope == null) {
+    return { success: true, data: [] };
+  }
+
+  // Seam cast: the real client structurally satisfies OrphanQueryClient, but
+  // matching supabase-js's deep generics against it trips TS2589. The cast
+  // narrows to the small surface the query uses; the mock satisfies it directly.
+  return queryOrphanPaidOrders(
+    supabase as unknown as OrphanQueryClient,
+    claims.tenant_id,
+    branchScope,
   );
 }
 
@@ -271,12 +315,8 @@ export async function createTaxInvoice(
     vatAmount = orderTotal - subtotal;
   }
 
-  const buyerTaxCode = parsed.data.buyerTaxCode?.trim() || undefined;
-  const buyerAddress = parsed.data.buyerAddress?.trim() || undefined;
-  const buyerNotGetInvoice =
-    parsed.data.buyerNotGetInvoice === true ||
-    (!buyerTaxCode && !parsed.data.buyerName?.trim());
-  const buyerName = parsed.data.buyerName?.trim() || BUYER_NOT_GET_INVOICE_NAME;
+  const { buyerName, buyerTaxCode, buyerAddress, buyerEmail, buyerNotGetInvoice } =
+    resolveInvoiceBuyerFields(parsed.data);
 
   // Use provider interface — runtime registers Viettel S-invoice only.
   ensureInvoiceProviderRegistered();
@@ -312,6 +352,7 @@ export async function createTaxInvoice(
       buyerName,
       buyerTaxCode,
       buyerAddress,
+      buyerEmail,
       buyerNotGetInvoice,
       items: invoiceItems,
       subtotal: Math.round(subtotal * 100) / 100,
@@ -350,6 +391,7 @@ export async function createTaxInvoice(
     buyer_name: buyerName,
     buyer_tax_code: buyerTaxCode ?? null,
     buyer_address: buyerAddress ?? null,
+    buyer_email: buyerEmail ?? null,
     subtotal: Math.round(subtotal * 100) / 100,
     vat_rate: vatRate,
     vat_amount: Math.round(vatAmount * 100) / 100,

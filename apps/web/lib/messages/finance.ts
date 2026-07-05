@@ -203,6 +203,7 @@ export const finance = {
       bankTransactions: "Giao dịch ngân hàng",
       expenses: "Chi vận hành",
       invoices: "Hóa đơn điện tử",
+      orphans: "Đơn chưa xuất HĐ",
       summary: "HĐ khách không lấy hóa đơn",
       foodCost: "Giá vốn món",
     },
@@ -674,6 +675,42 @@ export const finance = {
     description:
       "Danh sách HĐĐT đã phát hành, đang ký, đã hủy hoặc khách lẻ không yêu cầu MST.",
     loadError: "Không thể tải danh sách hóa đơn điện tử",
+  },
+  orphansPage: {
+    eyebrow: "HĐĐT HKD",
+    title: "Đơn đã thu chưa xuất HĐ",
+    description:
+      "Đơn đã thanh toán nhưng chưa có HĐĐT còn hiệu lực. Xuất hóa đơn cho từng đơn tại đây.",
+    caution:
+      "Kiểm tra portal Viettel trước khi xuất — đơn cũ có thể đã xuất tay.",
+    loadError: "Không thể tải danh sách đơn chưa xuất hóa đơn",
+    empty: {
+      title: "Không có đơn nào chờ xuất hóa đơn",
+      description:
+        "Mọi đơn đã thanh toán đều đã có HĐĐT còn hiệu lực hoặc đã nằm trong hóa đơn tổng hợp.",
+    },
+    table: {
+      order: "Đơn hàng",
+      day: "Ngày",
+      amount: "Tổng tiền",
+      action: "Hành động",
+    },
+    issue: "Xuất HĐ",
+    issueSuccess: "Đã xuất hóa đơn",
+    issueFailed: "Không thể xuất hóa đơn",
+    form: {
+      title: (orderNumber: string) => `Xuất HĐĐT cho đơn ${orderNumber}`,
+      description:
+        "Bỏ trống tên và MST nếu khách lẻ không lấy hóa đơn. Có nhập email thì Viettel gửi bản PDF cho khách.",
+      buyerName: "Tên người mua",
+      buyerNamePlaceholder: "CÔNG TY TNHH ...",
+      buyerTaxCode: "MST người mua",
+      buyerTaxCodePlaceholder: "0312891234 hoặc 0312891234-001",
+      buyerAddress: "Địa chỉ",
+      buyerEmail: "Email nhận hóa đơn",
+      buyerEmailPlaceholder: "email@congty.vn",
+      submit: "Xuất hóa đơn",
+    },
   },
   links: {
     revenue: {

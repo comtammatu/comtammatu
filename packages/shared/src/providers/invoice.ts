@@ -70,6 +70,8 @@ export interface InvoiceRequest {
   buyerName?: string;
   buyerTaxCode?: string;
   buyerAddress?: string;
+  /** Buyer delivery email (Viettel buyerInfo.buyerEmail). Server forces null when buyerNotGetInvoice. */
+  buyerEmail?: string;
   buyerNotGetInvoice?: boolean;
 
   /** Line items */

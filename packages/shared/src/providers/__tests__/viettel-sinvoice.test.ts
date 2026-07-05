@@ -663,6 +663,106 @@ test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", asy
   }
 });
 
+// Resolve the buyerInfo.buyerEmail Viettel receives for a given request, by
+// capturing the createInvoice body sent to the mocked provider.
+async function capturedBuyerEmail(
+  req: Parameters<ViettelSinvoiceProvider["createInvoice"]>[0],
+): Promise<unknown> {
+  const originalFetch = globalThis.fetch;
+  let createBody = "";
+  globalThis.fetch = (async (input, init) => {
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (String(input).includes("/InvoiceAPI/InvoiceWS/createInvoice/")) {
+      createBody = String((init ?? {}).body);
+    }
+    return new Response(
+      JSON.stringify({
+        result: { invoiceNo: "SBOX-EMAIL", supplierTaxCode: "0100109106-509" },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+  try {
+    const provider = new ViettelSinvoiceProvider({
+      username: "0100109106-509",
+      password: "test-password",
+      taxCode: "0100109106-509",
+      templateCode: "2/001",
+      invoiceSeries: "C22TYY",
+      baseUrl: "https://example.test",
+    });
+    await provider.createInvoice(req);
+    const parsed = JSON.parse(createBody) as {
+      buyerInfo: { buyerEmail?: unknown };
+    };
+    return parsed.buyerInfo.buyerEmail;
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+test("createInvoice: forwards buyerEmail to buyerInfo.buyerEmail", async () => {
+  const email = await capturedBuyerEmail({
+    orderId: 30,
+    orderNumber: "SBOX-EMAIL",
+    sellerName: "Com Tam Ma Tu",
+    sellerTaxCode: "0100109106-509",
+    sellerAddress: "Sandbox",
+    buyerName: "CÔNG TY ABC",
+    buyerTaxCode: "0109429414",
+    buyerEmail: "xuannt83@gmail.com",
+    items: [item("Com tam", 1, 100_000)],
+    subtotal: 92_593,
+    vatRate: 8,
+    vatAmount: 7_407,
+    totalAmount: 100_000,
+  });
+  assert.equal(email, "xuannt83@gmail.com");
+});
+
+test("createInvoice: buyerEmail absent → buyerInfo.buyerEmail null", async () => {
+  const email = await capturedBuyerEmail({
+    orderId: 31,
+    orderNumber: "SBOX-EMAIL",
+    sellerName: "Com Tam Ma Tu",
+    sellerTaxCode: "0100109106-509",
+    sellerAddress: "Sandbox",
+    buyerName: "CÔNG TY ABC",
+    buyerTaxCode: "0109429414",
+    items: [item("Com tam", 1, 100_000)],
+    subtotal: 92_593,
+    vatRate: 8,
+    vatAmount: 7_407,
+    totalAmount: 100_000,
+  });
+  assert.equal(email, null);
+});
+
+test("createInvoice: buyerNotGetInvoice forces buyerEmail null even if one is passed", async () => {
+  // Rule HDDT-BUYER-EMAIL-GUARD-ON-NO-BUYER: a "Bán cho người tiêu dùng"
+  // invoice must never carry a buyer email, even if a stale client sends one.
+  const email = await capturedBuyerEmail({
+    orderId: 32,
+    orderNumber: "SBOX-EMAIL",
+    sellerName: "Com Tam Ma Tu",
+    sellerTaxCode: "0100109106-509",
+    sellerAddress: "Sandbox",
+    buyerNotGetInvoice: true,
+    buyerEmail: "leaked@example.com",
+    items: [item("Com tam", 1, 100_000)],
+    subtotal: 92_593,
+    vatRate: 8,
+    vatAmount: 7_407,
+    totalAmount: 100_000,
+  });
+  assert.equal(email, null);
+});
+
 test("createInvoice: sends direct-sales line discount and discounted summary", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{
