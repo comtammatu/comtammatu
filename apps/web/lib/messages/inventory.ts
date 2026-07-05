@@ -438,6 +438,8 @@ export const inventory = {
     pricePlaceholder: "Giá",
     priceOptionalPlaceholder: "Giá (tùy chọn)",
     addLine: "Thêm dòng",
+    addLineTitle: "Thêm nguyên liệu",
+    quantitySheetTitle: (unit: string) => `Số lượng (${unit})`,
     unitPrice: "Đơn giá (₫)",
     estimatedTotal: "Tổng dự kiến",
     chooseIngredient: "Chọn nguyên liệu",
