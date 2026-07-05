@@ -49,7 +49,7 @@ export default async function PrintJobsPage({
   const { supabase, claims } = await loadAuthState();
 
   if (!canManageBranchFloorSettings(claims.user_role)) {
-    redirect("/admin/settings");
+    redirect("/admin/settings/printers");
   }
 
   const sp = await searchParams;
