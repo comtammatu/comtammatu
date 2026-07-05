@@ -1005,7 +1005,6 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/inventory/settings/settings-section-nav.tsx": 1,
       "apps/web/app/components/app-bottom-nav.tsx": 1,
       "apps/web/app/components/data-table/interactive-card.tsx": 1,
-      "apps/web/app/components/surface.tsx": 3,
       "packages/ui/src/components/badge.tsx": 1,
       "packages/ui/src/components/button.tsx": 1,
       "packages/ui/src/components/scroll-area.tsx": 1,

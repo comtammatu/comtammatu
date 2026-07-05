@@ -538,7 +538,6 @@ export function OperationalTile({
     <Button
       variant={variant ?? (selected ? "default" : "outline")}
       className={cn(
-        "transition-[background-color,border-color,color,box-shadow,transform]",
         selected
           ? "border-primary/20 ring-2 ring-primary/20"
           : OPERATIONAL_TILE_TONE_CLASSNAME[tone],
@@ -573,7 +572,7 @@ export function OperationalBoardCard({
   return (
     <Card
       className={cn(
-        "transition-[background-color,border-color,box-shadow]",
+        "transition",
         interactive && "hover:shadow-effect-card-hover",
         current && OPERATIONAL_BOARD_CURRENT_CLASSNAME[currentTone],
         className,
@@ -769,7 +768,7 @@ export function AppLinkCard({
   return (
     <Card
       className={cn(
-        "h-full transition-[box-shadow,border-color]",
+        "h-full transition",
         disabled
           ? "cursor-not-allowed opacity-60"
           : "hover:shadow-effect-card-hover",
