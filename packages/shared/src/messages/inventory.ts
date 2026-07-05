@@ -121,7 +121,6 @@ export const INVENTORY_VI = {
   systemActor: "Hệ thống",
   selectFile: "Vui lòng chọn file",
   templateCreateFailed: "Không tạo được template",
-  fromPoPending: "Từ PO chờ nhận",
   partialReceive: "Nhận một phần",
   today: "Hôm nay",
   yesterday: "Hôm qua",
@@ -129,7 +128,10 @@ export const INVENTORY_VI = {
   receivingEyebrow: "Nhập hàng",
   chooseSourceTitle: "Chọn nguồn nhập",
   chooseSourceDescription:
-    "Nhận hàng theo đơn đặt hàng (PO) đã gửi hoặc nhập ad-hoc.",
+    "Nhập hàng theo nhà cung cấp — không cần PO. Hoặc nhận theo PO đã đặt.",
+  receiveBySupplierTitle: "Nhận theo nhà cung cấp",
+  receiveBySupplierDescription: "Chọn NCC rồi nhập hàng — không cần PO.",
+  receiveByPoTitle: "Nhận theo PO đã đặt",
   adhocBySupplierHeading: "Nhập ad-hoc theo nhà cung cấp",
   noSupplierTitle: "Chưa có nhà cung cấp",
   noSupplierDescription:
