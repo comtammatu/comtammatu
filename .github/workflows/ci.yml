@@ -56,12 +56,42 @@ jobs:
 
       - run: pnpm build
 
+  # PR-only path filter for the two docker jobs below (each stands up Supabase
+  # Local — the slow part of CI). Skip them when the diff can't affect what they
+  # cover. On push to main both always run, so a PR that skipped via shared code
+  # the filter couldn't see is still caught at merge.
+  detect:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      db: ${{ steps.filter.outputs.db }}
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: filter
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          FILES=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          echo "changed files:"; echo "$FILES"
+          db=false; code=false
+          if echo "$FILES" | grep -qE '^supabase/'; then db=true; fi
+          if echo "$FILES" | grep -qE '^(apps/|packages/|supabase/|package\.json|pnpm-lock\.yaml|turbo\.json)'; then code=true; fi
+          echo "db=$db" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
   # Separate job (does not block the fast gates): replays the self-contained
   # baseline (public + private) on a from-empty Supabase Local (docker) so a
   # fresh-env regression — e.g. the baseline referencing a private.* object it
   # never creates — fails CI. The forward chain is squashed into this baseline
   # (see the re-baseline runbook).
   baseline-replay:
+    needs: detect
+    if: >-
+      always() &&
+      (github.event_name == 'push' || needs.detect.outputs.db == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -79,6 +109,10 @@ jobs:
   # the Playwright POS->payment->KDS smoke. This is the first automated end-to-end
   # run of the order/payment hot path against a real (local) database + RPCs.
   e2e-smoke:
+    needs: detect
+    if: >-
+      always() &&
+      (github.event_name == 'push' || needs.detect.outputs.code == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
