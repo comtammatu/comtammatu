@@ -18,7 +18,7 @@ export default async function OperatorProductionRecipesPage({
   if (!data.canManageRecipes) notFound();
 
   return (
-    <div className="flex w-full flex-col gap-3">
+    <>
       <Link
         href={`/br/${branchId}/stock/production`}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
@@ -34,6 +34,6 @@ export default async function OperatorProductionRecipesPage({
         ingredients={data.ingredients}
         recipes={data.recipes}
       />
-    </div>
+    </>
   );
 }

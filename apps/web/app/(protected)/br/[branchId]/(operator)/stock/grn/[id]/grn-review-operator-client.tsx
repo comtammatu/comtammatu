@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { ItemGroup } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { getStatusBadgeMeta } from "@/components/status-badge";
@@ -95,7 +96,7 @@ export function GrnReviewOperatorClient({
         </Button>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <ItemGroup className="gap-2">
         {lines.map((line, idx) => (
           <LineRow
             key={line.lineId}
@@ -111,7 +112,7 @@ export function GrnReviewOperatorClient({
             onAmend={() => {}}
           />
         ))}
-      </div>
+      </ItemGroup>
 
       <p className="px-1 text-xs text-muted-foreground">
         {INVENTORY_VI.grnReviewSummary(lines.length, stats.rejectedLines)}

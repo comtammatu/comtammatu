@@ -862,7 +862,6 @@ const perFileCountBudgets = [
       "apps/web/app/_components/notification-list.tsx": 1,
       "apps/web/app/(protected)/admin/settings/(tenant)/payments/payments-form.tsx": 3,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos-sessions/pos-sessions-client.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/discount-sheet.tsx": 1,
@@ -963,7 +962,6 @@ const perFileCountBudgets = [
       /\b(?:bg|border|ring|text|fill|stroke)-(?:warning|success|destructive|info|primary|accent|secondary)\/(?!(?:10|15|20)\b)\d+\b|\b(?:bg|border|ring|text|fill|stroke)-muted\/(?!(?:30|50)\b)\d+\b/g,
     allowlist: {
       "apps/web/app/_components/notification-item.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/age-badge.tsx": 3,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/order-grid.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/unassigned-banner.tsx": 1,
