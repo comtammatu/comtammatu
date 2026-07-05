@@ -10,6 +10,7 @@ import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty } from "../_lib/format";
+import { formatStockUnits } from "../_lib/stock-unit-format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import type { StockIngredient } from "./stock-client";
 
@@ -33,6 +34,7 @@ function StockGridCard({ item }: { item: StockGridItem }) {
   // signal (qty > 0 but under min) keeps the destructive treatment.
   const showDestructive = item.status === "low";
   const categoryLabel = item.category || stockCopy.filters.noCategory;
+  const { big, base } = formatStockUnits(item.qty, item.units, formatQty);
 
   return (
     <InteractiveCard
@@ -62,18 +64,22 @@ function StockGridCard({ item }: { item: StockGridItem }) {
           {item.name}
         </p>
 
-        <p
-          className={cn(
-            "font-mono text-xl font-bold tabular-nums",
-            showDestructive ? "text-destructive" : "text-foreground",
-            item.qty === 0 && !showDestructive && "text-muted-foreground",
-          )}
-        >
-          {formatQty(item.qty)}
-          <span className="ml-1 text-sm font-normal text-muted-foreground">
-            {item.unit}
-          </span>
-        </p>
+        <div className="flex flex-col leading-tight">
+          <p
+            className={cn(
+              "font-mono text-xl font-bold tabular-nums",
+              showDestructive ? "text-destructive" : "text-foreground",
+              item.qty === 0 && !showDestructive && "text-muted-foreground",
+            )}
+          >
+            {big ?? base}
+          </p>
+          {big !== null ? (
+            <span className="text-sm font-normal text-muted-foreground">
+              {base}
+            </span>
+          ) : null}
+        </div>
       </Link>
     </InteractiveCard>
   );

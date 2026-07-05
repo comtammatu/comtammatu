@@ -1,0 +1,78 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { formatStockUnits } from "../app/(protected)/inventory/_lib/stock-unit-format";
+import type { IngredientUnitRow } from "../app/(protected)/inventory/_lib/types";
+
+function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
+  return {
+    id: 0,
+    unit_id: 0,
+    unit_code: "",
+    to_base_factor: 1,
+    is_base: false,
+    is_active: true,
+    allow_purchase: true,
+    allow_issue: true,
+    allow_production: true,
+    sort_order: 0,
+    ...row,
+  };
+}
+
+// Plain formatter so the assertions stay independent of the vi-VN Intl
+// output used in the app.
+const plain = (n: number): string => String(n);
+
+test("multi-unit stock shows a whole-count step breakdown on top", () => {
+  const units = [
+    unit({ unit_code: "g", to_base_factor: 1, is_base: true }),
+    unit({ unit_code: "kg", to_base_factor: 1000 }),
+    unit({ unit_code: "cây", to_base_factor: 12000 }),
+  ];
+
+  const { big, base } = formatStockUnits(17000, units, plain);
+
+  assert.equal(big, "1 cây 5 kg");
+  assert.equal(base, "17000 g");
+});
+
+test("two-unit stock decomposes into both rungs", () => {
+  const units = [
+    unit({ unit_code: "lon", to_base_factor: 1, is_base: true }),
+    unit({ unit_code: "thùng", to_base_factor: 24 }),
+  ];
+
+  const { big, base } = formatStockUnits(500, units, plain);
+
+  assert.equal(big, "20 thùng 20 lon");
+  assert.equal(base, "500 lon");
+});
+
+test("step breakdown skips zero levels", () => {
+  const units = [
+    unit({ unit_code: "ml", to_base_factor: 1, is_base: true }),
+    unit({ unit_code: "chai", to_base_factor: 250 }),
+    unit({ unit_code: "thùng", to_base_factor: 5000 }),
+  ];
+
+  const { big, base } = formatStockUnits(18750, units, plain);
+
+  assert.equal(big, "3 thùng 15 chai");
+  assert.equal(base, "18750 ml");
+});
+
+test("single-unit ingredient renders base only (big is null)", () => {
+  const units = [unit({ unit_code: "g", to_base_factor: 1, is_base: true })];
+
+  const { big, base } = formatStockUnits(17000, units, plain);
+
+  assert.equal(big, null);
+  assert.equal(base, "17000 g");
+});
+
+test("missing units returns base with empty code and no big line", () => {
+  const { big, base } = formatStockUnits(5, undefined, plain);
+
+  assert.equal(big, null);
+  assert.equal(base, "5");
+});

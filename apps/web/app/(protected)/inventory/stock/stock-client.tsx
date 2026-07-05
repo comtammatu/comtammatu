@@ -54,6 +54,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty, formatVND } from "../_lib/format";
+import { formatStockUnits } from "../_lib/stock-unit-format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
 import { getDefaultIssueUnit, getIssueUnitOptions } from "../_lib/issue-units";
@@ -156,6 +157,27 @@ const quickIssueTypeOptions: {
     reasonPlaceholder: stockCopy.quickIssue.placeholders.other,
   },
 ];
+
+// Two-line stock quantity: largest unit on top (emphasis class from caller),
+// base unit muted below. Single-unit ingredients collapse to one line.
+function StockQtyCell({
+  item,
+  className,
+}: {
+  item: StockIngredient;
+  className?: string;
+}) {
+  const { big, base } = formatStockUnits(item.qty, item.units, formatQty);
+  if (big === null) {
+    return <span className={className}>{base}</span>;
+  }
+  return (
+    <span className={cn("flex flex-col leading-tight", className)}>
+      <span>{big}</span>
+      <span className="text-xs font-normal text-muted-foreground">{base}</span>
+    </span>
+  );
+}
 
 function createQuickIssueSchema(maxQuantity: number) {
   return z.object({
@@ -687,15 +709,14 @@ export function StockClient({
       header: stockCopy.table.stock,
       className: "min-w-24 text-right",
       render: (item) => (
-        <span
+        <StockQtyCell
+          item={item}
           className={cn(
             "font-mono",
             (item.status === "low" || item.status === "out") &&
               "font-semibold text-destructive",
           )}
-        >
-          {formatQty(item.qty)} {item.unit}
-        </span>
+        />
       ),
     },
     {
@@ -1035,15 +1056,14 @@ export function StockClient({
           <p className="text-xs text-muted-foreground">
             {stockCopy.table.availableStock}
           </p>
-          <p
+          <StockQtyCell
+            item={item}
             className={cn(
               "font-semibold tabular-nums",
               (item.status === "low" || item.status === "out") &&
                 "text-destructive",
             )}
-          >
-            {formatQty(item.qty)} {item.unit}
-          </p>
+          />
         </div>
         <div className="text-right">
           <p className="text-xs text-muted-foreground">{FORM_VI.value}</p>
