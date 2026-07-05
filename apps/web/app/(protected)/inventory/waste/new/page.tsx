@@ -131,7 +131,7 @@ export async function WasteNewPageContent({
     })),
     ingredients: (ingredientsRes.data ?? []).map((i) => {
       const issueUnits = (i.ingredient_units ?? [])
-        .filter((u) => u.allow_issue && (u.units?.code ?? "") !== "")
+        .filter((u) => (u.units?.code ?? "") !== "")
         .sort((a, b) => {
           if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
           return a.sort_order - b.sort_order;

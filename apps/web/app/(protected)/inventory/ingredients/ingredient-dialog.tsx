@@ -72,9 +72,6 @@ const unitRowSchema = z.object({
   anchor_unit_id: z.string(),
   anchor_factor: z.string(),
   is_base: z.boolean(),
-  allow_purchase: z.boolean(),
-  allow_issue: z.boolean(),
-  allow_production: z.boolean(),
 });
 
 const ingredientSchema = z
@@ -120,9 +117,6 @@ function makeBaseRow(unitId = ""): UnitFormRow {
     anchor_unit_id: NO_ANCHOR,
     anchor_factor: "",
     is_base: true,
-    allow_purchase: true,
-    allow_issue: true,
-    allow_production: false,
   };
 }
 
@@ -133,9 +127,6 @@ function makeSecondaryRow(): UnitFormRow {
     anchor_unit_id: NO_ANCHOR,
     anchor_factor: "",
     is_base: false,
-    allow_purchase: false,
-    allow_issue: false,
-    allow_production: true,
   };
 }
 
@@ -151,9 +142,6 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
             u.anchor_unit_id != null ? String(u.anchor_unit_id) : NO_ANCHOR,
           anchor_factor: u.anchor_factor != null ? String(u.anchor_factor) : "",
           is_base: u.is_base,
-          allow_purchase: u.allow_purchase,
-          allow_issue: u.allow_issue,
-          allow_production: u.allow_production,
         }))
     : [makeBaseRow()];
 
@@ -304,13 +292,8 @@ function UnitsField({
 
       <div className="overflow-hidden rounded-lg border">
         <div className="hidden grid-cols-12 items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid">
-          <div className="col-span-4">{copy.units.colUnit}</div>
+          <div className="col-span-10">{copy.units.colUnit}</div>
           <div className="text-center">{copy.units.colBase}</div>
-          <div className="col-span-2 text-center">{copy.units.colPurchase}</div>
-          <div className="col-span-2 text-center">{copy.units.colIssue}</div>
-          <div className="col-span-2 text-center">
-            {copy.units.colProduction}
-          </div>
           <div />
         </div>
 
@@ -421,7 +404,7 @@ function UnitRowCells({
   return (
     <div className="flex flex-col gap-1 px-3 py-2">
       <div className="grid grid-cols-1 items-center gap-2 md:grid-cols-12">
-        <div className="min-w-0 md:col-span-4">
+        <div className="min-w-0 md:col-span-10">
           <Controller
             control={control}
             name={`units.${index}.unit_id`}
@@ -462,54 +445,6 @@ function UnitRowCells({
             </div>
           )}
         />
-
-        <div className="md:col-span-2">
-          <Controller
-            control={control}
-            name={`units.${index}.allow_purchase`}
-            render={({ field }) => (
-              <div className="flex justify-center">
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={(checked) => field.onChange(checked === true)}
-                  aria-label={copy.units.colPurchase}
-                />
-              </div>
-            )}
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <Controller
-            control={control}
-            name={`units.${index}.allow_issue`}
-            render={({ field }) => (
-              <div className="flex justify-center">
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={(checked) => field.onChange(checked === true)}
-                  aria-label={copy.units.colIssue}
-                />
-              </div>
-            )}
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <Controller
-            control={control}
-            name={`units.${index}.allow_production`}
-            render={({ field }) => (
-              <div className="flex justify-center">
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={(checked) => field.onChange(checked === true)}
-                  aria-label={copy.units.colProduction}
-                />
-              </div>
-            )}
-          />
-        </div>
 
         <Button
           type="button"
@@ -673,9 +608,9 @@ export function IngredientDialog({
           is_base: u.is_base,
           anchor_unit_id: isPackaging ? derivationRow.anchor_unit_id : null,
           anchor_factor: isPackaging ? derivationRow.anchor_factor : null,
-          allow_purchase: u.allow_purchase,
-          allow_issue: u.allow_issue,
-          allow_production: u.allow_production,
+          allow_purchase: true,
+          allow_issue: true,
+          allow_production: true,
         };
       });
     } catch (error) {
