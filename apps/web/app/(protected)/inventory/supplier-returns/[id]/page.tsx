@@ -49,7 +49,7 @@ export async function SupplierReturnDetailPageContent({
       quantity: number;
       unit: string;
       unit_cost: number;
-      line_total: number;
+      total_cost: number;
       reason_detail: string | null;
       photo_url: string | null;
       ingredients: { id: number; name: string; unit: string } | null;

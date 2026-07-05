@@ -53,7 +53,7 @@ interface DetailLine {
   quantity: number;
   unit: string;
   unit_cost: number;
-  line_total: number;
+  total_cost: number;
   reason_detail: string | null;
   photo_url: string | null;
   ingredients: { id: number; name: string; unit: string } | null;
@@ -65,7 +65,7 @@ interface Props {
 }
 
 export function SupplierReturnDetailClient({ header, lines }: Props) {
-  const totalValue = lines.reduce((s, l) => s + Number(l.line_total ?? 0), 0);
+  const totalValue = lines.reduce((s, l) => s + Number(l.total_cost ?? 0), 0);
   const columns: DataTableColumn<DetailLine>[] = [
     {
       key: "ingredient",
@@ -96,11 +96,11 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
       ),
     },
     {
-      key: "line_total",
+      key: "total_cost",
       header: FORM_VI.amount,
       className: "text-right",
       render: (line) => (
-        <span className="font-mono">{formatReturnValue(line.line_total)}</span>
+        <span className="font-mono">{formatReturnValue(line.total_cost)}</span>
       ),
     },
   ];
@@ -200,7 +200,7 @@ function SupplierReturnLineItem({ line }: { line: DetailLine }) {
       </ItemContent>
       <ItemFooter>
         <span className="font-mono text-sm font-semibold">
-          {formatReturnValue(line.line_total)}
+          {formatReturnValue(line.total_cost)}
         </span>
       </ItemFooter>
     </Item>
