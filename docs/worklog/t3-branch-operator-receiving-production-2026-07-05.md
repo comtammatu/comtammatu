@@ -1,5 +1,7 @@
 # T3 Contract — Branch operator receiving (GRN) + production (D068)
 
+> Reconciled-through a5032545c2752b9b10de1199df7a4623fe064eb0
+
 Tier: **T3** (Auth/RLS + SECURITY-context function + prod migration). Debate: 4 lenses
 (Security, Data, Product, QA) spawned in parallel + orchestrator production trace.
 Owner decisions: 2026-07-05.

@@ -1,5 +1,7 @@
 # Inventory Unit System — Phase A2 (anchor-aware ingredient catalog)
 
+> Reconciled-through a5032545c2752b9b10de1199df7a4623fe064eb0
+
 Plan: `docs/plan/inventory-unit-system-2026-07-03.md` §5 (Catalog) / §6 (Phase A).
 Phase A (columns + `inv_derive_to_base_factor` + standard seed) is already applied
 to prod (ledger `20260703150555`). This slice wires the ingredient catalog form and
