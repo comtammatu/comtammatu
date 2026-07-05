@@ -1,6 +1,6 @@
 # Inventory remediation — tech-debt + realtime (2026-07-05)
 
-> Reconciled-through `0acdf5dc1`
+> Reconciled-through `a5310c8ef`
 >
 > Nguồn: audit 5-lane 2026-07-05 (dead-routes · scope · hub-debt · realtime ·
 > rpc-schema), verify code + PROD. Owner directive 2026-07-05: kiểm dead
@@ -46,14 +46,34 @@ publication.
 - 4 covering index (grn/production/transfers/po composite `(tenant, branch|
   to_branch, status)`).
 
-**PR client (T2, sau, auto):** hook wrapper `useBranchOpsRefresh(branchId)` đắp
-lên `useRealtimeChannel` (reconnect/visibility/poll default) + `<BranchOpsRefresh/>`
-coalesced `router.refresh` (qua `makeRealtimeCoalescer`, mirror
-`runner-realtime-refresh.tsx`) mount MỌI surface operator inventory (hub home,
-stock, grn list+detail, receive, transfer, stocktake, production, count-slips,
-waste). + notification CN-yêu-cầu: `dispatchNotificationOutbox` trong
-`createStockTransfer` + kind `inventory.transfer_requested` "Yêu cầu chuyển kho
-mới" → operator site đích. **KHÔNG** thêm TanStack/SWR (RSC là nguồn thật).
+**PR migration — MERGED #258** (a5310c8ef). 3-lens adversarial review: RLS
+receive-side NO-LEAK (fail-closed on every crafted-topic path, tenant guard
+composes), correctness 0 bug, 1 HIGH fixed (broadcast wrapped in
+`BEGIN/EXCEPTION WHEN OTHERS` → best-effort, không rollback được document
+write). PROD-apply chờ owner (guard-prod-db). baseline-replay xanh = full chain
+apply sạch trên DB trống.
+
+**PR client (T2) — this branch.** Extract chung (finance broadcast = use#1,
+branch-ops = use#2 → tách, no-new-debt): `useRealtimeRefresh({setupChannel,
+deps,enabled})` (`app/_hooks/use-realtime-refresh.ts`) sở hữu scheduler
+(trailing debounce 2.5s + min-interval 15s + visibility-aware 60s poll
+fallback) + `useRealtimeChannel`; `computeRefreshWaitMs` chuyển vào đây,
+finance hook thành wrapper mỏng (re-export cho test cũ). `<BranchOpsRefresh
+branchId>` (`(operator)/branch-ops-refresh.tsx`) subscribe private broadcast
+`branch:{id}:ops` event `ops` → coalesced `router.refresh`. Mount **1 chỗ** ở
+`(operator)/layout.tsx` → phủ MỌI surface operator (DRY, future-proof), không
+clone 20 mount. Static test contract client↔SQL topic/event/private
+(`tests/branch-ops-realtime-static.test.ts`). **KHÔNG** thêm TanStack/SWR (RSC
+là nguồn thật). Merge độc lập được: trước khi owner apply #258, subscribe chỉ
+nhận rỗng (graceful).
+
+**PR notification (sau).** Bell durable "CN yêu cầu hàng": SQL trigger trên
+`stock_transfers` INSERT → `INSERT INTO notifications` kind
+`inventory.transfer_requested` target `from_branch_id` (site trung tâm xử lý),
+sibling `trg_notify_transfer_in_transit`. + registry `messages/notifications.ts`
+kindLabel + `notification-item.tsx` iconFor + static test. LƯU Ý:
+`dispatchNotificationOutbox` là webhook relay (`notification_outbox`), KHÔNG
+phải bell feed (`notifications`) — bell do SQL trigger đổ.
 
 ## Còn (chưa làm)
 

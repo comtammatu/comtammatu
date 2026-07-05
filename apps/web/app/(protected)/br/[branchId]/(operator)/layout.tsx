@@ -17,6 +17,7 @@ import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
 import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { parseOperatorBranchId } from "../_lib/parse-branch-id";
+import { BranchOpsRefresh } from "./branch-ops-refresh";
 import { OperatorBottomNav } from "./operator-bottom-nav";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
 
@@ -63,6 +64,7 @@ export default async function OperatorLayout({
 
   return (
     <PwaRuntimeProvider>
+      <BranchOpsRefresh branchId={context.branchId} />
       <div className="flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
         <AppHeader
           title={context.branch.name}
