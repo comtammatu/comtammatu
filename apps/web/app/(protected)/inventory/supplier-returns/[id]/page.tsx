@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { fetchSupplierReturnDetail } from "@/(protected)/inventory/supplier-return-actions";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
+import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "@/(protected)/inventory/_components/audit-history-list";
 import { SupplierReturnDetailClient } from "./supplier-return-detail-client";
+import { SupplierReturnConfirmCta } from "./supplier-return-confirm-cta";
 
 interface SupplierReturnDetailPageContentProps {
   returnId: number;
@@ -19,9 +22,10 @@ export async function SupplierReturnDetailPageContent({
 }: SupplierReturnDetailPageContentProps) {
   if (!returnId || returnId <= 0) notFound();
 
-  const [result, auditLogs] = await Promise.all([
+  const [result, auditLogs, canConfirm] = await Promise.all([
     fetchSupplierReturnDetail(returnId),
     fetchEntityAuditLogs("supplier_return", returnId, 50),
+    currentUserHasAnyPermissionAny([PERMISSION_KEYS.SUPPLIER_RETURN_CONFIRM]),
   ]);
 
   if (!result.success || !result.data) notFound();
@@ -61,30 +65,38 @@ export async function SupplierReturnDetailPageContent({
   if (routeBranchId != null && header.branch_id !== routeBranchId) notFound();
 
   const content = (
-    <AppPageHeader
-      eyebrow={embedded ? undefined : "Kho hàng"}
-      title={header.return_number}
-      description={`NCC: ${header.suppliers?.name ?? "—"} · Chi nhánh: ${header.branches?.name ?? "—"}`}
-      tabs={
-        <AppPageTabs
-          items={[
-            { value: "overview", label: "Tổng quan" },
-            { value: "lines", label: "Dòng", count: lines.length },
-            { value: "history", label: "Lịch sử", count: auditLogs.length },
-          ]}
-        >
-          <TabsContent value="overview">
-            <SupplierReturnDetailClient header={header} lines={lines} />
-          </TabsContent>
-          <TabsContent value="lines">
-            <SupplierReturnDetailClient header={header} lines={lines} />
-          </TabsContent>
-          <TabsContent value="history">
-            <AuditHistoryList logs={auditLogs} />
-          </TabsContent>
-        </AppPageTabs>
-      }
-    />
+    <>
+      <AppPageHeader
+        eyebrow={embedded ? undefined : "Kho hàng"}
+        title={header.return_number}
+        description={`NCC: ${header.suppliers?.name ?? "—"} · Chi nhánh: ${header.branches?.name ?? "—"}`}
+        tabs={
+          <AppPageTabs
+            items={[
+              { value: "overview", label: "Tổng quan" },
+              { value: "lines", label: "Dòng", count: lines.length },
+              { value: "history", label: "Lịch sử", count: auditLogs.length },
+            ]}
+          >
+            <TabsContent value="overview">
+              <SupplierReturnDetailClient header={header} lines={lines} />
+            </TabsContent>
+            <TabsContent value="lines">
+              <SupplierReturnDetailClient header={header} lines={lines} />
+            </TabsContent>
+            <TabsContent value="history">
+              <AuditHistoryList logs={auditLogs} />
+            </TabsContent>
+          </AppPageTabs>
+        }
+      />
+      <SupplierReturnConfirmCta
+        returnId={header.id}
+        status={header.status}
+        resolution={header.resolution}
+        canConfirm={canConfirm}
+      />
+    </>
   );
 
   if (embedded) {
