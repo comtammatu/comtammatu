@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.14.0 | Updated: 2026-07-03 | Status: locked single source for UI agents
+> Version: 14.15.0 | Updated: 2026-07-05 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
@@ -142,6 +142,34 @@ Brand Concept 01 runtime mapping:
 - Body font: Geist.
 - Mono font: Geist Mono for tabular operational data.
 
+### Tint Opacity Scale
+
+Status-token tints use a locked three-step opacity scale so a "10% surface tint" reads the same everywhere instead of drifting across `/8`, `/12`, `/25`, `/35` …:
+
+| Step             | Opacity | Role                                           |
+| ---------------- | ------- | ---------------------------------------------- |
+| `fill`           | `/10`   | Default status-surface tint (`bg-warning/10`)  |
+| `fill-strong`    | `/15`   | Callout / emphasis surface (`bg-warning/15`)   |
+| `hairline-border`| `/20`   | Hairline border/ring on a tint (`border-…/20`) |
+
+- Applies to `(bg|border|ring|text|fill|stroke)-(warning|success|destructive|info|primary|accent|secondary)`.
+- Neutral muted fills are limited to `/30` and `/50` ONLY (`bg-muted/30`, `bg-muted/50`).
+- Every other step is forbidden: `/5`, `/8`, `/12`, `/25`, `/35`, `/45`, `/55`, `/60`, `/90`, `/95` (and any other value not in the locked set).
+- A solid status background uses the bare token (`bg-success`), never `bg-success/95`.
+- Enforced by the `tint-opacity` gate (status token `/N` where `N ∉ {10,15,20}`, `-muted/N` where `N ∉ {30,50}`), frozen per file and burning down.
+
+### Callout / tint chrome routing
+
+Any bordered / rounded `div` carrying a `bg-(warning|destructive|success|info)/N` tint MUST route through a primitive, not hand-rolled chrome:
+
+- `Alert` (icon + message + action) for actionable alerts.
+- `NoteCallout` (labeled note) for informational notes. The canonical warning callout is `NoteCallout tone="warning"` (`bg-warning/15`, no border).
+- No hand-rolled tinted callout chrome (a raw tinted, bordered, rounded box). See § Component Authority.
+
+### Sanctioned inline-style exception
+
+`apps/web/app/global-error.tsx` is the single file allowed to use inline `style` for presentation, because Tailwind / semantic tokens are unavailable there by Next.js necessity (root CSS may not have loaded when it renders). Its hex literals should align to Concept 01 — background = kem gạo, text = xanh đậm, and a muted-foreground tone — not neutral greys. This is a named exception, not license for inline styles anywhere else (see § Loading / Error / Not-found Frame).
+
 ## Typography Contract
 
 Runtime typography source:
@@ -204,8 +232,11 @@ A module that needs to deviate must update this contract first, not patch a sing
 | Within-section element gap   | `gap-2`                              | Default for inline rows / form fields |
 | Compact toolbar chip gap     | `gap-1.5`                            | Filter chips, badge clusters          |
 | Tight icon-label gap         | `gap-1`                              | Icon + 1–2 word label only            |
+| Sticky operator action bar   | `gap-2`                              | Touch CTA stack in a sticky footer    |
 
 Allowed gap scale in app code: `1`, `1.5`, `2`, `3`, `4`, `6`. Avoid `5`, `7`, `8` for horizontal flow — they break vertical rhythm with the heading scale below.
+
+Section-stack density is single-sourced on `AppPage`, not re-opened by page code. An operator client-root / page return MUST NOT open a fresh `flex flex-col gap-*` stack — sections are direct children of `AppPage`, so density (`gap-3` compact / `gap-4` default) is owned in exactly one place. A wrapper is permitted ONLY when a sticky-footer sibling requires it, and that wrapper MUST reuse `gap-3` verbatim (never `gap-2` / `gap-4`). Card / tap-target lists compose `gap-2` through `ItemGroup`; dense metadata lines use `gap-1`; never `space-y-*` for a section stack.
 
 Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card padding MUST come from `Card` / `Card size="sm"` (not ad-hoc on `<CardContent>`). When a card body needs table-edge alignment or horizontal table scrolling, use the named primitive props `CardContent flush` and/or `CardContent scroll` instead of local `p-0` / `overflow-x-auto` overrides.
 
@@ -219,8 +250,10 @@ Vertical rhythm uses flex gap, not `space-y-*`. Section / page / dialog / client
 | Section title           | `font-heading text-base font-semibold`                                  | `CardTitle`                                                            |
 | Sub-section / list head | `font-heading text-sm font-semibold`                                    | `Item title` slot                                                      |
 | Eyebrow / metadata      | `text-xs font-medium uppercase tracking-wide`                           | `AppPageHeader.eyebrow` (page-header lockup only)                      |
+| Panel / field / section uppercase label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome: `text-2xs font-medium uppercase tracking-wider`) | Panel / field / section eyebrow labels                 |
 | Table column header     | `text-xs font-medium uppercase tracking-wider text-muted-foreground`    | `TableHead`                                                            |
 | Dense eyebrow           | `text-2xs font-medium uppercase tracking-wider`                         | KDS chrome, audit row meta, mobile chrome labels                       |
+| KDS kitchen item-name   | `text-base font-semibold leading-6 xl:text-lg xl:leading-6`             | KDS ticket item-name (wall boards scale up at `xl`)                    |
 | Numeric input echo      | `text-3xl font-semibold tabular-nums`                                   | Number pad readout, scale display                                      |
 | Runner board header     | `text-runner-header font-semibold`                                      | Runner/KDS order board column headers, height-responsive display token |
 | Runner board row text   | `text-runner-board font-semibold`                                       | Runner/KDS order board data cells, height-responsive display token     |
@@ -228,13 +261,15 @@ Vertical rhythm uses flex gap, not `space-y-*`. Section / page / dialog / client
 | Runner board footer     | `text-runner-footer font-semibold`                                      | Runner/KDS order board footer, height-responsive display token         |
 | Display call target     | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing runner / queue display only                            |
 
+One role = one size (uppercase labels never scale by viewport). An uppercase eyebrow / panel / field / section label is a single locked role: `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome variant `text-2xs font-medium uppercase tracking-wider`). It is NEVER scaled by viewport — no `sm:text-sm` on eyebrows — and it NEVER uses `text-sm uppercase` / `text-base uppercase`. Every `text-sm uppercase` / `text-base uppercase` label is retired to this role. Enforced by the `uppercase-label-scale` gate (`uppercase` co-occurring with `text-sm` / `text-base`), frozen per file and burning down.
+
 `text-4xl`, `text-5xl` are NOT allowed in app surfaces. They live only in marketing/login splash. `text-3xl` is reserved for the numeric-input-echo role above (cashier number pad, scale display) and MUST be paired with `tabular-nums`. `text-3xs` is reserved for SVG axis labels and dense table micro-meta.
 
 Display call targets are a separate operational display role, not headings. Use them only on customer-facing queue/runner screens where the primary job is reading a stable serving target from distance. The displayed value must be stable (`table_number` for dine-in, `order_number` / `kitchen_ticket_number` for fallback), never a volatile render index.
 
 Runner/KDS customer boards must use Tailwind's built-in 12-column grid, not a custom percent grid: Đơn `col-span-4`, Số món `col-span-3`, Trạng thái `col-span-4`, Chờ `col-span-1`. The wait-time header is `Chờ`, not `Thời gian đợi`, because wait values are short and the label must not steal width from quantity/status. All four data cells use the same `text-runner-board` row typography. Runner display tokens scale with dynamic viewport height (`dvh`) and clamp between compact desktop and 2K/4K displays; they must not scale from viewport width. Compact desktop viewports must keep cell/header/footer padding below the `xl` breakpoint (`px-4 py-2`) so wrapped labels like `Mang về #041` and `2 món` do not collide with row dividers. The narrow wait-time column may use smaller horizontal padding than the other columns. Status cells MUST NOT add a separate `text-*` class on the data-text element; the label inherits row color so `tailwind-merge` cannot drop the shared row typography.
 
-`font-bold` only for receipt totals, page headers in print mode, and emphasis inside body copy. Default heading weight is `font-semibold`. `font-black` is not allowed in the app.
+Heading-weight lock: the default heading weight is `font-semibold`. `font-bold` is reserved for receipt totals and print-mode page headers ONLY. One owner-approved named exception: **POS menu item-name over photo → `font-bold` permitted** (legibility over the `pos-text-overlay` drop-shadow). Emphasis inside body copy may still use `font-bold` inline. `font-black` is not allowed in the app.
 
 Eyebrow tracking is locked per surface: `tracking-wide` for the single page-header eyebrow, `tracking-wider` for repeated dense / table / grid eyebrows. `tracking-tight` is allowed ONLY on `font-heading` titles — never on body, eyebrow, or `font-mono` text. Page H1 MUST come from `AppPageHeader`; hand-rolled `<h1>` headers (especially `sm:text-3xl`, which collides with the `text-3xl` numeric-echo reservation) are forbidden — route them through `AppPageHeader`.
 
@@ -366,6 +401,8 @@ The system is **border-first**: resting surfaces are separated by `--border`, no
 The only shared primitive layer is `packages/ui/src/components/*`.
 
 App-level page, section, toolbar, empty-state, and link-card composition is centralized in `apps/web/app/components/surface.tsx`. These exports are adapters around the shared primitives, not a second primitive library.
+
+Tinted callout chrome routes through a primitive: any bordered / rounded `div` carrying a `bg-(warning|destructive|success|info)/N` tint MUST be an `Alert` (icon + message + action) or a `NoteCallout` (labeled note), never a hand-rolled tinted box. The canonical warning callout is `NoteCallout tone="warning"` (`bg-warning/15`, no border). See § Token Contract → Callout / tint chrome routing and Tint Opacity Scale.
 
 Shared layout primitives also exported from `surface.tsx`:
 
@@ -683,6 +720,22 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
   asserts (a) each page resolves via `module-acl` to one family, (b) each
   navigable leaf has an inbound nav entry, (c) no two nav items in a shell share
   an `href`.
+
+#### Canonical operator-home skeleton (no KPI)
+
+The three operator hubs — Branch, Central Supply, Central Kitchen — share ONE
+ordered home recipe (owner-approved):
+
+1. **Primary CTA** — the single next safe action for this hub.
+2. **Live queue panel** — the hub's active work, live.
+3. **Curated job tiles** — the hub's next jobs, as tiles.
+
+The hubs differ only in which slots and data populate the recipe, never in the
+structure. Numbers appear as **badges on tiles / sections ONLY** — there are NO
+KPI / stat cards on operator surfaces (reaffirms the operator no-KPI rule: an
+operator home is job-first, not a dashboard). A hub that opens with a stat-card
+mosaic instead of `[primary CTA] → [live queue panel] → [curated job tiles]` is
+drift.
 
 ### D. Navigation Single-Source
 
