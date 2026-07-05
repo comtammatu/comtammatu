@@ -879,3 +879,18 @@ liệt kê trong báo cáo (mục 7).
 7. **Tier & gate:** T2 front-end (0 migration, 0 RLS, 0 tiền). Mỗi lát = 1 route family, 1 PR, **build phải khớp mockup** (`kho-tong-hub-mockup-2026-07-04.html`), QA 3 viewport, full gate fresh trước merge. Không đụng POS/KDS/Runner.
 
 **Consequences:** D066 §5–6 bị đè (native thay enhance-embedded); D066 §3 tile set `central_supply` 8→9 (thêm Danh mục); D066 §4 nới nhẹ (home có CTA+feed-duyệt, vẫn không Today-spine đầy đủ / không expiry-tồn alert). D059/D061 giữ nguyên (office=oversight, operator=native mobile). Không mở lại D019/D045/D058/D060/D063. Bếp TT là follow-on. Plan thi công: `docs/plan/kho-tong-hub-native-2026-07-04.md`. Đảo điểm 1–7 phải sửa bản ghi này trước.
+
+## D068: Kho CN tự nhận NCC (GRN) + sản xuất tại chi nhánh — branch_manager, own-branch (2026-07-05)
+
+**Context:** Owner chỉ đạo 2026-07-05: "Kho CN được quyền nhập hàng, không cần phải thông qua Kho Tổng" + "Sản xuất chi nhánh cũng có và làm được, Quản lý chi nhánh có quyền". Xác minh code+PROD: tầng data/RPC ĐÃ sẵn cho `branch` — `confirm_goods_receipt_note`, `create_production_order`, `confirm_production_order` đều whitelist kind `branch` và gate `has_permission(branch_id, …)`; cái chặn là role gate code (`PROCUREMENT_ROLES`, `PRODUCTION_OPERATOR_ROLES`, `MODULE_ACL.inventory_procurement`) + (production) RLS `production_orders_write`/`production_order_items_write` + hàm `is_inventory_production_operator()` hardcode `central_kitchen`/`production_manager`. GRN RLS `grn_insert` chỉ soi `has_permission_any` (không branch-membership). ĐẢO quyết định đã ghi (`docs/ref/inventory-rbac-matrix.md` — branch_manager bị cố tình gỡ procurement + hard-deny production, migration `20260505...v2`). T3 debate 4 lens: `docs/worklog/t3-branch-operator-receiving-production-2026-07-05.md`.
+
+**Decision (owner chỉ đạo 2026-07-05):**
+
+1. **Kho CN (`branch`) tự nhận hàng NCC (GRN) trực tiếp** — không bắt buộc qua Kho Tổng; luồng điều chuyển (Yêu cầu hàng → Nhận) GIỮ, đây là ADD không thay.
+2. **Sản xuất tại chi nhánh** — `branch` chạy được lệnh sản xuất (trước đây chỉ Bếp TT).
+3. **Actor = `branch_manager`, quyền TẠO + XÁC NHẬN** (post tồn / trừ NL), **chỉ trên chi nhánh của mình** (own-branch, enforce cả app-layer `isBranchScoped*` lẫn RLS `has_permission(branch_id,…)`).
+4. **NCC:** branch_manager được **tạo NCC nhanh** (danh mục NCC dùng chung tenant) — grant `procurement:supplier_manage`.
+5. **PO vẫn ĐÓNG với chi nhánh** (không đặt hàng NCC ở `branch`) — tách `PROCUREMENT_PO_ROLES` giữ PO cho owner/warehouse/production; giữ D066 §3 / D059 §7 (tile "Đơn đặt hàng" central-only).
+6. **Grant per-branch** (không tenant-wide): `procurement:grn_create/grn_confirm/read/supplier_manage` + `inventory:production_create/production_confirm` vào `role_templates.branch_manager` — migration file → PR → owner apply.
+
+**Consequences:** Đảo mục branch_manager trong `docs/ref/inventory-rbac-matrix.md` (update cùng PR). Mở rộng D000 (Kho CN nhận NCC + sản xuất, không chỉ giữ branch stock/consumption); không đảo D012/D020/D066 §3/D059 §7 (PO vẫn central). Migration đụng RLS + hàm `is_inventory_production_operator()` → owner-delegated apply; đến khi apply, branch_manager chưa có grant → tính năng ngủ, không vỡ. Đảo mục 1–6 phải sửa bản ghi này trước.

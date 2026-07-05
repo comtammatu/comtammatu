@@ -47,7 +47,9 @@ export {
   INVENTORY_CATALOG_ROLES,
   INVENTORY_OPS_ROLES,
   PROCUREMENT_ROLES,
+  PROCUREMENT_PO_ROLES,
   SUPPLIER_RETURN_ROLES,
+  isBranchScopedProcurementRole,
 } from "./inventory-roles";
 export type {
   NavItemConfig,

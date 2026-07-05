@@ -140,14 +140,14 @@ lý trường hợp này.
 | `inventory:stocktake_create`   |      ✅      |       ✅       |     ✅     |   ✅    |     ✅     |
 | `inventory:stocktake_complete` |      ✅      |       ✅       |     ✅     |   ✅    |     ✅     |
 | `inventory:writeoff`           |      ✅      |       ✅       |     ✅     |   ❌    |     ✅     |
-| `inventory:production_create`  |      ✅      |       ❌       |     ❌     |   ❌    |     ✅     |
-| `inventory:production_confirm` |      ✅      |       ❌       |     ❌     |   ❌    |     ✅     |
-| `procurement:read`             |      ✅      |       ❌       |     ✅     |   ❌    |     ✅     |
-| `procurement:supplier_manage`  |      ✅      |       ❌       |     ✅     |   ❌    |     ❌     |
+| `inventory:production_create`  |      ✅      |      ✅\*      |     ❌     |   ❌    |     ✅     |
+| `inventory:production_confirm` |      ✅      |      ✅\*      |     ❌     |   ❌    |     ✅     |
+| `procurement:read`             |      ✅      |       ✅       |     ✅     |   ❌    |     ✅     |
+| `procurement:supplier_manage`  |      ✅      |       ✅       |     ✅     |   ❌    |     ❌     |
 | `procurement:po_create`        |      ✅      |       ❌       |     ✅     |   ❌    |     ❌     |
 | `procurement:po_approve`       |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
-| `procurement:grn_create`       |      ✅      |       ❌       |     ✅     |   ❌    |     ✅     |
-| `procurement:grn_confirm`      |      ✅      |       ❌       |     ✅     |   ❌    |     ✅     |
+| `procurement:grn_create`       |      ✅      |      ✅\*      |     ✅     |   ❌    |     ✅     |
+| `procurement:grn_confirm`      |      ✅      |      ✅\*      |     ✅     |   ❌    |     ✅     |
 | `procurement:invoice_create`   |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
 | `procurement:invoice_match`    |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
 | `menu:read`                    |      ✅      |       ✅       |     ❌     |   ❌    |     ✅     |
@@ -167,7 +167,7 @@ lý trường hợp này.
 - `branch_manager` giữ `inventory:transfer_receive` chỉ để nhận inbound về đúng branch của mình.
 - Multi-branch oversight phải đi qua explicit branch grants hoặc tenant-level permission rõ ràng; không có scope trung gian.
 - `head_chef` / `production_manager` sở hữu vòng sản xuất Bếp Trung Tâm: nhận hàng, sản xuất, rồi create/ship transfer thật về Kho CN, và quản trị production recipes.
-- Production hard-deny `branch_manager` ở Server Actions, RPC và RLS dù có manual grant production/menu; operator production là `production_manager`, còn `owner` là oversight/emergency access.
+- **D068 (2026-07-05):** `branch_manager` được nhận NCC trực tiếp (GRN) và chạy sản xuất **tại chi nhánh của mình** (own-branch) — grant `procurement:grn_create/grn_confirm/read/supplier_manage` + `inventory:production_create/production_confirm`, per-branch (không tenant-wide). Enforce own-branch cả app-layer (`isBranchScopedProcurementRole` / `isProductionBranchScopedRole`) lẫn RLS (`has_permission(branch_id, …)`). PO vẫn ĐÓNG với chi nhánh (`procurement:po_create` = ❌; PO actions gate `PROCUREMENT_PO_ROLES`). Chi tiết: `docs/plan/decisions.md` D068.
 
 ---
 
@@ -196,7 +196,7 @@ Inventory RPC chính hiện đã permission-gated:
 - `stock_transfer_mark_in_transit` → `inventory:transfer_ship`
 - `stock_transfer_confirm_receive` / `stock_transfer_receive` → `inventory:transfer_receive`
 
-Production DB contract dùng helper `is_inventory_production_operator()` cho RPC và RLS của `production_recipes`, `production_orders`, `production_order_items`. Vì vậy manual permission grant không cho `branch_manager` bypass qua direct RPC hoặc PostgREST.
+Production DB contract dùng helper `is_inventory_production_operator()` cho RPC và RLS của `production_recipes`, `production_orders`, `production_order_items`. Post-D068 helper gồm `owner`, `production_manager`, `branch_manager` (migration `20260706150000`), và RLS `production_orders_write`/`production_order_items_write` nhận cả `branch_kind IN ('central_kitchen','branch')` — nhưng branch-membership vẫn khóa bằng `has_permission(branch_id, …)` nên `branch_manager` chỉ sản xuất được ở chi nhánh của mình. `production_recipes` (BOM) vẫn cần `menu:write` → `branch_manager` không CRUD được recipe (không có `menu:write`).
 
 Một số RPC vẫn dùng `auth_role()` như guard phụ:
 
@@ -208,7 +208,7 @@ Một số RPC vẫn dùng `auth_role()` như guard phụ:
 
 ## 7. Open Questions / Known Drift
 
-1. **Template drift** — closed by `20260505094000_inventory_rbac_template_contract_v2.sql`: add missing chi nhánh transfer grants for `head_chef`, remove procurement keys from `branch_manager`, and keep manual overrides reviewable.
+1. **Template drift** — closed by `20260505094000_inventory_rbac_template_contract_v2.sql`: add missing chi nhánh transfer grants for `head_chef` and keep manual overrides reviewable. Its "remove procurement keys from `branch_manager`" clause is **reversed by D068 (2026-07-05)** — `branch_manager` re-granted GRN + production + supplier-manage + procurement-read (own-branch), migration `20260706150000`. See `docs/plan/decisions.md` D068.
 2. **Intermediate scope** — Multi-branch access is explicit branch grants or tenant-level permission only.
 3. **Held permissions của warehouse_manager** (`po_approve`, `invoice_*`) — cố ý để owner / accounting. Document không ghi là thiếu quyền.
 4. **Manual permission overrides** — migration contract chỉ expire grant có `source_template` trỏ tới template hệ thống hiện tại. Grant thủ công phải review bằng admin/audit flow nếu muốn thu hồi.

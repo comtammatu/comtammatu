@@ -4,7 +4,11 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { JwtClaims } from "@comtammatu/shared/auth";
-import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  PROCUREMENT_ROLES,
+  isBranchScopedProcurementRole,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
 import { resolveCentralSiteHomeBranchId } from "@/_lib/branch-hub-device";
@@ -15,16 +19,15 @@ import { dispatchNotificationOutbox } from "./notifications-actions";
 
 const ROLES = PROCUREMENT_ROLES;
 
-function isBranchScopedProcurementRole(role: string) {
-  return role === "warehouse_manager" || role === "production_manager";
-}
-
 /**
- * Central-site procurement operators (warehouse_manager, production_manager)
- * carry `branch_id` null in claims (D055 §1); their operable site is the
- * central branch matching their role kind. Compare against that resolved home
- * — not the null claim — so they can write GRNs for their own Kho Tổng /
- * Bếp Trung Tâm. Pinned branch roles keep the strict claim equality.
+ * Cross-branch guard (D068 §Conflicts-resolved 3). `branch_manager` is a
+ * branch-scoped procurement role (its claims carry a non-null `branch_id`), so
+ * `canAccessProcurementBranch` enforces strict `effectiveBranchId === branchId`
+ * — branch A cannot write a GRN for branch B. Central-site operators
+ * (warehouse_manager, production_manager) carry `branch_id` null in claims
+ * (D055 §1); their operable site is the central branch matching their role
+ * kind, so compare against that resolved home — not the null claim — so they
+ * can write GRNs for their own Kho Tổng / Bếp Trung Tâm.
  */
 async function canAccessProcurementBranch(
   supabase: Parameters<typeof resolveCentralSiteHomeBranchId>[0],

@@ -11,6 +11,7 @@ import { fetchIngredients, fetchUnitOptions } from "./ingredient-actions";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
   canAccessProductionSurface,
+  isProductionBranchKind,
   isProductionBranchScopedRole,
   type ProductionOperatorRole,
 } from "./_lib/production-roles";
@@ -107,7 +108,8 @@ export async function hasCurrentProductionBranchAccess(
     .eq("id", branchId)
     .maybeSingle();
 
-  return !error && data?.branch_kind === "central_kitchen";
+  // Production runs at the central kitchen OR at a branch (D068).
+  return !error && isProductionBranchKind(data?.branch_kind);
 }
 
 export async function loadProductionSurfaceData({
@@ -178,8 +180,9 @@ export async function loadProductionSurfaceData({
     ]);
 
   const branches = (branchesRes.data ?? []) as BranchPreviewRow[];
+  // Production sites = central kitchen OR any branch (D068).
   let productionBranches: BranchOption[] = branches
-    .filter((branch) => branch.branch_kind === "central_kitchen")
+    .filter((branch) => isProductionBranchKind(branch.branch_kind))
     .map((branch) => ({
       id: branch.id,
       name: branch.name,

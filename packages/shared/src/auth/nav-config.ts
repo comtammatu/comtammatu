@@ -220,7 +220,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/production",
     label: "Sản xuất",
-    kinds: ["central_kitchen"],
+    kinds: ["central_kitchen", "branch"],
   },
   {
     moduleKey: "inventory",

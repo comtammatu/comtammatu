@@ -2,7 +2,11 @@
 
 import { z } from "zod";
 import type { JwtClaims } from "@comtammatu/shared/auth";
-import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  PROCUREMENT_PO_ROLES,
+  isBranchScopedProcurementRole,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction, withActionPositional } from "@/_lib/with-action";
 import { resolveCentralSiteHomeBranchId } from "@/_lib/branch-hub-device";
@@ -10,11 +14,10 @@ import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 
-const ROLES = PROCUREMENT_ROLES;
-
-function isBranchScopedProcurementRole(role: string) {
-  return role === "warehouse_manager" || role === "production_manager";
-}
+// PO lifecycle is central-only (D068 §5): branch_manager is rejected by role
+// here, independent of any grant. `isBranchScopedProcurementRole` (shared) then
+// pins the remaining central roles to their own site.
+const ROLES = PROCUREMENT_PO_ROLES;
 
 /**
  * Central-site procurement operators (warehouse_manager, production_manager)

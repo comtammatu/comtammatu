@@ -57,11 +57,18 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     ],
     label: getModuleLabelVi("inventory"),
   },
-  /** NCC, PO, GRN, HĐ NCC, công thức — branch-scoped inventory */
+  /**
+   * NCC, PO, GRN, HĐ NCC, công thức — branch-scoped inventory. `branch_manager`
+   * added (D068) so a Kho CN reaches the GRN/production operator routes and the
+   * `GrnNewPageContent` canAccess gate. Office PO/invoice reads become reachable
+   * but PO create is role-split-closed (PROCUREMENT_PO_ROLES), invoice-match is
+   * key-closed, and the PO nav tile stays central-kind-gated.
+   */
   inventory_procurement: {
     path: "/inventory/suppliers",
     allowedRoles: [
       "owner",
+      "branch_manager",
       "warehouse_manager",
       "production_manager",
     ],

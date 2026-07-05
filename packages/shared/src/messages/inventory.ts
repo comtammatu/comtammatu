@@ -510,6 +510,14 @@ export const INVENTORY_VI = {
     `${count} dòng GRN cần kiểm tra giá`,
   dashboardGrnPriceVarianceHint:
     "Giá nhập lệch lớn so với PO trong 30 ngày qua.",
+  // Production surface guards — generalized copy (D068): production runs at the
+  // central kitchen or at a branch, not central-kitchen-only.
+  productionSiteRequired:
+    "Chỉ Bếp Trung Tâm hoặc chi nhánh mới được phép tạo lệnh sản xuất.",
+  productionSiteCheckFailed: "Không thể kiểm tra quyền truy cập điểm sản xuất.",
+  productionSiteMigrationRequired:
+    "Cần áp dụng migration điểm vận hành trước khi dùng màn này.",
+  productionSiteNoneConfigured: "Chưa có điểm sản xuất đang hoạt động.",
 } as const;
 
 export type InventoryKey = keyof typeof INVENTORY_VI;

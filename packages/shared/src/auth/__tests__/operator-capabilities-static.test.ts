@@ -189,8 +189,10 @@ test("resolveOperatorTiles -> production tile is native under stock at central_k
   assert.equal(productionTile?.label, "Sản xuất");
 });
 
-test("resolveOperatorTiles -> production tile never renders outside central_kitchen", () => {
-  for (const branchKind of ["branch", "central_supply"] as const) {
+test("resolveOperatorTiles -> production tile renders at central_kitchen and branch, never at central_supply (D068)", () => {
+  // D068: branch runs production, so the "Sản xuất" tile is now curated for
+  // `branch` too. It must still never appear at `central_supply` (Kho Tổng).
+  for (const branchKind of ["central_kitchen", "branch"] as const) {
     for (const role of ["owner", "production_manager"] as const) {
       const groups = resolveOperatorTiles(role, 15, branchKind);
       const hrefs = groups.flatMap((group) =>
@@ -198,10 +200,22 @@ test("resolveOperatorTiles -> production tile never renders outside central_kitc
       );
       assert.equal(
         hrefs.includes("/br/15/stock/production"),
-        false,
-        `${role}/${branchKind} must not see production tile`,
+        true,
+        `${role}/${branchKind} must see production tile`,
       );
     }
+  }
+
+  for (const role of ["owner", "production_manager"] as const) {
+    const groups = resolveOperatorTiles(role, 15, "central_supply");
+    const hrefs = groups.flatMap((group) =>
+      group.tiles.map((tile) => tile.href),
+    );
+    assert.equal(
+      hrefs.includes("/br/15/stock/production"),
+      false,
+      `${role}/central_supply must not see production tile`,
+    );
   }
 });
 

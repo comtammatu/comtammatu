@@ -330,12 +330,15 @@ test("procurement and production route central sites through the new model", () 
     procurementBranches,
     /\.in\("branch_kind", \["branch", "central_supply", "central_kitchen"\]\)/,
   );
-  assert.match(productionData, /data\?\.branch_kind === "central_kitchen"/);
+  // D068: production runs at central_kitchen OR branch — the branch-kind gate
+  // moved to the shared `isProductionBranchKind` predicate (central_kitchen +
+  // branch), replacing the central-kitchen-only equality checks.
+  assert.match(productionData, /isProductionBranchKind\(data\?\.branch_kind\)/);
   assert.match(
     productionData,
-    /branch\.branch_kind === "central_kitchen"/,
+    /isProductionBranchKind\(branch\.branch_kind\)/,
   );
-  assert.match(productionShared, /data\?\.branch_kind !== "central_kitchen"/);
+  assert.match(productionShared, /!isProductionBranchKind\(data\?\.branch_kind\)/);
   assert.match(labels, /central_supply: "Kho Tổng"/);
   assert.match(labels, /central_kitchen: "Bếp Trung Tâm"/);
 });

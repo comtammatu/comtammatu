@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
+  isProductionBranchKind,
   isProductionBranchScopedRole,
   PRODUCTION_OPERATOR_ROLES,
 } from "./production-roles";
@@ -72,21 +74,22 @@ export async function requireProductionBranch(
   if (error?.code === "42703") {
     return {
       ok: false,
-      error: "Cần áp dụng migration điểm vận hành trước khi dùng màn này.",
+      error: INVENTORY_VI.productionSiteMigrationRequired,
     };
   }
 
   if (error) {
     return {
       ok: false,
-      error: "Không thể kiểm tra quyền truy cập Bếp Trung Tâm.",
+      error: INVENTORY_VI.productionSiteCheckFailed,
     };
   }
 
-  if (data?.branch_kind !== "central_kitchen") {
+  // Production runs at the central kitchen OR at a branch (D068).
+  if (!isProductionBranchKind(data?.branch_kind)) {
     return {
       ok: false,
-      error: "Chỉ Bếp Trung Tâm mới được phép tạo lệnh sản xuất.",
+      error: INVENTORY_VI.productionSiteRequired,
     };
   }
 
@@ -160,12 +163,12 @@ export async function requireProductionAccess(
   if (error) {
     return {
       ok: false,
-      error: "Không thể kiểm tra quyền truy cập Bếp Trung Tâm.",
+      error: INVENTORY_VI.productionSiteCheckFailed,
     };
   }
 
   if (!data) {
-    return { ok: false, error: "Chưa có Bếp Trung Tâm đang hoạt động." };
+    return { ok: false, error: INVENTORY_VI.productionSiteNoneConfigured };
   }
 
   return { ok: true };

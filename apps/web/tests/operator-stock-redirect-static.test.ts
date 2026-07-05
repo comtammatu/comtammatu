@@ -1120,7 +1120,7 @@ test("operator production renders branch-native inside the central_kitchen opera
   // declarative: nav-config `kinds` + the operator-capabilities kind filter.
   assert.match(
     navConfig,
-    /hrefTemplate: "\/br\/\{branchId\}\/stock\/production",\s*label: "Sản xuất",\s*kinds: \["central_kitchen"\]/,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/production",\s*label: "Sản xuất",\s*kinds: \["central_kitchen", "branch"\]/,
   );
   assert.match(
     operatorCapabilities,
