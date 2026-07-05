@@ -234,37 +234,46 @@
     </div>
 
     <div>
-    <div class="phone">
+    <div class="phone" style="position: relative; overflow: hidden;">
       <div class="hd"><i class="ti ti-arrow-left" style="font-size: 18px; color: var(--text-secondary);"></i><span style="font-family: monospace; font-size: 13px; font-weight: 600; flex: 1;">CH-0705-01</span><span style="font-size: 11px; color: var(--text-muted);">từ Kho Tổng</span></div>
       <div class="body" style="gap: 8px;">
         <div style="display: flex; align-items: center; gap: 8px;">
           <div style="flex: 1; height: 5px; background: var(--surface-2); border-radius: 4px; overflow: hidden;"><div style="width: 30%; height: 100%; background: var(--text-accent);"></div></div>
           <span style="font-size: 11px; color: var(--text-secondary); font-weight: 500;">3/10 dòng</span>
         </div>
+        <!-- Whole list stays; the pad is a drawer, not inline — tap any row to raise it. -->
         <div class="card2" style="padding: 8px 10px; display: flex; align-items: center; gap: 8px;">
           <i class="ti ti-circle-check" style="font-size: 17px; color: var(--text-accent);"></i>
           <div style="flex: 1;"><div style="font-size: 12px; font-weight: 500;">Sườn heo</div><div style="font-size: 11px; color: var(--text-muted);">Gửi 5 kg</div></div>
-          <span style="font-family: monospace; font-size: 14px; font-weight: 600;">5</span>
+          <span style="font-family: monospace; font-size: 14px; font-weight: 600; background: var(--bg-accent); color: var(--text-accent); border-radius: var(--radius); padding: 4px 12px;">5</span>
         </div>
-        <div class="card2" style="border-color: var(--border-strong); padding: 8px 10px; display: flex; align-items: center; gap: 8px;">
+        <div class="card2" style="padding: 8px 10px; display: flex; align-items: center; gap: 8px;">
           <i class="ti ti-circle" style="font-size: 17px; color: var(--text-muted);"></i>
           <div style="flex: 1;"><div style="font-size: 12px; font-weight: 500;">Gạo tấm</div><div style="font-size: 11px; color: var(--text-muted);">Gửi 50 kg</div></div>
-          <span style="font-family: monospace; font-size: 14px; font-weight: 600; background: var(--bg-accent); color: var(--text-accent); border-radius: var(--radius); padding: 4px 12px;">50</span>
+          <span style="font-family: monospace; font-size: 14px; font-weight: 600; color: var(--text-muted);">50</span>
         </div>
-        <div class="card2">
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font-size: 15px; font-weight: 500;">
-            <span style="padding: 8px; border-bottom: 0.5px solid var(--border); border-right: 0.5px solid var(--border);">1</span><span style="padding: 8px; border-bottom: 0.5px solid var(--border); border-right: 0.5px solid var(--border);">2</span><span style="padding: 8px; border-bottom: 0.5px solid var(--border);">3</span>
-            <span style="padding: 8px; border-right: 0.5px solid var(--border);">4</span><span style="padding: 8px; border-right: 0.5px solid var(--border);">5</span><span style="padding: 8px;">6</span>
-          </div>
-          <div style="display: flex; border-top: 0.5px solid var(--border);">
-            <span style="flex: 1; text-align: center; padding: 8px; font-size: 13px; color: var(--text-secondary);">…</span>
-            <span style="flex: 2; text-align: center; padding: 8px; font-size: 13px; font-weight: 500; background: var(--text-primary); color: var(--surface-2);">Dòng kế →</span>
-          </div>
+        <div class="card2" style="padding: 8px 10px; display: flex; align-items: center; gap: 8px;">
+          <i class="ti ti-circle" style="font-size: 17px; color: var(--text-muted);"></i>
+          <div style="flex: 1;"><div style="font-size: 12px; font-weight: 500;">Rau củ</div><div style="font-size: 11px; color: var(--text-muted);">Gửi 15 kg</div></div>
+          <span style="font-family: monospace; font-size: 14px; font-weight: 600; color: var(--text-muted);">15</span>
         </div>
       </div>
       <div style="padding: 9px 12px; border-top: 0.5px solid var(--border);"><button style="width: 100%; background: transparent; color: var(--text-muted); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px; font-size: 13px;">Xác nhận nhận hàng (còn 7 dòng)</button></div>
+      <!-- Number-pad DRAWER: rises from the bottom on row tap; list stays put behind. -->
+      <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.28);"></div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface-1); border-top: 0.5px solid var(--border); border-radius: 16px 16px 0 0; padding: 12px;">
+        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">Sườn heo · Gửi 5 kg</div>
+        <div style="font-size: 26px; font-weight: 700; font-family: monospace; margin: 2px 0 8px;">5<span style="font-size: 13px; font-weight: 400; color: var(--text-muted);"> kg</span></div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 18px; font-weight: 500; text-align: center;">
+          <span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius);">7</span><span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius);">8</span><span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius);">9</span>
+          <span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius);">4</span><span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius);">5</span><span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius);">6</span>
+          <span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius);">1</span><span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius);">2</span><span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius);">3</span>
+          <span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius);">.</span><span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius);">0</span><span style="padding: 10px; background: var(--surface-2); border-radius: var(--radius); color: var(--text-secondary);"><i class="ti ti-backspace"></i></span>
+        </div>
+        <button style="width: 100%; margin-top: 8px; background: var(--text-primary); color: var(--surface-2); border: none; border-radius: var(--radius); padding: 12px; font-size: 14px; font-weight: 600;">Xác nhận</button>
+      </div>
     </div>
-    <div class="cap">7 · Nhận chuyển — bấm số tại chỗ</div>
+    <div class="cap">7 · Nhận chuyển — bấm số qua drawer</div>
     </div>
 
     <div>
