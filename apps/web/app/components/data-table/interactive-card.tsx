@@ -5,7 +5,7 @@ import { Slot } from "@comtammatu/ui/components/slot";
 import { cn } from "@comtammatu/ui";
 
 const INTERACTIVE_CARD_BASE_CLASSNAME =
-  "flex items-center gap-3 rounded-md border bg-card text-card-foreground outline-none transition-[transform,box-shadow,background-color] hover:bg-accent/40 hover:shadow-effect-card-hover focus-visible:ring-[3px] focus-visible:ring-foreground active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50";
+  "flex items-center gap-3 rounded-md border bg-card text-card-foreground outline-none transition hover:bg-accent/20 hover:shadow-effect-card-hover focus-visible:ring-[3px] focus-visible:ring-foreground active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50";
 
 const MIN_HEIGHT_CLASSNAME = {
   default: "",
