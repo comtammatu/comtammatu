@@ -43,6 +43,7 @@ import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
+import { parseOperatorBranchId } from "../_lib/parse-branch-id";
 import { fetchBranchDayStatus, fetchBranchQueueCounts } from "./dashboard/data";
 import { resolveOperatorTileIcon } from "./operator-tile-icons";
 
@@ -207,11 +208,6 @@ function CompactQueueSection({ rows }: { rows: QueueRow[] }) {
   );
 }
 
-function parseBranchId(raw: string): number | null {
-  const branchId = Number(raw);
-  return Number.isInteger(branchId) && branchId > 0 ? branchId : null;
-}
-
 // Approved home tile curation per central kind (design contract screens 1+4):
 // four job tiles; every other job stays reachable via the CTA, the queue feed,
 // the bottom nav, and /more. Suffixes are matched against tile hrefs.
@@ -236,7 +232,7 @@ export default async function OperatorHomePage({
   params: Promise<{ branchId: string }>;
 }) {
   const { branchId: rawBranchId } = await params;
-  const branchId = parseBranchId(rawBranchId);
+  const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
 
   const authState = await loadAuthState();

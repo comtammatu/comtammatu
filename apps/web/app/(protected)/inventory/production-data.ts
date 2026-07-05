@@ -6,6 +6,7 @@ import {
   type JwtClaims,
   type PermissionKey,
 } from "@comtammatu/shared/auth";
+import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { fetchIngredients, fetchUnitOptions } from "./ingredient-actions";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
@@ -77,18 +78,6 @@ async function currentUserHasAnyPermission(
   return !error && data === true;
 }
 
-async function currentUserHasOneOfPermissions(
-  supabase: InventorySupabase,
-  keys: readonly PermissionKey[],
-): Promise<boolean> {
-  for (const key of keys) {
-    if (await currentUserHasAnyPermission(supabase, key)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /**
  * `production_manager` claims stay tenant-level (D055 §1: `branch_id` null)
  * so this role's own tenant-wide inventory scope is not pinned to one
@@ -148,8 +137,8 @@ export async function loadProductionSurfaceData({
     canAdjustStock,
     hasBranchAccess,
   ] = await Promise.all([
-    currentUserHasOneOfPermissions(supabase, PRODUCTION_OPEN_PERMISSIONS),
-    currentUserHasOneOfPermissions(supabase, CATALOG_MANAGE_PERMISSIONS),
+    currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
+    currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
     currentUserHasAnyPermission(supabase, PERMISSION_KEYS.MENU_WRITE),
     currentUserHasAnyPermission(
       supabase,

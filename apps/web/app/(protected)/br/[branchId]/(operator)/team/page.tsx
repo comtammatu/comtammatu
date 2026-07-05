@@ -4,15 +4,11 @@ import { AppEmptyState, AppPageHeader } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
+import { parseOperatorBranchId } from "../../_lib/parse-branch-id";
 import { fetchTeamBoard, type TeamBoardRow } from "./data";
 import { TeamBoardClient } from "./team-board-client";
 
 const copy = messages.employee.teamBoard;
-
-function parseBranchId(raw: string): number | null {
-  const branchId = Number(raw);
-  return Number.isInteger(branchId) && branchId > 0 ? branchId : null;
-}
 
 export default async function TeamBoardPage({
   params,
@@ -20,7 +16,7 @@ export default async function TeamBoardPage({
   params: Promise<{ branchId: string }>;
 }) {
   const { branchId: rawBranchId } = await params;
-  const branchId = parseBranchId(rawBranchId);
+  const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
 
   const { supabase, claims } = await loadAuthState();
