@@ -32,6 +32,11 @@ const BROAD_GRANT_ALLOWLIST = new Set([
   // row. Granted to authenticated for the web bill preview; the enqueue_*_bill
   // definers also call it. No in-body boundary needed — RLS is the boundary.
   "bill_line_items",
+  // Pure catalog-factor resolver: parses the caller's jsonb and delegates to
+  // inv_derive_to_base_factor (itself tenant-scoped from auth_tenant_id());
+  // reads no tables and mutates nothing, so a direct browser call only echoes
+  // arithmetic. Gated at the calling upsert_ingredient_catalog RPC.
+  "inv_catalog_unit_to_base",
 ]);
 
 // REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC | anon | authenticated

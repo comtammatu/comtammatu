@@ -9,6 +9,8 @@ export interface IngredientUnitRow {
   unit_name?: string | null;
   to_base_factor: number;
   is_base: boolean;
+  anchor_unit_id?: number | null;
+  anchor_factor?: number | null;
   is_active: boolean;
   allow_purchase: boolean;
   allow_issue: boolean;
@@ -43,6 +45,9 @@ export interface UnitOption {
   id: number;
   code: string;
   name: string;
+  dimension: "mass" | "volume" | null;
+  is_standard: boolean;
+  standard_factor: number | null;
 }
 
 export interface CategoryOption {

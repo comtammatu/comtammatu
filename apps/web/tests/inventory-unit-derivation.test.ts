@@ -185,3 +185,66 @@ test("a cyclical anchor chain is rejected fail-closed", () => {
       err.message === "unit_anchor_cycle",
   );
 });
+
+test("owner scenario: 1 Thung = 24 Chai, 1 Chai = 250 ml resolves on an ml base", () => {
+  // Flagship case. Base = ml (standard volume). Chai anchors to ml
+  // (1 chai = 250 ml); Thung anchors to Chai (1 thung = 24 chai). Thung must
+  // resolve two hops down to 6000 ml without the caller pre-flattening.
+  const ML = 8;
+  const CHAI = 9;
+  const THUNG = 10;
+  const units = new Map<number, DerivationUnitInfo>([
+    [ML, { id: ML, dimension: "volume", is_standard: true, standard_factor: 1 }],
+    [CHAI, { id: CHAI, dimension: null, is_standard: false, standard_factor: null }],
+    [THUNG, { id: THUNG, dimension: null, is_standard: false, standard_factor: null }],
+  ]);
+  const mlRow: DerivationRow = {
+    unit_id: ML,
+    is_base: true,
+    anchor_unit_id: null,
+    anchor_factor: null,
+  };
+  const chaiRow: DerivationRow = {
+    unit_id: CHAI,
+    is_base: false,
+    anchor_unit_id: ML,
+    anchor_factor: 250,
+  };
+  const thungRow: DerivationRow = {
+    unit_id: THUNG,
+    is_base: false,
+    anchor_unit_id: CHAI,
+    anchor_factor: 24,
+  };
+  const rows = rowsMap([mlRow, chaiRow, thungRow]);
+
+  assert.equal(deriveToBaseFactor(ML, mlRow, units, rows), 1);
+  assert.equal(deriveToBaseFactor(ML, chaiRow, units, rows), 250);
+  assert.equal(deriveToBaseFactor(ML, thungRow, units, rows), 6000);
+});
+
+test("standard secondary on a packaging base is rejected (A2 RPC keeps the client factor)", () => {
+  // base = chai (packaging), secondary = ml (standard volume), no anchor. A
+  // standard unit needs a same-dimension standard base, so the derivation
+  // rejects this shape. The A2 resolver therefore keeps the anchorless client
+  // to_base_factor rather than force-deriving, which is why such legacy
+  // ingredients still save unchanged.
+  const ML = 8;
+  const CHAI = 9;
+  const units = new Map<number, DerivationUnitInfo>([
+    [ML, { id: ML, dimension: "volume", is_standard: true, standard_factor: 1 }],
+    [CHAI, { id: CHAI, dimension: null, is_standard: false, standard_factor: null }],
+  ]);
+  const mlRow: DerivationRow = {
+    unit_id: ML,
+    is_base: false,
+    anchor_unit_id: null,
+    anchor_factor: null,
+  };
+  assert.throws(
+    () => deriveToBaseFactor(CHAI, mlRow, units, rowsMap([mlRow])),
+    (err: unknown) =>
+      err instanceof UnitDerivationError &&
+      err.message === "standard_unit_dimension_mismatch",
+  );
+});

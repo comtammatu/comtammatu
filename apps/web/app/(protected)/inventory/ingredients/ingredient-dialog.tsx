@@ -35,6 +35,12 @@ import { createIngredient, updateIngredient } from "../ingredient-actions";
 import type { CategoryOption, IngredientRow, UnitOption } from "../_lib/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "../_lib/constants";
 import { parseOptionalNumber } from "../_lib/format";
+import {
+  deriveToBaseFactor,
+  UnitDerivationError,
+  type DerivationRow,
+  type DerivationUnitInfo,
+} from "../_lib/unit-derivation";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 
@@ -42,6 +48,13 @@ const copy = messages.inventoryMaster.ingredientForm;
 const dialogCopy = messages.inventory.ingredients.dialog;
 
 const NO_CATEGORY = "none";
+const NO_ANCHOR = "";
+
+// Conversion factors are not money; format without a locale to keep the VND
+// SSoT formatter reserved for currency. Trims trailing zeros to 6 places.
+function formatFactor(value: number): string {
+  return Number(value.toFixed(6)).toString();
+}
 
 const unitRowSchema = z.object({
   unit_id: z.string().trim().min(1, { error: copy.units.selectUnit }),
@@ -56,6 +69,8 @@ const unitRowSchema = z.object({
       },
       { error: copy.units.factorPositive },
     ),
+  anchor_unit_id: z.string(),
+  anchor_factor: z.string(),
   is_base: z.boolean(),
   allow_purchase: z.boolean(),
   allow_issue: z.boolean(),
@@ -102,6 +117,8 @@ function makeBaseRow(unitId = ""): UnitFormRow {
   return {
     unit_id: unitId,
     to_base_factor: "1",
+    anchor_unit_id: NO_ANCHOR,
+    anchor_factor: "",
     is_base: true,
     allow_purchase: true,
     allow_issue: true,
@@ -113,6 +130,8 @@ function makeSecondaryRow(): UnitFormRow {
   return {
     unit_id: "",
     to_base_factor: "1",
+    anchor_unit_id: NO_ANCHOR,
+    anchor_factor: "",
     is_base: false,
     allow_purchase: false,
     allow_issue: false,
@@ -128,6 +147,9 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
         .map((u) => ({
           unit_id: String(u.unit_id),
           to_base_factor: String(u.to_base_factor),
+          anchor_unit_id:
+            u.anchor_unit_id != null ? String(u.anchor_unit_id) : NO_ANCHOR,
+          anchor_factor: u.anchor_factor != null ? String(u.anchor_factor) : "",
           is_base: u.is_base,
           allow_purchase: u.allow_purchase,
           allow_issue: u.allow_issue,
@@ -169,6 +191,54 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
   };
 }
 
+/**
+ * Builds the lookups the derivation walker needs from the live form state:
+ * unit metadata by id (from the static catalog) and the anchor row for each
+ * unit currently on the ingredient (from the watched form rows).
+ */
+function buildDerivationLookups(
+  rows: UnitFormRow[],
+  unitOptions: UnitOption[],
+): {
+  baseUnitId: number | null;
+  unitsById: Map<number, DerivationUnitInfo>;
+  rowsByUnitId: Map<number, DerivationRow>;
+} {
+  const unitsById = new Map<number, DerivationUnitInfo>();
+  for (const option of unitOptions) {
+    unitsById.set(option.id, {
+      id: option.id,
+      dimension: option.dimension,
+      is_standard: option.is_standard,
+      standard_factor: option.standard_factor,
+    });
+  }
+
+  const rowsByUnitId = new Map<number, DerivationRow>();
+  let baseUnitId: number | null = null;
+  for (const row of rows) {
+    const unitId = Number(row.unit_id);
+    if (!Number.isInteger(unitId) || unitId <= 0) continue;
+    const anchorUnitId = Number(row.anchor_unit_id);
+    const anchorFactor = Number(row.anchor_factor);
+    rowsByUnitId.set(unitId, {
+      unit_id: unitId,
+      is_base: row.is_base,
+      anchor_unit_id:
+        row.anchor_unit_id && Number.isInteger(anchorUnitId) && anchorUnitId > 0
+          ? anchorUnitId
+          : null,
+      anchor_factor:
+        row.anchor_factor && Number.isFinite(anchorFactor) && anchorFactor > 0
+          ? anchorFactor
+          : null,
+    });
+    if (row.is_base) baseUnitId = unitId;
+  }
+
+  return { baseUnitId, unitsById, rowsByUnitId };
+}
+
 interface IngredientDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -192,6 +262,9 @@ function UnitsField({
     name: "units",
   });
 
+  const watchedRows =
+    useWatch({ control: form.control, name: "units" }) ?? [];
+
   function setBase(targetIndex: number) {
     fields.forEach((_, index) => {
       const isTarget = index === targetIndex;
@@ -200,7 +273,14 @@ function UnitsField({
         shouldValidate: true,
       });
       if (isTarget) {
+        // The base unit anchors nothing and is locked to factor 1.
         form.setValue(`units.${index}.to_base_factor`, "1", {
+          shouldValidate: true,
+        });
+        form.setValue(`units.${index}.anchor_unit_id`, NO_ANCHOR, {
+          shouldValidate: true,
+        });
+        form.setValue(`units.${index}.anchor_factor`, "", {
           shouldValidate: true,
         });
       }
@@ -224,11 +304,10 @@ function UnitsField({
 
       <div className="overflow-hidden rounded-lg border">
         <div className="hidden grid-cols-12 items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid">
-          <div className="col-span-3">{copy.units.colUnit}</div>
-          <div className="col-span-2">{copy.units.colFactor}</div>
+          <div className="col-span-4">{copy.units.colUnit}</div>
           <div className="text-center">{copy.units.colBase}</div>
           <div className="col-span-2 text-center">{copy.units.colPurchase}</div>
-          <div className="text-center">{copy.units.colIssue}</div>
+          <div className="col-span-2 text-center">{copy.units.colIssue}</div>
           <div className="col-span-2 text-center">
             {copy.units.colProduction}
           </div>
@@ -242,6 +321,7 @@ function UnitsField({
               control={form.control}
               index={index}
               unitOptions={unitOptions}
+              watchedRows={watchedRows}
               onSetBase={() => setBase(index)}
               onRemove={() => remove(index)}
               rowCount={fields.length}
@@ -264,6 +344,7 @@ function UnitRowCells({
   control,
   index,
   unitOptions,
+  watchedRows,
   onSetBase,
   onRemove,
   rowCount,
@@ -271,137 +352,256 @@ function UnitRowCells({
   control: Control<IngredientFormValues>;
   index: number;
   unitOptions: UnitOption[];
+  watchedRows: UnitFormRow[];
   onSetBase: () => void;
   onRemove: () => void;
   rowCount: number;
 }) {
   const isBase = useWatch({ control, name: `units.${index}.is_base` }) ?? false;
+  const unitId = useWatch({ control, name: `units.${index}.unit_id` }) ?? "";
   const canRemove = rowCount > 1 && !isBase;
 
+  const selectedUnit = useMemo(
+    () => unitOptions.find((u) => String(u.id) === unitId) ?? null,
+    [unitOptions, unitId],
+  );
+  const isStandard = selectedUnit?.is_standard ?? false;
+  // A row is "packaging" only once a non-standard unit is selected; an empty
+  // selection shows no conversion controls until the owner picks a unit.
+  const isPackaging = selectedUnit != null && !selectedUnit.is_standard;
+
+  // Anchor targets: every OTHER unit currently on this ingredient.
+  const anchorOptions = useMemo(() => {
+    const options: { value: string; label: string }[] = [];
+    for (const row of watchedRows) {
+      if (!row.unit_id || row.unit_id === unitId) continue;
+      const option = unitOptions.find((u) => String(u.id) === row.unit_id);
+      if (!option) continue;
+      options.push({ value: row.unit_id, label: option.name });
+    }
+    return options;
+  }, [watchedRows, unitOptions, unitId]);
+
+  // Live derived preview, mirroring the submit-time derivation.
+  const preview = useMemo(() => {
+    if (isBase || !selectedUnit) return null;
+    const { baseUnitId, unitsById, rowsByUnitId } = buildDerivationLookups(
+      watchedRows,
+      unitOptions,
+    );
+    const baseUnit =
+      baseUnitId != null
+        ? unitOptions.find((u) => u.id === baseUnitId) ?? null
+        : null;
+    if (baseUnitId == null || !baseUnit) return { ok: false as const };
+
+    const row = rowsByUnitId.get(selectedUnit.id);
+    if (!row) return { ok: false as const };
+
+    try {
+      const factor = deriveToBaseFactor(
+        baseUnitId,
+        row,
+        unitsById,
+        rowsByUnitId,
+      );
+      return {
+        ok: true as const,
+        text: `${copy.units.previewPrefix(selectedUnit.code)} ${copy.units.previewValue(
+          formatFactor(factor),
+          baseUnit.code,
+        )}`,
+      };
+    } catch (error) {
+      if (error instanceof UnitDerivationError) return { ok: false as const };
+      throw error;
+    }
+  }, [isBase, selectedUnit, watchedRows, unitOptions]);
+
   return (
-    <div className="grid grid-cols-1 items-center gap-2 px-3 py-2 md:grid-cols-12">
-      <div className="min-w-0 md:col-span-3">
+    <div className="flex flex-col gap-1 px-3 py-2">
+      <div className="grid grid-cols-1 items-center gap-2 md:grid-cols-12">
+        <div className="min-w-0 md:col-span-4">
+          <Controller
+            control={control}
+            name={`units.${index}.unit_id`}
+            render={({ field, fieldState }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger
+                  className={cn("h-9", fieldState.error && "border-destructive")}
+                  aria-invalid={!!fieldState.error}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                >
+                  <SelectValue placeholder={copy.units.selectUnit} />
+                </SelectTrigger>
+                <SelectContent>
+                  {unitOptions.map((u) => (
+                    <SelectItem key={u.id} value={String(u.id)}>
+                      {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+
         <Controller
           control={control}
-          name={`units.${index}.unit_id`}
-          render={({ field, fieldState }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger
-                className={cn("h-9", fieldState.error && "border-destructive")}
-                aria-invalid={!!fieldState.error}
-                onBlur={field.onBlur}
-                ref={field.ref}
-              >
-                <SelectValue placeholder={copy.units.selectUnit} />
-              </SelectTrigger>
-              <SelectContent>
-                {unitOptions.map((u) => (
-                  <SelectItem key={u.id} value={String(u.id)}>
-                    {u.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          name={`units.${index}.is_base`}
+          render={({ field }) => (
+            <div className="flex justify-center">
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={(checked) => {
+                  if (checked) onSetBase();
+                }}
+                aria-label={copy.units.colBase}
+              />
+            </div>
           )}
         />
+
+        <div className="md:col-span-2">
+          <Controller
+            control={control}
+            name={`units.${index}.allow_purchase`}
+            render={({ field }) => (
+              <div className="flex justify-center">
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                  aria-label={copy.units.colPurchase}
+                />
+              </div>
+            )}
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <Controller
+            control={control}
+            name={`units.${index}.allow_issue`}
+            render={({ field }) => (
+              <div className="flex justify-center">
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                  aria-label={copy.units.colIssue}
+                />
+              </div>
+            )}
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <Controller
+            control={control}
+            name={`units.${index}.allow_production`}
+            render={({ field }) => (
+              <div className="flex justify-center">
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                  aria-label={copy.units.colProduction}
+                />
+              </div>
+            )}
+          />
+        </div>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onRemove}
+          disabled={!canRemove}
+          aria-label={copy.units.add}
+        >
+          <IconTrash className="size-4 text-muted-foreground" />
+        </Button>
       </div>
 
-      <div className="min-w-0 md:col-span-2">
-        <Controller
-          control={control}
-          name={`units.${index}.to_base_factor`}
-          render={({ field, fieldState }) => (
-            <FormattedNumberInput
-              value={field.value ?? ""}
-              onValueChange={field.onChange}
-              onBlur={field.onBlur}
-              ref={field.ref}
-              name={field.name}
-              maxFractionDigits={6}
-              disabled={isBase}
-              aria-invalid={!!fieldState.error}
-              className={cn(
-                "h-9",
-                isBase && "bg-muted/40",
-                fieldState.error && "border-destructive",
+      {isBase ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 font-medium uppercase tracking-wide">
+            {copy.units.baseTag}
+          </span>
+        </div>
+      ) : isPackaging ? (
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex items-center gap-2">
+            <Controller
+              control={control}
+              name={`units.${index}.anchor_factor`}
+              render={({ field, fieldState }) => (
+                <FormattedNumberInput
+                  value={field.value ?? ""}
+                  onValueChange={field.onChange}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  name={field.name}
+                  maxFractionDigits={6}
+                  placeholder={copy.units.colFactor}
+                  aria-invalid={!!fieldState.error}
+                  className={cn(
+                    "h-9 w-28",
+                    fieldState.error && "border-destructive",
+                  )}
+                />
               )}
             />
-          )}
-        />
-      </div>
-
-      <Controller
-        control={control}
-        name={`units.${index}.is_base`}
-        render={({ field }) => (
-          <div className="flex justify-center">
-            <Checkbox
-              checked={field.value}
-              onCheckedChange={(checked) => {
-                if (checked) onSetBase();
-              }}
-              aria-label={copy.units.colBase}
+            <Controller
+              control={control}
+              name={`units.${index}.anchor_unit_id`}
+              render={({ field, fieldState }) => (
+                <Select
+                  value={field.value || undefined}
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger
+                    className={cn(
+                      "h-9 min-w-40",
+                      fieldState.error && "border-destructive",
+                    )}
+                    aria-invalid={!!fieldState.error}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                    aria-label={copy.units.colAnchor}
+                  >
+                    <SelectValue placeholder={copy.units.anchorPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {anchorOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             />
           </div>
-        )}
-      />
-
-      <div className="md:col-span-2">
-        <Controller
-          control={control}
-          name={`units.${index}.allow_purchase`}
-          render={({ field }) => (
-            <div className="flex justify-center">
-              <Checkbox
-                checked={field.value}
-                onCheckedChange={(checked) => field.onChange(checked === true)}
-                aria-label={copy.units.colPurchase}
-              />
-            </div>
-          )}
-        />
-      </div>
-
-      <Controller
-        control={control}
-        name={`units.${index}.allow_issue`}
-        render={({ field }) => (
-          <div className="flex justify-center">
-            <Checkbox
-              checked={field.value}
-              onCheckedChange={(checked) => field.onChange(checked === true)}
-              aria-label={copy.units.colIssue}
-            />
-          </div>
-        )}
-      />
-
-      <div className="md:col-span-2">
-        <Controller
-          control={control}
-          name={`units.${index}.allow_production`}
-          render={({ field }) => (
-            <div className="flex justify-center">
-              <Checkbox
-                checked={field.value}
-                onCheckedChange={(checked) => field.onChange(checked === true)}
-                aria-label={copy.units.colProduction}
-              />
-            </div>
-          )}
-        />
-      </div>
-
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={onRemove}
-        disabled={!canRemove}
-        aria-label={copy.units.add}
-      >
-        <IconTrash className="size-4 text-muted-foreground" />
-      </Button>
+          <p
+            className={cn(
+              "text-xs",
+              preview?.ok ? "text-muted-foreground" : "text-destructive",
+            )}
+          >
+            {preview?.ok ? preview.text : copy.units.previewInvalid}
+          </p>
+        </div>
+      ) : isStandard ? (
+        <div className="flex flex-col gap-1 text-xs sm:flex-row sm:items-center sm:gap-3">
+          <span className="text-muted-foreground">{copy.units.autoStandard}</span>
+          <span
+            className={cn(preview?.ok ? "text-muted-foreground" : "text-destructive")}
+          >
+            {preview?.ok ? preview.text : copy.units.previewInvalid}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -431,6 +631,60 @@ export function IngredientDialog({
         ? Number(values.category_id)
         : null;
 
+    const { baseUnitId, unitsById, rowsByUnitId } = buildDerivationLookups(
+      values.units,
+      unitOptions,
+    );
+
+    let mappedUnits: {
+      unit_id: number;
+      to_base_factor: number;
+      is_base: boolean;
+      anchor_unit_id: number | null;
+      anchor_factor: number | null;
+      allow_purchase: boolean;
+      allow_issue: boolean;
+      allow_production: boolean;
+    }[];
+    try {
+      mappedUnits = values.units.map((u) => {
+        const unitId = Number(u.unit_id);
+        const row = rowsByUnitId.get(unitId);
+        const derivationRow: DerivationRow = row ?? {
+          unit_id: unitId,
+          is_base: u.is_base,
+          anchor_unit_id: null,
+          anchor_factor: null,
+        };
+        const toBase =
+          baseUnitId == null
+            ? Number(u.to_base_factor)
+            : deriveToBaseFactor(
+                baseUnitId,
+                derivationRow,
+                unitsById,
+                rowsByUnitId,
+              );
+        const isPackaging =
+          !u.is_base && unitsById.get(unitId)?.is_standard === false;
+        return {
+          unit_id: unitId,
+          to_base_factor: toBase,
+          is_base: u.is_base,
+          anchor_unit_id: isPackaging ? derivationRow.anchor_unit_id : null,
+          anchor_factor: isPackaging ? derivationRow.anchor_factor : null,
+          allow_purchase: u.allow_purchase,
+          allow_issue: u.allow_issue,
+          allow_production: u.allow_production,
+        };
+      });
+    } catch (error) {
+      if (error instanceof UnitDerivationError) {
+        return { success: false, error: copy.units.previewInvalid };
+      }
+      throw error;
+    }
+
     const payload = {
       name: values.name,
       sku: values.sku || undefined,
@@ -442,14 +696,7 @@ export function IngredientDialog({
       max_stock_level: parseOptionalNumber(values.max_stock_level),
       reorder_point: parseOptionalNumber(values.reorder_point),
       shelf_life_days: parseOptionalNumber(values.shelf_life_days),
-      units: values.units.map((u) => ({
-        unit_id: Number(u.unit_id),
-        to_base_factor: Number(u.to_base_factor),
-        is_base: u.is_base,
-        allow_purchase: u.allow_purchase,
-        allow_issue: u.allow_issue,
-        allow_production: u.allow_production,
-      })),
+      units: mappedUnits,
     };
 
     try {

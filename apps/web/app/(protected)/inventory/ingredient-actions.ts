@@ -44,6 +44,8 @@ const unitRowSchema = z.object({
     .number()
     .positive({ error: "Hệ số quy đổi phải lớn hơn 0" }),
   is_base: z.boolean(),
+  anchor_unit_id: z.coerce.number().int().positive().nullable().optional(),
+  anchor_factor: z.coerce.number().positive().nullable().optional(),
   allow_purchase: z.boolean(),
   allow_issue: z.boolean(),
   allow_production: z.boolean(),
@@ -128,6 +130,8 @@ function buildRpcUnits(units: IngredientInput["units"]) {
     unit_id: u.unit_id,
     to_base_factor: u.is_base ? 1 : u.to_base_factor,
     is_base: u.is_base,
+    anchor_unit_id: u.is_base ? null : (u.anchor_unit_id ?? null),
+    anchor_factor: u.is_base ? null : (u.anchor_factor ?? null),
     allow_purchase: u.allow_purchase,
     allow_issue: u.allow_issue,
     allow_production: u.allow_production,
@@ -173,7 +177,7 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+      "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("name")
@@ -193,6 +197,8 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
         unit_name: u.units?.name ?? u.units?.code ?? "",
         to_base_factor: Number(u.to_base_factor ?? 1),
         is_base: u.is_base,
+        anchor_unit_id: u.anchor_unit_id ?? null,
+        anchor_factor: u.anchor_factor == null ? null : Number(u.anchor_factor),
         is_active: u.is_active,
         allow_purchase: u.allow_purchase,
         allow_issue: u.allow_issue,
@@ -218,7 +224,14 @@ export async function fetchUnitOptions(): Promise<ActionResult<UnitOption[]>> {
   if (!result.success) return result;
   const options = (result.data ?? [])
     .filter((u) => u.is_active)
-    .map((u) => ({ id: u.id, code: u.code, name: u.name }));
+    .map((u) => ({
+      id: u.id,
+      code: u.code,
+      name: u.name,
+      dimension: u.dimension,
+      is_standard: u.is_standard,
+      standard_factor: u.standard_factor,
+    }));
   return { success: true, data: options };
 }
 
