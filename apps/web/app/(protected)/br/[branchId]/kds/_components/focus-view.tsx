@@ -611,7 +611,7 @@ function FocusOrderPanel({
           aria-live="polite"
           className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-success/15 backdrop-blur-sm motion-safe:animate-in motion-safe:fade-in"
         >
-          <div className="flex flex-col items-center gap-2 rounded-md bg-success/95 px-4 py-3 text-success-foreground shadow-md">
+          <div className="flex flex-col items-center gap-2 rounded-md bg-success px-4 py-3 text-success-foreground">
             <IconCheck className="size-6" aria-hidden />
             <span className="font-heading text-base font-semibold">
               {KDS_FOCUS_COPY.readyAdvance}

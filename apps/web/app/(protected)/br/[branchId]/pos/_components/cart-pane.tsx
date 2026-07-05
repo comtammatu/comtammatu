@@ -441,7 +441,7 @@ function CartPaneComponent({
             <div className="flex flex-col gap-1.5">
               <Label
                 htmlFor="pos-order-note"
-                className="text-sm font-semibold uppercase tracking-wider text-muted-foreground font-normal"
+                className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
               >
                 {cart.orderType === "takeaway"
                   ? messages.pos.pendingDraft.takeawayNoteLabel
@@ -474,7 +474,7 @@ function CartPaneComponent({
             <AppSection size="sm">
               <div className="relative flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {messages.pos.pendingDraft.subtotal}
                   </p>
                   <p className="ml-auto font-mono text-xl font-bold text-primary tabular-nums">

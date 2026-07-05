@@ -938,7 +938,7 @@ function OrderDetailSheet({
               </div>
 
               <div>
-                <h4 className="font-heading text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {PRODUCT_VI.posItem}
                 </h4>
                 <div className="mt-2 divide-y rounded-md border">
