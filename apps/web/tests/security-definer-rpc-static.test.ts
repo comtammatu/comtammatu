@@ -27,6 +27,11 @@ const BROAD_GRANT_ALLOWLIST = new Set([
   // returns public config. Sibling of generate_order_payment_code, which calls it.
   "vietqr_payment_code_prefix",
   "inv_to_base",
+  // Non-SECURITY-DEFINER bill line-item aggregator (20260706150000_bill_line_items_merge_notes):
+  // runs as the caller, so order_items RLS (tenant_id = auth_tenant_id()) gates every
+  // row. Granted to authenticated for the web bill preview; the enqueue_*_bill
+  // definers also call it. No in-body boundary needed — RLS is the boundary.
+  "bill_line_items",
 ]);
 
 // REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC | anon | authenticated
