@@ -283,6 +283,18 @@ export function GrnListClient({
         />
       ) : null}
 
+      {embedded && drafts && drafts.length > 0 ? (
+        <>
+          <div className="flex items-center gap-2 px-1">
+            <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+              {INVENTORY_VI.draft}
+            </p>
+            <Badge variant="warning">{drafts.length}</Badge>
+          </div>
+          <GrnDraftsTab drafts={drafts} basePath={basePath} />
+        </>
+      ) : null}
+
       {embedded || !drafts ? listBody : null}
     </>
   );

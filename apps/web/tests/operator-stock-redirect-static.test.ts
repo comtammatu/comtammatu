@@ -391,11 +391,16 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
     poDetailRoute,
     /afterCreateGrnHref=\{`\/br\/\$\{branchId\}\/stock\/receive\/:id`\}/,
   );
-  assert.match(grnDetailRoute, /GRNDetailPageContent/);
-  assert.match(grnDetailRoute, /routeBranchId=\{branchId\}/);
+  // D067 §1: GRN detail forks presentation over the SHARED loader —
+  // draft?review → native GrnReviewOperatorClient, confirmed → office
+  // GRNDetailClient (KEEP verdict). No office ProductionPageContent-style
+  // embed; the branch-scope check lives in loadGrnDetail(grnId, branchId).
+  assert.match(grnDetailRoute, /loadGrnDetail\(grnId, branchId\)/);
+  assert.match(grnDetailRoute, /GrnReviewOperatorClient/);
+  assert.match(grnDetailRoute, /GRNDetailClient/);
   assert.match(
     grnDetailRoute,
-    /purchaseOrdersBasePath=\{`\/br\/\$\{branchId\}\/stock\/purchase-orders`\}/,
+    /purchaseOrdersBasePath = `\/br\/\$\{branchId\}\/stock\/purchase-orders`/,
   );
   assert.doesNotMatch(grnDetailRoute, /TransferDetailPageContent/);
   assert.match(reportsRoute, /ReportsPageContent/);

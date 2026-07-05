@@ -6,7 +6,7 @@ import { fetchIngredients } from "../../ingredient-actions";
 import { fetchGrnDetail } from "../../procurement-actions";
 import { fetchQcSettings, type QcSettings } from "../../_lib/qc-settings";
 import { formatDate } from "../../_lib/format";
-import { fetchEntityAuditLogs } from "@/_lib/audit";
+import { fetchEntityAuditLogs, type AuditLogRow } from "@/_lib/audit";
 import { GRNDetailClient } from "./grn-detail-client";
 import type { GRNDetail } from "./grn-detail-client";
 import type { IngredientRow } from "../../page";
@@ -20,20 +20,24 @@ interface GRNDetailPageContentProps {
   supplierInvoicesBasePath?: string;
 }
 
-export async function GRNDetailPageContent({
-  grnId,
-  routeBranchId,
-  grnListBasePath = "/inventory/grn",
-  grnMobileBackPath = "/inventory/grn/new",
-  purchaseOrdersBasePath = "/inventory/purchase-orders",
-  supplierInvoicesBasePath = "/inventory/supplier-invoices",
-}: GRNDetailPageContentProps) {
+export interface GrnDetailData {
+  grn: GRNDetail;
+  ingredients: IngredientRow[];
+  auditLogs: AuditLogRow[];
+  canAdjustStock: boolean;
+  canAmendConfirmed: boolean;
+}
+
+export async function loadGrnDetail(
+  grnId: number,
+  routeBranchId?: number,
+): Promise<GrnDetailData | null> {
   const [res, ingredientsRes, auditLogs] = await Promise.all([
     fetchGrnDetail(grnId),
     fetchIngredients(),
     fetchEntityAuditLogs("goods_receipt_note", grnId, 50),
   ]);
-  if (!res.success || !res.data) notFound();
+  if (!res.success || !res.data) return null;
 
   const ctx = await getAuthContextWithPermission(
     PROCUREMENT_ROLES,
@@ -89,7 +93,7 @@ export async function GRNDetailPageContent({
     invoiceId: number | null;
   };
 
-  if (routeBranchId != null && d.grn.branch_id !== routeBranchId) notFound();
+  if (routeBranchId != null && d.grn.branch_id !== routeBranchId) return null;
 
   const supplier = d.grn.suppliers as { id: number; name: string } | null;
   const po = d.grn.purchase_orders as {
@@ -188,13 +192,27 @@ export async function GRNDetailPageContent({
     PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
   );
 
+  return { grn, ingredients, auditLogs, canAdjustStock, canAmendConfirmed };
+}
+
+export async function GRNDetailPageContent({
+  grnId,
+  routeBranchId,
+  grnListBasePath = "/inventory/grn",
+  grnMobileBackPath = "/inventory/grn/new",
+  purchaseOrdersBasePath = "/inventory/purchase-orders",
+  supplierInvoicesBasePath = "/inventory/supplier-invoices",
+}: GRNDetailPageContentProps) {
+  const data = await loadGrnDetail(grnId, routeBranchId);
+  if (!data) notFound();
+
   return (
     <GRNDetailClient
-      grn={grn}
-      ingredients={ingredients}
-      canAdjustStock={canAdjustStock}
-      canAmendConfirmed={canAmendConfirmed}
-      auditLogs={auditLogs}
+      grn={data.grn}
+      ingredients={data.ingredients}
+      canAdjustStock={data.canAdjustStock}
+      canAmendConfirmed={data.canAmendConfirmed}
+      auditLogs={data.auditLogs}
       grnListBasePath={grnListBasePath}
       grnMobileBackPath={grnMobileBackPath}
       purchaseOrdersBasePath={purchaseOrdersBasePath}
