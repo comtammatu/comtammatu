@@ -39,8 +39,8 @@ test("operator stock receive renders inbound transfer list and detail inside the
   const transfersPage = read(
     "apps/web/app/(protected)/inventory/transfers/page.tsx",
   );
-  const transferDetailPage = read(
-    "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx",
+  const receiveDetailContent = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-content.tsx",
   );
 
   assert.match(receiveRoute, /TransfersPageContent/);
@@ -58,21 +58,37 @@ test("operator stock receive renders inbound transfer list and detail inside the
   assert.match(receiveRoute, /embedded/);
   assert.doesNotMatch(receiveRoute, /GRNListPageContent|purchaseOrdersPath/);
 
-  assert.match(receiveDetailRoute, /TransferDetailPageContent/);
-  assert.match(receiveDetailRoute, /routeBranchId=\{branchId\}/);
-  assert.match(
-    receiveDetailRoute,
-    /basePath=\{`\/br\/\$\{branchId\}\/stock\/receive`\}/,
-  );
+  // D067 §2: the receive detail route forks to a mobile-native receive
+  // client over the SHARED transfer loader — no office
+  // TransferDetailPageContent embed (that stepper/summary chrome is exactly
+  // what the native screen removes).
+  assert.match(receiveDetailRoute, /TransferReceiveContent/);
+  assert.match(receiveDetailRoute, /branchId=\{branchId\}/);
+  assert.match(receiveDetailRoute, /transferId=\{transferId\}/);
+  assert.doesNotMatch(receiveDetailRoute, /TransferDetailPageContent/);
   assert.doesNotMatch(
     receiveDetailRoute,
     /GRNDetailPageContent|grnListBasePath/,
   );
-  assert.match(transfersPage, /export async function TransfersPageContent/);
+
   assert.match(
-    transferDetailPage,
-    /export async function TransferDetailPageContent/,
+    receiveDetailContent,
+    /export async function TransferReceiveContent/,
   );
+  assert.match(receiveDetailContent, /fetchStockTransferDetail/);
+  assert.match(receiveDetailContent, /resolveInventoryListScope/);
+  assert.match(receiveDetailContent, /scope\.outOfScope/);
+  assert.match(receiveDetailContent, /<TransferReceiveClient/);
+  assert.match(
+    receiveDetailContent,
+    /backHref=\{`\/br\/\$\{branchId\}\/stock\/receive`\}/,
+  );
+  assert.match(
+    receiveDetailContent,
+    /detailHref=\{`\/br\/\$\{branchId\}\/stock\/transfer\/\$\{transferId\}`\}/,
+  );
+
+  assert.match(transfersPage, /export async function TransfersPageContent/);
 });
 
 test("operator stock count renders employee count inside the branch operator shell", () => {

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { TransferDetailPageContent } from "@/(protected)/inventory/transfers/[id]/page";
+import { TransferReceiveContent } from "./transfer-receive-content";
 
 interface PageProps {
   params: Promise<{ branchId: string; id: string }>;
@@ -21,10 +21,6 @@ export default async function OperatorStockReceiveDetailPage({
   }
 
   return (
-    <TransferDetailPageContent
-      transferId={transferId}
-      routeBranchId={branchId}
-      basePath={`/br/${branchId}/stock/receive`}
-    />
+    <TransferReceiveContent transferId={transferId} branchId={branchId} />
   );
 }
