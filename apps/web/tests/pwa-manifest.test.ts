@@ -100,7 +100,10 @@ test("Operator Hub PWA manifest is installable per branch", async () => {
   assert.equal(response.headers.get("Content-Type"), "application/manifest+json; charset=utf-8");
   assert.equal(manifest.id, "/br/3");
   assert.equal(manifest.start_url, "/br/3");
-  assert.equal(manifest.scope, "/br/3");
+  // Hub scopes the whole origin so in-app navigation to shared routes
+  // (notifications, office bridges) stays standalone instead of dropping the
+  // installed PWA into a browser tab; `id` keeps the install distinct.
+  assert.equal(manifest.scope, "/");
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.short_name, "Má Tư Chi nhánh");
   assert.equal(manifest.orientation, "portrait");
