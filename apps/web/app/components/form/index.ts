@@ -3,6 +3,12 @@ export { FormattedNumberInput } from "./formatted-number-input";
 export { NumberField } from "./number-field";
 export { NumberPadSheet } from "./number-pad-sheet";
 export {
+  NumberPadGrid,
+  NUMPAD_KEYS,
+  appendNumpadKey,
+  type NumpadKey,
+} from "./number-pad-grid";
+export {
   MoneyVndField,
   MoneyVndInput,
   QuantityField,

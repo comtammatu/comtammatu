@@ -67,9 +67,13 @@ clone 20 mount. Static test contract client↔SQL topic/event/private
 là nguồn thật). Merge độc lập được: trước khi owner apply #258, subscribe chỉ
 nhận rỗng (graceful).
 
-**PR notification (sau).** Bell durable "CN yêu cầu hàng": SQL trigger trên
-`stock_transfers` INSERT → `INSERT INTO notifications` kind
-`inventory.transfer_requested` target `from_branch_id` (site trung tâm xử lý),
+**PR notification — DEFERRED (owner 2026-07-05).** Owner chốt: realtime
+live-refresh (#258+#259) đã phủ "Kho/Bếp biết khi đang mở màn kho" → quay lại
+main task (transfer-receive), bell là fast-follow. Thiết kế khi làm: SQL trigger
+`stock_transfers` INSERT → `notifications` kind `inventory.transfer_requested`
+target `from_branch_id` (site trung tâm fulfiller, roles warehouse_manager/
+production_manager/owner), CHỈ khi CN yêu cầu — không self-notify khi central
+tự đẩy (gate theo `created_by` ∉ from_branch, hoặc branch_manager-created).
 sibling `trg_notify_transfer_in_transit`. + registry `messages/notifications.ts`
 kindLabel + `notification-item.tsx` iconFor + static test. LƯU Ý:
 `dispatchNotificationOutbox` là webhook relay (`notification_outbox`), KHÔNG

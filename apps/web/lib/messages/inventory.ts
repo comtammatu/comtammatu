@@ -962,6 +962,24 @@ export const inventory = {
       confirmReceive: "Bắt đầu kiểm nhận",
       receive: "Xác nhận nhận hàng",
     },
+    receiveNative: {
+      receiveProgress: (done: number, total: number) =>
+        `${done}/${total} dòng`,
+      receiveSent: (qty: string, unit: string) => `Gửi ${qty} ${unit}`,
+      receiveNextLine: "Dòng kế →",
+      receiveConfirmRemaining: (n: number) =>
+        `Xác nhận nhận hàng (còn ${n} dòng)`,
+      receiveConfirmAll: "Xác nhận nhận hàng",
+      receiveExceedsSent: "Số nhận vượt quá số gửi.",
+      receiveInvalidQty: "Nhập số lượng hợp lệ.",
+      receiveFailed: "Không thể xác nhận nhận hàng.",
+      receiveFrom: (branch: string) => `từ ${branch}`,
+      receiveNotReady: "Phiếu chưa ở trạng thái nhận",
+      receiveNotReadyDescription:
+        "Mở phiếu điều chuyển để xem chi tiết hoặc chờ kho gửi xác nhận xuất.",
+      receiveOpenDetail: "Mở phiếu điều chuyển",
+      receiveSuccess: "Đã nhận hàng thành công.",
+    },
     list: {
       tabs: {
         receive: "Cần nhận",
