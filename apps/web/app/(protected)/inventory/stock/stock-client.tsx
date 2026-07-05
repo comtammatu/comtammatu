@@ -761,8 +761,9 @@ export function StockClient({
 
   // Pure-numeric value tiles route through the single-sourced KpiCard
   // (§ Metric Card). Count tiles are work signals, not KPIs — they live in
-  // the filter/badge cluster below.
-  const summaryMetrics = (
+  // the filter/badge cluster below. Operator surface shows no KPI value tiles
+  // (D067 §0 — numbers are badges/work-signals only), so gate to office.
+  const summaryMetrics = embedded ? null : (
     <div className="grid grid-cols-2 gap-2">
       <KpiCard
         density="compact"
@@ -839,22 +840,28 @@ export function StockClient({
 
   const filterControls = (
     <>
-      <Select value={activeCategory} onValueChange={setActiveCategory}>
-        <SelectTrigger
-          size={isCompactLayout ? "touch" : "default"}
-          className={isCompactLayout ? "w-full" : "min-w-40"}
-        >
-          <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{stockCopy.filters.allCategories}</SelectItem>
-          {categories.map((cat) => (
-            <SelectItem key={cat} value={cat}>
-              {cat}
+      {/* Operator category facet is owned by StockMobileGrid's chips (D066 §5);
+          only office renders the Select to avoid a second control on one facet. */}
+      {!embedded ? (
+        <Select value={activeCategory} onValueChange={setActiveCategory}>
+          <SelectTrigger
+            size={isCompactLayout ? "touch" : "default"}
+            className={isCompactLayout ? "w-full" : "min-w-40"}
+          >
+            <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">
+              {stockCopy.filters.allCategories}
             </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+            {categories.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
 
       <Select
         value={stockFilter}
