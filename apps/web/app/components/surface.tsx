@@ -231,9 +231,9 @@ type AppSectionTone = "default" | "info" | "warning" | "destructive";
 
 const SECTION_TONE_CLASSNAME: Record<AppSectionTone, string> = {
   default: "",
-  info: "border-info/40 bg-info/5",
-  warning: "border-warning/40 bg-warning/5",
-  destructive: "border-destructive/40 bg-destructive/5",
+  info: "border-info/20 bg-info/10",
+  warning: "border-warning/20 bg-warning/10",
+  destructive: "border-destructive/20 bg-destructive/10",
 };
 
 const SECTION_TONE_ICON_CLASSNAME: Record<AppSectionTone, string> = {
@@ -450,7 +450,7 @@ export function AppToolbar({
 
   if (variant === "inline") {
     return (
-      <Toolbar className={cn("gap-3 border-b bg-muted/25 p-3", className)}>
+      <Toolbar className={cn("gap-3 border-b bg-muted/30 p-3", className)}>
         {content}
       </Toolbar>
     );
@@ -514,12 +514,12 @@ export function DocumentFormFrame({
 type OperationalTileTone = "default" | "success" | "warning" | "muted";
 
 const OPERATIONAL_TILE_TONE_CLASSNAME: Record<OperationalTileTone, string> = {
-  default: "bg-card hover:border-primary/25",
+  default: "bg-card hover:border-primary/20",
   success:
-    "border-success/35 bg-success/10 text-foreground hover:border-success/50 hover:bg-success/20",
+    "border-success/20 bg-success/10 text-foreground hover:border-success/20 hover:bg-success/20",
   warning:
-    "border-warning/35 bg-warning/10 text-foreground hover:border-warning/50 hover:bg-warning/20",
-  muted: "bg-muted/55 text-muted-foreground hover:border-border",
+    "border-warning/20 bg-warning/10 text-foreground hover:border-warning/20 hover:bg-warning/20",
+  muted: "bg-muted/50 text-muted-foreground hover:border-border",
 };
 
 export type OperationalTileProps = ComponentProps<typeof Button> & {
@@ -540,7 +540,7 @@ export function OperationalTile({
       className={cn(
         "transition-[background-color,border-color,color,box-shadow,transform]",
         selected
-          ? "border-primary/50 ring-2 ring-primary/40"
+          ? "border-primary/20 ring-2 ring-primary/20"
           : OPERATIONAL_TILE_TONE_CLASSNAME[tone],
         className,
       )}
@@ -550,11 +550,11 @@ export function OperationalTile({
 }
 
 const OPERATIONAL_BOARD_CURRENT_CLASSNAME: Record<SurfaceTone, string> = {
-  primary: "relative z-10 bg-primary/10 ring-2 ring-primary/50",
-  success: "relative z-10 bg-success/10 ring-2 ring-success/50",
-  warning: "relative z-10 bg-warning/25 ring-2 ring-warning/70",
-  info: "relative z-10 bg-info/10 ring-2 ring-info/50",
-  secondary: "relative z-10 bg-secondary/50 ring-2 ring-secondary",
+  primary: "relative z-10 bg-primary/10 ring-2 ring-primary/20",
+  success: "relative z-10 bg-success/10 ring-2 ring-success/20",
+  warning: "relative z-10 bg-warning/15 ring-2 ring-warning/20",
+  info: "relative z-10 bg-info/10 ring-2 ring-info/20",
+  secondary: "relative z-10 bg-secondary/10 ring-2 ring-secondary",
 };
 
 export type OperationalBoardCardProps = ComponentProps<typeof Card> & {

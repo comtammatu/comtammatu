@@ -1081,7 +1081,6 @@ const perFileCountBudgets = [
       "apps/web/app/components/data-table/interactive-card.tsx": 1,
       "apps/web/app/components/kpi/kpi-card.tsx": 1,
       "apps/web/app/components/kpi/trend-sparkline.tsx": 1,
-      "apps/web/app/components/surface.tsx": 21,
     },
   },
   {
