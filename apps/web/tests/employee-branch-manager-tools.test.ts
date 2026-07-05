@@ -44,7 +44,7 @@ test("Employee profile launcher is ACL-driven for every role", () => {
   );
   assert.match(
     employeeProfileSource,
-    /resolveQuickLaunchGroups\(\s*claims\.user_role,\s*effectiveBranchId,\s*\)/,
+    /resolveQuickLaunchGroups\(\s*claims\.user_role,\s*effectiveBranchId,?\s*\)/,
     "Workspace launcher must derive direct links from the shared ACL nav resolvers for every role, admin and branch_manager included",
   );
   assert.match(
