@@ -8,6 +8,7 @@ import { AppEmptyState, AppPageHeader, AppSection } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Item,
   ItemActions,
@@ -151,17 +152,13 @@ export function EmployeeFrame({
   ...props
 }: EmployeeFrameProps) {
   return (
-    <div
+    <Frame
       data-employee-frame
-      className={cn(
-        "rounded-md border bg-card",
-        pad === "sm" && "p-3",
-        className,
-      )}
+      className={cn(pad === "sm" && "p-3", className)}
       {...props}
     >
       {children}
-    </div>
+    </Frame>
   );
 }
 

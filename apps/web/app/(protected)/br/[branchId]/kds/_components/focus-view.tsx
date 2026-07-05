@@ -29,6 +29,7 @@ import {
 } from "../_hooks/use-kds-row-effects";
 import { getKdsOrderLabelOverride } from "../_lib/order-columns";
 import {
+  KDS_ITEM_NAME_CLASS,
   shouldShowTicketStatusBadge,
 } from "../_lib/status-config";
 import {
@@ -504,7 +505,12 @@ function FocusOrderPanel({
                       getKdsRowEffectClass(rowEffect),
                     )}
                   >
-                    <span className="min-w-0 break-words text-base font-semibold leading-6 text-muted-foreground">
+                    <span
+                      className={cn(
+                        "min-w-0 break-words text-muted-foreground",
+                        KDS_ITEM_NAME_CLASS,
+                      )}
+                    >
                       {itemLabel}
                     </span>
                     <div className="flex shrink-0 items-center justify-end gap-1">

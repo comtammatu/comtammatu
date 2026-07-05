@@ -218,6 +218,14 @@ const STATUS_DOMAINS = {
       suspended: "secondary",
     },
   },
+  "expiry-urgency": {
+    labels: INVENTORY_STATUS_LABELS_VI,
+    variants: {
+      expired: "destructive",
+      critical: "destructive",
+      warning: "warning",
+    },
+  },
 } satisfies Record<string, DomainConfig>;
 
 export type StatusDomain = keyof typeof STATUS_DOMAINS;
