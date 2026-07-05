@@ -51,6 +51,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/status-badge";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
@@ -223,57 +224,6 @@ function stockValue(item: StockIngredient): number {
 function isReorderRisk(item: StockIngredient): boolean {
   return (
     item.status === "out" || item.status === "low" || item.qty <= item.reorder
-  );
-}
-
-function SummaryMetric({
-  label,
-  value,
-  tone = "default",
-  onClick,
-  active,
-}: {
-  label: string;
-  value: string;
-  tone?: "default" | "warning" | "muted";
-  onClick?: () => void;
-  active?: boolean;
-}) {
-  const content = (
-    <>
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span
-        className={cn(
-          "text-sm font-semibold tabular-nums",
-          tone === "warning" && "text-destructive",
-          tone === "muted" && "text-muted-foreground",
-        )}
-      >
-        {value}
-      </span>
-    </>
-  );
-
-  if (onClick) {
-    return (
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        onClick={onClick}
-        className={cn(
-          "min-w-fit justify-start gap-2 text-left",
-          active && "bg-primary/10",
-        )}
-        aria-pressed={active}
-      >
-        {content}
-      </Button>
-    );
-  }
-
-  return (
-    <div className="flex min-w-fit items-center gap-2 px-3 py-2">{content}</div>
   );
 }
 
@@ -809,41 +759,65 @@ export function StockClient({
     },
   ];
 
+  // Pure-numeric value tiles route through the single-sourced KpiCard
+  // (§ Metric Card). Count tiles are work signals, not KPIs — they live in
+  // the filter/badge cluster below.
   const summaryMetrics = (
-    <div className="flex flex-wrap items-center divide-x">
-      <SummaryMetric
+    <div className="grid grid-cols-2 gap-2">
+      <KpiCard
+        density="compact"
         label={stockCopy.metrics.selectedWarehouse}
         value={inventoryCommon.currencyCompact(formatVND(visibleTotalValue))}
       />
       {totalValue != null ? (
-        <SummaryMetric
+        <KpiCard
+          density="compact"
           label={stockCopy.metrics.wholeSystem}
           value={inventoryCommon.currencyCompact(formatVND(totalValue))}
         />
       ) : null}
-      <SummaryMetric
-        label={stockCopy.metrics.underThreshold}
-        value={String(summary.underThresholdCount)}
-        tone={summary.underThresholdCount > 0 ? "warning" : "muted"}
-        onClick={
-          summary.underThresholdCount > 0
-            ? () => {
-                setStockFilter(stockFilter === "low" ? "all" : "low");
-              }
-            : undefined
+    </div>
+  );
+
+  // Work signals: the under-threshold count doubles as a filter toggle; the
+  // expiry / pending counts are read-only badges (no dedicated filter facet).
+  const workSignalCluster = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        aria-pressed={stockFilter === "low"}
+        disabled={summary.underThresholdCount === 0}
+        onClick={() =>
+          setStockFilter(stockFilter === "low" ? "all" : "low")
         }
-        active={stockFilter === "low"}
-      />
-      <SummaryMetric
-        label={stockCopy.metrics.nearExpiry}
-        value={String(summary.expiryCount)}
-        tone={summary.expiryCount > 0 ? "warning" : "muted"}
-      />
-      <SummaryMetric
-        label={stockCopy.metrics.pending}
-        value={String(summary.pendingWorkCount)}
-        tone={summary.pendingWorkCount > 0 ? "warning" : "muted"}
-      />
+        className={cn(
+          "gap-1.5",
+          stockFilter === "low" && "ring-2 ring-foreground",
+        )}
+      >
+        {stockCopy.metrics.underThreshold}
+        <Badge
+          variant={summary.underThresholdCount > 0 ? "warning" : "secondary"}
+        >
+          {summary.underThresholdCount}
+        </Badge>
+      </Button>
+      <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+        {stockCopy.metrics.nearExpiry}
+        <Badge variant={summary.expiryCount > 0 ? "warning" : "secondary"}>
+          {summary.expiryCount}
+        </Badge>
+      </span>
+      <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+        {stockCopy.metrics.pending}
+        <Badge
+          variant={summary.pendingWorkCount > 0 ? "warning" : "secondary"}
+        >
+          {summary.pendingWorkCount}
+        </Badge>
+      </span>
     </div>
   );
 
@@ -944,6 +918,9 @@ export function StockClient({
   const resultCountBadge = !isFirstLoadEmpty ? (
     <Badge variant="outline" aria-live="polite">
       {filtered.length}/{ingredients.length}
+      {filteredValue > 0
+        ? ` · ${inventoryCommon.currencyCompact(formatVND(filteredValue))}`
+        : ""}
     </Badge>
   ) : null;
 
@@ -1143,8 +1120,9 @@ export function StockClient({
         />
       ) : null}
       {!isCompactLayout ? (
-        <AppSection className="overflow-hidden" contentFlush>
+        <AppSection>
           {summaryMetrics}
+          {workSignalCluster}
         </AppSection>
       ) : null}
 
@@ -1176,6 +1154,7 @@ export function StockClient({
           defaultOpen={false}
         >
           {summaryMetrics}
+          {workSignalCluster}
           <div className="grid gap-2 sm:grid-cols-2">{filterControls}</div>
           <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
         </AppSection>
@@ -1251,16 +1230,6 @@ export function StockClient({
           />
         </AppSection>
       )}
-
-      <AppSection
-        size="sm"
-        contentClassName="py-2 text-xs text-muted-foreground"
-      >
-        {stockCopy.table.filteredSummary(
-          filtered.length,
-          formatVND(filteredValue),
-        )}
-      </AppSection>
 
       {adjustTarget ? (
         <AdjustStockDialog

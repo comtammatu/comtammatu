@@ -327,7 +327,6 @@ const checks = [
     pattern:
       /\b(?:function|const)\s+\w*(?:StatCard|StatTile|SummaryCard|SummaryMetric|MetricCard|MetricTile|KpiCard)\b/g,
     allowlist: {
-      "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 1,
       "apps/web/app/components/kpi/kpi-card.tsx": 1,
     },
   },
@@ -1005,7 +1004,6 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/inventory/_components/zone-lock-indicator.tsx": 5,
       "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 2,
       "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx": 7,
       "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 3,
       "apps/web/app/(protected)/inventory/grn/new/supplier-picker.tsx": 2,
       "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx": 2,
@@ -1621,7 +1619,7 @@ const OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES = [
   "apps/web/app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
 ];
 const OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE = {
-  "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 8,
+  "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 1,
   "apps/web/app/(protected)/orders/orders-page-body.tsx": 1,
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
   "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 2,

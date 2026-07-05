@@ -39,17 +39,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
 import { FormDialog, NumberField } from "@/components/form";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import { StatusBadge } from "@/components/status-badge";
 import {
   DataTable,
   type DataTableColumn,
@@ -79,20 +74,8 @@ const WRITE_OFF_DEFAULT_VALUES: WriteOffFormValues = {
   photoUrl: "",
 };
 
-const URGENCY_META: Record<string, { label: string; className: string }> = {
-  expired: {
-    label: INVENTORY_VI.expired,
-    className: "bg-destructive/10 text-destructive border-destructive/30",
-  },
-  critical: {
-    label: INVENTORY_VI.critical,
-    className: "bg-destructive/10 text-destructive border-destructive/30",
-  },
-  warning: {
-    label: INVENTORY_VI.warning,
-    className: "bg-warning/10 text-warning border-warning/30",
-  },
-};
+const URGENCY_FILTERS = ["expired", "critical", "warning"] as const;
+type UrgencyFilter = (typeof URGENCY_FILTERS)[number];
 
 function ExpiryAlertCard({
   alert,
@@ -105,20 +88,22 @@ function ExpiryAlertCard({
   onWriteOff: (alert: ExpiryAlertRow) => void;
   embedded?: boolean;
 }) {
-  const meta = URGENCY_META[alert.urgency] ?? {
-    label: alert.urgency,
-    className: "bg-muted text-muted-foreground",
-  };
   return (
     <Item size="sm" className="justify-between border bg-muted/30">
       <ItemContent>
         <ItemTitle className="text-sm font-medium">
           <span className="truncate">{alert.ingredient_name}</span>
-          <Badge className={cn("text-xs shrink-0", meta.className)}>
-            {alert.urgency === "expired"
-              ? INVENTORY_VI.expired
-              : `${alert.days_remaining} ${INVENTORY_VI.daySuffix}`}
-          </Badge>
+          <StatusBadge
+            domain="expiry-urgency"
+            value={alert.urgency}
+            size="sm"
+            className="shrink-0"
+            label={
+              alert.urgency === "expired"
+                ? INVENTORY_VI.expired
+                : `${alert.days_remaining} ${INVENTORY_VI.daySuffix}`
+            }
+          />
         </ItemTitle>
         <ItemDescription className="truncate">
           {INVENTORY_VI.batchShort}: {alert.batch_number ?? "—"} · GRN:{" "}
@@ -166,7 +151,9 @@ export function ExpiryListClient({
       ? String(userBranchId)
       : "all",
   );
-  const [urgencyFilter, setUrgencyFilter] = useState<string | null>(null);
+  const [urgencyFilter, setUrgencyFilter] = useState<UrgencyFilter | null>(
+    null,
+  );
   const [writeOff, setWriteOff] = useState<ExpiryAlertRow | null>(null);
 
   const isBranchLocked =
@@ -207,18 +194,6 @@ export function ExpiryListClient({
     if (!urgencyFilter) return filtered;
     return filtered.filter((a) => a.urgency === urgencyFilter);
   }, [filtered, urgencyFilter]);
-
-  const expired = useMemo(
-    () => filtered.filter((a) => a.urgency === "expired"),
-    [filtered],
-  );
-  const nearExpiry = useMemo(
-    () =>
-      filtered.filter(
-        (a) => a.urgency === "critical" || a.urgency === "warning",
-      ),
-    [filtered],
-  );
 
   function openWriteOff(alert: ExpiryAlertRow) {
     setWriteOff(alert);
@@ -285,9 +260,7 @@ export function ExpiryListClient({
       header: INVENTORY_VI.remaining,
       render: (alert) =>
         alert.urgency === "expired" ? (
-          <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
-            {INVENTORY_VI.expired}
-          </Badge>
+          <StatusBadge domain="expiry-urgency" value="expired" size="sm" />
         ) : (
           <span
             className={cn(
@@ -395,70 +368,41 @@ export function ExpiryListClient({
         </Badge>
       </AppToolbar>
 
-      {/* Urgency filter buttons */}
+      {/* Sole urgency filter: one control per facet (ui.md). The per-row
+          badge is item-state, not a second filter. */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          onClick={() =>
-            setUrgencyFilter((prev) => (prev === "expired" ? null : "expired"))
-          }
-          className={cn(
-            "h-auto gap-1.5 rounded-full px-3 font-medium",
-            embedded ? "py-2.5" : "py-1",
-            urgencyFilter === "expired"
-              ? "bg-destructive/10 text-destructive border-destructive/30"
-              : "bg-muted/50 text-muted-foreground hover:bg-muted",
-          )}
-        >
-          {INVENTORY_VI.expired}
-          <span className="font-mono tabular-nums">
-            {urgencyCounts.expired}
-          </span>
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          onClick={() =>
-            setUrgencyFilter((prev) =>
-              prev === "critical" ? null : "critical",
-            )
-          }
-          className={cn(
-            "h-auto gap-1.5 rounded-full px-3 font-medium",
-            embedded ? "py-2.5" : "py-1",
-            urgencyFilter === "critical"
-              ? "bg-destructive/10 text-destructive border-destructive/30"
-              : "bg-muted/50 text-muted-foreground hover:bg-muted",
-          )}
-        >
-          {INVENTORY_VI.critical}
-          <span className="font-mono tabular-nums">
-            {urgencyCounts.critical}
-          </span>
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          onClick={() =>
-            setUrgencyFilter((prev) => (prev === "warning" ? null : "warning"))
-          }
-          className={cn(
-            "h-auto gap-1.5 rounded-full px-3 font-medium",
-            embedded ? "py-2.5" : "py-1",
-            urgencyFilter === "warning"
-              ? "bg-warning/10 text-warning border-warning/30"
-              : "bg-muted/50 text-muted-foreground hover:bg-muted",
-          )}
-        >
-          {INVENTORY_VI.warning}
-          <span className="font-mono tabular-nums">
-            {urgencyCounts.warning}
-          </span>
-        </Button>
+        {URGENCY_FILTERS.map((facet) => {
+          const active = urgencyFilter === facet;
+          return (
+            <Button
+              key={facet}
+              type="button"
+              variant="outline"
+              size="xs"
+              aria-pressed={active}
+              onClick={() =>
+                setUrgencyFilter((prev) => (prev === facet ? null : facet))
+              }
+              className={cn(
+                "h-auto gap-1.5 rounded-full px-3 font-medium",
+                embedded ? "py-2.5" : "py-1",
+                active
+                  ? "ring-2 ring-foreground"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted",
+              )}
+            >
+              <StatusBadge
+                domain="expiry-urgency"
+                value={facet}
+                size="sm"
+                className="pointer-events-none"
+              />
+              <span className="font-mono tabular-nums">
+                {urgencyCounts[facet]}
+              </span>
+            </Button>
+          );
+        })}
         {urgencyFilter && (
           <Button
             type="button"
@@ -472,48 +416,7 @@ export function ExpiryListClient({
         )}
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all">
-            {INVENTORY_VI.allTab} ({displayItems.length})
-          </TabsTrigger>
-          <TabsTrigger value="expired">
-            {INVENTORY_VI.expired} (
-            {urgencyFilter
-              ? displayItems.filter((a) => a.urgency === "expired").length
-              : expired.length}
-            )
-          </TabsTrigger>
-          <TabsTrigger value="near">
-            {INVENTORY_VI.warning} (
-            {urgencyFilter
-              ? displayItems.filter(
-                  (a) => a.urgency === "critical" || a.urgency === "warning",
-                ).length
-              : nearExpiry.length}
-            )
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all">{renderTable(displayItems)}</TabsContent>
-        <TabsContent value="expired">
-          {renderTable(
-            urgencyFilter
-              ? displayItems.filter((a) => a.urgency === "expired")
-              : expired,
-          )}
-        </TabsContent>
-        <TabsContent value="near">
-          {renderTable(
-            urgencyFilter
-              ? displayItems.filter(
-                  (a) => a.urgency === "critical" || a.urgency === "warning",
-                )
-              : nearExpiry,
-          )}
-        </TabsContent>
-      </Tabs>
+      {renderTable(displayItems)}
       <FormDialog
         open={writeOff != null}
         onOpenChange={(open) => {
