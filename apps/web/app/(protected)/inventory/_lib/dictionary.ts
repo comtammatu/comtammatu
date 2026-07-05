@@ -84,6 +84,10 @@ const VI_DICTIONARY: InventoryDictionary = {
       short: "Ngưỡng tồn",
       long: "Ngưỡng tồn kho",
     },
+    "/inventory/settings/categories": {
+      short: "Nhóm NL",
+      long: "Nhóm nguyên liệu",
+    },
   },
 
   // ------------------------------------------------------------------

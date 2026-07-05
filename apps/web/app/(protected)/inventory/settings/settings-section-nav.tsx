@@ -14,6 +14,7 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
+  { href: "/inventory/settings/categories" },
   { href: "/inventory/settings/units" },
   { href: "/inventory/settings/expiry" },
   { href: "/inventory/settings/thresholds" },
