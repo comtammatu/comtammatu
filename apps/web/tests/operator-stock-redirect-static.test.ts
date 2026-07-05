@@ -1009,7 +1009,7 @@ test("operator supplier returns render branch-native inside the branch operator 
 
   assert.match(
     officeNewPage,
-    /export function SupplierReturnNewPageContent/,
+    /export async function SupplierReturnNewPageContent/,
   );
   assert.match(officeNewPage, /embedded\?: boolean/);
 
