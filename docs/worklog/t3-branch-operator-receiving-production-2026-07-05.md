@@ -164,3 +164,31 @@ Integration note: rebased onto main (D067 W4 catalog surface, #274). Fixed a pre
 red — #274 tripped `check-ui-contract` (operator-embedded button density on `grn-list-client.tsx`) —
 in a separate `#274 follow-up` commit. Full gate (`pnpm lint && pnpm test`) green fresh in the
 worktree post-rebase + post-fixes.
+
+## Applied to PROD (2026-07-05, owner-delegated)
+
+Owner delegated the apply + authorized the guard bypass. Applied via the sanctioned path
+(temporary early `process.exit(0)` in `scripts/guard-prod-db.mjs`, restored byte-for-byte —
+`git diff` empty on the script and `.claude/settings.json`) using `mcp__supabase__execute_sql`
+against `iexwsuaqqenyjiskawoj`.
+
+**Pre-flight against real PROD changed the plan.** `grn_create` grants are per-branch:
+`branch_manager` already held `grn_create`/`grn_confirm`/`read` on branches 2 & 3 (the "hard-deny"
+was code-only, never data); `owner` holds `grn_create` on branch 2 only, `office` on 2/3 only. The
+current `grn_insert = has_permission_any` lets owner/office create GRNs for the central sites
+(Kho Tổng 15 / Bếp TT 16).
+
+**Applied: (a) grants + (c) production RLS relax + (d) operator fn. DEFERRED: (b) grn RLS
+hardening (F1.2)** — hardening `grn_insert`/`grn_update`/`grn_items_write` to
+`has_permission(branch_id,…)` would lock owner/office out of central-site GRN creation. It only
+closes a pre-existing direct-PostgREST path (branch_manager already held `grn_create`), so
+deferring is not a regression. The mandatory cross-branch guard (F1.1, app layer) is shipped.
+
+Verified post-apply (SELECT): `is_inventory_production_operator` → `IN (owner, production_manager,
+branch_manager)`; `production_orders_write` → `branch_kind = ANY('central_kitchen','branch')`;
+`grn_insert` UNCHANGED (`has_permission_any`); `branch_manager` holds all 6 keys branch-scoped on
+2 & 3. Security advisors: 0 new (156 pre-existing, none touch the changed objects).
+
+**Follow-up (owner-gated):** to enable F1.2 hardening safely, first normalize `grn_create` grants
+(owner → tenant-wide/null grant, or explicit per-central-site grants for whoever sets up
+Kho Tổng / Bếp TT stock), then ship the deferred `grn` RLS hardening as its own migration.

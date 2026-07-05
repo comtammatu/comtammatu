@@ -77,63 +77,21 @@ DO UPDATE SET
   source_template = COALESCE(public.staff_permissions.source_template, EXCLUDED.source_template);
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- (b) GRN RLS hardening (F1.2) — replace has_permission_any(key) with
---     has_permission(branch_id, key) so a GRN write requires membership on the
---     GRN's own branch (blocks cross-branch writes). grn_items has no direct
---     branch_id → derive via the parent goods_received_notes row.
+-- (b) GRN RLS hardening (F1.2) — DEFERRED, intentionally NOT applied.
+--     The MANDATORY cross-branch guard is the app layer (isProcurementBranchInScope
+--     / canAccessProcurementBranch), already shipped in the same PR. Hardening
+--     grn_insert/update/items_write from has_permission_any(key) to
+--     has_permission(branch_id, key) was defense-in-depth only.
+--     PROD reality (verified 2026-07-05): grn_create grants are per-branch —
+--     owner holds it on branch 2 only, office on 2/3 only — and the current
+--     has_permission_any lets them create GRNs for the central sites (Kho Tổng
+--     branch 15 / Bếp TT 16). Applying this hardening would LOCK owner/office out
+--     of central-site GRN creation. It only closes a pre-existing direct-PostgREST
+--     path (branch_manager already held grn_create before D068), so deferring is
+--     not a regression. Re-introduce as a separate migration AFTER normalizing
+--     grn_create grants (owner → tenant-wide/null grant, or explicit per-central
+--     grants). See docs/worklog/t3-branch-operator-receiving-production-2026-07-05.md.
 -- ─────────────────────────────────────────────────────────────────────────────
-
-DROP POLICY IF EXISTS grn_insert ON public.goods_received_notes;
-CREATE POLICY grn_insert ON public.goods_received_notes
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    (tenant_id = public.auth_tenant_id())
-    AND public.has_permission(branch_id, 'procurement:grn_create'::text)
-  );
-
-DROP POLICY IF EXISTS grn_update ON public.goods_received_notes;
-CREATE POLICY grn_update ON public.goods_received_notes
-  FOR UPDATE TO authenticated
-  USING (
-    (tenant_id = public.auth_tenant_id())
-    AND (
-      public.has_permission(branch_id, 'procurement:grn_create'::text)
-      OR public.has_permission(branch_id, 'procurement:grn_confirm'::text)
-    )
-  )
-  WITH CHECK (
-    (tenant_id = public.auth_tenant_id())
-    AND (
-      public.has_permission(branch_id, 'procurement:grn_create'::text)
-      OR public.has_permission(branch_id, 'procurement:grn_confirm'::text)
-    )
-  );
-
-DROP POLICY IF EXISTS grn_items_write ON public.grn_items;
-CREATE POLICY grn_items_write ON public.grn_items
-  TO authenticated
-  USING (
-    (tenant_id = public.auth_tenant_id())
-    AND (EXISTS (
-      SELECT 1
-      FROM public.goods_received_notes grn
-      WHERE grn.id = grn_items.grn_id
-        AND grn.tenant_id = grn_items.tenant_id
-        AND grn.tenant_id = public.auth_tenant_id()
-        AND public.has_permission(grn.branch_id, 'procurement:grn_create'::text)
-    ))
-  )
-  WITH CHECK (
-    (tenant_id = public.auth_tenant_id())
-    AND (EXISTS (
-      SELECT 1
-      FROM public.goods_received_notes grn
-      WHERE grn.id = grn_items.grn_id
-        AND grn.tenant_id = grn_items.tenant_id
-        AND grn.tenant_id = public.auth_tenant_id()
-        AND public.has_permission(grn.branch_id, 'procurement:grn_create'::text)
-    ))
-  );
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- (c) Production RLS relax — allow branch sites, not only central_kitchen.
