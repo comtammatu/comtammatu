@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft as IconArrowLeft, Info as IconInfo } from "lucide-react";
+import {
+  ArrowLeft as IconArrowLeft,
+  ClipboardList as IconClipboardList,
+  Truck as IconTruck,
+} from "lucide-react";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { resolveInventoryListScope } from "../../_lib/inventory-scope";
@@ -16,7 +20,12 @@ import {
   formatVNDate,
   getVNDateString,
 } from "@comtammatu/shared/time";
-import { AppPageHeader, DocumentFormFrame } from "@/components/surface";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
+import {
+  AppPageHeader,
+  AppSection,
+  DocumentFormFrame,
+} from "@/components/surface";
 import {
   fetchOpenPurchaseOrdersForReceiving,
   type OpenPurchaseOrderRow,
@@ -157,20 +166,32 @@ export async function GrnNewPageContent({
 
   const content = (
     <>
+      <AppSection
+        icon={<IconTruck />}
+        title={INVENTORY_VI.receiveBySupplierTitle}
+        description={INVENTORY_VI.receiveBySupplierDescription}
+      >
+        <div className="flex flex-col gap-3">
+          <NoteCallout icon={<IconTruck />}>
+            {INVENTORY_VI.noPoNeededHint}
+          </NoteCallout>
+          <SupplierPicker
+            suppliers={pickerSuppliers}
+            basePath={basePath}
+            canCreate={canCreateSupplier}
+          />
+        </div>
+      </AppSection>
+
       {openPos.length > 0 ? (
-        <GrnFromPoList openPos={openPos} grnBasePath={grnListBasePath} />
+        <AppSection
+          icon={<IconClipboardList />}
+          title={INVENTORY_VI.receiveByPoTitle}
+          badge={{ children: openPos.length, variant: "secondary" }}
+        >
+          <GrnFromPoList openPos={openPos} grnBasePath={grnListBasePath} />
+        </AppSection>
       ) : null}
-
-      <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-        <IconInfo className="size-4 shrink-0" />
-        {INVENTORY_VI.noPoNeededHint}
-      </div>
-
-      <SupplierPicker
-        suppliers={pickerSuppliers}
-        basePath={basePath}
-        canCreate={canCreateSupplier}
-      />
     </>
   );
 

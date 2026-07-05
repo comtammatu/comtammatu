@@ -63,15 +63,7 @@ export function GrnFromPoList({ openPos, grnBasePath = "/inventory/grn" }: Props
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between px-1">
-        <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-          {INVENTORY_VI.fromPoPending}
-        </p>
-        <Badge variant="secondary" className="h-5 px-2 text-3xs">
-          {openPos.length}
-        </Badge>
-      </div>
+    <div className="flex flex-col gap-3">
       {openPos.map((po) => {
         const rowPending = isPending && pendingPoId === po.id;
         return (
@@ -124,6 +116,6 @@ export function GrnFromPoList({ openPos, grnBasePath = "/inventory/grn" }: Props
           </InteractiveCard>
         );
       })}
-    </section>
+    </div>
   );
 }

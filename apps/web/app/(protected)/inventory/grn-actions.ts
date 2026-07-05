@@ -3,9 +3,11 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { JwtClaims } from "@comtammatu/shared/auth";
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
+import { resolveCentralSiteHomeBranchId } from "@/_lib/branch-hub-device";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
@@ -17,14 +19,23 @@ function isBranchScopedProcurementRole(role: string) {
   return role === "warehouse_manager" || role === "production_manager";
 }
 
-function canAccessProcurementBranch(
-  claims: { user_role: string; branch_id: number | null },
+/**
+ * Central-site procurement operators (warehouse_manager, production_manager)
+ * carry `branch_id` null in claims (D055 §1); their operable site is the
+ * central branch matching their role kind. Compare against that resolved home
+ * — not the null claim — so they can write GRNs for their own Kho Tổng /
+ * Bếp Trung Tâm. Pinned branch roles keep the strict claim equality.
+ */
+async function canAccessProcurementBranch(
+  supabase: Parameters<typeof resolveCentralSiteHomeBranchId>[0],
+  claims: JwtClaims,
   branchId: number,
-) {
-  return (
-    !isBranchScopedProcurementRole(claims.user_role) ||
-    claims.branch_id === branchId
-  );
+): Promise<boolean> {
+  if (!isBranchScopedProcurementRole(claims.user_role)) return true;
+  const effectiveBranchId =
+    claims.branch_id ??
+    (await resolveCentralSiteHomeBranchId(supabase, claims));
+  return effectiveBranchId === branchId;
 }
 
 /* ─── Recent Activity (cross-domain) ─── */
@@ -264,7 +275,7 @@ export const createGrnDraft = withAction(
     const targetBranchId = data.branchId;
 
     // Branch-scoped roles must match their assigned procurement branch.
-    if (!canAccessProcurementBranch(claims, targetBranchId)) {
+    if (!(await canAccessProcurementBranch(supabase, claims, targetBranchId))) {
       return {
         success: false,
         error: "Bạn chỉ được tạo phiếu nhập cho kho của mình.",
@@ -480,7 +491,7 @@ export const upsertGrnLine = withAction(
         error: "Chỉ chỉnh sửa dòng khi phiếu nhập đang ở trạng thái nháp.",
       };
     }
-    if (!canAccessProcurementBranch(claims, grn.branch_id)) {
+    if (!(await canAccessProcurementBranch(supabase, claims, grn.branch_id))) {
       return {
         success: false,
         error: "Bạn chỉ được chỉnh sửa phiếu nhập của kho mình.",
@@ -573,7 +584,7 @@ export const deleteGrnLine = withAction(
         error: "Chỉ xóa dòng khi phiếu nhập đang ở trạng thái nháp.",
       };
     }
-    if (!canAccessProcurementBranch(claims, grn.branch_id)) {
+    if (!(await canAccessProcurementBranch(supabase, claims, grn.branch_id))) {
       return {
         success: false,
         error: "Bạn chỉ được chỉnh sửa phiếu nhập của kho mình.",
