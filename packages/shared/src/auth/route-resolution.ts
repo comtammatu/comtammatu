@@ -50,7 +50,13 @@ export function isRunnerPublicDisplayPath(pathname: string): boolean {
 export function isPublicAppPath(pathname: string): boolean {
   if (pathname.startsWith("/swe-worker-")) return true;
   if (pathname.startsWith("/demo/")) return true;
-  if (/^\/br\/\d+\/(?:pos|kds)\/manifest\.webmanifest$/.test(pathname)) {
+  // Operational PWA manifests (hub `/br/{id}`, plus pos/kds/runner stations).
+  // Browsers fetch `<link rel="manifest">` without credentials, so a gated
+  // manifest 302s to /login and the PWA becomes uninstallable. The manifest
+  // body carries no sensitive data (name/icons/colors only).
+  if (
+    /^\/br\/\d+\/(?:(?:pos|kds|runner)\/)?manifest\.webmanifest$/.test(pathname)
+  ) {
     return true;
   }
   // Runner is a customer-facing read-only display, not a staff login surface.
