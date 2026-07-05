@@ -354,22 +354,30 @@ export const loadActiveGrnDraft = withAction(
 
 /* ─── listMyGrnDrafts (Sprint 6 #3) ─── */
 
-export async function listMyGrnDrafts(): Promise<ActionResult> {
+export async function listMyGrnDrafts(
+  branchId?: number,
+): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims, user } = ctx;
-  const { data, error } = await supabase
+  let query = supabase
     .from("goods_received_notes")
     .select(
       "id, supplier_id, branch_id, grn_number, updated_at, suppliers ( id, name ), grn_items ( id )",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("created_by", user.id)
-    .eq("status", "draft")
-    .order("updated_at", { ascending: false });
+    .eq("status", "draft");
+  // Branch-scope drafts on the operator plane so a multi-branch user does not
+  // see (and Continue into) another branch's draft; office (branchId omitted)
+  // keeps the cross-branch view.
+  if (branchId != null) query = query.eq("branch_id", branchId);
+  const { data, error } = await query.order("updated_at", {
+    ascending: false,
+  });
   if (error) {
     return { success: false, error: "Không thể tải danh sách phiếu nháp." };
   }
