@@ -67,7 +67,7 @@ export default async function OperatorLayout({
 
   return (
     <PwaRuntimeProvider>
-      <div className="flex h-dvh w-full flex-col overflow-y-auto overscroll-none touch-manipulation bg-muted/30">
+      <div className="flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
         <AppHeader
           title={context.branch.name}
           subtitle={ROLE_LABEL_VI[claims.user_role]}
@@ -106,7 +106,7 @@ export default async function OperatorLayout({
         <div
           id="main-content"
           role="main"
-          className="flex min-h-0 flex-1 flex-col"
+          className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
         >
           <AppPage
             density="compact"
