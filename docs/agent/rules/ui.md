@@ -26,6 +26,25 @@ Non-current visual-layer strings and non-current design-folder paths are blocked
 by `scripts/check-ui-contract.mjs` / `corepack pnpm lint:ui-contract`. Any new visual
 token layer requires a design-system contract change first.
 
+These recently-locked contracts live in `docs/spec/design-system.md` — read them
+there, do not restate them here:
+
+- Uppercase label role (one role = one size, never viewport-scaled) and the KDS
+  kitchen item-name scale: § Rhythm B (Heading Scale).
+- Heading-weight lock (`font-semibold` default; `font-bold` = receipt totals +
+  print-mode page headers; named POS-item-over-photo exception): § Rhythm B.
+- Sticky operator action-bar `gap-2` and the operator section-stack density rule
+  (no fresh `flex flex-col gap-*` stack; sections are `AppPage` children): § A
+  Spacing Rhythm.
+- Tint Opacity Scale (`/10` fill, `/15` fill-strong, `/20` hairline-border;
+  muted `/30` `/50` only): § Token Contract → Tint Opacity Scale.
+- Callout / tint-chrome routing (tinted bordered box → `Alert` / `NoteCallout`;
+  canonical warning = `NoteCallout tone="warning"`): § Token Contract → Callout /
+  tint chrome routing and § Component Authority.
+- Canonical operator-home skeleton (`[primary CTA] → [live queue panel] →
+  [curated job tiles]`, badges not KPI cards): § Structural Governance → C. Route
+  Home + IA.
+
 ## Guardrails
 
 - NEVER invent or redesign the UI outside the project's established design system.
@@ -62,6 +81,7 @@ token layer requires a design-system contract change first.
 - Mobile-first for operational routes: the first viewport must show the next safe action or the live queue, not decorative hero/status chrome.
 - Once staff lock context such as session, table, station, or order, compact the UI and give space back to the primary task.
 - One workflow state should have one visual source of truth. Do not repeat the same state in header, rail, sidebar, gate, and board.
+- A list surface exposes exactly ONE filter control per facet — never chips AND Tabs for the same axis. A per-row status badge is item-state, not a filter, and does not count as a second control.
 - Cart is for creating a new order only. After submit, order mutations MUST happen from order detail or order history flows.
 - Desktop may add density, secondary insight, or faster scan surfaces, but MUST NOT create a different IA from mobile.
 - Prefer real Má Tư DS primitives (`Tabs`, `Badge`, `Button`, `Card`, `Sheet`, `Select`, `Table`, `Dialog`) before styling raw `div` or `button` controls.
@@ -97,3 +117,9 @@ inspection.
 - `NO-INLINE-CHROME-REIMPL`
 - `NO-RADIUS-TIER-MISALIGN`
 - `NO-SPACE-Y-SECTION-STACK`
+
+New machine-checked dimensions (frozen-baseline gates in
+`scripts/check-ui-contract.mjs`, advisory-with-baseline like the others —
+current debt is frozen per file and only burns down): `tint-opacity`,
+`uppercase-label-scale`, the widened `inline-chrome-baseline`, and the widened
+`stat-card-ssot` name set.
