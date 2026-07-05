@@ -771,12 +771,19 @@ test("operator stocktake routes use branch stocktake, not employee count", () =>
     stocktakeListClient,
     stocktakeNewClient,
     stocktakeDetailClient,
-    stocktakeCountClient,
   ]) {
     assert.match(source, /embedded\?: boolean/);
     assert.match(source, /embedded = false/);
     assert.match(source, embeddedContentWrapperPattern);
   }
+  // The stocktake count client is the native operator exception: embedded mode
+  // renders the numpad-wizard (D067 mockup 8) instead of the office grid.
+  assert.match(stocktakeCountClient, /embedded\?: boolean/);
+  assert.match(stocktakeCountClient, /embedded = false/);
+  assert.match(
+    stocktakeCountClient,
+    /if \(embedded\) \{\s*return \(\s*<StocktakeCountWizard/,
+  );
   assert.match(
     stocktakeListClient,
     /<AppPage width="xwide">\s*\{content\}\s*<\/AppPage>/,

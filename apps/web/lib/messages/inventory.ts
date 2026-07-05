@@ -1128,6 +1128,15 @@ export const inventory = {
     creatingClassic: "Đang tạo...",
     createClassic: "Tạo phiên",
     zoneLockLost: "Mất zone lock — ngừng nhập số đếm",
+    countNative: {
+      countMode: (round: number) => `Đếm mù · R${round}`,
+      countRatio: (done: number, total: number) => `${done}/${total}`,
+      countSaveNext: "Lưu · món kế →",
+      countUpNext: (names: string[]) => `Kế: ${names.join(" · ")}…`,
+      countSubmitRemaining: (n: number) => `Gửi kết quả (còn ${n} mục)`,
+      countSubmitAll: "Gửi kết quả",
+      countInvalidQty: "Nhập số lượng hợp lệ.",
+    },
     detail: {
       title: "Chi tiết kiểm kê",
       createdAt: (date: string) => `Ngày tạo: ${date}`,
