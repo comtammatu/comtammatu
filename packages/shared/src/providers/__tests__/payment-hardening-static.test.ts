@@ -53,7 +53,7 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   );
   assert.ok(
     source.includes(
-      "/\\bVQRLOAMB20260626100157757 [A-Z0-9]{12}\\b|\\bDH[A-Z0-9]{3,12}\\b/gi;",
+      "/\\bQAJZRU5550 MBBMS01382716 1 [A-Z0-9]{12}\\b|\\bVQRLOAMB20260626100157757 [A-Z0-9]{12}\\b|\\bDH[A-Z0-9]{3,12}\\b/gi;",
     ),
   );
   assert.ok(

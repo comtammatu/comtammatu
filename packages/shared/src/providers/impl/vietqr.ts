@@ -128,8 +128,10 @@ const BANK_BINS: Record<string, string> = {
 
 // Fixed MB soundbox recognition token, NOT a live timestamp; mirrors the
 // literal in generate_order_payment_code (SQL). The transfer memo is this token
-// plus a 12-char CSPRNG suffix; SePay reconciles on the full string.
-const MB_SPEAKER_FIXED_TOKEN = "VQRLOAMB20260626100157757";
+// plus a 12-char CSPRNG suffix; SePay reconciles on the full string. Every space
+// is single: print_vietqr_ascii and the SePay webhook both collapse whitespace
+// runs to one space before matching.
+const MB_SPEAKER_FIXED_TOKEN = "QAJZRU5550 MBBMS01382716 1";
 const PAYMENT_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 function randomPaymentAlnum(length: number): string {
