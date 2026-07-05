@@ -34,6 +34,7 @@ import {
   isKdsActiveTicketStatus,
 } from "../_lib/order-status";
 import {
+  KDS_ITEM_NAME_CLASS,
   shouldShowTicketStatusBadge,
 } from "../_lib/status-config";
 import { BatchActions } from "./batch-actions";
@@ -117,7 +118,7 @@ function CompactItemRow({
         </span>
       </div>
       <div className="flex min-h-8 min-w-0 flex-wrap items-center gap-x-1 gap-y-1 xl:min-h-9 xl:gap-x-1.5">
-        <span className="min-w-0 break-words text-base font-semibold leading-5 xl:text-lg xl:leading-6">
+        <span className={cn("min-w-0 break-words", KDS_ITEM_NAME_CLASS)}>
           {item.item_name}
         </span>
         {item.is_priority && (
@@ -222,7 +223,12 @@ function CompactOrphanRow({
         getKdsRowEffectClass(rowEffect),
       )}
     >
-      <span className="min-w-0 break-words text-base font-semibold leading-6 text-muted-foreground">
+      <span
+        className={cn(
+          "min-w-0 break-words text-muted-foreground",
+          KDS_ITEM_NAME_CLASS,
+        )}
+      >
         {PRODUCT_VI.posItem} #{String(ticket.order_item_id)}
       </span>
       <div className="flex min-w-0 flex-wrap items-center justify-end gap-1 xl:shrink-0 xl:flex-nowrap">

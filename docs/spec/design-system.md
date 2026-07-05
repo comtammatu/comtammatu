@@ -416,7 +416,11 @@ Shared layout primitives also exported from `surface.tsx`:
 
 ### Card Roles
 
-`Card` is the frame primitive. `KpiCard` is only for numeric/stat values. Other
+`Card` is the frame primitive (card-role, `rounded-lg`). `KpiCard` is only for
+numeric/stat values. `Frame` is the layout-free inset-tier surface
+(`rounded-md border bg-card`, no flex/gap/padding) for a plain bordered box
+whose caller owns its layout and content flow — the delegation target when a box
+must not inherit `Card`'s flex/gap/padding (e.g. inline-flow note boxes). Other
 card jobs use `AppSection`, `AppLinkCard`, `OperationalBoardCard`,
 `OperationalTile`, `InteractiveCard`, `DataTable.mobileCardRender`, or a
 route-scoped adapter that still renders `Card`.

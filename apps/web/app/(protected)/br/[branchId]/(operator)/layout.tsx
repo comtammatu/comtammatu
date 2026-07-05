@@ -11,6 +11,7 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage } from "@/components/surface";
 import { AppHeader } from "@/components/app-header";
+import { NotificationCountBadge } from "@/components/notification-count-badge";
 import { PwaRuntimeProvider } from "@/components/pwa-runtime";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
@@ -90,11 +91,7 @@ export default async function OperatorLayout({
               >
                 <Link href={notificationsHref}>
                   <IconBell />
-                  {unread > 0 ? (
-                    <span className="absolute right-1 top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-2xs font-semibold leading-none text-destructive-foreground">
-                      {unread > 99 ? "99+" : unread}
-                    </span>
-                  ) : null}
+                  <NotificationCountBadge count={unread} />
                 </Link>
               </Button>
             </>

@@ -1,6 +1,14 @@
 import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
 import { getKdsTicketDisplayStatus } from "./order-status";
 
+/**
+ * Locked KDS kitchen item-name typography role
+ * (design-system.md § Rhythm B: Heading Scale). Single-sourced so the
+ * heatmap grid and focus view cannot diverge in item-name size.
+ */
+export const KDS_ITEM_NAME_CLASS =
+  "text-base font-semibold leading-6 xl:text-lg xl:leading-6";
+
 export function shouldShowTicketStatusBadge(status: string): boolean {
   return getKdsTicketDisplayStatus(status) !== "pending";
 }

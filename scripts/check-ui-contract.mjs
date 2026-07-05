@@ -872,7 +872,6 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 1,
       "apps/web/app/(protected)/branch-settings/_shared/kds/station-form-dialog.tsx": 1,
       "apps/web/app/(protected)/branch-settings/_shared/pos/stock-control-card.tsx": 1,
-      "apps/web/app/(protected)/employee/components/employee-page.tsx": 1,
       "apps/web/app/(protected)/finance/components/chart-card.tsx": 1,
       "apps/web/app/(protected)/finance/components/filter-bar.tsx": 1,
       "apps/web/app/(protected)/finance/components/mv-staleness-banner.tsx": 1,

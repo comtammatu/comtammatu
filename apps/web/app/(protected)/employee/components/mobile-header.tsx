@@ -3,6 +3,7 @@ import { Bell as IconBell, User as IconUser } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppHeader } from "@/components/app-header";
+import { NotificationCountBadge } from "@/components/notification-count-badge";
 import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { loadAuthState } from "@/_lib/auth";
@@ -54,11 +55,7 @@ export async function MobileHeader() {
           >
             <Link href="/notifications">
               <IconBell data-icon="inline-start" />
-              {unread > 0 ? (
-                <span className="absolute -right-1 -top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-2xs font-semibold text-destructive-foreground">
-                  {unread > 99 ? "99+" : unread}
-                </span>
-              ) : null}
+              <NotificationCountBadge count={unread} />
             </Link>
           </Button>
           <Button
