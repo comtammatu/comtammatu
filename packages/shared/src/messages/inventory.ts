@@ -161,6 +161,7 @@ export const INVENTORY_VI = {
   receiveDate: "Ngày kiểm nhận",
   draft: "Nháp",
   choosePoToCreateGrn: "Chọn PO để tạo GRN",
+  newGrn: "Phiếu nhập hàng mới",
   grnSearchPlaceholder: "Tìm mã GRN, nhà cung cấp, PO...",
   grnNotFoundFiltered: "Không tìm thấy phiếu nhập phù hợp",
   grnEmptyNoData: "Chưa có phiếu nhập kho nào",
