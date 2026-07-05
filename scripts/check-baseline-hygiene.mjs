@@ -60,6 +60,14 @@ const CLASSIFIED_FILES = new Map([
     "apps/web/e2e/inventory/transfer-direction.spec.ts",
     "E2E asserts the live redirect from the old transfer-create URL (create=cap-bep) to the consumption surface; URL canonicalization for the legacy kitchen-transfer flow, not cruft.",
   ],
+  [
+    "apps/web/tests/inventory-unit-derivation.test.ts",
+    "Phase A2 unit-conversion tests; 'legacy' names the live purchase_to_measure_factor backward-compat path the anchor-chain resolver still honors, not retired code.",
+  ],
+  [
+    "apps/web/tests/inventory-unit-system-phase-a2-static.test.ts",
+    "Phase A2 unit-conversion static tests; 'legacy' names the live purchase_to_measure_factor backward-compat fallback (positive-guarded, anchorless rows), not dead code.",
+  ],
 ]);
 
 function walkFiles(rootDir) {
