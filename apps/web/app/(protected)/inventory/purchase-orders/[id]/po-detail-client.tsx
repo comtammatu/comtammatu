@@ -12,6 +12,7 @@ import {
   Save as IconSave,
   Trash as IconTrash,
 } from "lucide-react";
+import { NumberPadSheet } from "@/components/form";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -1007,6 +1008,7 @@ function PoLineMobileCard({
   onSaveLine: (index: number) => void;
   onDeleteLine: (line: EditablePoLine) => void;
 }) {
+  const [numpad, setNumpad] = useState<"qty" | "price" | null>(null);
   return (
     <Item variant="outline" className="flex-col items-stretch gap-4 p-4">
       <div className="flex items-start justify-between gap-3">
@@ -1035,14 +1037,16 @@ function PoLineMobileCard({
         <div>
           <p className="text-muted-foreground">{FORM_VI.quantity}</p>
           {canEditLines ? (
-            <FormattedNumberInput
-              value={String(item.qty)}
-              onValueChange={(value) =>
-                patchLine(index, { qty: Number(value || 0) })
-              }
-              maxFractionDigits={3}
-              className="h-9"
-            />
+            <button
+              type="button"
+              onClick={() => setNumpad("qty")}
+              className="mt-1 flex w-full flex-col items-start gap-1 rounded-md bg-muted/50 px-3 py-2 text-left transition active:scale-[0.99]"
+            >
+              <span className="text-lg font-semibold tabular-nums">
+                {item.qty}
+              </span>
+              <span className="text-xs text-muted-foreground">{item.unit}</span>
+            </button>
           ) : (
             <p className="font-semibold">
               {item.qty} {item.unit}
@@ -1052,14 +1056,18 @@ function PoLineMobileCard({
         <div>
           <p className="text-muted-foreground">{FORM_VI.unitPrice}</p>
           {canEditLines ? (
-            <FormattedNumberInput
-              value={item.price != null ? String(item.price) : ""}
-              onValueChange={(value) =>
-                patchLine(index, { price: value ? Number(value) : null })
-              }
-              maxFractionDigits={0}
-              className="h-9"
-            />
+            <button
+              type="button"
+              onClick={() => setNumpad("price")}
+              className="mt-1 flex w-full flex-col items-start gap-1 rounded-md bg-muted/50 px-3 py-2 text-left transition active:scale-[0.99]"
+            >
+              <span className="text-lg font-semibold tabular-nums">
+                {item.price != null
+                  ? formatVND(item.price)
+                  : poCopy.pricePlaceholder}
+              </span>
+              <span className="text-xs text-muted-foreground">{item.unit}</span>
+            </button>
           ) : (
             <p className="font-semibold">
               {item.price != null
@@ -1121,6 +1129,28 @@ function PoLineMobileCard({
           <IconSave className="size-4" />
           {poDetailCopy.saveLine}
         </Button>
+      ) : null}
+      {canEditLines ? (
+        <>
+          <NumberPadSheet
+            open={numpad === "qty"}
+            onOpenChange={(next) => setNumpad(next ? "qty" : null)}
+            title={poCopy.quantitySheetTitle(item.unit)}
+            initialValue={item.qty}
+            suffix={item.unit}
+            onConfirm={(value) => patchLine(index, { qty: value })}
+            allowDecimal
+          />
+          <NumberPadSheet
+            open={numpad === "price"}
+            onOpenChange={(next) => setNumpad(next ? "price" : null)}
+            title={FORM_VI.unitPrice}
+            initialValue={item.price ?? 0}
+            suffix="đ"
+            onConfirm={(value) => patchLine(index, { price: value })}
+            allowDecimal={false}
+          />
+        </>
       ) : null}
     </Item>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -20,6 +20,7 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
+  ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
@@ -30,15 +31,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
-import { Combobox } from "@/components/form";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/components/data-table/data-table";
-import { FormattedNumberInput } from "../../_components/formatted-number-input";
+import { Combobox, NumberPadSheet } from "@/components/form";
 import { formatVND } from "../../_lib/format";
 import {
   getDefaultPurchaseUnit,
@@ -644,7 +647,26 @@ function SuggestionsPanel({
 }
 
 // ---------------------------------------------------------------------------
-// LineItemsSection — line items table with inline add-row
+// AddLineDraft — line editor state, mirroring GrnCreateClient's EditState.
+// ---------------------------------------------------------------------------
+type AddLineDraft = {
+  ingredientId: string;
+  unit: string;
+  entryUnitId: number | null;
+  quantity: number;
+  unitPrice: number | null;
+};
+
+const EMPTY_ADD_LINE: AddLineDraft = {
+  ingredientId: "",
+  unit: "",
+  entryUnitId: null,
+  quantity: 0,
+  unitPrice: null,
+};
+
+// ---------------------------------------------------------------------------
+// LineItemsSection — line list + sheet-driven add flow (mobile parity w/ GRN)
 // ---------------------------------------------------------------------------
 function LineItemsSection({
   lines,
@@ -665,74 +687,54 @@ function LineItemsSection({
   onRemoveLine: (idx: number) => void;
   onAddLine: (line: LocalLine) => void;
 }) {
-  const [ingredientId, setIngredientId] = useState("");
-  const [unit, setUnit] = useState("");
-  const [entryUnitId, setEntryUnitId] = useState<number | null>(null);
-  const [qtyInput, setQtyInput] = useState("");
-  const [unitPriceInput, setUnitPriceInput] = useState("");
+  const [draft, setDraft] = useState<AddLineDraft | null>(null);
+  const [numpad, setNumpad] = useState<"qty" | "price" | null>(null);
   const [addRowDeviation, setAddRowDeviation] =
     useState<SinglePriceDeviation | null>(null);
-  const qtyRef = useRef<HTMLInputElement>(null);
-  const priceRef = useRef<HTMLInputElement>(null);
 
-  const selectedIngredient = ingredients.find(
-    (x) => String(x.id) === ingredientId,
-  );
+  const selectedIngredient = draft
+    ? ingredients.find((x) => String(x.id) === draft.ingredientId)
+    : undefined;
   const purchaseUnitOptions = getPurchaseUnitOptions(selectedIngredient);
 
+  function openAddLine() {
+    setAddRowDeviation(null);
+    setDraft(EMPTY_ADD_LINE);
+  }
+
+  function closeAddLine() {
+    setDraft(null);
+    setNumpad(null);
+    setAddRowDeviation(null);
+  }
+
+  function patchDraft(patch: Partial<AddLineDraft>) {
+    setDraft((current) => (current ? { ...current, ...patch } : current));
+  }
+
   function handleIngredientChange(val: string) {
-    setIngredientId(val);
     setAddRowDeviation(null);
     const ing = ingredients.find((x) => String(x.id) === val);
     const defaultUnit = getDefaultPurchaseUnit(ing);
-    setUnit(defaultUnit?.label ?? ing?.purchase_unit ?? ing?.unit ?? "");
-    setEntryUnitId(defaultUnit?.unitId ?? null);
-    setTimeout(() => qtyRef.current?.focus(), 0);
+    patchDraft({
+      ingredientId: val,
+      unit: defaultUnit?.label ?? ing?.purchase_unit ?? ing?.unit ?? "",
+      entryUnitId: defaultUnit?.unitId ?? null,
+    });
   }
 
   function handleUnitChange(unitIdValue: string) {
-    setEntryUnitId(Number(unitIdValue));
     const opt = purchaseUnitOptions.find(
       (o) => String(o.unitId) === unitIdValue,
     );
-    if (opt) setUnit(opt.label);
-  }
-
-  function handleAddLine(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const iid = Number(ingredientId);
-    if (!iid) {
-      toast.error("Chọn nguyên liệu");
-      return;
-    }
-    const ing = ingredients.find((x) => x.id === iid);
-    const resolvedUnit = unit || ing?.purchase_unit || ing?.unit || "";
-    const qty = Number(qtyInput);
-    const priceRaw = unitPriceInput.trim();
-    const unitPriceEst = priceRaw === "" ? null : Number(priceRaw);
-    if (!resolvedUnit || !Number.isFinite(qty) || qty <= 0) {
-      toast.error("Nhập số lượng hợp lệ");
-      return;
-    }
-    onAddLine({
-      ingredientId: iid,
-      ingredientName: ing?.name ?? `#${iid}`,
-      quantity: qty,
-      unit: resolvedUnit,
-      entryUnitId,
-      unitPriceEst,
+    patchDraft({
+      entryUnitId: Number(unitIdValue),
+      unit: opt?.label ?? "",
     });
-    setIngredientId("");
-    setUnit("");
-    setEntryUnitId(null);
-    setQtyInput("");
-    setUnitPriceInput("");
-    setAddRowDeviation(null);
   }
 
-  function checkAddRowDeviation() {
-    const price = Number(unitPriceInput);
-    const ingId = Number(ingredientId);
+  function checkDraftDeviation(price: number) {
+    const ingId = Number(draft?.ingredientId);
     if (ingId && price > 0 && supplierId) {
       fetchSinglePriceDeviation({
         ingredientId: ingId,
@@ -748,82 +750,32 @@ function LineItemsSection({
     }
   }
 
-  const columns: DataTableColumn<LocalLine>[] = [
-    {
-      key: "ingredient",
-      header: PRODUCT_VI.rawIngredient,
-      render: (line) => {
-        const dev = lineDeviations.get(line.ingredientId);
-        return (
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="truncate font-medium">{line.ingredientName}</span>
-            {dev && Math.abs(dev.deviation_pct) > 5 ? (
-              <InlineDeviationHint deviation={dev} unit={line.unit} />
-            ) : null}
-          </div>
-        );
-      },
-    },
-    {
-      key: "quantity",
-      header: FORM_VI.quantity,
-      className: "w-24 text-right",
-      render: (line) => (
-        <span className="font-mono">
-          {line.quantity.toLocaleString("vi-VN")}
-        </span>
-      ),
-    },
-    {
-      key: "unit",
-      header: messages.inventory.po.unitShort,
-      className: "w-20",
-      render: (line) => (
-        <span className="text-muted-foreground">{line.unit}</span>
-      ),
-    },
-    {
-      key: "unitPrice",
-      header: messages.inventory.po.unitPrice,
-      className: "w-32 text-right",
-      render: (line) => (
-        <span className="font-mono text-muted-foreground">
-          {line.unitPriceEst != null
-            ? line.unitPriceEst.toLocaleString("vi-VN")
-            : "-"}
-        </span>
-      ),
-    },
-    {
-      key: "amount",
-      header: FORM_VI.amount,
-      className: "w-32 text-right",
-      render: (line) => (
-        <span className="font-mono">
-          {line.unitPriceEst != null
-            ? formatVND(line.quantity * line.unitPriceEst)
-            : "-"}
-        </span>
-      ),
-    },
-    {
-      key: "actions",
-      header: "",
-      className: "w-8 text-right",
-      render: (_line, idx) => (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => onRemoveLine(idx)}
-          className="text-muted-foreground hover:text-destructive"
-          aria-label={messages.inventory.po.removeLineAria}
-        >
-          <IconTrash />
-        </Button>
-      ),
-    },
-  ];
+  function commitAddLine() {
+    if (!draft) return;
+    const iid = Number(draft.ingredientId);
+    if (!iid) {
+      toast.error(messages.inventory.po.chooseIngredient);
+      return;
+    }
+    const ing = ingredients.find((x) => x.id === iid);
+    const resolvedUnit = draft.unit || ing?.purchase_unit || ing?.unit || "";
+    if (!resolvedUnit || draft.quantity <= 0) {
+      toast.error(messages.inventory.po.validQuantityRequired);
+      return;
+    }
+    onAddLine({
+      ingredientId: iid,
+      ingredientName: ing?.name ?? `#${iid}`,
+      quantity: draft.quantity,
+      unit: resolvedUnit,
+      entryUnitId: draft.entryUnitId,
+      unitPriceEst: draft.unitPrice,
+    });
+    closeAddLine();
+  }
+
+  const draftValid =
+    draft != null && draft.ingredientId !== "" && draft.quantity > 0;
 
   return (
     <AppSection
@@ -834,162 +786,294 @@ function LineItemsSection({
           : undefined
       }
     >
-      <DataTable
-        columns={columns}
-        data={lines}
-        getRowKey={(line) => line.ingredientId}
-        emptyTitle={messages.inventory.po.emptyIngredientsTitle}
-        emptyDescription={messages.inventory.po.emptyIngredientsDescription}
-        emptyIcon={<IconPackage />}
-        mobileCardRender={(line, idx) => {
-          const dev = lineDeviations.get(line.ingredientId);
-          return (
-            <Item variant="outline" size="sm">
-              <ItemContent className="min-w-0">
-                <ItemTitle className="w-full">
-                  <span className="truncate">{line.ingredientName}</span>
-                </ItemTitle>
-                <ItemDescription>
-                  {line.quantity.toLocaleString("vi-VN")} {line.unit}
-                  {line.unitPriceEst != null
-                    ? messages.inventory.po.totalAmountSuffix(
-                        line.unitPriceEst.toLocaleString("vi-VN"),
-                      )
-                    : ""}
-                </ItemDescription>
-                {dev && Math.abs(dev.deviation_pct) > 5 ? (
-                  <InlineDeviationHint deviation={dev} unit={line.unit} />
-                ) : null}
-              </ItemContent>
-              <ItemActions>
-                {line.unitPriceEst != null ? (
-                  <span className="font-mono text-sm">
-                    {formatVND(line.quantity * line.unitPriceEst)}
-                  </span>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => onRemoveLine(idx)}
-                  className="text-muted-foreground hover:text-destructive"
-                  aria-label={messages.inventory.po.removeLineAria}
-                >
-                  <IconTrash />
-                </Button>
-              </ItemActions>
-            </Item>
-          );
-        }}
-        desktopFooterRows={
-          hasValue
-            ? [
-                {
-                  key: "total",
-                  cells: [
-                    {
-                      key: "label",
-                      colSpan: 4,
-                      className:
-                        "text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground",
-                      content: messages.inventory.po.estimatedTotal,
-                    },
-                    {
-                      key: "value",
-                      className: "text-right font-mono font-semibold",
-                      content: formatVND(totalValue),
-                    },
-                    { key: "spacer", content: null },
-                  ],
-                },
-              ]
-            : undefined
-        }
-        mobileFooter={
-          hasValue ? (
-            <div className="flex items-center justify-between gap-2 text-sm">
-              <span className="text-muted-foreground">
-                {messages.inventory.po.estimatedTotal}
-              </span>
-              <span className="font-mono font-semibold">
-                {formatVND(totalValue)}
-              </span>
-            </div>
-          ) : null
-        }
+      {lines.length === 0 ? (
+        <AppEmptyState
+          compact
+          icon={<IconPackage />}
+          title={messages.inventory.po.emptyIngredientsTitle}
+          description={messages.inventory.po.emptyIngredientsDescription}
+        />
+      ) : (
+        <ItemGroup className="gap-2">
+          {lines.map((line, idx) => {
+            const dev = lineDeviations.get(line.ingredientId);
+            return (
+              <Item key={line.ingredientId} variant="outline" size="sm">
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="w-full">
+                    <span className="truncate">{line.ingredientName}</span>
+                  </ItemTitle>
+                  <ItemDescription>
+                    {line.quantity.toLocaleString("vi-VN")} {line.unit}
+                    {line.unitPriceEst != null
+                      ? messages.inventory.po.totalAmountSuffix(
+                          line.unitPriceEst.toLocaleString("vi-VN"),
+                        )
+                      : ""}
+                  </ItemDescription>
+                  {dev && Math.abs(dev.deviation_pct) > 5 ? (
+                    <InlineDeviationHint deviation={dev} unit={line.unit} />
+                  ) : null}
+                </ItemContent>
+                <ItemActions>
+                  {line.unitPriceEst != null ? (
+                    <span className="font-mono text-sm">
+                      {formatVND(line.quantity * line.unitPriceEst)}
+                    </span>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-lg"
+                    onClick={() => onRemoveLine(idx)}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label={messages.inventory.po.removeLineAria}
+                  >
+                    <IconTrash />
+                  </Button>
+                </ItemActions>
+              </Item>
+            );
+          })}
+        </ItemGroup>
+      )}
+
+      {hasValue ? (
+        <div className="flex items-center justify-between gap-2 border-t pt-3 text-sm">
+          <span className="text-muted-foreground">
+            {messages.inventory.po.estimatedTotal}
+          </span>
+          <span className="font-mono font-semibold">
+            {formatVND(totalValue)}
+          </span>
+        </div>
+      ) : null}
+
+      <Button
+        type="button"
+        variant="outline"
+        size="touch-lg"
+        className="w-full"
+        onClick={openAddLine}
+      >
+        <IconPlus data-icon="inline-start" />
+        {messages.inventory.po.addLine}
+      </Button>
+
+      <AddLineSheet
+        draft={draft}
+        ingredient={selectedIngredient}
+        ingredients={ingredients}
+        unitOptions={purchaseUnitOptions}
+        deviation={addRowDeviation}
+        valid={draftValid}
+        onIngredientChange={handleIngredientChange}
+        onUnitChange={handleUnitChange}
+        onOpenNumpad={setNumpad}
+        onClose={closeAddLine}
+        onCommit={commitAddLine}
       />
 
-      <form
-        onSubmit={handleAddLine}
-        className="grid grid-cols-1 gap-2 border-t pt-3 sm:grid-cols-2 lg:grid-cols-12"
-      >
-        <div className="lg:col-span-5">
-          <Combobox
-            value={ingredientId}
-            onValueChange={handleIngredientChange}
-              options={ingredients.map((i) => ({
-                value: String(i.id),
-                label: i.name,
-                hint: getDefaultPurchaseUnit(i)?.label ?? i.purchase_unit ?? i.unit,
-                keywords: [i.sku ?? "", i.category ?? ""],
-              }))}
-            placeholder={messages.inventory.po.ingredientPlaceholder}
-            searchPlaceholder={
-              messages.inventory.po.ingredientSearchPlaceholder
-            }
-            triggerClassName="border-dashed"
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <FormattedNumberInput
-            ref={qtyRef}
-            placeholder={messages.inventory.po.quantityShort}
-            className="text-right"
-            value={qtyInput}
-            onValueChange={setQtyInput}
-            maxFractionDigits={3}
-            required
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <UnitField
-            options={purchaseUnitOptions}
-            entryUnitId={entryUnitId}
-            unit={unit}
-            onUnitChange={handleUnitChange}
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <FormattedNumberInput
-            ref={priceRef}
-            placeholder={messages.inventory.po.priceOptionalPlaceholder}
-            className="text-right"
-            value={unitPriceInput}
-            onValueChange={setUnitPriceInput}
-            onBlur={checkAddRowDeviation}
-            maxFractionDigits={0}
-          />
-        </div>
-        <Button
-          type="submit"
-          disabled={!ingredientId}
-          size="sm"
-          className="w-full lg:col-span-1"
-          aria-label={messages.inventory.po.addLine}
-        >
-          <IconPlus data-icon="inline-start" />
-          <span className="lg:sr-only">{messages.inventory.po.addLine}</span>
-        </Button>
-        {addRowDeviation && Math.abs(addRowDeviation.deviation_pct) > 5 ? (
-          <div className="sm:col-span-2 lg:col-span-12">
-            <InlineDeviationHint
-              deviation={addRowDeviation}
-              unit={unit || messages.inventory.po.unitShort}
-            />
-          </div>
-        ) : null}
-      </form>
+      <NumberPadSheet
+        open={numpad === "qty"}
+        onOpenChange={(next) => setNumpad(next ? "qty" : null)}
+        title={messages.inventory.po.quantitySheetTitle(draft?.unit ?? "")}
+        initialValue={draft?.quantity ?? 0}
+        suffix={draft?.unit ?? ""}
+        onConfirm={(value) => patchDraft({ quantity: value })}
+        allowDecimal
+      />
+      <NumberPadSheet
+        open={numpad === "price"}
+        onOpenChange={(next) => setNumpad(next ? "price" : null)}
+        title={messages.inventory.po.unitPrice}
+        initialValue={draft?.unitPrice ?? 0}
+        suffix="đ"
+        onConfirm={(value) => {
+          patchDraft({ unitPrice: value });
+          checkDraftDeviation(value);
+        }}
+        allowDecimal={false}
+      />
     </AppSection>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AddLineSheet — bottom sheet line editor (ingredient + qty/price via numpad).
+// ---------------------------------------------------------------------------
+function AddLineSheet({
+  draft,
+  ingredient,
+  ingredients,
+  unitOptions,
+  deviation,
+  valid,
+  onIngredientChange,
+  onUnitChange,
+  onOpenNumpad,
+  onClose,
+  onCommit,
+}: {
+  draft: AddLineDraft | null;
+  ingredient: IngredientRow | undefined;
+  ingredients: IngredientRow[];
+  unitOptions: PurchaseUnitOption[];
+  deviation: SinglePriceDeviation | null;
+  valid: boolean;
+  onIngredientChange: (value: string) => void;
+  onUnitChange: (value: string) => void;
+  onOpenNumpad: (key: "qty" | "price") => void;
+  onClose: () => void;
+  onCommit: () => void;
+}) {
+  const open = draft != null;
+  const lineTotal =
+    draft && draft.unitPrice != null ? draft.quantity * draft.unitPrice : null;
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <SheetContent
+        side="bottom"
+        className="h-auto max-h-dvh-95 gap-0 bg-background p-0 text-foreground"
+        showCloseButton={false}
+      >
+        {draft ? (
+          <>
+            <SheetHeader>
+              <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+                {messages.inventory.po.addLineTitle}
+              </p>
+              <SheetTitle className="text-lg font-semibold">
+                {ingredient?.name ?? messages.inventory.po.addLineTitle}
+              </SheetTitle>
+            </SheetHeader>
+
+            <div className="flex flex-col gap-3 p-4">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {PRODUCT_VI.rawIngredient}
+                </Label>
+                <Combobox
+                  value={draft.ingredientId}
+                  onValueChange={onIngredientChange}
+                  options={ingredients.map((i) => ({
+                    value: String(i.id),
+                    label: i.name,
+                    hint:
+                      getDefaultPurchaseUnit(i)?.label ??
+                      i.purchase_unit ??
+                      i.unit,
+                    keywords: [i.sku ?? "", i.category ?? ""],
+                  }))}
+                  placeholder={messages.inventory.po.ingredientPlaceholder}
+                  searchPlaceholder={
+                    messages.inventory.po.ingredientSearchPlaceholder
+                  }
+                />
+              </div>
+
+              <UnitField
+                options={unitOptions}
+                entryUnitId={draft.entryUnitId}
+                unit={draft.unit}
+                onUnitChange={onUnitChange}
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <NumpadValueButton
+                  label={FORM_VI.quantity}
+                  display={draft.quantity.toLocaleString("vi-VN")}
+                  detail={draft.unit}
+                  onClick={() => onOpenNumpad("qty")}
+                />
+                <NumpadValueButton
+                  label={messages.inventory.po.unitPrice}
+                  display={
+                    draft.unitPrice != null
+                      ? formatVND(draft.unitPrice)
+                      : messages.inventory.po.priceOptionalPlaceholder
+                  }
+                  detail={draft.unit}
+                  onClick={() => onOpenNumpad("price")}
+                />
+              </div>
+
+              {lineTotal != null ? (
+                <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-3 text-sm">
+                  <span className="text-muted-foreground">{FORM_VI.amount}</span>
+                  <span className="text-base font-semibold">
+                    {formatVND(lineTotal)}
+                  </span>
+                </div>
+              ) : null}
+
+              {deviation && Math.abs(deviation.deviation_pct) > 5 ? (
+                <InlineDeviationHint
+                  deviation={deviation}
+                  unit={draft.unit || messages.inventory.po.unitShort}
+                />
+              ) : null}
+            </div>
+
+            <SheetFooter>
+              <Button
+                type="button"
+                size="touch-lg"
+                className="w-full"
+                onClick={onCommit}
+                disabled={!valid}
+              >
+                {ACTIONS_VI.add}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="touch-lg"
+                className="w-full"
+                onClick={onClose}
+              >
+                {ACTIONS_VI.close}
+              </Button>
+            </SheetFooter>
+          </>
+        ) : null}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NumpadValueButton — tappable value that opens a NumberPadSheet drawer.
+// ---------------------------------------------------------------------------
+function NumpadValueButton({
+  label,
+  display,
+  detail,
+  onClick,
+}: {
+  label: string;
+  display: React.ReactNode;
+  detail: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-start gap-1 rounded-md bg-muted/50 px-3 py-3 text-left transition active:scale-[0.99]"
+    >
+      <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <span className="text-2xl font-semibold tabular-nums">{display}</span>
+      <span className="text-xs text-muted-foreground">{detail}</span>
+    </button>
   );
 }
 
