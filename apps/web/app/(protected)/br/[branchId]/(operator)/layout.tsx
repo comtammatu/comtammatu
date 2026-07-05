@@ -2,9 +2,14 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Bell as IconBell, User as IconUser } from "lucide-react";
+import {
+  Bell as IconBell,
+  Building2 as IconBuilding2,
+  User as IconUser,
+} from "lucide-react";
 import {
   canAccess,
+  MODULE_ACL,
   ROLE_LABEL_VI,
   type BranchKind,
 } from "@comtammatu/shared/auth";
@@ -60,6 +65,7 @@ export default async function OperatorLayout({
   const canManageBranch =
     canAccess(claims.user_role, "branch_dashboard") ||
     canAccess(claims.user_role, "branch_settings");
+  const canUseBranchPicker = canAccess(claims.user_role, "branch_picker");
   const unreadResult = await getUnreadCount().catch(() => null);
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
   const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
@@ -75,6 +81,20 @@ export default async function OperatorLayout({
           homeAriaLabel={APP_COPY_VI.operatorHome}
           actions={
             <>
+              {canUseBranchPicker ? (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="touch"
+                  aria-label={MODULE_ACL.branch_picker.label}
+                  title={MODULE_ACL.branch_picker.label}
+                >
+                  <Link href={MODULE_ACL.branch_picker.path}>
+                    <IconBuilding2 data-icon="inline-start" />
+                    <span>{MODULE_ACL.branch_picker.label}</span>
+                  </Link>
+                </Button>
+              ) : null}
               <Button
                 asChild
                 variant="outline"
