@@ -7,6 +7,7 @@ import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
+import { ItemGroup } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -18,6 +19,8 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
+import { NumberPadSheet } from "@/components/form";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
@@ -64,12 +67,14 @@ export function CreateTransferForm({
   userBranchId,
   userRole,
   basePath = "/inventory/transfers",
+  embedded = false,
 }: {
   branches: BranchForTransfer[];
   ingredients: IngredientRow[];
   userBranchId: number | null;
   userRole: StaffRole;
   basePath?: string;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const isBranchManager = userRole === "branch_manager";
@@ -102,6 +107,10 @@ export function CreateTransferForm({
   const [inboundFromBranchId, setInboundFromBranchId] = useState("");
   const [draftLines, setDraftLines] = useState<DraftLine[]>([]);
   const [pickerIngredientId, setPickerIngredientId] = useState("");
+  // The line whose quantity number-pad drawer is open (null = closed). The pad
+  // is a bottom sheet so the line list stays scrollable and the keypad rises to
+  // the thumb on tap — mobile only.
+  const [numpadLineKey, setNumpadLineKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const myBranchName = useMemo(() => {
@@ -115,11 +124,29 @@ export function CreateTransferForm({
     [ingredients],
   );
 
+  // "gửi từ" context for each mobile line card: the branch manager picks the
+  // sending warehouse (inbound request), everyone else ships from their own.
+  const sourceContextLabel = useMemo(() => {
+    if (isBranchManager) {
+      const from = branches.find(
+        (branch) => String(branch.id) === inboundFromBranchId,
+      );
+      return from ? formatBranchSiteLabel(from) : null;
+    }
+    return myBranchName;
+  }, [branches, inboundFromBranchId, isBranchManager, myBranchName]);
+
+  const numpadLine = useMemo(
+    () => draftLines.find((line) => line.key === numpadLineKey) ?? null,
+    [draftLines, numpadLineKey],
+  );
+
   function resetForm() {
     setOutboundToBranchId("");
     setInboundFromBranchId("");
     setDraftLines([]);
     setPickerIngredientId("");
+    setNumpadLineKey(null);
   }
 
   function addIngredientLine() {
@@ -334,7 +361,10 @@ export function CreateTransferForm({
               value={pickerIngredientId}
               onValueChange={setPickerIngredientId}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger
+                className={embedded ? undefined : "h-9"}
+                size={embedded ? "touch" : "default"}
+              >
                 <SelectValue
                   placeholder={messages.inventory.transfer.chooseIngredient}
                 />
@@ -359,13 +389,14 @@ export function CreateTransferForm({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size={embedded ? "touch" : "sm"}
             className="shrink-0"
             onClick={addIngredientLine}
             disabled={!pickerIngredientId}
             aria-label={messages.inventory.transfer.addIngredientAria}
           >
             <IconPlus data-icon="inline-start" />
+            {embedded ? messages.inventory.transfer.createNative.addLine : null}
           </Button>
         </div>
 
@@ -377,6 +408,117 @@ export function CreateTransferForm({
               messages.inventory.transfer.emptyIngredientsDescription
             }
           />
+        ) : embedded ? (
+          <ItemGroup className="gap-2">
+            {draftLines.map((line) => {
+              const lineIngredient = ingredients.find(
+                (item) => item.id === line.ingredientId,
+              );
+              const lineUnitOptions = getIssueUnitOptions(lineIngredient);
+              const hasQty = line.quantity.trim().length > 0;
+              return (
+                <InteractiveCard
+                  key={line.key}
+                  padding="compact"
+                  className="flex-col items-stretch gap-3"
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {line.name}
+                      </p>
+                      {sourceContextLabel ? (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {messages.inventory.transfer.createNative.sendFrom(
+                            sourceContextLabel,
+                          )}
+                        </p>
+                      ) : null}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="touch"
+                      className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => removeLine(line.key)}
+                      aria-label={messages.inventory.transfer.removeLineAria}
+                    >
+                      <IconTrash />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      className="justify-between font-normal"
+                      onClick={() => setNumpadLineKey(line.key)}
+                    >
+                      <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+                        {messages.inventory.common.quantityShort}
+                      </span>
+                      <span
+                        className={
+                          hasQty
+                            ? "text-base font-semibold tabular-nums"
+                            : "text-sm text-muted-foreground"
+                        }
+                      >
+                        {hasQty
+                          ? line.quantity
+                          : messages.inventory.transfer.createNative
+                              .quantityUnset}
+                      </span>
+                    </Button>
+                    {lineUnitOptions.length > 0 ? (
+                      <Select
+                        value={line.entryUnitId}
+                        onValueChange={(value) => {
+                          const opt = lineUnitOptions.find(
+                            (o) => String(o.unitId) === value,
+                          );
+                          updateLine(line.key, {
+                            entryUnitId: value,
+                            unit: opt?.label ?? line.unit,
+                          });
+                        }}
+                      >
+                        <SelectTrigger
+                          size="touch"
+                          className="w-full"
+                          aria-label={messages.inventory.transfer.unit}
+                        >
+                          <SelectValue
+                            placeholder={messages.inventory.transfer.selectUnit}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {lineUnitOptions.map((o) => (
+                              <SelectItem
+                                key={o.unitId}
+                                value={String(o.unitId)}
+                              >
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        className="h-12"
+                        value={line.unit}
+                        readOnly
+                        aria-readonly="true"
+                        required
+                      />
+                    )}
+                  </div>
+                </InteractiveCard>
+              );
+            })}
+          </ItemGroup>
         ) : (
           <div className="flex flex-col gap-2">
             {draftLines.map((line) => {
@@ -478,18 +620,64 @@ export function CreateTransferForm({
         </div>
       </AppSection>
 
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button variant="outline" asChild>
-          <Link href={withBranchQuery(basePath, userBranchId)}>
-            {ACTIONS_VI.cancel}
-          </Link>
-        </Button>
-        <Button type="submit" disabled={submitDisabled}>
-          {isPending
-            ? messages.inventory.transfer.creating
-            : messages.inventory.transfer.createSlip}
-        </Button>
-      </div>
+      {embedded ? (
+        <div className="sticky chrome-safe-bottom z-10 flex w-full flex-col gap-2">
+          <Button
+            type="submit"
+            size="touch-lg"
+            className="w-full"
+            disabled={submitDisabled}
+          >
+            {isPending
+              ? messages.inventory.transfer.creating
+              : messages.inventory.transfer.createNative.submit}
+          </Button>
+          <Button variant="outline" size="touch" className="w-full" asChild>
+            <Link href={withBranchQuery(basePath, userBranchId)}>
+              {ACTIONS_VI.cancel}
+            </Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="outline" asChild>
+            <Link href={withBranchQuery(basePath, userBranchId)}>
+              {ACTIONS_VI.cancel}
+            </Link>
+          </Button>
+          <Button type="submit" disabled={submitDisabled}>
+            {isPending
+              ? messages.inventory.transfer.creating
+              : messages.inventory.transfer.createSlip}
+          </Button>
+        </div>
+      )}
+
+      {embedded ? (
+        <NumberPadSheet
+          open={numpadLine != null}
+          onOpenChange={(next) => {
+            if (!next) setNumpadLineKey(null);
+          }}
+          title={
+            numpadLine
+              ? `${numpadLine.name} · ${numpadLine.unit}`
+              : messages.inventory.transfer.createNative.quantityPrompt
+          }
+          suffix={numpadLine?.unit}
+          initialValue={
+            numpadLine && numpadLine.quantity.trim().length > 0
+              ? Number(numpadLine.quantity)
+              : null
+          }
+          onConfirm={(value) => {
+            if (numpadLine) {
+              updateLine(numpadLine.key, { quantity: String(value) });
+            }
+          }}
+          allowDecimal
+        />
+      ) : null}
     </form>
   );
 }

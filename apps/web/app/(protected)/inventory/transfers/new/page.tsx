@@ -81,6 +81,7 @@ export async function NewTransferPageContent({
           userBranchId={userBranchId}
           userRole={claims.user_role}
           basePath={basePath}
+          embedded
         />
       </div>
     );
