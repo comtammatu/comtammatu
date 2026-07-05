@@ -12,5 +12,11 @@ export default async function OperatorSupplierReturnNewPage({
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  return <SupplierReturnNewPageContent embedded />;
+  return (
+    <SupplierReturnNewPageContent
+      routeBranchId={branchId}
+      basePath={`/br/${branchId}/stock/supplier-returns`}
+      embedded
+    />
+  );
 }
