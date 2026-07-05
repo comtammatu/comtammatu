@@ -8804,6 +8804,7 @@ export type Database = {
       auth_role_to_position: { Args: { p_role: string }; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
       auto_close_periods: { Args: never; Returns: number }
+      bill_line_items: { Args: { p_order_id: number }; Returns: Json }
       branch_manager_approve_consumption_report: {
         Args: { p_report_id: number; p_tenant_id: number }
         Returns: Json
@@ -8857,6 +8858,7 @@ export type Database = {
         Returns: Json
       }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
+      can_read_branch_ops: { Args: { p_branch_id: number }; Returns: boolean }
       cancel_leave_request: {
         Args: { p_request_id: number }
         Returns: undefined
@@ -10385,6 +10387,7 @@ export type Database = {
         Args: { p_branch_id: number; p_code: string }
         Returns: boolean
       }
+      vietqr_payment_code_prefix: { Args: never; Returns: string }
       void_order_item: {
         Args: { p_order_item_id: number; p_reason: string }
         Returns: Json
