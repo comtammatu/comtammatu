@@ -9,6 +9,7 @@ import {
   Circle as IconCircle,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { ItemGroup } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
@@ -102,7 +103,7 @@ export function TransferReceiveClient({
 
   if (!isReceiveMode) {
     return (
-      <div className="flex w-full flex-col gap-3">
+      <>
         <div className="flex items-center gap-2">
           <Link
             href={backHref}
@@ -125,12 +126,12 @@ export function TransferReceiveClient({
             <Link href={detailHref}>{receiveCopy.receiveOpenDetail}</Link>
           </Button>
         </AppEmptyState>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="flex w-full flex-col gap-2">
+    <div className="flex w-full flex-col gap-3">
       <div className="flex items-center gap-2">
         <Link
           href={backHref}
@@ -157,7 +158,7 @@ export function TransferReceiveClient({
         </span>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <ItemGroup className="gap-2">
         {items.map((item) => {
           const isConfirmed = confirmed.has(item.ingredientId);
           const value = values[item.ingredientId] ?? item.qty;
@@ -200,7 +201,7 @@ export function TransferReceiveClient({
             </InteractiveCard>
           );
         })}
-      </div>
+      </ItemGroup>
 
       <div className="sticky chrome-safe-bottom z-10 flex w-full flex-col gap-2">
         <Button

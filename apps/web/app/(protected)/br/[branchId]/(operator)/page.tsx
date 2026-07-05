@@ -30,6 +30,7 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { AppEmptyState } from "@/components/surface";
 import {
@@ -391,10 +392,10 @@ export default async function OperatorHomePage({
       ) : null}
 
       {isFloorRole && beforeClockIn && (
-        <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm text-warning-foreground">
+        <NoteCallout tone="warning">
           Bạn cần <strong>chấm công vào ca</strong> để mở khóa các chức năng Bán
           hàng, Bếp và Kho chi nhánh.
-        </div>
+        </NoteCallout>
       )}
 
       {groups.map((group) => (

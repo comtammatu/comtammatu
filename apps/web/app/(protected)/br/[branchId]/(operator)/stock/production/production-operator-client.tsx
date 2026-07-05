@@ -16,6 +16,7 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { formatVNTime, getVNDateString } from "@comtammatu/shared/time";
 import { AppEmptyState } from "@/components/surface";
@@ -152,7 +153,7 @@ export function ProductionOperatorClient({
   }
 
   return (
-    <div className="flex w-full flex-col gap-3">
+    <>
       <ProductionOrderForm
         productionBranches={productionBranches}
         finishedGoodsOptions={sortedFinishedGoods}
@@ -162,18 +163,22 @@ export function ProductionOperatorClient({
       />
 
       {readinessState != null ? (
-        <div className="flex items-center gap-2 rounded-md bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
-          <IconAlertTriangle className="size-4 shrink-0 text-warning" />
-          <span className="min-w-0 flex-1">{readinessMessage}</span>
-          {canManageRecipes && readinessState === "missing-recipe" ? (
-            <Link
-              href={recipesHref}
-              className="shrink-0 font-medium underline underline-offset-4"
-            >
-              {INVENTORY_VI.productionOperatorConfigLink}
-            </Link>
-          ) : null}
-        </div>
+        <NoteCallout
+          tone="warning"
+          icon={<IconAlertTriangle className="size-4" />}
+        >
+          <span className="flex items-center gap-2">
+            <span className="min-w-0 flex-1">{readinessMessage}</span>
+            {canManageRecipes && readinessState === "missing-recipe" ? (
+              <Link
+                href={recipesHref}
+                className="shrink-0 font-medium underline underline-offset-4"
+              >
+                {INVENTORY_VI.productionOperatorConfigLink}
+              </Link>
+            ) : null}
+          </span>
+        </NoteCallout>
       ) : null}
 
       {drafts.length === 0 && doneToday.length === 0 ? (
@@ -285,6 +290,6 @@ export function ProductionOperatorClient({
         info={shortageInfo}
         onClose={() => setShortageInfo(null)}
       />
-    </div>
+    </>
   );
 }
