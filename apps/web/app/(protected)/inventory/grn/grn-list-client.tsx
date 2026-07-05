@@ -100,12 +100,14 @@ export function GrnListClient({
   purchaseOrdersPath = "/inventory/purchase-orders",
   drafts,
   embedded = false,
+  canCreate = true,
 }: {
   grns: GrnRow[];
   basePath?: string;
   purchaseOrdersPath?: string;
   drafts?: GrnDraftRow[];
   embedded?: boolean;
+  canCreate?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -290,6 +292,15 @@ export function GrnListClient({
             ) : undefined
           }
         />
+      ) : null}
+
+      {embedded && canCreate ? (
+        <Button asChild size="touch" className="w-full">
+          <Link href={`${basePath}/new`}>
+            <IconPlus className="size-4" />
+            {INVENTORY_VI.receivingEyebrow}
+          </Link>
+        </Button>
       ) : null}
 
       {embedded && drafts && drafts.length > 0 ? (

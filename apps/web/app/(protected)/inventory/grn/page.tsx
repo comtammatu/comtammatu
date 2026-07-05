@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchGrns } from "../procurement-actions";
 import { listMyGrnDrafts } from "../grn-actions";
@@ -31,6 +32,7 @@ export async function GRNListPageContent({
     queryBranchId: params.branchId,
   });
   if (scope.outOfScope) notFound();
+  const canCreate = PROCUREMENT_ROLES.includes(claims.user_role);
   const branchId = scope.selectedBranchId;
   const [res, draftsRes] = await Promise.all([
     fetchGrns(branchId ?? undefined),
@@ -91,6 +93,7 @@ export async function GRNListPageContent({
       purchaseOrdersPath={purchaseOrdersPath}
       drafts={showDrafts ? drafts : undefined}
       embedded={embedded}
+      canCreate={canCreate}
     />
   );
 }
