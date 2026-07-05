@@ -43,7 +43,9 @@ test("SePay webhook verifies raw-body HMAC and returns SePay success JSON", () =
 test("SePay webhook claims idempotency before payment settlement RPC", () => {
   const source = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
 
-  assert.match(source, /SEPAY_PAYMENT_CODE_RE/);
+  assert.match(source, /function buildPaymentCodeRe/);
+  assert.match(source, /function resolvePaymentCodePrefix/);
+  assert.match(source, /"payment_vietqr_code_prefix"/);
   assert.match(source, /LEGACY_PAYMENT_CODE_RE/);
   assert.match(source, /id: z\.coerce\.number\(\)\.int\(\)\.nonnegative\(\)/);
   assert.match(source, /new URLSearchParams\(rawBody\)/);
@@ -51,11 +53,15 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
     source,
     /transferAmount: z\.coerce\.number\(\)\.nonnegative\(\)/,
   );
-  assert.ok(
-    source.includes(
-      "/\\bQAJZRU5550 MBBMS01382716 1 [A-Z0-9]{12}\\b|\\bVQRLOAMB20260626100157757 [A-Z0-9]{12}\\b|\\bDH[A-Z0-9]{3,12}\\b/gi;",
-    ),
+  // Match regex is built per-webhook from the configured prefix (+ grandfather
+  // branches), not a static literal.
+  assert.match(
+    source,
+    /LEGACY_SOUNDBOX_PREFIX = "VQRLOAMB20260626100157757"/,
   );
+  assert.match(source, /\$\{configured\} \[A-Z0-9\]\{12\}/);
+  assert.match(source, /\$\{LEGACY_SOUNDBOX_PREFIX\} \[A-Z0-9\]\{12\}/);
+  assert.match(source, /DH\[A-Z0-9\]\{3,12\}/);
   assert.ok(
     source.includes(
       "const LEGACY_PAYMENT_CODE_RE = /\\bDH\\s+\\d{6}\\s+[A-Z0-9]{5}\\b/gi;",

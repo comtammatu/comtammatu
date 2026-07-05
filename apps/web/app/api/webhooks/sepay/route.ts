@@ -6,9 +6,38 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
-const SEPAY_PAYMENT_CODE_RE =
-  /\bQAJZRU5550 MBBMS01382716 1 [A-Z0-9]{12}\b|\bVQRLOAMB20260626100157757 [A-Z0-9]{12}\b|\bDH[A-Z0-9]{3,12}\b/gi;
+// Transfer-memo match. The configured prefix (Payment Settings →
+// payment_vietqr_code_prefix) is fetched per webhook and built into the regex,
+// mirroring the SQL vietqr_payment_code_prefix() helper. FALLBACK_CODE_PREFIX
+// matches the seeded default; LEGACY_SOUNDBOX_PREFIX and DH… stay as grandfather
+// branches for in-flight orders created before the prefix became configurable.
+const FALLBACK_CODE_PREFIX = "QAJZRU5550 MBBMS01382716 1";
+const LEGACY_SOUNDBOX_PREFIX = "VQRLOAMB20260626100157757";
 const LEGACY_PAYMENT_CODE_RE = /\bDH\s+\d{6}\s+[A-Z0-9]{5}\b/gi;
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Sanitise to uppercase single-spaced [A-Z0-9 ], mirroring the SQL helper, then
+// fall back to the seeded default when the setting is unset.
+function sanitizeCodePrefix(value: string | null | undefined): string {
+  const cleaned = (value ?? "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim();
+  return cleaned || FALLBACK_CODE_PREFIX;
+}
+
+function buildPaymentCodeRe(prefix: string): RegExp {
+  const configured = escapeRegExp(sanitizeCodePrefix(prefix));
+  return new RegExp(
+    `\\b${configured} [A-Z0-9]{12}\\b` +
+      `|\\b${LEGACY_SOUNDBOX_PREFIX} [A-Z0-9]{12}\\b` +
+      `|\\bDH[A-Z0-9]{3,12}\\b`,
+    "gi",
+  );
+}
 
 const sepayAcceptedResponse = () => NextResponse.json({ success: true });
 
@@ -113,25 +142,27 @@ function logSepayPayloadIssues(error: z.ZodError) {
 
 function normalizePaymentCodeCandidates(
   value: string | null | undefined,
+  codeRe: RegExp,
 ): string[] {
   if (!value) return [];
   const text = value.trim().toUpperCase().replace(/\s+/g, " ");
   return [
-    ...(text.match(SEPAY_PAYMENT_CODE_RE) ?? []).map((match) =>
-      match.toUpperCase(),
-    ),
+    ...(text.match(codeRe) ?? []).map((match) => match.toUpperCase()),
     ...(text.match(LEGACY_PAYMENT_CODE_RE) ?? []).map((match) =>
       match.toUpperCase().replace(/^DH\s+/, "DH "),
     ),
   ];
 }
 
-function extractPaymentCode(payload: SepayPayload): string | null {
+function extractPaymentCode(
+  payload: SepayPayload,
+  codeRe: RegExp,
+): string | null {
   return (
     [
-      ...normalizePaymentCodeCandidates(payload.content),
-      ...normalizePaymentCodeCandidates(payload.description),
-      ...normalizePaymentCodeCandidates(payload.code ?? null),
+      ...normalizePaymentCodeCandidates(payload.content, codeRe),
+      ...normalizePaymentCodeCandidates(payload.description, codeRe),
+      ...normalizePaymentCodeCandidates(payload.code ?? null, codeRe),
     ].sort(
       (a, b) => b.replace(/\s+/g, "").length - a.replace(/\s+/g, "").length,
     )[0] ?? null
@@ -173,6 +204,23 @@ async function resolveAccountScope(
   return typeof tenantId === "number"
     ? { status: "found", tenantId }
     : { status: "not_found" };
+}
+
+async function resolvePaymentCodePrefix(
+  supabase: ServiceClient,
+  tenantId: number,
+): Promise<string> {
+  const { data, error } = await supabase
+    .from("system_settings")
+    .select("value")
+    .eq("tenant_id", tenantId)
+    .eq("key", "payment_vietqr_code_prefix")
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[sepay-webhook] code prefix lookup failed", error.code);
+  }
+  return sanitizeCodePrefix(data?.value ?? null);
 }
 
 async function resolveOrderScope(
@@ -354,7 +402,10 @@ export async function POST(request: Request) {
     return sepayAcceptedResponse();
   }
 
-  const paymentCode = extractPaymentCode(payload);
+  const codeRe = buildPaymentCodeRe(
+    await resolvePaymentCodePrefix(supabase, accountScope.tenantId),
+  );
+  const paymentCode = extractPaymentCode(payload, codeRe);
   if (!paymentCode) {
     console.warn("[sepay-webhook] missing payment code", { id: payload.id });
     await markWebhookEvent(supabase, webhookEventId, {

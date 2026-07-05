@@ -230,6 +230,9 @@ export const settings = {
     bankCode: "Mã ngân hàng",
     accountNo: "Số tài khoản",
     accountName: "Chủ tài khoản",
+    codePrefix: "Tiền tố nội dung chuyển khoản",
+    codePrefixHelp:
+      "Tiền tố cố định để loa MB/SePay nhận diện; hệ thống tự thêm 12 ký tự ngẫu nhiên vào sau làm mã đối soát. Phải khớp với cấu hình loa/SePay. Chỉ chữ, số và khoảng trắng.",
     bankHelp:
       "Mã NH: TCB, VCB, BIDV, MB, ACB, TPB, VPB, STB... (Napas BIN cũng chấp nhận, vd 970407 = Techcombank).",
     sepayLabel: "SePay tự động xác nhận",

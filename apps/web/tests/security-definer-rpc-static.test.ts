@@ -22,6 +22,10 @@ const AUTH_BOUNDARY_TOKENS = [
 
 const BROAD_GRANT_ALLOWLIST = new Set([
   "generate_order_payment_code",
+  // Reads the customer-facing transfer-memo prefix (printed on every VietQR);
+  // no auth boundary because callers run SECURITY DEFINER and a direct call only
+  // returns public config. Sibling of generate_order_payment_code, which calls it.
+  "vietqr_payment_code_prefix",
   "inv_to_base",
 ]);
 

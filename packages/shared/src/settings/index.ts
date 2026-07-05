@@ -13,6 +13,13 @@ export const SYSTEM_SETTING_KEYS = {
   PAYMENT_VIETQR_ACCOUNT_NO: "payment_vietqr_account_no",
   /** Account holder name printed on QR. */
   PAYMENT_VIETQR_ACCOUNT_NAME: "payment_vietqr_account_name",
+  /**
+   * Transfer-memo fixed prefix (the MB soundbox recognition token). The stored
+   * payment code is this prefix + " " + a 12-char random suffix. Uppercase
+   * [A-Z0-9 ], single-spaced — the QR-memo builder and SePay webhook both
+   * collapse whitespace before matching.
+   */
+  PAYMENT_VIETQR_CODE_PREFIX: "payment_vietqr_code_prefix",
   /** Cash-book anchor — owner-counted opening cash balance (VND integer as string). */
   CASH_OPENING_BALANCE: "cash_opening_balance",
   /** Cash-book anchor date (YYYY-MM-DD); running cash-on-hand sums cash in/out from here. */
@@ -33,6 +40,7 @@ export const SYSTEM_SETTING_DEFAULTS: Record<SystemSettingKey, string> = {
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE]: "",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO]: "",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME]: "",
+  [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_CODE_PREFIX]: "QAJZRU5550 MBBMS01382716 1",
   [SYSTEM_SETTING_KEYS.CASH_OPENING_BALANCE]: "",
   [SYSTEM_SETTING_KEYS.CASH_OPENING_DATE]: "",
   [SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE]: "",

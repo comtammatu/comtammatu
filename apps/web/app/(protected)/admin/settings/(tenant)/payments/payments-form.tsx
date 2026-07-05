@@ -34,6 +34,14 @@ const paymentsSchema = z.object({
       error: "STK chỉ chứa chữ và số (không khoảng trắng).",
     }),
   vietqr_account_name: z.string().trim().max(64),
+  vietqr_code_prefix: z
+    .string()
+    .trim()
+    .min(2)
+    .max(40)
+    .regex(/^[A-Za-z0-9 ]+$/, {
+      error: "Tiền tố chỉ chứa chữ, số và khoảng trắng.",
+    }),
 });
 
 type PaymentsFormValues = z.infer<typeof paymentsSchema>;
@@ -64,6 +72,8 @@ export function PaymentsForm({
         settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ?? "",
       vietqr_account_name:
         settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] ?? "",
+      vietqr_code_prefix:
+        settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_CODE_PREFIX] ?? "",
     },
   });
 
@@ -88,6 +98,10 @@ export function PaymentsForm({
       fd.set(
         SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME,
         values.vietqr_account_name,
+      );
+      fd.set(
+        SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_CODE_PREFIX,
+        values.vietqr_code_prefix,
       );
       const result = await updatePaymentSettings(null, fd);
       if (!result.success) {
@@ -181,6 +195,26 @@ export function PaymentsForm({
           <p className="text-2xs text-muted-foreground">
             {messages.settings.payments.bankHelp}
           </p>
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="vietqr-code-prefix" className="text-xs">
+              {messages.settings.payments.codePrefix}
+            </Label>
+            <Input
+              id="vietqr-code-prefix"
+              autoCapitalize="characters"
+              placeholder="QAJZRU5550 MBBMS01382716 1"
+              {...form.register("vietqr_code_prefix")}
+            />
+            {form.formState.errors.vietqr_code_prefix && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.vietqr_code_prefix.message}
+              </p>
+            )}
+            <p className="text-2xs text-muted-foreground">
+              {messages.settings.payments.codePrefixHelp}
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-col gap-2 rounded-md border p-4">

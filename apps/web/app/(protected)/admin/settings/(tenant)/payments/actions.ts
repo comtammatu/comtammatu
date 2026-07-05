@@ -29,6 +29,14 @@ const paymentSettingsSchema = z.object({
       error: "Số tài khoản chỉ chứa chữ và số (không khoảng trắng).",
     }),
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME]: z.string().trim().max(64),
+  [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_CODE_PREFIX]: z
+    .string()
+    .trim()
+    .min(2)
+    .max(40)
+    .regex(/^[A-Za-z0-9 ]+$/, {
+      error: "Tiền tố chỉ chứa chữ, số và khoảng trắng.",
+    }),
 });
 
 export async function updatePaymentSettings(
@@ -54,6 +62,12 @@ export async function updatePaymentSettings(
     [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME]: str(
       SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME,
     ).toUpperCase(),
+    [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_CODE_PREFIX]: str(
+      SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_CODE_PREFIX,
+    )
+      .toUpperCase()
+      .replace(/\s+/g, " ")
+      .trim(),
   };
 
   const parsed = paymentSettingsSchema.safeParse(raw);
