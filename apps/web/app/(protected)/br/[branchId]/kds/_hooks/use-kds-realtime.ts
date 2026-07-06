@@ -577,7 +577,10 @@ export function useKdsRealtime({
             if (payload.eventType === "INSERT") {
               const newTicket = payload.new as KdsTicket;
               if (!isVisibleKdsTicket(newTicket)) return;
-              setTickets((prev) => [...prev, newTicket]);
+              setTickets((prev) => {
+                if (prev.some((t) => t.id === newTicket.id)) return prev;
+                return [...prev, newTicket];
+              });
               syncOrderItemStatusFromTicketRef.current(newTicket);
               lastSnapshotSyncRef.current = Date.now();
 

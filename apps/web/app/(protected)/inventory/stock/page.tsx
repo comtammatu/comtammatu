@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
-import { fetchExpiryAlerts } from "../alert-actions";
 import { fetchIngredients } from "../ingredient-actions";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { fetchStockBearingLocationIds } from "../_lib/stock-bearing-locations";
@@ -13,7 +12,40 @@ import type {
   StockIngredient,
   StockWorkSummary,
 } from "./stock-client";
+import type { StockLocationBreakdown } from "./stock-location-breakdown";
 import type { IngredientUnitRow } from "../_lib/types";
+
+type StockLevelLocationRow = {
+  id: number;
+  name: string | null;
+  code: string | null;
+  location_kind: string | null;
+};
+
+type StockLevelRow = {
+  ingredient_id: number;
+  location_id: number;
+  current_quantity: number;
+  avg_unit_cost: number | null;
+  last_counted_at: string | null;
+  inventory_locations: StockLevelLocationRow | StockLevelLocationRow[] | null;
+};
+
+const LOCATION_KIND_ORDER: Record<string, number> = {
+  warehouse: 0,
+  kitchen: 1,
+  receiving: 2,
+  production_storage: 3,
+};
+
+function relatedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function locationKindRank(locationKind: string): number {
+  return LOCATION_KIND_ORDER[locationKind] ?? 99;
+}
 
 function computeStatus(
   qty: number,
@@ -66,7 +98,6 @@ export async function StockPageContent({
   const [
     ingredientsRes,
     stockRes,
-    expiryAlertsRes,
     pendingGrnRes,
     outboundTransferRes,
     inboundTransferRes,
@@ -83,14 +114,13 @@ export async function StockPageContent({
       ? supabase
           .from("stock_levels")
           .select(
-            "ingredient_id, current_quantity, avg_unit_cost, last_counted_at",
+            "ingredient_id, location_id, current_quantity, avg_unit_cost, last_counted_at, inventory_locations ( id, name, code, location_kind )",
           )
           .eq("tenant_id", claims.tenant_id)
           .eq("branch_id", branchId)
           .in("location_id", stockBearingLocationIds)
           .order("ingredient_id")
       : Promise.resolve({ data: [], error: null }),
-    fetchExpiryAlerts(branchId),
     supabase
       .from("goods_received_notes")
       .select("id", { count: "exact", head: true })
@@ -135,6 +165,7 @@ export async function StockPageContent({
         unit: string;
         purchase_unit: string;
         category: string | null;
+        item_kind: string | null;
         unit_cost: number | null;
         min_stock_level: number | null;
         max_stock_level: number | null;
@@ -144,7 +175,7 @@ export async function StockPageContent({
       }>)
     : [];
 
-  const stockRows = stockRes.data ?? [];
+  const stockRows = (stockRes.data ?? []) as StockLevelRow[];
   const stockMap = new Map<
     number,
     {
@@ -154,10 +185,29 @@ export async function StockPageContent({
       last_counted_at: string | null;
     }
   >();
+  const stockLocationMap = new Map<number, StockLocationBreakdown[]>();
   for (const s of stockRows) {
+    const location = relatedOne(s.inventory_locations);
+    const locationRows = stockLocationMap.get(s.ingredient_id) ?? [];
+    locationRows.push({
+      locationId: s.location_id,
+      name: location?.name ?? location?.code ?? `#${s.location_id}`,
+      code: location?.code ?? "",
+      locationKind: location?.location_kind ?? "unknown",
+      qty: s.current_quantity,
+      avgUnitCost: s.avg_unit_cost,
+      lastCountedAt: s.last_counted_at,
+    });
+    stockLocationMap.set(s.ingredient_id, locationRows);
+
     const prev = stockMap.get(s.ingredient_id);
     if (!prev) {
-      stockMap.set(s.ingredient_id, { ...s });
+      stockMap.set(s.ingredient_id, {
+        ingredient_id: s.ingredient_id,
+        current_quantity: s.current_quantity,
+        avg_unit_cost: s.avg_unit_cost,
+        last_counted_at: s.last_counted_at,
+      });
       continue;
     }
     const prevQty = prev.current_quantity;
@@ -184,6 +234,15 @@ export async function StockPageContent({
       last_counted_at: latestCount,
     });
   }
+  for (const locationRows of stockLocationMap.values()) {
+    locationRows.sort((left, right) => {
+      const kindDiff =
+        locationKindRank(left.locationKind) -
+        locationKindRank(right.locationKind);
+      if (kindDiff !== 0) return kindDiff;
+      return left.name.localeCompare(right.name, "vi");
+    });
+  }
 
   const ingredients: StockIngredient[] = dbIngredients.map((row) => {
     const sl = stockMap.get(row.id);
@@ -200,6 +259,7 @@ export async function StockPageContent({
       unit: row.purchase_unit || row.unit,
       units: row.units,
       category: row.category ?? "",
+      itemKind: row.item_kind ?? "raw_material",
       qty,
       cost,
       min,
@@ -208,6 +268,7 @@ export async function StockPageContent({
       status: computeStatus(qty, min, reorder, max),
       lastCount: sl?.last_counted_at ? formatDate(sl.last_counted_at) : "—",
       temp: storageTemp(row.storage_type),
+      locationBreakdown: stockLocationMap.get(row.id) ?? [],
     };
   });
 
@@ -245,16 +306,11 @@ export async function StockPageContent({
       ingredient.status === "low" ||
       ingredient.qty <= ingredient.reorder,
   ).length;
-  const expiryCount =
-    expiryAlertsRes.success && Array.isArray(expiryAlertsRes.data)
-      ? expiryAlertsRes.data.length
-      : 0;
   const pendingGrnCount = pendingGrnRes.count ?? 0;
   const pendingTransferCount =
     (outboundTransferRes.count ?? 0) + (inboundTransferRes.count ?? 0);
   const summary: StockWorkSummary = {
     underThresholdCount,
-    expiryCount,
     pendingGrnCount,
     pendingTransferCount,
     pendingWorkCount: pendingGrnCount + pendingTransferCount,

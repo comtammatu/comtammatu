@@ -28,7 +28,6 @@ import {
   FormDialog,
   FormattedNumberInput,
   MoneyVndField,
-  NumberField,
   QuantityField,
   SelectField,
   TextField,
@@ -87,7 +86,6 @@ const ingredientSchema = z
     min_stock_level: z.string().optional(),
     max_stock_level: z.string().optional(),
     reorder_point: z.string().optional(),
-    shelf_life_days: z.string().optional(),
     units: z.array(unitRowSchema).min(1, { error: copy.units.minOne }),
   })
   .superRefine((data, ctx) => {
@@ -173,10 +171,6 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
         : "",
     reorder_point:
       ingredient?.reorder_point != null ? String(ingredient.reorder_point) : "",
-    shelf_life_days:
-      ingredient?.shelf_life_days != null
-        ? String(ingredient.shelf_life_days)
-        : "",
     units,
   };
 }
@@ -351,10 +345,18 @@ function UnitRowCells({
     () => unitOptions.find((u) => String(u.id) === unitId) ?? null,
     [unitOptions, unitId],
   );
-  const isStandard = selectedUnit?.is_standard ?? false;
-  // A row is "packaging" only once a non-standard unit is selected; an empty
-  // selection shows no conversion controls until the owner picks a unit.
-  const isPackaging = selectedUnit != null && !selectedUnit.is_standard;
+
+  const baseRow = useMemo(() => watchedRows.find((r) => r.is_base), [watchedRows]);
+  const baseUnit = useMemo(() => {
+    if (!baseRow?.unit_id) return null;
+    return unitOptions.find((u) => String(u.id) === baseRow.unit_id) ?? null;
+  }, [baseRow, unitOptions]);
+  const isBaseStandard = baseUnit?.is_standard ?? false;
+
+  const isStandard = selectedUnit?.is_standard && isBaseStandard;
+  // A row is "packaging" if a non-standard unit is selected, OR if a standard unit
+  // is selected but the base unit is non-standard (so it needs manual anchoring).
+  const isPackaging = selectedUnit != null && (!selectedUnit.is_standard || !isBaseStandard);
 
   // Anchor targets: every OTHER unit currently on this ingredient.
   const anchorOptions = useMemo(() => {
@@ -631,8 +633,10 @@ export function IngredientDialog({
                 unitsById,
                 rowsByUnitId,
               );
+        const baseUnit = baseUnitId != null ? unitsById.get(baseUnitId) : null;
+        const isBaseStandard = baseUnit?.is_standard ?? false;
         const isPackaging =
-          !u.is_base && unitsById.get(unitId)?.is_standard === false;
+          !u.is_base && (unitsById.get(unitId)?.is_standard === false || !isBaseStandard);
         return {
           unit_id: unitId,
           to_base_factor: toBase,
@@ -661,7 +665,6 @@ export function IngredientDialog({
       min_stock_level: parseOptionalNumber(values.min_stock_level) ?? 0,
       max_stock_level: parseOptionalNumber(values.max_stock_level),
       reorder_point: parseOptionalNumber(values.reorder_point),
-      shelf_life_days: parseOptionalNumber(values.shelf_life_days),
       units: mappedUnits,
     };
 
@@ -779,13 +782,6 @@ export function IngredientDialog({
             />
           </div>
 
-          <NumberField
-            control={form.control}
-            name="shelf_life_days"
-            label={dialogCopy.shelfLifeLabel}
-            maxFractionDigits={0}
-            placeholder={dialogCopy.shelfLifePlaceholder}
-          />
         </>
       )}
     </FormDialog>

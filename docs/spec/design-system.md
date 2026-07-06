@@ -587,7 +587,7 @@ do not add a one-off allowlist entry just to make a route compile.
 - Keep procurement and inventory terms aligned with `docs/ref/glossary.md`.
 - Dense tables are expected, but row actions and destructive actions must stay visually separated.
 - Route IA must stay anchored to three operator flows:
-  1. Kiem soat ton: stock on hand, stocktake, expiry, waste/adjustment, reporting.
+  1. Kiem soat ton: stock on hand, stocktake, waste/adjustment, reporting.
   2. Nhap/Nhan/Doi soat: purchase order, GRN, supplier invoice/price variance, receiving exceptions.
   3. Dieu phoi/San xuat: transfer, production order, BOM/recipe issue and yield.
 - Sidebar group labels must be compact enough for the fixed sidebar. Use detail page headings and breadcrumbs for full workflow wording.

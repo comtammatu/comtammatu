@@ -14,15 +14,9 @@ function readRepo(path: string): string {
 const taskKindMigration = readRepo(
   "supabase/migrations/_archive/20260619042223_employee_consumption_task_kind.sql",
 );
-const todayWorkStateSource = readWeb(
-  "lib/employee/_lib/today-work-state.ts",
-);
-const employeeTasksPageSource = readWeb(
-  "lib/employee/tasks/page.tsx",
-);
-const checkoutActionSource = readWeb(
-  "lib/employee/clock/actions.ts",
-);
+const todayWorkStateSource = readWeb("lib/employee/_lib/today-work-state.ts");
+const employeeTasksPageSource = readWeb("lib/employee/tasks/page.tsx");
+const checkoutActionSource = readWeb("lib/employee/clock/actions.ts");
 const checkoutApprovalsPageSource = readWeb(
   "lib/employee/checkout-approvals/page.tsx",
 );
@@ -91,6 +85,21 @@ test("HR per-position editor exposes the consumption task kind", () => {
     positionTasksClientSource,
     /watchedKind === "consumption_report"/,
     "HR position-task editor should reveal ingredients for consumption rows",
+  );
+  assert.match(
+    positionTasksActionsSource,
+    /\.from\("profiles"\)[\s\S]*\.select\("position_id"\)/,
+    "HR position-task editor should keep the position list scoped to active staff positions",
+  );
+  assert.match(
+    positionTasksActionsSource,
+    /activeProfilePositionIds\.has\(position\.id\)[\s\S]*taskPositionIds\.has\(position\.id\)/,
+    "HR position-task editor should keep positions that have staff or existing tasks",
+  );
+  assert.match(
+    positionTasksActionsSource,
+    /bucket === "owner"[\s\S]*position\.code === "waiter"/,
+    "HR position-task editor should exclude owner and inactive waiter positions",
   );
 });
 

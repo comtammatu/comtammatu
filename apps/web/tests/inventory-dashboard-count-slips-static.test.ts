@@ -30,6 +30,21 @@ test("inventory dashboard surfaces pending count slips for Branch Manager review
     "inventory paths must expose count-slip review route",
   );
   assert.match(
+    pathsSrc,
+    /countAssignments: joinInventoryPath\(base, "\/count-assignments"\)/,
+    "inventory paths must expose count assignment route",
+  );
+  assert.match(
+    dataSrc,
+    /currentUserHasPermissionAny\(PERMISSION_KEYS\.INVENTORY_COUNT_ASSIGN\)/,
+    "dashboard count-assignment link must stay behind inventory count assignment permission",
+  );
+  assert.match(
+    clientSrc,
+    /props\.canAssignCounts[\s\S]*Phân công đếm tồn[\s\S]*href: paths\.countAssignments/,
+    "dashboard control flow must link count assignment after the sidebar is compressed",
+  );
+  assert.match(
     clientSrc,
     /pendingCountSlips > 0[\s\S]*phiếu đếm tồn chờ duyệt[\s\S]*href: paths\.countSlips/,
     "dashboard tasks must link pending count slips to the review queue",

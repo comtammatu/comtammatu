@@ -28,20 +28,12 @@ const settingsUnitsSource = readFileSync(
   "app/(protected)/inventory/settings/units/units-client.tsx",
   "utf8",
 );
-const settingsExpiryPageSource = readFileSync(
-  "app/(protected)/inventory/settings/expiry/page.tsx",
-  "utf8",
-);
-const expiryListSource = readFileSync(
-  "app/(protected)/inventory/expiry/expiry-list-client.tsx",
-  "utf8",
-);
 const qcSettingsSource = readFileSync(
   "app/(protected)/inventory/settings/qc/qc-settings-client.tsx",
   "utf8",
 );
 
-test("owner inventory nav includes procurement, catalog, production, and control routes", () => {
+test("owner inventory nav keeps primary flow entry routes visible", () => {
   const visible = hrefs(
     resolveInventoryNav({
       userRole: "owner",
@@ -50,15 +42,17 @@ test("owner inventory nav includes procurement, catalog, production, and control
       showCatalogManagement: true,
       showSettings: true,
       showWasteApprovals: true,
-      showCountManagement: true,
+      showCountAssignments: true,
+      showCountSlips: true,
     }),
   );
 
   for (const href of [
-    "/inventory/count-assignments",
-    "/inventory/count-slips",
+    "/inventory/operations",
     "/inventory/supplier-invoices",
     "/inventory/supplier-returns",
+    "/inventory/transfers",
+    "/inventory/production",
     "/inventory/settings",
     "/inventory/suppliers",
     "/inventory/ingredients",
@@ -66,6 +60,64 @@ test("owner inventory nav includes procurement, catalog, production, and control
   ]) {
     assert.equal(visible.has(href), true, `owner inventory nav must include ${href}`);
   }
+});
+
+test("inventory sidebar compresses count management into one visible entry", () => {
+  const groups = resolveInventoryNav({
+    userRole: "owner",
+    showProcurement: true,
+    showProduction: true,
+    showCatalogManagement: true,
+    showSettings: true,
+    showWasteApprovals: true,
+    showCountAssignments: true,
+    showCountSlips: true,
+  });
+  const visible = hrefs(groups);
+  const countItem = groups
+    .flatMap((group) => group.items)
+    .find((item) => item.label === "Đếm tồn");
+
+  assert.equal(
+    visible.has("/inventory/count-assignments"),
+    true,
+    "count assignments remain reachable from the compressed sidebar",
+  );
+  assert.equal(
+    visible.has("/inventory/count-slips"),
+    false,
+    "count slips are covered by the single Đếm tồn entry instead of a second sidebar row",
+  );
+  assert.deepEqual(countItem?.matchPrefixes, [
+    "/inventory/count-assignments",
+    "/inventory/count-slips",
+  ]);
+
+  for (const href of ["/inventory/consumption", "/inventory/waste/approvals"]) {
+    assert.equal(
+      visible.has(href),
+      false,
+      `${href} stays out of the compressed sidebar`,
+    );
+  }
+});
+
+test("inventory sidebar sends count-approval-only users to count slips", () => {
+  const visible = hrefs(
+    resolveInventoryNav({
+      userRole: "office",
+      showProcurement: false,
+      showProduction: false,
+      showCatalogManagement: false,
+      showSettings: false,
+      showWasteApprovals: false,
+      showCountAssignments: false,
+      showCountSlips: true,
+    }),
+  );
+
+  assert.equal(visible.has("/inventory/count-assignments"), false);
+  assert.equal(visible.has("/inventory/count-slips"), true);
 });
 
 test("owner inventory nav excludes /inventory/drafts (folded into GRN list drafts tab)", () => {
@@ -77,7 +129,8 @@ test("owner inventory nav excludes /inventory/drafts (folded into GRN list draft
       showCatalogManagement: true,
       showSettings: true,
       showWasteApprovals: true,
-      showCountManagement: true,
+      showCountAssignments: true,
+      showCountSlips: true,
     }),
   );
 
@@ -97,13 +150,15 @@ test("office inventory nav shows on-hand, stocktake, and transfers as cross-bran
       showCatalogManagement: true,
       showSettings: true,
       showWasteApprovals: true,
-      showCountManagement: true,
+      showCountAssignments: true,
+      showCountSlips: true,
     }),
   );
 
   for (const href of [
     "/inventory/stock",
     "/inventory/stocktake",
+    "/inventory/transfers",
   ]) {
     assert.equal(
       visible.has(href),
@@ -121,7 +176,8 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
     showCatalogManagement: true,
     showSettings: true,
     showWasteApprovals: true,
-    showCountManagement: true,
+    showCountAssignments: true,
+    showCountSlips: true,
   });
 
   assert.deepEqual(
@@ -129,7 +185,8 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
     [
       "0 · Hôm nay",
       "1 · Kiểm soát tồn",
-      "2 · Vận hành & Đối soát",
+      "2 · Nhập/Nhận/Đối soát",
+      "3 · Điều phối/Sản xuất",
       "4 · Danh mục & thiết lập",
     ],
   );
@@ -139,6 +196,7 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
       "/inventory",
       "/inventory/stock",
       "/inventory/operations",
+      "/inventory/transfers",
       "/inventory/settings",
     ],
   );
@@ -159,7 +217,8 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
     showCatalogManagement: true,
     showSettings: true,
     showWasteApprovals: true,
-    showCountManagement: true,
+    showCountAssignments: true,
+    showCountSlips: true,
   });
   const visible = hrefs(groups);
   const settingsItem = groups
@@ -169,7 +228,6 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
   for (const href of [
     "/inventory/settings/categories",
     "/inventory/settings/units",
-    "/inventory/settings/expiry",
     "/inventory/settings/thresholds",
     "/inventory/settings/qc",
   ]) {
@@ -189,8 +247,9 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
   assert.match(settingsLayoutSource, /<SettingsSectionNav items=\{sectionItems\}/);
   assert.doesNotMatch(settingsLayoutSource, /from "lucide-react"/);
   assert.doesNotMatch(settingsLayoutSource, /icon: Icon[A-Z]/);
-  assert.match(settingsLayoutSource, /icon: "expiry"/);
+  assert.doesNotMatch(settingsLayoutSource, /settings\/expiry|icon: "expiry"/);
   assert.match(settingsSectionNavSource, /SETTINGS_SECTION_ICONS/);
+  assert.doesNotMatch(settingsSectionNavSource, /Hourglass|expiry/);
   assert.match(settingsSectionNavSource, /<AppToolbar className="flex-wrap">/);
   assert.match(settingsSectionNavSource, /usePathname/);
   assert.match(
@@ -201,15 +260,6 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
   assert.doesNotMatch(
     settingsUnitsSource,
     /rounded-full border border-border\/60 bg-muted\/40/,
-  );
-  assert.match(settingsExpiryPageSource, /<AppPageHeader/);
-  assert.match(
-    expiryListSource,
-    /<AppToolbar variant=\{embedded \? "inline" : "card"\}>/,
-  );
-  assert.doesNotMatch(
-    expiryListSource,
-    /rounded-full|ring-2 ring-foreground|bg-muted\/50 text-muted-foreground hover:bg-muted/,
   );
   assert.doesNotMatch(
     qcSettingsSource,

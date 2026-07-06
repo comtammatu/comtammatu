@@ -11,8 +11,9 @@ import { StatusBadge } from "@/components/status-badge";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty } from "../_lib/format";
 import { formatStockUnits } from "../_lib/stock-unit-format";
-import { CATEGORY_TONE_CLASS } from "../_lib/constants";
+import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
 import type { StockIngredient } from "./stock-client";
+import { StockLocationBreakdownLine } from "./stock-location-breakdown";
 
 const stockCopy = messages.inventory.stock;
 
@@ -45,16 +46,21 @@ function StockGridCard({ item }: { item: StockGridItem }) {
     >
       <Link href={item.href}>
         <div className="flex items-start justify-between gap-2">
-          <Badge
-            className={
-              item.category
-                ? (CATEGORY_TONE_CLASS[item.category] ??
-                  "bg-muted text-muted-foreground")
-                : "bg-muted text-muted-foreground"
-            }
-          >
-            {categoryLabel}
-          </Badge>
+          <div className="flex flex-wrap gap-1.5">
+            <Badge
+              className={
+                item.category
+                  ? (CATEGORY_TONE_CLASS[item.category] ??
+                    "bg-muted text-muted-foreground")
+                  : "bg-muted text-muted-foreground"
+              }
+            >
+              {categoryLabel}
+            </Badge>
+            <Badge variant="secondary">
+              {ITEM_KIND_LABELS[item.itemKind] ?? item.itemKind}
+            </Badge>
+          </div>
           {showDestructive ? (
             <StatusBadge domain="inventory" value={item.status} size="sm" />
           ) : null}
@@ -79,6 +85,10 @@ function StockGridCard({ item }: { item: StockGridItem }) {
               {base}
             </span>
           ) : null}
+          <StockLocationBreakdownLine
+            rows={item.locationBreakdown}
+            className="mt-1"
+          />
         </div>
       </Link>
     </InteractiveCard>

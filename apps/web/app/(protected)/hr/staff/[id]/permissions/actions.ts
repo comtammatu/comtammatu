@@ -5,6 +5,11 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { revalidatePath } from "next/cache";
 
+function rpcBranchId(branchId: number | null): number {
+  // Supabase generated RPC arg types do not encode nullable BIGINT inputs.
+  return branchId as number;
+}
+
 /* ─── Schemas ─── */
 
 const grantSchema = z.object({
@@ -40,13 +45,10 @@ export async function grantPermissionAction(
       error: parsed.error.issues[0]?.message ?? "Invalid input",
     };
   }
-  if (parsed.data.branch_id === null) {
-    return { success: false, error: "Vui lòng chọn chi nhánh." };
-  }
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("grant_permission", {
     p_target_user: parsed.data.target_user_id,
-    p_branch_id: parsed.data.branch_id,
+    p_branch_id: rpcBranchId(parsed.data.branch_id),
     p_permission_key: parsed.data.permission_key,
     p_source_template: undefined,
     p_valid_until: parsed.data.valid_until ?? undefined,
@@ -68,13 +70,10 @@ export async function revokePermissionAction(
       error: parsed.error.issues[0]?.message ?? "Invalid input",
     };
   }
-  if (parsed.data.branch_id === null) {
-    return { success: false, error: "Vui lòng chọn chi nhánh." };
-  }
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("revoke_permission", {
     p_target_user: parsed.data.target_user_id,
-    p_branch_id: parsed.data.branch_id,
+    p_branch_id: rpcBranchId(parsed.data.branch_id),
     p_permission_key: parsed.data.permission_key,
   });
   if (error) return { success: false, error: mapRpcError(error.message) };
@@ -94,13 +93,10 @@ export async function applyTemplateAction(
       error: parsed.error.issues[0]?.message ?? "Invalid input",
     };
   }
-  if (parsed.data.branch_id === null) {
-    return { success: false, error: "Vui lòng chọn chi nhánh." };
-  }
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("apply_template_to_user", {
     p_target_user: parsed.data.target_user_id,
-    p_branch_id: parsed.data.branch_id,
+    p_branch_id: rpcBranchId(parsed.data.branch_id),
     p_template_id: parsed.data.template_id,
     p_valid_until: parsed.data.valid_until ?? undefined,
   });
@@ -120,10 +116,20 @@ function mapRpcError(msg: string): string {
     return "Người dùng không thuộc tenant.";
   if (msg.includes("branch_not_in_tenant"))
     return "Chi nhánh không thuộc tenant.";
+  if (msg.includes("unknown_permission_key_in_template"))
+    return "Template có permission key không hợp lệ.";
   if (msg.includes("unknown_permission_key"))
     return "Permission key không hợp lệ.";
   if (msg.includes("template_not_in_tenant"))
     return "Template không thuộc tenant.";
+  if (msg.includes("permission_scope_requires_branch"))
+    return "Quyền này cần chọn chi nhánh.";
+  if (msg.includes("permission_scope_requires_tenant"))
+    return "Quyền này phải gán ở phạm vi toàn quán.";
+  if (msg.includes("permission_scope_mismatch"))
+    return "Template không khớp phạm vi. Chọn lại phạm vi phù hợp.";
+  if (msg.includes("cannot_self_assign_permissions"))
+    return "Không thể tự thay đổi quyền của chính mình.";
   if (msg.includes("invalid_validity_window"))
     return "Hạn kết thúc phải sau thời điểm bắt đầu.";
   if (msg.includes("not_authenticated")) return "Chưa đăng nhập.";

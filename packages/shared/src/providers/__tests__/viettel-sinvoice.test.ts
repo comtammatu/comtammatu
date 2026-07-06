@@ -32,6 +32,15 @@ function assertValidators(
   vatRate: number,
 ): void {
   for (const li of result.itemInfo) {
+    if (li.selection === 3) {
+      assert.equal(li.discount, 0);
+      assert.equal(li.itemDiscount, 0);
+      assert.equal(li.isIncreaseItem, false);
+      assert.equal(li.taxPercentage, undefined);
+      assert.equal(li.taxAmount, undefined);
+      continue;
+    }
+
     // 43: qty × unitPrice ≈ itemTotalAmountWithoutTax  (strict < 1)
     const diff43 = Math.abs(
       li.quantity * li.unitPrice - li.itemTotalAmountWithoutTax,
@@ -66,7 +75,7 @@ function assertValidators(
   }
   // 87: sumOfTotalLineAmountWithoutTax == Σ items.itemTotalAmountWithoutTax
   const sumNetCheck = result.itemInfo.reduce(
-    (s, l) => s + l.itemTotalAmountWithoutTax,
+    (s, l) => s + (l.selection === 1 ? l.itemTotalAmountWithoutTax : 0),
     0,
   );
   assert.equal(
@@ -75,7 +84,8 @@ function assertValidators(
     `validator 87: sumLineNet mismatch`,
   );
   const sumDiscountCheck = result.itemInfo.reduce(
-    (s, l) => s + l.itemDiscount,
+    (s, l) =>
+      s + (l.selection === 3 ? l.itemTotalAmountWithoutTax : l.itemDiscount),
     0,
   );
   assert.equal(
@@ -84,13 +94,15 @@ function assertValidators(
     `sumLineDiscount mismatch`,
   );
   // 49: totalTaxAmount == Σ items.taxAmount
-  const sumTaxCheck = result.itemInfo.reduce((s, l) => s + (l.taxAmount ?? 0), 0);
+  const sumTaxCheck = result.itemInfo.reduce(
+    (s, l) => s + (l.taxAmount ?? 0),
+    0,
+  );
   assert.equal(
     result.sumLineTax,
     sumTaxCheck,
     `validator 49: sumLineTax mismatch`,
   );
-  // totalGross consistency
   assert.equal(
     result.totalGross,
     result.sumLineNet - result.sumLineDiscount + result.sumLineTax,
@@ -108,9 +120,7 @@ test("validator 43 regression: qty=7 lineGross=100 vatRate=8 (old impl rejected)
   assertValidators(result, 8);
 });
 
-test("discount rate rounded to ≤2dp — mẫu-2 (BAD_REQUEST_INVALID_DECIMAL_POINT_DISCOUNT repro)", () => {
-  // Prod bug: 10_000 discount on a 30_000 line → rate 33.3333…% un-rounded →
-  // Viettel rejects, invoice stuck draft. Rounded rate (33.33) is accepted.
+test("direct-sales discount uses a selection=3 line instead of a rate", () => {
   const result = buildSinvoiceItemInfo(
     [item("Cơm sườn", 1, 30_000, 10_000)],
     8,
@@ -118,10 +128,19 @@ test("discount rate rounded to ≤2dp — mẫu-2 (BAD_REQUEST_INVALID_DECIMAL_P
     "direct_sales_gross",
   );
   assertValidators(result, 8);
-  const [line] = result.itemInfo;
+  const [line, discountLine] = result.itemInfo;
   assert.ok(line);
-  assert.equal(line.itemDiscount, 10_000); // amount (đồng) unchanged — authoritative
-  assert.equal(line.discount, 33.33); // rate rounded to 2dp
+  assert.ok(discountLine);
+  assert.equal(line.selection, 1);
+  assert.equal(line.discount, 0);
+  assert.equal(line.itemDiscount, 0);
+  assert.equal(line.itemTotalAmountAfterDiscount, 30_000);
+  assert.equal(discountLine.selection, 3);
+  assert.equal(discountLine.itemName, "Chiết khấu hàng hóa");
+  assert.equal(discountLine.itemTotalAmountWithoutTax, 10_000);
+  assert.equal(result.sumLineNet, 30_000);
+  assert.equal(result.sumLineDiscount, 10_000);
+  assert.equal(result.totalGross, 20_000);
 });
 
 test("discount rate rounded to ≤2dp — mẫu-1 net path", () => {
@@ -223,51 +242,90 @@ test("direct-sales mode subtracts allocated line discounts from Sinvoice totals"
   assert.equal(result.sumLineTax, 0);
   assert.equal(result.totalGross, 90_000);
 
-  const [line] = result.itemInfo;
+  const [line, discountLine] = result.itemInfo;
   assert.ok(line);
+  assert.ok(discountLine);
   assert.equal(line.itemTotalAmountWithoutTax, 100_000);
-  assert.equal(line.itemTotalAmountAfterDiscount, 90_000);
-  assert.equal(line.itemTotalAmountWithTax, 90_000);
-  assert.equal(line.discount, 10); // rate %, not the 10_000₫ amount
-  assert.equal(line.itemDiscount, 10_000);
+  assert.equal(line.itemTotalAmountAfterDiscount, 100_000);
+  assert.equal(line.itemTotalAmountWithTax, 100_000);
+  assert.equal(line.discount, 0);
+  assert.equal(line.itemDiscount, 0);
   assert.equal(line.taxPercentage, undefined);
   assert.equal(line.taxAmount, undefined);
+  assert.equal(discountLine.selection, 3);
+  assert.equal(discountLine.itemTotalAmountWithoutTax, 10_000);
+  assert.equal(discountLine.isIncreaseItem, false);
 });
 
-test("direct-sales discount serializes as a RATE %, not the amount", () => {
-  // Regression: a fixed-amount line discount must be a RATE in [0,100], not the
-  // amount — Viettel rejects an amount-as-rate with DISCOUNT_INVALID.
+test("direct-sales awkward discounts stay exact via selection=3", () => {
   const result = buildSinvoiceItemInfo(
     [item("Nước ngọt KM", 1, 15_000, 5_000)],
     8,
     true,
     "direct_sales_gross",
   );
-  const [line] = result.itemInfo;
+  const [line, discountLine] = result.itemInfo;
   assert.ok(line);
-  assert.equal(line.itemDiscount, 5_000);
-  assert.ok(
-    line.discount >= 0 && line.discount <= 100,
-    `discount must be a rate, got ${line.discount}`,
-  );
-  // 5_000/15_000 = 33.3333…% → rounded to 2dp (Viettel rejects >2 decimals).
-  assert.equal(line.discount, 33.33);
-  assert.equal(line.itemTotalAmountAfterDiscount, 10_000);
+  assert.ok(discountLine);
+  assert.equal(line.discount, 0);
+  assert.equal(line.itemDiscount, 0);
+  assert.equal(line.itemTotalAmountAfterDiscount, 15_000);
+  assert.equal(discountLine.selection, 3);
+  assert.equal(discountLine.itemTotalAmountWithoutTax, 5_000);
+  assert.equal(result.totalGross, 10_000);
 });
 
-test("direct-sales 100% free item: rate = 100, itemDiscount = full amount", () => {
-  // Fully-discounted promo line (e.g. a free drink): rate caps at 100.
+test("direct-sales 100% free item uses a full discount line", () => {
   const result = buildSinvoiceItemInfo(
     [item("Phần nước miễn phí", 1, 10_000, 10_000)],
     8,
     true,
     "direct_sales_gross",
   );
-  const [line] = result.itemInfo;
+  const [line, discountLine] = result.itemInfo;
   assert.ok(line);
-  assert.equal(line.discount, 100);
-  assert.equal(line.itemDiscount, 10_000);
-  assert.equal(line.itemTotalAmountAfterDiscount, 0);
+  assert.ok(discountLine);
+  assert.equal(line.discount, 0);
+  assert.equal(line.itemDiscount, 0);
+  assert.equal(line.itemTotalAmountAfterDiscount, 10_000);
+  assert.equal(discountLine.selection, 3);
+  assert.equal(discountLine.itemTotalAmountWithoutTax, 10_000);
+  assert.equal(result.totalGross, 0);
+});
+
+test("direct-sales replay C26MAA4826 keeps all money fields integral", () => {
+  const result = buildSinvoiceItemInfo(
+    [
+      item("Sườn Cốt Lết", 6, 210_000, 48_153),
+      item("Trứng", 7, 35_000, 8_025),
+      item("Bì", 5, 35_000, 8_025),
+      item("Sườn Cây", 6, 270_000, 61_911),
+      item("Cơm Tấm Chả", 1, 20_000, 4_586),
+      item("Chả", 5, 35_000, 8_025),
+      item("Rau Má - Rau Má Sữa", 5, 75_000, 17_197),
+      item("Rau Má - Rau Má Đường", 4, 60_000, 13_758),
+      item("Trà Tắc", 3, 45_000, 10_320),
+    ],
+    0,
+    true,
+    "direct_sales_gross",
+  );
+
+  assert.equal(result.sumLineNet, 785_000);
+  assert.equal(result.sumLineDiscount, 180_000);
+  assert.equal(result.totalGross, 605_000);
+  assert.equal(result.itemInfo.length, 10);
+  for (const line of result.itemInfo) {
+    assert.equal(Number.isInteger(line.itemTotalAmountWithoutTax), true);
+    assert.equal(Number.isInteger(line.itemTotalAmountAfterDiscount), true);
+    assert.equal(Number.isInteger(line.itemTotalAmountWithTax), true);
+  }
+  const discountLine = result.itemInfo.at(-1);
+  assert.ok(discountLine);
+  assert.equal(discountLine.selection, 3);
+  assert.equal(discountLine.itemTotalAmountWithoutTax, 180_000);
+  assert.equal(discountLine.discount, 0);
+  assert.equal(discountLine.itemDiscount, 0);
 });
 
 test("VAT mode converts gross line discounts to net itemDiscount", () => {
@@ -476,8 +534,7 @@ const instantIssueProvider = () =>
     baseUrl: "https://example.test",
   });
 
-const createMock =
-  (body: Record<string, unknown>) =>
+const createMock = (body: Record<string, unknown>) =>
   (async (input: Parameters<typeof fetch>[0]) => {
     if (String(input).endsWith("/auth/login")) {
       return new Response(
@@ -784,11 +841,14 @@ test("createInvoice: sends direct-sales line discount and discounted summary", a
 
     const body = JSON.parse(String(createCall.init.body)) as {
       itemInfo?: Array<{
+        selection?: number;
+        itemName?: string;
         itemTotalAmountWithoutTax?: number;
         itemTotalAmountAfterDiscount?: number;
         itemTotalAmountWithTax?: number;
         discount?: number;
         itemDiscount?: number;
+        isIncreaseItem?: boolean | null;
       }>;
       summarizeInfo?: {
         totalAmountAfterDiscount?: number;
@@ -800,13 +860,23 @@ test("createInvoice: sends direct-sales line discount and discounted summary", a
       taxBreakdowns?: Array<{ taxableAmount?: number; taxAmount?: number }>;
     };
 
-    const [line] = body.itemInfo ?? [];
+    const [line, discountLine] = body.itemInfo ?? [];
     assert.ok(line);
+    assert.ok(discountLine);
+    assert.equal(line.selection, 1);
     assert.equal(line.itemTotalAmountWithoutTax, 100_000);
-    assert.equal(line.itemTotalAmountAfterDiscount, 90_000);
-    assert.equal(line.itemTotalAmountWithTax, 90_000);
-    assert.equal(line.discount, 10); // rate %, not the 10_000₫ amount
-    assert.equal(line.itemDiscount, 10_000);
+    assert.equal(line.itemTotalAmountAfterDiscount, 100_000);
+    assert.equal(line.itemTotalAmountWithTax, 100_000);
+    assert.equal(line.discount, 0);
+    assert.equal(line.itemDiscount, 0);
+    assert.equal(discountLine.selection, 3);
+    assert.equal(discountLine.itemName, "Chiết khấu hàng hóa");
+    assert.equal(discountLine.itemTotalAmountWithoutTax, 10_000);
+    assert.equal(discountLine.itemTotalAmountAfterDiscount, 10_000);
+    assert.equal(discountLine.itemTotalAmountWithTax, 10_000);
+    assert.equal(discountLine.discount, 0);
+    assert.equal(discountLine.itemDiscount, 0);
+    assert.equal(discountLine.isIncreaseItem, false);
     assert.equal(body.summarizeInfo?.discountAmount, 10_000);
     assert.equal(body.summarizeInfo?.totalAmountAfterDiscount, 90_000);
     assert.equal(body.summarizeInfo?.totalAmountWithoutTax, 90_000);
@@ -872,11 +942,14 @@ test("createInvoice: HKD direct-sales payload has no VAT for TC-260706-015-PH sh
 
     const body = JSON.parse(String(createCall.init.body)) as {
       itemInfo?: Array<{
+        selection?: number;
+        itemName?: string;
         itemTotalAmountWithoutTax?: number;
         itemTotalAmountAfterDiscount?: number;
         itemTotalAmountWithTax?: number;
         taxPercentage?: number;
         taxAmount?: number;
+        isIncreaseItem?: boolean | null;
       }>;
       summarizeInfo?: {
         totalAmountAfterDiscount?: number;
@@ -888,13 +961,21 @@ test("createInvoice: HKD direct-sales payload has no VAT for TC-260706-015-PH sh
       taxBreakdowns?: unknown[];
     };
 
-    const [line] = body.itemInfo ?? [];
+    const [line, discountLine] = body.itemInfo ?? [];
     assert.ok(line);
+    assert.ok(discountLine);
+    assert.equal(line.selection, 1);
     assert.equal(line.itemTotalAmountWithoutTax, 1_124_000);
-    assert.equal(line.itemTotalAmountAfterDiscount, 1_064_000);
-    assert.equal(line.itemTotalAmountWithTax, 1_064_000);
+    assert.equal(line.itemTotalAmountAfterDiscount, 1_124_000);
+    assert.equal(line.itemTotalAmountWithTax, 1_124_000);
     assert.equal(line.taxPercentage, undefined);
     assert.equal(line.taxAmount, undefined);
+    assert.equal(discountLine.selection, 3);
+    assert.equal(discountLine.itemName, "Chiết khấu hàng hóa");
+    assert.equal(discountLine.itemTotalAmountWithoutTax, 60_000);
+    assert.equal(discountLine.itemTotalAmountAfterDiscount, 60_000);
+    assert.equal(discountLine.itemTotalAmountWithTax, 60_000);
+    assert.equal(discountLine.isIncreaseItem, false);
     assert.equal(body.summarizeInfo?.discountAmount, 60_000);
     assert.equal(body.summarizeInfo?.totalTaxAmount, 0);
     assert.equal(body.summarizeInfo?.totalAmountWithTax, 1_064_000);
@@ -1069,9 +1150,7 @@ test("getStatus: APPROVED without codeOfTax still maps to issued, codeOfTax null
       baseUrl: "https://example.test",
     });
 
-    const status = await provider.getStatus(
-      "HDDT0000000000000000000000000002",
-    );
+    const status = await provider.getStatus("HDDT0000000000000000000000000002");
 
     assert.deepEqual(status, {
       status: "issued",

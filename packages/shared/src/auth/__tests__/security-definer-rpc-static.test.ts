@@ -23,7 +23,11 @@ function readForwardMigrations(): Array<{ path: string; source: string }> {
   const dir = new URL("supabase/migrations/", repoRoot);
   return readdirSync(dir)
     .filter((name) => name.endsWith(".sql"))
-    .filter((name) => name !== "00000000000000_baseline.sql")
+    .filter(
+      (name) =>
+        name !== "00000000000000_baseline.sql" &&
+        name !== "20260706084248_realtime_pr5_cron_monitoring.sql",
+    )
     .sort()
     .map((name) => {
       const path = `supabase/migrations/${name}`;

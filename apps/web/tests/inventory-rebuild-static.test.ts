@@ -5,8 +5,10 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
-const readRepo = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
-const readWeb = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
+const readRepo = (path: string) =>
+  readFileSync(resolve(repoRoot, path), "utf8");
+const readWeb = (path: string) =>
+  readFileSync(resolve(process.cwd(), path), "utf8");
 
 const migration = readRepo(
   "supabase/migrations/_archive/20260619121446_inventory_rebuild_consumption_central_sites.sql",
@@ -14,10 +16,22 @@ const migration = readRepo(
 const centralTransferMigration = readRepo(
   "supabase/migrations/_archive/20260622041251_allow_central_supply_central_kitchen_transfers.sql",
 );
+const branchKitchenTransferMigration = readRepo(
+  "supabase/migrations/20260706084210_branch_kitchen_stock_transfer.sql",
+);
+const branchKitchenCleanupMigration = readRepo(
+  "supabase/migrations/20260706084153_branch_kitchen_location_cleanup.sql",
+);
+const consumptionSourceStockMigration = readRepo(
+  "supabase/migrations/20260706084325_fix_consumption_source_stock.sql",
+);
 
-function extractSqlFunctionBody(functionName: string): string {
+function extractSqlFunctionBody(
+  functionName: string,
+  source = migration,
+): string {
   const escapedName = functionName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = migration.match(
+  const match = source.match(
     new RegExp(
       `CREATE OR REPLACE FUNCTION public\\.${escapedName}[\\s\\S]*?\\n\\$\\$;`,
     ),
@@ -26,7 +40,7 @@ function extractSqlFunctionBody(functionName: string): string {
   return match[0];
 }
 
-test("central site kinds are valid and branch intra-transfer is rejected", () => {
+test("central site kinds are valid and branch kitchen transfers are allowed", () => {
   assert.match(
     migration,
     /CHECK \(branch_kind IN \('branch', 'central_supply', 'central_kitchen'\)\)/,
@@ -63,45 +77,55 @@ test("central site kinds are valid and branch intra-transfer is rejected", () =>
     "Kho CN return/rebalance should transfer into central sites",
   );
   assert.match(
-    migration,
-    /stock_transfers_no_intra_branch_new[\s\S]*CHECK \(from_branch_id <> to_branch_id\) NOT VALID/,
-    "new stock transfer rows must not be intra-branch",
-  );
-
-  const commitIntraBranch = extractSqlFunctionBody(
-    "commit_intra_branch_transfer",
+    branchKitchenTransferMigration,
+    /DROP CONSTRAINT IF EXISTS stock_transfers_no_intra_branch_new/,
+    "same-branch branch kitchen transfers must no longer be blocked by table constraint",
   );
   assert.match(
-    commitIntraBranch,
-    /RAISE EXCEPTION 'intra_branch_transfer_not_supported' USING ERRCODE = '22023'/,
-    "legacy intra-branch RPC should fail loudly",
+    branchKitchenTransferMigration,
+    /IF NEW\.from_branch_id = NEW\.to_branch_id[\s\S]*v_from_kind = 'branch'[\s\S]*RETURN NEW/,
+    "direction trigger should allow same-branch transfer only for branch sites",
   );
 });
 
-test("branch consumption approval posts sale consumption from warehouse/default issue only", () => {
+test("branch consumption approval posts sale consumption from branch kitchen when configured", () => {
   const approveConsumption = extractSqlFunctionBody(
     "branch_manager_approve_consumption_report",
+    consumptionSourceStockMigration,
   );
 
-  assert.match(approveConsumption, /il\.is_default_issue = true/);
-  assert.match(approveConsumption, /il\.location_kind = 'warehouse'/);
-  assert.doesNotMatch(
+  assert.match(
     approveConsumption,
-    /is_default_consumption/,
-    "approval must not route through a branch kitchen default",
+    /b\.branch_kind = 'branch' AND il\.location_kind = 'kitchen'/,
+    "branch kitchen should remain the first candidate when it can cover the report",
   );
-  assert.doesNotMatch(
+  assert.match(approveConsumption, /cs\.is_default_consumption DESC/);
+  assert.match(
     approveConsumption,
-    /location_kind\s+(?:=|IN)[\s\S]{0,120}'kitchen'|WHEN 'kitchen'/,
-    "approval must not prefer kitchen locations",
+    /COUNT\(sl\.ingredient_id\) AS matched_lines/,
+  );
+  assert.match(
+    approveConsumption,
+    /BOOL_AND\(COALESCE\(sl\.current_quantity, 0\) >= rl\.quantity\) AS stock_ready/,
+    "approval should only select a source location that has enough stock for every line",
+  );
+  assert.match(approveConsumption, /cs\.matched_lines = v_line_count/);
+  assert.match(approveConsumption, /AND cs\.wac_ready/);
+  assert.match(approveConsumption, /AND cs\.stock_ready/);
+  assert.match(
+    approveConsumption,
+    /OR il\.is_default_issue = true[\s\S]*OR il\.location_kind = 'warehouse'/,
+    "approval should still fall back to the issue warehouse when branch kitchen is missing",
   );
   assert.match(approveConsumption, /'consumption'/);
   assert.match(approveConsumption, /'sale_consumption'/);
   assert.match(approveConsumption, /'hrm_consumption'/);
 });
 
-test("transfer UI and action surface cannot create branch kitchen transfers", () => {
-  const transferActions = readWeb("app/(protected)/inventory/transfer-actions.ts");
+test("transfer UI and action surface can create branch kitchen transfers", () => {
+  const transferActions = readWeb(
+    "app/(protected)/inventory/transfer-actions.ts",
+  );
   const transferForm = readWeb(
     "app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
   );
@@ -109,6 +133,7 @@ test("transfer UI and action surface cannot create branch kitchen transfers", ()
   const transferList = readWeb(
     "app/(protected)/inventory/transfers/transfers-list-client.tsx",
   );
+  const issueActions = readWeb("app/(protected)/inventory/issue-actions.ts");
   const locationCompat = readWeb(
     "app/(protected)/inventory/_lib/inventory-location-compat.ts",
   );
@@ -119,7 +144,16 @@ test("transfer UI and action surface cannot create branch kitchen transfers", ()
     "createStockTransfer must not call the retired intra-branch RPC",
   );
   assert.match(transferActions, /fromBranchId === toBranchId/);
-  assert.match(transferActions, /tiêu hao bán hàng/);
+  assert.match(transferActions, /resolveBranchKitchenLocation/);
+  assert.match(transferActions, /location_kind", "kitchen"/);
+  assert.match(
+    transferActions,
+    /toLocationKind: z\.enum\(\["default_receive", "branch_kitchen"\]\)/,
+  );
+  assert.match(
+    transferActions,
+    /parsed\.data\.toLocationKind === "branch_kitchen"/,
+  );
   assert.match(
     transferActions,
     /fromKind === "central_supply" \|\| fromKind === "central_kitchen"/,
@@ -127,15 +161,45 @@ test("transfer UI and action surface cannot create branch kitchen transfers", ()
   assert.match(transferActions, /fromKind === "branch" &&/);
   assert.match(transferActions, /toKind === "central_supply"/);
   assert.match(transferActions, /toKind === "central_kitchen"/);
-  assert.match(transferActions, /fromKind === "central_supply" && toKind === "central_kitchen"/);
-  assert.match(transferActions, /fromKind === "central_kitchen" && toKind === "central_supply"/);
+  assert.match(
+    transferActions,
+    /fromKind === "central_supply" && toKind === "central_kitchen"/,
+  );
+  assert.match(
+    transferActions,
+    /fromKind === "central_kitchen" && toKind === "central_supply"/,
+  );
   assert.doesNotMatch(transferForm, /type SlipKind|TabsTrigger/);
-  assert.doesNotMatch(transferForm, /is_default_consumption/);
-  assert.doesNotMatch(transferForm, /location_kind\s*===\s*"kitchen"/);
+  assert.match(transferForm, /branch\.id === outboundSourceBranchId/);
+  assert.match(transferForm, /branch\.id === requestDestinationBranchId/);
+  assert.match(transferForm, /transferTargetValue\(branch\.id, "warehouse"\)/);
+  assert.match(transferForm, /transferTargetValue\(branch\.id, "kitchen"\)/);
+  assert.match(
+    transferForm,
+    /toLocationKind =\s*target\.kind === "kitchen" \? "branch_kitchen" : "default_receive"/,
+  );
+  assert.match(transferForm, /formatTransferTargetOption/);
+  assert.match(transferForm, /defaultWarehouseSuffix/);
+  assert.match(transferForm, /defaultKitchenSuffix/);
+  assert.match(transferForm, /function addAllAvailableStockLines/);
+  assert.match(
+    transferForm,
+    /formatIssueMaxEntryQuantity\(\s*getIssueMaxEntryQuantity\(sourceStock\[ingredient\.id\]/,
+    "transfer-all should fill each line with the max available source stock",
+  );
+  assert.match(transferForm, /setDraftLines\(nextLines\)/);
+  assert.match(transferForm, /transferAllStock/);
+  assert.match(
+    readWeb("lib/messages/inventory.ts"),
+    /transferAllStock: "Chuyển toàn bộ"/,
+  );
   assert.match(transferPage, /createParam === "cap-bep"/);
-  assert.match(transferPage, /\/inventory\/consumption/);
+  assert.match(transferPage, /\/inventory\/transfers\/new/);
   assert.match(transferList, /central_supply/);
   assert.match(transferList, /central_kitchen/);
+  assert.match(issueActions, /resolveIssueSourceLocation/);
+  assert.match(issueActions, /location_kind", "kitchen"/);
+  assert.match(issueActions, /is_default_consumption/);
   assert.doesNotMatch(
     locationCompat,
     /is_default_consumption|"consumption"/,
@@ -144,9 +208,10 @@ test("transfer UI and action surface cannot create branch kitchen transfers", ()
 });
 
 test("consumption route is first-class while issues route remains compatible", () => {
-  const routeResolution = readRepo("packages/shared/src/auth/route-resolution.ts");
+  const routeResolution = readRepo(
+    "packages/shared/src/auth/route-resolution.ts",
+  );
   const inventoryPaths = readWeb("app/(protected)/inventory/_lib/paths.ts");
-  const inventoryNav = readWeb("app/(protected)/inventory/_lib/inventory-nav.ts");
   const consumptionPage = readWeb(
     "app/(protected)/inventory/consumption/page.tsx",
   );
@@ -166,10 +231,6 @@ test("consumption route is first-class while issues route remains compatible", (
     inventoryPaths,
     /consumption: joinInventoryPath\(base, "\/consumption"\)/,
   );
-  assert.match(
-    inventoryNav,
-    /href: "\/inventory\/consumption"[\s\S]*label: "Tiêu hao"/,
-  );
   // consumption routes are real wrappers scoped to issue_type='consumption',
   // not byte-identical re-exports of the internal-issues route.
   assert.match(
@@ -177,10 +238,7 @@ test("consumption route is first-class while issues route remains compatible", (
     /import \{ IssuesPageContent \} from "\.\.\/issues\/page"/,
   );
   assert.match(consumptionPage, /scope="consumption"/);
-  assert.match(
-    consumptionPage,
-    /listBasePath="\/inventory\/consumption"/,
-  );
+  assert.match(consumptionPage, /listBasePath="\/inventory\/consumption"/);
   assert.match(
     consumptionDetailPage,
     /import \{ IssueDetailPageContent \} from "\.\.\/\.\.\/issues\/\[id\]\/page"/,
@@ -199,7 +257,10 @@ test("consumption route is first-class while issues route remains compatible", (
   assert.match(issuesPage, /created_at, reason/);
   assert.match(issuesPage, /\.eq\("type", "consumption"\)/);
   assert.match(issuesPage, /\.eq\("movement_subtype", "sale_consumption"\)/);
-  assert.match(issuesPage, /recordedBranchId=\{branchFilter \?\? claims\.branch_id \?\? null\}/);
+  assert.match(
+    issuesPage,
+    /recordedBranchId=\{branchFilter \?\? claims\.branch_id \?\? null\}/,
+  );
   assert.match(issuesPage, /movementSourceLabel\(row\.reason\)/);
   assert.match(issuesPage, /parseBusinessDateParam\(params\.startDate\)/);
   assert.match(issuesPage, /parseBusinessDateParam\(params\.endDate\)/);
@@ -229,7 +290,7 @@ test("consumption route is first-class while issues route remains compatible", (
   assert.match(issuesClient, /tieu-hao-da-ghi-nhan/);
 });
 
-test("stock and inventory value exclude legacy branch kitchen locations", () => {
+test("stock and inventory value include branch kitchen stock locations", () => {
   const stockBearing = readWeb(
     "app/(protected)/inventory/_lib/stock-bearing-locations.ts",
   );
@@ -238,17 +299,19 @@ test("stock and inventory value exclude legacy branch kitchen locations", () => 
     "app/(protected)/inventory/inventory-value-actions.ts",
   );
   const reportActions = readWeb("app/(protected)/inventory/report-actions.ts");
-  const financeCockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
+  const financeCockpit = readWeb(
+    "app/(protected)/finance/_lib/finance-cockpit.ts",
+  );
 
   assert.match(stockBearing, /locationKind === "warehouse"/);
   assert.match(
     stockBearing,
     /siteKind === "central_kitchen" && locationKind === "production_storage"/,
   );
-  assert.doesNotMatch(
+  assert.match(
     stockBearing,
-    /locationKind === "kitchen"/,
-    "Bếp CN/kitchen must not be treated as normal stock",
+    /siteKind === "branch" && locationKind === "kitchen"/,
+    "Bếp CN/kitchen is branch stock again",
   );
 
   for (const [name, source] of [
@@ -267,6 +330,45 @@ test("stock and inventory value exclude legacy branch kitchen locations", () => 
       `${name} should filter by stock-bearing location ids`,
     );
   }
+  assert.match(
+    stockPage,
+    /inventory_locations \( id, name, code, location_kind \)/,
+    "stock page should fetch location metadata for per-location display",
+  );
+  assert.match(
+    stockPage,
+    /stockLocationMap/,
+    "stock page should preserve location breakdown beside aggregate quantity",
+  );
+
+  const stockClient = readWeb(
+    "app/(protected)/inventory/stock/stock-client.tsx",
+  );
+  const stockMessages = readWeb("lib/messages/inventory.ts");
+  const stockMobileGrid = readWeb(
+    "app/(protected)/inventory/stock/stock-mobile-grid.tsx",
+  );
+  const stockBreakdown = readWeb(
+    "app/(protected)/inventory/stock/stock-location-breakdown.tsx",
+  );
+  assert.match(stockClient, /locationBreakdown\?: StockLocationBreakdown/);
+  assert.match(
+    stockClient,
+    /type LocationFilter = "all" \| "warehouse" \| "kitchen"/,
+  );
+  assert.match(stockClient, /locationFilterOptions/);
+  assert.match(stockClient, /locationScopedIngredient/);
+  assert.match(stockClient, /row\.locationKind === locationFilter/);
+  assert.match(stockClient, /locationFilterControl/);
+  assert.match(stockClient, /StockLocationBreakdownLine/);
+  assert.match(stockMessages, /locationWarehouse: "Kho"/);
+  assert.match(stockMessages, /locationKitchen: "Bếp"/);
+  assert.match(stockMobileGrid, /StockLocationBreakdownLine/);
+  assert.match(stockBreakdown, /avgUnitCost: number \| null/);
+  assert.match(stockBreakdown, /lastCountedAt: string \| null/);
+  assert.match(stockBreakdown, /locationKind === "kitchen"/);
+  assert.match(stockBreakdown, /return "Kho"/);
+  assert.match(stockBreakdown, /return "Bếp"/);
 
   // Movement report delegates stock-bearing filtering to the SECURITY DEFINER
   // RPC, which replicates the same predicate in SQL.
@@ -275,20 +377,36 @@ test("stock and inventory value exclude legacy branch kitchen locations", () => 
     /supabase\.rpc\("get_stock_movement_report"/,
     "movement report should call the get_stock_movement_report RPC",
   );
-  const movementRpc = readRepo(
-    "supabase/migrations/_archive/20260702200000_report_stock_movement_rpc.sql",
-  );
-  assert.match(movementRpc, /location_kind = 'warehouse'/);
   assert.match(
-    movementRpc,
+    branchKitchenTransferMigration,
+    /il\.location_kind = 'warehouse'/,
+  );
+  assert.match(
+    branchKitchenTransferMigration,
+    /b\.branch_kind = 'branch' AND il\.location_kind = 'kitchen'/,
+  );
+  assert.match(
+    branchKitchenTransferMigration,
     /branch_kind = 'central_kitchen' AND il\.location_kind = 'production_storage'/,
+  );
+  assert.match(branchKitchenCleanupMigration, /'Bếp CN'/);
+  assert.match(branchKitchenCleanupMigration, /is_default_consumption = TRUE/);
+  assert.match(
+    branchKitchenCleanupMigration,
+    /INSERT INTO public\.stock_levels[\s\S]*current_quantity[\s\S]*SELECT[\s\S]*0,/,
+    "cleanup migration should seed zero kitchen stock rows without changing quantities",
   );
 });
 
 test("finance gross profit uses actual approved consumption, not mv_food_cost", () => {
-  const financeCockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
+  const financeCockpit = readWeb(
+    "app/(protected)/finance/_lib/finance-cockpit.ts",
+  );
 
-  assert.match(financeCockpit, /function buildKpis\(\{[\s\S]*actualFoodCostRows/);
+  assert.match(
+    financeCockpit,
+    /function buildKpis\(\{[\s\S]*actualFoodCostRows/,
+  );
   assert.match(financeCockpit, /\.from\("stock_movements"\)/);
   assert.match(financeCockpit, /\.eq\("type", "consumption"\)/);
   assert.match(
@@ -334,11 +452,11 @@ test("procurement and production route central sites through the new model", () 
   // moved to the shared `isProductionBranchKind` predicate (central_kitchen +
   // branch), replacing the central-kitchen-only equality checks.
   assert.match(productionData, /isProductionBranchKind\(data\?\.branch_kind\)/);
+  assert.match(productionData, /isProductionBranchKind\(branch\.branch_kind\)/);
   assert.match(
-    productionData,
-    /isProductionBranchKind\(branch\.branch_kind\)/,
+    productionShared,
+    /!isProductionBranchKind\(data\?\.branch_kind\)/,
   );
-  assert.match(productionShared, /!isProductionBranchKind\(data\?\.branch_kind\)/);
   assert.match(labels, /central_supply: "Kho Tổng"/);
   assert.match(labels, /central_kitchen: "Bếp Trung Tâm"/);
 });
@@ -358,10 +476,11 @@ test("legacy kitchen backfill stays dry-run and read-only", () => {
   assert.match(output, /self-test ok/);
 });
 
-test("matu-platform import classifier stays dry-run and maps branch kitchen to consumption", () => {
+test("matu-platform import classifier keeps branch kitchen as stock-bearing transfer", () => {
   const script = readRepo("scripts/inventory-matu-platform-dry-run.mjs");
   assert.match(script, /mode: "dry-run"/);
-  assert.match(script, /branch_sale_consumption/);
+  assert.match(script, /branch_kitchen_transfer/);
+  assert.match(script, /branchKitchenTransferCostByBranch/);
   assert.match(script, /real_transfer/);
   assert.doesNotMatch(script, /\b(insert|update|delete|upsert)\s*\(/i);
   assert.doesNotMatch(script, /method:\s*["'](?:POST|PATCH|DELETE|PUT)["']/);
@@ -377,8 +496,14 @@ test("matu-platform import classifier stays dry-run and maps branch kitchen to c
 test("matu-platform master-data import requires explicit apply and maps source material contract", () => {
   const script = readRepo("scripts/inventory-matu-platform-master-data.mjs");
   assert.match(script, /--apply/);
-  assert.match(script, /assertProjectUrl\(args\.sourceUrl, SOURCE_REF, "Source"\)/);
-  assert.match(script, /assertProjectUrl\(args\.targetUrl, TARGET_REF, "Target"\)/);
+  assert.match(
+    script,
+    /assertProjectUrl\(args\.sourceUrl, SOURCE_REF, "Source"\)/,
+  );
+  assert.match(
+    script,
+    /assertProjectUrl\(args\.targetUrl, TARGET_REF, "Target"\)/,
+  );
   assert.match(script, /semi_finished.+finished_good/s);
   assert.match(script, /storageTypeForCategory/);
 
@@ -391,10 +516,13 @@ test("matu-platform master-data import requires explicit apply and maps source m
 });
 
 test("matu-platform operational import writes only a guarded SQL transaction", () => {
-  const script = readRepo("scripts/inventory-matu-platform-operational-import.mjs");
+  const script = readRepo(
+    "scripts/inventory-matu-platform-operational-import.mjs",
+  );
   assert.match(script, /--write-sql/);
   assert.match(script, /allow-manual-review-skip/);
-  assert.match(script, /branch_sale_consumption/);
+  assert.match(script, /branch_kitchen_transfer/);
+  assert.match(script, /branchKitchenStock/);
   assert.match(script, /sale_consumption/);
   assert.match(script, /balance_adjustment/);
   assert.match(script, /manual_review_disallowed_direction/);
@@ -407,7 +535,10 @@ test("matu-platform operational import writes only a guarded SQL transaction", (
 
   const output = execFileSync(
     process.execPath,
-    ["../../scripts/inventory-matu-platform-operational-import.mjs", "--self-test"],
+    [
+      "../../scripts/inventory-matu-platform-operational-import.mjs",
+      "--self-test",
+    ],
     { cwd: process.cwd(), encoding: "utf8" },
   );
   assert.match(output, /self-test ok/);

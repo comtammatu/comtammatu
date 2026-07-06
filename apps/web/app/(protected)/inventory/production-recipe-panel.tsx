@@ -23,6 +23,7 @@ import {
   ItemDescription,
   ItemFooter,
   ItemHeader,
+  ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -768,44 +769,63 @@ export function ProductionRecipePanel({
               }}
               action={
                 canManageRecipes ? (
-                  <>
+                  <div className="flex items-center gap-1">
                     <Button
                       type="button"
                       variant="outline"
-                      size={embedded ? "touch" : "sm"}
+                      size={embedded ? "icon-touch" : "sm"}
                       onClick={() => openRecipeDialog(group.finishedGoodId)}
+                      aria-label={INVENTORY_VI.productionRecipeUpdate}
+                      title={INVENTORY_VI.productionRecipeUpdate}
                     >
-                      <IconPencil data-icon="inline-start" />
-                      {INVENTORY_VI.productionRecipeUpdate}
+                      <IconPencil className={embedded ? "size-4" : undefined} data-icon={embedded ? undefined : "inline-start"} />
+                      {!embedded && INVENTORY_VI.productionRecipeUpdate}
                     </Button>
                     <Button
                       type="button"
                       variant="destructive"
-                      size={embedded ? "touch" : "sm"}
+                      size={embedded ? "icon-touch" : "sm"}
                       onClick={() => handleRecipeGroupDelete(group)}
+                      aria-label={INVENTORY_VI.productionRecipeGroupDeleteConfirm}
+                      title={INVENTORY_VI.productionRecipeGroupDeleteConfirm}
                     >
-                      <IconTrash data-icon="inline-start" />
-                      {INVENTORY_VI.productionRecipeGroupDeleteConfirm}
+                      <IconTrash className={embedded ? "size-4" : undefined} data-icon={embedded ? undefined : "inline-start"} />
+                      {!embedded && INVENTORY_VI.productionRecipeGroupDeleteConfirm}
                     </Button>
-                  </>
+                  </div>
                 ) : null
               }
               contentFlush
             >
-              <DataTable
-                columns={recipeLineColumns}
-                data={group.lines}
-                getRowKey={(recipe) => recipe.id}
-                mobileCardRender={(recipe) => (
-                  <RecipeLineItemCard
-                    recipe={recipe}
-                    canManageRecipes={canManageRecipes}
-                    embedded={embedded}
-                    onEdit={handleEditClick}
-                    onDelete={handleRecipeDelete}
-                  />
-                )}
-              />
+              {embedded ? (
+                <ItemGroup className="gap-2 border-t pt-2">
+                  {group.lines.map((recipe) => (
+                    <RecipeLineItemCard
+                      key={recipe.id}
+                      recipe={recipe}
+                      canManageRecipes={canManageRecipes}
+                      embedded={embedded}
+                      onEdit={handleEditClick}
+                      onDelete={handleRecipeDelete}
+                    />
+                  ))}
+                </ItemGroup>
+              ) : (
+                <DataTable
+                  columns={recipeLineColumns}
+                  data={group.lines}
+                  getRowKey={(recipe) => recipe.id}
+                  mobileCardRender={(recipe) => (
+                    <RecipeLineItemCard
+                      recipe={recipe}
+                      canManageRecipes={canManageRecipes}
+                      embedded={embedded}
+                      onEdit={handleEditClick}
+                      onDelete={handleRecipeDelete}
+                    />
+                  )}
+                />
+              )}
             </AppSection>
           ))}
         </div>
@@ -827,6 +847,47 @@ function RecipeLineItemCard({
   onEdit: (recipe: ProductionRecipeRow) => void;
   onDelete: (recipeId: number) => void;
 }) {
+  if (embedded) {
+    return (
+      <Item variant="outline" size="sm">
+        <ItemContent className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-medium">{recipe.ingredient_name}</span>
+            <Badge variant={badgeVariantFromTone("neutral")} className="shrink-0 font-mono text-xs">
+              {recipe.quantity} {recipe.unit}
+            </Badge>
+          </div>
+          <ItemDescription className="truncate text-xs">
+            Yield {recipe.yield_factor} {recipe.note ? `· ${recipe.note}` : ""}
+          </ItemDescription>
+        </ItemContent>
+        {canManageRecipes ? (
+          <ItemActions className="shrink-0 gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-touch"
+              onClick={() => onEdit(recipe)}
+              aria-label={ACTIONS_VI.update}
+            >
+              <IconPencil className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-touch"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onDelete(recipe.id)}
+              aria-label={ACTIONS_VI.delete}
+            >
+              <IconTrash className="size-4" />
+            </Button>
+          </ItemActions>
+        ) : null}
+      </Item>
+    );
+  }
+
   return (
     <Item variant="outline">
       <ItemHeader>
@@ -846,7 +907,7 @@ function RecipeLineItemCard({
             <Button
               type="button"
               variant="ghost"
-              size={embedded ? "touch" : "sm"}
+              size="sm"
               onClick={() => onEdit(recipe)}
             >
               <IconPencil data-icon="inline-start" />
@@ -855,7 +916,7 @@ function RecipeLineItemCard({
             <Button
               type="button"
               variant="ghost"
-              size={embedded ? "touch" : "sm"}
+              size="sm"
               onClick={() => onDelete(recipe.id)}
             >
               <IconTrash data-icon="inline-start" />

@@ -26,6 +26,13 @@ import { bulkUpdateIngredientThresholds } from "./actions";
 
 const copy = messages.inventory.settings.thresholds;
 
+const errorMinExceedsReorder = "Tồn tối thiểu > Điểm đặt lại";
+const errorReorderExceedsMax = "Điểm đặt lại > Tồn tối đa";
+const errorMinExceedsMax = "Tồn tối thiểu > Tồn tối đa";
+const ariaSelectRowPrefix = "Chọn ";
+const emptyTitleLabel = "Chưa có nguyên liệu cần cấu hình ngưỡng";
+const toastBulkEmptyInput = "Nhập ít nhất một ngưỡng để áp dụng.";
+
 const bulkThresholdSchema = z.object({
   min: z.string(),
   reorder: z.string(),
@@ -79,13 +86,13 @@ function rowError(row: EditableRow): string | null {
   const reorder = toNumOrNull(row.reorderPoint);
   const max = toNumOrNull(row.maxStock);
   if (min != null && reorder != null && min > reorder) {
-    return "Tồn tối thiểu > Điểm đặt lại";
+    return errorMinExceedsReorder;
   }
   if (reorder != null && max != null && reorder > max) {
-    return "Điểm đặt lại > Tồn tối đa";
+    return errorReorderExceedsMax;
   }
   if (min != null && max != null && min > max) {
-    return "Tồn tối thiểu > Tồn tối đa";
+    return errorMinExceedsMax;
   }
   return null;
 }
@@ -219,7 +226,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
         <Checkbox
           checked={selected.has(row.id)}
           onCheckedChange={(value) => toggleRow(row.id, value === true)}
-          aria-label={`Chọn ${row.name}`}
+          aria-label={`${ariaSelectRowPrefix}${row.name}`}
         />
       ),
     },
@@ -315,7 +322,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
         columns={columns}
         data={editable}
         getRowKey={(row) => row.id}
-        emptyTitle="Chưa có nguyên liệu cần cấu hình ngưỡng"
+        emptyTitle={emptyTitleLabel}
         emptyMode="no-data"
         rowClassName={(row) =>
           rowIsDirty(row)
@@ -403,7 +410,7 @@ function ThresholdItem({
         <Checkbox
           checked={selected}
           onCheckedChange={(value) => onSelectedChange(value === true)}
-          aria-label={`Chọn ${row.name}`}
+          aria-label={`${ariaSelectRowPrefix}${row.name}`}
         />
       </ItemHeader>
       <ItemContent className="basis-full">
@@ -474,7 +481,7 @@ function BulkApplyDialog({
     if (values.min === "" && values.reorder === "" && values.max === "") {
       return {
         success: false,
-        error: "Nhập ít nhất một ngưỡng để áp dụng.",
+        error: toastBulkEmptyInput,
       };
     }
 

@@ -97,22 +97,6 @@ type MovementRow = {
   inventory_locations: LocationRef | LocationRef[] | null;
 };
 
-type GrnRef = {
-  id: number;
-  grn_number: string;
-  received_date: string | null;
-};
-
-type ExpiryRow = {
-  id: number;
-  grn_id: number;
-  batch_number: string | null;
-  expiry_date: string | null;
-  received_quantity: number;
-  unit: string;
-  goods_received_notes: GrnRef | GrnRef[] | null;
-};
-
 interface StockIngredientDetailPageContentProps {
   ingredientId: number;
   searchParams?: Promise<{ branchId?: string | string[] }>;
@@ -209,7 +193,7 @@ function movementReferenceHref({
 }): string | null {
   if (embedded) {
     if (movement.grn_id != null)
-      return branchStockHref(branchStockBasePath, "/receive");
+      return branchStockHref(branchStockBasePath, `/grn/${movement.grn_id}`);
     if (movement.transfer_id != null)
       return branchStockHref(
         branchStockBasePath,
@@ -346,7 +330,7 @@ export async function StockIngredientDetailPageContent({
     }),
   );
 
-  const [stockRes, movementRes, expiryRes] = await Promise.all([
+  const [stockRes, movementRes] = await Promise.all([
     stockBearingLocationIds.length > 0
       ? supabase
           .from("stock_levels")
@@ -369,23 +353,10 @@ export async function StockIngredientDetailPageContent({
       .eq("ingredient_id", ingredientId)
       .order("created_at", { ascending: false })
       .limit(30),
-    supabase
-      .from("grn_items")
-      .select(
-        "id, grn_id, batch_number, expiry_date, received_quantity, unit, goods_received_notes!inner ( id, grn_number, branch_id, status, received_date )",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .eq("ingredient_id", ingredientId)
-      .eq("goods_received_notes.branch_id", branchId)
-      .eq("goods_received_notes.status", "confirmed")
-      .not("expiry_date", "is", null)
-      .order("expiry_date", { ascending: true })
-      .limit(8),
   ]);
 
   const stockRows = (stockRes.data ?? []) as StockLevelRow[];
   const movementRows = (movementRes.data ?? []) as MovementRow[];
-  const expiryRows = (expiryRes.data ?? []) as ExpiryRow[];
   const unit = ingredient.purchase_unit || ingredient.unit;
   const totalQty = stockRows.reduce(
     (sum, row) => sum + Number(row.current_quantity ?? 0),
@@ -697,9 +668,9 @@ export async function StockIngredientDetailPageContent({
                   term: stockCopy.table.minThreshold,
                   description: formatQty(min),
                 },
-                { term: "Reorder", description: formatQty(reorder) },
+                { term: messages.inventory.ingredients.dialog.reorderPointLabel, description: formatQty(reorder) },
                 {
-                  term: "Max",
+                  term: messages.inventory.ingredients.dialog.maxStockLabel,
                   description:
                     max > 0 ? formatQty(max) : inventoryCommon.noValue,
                 },
@@ -710,53 +681,6 @@ export async function StockIngredientDetailPageContent({
               ]}
             />
           </AppSection>
-
-          {expiryRows.length > 0 ? (
-            <AppSection
-              title={detailCopy.expiryTitle}
-              description={detailCopy.expiryDescription}
-            >
-              <div className="flex flex-col gap-2">
-                {expiryRows.map((row) => {
-                  const grn = relatedOne(row.goods_received_notes);
-                  const sourceHref = embedded
-                    ? actionHrefs.receive
-                    : grn
-                      ? `/inventory/grn/${grn.id}`
-                      : actionHrefs.receive;
-
-                  return (
-                    <Item
-                      key={row.id}
-                      variant="outline"
-                      className="flex-col items-stretch gap-1 text-sm"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium">
-                          {row.batch_number ?? detailCopy.noBatch}
-                        </p>
-                        <Badge variant="outline">
-                          {row.expiry_date
-                            ? formatDate(row.expiry_date)
-                            : inventoryCommon.noValue}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {detailCopy.received}:{" "}
-                        {formatQty(row.received_quantity)} {row.unit}
-                      </p>
-                      <Link
-                        href={sourceHref}
-                        className="text-xs font-medium text-primary hover:underline"
-                      >
-                        {grn?.grn_number ?? detailCopy.sourceHub}
-                      </Link>
-                    </Item>
-                  );
-                })}
-              </div>
-            </AppSection>
-          ) : null}
 
           <Button asChild variant="ghost" className="justify-start">
             <Link href={listHref}>

@@ -319,6 +319,207 @@ export function GRNDetailClient({
     </div>
   );
 
+  const mobileLayout = (
+    <div className="flex flex-col gap-4">
+      {isReview && isDraft ? (
+        <Alert>
+          <IconInfoCircle className="size-4" />
+          <AlertDescription>
+            {grnCopy.draftSavedReviewHint}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {/* 1. Tổng quan nhập kho */}
+      <AppSection title={grnCopy.qcSummary} size="sm">
+        <DescriptionList
+          className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm"
+          descriptionClassName="font-semibold text-right"
+          items={[
+            {
+              term: grnCopy.linkedPo,
+              description:
+                grn.poCode && grn.poId ? (
+                  <Link
+                    href={`${purchaseOrdersBasePath}/${grn.poId}`}
+                    className="text-primary hover:underline"
+                  >
+                    {grn.poCode}
+                  </Link>
+                ) : (
+                  <span className="text-muted-foreground">
+                    {inventoryCommon.noValue}
+                  </span>
+                ),
+            },
+            {
+              term: grnCopy.supplier,
+              description: grn.supplier,
+            },
+            {
+              term: grnCopy.receivingWarehouse,
+              description: grn.branchName,
+            },
+            {
+              term: grnCopy.totalReceivedValue,
+              description: (
+                <span className="text-primary font-bold">
+                  {inventoryCommon.currency(formatVND(stats.total))}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </AppSection>
+
+      {/* 2. Trạng thái kiểm kê QC & Tổng tiền */}
+      <AppSection size="sm" title={qcStatusTitle}>
+        <GrnSummaryRow
+          label={grnCopy.acceptedLines}
+          value={`${stats.acceptedLines}/${lines.length}`}
+          tone="success"
+        />
+        <GrnSummaryRow
+          label={grnCopy.rejectedLines}
+          value={String(stats.rejectedLines)}
+          tone={stats.rejectedLines > 0 ? "warning" : "default"}
+        />
+        <GrnSummaryRow
+          label={grnCopy.priceReviewNeeded}
+          value={String(stats.reviewLines)}
+          tone={stats.reviewLines > 0 ? "warning" : "default"}
+        />
+      </AppSection>
+
+      {/* 3. Danh sách sản phẩm kiểm tra */}
+      <AppSection
+        title={grnCopy.inspectionItemsTitle}
+        description={
+          isDraft
+            ? grnCopy.draftToleranceHint(
+                qc.qtyShortTolerancePct,
+                qc.priceVarianceWarnPct,
+                qc.priceVarianceReviewPct,
+              )
+            : grnCopy.finalizedLineCount(lines.length)
+        }
+        action={
+          isDraft ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              onClick={() => setAddDialogOpen(true)}
+            >
+              <IconPlus className="size-4" />
+              {grnCopy.addLine}
+            </Button>
+          ) : null
+        }
+        size="sm"
+      >
+        <div className="flex flex-col gap-3">
+          {lines.map((line, idx) => (
+            <LineRow
+              key={line.lineId}
+              tenantId={grn.tenantId}
+              grnId={grn.id}
+              line={line}
+              idx={idx}
+              isDraft={isDraft}
+              qc={qc}
+              showAmendAffordance={showAmendAffordance}
+              onChange={(p) => patch(idx, p)}
+              onDelete={() => void handleDeleteLine(line)}
+              onAmend={() => setAmendingLine(line)}
+            />
+          ))}
+        </div>
+      </AppSection>
+
+      {/* 4. Lịch sử */}
+      <AppSection title={historySectionTitle} size="sm" collapsible defaultOpen={false}>
+        <AuditHistoryList logs={auditLogs} />
+      </AppSection>
+
+      {/* Action Footer */}
+      <AppDetailFooter
+        sticky={embedded}
+        leading={
+          <>
+            {!isDraft ? (
+              <Button asChild variant="ghost" size="touch">
+                <Link href={grnMobileBackPath}>
+                  <IconArrowLeft className="size-5" />
+                  {grnCopy.back}
+                </Link>
+              </Button>
+            ) : null}
+            {!isDraft && canAdjustStock && lines.length > 0 ? (
+              <DocumentStockCorrectionDialog
+                documentType="grn"
+                documentId={grn.id}
+                documentCode={grn.code}
+                branchOptions={[
+                  {
+                    id: grn.branchId,
+                    name: grn.branchName,
+                  },
+                ]}
+                itemOptions={lines.map((line) => ({
+                  ingredientId: line.ingredientId,
+                  name: line.name,
+                  unit: line.unit,
+                }))}
+              />
+            ) : null}
+            {!isDraft ? (
+              <Button asChild variant="outline" size="touch">
+                <Link
+                  href={
+                    grn.invoiceId
+                      ? `${supplierInvoicesBasePath}?invoiceId=${grn.invoiceId}`
+                      : `${supplierInvoicesBasePath}?grnId=${grn.id}`
+                  }
+                >
+                  <IconReceipt className="size-5" />
+                  {grn.invoiceId
+                    ? grnCopy.viewInvoice
+                    : grnCopy.createInvoice}
+                </Link>
+              </Button>
+            ) : null}
+          </>
+        }
+        trailing={
+          isDraft ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSave}
+                disabled={isSaving || dirtyLines.length === 0}
+                size="touch"
+              >
+                <IconDeviceFloppy className="size-5" />
+                {grnCopy.saveChanges(dirtyLines.length)}
+              </Button>
+              <Button
+                type="button"
+                disabled={isConfirming || dirtyLines.length > 0}
+                onClick={handleConfirmGrn}
+                size="touch-lg"
+              >
+                <IconCircleCheck className="size-5" />
+                {grnCopy.confirmGrnAction}
+              </Button>
+            </>
+          ) : null
+        }
+      />
+    </div>
+  );
+
   const dialogs = (
     <>
       <AddGrnLineDialog
@@ -370,7 +571,7 @@ export function GRNDetailClient({
             {statusBadge.label}
           </Badge>
         </div>
-        {pageLayout}
+        {mobileLayout}
         {dialogs}
       </div>
     );

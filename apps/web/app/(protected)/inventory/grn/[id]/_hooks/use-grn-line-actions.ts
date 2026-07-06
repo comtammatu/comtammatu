@@ -76,8 +76,6 @@ export function useGrnLineActions({
           priceOverrideNote: l.priceOverrideNote || null,
           priceOverridePhotoUrl: l.priceOverridePhotoUrl || null,
           shortDeliveryAction: l.shortDeliveryAction,
-          batchNumber: l.lot || null,
-          expiryDate: l.expiry || null,
         });
         if (!res.success) {
           notify.error(

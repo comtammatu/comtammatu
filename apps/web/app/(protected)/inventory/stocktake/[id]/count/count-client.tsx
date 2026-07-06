@@ -29,6 +29,12 @@ import {
 } from "../../../stocktake-actions";
 import type { CountUnitOption } from "../../../_lib/count-units";
 
+const toastNoCountsInput = "Chưa nhập số đếm nào";
+const toastSubmitRoundFailed = "Không submit được round";
+const toastSavedCounts = (count: number) => `Đã lưu ${count} dòng đếm`;
+const labelWizardQuick = "Nhập nhanh (Wizard)";
+const labelSwitchTable = "Chuyển sang Nhập Bảng";
+
 interface Props {
   sessionId: number;
   branchId: number;
@@ -70,6 +76,7 @@ export function StocktakeCountClient({
     "idle" | "acquiring" | "held" | "blocked" | "lost" | "error"
   >("idle");
   const [pending, startTransition] = useTransition();
+  const [preferTableMode, setPreferTableMode] = useState<boolean>(false);
 
   const canCount = status === "in_progress";
   const editable = canCount && lockState === "held";
@@ -140,7 +147,7 @@ export function StocktakeCountClient({
       }));
 
     if (payload.length === 0) {
-      toast.error("Chưa nhập số đếm nào");
+      toast.error(toastNoCountsInput);
       return;
     }
 
@@ -152,10 +159,10 @@ export function StocktakeCountClient({
         counts: payload,
       });
       if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không submit được round");
+        toast.error(res.error ?? toastSubmitRoundFailed);
         return;
       }
-      toast.success(`Đã lưu ${res.data.appliedCount} dòng đếm`);
+      toast.success(toastSavedCounts(res.data.appliedCount));
       router.refresh();
     });
   }
@@ -221,6 +228,16 @@ export function StocktakeCountClient({
           submitting={pending}
           canSubmit={editable && Object.keys(counts).length > 0}
         >
+          {embedded ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              onClick={() => setPreferTableMode(false)}
+            >
+              {labelWizardQuick}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -245,19 +262,33 @@ export function StocktakeCountClient({
     </>
   );
 
-  if (embedded) {
+  const showWizard = embedded && !preferTableMode;
+
+  if (showWizard) {
     return (
-      <StocktakeCountWizard
-        lines={currentRoundLines}
-        counts={counts}
-        onCountChange={onCountChange}
-        onSubmit={submit}
-        submitting={pending}
-        editable={editable}
-        currentRound={currentRound}
-        unitLabelByIngredient={unitLabelByIngredient}
-        chrome={safetyChrome}
-      />
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-end px-1">
+          <Button
+            type="button"
+            variant="outline"
+            size={embedded ? "touch" : "sm"}
+            onClick={() => setPreferTableMode(true)}
+          >
+            {labelSwitchTable}
+          </Button>
+        </div>
+        <StocktakeCountWizard
+          lines={currentRoundLines}
+          counts={counts}
+          onCountChange={onCountChange}
+          onSubmit={submit}
+          submitting={pending}
+          editable={editable}
+          currentRound={currentRound}
+          unitLabelByIngredient={unitLabelByIngredient}
+          chrome={safetyChrome}
+        />
+      </div>
     );
   }
 

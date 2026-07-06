@@ -42,7 +42,6 @@ test("operator stock task routes render branch-shell content instead of redirect
   const expectations = [
     ["transfer", "TransfersPageContent", 'initialTab="dispatch"'],
     ["waste", "WasteNewPageContent", null],
-    ["expiry", "ExpiryPageContent", "embedded"],
   ] as const;
 
   for (const [segment, component, tabProp] of expectations) {
@@ -245,7 +244,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(stockDetailPageSource, /fetchStockBearingLocationIds/);
   assert.match(stockDetailPageSource, /\.from\("stock_levels"\)/);
   assert.match(stockDetailPageSource, /\.from\("stock_movements"\)/);
-  assert.match(stockDetailPageSource, /\.from\("grn_items"\)/);
+  assert.doesNotMatch(stockDetailPageSource, /\.from\("grn_items"\)/);
   assert.equal(
     (stockDetailPageSource.match(/size=\{embedded \? "touch" : "sm"\}/g) ?? [])
       .length,
@@ -255,6 +254,14 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(
     stockDetailPageSource,
     /movementReferenceHref\(\{\s*movement,\s*branchId,\s*branchStockBasePath: branchStockRoot,\s*embedded,\s*\}\)/,
+  );
+  assert.match(
+    stockDetailPageSource,
+    /branchStockHref\(branchStockBasePath,\s*`\/grn\/\$\{movement\.grn_id\}`\)/,
+  );
+  assert.doesNotMatch(
+    stockDetailPageSource,
+    /movement\.grn_id != null\)\s*return branchStockHref\(branchStockBasePath,\s*"\/receive"\)/,
   );
   assert.match(stockClientSource, /branchStockBasePath\?: string/);
   assert.match(stockClientSource, /embedded\?: boolean/);
@@ -294,7 +301,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
     stockClientSource,
     /branchStockHref\(stockRootPath, "\/stocktake"\)/,
   );
-  assert.match(
+  assert.doesNotMatch(
     stockClientSource,
     /branchStockHref\(stockRootPath, "\/expiry"\)/,
   );
@@ -319,7 +326,6 @@ test("operator stock landing keeps manager action affordances visible", () => {
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.receive\}[\s\S]*label=\{receiveActionLabel\}[\s\S]*primary/,
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.transfer\}[\s\S]*label=\{stockCopy\.actions\.transfer\}/,
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.stocktake\}[\s\S]*label=\{stockCopy\.actions\.stocktake\}/,
-    /summary\.expiryCount > 0[\s\S]*<QuickActionButton[\s\S]*href=\{actionHrefs\.expiry\}[\s\S]*label=\{stockCopy\.actions\.expiry\}/,
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.waste\}[\s\S]*label=\{stockCopy\.actions\.waste\}/,
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.purchaseSuggestion\}[\s\S]*label=\{stockCopy\.actions\.purchaseSuggestion\}/,
   ]) {
@@ -337,6 +343,7 @@ test("operator stock landing keeps manager action affordances visible", () => {
 
   assert.match(stockClientSource, /<AdjustStockDialog/);
   assert.match(stockClientSource, /<QuickStockIssueDialog/);
+  assert.doesNotMatch(stockClientSource, /expiryCount|actionHrefs\.expiry/);
   assert.match(
     stockClientSource,
     /embedded[\s\S]*branchStockHref\(stockRootPath, "\/issues"\)[\s\S]*: "\/inventory\/issues"/,
@@ -519,7 +526,7 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   );
   assert.match(
     issueDetailClient,
-    /className=\{embedded \? "h-12" : undefined\}/,
+    /className=\{embedded \? "h-12" : "h-10"\}/,
   );
   assert.equal(
     (
@@ -571,7 +578,7 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(purchaseOrdersClient, /suppliersPath \?/);
   assert.match(
     grnListClient,
-    /<AppToolbar variant=\{embedded \? "inline" : "card"\}>/,
+    /<AppToolbar variant=\{isOperator \? "inline" : "card"\}>/,
   );
   assert.match(grnDetailClient, /embedded\?: boolean/);
   assert.match(grnDetailClient, /embedded = false/);
@@ -597,7 +604,7 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(newPoClient, /<SuggestionsPanel[\s\S]*embedded=\{embedded\}/);
   assert.equal(
     (newPoClient.match(/size=\{embedded \? "touch" : "sm"\}/g) ?? []).length,
-    2,
+    3,
     "embedded new-PO suggestion actions must be touch-sized",
   );
   assert.match(newPoClient, /size=\{embedded \? "touch-lg" : "default"\}/);
@@ -774,17 +781,9 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
   const wasteRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx",
   );
-  const expiryPage = read("apps/web/app/(protected)/inventory/expiry/page.tsx");
-  const expiryClient = read(
-    "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx",
-  );
-  const expiryRoute = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/expiry/page.tsx",
-  );
-
   assert.match(
     transfersPage,
-    /if \(routeBranchId != null\) \{\s*redirect\(`\/br\/\$\{routeBranchId\}\/stock`\);\s*\}/,
+    /if \(routeBranchId != null\) \{\s*redirect\(`\/br\/\$\{routeBranchId\}\/stock\/transfer\/new`\);\s*\}/,
     "branch transfer fallback must stay under /br/[branchId]/stock",
   );
   assert.match(
@@ -818,15 +817,16 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
     /if \(!flagEnabled\) \{\s*if \(routeBranchId != null\)/,
   );
   assert.doesNotMatch(wastePage, /EmployeePage/);
-
-  assert.match(expiryRoute, /ExpiryPageContent/);
-  assert.match(expiryRoute, /routeBranchId=\{branchId\}/);
-  assert.match(expiryRoute, /embedded/);
-  assert.match(expiryPage, /export async function ExpiryPageContent/);
-  assert.match(expiryPage, /routeBranchId\?: number/);
-  assert.match(expiryPage, /scope\.outOfScope/);
-  assert.match(expiryClient, /embedded\?: boolean/);
-  assert.match(expiryClient, embeddedContentWrapperPattern);
+  assert.equal(
+    exists("apps/web/app/(protected)/inventory/expiry/page.tsx"),
+    false,
+  );
+  assert.equal(
+    exists(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/expiry/page.tsx",
+    ),
+    false,
+  );
 });
 
 test("transfer receive full receipt stays one-click on the existing atomic action", () => {
@@ -993,11 +993,11 @@ test("operator stocktake routes use branch stocktake, not employee count", () =>
   assert.match(stocktakeCountClient, /embedded = false/);
   assert.match(
     stocktakeCountClient,
-    /if \(embedded\) \{\s*return \(\s*<StocktakeCountWizard/,
+    /if \(showWizard\) \{\s*return \(\s*<div[\s\S]*?<StocktakeCountWizard/,
   );
   assert.match(
     stocktakeListClient,
-    /<AppPage width="xwide">\s*\{content\}\s*<\/AppPage>/,
+    /<AppPage width="xwide"[^>]*>\s*\{content\}\s*<\/AppPage>/,
   );
   assert.match(
     stocktakeListClient,
@@ -1015,7 +1015,7 @@ test("operator stocktake routes use branch stocktake, not employee count", () =>
   assert.doesNotMatch(stocktakeNewClient, /InventoryPageContent/);
   assert.match(
     stocktakeDetailClient,
-    /<AppPage width="wide" density="compact">[\s\S]*?<AppPageHeader/,
+    /<AppPage width="x?wide" density="compact">[\s\S]*?<AppPageHeader/,
   );
   assert.match(
     stocktakeNewClient,
@@ -1147,7 +1147,7 @@ test("operator transfer routes keep list, create, detail, and form actions branc
     /fromBranchId = Number\(inboundFromBranchId\)/,
   );
   assert.match(transfersListClient, /canCreateInboundRequest/);
-  assert.match(transfersListClient, /isBranchManager \? "Yêu cầu hàng"/);
+  assert.match(transfersListClient, /isBranchManager \? requestGoodsLabel/);
   assert.match(
     transfersListClient,
     /createPathBase = createBasePath \?\? basePath/,
@@ -1156,17 +1156,15 @@ test("operator transfer routes keep list, create, detail, and form actions branc
     transfersListClient,
     /userRole === "branch_manager" && viewerBranchId === toId/,
   );
-  assert.match(
-    transfersListClient,
-    /<AppToolbar\s*variant=\{embedded \? "inline" : "card"\}/,
-  );
+  assert.match(transfersListClient, /<AppToolbar\s*variant="inline"/);
+  assert.match(transfersListClient, /<AppToolbar\s*variant="card"/);
   assert.match(
     transferActions,
     /claims\.user_role === "branch_manager"[\s\S]*toBranchId !== claims\.branch_id/,
   );
   assert.match(
     transferActions,
-    /fromKind !== "central_supply" && fromKind !== "central_kitchen"/,
+    /fromKind !== "central_supply"\s*&&\s*fromKind !== "central_kitchen"/,
   );
   assert.match(
     createTransferForm,

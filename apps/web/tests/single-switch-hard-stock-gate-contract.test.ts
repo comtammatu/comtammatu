@@ -6,6 +6,14 @@ import { test } from "node:test";
 const migration = readFileSync(
   join(
     process.cwd(),
+    "../../supabase/migrations/20260706085000_pos_stock_outcome_to_kitchen.sql",
+  ),
+  "utf8",
+);
+
+const archiveMigration = readFileSync(
+  join(
+    process.cwd(),
     "../../supabase/migrations/_archive/20260705160000_single_switch_hard_stock_gate.sql",
   ),
   "utf8",
@@ -15,9 +23,20 @@ function sqlFunction(name: string, markerEnd: RegExp | string): string {
   const startPattern = new RegExp(
     `CREATE (?:OR REPLACE )?FUNCTION public\\.${name}\\(`,
   );
-  const startMatch = startPattern.exec(migration);
+  
+  // 1. Try finding in the new migration first
+  let startMatch = startPattern.exec(migration);
+  let src = migration;
+  
+  // 2. Fallback to archive migration for unchanged functions
+  if (!startMatch) {
+    startMatch = startPattern.exec(archiveMigration);
+    src = archiveMigration;
+  }
+  
   if (!startMatch) return "";
-  const rest = migration.slice(startMatch.index);
+  
+  const rest = src.slice(startMatch.index);
   const endMatch =
     typeof markerEnd === "string"
       ? rest.indexOf(markerEnd)
@@ -56,8 +75,9 @@ test("enforce_branch_stock_availability trigger: created and fires after the dai
     migration,
     /CREATE FUNCTION public\.enforce_branch_stock_availability\(\) RETURNS trigger/,
   );
+  // Trigger declaration is verified against the archive migration since it wasn't modified
   assert.match(
-    migration,
+    archiveMigration,
     /CREATE TRIGGER trg_enforce_stock_availability AFTER INSERT ON public\.order_items FOR EACH ROW EXECUTE FUNCTION public\.enforce_branch_stock_availability\(\);/,
   );
 
@@ -81,7 +101,7 @@ test("enforce_branch_stock_availability: GUC skip-hatch, warehouse pool, no-reci
     fn,
     /IF NOT public\.is_feature_enabled\(v_branch_id, 'pos_stock_outcome_posting'\) THEN/,
   );
-  assert.match(fn, /il\.location_kind = 'warehouse'/);
+  assert.match(fn, /il\.location_kind = 'kitchen'/);
   assert.match(fn, /il\.is_active = TRUE/);
 
   // Demand explosion joins recipes — a menu item with zero recipe lines never
@@ -104,7 +124,7 @@ test("enforce_branch_stock_availability: measures the SAME single warehouse loca
   // same predicate, same ORDER BY/LIMIT 1, no join across every location.
   assert.match(
     fn,
-    /SELECT il\.id\s*\n\s*INTO v_location_id\s*\n\s*FROM public\.inventory_locations il\s*\n\s*WHERE il\.branch_id = v_branch_id\s*\n\s*AND il\.tenant_id = v_tenant_id\s*\n\s*AND il\.location_kind = 'warehouse'\s*\n\s*AND il\.is_active = TRUE\s*\n\s*ORDER BY il\.is_default_issue DESC, il\.sort_order NULLS LAST, il\.id\s*\n\s*LIMIT 1;/,
+    /SELECT il\.id\s*\n\s*INTO v_location_id\s*\n\s*FROM public\.inventory_locations il\s*\n\s*WHERE il\.branch_id = v_branch_id\s*\n\s*AND il\.tenant_id = v_tenant_id\s*\n\s*AND il\.location_kind = 'kitchen'\s*\n\s*AND il\.is_active = TRUE\s*\n\s*ORDER BY il\.is_default_issue DESC, il\.sort_order NULLS LAST, il\.id\s*\n\s*LIMIT 1;/,
   );
 
   // Both the lock and the on_hand SUM are scoped to that single location_id —
@@ -197,7 +217,7 @@ test("post_pos_sale_consumption_if_ready: broken-unit-config items excluded from
 
 test("flag row cleanup: pos_stock_availability_gate rows are deleted", () => {
   assert.match(
-    migration,
+    archiveMigration,
     /DELETE FROM public\.branch_feature_flags WHERE flag_key = 'pos_stock_availability_gate';/,
   );
 });

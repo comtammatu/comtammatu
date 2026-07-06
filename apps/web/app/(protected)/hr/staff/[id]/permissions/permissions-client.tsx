@@ -2,7 +2,7 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: permission management surface keeps localized operational copy inline */
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   Plus as IconPlus,
   Trash as IconTrash,
@@ -67,6 +67,12 @@ interface Props {
   templates: Template[];
 }
 
+const TENANT_SCOPE_VALUE = "__tenant__";
+
+function branchIdFromValue(value: string): number | null {
+  return value === TENANT_SCOPE_VALUE ? null : Number(value);
+}
+
 export function PermissionsClient({
   targetUserId,
   targetFullName,
@@ -103,16 +109,41 @@ export function PermissionsClient({
     for (const p of permissionKeys) set.add(p.module);
     return Array.from(set).sort();
   }, [permissionKeys]);
+  const selectedPermission = useMemo(
+    () => permissionKeys.find((p) => p.key === selectedPerm),
+    [permissionKeys, selectedPerm],
+  );
+  const grantNeedsBranch = selectedPermission?.scope === "branch";
+  const grantNeedsTenant = selectedPermission?.scope === "tenant";
+  const canGrant =
+    !!selectedPerm &&
+    !!selectedBranch &&
+    !(grantNeedsBranch && selectedBranch === TENANT_SCOPE_VALUE) &&
+    !(grantNeedsTenant && selectedBranch !== TENANT_SCOPE_VALUE);
+
+  useEffect(() => {
+    if (grantNeedsTenant && selectedBranch !== TENANT_SCOPE_VALUE) {
+      setSelectedBranch(TENANT_SCOPE_VALUE);
+    }
+  }, [grantNeedsTenant, selectedBranch]);
 
   function handleGrant() {
-    if (!selectedBranch || !selectedPerm) {
-      toast.error("Chọn chi nhánh và quyền.");
+    if (!selectedPerm || !selectedBranch) {
+      toast.error("Chọn phạm vi và quyền.");
+      return;
+    }
+    if (grantNeedsBranch && selectedBranch === TENANT_SCOPE_VALUE) {
+      toast.error("Quyền này cần chọn chi nhánh.");
+      return;
+    }
+    if (grantNeedsTenant && selectedBranch !== TENANT_SCOPE_VALUE) {
+      toast.error("Quyền này phải gán ở phạm vi toàn quán.");
       return;
     }
     startTransition(async () => {
       const res = await grantPermissionAction({
         target_user_id: targetUserId,
-        branch_id: Number(selectedBranch),
+        branch_id: branchIdFromValue(selectedBranch),
         permission_key: selectedPerm,
         valid_until: grantValidUntil ? toIsoZ(grantValidUntil) : null,
       });
@@ -158,13 +189,13 @@ export function PermissionsClient({
 
   function handleApplyTemplate() {
     if (!templateBranch || !templateId) {
-      toast.error("Chọn chi nhánh và template.");
+      toast.error("Chọn phạm vi và template.");
       return;
     }
     startTransition(async () => {
       const res = await applyTemplateAction({
         target_user_id: targetUserId,
-        branch_id: Number(templateBranch),
+        branch_id: branchIdFromValue(templateBranch),
         template_id: Number(templateId),
         valid_until: templateValidUntil ? toIsoZ(templateValidUntil) : null,
       });
@@ -187,128 +218,136 @@ export function PermissionsClient({
   }
 
   return (
-      <div className="flex flex-col gap-4">
-        {/* ─── Grant individual permission ─── */}
+    <div className="flex flex-col gap-4">
+      {/* ─── Grant individual permission ─── */}
       <AppSection title="Gán quyền đơn lẻ">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-              <SelectTrigger>
-                <SelectValue placeholder="Chi nhánh" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedPerm} onValueChange={setSelectedPerm}>
-              <SelectTrigger className="sm:col-span-2">
-                <SelectValue placeholder="Chọn quyền" />
-              </SelectTrigger>
-              <SelectContent>
-                {modules.map((mod) => (
-                  <div key={mod}>
-                    <div className="px-2 py-1 text-xs font-medium uppercase text-muted-foreground">
-                      {mod}
-                    </div>
-                    {permissionKeys
-                      .filter((p) => p.module === mod)
-                      .map((p) => (
-                        <SelectItem key={p.key} value={p.key}>
-                          <div className="flex min-w-0 flex-col items-start gap-1">
-                            <span className="font-mono text-xs">{p.key}</span>
-                            <span className="break-words text-xs text-muted-foreground">
-                              {p.description}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                  </div>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="grant-valid-until" className="text-xs text-muted-foreground font-normal">
-                Hạn kết thúc (tuỳ chọn)
-              </Label>
-              <Input
-                id="grant-valid-until"
-                type="datetime-local"
-                value={grantValidUntil}
-                onChange={(e) => setGrantValidUntil(e.target.value)}
-                className="w-full sm:w-auto"
-              />
-            </div>
-            <p className="self-end text-xs text-muted-foreground">
-              Để trống = vĩnh viễn. Dùng cho luân chuyển tạm hoặc uỷ quyền có
-              hạn.
-            </p>
-          </div>
-          <Button
-            onClick={handleGrant}
-            disabled={isPending || !selectedBranch || !selectedPerm}
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Select
+            value={selectedBranch}
+            onValueChange={setSelectedBranch}
+            disabled={isPending || grantNeedsTenant}
           >
-            <IconPlus className="mr-1 size-4" />
-            Gán quyền
-          </Button>
+            <SelectTrigger>
+              <SelectValue placeholder="Phạm vi" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TENANT_SCOPE_VALUE}>Toàn quán</SelectItem>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedPerm} onValueChange={setSelectedPerm}>
+            <SelectTrigger className="sm:col-span-2">
+              <SelectValue placeholder="Chọn quyền" />
+            </SelectTrigger>
+            <SelectContent>
+              {modules.map((mod) => (
+                <div key={mod}>
+                  <div className="px-2 py-1 text-xs font-medium uppercase text-muted-foreground">
+                    {mod}
+                  </div>
+                  {permissionKeys
+                    .filter((p) => p.module === mod)
+                    .map((p) => (
+                      <SelectItem key={p.key} value={p.key}>
+                        <div className="flex min-w-0 flex-col items-start gap-1">
+                          <span className="font-mono text-xs">{p.key}</span>
+                          <span className="break-words text-xs text-muted-foreground">
+                            {p.description}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                </div>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
+          <div className="flex flex-col gap-1">
+            <Label
+              htmlFor="grant-valid-until"
+              className="text-xs text-muted-foreground font-normal"
+            >
+              Hạn kết thúc (tuỳ chọn)
+            </Label>
+            <Input
+              id="grant-valid-until"
+              type="datetime-local"
+              value={grantValidUntil}
+              onChange={(e) => setGrantValidUntil(e.target.value)}
+              className="w-full sm:w-auto"
+            />
+          </div>
+          <p className="self-end text-xs text-muted-foreground">
+            Để trống = vĩnh viễn. Dùng cho luân chuyển tạm hoặc uỷ quyền có hạn.
+          </p>
+        </div>
+        <Button onClick={handleGrant} disabled={isPending || !canGrant}>
+          <IconPlus className="mr-1 size-4" />
+          Gán quyền
+        </Button>
       </AppSection>
 
       {/* ─── Apply template ─── */}
       <AppSection title="Áp dụng template">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Select value={templateBranch} onValueChange={setTemplateBranch}>
-              <SelectTrigger>
-                <SelectValue placeholder="Chi nhánh" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={templateId} onValueChange={setTemplateId}>
-              <SelectTrigger className="sm:col-span-2">
-                <SelectValue placeholder="Template" />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((t) => (
-                  <SelectItem key={t.id} value={String(t.id)}>
-                    {t.name} ({t.permissionKeys.length} quyền)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="template-valid-until" className="text-xs text-muted-foreground font-normal">
-              Hạn kết thúc (tuỳ chọn)
-            </Label>
-            <Input
-              id="template-valid-until"
-              type="datetime-local"
-              value={templateValidUntil}
-              onChange={(e) => setTemplateValidUntil(e.target.value)}
-              className="max-w-xs w-full"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Template cộng dồn với quyền hiện có — chỉ thêm, không xóa. Nếu đặt
-            hạn, tất cả quyền mới cùng hạn.
-          </p>
-          <Button
-            onClick={handleApplyTemplate}
-            disabled={isPending || !templateBranch || !templateId}
-            variant="secondary"
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Select value={templateBranch} onValueChange={setTemplateBranch}>
+            <SelectTrigger>
+              <SelectValue placeholder="Phạm vi" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TENANT_SCOPE_VALUE}>Toàn quán</SelectItem>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={templateId} onValueChange={setTemplateId}>
+            <SelectTrigger className="sm:col-span-2">
+              <SelectValue placeholder="Template" />
+            </SelectTrigger>
+            <SelectContent>
+              {templates.map((t) => (
+                <SelectItem key={t.id} value={String(t.id)}>
+                  {t.name} ({t.permissionKeys.length} quyền)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label
+            htmlFor="template-valid-until"
+            className="text-xs text-muted-foreground font-normal"
           >
-            <IconStack className="mr-1 size-4" />
-            Áp dụng
-          </Button>
+            Hạn kết thúc (tuỳ chọn)
+          </Label>
+          <Input
+            id="template-valid-until"
+            type="datetime-local"
+            value={templateValidUntil}
+            onChange={(e) => setTemplateValidUntil(e.target.value)}
+            className="max-w-xs w-full"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Template cộng dồn với quyền hiện có — chỉ thêm, không xóa. Nếu đặt
+          hạn, tất cả quyền mới cùng hạn.
+        </p>
+        <Button
+          onClick={handleApplyTemplate}
+          disabled={isPending || !templateBranch || !templateId}
+          variant="secondary"
+        >
+          <IconStack className="mr-1 size-4" />
+          Áp dụng
+        </Button>
       </AppSection>
 
       {/* ─── Current grants — whole shop ─── */}

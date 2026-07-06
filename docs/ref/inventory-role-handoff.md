@@ -1,7 +1,7 @@
 # Inventory Role Handoff — 1 Trang
 
 > Dùng cho training nhanh đội vận hành  
-> Mô hình vận hành: `Kho Tổng`, `Bếp Trung Tâm`, `chi nhánh`, `Kho CN`, `tiêu hao`
+> Mô hình vận hành: `Kho Tổng`, `Bếp Trung Tâm`, `chi nhánh`, `Kho CN`, `Bếp CN`, `tiêu hao`
 
 ---
 
@@ -20,9 +20,9 @@ Tài liệu này là bản training 1 trang.
 1. Kho Tổng/Bếp Trung Tâm/chi nhánh nhập hàng từ nhà cung cấp bằng `PO` và `GRN`.
 2. Kho Tổng hoặc Bếp Trung Tâm chuyển hàng còn tồn về Kho CN bằng `stock_transfer`.
 3. Bếp Trung Tâm tạo `production_order` để sản xuất thành phẩm.
-4. Chi nhánh nhận hàng vào Kho CN và bán hàng.
-5. Quản lý chi nhánh duyệt/apply tiêu hao trong ngày.
-6. Cuối ngày các site kiểm kê và xử lý chênh lệch nếu có.
+4. Chi nhánh nhận hàng vào Kho CN, cấp Bếp CN bằng `stock_transfer` cùng chi nhánh, rồi bán hàng.
+5. Quản lý chi nhánh duyệt/apply tiêu hao trong ngày khi hàng thật sự được xuất dùng.
+6. Cuối ngày các site/location kiểm kê và xử lý chênh lệch nếu có.
 
 ## 2. Thủ kho chi nhánh
 
@@ -77,7 +77,7 @@ Trong hệ thống hiện tại, vai trò này map vào `branch_manager`.
 ### Việc phải làm
 
 - Xác nhận nhận hàng từ transfer inbound.
-- Theo dõi tồn tại Kho CN.
+- Theo dõi tồn tại Kho CN và Bếp CN.
 - Duyệt/apply báo cáo tiêu hao trong ngày.
 - Đảm bảo order/POS được chốt đúng luồng.
 - Kiểm kê cuối ngày cho các mặt hàng trọng yếu.
@@ -114,14 +114,14 @@ Trong hệ thống hiện tại, phần AP/reporting có thể đi qua `owner` h
 
 ## 6. Xử lý nhanh khi có sự cố
 
-| Sự cố                  | Hành động đúng                                                                      |
-| ---------------------- | ----------------------------------------------------------------------------------- |
-| NCC giao thiếu         | Ghi đúng thực nhận trên `GRN`                                                       |
-| Bếp thiếu nguyên liệu  | Lấy thêm từ Kho CN và ghi tiêu hao (`consumption`), không tạo transfer Kho CN → Bếp CN; nếu Kho CN hết thì kéo transfer thật từ Kho Tổng/Bếp Trung Tâm/chi nhánh khác |
-| Chi nhánh cần hàng gấp | Có thể nhận trực tiếp từ chi nhánh khác tùy loại hàng và vận hành thực tế           |
-| Thiếu BOM              | Dừng confirm sản xuất, cập nhật BOM trước                                           |
-| Chi nhánh nhận thiếu   | Xác nhận theo thực nhận và ghi chú chênh lệch                                       |
-| Lệch tồn cuối ngày     | Dùng `stocktake` / `adjustment`, không sửa tay                                      |
+| Sự cố                  | Hành động đúng                                                                                                                                                                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NCC giao thiếu         | Ghi đúng thực nhận trên `GRN`                                                                                                                                                                      |
+| Bếp thiếu nguyên liệu  | Tạo transfer cùng chi nhánh Kho CN -> Bếp CN; chỉ ghi tiêu hao (`consumption`) khi nguyên liệu đã thật sự xuất dùng; nếu Kho CN hết thì kéo transfer thật từ Kho Tổng/Bếp Trung Tâm/chi nhánh khác |
+| Chi nhánh cần hàng gấp | Có thể nhận trực tiếp từ chi nhánh khác tùy loại hàng và vận hành thực tế                                                                                                                          |
+| Thiếu BOM              | Dừng confirm sản xuất, cập nhật BOM trước                                                                                                                                                          |
+| Chi nhánh nhận thiếu   | Xác nhận theo thực nhận và ghi chú chênh lệch                                                                                                                                                      |
+| Lệch tồn cuối ngày     | Dùng `stocktake` / `adjustment`, không sửa tay                                                                                                                                                     |
 
 ## 7. Mở đúng tài liệu khi cần
 

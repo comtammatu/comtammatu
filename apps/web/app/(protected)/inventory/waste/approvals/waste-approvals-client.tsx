@@ -18,6 +18,11 @@ import { formatVNDateTime } from "@comtammatu/shared/time";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 
+const toastSelfApproveForbidden = "Không thể tự duyệt phiếu của mình (4-eye principle)";
+const toastApproveFailed = "Không duyệt được";
+const toastApproveSuccess = (issueNumber: string) => `Đã duyệt phiếu ${issueNumber}`;
+const toastRejectSuccess = (issueNumber: string) => `Đã từ chối phiếu ${issueNumber}`;
+
 type PendingWasteItem = {
   itemId: number;
   ingredientId: number;
@@ -62,6 +67,8 @@ export function WasteApprovalsClient({
 }: Props) {
   const [rows, setRows] = useState(initial);
   const copy = messages.inventory.waste.approvals;
+
+
 
   const content = (
     <>
@@ -117,7 +124,7 @@ function WasteApprovalCard({
 
   function handleDecision(decision: "approved" | "rejected") {
     if (row.isSelfCreated) {
-      toast.error("Không thể tự duyệt phiếu của mình (4-eye principle)");
+      toast.error(toastSelfApproveForbidden);
       return;
     }
     setPending(decision);
@@ -129,13 +136,13 @@ function WasteApprovalCard({
       });
       setPending(null);
       if (!res.success) {
-        toast.error(res.error ?? "Không duyệt được");
+        toast.error(res.error ?? toastApproveFailed);
         return;
       }
       toast.success(
         decision === "approved"
-          ? `Đã duyệt phiếu ${row.issueNumber}`
-          : `Đã từ chối phiếu ${row.issueNumber}`,
+          ? toastApproveSuccess(row.issueNumber)
+          : toastRejectSuccess(row.issueNumber),
       );
       onResolved(row.issueId);
       router.refresh();
@@ -194,7 +201,7 @@ function WasteApprovalCard({
               <Item
                 key={it.itemId}
                 variant="muted"
-                className="rounded-md border bg-muted/20 p-3 text-sm flex flex-col items-stretch"
+                className="bg-muted/30 flex flex-col items-stretch"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">

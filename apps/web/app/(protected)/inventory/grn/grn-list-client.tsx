@@ -87,10 +87,15 @@ export type GrnDraftRow = {
   lineCount: number;
 };
 
+const statusConfirmed = "Đã xác nhận";
+const toastDiscardDraftFailed = "Không thể hủy phiếu nháp.";
+const dialogDiscardTitlePrefix = "Xóa nháp của ";
+const dialogDiscardTitleSuffix = "?";
+
 const statusFilterOptions = [
   { value: "all", label: KDS_VI.filterAll },
   { value: "draft", label: INVENTORY_VI.draft },
-  { value: "confirmed", label: "Đã xác nhận" },
+  { value: "confirmed", label: statusConfirmed },
   { value: "cancelled", label: STATES_VI.cancelled },
 ];
 
@@ -113,6 +118,7 @@ export function GrnListClient({
   embedded?: boolean;
   canCreate?: boolean;
 }) {
+  const isOperator = basePath.startsWith("/br/");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const grnColumns: DataTableColumn<GrnRow>[] = [
@@ -208,7 +214,7 @@ export function GrnListClient({
 
   const listBody = (
     <>
-      <AppToolbar variant={embedded ? "inline" : "card"}>
+      <AppToolbar variant={isOperator ? "inline" : "card"}>
         <InputGroup className="h-12 basis-full flex-1 md:h-7 md:basis-auto">
           <InputGroupAddon>
             <IconSearch />
@@ -223,8 +229,8 @@ export function GrnListClient({
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger
-            size={embedded ? "touch" : "default"}
-            className={embedded ? "w-full" : "min-w-40"}
+            size={isOperator ? "touch" : "default"}
+            className={isOperator ? "w-full" : "min-w-40"}
           >
             <SelectValue placeholder={FORM_VI.status} />
           </SelectTrigger>
@@ -261,91 +267,97 @@ export function GrnListClient({
     </>
   );
 
-  const content = (
-    <>
-      {!embedded ? (
-        <AppPageHeader
-          eyebrow={messages.inventory.shell.moduleName}
-          title={tNav("grn", "navigation")}
-          actions={
-            <div className="flex items-center gap-2">
-              <Button asChild variant="outline">
-                <Link href={purchaseOrdersPath}>
-                  <IconClipboardList className="size-4" />
-                  {INVENTORY_VI.choosePoToCreateGrn}
-                </Link>
-              </Button>
-              <Button asChild>
-                <Link href={`${basePath}/new`}>
-                  <IconPlus className="size-4" />
-                  {INVENTORY_VI.newGrn}
-                </Link>
-              </Button>
-            </div>
-          }
-          tabs={
-            drafts ? (
-              <AppPageTabs
-                items={[
-                  { value: "list", label: INVENTORY_VI.grnListTab },
-                  {
-                    value: "drafts",
-                    label: INVENTORY_VI.draft,
-                    count: drafts.length,
-                  },
-                ]}
-              >
-                <TabsContent value="list">{listBody}</TabsContent>
-                <TabsContent value="drafts">
-                  <GrnDraftsTab drafts={drafts} basePath={basePath} />
-                </TabsContent>
-              </AppPageTabs>
-            ) : undefined
-          }
-        />
-      ) : null}
-
-      {embedded ? (
+  if (isOperator) {
+    return (
+      <div className="flex w-full flex-col gap-3">
         <OperatorFlowSteps
           title={operatorFlow.grnListTitle}
           description={operatorFlow.grnListDescription}
           steps={operatorFlow.grnSteps}
           currentStep={1}
         />
-      ) : null}
 
-      {embedded && canCreate ? (
-        <Button asChild size="touch" className="w-full">
-          <Link href={`${basePath}/new`}>
-            <IconPlus className="size-4" />
-            {INVENTORY_VI.receivingEyebrow}
-          </Link>
-        </Button>
-      ) : null}
+        {canCreate ? (
+          <Button asChild size="touch" className="w-full">
+            <Link href={`${basePath}/new`}>
+              <IconPlus className="size-4" />
+              {INVENTORY_VI.receivingEyebrow}
+            </Link>
+          </Button>
+        ) : null}
 
-      {embedded && drafts && drafts.length > 0 ? (
-        <>
-          <div className="flex items-center gap-2 px-1">
-            <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-              {INVENTORY_VI.draft}
-            </p>
-            <Badge variant="warning">{drafts.length}</Badge>
-          </div>
-          <GrnDraftsTab drafts={drafts} basePath={basePath} />
-        </>
-      ) : null}
+        {drafts && drafts.length > 0 ? (
+          <>
+            <div className="flex items-center gap-2 px-1">
+              <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+                {INVENTORY_VI.draft}
+              </p>
+              <Badge variant="warning">{drafts.length}</Badge>
+            </div>
+            <GrnDraftsTab drafts={drafts} basePath={basePath} />
+          </>
+        ) : null}
 
-      {embedded || !drafts ? listBody : null}
-    </>
+        {listBody}
+      </div>
+    );
+  }
+
+  const desktopActions = (
+    <div className="flex items-center gap-2">
+      <Button asChild variant="outline" size={embedded ? "touch" : "sm"}>
+        <Link href={purchaseOrdersPath}>
+          <IconClipboardList className="size-4" />
+          {INVENTORY_VI.choosePoToCreateGrn}
+        </Link>
+      </Button>
+      <Button asChild size={embedded ? "touch" : "sm"}>
+        <Link href={`${basePath}/new`}>
+          <IconPlus className="size-4" />
+          {INVENTORY_VI.newGrn}
+        </Link>
+      </Button>
+    </div>
+  );
+
+  const officeBody = drafts ? (
+    <AppPageTabs
+      paramKey={embedded ? "grnTab" : undefined}
+      items={[
+        { value: "list", label: INVENTORY_VI.grnListTab },
+        {
+          value: "drafts",
+          label: INVENTORY_VI.draft,
+          count: drafts.length,
+        },
+      ]}
+    >
+      <TabsContent value="list">{listBody}</TabsContent>
+      <TabsContent value="drafts">
+        <GrnDraftsTab drafts={drafts} basePath={basePath} />
+      </TabsContent>
+    </AppPageTabs>
+  ) : (
+    listBody
   );
 
   if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
+    return (
+      <div className="flex w-full flex-col gap-3">
+        <div className="flex justify-end">{desktopActions}</div>
+        {officeBody}
+      </div>
+    );
   }
 
   return (
     <AppPage width="xwide" density="compact" contentClassName="max-md:max-w-xl">
-      {content}
+      <AppPageHeader
+        eyebrow={messages.inventory.shell.moduleName}
+        title={tNav("grn", "navigation")}
+        actions={desktopActions}
+      />
+      {officeBody}
     </AppPage>
   );
 }
@@ -366,7 +378,7 @@ function GrnDraftsTab({
 
   async function handleDiscard(draft: GrnDraftRow) {
     const ok = await confirm({
-      title: `Xóa nháp của ${draft.supplierName}?`,
+      title: `${dialogDiscardTitlePrefix}${draft.supplierName}${dialogDiscardTitleSuffix}`,
       variant: "destructive",
     });
     if (!ok) return;
@@ -374,7 +386,7 @@ function GrnDraftsTab({
     try {
       const res = await discardGrnDraft({ grnId: draft.grnId });
       if (!res.success) {
-        toast.error(res.error ?? "Không thể hủy phiếu nháp.");
+        toast.error(res.error ?? toastDiscardDraftFailed);
         return;
       }
       router.refresh();

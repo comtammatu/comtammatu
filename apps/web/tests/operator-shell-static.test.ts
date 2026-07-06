@@ -113,6 +113,8 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /clock: `\$\{basePath\}\/shift\/clock`/);
   assert.match(home, /count: `\$\{basePath\}\/stock\/count`/);
   assert.match(home, /EmployeeActionSection/);
+  assert.match(home, /branchCopy\.centralSupplyTilesDescription/);
+  assert.match(home, /branchCopy\.centralKitchenTilesDescription/);
   assert.match(home, /groups\.map/);
   assert.match(home, /branchTodayGroup/);
   assert.match(home, /group\.id === "sales_kitchen"/);

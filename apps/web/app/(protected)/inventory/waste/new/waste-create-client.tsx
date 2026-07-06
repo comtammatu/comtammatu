@@ -3,6 +3,11 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+} from "@comtammatu/ui/components/input-group";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
@@ -30,6 +35,13 @@ import { ShiftCapMeter } from "@/(protected)/inventory/_components/shift-cap-met
 import { BranchDailyCapBanner } from "@/(protected)/inventory/_components/branch-daily-cap-banner";
 import { AntiSplitRollingMeter } from "@/(protected)/inventory/_components/anti-split-rolling-meter";
 import { createWasteEntry } from "@/(protected)/inventory/waste-actions";
+import { formatQty } from "@/(protected)/inventory/_lib/format";
+import {
+  clampIssueEntryQuantity,
+  formatIssueMaxEntryQuantity,
+  getIssueBaseQuantity,
+  getIssueMaxEntryQuantity,
+} from "@/(protected)/inventory/_lib/issue-units";
 import { formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 import {
@@ -56,6 +68,12 @@ export interface WasteFormContext {
       code: string;
       label: string;
       isBase: boolean;
+      toBaseFactor: number;
+    }>;
+    stockLevels: Array<{
+      locationId: number;
+      quantity: number;
+      unitCost: number | null;
     }>;
   }>;
   capStatus: {
@@ -72,6 +90,23 @@ export interface WasteFormContext {
 const TIER_1_VALUE = 150_000;
 const TIER_2_VALUE = 500_000;
 const SHIFT_CAP = 1_500_000;
+
+const toastSelectLocation = "Chọn location";
+const toastSelectIngredientForEachLine = "Chọn nguyên liệu cho mỗi dòng";
+const toastInvalidIngredient = "Nguyên liệu không hợp lệ";
+const toastSelectReasonForEachLine = "Chọn lý do cho mỗi dòng";
+const toastQtyPositive = "Số lượng phải > 0";
+const toastNoWacForLocation = "Chưa có WAG cho nguyên liệu tại vị trí kho này";
+const toastSelectUnitForEachLine = "Chọn đơn vị cho mỗi dòng";
+const toastQtyExceedsStock = "Số lượng vượt tồn hiện tại.";
+const toastCreateFailed = "Không tạo được phiếu hủy";
+const toastPhotoRequired = (ingredientName: string, tier: number) =>
+  `Dòng "${ingredientName}" cần ảnh (tier ${tier})`;
+const toastCreateSuccess = (issueNumber: string, itemsCreated: number, requiresApproval: boolean) =>
+  `Đã tạo phiếu ${issueNumber} (${itemsCreated} dòng)${requiresApproval ? " • Chờ QLV duyệt" : ""}`;
+const labelNoWac = "Chưa có WAG";
+const labelLocationStock = (qty: string, unit: string) =>
+  `Tồn vị trí: ${qty} ${unit}`;
 
 function previewTier(line: {
   value: number;
@@ -155,7 +190,12 @@ export function WasteCreateClient({
   }, [context.ingredients]);
 
   const totalValue = lines.reduce((sum, l) => {
-    const q = Number(l.quantity) || 0;
+    const ingredient =
+      l.ingredientId === null ? null : ingredientById.get(l.ingredientId);
+    const unit = ingredient?.issueUnits.find(
+      (u) => String(u.unitId) === l.entryUnitId,
+    );
+    const q = getIssueBaseQuantity(Number(l.quantity) || 0, unit);
     const c = Number(l.unitCost) || 0;
     return sum + q * c;
   }, 0);
@@ -166,6 +206,52 @@ export function WasteCreateClient({
   function updateLine(uid: string, patch: Partial<LineState>) {
     setLines((prev) =>
       prev.map((l) => (l.uid === uid ? { ...l, ...patch } : l)),
+    );
+  }
+
+  function resolveLocationStock(
+    ingredient: WasteFormContext["ingredients"][number],
+    nextLocationId: number | null,
+  ) {
+    return nextLocationId === null
+      ? null
+      : (ingredient.stockLevels.find(
+          (level) => level.locationId === nextLocationId,
+        ) ?? null);
+  }
+
+  function resolveLocationUnitCost(
+    ingredient: WasteFormContext["ingredients"][number],
+    nextLocationId: number | null,
+  ) {
+    return resolveLocationStock(ingredient, nextLocationId)?.unitCost ?? null;
+  }
+
+  function handleLocationChange(value: string) {
+    const nextLocationId = Number(value);
+    setLocationId(nextLocationId);
+    setLines((prev) =>
+      prev.map((line) => {
+        const ingredient =
+          line.ingredientId === null
+            ? null
+            : ingredientById.get(line.ingredientId);
+        if (!ingredient) return line;
+        const unitCost = resolveLocationUnitCost(ingredient, nextLocationId);
+        const issueUnit = ingredient.issueUnits.find(
+          (u) => String(u.unitId) === line.entryUnitId,
+        );
+        const locationStock = resolveLocationStock(ingredient, nextLocationId);
+        const maxEntryQuantity = getIssueMaxEntryQuantity(
+          locationStock?.quantity ?? 0,
+          issueUnit,
+        );
+        return {
+          ...line,
+          quantity: clampIssueEntryQuantity(line.quantity, maxEntryQuantity),
+          unitCost: unitCost === null ? "" : String(unitCost),
+        };
+      }),
     );
   }
 
@@ -187,41 +273,77 @@ export function WasteCreateClient({
     if (!ing) return;
     const defaultUnit =
       ing.issueUnits.find((u) => u.isBase) ?? ing.issueUnits[0] ?? null;
-    updateLine(uid, {
-      ingredientId: id,
-      unit: defaultUnit?.label ?? ing.unit,
-      entryUnitId: defaultUnit ? String(defaultUnit.unitId) : "",
-      unitCost: ing.unitCost !== null ? String(ing.unitCost) : "",
-    });
+    const unitCost = resolveLocationUnitCost(ing, locationId);
+    const locationStock = resolveLocationStock(ing, locationId);
+    const maxEntryQuantity = getIssueMaxEntryQuantity(
+      locationStock?.quantity ?? 0,
+      defaultUnit,
+    );
+    setLines((prev) =>
+      prev.map((line) =>
+        line.uid === uid
+          ? {
+              ...line,
+              ingredientId: id,
+              unit: defaultUnit?.label ?? ing.unit,
+              entryUnitId: defaultUnit ? String(defaultUnit.unitId) : "",
+              quantity: clampIssueEntryQuantity(
+                line.quantity,
+                maxEntryQuantity,
+              ),
+              unitCost: unitCost !== null ? String(unitCost) : "",
+            }
+          : line,
+      ),
+    );
   }
 
-  function handleSubmit() {
+    function handleSubmit() {
     if (locationId === null) {
-      toast.error("Chọn location");
+      toast.error(toastSelectLocation);
       return;
     }
     // Validate each line
     for (const l of lines) {
       if (l.ingredientId === null) {
-        toast.error("Chọn nguyên liệu cho mỗi dòng");
+        toast.error(toastSelectIngredientForEachLine);
+        return;
+      }
+      const ingredient = ingredientById.get(l.ingredientId);
+      if (!ingredient) {
+        toast.error(toastInvalidIngredient);
         return;
       }
       if (!l.reasonCode) {
-        toast.error("Chọn lý do cho mỗi dòng");
+        toast.error(toastSelectReasonForEachLine);
         return;
       }
       const qty = Number(l.quantity);
       if (!Number.isFinite(qty) || qty <= 0) {
-        toast.error("Số lượng phải > 0");
+        toast.error(toastQtyPositive);
         return;
       }
       const cost = Number(l.unitCost);
       if (!Number.isFinite(cost) || cost <= 0) {
-        toast.error("Đơn giá phải > 0");
+        toast.error(toastNoWacForLocation);
+        return;
+      }
+      const issueUnit = ingredient.issueUnits.find(
+        (u) => String(u.unitId) === l.entryUnitId,
+      );
+      if (ingredient.issueUnits.length > 0 && !issueUnit) {
+        toast.error(toastSelectUnitForEachLine);
+        return;
+      }
+      const baseQty = getIssueBaseQuantity(qty, issueUnit);
+      const locationStock = resolveLocationStock(ingredient, locationId);
+      const availableQuantity = Number(locationStock?.quantity ?? 0);
+      if (baseQty > availableQuantity + 1e-9) {
+        toast.error(toastQtyExceedsStock);
         return;
       }
       // Preview tier — if photo required but none attached, block
-      const value = qty * cost;
+      const value = baseQty * cost;
       const pv = previewTier({
         value,
         reasonCode: l.reasonCode,
@@ -231,7 +353,10 @@ export function WasteCreateClient({
       });
       if (pv.photoRequired && l.photoUrls.length === 0) {
         toast.error(
-          `Dòng "${ingredientById.get(l.ingredientId!)?.name ?? l.ingredientId}" cần ảnh (tier ${pv.tier})`,
+          toastPhotoRequired(
+            ingredientById.get(l.ingredientId!)?.name ?? String(l.ingredientId),
+            pv.tier,
+          ),
         );
         return;
       }
@@ -254,19 +379,26 @@ export function WasteCreateClient({
         sourceType: "manual",
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không tạo được phiếu hủy");
+        toast.error(res.error ?? toastCreateFailed);
         return;
       }
       toast.success(
-        `Đã tạo phiếu ${res.data?.issueNumber} (${res.data?.itemsCreated} dòng)${res.data?.requiresApproval ? " • Chờ QLV duyệt" : ""}`,
+        toastCreateSuccess(
+          res.data?.issueNumber ?? "",
+          res.data?.itemsCreated ?? 0,
+          res.data?.requiresApproval ?? false,
+        ),
       );
-      router.push(successHref ?? `/inventory/issues/${res.data?.issueId}`);
+      const fallbackSuccessHref = embedded
+        ? `/br/${context.branch.id}/stock`
+        : `/inventory/issues/${res.data?.issueId}`;
+      router.push(successHref ?? fallbackSuccessHref);
     });
   }
 
   const header = (
     <AppPageHeader
-      eyebrow="Kho hàng"
+      eyebrow={messages.inventory.shell.moduleName}
       title={messages.inventory.waste.title}
       description={
         <>
@@ -282,18 +414,40 @@ export function WasteCreateClient({
 
   const content = (
     <>
-      <BranchDailyCapBanner
-        branchToday={context.capStatus.branchToday}
-        branchCap={context.capStatus.branchCap}
-        pendingDelta={totalValue}
-      />
-
-      <ShiftCapMeter
-        shiftSum={context.capStatus.shiftSum}
-        shiftCap={context.capStatus.shiftCap}
-        pendingDelta={totalValue}
-        shiftLabel={context.capStatus.shiftKey}
-      />
+      {embedded ? (
+        <Item
+          variant="outline"
+          className="flex flex-col items-stretch gap-2 bg-card p-2 shadow-none"
+        >
+          <BranchDailyCapBanner
+            branchToday={context.capStatus.branchToday}
+            branchCap={context.capStatus.branchCap}
+            pendingDelta={totalValue}
+            className="p-2 py-1.5"
+          />
+          <ShiftCapMeter
+            shiftSum={context.capStatus.shiftSum}
+            shiftCap={context.capStatus.shiftCap}
+            pendingDelta={totalValue}
+            shiftLabel={context.capStatus.shiftKey}
+            className="p-2 gap-1"
+          />
+        </Item>
+      ) : (
+        <>
+          <BranchDailyCapBanner
+            branchToday={context.capStatus.branchToday}
+            branchCap={context.capStatus.branchCap}
+            pendingDelta={totalValue}
+          />
+          <ShiftCapMeter
+            shiftSum={context.capStatus.shiftSum}
+            shiftCap={context.capStatus.shiftCap}
+            pendingDelta={totalValue}
+            shiftLabel={context.capStatus.shiftKey}
+          />
+        </>
+      )}
 
       <AppSection
         title={messages.inventory.waste.generalInfoTitle}
@@ -303,7 +457,7 @@ export function WasteCreateClient({
           <Label htmlFor="waste-loc">{messages.inventory.waste.location}</Label>
           <Select
             value={locationId !== null ? String(locationId) : ""}
-            onValueChange={(v) => setLocationId(Number(v))}
+            onValueChange={handleLocationChange}
             disabled={isSubmitting}
           >
             <SelectTrigger
@@ -342,11 +496,25 @@ export function WasteCreateClient({
         {lines.map((line, idx) => {
           const qty = Number(line.quantity) || 0;
           const cost = Number(line.unitCost) || 0;
-          const value = qty * cost;
-          const lineIssueUnits =
+          const selectedIngredient =
             line.ingredientId !== null
-              ? (ingredientById.get(line.ingredientId)?.issueUnits ?? [])
-              : [];
+              ? ingredientById.get(line.ingredientId)
+              : null;
+          const selectedUnit = selectedIngredient?.issueUnits.find(
+            (u) => String(u.unitId) === line.entryUnitId,
+          );
+          const baseQty = getIssueBaseQuantity(qty, selectedUnit);
+          const value = baseQty * cost;
+          const locationStock = selectedIngredient
+            ? resolveLocationStock(selectedIngredient, locationId)
+            : null;
+          const maxEntryQuantity = getIssueMaxEntryQuantity(
+            locationStock?.quantity ?? 0,
+            selectedUnit,
+          );
+          const maxQuantityValue =
+            formatIssueMaxEntryQuantity(maxEntryQuantity);
+          const lineIssueUnits = selectedIngredient?.issueUnits ?? [];
           const preview = previewTier({
             value,
             reasonCode: line.reasonCode,
@@ -413,9 +581,17 @@ export function WasteCreateClient({
                         const opt = lineIssueUnits.find(
                           (u) => String(u.unitId) === v,
                         );
+                        const nextMaxEntryQuantity = getIssueMaxEntryQuantity(
+                          locationStock?.quantity ?? 0,
+                          opt,
+                        );
                         updateLine(line.uid, {
                           entryUnitId: v,
                           unit: opt?.label ?? line.unit,
+                          quantity: clampIssueEntryQuantity(
+                            line.quantity,
+                            nextMaxEntryQuantity,
+                          ),
                         });
                       }}
                       disabled={isSubmitting}
@@ -456,36 +632,66 @@ export function WasteCreateClient({
                     <Label htmlFor={`qty-${line.uid}`}>
                       {FORM_VI.quantity}
                     </Label>
-                    <FormattedNumberInput
-                      id={`qty-${line.uid}`}
-                      maxFractionDigits={3}
-                      value={line.quantity}
-                      onValueChange={(value) =>
-                        updateLine(line.uid, { quantity: value })
-                      }
-                      disabled={isSubmitting}
-                      placeholder="0"
-                      className={embedded ? "h-12" : undefined}
-                    />
+                    <InputGroup className={embedded ? "h-12" : undefined}>
+                      <FormattedNumberInput
+                        id={`qty-${line.uid}`}
+                        maxFractionDigits={3}
+                        value={line.quantity}
+                        onValueChange={(value) =>
+                          updateLine(line.uid, {
+                            quantity: clampIssueEntryQuantity(
+                              value,
+                              maxEntryQuantity,
+                            ),
+                          })
+                        }
+                        disabled={isSubmitting}
+                        placeholder="0"
+                        className="h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-1 dark:bg-transparent"
+                      />
+                      {maxQuantityValue ? (
+                        <InputGroupAddon align="inline-end">
+                          <InputGroupButton
+                            type="button"
+                            onClick={() =>
+                              updateLine(line.uid, {
+                                quantity: maxQuantityValue,
+                              })
+                            }
+                            disabled={isSubmitting}
+                          >
+                            {FORM_VI.max}
+                          </InputGroupButton>
+                        </InputGroupAddon>
+                      ) : null}
+                    </InputGroup>
                   </div>
                   <div>
                     <Label htmlFor={`cost-${line.uid}`}>
-                      {messages.inventory.waste.unitCostLabel(line.unit)}
+                      {messages.inventory.waste.unitCostLabel(
+                        selectedIngredient?.unit ?? line.unit,
+                      )}
                     </Label>
-                    <FormattedNumberInput
+                    <div
                       id={`cost-${line.uid}`}
-                      maxFractionDigits={0}
-                      value={line.unitCost}
-                      onValueChange={(value) =>
-                        updateLine(line.uid, { unitCost: value })
-                      }
-                      disabled={isSubmitting}
-                      placeholder="0"
-                      className={embedded ? "h-12" : undefined}
-                    />
+                      className={cn(
+                        "flex h-10 items-center bg-muted/30 px-3 font-mono text-sm tabular-nums",
+                        embedded && "h-12",
+                      )}
+                    >
+                      {cost > 0 ? formatVND(cost) : labelNoWac}
+                    </div>
                     <p className="mt-1 text-xs text-muted-foreground tabular-nums">
                       {messages.inventory.waste.value(formatVND(value))}
                     </p>
+                    {locationStock ? (
+                      <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                        {labelLocationStock(
+                          formatQty(locationStock.quantity),
+                          selectedIngredient?.unit ?? line.unit,
+                        )}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 
@@ -568,7 +774,14 @@ export function WasteCreateClient({
           <Button
             variant="outline"
             size={embedded ? "touch" : "default"}
-            onClick={() => router.push(cancelHref ?? "/inventory/issues")}
+            onClick={() =>
+              router.push(
+                cancelHref ??
+                  (embedded
+                    ? `/br/${context.branch.id}/stock`
+                    : "/inventory/issues"),
+              )
+            }
             disabled={isSubmitting}
           >
             {ACTIONS_VI.cancel}

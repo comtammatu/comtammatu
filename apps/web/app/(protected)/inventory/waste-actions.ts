@@ -6,6 +6,7 @@ import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "./_lib/auth";
+import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 
 /* ─── Waste entry (S11) ─── */
@@ -87,15 +88,97 @@ export async function createWasteEntry(
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
   if (!ctx) return { success: false, error: "Không có quyền tạo phiếu hủy" };
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+
+  const ingredientIds = [
+    ...new Set(parsed.data.items.map((item) => item.ingredient_id)),
+  ];
+  const { data: stockLevels, error: stockLevelError } = await supabase
+    .from("stock_levels")
+    .select("ingredient_id, avg_unit_cost, current_quantity")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", parsed.data.branchId)
+    .eq("location_id", parsed.data.locationId)
+    .in("ingredient_id", ingredientIds);
+  if (stockLevelError) {
+    return { success: false, error: "Không thể tải WAG cho phiếu hủy." };
+  }
+
+  const stockByIngredient = new Map(
+    (stockLevels ?? []).map((level) => [
+      level.ingredient_id,
+      {
+        currentQuantity: Number(level.current_quantity ?? 0),
+        unitCost: Number(level.avg_unit_cost ?? 0),
+      },
+    ]),
+  );
+  const entryUnitIds = [
+    ...new Set(
+      parsed.data.items
+        .map((item) => item.entry_unit_id)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const factorByIngredientUnit = new Map<string, number>();
+  if (entryUnitIds.length > 0) {
+    const { data: unitRows, error: unitError } = await supabase
+      .from("ingredient_units")
+      .select("ingredient_id, unit_id, to_base_factor")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .in("ingredient_id", ingredientIds)
+      .in("unit_id", entryUnitIds);
+
+    if (unitError) {
+      return { success: false, error: "Không thể tải đơn vị xuất kho." };
+    }
+    for (const row of unitRows ?? []) {
+      factorByIngredientUnit.set(
+        `${row.ingredient_id}:${row.unit_id}`,
+        Number(row.to_base_factor ?? 1),
+      );
+    }
+  }
+
+  const items = [];
+  for (const item of parsed.data.items) {
+    const stock = stockByIngredient.get(item.ingredient_id);
+    const unitCost = stock?.unitCost ?? 0;
+    if (!Number.isFinite(unitCost) || unitCost <= 0) {
+      return {
+        success: false,
+        error: "Chưa có WAG cho nguyên liệu tại vị trí kho này.",
+      };
+    }
+    const toBaseFactor =
+      item.entry_unit_id == null
+        ? 1
+        : factorByIngredientUnit.get(
+            `${item.ingredient_id}:${item.entry_unit_id}`,
+          );
+    const toBaseFactorValue = Number(toBaseFactor ?? 0);
+    if (!Number.isFinite(toBaseFactorValue) || toBaseFactorValue <= 0) {
+      return { success: false, error: "Đơn vị không thuộc nguyên liệu." };
+    }
+    const requestedBaseQuantity = getIssueBaseQuantity(item.quantity, {
+      toBaseFactor: toBaseFactorValue,
+    });
+    const availableQuantity = stock?.currentQuantity ?? 0;
+    if (requestedBaseQuantity > availableQuantity + 1e-9) {
+      return { success: false, error: "Số lượng vượt tồn hiện tại." };
+    }
+    items.push({ ...item, unit_cost: unitCost });
+  }
 
   // Each item carries entry_unit_id (the issue-role unit the qty was entered in);
   // create_waste_entry stores it on stock_issue_items so the writeoff decrement
-  // and waste-tier gate convert to the ingredient base via inv_to_base().
+  // and waste-tier gate convert to the ingredient base via inv_to_base(). Server
+  // always overrides unit_cost from stock_levels.avg_unit_cost.
   const { data, error } = await supabase.rpc("create_waste_entry", {
     p_branch_id: parsed.data.branchId,
     p_location_id: parsed.data.locationId,
-    p_items: parsed.data.items,
+    p_items: items,
     p_source_type: parsed.data.sourceType,
     p_source_ref: (parsed.data.sourceRef ?? undefined) as never,
     p_notes: parsed.data.notes ?? undefined,
@@ -230,7 +313,6 @@ export async function createExpiryWriteoff(
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;
-  revalidatePath("/inventory/expiry");
   revalidatePath("/inventory/issues");
 
   return {

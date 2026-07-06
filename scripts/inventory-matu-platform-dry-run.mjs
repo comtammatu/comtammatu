@@ -47,7 +47,8 @@ function parseArgs(argv) {
     sourceKey: process.env.MATU_PLATFORM_SUPABASE_SERVICE_ROLE_KEY ?? "",
     sourceUrl: process.env.MATU_PLATFORM_SUPABASE_URL ?? "",
     targetKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
-    targetUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "",
+    targetUrl:
+      process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "",
     to: null,
   };
 
@@ -88,7 +89,8 @@ function inFilter(values) {
 
 function chunk(values, size = 200) {
   const out = [];
-  for (let i = 0; i < values.length; i += size) out.push(values.slice(i, i + size));
+  for (let i = 0; i < values.length; i += size)
+    out.push(values.slice(i, i + size));
   return out;
 }
 
@@ -98,7 +100,8 @@ async function fetchAll({ baseUrl, key, table, select = "*", filters = {} }) {
     const url = new URL(`/rest/v1/${table}`, baseUrl);
     url.searchParams.set("select", select);
     for (const [name, value] of Object.entries(filters)) {
-      if (value != null && value !== "") url.searchParams.set(name, String(value));
+      if (value != null && value !== "")
+        url.searchParams.set(name, String(value));
     }
 
     const res = await fetch(url, {
@@ -167,7 +170,8 @@ async function loadSource(ctx, filters) {
       fetchAll({
         ...ctx,
         table: "stock_movements",
-        select: "id,warehouse_id,material_id,delta,kind,ref_table,ref_id,created_at",
+        select:
+          "id,warehouse_id,material_id,delta,kind,ref_table,ref_id,created_at",
         filters: movementFilters,
       }),
       fetchAll({
@@ -187,21 +191,47 @@ async function loadSource(ctx, filters) {
     "transfer_id",
   );
 
-  return { branches, warehouses, materials, stockItems, movements, transfers, transferItems };
+  return {
+    branches,
+    warehouses,
+    materials,
+    stockItems,
+    movements,
+    transfers,
+    transferItems,
+  };
 }
 
 async function loadTarget(ctx) {
-  const [branches, locations, ingredients, transfers, movements] = await Promise.all([
-    fetchAll({ ...ctx, table: "branches", select: "id,code,name,branch_kind" }),
-    fetchAll({
-      ...ctx,
-      table: "inventory_locations",
-      select: "id,branch_id,code,name,location_kind,is_default_issue,is_active",
-    }),
-    fetchAll({ ...ctx, table: "ingredients", select: "id,sku,name,unit,purchase_unit,unit_cost,is_active" }),
-    fetchAll({ ...ctx, table: "stock_transfers", select: "id,from_branch_id,to_branch_id" }),
-    fetchAll({ ...ctx, table: "stock_movements", select: "id,type,movement_subtype" }),
-  ]);
+  const [branches, locations, ingredients, transfers, movements] =
+    await Promise.all([
+      fetchAll({
+        ...ctx,
+        table: "branches",
+        select: "id,code,name,branch_kind",
+      }),
+      fetchAll({
+        ...ctx,
+        table: "inventory_locations",
+        select:
+          "id,branch_id,code,name,location_kind,is_default_issue,is_active",
+      }),
+      fetchAll({
+        ...ctx,
+        table: "ingredients",
+        select: "id,sku,name,unit,purchase_unit,unit_cost,is_active",
+      }),
+      fetchAll({
+        ...ctx,
+        table: "stock_transfers",
+        select: "id,from_branch_id,to_branch_id",
+      }),
+      fetchAll({
+        ...ctx,
+        table: "stock_movements",
+        select: "id,type,movement_subtype",
+      }),
+    ]);
 
   return { branches, locations, ingredients, transfers, movements };
 }
@@ -209,8 +239,10 @@ async function loadTarget(ctx) {
 function sourceWarehouseRole(warehouse) {
   const code = String(warehouse?.code ?? "");
   const name = normalizeText(warehouse?.name);
-  if (warehouse?.branch_id && warehouse?.kind === "warehouse") return "branch_warehouse";
-  if (warehouse?.branch_id && warehouse?.kind === "kitchen") return "branch_kitchen_endpoint";
+  if (warehouse?.branch_id && warehouse?.kind === "warehouse")
+    return "branch_warehouse";
+  if (warehouse?.branch_id && warehouse?.kind === "kitchen")
+    return "branch_kitchen_endpoint";
   if (!warehouse?.branch_id && code === "KHO-TONG") return "central_supply";
   if (
     !warehouse?.branch_id &&
@@ -227,8 +259,11 @@ function sourceWarehouseRole(warehouse) {
 function isAllowedTargetTransferDirection(fromKind, toKind) {
   return (
     (fromKind === "branch" &&
-      (toKind === "branch" || toKind === "central_supply" || toKind === "central_kitchen")) ||
-    ((fromKind === "central_supply" || fromKind === "central_kitchen") && toKind === "branch") ||
+      (toKind === "branch" ||
+        toKind === "central_supply" ||
+        toKind === "central_kitchen")) ||
+    ((fromKind === "central_supply" || fromKind === "central_kitchen") &&
+      toKind === "branch") ||
     (fromKind === "central_supply" && toKind === "central_kitchen") ||
     (fromKind === "central_kitchen" && toKind === "central_supply")
   );
@@ -240,10 +275,16 @@ function makeTargetIndex(target) {
       .filter((branch) => branch.code)
       .map((branch) => [String(branch.code).toUpperCase(), branch]),
   );
-  const branchByName = new Map(target.branches.map((branch) => [normalizeText(branch.name), branch]));
-  const centralSupply = target.branches.find((branch) => branch.branch_kind === "central_supply") ?? null;
+  const branchByName = new Map(
+    target.branches.map((branch) => [normalizeText(branch.name), branch]),
+  );
+  const centralSupply =
+    target.branches.find((branch) => branch.branch_kind === "central_supply") ??
+    null;
   const centralKitchen =
-    target.branches.find((branch) => branch.branch_kind === "central_kitchen") ?? null;
+    target.branches.find(
+      (branch) => branch.branch_kind === "central_kitchen",
+    ) ?? null;
 
   const locationsByBranch = new Map();
   for (const loc of target.locations) {
@@ -255,9 +296,21 @@ function makeTargetIndex(target) {
   const stockLocationForBranch = (branchId) => {
     const list = locationsByBranch.get(branchId) ?? [];
     return (
-      list.find((loc) => loc.is_default_issue && loc.location_kind === "warehouse") ??
+      list.find(
+        (loc) => loc.is_default_issue && loc.location_kind === "warehouse",
+      ) ??
       list.find((loc) => loc.location_kind === "warehouse") ??
       list.find((loc) => loc.location_kind === "production_storage") ??
+      null
+    );
+  };
+  const kitchenLocationForBranch = (branchId) => {
+    const list = locationsByBranch.get(branchId) ?? [];
+    return (
+      list.find(
+        (loc) => loc.is_default_consumption && loc.location_kind === "kitchen",
+      ) ??
+      list.find((loc) => loc.location_kind === "kitchen") ??
       null
     );
   };
@@ -268,13 +321,23 @@ function makeTargetIndex(target) {
       .map((ingredient) => [String(ingredient.sku).toUpperCase(), ingredient]),
   );
 
-  return { branchByCode, branchByName, centralKitchen, centralSupply, ingredientBySku, stockLocationForBranch };
+  return {
+    branchByCode,
+    branchByName,
+    centralKitchen,
+    centralSupply,
+    ingredientBySku,
+    kitchenLocationForBranch,
+    stockLocationForBranch,
+  };
 }
 
 function sourceBranchToTarget(sourceBranch, targetIndex) {
   if (!sourceBranch) return null;
   return (
-    targetIndex.branchByCode.get(String(sourceBranch.code ?? "").toUpperCase()) ??
+    targetIndex.branchByCode.get(
+      String(sourceBranch.code ?? "").toUpperCase(),
+    ) ??
     targetIndex.branchByName.get(normalizeText(sourceBranch.name)) ??
     null
   );
@@ -284,28 +347,52 @@ function sourceWarehouseTarget(warehouse, sourceBranchById, targetIndex) {
   const role = sourceWarehouseRole(warehouse);
   if (role === "central_supply") {
     const branch = targetIndex.centralSupply;
-    return { branch, location: branch ? targetIndex.stockLocationForBranch(branch.id) : null, role };
+    return {
+      branch,
+      location: branch ? targetIndex.stockLocationForBranch(branch.id) : null,
+      role,
+    };
   }
   if (role === "central_kitchen") {
     const branch = targetIndex.centralKitchen;
-    return { branch, location: branch ? targetIndex.stockLocationForBranch(branch.id) : null, role };
+    return {
+      branch,
+      location: branch ? targetIndex.stockLocationForBranch(branch.id) : null,
+      role,
+    };
   }
 
   const sourceBranch = sourceBranchById.get(warehouse?.branch_id);
   const branch = sourceBranchToTarget(sourceBranch, targetIndex);
   const location =
-    role === "branch_warehouse" && branch ? targetIndex.stockLocationForBranch(branch.id) : null;
+    role === "branch_warehouse" && branch
+      ? targetIndex.stockLocationForBranch(branch.id)
+      : role === "branch_kitchen_endpoint" && branch
+        ? targetIndex.kitchenLocationForBranch(branch.id)
+        : null;
   return { branch, location, role };
 }
 
 function transferCost(transfer, transferItemsByTransfer, materialById) {
-  return (transferItemsByTransfer.get(transfer.id) ?? []).reduce((sum, item) => {
-    const material = materialById.get(item.material_id);
-    return sum + numberValue(item.quantity) * numberValue(material?.cost_per_unit);
-  }, 0);
+  return (transferItemsByTransfer.get(transfer.id) ?? []).reduce(
+    (sum, item) => {
+      const material = materialById.get(item.material_id);
+      return (
+        sum + numberValue(item.quantity) * numberValue(material?.cost_per_unit)
+      );
+    },
+    0,
+  );
 }
 
-function classifyTransfer({ transfer, sourceWarehouseById, sourceBranchById, targetIndex, transferItemsByTransfer, materialById }) {
+function classifyTransfer({
+  transfer,
+  sourceWarehouseById,
+  sourceBranchById,
+  targetIndex,
+  transferItemsByTransfer,
+  materialById,
+}) {
   const from = sourceWarehouseById.get(transfer.from_warehouse_id);
   const to = sourceWarehouseById.get(transfer.to_warehouse_id);
   const fromTarget = sourceWarehouseTarget(from, sourceBranchById, targetIndex);
@@ -323,23 +410,59 @@ function classifyTransfer({ transfer, sourceWarehouseById, sourceBranchById, tar
     transferCode: transfer.code,
   };
 
-  if (transfer.status !== "received") return { ...base, class: "ignored_not_received" };
+  if (transfer.status !== "received")
+    return { ...base, class: "ignored_not_received" };
   if (toTarget.role === "branch_kitchen_endpoint") {
+    if (
+      fromTarget.role === "branch_warehouse" &&
+      fromTarget.branch?.id === toTarget.branch?.id &&
+      fromTarget.location &&
+      toTarget.location
+    ) {
+      return {
+        ...base,
+        branchCode: toTarget.branch?.code ?? null,
+        class: "branch_kitchen_transfer",
+        targetFromBranchId: fromTarget.branch?.id ?? null,
+        targetToBranchId: toTarget.branch?.id ?? null,
+      };
+    }
     return {
       ...base,
       branchCode: toTarget.branch?.code ?? null,
-      class: "branch_sale_consumption",
-      targetLocationId: targetIndex.stockLocationForBranch(toTarget.branch?.id)?.id ?? null,
+      class: "manual_review_branch_kitchen_inbound",
     };
   }
   if (fromTarget.role === "branch_kitchen_endpoint") {
+    if (
+      toTarget.role === "branch_warehouse" &&
+      fromTarget.branch?.id === toTarget.branch?.id &&
+      fromTarget.location &&
+      toTarget.location
+    ) {
+      return {
+        ...base,
+        branchCode: fromTarget.branch?.code ?? null,
+        class: "branch_kitchen_transfer",
+        targetFromBranchId: fromTarget.branch?.id ?? null,
+        targetToBranchId: toTarget.branch?.id ?? null,
+      };
+    }
     return { ...base, class: "manual_review_kitchen_source" };
   }
   if (fromTarget.location && toTarget.location) {
-    if (fromTarget.location.id === toTarget.location.id || fromTarget.branch?.id === toTarget.branch?.id) {
+    if (
+      fromTarget.location.id === toTarget.location.id ||
+      fromTarget.branch?.id === toTarget.branch?.id
+    ) {
       return { ...base, class: "manual_review_same_target_site" };
     }
-    if (!isAllowedTargetTransferDirection(fromTarget.branch?.branch_kind, toTarget.branch?.branch_kind)) {
+    if (
+      !isAllowedTargetTransferDirection(
+        fromTarget.branch?.branch_kind,
+        toTarget.branch?.branch_kind,
+      )
+    ) {
       return { ...base, class: "manual_review_disallowed_direction" };
     }
     return {
@@ -353,9 +476,15 @@ function classifyTransfer({ transfer, sourceWarehouseById, sourceBranchById, tar
 }
 
 function buildReport(source, target, filters = {}) {
-  const sourceBranchById = new Map(source.branches.map((branch) => [branch.id, branch]));
-  const sourceWarehouseById = new Map(source.warehouses.map((warehouse) => [warehouse.id, warehouse]));
-  const materialById = new Map(source.materials.map((material) => [material.id, material]));
+  const sourceBranchById = new Map(
+    source.branches.map((branch) => [branch.id, branch]),
+  );
+  const sourceWarehouseById = new Map(
+    source.warehouses.map((warehouse) => [warehouse.id, warehouse]),
+  );
+  const materialById = new Map(
+    source.materials.map((material) => [material.id, material]),
+  );
   const targetIndex = makeTargetIndex(target);
   const transferItemsByTransfer = new Map();
   for (const item of source.transferItems) {
@@ -376,7 +505,9 @@ function buildReport(source, target, filters = {}) {
   });
 
   const materialRows = source.materials.map((material) => {
-    const targetIngredient = targetIndex.ingredientBySku.get(String(material.sku ?? "").toUpperCase());
+    const targetIngredient = targetIndex.ingredientBySku.get(
+      String(material.sku ?? "").toUpperCase(),
+    );
     return {
       sourceSku: material.sku,
       sourceName: material.name,
@@ -387,7 +518,11 @@ function buildReport(source, target, filters = {}) {
 
   const sourceStockRows = source.stockItems.map((stock) => {
     const warehouse = sourceWarehouseById.get(stock.warehouse_id);
-    const targetRef = sourceWarehouseTarget(warehouse, sourceBranchById, targetIndex);
+    const targetRef = sourceWarehouseTarget(
+      warehouse,
+      sourceBranchById,
+      targetIndex,
+    );
     const material = materialById.get(stock.material_id);
     const quantity = numberValue(stock.quantity);
     const value = quantity * numberValue(material?.cost_per_unit);
@@ -403,11 +538,15 @@ function buildReport(source, target, filters = {}) {
   });
 
   const nonzeroStockRows = sourceStockRows.filter((row) => row.quantity !== 0);
-  const stockBearingRows = nonzeroStockRows.filter((row) => row.targetLocationId != null);
-  const missingStockTargetRows = nonzeroStockRows.filter(
-    (row) => row.role !== "branch_kitchen_endpoint" && row.targetLocationId == null,
+  const stockBearingRows = nonzeroStockRows.filter(
+    (row) => row.targetLocationId != null,
   );
-  const branchKitchenRows = nonzeroStockRows.filter((row) => row.role === "branch_kitchen_endpoint");
+  const missingStockTargetRows = nonzeroStockRows.filter(
+    (row) => row.targetLocationId == null,
+  );
+  const branchKitchenRows = nonzeroStockRows.filter(
+    (row) => row.role === "branch_kitchen_endpoint",
+  );
   const transferRows = source.transfers.map((transfer) =>
     classifyTransfer({
       materialById,
@@ -420,12 +559,20 @@ function buildReport(source, target, filters = {}) {
   );
 
   const preconditions = [];
-  if (!targetIndex.centralSupply) preconditions.push("missing target branch_kind=central_supply");
-  if (!targetIndex.centralKitchen) preconditions.push("missing target branch_kind=central_kitchen");
-  if (target.ingredients.length === 0) preconditions.push("target ingredients empty; import master data first");
-  if (materialRows.some((row) => !row.targetIngredientId)) preconditions.push("unmatched material SKU(s)");
-  if (branchMatches.some((row) => !row.targetBranchId)) preconditions.push("unmatched branch code/name");
-  if (missingStockTargetRows.length > 0) preconditions.push("stock-bearing source warehouse missing target location");
+  if (!targetIndex.centralSupply)
+    preconditions.push("missing target branch_kind=central_supply");
+  if (!targetIndex.centralKitchen)
+    preconditions.push("missing target branch_kind=central_kitchen");
+  if (target.ingredients.length === 0)
+    preconditions.push("target ingredients empty; import master data first");
+  if (materialRows.some((row) => !row.targetIngredientId))
+    preconditions.push("unmatched material SKU(s)");
+  if (branchMatches.some((row) => !row.targetBranchId))
+    preconditions.push("unmatched branch code/name");
+  if (missingStockTargetRows.length > 0)
+    preconditions.push(
+      "stock-bearing source warehouse missing target location",
+    );
 
   return {
     generatedAt: new Date().toISOString(),
@@ -439,7 +586,8 @@ function buildReport(source, target, filters = {}) {
       stockRows: source.stockItems.length,
       transfers: source.transfers.length,
       warehouses: source.warehouses.map((warehouse) => ({
-        branchCode: sourceBranchById.get(warehouse.branch_id)?.code ?? "central",
+        branchCode:
+          sourceBranchById.get(warehouse.branch_id)?.code ?? "central",
         code: warehouse.code,
         name: warehouse.name,
         role: sourceWarehouseRole(warehouse),
@@ -458,22 +606,32 @@ function buildReport(source, target, filters = {}) {
       materials: {
         matched: materialRows.filter((row) => row.targetIngredientId).length,
         missing: materialRows.filter((row) => !row.targetIngredientId).length,
-        missingSamples: materialRows.filter((row) => !row.targetIngredientId).slice(0, 20),
+        missingSamples: materialRows
+          .filter((row) => !row.targetIngredientId)
+          .slice(0, 20),
       },
     },
     stockSnapshotPlan: {
       stockBearingRows: stockBearingRows.length,
-      stockBearingValue: moneyValue(stockBearingRows.reduce((sum, row) => sum + row.value, 0)),
+      stockBearingValue: moneyValue(
+        stockBearingRows.reduce((sum, row) => sum + row.value, 0),
+      ),
       branchKitchenRows: branchKitchenRows.length,
-      branchKitchenValue: moneyValue(branchKitchenRows.reduce((sum, row) => sum + row.value, 0)),
-      bySourceWarehouse: sumBy(nonzeroStockRows, (row) => row.sourceWarehouseCode, (row) => row.value),
+      branchKitchenValue: moneyValue(
+        branchKitchenRows.reduce((sum, row) => sum + row.value, 0),
+      ),
+      bySourceWarehouse: sumBy(
+        nonzeroStockRows,
+        (row) => row.sourceWarehouseCode,
+        (row) => row.value,
+      ),
       missingTargetRows: missingStockTargetRows.length,
       missingTargetSamples: missingStockTargetRows.slice(0, 20),
     },
     transferPlan: {
       counts: countBy(transferRows, (row) => row.class),
-      saleConsumptionCostByBranch: sumBy(
-        transferRows.filter((row) => row.class === "branch_sale_consumption"),
+      branchKitchenTransferCostByBranch: sumBy(
+        transferRows.filter((row) => row.class === "branch_kitchen_transfer"),
         (row) => row.branchCode ?? "unmapped",
         (row) => row.cost,
       ),
@@ -484,9 +642,9 @@ function buildReport(source, target, filters = {}) {
     nextApplyOrder: [
       "create missing central_supply and central_kitchen branches/stock locations",
       "import materials as ingredients by SKU",
-      "import stock-bearing opening stock only",
-      "convert all source transfers into branch kitchen endpoints to consumption/sale_consumption",
-      "import only real stock-bearing transfers",
+      "import stock-bearing opening stock, including Bep CN",
+      "import Kho CN -> Bep CN as same-branch stock transfer",
+      "import remaining real stock-bearing transfers",
       "review manual_review rows before any write",
     ],
   };
@@ -498,11 +656,13 @@ function printHuman(report) {
   console.log(`Source materials: ${report.source.materials}`);
   console.log(`Source transfers: ${report.source.transfers}`);
   console.log(`Target ingredients: ${report.target.ingredients}`);
-  console.log(`Target preconditions: ${report.target.preconditions.length ? report.target.preconditions.join("; ") : "ok"}`);
+  console.log(
+    `Target preconditions: ${report.target.preconditions.length ? report.target.preconditions.join("; ") : "ok"}`,
+  );
   console.log("Transfer plan:");
   console.table(report.transferPlan.counts);
-  console.log("Sale consumption cost by branch:");
-  console.table(report.transferPlan.saleConsumptionCostByBranch);
+  console.log("Branch kitchen transfer cost by branch:");
+  console.table(report.transferPlan.branchKitchenTransferCostByBranch);
   console.log("Stock snapshot plan:");
   console.table(report.stockSnapshotPlan.bySourceWarehouse);
   if (report.mapping.materials.missingSamples.length > 0) {
@@ -518,9 +678,27 @@ function selfTest() {
       { id: "b-ph", code: "PH", name: "Phuoc Hai" },
     ],
     warehouses: [
-      { id: "kho-tong", branch_id: null, code: "KHO-TONG", name: "Kho Tong", kind: "warehouse" },
-      { id: "kho-dd", branch_id: "b-dd", code: "KHO-DD", name: "Kho DD", kind: "warehouse" },
-      { id: "bep-dd", branch_id: "b-dd", code: "BEP-DD", name: "Bep DD", kind: "kitchen" },
+      {
+        id: "kho-tong",
+        branch_id: null,
+        code: "KHO-TONG",
+        name: "Kho Tong",
+        kind: "warehouse",
+      },
+      {
+        id: "kho-dd",
+        branch_id: "b-dd",
+        code: "KHO-DD",
+        name: "Kho DD",
+        kind: "warehouse",
+      },
+      {
+        id: "bep-dd",
+        branch_id: "b-dd",
+        code: "BEP-DD",
+        name: "Bep DD",
+        kind: "kitchen",
+      },
       {
         id: "kho-tt",
         branch_id: null,
@@ -572,23 +750,52 @@ function selfTest() {
     branches: [
       { id: 1, code: "DD", name: "Dat Do", branch_kind: "branch" },
       { id: 2, code: "KT", name: "Kho Tong", branch_kind: "central_supply" },
-      { id: 3, code: "BTT", name: "Bep Trung Tam", branch_kind: "central_kitchen" },
+      {
+        id: 3,
+        code: "BTT",
+        name: "Bep Trung Tam",
+        branch_kind: "central_kitchen",
+      },
     ],
     locations: [
-      { id: 10, branch_id: 1, location_kind: "warehouse", is_default_issue: true },
-      { id: 20, branch_id: 2, location_kind: "warehouse", is_default_issue: true },
-      { id: 30, branch_id: 3, location_kind: "warehouse", is_default_issue: true },
+      {
+        id: 10,
+        branch_id: 1,
+        location_kind: "warehouse",
+        is_default_issue: true,
+      },
+      {
+        id: 11,
+        branch_id: 1,
+        location_kind: "kitchen",
+        is_default_consumption: true,
+      },
+      {
+        id: 20,
+        branch_id: 2,
+        location_kind: "warehouse",
+        is_default_issue: true,
+      },
+      {
+        id: 30,
+        branch_id: 3,
+        location_kind: "warehouse",
+        is_default_issue: true,
+      },
     ],
-    ingredients: [{ id: 100, sku: "MAT-1", name: "Rice" }],
+    ingredients: [
+      { id: 100, sku: "MAT-1", name: "Rice" },
+      { id: 200, sku: "MAT-2", name: "Pork" },
+    ],
     transfers: [],
     movements: [],
   };
   const report = buildReport(source, target);
-  assert.equal(report.transferPlan.counts.branch_sale_consumption, 1);
+  assert.equal(report.transferPlan.counts.branch_kitchen_transfer, 1);
   assert.equal(report.transferPlan.counts.real_transfer, 2);
   assert.equal(report.stockSnapshotPlan.branchKitchenRows, 1);
-  assert.equal(report.stockSnapshotPlan.stockBearingRows, 1);
-  assert.equal(report.mapping.materials.missing, 1);
+  assert.equal(report.stockSnapshotPlan.stockBearingRows, 2);
+  assert.equal(report.mapping.materials.missing, 0);
   console.log("self-test ok");
 }
 
@@ -598,7 +805,12 @@ if (args.help) {
 } else if (args.selfTest) {
   selfTest();
 } else {
-  if (!args.sourceUrl || !args.sourceKey || !args.targetUrl || !args.targetKey) {
+  if (
+    !args.sourceUrl ||
+    !args.sourceKey ||
+    !args.targetUrl ||
+    !args.targetKey
+  ) {
     throw new Error("Missing source/target Supabase env for dry-run");
   }
   const [source, target] = await Promise.all([

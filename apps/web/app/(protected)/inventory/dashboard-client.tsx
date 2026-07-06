@@ -11,13 +11,13 @@ import {
   ClipboardList as IconClipboardList,
   Clock as IconClock,
   Factory as IconBuildingFactory,
-  Hourglass as IconHourglass,
   Receipt as IconReceipt,
   Settings as IconSettings,
   ShoppingCart as IconShoppingCart,
   Truck as IconTruck,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { formatVNTime, formatVNDate } from "@comtammatu/shared/time";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { KpiCard } from "@/components/kpi/kpi-card";
@@ -50,6 +50,8 @@ export type DashboardProps = {
   userRole: StaffRole;
   showProcurement: boolean;
   showProduction: boolean;
+  canAssignCounts: boolean;
+  canApproveCounts: boolean;
   selectedBranchId: number | null;
   totalStockValue: number;
   pendingPO: number;
@@ -65,14 +67,6 @@ export type DashboardProps = {
     reorder: number;
     unit: string;
   }>;
-  expiryAlerts: Array<{
-    id: number;
-    ingredientName: string;
-    lot: string;
-    expiryDate: string;
-    daysLeft: number;
-    urgency: string;
-  }>;
   transfers: Array<{
     id: number;
     code: string;
@@ -87,6 +81,7 @@ export type DashboardProps = {
     progress: number;
     status: string;
   }>;
+  dataAsOf?: string;
 };
 
 type FlowAction = {
@@ -124,7 +119,6 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
   const outbound = openTransfers.filter((t) => t.fromBranch === props.siteName);
   const exceptionCount =
     props.activeStocktakes +
-    props.expiryAlerts.length +
     props.reorderAlerts.length +
     props.priceReviewCount;
 
@@ -142,14 +136,10 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         icon: IconClipboardList,
         metric: String(exceptionCount),
         metricLabel: messages.inventory.dashboard.oversightStockMetricLabel,
-        statusLabel: messages.inventory.dashboard.lowStockExpiryStatus(
+        statusLabel: messages.inventory.dashboard.lowStockStatus(
           props.reorderAlerts.length,
-          props.expiryAlerts.length,
         ),
-        tone:
-          props.expiryAlerts.length > 0 || props.reorderAlerts.length > 0
-            ? "warning"
-            : "default",
+        tone: props.reorderAlerts.length > 0 ? "warning" : "default",
         actions: [
           {
             label: messages.inventory.dashboard.viewStockAction,
@@ -163,22 +153,18 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         key: "oversight-alerts",
         title: messages.inventory.dashboard.oversightAlertsTitle,
         description: messages.inventory.dashboard.oversightAlertsDescription,
-        href: paths.expiry,
-        icon: IconHourglass,
-        metric: String(props.expiryAlerts.length + props.reorderAlerts.length),
+        href: paths.stock,
+        icon: IconAlertTriangle,
+        metric: String(props.reorderAlerts.length),
         metricLabel: messages.inventory.dashboard.alertsMetricLabel,
-        statusLabel: messages.inventory.dashboard.expiryLowStockStatus(
-          props.expiryAlerts.length,
+        statusLabel: messages.inventory.dashboard.lowStockStatus(
           props.reorderAlerts.length,
         ),
-        tone:
-          props.expiryAlerts.length > 0 || props.reorderAlerts.length > 0
-            ? "warning"
-            : "default",
+        tone: props.reorderAlerts.length > 0 ? "warning" : "default",
         actions: [
           {
             label: messages.inventory.dashboard.viewAlertsAction,
-            href: paths.expiry,
+            href: paths.stock,
             primary: true,
           },
           { label: tNav("reports", "navigation"), href: paths.reports },
@@ -227,6 +213,25 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         { label: tNav("stock", "navigation"), href: paths.stock },
       ];
 
+  const countActions: FlowAction[] = [
+    ...(props.canAssignCounts
+      ? [
+          {
+            label: "Phân công đếm tồn",
+            href: paths.countAssignments,
+          },
+        ]
+      : []),
+    ...(props.canApproveCounts
+      ? [
+          {
+            label: "Duyệt phiếu đếm tồn",
+            href: paths.countSlips,
+          },
+        ]
+      : []),
+  ];
+
   const movementActions: FlowAction[] = [
     {
       label:
@@ -262,12 +267,11 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
       icon: IconClipboardList,
       metric: String(exceptionCount),
       metricLabel: messages.inventory.dashboard.controlMetricLabel,
-      statusLabel: messages.inventory.dashboard.stocktakeExpiryStatus(
+      statusLabel: messages.inventory.dashboard.stocktakeStatus(
         props.activeStocktakes,
-        props.expiryAlerts.length,
       ),
       tone:
-        props.expiryAlerts.length > 0 || props.reorderAlerts.length > 0
+        props.reorderAlerts.length > 0
           ? "warning"
           : props.activeStocktakes > 0
             ? "success"
@@ -278,7 +282,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
           href: paths.stocktake,
           primary: true,
         },
-        { label: tNav("expiry", "navigation"), href: paths.expiry },
+        ...countActions,
         { label: tNav("issues", "navigation"), href: paths.issues },
         { label: tNav("reports", "navigation"), href: paths.reports },
       ],
@@ -443,7 +447,6 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     activeTransfers,
     pendingCountSlips,
     reorderAlerts,
-    expiryAlerts,
     transfers,
   } = props;
   const paths = getInventoryPaths(props.routeBase);
@@ -475,15 +478,6 @@ function buildTasks(props: DashboardProps): TaskItem[] {
         href: paths.stocktake,
         icon: <IconClipboardList className="size-4" />,
         severity: "success",
-      });
-    if (expiryAlerts.length > 0)
-      items.push({
-        key: "oversight-exp",
-        title: messages.inventory.dashboard.expiryLotsTask(expiryAlerts.length),
-        description: messages.inventory.dashboard.watchNearExpiryLots,
-        href: paths.expiry,
-        icon: <IconHourglass className="size-4" />,
-        severity: "warning",
       });
     if (reorderAlerts.length > 0)
       items.push({
@@ -539,15 +533,6 @@ function buildTasks(props: DashboardProps): TaskItem[] {
       icon: <IconClipboardList className="size-4" />,
       severity: "success",
     });
-  if (expiryAlerts.length > 0)
-    items.push({
-      key: "exp",
-      title: messages.inventory.dashboard.expiryLotsTask(expiryAlerts.length),
-      description: messages.inventory.dashboard.issueNearExpiryLots,
-      href: paths.expiry,
-      icon: <IconHourglass className="size-4" />,
-      severity: "warning",
-    });
   if (showProcurement && reorderAlerts.length > 0)
     items.push({
       key: "reorder",
@@ -585,9 +570,9 @@ export function DashboardClient(props: DashboardProps) {
     pendingPO,
     activeTransfers,
     reorderAlerts,
-    expiryAlerts,
     transfers,
     stocktakeSessions,
+    dataAsOf,
   } = props;
 
   const paths = getInventoryPaths(routeBase);
@@ -621,7 +606,6 @@ export function DashboardClient(props: DashboardProps) {
   const hasOpenInventoryWork =
     tasks.length > 0 ||
     reorderAlerts.length > 0 ||
-    expiryAlerts.length > 0 ||
     activeTransferList.length > 0 ||
     activeStocktakeList.length > 0;
 
@@ -655,14 +639,6 @@ export function DashboardClient(props: DashboardProps) {
       href: paths.transfers,
       icon: <IconArrowLeftRight className="size-4" />,
     },
-    {
-      label: messages.inventory.dashboard.kpiExpiryAlertsLabel,
-      value: String(expiryAlerts.length),
-      hint: messages.inventory.dashboard.kpiStockControlHint,
-      tone: expiryAlerts.length > 0 ? ("warning" as const) : ("neutral" as const),
-      href: paths.expiry,
-      icon: <IconHourglass className="size-4" />,
-    },
     ...(showProcurement
       ? [
           {
@@ -686,9 +662,20 @@ export function DashboardClient(props: DashboardProps) {
         eyebrow={messages.inventory.dashboard.headerEyebrow(siteKindLabel)}
         title={siteName}
         description={
-          isOversight
-            ? messages.inventory.dashboard.oversightTagline
-            : messages.inventory.dashboard.headerTagline
+          <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-3">
+            <span>
+              {isOversight
+                ? messages.inventory.dashboard.oversightTagline
+                : messages.inventory.dashboard.headerTagline}
+            </span>
+            {dataAsOf ? (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/80 font-mono">
+                <IconClock className="size-3" />
+                {messages.inventory.dashboard.dataAsOfLabel}:{" "}
+                {formatVNTime(dataAsOf)} ({formatVNDate(dataAsOf).slice(0, 5)})
+              </span>
+            ) : null}
+          </div>
         }
         meta={
           <span className="inline-flex items-center gap-2">
@@ -765,7 +752,9 @@ export function DashboardClient(props: DashboardProps) {
             size="sm"
             action={
               <Button variant="ghost" size="sm" asChild>
-                <Link href={withBranch(paths.expiry)}>{ACTIONS_VI.viewAll}</Link>
+                <Link href={withBranch(showProcurement ? paths.purchaseOrders : paths.stock)}>
+                  {ACTIONS_VI.viewAll}
+                </Link>
               </Button>
             }
           >
@@ -789,34 +778,7 @@ export function DashboardClient(props: DashboardProps) {
                   ctaLabel={messages.inventory.dashboard.openActionCta}
                 />
               ))}
-              {expiryAlerts.slice(0, 3).map((item) => (
-                <AppLinkCard
-                  key={`e-${item.id}`}
-                  href={withBranch(paths.expiry)}
-                  title={
-                    item.lot
-                      ? `${item.ingredientName} • ${item.lot}`
-                      : item.ingredientName
-                  }
-                  description={
-                    item.daysLeft <= 0
-                      ? messages.inventory.dashboard.expiredDays(item.daysLeft)
-                      : messages.inventory.dashboard.remainingDays(item.daysLeft)
-                  }
-                  icon={<IconAlertTriangle />}
-                  tone="warning"
-                  badge={
-                    item.daysLeft <= 0
-                      ? tStatus("expired", "badge")
-                      : tStatus("critical", "badge")
-                  }
-                  badgeVariant={
-                    item.urgency === "critical" ? "destructive" : "warning"
-                  }
-                  ctaLabel={messages.inventory.dashboard.openExpiryCta}
-                />
-              ))}
-              {reorderAlerts.length === 0 && expiryAlerts.length === 0 && (
+              {reorderAlerts.length === 0 && (
                 <AppEmptyState
                   compact
                   icon={<IconSquareCheck />}
@@ -897,7 +859,7 @@ export function DashboardClient(props: DashboardProps) {
         </div>
         <KpiRow
           density="compact"
-          className={showProcurement ? "lg:grid-cols-4" : undefined}
+          className={showProcurement ? "lg:grid-cols-3" : undefined}
         >
           {dashboardKpis.map((kpi) => (
             <KpiCard

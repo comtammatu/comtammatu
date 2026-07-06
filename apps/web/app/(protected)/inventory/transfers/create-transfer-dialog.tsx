@@ -3,11 +3,25 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
+import {
+  PackageCheck as IconPackageCheck,
+  Plus as IconPlus,
+  Trash as IconTrash,
+} from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
-import { ItemGroup } from "@comtammatu/ui/components/item";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+} from "@comtammatu/ui/components/input-group";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemGroup,
+} from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -21,7 +35,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { NumberPadSheet, FormattedNumberInput } from "@/components/form";
+import { FormattedNumberInput } from "@/components/form";
 import {
   AppDetailFooter,
   AppEmptyState,
@@ -29,12 +43,29 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
-import { getDefaultIssueUnit, getIssueUnitOptions } from "../_lib/issue-units";
+import {
+  clampIssueEntryQuantity,
+  formatIssueMaxEntryQuantity,
+  getDefaultIssueUnit,
+  getIssueBaseQuantity,
+  getIssueMaxEntryQuantity,
+  getIssueUnitOptions,
+} from "../_lib/issue-units";
 import { createStockTransfer } from "../transfer-actions";
 import type { IngredientRow } from "../page";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+
+const termSourceBranch = "Kho đi";
+const termTargetBranch = "Kho đến";
+const toastChooseIngredient = "Chọn nguyên liệu";
+const toastIngredientAlreadyExists = "Nguyên liệu đã có trong danh sách";
+const toastCheckLineQtyAndUnit = "Kiểm tra số lượng và đơn vị cho từng dòng";
+const toastChooseSourceBranch = "Chọn kho cấp hàng.";
+const toastChooseTargetBranch = "Chọn kho nhận.";
+const toastCreateFailed = "Không tạo được phiếu";
+const toastCreateSuccess = "Đã tạo phiếu điều chuyển";
 
 export interface BranchForTransfer {
   id: number;
@@ -52,6 +83,14 @@ type DraftLine = {
   entryUnitId: string;
 };
 
+type TransferTargetKind = "warehouse" | "kitchen";
+
+type TransferTargetOption = {
+  value: string;
+  branch: BranchForTransfer;
+  kind: TransferTargetKind;
+};
+
 function getWarehouseUnit(ingredient: IngredientRow) {
   return ingredient.purchase_unit || ingredient.unit;
 }
@@ -66,9 +105,47 @@ function isTransferSourceKind(kind: string | null | undefined): boolean {
   );
 }
 
+function formatTransferOption(
+  branch: BranchForTransfer,
+  homeBranchId: number | null,
+) {
+  const label = formatBranchSiteLabel(branch);
+  if (homeBranchId != null && branch.id === homeBranchId) {
+    return `${label}${messages.inventory.transfer.defaultKitchenSuffix}`;
+  }
+  return label;
+}
+
+function transferTargetValue(
+  branchId: number,
+  kind: TransferTargetKind,
+): string {
+  return `${branchId}:${kind}`;
+}
+
+function parseTransferTargetValue(value: string): {
+  branchId: number;
+  kind: TransferTargetKind;
+} | null {
+  const [branchIdRaw, kindRaw] = value.split(":");
+  const branchId = Number(branchIdRaw);
+  if (!Number.isInteger(branchId) || branchId <= 0) return null;
+  if (kindRaw !== "warehouse" && kindRaw !== "kitchen") return null;
+  return { branchId, kind: kindRaw };
+}
+
+function formatTransferTargetOption(option: TransferTargetOption): string {
+  const suffix =
+    option.kind === "kitchen"
+      ? messages.inventory.transfer.defaultKitchenSuffix
+      : messages.inventory.transfer.defaultWarehouseSuffix;
+  return `${formatBranchSiteLabel(option.branch)}${suffix}`;
+}
+
 export function CreateTransferForm({
   branches,
   ingredients,
+  sourceStockByBranch,
   userBranchId,
   userRole,
   basePath = "/inventory/transfers",
@@ -76,6 +153,7 @@ export function CreateTransferForm({
 }: {
   branches: BranchForTransfer[];
   ingredients: IngredientRow[];
+  sourceStockByBranch: Record<number, Record<number, number>>;
   userBranchId: number | null;
   userRole: StaffRole;
   basePath?: string;
@@ -96,15 +174,39 @@ export function CreateTransferForm({
   const requestDestinationBranchId =
     isBranchManager && currentBranchKind === "branch" ? userBranchId : null;
   const canCreateInboundRequest = requestDestinationBranchId != null;
-  const outboundDestinationOptions = branches.filter((branch) => {
-    if (!branch.is_active || branch.id === outboundSourceBranchId) return false;
-    return (branch.branch_kind ?? "branch") === "branch";
+  const outboundDestinationOptions = branches.flatMap((branch) => {
+    if (!branch.is_active) return [];
+    if (branch.id === outboundSourceBranchId) {
+      return currentBranchKind === "branch"
+        ? [
+            {
+              value: transferTargetValue(branch.id, "kitchen"),
+              branch,
+              kind: "kitchen" as const,
+            },
+          ]
+        : [];
+    }
+    if ((branch.branch_kind ?? "branch") !== "branch") return [];
+    return [
+      {
+        value: transferTargetValue(branch.id, "warehouse"),
+        branch,
+        kind: "warehouse" as const,
+      },
+      {
+        value: transferTargetValue(branch.id, "kitchen"),
+        branch,
+        kind: "kitchen" as const,
+      },
+    ];
   });
   const inboundSourceOptions = branches.filter((branch) => {
-    if (!branch.is_active || branch.id === requestDestinationBranchId) {
-      return false;
-    }
+    if (!branch.is_active) return false;
     const kind = branch.branch_kind ?? "branch";
+    if (branch.id === requestDestinationBranchId) {
+      return kind === "branch";
+    }
     return kind === "central_supply" || kind === "central_kitchen";
   });
 
@@ -112,11 +214,10 @@ export function CreateTransferForm({
   const [inboundFromBranchId, setInboundFromBranchId] = useState("");
   const [draftLines, setDraftLines] = useState<DraftLine[]>([]);
   const [pickerIngredientId, setPickerIngredientId] = useState("");
-  // The line whose quantity number-pad drawer is open (null = closed). The pad
-  // is a bottom sheet so the line list stays scrollable and the keypad rises to
-  // the thumb on tap — mobile only.
-  const [numpadLineKey, setNumpadLineKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const selectedSourceBranchId = isBranchManager
+    ? Number(inboundFromBranchId) || null
+    : outboundSourceBranchId;
 
   const myBranchName = useMemo(() => {
     if (userBranchId == null) return null;
@@ -141,38 +242,78 @@ export function CreateTransferForm({
     return myBranchName;
   }, [branches, inboundFromBranchId, isBranchManager, myBranchName]);
   const outboundDestinationName = useMemo(() => {
+    const option = outboundDestinationOptions.find(
+      (item) => item.value === outboundToBranchId,
+    );
+    return option ? formatTransferTargetOption(option) : null;
+  }, [outboundDestinationOptions, outboundToBranchId]);
+  const inboundSourceName = useMemo(() => {
     const branch = branches.find(
-      (item) => String(item.id) === outboundToBranchId,
+      (item) => String(item.id) === inboundFromBranchId,
     );
     return branch ? formatBranchSiteLabel(branch) : null;
-  }, [branches, outboundToBranchId]);
-  const inboundSourceName = useMemo(() => {
-    const branch = branches.find((item) => String(item.id) === inboundFromBranchId);
-    return branch ? formatBranchSiteLabel(branch) : null;
   }, [branches, inboundFromBranchId]);
-
-  const numpadLine = useMemo(
-    () => draftLines.find((line) => line.key === numpadLineKey) ?? null,
-    [draftLines, numpadLineKey],
-  );
 
   function resetForm() {
     setOutboundToBranchId("");
     setInboundFromBranchId("");
     setDraftLines([]);
     setPickerIngredientId("");
-    setNumpadLineKey(null);
+  }
+
+  function getLineIngredient(line: DraftLine) {
+    return ingredients.find((item) => item.id === line.ingredientId);
+  }
+
+  function getLineIssueUnit(line: DraftLine) {
+    return getIssueUnitOptions(getLineIngredient(line)).find(
+      (option) => String(option.unitId) === line.entryUnitId,
+    );
+  }
+
+  function getLineMaxEntryQuantity(
+    line: DraftLine,
+    sourceBranchId: number | null,
+  ) {
+    if (sourceBranchId == null) return 0;
+    const availableBaseQuantity =
+      sourceStockByBranch[sourceBranchId]?.[line.ingredientId] ?? 0;
+    return getIssueMaxEntryQuantity(
+      availableBaseQuantity,
+      getLineIssueUnit(line),
+    );
+  }
+
+  function clampLineForSource(
+    line: DraftLine,
+    sourceBranchId: number | null,
+  ): DraftLine {
+    return {
+      ...line,
+      quantity: clampIssueEntryQuantity(
+        line.quantity,
+        getLineMaxEntryQuantity(line, sourceBranchId),
+      ),
+    };
+  }
+
+  function handleInboundSourceChange(value: string) {
+    const nextSourceBranchId = Number(value) || null;
+    setInboundFromBranchId(value);
+    setDraftLines((current) =>
+      current.map((line) => clampLineForSource(line, nextSourceBranchId)),
+    );
   }
 
   function addIngredientLine() {
     const ingredientId = Number(pickerIngredientId);
     const ingredient = ingredients.find((item) => item.id === ingredientId);
     if (!ingredient) {
-      toast.error("Chọn nguyên liệu");
+      toast.error(toastChooseIngredient);
       return;
     }
     if (draftLines.some((line) => line.ingredientId === ingredientId)) {
-      toast.error("Nguyên liệu đã có trong danh sách");
+      toast.error(toastIngredientAlreadyExists);
       return;
     }
     const defaultUnit = getDefaultIssueUnit(ingredient);
@@ -189,6 +330,41 @@ export function CreateTransferForm({
         entryUnitId: defaultUnit ? String(defaultUnit.unitId) : "",
       },
     ]);
+    setPickerIngredientId("");
+  }
+
+  function addAllAvailableStockLines() {
+    if (selectedSourceBranchId == null) {
+      toast.error(toastChooseSourceBranch);
+      return;
+    }
+
+    const sourceStock = sourceStockByBranch[selectedSourceBranchId] ?? {};
+    const nextLines = activeIngredients.flatMap((ingredient) => {
+      const defaultUnit = getDefaultIssueUnit(ingredient);
+      const quantity = formatIssueMaxEntryQuantity(
+        getIssueMaxEntryQuantity(sourceStock[ingredient.id] ?? 0, defaultUnit),
+      );
+      if (!quantity) return [];
+
+      return [
+        {
+          key: `all-${ingredient.id}`,
+          ingredientId: ingredient.id,
+          name: ingredient.name,
+          quantity,
+          unit: defaultUnit?.label ?? getWarehouseUnit(ingredient),
+          entryUnitId: defaultUnit ? String(defaultUnit.unitId) : "",
+        },
+      ];
+    });
+
+    if (nextLines.length === 0) {
+      toast.error(messages.inventory.transfer.noStockToTransfer);
+      return;
+    }
+
+    setDraftLines(nextLines);
     setPickerIngredientId("");
   }
 
@@ -221,7 +397,19 @@ export function CreateTransferForm({
       const quantity = Number(line.quantity);
       const unit = line.unit.trim();
       if (!Number.isFinite(quantity) || quantity <= 0 || !unit) {
-        toast.error("Kiểm tra số lượng và đơn vị cho từng dòng");
+        toast.error(toastCheckLineQtyAndUnit);
+        return undefined;
+      }
+      const issueUnit = getLineIssueUnit(line);
+      const maxEntryQuantity = getLineMaxEntryQuantity(
+        line,
+        selectedSourceBranchId,
+      );
+      if (
+        getIssueBaseQuantity(quantity, issueUnit) >
+        getIssueBaseQuantity(maxEntryQuantity, issueUnit) + 1e-9
+      ) {
+        toast.error("Số lượng vượt tồn hiện tại.");
         return undefined;
       }
       out.push({
@@ -245,18 +433,25 @@ export function CreateTransferForm({
     }
 
     let fromBranchId = outboundSourceBranchId ?? undefined;
-    let toBranchId = Number(outboundToBranchId) || undefined;
+    let toBranchId: number | undefined;
+    let toLocationKind: "default_receive" | "branch_kitchen" | undefined;
 
     if (isBranchManager) {
       fromBranchId = Number(inboundFromBranchId) || undefined;
       toBranchId = requestDestinationBranchId ?? undefined;
       if (!fromBranchId) {
-        toast.error("Chọn kho cấp hàng.");
+        toast.error(toastChooseSourceBranch);
         return;
       }
-    } else if (!toBranchId) {
-      toast.error("Chọn kho nhận.");
-      return;
+    } else {
+      const target = parseTransferTargetValue(outboundToBranchId);
+      if (!target) {
+        toast.error(toastChooseTargetBranch);
+        return;
+      }
+      toBranchId = target.branchId;
+      toLocationKind =
+        target.kind === "kitchen" ? "branch_kitchen" : "default_receive";
     }
     if (!fromBranchId || !toBranchId) return;
 
@@ -269,13 +464,14 @@ export function CreateTransferForm({
         toBranchId,
         notes,
         vehicleInfo,
+        toLocationKind,
         lines: linesPayload,
       });
       if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không tạo được phiếu");
+        toast.error(res.error ?? toastCreateFailed);
         return;
       }
-      toast.success("Đã tạo phiếu điều chuyển");
+      toast.success(toastCreateSuccess);
       resetForm();
       const id = (res.data as { id: number }).id;
       router.push(withBranchQuery(`${basePath}/${id}`, userBranchId));
@@ -335,15 +531,16 @@ export function CreateTransferForm({
               descriptionClassName="font-semibold"
               items={[
                 {
-                  term: "Kho đi",
+                  term: termSourceBranch,
                   description:
                     inboundSourceName ??
                     messages.inventory.transfer.chooseSendingWarehouse,
                 },
                 {
-                  term: "Kho đến",
+                  term: termTargetBranch,
                   description:
-                    myBranchName ?? messages.inventory.transfer.inboundToSelected,
+                    myBranchName ??
+                    messages.inventory.transfer.inboundToSelected,
                 },
               ]}
             />
@@ -353,7 +550,7 @@ export function CreateTransferForm({
               </Label>
               <Select
                 value={inboundFromBranchId}
-                onValueChange={setInboundFromBranchId}
+                onValueChange={handleInboundSourceChange}
               >
                 <SelectTrigger
                   size={embedded ? "touch" : "default"}
@@ -369,7 +566,10 @@ export function CreateTransferForm({
                   <SelectGroup>
                     {inboundSourceOptions.map((branch) => (
                       <SelectItem key={branch.id} value={String(branch.id)}>
-                        {formatBranchSiteLabel(branch)}
+                        {formatTransferOption(
+                          branch,
+                          requestDestinationBranchId,
+                        )}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -384,13 +584,13 @@ export function CreateTransferForm({
               descriptionClassName="font-semibold"
               items={[
                 {
-                  term: "Kho đi",
+                  term: termSourceBranch,
                   description:
                     myBranchName ??
                     messages.inventory.transfer.outboundFromSelected,
                 },
                 {
-                  term: "Kho đến",
+                  term: termTargetBranch,
                   description:
                     outboundDestinationName ??
                     messages.inventory.transfer.chooseReceivingWarehouse,
@@ -418,8 +618,8 @@ export function CreateTransferForm({
                 <SelectContent>
                   <SelectGroup>
                     {outboundDestinationOptions.map((branch) => (
-                      <SelectItem key={branch.id} value={String(branch.id)}>
-                        {formatBranchSiteLabel(branch)}
+                      <SelectItem key={branch.value} value={branch.value}>
+                        {formatTransferTargetOption(branch)}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -438,50 +638,63 @@ export function CreateTransferForm({
 
       {showLineSection ? (
         <AppSection title={messages.inventory.transfer.ingredientsQtyRequired}>
-          <div className="flex items-end gap-2">
-            <div className="min-w-0 flex-1">
-              <Select
-                value={pickerIngredientId}
-                onValueChange={setPickerIngredientId}
-              >
-                <SelectTrigger
-                  className={embedded ? undefined : "h-9"}
-                  size={embedded ? "touch" : "default"}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="flex min-w-0 flex-1 items-end gap-2">
+              <div className="min-w-0 flex-1">
+                <Select
+                  value={pickerIngredientId}
+                  onValueChange={setPickerIngredientId}
                 >
-                  <SelectValue
-                    placeholder={messages.inventory.transfer.chooseIngredient}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {activeIngredients.map((ingredient) => (
-                      <SelectItem
-                        key={ingredient.id}
-                        value={String(ingredient.id)}
-                        textValue={`${ingredient.name} ${getWarehouseUnit(
-                          ingredient,
-                        )} ${ingredient.id}`}
-                      >
-                        {ingredient.name} ({getWarehouseUnit(ingredient)})
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+                  <SelectTrigger
+                    className={embedded ? undefined : "h-9"}
+                    size={embedded ? "touch" : "default"}
+                  >
+                    <SelectValue
+                      placeholder={messages.inventory.transfer.chooseIngredient}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {activeIngredients.map((ingredient) => (
+                        <SelectItem
+                          key={ingredient.id}
+                          value={String(ingredient.id)}
+                          textValue={`${ingredient.name} ${getWarehouseUnit(
+                            ingredient,
+                          )} ${ingredient.id}`}
+                        >
+                          {ingredient.name} ({getWarehouseUnit(ingredient)})
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size={embedded ? "touch" : "sm"}
+                className="shrink-0"
+                onClick={addIngredientLine}
+                disabled={!pickerIngredientId}
+                aria-label={messages.inventory.transfer.addIngredientAria}
+              >
+                <IconPlus data-icon="inline-start" />
+                {embedded
+                  ? messages.inventory.transfer.createNative.addLine
+                  : null}
+              </Button>
             </div>
             <Button
               type="button"
               variant="outline"
               size={embedded ? "touch" : "sm"}
-              className="shrink-0"
-              onClick={addIngredientLine}
-              disabled={!pickerIngredientId}
-              aria-label={messages.inventory.transfer.addIngredientAria}
+              className="w-full shrink-0 sm:w-auto"
+              onClick={addAllAvailableStockLines}
+              disabled={selectedSourceBranchId == null}
             >
-              <IconPlus data-icon="inline-start" />
-              {embedded
-                ? messages.inventory.transfer.createNative.addLine
-                : null}
+              <IconPackageCheck data-icon="inline-start" />
+              {messages.inventory.transfer.transferAllStock}
             </Button>
           </div>
 
@@ -500,7 +713,12 @@ export function CreateTransferForm({
                   (item) => item.id === line.ingredientId,
                 );
                 const lineUnitOptions = getIssueUnitOptions(lineIngredient);
-                const hasQty = line.quantity.trim().length > 0;
+                const maxEntryQuantity = getLineMaxEntryQuantity(
+                  line,
+                  selectedSourceBranchId,
+                );
+                const maxQuantityValue =
+                  formatIssueMaxEntryQuantity(maxEntryQuantity);
                 return (
                   <InteractiveCard
                     key={line.key}
@@ -532,29 +750,41 @@ export function CreateTransferForm({
                       </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="touch"
-                        className="justify-between font-normal"
-                        onClick={() => setNumpadLineKey(line.key)}
-                      >
-                        <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-                          {messages.inventory.common.quantityShort}
-                        </span>
-                        <span
-                          className={
-                            hasQty
-                              ? "text-base font-semibold tabular-nums"
-                              : "text-sm text-muted-foreground"
+                      <InputGroup className="h-12">
+                        <FormattedNumberInput
+                          maxFractionDigits={3}
+                          aria-label={messages.inventory.common.quantityShort}
+                          value={line.quantity}
+                          onValueChange={(value) =>
+                            updateLine(line.key, {
+                              quantity: clampIssueEntryQuantity(
+                                value,
+                                maxEntryQuantity,
+                              ),
+                            })
                           }
-                        >
-                          {hasQty
-                            ? line.quantity
-                            : messages.inventory.transfer.createNative
-                                .quantityUnset}
-                        </span>
-                      </Button>
+                          placeholder={
+                            messages.inventory.transfer.createNative
+                              .quantityUnset
+                          }
+                          className="h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-1 dark:bg-transparent"
+                          required
+                        />
+                        {maxQuantityValue ? (
+                          <InputGroupAddon align="inline-end">
+                            <InputGroupButton
+                              type="button"
+                              onClick={() =>
+                                updateLine(line.key, {
+                                  quantity: maxQuantityValue,
+                                })
+                              }
+                            >
+                              {FORM_VI.max}
+                            </InputGroupButton>
+                          </InputGroupAddon>
+                        ) : null}
+                      </InputGroup>
                       {lineUnitOptions.length > 0 ? (
                         <Select
                           value={line.entryUnitId}
@@ -565,6 +795,13 @@ export function CreateTransferForm({
                             updateLine(line.key, {
                               entryUnitId: value,
                               unit: opt?.label ?? line.unit,
+                              quantity: clampIssueEntryQuantity(
+                                line.quantity,
+                                getLineMaxEntryQuantity(
+                                  { ...line, entryUnitId: value },
+                                  selectedSourceBranchId,
+                                ),
+                              ),
                             });
                           }}
                         >
@@ -613,78 +850,116 @@ export function CreateTransferForm({
                   (item) => item.id === line.ingredientId,
                 );
                 const lineUnitOptions = getIssueUnitOptions(lineIngredient);
+                const maxEntryQuantity = getLineMaxEntryQuantity(
+                  line,
+                  selectedSourceBranchId,
+                );
+                const maxQuantityValue =
+                  formatIssueMaxEntryQuantity(maxEntryQuantity);
                 return (
-                  <div
-                    key={line.key}
-                    className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2"
-                  >
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                      {line.name}
-                    </span>
-                    <FormattedNumberInput
-                      className="h-8 w-20"
-                      placeholder={messages.inventory.common.quantityShort}
-                      value={line.quantity}
-                      onValueChange={(value) =>
-                        updateLine(line.key, { quantity: value })
-                      }
-                      maxFractionDigits={3}
-                      required
-                    />
-                    {lineUnitOptions.length > 0 ? (
-                      <Select
-                        value={line.entryUnitId}
-                        onValueChange={(value) => {
-                          const opt = lineUnitOptions.find(
-                            (o) => String(o.unitId) === value,
-                          );
-                          updateLine(line.key, {
-                            entryUnitId: value,
-                            unit: opt?.label ?? line.unit,
-                          });
-                        }}
-                      >
-                        <SelectTrigger
-                          className="h-8 w-20"
-                          aria-label={messages.inventory.transfer.unit}
+                  <Item key={line.key} variant="outline" size="sm" className="flex-nowrap justify-between gap-4 w-full">
+                    <ItemContent className="min-w-0 flex-1">
+                      <span className="truncate text-sm font-medium">
+                        {line.name}
+                      </span>
+                    </ItemContent>
+                    <ItemActions className="shrink-0 flex items-center gap-2">
+                      <InputGroup className="h-8 w-32">
+                        <FormattedNumberInput
+                          className="h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-1 dark:bg-transparent"
+                          placeholder={messages.inventory.common.quantityShort}
+                          aria-label={messages.inventory.common.quantityShort}
+                          value={line.quantity}
+                          onValueChange={(value) =>
+                            updateLine(line.key, {
+                              quantity: clampIssueEntryQuantity(
+                                value,
+                                maxEntryQuantity,
+                              ),
+                            })
+                          }
+                          maxFractionDigits={3}
+                          required
+                        />
+                        {maxQuantityValue ? (
+                          <InputGroupAddon align="inline-end">
+                            <InputGroupButton
+                              type="button"
+                              onClick={() =>
+                                updateLine(line.key, {
+                                  quantity: maxQuantityValue,
+                                })
+                              }
+                            >
+                              {FORM_VI.max}
+                            </InputGroupButton>
+                          </InputGroupAddon>
+                        ) : null}
+                      </InputGroup>
+                      {lineUnitOptions.length > 0 ? (
+                        <Select
+                          value={line.entryUnitId}
+                          onValueChange={(value) => {
+                            const opt = lineUnitOptions.find(
+                              (o) => String(o.unitId) === value,
+                            );
+                            updateLine(line.key, {
+                              entryUnitId: value,
+                              unit: opt?.label ?? line.unit,
+                              quantity: clampIssueEntryQuantity(
+                                line.quantity,
+                                getLineMaxEntryQuantity(
+                                  { ...line, entryUnitId: value },
+                                  selectedSourceBranchId,
+                                ),
+                              ),
+                            });
+                          }}
                         >
-                          <SelectValue
-                            placeholder={messages.inventory.transfer.selectUnit}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            {lineUnitOptions.map((o) => (
-                              <SelectItem
-                                key={o.unitId}
-                                value={String(o.unitId)}
-                              >
-                                {o.label}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        className="h-8 w-16"
-                        value={line.unit}
-                        readOnly
-                        aria-readonly="true"
-                        required
-                      />
-                    )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="shrink-0"
-                      onClick={() => removeLine(line.key)}
-                      aria-label={messages.inventory.transfer.removeLineAria}
-                    >
-                      <IconTrash />
-                    </Button>
-                  </div>
+                          <SelectTrigger
+                            className="h-8 w-20"
+                            aria-label={messages.inventory.transfer.unit}
+                          >
+                            <SelectValue
+                              placeholder={
+                                messages.inventory.transfer.selectUnit
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              {lineUnitOptions.map((o) => (
+                                <SelectItem
+                                  key={o.unitId}
+                                  value={String(o.unitId)}
+                                >
+                                  {o.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          className="h-8 w-16"
+                          value={line.unit}
+                          readOnly
+                          aria-readonly="true"
+                          required
+                        />
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="shrink-0"
+                        onClick={() => removeLine(line.key)}
+                        aria-label={messages.inventory.transfer.removeLineAria}
+                      >
+                        <IconTrash />
+                      </Button>
+                    </ItemActions>
+                  </Item>
                 );
               })}
             </div>
@@ -745,32 +1020,6 @@ export function CreateTransferForm({
           </Button>
         </div>
       )}
-
-      {embedded ? (
-        <NumberPadSheet
-          open={numpadLine != null}
-          onOpenChange={(next) => {
-            if (!next) setNumpadLineKey(null);
-          }}
-          title={
-            numpadLine
-              ? `${numpadLine.name} · ${numpadLine.unit}`
-              : messages.inventory.transfer.createNative.quantityPrompt
-          }
-          suffix={numpadLine?.unit}
-          initialValue={
-            numpadLine && numpadLine.quantity.trim().length > 0
-              ? Number(numpadLine.quantity)
-              : null
-          }
-          onConfirm={(value) => {
-            if (numpadLine) {
-              updateLine(numpadLine.key, { quantity: String(value) });
-            }
-          }}
-          allowDecimal
-        />
-      ) : null}
     </form>
   );
 }

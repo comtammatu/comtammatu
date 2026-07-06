@@ -15,13 +15,13 @@
 
 ## 1. Mô hình Auth (tóm tắt cho Inventory)
 
-| Khái niệm          | Ý nghĩa                                                                                                                                       | Nằm ở                                              |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| **Permission key** | Chuỗi hành động canonical (vd `inventory:production_create`). Là đơn vị authz nhỏ nhất.                                                       | `permission_keys` catalog + `permissions.ts`       |
-| **Position**       | Chức vụ HR (vd `head_chef` = Bếp trưởng). **Không** gate authz trực tiếp.                                                                    | `positions` (per tenant), `profiles.position_id`   |
-| **Template**       | Bundle permission preset gắn với 1 position. Snapshot — edit template không propagate.                                                        | `role_templates(position_code, permission_keys[])` |
-| **Grant**          | Quyền thật của user tại branch cụ thể, dạng (user, branch, key). `branch_id IS NULL` = tenant-wide.                                           | `staff_permissions`                                |
-| **Access bucket**  | Compatibility claim derived từ `positions.code` mapper. Dùng cho route-level ACL và một số scope guard còn chủ ý trong RPC.             | `module-acl.ts`, `auth_role()` helper              |
+| Khái niệm          | Ý nghĩa                                                                                                                     | Nằm ở                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **Permission key** | Chuỗi hành động canonical (vd `inventory:production_create`). Là đơn vị authz nhỏ nhất.                                     | `permission_keys` catalog + `permissions.ts`       |
+| **Position**       | Chức vụ HR (vd `head_chef` = Bếp trưởng). **Không** gate authz trực tiếp.                                                   | `positions` (per tenant), `profiles.position_id`   |
+| **Template**       | Bundle permission preset gắn với 1 position. Snapshot — edit template không propagate.                                      | `role_templates(position_code, permission_keys[])` |
+| **Grant**          | Quyền thật của user tại branch cụ thể, dạng (user, branch, key). `branch_id IS NULL` = tenant-wide.                         | `staff_permissions`                                |
+| **Access bucket**  | Compatibility claim derived từ `positions.code` mapper. Dùng cho route-level ACL và một số scope guard còn chủ ý trong RPC. | `module-acl.ts`, `auth_role()` helper              |
 
 **Authz path cho mỗi Inventory request:**
 
@@ -36,12 +36,12 @@
 
 ## 2. Positions liên quan Inventory (Cơm Tấm Má Tư — tenant_id=1)
 
-| Position code       | Label VI           | Access bucket        | Scope vận hành mặc định                                    |
-| ------------------- | ------------------ | -------------------- | ---------------------------------------------------------- |
-| `owner`             | Chủ sở hữu         | `owner`              | Tenant-wide bypass (owner bypass trong `has_permission()`) + tenant-wide operations + procurement |
-| `branch_manager`    | Quản lý chi nhánh  | `branch_manager`     | Branch của mình                                            |
-| `warehouse_manager` | Quản lý Kho Tổng   | `warehouse_manager`  | Kho Tổng (`central_supply`)                            |
-| `head_chef`         | Bếp trưởng         | `production_manager` | Bếp Trung Tâm (`central_kitchen`)                      |
+| Position code       | Label VI          | Access bucket        | Scope vận hành mặc định                                                                           |
+| ------------------- | ----------------- | -------------------- | ------------------------------------------------------------------------------------------------- |
+| `owner`             | Chủ sở hữu        | `owner`              | Tenant-wide bypass (owner bypass trong `has_permission()`) + tenant-wide operations + procurement |
+| `branch_manager`    | Quản lý chi nhánh | `branch_manager`     | Branch của mình                                                                                   |
+| `warehouse_manager` | Quản lý Kho Tổng  | `warehouse_manager`  | Kho Tổng (`central_supply`)                                                                       |
+| `head_chef`         | Bếp trưởng        | `production_manager` | Bếp Trung Tâm (`central_kitchen`)                                                                 |
 
 > Position code dùng English `lower_snake_case` theo bộ canonical hiện hành. Tên hiển thị tiếng Việt đi qua `label_vi`.
 >
@@ -53,52 +53,52 @@
 
 ### 3.1 Inventory module
 
-| Key                            | Ý nghĩa                                       |
-| ------------------------------ | --------------------------------------------- |
-| `inventory:read`               | Xem tồn kho, movement, alerts                 |
-| `inventory:write`              | Cập nhật catalog nguyên liệu, adjust tồn      |
-| `inventory:transfer_create`    | Tạo phiếu luân chuyển nội bộ (draft)          |
-| `inventory:transfer_ship`      | Confirm xuất kho (ship) của phiếu luân chuyển |
-| `inventory:transfer_receive`   | Confirm nhận hàng tại điểm đến                |
-| `inventory:stocktake_create`   | Mở phiên kiểm kê                              |
-| `inventory:stocktake_complete` | Đóng phiên kiểm kê + post adjustments         |
-| `inventory:writeoff`           | Ghi hao hụt / waste / hết hạn                 |
-| `inventory:production_create`  | Tạo lệnh sản xuất (chi nhánh)             |
-| `inventory:production_confirm` | Confirm hoàn thành lệnh sản xuất              |
-| `inventory:waste_approve`      | Duyệt phiếu waste tier-2                       |
-| `inventory:waste_bypass_photo` | Bỏ yêu cầu ảnh khi tạo waste                  |
-| `inventory:stocktake_recount`  | Mở vòng đếm lại trong kiểm kê                 |
-| `inventory:stocktake_unblind`  | Mở khoá blind mode để xem SL hệ thống         |
-| `inventory:adjust_approve`     | Duyệt điều chỉnh tồn thủ công                 |
-| `inventory:grn_express_configure` | Cấu hình GRN express                        |
-| `inventory:grn_express_extend` | Gia hạn cửa sổ GRN express                    |
-| `inventory:grn_hardblock_override` | Override hard-block khi nhận GRN           |
-| `inventory:catalog_review_policy_set` | Đặt policy review danh mục              |
-| `inventory:item_review_override_set` | Override review cho từng item            |
+| Key                                   | Ý nghĩa                                       |
+| ------------------------------------- | --------------------------------------------- |
+| `inventory:read`                      | Xem tồn kho, movement, alerts                 |
+| `inventory:write`                     | Cập nhật catalog nguyên liệu, adjust tồn      |
+| `inventory:transfer_create`           | Tạo phiếu luân chuyển nội bộ (draft)          |
+| `inventory:transfer_ship`             | Confirm xuất kho (ship) của phiếu luân chuyển |
+| `inventory:transfer_receive`          | Confirm nhận hàng tại điểm đến                |
+| `inventory:stocktake_create`          | Mở phiên kiểm kê                              |
+| `inventory:stocktake_complete`        | Đóng phiên kiểm kê + post adjustments         |
+| `inventory:writeoff`                  | Ghi hao hụt / waste / hết hạn                 |
+| `inventory:production_create`         | Tạo lệnh sản xuất (chi nhánh)                 |
+| `inventory:production_confirm`        | Confirm hoàn thành lệnh sản xuất              |
+| `inventory:waste_approve`             | Duyệt phiếu waste tier-2                      |
+| `inventory:waste_bypass_photo`        | Bỏ yêu cầu ảnh khi tạo waste                  |
+| `inventory:stocktake_recount`         | Mở vòng đếm lại trong kiểm kê                 |
+| `inventory:stocktake_unblind`         | Mở khoá blind mode để xem SL hệ thống         |
+| `inventory:adjust_approve`            | Duyệt điều chỉnh tồn thủ công                 |
+| `inventory:grn_express_configure`     | Cấu hình GRN express                          |
+| `inventory:grn_express_extend`        | Gia hạn cửa sổ GRN express                    |
+| `inventory:grn_hardblock_override`    | Override hard-block khi nhận GRN              |
+| `inventory:catalog_review_policy_set` | Đặt policy review danh mục                    |
+| `inventory:item_review_override_set`  | Override review cho từng item                 |
 
 ### 3.2 Procurement module (`inventory_procurement`)
 
-| Key                           | Ý nghĩa                           |
-| ----------------------------- | --------------------------------- |
-| `procurement:read`            | Xem PO, GRN, NCC, hoá đơn mua     |
-| `procurement:supplier_manage` | CRUD nhà cung cấp                 |
-| `procurement:po_create`       | Tạo Purchase Order                |
-| `procurement:po_approve`      | Duyệt PO (thả ra cho NCC)         |
-| `procurement:grn_create`      | Tạo phiếu nhập kho draft          |
-| `procurement:grn_confirm`     | Xác nhận GRN → cập nhật tồn       |
-| `procurement:invoice_create`  | Nhập hoá đơn NCC                  |
-| `procurement:invoice_match`   | 3-way matching PO ↔ GRN ↔ Invoice |
-| `procurement:grn_amend`       | Sửa GRN đã tạo (draft)            |
-| `procurement:price_list_read` | Xem bảng giá NCC                  |
-| `procurement:price_list_write`| Cập nhật bảng giá NCC             |
-| `procurement:override_code_rotate` | Xoay mã override nhập hàng   |
+| Key                                | Ý nghĩa                           |
+| ---------------------------------- | --------------------------------- |
+| `procurement:read`                 | Xem PO, GRN, NCC, hoá đơn mua     |
+| `procurement:supplier_manage`      | CRUD nhà cung cấp                 |
+| `procurement:po_create`            | Tạo Purchase Order                |
+| `procurement:po_approve`           | Duyệt PO (thả ra cho NCC)         |
+| `procurement:grn_create`           | Tạo phiếu nhập kho draft          |
+| `procurement:grn_confirm`          | Xác nhận GRN → cập nhật tồn       |
+| `procurement:invoice_create`       | Nhập hoá đơn NCC                  |
+| `procurement:invoice_match`        | 3-way matching PO ↔ GRN ↔ Invoice |
+| `procurement:grn_amend`            | Sửa GRN đã tạo (draft)            |
+| `procurement:price_list_read`      | Xem bảng giá NCC                  |
+| `procurement:price_list_write`     | Cập nhật bảng giá NCC             |
+| `procurement:override_code_rotate` | Xoay mã override nhập hàng        |
 
 ### 3.3 Supplier return + accounting
 
-| Key                        | Ý nghĩa                                  |
-| -------------------------- | ---------------------------------------- |
+| Key                        | Ý nghĩa                                   |
+| -------------------------- | ----------------------------------------- |
 | `supplier_return:read`     | Xem phiếu trả hàng NCC                    |
-| `supplier_return:create`   | Tạo phiếu trả hàng NCC (gồm QC nhận hàng)|
+| `supplier_return:create`   | Tạo phiếu trả hàng NCC (gồm QC nhận hàng) |
 | `supplier_return:confirm`  | Xác nhận trả hàng NCC                     |
 | `accounting:period_reopen` | Mở lại kỳ kế toán đã đóng                 |
 
@@ -132,26 +132,26 @@ lý trường hợp này.
 
 | Permission key                 | owner bypass | branch_manager | warehouse_manager | thu_kho¹ | head_chef |
 | ------------------------------ | :----------: | :------------: | :---------------: | :------: | :-------: |
-| `inventory:read`               |      ✅      |       ✅       |     ✅     |   ✅    |     ✅     |
-| `inventory:write`              |      ✅      |       ✅       |     ✅     |   ✅    |     ❌     |
-| `inventory:transfer_create`    |      ✅      |      ✅\*      |     ✅     |   ❌    |     ✅     |
-| `inventory:transfer_ship`      |      ✅      |       ❌       |     ✅     |   ❌    |     ✅     |
-| `inventory:transfer_receive`   |      ✅      |      ✅\*      |     ✅     |   ✅    |     ✅     |
-| `inventory:stocktake_create`   |      ✅      |       ✅       |     ✅     |   ✅    |     ✅     |
-| `inventory:stocktake_complete` |      ✅      |       ✅       |     ✅     |   ✅    |     ✅     |
-| `inventory:writeoff`           |      ✅      |       ✅       |     ✅     |   ❌    |     ✅     |
-| `inventory:production_create`  |      ✅      |      ✅\*      |     ❌     |   ❌    |     ✅     |
-| `inventory:production_confirm` |      ✅      |      ✅\*      |     ❌     |   ❌    |     ✅     |
-| `procurement:read`             |      ✅      |       ✅       |     ✅     |   ❌    |     ✅     |
-| `procurement:supplier_manage`  |      ✅      |       ✅       |     ✅     |   ❌    |     ❌     |
-| `procurement:po_create`        |      ✅      |       ❌       |     ✅     |   ❌    |     ❌     |
-| `procurement:po_approve`       |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
-| `procurement:grn_create`       |      ✅      |      ✅\*      |     ✅     |   ❌    |     ✅     |
-| `procurement:grn_confirm`      |      ✅      |      ✅\*      |     ✅     |   ❌    |     ✅     |
-| `procurement:invoice_create`   |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
-| `procurement:invoice_match`    |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
-| `menu:read`                    |      ✅      |       ✅       |     ❌     |   ❌    |     ✅     |
-| `menu:write`                   |      ✅      |       ❌       |     ❌     |   ❌    |     ✅     |
+| `inventory:read`               |      ✅      |       ✅       |        ✅         |    ✅    |    ✅     |
+| `inventory:write`              |      ✅      |       ✅       |        ✅         |    ✅    |    ❌     |
+| `inventory:transfer_create`    |      ✅      |      ✅\*      |        ✅         |    ❌    |    ✅     |
+| `inventory:transfer_ship`      |      ✅      |       ❌       |        ✅         |    ❌    |    ✅     |
+| `inventory:transfer_receive`   |      ✅      |      ✅\*      |        ✅         |    ✅    |    ✅     |
+| `inventory:stocktake_create`   |      ✅      |       ✅       |        ✅         |    ✅    |    ✅     |
+| `inventory:stocktake_complete` |      ✅      |       ✅       |        ✅         |    ✅    |    ✅     |
+| `inventory:writeoff`           |      ✅      |       ✅       |        ✅         |    ❌    |    ✅     |
+| `inventory:production_create`  |      ✅      |      ✅\*      |        ❌         |    ❌    |    ✅     |
+| `inventory:production_confirm` |      ✅      |      ✅\*      |        ❌         |    ❌    |    ✅     |
+| `procurement:read`             |      ✅      |       ✅       |        ✅         |    ❌    |    ✅     |
+| `procurement:supplier_manage`  |      ✅      |       ✅       |        ✅         |    ❌    |    ❌     |
+| `procurement:po_create`        |      ✅      |       ❌       |        ✅         |    ❌    |    ❌     |
+| `procurement:po_approve`       |      ✅      |       ❌       |      ⚠️ held      |    ❌    |    ❌     |
+| `procurement:grn_create`       |      ✅      |      ✅\*      |        ✅         |    ❌    |    ✅     |
+| `procurement:grn_confirm`      |      ✅      |      ✅\*      |        ✅         |    ❌    |    ✅     |
+| `procurement:invoice_create`   |      ✅      |       ❌       |      ⚠️ held      |    ❌    |    ❌     |
+| `procurement:invoice_match`    |      ✅      |       ❌       |      ⚠️ held      |    ❌    |    ❌     |
+| `menu:read`                    |      ✅      |       ✅       |        ❌         |    ❌    |    ✅     |
+| `menu:write`                   |      ✅      |       ❌       |        ❌         |    ❌    |    ✅     |
 
 **Legenda:**
 
@@ -163,7 +163,7 @@ lý trường hợp này.
 
 **Contract notes:**
 
-- `branch_manager` không tạo transfer outbound hoặc same-branch transfer; họ nhận inbound về đúng branch và duyệt/apply tiêu hao.
+- `branch_manager` không tạo transfer outbound ra site khác; họ nhận inbound về đúng branch, tạo transfer cùng chi nhánh `Kho CN -> Bếp CN`, và duyệt/apply tiêu hao.
 - `branch_manager` giữ `inventory:transfer_receive` chỉ để nhận inbound về đúng branch của mình.
 - Multi-branch oversight phải đi qua explicit branch grants hoặc tenant-level permission rõ ràng; không có scope trung gian.
 - `head_chef` / `production_manager` sở hữu vòng sản xuất Bếp Trung Tâm: nhận hàng, sản xuất, rồi create/ship transfer thật về Kho CN, và quản trị production recipes.
@@ -175,7 +175,7 @@ lý trường hợp này.
 
 | Dữ liệu                               | Quy tắc                                                                                 |
 | ------------------------------------- | --------------------------------------------------------------------------------------- |
-| On-hand quantity (`stock_levels`)     | `inventory:read` cần. Scope theo branch grant. Owner thấy tenant-wide.                   |
+| On-hand quantity (`stock_levels`)     | `inventory:read` cần. Scope theo branch grant. Owner thấy tenant-wide.                  |
 | WAC / Average unit cost               | Cùng scope với stock_levels; UI có thể ẩn cho branch-level role nếu use case không cần. |
 | Supplier invoice detail               | Cần `procurement:read` + scope branch.                                                  |
 | Production BOM (`production_recipes`) | Cần role production operator + `menu:read` (xem) hoặc `menu:write` (CRUD).              |

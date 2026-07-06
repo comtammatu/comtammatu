@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { Database, Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  staffRoleFromPositionCode,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
@@ -18,7 +22,7 @@ import {
   type PositionTaskRow,
 } from "./position-task-types";
 
-const POSITION_TASK_ROLES: readonly StaffRole[] = ["owner"];
+const POSITION_TASK_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
 
 const taskErrors = messages.hr.client.positionTasks.errors;
 
@@ -42,6 +46,7 @@ const savePositionTasksSchema = z.object({
 
 type PositionTaskDbRow = {
   id: number;
+  position_id: number;
   title: string;
   kind: string;
   applicability: string;
@@ -54,6 +59,10 @@ type PositionTaskDbRow = {
 type ConsumptionDefaultDbRow = {
   position_task_id: number | null;
   ingredient_id: number;
+};
+
+type ProfilePositionDbRow = {
+  position_id: number | null;
 };
 
 type ConsumptionDefaultInsert =
@@ -86,41 +95,52 @@ export async function fetchPositionTasksData(): Promise<
   if (!ctx) return { success: false, error: messages.common.forbidden };
 
   const service = createServiceClient();
-  const [positionsResult, tasksResult, defaultsResult, ingredientsResult] =
-    await Promise.all([
-      service
-        .from("positions")
-        .select("id, code, label_vi")
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .eq("is_active", true)
-        .order("label_vi", { ascending: true }),
-      service
-        .from("position_shift_tasks")
-        .select(
-          "id, position_id, title, kind, applicability, phase, is_required, done_definition, sort_order",
-        )
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true }),
-      service
-        .from("shift_checklist_consumption_default_items")
-        .select("position_task_id, ingredient_id")
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .eq("is_active", true)
-        .not("position_task_id", "is", null),
-      service
-        .from("ingredients")
-        .select("id, name, unit, purchase_unit")
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .eq("is_active", true)
-        .order("name", { ascending: true }),
-    ]);
+  const [
+    positionsResult,
+    tasksResult,
+    defaultsResult,
+    ingredientsResult,
+    profilesResult,
+  ] = await Promise.all([
+    service
+      .from("positions")
+      .select("id, code, label_vi")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("is_active", true)
+      .order("label_vi", { ascending: true }),
+    service
+      .from("position_shift_tasks")
+      .select(
+        "id, position_id, title, kind, applicability, phase, is_required, done_definition, sort_order",
+      )
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    service
+      .from("shift_checklist_consumption_default_items")
+      .select("position_task_id, ingredient_id")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("is_active", true)
+      .not("position_task_id", "is", null),
+    service
+      .from("ingredients")
+      .select("id, name, unit, purchase_unit")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("is_active", true)
+      .order("name", { ascending: true }),
+    service
+      .from("profiles")
+      .select("position_id")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("is_active", true),
+  ]);
 
   if (
     positionsResult.error ||
     tasksResult.error ||
     defaultsResult.error ||
-    ingredientsResult.error
+    ingredientsResult.error ||
+    profilesResult.error
   ) {
     return {
       success: false,
@@ -137,9 +157,9 @@ export async function fetchPositionTasksData(): Promise<
   }
 
   const tasksByPosition: Record<number, PositionTaskRow[]> = {};
-  for (const row of (tasksResult.data ?? []) as (PositionTaskDbRow & {
-    position_id: number;
-  })[]) {
+  const taskPositionIds = new Set<number>();
+  for (const row of (tasksResult.data ?? []) as PositionTaskDbRow[]) {
+    taskPositionIds.add(row.position_id);
     const list = tasksByPosition[row.position_id] ?? [];
     list.push({
       id: row.id,
@@ -159,12 +179,35 @@ export async function fetchPositionTasksData(): Promise<
     tasksByPosition[row.position_id] = list;
   }
 
-  const positions = (positionsResult.data ?? []).map<PositionOption>(
-    (position) => ({
-      id: position.id,
-      code: position.code,
-      label: position.label_vi ?? position.code,
-    }),
+  const activeProfilePositionIds = new Set<number>();
+  for (const row of (profilesResult.data ?? []) as ProfilePositionDbRow[]) {
+    if (row.position_id != null) activeProfilePositionIds.add(row.position_id);
+  }
+
+  const positions = (positionsResult.data ?? []).flatMap<PositionOption>(
+    (position) => {
+      const bucket = staffRoleFromPositionCode(position.code);
+      if (
+        bucket === "unassigned" ||
+        bucket === "owner" ||
+        position.code === "waiter"
+      ) {
+        return [];
+      }
+      if (
+        !activeProfilePositionIds.has(position.id) &&
+        !taskPositionIds.has(position.id)
+      ) {
+        return [];
+      }
+      return [
+        {
+          id: position.id,
+          code: position.code,
+          label: position.label_vi ?? position.code,
+        },
+      ];
+    },
   );
 
   const ingredients = (

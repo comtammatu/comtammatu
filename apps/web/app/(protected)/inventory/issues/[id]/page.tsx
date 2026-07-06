@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { fetchIngredients } from "../../ingredient-actions";
 import { fetchStockIssueDetail } from "../../issue-actions";
@@ -39,6 +40,7 @@ export async function IssueDetailPageContent({
       notes: string | null;
       issued_at: string;
       branch_id: number;
+      source_location_id: number | null;
       source_type: string | null;
       source_ref: unknown;
       branches: {
@@ -52,6 +54,7 @@ export async function IssueDetailPageContent({
       ingredient_id: number;
       quantity: number;
       unit: string;
+      entry_unit_id: number | null;
       unit_cost: number;
       total_cost: number;
       reason: string | null;
@@ -59,9 +62,37 @@ export async function IssueDetailPageContent({
     }>;
   };
   if (routeBranchId != null && d.issue.branch_id !== routeBranchId) notFound();
-  const ingredients: IngredientRow[] = ingredientsRes.success
+  const baseIngredients: IngredientRow[] = ingredientsRes.success
     ? ((ingredientsRes.data ?? []) as IngredientRow[])
     : [];
+  const stockLevelByIngredient = new Map<
+    number,
+    { current_quantity: number; avg_unit_cost: number | null }
+  >();
+  if (d.issue.source_location_id && baseIngredients.length > 0) {
+    const { supabase, claims } = await loadAuthState();
+    const { data: stockLevels } = await supabase
+      .from("stock_levels")
+      .select("ingredient_id, current_quantity, avg_unit_cost")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", d.issue.branch_id)
+      .eq("location_id", d.issue.source_location_id);
+    for (const row of stockLevels ?? []) {
+      stockLevelByIngredient.set(row.ingredient_id, {
+        current_quantity: Number(row.current_quantity ?? 0),
+        avg_unit_cost:
+          row.avg_unit_cost == null ? null : Number(row.avg_unit_cost),
+      });
+    }
+  }
+  const ingredients = baseIngredients.map((ingredient) => {
+    const stockLevel = stockLevelByIngredient.get(ingredient.id);
+    return {
+      ...ingredient,
+      current_quantity: stockLevel?.current_quantity ?? 0,
+      avg_unit_cost: stockLevel?.avg_unit_cost ?? null,
+    };
+  });
   const canAdjustStock = await currentUserHasPermission(
     d.issue.branch_id,
     PERMISSION_KEYS.INVENTORY_WRITE,

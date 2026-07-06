@@ -54,11 +54,11 @@ const CLASSIFIED_FILES = new Map([
   ],
   [
     "apps/web/tests/inventory-rebuild-static.test.ts",
-    "Test vocabulary for the Kho CN -> Bep CN legacy-transfer domain (intra-branch RPC guard, branch-kitchen exclusion, backfill audit); references the live audit script, not dead code.",
+    "Test vocabulary for the Kho CN -> Bep CN transfer domain (intra-branch RPC guard, branch-kitchen stock inclusion, backfill audit); references the live audit script, not dead code.",
   ],
   [
     "apps/web/e2e/inventory/transfer-direction.spec.ts",
-    "E2E asserts the live redirect from the old transfer-create URL (create=cap-bep) to the consumption surface; URL canonicalization for the legacy kitchen-transfer flow, not cruft.",
+    "E2E asserts the live redirect from the old transfer-create URL (create=cap-bep) to the transfer create surface; URL canonicalization for the branch-kitchen transfer flow, not cruft.",
   ],
   [
     "apps/web/tests/inventory-unit-derivation.test.ts",
@@ -67,6 +67,10 @@ const CLASSIFIED_FILES = new Map([
   [
     "apps/web/tests/inventory-unit-system-phase-a2-static.test.ts",
     "Phase A2 unit-conversion static tests; 'legacy' names the live purchase_to_measure_factor backward-compat fallback (positive-guarded, anchorless rows), not dead code.",
+  ],
+  [
+    "apps/web/tests/inventory-entry-unit-atomic-rpcs.test.ts",
+    "Test vocabulary for the GRN amend and legacy GRN movements; references live migration file name and assert strings, not dead code.",
   ],
 ]);
 

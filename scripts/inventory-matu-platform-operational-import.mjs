@@ -85,8 +85,8 @@ function printHelp() {
 
 Builds the operational Inventory import plan:
   - real stock-bearing transfers
-  - branch sale consumption from retired Bep CN transfer-in
-  - balance adjustments so current stock matches matu-platform stock_items
+  - branch kitchen same-branch transfers
+  - balance adjustments so current stock, including Bep CN, matches matu-platform stock_items
 
 Delta mode imports only missing real transfers, GRN receipts, and sale consumption movements up to a fixed cutoff.
 This script does not apply SQL. It writes one transaction file only after blockers are clear.
@@ -446,6 +446,16 @@ function makeTargetIndex(target, tenantId) {
       null
     );
   };
+  const kitchenLocationForBranch = (branchId) => {
+    const list = locationsByBranch.get(branchId) ?? [];
+    return (
+      list.find(
+        (loc) => loc.is_default_consumption && loc.location_kind === "kitchen",
+      ) ??
+      list.find((loc) => loc.location_kind === "kitchen") ??
+      null
+    );
+  };
   const ingredientBySku = new Map(
     ingredients
       .filter((ingredient) => ingredient.sku)
@@ -464,6 +474,7 @@ function makeTargetIndex(target, tenantId) {
     centralSupply,
     ingredientByName,
     ingredientBySku,
+    kitchenLocationForBranch,
     stockLocationForBranch,
   };
 }
@@ -508,7 +519,9 @@ function sourceWarehouseTarget(warehouse, sourceBranchById, targetIndex) {
   const location =
     role === "branch_warehouse" && branch
       ? targetIndex.stockLocationForBranch(branch.id)
-      : null;
+      : role === "branch_kitchen_endpoint" && branch
+        ? targetIndex.kitchenLocationForBranch(branch.id)
+        : null;
   return { branch, location, role };
 }
 
@@ -673,10 +686,27 @@ function classifyTransfer({
 
   if (transfer.status !== "received")
     return { ...base, class: "ignored_not_received" };
-  if (toTarget.role === "branch_kitchen_endpoint")
-    return { ...base, class: "branch_sale_consumption" };
+  if (toTarget.role === "branch_kitchen_endpoint") {
+    if (
+      fromTarget.role === "branch_warehouse" &&
+      fromTarget.branch?.id === toTarget.branch?.id &&
+      fromTarget.location &&
+      toTarget.location
+    ) {
+      return { ...base, class: "branch_kitchen_transfer" };
+    }
+    return { ...base, class: "manual_review_branch_kitchen_inbound" };
+  }
   if (fromTarget.role === "branch_kitchen_endpoint") {
-    return { ...base, class: "ignored_legacy_branch_kitchen_source" };
+    if (
+      toTarget.role === "branch_warehouse" &&
+      fromTarget.branch?.id === toTarget.branch?.id &&
+      fromTarget.location &&
+      toTarget.location
+    ) {
+      return { ...base, class: "branch_kitchen_transfer" };
+    }
+    return { ...base, class: "manual_review_branch_kitchen_source" };
   }
   if (fromTarget.location && toTarget.location) {
     if (
@@ -1033,7 +1063,7 @@ function buildPlan(source, target, options = {}) {
     if (
       classified.class !== "real_transfer" &&
       classified.class !== "kitchen_passthrough_transfer" &&
-      classified.class !== "branch_sale_consumption"
+      classified.class !== "branch_kitchen_transfer"
     ) {
       manualReview.push(sample);
       continue;
@@ -1041,13 +1071,16 @@ function buildPlan(source, target, options = {}) {
 
     if (
       classified.class === "real_transfer" ||
-      classified.class === "kitchen_passthrough_transfer"
+      classified.class === "kitchen_passthrough_transfer" ||
+      classified.class === "branch_kitchen_transfer"
     ) {
       const sourceTransfer = classified.inboundTransfer ?? transfer;
       const transferClass =
         classified.class === "kitchen_passthrough_transfer"
           ? "kitchen_passthrough"
-          : "real_transfer";
+          : classified.class === "branch_kitchen_transfer"
+            ? "branch_kitchen_transfer"
+            : "real_transfer";
       const transferRow = {
         created_at: sourceTransfer.created_at,
         created_by: actor.id,
@@ -1151,7 +1184,7 @@ function buildPlan(source, target, options = {}) {
   }
 
   const desiredStock = new Map();
-  const phantomKitchenStock = [];
+  const branchKitchenStock = [];
   for (const stock of source.stockItems) {
     const quantity = numberValue(stock.quantity);
     if (quantity === 0) continue;
@@ -1166,13 +1199,12 @@ function buildPlan(source, target, options = {}) {
     const value = costValue(quantity, material?.cost_per_unit);
 
     if (targetRef.role === "branch_kitchen_endpoint") {
-      phantomKitchenStock.push({
+      branchKitchenStock.push({
         materialSku: material?.sku ?? null,
         quantity,
         sourceWarehouseCode: warehouse?.code ?? null,
         value,
       });
-      continue;
     }
     if (!targetRef.branch || !targetRef.location || !ingredient) {
       addMissingMaterialRow(
@@ -1290,13 +1322,13 @@ function buildPlan(source, target, options = {}) {
           ),
         ),
       },
-      phantomKitchenStock: {
-        count: phantomKitchenStock.length,
+      branchKitchenStock: {
+        count: branchKitchenStock.length,
         estimatedValue: moneyValue(
-          phantomKitchenStock.reduce((sum, row) => sum + row.value, 0),
+          branchKitchenStock.reduce((sum, row) => sum + row.value, 0),
         ),
         byWarehouse: sumBy(
-          phantomKitchenStock,
+          branchKitchenStock,
           (row) => row.sourceWarehouseCode,
           (row) => row.value,
         ),
@@ -1477,7 +1509,23 @@ function buildRecipePlan(source, target, options = {}) {
       targetIndex,
     );
     if (!outputMaterial || !finishedIngredient) {
-      addMissingMaterialRow(missingRows, outputMaterial, recipe.output_material_id);
+      addMissingMaterialRow(
+        missingRows,
+        outputMaterial,
+        recipe.output_material_id,
+      );
+      continue;
+    }
+    if (
+      finishedIngredient.item_kind !== "finished_good" ||
+      finishedIngredient.is_active === false
+    ) {
+      manualReview.push({
+        class: "manual_review_recipe_output_not_finished_good",
+        finishedGoodId: finishedIngredient.id,
+        itemKind: finishedIngredient.item_kind ?? null,
+        recipeId: recipe.id,
+      });
       continue;
     }
 
@@ -1500,7 +1548,10 @@ function buildRecipePlan(source, target, options = {}) {
         addMissingMaterialRow(missingRows, material, item.material_id);
         continue;
       }
-      if (ingredient.item_kind !== "raw_material" || ingredient.is_active === false) {
+      if (
+        ingredient.item_kind !== "raw_material" ||
+        ingredient.is_active === false
+      ) {
         manualReview.push({
           class: "manual_review_recipe_component_not_raw_material",
           finishedGoodId: finishedIngredient.id,
@@ -2334,8 +2385,8 @@ function printHuman(report) {
   });
   console.log("Sale consumption cost by branch:");
   console.table(report.operationalPlan.saleConsumption.byBranch);
-  console.log("Phantom Bep CN stock excluded:");
-  console.table(report.operationalPlan.phantomKitchenStock.byWarehouse);
+  console.log("Bep CN stock included:");
+  console.table(report.operationalPlan.branchKitchenStock.byWarehouse);
   if (report.manualReview.count > 0) {
     console.log("Manual-review rows:");
     console.table(report.manualReview.samples);
@@ -2607,6 +2658,15 @@ function selfTest() {
         is_active: true,
       },
       {
+        id: 6,
+        tenant_id: 1,
+        branch_id: 2,
+        code: "branch_kitchen",
+        location_kind: "kitchen",
+        is_default_consumption: true,
+        is_active: true,
+      },
+      {
         id: 9,
         tenant_id: 1,
         branch_id: 15,
@@ -2675,10 +2735,9 @@ function selfTest() {
     actorId,
     balanceAt: "2026-06-01T00:00:00Z",
   }).report;
-  assert.equal(blocked.operationalPlan.realTransfers.count, 4);
-  assert.equal(blocked.operationalPlan.saleConsumption.movementRows, 1);
+  assert.equal(blocked.operationalPlan.realTransfers.count, 6);
+  assert.equal(blocked.operationalPlan.saleConsumption.movementRows, 0);
   assert.equal(blocked.manualReview.count, 0);
-  assert.equal(blocked.ignored.byClass.ignored_legacy_branch_kitchen_source, 1);
   assert.equal(blocked.ignored.byClass.ignored_kitchen_passthrough_inbound, 1);
   assert.ok(
     !blocked.blockers.includes("manual review rows require owner decision"),
@@ -2707,16 +2766,15 @@ function selfTest() {
   assert.equal(report.operationalPlan.production.consumptionRows, 1);
   assert.equal(report.operationalPlan.production.outputRows, 1);
   assert.equal(report.ignored.byClass.ignored_grn_not_posted, 1);
-  assert.equal(report.operationalPlan.realTransfers.estimatedCost, 120.36);
-  assert.equal(report.operationalPlan.saleConsumption.estimatedCost, 40.24);
-  assert.equal(report.operationalPlan.saleConsumption.byBranch.DD, 40.24);
+  assert.equal(report.operationalPlan.realTransfers.estimatedCost, 170.6);
+  assert.equal(report.operationalPlan.saleConsumption.estimatedCost, 0);
   const sql = generateSql(sqlRows);
   assert.match(sql, /BEGIN;/);
   assert.match(sql, /grn_receipt/);
+  assert.match(sql, /branch_kitchen_transfer/);
   assert.match(sql, /kitchen_passthrough/);
   assert.match(sql, /production_consumption/);
   assert.match(sql, /production_output/);
-  assert.match(sql, /sale_consumption/);
   assert.match(sql, /balance_adjustment/);
 
   const recipePlan = buildRecipePlan(source, target, {
@@ -2735,15 +2793,17 @@ function selfTest() {
     (row) => `${row.finished_good_id}:${row.ingredient_id}`,
   );
   assert.equal(new Set(recipePairs).size, recipePairs.length);
-  assert.ok(
-    recipePlan.missingRows.some((row) => row.materialSku === "X999"),
-  );
-  assert.ok(
-    !recipePlan.recipeRows.some((row) => row.ingredient_id == null),
-  );
+  assert.ok(recipePlan.missingRows.some((row) => row.materialSku === "X999"));
+  assert.ok(!recipePlan.recipeRows.some((row) => row.ingredient_id == null));
   assert.equal(
     recipePlan.manualReview.filter(
       (row) => row.class === "manual_review_recipe_duplicate_line",
+    ).length,
+    1,
+  );
+  assert.equal(
+    recipePlan.manualReview.filter(
+      (row) => row.class === "manual_review_recipe_output_not_finished_good",
     ).length,
     1,
   );
@@ -2753,9 +2813,13 @@ function selfTest() {
   assert.match(recipesSql, /inventory_entry_unit_code/);
   assert.match(recipesSql, /target_production_recipes_not_empty/);
   assert.equal(
-    buildRecipePlan(source, { ...target, productionRecipes: [{ id: 1 }] }, {
-      allowManualReviewSkip: true,
-    }).blockers.includes("target production_recipes not empty"),
+    buildRecipePlan(
+      source,
+      { ...target, productionRecipes: [{ id: 1 }] },
+      {
+        allowManualReviewSkip: true,
+      },
+    ).blockers.includes("target production_recipes not empty"),
     true,
   );
 
@@ -2768,11 +2832,11 @@ function selfTest() {
     },
   );
   assert.equal(deltaReport.blockers.length, 0);
-  assert.equal(deltaReport.operationalPlan.realTransfers.count, 1);
-  assert.equal(deltaReport.operationalPlan.realTransfers.itemRows, 1);
+  assert.equal(deltaReport.operationalPlan.realTransfers.count, 2);
+  assert.equal(deltaReport.operationalPlan.realTransfers.itemRows, 2);
   assert.equal(deltaReport.operationalPlan.goodsReceipts.movementRows, 1);
-  assert.equal(deltaReport.operationalPlan.saleConsumption.movementRows, 1);
-  assert.equal(deltaReport.operationalPlan.stockMovementRows, 4);
+  assert.equal(deltaReport.operationalPlan.saleConsumption.movementRows, 0);
+  assert.equal(deltaReport.operationalPlan.stockMovementRows, 5);
   assert.equal(
     deltaRows.movements.some((row) => row.type.startsWith("production_")),
     false,
@@ -2894,7 +2958,10 @@ if (args.help) {
         `Cannot write recipes SQL while blockers remain: ${recipePlan.blockers.join("; ")}`,
       );
     }
-    writeFileSync(args.writeRecipesSql, generateRecipesSql(recipePlan.recipeRows));
+    writeFileSync(
+      args.writeRecipesSql,
+      generateRecipesSql(recipePlan.recipeRows),
+    );
     report.recipes.writtenTo = args.writeRecipesSql;
   }
 

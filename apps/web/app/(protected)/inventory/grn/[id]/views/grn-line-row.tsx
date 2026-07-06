@@ -2,7 +2,6 @@
 
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
 import { Item } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -101,7 +100,7 @@ export function LineRow({
             )}
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-3">
           <Stat label={grnCopy.line.importPrice}>
             {inventoryCommon.currency(formatVND(line.cost))}
           </Stat>
@@ -113,7 +112,6 @@ export function LineRow({
           <Stat label={grnCopy.line.priceVariance}>
             <span className={varianceTone}>{variancesLabel}</span>
           </Stat>
-          <Stat label={grnCopy.line.expiry}>{line.expiryDisplay}</Stat>
         </div>
         {line.rejectionReason ? (
           <p className="mt-2 text-xs text-muted-foreground">
@@ -178,7 +176,7 @@ export function LineRow({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           <Field
             id={`actual-${idx}`}
             label={grnCopy.line.actualLabel(line.unit)}
@@ -219,14 +217,6 @@ export function LineRow({
               maxFractionDigits={0}
               value={String(line.cost)}
               onValueChange={(value) => onChange({ cost: Number(value || 0) })}
-            />
-          </Field>
-          <Field id={`expiry-${idx}`} label={grnCopy.line.expiry}>
-            <Input
-              id={`expiry-${idx}`}
-              type="date"
-              value={line.expiry || ""}
-              onChange={(e) => onChange({ expiry: e.target.value })}
             />
           </Field>
         </div>
@@ -328,14 +318,6 @@ export function LineRow({
           </Field>
         ) : null}
 
-        <Field id={`lot-${idx}`} label={grnCopy.line.lot}>
-          <Input
-            id={`lot-${idx}`}
-            value={line.lot}
-            placeholder={inventoryCommon.noValue}
-            onChange={(e) => onChange({ lot: e.target.value })}
-          />
-        </Field>
     </Item>
   );
 }

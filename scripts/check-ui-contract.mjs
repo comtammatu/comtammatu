@@ -1748,7 +1748,6 @@ for (const relPath of OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES) {
 const OPERATOR_EMBEDDED_PAGE_HEADER_FILES = [
   "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
   "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
-  "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx",
   "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
   "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   "apps/web/app/(protected)/inventory/issues/issues-client.tsx",

@@ -6,7 +6,6 @@ import {
   ChevronRight,
   ClipboardCheck,
   FileText,
-  Hourglass,
   LayoutDashboard,
   Package,
   Truck,
@@ -67,7 +66,6 @@ interface QueueRow {
 function buildQueueRows(
   basePath: string,
   counts: Awaited<ReturnType<typeof fetchBranchQueueCounts>>,
-  branchKind: BranchKind,
 ): QueueRow[] {
   const rows: QueueRow[] = [];
   // Central-kind domain rows lead the feed (design contract screens 1+4):
@@ -150,18 +148,6 @@ function buildQueueRows(
       title: branchCopy.queueWasteTitle,
       meta: branchCopy.queueWasteMeta(counts.pendingWaste),
       count: counts.pendingWaste,
-    });
-  }
-  // Expiry queue is a branch-floor job (D066); central sites keep the
-  // expiry surface on the office plane only.
-  if (counts.expiringItems != null && branchKind === "branch") {
-    rows.push({
-      key: "expiry",
-      href: `${basePath}/stock/expiry`,
-      icon: Hourglass,
-      title: branchCopy.queueExpiryTitle,
-      meta: branchCopy.queueExpiryMeta(counts.expiringItems),
-      count: counts.expiringItems,
     });
   }
   return rows;
@@ -267,7 +253,7 @@ export default async function OperatorHomePage({
     ? (unreadResult.data?.count ?? 0)
     : 0;
   const queueRows = queueCounts
-    ? buildQueueRows(basePath, queueCounts, branchKind)
+    ? buildQueueRows(basePath, queueCounts)
     : [];
 
   const workState = await getTodayWorkState();
@@ -435,12 +421,20 @@ export default async function OperatorHomePage({
       </NoteCallout>
     ) : null;
 
+  const isCentralKitchen = branchKind === "central_kitchen";
   const secondaryLinksSection = isCentral || showMoreLink ? (
     <div className="flex flex-wrap items-center justify-center gap-2">
       {isCentral ? (
         <Button asChild variant="outline" size="touch">
           <Link href={`${basePath}/shift/clock`}>
             {branchCopy.centralClockLink}
+          </Link>
+        </Button>
+      ) : null}
+      {isCentralKitchen ? (
+        <Button asChild variant="outline" size="touch">
+          <Link href={`${basePath}/stock/production/recipes`}>
+            Công thức
           </Link>
         </Button>
       ) : null}
@@ -474,6 +468,13 @@ export default async function OperatorHomePage({
           <div key={group.id} className={mainColumnClassName}>
             <EmployeeActionSection
               title={group.title}
+              description={
+                isCentral
+                  ? isCentralSupply
+                    ? branchCopy.centralSupplyTilesDescription
+                    : branchCopy.centralKitchenTilesDescription
+                  : undefined
+              }
               links={group.tiles.map((tile) => ({
                 key: `${group.id}-${tile.moduleKey}-${tile.href}`,
                 href: tile.href,

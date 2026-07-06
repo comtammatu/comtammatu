@@ -114,6 +114,9 @@ const TYPE_FILTER_OPTIONS = [
   { value: "other", label: INVENTORY_VI.issueTypeOther },
 ];
 
+const labelBranchExportSuffix = " xuất";
+const labelBranchExportPrefix = " xuất: ";
+
 const createIssueSchema = z.object({
   branchId: z
     .string()
@@ -908,7 +911,7 @@ export function IssuesClient({
               <SelectField
                 control={form.control}
                 name="branchId"
-                label={`${BRANCH_VI.long} xuất`}
+                label={`${BRANCH_VI.long}${labelBranchExportSuffix}`}
                 placeholder={BRANCH_VI.select}
                 options={branches.map((branch) => ({
                   value: String(branch.id),
@@ -918,7 +921,7 @@ export function IssuesClient({
               />
               {selectedBranch ? (
                 <p className="text-xs text-muted-foreground">
-                  {`${BRANCH_VI.long} xuất: `}
+                  {`${BRANCH_VI.long}${labelBranchExportPrefix}`}
                   <span className="font-medium text-foreground">
                     {selectedBranch.name}
                   </span>

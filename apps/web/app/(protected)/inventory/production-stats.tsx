@@ -44,6 +44,8 @@ interface ProductionStatsProps {
   canManageCatalog: boolean;
   canManageRecipes: boolean;
   onOpenRecipes: () => void;
+  embedded?: boolean;
+  branchId?: number;
 }
 
 export function ProductionStats({
@@ -59,6 +61,8 @@ export function ProductionStats({
   canManageCatalog,
   canManageRecipes,
   onOpenRecipes,
+  embedded = false,
+  branchId,
 }: ProductionStatsProps) {
   const router = useRouter();
   const [quickFinishedGoodDialogOpen, setQuickFinishedGoodDialogOpen] =
@@ -223,7 +227,7 @@ export function ProductionStats({
               </Button>
             ) : readinessState !== "missing-recipe" && canManageCatalog ? (
               <Button type="button" size="sm" variant="outline" asChild>
-                <Link href="/inventory/ingredients">
+                <Link href={embedded && branchId ? `/br/${branchId}/stock/catalog/ingredients` : "/inventory/ingredients"}>
                   {INVENTORY_VI.openIngredientCatalog}
                 </Link>
               </Button>

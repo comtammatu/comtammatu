@@ -26,5 +26,6 @@ export const FORM_VI = {
   required: "Bắt buộc",
   optional: "Tùy chọn",
   actionColumn: "Hành động",
+  max: "Tối đa",
 } as const;
 export type FormKey = keyof typeof FORM_VI;

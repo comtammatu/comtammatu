@@ -1,6 +1,5 @@
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
-  INVENTORY_OPS_ROLES,
   PERMISSION_KEYS,
   type BranchKind,
   type JwtClaims,
@@ -8,7 +7,6 @@ import {
 import { getRegisteredMethods } from "@comtammatu/shared/providers";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import type { loadAuthState } from "@/_lib/auth";
-import { fetchExpiryAlerts } from "@/(protected)/inventory/alert-actions";
 import { ensurePaymentProvidersRegistered } from "@lib/payment-providers-init";
 
 type ServerClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
@@ -201,16 +199,11 @@ export async function fetchBranchDayStatus(
   };
 }
 
-// Mirrors the "critical"/"expired" urgency cutoff in
-// inventory/alert-actions.ts fetchExpiryAlerts (days_remaining <= 3).
-const EXPIRING_SOON_DAYS_REMAINING = 3;
-
 export interface BranchQueueCounts {
   pendingCheckouts: number | null;
   pendingLeaveRequests: number | null;
   pendingCountSlips: number | null;
   pendingWaste: number | null;
-  expiringItems: number | null;
   draftGrns: number | null;
   openPurchaseOrders: number | null;
   draftProductionOrders: number | null;
@@ -285,14 +278,11 @@ export async function fetchBranchQueueCounts(
         })
       : Promise.resolve({ data: false }),
   ]);
-  const showExpiring = INVENTORY_OPS_ROLES.includes(claims.user_role);
-
   const [
     checkoutRes,
     leaveRes,
     countRes,
     wasteRes,
-    expiryRes,
     draftGrnRes,
     openPoRes,
     draftProductionRes,
@@ -332,7 +322,6 @@ export async function fetchBranchQueueCounts(
             .eq("issue_type", "writeoff")
             .eq("approval_status", "pending")
         : Promise.resolve(null),
-      showExpiring ? fetchExpiryAlerts(branchId) : Promise.resolve(null),
       grnPermission.data === true
         ? supabase
             .from("goods_received_notes")
@@ -367,21 +356,11 @@ export async function fetchBranchQueueCounts(
         : Promise.resolve(null),
     ]);
 
-  const expiringItems =
-    expiryRes && expiryRes.success
-      ? ((expiryRes.data ?? []) as Array<{ days_remaining: number }>).filter(
-          (alert) => alert.days_remaining <= EXPIRING_SOON_DAYS_REMAINING,
-        ).length
-      : showExpiring
-        ? 0
-        : null;
-
   return {
     pendingCheckouts: checkoutRes ? (checkoutRes.count ?? 0) : null,
     pendingLeaveRequests: leaveRes ? (leaveRes.count ?? 0) : null,
     pendingCountSlips: countRes ? (countRes.count ?? 0) : null,
     pendingWaste: wasteRes ? (wasteRes.count ?? 0) : null,
-    expiringItems,
     draftGrns: draftGrnRes ? (draftGrnRes.count ?? 0) : null,
     openPurchaseOrders: openPoRes ? (openPoRes.count ?? 0) : null,
     draftProductionOrders: draftProductionRes

@@ -142,13 +142,13 @@ Updated: `2026-06-19`
   2. Trên transfer detail (phiếu `chi nhánh → chi nhánh`), đi đủ máy trạng thái 5 bước tới `confirmed_receive -> received`.
   3. Quay lại dashboard hoặc `/inventory/consumption`, mở danh sách tiêu hao.
   4. Duyệt/apply báo cáo tiêu hao đã submit từ Employee checkout flow.
-  5. Vào `/inventory/stock`, kiểm tồn Kho CN giảm theo `sale_consumption` và không cộng tồn Bếp CN legacy.
+  5. Vào `/inventory/stock`, kiểm Kho CN và Bếp CN đều nằm trong tổng tồn chi nhánh; `sale_consumption` chỉ giảm tồn khi đã ghi phiếu tiêu hao/xuất.
   6. Đối chiếu doanh thu POS/KDS completed với actual consumption đã duyệt.
   7. Cuối ca vào `/inventory/stocktake`, hoàn tất một phiên kiểm kê.
   8. Kiểm `/inventory/expiry` cho lô cần xử lý.
 - `expected next step`:
   - sau `received`, UI phải gợi đủ rõ sang `Tiêu hao` nếu chi nhánh cần chốt nguyên liệu đã dùng;
-  - sau duyệt tiêu hao, user hiểu tồn Kho CN giảm và giá vốn thực tế tăng;
+  - sau duyệt tiêu hao, user hiểu tồn tại location nguồn giảm và giá vốn thực tế tăng;
   - sau stocktake, user hiểu variance/kết quả chốt; conflict/recount S13b không nằm trong daily UI.
 - `handoff`: báo chênh lệch lớn hoặc expiry risk cho OPS/owner
 - `success`:

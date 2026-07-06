@@ -97,7 +97,6 @@ test("shared inventory PageContents route scope-read through resolveInventoryLis
     "stocktake/page.tsx",
     "stocktake/new/page.tsx",
     "issues/page.tsx",
-    "expiry/page.tsx",
     "grn/page.tsx",
     "waste/approvals/page.tsx",
   ];

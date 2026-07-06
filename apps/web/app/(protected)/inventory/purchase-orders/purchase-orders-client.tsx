@@ -69,6 +69,11 @@ const PO_FILTER_KEYS = [
 const poCopy = messages.inventory.po;
 const inventoryShellCopy = messages.inventory.shell;
 
+const columnPoNumber = "Số PO";
+const columnSupplier = "Nhà cung cấp";
+const columnOrderDate = "Ngày đặt";
+const actionView = "Xem";
+
 function formatDate(value: string) {
   return formatVNDate(value);
 }
@@ -181,7 +186,7 @@ export function PurchaseOrdersClient({
   const columns: DataTableColumn<PurchaseOrderRow>[] = [
     {
       key: "po_number",
-      header: "Số PO",
+      header: columnPoNumber,
       className: "min-w-40",
       render: (row) => (
         <span className="font-mono font-medium">
@@ -191,7 +196,7 @@ export function PurchaseOrdersClient({
     },
     {
       key: "supplier",
-      header: "Nhà cung cấp",
+      header: columnSupplier,
       className: "min-w-52",
       render: (row) => (
         <span className="text-muted-foreground">
@@ -209,7 +214,7 @@ export function PurchaseOrdersClient({
     },
     {
       key: "ordered_at",
-      header: "Ngày đặt",
+      header: columnOrderDate,
       className: "min-w-32",
       render: (row) => (
         <span
@@ -241,7 +246,7 @@ export function PurchaseOrdersClient({
       render: (row) => (
         <Button asChild size="sm" variant="outline">
           <Link href={`${purchaseOrdersBasePath}/${row.id}`}>
-            Xem
+            {actionView}
             <IconArrowRight className="size-4" />
           </Link>
         </Button>

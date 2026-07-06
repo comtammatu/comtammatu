@@ -10,7 +10,7 @@ export const CENTRAL_HOME_TILE_SUFFIXES: Partial<
     "/stock",
     "/stock/stocktake",
     "/stock/transfer",
-    "/stock/supplier-returns",
+    "/stock/catalog",
   ],
   central_kitchen: [
     "/stock",

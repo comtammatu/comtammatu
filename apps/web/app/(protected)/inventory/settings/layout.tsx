@@ -70,12 +70,6 @@ export default async function InventorySettingsLayout({
     });
   }
 
-  sectionItems.push({
-    href: "/inventory/settings/expiry",
-    label: tRoute("/inventory/settings/expiry", "tab"),
-    icon: "expiry",
-  });
-
   if (canManageCatalog) {
     sectionItems.push({
       href: "/inventory/settings/thresholds",

@@ -66,7 +66,7 @@ test("operator inventory work routes expose touch progress steps", () => {
   assert.match(recipePanel, /groupedRecipes\.length === 0/);
   assert.match(recipePanel, /embedded\?: boolean/);
   assert.match(recipePanel, /actionSize=\{embedded \? "touch" : "default"\}/);
-  assert.match(recipePanel, /size=\{embedded \? "touch" : "sm"\}/);
+  assert.match(recipePanel, /size=\{embedded \? "icon-touch" : "sm"\}/);
   assert.match(messageSource, /productionRecipeSteps/);
 });
 

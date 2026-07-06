@@ -1,10 +1,11 @@
 import type { TenantSupabase } from "./types";
 
 type ResolveEntryUnitCodeResult =
-  | { success: true; unit: string }
+  | { success: true; unit: string; toBaseFactor: number }
   | { success: false; error: string };
 
 type IngredientUnitCodeRow = {
+  to_base_factor: number | string | null;
   units: { code: string | null } | null;
 };
 
@@ -22,7 +23,7 @@ export async function resolveEntryUnitCode(
 ): Promise<ResolveEntryUnitCodeResult> {
   const query = supabase
     .from("ingredient_units")
-    .select("units!ingredient_units_unit_tenant_fkey(code)")
+    .select("to_base_factor, units!ingredient_units_unit_tenant_fkey(code)")
     .eq("tenant_id", tenantId)
     .eq("ingredient_id", ingredientId)
     .eq("is_active", true);
@@ -43,7 +44,8 @@ export async function resolveEntryUnitCode(
 
   const row = data as unknown as IngredientUnitCodeRow;
   const unit = row.units?.code?.trim();
-  return unit
-    ? { success: true, unit }
+  const toBaseFactor = Number(row.to_base_factor ?? 1);
+  return unit && Number.isFinite(toBaseFactor) && toBaseFactor > 0
+    ? { success: true, unit, toBaseFactor }
     : { success: false, error: "Đơn vị không thuộc nguyên liệu." };
 }

@@ -29,8 +29,9 @@ import {
 } from "@/components/data-table/data-table";
 import { matchesSearch } from "@lib/search";
 import type { BranchForTransfer } from "./create-transfer-dialog";
-import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import { AppPage, AppPageHeader, AppToolbar, AppEmptyState } from "@/components/surface";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
+import { ItemGroup } from "@comtammatu/ui/components/item";
 import { StatusBadge } from "@/components/status-badge";
 import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import { messages } from "@lib/messages";
@@ -57,6 +58,10 @@ export interface TransferListRow {
 export type TransferTab = "receive" | "dispatch" | "history";
 
 const copy = messages.inventory.transfer;
+
+const requestGoodsLabel = "Yêu cầu hàng";
+const shippedLabelPrefix = "Xuất: ";
+const receivedLabelPrefix = "Nhận: ";
 
 const TAB_LABELS: Record<TransferTab, string> = {
   receive: copy.list.tabs.receive,
@@ -139,6 +144,7 @@ export function TransfersListClient({
   pageTitle?: string;
   embedded?: boolean;
 }) {
+  const isOperator = basePath.startsWith("/br/");
   const isBranchManager = userRole === "branch_manager";
   const userBranchKind =
     userBranchId == null
@@ -168,7 +174,7 @@ export function TransfersListClient({
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<TransferTab>(initialTab);
 
-  const createLabel = isBranchManager ? "Yêu cầu hàng" : copy.createSlip;
+  const createLabel = isBranchManager ? requestGoodsLabel : copy.createSlip;
   const pageTitle = pageTitleOverride ?? copy.internalTransferTitle;
   const tabLabels: Record<TransferTab, string> = TAB_LABELS;
   const createPathBase = createBasePath ?? basePath;
@@ -302,9 +308,9 @@ export function TransfersListClient({
       className: "text-sm text-muted-foreground",
       render: (r) =>
         r.shipped_at
-          ? `Xuất: ${formatVNDate(r.shipped_at)}`
+          ? `${shippedLabelPrefix}${formatVNDate(r.shipped_at)}`
           : r.received_at
-            ? `Nhận: ${formatVNDate(r.received_at)}`
+            ? `${receivedLabelPrefix}${formatVNDate(r.received_at)}`
             : "—",
     },
     {
@@ -321,19 +327,17 @@ export function TransfersListClient({
     },
   ];
 
-  const content = (
-    <>
-      {embedded ? (
+  if (isOperator) {
+    return (
+      <div className="flex w-full flex-col gap-3">
         <OperatorFlowSteps
           title={operatorFlow.transferListTitle}
           description={operatorFlow.transferListDescription}
           steps={operatorFlow.transferSteps}
           currentStep={1}
         />
-      ) : null}
 
-      {embedded ? (
-        canReceiveSupplier || canCreate ? (
+        {canReceiveSupplier || canCreate ? (
           <div className="flex justify-end gap-2">
             {canReceiveSupplier ? (
               <Button size="touch" asChild>
@@ -356,94 +360,148 @@ export function TransfersListClient({
               </Button>
             ) : null}
           </div>
-        ) : null
-      ) : (
-        <AppPageHeader
-          eyebrow={messages.inventory.shell.moduleName}
-          title={pageTitle}
-          actions={
-            canCreate ? (
-              <Button size="sm" asChild>
-                <Link href={createHref}>
-                  <IconPlus data-icon="inline-start" />
-                  {createLabel}
-                </Link>
-              </Button>
-            ) : undefined
+        ) : null}
+
+        <AppToolbar
+          variant="inline"
+          className="items-stretch sm:items-center"
+          search={
+            <InputGroup className="min-h-12 w-full">
+              <InputGroupAddon>
+                <IconSearch />
+              </InputGroupAddon>
+              <InputGroupInput
+                type="search"
+                placeholder={copy.list.searchPlaceholder}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <InputGroupAddon align="inline-end">
+                <InputGroupText>
+                  {searchFiltered.length} / {rows.length}
+                </InputGroupText>
+              </InputGroupAddon>
+            </InputGroup>
           }
         />
-      )}
-      <AppToolbar
-        variant={embedded ? "inline" : "card"}
-        className="items-stretch sm:items-center"
-        search={
-          <InputGroup className="min-h-10 w-full sm:h-10 sm:flex-1">
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="search"
-              placeholder={copy.list.searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <InputGroupAddon align="inline-end">
-              <InputGroupText>
-                {searchFiltered.length} / {rows.length}
-              </InputGroupText>
-            </InputGroupAddon>
-          </InputGroup>
-        }
-        filters={
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => setActiveTab(value as TransferTab)}
-          >
-            <TabsList variant="toolbar" className="p-1">
-              {(Object.keys(tabLabels) as TransferTab[]).map((tab) => {
-                return (
-                  <TabsTrigger
-                    key={tab}
-                    value={tab}
-                    className="min-h-9 min-w-0"
-                  >
-                    {tabLabels[tab]}
-                    {tabCounts[tab] > 0 && (
-                      <Badge variant="secondary" className="ml-1.5 font-mono">
-                        {tabCounts[tab]}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </Tabs>
-        }
-      />
 
-      <DataTable
-        className="md:rounded-md md:border"
-        columns={columns}
-        data={searchFiltered}
-        getRowKey={(r) => r.id}
-        emptyTitle={emptyTitle}
-        emptyDescription={emptyDescription}
-        emptyMode={search ? "no-results" : "no-data"}
-        emptyIcon={emptyIcon}
-        mobileCardRender={(r) => (
-          <MobileTransferCard row={r} tab={activeTab} href={detailHref(r.id)} />
+        {searchFiltered.length === 0 ? (
+          <AppEmptyState
+            compact
+            title={emptyTitle}
+            description={emptyDescription}
+            icon={emptyIcon}
+          />
+        ) : (
+          <ItemGroup className="gap-2 p-0 rounded-none border-0">
+            {searchFiltered.map((r) => (
+              <MobileTransferCard
+                key={r.id}
+                row={r}
+                tab={activeTab}
+                href={detailHref(r.id)}
+              />
+            ))}
+          </ItemGroup>
         )}
-      />
-    </>
+      </div>
+    );
+  }
+
+  const desktopCreateAction = canCreate ? (
+    <Button size="sm" asChild>
+      <Link href={createHref}>
+        <IconPlus data-icon="inline-start" />
+        {createLabel}
+      </Link>
+    </Button>
+  ) : null;
+
+  const desktopToolbar = (
+    <AppToolbar
+      variant="card"
+      className="items-stretch sm:items-center"
+      search={
+        <InputGroup className="min-h-10 w-full sm:h-10 sm:flex-1">
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            type="search"
+            placeholder={copy.list.searchPlaceholder}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupText>
+              {searchFiltered.length} / {rows.length}
+            </InputGroupText>
+          </InputGroupAddon>
+        </InputGroup>
+      }
+      filters={
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as TransferTab)}
+        >
+          <TabsList variant="toolbar" className="p-1">
+            {(Object.keys(tabLabels) as TransferTab[]).map((tab) => {
+              return (
+                <TabsTrigger
+                  key={tab}
+                  value={tab}
+                  className="min-h-9 min-w-0"
+                >
+                  {tabLabels[tab]}
+                  {tabCounts[tab] > 0 && (
+                    <Badge variant="secondary" className="ml-1.5 font-mono">
+                      {tabCounts[tab]}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </Tabs>
+      }
+    />
+  );
+
+  const desktopTable = (
+    <DataTable
+      className="md:rounded-md md:border"
+      columns={columns}
+      data={searchFiltered}
+      getRowKey={(r) => r.id}
+      emptyTitle={emptyTitle}
+      emptyDescription={emptyDescription}
+      emptyMode={search ? "no-results" : "no-data"}
+      emptyIcon={emptyIcon}
+      mobileCardRender={(r) => (
+        <MobileTransferCard row={r} tab={activeTab} href={detailHref(r.id)} />
+      )}
+    />
   );
 
   if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
+    return (
+      <div className="flex w-full flex-col gap-3">
+        <div className="flex justify-end">{desktopCreateAction}</div>
+        {desktopToolbar}
+        {desktopTable}
+      </div>
+    );
   }
 
   return (
     <AppPage width="xwide" density="compact">
-      {content}
+      <AppPageHeader
+        eyebrow={messages.inventory.shell.moduleName}
+        title={pageTitle}
+        actions={desktopCreateAction}
+      />
+      {desktopToolbar}
+      {desktopTable}
     </AppPage>
   );
 }

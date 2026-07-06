@@ -2,7 +2,7 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: baseline inline Vietnamese copy in order detail sheet */
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
@@ -136,6 +136,8 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
   // 20260520010000_audit_log_completeness.sql added the table to the
   // supabase_realtime publication; order_items is not in the publication
   // (see 20260428000000_pos_realtime_publication.sql) so we refetch it too.
+  const initialSubscribeSeenRef = useRef(false);
+
   useRealtimeChannel(
     (supabase) =>
       supabase
@@ -153,9 +155,31 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
             loadItems(orderId);
           },
         )
-        .subscribe(),
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          if (!initialSubscribeSeenRef.current) {
+            initialSubscribeSeenRef.current = true;
+            return;
+          }
+          loadAudit(orderId);
+          loadItems(orderId);
+        }),
     [orderId, loadAudit, loadItems],
   );
+
+  // Tab visibility reconnect backstop
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadAudit(orderId);
+        loadItems(orderId);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [orderId, loadAudit, loadItems]);
 
   const hasDiscount = order.discount_amount > 0;
   const hasTax = order.tax_amount > 0;

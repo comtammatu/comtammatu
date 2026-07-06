@@ -234,6 +234,11 @@ export function PosDesktopProvider({
     dailyLimitStoreRef.current = createDailyLimitStore(initialDailyLimits);
   }
   const dailyLimitStore = dailyLimitStoreRef.current;
+
+  useEffect(() => {
+    dailyLimitStore.setAll(initialDailyLimits);
+  }, [initialDailyLimits, dailyLimitStore]);
+
   const [archivedToken, setArchivedToken] = useState(0);
   // Default OFF; the device preference loads after mount to avoid a
   // hydration mismatch. Without persistence the alert channel silently

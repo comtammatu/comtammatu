@@ -6,6 +6,7 @@ import {
   currentUserHasPermissionAny,
 } from "@/_lib/permissions";
 import { InventoryShell } from "./_components/inventory-shell";
+import { BranchOpsRefresh } from "@/(protected)/br/[branchId]/(operator)/branch-ops-refresh";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 import {
@@ -34,7 +35,8 @@ export default async function InventoryLayout({
     hasProductionPermission,
     hasProductionBranchAccess,
     canApproveWaste,
-    canManageCounts,
+    canAssignCounts,
+    canApproveCounts,
   ] = await Promise.all([
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
     currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
@@ -42,10 +44,8 @@ export default async function InventoryLayout({
     currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
     hasCurrentProductionBranchAccess(supabase, claims),
     currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_WASTE_APPROVE),
-    currentUserHasAnyPermissionAny([
-      PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
-      PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-    ]),
+    currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN),
+    currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_COUNT_APPROVE),
   ]);
   const isOwner = claims.user_role === "owner";
   const showProcurement =
@@ -60,24 +60,30 @@ export default async function InventoryLayout({
   const showWasteApprovals = isOwner || canApproveWaste;
 
   return (
-    <InventoryShell
-      user={{
-        name:
-          session.user.user_metadata?.["display_name"] ??
-          session.user.email ??
-          "",
-      }}
-      userRole={claims.user_role}
-      showProcurement={showProcurement}
-      showProduction={showProduction}
-      showCatalogManagement={isOwner || canManageCatalog}
-      showSettings={isOwner || canOpenSettings}
-      showWasteApprovals={showWasteApprovals}
-      showCountManagement={isOwner || canManageCounts}
-      allowedBranches={scope.allowedBranches}
-      defaultBranchId={scope.selectedBranchId}
-    >
-      {children}
-    </InventoryShell>
+    <>
+      {scope.selectedBranchId && (
+        <BranchOpsRefresh branchId={scope.selectedBranchId} />
+      )}
+      <InventoryShell
+        user={{
+          name:
+            session.user.user_metadata?.["display_name"] ??
+            session.user.email ??
+            "",
+        }}
+        userRole={claims.user_role}
+        showProcurement={showProcurement}
+        showProduction={showProduction}
+        showCatalogManagement={isOwner || canManageCatalog}
+        showSettings={isOwner || canOpenSettings}
+        showWasteApprovals={showWasteApprovals}
+        showCountAssignments={isOwner || canAssignCounts}
+        showCountSlips={isOwner || canApproveCounts}
+        allowedBranches={scope.allowedBranches}
+        defaultBranchId={scope.selectedBranchId}
+      >
+        {children}
+      </InventoryShell>
+    </>
   );
 }

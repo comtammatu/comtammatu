@@ -8,8 +8,10 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
+import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
+import type { TenantSupabase } from "./_lib/types";
 
 const ROLES = INVENTORY_OPS_ROLES;
 
@@ -48,6 +50,33 @@ const fetchStockIssuesSchema = z.object({
   status: z.string().optional(),
   issueTypes: z.array(z.string()).optional(),
 });
+
+async function resolveIssueSourceLocation(
+  supabase: TenantSupabase,
+  tenantId: number,
+  branchId: number,
+  issueType: string,
+): Promise<number | null> {
+  if (issueType === "consumption") {
+    const { data, error } = await supabase
+      .from("inventory_locations")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("branch_id", branchId)
+      .eq("location_kind", "kitchen")
+      .eq("is_active", true)
+      .order("is_default_consumption", { ascending: false })
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data?.id) return data.id;
+  }
+
+  return resolveDefaultInventoryLocation(supabase, tenantId, branchId, "issue");
+}
 
 export async function fetchStockIssues(opts?: {
   branchId?: number;
@@ -107,12 +136,15 @@ export const createStockIssueDraft = withAction(
     }
 
     const issueNumber = `PXK-${randomUUID().slice(0, 8)}`;
-    const sourceLocationId = await resolveDefaultInventoryLocation(
+    const sourceLocationId = await resolveIssueSourceLocation(
       supabase,
       claims.tenant_id,
       d.branchId,
-      "issue",
+      d.issueType,
     );
+    if (!sourceLocationId) {
+      return { success: false, error: "Chưa cấu hình vị trí xuất kho." };
+    }
 
     // kitchen_use is not a valid stock-issue reason; sale usage posts as consumption.
     // target_location_id is always NULL for single-site issues.
@@ -170,7 +202,7 @@ export async function fetchStockIssueDetail(
     supabase
       .from("stock_issue_items")
       .select(
-        "id, ingredient_id, quantity, unit, unit_cost, total_cost, reason, ingredients ( id, name, unit, purchase_unit )",
+        "id, ingredient_id, quantity, unit, entry_unit_id, unit_cost, total_cost, reason, ingredients ( id, name, unit, purchase_unit )",
       )
       .eq("issue_id", id.data)
       .eq("tenant_id", claims.tenant_id)
@@ -204,6 +236,19 @@ export async function fetchStockIssueDetail(
 export const upsertStockIssueLine = withAction(
   { roles: ROLES, schema: issueLineSchema, requireBranchScope: true },
   async (d, { supabase, claims }) => {
+    const { data: issue } = await supabase
+      .from("stock_issues")
+      .select("branch_id, source_location_id, status")
+      .eq("id", d.issueId)
+      .eq("tenant_id", claims.tenant_id)
+      .maybeSingle();
+    if (!issue || issue.status !== "draft") {
+      return {
+        success: false,
+        error: "Chỉ có thể lưu dòng khi phiếu còn ở trạng thái nháp.",
+      };
+    }
+
     const resolvedUnit = await resolveEntryUnitCode(supabase, {
       tenantId: claims.tenant_id,
       ingredientId: d.ingredientId,
@@ -212,8 +257,41 @@ export const upsertStockIssueLine = withAction(
     if (!resolvedUnit.success) {
       return { success: false, error: resolvedUnit.error };
     }
-    // unit_cost is populated by confirm_stock_issue RPC from WAC at confirm
-    // time; DEFAULT 0 applies on this draft-only INSERT.
+    let stockLevel: {
+      avg_unit_cost: number | null;
+      current_quantity: number | null;
+    } | null = null;
+    if (issue.source_location_id) {
+      const stockLevelRes = await supabase
+        .from("stock_levels")
+        .select("avg_unit_cost, current_quantity")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", issue.branch_id)
+        .eq("location_id", issue.source_location_id)
+        .eq("ingredient_id", d.ingredientId)
+        .maybeSingle();
+      if (stockLevelRes.error) {
+        return {
+          success: false,
+          error: "Không thể tải WAG cho dòng phiếu xuất.",
+        };
+      }
+      stockLevel = stockLevelRes.data;
+    }
+    const unitCost = Number(stockLevel?.avg_unit_cost ?? 0);
+    const requestedBaseQuantity = getIssueBaseQuantity(
+      d.quantity,
+      resolvedUnit,
+    );
+    const availableQuantity = Number(stockLevel?.current_quantity ?? 0);
+    if (
+      issue.source_location_id &&
+      requestedBaseQuantity > availableQuantity + 1e-9
+    ) {
+      return { success: false, error: "Số lượng vượt tồn hiện tại." };
+    }
+
+    // confirm_stock_issue rewrites this from WAC again at commit time.
     const { error } = await supabase.from("stock_issue_items").upsert(
       {
         tenant_id: claims.tenant_id,
@@ -222,6 +300,7 @@ export const upsertStockIssueLine = withAction(
         quantity: d.quantity,
         unit: resolvedUnit.unit,
         entry_unit_id: d.entryUnitId ?? null,
+        unit_cost: Number.isFinite(unitCost) ? unitCost : 0,
         reason: d.reason ?? null,
       },
       { onConflict: "issue_id,ingredient_id,tenant_id" },

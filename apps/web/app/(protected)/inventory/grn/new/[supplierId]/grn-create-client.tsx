@@ -23,10 +23,12 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetFooter,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from "@comtammatu/ui/components/sheet";
 import {
   Select,
@@ -117,7 +119,7 @@ const GRN_CREATE_COPY = {
   panelEmptyTitle: "Chưa chọn mặt hàng",
   panelEmptyDescription: "Chọn một nguyên liệu ở danh sách để sửa thông tin.",
   optionalNote: "Ghi chú (tùy chọn)",
-  notePlaceholder: "Tình trạng, lô, nhiệt độ...",
+  notePlaceholder: "Tình trạng, nhiệt độ...",
   addedSummary: (lineCount: number) => `Đã thêm ${lineCount} mặt hàng`,
   saveDraft: (lineCount: number, total: number) =>
     `Lưu phiếu nháp · ${lineCount} mặt hàng · ${formatVND(total)}`,
@@ -129,6 +131,17 @@ const GRN_CREATE_COPY = {
   lastCost: (value: number, unit: string) => `${formatVND(value)}/${unit}`,
   varianceWarning: (variance: number) =>
     `Giá chênh ${(variance * 100).toFixed(0)}% so với lần trước — kiểm tra lại trước khi lưu.`,
+  currencySuffix: "đ",
+  branchUnselected: "Chưa chọn kho nhận",
+  toastChooseBranch: "Chưa có kho nhận hàng cho phiếu nhập.",
+  toastCreateDraftFailed: "Không thể tạo phiếu nháp.",
+  toastSaveLineFailed: "Không lưu được dòng.",
+  toastDeleteLineFailed: "Không xóa được dòng.",
+  toastDiscardDraftTitle: "Xóa phiếu nháp này?",
+  toastDiscardDraftDesc: "Các dòng đã nhập sẽ mất.",
+  toastDiscardDraftFailed: "Không thể hủy phiếu nháp.",
+  toastNoLines: "Phiếu chưa có dòng nào.",
+  labelQuantity: (unit: string) => `Số lượng (${unit})`,
 };
 
 type EditState = {
@@ -219,7 +232,7 @@ export function GrnCreateClient({
   async function ensureServerDraft(): Promise<number | null> {
     if (serverGrnId !== null) return serverGrnId;
     if (!branchId) {
-      setSubmitError("Chưa có kho nhận hàng cho phiếu nhập.");
+      setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
       return null;
     }
     const created = await createGrnDraft({
@@ -227,7 +240,7 @@ export function GrnCreateClient({
       branchId,
     });
     if (!created.success) {
-      setSubmitError(created.error ?? "Không thể tạo phiếu nháp.");
+      setSubmitError(created.error ?? GRN_CREATE_COPY.toastCreateDraftFailed);
       return null;
     }
     const id = (created.data as { id: number } | undefined)?.id ?? null;
@@ -294,7 +307,7 @@ export function GrnCreateClient({
         qualityStatus: "accepted",
       });
       if (!lineRes.success) {
-        setSubmitError(lineRes.error ?? "Không lưu được dòng.");
+        setSubmitError(lineRes.error ?? GRN_CREATE_COPY.toastSaveLineFailed);
         return;
       }
       const lineId = (lineRes.data as { id: number } | undefined)?.id ?? 0;
@@ -336,7 +349,7 @@ export function GrnCreateClient({
         lineId: target.lineId,
       });
       if (!res.success) {
-        setSubmitError(res.error ?? "Không xóa được dòng.");
+        setSubmitError(res.error ?? GRN_CREATE_COPY.toastDeleteLineFailed);
         return;
       }
     }
@@ -345,15 +358,15 @@ export function GrnCreateClient({
 
   async function discardDraft() {
     const ok = await confirm({
-      title: "Xóa phiếu nháp này?",
-      description: "Các dòng đã nhập sẽ mất.",
+      title: GRN_CREATE_COPY.toastDiscardDraftTitle,
+      description: GRN_CREATE_COPY.toastDiscardDraftDesc,
       variant: "destructive",
     });
     if (!ok) return;
     if (serverGrnId !== null) {
       const res = await discardGrnDraft({ grnId: serverGrnId });
       if (!res.success) {
-        setSubmitError(res.error ?? "Không thể hủy phiếu nháp.");
+        setSubmitError(res.error ?? GRN_CREATE_COPY.toastDiscardDraftFailed);
         return;
       }
     }
@@ -362,11 +375,11 @@ export function GrnCreateClient({
 
   async function submit() {
     if (draft.lines.length === 0) {
-      setSubmitError("Phiếu chưa có dòng nào.");
+      setSubmitError(GRN_CREATE_COPY.toastNoLines);
       return;
     }
     if (!branchId) {
-      setSubmitError("Chưa có kho nhận hàng cho phiếu nhập.");
+      setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
       return;
     }
     setSubmitting(true);
@@ -395,9 +408,10 @@ export function GrnCreateClient({
   const canSubmit = lineCount > 0 && !submitting;
   const branchLocked = serverGrnId !== null;
   const showWarehousePicker = canSwitchBranch && procurementBranches.length > 1;
+  const showWarehouseEditor = showWarehousePicker && !branchLocked;
   const selectedBranchName =
     procurementBranches.find((branch) => branch.id === branchId)?.name ??
-    (branchId ? `#${branchId}` : "Chưa chọn kho nhận");
+    (branchId ? `#${branchId}` : GRN_CREATE_COPY.branchUnselected);
 
   const warehouseField = (
     <div className="flex flex-col gap-1.5">
@@ -427,9 +441,57 @@ export function GrnCreateClient({
     </div>
   );
 
+  const documentSummary = (
+    <AppSection
+      size="sm"
+      title={messages.inventory.grn.documentLabel}
+      action={
+        showWarehouseEditor ? (
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size={embedded ? "touch" : "sm"}
+              >
+                {ACTIONS_VI.edit}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="max-h-dvh-95 p-0">
+              <SheetHeader>
+                <SheetTitle>{messages.inventory.grn.receivingWarehouse}</SheetTitle>
+              </SheetHeader>
+              <div className="px-3 py-3 sm:px-4">{warehouseField}</div>
+              <SheetFooter>
+                <Button type="button" size="touch-lg" asChild>
+                  <SheetClose>{ACTIONS_VI.close}</SheetClose>
+                </Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+        ) : undefined
+      }
+    >
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="rounded-md bg-muted/50 px-3 py-2">
+          <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+            {messages.inventory.grn.supplier}
+          </p>
+          <p className="truncate text-sm font-semibold">{supplier.name}</p>
+        </div>
+        <div className="rounded-md bg-muted/50 px-3 py-2">
+          <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+            {messages.inventory.grn.receivingWarehouse}
+          </p>
+          <p className="truncate text-sm font-semibold">{selectedBranchName}</p>
+        </div>
+      </div>
+    </AppSection>
+  );
+
   const listColumn = (
     <>
-      {warehouseField}
+      {documentSummary}
       {lineCount > 0 ? (
         <AppSection size="sm" contentClassName="gap-2">
           <div className="flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -636,7 +698,7 @@ export function GrnCreateClient({
       <NumberPadSheet
         open={numpad === "qty"}
         onOpenChange={(next) => setNumpad(next ? "qty" : null)}
-        title={`Số lượng (${edit?.unit ?? ""})`}
+        title={GRN_CREATE_COPY.labelQuantity(edit?.unit ?? "")}
         initialValue={edit?.quantity ?? 0}
         suffix={edit?.unit ?? ""}
         onConfirm={(value) =>
@@ -651,7 +713,7 @@ export function GrnCreateClient({
         onOpenChange={(next) => setNumpad(next ? "cost" : null)}
         title={GRN_CREATE_COPY.unitCostTitle}
         initialValue={edit?.unitCost ?? 0}
-        suffix="đ"
+        suffix={GRN_CREATE_COPY.currencySuffix}
         onConfirm={(value) =>
           setEdit((current) =>
             current ? { ...current, unitCost: value } : current,

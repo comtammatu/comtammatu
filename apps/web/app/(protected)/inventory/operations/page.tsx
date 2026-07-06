@@ -67,6 +67,7 @@ export default async function OperationsPage({
     tabsList.push({ value: "grn", label: "Phiếu nhập kho" });
   }
 
+  tabsList.push({ value: "consumption", label: "Tiêu hao / xuất bán" });
   tabsList.push({ value: "issues", label: "Xuất kho nội bộ" });
 
   if (showProduction) {
@@ -114,6 +115,15 @@ export default async function OperationsPage({
         searchParams={searchParams}
         embedded={true}
         basePath="/inventory/grn"
+      />
+    );
+  } else if (activeTab === "consumption") {
+    tabContent = (
+      <IssuesPageContent
+        searchParams={searchParams}
+        scope="consumption"
+        listBasePath="/inventory/consumption"
+        embedded={true}
       />
     );
   } else if (activeTab === "issues") {

@@ -14,7 +14,7 @@ export default async function InventoryThresholdsPage() {
   );
   if (!canEdit) {
     // Fail closed: page is gated by inventory:write.
-    redirect("/inventory/settings/expiry");
+    redirect("/inventory/settings");
   }
 
   const res = await fetchIngredients();

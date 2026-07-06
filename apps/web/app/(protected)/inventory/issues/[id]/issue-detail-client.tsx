@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -16,6 +16,11 @@ import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+} from "@comtammatu/ui/components/input-group";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -30,11 +35,12 @@ import {
   ItemFooter,
   ItemHeader,
   ItemTitle,
+  ItemGroup,
 } from "@comtammatu/ui/components/item";
 import {
   Combobox,
+  FormattedNumberInput,
   FormDialog,
-  NumberField,
   TextareaField,
 } from "@/components/form";
 import {
@@ -65,7 +71,11 @@ import {
   upsertStockIssueLine,
 } from "../../issue-actions";
 import {
+  clampIssueEntryQuantity,
+  formatIssueMaxEntryQuantity,
   getDefaultIssueUnit,
+  getIssueBaseQuantity,
+  getIssueMaxEntryQuantity,
   getIssueUnitOptions,
 } from "../../_lib/issue-units";
 import type { IngredientRow } from "../../page";
@@ -73,7 +83,14 @@ import type { IngredientRow } from "../../page";
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 
 const ISSUES_VI = messages.inventory.issues;
+const stockCopy = messages.inventory.stock;
+const inventoryCommon = messages.inventory.common;
 const historySectionTitle = "Lịch sử chỉnh sửa";
+
+type IssueIngredientRow = IngredientRow & {
+  current_quantity?: number;
+  avg_unit_cost?: number | null;
+};
 
 type IssueRecord = {
   id: number;
@@ -93,6 +110,7 @@ type IssueLine = {
   ingredient_id: number;
   quantity: number;
   unit: string;
+  entry_unit_id: number | null;
   unit_cost: number;
   total_cost: number;
   reason: string | null;
@@ -100,7 +118,7 @@ type IssueLine = {
 };
 
 type AddIssueLineDialogProps = {
-  ingredients: IngredientRow[];
+  ingredients: IssueIngredientRow[];
   isOpen: boolean;
   issueId: number;
   onOpenChange: (open: boolean) => void;
@@ -178,7 +196,7 @@ export function IssueDetailClient({
   issueId: number;
   initialIssue: IssueRecord;
   initialLines: IssueLine[];
-  ingredients: IngredientRow[];
+  ingredients: IssueIngredientRow[];
   canAdjustStock: boolean;
   auditLogs?: AuditLogRow[];
   listBasePath?: string;
@@ -197,10 +215,27 @@ export function IssueDetailClient({
   const statusBadge = getStatusBadgeMeta("inventory", issue.status);
   const issueBranchName =
     issue.branches?.name ?? ISSUES_VI.branchRef(issue.branch_id);
+  const ingredientById = useMemo(
+    () => new Map(ingredients.map((ingredient) => [ingredient.id, ingredient])),
+    [ingredients],
+  );
+  const lineBaseQuantity = useCallback(
+    (line: IssueLine) => {
+      const issueUnit = getIssueUnitOptions(
+        ingredientById.get(line.ingredient_id),
+      ).find((option) => option.unitId === line.entry_unit_id);
+      return Number(line.quantity ?? 0) * (issueUnit?.toBaseFactor ?? 1);
+    },
+    [ingredientById],
+  );
+  const lineAmount = useCallback(
+    (line: IssueLine) => lineBaseQuantity(line) * Number(line.unit_cost ?? 0),
+    [lineBaseQuantity],
+  );
 
   const totalAmount = useMemo(
-    () => lines.reduce((sum, line) => sum + Number(line.total_cost ?? 0), 0),
-    [lines],
+    () => lines.reduce((sum, line) => sum + lineAmount(line), 0),
+    [lineAmount, lines],
   );
 
   async function reload() {
@@ -331,7 +366,7 @@ export function IssueDetailClient({
       key: "total",
       header: FORM_VI.amount,
       className: "text-right font-bold",
-      render: (line) => formatVND(Number(line.total_cost ?? 0)),
+      render: (line) => formatVND(lineAmount(line)),
     },
     {
       key: "reason",
@@ -435,6 +470,7 @@ export function IssueDetailClient({
                     embedded={embedded}
                     isDraft={isDraft}
                     isPending={isPending}
+                    amount={lineAmount(item)}
                     onDelete={handleDeleteLine}
                   />
                 )}
@@ -510,7 +546,9 @@ export function IssueDetailClient({
                   term: ISSUES_VI.totalValue,
                   description: (
                     <span className="text-primary font-bold">
-                      {messages.inventory.common.currency(formatVND(totalAmount))}
+                      {messages.inventory.common.currency(
+                        formatVND(totalAmount),
+                      )}
                     </span>
                   ),
                 },
@@ -537,7 +575,7 @@ export function IssueDetailClient({
               variant="ghost"
               size={embedded ? "touch" : "default"}
               onClick={handleCancelIssue}
-              className="text-destructive hover:bg-destructive/8 hover:text-destructive disabled:opacity-60"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-60"
               disabled={isPending}
             >
               <IconX className="size-5" />
@@ -571,11 +609,218 @@ export function IssueDetailClient({
     </div>
   );
 
+  const mobileLayout = (
+    <div className="flex flex-col gap-4">
+      {/* 1. Tổng quan xuất kho */}
+      <AppSection title={ISSUES_VI.overviewTab} size="sm">
+        <DescriptionList
+          className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm"
+          descriptionClassName="font-semibold text-right"
+          items={[
+            {
+              term: ISSUES_VI.businessKindLabel,
+              description: surface.label,
+            },
+            {
+              term: `${BRANCH_VI.long} xuất`,
+              description: issueBranchName,
+            },
+            {
+              term: ISSUES_VI.totalLines,
+              description: String(lines.length).padStart(2, "0"),
+            },
+            {
+              term: ISSUES_VI.sourceLabel,
+              description: getIssueSourceLabel(issue),
+            },
+            {
+              term: ISSUES_VI.totalValue,
+              description: (
+                <span className="text-primary font-bold">
+                  {messages.inventory.common.currency(formatVND(totalAmount))}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </AppSection>
+
+      {/* Ghi chú nếu có */}
+      {issue.notes ? (
+        <AppSection
+          title={surface.noteLabel}
+          size="sm"
+          collapsible
+          defaultOpen={false}
+        >
+          <p className="break-words text-sm text-muted-foreground">
+            {issue.notes}
+          </p>
+        </AppSection>
+      ) : null}
+
+      {/* 2. Danh sách sản phẩm */}
+      <AppSection
+        title={tTerm("ingredientsList")}
+        description={
+          isDraft
+            ? ISSUES_VI.draftAutoSaveHint
+            : ISSUES_VI.finalizedReadOnlyHint
+        }
+        action={
+          isDraft ? (
+            <Button
+              onClick={() => setAddDialogOpen(true)}
+              size="touch"
+              className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
+            >
+              <IconCirclePlus className="size-4" />
+              {ISSUES_VI.addLinePrefixed(
+                tTerm("ingredient", "button").toLowerCase(),
+              )}
+            </Button>
+          ) : canAdjustStock && lines.length > 0 ? (
+            <DocumentStockCorrectionDialog
+              documentType="issue"
+              documentId={issue.id}
+              documentCode={issue.issue_number}
+              branchOptions={[
+                {
+                  id: issue.branch_id,
+                  name:
+                    issue.branches?.name ??
+                    ISSUES_VI.branchRef(issue.branch_id),
+                },
+              ]}
+              itemOptions={lines.map((line) => ({
+                ingredientId: line.ingredient_id,
+                name: line.ingredients?.name ?? `#${line.ingredient_id}`,
+                unit: line.unit ?? line.ingredients?.unit ?? "",
+              }))}
+            />
+          ) : null
+        }
+        size="sm"
+      >
+        {lines.length === 0 ? (
+          <AppEmptyState
+            mode="no-data"
+            title={
+              isDraft
+                ? ISSUES_VI.emptyLinesDraftTitle
+                : ISSUES_VI.emptyLinesTitle(surface.label)
+            }
+            description={
+              isDraft
+                ? ISSUES_VI.emptyLinesDraftDescription(
+                    surface.confirmAction.toLowerCase(),
+                  )
+                : ISSUES_VI.emptyLinesFinalizedDescription
+            }
+            compact
+          />
+        ) : (
+          <ItemGroup className="gap-2 p-0 rounded-none border-0">
+            {lines.map((item) => (
+              <IssueLineMobileCard
+                key={item.id}
+                item={item}
+                embedded={embedded}
+                isDraft={isDraft}
+                isPending={isPending}
+                amount={lineAmount(item)}
+                onDelete={handleDeleteLine}
+              />
+            ))}
+          </ItemGroup>
+        )}
+
+        {lines.length > 0 && (
+          <Item
+            variant="outline"
+            className="mt-4 flex-col items-stretch gap-2 p-3 text-sm bg-muted/30"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">
+                {ISSUES_VI.totalLinesColon}
+              </span>
+              <span className="font-bold">
+                {String(lines.length).padStart(2, "0")}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">
+                {ISSUES_VI.goodsSubtotalColon}
+              </span>
+              <span className="font-bold">{formatVND(totalAmount)}</span>
+            </div>
+            <div className="flex items-center justify-between border-t border-border pt-2">
+              <span className="font-bold">{ISSUES_VI.grandTotalCaps}</span>
+              <span className="font-mono font-semibold text-primary">
+                {messages.inventory.common.currency(formatVND(totalAmount))}
+              </span>
+            </div>
+          </Item>
+        )}
+      </AppSection>
+
+      {/* 3. Lịch sử */}
+      <AppSection
+        title={historySectionTitle}
+        size="sm"
+        collapsible
+        defaultOpen={false}
+      >
+        <AuditHistoryList logs={auditLogs} />
+      </AppSection>
+
+      {/* 4. Action Footer */}
+      {isDraft ? (
+        <AppDetailFooter
+          sticky
+          leading={
+            <Button
+              type="button"
+              variant="ghost"
+              size="touch"
+              onClick={handleCancelIssue}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-60"
+              disabled={isPending}
+            >
+              <IconX className="size-5" />
+              {ISSUES_VI.cancelIssueAction}
+            </Button>
+          }
+          trailing={
+            <>
+              <Button type="button" variant="secondary" size="touch" disabled>
+                {ISSUES_VI.draftAutoSaved}
+              </Button>
+              <Button
+                type="button"
+                size="touch-lg"
+                onClick={handleConfirmIssue}
+                disabled={isPending || lines.length === 0}
+                className="transition-transform hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <IconCircleCheck className="size-5" />
+                {surface.confirmAction}
+              </Button>
+            </>
+          }
+        />
+      ) : null}
+    </div>
+  );
+
   const embeddedContent = (
     <>
       <div className="flex items-center gap-2">
         <Button asChild variant="ghost" size="icon" className="shrink-0">
-          <Link href={listBasePath} aria-label={tRoute("/inventory/consumption")}>
+          <Link
+            href={listBasePath}
+            aria-label={tRoute("/inventory/consumption")}
+          >
             <IconArrowLeft className="size-4" />
           </Link>
         </Button>
@@ -595,7 +840,7 @@ export function IssueDetailClient({
           {statusBadge.label}
         </Badge>
       </div>
-      {pageLayout}
+      {mobileLayout}
 
       <AddIssueLineDialog
         ingredients={ingredients}
@@ -708,6 +953,27 @@ function AddIssueLineDialog({
         );
         const issueUnitOptions = getIssueUnitOptions(selectedIngredient);
         const entryUnitId = form.watch("entryUnitId");
+        const selectedIssueUnit = issueUnitOptions.find(
+          (option) => String(option.unitId) === entryUnitId,
+        );
+        const quantityValue = form.watch("quantity");
+        const quantity = Number(quantityValue || 0);
+        const quantityError = form.formState.errors.quantity;
+        const baseQuantity = getIssueBaseQuantity(quantity, selectedIssueUnit);
+        const wac = Number(
+          selectedIngredient?.avg_unit_cost ??
+            selectedIngredient?.unit_cost ??
+            0,
+        );
+        const availableQuantity = Number(
+          selectedIngredient?.current_quantity ?? 0,
+        );
+        const maxEntryQuantity = getIssueMaxEntryQuantity(
+          availableQuantity,
+          selectedIssueUnit,
+        );
+        const maxQuantityValue = formatIssueMaxEntryQuantity(maxEntryQuantity);
+        const previewValue = baseQuantity * (Number.isFinite(wac) ? wac : 0);
         return (
           <>
             <Field data-invalid={!!ingredientError}>
@@ -725,6 +991,18 @@ function AddIssueLineDialog({
                   form.setValue(
                     "entryUnitId",
                     defaultUnit ? String(defaultUnit.unitId) : "",
+                  );
+                  const nextMaxEntryQuantity = getIssueMaxEntryQuantity(
+                    Number(ingredient?.current_quantity ?? 0),
+                    defaultUnit,
+                  );
+                  form.setValue(
+                    "quantity",
+                    clampIssueEntryQuantity(
+                      form.watch("quantity"),
+                      nextMaxEntryQuantity,
+                    ),
+                    { shouldValidate: true },
                   );
                 }}
                 options={ingredients
@@ -745,15 +1023,44 @@ function AddIssueLineDialog({
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <NumberField
-                control={form.control}
-                name="quantity"
-                label={ISSUES_VI.quantityLabel}
-                maxFractionDigits={3}
-                placeholder="0"
-                className={embedded ? "h-12" : undefined}
-                required
-              />
+              <Field data-invalid={!!quantityError}>
+                <FieldLabel htmlFor="issue-line-quantity">
+                  {ISSUES_VI.quantityLabel} *
+                </FieldLabel>
+                <InputGroup className={embedded ? "h-12" : "h-10"}>
+                  <FormattedNumberInput
+                    id="issue-line-quantity"
+                    maxFractionDigits={3}
+                    value={quantityValue}
+                    onValueChange={(value) =>
+                      form.setValue(
+                        "quantity",
+                        clampIssueEntryQuantity(value, maxEntryQuantity),
+                        { shouldValidate: true },
+                      )
+                    }
+                    placeholder="0"
+                    className="h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-1 dark:bg-transparent"
+                  />
+                  {maxQuantityValue ? (
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton
+                        type="button"
+                        onClick={() =>
+                          form.setValue("quantity", maxQuantityValue, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                            shouldValidate: true,
+                          })
+                        }
+                      >
+                        {FORM_VI.max}
+                      </InputGroupButton>
+                    </InputGroupAddon>
+                  ) : null}
+                </InputGroup>
+                {quantityError ? <FieldError errors={[quantityError]} /> : null}
+              </Field>
 
               {issueUnitOptions.length > 0 ? (
                 <Field>
@@ -763,11 +1070,25 @@ function AddIssueLineDialog({
                   <Select
                     value={entryUnitId ?? ""}
                     onValueChange={(value) => {
-                      form.setValue("entryUnitId", value);
+                      form.setValue("entryUnitId", value, {
+                        shouldValidate: true,
+                      });
                       const opt = issueUnitOptions.find(
                         (o) => String(o.unitId) === value,
                       );
                       if (!opt) form.setValue("entryUnitId", "");
+                      const nextMaxEntryQuantity = getIssueMaxEntryQuantity(
+                        availableQuantity,
+                        opt,
+                      );
+                      form.setValue(
+                        "quantity",
+                        clampIssueEntryQuantity(
+                          form.watch("quantity"),
+                          nextMaxEntryQuantity,
+                        ),
+                        { shouldValidate: true },
+                      );
                     }}
                   >
                     <SelectTrigger
@@ -806,8 +1127,40 @@ function AddIssueLineDialog({
               )}
             </div>
 
-            <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-              {ISSUES_VI.wacAutoHint}
+            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+              <div className="grid gap-2 text-sm sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    {ISSUES_VI.unitCostWac}
+                  </p>
+                  <p className="font-mono font-semibold tabular-nums">
+                    {wac > 0 ? formatVND(wac) : inventoryCommon.noValue}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    {stockCopy.table.availableStock}
+                  </p>
+                  <p className="font-mono font-semibold tabular-nums">
+                    {selectedIngredient
+                      ? `${formatQty(availableQuantity)} ${selectedIngredient.unit}`
+                      : inventoryCommon.noValue}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    {FORM_VI.value}
+                  </p>
+                  <p className="font-mono font-semibold tabular-nums text-primary">
+                    {previewValue > 0
+                      ? formatVND(previewValue)
+                      : inventoryCommon.noValue}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {ISSUES_VI.wacAutoHint}
+              </p>
             </div>
 
             <TextareaField
@@ -830,12 +1183,14 @@ function IssueLineMobileCard({
   embedded,
   isDraft,
   isPending,
+  amount,
   onDelete,
 }: {
   item: IssueLine;
   embedded?: boolean;
   isDraft: boolean;
   isPending: boolean;
+  amount: number;
   onDelete: (lineId: number) => void;
 }) {
   return (
@@ -884,9 +1239,7 @@ function IssueLineMobileCard({
           </div>
           <div>
             <p className="text-muted-foreground">{FORM_VI.amount}</p>
-            <p className="font-semibold text-primary">
-              {formatVND(Number(item.total_cost ?? 0))}
-            </p>
+            <p className="font-semibold text-primary">{formatVND(amount)}</p>
           </div>
         </div>
       </ItemContent>

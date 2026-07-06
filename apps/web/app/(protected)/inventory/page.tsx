@@ -3,7 +3,6 @@ import { loadInventoryDashboardData } from "./_lib/dashboard-data";
 import { resolveRequestedBranchId } from "./_lib/inventory-scope";
 export type {
   BranchOption,
-  ExpiryAlertRow,
   IngredientRow,
   ReorderAlertRow,
 } from "./_lib/types";

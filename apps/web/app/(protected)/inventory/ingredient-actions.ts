@@ -1,6 +1,8 @@
 "use server";
 
+import { cache } from "react";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { VALIDATION_VI } from "@comtammatu/shared/messages";
@@ -66,7 +68,6 @@ const ingredientBaseSchema = z.object({
   storage_type: z
     .enum(["ambient", "refrigerated", "frozen"])
     .default("ambient"),
-  shelf_life_days: z.coerce.number().int().positive().optional(),
   units: z.array(unitRowSchema).min(1, { error: "Cần ít nhất 1 đơn vị" }),
 });
 
@@ -167,28 +168,51 @@ function rpcCatalogArgs(
     p_min_stock_level: data.min_stock_level,
     p_max_stock_level: (data.max_stock_level ?? null) as never,
     p_reorder_point: (data.reorder_point ?? null) as never,
-    p_shelf_life_days: (data.shelf_life_days ?? null) as never,
+    p_shelf_life_days: null as never,
     p_units: buildRpcUnits(data.units) as never,
   };
 }
 
 /* ─── fetchIngredients (full catalog — SM manages it; ops view by workflow) ─── */
 
-export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
+const getIngredientsCached = cache(
+  async (
+    supabase: SupabaseClient,
+    tenantId: number,
+    limit: number,
+    updatedSince?: string,
+  ) => {
+    let query = supabase
+      .from("ingredients")
+      .select(
+        "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+      )
+      .eq("tenant_id", tenantId);
+
+    if (updatedSince) {
+      query = query.gt("updated_at", updatedSince);
+    }
+
+    return query.order("name").limit(limit);
+  },
+);
+
+export async function fetchIngredients(
+  limit = 2000,
+  updatedSince?: string,
+): Promise<ActionResult> {
   const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
   const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 5000);
 
-  const { data, error } = await supabase
-    .from("ingredients")
-    .select(
-      "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("name")
-    .limit(safeLimit);
+  const { data, error } = await getIngredientsCached(
+    supabase,
+    claims.tenant_id,
+    safeLimit,
+    updatedSince,
+  );
 
   if (error) {
     return { success: false, error: "Không thể tải danh sách nguyên liệu." };
@@ -197,7 +221,8 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
   const rows = (data ?? []).map((row) => {
     const { ingredient_categories, ingredient_units, ...rest } = row;
     const units: IngredientUnitRow[] = (ingredient_units ?? [])
-      .map((u) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((u: any) => ({
         id: u.id,
         unit_id: u.unit_id,
         unit_code: u.units?.code ?? "",
@@ -212,7 +237,8 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
         allow_production: u.allow_production,
         sort_order: u.sort_order,
       }))
-      .sort((a, b) => a.sort_order - b.sort_order);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .sort((a: any, b: any) => a.sort_order - b.sort_order);
 
     return {
       ...rest,
@@ -458,7 +484,6 @@ interface ExportIngredientRow {
   max_stock_level: number | null;
   reorder_point: number | null;
   storage_type: string;
-  shelf_life_days: number | null;
   is_active: boolean;
   units: {
     unit_code: string;
@@ -491,7 +516,6 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
         { header: "Tồn tối đa", key: "max_stock_level", width: 14 },
         { header: "Điểm đặt hàng", key: "reorder_point", width: 14 },
         { header: "Bảo quản", key: "storage_label", width: 14 },
-        { header: "Hạn dùng (ngày)", key: "shelf_life_days", width: 14 },
         { header: "Hoạt động", key: "is_active", width: 12 },
       ],
       rows: rows.map((r) => ({
@@ -507,7 +531,6 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
         max_stock_level: r.max_stock_level ?? "",
         reorder_point: r.reorder_point ?? "",
         storage_label: STORAGE_LABELS[r.storage_type] ?? r.storage_type,
-        shelf_life_days: r.shelf_life_days ?? "",
         is_active: r.is_active ? "Có" : "Không",
       })),
     },
@@ -558,7 +581,7 @@ export async function exportIngredients(
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "name, sku, purchase_unit, measure_unit, purchase_to_measure_factor, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+      "name, sku, purchase_unit, measure_unit, purchase_to_measure_factor, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("name");
@@ -581,7 +604,6 @@ export async function exportIngredients(
       r.max_stock_level != null ? Number(r.max_stock_level) : null,
     reorder_point: r.reorder_point != null ? Number(r.reorder_point) : null,
     storage_type: r.storage_type ?? "ambient",
-    shelf_life_days: r.shelf_life_days,
     is_active: r.is_active ?? true,
     units: (r.ingredient_units ?? [])
       .slice()
@@ -642,7 +664,6 @@ const importIngredientRowSchema = z.object({
   storage_type: z
     .enum(["ambient", "refrigerated", "frozen"])
     .default("ambient"),
-  shelf_life_days: z.coerce.number().int().positive().optional(),
   is_active: z.boolean().default(true),
 });
 
@@ -790,9 +811,6 @@ export async function importIngredients(
     const reorder = parseOptionalNumber(
       raw["Điểm đặt hàng"] ?? raw["reorder_point"],
     );
-    const shelfLife = parseOptionalNumber(
-      raw["Hạn dùng (ngày)"] ?? raw["shelf_life_days"],
-    );
     const conversionRaw =
       raw["Tỉ lệ quy đổi"] ?? raw["purchase_to_measure_factor"];
 
@@ -812,7 +830,6 @@ export async function importIngredients(
       max_stock_level: maxStock,
       reorder_point: reorder,
       storage_type: storageKey,
-      shelf_life_days: shelfLife,
       is_active: parseBool(raw["Hoạt động"] ?? raw["is_active"]),
     });
 
@@ -856,7 +873,6 @@ export async function importIngredients(
       max_stock_level: row.max_stock_level ?? null,
       reorder_point: row.reorder_point ?? null,
       storage_type: row.storage_type,
-      shelf_life_days: row.shelf_life_days ?? null,
     })),
   });
 
@@ -903,7 +919,6 @@ export async function downloadIngredientTemplate(): Promise<ActionResult> {
       max_stock_level: 10000,
       reorder_point: 2000,
       storage_type: "ambient",
-      shelf_life_days: 365,
       is_active: true,
       units: [
         {

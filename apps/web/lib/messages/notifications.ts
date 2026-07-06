@@ -33,6 +33,7 @@ export const notifications = {
     "inventory.stock_low": "Tồn kho thấp",
     "inventory.expiry_soon": "Sắp hết hạn",
     "system.test": "Thông báo thử",
+    "system.cron_failed": "Lỗi tác vụ tự động (Cron)",
   } as Record<string, string>,
   time: {
     justNow: "vừa xong",

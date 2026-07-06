@@ -1,141 +1,11 @@
 "use server";
 
 import type { ActionResult } from "@comtammatu/shared/types";
-import {
-  addVNDateDays,
-  diffVNDateDays,
-  getVNDateString,
-} from "@comtammatu/shared/time";
 import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContext } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
-/* ─── Inventory alerts (low-stock / expiry / reorder) ─── */
-
-export async function fetchExpiryAlerts(
-  branchId?: number,
-): Promise<ActionResult> {
-  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  let query = supabase
-    .from("grn_items")
-    .select(
-      `
-      id,
-      unit,
-      batch_number,
-      expiry_date,
-      goods_received_notes!inner (
-        branch_id,
-        grn_number,
-        status,
-        branches ( name, branch_kind )
-      ),
-      ingredients ( id, name )
-    `,
-    )
-    .eq("goods_received_notes.status", "confirmed")
-    .not("expiry_date", "is", null)
-    .lte("expiry_date", addVNDateDays(getVNDateString(), 7))
-    .eq("tenant_id", claims.tenant_id)
-    .order("expiry_date", { ascending: true });
-
-  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
-    query = query.eq("goods_received_notes.branch_id", claims.branch_id);
-  } else if (branchId) {
-    query = query.eq("goods_received_notes.branch_id", branchId);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error("[inventory/alert-actions:fetchExpiryAlerts] Fetch expiry alerts error:", error);
-    return { success: false, error: "Không thể tải cảnh báo hạn sử dụng." };
-  }
-
-  const today = getVNDateString();
-
-  const alerts = (data ?? [])
-    .filter((item) => {
-      // Skip items where ingredient join failed — write-off requires valid ingredient_id
-      const ing = item.ingredients as unknown as { id: number } | null;
-      return ing != null && ing.id > 0;
-    })
-    .map((item) => {
-      const daysRemaining = diffVNDateDays(today, item.expiry_date as string);
-
-      const grn = item.goods_received_notes as unknown as {
-        grn_number: string;
-        branch_id: number;
-        branches: {
-          name: string;
-          branch_kind?: string | null;
-        } | null;
-      };
-
-      let urgency: "expired" | "critical" | "warning";
-      if (daysRemaining <= 0) {
-        urgency = "expired";
-      } else if (daysRemaining <= 3) {
-        urgency = "critical";
-      } else {
-        urgency = "warning";
-      }
-
-      const ingredient = item.ingredients as unknown as {
-        id: number;
-        name: string;
-      };
-
-      return {
-        ingredient_id: ingredient.id,
-        ingredient_name: ingredient.name,
-        grn_item_id: Number(item.id),
-        unit: String(item.unit),
-        batch_number: item.batch_number,
-        expiry_date: item.expiry_date,
-        grn_number: grn.grn_number,
-        branch_id: grn.branch_id,
-        branch_name: grn.branches ? getBranchSiteDisplayName(grn.branches) : "",
-        days_remaining: daysRemaining,
-        urgency,
-      };
-    });
-
-  // Exclude lots already written off — a non-cancelled writeoff stock_issue
-  // whose source_ref points at this grn_item — so the alert clears once the
-  // expiry write-off is created.
-  const grnItemIds = alerts.map((a) => a.grn_item_id);
-  if (grnItemIds.length === 0) {
-    return { success: true, data: alerts };
-  }
-
-  const { data: writeoffs } = await supabase
-    .from("stock_issues")
-    .select("source_ref")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("issue_type", "writeoff")
-    .neq("status", "cancelled")
-    .not("source_ref", "is", null);
-
-  const writtenOffGrnItemIds = new Set(
-    (writeoffs ?? [])
-      .map(
-        (w) =>
-          (w.source_ref as unknown as { grn_item_id?: number } | null)
-            ?.grn_item_id,
-      )
-      .filter((id): id is number => id != null),
-  );
-
-  return {
-    success: true,
-    data: alerts.filter((a) => !writtenOffGrnItemIds.has(a.grn_item_id)),
-  };
-}
+/* ─── Inventory alerts (low-stock / reorder) ─── */
 
 /* ─── fetchReorderAlerts ─── */
 
@@ -219,4 +89,3 @@ export async function fetchReorderAlerts(
 
   return { success: true, data: alerts };
 }
-

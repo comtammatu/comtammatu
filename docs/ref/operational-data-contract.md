@@ -38,45 +38,45 @@ nguồn dữ liệu.
 
 Khi thêm metric hoặc card mới, định nghĩa tối thiểu:
 
-| Trường | Ý nghĩa |
-| ------ | ------- |
-| `contract_key` | Key tiếng Anh ổn định, ví dụ `finance.revenue.money_collected`. |
-| `ui_label_vi` | Nhãn tiếng Việt ngắn gọn hiển thị cho người dùng. |
-| `owner_question` | Câu hỏi vận hành mà số liệu trả lời. |
-| `scope` | Tenant, branch, POS session, date range, hay snapshot hiện tại. |
-| `formula` | Công thức hoặc rule tính, gồm đơn vị và thời gian bucket. |
-| `source_of_truth` | Bảng/RPC/view/action sở hữu dữ liệu thật. |
-| `exclusions` | Những thứ không được tính vào số này. |
-| `freshness` | Realtime, theo request, snapshot ngày, hay cần đối soát thủ công. |
-| `confidence` | `trusted`, `needs_review`, `estimated`, `blocked`. |
-| `permission` | Quyền hoặc role tối thiểu để xem. |
-| `drilldown` | Route/action giải thích số hoặc xử lý ngoại lệ. |
+| Trường            | Ý nghĩa                                                           |
+| ----------------- | ----------------------------------------------------------------- |
+| `contract_key`    | Key tiếng Anh ổn định, ví dụ `finance.revenue.money_collected`.   |
+| `ui_label_vi`     | Nhãn tiếng Việt ngắn gọn hiển thị cho người dùng.                 |
+| `owner_question`  | Câu hỏi vận hành mà số liệu trả lời.                              |
+| `scope`           | Tenant, branch, POS session, date range, hay snapshot hiện tại.   |
+| `formula`         | Công thức hoặc rule tính, gồm đơn vị và thời gian bucket.         |
+| `source_of_truth` | Bảng/RPC/view/action sở hữu dữ liệu thật.                         |
+| `exclusions`      | Những thứ không được tính vào số này.                             |
+| `freshness`       | Realtime, theo request, snapshot ngày, hay cần đối soát thủ công. |
+| `confidence`      | `trusted`, `needs_review`, `estimated`, `blocked`.                |
+| `permission`      | Quyền hoặc role tối thiểu để xem.                                 |
+| `drilldown`       | Route/action giải thích số hoặc xử lý ngoại lệ.                   |
 
 Nếu chưa đủ các trường này, UI chỉ được hiển thị dạng việc cần xử lý hoặc trạng
 thái chưa đủ dữ liệu; không được gọi là KPI chính thức.
 
 ## Trạng thái tin cậy của số liệu
 
-| `confidence` | Nghĩa | Quy tắc hiển thị |
-| ------------ | ----- | ---------------- |
-| `trusted` | Đã có source of truth và công thức khớp module contract. | Có thể là KPI chính. |
-| `needs_review` | Có dữ liệu thật nhưng đang cần người duyệt hoặc đối soát. | Hiển thị như ngoại lệ/queue, không gọi là kết quả cuối. |
-| `estimated` | Công thức suy ra từ định mức, snapshot, hoặc nguồn chưa đầy đủ. | Phải ghi rõ `ước tính` hoặc chuyển thành supporting context. |
-| `blocked` | Thiếu source, migration, quyền, hoặc policy/config chưa được khai báo. | Không tạo card KPI; chỉ ghi blocker cụ thể. |
+| `confidence`   | Nghĩa                                                                  | Quy tắc hiển thị                                             |
+| -------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `trusted`      | Đã có source of truth và công thức khớp module contract.               | Có thể là KPI chính.                                         |
+| `needs_review` | Có dữ liệu thật nhưng đang cần người duyệt hoặc đối soát.              | Hiển thị như ngoại lệ/queue, không gọi là kết quả cuối.      |
+| `estimated`    | Công thức suy ra từ định mức, snapshot, hoặc nguồn chưa đầy đủ.        | Phải ghi rõ `ước tính` hoặc chuyển thành supporting context. |
+| `blocked`      | Thiếu source, migration, quyền, hoặc policy/config chưa được khai báo. | Không tạo card KPI; chỉ ghi blocker cụ thể.                  |
 
 ## Ranh giới thuật ngữ tài chính
 
 Các khái niệm dưới đây không được dùng thay thế nhau:
 
-| Khái niệm | Nghĩa chuẩn | Không được lẫn với |
-| --------- | ----------- | ------------------ |
-| Tiền đã thu | Tổng tiền đã nhận qua thanh toán hoàn tất. | HĐĐT đã phát hành, doanh thu trước VAT, công nợ. |
-| Doanh thu ròng trước VAT / doanh thu thuần | Giá trị bán hàng sau giảm giá/hoàn tiền, trước thuế GTGT; đây là mẫu số margin F&B. | Tiền mặt trong két, tổng thanh toán gồm VAT, HĐĐT đã phát hành. |
-| HĐĐT đã phát hành | Hóa đơn điện tử bán ra đã được provider/CQT xử lý theo trạng thái. | Doanh thu vận hành nếu đơn chưa/không xuất HĐĐT. |
-| Giá trị tồn kho | Snapshot giá trị tồn hiện tại theo `stock_levels` và WAC/giá vốn fallback. | Chi phí trong kỳ, tiền đã chi cho NCC. |
-| Giá vốn món / food cost | Chi phí nguyên liệu thực tế đã được quản lý duyệt/apply từ tiêu hao bán hàng. | Recipe theoretical cost, chi vận hành, hóa đơn NCC, hoặc PO chưa nhận hàng. |
-| Chi vận hành | Chi phí HKD đã ghi nhận trong kỳ, không gồm direct ingredient COGS. | Giá vốn món, thanh toán NCC cho nguyên liệu nếu đang tính COGS riêng. |
-| Lãi gộp | Doanh thu trước VAT sau giảm giá trừ giá vốn món/food cost. | Lợi nhuận ròng, dòng tiền, lợi nhuận kế toán doanh nghiệp. |
+| Khái niệm                                  | Nghĩa chuẩn                                                                         | Không được lẫn với                                                          |
+| ------------------------------------------ | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Tiền đã thu                                | Tổng tiền đã nhận qua thanh toán hoàn tất.                                          | HĐĐT đã phát hành, doanh thu trước VAT, công nợ.                            |
+| Doanh thu ròng trước VAT / doanh thu thuần | Giá trị bán hàng sau giảm giá/hoàn tiền, trước thuế GTGT; đây là mẫu số margin F&B. | Tiền mặt trong két, tổng thanh toán gồm VAT, HĐĐT đã phát hành.             |
+| HĐĐT đã phát hành                          | Hóa đơn điện tử bán ra đã được provider/CQT xử lý theo trạng thái.                  | Doanh thu vận hành nếu đơn chưa/không xuất HĐĐT.                            |
+| Giá trị tồn kho                            | Snapshot giá trị tồn hiện tại theo `stock_levels` và WAC/giá vốn fallback.          | Chi phí trong kỳ, tiền đã chi cho NCC.                                      |
+| Giá vốn món / food cost                    | Chi phí nguyên liệu thực tế đã được quản lý duyệt/apply từ tiêu hao bán hàng.       | Recipe theoretical cost, chi vận hành, hóa đơn NCC, hoặc PO chưa nhận hàng. |
+| Chi vận hành                               | Chi phí HKD đã ghi nhận trong kỳ, không gồm direct ingredient COGS.                 | Giá vốn món, thanh toán NCC cho nguyên liệu nếu đang tính COGS riêng.       |
+| Lãi gộp                                    | Doanh thu trước VAT sau giảm giá trừ giá vốn món/food cost.                         | Lợi nhuận ròng, dòng tiền, lợi nhuận kế toán doanh nghiệp.                  |
 
 Quy tắc mặc định: nếu một báo cáo vận hành dùng nhãn ngắn `doanh thu`, nghĩa
 chuẩn là `doanh thu ròng trước VAT` / `doanh thu thuần` theo
@@ -88,15 +88,15 @@ payment, dùng `Tiền đã thu`; nếu câu hỏi là hóa đơn, dùng `HĐĐT
 Finance Basic chỉ có bốn metric chính. Các số liệu khác là supporting workflow,
 không được đẩy lên thành Finance landing mặc định nếu không có quyết định mới.
 
-| `contract_key` | Nhãn UI | Câu hỏi owner | Source/rule | Confidence |
-| -------------- | ------- | ------------- | ----------- | ---------- |
-| `finance.revenue.money_collected` | Tiền đã thu | Kỳ này đã thu bao nhiêu tiền? | Thanh toán hoàn tất, bucket theo ngày Việt Nam tại thời điểm paid. | `trusted` khi payment/order sync xanh. |
-| `finance.revenue.before_vat_after_discount` | Doanh thu ròng trước VAT | Giá trị bán hàng trước VAT sau giảm giá/hoàn tiền là bao nhiêu? | Đơn đã thanh toán/đóng POS, loại VAT theo contract thuế. | `trusted` khi tax/payment mapping khớp. |
-| `finance.inventory_value.current` | Giá trị tồn kho | Hiện đang giữ bao nhiêu tiền trong kho? | `stock_levels.current_quantity * avg_unit_cost` hoặc unit-cost fallback theo Inventory contract. | `trusted` nếu stock ledger/WAC đã gated; nếu không là `needs_review`. |
-| `finance.expense.operating` | Chi vận hành | Kỳ này đã ghi nhận bao nhiêu chi phí vận hành? | Expense đã posted trong kỳ. | `trusted` khi expense module active. |
-| `finance.food_cost.recorded` | Giá vốn món | Kỳ này đã ghi nhận bao nhiêu chi phí nguyên liệu cho món bán/tiêu hao? | `stock_movements.type = 'consumption'`, `movement_subtype = 'sale_consumption'`, `abs(quantity_change) * unit_cost`, theo branch/date. | `trusted` sau khi báo cáo tiêu hao được duyệt/apply; `needs_review` khi còn thiếu tiêu hao đã duyệt. |
-| `finance.food_cost.theoretical` | Giá vốn lý thuyết | Theo recipe thì kỳ này lẽ ra tốn bao nhiêu nguyên liệu? | `mv_food_cost` / `get_food_cost`, dùng để tham chiếu và variance. | `estimated`. |
-| `finance.gross_profit.readonly` | Lãi gộp | Sau khi trừ giá vốn món thực tế, còn bao nhiêu? | `finance.revenue.before_vat_after_discount - finance.food_cost.recorded`. | `trusted` khi revenue và approved consumption đều xanh; không dùng recipe-only cost làm lãi gộp thật. |
+| `contract_key`                              | Nhãn UI                  | Câu hỏi owner                                                          | Source/rule                                                                                                                            | Confidence                                                                                            |
+| ------------------------------------------- | ------------------------ | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `finance.revenue.money_collected`           | Tiền đã thu              | Kỳ này đã thu bao nhiêu tiền?                                          | Thanh toán hoàn tất, bucket theo ngày Việt Nam tại thời điểm paid.                                                                     | `trusted` khi payment/order sync xanh.                                                                |
+| `finance.revenue.before_vat_after_discount` | Doanh thu ròng trước VAT | Giá trị bán hàng trước VAT sau giảm giá/hoàn tiền là bao nhiêu?        | Đơn đã thanh toán/đóng POS, loại VAT theo contract thuế.                                                                               | `trusted` khi tax/payment mapping khớp.                                                               |
+| `finance.inventory_value.current`           | Giá trị tồn kho          | Hiện đang giữ bao nhiêu tiền trong kho?                                | `stock_levels.current_quantity * avg_unit_cost` hoặc unit-cost fallback theo Inventory contract.                                       | `trusted` nếu stock ledger/WAC đã gated; nếu không là `needs_review`.                                 |
+| `finance.expense.operating`                 | Chi vận hành             | Kỳ này đã ghi nhận bao nhiêu chi phí vận hành?                         | Expense đã posted trong kỳ.                                                                                                            | `trusted` khi expense module active.                                                                  |
+| `finance.food_cost.recorded`                | Giá vốn món              | Kỳ này đã ghi nhận bao nhiêu chi phí nguyên liệu cho món bán/tiêu hao? | `stock_movements.type = 'consumption'`, `movement_subtype = 'sale_consumption'`, `abs(quantity_change) * unit_cost`, theo branch/date. | `trusted` sau khi báo cáo tiêu hao được duyệt/apply; `needs_review` khi còn thiếu tiêu hao đã duyệt.  |
+| `finance.food_cost.theoretical`             | Giá vốn lý thuyết        | Theo recipe thì kỳ này lẽ ra tốn bao nhiêu nguyên liệu?                | `mv_food_cost` / `get_food_cost`, dùng để tham chiếu và variance.                                                                      | `estimated`.                                                                                          |
+| `finance.gross_profit.readonly`             | Lãi gộp                  | Sau khi trừ giá vốn món thực tế, còn bao nhiêu?                        | `finance.revenue.before_vat_after_discount - finance.food_cost.recorded`.                                                              | `trusted` khi revenue và approved consumption đều xanh; không dùng recipe-only cost làm lãi gộp thật. |
 
 Không thêm KPI tài chính mới nếu KPI đó không trả lời câu hỏi daily operator
 hoặc accountant export bắt buộc.
@@ -106,22 +106,21 @@ hoặc accountant export bắt buộc.
 Inventory là bề mặt workflow-first: ưu tiên phiếu, việc cần xử lý, ngoại lệ, và
 trạng thái tồn thật. Analytics phụ trợ không được che mất công việc vận hành.
 
-| `contract_key` | Nhãn UI | Nghĩa chuẩn | Source/rule |
-| -------------- | ------- | ----------- | ----------- |
-| `inventory.stock_value.current` | Giá trị tồn kho | Snapshot tiền đang nằm trong tồn kho vận hành. | `stock_levels` chỉ ở stock-bearing locations: Kho CN/Kho Tổng/Bếp Trung Tâm; không cộng legacy Bếp CN/kitchen. |
-| `inventory.stock_quantity.current` | Tồn hiện tại | Số lượng hiện có theo đơn vị nhập chuẩn tại stock-bearing locations. | `stock_levels.current_quantity`, loại `location_kind = kitchen` khỏi tổng vận hành. |
-| `inventory.alert.low_stock` | Sắp hết hàng | Nguyên liệu dưới reorder/min threshold. | Stock level so với điểm đặt hàng. |
-| `inventory.alert.negative_stock` | Âm kho | Tồn nhỏ hơn 0, cần xử lý dữ liệu. | Stock level hiện tại. |
-| `inventory.transfer.open` | Phiếu điều chuyển đang mở | Phiếu chưa hoàn tất nhận/hủy. | `stock_transfers` theo state machine hợp lệ. |
-| `inventory.grn.pending` | Phiếu nhập chờ xác nhận | GRN chưa confirm/cập nhật WAC. | GRN state. |
-| `inventory.stocktake.active` | Kiểm kê đang chạy | Phiên kiểm kê chưa finalize. | Stocktake session state. |
-| `inventory.consumption.review_queue` | Tiêu hao chờ duyệt | Báo cáo tiêu hao bếp chưa được quản lý duyệt/apply. | Consumption report workflow, không phải employee checklist tick. |
+| `contract_key`                       | Nhãn UI                   | Nghĩa chuẩn                                                          | Source/rule                                                                                           |
+| ------------------------------------ | ------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `inventory.stock_value.current`      | Giá trị tồn kho           | Snapshot tiền đang nằm trong tồn kho vận hành.                       | `stock_levels` ở stock-bearing locations: Kho CN, Bếp CN, Kho Tổng, Bếp Trung Tâm.                    |
+| `inventory.stock_quantity.current`   | Tồn hiện tại              | Số lượng hiện có theo đơn vị nhập chuẩn tại stock-bearing locations. | `stock_levels.current_quantity`; `branch/kitchen` là tồn chi nhánh, không bị loại khỏi tổng vận hành. |
+| `inventory.alert.low_stock`          | Sắp hết hàng              | Nguyên liệu dưới reorder/min threshold.                              | Stock level so với điểm đặt hàng.                                                                     |
+| `inventory.alert.negative_stock`     | Âm kho                    | Tồn nhỏ hơn 0, cần xử lý dữ liệu.                                    | Stock level hiện tại.                                                                                 |
+| `inventory.transfer.open`            | Phiếu điều chuyển đang mở | Phiếu chưa hoàn tất nhận/hủy.                                        | `stock_transfers` theo state machine hợp lệ.                                                          |
+| `inventory.grn.pending`              | Phiếu nhập chờ xác nhận   | GRN chưa confirm/cập nhật WAC.                                       | GRN state.                                                                                            |
+| `inventory.stocktake.active`         | Kiểm kê đang chạy         | Phiên kiểm kê chưa finalize.                                         | Stocktake session state.                                                                              |
+| `inventory.consumption.review_queue` | Tiêu hao chờ duyệt        | Báo cáo tiêu hao bếp chưa được quản lý duyệt/apply.                  | Consumption report workflow, không phải employee checklist tick.                                      |
 
-`Kho CN -> Bếp CN` không phải transfer trong contract mới. Khi import hoặc diễn
-giải dữ liệu lịch sử từ hệ thống khác, phải phân loại theo nghĩa vận hành: nếu
-đó là nguyên liệu đã dùng trong ngày để tạo doanh thu, ghi thành
-`stock_movements.consumption/sale_consumption`; không replay thành
-`stock_transfers`.
+`Kho CN -> Bếp CN` là transfer nội bộ cùng chi nhánh vì Bếp CN giữ tồn của chi
+nhánh. Khi import hoặc diễn giải dữ liệu lịch sử từ hệ thống khác, chỉ phân loại
+thành `stock_movements.consumption/sale_consumption` nếu đó là nguyên liệu đã
+thực sự xuất dùng trong ngày để tạo doanh thu.
 
 `supplier_invoice`, AP aging, và thanh toán NCC là Finance handoff. Inventory
 không được gọi các số đó là gate đóng ngày kho nếu PO/GRN/WAC/stock ledger đã

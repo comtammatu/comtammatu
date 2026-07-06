@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { unstable_cache } from "next/cache";
+import { unstable_cache, revalidateTag } from "next/cache";
 import { createServiceClient } from "@comtammatu/database";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -103,10 +103,19 @@ const getCachedMenuStructure = unstable_cache(
  * Fetch full menu for POS display: categories -> items -> variants + modifiers + sides.
  * Only returns active categories and active items.
  */
-export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
+export async function fetchMenuForPos(
+  branchId: number,
+  forceRefresh?: boolean,
+): Promise<ActionResult> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
     return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  if (forceRefresh) {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    revalidateTag("menu-structure");
   }
 
   const ctx = await getAuthContextWithPermission(

@@ -7,11 +7,10 @@ import {
   currentUserHasPermissionAny,
 } from "@/_lib/permissions";
 import { fetchStocktakeSessions } from "../actions";
-import { fetchReorderAlerts, fetchExpiryAlerts } from "../alert-actions";
+import { fetchReorderAlerts } from "../alert-actions";
 import { countOpenPurchaseOrders } from "./receiving-counts";
 import { fetchStockTransfers } from "../transfer-actions";
 import { getInventoryDashboard } from "../dashboard-actions";
-import { formatDate } from "./format";
 import { resolveInventoryBranchScope } from "./inventory-scope";
 import {
   canAccessProductionSurface,
@@ -46,21 +45,14 @@ type DashboardReorder = {
   branch_id: number;
 };
 
-type DashboardExpiry = {
-  ingredient_id: number;
-  ingredient_name: string;
-  batch_number: string | null;
-  expiry_date: string;
-  days_remaining: number;
-  urgency: string;
-};
-
 export type InventoryDashboardData = {
   siteName: string;
   siteKind: DashboardSiteKind;
   userRole: StaffRole;
   showProcurement: boolean;
   showProduction: boolean;
+  canAssignCounts: boolean;
+  canApproveCounts: boolean;
   selectedBranchId: number | null;
   totalStockValue: number;
   pendingPO: number;
@@ -76,14 +68,6 @@ export type InventoryDashboardData = {
     reorder: number;
     unit: string;
   }>;
-  expiryAlerts: Array<{
-    id: number;
-    ingredientName: string;
-    lot: string;
-    expiryDate: string;
-    daysLeft: number;
-    urgency: string;
-  }>;
   transfers: Array<{
     id: number;
     code: string;
@@ -98,6 +82,7 @@ export type InventoryDashboardData = {
     progress: number;
     status: string;
   }>;
+  dataAsOf?: string;
 };
 
 export async function loadInventoryDashboardData(
@@ -121,6 +106,7 @@ export async function loadInventoryDashboardData(
     procurementAsync,
     productionPermissionAsync,
     productionBranchAsync,
+    countAssignAsync,
     countApprovalAsync,
     scope,
   ] = await Promise.all([
@@ -137,6 +123,7 @@ export async function loadInventoryDashboardData(
     productionSyncOk
       ? hasCurrentProductionBranchAccess(supabase, claims)
       : Promise.resolve(false),
+    currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN),
     currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_COUNT_APPROVE),
     resolveInventoryBranchScope(supabase, claims, requestedBranchId),
   ]);
@@ -145,6 +132,8 @@ export async function loadInventoryDashboardData(
   const showProduction =
     isOwner ||
     (productionSyncOk && productionPermissionAsync && productionBranchAsync);
+  const canAssignCounts = isOwner || countAssignAsync;
+  const canApproveCounts = isOwner || countApprovalAsync;
 
   const selectedBranch = scope.allowedBranches.find(
     (b) => b.id === scope.selectedBranchId,
@@ -201,7 +190,6 @@ export async function loadInventoryDashboardData(
     transferRes,
     stocktakeRes,
     reorderRes,
-    expiryRes,
     priceReviewRes,
     pendingCountSlipRes,
   ] = await Promise.all([
@@ -212,11 +200,10 @@ export async function loadInventoryDashboardData(
     fetchStockTransfers(branchFilter),
     fetchStocktakeSessions(branchFilter),
     fetchReorderAlerts(branchFilter),
-    fetchExpiryAlerts(branchFilter),
     showProcurement
       ? priceReviewQuery
       : Promise.resolve({ count: 0, error: null }),
-    countApprovalAsync
+    canApproveCounts
       ? pendingCountSlipQuery
       : Promise.resolve({ count: 0, error: null }),
   ]);
@@ -287,24 +274,14 @@ export async function loadInventoryDashboardData(
         }))
       : [];
 
-  const expiryAlerts: InventoryDashboardData["expiryAlerts"] =
-    expiryRes.success && expiryRes.data
-      ? (expiryRes.data as DashboardExpiry[]).map((e, idx) => ({
-          id: e.ingredient_id * 1000 + idx,
-          ingredientName: e.ingredient_name,
-          lot: e.batch_number ?? "",
-          expiryDate: formatDate(e.expiry_date),
-          daysLeft: e.days_remaining,
-          urgency: e.urgency,
-        }))
-      : [];
-
   return {
     siteName,
     siteKind,
     userRole: claims.user_role,
     showProcurement,
     showProduction,
+    canAssignCounts,
+    canApproveCounts,
     selectedBranchId: scope.selectedBranchId,
     totalStockValue,
     pendingPO,
@@ -313,8 +290,11 @@ export async function loadInventoryDashboardData(
     pendingCountSlips,
     priceReviewCount,
     reorderAlerts,
-    expiryAlerts,
     transfers,
     stocktakeSessions,
+    dataAsOf:
+      dashboardRes != null && dashboardRes.success && dashboardRes.data
+        ? dashboardRes.data.computedAt
+        : undefined,
   };
 }

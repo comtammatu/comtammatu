@@ -35,7 +35,6 @@ export interface IngredientRow {
   max_stock_level: number | null;
   reorder_point: number | null;
   storage_type: string | null;
-  shelf_life_days: number | null;
   is_active: boolean;
   updated_at: string | null;
   units?: IngredientUnitRow[];
@@ -73,18 +72,4 @@ export interface ReorderAlertRow {
   suggested_order_qty: number;
   branch_id: number;
   branch_name: string;
-}
-
-export interface ExpiryAlertRow {
-  ingredient_id: number;
-  ingredient_name: string;
-  grn_item_id: number;
-  unit: string;
-  batch_number: string | null;
-  expiry_date: string;
-  grn_number: string;
-  branch_id: number;
-  branch_name: string;
-  days_remaining: number;
-  urgency: "expired" | "critical" | "warning";
 }

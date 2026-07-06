@@ -17,6 +17,7 @@ export interface CountUnitChoice {
   code: string;
   label: string;
   isBase: boolean;
+  toBaseFactor: number | null;
 }
 
 export interface CountAssignment {
@@ -47,6 +48,7 @@ interface AssignmentUnitRow {
   unit_id: number;
   is_base: boolean;
   sort_order: number;
+  to_base_factor: number | null;
   units: { code: string; name: string | null } | null;
 }
 
@@ -130,7 +132,7 @@ async function buildEmployeeCountSurface({
   const { data: assignmentData } = await countReadClient
     .from("inventory_count_assignments")
     .select(
-      "ingredient_id, location_id, ingredients ( name, measure_unit, ingredient_units!ingredient_units_ingredient_tenant_fkey ( unit_id, is_base, sort_order, units!ingredient_units_unit_tenant_fkey ( code, name ) ) )",
+      "ingredient_id, location_id, ingredients ( name, measure_unit, ingredient_units!ingredient_units_ingredient_tenant_fkey ( unit_id, is_base, sort_order, to_base_factor, units!ingredient_units_unit_tenant_fkey ( code, name ) ) )",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("employee_id", employeeId)
@@ -189,6 +191,8 @@ async function buildEmployeeCountSurface({
               code: u.units?.code ?? "",
               label: u.units?.name ?? u.units?.code ?? "",
               isBase: u.is_base,
+              toBaseFactor:
+                u.to_base_factor == null ? null : Number(u.to_base_factor),
             })),
         }))
         .sort((a, b) => a.ingredientName.localeCompare(b.ingredientName, "vi")),

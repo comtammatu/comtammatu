@@ -59,7 +59,7 @@ export function deriveToBaseFactor(
   const unit = unitsById.get(row.unit_id);
   if (!unit) throw new UnitDerivationError("unit_not_found");
 
-  if (unit.is_standard) {
+  if (unit.is_standard && row.anchor_unit_id == null) {
     if (!base.is_standard || base.dimension !== unit.dimension) {
       throw new UnitDerivationError("standard_unit_dimension_mismatch");
     }

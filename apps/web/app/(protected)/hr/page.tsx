@@ -16,6 +16,7 @@ export default async function HrPage() {
   const canManageEmployees = claims.user_role === "owner";
   const isBranchManager = claims.user_role === "branch_manager";
   const canViewEmployees = canManageEmployees || isBranchManager;
+  const canManagePositionTasks = canViewEmployees;
 
   const branchesPromise =
     isBranchManager && claims.branch_id == null
@@ -40,7 +41,7 @@ export default async function HrPage() {
       canViewEmployees
         ? fetchEmployees()
         : Promise.resolve({ success: true, data: [] }),
-      canManageEmployees
+      canManagePositionTasks
         ? fetchPositionTasksData()
         : Promise.resolve({
             success: true as const,
@@ -65,6 +66,7 @@ export default async function HrPage() {
       isBranchManager={isBranchManager}
       canManageEmployees={canManageEmployees}
       canViewEmployees={canViewEmployees}
+      canManagePositionTasks={canManagePositionTasks}
       positionTasksData={positionTasksData}
     />
   );

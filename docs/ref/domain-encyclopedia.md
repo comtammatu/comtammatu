@@ -20,26 +20,26 @@ luật hiện hành, đọc `legal-framework-2026.md`, `einvoice-tax.md`,
 
 ## Bản đồ tài liệu
 
-| Cần làm | Đọc trước |
-| --- | --- |
-| Đặt tên thuật ngữ, nhãn UI, acronym | `glossary.md` |
-| Thêm card/KPI/report summary | `operational-data-contract.md` |
-| Sửa Finance landing hoặc report | `modules/finance.md`, file này |
-| Sửa Inventory, kho, WAC, tiêu hao | `inventory.md`, file này |
-| Sửa HĐĐT, VAT, doanh thu tính thuế | `einvoice-tax.md`, `legal-framework-2026.md`, file này |
-| Sửa payroll, BHXH, PIT lương | `payroll-pit.md`, `labor-contracts.md`, file này |
-| Sửa POS/KDS/table/order lifecycle | `glossary.md`, `modules/web-app.md`, regression rules |
+| Cần làm                             | Đọc trước                                              |
+| ----------------------------------- | ------------------------------------------------------ |
+| Đặt tên thuật ngữ, nhãn UI, acronym | `glossary.md`                                          |
+| Thêm card/KPI/report summary        | `operational-data-contract.md`                         |
+| Sửa Finance landing hoặc report     | `modules/finance.md`, file này                         |
+| Sửa Inventory, kho, WAC, tiêu hao   | `inventory.md`, file này                               |
+| Sửa HĐĐT, VAT, doanh thu tính thuế  | `einvoice-tax.md`, `legal-framework-2026.md`, file này |
+| Sửa payroll, BHXH, PIT lương        | `payroll-pit.md`, `labor-contracts.md`, file này       |
+| Sửa POS/KDS/table/order lifecycle   | `glossary.md`, `modules/web-app.md`, regression rules  |
 
 ## Nguyên tắc phân lớp dữ liệu
 
-| Lớp | Câu hỏi | Ví dụ | Không lẫn với |
-| --- | --- | --- | --- |
-| Sự kiện vận hành | Đã xảy ra việc gì? | order paid, GRN confirmed, stocktake finalized | Số tổng hợp |
-| Chứng từ | Bằng chứng nào ghi nhận sự kiện? | receipt, HĐĐT, supplier invoice, GRN | Trạng thái thanh toán |
-| Ledger | Sổ append-only nào tạo sự thật? | stock movements, payments, cash session logs | Dashboard card |
-| Metric | Số trả lời câu hỏi nào? | doanh thu ròng, food cost %, cash variance | Label chung chung |
-| Workflow | Ai cần xử lý gì tiếp? | HĐĐT lỗi, tiền mặt lệch, phiếu nhập chờ duyệt | Kết quả tài chính |
-| Report | Giải thích số bằng drilldown nào? | doanh thu theo giờ, top món, AP aging | Action trực tiếp |
+| Lớp              | Câu hỏi                           | Ví dụ                                          | Không lẫn với         |
+| ---------------- | --------------------------------- | ---------------------------------------------- | --------------------- |
+| Sự kiện vận hành | Đã xảy ra việc gì?                | order paid, GRN confirmed, stocktake finalized | Số tổng hợp           |
+| Chứng từ         | Bằng chứng nào ghi nhận sự kiện?  | receipt, HĐĐT, supplier invoice, GRN           | Trạng thái thanh toán |
+| Ledger           | Sổ append-only nào tạo sự thật?   | stock movements, payments, cash session logs   | Dashboard card        |
+| Metric           | Số trả lời câu hỏi nào?           | doanh thu ròng, food cost %, cash variance     | Label chung chung     |
+| Workflow         | Ai cần xử lý gì tiếp?             | HĐĐT lỗi, tiền mặt lệch, phiếu nhập chờ duyệt  | Kết quả tài chính     |
+| Report           | Giải thích số bằng drilldown nào? | doanh thu theo giờ, top món, AP aging          | Action trực tiếp      |
 
 Agent phải xác định lớp trước khi thiết kế. Không được tạo một card chỉ vì có
 field trong database.
@@ -52,12 +52,12 @@ field trong database.
 `order_item`, `menu_item`, `table_session`, `takeaway_context`...) nằm ở
 `glossary.md`. Term riêng của file này:
 
-| term_en | label_vi | Nghĩa chuẩn | Không lẫn với |
-| --- | --- | --- | --- |
-| `modifier` | tùy chọn món | Lựa chọn thêm/bớt như thêm trứng, thêm sườn, đổi topping. | side item nếu là dòng bán riêng |
-| `combo` | combo | Nhóm món bán chung dưới một giá/khuyến mãi. | production recipe |
-| `cover` | lượt khách | Một khách được phục vụ; chỉ dùng nếu POS capture guest count. | order count |
-| `party` | nhóm khách | Nhóm khách dùng một bàn/phiên. | table |
+| term_en    | label_vi     | Nghĩa chuẩn                                                   | Không lẫn với                   |
+| ---------- | ------------ | ------------------------------------------------------------- | ------------------------------- |
+| `modifier` | tùy chọn món | Lựa chọn thêm/bớt như thêm trứng, thêm sườn, đổi topping.     | side item nếu là dòng bán riêng |
+| `combo`    | combo        | Nhóm món bán chung dưới một giá/khuyến mãi.                   | production recipe               |
+| `cover`    | lượt khách   | Một khách được phục vụ; chỉ dùng nếu POS capture guest count. | order count                     |
+| `party`    | nhóm khách   | Nhóm khách dùng một bàn/phiên.                                | table                           |
 
 Quy tắc: nếu chưa capture `guest_count`, không được suy `covers` từ số đơn dine-in
 một cách im lặng. Dùng `order_count` hoặc ghi rõ ước tính.
@@ -67,11 +67,11 @@ một cách im lặng. Dùng `order_count` hoặc ghi rõ ước tính.
 Định nghĩa các trạng thái lifecycle dùng chung (`kds_ticket`, `ready`, `served`,
 `completed`, `void`, `refund`...) nằm ở `glossary.md`. Term riêng của file này:
 
-| term_en | label_vi | Nghĩa chuẩn | Không lẫn với |
-| --- | --- | --- | --- |
-| `draft_order` | đơn nháp | Đơn đang tạo, chưa gửi bếp/confirm. | đơn đã bán |
-| `confirmed_order` | đơn đã xác nhận | Đơn đã ghi nhận để chế biến hoặc thanh toán theo workflow. | paid order |
-| `cancel_order` | hủy đơn | Hủy toàn đơn trước commercial close. | refund |
+| term_en           | label_vi        | Nghĩa chuẩn                                                | Không lẫn với |
+| ----------------- | --------------- | ---------------------------------------------------------- | ------------- |
+| `draft_order`     | đơn nháp        | Đơn đang tạo, chưa gửi bếp/confirm.                        | đơn đã bán    |
+| `confirmed_order` | đơn đã xác nhận | Đơn đã ghi nhận để chế biến hoặc thanh toán theo workflow. | paid order    |
+| `cancel_order`    | hủy đơn         | Hủy toàn đơn trước commercial close.                       | refund        |
 
 Quy tắc: `served` là fulfillment signal. `completed` là commercial close. Không
 dùng một label `Hoàn thành` cho cả hai nếu cùng surface có thể nhầm.
@@ -82,10 +82,10 @@ dùng một label `Hoàn thành` cho cả hai nếu cùng surface có thể nh�
 (`sales_channel`, `payment_method`, `platform_commission`, `net_payout`...) nằm ở
 `glossary.md`. Term riêng của file này:
 
-| term_en | label_vi | Nghĩa chuẩn | Không lẫn với |
-| --- | --- | --- | --- |
-| `delivery_platform` | nền tảng giao hàng | Đối tác giao hàng bên thứ ba nếu tích hợp. | payment provider |
-| `settlement` | đối soát nhận tiền | Quá trình khớp order với tiền về ngân hàng/nền tảng. | payment split |
+| term_en             | label_vi           | Nghĩa chuẩn                                          | Không lẫn với    |
+| ------------------- | ------------------ | ---------------------------------------------------- | ---------------- |
+| `delivery_platform` | nền tảng giao hàng | Đối tác giao hàng bên thứ ba nếu tích hợp.           | payment provider |
+| `settlement`        | đối soát nhận tiền | Quá trình khớp order với tiền về ngân hàng/nền tảng. | payment split    |
 
 Quy tắc: doanh thu kênh delivery không bằng tiền nền tảng thực chuyển. Phí nền
 tảng là cost/fee cần hạch toán riêng.
@@ -108,8 +108,8 @@ hóa đơn, dùng `doanh thu HĐĐT đã phát hành`.
 `average_check`, `covers`, `average_spend_per_cover`, `sales_mix`,
 `product_mix`...) nằm ở `glossary.md`. Term riêng của file này:
 
-| term_en | label_vi | Công thức mặc định | Dùng khi nào |
-| --- | --- | --- | --- |
+| term_en           | label_vi         | Công thức mặc định                           | Dùng khi nào         |
+| ----------------- | ---------------- | -------------------------------------------- | -------------------- |
 | `conversion_rate` | tỷ lệ chuyển đổi | Orders / visits/leads nếu có traffic source. | Online/campaign only |
 
 Không dùng AOV thay `average_spend_per_cover` nếu chưa capture covers.
@@ -148,9 +148,9 @@ Không dùng một từ `hóa đơn` cho cả HĐĐT bán ra và hóa đơn NCC.
 `cooking_loss`, `consumption`, `stock_transfer`, `stock_issue`...) nằm ở
 `glossary.md`.
 
-Với runtime hiện tại, `Kho CN -> Bếp CN` là tiêu hao chi nhánh, không phải stock
-transfer. Khi xử lý dữ liệu lịch sử/import, phân loại theo nghĩa vận hành: hàng
-còn tồn ở site nhận hay thực chất là tiêu hao/food cost.
+Với runtime hiện tại, `Kho CN -> Bếp CN` là stock transfer cùng chi nhánh. Bếp
+CN vẫn là tồn của chi nhánh; chỉ `stock_issue` / `consumption` / write-off sau
+đó mới làm giảm tồn.
 
 ## Tài chính vận hành
 
@@ -192,8 +192,8 @@ có số ghế/giờ mở cửa đủ tin cậy.
 `taxable_revenue`, `vat_payable`, `pit_business_payable`, `tax_withholding`,
 `hkd_accounting_book`...) nằm ở `glossary.md`. Term riêng của file này:
 
-| term_en | label_vi | Nghĩa chuẩn | Không lẫn với |
-| --- | --- | --- | --- |
+| term_en            | label_vi     | Nghĩa chuẩn                               | Không lẫn với      |
+| ------------------ | ------------ | ----------------------------------------- | ------------------ |
 | `tax_registration` | đăng ký thuế | Thông tin MST/tên/địa chỉ theo hồ sơ HKD. | brand display name |
 
 Không gọi Má Tư là CTCP/công ty/doanh nghiệp trong UI hoặc docs vận hành hiện
@@ -207,23 +207,23 @@ conversion, không phải trạng thái hiện tại.
 `invoice_cancellation`, `invoice_replacement`, `customer_tax_info`...) nằm ở
 `glossary.md`. Term riêng của file này:
 
-| term_en | label_vi | Nghĩa chuẩn | Không lẫn với |
-| --- | --- | --- | --- |
-| `receipt` | phiếu tạm tính | Bản in POS cho khách; không có mã CQT. | HĐĐT |
-| `invoice_status` | trạng thái hóa đơn | Draft/submitted/issued/cancelled/replaced theo provider. | order status |
+| term_en          | label_vi           | Nghĩa chuẩn                                              | Không lẫn với |
+| ---------------- | ------------------ | -------------------------------------------------------- | ------------- |
+| `receipt`        | phiếu tạm tính     | Bản in POS cho khách; không có mã CQT.                   | HĐĐT          |
+| `invoice_status` | trạng thái hóa đơn | Draft/submitted/issued/cancelled/replaced theo provider. | order status  |
 
 Không hứa “hóa đơn đủ pháp lý” nếu chưa xác minh provider, mã CQT, XML/PDF gốc,
 trạng thái phát hành, và dữ liệu truyền CQT.
 
 ### HKD trực tiếp và doanh nghiệp khấu trừ
 
-| Chủ đề | HKD hiện hành | Doanh nghiệp/phương pháp khác |
-| --- | --- | --- |
-| Chủ thể | Hộ kinh doanh/chủ hộ | Công ty/pháp nhân |
-| Kế toán | Sổ HKD, vận hành đơn giản, export theo regime HKD | Có thể cần double-entry, BCTC, VAS/TT200 |
-| VAT đầu vào | Không mặc định khấu trừ nếu đang theo phương pháp trực tiếp | Có thể khấu trừ nếu đủ điều kiện và đăng ký |
-| HĐĐT | Theo ngưỡng/phương pháp HKD và provider | Theo chế độ doanh nghiệp |
-| Báo cáo | Daily close, cash, revenue, expense, inventory, HĐĐT, export kế toán | P&L, balance sheet, general ledger, tax reports đầy đủ |
+| Chủ đề      | HKD hiện hành                                                        | Doanh nghiệp/phương pháp khác                          |
+| ----------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
+| Chủ thể     | Hộ kinh doanh/chủ hộ                                                 | Công ty/pháp nhân                                      |
+| Kế toán     | Sổ HKD, vận hành đơn giản, export theo regime HKD                    | Có thể cần double-entry, BCTC, VAS/TT200               |
+| VAT đầu vào | Không mặc định khấu trừ nếu đang theo phương pháp trực tiếp          | Có thể khấu trừ nếu đủ điều kiện và đăng ký            |
+| HĐĐT        | Theo ngưỡng/phương pháp HKD và provider                              | Theo chế độ doanh nghiệp                               |
+| Báo cáo     | Daily close, cash, revenue, expense, inventory, HĐĐT, export kế toán | P&L, balance sheet, general ledger, tax reports đầy đủ |
 
 Agent không được tự thêm balance sheet, general ledger, input VAT credit, VAS
 reporting vào Finance Basic khi business model vẫn là HKD.
@@ -236,28 +236,28 @@ reporting vào Finance Basic khi business model vẫn là HKD.
 `employment_contract`, `employer`, `employee_party`...) nằm ở `glossary.md`.
 Term riêng của file này:
 
-| term_en | label_vi | Nghĩa chuẩn | Không lẫn với |
-| --- | --- | --- | --- |
-| `position` | chức vụ | Nhãn HR/công việc. | permission |
-| `permission_key` | khóa quyền | Quyền thao tác trong hệ thống. | position |
-| `probation` | thử việc | Giai đoạn thử việc theo luật/contract. | seasonal |
-| `fixed_term_contract` | hợp đồng xác định thời hạn | Hợp đồng có thời hạn. | indefinite |
-| `indefinite_contract` | hợp đồng không xác định thời hạn | Hợp đồng không có ngày kết thúc. | fixed term |
-| `seasonal_contract` | hợp đồng mùa vụ | Công việc/ngắn hạn nếu hợp lệ. | part-time schedule |
+| term_en               | label_vi                         | Nghĩa chuẩn                            | Không lẫn với      |
+| --------------------- | -------------------------------- | -------------------------------------- | ------------------ |
+| `position`            | chức vụ                          | Nhãn HR/công việc.                     | permission         |
+| `permission_key`      | khóa quyền                       | Quyền thao tác trong hệ thống.         | position           |
+| `probation`           | thử việc                         | Giai đoạn thử việc theo luật/contract. | seasonal           |
+| `fixed_term_contract` | hợp đồng xác định thời hạn       | Hợp đồng có thời hạn.                  | indefinite         |
+| `indefinite_contract` | hợp đồng không xác định thời hạn | Hợp đồng không có ngày kết thúc.       | fixed term         |
+| `seasonal_contract`   | hợp đồng mùa vụ                  | Công việc/ngắn hạn nếu hợp lệ.         | part-time schedule |
 
 Không dùng chức vụ để suy quyền nếu ACL đã có `permission_key`. Quyền thật nằm ở
 grant/permission contract.
 
 ### Chấm công, lương, bảo hiểm, thuế lương
 
-| term_en | label_vi | Nghĩa chuẩn | Không lẫn với |
-| --- | --- | --- | --- |
-| `attendance` | chấm công | Ghi nhận làm việc. | payroll approval |
-| `shift` | ca làm | Khung giờ làm việc. | POS session |
-| `timesheet` | bảng công | Tổng hợp giờ/ngày công. | payroll entry |
-| `standard_days` | ngày công chuẩn | Số ngày chuẩn kỳ lương. | actual working days |
-| `working_days` | ngày công thực tế | Số ngày công nhân viên làm. | calendar days |
-| `overtime` | làm thêm giờ | Thời gian vượt chuẩn theo policy/luật. | shift extension |
+| term_en         | label_vi          | Nghĩa chuẩn                            | Không lẫn với       |
+| --------------- | ----------------- | -------------------------------------- | ------------------- |
+| `attendance`    | chấm công         | Ghi nhận làm việc.                     | payroll approval    |
+| `shift`         | ca làm            | Khung giờ làm việc.                    | POS session         |
+| `timesheet`     | bảng công         | Tổng hợp giờ/ngày công.                | payroll entry       |
+| `standard_days` | ngày công chuẩn   | Số ngày chuẩn kỳ lương.                | actual working days |
+| `working_days`  | ngày công thực tế | Số ngày công nhân viên làm.            | calendar days       |
+| `overtime`      | làm thêm giờ      | Thời gian vượt chuẩn theo policy/luật. | shift extension     |
 
 Định nghĩa lương, bảo hiểm, TNCN lương, và dòng lương (`gross_salary`,
 `net_salary`, `insurance_base_salary`, `social_insurance`, `health_insurance`,

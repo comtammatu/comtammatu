@@ -47,6 +47,7 @@ interface ProductionHubClientProps {
   orders: ProductionOrderRow[];
   recipes: ProductionRecipeRow[];
   embedded?: boolean;
+  branchId?: number;
 }
 
 export function ProductionHubClient({
@@ -62,6 +63,7 @@ export function ProductionHubClient({
   orders,
   recipes,
   embedded = false,
+  branchId,
 }: ProductionHubClientProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -183,6 +185,8 @@ export function ProductionHubClient({
           canManageCatalog={canManageCatalog}
           canManageRecipes={canManageRecipes}
           onOpenRecipes={handleOpenRecipes}
+          embedded={embedded}
+          branchId={branchId}
         />
         <LinkCardGrid>
           <AppLinkCard
@@ -212,7 +216,7 @@ export function ProductionHubClient({
             ctaLabel={INVENTORY_VI.productionOpenRecipes}
           />
           <AppLinkCard
-            href="/inventory/ingredients"
+            href={embedded && branchId ? `/br/${branchId}/stock/catalog/ingredients` : "/inventory/ingredients"}
             title={INVENTORY_VI.productionCatalogCardTitle}
             description={INVENTORY_VI.productionCatalogCardDescription}
             icon={<IconPackage />}

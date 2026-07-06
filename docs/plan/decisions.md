@@ -9,9 +9,9 @@
 
 **Decision:** Inventory dùng `branches` làm site table; `branches.branch_kind` active với `branch`, `central_supply`, `central_kitchen`.
 
-**Transfer matrix** (trigger `enforce_stock_transfer_direction`): cho phép `central_supply → branch`, `central_kitchen → branch`, `branch → central_supply`, `branch → central_kitchen`, `central_supply ↔ central_kitchen`, `branch → branch`; chặn thiếu ref, central direction lạ, và same-branch.
+**Transfer matrix** (trigger `enforce_stock_transfer_direction`): cho phép `central_supply → branch`, `central_kitchen → branch`, `branch → central_supply`, `branch → central_kitchen`, `central_supply ↔ central_kitchen`, `branch → branch`, và same-branch `Kho CN → Bếp CN` cho site `branch`; chặn thiếu ref, central direction lạ, và same-branch ngoài site `branch`.
 
-**Contract:** PO/GRN/stock levels/production orders/stock transfers ref `branch_id` trực tiếp. Branch kind quyết hành vi site: Kho CN giữ branch stock, Kho Tổng giữ supply stock, Bếp TT giữ production stock, Bếp CN consumption ghi như approved consumption movement (không transfer).
+**Contract:** PO/GRN/stock levels/production orders/stock transfers ref `branch_id` trực tiếp. Branch kind quyết hành vi site: Kho CN và Bếp CN giữ branch stock, Kho Tổng giữ supply stock, Bếp TT giữ production stock. Chuyển `Kho CN → Bếp CN` là transfer cùng chi nhánh; chỉ phiếu xuất/tiêu hao/write-off sau đó mới giảm tồn chi nhánh.
 
 ## D002: Tenant-Branch 2-level thay vì Company-Brand-Branch 3-level (2026-04-01)
 

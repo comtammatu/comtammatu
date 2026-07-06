@@ -1,11 +1,10 @@
 import {
+  ArrowLeftRight as IconArrowLeftRight,
   ChartBar as IconChartBar,
-  CheckCircle as IconCheckCircle,
   ClipboardCheck as IconClipboardCheck,
   ClipboardList as IconClipboardList,
   FileCheck as IconFileCheck,
   FileText as IconFileText,
-  Hourglass as IconHourglass,
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
   RotateCcw as IconRotateCcw,
@@ -24,11 +23,11 @@ import { tNav } from "./dictionary";
 export function resolveInventoryNav({
   userRole,
   showProcurement,
-  showProduction: _showProduction,
+  showProduction,
   showCatalogManagement,
   showSettings,
-  showWasteApprovals,
-  showCountManagement,
+  showCountAssignments,
+  showCountSlips,
 }: {
   userRole: StaffRole;
   showProcurement: boolean;
@@ -36,11 +35,17 @@ export function resolveInventoryNav({
   showCatalogManagement: boolean;
   showSettings: boolean;
   showWasteApprovals: boolean;
-  showCountManagement: boolean;
+  showCountAssignments: boolean;
+  showCountSlips: boolean;
 }): ShellNavGroup[] {
   const isBranchManager = userRole === "branch_manager";
   const showBackOffice =
     !isBranchManager && (showSettings || showProcurement || showCatalogManagement);
+  const countHref = showCountAssignments
+    ? "/inventory/count-assignments"
+    : showCountSlips
+      ? "/inventory/count-slips"
+      : null;
   const groups: ShellNavGroup[] = [
     {
       title: "0 · Hôm nay",
@@ -70,36 +75,16 @@ export function resolveInventoryNav({
         label: tNav("stocktake", "navigation"),
         icon: IconClipboardCheck,
       },
-      ...(showCountManagement
+      ...(countHref
         ? [
             {
-              href: "/inventory/count-assignments",
-              label: "Phân công đếm tồn",
+              href: countHref,
+              label: "Đếm tồn",
               icon: IconClipboardList,
-            },
-            {
-              href: "/inventory/count-slips",
-              label: "Duyệt phiếu đếm tồn",
-              icon: IconClipboardCheck,
-            },
-          ]
-        : []),
-      {
-        href: "/inventory/expiry",
-        label: tNav("expiry", "navigation"),
-        icon: IconHourglass,
-      },
-      {
-        href: "/inventory/consumption",
-        label: "Tiêu hao",
-        icon: IconToolsKitchen,
-      },
-      ...(showWasteApprovals
-        ? [
-            {
-              href: "/inventory/waste/approvals",
-              label: "Duyệt hao hụt",
-              icon: IconCheckCircle,
+              matchPrefixes: [
+                "/inventory/count-assignments",
+                "/inventory/count-slips",
+              ],
             },
           ]
         : []),
@@ -112,7 +97,7 @@ export function resolveInventoryNav({
   });
 
   groups.push({
-    title: "2 · Vận hành & Đối soát",
+    title: "2 · Nhập/Nhận/Đối soát",
     items: [
       {
         href: "/inventory/operations",
@@ -131,6 +116,26 @@ export function resolveInventoryNav({
               href: "/inventory/supplier-returns",
               label: tNav("supplierReturns", "navigation"),
               icon: IconRotateCcw,
+            },
+          ]
+        : []),
+    ],
+  });
+
+  groups.push({
+    title: "3 · Điều phối/Sản xuất",
+    items: [
+      {
+        href: "/inventory/transfers",
+        label: tNav("transfers", "navigation"),
+        icon: IconArrowLeftRight,
+      },
+      ...(showProduction
+        ? [
+            {
+              href: "/inventory/production",
+              label: "Sản xuất",
+              icon: IconToolsKitchen,
             },
           ]
         : []),

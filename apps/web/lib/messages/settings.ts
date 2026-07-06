@@ -417,9 +417,6 @@ export const settings = {
     queueWasteTitle: "Duyệt hao hụt",
     queueWasteMeta: (count: number) =>
       `${count.toLocaleString("vi-VN")} báo cáo chờ duyệt`,
-    queueExpiryTitle: "Hạn dùng",
-    queueExpiryMeta: (count: number) =>
-      `${count.toLocaleString("vi-VN")} mặt hàng sắp hết hạn`,
     queueDraftGrnsTitle: "Phiếu nhập dở",
     queueDraftGrnsMeta: (count: number) =>
       `${count.toLocaleString("vi-VN")} phiếu nhập chưa xong`,
@@ -432,8 +429,12 @@ export const settings = {
     queueInboundTransfersTitle: "Chờ nhận nguyên liệu",
     queueInboundTransfersMeta: (count: number) =>
       `${count.toLocaleString("vi-VN")} chuyến hàng đang đến`,
-    centralSupplyTilesTitle: "Việc kho",
-    centralKitchenTilesTitle: "Việc bếp",
+    centralSupplyTilesTitle: "Kho Tổng - Inventory",
+    centralSupplyTilesDescription:
+      "Chỉ xử lý tồn kho, nhập - chuyển - kiểm; không có POS, KDS hoặc Runner.",
+    centralKitchenTilesTitle: "Bếp TT - Inventory",
+    centralKitchenTilesDescription:
+      "Chỉ xử lý sản xuất và tồn kho trung tâm; không có POS, KDS hoặc Runner.",
     centralReceiveCta: "Nhận hàng",
     centralProductionCta: "Tạo lệnh sản xuất",
     centralNavReceive: "Nhận",

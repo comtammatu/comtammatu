@@ -84,8 +84,6 @@ export async function loadGrnDetail(
       total_cost: number;
       quality_status: string;
       receiving_temperature: number | null;
-      batch_number: string | null;
-      expiry_date: string | null;
       ingredients: {
         id: number;
         name: string;
@@ -161,9 +159,6 @@ export async function loadGrnDetail(
       ),
       entryUnitId,
       cost: Number(l.unit_cost ?? 0),
-      lot: l.batch_number ?? "",
-      expiry: l.expiry_date ?? "",
-      expiryDisplay: l.expiry_date ? formatDate(l.expiry_date) : "—",
       temp:
         l.receiving_temperature != null ? `${l.receiving_temperature}°C` : null,
       qualityStatus:

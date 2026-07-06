@@ -31,7 +31,6 @@ import type { IngredientRow } from "../../../page";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   grnCopy,
-  inventoryCommon,
   type EditableLine,
   type GRNDetail,
 } from "./grn-detail-types";
@@ -58,8 +57,6 @@ export function AddGrnLineDialog({
   const [unit, setUnit] = useState("");
   const [entryUnitId, setEntryUnitId] = useState<number | null>(null);
   const [unitCost, setUnitCost] = useState("");
-  const [batchNumber, setBatchNumber] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
 
   const selectedIngredient = ingredients.find(
     (item) => item.id === Number(ingredientId),
@@ -72,8 +69,6 @@ export function AddGrnLineDialog({
     setUnit("");
     setEntryUnitId(null);
     setUnitCost("");
-    setBatchNumber("");
-    setExpiryDate("");
   }
 
   function handleIngredientChange(value: string) {
@@ -137,8 +132,6 @@ export function AddGrnLineDialog({
         priceOverrideNote: null,
         priceOverridePhotoUrl: null,
         shortDeliveryAction: null,
-        batchNumber: batchNumber.trim() || null,
-        expiryDate: expiryDate || null,
       });
       if (!res.success || !res.data) {
         notify.error(res.error ?? grnCopy.saveLineFailed);
@@ -167,9 +160,6 @@ export function AddGrnLineDialog({
         unit: unit.trim(),
         entryUnitId,
         cost: parsedUnitCost,
-        lot: batchNumber.trim(),
-        expiry: expiryDate,
-        expiryDisplay: expiryDate || inventoryCommon.noValue,
         temp: null,
         qualityStatus: "accepted",
         status: "pass",
@@ -271,31 +261,6 @@ export function AddGrnLineDialog({
                 onValueChange={setUnitCost}
                 maxFractionDigits={0}
                 placeholder="0"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="grn-line-batch">
-                {grnCopy.addDialog.batchLabel}
-              </Label>
-              <Input
-                id="grn-line-batch"
-                value={batchNumber}
-                onChange={(event) => setBatchNumber(event.target.value)}
-                placeholder={inventoryCommon.noValue}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="grn-line-expiry">
-                {grnCopy.addDialog.expiryLabel}
-              </Label>
-              <Input
-                id="grn-line-expiry"
-                type="date"
-                value={expiryDate}
-                onChange={(event) => setExpiryDate(event.target.value)}
               />
             </div>
           </div>

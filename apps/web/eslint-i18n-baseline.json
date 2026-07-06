@@ -2,11 +2,10 @@
   "version": 1,
   "rule": "i18n/no-inline-vietnamese",
   "description": "Baseline for existing inline Vietnamese JSX copy. New occurrences not listed here fail pnpm lint.",
-  "generatedAt": "2026-07-04",
-  "count": 11,
+  "generatedAt": "2026-07-06",
+  "count": 10,
   "entries": [
     "app/(protected)/br/[branchId]/kds/_components/filter-bar.tsx:81:27",
-    "app/(protected)/br/[branchId]/pos/_components/bill/invoice-form-section.tsx:124:31",
     "app/(protected)/br/[branchId]/pos/_components/order-detail/discount-sheet.tsx:203:33",
     "app/(protected)/br/[branchId]/pos/_components/order-detail/discount-sheet.tsx:204:50",
     "app/(protected)/br/[branchId]/pos/_components/order-detail/discount-sheet.tsx:222:21",

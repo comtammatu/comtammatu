@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { isRunnerPublicDisplayPath } from "@comtammatu/shared/auth";
+import { isRunnerPublicDisplayPath, extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { listNotifications } from "@/(protected)/notifications/actions";
 import { areNotificationPopupsEnabled } from "@lib/notifications/popup-preference";
@@ -83,20 +83,68 @@ export function useForegroundNotifications(): void {
     });
   }, [disabled]);
 
+  const initialSubscribeSeenRef = useRef(false);
+
   useRealtimeChannel(
-    (supabase) => {
+    (supabase, token) => {
       if (disabled) return null;
+
+      let tenantId: number | null = null;
+      let branchId: number | null = null;
+      if (token) {
+        const claims = extractClaimsFromAccessToken(token);
+        if (claims) {
+          tenantId = claims.tenant_id;
+          branchId = claims.branch_id;
+        }
+      }
+      if (tenantId === null) return null;
+
       return supabase
-        .channel("notification-popups")
+        .channel(`notification-popups-${String(tenantId)}`)
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "notifications" },
-          () => {
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `tenant_id=eq.${String(tenantId)}`,
+          },
+          (payload: { new: { target_branch_id?: number | null } }) => {
+            // Client-side branch scoping
+            if (
+              branchId !== null &&
+              payload.new.target_branch_id != null &&
+              payload.new.target_branch_id !== branchId
+            ) {
+              return;
+            }
             void showPopupsForNewNotifications(highWaterRef, inFlightRef);
           },
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          if (!initialSubscribeSeenRef.current) {
+            initialSubscribeSeenRef.current = true;
+            return;
+          }
+          void showPopupsForNewNotifications(highWaterRef, inFlightRef);
+        });
     },
     [disabled],
   );
+
+  // Re-fetch when tab returns to foreground
+  useEffect(() => {
+    if (disabled) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void showPopupsForNewNotifications(highWaterRef, inFlightRef);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [disabled]);
 }

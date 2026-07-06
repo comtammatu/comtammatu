@@ -22,7 +22,10 @@ export function isStockBearingLocationKind({
   locationKind: string | null | undefined;
 }): boolean {
   if (locationKind === "warehouse") return true;
-  return siteKind === "central_kitchen" && locationKind === "production_storage";
+  if (siteKind === "branch" && locationKind === "kitchen") return true;
+  return (
+    siteKind === "central_kitchen" && locationKind === "production_storage"
+  );
 }
 
 export async function fetchStockBearingLocationIds({

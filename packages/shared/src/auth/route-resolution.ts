@@ -28,7 +28,6 @@ export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/count-assignments",
   "/inventory/count-slips",
   "/inventory/drafts",
-  "/inventory/expiry",
   "/inventory/issues",
   "/inventory/operations",
   "/inventory/production",

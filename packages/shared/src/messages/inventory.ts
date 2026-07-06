@@ -1,29 +1,7 @@
 // Inventory-domain Vietnamese copy (extracted from inventory module JSX).
 export const INVENTORY_VI = {
   warehouse: "Kho hàng",
-  expired: "Đã hết hạn",
-  critical: "Nguy cấp",
-  warning: "Sắp hết hạn",
-  allTab: "Tất cả",
-  batchShort: "Lô",
-  daySuffix: "ngày",
-  itemSuffix: "mục",
-  writeOff: "Xóa sổ",
-  batchNumber: "Lô hàng",
-  expiryDate: "Ngày hết hạn",
-  remaining: "Còn lại",
-  grnDoc: "Phiếu nhập",
-  writeOffConfirmTitle: "Xác nhận xóa sổ",
-  writeOffQty: "Số lượng xóa sổ",
-  evidencePhoto: "Ảnh bằng chứng",
-  evidenceRequiredHint: "Bắt buộc nếu giá trị xóa sổ vượt ngưỡng (tier ≥ 1).",
-  expiryTitle: "Hạn sử dụng",
-  expirySearchPlaceholder: "Tìm nguyên liệu, lô hàng, phiếu nhập...",
-  expiryEmptyTitle: "Không có hàng sắp hết hạn",
-  expiryEmptyDescription: "Tất cả nguyên liệu còn trong hạn sử dụng",
   settingsEyebrow: "Cài đặt kho",
-  expiryAlertTitle: "Cảnh báo hạn sử dụng",
-  expiryAlertDescription: "Quản lý ngưỡng cảnh báo hạn sử dụng nguyên liệu.",
   importFromFile: "Import từ file",
   downloadTemplate: "Tải template (.xlsx)",
   exportXlsx: "Export .xlsx",
@@ -222,7 +200,7 @@ export const INVENTORY_VI = {
   productionStatCancelledHint: "Không ghi tồn kho",
   productionStatCatalogLabel: "Danh mục sẵn sàng",
   productionStatCatalogHint: (finishedGoods: number, rawMaterials: number) =>
-    `${finishedGoods} TP / ${rawMaterials} NL`,
+    `${finishedGoods} thành phẩm / ${rawMaterials} nguyên liệu`,
   productionStandardFlowHint:
     "Quy trình chuẩn: nhận nguyên liệu, chốt công thức, xác nhận lệnh để trừ nguyên liệu và nhập thành phẩm.",
   productionRecoveryMissingFinishedGood:

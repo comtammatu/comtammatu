@@ -188,7 +188,7 @@ Các nguyên tắc đang được code phản ánh:
 
 - `Receiving` là hub procurement của tenant, không phải hub nhận hàng chung cho chi nhánh
 - `Production` chỉ là happy path cho `central_kitchen`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày
-- `Consumption` là actual branch food cost; `/inventory/transfers?create=cap-bep` chỉ còn là compat redirect sang `/inventory/consumption`
+- `Consumption` là actual branch food cost; `/inventory/transfers?create=cap-bep` là compat redirect sang form transfer để cấp Bếp CN
 - `Ingredients / Suppliers / Định mức món bán` chỉ còn một cửa vào chính trong `Danh mục`
 
 ### Workflow đã wire thật ở UI

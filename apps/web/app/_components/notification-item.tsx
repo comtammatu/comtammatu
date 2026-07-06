@@ -41,6 +41,7 @@ function iconFor(kind: string) {
       return IconAlertTriangle;
     case "inventory.stock_low":
     case "inventory.expiry_soon":
+    case "system.cron_failed":
       return IconAlertTriangle;
     default:
       return IconInfoCircle;

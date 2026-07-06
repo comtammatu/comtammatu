@@ -8,7 +8,6 @@ import {
   Ban as IconBan,
   Check as IconCheck,
   CircleCheck as IconCircleCheck,
-  ClipboardCheck as IconClipboardCheck,
   CircleX as IconCircleX,
 } from "lucide-react";
 import { formatVNDateTime } from "@comtammatu/shared/time";
@@ -22,13 +21,12 @@ import { toast } from "@comtammatu/ui/components/sonner";
 
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection, DescriptionList, AppDetailFooter } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { FormattedNumberInput } from "@/components/form";
@@ -46,7 +44,14 @@ import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 
 const stocktakeCopy = messages.inventory.stocktake;
 const stocktakeDetailCopy = stocktakeCopy.detail;
+import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 const inventoryCommon = messages.inventory.common;
+
+const eyebrowLabel = "Kho hàng";
+const historySectionTitle = "Lịch sử chỉnh sửa";
+const summarySectionTitle = "Tổng quan phiên";
+const labelCreator = "Người tạo";
+const labelCompletedAt = "Hoàn tất lúc";
 
 interface StocktakeSession {
   id: number;
@@ -246,122 +251,167 @@ export function StocktakeDetailClient({
       </>
     ) : null;
 
-  const tabs = (
-    <AppPageTabs
-      items={[
-        { value: "overview", label: "Tổng quan" },
-        { value: "lines", label: "Dòng", count: lines.length },
-        { value: "history", label: "Lịch sử", count: auditLogs.length },
-      ]}
-    >
-      <TabsContent value="overview">
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              {
-                label: stocktakeDetailCopy.metrics.status,
-                value: statusLabel,
-              },
-              {
-                label: stocktakeDetailCopy.metrics.counted,
-                value: `${countedCount}/${lines.length}`,
-              },
-              {
-                label: stocktakeDetailCopy.metrics.progress,
-                value: `${progressPct}%`,
-              },
-              {
-                label: stocktakeDetailCopy.metrics.varianceLines,
-                value: String(varianceCount).padStart(2, "0"),
-              },
-            ].map((item) => (
-              <AppSection key={item.label} size="sm">
-                <Badge variant="secondary">{item.label}</Badge>
-                <p className="text-xl font-semibold">{item.value}</p>
-              </AppSection>
-            ))}
-          </div>
-
-          {/* Progress (in_progress only) */}
-          {session.status === "in_progress" && (
-            <AppSection>
-              <div className="flex items-center gap-3 text-sm">
-                <IconClipboardCheck className="size-4 text-muted-foreground" />
-                <span className="text-muted-foreground">
-                  {stocktakeDetailCopy.progressText(
-                    countedCount,
-                    lines.length,
-                    progressPct,
-                  )}
-                </span>
-                <Progress value={progressPct} className="h-2 max-w-48 flex-1" />
+  const summarySection = (
+    <AppSection title={summarySectionTitle} size="sm">
+      <DescriptionList
+        className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm"
+        descriptionClassName="font-semibold text-right"
+        items={[
+          {
+            term: stocktakeDetailCopy.metrics.status,
+            description: (
+              <Badge variant={statusBadge.variant}>
+                {statusBadge.label}
+              </Badge>
+            ),
+          },
+          {
+            term: stocktakeDetailCopy.metrics.counted,
+            description: `${countedCount}/${lines.length}`,
+          },
+          {
+            term: stocktakeDetailCopy.metrics.progress,
+            description: (
+              <div className="flex items-center justify-end gap-2">
+                <span className="tabular-nums">{progressPct}%</span>
+                <Progress value={progressPct} className="h-1.5 w-16" />
               </div>
-            </AppSection>
-          )}
-
-          {/* Cancelled state */}
-          {session.status === "cancelled" && (
-            <AppSection contentClassName="items-center justify-center gap-2 py-6 text-center">
-              <IconCircleX className="size-8 text-muted-foreground" />
-              <p className="text-base font-semibold">
-                {stocktakeDetailCopy.cancelledTitle}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {stocktakeDetailCopy.cancelledDescription}
-              </p>
-            </AppSection>
-          )}
+            ),
+          },
+          {
+            term: stocktakeDetailCopy.metrics.varianceLines,
+            description: (
+              <span
+                className={cn(
+                  "tabular-nums",
+                  varianceCount > 0 ? "text-warning font-bold" : "text-muted-foreground"
+                )}
+              >
+                {varianceCount}
+              </span>
+            ),
+          },
+          {
+            term: stocktakeCopy.startedAt,
+            description: formatVNDateTime(session.started_at ?? session.created_at),
+          },
+          ...(session.completed_at
+            ? [
+                {
+                  term: labelCompletedAt,
+                  description: formatVNDateTime(session.completed_at),
+                },
+              ]
+            : []),
+          {
+            term: labelCreator,
+            description: session.created_by,
+          },
+        ]}
+      />
+      {session.notes ? (
+        <div className="mt-3 border-t pt-2.5 text-xs text-muted-foreground">
+          <p className="font-semibold text-foreground mb-1">{FORM_VI.notes}</p>
+          <p className="whitespace-pre-wrap">{session.notes}</p>
         </div>
-      </TabsContent>
+      ) : null}
+    </AppSection>
+  );
 
-      <TabsContent value="lines">
-        <div className="flex flex-col gap-4">
-          {/* Counting phase (in_progress) */}
-          {session.status === "in_progress" && (
-            <CountingPhase
-              lines={lines}
-              savedLines={savedLines}
-              isPending={isPending}
-              onLineBlur={handleLineBlur}
-              onReasonBlur={handleReasonBlur}
-            />
-          )}
+  const mainContent = (
+    <div className="flex flex-col gap-4">
+      {/* Cancelled state */}
+      {session.status === "cancelled" && (
+        <AppSection contentClassName="items-center justify-center gap-2 py-6 text-center">
+          <IconCircleX className="size-8 text-muted-foreground" />
+          <p className="text-base font-semibold">
+            {stocktakeDetailCopy.cancelledTitle}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {stocktakeDetailCopy.cancelledDescription}
+          </p>
+        </AppSection>
+      )}
 
-          {/* Results phase (completed) */}
-          {session.status === "completed" && (
-            <ResultsPhase
-              lines={lines}
-              varianceCount={varianceCount}
-              wasteHref={`${wasteBasePath}?branchId=${session.branch_id}`}
-              embedded={embedded}
-            />
-          )}
-        </div>
-      </TabsContent>
+      {/* Counting phase (in_progress) */}
+      {session.status === "in_progress" && (
+        <CountingPhase
+          lines={lines}
+          savedLines={savedLines}
+          isPending={isPending}
+          onLineBlur={handleLineBlur}
+          onReasonBlur={handleReasonBlur}
+        />
+      )}
 
-      <TabsContent value="history">
-        <AuditHistoryList logs={auditLogs} />
-      </TabsContent>
-    </AppPageTabs>
+      {/* Results phase (completed) */}
+      {session.status === "completed" && (
+        <ResultsPhase
+          lines={lines}
+          varianceCount={varianceCount}
+          wasteHref={`${wasteBasePath}?branchId=${session.branch_id}`}
+          embedded={embedded}
+        />
+      )}
+    </div>
+  );
+
+  const historySection = (
+    <AppSection
+      title={historySectionTitle}
+      size="sm"
+      collapsible
+      defaultOpen={false}
+    >
+      <AuditHistoryList logs={auditLogs} />
+    </AppSection>
   );
 
   if (embedded) {
     return (
       <div className="flex w-full flex-col gap-3">
-        {stocktakeActions ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            {stocktakeActions}
+        <div className="flex items-center gap-2">
+          <Button asChild variant="ghost" size="icon" className="shrink-0">
+            <Link
+              href={`${routeBase}?branchId=${session.branch_id}`}
+              aria-label={ACTIONS_VI.back}
+            >
+              <IconArrowLeft className="size-4" />
+            </Link>
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-mono text-sm font-semibold">
+              {`KK-${session.id}`}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {headerDescription}
+            </p>
           </div>
+          <Badge variant={statusBadge.variant} className="shrink-0">
+            {statusLabel}
+          </Badge>
+        </div>
+        {summarySection}
+        {mainContent}
+        {historySection}
+        {stocktakeActions ? (
+          <AppDetailFooter
+            sticky
+            trailing={
+              <div className="flex gap-2">
+                {stocktakeActions}
+              </div>
+            }
+          />
         ) : null}
-        {tabs}
       </div>
     );
   }
 
   return (
-    <AppPage width="wide" density="compact">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow="Kho hàng"
+        eyebrow={eyebrowLabel}
         title={`KK-${session.id}`}
         description={headerDescription}
         badge={{
@@ -377,8 +427,16 @@ export function StocktakeDetailClient({
           </Link>
         }
         actions={stocktakeActions}
-        tabs={tabs}
       />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] items-start">
+        <div className="flex flex-col gap-4">
+          {mainContent}
+          {historySection}
+        </div>
+        <div className="flex flex-col gap-4 lg:sticky lg:top-4">
+          {summarySection}
+        </div>
+      </div>
     </AppPage>
   );
 }
@@ -588,6 +646,9 @@ function ResultsPhase({
       key: "variance",
       header: stocktakeDetailCopy.results.variance,
       render: (line) => {
+        if (line.counted_quantity == null) {
+          return <span className="text-sm font-mono text-muted-foreground">—</span>;
+        }
         const variance = line.variance ?? 0;
         return (
           <span
@@ -613,51 +674,108 @@ function ResultsPhase({
     },
   ];
 
+  const legend = (
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      <span className="text-muted-foreground font-medium">
+        {stocktakeDetailCopy.results.legendTitle}
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="size-2.5 rounded-full bg-success" />
+        {stocktakeDetailCopy.results.good}
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="size-2.5 rounded-full bg-warning" />
+        {stocktakeDetailCopy.results.review}
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="size-2.5 rounded-full bg-destructive" />
+        {stocktakeDetailCopy.results.severe}
+      </span>
+    </div>
+  );
+
+  const nextAction = varianceCount > 0 && (
+    <AppSection
+      tone="warning"
+      contentClassName="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
+    >
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-semibold">
+          {stocktakeDetailCopy.results.nextActionTitle}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {stocktakeDetailCopy.results.nextActionDescription(
+            varianceCount,
+          )}
+        </p>
+      </div>
+      <Button asChild size={embedded ? "touch" : "sm"}>
+        <Link href={wasteHref}>
+          {stocktakeDetailCopy.results.nextActionCta}
+          <IconArrowRight className="size-4" />
+        </Link>
+      </Button>
+    </AppSection>
+  );
+
+  if (embedded) {
+    return (
+      <div className="flex flex-col gap-3">
+        {legend}
+        {nextAction}
+        <ItemGroup className="gap-2">
+          {lines.map((line) => {
+            const varianceColor = getVarianceColor(line);
+            const variance = line.variance ?? 0;
+            const varianceBg = getVarianceBg(line);
+            return (
+              <Item
+                key={line.id}
+                variant="outline"
+                className={cn(
+                  "flex-col items-stretch gap-1.5 bg-card p-3",
+                  varianceBg,
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="truncate text-sm font-semibold text-foreground">
+                    {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                  </span>
+                  {line.counted_quantity == null ? (
+                    <span className="font-mono text-sm text-muted-foreground">—</span>
+                  ) : (
+                    <span className={cn("font-mono text-sm font-bold tabular-nums", varianceColor)}>
+                      {variance > 0 && "+"}
+                      {variance}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>
+                    {stocktakeDetailCopy.results.systemShort}:{" "}
+                    <span className="font-mono text-foreground font-medium">{line.system_quantity}</span>
+                    {" · "}
+                    {stocktakeDetailCopy.results.countedShort}:{" "}
+                    <span className="font-mono text-foreground font-medium">
+                      {line.counted_quantity ?? "—"}
+                    </span>
+                  </span>
+                  {line.variance_reason ? (
+                    <span className="truncate italic">{line.variance_reason}</span>
+                  ) : null}
+                </div>
+              </Item>
+            );
+          })}
+        </ItemGroup>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      {/* Variance legend */}
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-muted-foreground font-medium">
-          {stocktakeDetailCopy.results.legendTitle}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-success" />
-          {stocktakeDetailCopy.results.good}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-warning" />
-          {stocktakeDetailCopy.results.review}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-destructive" />
-          {stocktakeDetailCopy.results.severe}
-        </span>
-      </div>
-
-      {varianceCount > 0 && (
-        <AppSection
-          tone="warning"
-          contentClassName="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
-        >
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-semibold">
-              {stocktakeDetailCopy.results.nextActionTitle}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {stocktakeDetailCopy.results.nextActionDescription(
-                varianceCount,
-              )}
-            </p>
-          </div>
-          <Button asChild size={embedded ? "touch" : "sm"}>
-            <Link href={wasteHref}>
-              {stocktakeDetailCopy.results.nextActionCta}
-              <IconArrowRight className="size-4" />
-            </Link>
-          </Button>
-        </AppSection>
-      )}
-
+      {legend}
+      {nextAction}
       <AppSection className="overflow-hidden" contentFlush>
         <DataTable
           columns={resultColumns}
@@ -682,15 +800,19 @@ function ResultsPhase({
                   <span className="truncate text-sm font-medium">
                     {line.ingredients?.name ?? `#${line.ingredient_id}`}
                   </span>
-                  <span
-                    className={cn(
-                      "shrink-0 font-mono text-sm font-medium tabular-nums",
-                      varianceColor,
-                    )}
-                  >
-                    {variance > 0 && "+"}
-                    {variance}
-                  </span>
+                  {line.counted_quantity == null ? (
+                    <span className="shrink-0 font-mono text-sm text-muted-foreground">—</span>
+                  ) : (
+                    <span
+                      className={cn(
+                        "shrink-0 font-mono text-sm font-medium tabular-nums",
+                        varianceColor,
+                      )}
+                    >
+                      {variance > 0 && "+"}
+                      {variance}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                   <span>

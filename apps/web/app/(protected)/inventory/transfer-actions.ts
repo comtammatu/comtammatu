@@ -13,6 +13,8 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { resolveCentralSiteHomeBranchId } from "@/_lib/branch-hub-device";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import type { TenantSupabase } from "./_lib/types";
+import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
+import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
@@ -25,8 +27,6 @@ const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = [
 ];
 const BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR =
   "Quản lý chi nhánh chỉ được nhận phiếu chuyển về chi nhánh.";
-const INTRA_BRANCH_TRANSFER_RETIRED_ERROR =
-  "Kho chi nhánh sang bếp chi nhánh là tiêu hao bán hàng, không phải phiếu điều chuyển.";
 
 function isBranchScopedTransferRole(role: StaffRole): boolean {
   return BRANCH_SCOPED_TRANSFER_ROLES.includes(role);
@@ -82,7 +82,10 @@ async function enforceTransferActionScope(
       return BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR;
     }
 
-    if (requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE) {
+    if (
+      requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE &&
+      transfer.from_branch_id !== transfer.to_branch_id
+    ) {
       return BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR;
     }
 
@@ -140,9 +143,6 @@ async function loadTransferForPermission(
     .single();
   if (transferError || !transfer) {
     return { success: false, error: "Không tìm thấy phiếu chuyển." };
-  }
-  if (transfer.from_branch_id === transfer.to_branch_id) {
-    return { success: false, error: INTRA_BRANCH_TRANSFER_RETIRED_ERROR };
   }
 
   const branchId =
@@ -277,8 +277,7 @@ export async function fetchStockTransferDetail(
     unit_label:
       l.entry_unit_id == null
         ? null
-        : (unitLabelByKey.get(`${l.ingredient_id}:${l.entry_unit_id}`) ??
-          null),
+        : (unitLabelByKey.get(`${l.ingredient_id}:${l.entry_unit_id}`) ?? null),
   }));
 
   return {
@@ -348,6 +347,7 @@ const transferCreateSchema = z.object({
   toBranchId: z.coerce.number().int().positive(),
   fromLocationId: z.coerce.number().int().positive().optional(),
   toLocationId: z.coerce.number().int().positive().optional(),
+  toLocationKind: z.enum(["default_receive", "branch_kitchen"]).optional(),
   notes: z.string().max(500, { error: "Ghi chú tối đa 500 ký tự" }).optional(),
   vehicleInfo: z.string().optional(),
   lines: z.array(transferLineInputSchema).optional(),
@@ -368,6 +368,28 @@ async function loadBranchKind(
   return data.branch_kind;
 }
 
+async function resolveBranchKitchenLocation(
+  supabase: TenantSupabase,
+  tenantId: number,
+  branchId: number,
+): Promise<number | null> {
+  const { data, error } = await supabase
+    .from("inventory_locations")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("branch_id", branchId)
+    .eq("location_kind", "kitchen")
+    .eq("is_active", true)
+    .order("is_default_consumption", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
 export async function createStockTransfer(
   input: z.infer<typeof transferCreateSchema>,
 ): Promise<ActionResult> {
@@ -385,13 +407,6 @@ export async function createStockTransfer(
 
   const isIntraBranch = fromBranchId === toBranchId;
 
-  if (isIntraBranch) {
-    return {
-      success: false,
-      error: INTRA_BRANCH_TRANSFER_RETIRED_ERROR,
-    };
-  }
-
   if (
     claims.user_role === "warehouse_manager" ||
     claims.user_role === "production_manager"
@@ -402,7 +417,10 @@ export async function createStockTransfer(
     const effectiveFromBranchId =
       claims.branch_id ??
       (await resolveCentralSiteHomeBranchId(supabase, claims));
-    if (effectiveFromBranchId == null || fromBranchId !== effectiveFromBranchId) {
+    if (
+      effectiveFromBranchId == null ||
+      fromBranchId !== effectiveFromBranchId
+    ) {
       return {
         success: false,
         error: "Bạn chỉ được tạo phiếu xuất từ kho của mình.",
@@ -419,6 +437,11 @@ export async function createStockTransfer(
   if (!fromKind || !toKind) {
     return { success: false, error: "Điểm vận hành không hợp lệ." };
   }
+  const wantsBranchKitchenTarget =
+    isIntraBranch || parsed.data.toLocationKind === "branch_kitchen";
+  if (wantsBranchKitchenTarget && toKind !== "branch") {
+    return { success: false, error: "Bếp CN chỉ áp dụng cho chi nhánh." };
+  }
   if (!isAllowedInterSiteDirection(fromKind, toKind)) {
     return {
       success: false,
@@ -427,13 +450,21 @@ export async function createStockTransfer(
     };
   }
   if (claims.user_role === "branch_manager") {
-    if (claims.branch_id == null || toBranchId !== claims.branch_id) {
+    if (
+      claims.branch_id == null ||
+      toBranchId !== claims.branch_id ||
+      (isIntraBranch && fromBranchId !== claims.branch_id)
+    ) {
       return {
         success: false,
         error: "Quản lý chi nhánh chỉ được yêu cầu hàng về chi nhánh của mình.",
       };
     }
-    if (fromKind !== "central_supply" && fromKind !== "central_kitchen") {
+    if (
+      !isIntraBranch &&
+      fromKind !== "central_supply" &&
+      fromKind !== "central_kitchen"
+    ) {
       return {
         success: false,
         error:
@@ -485,25 +516,74 @@ export async function createStockTransfer(
     ));
   const toLocationId =
     parsed.data.toLocationId ??
-    (await resolveDefaultInventoryLocation(
-      supabase,
-      claims.tenant_id,
-      toBranchId,
-      "receive",
-    ));
+    (wantsBranchKitchenTarget
+      ? await resolveBranchKitchenLocation(
+          supabase,
+          claims.tenant_id,
+          toBranchId,
+        )
+      : await resolveDefaultInventoryLocation(
+          supabase,
+          claims.tenant_id,
+          toBranchId,
+          "receive",
+        ));
 
   if (!fromLocationId || !toLocationId) {
     return {
       success: false,
-      error: "Chưa cấu hình vị trí kho gửi hoặc kho nhận mặc định.",
+      error: wantsBranchKitchenTarget
+        ? "Chưa cấu hình Bếp CN để nhận hàng."
+        : "Chưa cấu hình vị trí kho gửi hoặc kho nhận mặc định.",
     };
   }
 
   const transferLines = (parsed.data.lines ?? []).map((line) => ({
-      ingredientId: line.ingredientId,
-      quantity: line.quantity,
-      entryUnitId: line.entryUnitId ?? null,
-    }));
+    ingredientId: line.ingredientId,
+    quantity: line.quantity,
+    entryUnitId: line.entryUnitId ?? null,
+  }));
+  if (transferLines.length > 0) {
+    const ingredientIds = [
+      ...new Set(transferLines.map((line) => line.ingredientId)),
+    ];
+    const { data: stockLevels, error: stockLevelError } = await supabase
+      .from("stock_levels")
+      .select("ingredient_id, current_quantity")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", fromBranchId)
+      .eq("location_id", fromLocationId)
+      .in("ingredient_id", ingredientIds);
+    if (stockLevelError) {
+      return { success: false, error: "Không thể tải tồn kho gửi." };
+    }
+    const availableByIngredient = new Map(
+      (stockLevels ?? []).map((level) => [
+        level.ingredient_id,
+        Number(level.current_quantity ?? 0),
+      ]),
+    );
+
+    for (const line of transferLines) {
+      const resolvedUnit = await resolveEntryUnitCode(supabase, {
+        tenantId: claims.tenant_id,
+        ingredientId: line.ingredientId,
+        entryUnitId: line.entryUnitId,
+      });
+      if (!resolvedUnit.success) {
+        return { success: false, error: resolvedUnit.error };
+      }
+      const requestedBaseQuantity = getIssueBaseQuantity(
+        line.quantity,
+        resolvedUnit,
+      );
+      const availableQuantity =
+        availableByIngredient.get(line.ingredientId) ?? 0;
+      if (requestedBaseQuantity > availableQuantity + 1e-9) {
+        return { success: false, error: "Số lượng vượt tồn hiện tại." };
+      }
+    }
+  }
 
   const { data, error } = await supabase.rpc("create_stock_transfer_draft", {
     p_from_branch_id: fromBranchId,
@@ -547,7 +627,10 @@ export async function transferConfirmShip(
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
   const authz = await loadTransferForPermission(
     id.data,
-    PERMISSION_KEYS.INVENTORY_TRANSFER_SHIP,
+    (transfer) =>
+      transfer.from_branch_id === transfer.to_branch_id
+        ? PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE
+        : PERMISSION_KEYS.INVENTORY_TRANSFER_SHIP,
     "from",
   );
   if (!authz.success) return { success: false, error: authz.error };
@@ -563,6 +646,23 @@ export async function transferConfirmShip(
       error: "Không thể xác nhận xuất (kiểm tra tồn kho gửi).",
     };
   }
+
+  // GỘP: Nếu là điều chuyển liên chi nhánh, tự động chuyển sang đang vận chuyển (in_transit)
+  if (authz.transfer.from_branch_id !== authz.transfer.to_branch_id) {
+    const { error: transitError } = await authz.supabase.rpc("stock_transfer_mark_in_transit", {
+      p_transfer_id: id.data,
+    });
+    if (transitError) {
+      console.error("inventory.transfer.mark_in_transit_auto_failed", {
+        error: transitError instanceof Error ? transitError.message : String(transitError),
+      });
+      return {
+        success: false,
+        error: "Đã xác nhận xuất kho nhưng không thể tự động chuyển sang đang vận chuyển.",
+      };
+    }
+  }
+
   revalidatePath("/inventory/transfers");
   revalidatePath(`/inventory/transfers/${id.data}`);
   return { success: true };
@@ -647,6 +747,20 @@ export async function transferReceive(
     "to",
   );
   if (!authz.success) return { success: false, error: authz.error };
+
+  // GỘP: Tự động chuyển sang 'confirmed_receive' (bắt đầu nhận) nếu phiếu đang ở 'in_transit'
+  if (authz.transfer.status === "in_transit") {
+    const { error: confirmReceiveError } = await authz.supabase.rpc("stock_transfer_confirm_receive", {
+      p_transfer_id: id.data,
+    });
+    if (confirmReceiveError) {
+      console.error("inventory.transfer.confirm_receive_auto_failed", {
+        error: confirmReceiveError instanceof Error ? confirmReceiveError.message : String(confirmReceiveError),
+      });
+      return { success: false, error: "Không thể bắt đầu kiểm nhận hàng." };
+    }
+  }
+
   const { error } = await authz.supabase.rpc("stock_transfer_receive", {
     p_transfer_id: id.data,
     p_items: items ?? null,

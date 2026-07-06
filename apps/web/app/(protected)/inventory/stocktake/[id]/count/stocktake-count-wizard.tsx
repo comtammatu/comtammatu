@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppDetailFooter } from "@/components/surface";
+import { Item } from "@comtammatu/ui/components/item";
 import {
   NumberPadGrid,
   appendNumpadKey,
@@ -84,21 +85,24 @@ export function StocktakeCountWizard({
     return names;
   }, [lines, activeIndex, counts]);
 
-  function handleKey(key: NumpadKey) {
-    if (!editable || activeLine == null) return;
-    const id = activeLine.ingredientId;
-    const nextBuffer = appendNumpadKey(values[id] ?? "", key, true);
-    setValues((current) => ({ ...current, [id]: nextBuffer }));
-    if (nextBuffer.length === 0) {
-      onCountChange(id, null);
-      return;
-    }
-    // A trailing "." (e.g. "0.") is an incomplete decimal — don't commit it, or a
-    // half-typed count would land as qty=0. Commit once the number is complete.
-    if (nextBuffer.endsWith(".")) return;
-    const parsed = Number(nextBuffer);
-    if (Number.isFinite(parsed)) onCountChange(id, parsed);
-  }
+  const handleKey = useCallback(
+    (key: NumpadKey) => {
+      if (!editable || activeLine == null) return;
+      const id = activeLine.ingredientId;
+      const nextBuffer = appendNumpadKey(values[id] ?? "", key, true);
+      setValues((current) => ({ ...current, [id]: nextBuffer }));
+      if (nextBuffer.length === 0) {
+        onCountChange(id, null);
+        return;
+      }
+      // A trailing "." (e.g. "0.") is an incomplete decimal — don't commit it, or a
+      // half-typed count would land as qty=0. Commit once the number is complete.
+      if (nextBuffer.endsWith(".")) return;
+      const parsed = Number(nextBuffer);
+      if (Number.isFinite(parsed)) onCountChange(id, parsed);
+    },
+    [editable, activeLine, values, onCountChange],
+  );
 
   function nextUncountedIndex(fromIndex: number): number | null {
     for (const [i, line] of lines.entries()) {
@@ -108,7 +112,7 @@ export function StocktakeCountWizard({
     return null;
   }
 
-  function handleSaveNext() {
+  const handleSaveNext = useCallback(() => {
     if (activeLine == null) return;
     const raw = values[activeLine.ingredientId] ?? "";
     const qty = Number(raw);
@@ -126,14 +130,59 @@ export function StocktakeCountWizard({
     onCountChange(activeLine.ingredientId, qty);
     const nextIndex = nextUncountedIndex(activeIndex);
     if (nextIndex != null) setActiveIndex(nextIndex);
-  }
+  }, [
+    activeLine,
+    values,
+    onCountChange,
+    activeIndex,
+    lines,
+    counts,
+    copy.countInvalidQty,
+  ]);
+
+  useEffect(() => {
+    if (!editable || activeLine == null) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      // Ignored if focusing on input fields
+      if (
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA"
+      ) {
+        return;
+      }
+
+      const key = e.key;
+      if (key >= "0" && key <= "9") {
+        handleKey(key as NumpadKey);
+      } else if (key === "." || key === ",") {
+        handleKey(".");
+      } else if (key === "Backspace") {
+        handleKey("del");
+      } else if (key === "Enter") {
+        e.preventDefault();
+        handleSaveNext();
+      } else if (key === "ArrowUp" || key === "ArrowLeft") {
+        e.preventDefault();
+        setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
+      } else if (key === "ArrowDown" || key === "ArrowRight") {
+        e.preventDefault();
+        setActiveIndex((prev) => (prev < total - 1 ? prev + 1 : prev));
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [editable, activeLine, handleKey, handleSaveNext, total]);
 
   const activeBuffer =
     activeLine != null ? (values[activeLine.ingredientId] ?? "") : "";
 
   return (
     <div className="flex w-full flex-col gap-2">
-      <div className="flex flex-col gap-2 rounded-md bg-muted/50 p-2.5">
+      <Item variant="outline" size="sm" className="flex-col items-stretch gap-2 bg-muted/30">
         <div className="flex items-center gap-2">
           <span className="flex-1 text-sm font-medium">
             {copy.countMode(currentRound)}
@@ -147,7 +196,7 @@ export function StocktakeCountWizard({
           tone={remaining === 0 && total > 0 ? "success" : "default"}
           className="h-2"
         />
-      </div>
+      </Item>
 
       {chrome}
 

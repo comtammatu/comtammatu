@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { usePosMenuSync } from "./_hooks/use-pos-menu-sync";
 import { PosDesktopInner } from "./pos-desktop-inner";
 import type { OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
@@ -41,13 +42,20 @@ interface PosDesktopShellProps {
 }
 
 export function PosDesktopShell(props: PosDesktopShellProps) {
+  const [categories, setCategories] = useState(props.categories);
+
+  usePosMenuSync({
+    branchId: props.branchId,
+    setCategories,
+  });
+
   // Extract the volatile slice (sold_today / is_disabled / available_to_sell)
   // from RSC's `fetchMenuForPos` snapshot so the provider can patch it in
   // real time via `useDailyLimitSync` without re-fetching the whole menu
   // structure on each event. Items without a limit row simply aren't keys.
   const initialDailyLimits = useMemo<DailyLimitsMap>(() => {
     const map = new Map<number, NonNullable<MenuItem["daily_limit"]>>();
-    for (const category of props.categories) {
+    for (const category of categories) {
       for (const item of category.menu_items) {
         if (item.daily_limit) {
           map.set(item.id, item.daily_limit);
@@ -55,7 +63,7 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
       }
     }
     return map;
-  }, [props.categories]);
+  }, [categories]);
 
   return (
     <PosDesktopProvider
@@ -68,7 +76,7 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
       initialDailyLimits={initialDailyLimits}
     >
       <PosDesktopInner
-        categories={props.categories}
+        categories={categories}
         canCloseShift={props.canCloseShift}
         canConfirmCash={props.canConfirmCash}
         canSplitMerge={props.canSplitMerge}

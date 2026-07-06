@@ -456,8 +456,6 @@ const grnLineSchema = z
       .enum(["accepted", "rejected", "partial"])
       .default("accepted"),
     receivingTemperature: z.coerce.number().optional().nullable(),
-    batchNumber: z.string().trim().optional().nullable(),
-    expiryDate: z.string().date().optional().nullable(),
     // QC fields — rejectedQuantity is a subset of receivedQuantity
     rejectedQuantity: z.coerce.number().min(0).optional(),
     rejectionReason: z.string().trim().max(500).optional().nullable(),
@@ -542,8 +540,6 @@ export const upsertGrnLine = withAction(
           total_cost: totalCost,
           quality_status: data.qualityStatus,
           receiving_temperature: data.receivingTemperature ?? null,
-          batch_number: data.batchNumber ?? null,
-          expiry_date: data.expiryDate ?? null,
           rejected_quantity: rejected,
           rejection_reason: data.rejectionReason ?? null,
           rejected_photo_url: data.rejectedPhotoUrl ?? null,

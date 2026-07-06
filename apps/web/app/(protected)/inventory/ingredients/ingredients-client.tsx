@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, useRef } from "react";
 import {
   Ellipsis as IconDots,
   Eye as IconEye,
@@ -45,14 +45,17 @@ import {
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatVND } from "../_lib/format";
-import { CATEGORY_TONE_CLASS } from "../_lib/constants";
-import { fetchIngredients, toggleIngredientActive } from "../ingredient-actions";
+import {
+  CATEGORY_TONE_CLASS,
+  ITEM_KIND_LABELS,
+  ITEM_KIND_OPTIONS,
+} from "../_lib/constants";
+import {
+  fetchIngredients,
+  toggleIngredientActive,
+} from "../ingredient-actions";
 import { IngredientDialog } from "./ingredient-dialog";
-import type {
-  CategoryOption,
-  IngredientRow,
-  UnitOption,
-} from "../_lib/types";
+import type { CategoryOption, IngredientRow, UnitOption } from "../_lib/types";
 import { IngredientImportExportMenu } from "./import-export-menu";
 
 import {
@@ -76,6 +79,14 @@ const activeOptions = [
   { value: "active", label: ingredientListCopy.activeOnly },
   { value: "all", label: ingredientListCopy.includeHidden },
 ];
+const allItemKindsValue = "all";
+const itemKindOptions = [
+  {
+    value: allItemKindsValue,
+    label: messages.inventory.ingredients.dialog.itemKindLabel,
+  },
+  ...ITEM_KIND_OPTIONS,
+] as const;
 
 function storageLabel(type: string | null): string {
   if (type === "refrigerated") return "0–4°C";
@@ -89,6 +100,10 @@ const conversionNumberFormatter = new Intl.NumberFormat("vi-VN", {
 
 function categoryLabel(item: IngredientRow): string | null {
   return item.category_name ?? item.category ?? null;
+}
+
+function itemKindLabel(item: IngredientRow): string {
+  return ITEM_KIND_LABELS[item.item_kind] ?? item.item_kind;
 }
 
 function categoryToneClass(
@@ -148,7 +163,10 @@ function IngredientMobileCard({
 }) {
   const category = categoryLabel(item);
   return (
-    <InteractiveCard minHeight="tap" className="flex-col items-stretch gap-0 p-0">
+    <InteractiveCard
+      minHeight="tap"
+      className="flex-col items-stretch gap-0 p-0"
+    >
       <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-1">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -160,6 +178,9 @@ function IngredientMobileCard({
                 {category}
               </Badge>
             ) : null}
+            <Badge variant="secondary" className="text-xs">
+              {itemKindLabel(item)}
+            </Badge>
             <StatusBadge
               domain="inventory"
               value={item.is_active ? "active" : "suspended"}
@@ -228,12 +249,27 @@ export function IngredientsClient({
   const [rows, setRows] = useState(initial);
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
+  const [itemKind, setItemKind] = useState(allItemKindsValue);
   const [preservation, setPreservation] = useState("all");
   const [activeFilter, setActiveFilter] = useState<"active" | "all">("active");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] =
     useState<IngredientRow | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const lastUpdatedAtRef = useRef<string | null>(null);
+
+  // Initialize the water-mark cursor from initial rows
+  if (lastUpdatedAtRef.current === null && initial.length > 0) {
+    const timestamps = initial
+      .map((r) => r.updated_at)
+      .filter((t): t is string => !!t);
+    if (timestamps.length > 0) {
+      lastUpdatedAtRef.current = timestamps.reduce((latest, current) => 
+        new Date(current) > new Date(latest) ? current : latest
+      );
+    }
+  }
 
   const toneMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -259,6 +295,9 @@ export function IngredientsClient({
     if (category !== "all") {
       result = result.filter((item) => categoryLabel(item) === category);
     }
+    if (itemKind !== allItemKindsValue) {
+      result = result.filter((item) => item.item_kind === itemKind);
+    }
     if (preservation !== "all") {
       result = result.filter(
         (item) => (item.storage_type ?? "ambient") === preservation,
@@ -270,13 +309,36 @@ export function IngredientsClient({
       );
     }
     return result;
-  }, [rows, activeFilter, category, preservation, searchQuery]);
+  }, [rows, activeFilter, category, itemKind, preservation, searchQuery]);
 
   async function reload() {
     try {
-      const response = await fetchIngredients();
+      const response = await fetchIngredients(2000, lastUpdatedAtRef.current ?? undefined);
       if (response.success) {
-        setRows((response.data ?? []) as IngredientRow[]);
+        const delta = (response.data ?? []) as IngredientRow[];
+        if (delta.length > 0) {
+          setRows((prev) => {
+            const next = [...prev];
+            for (const item of delta) {
+              const idx = next.findIndex((r) => r.id === item.id);
+              if (idx !== -1) {
+                next[idx] = item;
+              } else {
+                next.push(item);
+              }
+            }
+            return next;
+          });
+          const timestamps = delta
+            .map((r) => r.updated_at)
+            .filter((t): t is string => !!t);
+          if (timestamps.length > 0) {
+            lastUpdatedAtRef.current = timestamps.reduce((latest, current) => 
+              new Date(current) > new Date(latest) ? current : latest,
+              lastUpdatedAtRef.current ?? timestamps[0]!
+            );
+          }
+        }
         return;
       }
       toast.error(response.error ?? ingredientListCopy.reloadFailed);
@@ -341,6 +403,21 @@ export function IngredientsClient({
         </SelectContent>
       </Select>
 
+      <Select value={itemKind} onValueChange={setItemKind}>
+        <SelectTrigger className="w-40">
+          <SelectValue
+            placeholder={messages.inventory.ingredients.dialog.itemKindLabel}
+          />
+        </SelectTrigger>
+        <SelectContent>
+          {itemKindOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       <Select value={preservation} onValueChange={setPreservation}>
         <SelectTrigger className="w-40">
           <SelectValue placeholder={ingredientListCopy.preservationAll} />
@@ -392,6 +469,7 @@ export function IngredientsClient({
                   {category}
                 </Badge>
               ) : null}
+              <Badge variant="secondary">{itemKindLabel(item)}</Badge>
             </div>
             {item.sku ? (
               <span className="font-mono text-xs text-muted-foreground">

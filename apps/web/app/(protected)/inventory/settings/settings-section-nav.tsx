@@ -6,7 +6,6 @@ import {
   CheckCircle as IconCheckCircle,
   ChartBar as IconChartBar,
   FileText as IconFileText,
-  Hourglass as IconHourglass,
   Package as IconPackage,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
@@ -15,7 +14,6 @@ import { AppToolbar } from "@/components/surface";
 const SETTINGS_SECTION_ICONS = {
   categories: IconFileText,
   units: IconPackage,
-  expiry: IconHourglass,
   thresholds: IconChartBar,
   qc: IconCheckCircle,
 } as const;

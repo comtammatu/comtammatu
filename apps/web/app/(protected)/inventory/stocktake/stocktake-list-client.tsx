@@ -270,7 +270,7 @@ export function StocktakeListClient({
         stocktakeActions
       ) : (
         <AppPageHeader
-          eyebrow="Kho hàng"
+          eyebrow={messages.inventory.shell.moduleName}
           title={messages.inventory.stocktake.title}
           actions={stocktakeActions}
         />
@@ -376,5 +376,5 @@ export function StocktakeListClient({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return <AppPage width="xwide">{content}</AppPage>;
+  return <AppPage width="xwide" density="compact">{content}</AppPage>;
 }

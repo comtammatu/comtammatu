@@ -68,8 +68,6 @@ export const PAGE_ARCHETYPES = {
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx":
     "EMBED-WRAPPER",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/expiry/page.tsx":
-    "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx":
@@ -155,7 +153,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/count-slips/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/dashboard/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/drafts/page.tsx": "REDIRECT-SHIM",
-  "apps/web/app/(protected)/inventory/expiry/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx":
     "DOC-WORKFLOW",
@@ -174,8 +171,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/recipes/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/reports/page.tsx": "REPORT",
   "apps/web/app/(protected)/inventory/settings/categories/page.tsx":
-    "SETTINGS-PANEL",
-  "apps/web/app/(protected)/inventory/settings/expiry/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/inventory/settings/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/settings/qc/page.tsx": "SETTINGS-PANEL",

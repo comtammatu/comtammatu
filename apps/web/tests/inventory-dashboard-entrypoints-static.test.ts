@@ -15,6 +15,8 @@ test("inventory dashboard keeps the four owner entrypoint groups visible", () =>
     "href: paths.units",
     "href: paths.suppliers",
     "href: paths.recipes",
+    "href: paths.countAssignments",
+    "href: paths.countSlips",
     "href: props.showProduction ? paths.production : paths.transfers",
     "primary: !props.showProduction",
     'label: "Lệnh sản xuất"',

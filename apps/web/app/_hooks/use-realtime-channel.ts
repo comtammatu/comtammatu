@@ -32,7 +32,10 @@ import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
  *   );
  */
 export function useRealtimeChannel(
-  setupChannel: (supabase: SupabaseClient) => RealtimeChannel | null,
+  setupChannel: (
+    supabase: SupabaseClient,
+    token: string | null,
+  ) => RealtimeChannel | null,
   deps: DependencyList,
 ): void {
   // One client per hook instance. Lazy-init mirrors the existing pattern
@@ -120,7 +123,7 @@ export function useRealtimeChannel(
         // yet — explicit setAuth ensures the JOIN frame carries it.
         void supabase.realtime.setAuth(token);
       }
-      channel = setupRef.current(freshChannelClient);
+      channel = setupRef.current(freshChannelClient, token);
     };
 
     void supabase.auth

@@ -1,11 +1,12 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { fetchSupplierReturnDetail } from "@/(protected)/inventory/supplier-return-actions";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { AppPage, AppPageHeader } from "@/components/surface";
-import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
-import { AuditHistoryList } from "@/(protected)/inventory/_components/audit-history-list";
 import { SupplierReturnDetailClient } from "./supplier-return-detail-client";
 import { SupplierReturnConfirmCta } from "./supplier-return-confirm-cta";
 
@@ -68,25 +69,6 @@ export async function SupplierReturnDetailPageContent({
     PERMISSION_KEYS.SUPPLIER_RETURN_CONFIRM,
   );
 
-  const tabs = (
-    <AppPageTabs
-      items={[
-        { value: "overview", label: "Tổng quan" },
-        { value: "lines", label: "Dòng", count: lines.length },
-        { value: "history", label: "Lịch sử", count: auditLogs.length },
-      ]}
-    >
-      <TabsContent value="overview">
-        <SupplierReturnDetailClient header={header} lines={lines} />
-      </TabsContent>
-      <TabsContent value="lines">
-        <SupplierReturnDetailClient header={header} lines={lines} />
-      </TabsContent>
-      <TabsContent value="history">
-        <AuditHistoryList logs={auditLogs} />
-      </TabsContent>
-    </AppPageTabs>
-  );
   const confirmCta = (
     <SupplierReturnConfirmCta
       returnId={header.id}
@@ -99,19 +81,38 @@ export async function SupplierReturnDetailPageContent({
   if (embedded) {
     return (
       <div className="flex w-full flex-col gap-3">
-        {tabs}
+        <SupplierReturnDetailClient
+          header={header}
+          lines={lines}
+          auditLogs={auditLogs}
+          embedded={true}
+        />
         {confirmCta}
       </div>
     );
   }
 
   return (
-    <AppPage width="wide" density="compact">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         eyebrow="Kho hàng"
         title={header.return_number}
         description={`NCC: ${header.suppliers?.name ?? "—"} · Chi nhánh: ${header.branches?.name ?? "—"}`}
-        tabs={tabs}
+        breadcrumb={
+          <Link
+            href="/inventory/supplier-returns"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline"
+          >
+            <IconArrowLeft className="size-4" />
+            {ACTIONS_VI.back}
+          </Link>
+        }
+      />
+      <SupplierReturnDetailClient
+        header={header}
+        lines={lines}
+        auditLogs={auditLogs}
+        embedded={false}
       />
       {confirmCta}
     </AppPage>

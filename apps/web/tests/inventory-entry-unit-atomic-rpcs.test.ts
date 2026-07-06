@@ -168,10 +168,6 @@ test("transaction write callers do not send unit text/code", () => {
       "createWasteEntry",
     ],
     [
-      "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx",
-      "createExpiryWriteoff",
-    ],
-    [
       "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
       "createStockTransfer",
     ],
@@ -207,7 +203,6 @@ test("direct table writes derive persisted unit text from the entry unit catalog
 test("RPC-backed inventory writes let the RPC derive persisted unit text", () => {
   for (const path of [
     "apps/web/app/(protected)/inventory/production-order-actions.ts",
-    "apps/web/app/(protected)/inventory/transfer-actions.ts",
     "apps/web/app/(protected)/inventory/waste-actions.ts",
     "apps/web/app/(protected)/inventory/recipe-actions.ts",
     "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
@@ -216,6 +211,10 @@ test("RPC-backed inventory writes let the RPC derive persisted unit text", () =>
     assert.doesNotMatch(source, /resolveEntryUnitCode/, path);
     assert.doesNotMatch(source, /unit:\s*resolvedUnit\.unit/, path);
   }
+  assert.doesNotMatch(
+    read("apps/web/app/(protected)/inventory/transfer-actions.ts"),
+    /unit:\s*resolvedUnit\.unit/,
+  );
 
   const createPo = section(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
@@ -322,4 +321,74 @@ test("employee count slip prefill preserves the submitted entry unit", () => {
     sql,
     /REVOKE ALL ON FUNCTION public\.get_my_count_slip\(BIGINT\) FROM PUBLIC, anon/,
   );
+});
+
+test("stock transfer receive converts received entry quantities to base units", () => {
+  const sql = read(
+    "supabase/migrations/20260706071001_stock_transfer_receive_base_quantity.sql",
+  );
+  const fnStart = sql.indexOf(
+    "CREATE OR REPLACE FUNCTION public.stock_transfer_receive",
+  );
+  assert.ok(fnStart >= 0, "stock_transfer_receive override not found");
+  const fnBody = sql.slice(
+    fnStart,
+    sql.indexOf("REVOKE ALL ON FUNCTION public.stock_transfer_receive", fnStart),
+  );
+
+  assert.match(fnBody, /v_recv_base\s+NUMERIC\(15,3\)/);
+  assert.match(
+    fnBody,
+    /v_recv_base := public\.inv_to_base\(v_line\.ingredient_id, v_line\.entry_unit_id, v_recv\)::NUMERIC\(15,3\);/,
+  );
+  assert.match(fnBody, /'transfer_in', v_recv_base/);
+  assert.doesNotMatch(fnBody, /'transfer_in', v_recv,/);
+  assert.match(fnBody, /entry_unit_id, entry_quantity/);
+  assert.match(fnBody, /v_line\.entry_unit_id, v_recv/);
+
+  assert.match(sql, /sm\.entry_unit_id IS NULL/);
+  assert.match(sql, /sm\.entry_quantity IS NULL/);
+  assert.match(
+    sql,
+    /ABS\(sm\.quantity_change - COALESCE\(sti\.quantity_received, sti\.quantity\)\) <= 0\.0005/,
+  );
+  assert.match(sql, /current_quantity = sl\.current_quantity \+ agg\.delta/);
+});
+
+test("GRN amend and legacy GRN movements use base quantities", () => {
+  const sql = read(
+    "supabase/migrations/20260706084233_grn_base_quantity_legacy_cleanup.sql",
+  );
+  const fnStart = sql.indexOf("CREATE OR REPLACE FUNCTION public.amend_grn_line");
+  assert.ok(fnStart >= 0, "amend_grn_line override not found");
+  const fnBody = sql.slice(fnStart, sql.indexOf("DO $$", fnStart));
+
+  assert.match(
+    fnBody,
+    /v_old_net_base := public\.inv_to_base\(v_line\.ingredient_id, v_line\.entry_unit_id, v_old_net\);/,
+  );
+  assert.match(
+    fnBody,
+    /v_new_net_base := public\.inv_to_base\(v_line\.ingredient_id, v_line\.entry_unit_id, v_new_net\);/,
+  );
+  assert.match(fnBody, /v_delta_base := v_new_net_base - v_old_net_base;/);
+  assert.match(
+    fnBody,
+    /WHERE tenant_id = v_tenant[\s\S]*location_id = v_location_id[\s\S]*ingredient_id = v_line\.ingredient_id/,
+  );
+  assert.match(fnBody, /'grn_amend',\s*\n\s*v_delta_base/);
+  assert.match(fnBody, /entry_unit_id, entry_quantity/);
+  assert.match(fnBody, /v_line\.entry_unit_id, ABS\(v_delta_qty\)/);
+  assert.doesNotMatch(fnBody, /'grn_amend',\s*\n\s*v_delta_qty/);
+
+  assert.match(sql, /grn_entry_unit_backfill_missing_conversion/);
+  assert.match(sql, /grn_amend_backfill_requires_manual_review/);
+  assert.match(sql, /sm\.type = 'grn_receipt'/);
+  assert.match(sql, /COALESCE\(sm\.entry_unit_id, gi\.entry_unit_id\)/);
+  assert.match(sql, /SET quantity_change = CASE/);
+  assert.match(sql, /unit_cost = targets\.expected_unit_cost/);
+  assert.match(sql, /entry_unit_id = targets\.entry_unit_id/);
+  assert.match(sql, /entry_quantity = targets\.entry_quantity/);
+  assert.match(sql, /current_quantity = sl\.current_quantity \+ agg\.delta/);
+  assert.match(sql, /avg_unit_cost = CASE/);
 });

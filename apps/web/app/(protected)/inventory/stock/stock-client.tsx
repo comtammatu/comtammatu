@@ -7,7 +7,6 @@ import { z } from "zod";
 import { formatVNDate } from "@comtammatu/shared/time";
 import {
   ArrowRightToLine as IconArrowBarRight,
-  CalendarClock as IconCalendarClock,
   ClipboardList as IconClipboardList,
   Pencil as IconPencil,
   Receipt as IconReceipt,
@@ -19,7 +18,12 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Item } from "@comtammatu/ui/components/item";
+import {
+  Item,
+  ItemContent,
+  ItemTitle,
+  ItemDescription,
+} from "@comtammatu/ui/components/item";
 import {
   Select,
   SelectContent,
@@ -36,14 +40,16 @@ import {
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupButton,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
 import {
+  FormattedNumberInput,
   FormDialog,
-  NumberField,
   SelectField,
   TextareaField,
 } from "@/components/form";
@@ -64,12 +70,24 @@ import { KpiCard } from "@/components/kpi/kpi-card";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty, formatVND } from "../_lib/format";
 import { formatStockUnits } from "../_lib/stock-unit-format";
-import { CATEGORY_TONE_CLASS } from "../_lib/constants";
+import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
-import { getDefaultIssueUnit, getIssueUnitOptions } from "../_lib/issue-units";
+import {
+  clampIssueEntryQuantity,
+  formatIssueMaxEntryQuantity,
+  getDefaultIssueUnit,
+  getIssueBaseQuantity,
+  getIssueMaxEntryQuantity,
+  getIssueUnitOptions,
+  type IssueUnitOption,
+} from "../_lib/issue-units";
 import type { IngredientUnitRow } from "../_lib/types";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 import { StockMobileGrid } from "./stock-mobile-grid";
+import {
+  StockLocationBreakdownLine,
+  type StockLocationBreakdown,
+} from "./stock-location-breakdown";
 import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import {
   RowActionsContextMenuItems,
@@ -90,6 +108,7 @@ export type StockIngredient = {
   unit: string;
   units?: IngredientUnitRow[];
   category: string;
+  itemKind: string;
   qty: number;
   cost: number;
   min: number;
@@ -98,11 +117,11 @@ export type StockIngredient = {
   status: "normal" | "low" | "out" | "over";
   lastCount: string;
   temp: string | null;
+  locationBreakdown?: StockLocationBreakdown[];
 };
 
 export type StockWorkSummary = {
   underThresholdCount: number;
-  expiryCount: number;
   pendingGrnCount: number;
   pendingTransferCount: number;
   pendingWorkCount: number;
@@ -120,8 +139,7 @@ export type StockActionPermissions = {
 };
 
 type StockFilter = "all" | "in_stock" | "low" | "out";
-type RiskFilter = "all" | "reorder" | "not_counted";
-type SortMode = "priority" | "name" | "value_desc";
+type LocationFilter = "all" | "warehouse" | "kitchen";
 type QuickIssueType = "consumption" | "writeoff" | "other";
 type QuickIssueTarget = {
   ingredient: StockIngredient;
@@ -135,16 +153,10 @@ const stockFilterOptions: { value: StockFilter; label: string }[] = [
   { value: "out", label: stockCopy.filters.out },
 ];
 
-const riskFilterOptions: { value: RiskFilter; label: string }[] = [
-  { value: "all", label: stockCopy.filters.allRisk },
-  { value: "reorder", label: stockCopy.filters.reorder },
-  { value: "not_counted", label: stockCopy.filters.notCounted },
-];
-
-const sortOptions: { value: SortMode; label: string }[] = [
-  { value: "priority", label: stockCopy.filters.priority },
-  { value: "name", label: stockCopy.filters.name },
-  { value: "value_desc", label: stockCopy.filters.valueDesc },
+const locationFilterOptions: { value: LocationFilter; label: string }[] = [
+  { value: "all", label: stockCopy.filters.all },
+  { value: "warehouse", label: stockCopy.filters.locationWarehouse },
+  { value: "kitchen", label: stockCopy.filters.locationKitchen },
 ];
 
 const quickIssueTypeOptions: {
@@ -190,23 +202,37 @@ function StockQtyCell({
   );
 }
 
-function createQuickIssueSchema(maxQuantity: number) {
-  return z.object({
-    issueType: z.enum(["consumption", "writeoff", "other"]),
-    quantity: z
-      .string()
-      .refine((value) => Number(value) > 0, {
+function createQuickIssueSchema(
+  maxBaseQuantity: number,
+  issueUnitOptions: IssueUnitOption[],
+) {
+  return z
+    .object({
+      issueType: z.enum(["consumption", "writeoff", "other"]),
+      quantity: z.string().refine((value) => Number(value) > 0, {
         error: stockCopy.quickIssue.quantityPositive,
-      })
-      .refine((value) => Number(value) <= maxQuantity, {
-        error: stockCopy.quickIssue.quantityExceedsStock,
       }),
-    entryUnitId: z.string().optional(),
-    reason: z
-      .string()
-      .trim()
-      .min(1, { error: stockCopy.quickIssue.reasonRequired }),
-  });
+      entryUnitId: z.string().optional(),
+      reason: z
+        .string()
+        .trim()
+        .min(1, { error: stockCopy.quickIssue.reasonRequired }),
+    })
+    .refine(
+      (value) => {
+        const issueUnit = issueUnitOptions.find(
+          (option) => String(option.unitId) === value.entryUnitId,
+        );
+        return (
+          getIssueBaseQuantity(Number(value.quantity), issueUnit) <=
+          maxBaseQuantity + 1e-9
+        );
+      },
+      {
+        path: ["quantity"],
+        error: stockCopy.quickIssue.quantityExceedsStock,
+      },
+    );
 }
 
 type QuickIssueFormValues = z.infer<ReturnType<typeof createQuickIssueSchema>>;
@@ -219,6 +245,50 @@ const STATUS_PRIORITY: Record<StockIngredient["status"], number> = {
 };
 
 const STOCK_COMPACT_QUERY = "(max-width: 1023px)";
+
+function computeStockStatus(
+  qty: number,
+  min: number,
+  max: number,
+): StockIngredient["status"] {
+  if (qty <= 0) return "out";
+  if (qty < min) return "low";
+  if (max > 0 && qty > max) return "over";
+  return "normal";
+}
+
+function locationScopedIngredient(
+  ingredient: StockIngredient,
+  locationFilter: LocationFilter,
+): StockIngredient {
+  if (locationFilter === "all") return ingredient;
+
+  const rows =
+    ingredient.locationBreakdown?.filter(
+      (row) => row.locationKind === locationFilter,
+    ) ?? [];
+  const qty = rows.reduce((sum, row) => sum + row.qty, 0);
+  const costBasis = rows.reduce(
+    (sum, row) => sum + row.qty * (row.avgUnitCost ?? 0),
+    0,
+  );
+  const latestCount = rows
+    .map((row) => row.lastCountedAt)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1);
+
+  return {
+    ...ingredient,
+    qty,
+    cost: qty > 0 ? costBasis / qty : ingredient.cost,
+    status: computeStockStatus(qty, ingredient.min, ingredient.max),
+    lastCount: latestCount
+      ? formatVNDate(latestCount)
+      : inventoryCommon.noValue,
+    locationBreakdown: rows,
+  };
+}
 
 function subscribeStockCompactLayout(callback: () => void) {
   const media = window.matchMedia(STOCK_COMPACT_QUERY);
@@ -257,6 +327,29 @@ function stockValue(item: StockIngredient): number {
 function isReorderRisk(item: StockIngredient): boolean {
   return (
     item.status === "out" || item.status === "low" || item.qty <= item.reorder
+  );
+}
+
+function StockAlertBadges({
+  item,
+  className,
+}: {
+  item: StockIngredient;
+  className?: string;
+}) {
+  const showStatus = item.status !== "normal";
+  const showReorder = item.qty <= item.reorder;
+  if (!showStatus && !showReorder) return null;
+
+  return (
+    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+      {showStatus ? (
+        <StatusBadge domain="inventory" value={item.status} size="sm" />
+      ) : null}
+      {showReorder ? (
+        <Badge variant="warning">{stockCopy.filters.reorder}</Badge>
+      ) : null}
+    </div>
   );
 }
 
@@ -313,8 +406,8 @@ function QuickStockIssueDialog({
     [target.ingredient],
   );
   const schema = useMemo(
-    () => createQuickIssueSchema(target.ingredient.qty),
-    [target.ingredient.qty],
+    () => createQuickIssueSchema(target.ingredient.qty, issueUnitOptions),
+    [issueUnitOptions, target.ingredient.qty],
   );
   const defaultValues = useMemo<QuickIssueFormValues>(
     () => ({
@@ -384,40 +477,116 @@ function QuickStockIssueDialog({
         const activeIssueType = quickIssueTypeOptions.find(
           (option) => option.value === form.watch("issueType"),
         );
+        const quantityError = form.formState.errors.quantity;
+        const entryUnitId = form.watch("entryUnitId");
+        const selectedIssueUnit = issueUnitOptions.find(
+          (option) => String(option.unitId) === entryUnitId,
+        );
+        const maxEntryQuantity = getIssueMaxEntryQuantity(
+          target.ingredient.qty,
+          selectedIssueUnit,
+        );
+        const maxQuantityValue = formatIssueMaxEntryQuantity(maxEntryQuantity);
         return (
           <>
-            <div className="rounded-md border bg-muted/20 px-3 py-2">
-              <p className="font-medium">{target.ingredient.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {stockCopy.quickIssue.stockLine(
-                  target.ingredient.sku,
-                  target.ingredient.category,
-                  formatQty(target.ingredient.qty),
-                  target.ingredient.unit,
-                )}
-              </p>
-            </div>
+            <Item variant="outline" size="sm">
+              <ItemContent className="min-w-0 flex-1">
+                <ItemTitle className="text-sm font-medium">
+                  {target.ingredient.name}
+                </ItemTitle>
+                <ItemDescription className="text-xs text-muted-foreground">
+                  {stockCopy.quickIssue.stockLine(
+                    target.ingredient.sku,
+                    target.ingredient.category,
+                    formatQty(target.ingredient.qty),
+                    target.ingredient.unit,
+                  )}
+                </ItemDescription>
+              </ItemContent>
+            </Item>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <NumberField
-                control={form.control}
-                name="quantity"
-                label={FORM_VI.quantity}
-                maxFractionDigits={3}
-                placeholder="0"
-                required
-              />
+              <Field data-invalid={!!quantityError}>
+                <FieldLabel htmlFor="quick-issue-quantity">
+                  {FORM_VI.quantity} *
+                </FieldLabel>
+                <InputGroup className="h-10">
+                  <FormattedNumberInput
+                    id="quick-issue-quantity"
+                    maxFractionDigits={3}
+                    value={form.watch("quantity")}
+                    onValueChange={(value) =>
+                      form.setValue(
+                        "quantity",
+                        clampIssueEntryQuantity(value, maxEntryQuantity),
+                        { shouldValidate: true },
+                      )
+                    }
+                    placeholder="0"
+                    className="h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-1 dark:bg-transparent"
+                  />
+                  {maxQuantityValue ? (
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton
+                        type="button"
+                        onClick={() =>
+                          form.setValue("quantity", maxQuantityValue, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                            shouldValidate: true,
+                          })
+                        }
+                      >
+                        {FORM_VI.max}
+                      </InputGroupButton>
+                    </InputGroupAddon>
+                  ) : null}
+                </InputGroup>
+                {quantityError ? <FieldError errors={[quantityError]} /> : null}
+              </Field>
               {issueUnitOptions.length > 0 ? (
-                <SelectField
-                  control={form.control}
-                  name="entryUnitId"
-                  label={FORM_VI.unit}
-                  options={issueUnitOptions.map((option) => ({
-                    value: String(option.unitId),
-                    label: option.label,
-                  }))}
-                  required
-                />
+                <Field>
+                  <FieldLabel htmlFor="quick-issue-unit">
+                    {FORM_VI.unit} *
+                  </FieldLabel>
+                  <Select
+                    value={entryUnitId ?? ""}
+                    onValueChange={(value) => {
+                      form.setValue("entryUnitId", value, {
+                        shouldValidate: true,
+                      });
+                      const nextIssueUnit = issueUnitOptions.find(
+                        (option) => String(option.unitId) === value,
+                      );
+                      const nextMaxEntryQuantity = getIssueMaxEntryQuantity(
+                        target.ingredient.qty,
+                        nextIssueUnit,
+                      );
+                      form.setValue(
+                        "quantity",
+                        clampIssueEntryQuantity(
+                          form.watch("quantity"),
+                          nextMaxEntryQuantity,
+                        ),
+                        { shouldValidate: true },
+                      );
+                    }}
+                  >
+                    <SelectTrigger id="quick-issue-unit" className="h-10">
+                      <SelectValue placeholder={FORM_VI.unit} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {issueUnitOptions.map((option) => (
+                        <SelectItem
+                          key={option.unitId}
+                          value={String(option.unitId)}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
               ) : (
                 <div className="flex flex-col gap-2">
                   <span className="text-sm font-medium">{FORM_VI.unit}</span>
@@ -476,8 +645,7 @@ export function StockClient({
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
-  const [riskFilter, setRiskFilter] = useState<RiskFilter>("all");
-  const [sortMode, setSortMode] = useState<SortMode>("priority");
+  const [locationFilter, setLocationFilter] = useState<LocationFilter>("all");
   const [adjustTarget, setAdjustTarget] = useState<StockIngredient | null>(
     null,
   );
@@ -496,7 +664,9 @@ export function StockClient({
   }, [ingredients]);
 
   const filtered = useMemo(() => {
-    let result = ingredients;
+    let result = ingredients.map((ingredient) =>
+      locationScopedIngredient(ingredient, locationFilter),
+    );
 
     if (activeCategory !== "all") {
       result = result.filter(
@@ -515,12 +685,6 @@ export function StockClient({
       result = result.filter((ingredient) => ingredient.status === "out");
     }
 
-    if (riskFilter === "reorder") {
-      result = result.filter(isReorderRisk);
-    } else if (riskFilter === "not_counted") {
-      result = result.filter((ingredient) => ingredient.lastCount === "—");
-    }
-
     if (searchQuery.trim()) {
       result = result.filter((ingredient) =>
         matchesSearch([ingredient.name, ingredient.sku], searchQuery),
@@ -528,34 +692,21 @@ export function StockClient({
     }
 
     const sorted = [...result];
-    if (sortMode === "name") {
-      sorted.sort((a, b) => a.name.localeCompare(b.name, "vi"));
-    } else if (sortMode === "value_desc") {
-      sorted.sort((a, b) => stockValue(b) - stockValue(a));
-    } else {
-      sorted.sort(
-        (a, b) =>
-          STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status] ||
-          Number(isReorderRisk(b)) - Number(isReorderRisk(a)) ||
-          a.name.localeCompare(b.name, "vi"),
-      );
-    }
+    sorted.sort(
+      (a, b) =>
+        STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status] ||
+        Number(isReorderRisk(b)) - Number(isReorderRisk(a)) ||
+        a.name.localeCompare(b.name, "vi"),
+    );
 
     return sorted;
-  }, [
-    ingredients,
-    activeCategory,
-    stockFilter,
-    riskFilter,
-    searchQuery,
-    sortMode,
-  ]);
+  }, [ingredients, activeCategory, stockFilter, searchQuery, locationFilter]);
 
   const filtersActive =
     searchQuery.trim() !== "" ||
     activeCategory !== "all" ||
     stockFilter !== "all" ||
-    riskFilter !== "all";
+    locationFilter !== "all";
 
   // Pristine first-load: ingredients exist in catalog but no GRN has ever
   // happened for this branch. Suppress the 87/87 "Hết hàng" alarm storm
@@ -585,7 +736,6 @@ export function StockClient({
         receive: branchStockHref(stockRootPath, "/receive"),
         transfer: branchStockHref(stockRootPath, "/transfer"),
         stocktake: branchStockHref(stockRootPath, "/stocktake"),
-        expiry: branchStockHref(stockRootPath, "/expiry"),
         waste: branchStockHref(stockRootPath, "/waste"),
         purchaseSuggestion: branchStockHref(
           stockRootPath,
@@ -597,7 +747,6 @@ export function StockClient({
         receive: branchHref(branchId, "/inventory/grn"),
         transfer: branchHref(branchId, "/inventory/transfers"),
         stocktake: branchHref(branchId, "/inventory/stocktake"),
-        expiry: branchHref(branchId, "/inventory/expiry"),
         waste: branchHref(branchId, "/inventory/waste/new"),
         purchaseSuggestion: branchHref(
           branchId,
@@ -681,6 +830,68 @@ export function StockClient({
 
     return rowActions;
   };
+  const categoryColumnHeader = (
+    <Select value={activeCategory} onValueChange={setActiveCategory}>
+      <SelectTrigger
+        aria-label={stockCopy.filters.categoryPlaceholder}
+        size="sm"
+        className="min-w-32 bg-background normal-case tracking-normal text-foreground"
+      >
+        <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">
+          {stockCopy.filters.categoryPlaceholder}
+        </SelectItem>
+        {categories.map((cat) => (
+          <SelectItem key={cat} value={cat}>
+            {cat}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+  const stockColumnHeader = (
+    <Select
+      value={stockFilter}
+      onValueChange={(v) => setStockFilter(v as StockFilter)}
+    >
+      <SelectTrigger
+        aria-label={stockCopy.filters.statusPlaceholder}
+        size="sm"
+        className="ml-auto min-w-28 bg-background normal-case tracking-normal text-foreground"
+      >
+        <SelectValue placeholder={stockCopy.table.stock} />
+      </SelectTrigger>
+      <SelectContent>
+        {stockFilterOptions.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.value === "all" ? stockCopy.table.stock : opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+  const locationFilterControl = (
+    <Select
+      value={locationFilter}
+      onValueChange={(v) => setLocationFilter(v as LocationFilter)}
+    >
+      <SelectTrigger
+        size={isCompactLayout ? "touch" : "default"}
+        className={isCompactLayout ? "w-full" : "min-w-32"}
+      >
+        <SelectValue placeholder={stockCopy.filters.locationPlaceholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {locationFilterOptions.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
   const stockColumns: DataTableColumn<StockIngredient>[] = [
     {
       key: "ingredient",
@@ -688,16 +899,19 @@ export function StockClient({
       className: "min-w-56",
       render: (item) => (
         <div className="flex flex-col gap-1">
-          <p className="font-semibold">{item.name}</p>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className="font-mono">{item.sku}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold">{item.name}</p>
+            <StockAlertBadges item={item} />
           </div>
+          <span className="font-mono text-xs text-muted-foreground">
+            {item.sku || inventoryCommon.noValue}
+          </span>
         </div>
       ),
     },
     {
       key: "category",
-      header: FORM_VI.category,
+      header: categoryColumnHeader,
       className: "min-w-32",
       render: (item) =>
         item.category ? (
@@ -716,51 +930,54 @@ export function StockClient({
         ),
     },
     {
-      key: "stock",
-      header: stockCopy.table.stock,
-      className: "min-w-24 text-right",
+      key: "kind",
+      header: stockCopy.table.kind,
+      className: "min-w-28",
       render: (item) => (
-        <StockQtyCell
-          item={item}
-          className={cn(
-            "font-mono",
-            (item.status === "low" || item.status === "out") &&
-              "font-semibold text-destructive",
-          )}
-        />
+        <Badge variant="secondary">
+          {ITEM_KIND_LABELS[item.itemKind] ?? item.itemKind}
+        </Badge>
       ),
     },
     {
-      key: "warning",
-      header: stockCopy.table.warning,
-      className: "min-w-40 text-right",
+      key: "stock",
+      header: stockColumnHeader,
+      className: "min-w-24 text-right",
       render: (item) => (
-        <div className="flex flex-wrap justify-end gap-2">
-          <StatusBadge domain="inventory" value={item.status} size="sm" />
-          {item.qty <= item.reorder ? (
-            <Badge variant="warning">{stockCopy.filters.reorder}</Badge>
-          ) : null}
+        <div className="flex flex-col items-end gap-1">
+          <StockQtyCell
+            item={item}
+            className={cn(
+              "font-mono tabular-nums",
+              (item.status === "low" || item.status === "out") &&
+                "font-semibold text-destructive",
+            )}
+          />
+          <StockLocationBreakdownLine
+            rows={item.locationBreakdown}
+            className="max-w-40 text-right"
+          />
         </div>
       ),
     },
     {
       key: "wac",
       header: stockCopy.table.wac,
-      className: "min-w-24 text-right",
+      className: "min-w-28 text-right",
       render: (item) => (
-        <span className="font-mono">
+        <span className="font-mono tabular-nums">
           {item.cost > 0 ? formatVND(item.cost) : inventoryCommon.noValue}
         </span>
       ),
     },
     {
       key: "value",
-      header: FORM_VI.value,
+      header: stockCopy.table.stockValue,
       className: "min-w-28 text-right",
       render: (item) => (
-        <span className="font-mono font-semibold">
+        <span className="font-mono font-semibold tabular-nums">
           {stockValue(item) > 0
-            ? inventoryCommon.currencyCompact(formatVND(stockValue(item)))
+            ? formatVND(stockValue(item))
             : inventoryCommon.noValue}
         </span>
       ),
@@ -812,8 +1029,8 @@ export function StockClient({
     </div>
   );
 
-  // Work signals: the under-threshold count doubles as a filter toggle; the
-  // expiry / pending counts are read-only badges (no dedicated filter facet).
+  // Work signals: the under-threshold count doubles as a filter toggle; pending
+  // counts are read-only badges (no dedicated filter facet).
   const workSignalCluster = (
     <div className="flex flex-wrap items-center gap-2">
       <Button
@@ -835,12 +1052,6 @@ export function StockClient({
           {summary.underThresholdCount}
         </Badge>
       </Button>
-      <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-        {stockCopy.metrics.nearExpiry}
-        <Badge variant={summary.expiryCount > 0 ? "warning" : "secondary"}>
-          {summary.expiryCount}
-        </Badge>
-      </span>
       <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
         {stockCopy.metrics.pending}
         <Badge variant={summary.pendingWorkCount > 0 ? "warning" : "secondary"}>
@@ -884,7 +1095,7 @@ export function StockClient({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">
-              {stockCopy.filters.allCategories}
+              {stockCopy.filters.categoryPlaceholder}
             </SelectItem>
             {categories.map((cat) => (
               <SelectItem key={cat} value={cat}>
@@ -914,52 +1125,13 @@ export function StockClient({
         </SelectContent>
       </Select>
 
-      <Select
-        value={riskFilter}
-        onValueChange={(v) => setRiskFilter(v as RiskFilter)}
-      >
-        <SelectTrigger
-          size={isCompactLayout ? "touch" : "default"}
-          className={isCompactLayout ? "w-full" : "min-w-40"}
-        >
-          <SelectValue placeholder={stockCopy.filters.riskPlaceholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {riskFilterOptions.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={sortMode}
-        onValueChange={(v) => setSortMode(v as SortMode)}
-      >
-        <SelectTrigger
-          size={isCompactLayout ? "touch" : "default"}
-          className={isCompactLayout ? "w-full" : "min-w-56"}
-        >
-          <SelectValue placeholder={stockCopy.filters.sortPlaceholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {sortOptions.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {locationFilterControl}
     </>
   );
 
   const resultCountBadge = !isFirstLoadEmpty ? (
     <Badge variant="outline" aria-live="polite">
       {filtered.length}/{ingredients.length}
-      {filteredValue > 0
-        ? ` · ${inventoryCommon.currencyCompact(formatVND(filteredValue))}`
-        : ""}
     </Badge>
   ) : null;
 
@@ -992,14 +1164,6 @@ export function StockClient({
           size={embedded || isCompactLayout ? "touch" : "sm"}
         />
       ) : null}
-      {actionPermissions.canWriteoff && summary.expiryCount > 0 ? (
-        <QuickActionButton
-          href={actionHrefs.expiry}
-          icon={IconCalendarClock}
-          label={stockCopy.actions.expiry}
-          size={embedded || isCompactLayout ? "touch" : "sm"}
-        />
-      ) : null}
       {actionPermissions.canWriteoff ? (
         <QuickActionButton
           href={actionHrefs.waste}
@@ -1023,14 +1187,18 @@ export function StockClient({
   const hasSecondaryActions =
     actionPermissions.canCreateTransfer ||
     (actionPermissions.canCreateStocktake && actionHrefs.stocktake) ||
-    (actionPermissions.canWriteoff && summary.expiryCount > 0) ||
     actionPermissions.canWriteoff ||
-    (actionPermissions.canCreatePurchaseOrder && actionHrefs.purchaseSuggestion);
+    (actionPermissions.canCreatePurchaseOrder &&
+      actionHrefs.purchaseSuggestion);
 
   const desktopSecondaryActionsDropdown = hasSecondaryActions ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size={embedded ? "touch" : "sm"} className="gap-1.5">
+        <Button
+          variant="outline"
+          size={embedded ? "touch" : "sm"}
+          className="gap-1.5"
+        >
           {stockCopy.actions.actionsDropdown}
           <IconChevronDown className="size-3.5" />
         </Button>
@@ -1038,7 +1206,10 @@ export function StockClient({
       <DropdownMenuContent align="end" className="w-56">
         {actionPermissions.canCreateTransfer ? (
           <DropdownMenuItem asChild>
-            <Link href={actionHrefs.transfer} className="flex items-center gap-2">
+            <Link
+              href={actionHrefs.transfer}
+              className="flex items-center gap-2"
+            >
               <IconTruck className="size-4 text-muted-foreground" />
               <span>{stockCopy.actions.transfer}</span>
             </Link>
@@ -1046,17 +1217,12 @@ export function StockClient({
         ) : null}
         {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
           <DropdownMenuItem asChild>
-            <Link href={actionHrefs.stocktake} className="flex items-center gap-2">
+            <Link
+              href={actionHrefs.stocktake}
+              className="flex items-center gap-2"
+            >
               <IconClipboardList className="size-4 text-muted-foreground" />
               <span>{stockCopy.actions.stocktake}</span>
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
-        {actionPermissions.canWriteoff && summary.expiryCount > 0 ? (
-          <DropdownMenuItem asChild>
-            <Link href={actionHrefs.expiry} className="flex items-center gap-2">
-              <IconCalendarClock className="size-4 text-muted-foreground" />
-              <span>{stockCopy.actions.expiry}</span>
             </Link>
           </DropdownMenuItem>
         ) : null}
@@ -1071,7 +1237,10 @@ export function StockClient({
         {actionPermissions.canCreatePurchaseOrder &&
         actionHrefs.purchaseSuggestion ? (
           <DropdownMenuItem asChild>
-            <Link href={actionHrefs.purchaseSuggestion} className="flex items-center gap-2">
+            <Link
+              href={actionHrefs.purchaseSuggestion}
+              className="flex items-center gap-2"
+            >
               <IconShoppingCart className="size-4 text-muted-foreground" />
               <span>{stockCopy.actions.purchaseSuggestion}</span>
             </Link>
@@ -1139,15 +1308,15 @@ export function StockClient({
                 {item.category}
               </Badge>
             ) : null}
-            <span className="text-xs text-muted-foreground">{item.sku}</span>
+            <Badge variant="secondary">
+              {ITEM_KIND_LABELS[item.itemKind] ?? item.itemKind}
+            </Badge>
+            <span className="font-mono text-xs text-muted-foreground">
+              {item.sku || inventoryCommon.noValue}
+            </span>
           </div>
         </div>
-        <div className="flex flex-wrap justify-end gap-2">
-          <StatusBadge domain="inventory" value={item.status} size="sm" />
-          {item.qty <= item.reorder ? (
-            <Badge variant="warning">{stockCopy.filters.reorder}</Badge>
-          ) : null}
-        </div>
+        <StockAlertBadges item={item} className="justify-end" />
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-sm">
@@ -1163,9 +1332,15 @@ export function StockClient({
                 "text-destructive",
             )}
           />
+          <StockLocationBreakdownLine
+            rows={item.locationBreakdown}
+            className="mt-1"
+          />
         </div>
         <div className="text-right">
-          <p className="text-xs text-muted-foreground">{FORM_VI.value}</p>
+          <p className="text-xs text-muted-foreground">
+            {stockCopy.table.stockValue}
+          </p>
           <p className="font-semibold tabular-nums">
             {stockValue(item) > 0
               ? inventoryCommon.currencyCompact(formatVND(stockValue(item)))
@@ -1174,7 +1349,7 @@ export function StockClient({
         </div>
         <div>
           <p className="text-xs text-muted-foreground">{stockCopy.table.wac}</p>
-          <p className="tabular-nums">
+          <p className="font-mono tabular-nums">
             {item.cost > 0
               ? inventoryCommon.currencyCompact(formatVND(item.cost))
               : inventoryCommon.noValue}
@@ -1249,11 +1424,13 @@ export function StockClient({
       {operatorTaskSection}
       {!embedded && !isCompactLayout ? (
         <div className="flex flex-col gap-3">
-          <KpiRow density="compact" className="lg:grid-cols-2 xl:grid-cols-2">
+          <KpiRow density="compact">
             <KpiCard
               density="compact"
               label={stockCopy.metrics.selectedWarehouse}
-              value={inventoryCommon.currencyCompact(formatVND(visibleTotalValue))}
+              value={inventoryCommon.currencyCompact(
+                formatVND(visibleTotalValue),
+              )}
             />
             {totalValue != null ? (
               <KpiCard
@@ -1263,19 +1440,20 @@ export function StockClient({
               />
             ) : null}
           </KpiRow>
-          <Item variant="outline" className="justify-between bg-card p-3 shadow-none">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {stockCopy.metrics.workSignalTitle}
-            </span>
-            {workSignalCluster}
-          </Item>
         </div>
       ) : null}
 
       <AppToolbar
         variant={embedded ? "inline" : "card"}
         search={searchControl}
-        filters={!isCompactLayout ? filterControls : undefined}
+        bulk={
+          !embedded && !isCompactLayout ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {locationFilterControl}
+              {workSignalCluster}
+            </div>
+          ) : undefined
+        }
         actions={
           embedded ? undefined : isCompactLayout ? (
             primaryReceiveAction

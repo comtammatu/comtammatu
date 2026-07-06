@@ -39,6 +39,7 @@ interface HrClientProps {
   isBranchManager: boolean;
   canManageEmployees: boolean;
   canViewEmployees: boolean;
+  canManagePositionTasks: boolean;
   positionTasksData: PositionTasksData;
 }
 
@@ -48,6 +49,7 @@ export function HrClient({
   isBranchManager,
   canManageEmployees,
   canViewEmployees,
+  canManagePositionTasks,
   positionTasksData,
 }: HrClientProps) {
   const [addOpen, setAddOpen] = useState(false);
@@ -284,7 +286,7 @@ export function HrClient({
               }
             />
           </AppSection>
-          {canManageEmployees ? (
+          {canManagePositionTasks ? (
             <AppSection
               title={copy.positionTasks.title}
               description={copy.positionTasks.description}

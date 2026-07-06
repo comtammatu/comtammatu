@@ -19,35 +19,36 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 
 - Kho Tổng giữ phụ gia, nguyên liệu khô, vật tư và hàng cấp chi nhánh.
 - Bếp Trung Tâm giữ đồ tươi/sản xuất trong ngày như thịt, đồ chua, thành phẩm sơ chế.
-- Chi nhánh giữ tồn vận hành tại Kho CN.
-- Bếp CN là endpoint tiêu hao bán hàng trong ngày, không phải nơi giữ tồn.
+- Chi nhánh giữ tồn vận hành tại Kho CN và Bếp CN.
+- Chuyển Kho CN -> Bếp CN là luân chuyển nội bộ cùng chi nhánh; xuất/tiêu hao sau đó mới giảm tồn chi nhánh.
 - Mọi bước đều có chứng từ rõ: PO/GRN, stock transfer thật, production order, consumption report, stocktake/adjustment.
 
 ## 2. Site và location
 
-| Site | `branch_kind` | Stock-bearing location | Vai trò |
-| --- | --- | --- | --- |
-| Chi nhánh | `branch` | `warehouse` = Kho CN | Nhận hàng, giữ tồn chi nhánh, kiểm kê, xuất tiêu hao |
-| Kho Tổng | `central_supply` | `warehouse` = Kho Tổng | Nhập/kho phụ gia, nguyên liệu khô, vật tư cấp chi nhánh |
-| Bếp Trung Tâm | `central_kitchen` | `warehouse` hoặc `production_storage` | Nhập đồ tươi, sản xuất trong ngày, cấp chi nhánh |
+| Site          | `branch_kind`     | Stock-bearing location                   | Vai trò                                                       |
+| ------------- | ----------------- | ---------------------------------------- | ------------------------------------------------------------- |
+| Chi nhánh     | `branch`          | `warehouse` = Kho CN; `kitchen` = Bếp CN | Nhận hàng, giữ tồn chi nhánh, kiểm kê, cấp bếp, xuất tiêu hao |
+| Kho Tổng      | `central_supply`  | `warehouse` = Kho Tổng                   | Nhập/kho phụ gia, nguyên liệu khô, vật tư cấp chi nhánh       |
+| Bếp Trung Tâm | `central_kitchen` | `warehouse` hoặc `production_storage`    | Nhập đồ tươi, sản xuất trong ngày, cấp chi nhánh              |
 
-`location_kind = 'kitchen'` chỉ còn phục vụ dữ liệu cũ/backfill. Flow mới không tạo Bếp CN như location giữ tồn và không cộng tồn kitchen vào tồn vận hành.
+`location_kind = 'kitchen'` tại `branch` là stock-bearing Bếp CN và được cộng vào tồn vận hành của chi nhánh.
 
 ## 3. Chứng từ chuẩn
 
-| Bước | Chứng từ / thao tác hệ thống | Kết quả kho |
-| --- | --- | --- |
-| NCC giao Kho Tổng | `PO`, `GRN` | Tăng tồn Kho Tổng |
-| NCC giao Bếp Trung Tâm | `PO`, `GRN` | Tăng tồn Bếp Trung Tâm |
-| NCC giao chi nhánh | `PO`, `GRN` | Tăng tồn Kho CN |
-| Kho Tổng cấp chi nhánh | `stock_transfer` | Kho Tổng giảm, Kho CN tăng |
-| Bếp Trung Tâm cấp chi nhánh | `stock_transfer` | Bếp Trung Tâm giảm, Kho CN tăng |
-| Chi nhánh chuyển chi nhánh | `stock_transfer` | Chi nhánh gửi giảm, chi nhánh nhận tăng |
-| Bếp Trung Tâm sản xuất | `production_order` | Nguyên liệu giảm, thành phẩm tăng |
-| Chi nhánh dùng nguyên liệu bán hàng | consumption report duyệt/apply | Kho CN giảm bằng `stock_movements.consumption/sale_consumption` |
-| Kiểm kê | `stocktake` / `adjustment` | Điều chỉnh về tồn thực tế |
+| Bước                                | Chứng từ / thao tác hệ thống    | Kết quả kho                                                     |
+| ----------------------------------- | ------------------------------- | --------------------------------------------------------------- |
+| NCC giao Kho Tổng                   | `PO`, `GRN`                     | Tăng tồn Kho Tổng                                               |
+| NCC giao Bếp Trung Tâm              | `PO`, `GRN`                     | Tăng tồn Bếp Trung Tâm                                          |
+| NCC giao chi nhánh                  | `PO`, `GRN`                     | Tăng tồn Kho CN                                                 |
+| Kho Tổng cấp chi nhánh              | `stock_transfer`                | Kho Tổng giảm, Kho CN tăng                                      |
+| Bếp Trung Tâm cấp chi nhánh         | `stock_transfer`                | Bếp Trung Tâm giảm, Kho CN tăng                                 |
+| Chi nhánh chuyển chi nhánh          | `stock_transfer`                | Chi nhánh gửi giảm, chi nhánh nhận tăng                         |
+| Kho CN cấp Bếp CN                   | `stock_transfer` cùng chi nhánh | Kho CN giảm, Bếp CN tăng; tổng tồn chi nhánh không giảm         |
+| Bếp Trung Tâm sản xuất              | `production_order`              | Nguyên liệu giảm, thành phẩm tăng                               |
+| Chi nhánh dùng nguyên liệu bán hàng | consumption report duyệt/apply  | Kho CN giảm bằng `stock_movements.consumption/sale_consumption` |
+| Kiểm kê                             | `stocktake` / `adjustment`      | Điều chỉnh về tồn thực tế                                       |
 
-`stock_transfers` chỉ dùng khi hàng vẫn còn tồn tại site nhận. `Kho CN -> Bếp CN` không phải transfer.
+`stock_transfers` dùng khi hàng vẫn còn tồn tại ở nơi nhận. `Kho CN -> Bếp CN` là transfer nội bộ cùng chi nhánh; phiếu xuất/tiêu hao mới là bước giảm tồn.
 
 ## 4. Quy trình chuẩn
 
@@ -95,17 +96,17 @@ Luồng dùng state machine 5 bước: `draft -> confirmed_ship -> in_transit ->
 
 1. Nhân viên/kíp bếp ghi báo cáo tiêu hao trong ngày từ Employee checkout flow.
 2. Quản lý chi nhánh duyệt báo cáo trước khi checkout được hoàn tất.
-3. Khi duyệt/apply, hệ thống trừ tồn tại Kho CN/default issue warehouse.
+3. Khi duyệt/apply, hệ thống trừ tồn tại Bếp CN nếu chi nhánh đã cấu hình kitchen; fallback Kho CN/default issue warehouse khi chưa có Bếp CN.
 4. Movement sinh ra:
    - `stock_movements.type = 'consumption'`
    - `movement_subtype = 'sale_consumption'`
    - `source_type = 'hrm_consumption'`
-   - `location_id` là stock-bearing Kho CN.
+   - `location_id` là stock-bearing Bếp CN hoặc Kho CN fallback.
 
 Điểm kiểm soát:
 
 - Checklist nhân viên không tự mutate tồn.
-- Không chọn `is_default_consumption` hoặc `location_kind = 'kitchen'` để trừ tồn.
+- Không trừ tồn khi mới cấp Bếp CN; chỉ phiếu xuất/tiêu hao được duyệt mới ghi giảm tồn.
 - Nếu thiếu WAC hoặc không đủ tồn, không apply tiêu hao; phải xử lý tồn/GRN/adjustment trước.
 
 ### 4.5 Kiểm kê cuối ngày
@@ -118,18 +119,18 @@ Luồng dùng state machine 5 bước: `draft -> confirmed_ship -> in_transit ->
 Điểm kiểm soát:
 
 - Mỗi site chỉ có 1 phiên kiểm kê `in_progress` tại một thời điểm.
-- Không cộng tồn legacy Bếp CN vào tồn vận hành.
+- Cộng tồn Bếp CN/kitchen vào tồn vận hành của chi nhánh.
 
 ## 5. Ngoại lệ và cách xử lý
 
-| Tình huống | Cách xử lý |
-| --- | --- |
-| NCC giao thiếu / giao dư | Ghi đúng số thực nhận trên `GRN`, không sửa PO để che lệch |
-| Hàng cận date / hỏng | Dùng `adjustment` hoặc write-off theo lý do rõ ràng |
-| Transfer nhận thiếu | Xác nhận theo số thực nhận, ghi chú chênh lệch để OPS đối soát |
-| Thiếu BOM cho thành phẩm | Không xác nhận sản xuất; cập nhật `production_recipes` trước |
-| Thiếu nguyên liệu ở Kho CN khi duyệt tiêu hao | Không apply tiêu hao; kiểm GRN/transfer/stocktake trước |
-| Còn tồn legacy ở Bếp CN/kitchen | Đưa vào audit/backfill riêng; không sửa/xóa lịch sử transfer cũ |
+| Tình huống                                    | Cách xử lý                                                                  |
+| --------------------------------------------- | --------------------------------------------------------------------------- |
+| NCC giao thiếu / giao dư                      | Ghi đúng số thực nhận trên `GRN`, không sửa PO để che lệch                  |
+| Hàng cận date / hỏng                          | Dùng `adjustment` hoặc write-off theo lý do rõ ràng                         |
+| Transfer nhận thiếu                           | Xác nhận theo số thực nhận, ghi chú chênh lệch để OPS đối soát              |
+| Thiếu BOM cho thành phẩm                      | Không xác nhận sản xuất; cập nhật `production_recipes` trước                |
+| Thiếu nguyên liệu ở Bếp CN khi duyệt tiêu hao | Không apply tiêu hao; kiểm transfer cấp bếp/GRN/stocktake trước             |
+| Còn tồn ở Bếp CN/kitchen                      | Tính vào tồn chi nhánh; audit lịch sử riêng nếu số liệu nguồn cũ không khớp |
 
 ## 6. Checklist cuối ngày
 

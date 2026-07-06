@@ -30,7 +30,6 @@ const VI_DICTIONARY: InventoryDictionary = {
     stocktake: { long: "Kiểm kê" },
     issues: { short: "Xuất kho", long: "Xuất kho nội bộ" },
     consumption: { long: "Tiêu hao" },
-    expiry: { short: "Hạn dùng", long: "Hạn sử dụng" },
     reports: { long: "Báo cáo" },
     production: { long: "Sản xuất Bếp Trung Tâm" },
     ingredients: { long: "Nguyên liệu" },
@@ -62,10 +61,6 @@ const VI_DICTIONARY: InventoryDictionary = {
       long: "Điều chuyển nội bộ",
     },
     "/inventory/stocktake": { long: "Kiểm kê" },
-    "/inventory/expiry": {
-      short: "Cảnh báo hạn",
-      long: "Cảnh báo hạn sử dụng",
-    },
     "/inventory/production": { long: "Sản xuất Bếp Trung Tâm" },
     "/inventory/reports": { long: "Báo cáo" },
     "/inventory/ingredients": { long: "Nguyên liệu" },
@@ -75,10 +70,6 @@ const VI_DICTIONARY: InventoryDictionary = {
     "/inventory/settings/units": {
       short: "Đơn vị",
       long: "Đơn vị đo",
-    },
-    "/inventory/settings/expiry": {
-      short: "Hạn dùng",
-      long: "Hạn sử dụng",
     },
     "/inventory/settings/thresholds": {
       short: "Ngưỡng tồn",

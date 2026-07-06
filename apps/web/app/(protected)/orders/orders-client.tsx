@@ -2,7 +2,10 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing orders review surface keeps operational copy inline */
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
+import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import { ShoppingBag as IconShoppingBag, X as IconX } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
@@ -136,6 +139,8 @@ export function OrdersClient({
   branches,
   showBranchFilter,
 }: OrdersClientProps) {
+  const router = useRouter();
+  const params = useParams();
   const [orders, setOrders] = useState<OrderRow[]>(initialOrders);
   const [summary, setSummary] = useState<OrdersSummary>(initialSummary);
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
@@ -150,6 +155,75 @@ export function OrdersClient({
   const [dateTo, setDateTo] = useState("");
   const [status, setStatus] = useState<string>("");
   const [branchId, setBranchId] = useState<string>("");
+
+  // Sync prop-to-state for router.refresh() updates
+  useEffect(() => {
+    setOrders(initialOrders);
+  }, [initialOrders]);
+
+  useEffect(() => {
+    setSummary(initialSummary);
+  }, [initialSummary]);
+
+  const routeBranchId = params?.branchId ? Number(params.branchId) : null;
+  const currentBranchId = (routeBranchId && !isNaN(routeBranchId)) ? routeBranchId : (branchId ? Number(branchId) : null);
+
+  const initialSubscribeSeenRef = useRef(false);
+
+  useRealtimeChannel(
+    (supabase, token) => {
+      let tenantId: number | null = null;
+      if (token) {
+        const claims = extractClaimsFromAccessToken(token);
+        if (claims) {
+          tenantId = claims.tenant_id;
+        }
+      }
+      if (tenantId === null) return null;
+
+      // Filter dynamically based on current branch selection or route context
+      const realtimeFilter = currentBranchId 
+        ? `branch_id=eq.${String(currentBranchId)}`
+        : `tenant_id=eq.${String(tenantId)}`;
+
+      return supabase
+        .channel(`orders-list-realtime-${String(tenantId)}-${String(currentBranchId ?? "all")}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "orders",
+            filter: realtimeFilter,
+          },
+          () => {
+            router.refresh();
+          },
+        )
+        .subscribe((subscriptionStatus) => {
+          if (subscriptionStatus !== "SUBSCRIBED") return;
+          if (!initialSubscribeSeenRef.current) {
+            initialSubscribeSeenRef.current = true;
+            return;
+          }
+          router.refresh();
+        });
+    },
+    [currentBranchId, router],
+  );
+
+  // Tab visibility reconnect backstop
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        router.refresh();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [router]);
 
   function handleFilter() {
     const filters: FetchOrdersFilters = {};

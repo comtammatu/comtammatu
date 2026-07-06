@@ -56,10 +56,10 @@ export async function TransfersPageContent({
 
   if (createParam === "cap-bep") {
     if (routeBranchId != null) {
-      redirect(`/br/${routeBranchId}/stock`);
+      redirect(`/br/${routeBranchId}/stock/transfer/new`);
     }
     const scopeQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
-    redirect(`/inventory/consumption${scopeQuery}`);
+    redirect(`/inventory/transfers/new${scopeQuery}`);
   }
 
   const [trRes, brRes] = await Promise.all([

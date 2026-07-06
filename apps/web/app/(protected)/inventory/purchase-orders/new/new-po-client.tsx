@@ -33,10 +33,12 @@ import {
 } from "@comtammatu/ui/components/select";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetFooter,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from "@comtammatu/ui/components/sheet";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -74,6 +76,25 @@ import {
   PRODUCT_VI,
   STATES_VI,
 } from "@comtammatu/shared/messages";
+
+const toastLoadSuggestionsFailed = "Không thể tải gợi ý.";
+const toastIngredientAlreadyExists = "đã có trong PO";
+const toastAddedIngredient = "Đã thêm";
+const toastNoSuggestionsToAdd = "Không có gợi ý nào để thêm";
+const toastAddedIngredientsPrefix = "Đã thêm ";
+const toastAddedIngredientsSuffix = " nguyên liệu";
+const toastChooseSupplier = "Chọn nhà cung cấp";
+const toastChooseReceivingBranch = "Chọn kho nhận hàng";
+const toastAddAtLeastOneIngredient = "Thêm ít nhất 1 nguyên liệu";
+const toastCreatePoFailed = "Không tạo được PO";
+const toastCreatePoSuccess = "Đã tạo đơn đặt hàng";
+const branchUnselected = "Chưa chọn";
+const currencySuffix = "đ";
+const poHeaderSupplierFallback = "Chưa chọn nhà cung cấp";
+const poHeaderSupplierSelected = "Đã chọn";
+const poHeaderNotesPresent = "Có ghi chú";
+const poHeaderNotesEmpty = "Chưa ghi chú";
+
 interface LocalLine {
   ingredientId: number;
   ingredientName: string;
@@ -174,7 +195,7 @@ export function NewPoClient({
       if (res.success) {
         setSuggestions((res.data ?? []) as PoSuggestionRow[]);
       } else {
-        toast.error(res.error ?? "Không thể tải gợi ý.");
+        toast.error(res.error ?? toastLoadSuggestionsFailed);
       }
     });
   }
@@ -193,7 +214,7 @@ export function NewPoClient({
 
   function addSuggestionToLines(s: PoSuggestionRow) {
     if (lineIngredientIds.has(s.ingredient_id)) {
-      toast.info(`${s.ingredient_name} đã có trong PO`);
+      toast.info(`${s.ingredient_name} ${toastIngredientAlreadyExists}`);
       return;
     }
     const ing = ingredients.find((x) => x.id === s.ingredient_id);
@@ -209,7 +230,7 @@ export function NewPoClient({
         unitPriceEst: ing?.unit_cost ?? null,
       },
     ]);
-    toast.success(`Đã thêm ${s.ingredient_name}`);
+    toast.success(`${toastAddedIngredient} ${s.ingredient_name}`);
   }
 
   function addAllSuggestions() {
@@ -217,7 +238,7 @@ export function NewPoClient({
       (s) => !lineIngredientIds.has(s.ingredient_id) && s.suggested_qty > 0,
     );
     if (toAdd.length === 0) {
-      toast.info("Không có gợi ý nào để thêm");
+      toast.info(toastNoSuggestionsToAdd);
       return;
     }
     setLines((prev) => [
@@ -235,7 +256,7 @@ export function NewPoClient({
         };
       }),
     ]);
-    toast.success(`Đã thêm ${toAdd.length} nguyên liệu`);
+    toast.success(toastAddedIngredientsPrefix + toAdd.length + toastAddedIngredientsSuffix);
   }
 
   function removeLine(idx: number) {
@@ -254,15 +275,15 @@ export function NewPoClient({
 
   function submit() {
     if (!supplierId) {
-      toast.error("Chọn nhà cung cấp");
+      toast.error(toastChooseSupplier);
       return;
     }
     if (!branchId) {
-      toast.error("Chọn kho nhận hàng");
+      toast.error(toastChooseReceivingBranch);
       return;
     }
     if (lines.length === 0) {
-      toast.error("Thêm ít nhất 1 nguyên liệu");
+      toast.error(toastAddAtLeastOneIngredient);
       return;
     }
     startTransition(async () => {
@@ -278,11 +299,11 @@ export function NewPoClient({
         })),
       });
       if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không tạo được PO");
+        toast.error(res.error ?? toastCreatePoFailed);
         return;
       }
       const poId = (res.data as { id: number }).id;
-      toast.success("Đã tạo đơn đặt hàng");
+      toast.success(toastCreatePoSuccess);
       router.push(`${poBasePath}/${poId}?branchId=${branchId}`);
     });
   }
@@ -297,6 +318,9 @@ export function NewPoClient({
   const addableCount = sortedSuggestions.filter(
     (s) => !lineIngredientIds.has(s.ingredient_id) && s.suggested_qty > 0,
   ).length;
+  const selectedBranchName =
+    procurementBranches.find((branch) => branch.id === branchId)?.name ??
+    branchUnselected;
 
   const header = (
     <AppPageHeader
@@ -321,8 +345,10 @@ export function NewPoClient({
         suppliers={suppliers}
         supplierId={supplierId}
         onSupplierChange={setSupplierId}
+        branchName={selectedBranchName}
         notes={notes}
         onNotesChange={setNotes}
+        embedded={embedded}
       />
       <SuggestionsPanel
         suggestions={sortedSuggestions}
@@ -433,49 +459,106 @@ function SupplierSection({
   suppliers,
   supplierId,
   onSupplierChange,
+  branchName,
   notes,
   onNotesChange,
+  embedded,
 }: {
   suppliers: SupplierRow[];
   supplierId: string;
   onSupplierChange: (v: string) => void;
+  branchName: string;
   notes: string;
   onNotesChange: (v: string) => void;
+  embedded: boolean;
 }) {
+  const supplierName =
+    suppliers.find((supplier) => String(supplier.id) === supplierId)?.name ??
+    poHeaderSupplierFallback;
+  const notesLabel = notes.trim() ? poHeaderNotesPresent : poHeaderNotesEmpty;
+
   return (
     <AppSection
       title={messages.inventory.po.headerInfoTitle}
       description={messages.inventory.po.headerInfoDescription}
+      action={
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button type="button" variant="outline" size={embedded ? "touch" : "sm"}>
+              {ACTIONS_VI.edit}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="max-h-dvh-95 p-0">
+            <SheetHeader>
+              <SheetTitle>{messages.inventory.po.headerInfoTitle}</SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col gap-3 overflow-y-auto px-3 py-3 sm:px-4">
+              <div className="flex flex-col gap-1.5">
+                <Label>
+                  {messages.inventory.po.supplierRequired}{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Combobox
+                  value={supplierId}
+                  onValueChange={onSupplierChange}
+                  options={suppliers.map((s) => ({
+                    value: String(s.id),
+                    label: s.name,
+                  }))}
+                  placeholder={messages.inventory.po.supplierPlaceholder}
+                  searchPlaceholder={
+                    messages.inventory.po.supplierSearchPlaceholder
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="notes">{FORM_VI.notes}</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => onNotesChange(e.target.value)}
+                  rows={3}
+                  placeholder={messages.inventory.po.notesPlaceholder}
+                  className="min-h-24"
+                />
+              </div>
+            </div>
+            <SheetFooter>
+              <Button type="button" size="touch-lg" asChild>
+                <SheetClose>{ACTIONS_VI.close}</SheetClose>
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      }
     >
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <Label>
-            {messages.inventory.po.supplierRequired}{" "}
-            <span className="text-destructive">*</span>
-          </Label>
-          <Combobox
-            value={supplierId}
-            onValueChange={onSupplierChange}
-            options={suppliers.map((s) => ({
-              value: String(s.id),
-              label: s.name,
-            }))}
-            placeholder={messages.inventory.po.supplierPlaceholder}
-            searchPlaceholder={messages.inventory.po.supplierSearchPlaceholder}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="notes">{FORM_VI.notes}</Label>
-          <Textarea
-            id="notes"
-            value={notes}
-            onChange={(e) => onNotesChange(e.target.value)}
-            rows={3}
-            placeholder={messages.inventory.po.notesPlaceholder}
-            className="min-h-24"
-          />
-        </div>
-      </div>
+      <ItemGroup className="gap-2">
+        <Item variant="outline" size="sm" className="justify-between">
+          <ItemContent>
+            <ItemTitle>{supplierName}</ItemTitle>
+            <ItemDescription>
+              {messages.inventory.po.supplierRequired}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <Badge variant={supplierId ? "success" : "warning"}>
+              {supplierId ? poHeaderSupplierSelected : FORM_VI.required}
+            </Badge>
+          </ItemActions>
+        </Item>
+        <Item variant="muted" size="sm">
+          <ItemContent>
+            <ItemTitle>{messages.inventory.po.warehouseShort}</ItemTitle>
+            <ItemDescription>{branchName}</ItemDescription>
+          </ItemContent>
+        </Item>
+        <Item variant="muted" size="sm">
+          <ItemContent>
+            <ItemTitle>{FORM_VI.notes}</ItemTitle>
+            <ItemDescription>{notesLabel}</ItemDescription>
+          </ItemContent>
+        </Item>
+      </ItemGroup>
     </AppSection>
   );
 }
@@ -513,7 +596,7 @@ function SuggestionsPanel({
   embedded: boolean;
 }) {
   const branchLabel =
-    procurementBranches.find((b) => b.id === branchId)?.name ?? "Chưa chọn";
+    procurementBranches.find((b) => b.id === branchId)?.name ?? branchUnselected;
   const showBranchSwitcher = canSwitchBranch && procurementBranches.length > 1;
   return (
     <AppSection
@@ -913,7 +996,7 @@ function LineItemsSection({
         onOpenChange={(next) => setNumpad(next ? "price" : null)}
         title={messages.inventory.po.unitPrice}
         initialValue={draft?.unitPrice ?? 0}
-        suffix="đ"
+        suffix={currencySuffix}
         onConfirm={(value) => {
           patchDraft({ unitPrice: value });
           checkDraftDeviation(value);

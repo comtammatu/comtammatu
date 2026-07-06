@@ -328,14 +328,6 @@ export const OPERATOR_TILE_ITEMS = [
   },
   {
     moduleKey: "inventory",
-    icon: "Hourglass",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/expiry",
-    label: "Hạn dùng",
-    kinds: ["branch"],
-  },
-  {
-    moduleKey: "inventory",
     icon: "ChartBar",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/reports",

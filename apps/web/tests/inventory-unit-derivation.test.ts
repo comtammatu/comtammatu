@@ -248,3 +248,27 @@ test("standard secondary on a packaging base is rejected (A2 RPC keeps the clien
       err.message === "standard_unit_dimension_mismatch",
   );
 });
+
+test("standard secondary on a packaging base succeeds if it has a valid anchor", () => {
+  const ML = 8;
+  const CHAI = 9;
+  const units = new Map<number, DerivationUnitInfo>([
+    [ML, { id: ML, dimension: "volume", is_standard: true, standard_factor: 1 }],
+    [CHAI, { id: CHAI, dimension: null, is_standard: false, standard_factor: null }],
+  ]);
+  const mlRow: DerivationRow = {
+    unit_id: ML,
+    is_base: false,
+    anchor_unit_id: CHAI,
+    anchor_factor: 1 / 250,
+  };
+  const chaiRow: DerivationRow = {
+    unit_id: CHAI,
+    is_base: true,
+    anchor_unit_id: null,
+    anchor_factor: null,
+  };
+  const rows = rowsMap([mlRow, chaiRow]);
+  const mlToBase = deriveToBaseFactor(CHAI, mlRow, units, rows);
+  assert.equal(mlToBase, 1 / 250);
+});

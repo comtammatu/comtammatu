@@ -107,13 +107,18 @@ export async function WasteNewPageContent({
     supabase
       .from("ingredients")
       .select(
-        "id, name, unit, purchase_unit, unit_cost, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, allow_issue, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        "id, name, unit, purchase_unit, unit_cost, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, allow_issue, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .order("name", { ascending: true }),
     getWasteCapStatus(branchId),
   ]);
+  const { data: stockLevels } = await supabase
+    .from("stock_levels")
+    .select("ingredient_id, location_id, current_quantity, avg_unit_cost")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", branchId);
 
   if (!branchRes.data) {
     redirect(fallbackHref);
@@ -143,6 +148,15 @@ export async function WasteNewPageContent({
           code: u.units?.code ?? "",
           label: u.units?.name ?? u.units?.code ?? "",
           isBase: u.is_base,
+          toBaseFactor: Number(u.to_base_factor ?? 1),
+        }));
+      const ingredientStockLevels = (stockLevels ?? [])
+        .filter((level) => level.ingredient_id === i.id)
+        .map((level) => ({
+          locationId: level.location_id,
+          quantity: Number(level.current_quantity ?? 0),
+          unitCost:
+            level.avg_unit_cost == null ? null : Number(level.avg_unit_cost),
         }));
       return {
         id: i.id,
@@ -155,6 +169,7 @@ export async function WasteNewPageContent({
           "kg",
         unitCost: i.unit_cost === null ? null : Number(i.unit_cost),
         issueUnits,
+        stockLevels: ingredientStockLevels,
       };
     }),
     capStatus:

@@ -33,7 +33,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { Input } from "@comtammatu/ui/components/input";
-import { Item } from "@comtammatu/ui/components/item";
+import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Combobox, FormattedNumberInput } from "@/components/form";
@@ -105,6 +105,7 @@ export type PODetail = {
 };
 
 function VarianceBadge({ variance }: { variance: number }) {
+  if (variance === 0) return null;
   const variant =
     variance > 0 ? "destructive" : variance < 0 ? "success" : "secondary";
   return (
@@ -931,6 +932,153 @@ export function PODetailClient({
     </div>
   );
 
+  const mobileLayout = (
+    <div className="flex flex-col gap-4">
+      {/* 1. Tổng quan đơn hàng */}
+      <AppSection title={poDetailCopy.summaryTitle} size="sm">
+        <DescriptionList
+          className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm"
+          descriptionClassName="font-semibold text-right"
+          items={[
+            {
+              term: poCopy.supplierRequired,
+              description: po.supplier,
+            },
+            {
+              term: poDetailCopy.goodsTotal,
+              description: messages.inventory.common.currency(formatVND(totalAmount)),
+            },
+            {
+              term: FORM_VI.totalAmount,
+              description: (
+                <span className="text-primary font-bold">
+                  {messages.inventory.common.currency(formatVND(grandTotal))}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </AppSection>
+
+      {/* 2. Linked GRNs */}
+      <PoLinkedGrns grns={po.grns} grnBasePath={grnBasePath} />
+
+      {/* 3. Supplier info (chỉ hiển thị nếu có thông tin thực tế) */}
+      {supplierInfoAvailable && (
+        <AppSection title={poDetailCopy.supplierInfoTitle} size="sm" collapsible defaultOpen={false}>
+          <div className="flex flex-col gap-3 text-sm">
+            {po.supplierInfo.address && po.supplierInfo.address !== "—" && (
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">{poDetailCopy.invoiceAddress}</p>
+                <p className="mt-0.5 font-medium">{po.supplierInfo.address}</p>
+              </div>
+            )}
+            {po.supplierInfo.contact && po.supplierInfo.contact !== "—" && (
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">{poDetailCopy.contactPerson}</p>
+                <p className="mt-0.5 font-medium">{po.supplierInfo.contact}</p>
+              </div>
+            )}
+            {po.supplierInfo.payment && po.supplierInfo.payment !== "—" && (
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">{poDetailCopy.paymentTerm}</p>
+                <p className="mt-0.5 font-medium">{po.supplierInfo.payment}</p>
+              </div>
+            )}
+          </div>
+        </AppSection>
+      )}
+
+      {/* 4. Danh sách sản phẩm */}
+      <AppSection
+        title={poDetailCopy.itemCatalogTitle}
+        description={poDetailCopy.itemCatalogDescription(lines.length)}
+        size="sm"
+      >
+        <ItemGroup className="gap-2 p-0 rounded-none border-0">
+          {lines.map((item, index) => (
+            <PoLineMobileCard
+              key={item.lineId}
+              item={item}
+              index={index}
+              canEditLines={canEditLines}
+              isPending={isPending}
+              unitOptions={getPurchaseUnitOptions(ingredientById.get(item.ingredientId))}
+              patchLine={patchLine}
+              onUnitChange={handleLineUnitChange}
+              onSaveLine={handleSaveLine}
+              onDeleteLine={(line) => void handleDeleteLine(line)}
+            />
+          ))}
+        </ItemGroup>
+
+        {canEditLines ? (
+          <form onSubmit={handleAddLine} className="mt-4">
+            <Item variant="outline" className="flex flex-col items-stretch gap-3 bg-muted/30 p-3">
+              <Combobox
+                value={addIngredientId}
+                onValueChange={handleAddIngredientChange}
+                options={ingredients
+                  .filter((ingredient) => ingredient.is_active)
+                  .map((ingredient) => ({
+                    value: String(ingredient.id),
+                    label: ingredient.name,
+                    hint: ingredient.purchase_unit ?? ingredient.unit,
+                    keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
+                  }))}
+                placeholder={poCopy.ingredientPlaceholder}
+                searchPlaceholder={poCopy.ingredientSearchPlaceholder}
+                triggerClassName="h-12 border-dashed"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <FormattedNumberInput
+                  value={addQty}
+                  onValueChange={setAddQty}
+                  maxFractionDigits={3}
+                  placeholder={poCopy.quantityShort}
+                  className="h-12"
+                  required
+                />
+                {addUnitOptions.length > 0 ? (
+                  <Select value={addEntryUnitId != null ? String(addEntryUnitId) : ""} onValueChange={handleAddUnitChange}>
+                    <SelectTrigger size="touch" className="min-h-12" aria-label={FORM_VI.unit}>
+                      <SelectValue placeholder={poCopy.unitShort} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {addUnitOptions.map((option) => (
+                        <SelectItem key={option.unitId} value={String(option.unitId)}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input value={addUnit} readOnly aria-readonly="true" placeholder={poCopy.unitShort} className="h-12" required />
+                )}
+              </div>
+              <FormattedNumberInput
+                value={addPrice}
+                onValueChange={setAddPrice}
+                maxFractionDigits={0}
+                placeholder={poCopy.pricePlaceholder}
+                className="h-12"
+              />
+              <Button type="submit" disabled={isPending || !addIngredientId} size="touch-lg" className="w-full">
+                <IconPlus className="size-4" />
+                {ACTIONS_VI.add}
+              </Button>
+            </Item>
+          </form>
+        ) : null}
+      </AppSection>
+
+      {/* 5. Lịch sử */}
+      <AppSection title={historySectionTitle} size="sm" collapsible defaultOpen={false}>
+        <AuditHistoryList logs={auditLogs} />
+      </AppSection>
+    </div>
+  );
+
   const content = (
     <>
       {embedded && headerActions ? (
@@ -938,7 +1086,7 @@ export function PODetailClient({
           {headerActions}
         </div>
       ) : null}
-      {pageLayout}
+      {embedded ? mobileLayout : pageLayout}
     </>
   );
 

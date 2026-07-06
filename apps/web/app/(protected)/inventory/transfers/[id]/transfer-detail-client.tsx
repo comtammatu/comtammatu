@@ -12,7 +12,7 @@ import {
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Item } from "@comtammatu/ui/components/item";
+import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { FormattedNumberInput } from "@/components/form";
 import {
   DataTable,
@@ -26,6 +26,7 @@ import {
 } from "../../_components/document-stock-correction-dialog";
 import {
   AppDetailFooter,
+  AppEmptyState,
   AppPage,
   AppPageHeader,
   AppSection,
@@ -39,7 +40,6 @@ import { TimelineStepper } from "../../_components/timeline-stepper";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatVND } from "../../_lib/format";
 import {
-  transferConfirmReceive,
   transferConfirmShip,
   transferMarkInTransit,
   transferReceive,
@@ -106,7 +106,7 @@ export function TransferDetailClient({
     return initial;
   });
   const [shortNote, setShortNote] = useState("");
-  const isReceiveMode = transfer.status === "confirmed_receive";
+  const isReceiveMode = transfer.status === "in_transit" || transfer.status === "confirmed_receive";
   const isIntraBranch = transfer.fromBranchId === transfer.toBranchId;
   const isBranchScopedOps =
     userRole === "warehouse_manager" || userRole === "production_manager";
@@ -136,27 +136,18 @@ export function TransferDetailClient({
       active: transfer.status === "draft",
     },
     {
-      label: copy.steps.shipped,
-      completed:
-        transfer.status === "confirmed_ship" ||
-        transfer.status === "in_transit" ||
-        transfer.status === "confirmed_receive" ||
-        transfer.status === "received",
-      active: transfer.status === "confirmed_ship",
-    },
-    {
-      label: copy.steps.checking,
+      label: copy.steps.inTransit,
       completed:
         transfer.status === "confirmed_receive" ||
         transfer.status === "received",
       active:
-        transfer.status === "in_transit" ||
-        transfer.status === "confirmed_receive",
+        transfer.status === "confirmed_ship" ||
+        transfer.status === "in_transit",
     },
     {
       label: copy.steps.received,
       completed: transfer.status === "received",
-      active: false,
+      active: transfer.status === "confirmed_receive",
     },
   ];
   const actionConfig = useMemo(() => {
@@ -188,8 +179,8 @@ export function TransferDetailClient({
     }
     if (transfer.status === "in_transit") {
       return {
-        label: copy.actions.confirmReceive,
-        action: "confirm_receive" as const,
+        label: copy.actions.receive,
+        action: "receive" as const,
         enabled:
           userRole === "branch_manager"
             ? userBranchId === transfer.toBranchId
@@ -232,8 +223,6 @@ export function TransferDetailClient({
         res = await transferConfirmShip(transfer.id);
       } else if (actionConfig.action === "mark_in_transit") {
         res = await transferMarkInTransit(transfer.id);
-      } else if (actionConfig.action === "confirm_receive") {
-        res = await transferConfirmReceive(transfer.id);
       } else {
         if (!noteOk) {
           toast.error("Nhập ghi chú thiếu hụt tối thiểu 3 ký tự.");
@@ -277,7 +266,7 @@ export function TransferDetailClient({
       key: "ingredient",
       header: tTerm("ingredient"),
       render: (item) => (
-        <div className="flex flex-col">
+        <div className="flex flex-col whitespace-normal break-words min-w-48 max-w-80">
           <span className="font-bold">{item.name}</span>
           <span className="text-xs text-muted-foreground">{item.sku}</span>
         </div>
@@ -309,7 +298,7 @@ export function TransferDetailClient({
     {
       key: "received",
       header: copy.receivedQty,
-      className: "text-right",
+      className: "text-right w-28 md:w-32",
       render: (item) =>
         isReceiveMode ? (
           <FormattedNumberInput
@@ -531,10 +520,8 @@ export function TransferDetailClient({
             />
           </AppSection>
 
-          <AppSection contentClassName="py-4">
-            <div className="flex justify-center">
-              <TimelineStepper steps={transferSteps} />
-            </div>
+          <AppSection>
+            <TimelineStepper steps={transferSteps} orientation="vertical" />
           </AppSection>
 
           {transfer.note && (
@@ -556,7 +543,7 @@ export function TransferDetailClient({
               type="button"
               variant="outline"
               size={embedded ? "touch" : "default"}
-              className="px-6 font-bold text-muted-foreground"
+              className="px-4 font-bold text-muted-foreground"
             >
               <IconPrinter className="size-5" />
               {copy.printSlip}
@@ -589,7 +576,209 @@ export function TransferDetailClient({
                 !noteOk)
             }
             size={embedded ? "touch" : "default"}
-            className="px-6 font-bold"
+            className="px-4 font-bold"
+            onClick={handlePrimaryAction}
+          >
+            <IconCircleCheck className="size-5" />
+            {actionConfig?.label ?? copy.completedSlip}
+          </Button>
+        }
+      />
+    </div>
+  );
+
+  const mobileLayout = (
+    <div className="flex flex-col gap-4">
+      {/* 1. Tổng quan điều chuyển */}
+      <AppSection title={transferDetailTitle} size="sm">
+        <DescriptionList
+          className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm"
+          descriptionClassName="font-semibold text-right"
+          items={[
+            {
+              term: copy.totalValue,
+              description: (
+                <span className="text-primary font-bold">
+                  {messages.inventory.common.currencyCompact(formatVND(transfer.total))}
+                </span>
+              ),
+            },
+            {
+              term: copy.totalItems,
+              description: String(transfer.items.length).padStart(2, "0"),
+            },
+            {
+              term: tTerm("fromWarehouse"),
+              description: (
+                <span className="inline-flex items-center gap-1">
+                  <IconMapPin className="size-3 text-primary" />
+                  {transfer.fromBranch}
+                </span>
+              ),
+            },
+            {
+              term: tTerm("toWarehouse"),
+              description: (
+                <span className="inline-flex items-center gap-1">
+                  <IconMapPin className="size-3 text-info" />
+                  {transfer.toBranch}
+                </span>
+              ),
+            },
+            {
+              term: copy.recorded,
+              description: `${String(receivedCount).padStart(2, "0")}/${String(transfer.items.length).padStart(2, "0")}`,
+            },
+          ]}
+        />
+      </AppSection>
+
+      {/* Timeline Stepper */}
+      <AppSection size="sm">
+        <TimelineStepper steps={transferSteps} orientation="vertical" />
+      </AppSection>
+
+      {/* Ghi chú vận chuyển nếu có */}
+      {transfer.note && (
+        <AppSection title={copy.transportNote} size="sm" collapsible defaultOpen={false}>
+          <p className="break-words text-sm italic">
+            &ldquo;{transfer.note}&rdquo;
+          </p>
+        </AppSection>
+      )}
+
+      {/* 2. Danh sách nguyên liệu */}
+      <AppSection
+        title={tTerm("ingredientsList")}
+        description={
+          isReceiveMode
+            ? copy.receiveInstructions
+            : copy.receivedReadonlyHint
+        }
+        size="sm"
+      >
+        {transfer.items.length === 0 ? (
+          <AppEmptyState
+            mode="no-data"
+            title={copy.emptyTransferItemsTitle}
+            description={copy.emptyTransferItemsDescription}
+            compact
+          />
+        ) : (
+          <ItemGroup className="gap-2 p-0 rounded-none border-0">
+            {transfer.items.map((item) => (
+              <TransferLineMobileCard
+                key={item.sku || item.name}
+                item={item}
+                isReceiveMode={isReceiveMode}
+                embedded={embedded}
+                receiveValue={receiveQty[item.ingredientId] ?? ""}
+                onReceiveValueChange={(value) =>
+                  setReceiveQty((prev) => ({
+                    ...prev,
+                    [item.ingredientId]: value,
+                  }))
+                }
+              />
+            ))}
+          </ItemGroup>
+        )}
+
+        {transfer.items.length > 0 && (
+          <Item variant="outline" className="mt-4 flex-col items-stretch gap-2 p-3 text-sm bg-muted/30">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{copy.ingredientValue}</span>
+              <span className="font-bold">
+                {messages.inventory.common.currencyCompact(formatVND(transfer.subtotal))}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{copy.shippingFee}</span>
+              <span className="font-bold">
+                {messages.inventory.common.currencyCompact(formatVND(transfer.shipping))}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-t border-border pt-2">
+              <span className="font-bold">{copy.totalValue}</span>
+              <span className="font-mono font-semibold text-primary">
+                {messages.inventory.common.currencyCompact(formatVND(transfer.total))}
+              </span>
+            </div>
+          </Item>
+        )}
+      </AppSection>
+
+      {isReceiveMode && hasShort ? (
+        <AppSection tone="warning" size="sm">
+          <p className="text-sm font-semibold">
+            {copy.shortageNoteTitle} <span className="text-destructive">*</span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {copy.shortageNoteDescription(shortLines)}
+          </p>
+          <Textarea
+            value={shortNote}
+            onChange={(e) => setShortNote(e.target.value)}
+            rows={3}
+            maxLength={300}
+            placeholder={copy.shortageNotePlaceholder}
+          />
+          {!noteOk ? (
+            <p className="text-xs text-destructive">
+               {copy.shortageNoteMinLength}
+            </p>
+          ) : null}
+        </AppSection>
+      ) : null}
+
+      {/* 3. Lịch sử */}
+      <AppSection title={historySectionTitle} size="sm" collapsible defaultOpen={false}>
+        <AuditHistoryList logs={auditLogs} />
+      </AppSection>
+
+      {/* Action Footer */}
+      <AppDetailFooter
+        sticky={embedded}
+        leading={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="px-4 font-bold text-muted-foreground"
+            >
+              <IconPrinter className="size-5" />
+              {copy.printSlip}
+            </Button>
+            {transfer.status !== "draft" &&
+            correctionBranches.length > 0 &&
+            transfer.items.length > 0 ? (
+               <DocumentStockCorrectionDialog
+                 documentType="transfer"
+                 documentId={transfer.id}
+                 documentCode={transfer.code}
+                 branchOptions={correctionBranches}
+                 itemOptions={transfer.items.map((item) => ({
+                   ingredientId: item.ingredientId,
+                   name: item.name,
+                   unit: item.unit,
+                 }))}
+               />
+            ) : null}
+          </>
+        }
+        trailing={
+          <Button
+            type="button"
+            disabled={
+              isPending ||
+              !actionConfig?.enabled ||
+              (isReceiveMode &&
+                actionConfig?.action === "receive" &&
+                !noteOk)
+            }
+            size="touch"
+            className="px-4 font-bold"
             onClick={handlePrimaryAction}
           >
             <IconCircleCheck className="size-5" />
@@ -627,7 +816,7 @@ export function TransferDetailClient({
           {statusBadge.label}
         </Badge>
       </div>
-      {pageLayout}
+      {mobileLayout}
     </>
   ) : (
     <AppPageHeader

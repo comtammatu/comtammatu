@@ -26,9 +26,6 @@ export type GRNDetailItem = {
   unit: string;
   entryUnitId: number | null;
   cost: number;
-  lot: string;
-  expiry: string;
-  expiryDisplay: string;
   temp: string | null;
   qualityStatus: "accepted" | "rejected" | "partial";
   status: string;

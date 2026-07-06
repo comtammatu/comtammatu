@@ -2,7 +2,7 @@
 
 > Smoke + readiness checklist trước khi coi một lát Inventory là sẵn sàng dùng.
 
-Updated: `2026-06-19`
+Updated: `2026-07-06`
 
 ---
 
@@ -52,18 +52,18 @@ Các route phải mở đúng theo ACL và nav:
 
 ## 3. ACL smoke
 
-| Role | Phải đúng |
-| --- | --- |
-| `warehouse_manager` | Vào Inventory + procurement + transfer theo scope; không bị dẫn vào production nếu không ở Bếp Trung Tâm |
-| `production_manager` | Vào Inventory + production tại Bếp Trung Tâm |
-| `branch_manager` | Vào stock, transfers inbound, consumption, stocktake, expiry, reports; không vào procurement/production |
-| `owner` | Xem oversight tenant-wide; không bị UX dẫn như operator hằng ngày |
-| `office`, `cashier`, `chef` | Không vào Inventory route nếu ACL hiện tại chưa cho |
+| Role                        | Phải đúng                                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `warehouse_manager`         | Vào Inventory + procurement + transfer theo scope; không bị dẫn vào production nếu không ở Bếp Trung Tâm |
+| `production_manager`        | Vào Inventory + production tại Bếp Trung Tâm                                                             |
+| `branch_manager`            | Vào stock, transfers inbound, consumption, stocktake, expiry, reports; không vào procurement/production  |
+| `owner`                     | Xem oversight tenant-wide; không bị UX dẫn như operator hằng ngày                                        |
+| `office`, `cashier`, `chef` | Không vào Inventory route nếu ACL hiện tại chưa cho                                                      |
 
 Đặc biệt kiểm:
 
 - nav không lộ link sai role/site
-- branch manager không tạo transfer outbound hay intra-branch transfer
+- branch manager không tạo transfer outbound ra site khác; được tạo transfer cùng chi nhánh `Kho CN -> Bếp CN`
 - production không hiện như daily action của chi nhánh thường
 - site label phân biệt `Kho chi nhánh`, `Kho Tổng`, `Bếp Trung Tâm`
 
@@ -87,12 +87,11 @@ Các route phải mở đúng theo ACL và nav:
   - `central_supply -> central_kitchen`
   - `central_kitchen -> central_supply`
   - `branch -> branch`
-- Confirm ship.
-- Mark in transit.
-- Confirm receive.
-- Receive.
-- Kiểm `transfer_out` / `transfer_in` và tồn hai đầu.
-- Thử `from_branch_id = to_branch_id`: phải bị reject.
+  - cùng chi nhánh `Kho CN -> Bếp CN`
+- Với transfer khác site: confirm ship, mark in transit, confirm receive, receive.
+- Với `Kho CN -> Bếp CN`: confirm ship phải ghi `transfer_out` ở Kho CN, `transfer_in` ở Bếp CN, và kết thúc `received` trong cùng chi nhánh.
+- Kiểm `transfer_out` / `transfer_in` và tồn hai đầu; tổng tồn chi nhánh không giảm sau `Kho CN -> Bếp CN`.
+- Thử `from_branch_id = to_branch_id` tại central site: phải bị reject.
 
 ### 4.3 Tiêu hao chi nhánh
 
@@ -103,7 +102,7 @@ Các route phải mở đúng theo ACL và nav:
   - `type = consumption`
   - `movement_subtype = sale_consumption`
   - `source_type = hrm_consumption`
-  - `location_id` là Kho CN/default issue warehouse, không phải kitchen.
+  - `location_id` ưu tiên Bếp CN nếu chi nhánh đã cấu hình kitchen, fallback Kho CN/default issue warehouse nếu chưa có Bếp CN.
 - Kiểm `/inventory/consumption` và detail đọc được trace.
 
 ### 4.4 Production tại Bếp Trung Tâm
@@ -120,14 +119,14 @@ Các route phải mở đúng theo ACL và nav:
 - Nhập số đếm.
 - Complete session.
 - Kiểm `count_adjustment`.
-- Kiểm `/inventory/stock` và report không cộng `location_kind = kitchen` vào tổng tồn vận hành.
+- Kiểm `/inventory/stock` và report cộng `location_kind = kitchen` của chi nhánh vào tổng tồn vận hành.
 
 ## 5. Matu-platform import smoke
 
 Sau import production, kiểm nhanh:
 
-- `/inventory/stock`: tồn chỉ ở stock-bearing warehouse; không có dòng kitchen trong tổng tồn.
-- `/inventory/transfers`: có đủ transfer thật theo hướng central -> branch, branch -> central, Kho Tổng <-> Bếp Trung Tâm, branch -> branch.
+- `/inventory/stock`: tồn có ở stock-bearing warehouse và Bếp CN/kitchen của chi nhánh.
+- `/inventory/transfers`: có đủ transfer thật theo hướng central -> branch, branch -> central, Kho Tổng <-> Bếp Trung Tâm, branch -> branch, và Kho CN -> Bếp CN.
 - `/inventory/consumption`: thấy tiêu hao chi nhánh từ import với `sale_consumption`.
 - Finance food cost/gross profit đọc actual consumption, không đọc recipe-only `mv_food_cost`.
 - 4 dòng legacy source từ `BEP-DD` / `BEP-TT` không import history; tồn cuối đã nằm trong `balance_adjustment`.
@@ -140,14 +139,14 @@ Sau import production, kiểm nhanh:
 
 ## 5. Regression hotspots
 
-| Hotspot | Vì sao dễ vỡ |
-| --- | --- |
-| RLS + GRANT | Supabase có thể trả dữ liệu rỗng mà UI hiểu nhầm là không có việc |
-| Transfer direction | Dễ tái tạo `Kho CN -> Bếp CN` như transfer nếu chỉ copy flow cũ |
-| Consumption source location | Dễ chọn `is_default_consumption`/`kitchen` thay vì Kho CN |
-| Stock totals | Legacy kitchen stock dễ bị cộng vào tồn vận hành |
-| Finance food cost | Recipe theoretical dễ bị nhầm thành actual gross profit |
-| Production site kind | Branch production cũ dễ bị giữ làm happy path |
+| Hotspot                     | Vì sao dễ vỡ                                                             |
+| --------------------------- | ------------------------------------------------------------------------ |
+| RLS + GRANT                 | Supabase có thể trả dữ liệu rỗng mà UI hiểu nhầm là không có việc        |
+| Transfer direction          | Dễ chặn nhầm `Kho CN -> Bếp CN` dù đây là transfer cùng chi nhánh hợp lệ |
+| Consumption source location | Dễ tiếp tục trừ Kho CN dù tồn đã được cấp sang Bếp CN                    |
+| Stock totals                | Bếp CN/kitchen dễ bị loại nhầm khỏi tồn vận hành                         |
+| Finance food cost           | Recipe theoretical dễ bị nhầm thành actual gross profit                  |
+| Production site kind        | Branch production cũ dễ bị giữ làm happy path                            |
 
 ## 6. Evidence cần lưu
 

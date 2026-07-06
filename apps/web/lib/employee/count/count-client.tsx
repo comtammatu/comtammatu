@@ -32,7 +32,11 @@ import {
   EmployeeStatusStrip,
 } from "../components/employee-page";
 import { submitCountSlip } from "./actions";
-import type { CountLocationGroup, CountSlipHeader } from "./page";
+import type {
+  CountLocationGroup,
+  CountSlipHeader,
+  CountUnitChoice,
+} from "./page";
 
 interface CountSlipClientProps {
   branchId: number;
@@ -50,6 +54,57 @@ interface DraftLine {
   quantity: string;
   note: string;
   entryUnitId: number | null;
+}
+
+function parseDraftQuantity(value: string): number | null {
+  const raw = value.trim().replace(",", ".");
+  if (raw.length === 0) return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function formatCountQuantity(value: number): string {
+  return value % 1 === 0
+    ? value.toLocaleString("vi-VN")
+    : value.toLocaleString("vi-VN", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 3,
+      });
+}
+
+function getBaseCountUnit(units: CountUnitChoice[]) {
+  return units.find((unit) => unit.isBase) ?? units[0] ?? null;
+}
+
+function buildCountUnitPreview({
+  quantity,
+  entryUnitId,
+  units,
+}: {
+  quantity: string;
+  entryUnitId: number | null;
+  units: CountUnitChoice[];
+}): string | null {
+  const baseUnit = getBaseCountUnit(units);
+  const entryUnit =
+    entryUnitId == null
+      ? null
+      : (units.find((unit) => unit.unitId === entryUnitId) ?? null);
+  if (!baseUnit || !entryUnit || baseUnit.unitId === entryUnit.unitId) {
+    return null;
+  }
+
+  const quantityValue = parseDraftQuantity(quantity);
+  const factor = entryUnit.toBaseFactor;
+  if (
+    quantityValue === null ||
+    factor === null ||
+    !Number.isFinite(factor)
+  ) {
+    return null;
+  }
+
+  return `${formatCountQuantity(quantityValue)} ${entryUnit.code} = ${formatCountQuantity(quantityValue * factor)} ${baseUnit.code}`;
 }
 
 export function CountSlipClient({
@@ -88,10 +143,7 @@ export function CountSlipClient({
     const next: Record<number, DraftLine> = {};
     for (const assignment of activeGroup.assignments) {
       const prior = prefill[assignment.ingredientId];
-      const baseUnit =
-        assignment.countUnits.find((u) => u.isBase) ??
-        assignment.countUnits[0] ??
-        null;
+      const baseUnit = getBaseCountUnit(assignment.countUnits);
       next[assignment.ingredientId] = {
         quantity: prior?.quantity ?? "",
         note: prior?.note ?? "",
@@ -261,6 +313,14 @@ export function CountSlipClient({
               {activeGroup.assignments.map((assignment) => {
                 const entry = draft[assignment.ingredientId];
                 const inputId = `count-${assignment.ingredientId}`;
+                const unitInputId = `${inputId}-unit`;
+                const baseUnit = getBaseCountUnit(assignment.countUnits);
+                const stockUnitLabel = baseUnit?.code ?? assignment.measureUnit;
+                const unitPreview = buildCountUnitPreview({
+                  quantity: entry?.quantity ?? "",
+                  entryUnitId: entry?.entryUnitId ?? null,
+                  units: assignment.countUnits,
+                });
                 return (
                   <Item
                     key={assignment.ingredientId}
@@ -271,63 +331,84 @@ export function CountSlipClient({
                       <ItemTitle className="text-sm font-semibold">
                         {assignment.ingredientName}
                       </ItemTitle>
-                      {assignment.measureUnit ? (
+                      {stockUnitLabel ? (
                         <ItemDescription className="text-xs">
-                          Đơn vị: {assignment.measureUnit}
+                          Tồn so theo: {stockUnitLabel}
                         </ItemDescription>
                       ) : null}
                     </ItemContent>
-                    <div className="grid gap-2 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={inputId}>Số đếm được</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id={inputId}
-                            inputMode="decimal"
-                            autoComplete="off"
-                            value={entry?.quantity ?? ""}
-                            disabled={locked || isPending}
-                            onChange={(event) =>
-                              updateLine(assignment.ingredientId, {
-                                quantity: event.target.value,
-                              })
-                            }
-                            placeholder={assignment.measureUnit || "Số lượng"}
-                            className="flex-1"
-                          />
-                          {assignment.countUnits.length > 0 ? (
-                            <Select
-                              value={
-                                entry?.entryUnitId != null
-                                  ? String(entry.entryUnitId)
-                                  : ""
-                              }
-                              onValueChange={(value) =>
+                        <div
+                          className={
+                            assignment.countUnits.length > 0
+                              ? "grid grid-cols-[minmax(0,1fr)_minmax(7.5rem,9rem)] gap-2"
+                              : "grid gap-2"
+                          }
+                        >
+                          <div className="flex min-w-0 flex-col gap-1.5">
+                            <Label htmlFor={inputId}>Số đếm được</Label>
+                            <Input
+                              id={inputId}
+                              inputMode="decimal"
+                              autoComplete="off"
+                              value={entry?.quantity ?? ""}
+                              disabled={locked || isPending}
+                              onChange={(event) =>
                                 updateLine(assignment.ingredientId, {
-                                  entryUnitId: Number(value),
+                                  quantity: event.target.value,
                                 })
                               }
-                              disabled={locked || isPending}
-                            >
-                              <SelectTrigger
-                                className="w-24 shrink-0"
-                                aria-label="Đơn vị"
+                              placeholder={assignment.measureUnit || "Số lượng"}
+                              className="min-h-12 text-base tabular-nums md:text-sm"
+                            />
+                          </div>
+                          {assignment.countUnits.length > 0 ? (
+                            <div className="flex min-w-0 flex-col gap-1.5">
+                              <Label htmlFor={unitInputId}>Đơn vị đếm</Label>
+                              <Select
+                                value={
+                                  entry?.entryUnitId != null
+                                    ? String(entry.entryUnitId)
+                                    : ""
+                                }
+                                onValueChange={(value) =>
+                                  updateLine(assignment.ingredientId, {
+                                    entryUnitId: Number(value),
+                                  })
+                                }
+                                disabled={locked || isPending}
                               >
-                                <SelectValue placeholder="Đơn vị" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {assignment.countUnits.map((unit) => (
-                                  <SelectItem
-                                    key={unit.unitId}
-                                    value={String(unit.unitId)}
-                                  >
-                                    {unit.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                                <SelectTrigger
+                                  id={unitInputId}
+                                  size="touch"
+                                  className="w-full min-w-0"
+                                  aria-label={`Đơn vị đếm ${assignment.ingredientName}`}
+                                >
+                                  <SelectValue placeholder="Đơn vị" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {assignment.countUnits.map((unit) => (
+                                    <SelectItem
+                                      key={unit.unitId}
+                                      value={String(unit.unitId)}
+                                    >
+                                      {unit.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           ) : null}
                         </div>
+                        {unitPreview ? (
+                          <p className="text-xs leading-5 text-muted-foreground">
+                            So sánh tồn:{" "}
+                            <span className="font-medium tabular-nums text-foreground">
+                              {unitPreview}
+                            </span>
+                          </p>
+                        ) : null}
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <Label htmlFor={`${inputId}-note`}>Ghi chú</Label>
@@ -341,6 +422,7 @@ export function CountSlipClient({
                             })
                           }
                           placeholder="Tuỳ chọn"
+                          className="min-h-12 text-base md:text-sm"
                         />
                       </div>
                     </div>

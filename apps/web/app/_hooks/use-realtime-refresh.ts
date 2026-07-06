@@ -37,6 +37,7 @@ interface UseRealtimeRefreshOptions {
   setupChannel: (
     supabase: SupabaseClient,
     scheduleRefresh: () => void,
+    token: string | null,
   ) => RealtimeChannel | null;
   /** Re-subscribe when any of these change (e.g. [branchId]). */
   deps: DependencyList;
@@ -72,9 +73,9 @@ export function useRealtimeRefresh({
   }, [enabled, router]);
 
   useRealtimeChannel(
-    (supabase) => {
+    (supabase, token) => {
       if (!enabled) return null;
-      return setupChannel(supabase, scheduleRefresh);
+      return setupChannel(supabase, scheduleRefresh, token);
     },
     // Caller's `deps` drive re-subscribe (e.g. [branchId]); enabled/scheduleRefresh
     // added so toggling off or a router change re-wires the channel.

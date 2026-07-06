@@ -208,9 +208,9 @@ export function AppPageHeader({
             ) : null}
           </div>
           {description ? (
-            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            <div className="max-w-3xl text-sm leading-6 text-muted-foreground">
               {description}
-            </p>
+            </div>
           ) : null}
           {meta ? (
             <div className="text-xs text-muted-foreground">{meta}</div>

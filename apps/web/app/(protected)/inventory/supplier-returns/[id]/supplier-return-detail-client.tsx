@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
 import {
   Item,
@@ -14,13 +15,21 @@ import {
   type DataTableColumn,
   type DataTableFooterRow,
 } from "@/components/data-table/data-table";
-import { AppSection } from "@/components/surface";
+import { AppSection, DescriptionList } from "@/components/surface";
+import { AuditHistoryList } from "../../_components/audit-history-list";
+import type { AuditLogRow } from "@/_lib/audit";
 import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 
-import { formatVND as formatVndNumber } from "../../_lib/format";
+import { formatVND as formatVndNumber, formatDateTime } from "../../_lib/format";
 import { messages as inventoryMessages } from "@lib/messages";
 
 const RETURNS_VI = inventoryMessages.inventory.supplierReturns;
+
+const labelTicketInfo = "Thông tin phiếu";
+const labelSourceTransaction = "Giao dịch gốc";
+const labelCreatedAt = "Ngày tạo";
+const labelApprovedAt = "Ngày duyệt";
+const labelAuditHistory = "Lịch sử hoạt động";
 
 const REASON_LABELS: Record<string, string> = RETURNS_VI.reasonLabels;
 
@@ -62,9 +71,16 @@ interface DetailLine {
 interface Props {
   header: DetailHeader;
   lines: DetailLine[];
+  auditLogs: AuditLogRow[];
+  embedded?: boolean;
 }
 
-export function SupplierReturnDetailClient({ header, lines }: Props) {
+export function SupplierReturnDetailClient({
+  header,
+  lines,
+  auditLogs,
+  embedded = false,
+}: Props) {
   const totalValue = lines.reduce((s, l) => s + Number(l.total_cost ?? 0), 0);
   const columns: DataTableColumn<DetailLine>[] = [
     {
@@ -104,6 +120,7 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
       ),
     },
   ];
+
   const footerRows: DataTableFooterRow[] =
     lines.length > 0
       ? [
@@ -126,62 +143,108 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
         ]
       : [];
 
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Meta */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-md border p-3">
-          <p className="text-xs text-muted-foreground">{FORM_VI.status}</p>
-          <StatusBadge
-            domain="inventory"
-            value={header.status}
-            className="mt-2"
-          />
-        </div>
-        <div className="rounded-md border p-3">
-          <p className="text-xs text-muted-foreground">{FORM_VI.reason}</p>
-          <p className="mt-1 text-sm font-medium">
-            {REASON_LABELS[header.reason] ?? header.reason}
-          </p>
-        </div>
-        <div className="rounded-md border p-3">
-          <p className="text-xs text-muted-foreground">
-            {RETURNS_VI.resolutionLabel}
-          </p>
-          <p className="mt-1 text-sm font-medium">
-            {RESOLUTION_LABELS[header.resolution] ?? header.resolution}
-          </p>
-        </div>
+  const metaSection = (
+    <AppSection title={labelTicketInfo}>
+      <DescriptionList
+        items={[
+          {
+            term: FORM_VI.status,
+            description: (
+              <StatusBadge domain="inventory" value={header.status} />
+            ),
+          },
+          {
+            term: FORM_VI.reason,
+            description: REASON_LABELS[header.reason] ?? header.reason,
+          },
+          {
+            term: RETURNS_VI.resolutionLabel,
+            description:
+              RESOLUTION_LABELS[header.resolution] ?? header.resolution,
+          },
+          {
+            term: labelSourceTransaction,
+            description: header.goods_received_notes ? (
+              <Link
+                href={`/inventory/grn/${header.goods_received_notes.id}`}
+                className="font-medium text-primary hover:underline"
+              >
+                {header.goods_received_notes.grn_number}
+              </Link>
+            ) : (
+              "—"
+            ),
+          },
+          {
+            term: labelCreatedAt,
+            description: formatDateTime(header.created_at),
+          },
+          {
+            term: labelApprovedAt,
+            description: header.confirmed_at
+              ? formatDateTime(header.confirmed_at)
+              : "—",
+          },
+          {
+            term: FORM_VI.notes,
+            description: header.notes ?? "—",
+          },
+        ]}
+      />
+    </AppSection>
+  );
+
+  const linesSection = (
+    <AppSection title={RETURNS_VI.linesTitle} contentFlush>
+      <DataTable
+        columns={columns}
+        data={lines}
+        getRowKey={(line) => line.id}
+        emptyTitle={RETURNS_VI.emptyLines}
+        emptyMode="no-data"
+        desktopFooterRows={footerRows}
+        mobileFooter={
+          lines.length > 0 ? (
+            <Item
+              variant="outline"
+              size="sm"
+              className="bg-muted/30 flex justify-between px-3 py-2 text-sm"
+            >
+              <span className="font-bold">{FORM_VI.total}</span>
+              <span className="font-mono font-bold">
+                {formatReturnValue(totalValue)}
+              </span>
+            </Item>
+          ) : null
+        }
+        mobileCardRender={(line) => <SupplierReturnLineItem line={line} />}
+      />
+    </AppSection>
+  );
+
+  const auditSection = (
+    <AppSection title={labelAuditHistory} collapsible defaultOpen={false}>
+      <AuditHistoryList logs={auditLogs} />
+    </AppSection>
+  );
+
+  if (embedded) {
+    return (
+      <div className="flex flex-col gap-3">
+        {metaSection}
+        {linesSection}
+        {auditSection}
       </div>
+    );
+  }
 
-      <AppSection title={RETURNS_VI.linesTitle} contentFlush>
-        <DataTable
-          columns={columns}
-          data={lines}
-          getRowKey={(line) => line.id}
-          emptyTitle={RETURNS_VI.emptyLines}
-          emptyMode="no-data"
-          desktopFooterRows={footerRows}
-          mobileFooter={
-            lines.length > 0 ? (
-              <div className="flex justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm">
-                <span className="font-bold">{FORM_VI.total}</span>
-                <span className="font-mono font-bold">
-                  {formatReturnValue(totalValue)}
-                </span>
-              </div>
-            ) : null
-          }
-          mobileCardRender={(line) => <SupplierReturnLineItem line={line} />}
-        />
-      </AppSection>
-
-      {header.notes && (
-        <div className="rounded-md border p-3">
-          <p className="text-xs text-muted-foreground">{FORM_VI.notes}</p>
-          <p className="mt-1 text-sm">{header.notes}</p>
-        </div>
-      )}
+  return (
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <div className="flex flex-col gap-3 lg:col-span-2">
+        {linesSection}
+        {auditSection}
+      </div>
+      <div className="flex flex-col gap-3">{metaSection}</div>
     </div>
   );
 }

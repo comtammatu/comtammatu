@@ -115,21 +115,25 @@ async function buildFixtures(): Promise<InventoryFixtures> {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-test.describe("Branch consumption redirect", () => {
-  test("legacy transfer create URL opens the consumption surface", async ({
+test.describe("Branch kitchen transfer redirect", () => {
+  test("legacy cap-bep URL opens the transfer create surface", async ({
     page,
   }) => {
     const fx = await buildFixtures();
 
-    await page.goto(`/inventory/transfers?branchId=${fx.branchId}&create=cap-bep`);
+    await page.goto(
+      `/inventory/transfers?branchId=${fx.branchId}&create=cap-bep`,
+    );
     await page.waitForLoadState("networkidle");
     if (await isAccessDenied(page)) {
       test.skip(true, "E2E auth user cannot access Inventory.");
       return;
     }
 
-    await expect(page).toHaveURL(/\/inventory\/consumption/);
-    await expect(page.getByRole("heading", { name: /Tiêu hao/i })).toBeVisible();
+    await expect(page).toHaveURL(/\/inventory\/transfers\/new/);
+    await expect(
+      page.getByRole("heading", { name: /Tạo phiếu luân chuyển/i }),
+    ).toBeVisible();
     await expect(page.getByRole("tab", { name: /Cấp bếp/i })).toHaveCount(0);
   });
 });
