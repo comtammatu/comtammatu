@@ -24,8 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Combobox, MultiSelectCombobox } from "@/components/form";
-import { FormattedNumberInput } from "./formatted-number-input";
+import { Combobox, MultiSelectCombobox, FormattedNumberInput } from "@/components/form";
 import {
   getDefaultProductionUnit,
   getProductionUnitOptions,
@@ -202,7 +201,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
       <div className="overflow-hidden rounded-lg border">
         <div
           className={cn(
-            "hidden items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid",
+            "hidden items-center gap-2 border-b bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid",
             GRID_TEMPLATE,
           )}
         >
@@ -385,7 +384,7 @@ function RecipeLineRow<T extends FieldValues>({
                   aria-invalid={!!rowError?.unit}
                   className={cn(
                     "h-9",
-                    "bg-muted/40",
+                    "bg-muted/30",
                     rowError?.unit && "border-destructive",
                   )}
                 />

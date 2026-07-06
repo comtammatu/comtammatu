@@ -30,7 +30,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { FormattedNumberInput } from "./formatted-number-input";
+import { FormattedNumberInput } from "@/components/form";
 import { AbcClassChip } from "./abc-class-chip";
 import type { StocktakeLineBlind } from "../stocktake-actions";
 import type { CountUnitOption } from "../_lib/count-units";
@@ -194,7 +194,7 @@ export function BlindCountingGrid({
         {blindMode ? (
           <Badge
             variant="outline"
-            className="border-warning/40 bg-warning/10 text-warning-foreground"
+            className="border-warning/20 bg-warning/10 text-warning-foreground"
           >
             Blind mode
           </Badge>
@@ -344,7 +344,7 @@ function CountUnitSelect({
 function CountStatusBadge({ line }: { line: StocktakeLineBlind }) {
   if (line.isFinal) {
     return (
-      <Badge variant="outline" className="gap-1 border-success/40 text-success">
+      <Badge variant="outline" className="gap-1 border-success/20 text-success">
         <IconCheck className="size-3.5" /> Final
       </Badge>
     );
@@ -354,7 +354,7 @@ function CountStatusBadge({ line }: { line: StocktakeLineBlind }) {
     return (
       <Badge
         variant="outline"
-        className="gap-1 border-tier-note/40 text-tier-note-foreground"
+        className="gap-1 border-tier-note/20 text-tier-note-foreground"
       >
         <IconFlag3 className="size-3.5" /> {INVENTORY_VI.needsRecheckBadge}
       </Badge>

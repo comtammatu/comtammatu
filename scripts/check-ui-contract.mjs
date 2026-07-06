@@ -332,7 +332,6 @@ const checks = [
     pattern:
       /toLocaleString\(\s*["']vi-VN["']|Intl\.NumberFormat\(\s*["']vi-VN["']|\b(?:function|const)\s+formatVND\b/g,
     allowlist: {
-      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
       "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts": 2,
       "apps/web/app/(protected)/finance/components/work-queue-strip.tsx": 1,
       "apps/web/app/(protected)/finance/page.tsx": 2,
@@ -343,7 +342,7 @@ const checks = [
       "apps/web/app/(protected)/inventory/grn/[id]/views/amend-owner-dialog.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
       "apps/web/app/(protected)/inventory/production-order-list.tsx": 1,
-      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 15,
+      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 8,
     },
   },
   {
@@ -391,7 +390,6 @@ const checks = [
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx": 2,
-      "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 2,
       "apps/web/app/_components/responsive-toaster.tsx": 2,
       "apps/web/app/components/data-table/data-table.tsx": 2,
     },
@@ -489,13 +487,11 @@ const checks = [
       "apps/web/app/components/app-bottom-nav.tsx": 1,
       "apps/web/app/(public)/access-denied/page.tsx": 1,
       "apps/web/app/(public)/(auth)/login/page.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/runner-idle-visual.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-status-shell.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/kds-board.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/_components/focus-view.tsx": 1,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
       "apps/web/app/components/surface.tsx": 1,
     },
@@ -914,7 +910,7 @@ const countBudgets = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
-    maxCount: 14,
+    maxCount: 11,
   },
 ];
 
@@ -927,7 +923,6 @@ const perFileCountBudgets = [
     pattern:
       /\bspace-y-(?:px|0|0\.5|1|1\.5|2|2\.5|3|3\.5|4|5|6|7|8|9|10|11|12|14|16|20|24|\[[^\]]+\])\b/g,
     allowlist: {
-      "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
       "apps/web/app/(protected)/menu/category-table.tsx": 2,
       "apps/web/app/(protected)/menu/item-table.tsx": 1,
     },
@@ -949,7 +944,7 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
       "apps/web/app/(protected)/branch-settings/_shared/kds/station-form-dialog.tsx": 1,
       "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/blind-counting-grid.tsx": 1,
@@ -983,7 +978,7 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
       "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 1,
-      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 4,
+      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 1,
     },
   },
   {
@@ -1031,9 +1026,7 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 1,
       "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 2,
       "apps/web/app/(protected)/inventory/production-stats.tsx": 1,
-      "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx": 1,
       "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/settings/qc/qc-settings-client.tsx": 1,
       "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 1,
       "apps/web/app/(protected)/inventory/stocktake/new/new-session-client.tsx": 1,
       "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 9,
@@ -1058,7 +1051,6 @@ const perFileCountBudgets = [
     allowlist: {
       "apps/web/app/_components/notification-list.tsx": 1,
       "apps/web/app/(protected)/inventory/dashboard-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/grn/new/page.tsx": 1,
     },
   },
   {
@@ -1073,7 +1065,6 @@ const perFileCountBudgets = [
       /\bshadow-\[[^\]]+\]|\bboxShadow\b|\bbox-shadow\b|--shadow-[\w-]+/g,
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx": 1,
-      "apps/web/app/(protected)/inventory/settings/settings-section-nav.tsx": 1,
       "apps/web/app/components/app-bottom-nav.tsx": 1,
       "packages/ui/src/components/badge.tsx": 1,
       "packages/ui/src/components/button.tsx": 1,
@@ -1116,34 +1107,21 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/hr/employee-form-dialog.tsx": 1,
       "apps/web/app/(protected)/hr/position-tasks-client.tsx": 1,
       "apps/web/app/(protected)/hr/staff/[id]/permissions/permissions-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/_components/abc-class-chip.tsx": 2,
-      "apps/web/app/(protected)/inventory/_components/blind-counting-grid.tsx": 2,
-      "apps/web/app/(protected)/inventory/_components/branch-daily-cap-banner.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/recipe-lines-editor.tsx": 2,
-      "apps/web/app/(protected)/inventory/_components/shift-cap-meter.tsx": 2,
-      "apps/web/app/(protected)/inventory/_components/stocktake-draft-saver.tsx": 4,
-      "apps/web/app/(protected)/inventory/_components/stocktake-mode-selector.tsx": 3,
-      "apps/web/app/(protected)/inventory/_components/waste-tier-badge.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/zone-lock-indicator.tsx": 5,
+      "apps/web/app/(protected)/inventory/_components/stocktake-mode-selector.tsx": 2,
       "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 3,
-      "apps/web/app/(protected)/inventory/grn/new/supplier-picker.tsx": 2,
-      "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx": 2,
+      "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
       "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 3,
       "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 1,
       "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 1,
       "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 3,
-      "apps/web/app/(protected)/inventory/settings/settings-section-nav.tsx": 2,
       "apps/web/app/(protected)/inventory/settings/thresholds/thresholds-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/settings/units/units-client.tsx": 1,
       "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/stocktake/[id]/count/stocktake-count-wizard.tsx": 1,
       "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 3,
-      "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 8,
+      "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 5,
       "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx": 3,
       "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx": 1,
-      "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx": 3,
+      "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx": 1,
       "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 8,
       "apps/web/app/(public)/access-denied/page.tsx": 3,
       "apps/web/app/components/data-table/data-table.tsx": 1,
@@ -1197,8 +1175,6 @@ const frozenPrimitiveImportBaselines = [
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/transfer-table-dialog.tsx": 1,
       "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
-      "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/production-order-list.tsx": 1,
       "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 1,
       "apps/web/app/components/form/form-dialog.tsx": 1,
       "apps/web/app/components/pwa-install-help-dialog.tsx": 1,
@@ -1732,13 +1708,10 @@ const OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES = [
   "apps/web/app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
 ];
 const OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE = {
-  "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 1,
   "apps/web/app/(protected)/orders/orders-page-body.tsx": 1,
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
   "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 2,
   "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx": 1,
-  "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 4,
-  "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 2,
 };
 const OPERATOR_EMBEDDED_BUTTON_SIZE_TOKEN =
   /\bsize=(?:"(?:sm|xs)"|'(?:sm|xs)'|\{["'](?:sm|xs)["']\})/;

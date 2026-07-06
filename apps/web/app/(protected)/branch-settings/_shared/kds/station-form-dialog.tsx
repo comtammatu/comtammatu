@@ -11,7 +11,7 @@ import { Switch } from "@comtammatu/ui/components/switch";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState } from "@/components/surface";
-import { FormDialog, TextField } from "@/components/form";
+import { FormDialog, TextField, NumberField } from "@/components/form";
 import { upsertStationWithCategories } from "./actions";
 import type { CategoryOption, StationRow } from "./stations-client";
 
@@ -98,12 +98,11 @@ export function StationFormDialog({
             required
           />
 
-          <TextField
+          <NumberField
             control={form.control}
             name="position"
             label="Thứ tự hiển thị"
-            type="number"
-            min={0}
+            allowNegative={false}
           />
 
           {isEdit && (

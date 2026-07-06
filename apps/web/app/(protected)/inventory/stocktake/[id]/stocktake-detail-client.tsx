@@ -31,7 +31,7 @@ import {
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
-import { FormattedNumberInput } from "../../_components/formatted-number-input";
+import { FormattedNumberInput } from "@/components/form";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
   cancelStocktake,

@@ -36,9 +36,8 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Item } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { Combobox } from "@/components/form";
+import { Combobox, FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
-import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import {
   AppDetailFooter,
   AppPage,

@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { messages } from "@lib/messages";
-import { SearchableSelect } from "@/(protected)/inventory/_components/searchable-select";
+import { Combobox } from "@/components/form";
 import {
   createSupplierReturnFromGrn,
   type ReturnableGrnRow,
@@ -112,13 +112,13 @@ export function SupplierReturnCreateClient({
         <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {CREATE.grnPickerLabel}
         </Label>
-        <SearchableSelect
+        <Combobox
           options={grnOptions}
           value={grnId}
           onValueChange={setGrnId}
           placeholder={CREATE.grnPickerPlaceholder}
           searchPlaceholder={CREATE.grnPickerSearch}
-          emptyText={CREATE.grnPickerEmpty}
+          emptyMessage={CREATE.grnPickerEmpty}
           size="touch"
           className="w-full"
         />

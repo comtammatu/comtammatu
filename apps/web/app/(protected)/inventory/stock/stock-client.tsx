@@ -15,9 +15,11 @@ import {
   ShoppingCart as IconShoppingCart,
   Trash as IconTrash,
   Truck as IconTruck,
+  ChevronDown as IconChevronDown,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Item } from "@comtammatu/ui/components/item";
 import {
   Select,
   SelectContent,
@@ -25,6 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@comtammatu/ui/components/dropdown-menu";
 import {
   InputGroup,
   InputGroupAddon,
@@ -45,6 +53,7 @@ import {
   AppPageHeader,
   AppSection,
   AppToolbar,
+  KpiRow,
 } from "@/components/surface";
 import {
   DataTable,
@@ -1011,6 +1020,67 @@ export function StockClient({
     </>
   );
 
+  const hasSecondaryActions =
+    actionPermissions.canCreateTransfer ||
+    (actionPermissions.canCreateStocktake && actionHrefs.stocktake) ||
+    (actionPermissions.canWriteoff && summary.expiryCount > 0) ||
+    actionPermissions.canWriteoff ||
+    (actionPermissions.canCreatePurchaseOrder && actionHrefs.purchaseSuggestion);
+
+  const desktopSecondaryActionsDropdown = hasSecondaryActions ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size={embedded ? "touch" : "sm"} className="gap-1.5">
+          {stockCopy.actions.actionsDropdown}
+          <IconChevronDown className="size-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        {actionPermissions.canCreateTransfer ? (
+          <DropdownMenuItem asChild>
+            <Link href={actionHrefs.transfer} className="flex items-center gap-2">
+              <IconTruck className="size-4 text-muted-foreground" />
+              <span>{stockCopy.actions.transfer}</span>
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
+          <DropdownMenuItem asChild>
+            <Link href={actionHrefs.stocktake} className="flex items-center gap-2">
+              <IconClipboardList className="size-4 text-muted-foreground" />
+              <span>{stockCopy.actions.stocktake}</span>
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {actionPermissions.canWriteoff && summary.expiryCount > 0 ? (
+          <DropdownMenuItem asChild>
+            <Link href={actionHrefs.expiry} className="flex items-center gap-2">
+              <IconCalendarClock className="size-4 text-muted-foreground" />
+              <span>{stockCopy.actions.expiry}</span>
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {actionPermissions.canWriteoff ? (
+          <DropdownMenuItem asChild>
+            <Link href={actionHrefs.waste} className="flex items-center gap-2">
+              <IconTrash className="size-4 text-muted-foreground" />
+              <span>{stockCopy.actions.waste}</span>
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {actionPermissions.canCreatePurchaseOrder &&
+        actionHrefs.purchaseSuggestion ? (
+          <DropdownMenuItem asChild>
+            <Link href={actionHrefs.purchaseSuggestion} className="flex items-center gap-2">
+              <IconShoppingCart className="size-4 text-muted-foreground" />
+              <span>{stockCopy.actions.purchaseSuggestion}</span>
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+
   const operatorTaskSection = embedded ? (
     <AppSection
       title={stockCopy.filters.operatorTasksTitle}
@@ -1178,10 +1248,28 @@ export function StockClient({
       ) : null}
       {operatorTaskSection}
       {!embedded && !isCompactLayout ? (
-        <AppSection>
-          {summaryMetrics}
-          {workSignalCluster}
-        </AppSection>
+        <div className="flex flex-col gap-3">
+          <KpiRow density="compact" className="lg:grid-cols-2 xl:grid-cols-2">
+            <KpiCard
+              density="compact"
+              label={stockCopy.metrics.selectedWarehouse}
+              value={inventoryCommon.currencyCompact(formatVND(visibleTotalValue))}
+            />
+            {totalValue != null ? (
+              <KpiCard
+                density="compact"
+                label={stockCopy.metrics.wholeSystem}
+                value={inventoryCommon.currencyCompact(formatVND(totalValue))}
+              />
+            ) : null}
+          </KpiRow>
+          <Item variant="outline" className="justify-between bg-card p-3 shadow-none">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {stockCopy.metrics.workSignalTitle}
+            </span>
+            {workSignalCluster}
+          </Item>
+        </div>
       ) : null}
 
       <AppToolbar
@@ -1194,7 +1282,7 @@ export function StockClient({
           ) : (
             <>
               {primaryReceiveAction}
-              {secondaryStockActions}
+              {desktopSecondaryActionsDropdown}
             </>
           )
         }

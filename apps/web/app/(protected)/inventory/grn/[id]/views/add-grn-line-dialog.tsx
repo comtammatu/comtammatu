@@ -21,8 +21,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Plus as IconPlus } from "lucide-react";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { Combobox } from "@/components/form";
-import { FormattedNumberInput } from "../../../_components/formatted-number-input";
+import { Combobox, FormattedNumberInput } from "@/components/form";
 import { upsertGrnLine } from "../../../grn-actions";
 import {
   getDefaultPurchaseUnit,

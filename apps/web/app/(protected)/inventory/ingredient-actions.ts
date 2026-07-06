@@ -110,7 +110,14 @@ const ingredientUpdateSchema = ingredientBaseSchema.superRefine((data, ctx) => {
 
 type IngredientInput = z.infer<typeof ingredientBaseSchema>;
 
-function mapCatalogRpcError(code: string | undefined): string {
+function mapCatalogRpcError(
+  code: string | undefined,
+  message: string | undefined,
+): string {
+  if (message?.includes("inventory_unit_ladder_locked_by_stock_movements")) {
+    return "Nguyên liệu đã có lịch sử tồn kho; không thể đổi đơn vị gốc hoặc hệ số quy đổi. Hãy tạo nguyên liệu mới hoặc xử lý điều chỉnh tồn kho.";
+  }
+
   switch (code) {
     case PG_ERR.INSUFFICIENT_PRIVILEGE:
       return "Không có quyền";
@@ -264,7 +271,10 @@ export const createIngredient = withAction<
     );
 
     if (error) {
-      return { success: false, error: mapCatalogRpcError(error.code) };
+      return {
+        success: false,
+        error: mapCatalogRpcError(error.code, error.message),
+      };
     }
 
     return { success: true, data: { id: Number(id) } };
@@ -354,7 +364,10 @@ export const quickCreateIngredient = withAction<
     );
 
     if (error) {
-      return { success: false, error: mapCatalogRpcError(error.code) };
+      return {
+        success: false,
+        error: mapCatalogRpcError(error.code, error.message),
+      };
     }
 
     return { success: true, data: { id: Number(id) } };
@@ -395,7 +408,10 @@ export async function updateIngredient(
   );
 
   if (error) {
-    return { success: false, error: mapCatalogRpcError(error.code) };
+    return {
+      success: false,
+      error: mapCatalogRpcError(error.code, error.message),
+    };
   }
 
   return { success: true };

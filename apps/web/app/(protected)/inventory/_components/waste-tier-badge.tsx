@@ -36,8 +36,8 @@ export function WasteTierBadge({
   }
 
   const tone = {
-    1: "bg-warning/15 text-warning-foreground border-warning/40",
-    2: "bg-tier-note/15 text-tier-note-foreground border-tier-note/40",
+    1: "bg-warning/15 text-warning-foreground border-warning/20",
+    2: "bg-tier-note/15 text-tier-note-foreground border-tier-note/20",
   }[resolved];
 
   const label = WASTE_TIER_LABELS_VI[resolved];

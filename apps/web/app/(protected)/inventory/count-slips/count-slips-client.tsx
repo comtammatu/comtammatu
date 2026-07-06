@@ -264,7 +264,7 @@ function CountSlipCard({
       <div
         className={cn(
           "rounded-lg border bg-card",
-          !readOnly && hasShrinkage && "border-destructive/40",
+          !readOnly && hasShrinkage && "border-destructive/20",
         )}
       >
         <div className="flex items-start justify-between gap-2 p-4 pb-3">

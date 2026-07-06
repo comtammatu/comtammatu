@@ -119,7 +119,7 @@ export function StocktakeModeSelector({
                 {meta.defaultBlind ? (
                   <Badge
                     variant="outline"
-                    className="border-warning/40 bg-warning/15 text-warning-foreground"
+                    className="border-warning/20 bg-warning/15 text-warning-foreground"
                   >
                     Blind
                   </Badge>

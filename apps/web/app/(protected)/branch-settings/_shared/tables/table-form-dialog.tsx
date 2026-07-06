@@ -4,7 +4,7 @@ import { z } from "zod";
 import {
   FormDialog,
   SelectField,
-  TextField,
+  NumberField,
   valuesToFormData,
 } from "@/components/form";
 import { createTable, updateTable } from "./actions";
@@ -88,13 +88,12 @@ export function TableFormDialog({
     >
       {(form) => (
         <>
-          <TextField
+          <NumberField
             control={form.control}
             name="number"
             label="Số bàn"
-            type="number"
-            min={1}
             placeholder="VD: 1, 2, 3..."
+            allowNegative={false}
             required
           />
           <SelectField

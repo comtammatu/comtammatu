@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
+import { FormattedNumberInput } from "@/components/form";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Item,
@@ -333,7 +333,7 @@ export function PayrollDetailClient({
               <Label htmlFor="standard-days-input" className="text-xs text-muted-foreground font-normal">
                 {copy.standardDays}
               </Label>
-              <Input
+              <FormattedNumberInput
                 id="standard-days-input"
                 aria-label={copy.standardDays}
                 className="h-9 w-24 text-right font-mono tabular-nums"
@@ -344,12 +344,10 @@ export function PayrollDetailClient({
                     period.status !== "calculated")
                 }
                 inputMode="decimal"
-                min="0.5"
-                max="31"
-                step="0.5"
-                type="number"
+                maxFractionDigits={1}
+                allowNegative={false}
                 value={standardDaysInput}
-                onChange={(event) => setStandardDaysInput(event.target.value)}
+                onValueChange={setStandardDaysInput}
               />
             </div>
             <Button

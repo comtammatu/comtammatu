@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { FormDialog, TextField, valuesToFormData } from "@/components/form";
+import { FormDialog, TextField, NumberField, valuesToFormData } from "@/components/form";
 import { messages } from "@lib/messages";
 import { createZone, updateZone } from "./actions";
 import type { ZoneRow } from "./zone-table";
@@ -66,12 +66,11 @@ export function ZoneFormDialog({
             placeholder={copy.zoneNamePlaceholder}
             required
           />
-          <TextField
+          <NumberField
             control={form.control}
             name="sort_order"
             label={copy.zoneOrderLabel}
-            type="number"
-            min={0}
+            allowNegative={false}
           />
         </>
       )}

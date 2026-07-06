@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
+import { FormattedNumberInput } from "@/components/form";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Item,
@@ -173,17 +173,15 @@ export function PayrollListClient({
             <Label htmlFor="standard-days-list" className="text-xs text-muted-foreground font-normal">
               {copy.standardDays}
             </Label>
-            <Input
+            <FormattedNumberInput
               id="standard-days-list"
               aria-label={copy.standardDays}
               className="h-9 w-24 text-right font-mono tabular-nums"
               inputMode="decimal"
-              min="0.5"
-              max="31"
-              step="0.5"
-              type="number"
+              maxFractionDigits={1}
+              allowNegative={false}
               value={standardDays}
-              onChange={(event) => setStandardDays(event.target.value)}
+              onValueChange={setStandardDays}
             />
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">

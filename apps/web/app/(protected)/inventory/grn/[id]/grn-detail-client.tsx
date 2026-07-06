@@ -1,9 +1,8 @@
 "use client";
-
+ 
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -38,11 +37,11 @@ import { AmendOwnerDialog } from "./views/amend-owner-dialog";
 import { GrnSummaryRow } from "./views/grn-summary-row";
 import { LineRow } from "./views/grn-line-row";
 import { OverviewLinesPreview } from "./views/overview-lines-preview";
-
+ 
 export type { GRNDetail } from "./views/grn-detail-types";
-
+ 
 import type { EditableLine, GRNDetail } from "./views/grn-detail-types";
-
+ 
 export function GRNDetailClient({
   grn,
   ingredients,
@@ -71,7 +70,7 @@ export function GRNDetailClient({
   // Device-derived, not param-derived: the old `?m=1` flag had no setter
   // anywhere in the codebase, so the mobile post-confirm navigation and
   // back-link paths below never activated for phone receivers.
-  const isMobile = useIsMobile() === true;
+  const isMobile = embedded;
   const isReview = searchParams.get("review") === "1";
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();

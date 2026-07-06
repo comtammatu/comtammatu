@@ -5,7 +5,7 @@
 import type { ReactNode } from "react";
 import { z } from "zod";
 import { FieldGroup } from "@comtammatu/ui/components/field";
-import { FormDialog, SelectField, TextField } from "@/components/form";
+import { FormDialog, SelectField, TextField, MoneyVndField, NumberField } from "@/components/form";
 import { requiredBranchKindForPositionCode } from "@comtammatu/shared/auth";
 import { createEmployeeAccount, updateEmployee } from "./actions";
 import type { BranchOption, EmployeeRow } from "./_types";
@@ -294,29 +294,27 @@ export function EmployeeFormDialog({
                 label="Ngày hết hạn HĐ"
                 type="date"
               />
-              <TextField
+              <MoneyVndField
                 control={form.control}
                 name="base_salary"
                 label="Lương tháng (VND)"
-                type="number"
-                placeholder="12000000"
+                placeholder="12.000.000"
                 description="Lương gộp/tháng — dùng để tính lương"
               />
-              <TextField
+              <MoneyVndField
                 control={form.control}
                 name="insurance_base_salary"
                 label="Lương đóng BH (VND)"
-                type="number"
                 placeholder="0"
                 description="0 = chưa tham gia BHXH"
               />
-              <TextField
+              <NumberField
                 control={form.control}
                 name="dependents_count"
                 label="Số người phụ thuộc"
-                type="number"
                 placeholder="0"
                 description="Chỉ ảnh hưởng thuế TNCN"
+                allowNegative={false}
               />
             </FormSection>
 
@@ -506,29 +504,27 @@ export function EmployeeFormDialog({
               label="Ngày hết hạn HĐ"
               type="date"
             />
-            <TextField
+            <MoneyVndField
               control={form.control}
               name="base_salary"
               label="Lương tháng (VND)"
-              type="number"
-              placeholder="12000000"
+              placeholder="12.000.000"
               description="Lương gộp/tháng — dùng để tính lương"
             />
-            <TextField
+            <MoneyVndField
               control={form.control}
               name="insurance_base_salary"
               label="Lương đóng BH (VND)"
-              type="number"
               placeholder="0"
               description="0 = chưa tham gia BHXH"
             />
-            <TextField
+            <NumberField
               control={form.control}
               name="dependents_count"
               label="Số người phụ thuộc"
-              type="number"
               placeholder="0"
               description="Chỉ ảnh hưởng thuế TNCN"
+              allowNegative={false}
             />
           </FormSection>
 

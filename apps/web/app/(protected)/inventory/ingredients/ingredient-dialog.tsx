@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: ingredient units table layout uses inline headers and helper labels */
+
 import { useMemo } from "react";
 import {
   Controller,
@@ -291,10 +293,11 @@ function UnitsField({
       </div>
 
       <div className="overflow-hidden rounded-lg border">
-        <div className="hidden grid-cols-12 items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid">
-          <div className="col-span-10">{copy.units.colUnit}</div>
-          <div className="text-center">{copy.units.colBase}</div>
-          <div />
+        <div className="hidden grid-cols-12 items-center gap-3 border-b bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid">
+          <div className="col-span-3">{copy.units.colUnit}</div>
+          <div className="col-span-6">Hệ số quy đổi</div>
+          <div className="text-center col-span-2">{copy.units.colBase}</div>
+          <div className="col-span-1" />
         </div>
 
         <div className="divide-y">
@@ -402,16 +405,17 @@ function UnitRowCells({
   }, [isBase, selectedUnit, watchedRows, unitOptions]);
 
   return (
-    <div className="flex flex-col gap-1 px-3 py-2">
-      <div className="grid grid-cols-1 items-center gap-2 md:grid-cols-12">
-        <div className="min-w-0 md:col-span-10">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center px-3 py-2">
+      {/* Unit Dropdown & Mobile Delete Button */}
+      <div className="col-span-1 md:col-span-3 flex items-center gap-2">
+        <div className="flex-1 min-w-0">
           <Controller
             control={control}
             name={`units.${index}.unit_id`}
             render={({ field, fieldState }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger
-                  className={cn("h-9", fieldState.error && "border-destructive")}
+                  className={cn("h-9 w-full", fieldState.error && "border-destructive")}
                   aria-invalid={!!fieldState.error}
                   onBlur={field.onBlur}
                   ref={field.ref}
@@ -430,22 +434,7 @@ function UnitRowCells({
           />
         </div>
 
-        <Controller
-          control={control}
-          name={`units.${index}.is_base`}
-          render={({ field }) => (
-            <div className="flex justify-center">
-              <Checkbox
-                checked={field.value}
-                onCheckedChange={(checked) => {
-                  if (checked) onSetBase();
-                }}
-                aria-label={copy.units.colBase}
-              />
-            </div>
-          )}
-        />
-
+        {/* Mobile Delete Button */}
         <Button
           type="button"
           variant="ghost"
@@ -453,20 +442,22 @@ function UnitRowCells({
           onClick={onRemove}
           disabled={!canRemove}
           aria-label={copy.units.add}
+          className="h-9 w-9 md:hidden flex-shrink-0"
         >
           <IconTrash className="size-4 text-muted-foreground" />
         </Button>
       </div>
 
-      {isBase ? (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 font-medium uppercase tracking-wide">
-            {copy.units.baseTag}
-          </span>
-        </div>
-      ) : isPackaging ? (
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-          <div className="flex items-center gap-2">
+      {/* Conversion Details Column */}
+      <div className="col-span-1 md:col-span-6">
+        {isBase ? (
+          <div className="flex items-center text-xs text-muted-foreground h-9">
+            <span className="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 font-medium uppercase tracking-wide">
+              {copy.units.baseTag}
+            </span>
+          </div>
+        ) : isPackaging ? (
+          <div className="flex flex-wrap items-center gap-2">
             <Controller
               control={control}
               name={`units.${index}.anchor_factor`}
@@ -481,7 +472,7 @@ function UnitRowCells({
                   placeholder={copy.units.colFactor}
                   aria-invalid={!!fieldState.error}
                   className={cn(
-                    "h-9 w-28",
+                    "h-9 w-20 flex-shrink-0",
                     fieldState.error && "border-destructive",
                   )}
                 />
@@ -497,7 +488,7 @@ function UnitRowCells({
                 >
                   <SelectTrigger
                     className={cn(
-                      "h-9 min-w-40",
+                      "h-9 w-28 flex-shrink-0",
                       fieldState.error && "border-destructive",
                     )}
                     aria-invalid={!!fieldState.error}
@@ -517,26 +508,66 @@ function UnitRowCells({
                 </Select>
               )}
             />
-          </div>
-          <p
-            className={cn(
-              "text-xs",
-              preview?.ok ? "text-muted-foreground" : "text-destructive",
+            {preview?.ok ? (
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {preview.text}
+              </span>
+            ) : (
+              <span className="text-xs text-destructive whitespace-nowrap">
+                {copy.units.previewInvalid}
+              </span>
             )}
-          >
-            {preview?.ok ? preview.text : copy.units.previewInvalid}
-          </p>
-        </div>
-      ) : isStandard ? (
-        <div className="flex flex-col gap-1 text-xs sm:flex-row sm:items-center sm:gap-3">
-          <span className="text-muted-foreground">{copy.units.autoStandard}</span>
-          <span
-            className={cn(preview?.ok ? "text-muted-foreground" : "text-destructive")}
-          >
-            {preview?.ok ? preview.text : copy.units.previewInvalid}
-          </span>
-        </div>
-      ) : null}
+          </div>
+        ) : isStandard ? (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground h-9">
+            <span>{copy.units.autoStandard}</span>
+            {preview?.ok && (
+              <span className="whitespace-nowrap">({preview.text})</span>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Base Checkbox/Radio Column */}
+      <div className="col-span-1 md:col-span-2 flex items-center gap-2 md:justify-center h-9">
+        <Controller
+          control={control}
+          name={`units.${index}.is_base`}
+          render={({ field }) => (
+            <>
+              <Checkbox
+                id={`units-base-${index}`}
+                checked={field.value}
+                onCheckedChange={(checked) => {
+                  if (checked) onSetBase();
+                }}
+                aria-label={copy.units.colBase}
+              />
+              <Label
+                htmlFor={`units-base-${index}`}
+                className="text-sm font-medium md:hidden cursor-pointer"
+              >
+                {copy.units.colBase}
+              </Label>
+            </>
+          )}
+        />
+      </div>
+
+      {/* Desktop Delete Button */}
+      <div className="hidden md:flex md:col-span-1 justify-end">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onRemove}
+          disabled={!canRemove}
+          aria-label={copy.units.add}
+          className="h-9 w-9"
+        >
+          <IconTrash className="size-4 text-muted-foreground" />
+        </Button>
+      </div>
     </div>
   );
 }

@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
-import { FormDialog, SelectField, TextField } from "@/components/form";
+import { FormDialog, SelectField, TextField, FormattedNumberInput } from "@/components/form";
 import {
   ChevronDown as IconChevronDown,
   ChevronUp as IconChevronUp,
@@ -623,16 +623,16 @@ function BlockFields({
             <Label className="text-muted-foreground">
               {copy.spacerLinesLabel}
             </Label>
-            <Input
-              type="number"
-              min={1}
-              max={5}
-              value={Number(block.lines ?? 1)}
-              onChange={(e) =>
+            <FormattedNumberInput
+              maxFractionDigits={0}
+              allowNegative={false}
+              value={String(block.lines ?? 1)}
+              onValueChange={(val) => {
+                const num = Number(val) || 1;
                 onPatch({
-                  lines: Math.max(1, Math.min(5, Number(e.target.value) || 1)),
-                })
-              }
+                  lines: Math.max(1, Math.min(5, num)),
+                });
+              }}
               className="w-20"
             />
           </div>

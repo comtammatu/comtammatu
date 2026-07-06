@@ -21,13 +21,12 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { NumberPadSheet } from "@/components/form";
+import { NumberPadSheet, FormattedNumberInput } from "@/components/form";
 import {
   AppDetailFooter,
   AppEmptyState,
   AppSection,
 } from "@/components/surface";
-import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { getDefaultIssueUnit, getIssueUnitOptions } from "../_lib/issue-units";
 import { createStockTransfer } from "../transfer-actions";

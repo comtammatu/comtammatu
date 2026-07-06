@@ -9,6 +9,12 @@ const readRepo = (path: string) => readFileSync(resolve(repoRoot, path), "utf8")
 const migration = readRepo(
   "supabase/migrations/20260706170000_inventory_unit_system_phase_a2_catalog_anchor.sql",
 );
+const unitLadderLockMigration = readRepo(
+  "supabase/migrations/20260706024311_inventory_unit_ladder_lock_by_stock_movements.sql",
+);
+const ingredientActions = readRepo(
+  "apps/web/app/(protected)/inventory/ingredient-actions.ts",
+);
 
 test("A2 redefines the catalog upsert to derive to_base_factor from anchors", () => {
   assert.match(
@@ -77,5 +83,50 @@ test("A2 locks the new resolver to authenticated/service_role and keeps the RPC 
   assert.match(
     migration,
     /GRANT ALL ON FUNCTION public\.upsert_ingredient_catalog\([^)]*\) TO authenticated, service_role/,
+  );
+});
+
+test("A2 blocks unit ladder rewrites once ledger movements exist", () => {
+  const guardIndex = unitLadderLockMigration.indexOf(
+    "inventory_unit_ladder_locked_by_stock_movements",
+  );
+  const replaceIndex = unitLadderLockMigration.indexOf(
+    "DELETE FROM public.ingredient_units WHERE ingredient_id = v_id",
+  );
+
+  assert.ok(guardIndex > 0, "the catalog upsert must expose a stable lock code");
+  assert.ok(
+    replaceIndex > guardIndex,
+    "the lock must run before replacing ingredient_units",
+  );
+  assert.match(
+    unitLadderLockMigration,
+    /FROM public\.stock_movements sm\s+WHERE sm\.tenant_id = v_tenant\s+AND sm\.ingredient_id = v_id/,
+    "the guard must be driven by existing ledger movements",
+  );
+  assert.match(
+    unitLadderLockMigration,
+    /iu\.is_base\s+AND iu\.unit_id IS DISTINCT FROM v_base_unit_id/,
+    "base unit changes would reinterpret stock_levels quantities",
+  );
+  assert.match(
+    unitLadderLockMigration,
+    /public\.inv_catalog_unit_to_base\(v_base_unit_id, incoming\.e, p_units\)/,
+    "used entry units must keep the same derived base factor",
+  );
+});
+
+test("ingredient actions surface locked unit ladders with operator-safe copy", () => {
+  assert.match(
+    ingredientActions,
+    /inventory_unit_ladder_locked_by_stock_movements/,
+  );
+  assert.match(
+    ingredientActions,
+    /Nguyên liệu đã có lịch sử tồn kho; không thể đổi đơn vị gốc hoặc hệ số quy đổi\./,
+  );
+  assert.match(
+    ingredientActions,
+    /mapCatalogRpcError\(error\.code, error\.message\)/,
   );
 });

@@ -13,7 +13,7 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
-import { FormattedNumberInput } from "../../_components/formatted-number-input";
+import { FormattedNumberInput } from "@/components/form";
 import {
   DataTable,
   type DataTableColumn,

@@ -56,9 +56,9 @@ export function ShiftCapMeter({
 
   const wrapTone =
     pct >= 0.9 || willExceed
-      ? "border-destructive/40 bg-destructive/10"
+      ? "border-destructive/20 bg-destructive/10"
       : pct >= 0.7
-        ? "border-warning/40 bg-warning/10"
+        ? "border-warning/20 bg-warning/10"
         : "border-muted";
 
   return (

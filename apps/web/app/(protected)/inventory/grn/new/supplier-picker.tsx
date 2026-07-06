@@ -107,7 +107,7 @@ export function SupplierPicker({
           asChild
           minHeight="mobile"
           padding="default"
-          className="border-primary/40 bg-primary/5 text-left"
+          className="border-primary/20 bg-primary/10 text-left"
         >
           <button type="button" onClick={handleCreate} disabled={creating}>
             <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">

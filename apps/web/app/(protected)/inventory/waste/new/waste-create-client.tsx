@@ -17,8 +17,8 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Trash as IconTrash } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { Combobox, FormattedNumberInput } from "@/components/form";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
-import { SearchableSelect } from "@/(protected)/inventory/_components/searchable-select";
 import {
   WasteReasonDropdown,
   isAlwaysTier2Reason,
@@ -31,7 +31,6 @@ import { BranchDailyCapBanner } from "@/(protected)/inventory/_components/branch
 import { AntiSplitRollingMeter } from "@/(protected)/inventory/_components/anti-split-rolling-meter";
 import { createWasteEntry } from "@/(protected)/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
-import { FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import {
   AppDetailFooter,
@@ -391,7 +390,7 @@ export function WasteCreateClient({
               <div className="flex flex-col gap-3 p-4 pt-0">
                 <div>
                   <Label>{PRODUCT_VI.rawIngredient}</Label>
-                  <SearchableSelect
+                  <Combobox
                     options={ingredientOptions}
                     value={
                       line.ingredientId !== null

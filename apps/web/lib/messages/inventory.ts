@@ -602,6 +602,7 @@ export const inventory = {
       exception: "Ngoại lệ",
       adjustExceptionAria: (name: string) => `Điều chỉnh ngoại lệ ${name}`,
       viewDetailAria: (name: string) => `Xem chi tiết ${name}`,
+      actionsDropdown: "Thao tác kho",
     },
     metrics: {
       selectedWarehouse: "Kho chọn",
@@ -609,6 +610,7 @@ export const inventory = {
       underThreshold: "Dưới ngưỡng",
       nearExpiry: "Cận date",
       pending: "Chờ xử lý",
+      workSignalTitle: "Tín hiệu cần xử lý",
     },
     empty: {
       search: "Không tìm thấy nguyên liệu phù hợp",

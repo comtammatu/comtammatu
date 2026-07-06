@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
+import { QuantityInput } from "@/components/form";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
 import {
   InputGroup,
   InputGroupAddon,
@@ -360,17 +360,15 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     const draft = drafts[row.menu_item_id] ?? buildDraft(row);
     const rowPending = isPending && pendingId === row.menu_item_id;
     return (
-      <Input
-        type="number"
-        min={0}
+      <QuantityInput
+        maxFractionDigits={0}
         max={9999}
-        inputMode="numeric"
         placeholder={messages.pos.menu.manualLimitPlaceholder}
         value={draft.qtyText}
         disabled={rowPending}
-        onChange={(event) =>
+        onValueChange={(val) =>
           updateDraft(row.menu_item_id, {
-            qtyText: event.target.value,
+            qtyText: val,
           })
         }
         aria-label={messages.pos.menu.manualLimitInputAria(row.item_name)}

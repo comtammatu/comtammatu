@@ -384,7 +384,7 @@ export function IngredientsClient({
       render: (item) => {
         const category = categoryLabel(item);
         return (
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <p className="font-semibold">{item.name}</p>
               {category ? (
@@ -393,40 +393,34 @@ export function IngredientsClient({
                 </Badge>
               ) : null}
             </div>
+            {item.sku ? (
+              <span className="font-mono text-xs text-muted-foreground">
+                {item.sku}
+              </span>
+            ) : null}
           </div>
         );
       },
     },
     {
-      key: "sku",
-      header: "SKU",
-      className: "min-w-28",
-      render: (item) => (
-        <span className="font-mono text-sm text-muted-foreground">
-          {item.sku || "—"}
-        </span>
-      ),
-    },
-    {
       key: "unit",
-      header: FORM_VI.unit,
-      className: "min-w-48",
+      header: `${FORM_VI.unit} & ${ingredientListCopy.colStorage}`,
+      className: "min-w-44",
       render: (item) => (
-        <span className="text-sm text-muted-foreground">
-          {unitsSummary(item)}
-        </span>
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-foreground">
+            {unitsSummary(item)}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {storageLabel(item.storage_type)}
+          </span>
+        </div>
       ),
-    },
-    {
-      key: "storage",
-      header: ingredientListCopy.colStorage,
-      className: "min-w-36",
-      render: (item) => storageLabel(item.storage_type),
     },
     {
       key: "unit_cost",
       header: ingredientListCopy.colReferenceCost,
-      className: "min-w-32",
+      className: "min-w-28 text-right",
       render: (item) => (
         <span className="font-mono">
           {item.unit_cost != null ? formatVND(item.unit_cost) : "—"}
@@ -434,26 +428,26 @@ export function IngredientsClient({
       ),
     },
     {
-      key: "thresholds",
-      header: ingredientListCopy.colThresholds,
-      className: "min-w-44",
-      render: (item) => <ThresholdBadges item={item} />,
-    },
-    {
       key: "status",
-      header: FORM_VI.status,
-      className: "min-w-28",
+      header: `${FORM_VI.status} & ${ingredientListCopy.colThresholds}`,
+      className: "min-w-44",
       render: (item) => (
-        <StatusBadge
-          domain="inventory"
-          value={item.is_active ? "active" : "suspended"}
-        />
+        <div className="flex flex-col gap-1.5">
+          <div>
+            <StatusBadge
+              domain="inventory"
+              value={item.is_active ? "active" : "suspended"}
+              size="sm"
+            />
+          </div>
+          <ThresholdBadges item={item} />
+        </div>
       ),
     },
     {
       key: "actions",
-      header: FORM_VI.action,
-      className: "w-24 text-right",
+      header: <span className="sr-only">{FORM_VI.action}</span>,
+      className: "w-12 text-right",
       render: (item) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

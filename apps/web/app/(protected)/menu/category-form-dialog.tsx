@@ -5,6 +5,7 @@ import {
   FormDialog,
   SelectField,
   TextField,
+  NumberField,
   valuesToFormData,
 } from "@/components/form";
 import { ACTIONS_VI, MENU_VI } from "@comtammatu/shared/messages";
@@ -91,12 +92,11 @@ export function CategoryFormDialog({
             placeholder={MENU_VI.selectTypePlaceholder}
             required
           />
-          <TextField
+          <NumberField
             control={form.control}
             name="sort_order"
             label={MENU_VI.sortOrderLabel}
-            type="number"
-            min={0}
+            allowNegative={false}
           />
         </>
       )}

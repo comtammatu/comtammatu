@@ -19,7 +19,7 @@ import {
   Trash as IconTrash,
 } from "lucide-react";
 import { PhotoUploadInput } from "../../../_components/photo-upload-input";
-import { FormattedNumberInput } from "../../../_components/formatted-number-input";
+import { FormattedNumberInput } from "@/components/form";
 import { formatVND } from "../../../_lib/format";
 import {
   deriveVariance,

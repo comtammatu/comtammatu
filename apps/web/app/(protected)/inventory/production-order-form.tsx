@@ -24,9 +24,8 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { Combobox, FormDialog } from "@/components/form";
+import { Combobox, FormDialog, FormattedNumberInput } from "@/components/form";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormattedNumberInput } from "./_components/formatted-number-input";
 import { getAnyUnitOptions, getDefaultAnyUnit } from "./_lib/production-units";
 import { createProductionOrder } from "./production-actions";
 import { defaultProductionNumber } from "./production-types";

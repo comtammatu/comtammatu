@@ -19,7 +19,7 @@ import {
   Save as IconDeviceFloppy,
 } from "lucide-react";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { FormattedNumberInput } from "../../../_components/formatted-number-input";
+import { FormattedNumberInput } from "@/components/form";
 import { amendGrnLine } from "../../../grn-actions";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { grnCopy, type EditableLine } from "./grn-detail-types";

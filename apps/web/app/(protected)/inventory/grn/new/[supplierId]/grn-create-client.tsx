@@ -435,7 +435,7 @@ export function GrnCreateClient({
             {draft.lines.map((line) => (
               <div
                 key={line.ingredientId}
-                className="flex items-center justify-between gap-3 rounded-md bg-muted/40 px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-md bg-muted/30 px-3 py-2"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold leading-tight">
@@ -514,7 +514,7 @@ export function GrnCreateClient({
                 key={ingredient.id}
                 type="button"
                 onClick={() => openEdit(ingredient)}
-                className="flex items-center gap-3 rounded-lg border bg-card px-3 py-3 text-left transition hover:bg-accent/40 active:scale-[0.99]"
+                className="flex items-center gap-3 rounded-lg border bg-card px-3 py-3 text-left transition hover:bg-accent/10 active:scale-[0.99]"
               >
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-2xs font-bold uppercase text-muted-foreground">
                   {(ingredient.sku ?? ingredient.name).slice(0, 2)}

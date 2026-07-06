@@ -557,7 +557,7 @@ export function SupplierInvoicesClient({
         padding="default"
         className={cn(
           "flex-col items-stretch gap-3 text-left",
-          isActive && "border-primary/40 bg-primary/5 ring-2 ring-primary/40",
+          isActive && "border-primary/20 bg-primary/10 ring-2 ring-primary/20",
         )}
       >
         <button

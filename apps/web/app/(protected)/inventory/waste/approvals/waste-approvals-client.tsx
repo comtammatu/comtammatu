@@ -147,7 +147,7 @@ function WasteApprovalCard({
       variant="outline"
       className={cn(
         "rounded-lg border bg-card p-0 flex flex-col items-stretch",
-        row.isSelfCreated && "border-warning/40 bg-warning/10",
+        row.isSelfCreated && "border-warning/20 bg-warning/10",
       )}
     >
         <div className="p-4 pb-3">
@@ -170,7 +170,7 @@ function WasteApprovalCard({
               <p className="mt-1 text-sm text-muted-foreground">
                 {row.createdByName}
                 {row.isSelfCreated ? (
-                  <Badge className="ml-2 bg-warning/15 text-warning-foreground border-warning/40 border text-xs">
+                  <Badge className="ml-2 bg-warning/15 text-warning-foreground border-warning/20 border text-xs">
                     {copy.selfCreatedBadge}
                   </Badge>
                 ) : null}

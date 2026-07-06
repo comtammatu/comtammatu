@@ -183,7 +183,7 @@ export function ZoneLockIndicator({
         <>
           <Badge
             variant="outline"
-            className="border-success/40 bg-background text-success"
+            className="border-success/20 bg-background text-success"
           >
             {INVENTORY_VI.holdingLock}
           </Badge>
@@ -204,7 +204,7 @@ export function ZoneLockIndicator({
         <>
           <Badge
             variant="outline"
-            className="border-tier-note/40 bg-background text-tier-note-foreground"
+            className="border-tier-note/20 bg-background text-tier-note-foreground"
           >
             {INVENTORY_VI.lockHeldByOther}
           </Badge>
@@ -251,15 +251,15 @@ export function ZoneLockIndicator({
 function toneFor(kind: LockState["kind"]): string {
   switch (kind) {
     case "held":
-      return "border-success/40 bg-success/10 text-success";
+      return "border-success/20 bg-success/10 text-success";
     case "blocked":
-      return "border-tier-note/40 bg-tier-note/15 text-tier-note-foreground";
+      return "border-tier-note/20 bg-tier-note/15 text-tier-note-foreground";
     case "lost":
-      return "border-destructive/50 bg-destructive/10 text-destructive";
+      return "border-destructive/20 bg-destructive/10 text-destructive";
     case "error":
-      return "border-destructive/40 bg-destructive/10 text-destructive";
+      return "border-destructive/20 bg-destructive/10 text-destructive";
     case "acquiring":
-      return "border-info/40 bg-info/10 text-info";
+      return "border-info/20 bg-info/10 text-info";
     default:
       return "border-muted bg-muted/30 text-muted-foreground";
   }
