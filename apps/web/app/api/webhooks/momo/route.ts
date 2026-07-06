@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { MoMoProvider } from "@comtammatu/shared/providers";
+import { issueTaxInvoiceForPaidOrder } from "@lib/hddt-per-order";
 
 const MOMO_PARTNER_CODE = process.env.MOMO_PARTNER_CODE ?? "";
 const MOMO_ACCESS_KEY = process.env.MOMO_ACCESS_KEY ?? "";
@@ -374,13 +375,35 @@ export async function POST(request: Request) {
     // Payments never consume stock (D016): completed is accepted
     // unconditionally.
     case "completed":
-    case "already_completed":
+    case "already_completed": {
+      const invoiceResult = await issueTaxInvoiceForPaidOrder({
+        supabase,
+        tenantId: extra.tenantId,
+        input: { orderId: pendingPayment.order_id },
+        actorId: null,
+        logPrefix: "momo-webhook",
+      });
+      const invoiceErrorCode =
+        !invoiceResult.success &&
+        invoiceResult.errorCode !== "invoice_exists" &&
+        invoiceResult.errorCode !== "summary_invoice_exists"
+          ? "invoice_attempt_failed"
+          : null;
+      if (invoiceErrorCode) {
+        console.error("[momo-webhook] HĐĐT attempt failed", {
+          orderId: pendingPayment.order_id,
+          code: invoiceResult.errorCode ?? "unknown",
+        });
+      }
+
       await markWebhookEvent(supabase, webhookEventId, {
         payment_id: pendingPayment.id,
         processing_status: "processed",
         http_status: 204,
+        error_code: invoiceErrorCode,
       });
       return momoAcceptedResponse();
+    }
     // Defensive: only reachable while the pre-20260611001000 RPC (which
     // still had a stock leg) is deployed.
     case "stock_failed":

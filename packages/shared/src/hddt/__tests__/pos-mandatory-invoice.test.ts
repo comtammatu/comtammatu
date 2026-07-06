@@ -7,6 +7,14 @@ import { POS_VI } from "../../messages";
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
+function sourceBetween(source: string, start: string, end: string): string {
+  const startIndex = source.indexOf(start);
+  assert.notEqual(startIndex, -1, `missing start marker: ${start}`);
+  const endIndex = source.indexOf(end, startIndex);
+  assert.notEqual(endIndex, -1, `missing end marker: ${end}`);
+  return source.slice(startIndex, endIndex);
+}
+
 test("POS invoice form defaults to buyer-not-get-invoice instead of opting out", () => {
   const src = read(
     "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/invoice-form-section.tsx",
@@ -47,6 +55,43 @@ test("payment confirm actions always attempt HĐĐT after successful payment", (
   assert.ok(
     src.includes("normalizeInvoicePayload(invoice)"),
     "missing no-MST fallback payload before createTaxInvoice",
+  );
+});
+
+test("POS validates HĐĐT buyer payload before committing payment", () => {
+  const src = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
+  );
+  const cashBlock = sourceBetween(
+    src,
+    "export async function confirmCashPaymentWithInvoice",
+    "/* ─── fetchVietQrConfig",
+  );
+  const vietQrStart = src.indexOf(
+    "export async function confirmVietQrPaymentWithInvoice",
+  );
+  assert.notEqual(vietQrStart, -1, "missing VietQR invoice orchestrator");
+  const vietQrBlock = src.slice(vietQrStart);
+
+  assert.match(
+    src,
+    /buyerTaxCode:[\s\S]*regex\(MST_REGEX/,
+    "POS server action must enforce the same MST format as createTaxInvoice",
+  );
+  assert.match(
+    src,
+    /refine\(\(v\) => !v\.buyerTaxCode \|\|/,
+    "POS server action must require buyerName when MST is present",
+  );
+  assert.ok(
+    cashBlock.indexOf("parseInvoicePayload(invoice)") <
+      cashBlock.indexOf("confirmCashPayment(orderId, cashReceived)"),
+    "cash HĐĐT buyer validation must happen before payment commit",
+  );
+  assert.ok(
+    vietQrBlock.indexOf("parseInvoicePayload(invoice)") <
+      vietQrBlock.indexOf("confirmVietQrPayment(branchId, orderId, amount)"),
+    "VietQR HĐĐT buyer validation must happen before payment commit",
   );
 });
 
@@ -132,6 +177,24 @@ test("SePay webhook attempts HĐĐT after successful webhook payment", () => {
   );
 });
 
+test("MoMo webhook attempts HĐĐT after successful webhook payment", () => {
+  const src = read("apps/web/app/api/webhooks/momo/route.ts");
+
+  assert.ok(
+    src.includes("issueTaxInvoiceForPaidOrder"),
+    "MoMo paid webhook must attempt per-order HĐĐT issuance",
+  );
+  assert.match(
+    src,
+    /case "completed":\s*\n\s*case "already_completed": \{/,
+    "HĐĐT attempt must run for both fresh and idempotent MoMo paid outcomes",
+  );
+  assert.ok(
+    src.includes("error_code: invoiceErrorCode"),
+    "MoMo webhook event should record invoice attempt failure without failing payment",
+  );
+});
+
 test("finance can recover paid SePay orders that missed HĐĐT", () => {
   const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
   const listSrc = read("apps/web/app/(protected)/finance/invoice-list.tsx");
@@ -158,6 +221,30 @@ test("finance can recover paid SePay orders that missed HĐĐT", () => {
   assert.ok(
     listSrc.includes("issueMissingSepayInvoices"),
     "finance invoice list must expose the recovery action to operators",
+  );
+});
+
+test("draft HĐĐT reissue preserves stored buyer contact fields", () => {
+  const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
+  const createSrc = read("apps/web/lib/hddt-per-order.ts");
+
+  assert.ok(
+    actionSrc.includes(
+      '.select("id, order_id, buyer_name, buyer_tax_code, buyer_address, buyer_email")',
+    ),
+    "draft reissue must load buyer address/email with the other buyer fields",
+  );
+  assert.ok(
+    actionSrc.includes("buyerAddress: draft.buyer_address ?? undefined"),
+    "draft reissue must pass buyer_address back into createTaxInvoice",
+  );
+  assert.ok(
+    actionSrc.includes("buyerEmail: draft.buyer_email ?? undefined"),
+    "draft reissue must pass buyer_email back into createTaxInvoice",
+  );
+  assert.ok(
+    createSrc.includes("buyer_email: buyerEmail ?? null"),
+    "per-order HĐĐT writes must persist buyer_email",
   );
 });
 

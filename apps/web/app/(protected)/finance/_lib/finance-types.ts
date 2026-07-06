@@ -22,6 +22,7 @@ export interface InvoiceRow {
   status: string;
   buyer_name: string | null;
   buyer_tax_code: string | null;
+  buyer_email: string | null;
   subtotal: number;
   vat_rate: number;
   vat_amount: number;

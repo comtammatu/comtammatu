@@ -8149,6 +8149,7 @@ export type Database = {
           archived_at: string | null
           branch_id: number
           buyer_address: string | null
+          buyer_email: string | null
           buyer_name: string | null
           buyer_tax_code: string | null
           cancelled_at: string | null
@@ -8187,6 +8188,7 @@ export type Database = {
           archived_at?: string | null
           branch_id: number
           buyer_address?: string | null
+          buyer_email?: string | null
           buyer_name?: string | null
           buyer_tax_code?: string | null
           cancelled_at?: string | null
@@ -8225,6 +8227,7 @@ export type Database = {
           archived_at?: string | null
           branch_id?: number
           buyer_address?: string | null
+          buyer_email?: string | null
           buyer_name?: string | null
           buyer_tax_code?: string | null
           cancelled_at?: string | null

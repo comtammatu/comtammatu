@@ -142,7 +142,7 @@ export async function reissueAllDraftInvoices(): Promise<ActionResult> {
 
   const { data: drafts, error } = await supabase
     .from("tax_invoices")
-    .select("id, order_id, buyer_name, buyer_tax_code")
+    .select("id, order_id, buyer_name, buyer_tax_code, buyer_address, buyer_email")
     .eq("tenant_id", claims.tenant_id)
     .eq("status", "draft")
     .is("invoice_number", null)
@@ -165,6 +165,8 @@ export async function reissueAllDraftInvoices(): Promise<ActionResult> {
       orderId: draft.order_id,
       buyerName: draft.buyer_name ?? undefined,
       buyerTaxCode: draft.buyer_tax_code ?? undefined,
+      buyerAddress: draft.buyer_address ?? undefined,
+      buyerEmail: draft.buyer_email ?? undefined,
     });
     if (result.success) issued += 1;
     else failed += 1;
@@ -581,7 +583,7 @@ export async function cancelTaxInvoice(
 // and since both tables' RLS policies reference a bare `branch_id`, the generated
 // query fails with 42702 "column reference branch_id is ambiguous".
 const TAX_INVOICE_LIST_SELECT = `
-  id, order_id, invoice_number, status, buyer_name, buyer_tax_code,
+  id, order_id, invoice_number, status, buyer_name, buyer_tax_code, buyer_email,
   subtotal, vat_rate, vat_amount, total_amount,
   issued_at, cancelled_at, archived_at, created_at
 ` as const;

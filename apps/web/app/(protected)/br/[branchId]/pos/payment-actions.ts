@@ -58,6 +58,7 @@ type OrderPaymentCodeResult = {
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const POS_CONSUMPTION_SETUP_ERROR =
   "Không thể hoàn tất thanh toán vì cấu hình chi nhánh chưa sẵn sàng. Quản lý đã được thông báo.";
+const MST_REGEX = /^\d{10}(-\d{3})?$/;
 
 const branchIdSchema = z.coerce
   .number()
@@ -1109,26 +1110,50 @@ export interface CashPaymentWithInvoiceResult extends CashPaymentResult {
   invoice: InvoiceOutcome;
 }
 
-const invoicePayloadSchema = z
+const invoiceBuyerPayloadSchema = z
   .object({
     buyerName: z.string().trim().max(200).optional(),
-    buyerTaxCode: z.string().trim().optional(),
+    buyerTaxCode: z
+      .string()
+      .trim()
+      .regex(MST_REGEX, { error: "MST phải có dạng 10 số hoặc 10-3 số" })
+      .optional(),
     buyerAddress: z.string().trim().max(500).optional(),
     buyerEmail: z.email({ error: "Email không hợp lệ" }).optional(),
     buyerNotGetInvoice: z.boolean().optional(),
   })
-  .optional()
-  .nullable();
+  .refine((v) => !v.buyerTaxCode || (v.buyerName && v.buyerName.length > 0), {
+    error: "Có MST thì phải nhập tên người mua",
+    path: ["buyerName"],
+  });
+
+type InvoiceBuyerPayload = z.infer<typeof invoiceBuyerPayloadSchema>;
+type InvoicePayload = InvoiceBuyerPayload | null | undefined;
 
 function normalizeInvoicePayload(
-  invoice: z.infer<typeof invoicePayloadSchema> | null,
-): z.infer<typeof invoicePayloadSchema> {
+  invoice: InvoicePayload,
+): InvoiceBuyerPayload {
   return (
     invoice ?? {
       buyerName: BUYER_NOT_GET_INVOICE_NAME,
       buyerNotGetInvoice: true,
     }
   );
+}
+
+function parseInvoicePayload(
+  invoice: InvoicePayload,
+): ActionResult<InvoiceBuyerPayload> {
+  const parsed = invoiceBuyerPayloadSchema.safeParse(
+    normalizeInvoicePayload(invoice),
+  );
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu HĐĐT không hợp lệ",
+    };
+  }
+  return { success: true, data: parsed.data };
 }
 
 /**
@@ -1144,8 +1169,13 @@ function normalizeInvoicePayload(
 export async function confirmCashPaymentWithInvoice(
   orderId: number,
   cashReceived: number,
-  invoice: z.infer<typeof invoicePayloadSchema> | null,
+  invoice: InvoicePayload,
 ): Promise<ActionResult<CashPaymentWithInvoiceResult>> {
+  const invoicePayload = parseInvoicePayload(invoice);
+  if (!invoicePayload.success || !invoicePayload.data) {
+    return invoicePayload as ActionResult<CashPaymentWithInvoiceResult>;
+  }
+
   const paymentResult = await confirmCashPayment(orderId, cashReceived);
   if (!paymentResult.success || !paymentResult.data) {
     return paymentResult as ActionResult<CashPaymentWithInvoiceResult>;
@@ -1167,25 +1197,9 @@ export async function confirmCashPaymentWithInvoice(
     }
   }
 
-  const parsed = invoicePayloadSchema.safeParse(
-    normalizeInvoicePayload(invoice),
-  );
-  if (!parsed.success) {
-    return {
-      success: true,
-      data: {
-        ...paymentResult.data,
-        invoice: {
-          status: "failed",
-          error: parsed.error.issues[0]?.message ?? "Dữ liệu HĐĐT không hợp lệ",
-        },
-      },
-    };
-  }
-
   const invoiceResult = await createTaxInvoice({
     orderId,
-    ...(parsed.data ?? {}),
+    ...invoicePayload.data,
   });
 
   if (!invoiceResult.success) {
@@ -1417,8 +1431,13 @@ export async function confirmVietQrPaymentWithInvoice(
   branchId: number,
   orderId: number,
   amount: number,
-  invoice: z.infer<typeof invoicePayloadSchema> | null,
+  invoice: InvoicePayload,
 ): Promise<ActionResult<VietQrPaymentWithInvoiceResult>> {
+  const invoicePayload = parseInvoicePayload(invoice);
+  if (!invoicePayload.success || !invoicePayload.data) {
+    return invoicePayload as ActionResult<VietQrPaymentWithInvoiceResult>;
+  }
+
   const paymentResult = await confirmVietQrPayment(branchId, orderId, amount);
   if (!paymentResult.success || !paymentResult.data) {
     return paymentResult as ActionResult<VietQrPaymentWithInvoiceResult>;
@@ -1439,25 +1458,9 @@ export async function confirmVietQrPaymentWithInvoice(
     }
   }
 
-  const parsed = invoicePayloadSchema.safeParse(
-    normalizeInvoicePayload(invoice),
-  );
-  if (!parsed.success) {
-    return {
-      success: true,
-      data: {
-        ...paymentResult.data,
-        invoice: {
-          status: "failed",
-          error: parsed.error.issues[0]?.message ?? "Dữ liệu HĐĐT không hợp lệ",
-        },
-      },
-    };
-  }
-
   const invoiceResult = await createTaxInvoice({
     orderId,
-    ...(parsed.data ?? {}),
+    ...invoicePayload.data,
   });
 
   if (!invoiceResult.success) {

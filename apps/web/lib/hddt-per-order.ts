@@ -247,6 +247,7 @@ export async function issueTaxInvoiceForPaidOrder({
     buyer_name: buyerName,
     buyer_tax_code: buyerTaxCode ?? null,
     buyer_address: buyerAddress ?? null,
+    buyer_email: buyerEmail ?? null,
     subtotal: Math.round(subtotal * 100) / 100,
     vat_rate: vatRate,
     vat_amount: Math.round(vatAmount * 100) / 100,
