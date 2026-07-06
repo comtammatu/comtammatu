@@ -4,7 +4,7 @@ SET check_function_bodies = false;
 -- PostgreSQL database dump
 --
 
--- \restrict obnhtTc11TMiIEF6BGsrR5DXDKvQ5bIZtLmXMEYScBOq35gdr36RYCfV6Haem7h
+-- \restrict Y2WcDr0KbAr7PTFbJBcQfcjASZ09sSPy2jW5XOm3BqeLq4ASigKitPcFeT2oxcf
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.3
@@ -705,14 +705,14 @@ GRANT ALL ON FUNCTION private.staff_role_from_position_code(p_code text) TO serv
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict obnhtTc11TMiIEF6BGsrR5DXDKvQ5bIZtLmXMEYScBOq35gdr36RYCfV6Haem7h
+-- \unrestrict Y2WcDr0KbAr7PTFbJBcQfcjASZ09sSPy2jW5XOm3BqeLq4ASigKitPcFeT2oxcf
 
 
 --
 -- PostgreSQL database dump
 --
 
--- \restrict ptuomre4fc0JM5rHdZz4Y49dSHHyic5QPenyMtqBlohcQdc9eWj1qUgYo92MSHb
+-- \restrict kTOQ8m6uBrO4Uo3gfil0NTZ9Z1KcRGBJO6T8I4jYKTT4fIDp9yE4ZId1bracxW4
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.3
@@ -1055,15 +1055,12 @@ BEGIN
     WHEN 'grill_counter' THEN 'branch'
     WHEN 'cleaner' THEN 'branch'
     WHEN 'waiter' THEN 'branch'
-    WHEN 'warehouse_manager' THEN 'central_supply'
-    WHEN 'central_supply_manager' THEN 'central_supply'
-    WHEN 'production_manager' THEN 'central_kitchen'
-    WHEN 'central_kitchen_manager' THEN 'central_kitchen'
-    WHEN 'head_chef' THEN 'central_kitchen'
     ELSE NULL
   END;
 
-  IF v_required_branch_kind IS NULL AND v_requested_code IS NOT NULL THEN
+  IF v_final_role IN ('warehouse_manager', 'production_manager') THEN
+    v_final_branch := NULL;
+  ELSIF v_required_branch_kind IS NULL AND v_requested_code IS NOT NULL THEN
     v_final_branch := NULL;
   ELSE
     v_final_branch := COALESCE(p_branch_id, v_target.branch_id);
@@ -1284,7 +1281,7 @@ BEGIN
   ) VALUES (
     v_tenant_id, p_branch_id, NULL, 'draft',
     'daily_summary', p_summary_date, v_order_count,
-    'Khách hàng không lấy hóa đơn', NULL, NULL,
+    'Bán cho người tiêu dùng', NULL, NULL,
     v_subtotal, v_pred_rate, v_vat_amount, v_total,
     'viettel', NULL,
     jsonb_build_object('vat_breakdown', v_breakdown),
@@ -2371,6 +2368,7 @@ CREATE FUNCTION public.apply_template_to_user(p_target_user uuid, p_branch_id bi
 DECLARE
   v_tenant_id       BIGINT;
   v_target_tenant   BIGINT;
+  v_target_bucket   TEXT;
   v_template        RECORD;
   v_perm_key        TEXT;
   v_perm_scope      TEXT;
@@ -2399,6 +2397,18 @@ BEGIN
 
   IF public.auth_is_owner(p_target_user) THEN
     RAISE EXCEPTION 'cannot_manage_owner_permissions' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT private.staff_role_from_position_code(pos.code)
+  INTO v_target_bucket
+  FROM public.profiles p
+  JOIN public.positions pos
+    ON pos.id = p.position_id
+   AND pos.tenant_id = p.tenant_id
+  WHERE p.id = p_target_user;
+  IF v_target_bucket IS NULL
+     OR v_target_bucket NOT IN ('warehouse_manager', 'production_manager') THEN
+    v_target_bucket := NULL;
   END IF;
 
   IF p_branch_id IS NOT NULL AND NOT EXISTS (
@@ -2436,7 +2446,11 @@ BEGIN
     END;
 
     IF v_perm_scope = 'branch' AND v_grant_branch_id IS NULL THEN
-      RAISE EXCEPTION 'permission_scope_requires_branch: %', v_perm_key USING ERRCODE = '22023';
+      IF v_target_bucket IS NOT NULL THEN
+        v_grant_branch_id := NULL;
+      ELSE
+        RAISE EXCEPTION 'permission_scope_requires_branch: %', v_perm_key USING ERRCODE = '22023';
+      END IF;
     END IF;
 
     INSERT INTO public.staff_permissions (
@@ -2583,7 +2597,7 @@ BEGIN
     'Phiếu đếm tồn của bạn đã được duyệt và điều chỉnh kho.',
     'inventory_count_slip',
     p_slip_id,
-    format('/br/%s/stock/count', v_slip.branch_id),
+    '/employee/count',
     jsonb_build_object(
       'slip_id', p_slip_id, 'employee_id', v_slip.employee_id,
       'branch_id', v_slip.branch_id, 'result', 'approved', 'adjusted_lines', v_adjusted
@@ -2770,7 +2784,7 @@ BEGIN
     ),
     'leave_request',
     p_request_id,
-    format('/br/%s/shift/schedule/leave', v_request.branch_id),
+    '/employee/leave',
     jsonb_build_object(
       'leave_request_id', p_request_id,
       'employee_id', v_request.employee_id,
@@ -3046,53 +3060,49 @@ COMMENT ON FUNCTION public.auto_close_periods() IS 'Daily automation — day 5+ 
 
 
 --
--- Name: branch_kitchen_ingredient_availability(bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+-- Name: bill_line_items(bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.branch_kitchen_ingredient_availability(p_tenant_id bigint, p_branch_id bigint) RETURNS TABLE(ingredient_id bigint, on_hand numeric, pending_demand numeric)
-    LANGUAGE sql STABLE SECURITY DEFINER
+CREATE FUNCTION public.bill_line_items(p_order_id bigint) RETURNS jsonb
+    LANGUAGE sql STABLE
     SET search_path TO 'public'
     AS $$
-  WITH loc AS (
-    SELECT il.id
-    FROM public.inventory_locations il
-    WHERE il.branch_id = p_branch_id
-      AND il.tenant_id = p_tenant_id
-      AND il.location_kind = 'kitchen'
-      AND il.is_active = TRUE
-    ORDER BY il.is_default_consumption DESC, il.sort_order NULLS LAST, il.id
-    LIMIT 1
-  ),
-  pending AS (
-    SELECT r.ingredient_id,
-           SUM(oi.quantity::numeric * r.quantity / r.yield_factor) AS demand
-    FROM public.orders o
-    JOIN public.order_items oi
-      ON oi.order_id = o.id AND oi.tenant_id = o.tenant_id
-    JOIN public.recipes r
-      ON r.menu_item_id = oi.menu_item_id AND r.tenant_id = oi.tenant_id
-    WHERE o.tenant_id = p_tenant_id
-      AND o.branch_id = p_branch_id
-      AND o.status NOT IN ('completed', 'cancelled')
+  SELECT COALESCE(jsonb_agg(line ORDER BY first_id), '[]'::jsonb)
+  FROM (
+    SELECT
+      jsonb_build_object(
+        'item_name',     oi.item_name,
+        'variant_name',  oi.variant_name,
+        'category_type', mc.type,
+        'quantity',      SUM(oi.quantity),
+        'unit_price',    oi.unit_price,
+        'modifiers',     oi.modifiers,
+        'sides',         oi.sides,
+        'subtotal',      SUM(oi.subtotal),
+        'note',          NULL::text
+      ) AS line,
+      MIN(oi.id) AS first_id
+    FROM public.order_items oi
+    LEFT JOIN public.menu_items mi
+      ON mi.id = oi.menu_item_id
+     AND mi.tenant_id = oi.tenant_id
+    LEFT JOIN public.menu_categories mc
+      ON mc.id = mi.category_id
+     AND mc.tenant_id = oi.tenant_id
+    WHERE oi.order_id = p_order_id
       AND oi.status <> 'cancelled'
-    GROUP BY r.ingredient_id
-  )
-  SELECT sl.ingredient_id,
-         sl.current_quantity AS on_hand,
-         COALESCE(p.demand, 0) AS pending_demand
-  FROM public.stock_levels sl
-  LEFT JOIN pending p ON p.ingredient_id = sl.ingredient_id
-  WHERE sl.tenant_id = p_tenant_id
-    AND sl.branch_id = p_branch_id
-    AND sl.location_id = (SELECT id FROM loc);
+    GROUP BY
+      oi.menu_item_id, oi.variant_id, oi.item_name, oi.variant_name,
+      oi.unit_price, oi.modifiers, oi.sides, mc.type
+  ) grouped;
 $$;
 
 
 --
--- Name: FUNCTION branch_kitchen_ingredient_availability(p_tenant_id bigint, p_branch_id bigint); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION bill_line_items(p_order_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.branch_kitchen_ingredient_availability(p_tenant_id bigint, p_branch_id bigint) IS 'Per kitchen ingredient: on_hand and pending_demand (recipe demand of not-yet-consumed orders), using consume_stock_for_order''s exact explosion. Internal helper for the ingredient-stock gate + the POS cap RPC.';
+COMMENT ON FUNCTION public.bill_line_items(p_order_id bigint) IS 'Payment-bill (provisional + receipt) line items: one entry per distinct sold product (menu_item, variant, unit_price, modifiers, sides, category), quantity/subtotal summed. Item note is not part of the key — it is hidden on bills — so a noted and an un-noted portion of the same dish merge into one line. Not for HĐĐT (separate builder).';
 
 
 --
@@ -3545,10 +3555,10 @@ COMMENT ON FUNCTION public.branch_manager_request_consumption_adjustment(p_tenan
 
 
 --
--- Name: branch_menu_limit_availability(bigint, bigint, date, boolean); Type: FUNCTION; Schema: public; Owner: -
+-- Name: branch_menu_limit_availability(bigint, bigint, date, boolean, uuid[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_outcome_enabled boolean DEFAULT false) RETURNS TABLE(menu_item_id bigint, item_name text, category_id bigint, category_name text, base_price numeric, limit_id bigint, limit_date date, limit_quantity integer, is_disabled boolean, sold_today integer, stock_capacity integer, stock_capacity_live integer, manual_limit_quantity integer, accepted_today integer, pending_unfinalized_demand integer, active_hold_demand integer, available_to_sell integer)
+CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_gate_enabled boolean DEFAULT false, p_exclude_hold_tokens uuid[] DEFAULT NULL::uuid[]) RETURNS TABLE(menu_item_id bigint, item_name text, category_id bigint, category_name text, base_price numeric, limit_id bigint, limit_date date, is_disabled boolean, sold_today integer, stock_capacity integer, manual_limit_quantity integer, pending_unfinalized_demand integer, active_hold_demand integer, available_to_sell integer)
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO ''
     AS $_$
@@ -3598,6 +3608,7 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
       AND h.committed_at IS NULL
       AND h.released_at IS NULL
       AND h.expires_at > now()
+      AND (p_exclude_hold_tokens IS NULL OR h.hold_token <> ALL(p_exclude_hold_tokens))
     GROUP BY h.menu_item_id
   ),
   rows AS (
@@ -3611,13 +3622,10 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
       mi.base_price,
       bl.id AS limit_id,
       bl.limit_date,
-      COALESCE(bl.limit_quantity, sc.stock_capacity) AS limit_quantity,
       COALESCE(bl.is_disabled, false) AS is_disabled,
       COALESCE(bl.sold_today, 0) AS sold_today,
       sc.stock_capacity,
-      sc.stock_capacity AS stock_capacity_live,
       bl.limit_quantity AS manual_limit_quantity,
-      COALESCE(bl.sold_today, 0) AS accepted_today,
       COALESCE(p.quantity, 0) AS pending_unfinalized_demand,
       COALESCE(h.quantity, 0) AS active_hold_demand
     FROM public.menu_items mi
@@ -3642,13 +3650,13 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
     SELECT
       r.*,
       CASE
-        WHEN NOT p_stock_outcome_enabled THEN NULL::integer
-        WHEN r.stock_capacity_live IS NULL THEN 0
-        ELSE r.stock_capacity_live - r.pending_unfinalized_demand - r.active_hold_demand
+        WHEN NOT p_stock_gate_enabled THEN NULL::integer
+        WHEN r.stock_capacity IS NULL THEN NULL::integer
+        ELSE r.stock_capacity - r.pending_unfinalized_demand - r.active_hold_demand
       END AS stock_remaining,
       CASE
         WHEN r.manual_limit_quantity IS NULL THEN NULL::integer
-        ELSE r.manual_limit_quantity - r.accepted_today - r.active_hold_demand
+        ELSE r.manual_limit_quantity - r.sold_today - r.active_hold_demand
       END AS manual_remaining
     FROM rows r
   )
@@ -3660,13 +3668,10 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
     c.base_price,
     c.limit_id,
     c.limit_date,
-    c.limit_quantity,
     c.is_disabled,
     c.sold_today,
     c.stock_capacity,
-    c.stock_capacity_live,
     c.manual_limit_quantity,
-    c.accepted_today,
     c.pending_unfinalized_demand,
     c.active_hold_demand,
     CASE
@@ -3679,6 +3684,459 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
   FROM computed c
   ORDER BY c.category_sort_order, c.item_sort_order, c.item_name;
 $_$;
+
+
+--
+-- Name: FUNCTION branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_gate_enabled boolean, p_exclude_hold_tokens uuid[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_gate_enabled boolean, p_exclude_hold_tokens uuid[]) IS 'stock_remaining is NULL (unlimited) both when the gate is off AND when stock_capacity is NULL (no recipe / broken unit config) — D064 §2 fail-open NULL doctrine, never 0. p_exclude_hold_tokens drops the caller''s own active holds from active_hold_demand so a refetch does not double-count a terminal''s own reservation. Slimmed shape: accepted_today (dup of sold_today), stock_capacity_live (dup of stock_capacity), and the COALESCE-blended limit_quantity were dropped — D064 §7/PR-3.';
+
+
+--
+-- Name: broadcast_branch_ops(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.broadcast_branch_ops() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_row jsonb := to_jsonb(COALESCE(NEW, OLD));
+  v_payload jsonb;
+  v_branch text;
+BEGIN
+  v_payload := jsonb_build_object(
+    'domain', 'inventory',
+    'table', TG_TABLE_NAME,
+    'op', TG_OP,
+    'id', v_row ->> 'id',
+    'at', now()
+  );
+  BEGIN
+    FOR v_branch IN
+      SELECT DISTINCT b
+      FROM (VALUES
+        (v_row ->> 'branch_id'),
+        (v_row ->> 'from_branch_id'),
+        (v_row ->> 'to_branch_id')
+      ) AS t(b)
+      WHERE b IS NOT NULL
+    LOOP
+      PERFORM realtime.send(v_payload, 'ops', 'branch:' || v_branch || ':ops', true);
+    END LOOP;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'broadcast_branch_ops best-effort send failed (table=%, op=%): %',
+      TG_TABLE_NAME, TG_OP, SQLERRM;
+  END;
+  RETURN NULL;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION broadcast_branch_ops(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.broadcast_branch_ops() IS 'AFTER trigger: broadcasts a thin {domain,table,op,id,at} signal to branch:{id}:ops for every branch column present on the row (branch_id / from_branch_id / to_branch_id).';
+
+
+--
+-- Name: bulk_import_ingredients(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.bulk_import_ingredients(p_rows jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_tenant bigint := public.auth_tenant_id();
+  v_inserted integer := 0;
+  v_updated integer := 0;
+BEGIN
+  IF NOT public.has_permission_any('inventory:write') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_rows IS NULL OR jsonb_typeof(p_rows) <> 'array' OR jsonb_array_length(p_rows) = 0 THEN
+    RAISE EXCEPTION 'rows_must_be_non_empty_array' USING ERRCODE = '22023';
+  END IF;
+
+  DROP TABLE IF EXISTS pg_temp.bulk_import_ingredient_rows;
+  DROP TABLE IF EXISTS pg_temp.bulk_import_ingredient_upserted;
+
+  CREATE TEMP TABLE pg_temp.bulk_import_ingredient_rows ON COMMIT DROP AS
+  SELECT
+    raw.ordinality::integer AS row_no,
+    btrim(raw.value->>'name') AS name,
+    nullif(btrim(coalesce(raw.value->>'sku', '')), '') AS sku,
+    btrim(raw.value->>'purchase_unit') AS purchase_unit,
+    btrim(raw.value->>'measure_unit') AS measure_unit,
+    coalesce((raw.value->>'purchase_to_measure_factor')::numeric, 1) AS purchase_to_measure_factor,
+    nullif(btrim(coalesce(raw.value->>'category', '')), '') AS category,
+    coalesce(nullif(btrim(coalesce(raw.value->>'item_kind', '')), ''), 'raw_material') AS item_kind,
+    (raw.value->>'unit_cost')::numeric AS unit_cost,
+    coalesce((raw.value->>'min_stock_level')::numeric, 0) AS min_stock_level,
+    (raw.value->>'max_stock_level')::numeric AS max_stock_level,
+    (raw.value->>'reorder_point')::numeric AS reorder_point,
+    coalesce(nullif(btrim(coalesce(raw.value->>'storage_type', '')), ''), 'ambient') AS storage_type,
+    (raw.value->>'shelf_life_days')::integer AS shelf_life_days
+  FROM jsonb_array_elements(p_rows) WITH ORDINALITY AS raw(value, ordinality);
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_ingredient_rows
+    WHERE coalesce(name, '') = ''
+       OR coalesce(purchase_unit, '') = ''
+       OR coalesce(measure_unit, '') = ''
+       OR purchase_to_measure_factor <= 0
+  ) THEN
+    RAISE EXCEPTION 'invalid_import_row' USING ERRCODE = '22023';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_ingredient_rows
+    GROUP BY name
+    HAVING count(*) > 1
+  ) THEN
+    RAISE EXCEPTION 'duplicate_import_name' USING ERRCODE = '23505';
+  END IF;
+
+  INSERT INTO public.units (tenant_id, code, name, is_active)
+  SELECT DISTINCT v_tenant, code, code, true
+  FROM (
+    SELECT purchase_unit AS code FROM pg_temp.bulk_import_ingredient_rows
+    UNION
+    SELECT measure_unit AS code FROM pg_temp.bulk_import_ingredient_rows
+  ) unit_codes
+  WHERE coalesce(code, '') <> ''
+  ON CONFLICT ON CONSTRAINT units_code_tenant_key DO NOTHING;
+
+  INSERT INTO public.ingredient_categories (tenant_id, name)
+  SELECT DISTINCT v_tenant, category
+  FROM pg_temp.bulk_import_ingredient_rows
+  WHERE category IS NOT NULL
+  ON CONFLICT ON CONSTRAINT ingredient_categories_name_tenant_key DO NOTHING;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_ingredient_rows rows
+    LEFT JOIN public.units purchase_units
+      ON purchase_units.tenant_id = v_tenant
+     AND purchase_units.code = rows.purchase_unit
+     AND purchase_units.is_active
+    LEFT JOIN public.units measure_units
+      ON measure_units.tenant_id = v_tenant
+     AND measure_units.code = rows.measure_unit
+     AND measure_units.is_active
+    WHERE purchase_units.id IS NULL OR measure_units.id IS NULL
+  ) THEN
+    RAISE EXCEPTION 'unit_not_found' USING ERRCODE = '23503';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_ingredient_rows rows
+    LEFT JOIN public.ingredient_categories categories
+      ON categories.tenant_id = v_tenant
+     AND categories.name = rows.category
+     AND categories.is_active
+    WHERE rows.category IS NOT NULL
+      AND categories.id IS NULL
+  ) THEN
+    RAISE EXCEPTION 'category_not_found' USING ERRCODE = '23503';
+  END IF;
+
+  CREATE TEMP TABLE pg_temp.bulk_import_ingredient_upserted ON COMMIT DROP AS
+  WITH existing AS (
+    SELECT ingredients.name
+    FROM public.ingredients
+    JOIN pg_temp.bulk_import_ingredient_rows rows
+      ON rows.name = ingredients.name
+    WHERE ingredients.tenant_id = v_tenant
+  ),
+  upserted AS (
+    INSERT INTO public.ingredients (
+      tenant_id, name, sku, category_id, category, unit,
+      purchase_unit, measure_unit, purchase_to_measure_factor,
+      unit_cost, item_kind, storage_type,
+      min_stock_level, max_stock_level, reorder_point, shelf_life_days
+    )
+    SELECT
+      v_tenant,
+      rows.name,
+      rows.sku,
+      categories.id,
+      categories.name,
+      measure_units.code,
+      purchase_units.code,
+      measure_units.code,
+      rows.purchase_to_measure_factor,
+      rows.unit_cost,
+      rows.item_kind,
+      rows.storage_type,
+      rows.min_stock_level,
+      rows.max_stock_level,
+      rows.reorder_point,
+      rows.shelf_life_days
+    FROM pg_temp.bulk_import_ingredient_rows rows
+    JOIN public.units purchase_units
+      ON purchase_units.tenant_id = v_tenant
+     AND purchase_units.code = rows.purchase_unit
+     AND purchase_units.is_active
+    JOIN public.units measure_units
+      ON measure_units.tenant_id = v_tenant
+     AND measure_units.code = rows.measure_unit
+     AND measure_units.is_active
+    LEFT JOIN public.ingredient_categories categories
+      ON categories.tenant_id = v_tenant
+     AND categories.name = rows.category
+     AND categories.is_active
+    ON CONFLICT ON CONSTRAINT ingredients_name_tenant_id_key
+    DO UPDATE SET
+      sku = EXCLUDED.sku,
+      category_id = EXCLUDED.category_id,
+      category = EXCLUDED.category,
+      unit = EXCLUDED.unit,
+      purchase_unit = EXCLUDED.purchase_unit,
+      measure_unit = EXCLUDED.measure_unit,
+      purchase_to_measure_factor = EXCLUDED.purchase_to_measure_factor,
+      unit_cost = EXCLUDED.unit_cost,
+      item_kind = EXCLUDED.item_kind,
+      storage_type = EXCLUDED.storage_type,
+      min_stock_level = EXCLUDED.min_stock_level,
+      max_stock_level = EXCLUDED.max_stock_level,
+      reorder_point = EXCLUDED.reorder_point,
+      shelf_life_days = EXCLUDED.shelf_life_days,
+      updated_at = now()
+    RETURNING id, name
+  )
+  SELECT upserted.id, upserted.name, existing.name IS NOT NULL AS existed
+  FROM upserted
+  LEFT JOIN existing ON existing.name = upserted.name;
+
+  DELETE FROM public.ingredient_units ingredient_units
+  USING pg_temp.bulk_import_ingredient_upserted upserted
+  WHERE ingredient_units.tenant_id = v_tenant
+    AND ingredient_units.ingredient_id = upserted.id;
+
+  INSERT INTO public.ingredient_units (
+    tenant_id, ingredient_id, unit_id, to_base_factor, is_base,
+    allow_purchase, allow_issue, allow_production, sort_order
+  )
+  SELECT
+    v_tenant,
+    upserted.id,
+    import_units.unit_id,
+    import_units.to_base_factor,
+    import_units.is_base,
+    import_units.allow_purchase,
+    import_units.allow_issue,
+    import_units.allow_production,
+    import_units.sort_order
+  FROM pg_temp.bulk_import_ingredient_rows rows
+  JOIN pg_temp.bulk_import_ingredient_upserted upserted
+    ON upserted.name = rows.name
+  JOIN LATERAL (
+    SELECT
+      purchase_units.id AS unit_id,
+      1::numeric AS to_base_factor,
+      true AS is_base,
+      true AS allow_purchase,
+      true AS allow_issue,
+      false AS allow_production,
+      0 AS sort_order
+    FROM public.units purchase_units
+    WHERE purchase_units.tenant_id = v_tenant
+      AND purchase_units.code = rows.purchase_unit
+      AND purchase_units.is_active
+    UNION ALL
+    SELECT
+      measure_units.id AS unit_id,
+      1 / rows.purchase_to_measure_factor AS to_base_factor,
+      false AS is_base,
+      false AS allow_purchase,
+      false AS allow_issue,
+      true AS allow_production,
+      1 AS sort_order
+    FROM public.units measure_units
+    WHERE measure_units.tenant_id = v_tenant
+      AND measure_units.code = rows.measure_unit
+      AND measure_units.is_active
+      AND rows.measure_unit <> rows.purchase_unit
+  ) import_units ON true;
+
+  SELECT
+    count(*) FILTER (WHERE NOT existed),
+    count(*) FILTER (WHERE existed)
+  INTO v_inserted, v_updated
+  FROM pg_temp.bulk_import_ingredient_upserted;
+
+  RETURN jsonb_build_object('inserted', v_inserted, 'updated', v_updated);
+END;
+$$;
+
+
+--
+-- Name: bulk_import_production_recipes(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.bulk_import_production_recipes(p_groups jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_recipes integer := 0;
+  v_lines integer := 0;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF NOT public.is_inventory_production_operator() THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT public.has_permission_any('menu:write') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_groups IS NULL OR jsonb_typeof(p_groups) <> 'array' OR jsonb_array_length(p_groups) = 0 THEN
+    RAISE EXCEPTION 'groups_must_be_non_empty_array' USING ERRCODE = '22023';
+  END IF;
+
+  DROP TABLE IF EXISTS pg_temp.bulk_import_production_groups;
+  DROP TABLE IF EXISTS pg_temp.bulk_import_production_lines;
+
+  CREATE TEMP TABLE pg_temp.bulk_import_production_groups ON COMMIT DROP AS
+  SELECT
+    raw.ordinality::integer AS group_no,
+    (raw.value->>'finished_good_id')::bigint AS finished_good_id,
+    raw.value->'lines' AS lines
+  FROM jsonb_array_elements(p_groups) WITH ORDINALITY AS raw(value, ordinality);
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_production_groups
+    WHERE finished_good_id IS NULL
+       OR lines IS NULL
+       OR jsonb_typeof(lines) <> 'array'
+       OR jsonb_array_length(lines) = 0
+  ) THEN
+    RAISE EXCEPTION 'invalid_group_shape' USING ERRCODE = '22023';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_production_groups
+    GROUP BY finished_good_id
+    HAVING count(*) > 1
+  ) THEN
+    RAISE EXCEPTION 'duplicate_finished_good' USING ERRCODE = '23505';
+  END IF;
+
+  CREATE TEMP TABLE pg_temp.bulk_import_production_lines ON COMMIT DROP AS
+  SELECT
+    groups.finished_good_id,
+    raw.ordinality::integer AS line_no,
+    (raw.value->>'ingredient_id')::bigint AS ingredient_id,
+    (raw.value->>'quantity')::numeric AS quantity,
+    NULLIF(raw.value->>'entry_unit_id', '')::bigint AS entry_unit_id,
+    nullif(btrim(coalesce(raw.value->>'note', '')), '') AS note,
+    coalesce(NULLIF(raw.value->>'yield_factor', '')::numeric, 1) AS yield_factor
+  FROM pg_temp.bulk_import_production_groups groups
+  CROSS JOIN LATERAL jsonb_array_elements(groups.lines) WITH ORDINALITY AS raw(value, ordinality);
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_production_lines
+    WHERE ingredient_id IS NULL
+       OR quantity <= 0
+       OR yield_factor <= 0
+  ) THEN
+    RAISE EXCEPTION 'invalid_line_shape' USING ERRCODE = '22023';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_production_lines
+    GROUP BY finished_good_id, ingredient_id
+    HAVING count(*) > 1
+  ) THEN
+    RAISE EXCEPTION 'duplicate_ingredient' USING ERRCODE = '23505';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_production_groups groups
+    LEFT JOIN public.ingredients finished_goods
+      ON finished_goods.id = groups.finished_good_id
+     AND finished_goods.tenant_id = v_tenant
+     AND finished_goods.item_kind = 'finished_good'
+     AND finished_goods.is_active
+    WHERE finished_goods.id IS NULL
+  ) THEN
+    RAISE EXCEPTION 'finished_good_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_production_lines lines
+    LEFT JOIN public.ingredients ingredients
+      ON ingredients.id = lines.ingredient_id
+     AND ingredients.tenant_id = v_tenant
+     AND ingredients.item_kind = 'raw_material'
+     AND ingredients.is_active
+    WHERE ingredients.id IS NULL
+  ) THEN
+    RAISE EXCEPTION 'ingredient_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  INSERT INTO public.production_recipes (
+    tenant_id, finished_good_id, ingredient_id,
+    quantity, unit, entry_unit_id, note, yield_factor
+  )
+  SELECT
+    v_tenant,
+    lines.finished_good_id,
+    lines.ingredient_id,
+    lines.quantity,
+    public.inventory_entry_unit_code(v_tenant, lines.ingredient_id, lines.entry_unit_id),
+    lines.entry_unit_id,
+    lines.note,
+    lines.yield_factor
+  FROM pg_temp.bulk_import_production_lines lines
+  ON CONFLICT (finished_good_id, ingredient_id, tenant_id)
+  DO UPDATE SET
+    quantity = EXCLUDED.quantity,
+    unit = EXCLUDED.unit,
+    entry_unit_id = EXCLUDED.entry_unit_id,
+    note = EXCLUDED.note,
+    yield_factor = EXCLUDED.yield_factor;
+
+  DELETE FROM public.production_recipes recipes
+  USING pg_temp.bulk_import_production_groups groups
+  WHERE recipes.tenant_id = v_tenant
+    AND recipes.finished_good_id = groups.finished_good_id
+    AND NOT EXISTS (
+      SELECT 1
+      FROM pg_temp.bulk_import_production_lines lines
+      WHERE lines.finished_good_id = recipes.finished_good_id
+        AND lines.ingredient_id = recipes.ingredient_id
+    );
+
+  SELECT count(*) INTO v_recipes
+  FROM pg_temp.bulk_import_production_groups;
+
+  SELECT count(*) INTO v_lines
+  FROM pg_temp.bulk_import_production_lines;
+
+  RETURN jsonb_build_object('recipes', v_recipes, 'lines', v_lines);
+END;
+$$;
 
 
 --
@@ -3755,6 +4213,43 @@ BEGIN
   RETURN v_new_status;
 END;
 $$;
+
+
+--
+-- Name: can_read_branch_ops(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.can_read_branch_ops(p_branch_id bigint) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  SELECT
+    EXISTS (
+      SELECT 1 FROM public.branches b
+      WHERE b.id = p_branch_id AND b.tenant_id = public.auth_tenant_id()
+    )
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.profiles pr
+        JOIN public.positions po ON po.id = pr.position_id
+        WHERE pr.id = auth.uid() AND po.code = 'owner'
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.staff_permissions sp
+        WHERE sp.user_id = auth.uid()
+          AND (sp.branch_id = p_branch_id OR sp.branch_id IS NULL)
+          AND sp.valid_from <= now()
+          AND (sp.valid_until IS NULL OR sp.valid_until > now())
+      )
+    );
+$$;
+
+
+--
+-- Name: FUNCTION can_read_branch_ops(p_branch_id bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.can_read_branch_ops(p_branch_id bigint) IS 'RLS predicate for realtime branch:{id}:ops topics — TRUE if the caller is the tenant owner or holds a valid branch-scoped/tenant-wide grant for that branch (same tenant).';
 
 
 --
@@ -4085,11 +4580,8 @@ BEGIN
 
   IF v_access_bucket IN (
     'cashier',
-    'waiter',
     'chef',
-    'branch_manager',
-    'warehouse_manager',
-    'production_manager'
+    'branch_manager'
   )
   AND NEW.branch_id IS NULL THEN
     RAISE EXCEPTION 'branch_required_for_operational_position: position_id=%', NEW.position_id
@@ -4436,7 +4928,6 @@ DECLARE
   v_role      TEXT   := public.auth_role();
   v_branch    BIGINT := public.auth_branch_id();
   v_today     DATE   := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
-  v_deleted   INT;
   v_row       public.branch_menu_item_daily_limits;
 BEGIN
   IF v_tenant_id IS NULL THEN
@@ -4453,14 +4944,13 @@ BEGIN
   END IF;
 
   UPDATE public.branch_menu_item_daily_limits
-     SET limit_quantity = stock_capacity,
+     SET limit_quantity = NULL,
          is_disabled = FALSE,
          updated_at = now()
    WHERE tenant_id = v_tenant_id
      AND branch_id = p_branch_id
      AND menu_item_id = p_menu_item_id
      AND limit_date = v_today
-     AND stock_capacity IS NOT NULL
    RETURNING * INTO v_row;
 
   IF FOUND THEN
@@ -4472,16 +4962,16 @@ BEGIN
     );
   END IF;
 
-  DELETE FROM public.branch_menu_item_daily_limits
-   WHERE tenant_id = v_tenant_id
-     AND branch_id = p_branch_id
-     AND menu_item_id = p_menu_item_id
-     AND limit_date = v_today;
-
-  GET DIAGNOSTICS v_deleted = ROW_COUNT;
-  RETURN jsonb_build_object('deleted', v_deleted, 'cleared', 0);
+  RETURN jsonb_build_object('deleted', 0, 'cleared', 0);
 END;
 $$;
+
+
+--
+-- Name: FUNCTION clear_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.clear_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint) IS 'Clears today''s manual limit by nulling limit_quantity and re-enabling the item while KEEPING the row, so sold_today survives a mid-day re-limit (deleting the row would reset the counter and over-permit). Never copies stock capacity into the manual limit.';
 
 
 --
@@ -6446,11 +6936,25 @@ BEGIN
   ) THEN
     IF v_payment.payment_method = 'vietqr'
        AND COALESCE(v_order.payment_method, '') = 'vietqr' THEN
+      BEGIN
+        v_receipt_res := public.enqueue_receipt_print(v_order.order_id, NULL, NULL);
+        v_print_job_id := NULLIF(v_receipt_res ->> 'job_id', '')::BIGINT;
+      EXCEPTION WHEN OTHERS THEN
+        v_print_failed := TRUE;
+        v_print_error := SQLERRM;
+        RAISE NOTICE '[confirm_sepay_payment] receipt print failed for order %: %',
+          v_order.order_id, SQLERRM;
+      END;
+
       RETURN jsonb_build_object(
         'status', 'already_completed',
         'order_id', v_order.order_id,
         'payment_id', v_payment.payment_id,
-        'print', jsonb_build_object('failed', FALSE)
+        'print', jsonb_build_object(
+          'job_id', v_print_job_id,
+          'failed', v_print_failed,
+          'error', v_print_error
+        )
       );
     END IF;
 
@@ -8222,11 +8726,12 @@ BEGIN
     line_total     = EXCLUDED.line_total;
 
   GET DIAGNOSTICS v_count = ROW_COUNT;
-  IF v_count = 0 THEN
-    RAISE EXCEPTION 'invalid_po_lines' USING ERRCODE = '22023';
-  END IF;
 
-  RETURN jsonb_build_object('id', v_po_id, 'display_id', v_display, 'lines', v_count);
+  RETURN jsonb_build_object(
+    'id', v_po_id,
+    'display_id', v_display,
+    'line_count', v_count
+  );
 END;
 $$;
 
@@ -8341,6 +8846,7 @@ DECLARE
   v_uid          UUID := auth.uid();
   v_tenant       BIGINT := public.auth_tenant_id();
   v_role         TEXT := public.auth_role();
+  v_branch_claim BIGINT := public.auth_branch_id();
   v_transfer_id  BIGINT;
   v_is_intra     BOOLEAN := (p_from_branch_id = p_to_branch_id);
   v_from_kind    TEXT;
@@ -8426,12 +8932,24 @@ BEGIN
     END IF;
   ELSE
     IF v_role = 'branch_manager' THEN
-      RAISE EXCEPTION 'branch_manager_inter_site_create_forbidden' USING ERRCODE = '42501';
+      IF v_branch_claim IS NULL OR p_to_branch_id <> v_branch_claim THEN
+        RAISE EXCEPTION 'branch_manager_inbound_request_forbidden' USING ERRCODE = '42501';
+      END IF;
+
+      IF v_to_kind <> 'branch' OR v_from_kind NOT IN ('central_supply', 'central_kitchen') THEN
+        RAISE EXCEPTION 'branch_manager_inbound_request_source_invalid' USING ERRCODE = '23514';
+      END IF;
     END IF;
   END IF;
 
-  IF NOT public.has_permission(p_from_branch_id, 'inventory:transfer_create') THEN
-    RAISE EXCEPTION 'forbidden_transfer_create' USING ERRCODE = '42501';
+  IF v_role = 'branch_manager' THEN
+    IF NOT public.has_permission(p_to_branch_id, 'inventory:transfer_create') THEN
+      RAISE EXCEPTION 'forbidden_transfer_create' USING ERRCODE = '42501';
+    END IF;
+  ELSE
+    IF NOT public.has_permission(p_from_branch_id, 'inventory:transfer_create') THEN
+      RAISE EXCEPTION 'forbidden_transfer_create' USING ERRCODE = '42501';
+    END IF;
   END IF;
 
   IF p_lines IS NULL OR jsonb_typeof(p_lines) <> 'array' THEN
@@ -8841,13 +9359,22 @@ BEGIN
                      ELSE ARRAY[]::TEXT[] END;
     INSERT INTO public.stock_issue_items (tenant_id, issue_id, ingredient_id, quantity, unit, entry_unit_id, unit_cost,
       reason_code, photo_urls, reason)
-    VALUES (v_tenant, v_issue_id, (v_item->>'ingredient_id')::BIGINT, (v_item->>'quantity')::NUMERIC,
+    VALUES (
+      v_tenant,
+      v_issue_id,
+      (v_item->>'ingredient_id')::BIGINT,
+      (v_item->>'quantity')::NUMERIC,
       public.inventory_entry_unit_code(
         v_tenant,
         (v_item->>'ingredient_id')::BIGINT,
         NULLIF(v_item->>'entry_unit_id','')::BIGINT
-      ), NULLIF(v_item->>'entry_unit_id','')::BIGINT, NULLIF(v_item->>'unit_cost','')::NUMERIC,
-      v_item->>'reason_code', v_photos, v_item->>'note');
+      ),
+      NULLIF(v_item->>'entry_unit_id','')::BIGINT,
+      NULLIF(v_item->>'unit_cost','')::NUMERIC,
+      v_item->>'reason_code',
+      v_photos,
+      v_item->>'note'
+    );
     v_created := v_created + 1;
   END LOOP;
   SELECT bool_or(approval_required) INTO v_needs_appr FROM public.stock_issue_items WHERE issue_id = v_issue_id;
@@ -8994,6 +9521,16 @@ BEGIN
     RETURN NEW;
   END IF;
 
+  IF EXISTS (
+    SELECT 1
+    FROM public.kds_tickets kt
+    WHERE kt.tenant_id = NEW.tenant_id
+      AND kt.order_item_id = NEW.id
+      AND kt.first_ready_at IS NOT NULL
+  ) THEN
+    RETURN NEW;
+  END IF;
+
   SELECT o.branch_id,
          (o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
   INTO v_branch_id, v_order_date
@@ -9037,7 +9574,7 @@ $_$;
 -- Name: FUNCTION decrement_branch_menu_daily_limit(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.decrement_branch_menu_daily_limit() IS 'AFTER UPDATE OF status on order_items (→ cancelled): symmetric decrement using OLD.menu_item_id + OLD.sides aggregated by menu_item_id ASC. Bounded at 0 via GREATEST.';
+COMMENT ON FUNCTION public.decrement_branch_menu_daily_limit() IS 'AFTER UPDATE OF status on order_items (→ cancelled): symmetric decrement using OLD.menu_item_id + OLD.sides aggregated by menu_item_id ASC. Bounded at 0 via GREATEST. First-ready boundary (D064 §5): a line the kitchen already made (kds_tickets.first_ready_at IS NOT NULL) keeps its quota consumed on cancel/void; a never-ready line returns quota.';
 
 
 --
@@ -9523,7 +10060,7 @@ BEGIN
     ),
     'attendance_record',
     p_attendance_id,
-    format('/br/%s/shift/checkout-approvals', v_record.branch_id),
+    '/employee/checkout-approvals',
     jsonb_build_object(
       'attendance_id', p_attendance_id,
       'employee_id', p_employee_id,
@@ -9794,107 +10331,6 @@ END; $$;
 
 
 --
--- Name: enforce_branch_ingredient_stock(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.enforce_branch_ingredient_stock() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-DECLARE
-  v_tenant_id   bigint;
-  v_branch_id   bigint;
-  v_location_id bigint;
-  v_short       bigint;
-BEGIN
-  -- Shared skip-hatch (split_order sets it for net-zero re-inserts).
-  IF COALESCE(current_setting('comtammatu.skip_quota_enforcement', true), 'false') = 'true' THEN
-    RETURN NEW;
-  END IF;
-
-  SELECT o.tenant_id, o.branch_id
-  INTO v_tenant_id, v_branch_id
-  FROM public.orders o
-  WHERE o.id = NEW.order_id;
-
-  IF v_branch_id IS NULL THEN
-    RETURN NEW;
-  END IF;
-
-  IF NOT public.is_feature_enabled(v_branch_id, 'pos_ingredient_stock_block') THEN
-    RETURN NEW;
-  END IF;
-
-  SELECT il.id INTO v_location_id
-  FROM public.inventory_locations il
-  WHERE il.branch_id = v_branch_id
-    AND il.tenant_id = v_tenant_id
-    AND il.location_kind = 'kitchen'
-    AND il.is_active = TRUE
-  ORDER BY il.is_default_consumption DESC, il.sort_order NULLS LAST, il.id
-  LIMIT 1;
-
-  -- No kitchen location → cannot enforce; do NOT hard-block the register.
-  IF v_location_id IS NULL THEN
-    RETURN NEW;
-  END IF;
-
-  -- Lock this order's demanded ingredient stock rows (deterministic order) so
-  -- two concurrent carts sharing an ingredient serialize on the stock row.
-  PERFORM 1
-  FROM public.stock_levels sl
-  WHERE sl.tenant_id = v_tenant_id
-    AND sl.branch_id = v_branch_id
-    AND sl.location_id = v_location_id
-    AND sl.ingredient_id IN (
-      SELECT DISTINCT r.ingredient_id
-      FROM public.order_items oi
-      JOIN public.recipes r
-        ON r.menu_item_id = oi.menu_item_id AND r.tenant_id = oi.tenant_id
-      WHERE oi.order_id = NEW.order_id
-        AND oi.tenant_id = v_tenant_id
-        AND oi.status <> 'cancelled'
-    )
-  ORDER BY sl.ingredient_id
-  FOR UPDATE;
-
-  SELECT a.ingredient_id INTO v_short
-  FROM public.branch_kitchen_ingredient_availability(v_tenant_id, v_branch_id) a
-  WHERE a.on_hand - a.pending_demand < 0
-    AND a.ingredient_id IN (
-      SELECT DISTINCT r.ingredient_id
-      FROM public.order_items oi
-      JOIN public.recipes r
-        ON r.menu_item_id = oi.menu_item_id AND r.tenant_id = oi.tenant_id
-      WHERE oi.order_id = NEW.order_id
-        AND oi.tenant_id = v_tenant_id
-        AND oi.status <> 'cancelled'
-    )
-  ORDER BY a.ingredient_id
-  LIMIT 1;
-
-  IF v_short IS NOT NULL THEN
-    RAISE EXCEPTION 'insufficient_stock_ingredient:%', v_short
-      USING ERRCODE = 'P0001',
-            DETAIL = jsonb_build_object(
-              'reason', 'insufficient_stock_ingredient',
-              'ingredient_id', v_short
-            )::text;
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-
---
--- Name: FUNCTION enforce_branch_ingredient_stock(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.enforce_branch_ingredient_stock() IS 'AFTER INSERT on order_items: when branch flag pos_ingredient_stock_block is on, hard-block (P0001 insufficient_stock_ingredient:<id>) if the order''s recipe demand would drive a kitchen ingredient stock negative (available = on_hand − pending demand of not-yet-consumed orders). Skip-hatch comtammatu.skip_quota_enforcement. Fires after trg_enforce_branch_menu_daily_limit.';
-
-
---
 -- Name: enforce_branch_menu_daily_limit(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10013,6 +10449,211 @@ $_$;
 --
 
 COMMENT ON FUNCTION public.enforce_branch_menu_daily_limit() IS 'AFTER INSERT on order_items: aggregate main + sides by menu_item_id ASC, lock each limit row, count active daily-limit holds except comtammatu.daily_limit_hold_token, raise P0001 daily_limit_item_disabled / daily_limit_exceeded, increment sold_today. Skip-hatch: comtammatu.skip_quota_enforcement=true.';
+
+
+--
+-- Name: enforce_branch_stock_availability(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enforce_branch_stock_availability() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $_$
+DECLARE
+  v_tenant_id   bigint;
+  v_branch_id   bigint;
+  v_order_date  date;
+  v_location_id bigint;
+  v_need        record;
+  v_on_hand     numeric(15,3);
+  v_pending     numeric(15,3);
+BEGIN
+  IF COALESCE(current_setting('comtammatu.skip_quota_enforcement', true), 'false') = 'true' THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT o.tenant_id,
+         o.branch_id,
+         (o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
+  INTO v_tenant_id, v_branch_id, v_order_date
+  FROM public.orders o
+  WHERE o.id = NEW.order_id;
+
+  IF v_branch_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF NOT public.is_feature_enabled(v_branch_id, 'pos_stock_outcome_posting') THEN
+    RETURN NEW;
+  END IF;
+
+  -- Same location resolution as post_pos_sale_consumption_if_ready so the
+  -- gate measures exactly the pool posting deducts from. NULL (no active
+  -- warehouse location) leaves on_hand at 0 below — consistent with
+  -- capacity/availability display already showing 0 in that case.
+  SELECT il.id
+  INTO v_location_id
+  FROM public.inventory_locations il
+  WHERE il.branch_id = v_branch_id
+    AND il.tenant_id = v_tenant_id
+    AND il.location_kind = 'warehouse'
+    AND il.is_active = TRUE
+  ORDER BY il.is_default_issue DESC, il.sort_order NULLS LAST, il.id
+  LIMIT 1;
+
+  -- Demand of this inserted row only (main + sides), converted to base units.
+  -- Recipe-less items contribute nothing — outside stock control (D064 §2/D065 §4).
+  -- Items with a recipe line whose entry_unit_id has no active ingredient_units
+  -- row are ALSO outside stock control (mirrors compute_menu_item_stock_capacity's
+  -- line_missing_config: capacity is NULL for them, never a hard 0) — excluded
+  -- via NOT EXISTS so inv_to_base_for_tenant never hits recipe_unit_conversion_missing.
+  FOR v_need IN
+    WITH row_demand AS (
+      SELECT NEW.menu_item_id::bigint AS menu_item_id,
+             NEW.quantity::integer    AS quantity
+      UNION ALL
+      SELECT (s.elem ->> 'side_item_id')::bigint,
+             (NEW.quantity * COALESCE(NULLIF(s.elem ->> 'quantity', '')::integer, 1))::integer
+      FROM jsonb_array_elements(COALESCE(NEW.sides, '[]'::jsonb)) AS s(elem)
+      WHERE s.elem ? 'side_item_id'
+        AND (s.elem ->> 'side_item_id') ~ '^[0-9]+$'
+    )
+    SELECT
+      r.ingredient_id,
+      ROUND(SUM(public.inv_to_base_for_tenant(
+        v_tenant_id,
+        r.ingredient_id,
+        r.entry_unit_id,
+        d.quantity * r.quantity / r.yield_factor
+      )), 3)::numeric(15,3) AS need_qty
+    FROM row_demand d
+    JOIN public.recipes r
+      ON r.menu_item_id = d.menu_item_id
+     AND r.tenant_id = v_tenant_id
+    WHERE d.menu_item_id IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.recipes r2
+        WHERE r2.menu_item_id = d.menu_item_id
+          AND r2.tenant_id = v_tenant_id
+          AND r2.entry_unit_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM public.ingredient_units iu
+            WHERE iu.tenant_id = v_tenant_id
+              AND iu.ingredient_id = r2.ingredient_id
+              AND iu.unit_id = r2.entry_unit_id
+              AND iu.is_active = TRUE
+          )
+      )
+    GROUP BY r.ingredient_id
+    HAVING ROUND(SUM(public.inv_to_base_for_tenant(
+      v_tenant_id,
+      r.ingredient_id,
+      r.entry_unit_id,
+      d.quantity * r.quantity / r.yield_factor
+    )), 3) > 0
+    ORDER BY r.ingredient_id
+  LOOP
+    -- Serialize concurrent carts sharing an ingredient — lock only the
+    -- stock_levels row(s) at the resolved issue location, not the location
+    -- catalog itself.
+    PERFORM 1
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant_id
+      AND sl.branch_id = v_branch_id
+      AND sl.ingredient_id = v_need.ingredient_id
+      AND sl.location_id = v_location_id
+    FOR UPDATE OF sl;
+
+    SELECT COALESCE(SUM(sl.current_quantity), 0)
+    INTO v_on_hand
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant_id
+      AND sl.branch_id = v_branch_id
+      AND sl.ingredient_id = v_need.ingredient_id
+      AND sl.location_id = v_location_id;
+
+    -- Pending demand = today's not-yet-completed/cancelled order lines
+    -- (main + sides), including the row just inserted, same explosion,
+    -- business-date keying, and missing-config exclusion as above.
+    SELECT COALESCE(ROUND(SUM(public.inv_to_base_for_tenant(
+      v_tenant_id,
+      r.ingredient_id,
+      r.entry_unit_id,
+      cl.quantity * r.quantity / r.yield_factor
+    )), 3), 0)
+    INTO v_pending
+    FROM (
+      SELECT oi.menu_item_id::bigint AS menu_item_id,
+             oi.quantity::integer AS quantity
+      FROM public.orders o
+      JOIN public.order_items oi
+        ON oi.order_id = o.id
+       AND oi.tenant_id = o.tenant_id
+      WHERE o.tenant_id = v_tenant_id
+        AND o.branch_id = v_branch_id
+        AND (o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date = v_order_date
+        AND o.status NOT IN ('completed', 'cancelled')
+        AND oi.status <> 'cancelled'
+
+      UNION ALL
+
+      SELECT (s.elem ->> 'side_item_id')::bigint AS menu_item_id,
+             (oi.quantity * COALESCE(NULLIF(s.elem ->> 'quantity', '')::integer, 1))::integer AS quantity
+      FROM public.orders o
+      JOIN public.order_items oi
+        ON oi.order_id = o.id
+       AND oi.tenant_id = o.tenant_id
+      CROSS JOIN LATERAL jsonb_array_elements(COALESCE(oi.sides, '[]'::jsonb)) AS s(elem)
+      WHERE o.tenant_id = v_tenant_id
+        AND o.branch_id = v_branch_id
+        AND (o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date = v_order_date
+        AND o.status NOT IN ('completed', 'cancelled')
+        AND oi.status <> 'cancelled'
+        AND s.elem ? 'side_item_id'
+        AND (s.elem ->> 'side_item_id') ~ '^[0-9]+$'
+    ) cl
+    JOIN public.recipes r
+      ON r.menu_item_id = cl.menu_item_id
+     AND r.tenant_id = v_tenant_id
+    WHERE r.ingredient_id = v_need.ingredient_id
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.recipes r2
+        WHERE r2.menu_item_id = cl.menu_item_id
+          AND r2.tenant_id = v_tenant_id
+          AND r2.entry_unit_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM public.ingredient_units iu
+            WHERE iu.tenant_id = v_tenant_id
+              AND iu.ingredient_id = r2.ingredient_id
+              AND iu.unit_id = r2.entry_unit_id
+              AND iu.is_active = TRUE
+          )
+      );
+
+    IF v_on_hand - v_pending < 0 THEN
+      RAISE EXCEPTION 'insufficient_stock_ingredient:%', v_need.ingredient_id
+        USING ERRCODE = 'P0001',
+              DETAIL = jsonb_build_object(
+                'reason', 'insufficient_stock_ingredient',
+                'ingredient_id', v_need.ingredient_id
+              )::text;
+    END IF;
+  END LOOP;
+
+  RETURN NEW;
+END;
+$_$;
+
+
+--
+-- Name: FUNCTION enforce_branch_stock_availability(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.enforce_branch_stock_availability() IS 'AFTER INSERT on order_items: when branch flag pos_stock_outcome_posting is on, hard-block (P0001 insufficient_stock_ingredient:<id>) if this row''s recipe demand would drive branch warehouse stock negative at the SAME issue location post_pos_sale_consumption_if_ready deducts from (is_default_issue DESC, sort_order, id — NULL location leaves on_hand 0); pending = today''s not-yet-completed/cancelled order lines, main + sides, including this row. No-recipe items AND items with a recipe line missing an active unit conversion contribute nothing (D064 §2 fail-open, mirrors compute_menu_item_stock_capacity). Skip-hatch comtammatu.skip_quota_enforcement. Fires after trg_enforce_branch_menu_daily_limit — D065 §2.';
 
 
 --
@@ -10863,30 +11504,7 @@ BEGIN
     );
   END IF;
 
-  SELECT jsonb_agg(
-    jsonb_build_object(
-      'item_name',     oi.item_name,
-      'variant_name',  oi.variant_name,
-      'category_type', mc.type,
-      'quantity',      oi.quantity,
-      'unit_price',    oi.unit_price,
-      'modifiers',     oi.modifiers,
-      'sides',         oi.sides,
-      'subtotal',      oi.subtotal,
-      'note',          oi.note
-    )
-    ORDER BY oi.id
-  )
-  INTO v_items
-  FROM public.order_items oi
-  LEFT JOIN public.menu_items mi
-    ON mi.id = oi.menu_item_id
-   AND mi.tenant_id = oi.tenant_id
-  LEFT JOIN public.menu_categories mc
-    ON mc.id = mi.category_id
-   AND mc.tenant_id = oi.tenant_id
-  WHERE oi.order_id = p_order_id
-    AND oi.status <> 'cancelled';
+  v_items := public.bill_line_items(p_order_id);
 
   v_payload := jsonb_build_object(
     'kind',             'provisional_bill',
@@ -11028,7 +11646,8 @@ BEGIN
   WHERE order_id = p_order_id
     AND tenant_id = v_order.tenant_id
     AND status <> 'failed'
-    AND provider_ref ~* '^(VQRLOAMB[0-9]{17}|DH[A-Z0-9]{3,12})$'
+    AND provider_ref ~* ('^(' || public.vietqr_payment_code_prefix()
+          || ' [A-Z0-9]{12}|VQRLOAMB20260626100157757 [A-Z0-9]{12}|VQRLOAMB[0-9]{17}|DH[A-Z0-9]{3,12})$')
   ORDER BY id DESC
   LIMIT 1;
 
@@ -11073,30 +11692,7 @@ BEGIN
     END IF;
   END IF;
 
-  SELECT jsonb_agg(
-    jsonb_build_object(
-      'item_name',     oi.item_name,
-      'variant_name',  oi.variant_name,
-      'category_type', mc.type,
-      'quantity',      oi.quantity,
-      'unit_price',    oi.unit_price,
-      'modifiers',     oi.modifiers,
-      'sides',         oi.sides,
-      'subtotal',      oi.subtotal,
-      'note',          oi.note
-    )
-    ORDER BY oi.id
-  )
-  INTO v_items
-  FROM public.order_items oi
-  LEFT JOIN public.menu_items mi
-    ON mi.id = oi.menu_item_id
-   AND mi.tenant_id = oi.tenant_id
-  LEFT JOIN public.menu_categories mc
-    ON mc.id = mi.category_id
-   AND mc.tenant_id = oi.tenant_id
-  WHERE oi.order_id = p_order_id
-    AND oi.status <> 'cancelled';
+  v_items := public.bill_line_items(p_order_id);
 
   v_payload := jsonb_build_object(
     'kind',             'receipt',
@@ -11984,9 +12580,15 @@ CREATE FUNCTION public.generate_order_payment_code() RETURNS text
     LANGUAGE sql
     SET search_path TO ''
     AS $$
-  SELECT 'VQRLOAMB'
-      || to_char(clock_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYYMMDDHH24MISS')
-      || lpad((nextval('public.order_payment_code_sequence'::regclass) % 1000)::text, 3, '0');
+  SELECT public.vietqr_payment_code_prefix() || ' ' || string_agg(
+    substr(
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+      1 + (get_byte(extensions.gen_random_bytes(1), 0) % 36),
+      1
+    ),
+    ''
+  )
+  FROM generate_series(1, 12);
 $$;
 
 
@@ -12062,10 +12664,10 @@ $$;
 
 
 --
--- Name: get_branch_menu_daily_limits_for_pos(bigint); Type: FUNCTION; Schema: public; Owner: -
+-- Name: get_branch_menu_daily_limits_for_pos(bigint, uuid[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) RETURNS TABLE(menu_item_id bigint, limit_quantity integer, is_disabled boolean, sold_today integer, stock_capacity integer, stock_capacity_live integer, manual_limit_quantity integer, accepted_today integer, pending_unfinalized_demand integer, active_hold_demand integer, available_to_sell integer)
+CREATE FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint, p_exclude_hold_tokens uuid[] DEFAULT NULL::uuid[]) RETURNS TABLE(menu_item_id bigint, is_disabled boolean, sold_today integer, stock_capacity integer, manual_limit_quantity integer, pending_unfinalized_demand integer, active_hold_demand integer, available_to_sell integer)
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO ''
     AS $$
@@ -12074,17 +12676,14 @@ CREATE FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) 
            public.auth_role() AS role,
            public.auth_branch_id() AS branch_id,
            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS limit_date,
-           public.is_feature_enabled(p_branch_id, 'pos_stock_outcome_posting') AS stock_outcome_enabled
+           public.is_feature_enabled(p_branch_id, 'pos_stock_outcome_posting') AS gate_eff
   )
   SELECT
     a.menu_item_id,
-    a.limit_quantity,
     a.is_disabled,
     a.sold_today,
     a.stock_capacity,
-    a.stock_capacity_live,
     a.manual_limit_quantity,
-    a.accepted_today,
     a.pending_unfinalized_demand,
     a.active_hold_demand,
     a.available_to_sell
@@ -12093,7 +12692,8 @@ CREATE FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) 
     ctx.tenant_id,
     p_branch_id,
     ctx.limit_date,
-    ctx.stock_outcome_enabled
+    ctx.gate_eff,
+    p_exclude_hold_tokens
   ) a ON TRUE
   WHERE ctx.tenant_id IS NOT NULL
     AND (
@@ -12102,46 +12702,16 @@ CREATE FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) 
     )
     AND (
       a.limit_id IS NOT NULL
-      OR ctx.stock_outcome_enabled
+      OR ctx.gate_eff
     );
 $$;
 
 
 --
--- Name: get_branch_menu_ingredient_caps_for_pos(bigint); Type: FUNCTION; Schema: public; Owner: -
+-- Name: FUNCTION get_branch_menu_daily_limits_for_pos(p_branch_id bigint, p_exclude_hold_tokens uuid[]); Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_branch_menu_ingredient_caps_for_pos(p_branch_id bigint) RETURNS TABLE(menu_item_id bigint, max_sellable integer)
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-  WITH ctx AS (
-    SELECT b.tenant_id, b.id AS branch_id
-    FROM public.branches b
-    WHERE b.id = p_branch_id
-      AND b.tenant_id = public.auth_tenant_id()
-      AND public.is_feature_enabled(b.id, 'pos_ingredient_stock_block')
-  ),
-  avail AS (
-    SELECT a.ingredient_id,
-           GREATEST(a.on_hand - a.pending_demand, 0) AS free
-    FROM ctx
-    JOIN LATERAL public.branch_kitchen_ingredient_availability(ctx.tenant_id, ctx.branch_id) a ON TRUE
-  )
-  SELECT r.menu_item_id,
-         FLOOR(MIN(av.free / (r.quantity / r.yield_factor)))::int AS max_sellable
-  FROM ctx
-  JOIN public.recipes r ON r.tenant_id = ctx.tenant_id
-  JOIN avail av ON av.ingredient_id = r.ingredient_id
-  GROUP BY r.menu_item_id;
-$$;
-
-
---
--- Name: FUNCTION get_branch_menu_ingredient_caps_for_pos(p_branch_id bigint); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.get_branch_menu_ingredient_caps_for_pos(p_branch_id bigint) IS 'Per menu item with a recipe: snapshot max_sellable = floor(MIN over recipe ingredients of available/(quantity/yield_factor)) when branch flag pos_ingredient_stock_block is on; empty otherwise. Advisory display only — the order_items trigger is the hard gate.';
+COMMENT ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint, p_exclude_hold_tokens uuid[]) IS 'Row filter and availability gate both key on gate_eff = pos_stock_outcome_posting alone — D065 §1 collapses the two-flag AND into one owner-facing switch. p_exclude_hold_tokens passes the caller''s live hold token(s) through so its own reservation is not double-counted on refetch. Slimmed shape — see branch_menu_limit_availability comment.';
 
 
 --
@@ -12184,8 +12754,8 @@ CREATE FUNCTION public.get_cash_variance_summary(p_branch_id bigint, p_start_dat
     AS $$
 #variable_conflict use_column
 DECLARE
-  v_uid    UUID;
-  v_tenant BIGINT;
+  v_uid    uuid;
+  v_tenant bigint;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -12193,7 +12763,8 @@ BEGIN
   END IF;
 
   SELECT pr.tenant_id INTO v_tenant
-  FROM public.profiles pr WHERE pr.id = v_uid;
+  FROM public.profiles pr
+  WHERE pr.id = v_uid;
 
   IF v_tenant IS NULL THEN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
@@ -12202,6 +12773,7 @@ BEGIN
   IF p_start_date IS NULL OR p_end_date IS NULL THEN
     RAISE EXCEPTION 'start/end required' USING ERRCODE = '22023';
   END IF;
+
   IF p_start_date > p_end_date THEN
     RAISE EXCEPTION 'start > end' USING ERRCODE = '22023';
   END IF;
@@ -12229,6 +12801,11 @@ BEGIN
       AND ps.status = 'closed'
       AND ps.closed_at IS NOT NULL
       AND ps.cash_difference IS NOT NULL
+      AND ps.variance_approval_note IS NULL
+      AND abs(ps.cash_difference) > GREATEST(
+        50000::numeric,
+        ROUND(COALESCE(ps.expected_cash, 0) * 0.005, 2)
+      )
       AND (ps.closed_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date >= p_start_date
       AND (ps.closed_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date <= p_end_date
       AND (
@@ -12238,12 +12815,12 @@ BEGIN
   ),
   agg AS (
     SELECT
-      COUNT(*)::BIGINT AS session_count,
+      COUNT(*)::bigint AS session_count,
       COALESCE(SUM(c.cash_difference), 0) AS total_variance,
       COALESCE(SUM(ABS(c.cash_difference)), 0) AS abs_variance_total,
-      COUNT(*) FILTER (WHERE c.cash_difference < 0)::BIGINT AS short_count,
+      COUNT(*) FILTER (WHERE c.cash_difference < 0)::bigint AS short_count,
       COALESCE(SUM(c.cash_difference) FILTER (WHERE c.cash_difference < 0), 0) AS short_total,
-      COUNT(*) FILTER (WHERE c.cash_difference > 0)::BIGINT AS over_count,
+      COUNT(*) FILTER (WHERE c.cash_difference > 0)::bigint AS over_count,
       COALESCE(SUM(c.cash_difference) FILTER (WHERE c.cash_difference > 0), 0) AS over_total
     FROM closed_in_range c
   ),
@@ -12251,7 +12828,7 @@ BEGIN
     SELECT
       c.cashier_id,
       COALESCE(pr.full_name, '—') AS cashier_name,
-      COUNT(*)::BIGINT AS session_count,
+      COUNT(*)::bigint AS session_count,
       SUM(c.cash_difference) AS net_variance,
       SUM(ABS(c.cash_difference)) AS abs_variance
     FROM closed_in_range c
@@ -12300,7 +12877,7 @@ $$;
 -- Name: FUNCTION get_cash_variance_summary(p_branch_id bigint, p_start_date date, p_end_date date); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.get_cash_variance_summary(p_branch_id bigint, p_start_date date, p_end_date date) IS 'Aggregate POS cash variance over closed sessions in range. Variance is owned by pos_sessions.opened_by; closed_by is only the close actor and may be a manager closing another cashier shift. NULL branch = sum across branches caller has finance:view.';
+COMMENT ON FUNCTION public.get_cash_variance_summary(p_branch_id bigint, p_start_date date, p_end_date date) IS 'Aggregate unresolved over-threshold POS cash variance over closed sessions in range. A session is unresolved while variance_approval_note is NULL.';
 
 
 --
@@ -14412,6 +14989,10 @@ BEGIN
       USING ERRCODE = 'P0001';
   END IF;
 
+  IF v_access_bucket IN ('warehouse_manager', 'production_manager') THEN
+    v_branch_id := NULL;
+  END IF;
+
   v_required_branch_kind := CASE v_position_code
     WHEN 'branch_manager' THEN 'branch'
     WHEN 'cashier' THEN 'branch'
@@ -14422,11 +15003,6 @@ BEGIN
     WHEN 'grill_counter' THEN 'branch'
     WHEN 'cleaner' THEN 'branch'
     WHEN 'waiter' THEN 'branch'
-    WHEN 'warehouse_manager' THEN 'central_supply'
-    WHEN 'central_supply_manager' THEN 'central_supply'
-    WHEN 'production_manager' THEN 'central_kitchen'
-    WHEN 'central_kitchen_manager' THEN 'central_kitchen'
-    WHEN 'head_chef' THEN 'central_kitchen'
     ELSE NULL
   END;
 
@@ -14608,6 +15184,36 @@ BEGIN
   RETURN v_new;
 END;
 $$;
+
+
+--
+-- Name: inv_catalog_unit_to_base(bigint, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.inv_catalog_unit_to_base(p_base_unit_id bigint, p_unit jsonb, p_all_units jsonb) RETURNS numeric
+    LANGUAGE plpgsql STABLE
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_anchor_unit bigint := nullif(p_unit->>'anchor_unit_id', '')::bigint;
+BEGIN
+  IF coalesce((p_unit->>'is_base')::boolean, false) THEN
+    RETURN 1;
+  END IF;
+
+  IF v_anchor_unit IS NOT NULL THEN
+    RETURN public.inv_derive_to_base_factor(
+      p_base_unit_id,
+      (p_unit->>'unit_id')::bigint,
+      false,
+      v_anchor_unit,
+      nullif(p_unit->>'anchor_factor', '')::numeric,
+      p_all_units
+    );
+  END IF;
+
+  RETURN coalesce((p_unit->>'to_base_factor')::numeric, 1);
+END $$;
 
 
 --
@@ -14992,9 +15598,7 @@ $$;
 CREATE FUNCTION public.is_inventory_production_operator() RETURNS boolean
     LANGUAGE sql STABLE
     SET search_path TO ''
-    AS $$
-  SELECT public.auth_role() IN ('owner', 'production_manager');
-$$;
+    AS $$ SELECT public.auth_role() IN ('owner','production_manager','branch_manager'); $$;
 
 
 --
@@ -15008,7 +15612,7 @@ COMMENT ON FUNCTION public.is_inventory_production_operator() IS 'Shared DB role
 -- Name: list_branch_menu_daily_limits(bigint, date); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date DEFAULT NULL::date) RETURNS TABLE(menu_item_id bigint, item_name text, category_id bigint, category_name text, base_price numeric, limit_id bigint, limit_date date, limit_quantity integer, is_disabled boolean, sold_today integer, stock_capacity integer, stock_capacity_live integer, manual_limit_quantity integer, accepted_today integer, pending_unfinalized_demand integer, active_hold_demand integer, available_to_sell integer)
+CREATE FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date DEFAULT NULL::date) RETURNS TABLE(menu_item_id bigint, item_name text, category_id bigint, category_name text, base_price numeric, limit_id bigint, limit_date date, is_disabled boolean, sold_today integer, stock_capacity integer, manual_limit_quantity integer, pending_unfinalized_demand integer, active_hold_demand integer, available_to_sell integer)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     SET search_path TO ''
     AS $$
@@ -15020,6 +15624,7 @@ DECLARE
     p_limit_date,
     (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
   );
+  v_gate_eff  BOOLEAN;
 BEGIN
   IF v_tenant_id IS NULL THEN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
@@ -15040,6 +15645,8 @@ BEGIN
     RAISE EXCEPTION 'branch not found' USING ERRCODE = 'P0002';
   END IF;
 
+  v_gate_eff := public.is_feature_enabled(p_branch_id, 'pos_stock_outcome_posting');
+
   RETURN QUERY
   SELECT
     a.menu_item_id,
@@ -15049,13 +15656,10 @@ BEGIN
     a.base_price,
     a.limit_id,
     a.limit_date,
-    a.limit_quantity,
     a.is_disabled,
     a.sold_today,
     a.stock_capacity,
-    a.stock_capacity_live,
     a.manual_limit_quantity,
-    a.accepted_today,
     a.pending_unfinalized_demand,
     a.active_hold_demand,
     a.available_to_sell
@@ -15063,11 +15667,18 @@ BEGIN
     v_tenant_id,
     p_branch_id,
     v_date,
-    public.is_feature_enabled(p_branch_id, 'pos_stock_outcome_posting')
+    v_gate_eff
   ) a
   ORDER BY a.category_name, a.item_name;
 END;
 $$;
+
+
+--
+-- Name: FUNCTION list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date) IS 'Manager Giới hạn bán page. gate_eff = pos_stock_outcome_posting alone (D065 §1), same source as get_branch_menu_daily_limits_for_pos.';
 
 
 --
@@ -17020,7 +17631,8 @@ BEGIN
     FROM public.stock_movements sm
     WHERE sm.tenant_id = v_order.tenant_id
       AND sm.order_id = p_order_id
-      AND sm.movement_subtype = 'sale_consumption'
+      AND sm.type = 'consumption'
+      AND (sm.movement_subtype IS NULL OR sm.movement_subtype = 'sale_consumption')
   ) THEN
     RETURN jsonb_build_object('order_id', p_order_id, 'consumed', true, 'skipped', true, 'reason', 'already_posted');
   END IF;
@@ -17154,6 +17766,21 @@ BEGIN
     JOIN public.recipes r
       ON r.menu_item_id = cl.menu_item_id
      AND r.tenant_id = v_order.tenant_id
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM public.recipes r2
+      WHERE r2.menu_item_id = cl.menu_item_id
+        AND r2.tenant_id = v_order.tenant_id
+        AND r2.entry_unit_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1
+          FROM public.ingredient_units iu
+          WHERE iu.tenant_id = v_order.tenant_id
+            AND iu.ingredient_id = r2.ingredient_id
+            AND iu.unit_id = r2.entry_unit_id
+            AND iu.is_active = TRUE
+        )
+    )
     GROUP BY r.ingredient_id
     HAVING ROUND(SUM(public.inv_to_base_for_tenant(
       v_order.tenant_id,
@@ -17173,7 +17800,8 @@ BEGIN
     FOR UPDATE;
 
     IF COALESCE(v_available, 0) < v_need.need_qty THEN
-      RAISE EXCEPTION 'insufficient_stock_ingredient:%', v_need.ingredient_id USING ERRCODE = 'P0001';
+      RAISE WARNING 'insufficient_stock_at_posting: order %, ingredient %', p_order_id, v_need.ingredient_id;
+      RETURN jsonb_build_object('order_id', p_order_id, 'consumed', false, 'skipped', true, 'reason', 'insufficient_stock_at_posting');
     END IF;
   END LOOP;
 
@@ -17244,6 +17872,21 @@ BEGIN
     JOIN public.recipes r
       ON r.menu_item_id = cl.menu_item_id
      AND r.tenant_id = v_order.tenant_id
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM public.recipes r2
+      WHERE r2.menu_item_id = cl.menu_item_id
+        AND r2.tenant_id = v_order.tenant_id
+        AND r2.entry_unit_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1
+          FROM public.ingredient_units iu
+          WHERE iu.tenant_id = v_order.tenant_id
+            AND iu.ingredient_id = r2.ingredient_id
+            AND iu.unit_id = r2.entry_unit_id
+            AND iu.is_active = TRUE
+        )
+    )
     GROUP BY r.ingredient_id
     HAVING ROUND(SUM(public.inv_to_base_for_tenant(
       v_order.tenant_id,
@@ -17314,7 +17957,7 @@ $_$;
 -- Name: FUNCTION post_pos_sale_consumption_if_ready(p_order_id bigint, p_actor_id uuid); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.post_pos_sale_consumption_if_ready(p_order_id bigint, p_actor_id uuid) IS 'Posts sale_consumption for paid completed orders; KDS lines wait for ready, and non-KDS lines consume after kitchen dispatch.';
+COMMENT ON FUNCTION public.post_pos_sale_consumption_if_ready(p_order_id bigint, p_actor_id uuid) IS 'Idempotency check matches sale-shaped consumption rows for the order: movement_subtype IS NULL (legacy Path-2 consume_stock_for_order) or sale_consumption. Not any consumption row — cancelled_after_kds_ready waste is also type=consumption and must not suppress the sale posting (D064 §8). A shortage caught here (race past the hard gate) never fails payment completion: RAISE WARNING + return insufficient_stock_at_posting, no partial posting — drift is caught by stocktake (D065 §3). Menu items with a recipe line missing an active unit conversion are excluded from both consumption loops (D064 §2 fail-open) rather than letting inv_to_base_for_tenant raise recipe_unit_conversion_missing on the payment path.';
 
 
 --
@@ -18659,7 +19302,7 @@ BEGIN
 
   v_bin := public.print_vietqr_bank_bin(p_bank_code);
   v_amount := trim(to_char(round(p_amount), 'FM9999999999999999'));
-  v_description := public.print_vietqr_ascii(p_description, 25);
+  v_description := public.print_vietqr_ascii(p_description, 50);
   v_merchant_name := COALESCE(
     NULLIF(public.print_vietqr_ascii(p_account_name, 25), ''),
     'MERCHANT'
@@ -19001,47 +19644,6 @@ END; $$;
 
 
 --
--- Name: refresh_branch_menu_stock_capacity(bigint, bigint, bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.refresh_branch_menu_stock_capacity(p_tenant_id bigint, p_branch_id bigint, p_menu_item_id bigint DEFAULT NULL::bigint, p_ingredient_id bigint DEFAULT NULL::bigint) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_today date := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
-BEGIN
-  PERFORM 1 FROM public.branches b
-    WHERE b.id = p_branch_id AND b.tenant_id = p_tenant_id;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'branch_tenant_mismatch' USING ERRCODE = '42501';
-  END IF;
-
-  INSERT INTO public.branch_menu_item_daily_limits
-    (tenant_id, branch_id, menu_item_id, limit_date, stock_capacity)
-  SELECT p_tenant_id, p_branch_id, mi.menu_item_id, v_today,
-         public.compute_menu_item_stock_capacity(p_tenant_id, p_branch_id, mi.menu_item_id)
-  FROM (
-    SELECT DISTINCT r.menu_item_id
-    FROM public.recipes r
-    WHERE r.tenant_id = p_tenant_id
-      AND (p_menu_item_id IS NULL OR r.menu_item_id = p_menu_item_id)
-      AND (p_ingredient_id IS NULL OR r.ingredient_id = p_ingredient_id)
-  ) mi
-  ON CONFLICT (branch_id, menu_item_id, limit_date)
-  DO UPDATE SET stock_capacity = EXCLUDED.stock_capacity, updated_at = now();
-END;
-$$;
-
-
---
--- Name: FUNCTION refresh_branch_menu_stock_capacity(p_tenant_id bigint, p_branch_id bigint, p_menu_item_id bigint, p_ingredient_id bigint); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.refresh_branch_menu_stock_capacity(p_tenant_id bigint, p_branch_id bigint, p_menu_item_id bigint, p_ingredient_id bigint) IS 'Recompute + UPSERT today''s stock_capacity for menu items with a recipe (optionally narrowed by menu item or ingredient), preserving limit_quantity/is_disabled/sold_today.';
-
-
---
 -- Name: refresh_finance_views(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -19144,7 +19746,7 @@ BEGIN
     RAISE EXCEPTION 'order_not_paid' USING ERRCODE = 'P0001';
   END IF;
 
-  SELECT id, branch_id, amount, status, method, stock_consumed_status
+  SELECT id, branch_id, amount, status, method
   INTO v_payment
   FROM public.payments
   WHERE order_id = p_order_id
@@ -19254,7 +19856,7 @@ BEGIN
     END;
   END IF;
 
-  -- Money leg: a refund row + stock restore only when there is money to return
+  -- Money leg: a refund row only when there is money to return
   -- (refunds_amount_check requires amount > 0; zero-total comp / staff meals have none).
   IF v_payment.amount > 0 THEN
     INSERT INTO public.refunds
@@ -19265,11 +19867,6 @@ BEGIN
       'approved', v_actor, v_actor, now(), v_invoice.id
     )
     RETURNING id INTO v_refund_id;
-
-    -- D016: POS does not consume stock, so this is normally a no-op.
-    IF v_payment.stock_consumed_status = 'ok' THEN
-      PERFORM public.restore_stock_for_order(p_order_id, v_actor);
-    END IF;
   END IF;
 
   -- Always flip the payment, including a zero-total comp, so a voided order never
@@ -19585,7 +20182,7 @@ BEGIN
     ),
     'leave_request',
     p_request_id,
-    format('/br/%s/shift/schedule/leave', v_request.branch_id),
+    '/employee/leave',
     jsonb_build_object(
       'leave_request_id', p_request_id,
       'employee_id', v_request.employee_id,
@@ -19968,7 +20565,7 @@ BEGIN
     COALESCE(format('Quản lý yêu cầu đếm lại: %s', v_note), 'Quản lý yêu cầu đếm lại phiếu đếm tồn của bạn.'),
     'inventory_count_slip',
     p_slip_id,
-    format('/br/%s/stock/count', v_slip.branch_id),
+    '/employee/count',
     jsonb_build_object(
       'slip_id', p_slip_id, 'employee_id', v_slip.employee_id,
       'branch_id', v_slip.branch_id, 'result', 'needs_changes'
@@ -20224,10 +20821,15 @@ CREATE FUNCTION public.resolve_branch_printer_for_type(p_tenant_id bigint, p_bra
    AND ppt.print_type = p_print_type
   WHERE p.tenant_id = p_tenant_id
     AND p.branch_id = p_branch_id
-    AND p_tenant_id = public.auth_tenant_id()
     AND (
-      public.auth_branch_id() IS NULL
-      OR p_branch_id = public.auth_branch_id()
+      auth.role() = 'service_role'
+      OR (
+        p_tenant_id = public.auth_tenant_id()
+        AND (
+          public.auth_branch_id() IS NULL
+          OR p_branch_id = public.auth_branch_id()
+        )
+      )
     )
     AND p.is_active = TRUE
   ORDER BY
@@ -20412,70 +21014,6 @@ END; $$;
 
 
 --
--- Name: restore_stock_for_order(bigint, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.restore_stock_for_order(p_order_id bigint, p_actor_id uuid) RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-DECLARE
-  v_order   RECORD;
-  v_count   INT := 0;
-BEGIN
-  SELECT id, tenant_id, branch_id INTO v_order
-  FROM public.orders
-  WHERE id = p_order_id;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'restore_stock_for_order: order % not found', p_order_id
-      USING ERRCODE = 'P0002';
-  END IF;
-
-  WITH per_ingredient AS (
-    SELECT
-      ri.ingredient_id,
-      SUM(oi.quantity * ri.quantity_required) AS qty
-    FROM public.order_items oi
-    JOIN public.menu_items mi
-      ON mi.id = oi.menu_item_id
-    JOIN public.recipes r
-      ON r.menu_item_id = mi.id
-    JOIN public.recipe_ingredients ri
-      ON ri.recipe_id = r.id
-    WHERE oi.order_id = p_order_id
-      AND COALESCE(oi.status, '') <> 'cancelled'
-    GROUP BY ri.ingredient_id
-  ),
-  inserted AS (
-    INSERT INTO public.stock_movements
-      (tenant_id, branch_id, ingredient_id, type, quantity_change, reason, created_by)
-    SELECT
-      v_order.tenant_id,
-      v_order.branch_id,
-      pi.ingredient_id,
-      'refund_restore',
-      pi.qty,
-      'Hoàn tiền — restore tồn kho cho đơn ' || p_order_id::TEXT,
-      COALESCE(p_actor_id, auth.uid())
-    FROM per_ingredient pi
-    WHERE pi.qty > 0
-    RETURNING 1
-  )
-  SELECT COUNT(*) INTO v_count FROM inserted;
-
-  RETURN v_count;
-END;
-$$;
-
-
---
--- Name: FUNCTION restore_stock_for_order(p_order_id bigint, p_actor_id uuid); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.restore_stock_for_order(p_order_id bigint, p_actor_id uuid) IS 'M4 (2026-04-29): inserts positive stock_movements of type=refund_restore for every recipe ingredient × ordered quantity. Internal helper for reverse_payment_and_post. Not callable by authenticated users.';
-
-
---
 -- Name: retry_print_job(bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -20566,7 +21104,7 @@ BEGIN
       USING ERRCODE = 'P0001';
   END IF;
 
-  SELECT id, tenant_id, branch_id, amount, status, stock_consumed_status
+  SELECT id, tenant_id, branch_id, amount, status
   INTO v_payment
   FROM public.payments
   WHERE id = v_refund.payment_id
@@ -20596,16 +21134,6 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'order % not found', v_refund.order_id
       USING ERRCODE = 'P0002';
-  END IF;
-
-  -- Restore stock only when this payment actually consumed stock ('ok').
-  -- NULL means stock was never consumed, so nothing is restored.
-  IF v_payment.stock_consumed_status = 'ok' THEN
-    BEGIN
-      v_stock_count := public.restore_stock_for_order(v_refund.order_id, v_actor);
-    EXCEPTION WHEN OTHERS THEN
-      RAISE EXCEPTION 'restore_stock_for_order failed: %', SQLERRM;
-    END;
   END IF;
 
   UPDATE public.payments
@@ -20644,7 +21172,7 @@ $$;
 -- Name: FUNCTION reverse_payment_and_post(p_refund_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.reverse_payment_and_post(p_refund_id bigint) IS 'Atomic refund reversal with branch-scoped orders:refund_approve permission. Locks refund/payment/order, restores stock ONLY when stock_consumed_status=''ok'' strictly (NULL = never consumed), flips payment and refund, and audits. orders.payment_status intentionally stays ''paid'' (CHECK allows unpaid/pending/paid only; partial refunds make an order-level refunded label wrong) — refund truth = payments.status + refunds.';
+COMMENT ON FUNCTION public.reverse_payment_and_post(p_refund_id bigint) IS 'Atomic refund reversal with branch-scoped orders:refund_approve permission. Locks refund/payment/order, flips payment and refund, and audits. orders.payment_status intentionally stays ''paid'' (CHECK allows unpaid/pending/paid only; partial refunds make an order-level refunded label wrong) — refund truth = payments.status + refunds.';
 
 
 --
@@ -21653,7 +22181,6 @@ DECLARE
   v_today     DATE   := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
   v_row       public.branch_menu_item_daily_limits;
   v_stock_capacity INTEGER;
-  v_limit_quantity INTEGER;
 BEGIN
   IF v_tenant_id IS NULL THEN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
@@ -21692,16 +22219,6 @@ BEGIN
     p_menu_item_id
   );
 
-  IF v_stock_capacity IS NULL THEN
-    RAISE EXCEPTION 'stock capacity required' USING ERRCODE = '22023';
-  END IF;
-
-  v_limit_quantity := COALESCE(p_limit_quantity, v_stock_capacity);
-
-  IF v_limit_quantity > v_stock_capacity THEN
-    RAISE EXCEPTION 'limit quantity exceeds stock capacity' USING ERRCODE = '22023';
-  END IF;
-
   INSERT INTO public.branch_menu_item_daily_limits
     (
       tenant_id,
@@ -21719,7 +22236,7 @@ BEGIN
       p_branch_id,
       p_menu_item_id,
       v_today,
-      v_limit_quantity,
+      p_limit_quantity,
       p_is_disabled,
       0,
       v_stock_capacity
@@ -21744,6 +22261,13 @@ BEGIN
   );
 END;
 $$;
+
+
+--
+-- Name: FUNCTION set_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint, p_limit_quantity integer, p_is_disabled boolean); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.set_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint, p_limit_quantity integer, p_is_disabled boolean) IS 'Upserts today''s manual daily limit row. limit_quantity is a pure manual cap: NULL = no manual limit (never defaulted or clamped from stock capacity — D064 limit-ratchet invariant); is_disabled is settable for every active item including capacity-NULL ones.';
 
 
 --
@@ -23806,7 +24330,11 @@ BEGIN
       END;
 
       IF v_perm_scope = 'branch' AND v_grant_branch IS NULL THEN
-        CONTINUE;
+        IF v_profile.access_bucket IN ('warehouse_manager', 'production_manager') THEN
+          v_grant_branch := NULL;
+        ELSE
+          CONTINUE;
+        END IF;
       END IF;
 
       INSERT INTO public.staff_permissions (
@@ -24992,92 +25520,6 @@ $$;
 
 
 --
--- Name: trg_refresh_menu_stock_capacity_on_recipe(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.trg_refresh_menu_stock_capacity_on_recipe() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_tenant_id bigint;
-  v_menu_item bigint;
-  v_branch_id bigint;
-  v_today     date := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
-BEGIN
-  IF TG_OP = 'DELETE' THEN
-    v_tenant_id := OLD.tenant_id; v_menu_item := OLD.menu_item_id;
-  ELSE
-    v_tenant_id := NEW.tenant_id; v_menu_item := NEW.menu_item_id;
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM public.recipes r
-    WHERE r.tenant_id = v_tenant_id AND r.menu_item_id = v_menu_item
-  ) THEN
-    UPDATE public.branch_menu_item_daily_limits
-    SET stock_capacity = NULL, updated_at = now()
-    WHERE tenant_id = v_tenant_id
-      AND menu_item_id = v_menu_item
-      AND limit_date = v_today;
-    RETURN NULL;
-  END IF;
-
-  FOR v_branch_id IN
-    SELECT b.id FROM public.branches b
-    WHERE b.tenant_id = v_tenant_id
-      AND b.branch_kind = 'branch'
-      AND b.is_active
-  LOOP
-    PERFORM public.refresh_branch_menu_stock_capacity(
-      v_tenant_id, v_branch_id, v_menu_item, NULL
-    );
-  END LOOP;
-  RETURN NULL;
-END;
-$$;
-
-
---
--- Name: trg_refresh_menu_stock_capacity_on_stock(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.trg_refresh_menu_stock_capacity_on_stock() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_tenant_id   bigint;
-  v_branch_id   bigint;
-  v_ingredient  bigint;
-  v_location_id bigint;
-  v_kind        text;
-BEGIN
-  IF TG_OP = 'DELETE' THEN
-    v_tenant_id := OLD.tenant_id; v_branch_id := OLD.branch_id;
-    v_ingredient := OLD.ingredient_id; v_location_id := OLD.location_id;
-  ELSE
-    v_tenant_id := NEW.tenant_id; v_branch_id := NEW.branch_id;
-    v_ingredient := NEW.ingredient_id; v_location_id := NEW.location_id;
-  END IF;
-
-  SELECT il.location_kind INTO v_kind
-  FROM public.inventory_locations il
-  WHERE il.id = v_location_id;
-
-  IF v_kind IS DISTINCT FROM 'warehouse' THEN
-    RETURN NULL;
-  END IF;
-
-  PERFORM public.refresh_branch_menu_stock_capacity(
-    v_tenant_id, v_branch_id, NULL, v_ingredient
-  );
-  RETURN NULL;
-END;
-$$;
-
-
---
 -- Name: trg_release_table_on_order_status(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -25727,10 +26169,11 @@ CREATE FUNCTION public.upsert_ingredient_catalog(p_ingredient_id bigint, p_name 
     SET search_path TO ''
     AS $$
 DECLARE
-  v_tenant     bigint := public.auth_tenant_id();
-  v_id         bigint := p_ingredient_id;
-  v_base       jsonb;
-  v_secondary  jsonb;
+  v_tenant       bigint := public.auth_tenant_id();
+  v_id           bigint := p_ingredient_id;
+  v_base         jsonb;
+  v_base_unit_id bigint;
+  v_secondary    jsonb;
   v_purchase_unit text;
   v_measure_unit  text;
   v_factor     numeric;
@@ -25747,7 +26190,9 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM jsonb_array_elements(p_units) e
-    WHERE (e->>'to_base_factor')::numeric <= 0
+    WHERE NOT coalesce((e->>'is_base')::boolean, false)
+      AND nullif(e->>'anchor_unit_id', '') IS NULL
+      AND coalesce((e->>'to_base_factor')::numeric, 0) <= 0
   ) THEN
     RAISE EXCEPTION 'unit factor must be positive' USING ERRCODE = '23514';
   END IF;
@@ -25781,6 +26226,7 @@ BEGIN
   END IF;
 
   v_base := (SELECT e FROM jsonb_array_elements(p_units) e WHERE (e->>'is_base')::boolean LIMIT 1);
+  v_base_unit_id := (v_base->>'unit_id')::bigint;
   v_secondary := (
     SELECT e FROM jsonb_array_elements(p_units) e
     WHERE NOT (e->>'is_base')::boolean
@@ -25790,7 +26236,7 @@ BEGIN
 
   SELECT code INTO v_purchase_unit
   FROM public.units
-  WHERE id = (v_base->>'unit_id')::bigint
+  WHERE id = v_base_unit_id
     AND tenant_id = v_tenant
     AND is_active;
 
@@ -25800,7 +26246,7 @@ BEGIN
     WHERE id = (v_secondary->>'unit_id')::bigint
       AND tenant_id = v_tenant
       AND is_active;
-    v_factor := 1.0 / (v_secondary->>'to_base_factor')::numeric;
+    v_factor := 1.0 / public.inv_catalog_unit_to_base(v_base_unit_id, v_secondary, p_units);
   ELSE
     v_measure_unit := v_purchase_unit;
     v_factor := 1;
@@ -25832,13 +26278,78 @@ BEGIN
     END IF;
   END IF;
 
+  IF p_ingredient_id IS NOT NULL
+     AND EXISTS (
+       SELECT 1
+       FROM public.stock_movements sm
+       WHERE sm.tenant_id = v_tenant
+         AND sm.ingredient_id = v_id
+     )
+  THEN
+    IF EXISTS (
+      SELECT 1
+      FROM public.ingredient_units iu
+      WHERE iu.tenant_id = v_tenant
+        AND iu.ingredient_id = v_id
+        AND iu.is_base
+        AND iu.unit_id IS DISTINCT FROM v_base_unit_id
+    ) THEN
+      RAISE EXCEPTION 'inventory_unit_ladder_locked_by_stock_movements' USING ERRCODE = '23514';
+    END IF;
+
+    IF EXISTS (
+      SELECT 1
+      FROM public.stock_movements sm
+      WHERE sm.tenant_id = v_tenant
+        AND sm.ingredient_id = v_id
+        AND sm.entry_unit_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1
+          FROM jsonb_array_elements(p_units) e
+          WHERE (e->>'unit_id')::bigint = sm.entry_unit_id
+        )
+    ) THEN
+      RAISE EXCEPTION 'inventory_unit_ladder_locked_by_stock_movements' USING ERRCODE = '23514';
+    END IF;
+
+    IF EXISTS (
+      SELECT 1
+      FROM public.ingredient_units iu
+      JOIN (
+        SELECT DISTINCT sm.entry_unit_id
+        FROM public.stock_movements sm
+        WHERE sm.tenant_id = v_tenant
+          AND sm.ingredient_id = v_id
+          AND sm.entry_unit_id IS NOT NULL
+      ) used ON used.entry_unit_id = iu.unit_id
+      JOIN LATERAL (
+        SELECT e
+        FROM jsonb_array_elements(p_units) e
+        WHERE (e->>'unit_id')::bigint = iu.unit_id
+        LIMIT 1
+      ) incoming ON TRUE
+      WHERE iu.tenant_id = v_tenant
+        AND iu.ingredient_id = v_id
+        AND abs(
+          iu.to_base_factor
+          - public.inv_catalog_unit_to_base(v_base_unit_id, incoming.e, p_units)
+        ) > 0.000000001
+    ) THEN
+      RAISE EXCEPTION 'inventory_unit_ladder_locked_by_stock_movements' USING ERRCODE = '23514';
+    END IF;
+  END IF;
+
   DELETE FROM public.ingredient_units WHERE ingredient_id = v_id AND tenant_id = v_tenant;
   INSERT INTO public.ingredient_units (
     tenant_id, ingredient_id, unit_id, to_base_factor, is_base,
+    anchor_unit_id, anchor_factor,
     allow_purchase, allow_issue, allow_production, sort_order
   )
-  SELECT v_tenant, v_id, (e->>'unit_id')::bigint, (e->>'to_base_factor')::numeric,
+  SELECT v_tenant, v_id, (e->>'unit_id')::bigint,
+         public.inv_catalog_unit_to_base(v_base_unit_id, e, p_units),
          (e->>'is_base')::boolean,
+         nullif(e->>'anchor_unit_id', '')::bigint,
+         nullif(e->>'anchor_factor', '')::numeric,
          coalesce((e->>'allow_purchase')::boolean, false),
          coalesce((e->>'allow_issue')::boolean, false),
          coalesce((e->>'allow_production')::boolean, false),
@@ -26342,15 +26853,21 @@ BEGIN
     IF (v_line->>'ingredient_id') IS NULL OR (v_line->>'quantity') IS NULL THEN
       RAISE EXCEPTION 'invalid_line_shape' USING ERRCODE = '22023';
     END IF;
+
     v_ingredient_id := (v_line->>'ingredient_id')::BIGINT;
     v_entry_unit_id := NULLIF(v_line->>'entry_unit_id', '')::BIGINT;
 
     INSERT INTO public.recipes (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, note, yield_factor)
-    VALUES (v_tenant, p_menu_item_id, v_ingredient_id,
-            (v_line->>'quantity')::NUMERIC,
-            public.inventory_entry_unit_code(v_tenant, v_ingredient_id, v_entry_unit_id),
-            v_entry_unit_id,
-            NULLIF(v_line->>'note',''), COALESCE(NULLIF(v_line->>'yield_factor', '')::NUMERIC, 1.000))
+    VALUES (
+      v_tenant,
+      p_menu_item_id,
+      v_ingredient_id,
+      (v_line->>'quantity')::NUMERIC,
+      public.inventory_entry_unit_code(v_tenant, v_ingredient_id, v_entry_unit_id),
+      v_entry_unit_id,
+      NULLIF(v_line->>'note',''),
+      COALESCE(NULLIF(v_line->>'yield_factor', '')::NUMERIC, 1.000)
+    )
     ON CONFLICT (menu_item_id, ingredient_id, tenant_id)
     DO UPDATE SET quantity = EXCLUDED.quantity, unit = EXCLUDED.unit,
                   entry_unit_id = EXCLUDED.entry_unit_id,
@@ -26667,6 +27184,25 @@ $$;
 
 
 --
+-- Name: vietqr_payment_code_prefix(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.vietqr_payment_code_prefix() RETURNS text
+    LANGUAGE sql STABLE
+    SET search_path TO ''
+    AS $$
+  SELECT COALESCE(
+    (SELECT NULLIF(btrim(regexp_replace(upper(value), '[^A-Z0-9]+', ' ', 'g')), '')
+       FROM public.system_settings
+      WHERE key = 'payment_vietqr_code_prefix'
+      ORDER BY tenant_id
+      LIMIT 1),
+    'QAJZRU5550 MBBMS01382716 1'
+  );
+$$;
+
+
+--
 -- Name: void_order_item(bigint, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -26884,6 +27420,108 @@ END; $$;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: _ing_backup_a2fix; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public._ing_backup_a2fix (
+    id bigint,
+    unit text,
+    purchase_unit text,
+    measure_unit text,
+    purchase_to_measure_factor numeric(15,6)
+);
+
+
+--
+-- Name: _ingcost_backup_a2fix; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public._ingcost_backup_a2fix (
+    id bigint,
+    unit_cost numeric(15,2)
+);
+
+
+--
+-- Name: _ingthr_backup_a2fix; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public._ingthr_backup_a2fix (
+    id bigint,
+    min_stock_level numeric(15,3),
+    max_stock_level numeric(15,3),
+    reorder_point numeric(15,3)
+);
+
+
+--
+-- Name: _iu_backup_a2fix; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public._iu_backup_a2fix (
+    id bigint,
+    tenant_id bigint,
+    ingredient_id bigint,
+    unit_id bigint,
+    to_base_factor numeric(18,12),
+    is_base boolean,
+    allow_purchase boolean,
+    allow_issue boolean,
+    allow_production boolean,
+    sort_order integer,
+    is_active boolean,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    anchor_unit_id bigint,
+    anchor_factor numeric(18,9)
+);
+
+
+--
+-- Name: _sl_backup_a2fix; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public._sl_backup_a2fix (
+    id bigint,
+    tenant_id bigint,
+    branch_id bigint,
+    ingredient_id bigint,
+    current_quantity numeric(15,3),
+    last_counted_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    avg_unit_cost numeric(15,2),
+    location_id bigint
+);
+
+
+--
+-- Name: _sm_backup_a2fix; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public._sm_backup_a2fix (
+    id bigint,
+    tenant_id bigint,
+    branch_id bigint,
+    ingredient_id bigint,
+    type text,
+    quantity_change numeric(15,3),
+    reason text,
+    created_by uuid,
+    created_at timestamp with time zone,
+    grn_id bigint,
+    transfer_id bigint,
+    order_id bigint,
+    unit_cost numeric(15,2),
+    production_order_id bigint,
+    issue_id bigint,
+    location_id bigint,
+    movement_subtype text,
+    entry_unit_id bigint,
+    entry_quantity numeric(15,3)
+);
+
 
 --
 -- Name: accounting_periods; Type: TABLE; Schema: public; Owner: -
@@ -27218,7 +27856,7 @@ COMMENT ON COLUMN public.attendance_records.checkout_requested_by_role IS 'Staff
 -- Name: COLUMN attendance_records.checkout_approval_target_roles; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.attendance_records.checkout_approval_target_roles IS 'Access buckets that should approve this checkout request. Branch staff target branch_manager; manager and non-branch staff target owner.';
+COMMENT ON COLUMN public.attendance_records.checkout_approval_target_roles IS 'Access buckets that should approve this checkout request. Branch staff target branch_manager; manager and non-branch staff target owner/office.';
 
 
 --
@@ -27488,7 +28126,7 @@ COMMENT ON TABLE public.branch_menu_item_daily_limits IS 'Per-(branch, menu item
 -- Name: COLUMN branch_menu_item_daily_limits.stock_capacity; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.branch_menu_item_daily_limits.stock_capacity IS 'Recipe-derived sellable portions from warehouse stock: floor(min over recipe ingredients of warehouse on_hand/(quantity/yield_factor)). NULL = no recipe / no cap. Maintained by triggers on stock_levels + recipes. Advisory; composed with limit_quantity at POS, never a DB hard-gate.';
+COMMENT ON COLUMN public.branch_menu_item_daily_limits.stock_capacity IS 'Dead snapshot — refresh triggers removed in PR-3 (D064 §7); live capacity now comes from compute_menu_item_stock_capacity inside branch_menu_limit_availability. Column kept only for additive-only compliance.';
 
 
 --
@@ -28803,7 +29441,7 @@ CREATE TABLE public.orders (
     CONSTRAINT orders_no_self_merge CHECK ((merged_into_order_id IS DISTINCT FROM id)),
     CONSTRAINT orders_order_discount_metadata_paired CHECK ((((order_discount_amount = (0)::numeric) AND (discount_type IS NULL) AND (discount_value IS NULL) AND (discount_note IS NULL)) OR ((order_discount_amount > (0)::numeric) AND (discount_type IS NOT NULL) AND (discount_value IS NOT NULL) AND (discount_note IS NOT NULL) AND (length(TRIM(BOTH FROM discount_note)) >= 3)))),
     CONSTRAINT orders_order_type_check CHECK ((order_type = ANY (ARRAY['dine_in'::text, 'takeaway'::text]))),
-    CONSTRAINT orders_payment_code_format_check CHECK ((payment_code ~* '^(VQRLOAMB[0-9]{17}|DH[A-Z0-9]{3,12})$'::text)),
+    CONSTRAINT orders_payment_code_format_check CHECK ((((char_length(payment_code) >= 3) AND (char_length(payment_code) <= 50)) AND (payment_code ~ '^[A-Za-z0-9]+( [A-Za-z0-9]+)*$'::text))),
     CONSTRAINT orders_payment_status_check CHECK ((payment_status = ANY (ARRAY['unpaid'::text, 'pending'::text, 'paid'::text]))),
     CONSTRAINT orders_status_check CHECK ((status = ANY (ARRAY['new'::text, 'confirmed'::text, 'preparing'::text, 'ready'::text, 'served'::text, 'completed'::text, 'cancelled'::text])))
 );
@@ -28921,7 +29559,7 @@ ALTER TABLE ONLY public.payments REPLICA IDENTITY FULL;
 -- Name: COLUMN payments.stock_consumed_status; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.payments.stock_consumed_status IS 'M4 P0-3: replaces the boolean stock_consumed return value with a queryable status enum. Values: ok | out_of_stock | recipe_missing | internal_error. Backfill + CHECK constraint added by the upcoming payment_recompute_total migration. NULL means historical row written before the column existed.';
+COMMENT ON COLUMN public.payments.stock_consumed_status IS 'Historical only: no writer since D016 (2026-05-28 stock leg removal), no reader since D064-tail (A) (this migration removed the reverse_payment_and_post and refund_paid_order restore branches). Retained for audit of pre-2026-05 rows.';
 
 
 --
@@ -31942,7 +32580,7 @@ CREATE TABLE public.tenants (
 -- Name: COLUMN tenants.owner_user_id; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.tenants.owner_user_id IS 'Canonical auth identity of tenant owner — UUID FK to auth.users, ON DELETE RESTRICT. NOT NULL since H3b (2026-05-07). Distinct from `representative` (TEXT legal name) and `positions.code=''owner''` (HR label). has_permission() owner-bypass currently uses positions.code=''owner''; this column is data foundation for future ownership transfer RPC + UI. See docs/plan/adr/0005-owner-identity-source-separation.md, regressions.md TENANT-OWNER-USER-ID-CANONICAL.';
+COMMENT ON COLUMN public.tenants.owner_user_id IS 'Canonical auth identity of tenant owner — UUID FK to auth.users, ON DELETE RESTRICT. NOT NULL since H3b (2026-05-07). Distinct from `representative` (TEXT legal name) and `positions.code=''owner''` (HR label). has_permission() owner-bypass currently uses positions.code=''owner''; this column is data foundation for future ownership transfer RPC + UI. See regressions.md TENANT-OWNER-USER-ID-CANONICAL.';
 
 
 --
@@ -32068,7 +32706,7 @@ CREATE TABLE public.webhook_events (
 -- Name: TABLE webhook_events; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.webhook_events IS 'Payment provider webhook idempotency log. UNIQUE(provider, request_id) blocks duplicate processing. Webhook routes MUST insert this row before calling complete_payment_and_consume_stock or any payment-state RPC. RLS allows owner SELECT for debugging/reconciliation; INSERT only via service_role webhook handlers.';
+COMMENT ON TABLE public.webhook_events IS 'M4 P1-A (2026-04-29): payment provider webhook idempotency log. UNIQUE(provider, request_id) blocks duplicate processing. Webhook routes MUST insert this row before calling complete_payment_and_consume_stock or any payment-state RPC. RLS allows owner+office SELECT (debugging/reconciliation); INSERT only via service_role webhook handlers (RLS bypassed).';
 
 
 --
@@ -34030,6 +34668,13 @@ CREATE INDEX idx_grn_tenant ON public.goods_received_notes USING btree (tenant_i
 
 
 --
+-- Name: idx_grn_tenant_branch_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_grn_tenant_branch_status ON public.goods_received_notes USING btree (tenant_id, branch_id, status);
+
+
+--
 -- Name: idx_hardblock_overrides_item; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -34898,6 +35543,13 @@ CREATE INDEX idx_production_orders_tenant ON public.production_orders USING btre
 
 
 --
+-- Name: idx_production_orders_tenant_branch_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_production_orders_tenant_branch_status ON public.production_orders USING btree (tenant_id, branch_id, status);
+
+
+--
 -- Name: idx_production_recipes_finished_good; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -34923,6 +35575,13 @@ CREATE INDEX idx_profiles_position_id ON public.profiles USING btree (position_i
 --
 
 CREATE INDEX idx_profiles_tenant_branch ON public.profiles USING btree (tenant_id, branch_id);
+
+
+--
+-- Name: idx_purchase_orders_tenant_branch_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_purchase_orders_tenant_branch_status ON public.purchase_orders USING btree (tenant_id, branch_id, status);
 
 
 --
@@ -35336,6 +35995,13 @@ CREATE INDEX idx_stock_transfers_from_location ON public.stock_transfers USING b
 --
 
 CREATE INDEX idx_stock_transfers_tenant ON public.stock_transfers USING btree (tenant_id);
+
+
+--
+-- Name: idx_stock_transfers_tenant_tobranch_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_transfers_tenant_tobranch_status ON public.stock_transfers USING btree (tenant_id, to_branch_id, status);
 
 
 --
@@ -36074,6 +36740,62 @@ CREATE TRIGGER trg_branches_updated_at BEFORE UPDATE ON public.branches FOR EACH
 
 
 --
+-- Name: goods_received_notes trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.goods_received_notes FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
+-- Name: inventory_count_slips trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.inventory_count_slips FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
+-- Name: production_orders trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.production_orders FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
+-- Name: purchase_orders trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.purchase_orders FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
+-- Name: stock_issues trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.stock_issues FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
+-- Name: stock_transfers trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.stock_transfers FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
+-- Name: stocktake_sessions trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.stocktake_sessions FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
+-- Name: supplier_returns trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.supplier_returns FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
 -- Name: employment_contracts trg_contract_sync_insurance; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -36109,17 +36831,17 @@ CREATE TRIGGER trg_enforce_branch_menu_daily_limit AFTER INSERT ON public.order_
 
 
 --
--- Name: order_items trg_enforce_ingredient_stock; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_enforce_ingredient_stock AFTER INSERT ON public.order_items FOR EACH ROW EXECUTE FUNCTION public.enforce_branch_ingredient_stock();
-
-
---
 -- Name: stock_issues trg_enforce_period_close_stock_issues; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_enforce_period_close_stock_issues BEFORE INSERT OR UPDATE OF issued_at ON public.stock_issues FOR EACH ROW EXECUTE FUNCTION public.enforce_period_close_stock_issues();
+
+
+--
+-- Name: order_items trg_enforce_stock_availability; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_enforce_stock_availability AFTER INSERT ON public.order_items FOR EACH ROW EXECUTE FUNCTION public.enforce_branch_stock_availability();
 
 
 --
@@ -36463,20 +37185,6 @@ CREATE TRIGGER trg_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH
 --
 
 CREATE TRIGGER trg_purchase_orders_updated_at BEFORE UPDATE ON public.purchase_orders FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
-
-
---
--- Name: recipes trg_refresh_menu_stock_capacity_on_recipe; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_refresh_menu_stock_capacity_on_recipe AFTER INSERT OR DELETE OR UPDATE ON public.recipes FOR EACH ROW EXECUTE FUNCTION public.trg_refresh_menu_stock_capacity_on_recipe();
-
-
---
--- Name: stock_levels trg_refresh_menu_stock_capacity_on_stock; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_refresh_menu_stock_capacity_on_stock AFTER INSERT OR DELETE OR UPDATE OF current_quantity ON public.stock_levels FOR EACH ROW EXECUTE FUNCTION public.trg_refresh_menu_stock_capacity_on_stock();
 
 
 --
@@ -40214,7 +40922,7 @@ CREATE POLICY employees_select_self ON public.employees FOR SELECT TO authentica
 -- Name: POLICY employees_select_self ON employees; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON POLICY employees_select_self ON public.employees IS 'Self-read regression fix: every authenticated user can read their own employees row even without hr:view_employee. Required for Branch Hub staff workflows (clock, schedule, payslip, shift-register).';
+COMMENT ON POLICY employees_select_self ON public.employees IS 'Self-read regression fix: every authenticated user can read their own employees row even without hr:view_employee. Required for /employee/* portal (clock, schedule, attendance, payslip, shift-register).';
 
 
 --
@@ -40309,9 +41017,16 @@ CREATE POLICY feature_flags_read_tenant ON public.branch_feature_flags FOR SELEC
 
 CREATE POLICY feature_flags_write_settings ON public.branch_feature_flags TO authenticated USING (((EXISTS ( SELECT 1
    FROM public.branches b
-  WHERE ((b.id = branch_feature_flags.branch_id) AND (b.tenant_id = public.auth_tenant_id())))) AND (public.has_permission(branch_id, 'settings:branch'::text) OR public.has_permission(NULL::bigint, 'settings:tenant'::text)))) WITH CHECK (((EXISTS ( SELECT 1
+  WHERE ((b.id = branch_feature_flags.branch_id) AND (b.tenant_id = public.auth_tenant_id())))) AND (public.has_permission(branch_id, 'settings:branch'::text) OR public.has_permission(NULL::bigint, 'settings:tenant'::text)) AND ((flag_key <> 'pos_stock_outcome_posting'::text) OR (public.auth_role() = 'owner'::text)))) WITH CHECK (((EXISTS ( SELECT 1
    FROM public.branches b
-  WHERE ((b.id = branch_feature_flags.branch_id) AND (b.tenant_id = public.auth_tenant_id())))) AND (public.has_permission(branch_id, 'settings:branch'::text) OR public.has_permission(NULL::bigint, 'settings:tenant'::text))));
+  WHERE ((b.id = branch_feature_flags.branch_id) AND (b.tenant_id = public.auth_tenant_id())))) AND (public.has_permission(branch_id, 'settings:branch'::text) OR public.has_permission(NULL::bigint, 'settings:tenant'::text)) AND ((flag_key <> 'pos_stock_outcome_posting'::text) OR (public.auth_role() = 'owner'::text))));
+
+
+--
+-- Name: POLICY feature_flags_write_settings ON branch_feature_flags; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON POLICY feature_flags_write_settings ON public.branch_feature_flags IS 'Branch settings holders write feature flags, EXCEPT pos_stock_outcome_posting ("Trừ tồn khi bán") which only the owner may flip — owner decision 2026-07-04 (D065 addendum). service_role bypasses RLS.';
 
 
 --
@@ -41513,10 +42228,10 @@ CREATE POLICY production_order_items_select ON public.production_order_items FOR
 CREATE POLICY production_order_items_write ON public.production_order_items TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (EXISTS ( SELECT 1
    FROM (public.production_orders po
      JOIN public.branches b ON ((b.id = po.branch_id)))
-  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = 'central_kitchen'::text) AND (b.is_active = true) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text))))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (EXISTS ( SELECT 1
+  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = ANY (ARRAY['central_kitchen'::text, 'branch'::text])) AND (b.is_active = true) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text))))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (EXISTS ( SELECT 1
    FROM (public.production_orders po
      JOIN public.branches b ON ((b.id = po.branch_id)))
-  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = 'central_kitchen'::text) AND (b.is_active = true) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text)))))));
+  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = ANY (ARRAY['central_kitchen'::text, 'branch'::text])) AND (b.is_active = true) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text)))))));
 
 
 --
@@ -41538,9 +42253,9 @@ CREATE POLICY production_orders_select ON public.production_orders FOR SELECT TO
 
 CREATE POLICY production_orders_write ON public.production_orders TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission(branch_id, 'inventory:production_create'::text) OR public.has_permission(branch_id, 'inventory:production_confirm'::text)) AND (EXISTS ( SELECT 1
    FROM public.branches b
-  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = 'central_kitchen'::text) AND (b.is_active = true)))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission(branch_id, 'inventory:production_create'::text) OR public.has_permission(branch_id, 'inventory:production_confirm'::text)) AND (EXISTS ( SELECT 1
+  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = ANY (ARRAY['central_kitchen'::text, 'branch'::text])) AND (b.is_active = true)))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission(branch_id, 'inventory:production_create'::text) OR public.has_permission(branch_id, 'inventory:production_confirm'::text)) AND (EXISTS ( SELECT 1
    FROM public.branches b
-  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = 'central_kitchen'::text) AND (b.is_active = true))))));
+  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = ANY (ARRAY['central_kitchen'::text, 'branch'::text])) AND (b.is_active = true))))));
 
 
 --
@@ -42705,12 +43420,12 @@ GRANT ALL ON FUNCTION public.auto_close_periods() TO service_role;
 
 
 --
--- Name: FUNCTION branch_kitchen_ingredient_availability(p_tenant_id bigint, p_branch_id bigint); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION bill_line_items(p_order_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.branch_kitchen_ingredient_availability(p_tenant_id bigint, p_branch_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.branch_kitchen_ingredient_availability(p_tenant_id bigint, p_branch_id bigint) TO authenticated;
-GRANT ALL ON FUNCTION public.branch_kitchen_ingredient_availability(p_tenant_id bigint, p_branch_id bigint) TO service_role;
+REVOKE ALL ON FUNCTION public.bill_line_items(p_order_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.bill_line_items(p_order_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.bill_line_items(p_order_id bigint) TO service_role;
 
 
 --
@@ -42740,11 +43455,37 @@ GRANT ALL ON FUNCTION public.branch_manager_request_consumption_adjustment(p_ten
 
 
 --
--- Name: FUNCTION branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_outcome_enabled boolean); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_gate_enabled boolean, p_exclude_hold_tokens uuid[]); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_outcome_enabled boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_outcome_enabled boolean) TO service_role;
+REVOKE ALL ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_gate_enabled boolean, p_exclude_hold_tokens uuid[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_gate_enabled boolean, p_exclude_hold_tokens uuid[]) TO service_role;
+
+
+--
+-- Name: FUNCTION broadcast_branch_ops(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.broadcast_branch_ops() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.broadcast_branch_ops() TO service_role;
+
+
+--
+-- Name: FUNCTION bulk_import_ingredients(p_rows jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.bulk_import_ingredients(p_rows jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.bulk_import_ingredients(p_rows jsonb) TO service_role;
+GRANT ALL ON FUNCTION public.bulk_import_ingredients(p_rows jsonb) TO authenticated;
+
+
+--
+-- Name: FUNCTION bulk_import_production_recipes(p_groups jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.bulk_import_production_recipes(p_groups jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.bulk_import_production_recipes(p_groups jsonb) TO service_role;
+GRANT ALL ON FUNCTION public.bulk_import_production_recipes(p_groups jsonb) TO authenticated;
 
 
 --
@@ -42754,6 +43495,15 @@ GRANT ALL ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, 
 REVOKE ALL ON FUNCTION public.bump_kds_ticket(p_ticket_id bigint) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.bump_kds_ticket(p_ticket_id bigint) TO authenticated;
 GRANT ALL ON FUNCTION public.bump_kds_ticket(p_ticket_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION can_read_branch_ops(p_branch_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.can_read_branch_ops(p_branch_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.can_read_branch_ops(p_branch_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.can_read_branch_ops(p_branch_id bigint) TO service_role;
 
 
 --
@@ -43330,20 +44080,19 @@ GRANT ALL ON FUNCTION public.enable_offline_for_session(p_session_id bigint) TO 
 
 
 --
--- Name: FUNCTION enforce_branch_ingredient_stock(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.enforce_branch_ingredient_stock() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.enforce_branch_ingredient_stock() TO authenticated;
-GRANT ALL ON FUNCTION public.enforce_branch_ingredient_stock() TO service_role;
-
-
---
 -- Name: FUNCTION enforce_branch_menu_daily_limit(); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.enforce_branch_menu_daily_limit() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.enforce_branch_menu_daily_limit() TO service_role;
+
+
+--
+-- Name: FUNCTION enforce_branch_stock_availability(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.enforce_branch_stock_availability() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.enforce_branch_stock_availability() TO service_role;
 
 
 --
@@ -43547,21 +44296,12 @@ GRANT ALL ON FUNCTION public.get_ap_aging() TO service_role;
 
 
 --
--- Name: FUNCTION get_branch_menu_daily_limits_for_pos(p_branch_id bigint); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION get_branch_menu_daily_limits_for_pos(p_branch_id bigint, p_exclude_hold_tokens uuid[]); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) TO service_role;
-GRANT ALL ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) TO authenticated;
-
-
---
--- Name: FUNCTION get_branch_menu_ingredient_caps_for_pos(p_branch_id bigint); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_branch_menu_ingredient_caps_for_pos(p_branch_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_branch_menu_ingredient_caps_for_pos(p_branch_id bigint) TO authenticated;
-GRANT ALL ON FUNCTION public.get_branch_menu_ingredient_caps_for_pos(p_branch_id bigint) TO service_role;
+REVOKE ALL ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint, p_exclude_hold_tokens uuid[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint, p_exclude_hold_tokens uuid[]) TO authenticated;
+GRANT ALL ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint, p_exclude_hold_tokens uuid[]) TO service_role;
 
 
 --
@@ -43822,12 +44562,21 @@ GRANT ALL ON FUNCTION public.heartbeat_zone_lock(p_session_id bigint, p_zone_id 
 
 
 --
+-- Name: FUNCTION inv_catalog_unit_to_base(p_base_unit_id bigint, p_unit jsonb, p_all_units jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.inv_catalog_unit_to_base(p_base_unit_id bigint, p_unit jsonb, p_all_units jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.inv_catalog_unit_to_base(p_base_unit_id bigint, p_unit jsonb, p_all_units jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.inv_catalog_unit_to_base(p_base_unit_id bigint, p_unit jsonb, p_all_units jsonb) TO service_role;
+
+
+--
 -- Name: FUNCTION inv_derive_to_base_factor(p_base_unit_id bigint, p_unit_id bigint, p_is_base boolean, p_anchor_unit_id bigint, p_anchor_factor numeric, p_all_units jsonb); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.inv_derive_to_base_factor(p_base_unit_id bigint, p_unit_id bigint, p_is_base boolean, p_anchor_unit_id bigint, p_anchor_factor numeric, p_all_units jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.inv_derive_to_base_factor(p_base_unit_id bigint, p_unit_id bigint, p_is_base boolean, p_anchor_unit_id bigint, p_anchor_factor numeric, p_all_units jsonb) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.inv_derive_to_base_factor(p_base_unit_id bigint, p_unit_id bigint, p_is_base boolean, p_anchor_unit_id bigint, p_anchor_factor numeric, p_all_units jsonb) TO service_role;
+GRANT ALL ON FUNCTION public.inv_derive_to_base_factor(p_base_unit_id bigint, p_unit_id bigint, p_is_base boolean, p_anchor_unit_id bigint, p_anchor_factor numeric, p_all_units jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.inv_derive_to_base_factor(p_base_unit_id bigint, p_unit_id bigint, p_is_base boolean, p_anchor_unit_id bigint, p_anchor_factor numeric, p_all_units jsonb) TO service_role;
 
 
 --
@@ -43852,7 +44601,7 @@ GRANT ALL ON FUNCTION public.inv_to_base_for_tenant(p_tenant_id bigint, p_ingred
 --
 
 REVOKE ALL ON FUNCTION public.inventory_entry_unit_code(p_tenant_id bigint, p_ingredient_id bigint, p_entry_unit_id bigint) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.inventory_entry_unit_code(p_tenant_id bigint, p_ingredient_id bigint, p_entry_unit_id bigint) TO service_role;
+GRANT ALL ON FUNCTION public.inventory_entry_unit_code(p_tenant_id bigint, p_ingredient_id bigint, p_entry_unit_id bigint) TO service_role;
 
 
 --
@@ -43895,8 +44644,8 @@ GRANT ALL ON FUNCTION public.is_inventory_production_operator() TO service_role;
 --
 
 REVOKE ALL ON FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date) TO service_role;
 GRANT ALL ON FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date) TO authenticated;
+GRANT ALL ON FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date) TO service_role;
 
 
 --
@@ -44418,14 +45167,6 @@ GRANT ALL ON FUNCTION public.refresh_abc_classification() TO service_role;
 
 
 --
--- Name: FUNCTION refresh_branch_menu_stock_capacity(p_tenant_id bigint, p_branch_id bigint, p_menu_item_id bigint, p_ingredient_id bigint); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.refresh_branch_menu_stock_capacity(p_tenant_id bigint, p_branch_id bigint, p_menu_item_id bigint, p_ingredient_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.refresh_branch_menu_stock_capacity(p_tenant_id bigint, p_branch_id bigint, p_menu_item_id bigint, p_ingredient_id bigint) TO service_role;
-
-
---
 -- Name: FUNCTION refresh_finance_views(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -44580,14 +45321,6 @@ GRANT ALL ON FUNCTION public.resolve_print_template_version(p_tenant_id bigint, 
 REVOKE ALL ON FUNCTION public.resolve_stocktake_conflict(p_conflict_id bigint, p_resolution text, p_manual_qty numeric, p_note text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.resolve_stocktake_conflict(p_conflict_id bigint, p_resolution text, p_manual_qty numeric, p_note text) TO authenticated;
 GRANT ALL ON FUNCTION public.resolve_stocktake_conflict(p_conflict_id bigint, p_resolution text, p_manual_qty numeric, p_note text) TO service_role;
-
-
---
--- Name: FUNCTION restore_stock_for_order(p_order_id bigint, p_actor_id uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.restore_stock_for_order(p_order_id bigint, p_actor_id uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.restore_stock_for_order(p_order_id bigint, p_actor_id uuid) TO service_role;
 
 
 --
@@ -44968,7 +45701,6 @@ GRANT ALL ON FUNCTION public.transition_order_item_status(p_item_id bigint, p_ne
 --
 
 REVOKE ALL ON FUNCTION public.transition_order_status(p_order_id bigint, p_new_status text, p_expected_status text, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.transition_order_status(p_order_id bigint, p_new_status text, p_expected_status text, p_note text) TO authenticated;
 GRANT ALL ON FUNCTION public.transition_order_status(p_order_id bigint, p_new_status text, p_expected_status text, p_note text) TO service_role;
 
 
@@ -45060,22 +45792,6 @@ GRANT ALL ON FUNCTION public.trg_notify_stocktake_completed() TO service_role;
 
 REVOKE ALL ON FUNCTION public.trg_notify_transfer_in_transit() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.trg_notify_transfer_in_transit() TO service_role;
-
-
---
--- Name: FUNCTION trg_refresh_menu_stock_capacity_on_recipe(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.trg_refresh_menu_stock_capacity_on_recipe() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.trg_refresh_menu_stock_capacity_on_recipe() TO service_role;
-
-
---
--- Name: FUNCTION trg_refresh_menu_stock_capacity_on_stock(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.trg_refresh_menu_stock_capacity_on_stock() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.trg_refresh_menu_stock_capacity_on_stock() TO service_role;
 
 
 --
@@ -45262,6 +45978,15 @@ GRANT ALL ON FUNCTION public.verify_branch_override_code(p_branch_id bigint, p_c
 
 
 --
+-- Name: FUNCTION vietqr_payment_code_prefix(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.vietqr_payment_code_prefix() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.vietqr_payment_code_prefix() TO authenticated;
+GRANT ALL ON FUNCTION public.vietqr_payment_code_prefix() TO service_role;
+
+
+--
 -- Name: FUNCTION void_order_item(p_order_item_id bigint, p_reason text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -45284,6 +46009,60 @@ GRANT ALL ON FUNCTION public.weekly_grn_override_report() TO service_role;
 
 REVOKE ALL ON FUNCTION public.weekly_waste_report() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.weekly_waste_report() TO service_role;
+
+
+--
+-- Name: TABLE _ing_backup_a2fix; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ing_backup_a2fix TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ing_backup_a2fix TO authenticated;
+GRANT ALL ON TABLE public._ing_backup_a2fix TO service_role;
+
+
+--
+-- Name: TABLE _ingcost_backup_a2fix; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ingcost_backup_a2fix TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ingcost_backup_a2fix TO authenticated;
+GRANT ALL ON TABLE public._ingcost_backup_a2fix TO service_role;
+
+
+--
+-- Name: TABLE _ingthr_backup_a2fix; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ingthr_backup_a2fix TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ingthr_backup_a2fix TO authenticated;
+GRANT ALL ON TABLE public._ingthr_backup_a2fix TO service_role;
+
+
+--
+-- Name: TABLE _iu_backup_a2fix; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._iu_backup_a2fix TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._iu_backup_a2fix TO authenticated;
+GRANT ALL ON TABLE public._iu_backup_a2fix TO service_role;
+
+
+--
+-- Name: TABLE _sl_backup_a2fix; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._sl_backup_a2fix TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._sl_backup_a2fix TO authenticated;
+GRANT ALL ON TABLE public._sl_backup_a2fix TO service_role;
+
+
+--
+-- Name: TABLE _sm_backup_a2fix; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._sm_backup_a2fix TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._sm_backup_a2fix TO authenticated;
+GRANT ALL ON TABLE public._sm_backup_a2fix TO service_role;
 
 
 --
@@ -47357,4 +48136,4 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES 
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict ptuomre4fc0JM5rHdZz4Y49dSHHyic5QPenyMtqBlohcQdc9eWj1qUgYo92MSHb
+-- \unrestrict kTOQ8m6uBrO4Uo3gfil0NTZ9Z1KcRGBJO6T8I4jYKTT4fIDp9yE4ZId1bracxW4

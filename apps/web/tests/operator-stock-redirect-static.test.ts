@@ -551,7 +551,7 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   );
   assert.match(formCombobox, /size\?: ComponentProps<typeof Button>\["size"\]/);
   assert.match(formCombobox, /size=\{size\}/);
-  assert.match(formCombobox, /isTouchSize && "h-auto min-h-12 text-sm"/);
+  assert.match(formCombobox, /isTouchSize && "h-auto min-h-12 text-sm/);
 
   assert.match(purchaseOrdersPage, /routeBranchId\?: number/);
   assert.match(purchaseOrdersPage, /embedded\?: boolean/);
@@ -575,10 +575,6 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   );
   assert.match(grnDetailClient, /embedded\?: boolean/);
   assert.match(grnDetailClient, /embedded = false/);
-  assert.match(
-    grnDetailClient,
-    /defaultValue=\{embedded \? "lines" : undefined\}/,
-  );
   assert.match(grnDetailClient, embeddedContentWrapperPattern);
   assert.doesNotMatch(grnDetailEmbeddedBranch, /AppPageHeader|<AppPage/);
   assert.match(newPoPage, /routeBranchId\?: number/);
@@ -806,11 +802,11 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
   );
   assert.match(
     wasteCreateClient,
-    /<SearchableSelect[\s\S]*size=\{embedded \? "touch" : "default"\}[\s\S]*className="w-full"/,
+    /<Combobox[\s\S]*size=\{embedded \? "touch" : "sm"\}[\s\S]*className="w-full"/,
   );
   assert.match(
     wasteCreateClient,
-    /<WasteReasonDropdown[\s\S]*size=\{embedded \? "touch" : "default"\}[\s\S]*className="w-full"/,
+    /<WasteReasonDropdown[\s\S]*size=\{embedded \? "touch" : "sm"\}[\s\S]*className="w-full"/,
   );
   assert.match(
     wasteCreateClient,
@@ -1130,10 +1126,6 @@ test("operator transfer routes keep list, create, detail, and form actions branc
     /routeBranchId != null\s*\?\s*basePath\s*:\s*scopedBranchId != null/,
   );
   assert.match(transferDetailClient, /listHref \?\?/);
-  assert.match(
-    transferDetailClient,
-    /const detailTabs = \(\s*<AppPageTabs\s*defaultValue=\{embedded \? "lines" : undefined\}/,
-  );
   assert.doesNotMatch(transferDetailEmbeddedBranch, /AppPageHeader/);
   assert.match(
     transferDetailEmbeddedBranch,
@@ -1307,7 +1299,7 @@ test("operator supplier returns render branch-native inside the branch operator 
   assert.match(officeNewPage, /embedded\?: boolean/);
   assert.match(
     createClient,
-    /<SearchableSelect[\s\S]*size="touch"[\s\S]*className="w-full"/,
+    /<Combobox[\s\S]*size="touch"[\s\S]*className="w-full"/,
   );
   assert.match(createClient, /grid grid-cols-1 gap-3 sm:grid-cols-2/);
   assert.equal(

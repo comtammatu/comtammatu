@@ -1,20 +1,14 @@
 "use server";
 
 import { z } from "zod";
-import { randomUUID as _randomUUID } from "crypto";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import {
-  BUYER_NOT_GET_INVOICE_NAME,
-  getInvoiceProvider,
-} from "@comtammatu/shared/providers";
-import { resolveSalesTaxProfile } from "@comtammatu/shared/tax";
-import {
-  applyInvoiceLineDiscount,
-  buildInvoiceLineItemsFromOrderItems,
-} from "@comtammatu/shared/hddt";
+import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
-import { estimateAnnualRevenue } from "@lib/estimate-annual-revenue";
+import {
+  createInvoiceSchema,
+  issueTaxInvoiceForPaidOrder,
+} from "@lib/hddt-per-order";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
@@ -36,25 +30,6 @@ const REPORT_ROLES: readonly StaffRole[] = [
 ];
 
 /* ─── HĐĐT: Create Invoice ─── */
-
-const MST_REGEX = /^\d{10}(-\d{3})?$/;
-
-const createInvoiceSchema = z
-  .object({
-    orderId: z.coerce.number().int().positive(),
-    buyerName: z.string().trim().max(200).optional(),
-    buyerTaxCode: z
-      .string()
-      .trim()
-      .regex(MST_REGEX, { error: "MST phải có dạng 10 số hoặc 10-3 số" })
-      .optional(),
-    buyerAddress: z.string().trim().max(500).optional(),
-    buyerNotGetInvoice: z.boolean().optional(),
-  })
-  .refine((v) => !v.buyerTaxCode || (v.buyerName && v.buyerName.length > 0), {
-    error: "Có MST thì phải nhập tên người mua",
-    path: ["buyerName"],
-  });
 
 /**
  * Read-only resolve of the active tax invoice for an order, tenant-scoped.
@@ -118,293 +93,34 @@ export async function createTaxInvoice(
 
   const { supabase, claims, user } = ctx;
 
-  // Fetch order with line items — must be paid. order_items.vat_rate is
-  // the per-line snapshot populated at INSERT time by trigger
-  // trg_order_items_populate_vat_rate (migration 20260509000000) — needed
-  // for correct mixed-rate aggregation per rule VAT-PER-LINE-NOT-PER-INVOICE.
-  const { data: order, error: orderErr } = await supabase
-    .from("orders")
-    .select(
-      "id, branch_id, subtotal, tax_amount, total_amount, discount_amount, order_discount_amount, payment_status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal, discount_amount, modifiers, sides, status, vat_rate)",
-    )
-    .eq("id", parsed.data.orderId)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-
-  if (orderErr || !order) {
-    if (orderErr) {
-      console.error("[finance/actions:createTaxInvoice] Fetch order error:", orderErr);
-    }
-    return { success: false, error: "Đơn hàng không tồn tại." };
-  }
-
-  if (order.payment_status !== "paid") {
-    return {
-      success: false,
-      error: "Đơn hàng chưa thanh toán. Không thể xuất hóa đơn.",
-    };
-  }
-
-  // Branch scope check.
-  if (!(await canAccessBranch(supabase, claims, order.branch_id))) {
-    return {
-      success: false,
-      error: "Không có quyền xuất hóa đơn cho chi nhánh này.",
-    };
-  }
-
-  // Check no existing active invoice for this order. Older `not_required`
-  // rows do NOT count as active so we can issue the legally required HĐĐT
-  // for orders that were paid before the mandatory-per-payment correction.
-  //
-  // A provider-rejected attempt is persisted as status='draft' with no
-  // invoice_number. It must be retryable after config/payload fixes; reuse the
-  // same row so the active-per-order unique slot remains stable.
-  const { data: existing } = await supabase
-    .from("tax_invoices")
-    .select("id, status, invoice_number")
-    .eq("order_id", parsed.data.orderId)
-    .eq("tenant_id", claims.tenant_id)
-    .not("status", "in", '("cancelled","replaced","not_required")')
-    .maybeSingle();
-
-  const retryDraftInvoiceId =
-    existing?.status === "draft" && !existing.invoice_number
-      ? existing.id
-      : null;
-
-  if (existing && !retryDraftInvoiceId) {
-    return { success: false, error: "Đơn hàng đã có hóa đơn." };
-  }
-
-  // Rule HDDT-LATE-B2B-REQUEST-AFTER-BATCH-BLOCKED: an order already folded
-  // into a B2C daily-summary HĐ (TT 78/2021 §11.4) must NOT also receive a
-  // per-order B2B invoice — that double-issues the same revenue. The per-order
-  // check above only scans tax_invoices.order_id; on a summary row order_id is
-  // NULL and the order is linked through the tax_invoice_orders junction, so it
-  // needs its own JOIN. "Active" = the summary invoice is not cancelled/replaced
-  // (a cancelled batch may be re-created, freeing the order again).
-  const { data: summaryLinks } = await supabase
-    .from("tax_invoice_orders")
-    .select("tax_invoices(summary_date, status)")
-    .eq("order_id", parsed.data.orderId)
-    .eq("tenant_id", claims.tenant_id);
-
-  const summaryInvoice = (summaryLinks ?? [])
-    .map(
-      (l) =>
-        l.tax_invoices as unknown as {
-          summary_date: string | null;
-          status: string;
-        } | null,
-    )
-    .find(
-      (inv) => inv != null && !["cancelled", "replaced"].includes(inv.status),
-    );
-
-  if (summaryInvoice) {
-    const d = summaryInvoice.summary_date;
-    const dateLabel = d
-      ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`
-      : "trước đó";
-    return {
-      success: false,
-      error: `Đơn này đã nằm trong hóa đơn tổng hợp ngày ${dateLabel}. Vui lòng giữ biên nhận hoặc yêu cầu hóa đơn điều chỉnh qua kế toán.`,
-    };
-  }
-
-  // Per-line VAT aggregation (rule VAT-PER-LINE-NOT-PER-INVOICE).
-  // Each order_item carries its own vat_rate snapshot. For uniform-rate
-  // orders this is mathematically equivalent to the previous
-  // `total / (1 + system_rate)` formula; for mixed-rate orders
-  // (food 8% + beer 10%) it produces the correct subtotal/VAT breakdown
-  // that the previous single-rate division could not.
-  const activeItems = order.order_items.filter(
-    (item) => item.status !== "cancelled",
-  );
-  const orderTotal = Number(order.total_amount);
-  const itemGrossSum = activeItems.reduce((s, i) => s + Number(i.subtotal), 0);
-
-  let subtotal: number;
-  let vatAmount: number;
-  let vatRate: number;
-
-  if (activeItems.length > 0 && itemGrossSum > 0) {
-    // Scale absorbs order-level discount: sum of items.subtotal is
-    // pre-discount, order.total_amount is post-discount. Discount allocated
-    // proportionally across lines at the same rate.
-    const scale = orderTotal / itemGrossSum;
-    const grossByRate = new Map<number, number>();
-    for (const item of activeItems) {
-      const rate = Number(item.vat_rate);
-      const gross = Number(item.subtotal) * scale;
-      grossByRate.set(rate, (grossByRate.get(rate) ?? 0) + gross);
-    }
-
-    let sumSub = 0;
-    let sumVat = 0;
-    let predRate = 0;
-    let predGross = -1;
-    for (const [rate, gross] of grossByRate) {
-      const lineSub = gross / (1 + rate / 100);
-      const lineVat = gross - lineSub;
-      sumSub += lineSub;
-      sumVat += lineVat;
-      if (gross > predGross) {
-        predRate = rate;
-        predGross = gross;
-      }
-    }
-    subtotal = sumSub;
-    vatAmount = sumVat;
-    // Header rate = predominant by gross weight. For mixed-rate orders
-    // (grossByRate.size > 1) this is informational; UI can flag mixed.
-    vatRate = predRate;
-  } else {
-    // Edge: no active items or zero subtotal. Derive the header rate from the
-    // HKD revenue-tier GTGT resolver (annual-revenue group) so the
-    // draft/failure row has a sensible rate consistent with the per-line snapshot.
-    vatRate = resolveSalesTaxProfile({
-      annualRevenue: await estimateAnnualRevenue(supabase, claims.tenant_id),
-      effectiveDate: new Date(),
-    }).gtgtRate;
-    subtotal = vatRate > 0 ? orderTotal / (1 + vatRate / 100) : orderTotal;
-    vatAmount = orderTotal - subtotal;
-  }
-
-  const buyerTaxCode = parsed.data.buyerTaxCode?.trim() || undefined;
-  const buyerAddress = parsed.data.buyerAddress?.trim() || undefined;
-  const buyerNotGetInvoice =
-    parsed.data.buyerNotGetInvoice === true ||
-    (!buyerTaxCode && !parsed.data.buyerName?.trim());
-  const buyerName = parsed.data.buyerName?.trim() || BUYER_NOT_GET_INVOICE_NAME;
-
-  // Use provider interface — runtime registers Viettel S-invoice only.
-  ensureInvoiceProviderRegistered();
-  const invoiceProvider = getInvoiceProvider();
-
-  let invoiceNumber: string | null;
-  let providerRef: string | null;
-  let invoiceStatus: "draft" | "signing" | "submitted" | "issued";
-  let providerData: Record<string, unknown> | undefined;
-  let cqtCode: string | null = null;
-
-  // activeItems already computed above for VAT aggregation; the empty-
-  // items check still applies here (provider payload cannot have zero lines).
-  if (activeItems.length === 0) {
-    return {
-      success: false,
-      error: "Đơn hàng không có món nào để xuất hóa đơn.",
-    };
-  }
-
-  const invoiceItems = applyInvoiceLineDiscount(
-    buildInvoiceLineItemsFromOrderItems(activeItems),
-    Number(order.order_discount_amount ?? order.discount_amount ?? 0),
-  );
-
-  if (invoiceProvider) {
-    const result = await invoiceProvider.createInvoice({
-      orderId: parsed.data.orderId,
-      orderNumber: `ORD-${parsed.data.orderId}`,
-      sellerName: "",
-      sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
-      sellerAddress: "",
-      buyerName,
-      buyerTaxCode,
-      buyerAddress,
-      buyerNotGetInvoice,
-      items: invoiceItems,
-      subtotal: Math.round(subtotal * 100) / 100,
-      vatRate,
-      vatAmount: Math.round(vatAmount * 100) / 100,
-      totalAmount: Number(order.total_amount),
-    });
-    invoiceNumber = result.invoiceNumber;
-    providerRef = result.providerRef;
-    invoiceStatus = result.status === "failed" ? "draft" : result.status;
-    providerData = result.providerData;
-    cqtCode =
-      typeof result.codeOfTax === "string" && result.codeOfTax.trim().length > 0
-        ? result.codeOfTax
-        : null;
-  } else {
-    // No provider configured — create as draft with unique ID
-    invoiceNumber = `DRAFT-${order.branch_id}-${crypto.randomUUID().slice(0, 8)}`;
-    providerRef = invoiceNumber;
-    invoiceStatus = "draft";
-    providerData = undefined;
-  }
-
-  const stateTimestamp = new Date().toISOString();
-  const hasProviderSubmission =
-    invoiceStatus === "signing" ||
-    invoiceStatus === "submitted" ||
-    invoiceStatus === "issued";
-
-  const invoiceWrite = {
-    tenant_id: claims.tenant_id,
-    branch_id: order.branch_id,
-    order_id: parsed.data.orderId,
-    invoice_number: invoiceNumber,
-    status: invoiceStatus,
-    buyer_name: buyerName,
-    buyer_tax_code: buyerTaxCode ?? null,
-    buyer_address: buyerAddress ?? null,
-    subtotal: Math.round(subtotal * 100) / 100,
-    vat_rate: vatRate,
-    vat_amount: Math.round(vatAmount * 100) / 100,
-    total_amount: Number(order.total_amount),
-    provider: invoiceProvider?.name ?? "viettel",
-    provider_ref: providerRef,
-    provider_data: providerData
-      ? JSON.parse(JSON.stringify(providerData))
-      : null,
-    cqt_code: cqtCode,
-    signing_started_at: hasProviderSubmission ? stateTimestamp : null,
-    issued_at: invoiceStatus === "issued" ? stateTimestamp : null,
-  };
-
-  const invoiceMutation = retryDraftInvoiceId
-    ? supabase
-        .from("tax_invoices")
-        .update(invoiceWrite)
-        .eq("id", retryDraftInvoiceId)
-        .eq("tenant_id", claims.tenant_id)
-        .eq("status", "draft")
-    : supabase.from("tax_invoices").insert({
-        ...invoiceWrite,
-        created_by: user.id,
-      });
-
-  const { data: invoice, error: insertErr } = await invoiceMutation
-    .select("id, invoice_number, status")
-    .single();
-
-  if (insertErr) {
-    console.error("[finance/actions:createTaxInvoice] Insert/update invoice error:", insertErr);
-    if (insertErr.code === "23505") {
-      // UNIQUE partial idx uq_tax_invoices_active_per_order — concurrent
-      // double-click slipped past the maybeSingle() pre-check above.
-      return { success: false, error: "Đơn hàng đã có hóa đơn." };
-    }
-    return { success: false, error: "Không thể tạo hóa đơn." };
-  }
+  const result = await issueTaxInvoiceForPaidOrder({
+    supabase,
+    tenantId: claims.tenant_id,
+    input: parsed.data,
+    actorId: user.id,
+    canAccessBranch: (branchId) => canAccessBranch(supabase, claims, branchId),
+    logPrefix: "finance/actions:createTaxInvoice",
+  });
+  if (!result.success) return result;
 
   await logAudit(supabase, {
     action: "create",
     entityType: "tax_invoice",
-    entityId: invoice?.id ?? null,
-    newData: { invoice_number: invoice?.invoice_number, status: invoiceStatus },
+    entityId: result.data?.id ?? null,
+    newData: {
+      invoice_number: result.data?.invoice_number,
+      status: result.data?.status,
+    },
   });
 
-  return { success: true, data: invoice };
+  return result;
 }
 
 /* ─── HĐĐT: Bulk re-issue provider-rejected drafts ─── */
 
 const REISSUE_ALL_CAP = 20;
 const REISSUE_ALL_BUDGET_MS = 40_000;
+const SEPAY_MISSING_SCAN_CAP = 200;
 
 /**
  * Bulk-reissue draft invoices (status='draft' with no invoice_number — i.e.
@@ -465,6 +181,147 @@ export async function reissueAllDraftInvoices(): Promise<ActionResult> {
   return {
     success: true,
     data: { issued, failed, remaining: remaining ?? 0 },
+  };
+}
+
+export async function issueMissingSepayInvoices(): Promise<
+  ActionResult<{
+    issued: number;
+    failed: number;
+    skipped: number;
+    remainingInScan: number;
+  }>
+> {
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
+  if (!ctx) return { success: false, errorCode: "forbidden" };
+
+  const { supabase, claims, user } = ctx;
+
+  const { data: webhookRows, error: webhookErr } = await supabase
+    .from("webhook_events")
+    .select("id, payment_id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("provider", "sepay")
+    .eq("processing_status", "processed")
+    .not("payment_id", "is", null)
+    .order("created_at", { ascending: true })
+    .limit(SEPAY_MISSING_SCAN_CAP);
+
+  if (webhookErr) {
+    console.error("[finance/actions:issueMissingSepayInvoices] Fetch webhook_events error:", webhookErr);
+    return { success: false, errorCode: "load_failed" };
+  }
+
+  const paymentIds = Array.from(
+    new Set(
+      (webhookRows ?? [])
+        .map((row) => row.payment_id)
+        .filter((id): id is number => typeof id === "number"),
+    ),
+  );
+  if (paymentIds.length === 0) {
+    return {
+      success: true,
+      data: { issued: 0, failed: 0, skipped: 0, remainingInScan: 0 },
+    };
+  }
+
+  const { data: payments, error: paymentErr } = await supabase
+    .from("payments")
+    .select("id, order_id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("method", "vietqr")
+    .eq("status", "completed")
+    .in("id", paymentIds);
+
+  if (paymentErr) {
+    console.error("[finance/actions:issueMissingSepayInvoices] Fetch payments error:", paymentErr);
+    return { success: false, errorCode: "load_failed" };
+  }
+
+  const orderIds = Array.from(new Set((payments ?? []).map((p) => p.order_id)));
+  if (orderIds.length === 0) {
+    return {
+      success: true,
+      data: { issued: 0, failed: 0, skipped: 0, remainingInScan: 0 },
+    };
+  }
+
+  const [{ data: activeInvoices }, { data: summaryLinks }] = await Promise.all([
+    supabase
+      .from("tax_invoices")
+      .select("order_id")
+      .eq("tenant_id", claims.tenant_id)
+      .in("order_id", orderIds)
+      .not("status", "in", '("cancelled","replaced","not_required")'),
+    supabase
+      .from("tax_invoice_orders")
+      .select("order_id, tax_invoices(status)")
+      .eq("tenant_id", claims.tenant_id)
+      .in("order_id", orderIds),
+  ]);
+
+  const invoicedOrderIds = new Set(
+    (activeInvoices ?? [])
+      .map((row) => row.order_id)
+      .filter((id): id is number => typeof id === "number"),
+  );
+  const summaryOrderIds = new Set(
+    ((summaryLinks ?? []) as Array<{
+      order_id: number | null;
+      tax_invoices: { status: string } | null;
+    }>)
+      .filter(
+        (link) =>
+          link.order_id != null &&
+          link.tax_invoices != null &&
+          !["cancelled", "replaced"].includes(link.tax_invoices.status),
+      )
+      .map((link) => link.order_id as number),
+  );
+
+  const missingOrderIds = orderIds.filter(
+    (orderId) =>
+      !invoicedOrderIds.has(orderId) && !summaryOrderIds.has(orderId),
+  );
+
+  let issued = 0;
+  let failed = 0;
+  let skipped = 0;
+  const startedAt = Date.now();
+  for (const orderId of missingOrderIds.slice(0, REISSUE_ALL_CAP)) {
+    if (Date.now() - startedAt > REISSUE_ALL_BUDGET_MS) break;
+    const result = await issueTaxInvoiceForPaidOrder({
+      supabase,
+      tenantId: claims.tenant_id,
+      input: { orderId, buyerNotGetInvoice: true },
+      actorId: user.id,
+      canAccessBranch: (branchId) => canAccessBranch(supabase, claims, branchId),
+      logPrefix: "finance/actions:issueMissingSepayInvoices",
+    });
+    if (result.success) {
+      issued += 1;
+    } else if (
+      result.errorCode === "invoice_exists" ||
+      result.errorCode === "summary_invoice_exists"
+    ) {
+      skipped += 1;
+    } else {
+      failed += 1;
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      issued,
+      failed,
+      skipped,
+      remainingInScan: Math.max(0, missingOrderIds.length - issued - skipped),
+    },
   };
 }
 

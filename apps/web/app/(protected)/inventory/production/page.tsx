@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { loadProductionSurfaceData } from "../production-data";
 import { ProductionHubClient } from "../production-client";
 
@@ -51,6 +52,20 @@ export async function ProductionPageContent({
   );
 }
 
-export default async function ProductionPage() {
-  return <ProductionPageContent />;
+export default async function ProductionPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+}) {
+  const params = searchParams ? await searchParams : {};
+  const qParams = new URLSearchParams();
+  qParams.set("tab", "production");
+  if (params.branchId) {
+    if (Array.isArray(params.branchId)) {
+      params.branchId.forEach((id) => qParams.append("branchId", id));
+    } else {
+      qParams.set("branchId", params.branchId);
+    }
+  }
+  redirect(`/inventory/operations?${qParams.toString()}`);
 }

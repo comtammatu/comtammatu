@@ -60,6 +60,7 @@ export async function loadGrnDetail(
       received_date: string | null;
       branch_id: number;
       supplier_id: number;
+      branches: { id: number; name: string } | null;
       suppliers: { id: number; name: string } | null;
       purchase_orders: { id: number; po_number: string } | null;
     };
@@ -98,6 +99,7 @@ export async function loadGrnDetail(
   if (routeBranchId != null && d.grn.branch_id !== routeBranchId) return null;
 
   const supplier = d.grn.suppliers as { id: number; name: string } | null;
+  const branch = d.grn.branches as { id: number; name: string } | null;
   const po = d.grn.purchase_orders as {
     id: number;
     po_number: string;
@@ -181,6 +183,7 @@ export async function loadGrnDetail(
     poId: po?.id,
     invoiceId: d.invoiceId ?? null,
     branchId: d.grn.branch_id,
+    branchName: branch?.name ?? `#${d.grn.branch_id}`,
     supplierId: d.grn.supplier_id,
     supplier: supplier?.name ?? "—",
     date: d.grn.received_date ? formatDate(d.grn.received_date) : "—",

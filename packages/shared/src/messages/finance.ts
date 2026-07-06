@@ -33,8 +33,11 @@ export const FINANCE_VI = {
   agreementDateLabel: "Ngày văn bản",
   buyerNameLabel: "Tên người mua",
   buyerTaxCodeLabel: "MST người mua",
+  buyerEmailLabel: "Email nhận hóa đơn",
+  buyerEmailPlaceholder: "email@example.com",
   buyerTaxCodePlaceholder: "0312891234 hoặc 0312891234-001",
   taxCodeFormatError: "MST phải có dạng 10 số hoặc 10-3 số",
+  emailFormatError: "Email không hợp lệ",
   replaceConfirmTitle: "Thay thế hóa đơn",
   createReplacementInvoice: "Tạo HĐ thay thế",
 } as const;

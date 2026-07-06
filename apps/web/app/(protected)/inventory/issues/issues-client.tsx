@@ -899,15 +899,16 @@ export function IssuesClient({
       >
         {(form) => {
           const selectedBranchId = form.watch("branchId");
-          const selectedKind =
-            branches.find((branch) => branch.id === Number(selectedBranchId))
-              ?.branchKind ?? null;
+          const selectedBranch =
+            branches.find((branch) => branch.id === Number(selectedBranchId)) ??
+            null;
+          const selectedKind = selectedBranch?.branchKind ?? null;
           return (
             <>
               <SelectField
                 control={form.control}
                 name="branchId"
-                label={BRANCH_VI.long}
+                label={`${BRANCH_VI.long} xuất`}
                 placeholder={BRANCH_VI.select}
                 options={branches.map((branch) => ({
                   value: String(branch.id),
@@ -915,6 +916,14 @@ export function IssuesClient({
                 }))}
                 required
               />
+              {selectedBranch ? (
+                <p className="text-xs text-muted-foreground">
+                  {`${BRANCH_VI.long} xuất: `}
+                  <span className="font-medium text-foreground">
+                    {selectedBranch.name}
+                  </span>
+                </p>
+              ) : null}
               <SelectField
                 control={form.control}
                 name="issueType"

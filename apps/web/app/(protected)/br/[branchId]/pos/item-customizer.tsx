@@ -425,6 +425,7 @@ export function ItemCustomizer({
                           >
                             <Checkbox
                               id={`modifier-${m.id}`}
+                              size="touch"
                               checked={selectedModifierIds.has(m.id)}
                               onCheckedChange={() => toggleModifier(m.id)}
                             />
@@ -469,6 +470,7 @@ export function ItemCustomizer({
                             <Checkbox
                               id={`side-${String(s.id)}`}
                               className="mt-1.5"
+                              size="touch"
                               checked={isSelected}
                               onCheckedChange={() => toggleSide(s.side_item.id)}
                             />
@@ -571,6 +573,7 @@ export function ItemCustomizer({
                       </FieldLabel>
                       <Checkbox
                         id="item-discount-toggle"
+                        size="touch"
                         checked={discountEnabled}
                         onCheckedChange={(checked) =>
                           setDiscountEnabled(checked === true)

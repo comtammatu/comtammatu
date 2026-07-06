@@ -7,10 +7,10 @@ const repoRoot = resolve(process.cwd(), "../..");
 const readRepo = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const migration = readRepo(
-  "supabase/migrations/20260706170000_inventory_unit_system_phase_a2_catalog_anchor.sql",
+  "supabase/migrations/_archive/20260706170000_inventory_unit_system_phase_a2_catalog_anchor.sql",
 );
 const unitLadderLockMigration = readRepo(
-  "supabase/migrations/20260706024311_inventory_unit_ladder_lock_by_stock_movements.sql",
+  "supabase/migrations/_archive/20260706024311_inventory_unit_ladder_lock_by_stock_movements.sql",
 );
 const ingredientActions = readRepo(
   "apps/web/app/(protected)/inventory/ingredient-actions.ts",

@@ -26,6 +26,7 @@ import { formatVNDateTime } from "@/_lib/format-datetime";
 
 const MI = messages.finance.invoiceList.manualIssue;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** YYYY-MM-DD → DD/MM/YYYY (summary_date is a plain date, not a timestamp). */
 function formatSummaryDate(date: string): string {
@@ -61,7 +62,9 @@ export function ManualIssueInvoiceDialog({
 
   const [branchId, setBranchId] = useState(initialBranch);
   const [orderNumber, setOrderNumber] = useState("");
-  const [preview, setPreview] = useState<ManualInvoiceOrderPreview | null>(null);
+  const [preview, setPreview] = useState<ManualInvoiceOrderPreview | null>(
+    null,
+  );
   // Buyer form — mirrors POS invoice-form-section: `enabled` = customer wants a
   // named invoice; when off, an HĐĐT still issues under the server-owned
   // "Bán cho người tiêu dùng".
@@ -69,6 +72,7 @@ export function ManualIssueInvoiceDialog({
   const [buyerName, setBuyerName] = useState("");
   const [buyerTaxCode, setBuyerTaxCode] = useState("");
   const [buyerAddress, setBuyerAddress] = useState("");
+  const [buyerEmail, setBuyerEmail] = useState("");
   const [isPending, startTransition] = useTransition();
 
   function resetAll() {
@@ -79,6 +83,7 @@ export function ManualIssueInvoiceDialog({
     setBuyerName("");
     setBuyerTaxCode("");
     setBuyerAddress("");
+    setBuyerEmail("");
   }
 
   function handleOpenChange(next: boolean) {
@@ -92,6 +97,7 @@ export function ManualIssueInvoiceDialog({
     setBuyerName("");
     setBuyerTaxCode("");
     setBuyerAddress("");
+    setBuyerEmail("");
   }
 
   const canLookup = branchId !== "" && orderNumber.trim().length > 0;
@@ -112,18 +118,21 @@ export function ManualIssueInvoiceDialog({
   }
 
   const mstTrim = buyerTaxCode.trim();
+  const emailTrim = buyerEmail.trim();
   const mstInvalid = mstTrim.length > 0 && !MST_REGEX.test(mstTrim);
+  const emailInvalid = emailTrim.length > 0 && !EMAIL_REGEX.test(emailTrim);
   const nameMissing =
     enabled && mstTrim.length > 0 && buyerName.trim().length === 0;
-  const buyerValid = !mstInvalid && !nameMissing;
+  const buyerValid = !mstInvalid && !emailInvalid && !nameMissing;
 
   function handleIssue() {
     if (!preview || !preview.issuable || !buyerValid) return;
     const name = enabled ? buyerName.trim() : "";
     const mst = enabled ? mstTrim : "";
     const addr = enabled ? buyerAddress.trim() : "";
+    const email = enabled ? emailTrim : "";
     const hasBuyerDetails =
-      name.length > 0 || mst.length > 0 || addr.length > 0;
+      name.length > 0 || mst.length > 0 || addr.length > 0 || email.length > 0;
     const orderId = preview.orderId;
 
     startTransition(async () => {
@@ -132,6 +141,7 @@ export function ManualIssueInvoiceDialog({
         ...(name ? { buyerName: name } : {}),
         ...(mst ? { buyerTaxCode: mst } : {}),
         ...(addr ? { buyerAddress: addr } : {}),
+        ...(email ? { buyerEmail: email } : {}),
         ...(!enabled || !hasBuyerDetails ? { buyerNotGetInvoice: true } : {}),
       });
       if (!result.success) {
@@ -194,134 +204,154 @@ export function ManualIssueInvoiceDialog({
       footer={footer}
     >
       {!preview ? (
-          <div className="grid gap-3">
-            <div className="grid gap-2">
-              <Label htmlFor="manual-issue-branch">{MI.branchLabel}</Label>
-              <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger id="manual-issue-branch">
-                  <SelectValue placeholder={MI.branchPlaceholder} />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="manual-issue-order">{MI.orderNumberLabel}</Label>
-              <Input
-                id="manual-issue-order"
-                value={orderNumber}
-                disabled={isPending}
-                onChange={(e) => setOrderNumber(e.target.value)}
-                placeholder={MI.orderNumberPlaceholder}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleLookup();
-                }}
-              />
-            </div>
+        <div className="grid gap-3">
+          <div className="grid gap-2">
+            <Label htmlFor="manual-issue-branch">{MI.branchLabel}</Label>
+            <Select value={branchId} onValueChange={setBranchId}>
+              <SelectTrigger id="manual-issue-branch">
+                <SelectValue placeholder={MI.branchPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        ) : (
-          <div className="grid gap-3">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-              <dt className="text-muted-foreground">{MI.orderNumberLabel}</dt>
-              <dd className="font-mono">{preview.orderNumber}</dd>
-              <dt className="text-muted-foreground">{MI.totalLabel}</dt>
-              <dd className="font-mono tabular-nums">
-                {formatVND(preview.totalAmount)}
-              </dd>
-              <dt className="text-muted-foreground">{MI.timeLabel}</dt>
-              <dd>{formatVNDateTime(preview.createdAt)}</dd>
-            </dl>
+          <div className="grid gap-2">
+            <Label htmlFor="manual-issue-order">{MI.orderNumberLabel}</Label>
+            <Input
+              id="manual-issue-order"
+              value={orderNumber}
+              disabled={isPending}
+              onChange={(e) => setOrderNumber(e.target.value)}
+              placeholder={MI.orderNumberPlaceholder}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleLookup();
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dt className="text-muted-foreground">{MI.orderNumberLabel}</dt>
+            <dd className="font-mono">{preview.orderNumber}</dd>
+            <dt className="text-muted-foreground">{MI.totalLabel}</dt>
+            <dd className="font-mono tabular-nums">
+              {formatVND(preview.totalAmount)}
+            </dd>
+            <dt className="text-muted-foreground">{MI.timeLabel}</dt>
+            <dd>{formatVNDateTime(preview.createdAt)}</dd>
+          </dl>
 
-            {ineligibleReason ? (
-              <Alert variant="destructive">
-                <AlertDescription>{ineligibleReason}</AlertDescription>
-              </Alert>
-            ) : (
-              <>
-                {preview.isDraftRetry ? (
-                  <Alert>
-                    <AlertDescription>{MI.draftRetry}</AlertDescription>
-                  </Alert>
-                ) : null}
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="manual-issue-no-invoice"
-                    checked={!enabled}
-                    disabled={isPending}
-                    onCheckedChange={(checked) => {
-                      if (checked === true) {
-                        setEnabled(false);
-                        setBuyerName("");
-                        setBuyerTaxCode("");
-                        setBuyerAddress("");
-                      } else {
-                        setEnabled(true);
-                      }
-                    }}
-                  />
-                  <Label htmlFor="manual-issue-no-invoice">
-                    {POS_VI.buyerNoInvoice}
-                  </Label>
-                </div>
-                {enabled ? (
-                  <div className="grid gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="manual-issue-buyer-name">
-                        {FINANCE_VI.buyerNameLabel}
-                      </Label>
-                      <Input
-                        id="manual-issue-buyer-name"
-                        value={buyerName}
-                        disabled={isPending}
-                        maxLength={200}
-                        onChange={(e) => setBuyerName(e.target.value)}
-                        placeholder={POS_VI.buyerNamePlaceholder}
-                        aria-invalid={nameMissing || undefined}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="manual-issue-buyer-mst">
-                        {FINANCE_VI.buyerTaxCodeLabel}
-                      </Label>
-                      <Input
-                        id="manual-issue-buyer-mst"
-                        value={buyerTaxCode}
-                        disabled={isPending}
-                        maxLength={14}
-                        onChange={(e) => setBuyerTaxCode(e.target.value)}
-                        placeholder={FINANCE_VI.buyerTaxCodePlaceholder}
-                        aria-invalid={mstInvalid || undefined}
-                      />
-                      {mstInvalid ? (
-                        <p className="text-xs text-destructive">
-                          {FINANCE_VI.taxCodeFormatError}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="manual-issue-buyer-addr">
-                        {POS_VI.addressLabel}
-                      </Label>
-                      <Input
-                        id="manual-issue-buyer-addr"
-                        value={buyerAddress}
-                        disabled={isPending}
-                        maxLength={500}
-                        onChange={(e) => setBuyerAddress(e.target.value)}
-                      />
-                    </div>
+          {ineligibleReason ? (
+            <Alert variant="destructive">
+              <AlertDescription>{ineligibleReason}</AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              {preview.isDraftRetry ? (
+                <Alert>
+                  <AlertDescription>{MI.draftRetry}</AlertDescription>
+                </Alert>
+              ) : null}
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="manual-issue-no-invoice"
+                  checked={!enabled}
+                  disabled={isPending}
+                  onCheckedChange={(checked) => {
+                    if (checked === true) {
+                      setEnabled(false);
+                      setBuyerName("");
+                      setBuyerTaxCode("");
+                      setBuyerAddress("");
+                      setBuyerEmail("");
+                    } else {
+                      setEnabled(true);
+                    }
+                  }}
+                />
+                <Label htmlFor="manual-issue-no-invoice">
+                  {POS_VI.buyerNoInvoice}
+                </Label>
+              </div>
+              {enabled ? (
+                <div className="grid gap-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="manual-issue-buyer-name">
+                      {FINANCE_VI.buyerNameLabel}
+                    </Label>
+                    <Input
+                      id="manual-issue-buyer-name"
+                      value={buyerName}
+                      disabled={isPending}
+                      maxLength={200}
+                      onChange={(e) => setBuyerName(e.target.value)}
+                      placeholder={POS_VI.buyerNamePlaceholder}
+                      aria-invalid={nameMissing || undefined}
+                    />
                   </div>
-                ) : null}
-              </>
-            )}
-          </div>
-        )}
-
+                  <div className="grid gap-2">
+                    <Label htmlFor="manual-issue-buyer-mst">
+                      {FINANCE_VI.buyerTaxCodeLabel}
+                    </Label>
+                    <Input
+                      id="manual-issue-buyer-mst"
+                      value={buyerTaxCode}
+                      disabled={isPending}
+                      maxLength={14}
+                      onChange={(e) => setBuyerTaxCode(e.target.value)}
+                      placeholder={FINANCE_VI.buyerTaxCodePlaceholder}
+                      aria-invalid={mstInvalid || undefined}
+                    />
+                    {mstInvalid ? (
+                      <p className="text-xs text-destructive">
+                        {FINANCE_VI.taxCodeFormatError}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="manual-issue-buyer-addr">
+                      {POS_VI.addressLabel}
+                    </Label>
+                    <Input
+                      id="manual-issue-buyer-addr"
+                      value={buyerAddress}
+                      disabled={isPending}
+                      maxLength={500}
+                      onChange={(e) => setBuyerAddress(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="manual-issue-buyer-email">
+                      {FINANCE_VI.buyerEmailLabel}
+                    </Label>
+                    <Input
+                      id="manual-issue-buyer-email"
+                      type="email"
+                      value={buyerEmail}
+                      disabled={isPending}
+                      maxLength={254}
+                      onChange={(e) => setBuyerEmail(e.target.value)}
+                      placeholder={FINANCE_VI.buyerEmailPlaceholder}
+                      aria-invalid={emailInvalid || undefined}
+                    />
+                    {emailInvalid ? (
+                      <p className="text-xs text-destructive">
+                        {FINANCE_VI.emailFormatError}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
+      )}
     </AppDialog>
   );
 }

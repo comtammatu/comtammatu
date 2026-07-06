@@ -7,7 +7,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const readRepo = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const migration = readRepo(
-  "supabase/migrations/20260703160000_inventory_unit_system_phase_a.sql",
+  "supabase/migrations/_archive/20260703160000_inventory_unit_system_phase_a.sql",
 );
 const baseline = readRepo("supabase/migrations/00000000000000_baseline.sql");
 
@@ -134,7 +134,7 @@ test("inv_derive_to_base_factor is present in the baseline for a from-empty inst
   assert.match(baseline, /CREATE FUNCTION public\.inv_derive_to_base_factor/);
   assert.match(
     baseline,
-    /GRANT EXECUTE ON FUNCTION public\.inv_derive_to_base_factor\(/,
+    /GRANT (?:EXECUTE|ALL) ON FUNCTION public\.inv_derive_to_base_factor\(/,
   );
 });
 

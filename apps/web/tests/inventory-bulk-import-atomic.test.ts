@@ -19,7 +19,7 @@ function sourceBetween(source: string, start: string, end: string): string {
 
 test("WF-09 migration defines atomic bulk import RPC contracts", () => {
   const sql = read(
-    "supabase/migrations/20260702105307_wf09_bulk_import_atomic.sql",
+    "supabase/migrations/_archive/20260702105307_wf09_bulk_import_atomic.sql",
   );
 
   for (const fn of [

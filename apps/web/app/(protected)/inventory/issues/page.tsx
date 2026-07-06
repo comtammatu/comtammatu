@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchStockIssues } from "../issue-actions";
 import {
@@ -294,11 +294,24 @@ export default async function IssuesPage({
     startDate?: string | string[];
   }>;
 }) {
-  return (
-    <IssuesPageContent
-      searchParams={searchParams}
-      scope="internal"
-      listBasePath="/inventory/issues"
-    />
-  );
+  const params = await searchParams;
+  const qParams = new URLSearchParams();
+  qParams.set("tab", "issues");
+  if (params.branchId) {
+    if (Array.isArray(params.branchId)) {
+      params.branchId.forEach((id) => qParams.append("branchId", id));
+    } else {
+      qParams.set("branchId", params.branchId);
+    }
+  }
+  // forward date parameters if they exist
+  if (params.startDate) {
+    const sd = Array.isArray(params.startDate) ? params.startDate[0] : params.startDate;
+    if (sd) qParams.set("startDate", sd);
+  }
+  if (params.endDate) {
+    const ed = Array.isArray(params.endDate) ? params.endDate[0] : params.endDate;
+    if (ed) qParams.set("endDate", ed);
+  }
+  redirect(`/inventory/operations?${qParams.toString()}`);
 }

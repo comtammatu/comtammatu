@@ -1114,6 +1114,7 @@ const invoicePayloadSchema = z
     buyerName: z.string().trim().max(200).optional(),
     buyerTaxCode: z.string().trim().optional(),
     buyerAddress: z.string().trim().max(500).optional(),
+    buyerEmail: z.email({ error: "Email không hợp lệ" }).optional(),
     buyerNotGetInvoice: z.boolean().optional(),
   })
   .optional()

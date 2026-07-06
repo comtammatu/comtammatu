@@ -73,7 +73,8 @@ test("POS invoice buyer form is available for cash and VietQR confirmation", () 
 });
 
 test("createTaxInvoice does not create new not_required/skipped rows", () => {
-  const src = read("apps/web/app/(protected)/finance/actions.ts");
+  const src = read("apps/web/lib/hddt-per-order.ts");
+  const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
 
   assert.ok(
     !/status:\s*"not_required"/.test(src),
@@ -92,6 +93,10 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
     "missing buyerNotGetInvoice pass-through to provider calls",
   );
   assert.ok(
+    src.includes("buyerEmail"),
+    "missing buyerEmail pass-through to provider calls",
+  );
+  assert.ok(
     src.includes("signing_started_at"),
     "provider-submitted invoices must be reconcile-eligible",
   );
@@ -103,10 +108,61 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
     src.includes('.select("id, invoice_number, status")'),
     "POS toast needs persisted invoice status, especially provider failures",
   );
+  assert.ok(
+    actionSrc.includes("issueTaxInvoiceForPaidOrder"),
+    "createTaxInvoice action must use the shared per-order issue helper",
+  );
+});
+
+test("SePay webhook attempts HĐĐT after successful webhook payment", () => {
+  const src = read("apps/web/app/api/webhooks/sepay/route.ts");
+
+  assert.ok(
+    src.includes("issueTaxInvoiceForPaidOrder"),
+    "SePay paid webhook must attempt per-order HĐĐT issuance",
+  );
+  assert.match(
+    src,
+    /status === "completed" \|\| status === "already_completed"/,
+    "HĐĐT attempt must run for both fresh and idempotent paid webhook outcomes",
+  );
+  assert.ok(
+    src.includes("error_code: invoiceErrorCode"),
+    "webhook event should record invoice attempt failure without failing payment",
+  );
+});
+
+test("finance can recover paid SePay orders that missed HĐĐT", () => {
+  const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
+  const listSrc = read("apps/web/app/(protected)/finance/invoice-list.tsx");
+
+  assert.ok(
+    actionSrc.includes("issueMissingSepayInvoices"),
+    "finance must expose a bounded recovery action for processed SePay webhooks",
+  );
+  assert.match(
+    actionSrc,
+    /\.from\("webhook_events"\)[\s\S]*\.eq\("provider", "sepay"\)[\s\S]*\.eq\("processing_status", "processed"\)/,
+    "recovery candidates must come from processed SePay webhook events",
+  );
+  assert.match(
+    actionSrc,
+    /\.from\("payments"\)[\s\S]*\.eq\("method", "vietqr"\)[\s\S]*\.eq\("status", "completed"\)/,
+    "recovery must bind processed webhooks to completed VietQR payments",
+  );
+  assert.match(
+    actionSrc,
+    /issueTaxInvoiceForPaidOrder\(\{/,
+    "recovery must reuse the shared per-order HĐĐT helper and duplicate guards",
+  );
+  assert.ok(
+    listSrc.includes("issueMissingSepayInvoices"),
+    "finance invoice list must expose the recovery action to operators",
+  );
 });
 
 test("per-order HĐĐT payload expands POS modifiers and sides", () => {
-  const createSrc = read("apps/web/app/(protected)/finance/actions.ts");
+  const createSrc = read("apps/web/lib/hddt-per-order.ts");
   const replaceSrc = read(
     "apps/web/app/(protected)/finance/replace-invoice-actions.ts",
   );
@@ -137,6 +193,28 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
       "provider item payload must apply only the remaining order-level discount after item discounts",
     );
   }
+});
+
+test("per-order HKD HĐĐT never carries VAT", () => {
+  const createSrc = read("apps/web/lib/hddt-per-order.ts");
+
+  assert.match(
+    createSrc,
+    /const subtotal(?:: number)? = orderTotal;/,
+    "HKD HĐĐT subtotal must be the paid total, not a reverse VAT split",
+  );
+  assert.match(
+    createSrc,
+    /const vatRate(?:: number)? = 0;[\s\S]*const vatAmount(?:: number)? = 0;/,
+    "HKD HĐĐT must not carry VAT rate or VAT amount",
+  );
+  assert.ok(
+    !createSrc.includes("resolveSalesTaxProfile") &&
+      !createSrc.includes("estimateAnnualRevenue") &&
+      !createSrc.includes("item.vat_rate") &&
+      !createSrc.includes("status, vat_rate"),
+    "per-order HĐĐT must not derive VAT from tax profiles or order_items",
+  );
 });
 
 test("POS item-level discount migration and actions exist", () => {

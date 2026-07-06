@@ -11,6 +11,7 @@ import {
   Trash as IconTrash,
   X as IconX,
 } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
@@ -41,16 +42,15 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   AppDetailFooter,
   AppEmptyState,
   AppPage,
   AppPageHeader,
   AppSection,
+  DescriptionList,
 } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
-import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
@@ -73,6 +73,7 @@ import type { IngredientRow } from "../../page";
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 
 const ISSUES_VI = messages.inventory.issues;
+const historySectionTitle = "Lịch sử chỉnh sửa";
 
 type IssueRecord = {
   id: number;
@@ -194,6 +195,8 @@ export function IssueDetailClient({
     issue.branches?.branch_kind ?? null,
   );
   const statusBadge = getStatusBadgeMeta("inventory", issue.status);
+  const issueBranchName =
+    issue.branches?.name ?? ISSUES_VI.branchRef(issue.branch_id);
 
   const totalAmount = useMemo(
     () => lines.reduce((sum, line) => sum + Number(line.total_cost ?? 0), 0),
@@ -358,63 +361,10 @@ export function IssueDetailClient({
     },
   ];
 
-  const tabs = (
-    <AppPageTabs
-      items={[
-        { value: "overview", label: ISSUES_VI.overviewTab },
-        {
-          value: "lines",
-          label: ISSUES_VI.linesTab,
-          count: lines.length,
-        },
-        {
-          value: "history",
-          label: ISSUES_VI.historyTab,
-          count: auditLogs.length,
-        },
-      ]}
-    >
-      <TabsContent value="overview">
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            {[
-              {
-                label: ISSUES_VI.businessKindLabel,
-                value: surface.label,
-              },
-              {
-                label: BRANCH_VI.long,
-                value:
-                  issue.branches?.name ?? ISSUES_VI.branchRef(issue.branch_id),
-              },
-              {
-                label: ISSUES_VI.totalLines,
-                value: String(lines.length).padStart(2, "0"),
-              },
-              {
-                label: ISSUES_VI.sourceLabel,
-                value: getIssueSourceLabel(issue),
-              },
-              {
-                label: ISSUES_VI.totalValue,
-                value: formatVND(totalAmount),
-              },
-            ].map((item) => (
-              <KpiCard key={item.label} label={item.label} value={item.value} />
-            ))}
-          </div>
-
-          {issue.notes ? (
-            <AppSection title={surface.noteLabel} size="sm">
-              <p className="line-clamp-3 break-words text-sm text-muted-foreground">
-                {issue.notes}
-              </p>
-            </AppSection>
-          ) : null}
-        </div>
-      </TabsContent>
-
-      <TabsContent value="lines">
+  const pageLayout = (
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        {/* Left Column: Ingredients List Table + Audit History */}
         <div className="flex flex-col gap-4">
           <AppSection
             title={tTerm("ingredientsList")}
@@ -523,58 +473,129 @@ export function IssueDetailClient({
             </div>
           </AppSection>
 
-          {isDraft ? (
-            <AppDetailFooter
-              sticky={embedded}
-              leading={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size={embedded ? "touch" : "default"}
-                  onClick={handleCancelIssue}
-                  className="text-destructive hover:bg-destructive/8 hover:text-destructive disabled:opacity-60"
-                  disabled={isPending}
-                >
-                  <IconX className="size-5" />
-                  {ISSUES_VI.cancelIssueAction}
-                </Button>
-              }
-              trailing={
-                <>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size={embedded ? "touch" : "default"}
-                    disabled
-                  >
-                    {ISSUES_VI.draftAutoSaved}
-                  </Button>
-                  <Button
-                    type="button"
-                    size={embedded ? "touch-lg" : "default"}
-                    onClick={handleConfirmIssue}
-                    disabled={isPending || lines.length === 0}
-                    className="transition-transform hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <IconCircleCheck className="size-5" />
-                    {surface.confirmAction}
-                  </Button>
-                </>
-              }
+          {/* Audit History (Collapsible) */}
+          <AppSection
+            title={historySectionTitle}
+            collapsible={true}
+            defaultOpen={false}
+          >
+            <AuditHistoryList logs={auditLogs} />
+          </AppSection>
+        </div>
+
+        {/* Right Column: Metadata Overview + Notes */}
+        <div className="flex flex-col gap-4">
+          <AppSection title={ISSUES_VI.overviewTab}>
+            <DescriptionList
+              className="grid gap-3"
+              descriptionClassName="font-semibold"
+              items={[
+                {
+                  term: ISSUES_VI.businessKindLabel,
+                  description: surface.label,
+                },
+                {
+                  term: `${BRANCH_VI.long} xuất`,
+                  description: issueBranchName,
+                },
+                {
+                  term: ISSUES_VI.totalLines,
+                  description: String(lines.length).padStart(2, "0"),
+                },
+                {
+                  term: ISSUES_VI.sourceLabel,
+                  description: getIssueSourceLabel(issue),
+                },
+                {
+                  term: ISSUES_VI.totalValue,
+                  description: (
+                    <span className="text-primary font-bold">
+                      {messages.inventory.common.currency(formatVND(totalAmount))}
+                    </span>
+                  ),
+                },
+              ]}
             />
+          </AppSection>
+
+          {issue.notes ? (
+            <AppSection title={surface.noteLabel} size="sm">
+              <p className="line-clamp-3 break-words text-sm text-muted-foreground">
+                {issue.notes}
+              </p>
+            </AppSection>
           ) : null}
         </div>
-      </TabsContent>
+      </div>
 
-      <TabsContent value="history">
-        <AuditHistoryList logs={auditLogs} />
-      </TabsContent>
-    </AppPageTabs>
+      {isDraft ? (
+        <AppDetailFooter
+          sticky={embedded}
+          leading={
+            <Button
+              type="button"
+              variant="ghost"
+              size={embedded ? "touch" : "default"}
+              onClick={handleCancelIssue}
+              className="text-destructive hover:bg-destructive/8 hover:text-destructive disabled:opacity-60"
+              disabled={isPending}
+            >
+              <IconX className="size-5" />
+              {ISSUES_VI.cancelIssueAction}
+            </Button>
+          }
+          trailing={
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                size={embedded ? "touch" : "default"}
+                disabled
+              >
+                {ISSUES_VI.draftAutoSaved}
+              </Button>
+              <Button
+                type="button"
+                size={embedded ? "touch-lg" : "default"}
+                onClick={handleConfirmIssue}
+                disabled={isPending || lines.length === 0}
+                className="transition-transform hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <IconCircleCheck className="size-5" />
+                {surface.confirmAction}
+              </Button>
+            </>
+          }
+        />
+      ) : null}
+    </div>
   );
 
-  const content = (
+  const embeddedContent = (
     <>
-      {tabs}
+      <div className="flex items-center gap-2">
+        <Button asChild variant="ghost" size="icon" className="shrink-0">
+          <Link href={listBasePath} aria-label={tRoute("/inventory/consumption")}>
+            <IconArrowLeft className="size-4" />
+          </Link>
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-mono text-sm font-semibold">
+            {issue.issue_number}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {ISSUES_VI.headerMeta(
+              surface.label,
+              issueBranchName,
+              issue.issued_at ? formatDateTime(issue.issued_at) : "—",
+            )}
+          </p>
+        </div>
+        <Badge variant={statusBadge.variant} className="shrink-0">
+          {statusBadge.label}
+        </Badge>
+      </div>
+      {pageLayout}
 
       <AddIssueLineDialog
         ingredients={ingredients}
@@ -588,17 +609,17 @@ export function IssueDetailClient({
   );
 
   if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
+    return <div className="flex w-full flex-col gap-3">{embeddedContent}</div>;
   }
 
   return (
-    <AppPage width="wide" density="compact">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         eyebrow={surface.eyebrow}
         title={issue.issue_number}
         description={ISSUES_VI.headerMeta(
           surface.label,
-          issue.branches?.name ?? ISSUES_VI.branchRef(issue.branch_id),
+          issueBranchName,
           issue.issued_at ? formatDateTime(issue.issued_at) : "—",
         )}
         badge={{
@@ -614,8 +635,8 @@ export function IssueDetailClient({
             {tRoute("/inventory/consumption")}
           </Link>
         }
-        tabs={tabs}
       />
+      {pageLayout}
       <AddIssueLineDialog
         ingredients={ingredients}
         isOpen={addDialogOpen}

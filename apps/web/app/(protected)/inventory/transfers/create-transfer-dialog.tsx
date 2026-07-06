@@ -26,6 +26,7 @@ import {
   AppDetailFooter,
   AppEmptyState,
   AppSection,
+  DescriptionList,
 } from "@/components/surface";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { getDefaultIssueUnit, getIssueUnitOptions } from "../_lib/issue-units";
@@ -139,6 +140,16 @@ export function CreateTransferForm({
     }
     return myBranchName;
   }, [branches, inboundFromBranchId, isBranchManager, myBranchName]);
+  const outboundDestinationName = useMemo(() => {
+    const branch = branches.find(
+      (item) => String(item.id) === outboundToBranchId,
+    );
+    return branch ? formatBranchSiteLabel(branch) : null;
+  }, [branches, outboundToBranchId]);
+  const inboundSourceName = useMemo(() => {
+    const branch = branches.find((item) => String(item.id) === inboundFromBranchId);
+    return branch ? formatBranchSiteLabel(branch) : null;
+  }, [branches, inboundFromBranchId]);
 
   const numpadLine = useMemo(
     () => draftLines.find((line) => line.key === numpadLineKey) ?? null,
@@ -319,11 +330,23 @@ export function CreateTransferForm({
       <AppSection title={messages.inventory.transfer.createTransferTitle}>
         {canCreateInboundRequest ? (
           <div className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">
-              {myBranchName
-                ? `Yêu cầu hàng về ${myBranchName}.`
-                : messages.inventory.transfer.inboundToSelected}
-            </p>
+            <DescriptionList
+              className="grid gap-2 sm:grid-cols-2"
+              descriptionClassName="font-semibold"
+              items={[
+                {
+                  term: "Kho đi",
+                  description:
+                    inboundSourceName ??
+                    messages.inventory.transfer.chooseSendingWarehouse,
+                },
+                {
+                  term: "Kho đến",
+                  description:
+                    myBranchName ?? messages.inventory.transfer.inboundToSelected,
+                },
+              ]}
+            />
             <div className="flex flex-col gap-1.5">
               <Label>
                 {messages.inventory.transfer.sendingWarehouseRequired}
@@ -356,11 +379,24 @@ export function CreateTransferForm({
           </div>
         ) : canCreateOutbound ? (
           <div className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">
-              {myBranchName
-                ? messages.inventory.transfer.outboundFromBranch(myBranchName)
-                : messages.inventory.transfer.outboundFromSelected}
-            </p>
+            <DescriptionList
+              className="grid gap-2 sm:grid-cols-2"
+              descriptionClassName="font-semibold"
+              items={[
+                {
+                  term: "Kho đi",
+                  description:
+                    myBranchName ??
+                    messages.inventory.transfer.outboundFromSelected,
+                },
+                {
+                  term: "Kho đến",
+                  description:
+                    outboundDestinationName ??
+                    messages.inventory.transfer.chooseReceivingWarehouse,
+                },
+              ]}
+            />
             <div className="flex flex-col gap-1.5">
               <Label>
                 {messages.inventory.transfer.receivingWarehouseRequired}

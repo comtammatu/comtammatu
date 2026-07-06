@@ -32,7 +32,7 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
-import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
+
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { TimelineStepper } from "../../_components/timeline-stepper";
@@ -47,6 +47,8 @@ import {
 import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
+const transferDetailTitle = "Chi tiết điều chuyển";
+const historySectionTitle = "Lịch sử chỉnh sửa";
 export type TransferDetail = {
   id: number;
   code: string;
@@ -331,31 +333,173 @@ export function TransferDetailClient({
     },
   ];
 
-  const detailTabs = (
-    <AppPageTabs
-      defaultValue={embedded ? "lines" : undefined}
-      items={[
-        { value: "overview", label: "Tổng quan" },
-        { value: "lines", label: "Dòng", count: transfer.items.length },
-        { value: "history", label: "Lịch sử", count: auditLogs.length },
-      ]}
-    >
-      <TabsContent value="overview">
+  const pageLayout = (
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        {/* Left Column: Ingredients List Table + Audit History */}
         <div className="flex flex-col gap-4">
-          <AppSection contentClassName="py-4">
-            <div className="flex justify-center">
-              <TimelineStepper steps={transferSteps} />
-            </div>
+          <AppSection
+            className="overflow-hidden"
+            title={tTerm("ingredientsList")}
+            headerHint={
+              isReceiveMode
+                ? copy.receiveInstructions
+                : copy.receivedReadonlyHint
+            }
+            contentFlush
+          >
+            <DataTable
+              className="p-4 md:p-0"
+              columns={lineColumns}
+              data={transfer.items}
+              getRowKey={(item) => item.sku || item.name}
+              emptyTitle={copy.emptyTransferItemsTitle}
+              emptyDescription={copy.emptyTransferItemsDescription}
+              mobileCardRender={(item) => (
+                <TransferLineMobileCard
+                  item={item}
+                  isReceiveMode={isReceiveMode}
+                  embedded={embedded}
+                  receiveValue={receiveQty[item.ingredientId] ?? ""}
+                  onReceiveValueChange={(value) =>
+                    setReceiveQty((prev) => ({
+                      ...prev,
+                      [item.ingredientId]: value,
+                    }))
+                  }
+                />
+              )}
+              mobileFooter={
+                <Item
+                  variant="outline"
+                  className="flex-col items-stretch gap-2 p-3 text-sm"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">
+                      {copy.totalValue}
+                    </span>
+                    <span className="font-mono font-semibold tabular-nums text-primary">
+                      {messages.inventory.common.currencyCompact(
+                        formatVND(transfer.total),
+                      )}
+                    </span>
+                  </div>
+                </Item>
+              }
+              desktopFooterRows={[
+                {
+                  key: "ingredient-value",
+                  className: "border-border",
+                  cells: [
+                    {
+                      key: "label",
+                      colSpan: 4,
+                      className: "text-right text-sm text-muted-foreground",
+                      content: copy.ingredientValue,
+                    },
+                    {
+                      key: "value",
+                      className: "text-right font-mono tabular-nums",
+                      content: messages.inventory.common.currencyCompact(
+                        formatVND(transfer.subtotal),
+                      ),
+                    },
+                    { key: "actions", content: null },
+                  ],
+                },
+                {
+                  key: "shipping-fee",
+                  className: "border-border",
+                  cells: [
+                    {
+                      key: "label",
+                      colSpan: 4,
+                      className: "text-right text-sm text-muted-foreground",
+                      content: copy.shippingFee,
+                    },
+                    {
+                      key: "value",
+                      className: "text-right font-mono tabular-nums",
+                      content: messages.inventory.common.currencyCompact(
+                        formatVND(transfer.shipping),
+                      ),
+                    },
+                    { key: "actions", content: null },
+                  ],
+                },
+                {
+                  key: "total-value",
+                  className: "border-border",
+                  cells: [
+                    {
+                      key: "label",
+                      colSpan: 4,
+                      className: "text-right text-sm font-bold",
+                      content: copy.totalValue,
+                    },
+                    {
+                      key: "value",
+                      className:
+                        "text-right font-mono font-bold tabular-nums text-primary",
+                      content: messages.inventory.common.currencyCompact(
+                        formatVND(transfer.total),
+                      ),
+                    },
+                    { key: "actions", content: null },
+                  ],
+                },
+              ]}
+            />
           </AppSection>
 
-          <AppSection title={copy.totalTransferValue}>
+          {isReceiveMode && hasShort ? (
+            <AppSection tone="warning">
+              <p className="text-sm font-semibold">
+                {copy.shortageNoteTitle}{" "}
+                <span className="text-destructive">*</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {copy.shortageNoteDescription(shortLines)}
+              </p>
+              <Textarea
+                value={shortNote}
+                onChange={(e) => setShortNote(e.target.value)}
+                rows={3}
+                maxLength={300}
+                placeholder={copy.shortageNotePlaceholder}
+              />
+              {!noteOk ? (
+                <p className="text-xs text-destructive">
+                  {copy.shortageNoteMinLength}
+                </p>
+              ) : null}
+            </AppSection>
+          ) : null}
+
+          {/* Audit History (Collapsible) */}
+          <AppSection
+            title={historySectionTitle}
+            collapsible={true}
+            defaultOpen={false}
+          >
+            <AuditHistoryList logs={auditLogs} />
+          </AppSection>
+        </div>
+
+        {/* Right Column: Metadata Overview + Timeline Stepper + Transport Note */}
+        <div className="flex flex-col gap-4">
+          <AppSection title={transferDetailTitle}>
             <DescriptionList
-              className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+              className="grid gap-3"
               descriptionClassName="flex items-center gap-1 font-semibold"
               items={[
                 {
                   term: copy.totalValue,
-                  description: formatVND(transfer.total),
+                  description: (
+                    <span className="text-primary font-bold">
+                      {messages.inventory.common.currencyCompact(formatVND(transfer.total))}
+                    </span>
+                  ),
                 },
                 {
                   term: copy.totalItems,
@@ -387,6 +531,12 @@ export function TransferDetailClient({
             />
           </AppSection>
 
+          <AppSection contentClassName="py-4">
+            <div className="flex justify-center">
+              <TimelineStepper steps={transferSteps} />
+            </div>
+          </AppSection>
+
           {transfer.note && (
             <AppSection title={copy.transportNote}>
               <p className="line-clamp-3 break-words text-sm italic">
@@ -395,231 +545,59 @@ export function TransferDetailClient({
             </AppSection>
           )}
         </div>
-      </TabsContent>
+      </div>
 
-      <TabsContent value="lines">
-        <div className="flex flex-col gap-4">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <AppSection
-                className="overflow-hidden"
-                title={tTerm("ingredientsList")}
-                headerHint={
-                  isReceiveMode
-                    ? copy.receiveInstructions
-                    : copy.receivedReadonlyHint
-                }
-                contentFlush
-              >
-                <DataTable
-                  className="p-4 md:p-0"
-                  columns={lineColumns}
-                  data={transfer.items}
-                  getRowKey={(item) => item.sku || item.name}
-                  emptyTitle={copy.emptyTransferItemsTitle}
-                  emptyDescription={copy.emptyTransferItemsDescription}
-                  mobileCardRender={(item) => (
-                    <TransferLineMobileCard
-                      item={item}
-                      isReceiveMode={isReceiveMode}
-                      embedded={embedded}
-                      receiveValue={receiveQty[item.ingredientId] ?? ""}
-                      onReceiveValueChange={(value) =>
-                        setReceiveQty((prev) => ({
-                          ...prev,
-                          [item.ingredientId]: value,
-                        }))
-                      }
-                    />
-                  )}
-                  mobileFooter={
-                    <Item
-                      variant="outline"
-                      className="flex-col items-stretch gap-2 p-3 text-sm"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-muted-foreground">
-                          {copy.totalValue}
-                        </span>
-                        <span className="font-mono font-semibold tabular-nums text-primary">
-                          {messages.inventory.common.currencyCompact(
-                            formatVND(transfer.total),
-                          )}
-                        </span>
-                      </div>
-                    </Item>
-                  }
-                  desktopFooterRows={[
-                    {
-                      key: "ingredient-value",
-                      className: "border-border",
-                      cells: [
-                        {
-                          key: "label",
-                          colSpan: 4,
-                          className: "text-right text-sm text-muted-foreground",
-                          content: copy.ingredientValue,
-                        },
-                        {
-                          key: "value",
-                          className: "text-right font-mono tabular-nums",
-                          content: messages.inventory.common.currencyCompact(
-                            formatVND(transfer.subtotal),
-                          ),
-                        },
-                        { key: "actions", content: null },
-                      ],
-                    },
-                    {
-                      key: "shipping-fee",
-                      className: "border-border",
-                      cells: [
-                        {
-                          key: "label",
-                          colSpan: 4,
-                          className: "text-right text-sm text-muted-foreground",
-                          content: copy.shippingFee,
-                        },
-                        {
-                          key: "value",
-                          className: "text-right font-mono tabular-nums",
-                          content: messages.inventory.common.currencyCompact(
-                            formatVND(transfer.shipping),
-                          ),
-                        },
-                        { key: "actions", content: null },
-                      ],
-                    },
-                    {
-                      key: "total-value",
-                      className: "border-border",
-                      cells: [
-                        {
-                          key: "label",
-                          colSpan: 4,
-                          className: "text-right text-sm font-bold",
-                          content: copy.totalValue,
-                        },
-                        {
-                          key: "value",
-                          className:
-                            "text-right font-mono font-bold tabular-nums text-primary",
-                          content: messages.inventory.common.currencyCompact(
-                            formatVND(transfer.total),
-                          ),
-                        },
-                        { key: "actions", content: null },
-                      ],
-                    },
-                  ]}
-                />
-              </AppSection>
-            </div>
-
-            <AppSection tone="info" title={copy.totalTransferValue}>
-              <div className="flex flex-col gap-3">
-                <p className="font-mono text-xl font-semibold tabular-nums text-primary">
-                  {messages.inventory.common.currencyCompact(
-                    formatVND(transfer.total),
-                  )}
-                </p>
-                <DescriptionList
-                  descriptionClassName="font-bold tabular-nums"
-                  items={[
-                    {
-                      term: copy.totalItems,
-                      description: String(transfer.items.length).padStart(
-                        2,
-                        "0",
-                      ),
-                    },
-                  ]}
-                />
-              </div>
-            </AppSection>
-          </div>
-
-          {isReceiveMode && hasShort ? (
-            <AppSection tone="warning">
-              <p className="text-sm font-semibold">
-                {copy.shortageNoteTitle}{" "}
-                <span className="text-destructive">*</span>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {copy.shortageNoteDescription(shortLines)}
-              </p>
-              <Textarea
-                value={shortNote}
-                onChange={(e) => setShortNote(e.target.value)}
-                rows={3}
-                maxLength={300}
-                placeholder={copy.shortageNotePlaceholder}
+      {/* Footer Action Bar */}
+      <AppDetailFooter
+        sticky={embedded}
+        leading={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size={embedded ? "touch" : "default"}
+              className="px-6 font-bold text-muted-foreground"
+            >
+              <IconPrinter className="size-5" />
+              {copy.printSlip}
+            </Button>
+            {transfer.status !== "draft" &&
+            correctionBranches.length > 0 &&
+            transfer.items.length > 0 ? (
+              <DocumentStockCorrectionDialog
+                documentType="transfer"
+                documentId={transfer.id}
+                documentCode={transfer.code}
+                branchOptions={correctionBranches}
+                itemOptions={transfer.items.map((item) => ({
+                  ingredientId: item.ingredientId,
+                  name: item.name,
+                  unit: item.unit,
+                }))}
               />
-              {!noteOk ? (
-                <p className="text-xs text-destructive">
-                  {copy.shortageNoteMinLength}
-                </p>
-              ) : null}
-            </AppSection>
-          ) : null}
-
-          {/* Footer Action Bar */}
-          <AppDetailFooter
-            sticky={embedded}
-            leading={
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size={embedded ? "touch" : "default"}
-                  className="px-6 font-bold text-muted-foreground"
-                >
-                  <IconPrinter className="size-5" />
-                  {copy.printSlip}
-                </Button>
-                {transfer.status !== "draft" &&
-                correctionBranches.length > 0 &&
-                transfer.items.length > 0 ? (
-                  <DocumentStockCorrectionDialog
-                    documentType="transfer"
-                    documentId={transfer.id}
-                    documentCode={transfer.code}
-                    branchOptions={correctionBranches}
-                    itemOptions={transfer.items.map((item) => ({
-                      ingredientId: item.ingredientId,
-                      name: item.name,
-                      unit: item.unit,
-                    }))}
-                  />
-                ) : null}
-              </>
+            ) : null}
+          </>
+        }
+        trailing={
+          <Button
+            type="button"
+            disabled={
+              isPending ||
+              !actionConfig?.enabled ||
+              (isReceiveMode &&
+                actionConfig?.action === "receive" &&
+                !noteOk)
             }
-            trailing={
-              <Button
-                type="button"
-                disabled={
-                  isPending ||
-                  !actionConfig?.enabled ||
-                  (isReceiveMode &&
-                    actionConfig?.action === "receive" &&
-                    !noteOk)
-                }
-                size={embedded ? "touch" : "default"}
-                className="px-6 font-bold"
-                onClick={handlePrimaryAction}
-              >
-                <IconCircleCheck className="size-5" />
-                {actionConfig?.label ?? copy.completedSlip}
-              </Button>
-            }
-          />
-        </div>
-      </TabsContent>
-
-      <TabsContent value="history">
-        <AuditHistoryList logs={auditLogs} />
-      </TabsContent>
-    </AppPageTabs>
+            size={embedded ? "touch" : "default"}
+            className="px-6 font-bold"
+            onClick={handlePrimaryAction}
+          >
+            <IconCircleCheck className="size-5" />
+            {actionConfig?.label ?? copy.completedSlip}
+          </Button>
+        }
+      />
+    </div>
   );
 
   const content = embedded ? (
@@ -649,7 +627,7 @@ export function TransferDetailClient({
           {statusBadge.label}
         </Badge>
       </div>
-      {detailTabs}
+      {pageLayout}
     </>
   ) : (
     <AppPageHeader
@@ -672,7 +650,6 @@ export function TransferDetailClient({
           <IconArrowLeft className="size-4" /> {tRoute("/inventory/transfers")}
         </Link>
       }
-      tabs={detailTabs}
     />
   );
 
@@ -681,8 +658,9 @@ export function TransferDetailClient({
   }
 
   return (
-    <AppPage width="wide" density="compact">
+    <AppPage width="xwide" density="compact">
       {content}
+      {!embedded && pageLayout}
     </AppPage>
   );
 }

@@ -42,6 +42,7 @@ export type GRNDetail = {
   poId?: number;
   invoiceId: number | null;
   branchId: number;
+  branchName: string;
   supplierId: number;
   supplier: string;
   date: string;

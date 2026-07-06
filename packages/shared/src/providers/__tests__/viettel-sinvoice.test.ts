@@ -461,7 +461,7 @@ const instantIssueReq = (orderId: number) => ({
   buyerName: "Khach le",
   items: [item("Com tam", 1, 100_000)],
   subtotal: 100_000,
-  vatRate: 2.4,
+  vatRate: 0,
   vatAmount: 0,
   totalAmount: 100_000,
 });
@@ -537,6 +537,64 @@ test("createInvoice: no invoiceNo stays signing", async () => {
     );
     assert.equal(result.status, "signing");
     assert.equal(result.invoiceNumber, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createInvoice: sends buyer email for named buyer invoices", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{
+    input: Parameters<typeof fetch>[0];
+    init: NonNullable<Parameters<typeof fetch>[1]>;
+  }> = [];
+
+  globalThis.fetch = (async (input, init) => {
+    const requestInit = init ?? {};
+    calls.push({ input, init: requestInit });
+
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        result: {
+          invoiceNo: "SBOX-EMAIL",
+          supplierTaxCode: "0100109106-509",
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    await instantIssueProvider().createInvoice({
+      ...instantIssueReq(83),
+      buyerName: "Cong ty Phuc Khang",
+      buyerTaxCode: "0109429414",
+      buyerAddress: "Ha Noi",
+      buyerEmail: "xuannt83@gmail.com",
+      buyerNotGetInvoice: false,
+    });
+
+    const createCall = calls.find((call) =>
+      String(call.input).includes("/InvoiceAPI/InvoiceWS/createInvoice/"),
+    );
+    assert.ok(createCall, "expected createInvoice endpoint to be called");
+
+    const body = JSON.parse(String(createCall.init.body)) as {
+      buyerInfo: {
+        buyerEmail?: string | null;
+        buyerNotGetInvoice?: string;
+      };
+    };
+
+    assert.equal(body.buyerInfo.buyerEmail, "xuannt83@gmail.com");
+    assert.equal(body.buyerInfo.buyerNotGetInvoice, "0");
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -755,6 +813,91 @@ test("createInvoice: sends direct-sales line discount and discounted summary", a
     assert.equal(body.summarizeInfo?.totalTaxAmount, 0);
     assert.equal(body.summarizeInfo?.totalAmountWithTax, 90_000);
     // mẫu-2 sales invoice: no tax breakdown (taxPercentage turned off).
+    assert.deepEqual(body.taxBreakdowns, []);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createInvoice: HKD direct-sales payload has no VAT for TC-260706-015-PH shape", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{
+    input: Parameters<typeof fetch>[0];
+    init: NonNullable<Parameters<typeof fetch>[1]>;
+  }> = [];
+
+  globalThis.fetch = (async (input, init) => {
+    const requestInit = init ?? {};
+    calls.push({ input, init: requestInit });
+
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        result: {
+          invoiceNo: "C26MAA4667",
+          codeOfTax: "M2-26-5RDBW-00000004667",
+          supplierTaxCode: "077200004194",
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    await instantIssueProvider().createInvoice({
+      orderId: 8435,
+      orderNumber: "TC-260706-015-PH",
+      sellerName: "",
+      sellerTaxCode: "077200004194",
+      sellerAddress: "",
+      buyerName: "Bán cho người tiêu dùng",
+      buyerNotGetInvoice: true,
+      items: [item("TC-260706-015-PH", 1, 1_124_000, 60_000)],
+      subtotal: 1_064_000,
+      vatRate: 0,
+      vatAmount: 0,
+      totalAmount: 1_064_000,
+    });
+
+    const createCall = calls.find((call) =>
+      String(call.input).includes("/InvoiceAPI/InvoiceWS/createInvoice/"),
+    );
+    assert.ok(createCall, "expected createInvoice endpoint to be called");
+
+    const body = JSON.parse(String(createCall.init.body)) as {
+      itemInfo?: Array<{
+        itemTotalAmountWithoutTax?: number;
+        itemTotalAmountAfterDiscount?: number;
+        itemTotalAmountWithTax?: number;
+        taxPercentage?: number;
+        taxAmount?: number;
+      }>;
+      summarizeInfo?: {
+        totalAmountAfterDiscount?: number;
+        totalAmountWithoutTax?: number;
+        totalTaxAmount?: number;
+        totalAmountWithTax?: number;
+        discountAmount?: number;
+      };
+      taxBreakdowns?: unknown[];
+    };
+
+    const [line] = body.itemInfo ?? [];
+    assert.ok(line);
+    assert.equal(line.itemTotalAmountWithoutTax, 1_124_000);
+    assert.equal(line.itemTotalAmountAfterDiscount, 1_064_000);
+    assert.equal(line.itemTotalAmountWithTax, 1_064_000);
+    assert.equal(line.taxPercentage, undefined);
+    assert.equal(line.taxAmount, undefined);
+    assert.equal(body.summarizeInfo?.discountAmount, 60_000);
+    assert.equal(body.summarizeInfo?.totalTaxAmount, 0);
+    assert.equal(body.summarizeInfo?.totalAmountWithTax, 1_064_000);
     assert.deepEqual(body.taxBreakdowns, []);
   } finally {
     globalThis.fetch = originalFetch;

@@ -21,7 +21,7 @@ const hrActionsSource = readFileSync(
 const centralSiteClaimsMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260702123000_wf10_central_site_roles_tenant_claims.sql",
+    "supabase/migrations/_archive/20260702123000_wf10_central_site_roles_tenant_claims.sql",
   ),
   "utf8",
 );

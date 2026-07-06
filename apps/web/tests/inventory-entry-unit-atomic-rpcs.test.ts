@@ -229,7 +229,7 @@ test("RPC-backed inventory writes let the RPC derive persisted unit text", () =>
 
 test("inventory RPCs derive persisted unit text from the unit catalog", () => {
   const migration = read(
-    "supabase/migrations/20260704193015_inventory_unit_rpc_contract.sql",
+    "supabase/migrations/_archive/20260704193015_inventory_unit_rpc_contract.sql",
   );
   const baseline = read("supabase/migrations/00000000000000_baseline.sql");
 
@@ -258,10 +258,10 @@ test("inventory RPCs derive persisted unit text from the unit catalog", () => {
 
 test("expiry writeoff RPC does not accept a unit text argument", () => {
   const migration = read(
-    "supabase/migrations/20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql",
+    "supabase/migrations/_archive/20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql",
   );
   const bridge = read(
-    "supabase/migrations/20260704214448_inventory_expiry_writeoff_optional_unit_bridge.sql",
+    "supabase/migrations/_archive/20260704214448_inventory_expiry_writeoff_optional_unit_bridge.sql",
   );
   const baseline = read("supabase/migrations/00000000000000_baseline.sql");
   const action = read("apps/web/app/(protected)/inventory/waste-actions.ts");
@@ -286,7 +286,7 @@ test("expiry writeoff RPC does not accept a unit text argument", () => {
 
 test("production recipe bulk import stores catalog-derived units", () => {
   const migration = read(
-    "supabase/migrations/20260704193015_inventory_unit_rpc_contract.sql",
+    "supabase/migrations/_archive/20260704193015_inventory_unit_rpc_contract.sql",
   );
   const fnStart = migration.indexOf(
     "CREATE OR REPLACE FUNCTION public.bulk_import_production_recipes",

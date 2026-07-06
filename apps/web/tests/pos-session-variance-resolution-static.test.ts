@@ -17,7 +17,7 @@ test("POS session variance resolution keeps the close-time cash difference immut
     "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx",
   );
   const migration = read(
-    "supabase/migrations/20260705203920_pos_session_variance_resolution.sql",
+    "supabase/migrations/_archive/20260705203920_pos_session_variance_resolution.sql",
   );
 
   assert.match(action, /resolvePosSessionVariance/);

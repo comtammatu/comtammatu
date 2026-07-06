@@ -1,3 +1,4 @@
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: invoice form section displays inline vietnamese text for advisory warnings and placeholder text */
 "use client";
 
 import { useId } from "react";
@@ -17,12 +18,14 @@ import { AppSection } from "@/components/surface";
 
 const ADVISORY_THRESHOLD_VND = 200_000;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface InvoiceFormState {
   enabled: boolean;
   buyerName: string;
   buyerTaxCode: string;
   buyerAddress: string;
+  buyerEmail: string;
 }
 
 export const EMPTY_INVOICE_FORM: InvoiceFormState = {
@@ -30,12 +33,14 @@ export const EMPTY_INVOICE_FORM: InvoiceFormState = {
   buyerName: "",
   buyerTaxCode: "",
   buyerAddress: "",
+  buyerEmail: "",
 };
 
 export interface InvoiceFormPayload {
   buyerName: string;
   buyerTaxCode?: string;
   buyerAddress?: string;
+  buyerEmail?: string;
   buyerNotGetInvoice?: boolean;
 }
 
@@ -43,8 +48,10 @@ export function isInvoiceFormValid(state: InvoiceFormState): boolean {
   if (!state.enabled) return true;
   const name = state.buyerName.trim();
   const mst = state.buyerTaxCode.trim();
+  const email = state.buyerEmail.trim();
   if (mst.length > 0 && !MST_REGEX.test(mst)) return false;
   if (mst.length > 0 && name.length === 0) return false;
+  if (email.length > 0 && !EMAIL_REGEX.test(email)) return false;
   return true;
 }
 
@@ -54,7 +61,9 @@ export function buildInvoicePayload(
   const name = state.enabled ? state.buyerName.trim() : "";
   const mst = state.enabled ? state.buyerTaxCode.trim() : "";
   const addr = state.enabled ? state.buyerAddress.trim() : "";
-  const hasBuyerDetails = name.length > 0 || mst.length > 0 || addr.length > 0;
+  const email = state.enabled ? state.buyerEmail.trim() : "";
+  const hasBuyerDetails =
+    name.length > 0 || mst.length > 0 || addr.length > 0 || email.length > 0;
   const buyerNotGetInvoice = !state.enabled || !hasBuyerDetails;
 
   return {
@@ -62,6 +71,7 @@ export function buildInvoicePayload(
     ...(buyerNotGetInvoice ? { buyerNotGetInvoice: true } : {}),
     ...(mst ? { buyerTaxCode: mst } : {}),
     ...(addr ? { buyerAddress: addr } : {}),
+    ...(email ? { buyerEmail: email } : {}),
   };
 }
 
@@ -82,12 +92,15 @@ export function InvoiceFormSection({
   const nameId = useId();
   const mstId = useId();
   const addrId = useId();
+  const emailId = useId();
 
   const showAdvisory = !state.enabled && totalAmount >= ADVISORY_THRESHOLD_VND;
   const buyerNotGetInvoice = !state.enabled;
 
   const mstTrim = state.buyerTaxCode.trim();
+  const emailTrim = state.buyerEmail.trim();
   const mstInvalid = mstTrim.length > 0 && !MST_REGEX.test(mstTrim);
+  const emailInvalid = emailTrim.length > 0 && !EMAIL_REGEX.test(emailTrim);
   const nameMissing =
     state.enabled && mstTrim.length > 0 && state.buyerName.trim().length === 0;
 
@@ -97,6 +110,7 @@ export function InvoiceFormSection({
         <Field orientation="horizontal">
           <Checkbox
             id={checkboxId}
+            size="touch"
             checked={buyerNotGetInvoice}
             disabled={disabled}
             onCheckedChange={(checked) =>
@@ -106,6 +120,7 @@ export function InvoiceFormSection({
                     buyerName: "",
                     buyerTaxCode: "",
                     buyerAddress: "",
+                    buyerEmail: "",
                   })
                 : onChange({ ...state, enabled: true })
             }
@@ -131,11 +146,14 @@ export function InvoiceFormSection({
           <FieldGroup className="gap-3">
             <Field data-invalid={nameMissing || undefined}>
               <FieldLabel htmlFor={nameId} className="text-xs">
-                {POS_VI.buyerNameLabel}{""}
+                {POS_VI.buyerNameLabel}
+                {""}
                 {mstTrim ? (
                   <span className="text-destructive">*</span>
                 ) : (
-                  <span className="text-muted-foreground">{POS_VI.optionalHint}</span>
+                  <span className="text-muted-foreground">
+                    {POS_VI.optionalHint}
+                  </span>
                 )}
               </FieldLabel>
               <Input
@@ -153,7 +171,8 @@ export function InvoiceFormSection({
 
             <Field data-invalid={mstInvalid || undefined}>
               <FieldLabel htmlFor={mstId} className="text-xs">
-                {POS_VI.taxCodeLabel}{""}
+                {POS_VI.taxCodeLabel}
+                {""}
                 <span className="text-muted-foreground">
                   {POS_VI.taxCodeOptionalHint}
                 </span>
@@ -170,16 +189,17 @@ export function InvoiceFormSection({
                 aria-invalid={mstInvalid || undefined}
               />
               {mstInvalid ? (
-                <FieldError>
-                  {POS_VI.taxCodeError}
-                </FieldError>
+                <FieldError>{POS_VI.taxCodeError}</FieldError>
               ) : null}
             </Field>
 
             <Field>
               <FieldLabel htmlFor={addrId} className="text-xs">
-                {POS_VI.addressLabel}{""}
-                <span className="text-muted-foreground">{POS_VI.optionalHint}</span>
+                {POS_VI.addressLabel}
+                {""}
+                <span className="text-muted-foreground">
+                  {POS_VI.optionalHint}
+                </span>
               </FieldLabel>
               <Input
                 id={addrId}
@@ -190,6 +210,30 @@ export function InvoiceFormSection({
                   onChange({ ...state, buyerAddress: e.target.value })
                 }
               />
+            </Field>
+
+            <Field data-invalid={emailInvalid || undefined}>
+              <FieldLabel htmlFor={emailId} className="text-xs">
+                Email nhận hóa đơn{""}
+                <span className="text-muted-foreground">
+                  {POS_VI.optionalHint}
+                </span>
+              </FieldLabel>
+              <Input
+                id={emailId}
+                type="email"
+                value={state.buyerEmail}
+                disabled={disabled}
+                maxLength={254}
+                onChange={(e) =>
+                  onChange({ ...state, buyerEmail: e.target.value })
+                }
+                placeholder="email@example.com"
+                aria-invalid={emailInvalid || undefined}
+              />
+              {emailInvalid ? (
+                <FieldError>Email không hợp lệ</FieldError>
+              ) : null}
             </Field>
           </FieldGroup>
         ) : null}

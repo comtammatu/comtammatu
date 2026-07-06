@@ -69,6 +69,7 @@ export type GrnRow = {
   id: number;
   code: string;
   supplierName: string;
+  branchName: string;
   poId: number | null;
   poCode: string;
   date: string;
@@ -80,6 +81,7 @@ export type GrnDraftRow = {
   grnId: number;
   supplierId: number;
   supplierName: string;
+  branchName: string;
   grnNumber: string;
   updatedAt: string;
   lineCount: number;
@@ -131,6 +133,12 @@ export function GrnListClient({
       header: INVENTORY_VI.supplier,
       className: "text-sm font-medium",
       render: (g) => g.supplierName,
+    },
+    {
+      key: "branch",
+      header: messages.inventory.grn.receivingWarehouse,
+      className: "text-sm text-muted-foreground",
+      render: (g) => g.branchName,
     },
     {
       key: "po",
@@ -393,7 +401,9 @@ function GrnDraftsTab({
           <ItemHeader>
             <div className="min-w-0">
               <ItemTitle className="text-base">{draft.supplierName}</ItemTitle>
-              <ItemDescription>{draft.grnNumber}</ItemDescription>
+              <ItemDescription>
+                {draft.grnNumber} • {draft.branchName}
+              </ItemDescription>
               <p className="mt-1 text-sm text-muted-foreground">
                 {INVENTORY_VI.grnDraftUpdatedAt(
                   formatVNDateTime(draft.updatedAt),
@@ -446,6 +456,7 @@ function GrnMobileCard({ grn, basePath }: { grn: GrnRow; basePath: string }) {
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {grn.supplierName}
+            {` • ${grn.branchName}`}
             {grn.poCode && ` • PO ${grn.poCode}`}
           </p>
         </div>

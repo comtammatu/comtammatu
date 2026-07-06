@@ -19,6 +19,7 @@ const invoiceQueriesSource = read(
   "app/(protected)/finance/_lib/invoice-queries.ts",
 );
 const financeActionsSource = read("app/(protected)/finance/actions.ts");
+const perOrderInvoiceSource = read("lib/hddt-per-order.ts");
 
 function fnBlock(source: string, name: string): string {
   const block = new RegExp(
@@ -70,10 +71,11 @@ test("resolve helper is exported and its filter matches createTaxInvoice (no dri
     /\.not\("status", "in", '\("cancelled","replaced","not_required"\)'\)/;
   // Same filter in the extracted query helper AND createTaxInvoice's own check.
   assert.match(invoiceQueriesSource, activeFilter);
-  assert.match(financeActionsSource, activeFilter);
+  assert.match(perOrderInvoiceSource, activeFilter);
+  assert.match(financeActionsSource, /issueTaxInvoiceForPaidOrder\(/);
 });
 
 test("shared createTaxInvoice keeps its duplicate-guard branches so finance accounting cannot silently break", () => {
-  assert.match(financeActionsSource, /error: "Đơn hàng đã có hóa đơn\."/);
-  assert.match(financeActionsSource, /23505/);
+  assert.match(perOrderInvoiceSource, /error: "Đơn hàng đã có hóa đơn\."/);
+  assert.match(perOrderInvoiceSource, /23505/);
 });

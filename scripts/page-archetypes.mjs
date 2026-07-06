@@ -164,6 +164,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/ingredients/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/issues/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/operations/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/page.tsx": "DASHBOARD",
   "apps/web/app/(protected)/inventory/production/page.tsx": "HUB",
   "apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx": "DETAIL",

@@ -18,7 +18,7 @@ const client = readFileSync(
 
 const migration = readFileSync(
   new URL(
-    "../../../supabase/migrations/20260706120000_inventory_realtime_ops_bus.sql",
+    "../../../supabase/migrations/_archive/20260706120000_inventory_realtime_ops_bus.sql",
     import.meta.url,
   ),
   "utf8",

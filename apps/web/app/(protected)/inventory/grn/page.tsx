@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchGrns } from "../procurement-actions";
@@ -49,6 +49,9 @@ export async function GRNListPageContent({
     code: (row.grn_number as string) ?? "",
     supplierName:
       ((row.suppliers as Record<string, unknown>)?.name as string) ?? "—",
+    branchName:
+      ((row.branches as Record<string, unknown>)?.name as string) ??
+      `#${row.branch_id as number}`,
     poId: row.po_id != null ? Number(row.po_id) : null,
     poCode:
       ((row.purchase_orders as Record<string, unknown>)?.po_number as string) ??
@@ -81,6 +84,9 @@ export async function GRNListPageContent({
     supplierId: row.supplier_id as number,
     supplierName:
       ((row.suppliers as Record<string, unknown>)?.name as string) ?? "—",
+    branchName:
+      ((row.branches as Record<string, unknown>)?.name as string) ??
+      `#${row.branch_id as number}`,
     grnNumber: (row.grn_number as string) ?? "",
     updatedAt: row.updated_at as string,
     lineCount: (row.grn_items as Array<{ id: number }> | null)?.length ?? 0,
@@ -103,5 +109,15 @@ export default async function GRNListPage({
 }: {
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
-  return <GRNListPageContent searchParams={searchParams} />;
+  const params = await searchParams;
+  const qParams = new URLSearchParams();
+  qParams.set("tab", "grn");
+  if (params.branchId) {
+    if (Array.isArray(params.branchId)) {
+      params.branchId.forEach((id) => qParams.append("branchId", id));
+    } else {
+      qParams.set("branchId", params.branchId);
+    }
+  }
+  redirect(`/inventory/operations?${qParams.toString()}`);
 }

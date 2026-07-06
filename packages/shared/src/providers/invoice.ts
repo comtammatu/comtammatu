@@ -70,6 +70,7 @@ export interface InvoiceRequest {
   buyerName?: string;
   buyerTaxCode?: string;
   buyerAddress?: string;
+  buyerEmail?: string;
   buyerNotGetInvoice?: boolean;
 
   /** Line items */

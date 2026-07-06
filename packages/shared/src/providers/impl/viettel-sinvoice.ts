@@ -552,6 +552,14 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         callerPassesGross,
         pricingMode,
       );
+    if (
+      pricingMode === "direct_sales_gross" &&
+      totalGross !== normalizeMoney(request.totalAmount)
+    ) {
+      throw new Error(
+        `sinvoice_direct_sales_total_mismatch:${totalGross}:${normalizeMoney(request.totalAmount)}`,
+      );
+    }
     const totalAmountAfterDiscount = sumLineNet - sumLineDiscount;
 
     const isReplacement = !!request.replacement;
@@ -601,7 +609,7 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         buyerTaxCode: request.buyerTaxCode ?? null,
         buyerAddressLine: request.buyerAddress ?? null,
         buyerPhoneNumber: null,
-        buyerEmail: null,
+        buyerEmail: buyerNotGetInvoice ? null : (request.buyerEmail ?? null),
         buyerIdNo: null,
         buyerIdType: null,
         buyerNotGetInvoice: buyerNotGetInvoice ? "1" : "0",
@@ -635,9 +643,13 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
   }
 
   async createInvoice(request: InvoiceRequest): Promise<InvoiceResult> {
-    const { body, transactionUuid } = this.buildInvoiceBody(request);
+    let transactionUuid = buildSinvoiceTransactionUuid(request.orderId);
 
     try {
+      const built = this.buildInvoiceBody(request);
+      const body = built.body;
+      transactionUuid = built.transactionUuid;
+
       const res = await this.authedFetch(
         `/InvoiceAPI/InvoiceWS/createInvoice/${this.taxCode}`,
         { method: "POST", body: JSON.stringify(body) },
@@ -734,7 +746,23 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
 
     for (let i = 0; i < requests.length; i += SINVOICE_BATCH_MAX) {
       const chunk = requests.slice(i, i + SINVOICE_BATCH_MAX);
-      const built = chunk.map((r) => this.buildInvoiceBody(r));
+      const built: Array<{
+        body: Record<string, unknown>;
+        transactionUuid: string;
+      }> = [];
+      for (const request of chunk) {
+        try {
+          built.push(this.buildInvoiceBody(request));
+        } catch (err) {
+          results.push(
+            fail(
+              buildSinvoiceTransactionUuid(request.orderId),
+              err instanceof Error ? err.message : "sinvoice_body_build_failed",
+            ),
+          );
+        }
+      }
+      if (built.length === 0) continue;
       const reqBody = { commonInvoiceInputs: built.map((b) => b.body) };
 
       try {

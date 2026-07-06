@@ -395,30 +395,37 @@ export function GrnCreateClient({
   const canSubmit = lineCount > 0 && !submitting;
   const branchLocked = serverGrnId !== null;
   const showWarehousePicker = canSwitchBranch && procurementBranches.length > 1;
+  const selectedBranchName =
+    procurementBranches.find((branch) => branch.id === branchId)?.name ??
+    (branchId ? `#${branchId}` : "Chưa chọn kho nhận");
 
-  const warehouseField = showWarehousePicker ? (
+  const warehouseField = (
     <div className="flex flex-col gap-1.5">
       <Label className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
         {messages.inventory.grn.receivingWarehouse}
       </Label>
-      <Select
-        value={branchId != null ? String(branchId) : ""}
-        onValueChange={(v) => setBranchId(Number(v) || null)}
-        disabled={branchLocked}
-      >
-        <SelectTrigger className="h-11 w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {procurementBranches.map((b) => (
-            <SelectItem key={b.id} value={String(b.id)}>
-              {b.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {procurementBranches.length > 0 ? (
+        <Select
+          value={branchId != null ? String(branchId) : ""}
+          onValueChange={(v) => setBranchId(Number(v) || null)}
+          disabled={!showWarehousePicker || branchLocked}
+        >
+          <SelectTrigger className="h-11 w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {procurementBranches.map((b) => (
+              <SelectItem key={b.id} value={String(b.id)}>
+                {b.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <p className="text-sm font-medium">{selectedBranchName}</p>
+      )}
     </div>
-  ) : null;
+  );
 
   const listColumn = (
     <>

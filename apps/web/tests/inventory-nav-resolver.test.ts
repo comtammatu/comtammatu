@@ -57,11 +57,8 @@ test("owner inventory nav includes procurement, catalog, production, and control
   for (const href of [
     "/inventory/count-assignments",
     "/inventory/count-slips",
-    "/inventory/purchase-orders",
-    "/inventory/grn",
     "/inventory/supplier-invoices",
     "/inventory/supplier-returns",
-    "/inventory/production",
     "/inventory/settings",
     "/inventory/suppliers",
     "/inventory/ingredients",
@@ -107,7 +104,6 @@ test("office inventory nav shows on-hand, stocktake, and transfers as cross-bran
   for (const href of [
     "/inventory/stock",
     "/inventory/stocktake",
-    "/inventory/transfers",
   ]) {
     assert.equal(
       visible.has(href),
@@ -133,8 +129,7 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
     [
       "0 · Hôm nay",
       "1 · Kiểm soát tồn",
-      "2 · Nhập/Nhận/Đối soát",
-      "3 · Điều phối/Sản xuất",
+      "2 · Vận hành & Đối soát",
       "4 · Danh mục & thiết lập",
     ],
   );
@@ -143,8 +138,7 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
     [
       "/inventory",
       "/inventory/stock",
-      "/inventory/purchase-orders",
-      "/inventory/transfers",
+      "/inventory/operations",
       "/inventory/settings",
     ],
   );

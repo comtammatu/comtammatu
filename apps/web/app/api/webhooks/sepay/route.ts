@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
+import { issueTaxInvoiceForPaidOrder } from "@lib/hddt-per-order";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
@@ -478,10 +479,31 @@ export async function POST(request: Request) {
   const status = rpcData?.status ?? "unknown";
   const paymentId = rpcData?.payment_id ?? null;
   if (status === "completed" || status === "already_completed") {
+    const invoiceResult = await issueTaxInvoiceForPaidOrder({
+      supabase,
+      tenantId: accountScope.tenantId,
+      input: { orderId: orderScope.orderId },
+      actorId: null,
+      logPrefix: "sepay-webhook",
+    });
+    const invoiceErrorCode =
+      !invoiceResult.success &&
+      invoiceResult.errorCode !== "invoice_exists" &&
+      invoiceResult.errorCode !== "summary_invoice_exists"
+        ? "invoice_attempt_failed"
+        : null;
+    if (invoiceErrorCode) {
+      console.error("[sepay-webhook] HĐĐT attempt failed", {
+        orderId: orderScope.orderId,
+        code: invoiceResult.errorCode ?? "unknown",
+      });
+    }
+
     await markWebhookEvent(supabase, webhookEventId, {
       payment_id: paymentId,
       processing_status: "processed",
       http_status: 200,
+      error_code: invoiceErrorCode,
     });
     return sepayAcceptedResponse();
   }

@@ -26,6 +26,7 @@ import {
   cancelTaxInvoice,
   createTaxInvoice,
   fetchTaxInvoicesPage,
+  issueMissingSepayInvoices,
   reissueAllDraftInvoices,
 } from "./actions";
 import type { TaxInvoiceCursor } from "./actions";
@@ -490,6 +491,41 @@ export function InvoiceList({
     handleReissueAll();
   }
 
+  function handleIssueMissingSepay() {
+    startTransition(async () => {
+      try {
+        const result = await issueMissingSepayInvoices();
+        if (!result.success) {
+          toast.error(messages.finance.invoiceList.sepayMissingError);
+          return;
+        }
+        const d = result.data;
+        toast.success(
+          messages.finance.invoiceList.sepayMissingResult(
+            d?.issued ?? 0,
+            d?.failed ?? 0,
+            d?.skipped ?? 0,
+            d?.remainingInScan ?? 0,
+          ),
+        );
+        setTimeout(() => window.location.reload(), 1500);
+      } catch {
+        toast.error(messages.finance.invoiceList.sepayMissingError);
+      }
+    });
+  }
+
+  async function handleConfirmIssueMissingSepay() {
+    const ok = await confirm({
+      title: messages.finance.invoiceList.sepayMissingTitle,
+      description: messages.finance.invoiceList.sepayMissingDescription,
+      cancelText: messages.finance.invoiceList.reissueAllCancel,
+      confirmText: messages.finance.invoiceList.sepayMissingConfirm,
+    });
+    if (!ok) return;
+    handleIssueMissingSepay();
+  }
+
   function renderActions(inv: InvoiceRow, variant: "card" | "table") {
     const dense = variant === "table";
     const size = dense ? "icon" : "sm";
@@ -686,7 +722,7 @@ export function InvoiceList({
   return (
     <>
       <div className="flex flex-col gap-4">
-        {canIssueInvoices || (canManageInvoices && draftCount > 0) ? (
+        {canIssueInvoices || canManageInvoices ? (
           <div className="flex flex-wrap justify-end gap-2">
             {canIssueInvoices ? (
               <Button
@@ -697,6 +733,17 @@ export function InvoiceList({
               >
                 <IconReceipt className="size-4" />
                 {messages.finance.invoiceList.manualIssue.button}
+              </Button>
+            ) : null}
+            {canManageInvoices ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleConfirmIssueMissingSepay}
+                disabled={isPending}
+              >
+                <IconRefreshCw className="size-4" />
+                {messages.finance.invoiceList.sepayMissing}
               </Button>
             ) : null}
             {canManageInvoices && draftCount > 0 ? (

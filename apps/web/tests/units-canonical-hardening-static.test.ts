@@ -7,7 +7,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const readRepo = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const migration = readRepo(
-  "supabase/migrations/20260703170000_units_canonical_hardening.sql",
+  "supabase/migrations/_archive/20260703170000_units_canonical_hardening.sql",
 );
 const baseline = readRepo("supabase/migrations/00000000000000_baseline.sql");
 

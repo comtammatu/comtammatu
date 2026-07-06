@@ -1,19 +1,15 @@
 import {
-  ArrowLeftRight as IconArrowLeftRight,
   ChartBar as IconChartBar,
   CheckCircle as IconCheckCircle,
   ClipboardCheck as IconClipboardCheck,
   ClipboardList as IconClipboardList,
-  Factory as IconBuildingFactory,
   FileCheck as IconFileCheck,
   FileText as IconFileText,
   Hourglass as IconHourglass,
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
-  Receipt as IconReceipt,
   RotateCcw as IconRotateCcw,
   Settings as IconSettings,
-  ShoppingCart as IconShoppingCart,
   Users as IconUsers,
   Utensils as IconToolsKitchen,
 } from "lucide-react";
@@ -28,7 +24,7 @@ import { tNav } from "./dictionary";
 export function resolveInventoryNav({
   userRole,
   showProcurement,
-  showProduction,
+  showProduction: _showProduction,
   showCatalogManagement,
   showSettings,
   showWasteApprovals,
@@ -94,11 +90,6 @@ export function resolveInventoryNav({
         icon: IconHourglass,
       },
       {
-        href: "/inventory/issues",
-        label: "Xuất kho nội bộ",
-        icon: IconFileText,
-      },
-      {
         href: "/inventory/consumption",
         label: "Tiêu hao",
         icon: IconToolsKitchen,
@@ -120,53 +111,31 @@ export function resolveInventoryNav({
     ],
   });
 
-  if (showProcurement) {
-    groups.push({
-      title: "2 · Nhập/Nhận/Đối soát",
-      items: [
-        {
-          href: "/inventory/purchase-orders",
-          label: tNav("purchaseOrders", "navigation"),
-          icon: IconShoppingCart,
-        },
-        {
-          href: "/inventory/grn",
-          label: tNav("grn", "navigation"),
-          icon: IconReceipt,
-        },
-        {
-          href: "/inventory/supplier-invoices",
-          label: tNav("supplierInvoices", "navigation"),
-          icon: IconFileCheck,
-        },
-        {
-          href: "/inventory/supplier-returns",
-          label: tNav("supplierReturns", "navigation"),
-          icon: IconRotateCcw,
-        },
-      ],
-    });
-  }
-
-  if (showProduction) {
-    groups.push({
-      title: "3 · Điều phối/Sản xuất",
-      items: [
-        // Cross-branch oversight entry (D061), additive to the branch
-        // operator plane at /br/[id]/stock/transfer.
-        {
-          href: "/inventory/transfers",
-          label: tNav("transfers", "navigation"),
-          icon: IconArrowLeftRight,
-        },
-        {
-          href: "/inventory/production",
-          label: "Lệnh sản xuất",
-          icon: IconBuildingFactory,
-        },
-      ],
-    });
-  }
+  groups.push({
+    title: "2 · Vận hành & Đối soát",
+    items: [
+      {
+        href: "/inventory/operations",
+        label: "Giao dịch kho",
+        icon: IconFileText,
+        matchPrefixes: ["/inventory/operations"],
+      },
+      ...(showProcurement
+        ? [
+            {
+              href: "/inventory/supplier-invoices",
+              label: tNav("supplierInvoices", "navigation"),
+              icon: IconFileCheck,
+            },
+            {
+              href: "/inventory/supplier-returns",
+              label: tNav("supplierReturns", "navigation"),
+              icon: IconRotateCcw,
+            },
+          ]
+        : []),
+    ],
+  });
 
   if (showBackOffice) {
     const settingsItems: ShellNavGroup["items"] = showSettings

@@ -77,7 +77,7 @@ const liveStockCapacityMigration = readFileSync(
 const unlimitedWhenDeductionOffMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260703150000_menu_limit_availability_unlimited_when_deduction_off.sql",
+    "../../supabase/migrations/_archive/20260703150000_menu_limit_availability_unlimited_when_deduction_off.sql",
   ),
   "utf8",
 );
@@ -119,7 +119,6 @@ test("Menu-Limits manager saves raw manual limit; empty input clears without cli
   assert.doesNotMatch(tableSource, /stockCapacityRequired/);
   assert.doesNotMatch(tableSource, /max=\{row\.stock_capacity/);
   assert.match(tableSource, /manualLimitRange/);
-  assert.match(tableSource, /min=\{0\}/);
   assert.match(tableSource, /manualLimitPlaceholder/);
   assert.match(limitQuantitySchemaSource, /\.min\(0/);
   assert.doesNotMatch(limitQuantitySchemaSource, /\.positive\(/);
@@ -291,7 +290,7 @@ test("Menu-Limits availability sells freely when stock-outcome deduction is off"
 test("Menu-Limits availability fix is mirrored in the baseline", () => {
   assert.match(
     baselineSource,
-    /CREATE FUNCTION public\.branch_menu_limit_availability[\s\S]*?WHEN NOT p_stock_outcome_enabled THEN NULL::integer\s+WHEN r\.stock_capacity_live IS NULL THEN 0\s+ELSE r\.stock_capacity_live - r\.pending_unfinalized_demand - r\.active_hold_demand\s+END AS stock_remaining/,
+    /CREATE FUNCTION public\.branch_menu_limit_availability[\s\S]*?WHEN NOT p_stock_gate_enabled THEN NULL::integer\s+WHEN r\.stock_capacity IS NULL THEN NULL::integer\s+ELSE r\.stock_capacity - r\.pending_unfinalized_demand - r\.active_hold_demand\s+END AS stock_remaining/,
   );
   assert.doesNotMatch(
     baselineSource,

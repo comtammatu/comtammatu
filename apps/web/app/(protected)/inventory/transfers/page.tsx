@@ -99,5 +99,19 @@ export default async function TransfersPage({
     create?: string | string[];
   }>;
 }) {
-  return <TransfersPageContent searchParams={searchParams} />;
+  const params = await searchParams;
+  const qParams = new URLSearchParams();
+  qParams.set("tab", "transfers");
+  if (params.branchId) {
+    if (Array.isArray(params.branchId)) {
+      params.branchId.forEach((id) => qParams.append("branchId", id));
+    } else {
+      qParams.set("branchId", params.branchId);
+    }
+  }
+  if (params.create) {
+    const c = Array.isArray(params.create) ? params.create[0] : params.create;
+    if (c) qParams.set("create", c);
+  }
+  redirect(`/inventory/operations?${qParams.toString()}`);
 }

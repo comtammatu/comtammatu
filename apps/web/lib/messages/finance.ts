@@ -18,6 +18,23 @@ export const finance = {
           ? `Đã phát hành ${issued}, còn ${failed} đơn vẫn lỗi.`
           : `Đã phát hành ${issued} hóa đơn.`,
     reissueAllError: "Không thể phát hành lại hàng loạt.",
+    sepayMissing: "Khôi phục HĐĐT SePay thiếu",
+    sepayMissingTitle: "Khôi phục HĐĐT cho đơn SePay đã thanh toán",
+    sepayMissingDescription:
+      "Tìm các webhook SePay đã xử lý, thanh toán đã hoàn tất nhưng chưa có HĐĐT/summary, rồi xuất tối đa 20 hóa đơn trong lượt này. Tiếp tục?",
+    sepayMissingConfirm: "Khôi phục",
+    sepayMissingResult: (
+      issued: number,
+      failed: number,
+      skipped: number,
+      remaining: number,
+    ) =>
+      remaining > 0
+        ? `Đã xuất ${issued}, bỏ qua ${skipped}, lỗi ${failed}, còn ${remaining} trong lượt quét — bấm lại để tiếp tục.`
+        : failed > 0
+          ? `Đã xuất ${issued}, bỏ qua ${skipped}, còn ${failed} đơn lỗi.`
+          : `Đã xuất ${issued}, bỏ qua ${skipped}.`,
+    sepayMissingError: "Không thể khôi phục HĐĐT SePay.",
     refund: "Hoàn tiền",
     refundTitle: "Hoàn tiền / đảo thanh toán",
     refundDialogTitle: "Xác nhận hoàn tiền",

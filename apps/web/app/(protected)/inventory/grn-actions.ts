@@ -190,7 +190,7 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
   let query = supabase
     .from("goods_received_notes")
     .select(
-      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( received_quantity, rejected_quantity, unit_cost )",
+      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, branches ( id, name ), suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( received_quantity, rejected_quantity, unit_cost )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false })
@@ -386,7 +386,7 @@ export async function listMyGrnDrafts(
   let query = supabase
     .from("goods_received_notes")
     .select(
-      "id, supplier_id, branch_id, grn_number, updated_at, suppliers ( id, name ), grn_items ( id )",
+      "id, supplier_id, branch_id, grn_number, updated_at, branches ( id, name ), suppliers ( id, name ), grn_items ( id )",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("created_by", user.id)
