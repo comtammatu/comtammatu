@@ -62,23 +62,22 @@ function MobileShiftCard({
   });
 
   return (
-    <InteractiveCard asChild minHeight="mobile" className="h-auto">
-      <div
-        {...longPress}
-        className={`flex flex-row items-center gap-3 touch-none select-none cursor-pointer active:scale-[0.98] transition-transform ${isPending ? "opacity-60" : ""}`}
-      >
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5 pointer-events-none">
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-sm font-semibold">{shift.name}</p>
-            <StatusBadge
-              domain="active-state"
-              value={shift.is_active ? "active" : "inactive"}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground font-mono">
-            {shift.start_time} – {shift.end_time}
-          </p>
+    <InteractiveCard 
+      minHeight="mobile" 
+      className={`h-auto touch-none select-none cursor-pointer ${isPending ? "opacity-60" : ""}`}
+      {...longPress}
+    >
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 pointer-events-none">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-semibold">{shift.name}</p>
+          <StatusBadge
+            domain="active-state"
+            value={shift.is_active ? "active" : "inactive"}
+          />
         </div>
+        <p className="text-xs text-muted-foreground font-mono">
+          {shift.start_time} – {shift.end_time}
+        </p>
       </div>
     </InteractiveCard>
   );

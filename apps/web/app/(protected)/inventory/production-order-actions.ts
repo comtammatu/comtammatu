@@ -228,7 +228,7 @@ export async function fetchProductionOrders(): Promise<
       supabase
         .from("production_recipes")
         .select(
-          "finished_good_id, ingredient_id, quantity, yield_factor, ingredients:ingredients!production_recipes_ingredient_id_fkey ( purchase_to_measure_factor, unit_cost )",
+          "finished_good_id, ingredient_id, quantity, yield_factor, entry_unit_id, ingredients:ingredients!production_recipes_ingredient_id_fkey ( purchase_to_measure_factor, unit_cost, ingredient_units!ingredient_units_ingredient_tenant_fkey ( unit_id, is_base, to_base_factor ) )",
         )
         .in("finished_good_id", fgIds)
         .eq("tenant_id", claims.tenant_id),
@@ -266,9 +266,15 @@ export async function fetchProductionOrders(): Promise<
       ingredient_id: number;
       quantity: number | string | null;
       yield_factor: number | string | null;
+      entry_unit_id: number | null;
       ingredients: {
         purchase_to_measure_factor: number | string | null;
         unit_cost: number | string | null;
+        ingredient_units: Array<{
+          unit_id: number;
+          is_base: boolean;
+          to_base_factor: number | string | null;
+        }> | null;
       } | null;
     };
     const bomByFinishedGood = new Map<number, BomRow[]>();
@@ -299,7 +305,21 @@ export async function fetchProductionOrders(): Promise<
                 ? Number(bom.ingredients.unit_cost)
                 : 0;
             const rawUnitCost = wac != null ? wac : refCost;
-            const rawNeedPurchase = qty / yf / conv;
+
+            let rawNeedPurchase = qty / yf;
+            if (bom.entry_unit_id && bom.ingredients?.ingredient_units) {
+              const u = bom.ingredients.ingredient_units.find(
+                (iu) => iu.unit_id === bom.entry_unit_id,
+              );
+              if (u && u.to_base_factor) {
+                rawNeedPurchase = rawNeedPurchase * Number(u.to_base_factor);
+              } else {
+                rawNeedPurchase = rawNeedPurchase / conv;
+              }
+            } else {
+              rawNeedPurchase = rawNeedPurchase / conv;
+            }
+
             return sum + rawNeedPurchase * rawUnitCost;
           }, 0);
         }
@@ -435,7 +455,18 @@ export async function getProductionOrderDetailsForConfirm(
       finished_good_id,
       ingredient_id,
       quantity,
-      ingredients!production_recipes_ingredient_tenant_fkey ( name, unit )
+      entry_unit_id,
+      yield_factor,
+      ingredients!production_recipes_ingredient_tenant_fkey ( 
+        name, 
+        unit, 
+        purchase_to_measure_factor,
+        ingredient_units!ingredient_units_ingredient_tenant_fkey (
+          unit_id,
+          to_base_factor,
+          units!ingredient_units_unit_tenant_fkey ( name )
+        ) 
+      )
     `)
     .eq("tenant_id", claims.tenant_id)
     .in("finished_good_id", fgIds);
@@ -443,12 +474,29 @@ export async function getProductionOrderDetailsForConfirm(
   const items = order.production_order_items.map((item: any) => {
     const itemRecipes = (recipes || [])
       .filter((r: any) => r.finished_good_id === item.finished_good_id)
-      .map((r: any) => ({
-        ingredient_id: r.ingredient_id,
-        ingredient_name: r.ingredients?.name || "",
-        quantity: Number(r.quantity),
-        unit: r.ingredients?.unit || "",
-      }));
+      .map((r: any) => {
+        let displayUnit = r.ingredients?.unit || "";
+        let displayQty = Number(r.quantity) / (Number(r.yield_factor) || 1);
+
+        if (r.entry_unit_id && r.ingredients?.ingredient_units) {
+          const iu = r.ingredients.ingredient_units.find(
+            (u: any) => u.unit_id === r.entry_unit_id,
+          );
+          if (iu && iu.units?.name) {
+            displayUnit = iu.units.name;
+          }
+        } else {
+          const conv = Number(r.ingredients?.purchase_to_measure_factor) || 1;
+          displayQty = displayQty / conv;
+        }
+
+        return {
+          ingredient_id: r.ingredient_id,
+          ingredient_name: r.ingredients?.name || "",
+          quantity: displayQty,
+          unit: displayUnit,
+        };
+      });
 
     return {
       id: item.id,

@@ -149,30 +149,25 @@ function MobileTeamCard({
   });
 
   return (
-    <InteractiveCard asChild minHeight="mobile" className="h-auto">
-      <div
-        {...longPress}
-        className="flex flex-row items-center gap-3 touch-none select-none cursor-pointer active:scale-[0.98] transition-transform"
-      >
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5 pointer-events-none">
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-sm font-semibold">
-              {row.fullName}
-            </p>
-            <AttendanceBadge shift={row.shift} />
-          </div>
-          <p className="truncate text-xs text-muted-foreground">
-            {row.positionLabel ?? copy.positionUnknown} · {row.shift?.shiftName ?? copy.shiftNone}
+    <InteractiveCard minHeight="mobile" className="h-auto touch-none select-none cursor-pointer" {...longPress}>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 pointer-events-none">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-semibold">
+            {row.fullName}
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            <CountBadge status={row.countStatus} />
-            {row.onApprovedLeave ? (
-              <StatusBadge domain="leave-request" value="approved" label={copy.leaveApproved} />
-            ) : null}
-          </div>
+          <AttendanceBadge shift={row.shift} />
         </div>
-        <IconClipboardCheck className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
+        <p className="truncate text-xs text-muted-foreground">
+          {row.positionLabel ?? copy.positionUnknown} · {row.shift?.shiftName ?? copy.shiftNone}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <CountBadge status={row.countStatus} />
+          {row.onApprovedLeave ? (
+            <StatusBadge domain="leave-request" value="approved" label={copy.leaveApproved} />
+          ) : null}
+        </div>
       </div>
+      <IconClipboardCheck className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
     </InteractiveCard>
   );
 }

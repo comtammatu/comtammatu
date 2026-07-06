@@ -43,30 +43,25 @@ function EmployeeCard({
   });
 
   return (
-    <InteractiveCard asChild minHeight="mobile" className="h-auto">
-      <div
-        {...longPress}
-        className="flex flex-row items-center gap-3 touch-none select-none cursor-pointer active:scale-[0.98] transition-transform"
-      >
-        <div className="flex min-w-0 flex-1 flex-col gap-1 pointer-events-none">
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-sm font-medium">{emp.name}</p>
-            {emp.code && <Badge variant="secondary">{emp.code}</Badge>}
-          </div>
-          <div className="flex gap-4 text-xs text-muted-foreground">
-            {emp.phone && (
-              <span className="flex items-center gap-1">
-                <Phone className="size-3" />
-                {emp.phone}
-              </span>
-            )}
-            {emp.startDate && (
-              <span className="flex items-center gap-1">
-                <CalendarDays className="size-3" />
-                {formatDateVN(emp.startDate)}
-              </span>
-            )}
-          </div>
+    <InteractiveCard minHeight="mobile" className="h-auto touch-none select-none cursor-pointer" {...longPress}>
+      <div className="flex min-w-0 flex-1 flex-col gap-1 pointer-events-none">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-medium">{emp.name}</p>
+          {emp.code && <Badge variant="secondary">{emp.code}</Badge>}
+        </div>
+        <div className="flex gap-4 text-xs text-muted-foreground">
+          {emp.phone && (
+            <span className="flex items-center gap-1">
+              <Phone className="size-3" />
+              {emp.phone}
+            </span>
+          )}
+          {emp.startDate && (
+            <span className="flex items-center gap-1">
+              <CalendarDays className="size-3" />
+              {formatDateVN(emp.startDate)}
+            </span>
+          )}
         </div>
       </div>
     </InteractiveCard>

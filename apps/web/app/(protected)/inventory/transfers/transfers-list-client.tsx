@@ -599,15 +599,11 @@ function MobileTransferCard({
   });
 
   return (
-    <InteractiveCard asChild minHeight="mobile" className="h-auto">
-      <div
-        {...longPress}
-        className="flex flex-row items-center gap-3 touch-none select-none cursor-pointer active:scale-[0.98] transition-transform"
-      >
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary pointer-events-none">
-          <Icon className="size-5" />
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1 pointer-events-none">
+    <InteractiveCard minHeight="mobile" className="h-auto touch-none select-none cursor-pointer" {...longPress}>
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary pointer-events-none">
+        <Icon className="size-5" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1 pointer-events-none">
           <div className="flex items-center justify-between gap-2">
             <p className="truncate font-mono text-sm font-semibold">
               {row.transfer_number}
@@ -626,7 +622,6 @@ function MobileTransferCard({
           )}
         </div>
         <IconChevronRight className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
-      </div>
     </InteractiveCard>
   );
 }

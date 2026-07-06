@@ -503,30 +503,25 @@ function GrnMobileCard({
   });
 
   return (
-    <InteractiveCard minHeight="mobile" padding="default" asChild>
-      <div
-        {...longPress}
-        className="flex flex-row items-center justify-between gap-3 touch-none select-none cursor-pointer active:scale-[0.98] transition-transform"
-      >
-        <div className="min-w-0 flex-1 flex flex-col gap-1 pointer-events-none">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-sm font-semibold">{grn.code}</span>
-            <StatusBadge domain="inventory" value={grn.status} size="sm" />
-          </div>
-          <p className="truncate text-xs text-muted-foreground">
-            {grn.supplierName}
-            {` • ${grn.branchName}`}
-            {grn.poCode && ` • PO ${grn.poCode}`}
-          </p>
+    <InteractiveCard minHeight="mobile" padding="default" className="justify-between touch-none select-none cursor-pointer" {...longPress}>
+      <div className="min-w-0 flex-1 flex flex-col gap-1 pointer-events-none">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm font-semibold">{grn.code}</span>
+          <StatusBadge domain="inventory" value={grn.status} size="sm" />
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1 pointer-events-none">
-          <span className="text-xs text-muted-foreground">
-            {grn.date || "—"}
-          </span>
-          <span className="font-mono text-sm font-semibold">
-            {formatVND(grn.total)}
-          </span>
-        </div>
+        <p className="truncate text-xs text-muted-foreground">
+          {grn.supplierName}
+          {` • ${grn.branchName}`}
+          {grn.poCode && ` • PO ${grn.poCode}`}
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-1 pointer-events-none">
+        <span className="text-xs text-muted-foreground">
+          {grn.date || "—"}
+        </span>
+        <span className="font-mono text-sm font-semibold">
+          {formatVND(grn.total)}
+        </span>
       </div>
     </InteractiveCard>
   );

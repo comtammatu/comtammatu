@@ -103,21 +103,16 @@ function StocktakeSessionCard({
   });
 
   return (
-    <InteractiveCard minHeight="mobile" padding="default" asChild>
-      <div
-        {...longPress}
-        className="flex-col items-stretch gap-3 touch-none select-none cursor-pointer active:scale-[0.98] transition-transform"
-      >
-        <div className="flex items-center justify-between gap-2 pointer-events-none">
-          <span className="font-mono text-sm font-medium">KK-{row.id}</span>
-          <StatusBadge domain="inventory" value={row.status} />
-        </div>
-        <div className="flex items-center justify-between text-xs text-muted-foreground pointer-events-none">
-          <span>{row.branches?.name ?? "—"}</span>
-          <span className="tabular-nums">
-            {formatDateShort(row.started_at ?? row.created_at)}
-          </span>
-        </div>
+    <InteractiveCard minHeight="mobile" padding="default" className="flex-col items-stretch touch-none select-none cursor-pointer" {...longPress}>
+      <div className="flex items-center justify-between gap-2 pointer-events-none">
+        <span className="font-mono text-sm font-medium">KK-{row.id}</span>
+        <StatusBadge domain="inventory" value={row.status} />
+      </div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground pointer-events-none">
+        <span>{row.branches?.name ?? "—"}</span>
+        <span className="tabular-nums">
+          {formatDateShort(row.started_at ?? row.created_at)}
+        </span>
       </div>
     </InteractiveCard>
   );
