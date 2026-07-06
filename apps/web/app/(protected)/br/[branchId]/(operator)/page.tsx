@@ -224,7 +224,8 @@ export default async function OperatorHomePage({
     branchKind,
   );
   const basePath = `/br/${context.branchId}`;
-  const showTodayCard = canAccess(claims.user_role, "employee");
+  const showTodayCard =
+    canAccess(claims.user_role, "employee") && claims.user_role !== "owner";
   // Sales KPIs and the branch-command door are branch-floor chrome — central
   // sites keep their home to the curated job tiles (D066 no-hub-bloat).
   const showOverview =

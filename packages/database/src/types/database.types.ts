@@ -10496,11 +10496,19 @@ export type Database = {
         Returns: number
       }
       upsert_production_recipe_lines: {
-        Args: { p_finished_good_id: number; p_lines: Json }
+        Args: {
+          p_finished_good_id: number
+          p_lines: Json
+          p_old_finished_good_id?: number
+        }
         Returns: Json
       }
       upsert_recipe_lines: {
-        Args: { p_lines: Json; p_menu_item_id: number }
+        Args: {
+          p_lines: Json
+          p_menu_item_id: number
+          p_old_menu_item_id?: number
+        }
         Returns: Json
       }
       upsert_shift_checklist_template: {

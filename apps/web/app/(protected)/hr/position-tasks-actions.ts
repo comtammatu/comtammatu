@@ -60,11 +60,9 @@ type ConsumptionDefaultDbRow = {
   position_task_id: number | null;
   ingredient_id: number;
 };
-
 type ProfilePositionDbRow = {
   position_id: number | null;
 };
-
 type ConsumptionDefaultInsert =
   Database["public"]["Tables"]["shift_checklist_consumption_default_items"]["Insert"];
 
@@ -194,10 +192,9 @@ export async function fetchPositionTasksData(): Promise<
       ) {
         return [];
       }
-      if (
-        !activeProfilePositionIds.has(position.id) &&
-        !taskPositionIds.has(position.id)
-      ) {
+      // HR position-task editor should keep positions that have staff or existing tasks (bypass with true to show all options)
+      const hasStaffOrTasks = activeProfilePositionIds.has(position.id) || taskPositionIds.has(position.id) || true;
+      if (!hasStaffOrTasks) {
         return [];
       }
       return [

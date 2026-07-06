@@ -160,7 +160,7 @@ export const upsertRecipeLines = withAction(
     const { error } = await supabase.rpc("upsert_recipe_lines", {
       p_menu_item_id: data.menuItemId,
       p_lines: lines,
-      p_old_menu_item_id: data.oldMenuItemId ?? null,
+      p_old_menu_item_id: data.oldMenuItemId ?? undefined,
     });
     if (error) {
       console.error("inventory.recipe.upsert_recipe_lines_failed", {

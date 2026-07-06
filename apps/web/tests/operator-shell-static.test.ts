@@ -105,7 +105,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /mode="compact-status"/);
   assert.match(
     home,
-    /showTodayCard = canAccess\(claims\.user_role, "employee"\)/,
+    /showTodayCard =\s*canAccess\(claims\.user_role, "employee"\)(?: && claims\.user_role !== "owner")?/,
   );
   assert.match(home, /showManagementCard/);
   assert.match(home, /APP_COPY_VI\.branchCommand/);

@@ -57,12 +57,44 @@ export async function createStocktakeSession(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  const defaultLocationId = await resolveDefaultInventoryLocation(
-    supabase,
-    claims.tenant_id,
-    parsedBranch.data,
-    "receive",
-  );
+  const { data: branchData, error: branchError } = await supabase
+    .from("branches")
+    .select("branch_kind")
+    .eq("id", parsedBranch.data)
+    .single();
+
+  if (branchError || !branchData) {
+    return { success: false, error: "Không tìm thấy chi nhánh" };
+  }
+
+  let defaultLocationId: number | null = null;
+  if (branchData.branch_kind === "branch") {
+    const { data: locData, error: locError } = await supabase
+      .from("inventory_locations")
+      .select("id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", parsedBranch.data)
+      .eq("location_kind", "kitchen")
+      .eq("is_active", true)
+      .order("is_default_consumption", { ascending: false })
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!locError && locData) {
+      defaultLocationId = locData.id;
+    }
+  }
+
+  if (!defaultLocationId) {
+    defaultLocationId = await resolveDefaultInventoryLocation(
+      supabase,
+      claims.tenant_id,
+      parsedBranch.data,
+      "receive",
+    );
+  }
 
   const { data, error } = await supabase.rpc("create_stocktake_session", {
     p_branch_id: parsedBranch.data,

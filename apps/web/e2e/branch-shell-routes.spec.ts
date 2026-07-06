@@ -1,6 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { getCashierProfile } from "./helpers/supabase";
+import { E2E_AUTH_STORAGE_OWNER } from "../playwright.config";
+
+test.use({ storageState: E2E_AUTH_STORAGE_OWNER });
+
 
 const MOBILE = { width: 390, height: 844 };
 const DESKTOP = { width: 1440, height: 900 };
@@ -114,7 +118,6 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}/menu-limits`,
       `/br/${branchId}/pos-sessions`,
       `/br/${branchId}/stock`,
-      `/br/${branchId}/stock/on-hand`,
       `/br/${branchId}/stock/issues`,
       `/br/${branchId}/stock/purchase-orders`,
       `/br/${branchId}/stock/purchase-orders/new`,

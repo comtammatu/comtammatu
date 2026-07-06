@@ -169,6 +169,7 @@ export function OperatorBottomNav({
                     `/br/${branchId}/dashboard`,
                     `/br/${branchId}/pos-sessions`,
                     `/br/${branchId}/settings`,
+                    `/br/${branchId}/menu-limits`,
                     `/br/${branchId}/team`,
                   ],
                 },
