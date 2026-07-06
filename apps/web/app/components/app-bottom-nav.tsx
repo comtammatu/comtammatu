@@ -29,6 +29,8 @@ export function AppBottomNav({
   itemClassName,
   leading,
   trailing,
+  hideOnDesktop = true,
+  position = "fixed",
 }: {
   items: AppBottomNavItem[];
   ariaLabel: string;
@@ -36,11 +38,15 @@ export function AppBottomNav({
   itemClassName?: string;
   leading?: ReactNode;
   trailing?: ReactNode;
+  hideOnDesktop?: boolean;
+  position?: "fixed" | "static";
 }) {
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 px-3 pt-2 shadow-sm chrome-safe-pb chrome-tap select-none backdrop-blur lg:hidden print:hidden",
+        "z-40 border-t bg-card/95 px-3 pt-2 shadow-sm chrome-safe-pb chrome-tap select-none backdrop-blur print:hidden",
+        position === "fixed" ? "fixed inset-x-0 bottom-0" : "static shrink-0",
+        hideOnDesktop && "lg:hidden",
         className,
       )}
       aria-label={ariaLabel}

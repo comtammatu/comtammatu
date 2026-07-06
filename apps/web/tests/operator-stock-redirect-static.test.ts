@@ -1,13 +1,42 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 const exists = (path: string) => existsSync(resolve(repoRoot, path));
+const sourceFiles = (path: string): string[] => {
+  const absolute = resolve(repoRoot, path);
+  return readdirSync(absolute).flatMap((entry) => {
+    const child = `${path}/${entry}`;
+    const childAbsolute = resolve(repoRoot, child);
+    if (statSync(childAbsolute).isDirectory()) return sourceFiles(child);
+    return child.endsWith(".ts") || child.endsWith(".tsx") ? [child] : [];
+  });
+};
 const embeddedContentWrapperPattern =
-  /if \(embedded\) \{\s*return <div className="flex w-full flex-col gap-3">\{content\}<\/div>;\s*\}/;
+  /if \(embedded\) \{\s*return (?:<div className="flex w-full flex-col gap-3">[\s\S]*?<\/div>|\(\s*<div className="flex w-full flex-col gap-3">[\s\S]*?<\/div>\s*\));\s*\}/;
+
+test("operator stock sticky action bars route through AppDetailFooter", () => {
+  const stockFiles = [
+    ...sourceFiles("apps/web/app/(protected)/inventory"),
+    ...sourceFiles("apps/web/app/(protected)/br/[branchId]/(operator)/stock"),
+  ];
+  const rawStickyCallSites = stockFiles.filter((path) =>
+    read(path).includes("sticky chrome-safe-bottom"),
+  );
+  const nestedFooterCallSites = stockFiles.filter((path) =>
+    /<AppDetailFooter\s+sticky\s+trailing=\{footer\}/.test(read(path)),
+  );
+  const appSurface = read("apps/web/app/components/surface.tsx");
+
+  assert.deepEqual(rawStickyCallSites, []);
+  assert.deepEqual(nestedFooterCallSites, []);
+  assert.match(appSurface, /sticky chrome-safe-bottom/);
+  assert.match(appSurface, /shadow-lg/);
+  assert.match(appSurface, /data-slot=button/);
+});
 
 test("operator stock task routes render branch-shell content instead of redirecting to inventory", () => {
   const expectations = [
@@ -91,7 +120,7 @@ test("operator stock receive renders inbound transfer list and detail inside the
     /detailHref=\{`\/br\/\$\{branchId\}\/stock\/transfer\/\$\{transferId\}`\}/,
   );
   assert.match(receiveClient, /Button asChild variant="ghost" size="icon"/);
-  assert.match(receiveClient, /sticky chrome-safe-bottom[\s\S]*border/);
+  assert.match(receiveClient, /<AppDetailFooter[\s\S]*\bsticky\b/);
   assert.match(
     receiveClient,
     /initialValue=\{\s*sheetItem\s*\?\s*confirmed\.has\(sheetItem\.ingredientId\)[\s\S]*: null\s*: null\s*\}/,
@@ -162,7 +191,11 @@ test("operator stock landing keeps inventory logic without nesting desktop page 
   assert.match(stockClientSource, embeddedContentWrapperPattern);
   assert.match(
     stockClientSource,
-    /return \(\s*<AppPage[\s\S]*width=\{isCompactLayout \? "narrow" : "wide"\}[\s\S]*scroll[\s\S]*>\s*\{content\}\s*<\/AppPage>\s*\);/,
+    /<AppToolbar\s*variant=\{embedded \? "inline" : "card"\}/,
+  );
+  assert.match(
+    stockClientSource,
+    /return \(\s*<AppPage[\s\S]*width=\{isCompactLayout \? "narrow" : "xwide"\}[\s\S]*scroll[\s\S]*>\s*\{content\}\s*<\/AppPage>\s*\);/,
   );
   assert.doesNotMatch(stockClientSource, /InventoryPageContent/);
 });
@@ -213,6 +246,12 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(stockDetailPageSource, /\.from\("stock_levels"\)/);
   assert.match(stockDetailPageSource, /\.from\("stock_movements"\)/);
   assert.match(stockDetailPageSource, /\.from\("grn_items"\)/);
+  assert.equal(
+    (stockDetailPageSource.match(/size=\{embedded \? "touch" : "sm"\}/g) ?? [])
+      .length,
+    5,
+    "embedded stock detail operation buttons must be touch-sized",
+  );
   assert.match(
     stockDetailPageSource,
     /movementReferenceHref\(\{\s*movement,\s*branchId,\s*branchStockBasePath: branchStockRoot,\s*embedded,\s*\}\)/,
@@ -342,6 +381,12 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   const purchaseOrdersClient = read(
     "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
+  const grnListClient = read(
+    "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
+  );
+  const grnDetailClient = read(
+    "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
+  );
   const newPoPage = read(
     "apps/web/app/(protected)/inventory/purchase-orders/new/page.tsx",
   );
@@ -352,11 +397,22 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
     newPoClient.indexOf("if (embedded)"),
     newPoClient.indexOf("<DocumentFormFrame"),
   );
+  const grnDetailEmbeddedBranch = grnDetailClient.slice(
+    grnDetailClient.indexOf("if (embedded)"),
+    grnDetailClient.indexOf(
+      "<AppPage width",
+      grnDetailClient.indexOf("if (embedded)"),
+    ),
+  );
   const poDetailPage = read(
     "apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx",
   );
   const poDetailClient = read(
     "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
+  );
+  const poLineMobileCard = poDetailClient.slice(
+    poDetailClient.indexOf("function PoLineMobileCard"),
+    poDetailClient.indexOf("const PO_PREVIEW_LIMIT"),
   );
   const reportsPage = read(
     "apps/web/app/(protected)/inventory/reports/page.tsx",
@@ -364,6 +420,9 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   const reportsClient = read(
     "apps/web/app/(protected)/inventory/reports/reports-client.tsx",
   );
+  const appSurface = read("apps/web/app/components/surface.tsx");
+  const formDialog = read("apps/web/app/components/form/form-dialog.tsx");
+  const formCombobox = read("apps/web/app/components/form/combobox.tsx");
 
   assert.match(issueRoute, /IssuesPageContent/);
   assert.match(issueRoute, /routeBranchId=\{branchId\}/);
@@ -412,13 +471,13 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
     poDetailRoute,
     /afterCreateGrnHref=\{`\/br\/\$\{branchId\}\/stock\/receive\/:id`\}/,
   );
-  // D067 §1: GRN detail forks presentation over the SHARED loader —
-  // draft?review → native GrnReviewOperatorClient, confirmed → office
-  // GRNDetailClient (KEEP verdict). No office ProductionPageContent-style
-  // embed; the branch-scope check lives in loadGrnDetail(grnId, branchId).
+  // D067 §1: GRN detail forks presentation over the SHARED loader. Draft
+  // review stays native, confirmed GRN uses the shared detail client in
+  // embedded mode so branch stock never nests the office AppPage frame.
   assert.match(grnDetailRoute, /loadGrnDetail\(grnId, branchId\)/);
   assert.match(grnDetailRoute, /GrnReviewOperatorClient/);
   assert.match(grnDetailRoute, /GRNDetailClient/);
+  assert.match(grnDetailRoute, /embedded/);
   assert.match(
     grnDetailRoute,
     /purchaseOrdersBasePath = `\/br\/\$\{branchId\}\/stock\/purchase-orders`/,
@@ -449,6 +508,50 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(issueDetailClient, /embedded\?: boolean/);
   assert.match(issueDetailClient, embeddedContentWrapperPattern);
   assert.match(issueDetailClient, /href=\{listBasePath\}/);
+  assert.match(issueDetailClient, /embedded=\{embedded\}/);
+  assert.match(
+    issueDetailClient,
+    /actionSize=\{embedded \? "touch" : "default"\}/,
+  );
+  assert.match(
+    issueDetailClient,
+    /<Combobox[\s\S]*size=\{embedded \? "touch" : "default"\}/,
+  );
+  assert.match(
+    issueDetailClient,
+    /className=\{embedded \? "h-12" : undefined\}/,
+  );
+  assert.equal(
+    (
+      issueDetailClient.match(
+        /<SelectTrigger[\s\S]*?size=\{embedded \? "touch" : "default"\}[\s\S]*?className="w-full"[\s\S]*?>/g,
+      ) ?? []
+    ).length,
+    2,
+    "issue add-line unit selectors must stay touch-sized in embedded stock",
+  );
+  assert.match(
+    issueDetailClient,
+    /size=\{embedded \? "touch-lg" : "default"\}/,
+  );
+  assert.match(issueDetailClient, /size=\{embedded \? "icon-touch" : "icon"\}/);
+  assert.match(appSurface, /sticky chrome-safe-bottom/);
+  assert.match(appSurface, /border-t border-border/);
+  assert.match(appSurface, /shadow-lg/);
+  assert.match(appSurface, /data-slot=button/);
+  assert.match(issueDetailClient, /<AppDetailFooter[\s\S]*sticky=\{embedded\}/);
+  assert.match(
+    formDialog,
+    /actionSize\?: ComponentProps<typeof Button>\["size"\]/,
+  );
+  assert.equal(
+    (formDialog.match(/size=\{actionSize\}/g) ?? []).length,
+    2,
+    "FormDialog action buttons must keep opt-in touch sizing",
+  );
+  assert.match(formCombobox, /size\?: ComponentProps<typeof Button>\["size"\]/);
+  assert.match(formCombobox, /size=\{size\}/);
+  assert.match(formCombobox, /isTouchSize && "h-auto min-h-12 text-sm"/);
 
   assert.match(purchaseOrdersPage, /routeBranchId\?: number/);
   assert.match(purchaseOrdersPage, /embedded\?: boolean/);
@@ -457,7 +560,27 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(purchaseOrdersClient, /suppliersPath\?: string \| null/);
   assert.match(purchaseOrdersClient, /embedded\?: boolean/);
   assert.match(purchaseOrdersClient, embeddedContentWrapperPattern);
+  assert.match(
+    purchaseOrdersClient,
+    /<AppToolbar\s*variant=\{embedded \? "inline" : "card"\}/,
+  );
+  assert.match(
+    purchaseOrdersClient,
+    /size=\{embedded \? "touch" : "default"\}/,
+  );
   assert.match(purchaseOrdersClient, /suppliersPath \?/);
+  assert.match(
+    grnListClient,
+    /<AppToolbar variant=\{embedded \? "inline" : "card"\}>/,
+  );
+  assert.match(grnDetailClient, /embedded\?: boolean/);
+  assert.match(grnDetailClient, /embedded = false/);
+  assert.match(
+    grnDetailClient,
+    /defaultValue=\{embedded \? "lines" : undefined\}/,
+  );
+  assert.match(grnDetailClient, embeddedContentWrapperPattern);
+  assert.doesNotMatch(grnDetailEmbeddedBranch, /AppPageHeader|<AppPage/);
   assert.match(newPoPage, /routeBranchId\?: number/);
   assert.match(newPoPage, /poBasePath\?: string/);
   assert.match(newPoPage, /embedded\?: boolean/);
@@ -474,8 +597,31 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
     /if \(embedded\) \{\s*return \(\s*<div className="flex w-full flex-col gap-3">[\s\S]*?\}\s*return \(\s*<DocumentFormFrame/,
   );
   assert.doesNotMatch(newPoClientEmbeddedBranch, /\{header\}/);
-  assert.match(newPoClientEmbeddedBranch, /sticky chrome-safe-bottom/);
-  assert.match(newPoClientEmbeddedBranch, /border/);
+  assert.match(newPoClientEmbeddedBranch, /<AppDetailFooter[\s\S]*\bsticky\b/);
+  assert.match(newPoClient, /<SuggestionsPanel[\s\S]*embedded=\{embedded\}/);
+  assert.equal(
+    (newPoClient.match(/size=\{embedded \? "touch" : "sm"\}/g) ?? []).length,
+    2,
+    "embedded new-PO suggestion actions must be touch-sized",
+  );
+  assert.match(newPoClient, /size=\{embedded \? "touch-lg" : "default"\}/);
+  assert.match(
+    newPoClient,
+    /className=\{embedded \? "min-h-12 w-full" : "w-40"\}/,
+  );
+  assert.match(
+    newPoClient,
+    /className=\{embedded \? "min-h-12 w-full" : "w-28"\}/,
+  );
+  assert.equal(
+    (
+      newPoClient.match(
+        /<SelectTrigger size="touch" className="w-full" aria-label=\{unit\}>/g,
+      ) ?? []
+    ).length,
+    2,
+    "new-PO add-line unit picker must stay touch-sized",
+  );
   assert.match(
     newPoPage,
     /canSwitchBranch=\{routeBranchId == null && !isBranchScoped\}/,
@@ -494,6 +640,17 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
     poDetailClient,
     /afterCreateGrnHref[\s\S]*replace\(":id", String\(created\.id\)\)/,
   );
+  assert.match(
+    poDetailClient,
+    /triggerClassName=\{\s*embedded \? "h-12 border-dashed" : "h-9 border-dashed"\s*\}/,
+  );
+  assert.match(poDetailClient, /size=\{embedded \? "touch" : "default"\}/);
+  assert.match(
+    poLineMobileCard,
+    /<SelectTrigger[\s\S]*size="touch"[\s\S]*className="min-h-12"[\s\S]*aria-label=\{FORM_VI\.unit\}/,
+  );
+  assert.match(poLineMobileCard, /className="h-12"/);
+  assert.match(poLineMobileCard, /size="touch"[\s\S]*poDetailCopy\.saveLine/);
 
   assert.match(reportsPage, /routeBranchId\?: number/);
   assert.match(reportsPage, /branchId: routeBranchId/);
@@ -592,7 +749,16 @@ test("operator stock GRN create routes stay branch-native (D059 §4 slice 1)", (
   );
   assert.doesNotMatch(grnCreateEmbeddedBranch, /\{header\}/);
   assert.match(grnCreateEmbeddedBranch, /\{footer\}/);
-  assert.match(grnCreateClient, /sticky chrome-safe-bottom[\s\S]*border/);
+  assert.match(grnCreateClient, /<AppDetailFooter[\s\S]*sticky=\{embedded\}/);
+  assert.equal(
+    (
+      grnCreateClient.match(
+        /<SelectTrigger size="touch" className="w-full" aria-label=\{unit\}>/g,
+      ) ?? []
+    ).length,
+    2,
+    "GRN create unit picker must stay touch-sized",
+  );
   assert.match(
     grnCreateClient,
     /router\.push\(`\$\{grnBasePath\}\/\$\{grnId\}\?review=1`\)/,
@@ -605,6 +771,9 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
   );
   const wastePage = read(
     "apps/web/app/(protected)/inventory/waste/new/page.tsx",
+  );
+  const wasteCreateClient = read(
+    "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx",
   );
   const wasteRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx",
@@ -631,6 +800,23 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
   assert.match(wastePage, /embedded\?: boolean/);
   assert.match(wastePage, embeddedContentWrapperPattern);
   assert.match(wastePage, /if \(routeBranchId == null\)/);
+  assert.match(
+    wasteCreateClient,
+    /<SelectTrigger\s+id="waste-loc"\s+size=\{embedded \? "touch" : "default"\}\s+className="w-full"/,
+  );
+  assert.match(
+    wasteCreateClient,
+    /<SearchableSelect[\s\S]*size=\{embedded \? "touch" : "default"\}[\s\S]*className="w-full"/,
+  );
+  assert.match(
+    wasteCreateClient,
+    /<WasteReasonDropdown[\s\S]*size=\{embedded \? "touch" : "default"\}[\s\S]*className="w-full"/,
+  );
+  assert.match(
+    wasteCreateClient,
+    /size=\{embedded \? "touch-lg" : "default"\}/,
+  );
+  assert.match(wasteCreateClient, /<AppDetailFooter[\s\S]*sticky=\{embedded\}/);
   assert.doesNotMatch(
     wastePage,
     /if \(!flagEnabled\) \{\s*if \(routeBranchId != null\)/,
@@ -670,6 +856,18 @@ test("transfer receive full receipt stays one-click on the existing atomic actio
     /const noteOk = !hasShort \|\| shortNote\.trim\(\)\.length >= 3;/,
   );
   assert.match(detailClient, /transferReceive\(transfer\.id, payload\)/);
+  assert.match(
+    detailClient,
+    /className=\{embedded \? "h-12 text-right" : "h-9 text-right"\}/,
+  );
+  assert.match(detailClient, /embedded=\{embedded\}/);
+  assert.equal(
+    (detailClient.match(/size=\{embedded \? "touch" : "default"\}/g) ?? [])
+      .length,
+    2,
+    "embedded transfer detail footer actions must be touch-sized",
+  );
+  assert.match(detailClient, /className=\{embedded \? "h-12" : "h-9"\}/);
   assert.match(transferActions, /stock_transfer_receive/);
   assert.match(transferActions, /p_items: items \?\? null/);
 });
@@ -805,6 +1003,14 @@ test("operator stocktake routes use branch stocktake, not employee count", () =>
     stocktakeListClient,
     /<AppPage width="xwide">\s*\{content\}\s*<\/AppPage>/,
   );
+  assert.match(
+    stocktakeListClient,
+    /<AppToolbar variant=\{embedded \? "inline" : "card"\}>/,
+  );
+  assert.match(
+    stocktakeDetailClient,
+    /size=\{embedded \? "touch" : "default"\}/,
+  );
   assert.match(stocktakeNewClient, /routeBase = "\/inventory\/stocktake"/);
   assert.match(
     stocktakeNewClient,
@@ -813,12 +1019,26 @@ test("operator stocktake routes use branch stocktake, not employee count", () =>
   assert.doesNotMatch(stocktakeNewClient, /InventoryPageContent/);
   assert.match(
     stocktakeDetailClient,
-    /<AppPage width="wide" density="compact">\s*\{content\}\s*<\/AppPage>/,
+    /<AppPage width="wide" density="compact">[\s\S]*?<AppPageHeader/,
   );
   assert.match(
     stocktakeNewClient,
     /router\.push\(\s*`\$\{routeBase\}\/\$\{res\.data\.sessionId\}\/count\?branchId=\$\{branchId\}`,\s*\)/,
   );
+  assert.equal(
+    (
+      stocktakeNewClient.match(
+        /<SelectTrigger\s+size=\{embedded \? "touch" : "default"\}\s+className="w-full"/g,
+      ) ?? []
+    ).length,
+    2,
+    "embedded stocktake start branch/location selects must be touch-sized",
+  );
+  assert.match(
+    stocktakeNewClient,
+    /size=\{embedded \? "touch-lg" : "default"\}/,
+  );
+  assert.match(stocktakeNewClient, /<AppDetailFooter[\s\S]*\bsticky\b/);
   assert.match(stocktakeCountClient, /routeBase = "\/inventory\/stocktake"/);
   assert.match(
     stocktakeCountClient,
@@ -921,7 +1141,7 @@ test("operator transfer routes keep list, create, detail, and form actions branc
   );
   assert.match(
     transferDetailClient,
-    /className=\{\s*embedded\s*\?\s*"sticky chrome-safe-bottom[\s\S]*border/,
+    /<AppDetailFooter[\s\S]*sticky=\{embedded\}/,
   );
   assert.match(
     createTransferForm,
@@ -945,6 +1165,10 @@ test("operator transfer routes keep list, create, detail, and form actions branc
     /userRole === "branch_manager" && viewerBranchId === toId/,
   );
   assert.match(
+    transfersListClient,
+    /<AppToolbar\s*variant=\{embedded \? "inline" : "card"\}/,
+  );
+  assert.match(
     transferActions,
     /claims\.user_role === "branch_manager"[\s\S]*toBranchId !== claims\.branch_id/,
   );
@@ -960,7 +1184,20 @@ test("operator transfer routes keep list, create, detail, and form actions branc
     createTransferForm,
     /className=\{`flex min-w-0 flex-col \$\{embedded \? "gap-3" : "gap-4"\}`\}/,
   );
-  assert.match(createTransferForm, /sticky chrome-safe-bottom/);
+  assert.doesNotMatch(createTransferForm, /<OperatorFlowSteps/);
+  assert.match(createTransferForm, /flowProgressValue/);
+  assert.match(createTransferForm, /showLineSection/);
+  assert.match(createTransferForm, /showNotesSection/);
+  assert.equal(
+    (
+      createTransferForm.match(
+        /<SelectTrigger\s+size=\{embedded \? "touch" : "default"\}\s+className="w-full"/g,
+      ) ?? []
+    ).length,
+    2,
+    "embedded transfer create warehouse selectors must be touch-sized",
+  );
+  assert.match(createTransferForm, /<AppDetailFooter[\s\S]*\bsticky\b/);
   assert.doesNotMatch(
     createTransferForm,
     /router\.(?:push|replace)\(\s*["'`]\/inventory\/transfers/,
@@ -1025,6 +1262,9 @@ test("operator supplier returns render branch-native inside the branch operator 
   const listClient = read(
     "apps/web/app/(protected)/inventory/supplier-returns/supplier-returns-client.tsx",
   );
+  const createClient = read(
+    "apps/web/app/(protected)/inventory/supplier-returns/new/supplier-return-create-client.tsx",
+  );
   const navConfig = read("packages/shared/src/auth/nav-config.ts");
 
   assert.match(listRoute, /params: Promise<\{ branchId: string \}>/);
@@ -1065,6 +1305,19 @@ test("operator supplier returns render branch-native inside the branch operator 
     /export async function SupplierReturnNewPageContent/,
   );
   assert.match(officeNewPage, /embedded\?: boolean/);
+  assert.match(
+    createClient,
+    /<SearchableSelect[\s\S]*size="touch"[\s\S]*className="w-full"/,
+  );
+  assert.match(createClient, /grid grid-cols-1 gap-3 sm:grid-cols-2/);
+  assert.equal(
+    (
+      createClient.match(/<SelectTrigger size="touch" className="w-full">/g) ??
+      []
+    ).length,
+    2,
+    "supplier return create selects must stay touch-sized",
+  );
 
   assert.match(
     officeDetailPage,
@@ -1091,6 +1344,9 @@ test("operator production renders branch-native inside the central_kitchen opera
   );
   const clientSource = read(
     "apps/web/app/(protected)/inventory/production-client.tsx",
+  );
+  const operatorClientSource = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/production-operator-client.tsx",
   );
   const navConfig = read("packages/shared/src/auth/nav-config.ts");
   const operatorCapabilities = read(
@@ -1185,6 +1441,16 @@ test("operator production renders branch-native inside the central_kitchen opera
     operatorCapabilities,
     /tile\.kinds === undefined \|\| tile\.kinds\.includes\(branchKind\)/,
   );
+  assert.match(operatorClientSource, /const showDraftsFirst =/);
+  assert.match(
+    operatorClientSource,
+    /\{showDraftsFirst \? draftsSection : createSection\}/,
+  );
+  assert.match(
+    operatorClientSource,
+    /\{showDraftsFirst[\s\S]*\? createSection[\s\S]*: drafts\.length > 0[\s\S]*\? draftsSection[\s\S]*: null\}/,
+  );
+  assert.doesNotMatch(operatorClientSource, /productionOperatorEmpty/);
 
   // The office_bridge "Sản xuất" tile is retired now that the native
   // surface has landed (D059 §2 shrink-to-zero).

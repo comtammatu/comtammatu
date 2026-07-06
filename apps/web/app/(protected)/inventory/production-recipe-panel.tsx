@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Controller, useFieldArray, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import {
+  ArrowLeft as IconArrowLeft,
   ClipboardList as IconClipboardList,
   Pencil as IconPencil,
   Plus as IconPlus,
@@ -24,6 +26,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { messages } from "@lib/messages";
 import {
   DataTable,
   type DataTableColumn,
@@ -41,6 +44,7 @@ import {
   QuickRawIngredientDialog,
 } from "./production-quick-create-dialogs";
 import { ProductionRecipeImportExportMenu } from "./production-recipe-import-export-menu";
+import { OperatorFlowSteps } from "./_components/operator-flow-steps";
 import {
   badgeVariantFromTone,
   sortFinishedGoods,
@@ -170,6 +174,8 @@ interface ProductionRecipePanelProps {
   unitOptions: UnitOption[];
   ingredients: IngredientOption[];
   recipes: ProductionRecipeRow[];
+  backHref?: string;
+  embedded?: boolean;
 }
 
 function RecipeDialogFields({
@@ -364,6 +370,8 @@ export function ProductionRecipePanel({
   unitOptions,
   ingredients,
   recipes,
+  backHref,
+  embedded = false,
 }: ProductionRecipePanelProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -456,6 +464,15 @@ export function ProductionRecipePanel({
   );
 
   const finishedGoodLocked = pendingFinishedGoodId != null;
+  const operatorFlow = messages.inventory.operatorFlow;
+  const recipeStep =
+    finishedGoodsOptions.length === 0
+      ? 1
+      : rawIngredientsOptions.length === 0
+        ? 2
+        : groupedRecipes.length === 0
+          ? 3
+          : 4;
 
   function openRecipeDialog(finishedGoodId?: number) {
     const group =
@@ -639,6 +656,30 @@ export function ProductionRecipePanel({
 
   return (
     <section className="flex flex-col gap-3">
+      {embedded && backHref ? (
+        <Button
+          variant="ghost"
+          size="touch"
+          className="self-start px-2"
+          asChild
+        >
+          <Link href={backHref}>
+            <IconArrowLeft data-icon="inline-start" />
+            {INVENTORY_VI.productionBackToHub}
+          </Link>
+        </Button>
+      ) : null}
+
+      {embedded ? (
+        <OperatorFlowSteps
+          title={operatorFlow.productionRecipeTitle}
+          description={operatorFlow.productionRecipeDescription}
+          steps={operatorFlow.productionRecipeSteps}
+          currentStep={recipeStep}
+          tone={recipeStep >= 4 ? "success" : "default"}
+        />
+      ) : null}
+
       <AppSection
         title={INVENTORY_VI.productionRecipesTab}
         icon={<IconClipboardList />}
@@ -651,6 +692,8 @@ export function ProductionRecipePanel({
               <Button
                 type="button"
                 variant="outline"
+                size={embedded ? "touch" : "default"}
+                className={embedded ? "w-full sm:w-auto" : undefined}
                 onClick={() => openRecipeDialog()}
               >
                 <IconPlus data-icon="inline-start" />
@@ -686,6 +729,7 @@ export function ProductionRecipePanel({
         onSuccess={handleRecipeSaved}
         submitLabel={INVENTORY_VI.productionRecipeSave}
         cancelLabel={ACTIONS_VI.cancel}
+        actionSize={embedded ? "touch" : "default"}
         contentClassName="sm:max-w-5xl"
       >
         {(form) => (
@@ -728,7 +772,7 @@ export function ProductionRecipePanel({
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size={embedded ? "touch" : "sm"}
                       onClick={() => openRecipeDialog(group.finishedGoodId)}
                     >
                       <IconPencil data-icon="inline-start" />
@@ -737,7 +781,7 @@ export function ProductionRecipePanel({
                     <Button
                       type="button"
                       variant="destructive"
-                      size="sm"
+                      size={embedded ? "touch" : "sm"}
                       onClick={() => handleRecipeGroupDelete(group)}
                     >
                       <IconTrash data-icon="inline-start" />
@@ -756,6 +800,7 @@ export function ProductionRecipePanel({
                   <RecipeLineItemCard
                     recipe={recipe}
                     canManageRecipes={canManageRecipes}
+                    embedded={embedded}
                     onEdit={handleEditClick}
                     onDelete={handleRecipeDelete}
                   />
@@ -772,11 +817,13 @@ export function ProductionRecipePanel({
 function RecipeLineItemCard({
   recipe,
   canManageRecipes,
+  embedded,
   onEdit,
   onDelete,
 }: {
   recipe: ProductionRecipeRow;
   canManageRecipes: boolean;
+  embedded: boolean;
   onEdit: (recipe: ProductionRecipeRow) => void;
   onDelete: (recipeId: number) => void;
 }) {
@@ -799,7 +846,7 @@ function RecipeLineItemCard({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size={embedded ? "touch" : "sm"}
               onClick={() => onEdit(recipe)}
             >
               <IconPencil data-icon="inline-start" />
@@ -808,7 +855,7 @@ function RecipeLineItemCard({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size={embedded ? "touch" : "sm"}
               onClick={() => onDelete(recipe.id)}
             >
               <IconTrash data-icon="inline-start" />

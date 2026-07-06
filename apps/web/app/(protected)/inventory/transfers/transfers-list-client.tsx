@@ -32,6 +32,7 @@ import type { BranchForTransfer } from "./create-transfer-dialog";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
+import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import { messages } from "@lib/messages";
 
 import { FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
@@ -171,6 +172,7 @@ export function TransfersListClient({
   const pageTitle = pageTitleOverride ?? copy.internalTransferTitle;
   const tabLabels: Record<TransferTab, string> = TAB_LABELS;
   const createPathBase = createBasePath ?? basePath;
+  const operatorFlow = messages.inventory.operatorFlow;
   const createHref =
     userBranchId == null
       ? `${createPathBase}/new`
@@ -322,6 +324,15 @@ export function TransfersListClient({
   const content = (
     <>
       {embedded ? (
+        <OperatorFlowSteps
+          title={operatorFlow.transferListTitle}
+          description={operatorFlow.transferListDescription}
+          steps={operatorFlow.transferSteps}
+          currentStep={1}
+        />
+      ) : null}
+
+      {embedded ? (
         canReceiveSupplier || canCreate ? (
           <div className="flex justify-end gap-2">
             {canReceiveSupplier ? (
@@ -348,7 +359,7 @@ export function TransfersListClient({
         ) : null
       ) : (
         <AppPageHeader
-          eyebrow="Kho hàng"
+          eyebrow={messages.inventory.shell.moduleName}
           title={pageTitle}
           actions={
             canCreate ? (
@@ -363,6 +374,7 @@ export function TransfersListClient({
         />
       )}
       <AppToolbar
+        variant={embedded ? "inline" : "card"}
         className="items-stretch sm:items-center"
         search={
           <InputGroup className="min-h-10 w-full sm:h-10 sm:flex-1">
@@ -390,7 +402,11 @@ export function TransfersListClient({
             <TabsList variant="toolbar" className="p-1">
               {(Object.keys(tabLabels) as TransferTab[]).map((tab) => {
                 return (
-                  <TabsTrigger key={tab} value={tab} className="min-h-9 min-w-0">
+                  <TabsTrigger
+                    key={tab}
+                    value={tab}
+                    className="min-h-9 min-w-0"
+                  >
                     {tabLabels[tab]}
                     {tabCounts[tab] > 0 && (
                       <Badge variant="secondary" className="ml-1.5 font-mono">

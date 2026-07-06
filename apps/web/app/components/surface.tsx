@@ -875,26 +875,57 @@ export type AppDetailFooterProps = {
   leading?: ReactNode;
   trailing?: ReactNode;
   className?: string;
+  sticky?: boolean;
+  mobileReverse?: boolean;
+  stacked?: boolean;
 };
 
 export function AppDetailFooter({
   leading,
   trailing,
   className,
+  sticky = false,
+  mobileReverse = false,
+  stacked = false,
 }: AppDetailFooterProps) {
+  const hasLeading = leading != null;
+  const hasTrailing = trailing != null;
+
   return (
     <footer
       className={cn(
-        "flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between",
+        "flex border-t border-border",
+        mobileReverse ? "flex-col-reverse" : "flex-col",
+        stacked
+          ? "sm:flex-col sm:items-stretch"
+          : "sm:flex-row sm:items-center sm:justify-between",
+        sticky
+          ? "sticky chrome-safe-bottom z-10 gap-2 bg-background/95 p-2 shadow-lg backdrop-blur [&_[data-slot=button]]:w-full sm:[&_[data-slot=button]]:w-auto"
+          : "gap-3 py-6",
         className,
       )}
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        {leading}
-      </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        {trailing}
-      </div>
+      {hasLeading ? (
+        <div
+          className={cn(
+            "flex min-w-0 flex-col gap-2",
+            !stacked && "sm:flex-row sm:items-center",
+          )}
+        >
+          {leading}
+        </div>
+      ) : null}
+      {hasTrailing ? (
+        <div
+          className={cn(
+            "flex min-w-0 flex-col gap-2",
+            !stacked && "sm:flex-row sm:items-center sm:justify-end",
+            !hasLeading && "w-full",
+          )}
+        >
+          {trailing}
+        </div>
+      ) : null}
     </footer>
   );
 }

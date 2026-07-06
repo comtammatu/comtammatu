@@ -39,6 +39,222 @@ export type Database = {
   }
   public: {
     Tables: {
+      _ing_backup_a2fix: {
+        Row: {
+          id: number | null
+          measure_unit: string | null
+          purchase_to_measure_factor: number | null
+          purchase_unit: string | null
+          unit: string | null
+        }
+        Insert: {
+          id?: number | null
+          measure_unit?: string | null
+          purchase_to_measure_factor?: number | null
+          purchase_unit?: string | null
+          unit?: string | null
+        }
+        Update: {
+          id?: number | null
+          measure_unit?: string | null
+          purchase_to_measure_factor?: number | null
+          purchase_unit?: string | null
+          unit?: string | null
+        }
+        Relationships: []
+      }
+      _ingcost_backup_a2fix: {
+        Row: {
+          id: number | null
+          unit_cost: number | null
+        }
+        Insert: {
+          id?: number | null
+          unit_cost?: number | null
+        }
+        Update: {
+          id?: number | null
+          unit_cost?: number | null
+        }
+        Relationships: []
+      }
+      _ingthr_backup_a2fix: {
+        Row: {
+          id: number | null
+          max_stock_level: number | null
+          min_stock_level: number | null
+          reorder_point: number | null
+        }
+        Insert: {
+          id?: number | null
+          max_stock_level?: number | null
+          min_stock_level?: number | null
+          reorder_point?: number | null
+        }
+        Update: {
+          id?: number | null
+          max_stock_level?: number | null
+          min_stock_level?: number | null
+          reorder_point?: number | null
+        }
+        Relationships: []
+      }
+      _iu_backup_a2fix: {
+        Row: {
+          allow_issue: boolean | null
+          allow_production: boolean | null
+          allow_purchase: boolean | null
+          anchor_factor: number | null
+          anchor_unit_id: number | null
+          created_at: string | null
+          id: number | null
+          ingredient_id: number | null
+          is_active: boolean | null
+          is_base: boolean | null
+          sort_order: number | null
+          tenant_id: number | null
+          to_base_factor: number | null
+          unit_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          allow_issue?: boolean | null
+          allow_production?: boolean | null
+          allow_purchase?: boolean | null
+          anchor_factor?: number | null
+          anchor_unit_id?: number | null
+          created_at?: string | null
+          id?: number | null
+          ingredient_id?: number | null
+          is_active?: boolean | null
+          is_base?: boolean | null
+          sort_order?: number | null
+          tenant_id?: number | null
+          to_base_factor?: number | null
+          unit_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          allow_issue?: boolean | null
+          allow_production?: boolean | null
+          allow_purchase?: boolean | null
+          anchor_factor?: number | null
+          anchor_unit_id?: number | null
+          created_at?: string | null
+          id?: number | null
+          ingredient_id?: number | null
+          is_active?: boolean | null
+          is_base?: boolean | null
+          sort_order?: number | null
+          tenant_id?: number | null
+          to_base_factor?: number | null
+          unit_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      _sl_backup_a2fix: {
+        Row: {
+          avg_unit_cost: number | null
+          branch_id: number | null
+          current_quantity: number | null
+          id: number | null
+          ingredient_id: number | null
+          last_counted_at: string | null
+          location_id: number | null
+          tenant_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          avg_unit_cost?: number | null
+          branch_id?: number | null
+          current_quantity?: number | null
+          id?: number | null
+          ingredient_id?: number | null
+          last_counted_at?: string | null
+          location_id?: number | null
+          tenant_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          avg_unit_cost?: number | null
+          branch_id?: number | null
+          current_quantity?: number | null
+          id?: number | null
+          ingredient_id?: number | null
+          last_counted_at?: string | null
+          location_id?: number | null
+          tenant_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      _sm_backup_a2fix: {
+        Row: {
+          branch_id: number | null
+          created_at: string | null
+          created_by: string | null
+          entry_quantity: number | null
+          entry_unit_id: number | null
+          grn_id: number | null
+          id: number | null
+          ingredient_id: number | null
+          issue_id: number | null
+          location_id: number | null
+          movement_subtype: string | null
+          order_id: number | null
+          production_order_id: number | null
+          quantity_change: number | null
+          reason: string | null
+          tenant_id: number | null
+          transfer_id: number | null
+          type: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          branch_id?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          entry_quantity?: number | null
+          entry_unit_id?: number | null
+          grn_id?: number | null
+          id?: number | null
+          ingredient_id?: number | null
+          issue_id?: number | null
+          location_id?: number | null
+          movement_subtype?: string | null
+          order_id?: number | null
+          production_order_id?: number | null
+          quantity_change?: number | null
+          reason?: string | null
+          tenant_id?: number | null
+          transfer_id?: number | null
+          type?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          branch_id?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          entry_quantity?: number | null
+          entry_unit_id?: number | null
+          grn_id?: number | null
+          id?: number | null
+          ingredient_id?: number | null
+          issue_id?: number | null
+          location_id?: number | null
+          movement_subtype?: string | null
+          order_id?: number | null
+          production_order_id?: number | null
+          quantity_change?: number | null
+          reason?: string | null
+          tenant_id?: number | null
+          transfer_id?: number | null
+          type?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: []
+      }
       accounting_periods: {
         Row: {
           closed_by: string | null
@@ -9651,6 +9867,10 @@ export type Database = {
           p_zone_id: string
         }
         Returns: string
+      }
+      inv_catalog_unit_to_base: {
+        Args: { p_all_units: Json; p_base_unit_id: number; p_unit: Json }
+        Returns: number
       }
       inv_derive_to_base_factor: {
         Args: {

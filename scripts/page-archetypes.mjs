@@ -25,11 +25,11 @@ export const PAGE_ARCHETYPES = {
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/kds/page.tsx":
     "SETTINGS-PANEL",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/menu-limits/page.tsx":
+  "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx": "HUB",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos-sessions/page.tsx":
-    "SETTINGS-PANEL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/page.tsx":
+    "REPORT",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/printers/page.tsx":

@@ -46,6 +46,11 @@ import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../_lib/parse-branch-id";
 import { fetchBranchDayStatus, fetchBranchQueueCounts } from "./dashboard/data";
+import {
+  CENTRAL_HOME_TILE_SUFFIXES,
+  getBranchHomeTileLimit,
+  getBranchPrimaryHomeGroup,
+} from "./_lib/operator-home-contract";
 import { resolveOperatorTileIcon } from "./operator-tile-icons";
 
 const branchCopy = messages.settings.branch;
@@ -212,21 +217,6 @@ function CompactQueueSection({ rows }: { rows: QueueRow[] }) {
 // Approved home tile curation per central kind (design contract screens 1+4):
 // four job tiles; every other job stays reachable via the CTA, the queue feed,
 // the bottom nav, and /more. Suffixes are matched against tile hrefs.
-const CENTRAL_TILE_SUFFIXES: Record<string, readonly string[]> = {
-  central_supply: [
-    "/stock",
-    "/stock/stocktake",
-    "/stock/transfer",
-    "/stock/supplier-returns",
-  ],
-  central_kitchen: [
-    "/stock",
-    "/stock/grn",
-    "/stock/transfer",
-    "/stock/stocktake",
-  ],
-};
-
 export default async function OperatorHomePage({
   params,
 }: {
@@ -293,7 +283,7 @@ export default async function OperatorHomePage({
 
   const isCentral = branchKind !== "branch";
   const isCentralSupply = branchKind === "central_supply";
-  const centralSuffixes = CENTRAL_TILE_SUFFIXES[branchKind] ?? null;
+  const centralSuffixes = CENTRAL_HOME_TILE_SUFFIXES[branchKind] ?? null;
   // Central homes render one curated job-tile group; the full tile directory
   // lives on /more (design contract screens 1+4).
   const centralGroups =
@@ -322,11 +312,10 @@ export default async function OperatorHomePage({
             : [];
         })()
       : rawGroups;
-  const branchTodayGroup =
-    rawGroups.find((group) => group.id === "sales_kitchen") ??
-    rawGroups.find((group) => group.id === "stock") ??
-    null;
-  const branchTodayTileLimit = branchTodayGroup?.id === "sales_kitchen" ? 3 : 4;
+  const branchTodayGroup = getBranchPrimaryHomeGroup(rawGroups);
+  const branchTodayTileLimit = branchTodayGroup
+    ? getBranchHomeTileLimit(branchTodayGroup.id)
+    : 0;
   const branchTodayTileCount = branchTodayGroup?.tiles.length ?? 0;
   const branchTodayGroups = branchTodayGroup
     ? [
@@ -447,21 +436,17 @@ export default async function OperatorHomePage({
     ) : null;
 
   const secondaryLinksSection = isCentral || showMoreLink ? (
-    <div className="flex items-center justify-center gap-4">
+    <div className="flex flex-wrap items-center justify-center gap-2">
       {isCentral ? (
-        <Link
-          href={`${basePath}/shift/clock`}
-          className="text-sm text-muted-foreground underline underline-offset-4"
-        >
-          {branchCopy.centralClockLink}
-        </Link>
+        <Button asChild variant="outline" size="touch">
+          <Link href={`${basePath}/shift/clock`}>
+            {branchCopy.centralClockLink}
+          </Link>
+        </Button>
       ) : null}
-      <Link
-        href={`${basePath}/more`}
-        className="text-sm text-muted-foreground underline underline-offset-4"
-      >
-        {branchCopy.centralMoreTitle}
-      </Link>
+      <Button asChild variant="outline" size="touch">
+        <Link href={`${basePath}/more`}>{branchCopy.centralMoreTitle}</Link>
+      </Button>
     </div>
   ) : null;
   const mainColumnClassName =

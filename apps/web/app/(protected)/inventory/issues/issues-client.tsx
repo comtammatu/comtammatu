@@ -32,6 +32,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { downloadCsv } from "@/_lib/download-file";
 import { matchesSearch } from "@lib/search";
+import { messages } from "@lib/messages";
 import { FormDialog, SelectField, TextareaField } from "@/components/form";
 import {
   AppPage,
@@ -783,7 +784,7 @@ export function IssuesClient({
         </div>
       ) : (
         <AppPageHeader
-          eyebrow={INVENTORY_VI.warehouse}
+          eyebrow={messages.inventory.shell.moduleName}
           title={pageTitle ?? tNav("consumption", "navigation")}
           actions={
             <>
@@ -866,7 +867,7 @@ export function IssuesClient({
         </AppSection>
       )}
 
-      <AppSection title={pageTitle ?? INVENTORY_VI.consumptionSlipsTitle} contentFlush>
+      <AppSection className="overflow-hidden" contentFlush>
         {filterBar}
         <DataTable
           columns={issueColumns}
@@ -945,5 +946,9 @@ export function IssuesClient({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return <AppPage width="xwide">{content}</AppPage>;
+  return (
+    <AppPage width="xwide" density="compact">
+      {content}
+    </AppPage>
+  );
 }

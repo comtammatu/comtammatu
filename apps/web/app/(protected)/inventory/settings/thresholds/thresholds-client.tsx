@@ -19,6 +19,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { AppToolbar } from "@/components/surface";
 import { FormDialog, QuantityField, QuantityInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import { bulkUpdateIngredientThresholds } from "./actions";
@@ -297,8 +298,8 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-col gap-2 border-b bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <span>{copy.hint}</span>
+      <AppToolbar variant="inline" className="justify-between">
+        <span className="text-xs text-muted-foreground">{copy.hint}</span>
         <Button
           type="button"
           size="sm"
@@ -308,7 +309,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
         >
           {copy.bulk.applyTo(selected.size)}
         </Button>
-      </div>
+      </AppToolbar>
 
       <DataTable
         columns={columns}

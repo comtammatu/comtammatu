@@ -164,7 +164,9 @@ component — the same branch benefits both planes, and the office plane
   branch context) already owns the page-header job; a second `AppPageHeader`
   inside the embedded content is a duplicate header. Gate `AppPageHeader`
   rendering on `!embedded`, or split it out of the shared `content` block so
-  the embedded return path skips it entirely.
+  the embedded return path skips it entirely. Gate
+  `operator-embedded-page-header-boundary` catches shared `content` blocks that
+  put `AppPageHeader` outside an explicit `embedded` branch.
 - **R2 — No nested page shell.** An embedded branch MUST NOT wrap its content
   in `AppPage` (or an `AppPage`-backed adapter such as
   `InventoryPageContent`) — the operator layout's own `AppPage

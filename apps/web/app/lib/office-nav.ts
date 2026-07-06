@@ -7,6 +7,7 @@ import {
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
   Printer as IconPrinter,
+  ReceiptText as IconReceiptText,
   ScrollText as IconScrollText,
   Settings as IconSettings,
   Users as IconUsers,
@@ -42,6 +43,7 @@ const OFFICE_ICON_MAP: Record<string, ElementType> = {
   Wallet: IconWallet,
   Briefcase: IconBriefcase,
   Building2: IconBuilding2,
+  ReceiptText: IconReceiptText,
 };
 
 function mapItem(item: ResolvedNavLink): ShellNavItem {

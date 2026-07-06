@@ -51,6 +51,7 @@ export function StockControlCard({
             ) : null}
           </div>
           <Switch
+            size="touch"
             checked={postingEnabled}
             onCheckedChange={handlePostingChange}
             disabled={isSaving || !canToggle}

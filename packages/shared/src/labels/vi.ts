@@ -19,6 +19,7 @@ export type ModuleLabelKey =
   | "branch_dashboard"
   | "branch_settings"
   | "branch_menu_limits"
+  | "branch_pos_sessions"
   | "branch_team"
   | "employee"
   | "employee_checkout_approvals"
@@ -38,8 +39,8 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   hr: "Nhân sự",
   hr_payroll: "Lương",
   finance: "Tài chính",
-  branches: "Chi nhánh",
-  branch_picker: "Chọn chi nhánh",
+  branches: "Hub",
+  branch_picker: "Chọn Hub",
   settings: "Cài đặt",
   pos: "POS",
   kds: "KDS",
@@ -48,6 +49,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_dashboard: "Điều hành chi nhánh",
   branch_settings: "Cài đặt chi nhánh",
   branch_menu_limits: "Giới hạn bán",
+  branch_pos_sessions: "Đối soát ca POS",
   branch_team: "Đội hôm nay",
   employee: "Ca của tôi",
   employee_checkout_approvals: "Duyệt kết ca",
@@ -88,7 +90,7 @@ export const APP_COPY_VI = {
   loading: "Đang tải…",
   refresh: "Làm mới",
   noAreaData: "Không có dữ liệu khu vực",
-  noScopedBranches: "Không có chi nhánh trong phạm vi",
+  noScopedBranches: "Không có Hub trong phạm vi",
 } as const;
 
 const SITE_KIND_LABELS_VI: Record<SiteKind, string> = {

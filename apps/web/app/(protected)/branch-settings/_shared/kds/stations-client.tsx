@@ -85,7 +85,7 @@ export function StationsClient({
     return (
       <Button
         variant="ghost"
-        size="icon"
+        size="icon-touch"
         onClick={() => {
           setEditStation(station);
           setDialogOpen(true);
@@ -191,6 +191,7 @@ export function StationsClient({
         }
         actions={
           <Button
+            size="touch"
             className="w-full sm:w-auto"
             onClick={() => {
               setEditStation(null);
@@ -208,6 +209,7 @@ export function StationsClient({
         data={filteredStations}
         getRowKey={(station) => station.id}
         emptyTitle={messages.settings.kds.emptyForBranch}
+        mobileBreakpoint={1024}
         mobileCardRender={(station) => (
           <Item variant="outline">
             <ItemContent className="min-w-0">

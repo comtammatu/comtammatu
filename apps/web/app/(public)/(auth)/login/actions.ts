@@ -62,8 +62,6 @@ export async function login(
   }
 
   const { email, password } = parsed.data;
-  const rawReturnTo = formData.get("returnTo");
-  const returnTo = typeof rawReturnTo === "string" ? rawReturnTo : null;
 
   // Rate limiting — 10 attempts per 5 min, keyed by IP
   // Bypass in dev via DISABLE_LOGIN_RATE_LIMIT=true
@@ -140,5 +138,5 @@ export async function login(
     ...resolveBranchHubContextFromHeaders(await headers()),
     homeBranchId: await resolveCentralSiteHomeBranchId(supabase, claims),
   };
-  redirect(resolvePostLoginRedirect(claims, returnTo, branchHubContext));
+  redirect(resolvePostLoginRedirect(claims, null, branchHubContext));
 }

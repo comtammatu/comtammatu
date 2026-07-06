@@ -255,6 +255,7 @@ export function PrintersClient(props: {
           initial={editing}
           preset={adding}
           categories={categories}
+          embedded={embedded}
           onClose={() => {
             setEditing(null);
             setAdding(null);
@@ -270,12 +271,14 @@ function PrinterForm({
   initial,
   preset,
   categories,
+  embedded,
   onClose,
 }: {
   branches: Branch[];
   initial: Printer | null;
   preset: { branch_id: number; role: PrinterRole } | null;
   categories: Category[];
+  embedded: boolean;
   onClose: () => void;
 }) {
   const [pending, startTransition] = useTransition();
@@ -561,6 +564,7 @@ function PrinterForm({
         {initial ? (
           <Button
             variant="outline"
+            size={embedded ? "touch" : "default"}
             className="w-full sm:w-auto"
             onClick={remove}
             disabled={pending}
@@ -570,13 +574,19 @@ function PrinterForm({
         ) : null}
         <Button
           variant="outline"
+          size={embedded ? "touch" : "default"}
           className="w-full sm:w-auto"
           onClick={onClose}
           disabled={pending}
         >
           {ACTIONS_VI.cancel}
         </Button>
-        <Button className="w-full sm:w-auto" onClick={save} disabled={pending}>
+        <Button
+          size={embedded ? "touch" : "default"}
+          className="w-full sm:w-auto"
+          onClick={save}
+          disabled={pending}
+        >
           {pending ? "Đang lưu..." : "Lưu"}
         </Button>
       </div>

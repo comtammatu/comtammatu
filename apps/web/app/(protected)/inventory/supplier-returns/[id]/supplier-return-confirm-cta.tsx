@@ -12,6 +12,7 @@ import {
   confirmSupplierReturn,
   transitionSupplierReturn,
 } from "@/(protected)/inventory/supplier-return-actions";
+import { AppDetailFooter } from "@/components/surface";
 
 const DETAIL = messages.inventory.supplierReturns.detail;
 
@@ -79,61 +80,65 @@ export function SupplierReturnConfirmCta({
   }
 
   return (
-    <div className="sticky chrome-safe-bottom z-10 flex w-full flex-col gap-2">
-      {status === "draft" ? (
+    <AppDetailFooter
+      sticky
+      mobileReverse={false}
+      stacked
+      trailing={
         <>
-          <NoteCallout tone="muted">{DETAIL.confirmHint}</NoteCallout>
-          <Button
-            type="button"
-            size="touch-lg"
-            className="w-full"
-            disabled={pending}
-            onClick={runConfirm}
-          >
-            {pending ? <Spinner className="size-5" /> : null}
-            {pending ? DETAIL.confirmingState : DETAIL.confirmCta}
-          </Button>
-        </>
-      ) : null}
+          {status === "draft" ? (
+            <>
+              <NoteCallout tone="muted">{DETAIL.confirmHint}</NoteCallout>
+              <Button
+                type="button"
+                size="touch-lg"
+                disabled={pending}
+                onClick={runConfirm}
+              >
+                {pending ? <Spinner className="size-5" /> : null}
+                {pending ? DETAIL.confirmingState : DETAIL.confirmCta}
+              </Button>
+            </>
+          ) : null}
 
-      {status === "sent" ? (
-        <div className="flex flex-col gap-2">
-          {resolution === "credit_note" ? (
-            <Button
-              type="button"
-              size="touch-lg"
-              className="w-full"
-              disabled={pending}
-              onClick={() => runTransition("credited", false)}
-            >
-              {pending ? <Spinner className="size-5" /> : null}
-              {DETAIL.creditCta}
-            </Button>
+          {status === "sent" ? (
+            <>
+              {resolution === "credit_note" ? (
+                <Button
+                  type="button"
+                  size="touch-lg"
+                  disabled={pending}
+                  onClick={() => runTransition("credited", false)}
+                >
+                  {pending ? <Spinner className="size-5" /> : null}
+                  {DETAIL.creditCta}
+                </Button>
+              ) : null}
+              {resolution === "cash_refund" ? (
+                <Button
+                  type="button"
+                  size="touch-lg"
+                  disabled={pending}
+                  onClick={() => runTransition("refunded", false)}
+                >
+                  {pending ? <Spinner className="size-5" /> : null}
+                  {DETAIL.refundCta}
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                disabled={pending}
+                onClick={() => runTransition("cancelled", true)}
+              >
+                {DETAIL.cancelCta}
+              </Button>
+            </>
           ) : null}
-          {resolution === "cash_refund" ? (
-            <Button
-              type="button"
-              size="touch-lg"
-              className="w-full"
-              disabled={pending}
-              onClick={() => runTransition("refunded", false)}
-            >
-              {pending ? <Spinner className="size-5" /> : null}
-              {DETAIL.refundCta}
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            className="w-full border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            disabled={pending}
-            onClick={() => runTransition("cancelled", true)}
-          >
-            {DETAIL.cancelCta}
-          </Button>
-        </div>
-      ) : null}
-    </div>
+        </>
+      }
+    />
   );
 }

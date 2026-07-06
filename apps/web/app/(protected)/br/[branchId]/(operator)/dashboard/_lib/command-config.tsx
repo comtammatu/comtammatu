@@ -8,11 +8,14 @@ import {
   Package as IconPackage,
   Printer as IconPrinter,
   ReceiptText as IconReceiptText,
-  Settings as IconSettings,
-  Users as IconUsers,
   Utensils as IconUtensils,
+  Users as IconUsers,
 } from "lucide-react";
-import { canAccess, type ModuleKey, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  canAccess,
+  type ModuleKey,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import { formatVNTime } from "@comtammatu/shared/time";
 import type { BadgeProps } from "@comtammatu/ui/components/badge";
 import { messages } from "@lib/messages";
@@ -41,7 +44,6 @@ export type BranchReadinessItem = {
 
 export type BranchCommandTileGroups = {
   endDay: BranchCommandTile[];
-  setup: BranchCommandTile[];
   drilldown: BranchCommandTile[];
 };
 
@@ -52,30 +54,14 @@ function buildTileGroups(
   return {
     endDay: [
       {
-        moduleKey: "branch_dashboard",
-        href: `/br/${branchId}/settings/pos-sessions`,
+        moduleKey: "branch_pos_sessions",
+        href: `/br/${branchId}/pos-sessions`,
         title: copy.commandPosSessionsTitle,
         description: copy.commandPosSessionsDescription,
         icon: <IconReceiptText />,
       },
     ],
-    setup: [
-      {
-        moduleKey: "branch_settings",
-        href: `/br/${branchId}/settings`,
-        title: copy.commandBranchSetup,
-        description: copy.commandBranchSetupDescription,
-        icon: <IconSettings />,
-      },
-    ],
     drilldown: [
-      {
-        moduleKey: "branch_menu_limits",
-        href: `/br/${branchId}/settings/menu-limits`,
-        title: copy.menuLimitsTitle,
-        description: copy.commandMenuLimitsDescription,
-        icon: <IconUtensils />,
-      },
       {
         moduleKey: "inventory",
         href: `/br/${branchId}/stock`,
@@ -102,7 +88,6 @@ export function buildVisibleTileGroups(
     tiles.filter((tile) => canAccess(role, tile.moduleKey));
   return {
     endDay: visible(groups.endDay),
-    setup: visible(groups.setup),
     drilldown: visible(groups.drilldown),
   };
 }
@@ -115,7 +100,7 @@ type ReadinessHrefs = {
   posHref?: string;
   kdsHref?: string;
   printersHref?: string;
-  hrHref?: string;
+  staffHref?: string;
   settingsHref?: string;
   checkoutApprovalsHref?: string;
 };
@@ -131,7 +116,7 @@ export function buildReadinessItems(
   hrefs: ReadinessHrefs,
 ): BranchReadinessItem[] {
   const posOpen = day.posSessionOpenedAt !== null;
-  const menuReady = day.setupActiveMenuItems > 0;
+  const menuLimitsReady = day.menuLimitAvailableItems > 0;
   const floorReady = day.tablesTotal > 0 && day.setupActiveTerminals > 0;
   const kdsSetupReady = day.setupActiveKdsStations > 0;
   const printerConfigured = day.setupActivePrinters > 0;
@@ -156,11 +141,13 @@ export function buildReadinessItems(
       key: "menu",
       icon: <IconUtensils />,
       title: copy.readinessMenuTitle,
-      description: menuReady
-        ? copy.readinessMenuReady(day.setupActiveMenuItems)
+      description: menuLimitsReady
+        ? copy.readinessMenuReady(day.menuLimitAvailableItems)
         : copy.readinessMenuMissing,
-      badge: menuReady ? copy.readinessReadyBadge : copy.readinessMissingBadge,
-      badgeVariant: menuReady ? "success" : "warning",
+      badge: menuLimitsReady
+        ? copy.readinessReadyBadge
+        : copy.readinessMissingBadge,
+      badgeVariant: menuLimitsReady ? "success" : "warning",
       href: hrefs.menuHref,
       ctaLabel: hrefs.menuHref ? copy.readinessMenuCta : undefined,
     },
@@ -269,12 +256,10 @@ export function buildReadinessItems(
       description: staffReady
         ? copy.readinessStaffReady(day.setupActiveStaff)
         : copy.readinessStaffMissing,
-      badge: staffReady
-        ? copy.readinessReadyBadge
-        : copy.readinessWarningBadge,
+      badge: staffReady ? copy.readinessReadyBadge : copy.readinessWarningBadge,
       badgeVariant: staffReady ? "success" : "secondary",
-      href: hrefs.hrHref,
-      ctaLabel: hrefs.hrHref ? copy.readinessStaffCta : undefined,
+      href: hrefs.staffHref,
+      ctaLabel: hrefs.staffHref ? copy.readinessStaffCta : undefined,
     },
     {
       key: "checkout",

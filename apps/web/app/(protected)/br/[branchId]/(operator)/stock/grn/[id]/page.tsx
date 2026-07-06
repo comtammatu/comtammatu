@@ -41,6 +41,7 @@ export default async function OperatorStockGrnDetailPage({
       grnListBasePath={grnListBasePath}
       grnMobileBackPath={grnListBasePath}
       purchaseOrdersBasePath={purchaseOrdersBasePath}
+      embedded
     />
   );
 }

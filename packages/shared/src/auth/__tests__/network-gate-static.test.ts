@@ -20,6 +20,7 @@ function readRepoFile(path: string): string {
 }
 
 const route = readRepoFile("apps/web/app/api/branch-presence/route.ts");
+const proxy = readRepoFile("apps/web/proxy.ts");
 const provisioningCli = readRepoFile(
   "apps/print-agent/src/ops/provision-presence-token.ts",
 );
@@ -72,6 +73,17 @@ test("presence token registry is service-role only and bound to tenant branch ag
   assert.match(
     migration,
     /GRANT EXECUTE ON FUNCTION public\.register_branch_presence\(BIGINT, BIGINT, TEXT, TEXT, INET\)\s+TO service_role/,
+  );
+});
+
+test("owner bypasses station network gate while other roles still use it", () => {
+  assert.match(
+    proxy,
+    /claims\.user_role !== "owner"[\s\S]*process\.env\.POS_NETWORK_GATE !== "off"/,
+  );
+  assert.match(
+    proxy,
+    /if \(networkGateEnabled\) \{[\s\S]*\.from\("branch_trusted_egress_ips"\)/,
   );
 });
 

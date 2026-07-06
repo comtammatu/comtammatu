@@ -3,6 +3,12 @@
 import { useState, useTransition } from "react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from "@comtammatu/ui/components/field";
 import { Label } from "@comtammatu/ui/components/label";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -56,7 +62,7 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <Alert>
         <AlertDescription>{copy.description}</AlertDescription>
       </Alert>
@@ -65,6 +71,11 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
         title={copy.toleranceTitle}
         size="sm"
         contentClassName="grid gap-4 md:grid-cols-3"
+        footer={
+          <Button onClick={handleSave} disabled={isSaving}>
+            <IconDeviceFloppy className="size-4" /> {copy.saveButton}
+          </Button>
+        }
       >
         <div className="flex flex-col gap-1">
           <Label htmlFor="short-tol">{copy.shortToleranceLabel}</Label>
@@ -102,24 +113,18 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
             {copy.reviewThresholdHelp}
           </p>
         </div>
-        <div className="md:col-span-3">
-          <div className="flex items-center justify-between rounded-md border p-3">
-            <div>
-              <Label className="text-sm">{copy.rejectPhotoLabel}</Label>
-              <p className="text-xs text-muted-foreground">
-                {copy.rejectPhotoHelp}
-              </p>
-            </div>
-            <Switch checked={requirePhoto} onCheckedChange={setRequirePhoto} />
-          </div>
-        </div>
+        <Field orientation="horizontal" className="md:col-span-3">
+          <FieldContent>
+            <FieldLabel className="text-sm">{copy.rejectPhotoLabel}</FieldLabel>
+            <FieldDescription>{copy.rejectPhotoHelp}</FieldDescription>
+          </FieldContent>
+          <Switch
+            aria-label={copy.rejectPhotoLabel}
+            checked={requirePhoto}
+            onCheckedChange={setRequirePhoto}
+          />
+        </Field>
       </AppSection>
-
-      <footer className="flex justify-end gap-2 border-t pt-4">
-        <Button onClick={handleSave} disabled={isSaving}>
-          <IconDeviceFloppy className="size-4" /> {copy.saveButton}
-        </Button>
-      </footer>
     </div>
   );
 }

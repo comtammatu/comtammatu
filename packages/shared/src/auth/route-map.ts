@@ -255,17 +255,27 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    // First-match: menu-limits is nested under /settings, so it MUST precede
-    // the broader branch-settings family or that less-specific prefix wins.
     id: "branch-menu-limits",
     label: MODULE_ACL.branch_menu_limits.label,
-    surface: "branch_management",
-    entryPath: "/br/[branchId]/settings/menu-limits",
-    matchPrefixes: ["/br/[branchId]/settings/menu-limits"],
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/menu-limits",
+    matchPrefixes: ["/br/[branchId]/menu-limits"],
     moduleKeys: ["branch_menu_limits"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
+    id: "branch-pos-sessions",
+    label: MODULE_ACL.branch_pos_sessions.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/pos-sessions",
+    matchPrefixes: ["/br/[branchId]/pos-sessions"],
+    moduleKeys: ["branch_pos_sessions"],
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
   },
   {

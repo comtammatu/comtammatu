@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
+import { AppDetailFooter } from "@/components/surface";
 import {
   NumberPadGrid,
   appendNumpadKey,
@@ -69,6 +71,7 @@ export function StocktakeCountWizard({
     [lines, counts],
   );
   const remaining = total - done;
+  const progressValue = total > 0 ? Math.round((done / total) * 100) : 0;
 
   const upNext = useMemo(() => {
     const names: string[] = [];
@@ -109,7 +112,12 @@ export function StocktakeCountWizard({
     if (activeLine == null) return;
     const raw = values[activeLine.ingredientId] ?? "";
     const qty = Number(raw);
-    if (raw.length === 0 || raw.endsWith(".") || !Number.isFinite(qty) || qty < 0) {
+    if (
+      raw.length === 0 ||
+      raw.endsWith(".") ||
+      !Number.isFinite(qty) ||
+      qty < 0
+    ) {
       toast.error(copy.countInvalidQty);
       return;
     }
@@ -125,18 +133,25 @@ export function StocktakeCountWizard({
 
   return (
     <div className="flex w-full flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <span className="flex-1 text-sm font-medium">
-          {copy.countMode(currentRound)}
-        </span>
-        <span className="text-xs font-medium text-muted-foreground tabular-nums">
-          {copy.countRatio(done, total)}
-        </span>
+      <div className="flex flex-col gap-2 rounded-md bg-muted/50 p-2.5">
+        <div className="flex items-center gap-2">
+          <span className="flex-1 text-sm font-medium">
+            {copy.countMode(currentRound)}
+          </span>
+          <span className="text-xs font-medium text-muted-foreground tabular-nums">
+            {copy.countRatio(done, total)}
+          </span>
+        </div>
+        <Progress
+          value={progressValue}
+          tone={remaining === 0 && total > 0 ? "success" : "default"}
+          className="h-2"
+        />
       </div>
 
       {chrome}
 
-      <InteractiveCard className="flex-col items-center gap-1.5 border-primary/40 text-center">
+      <InteractiveCard className="flex-col items-center gap-1.5 border-primary/20 text-center">
         <div className="text-sm font-medium">
           {activeLine?.ingredientName ?? "—"}
         </div>
@@ -149,6 +164,11 @@ export function StocktakeCountWizard({
               : null}
           </span>
         </div>
+        {upNext.length > 0 ? (
+          <div className="text-xs text-muted-foreground">
+            {copy.countUpNext(upNext)}
+          </div>
+        ) : null}
       </InteractiveCard>
 
       <InteractiveCard>
@@ -165,27 +185,23 @@ export function StocktakeCountWizard({
         {copy.countSaveNext}
       </Button>
 
-      {upNext.length > 0 ? (
-        <div className="text-center text-xs text-muted-foreground">
-          {copy.countUpNext(upNext)}
-        </div>
-      ) : null}
-
-      <div className="sticky chrome-safe-bottom z-10 flex w-full flex-col gap-2">
-        <Button
-          type="button"
-          size="touch"
-          variant="outline"
-          className="w-full"
-          onClick={onSubmit}
-          disabled={!editable || submitting || done === 0}
-        >
-          {submitting ? <Spinner className="size-4" /> : null}
-          {remaining > 0
-            ? copy.countSubmitRemaining(remaining)
-            : copy.countSubmitAll}
-        </Button>
-      </div>
+      <AppDetailFooter
+        sticky
+        trailing={
+          <Button
+            type="button"
+            size="touch"
+            variant="outline"
+            onClick={onSubmit}
+            disabled={!editable || submitting || done === 0}
+          >
+            {submitting ? <Spinner className="size-4" /> : null}
+            {remaining > 0
+              ? copy.countSubmitRemaining(remaining)
+              : copy.countSubmitAll}
+          </Button>
+        }
+      />
     </div>
   );
 }

@@ -21,9 +21,11 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "branch_dashboard",
     "branch_menu_limits",
     "branch_picker",
+    "branch_pos_sessions",
     "branch_settings",
     "branch_team",
     "branches",
+    "employee",
     "employee_checkout_approvals",
     "employee_leave_approvals",
     "finance",
@@ -44,6 +46,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
   branch_manager: [
     "branch_dashboard",
     "branch_menu_limits",
+    "branch_pos_sessions",
     "branch_settings",
     "branch_team",
     "employee",
@@ -82,33 +85,22 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "notifications",
     "operator_home",
   ],
-  chef: [
-    "employee",
-    "kds",
-    "notifications",
-    "operator_home",
-    "runner",
-  ],
+  chef: ["employee", "kds", "notifications", "operator_home", "runner"],
   office: ["employee", "finance", "notifications"],
 };
 
 for (const [role, expected] of Object.entries(EXPECTED_MATRIX)) {
   test(`MODULE_ACL access matrix for ${role} is locked`, () => {
-    assert.deepEqual(accessibleModules(role as StaffRole), [...expected].sort());
+    assert.deepEqual(
+      accessibleModules(role as StaffRole),
+      [...expected].sort(),
+    );
   });
 }
 
-test("owner reaches every module except the staff-only employee surface", () => {
+test("owner reaches every module", () => {
   const ownerModules = new Set(accessibleModules("owner"));
   for (const key of ALL_MODULE_KEYS) {
-    if (key === "employee") {
-      assert.equal(ownerModules.has(key), false);
-    } else {
-      assert.equal(
-        ownerModules.has(key),
-        true,
-        `owner must reach ${key}`,
-      );
-    }
+    assert.equal(ownerModules.has(key), true, `owner must reach ${key}`);
   }
 });

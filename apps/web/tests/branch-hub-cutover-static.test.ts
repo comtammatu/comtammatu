@@ -33,12 +33,9 @@ test("proxy passes device context into post-login redirect", () => {
   assert.match(proxy, /resolveBranchHubContextFromHeaders/);
   assert.match(
     proxy,
-    /resolvePostLoginRedirect\(claims, returnTo, branchHubContext\)/,
-  );
-  assert.match(
-    proxy,
     /resolvePostLoginRedirect\(claims, null, branchHubContext\)/,
   );
+  assert.doesNotMatch(proxy, /searchParams\.set\(\s*"returnTo"/);
 });
 
 test("login action passes device context into post-login redirect", () => {
@@ -50,7 +47,7 @@ test("login action passes device context into post-login redirect", () => {
   );
   assert.match(
     actions,
-    /resolvePostLoginRedirect\(claims, returnTo, branchHubContext\)/,
+    /resolvePostLoginRedirect\(claims, null, branchHubContext\)/,
   );
 });
 

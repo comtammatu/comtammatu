@@ -14,24 +14,25 @@ Gộp "Cổng nhân viên" và "Branch Management" thành **một Operator Works
 
 1. **Họ "Vận hành" chưa chín.** `/employee/*` (PWA header + bottom-nav) và POS/KDS/Runner (`OperationalPwaProvider` full-screen) cùng họ chrome D019 nhưng **không chia khung**: nav viết tay (`NAV_ITEMS`), `MobileHeader`/bottom-nav copy giữa employee và inventory-mobile, không entry chung. Branch command/setup `/br/[branchId]/{dashboard,settings}` lại render trong họ "Quản trị" (`AppShell` desktop) → manager điều hành hằng ngày phải nhảy chrome.
 2. **3 cơ chế branch-scope rời nhau.** Employee = `claims.branch_id` (cố định, không picker); Inventory = `?branchId=N` (query param); POS/KDS/Runner = segment `[branchId]`. Không có "current branch" thống nhất; mỗi page query lại bảng `branches`.
-3. **Route operator rải rác.** Việc *tại* chi nhánh nằm ở `/employee/*` + `/inventory/*` + `/br/[branchId]/*` — không một gốc.
+3. **Route operator rải rác.** Việc _tại_ chi nhánh nằm ở `/employee/*` + `/inventory/*` + `/br/[branchId]/*` — không một gốc.
 
 Giữ được (tài sản tốt): design tokens OKLCH + Geist + Tailwind v4, `AppBottomNav`, primitive touch (`NumberPadSheet`, `InteractiveCard`, `size="touch-lg"`), realtime store (`useSyncExternalStore` + coalescer), `MODULE_ACL` + `has_permission` RPC, `resolveInventoryBranchScope` (bản branch-scope sạch nhất).
 
 ## 3. Hai mặt phẳng = 2 họ chrome D019 (không có họ thứ 3)
 
-| Operator plane — họ "Vận hành" (matured) — `/br/[branchId]/*` (phone + tablet) | Office plane — họ "Quản trị" (`AppShell`, desktop) |
-|---|---|
-| `/` Operator home — tiles theo role *(thay `/employee` home)* | `/admin/*` L0 tenant command (owner-only, D017) |
-| `/shift/*` clock · tasks · schedule · leave · payslip *(từ `/employee/*`)* | `/hr/*` nhân sự · ngày công · lương *(domain workspace độc lập)* |
-| `/pos` · `/kds` · `/runner` *(giữ UI, re-root)* | `/finance/*` |
-| `/stock/*` count · receive · transfer · waste *(slice sàn của Kho)* | `/menu` catalog món (tenant) |
-| `/menu-limits` *(giới hạn ngày, per-branch)* | `/inventory/*` procurement · production · catalog · recipe · supplier |
-| `/approvals` checkout + waste *(manager)* | `/branches` list quản lý CN |
-| `/overview` doanh thu · cảnh báo *(manager/owner)* | |
-| `/dashboard` + `/settings/*` tables · pos · kds · printers · pos-sessions *(branch command+setup, kéo từ AppShell sang — D050)* | |
+| Operator plane — họ "Vận hành" (matured) — `/br/[branchId]/*` (phone + tablet)                                                               | Office plane — họ "Quản trị" (`AppShell`, desktop)                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `/` Operator home — tiles theo role _(thay `/employee` home)_                                                                                | `/admin/*` L0 tenant command (owner-only, D017)                       |
+| `/shift/*` clock · tasks · schedule · leave · payslip _(từ `/employee/_`)\*                                                                  | `/hr/*` nhân sự · ngày công · lương _(domain workspace độc lập)_      |
+| `/pos` · `/kds` · `/runner` _(giữ UI, re-root)_                                                                                              | `/finance/*`                                                          |
+| `/stock/*` count · receive · transfer · waste _(slice sàn của Kho)_                                                                          | `/menu` catalog món (tenant)                                          |
+| `/menu-limits` _(giới hạn ngày, per-branch)_                                                                                                 | `/inventory/*` procurement · production · catalog · recipe · supplier |
+| `/approvals` checkout + waste _(manager)_                                                                                                    | `/branches` list quản lý CN                                           |
+| `/overview` doanh thu · cảnh báo _(manager/owner)_                                                                                           |                                                                       |
+| `/dashboard` · `/pos-sessions` · `/settings/*` tables · pos · kds · printers _(branch command/setup/reconcile, kéo từ AppShell sang — D050)_ |                                                                       |
 
-Cắt theo *ai-làm-ở-đâu*, không theo bảng dữ liệu:
+Cắt theo _ai-làm-ở-đâu_, không theo bảng dữ liệu:
+
 - **Kho tách đôi:** việc sàn hằng ngày → Operator; back-office nặng (PO/production/catalog/report) → Office.
 - **Menu tách Menu-Limits:** định nghĩa món = Office/tenant; giới hạn ngày = Operator/per-branch.
 
@@ -58,15 +59,15 @@ Owner landing theo thiết bị: desktop → Office; phone → Operator "Overvie
 
 **Capability matrix** (role → nhóm tile; mỗi ô vẫn gate server-side):
 
-| Nhóm tile | owner | branch_manager | warehouse_mgr | production_mgr | cashier | chef |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|
-| Ca của tôi (chấm công · việc · lịch · phép · lương) | – | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Bán hàng (POS · bàn · đơn) | ✓ | ✓ | – | – | ✓ | – |
-| Bếp (KDS · runner) | ✓ | ✓ | – | – | – | ✓ |
-| Kho (đếm · nhận · điều chuyển · hao hụt) | ✓ | ✓ | ✓ | ✓ | – | – |
-| Sản xuất (production) | ✓ | ✓ | – | ✓ | – | – |
-| Điều hành CN (giới hạn món · duyệt · cài đặt · ca kíp) | ✓ | ✓ | – | – | – | – |
-| Tổng quan (doanh thu · cảnh báo) | ✓ | ✓ | – | – | – | – | – |
+| Nhóm tile                                              | owner | branch_manager | warehouse_mgr | production_mgr | cashier | chef |
+| ------------------------------------------------------ | :---: | :------------: | :-----------: | :------------: | :-----: | :--: | --- |
+| Ca của tôi (chấm công · việc · lịch · phép · lương)    |   –   |       ✓        |       ✓       |       ✓        |    ✓    |  ✓   |
+| Bán hàng (POS · bàn · đơn)                             |   ✓   |       ✓        |       –       |       –        |    ✓    |  –   |
+| Bếp (KDS · runner)                                     |   ✓   |       ✓        |       –       |       –        |    –    |  ✓   |
+| Kho (đếm · nhận · điều chuyển · hao hụt)               |   ✓   |       ✓        |       ✓       |       ✓        |    –    |  –   |
+| Sản xuất (production)                                  |   ✓   |       ✓        |       –       |       ✓        |    –    |  –   |
+| Điều hành CN (giới hạn món · duyệt · cài đặt · ca kíp) |   ✓   |       ✓        |       –       |       –        |    –    |  –   |
+| Tổng quan (doanh thu · cảnh báo)                       |   ✓   |       ✓        |       –       |       –        |    –    |  –   | –   |
 
 ## 6. Branch-context — 1 provider thay 3 cơ chế
 
@@ -90,7 +91,7 @@ Owner landing theo thiết bị: desktop → Office; phone → Operator "Overvie
 
 ## 9. Amendment D019/D017 (sửa load-bearing — ghi ở D050)
 
-- D019.1 hiện đặt *branch command/setup `/br/[branchId]/*`* trong họ "Quản trị" (`AppShell`). **Sửa:** branch dashboard + control + settings (tables/pos/kds/printers/pos-sessions) render trong họ "Vận hành" (Operator plane mobile/tablet). Office plane (`AppShell`) còn `/admin` + domain workspaces + `/branches` list.
+- D019.1 hiện đặt _branch command/setup `/br/[branchId]/_`* trong họ "Quản trị" (`AppShell`). **Sửa:** branch dashboard + control + settings (tables/pos/kds/printers) + end-day POS reconciliation render trong họ "Vận hành" (Operator plane mobile/tablet). Office plane (`AppShell`) còn `/admin`+ domain workspaces +`/branches` list.
 - D017.3 "Home BM = `/employee`; điều hành ở `/br/[branchId]/*`": vẫn đúng tinh thần; chỉ chuẩn hóa cả hai về một Operator plane (home BM = `/br/[branchId]` Operator home).
 
 ## 10. Quan hệ với work đang chạy
@@ -101,15 +102,15 @@ Owner landing theo thiết bị: desktop → Office; phone → Operator "Overvie
 
 ## 11. Lộ trình tách sub-project (mỗi cái 1 vòng spec→plan→build)
 
-| # | Sub-project | Phụ thuộc | Rủi ro |
-|---|---|---|---|
-| 1 | **Foundation**: `resolveBranchContext` + capability registry (mở rộng `nav-config.ts`) + Branch Hub (device-aware `resolvePostLoginRedirect`) | – | thấp (plumbing, ẩn sau UI cũ) |
-| 2 | Operator shell + phone nav (4 anchor + smart card) + tile Home | 1 | trung |
-| 3 | Migrate My-shift (`/employee/*` → `/br/[id]/shift/*`) + redirect | 1, 2, **HR settle (D026/D027)** | trung |
-| 4 | Migrate Stock floor slices (`/br/[id]/stock/*`) | 1, 2 | trung |
-| 5 | Branch command+control+setup + Overview (dashboard, menu-limits, approvals, settings, glance) | 1, 2, task3 | trung |
-| 6 | Re-root station apps (POS/KDS/Runner) lên context + Hub | 1 | thấp |
-| 7 | Office plane cleanup (gỡ operator/branch khỏi `AppShell`) | 3–6, task3 | thấp |
+| #   | Sub-project                                                                                                                                   | Phụ thuộc                       | Rủi ro                        |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ----------------------------- |
+| 1   | **Foundation**: `resolveBranchContext` + capability registry (mở rộng `nav-config.ts`) + Branch Hub (device-aware `resolvePostLoginRedirect`) | –                               | thấp (plumbing, ẩn sau UI cũ) |
+| 2   | Operator shell + phone nav (4 anchor + smart card) + tile Home                                                                                | 1                               | trung                         |
+| 3   | Migrate My-shift (`/employee/*` → `/br/[id]/shift/*`) + redirect                                                                              | 1, 2, **HR settle (D026/D027)** | trung                         |
+| 4   | Migrate Stock floor slices (`/br/[id]/stock/*`)                                                                                               | 1, 2                            | trung                         |
+| 5   | Branch command+control+setup + Overview (dashboard, menu-limits, approvals, settings, glance)                                                 | 1, 2, task3                     | trung                         |
+| 6   | Re-root station apps (POS/KDS/Runner) lên context + Hub                                                                                       | 1                               | thấp                          |
+| 7   | Office plane cleanup (gỡ operator/branch khỏi `AppShell`)                                                                                     | 3–6, task3                      | thấp                          |
 
 `#1` làm trước & chắc — cõng tất cả; ship được mà chưa gỡ UI cũ (additive). Mỗi lát đụng route phải đồng bộ `module-acl.ts`, `route-resolution.ts`, `route-map.ts`, `nav-config.ts`/`office-nav.ts`, và gate `protected-route-module-coverage.test.ts` (như task3 đã ghi).
 

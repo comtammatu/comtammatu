@@ -129,6 +129,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
         data={tables}
         getRowKey={(table) => table.id}
         emptyTitle={messages.settings.tables.emptyTitle}
+        mobileBreakpoint={1024}
         emptyIcon={
           <IconToolsKitchen className="mx-auto size-8 text-muted-foreground" />
         }

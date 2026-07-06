@@ -23,10 +23,6 @@ import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { ACTIONS_VI, AUTH_VI } from "@comtammatu/shared/messages";
 import { login } from "./actions";
 
-interface LoginFormProps {
-  returnTo?: string;
-}
-
 type LoginField = "email" | "password";
 
 interface LoginValues {
@@ -38,7 +34,7 @@ const LOGIN_ERROR_ID = "login-form-error";
 const EMAIL_ERROR_ID = "login-email-error";
 const PASSWORD_ERROR_ID = "login-password-error";
 
-export function LoginForm({ returnTo }: LoginFormProps) {
+export function LoginForm() {
   const [state, formAction, isPending] = useActionState(login, null);
   const [values, setValues] = useState<LoginValues>({
     email: "",
@@ -74,10 +70,6 @@ export function LoginForm({ returnTo }: LoginFormProps) {
       aria-busy={isPending}
       onSubmit={() => setLastSubmittedValues(values)}
     >
-      {returnTo ? (
-        <input type="hidden" name="returnTo" value={returnTo} />
-      ) : null}
-
       {actionError ? (
         <Alert variant="destructive">
           <IconAlertCircle />

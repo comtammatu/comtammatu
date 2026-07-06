@@ -30,7 +30,7 @@ const stockCapacityMultiUnitMigration = readFileSync(
 const actionsSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/(operator)/settings/menu-limits/actions.ts",
+    "app/(protected)/br/[branchId]/(operator)/menu-limits/actions.ts",
   ),
   "utf8",
 );
@@ -38,7 +38,7 @@ const actionsSource = readFileSync(
 const tableSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/(operator)/settings/menu-limits/menu-limits-table.tsx",
+    "app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
   ),
   "utf8",
 );

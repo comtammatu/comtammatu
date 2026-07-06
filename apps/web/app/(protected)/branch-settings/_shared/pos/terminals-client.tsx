@@ -69,7 +69,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
     return (
       <Button
         variant="ghost"
-        size="icon"
+        size="icon-touch"
         onClick={() => {
           setEditTerminal(terminal);
           setDialogOpen(true);
@@ -155,7 +155,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
             {selectedBranchId !== null && (
               <Button
                 variant="outline"
-                size="sm"
+                size="touch"
                 asChild
                 className="w-full sm:w-auto"
               >
@@ -166,6 +166,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
               </Button>
             )}
             <Button
+              size="touch"
               className="w-full sm:w-auto"
               onClick={() => {
                 setEditTerminal(null);
@@ -185,6 +186,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
         data={filteredTerminals}
         getRowKey={(terminal) => terminal.id}
         emptyTitle={messages.settings.pos.emptyForBranch}
+        mobileBreakpoint={1024}
         mobileCardRender={(terminal) => (
           <Item variant="outline">
             <ItemContent className="min-w-0">

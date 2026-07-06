@@ -1,11 +1,10 @@
 "use client";
 
-import { Fragment, useMemo, type ComponentType, type ReactNode } from "react";
+import { Fragment, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft as IconArrowLeft, LogOut as IconLogout } from "lucide-react";
-import type { StaffRole } from "@comtammatu/shared/auth";
-import { resolveRoleHomeLink } from "@comtammatu/shared/auth";
+import { LogOut as IconLogout } from "lucide-react";
+import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { cn } from "@comtammatu/ui";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -33,7 +32,6 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
-  SidebarRail,
   SidebarTrigger,
 } from "@comtammatu/ui/components/sidebar";
 import {
@@ -46,27 +44,9 @@ import {
   type ShellNavItem,
 } from "@/lib/shell-primitives";
 import { AppShellPaddingBoundary } from "@/components/surface";
-import {
-  BrandLogoBox,
-  BrandMark,
-  type BrandMarkVariant,
-} from "@/components/brand";
-import { BranchSwitcher } from "@/components/branch-switcher";
+import { BrandLogoBox, BrandMark } from "@/components/brand";
 import { WorkspaceBottomNav } from "@/components/workspace-bottom-nav";
 import { messages } from "@lib/messages";
-import type { BranchSwitcherOption } from "@/_lib/branch-scope";
-
-export interface BrandConfig {
-  icon: ComponentType<{ className?: string }>;
-  subLabel: string;
-  mainLabel: ReactNode;
-  logoVariant?: BrandMarkVariant | null;
-  logoAlt?: string;
-  /** Show role-safe home link above brand block. Default true. */
-  showBackLink?: boolean;
-  backHref?: string;
-  backLabel?: string;
-}
 
 export interface PageHeaderConfig {
   /** Either a single Badge label or breadcrumb chain segments. */
@@ -85,21 +65,12 @@ export interface PageHeaderConfig {
 export interface AppShellProps {
   children: ReactNode;
   user: { name: string };
-  role: StaffRole;
-  branchId?: number | null;
-  brand: BrandConfig;
   /** Primary module tabs for the single sidebar. */
   tier1: ShellNavItem[];
   /** Sub-tabs for the active primary tab. */
   tier2: ShellNavGroup[];
   defaultPageTitle: string;
   pageHeader: PageHeaderConfig;
-  /**
-   * Branches the current user can switch to. The `BranchSwitcher` renders in
-   * the brand block only when more than one option is present (hidden for
-   * single-branch users).
-   */
-  branchOptions?: BranchSwitcherOption[];
   /**
    * Mobile-only workspace bottom navbar (same nav model as the sidebar +
    * drawer trigger). Default true for all back-office shells.
@@ -122,14 +93,10 @@ function getSidebarSubNavGroups(
 export function AppShell({
   children,
   user,
-  role,
-  branchId,
-  brand,
   tier1,
   tier2,
   defaultPageTitle,
   pageHeader,
-  branchOptions,
   bottomNav = true,
 }: AppShellProps) {
   const pathname = usePathname();
@@ -151,60 +118,29 @@ export function AppShell({
     [tier1, pathname],
   );
 
-  const BrandIcon = brand.icon;
-  const logoVariant =
-    brand.logoVariant === undefined ? "seal" : brand.logoVariant;
-  const showBackLink = brand.showBackLink ?? true;
-  const defaultBackLink = resolveRoleHomeLink(role, branchId);
-  const backHref = brand.backHref ?? defaultBackLink.href;
-  const backLabel = brand.backLabel ?? defaultBackLink.label;
   const breadcrumbSegments = pageHeader.breadcrumbSegments ?? [];
 
   return (
-    <SidebarProvider>
-      <Sidebar variant="inset" collapsible="icon">
+    <SidebarProvider open={true}>
+      <Sidebar variant="inset" collapsible="offcanvas">
         <SidebarHeader className="gap-3 border-b p-3">
           <div className="flex items-center gap-3">
-            <BrandLogoBox tone={logoVariant ? "sidebar" : "sidebar-primary"}>
-              {logoVariant ? (
-                <BrandMark
-                  variant={logoVariant}
-                  alt={brand.logoAlt}
-                  className="size-full"
-                />
-              ) : (
-                <BrandIcon className="size-5" />
-              )}
+            <BrandLogoBox tone="sidebar">
+              <BrandMark
+                variant="seal"
+                alt={copy.brandName}
+                className="size-full"
+              />
             </BrandLogoBox>
-            <div className="min-w-0 flex flex-1 flex-col gap-1 group-data-[collapsible=icon]:hidden">
+            <div className="min-w-0 flex flex-1 flex-col gap-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
-                {brand.subLabel}
+                {ROLE_LABEL_VI.office}
               </p>
               <p className="truncate font-heading text-base font-semibold leading-tight">
-                {brand.mainLabel}
+                {copy.brandName}
               </p>
             </div>
           </div>
-          {branchOptions ? (
-            <div className="group-data-[collapsible=icon]:hidden">
-              <BranchSwitcher options={branchOptions} branchId={branchId} />
-            </div>
-          ) : null}
-          {showBackLink ? (
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="justify-start text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2!"
-            >
-              <Link href={backHref}>
-                <IconArrowLeft data-icon="inline-start" />
-                <span className="group-data-[collapsible=icon]:hidden">
-                  {backLabel}
-                </span>
-              </Link>
-            </Button>
-          ) : null}
         </SidebarHeader>
 
         <SidebarContent className="gap-3 px-2 py-3">
@@ -303,14 +239,13 @@ export function AppShell({
             </form>
           </div>
         </SidebarFooter>
-        <SidebarRail />
       </Sidebar>
 
       <SidebarInset id="main-content">
         <header className="sticky top-0 z-30 border-b bg-background px-4 py-2 print:hidden">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-3">
-              <SidebarTrigger />
+              <SidebarTrigger className="lg:hidden" />
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 {breadcrumbSegments.length > 0 ? (
                   <Breadcrumb>

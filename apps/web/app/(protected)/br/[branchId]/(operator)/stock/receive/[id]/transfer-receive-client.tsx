@@ -15,7 +15,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { AppEmptyState } from "@/components/surface";
+import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { NumberPadSheet } from "@/components/form";
 import { transferReceive } from "@/(protected)/inventory/transfer-actions";
 import type { TransferDetail } from "@/(protected)/inventory/transfers/[id]/transfer-detail-client";
@@ -61,6 +61,10 @@ export function TransferReceiveClient({
   const sheetItem = useMemo(
     () => items.find((item) => item.ingredientId === sheetId) ?? null,
     [items, sheetId],
+  );
+  const nextItem = useMemo(
+    () => items.find((item) => !confirmed.has(item.ingredientId)) ?? null,
+    [items, confirmed],
   );
 
   function handleSheetConfirm(value: number) {
@@ -142,21 +146,51 @@ export function TransferReceiveClient({
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-primary transition-[width]"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
+      <div className="rounded-md bg-muted/50 p-2.5">
+        <div className="flex items-center gap-2">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-[width]"
+              style={{ width: `${Math.round(progress * 100)}%` }}
+            />
+          </div>
+          <span className="text-xs font-medium text-muted-foreground tabular-nums">
+            {receiveCopy.receiveProgress(confirmed.size, total)}
+          </span>
         </div>
-        <span className="text-xs font-medium text-muted-foreground tabular-nums">
-          {receiveCopy.receiveProgress(confirmed.size, total)}
-        </span>
+
+        {nextItem ? (
+          <InteractiveCard
+            asChild
+            padding="compact"
+            minHeight="tap"
+            className="mt-2"
+          >
+            <button
+              type="button"
+              className="w-full flex-col items-start justify-center text-left"
+              onClick={() => setSheetId(nextItem.ingredientId)}
+            >
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {receiveCopy.receiveNextLine}
+              </span>
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                  {nextItem.name}
+                </span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {receiveCopy.receiveSent(String(nextItem.qty), nextItem.unit)}
+                </span>
+              </span>
+            </button>
+          </InteractiveCard>
+        ) : null}
       </div>
 
       <ItemGroup className="gap-2">
         {items.map((item) => {
           const isConfirmed = confirmed.has(item.ingredientId);
+          const isNext = nextItem?.ingredientId === item.ingredientId;
           const value = values[item.ingredientId] ?? item.qty;
           return (
             <InteractiveCard
@@ -188,10 +222,12 @@ export function TransferReceiveClient({
                     "shrink-0 rounded-md px-3 py-1 font-mono text-sm font-semibold tabular-nums",
                     isConfirmed
                       ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground",
+                      : isNext
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground",
                   )}
                 >
-                  {value}
+                  {isConfirmed ? value : receiveCopy.receiveTapToEnter}
                 </span>
               </button>
             </InteractiveCard>
@@ -199,21 +235,23 @@ export function TransferReceiveClient({
         })}
       </ItemGroup>
 
-      <div className="sticky chrome-safe-bottom z-10 flex w-full flex-col gap-2 border-t bg-background/95 p-2 backdrop-blur">
-        <Button
-          type="button"
-          size="touch-lg"
-          variant={remaining > 0 ? "outline" : "default"}
-          className="w-full"
-          disabled={isPending}
-          onClick={handleConfirm}
-        >
-          {isPending ? <Spinner className="size-5" /> : null}
-          {remaining > 0
-            ? receiveCopy.receiveConfirmRemaining(remaining)
-            : receiveCopy.receiveConfirmAll}
-        </Button>
-      </div>
+      <AppDetailFooter
+        sticky
+        trailing={
+          <Button
+            type="button"
+            size="touch-lg"
+            variant={remaining > 0 ? "outline" : "default"}
+            disabled={isPending}
+            onClick={handleConfirm}
+          >
+            {isPending ? <Spinner className="size-5" /> : null}
+            {remaining > 0
+              ? receiveCopy.receiveConfirmRemaining(remaining)
+              : receiveCopy.receiveConfirmAll}
+          </Button>
+        }
+      />
 
       <NumberPadSheet
         open={sheetItem != null}

@@ -168,10 +168,10 @@ export const finance = {
       branchCashVariance: "Lệch quỹ",
     },
     exceptions: {
-      cashVarianceLabel: "Lệch tiền mặt cuối ca",
+      cashVarianceLabel: "Lệch tiền mặt cần xử lý",
       cashVarianceClosedSessions: (count: string) =>
-        `${count} ca đã đóng trong kỳ`,
-      cashVarianceNoClosedSession: "Chưa có ca đóng trong kỳ",
+        `${count} ca vượt ngưỡng chưa xử lý trong kỳ`,
+      cashVarianceNoClosedSession: "Không còn ca lệch cần xử lý",
       operatingExpenseLabel: "Chi vận hành",
       operatingExpenseRecorded: "Đã có chi vận hành ghi nhận trong kỳ",
       operatingExpenseMissing:
@@ -476,8 +476,9 @@ export const finance = {
       invoicesAttention: "HĐĐT cần xử lý",
       invoicesAttentionHint: "Nháp, đang ký hoặc đã gửi nhưng chưa có mã CQT",
       totalDifferenceHint: (amount: string) => `Tổng lệch ${amount}`,
-      cashVariance: "Lệch quỹ",
-      absoluteVarianceHint: (amount: string) => `Tổng trị tuyệt đối ${amount}`,
+      cashVariance: "Lệch quỹ cần xử lý",
+      absoluteVarianceHint: (amount: string) =>
+        `Tổng lệch vượt ngưỡng ${amount}`,
       foodCostAlert: "Cảnh báo giá vốn món",
       thresholdHint: (percent: string) => `Ngưỡng ${percent}`,
       webhookFailures: "Lỗi đồng bộ thanh toán",
@@ -682,15 +683,15 @@ export const finance = {
     },
   },
   cashVarianceCard: {
-    title: "Lệch quỹ cuối ca",
-    description: "Theo ca POS đã đóng trong khoảng đang xem.",
-    closedSessions: "Ca đã đóng",
+    title: "Lệch quỹ cần xử lý",
+    description: "Ca POS đã đóng, lệch vượt ngưỡng và chưa có hướng xử lý.",
+    closedSessions: "Ca lệch",
     netVariance: "Lệch ròng",
     short: (count: number) => `Thiếu ${count} ca`,
     over: (count: number) => `Thừa ${count} ca`,
-    topVariance: "Top thu ngân lệch nhiều",
+    topVariance: "Top thu ngân còn lệch",
     sessionCount: (count: number) => `${count} ca`,
-    noVariance: "Không phát hiện lệch quỹ trong kỳ.",
+    noVariance: "Không còn ca lệch quỹ cần xử lý trong kỳ.",
   },
   invoicesPage: {
     eyebrow: "HĐĐT HKD",

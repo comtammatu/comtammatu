@@ -48,8 +48,13 @@ test("Branch command and settings routes belong to the operator contract", () =>
   );
   assert.match(
     routeMap,
-    /id: "branch-menu-limits"[\s\S]*?surface: "branch_management"[\s\S]*?primaryNav: "operator-bottom-nav"/,
-    "menu limits are manager-owned branch controls, not employee runtime chrome",
+    /id: "branch-menu-limits"[\s\S]*?surface: "branch_operation"[\s\S]*?primaryNav: "operator-bottom-nav"/,
+    "menu limits are manager-owned day-operation controls, not branch setup",
+  );
+  assert.match(
+    routeMap,
+    /id: "branch-pos-sessions"[\s\S]*?surface: "branch_operation"[\s\S]*?primaryNav: "operator-bottom-nav"/,
+    "POS session reconciliation is an end-day operation route, not branch setup",
   );
   assert.equal(
     existsSync(
@@ -106,14 +111,20 @@ test("Station apps keep standalone operational chrome, not operator or admin she
   );
   assert.equal(
     existsSync(
-      resolve(repoRoot, "apps/web/app/(protected)/br/[branchId]/(operator)/pos"),
+      resolve(
+        repoRoot,
+        "apps/web/app/(protected)/br/[branchId]/(operator)/pos",
+      ),
     ),
     false,
     "do not move POS under the operator shell",
   );
   assert.equal(
     existsSync(
-      resolve(repoRoot, "apps/web/app/(protected)/br/[branchId]/(operator)/kds"),
+      resolve(
+        repoRoot,
+        "apps/web/app/(protected)/br/[branchId]/(operator)/kds",
+      ),
     ),
     false,
     "do not move KDS under the operator shell",
@@ -134,7 +145,11 @@ test("Station apps keep standalone operational chrome, not operator or admin she
     ["KDS", kdsLayout],
     ["Runner", runnerLayout],
   ] as const) {
-    assert.match(source, /<main/, `${label} layout must own its own main shell`);
+    assert.match(
+      source,
+      /<main/,
+      `${label} layout must own its own main shell`,
+    );
     assert.match(source, /h-dvh/, `${label} layout must be viewport-first`);
     assert.doesNotMatch(source, /<AppPage|OperatorBottomNav|management-chrome/);
   }
@@ -149,7 +164,7 @@ test("Station apps keep standalone operational chrome, not operator or admin she
   assert.match(foregroundNotificationsHook, /if \(disabled\) return null/);
 });
 
-test("Branch command dashboard is split into readiness, end-day, setup, and drilldown lanes", () => {
+test("Branch command dashboard is split into readiness, end-day, and drilldown lanes", () => {
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
@@ -164,22 +179,21 @@ test("Branch command dashboard is split into readiness, end-day, setup, and dril
   const actionItem = read(
     "apps/web/app/(protected)/br/[branchId]/_components/branch-action-item.tsx",
   );
+  const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
   // Lane titles still drive the page's section layout.
-  for (const expected of [
-    "readinessTitle",
-    "endDayTitle",
-    "setupLaneTitle",
-    "drilldownTitle",
-  ]) {
+  for (const expected of ["readinessTitle", "endDayTitle", "drilldownTitle"]) {
     assert.ok(dashboard.includes(expected), `expected ${expected}`);
   }
   // Lane hrefs now live in the extracted tile config (buildTileGroups).
-  for (const expected of [
-    "/br/${branchId}/settings/pos-sessions",
-  ]) {
+  for (const expected of ["/br/${branchId}/pos-sessions"]) {
     assert.ok(commandConfig.includes(expected), `expected ${expected}`);
   }
+  assert.doesNotMatch(
+    commandConfig,
+    /moduleKey: "branch_menu_limits"|menu-limits/,
+    "Giới hạn bán must stay a readiness row, not a duplicate Dashboard drilldown tile",
+  );
   assert.doesNotMatch(dashboard, /liveOperationsTitle/);
   assert.doesNotMatch(commandConfig, /liveOperations/);
   // Nav lanes and readiness now share the mobile-first action-row rhythm.
@@ -205,6 +219,11 @@ test("Branch command dashboard is split into readiness, end-day, setup, and dril
   );
   assert.match(
     dashboard,
+    /const floorHref =[\s\S]*day\.tablesTotal <= 0[\s\S]*day\.setupActiveTerminals <= 0/,
+    "Bàn & máy POS readiness CTA must route to the missing setup part",
+  );
+  assert.match(
+    dashboard,
     /<BranchCommandTileGrid/,
     "Branch Command page should mount the nav-lane tile grids",
   );
@@ -225,6 +244,30 @@ test("Branch command dashboard is split into readiness, end-day, setup, and dril
     /grid-cols-2 gap-3 lg:grid-cols-4/,
     "KPI cards must not force two columns on phone-width viewports",
   );
+  assert.match(
+    settingsMessages,
+    /commandPosSessionsTitle: "Đối soát ca POS"/,
+    "Branch Command reconciliation tile should not duplicate the readiness Ca POS label",
+  );
+  assert.doesNotMatch(
+    settingsMessages,
+    /setupLaneTitle|commandBranchSetup/,
+    "Branch Command must not keep a Settings doorway lane; Settings is already the setup hub",
+  );
+  assert.doesNotMatch(
+    commandConfig,
+    /href:\s*`\/br\/\$\{branchId\}\/settings`/,
+  );
+  assert.doesNotMatch(commandConfig, /IconSettings/);
+  assert.match(
+    settingsMessages,
+    /readinessMenuTitle: "Giới hạn bán"/,
+    "Branch Command readiness row links to menu-limits, not the menu catalog",
+  );
+  assert.match(settingsMessages, /drilldownTitle: "Kho chi nhánh"/);
+  assert.match(settingsMessages, /readinessMenuCta: "Mở giới hạn bán"/);
+  assert.doesNotMatch(settingsMessages, /Thực đơn bán|Mở thực đơn/);
+  assert.doesNotMatch(settingsMessages, /Chưa có món active/);
 });
 
 test("Branch settings hub exposes setup controls only", () => {
@@ -236,6 +279,7 @@ test("Branch settings hub exposes setup controls only", () => {
   const hubTiles = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/_lib/hub-tiles.ts",
   );
+  const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
   assert.match(settingsHub, /<EmployeePage/);
   assert.match(settingsHub, /<EmployeeActionSection/);
@@ -258,6 +302,50 @@ test("Branch settings hub exposes setup controls only", () => {
   assert.doesNotMatch(settingsHub, /AttendanceSettingsCard/);
   assert.doesNotMatch(settingsHub, /\/hr/);
   assert.doesNotMatch(settingsHub, /className="md:p-6"/);
+  assert.match(
+    settingsMessages,
+    /hubDescription: \(branchName: string\) =>\s*`\$\{branchName\} · Bàn, POS, bếp và in`/,
+    "Settings hub description should state the concrete setup scope",
+  );
+  assert.match(
+    settingsMessages,
+    /posSetupTitle: "Máy POS & tồn kho"/,
+    "Settings POS tile must name the stock-control policy it contains",
+  );
+  assert.doesNotMatch(
+    settingsMessages,
+    /Bàn, máy POS, trạm bếp, máy in và cấu hình chấm công của chi nhánh/,
+    "Settings hub must not advertise attendance setup unless it exposes that tile",
+  );
+});
+
+test("Branch More is overflow, not a duplicate Dashboard or Settings hub", () => {
+  const more = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/more/page.tsx",
+  );
+  const homeContract = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_lib/operator-home-contract.ts",
+  );
+  const bottomNav = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
+  );
+  const settingsMessages = read("apps/web/lib/messages/settings.ts");
+
+  assert.match(more, /getOperatorMoreGroups/);
+  assert.match(homeContract, /getOperatorHomeTileHrefs/);
+  assert.match(homeContract, /getBranchPrimaryHomeGroup/);
+  assert.match(homeContract, /CENTRAL_HOME_TILE_SUFFIXES/);
+  assert.match(
+    bottomNav,
+    /branchOverflowPrefixes = \[[\s\S]*`\/br\/\$\{branchId\}\/more`[\s\S]*`\/br\/\$\{branchId\}\/stock`[\s\S]*`\/br\/\$\{branchId\}\/orders`/,
+  );
+  assert.doesNotMatch(
+    bottomNav,
+    /APP_COPY_VI\.operatorManagement[\s\S]{0,360}`\/br\/\$\{branchId\}\/stock`/,
+    "stock overflow must not light the management tab",
+  );
+  assert.match(settingsMessages, /centralMoreDescription/);
+  assert.match(settingsMessages, /moreEmptyTitle: "Không có mục khác"/);
 });
 
 test("Branch setup clients keep mobile-stable toolbars and table surfaces", () => {
@@ -277,8 +365,13 @@ test("Branch setup clients keep mobile-stable toolbars and table surfaces", () =
     "apps/web/app/(protected)/branch-settings/_shared/tables/table-table.tsx",
   );
   const posSessionsClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos-sessions/pos-sessions-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx",
   );
+  const stockControlCard = read(
+    "apps/web/app/(protected)/branch-settings/_shared/pos/stock-control-card.tsx",
+  );
+  const dataTable = read("apps/web/app/components/data-table/data-table.tsx");
+  const sheet = read("packages/ui/src/components/sheet.tsx");
   const setupClients = [
     terminalsClient,
     stationsClient,
@@ -286,12 +379,24 @@ test("Branch setup clients keep mobile-stable toolbars and table surfaces", () =
     printersClient,
     tableTable,
     posSessionsClient,
+    stockControlCard,
   ].join("\n");
 
   assert.match(terminalsClient, /DataTable/);
   assert.match(stationsClient, /DataTable/);
   assert.match(tableTable, /DataTable/);
+  assert.match(dataTable, /mobileBreakpoint\?: number/);
+  assert.match(dataTable, /useIsMobile\(mobileBreakpoint\)/);
+  assert.match(terminalsClient, /mobileBreakpoint=\{1024\}/);
+  assert.match(stationsClient, /mobileBreakpoint=\{1024\}/);
+  assert.match(tableTable, /mobileBreakpoint=\{1024\}/);
+  assert.match(posSessionsClient, /mobileBreakpoint=\{1024\}/);
   assert.match(tablesClient, /w-full sm:w-60/);
+  assert.match(tablesClient, /<TabsList className="h-11 w-full"/);
+  assert.match(terminalsClient, /size="icon-touch"/);
+  assert.match(stationsClient, /size="icon-touch"/);
+  assert.match(stockControlCard, /<Switch\s+size="touch"/);
+  assert.match(sheet, /size="icon-touch"/);
   assert.match(terminalsClient, /const canSwitchBranch = branches\.length > 1/);
   assert.match(stationsClient, /const canSwitchBranch = branches\.length > 1/);
   assert.match(tablesClient, /const canSwitchBranch = branches\.length > 1/);
@@ -301,6 +406,7 @@ test("Branch setup clients keep mobile-stable toolbars and table surfaces", () =
   assert.match(tablesClient, /\{canSwitchBranch \? \(\s*<AppToolbar/);
   assert.match(printersClient, /\{canSwitchBranch \? \(\s*<div/);
   assert.doesNotMatch(setupClients, /SelectTrigger className="w-60"/);
+  assert.doesNotMatch(setupClients, /size="icon"/);
   assert.doesNotMatch(setupClients, /className="ml-auto"/);
   assert.doesNotMatch(setupClients, /mr-2 size-4/);
   assert.doesNotMatch(setupClients, /max-w-xs truncate/);

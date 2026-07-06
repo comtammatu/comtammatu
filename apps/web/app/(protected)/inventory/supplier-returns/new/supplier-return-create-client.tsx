@@ -23,6 +23,7 @@ import {
   createSupplierReturnFromGrn,
   type ReturnableGrnRow,
 } from "@/(protected)/inventory/supplier-return-actions";
+import { AppDetailFooter } from "@/components/surface";
 
 const COPY = messages.inventory.supplierReturns;
 const CREATE = COPY.create;
@@ -118,12 +119,14 @@ export function SupplierReturnCreateClient({
           placeholder={CREATE.grnPickerPlaceholder}
           searchPlaceholder={CREATE.grnPickerSearch}
           emptyText={CREATE.grnPickerEmpty}
+          size="touch"
+          className="w-full"
         />
         <NoteCallout tone="muted">{CREATE.grnAutoLinesHint}</NoteCallout>
       </div>
 
       {/* Resolution + reason */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {CREATE.resolutionLabel}
@@ -132,7 +135,7 @@ export function SupplierReturnCreateClient({
             value={resolution}
             onValueChange={(v) => setResolution(v as Resolution)}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger size="touch" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -149,7 +152,7 @@ export function SupplierReturnCreateClient({
             {CREATE.reasonLabel}
           </Label>
           <Select value={reason} onValueChange={(v) => setReason(v as Reason)}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger size="touch" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -188,19 +191,20 @@ export function SupplierReturnCreateClient({
         </Alert>
       ) : null}
 
-      {/* Sticky submit */}
-      <div className="sticky chrome-safe-bottom z-10 w-full">
-        <Button
-          type="button"
-          size="touch-lg"
-          className="w-full"
-          onClick={submitFromGrn}
-          disabled={!canSubmitGrn}
-        >
-          {submitting ? <Spinner className="size-5" /> : null}
-          {grnId === "" ? CREATE.submitDisabledGrn : CREATE.submitFromGrn}
-        </Button>
-      </div>
+      <AppDetailFooter
+        sticky
+        trailing={
+          <Button
+            type="button"
+            size="touch-lg"
+            onClick={submitFromGrn}
+            disabled={!canSubmitGrn}
+          >
+            {submitting ? <Spinner className="size-5" /> : null}
+            {grnId === "" ? CREATE.submitDisabledGrn : CREATE.submitFromGrn}
+          </Button>
+        }
+      />
     </div>
   );
 }

@@ -44,6 +44,7 @@ import {
 import { matchesSearch } from "@lib/search";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
+  AppDetailFooter,
   AppEmptyState,
   AppPageHeader,
   AppSection,
@@ -655,26 +656,29 @@ export function GrnCreateClient({
   );
 
   const footer = (
-    <div className="sticky chrome-safe-bottom z-10 w-full border-t bg-background/95 p-2 backdrop-blur lg:static lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
-      <Button
-        type="button"
-        size="touch-lg"
-        className="w-full"
-        onClick={submit}
-        disabled={!canSubmit}
-      >
-        {submitting ? (
-          <>
-            <Spinner className="size-5" />
-            {STATES_VI.saving}
-          </>
-        ) : lineCount === 0 ? (
-          GRN_CREATE_COPY.addItemToContinue
-        ) : (
-          GRN_CREATE_COPY.saveDraft(lineCount, total)
-        )}
-      </Button>
-    </div>
+    <AppDetailFooter
+      sticky={embedded}
+      className={embedded ? undefined : "border-0 p-0 shadow-none"}
+      trailing={
+        <Button
+          type="button"
+          size="touch-lg"
+          onClick={submit}
+          disabled={!canSubmit}
+        >
+          {submitting ? (
+            <>
+              <Spinner className="size-5" />
+              {STATES_VI.saving}
+            </>
+          ) : lineCount === 0 ? (
+            GRN_CREATE_COPY.addItemToContinue
+          ) : (
+            GRN_CREATE_COPY.saveDraft(lineCount, total)
+          )}
+        </Button>
+      }
+    />
   );
 
   if (embedded) {
@@ -1029,7 +1033,7 @@ function UnitField({
             if (opt) onUnitChange(opt.unitId, opt.label);
           }}
         >
-          <SelectTrigger className="h-9 w-full text-sm" aria-label={unit}>
+          <SelectTrigger size="touch" className="w-full" aria-label={unit}>
             <SelectValue
               placeholder={messages.inventory.grn.addDialog.selectUnit}
             />
@@ -1044,7 +1048,7 @@ function UnitField({
         </Select>
       ) : (
         <Select disabled value="">
-          <SelectTrigger className="h-9 w-full text-sm" aria-label={unit}>
+          <SelectTrigger size="touch" className="w-full" aria-label={unit}>
             <SelectValue
               placeholder={messages.inventory.grn.addDialog.selectUnit}
             />

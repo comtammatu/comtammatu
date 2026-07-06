@@ -32,7 +32,12 @@ import {
 } from "@comtammatu/ui/components/select";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
-import { AppPageHeader, AppPage, AppToolbar } from "@/components/surface";
+import {
+  AppPageHeader,
+  AppPage,
+  AppSection,
+  AppToolbar,
+} from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -488,8 +493,9 @@ export function IngredientsClient({
   ];
 
   return (
-    <AppPage width="xwide" scroll className="max-md:pb-28">
+    <AppPage width="xwide" density="compact" scroll className="max-md:pb-28">
       <AppPageHeader
+        eyebrow={messages.inventory.shell.moduleName}
         title={PRODUCT_VI.rawIngredient}
         actions={
           <div className="flex items-center gap-2">
@@ -502,31 +508,33 @@ export function IngredientsClient({
       />
       {filterBar}
 
-      <DataTable
-        columns={columns}
-        data={filtered}
-        getRowKey={(item) => item.id}
-        emptyTitle={
-          searchQuery.trim()
-            ? ingredientListCopy.emptyFiltered
-            : ingredientListCopy.emptyTitle
-        }
-        emptyDescription={
-          searchQuery.trim()
-            ? ingredientListCopy.emptyFilteredDescription
-            : ingredientListCopy.emptyDescription
-        }
-        emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
-        mobileCardRender={(item) => (
-          <IngredientMobileCard
-            item={item}
-            isPending={isPending}
-            toneMap={toneMap}
-            onToggleActive={handleToggleActive}
-            onEdit={openEdit}
-          />
-        )}
-      />
+      <AppSection className="overflow-hidden" contentFlush>
+        <DataTable
+          columns={columns}
+          data={filtered}
+          getRowKey={(item) => item.id}
+          emptyTitle={
+            searchQuery.trim()
+              ? ingredientListCopy.emptyFiltered
+              : ingredientListCopy.emptyTitle
+          }
+          emptyDescription={
+            searchQuery.trim()
+              ? ingredientListCopy.emptyFilteredDescription
+              : ingredientListCopy.emptyDescription
+          }
+          emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
+          mobileCardRender={(item) => (
+            <IngredientMobileCard
+              item={item}
+              isPending={isPending}
+              toneMap={toneMap}
+              onToggleActive={handleToggleActive}
+              onEdit={openEdit}
+            />
+          )}
+        />
+      </AppSection>
 
       <IngredientDialog
         open={dialogOpen}

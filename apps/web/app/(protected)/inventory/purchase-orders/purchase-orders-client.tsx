@@ -249,20 +249,30 @@ export function PurchaseOrdersClient({
     },
   ];
 
+  const createPoAction = (
+    <Button
+      asChild
+      disabled={suppliers.length === 0}
+      size={embedded ? "touch" : "default"}
+    >
+      <Link href={`${purchaseOrdersBasePath}/new`}>
+        <IconPlus className="size-4" />
+        {poCopy.createPo}
+      </Link>
+    </Button>
+  );
+
   const content = (
     <>
-      <AppPageHeader
-        eyebrow={inventoryShellCopy.moduleName}
-        title={tRoute("/inventory/purchase-orders", "heading")}
-        actions={
-          <Button asChild disabled={suppliers.length === 0}>
-            <Link href={`${purchaseOrdersBasePath}/new`}>
-              <IconPlus className="size-4" />
-              {poCopy.createPo}
-            </Link>
-          </Button>
-        }
-      />
+      {embedded ? (
+        <div className="flex justify-end">{createPoAction}</div>
+      ) : (
+        <AppPageHeader
+          eyebrow={inventoryShellCopy.moduleName}
+          title={tRoute("/inventory/purchase-orders", "heading")}
+          actions={createPoAction}
+        />
+      )}
       {suppliers.length === 0 ? (
         <AppSection
           tone="warning"
@@ -303,8 +313,15 @@ export function PurchaseOrdersClient({
         </AppSection>
       ) : null}
 
-      <AppToolbar className="items-stretch sm:items-center">
-        <InputGroup className="min-h-10 w-full sm:h-10 sm:flex-1">
+      <AppToolbar
+        variant={embedded ? "inline" : "card"}
+        className="items-stretch sm:items-center"
+      >
+        <InputGroup
+          className={
+            embedded ? "min-h-12 w-full" : "min-h-10 w-full sm:h-10 sm:flex-1"
+          }
+        >
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -323,7 +340,10 @@ export function PurchaseOrdersClient({
             )
           }
         >
-          <SelectTrigger className="min-h-10 w-full sm:h-10 sm:w-44">
+          <SelectTrigger
+            size={embedded ? "touch" : "default"}
+            className={embedded ? "w-full" : "min-h-10 w-full sm:h-10 sm:w-44"}
+          >
             <SelectValue placeholder={poCopy.statusPlaceholder} />
           </SelectTrigger>
           <SelectContent>
@@ -351,7 +371,9 @@ export function PurchaseOrdersClient({
           placeholder={poCopy.supplierRequired}
           searchPlaceholder={poCopy.supplierSearchPlaceholder}
           aria-label={poCopy.supplierFilterAria}
-          triggerClassName="min-h-10 w-full sm:h-10 sm:w-48"
+          triggerClassName={
+            embedded ? "min-h-12 w-full" : "min-h-10 w-full sm:h-10 sm:w-48"
+          }
         />
 
         <Badge variant="outline" className="rounded-full">
@@ -359,27 +381,28 @@ export function PurchaseOrdersClient({
         </Badge>
       </AppToolbar>
 
-      <DataTable
-        className="md:rounded-lg md:border"
-        columns={columns}
-        data={filteredRows}
-        getRowKey={(row) => row.id}
-        emptyTitle={
-          showEmptyResults ? poCopy.emptySearchTitle : poCopy.emptyInitialTitle
-        }
-        emptyDescription={
-          showEmptyResults
-            ? poCopy.emptySearchDescription
-            : poCopy.emptyInitialDescription
-        }
-        emptyMode={showEmptyResults ? "no-results" : "no-data"}
-        mobileCardRender={(row) => (
-          <PurchaseOrderCard
-            row={row}
-            href={`${purchaseOrdersBasePath}/${row.id}`}
-          />
-        )}
-      />
+      <AppSection className="overflow-hidden" contentFlush>
+        <DataTable
+          columns={columns}
+          data={filteredRows}
+          getRowKey={(row) => row.id}
+          emptyTitle={
+            showEmptyResults ? poCopy.emptySearchTitle : poCopy.emptyInitialTitle
+          }
+          emptyDescription={
+            showEmptyResults
+              ? poCopy.emptySearchDescription
+              : poCopy.emptyInitialDescription
+          }
+          emptyMode={showEmptyResults ? "no-results" : "no-data"}
+          mobileCardRender={(row) => (
+            <PurchaseOrderCard
+              row={row}
+              href={`${purchaseOrdersBasePath}/${row.id}`}
+            />
+          )}
+        />
+      </AppSection>
 
       {hasMore ? (
         <div className="flex justify-center">
@@ -400,7 +423,11 @@ export function PurchaseOrdersClient({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return <AppPage width="xwide">{content}</AppPage>;
+  return (
+    <AppPage width="xwide" density="compact">
+      {content}
+    </AppPage>
+  );
 }
 
 function PurchaseOrderCard({

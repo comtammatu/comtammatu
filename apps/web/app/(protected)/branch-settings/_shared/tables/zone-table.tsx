@@ -111,6 +111,7 @@ export function ZoneTable({ zones }: ZoneTableProps) {
         data={zones}
         getRowKey={(zone) => zone.id}
         emptyTitle={copy.noZonesTitle}
+        mobileBreakpoint={1024}
         emptyIcon={
           <IconMapPin className="mx-auto size-8 text-muted-foreground" />
         }

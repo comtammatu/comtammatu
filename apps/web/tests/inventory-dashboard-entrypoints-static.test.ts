@@ -7,10 +7,10 @@ const messageSource = readFileSync("lib/messages/inventory.ts", "utf8");
 
 test("inventory dashboard keeps the four owner entrypoint groups visible", () => {
   for (const text of [
-    'title: "1. Tồn kho"',
-    'title: "2. Nhập hàng / NCC"',
-    'title: "3. Danh mục"',
-    'title: "4. Sản xuất / điều phối"',
+    'title: "1. Kiểm soát tồn"',
+    'title: "2. Nhập/Nhận/Đối soát"',
+    'title: "3. Điều phối/Sản xuất"',
+    'title: "4. Danh mục & thiết lập"',
     "href: paths.ingredients",
     "href: paths.units",
     "href: paths.suppliers",
@@ -27,5 +27,8 @@ test("inventory dashboard keeps the four owner entrypoint groups visible", () =>
   }
 
   assert.match(messageSource, /mainFlowsTitle: "4 điểm vào vận hành chính"/);
-  assert.match(messageSource, /headerTagline: "4 điểm vào: tồn · nhập · danh mục · sản xuất."/);
+  assert.match(
+    messageSource,
+    /headerTagline:\s*"4 điểm vào: kiểm soát tồn · nhập\/nhận · điều phối · danh mục."/,
+  );
 });

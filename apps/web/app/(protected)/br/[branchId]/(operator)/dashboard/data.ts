@@ -30,7 +30,7 @@ export interface BranchDayStatus {
   printerOnline: boolean;
   printerFailed24h: number;
   pendingCheckouts: number;
-  setupActiveMenuItems: number;
+  menuLimitAvailableItems: number;
   setupActiveTerminals: number;
   setupActiveKdsStations: number;
   setupActivePrinters: number;
@@ -76,7 +76,7 @@ export async function fetchBranchDayStatus(
     failedRes,
     sessionRes,
     checkoutRes,
-    menuRes,
+    menuLimitsRes,
     terminalRes,
     stationRes,
     printerRes,
@@ -132,11 +132,9 @@ export async function fetchBranchDayStatus(
       .eq("branch_id", branchId)
       .is("check_out", null)
       .not("checkout_requested_at", "is", null),
-    service
-      .from("menu_items")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true),
+    supabase.rpc("list_branch_menu_daily_limits", {
+      p_branch_id: branchId,
+    }),
     service
       .from("pos_terminals")
       .select("id", { count: "exact", head: true })
@@ -166,6 +164,19 @@ export async function fetchBranchDayStatus(
   const paymentRows = paymentsRes.data ?? [];
   const tableRows = tablesRes.data ?? [];
   const lastSeenAt = agentRes.data?.last_seen_at ?? null;
+  const menuLimitRows = (menuLimitsRes.data ?? []) as Array<{
+    is_disabled: boolean | null;
+    available_to_sell: number | null;
+  }>;
+  const menuLimitAvailableItems = menuLimitsRes.error
+    ? 0
+    : menuLimitRows.filter((row) => {
+        if (row.is_disabled) {
+          return false;
+        }
+
+        return row.available_to_sell == null || row.available_to_sell > 0;
+      }).length;
 
   return {
     todayRevenue: paymentRows.reduce((sum, r) => sum + Number(r.amount), 0),
@@ -180,7 +191,7 @@ export async function fetchBranchDayStatus(
       Date.now() - new Date(lastSeenAt).getTime() < AGENT_OFFLINE_THRESHOLD_MS,
     printerFailed24h: failedRes.count ?? 0,
     pendingCheckouts: checkoutRes.count ?? 0,
-    setupActiveMenuItems: menuRes.count ?? 0,
+    menuLimitAvailableItems,
     setupActiveTerminals: terminalRes.count ?? 0,
     setupActiveKdsStations: stationRes.count ?? 0,
     setupActivePrinters: printerRes.count ?? 0,

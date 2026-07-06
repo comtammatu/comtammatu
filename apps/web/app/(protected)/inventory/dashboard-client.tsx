@@ -256,7 +256,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
   return [
     {
       key: "control",
-      title: "1. Tồn kho",
+      title: "1. Kiểm soát tồn",
       description: messages.inventory.dashboard.controlDescription,
       href: paths.stocktake,
       icon: IconClipboardList,
@@ -285,7 +285,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     },
     {
       key: "source",
-      title: "2. Nhập hàng / NCC",
+      title: "2. Nhập/Nhận/Đối soát",
       description: props.showProcurement
         ? INVENTORY_VI.dashboardSourceProcurementDescription
         : messages.inventory.dashboard.sourceBranchDescription,
@@ -309,8 +309,23 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
       actions: sourceActions,
     },
     {
+      key: "production",
+      title: "3. Điều phối/Sản xuất",
+      description: messages.inventory.dashboard.productionFlowDescription,
+      href: props.showProduction ? paths.production : paths.transfers,
+      icon: props.showProduction ? IconBuildingFactory : IconArrowLeftRight,
+      metric: String(props.activeTransfers),
+      metricLabel: messages.inventory.dashboard.runningSlipsMetricLabel,
+      statusLabel: messages.inventory.dashboard.inboundOutboundStatus(
+        inbound.length,
+        outbound.length,
+      ),
+      tone: props.activeTransfers > 0 ? "info" : "default",
+      actions: movementActions,
+    },
+    {
       key: "catalog",
-      title: "3. Danh mục",
+      title: "4. Danh mục & thiết lập",
       description: messages.inventory.dashboard.catalogDescription,
       href: paths.ingredients,
       icon: IconSettings,
@@ -331,21 +346,6 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         { label: tNav("suppliers", "navigation"), href: paths.suppliers },
         { label: tNav("recipes", "navigation"), href: paths.recipes },
       ],
-    },
-    {
-      key: "production",
-      title: "4. Sản xuất / điều phối",
-      description: messages.inventory.dashboard.productionFlowDescription,
-      href: props.showProduction ? paths.production : paths.transfers,
-      icon: props.showProduction ? IconBuildingFactory : IconArrowLeftRight,
-      metric: String(props.activeTransfers),
-      metricLabel: messages.inventory.dashboard.runningSlipsMetricLabel,
-      statusLabel: messages.inventory.dashboard.inboundOutboundStatus(
-        inbound.length,
-        outbound.length,
-      ),
-      tone: props.activeTransfers > 0 ? "info" : "default",
-      actions: movementActions,
     },
   ];
 }

@@ -2,7 +2,6 @@
 
 import { useMemo, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { Warehouse as IconWarehouse } from "lucide-react";
 import { type StaffRole } from "@comtammatu/shared/auth";
 import { AppShell } from "@/components/app-shell";
 import { messages } from "@lib/messages";
@@ -92,15 +91,6 @@ export function InventoryShell({
   return (
     <AppShell
       user={user}
-      role={userRole}
-      branchId={defaultBranchId}
-      brand={{
-        icon: IconWarehouse,
-        subLabel: messages.inventory.shell.moduleName,
-        mainLabel: messages.inventory.shell.brandName,
-        logoVariant: "seal",
-        showBackLink: true,
-      }}
       tier1={tier1}
       tier2={tier2}
       defaultPageTitle={messages.inventory.shell.brandName}

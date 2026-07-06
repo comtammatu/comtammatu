@@ -15,14 +15,17 @@ import { usePathname } from "next/navigation";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import type { BranchKind } from "@comtammatu/shared/auth";
 import { AppBottomNav } from "@/components/app-bottom-nav";
-import { isNavItemActive } from "@/lib/shell-primitives";
+import { isNavItemActive, type ShellNavItem } from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
 
 const branchCopy = messages.settings.branch;
 
 // Curated central-site tabs (design contract screens 1+4): the site's core
 // jobs get first-class tabs; everything else lives on /more.
-function centralNavItems(branchId: number, branchKind: BranchKind) {
+function centralNavItems(
+  branchId: number,
+  branchKind: BranchKind,
+): ShellNavItem[] {
   const base = `/br/${branchId}`;
   const home = {
     href: base,
@@ -52,6 +55,7 @@ function centralNavItems(branchId: number, branchKind: BranchKind) {
     `${base}/stock/transfer`,
     `${base}/shift`,
     `${base}/team`,
+    `${base}/pos-sessions`,
     `${base}/settings`,
     `${base}/profile`,
   ];
@@ -97,7 +101,12 @@ function centralNavItems(branchId: number, branchKind: BranchKind) {
       label: branchCopy.centralNavMore,
       icon: Ellipsis,
       exact: false,
-      matchPrefixes: [...moreOverflow, `${base}/stock/purchase-orders`, `${base}/stock/stocktake`, `${base}/stock/count-slips`],
+      matchPrefixes: [
+        ...moreOverflow,
+        `${base}/stock/purchase-orders`,
+        `${base}/stock/stocktake`,
+        `${base}/stock/count-slips`,
+      ],
     },
   ];
 }
@@ -114,68 +123,71 @@ export function OperatorBottomNav({
   branchKind?: BranchKind;
 }) {
   const pathname = usePathname();
-  if (branchKind !== "branch") {
-    return (
-      <AppBottomNav
-        ariaLabel={APP_COPY_VI.operatorAriaLabel}
-        className="static shrink-0"
-        items={centralNavItems(branchId, branchKind).map((item) => ({
-          href: item.href,
-          label: item.label,
-          icon: item.icon,
-          active: isNavItemActive(item, pathname),
-        }))}
-      />
-    );
-  }
-  const items = [
-    {
-      href: `/br/${branchId}`,
-      label: APP_COPY_VI.operatorHome,
-      icon: Home,
-      exact: true,
-    },
-    ...(showEmployeeLinks
-      ? [
-          {
-            href: `/br/${branchId}/shift`,
-            label: APP_COPY_VI.operatorShift,
-            icon: Clock,
-            exact: true,
-            matchPrefixes: [
-              `/br/${branchId}/shift/clock`,
-              `/br/${branchId}/shift/checkout-approvals`,
-            ],
-          },
-          {
-            href: `/br/${branchId}/shift/schedule`,
-            label: messages.employee.nav.schedule,
-            icon: CalendarDays,
-            exact: false,
-          },
-        ]
-      : []),
-    ...(showBranchManagement
-      ? [
-          {
-            href: `/br/${branchId}/dashboard`,
-            label: APP_COPY_VI.operatorManagement,
-            icon: Settings,
-            exact: true,
-            matchPrefixes: [
-              `/br/${branchId}/dashboard`,
-              `/br/${branchId}/settings`,
-              `/br/${branchId}/stock`,
-            ],
-          },
-        ]
-      : []),
+  const branchOverflowPrefixes = [
+    `/br/${branchId}/more`,
+    `/br/${branchId}/stock`,
+    `/br/${branchId}/orders`,
   ];
+  const items: ShellNavItem[] =
+    branchKind !== "branch"
+      ? centralNavItems(branchId, branchKind)
+      : [
+          {
+            href: `/br/${branchId}`,
+            label: APP_COPY_VI.operatorHome,
+            icon: Home,
+            exact: true,
+          },
+          ...(showEmployeeLinks
+            ? [
+                {
+                  href: `/br/${branchId}/shift`,
+                  label: APP_COPY_VI.operatorShift,
+                  icon: Clock,
+                  exact: true,
+                  matchPrefixes: [
+                    `/br/${branchId}/shift/clock`,
+                    `/br/${branchId}/shift/checkout-approvals`,
+                  ],
+                },
+                {
+                  href: `/br/${branchId}/shift/schedule`,
+                  label: messages.employee.nav.schedule,
+                  icon: CalendarDays,
+                  exact: false,
+                },
+              ]
+            : []),
+          ...(showBranchManagement
+            ? [
+                {
+                  href: `/br/${branchId}/dashboard`,
+                  label: APP_COPY_VI.operatorManagement,
+                  icon: Settings,
+                  exact: true,
+                  matchPrefixes: [
+                    `/br/${branchId}/dashboard`,
+                    `/br/${branchId}/pos-sessions`,
+                    `/br/${branchId}/settings`,
+                    `/br/${branchId}/team`,
+                  ],
+                },
+              ]
+            : []),
+          {
+            href: `/br/${branchId}/more`,
+            label: branchCopy.centralNavMore,
+            icon: Ellipsis,
+            exact: true,
+            matchPrefixes: branchOverflowPrefixes,
+          },
+        ];
 
   return (
     <AppBottomNav
       ariaLabel={APP_COPY_VI.operatorAriaLabel}
-      className="static shrink-0"
+      hideOnDesktop={false}
+      position="static"
       items={items.map((item) => ({
         href: item.href,
         label: item.label,

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import type { ResolvedOperatorTileGroup } from "@comtammatu/shared/auth";
+import { getOperatorMoreGroups } from "../app/(protected)/br/[branchId]/(operator)/_lib/operator-home-contract";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
@@ -41,7 +43,10 @@ test("operator bottom nav keeps profile out of shift navigation", () => {
   assert.doesNotMatch(bottomNav, /`\/br\/\$\{branchId\}\/profile`/);
   assert.ok(bottomNav.includes("showBranchManagement"));
   assert.ok(bottomNav.includes("`/br/${branchId}/dashboard`"));
+  assert.ok(bottomNav.includes("`/br/${branchId}/pos-sessions`"));
   assert.ok(bottomNav.includes("`/br/${branchId}/settings`"));
+  assert.ok(bottomNav.includes("`/br/${branchId}/more`"));
+  assert.ok(bottomNav.includes("branchOverflowPrefixes"));
   assert.ok(bottomNav.includes("APP_COPY_VI.operatorManagement"));
   assert.doesNotMatch(
     bottomNav,
@@ -131,6 +136,52 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.doesNotMatch(home, /OPERATION_HANDOFFS/);
 });
 
+test("operator more renders only tiles hidden from Today", () => {
+  const more = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/more/page.tsx",
+  );
+
+  assert.match(more, /resolveOperatorTiles/);
+  assert.match(more, /getOperatorMoreGroups/);
+  assert.match(more, /centralMoreTitle/);
+  assert.match(more, /moreEmptyTitle/);
+  assert.doesNotMatch(more, /redirect\(/);
+});
+
+test("operator more group resolver removes home-visible shortcuts", () => {
+  const tile = (href: string, moduleKey = "inventory") => ({
+    moduleKey,
+    href,
+    label: href,
+    icon: "Package",
+    group: "stock",
+  });
+  const groups = [
+    {
+      id: "sales_kitchen",
+      title: "Bán hàng",
+      tiles: [
+        tile("/br/1/pos", "pos"),
+        tile("/br/1/runner", "runner"),
+        tile("/br/1/kds", "kds"),
+        tile("/br/1/menu-limits", "branch_menu_limits"),
+        tile("/br/1/orders", "orders"),
+      ],
+    },
+    {
+      id: "stock",
+      title: "Kho hàng",
+      tiles: [tile("/br/1/stock"), tile("/br/1/stock/receive")],
+    },
+  ] as ResolvedOperatorTileGroup[];
+
+  const moreGroups = getOperatorMoreGroups(groups, "branch");
+  assert.deepEqual(
+    moreGroups.flatMap((group) => group.tiles.map((tile) => tile.href)),
+    ["/br/1/menu-limits", "/br/1/orders", "/br/1/stock", "/br/1/stock/receive"],
+  );
+});
+
 test("operator hub owns branch workflow entry tiles", () => {
   const navConfig = read("packages/shared/src/auth/nav-config.ts");
   const operatorTiles =
@@ -184,6 +235,7 @@ test("operator hub owns branch workflow entry tiles", () => {
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/count"/,
   );
+  assert.doesNotMatch(operatorTiles, /branch_pos_sessions/);
   assert.match(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/waste"/,
@@ -195,7 +247,7 @@ test("operator hub owns branch workflow entry tiles", () => {
   assert.match(operatorTiles, /moduleKey: "branch_menu_limits"/);
   assert.match(
     operatorTiles,
-    /hrefTemplate: "\/br\/\{branchId\}\/settings\/menu-limits"/,
+    /hrefTemplate: "\/br\/\{branchId\}\/menu-limits"/,
   );
   assert.doesNotMatch(navConfig, /branch_setup/);
   assert.doesNotMatch(operatorTiles, /moduleKey: "branch_dashboard"/);
@@ -206,7 +258,7 @@ test("branch dashboard and settings routes live inside operator shell", () => {
   for (const path of [
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/menu-limits/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
   ]) {
     const source = read(path);
 
@@ -292,10 +344,8 @@ test("operator today shift and profile screens use responsive branch layout", ()
 
   assert.match(layout, /md:max-w-3xl lg:max-w-5xl xl:max-w-6xl/);
   assert.doesNotMatch(layout, /\s+mobile\s+contentClassName=/);
-  assert.equal(
-    (bottomNav.match(/className="static shrink-0"/g) ?? []).length,
-    2,
-  );
+  assert.match(bottomNav, /position="static"/);
+  assert.match(bottomNav, /hideOnDesktop=\{false\}/);
   assert.match(home, /lg:grid-cols-3/);
   assert.match(home, /lg:col-start-3 lg:row-span-6 lg:row-start-1/);
   assert.match(employeeHome, /workflowLayout === "stepper"/);

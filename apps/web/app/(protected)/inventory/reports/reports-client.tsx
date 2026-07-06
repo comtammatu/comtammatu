@@ -76,7 +76,12 @@ export function ReportsClient({
   const showSupplierPayables = supplierInvoicesHref != null;
   const content = (
     <>
-      <AppPageHeader title={messages.inventory.reports.pageTitle} />
+      {!embedded ? (
+        <AppPageHeader
+          eyebrow={messages.inventory.shell.moduleName}
+          title={messages.inventory.reports.pageTitle}
+        />
+      ) : null}
 
       {/* Dashboard Grid — 12 col asymmetric */}
       <div className="grid grid-cols-12 gap-4">

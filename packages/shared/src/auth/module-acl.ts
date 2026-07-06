@@ -25,6 +25,7 @@ export type ModuleKey =
   | "branch_dashboard"
   | "branch_settings"
   | "branch_menu_limits"
+  | "branch_pos_sessions"
   | "branch_team"
   | "employee"
   | "employee_checkout_approvals"
@@ -152,13 +153,18 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: getModuleLabelVi("branch_settings"),
   },
   /**
-   * Daily sales limits per (branch, menu item). Lives under the branch
-   * settings hub and is restricted to branch managers.
+   * Daily sales limits per (branch, menu item). Branch manager day-control
+   * surface; durable setup remains under branch_settings.
    */
   branch_menu_limits: {
-    path: "/br/*/settings/menu-limits",
+    path: "/br/*/menu-limits",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_menu_limits"),
+  },
+  branch_pos_sessions: {
+    path: "/br/*/pos-sessions",
+    allowedRoles: ["owner", "branch_manager"],
+    label: getModuleLabelVi("branch_pos_sessions"),
   },
   /**
    * "Đội hôm nay" branch team board (D059). Scoped to owner/branch_manager
@@ -203,5 +209,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
 
 /** Check if a role can access a module */
 export function canAccess(role: StaffRole, moduleKey: ModuleKey): boolean {
+  if (role === "owner") return true;
   return MODULE_ACL[moduleKey].allowedRoles.includes(role);
 }

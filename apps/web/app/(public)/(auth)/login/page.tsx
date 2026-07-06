@@ -2,13 +2,7 @@ import { BRAND_NAME, BrandLockup } from "@/components/brand";
 import { LoginForm } from "./login-form";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ returnTo?: string }>;
-}) {
-  const sp = await searchParams;
-
+export default function LoginPage() {
   return (
     <main className="flex min-h-dvh flex-col lg:grid lg:grid-cols-2">
       {/* Brand — compact on mobile, full-height panel on desktop */}
@@ -32,7 +26,7 @@ export default async function LoginPage({
           <h2 className="font-heading text-xl font-semibold">
             {ACTIONS_VI.signIn}
           </h2>
-          <LoginForm returnTo={sp.returnTo} />
+          <LoginForm />
         </div>
       </section>
     </main>

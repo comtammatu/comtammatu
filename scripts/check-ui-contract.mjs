@@ -102,6 +102,42 @@ function extractJsxOpeningTags(content, tagName) {
   return tags;
 }
 
+function extractConstExpressions(content, name) {
+  const expressions = [];
+  let searchFrom = 0;
+  const needle = `const ${name} =`;
+  while (searchFrom < content.length) {
+    const anchor = content.indexOf(needle, searchFrom);
+    if (anchor === -1) break;
+
+    let i = anchor + needle.length;
+    while (i < content.length && /\s/.test(content[i])) i += 1;
+
+    const start = i;
+    let depth = 0;
+    let inString = null;
+    while (i < content.length) {
+      const ch = content[i];
+      if (inString) {
+        if (ch === inString && content[i - 1] !== "\\") inString = null;
+      } else if (ch === '"' || ch === "'" || ch === "`") {
+        inString = ch;
+      } else if (ch === "{" || ch === "(" || ch === "[") {
+        depth += 1;
+      } else if (ch === "}" || ch === ")" || ch === "]") {
+        depth -= 1;
+      } else if (ch === ";" && depth === 0) {
+        break;
+      }
+      i += 1;
+    }
+
+    expressions.push(content.slice(start, i));
+    searchFrom = i + 1;
+  }
+  return expressions;
+}
+
 const checks = [
   {
     id: "non-current-visual-layer",
@@ -396,6 +432,35 @@ const checks = [
     allowlist: {},
   },
   {
+    id: "operator-office-shell-boundary",
+    description:
+      "Branch runtime, Operations, and employee-lib surfaces must not import or render Management/Office chrome. Use the operator layout, AppHeader/AppBottomNav, EmployeePage, or embedded PageContent branches instead.",
+    roots: [
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]",
+        extensions: [".ts", ".tsx"],
+      },
+      { dir: "apps/web/lib/employee", extensions: [".ts", ".tsx"] },
+    ],
+    pattern:
+      /\b(?:OfficeModuleShell|ManagementShell|AppShell|FinanceShell|InventoryShell|resolveOffice(?:PrimaryTabs|DeepNav))\b|["'][^"']*(?:office-module-shell|management-chrome|app-shell|office-nav|finance-shell|inventory-shell)["']/g,
+    allowlist: {},
+  },
+  {
+    id: "operator-office-route-boundary",
+    description:
+      "Branch operator routes must not link or redirect into Office route roots; keep work inside /br/[branchId] or a shared non-office surface.",
+    roots: [
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/(operator)",
+        extensions: [".ts", ".tsx"],
+      },
+    ],
+    pattern:
+      /["'`]\/(?:admin|finance|inventory|menu|orders|branches|hr)(?:\/|["'`?#])/g,
+    allowlist: {},
+  },
+  {
     id: "hover-shadow-rung",
     description:
       "Hover elevation caps at the shadow-effect-card-hover Hover rung; hover:shadow-md/lg/xl/2xl is an over-elevated rung (design-system.md § Elevation / Shadow).",
@@ -432,6 +497,7 @@ const checks = [
       "apps/web/app/(protected)/br/[branchId]/kds/kds-board.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/focus-view.tsx": 1,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
+      "apps/web/app/components/surface.tsx": 1,
     },
   },
   {
@@ -523,7 +589,9 @@ const packageManifestPaths = [
 ];
 
 for (const packageManifestPath of packageManifestPaths) {
-  const packageManifest = JSON.parse(fs.readFileSync(packageManifestPath, "utf8"));
+  const packageManifest = JSON.parse(
+    fs.readFileSync(packageManifestPath, "utf8"),
+  );
   const relativePath = toPosix(packageManifestPath);
   for (const dependencyField of [
     "dependencies",
@@ -534,7 +602,10 @@ for (const packageManifestPath of packageManifestPaths) {
     for (const dependencyName of Object.keys(
       packageManifest[dependencyField] ?? {},
     )) {
-      if (dependencyName === "shadcn" || dependencyName.startsWith("@shadcn/")) {
+      if (
+        dependencyName === "shadcn" ||
+        dependencyName.startsWith("@shadcn/")
+      ) {
         failures.push(
           `external-design-context: ${relativePath} must not depend on ${dependencyName}; shadcn scaffold tooling is retired`,
         );
@@ -843,7 +914,7 @@ const countBudgets = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
-    maxCount: 13,
+    maxCount: 14,
   },
 ];
 
@@ -927,7 +998,7 @@ const perFileCountBudgets = [
       "apps/web/app/_components/notification-list.tsx": 1,
       "apps/web/app/(protected)/admin/settings/(tenant)/payments/payments-form.tsx": 3,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos-sessions/pos-sessions-client.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/discount-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/service-charge-sheet.tsx": 1,
@@ -1692,6 +1763,72 @@ for (const relPath of OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES) {
   if (count > allowed) {
     failures.push(
       `operator-embedded-button-density: ${relPath} has ${count} office-density Button(s) (size="sm"/"xs"), allowed ${allowed}. Operator-plane primary actions use size={embedded ? "touch" : "sm"} (page-archetypes.md § Operator Embedded Presentation Contract R3).`,
+    );
+  }
+}
+
+// operator-embedded-page-header-boundary (page-archetypes.md § Operator
+// Embedded Presentation Contract R1): an embedded Branch runtime screen must not
+// receive a nested `AppPageHeader` through shared canonical `content`. Office
+// headers remain valid when explicitly gated by `embedded ? … : <AppPageHeader>`
+// or `!embedded ? <AppPageHeader> : …`.
+const OPERATOR_EMBEDDED_PAGE_HEADER_FILES = [
+  "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
+  "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
+  "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx",
+  "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
+  "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
+  "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
+  "apps/web/app/(protected)/inventory/production-client.tsx",
+  "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
+  "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
+  "apps/web/app/(protected)/inventory/reports/reports-client.tsx",
+  "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx",
+  "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
+  "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
+  "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
+  "apps/web/app/(protected)/inventory/supplier-returns/[id]/page.tsx",
+  "apps/web/app/(protected)/inventory/supplier-returns/supplier-returns-client.tsx",
+  "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx",
+  "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx",
+  "apps/web/app/(protected)/inventory/waste/new/page.tsx",
+];
+const OPERATOR_EMBEDDED_HEADER_BRANCH_GUARD =
+  /(?:!\s*embedded\s*\?|\bembedded\s*\?)/;
+function countOperatorEmbeddedPageHeaderLeaks(content) {
+  let count = 0;
+  for (const expression of extractConstExpressions(content, "content")) {
+    let searchFrom = 0;
+    while (searchFrom < expression.length) {
+      const index = expression.indexOf("<AppPageHeader", searchFrom);
+      if (index === -1) break;
+      const prefix = expression.slice(0, index);
+      const guardWindow = prefix.slice(Math.max(0, prefix.length - 220));
+      if (
+        !OPERATOR_EMBEDDED_HEADER_BRANCH_GUARD.test(guardWindow) &&
+        !/\bembedded\s*\?/.test(prefix)
+      ) {
+        count += 1;
+      }
+      searchFrom = index + 1;
+    }
+  }
+  return count;
+}
+for (const relPath of OPERATOR_EMBEDDED_PAGE_HEADER_FILES) {
+  const filePath = path.join(REPO_ROOT, relPath);
+  if (!fs.existsSync(filePath)) {
+    failures.push(
+      `operator-embedded-page-header-boundary: ${relPath} is missing; update OPERATOR_EMBEDDED_PAGE_HEADER_FILES.`,
+    );
+    continue;
+  }
+  const content = fs.readFileSync(filePath, "utf8");
+  const count = countOperatorEmbeddedPageHeaderLeaks(content);
+  if (count > 0) {
+    failures.push(
+      `operator-embedded-page-header-boundary: ${relPath} has ${count} shared content AppPageHeader leak(s). Gate Office headers on !embedded or split AppPageTabs/content out of AppPageHeader (page-archetypes.md § Operator Embedded Presentation Contract R1).`,
     );
   }
 }

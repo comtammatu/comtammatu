@@ -34,6 +34,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import { FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import {
+  AppDetailFooter,
   AppPageHeader,
   AppSection,
   DocumentFormFrame,
@@ -306,7 +307,11 @@ export function WasteCreateClient({
             onValueChange={(v) => setLocationId(Number(v))}
             disabled={isSubmitting}
           >
-            <SelectTrigger id="waste-loc">
+            <SelectTrigger
+              id="waste-loc"
+              size={embedded ? "touch" : "default"}
+              className="w-full"
+            >
               <SelectValue
                 placeholder={messages.inventory.waste.chooseLocation}
               />
@@ -369,7 +374,7 @@ export function WasteCreateClient({
                     />
                     {lines.length > 1 ? (
                       <Button
-                        size="icon"
+                        size={embedded ? "icon-touch" : "icon"}
                         variant="ghost"
                         type="button"
                         onClick={() => removeLine(line.uid)}
@@ -395,6 +400,8 @@ export function WasteCreateClient({
                     }
                     onValueChange={(v) => handleIngredientChange(line.uid, v)}
                     placeholder={messages.inventory.waste.chooseIngredient}
+                    size={embedded ? "touch" : "default"}
+                    className="w-full"
                   />
                 </div>
 
@@ -414,7 +421,11 @@ export function WasteCreateClient({
                       }}
                       disabled={isSubmitting}
                     >
-                      <SelectTrigger id={`unit-${line.uid}`}>
+                      <SelectTrigger
+                        id={`unit-${line.uid}`}
+                        size={embedded ? "touch" : "default"}
+                        className="w-full"
+                      >
                         <SelectValue
                           placeholder={messages.inventory.transfer.selectUnit}
                         />
@@ -455,6 +466,7 @@ export function WasteCreateClient({
                       }
                       disabled={isSubmitting}
                       placeholder="0"
+                      className={embedded ? "h-12" : undefined}
                     />
                   </div>
                   <div>
@@ -470,6 +482,7 @@ export function WasteCreateClient({
                       }
                       disabled={isSubmitting}
                       placeholder="0"
+                      className={embedded ? "h-12" : undefined}
                     />
                     <p className="mt-1 text-xs text-muted-foreground tabular-nums">
                       {messages.inventory.waste.value(formatVND(value))}
@@ -484,6 +497,8 @@ export function WasteCreateClient({
                     value={line.reasonCode as never}
                     onChange={(v) => updateLine(line.uid, { reasonCode: v })}
                     disabled={isSubmitting}
+                    size={embedded ? "touch" : "default"}
+                    className="w-full"
                   />
                 </div>
 
@@ -530,6 +545,7 @@ export function WasteCreateClient({
         <Button
           type="button"
           variant="outline"
+          size={embedded ? "touch" : "default"}
           onClick={addLine}
           disabled={isSubmitting}
           className="w-full sm:w-auto"
@@ -546,23 +562,29 @@ export function WasteCreateClient({
         </div>
       </div>
 
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button
-          variant="outline"
-          onClick={() => router.push(cancelHref ?? "/inventory/issues")}
-          disabled={isSubmitting}
-          className="w-full sm:w-auto"
-        >
-          {ACTIONS_VI.cancel}
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="w-full sm:w-auto"
-        >
-          {isSubmitting ? <Spinner /> : messages.inventory.waste.createSlip}
-        </Button>
-      </div>
+      <AppDetailFooter
+        sticky={embedded}
+        className={embedded ? undefined : "border-0 py-0"}
+        leading={
+          <Button
+            variant="outline"
+            size={embedded ? "touch" : "default"}
+            onClick={() => router.push(cancelHref ?? "/inventory/issues")}
+            disabled={isSubmitting}
+          >
+            {ACTIONS_VI.cancel}
+          </Button>
+        }
+        trailing={
+          <Button
+            size={embedded ? "touch-lg" : "default"}
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? <Spinner /> : messages.inventory.waste.createSlip}
+          </Button>
+        }
+      />
     </>
   );
 

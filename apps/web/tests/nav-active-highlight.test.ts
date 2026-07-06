@@ -116,19 +116,30 @@ test("management shell renders one sidebar with nested active-tab sub-nav", () =
     /<SidebarMenuSub>/,
     "active module sub-nav must render inside the primary sidebar item",
   );
-  // D063 (2026-07-03): desktop Management chrome collapses the single
-  // sidebar to an icon rail in place (collapsible="icon") instead of
-  // offcanvas — this is the SAME <Sidebar> primitive changing width, not a
-  // second rail column, so the "one sidebar" contract below still holds.
   assert.match(
     appShell,
-    /collapsible="icon"/,
-    "management shell collapses in place to an icon rail (D063), not offcanvas",
+    /<SidebarProvider open=\{true\}>/,
+    "office sidebar must default open and remain controlled open",
   );
   assert.match(
     appShell,
-    /<SidebarRail \/>/,
-    "management shell exposes the drag-to-collapse rail handle for desktop (D063)",
+    /collapsible="offcanvas"/,
+    "desktop office sidebar must not use collapsed icon mode",
+  );
+  assert.doesNotMatch(
+    appShell,
+    /<SidebarRail|collapsible="icon"/,
+    "office sidebar must not expose the desktop collapsed rail mode",
+  );
+  assert.doesNotMatch(
+    appShell,
+    /BranchSwitcher|branchOptions|showBackLink|resolveRoleHomeLink|brand\./,
+    "office sidebar chrome must stay fixed and must not accept module branch/back/brand state",
+  );
+  assert.match(
+    appShell,
+    /<BrandMark\s+variant="seal"/,
+    "office sidebar brand must render the fixed tenant seal",
   );
   assert.match(
     appShell,

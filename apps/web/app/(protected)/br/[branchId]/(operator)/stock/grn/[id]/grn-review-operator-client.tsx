@@ -13,8 +13,11 @@ import { Button } from "@comtammatu/ui/components/button";
 import { ItemGroup } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
+import { AppDetailFooter } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { formatVND } from "@/(protected)/inventory/_lib/format";
+import { OperatorFlowSteps } from "@/(protected)/inventory/_components/operator-flow-steps";
 import type { IngredientRow } from "@/(protected)/inventory/page";
 import { useGrnLines } from "@/(protected)/inventory/grn/[id]/_hooks/use-grn-lines";
 import { useGrnLineActions } from "@/(protected)/inventory/grn/[id]/_hooks/use-grn-line-actions";
@@ -60,6 +63,8 @@ export function GrnReviewOperatorClient({
       grnMobileBackPath: grnListBasePath,
       purchaseOrdersBasePath,
     });
+  const operatorFlow = messages.inventory.operatorFlow;
+  const reviewStep = dirtyLines.length > 0 ? 2 : 3;
 
   return (
     <div className="flex w-full flex-col gap-3">
@@ -80,6 +85,13 @@ export function GrnReviewOperatorClient({
       <p className="text-sm text-muted-foreground">
         {grn.supplier} • {grn.date}
       </p>
+
+      <OperatorFlowSteps
+        title={operatorFlow.grnListTitle}
+        description={operatorFlow.grnListDescription}
+        steps={operatorFlow.grnSteps}
+        currentStep={reviewStep}
+      />
 
       <div className="flex items-center justify-between gap-2 px-1">
         <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -118,38 +130,44 @@ export function GrnReviewOperatorClient({
         {INVENTORY_VI.grnReviewSummary(lines.length, stats.rejectedLines)}
       </p>
 
-      <div className="sticky chrome-safe-bottom z-10 flex w-full flex-col gap-2">
-        {dirtyLines.length > 0 ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <Spinner className="size-4" />
-            ) : (
-              <IconDeviceFloppy className="size-5" />
-            )}
-            {grnCopy.saveChanges(dirtyLines.length)}
-          </Button>
-        ) : null}
-        <Button
-          type="button"
-          size="touch-lg"
-          className="w-full"
-          disabled={isConfirming || dirtyLines.length > 0}
-          onClick={handleConfirmGrn}
-        >
-          {isConfirming ? (
-            <Spinner className="size-5" />
-          ) : (
-            <IconCircleCheck className="size-5" />
-          )}
-          {grnCopy.confirmGrnAction} · {formatVND(stats.total)}
-        </Button>
-      </div>
+      <AppDetailFooter
+        sticky
+        mobileReverse={false}
+        stacked
+        trailing={
+          <>
+            {dirtyLines.length > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <IconDeviceFloppy className="size-5" />
+                )}
+                {grnCopy.saveChanges(dirtyLines.length)}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              size="touch-lg"
+              disabled={isConfirming || dirtyLines.length > 0}
+              onClick={handleConfirmGrn}
+            >
+              {isConfirming ? (
+                <Spinner className="size-5" />
+              ) : (
+                <IconCircleCheck className="size-5" />
+              )}
+              {grnCopy.confirmGrnAction} · {formatVND(stats.total)}
+            </Button>
+          </>
+        }
+      />
 
       <AddGrnLineDialog
         grn={grn}

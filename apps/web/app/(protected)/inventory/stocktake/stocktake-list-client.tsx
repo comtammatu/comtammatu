@@ -30,6 +30,7 @@ import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { FormDialog, SelectField } from "@/components/form";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import {
   DataTable,
   type DataTableColumn,
@@ -148,7 +149,11 @@ export function StocktakeListClient({
   }, [rows, search, statusFilter]);
 
   const branchOptions = useMemo(
-    () => branches.map((branch) => ({ value: String(branch.id), label: branch.name })),
+    () =>
+      branches.map((branch) => ({
+        value: String(branch.id),
+        label: branch.name,
+      })),
     [branches],
   );
 
@@ -179,6 +184,7 @@ export function StocktakeListClient({
   }
 
   const isFiltered = Boolean(search) || statusFilter !== "all";
+  const operatorFlow = messages.inventory.operatorFlow;
 
   const columns: DataTableColumn<StocktakeSessionRow>[] = [
     {
@@ -252,6 +258,15 @@ export function StocktakeListClient({
   const content = (
     <>
       {embedded ? (
+        <OperatorFlowSteps
+          title={operatorFlow.stocktakeListTitle}
+          description={operatorFlow.stocktakeListDescription}
+          steps={operatorFlow.stocktakeSteps}
+          currentStep={1}
+        />
+      ) : null}
+
+      {embedded ? (
         stocktakeActions
       ) : (
         <AppPageHeader
@@ -261,7 +276,7 @@ export function StocktakeListClient({
         />
       )}
       {/* Filters */}
-      <AppToolbar>
+      <AppToolbar variant={embedded ? "inline" : "card"}>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger
             size={embedded ? "touch" : "default"}
@@ -361,9 +376,5 @@ export function StocktakeListClient({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return (
-    <AppPage width="xwide">
-      {content}
-    </AppPage>
-  );
+  return <AppPage width="xwide">{content}</AppPage>;
 }

@@ -92,11 +92,11 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
       ) : null}
 
       <Tabs defaultValue="zones">
-        <TabsList>
-          <TabsTrigger value="zones">
+        <TabsList className="h-11 w-full">
+          <TabsTrigger value="zones" className="flex-1">
             {copy.zonesTab(filteredZones.length)}
           </TabsTrigger>
-          <TabsTrigger value="tables">
+          <TabsTrigger value="tables" className="flex-1">
             {copy.tablesTab(filteredTables.length)}
           </TabsTrigger>
         </TabsList>
@@ -105,6 +105,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
           <AppToolbar
             actions={
               <Button
+                size="touch"
                 className="w-full sm:w-auto"
                 onClick={() => setZoneDialogOpen(true)}
               >
@@ -120,6 +121,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
           <AppToolbar
             actions={
               <Button
+                size="touch"
                 className="w-full sm:w-auto"
                 onClick={() => setTableDialogOpen(true)}
               >

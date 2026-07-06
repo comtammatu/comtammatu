@@ -36,7 +36,7 @@ export default async function BranchCommandPage({
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
 
-  if (!branch || !branch.is_active) notFound();
+  if (!branch || !branch.is_active || branch.branch_kind !== "branch") notFound();
 
   const day = await fetchBranchDayStatus(supabase, claims, branchId);
 
@@ -61,21 +61,29 @@ export default async function BranchCommandPage({
     ? `/br/${branchId}/settings/printers`
     : undefined;
   const menuHref = canAccess(role, "branch_menu_limits")
-    ? `/br/${branchId}/settings/menu-limits`
+    ? `/br/${branchId}/menu-limits`
     : undefined;
   const checkoutApprovalsHref = canAccess(role, "employee_checkout_approvals")
     ? `/br/${branchId}/shift/checkout-approvals`
     : undefined;
-  const hrHref = canAccess(role, "hr") ? "/hr" : undefined;
+  const staffHref = canAccess(role, "branch_team")
+    ? `/br/${branchId}/team`
+    : undefined;
+  const floorHref =
+    day.tablesTotal <= 0
+      ? tablesHref
+      : day.setupActiveTerminals <= 0
+        ? posSettingsHref
+        : settingsHref;
 
   const readinessItems = buildReadinessItems(day, copy, {
     menuHref,
-    floorHref: tablesHref ?? posSettingsHref,
+    floorHref,
     kdsSettingsHref,
     posHref,
     kdsHref,
     printersHref,
-    hrHref,
+    staffHref,
     settingsHref,
     checkoutApprovalsHref,
   });
@@ -132,18 +140,6 @@ export default async function BranchCommandPage({
         </AppSection>
       ) : null}
 
-      {tileGroups.setup.length > 0 ? (
-        <AppSection
-          title={copy.setupLaneTitle}
-          description={copy.setupLaneDescription}
-        >
-          <BranchCommandTileGrid
-            tiles={tileGroups.setup}
-            ctaLabel={copy.openAction}
-          />
-        </AppSection>
-      ) : null}
-
       {tileGroups.drilldown.length > 0 ? (
         <AppSection
           title={copy.drilldownTitle}
@@ -153,8 +149,8 @@ export default async function BranchCommandPage({
             tiles={tileGroups.drilldown}
             ctaLabel={copy.openAction}
           />
-          </AppSection>
-        ) : null}
+        </AppSection>
+      ) : null}
     </EmployeePage>
   );
 }

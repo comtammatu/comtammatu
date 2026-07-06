@@ -459,7 +459,7 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
         title={messages.pos.menu.empty}
         description={messages.pos.menu.menuLimitsEmptyDescription}
       >
-        <Button asChild variant="outline" size="sm">
+        <Button asChild variant="outline" size="touch">
           <Link href={`/br/${branchId}/settings`}>
             {messages.settings.branch.branchSettingsBack}
           </Link>
@@ -524,6 +524,7 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
             columns={columns}
             data={group.items}
             getRowKey={(row) => row.menu_item_id}
+            mobileBreakpoint={1024}
             mobileCardRender={(row) => (
               <Item variant="outline" className="items-stretch gap-3">
                 <ItemHeader className="items-start">

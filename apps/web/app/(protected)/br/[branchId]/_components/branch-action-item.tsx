@@ -73,7 +73,7 @@ export function BranchActionItem({
           <Button
             asChild
             variant="outline"
-            size="sm"
+            size="touch"
             className="w-full sm:w-auto"
           >
             <Link href={href} aria-label={ariaLabel}>

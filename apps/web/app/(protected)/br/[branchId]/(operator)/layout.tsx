@@ -13,7 +13,7 @@ import {
   ROLE_LABEL_VI,
   type BranchKind,
 } from "@comtammatu/shared/auth";
-import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { APP_COPY_VI, getSiteKindLabelVi } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage } from "@/components/surface";
 import { AppHeader } from "@/components/app-header";
@@ -39,7 +39,7 @@ export async function generateMetadata({
     appleWebApp: {
       capable: true,
       statusBarStyle: "default",
-      title: "Má Tư Chi nhánh",
+      title: "Má Tư Hub",
     },
   };
 }
@@ -64,11 +64,14 @@ export default async function OperatorLayout({
     canAccess(claims.user_role, "employee_checkout_approvals");
   const canManageBranch =
     canAccess(claims.user_role, "branch_dashboard") ||
-    canAccess(claims.user_role, "branch_settings");
+    canAccess(claims.user_role, "branch_settings") ||
+    canAccess(claims.user_role, "branch_pos_sessions");
   const canUseBranchPicker = canAccess(claims.user_role, "branch_picker");
   const unreadResult = await getUnreadCount().catch(() => null);
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
   const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
+  const branchKind = context.branch.branch_kind as BranchKind;
+  const hubLabel = getSiteKindLabelVi(branchKind);
 
   return (
     <PwaRuntimeProvider>
@@ -76,7 +79,7 @@ export default async function OperatorLayout({
       <div className="flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
         <AppHeader
           title={context.branch.name}
-          subtitle={ROLE_LABEL_VI[claims.user_role]}
+          subtitle={`Hub ${hubLabel} · ${ROLE_LABEL_VI[claims.user_role]}`}
           homeHref={`/br/${context.branchId}`}
           homeAriaLabel={APP_COPY_VI.operatorHome}
           actions={
@@ -128,7 +131,7 @@ export default async function OperatorLayout({
         >
           <AppPage
             density="compact"
-            contentClassName="max-w-lg md:max-w-3xl lg:max-w-5xl xl:max-w-6xl"
+            contentClassName="max-w-lg md:max-w-3xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-screen-2xl"
           >
             {children}
           </AppPage>
@@ -137,7 +140,7 @@ export default async function OperatorLayout({
           branchId={context.branchId}
           showEmployeeLinks={canUseEmployeePortal}
           showBranchManagement={canManageBranch}
-          branchKind={context.branch.branch_kind as BranchKind}
+          branchKind={branchKind}
         />
       </div>
     </PwaRuntimeProvider>

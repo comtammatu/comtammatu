@@ -68,48 +68,52 @@ export async function SupplierReturnDetailPageContent({
     PERMISSION_KEYS.SUPPLIER_RETURN_CONFIRM,
   );
 
-  const content = (
-    <>
-      <AppPageHeader
-        eyebrow={embedded ? undefined : "Kho hàng"}
-        title={header.return_number}
-        description={`NCC: ${header.suppliers?.name ?? "—"} · Chi nhánh: ${header.branches?.name ?? "—"}`}
-        tabs={
-          <AppPageTabs
-            items={[
-              { value: "overview", label: "Tổng quan" },
-              { value: "lines", label: "Dòng", count: lines.length },
-              { value: "history", label: "Lịch sử", count: auditLogs.length },
-            ]}
-          >
-            <TabsContent value="overview">
-              <SupplierReturnDetailClient header={header} lines={lines} />
-            </TabsContent>
-            <TabsContent value="lines">
-              <SupplierReturnDetailClient header={header} lines={lines} />
-            </TabsContent>
-            <TabsContent value="history">
-              <AuditHistoryList logs={auditLogs} />
-            </TabsContent>
-          </AppPageTabs>
-        }
-      />
-      <SupplierReturnConfirmCta
-        returnId={header.id}
-        status={header.status}
-        resolution={header.resolution}
-        canConfirm={canConfirm}
-      />
-    </>
+  const tabs = (
+    <AppPageTabs
+      items={[
+        { value: "overview", label: "Tổng quan" },
+        { value: "lines", label: "Dòng", count: lines.length },
+        { value: "history", label: "Lịch sử", count: auditLogs.length },
+      ]}
+    >
+      <TabsContent value="overview">
+        <SupplierReturnDetailClient header={header} lines={lines} />
+      </TabsContent>
+      <TabsContent value="lines">
+        <SupplierReturnDetailClient header={header} lines={lines} />
+      </TabsContent>
+      <TabsContent value="history">
+        <AuditHistoryList logs={auditLogs} />
+      </TabsContent>
+    </AppPageTabs>
+  );
+  const confirmCta = (
+    <SupplierReturnConfirmCta
+      returnId={header.id}
+      status={header.status}
+      resolution={header.resolution}
+      canConfirm={canConfirm}
+    />
   );
 
   if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
+    return (
+      <div className="flex w-full flex-col gap-3">
+        {tabs}
+        {confirmCta}
+      </div>
+    );
   }
 
   return (
     <AppPage width="wide" density="compact">
-      {content}
+      <AppPageHeader
+        eyebrow="Kho hàng"
+        title={header.return_number}
+        description={`NCC: ${header.suppliers?.name ?? "—"} · Chi nhánh: ${header.branches?.name ?? "—"}`}
+        tabs={tabs}
+      />
+      {confirmCta}
     </AppPage>
   );
 }

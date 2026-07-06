@@ -98,7 +98,7 @@
 **Decision** (chi tiết hoá D014 W5; gốc tái-drift = tầng cấu trúc chỉ là luật chữ, 0 check):
 
 1. **2 họ chrome** (không có họ thứ 3): **Quản trị** = `AppShell` chung (admin + domain workspaces + branch command/setup `/br/[branchId]/*`), một sidebar nhiều nhóm theo role/scope; **Vận hành** = chrome full-screen (POS, KDS, Runner) + `/employee`, dùng chung token/typography/status primitives.
-2. **Một capability = một route home** theo `role-route-matrix.md`. Branch-floor settings (tables/pos/kds/printers/pos-sessions) nhà canonical `/br/[branchId]/settings/*`; Tenant Admin Settings giữ `general`/`branches`/`payments`/tenant printer.
+2. **Một capability = một route home** theo `role-route-matrix.md`. Branch-floor settings (tables/pos/kds/printers) nhà canonical `/br/[branchId]/settings/*`; end-day reconciliation dùng `/br/[branchId]/pos-sessions`; Tenant Admin Settings giữ `general`/`branches`/`payments`/tenant printer.
 3. **Padding một chủ = `AppPage`**; `AppShell` main bỏ outer padding; trang lá không tự đặt `p-*` gốc.
 4. **Nav là data**: mọi sidebar/bottom-nav project từ `nav-config.ts` qua resolver chung; cấm `ShellNavGroup[]` literal trong shell.
 5. Hợp đồng chi tiết: `docs/spec/design-system.md` § Structural Governance; mỗi luật kèm ratchet baseline-đóng-băng-chỉ-giảm.
@@ -537,7 +537,7 @@ test) chỉ build sau khi types regen.
 
 1. **Hai mặt phẳng = 2 họ chrome D019, không thêm họ thứ 3.** Operator plane = họ "Vận hành" làm chín (mobile/tablet, gốc `/br/[branchId]/*`); Office plane = họ "Quản trị" (`AppShell` desktop: `/admin` owner-only + domain workspaces độc lập + `/branches`).
 2. **Dồn route operator-facing về `/br/[branchId]/*`** (D009). Move thật: `/employee/*` → `/br/[id]/shift/*`; slice sàn Kho → `/br/[id]/stock/*`. branchId trên URL = SSoT; staff pin thì Branch Hub tự điền (không picker).
-3. **Amendment D019.1 + D017.3:** branch dashboard + control + **setup** (tables/pos/kds/printers/pos-sessions) chuyển TỪ họ "Quản trị" SANG Operator plane (full mobile — owner chốt "chuyển hết"). Office plane còn `/admin` + domain workspaces + `/branches` list.
+3. **Amendment D019.1 + D017.3:** branch dashboard + control, **setup** (tables/pos/kds/printers), và đối soát cuối ngày (`pos-sessions`) chuyển TỪ họ "Quản trị" SANG Operator plane (full mobile — owner chốt "chuyển hết"). Office plane còn `/admin` + domain workspaces + `/branches` list.
 4. **Branch-context = 1 provider** `resolveBranchContext()` (cache, tổng quát hóa `resolveInventoryBranchScope`) thay 3 cơ chế. Proxy + RLS + `MODULE_ACL` + `has_permission` GIỮ NGUYÊN làm cổng gác; context chỉ là lớp đọc.
 5. **Branch Hub = entry device-aware** (nâng cấp `resolvePostLoginRedirect`): station PWA → vào thẳng station; desktop + owner/office → Office; còn lại → Operator (picker nếu >1 CN). Owner landing theo thiết bị (desktop→Office, phone→Operator Overview). Không phá route-home matrix.
 6. **Phone nav = 4 anchor cố định** (`Trang chủ · Ca · Thông báo · Hồ sơ`) + smart card theo `today-work-state`; bỏ hack `MAX_VISIBLE_ITEMS=5`. Việc theo-CN qua **capability tiles** = mở rộng `nav-config.ts`/`MODULE_ACL` (D019.4), gate server-side; route-home canonical vẫn `role-route-matrix.md` (D019.2).
@@ -603,7 +603,7 @@ Chi tiết design: `docs/plan/viec-trong-ca-redesign-2026-06-29.md`. Các chốt
 
 **Decision:** Owner chốt triển khai lại trừ kho theo outcome thật, không theo thao tác POS/KDS trung gian. Chi tiết execution plan: `docs/plan/pos-kds-inventory-truth-plan-2026-06-30.md`.
 
-1. **Rollout flag:** stock-outcome posting dùng branch flag `pos_stock_outcome_posting`, default OFF. Rollback đầu tiên là disable flag theo chi nhánh. *(Sửa 2026-07-04 theo D064 §1: gate availability tách sang flag riêng `pos_stock_availability_gate` — `pos_stock_outcome_posting` chỉ còn posting; rollback ladder mới: tắt gate trước, posting sau.)*
+1. **Rollout flag:** stock-outcome posting dùng branch flag `pos_stock_outcome_posting`, default OFF. Rollback đầu tiên là disable flag theo chi nhánh. _(Sửa 2026-07-04 theo D064 §1: gate availability tách sang flag riêng `pos_stock_availability_gate` — `pos_stock_outcome_posting` chỉ còn posting; rollback ladder mới: tắt gate trước, posting sau.)_
 2. **D016 supersede có điều kiện:** D016 vẫn giữ cho mọi chi nhánh chưa bật flag hoặc chưa đủ recipe/unit/location contract. Khi flag bật và guard pass, paid/completed order được phép post stock outcome.
 3. **UI ownership:** POS/KDS không còn giao diện quản lý giới hạn món. Owner/branch_manager quản lý sell state ở branch manager surface với `Tồn | Sẵn bán | Còn`; cashier/chef chỉ thấy trạng thái bán được/khóa món cần cho thao tác.
 4. **Pending demand:** POS create/append chỉ tạo demand/reservation, chưa trừ kho. Reuse `branch_menu_item_daily_holds`; không tạo reservation table thứ hai.
@@ -755,6 +755,7 @@ liệt kê trong báo cáo (mục 7).
 5. **Ledger-correctness migrations HOÃN, gắn vào NHẬP ĐẦU KỲ.** Owner cho biết dữ liệu inventory PROD hiện đang sai và sắp làm lại nhập đầu kỳ. Fix đóng-băng-base-qty+cost lúc confirm (audit #2) + RPC `verify_inventory_ledger()` KHÔNG land rời rạc bây giờ — sequence để land NGAY TRƯỚC đợt nhập đầu kỳ, để số liệu mới đúng từ đầu. Đây là hoãn-có-điều-kiện, không phải bác.
 
 **Việc pure-exec được phép làm ngay (không đụng model/schema):**
+
 - Flow-stitch links PO↔GRN↔hóa đơn + movement→transfer (PR đang chạy).
 - Nav restructure (thêm tồn/kiểm kê/transfer vào sidebar; dedup 4 cửa GRN; completeStocktake next-action) — mirror operator tiles D058/D059.
 - reorder → 1-chạm PO nháp (§4).
@@ -820,14 +821,14 @@ liệt kê trong báo cáo (mục 7).
 
 **Decision (owner chốt 2026-07-04):**
 
-1. **Hai flag, hai switch UI** (`pos_stock_outcome_posting` CHỈ posting; flag mới `pos_stock_availability_gate` CHỈ gate, `GATE_eff = GATE AND DED`). *(SUPERSEDED by D065 2026-07-04: owner chốt MỘT công tắc trọn gói — bật trừ kho là rào cứng luôn, không có chế độ trừ-mà-không-chặn.)*
+1. **Hai flag, hai switch UI** (`pos_stock_outcome_posting` CHỈ posting; flag mới `pos_stock_availability_gate` CHỈ gate, `GATE_eff = GATE AND DED`). _(SUPERSEDED by D065 2026-07-04: owner chốt MỘT công tắc trọn gói — bật trừ kho là rào cứng luôn, không có chế độ trừ-mà-không-chặn.)_
 2. **Capacity NULL = vô hạn, không bao giờ 0**, mọi tầng (display + gating): không định mức HOẶC thiếu quy đổi đơn vị → món bán tự do, chỉ "Tắt món"/"Ngưng bán" chặn được. Fail-open khi bán, fail-loud trên trang quản lý (badge "Chưa có định mức"/"Thiếu quy đổi"). Supersede rule fail-closed của pilot doc Phước Hải.
 3. **Giới hạn bán tay thuần tay:** không seed/clamp từ Tồn — bỏ `stock capacity required` + `limit quantity exceeds stock capacity`; trống = không giới hạn; "Bỏ giới hạn" = null-out `limit_quantity` + `is_disabled=false` nhưng GIỮ row (bảo toàn `sold_today` — xóa row là mất bộ đếm, đặt lại giới hạn giữa ngày sẽ bán lố); "Tắt món" đặt được cho mọi món active. Invariant limit-ratchet: số so với lũy kế Đã bán phải cố định lúc đặt; số tụt theo bán (Tồn-live) chỉ so với demand còn lại (pending + holds), không bao giờ trừ thêm Đã bán. Sequencing: migration decouple (M2) phải apply TRƯỚC khi deploy UI mới — UI cũ an toàn với M2, nhưng UI mới trên RPC cũ sẽ ghi limit=capacity(=0) khi để trống.
-4. **Stock gate Phase 1 = advisory**, KHÔNG thêm hard trigger mới trên `order_items`. *(SUPERSEDED by D065 2026-07-04: bật trừ kho = chặn cứng DB-level; lý do advisory cũ — sợ chặn oan do kho rỗng/thiếu config — đã hết hiệu lực vì capacity NULL = vô hạn đã fix tận gốc ở §2.)*
+4. **Stock gate Phase 1 = advisory**, KHÔNG thêm hard trigger mới trên `order_items`. _(SUPERSEDED by D065 2026-07-04: bật trừ kho = chặn cứng DB-level; lý do advisory cũ — sợ chặn oan do kho rỗng/thiếu config — đã hết hiệu lực vì capacity NULL = vô hạn đã fix tận gốc ở §2.)_
 5. **Refund/void sau thanh toán:** line đã first-ready → KHÔNG trả suất (`sold_today` giữ, đúng phần bếp đã làm); chưa first-ready → trả suất. Mở rộng D053 §7 sang quota; sửa mâu thuẫn comment-vs-code ở `refund_paid_order`/`decrement_branch_menu_daily_limit`.
 6. **POS thẻ món hiển thị "Còn N phần"** ngay trên thẻ ở thực đơn khi hữu hạn (display, không phải management UI — làm rõ D053 §3), kèm badge lý do khi = 0 (Tắt / Hết suất / Hết nguyên liệu).
 7. **Trigger bếp `pos_ingredient_stock_block`: GỠ HẲN** (owner chốt 2026-07-04 sau giải thích — đảo quyết định 2026-06-28). PR-1 ẩn card + không bật; PR-3 gỡ trọn: TS bỏ ingredient-cap client stack (store/draft/fetch caps) trước, rồi migration DROP `trg_enforce_ingredient_stock` + `enforce_branch_ingredient_stock` + `get_branch_menu_ingredient_caps_for_pos` + xóa row flag. Lý do: đo kho bếp trong khi mọi tầng khác đo kho chi nhánh (chặn oan/hiện sai), pending demand không giới hạn ngày, hai bộ luật chặn song song, chưa từng bật + QA chưa chạy. Phần đúng của nó (không định mức = bán tự do; "còn N phần") đã nằm trong §2/§6.
-8. **Khóa Path 2 trước khi re-enable posting:** REVOKE `transition_order_status` khỏi `authenticated` + idempotency `post_pos_sale_consumption_if_ready` (thi công thực tế: match sale-shaped rows — subtype NULL hoặc `sale_consumption`, KHÔNG phải mọi `consumption` vì đụng waste `cancelled_after_kds_ready`). *(Clause "shortage → post âm" SUPERSEDED by D065 §3: kho không bao giờ âm; shortage lúc ghi sổ → payment vẫn hoàn tất, không ghi movement, cảnh báo — lệch bắt bằng kiểm kê.)* Số phận `payments.stock_consumed_status` vẫn mở.
+8. **Khóa Path 2 trước khi re-enable posting:** REVOKE `transition_order_status` khỏi `authenticated` + idempotency `post_pos_sale_consumption_if_ready` (thi công thực tế: match sale-shaped rows — subtype NULL hoặc `sale_consumption`, KHÔNG phải mọi `consumption` vì đụng waste `cancelled_after_kds_ready`). _(Clause "shortage → post âm" SUPERSEDED by D065 §3: kho không bao giờ âm; shortage lúc ghi sổ → payment vẫn hoàn tất, không ghi movement, cảnh báo — lệch bắt bằng kiểm kê.)_ Số phận `payments.stock_consumed_status` vẫn mở.
 
 ## D065: "Trừ tồn khi bán" = một công tắc trọn gói — bật là rào cứng, kho không âm; tắt là bán vô hạn (2026-07-04)
 

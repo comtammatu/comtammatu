@@ -53,10 +53,9 @@ export const settings = {
       "Mẫu phiếu, giám sát job in, và cấu hình máy in theo từng chi nhánh.",
     printBranchConfigTitle: "Cấu hình theo chi nhánh",
     tablesTitle: "Sơ đồ bàn",
-    posTitle: "Máy POS",
-    posSessionsTitle: "Ca POS",
-    posSessionsDescription:
-      "Lịch sử ca, bill, doanh thu, số món và đối soát chênh lệch.",
+    posTitle: "Máy POS & tồn kho",
+    posSessionsTitle: "Đối soát ca POS",
+    posSessionsDescription: "Lịch sử ca, bill, doanh thu và chênh lệch quỹ.",
   },
   printTemplates: {
     layoutTitle: "Bố cục phiếu",
@@ -307,27 +306,21 @@ export const settings = {
       "Mở đúng bề mặt để vận hành chi nhánh, kiểm tra thiết bị và xử lý công việc trong ngày.",
     liveOperationsTitle: "Vận hành trực tiếp",
     liveOperationsDescription:
-      "Các màn thao tác trong ca: bán hàng, bếp, gọi món và hạn mức bán hôm nay.",
-    endDayTitle: "Đối soát ca / cuối ngày",
+      "Các màn thao tác trong ca: bán hàng, bếp, gọi món và giới hạn bán hôm nay.",
+    endDayTitle: "Đối soát cuối ngày",
     endDayDescription:
       "Xem lại ca POS, bill, doanh thu và chênh lệch sau khi vận hành.",
-    setupLaneTitle: "Cài đặt chi nhánh",
     setupEssentialsTitle: "Thiết lập vận hành",
-    setupLaneDescription:
-      "Bàn, máy POS, trạm bếp, máy in và cấu hình chấm công của chi nhánh.",
-    drilldownTitle: "Mở sâu",
-    drilldownDescription:
-      "Kiểm tra hạn mức bán và tồn kho trong phạm vi chi nhánh.",
-    commandBranchSetup: "Thiết lập sàn",
-    commandBranchSetupDescription:
-      "Bàn, máy POS, trạm bếp, máy in và cấu hình chấm công của chi nhánh.",
+    setupLaneDescription: "Bàn, máy POS, trạm bếp và máy in của chi nhánh.",
+    drilldownTitle: "Kho chi nhánh",
+    drilldownDescription: "Kiểm tra tồn kho trong phạm vi chi nhánh.",
     commandPosDescription: "Bán hàng, gửi bếp, thanh toán và in hóa đơn.",
     commandKdsDescription: "Nhận món, cập nhật trạng thái bếp và gọi món xong.",
     commandRunnerDescription:
       "Màn hình gọi số cho khách theo dõi món đã sẵn sàng.",
-    commandPosSessionsTitle: "Ca POS",
+    commandPosSessionsTitle: "Đối soát ca POS",
     commandPosSessionsDescription:
-      "Lịch sử ca, bill, doanh thu, số món và đối soát chênh lệch.",
+      "Lịch sử ca, bill, doanh thu và chênh lệch quỹ.",
     commandOrdersDescription:
       "Tra cứu đơn, xử lý sự cố và đối soát theo chi nhánh.",
     commandHrDescription: "Ngày công, nghỉ phép và duyệt kết ca của nhân viên.",
@@ -344,7 +337,7 @@ export const settings = {
     dayPaidOrdersHint: "Số đơn đã thu tiền hôm nay.",
     dayTablesLabel: "Bàn đang dùng",
     dayTablesHint: "Bàn có khách trên tổng số bàn.",
-    dayKitchenLabel: "Đơn đang chế biến",
+    dayKitchenLabel: "Đơn bếp đang mở",
     dayKitchenHint: "Đơn chưa phục vụ xong hôm nay.",
     readinessTitle: "Sẵn sàng vận hành",
     readinessDescription:
@@ -353,11 +346,11 @@ export const settings = {
     readinessWarningBadge: "Cảnh báo",
     readinessMissingBadge: "Thiếu",
     readinessSetupCta: "Mở thiết lập",
-    readinessMenuTitle: "Thực đơn bán",
+    readinessMenuTitle: "Giới hạn bán",
     readinessMenuReady: (count: number) =>
-      `${count.toLocaleString("vi-VN")} món đang bật để bán.`,
-    readinessMenuMissing: "Chưa có món active để POS bán đúng.",
-    readinessMenuCta: "Mở thực đơn",
+      `${count.toLocaleString("vi-VN")} món có thể mở bán trên POS.`,
+    readinessMenuMissing: "Chưa có món khả dụng để POS bán.",
+    readinessMenuCta: "Mở giới hạn bán",
     readinessFloorTitle: "Bàn & máy POS",
     readinessFloorReady: (tables: number, terminals: number) =>
       `${tables.toLocaleString("vi-VN")} bàn và ${terminals.toLocaleString("vi-VN")} máy POS active.`,
@@ -384,7 +377,7 @@ export const settings = {
     readinessPosCta: "Mở POS",
     readinessKdsTitle: "Bếp/KDS",
     readinessKdsActive: (count: number) =>
-      `${count.toLocaleString("vi-VN")} đơn đang trong bếp.`,
+      `${count.toLocaleString("vi-VN")} đơn bếp đang mở.`,
     readinessKdsEmpty: "Không có đơn bếp đang mở.",
     readinessKdsBadge: (count: number) =>
       count > 0 ? `${count.toLocaleString("vi-VN")} đơn` : "0 đơn",
@@ -447,8 +440,11 @@ export const settings = {
     centralNavStock: "Tồn",
     centralNavStocktake: "Kiểm",
     centralNavProduction: "Sản xuất",
-    centralNavMore: "Thêm",
-    centralMoreTitle: "Thêm",
+    centralNavMore: "Khác",
+    centralMoreTitle: "Mục khác",
+    centralMoreDescription: "Các mục không nằm trực tiếp trên Hôm nay.",
+    moreEmptyTitle: "Không có mục khác",
+    moreEmptyDescription: "Các việc chính đã nằm trên Hôm nay.",
     centralClockLink: "Chấm công",
     queueEmpty: "Không có việc cần xử lý",
     settingsBack: "Thiết lập",
@@ -456,7 +452,8 @@ export const settings = {
     employeeBack: "Về Cổng",
     branchSettingsBack: "Cài đặt chi nhánh",
     hubTitle: "Cài đặt chi nhánh",
-    hubDescription: (branchName: string) => branchName,
+    hubDescription: (branchName: string) =>
+      `${branchName} · Bàn, POS, bếp và in`,
     hubEmptyTitle: "Không có mục thiết lập khả dụng",
     hubEmptyDescription:
       "Tài khoản của bạn chưa được cấp quyền cho các mục thiết lập của chi nhánh này. Liên hệ chủ/quản lý nếu cần truy cập.",
@@ -466,8 +463,9 @@ export const settings = {
       "Khu vực ăn uống, danh sách bàn và trạng thái vận hành tại chi nhánh.",
     tablesDescription: (branchName: string) =>
       `Sơ đồ khu vực và bàn của ${branchName}: thêm khu vực, quản lý bàn và trạng thái phục vụ.`,
-    posSetupTitle: "Máy POS",
-    posSetupDescription: "Máy POS đăng ký tại chi nhánh và điểm bán tương ứng.",
+    posSetupTitle: "Máy POS & tồn kho",
+    posSetupDescription:
+      "Máy POS đăng ký tại chi nhánh và chính sách trừ tồn khi bán.",
     printersSetupTitle: "Máy in",
     printersSetupDescription:
       "Hóa đơn, bếp và trạng thái agent in đang dùng cho chi nhánh.",
@@ -513,7 +511,13 @@ export const settings = {
     emptyDescription:
       "Khi nhân viên mở ca từ màn hình POS, lịch sử ca sẽ xuất hiện tại đây.",
     sessionHistory: "Lịch sử ca",
+    sessionHistoryDescription: (openCount: number, varianceCount: number) =>
+      `${openCount.toLocaleString("vi-VN")} ca đang mở · ${varianceCount.toLocaleString("vi-VN")} ca lệch quỹ chưa xử lý`,
+    sessionCount: (count: number) => `${count.toLocaleString("vi-VN")} ca`,
+    sessionVarianceLine: (difference: string) => `Lệch quỹ ${difference}`,
+    settlementTitle: "Đối soát quỹ",
     varianceShort: "Lệch",
+    varianceResolvedShort: "Đã xử lý",
     open: "Đang mở",
     closed: "Đã chốt",
     billsInSession: (count: number) => `Bill trong ca (${count})`,
@@ -533,8 +537,19 @@ export const settings = {
     closeShift: "Chốt ca",
     varianceAlertStrong: "Lệch quỹ vượt ngưỡng.",
     varianceAlert: (difference: string, threshold: string) =>
-      ` Chênh lệch ${difference} > ngưỡng ${threshold}. Đã gửi cảnh báo cho quản lý.`,
-    varianceApprovalNote: (note: string) => `Ghi chú duyệt: ${note}`,
+      ` Chênh lệch ${difference} > ngưỡng ${threshold}. Cần ghi nhận hướng xử lý.`,
+    varianceResolvedStrong: "Lệch quỹ đã xử lý.",
+    varianceResolved: (difference: string) =>
+      ` Chênh lệch lúc chốt ca: ${difference}.`,
+    varianceApprovalNote: (note: string) => `Hướng xử lý: ${note}`,
+    varianceResolutionLabel: "Hướng xử lý",
+    varianceResolutionPlaceholder:
+      "VD: Thu ngân đã bù đủ tiền thiếu, quản lý đã nhận.",
+    varianceResolutionCount: (count: number) => `${count}/500`,
+    resolveVariance: "Ghi nhận đã xử lý",
+    resolving: "Đang lưu",
+    resolveSuccess: "Đã ghi nhận xử lý lệch quỹ",
+    resolveFailed: "Không thể lưu xử lý lệch quỹ",
     cashMatched: "Số dư khớp hoàn toàn.",
     totalBills: "Tổng bill",
     paidRevenue: "Doanh thu (đã thanh toán)",

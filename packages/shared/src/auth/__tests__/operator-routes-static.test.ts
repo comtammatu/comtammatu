@@ -36,6 +36,16 @@ test("operator routes resolve to ACL modules", () => {
   assert.equal(resolveModuleFromPath("/br/7/stock"), "inventory");
   assert.equal(resolveModuleFromPath("/br/7/stock/count"), "operator_home");
   assert.equal(resolveModuleFromPath("/br/7/stock/count-slips"), "inventory");
+  assert.equal(
+    resolveModuleFromPath("/br/7/pos-sessions"),
+    "branch_pos_sessions",
+  );
+  assert.equal(resolveModuleFromPath("/br/7/settings/pos-sessions"), null);
+  assert.equal(
+    resolveModuleFromPath("/br/7/pos-sessions/1"),
+    "branch_pos_sessions",
+  );
+  assert.equal(resolveModuleFromPath("/br/7/pos-terminal"), null);
 });
 
 test("operator stock count does not require full inventory access", () => {
@@ -62,6 +72,7 @@ test("operator route families use operator bottom nav", () => {
     ["/br/7/stock/transfer/123", "operator-stock"],
     ["/br/7/stock/transfer/new", "operator-stock"],
     ["/br/7/stock/waste", "operator-stock"],
+    ["/br/7/pos-sessions", "branch-pos-sessions"],
   ] as const) {
     const family = resolveRouteFamilyContract(path);
     assert.equal(family?.id, id);

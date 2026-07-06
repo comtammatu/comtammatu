@@ -106,6 +106,7 @@ interface DataTableProps<T> {
   getRowDataState?: (row: T, index: number) => string | undefined;
   rowClassName?: (row: T, index: number) => string | undefined;
   className?: string;
+  mobileBreakpoint?: number;
   /**
    * Document-table totals (e.g. PO/transfer/issue line sheets). Rendered
    * as `<TableFooter>` rows on desktop and as a block under the card
@@ -148,11 +149,12 @@ export function DataTable<T>({
   getRowDataState,
   rowClassName,
   className,
+  mobileBreakpoint,
   desktopFooter,
   desktopFooterRows,
   mobileFooter,
 }: DataTableProps<T>) {
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile(mobileBreakpoint);
   const [openContextRowKey, setOpenContextRowKey] = React.useState<
     string | number | null
   >(null);

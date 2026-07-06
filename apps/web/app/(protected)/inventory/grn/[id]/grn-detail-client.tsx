@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   ArrowLeft as IconArrowLeft,
@@ -52,6 +53,7 @@ export function GRNDetailClient({
   grnMobileBackPath = "/inventory/grn/new",
   purchaseOrdersBasePath = "/inventory/purchase-orders",
   supplierInvoicesBasePath = "/inventory/supplier-invoices",
+  embedded = false,
 }: {
   grn: GRNDetail;
   ingredients: IngredientRow[];
@@ -62,6 +64,7 @@ export function GRNDetailClient({
   grnMobileBackPath?: string;
   purchaseOrdersBasePath?: string;
   supplierInvoicesBasePath?: string;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -102,270 +105,248 @@ export function GRNDetailClient({
       purchaseOrdersBasePath,
     });
 
-  return (
-    <AppPage width="wide" density="compact">
-      <AppPageHeader
-        eyebrow="Kho hàng"
-        title={grn.code}
-        description={`${grn.supplier} • ${grn.date}`}
-        badge={{
-          children: statusBadge.label,
-          variant: statusBadge.variant,
-        }}
-        breadcrumb={
-          <Link
-            href={isMobile ? grnMobileBackPath : grnListBasePath}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />{" "}
-            {isMobile ? grnCopy.back : tRoute("/inventory/grn", "heading")}
-          </Link>
-        }
-        tabs={
-          <AppPageTabs
-            items={[
-              { value: "overview", label: "Tổng quan" },
-              { value: "lines", label: "Dòng", count: lines.length },
-              { value: "history", label: "Lịch sử", count: auditLogs.length },
-            ]}
-          >
-            <TabsContent value="overview">
-              <div className="flex flex-col gap-4">
-                {isReview && isDraft ? (
-                  <Alert>
-                    <IconInfoCircle className="size-4" />
-                    <AlertDescription>
-                      {grnCopy.draftSavedReviewHint}
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
+  const backHref = isMobile ? grnMobileBackPath : grnListBasePath;
+  const tabs = (
+    <AppPageTabs
+      defaultValue={embedded ? "lines" : undefined}
+      items={[
+        { value: "overview", label: "Tổng quan" },
+        { value: "lines", label: "Dòng", count: lines.length },
+        { value: "history", label: "Lịch sử", count: auditLogs.length },
+      ]}
+    >
+      <TabsContent value="overview">
+        <div className="flex flex-col gap-4">
+          {isReview && isDraft ? (
+            <Alert>
+              <IconInfoCircle className="size-4" />
+              <AlertDescription>
+                {grnCopy.draftSavedReviewHint}
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
-                <AppSection title={grnCopy.qcSummary}>
-                  <DescriptionList
-                    className="grid gap-3 md:grid-cols-4"
-                    descriptionClassName="font-semibold"
-                    items={[
+          <AppSection title={grnCopy.qcSummary}>
+            <DescriptionList
+              className="grid gap-3 md:grid-cols-4"
+              descriptionClassName="font-semibold"
+              items={[
+                {
+                  term: grnCopy.linkedPo,
+                  description:
+                    grn.poCode && grn.poId ? (
+                      <Link
+                        href={`${purchaseOrdersBasePath}/${grn.poId}`}
+                        className="text-primary hover:underline"
+                      >
+                        {grn.poCode}
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {inventoryCommon.noValue}
+                      </span>
+                    ),
+                },
+                {
+                  term: grnCopy.supplier,
+                  description: grn.supplier,
+                },
+                {
+                  term: grnCopy.totalReceivedValue,
+                  description: (
+                    <span className="text-primary">
+                      {inventoryCommon.currency(formatVND(stats.total))}
+                    </span>
+                  ),
+                },
+                {
+                  term: grnCopy.priceReviewNeeded,
+                  description: (
+                    <span
+                      className={
+                        stats.reviewLines > 0 ? "text-destructive" : ""
+                      }
+                    >
+                      {grnCopy.reviewRatio(stats.reviewLines, lines.length)}
+                    </span>
+                  ),
+                },
+              ]}
+            />
+          </AppSection>
+
+          <OverviewLinesPreview lines={lines} />
+        </div>
+      </TabsContent>
+
+      <TabsContent value="lines">
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <AppSection
+                className="overflow-hidden"
+                title={grnCopy.inspectionItemsTitle}
+                description={
+                  isDraft
+                    ? grnCopy.draftToleranceHint(
+                        qc.qtyShortTolerancePct,
+                        qc.priceVarianceWarnPct,
+                        qc.priceVarianceReviewPct,
+                      )
+                    : grnCopy.finalizedLineCount(lines.length)
+                }
+                action={
+                  isDraft ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setAddDialogOpen(true)}
+                    >
+                      <IconPlus className="size-4" />
+                      {grnCopy.addLine}
+                    </Button>
+                  ) : null
+                }
+              >
+                {lines.map((line, idx) => (
+                  <LineRow
+                    key={line.lineId}
+                    tenantId={grn.tenantId}
+                    grnId={grn.id}
+                    line={line}
+                    idx={idx}
+                    isDraft={isDraft}
+                    qc={qc}
+                    showAmendAffordance={showAmendAffordance}
+                    onChange={(p) => patch(idx, p)}
+                    onDelete={() => void handleDeleteLine(line)}
+                    onAmend={() => setAmendingLine(line)}
+                  />
+                ))}
+              </AppSection>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <AppSection
+                size="sm"
+                title={grnCopy.qcSummary}
+                contentClassName="text-sm"
+              >
+                <GrnSummaryRow
+                  label={grnCopy.acceptedLines}
+                  value={`${stats.acceptedLines}/${lines.length}`}
+                  tone="success"
+                />
+                <GrnSummaryRow
+                  label={grnCopy.rejectedLines}
+                  value={String(stats.rejectedLines)}
+                  tone={stats.rejectedLines > 0 ? "warning" : "default"}
+                />
+                <GrnSummaryRow
+                  label={grnCopy.priceReviewNeeded}
+                  value={String(stats.reviewLines)}
+                  tone={stats.reviewLines > 0 ? "warning" : "default"}
+                />
+              </AppSection>
+
+              <AppSection tone="info" size="sm" title={grnCopy.totalStockValue}>
+                <p className="font-mono text-xl font-semibold tabular-nums text-primary">
+                  {inventoryCommon.currency(formatVND(stats.total))}
+                </p>
+              </AppSection>
+            </div>
+          </div>
+
+          <AppDetailFooter
+            leading={
+              <>
+                {!isDraft ? (
+                  <Button asChild variant="ghost">
+                    <Link
+                      href={
+                        isMobile
+                          ? grnMobileBackPath
+                          : grn.poId
+                            ? `${purchaseOrdersBasePath}/${grn.poId}`
+                            : grnListBasePath
+                      }
+                    >
+                      <IconArrowLeft className="size-5" />
+                      {grnCopy.back}
+                    </Link>
+                  </Button>
+                ) : null}
+                {!isDraft && canAdjustStock && lines.length > 0 ? (
+                  <DocumentStockCorrectionDialog
+                    documentType="grn"
+                    documentId={grn.id}
+                    documentCode={grn.code}
+                    branchOptions={[
                       {
-                        term: grnCopy.linkedPo,
-                        description:
-                          grn.poCode && grn.poId ? (
-                            <Link
-                              href={`${purchaseOrdersBasePath}/${grn.poId}`}
-                              className="text-primary hover:underline"
-                            >
-                              {grn.poCode}
-                            </Link>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              {inventoryCommon.noValue}
-                            </span>
-                          ),
-                      },
-                      {
-                        term: grnCopy.supplier,
-                        description: grn.supplier,
-                      },
-                      {
-                        term: grnCopy.totalReceivedValue,
-                        description: (
-                          <span className="text-primary">
-                            {inventoryCommon.currency(formatVND(stats.total))}
-                          </span>
-                        ),
-                      },
-                      {
-                        term: grnCopy.priceReviewNeeded,
-                        description: (
-                          <span
-                            className={
-                              stats.reviewLines > 0 ? "text-destructive" : ""
-                            }
-                          >
-                            {grnCopy.reviewRatio(
-                              stats.reviewLines,
-                              lines.length,
-                            )}
-                          </span>
-                        ),
+                        id: grn.branchId,
+                        name: grnCopy.receivingWarehouse,
                       },
                     ]}
+                    itemOptions={lines.map((line) => ({
+                      ingredientId: line.ingredientId,
+                      name: line.name,
+                      unit: line.unit,
+                    }))}
                   />
-                </AppSection>
-
-                <OverviewLinesPreview lines={lines} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="lines">
-              <div className="flex flex-col gap-4">
-                <div className="grid gap-6 lg:grid-cols-3">
-                  <div className="lg:col-span-2">
-                    <AppSection
-                      className="overflow-hidden"
-                      title={grnCopy.inspectionItemsTitle}
-                      description={
-                        isDraft
-                          ? grnCopy.draftToleranceHint(
-                              qc.qtyShortTolerancePct,
-                              qc.priceVarianceWarnPct,
-                              qc.priceVarianceReviewPct,
-                            )
-                          : grnCopy.finalizedLineCount(lines.length)
-                      }
-                      action={
-                        isDraft ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setAddDialogOpen(true)}
-                          >
-                            <IconPlus className="size-4" />
-                            {grnCopy.addLine}
-                          </Button>
-                        ) : null
+                ) : null}
+                {!isDraft ? (
+                  <Button asChild variant="outline">
+                    <Link
+                      href={
+                        grn.invoiceId
+                          ? `${supplierInvoicesBasePath}?invoiceId=${grn.invoiceId}`
+                          : `${supplierInvoicesBasePath}?grnId=${grn.id}`
                       }
                     >
-                      {lines.map((line, idx) => (
-                        <LineRow
-                          key={line.lineId}
-                          tenantId={grn.tenantId}
-                          grnId={grn.id}
-                          line={line}
-                          idx={idx}
-                          isDraft={isDraft}
-                          qc={qc}
-                          showAmendAffordance={showAmendAffordance}
-                          onChange={(p) => patch(idx, p)}
-                          onDelete={() => void handleDeleteLine(line)}
-                          onAmend={() => setAmendingLine(line)}
-                        />
-                      ))}
-                    </AppSection>
-                  </div>
+                      <IconReceipt className="size-5" />
+                      {grn.invoiceId
+                        ? grnCopy.viewInvoice
+                        : grnCopy.createInvoice}
+                    </Link>
+                  </Button>
+                ) : null}
+              </>
+            }
+            trailing={
+              isDraft ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSave}
+                    disabled={isSaving || dirtyLines.length === 0}
+                  >
+                    <IconDeviceFloppy className="size-5" />
+                    {grnCopy.saveChanges(dirtyLines.length)}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={isConfirming || dirtyLines.length > 0}
+                    onClick={handleConfirmGrn}
+                  >
+                    <IconCircleCheck className="size-5" />
+                    {grnCopy.confirmGrnAction}
+                  </Button>
+                </>
+              ) : null
+            }
+          />
+        </div>
+      </TabsContent>
 
-                  <div className="flex flex-col gap-4">
-                    <AppSection
-                      size="sm"
-                      title={grnCopy.qcSummary}
-                      contentClassName="text-sm"
-                    >
-                      <GrnSummaryRow
-                        label={grnCopy.acceptedLines}
-                        value={`${stats.acceptedLines}/${lines.length}`}
-                        tone="success"
-                      />
-                      <GrnSummaryRow
-                        label={grnCopy.rejectedLines}
-                        value={String(stats.rejectedLines)}
-                        tone={stats.rejectedLines > 0 ? "warning" : "default"}
-                      />
-                      <GrnSummaryRow
-                        label={grnCopy.priceReviewNeeded}
-                        value={String(stats.reviewLines)}
-                        tone={stats.reviewLines > 0 ? "warning" : "default"}
-                      />
-                    </AppSection>
+      <TabsContent value="history">
+        <AuditHistoryList logs={auditLogs} />
+      </TabsContent>
+    </AppPageTabs>
+  );
 
-                    <AppSection
-                      tone="info"
-                      size="sm"
-                      title={grnCopy.totalStockValue}
-                    >
-                      <p className="font-mono text-xl font-semibold tabular-nums text-primary">
-                        {inventoryCommon.currency(formatVND(stats.total))}
-                      </p>
-                    </AppSection>
-                  </div>
-                </div>
-
-                <AppDetailFooter
-                  leading={
-                    <>
-                      {!isDraft ? (
-                        <Button asChild variant="ghost">
-                          <Link
-                            href={
-                              isMobile
-                                ? grnMobileBackPath
-                                : grn.poId
-                                  ? `${purchaseOrdersBasePath}/${grn.poId}`
-                                  : grnListBasePath
-                            }
-                          >
-                            <IconArrowLeft className="size-5" />
-                            {grnCopy.back}
-                          </Link>
-                        </Button>
-                      ) : null}
-                      {!isDraft && canAdjustStock && lines.length > 0 ? (
-                        <DocumentStockCorrectionDialog
-                          documentType="grn"
-                          documentId={grn.id}
-                          documentCode={grn.code}
-                          branchOptions={[
-                            {
-                              id: grn.branchId,
-                              name: grnCopy.receivingWarehouse,
-                            },
-                          ]}
-                          itemOptions={lines.map((line) => ({
-                            ingredientId: line.ingredientId,
-                            name: line.name,
-                            unit: line.unit,
-                          }))}
-                        />
-                      ) : null}
-                      {!isDraft ? (
-                        <Button asChild variant="outline">
-                          <Link
-                            href={
-                              grn.invoiceId
-                                ? `${supplierInvoicesBasePath}?invoiceId=${grn.invoiceId}`
-                                : `${supplierInvoicesBasePath}?grnId=${grn.id}`
-                            }
-                          >
-                            <IconReceipt className="size-5" />
-                            {grn.invoiceId
-                              ? grnCopy.viewInvoice
-                              : grnCopy.createInvoice}
-                          </Link>
-                        </Button>
-                      ) : null}
-                    </>
-                  }
-                  trailing={
-                    isDraft ? (
-                      <>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleSave}
-                          disabled={isSaving || dirtyLines.length === 0}
-                        >
-                          <IconDeviceFloppy className="size-5" />
-                          {grnCopy.saveChanges(dirtyLines.length)}
-                        </Button>
-                        <Button
-                          type="button"
-                          disabled={isConfirming || dirtyLines.length > 0}
-                          onClick={handleConfirmGrn}
-                        >
-                          <IconCircleCheck className="size-5" />
-                          {grnCopy.confirmGrnAction}
-                        </Button>
-                      </>
-                    ) : null
-                  }
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="history">
-              <AuditHistoryList logs={auditLogs} />
-            </TabsContent>
-          </AppPageTabs>
-        }
-      />
+  const dialogs = (
+    <>
       <AddGrnLineDialog
         grn={grn}
         ingredients={ingredients}
@@ -391,6 +372,58 @@ export function GRNDetailClient({
         }}
         startTransition={startAmend}
       />
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="flex w-full flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Button asChild variant="ghost" size="icon" className="shrink-0">
+            <Link href={grnMobileBackPath} aria-label={grnCopy.back}>
+              <IconArrowLeft className="size-4" />
+            </Link>
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-mono text-sm font-semibold">
+              {grn.code}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {grn.supplier} • {grn.date}
+            </p>
+          </div>
+          <Badge variant={statusBadge.variant} className="shrink-0">
+            {statusBadge.label}
+          </Badge>
+        </div>
+        {tabs}
+        {dialogs}
+      </div>
+    );
+  }
+
+  return (
+    <AppPage width="wide" density="compact">
+      <AppPageHeader
+        eyebrow="Kho hàng"
+        title={grn.code}
+        description={`${grn.supplier} • ${grn.date}`}
+        badge={{
+          children: statusBadge.label,
+          variant: statusBadge.variant,
+        }}
+        breadcrumb={
+          <Link
+            href={backHref}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+          >
+            <IconArrowLeft className="size-4" />{" "}
+            {isMobile ? grnCopy.back : tRoute("/inventory/grn", "heading")}
+          </Link>
+        }
+        tabs={tabs}
+      />
+      {dialogs}
     </AppPage>
   );
 }

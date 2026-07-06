@@ -62,6 +62,7 @@ export default async function BranchPosSessionsPage({
           status,
           note,
           variance_approval_note,
+          variance_approver_user_id,
           pos_terminals!pos_sessions_terminal_id_fkey (
             name
           ),

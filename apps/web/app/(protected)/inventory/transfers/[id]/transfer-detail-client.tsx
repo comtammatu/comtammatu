@@ -319,7 +319,7 @@ export function TransferDetailClient({
               }))
             }
             maxFractionDigits={3}
-            className="h-9 text-right"
+            className={embedded ? "h-12 text-right" : "h-9 text-right"}
           />
         ) : item.received != null ? (
           <span className="font-mono tabular-nums">{item.received}</span>
@@ -422,6 +422,7 @@ export function TransferDetailClient({
                     <TransferLineMobileCard
                       item={item}
                       isReceiveMode={isReceiveMode}
+                      embedded={embedded}
                       receiveValue={receiveQty[item.ingredientId] ?? ""}
                       onReceiveValueChange={(value) =>
                         setReceiveQty((prev) => ({
@@ -564,16 +565,13 @@ export function TransferDetailClient({
 
           {/* Footer Action Bar */}
           <AppDetailFooter
-            className={
-              embedded
-                ? "sticky chrome-safe-bottom z-10 border-t bg-background/95 p-2 py-2 backdrop-blur"
-                : undefined
-            }
+            sticky={embedded}
             leading={
               <>
                 <Button
                   type="button"
                   variant="outline"
+                  size={embedded ? "touch" : "default"}
                   className="px-6 font-bold text-muted-foreground"
                 >
                   <IconPrinter className="size-5" />
@@ -606,6 +604,7 @@ export function TransferDetailClient({
                     actionConfig?.action === "receive" &&
                     !noteOk)
                 }
+                size={embedded ? "touch" : "default"}
                 className="px-6 font-bold"
                 onClick={handlePrimaryAction}
               >
@@ -691,11 +690,13 @@ export function TransferDetailClient({
 function TransferLineMobileCard({
   item,
   isReceiveMode,
+  embedded,
   receiveValue,
   onReceiveValueChange,
 }: {
   item: TransferLineItem;
   isReceiveMode: boolean;
+  embedded: boolean;
   receiveValue: string;
   onReceiveValueChange: (value: string) => void;
 }) {
@@ -721,7 +722,7 @@ function TransferLineMobileCard({
               value={receiveValue}
               onValueChange={onReceiveValueChange}
               maxFractionDigits={3}
-              className="h-9"
+              className={embedded ? "h-12" : "h-9"}
             />
           ) : (
             <p className="font-semibold">

@@ -5,7 +5,7 @@ import { GET as getHubManifest } from "../app/(protected)/br/[branchId]/(operato
 import { GET as getKdsManifest } from "../app/(protected)/br/[branchId]/kds/manifest.webmanifest/route";
 import { GET as getPosManifest } from "../app/(protected)/br/[branchId]/pos/manifest.webmanifest/route";
 
-test("root PWA manifest opens Branch Hub instead of the retired employee app", () => {
+test("root PWA manifest opens Operator Hub instead of the retired employee app", () => {
   const manifest = JSON.parse(
     readFileSync(
       new URL("../public/manifest.webmanifest", import.meta.url),
@@ -21,10 +21,10 @@ test("root PWA manifest opens Branch Hub instead of the retired employee app", (
     start_url?: unknown;
   };
 
-  assert.equal(manifest.name, "Cơm Tấm Má Tư - Chi nhánh");
+  assert.equal(manifest.name, "Cơm Tấm Má Tư - Hub");
   assert.equal(manifest.orientation, "portrait");
   assert.equal(manifest.scope, "/");
-  assert.equal(manifest.short_name, "Má Tư CN");
+  assert.equal(manifest.short_name, "Má Tư Hub");
   assert.equal(manifest.start_url, "/br");
   assert.deepEqual(manifest.categories, ["business", "productivity"]);
   assert.deepEqual(
@@ -108,7 +108,7 @@ test("Operator Hub PWA manifest is installable per branch", async () => {
   // installed PWA into a browser tab; `id` keeps the install distinct.
   assert.equal(manifest.scope, "/");
   assert.equal(manifest.display, "standalone");
-  assert.equal(manifest.short_name, "Má Tư Chi nhánh");
+  assert.equal(manifest.short_name, "Má Tư Hub");
   assert.equal(manifest.orientation, "portrait");
   assert.ok(manifest.icons && manifest.icons.length >= 2);
   assert.ok(
@@ -195,7 +195,7 @@ test("POS and KDS toolbars render a return-to-hub link; runner never does", () =
     toolbarSource,
     /<PwaToolbarHubLink\s+href=\{`\/br\/\$\{branchId\}`\}\s+label=\{copy\.hubLinkLabel\}/,
   );
-  assert.match(toolbarSource, /hubLinkLabel: "Về màn hình chính chi nhánh"/);
+  assert.match(toolbarSource, /hubLinkLabel: "Về Má Tư Hub"/);
   assert.match(pwaToolbarSource, /<Link href=\{href\} aria-label=\{label\}>/);
   assert.match(
     pwaToolbarSource,

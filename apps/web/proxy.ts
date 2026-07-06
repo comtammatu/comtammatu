@@ -166,13 +166,12 @@ export async function proxy(request: NextRequest) {
     if (!session) return response; // unauthenticated → show login
     // Authenticated → bounce to role's post-login destination.
     if (claims) {
-      const returnTo = request.nextUrl.searchParams.get("returnTo");
       const branchHubContext = {
         ...resolveBranchHubContextFromHeaders(request.headers),
         homeBranchId: await resolveCentralSiteHomeBranchId(supabase, claims),
       };
       const url = new URL(
-        resolvePostLoginRedirect(claims, returnTo, branchHubContext),
+        resolvePostLoginRedirect(claims, null, branchHubContext),
         request.nextUrl.origin,
       );
       return redirectWithCookies(url, response);
@@ -180,15 +179,11 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Not authenticated → send to login with returnTo preserved.
+  // Not authenticated → send to login.
   if (!session) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
-    url.searchParams.set(
-      "returnTo",
-      `${request.nextUrl.pathname}${request.nextUrl.search}`,
-    );
     return redirectWithCookies(url, response);
   }
 
@@ -346,11 +341,11 @@ export async function proxy(request: NextRequest) {
         // 307 to /access-denied. Vercel preview deploys run as production;
         // set POS_NETWORK_GATE=off on those if you don't want the gate there.
         //
-        // Owner reaches this point via allowCrossBranch (cover-ca) and is
-        // intentionally subject to the same network gate: covering a shift
-        // means being on the branch network. No owner bypass here.
+        // Owner is the business break-glass role for all Má Tư surfaces,
+        // including POS/KDS/Runner.
         const networkGateEnabled =
           process.env.NODE_ENV === "production" &&
+          claims.user_role !== "owner" &&
           process.env.POS_NETWORK_GATE !== "off";
 
         // Loud kill-switch: emit one warning per warm Edge instance when

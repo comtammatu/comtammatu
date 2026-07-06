@@ -33,18 +33,20 @@ function renderWasteUnavailable({
   description: string;
   embedded: boolean;
 }) {
-  const content = (
-    <>
-      <AppPageHeader title={INVENTORY_VI.createWasteTitle} />
-      <AppEmptyState mode="no-access" title={title} description={description} />
-    </>
+  const emptyState = (
+    <AppEmptyState mode="no-access" title={title} description={description} />
   );
 
   if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
+    return <div className="flex w-full flex-col gap-3">{emptyState}</div>;
   }
 
-  return <AppPage width="default">{content}</AppPage>;
+  return (
+    <AppPage width="default">
+      <AppPageHeader title={INVENTORY_VI.createWasteTitle} />
+      {emptyState}
+    </AppPage>
+  );
 }
 
 export async function WasteNewPageContent({

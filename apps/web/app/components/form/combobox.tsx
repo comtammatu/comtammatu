@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ComponentProps } from "react";
 import {
   Check as IconCheck,
   ChevronsUpDown as IconSelector,
@@ -33,6 +33,7 @@ export interface ComboboxProps {
   disabled?: boolean;
   className?: string;
   triggerClassName?: string;
+  size?: ComponentProps<typeof Button>["size"];
   id?: string;
   "aria-label"?: string;
   "aria-invalid"?: boolean;
@@ -49,11 +50,13 @@ export function Combobox({
   disabled,
   className,
   triggerClassName,
+  size = "default",
   id,
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
+  const isTouchSize = size === "touch" || size === "touch-lg";
 
   const selected = useMemo(
     () => options.find((opt) => opt.value === value),
@@ -67,6 +70,7 @@ export function Combobox({
           id={id}
           type="button"
           variant="outline"
+          size={size}
           role="combobox"
           aria-expanded={open}
           aria-invalid={ariaInvalid}
@@ -74,6 +78,7 @@ export function Combobox({
           disabled={disabled}
           className={cn(
             "h-10 w-full justify-between font-normal",
+            isTouchSize && "h-auto min-h-12 text-sm",
             !selected && "text-muted-foreground",
             triggerClassName ?? className,
           )}

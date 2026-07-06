@@ -30,11 +30,11 @@ the exact source, formula, exclusions, confidence, and drilldown.
 Finance grows by reporting maturity, not by exposing enterprise accounting
 screens to every operator from day one.
 
-| Stage | Key                 | Default audience                     | Product intent                                                                         |
-| ----- | ------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
-| 1     | `hkd_basic`         | Hộ kinh doanh / one-shop owner       | Daily cash, simple gross profit, inventory money, simple expenses, and exceptions only |
-| 2     | `branch_control`    | Multi-branch owner / operator        | Compare branches using the same formulas as HKD Basic, then drill into outliers        |
-| 3     | `accountant_reporting` | Accountant / reporting owner       | HĐĐT, AP, payroll liability, accountant exports, and advanced accounting reports       |
+| Stage | Key                    | Default audience               | Product intent                                                                         |
+| ----- | ---------------------- | ------------------------------ | -------------------------------------------------------------------------------------- |
+| 1     | `hkd_basic`            | Hộ kinh doanh / one-shop owner | Daily cash, simple gross profit, inventory money, simple expenses, and exceptions only |
+| 2     | `branch_control`       | Multi-branch owner / operator  | Compare branches using the same formulas as HKD Basic, then drill into outliers        |
+| 3     | `accountant_reporting` | Accountant / reporting owner   | HĐĐT, AP, payroll liability, accountant exports, and advanced accounting reports       |
 
 The default `/finance` experience must start at `hkd_basic`. It may reveal
 `branch_control` comparison only when the user has more than one accessible
@@ -92,14 +92,14 @@ requires a new decision.
 
 Current code has a broad `/finance/*` workspace. The target product contract is:
 
-| Route family                     | Current role                 | Decision                                                              |
-| -------------------------------- | ---------------------------- | --------------------------------------------------------------------- |
-| `/finance`                       | Four-metric basic landing    | Should show revenue, inventory value, operating expense, gross profit |
-| `/finance/revenue`               | Revenue analytics            | Keep, but do not make it the only money-control entry                 |
-| `/finance/inventory-value`       | Inventory value drilldown    | Link from Finance Basic, implemented in Finance                       |
-| `/finance/food-cost`             | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                  |
-| `/finance/invoices`              | HĐĐT queue                   | Keep as support workflow                                              |
-| `/finance/summary`               | HĐĐT summary trigger         | Keep admin-only by action permission                                  |
+| Route family               | Current role                 | Decision                                                              |
+| -------------------------- | ---------------------------- | --------------------------------------------------------------------- |
+| `/finance`                 | Four-metric basic landing    | Should show revenue, inventory value, operating expense, gross profit |
+| `/finance/revenue`         | Revenue analytics            | Keep, but do not make it the only money-control entry                 |
+| `/finance/inventory-value` | Inventory value drilldown    | Link from Finance Basic, implemented in Finance                       |
+| `/finance/food-cost`       | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                 |
+| `/finance/invoices`        | HĐĐT queue                   | Keep as support workflow                                              |
+| `/finance/summary`         | HĐĐT summary trigger         | Keep admin-only by action permission                                  |
 
 There is no current `/admin/accounting/*` app surface.
 
@@ -136,7 +136,7 @@ Do not call the module "done" because enterprise-accounting objects exist in old
 ## Source Files
 
 - `apps/web/app/(protected)/finance/*`
-- `apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/*`
+- `apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/*`
 - `apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts`
 - `apps/web/app/(protected)/inventory/supplier-invoices/*`
 - `apps/web/app/(protected)/inventory/report-actions.ts`

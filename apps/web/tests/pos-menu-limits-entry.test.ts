@@ -36,10 +36,10 @@ const kdsActionsSource = readSource(
   "app/(protected)/br/[branchId]/kds/actions.ts",
 );
 const managerActionsSource = readSource(
-  "app/(protected)/br/[branchId]/(operator)/settings/menu-limits/actions.ts",
+  "app/(protected)/br/[branchId]/(operator)/menu-limits/actions.ts",
 );
 const managerPageSource = readSource(
-  "app/(protected)/br/[branchId]/(operator)/settings/menu-limits/page.tsx",
+  "app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
 );
 
 test("POS no longer exposes branch menu-limit management", () => {
@@ -77,7 +77,7 @@ test("KDS no longer exposes menu-limit or out-of-stock controls", () => {
   );
 });
 
-test("branch menu-limit management remains on the manager settings surface", () => {
+test("branch menu-limit management remains on the manager day-control surface", () => {
   assert.match(
     managerActionsSource,
     /const LIMITS_ROLES = MODULE_ACL\.branch_menu_limits\.allowedRoles;/,

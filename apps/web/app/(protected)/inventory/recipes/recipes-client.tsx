@@ -33,6 +33,7 @@ import {
   AppPage,
   AppPageHeader,
   AppEmptyState,
+  AppSection,
   AppToolbar,
 } from "@/components/surface";
 import { formatVND } from "../_lib/format";
@@ -42,6 +43,7 @@ import type {
   IngredientOption,
   RecipeLineDraft,
 } from "./recipe-line-dialog";
+import { messages } from "@lib/messages";
 
 export type RecipeItem = {
   ingredientId: number;
@@ -188,6 +190,7 @@ export function RecipesClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
+        eyebrow={messages.inventory.shell.moduleName}
         title={INVENTORY_VI.recipesPageTitle}
         actions={
           <Button type="button" onClick={openCreate}>
@@ -218,26 +221,28 @@ export function RecipesClient({
               </InputGroup>
             }
           />
-          <DataTable
-            columns={columns}
-            data={filteredRecipes}
-            getRowKey={(recipe) => recipe.id}
-            emptyTitle={
-              showNoResults
-                ? INVENTORY_VI.recipesEmptyFiltered
-                : INVENTORY_VI.recipesEmptyTitle
-            }
-            emptyMode={showNoResults ? "no-results" : "no-data"}
-            mobileCardRender={(recipe) => (
-              <RecipeCard
-                recipe={recipe}
-                stockCapacity={
-                  stockCapacityByMenuItemId[String(recipe.menuItemId)]
-                }
-                onEdit={openEdit}
-              />
-            )}
-          />
+          <AppSection className="overflow-hidden" contentFlush>
+            <DataTable
+              columns={columns}
+              data={filteredRecipes}
+              getRowKey={(recipe) => recipe.id}
+              emptyTitle={
+                showNoResults
+                  ? INVENTORY_VI.recipesEmptyFiltered
+                  : INVENTORY_VI.recipesEmptyTitle
+              }
+              emptyMode={showNoResults ? "no-results" : "no-data"}
+              mobileCardRender={(recipe) => (
+                <RecipeCard
+                  recipe={recipe}
+                  stockCapacity={
+                    stockCapacityByMenuItemId[String(recipe.menuItemId)]
+                  }
+                  onEdit={openEdit}
+                />
+              )}
+            />
+          </AppSection>
         </>
       )}
 

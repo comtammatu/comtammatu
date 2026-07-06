@@ -1,4 +1,5 @@
 import { loadAuthState } from "@/_lib/auth";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { fetchExpiryAlerts } from "@/(protected)/inventory/alert-actions";
 import {
   parseBranchIdParam,
@@ -10,6 +11,8 @@ import type {
   ExpiryAlertRow,
 } from "@/(protected)/inventory/page";
 import { getBranchSiteDisplayName } from "@/(protected)/inventory/_lib/branch-site-labels";
+import { AppPageHeader } from "@/components/surface";
+import { messages } from "@lib/messages";
 
 export default async function ExpirySettingsPage({
   searchParams,
@@ -47,6 +50,11 @@ export default async function ExpirySettingsPage({
 
   return (
     <div className="flex flex-col gap-4">
+      <AppPageHeader
+        eyebrow={messages.inventory.shell.moduleName}
+        title={INVENTORY_VI.expiryTitle}
+        description={INVENTORY_VI.expiryAlertDescription}
+      />
       <ExpiryListClient
         initial={alerts}
         branches={branches}

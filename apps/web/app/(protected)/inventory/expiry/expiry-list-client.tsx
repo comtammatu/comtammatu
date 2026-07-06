@@ -42,8 +42,14 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
+import { messages } from "@lib/messages";
 import { FormDialog, NumberField } from "@/components/form";
-import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import {
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  AppToolbar,
+} from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import {
   DataTable,
@@ -331,13 +337,15 @@ export function ExpiryListClient({
 
   const content = (
     <>
-      <AppPageHeader
-        headingLevel={headingLevel}
-        eyebrow={INVENTORY_VI.warehouse}
-        title={INVENTORY_VI.expiryTitle}
-      />
+      {!embedded ? (
+        <AppPageHeader
+          headingLevel={headingLevel}
+          eyebrow={messages.inventory.shell.moduleName}
+          title={INVENTORY_VI.expiryTitle}
+        />
+      ) : null}
       {/* IconSearch + branch filter */}
-      <AppToolbar>
+      <AppToolbar variant={embedded ? "inline" : "card"}>
         <InputGroup className="h-10 flex-1">
           <InputGroupAddon>
             <IconSearch />
@@ -363,60 +371,59 @@ export function ExpiryListClient({
             </SelectContent>
           </Select>
         )}
-        <Badge variant="outline" className="rounded-full">
+        <Badge variant="outline">
           {displayItems.length} {INVENTORY_VI.itemSuffix}
         </Badge>
       </AppToolbar>
 
-      {/* Sole urgency filter: one control per facet (ui.md). The per-row
-          badge is item-state, not a second filter. */}
-      <div className="flex flex-wrap items-center gap-2">
-        {URGENCY_FILTERS.map((facet) => {
-          const active = urgencyFilter === facet;
-          return (
+      <AppSection className="overflow-hidden" contentFlush>
+        {/* Sole urgency filter: one control per facet (ui.md). The per-row
+            badge is item-state, not a second filter. */}
+        <AppToolbar variant="inline">
+          {URGENCY_FILTERS.map((facet) => {
+            const active = urgencyFilter === facet;
+            return (
+              <Button
+                key={facet}
+                type="button"
+                variant={active ? "secondary" : "outline"}
+                size="xs"
+                aria-pressed={active}
+                onClick={() =>
+                  setUrgencyFilter((prev) => (prev === facet ? null : facet))
+                }
+                className={cn(
+                  "h-auto gap-1.5 px-3 font-medium",
+                  embedded ? "py-2.5" : "py-1",
+                )}
+              >
+                <StatusBadge
+                  domain="expiry-urgency"
+                  value={facet}
+                  size="sm"
+                  className="pointer-events-none"
+                />
+                <span className="font-mono tabular-nums">
+                  {urgencyCounts[facet]}
+                </span>
+              </Button>
+            );
+          })}
+          {urgencyFilter && (
             <Button
-              key={facet}
               type="button"
-              variant="outline"
+              variant="link"
               size="xs"
-              aria-pressed={active}
-              onClick={() =>
-                setUrgencyFilter((prev) => (prev === facet ? null : facet))
-              }
-              className={cn(
-                "h-auto gap-1.5 rounded-full px-3 font-medium",
-                embedded ? "py-2.5" : "py-1",
-                active
-                  ? "ring-2 ring-foreground"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted",
-              )}
+              onClick={() => setUrgencyFilter(null)}
+              className="h-auto px-0 text-muted-foreground hover:text-foreground"
             >
-              <StatusBadge
-                domain="expiry-urgency"
-                value={facet}
-                size="sm"
-                className="pointer-events-none"
-              />
-              <span className="font-mono tabular-nums">
-                {urgencyCounts[facet]}
-              </span>
+              {ACTIONS_VI.clearFilters}
             </Button>
-          );
-        })}
-        {urgencyFilter && (
-          <Button
-            type="button"
-            variant="link"
-            size="xs"
-            onClick={() => setUrgencyFilter(null)}
-            className="h-auto px-0 text-muted-foreground hover:text-foreground"
-          >
-            {ACTIONS_VI.clearFilters}
-          </Button>
-        )}
-      </div>
+          )}
+        </AppToolbar>
 
-      {renderTable(displayItems)}
+        {renderTable(displayItems)}
+      </AppSection>
       <FormDialog
         open={writeOff != null}
         onOpenChange={(open) => {
@@ -473,5 +480,9 @@ export function ExpiryListClient({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return <AppPage>{content}</AppPage>;
+  return (
+    <AppPage width="xwide" density="compact">
+      {content}
+    </AppPage>
+  );
 }

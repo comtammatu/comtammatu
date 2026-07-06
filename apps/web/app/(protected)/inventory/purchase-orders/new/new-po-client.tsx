@@ -49,6 +49,7 @@ import {
   type PurchaseUnitOption,
 } from "../../_lib/purchase-units";
 import {
+  AppDetailFooter,
   AppEmptyState,
   AppPageHeader,
   AppSection,
@@ -336,6 +337,7 @@ export function NewPoClient({
         branchId={branchId}
         onBranchChange={handleBranchChange}
         canSwitchBranch={canSwitchBranch}
+        embedded={embedded}
       />
       <LineItemsSection
         lines={lines}
@@ -359,45 +361,55 @@ export function NewPoClient({
     </>
   );
 
-  const footer = (
-    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <Button variant="ghost" asChild>
-        <Link
-          href={branchId ? `${poBasePath}?branchId=${branchId}` : poBasePath}
-        >
-          {ACTIONS_VI.cancel}
-        </Link>
+  const footerLeading = (
+    <Button variant="ghost" size={embedded ? "touch" : "default"} asChild>
+      <Link
+        href={branchId ? `${poBasePath}?branchId=${branchId}` : poBasePath}
+      >
+        {ACTIONS_VI.cancel}
+      </Link>
+    </Button>
+  );
+  const footerTrailing = (
+    <>
+      {lines.length > 0 && (
+        <span className="text-sm text-muted-foreground sm:text-right">
+          {messages.inventory.po.lineCount(lines.length)}
+          {hasValue
+            ? messages.inventory.po.totalAmountSuffix(
+                totalValue.toLocaleString("vi-VN"),
+              )
+            : ""}
+        </span>
+      )}
+      <Button
+        onClick={submit}
+        disabled={isPending || !supplierId || lines.length === 0}
+        size={embedded ? "touch-lg" : "default"}
+      >
+        {isPending
+          ? messages.inventory.po.creating
+          : messages.inventory.po.createPo}
       </Button>
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:gap-3">
-        {lines.length > 0 && (
-          <span className="text-sm text-muted-foreground sm:text-right">
-            {messages.inventory.po.lineCount(lines.length)}
-            {hasValue
-              ? messages.inventory.po.totalAmountSuffix(
-                  totalValue.toLocaleString("vi-VN"),
-                )
-              : ""}
-          </span>
-        )}
-        <Button
-          onClick={submit}
-          disabled={isPending || !supplierId || lines.length === 0}
-        >
-          {isPending
-            ? messages.inventory.po.creating
-            : messages.inventory.po.createPo}
-        </Button>
-      </div>
-    </div>
+    </>
+  );
+  const footer = (
+    <AppDetailFooter
+      className="border-0 py-0"
+      leading={footerLeading}
+      trailing={footerTrailing}
+    />
   );
 
   if (embedded) {
     return (
       <div className="flex w-full flex-col gap-3">
         <div className="flex flex-col gap-3">{body}</div>
-        <div className="sticky chrome-safe-bottom z-10 border-t bg-background/95 p-2 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
-          {footer}
-        </div>
+        <AppDetailFooter
+          sticky
+          leading={footerLeading}
+          trailing={footerTrailing}
+        />
       </div>
     );
   }
@@ -484,6 +496,7 @@ function SuggestionsPanel({
   branchId,
   onBranchChange,
   canSwitchBranch,
+  embedded,
 }: {
   suggestions: PoSuggestionRow[];
   periodDays: number;
@@ -497,6 +510,7 @@ function SuggestionsPanel({
   branchId: number | null;
   onBranchChange: (val: string) => void;
   canSwitchBranch: boolean;
+  embedded: boolean;
 }) {
   const branchLabel =
     procurementBranches.find((b) => b.id === branchId)?.name ?? "Chưa chọn";
@@ -513,7 +527,11 @@ function SuggestionsPanel({
       }
       action={
         addableCount > 0 ? (
-          <Button variant="outline" size="sm" onClick={onAddAll}>
+          <Button
+            variant="outline"
+            size={embedded ? "touch" : "sm"}
+            onClick={onAddAll}
+          >
             <IconCirclePlus data-icon="inline-start" />
             {messages.inventory.po.addAll(addableCount)}
           </Button>
@@ -532,7 +550,10 @@ function SuggestionsPanel({
             onValueChange={onBranchChange}
             disabled={isLoading}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger
+              size={embedded ? "touch" : "default"}
+              className={embedded ? "min-h-12 w-full" : "w-40"}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -555,7 +576,10 @@ function SuggestionsPanel({
           onValueChange={onPeriodChange}
           disabled={isLoading}
         >
-          <SelectTrigger className="w-28">
+          <SelectTrigger
+            size={embedded ? "touch" : "default"}
+            className={embedded ? "min-h-12 w-full" : "w-28"}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -624,7 +648,7 @@ function SuggestionsPanel({
                   <Button
                     type="button"
                     variant={alreadyAdded ? "secondary" : "ghost"}
-                    size="sm"
+                    size={embedded ? "touch" : "sm"}
                     disabled={alreadyAdded || s.suggested_qty <= 0}
                     onClick={() => onAddSuggestion(s)}
                   >
@@ -1097,7 +1121,7 @@ function UnitField({
   if (options.length === 0) {
     return (
       <Select disabled value="">
-        <SelectTrigger className="w-full" aria-label={unit}>
+        <SelectTrigger size="touch" className="w-full" aria-label={unit}>
           <SelectValue placeholder={messages.inventory.po.selectUnit} />
         </SelectTrigger>
         <SelectContent />
@@ -1109,7 +1133,7 @@ function UnitField({
       value={entryUnitId != null ? String(entryUnitId) : ""}
       onValueChange={onUnitChange}
     >
-      <SelectTrigger className="w-full" aria-label={unit}>
+      <SelectTrigger size="touch" className="w-full" aria-label={unit}>
         <SelectValue placeholder={messages.inventory.po.selectUnit} />
       </SelectTrigger>
       <SelectContent>

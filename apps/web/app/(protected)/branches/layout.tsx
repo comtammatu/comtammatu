@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { canAccess } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
-import { resolveBranchSwitcherOptions } from "@/_lib/branch-scope";
 import { OfficeModuleShell } from "@/components/office-module-shell";
 
 export default async function BranchesLayout({
@@ -10,13 +9,11 @@ export default async function BranchesLayout({
 }: {
   children: ReactNode;
 }) {
-  const { supabase, session, claims } = await loadAuthState();
+  const { session, claims } = await loadAuthState();
 
   if (!canAccess(claims.user_role, "branches")) {
     redirect("/access-denied?reason=insufficient-permission");
   }
-
-  const branchOptions = await resolveBranchSwitcherOptions(supabase, claims);
 
   return (
     <OfficeModuleShell
@@ -29,7 +26,6 @@ export default async function BranchesLayout({
       }}
       role={claims.user_role}
       branchId={claims.branch_id}
-      branchOptions={branchOptions}
     >
       {children}
     </OfficeModuleShell>

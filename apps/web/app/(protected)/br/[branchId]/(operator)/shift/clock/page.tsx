@@ -14,7 +14,7 @@ export default async function OperatorShiftClockPage({
         tasks: `/br/${branchId}/shift`,
         schedule: `/br/${branchId}/shift/schedule`,
         profile: `/br/${branchId}/profile`,
-        managerHr: "/hr",
+        managerHr: `/br/${branchId}/team`,
       }}
     />
   );

@@ -703,6 +703,12 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
 - The canonical header lockup and bottom-nav MUST be exported primitives that
   approved chrome families consume, not re-implemented per surface. (Stage 0
   extracts `AppHeader` / `AppBottomNav` from `AppShell`.)
+- Branch runtime, Operations, and employee-lib surfaces MUST NOT import or render
+  Management/Office chrome (`AppShell`, `ManagementShell`, `OfficeModuleShell`,
+  `resolveOffice*`, `office-nav`, `finance-shell`, `inventory-shell`). They must
+  use the approved operator/operations chrome, shared `AppHeader` /
+  `AppBottomNav`, `EmployeePage`, or an `embedded` branch of the canonical
+  `PageContent`.
 - Naming: reserve the `*-shell` suffix for components in the allowlist above. A
   component that only composes `AppPageHeader` / `AppEmptyState` inside an
   existing shell is a page section, not a shell, and must not carry the suffix.
@@ -812,6 +818,14 @@ Stage 0 gate status (each flips to **live** as its ratchet lands in
 
 - `shell-registry` (§ B) — **live**: the `*-shell.tsx` file set, `<SidebarProvider>`,
   and page-owned `<main>` are frozen to baseline; additions fail CI.
+- `operator-office-shell-boundary` (§ B) — **live**: Branch runtime,
+  Operations, and employee-lib code cannot import or render Management/Office
+  shell modules; additions fail CI.
+- `operator-embedded-page-header-boundary` (§ F / page-archetypes.md R1) —
+  **live**: embedded canonical content mounted under Branch runtime cannot leak
+  a shared `AppPageHeader` into the operator plane; Office headers must be
+  gated on `!embedded` or split so `AppPageTabs`/content render without page
+  header chrome.
 - route-manifest (§ C) — **live**: every `(protected)/**/page.tsx` resolves to
   exactly one MODULE_ACL family (redirect shims allowlisted), and every
   family-root has a landing page; a new unclassified route fails CI.

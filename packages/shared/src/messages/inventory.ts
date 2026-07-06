@@ -146,6 +146,9 @@ export const INVENTORY_VI = {
       : `${count} mặt hàng`,
   productionOperatorDraftsTitle: "Lệnh nháp",
   productionOperatorDoneTodayTitle: "Hoàn tất hôm nay",
+  productionOperatorCreateTitle: "Tạo lệnh sản xuất",
+  productionOperatorCreateHint:
+    "Chọn thành phẩm, kiểm thiếu nguyên liệu, rồi chốt để ghi tiêu hao và nhập thành phẩm.",
   productionOperatorRecipesLink: "Công thức",
   productionOperatorConfigLink: "Cấu hình",
   productionOperatorEmpty: "Chưa có lệnh sản xuất hôm nay",
@@ -251,8 +254,7 @@ export const INVENTORY_VI = {
   productionRecipeSelectFinishedGoodRequired: "Vui lòng chọn thành phẩm",
   productionRecipeFinishedGoodInvalid: "Thành phẩm không hợp lệ",
   productionRecipeMinLines: "Cần ít nhất một nguyên liệu trong công thức.",
-  productionRecipeDuplicateIngredient:
-    "Nguyên liệu bị trùng trong công thức.",
+  productionRecipeDuplicateIngredient: "Nguyên liệu bị trùng trong công thức.",
   productionRecipeDialogIntro:
     "Chọn thành phẩm một lần, thêm nhiều nguyên liệu rồi lưu công thức.",
   productionRecipeFinishedGoodLabel: "Thành phẩm *",
@@ -370,7 +372,8 @@ export const INVENTORY_VI = {
   consumptionSlipsTitle: "Phiếu tiêu hao",
   issueEmptyFiltered: "Không tìm thấy phiếu xuất phù hợp",
   issueEmptyNoData: "Chưa có phiếu xuất kho nào",
-  issueEmptyDescription: "Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu.",
+  issueEmptyDescription:
+    "Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu.",
   issueCreated: "Đã tạo phiếu xuất.",
   issueNotesPlaceholder: "Nhập ghi chú cho phiếu xuất",
   countSlipTitle: "Duyệt phiếu đếm tồn",
@@ -499,8 +502,7 @@ export const INVENTORY_VI = {
     `Đã import: +${inserted} / ${updated} cập nhật`,
   importIngredientsSummary: (inserted: number, updated: number) =>
     `Tạo mới ${inserted} · Cập nhật ${updated}`,
-  importIssueLine: (row: number, message: string) =>
-    `[dòng ${row}] ${message}`,
+  importIssueLine: (row: number, message: string) => `[dòng ${row}] ${message}`,
   dashboardSourceProcurementDescription:
     "Theo dõi PO, GRN, hóa đơn NCC và lệch giá/số lượng trước khi hàng vào tồn.",
   dashboardPendingPoLabel: "PO đang chờ",

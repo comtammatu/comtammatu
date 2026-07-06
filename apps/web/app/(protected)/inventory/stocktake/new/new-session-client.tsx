@@ -14,6 +14,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
+  AppDetailFooter,
   AppPageHeader,
   AppSection,
   DocumentFormFrame,
@@ -102,6 +103,20 @@ export function NewStocktakeSessionClient({
     });
   }
 
+  const startButton = (
+    <Button
+      type="button"
+      size={embedded ? "touch-lg" : "default"}
+      className="w-full"
+      onClick={submit}
+      disabled={pending || !branchId}
+    >
+      {pending
+        ? messages.inventory.stocktake.creating
+        : messages.inventory.stocktake.startCounting}
+    </Button>
+  );
+
   const header = (
     <AppPageHeader
       eyebrow="Kiểm kê"
@@ -129,7 +144,10 @@ export function NewStocktakeSessionClient({
                 setLocationId(null);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger
+                size={embedded ? "touch" : "default"}
+                className="w-full"
+              >
                 <SelectValue placeholder={BRANCH_VI.select} />
               </SelectTrigger>
               <SelectContent>
@@ -151,7 +169,10 @@ export function NewStocktakeSessionClient({
               }
               disabled={!branchId || branchLocations.length === 0}
             >
-              <SelectTrigger>
+              <SelectTrigger
+                size={embedded ? "touch" : "default"}
+                className="w-full"
+              >
                 <SelectValue
                   placeholder={messages.inventory.stocktake.allLocations}
                 />
@@ -227,16 +248,15 @@ export function NewStocktakeSessionClient({
               messages.inventory.common.all}
           </span>
         </div>
-        <Button
-          className="w-full"
-          onClick={submit}
-          disabled={pending || !branchId}
-        >
-          {pending
-            ? messages.inventory.stocktake.creating
-            : messages.inventory.stocktake.startCounting}
-        </Button>
+        {embedded ? null : startButton}
       </AppSection>
+      {embedded ? (
+        <AppDetailFooter
+          sticky
+          className="lg:col-span-3"
+          trailing={startButton}
+        />
+      ) : null}
     </div>
   );
 

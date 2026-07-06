@@ -162,6 +162,9 @@ test("branch command landing surfaces day metrics and readiness (D017 step 5)", 
   assert.match(surface, /readinessPrinterTitle/);
   assert.match(surface, /readinessCheckoutTitle/);
   assert.match(surface, /checkoutApprovalsHref/);
+  assert.match(page, /branch\.branch_kind !== "branch"/);
+  assert.match(page, /const floorHref =[\s\S]*day\.tablesTotal <= 0/);
+  assert.match(page, /day\.setupActiveTerminals <= 0/);
   assert.match(page, /\/br\/\$\{branchId\}\/shift\/checkout-approvals/);
   assert.doesNotMatch(surface, /\/employee\/checkout-approvals/);
 });
@@ -169,6 +172,11 @@ test("branch command landing surfaces day metrics and readiness (D017 step 5)", 
 test("branch day status service-client reads carry explicit tenant+branch filters", () => {
   const data = read(BRANCH_DATA);
 
+  assert.match(data, /supabase\.rpc\("list_branch_menu_daily_limits"/);
+  assert.match(data, /menuLimitAvailableItems/);
+  assert.match(data, /available_to_sell/);
+  assert.doesNotMatch(data, /setupActiveMenuItems/);
+  assert.doesNotMatch(data, /\.from\("menu_items"\)/);
   assert.match(
     data,
     /service\s*\.from\("pos_sessions"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,

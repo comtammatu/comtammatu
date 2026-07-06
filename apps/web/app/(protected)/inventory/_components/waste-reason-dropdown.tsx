@@ -34,6 +34,8 @@ interface WasteReasonDropdownProps {
   manualOnly?: boolean;
   disabled?: boolean;
   id?: string;
+  size?: "sm" | "default" | "touch";
+  className?: string;
 }
 
 /**
@@ -47,6 +49,8 @@ export function WasteReasonDropdown({
   manualOnly = true,
   disabled,
   id,
+  size = "default",
+  className,
 }: WasteReasonDropdownProps) {
   const options = (Object.keys(WASTE_REASON_LABELS_VI) as WasteReason[]).filter(
     (key) => {
@@ -66,7 +70,7 @@ export function WasteReasonDropdown({
       onValueChange={(v) => onChange(v as WasteReason)}
       disabled={disabled}
     >
-      <SelectTrigger id={id}>
+      <SelectTrigger id={id} size={size} className={className}>
         <SelectValue placeholder={INVENTORY_VI.selectReason} />
       </SelectTrigger>
       <SelectContent>

@@ -15,25 +15,25 @@ navigation, and default-landing changes must keep the spec, `module-acl.ts`,
 
 ## Components
 
-| File                                                     | Purpose                                                                                        | Lines                     |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------- |
-| `packages/shared/src/auth/types.ts`                      | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                |
-| `packages/shared/src/auth/module-acl.ts`                 | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)  |
-| `packages/shared/src/auth/permissions.ts`                | `PERMISSION_KEYS` (83 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**         | Permission catalog        |
-| `packages/shared/src/auth/scope.ts`                      | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
-| `packages/shared/src/auth/route-resolution.ts`           | Public route helpers + URL → `ModuleKey` mapping                                               | Proxy route mapping       |
-| `packages/shared/src/auth/route-map.ts`                  | Route family contract: surface, entry point, chrome, back behavior, breadcrumb root            | Navigation contract       |
-| `packages/shared/src/auth/nav-config.ts`                 | Admin sidebar navigation groups filtered by role                                               | UI navigation             |
-| `packages/shared/src/auth/app-discovery.ts`              | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract  |
-| `packages/shared/src/auth/blocked-state.ts`              | Canonical blocked-state reasons, user-facing copy, `buildAccessDeniedPath()`                   | Access-state contract     |
-| `apps/web/app/(public)/access-denied/page.tsx`           | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view         |
-| `apps/web/app/_lib/auth.ts`                              | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
-| `apps/web/proxy.ts`                                      | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
-| `supabase/migrations/00000000000000_baseline.sql`        | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
-| `supabase/migrations/00000000000000_baseline.sql`        | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
-| `supabase/migrations/00000000000000_baseline.sql`        | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
-| `apps/web/app/(protected)/hr/staff/[id]/permissions/`    | HR UI for grant/revoke + audit (page + client + actions)                                       | Permission admin UI       |
-| `apps/web/app/_lib/permissions.ts`                       | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
+| File                                                  | Purpose                                                                                        | Lines                     |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------- |
+| `packages/shared/src/auth/types.ts`                   | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                |
+| `packages/shared/src/auth/module-acl.ts`              | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)  |
+| `packages/shared/src/auth/permissions.ts`             | `PERMISSION_KEYS` (83 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**         | Permission catalog        |
+| `packages/shared/src/auth/scope.ts`                   | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
+| `packages/shared/src/auth/route-resolution.ts`        | Public route helpers + URL → `ModuleKey` mapping                                               | Proxy route mapping       |
+| `packages/shared/src/auth/route-map.ts`               | Route family contract: surface, entry point, chrome, back behavior, breadcrumb root            | Navigation contract       |
+| `packages/shared/src/auth/nav-config.ts`              | Admin sidebar navigation groups filtered by role                                               | UI navigation             |
+| `packages/shared/src/auth/app-discovery.ts`           | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract  |
+| `packages/shared/src/auth/blocked-state.ts`           | Canonical blocked-state reasons, user-facing copy, `buildAccessDeniedPath()`                   | Access-state contract     |
+| `apps/web/app/(public)/access-denied/page.tsx`        | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view         |
+| `apps/web/app/_lib/auth.ts`                           | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
+| `apps/web/proxy.ts`                                   | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
+| `supabase/migrations/00000000000000_baseline.sql`     | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
+| `supabase/migrations/00000000000000_baseline.sql`     | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
+| `supabase/migrations/00000000000000_baseline.sql`     | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
+| `apps/web/app/(protected)/hr/staff/[id]/permissions/` | HR UI for grant/revoke + audit (page + client + actions)                                       | Permission admin UI       |
+| `apps/web/app/_lib/permissions.ts`                    | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
 
 Discovery invariant: `MODULE_ACL.hr_payroll` still gates `/hr/payroll/*` for
 owner, but is not part of `DOMAIN_WORKSPACE_ITEMS` or default app
@@ -163,7 +163,8 @@ use `branch_dashboard` / `branch_settings` route families.
 
 - `/admin/settings/branches` — owner only (page-level redirect)
 - `/admin/settings/general` — owner only (page-level redirect)
-- `/br/[branchId]/settings/tables`, `/br/[branchId]/settings/kds`, `/br/[branchId]/settings/pos`, `/br/[branchId]/settings/pos-sessions`, `/br/[branchId]/settings/printers` — branch setup roles with branch-scope enforcement
+- `/br/[branchId]/settings/tables`, `/br/[branchId]/settings/kds`, `/br/[branchId]/settings/pos`, `/br/[branchId]/settings/printers` — branch setup roles with branch-scope enforcement
+- `/br/[branchId]/pos-sessions` — branch end-day POS reconciliation for owner and branch_manager
 
 ## Proxy Routing Logic — Single Gate
 

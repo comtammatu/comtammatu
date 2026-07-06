@@ -114,14 +114,16 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (/^\/br\/\d+\/orders/.test(pathname)) return "orders";
   if (/^\/br\/\d+\/dashboard/.test(pathname)) return "branch_dashboard";
   if (/^\/br\/\d+\/team/.test(pathname)) return "branch_team";
-  // menu-limits lives UNDER /settings — check it BEFORE branch_settings so the
-  // broader /settings prefix does not swallow the menu-limits sub-route.
-  if (/^\/br\/\d+\/settings\/menu-limits/.test(pathname))
+  if (/^\/br\/\d+\/menu-limits(?:\/|$)/.test(pathname))
     return "branch_menu_limits";
+  if (/^\/br\/\d+\/settings\/menu-limits(?:\/|$)/.test(pathname)) return null;
+  if (/^\/br\/\d+\/pos-sessions(?:\/|$)/.test(pathname))
+    return "branch_pos_sessions";
+  if (/^\/br\/\d+\/settings\/pos-sessions(?:\/|$)/.test(pathname)) return null;
   if (/^\/br\/\d+\/settings/.test(pathname)) return "branch_settings";
-  if (/^\/br\/\d+\/pos/.test(pathname)) return "pos";
-  if (/^\/br\/\d+\/kds/.test(pathname)) return "kds";
-  if (/^\/br\/\d+\/runner/.test(pathname)) return "runner";
+  if (/^\/br\/\d+\/pos(?:\/|$)/.test(pathname)) return "pos";
+  if (/^\/br\/\d+\/kds(?:\/|$)/.test(pathname)) return "kds";
+  if (/^\/br\/\d+\/runner(?:\/|$)/.test(pathname)) return "runner";
   if (pathname.startsWith("/notifications")) return "notifications";
 
   return null;

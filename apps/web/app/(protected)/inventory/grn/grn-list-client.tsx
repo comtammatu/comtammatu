@@ -44,6 +44,7 @@ import {
   AppPageHeader,
   AppToolbar,
 } from "@/components/surface";
+import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
   DataTable,
@@ -54,6 +55,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";
 import { discardGrnDraft } from "../grn-actions";
+import { messages } from "@lib/messages";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
@@ -194,10 +196,11 @@ export function GrnListClient({
   }, [grns, search, statusFilter]);
 
   const hasActiveFilters = search.trim() !== "" || statusFilter !== "all";
+  const operatorFlow = messages.inventory.operatorFlow;
 
   const listBody = (
     <>
-      <AppToolbar>
+      <AppToolbar variant={embedded ? "inline" : "card"}>
         <InputGroup className="h-12 basis-full flex-1 md:h-7 md:basis-auto">
           <InputGroupAddon>
             <IconSearch />
@@ -254,7 +257,7 @@ export function GrnListClient({
     <>
       {!embedded ? (
         <AppPageHeader
-          eyebrow={INVENTORY_VI.warehouse}
+          eyebrow={messages.inventory.shell.moduleName}
           title={tNav("grn", "navigation")}
           actions={
             <div className="flex items-center gap-2">
@@ -294,6 +297,15 @@ export function GrnListClient({
         />
       ) : null}
 
+      {embedded ? (
+        <OperatorFlowSteps
+          title={operatorFlow.grnListTitle}
+          description={operatorFlow.grnListDescription}
+          steps={operatorFlow.grnSteps}
+          currentStep={1}
+        />
+      ) : null}
+
       {embedded && canCreate ? (
         <Button asChild size="touch" className="w-full">
           <Link href={`${basePath}/new`}>
@@ -324,7 +336,7 @@ export function GrnListClient({
   }
 
   return (
-    <AppPage width="xwide" contentClassName="max-md:max-w-xl">
+    <AppPage width="xwide" density="compact" contentClassName="max-md:max-w-xl">
       {content}
     </AppPage>
   );
@@ -380,9 +392,7 @@ function GrnDraftsTab({
         <Item key={draft.grnId} variant="outline">
           <ItemHeader>
             <div className="min-w-0">
-              <ItemTitle className="text-base">
-                {draft.supplierName}
-              </ItemTitle>
+              <ItemTitle className="text-base">{draft.supplierName}</ItemTitle>
               <ItemDescription>{draft.grnNumber}</ItemDescription>
               <p className="mt-1 text-sm text-muted-foreground">
                 {INVENTORY_VI.grnDraftUpdatedAt(

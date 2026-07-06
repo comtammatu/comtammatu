@@ -23,7 +23,7 @@ test("retired employee app no longer exists as an App Router surface", () => {
   }
 });
 
-test("root PWA manifest opens Branch Hub, not the retired employee app", () => {
+test("root PWA manifest opens Operator Hub, not the retired employee app", () => {
   const manifest = JSON.parse(read("apps/web/public/manifest.webmanifest")) as {
     id?: unknown;
     name?: unknown;
@@ -34,8 +34,8 @@ test("root PWA manifest opens Branch Hub, not the retired employee app", () => {
   };
 
   assert.equal(manifest.id, "/br");
-  assert.equal(manifest.name, "Cơm Tấm Má Tư - Chi nhánh");
-  assert.equal(manifest.short_name, "Má Tư CN");
+  assert.equal(manifest.name, "Cơm Tấm Má Tư - Hub");
+  assert.equal(manifest.short_name, "Má Tư Hub");
   assert.equal(manifest.start_url, "/br");
   assert.equal(manifest.scope, "/");
   assert.deepEqual(
@@ -44,22 +44,24 @@ test("root PWA manifest opens Branch Hub, not the retired employee app", () => {
   );
 });
 
-test("Branch Hub owns the mobile shell and keeps bottom nav outside scroll content", () => {
+test("Operator Hub owns the mobile shell and keeps bottom nav outside scroll content", () => {
   const layout = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
   );
   const bottomNav = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
   );
+  const appBottomNav = read("apps/web/app/components/app-bottom-nav.tsx");
 
   assert.match(layout, /homeHref=\{`\/br\/\$\{context\.branchId\}`\}/);
   assert.match(layout, /homeAriaLabel=\{APP_COPY_VI\.operatorHome\}/);
   assert.match(layout, /id="main-content"[\s\S]*overflow-y-auto/);
   assert.match(
     layout,
-    /contentClassName="max-w-lg md:max-w-3xl lg:max-w-5xl xl:max-w-6xl"/,
+    /contentClassName="max-w-lg md:max-w-3xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-screen-2xl"/,
   );
-  assert.match(bottomNav, /className="static shrink-0"/);
+  assert.match(bottomNav, /position="static"/);
+  assert.match(appBottomNav, /"static shrink-0"/);
   assert.match(bottomNav, /`\/br\/\$\{branchId\}\/shift`/);
   assert.match(bottomNav, /`\/br\/\$\{branchId\}\/shift\/schedule`/);
   assert.doesNotMatch(bottomNav, /\/employee/);

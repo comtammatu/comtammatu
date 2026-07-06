@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TriangleAlert as IconAlertTriangle } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -19,7 +18,9 @@ import {
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { formatVNTime, getVNDateString } from "@comtammatu/shared/time";
-import { AppEmptyState } from "@/components/surface";
+import { messages } from "@lib/messages";
+import { AppSection } from "@/components/surface";
+import { OperatorFlowSteps } from "@/(protected)/inventory/_components/operator-flow-steps";
 import {
   cancelProductionOrder,
   confirmProductionOrder,
@@ -77,17 +78,21 @@ export function ProductionOperatorClient({
     rows: ProductionShortageRow[];
   } | null>(null);
 
-  const { sortedFinishedGoods, readinessState, readinessMessage, actionsEnabled } =
-    React.useMemo(
-      () =>
-        getProductionReadinessSummary({
-          productionBranches,
-          ingredients,
-          finishedGoods,
-          recipes,
-        }),
-      [productionBranches, ingredients, finishedGoods, recipes],
-    );
+  const {
+    sortedFinishedGoods,
+    readinessState,
+    readinessMessage,
+    actionsEnabled,
+  } = React.useMemo(
+    () =>
+      getProductionReadinessSummary({
+        productionBranches,
+        ingredients,
+        finishedGoods,
+        recipes,
+      }),
+    [productionBranches, ingredients, finishedGoods, recipes],
+  );
 
   const drafts = React.useMemo(
     () => orders.filter((order) => order.status === "draft"),
@@ -102,6 +107,16 @@ export function ProductionOperatorClient({
         getVNDateString(order.completed_at) === today,
     );
   }, [orders]);
+  const operatorFlow = messages.inventory.operatorFlow;
+  const productionStep =
+    readinessState != null
+      ? 2
+      : drafts.length > 0
+        ? 3
+        : doneToday.length > 0
+          ? 4
+          : 1;
+  const showDraftsFirst = readinessState == null && drafts.length > 0;
 
   async function runOrderAction(
     order: ProductionOrderRow,
@@ -152,8 +167,19 @@ export function ProductionOperatorClient({
     }
   }
 
-  return (
-    <>
+  const createSection = (
+    <AppSection
+      title={INVENTORY_VI.productionOperatorCreateTitle}
+      description={INVENTORY_VI.productionOperatorCreateHint}
+      size="sm"
+      badge={{
+        children:
+          readinessState == null
+            ? INVENTORY_VI.productionReadyBadge
+            : INVENTORY_VI.productionNeedsConfigBadge,
+        variant: readinessState == null ? "success" : "warning",
+      }}
+    >
       <ProductionOrderForm
         productionBranches={productionBranches}
         finishedGoodsOptions={sortedFinishedGoods}
@@ -180,84 +206,93 @@ export function ProductionOperatorClient({
           </span>
         </NoteCallout>
       ) : null}
+    </AppSection>
+  );
 
-      {drafts.length === 0 && doneToday.length === 0 ? (
-        <AppEmptyState compact title={INVENTORY_VI.productionOperatorEmpty} />
-      ) : null}
-
-      {drafts.length > 0 ? (
-        <>
-          <div className="flex items-center gap-2 px-1">
-            <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-              {INVENTORY_VI.productionOperatorDraftsTitle}
-            </p>
-            <Badge variant="warning">{drafts.length}</Badge>
-          </div>
-          <ItemGroup className="gap-2">
-            {drafts.map((order) => {
-              const isPendingConfirm =
-                pending?.id === order.id && pending.action === "confirm";
-              const isPendingCancel =
-                pending?.id === order.id && pending.action === "cancel";
-              const orderBusy = pending?.id === order.id;
-              return (
-                <Item
-                  key={order.id}
-                  variant="outline"
-                  size="sm"
-                  className="flex-col items-stretch gap-2 bg-card"
+  const draftsSection = (
+    <AppSection
+      title={INVENTORY_VI.productionOperatorDraftsTitle}
+      badge={{ children: String(drafts.length), variant: "warning" }}
+      size="sm"
+    >
+      <ItemGroup className="gap-2">
+        {drafts.map((order) => {
+          const isPendingConfirm =
+            pending?.id === order.id && pending.action === "confirm";
+          const isPendingCancel =
+            pending?.id === order.id && pending.action === "cancel";
+          const orderBusy = pending?.id === order.id;
+          return (
+            <Item
+              key={order.id}
+              variant="outline"
+              size="sm"
+              className="flex-col items-stretch gap-2 bg-card"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono text-sm font-semibold">
+                  {order.production_number}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {formatVNTime(order.created_at)}
+                </span>
+              </div>
+              <p className="text-sm leading-snug">{orderItemsSummary(order)}</p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="touch"
+                  className="flex-1"
+                  disabled={
+                    !canConfirmProduction || !actionsEnabled || orderBusy
+                  }
+                  onClick={() => runOrderAction(order, "confirm")}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-sm font-semibold">
-                      {order.production_number}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatVNTime(order.created_at)}
-                    </span>
-                  </div>
-                  <p className="text-sm leading-snug">
-                    {orderItemsSummary(order)}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="touch"
-                      className="flex-1"
-                      disabled={
-                        !canConfirmProduction || !actionsEnabled || orderBusy
-                      }
-                      onClick={() => runOrderAction(order, "confirm")}
-                    >
-                      {isPendingConfirm ? <Spinner className="size-4" /> : null}
-                      {ACTIONS_VI.confirm}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      disabled={orderBusy}
-                      onClick={() => runOrderAction(order, "cancel")}
-                    >
-                      {isPendingCancel ? <Spinner className="size-4" /> : null}
-                      {ACTIONS_VI.cancel}
-                    </Button>
-                  </div>
-                </Item>
-              );
-            })}
-          </ItemGroup>
-        </>
-      ) : null}
+                  {isPendingConfirm ? <Spinner className="size-4" /> : null}
+                  {ACTIONS_VI.confirm}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={orderBusy}
+                  onClick={() => runOrderAction(order, "cancel")}
+                >
+                  {isPendingCancel ? <Spinner className="size-4" /> : null}
+                  {ACTIONS_VI.cancel}
+                </Button>
+              </div>
+            </Item>
+          );
+        })}
+      </ItemGroup>
+    </AppSection>
+  );
+
+  return (
+    <div className="flex w-full flex-col gap-3">
+      <OperatorFlowSteps
+        title={operatorFlow.productionTitle}
+        description={operatorFlow.productionDescription}
+        steps={operatorFlow.productionSteps}
+        currentStep={productionStep}
+        tone={productionStep >= 4 ? "success" : "default"}
+      />
+
+      {showDraftsFirst ? draftsSection : createSection}
+      {showDraftsFirst
+        ? createSection
+        : drafts.length > 0
+          ? draftsSection
+          : null}
 
       {doneToday.length > 0 ? (
-        <>
-          <div className="flex items-center gap-2 px-1">
-            <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-              {INVENTORY_VI.productionOperatorDoneTodayTitle}
-            </p>
-            <Badge variant="secondary">{doneToday.length}</Badge>
-          </div>
+        <AppSection
+          title={INVENTORY_VI.productionOperatorDoneTodayTitle}
+          badge={{ children: String(doneToday.length), variant: "secondary" }}
+          size="sm"
+        >
           <ItemGroup className="gap-2">
             {doneToday.map((order) => (
               <Item key={order.id} variant="outline" size="sm">
@@ -272,7 +307,7 @@ export function ProductionOperatorClient({
               </Item>
             ))}
           </ItemGroup>
-        </>
+        </AppSection>
       ) : null}
 
       {canManageRecipes ? (
@@ -290,6 +325,6 @@ export function ProductionOperatorClient({
         info={shortageInfo}
         onClose={() => setShortageInfo(null)}
       />
-    </>
+    </div>
   );
 }

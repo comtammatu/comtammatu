@@ -546,8 +546,419 @@ export function PODetailClient({
     });
   }
 
+  const headerActions = canSendPo ? (
+    <Button
+      type="button"
+      size={embedded ? "touch" : "lg"}
+      disabled={isPending}
+      onClick={handleSendPo}
+    >
+      <IconCircleCheck className="size-4" />
+      {poDetailCopy.sendPo}
+    </Button>
+  ) : canCreateGrn ? (
+    <Button
+      type="button"
+      size={embedded ? "touch" : "lg"}
+      disabled={isPending}
+      onClick={handleCreateGrn}
+    >
+      <IconCircleCheck className="size-4" />
+      {poDetailCopy.createGrnStep}
+    </Button>
+  ) : po.status !== "cancelled" ? (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span tabIndex={0}>
+            <Button type="button" size={embedded ? "touch" : "lg"} disabled>
+              <IconCircleCheck className="size-4" />
+              {poDetailCopy.createGrnStep}
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{poDetailCopy.createGrnDisabledHint}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  ) : null;
+
+  const tabs = (
+    <AppPageTabs
+      items={[
+        { value: "overview", label: "Tổng quan" },
+        { value: "lines", label: "Dòng", count: lines.length },
+        { value: "history", label: "Lịch sử", count: auditLogs.length },
+      ]}
+    >
+      <TabsContent value="overview">
+        <div className="flex flex-col gap-4">
+          <AppSection title={poDetailCopy.summaryTitle}>
+            <DescriptionList
+              className="grid gap-3 md:grid-cols-3"
+              descriptionClassName="font-semibold"
+              items={[
+                {
+                  term: poCopy.supplierRequired,
+                  description: po.supplier,
+                },
+                {
+                  term: poDetailCopy.goodsTotal,
+                  description: messages.inventory.common.currency(
+                    formatVND(totalAmount),
+                  ),
+                },
+                {
+                  term: FORM_VI.totalAmount,
+                  description: (
+                    <span className="text-primary">
+                      {messages.inventory.common.currency(
+                        formatVND(grandTotal),
+                      )}
+                    </span>
+                  ),
+                },
+              ]}
+            />
+          </AppSection>
+
+          <AppSection contentClassName="py-4">
+            <div className="flex justify-center">
+              <TimelineStepper
+                steps={[
+                  {
+                    label: poDetailCopy.steps.draft,
+                    date: po.date,
+                    completed: true,
+                  },
+                  {
+                    label: poDetailCopy.steps.sent,
+                    date: po.sentAt,
+                    completed: po.status !== "draft",
+                  },
+                  {
+                    label: poDetailCopy.steps.waitingInspection,
+                    active: po.status === "sent",
+                    date:
+                      po.status === "sent"
+                        ? poDetailCopy.steps.waitingInspectionHint
+                        : undefined,
+                  },
+                  {
+                    label: poDetailCopy.steps.hasGrn,
+                    completed: po.status === "received",
+                    active: po.status === "partially_received",
+                    date:
+                      po.status === "partially_received"
+                        ? poDetailCopy.steps.partialReceivedHint
+                        : undefined,
+                  },
+                ]}
+              />
+            </div>
+          </AppSection>
+
+          <PoOverviewLinesPreview
+            lines={lines}
+            onViewAll={() => router.replace("?tab=lines", { scroll: false })}
+          />
+
+          <PoLinkedGrns grns={po.grns} grnBasePath={grnBasePath} />
+        </div>
+      </TabsContent>
+
+      <TabsContent value="lines">
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="min-w-0">
+              <AppSection
+                className="overflow-hidden"
+                title={poDetailCopy.itemCatalogTitle}
+                description={poDetailCopy.itemCatalogDescription(lines.length)}
+                contentFlush
+              >
+                <DataTable
+                  className="p-4 md:p-0"
+                  columns={lineColumns}
+                  data={lines}
+                  getRowKey={(item) => item.lineId}
+                  mobileCardRender={(item, index) => (
+                    <PoLineMobileCard
+                      item={item}
+                      index={index}
+                      canEditLines={canEditLines}
+                      isPending={isPending}
+                      unitOptions={getPurchaseUnitOptions(
+                        ingredientById.get(item.ingredientId),
+                      )}
+                      patchLine={patchLine}
+                      onUnitChange={handleLineUnitChange}
+                      onSaveLine={handleSaveLine}
+                      onDeleteLine={(line) => void handleDeleteLine(line)}
+                    />
+                  )}
+                  mobileFooter={
+                    <Item
+                      variant="outline"
+                      className="flex-col items-stretch gap-2 p-3 text-sm"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">
+                          {FORM_VI.totalAmount}
+                        </span>
+                        <span className="font-mono font-semibold tabular-nums text-primary">
+                          {inventoryCommon.currencyCompact(
+                            formatVND(grandTotal),
+                          )}
+                        </span>
+                      </div>
+                    </Item>
+                  }
+                  desktopFooterRows={[
+                    {
+                      key: "goods-total",
+                      className: "border-border",
+                      cells: [
+                        {
+                          key: "label",
+                          colSpan: 3,
+                          className: "text-right text-sm text-muted-foreground",
+                          content: poDetailCopy.goodsTotal,
+                        },
+                        {
+                          key: "value",
+                          className:
+                            "text-right font-mono font-semibold tabular-nums",
+                          content: inventoryCommon.currencyCompact(
+                            formatVND(totalAmount),
+                          ),
+                        },
+                        { key: "actions", colSpan: 2, content: null },
+                      ],
+                    },
+                    {
+                      key: "tax",
+                      className: "border-border",
+                      cells: [
+                        {
+                          key: "label",
+                          colSpan: 3,
+                          className: "text-right text-sm text-muted-foreground",
+                          content: FORM_VI.tax,
+                        },
+                        {
+                          key: "value",
+                          className: "text-right font-mono tabular-nums",
+                          content: inventoryCommon.currencyCompact(
+                            formatVND(taxAmount),
+                          ),
+                        },
+                        { key: "actions", colSpan: 2, content: null },
+                      ],
+                    },
+                    {
+                      key: "grand-total",
+                      className: "border-border",
+                      cells: [
+                        {
+                          key: "label",
+                          colSpan: 3,
+                          className: "text-right text-sm font-bold",
+                          content: FORM_VI.totalAmount,
+                        },
+                        {
+                          key: "value",
+                          className:
+                            "text-right font-mono font-bold tabular-nums text-primary",
+                          content: inventoryCommon.currencyCompact(
+                            formatVND(grandTotal),
+                          ),
+                        },
+                        { key: "actions", colSpan: 2, content: null },
+                      ],
+                    },
+                  ]}
+                />
+
+                {canEditLines ? (
+                  <form
+                    onSubmit={handleAddLine}
+                    className="grid gap-3 border-t bg-muted/5 p-4 sm:grid-cols-2 lg:grid-cols-5"
+                  >
+                    <Combobox
+                      value={addIngredientId}
+                      onValueChange={handleAddIngredientChange}
+                      options={ingredients
+                        .filter((ingredient) => ingredient.is_active)
+                        .map((ingredient) => ({
+                          value: String(ingredient.id),
+                          label: ingredient.name,
+                          hint: ingredient.purchase_unit ?? ingredient.unit,
+                          keywords: [
+                            ingredient.sku ?? "",
+                            ingredient.category ?? "",
+                          ],
+                        }))}
+                      placeholder={poCopy.ingredientPlaceholder}
+                      searchPlaceholder={poCopy.ingredientSearchPlaceholder}
+                      triggerClassName={
+                        embedded ? "h-12 border-dashed" : "h-9 border-dashed"
+                      }
+                    />
+                    <FormattedNumberInput
+                      value={addQty}
+                      onValueChange={setAddQty}
+                      maxFractionDigits={3}
+                      placeholder={poCopy.quantityShort}
+                      className={embedded ? "h-12" : "h-9"}
+                      required
+                    />
+                    {addUnitOptions.length > 0 ? (
+                      <Select
+                        value={
+                          addEntryUnitId != null ? String(addEntryUnitId) : ""
+                        }
+                        onValueChange={handleAddUnitChange}
+                      >
+                        <SelectTrigger
+                          size={embedded ? "touch" : "default"}
+                          className={embedded ? "min-h-12" : "h-9"}
+                          aria-label={FORM_VI.unit}
+                        >
+                          <SelectValue placeholder={poCopy.unitShort} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {addUnitOptions.map((option) => (
+                            <SelectItem
+                              key={option.unitId}
+                              value={String(option.unitId)}
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        value={addUnit}
+                        readOnly
+                        aria-readonly="true"
+                        placeholder={poCopy.unitShort}
+                        className={embedded ? "h-12" : "h-9"}
+                        required
+                      />
+                    )}
+                    <FormattedNumberInput
+                      value={addPrice}
+                      onValueChange={setAddPrice}
+                      maxFractionDigits={0}
+                      placeholder={poCopy.pricePlaceholder}
+                      className={embedded ? "h-12" : "h-9"}
+                    />
+                    <Button
+                      type="submit"
+                      disabled={isPending || !addIngredientId}
+                      size={embedded ? "touch" : "default"}
+                      className={embedded ? undefined : "h-9"}
+                    >
+                      <IconPlus className="size-4" />
+                      {ACTIONS_VI.add}
+                    </Button>
+                  </form>
+                ) : null}
+              </AppSection>
+            </div>
+
+            <div className="min-w-0">
+              <AppSection title={poDetailCopy.supplierInfoTitle}>
+                {supplierInfoAvailable ? (
+                  <div className="flex flex-col gap-3 text-sm">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                        {poDetailCopy.invoiceAddress}
+                      </p>
+                      <p className="mt-1 break-words font-medium">
+                        {po.supplierInfo.address}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                        {poDetailCopy.contactPerson}
+                      </p>
+                      <p className="mt-1 font-medium">
+                        {po.supplierInfo.contact}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                        {poDetailCopy.paymentTerm}
+                      </p>
+                      <p className="mt-1 font-medium">
+                        {po.supplierInfo.payment}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    {poDetailCopy.supplierInfoEmpty}
+                  </div>
+                )}
+              </AppSection>
+            </div>
+          </div>
+
+          <AppDetailFooter
+            leading={
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={isPending || !canCancelPo}
+                size="touch"
+                className="rounded-full px-6 font-bold text-destructive"
+                onClick={handleCancelPo}
+              >
+                <IconCircleX className="size-5" />
+                {poDetailCopy.cancelPo}
+              </Button>
+            }
+            trailing={
+              <Button
+                type="button"
+                disabled={isPending || (!canSendPo && !canCreateGrn)}
+                size="touch"
+                className="rounded-full px-10 font-bold"
+                onClick={canSendPo ? handleSendPo : handleCreateGrn}
+              >
+                <IconCircleCheck className="size-5" />
+                {canSendPo ? poDetailCopy.sendPo : poDetailCopy.createGrnStep}
+              </Button>
+            }
+          />
+        </div>
+      </TabsContent>
+
+      <TabsContent value="history">
+        <AuditHistoryList logs={auditLogs} />
+      </TabsContent>
+    </AppPageTabs>
+  );
+
   const content = (
     <>
+      {embedded && headerActions ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          {headerActions}
+        </div>
+      ) : null}
+      {tabs}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow="Kho hàng"
         title={po.code}
@@ -565,424 +976,9 @@ export function PODetailClient({
             {tRoute("/inventory/purchase-orders", "heading")}
           </Link>
         }
-        actions={
-          canSendPo ? (
-            <Button
-              type="button"
-              size="lg"
-              disabled={isPending}
-              onClick={handleSendPo}
-            >
-              <IconCircleCheck className="size-4" />
-              {poDetailCopy.sendPo}
-            </Button>
-          ) : canCreateGrn ? (
-            <Button
-              type="button"
-              size="lg"
-              disabled={isPending}
-              onClick={handleCreateGrn}
-            >
-              <IconCircleCheck className="size-4" />
-              {poDetailCopy.createGrnStep}
-            </Button>
-          ) : po.status !== "cancelled" ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span tabIndex={0}>
-                    <Button type="button" size="lg" disabled>
-                      <IconCircleCheck className="size-4" />
-                      {poDetailCopy.createGrnStep}
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {poDetailCopy.createGrnDisabledHint}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : null
-        }
-        tabs={
-          <AppPageTabs
-            items={[
-              { value: "overview", label: "Tổng quan" },
-              { value: "lines", label: "Dòng", count: lines.length },
-              { value: "history", label: "Lịch sử", count: auditLogs.length },
-            ]}
-          >
-            <TabsContent value="overview">
-              <div className="flex flex-col gap-4">
-                <AppSection title={poDetailCopy.summaryTitle}>
-                  <DescriptionList
-                    className="grid gap-3 md:grid-cols-3"
-                    descriptionClassName="font-semibold"
-                    items={[
-                      {
-                        term: poCopy.supplierRequired,
-                        description: po.supplier,
-                      },
-                      {
-                        term: poDetailCopy.goodsTotal,
-                        description: messages.inventory.common.currency(
-                          formatVND(totalAmount),
-                        ),
-                      },
-                      {
-                        term: FORM_VI.totalAmount,
-                        description: (
-                          <span className="text-primary">
-                            {messages.inventory.common.currency(
-                              formatVND(grandTotal),
-                            )}
-                          </span>
-                        ),
-                      },
-                    ]}
-                  />
-                </AppSection>
-
-                <AppSection contentClassName="py-4">
-                  <div className="flex justify-center">
-                    <TimelineStepper
-                      steps={[
-                        {
-                          label: poDetailCopy.steps.draft,
-                          date: po.date,
-                          completed: true,
-                        },
-                        {
-                          label: poDetailCopy.steps.sent,
-                          date: po.sentAt,
-                          completed: po.status !== "draft",
-                        },
-                        {
-                          label: poDetailCopy.steps.waitingInspection,
-                          active: po.status === "sent",
-                          date:
-                            po.status === "sent"
-                              ? poDetailCopy.steps.waitingInspectionHint
-                              : undefined,
-                        },
-                        {
-                          label: poDetailCopy.steps.hasGrn,
-                          completed: po.status === "received",
-                          active: po.status === "partially_received",
-                          date:
-                            po.status === "partially_received"
-                              ? poDetailCopy.steps.partialReceivedHint
-                              : undefined,
-                        },
-                      ]}
-                    />
-                  </div>
-                </AppSection>
-
-                <PoOverviewLinesPreview
-                  lines={lines}
-                  onViewAll={() =>
-                    router.replace("?tab=lines", { scroll: false })
-                  }
-                />
-
-                <PoLinkedGrns grns={po.grns} grnBasePath={grnBasePath} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="lines">
-              <div className="flex flex-col gap-4">
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-                  <div className="min-w-0">
-                    <AppSection
-                      className="overflow-hidden"
-                      title={poDetailCopy.itemCatalogTitle}
-                      description={poDetailCopy.itemCatalogDescription(
-                        lines.length,
-                      )}
-                      contentFlush
-                    >
-                      <DataTable
-                        className="p-4 md:p-0"
-                        columns={lineColumns}
-                        data={lines}
-                        getRowKey={(item) => item.lineId}
-                        mobileCardRender={(item, index) => (
-                          <PoLineMobileCard
-                            item={item}
-                            index={index}
-                            canEditLines={canEditLines}
-                            isPending={isPending}
-                            unitOptions={getPurchaseUnitOptions(
-                              ingredientById.get(item.ingredientId),
-                            )}
-                            patchLine={patchLine}
-                            onUnitChange={handleLineUnitChange}
-                            onSaveLine={handleSaveLine}
-                            onDeleteLine={(line) => void handleDeleteLine(line)}
-                          />
-                        )}
-                        mobileFooter={
-                          <Item
-                            variant="outline"
-                            className="flex-col items-stretch gap-2 p-3 text-sm"
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-muted-foreground">
-                                {FORM_VI.totalAmount}
-                              </span>
-                              <span className="font-mono font-semibold tabular-nums text-primary">
-                                {inventoryCommon.currencyCompact(
-                                  formatVND(grandTotal),
-                                )}
-                              </span>
-                            </div>
-                          </Item>
-                        }
-                        desktopFooterRows={[
-                          {
-                            key: "goods-total",
-                            className: "border-border",
-                            cells: [
-                              {
-                                key: "label",
-                                colSpan: 3,
-                                className:
-                                  "text-right text-sm text-muted-foreground",
-                                content: poDetailCopy.goodsTotal,
-                              },
-                              {
-                                key: "value",
-                                className:
-                                  "text-right font-mono font-semibold tabular-nums",
-                                content: inventoryCommon.currencyCompact(
-                                  formatVND(totalAmount),
-                                ),
-                              },
-                              { key: "actions", colSpan: 2, content: null },
-                            ],
-                          },
-                          {
-                            key: "tax",
-                            className: "border-border",
-                            cells: [
-                              {
-                                key: "label",
-                                colSpan: 3,
-                                className:
-                                  "text-right text-sm text-muted-foreground",
-                                content: FORM_VI.tax,
-                              },
-                              {
-                                key: "value",
-                                className: "text-right font-mono tabular-nums",
-                                content: inventoryCommon.currencyCompact(
-                                  formatVND(taxAmount),
-                                ),
-                              },
-                              { key: "actions", colSpan: 2, content: null },
-                            ],
-                          },
-                          {
-                            key: "grand-total",
-                            className: "border-border",
-                            cells: [
-                              {
-                                key: "label",
-                                colSpan: 3,
-                                className: "text-right text-sm font-bold",
-                                content: FORM_VI.totalAmount,
-                              },
-                              {
-                                key: "value",
-                                className:
-                                  "text-right font-mono font-bold tabular-nums text-primary",
-                                content: inventoryCommon.currencyCompact(
-                                  formatVND(grandTotal),
-                                ),
-                              },
-                              { key: "actions", colSpan: 2, content: null },
-                            ],
-                          },
-                        ]}
-                      />
-
-                      {canEditLines ? (
-                        <form
-                          onSubmit={handleAddLine}
-                          className="grid gap-3 border-t bg-muted/5 p-4 sm:grid-cols-2 lg:grid-cols-5"
-                        >
-                          <Combobox
-                            value={addIngredientId}
-                            onValueChange={handleAddIngredientChange}
-                            options={ingredients
-                              .filter((ingredient) => ingredient.is_active)
-                              .map((ingredient) => ({
-                                value: String(ingredient.id),
-                                label: ingredient.name,
-                                hint:
-                                  ingredient.purchase_unit ?? ingredient.unit,
-                                keywords: [
-                                  ingredient.sku ?? "",
-                                  ingredient.category ?? "",
-                                ],
-                              }))}
-                            placeholder={poCopy.ingredientPlaceholder}
-                            searchPlaceholder={
-                              poCopy.ingredientSearchPlaceholder
-                            }
-                            triggerClassName="h-9 border-dashed"
-                          />
-                          <FormattedNumberInput
-                            value={addQty}
-                            onValueChange={setAddQty}
-                            maxFractionDigits={3}
-                            placeholder={poCopy.quantityShort}
-                            className="h-9"
-                            required
-                          />
-                          {addUnitOptions.length > 0 ? (
-                            <Select
-                              value={
-                                addEntryUnitId != null
-                                  ? String(addEntryUnitId)
-                                  : ""
-                              }
-                              onValueChange={handleAddUnitChange}
-                            >
-                              <SelectTrigger
-                                className="h-9"
-                                aria-label={FORM_VI.unit}
-                              >
-                                <SelectValue placeholder={poCopy.unitShort} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {addUnitOptions.map((option) => (
-                                  <SelectItem
-                                    key={option.unitId}
-                                    value={String(option.unitId)}
-                                  >
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Input
-                              value={addUnit}
-                              readOnly
-                              aria-readonly="true"
-                              placeholder={poCopy.unitShort}
-                              className="h-9"
-                              required
-                            />
-                          )}
-                          <FormattedNumberInput
-                            value={addPrice}
-                            onValueChange={setAddPrice}
-                            maxFractionDigits={0}
-                            placeholder={poCopy.pricePlaceholder}
-                            className="h-9"
-                          />
-                          <Button
-                            type="submit"
-                            disabled={isPending || !addIngredientId}
-                            className="h-9"
-                          >
-                            <IconPlus className="size-4" />
-                            {ACTIONS_VI.add}
-                          </Button>
-                        </form>
-                      ) : null}
-                    </AppSection>
-                  </div>
-
-                  <div className="min-w-0">
-                    <AppSection title={poDetailCopy.supplierInfoTitle}>
-                      {supplierInfoAvailable ? (
-                        <div className="flex flex-col gap-3 text-sm">
-                          <div>
-                            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                              {poDetailCopy.invoiceAddress}
-                            </p>
-                            <p className="mt-1 break-words font-medium">
-                              {po.supplierInfo.address}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                              {poDetailCopy.contactPerson}
-                            </p>
-                            <p className="mt-1 font-medium">
-                              {po.supplierInfo.contact}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                              {poDetailCopy.paymentTerm}
-                            </p>
-                            <p className="mt-1 font-medium">
-                              {po.supplierInfo.payment}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground">
-                          {poDetailCopy.supplierInfoEmpty}
-                        </div>
-                      )}
-                    </AppSection>
-                  </div>
-                </div>
-
-                <AppDetailFooter
-                  leading={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      disabled={isPending || !canCancelPo}
-                      size="touch"
-                      className="rounded-full px-6 font-bold text-destructive"
-                      onClick={handleCancelPo}
-                    >
-                      <IconCircleX className="size-5" />
-                      {poDetailCopy.cancelPo}
-                    </Button>
-                  }
-                  trailing={
-                    <Button
-                      type="button"
-                      disabled={isPending || (!canSendPo && !canCreateGrn)}
-                      size="touch"
-                      className="rounded-full px-10 font-bold"
-                      onClick={canSendPo ? handleSendPo : handleCreateGrn}
-                    >
-                      <IconCircleCheck className="size-5" />
-                      {canSendPo
-                        ? poDetailCopy.sendPo
-                        : poDetailCopy.createGrnStep}
-                    </Button>
-                  }
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="history">
-              <AuditHistoryList logs={auditLogs} />
-            </TabsContent>
-          </AppPageTabs>
-        }
+        actions={headerActions}
+        tabs={tabs}
       />
-    </>
-  );
-
-  if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
-  }
-
-  return (
-    <AppPage width="wide" density="compact">
-      {content}
     </AppPage>
   );
 }
@@ -1084,7 +1080,11 @@ function PoLineMobileCard({
                 value={item.entryUnitId != null ? String(item.entryUnitId) : ""}
                 onValueChange={(value) => onUnitChange(index, value)}
               >
-                <SelectTrigger className="h-9" aria-label={FORM_VI.unit}>
+                <SelectTrigger
+                  size="touch"
+                  className="min-h-12"
+                  aria-label={FORM_VI.unit}
+                >
                   <SelectValue placeholder={FORM_VI.unit} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1103,7 +1103,7 @@ function PoLineMobileCard({
                 value={item.unit}
                 readOnly
                 aria-readonly="true"
-                className="h-9"
+                className="h-12"
               />
             )}
           </div>
@@ -1121,7 +1121,7 @@ function PoLineMobileCard({
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="touch"
           disabled={isPending || !item.dirty}
           className="mt-4"
           onClick={() => onSaveLine(index)}
@@ -1274,7 +1274,7 @@ function PoOverviewLinesPreview({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size="touch"
             onClick={onViewAll}
             className="text-primary"
           >

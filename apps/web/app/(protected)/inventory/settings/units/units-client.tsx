@@ -239,18 +239,23 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
                   {dimensionRows.map((row) => (
                     <div
                       key={row.id}
-                      className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1.5"
+                      className="inline-flex items-center gap-2"
                     >
-                      <span className="font-mono text-sm font-medium">
-                        {row.code}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {copy.standard.factor(
-                          `${row.standard_factor ?? 1} ${
-                            dimension === "mass" ? "g" : "ml"
-                          }`,
-                        )}
-                      </span>
+                      <Badge
+                        variant="outline"
+                        className="h-auto gap-2 px-3 py-1.5 text-xs"
+                      >
+                        <span className="font-mono font-semibold">
+                          {row.code}
+                        </span>
+                        <span className="font-normal text-muted-foreground">
+                          {copy.standard.factor(
+                            `${row.standard_factor ?? 1} ${
+                              dimension === "mass" ? "g" : "ml"
+                            }`,
+                          )}
+                        </span>
+                      </Badge>
                       {row.inUse ? (
                         <Badge variant="outline">{copy.status.inUse}</Badge>
                       ) : null}

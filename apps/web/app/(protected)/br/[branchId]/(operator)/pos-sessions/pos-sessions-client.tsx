@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Banknote as IconCash,
   Clock as IconClock,
@@ -26,7 +27,10 @@ import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Button } from "@comtammatu/ui/components/button";
+import { Label } from "@comtammatu/ui/components/label";
 import { Progress } from "@comtammatu/ui/components/progress";
+import { Spinner } from "@comtammatu/ui/components/spinner";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Item,
   ItemContent,
@@ -44,10 +48,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
-import { CloseSessionSheet } from "../../../pos/close-session-sheet";
-import type { CartModifier, CartSide } from "../../../pos/types";
+import { CloseSessionSheet } from "../../pos/close-session-sheet";
+import type { CartModifier, CartSide } from "../../pos/types";
 import type { PosSessionReport } from "./report-actions";
+import { resolvePosSessionVariance } from "./actions";
 import { messages } from "@lib/messages";
+import { toast } from "@comtammatu/ui/components/sonner";
 
 import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export interface PosSessionRow {
@@ -66,13 +72,13 @@ export interface PosSessionRow {
   status: string;
   note: string | null;
   variance_approval_note: string | null;
+  variance_approver_user_id: string | null;
   pos_terminals: { name: string } | null;
   opened_by_profile: { full_name: string } | null;
   closed_by_profile: { full_name: string } | null;
 }
 
-/** Resolve display name của ca: ưu tiên tên terminal nếu còn, fallback
- * "Ca chung của chi nhánh" cho ca không liên kết terminal (post-D7). */
+/** Terminal name is preferred; branch-wide sessions fall back to shared copy. */
 function resolveSessionLabel(session: PosSessionRow): string {
   if (session.pos_terminals?.name) return session.pos_terminals.name;
   if (session.terminal_id != null) return `POS #${String(session.terminal_id)}`;
@@ -124,8 +130,7 @@ function paymentMethodLabel(method: string | null): string {
   return getPaymentMethodLabelVi(method);
 }
 
-/** Server tính: max(50.000đ, 0.5% × expected_cash). Mirror inline cho UI
- * khi server không trả về (sessions cũ trước D8 chỉ có cash_difference). */
+/** Mirrors the close-session threshold for older rows without report payloads. */
 function computeVarianceThreshold(expectedCash: number | null): number {
   if (expectedCash == null) return 50_000;
   return Math.max(50_000, Math.round(expectedCash * 0.005 * 100) / 100);
@@ -135,6 +140,10 @@ function isVarianceBreached(session: PosSessionRow): boolean {
   if (session.cash_difference == null) return false;
   const threshold = computeVarianceThreshold(session.expected_cash);
   return Math.abs(session.cash_difference) > threshold;
+}
+
+function isVarianceResolved(session: PosSessionRow): boolean {
+  return Boolean(session.variance_approval_note);
 }
 
 export function PosSessionsClient({
@@ -150,6 +159,15 @@ export function PosSessionsClient({
     sessions.find((session) => session.id === selectedSessionId) ?? null;
   const selectedOrder =
     orders.find((order) => order.id === selectedOrderId) ?? null;
+  const openSessionCount = sessions.filter(
+    (session) => session.status === "open",
+  ).length;
+  const unresolvedVarianceCount = sessions.filter(
+    (session) =>
+      isVarianceBreached(session) &&
+      session.status !== "open" &&
+      !isVarianceResolved(session),
+  ).length;
 
   const summary = useMemo(() => buildSummary(orders), [orders]);
   const orderColumns: DataTableColumn<PosSessionOrder>[] = [
@@ -220,64 +238,26 @@ export function PosSessionsClient({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(18rem,22rem)_1fr]">
-      <AppSection
-        title={messages.settings.posSessions.sessionHistory}
-        className="h-fit"
-      >
-        {sessions.map((session) => {
-          const selected = session.id === selectedSessionId;
-          const breached = isVarianceBreached(session);
-          return (
-            <Button
-              asChild
-              key={session.id}
-              variant={selected ? "secondary" : "ghost"}
-              className="h-auto w-full justify-start px-3 py-2"
-            >
-              <Link
-                href={`/br/${branchId}/settings/pos-sessions?session=${session.id}`}
-                className="flex min-w-0 items-center gap-3"
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                  <IconClock className="size-4" />
-                </span>
-                <span className="min-w-0 flex-1 text-left">
-                  <span className="block truncate text-sm font-semibold">
-                    {resolveSessionLabel(session)}
-                  </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {formatDateTime(session.opened_at)}
-                  </span>
-                </span>
-                {breached ? (
-                  <Badge variant="destructive">
-                    {messages.settings.posSessions.varianceShort}
-                  </Badge>
-                ) : null}
-                <Badge
-                  variant={session.status === "open" ? "warning" : "outline"}
-                >
-                  {session.status === "open"
-                    ? messages.settings.posSessions.open
-                    : messages.settings.posSessions.closed}
-                </Badge>
-              </Link>
-            </Button>
-          );
-        })}
-      </AppSection>
+    <div className="grid gap-3 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(20rem,24rem)_minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+      <div className="order-2 min-w-0 xl:order-1">
+        <SessionHistoryPanel
+          branchId={branchId}
+          sessions={sessions}
+          selectedSessionId={selectedSessionId}
+          openSessionCount={openSessionCount}
+          unresolvedVarianceCount={unresolvedVarianceCount}
+        />
+      </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="order-1 flex min-w-0 flex-col gap-3 xl:order-2">
         {selectedSession ? (
           <>
             <SessionDetailCard
+              branchId={branchId}
               session={selectedSession}
               summary={summary}
               onCloseShift={() => setCloseSheetOpen(true)}
             />
-
-            {report ? <SessionReportCard report={report} /> : null}
 
             <AppSection
               title={messages.settings.posSessions.billsInSession(
@@ -292,6 +272,7 @@ export function PosSessionsClient({
                 data={orders}
                 getRowKey={(order) => order.id}
                 emptyTitle={messages.settings.posSessions.noBills}
+                mobileBreakpoint={1024}
                 onRowClick={(order) => setSelectedOrderId(order.id)}
                 mobileCardRender={(order) => (
                   <Item variant="outline">
@@ -323,6 +304,10 @@ export function PosSessionsClient({
         ) : null}
       </div>
 
+      <div className="order-3 min-w-0 xl:col-start-2 2xl:col-start-3 2xl:row-start-1">
+        {report ? <SessionReportCard report={report} /> : null}
+      </div>
+
       {selectedSession ? (
         <CloseSessionSheet
           sessionId={selectedSession.id}
@@ -342,6 +327,99 @@ export function PosSessionsClient({
   );
 }
 
+function SessionHistoryPanel({
+  branchId,
+  sessions,
+  selectedSessionId,
+  openSessionCount,
+  unresolvedVarianceCount,
+}: {
+  branchId: number;
+  sessions: PosSessionRow[];
+  selectedSessionId: number | null;
+  openSessionCount: number;
+  unresolvedVarianceCount: number;
+}) {
+  return (
+    <AppSection
+      title={messages.settings.posSessions.sessionHistory}
+      description={messages.settings.posSessions.sessionHistoryDescription(
+        openSessionCount,
+        unresolvedVarianceCount,
+      )}
+      badge={{
+        children: messages.settings.posSessions.sessionCount(sessions.length),
+        variant: "secondary",
+      }}
+      className="h-fit"
+      contentClassName="gap-2"
+    >
+      {sessions.map((session) => {
+        const selected = session.id === selectedSessionId;
+        const breached = isVarianceBreached(session);
+        const resolved = breached && isVarianceResolved(session);
+        return (
+          <Button
+            asChild
+            key={session.id}
+            variant={selected ? "secondary" : "ghost"}
+            size="touch-lg"
+            className="w-full justify-start text-left"
+          >
+            <Link
+              href={`/br/${branchId}/pos-sessions?session=${session.id}`}
+              aria-current={selected ? "page" : undefined}
+              className="flex min-w-0 flex-1 flex-wrap items-center gap-3"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                <IconClock className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1 basis-40">
+                <span className="block truncate text-sm font-semibold">
+                  {resolveSessionLabel(session)}
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {formatDateTime(session.opened_at)}
+                </span>
+                {session.cash_difference != null ? (
+                  <span
+                    className={cn(
+                      "mt-1 block text-xs font-medium tabular-nums",
+                      breached && !resolved
+                        ? "text-destructive"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {messages.settings.posSessions.sessionVarianceLine(
+                      formatVND(session.cash_difference),
+                    )}
+                  </span>
+                ) : null}
+              </span>
+              <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                {breached ? (
+                  <Badge variant={resolved ? "outline" : "destructive"}>
+                    {resolved
+                      ? messages.settings.posSessions.varianceResolvedShort
+                      : messages.settings.posSessions.varianceShort}
+                  </Badge>
+                ) : null}
+                <Badge
+                  variant={session.status === "open" ? "warning" : "outline"}
+                >
+                  {session.status === "open"
+                    ? messages.settings.posSessions.open
+                    : messages.settings.posSessions.closed}
+                </Badge>
+              </span>
+            </Link>
+          </Button>
+        );
+      })}
+    </AppSection>
+  );
+}
+
 interface SessionSummary {
   billCount: number;
   revenue: number;
@@ -355,23 +433,62 @@ interface SessionSummary {
 }
 
 function SessionDetailCard({
+  branchId,
   session,
   summary,
   onCloseShift,
 }: {
+  branchId: number;
   session: PosSessionRow;
   summary: SessionSummary;
   onCloseShift: () => void;
 }) {
+  const router = useRouter();
   const breached = isVarianceBreached(session);
+  const resolved = breached && isVarianceResolved(session);
   const threshold = computeVarianceThreshold(session.expected_cash);
   const isOpen = session.status === "open";
+  const [resolutionNote, setResolutionNote] = useState("");
+  const [isResolving, startResolving] = useTransition();
+  const trimmedResolutionNote = resolutionNote.trim();
+  const canResolve =
+    breached &&
+    !isOpen &&
+    !resolved &&
+    trimmedResolutionNote.length >= 10 &&
+    trimmedResolutionNote.length <= 500 &&
+    !isResolving;
+
+  function handleResolveVariance() {
+    if (!canResolve) return;
+
+    startResolving(async () => {
+      const result = await resolvePosSessionVariance(
+        branchId,
+        session.id,
+        trimmedResolutionNote,
+      );
+      if (!result.success) {
+        toast.error(
+          result.error ?? messages.settings.posSessions.resolveFailed,
+        );
+        return;
+      }
+
+      toast.success(messages.settings.posSessions.resolveSuccess);
+      setResolutionNote("");
+      router.refresh();
+    });
+  }
 
   return (
     <AppSection
-      title={resolveSessionLabel(session)}
+      title={messages.settings.posSessions.settlementTitle}
       description={
         <div className="flex flex-col gap-1">
+          <p className="font-medium text-foreground">
+            {resolveSessionLabel(session)}
+          </p>
           <p>
             {messages.settings.posSessions.openedBy(
               session.opened_by_profile?.full_name ?? "—",
@@ -389,27 +506,44 @@ function SessionDetailCard({
           ) : null}
         </div>
       }
+      badge={{
+        children: isOpen
+          ? messages.settings.posSessions.open
+          : messages.settings.posSessions.closed,
+        variant: isOpen ? "warning" : "outline",
+      }}
       action={
         isOpen ? (
-          <Button onClick={onCloseShift}>
+          <Button size="touch" onClick={onCloseShift}>
             {messages.settings.posSessions.closeShift}
           </Button>
-        ) : (
-          <Badge variant="outline" className="self-start">
-            {messages.settings.posSessions.closed}
-          </Badge>
-        )
+        ) : null
       }
     >
       {breached ? (
-        <Alert variant="destructive">
+        <Alert
+          variant={resolved ? "default" : "destructive"}
+          className={
+            resolved
+              ? "border-success/20 bg-success/10 text-success"
+              : undefined
+          }
+        >
           <IconAlertTriangle className="size-4" />
           <AlertDescription className="text-current">
-            <strong>{messages.settings.posSessions.varianceAlertStrong}</strong>
-            {messages.settings.posSessions.varianceAlert(
-              formatVND(session.cash_difference ?? 0),
-              formatVND(threshold),
-            )}
+            <strong>
+              {resolved
+                ? messages.settings.posSessions.varianceResolvedStrong
+                : messages.settings.posSessions.varianceAlertStrong}
+            </strong>
+            {resolved
+              ? messages.settings.posSessions.varianceResolved(
+                  formatVND(session.cash_difference ?? 0),
+                )
+              : messages.settings.posSessions.varianceAlert(
+                  formatVND(session.cash_difference ?? 0),
+                  formatVND(threshold),
+                )}
             {session.variance_approval_note ? (
               <span className="mt-1 block text-sm">
                 {messages.settings.posSessions.varianceApprovalNote(
@@ -426,6 +560,47 @@ function SessionDetailCard({
             {messages.settings.posSessions.cashMatched}
           </AlertDescription>
         </Alert>
+      ) : null}
+
+      {breached && !isOpen && !resolved ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`variance-resolution-${String(session.id)}`}>
+            {messages.settings.posSessions.varianceResolutionLabel}
+          </Label>
+          <Textarea
+            id={`variance-resolution-${String(session.id)}`}
+            value={resolutionNote}
+            onChange={(event) => setResolutionNote(event.target.value)}
+            placeholder={
+              messages.settings.posSessions.varianceResolutionPlaceholder
+            }
+            maxLength={500}
+            rows={3}
+            className="resize-none text-base"
+          />
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {messages.settings.posSessions.varianceResolutionCount(
+                trimmedResolutionNote.length,
+              )}
+            </span>
+            <Button
+              type="button"
+              size="touch"
+              disabled={!canResolve}
+              onClick={handleResolveVariance}
+            >
+              {isResolving ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  {messages.settings.posSessions.resolving}
+                </>
+              ) : (
+                messages.settings.posSessions.resolveVariance
+              )}
+            </Button>
+          </div>
+        </div>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -680,6 +855,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
             columns={topItemColumns}
             data={top_items}
             getRowKey={(item) => `${item.source}-${item.name}`}
+            mobileBreakpoint={1024}
             mobileCardRender={(item) => (
               <Item variant="outline">
                 <ItemContent>
@@ -772,6 +948,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
             columns={discountColumns}
             data={discounts.top_orders}
             getRowKey={(order) => order.order_id}
+            mobileBreakpoint={1024}
             mobileCardRender={(order) => (
               <Item variant="outline">
                 <ItemContent>

@@ -61,6 +61,7 @@ import { getDefaultIssueUnit, getIssueUnitOptions } from "../_lib/issue-units";
 import type { IngredientUnitRow } from "../_lib/types";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 import { StockMobileGrid } from "./stock-mobile-grid";
+import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -71,6 +72,7 @@ import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 
 const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
+const operatorFlow = messages.inventory.operatorFlow;
 
 export type StockIngredient = {
   id: number;
@@ -807,13 +809,11 @@ export function StockClient({
     <div className="flex flex-wrap items-center gap-2">
       <Button
         type="button"
-        size="sm"
+        size={embedded || isCompactLayout ? "touch" : "sm"}
         variant="outline"
         aria-pressed={stockFilter === "low"}
         disabled={summary.underThresholdCount === 0}
-        onClick={() =>
-          setStockFilter(stockFilter === "low" ? "all" : "low")
-        }
+        onClick={() => setStockFilter(stockFilter === "low" ? "all" : "low")}
         className={cn(
           "gap-1.5",
           stockFilter === "low" && "ring-2 ring-foreground",
@@ -834,9 +834,7 @@ export function StockClient({
       </span>
       <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
         {stockCopy.metrics.pending}
-        <Badge
-          variant={summary.pendingWorkCount > 0 ? "warning" : "secondary"}
-        >
+        <Badge variant={summary.pendingWorkCount > 0 ? "warning" : "secondary"}>
           {summary.pendingWorkCount}
         </Badge>
       </span>
@@ -845,7 +843,11 @@ export function StockClient({
 
   const searchControl = (
     <InputGroup
-      className={cn("w-full min-w-0", !isCompactLayout && "min-w-56 flex-1")}
+      className={cn(
+        "w-full min-w-0",
+        embedded && "min-h-12",
+        !isCompactLayout && "min-w-56 flex-1",
+      )}
     >
       <InputGroupAddon>
         <IconSearch />
@@ -970,7 +972,7 @@ export function StockClient({
           href={actionHrefs.transfer}
           icon={IconTruck}
           label={stockCopy.actions.transfer}
-          size={isCompactLayout ? "touch" : "sm"}
+          size={embedded || isCompactLayout ? "touch" : "sm"}
         />
       ) : null}
       {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
@@ -978,7 +980,7 @@ export function StockClient({
           href={actionHrefs.stocktake}
           icon={IconClipboardList}
           label={stockCopy.actions.stocktake}
-          size={isCompactLayout ? "touch" : "sm"}
+          size={embedded || isCompactLayout ? "touch" : "sm"}
         />
       ) : null}
       {actionPermissions.canWriteoff && summary.expiryCount > 0 ? (
@@ -986,7 +988,7 @@ export function StockClient({
           href={actionHrefs.expiry}
           icon={IconCalendarClock}
           label={stockCopy.actions.expiry}
-          size={isCompactLayout ? "touch" : "sm"}
+          size={embedded || isCompactLayout ? "touch" : "sm"}
         />
       ) : null}
       {actionPermissions.canWriteoff ? (
@@ -994,7 +996,7 @@ export function StockClient({
           href={actionHrefs.waste}
           icon={IconTrash}
           label={stockCopy.actions.waste}
-          size={isCompactLayout ? "touch" : "sm"}
+          size={embedded || isCompactLayout ? "touch" : "sm"}
         />
       ) : null}
       {actionPermissions.canCreatePurchaseOrder &&
@@ -1003,11 +1005,38 @@ export function StockClient({
           href={actionHrefs.purchaseSuggestion}
           icon={IconShoppingCart}
           label={stockCopy.actions.purchaseSuggestion}
-          size={isCompactLayout ? "touch" : "sm"}
+          size={embedded || isCompactLayout ? "touch" : "sm"}
         />
       ) : null}
     </>
   );
+
+  const operatorTaskSection = embedded ? (
+    <AppSection
+      title={stockCopy.filters.operatorTasksTitle}
+      badge={{
+        children: String(summary.pendingWorkCount),
+        variant: summary.pendingWorkCount > 0 ? "warning" : "secondary",
+      }}
+      size="sm"
+    >
+      <OperatorFlowSteps
+        title={operatorFlow.stockTitle}
+        description={operatorFlow.stockDescription}
+        steps={operatorFlow.stockSteps}
+        currentStep={1}
+      />
+      {primaryReceiveAction ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {primaryReceiveAction}
+          <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
+      )}
+      {workSignalCluster}
+    </AppSection>
+  ) : null;
 
   const hasItemActions =
     actionPermissions.canCreateIssue ||
@@ -1135,6 +1164,7 @@ export function StockClient({
     <>
       {!embedded ? (
         <AppPageHeader
+          eyebrow={messages.inventory.shell.moduleName}
           title={stockCopy.title}
           actions={
             <div className="flex items-center gap-2">
@@ -1146,7 +1176,8 @@ export function StockClient({
           }
         />
       ) : null}
-      {!isCompactLayout ? (
+      {operatorTaskSection}
+      {!embedded && !isCompactLayout ? (
         <AppSection>
           {summaryMetrics}
           {workSignalCluster}
@@ -1154,10 +1185,11 @@ export function StockClient({
       ) : null}
 
       <AppToolbar
+        variant={embedded ? "inline" : "card"}
         search={searchControl}
         filters={!isCompactLayout ? filterControls : undefined}
         actions={
-          isCompactLayout ? (
+          embedded ? undefined : isCompactLayout ? (
             primaryReceiveAction
           ) : (
             <>
@@ -1180,10 +1212,12 @@ export function StockClient({
           collapsible
           defaultOpen={false}
         >
-          {summaryMetrics}
-          {workSignalCluster}
+          {!embedded ? summaryMetrics : null}
+          {!embedded ? workSignalCluster : null}
           <div className="grid gap-2 sm:grid-cols-2">{filterControls}</div>
-          <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
+          {!embedded ? (
+            <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
+          ) : null}
         </AppSection>
       ) : null}
 
@@ -1300,9 +1334,8 @@ export function StockClient({
 
   return (
     <AppPage
-      width={isCompactLayout ? "narrow" : "wide"}
-      className={isCompactLayout ? undefined : "p-3"}
-      contentClassName={isCompactLayout ? undefined : "max-w-none gap-3"}
+      width={isCompactLayout ? "narrow" : "xwide"}
+      density="compact"
       scroll
     >
       {content}

@@ -1,8 +1,8 @@
 {
   "id": "/br",
-  "name": "Cơm Tấm Má Tư - Chi nhánh",
-  "short_name": "Má Tư CN",
-  "description": "Branch Hub Cơm Tấm Má Tư",
+  "name": "Cơm Tấm Má Tư - Hub",
+  "short_name": "Má Tư Hub",
+  "description": "Hub vận hành Cơm Tấm Má Tư",
   "lang": "vi",
   "display": "standalone",
   "orientation": "portrait",

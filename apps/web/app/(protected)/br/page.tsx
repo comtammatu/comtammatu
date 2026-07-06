@@ -7,7 +7,11 @@ import {
   Warehouse as IconWarehouse,
 } from "lucide-react";
 import { canAccess, MODULE_ACL } from "@comtammatu/shared/auth";
-import { resolveSiteKind, type SiteKind } from "@comtammatu/shared/labels";
+import {
+  getSiteKindLabelVi,
+  resolveSiteKind,
+  type SiteKind,
+} from "@comtammatu/shared/labels";
 import { createServiceClient } from "@comtammatu/database";
 import {
   AppEmptyState,
@@ -82,29 +86,33 @@ export default async function BranchPickerPage() {
   );
 
   return (
-    <AppPage mobile density="compact" contentClassName="max-w-lg">
-      <AppPageHeader title={MODULE_ACL.branches.label} />
+    <AppPage density="compact" width="default">
+      <AppPageHeader title={MODULE_ACL.branch_picker.label} />
       {orderedSites.length > 0 || showOfficeCard ? (
-        <LinkCardGrid>
+        <LinkCardGrid className="lg:grid-cols-4">
           {orderedSites.map((site) => (
             <AppLinkCard
               key={site.id}
               href={`/br/${site.id}`}
               title={site.name}
+              description={getSiteKindLabelVi(resolveSiteKind(site))}
               icon={siteIcon(resolveSiteKind(site))}
+              ctaLabel="Chọn"
             />
           ))}
           {showOfficeCard ? (
             <AppLinkCard
               href={MODULE_ACL.finance.path}
               title={MODULE_ACL.finance.label}
+              description="Office"
               icon={<IconWallet />}
               tone="secondary"
+              ctaLabel="Mở tài chính"
             />
           ) : null}
         </LinkCardGrid>
       ) : (
-        <AppEmptyState title={MODULE_ACL.branches.label} />
+        <AppEmptyState title={MODULE_ACL.branch_picker.label} />
       )}
     </AppPage>
   );

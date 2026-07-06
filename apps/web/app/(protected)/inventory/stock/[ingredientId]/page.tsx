@@ -413,30 +413,32 @@ export async function StockIngredientDetailPageContent({
 
   const content = (
     <>
-      <AppPageHeader
-        eyebrow={detailCopy.eyebrow}
-        title={ingredient.name}
-        description={[
-          ingredient.sku ? ingredient.sku : null,
-          ingredient.category,
-          unit,
-        ]
-          .filter(Boolean)
-          .join(" · ")}
-        badge={{
-          children: statusBadge.label,
-          variant: statusBadge.variant,
-        }}
-        breadcrumb={
-          <Link
-            href={listHref}
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />
-            {detailCopy.backToStock}
-          </Link>
-        }
-      />
+      {!embedded ? (
+        <AppPageHeader
+          eyebrow={detailCopy.eyebrow}
+          title={ingredient.name}
+          description={[
+            ingredient.sku ? ingredient.sku : null,
+            ingredient.category,
+            unit,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          badge={{
+            children: statusBadge.label,
+            variant: statusBadge.variant,
+          }}
+          breadcrumb={
+            <Link
+              href={listHref}
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline"
+            >
+              <IconArrowLeft className="size-4" />
+              {detailCopy.backToStock}
+            </Link>
+          }
+        />
+      ) : null}
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <div className="flex flex-col gap-3 lg:col-span-2">
@@ -626,7 +628,7 @@ export async function StockIngredientDetailPageContent({
           <AppSection title={detailCopy.operationTitle}>
             <div className="grid grid-cols-2 gap-2">
               {canReceiveGrn ? (
-                <Button asChild size="sm">
+                <Button asChild size={embedded ? "touch" : "sm"}>
                   <Link href={actionHrefs.receive}>
                     <IconReceipt className="size-3.5" />
                     {stockCopy.actions.receiveGoods}
@@ -634,7 +636,11 @@ export async function StockIngredientDetailPageContent({
                 </Button>
               ) : null}
               {canCreateTransfer ? (
-                <Button asChild size="sm" variant="outline">
+                <Button
+                  asChild
+                  size={embedded ? "touch" : "sm"}
+                  variant="outline"
+                >
                   <Link href={actionHrefs.transfer}>
                     <IconTruck className="size-3.5" />
                     {stockCopy.actions.transfer}
@@ -642,7 +648,11 @@ export async function StockIngredientDetailPageContent({
                 </Button>
               ) : null}
               {canCreateStocktake ? (
-                <Button asChild size="sm" variant="outline">
+                <Button
+                  asChild
+                  size={embedded ? "touch" : "sm"}
+                  variant="outline"
+                >
                   <Link href={actionHrefs.stocktake}>
                     <IconClipboardList className="size-3.5" />
                     {stockCopy.actions.stocktake}
@@ -650,7 +660,11 @@ export async function StockIngredientDetailPageContent({
                 </Button>
               ) : null}
               {canCreateIssue ? (
-                <Button asChild size="sm" variant="outline">
+                <Button
+                  asChild
+                  size={embedded ? "touch" : "sm"}
+                  variant="outline"
+                >
                   <Link href={actionHrefs.issues}>
                     <IconTruck className="size-3.5" />
                     {stockCopy.actions.issueStock}
@@ -658,7 +672,11 @@ export async function StockIngredientDetailPageContent({
                 </Button>
               ) : null}
               {canWriteoff ? (
-                <Button asChild size="sm" variant="outline">
+                <Button
+                  asChild
+                  size={embedded ? "touch" : "sm"}
+                  variant="outline"
+                >
                   <Link href={actionHrefs.waste}>
                     <IconTrash className="size-3.5" />
                     {stockCopy.actions.waste}

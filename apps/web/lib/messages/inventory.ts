@@ -15,6 +15,65 @@ export const inventory = {
     mobileBrand: "Kho Má Tư",
     mobileMode: "Mobile",
   },
+  operatorFlow: {
+    stepBadge: (current: number, total: number) => `Bước ${current}/${total}`,
+    done: "Xong",
+    current: "Đang làm",
+    next: "Tiếp",
+    stockTitle: "Luồng xử lý tồn trong ca",
+    stockDescription: "Chọn việc cần làm trước, rồi mở đúng phiếu để chốt.",
+    stockSteps: [
+      { label: "Xem cảnh báo", hint: "thiếu / HSD / phiếu chờ" },
+      { label: "Chọn việc", hint: "nhận, chuyển, kiểm, hủy" },
+      { label: "Chốt phiếu", hint: "ghi tồn sau khi kiểm" },
+    ],
+    grnListTitle: "Nhận hàng NCC",
+    grnListDescription: "Mở phiếu nhập trước, nhân viên kiểm từng dòng sau.",
+    grnSteps: [
+      { label: "Mở phiếu", hint: "tạo mới hoặc nháp" },
+      { label: "Kiểm dòng", hint: "chạm để sửa SL/giá" },
+      { label: "Chốt nhập", hint: "ghi tồn kho" },
+    ],
+    transferListTitle: "Điều chuyển nội bộ",
+    transferListDescription: "Tách rõ phiếu cần nhận, cần giao và lịch sử.",
+    transferSteps: [
+      { label: "Chọn phiếu", hint: "cần nhận / cần giao" },
+      { label: "Kiểm hàng", hint: "chạm từng dòng" },
+      { label: "Xác nhận", hint: "ghi nhận tồn" },
+    ],
+    transferCreateTitle: "Tạo phiếu điều chuyển",
+    transferCreateDescription: "Chọn nơi nhận, thêm hàng, rồi gửi phiếu.",
+    transferCreateSteps: [
+      { label: "Chọn kho", hint: "nơi gửi / nơi nhận" },
+      { label: "Thêm hàng", hint: "chạm nhập số lượng" },
+      { label: "Gửi phiếu", hint: "tạo và chuyển xử lý" },
+    ],
+    stocktakeListTitle: "Kiểm kê",
+    stocktakeListDescription: "Mở phiên, đếm trên mobile, rồi chốt kết quả.",
+    stocktakeSteps: [
+      { label: "Mở phiên", hint: "chọn phạm vi" },
+      { label: "Đếm từng dòng", hint: "number pad" },
+      { label: "Gửi kết quả", hint: "lưu round" },
+      { label: "Chốt lệch", hint: "khóa tồn" },
+    ],
+    productionTitle: "Bếp TT sản xuất",
+    productionDescription: "Tạo lệnh, kiểm thiếu, xác nhận để nhập thành phẩm.",
+    productionSteps: [
+      { label: "Chọn món", hint: "thành phẩm cần làm" },
+      { label: "Kiểm thiếu", hint: "nguyên liệu đủ/thiếu" },
+      { label: "Chốt lệnh", hint: "ghi tiêu hao" },
+      { label: "Hoàn tất", hint: "nhập thành phẩm" },
+    ],
+    productionRecipeTitle: "Cấu hình công thức",
+    productionRecipeDescription:
+      "Chuẩn bị thành phẩm, nguyên liệu, rồi lưu công thức trước khi tạo lệnh.",
+    productionRecipeSteps: [
+      { label: "Có thành phẩm", hint: "món Bếp TT sẽ làm" },
+      { label: "Có nguyên liệu", hint: "đầu vào để trừ kho" },
+      { label: "Lưu công thức", hint: "định lượng từng dòng" },
+      { label: "Quay lại lệnh", hint: "sẵn sàng sản xuất" },
+    ],
+  },
   dashboard: {
     mainFlowsTitle: "4 điểm vào vận hành chính",
     mainFlowsOversightTitle: "3 điểm giám sát chính",
@@ -37,7 +96,8 @@ export const inventory = {
     transferTrackingTitle: "Theo dõi điều chuyển",
     activeTransfers: (count: number) => `${count} phiếu đang xử lý`,
     noActiveTransfers: "Không có điều chuyển đang xử lý",
-    headerTagline: "4 điểm vào: tồn · nhập · danh mục · sản xuất.",
+    headerTagline:
+      "4 điểm vào: kiểm soát tồn · nhập/nhận · điều phối · danh mục.",
     allClearTitle: "Mọi thứ đang ổn",
     allClearHint:
       "Không có việc gấp, cảnh báo, điều chuyển hay kiểm kê đang chờ.",
@@ -110,16 +170,13 @@ export const inventory = {
     watchProgressBeforeLock: "Theo dõi tiến độ trước khi khóa chênh lệch.",
     expiryLotsTask: (count: number) => `${count} lô cần xử lý hạn dùng`,
     watchNearExpiryLots: "Ưu tiên theo dõi các lô cận hạn.",
-    reorderThresholdTask: (count: number) =>
-      `${count} nguyên liệu chạm ngưỡng`,
-    watchReplenishPoints:
-      "Theo dõi điểm cần bổ sung hoặc điều chỉnh kế hoạch.",
+    reorderThresholdTask: (count: number) => `${count} nguyên liệu chạm ngưỡng`,
+    watchReplenishPoints: "Theo dõi điểm cần bổ sung hoặc điều chỉnh kế hoạch.",
     countSlipsReviewHint: "Đối chiếu số đếm với tồn hệ thống.",
     inboundConfirmTask: (count: number) => `${count} phiếu đến cần xác nhận`,
     inboundReceiveHint: "Nhận hàng nội bộ.",
     dailyConsumptionTask: "Tiêu hao trong ngày",
-    dailyConsumptionHint:
-      "Duyệt nguyên liệu đã dùng để ghi giá vốn thực tế.",
+    dailyConsumptionHint: "Duyệt nguyên liệu đã dùng để ghi giá vốn thực tế.",
     stocktakeOpenTask: (count: number) => `${count} phiên kiểm kê đang mở`,
     stocktakeFinishHint: "Hoàn tất để khóa chênh lệch.",
     issueNearExpiryLots: "Ưu tiên xuất các lô cận hạn.",
@@ -134,8 +191,7 @@ export const inventory = {
     openActionCta: "Mở xử lý",
     openExpiryCta: "Mở hạn dùng",
     oversightStocktakeProgressTitle: "Tiến độ đối soát tồn",
-    oversightNoActiveStocktakes:
-      "Không có phiên đối soát tồn đang thực hiện",
+    oversightNoActiveStocktakes: "Không có phiên đối soát tồn đang thực hiện",
     openSlipCta: "Mở phiếu",
     openSessionCta: "Mở phiên",
     progressMetricLabel: "tiến độ",
@@ -529,6 +585,7 @@ export const inventory = {
       sortPlaceholder: "Sắp xếp",
       searchPlaceholder: "Tìm nhanh: tên hoặc SKU",
       controlsTitle: "Tóm tắt & bộ lọc",
+      operatorTasksTitle: "Việc kho hôm nay",
     },
     actions: {
       receiveGrn: "Nhận phiếu nhập",
@@ -1000,10 +1057,10 @@ export const inventory = {
       receive: "Xác nhận nhận hàng",
     },
     receiveNative: {
-      receiveProgress: (done: number, total: number) =>
-        `${done}/${total} dòng`,
+      receiveProgress: (done: number, total: number) => `${done}/${total} dòng`,
       receiveSent: (qty: string, unit: string) => `Gửi ${qty} ${unit}`,
       receiveNextLine: "Dòng kế →",
+      receiveTapToEnter: "Nhập",
       receiveConfirmRemaining: (n: number) =>
         `Xác nhận nhận hàng (còn ${n} dòng)`,
       receiveConfirmAll: "Xác nhận nhận hàng",

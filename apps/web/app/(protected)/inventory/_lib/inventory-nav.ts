@@ -17,7 +17,7 @@ import {
   Users as IconUsers,
   Utensils as IconToolsKitchen,
 } from "lucide-react";
-import { type StaffRole } from "@comtammatu/shared/auth";
+import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ShellNavGroup } from "@/lib/shell-primitives";
 import { tNav } from "./dictionary";
 
@@ -47,7 +47,7 @@ export function resolveInventoryNav({
     !isBranchManager && (showSettings || showProcurement || showCatalogManagement);
   const groups: ShellNavGroup[] = [
     {
-      title: "Điểm vào",
+      title: "0 · Hôm nay",
       items: [
         {
           href: "/inventory",
@@ -169,18 +169,21 @@ export function resolveInventoryNav({
   }
 
   if (showBackOffice) {
+    const settingsItems: ShellNavGroup["items"] = showSettings
+      ? [
+          {
+            href: "/inventory/settings",
+            label: tNav("settings", "navigation"),
+            icon: IconSettings,
+            matchPrefixes: ["/inventory/settings/"],
+          },
+        ]
+      : [];
+
     groups.push({
-      title: "Danh mục",
+      title: "4 · Danh mục & thiết lập",
       items: [
-        ...(showSettings
-          ? [
-              {
-                href: "/inventory/settings",
-                label: tNav("settings", "navigation"),
-                icon: IconSettings,
-              },
-            ]
-          : []),
+        ...settingsItems,
         ...(showProcurement
           ? [
               {

@@ -21,8 +21,8 @@ const APP_LABELS: Record<
     orientation: "landscape",
   },
   hub: {
-    label: "Chi nhánh",
-    description: "Vận hành chi nhánh - Cơm Tấm Má Tư",
+    label: "Hub",
+    description: "Vận hành Hub - Cơm Tấm Má Tư",
     orientation: "portrait",
   },
 };
@@ -58,7 +58,7 @@ function buildOperationalManifest(app: OperationalApp, branchId: string) {
   return {
     id: appUrl,
     name: isHub
-      ? `Cơm Tấm Má Tư - Chi nhánh CN${branchId}`
+      ? `Cơm Tấm Má Tư - Hub CN${branchId}`
       : `Cơm Tấm Má Tư - ${appConfig.label} CN${branchId}`,
     short_name: `Má Tư ${appConfig.label}`,
     description: appConfig.description,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useState, type ComponentProps, type CSSProperties } from "react";
 import {
   Check as IconCheck,
   ChevronDown as IconChevronDown,
@@ -37,6 +37,7 @@ interface SearchableSelectProps {
   className?: string;
   style?: CSSProperties;
   variant?: "default" | "ghost" | "pill";
+  size?: ComponentProps<typeof Button>["size"];
 }
 
 export function SearchableSelect({
@@ -49,6 +50,7 @@ export function SearchableSelect({
   className,
   style,
   variant = "default",
+  size = "default",
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
@@ -61,10 +63,16 @@ export function SearchableSelect({
           role="combobox"
           aria-expanded={open}
           variant={variant === "ghost" ? "ghost" : "outline"}
-          className={cn("justify-between", className)}
+          size={size}
+          className={cn("min-w-0 justify-between", className)}
           style={style}
         >
-          <span className={cn(!selected && "opacity-60")}>
+          <span
+            className={cn(
+              "min-w-0 flex-1 truncate text-left",
+              !selected && "opacity-60",
+            )}
+          >
             {selected?.label ?? placeholder}
           </span>
           <IconChevronDown

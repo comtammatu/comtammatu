@@ -64,6 +64,7 @@ export interface FormDialogProps<TValues extends FieldValues> {
   onSuccess?: (result: ActionResult, values: TValues) => void;
   submitLabel: string;
   submitVariant?: ComponentProps<typeof Button>["variant"];
+  actionSize?: ComponentProps<typeof Button>["size"];
   cancelLabel?: string;
   contentClassName?: string;
   children: (form: FormContext<TValues>) => ReactNode;
@@ -116,6 +117,7 @@ export function FormDialog<TValues extends FieldValues>({
   onSuccess,
   submitLabel,
   submitVariant = "default",
+  actionSize = "default",
   cancelLabel = "Hủy",
   contentClassName,
   children,
@@ -186,12 +188,18 @@ export function FormDialog<TValues extends FieldValues>({
             <Button
               type="button"
               variant="outline"
+              size={actionSize}
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
               {cancelLabel}
             </Button>
-            <Button type="submit" variant={submitVariant} disabled={isPending}>
+            <Button
+              type="submit"
+              variant={submitVariant}
+              size={actionSize}
+              disabled={isPending}
+            >
               {isPending && <Spinner />}
               {submitLabel}
             </Button>

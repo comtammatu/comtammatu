@@ -146,14 +146,27 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
     "operator-bottom-nav",
   );
   assert.equal(
-    resolveRouteFamilyContract("/br/3/settings/menu-limits")?.surface,
-    "branch_management",
+    resolveRouteFamilyContract("/br/3/menu-limits")?.surface,
+    "branch_operation",
   );
   assert.equal(
-    resolveRouteFamilyContract("/br/3/settings/menu-limits")?.primaryNav,
+    resolveRouteFamilyContract("/br/3/menu-limits")?.primaryNav,
     "operator-bottom-nav",
   );
-  assert.equal(resolveRouteFamilyContract("/br/3/menu-limits"), null);
+  assert.equal(resolveRouteFamilyContract("/br/3/settings/menu-limits"), null);
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/pos-sessions")?.id,
+    "branch-pos-sessions",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/pos-sessions")?.surface,
+    "branch_operation",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/pos-sessions")?.primaryNav,
+    "operator-bottom-nav",
+  );
+  assert.equal(resolveRouteFamilyContract("/br/3/settings/pos-sessions"), null);
   assert.equal(resolveRouteFamilyContract("/admin/finance/revenue"), null);
   assert.equal(
     resolveRouteFamilyContract("/inventory/grn/123")?.id,
@@ -481,18 +494,56 @@ test("isPublicAppPath PWA manifests and Runner display bypass auth proxy", () =>
   assert.equal(isPublicAppPath("/br/abc/kds/manifest.webmanifest"), false);
 });
 
-test("resolveModuleFromPath → branch menu limits and finance workspace map to modules", () => {
+test("resolveModuleFromPath → branch operation controls and finance workspace map to modules", () => {
   assert.equal(resolveModuleFromPath("/finance/revenue"), "finance");
   assert.equal(resolveModuleFromPath("/hr"), "hr");
   assert.equal(resolveModuleFromPath("/hr/payroll"), "hr_payroll");
   assert.equal(resolveModuleFromPath("/br/3/dashboard"), "branch_dashboard");
   assert.equal(
-    resolveModuleFromPath("/br/3/settings/menu-limits"),
+    resolveModuleFromPath("/br/3/menu-limits"),
     "branch_menu_limits",
   );
+  assert.equal(resolveModuleFromPath("/br/3/settings/menu-limits"), null);
+  assert.equal(
+    resolveModuleFromPath("/br/3/pos-sessions"),
+    "branch_pos_sessions",
+  );
+  assert.equal(resolveModuleFromPath("/br/3/settings/pos-sessions"), null);
   assert.equal(resolveModuleFromPath("/br/3/runner"), "runner");
   assert.equal(resolveModuleFromPath("/employee/checkout-approvals"), null);
   assert.equal(resolveModuleFromPath("/employee/clock"), null);
+});
+
+test("resolvePostLoginRedirect → branch POS sessions follows branch scope", () => {
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("branch_manager", 3),
+      "/br/3/pos-sessions",
+    ),
+    "/br/3/pos-sessions",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("branch_manager", 3),
+      "/br/7/pos-sessions",
+    ),
+    "/br/3",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/pos-sessions"),
+    "/br/3",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("owner"), "/br/7/pos-sessions"),
+    "/br/7/pos-sessions",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("branch_manager", 3),
+      "/br/3/settings/pos-sessions",
+    ),
+    "/br/3",
+  );
 });
 
 test("resolvePostLoginRedirect → branch settings follows branch scope", () => {
@@ -516,34 +567,31 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
       makeClaims("branch_manager", 3),
       "/br/3/menu-limits",
     ),
-    "/br/3",
+    "/br/3/menu-limits",
   );
   assert.equal(
     resolvePostLoginRedirect(
       makeClaims("branch_manager", 3),
-      "/br/3/settings/menu-limits",
-    ),
-    "/br/3/settings/menu-limits",
-  );
-  assert.equal(
-    resolvePostLoginRedirect(
-      makeClaims("branch_manager", 3),
-      "/br/7/settings/menu-limits",
+      "/br/7/menu-limits",
     ),
     "/br/3",
   );
-  // Cashier no longer reaches the menu-limits management surface (D048):
+  // Cashier no longer reaches the menu-limits day-control surface (D048):
   // access is tightened to owner + branch_manager, so it falls back home.
   assert.equal(
-    resolvePostLoginRedirect(
-      makeClaims("cashier", 3),
-      "/br/3/settings/menu-limits",
-    ),
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/menu-limits"),
     "/br/3",
   );
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("owner"), "/br/7/settings/menu-limits"),
-    "/br/7/settings/menu-limits",
+    resolvePostLoginRedirect(makeClaims("owner"), "/br/7/menu-limits"),
+    "/br/7/menu-limits",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("branch_manager", 3),
+      "/br/3/settings/menu-limits",
+    ),
+    "/br/3",
   );
 });
 
@@ -568,6 +616,7 @@ test("canAccess → branch command and branch settings include branch manager", 
   for (const role of ["owner", "branch_manager"] as const) {
     assert.equal(canAccess(role, "branch_dashboard"), true);
     assert.equal(canAccess(role, "branch_settings"), true);
+    assert.equal(canAccess(role, "branch_pos_sessions"), true);
   }
   for (const role of [
     "warehouse_manager",
@@ -578,6 +627,7 @@ test("canAccess → branch command and branch settings include branch manager", 
   ] as const) {
     assert.equal(canAccess(role, "branch_dashboard"), false);
     assert.equal(canAccess(role, "branch_settings"), false);
+    assert.equal(canAccess(role, "branch_pos_sessions"), false);
   }
 });
 
@@ -597,8 +647,10 @@ test("canAccess → tenant settings excludes branch floor roles", () => {
   }
 });
 
-test("canAccess → employee portal excludes admin-level roles", () => {
-  for (const role of ADMIN_ROLES) {
+test("canAccess → employee portal includes owner but excludes other admin-level roles", () => {
+  assert.equal(canAccess("owner", "employee"), true);
+
+  for (const role of ADMIN_ROLES.filter((role) => role !== "owner")) {
     assert.equal(canAccess(role, "employee"), false);
   }
 
@@ -694,11 +746,11 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   );
   assert.deepEqual(
     branchManagementGroup?.items.map((app) => app.moduleKey),
-    ["branch_dashboard", "branch_settings", "branch_menu_limits"],
+    ["branch_dashboard", "branch_settings"],
   );
   assert.deepEqual(
     branchOperationGroup?.items.map((app) => app.moduleKey),
-    ["pos", "kds", "runner"],
+    ["pos", "kds", "branch_menu_limits", "branch_pos_sessions", "runner"],
   );
   assert.equal(
     branchManagerApps.some((app) => app.moduleKey === "settings"),
@@ -725,13 +777,25 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
     branchManagerApps.some(
       (app) =>
         app.moduleKey === "branch_menu_limits" &&
-        app.href === "/br/3/settings/menu-limits",
+        app.href === "/br/3/menu-limits",
     ),
   );
   assert.equal(
     branchManagerApps.find((app) => app.moduleKey === "branch_menu_limits")
       ?.surface,
-    "branch_management",
+    "branch_operation",
+  );
+  assert.ok(
+    branchManagerApps.some(
+      (app) =>
+        app.moduleKey === "branch_pos_sessions" &&
+        app.href === "/br/3/pos-sessions",
+    ),
+  );
+  assert.equal(
+    branchManagerApps.find((app) => app.moduleKey === "branch_pos_sessions")
+      ?.surface,
+    "branch_operation",
   );
   assert.ok(
     branchManagerApps.some(

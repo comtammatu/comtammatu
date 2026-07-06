@@ -23,7 +23,7 @@ function buildCopy(surface: OperationalPwaSurface) {
 
   return {
     regionLabel: `${appLabel} - cài đặt và trạng thái kết nối`,
-    hubLinkLabel: "Về màn hình chính chi nhánh",
+    hubLinkLabel: "Về Má Tư Hub",
     offline: `Mất kết nối - không thể cập nhật ${jobLabel}.`,
     iosInstallHint: `iOS: dùng Chia sẻ để thêm ${appLabel} vào Màn hình chính.`,
     iosInstallHintShort: "iOS: thêm vào Màn hình",

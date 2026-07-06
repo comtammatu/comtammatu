@@ -43,6 +43,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import {
+  AppDetailFooter,
   AppEmptyState,
   AppPage,
   AppPageHeader,
@@ -103,6 +104,7 @@ type AddIssueLineDialogProps = {
   issueId: number;
   onOpenChange: (open: boolean) => void;
   onSaved: () => Promise<void>;
+  embedded?: boolean;
 };
 
 const addIssueLineSchema = z.object({
@@ -356,8 +358,241 @@ export function IssueDetailClient({
     },
   ];
 
+  const tabs = (
+    <AppPageTabs
+      items={[
+        { value: "overview", label: ISSUES_VI.overviewTab },
+        {
+          value: "lines",
+          label: ISSUES_VI.linesTab,
+          count: lines.length,
+        },
+        {
+          value: "history",
+          label: ISSUES_VI.historyTab,
+          count: auditLogs.length,
+        },
+      ]}
+    >
+      <TabsContent value="overview">
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            {[
+              {
+                label: ISSUES_VI.businessKindLabel,
+                value: surface.label,
+              },
+              {
+                label: BRANCH_VI.long,
+                value:
+                  issue.branches?.name ?? ISSUES_VI.branchRef(issue.branch_id),
+              },
+              {
+                label: ISSUES_VI.totalLines,
+                value: String(lines.length).padStart(2, "0"),
+              },
+              {
+                label: ISSUES_VI.sourceLabel,
+                value: getIssueSourceLabel(issue),
+              },
+              {
+                label: ISSUES_VI.totalValue,
+                value: formatVND(totalAmount),
+              },
+            ].map((item) => (
+              <KpiCard key={item.label} label={item.label} value={item.value} />
+            ))}
+          </div>
+
+          {issue.notes ? (
+            <AppSection title={surface.noteLabel} size="sm">
+              <p className="line-clamp-3 break-words text-sm text-muted-foreground">
+                {issue.notes}
+              </p>
+            </AppSection>
+          ) : null}
+        </div>
+      </TabsContent>
+
+      <TabsContent value="lines">
+        <div className="flex flex-col gap-4">
+          <AppSection
+            title={tTerm("ingredientsList")}
+            description={
+              isDraft
+                ? ISSUES_VI.draftAutoSaveHint
+                : ISSUES_VI.finalizedReadOnlyHint
+            }
+            action={
+              isDraft ? (
+                <Button
+                  onClick={() => setAddDialogOpen(true)}
+                  size={embedded ? "touch" : "default"}
+                  className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
+                >
+                  <IconCirclePlus className="size-4" />
+                  {ISSUES_VI.addLinePrefixed(
+                    tTerm("ingredient", "button").toLowerCase(),
+                  )}
+                </Button>
+              ) : canAdjustStock && lines.length > 0 ? (
+                <DocumentStockCorrectionDialog
+                  documentType="issue"
+                  documentId={issue.id}
+                  documentCode={issue.issue_number}
+                  branchOptions={[
+                    {
+                      id: issue.branch_id,
+                      name:
+                        issue.branches?.name ??
+                        ISSUES_VI.branchRef(issue.branch_id),
+                    },
+                  ]}
+                  itemOptions={lines.map((line) => ({
+                    ingredientId: line.ingredient_id,
+                    name: line.ingredients?.name ?? `#${line.ingredient_id}`,
+                    unit: line.unit ?? line.ingredients?.unit ?? "",
+                  }))}
+                />
+              ) : null
+            }
+          >
+            {lines.length === 0 ? (
+              <AppEmptyState
+                mode="no-data"
+                title={
+                  isDraft
+                    ? ISSUES_VI.emptyLinesDraftTitle
+                    : ISSUES_VI.emptyLinesTitle(surface.label)
+                }
+                description={
+                  isDraft
+                    ? ISSUES_VI.emptyLinesDraftDescription(
+                        surface.confirmAction.toLowerCase(),
+                      )
+                    : ISSUES_VI.emptyLinesFinalizedDescription
+                }
+                compact
+              />
+            ) : (
+              <DataTable
+                columns={lineColumns}
+                data={lines}
+                getRowKey={(line) => line.id}
+                mobileCardRender={(item) => (
+                  <IssueLineMobileCard
+                    item={item}
+                    embedded={embedded}
+                    isDraft={isDraft}
+                    isPending={isPending}
+                    onDelete={handleDeleteLine}
+                  />
+                )}
+              />
+            )}
+
+            <div className="flex justify-end rounded-md border border-border/60 bg-muted/30 p-4">
+              <div className="flex w-full max-w-sm flex-col gap-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {ISSUES_VI.totalLinesColon}
+                  </span>
+                  <span className="font-bold">
+                    {String(lines.length).padStart(2, "0")}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {ISSUES_VI.goodsSubtotalColon}
+                  </span>
+                  <span className="font-bold">{formatVND(totalAmount)}</span>
+                </div>
+                <div className="flex items-end justify-between border-t border-border pt-3">
+                  <span className="text-sm font-bold">
+                    {ISSUES_VI.grandTotalCaps}
+                  </span>
+                  <div className="text-right">
+                    <span className="block font-mono text-xl font-semibold leading-none tabular-nums text-primary">
+                      {messages.inventory.common.currency(
+                        formatVND(totalAmount),
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </AppSection>
+
+          {isDraft ? (
+            <AppDetailFooter
+              sticky={embedded}
+              leading={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size={embedded ? "touch" : "default"}
+                  onClick={handleCancelIssue}
+                  className="text-destructive hover:bg-destructive/8 hover:text-destructive disabled:opacity-60"
+                  disabled={isPending}
+                >
+                  <IconX className="size-5" />
+                  {ISSUES_VI.cancelIssueAction}
+                </Button>
+              }
+              trailing={
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size={embedded ? "touch" : "default"}
+                    disabled
+                  >
+                    {ISSUES_VI.draftAutoSaved}
+                  </Button>
+                  <Button
+                    type="button"
+                    size={embedded ? "touch-lg" : "default"}
+                    onClick={handleConfirmIssue}
+                    disabled={isPending || lines.length === 0}
+                    className="transition-transform hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <IconCircleCheck className="size-5" />
+                    {surface.confirmAction}
+                  </Button>
+                </>
+              }
+            />
+          ) : null}
+        </div>
+      </TabsContent>
+
+      <TabsContent value="history">
+        <AuditHistoryList logs={auditLogs} />
+      </TabsContent>
+    </AppPageTabs>
+  );
+
   const content = (
     <>
+      {tabs}
+
+      <AddIssueLineDialog
+        ingredients={ingredients}
+        isOpen={addDialogOpen}
+        issueId={issueId}
+        onOpenChange={setAddDialogOpen}
+        onSaved={reload}
+        embedded={embedded}
+      />
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={surface.eyebrow}
         title={issue.issue_number}
@@ -379,232 +614,16 @@ export function IssueDetailClient({
             {tRoute("/inventory/consumption")}
           </Link>
         }
-        tabs={
-          <AppPageTabs
-            items={[
-              { value: "overview", label: ISSUES_VI.overviewTab },
-              {
-                value: "lines",
-                label: ISSUES_VI.linesTab,
-                count: lines.length,
-              },
-              {
-                value: "history",
-                label: ISSUES_VI.historyTab,
-                count: auditLogs.length,
-              },
-            ]}
-          >
-            <TabsContent value="overview">
-              <div className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                  {[
-                    {
-                      label: ISSUES_VI.businessKindLabel,
-                      value: surface.label,
-                    },
-                    {
-                      label: BRANCH_VI.long,
-                      value:
-                        issue.branches?.name ??
-                        ISSUES_VI.branchRef(issue.branch_id),
-                    },
-                    {
-                      label: ISSUES_VI.totalLines,
-                      value: String(lines.length).padStart(2, "0"),
-                    },
-                    {
-                      label: ISSUES_VI.sourceLabel,
-                      value: getIssueSourceLabel(issue),
-                    },
-                    {
-                      label: ISSUES_VI.totalValue,
-                      value: formatVND(totalAmount),
-                    },
-                  ].map((item) => (
-                    <KpiCard
-                      key={item.label}
-                      label={item.label}
-                      value={item.value}
-                    />
-                  ))}
-                </div>
-
-                {issue.notes ? (
-                  <AppSection title={surface.noteLabel} size="sm">
-                    <p className="line-clamp-3 break-words text-sm text-muted-foreground">
-                      {issue.notes}
-                    </p>
-                  </AppSection>
-                ) : null}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="lines">
-              <div className="flex flex-col gap-4">
-                <AppSection
-                  title={tTerm("ingredientsList")}
-                  description={
-                    isDraft
-                      ? ISSUES_VI.draftAutoSaveHint
-                      : ISSUES_VI.finalizedReadOnlyHint
-                  }
-                  action={
-                    isDraft ? (
-                      <Button
-                        onClick={() => setAddDialogOpen(true)}
-                        className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
-                      >
-                        <IconCirclePlus className="size-4" />
-                        {ISSUES_VI.addLinePrefixed(
-                          tTerm("ingredient", "button").toLowerCase(),
-                        )}
-                      </Button>
-                    ) : canAdjustStock && lines.length > 0 ? (
-                      <DocumentStockCorrectionDialog
-                        documentType="issue"
-                        documentId={issue.id}
-                        documentCode={issue.issue_number}
-                        branchOptions={[
-                          {
-                            id: issue.branch_id,
-                            name:
-                              issue.branches?.name ??
-                              ISSUES_VI.branchRef(issue.branch_id),
-                          },
-                        ]}
-                        itemOptions={lines.map((line) => ({
-                          ingredientId: line.ingredient_id,
-                          name:
-                            line.ingredients?.name ?? `#${line.ingredient_id}`,
-                          unit: line.unit ?? line.ingredients?.unit ?? "",
-                        }))}
-                      />
-                    ) : null
-                  }
-                >
-                  {lines.length === 0 ? (
-                    <AppEmptyState
-                      mode="no-data"
-                      title={
-                        isDraft
-                          ? ISSUES_VI.emptyLinesDraftTitle
-                          : ISSUES_VI.emptyLinesTitle(surface.label)
-                      }
-                      description={
-                        isDraft
-                          ? ISSUES_VI.emptyLinesDraftDescription(
-                              surface.confirmAction.toLowerCase(),
-                            )
-                          : ISSUES_VI.emptyLinesFinalizedDescription
-                      }
-                      compact
-                    />
-                  ) : (
-                    <DataTable
-                      columns={lineColumns}
-                      data={lines}
-                      getRowKey={(line) => line.id}
-                      mobileCardRender={(item) => (
-                        <IssueLineMobileCard
-                          item={item}
-                          isDraft={isDraft}
-                          isPending={isPending}
-                          onDelete={handleDeleteLine}
-                        />
-                      )}
-                    />
-                  )}
-
-                  <div className="flex justify-end rounded-md border border-border/60 bg-muted/30 p-4">
-                    <div className="flex w-full max-w-sm flex-col gap-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {ISSUES_VI.totalLinesColon}
-                        </span>
-                        <span className="font-bold">
-                          {String(lines.length).padStart(2, "0")}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {ISSUES_VI.goodsSubtotalColon}
-                        </span>
-                        <span className="font-bold">
-                          {formatVND(totalAmount)}
-                        </span>
-                      </div>
-                      <div className="flex items-end justify-between border-t border-border pt-3">
-                        <span className="text-sm font-bold">
-                          {ISSUES_VI.grandTotalCaps}
-                        </span>
-                        <div className="text-right">
-                          <span className="block font-mono text-xl font-semibold leading-none tabular-nums text-primary">
-                            {messages.inventory.common.currency(
-                              formatVND(totalAmount),
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </AppSection>
-
-                {isDraft ? (
-                  <footer className="flex flex-col gap-4 border-t border-border py-4 md:flex-row md:items-center md:justify-between">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={handleCancelIssue}
-                      className="text-destructive hover:bg-destructive/8 hover:text-destructive disabled:opacity-60"
-                      disabled={isPending}
-                    >
-                      <IconX className="size-5" />
-                      {ISSUES_VI.cancelIssueAction}
-                    </Button>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-                      <Button type="button" variant="secondary" disabled>
-                        {ISSUES_VI.draftAutoSaved}
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleConfirmIssue}
-                        disabled={isPending || lines.length === 0}
-                        className="transition-transform hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <IconCircleCheck className="size-5" />
-                        {surface.confirmAction}
-                      </Button>
-                    </div>
-                  </footer>
-                ) : null}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="history">
-              <AuditHistoryList logs={auditLogs} />
-            </TabsContent>
-          </AppPageTabs>
-        }
+        tabs={tabs}
       />
-
       <AddIssueLineDialog
         ingredients={ingredients}
         isOpen={addDialogOpen}
         issueId={issueId}
         onOpenChange={setAddDialogOpen}
         onSaved={reload}
+        embedded={embedded}
       />
-    </>
-  );
-
-  if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
-  }
-
-  return (
-    <AppPage width="wide" density="compact">
-      {content}
     </AppPage>
   );
 }
@@ -615,6 +634,7 @@ function AddIssueLineDialog({
   issueId,
   onOpenChange,
   onSaved,
+  embedded = false,
 }: AddIssueLineDialogProps) {
   const defaultValues = useMemo<AddIssueLineFormValues>(
     () => ({
@@ -658,6 +678,7 @@ function AddIssueLineDialog({
       successMessage={ISSUES_VI.saveLineOk}
       submitLabel={ISSUES_VI.saveLineAction}
       cancelLabel={ACTIONS_VI.cancel}
+      actionSize={embedded ? "touch" : "default"}
     >
       {(form) => {
         const ingredientError = form.formState.errors.ingredientId;
@@ -695,6 +716,7 @@ function AddIssueLineDialog({
                   }))}
                 placeholder={ISSUES_VI.ingredientPlaceholder}
                 searchPlaceholder={ISSUES_VI.ingredientSearchPlaceholder}
+                size={embedded ? "touch" : "default"}
               />
               {ingredientError ? (
                 <FieldError errors={[ingredientError]} />
@@ -708,6 +730,7 @@ function AddIssueLineDialog({
                 label={ISSUES_VI.quantityLabel}
                 maxFractionDigits={3}
                 placeholder="0"
+                className={embedded ? "h-12" : undefined}
                 required
               />
 
@@ -728,6 +751,8 @@ function AddIssueLineDialog({
                   >
                     <SelectTrigger
                       id="issue-line-unit"
+                      size={embedded ? "touch" : "default"}
+                      className="w-full"
                       aria-label={ISSUES_VI.unitLabel}
                     >
                       <SelectValue placeholder={ISSUES_VI.selectUnit} />
@@ -747,7 +772,11 @@ function AddIssueLineDialog({
                     {ISSUES_VI.unitLabel}
                   </FieldLabel>
                   <Select disabled value="">
-                    <SelectTrigger id="issue-line-unit-missing">
+                    <SelectTrigger
+                      id="issue-line-unit-missing"
+                      size={embedded ? "touch" : "default"}
+                      className="w-full"
+                    >
                       <SelectValue placeholder={ISSUES_VI.selectUnit} />
                     </SelectTrigger>
                     <SelectContent />
@@ -777,11 +806,13 @@ function AddIssueLineDialog({
 
 function IssueLineMobileCard({
   item,
+  embedded,
   isDraft,
   isPending,
   onDelete,
 }: {
   item: IssueLine;
+  embedded?: boolean;
   isDraft: boolean;
   isPending: boolean;
   onDelete: (lineId: number) => void;
@@ -800,7 +831,7 @@ function IssueLineMobileCard({
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              size={embedded ? "icon-touch" : "icon"}
               onClick={() => onDelete(item.id)}
               disabled={isPending}
               className="text-muted-foreground hover:text-destructive"

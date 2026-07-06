@@ -8,6 +8,7 @@ import {
   Monitor as IconMonitor,
   MonitorUp as IconMonitorUp,
   Package as IconPackage,
+  ReceiptText as IconReceiptText,
   Settings as IconSettings,
   User as IconUser,
   Users as IconUsers,
@@ -56,6 +57,7 @@ const WORKSPACE_ICON_MAP: Record<string, LucideIcon> = {
   Briefcase: IconBriefcase,
   Monitor: IconMonitor,
   MonitorUp: IconMonitorUp,
+  ReceiptText: IconReceiptText,
   ChefHat: IconChefHat,
 };
 

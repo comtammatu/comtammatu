@@ -1,7 +1,4 @@
-import type {
-  PosSessionOrder,
-  PosSessionRow,
-} from "../pos-sessions-client";
+import type { PosSessionOrder, PosSessionRow } from "../pos-sessions-client";
 
 // Supabase returns numeric/decimal columns as strings; coerce to number at the
 // trust boundary so downstream components receive the typed shapes they expect.
@@ -19,9 +16,7 @@ export function normalizeSessionRows(
     expected_cash:
       session.expected_cash == null ? null : Number(session.expected_cash),
     cash_difference:
-      session.cash_difference == null
-        ? null
-        : Number(session.cash_difference),
+      session.cash_difference == null ? null : Number(session.cash_difference),
   }));
 }
 

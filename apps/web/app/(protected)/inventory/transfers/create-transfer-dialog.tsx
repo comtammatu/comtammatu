@@ -19,9 +19,14 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { NumberPadSheet } from "@/components/form";
-import { AppEmptyState, AppSection } from "@/components/surface";
+import {
+  AppDetailFooter,
+  AppEmptyState,
+  AppSection,
+} from "@/components/surface";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { getDefaultIssueUnit, getIssueUnitOptions } from "../_lib/issue-units";
@@ -273,12 +278,45 @@ export function CreateTransferForm({
     (!canCreateOutbound && !canCreateInboundRequest) ||
     (isBranchManager ? !inboundFromBranchId : !outboundToBranchId) ||
     draftLines.length === 0;
+  const operatorFlow = messages.inventory.operatorFlow;
+  const selectedBranch = isBranchManager
+    ? Boolean(inboundFromBranchId)
+    : Boolean(outboundToBranchId);
+  const flowSteps = operatorFlow.transferCreateSteps;
+  const flowStep = draftLines.length > 0 ? 3 : selectedBranch ? 2 : 1;
+  const flowStepMeta = flowSteps[flowStep - 1] ?? {
+    label: operatorFlow.transferCreateTitle,
+    hint: operatorFlow.transferCreateDescription,
+  };
+  const flowProgressValue = Math.round((flowStep / flowSteps.length) * 100);
+  const showLineSection = !embedded || selectedBranch;
+  const showNotesSection = !embedded || draftLines.length > 0;
 
   return (
     <form
       onSubmit={submit}
       className={`flex min-w-0 flex-col ${embedded ? "gap-3" : "gap-4"}`}
     >
+      {embedded ? (
+        <div className="flex flex-col gap-2 px-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase text-muted-foreground">
+                {operatorFlow.stepBadge(flowStep, flowSteps.length)}
+              </p>
+              <p className="mt-1 text-sm font-semibold">{flowStepMeta.label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {flowStepMeta.hint}
+              </p>
+            </div>
+            <span className="shrink-0 text-xs font-medium text-primary">
+              {operatorFlow.current}
+            </span>
+          </div>
+          <Progress className="h-2" value={flowProgressValue} />
+        </div>
+      ) : null}
+
       <AppSection title={messages.inventory.transfer.createTransferTitle}>
         {canCreateInboundRequest ? (
           <div className="flex flex-col gap-3">
@@ -295,7 +333,10 @@ export function CreateTransferForm({
                 value={inboundFromBranchId}
                 onValueChange={setInboundFromBranchId}
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  size={embedded ? "touch" : "default"}
+                  className="w-full"
+                >
                   <SelectValue
                     placeholder={
                       messages.inventory.transfer.chooseSendingWarehouse
@@ -329,7 +370,10 @@ export function CreateTransferForm({
                 value={outboundToBranchId}
                 onValueChange={setOutboundToBranchId}
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  size={embedded ? "touch" : "default"}
+                  className="w-full"
+                >
                   <SelectValue
                     placeholder={
                       messages.inventory.transfer.chooseReceivingWarehouse
@@ -357,122 +401,201 @@ export function CreateTransferForm({
         )}
       </AppSection>
 
-      <AppSection title={messages.inventory.transfer.ingredientsQtyRequired}>
-        <div className="flex items-end gap-2">
-          <div className="min-w-0 flex-1">
-            <Select
-              value={pickerIngredientId}
-              onValueChange={setPickerIngredientId}
-            >
-              <SelectTrigger
-                className={embedded ? undefined : "h-9"}
-                size={embedded ? "touch" : "default"}
+      {showLineSection ? (
+        <AppSection title={messages.inventory.transfer.ingredientsQtyRequired}>
+          <div className="flex items-end gap-2">
+            <div className="min-w-0 flex-1">
+              <Select
+                value={pickerIngredientId}
+                onValueChange={setPickerIngredientId}
               >
-                <SelectValue
-                  placeholder={messages.inventory.transfer.chooseIngredient}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {activeIngredients.map((ingredient) => (
-                    <SelectItem
-                      key={ingredient.id}
-                      value={String(ingredient.id)}
-                      textValue={`${ingredient.name} ${getWarehouseUnit(
-                        ingredient,
-                      )} ${ingredient.id}`}
-                    >
-                      {ingredient.name} ({getWarehouseUnit(ingredient)})
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size={embedded ? "touch" : "sm"}
-            className="shrink-0"
-            onClick={addIngredientLine}
-            disabled={!pickerIngredientId}
-            aria-label={messages.inventory.transfer.addIngredientAria}
-          >
-            <IconPlus data-icon="inline-start" />
-            {embedded ? messages.inventory.transfer.createNative.addLine : null}
-          </Button>
-        </div>
-
-        {draftLines.length === 0 ? (
-          <AppEmptyState
-            compact
-            title={messages.inventory.transfer.emptyIngredientsTitle}
-            description={
-              messages.inventory.transfer.emptyIngredientsDescription
-            }
-          />
-        ) : embedded ? (
-          <ItemGroup className="gap-2">
-            {draftLines.map((line) => {
-              const lineIngredient = ingredients.find(
-                (item) => item.id === line.ingredientId,
-              );
-              const lineUnitOptions = getIssueUnitOptions(lineIngredient);
-              const hasQty = line.quantity.trim().length > 0;
-              return (
-                <InteractiveCard
-                  key={line.key}
-                  padding="compact"
-                  className="flex-col items-stretch gap-3"
+                <SelectTrigger
+                  className={embedded ? undefined : "h-9"}
+                  size={embedded ? "touch" : "default"}
                 >
-                  <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {line.name}
-                      </p>
-                      {sourceContextLabel ? (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {messages.inventory.transfer.createNative.sendFrom(
-                            sourceContextLabel,
-                          )}
-                        </p>
-                      ) : null}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="touch"
-                      className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => removeLine(line.key)}
-                      aria-label={messages.inventory.transfer.removeLineAria}
-                    >
-                      <IconTrash />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      className="justify-between font-normal"
-                      onClick={() => setNumpadLineKey(line.key)}
-                    >
-                      <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-                        {messages.inventory.common.quantityShort}
-                      </span>
-                      <span
-                        className={
-                          hasQty
-                            ? "text-base font-semibold tabular-nums"
-                            : "text-sm text-muted-foreground"
-                        }
+                  <SelectValue
+                    placeholder={messages.inventory.transfer.chooseIngredient}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {activeIngredients.map((ingredient) => (
+                      <SelectItem
+                        key={ingredient.id}
+                        value={String(ingredient.id)}
+                        textValue={`${ingredient.name} ${getWarehouseUnit(
+                          ingredient,
+                        )} ${ingredient.id}`}
                       >
-                        {hasQty
-                          ? line.quantity
-                          : messages.inventory.transfer.createNative
-                              .quantityUnset}
-                      </span>
-                    </Button>
+                        {ingredient.name} ({getWarehouseUnit(ingredient)})
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size={embedded ? "touch" : "sm"}
+              className="shrink-0"
+              onClick={addIngredientLine}
+              disabled={!pickerIngredientId}
+              aria-label={messages.inventory.transfer.addIngredientAria}
+            >
+              <IconPlus data-icon="inline-start" />
+              {embedded
+                ? messages.inventory.transfer.createNative.addLine
+                : null}
+            </Button>
+          </div>
+
+          {draftLines.length === 0 ? (
+            <AppEmptyState
+              compact
+              title={messages.inventory.transfer.emptyIngredientsTitle}
+              description={
+                messages.inventory.transfer.emptyIngredientsDescription
+              }
+            />
+          ) : embedded ? (
+            <ItemGroup className="gap-2">
+              {draftLines.map((line) => {
+                const lineIngredient = ingredients.find(
+                  (item) => item.id === line.ingredientId,
+                );
+                const lineUnitOptions = getIssueUnitOptions(lineIngredient);
+                const hasQty = line.quantity.trim().length > 0;
+                return (
+                  <InteractiveCard
+                    key={line.key}
+                    padding="compact"
+                    className="flex-col items-stretch gap-3"
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {line.name}
+                        </p>
+                        {sourceContextLabel ? (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {messages.inventory.transfer.createNative.sendFrom(
+                              sourceContextLabel,
+                            )}
+                          </p>
+                        ) : null}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="touch"
+                        className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => removeLine(line.key)}
+                        aria-label={messages.inventory.transfer.removeLineAria}
+                      >
+                        <IconTrash />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="touch"
+                        className="justify-between font-normal"
+                        onClick={() => setNumpadLineKey(line.key)}
+                      >
+                        <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+                          {messages.inventory.common.quantityShort}
+                        </span>
+                        <span
+                          className={
+                            hasQty
+                              ? "text-base font-semibold tabular-nums"
+                              : "text-sm text-muted-foreground"
+                          }
+                        >
+                          {hasQty
+                            ? line.quantity
+                            : messages.inventory.transfer.createNative
+                                .quantityUnset}
+                        </span>
+                      </Button>
+                      {lineUnitOptions.length > 0 ? (
+                        <Select
+                          value={line.entryUnitId}
+                          onValueChange={(value) => {
+                            const opt = lineUnitOptions.find(
+                              (o) => String(o.unitId) === value,
+                            );
+                            updateLine(line.key, {
+                              entryUnitId: value,
+                              unit: opt?.label ?? line.unit,
+                            });
+                          }}
+                        >
+                          <SelectTrigger
+                            size="touch"
+                            className="w-full"
+                            aria-label={messages.inventory.transfer.unit}
+                          >
+                            <SelectValue
+                              placeholder={
+                                messages.inventory.transfer.selectUnit
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              {lineUnitOptions.map((o) => (
+                                <SelectItem
+                                  key={o.unitId}
+                                  value={String(o.unitId)}
+                                >
+                                  {o.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          className="h-12"
+                          value={line.unit}
+                          readOnly
+                          aria-readonly="true"
+                          required
+                        />
+                      )}
+                    </div>
+                  </InteractiveCard>
+                );
+              })}
+            </ItemGroup>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {draftLines.map((line) => {
+                const lineIngredient = ingredients.find(
+                  (item) => item.id === line.ingredientId,
+                );
+                const lineUnitOptions = getIssueUnitOptions(lineIngredient);
+                return (
+                  <div
+                    key={line.key}
+                    className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {line.name}
+                    </span>
+                    <FormattedNumberInput
+                      className="h-8 w-20"
+                      placeholder={messages.inventory.common.quantityShort}
+                      value={line.quantity}
+                      onValueChange={(value) =>
+                        updateLine(line.key, { quantity: value })
+                      }
+                      maxFractionDigits={3}
+                      required
+                    />
                     {lineUnitOptions.length > 0 ? (
                       <Select
                         value={line.entryUnitId}
@@ -487,8 +610,7 @@ export function CreateTransferForm({
                         }}
                       >
                         <SelectTrigger
-                          size="touch"
-                          className="w-full"
+                          className="h-8 w-20"
                           aria-label={messages.inventory.transfer.unit}
                         >
                           <SelectValue
@@ -510,137 +632,70 @@ export function CreateTransferForm({
                       </Select>
                     ) : (
                       <Input
-                        className="h-12"
+                        className="h-8 w-16"
                         value={line.unit}
                         readOnly
                         aria-readonly="true"
                         required
                       />
                     )}
-                  </div>
-                </InteractiveCard>
-              );
-            })}
-          </ItemGroup>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {draftLines.map((line) => {
-              const lineIngredient = ingredients.find(
-                (item) => item.id === line.ingredientId,
-              );
-              const lineUnitOptions = getIssueUnitOptions(lineIngredient);
-              return (
-                <div
-                  key={line.key}
-                  className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2"
-                >
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                    {line.name}
-                  </span>
-                  <FormattedNumberInput
-                    className="h-8 w-20"
-                    placeholder={messages.inventory.common.quantityShort}
-                    value={line.quantity}
-                    onValueChange={(value) =>
-                      updateLine(line.key, { quantity: value })
-                    }
-                    maxFractionDigits={3}
-                    required
-                  />
-                  {lineUnitOptions.length > 0 ? (
-                    <Select
-                      value={line.entryUnitId}
-                      onValueChange={(value) => {
-                        const opt = lineUnitOptions.find(
-                          (o) => String(o.unitId) === value,
-                        );
-                        updateLine(line.key, {
-                          entryUnitId: value,
-                          unit: opt?.label ?? line.unit,
-                        });
-                      }}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="shrink-0"
+                      onClick={() => removeLine(line.key)}
+                      aria-label={messages.inventory.transfer.removeLineAria}
                     >
-                      <SelectTrigger
-                        className="h-8 w-20"
-                        aria-label={messages.inventory.transfer.unit}
-                      >
-                        <SelectValue
-                          placeholder={messages.inventory.transfer.selectUnit}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {lineUnitOptions.map((o) => (
-                            <SelectItem key={o.unitId} value={String(o.unitId)}>
-                              {o.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      className="h-8 w-16"
-                      value={line.unit}
-                      readOnly
-                      aria-readonly="true"
-                      required
-                    />
-                  )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="shrink-0"
-                    onClick={() => removeLine(line.key)}
-                    aria-label={messages.inventory.transfer.removeLineAria}
-                  >
-                    <IconTrash />
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </AppSection>
+                      <IconTrash />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </AppSection>
+      ) : null}
 
-      <AppSection title={FORM_VI.notes}>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="vehicleInfo">
-            {messages.inventory.transfer.vehicleInfo}
-          </Label>
-          <Input id="vehicleInfo" name="vehicleInfo" />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="notes">{FORM_VI.notes}</Label>
-          <Textarea
-            id="notes"
-            name="notes"
-            rows={3}
-            placeholder={messages.inventory.transfer.notesPlaceholder}
-            className="min-h-24"
-          />
-        </div>
-      </AppSection>
+      {showNotesSection ? (
+        <AppSection title={FORM_VI.notes}>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="vehicleInfo">
+              {messages.inventory.transfer.vehicleInfo}
+            </Label>
+            <Input id="vehicleInfo" name="vehicleInfo" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="notes">{FORM_VI.notes}</Label>
+            <Textarea
+              id="notes"
+              name="notes"
+              rows={3}
+              placeholder={messages.inventory.transfer.notesPlaceholder}
+              className="min-h-24"
+            />
+          </div>
+        </AppSection>
+      ) : null}
 
       {embedded ? (
-        <div className="sticky chrome-safe-bottom z-10 flex w-full flex-col gap-2">
-          <Button
-            type="submit"
-            size="touch-lg"
-            className="w-full"
-            disabled={submitDisabled}
-          >
-            {isPending
-              ? messages.inventory.transfer.creating
-              : messages.inventory.transfer.createNative.submit}
-          </Button>
-          <Button variant="outline" size="touch" className="w-full" asChild>
-            <Link href={withBranchQuery(basePath, userBranchId)}>
-              {ACTIONS_VI.cancel}
-            </Link>
-          </Button>
-        </div>
+        <AppDetailFooter
+          sticky
+          leading={
+            <Button variant="outline" size="touch" asChild>
+              <Link href={withBranchQuery(basePath, userBranchId)}>
+                {ACTIONS_VI.cancel}
+              </Link>
+            </Button>
+          }
+          trailing={
+            <Button type="submit" size="touch-lg" disabled={submitDisabled}>
+              {isPending
+                ? messages.inventory.transfer.creating
+                : messages.inventory.transfer.createNative.submit}
+            </Button>
+          }
+        />
       ) : (
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" asChild>

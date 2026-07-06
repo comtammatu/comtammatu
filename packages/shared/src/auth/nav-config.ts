@@ -84,11 +84,6 @@ export const BRANCH_MANAGEMENT_ITEMS: BranchManagementNavItemConfig[] = [
     icon: "Settings",
     hrefTemplate: "/br/{branchId}/settings",
   },
-  {
-    moduleKey: "branch_menu_limits",
-    icon: "Utensils",
-    hrefTemplate: "/br/{branchId}/settings/menu-limits",
-  },
 ];
 
 /** Branch-scoped live operation entry points */
@@ -103,6 +98,16 @@ export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
     icon: "ChefHat",
     hrefTemplate: "/br/{branchId}/kds",
     label: APP_COPY_VI.branchOperationsKds,
+  },
+  {
+    moduleKey: "branch_menu_limits",
+    icon: "Utensils",
+    hrefTemplate: "/br/{branchId}/menu-limits",
+  },
+  {
+    moduleKey: "branch_pos_sessions",
+    icon: "ReceiptText",
+    hrefTemplate: "/br/{branchId}/pos-sessions",
   },
   {
     moduleKey: "runner",
@@ -203,7 +208,7 @@ export const OPERATOR_TILE_ITEMS = [
     moduleKey: "branch_menu_limits",
     icon: "Utensils",
     group: "sales_kitchen",
-    hrefTemplate: "/br/{branchId}/settings/menu-limits",
+    hrefTemplate: "/br/{branchId}/menu-limits",
     kinds: ["branch"],
   },
   {
