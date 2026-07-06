@@ -750,6 +750,7 @@ export function SupplierInvoicesClient({
                   placeholder={copy.supplierPlaceholder}
                   searchPlaceholder={copy.supplierSearchPlaceholder}
                   aria-label={copy.supplierFilterAria}
+                  size="sm"
                   triggerClassName="w-48"
                 />
 

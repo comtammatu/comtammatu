@@ -399,7 +399,7 @@ export function WasteCreateClient({
                     }
                     onValueChange={(v) => handleIngredientChange(line.uid, v)}
                     placeholder={messages.inventory.waste.chooseIngredient}
-                    size={embedded ? "touch" : "default"}
+                    size={embedded ? "touch" : "sm"}
                     className="w-full"
                   />
                 </div>
@@ -422,7 +422,7 @@ export function WasteCreateClient({
                     >
                       <SelectTrigger
                         id={`unit-${line.uid}`}
-                        size={embedded ? "touch" : "default"}
+                        size={embedded ? "touch" : "sm"}
                         className="w-full"
                       >
                         <SelectValue
@@ -496,7 +496,7 @@ export function WasteCreateClient({
                     value={line.reasonCode as never}
                     onChange={(v) => updateLine(line.uid, { reasonCode: v })}
                     disabled={isSubmitting}
-                    size={embedded ? "touch" : "default"}
+                    size={embedded ? "touch" : "sm"}
                     className="w-full"
                   />
                 </div>
