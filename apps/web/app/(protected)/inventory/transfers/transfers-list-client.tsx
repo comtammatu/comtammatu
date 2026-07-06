@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight as IconArrowRight,
   CircleCheck as IconCircleCheck,
@@ -32,6 +33,14 @@ import type { BranchForTransfer } from "./create-transfer-dialog";
 import { AppPage, AppPageHeader, AppToolbar, AppEmptyState } from "@/components/surface";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { ItemGroup } from "@comtammatu/ui/components/item";
+import { useLongPress } from "@lib/hooks/use-long-press";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@comtammatu/ui/components/drawer";
 import { StatusBadge } from "@/components/status-badge";
 import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import { messages } from "@lib/messages";
@@ -173,6 +182,8 @@ export function TransfersListClient({
   const rows = initial;
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<TransferTab>(initialTab);
+  const [drawerRow, setDrawerRow] = useState<TransferListRow | null>(null);
+  const router = useRouter();
 
   const createLabel = isBranchManager ? requestGoodsLabel : copy.createSlip;
   const pageTitle = pageTitleOverride ?? copy.internalTransferTitle;
@@ -400,10 +411,29 @@ export function TransfersListClient({
                 row={r}
                 tab={activeTab}
                 href={detailHref(r.id)}
+                onOpenDrawer={setDrawerRow}
               />
             ))}
           </ItemGroup>
         )}
+
+      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
+        <DrawerContent>
+          {drawerRow && (
+            <>
+              <DrawerHeader>
+                <DrawerTitle>{drawerRow.transfer_number}</DrawerTitle>
+                <DrawerDescription>{drawerRow.from_branch_name} → {drawerRow.to_branch_name}</DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 flex flex-col gap-3">
+                <Button variant="default" className="w-full" onClick={() => router.push(detailHref(drawerRow.id))}>
+                  Xem chi tiết
+                </Button>
+              </div>
+            </>
+          )}
+        </DrawerContent>
+      </Drawer>
       </div>
     );
   }
@@ -478,7 +508,7 @@ export function TransfersListClient({
       emptyMode={search ? "no-results" : "no-data"}
       emptyIcon={emptyIcon}
       mobileCardRender={(r) => (
-        <MobileTransferCard row={r} tab={activeTab} href={detailHref(r.id)} />
+        <MobileTransferCard row={r} tab={activeTab} href={detailHref(r.id)} onOpenDrawer={setDrawerRow} />
       )}
     />
   );
@@ -489,6 +519,24 @@ export function TransfersListClient({
         <div className="flex justify-end">{desktopCreateAction}</div>
         {desktopToolbar}
         {desktopTable}
+
+      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
+        <DrawerContent>
+          {drawerRow && (
+            <>
+              <DrawerHeader>
+                <DrawerTitle>{drawerRow.transfer_number}</DrawerTitle>
+                <DrawerDescription>{drawerRow.from_branch_name} → {drawerRow.to_branch_name}</DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 flex flex-col gap-3">
+                <Button variant="default" className="w-full" onClick={() => router.push(detailHref(drawerRow.id))}>
+                  Xem chi tiết
+                </Button>
+              </div>
+            </>
+          )}
+        </DrawerContent>
+      </Drawer>
       </div>
     );
   }
@@ -502,6 +550,24 @@ export function TransfersListClient({
       />
       {desktopToolbar}
       {desktopTable}
+
+      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
+        <DrawerContent>
+          {drawerRow && (
+            <>
+              <DrawerHeader>
+                <DrawerTitle>{drawerRow.transfer_number}</DrawerTitle>
+                <DrawerDescription>{drawerRow.from_branch_name} → {drawerRow.to_branch_name}</DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 flex flex-col gap-3">
+                <Button variant="default" className="w-full" onClick={() => router.push(detailHref(drawerRow.id))}>
+                  Xem chi tiết
+                </Button>
+              </div>
+            </>
+          )}
+        </DrawerContent>
+      </Drawer>
     </AppPage>
   );
 }
@@ -512,11 +578,14 @@ function MobileTransferCard({
   row,
   tab,
   href,
+  onOpenDrawer,
 }: {
   row: TransferListRow;
   tab: TransferTab;
   href: string;
+  onOpenDrawer: (row: TransferListRow) => void;
 }) {
+  const router = useRouter();
   const Icon =
     tab === "receive"
       ? IconPackageImport
@@ -524,13 +593,21 @@ function MobileTransferCard({
         ? IconSend
         : IconCircleCheck;
 
+  const longPress = useLongPress({
+    onLongPress: () => onOpenDrawer(row),
+    onClick: () => router.push(href),
+  });
+
   return (
     <InteractiveCard asChild minHeight="mobile" className="h-auto">
-      <Link href={href}>
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+      <div
+        {...longPress}
+        className="flex flex-row items-center gap-3 touch-none select-none cursor-pointer active:scale-[0.98] transition-transform"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary pointer-events-none">
           <Icon className="size-5" />
         </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1 pointer-events-none">
           <div className="flex items-center justify-between gap-2">
             <p className="truncate font-mono text-sm font-semibold">
               {row.transfer_number}
@@ -548,8 +625,8 @@ function MobileTransferCard({
             </p>
           )}
         </div>
-        <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
-      </Link>
+        <IconChevronRight className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
+      </div>
     </InteractiveCard>
   );
 }

@@ -323,9 +323,6 @@ export async function StockIngredientDetailPageContent({
       to_base_factor: Number(u.to_base_factor ?? 1),
       is_base: u.is_base,
       is_active: u.is_active,
-      allow_purchase: false,
-      allow_issue: false,
-      allow_production: false,
       sort_order: 0,
     }),
   );

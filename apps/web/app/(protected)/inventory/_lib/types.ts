@@ -12,9 +12,6 @@ export interface IngredientUnitRow {
   anchor_unit_id?: number | null;
   anchor_factor?: number | null;
   is_active: boolean;
-  allow_purchase: boolean;
-  allow_issue: boolean;
-  allow_production: boolean;
   sort_order: number;
 }
 

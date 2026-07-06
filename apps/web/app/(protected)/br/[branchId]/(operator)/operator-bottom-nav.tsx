@@ -8,8 +8,8 @@ import {
   Ellipsis,
   Home,
   Package,
-  Settings,
   Truck,
+  Users,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
@@ -123,11 +123,27 @@ export function OperatorBottomNav({
   branchKind?: BranchKind;
 }) {
   const pathname = usePathname();
-  const branchOverflowPrefixes = [
-    `/br/${branchId}/more`,
-    `/br/${branchId}/stock`,
-    `/br/${branchId}/orders`,
-  ];
+  
+  // Dynamic overflow based on role
+  const branchOverflowPrefixes = showBranchManagement
+    ? [
+        `/br/${branchId}/more`,
+        `/br/${branchId}/orders`,
+        `/br/${branchId}/dashboard`,
+        `/br/${branchId}/settings`,
+        `/br/${branchId}/pos-sessions`,
+        `/br/${branchId}/menu-limits`,
+        `/br/${branchId}/shift/schedule`,
+      ]
+    : [
+        `/br/${branchId}/more`,
+        `/br/${branchId}/stock`,
+        `/br/${branchId}/orders`,
+        `/br/${branchId}/dashboard`,
+        `/br/${branchId}/settings`,
+        `/br/${branchId}/team`,
+      ];
+
   const items: ShellNavItem[] =
     branchKind !== "branch"
       ? centralNavItems(branchId, branchKind)
@@ -150,27 +166,36 @@ export function OperatorBottomNav({
                     `/br/${branchId}/shift/checkout-approvals`,
                   ],
                 },
-                {
-                  href: `/br/${branchId}/shift/schedule`,
-                  label: messages.employee.nav.schedule,
-                  icon: CalendarDays,
-                  exact: false,
-                },
+                ...(!showBranchManagement
+                  ? [
+                      {
+                        href: `/br/${branchId}/shift/schedule`,
+                        label: messages.employee.nav.schedule,
+                        icon: CalendarDays,
+                        exact: false,
+                      },
+                    ]
+                  : []),
               ]
             : []),
           ...(showBranchManagement
             ? [
                 {
-                  href: `/br/${branchId}/dashboard`,
-                  label: APP_COPY_VI.operatorManagement,
-                  icon: Settings,
-                  exact: true,
+                  href: `/br/${branchId}/team`,
+                  label: "Đội nhóm",
+                  icon: Users,
+                  exact: false,
                   matchPrefixes: [
-                    `/br/${branchId}/dashboard`,
-                    `/br/${branchId}/pos-sessions`,
-                    `/br/${branchId}/settings`,
-                    `/br/${branchId}/menu-limits`,
                     `/br/${branchId}/team`,
+                  ],
+                },
+                {
+                  href: `/br/${branchId}/stock`,
+                  label: branchCopy.centralNavStock,
+                  icon: Package,
+                  exact: false,
+                  matchPrefixes: [
+                    `/br/${branchId}/stock`,
                   ],
                 },
               ]
@@ -179,7 +204,7 @@ export function OperatorBottomNav({
             href: `/br/${branchId}/more`,
             label: branchCopy.centralNavMore,
             icon: Ellipsis,
-            exact: true,
+            exact: false,
             matchPrefixes: branchOverflowPrefixes,
           },
         ];

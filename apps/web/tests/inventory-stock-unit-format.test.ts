@@ -11,9 +11,6 @@ function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
     to_base_factor: 1,
     is_base: false,
     is_active: true,
-    allow_purchase: true,
-    allow_issue: true,
-    allow_production: true,
     sort_order: 0,
     ...row,
   };

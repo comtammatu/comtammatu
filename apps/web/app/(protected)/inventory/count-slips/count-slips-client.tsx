@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Check as IconCheck,
   ClipboardCheck as IconClipboardCheck,
+  ClipboardList as IconClipboardList,
   RotateCcw as IconRecount,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -71,12 +73,15 @@ export function CountSlipsClient({
   initial,
   branchScoped = false,
   embedded = false,
+  basePath = "/inventory/count-slips",
 }: {
   initial: CountSlipRow[];
   branchScoped?: boolean;
   embedded?: boolean;
+  basePath?: string;
 }) {
   const [rows, setRows] = useState(initial);
+  const assignmentsHref = basePath.replace("count-slips", "count-assignments");
 
   const { pending, history } = useMemo(() => {
     const pendingRows: CountSlipRow[] = [];
@@ -94,12 +99,34 @@ export function CountSlipsClient({
     );
   }
 
+  const headerActions = (
+    <Button asChild variant="outline">
+      <Link href={assignmentsHref}>
+        <IconClipboardList className="size-4" />
+        {INVENTORY_VI.countAssignTitle}
+      </Link>
+    </Button>
+  );
+
+  const toolbar = embedded ? (
+    <div className="flex justify-end mb-2">
+      <Button asChild variant="outline" size="touch">
+        <Link href={assignmentsHref}>
+          <IconClipboardList className="size-4" />
+          {INVENTORY_VI.countAssignTitle}
+        </Link>
+      </Button>
+    </div>
+  ) : null;
+
   const content = (
     <>
+      {toolbar}
       {!embedded ? (
         <AppPageHeader
           title={INVENTORY_VI.countSlipTitle}
           description={INVENTORY_VI.countSlipDescription}
+          actions={headerActions}
           badge={{
             children: INVENTORY_VI.countSlipPendingBadge(pending.length),
             variant: pending.length > 0 ? "warning" : "secondary",

@@ -65,12 +65,10 @@ function buildOperationalManifest(app: OperationalApp, branchId: string) {
     lang: "vi",
     display: "standalone",
     start_url: appUrl,
-    // The hub covers the whole operator plane and legitimately links to shared
-    // routes (notifications, office bridges), so it scopes the entire origin —
-    // otherwise those navigations drop the installed PWA back into a browser
-    // tab (chrome reappears, vertical space lost). `id` keeps each install
-    // distinct. Single-job stations stay pinned to their own scope.
-    scope: isHub ? "/" : appUrl,
+    // The hub and all single-job stations scope the entire origin so that
+    // navigations between them (including the toolbar's "Về Má Tư Hub" link and
+    // auth redirects) do not drop the installed PWA back into a browser tab.
+    scope: "/",
     background_color: "#fff6ee",
     theme_color: "#fff6ee",
     orientation: appConfig.orientation,

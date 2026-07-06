@@ -20,6 +20,16 @@ export const CENTRAL_HOME_TILE_SUFFIXES: Partial<
   ],
 } as const satisfies Partial<Record<BranchKind, readonly string[]>>;
 
+export const BRANCH_MANAGER_HOME_TILE_SUFFIXES = [
+  "/pos",
+  "/menu-limits",
+  "/" + "orders",
+  "/stock",
+  "/stock/receive",
+  "/stock/waste",
+  "/stock/stocktake",
+] as const;
+
 export function getBranchPrimaryHomeGroup(
   groups: ResolvedOperatorTileGroup[],
 ): ResolvedOperatorTileGroup | null {
@@ -39,8 +49,25 @@ export function getBranchHomeTileLimit(
 export function getOperatorHomeTileHrefs(
   groups: ResolvedOperatorTileGroup[],
   branchKind: BranchKind,
+  role?: string,
 ): Set<string> {
   if (branchKind === "branch") {
+    if (role === "branch_manager" || role === "owner") {
+      const result = new Set<string>();
+      for (const group of groups) {
+        for (const tile of group.tiles) {
+          if (
+            BRANCH_MANAGER_HOME_TILE_SUFFIXES.some((suffix) =>
+              tile.href.endsWith(suffix),
+            )
+          ) {
+            result.add(tile.href);
+          }
+        }
+      }
+      return result;
+    }
+
     const group = getBranchPrimaryHomeGroup(groups);
     return new Set(
       group?.tiles
@@ -64,8 +91,9 @@ export function getOperatorHomeTileHrefs(
 export function getOperatorMoreGroups(
   groups: ResolvedOperatorTileGroup[],
   branchKind: BranchKind,
+  role?: string,
 ): ResolvedOperatorTileGroup[] {
-  const homeTileHrefs = getOperatorHomeTileHrefs(groups, branchKind);
+  const homeTileHrefs = getOperatorHomeTileHrefs(groups, branchKind, role);
   return groups
     .map((group) => ({
       ...group,

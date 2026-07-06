@@ -1,3 +1,4 @@
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: manager shift action panel keeps operational copy inline */
 import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -8,12 +9,20 @@ import {
   ListChecks as IconListChecks,
   LogOut as IconLogout,
   UserCircle as IconUserCircle,
+  Users as IconUsers,
 } from "lucide-react";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Progress } from "@comtammatu/ui/components/progress";
+import {
+  Item,
+  ItemContent,
+  ItemTitle,
+  ItemDescription,
+  ItemActions,
+} from "@comtammatu/ui/components/item";
 import { loadAuthState } from "@/_lib/auth";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
 import { messages } from "@lib/messages";
@@ -52,6 +61,11 @@ export type EmployeeHomeRoutes = {
   checkoutApprovals: string;
   count: string;
   wasteApprovals: string;
+  leaveApprovals?: string;
+  countSlips?: string;
+  countAssignments?: string;
+  team?: string;
+  hr?: string;
 };
 
 const DEFAULT_HOME_ROUTES: EmployeeHomeRoutes = {
@@ -178,7 +192,7 @@ export async function EmployeeHomePageContent({
   routes?: EmployeeHomeRoutes;
   authState?: EmployeeHomeAuthState;
   showNotificationControl?: boolean;
-  mode?: "full" | "today-card" | "compact-status";
+  mode?: "full" | "today-card" | "compact-status" | "manager-dashboard";
   workflowLayout?: EmployeeHomeWorkflowLayout;
 } = {}) {
   const { supabase, claims, session } = authState ?? (await loadAuthState());
@@ -249,6 +263,58 @@ export async function EmployeeHomePageContent({
     }
   }
 
+  let pendingLeaveRequests = 0;
+  let pendingCountSlips = 0;
+  if (claims.user_role === "branch_manager" || claims.user_role === "owner") {
+    const service = createServiceClient();
+    const branchIdFilter = claims.branch_id ?? -1;
+
+    const [leavePermissionResult, countPermissionResult] = await Promise.all([
+      typeof claims.branch_id === "number"
+        ? supabase.rpc("has_permission", {
+            p_branch_id: claims.branch_id,
+            p_key: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
+          })
+        : supabase.rpc("has_permission_any", {
+            p_key: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
+          }),
+      typeof claims.branch_id === "number"
+        ? supabase.rpc("has_permission", {
+            p_branch_id: claims.branch_id,
+            p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
+          })
+        : supabase.rpc("has_permission_any", {
+            p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
+          }),
+    ]);
+
+    const leavePromise = leavePermissionResult.data === true
+      ? service
+          .from("leave_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchIdFilter)
+          .eq("status", "pending")
+      : Promise.resolve(null);
+
+    const countPromise = countPermissionResult.data === true
+      ? service
+          .from("inventory_count_slips")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchIdFilter)
+          .eq("status", "submitted")
+      : Promise.resolve(null);
+
+    const [leaveCountResult, countCountResult] = await Promise.all([
+      leavePromise,
+      countPromise,
+    ]);
+
+    if (leaveCountResult) pendingLeaveRequests = leaveCountResult.count ?? 0;
+    if (countCountResult) pendingCountSlips = countCountResult.count ?? 0;
+  }
+
   // Surface the count-slip task only when this employee actually has active
   // assignments — RLS + the inner-join on profile_id keep it to their own rows
   // (a manager who can read branch-wide assignments still only sees their own).
@@ -262,6 +328,13 @@ export async function EmployeeHomePageContent({
       .eq("employees.profile_id", session.user.id);
     countAssignmentCount = count ?? 0;
   }
+  const activeBranchId = claims.branch_id ?? -1;
+  const checkoutApprovalsRoute = routes.checkoutApprovals ?? `/br/${activeBranchId}/shift/checkout-approvals`;
+  const leaveApprovalsRoute = routes.leaveApprovals ?? `/br/${activeBranchId}/shift/leave-approvals`;
+  const countSlipsRoute = routes.countSlips ?? `/br/${activeBranchId}/stock/count-slips`;
+  const countAssignmentsRoute = routes.countAssignments ?? `/br/${activeBranchId}/stock/count-assignments`;
+  const teamRoute = routes.team ?? `/br/${activeBranchId}/team`;
+  const hrRoute = routes.hr ?? `/hr`;
 
   const tone = getWorkTone(state.status);
   const title = getWorkTitle(state);
@@ -626,6 +699,135 @@ export async function EmployeeHomePageContent({
       {checklistContent}
     </EmployeePanel>
   ) : null;
+
+  const isBranchManager = claims.user_role === "branch_manager";
+
+  const managerActionPanel = isBranchManager ? (
+    <div className="flex flex-col gap-3">
+      <EmployeePanel
+        icon={IconClipboardCheck}
+        title="Duyệt ca & kho"
+        tone="warning"
+        size="sm"
+      >
+        <div className="flex flex-col gap-2">
+          {/* Duyệt kết ca */}
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={checkoutApprovalsRoute}>
+              <ItemContent>
+                <ItemTitle className="text-sm font-semibold">Duyệt kết ca</ItemTitle>
+                <ItemDescription className="text-xs text-muted-foreground">
+                  Phê duyệt kết ca của nhân viên
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Badge variant={pendingCheckouts > 0 ? "warning" : "secondary"}>
+                  {pendingCheckouts}
+                </Badge>
+              </ItemActions>
+            </Link>
+          </Item>
+
+          {/* Duyệt kiểm kê */}
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={countSlipsRoute}>
+              <ItemContent>
+                <ItemTitle className="text-sm font-semibold">Duyệt kiểm kê</ItemTitle>
+                <ItemDescription className="text-xs text-muted-foreground">
+                  Duyệt chênh lệch phiếu kiểm kê
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Badge variant={pendingCountSlips > 0 ? "warning" : "secondary"}>
+                  {pendingCountSlips}
+                </Badge>
+              </ItemActions>
+            </Link>
+          </Item>
+
+          {/* Duyệt nghỉ phép */}
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={leaveApprovalsRoute}>
+              <ItemContent>
+                <ItemTitle className="text-sm font-semibold">Duyệt nghỉ phép</ItemTitle>
+                <ItemDescription className="text-xs text-muted-foreground">
+                  Phê duyệt yêu cầu nghỉ phép
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Badge variant={pendingLeaveRequests > 0 ? "warning" : "secondary"}>
+                  {pendingLeaveRequests}
+                </Badge>
+              </ItemActions>
+            </Link>
+          </Item>
+
+          {/* Duyệt hao hụt */}
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={routes.wasteApprovals}>
+              <ItemContent>
+                <ItemTitle className="text-sm font-semibold">Duyệt hao hụt</ItemTitle>
+                <ItemDescription className="text-xs text-muted-foreground">
+                  Duyệt báo cáo hao hụt nguyên liệu
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Badge variant={pendingWaste > 0 ? "warning" : "secondary"}>
+                  {pendingWaste}
+                </Badge>
+              </ItemActions>
+            </Link>
+          </Item>
+        </div>
+      </EmployeePanel>
+
+      <EmployeePanel
+        icon={IconUsers}
+        title="Nhân sự & Phân công"
+        tone="info"
+        size="sm"
+      >
+        <div className="flex flex-col gap-2">
+          {/* Đội hôm nay */}
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={teamRoute}>
+              <ItemContent>
+                <ItemTitle className="text-sm font-semibold">Đội hôm nay</ItemTitle>
+                <ItemDescription className="text-xs text-muted-foreground">
+                  Danh sách, ca làm, checklist nhân sự trong ca
+                </ItemDescription>
+              </ItemContent>
+            </Link>
+          </Item>
+
+          {/* Nhân sự chi nhánh */}
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={hrRoute}>
+              <ItemContent>
+                <ItemTitle className="text-sm font-semibold">Nhân sự chi nhánh</ItemTitle>
+                <ItemDescription className="text-xs text-muted-foreground">
+                  Xem thông tin nhân viên, ngày công, ngày nghỉ phép
+                </ItemDescription>
+              </ItemContent>
+            </Link>
+          </Item>
+
+          {/* Phân công đếm tồn */}
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={countAssignmentsRoute}>
+              <ItemContent>
+                <ItemTitle className="text-sm font-semibold">Phân công đếm tồn</ItemTitle>
+                <ItemDescription className="text-xs text-muted-foreground">
+                  Giao việc kiểm đếm nguyên liệu cho nhân sự
+                </ItemDescription>
+              </ItemContent>
+            </Link>
+          </Item>
+        </div>
+      </EmployeePanel>
+    </div>
+  ) : null;
+
   const notificationSection = showNotificationControl ? (
     <EmployeePanel tone="info" size="sm">
       <NotificationPopupControl compact />
@@ -730,11 +932,19 @@ export async function EmployeeHomePageContent({
   const workflowSection = <ShiftWorkflowPanel steps={shiftStepItems} />;
 
   const pageContent =
-    workflowLayout === "stepper" ? (
+    mode === "manager-dashboard" ? (
+      <div className="flex flex-col gap-3">
+        {managerActionPanel}
+        {shiftsTodaySection}
+        {staleOpenShiftSection}
+        {notificationSection}
+      </div>
+    ) : workflowLayout === "stepper" ? (
       <div className="grid gap-3 lg:grid-cols-5 lg:items-start">
         <div className="lg:sticky lg:top-3 lg:col-span-2">{todayCard}</div>
-        <div className="lg:col-span-3 lg:col-start-3 lg:row-span-4 lg:row-start-1">
+        <div className="lg:col-span-3 lg:col-start-3 lg:row-span-4 lg:row-start-1 flex flex-col gap-3">
           {workflowSection}
+          {isBranchManager ? managerActionPanel : null}
         </div>
         {staleOpenShiftSection ? (
           <div className="lg:col-span-2">{staleOpenShiftSection}</div>
@@ -752,7 +962,7 @@ export async function EmployeeHomePageContent({
         {shiftsTodaySection}
         {staleOpenShiftSection}
         {checkoutApprovalsSection}
-        {checklistSection}
+        {isBranchManager ? managerActionPanel : checklistSection}
         {countPanel}
         {notificationSection}
       </div>

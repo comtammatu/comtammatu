@@ -111,6 +111,10 @@ export function useSwipeReveal({
             offset: nextOffset,
             dragging: true,
           };
+          
+          const target = event.currentTarget;
+          target.style.transition = "none";
+          target.style.transform = `translate3d(${nextOffset}px, 0, 0)`;
         },
         onPointerUp(event: ReactPointerEvent<HTMLElement>) {
           const state = swipeStateRef.current;
@@ -124,6 +128,10 @@ export function useSwipeReveal({
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
           }
+          const target = event.currentTarget;
+          target.style.transition = "";
+          target.style.transform = "";
+          
           if (state.dragging) {
             const shouldReveal = state.offset <= -threshold;
             setRevealedKey(shouldReveal ? key : null);
@@ -139,6 +147,9 @@ export function useSwipeReveal({
             if (event.currentTarget.hasPointerCapture(event.pointerId)) {
               event.currentTarget.releasePointerCapture(event.pointerId);
             }
+            const target = event.currentTarget;
+            target.style.transition = "";
+            target.style.transform = "";
             swipeStateRef.current = null;
           }
         },

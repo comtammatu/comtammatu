@@ -1,18 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ClipboardCheck as IconClipboardCheck,
+  Clock as IconClock,
   Users as IconUsers,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { ItemGroup } from "@comtammatu/ui/components/item";
 import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@comtammatu/ui/components/drawer";
+import { Button } from "@comtammatu/ui/components/button";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatVNTime } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
@@ -21,6 +27,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { useLongPress } from "@lib/hooks/use-long-press";
 import type {
   TeamBoardChecklistPhase,
   TeamBoardCountStatus,
@@ -121,6 +128,57 @@ function CountBadge({ status }: { status: TeamBoardCountStatus }) {
   return <Badge variant="warning">{copy.countNotSubmitted}</Badge>;
 }
 
+// ─── Mobile card ───────────────────────────────────────────────────────
+
+function MobileTeamCard({
+  row,
+  onOpenDrawer,
+  href,
+}: {
+  row: TeamBoardDisplayRow;
+  onOpenDrawer: (row: TeamBoardDisplayRow) => void;
+  href: string | undefined;
+}) {
+  const router = useRouter();
+  const longPress = useLongPress({
+    onLongPress: () => onOpenDrawer(row),
+    onClick: () => {
+      if (href) router.push(href);
+      else onOpenDrawer(row);
+    },
+  });
+
+  return (
+    <InteractiveCard asChild minHeight="mobile" className="h-auto">
+      <div
+        {...longPress}
+        className="flex flex-row items-center gap-3 touch-none select-none cursor-pointer active:scale-[0.98] transition-transform"
+      >
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 pointer-events-none">
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-sm font-semibold">
+              {row.fullName}
+            </p>
+            <AttendanceBadge shift={row.shift} />
+          </div>
+          <p className="truncate text-xs text-muted-foreground">
+            {row.positionLabel ?? copy.positionUnknown} · {row.shift?.shiftName ?? copy.shiftNone}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <CountBadge status={row.countStatus} />
+            {row.onApprovedLeave ? (
+              <StatusBadge domain="leave-request" value="approved" label={copy.leaveApproved} />
+            ) : null}
+          </div>
+        </div>
+        <IconClipboardCheck className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
+      </div>
+    </InteractiveCard>
+  );
+}
+
+// ─── Main component ────────────────────────────────────────────────────
+
 export function TeamBoardClient({
   rows,
   countSlipsHref,
@@ -131,6 +189,8 @@ export function TeamBoardClient({
   checkoutApprovalsHref: string;
 }) {
   const displayRows = buildDisplayRows(rows);
+  const [drawerRow, setDrawerRow] = useState<TeamBoardDisplayRow | null>(null);
+  const router = useRouter();
 
   if (displayRows.length === 0) {
     return (
@@ -215,57 +275,88 @@ export function TeamBoardClient({
   ];
 
   return (
-    <DataTable
-      columns={columns}
-      data={displayRows}
-      getRowKey={(row) => row.key}
-      onRowClick={(row) => {
-        const href = rowHref(row);
-        if (href) window.location.assign(href);
-      }}
-      getRowAriaLabel={(row) => `${row.fullName} · ${row.positionLabel ?? ""}`}
-      mobileCardRender={(row) => {
-        const href = rowHref(row);
-        const content = (
-          <Item variant="outline">
-            <ItemContent>
-              <ItemTitle className="line-clamp-none text-sm font-semibold">
-                {row.fullName}
-              </ItemTitle>
-              <ItemDescription className="line-clamp-none text-sm leading-6">
-                {row.positionLabel ?? copy.positionUnknown} ·{" "}
-                {row.shift?.shiftName ?? copy.shiftNone}
-              </ItemDescription>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <AttendanceBadge shift={row.shift} />
-                <CountBadge status={row.countStatus} />
-                {row.onApprovedLeave ? (
-                  <StatusBadge domain="leave-request" value="approved" label={copy.leaveApproved} />
-                ) : null}
-              </div>
-              <div className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
-                <span>
-                  {copy.phaseStart}: {checklistLabel(row.shift, "start_of_shift")}
-                </span>
-                <span>
-                  {copy.phaseEnd}: {checklistLabel(row.shift, "end_of_shift")}
-                </span>
-              </div>
-            </ItemContent>
-            <ItemActions>
-              <IconClipboardCheck className="size-4 text-muted-foreground" />
-            </ItemActions>
-          </Item>
-        );
+    <>
+      <DataTable
+        columns={columns}
+        data={displayRows}
+        getRowKey={(row) => row.key}
+        onRowClick={(row) => {
+          const href = rowHref(row);
+          if (href) window.location.assign(href);
+        }}
+        getRowAriaLabel={(row) => `${row.fullName} · ${row.positionLabel ?? ""}`}
+        mobileCardRender={(row) => (
+          <MobileTeamCard
+            row={row}
+            href={rowHref(row)}
+            onOpenDrawer={setDrawerRow}
+          />
+        )}
+      />
 
-        return href ? (
-          <Link href={href} className="block">
-            {content}
-          </Link>
-        ) : (
-          content
-        );
-      }}
-    />
+      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
+        <DrawerContent>
+          {drawerRow && (
+            <>
+              <DrawerHeader>
+                <DrawerTitle>{drawerRow.fullName}</DrawerTitle>
+                <DrawerDescription>
+                  {drawerRow.positionLabel ?? copy.positionUnknown} · {drawerRow.shift?.shiftName ?? copy.shiftNone}
+                </DrawerDescription>
+              </DrawerHeader>
+              <div className="flex flex-col gap-3 p-4">
+                <div className="flex flex-wrap gap-2">
+                  <AttendanceBadge shift={drawerRow.shift} />
+                  <CountBadge status={drawerRow.countStatus} />
+                  {drawerRow.onApprovedLeave ? (
+                    <StatusBadge domain="leave-request" value="approved" label={copy.leaveApproved} />
+                  ) : null}
+                </div>
+
+                {drawerRow.shift && (
+                  <div className="flex flex-col gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <IconClock className="size-4 shrink-0" />
+                      <span className="font-mono tabular-nums">
+                        {drawerRow.shift.checkIn ? formatVNTime(drawerRow.shift.checkIn) : "—"}
+                        {" - "}
+                        {drawerRow.shift.checkOut ? formatVNTime(drawerRow.shift.checkOut) : "—"}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                      <span>
+                        {copy.phaseStart}: {checklistLabel(drawerRow.shift, "start_of_shift")}
+                      </span>
+                      <span>
+                        {copy.phaseEnd}: {checklistLabel(drawerRow.shift, "end_of_shift")}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {(() => {
+                  const href = rowHref(drawerRow);
+                  if (!href) return null;
+                  const state = attendanceState(drawerRow.shift);
+                  const label =
+                    state === "checkout_pending"
+                      ? copy.attendanceCheckoutPending
+                      : copy.countSubmitted;
+                  return (
+                    <Button
+                      variant="default"
+                      className="w-full"
+                      onClick={() => router.push(href)}
+                    >
+                      {label}
+                    </Button>
+                  );
+                })()}
+              </div>
+            </>
+          )}
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 }

@@ -66,6 +66,8 @@ const updateEmployeeSchema = z.object({
     .min(1, { error: "Họ tên không được để trống" })
     .optional(),
   phone: z.string().trim().optional(),
+  positionCode: z.string().optional(),
+  branchId: z.coerce.number().int().positive().nullable().optional(),
   employeeCode: z.string().trim().optional(),
   startDate: z.string().optional(),
   contractType: z.enum(CONTRACT_TYPES).nullable().optional(),
@@ -481,11 +483,36 @@ export const createEmployeeAccount = withAction(
   },
 );
 
+// Helper to map DB RPC errors to user-friendly messages
+function mapRpcError(msg: string): string {
+  if (msg.includes("target profile not found"))
+    return "Nhân viên không tồn tại";
+  if (msg.includes("cannot modify owner"))
+    return "Không có quyền chỉnh sửa chủ sở hữu";
+  if (msg.includes("cannot set role above"))
+    return "Không có quyền gán vai trò cao hơn";
+  if (msg.includes("target not in your branch"))
+    return "Nhân viên không thuộc chi nhánh của bạn";
+  if (msg.includes("cannot modify peer"))
+    return "Không có quyền chỉnh sửa quản lý cùng cấp";
+  if (msg.includes("can only assign"))
+    return "Bạn chỉ có thể gán vai trò thu ngân/bếp";
+  if (msg.includes("cannot reassign to other branch"))
+    return "Không có quyền chuyển nhân viên sang chi nhánh khác";
+  if (msg.includes("operational roles require branch_id") || msg.includes("branch_required_for_operational_position"))
+    return "Chức vụ vận hành phải thuộc một địa điểm";
+  if (msg.includes("branch_id does not belong") || msg.includes("branch_not_found_in_tenant"))
+    return "Chi nhánh không hợp lệ";
+  if (msg.includes("position_site_kind_mismatch"))
+    return "Chức vụ này không thuộc loại địa điểm đã chọn.";
+  if (msg.includes("insufficient privileges"))
+    return "Không có quyền quản lý nhân viên";
+  return "Không thể cập nhật. Vui lòng thử lại.";
+}
+
 // Edit an existing employee's profile + employment record. Owner-only
-// (HR_ROLES): base_salary/id_number/bank_account are owner PII. Auth identity
-// (email/password) and role/branch are out of scope — those go through
-// /hr/staff + admin_update_profile. Partial update: only provided fields
-// are written.
+// (HR_ROLES): base_salary/id_number/bank_account are owner PII.
+// Partial update: only provided fields are written.
 export const updateEmployee = withAction(
   { roles: HR_ROLES, schema: updateEmployeeSchema },
   async (data, { claims, supabase }) => {
@@ -495,9 +522,9 @@ export const updateEmployee = withAction(
       .from("employees")
       .select(
         `
-        id, profile_id,
+        id, profile_id, is_active,
         profiles!inner (
-          id, branch_id,
+          id, branch_id, full_name, phone,
           positions ( code, label_vi ),
           branches ( name )
         )
@@ -518,6 +545,7 @@ export const updateEmployee = withAction(
     }
 
     const employeeBranchId = employee.profiles?.branch_id ?? null;
+    const finalBranchId = data.branchId !== undefined ? data.branchId : employeeBranchId;
 
     if (data.defaultChecklistTemplateId != null) {
       const templateBranchId = await loadChecklistTemplateBranch(
@@ -530,7 +558,7 @@ export const updateEmployee = withAction(
           error: "Checklist template không tồn tại hoặc đã bị ngưng sử dụng.",
         };
       }
-      if (templateBranchId != null && templateBranchId !== employeeBranchId) {
+      if (templateBranchId != null && templateBranchId !== finalBranchId) {
         return {
           success: false,
           error: "Checklist template không thuộc phạm vi chi nhánh này.",
@@ -538,22 +566,38 @@ export const updateEmployee = withAction(
       }
     }
 
-    const profileUpdate: { full_name?: string; phone?: string } = {};
-    if (data.fullName !== undefined) profileUpdate.full_name = data.fullName;
-    if (data.phone !== undefined) profileUpdate.phone = data.phone;
+    const isProfileModified =
+      data.fullName !== undefined ||
+      data.phone !== undefined ||
+      data.positionCode !== undefined ||
+      data.branchId !== undefined ||
+      data.isActive !== undefined;
 
-    if (Object.keys(profileUpdate).length > 0) {
-      const { error: profileError } = await service
-        .from("profiles")
-        .update(profileUpdate)
-        .eq("id", employee.profile_id)
-        .eq("tenant_id", claims.tenant_id);
+    if (isProfileModified) {
+      const currentPositionCode = employee.profiles?.positions?.code ?? null;
+      const finalPositionCode = data.positionCode !== undefined ? data.positionCode : currentPositionCode;
+
+      const role = finalPositionCode ? staffRoleFromPositionCode(finalPositionCode) : "unassigned";
+      const isCentralSite = role !== "unassigned" && centralSiteBranchKindForRole(role) !== null;
+      const targetBranchId = isCentralSite
+        ? undefined
+        : (data.branchId !== undefined ? (data.branchId ?? undefined) : (employee.profiles?.branch_id ?? undefined));
+
+      const { error: profileError } = await supabase.rpc("admin_update_profile", {
+        p_target_id: employee.profile_id,
+        p_full_name: data.fullName !== undefined ? data.fullName : (employee.profiles?.full_name ?? undefined),
+        p_phone: data.phone !== undefined ? (data.phone || undefined) : (employee.profiles?.phone ?? undefined),
+        p_role: finalPositionCode ?? undefined,
+        p_branch_id: targetBranchId,
+        p_is_active: data.isActive !== undefined ? data.isActive : (employee.is_active ?? undefined),
+      });
+
       if (profileError) {
         console.error(
-          "[hr/actions:updateEmployee] Update profile error:",
+          "[hr/actions:updateEmployee] Update profile via RPC error:",
           profileError,
         );
-        return { success: false, error: "Không thể cập nhật hồ sơ nhân viên." };
+        return { success: false, error: mapRpcError(profileError.message) };
       }
     }
 

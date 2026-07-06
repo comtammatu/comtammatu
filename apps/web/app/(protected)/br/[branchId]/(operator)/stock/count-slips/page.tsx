@@ -10,5 +10,11 @@ export default async function OperatorCountSlipsPage({ params }: PageProps) {
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  return <CountSlipsPageContent routeBranchId={branchId} embedded />;
+  return (
+    <CountSlipsPageContent
+      routeBranchId={branchId}
+      embedded
+      basePath={`/br/${branchId}/stock/count-slips`}
+    />
+  );
 }

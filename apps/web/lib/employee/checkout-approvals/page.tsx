@@ -184,7 +184,13 @@ export async function CheckoutApprovalsPageContent({
           employee_code,
           profiles ( full_name )
         ),
-        shifts ( name, start_time, end_time )
+        shifts ( name, start_time, end_time ),
+        attendance_checklist_items (
+          id,
+          title,
+          is_done,
+          is_required
+        )
       `,
     )
     .eq("tenant_id", claims.tenant_id)
@@ -213,6 +219,13 @@ export async function CheckoutApprovalsPageContent({
           }`
         : null;
 
+    const checklistRows = (record.attendance_checklist_items ?? []) as Array<{
+      id: number;
+      title: string;
+      is_done: boolean;
+      is_required: boolean;
+    }>;
+
     return {
       id: record.id,
       employeeName: employee.fullName ?? "Nhân viên",
@@ -232,6 +245,12 @@ export async function CheckoutApprovalsPageContent({
         record.checkout_requested_by_role === "branch_manager"
           ? "Quản lý chi nhánh"
           : "Nhân viên chi nhánh",
+      checklist: checklistRows.map((c) => ({
+        id: c.id,
+        title: c.title,
+        isDone: c.is_done,
+        isRequired: c.is_required,
+      })),
     };
   });
 
@@ -267,7 +286,6 @@ export async function CheckoutApprovalsPageContent({
         <CheckoutApprovalsClient
           items={items}
           canApprove={canApprove === true}
-          embedded={routeBranchId !== undefined}
         />
       </EmployeePanel>
     </EmployeePage>

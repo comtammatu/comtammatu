@@ -610,9 +610,6 @@ export function IngredientDialog({
       is_base: boolean;
       anchor_unit_id: number | null;
       anchor_factor: number | null;
-      allow_purchase: boolean;
-      allow_issue: boolean;
-      allow_production: boolean;
     }[];
     try {
       mappedUnits = values.units.map((u) => {
@@ -643,9 +640,6 @@ export function IngredientDialog({
           is_base: u.is_base,
           anchor_unit_id: isPackaging ? derivationRow.anchor_unit_id : null,
           anchor_factor: isPackaging ? derivationRow.anchor_factor : null,
-          allow_purchase: true,
-          allow_issue: true,
-          allow_production: true,
         };
       });
     } catch (error) {

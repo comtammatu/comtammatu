@@ -14,7 +14,7 @@ export async function generateMetadata({
     manifest: `/br/${branchId}/pos/manifest.webmanifest`,
     appleWebApp: {
       capable: true,
-      statusBarStyle: "default",
+      statusBarStyle: "black-translucent",
       title: "Má Tư POS",
     },
   };

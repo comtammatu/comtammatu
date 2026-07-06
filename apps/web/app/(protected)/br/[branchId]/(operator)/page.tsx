@@ -49,6 +49,7 @@ import {
   CENTRAL_HOME_TILE_SUFFIXES,
   getBranchHomeTileLimit,
   getBranchPrimaryHomeGroup,
+  getOperatorHomeTileHrefs,
 } from "./_lib/operator-home-contract";
 import { resolveOperatorTileIcon } from "./operator-tile-icons";
 
@@ -299,27 +300,64 @@ export default async function OperatorHomePage({
             : [];
         })()
       : rawGroups;
+  const isBranchManagerOrOwner =
+    claims.user_role === "branch_manager" || claims.user_role === "owner";
+
   const branchTodayGroup = getBranchPrimaryHomeGroup(rawGroups);
   const branchTodayTileLimit = branchTodayGroup
     ? getBranchHomeTileLimit(branchTodayGroup.id)
     : 0;
   const branchTodayTileCount = branchTodayGroup?.tiles.length ?? 0;
-  const branchTodayGroups = branchTodayGroup
-    ? [
-        {
-          ...branchTodayGroup,
-          tiles: branchTodayGroup.tiles.slice(0, branchTodayTileLimit),
-        },
-      ].filter((group) => group.tiles.length > 0)
-    : [];
+
+  const branchTodayGroups = isBranchManagerOrOwner
+    ? (() => {
+        const managerHomeHrefs = getOperatorHomeTileHrefs(
+          rawGroups,
+          branchKind,
+          claims.user_role,
+        );
+        const homeTiles = rawGroups
+          .flatMap((group) => group.tiles)
+          .filter((tile) => managerHomeHrefs.has(tile.href));
+        return homeTiles.length > 0
+          ? [
+              {
+                id: "manager-home-jobs",
+                title: "Vận hành chi nhánh",
+                tiles: homeTiles,
+              },
+            ]
+          : [];
+      })()
+    : branchTodayGroup
+      ? [
+          {
+            ...branchTodayGroup,
+            tiles: branchTodayGroup.tiles.slice(0, branchTodayTileLimit),
+          },
+        ].filter((group) => group.tiles.length > 0)
+      : [];
+
   const groups = isCentral ? centralGroups : branchTodayGroups;
+
   const showMoreLink =
     !isCentral &&
-    rawGroups.some((group) =>
-      group.id !== branchTodayGroup?.id
-        ? group.tiles.length > 0
-        : branchTodayTileCount > branchTodayTileLimit,
-    );
+    (isBranchManagerOrOwner
+      ? (() => {
+          const managerHomeHrefs = getOperatorHomeTileHrefs(
+            rawGroups,
+            branchKind,
+            claims.user_role,
+          );
+          return rawGroups.some((group) =>
+            group.tiles.some((tile) => !managerHomeHrefs.has(tile.href)),
+          );
+        })()
+      : rawGroups.some((group) =>
+          group.id !== branchTodayGroup?.id
+            ? group.tiles.length > 0
+            : branchTodayTileCount > branchTodayTileLimit,
+        ));
 
   const todayStatusSection = showTodayCard ? (
     <EmployeeHomePageContent

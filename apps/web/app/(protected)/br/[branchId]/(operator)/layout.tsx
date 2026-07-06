@@ -38,7 +38,7 @@ export async function generateMetadata({
     manifest: `/br/${branchId}/manifest.webmanifest`,
     appleWebApp: {
       capable: true,
-      statusBarStyle: "default",
+      statusBarStyle: "black-translucent",
       title: "Má Tư Hub",
     },
   };

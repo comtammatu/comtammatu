@@ -15,6 +15,13 @@ import {
 } from "lucide-react";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@comtammatu/ui/components/drawer";
+import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
@@ -38,6 +45,7 @@ import {
   ItemFooter,
   ItemHeader,
   ItemTitle,
+  ItemGroup,
 } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
@@ -170,63 +178,7 @@ export function PosSessionsClient({
   ).length;
 
   const summary = useMemo(() => buildSummary(orders), [orders]);
-  const orderColumns: DataTableColumn<PosSessionOrder>[] = [
-    {
-      key: "bill",
-      header: messages.settings.posSessions.bill,
-      className: "max-w-sm",
-      render: (order) => (
-        <div>
-          <div className="font-medium">{order.order_number}</div>
-          <div className="text-xs text-muted-foreground">
-            {order.order_type === "dine_in"
-              ? messages.settings.posSessions.tableContext(
-                  order.tables?.number ?? "-",
-                )
-              : messages.settings.posSessions.takeaway}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "time",
-      header: messages.settings.posSessions.time,
-      render: (order) => formatTime(order.created_at),
-    },
-    {
-      key: "status",
-      header: FORM_VI.status,
-      render: (order) => <StatusBadge domain="order" value={order.status} />,
-    },
-    {
-      key: "payment",
-      header: messages.settings.posSessions.payment,
-      render: (order) =>
-        order.payment_status === "paid" ? (
-          <span className="text-success">
-            {paymentMethodLabel(order.payment_method)}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">
-            {messages.settings.posSessions.unpaidShort}
-          </span>
-        ),
-    },
-    {
-      key: "total",
-      header: FORM_VI.total,
-      className: "text-right font-medium font-mono tabular-nums",
-      render: (order) => formatVND(order.total_amount),
-    },
-    {
-      key: "open",
-      header: "",
-      className: "w-8",
-      render: () => (
-        <IconChevronRight className="size-4 text-muted-foreground" />
-      ),
-    },
-  ];
+  
 
   if (sessions.length === 0) {
     return (
@@ -267,38 +219,44 @@ export function PosSessionsClient({
               contentFlush
               contentScroll
             >
-              <DataTable
-                columns={orderColumns}
-                data={orders}
-                getRowKey={(order) => order.id}
-                emptyTitle={messages.settings.posSessions.noBills}
-                mobileBreakpoint={1024}
-                onRowClick={(order) => setSelectedOrderId(order.id)}
-                mobileCardRender={(order) => (
-                  <Item variant="outline">
-                    <ItemHeader>
-                      <ItemContent>
-                        <ItemTitle>{order.order_number}</ItemTitle>
-                        <ItemDescription>
-                          {formatTime(order.created_at)} ·{" "}
-                          {order.order_type === "dine_in"
-                            ? messages.settings.posSessions.tableContext(
-                                order.tables?.number ?? "-",
-                              )
-                            : messages.settings.posSessions.takeaway}
-                        </ItemDescription>
-                      </ItemContent>
-                      <IconChevronRight className="size-4 text-muted-foreground" />
-                    </ItemHeader>
-                    <ItemFooter>
-                      <StatusBadge domain="order" value={order.status} />
-                      <span className="font-mono text-sm font-semibold tabular-nums">
-                        {formatVND(order.total_amount)}
-                      </span>
-                    </ItemFooter>
-                  </Item>
-                )}
-              />
+              {orders.length > 0 ? (
+                <ItemGroup>
+                  {orders.map((order) => (
+                    <Item
+                      key={order.id}
+                      variant="outline"
+                      className="cursor-pointer"
+                      onClick={() => setSelectedOrderId(order.id)}
+                    >
+                      <ItemHeader>
+                        <ItemContent>
+                          <ItemTitle>{order.order_number}</ItemTitle>
+                          <ItemDescription>
+                            {formatTime(order.created_at)} ·{" "}
+                            {order.order_type === "dine_in"
+                              ? messages.settings.posSessions.tableContext(
+                                  order.tables?.number ?? "-",
+                                )
+                              : messages.settings.posSessions.takeaway}
+                          </ItemDescription>
+                        </ItemContent>
+                        <IconChevronRight className="size-4 text-muted-foreground" />
+                      </ItemHeader>
+                      <ItemFooter>
+                        <StatusBadge domain="order" value={order.status} />
+                        <span className="font-mono text-sm font-semibold tabular-nums">
+                          {formatVND(order.total_amount)}
+                        </span>
+                      </ItemFooter>
+                    </Item>
+                  ))}
+                </ItemGroup>
+              ) : (
+                <AppEmptyState
+                  title={messages.settings.posSessions.noBills}
+                  compact
+                />
+              )}
             </AppSection>
           </>
         ) : null}
@@ -316,7 +274,7 @@ export function PosSessionsClient({
         />
       ) : null}
 
-      <OrderDetailSheet
+      <OrderDetailDrawer
         order={selectedOrder}
         open={selectedOrder !== null}
         onOpenChange={(next) => {
@@ -746,70 +704,8 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
     1,
     ...category_breakdown.map((c) => c.revenue),
   );
-  const topItemColumns: DataTableColumn<
-    PosSessionReport["top_items"][number]
-  >[] = [
-    {
-      key: "name",
-      header: messages.settings.posSessions.itemName,
-      className: "font-medium",
-      render: (item) => item.name,
-    },
-    {
-      key: "type",
-      header: messages.settings.posSessions.itemType,
-      render: (item) => (
-        <Badge variant="outline">{ITEM_SOURCE_LABEL[item.source]}</Badge>
-      ),
-    },
-    {
-      key: "quantity",
-      header: messages.settings.posSessions.quantityShort,
-      className: "text-right font-mono tabular-nums",
-      render: (item) => item.qty,
-    },
-    {
-      key: "revenue",
-      header: messages.settings.posSessions.revenue,
-      className: "text-right font-mono tabular-nums",
-      render: (item) => formatVND(item.revenue),
-    },
-  ];
-  const discountColumns: DataTableColumn<
-    PosSessionReport["discounts"]["top_orders"][number]
-  >[] = [
-    {
-      key: "bill",
-      header: messages.settings.posSessions.bill,
-      className: "font-medium",
-      render: (order) => order.order_number,
-    },
-    {
-      key: "type",
-      header: messages.settings.posSessions.itemType,
-      render: (order) => (
-        <Badge variant="outline">
-          {order.type === "pct"
-            ? `${order.value ?? 0}%`
-            : order.type === "vnd"
-              ? "VND"
-              : "—"}
-        </Badge>
-      ),
-    },
-    {
-      key: "discount",
-      header: messages.settings.posSessions.discount,
-      className: "text-right font-mono tabular-nums",
-      render: (order) => `-${formatVND(order.amount)}`,
-    },
-    {
-      key: "note",
-      header: messages.settings.posSessions.note,
-      className: "max-w-sm whitespace-normal break-words text-muted-foreground",
-      render: (order) => order.note ?? "—",
-    },
-  ];
+  
+  
 
   return (
     <AppSection
@@ -851,13 +747,9 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
       {top_items.length > 0 ? (
         <div>
           <SectionLabel>{messages.settings.posSessions.topItems}</SectionLabel>
-          <DataTable
-            columns={topItemColumns}
-            data={top_items}
-            getRowKey={(item) => `${item.source}-${item.name}`}
-            mobileBreakpoint={1024}
-            mobileCardRender={(item) => (
-              <Item variant="outline">
+          <ItemGroup>
+            {top_items.map((item) => (
+              <Item key={`${item.source}-${item.name}`} variant="outline">
                 <ItemContent>
                   <ItemTitle>{item.name}</ItemTitle>
                   <ItemDescription>
@@ -873,8 +765,8 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
                   </span>
                 </ItemFooter>
               </Item>
-            )}
-          />
+            ))}
+          </ItemGroup>
         </div>
       ) : (
         <NoteCallout label={messages.settings.posSessions.topItemsEmptyTitle}>
@@ -944,13 +836,9 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
               formatVND(discounts.total),
             )}
           </SectionLabel>
-          <DataTable
-            columns={discountColumns}
-            data={discounts.top_orders}
-            getRowKey={(order) => order.order_id}
-            mobileBreakpoint={1024}
-            mobileCardRender={(order) => (
-              <Item variant="outline">
+          <ItemGroup>
+            {discounts.top_orders.map((order) => (
+              <Item key={order.order_id} variant="outline">
                 <ItemContent>
                   <ItemTitle>{order.order_number}</ItemTitle>
                   <ItemDescription>{order.note ?? "—"}</ItemDescription>
@@ -968,8 +856,8 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
                   </span>
                 </ItemFooter>
               </Item>
-            )}
-          />
+            ))}
+          </ItemGroup>
         </div>
       ) : null}
     </AppSection>
@@ -1027,7 +915,7 @@ function AddOnLine({
   );
 }
 
-function OrderDetailSheet({
+function OrderDetailDrawer({
   order,
   open,
   onOpenChange,
@@ -1037,23 +925,20 @@ function OrderDetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full p-0 data-[side=right]:w-full"
-      >
-        <SheetHeader>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="flex flex-col overflow-hidden">
+        <DrawerHeader>
           <div className="flex flex-col gap-1">
             <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {messages.settings.posSessions.orderSheetEyebrow}
             </div>
-            <SheetTitle className="text-base font-semibold">
+            <DrawerTitle className="text-base font-semibold">
               {messages.settings.posSessions.orderSheetTitle(
                 order?.order_number ?? "",
               )}
-            </SheetTitle>
+            </DrawerTitle>
             {order ? (
-              <SheetDescription>
+              <DrawerDescription>
                 {order.order_type === "dine_in"
                   ? messages.settings.posSessions.tableContext(
                       order.tables?.number ?? "-",
@@ -1061,10 +946,10 @@ function OrderDetailSheet({
                   : messages.settings.posSessions.takeaway}
                 {" · "}
                 {formatDateTime(order.created_at)}
-              </SheetDescription>
+              </DrawerDescription>
             ) : null}
           </div>
-        </SheetHeader>
+        </DrawerHeader>
 
         <ScrollArea className="min-h-0 flex-1">
           {order ? (
@@ -1254,8 +1139,8 @@ function OrderDetailSheet({
             </div>
           ) : null}
         </ScrollArea>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }
 

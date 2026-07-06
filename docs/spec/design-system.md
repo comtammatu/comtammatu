@@ -138,7 +138,7 @@ Brand Concept 01 runtime mapping:
 - `ring` / chart accent: vang gao.
 - `success`: xanh la diu.
 - `muted-foreground` / supporting tone: nau go or xam am depending on theme.
-- Heading font: Outfit.
+- Heading font: Geist.
 - Body font: Geist.
 - Mono font: Geist Mono for tabular operational data.
 

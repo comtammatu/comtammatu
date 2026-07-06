@@ -55,6 +55,7 @@ function employeeName(value: unknown): string | null {
 interface CountSlipsPageContentProps {
   routeBranchId?: number;
   embedded?: boolean;
+  basePath?: string;
 }
 
 interface CountSlipQueryLine {
@@ -85,6 +86,7 @@ function unitKey(ingredientId: number, unitId: number): string {
 export async function CountSlipsPageContent({
   routeBranchId,
   embedded = false,
+  basePath = "/inventory/count-slips",
 }: CountSlipsPageContentProps = {}) {
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
@@ -231,6 +233,7 @@ export async function CountSlipsPageContent({
       initial={rows}
       branchScoped={routeBranchId != null}
       embedded={embedded}
+      basePath={basePath}
     />
   );
 }

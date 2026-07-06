@@ -22,13 +22,7 @@ export interface ResolvedOperatorTileGroup {
   tiles: ResolvedOperatorTile[];
 }
 
-/**
- * Domain tile rows rendered below the "Cần xử lý" queue. `approvals` is
- * excluded here — its tiles are surfaced exclusively as queue rows (V2
- * hub layout), not as a duplicate domain tile group.
- */
-const DOMAIN_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] =
-  OPERATOR_TILE_GROUP_ORDER.filter((groupId) => groupId !== "approvals");
+
 
 function resolveVisibleTiles(
   role: StaffRole,
@@ -50,6 +44,9 @@ function resolveVisibleTiles(
     }));
 }
 
+const DOMAIN_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] =
+  OPERATOR_TILE_GROUP_ORDER.filter((groupId) => groupId !== "approvals");
+
 export function resolveOperatorTiles(
   role: StaffRole,
   branchId: number,
@@ -58,8 +55,9 @@ export function resolveOperatorTiles(
   if (role === "office") return [];
 
   const visibleTiles = resolveVisibleTiles(role, branchId, branchKind);
+  const allowedGroups = DOMAIN_TILE_GROUP_ORDER;
 
-  return DOMAIN_TILE_GROUP_ORDER.map((groupId) => ({
+  return allowedGroups.map((groupId) => ({
     id: groupId,
     title: OPERATOR_TILE_GROUP_TITLES[groupId],
     tiles: visibleTiles.filter((tile) => tile.group === groupId),

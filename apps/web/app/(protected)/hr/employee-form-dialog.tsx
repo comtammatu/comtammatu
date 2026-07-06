@@ -74,6 +74,8 @@ const employeeSchema = z.object({
 const editEmployeeSchema = z.object({
   full_name: z.string().trim().min(1, { error: "Họ tên không được để trống" }),
   phone: z.string().trim().optional(),
+  position_code: z.string().min(1, { error: "Chọn chức vụ" }),
+  branch_id: z.string().optional(),
   employee_code: z.string().trim().optional(),
   start_date: z.string().optional(),
   contract_type: z.string().optional(),
@@ -142,6 +144,8 @@ function editDefaults(employee: EmployeeRow): EditEmployeeFormValues {
   return {
     full_name: employee.profiles?.full_name ?? "",
     phone: employee.profiles?.phone ?? "",
+    position_code: employee.profiles?.positions?.code ?? "",
+    branch_id: employee.profiles?.branch_id?.toString() ?? NO_BRANCH,
     employee_code: employee.employee_code ?? "",
     start_date: employee.start_date ?? "",
     contract_type: employee.contract_type ?? NO_CONTRACT,
@@ -186,10 +190,17 @@ export function EmployeeFormDialog({
 
   if (mode === "edit" && employee) {
     async function handleEditSubmit(values: EditEmployeeFormValues) {
+      const branchId =
+        values.branch_id && values.branch_id !== NO_BRANCH
+          ? Number(values.branch_id)
+          : null;
+
       return updateEmployee({
         employeeId: employee!.id,
         fullName: values.full_name,
         phone: values.phone || undefined,
+        positionCode: values.position_code,
+        branchId: branchId,
         employeeCode: values.employee_code ?? "",
         startDate: values.start_date ?? "",
         contractType: contractType(values.contract_type),
@@ -222,48 +233,83 @@ export function EmployeeFormDialog({
         contentClassName="sm:max-w-2xl"
         onSubmit={handleEditSubmit}
       >
-        {(form) => (
-          <>
-            <TextField
-              control={form.control}
-              name="full_name"
-              label="Họ tên"
-              placeholder="Nguyễn Văn A"
-              required
-            />
+        {(form) => {
+          const selectedPosition = form.watch("position_code");
+          const requiredBranchKind = requiredBranchKindForPositionCode(
+            selectedPosition,
+          );
+          const isSiteOptional = requiredBranchKind === null;
+          const branchChoices =
+            requiredBranchKind && requiredBranchKind !== "unassigned"
+              ? branches.filter(
+                  (branch) =>
+                    (branch.branch_kind ?? "branch") === requiredBranchKind,
+                )
+              : branches;
 
-            <FormSection
-              title="Hồ sơ làm việc"
-              description="Thông tin dùng cho phân quyền, chi nhánh, checklist và trạng thái đi làm."
-            >
+          return (
+            <>
               <TextField
                 control={form.control}
-                name="phone"
-                label="Số điện thoại"
-                placeholder="0901234567"
+                name="full_name"
+                label="Họ tên"
+                placeholder="Nguyễn Văn A"
+                required
               />
-              <TextField
-                control={form.control}
-                name="employee_code"
-                label="Mã nhân viên"
-                placeholder="NV001"
-              />
-              <TextField
-                control={form.control}
-                name="start_date"
-                label="Ngày bắt đầu"
-                type="date"
-              />
-              <SelectField
-                control={form.control}
-                name="status"
-                label="Trạng thái"
-                options={[
-                  { value: STATUS_ACTIVE, label: "Hoạt động" },
-                  { value: STATUS_INACTIVE, label: "Tạm ngưng" },
-                ]}
-              />
-            </FormSection>
+
+              <FormSection
+                title="Hồ sơ làm việc"
+                description="Thông tin dùng cho phân quyền, chi nhánh, checklist và trạng thái đi làm."
+              >
+                <TextField
+                  control={form.control}
+                  name="phone"
+                  label="Số điện thoại"
+                  placeholder="0901234567"
+                />
+                <SelectField
+                  control={form.control}
+                  name="position_code"
+                  label="Chức vụ"
+                  options={positionOptions}
+                  placeholder="Chọn chức vụ"
+                />
+                <SelectField
+                  control={form.control}
+                  name="branch_id"
+                  label="Chi nhánh / địa điểm"
+                  options={[
+                    { value: NO_BRANCH, label: "Không thuộc địa điểm" },
+                    ...branchChoices.map((branch) => ({
+                      value: branch.id.toString(),
+                      label: branch.name,
+                    })),
+                  ]}
+                  placeholder="Không thuộc địa điểm"
+                  disabled={isSiteOptional}
+                />
+                <TextField
+                  control={form.control}
+                  name="employee_code"
+                  label="Mã nhân viên"
+                  placeholder="NV001"
+                />
+                <TextField
+                  control={form.control}
+                  name="start_date"
+                  label="Ngày bắt đầu"
+                  type="date"
+                />
+                <SelectField
+                  control={form.control}
+                  name="status"
+                  label="Trạng thái"
+                  options={[
+                    { value: STATUS_ACTIVE, label: "Hoạt động" },
+                    { value: STATUS_INACTIVE, label: "Tạm ngưng" },
+                  ]}
+                />
+              </FormSection>
 
             <FormSection
               title="HĐLĐ, lương và BHXH"
@@ -334,8 +380,9 @@ export function EmployeeFormDialog({
               />
             </FormSection>
           </>
-        )}
-      </FormDialog>
+        );
+      }}
+    </FormDialog>
     );
   }
 

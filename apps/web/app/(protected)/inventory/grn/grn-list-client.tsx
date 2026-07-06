@@ -37,6 +37,14 @@ import {
 } from "@comtammatu/ui/components/item";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useLongPress } from "@lib/hooks/use-long-press";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@comtammatu/ui/components/drawer";
 import { matchesSearch } from "@lib/search";
 import {
   AppEmptyState,
@@ -121,6 +129,8 @@ export function GrnListClient({
   const isOperator = basePath.startsWith("/br/");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [drawerRow, setDrawerRow] = useState<GrnRow | null>(null);
+  const router = useRouter();
   const grnColumns: DataTableColumn<GrnRow>[] = [
     {
       key: "code",
@@ -262,8 +272,27 @@ export function GrnListClient({
         rowClassName={(g) =>
           g.status === "cancelled" ? "opacity-60" : undefined
         }
-        mobileCardRender={(g) => <GrnMobileCard grn={g} basePath={basePath} />}
+        mobileCardRender={(g) => <GrnMobileCard grn={g} basePath={basePath} onOpenDrawer={setDrawerRow} />}
       />
+
+      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
+        <DrawerContent>
+          {drawerRow && (
+            <>
+              <DrawerHeader>
+                <DrawerTitle>{drawerRow.code}</DrawerTitle>
+                <DrawerDescription>{drawerRow.supplierName} • {drawerRow.branchName}</DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 flex flex-col gap-3">
+                <Button variant="default" className="w-full" onClick={() => router.push(grnDetailHref(basePath, drawerRow.id))}>
+                  Xem chi tiết
+                </Button>
+              </div>
+            </>
+          )}
+        </DrawerContent>
+      </Drawer>
+
     </>
   );
 
@@ -457,11 +486,29 @@ function GrnDraftsTab({
   );
 }
 
-function GrnMobileCard({ grn, basePath }: { grn: GrnRow; basePath: string }) {
+function GrnMobileCard({
+  grn,
+  basePath,
+  onOpenDrawer,
+}: {
+  grn: GrnRow;
+  basePath: string;
+  onOpenDrawer: (grn: GrnRow) => void;
+}) {
+  const router = useRouter();
+
+  const longPress = useLongPress({
+    onLongPress: () => onOpenDrawer(grn),
+    onClick: () => router.push(grnDetailHref(basePath, grn.id)),
+  });
+
   return (
-    <InteractiveCard asChild minHeight="mobile" padding="default">
-      <Link href={grnDetailHref(basePath, grn.id)} className="block">
-        <div className="min-w-0 flex-1 flex flex-col gap-1">
+    <InteractiveCard minHeight="mobile" padding="default" asChild>
+      <div
+        {...longPress}
+        className="flex flex-row items-center justify-between gap-3 touch-none select-none cursor-pointer active:scale-[0.98] transition-transform"
+      >
+        <div className="min-w-0 flex-1 flex flex-col gap-1 pointer-events-none">
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-semibold">{grn.code}</span>
             <StatusBadge domain="inventory" value={grn.status} size="sm" />
@@ -472,7 +519,7 @@ function GrnMobileCard({ grn, basePath }: { grn: GrnRow; basePath: string }) {
             {grn.poCode && ` • PO ${grn.poCode}`}
           </p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
+        <div className="flex shrink-0 flex-col items-end gap-1 pointer-events-none">
           <span className="text-xs text-muted-foreground">
             {grn.date || "—"}
           </span>
@@ -480,7 +527,7 @@ function GrnMobileCard({ grn, basePath }: { grn: GrnRow; basePath: string }) {
             {formatVND(grn.total)}
           </span>
         </div>
-      </Link>
+      </div>
     </InteractiveCard>
   );
 }

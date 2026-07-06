@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
-import { Outfit } from "next/font/google";
+
 import Script from "next/script";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
@@ -17,11 +17,7 @@ import "@comtammatu/ui/globals.css";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-outfit",
-  weight: ["400", "500", "600", "700"],
-});
+
 
 export const metadata: Metadata = {
   title: "Cơm Tấm Má Tư",
@@ -43,13 +39,17 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "Má Tư",
   },
 };
 
 export const viewport: Viewport = {
   themeColor: "#fff6ee",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
 };
 
@@ -60,7 +60,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={cn(
         GeistSans.variable,
         GeistMono.variable,
-        outfit.variable,
+
         "font-sans",
       )}
       suppressHydrationWarning

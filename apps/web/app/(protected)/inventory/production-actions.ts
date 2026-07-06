@@ -22,5 +22,6 @@ export {
   createProductionOrder,
   confirmProductionOrder,
   cancelProductionOrder,
+  getProductionOrderDetailsForConfirm,
 } from "./production-order-actions";
 export type { ProductionOrderRow } from "./production-order-actions";

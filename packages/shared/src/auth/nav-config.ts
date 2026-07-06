@@ -285,7 +285,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/supplier-returns",
     label: "Trả hàng NCC",
-    kinds: ["branch", "central_supply"],
+    kinds: ["central_supply"],
   },
   {
     moduleKey: "inventory",
@@ -309,29 +309,5 @@ export const OPERATOR_TILE_ITEMS = [
     hrefTemplate: "/br/{branchId}/stock/catalog",
     label: "Danh mục",
     kinds: ["central_supply"],
-  },
-  {
-    moduleKey: "inventory",
-    icon: "ClipboardList",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/consumption",
-    label: "Tiêu hao",
-    kinds: ["branch"],
-  },
-  {
-    moduleKey: "inventory",
-    icon: "FileText",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/issues",
-    label: "Xuất kho",
-    kinds: ["branch"],
-  },
-  {
-    moduleKey: "inventory",
-    icon: "ChartBar",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/reports",
-    label: "Báo cáo",
-    kinds: ["branch"],
   },
 ] satisfies readonly OperatorTileConfig[];

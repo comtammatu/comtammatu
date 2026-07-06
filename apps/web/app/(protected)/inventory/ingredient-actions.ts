@@ -48,9 +48,6 @@ const unitRowSchema = z.object({
   is_base: z.boolean(),
   anchor_unit_id: z.coerce.number().int().positive().nullable().optional(),
   anchor_factor: z.coerce.number().positive().nullable().optional(),
-  allow_purchase: z.boolean(),
-  allow_issue: z.boolean(),
-  allow_production: z.boolean(),
 });
 
 const ingredientBaseSchema = z.object({
@@ -140,9 +137,6 @@ function buildRpcUnits(units: IngredientInput["units"]) {
     is_base: u.is_base,
     anchor_unit_id: u.is_base ? null : (u.anchor_unit_id ?? null),
     anchor_factor: u.is_base ? null : (u.anchor_factor ?? null),
-    allow_purchase: u.allow_purchase,
-    allow_issue: u.allow_issue,
-    allow_production: u.allow_production,
     sort_order: index,
   }));
 }
@@ -185,7 +179,7 @@ const getIngredientsCached = cache(
     let query = supabase
       .from("ingredients")
       .select(
-        "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", tenantId);
 
@@ -232,9 +226,6 @@ export async function fetchIngredients(
         anchor_unit_id: u.anchor_unit_id ?? null,
         anchor_factor: u.anchor_factor == null ? null : Number(u.anchor_factor),
         is_active: u.is_active,
-        allow_purchase: u.allow_purchase,
-        allow_issue: u.allow_issue,
-        allow_production: u.allow_production,
         sort_order: u.sort_order,
       }))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -381,9 +372,6 @@ export const quickCreateIngredient = withAction<
             unit_id: unitId,
             to_base_factor: 1,
             is_base: true,
-            allow_purchase: true,
-            allow_issue: true,
-            allow_production: true,
           },
         ],
       }),
@@ -474,9 +462,6 @@ export const toggleIngredientActive = withAction(
 interface ExportIngredientRow {
   name: string;
   sku: string | null;
-  purchase_unit: string;
-  measure_unit: string;
-  purchase_to_measure_factor: number;
   category: string | null;
   item_kind: string;
   unit_cost: number | null;
@@ -489,9 +474,6 @@ interface ExportIngredientRow {
     unit_code: string;
     to_base_factor: number;
     is_base: boolean;
-    allow_purchase: boolean;
-    allow_issue: boolean;
-    allow_production: boolean;
   }[];
 }
 
@@ -502,13 +484,6 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
       columns: [
         { header: "Tên nguyên liệu", key: "name", width: 32 },
         { header: "SKU", key: "sku", width: 14 },
-        { header: "Đơn vị nhập", key: "purchase_unit", width: 14 },
-        { header: "Đơn vị tính", key: "measure_unit", width: 14 },
-        {
-          header: "Tỉ lệ quy đổi",
-          key: "purchase_to_measure_factor",
-          width: 16,
-        },
         { header: "Danh mục", key: "category", width: 18 },
         { header: "Loại hàng", key: "item_kind_label", width: 16 },
         { header: "Giá nhập (VND)", key: "unit_cost", width: 16 },
@@ -521,9 +496,6 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
       rows: rows.map((r) => ({
         name: r.name,
         sku: r.sku ?? "",
-        purchase_unit: r.purchase_unit,
-        measure_unit: r.measure_unit,
-        purchase_to_measure_factor: r.purchase_to_measure_factor,
         category: r.category ?? "",
         item_kind_label: ITEM_KIND_LABELS[r.item_kind] ?? r.item_kind,
         unit_cost: r.unit_cost ?? "",
@@ -541,9 +513,6 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
         { header: "Mã đơn vị", key: "unit_code", width: 14 },
         { header: "Hệ số quy đổi", key: "to_base_factor", width: 16 },
         { header: "Đơn vị gốc", key: "is_base", width: 12 },
-        { header: "Nhập", key: "allow_purchase", width: 10 },
-        { header: "Xuất", key: "allow_issue", width: 10 },
-        { header: "Sản xuất", key: "allow_production", width: 12 },
       ],
       rows: rows.flatMap((r) =>
         r.units.map((u) => ({
@@ -551,9 +520,6 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
           unit_code: u.unit_code,
           to_base_factor: u.to_base_factor,
           is_base: u.is_base ? "Có" : "Không",
-          allow_purchase: u.allow_purchase ? "Có" : "Không",
-          allow_issue: u.allow_issue ? "Có" : "Không",
-          allow_production: u.allow_production ? "Có" : "Không",
         })),
       ),
     },
@@ -581,7 +547,7 @@ export async function exportIngredients(
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "name, sku, purchase_unit, measure_unit, purchase_to_measure_factor, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+      "name, sku, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("name");
@@ -593,9 +559,6 @@ export async function exportIngredients(
   const rows: ExportIngredientRow[] = (data ?? []).map((r) => ({
     name: r.name,
     sku: r.sku,
-    purchase_unit: r.purchase_unit ?? "",
-    measure_unit: r.measure_unit ?? "",
-    purchase_to_measure_factor: Number(r.purchase_to_measure_factor ?? 1),
     category: r.category,
     item_kind: r.item_kind ?? "raw_material",
     unit_cost: r.unit_cost != null ? Number(r.unit_cost) : null,
@@ -612,9 +575,6 @@ export async function exportIngredients(
         unit_code: u.units?.code ?? "",
         to_base_factor: Number(u.to_base_factor ?? 1),
         is_base: u.is_base,
-        allow_purchase: u.allow_purchase,
-        allow_issue: u.allow_issue,
-        allow_production: u.allow_production,
       })),
   }));
 
@@ -649,12 +609,7 @@ export async function exportIngredients(
 const importIngredientRowSchema = z.object({
   name: z.string().trim().min(1, { error: "Thiếu tên" }),
   sku: z.string().trim().optional(),
-  purchase_unit: z.string().trim().min(1, { error: "Thiếu đơn vị nhập" }),
-  measure_unit: z.string().trim().min(1, { error: "Thiếu đơn vị tính" }),
-  purchase_to_measure_factor: z.coerce
-    .number()
-    .positive({ error: VALIDATION_VI.positive("Tỉ lệ quy đổi") })
-    .default(1),
+  unit: z.string().trim().min(1, { error: "Thiếu đơn vị" }),
   category: z.string().trim().optional(),
   item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
   unit_cost: z.coerce.number().min(0).optional(),
@@ -811,16 +766,10 @@ export async function importIngredients(
     const reorder = parseOptionalNumber(
       raw["Điểm đặt hàng"] ?? raw["reorder_point"],
     );
-    const conversionRaw =
-      raw["Tỉ lệ quy đổi"] ?? raw["purchase_to_measure_factor"];
-
     const parsedRow = importIngredientRowSchema.safeParse({
       name: raw["Tên nguyên liệu"] ?? raw["name"],
       sku: (raw["SKU"] ?? raw["sku"] ?? "").trim() || undefined,
-      purchase_unit: raw["Đơn vị nhập"] ?? raw["purchase_unit"],
-      measure_unit: raw["Đơn vị tính"] ?? raw["measure_unit"],
-      purchase_to_measure_factor:
-        conversionRaw && conversionRaw.trim() ? conversionRaw : undefined,
+      unit: raw["Đơn vị"] ?? raw["unit"],
       category: (raw["Danh mục"] ?? raw["category"] ?? "").trim() || undefined,
       item_kind: kindKey,
       unit_cost: unitCost,
@@ -863,9 +812,7 @@ export async function importIngredients(
     p_rows: valid.map((row) => ({
       name: row.name,
       sku: row.sku ?? null,
-      purchase_unit: row.purchase_unit,
-      measure_unit: row.measure_unit,
-      purchase_to_measure_factor: row.purchase_to_measure_factor,
+      unit: row.unit,
       category: row.category ?? null,
       item_kind: row.item_kind,
       unit_cost: row.unit_cost ?? null,
@@ -909,9 +856,7 @@ export async function downloadIngredientTemplate(): Promise<ActionResult> {
     {
       name: "Nước mắm chai (ví dụ)",
       sku: "NM-001",
-      purchase_unit: "chai",
-      measure_unit: "ml",
-      purchase_to_measure_factor: 250,
+
       category: "Gia vị",
       item_kind: "raw_material",
       unit_cost: 18000,
@@ -925,17 +870,6 @@ export async function downloadIngredientTemplate(): Promise<ActionResult> {
           unit_code: "chai",
           to_base_factor: 1,
           is_base: true,
-          allow_purchase: true,
-          allow_issue: true,
-          allow_production: false,
-        },
-        {
-          unit_code: "ml",
-          to_base_factor: 1 / 250,
-          is_base: false,
-          allow_purchase: false,
-          allow_issue: false,
-          allow_production: true,
         },
       ],
     },

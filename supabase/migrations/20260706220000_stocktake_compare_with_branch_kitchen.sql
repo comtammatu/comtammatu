@@ -134,3 +134,84 @@ REVOKE ALL ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id 
 GRANT EXECUTE ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric) TO authenticated, service_role;
 
 COMMENT ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric) IS 'Start a stocktake session for a branch. If p_location_id is NULL, defaults to kitchen for branch sites, and default receive warehouse for others. Prevents duplicate stocktake lines by filtering by location_id.';
+
+
+-- 3. Correct existing active/pending count slips and stocktake sessions from Kho CN to Bếp CN for branch sites
+DO $$
+DECLARE
+  v_rec RECORD;
+  v_kitchen_id BIGINT;
+BEGIN
+  -- 3.1. Correct inventory_count_slips in 'submitted' or 'needs_changes' status
+  FOR v_rec IN 
+    SELECT s.id, s.branch_id, s.location_id, s.tenant_id
+    FROM public.inventory_count_slips s
+    JOIN public.branches b ON b.id = s.branch_id
+    JOIN public.inventory_locations l ON l.id = s.location_id
+    WHERE b.branch_kind = 'branch'
+      AND l.location_kind = 'warehouse'
+      AND s.status IN ('submitted', 'needs_changes')
+  LOOP
+    SELECT il.id INTO v_kitchen_id
+    FROM public.inventory_locations il
+    WHERE il.branch_id = v_rec.branch_id
+      AND il.tenant_id = v_rec.tenant_id
+      AND il.location_kind = 'kitchen'
+      AND il.is_active = TRUE
+    LIMIT 1;
+
+    IF v_kitchen_id IS NOT NULL THEN
+      UPDATE public.inventory_count_slips
+      SET location_id = v_kitchen_id
+      WHERE id = v_rec.id;
+
+      UPDATE public.inventory_count_slip_lines sl
+      SET system_quantity = COALESCE((
+        SELECT current_quantity 
+        FROM public.stock_levels stl
+        WHERE stl.tenant_id = v_rec.tenant_id
+          AND stl.branch_id = v_rec.branch_id
+          AND stl.location_id = v_kitchen_id
+          AND stl.ingredient_id = sl.ingredient_id
+      ), 0)
+      WHERE sl.slip_id = v_rec.id;
+    END IF;
+  END LOOP;
+
+  -- 3.2. Correct stocktake_sessions in 'in_progress' status
+  FOR v_rec IN 
+    SELECT s.id, s.branch_id, s.location_id, s.tenant_id
+    FROM public.stocktake_sessions s
+    JOIN public.branches b ON b.id = s.branch_id
+    JOIN public.inventory_locations l ON l.id = s.location_id
+    WHERE b.branch_kind = 'branch'
+      AND l.location_kind = 'warehouse'
+      AND s.status = 'in_progress'
+  LOOP
+    SELECT il.id INTO v_kitchen_id
+    FROM public.inventory_locations il
+    WHERE il.branch_id = v_rec.branch_id
+      AND il.tenant_id = v_rec.tenant_id
+      AND il.location_kind = 'kitchen'
+      AND il.is_active = TRUE
+    LIMIT 1;
+
+    IF v_kitchen_id IS NOT NULL THEN
+      UPDATE public.stocktake_sessions
+      SET location_id = v_kitchen_id
+      WHERE id = v_rec.id;
+
+      UPDATE public.stocktake_lines sl
+      SET system_quantity = COALESCE((
+        SELECT current_quantity 
+        FROM public.stock_levels stl
+        WHERE stl.tenant_id = v_rec.tenant_id
+          AND stl.branch_id = v_rec.branch_id
+          AND stl.location_id = v_kitchen_id
+          AND stl.ingredient_id = sl.ingredient_id
+      ), 0)
+      WHERE sl.session_id = v_rec.id;
+    END IF;
+  END LOOP;
+END;
+$$;

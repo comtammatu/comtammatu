@@ -5206,6 +5206,7 @@ export type Database = {
       }
       production_order_items: {
         Row: {
+          actual_quantity: number | null
           created_at: string
           entry_unit_id: number | null
           finished_good_id: number
@@ -5217,6 +5218,7 @@ export type Database = {
           unit_cost_at_production: number | null
         }
         Insert: {
+          actual_quantity?: number | null
           created_at?: string
           entry_unit_id?: number | null
           finished_good_id: number
@@ -5228,6 +5230,7 @@ export type Database = {
           unit_cost_at_production?: number | null
         }
         Update: {
+          actual_quantity?: number | null
           created_at?: string
           entry_unit_id?: number | null
           finished_good_id?: number

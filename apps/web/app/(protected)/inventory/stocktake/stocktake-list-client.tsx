@@ -14,6 +14,19 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { useLongPress } from "@lib/hooks/use-long-press";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from "@comtammatu/ui/components/drawer";
+import { cancelStocktake } from "../actions";
+import { useTransition } from "react";
+import { toast } from "@comtammatu/ui/components/sonner";
+
 import {
   InputGroup,
   InputGroupAddon,
@@ -38,6 +51,7 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { createStocktakeSession } from "../actions";
+import { Ban as IconBan } from "lucide-react";
 
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 
@@ -75,27 +89,36 @@ function formatDateShort(dateStr: string | null): string {
 function StocktakeSessionCard({
   row,
   routeBase,
+  onOpenDrawer,
 }: {
   row: StocktakeSessionRow;
   routeBase: string;
+  onOpenDrawer: (row: StocktakeSessionRow) => void;
 }) {
+  const router = useRouter();
+  
+  const longPress = useLongPress({
+    onLongPress: () => onOpenDrawer(row),
+    onClick: () => router.push(`${routeBase}/${row.id}?branchId=${row.branch_id}`),
+  });
+
   return (
     <InteractiveCard minHeight="mobile" padding="default" asChild>
-      <Link
-        href={`${routeBase}/${row.id}?branchId=${row.branch_id}`}
-        className="flex-col items-stretch gap-3"
+      <div
+        {...longPress}
+        className="flex-col items-stretch gap-3 touch-none select-none cursor-pointer active:scale-[0.98] transition-transform"
       >
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 pointer-events-none">
           <span className="font-mono text-sm font-medium">KK-{row.id}</span>
           <StatusBadge domain="inventory" value={row.status} />
         </div>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex items-center justify-between text-xs text-muted-foreground pointer-events-none">
           <span>{row.branches?.name ?? "—"}</span>
           <span className="tabular-nums">
             {formatDateShort(row.started_at ?? row.created_at)}
           </span>
         </div>
-      </Link>
+      </div>
     </InteractiveCard>
   );
 }
@@ -121,6 +144,22 @@ export function StocktakeListClient({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const branchQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
+  const [drawerRow, setDrawerRow] = useState<StocktakeSessionRow | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleCancelSession(id: number) {
+    if (!confirm("Bạn có chắc chắn muốn hủy phiếu này không?")) return;
+    startTransition(async () => {
+      const res = await cancelStocktake(id);
+      if (!res.success) {
+        toast.error(res.error ?? "Hủy phiếu thất bại");
+        return;
+      }
+      toast.success("Hủy phiếu thành công");
+      setDrawerRow(null);
+      router.refresh();
+    });
+  }
 
   useEffect(() => {
     setRows(initial);
@@ -342,7 +381,7 @@ export function StocktakeListClient({
         emptyMode={isFiltered ? "no-results" : "no-data"}
         emptyIcon={<IconClipboardCheck />}
         mobileCardRender={(r) => (
-          <StocktakeSessionCard row={r} routeBase={routeBase} />
+          <StocktakeSessionCard row={r} routeBase={routeBase} onOpenDrawer={setDrawerRow} />
         )}
       />
       <FormDialog
@@ -369,6 +408,29 @@ export function StocktakeListClient({
           />
         )}
       </FormDialog>
+      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
+        <DrawerContent>
+          {drawerRow && (
+            <>
+              <DrawerHeader>
+                <DrawerTitle>KK-{drawerRow.id}</DrawerTitle>
+                <DrawerDescription>{drawerRow.branches?.name ?? "—"}</DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 flex flex-col gap-3">
+                <Button variant="default" className="w-full" onClick={() => router.push(`${routeBase}/${drawerRow.id}?branchId=${drawerRow.branch_id}`)}>
+                  Xem chi tiết
+                </Button>
+                {drawerRow.status === "in_progress" && (
+                  <Button variant="destructive" className="w-full" disabled={isPending} onClick={() => handleCancelSession(drawerRow.id)}>
+                    <IconBan className="mr-2 h-4 w-4" />
+                    Hủy phiếu
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </DrawerContent>
+      </Drawer>
     </>
   );
 

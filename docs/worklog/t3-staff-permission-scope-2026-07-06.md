@@ -1,5 +1,7 @@
 # T3 Staff Permission Scope
 
+> Reconciled-through 9ba5a299d5b41949f56deede78281fdac7e9f835
+
 Skill plan: repo rules = engineering + skills + database/auth + ui + workflow + team; external skills = supabase + supabase-postgres-best-practices for Auth/RLS/RPC scope review; runtime tools = CodeGraph + CLI static test; skipped = subagents, because Codex has no live Agent Teams here and this transcript captures the four required lenses inline.
 
 PM: Owner must be able to manage staff permission grants from `/hr/staff/{userId}/permissions`. Acceptance is tenant-scope grants using `branch_id = NULL`, branch-scope grants still requiring a branch, and no production DB mutation.

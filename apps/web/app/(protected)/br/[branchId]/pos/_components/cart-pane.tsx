@@ -34,7 +34,7 @@ import {
 import type { CartItem, OrderType } from "../types";
 import { useCart } from "../_hooks/use-cart";
 import { useActiveTable } from "../_hooks/use-active-table";
-import { useSwipeReveal } from "../_hooks/use-swipe-reveal";
+import { useSwipeReveal } from "@lib/hooks/use-swipe-reveal";
 import { PosLineItemCompact } from "./pos-line-item-compact";
 import { messages } from "@lib/messages";
 

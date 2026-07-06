@@ -13,7 +13,7 @@ export async function generateMetadata({
     manifest: `/br/${branchId}/kds/manifest.webmanifest`,
     appleWebApp: {
       capable: true,
-      statusBarStyle: "default",
+      statusBarStyle: "black-translucent",
       title: "Má Tư KDS",
     },
   };

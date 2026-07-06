@@ -692,3 +692,95 @@ export async function approveCheckoutRequest(input: {
   revalidateEmployeeWorkPaths(branchId);
   return { success: true, data: { checkOutTime } };
 }
+
+const rejectCheckoutSchema = z.object({
+  attendanceId: z.coerce.number().int().positive(),
+  note: z.string().trim().max(500).optional(),
+});
+
+export async function rejectCheckoutRequest(input: {
+  attendanceId: number;
+  note?: string;
+}): Promise<ActionResult<{ rejected: true }>> {
+  const parsed = rejectCheckoutSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContext(CHECKOUT_APPROVAL_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const service = createServiceClient();
+  const { data: request } = await service
+    .from("attendance_records")
+    .select("id, branch_id")
+    .eq("id", parsed.data.attendanceId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .is("check_out", null)
+    .not("checkout_requested_at", "is", null)
+    .maybeSingle();
+
+  if (!request) {
+    return {
+      success: false,
+      error: "Yêu cầu kết ca không còn ở trạng thái chờ duyệt.",
+    };
+  }
+
+  const branchId = request.branch_id;
+  if (
+    ctx.claims.user_role === "branch_manager" &&
+    ctx.claims.branch_id !== branchId
+  ) {
+    return {
+      success: false,
+      error: "Không có quyền từ chối kết ca tại chi nhánh này.",
+    };
+  }
+
+  const canApprove = await probePermission(
+    ctx,
+    PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+    branchId,
+  );
+  if (!canApprove) {
+    return {
+      success: false,
+      error: "Không có quyền từ chối kết ca tại chi nhánh này.",
+    };
+  }
+
+  const now = new Date().toISOString();
+  const { data: result, error } = await service
+    .from("attendance_records")
+    .update({
+      checkout_requested_at: null,
+      checkout_requested_by_role: null,
+      checkout_approval_target_roles: [],
+      checkout_approval_note: parsed.data.note ?? null,
+      updated_at: now,
+    })
+    .eq("id", parsed.data.attendanceId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .is("check_out", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !result) {
+    if (error) {
+      console.error("[employee/clock] reject checkout request failed", {
+        code: error.code,
+      });
+    }
+    return {
+      success: false,
+      error: "Không thể từ chối yêu cầu kết ca.",
+    };
+  }
+
+  revalidateEmployeeWorkPaths(branchId);
+  return { success: true, data: { rejected: true } };
+}

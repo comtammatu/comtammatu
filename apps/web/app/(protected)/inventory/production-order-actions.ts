@@ -366,8 +366,113 @@ export const createProductionOrder = withAction(
   },
 );
 
+export async function getProductionOrderDetailsForConfirm(
+  orderId: number,
+): Promise<
+  ActionResult<{
+    id: number;
+    production_number: string;
+    items: {
+      id: number;
+      finished_good_id: number;
+      finished_good_name: string;
+      quantity: number;
+      unit: string;
+      recipes: {
+        ingredient_id: number;
+        ingredient_name: string;
+        quantity: number;
+        unit: string;
+      }[];
+    }[];
+  }>
+> {
+  const parsed = idSchema.safeParse(orderId);
+  if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
+
+  const ctx = await getAuthContextWithPermission(
+    PRODUCTION_ROLES,
+    PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+  const { data: order, error: orderError } = await supabase
+    .from("production_orders")
+    .select(`
+      id,
+      production_number,
+      branch_id,
+      production_order_items (
+        id,
+        finished_good_id,
+        quantity,
+        unit,
+        ingredients ( name )
+      )
+    `)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("id", parsed.data)
+    .maybeSingle();
+
+  if (orderError || !order) {
+    return { success: false, error: "Không tìm thấy lệnh sản xuất." };
+  }
+
+  const access = await requireProductionBranch(
+    supabase,
+    claims.tenant_id,
+    Number(order.branch_id),
+  );
+  if (!access.ok) {
+    return { success: false, error: access.error };
+  }
+
+  const fgIds = order.production_order_items.map((i: any) => i.finished_good_id);
+  const { data: recipes } = await supabase
+    .from("production_recipes")
+    .select(`
+      finished_good_id,
+      ingredient_id,
+      quantity,
+      ingredients!production_recipes_ingredient_tenant_fkey ( name, unit )
+    `)
+    .eq("tenant_id", claims.tenant_id)
+    .in("finished_good_id", fgIds);
+
+  const items = order.production_order_items.map((item: any) => {
+    const itemRecipes = (recipes || [])
+      .filter((r: any) => r.finished_good_id === item.finished_good_id)
+      .map((r: any) => ({
+        ingredient_id: r.ingredient_id,
+        ingredient_name: r.ingredients?.name || "",
+        quantity: Number(r.quantity),
+        unit: r.ingredients?.unit || "",
+      }));
+
+    return {
+      id: item.id,
+      finished_good_id: item.finished_good_id,
+      finished_good_name: item.ingredients?.name || "",
+      quantity: Number(item.quantity),
+      unit: item.unit,
+      recipes: itemRecipes,
+    };
+  });
+
+  return {
+    success: true,
+    data: {
+      id: order.id,
+      production_number: order.production_number,
+      items,
+    },
+  };
+}
+
 export async function confirmProductionOrder(
   orderId: number,
+  actualQuantities?: { itemId: number; actualQuantity: number }[],
 ): Promise<ActionResult> {
   const parsed = idSchema.safeParse(orderId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
@@ -398,6 +503,21 @@ export async function confirmProductionOrder(
   );
   if (!access.ok) {
     return { success: false, error: access.error };
+  }
+
+  if (actualQuantities && actualQuantities.length > 0) {
+    for (const q of actualQuantities) {
+      const { error: updateError } = await supabase
+        .from("production_order_items")
+        .update({ actual_quantity: q.actualQuantity } as any)
+        .eq("id", q.itemId)
+        .eq("production_order_id", parsed.data)
+        .eq("tenant_id", claims.tenant_id);
+      
+      if (updateError) {
+        return { success: false, error: "Không thể cập nhật số lượng thực nhận." };
+      }
+    }
   }
 
   const sb = supabase as unknown as RpcClient;

@@ -13,7 +13,7 @@ export async function generateMetadata({
     manifest: `/br/${branchId}/runner/manifest.webmanifest`,
     appleWebApp: {
       capable: true,
-      statusBarStyle: "default",
+      statusBarStyle: "black-translucent",
       title: "Má Tư Gọi số",
     },
   };

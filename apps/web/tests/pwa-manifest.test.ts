@@ -51,7 +51,7 @@ test("POS PWA manifest requests portrait orientation per branch", async () => {
   assert.equal(response.status, 200);
   assert.equal(manifest.id, "/br/3/pos");
   assert.equal(manifest.start_url, "/br/3/pos");
-  assert.equal(manifest.scope, "/br/3/pos");
+  assert.equal(manifest.scope, "/");
   assert.equal(manifest.short_name, "Má Tư POS");
   assert.equal(manifest.orientation, "portrait");
 });
@@ -74,7 +74,7 @@ test("KDS PWA manifest requests landscape orientation per branch", async () => {
   assert.equal(response.status, 200);
   assert.equal(manifest.id, "/br/3/kds");
   assert.equal(manifest.start_url, "/br/3/kds");
-  assert.equal(manifest.scope, "/br/3/kds");
+  assert.equal(manifest.scope, "/");
   assert.equal(manifest.short_name, "Má Tư KDS");
   assert.equal(manifest.orientation, "landscape");
 });

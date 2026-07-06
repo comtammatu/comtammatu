@@ -27,6 +27,7 @@ import {
 import { AppDialog } from "@/components/form";
 import { AppSection } from "@/components/surface";
 import { DocumentStockCorrectionDialog } from "./_components/document-stock-correction-dialog";
+import { ProductionConfirmDialog } from "./_components/production-confirm-dialog";
 import {
   cancelProductionOrder,
   confirmProductionOrder,
@@ -73,28 +74,13 @@ export function ProductionOrderList({
   } | null>(null);
   const draftCount = orders.filter((order) => order.status === "draft").length;
 
-  function handleConfirm(orderId: number, productionNumber: string) {
-    startTransition(async () => {
-      const result = await confirmProductionOrder(orderId);
-      if (!result.success) {
-        if (
-          result.errorCode === PRODUCTION_ERROR_CODES.INSUFFICIENT_STOCK &&
-          Array.isArray(result.meta?.shortages) &&
-          result.meta.shortages.length > 0
-        ) {
-          setShortageInfo({
-            productionNumber,
-            rows: result.meta.shortages as ProductionShortageRow[],
-          });
-          toast.error(result.error ?? INVENTORY_VI.productionInsufficientStock);
-          return;
-        }
-        toast.error(result.error ?? INVENTORY_VI.productionConfirmFailed);
-        return;
-      }
-      toast.success(INVENTORY_VI.productionOrderConfirmed);
-      router.refresh();
-    });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    orderId: number;
+    productionNumber: string;
+  } | null>(null);
+
+  function handleConfirmClick(orderId: number, productionNumber: string) {
+    setConfirmDialog({ orderId, productionNumber });
   }
 
   function handleCancel(orderId: number) {
@@ -140,7 +126,7 @@ export function ProductionOrderList({
         <Button
           type="button"
           size="sm"
-          onClick={() => handleConfirm(order.id, order.production_number)}
+          onClick={() => handleConfirmClick(order.id, order.production_number)}
           disabled={isPending}
         >
           <IconCircleCheck data-icon="inline-start" />
@@ -241,6 +227,26 @@ export function ProductionOrderList({
           )}
         />
       </AppSection>
+      <ProductionConfirmDialog
+        open={confirmDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDialog(null);
+        }}
+        orderId={confirmDialog?.orderId ?? 0}
+        productionNumber={confirmDialog?.productionNumber ?? ""}
+        onSuccess={() => {
+          setConfirmDialog(null);
+          router.refresh();
+        }}
+        onShortage={(shortages) => {
+          if (confirmDialog) {
+            setShortageInfo({
+              productionNumber: confirmDialog.productionNumber,
+              rows: shortages as ProductionShortageRow[],
+            });
+          }
+        }}
+      />
       <ProductionShortageDialog
         info={shortageInfo}
         onClose={() => setShortageInfo(null)}

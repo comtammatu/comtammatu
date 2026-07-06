@@ -27,9 +27,6 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
         to_base_factor: 1,
         is_base: true,
         is_active: true,
-        allow_purchase: true,
-        allow_issue: true,
-        allow_production: false,
         sort_order: 0,
       },
       {
@@ -40,9 +37,6 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
         to_base_factor: 24,
         is_base: false,
         is_active: true,
-        allow_purchase: true,
-        allow_issue: false,
-        allow_production: false,
         sort_order: 1,
       },
     ],
@@ -83,9 +77,6 @@ test("getPurchaseUnitOptions excludes an is_active=false allow_purchase unit (in
         to_base_factor: 1,
         is_base: true,
         is_active: true,
-        allow_purchase: true,
-        allow_issue: true,
-        allow_production: false,
         sort_order: 0,
       },
       {
@@ -96,9 +87,6 @@ test("getPurchaseUnitOptions excludes an is_active=false allow_purchase unit (in
         to_base_factor: 25,
         is_base: false,
         is_active: false,
-        allow_purchase: true,
-        allow_issue: false,
-        allow_production: false,
         sort_order: 1,
       },
     ],
@@ -136,9 +124,6 @@ test("getPurchaseUnitOptions includes every active ingredient unit regardless of
         to_base_factor: 1,
         is_base: true,
         is_active: true,
-        allow_purchase: true,
-        allow_issue: true,
-        allow_production: false,
         sort_order: 0,
       },
       {
@@ -149,9 +134,6 @@ test("getPurchaseUnitOptions includes every active ingredient unit regardless of
         to_base_factor: 0.5,
         is_base: false,
         is_active: true,
-        allow_purchase: false,
-        allow_issue: false,
-        allow_production: false,
         sort_order: 1,
       },
     ],
@@ -178,9 +160,6 @@ test("inventory unit display uses the catalog name, not the unit code", () => {
       to_base_factor: 1,
       is_base: true,
       is_active: true,
-      allow_purchase: true,
-      allow_issue: true,
-      allow_production: true,
       sort_order: 0,
     },
     {
@@ -191,9 +170,6 @@ test("inventory unit display uses the catalog name, not the unit code", () => {
       to_base_factor: 0.5,
       is_base: false,
       is_active: true,
-      allow_purchase: true,
-      allow_issue: true,
-      allow_production: true,
       sort_order: 1,
     },
   ];
@@ -210,7 +186,6 @@ test("inventory unit option helpers are not role-gated by allow flags", () => {
   ]) {
     const source = readRepo(path);
     assert.match(source, /u\.is_active && u\.unit_code !== ""/, path);
-    assert.doesNotMatch(source, /u\.allow_(purchase|issue|production)/, path);
   }
 });
 
