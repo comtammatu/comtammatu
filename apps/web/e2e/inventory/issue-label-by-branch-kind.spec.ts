@@ -97,12 +97,13 @@ test.describe("stock_issue retirement + movement_subtype schema", () => {
 
     const { data: location } = await supabase
       .from("inventory_locations")
-      .select("id")
+      .select("id, branch_id")
       .eq("tenant_id", tenantId)
-      .eq("branch_id", branch.id)
       .limit(1)
       .single();
     if (!location) throw new Error("No inventory_location seeded");
+
+    const branchId = location.branch_id;
 
     const { data: userRes } = await supabase.auth.admin.listUsers();
     const adminUser = userRes.users[0];
@@ -111,7 +112,7 @@ test.describe("stock_issue retirement + movement_subtype schema", () => {
     // Invalid subtype must raise 23514.
     const { error } = await supabase.from("stock_movements").insert({
       tenant_id: tenantId,
-      branch_id: branch.id,
+      branch_id: branchId,
       ingredient_id: ingredient.id,
       location_id: location.id,
       created_by: adminUser.id,

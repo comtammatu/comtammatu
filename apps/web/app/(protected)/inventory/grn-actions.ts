@@ -624,7 +624,7 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
   });
   if (error) {
     console.error("inventory.grn.confirm_failed", {
-      error: error instanceof Error ? error.message : String(error),
+      error: error,
     });
     return { success: false, error: "Không thể xác nhận phiếu nhập." };
   }

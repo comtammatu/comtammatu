@@ -1,4 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
+import { E2E_AUTH_STORAGE_MANAGER } from "../../playwright.config";
+
+test.use({ storageState: E2E_AUTH_STORAGE_MANAGER });
 import {
   createServiceClient,
   resolveTenantId,
@@ -60,6 +63,7 @@ async function isAccessDenied(page: Page) {
 async function buildGrnFixtures(): Promise<GrnFixtures> {
   const supabase = createServiceClient();
   const tenantId = await resolveTenantId(supabase);
+  const manager = await resolveInventoryManagerUser(supabase);
 
   const [receiveBranch, otherBranch, ingredient, supplierId] =
     await Promise.all([
@@ -75,19 +79,13 @@ async function buildGrnFixtures(): Promise<GrnFixtures> {
     ensureInventoryLocation(supabase, tenantId, otherBranch.id, "receive"),
   ]);
 
-  const {
-    data: { users },
-  } = await supabase.auth.admin.listUsers();
-  const adminUser = users[0];
-  if (!adminUser) throw new Error("No auth users found for E2E seed");
-
   return {
     tenantId,
     receiveBranchId: receiveBranch.id,
     otherBranchId: otherBranch.id,
     supplierId,
     ingredientId: ingredient.id,
-    adminUserId: adminUser.id,
+    adminUserId: manager.userId,
   };
 }
 
@@ -260,6 +258,7 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
       received_quantity: 10,
       rejected_quantity: 3,
       rejection_reason: "Hàng ẩm mốc 3 đơn vị",
+      rejected_photo_url: "http://example.com/rejected.jpg",
       unit: "kg",
       unit_cost: 15000,
       total_cost: 150000,

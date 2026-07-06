@@ -37,7 +37,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-effect-scrim duration-[var(--motion-fast)] supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 z-50 bg-effect-scrim duration-[var(--motion-fast)] supports-backdrop-filter:backdrop-blur-sm data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className,
       )}
       {...props}
@@ -90,7 +90,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sheet-header"
       className={cn(
-        "flex flex-col gap-1 border-b border-border/60 px-3 py-2.5 pr-16 text-left sm:px-4 sm:pr-16",
+        "flex flex-col gap-1 border-b border-border/60 bg-gradient-to-b from-secondary/20 to-card px-3 py-2.5 pr-16 text-left sm:px-4 sm:pr-16",
         className,
       )}
       {...props}

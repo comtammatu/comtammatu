@@ -43,6 +43,7 @@ const productionRecipeLineUpsertSchema = z.object({
 const productionRecipeLinesSchema = z
   .object({
     finishedGoodId: z.coerce.number().int().positive(),
+    oldFinishedGoodId: z.coerce.number().int().positive().optional().nullable(),
     lines: z.array(productionRecipeLineUpsertSchema).min(1, {
       error: "Cần ít nhất một nguyên liệu trong công thức.",
     }),
@@ -594,7 +595,10 @@ export async function importProductionRecipes(
     if (ingredient.item_kind === "finished_good") {
       addNameLookup(finishedGoodByName, ingredient);
     }
-    if (ingredient.item_kind === "raw_material") {
+    if (
+      ingredient.item_kind === "raw_material" ||
+      ingredient.item_kind === "finished_good"
+    ) {
       addNameLookup(rawIngredientByName, ingredient);
     }
   }
@@ -688,7 +692,11 @@ export async function importProductionRecipes(
       }
       ingredient = resolved;
     }
-    if (!ingredient || ingredient.item_kind !== "raw_material") {
+    if (
+      !ingredient ||
+      (ingredient.item_kind !== "raw_material" &&
+        ingredient.item_kind !== "finished_good")
+    ) {
       issues.push({
         row: rowNumber,
         field: "Nguyên liệu",
@@ -858,6 +866,7 @@ export const upsertProductionRecipeLines = withAction(
     const { error } = await sb.rpc("upsert_production_recipe_lines", {
       p_finished_good_id: data.finishedGoodId,
       p_lines: lines,
+      p_old_finished_good_id: data.oldFinishedGoodId ?? null,
     });
 
     if (error) {

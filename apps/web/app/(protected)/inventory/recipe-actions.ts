@@ -22,6 +22,7 @@ const recipeLineSchema = z.object({
 
 const recipeBatchSchema = z.object({
   menuItemId: z.coerce.number().int().positive(),
+  oldMenuItemId: z.coerce.number().int().positive().optional().nullable(),
   lines: z.array(recipeLineSchema),
 });
 
@@ -105,7 +106,7 @@ export async function fetchBranchWacMap(): Promise<
 // Live recipe × warehouse-stock sellable portions per dish for one branch.
 export async function fetchBranchMenuStockCapacity(
   branchId: number,
-): Promise<ActionResult<Record<string, number>>> {
+ ): Promise<ActionResult<Record<string, number>>> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
     return { success: false, error: "Chi nhánh không hợp lệ." };
@@ -159,6 +160,7 @@ export const upsertRecipeLines = withAction(
     const { error } = await supabase.rpc("upsert_recipe_lines", {
       p_menu_item_id: data.menuItemId,
       p_lines: lines,
+      p_old_menu_item_id: data.oldMenuItemId ?? null,
     });
     if (error) {
       console.error("inventory.recipe.upsert_recipe_lines_failed", {

@@ -350,7 +350,48 @@ async function ensureTerminalAndSession(
 
   if (openSession) {
     if (openSession.terminal_id == null) {
-      throw new Error("E2E: open POS session has no terminal_id");
+      const terminalName = `E2E POS Terminal ${cashier.userId.slice(0, 8)}`;
+      const { data: existingTerminal } = await supabase
+        .from("pos_terminals")
+        .select("id")
+        .eq("tenant_id", cashier.tenantId)
+        .eq("branch_id", cashier.branchId)
+        .eq("name", terminalName)
+        .maybeSingle();
+
+      const terminalId = existingTerminal
+        ? existingTerminal.id
+        : await (async () => {
+            const { data: insertedTerminal, error: terminalError } = await supabase
+              .from("pos_terminals")
+              .insert({
+                tenant_id: cashier.tenantId,
+                branch_id: cashier.branchId,
+                name: terminalName,
+                device_id: `e2e-${cashier.userId.slice(0, 8)}`,
+                is_active: true,
+              })
+              .select("id")
+              .single();
+            if (terminalError || !insertedTerminal) {
+              throw new Error(`Failed to create E2E terminal: ${terminalError?.message}`);
+            }
+            return insertedTerminal.id;
+          })();
+
+      const { error: updateErr } = await supabase
+        .from("pos_sessions")
+        .update({ terminal_id: terminalId })
+        .eq("id", openSession.id);
+
+      if (updateErr) {
+        throw new Error(`Failed to assign terminal to open session: ${updateErr.message}`);
+      }
+
+      return {
+        terminalId,
+        posSessionId: openSession.id,
+      };
     }
     return {
       terminalId: openSession.terminal_id,

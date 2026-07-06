@@ -73,7 +73,7 @@ test("list_branch_menu_daily_limits: gate_eff collapses to the single posting fl
 test("enforce_branch_stock_availability trigger: created and fires after the daily-limit trigger (name-ordering safe)", () => {
   assert.match(
     migration,
-    /CREATE FUNCTION public\.enforce_branch_stock_availability\(\) RETURNS trigger/,
+    /CREATE (?:OR REPLACE )?FUNCTION public\.enforce_branch_stock_availability\(\) RETURNS trigger/,
   );
   // Trigger declaration is verified against the archive migration since it wasn't modified
   assert.match(

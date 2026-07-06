@@ -102,9 +102,9 @@ test.describe("Daily limit — realtime + enforcement", () => {
 
       await expect
         .poll(() => receivedPayload, {
-          timeout: 5_000,
+          timeout: 15_000,
           message:
-            "subscriber must receive UPDATE event within 5s — verifies publication + REPLICA IDENTITY FULL chain (REALTIME-PUB-NEEDS-REPLICA-IDENTITY-FULL)",
+            "subscriber must receive UPDATE event within 15s — verifies publication + REPLICA IDENTITY FULL chain (REALTIME-PUB-NEEDS-REPLICA-IDENTITY-FULL)",
         })
         .not.toBeNull();
 

@@ -13,19 +13,26 @@ export interface UsePosMenuSyncArgs {
 
 export function usePosMenuSync({ branchId, setCategories }: UsePosMenuSyncArgs) {
   const setCategoriesRef = useRef(setCategories);
+  const didInitialSubscribeRef = useRef(false);
 
   useEffect(() => {
     setCategoriesRef.current = setCategories;
   }, [setCategories]);
 
+  useEffect(() => {
+    didInitialSubscribeRef.current = false;
+  }, [branchId]);
+
   useRealtimeChannel(
     (supabase) => {
-      const handleMenuRefetch = async () => {
+      const handleMenuRefetch = async ({ notify = true } = {}) => {
         try {
           const res = await fetchMenuForPos(branchId, true);
           if (res.success && Array.isArray(res.data)) {
             setCategoriesRef.current(res.data as MenuCategory[]);
-            toast.success("Thực đơn POS đã được cập nhật tự động.");
+            if (notify) {
+              toast.success("Thực đơn POS đã được cập nhật tự động.");
+            }
           }
         } catch (err) {
           console.error("Refetch POS menu failed:", err);
@@ -41,7 +48,14 @@ export function usePosMenuSync({ branchId, setCategories }: UsePosMenuSyncArgs) 
             handleMenuRefetch();
           }
         })
-        .subscribe();
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          if (!didInitialSubscribeRef.current) {
+            didInitialSubscribeRef.current = true;
+            return;
+          }
+          handleMenuRefetch({ notify: false });
+        });
     },
     [branchId],
   );

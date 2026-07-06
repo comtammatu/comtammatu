@@ -37258,6 +37258,13 @@ CREATE TRIGGER trg_stock_levels_updated_at BEFORE UPDATE ON public.stock_levels 
 
 
 --
+-- Name: stock_levels trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.stock_levels FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
 -- Name: stock_movements trg_stock_movement_update_levels; Type: TRIGGER; Schema: public; Owner: -
 --
 

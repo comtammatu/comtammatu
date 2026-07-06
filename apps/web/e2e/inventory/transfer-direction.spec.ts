@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { E2E_AUTH_STORAGE_MANAGER, E2E_AUTH_STORAGE_OWNER } from "../../playwright.config";
 import {
   createServiceClient,
   resolveTenantId,
@@ -9,7 +10,10 @@ import {
   createTestTransferDraft,
   getTransferStatus,
   getStockLevel,
+  resolveInventoryManagerUser,
 } from "./helpers";
+
+test.use({ storageState: E2E_AUTH_STORAGE_MANAGER });
 
 /**
  * E2E: Transfer direction enforcement
@@ -64,17 +68,20 @@ async function isAccessDenied(page: Page) {
 async function buildFixtures(): Promise<InventoryFixtures> {
   const supabase = createServiceClient();
   const tenantId = await resolveTenantId(supabase);
+  const manager = await resolveInventoryManagerUser(supabase);
 
-  const [sourceBranch, destinationBranch, branch, ingredient] =
+  // Kho Tong is always branch ID 3
+  const sourceBranchId = 3;
+
+  const [destinationBranch, branch, ingredient] =
     await Promise.all([
-      ensureBranch(supabase, tenantId, "branch", "transfer-source"),
       ensureBranch(supabase, tenantId, "branch", "transfer-destination"),
       ensureBranch(supabase, tenantId, "branch", "1"),
       ensureIngredient(supabase, tenantId, "transfer"),
     ]);
 
   const [sourceLocId, destinationLocId] = await Promise.all([
-    ensureInventoryLocation(supabase, tenantId, sourceBranch.id, "issue"),
+    ensureInventoryLocation(supabase, tenantId, sourceBranchId, "issue"),
     ensureInventoryLocation(
       supabase,
       tenantId,
@@ -83,33 +90,25 @@ async function buildFixtures(): Promise<InventoryFixtures> {
     ),
   ]);
 
-  // Seed enough stock at the source branch for the happy-path transfer.
+  // Seed enough stock at Kho Tong for the happy-path transfer.
   await seedStockLevel(
     supabase,
     tenantId,
-    sourceBranch.id,
+    sourceBranchId,
     ingredient.id,
     100,
     sourceLocId,
   );
 
-  // Resolve any admin user id (needed for createdByUserId in service-role inserts)
-  const {
-    data: { users },
-  } = await supabase.auth.admin.listUsers();
-  const adminUser = users[0];
-  if (!adminUser)
-    throw new Error("No auth users found — seed at least one test user");
-
   return {
     tenantId,
-    sourceBranchId: sourceBranch.id,
+    sourceBranchId,
     destinationBranchId: destinationBranch.id,
     branchId: branch.id,
     ingredientId: ingredient.id,
     sourceLocId,
     destinationLocId,
-    adminUserId: adminUser.id,
+    adminUserId: manager.userId,
   };
 }
 
@@ -139,141 +138,115 @@ test.describe("Branch kitchen transfer redirect", () => {
 });
 
 test.describe("Transfer direction — branch-to-branch happy path", () => {
-  test("transfer progresses draft→confirmed_ship→in_transit→confirmed_receive→received and stock levels move correctly", async ({
-    page,
-  }) => {
-    const supabase = createServiceClient();
-    const fx = await buildFixtures();
+  test(
+    "transfer progresses draft→confirmed_ship→in_transit→received and stock levels move correctly",
+    { tag: "@slow" },
+    async ({ page, browser }) => {
+      test.setTimeout(90_000);
+      const supabase = createServiceClient();
+      const fx = await buildFixtures();
 
-    const stockBefore = await getStockLevel(
-      supabase,
-      fx.tenantId,
-      fx.sourceBranchId,
-      fx.ingredientId,
-    );
-
-    const transfer = await createTestTransferDraft(supabase, {
-      tenantId: fx.tenantId,
-      fromBranchId: fx.sourceBranchId,
-      toBranchId: fx.destinationBranchId,
-      ingredientId: fx.ingredientId,
-      quantity: 5,
-      createdByUserId: fx.adminUserId,
-      fromLocationId: fx.sourceLocId,
-      toLocationId: fx.destinationLocId,
-    });
-
-    try {
-      // ── confirm_ship ───────────────────────────────────────────────────────
-      await page.goto(
-        `/inventory/transfers/${transfer.id}?branchId=${fx.sourceBranchId}`,
-      );
-      await page.waitForLoadState("networkidle");
-      if (await isAccessDenied(page)) {
-        test.skip(
-          true,
-          "E2E auth user cannot access Inventory transfer UI. Use owner, warehouse_manager, or production_manager for UI happy-path coverage.",
-        );
-        return;
-      }
-
-      // Click "Xác nhận xuất kho" button
-      const confirmShipBtn = page.getByRole("button", {
-        name: /x.c nh.n xu.t/i,
-      });
-      await expect(confirmShipBtn).toBeVisible({ timeout: 10_000 });
-      await expect(confirmShipBtn).toBeEnabled({ timeout: 10_000 });
-      await confirmShipBtn.click();
-
-      // Wait for status to update in DB (RPC is async relative to UI rerender)
-      await expect
-        .poll(() => getTransferStatus(supabase, fx.tenantId, transfer.id), {
-          timeout: 15_000,
-          message: "status should become confirmed_ship after confirm_ship",
-        })
-        .toBe("confirmed_ship");
-
-      await page.goto(
-        `/inventory/transfers/${transfer.id}?branchId=${fx.sourceBranchId}`,
-      );
-      await page.waitForLoadState("networkidle");
-
-      // ── mark_in_transit ────────────────────────────────────────────────────
-      const inTransitBtn = page.getByRole("button", {
-        name: /.ang v.n chuy.n|b.t .au v.n chuy.n/i,
-      });
-      await expect(inTransitBtn).toBeVisible({ timeout: 8_000 });
-      await expect(inTransitBtn).toBeEnabled({ timeout: 10_000 });
-      await inTransitBtn.click();
-
-      await expect
-        .poll(() => getTransferStatus(supabase, fx.tenantId, transfer.id), {
-          timeout: 15_000,
-          message: "status should become in_transit",
-        })
-        .toBe("in_transit");
-
-      await page.goto(
-        `/inventory/transfers/${transfer.id}?branchId=${fx.destinationBranchId}`,
-      );
-      await page.waitForLoadState("networkidle");
-
-      // ── confirm_receive ────────────────────────────────────────────────────
-      const receiveBtn = page.getByRole("button", {
-        name: /x.c nh.n nh.n|ki.m nh.n|b.t .au ki.m nh.n/i,
-      });
-      await expect(receiveBtn).toBeVisible({ timeout: 8_000 });
-      await expect(receiveBtn).toBeEnabled({ timeout: 10_000 });
-      await receiveBtn.click();
-
-      await expect
-        .poll(() => getTransferStatus(supabase, fx.tenantId, transfer.id), {
-          timeout: 15_000,
-          message: "status should become confirmed_receive",
-        })
-        .toBe("confirmed_receive");
-
-      await page.goto(
-        `/inventory/transfers/${transfer.id}?branchId=${fx.destinationBranchId}`,
-      );
-      await page.waitForLoadState("networkidle");
-
-      // Confirm receive (complete the receipt)
-      const finishBtn = page.getByRole("button", {
-        name: /ho.n t.t nh.n|x.c nh.n nh.n h.ng|x.c nh.n nh.p/i,
-      });
-      await expect(finishBtn).toBeVisible({ timeout: 8_000 });
-      await expect(finishBtn).toBeEnabled({ timeout: 10_000 });
-      await finishBtn.click();
-
-      await expect
-        .poll(() => getTransferStatus(supabase, fx.tenantId, transfer.id), {
-          timeout: 20_000,
-          message: "final status should be received",
-        })
-        .toBe("received");
-
-      // ── Assert stock levels moved ──────────────────────────────────────────
-      const sourceStockAfter = await getStockLevel(
+      const stockBefore = await getStockLevel(
         supabase,
         fx.tenantId,
         fx.sourceBranchId,
         fx.ingredientId,
       );
-      const destinationStockAfter = await getStockLevel(
-        supabase,
-        fx.tenantId,
-        fx.destinationBranchId,
-        fx.ingredientId,
-      );
 
-      const beforeQty = stockBefore ?? 0;
-      expect(sourceStockAfter).toBeCloseTo(beforeQty - 5, 2);
-      expect(destinationStockAfter).toBeGreaterThan(0);
-    } finally {
-      await transfer.cleanup();
-    }
-  });
+      const transfer = await createTestTransferDraft(supabase, {
+        tenantId: fx.tenantId,
+        fromBranchId: fx.sourceBranchId,
+        toBranchId: fx.destinationBranchId,
+        ingredientId: fx.ingredientId,
+        quantity: 5,
+        createdByUserId: fx.adminUserId,
+        fromLocationId: fx.sourceLocId,
+        toLocationId: fx.destinationLocId,
+      });
+
+      // Owner context: keeper@comtammatu.vn (owner role) bypasses branch_claim DB checks
+      // and can perform receive at any branch. This accurately models the real-world
+      // two-person transfer workflow: manager ships, owner/branch-manager receives.
+      const ownerCtx = await browser.newContext({ storageState: E2E_AUTH_STORAGE_OWNER });
+      const ownerPage = await ownerCtx.newPage();
+
+      try {
+        // ── confirm_ship (manager = warehouse_manager at Kho Tong) ─────────────
+        await page.goto(
+          `/inventory/transfers/${transfer.id}?branchId=${fx.sourceBranchId}`,
+        );
+        await page.waitForLoadState("networkidle");
+        if (await isAccessDenied(page)) {
+          test.skip(
+            true,
+            "E2E auth user cannot access Inventory transfer UI. Use owner, warehouse_manager, or production_manager for UI happy-path coverage.",
+          );
+          return;
+        }
+
+        const confirmShipBtn = page.getByRole("button", {
+          name: /x.c nh.n xu.t/i,
+        });
+        await expect(confirmShipBtn).toBeVisible({ timeout: 10_000 });
+        await expect(confirmShipBtn).toBeEnabled({ timeout: 10_000 });
+        await confirmShipBtn.click();
+
+        // Inter-branch transfer auto-transitions to in_transit after confirm_ship.
+        await expect
+          .poll(() => getTransferStatus(supabase, fx.tenantId, transfer.id), {
+            timeout: 15_000,
+            message: "status should become in_transit after confirm_ship due to auto-transit",
+          })
+          .toBe("in_transit");
+
+        // ── receive (owner — bypasses branch_claim check) ──────────────────────
+        // The "Xác nhận nhận hàng" button calls transferReceive which atomically:
+        //   1. stock_transfer_confirm_receive (in_transit → confirmed_receive)
+        //   2. stock_transfer_receive         (confirmed_receive → received)
+        // So the status goes directly to "received" from the UI's perspective.
+        await ownerPage.goto(
+          `/inventory/transfers/${transfer.id}?branchId=${fx.destinationBranchId}`,
+        );
+        await ownerPage.waitForLoadState("networkidle");
+
+        const receiveBtn = ownerPage.getByRole("button", {
+          name: /x.c nh.n nh.n h.ng/i,
+        });
+        await expect(receiveBtn).toBeVisible({ timeout: 10_000 });
+        await expect(receiveBtn).toBeEnabled({ timeout: 10_000 });
+        await receiveBtn.click();
+
+        await expect
+          .poll(() => getTransferStatus(supabase, fx.tenantId, transfer.id), {
+            timeout: 20_000,
+            message: "status should become received",
+          })
+          .toBe("received");
+
+        // ── Assert stock levels moved ──────────────────────────────────────────
+        const sourceStockAfter = await getStockLevel(
+          supabase,
+          fx.tenantId,
+          fx.sourceBranchId,
+          fx.ingredientId,
+        );
+        const destinationStockAfter = await getStockLevel(
+          supabase,
+          fx.tenantId,
+          fx.destinationBranchId,
+          fx.ingredientId,
+        );
+
+        const beforeQty = stockBefore ?? 0;
+        expect(sourceStockAfter).toBeCloseTo(beforeQty - 5, 2);
+        expect(destinationStockAfter).toBeGreaterThan(0);
+      } finally {
+        await ownerPage.close();
+        await ownerCtx.close();
+        await transfer.cleanup();
+      }
+    },
+  );
 });
 
 // Persisting `issue_type='kitchen_use'` trips the DB CHECK constraint.

@@ -75,7 +75,11 @@ export function getProductionReadinessSummary({
   const sortedFinishedGoods = sortFinishedGoods(finishedGoods);
   const sortedRawIngredients = sortRawIngredients(
     ingredients
-      .filter((ingredient) => ingredient.item_kind === "raw_material")
+      .filter(
+        (ingredient) =>
+          ingredient.item_kind === "raw_material" ||
+          ingredient.item_kind === "finished_good",
+      )
       .map((ingredient) => ({
         id: ingredient.id,
         name: ingredient.name,

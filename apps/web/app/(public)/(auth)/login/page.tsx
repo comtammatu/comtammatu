@@ -1,32 +1,55 @@
-import { BRAND_NAME, BrandLockup } from "@/components/brand";
+import { BRAND_NAME, BrandLockup, BrandMascot } from "@/components/brand";
 import { LoginForm } from "./login-form";
+import { AppSection } from "@/components/surface";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export default function LoginPage() {
   return (
-    <main className="flex min-h-dvh flex-col lg:grid lg:grid-cols-2">
+    <main className="relative flex min-h-dvh flex-col bg-gradient-to-br from-secondary/30 via-background to-primary/10 lg:grid lg:grid-cols-2">
+      {/* Caro Pattern overlay */}
+      <div className="brand-pattern-caro absolute inset-0 opacity-10 pointer-events-none" />
+
       {/* Brand — compact on mobile, full-height panel on desktop */}
-      <div className="flex flex-col items-center gap-3 px-6 pt-10 pb-4 lg:justify-between lg:bg-primary lg:p-12">
+      <div className="relative z-10 flex flex-col items-center gap-3 px-6 pt-10 pb-4 lg:justify-between lg:p-12 lg:bg-primary/10">
         <span aria-hidden="true" className="hidden lg:block" />
-        <div className="flex flex-col items-center gap-3 lg:flex-1 lg:justify-center">
-          <div className="rounded-lg border bg-background/95 p-3 shadow-sm lg:bg-primary-foreground">
+        <div className="flex flex-col items-center gap-6 lg:flex-1 lg:justify-center">
+          <div className="rounded-lg border border-border/20 bg-card/90 p-3 shadow-effect-card-resting transition-transform duration-200">
             <BrandLockup decorative size="md" priority className="lg:h-28" />
+          </div>
+          <div className="flex flex-col items-center text-center gap-2">
+            {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: brand tagline static text */}
+            <p className="font-heading text-lg font-bold tracking-tight text-foreground lg:text-xl">
+              Hệ thống Vận hành & Bán hàng
+            </p>
+            {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: brand subtitle static text */}
+            <p className="text-xs text-muted-foreground max-w-xs">
+              Đồng bộ dữ liệu thời gian thực giữa Bếp, POS, Kho và Tài chính.
+            </p>
           </div>
           <h1 className="font-heading sr-only">{BRAND_NAME}</h1>
         </div>
-        <div
-          aria-hidden="true"
-          className="brand-strip brand-pattern-caro hidden w-full max-w-xs overflow-hidden border lg:block"
-        />
+        <div className="hidden lg:flex flex-col items-center gap-2">
+          <BrandMascot mood="waving" animated className="size-20" />
+          {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: mascot caption label */}
+          <span className="text-2xs text-muted-foreground uppercase tracking-widest">
+            Má Tư Mascot · Heo Cốt Lết
+          </span>
+        </div>
       </div>
 
       {/* Login form */}
-      <section className="flex flex-1 items-center justify-center p-6 sm:p-8">
-        <div className="flex w-full max-w-sm flex-col gap-4">
-          <h2 className="font-heading text-xl font-semibold">
-            {ACTIONS_VI.signIn}
-          </h2>
-          <LoginForm />
+      <section className="relative z-10 flex flex-1 items-center justify-center p-6 sm:p-8">
+        <div className="w-full max-w-sm">
+          <div className="flex flex-col items-center gap-3 mb-6 lg:hidden">
+            <BrandMascot mood="waving" animated className="size-12" />
+          </div>
+          <AppSection
+            title={ACTIONS_VI.signIn}
+            description="Nhập tài khoản nhân viên được cấp để tiếp tục."
+            className="bg-card/50 shadow-effect-card-resting backdrop-blur-md transition-all border-border/20 hover:border-border/30"
+          >
+            <LoginForm />
+          </AppSection>
         </div>
       </section>
     </main>

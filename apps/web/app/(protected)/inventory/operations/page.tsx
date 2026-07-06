@@ -72,8 +72,9 @@ export default async function OperationsPage({
 
   if (showProduction) {
     tabsList.push({ value: "production", label: "Lệnh sản xuất" });
-    tabsList.push({ value: "transfers", label: "Điều chuyển nội bộ" });
   }
+
+  tabsList.push({ value: "transfers", label: "Điều chuyển nội bộ" });
 
   if (tabsList.length === 0) {
     notFound();

@@ -138,7 +138,7 @@ Brand Concept 01 runtime mapping:
 - `ring` / chart accent: vang gao.
 - `success`: xanh la diu.
 - `muted-foreground` / supporting tone: nau go or xam am depending on theme.
-- Heading font: Geist.
+- Heading font: Outfit.
 - Body font: Geist.
 - Mono font: Geist Mono for tabular operational data.
 
@@ -376,7 +376,7 @@ The system is **border-first**: resting surfaces are separated by `--border`, no
 
 | Rung           | Utility                            | Locked role                                                                                                                                                                                  |
 | -------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rest           | _(none — border only)_             | Base `Card`, page sections, table rows, resting tiles. `card.tsx` carries no shadow by design.                                                                                               |
+| Rest           | `shadow-effect-card-resting`       | Base `Card` carries a light resting shadow. Page sections, table rows, resting tiles are border-only.                                                                                        |
 | Hover          | `shadow-effect-card-hover`         | Interactive/clickable card adapters on hover only — data-table + inventory `interactive-card.tsx`, `AppLinkCard` + `OperationalBoardCard` (`surface.tsx`). Hairline ring + `0 1px 3px` drop. |
 | Overlay        | `shadow-effect-popover`            | Popover-family floating layers: `popover`, `dropdown-menu`, `select`. Bakes the `--effect-ring-border` hairline + soft drop (replaces the old `shadow-md ring-1 ring-foreground/10`).        |
 | Modal          | `shadow-effect-dialog`             | `dialog` content.                                                                                                                                                                            |

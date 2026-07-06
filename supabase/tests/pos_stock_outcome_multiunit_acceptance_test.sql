@@ -184,8 +184,8 @@ BEGIN
     v_tenant,
     v_branch,
     '__g5_wh_' || floor(random() * 1000000)::text,
-    '__g5 warehouse',
-    'warehouse',
+    '__g5 kitchen',
+    'kitchen',
     true,
     true,
     true,
@@ -219,7 +219,7 @@ BEGIN
       is_disabled = false,
       updated_at = now();
 
-  SELECT a.available_to_sell, a.stock_capacity_live, a.manual_limit_quantity
+  SELECT a.available_to_sell, a.stock_capacity, a.manual_limit_quantity
     INTO v_available, v_stock_live, v_manual_limit
   FROM public.branch_menu_limit_availability(v_tenant, v_branch, v_today, true) a
   WHERE a.menu_item_id = v_limit_menu;

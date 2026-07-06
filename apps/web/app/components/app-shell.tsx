@@ -123,8 +123,9 @@ export function AppShell({
   return (
     <SidebarProvider open={true}>
       <Sidebar variant="inset" collapsible="offcanvas">
-        <SidebarHeader className="gap-3 border-b p-3">
-          <div className="flex items-center gap-3">
+        <SidebarHeader className="relative gap-3 border-b p-3 overflow-hidden bg-gradient-to-br from-sidebar via-sidebar/50 to-sidebar/10">
+          <div className="brand-pattern-caro absolute inset-0 opacity-10 pointer-events-none" />
+          <div className="relative z-10 flex items-center gap-3">
             <BrandLogoBox tone="sidebar">
               <BrandMark
                 variant="seal"
@@ -160,7 +161,7 @@ export function AppShell({
                         asChild
                         isActive={active}
                         tooltip={item.label}
-                        className="rounded-md"
+                        className="relative rounded-md data-active:bg-primary/10 data-active:text-primary font-medium dark:data-active:bg-primary/15 before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-r-sm before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity"
                       >
                         <Link
                           href={item.href}
@@ -192,6 +193,7 @@ export function AppShell({
                                     <SidebarMenuSubButton
                                       asChild
                                       isActive={subActive}
+                                      className="relative data-active:text-primary data-active:font-semibold dark:data-active:text-primary-foreground before:absolute before:-left-2.5 before:top-3 before:size-1.5 before:rounded-full before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity"
                                     >
                                       <Link
                                         href={subItem.href}
@@ -218,7 +220,7 @@ export function AppShell({
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="border-t p-2">
+        <SidebarFooter className="border-t p-2 bg-muted/30">
           <div className="flex items-center gap-2">
             <Avatar size="sm">
               <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
@@ -242,13 +244,13 @@ export function AppShell({
       </Sidebar>
 
       <SidebarInset id="main-content">
-        <header className="sticky top-0 z-30 border-b bg-background px-4 py-2 print:hidden">
+        <header className="sticky top-0 z-30 border-b border-border/20 bg-background/80 px-4 py-2.5 backdrop-blur-md shadow-xs print:hidden">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <SidebarTrigger className="lg:hidden" />
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <div className="flex min-w-0 flex-1 flex-col justify-center">
                 {breadcrumbSegments.length > 0 ? (
-                  <Breadcrumb>
+                  <Breadcrumb className="mb-0.5">
                     <BreadcrumbList>
                       {breadcrumbSegments.map((segment, idx) => {
                         const label =
@@ -282,23 +284,30 @@ export function AppShell({
                     </BreadcrumbList>
                   </Breadcrumb>
                 ) : pageHeader.crumbLabel ? (
-                  <Badge variant="outline">{pageHeader.crumbLabel}</Badge>
+                  <div className="mb-1">
+                    <Badge variant="outline">{pageHeader.crumbLabel}</Badge>
+                  </div>
                 ) : null}
-                <span className="truncate text-sm font-medium">
-                  {pageTitle}
-                </span>
-                {pageHeader.suppressTitleHeading ? null : (
-                  <h1 className="font-heading sr-only">{pageTitle}</h1>
-                )}
-              </div>
-              {pageHeader.headerExtras ? (
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
-                  {pageHeader.headerExtras}
+                <div className="flex flex-wrap items-center gap-3">
+                  {pageHeader.suppressTitleHeading ? (
+                    <span className="truncate font-heading text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                      {pageTitle}
+                    </span>
+                  ) : (
+                    <h1 className="truncate font-heading text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                      {pageTitle}
+                    </h1>
+                  )}
+                  {pageHeader.headerExtras ? (
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      {pageHeader.headerExtras}
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
+              </div>
             </div>
             {pageHeader.actions ? (
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="flex shrink-0 flex-wrap items-center gap-2 lg:self-end">
                 {pageHeader.actions}
               </div>
             ) : null}

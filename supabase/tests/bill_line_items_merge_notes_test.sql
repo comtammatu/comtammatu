@@ -26,6 +26,7 @@ DECLARE
   v_branch     BIGINT;
   v_category   BIGINT;
   v_menu_item  BIGINT;
+  v_egg_menu_item BIGINT;
   v_creator    UUID;
   v_order_id   BIGINT;
   v_items      JSONB;
@@ -83,6 +84,8 @@ BEGIN
     VALUES (v_tenant, 'ZZTEST-BILLMERGE') RETURNING id INTO v_category;
   INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
     VALUES (v_tenant, v_category, 'Suon Cot Let', 50000) RETURNING id INTO v_menu_item;
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
+    VALUES (v_tenant, v_category, 'Trung', 5000) RETURNING id INTO v_egg_menu_item;
 
   INSERT INTO public.orders (
     tenant_id, branch_id, order_number, order_type, status, created_by
@@ -103,7 +106,7 @@ BEGIN
      '[]'::jsonb, '[]'::jsonb, 50000, NULL, 'pending', 0),
     -- Same dish but carrying an egg side → distinct line, side must stay attached.
     (v_tenant, v_order_id, v_menu_item, 'Suon Cot Let', 1, 55000, '[]'::jsonb,
-     '[{"name":"Trung","price":5000,"quantity":1,"is_default":false,"side_item_id":6}]'::jsonb,
+     jsonb_build_array(jsonb_build_object('name', 'Trung', 'price', 5000, 'quantity', 1, 'is_default', false, 'side_item_id', v_egg_menu_item)),
      55000, NULL, 'pending', 0);
 
   v_items := public.bill_line_items(v_order_id);

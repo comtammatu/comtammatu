@@ -191,14 +191,27 @@ export async function fetchStockTransferDetail(
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .single();
-  if (e1 || !tr)
+  if (e1 || !tr) {
+    console.error("fetchStockTransferDetail.failed_fetch_transfer", {
+      transferId: id.data,
+      error: e1,
+    });
     return { success: false, error: "Không tìm thấy phiếu chuyển." };
+  }
   const requestedBranchId = branchId ?? null;
   if (isBranchScopedTransferRole(claims.user_role)) {
+    const ownBranchId =
+      claims.branch_id ??
+      (await resolveCentralSiteHomeBranchId(supabase, claims));
     if (
-      claims.branch_id == null ||
-      !transferInvolvesBranch(tr, claims.branch_id)
+      ownBranchId == null ||
+      !transferInvolvesBranch(tr, ownBranchId)
     ) {
+      console.error("fetchStockTransferDetail.failed_involves_branch", {
+        ownBranchId,
+        from_branch_id: tr.from_branch_id,
+        to_branch_id: tr.to_branch_id,
+      });
       return { success: false, error: "Không tìm thấy phiếu chuyển." };
     }
   } else if (
@@ -654,7 +667,7 @@ export async function transferConfirmShip(
     });
     if (transitError) {
       console.error("inventory.transfer.mark_in_transit_auto_failed", {
-        error: transitError instanceof Error ? transitError.message : String(transitError),
+        error: transitError,
       });
       return {
         success: false,
@@ -684,7 +697,7 @@ export async function transferMarkInTransit(
   });
   if (error) {
     console.error("inventory.transfer.mark_in_transit_failed", {
-      error: error instanceof Error ? error.message : String(error),
+      error: error,
     });
     return { success: false, error: "Không thể chuyển trạng thái vận chuyển." };
   }

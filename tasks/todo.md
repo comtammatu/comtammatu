@@ -189,18 +189,22 @@ checkout.
   `webhook_events` subscribed but NOT in publication (finance listener
   silently dead); `notification-popups` unfiltered + bare subscribe;
   inventory/orders-list zero-sync. RT-4 proliferation NOT confirmed.
-- [ ] **Realtime PR1 — client hardening (no schema, T2):** wrapper hook with
-  reconnect-backoff/visibility/poll defaults + fix bare-subscribe F4
-  (`orders/order-detail-sheet.tsx:156`) + F5
-  (`use-foreground-notifications.ts:98` + tenant/branch filter) + KDS insert
-  dedupe (F7).
-- [ ] **Realtime PR2 — ops-bus migration (T3, file → PR → owner apply):**
-  generic AFTER trigger + `realtime.messages` RLS policy + fix RT-01
-  (`webhook_events` publication or move finance signal to bus).
-- [ ] **Realtime PR3–PR6:** mount on approvals/orders/Hub counts → inventory
-  + delta fetches → freshness stamps + cron run-log/alert → POS menu sync
-  (last, alone). Owner decisions pending (plan §5): transport A2-vs-A1,
-  stock page live-vs-MV, Supabase plan tier.
+- [x] **Realtime PR1 — client hardening (no schema, T2):** shipped auth-hot
+  subscribe/resubscribe wrapper, same-topic channel eviction, coalesced
+  `router.refresh()` with visibility poll fallback, F4/F5 bare-subscribe
+  fixes, notification tenant/branch filtering, and KDS insert dedupe. Explicit
+  error backoff is deferred until a measured runtime incident; poll fallback is
+  the current recovery path.
+- [~] **Realtime PR2 — ops-bus migration (T3):** migration file exists for the
+  inventory branch ops bus, `realtime.messages` RLS policy, covering queue-count
+  indexes, and RT-01 `webhook_events` publication fix. Still blocked on normal
+  PR/merge + owner production apply; never direct-apply production.
+- [~] **Realtime PR3–PR6:** orders list, operator hub, inventory shell, finance,
+  KDS, and POS menu sync now have concrete realtime paths. Remaining debt:
+  production apply for PR2/PR6 migrations, runtime smoke on real auth/socket,
+  approval queues whose source tables are not on the branch ops bus
+  (`attendance_records`, leave requests), and freshness stamps/delta-fetches
+  only if operators still report stale screens after the bus is live.
 
 ## Now — Branch Hub Runtime QA + Gap Audit (owner-requested 2026-07-03)
 

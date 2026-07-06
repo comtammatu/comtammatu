@@ -412,6 +412,12 @@ test.describe("KDS bump / recall workflow", () => {
 
     try {
       await loginAsChef(page, chef.email, chef.password!);
+      page.on("console", (msg) => {
+        console.log(`[BROWSER CONSOLE] ${msg.type()}: ${msg.text()}`);
+      });
+      page.on("pageerror", (err) => {
+        console.error(`[BROWSER UNCAUGHT ERROR] ${err.message}`);
+      });
       await page.goto(`/br/${String(fixture.branchId)}/kds?view=comprehensive`);
       await page.waitForLoadState("networkidle");
 

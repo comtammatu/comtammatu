@@ -13,7 +13,7 @@ import { Button } from "@comtammatu/ui/components/button";
  * trailing actions.
  */
 export const BOTTOM_NAV_ITEM_CLASS =
-  "flex-1 flex-col gap-1 px-1 text-2xs transition-[background-color,color,box-shadow] duration-150";
+  "flex-1 flex-col gap-1 px-1 text-2xs transition-all duration-150 relative active:scale-95";
 
 export type AppBottomNavItem = {
   href: string;
@@ -44,7 +44,7 @@ export function AppBottomNav({
   return (
     <nav
       className={cn(
-        "z-40 border-t bg-card/95 px-3 pt-2 shadow-sm chrome-safe-pb chrome-tap select-none backdrop-blur print:hidden",
+        "z-40 border-t border-border/20 bg-card/80 px-3 pt-2 pb-1 shadow-effect-card-resting chrome-safe-pb chrome-tap select-none backdrop-blur-md print:hidden",
         position === "fixed" ? "fixed inset-x-0 bottom-0" : "static shrink-0",
         hideOnDesktop && "lg:hidden",
         className,
@@ -59,10 +59,15 @@ export function AppBottomNav({
             <Button
               key={item.href}
               asChild
-              variant={item.active ? "secondary" : "ghost"}
+              variant="ghost"
               size="touch"
               data-active={item.active ? "true" : undefined}
-              className={cn(BOTTOM_NAV_ITEM_CLASS, "min-w-0", itemClassName)}
+              className={cn(
+                BOTTOM_NAV_ITEM_CLASS,
+                "min-w-0 data-active:text-primary data-active:bg-primary/10 rounded-md font-medium",
+                "before:absolute before:top-0 before:inset-x-4 before:h-0.5 before:rounded-b-sm before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity",
+                itemClassName,
+              )}
             >
               <Link
                 href={item.href}

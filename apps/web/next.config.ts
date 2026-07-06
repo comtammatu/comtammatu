@@ -11,7 +11,7 @@ import { resolve } from "node:path";
 const localSupabase =
   process.env.NODE_ENV === "production"
     ? ""
-    : " http://127.0.0.1:54321 ws://127.0.0.1:54321";
+    : " http://127.0.0.1:54321 ws://127.0.0.1:54321 http://127.0.0.1:55521 ws://127.0.0.1:55521";
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",

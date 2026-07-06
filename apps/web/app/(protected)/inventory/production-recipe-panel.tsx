@@ -183,7 +183,6 @@ function RecipeDialogFields({
   form,
   canManageCatalog,
   finishedGoodLocked,
-  finishedGoodOptions,
   finishedGoodsOptions,
   unitOptions,
   groupedRecipes,
@@ -191,11 +190,11 @@ function RecipeDialogFields({
   rawIngredientsOptions,
   onFinishedGoodCreated,
   onRawIngredientCreated,
+  pendingFinishedGoodId,
 }: {
   form: UseFormReturn<RecipeFormValues, unknown, RecipeFormValues>;
   canManageCatalog: boolean;
   finishedGoodLocked: boolean;
-  finishedGoodOptions: { value: string; label: string }[];
   finishedGoodsOptions: FinishedGoodOption[];
   unitOptions: UnitOption[];
   groupedRecipes: ProductionRecipeGroup[];
@@ -203,6 +202,7 @@ function RecipeDialogFields({
   rawIngredientsOptions: RawIngredientOption[];
   onFinishedGoodCreated: (good: FinishedGoodOption) => void;
   onRawIngredientCreated: (ingredient: RawIngredientOption) => void;
+  pendingFinishedGoodId?: string;
 }) {
   const [quickFinishedGoodDialogOpen, setQuickFinishedGoodDialogOpen] =
     useState(false);
@@ -217,17 +217,7 @@ function RecipeDialogFields({
     name: "lines",
   });
 
-  function replaceRecipeLinesForFinishedGood(finishedGoodId: string) {
-    const group =
-      groupedRecipes.find(
-        (item) => item.finishedGoodId === Number(finishedGoodId),
-      ) ?? null;
-    replaceRecipeLines(
-      group?.lines.length
-        ? group.lines.map(recipeToLineFormValue)
-        : [emptyRecipeLine()],
-    );
-  }
+
 
   function handleFinishedGoodCreated(good: FinishedGoodOption) {
     onFinishedGoodCreated(good);
@@ -254,6 +244,19 @@ function RecipeDialogFields({
     }
   }
 
+  const availableFinishedGoodOptions = useMemo(() => {
+    const blocked = new Set(groupedRecipes.map((r) => r.finishedGoodId));
+    if (pendingFinishedGoodId != null) {
+      blocked.delete(Number(pendingFinishedGoodId));
+    }
+    return finishedGoodsOptions
+      .filter((good) => !blocked.has(good.id))
+      .map((good) => ({
+        value: String(good.id),
+        label: good.name,
+      }));
+  }, [finishedGoodsOptions, groupedRecipes, pendingFinishedGoodId]);
+
   return (
     <>
       <p className="text-sm text-muted-foreground">
@@ -273,14 +276,13 @@ function RecipeDialogFields({
                 <Combobox
                   id="recipe-finished-good"
                   value={field.value ?? ""}
-                  options={finishedGoodOptions}
+                  options={availableFinishedGoodOptions}
                   placeholder={INVENTORY_VI.selectFinishedGood}
                   searchPlaceholder={INVENTORY_VI.searchFinishedGood}
-                  disabled={finishedGoodLocked}
+                  disabled={false}
                   aria-invalid={!!fieldState.error}
                   onValueChange={(nextValue) => {
                     field.onChange(nextValue);
-                    replaceRecipeLinesForFinishedGood(nextValue);
                   }}
                 />
                 {fieldState.error ? (
@@ -384,7 +386,11 @@ export function ProductionRecipePanel({
   >(() =>
     sortRawIngredients(
       ingredients
-        .filter((ingredient) => ingredient.item_kind === "raw_material")
+        .filter(
+          (ingredient) =>
+            ingredient.item_kind === "raw_material" ||
+            ingredient.item_kind === "finished_good",
+        )
         .map((ingredient) => ({
           id: ingredient.id,
           name: ingredient.name,
@@ -414,7 +420,11 @@ export function ProductionRecipePanel({
     setRawIngredientsOptions(
       sortRawIngredients(
         ingredients
-          .filter((ingredient) => ingredient.item_kind === "raw_material")
+          .filter(
+            (ingredient) =>
+              ingredient.item_kind === "raw_material" ||
+              ingredient.item_kind === "finished_good",
+          )
           .map((ingredient) => ({
             id: ingredient.id,
             name: ingredient.name,
@@ -448,10 +458,7 @@ export function ProductionRecipePanel({
     );
   }, [recipes]);
 
-  const finishedGoodOptions = finishedGoodsOptions.map((good) => ({
-    value: String(good.id),
-    label: good.name,
-  }));
+
 
   const recipeLinesEditorIngredients = useMemo(
     () =>
@@ -522,6 +529,7 @@ export function ProductionRecipePanel({
   async function submitRecipe(values: RecipeFormValues): Promise<ActionResult> {
     const result = await upsertProductionRecipeLines({
       finishedGoodId: Number(values.finished_good_id),
+      oldFinishedGoodId: pendingFinishedGoodId ? Number(pendingFinishedGoodId) : undefined,
       lines: values.lines.map((line) => ({
         ingredientId: Number(line.ingredient_id),
         quantity: Number(line.quantity),
@@ -738,7 +746,6 @@ export function ProductionRecipePanel({
             form={form}
             canManageCatalog={canManageCatalog}
             finishedGoodLocked={finishedGoodLocked}
-            finishedGoodOptions={finishedGoodOptions}
             finishedGoodsOptions={finishedGoodsOptions}
             unitOptions={unitOptions}
             groupedRecipes={groupedRecipes}
@@ -746,6 +753,7 @@ export function ProductionRecipePanel({
             rawIngredientsOptions={rawIngredientsOptions}
             onFinishedGoodCreated={handleFinishedGoodCreated}
             onRawIngredientCreated={handleRawIngredientCreated}
+            pendingFinishedGoodId={pendingFinishedGoodId}
           />
         )}
       </FormDialog>

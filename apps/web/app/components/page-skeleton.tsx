@@ -3,6 +3,7 @@ import { cn } from "@comtammatu/ui";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppPage, type AppPageProps } from "@/components/surface";
+import { BrandMascot } from "@/components/brand";
 
 type PageSkeletonProps = {
   width?: AppPageProps["width"];
@@ -56,11 +57,20 @@ export function PageSpinner({
     <div
       className={cn(
         "flex w-full flex-col items-center justify-center gap-3 py-6",
-        fullScreen && "min-h-dvh py-0",
+        fullScreen && "min-h-dvh py-0 bg-background",
       )}
     >
-      <Spinner className="size-6" />
-      <p className="text-sm text-muted-foreground">{label}</p>
+      {fullScreen ? (
+        <BrandMascot
+          variant="cotlet"
+          mood="waiting"
+          animated
+          className="mb-2"
+        />
+      ) : (
+        <Spinner className="size-6" />
+      )}
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
     </div>
   );
 }

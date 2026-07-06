@@ -84,12 +84,16 @@ export async function ensureBranch(
     return { id: existing.id, name: existing.name, kind, tenantId };
   }
 
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const code = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+
   const { data: inserted, error } = await supabase
     .from("branches")
     .insert({
       tenant_id: tenantId,
       name,
       branch_kind: kind,
+      code,
       is_active: true,
     })
     .select("id, name")

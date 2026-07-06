@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { BranchOpsRefresh } from "../(operator)/branch-ops-refresh";
 import { PosPwaProvider } from "./_components/pwa/online-status-provider";
 import { PosPwaToolbar } from "./_components/pwa/pos-pwa-toolbar";
 
@@ -27,12 +28,14 @@ export default async function PosLayout({
   params: Promise<{ branchId: string }>;
 }) {
   const { branchId } = await params;
+  const numericBranchId = Number(branchId);
 
   return (
     <main
       id="main-content"
       className="flex h-dvh min-h-dvh w-full flex-col touch-manipulation overflow-hidden bg-background md:min-h-screen"
     >
+      <BranchOpsRefresh branchId={numericBranchId} />
       <PosPwaProvider>
         <PosPwaToolbar branchId={branchId} />
         {children}

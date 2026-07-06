@@ -8547,47 +8547,6 @@ export type Database = {
       }
     }
     Views: {
-      mv_daily_revenue: {
-        Row: {
-          branch_id: number | null
-          cash_revenue: number | null
-          date: string | null
-          dine_in_revenue: number | null
-          discount_amount: number | null
-          momo_revenue: number | null
-          order_count: number | null
-          subtotal_revenue: number | null
-          takeaway_revenue: number | null
-          tenant_id: number | null
-          total_covers: number | null
-          total_revenue: number | null
-          total_tax: number | null
-          vietqr_revenue: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       mv_food_cost: {
         Row: {
           branch_id: number | null
@@ -8757,48 +8716,6 @@ export type Database = {
           },
           {
             foreignKeyName: "stock_levels_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      mv_top_items: {
-        Row: {
-          branch_id: number | null
-          item_name: string | null
-          menu_item_id: number | null
-          period_end: string | null
-          period_start: string | null
-          quantity_sold: number | null
-          revenue: number | null
-          tenant_id: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "order_items_menu_item_id_fkey"
-            columns: ["menu_item_id"]
-            isOneToOne: false
-            referencedRelation: "menu_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "orders_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -9091,6 +9008,7 @@ export type Database = {
         Returns: undefined
       }
       cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
+      check_cron_jobs_health: { Args: never; Returns: undefined }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
       claim_print_job: {
         Args: { p_agent_id: string; p_job_id: number }

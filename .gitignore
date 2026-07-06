@@ -65,6 +65,7 @@ supabase/.branches/
 .agents/cache/
 .agents/logs/
 .agents/tmp/
+.agents/skills/
 AGENTS.local.md
 CLAUDE.local.md
 .headroom/

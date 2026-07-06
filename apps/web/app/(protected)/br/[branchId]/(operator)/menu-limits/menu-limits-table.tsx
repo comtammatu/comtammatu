@@ -102,7 +102,7 @@ function getItemBadge(row: MenuLimitRow): {
     return { label: messages.pos.menu.soldOut, variant: "warning" };
   }
 
-  if (row.stock_capacity === null) {
+  if (row.stock_capacity === null && row.manual_limit_quantity == null) {
     return { label: messages.pos.menu.noStockConfig, variant: "outline" };
   }
 

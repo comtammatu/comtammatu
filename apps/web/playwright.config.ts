@@ -25,6 +25,14 @@ export const E2E_AUTH_STORAGE = fileURLToPath(
   new URL(".playwright/.auth/cashier.json", import.meta.url),
 );
 
+export const E2E_AUTH_STORAGE_MANAGER = fileURLToPath(
+  new URL(".playwright/.auth/manager.json", import.meta.url),
+);
+
+export const E2E_AUTH_STORAGE_OWNER = fileURLToPath(
+  new URL(".playwright/.auth/owner.json", import.meta.url),
+);
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false, // payment tests mutate DB state — run sequentially

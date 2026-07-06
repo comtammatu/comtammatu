@@ -28,7 +28,7 @@
  * ============================================================ */
 
 @theme inline {
-  --font-heading: var(--font-geist-sans);
+  --font-heading: var(--font-outfit);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -75,9 +75,9 @@
   --popover-foreground: oklch(0.218 0.036 251.3);
   --primary: oklch(0.56 0.18 33);
   --primary-foreground: oklch(0.978 0.014 64.3);
-  --secondary: oklch(0.961 0.016 64.7);
+  --secondary: oklch(0.945 0.014 64.7);
   --secondary-foreground: oklch(0.218 0.036 251.3);
-  --muted: oklch(0.956 0.014 67.7);
+  --muted: oklch(0.935 0.012 67.7);
   --muted-foreground: oklch(0.512 0.09 62.2);
   --accent: oklch(0.936 0.018 70.2);
   --accent-foreground: oklch(0.218 0.036 251.3);
@@ -220,8 +220,10 @@
   --effect-drawer-blur: blur(2px);
   --effect-ring-hairline: inset 0 0 0 1px rgba(13, 27, 42, 0.1);
   --effect-ring-border: inset 0 0 0 1px var(--border);
+  --effect-card-resting:
+    var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.04), 0 2px 8px rgba(13, 27, 42, 0.02);
   --effect-card-hover:
-    var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.1);
+    var(--effect-ring-hairline), 0 2px 8px rgba(13, 27, 42, 0.08), 0 4px 16px rgba(13, 27, 42, 0.04);
   --effect-popover:
     var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
   --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.18);
@@ -239,8 +241,10 @@
   --effect-drawer-blur: blur(2px);
   --effect-ring-hairline: inset 0 0 0 1px rgba(13, 27, 42, 0.1);
   --effect-ring-border: inset 0 0 0 1px var(--border);
+  --effect-card-resting:
+    var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.04), 0 2px 8px rgba(13, 27, 42, 0.02);
   --effect-card-hover:
-    var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.1);
+    var(--effect-ring-hairline), 0 2px 8px rgba(13, 27, 42, 0.08), 0 4px 16px rgba(13, 27, 42, 0.04);
   --effect-popover:
     var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
   --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.18);
@@ -568,8 +572,35 @@
 @utility shadow-effect-tooltip {
   box-shadow: var(--effect-tooltip);
 }
+@utility shadow-effect-card-resting {
+  box-shadow: var(--effect-card-resting);
+}
 @utility shadow-effect-card-hover {
   box-shadow: var(--effect-card-hover);
+}
+
+@utility bg-glass-nav {
+  backdrop-filter: blur(12px);
+  background: rgba(250, 247, 242, 0.85); /* Kem gạo trong suốt 85% */
+  border-bottom: 1px solid var(--border);
+}
+
+@utility scrollbar-thin {
+  &::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--muted-foreground);
+    opacity: 0.2;
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+  }
 }
 
 /* Modal / drawer backdrop: navy scrim + 2px backdrop blur bundled so

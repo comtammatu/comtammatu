@@ -127,10 +127,12 @@ export function RecipeLineDialog({
   );
 
   const availableMenuItems = useMemo(() => {
-    if (isEdit) return menuItems;
     const blocked = new Set(existingMenuItemIds);
+    if (editingMenuItemId != null) {
+      blocked.delete(editingMenuItemId);
+    }
     return menuItems.filter((mi) => !blocked.has(mi.id));
-  }, [menuItems, existingMenuItemIds, isEdit]);
+  }, [menuItems, existingMenuItemIds, editingMenuItemId]);
 
   async function handleSubmit(values: RecipeFormValues) {
     const menuItemId = Number(values.menu_item_id);
@@ -144,6 +146,7 @@ export function RecipeLineDialog({
 
     return upsertRecipeLines({
       menuItemId,
+      oldMenuItemId: editingMenuItemId ? Number(editingMenuItemId) : undefined,
       lines: parsedLines,
     });
   }
@@ -186,7 +189,7 @@ export function RecipeLineDialog({
                 <Select
                   value={field.value}
                   onValueChange={field.onChange}
-                  disabled={isEdit}
+                  disabled={false}
                 >
                   <SelectTrigger
                     className={cn(

@@ -55,6 +55,7 @@ there, do not restate them here:
   cards/titles/KPIs, read `docs/ref/operational-data-contract.md`. Every metric
   card must bind to a contract key or an existing workflow/entity contract; if
   no contract exists, update the contract before changing UI.
+- BEFORE modifying or creating any screen or flow, read and follow `docs/ref/screen-context-map.md`. Every interface element, input, button, widget, or tab must align with the business goal, user persona, and step-by-step workflow defined there. NEVER add arbitrary fields, buttons, or components that do not serve the screen's primary purpose.
 - USE Má Tư DS primitives from `@comtammatu/ui` and the app surface adapters as
   the default implementation path after `docs/spec/design-system.md` has
   selected the pattern.

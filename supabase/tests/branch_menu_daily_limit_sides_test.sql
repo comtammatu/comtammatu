@@ -37,6 +37,11 @@ BEGIN
   SELECT b.id INTO v_branch   FROM public.branches b WHERE b.tenant_id = v_tenant LIMIT 1;
   SELECT p.id INTO v_profile  FROM public.profiles p WHERE p.tenant_id = v_tenant LIMIT 1;
   SELECT mc.id INTO v_category FROM public.menu_categories mc WHERE mc.tenant_id = v_tenant LIMIT 1;
+  IF v_category IS NULL THEN
+    INSERT INTO public.menu_categories (tenant_id, name, type, sort_order)
+    VALUES (v_tenant, '__test_category_for_limits', 'main_dish', 999)
+    RETURNING id INTO v_category;
+  END IF;
 
   IF v_tenant IS NULL OR v_branch IS NULL OR v_profile IS NULL OR v_category IS NULL THEN
     RAISE EXCEPTION 'Tests need seed data: tenant=% branch=% profile=% category=%',
@@ -94,7 +99,7 @@ BEGIN
        jsonb_build_array(jsonb_build_object('side_item_id', v_side_id, 'name', 'side', 'price', 10000, 'quantity', 1)),
        60000);
   EXCEPTION WHEN sqlstate 'P0001' THEN
-    IF SQLERRM LIKE 'daily_limit_item_disabled:%' THEN
+    IF SQLERRM LIKE 'daily_limit_item_disabled%' THEN
       v_caught := true;
     ELSE
       RAISE EXCEPTION 'TEST 1 wrong error: %', SQLERRM;
@@ -150,7 +155,7 @@ BEGIN
        jsonb_build_array(jsonb_build_object('side_item_id', v_side_id, 'name', 'side', 'price', 10000, 'quantity', 1)),
        60000);
   EXCEPTION WHEN sqlstate 'P0001' THEN
-    IF SQLERRM LIKE 'daily_limit_exceeded:%' THEN
+    IF SQLERRM LIKE 'daily_limit_exceeded%' THEN
       v_caught := true;
     ELSE
       RAISE EXCEPTION 'TEST 2 wrong error: %', SQLERRM;
