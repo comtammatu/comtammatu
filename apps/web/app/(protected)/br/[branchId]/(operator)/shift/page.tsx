@@ -1,3 +1,4 @@
+import { loadAuthState } from "@/_lib/auth";
 import { EmployeeHomePageContent } from "@lib/employee/page";
 
 export default async function OperatorShiftPage({
@@ -6,9 +7,12 @@ export default async function OperatorShiftPage({
   params: Promise<{ branchId: string }>;
 }) {
   const { branchId } = await params;
+  const authState = await loadAuthState();
+  const isBranchManager = authState.claims.user_role === "branch_manager";
 
   return (
     <EmployeeHomePageContent
+      authState={authState}
       routes={{
         clock: `/br/${branchId}/shift/clock`,
         tasks: `/br/${branchId}/shift`,
@@ -24,7 +28,7 @@ export default async function OperatorShiftPage({
         hr: "/" + "hr",
       }}
       showNotificationControl={false}
-      mode="manager-dashboard"
+      mode={isBranchManager ? "manager-dashboard" : "full"}
     />
   );
 }

@@ -189,6 +189,23 @@ test("old /employee route map mirrors branch runtime pairs", () => {
   assert.match(redirectLib, /"\/employee\/permissions": "profile"/);
 });
 
+test("branch shift route keeps floor-staff daily work visible", () => {
+  const shiftPage = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
+  );
+
+  assert.match(shiftPage, /const authState = await loadAuthState\(\)/);
+  assert.match(
+    shiftPage,
+    /authState\.claims\.user_role === "branch_manager"/,
+  );
+  assert.match(
+    shiftPage,
+    /mode=\{isBranchManager \? "manager-dashboard" : "full"\}/,
+  );
+  assert.doesNotMatch(shiftPage, /mode="manager-dashboard"/);
+});
+
 test("proxy never lets retired /employee paths fall through to pages", () => {
   const proxy = read("apps/web/proxy.ts");
 

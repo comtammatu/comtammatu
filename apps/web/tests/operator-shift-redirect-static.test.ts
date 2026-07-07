@@ -220,7 +220,16 @@ test("operator shift landing renders the shared cockpit with branch-scoped route
   );
   assert.ok(source.includes("showNotificationControl={false}"));
   assert.doesNotMatch(source, /showPersonalActions/);
-  assert.ok(source.includes('mode="manager-dashboard"'));
+  assert.match(source, /const authState = await loadAuthState\(\)/);
+  assert.match(
+    source,
+    /authState\.claims\.user_role === "branch_manager"/,
+  );
+  assert.match(
+    source,
+    /mode=\{isBranchManager \? "manager-dashboard" : "full"\}/,
+  );
+  assert.doesNotMatch(source, /mode="manager-dashboard"/);
   assert.doesNotMatch(source, /EmployeeActionSection|AppLinkCard|LinkCardGrid/);
 });
 
