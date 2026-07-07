@@ -69,7 +69,7 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     href: "/finance",
   });
   assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
-    label: "Hôm nay",
+    label: "Nay",
     href: "/br",
   });
 
@@ -80,18 +80,13 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     "production_manager",
     "cashier",
     "chef",
+    "office",
   ] as const) {
     assert.deepEqual(resolveRoleHomeLink(role, 3), {
-      label: "Hôm nay",
+      label: "Nay",
       href: "/br/3",
     });
   }
-
-  // Office has no operator hub; a stray branch id must not move it.
-  assert.deepEqual(resolveRoleHomeLink("office", 3), {
-    label: "Tài chính",
-    href: "/finance",
-  });
 
   for (const role of [
     "warehouse_manager",
@@ -100,7 +95,7 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     "chef",
   ] as const) {
     assert.deepEqual(resolveRoleHomeLink(role), {
-      label: "Hôm nay",
+      label: "Nay",
       href: "/br",
     });
   }

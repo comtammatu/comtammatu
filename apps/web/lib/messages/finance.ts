@@ -546,7 +546,7 @@ export const finance = {
     paymentCash: "Chỉ tiền mặt",
     paymentVietqr: "Chỉ VietQR",
     paymentMomo: "Chỉ MoMo",
-    rangeToday: "Hôm nay",
+    rangeToday: "Nay",
     rangeYesterday: "Hôm qua",
     range7d: "7 ngày",
     range30d: "30 ngày",

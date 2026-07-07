@@ -81,7 +81,7 @@ test("operator route families use operator bottom nav", () => {
   }
 });
 
-test("operator home excludes office but includes every site-attached role", () => {
+test("operator home includes every role including office", () => {
   for (const role of [
     "owner",
     "branch_manager",
@@ -89,10 +89,10 @@ test("operator home excludes office but includes every site-attached role", () =
     "chef",
     "warehouse_manager",
     "production_manager",
+    "office",
   ] as const) {
     assert.equal(canAccess(role, "operator_home"), true, role);
   }
-  assert.equal(canAccess("office", "operator_home"), false);
 });
 
 test("central-site role positions keep tenant-level branch claims", () => {

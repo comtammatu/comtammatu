@@ -133,15 +133,15 @@ export function MembersClient({
         open={activeEmp !== null}
         onOpenChange={(o) => !o && setActiveEmp(null)}
       >
-        <DrawerContent>
-          <DrawerHeader>
+        <DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden">
+          <DrawerHeader className="shrink-0">
             <DrawerTitle>{activeEmp?.name}</DrawerTitle>
             <DrawerDescription>
               {activeEmp?.code ? `Mã NV: ${activeEmp.code}` : "Thông tin chi tiết nhân sự"}
             </DrawerDescription>
           </DrawerHeader>
-          <ScrollArea className="px-4 max-h-dvh-80">
-            <div className="flex flex-col gap-4 pb-4">
+          <ScrollArea className="min-h-0 flex-1 px-4">
+            <div className="flex flex-col gap-4 pb-4 pr-2" data-vaul-no-drag>
               {/* Thông tin liên hệ */}
               <div className="flex flex-col gap-2">
                 <h4 className="text-sm font-semibold">Thông tin liên hệ</h4>

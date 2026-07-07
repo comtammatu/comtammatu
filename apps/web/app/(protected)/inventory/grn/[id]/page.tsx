@@ -1,12 +1,16 @@
 import { notFound } from "next/navigation";
 import { PROCUREMENT_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { currentUserHasPermission } from "@/_lib/permissions";
+import { messages } from "@lib/messages";
+import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { fetchIngredients } from "../../ingredient-actions";
 import { fetchGrnDetail } from "../../procurement-actions";
 import { fetchQcSettings, type QcSettings } from "../../_lib/qc-settings";
 import { formatDate } from "../../_lib/format";
 import { getIngredientUnitDisplayName } from "../../_lib/unit-display";
+import { tRoute } from "../../_lib/dictionary";
 import { fetchEntityAuditLogs, type AuditLogRow } from "@/_lib/audit";
 import { GRNDetailClient } from "./grn-detail-client";
 import type { GRNDetail } from "./grn-detail-client";
@@ -29,16 +33,26 @@ export interface GrnDetailData {
   canAmendConfirmed: boolean;
 }
 
-export async function loadGrnDetail(
+type GrnDetailLoadResult =
+  | { data: GrnDetailData; error?: never }
+  | { data: null; error?: string; notFound?: boolean };
+
+async function loadGrnDetailResult(
   grnId: number,
   routeBranchId?: number,
-): Promise<GrnDetailData | null> {
+): Promise<GrnDetailLoadResult> {
   const [res, ingredientsRes, auditLogs] = await Promise.all([
     fetchGrnDetail(grnId),
     fetchIngredients(),
     fetchEntityAuditLogs("goods_receipt_note", grnId, 50),
   ]);
-  if (!res.success || !res.data) return null;
+  if (!res.success || !res.data) {
+    return {
+      data: null,
+      error: res.error,
+      notFound: res.errorCode === "not_found",
+    };
+  }
 
   const ctx = await getAuthContextWithPermission(
     PROCUREMENT_ROLES,
@@ -93,7 +107,9 @@ export async function loadGrnDetail(
     invoiceId: number | null;
   };
 
-  if (routeBranchId != null && d.grn.branch_id !== routeBranchId) return null;
+  if (routeBranchId != null && d.grn.branch_id !== routeBranchId) {
+    return { data: null, notFound: true };
+  }
 
   const supplier = d.grn.suppliers as { id: number; name: string } | null;
   const branch = d.grn.branches as { id: number; name: string } | null;
@@ -202,12 +218,38 @@ export async function loadGrnDetail(
   );
 
   return {
-    grn,
-    ingredients: catalogIngredients,
-    auditLogs,
-    canAdjustStock,
-    canAmendConfirmed,
+    data: {
+      grn,
+      ingredients: catalogIngredients,
+      auditLogs,
+      canAdjustStock,
+      canAmendConfirmed,
+    },
   };
+}
+
+export async function loadGrnDetail(
+  grnId: number,
+  routeBranchId?: number,
+): Promise<GrnDetailData | null> {
+  const result = await loadGrnDetailResult(grnId, routeBranchId);
+  return result.data;
+}
+
+function GrnDetailLoadError({ error }: { error: string }) {
+  return (
+    <AppPage width="xwide" density="compact">
+      <AppPageHeader
+        eyebrow={messages.inventory.shell.moduleName}
+        title={tRoute("/inventory/grn", "heading")}
+      />
+      <AppEmptyState
+        mode="error"
+        title={ERRORS_VI.loadFailed}
+        description={error}
+      />
+    </AppPage>
+  );
 }
 
 export async function GRNDetailPageContent({
@@ -218,16 +260,21 @@ export async function GRNDetailPageContent({
   purchaseOrdersBasePath = "/inventory/purchase-orders",
   supplierInvoicesBasePath = "/inventory/supplier-invoices",
 }: GRNDetailPageContentProps) {
-  const data = await loadGrnDetail(grnId, routeBranchId);
-  if (!data) notFound();
+  const result = await loadGrnDetailResult(grnId, routeBranchId);
+  if (!result.data) {
+    if (result.error && !result.notFound) {
+      return <GrnDetailLoadError error={result.error} />;
+    }
+    notFound();
+  }
 
   return (
     <GRNDetailClient
-      grn={data.grn}
-      ingredients={data.ingredients}
-      canAdjustStock={data.canAdjustStock}
-      canAmendConfirmed={data.canAmendConfirmed}
-      auditLogs={data.auditLogs}
+      grn={result.data.grn}
+      ingredients={result.data.ingredients}
+      canAdjustStock={result.data.canAdjustStock}
+      canAmendConfirmed={result.data.canAmendConfirmed}
+      auditLogs={result.data.auditLogs}
       grnListBasePath={grnListBasePath}
       grnMobileBackPath={grnMobileBackPath}
       purchaseOrdersBasePath={purchaseOrdersBasePath}
@@ -242,5 +289,7 @@ export default async function GRNDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <GRNDetailPageContent grnId={Number(id)} />;
+  const grnId = Number(id);
+  if (!Number.isInteger(grnId) || grnId <= 0) notFound();
+  return <GRNDetailPageContent grnId={grnId} />;
 }

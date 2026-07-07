@@ -22,7 +22,7 @@ function looksLikeGroupedInteger(value: string) {
   return /^\d{1,3}(\.\d{3})+$/.test(value);
 }
 
-function sanitizeNumericInput(
+export function sanitizeNumericInput(
   input: string,
   {
     allowNegative = false,
@@ -56,7 +56,6 @@ function sanitizeNumericInput(
   const dotCanBeDecimal =
     !hasExplicitDecimalComma &&
     dotCount === 1 &&
-    digitsAfterDot.length > 0 &&
     digitsAfterDot.length <= maxFractionDigits &&
     !looksLikeGroupedInteger(cleaned);
   const separatorIndex = hasExplicitDecimalComma

@@ -9,7 +9,6 @@ import {
   CircleCheck as IconCircleCheck,
   CircleX as IconCircleX,
   Clock as IconClock,
-  ListChecks as IconListChecks,
   Upload as IconUpload,
 } from "lucide-react";
 import {
@@ -71,6 +70,46 @@ function waitForNextAnimationFrame(): Promise<void> {
 
 function formatTime(iso: string | null): string {
   return iso ? formatVNTime(iso) : "—";
+}
+
+function timeToMinutes(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const [hourRaw, minuteRaw] = value.split(":");
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
+function getCurrentVNMinutes(): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const hour = Number(parts.find((part) => part.type === "hour")?.value);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value);
+  return hour * 60 + minute;
+}
+
+function isPastShiftEnd(state: TodayWorkState): boolean {
+  const attendance = state.attendance;
+  if (!attendance?.checkIn || attendance.checkOut || attendance.checkoutRequestedAt) {
+    return false;
+  }
+  if (attendance.date < state.today) return true;
+  if (attendance.date !== state.today) return false;
+
+  const start = timeToMinutes(attendance.shiftStartTime);
+  const end = timeToMinutes(attendance.shiftEndTime);
+  if (start === null || end === null) return false;
+
+  const effectiveEnd = end > start ? end : end + 1440;
+  const now = getCurrentVNMinutes();
+  const effectiveNow = effectiveEnd > 1440 && now < start ? now + 1440 : now;
+  return effectiveNow >= effectiveEnd;
 }
 
 function ErrorAlert({ message }: { message: string }) {
@@ -536,54 +575,29 @@ export function ClockClient({ state, routes }: ClockClientProps) {
     );
   }
 
-  if (
-    state.status === "working" &&
-    !managerAttendanceOnly &&
-    state.checklist.requiredRemaining > 0
-  ) {
-    return (
-      <EmployeePanel
-        icon={IconListChecks}
-        title={clockCopy.tasksTitle}
-        tone="info"
-        badge={{
-          children: `${state.checklist.done}/${state.checklist.total} xong`,
-          variant: "info",
-        }}
-      >
-        <EmployeeDetailList
-          rows={[
-            {
-              label: clockCopy.branchLabel,
-              value: state.branchName ?? clockCopy.notRecorded,
-              muted: !state.branchName,
-            },
-            {
-              label: clockCopy.checkInLabel,
-              value: formatTime(state.attendance?.checkIn ?? null),
-            },
-          ]}
-        />
-        <Button asChild size="touch" className="w-full sm:w-fit">
-          <Link href={routes.tasks}>
-            <IconListChecks data-icon="inline-start" />
-            {clockCopy.tasksButton}
-          </Link>
-        </Button>
-      </EmployeePanel>
-    );
-  }
-
   if (state.status === "working") {
+    const pastShiftEnd = isPastShiftEnd(state);
     const checkoutTitle = managerAttendanceOnly
-      ? clockCopy.managerCheckoutTitle
-      : clockCopy.staffCheckoutTitle;
+      ? pastShiftEnd
+        ? "Quá giờ ca - Chấm công ra"
+        : clockCopy.managerCheckoutTitle
+      : pastShiftEnd
+        ? "Quá giờ ca - Kết ca làm"
+        : clockCopy.staffCheckoutTitle;
     const checkoutDescription = managerAttendanceOnly
-      ? clockCopy.managerCheckoutDescription
-      : `${clockCopy.staffCheckoutDescriptionPrefix} ${state.approvalTargetLabel} ${clockCopy.staffCheckoutDescriptionSuffix}`;
+      ? pastShiftEnd
+        ? "Ca đã quá giờ kết thúc. Ghi giờ ra để chốt ca hiện tại."
+        : clockCopy.managerCheckoutDescription
+      : pastShiftEnd
+        ? `Ca đã quá giờ kết thúc. ${clockCopy.staffCheckoutDescriptionPrefix} ${state.approvalTargetLabel} ${clockCopy.staffCheckoutDescriptionSuffix}`
+        : `${clockCopy.staffCheckoutDescriptionPrefix} ${state.approvalTargetLabel} ${clockCopy.staffCheckoutDescriptionSuffix}`;
     const checkoutBadge = managerAttendanceOnly
-      ? clockCopy.managerCheckoutBadge
-      : clockCopy.staffCheckoutBadge;
+      ? pastShiftEnd
+        ? "Quá giờ ca"
+        : clockCopy.managerCheckoutBadge
+      : pastShiftEnd
+        ? "Cần kết ca"
+        : clockCopy.staffCheckoutBadge;
     const checkoutButtonLabel = managerAttendanceOnly
       ? clockCopy.managerCheckoutButton
       : clockCopy.staffCheckoutButton;
@@ -623,8 +637,11 @@ export function ClockClient({ state, routes }: ClockClientProps) {
         icon={IconClock}
         title={checkoutTitle}
         description={checkoutDescription}
-        tone="success"
-        badge={{ children: checkoutBadge, variant: "success" }}
+        tone={pastShiftEnd ? "warning" : "success"}
+        badge={{
+          children: checkoutBadge,
+          variant: pastShiftEnd ? "warning" : "success",
+        }}
       >
         <EmployeeDetailList rows={detailRows} />
 

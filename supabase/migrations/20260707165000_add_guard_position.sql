@@ -146,6 +146,9 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO service_role;
+
 -- 4) Update admin_update_profile required branch kinds
 CREATE OR REPLACE FUNCTION public.admin_update_profile(p_target_id uuid, p_full_name text DEFAULT NULL::text, p_phone text DEFAULT NULL::text, p_role text DEFAULT NULL::text, p_branch_id bigint DEFAULT NULL::bigint, p_is_active boolean DEFAULT NULL::boolean) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER

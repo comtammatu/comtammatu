@@ -182,7 +182,7 @@ export function OperatorBottomNav({
             ? [
                 {
                   href: `/br/${branchId}/team`,
-                  label: "Đội nhóm",
+                  label: "Đội",
                   icon: Users,
                   exact: false,
                   matchPrefixes: [

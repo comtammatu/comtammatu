@@ -19,6 +19,8 @@ import { fetchProcurementBranches } from "./_lib/procurement-branches";
 import { dispatchNotificationOutbox } from "./notifications-actions";
 
 const ROLES = PROCUREMENT_ROLES;
+const grnLoadFailedError = "Không thể tải phiếu nhập.";
+const grnNotFoundError = "Không tìm thấy phiếu nhập.";
 
 /**
  * Cross-branch guard (D068 §Conflicts-resolved 3). `branch_manager` is a
@@ -197,7 +199,7 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
     .limit(100);
   if (branchId != null) query = query.eq("branch_id", branchId);
   const { data, error } = await query;
-  if (error) return { success: false, error: "Không thể tải phiếu nhập." };
+  if (error) return { success: false, error: grnLoadFailedError };
   return { success: true, data: data ?? [] };
 }
 
@@ -220,7 +222,7 @@ export async function fetchGrnIdsForDropdown(
     .limit(100);
   if (branchId != null) query = query.eq("branch_id", branchId);
   const { data, error } = await query;
-  if (error) return { success: false, error: "Không thể tải phiếu nhập." };
+  if (error) return { success: false, error: grnLoadFailedError };
   return { success: true, data: data ?? [] };
 }
 
@@ -242,9 +244,21 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
     )
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id)
-    .single();
-  if (e1 || !grn)
-    return { success: false, error: "Không tìm thấy phiếu nhập." };
+    .maybeSingle();
+  if (e1) {
+    return {
+      success: false,
+      error: grnLoadFailedError,
+      errorCode: "load_failed",
+    };
+  }
+  if (!grn) {
+    return {
+      success: false,
+      error: grnNotFoundError,
+      errorCode: "not_found",
+    };
+  }
   const { data: lines, error: e2 } = await supabase
     .from("grn_items")
     .select("*, ingredients ( id, name, ingredient_units(is_base, units!ingredient_units_unit_id_fkey(code)) )")

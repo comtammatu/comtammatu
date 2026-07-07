@@ -233,13 +233,28 @@ export function CheckoutApprovalsClient({
   const swipe = useSwipeReveal({ revealWidth: 140 });
 
   async function approve(item: CheckoutApprovalItem) {
+    const checklistTotal = item.checklist.length;
+    const checklistDone = item.checklist.filter((entry) => entry.isDone).length;
+    const requiredRemaining = item.checklist.filter(
+      (entry) => entry.isRequired && !entry.isDone,
+    ).length;
     const ok = await confirm({
       title: "Duyệt kết ca?",
       description:
-        "Giờ ra sẽ được ghi vào bảng công của nhân viên và không thể hoàn tác.",
+        requiredRemaining > 0
+          ? "Ca còn việc bắt buộc chưa đánh dấu xong. Nếu vẫn duyệt, giờ ra sẽ được ghi vào bảng công."
+          : "Giờ ra sẽ được ghi vào bảng công của nhân viên và không thể hoàn tác.",
       details: [
         { label: "Nhân viên", value: item.employeeName },
         { label: "Giờ ra", value: item.requestedLabel },
+        ...(checklistTotal > 0
+          ? [
+              {
+                label: "Checklist",
+                value: `${checklistDone}/${checklistTotal} xong`,
+              },
+            ]
+          : []),
       ],
       confirmText: "Duyệt",
       variant: "destructive",

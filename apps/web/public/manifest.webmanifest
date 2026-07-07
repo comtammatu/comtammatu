@@ -23,7 +23,7 @@
   ],
   "shortcuts": [
     {
-      "name": "Hôm nay",
+      "name": "Nay",
       "url": "/br",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },

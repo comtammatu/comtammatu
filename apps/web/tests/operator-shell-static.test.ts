@@ -89,8 +89,8 @@ test("notifications page provides a safe branch return path", () => {
 test("operator home label is today, not Branch Hub", () => {
   const labels = read("packages/shared/src/labels/vi.ts");
 
-  assert.match(labels, /operatorHome: "Hôm nay"/);
-  assert.match(labels, /operator_home: "Hôm nay"/);
+  assert.match(labels, /operatorHome: "Nay"/);
+  assert.match(labels, /operator_home: "Nay"/);
   assert.doesNotMatch(labels, /operatorHome: "Branch Hub"/);
   assert.doesNotMatch(labels, /Branch Runtime|Branch Ops/);
 });

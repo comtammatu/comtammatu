@@ -183,7 +183,7 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
   assert.deepEqual(
     groups.map((group) => group.title),
     [
-      "0 · Hôm nay",
+      "0 · Nay",
       "1 · Kiểm soát tồn",
       "2 · Nhập/Nhận/Đối soát",
       "3 · Điều phối/Sản xuất",

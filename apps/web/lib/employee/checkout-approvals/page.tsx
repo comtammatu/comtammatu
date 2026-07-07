@@ -113,7 +113,7 @@ export async function CheckoutApprovalsPageContent({
   const branchId = claims.branch_id;
   const homeLink =
     routeBranchId !== undefined
-      ? { href: `/br/${routeBranchId}`, label: "Hôm nay" }
+      ? { href: `/br/${routeBranchId}`, label: "Nay" }
       : resolveRoleHomeLink(claims.user_role, branchId);
   const canUseApprovalRoute = CHECKOUT_APPROVER_ROLES.includes(
     claims.user_role,

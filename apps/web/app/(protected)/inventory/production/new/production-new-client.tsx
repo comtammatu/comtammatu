@@ -51,7 +51,17 @@ export function ProductionNewClient({
   const [ingredientUsages, setIngredientUsages] = useState<Record<number, string>>({});
 
   const selectedFg = finishedGoods.find((fg) => fg.id === finishedGoodId);
-  const unitOptions = selectedFg ? [{ id: 0, name: selectedFg.unit }, ...(selectedFg.units || []).map((u) => ({ id: u.unit_id, name: u.unit_name || "" }))] : [];
+  const unitOptions = selectedFg
+    ? [{ id: 0, name: selectedFg.unit }, ...(selectedFg.units || []).map((u) => ({ id: u.unit_id, name: u.unit_name || "" }))]
+    : [];
+  const canUseRecipeControls = branchId != null && finishedGoodId != null;
+  const plannedQtyParsed = parseFloat(plannedQuantity);
+  const hasValidPlannedQty = !Number.isNaN(plannedQtyParsed) && plannedQtyParsed > 0;
+
+  const formatQty = (value: number | null | undefined) => {
+    if (value == null) return "N/A";
+    return Math.floor(value * 1000) / 1000;
+  };
 
   // Fetch recipe context when branch or finished good changes
   useEffect(() => {
@@ -79,7 +89,7 @@ export function ProductionNewClient({
       const parsedQty = parseFloat(plannedQuantity);
       const usages: Record<number, string> = {};
       for (const ing of recipeContext.ingredients) {
-        if (!isNaN(parsedQty) && parsedQty > 0) {
+        if (!Number.isNaN(parsedQty) && parsedQty > 0 && ing.yield_factor > 0) {
           const defaultQty = (parsedQty * ing.recipe_quantity) / ing.yield_factor;
           usages[ing.ingredient_id] = defaultQty.toFixed(3);
         } else {
@@ -221,13 +231,13 @@ export function ProductionNewClient({
               className="pr-16"
               placeholder="Nhập số lượng..."
             />
-            {recipeContext && (
+            {canUseRecipeControls && (
               <Button 
                 variant="ghost" 
                 size="sm" 
                 className="absolute right-1 top-1 h-7 text-xs px-2"
                 onClick={handleSetMaxQuantity}
-                disabled={isLoadingContext}
+                disabled={isLoadingContext || recipeContext == null}
               >
                 Tối đa
               </Button>
@@ -254,6 +264,7 @@ export function ProductionNewClient({
         {recipeContext?.maxProductionQuantity != null && (
           <p className="text-xs text-muted-foreground">
             Có thể sản xuất tối đa: <span className="font-medium text-foreground">{recipeContext.maxProductionQuantity}</span>
+            {selectedFg?.unit ? ` ${selectedFg.unit}` : ""}
           </p>
         )}
       </div>
@@ -269,7 +280,8 @@ export function ProductionNewClient({
                 <tr className="text-left text-muted-foreground">
                   <th className="p-3 font-medium">Tên nguyên liệu</th>
                   <th className="p-3 font-medium text-right">Tồn kho tối đa</th>
-                  <th className="p-3 font-medium w-[150px]">Sử dụng thực tế</th>
+                  <th className="p-3 font-medium w-36">Cần dùng</th>
+                  <th className="p-3 font-medium w-36">Sử dụng thực tế</th>
                 </tr>
               </thead>
               <tbody>
@@ -277,7 +289,16 @@ export function ProductionNewClient({
                   <tr key={ing.ingredient_id} className="border-b last:border-0 bg-background">
                     <td className="p-3">{ing.ingredient_name}</td>
                     <td className="p-3 text-right text-muted-foreground">
-                      {ing.max_ingredient_qty != null ? (Math.floor(ing.max_ingredient_qty * 1000) / 1000) : "N/A"} {ing.unit_name}
+                      {formatQty(ing.max_ingredient_qty)} {ing.unit_name}
+                    </td>
+                    <td className="p-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">
+                          {hasValidPlannedQty && ing.yield_factor > 0
+                            ? `${formatQty((plannedQtyParsed * ing.recipe_quantity) / ing.yield_factor)} ${ing.unit_name}`
+                            : "Nhập số lượng để xem"}
+                        </span>
+                      </div>
                     </td>
                     <td className="p-2">
                       <div className="flex items-center gap-2">

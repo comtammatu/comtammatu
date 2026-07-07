@@ -68,6 +68,7 @@ export interface ProductionSurfaceData {
   finishedGoods: FinishedGoodOption[];
   runs: ProductionRunRow[];
   recipes: ProductionRecipeRow[];
+  recipeLoadError: string | null;
 }
 
 async function currentUserHasAnyPermission(
@@ -182,15 +183,19 @@ export async function loadProductionSurfaceData({
     ]);
 
   const branches = (branchesRes.data ?? []) as BranchPreviewRow[];
-  // Production sites = central kitchen OR any branch (D068).
-  const allProductionBranches: BranchOption[] = branches
+  // Production site choices must remain production-compatible locations only (D068).
+  const productionBranchesList: BranchOption[] = branches
     .filter((branch) => isProductionBranchKind(branch.branch_kind))
     .map((branch) => ({
       id: branch.id,
       name: branch.name,
     }));
+  const allTargetBranches: BranchOption[] = branches.map((branch) => ({
+    id: branch.id,
+    name: branch.name,
+  }));
   const scopedBranchId = claims.branch_id ?? routeBranchId;
-  let productionBranches: BranchOption[] = allProductionBranches;
+  let productionBranches: BranchOption[] = productionBranchesList;
   if (isProductionBranchScopedRole(role) && scopedBranchId != null) {
     productionBranches = productionBranches.filter(
       (branch) => branch.id === scopedBranchId,
@@ -228,11 +233,14 @@ export async function loadProductionSurfaceData({
     canConfirmProduction,
     canAdjustStock,
     productionBranches,
-    targetBranches: allProductionBranches,
+    targetBranches: allTargetBranches,
     unitOptions: unitOptionsRes.success ? (unitOptionsRes.data ?? []) : [],
     ingredients,
     finishedGoods,
     runs: runsRes.success ? (runsRes.data ?? []) : [],
     recipes: recipesRes.success ? (recipesRes.data ?? []) : [],
+    recipeLoadError: recipesRes.success
+      ? null
+      : (recipesRes.error ?? "Không thể tải công thức sản xuất."),
   };
 }

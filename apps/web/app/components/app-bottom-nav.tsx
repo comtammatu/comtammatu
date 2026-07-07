@@ -65,7 +65,6 @@ export function AppBottomNav({
               className={cn(
                 BOTTOM_NAV_ITEM_CLASS,
                 "min-w-0 data-active:text-primary data-active:bg-primary/10 rounded-md font-medium",
-                "before:absolute before:top-0 before:inset-x-4 before:h-0.5 before:rounded-b-sm before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity",
                 itemClassName,
               )}
             >

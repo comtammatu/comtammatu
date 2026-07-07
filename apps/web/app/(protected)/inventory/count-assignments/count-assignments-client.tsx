@@ -144,7 +144,7 @@ function EmployeeAssignmentRow({
   const hasAssignments = selectedIds.length > 0;
 
   return (
-    <div className="relative overflow-hidden bg-destructive rounded-md">
+    <div className="relative overflow-hidden rounded-md bg-transparent">
       <div className="absolute inset-y-0 right-0 flex w-20 items-center justify-end">
         <Button
           variant="destructive"
@@ -161,18 +161,18 @@ function EmployeeAssignmentRow({
 
       <div
         className={cn(
-          "bg-background transition-transform duration-300 ease-out cursor-pointer h-full border rounded-md",
+          "h-full cursor-pointer rounded-md border bg-card transition-transform duration-300 ease-out",
           isRevealed ? "-translate-x-20" : "translate-x-0"
         )}
         {...handlers}
       >
         <Item
           variant="outline"
-          className="flex flex-col p-4 pointer-events-none select-none h-full border-none"
+          className="flex h-full select-none flex-col border-none p-3 pointer-events-none"
         >
           <ItemContent className="min-w-0 w-full">
             <div className="flex items-start justify-between gap-3 w-full">
-              <ItemTitle className="text-sm font-medium">{emp.name}</ItemTitle>
+              <ItemTitle className="text-base font-semibold">{emp.name}</ItemTitle>
               <Badge variant={hasAssignments ? "success" : "outline"}>
                 {hasAssignments ? `${selectedIds.length} mặt hàng` : "Chưa gán"}
               </Badge>
@@ -305,15 +305,31 @@ export function CountAssignmentsClient({
   }
 
   const assignmentActions = (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      <Button asChild variant="outline" size={embedded ? "touch" : "default"}>
+    <div
+      className={cn(
+        embedded
+          ? "grid grid-cols-2 gap-2"
+          : "flex flex-wrap items-center justify-end gap-2",
+      )}
+    >
+      <Button
+        asChild
+        variant="outline"
+        size={embedded ? "touch" : "default"}
+        className={embedded ? "min-w-0 whitespace-normal text-center leading-tight" : undefined}
+      >
         <Link href={slipsHref}>
           <IconFileText className="size-4" />
           {INVENTORY_VI.countSlipTitle}
         </Link>
       </Button>
       {countHref ? (
-        <Button asChild variant="outline" size={embedded ? "touch" : "default"}>
+        <Button
+          asChild
+          variant="outline"
+          size={embedded ? "touch" : "default"}
+          className={embedded ? "min-w-0 whitespace-normal text-center leading-tight" : undefined}
+        >
           <Link href={countHref}>
             <IconArrowRight className="size-4" />
             {INVENTORY_VI.openCountScreen}
@@ -379,15 +395,15 @@ export function CountAssignmentsClient({
         open={activeEmpId !== null}
         onOpenChange={(o) => !o && setActiveEmpId(null)}
       >
-        <DrawerContent>
-          <DrawerHeader>
+        <DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden">
+          <DrawerHeader className="shrink-0">
             <DrawerTitle>Phân công đếm tồn: {activeEmp?.name}</DrawerTitle>
             <DrawerDescription>
               {INVENTORY_VI.countAssignEditDescription(activeEmp?.name ?? "")}
             </DrawerDescription>
           </DrawerHeader>
-          <ScrollArea className="px-4 max-h-dvh-80">
-            <div className="flex flex-col gap-1 pb-4">
+          <ScrollArea className="min-h-0 flex-1 px-4">
+            <div className="flex flex-col gap-1 pb-4 pr-2" data-vaul-no-drag>
               {ingredients.length === 0 ? (
                 <p className="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
                   {INVENTORY_VI.countAssignNoFinishedGoods}
@@ -431,7 +447,7 @@ export function CountAssignmentsClient({
               )}
             </div>
           </ScrollArea>
-          <DrawerFooter className="flex-row gap-2">
+          <DrawerFooter className="shrink-0 flex-row gap-2">
             <Button
               type="button"
               variant="outline"

@@ -100,7 +100,7 @@ export const INVENTORY_VI = {
   selectFile: "Vui lòng chọn file",
   templateCreateFailed: "Không tạo được template",
   partialReceive: "Nhận một phần",
-  today: "Hôm nay",
+  today: "Nay",
   yesterday: "Hôm qua",
   grnListBackLabel: "Danh sách GRN",
   receivingEyebrow: "Nhập hàng",

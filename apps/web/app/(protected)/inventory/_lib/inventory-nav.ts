@@ -45,11 +45,11 @@ export function resolveInventoryNav({
       : null;
   const groups: ShellNavGroup[] = [
     {
-      title: "0 · Hôm nay",
+      title: "0 · Nay",
       items: [
         {
           href: "/inventory",
-          label: "Hôm nay",
+          label: "Nay",
           icon: IconLayoutDashboard,
           exact: true,
         },

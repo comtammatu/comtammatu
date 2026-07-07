@@ -51,6 +51,10 @@ export function resolveEmployeeBranchRuntimePath(
   route: BranchRuntimeRoute,
   homeBranchId?: number | null,
 ): string | null {
+  if (claims.user_role === "office" && claims.branch_id == null) {
+    return "/finance";
+  }
+
   if (!canAccess(claims.user_role, "operator_home")) {
     return claims.user_role === "office" ? "/finance" : null;
   }

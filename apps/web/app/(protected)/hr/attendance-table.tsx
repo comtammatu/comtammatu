@@ -44,6 +44,8 @@ import {
   getVNMonthSequenceBack,
   getVNMonthString,
   formatVNTime,
+  parseClockTimeToMinutes,
+  getVNMinutesOfDay,
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import {
@@ -490,10 +492,19 @@ function DetailView({
     });
   }
 
+  function isStaleOpenRecord(record: AttendanceRecord): boolean {
+    if (!record.check_in || record.check_out) return false;
+    if (record.date < todayStr) return true;
+    if (record.date !== todayStr) return false;
+
+    const start = parseClockTimeToMinutes(record.shifts?.start_time || "");
+    const end = parseClockTimeToMinutes(record.shifts?.end_time || "");
+    if (start === null || end === null || end <= start) return false;
+    return getVNMinutesOfDay() >= end;
+  }
+
   function recordStateBadge(record: AttendanceRecord) {
-    const isStale =
-      !!record.check_in && !record.check_out && record.date < todayStr;
-    if (isStale) {
+    if (isStaleOpenRecord(record)) {
       return <StatusBadge domain="attendance" value="stale_open" />;
     }
     if (record.check_out) {
@@ -548,6 +559,7 @@ function DetailView({
   function forceCloseAction(record: AttendanceRecord) {
     const isOpen = !!record.check_in && !record.check_out;
     if (!isOpen) return null;
+    const isStale = isStaleOpenRecord(record);
 
     return (
       <Button
@@ -556,7 +568,7 @@ function DetailView({
         size="sm"
         onClick={() => setClosingRecord(record)}
       >
-        Đóng ca
+        {isStale ? "Đóng ca treo" : "Đóng ca"}
       </Button>
     );
   }

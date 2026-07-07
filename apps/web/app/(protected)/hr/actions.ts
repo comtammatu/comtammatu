@@ -1016,7 +1016,8 @@ const forceCloseStaleAttendanceSchema = z.object({
 export const forceCloseStaleAttendance = withAction(
   { roles: HR_EMPLOYEE_VIEW_ROLES, schema: forceCloseStaleAttendanceSchema },
   async (data, { supabase, claims, user }) => {
-    const { data: openRecord, error: fetchError } = await supabase
+    const service = createServiceClient();
+    const { data: openRecord, error: fetchError } = await service
       .from("attendance_records")
       .select("id, branch_id, check_in")
       .eq("id", data.attendanceId)
@@ -1069,7 +1070,7 @@ export const forceCloseStaleAttendance = withAction(
         ? data.note
         : "Force closed: Quên kết ca trong ngày (không tính công)";
 
-    const { data: closedRecord, error } = await supabase
+    const { data: closedRecord, error } = await service
       .from("attendance_records")
       .update({
         check_out: checkOutTime,

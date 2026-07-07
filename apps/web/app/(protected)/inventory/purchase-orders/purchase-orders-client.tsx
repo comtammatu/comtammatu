@@ -78,11 +78,11 @@ function formatDate(value: string) {
   return formatVNDate(value);
 }
 
-/** Vietnamese relative-time hint (e.g. "3 ngày trước", "Hôm nay") for tooltips. */
+/** Vietnamese relative-time hint (e.g. "3 ngày trước", "Nay") for tooltips. */
 function formatRelative(value: string): string {
   const ms = Date.now() - new Date(value).getTime();
   const days = Math.floor(ms / 86400000);
-  if (days === 0) return "Hôm nay";
+  if (days === 0) return "Nay";
   if (days === 1) return "Hôm qua";
   if (days < 0) return `${Math.abs(days)} ngày tới`;
   if (days < 30) return `${days} ngày trước`;

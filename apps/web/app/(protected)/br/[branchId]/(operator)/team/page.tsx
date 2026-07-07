@@ -57,7 +57,11 @@ export default async function TeamBoardPage({
   ];
 
   const content = (
-    <AppPageTabs items={tabsList} defaultValue={activeTab}>
+    <AppPageTabs
+      items={tabsList}
+      defaultValue={activeTab}
+      className="flex flex-col gap-3"
+    >
       <TabsContent value="board" className="mt-0">
         {result.success ? (
           <TeamBoardClient
@@ -79,10 +83,13 @@ export default async function TeamBoardPage({
   );
 
   return (
-    <AppPageHeader
-      title={copy.title}
-      description={copy.description}
-      tabs={content}
-    />
+    <div className="flex flex-col gap-3">
+      <AppPageHeader
+        title={copy.title}
+        description={copy.description}
+        className="sr-only sm:not-sr-only"
+      />
+      {content}
+    </div>
   );
 }

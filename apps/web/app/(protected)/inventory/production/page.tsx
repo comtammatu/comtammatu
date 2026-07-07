@@ -4,7 +4,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { fetchProductionRuns, type ProductionRunRow } from "../production-run-actions";
 import { ProductionRunsClient } from "./production-runs-client";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { loadProductionSurfaceData } from "../production-data";
 import { ProductionRecipePanel } from "../production-recipe-panel";
@@ -46,7 +46,13 @@ export async function ProductionPageContent({
     />
   );
 
-  const recipesContent = (
+  const recipesContent = surfaceData.recipeLoadError ? (
+    <AppEmptyState
+      mode="error"
+      title="Không thể tải công thức sản xuất"
+      description={surfaceData.recipeLoadError}
+    />
+  ) : (
     <ProductionRecipePanel
       canManageCatalog={surfaceData.canManageCatalog}
       canManageRecipes={surfaceData.canManageRecipes}

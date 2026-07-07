@@ -168,7 +168,7 @@ export const hr = {
     approvalsTitle: "Duyệt nghỉ phép",
     approvalsDescription:
       "Duyệt hoặc từ chối yêu cầu nghỉ phép của nhân viên chi nhánh.",
-    approvalsHomeLabel: "Hôm nay",
+    approvalsHomeLabel: "Nay",
     approvalsNoAccessTitle: "Không có quyền duyệt nghỉ phép",
     approvalsNoAccessDescription:
       "Chỉ tài khoản quản lý có quyền nhân sự mới duyệt yêu cầu nghỉ phép.",
