@@ -247,7 +247,7 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
     return { success: false, error: "Không tìm thấy phiếu nhập." };
   const { data: lines, error: e2 } = await supabase
     .from("grn_items")
-    .select("*, ingredients ( id, name, ingredient_units(is_base, units(code)) )")
+    .select("*, ingredients ( id, name, ingredient_units(is_base, units!ingredient_units_unit_id_fkey(code)) )")
     .eq("grn_id", id.data)
     .eq("tenant_id", claims.tenant_id);
   if (e2)
@@ -534,7 +534,6 @@ export const upsertGrnLine = withAction(
           grn_id: data.grnId,
           ingredient_id: data.ingredientId,
           received_quantity: data.receivedQuantity,
-          unit: resolvedUnit.unit,
           entry_unit_id: data.entryUnitId ?? null,
           unit_cost: data.unitCost,
           total_cost: totalCost,

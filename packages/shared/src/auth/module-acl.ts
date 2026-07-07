@@ -139,6 +139,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
       "chef",
       "warehouse_manager",
       "production_manager",
+      "office",
     ],
     label: getModuleLabelVi("operator_home"),
   },

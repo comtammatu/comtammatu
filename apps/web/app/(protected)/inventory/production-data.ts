@@ -62,6 +62,7 @@ export interface ProductionSurfaceData {
   canConfirmProduction: boolean;
   canAdjustStock: boolean;
   productionBranches: BranchOption[];
+  targetBranches: BranchOption[];
   unitOptions: UnitOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
@@ -181,13 +182,14 @@ export async function loadProductionSurfaceData({
 
   const branches = (branchesRes.data ?? []) as BranchPreviewRow[];
   // Production sites = central kitchen OR any branch (D068).
-  let productionBranches: BranchOption[] = branches
+  const allProductionBranches: BranchOption[] = branches
     .filter((branch) => isProductionBranchKind(branch.branch_kind))
     .map((branch) => ({
       id: branch.id,
       name: branch.name,
     }));
   const scopedBranchId = claims.branch_id ?? routeBranchId;
+  let productionBranches: BranchOption[] = allProductionBranches;
   if (isProductionBranchScopedRole(role) && scopedBranchId != null) {
     productionBranches = productionBranches.filter(
       (branch) => branch.id === scopedBranchId,
@@ -225,6 +227,7 @@ export async function loadProductionSurfaceData({
     canConfirmProduction,
     canAdjustStock,
     productionBranches,
+    targetBranches: allProductionBranches,
     unitOptions: unitOptionsRes.success ? (unitOptionsRes.data ?? []) : [],
     ingredients,
     finishedGoods,

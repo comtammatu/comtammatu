@@ -123,7 +123,7 @@ export async function fetchPositionTasksData(): Promise<
     service
       .from("ingredients")
       .select(
-        "id, name, ingredient_units(is_base, units(code))",
+        "id, name, ingredient_units(is_base, units!ingredient_units_unit_id_fkey(code))",
       )
       .eq("tenant_id", ctx.claims.tenant_id)
       .eq("is_active", true)

@@ -369,7 +369,6 @@ export async function createTestGrnDraft(
     grn_id: grn.id,
     ingredient_id: opts.ingredientId,
     received_quantity: qty,
-    unit: "kg",
     unit_cost: cost,
     total_cost: qty * cost,
     quality_status: "accepted",
@@ -467,7 +466,6 @@ export async function createTestTransferDraft(
       transfer_id: transfer.id,
       ingredient_id: opts.ingredientId,
       quantity: qty,
-      unit: "kg",
     });
 
   if (lineErr) {

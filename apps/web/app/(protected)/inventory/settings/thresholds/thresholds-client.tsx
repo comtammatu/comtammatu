@@ -52,7 +52,6 @@ export type ThresholdRow = {
   name: string;
   sku: string | null;
   unit: string;
-  purchaseUnit: string | null;
   minStock: string;
   reorderPoint: string;
   maxStock: string;

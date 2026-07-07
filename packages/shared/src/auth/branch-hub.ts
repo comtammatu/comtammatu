@@ -21,7 +21,10 @@ function isAdminRole(role: JwtClaims["user_role"]): boolean {
 
 /** Determine the default redirect path for a role after login */
 export function getDefaultRedirect(claims: JwtClaims): string {
-  if (isAdminRole(claims.user_role) || claims.user_role === "office") {
+  if (
+    isAdminRole(claims.user_role) ||
+    (claims.user_role === "office" && claims.branch_id == null)
+  ) {
     return "/finance";
   }
 
@@ -48,7 +51,7 @@ export function resolveBranchHubDestination(
     return getDefaultRedirect(claims);
   }
 
-  if (claims.user_role === "office") {
+  if (claims.user_role === "office" && claims.branch_id == null) {
     return getDefaultRedirect(claims);
   }
 

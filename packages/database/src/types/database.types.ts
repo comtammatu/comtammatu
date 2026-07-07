@@ -512,7 +512,6 @@ export type Database = {
           report_id: number
           sort_order: number
           tenant_id: number
-          unit: string
           updated_at: string
         }
         Insert: {
@@ -525,7 +524,6 @@ export type Database = {
           report_id: number
           sort_order?: number
           tenant_id: number
-          unit: string
           updated_at?: string
         }
         Update: {
@@ -538,7 +536,6 @@ export type Database = {
           report_id?: number
           sort_order?: number
           tenant_id?: number
-          unit?: string
           updated_at?: string
         }
         Relationships: [
@@ -2026,7 +2023,6 @@ export type Database = {
           short_delivery_action: string | null
           tenant_id: number
           total_cost: number
-          unit: string
           unit_cost: number
           variance_tier: number | null
         }
@@ -2056,7 +2052,6 @@ export type Database = {
           short_delivery_action?: string | null
           tenant_id: number
           total_cost: number
-          unit: string
           unit_cost: number
           variance_tier?: number | null
         }
@@ -2086,7 +2081,6 @@ export type Database = {
           short_delivery_action?: string | null
           tenant_id?: number
           total_cost?: number
-          unit?: string
           unit_cost?: number
           variance_tier?: number | null
         }
@@ -5193,7 +5187,6 @@ export type Database = {
           production_order_id: number
           quantity: number
           tenant_id: number
-          unit: string
           unit_cost_at_production: number | null
         }
         Insert: {
@@ -5205,7 +5198,6 @@ export type Database = {
           production_order_id: number
           quantity: number
           tenant_id: number
-          unit: string
           unit_cost_at_production?: number | null
         }
         Update: {
@@ -5217,7 +5209,6 @@ export type Database = {
           production_order_id?: number
           quantity?: number
           tenant_id?: number
-          unit?: string
           unit_cost_at_production?: number | null
         }
         Relationships: [
@@ -5329,7 +5320,6 @@ export type Database = {
           note: string | null
           quantity: number
           tenant_id: number
-          unit: string
           updated_at: string
           yield_factor: number
         }
@@ -5342,7 +5332,6 @@ export type Database = {
           note?: string | null
           quantity: number
           tenant_id: number
-          unit: string
           updated_at?: string
           yield_factor?: number
         }
@@ -5355,7 +5344,6 @@ export type Database = {
           note?: string | null
           quantity?: number
           tenant_id?: number
-          unit?: string
           updated_at?: string
           yield_factor?: number
         }
@@ -5584,7 +5572,6 @@ export type Database = {
           po_id: number
           quantity: number
           tenant_id: number
-          unit: string
           unit_price_est: number | null
         }
         Insert: {
@@ -5595,7 +5582,6 @@ export type Database = {
           po_id: number
           quantity: number
           tenant_id: number
-          unit: string
           unit_price_est?: number | null
         }
         Update: {
@@ -5606,7 +5592,6 @@ export type Database = {
           po_id?: number
           quantity?: number
           tenant_id?: number
-          unit?: string
           unit_price_est?: number | null
         }
         Relationships: [
@@ -5731,7 +5716,6 @@ export type Database = {
           note: string | null
           quantity: number
           tenant_id: number
-          unit: string
           yield_factor: number
         }
         Insert: {
@@ -5743,7 +5727,6 @@ export type Database = {
           note?: string | null
           quantity: number
           tenant_id: number
-          unit: string
           yield_factor?: number
         }
         Update: {
@@ -5755,7 +5738,6 @@ export type Database = {
           note?: string | null
           quantity?: number
           tenant_id?: number
-          unit?: string
           yield_factor?: number
         }
         Relationships: [
@@ -6346,7 +6328,6 @@ export type Database = {
           rolling_15min_sum: number | null
           tenant_id: number
           total_cost: number | null
-          unit: string
           unit_cost: number
           waste_tier: number | null
         }
@@ -6365,7 +6346,6 @@ export type Database = {
           rolling_15min_sum?: number | null
           tenant_id: number
           total_cost?: number | null
-          unit: string
           unit_cost?: number
           waste_tier?: number | null
         }
@@ -6384,7 +6364,6 @@ export type Database = {
           rolling_15min_sum?: number | null
           tenant_id?: number
           total_cost?: number | null
-          unit?: string
           unit_cost?: number
           waste_tier?: number | null
         }
@@ -6764,7 +6743,6 @@ export type Database = {
           receive_note: string | null
           tenant_id: number
           transfer_id: number
-          unit: string
           unit_cost_at_ship: number | null
         }
         Insert: {
@@ -6776,7 +6754,6 @@ export type Database = {
           receive_note?: string | null
           tenant_id: number
           transfer_id: number
-          unit: string
           unit_cost_at_ship?: number | null
         }
         Update: {
@@ -6788,7 +6765,6 @@ export type Database = {
           receive_note?: string | null
           tenant_id?: number
           transfer_id?: number
-          unit?: string
           unit_cost_at_ship?: number | null
         }
         Relationships: [
@@ -7796,7 +7772,6 @@ export type Database = {
           stock_movement_id: number | null
           tenant_id: number
           total_cost: number
-          unit: string
           unit_cost: number
         }
         Insert: {
@@ -7810,7 +7785,6 @@ export type Database = {
           stock_movement_id?: number | null
           tenant_id: number
           total_cost: number
-          unit: string
           unit_cost: number
         }
         Update: {
@@ -7824,7 +7798,6 @@ export type Database = {
           stock_movement_id?: number | null
           tenant_id?: number
           total_cost?: number
-          unit?: string
           unit_cost?: number
         }
         Relationships: [
@@ -8710,40 +8683,6 @@ export type Database = {
           },
         ]
       }
-      mv_grn_price_baseline: {
-        Row: {
-          avg_30d: number | null
-          ingredient_id: number | null
-          last_seen_at: string | null
-          sample_n: number | null
-          supplier_id: number | null
-          tenant_id: number | null
-          uom: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "goods_received_notes_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "goods_received_notes_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_items_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       mv_inventory_stock_current: {
         Row: {
           avg_unit_cost: number | null
@@ -8948,6 +8887,16 @@ export type Database = {
           p_zone_id: string
         }
         Returns: Json
+      }
+      admin_force_close_attendance: {
+        Args: {
+          p_approved_by: string
+          p_attendance_id: number
+          p_branch_id: number
+          p_note?: string
+          p_tenant_id: number
+        }
+        Returns: string
       }
       admin_update_profile: {
         Args: {

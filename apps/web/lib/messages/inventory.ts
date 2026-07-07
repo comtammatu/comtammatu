@@ -453,7 +453,7 @@ export const inventory = {
     notesPlaceholder: "Ghi chú đơn hàng…",
     suggestionsTitle: "Gợi ý đặt hàng",
     reorderBannerDescription: (count: number) =>
-      `${count} nguyên liệu đang dưới định mức tồn kho tối thiểu.`,
+      `${count} nguyên liệu đang dưới ngưỡng tồn kho tối thiểu.`,
     createDraftFromSuggestions: "Tạo đơn mua nháp",
     warehouseShort: "Kho",
     averageConsumption: "Tiêu hao trung bình",

@@ -83,7 +83,6 @@ export async function WasteApprovalsPageContent({
             issue_id,
             ingredient_id,
             quantity,
-            unit,
             unit_cost,
             total_cost,
             reason_code,
@@ -91,7 +90,8 @@ export async function WasteApprovalsPageContent({
             waste_tier,
             qty_ratio,
             rolling_15min_sum,
-            ingredient:ingredients(id, name, unit)
+            ingredient:ingredients(id, name),
+            unit_obj:units!stock_issue_items_entry_unit_id_fkey(code)
           `,
           )
           .in("issue_id", issueIds)
@@ -149,7 +149,7 @@ export async function WasteApprovalsPageContent({
           ingredientId: it.ingredient_id,
           ingredientName: ingredient?.name ?? `#${it.ingredient_id}`,
           quantity: Number(it.quantity),
-          unit: it.unit,
+          unit: (it as any).unit_obj?.code ?? "",
           unitCost: it.unit_cost !== null ? Number(it.unit_cost) : null,
           totalCost: it.total_cost !== null ? Number(it.total_cost) : 0,
           reasonCode: it.reason_code ?? "",

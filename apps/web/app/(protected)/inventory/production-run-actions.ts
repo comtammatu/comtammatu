@@ -302,7 +302,7 @@ export const confirmProductionRun = withAction(
         return { success: false, error: "Kho không đủ nguyên liệu", data: shortages };
       }
       if (message.includes("production_recipe_missing")) {
-        return { success: false, error: "Thiếu công thức (BOM)" };
+        return { success: false, error: "Thiếu công thức sản xuất" };
       }
       if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE || message.includes("forbidden") || message.includes("branch_scope_violation")) {
         return { success: false, error: "Không có quyền thực hiện" };

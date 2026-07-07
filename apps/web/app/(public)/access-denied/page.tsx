@@ -64,11 +64,11 @@ export default async function AccessDeniedPage({
               Về trang mặc định
             </Link>
           </Button>
-          <Button asChild variant="outline" size="touch" className="flex-1">
-            <Link href="/login" replace>
-              Đăng nhập lại
-            </Link>
-          </Button>
+          <form action="/api/auth/signout" method="post" className="flex-1">
+            <Button type="submit" variant="outline" size="touch" className="w-full">
+              Đăng xuất
+            </Button>
+          </form>
         </div>
       </AppSection>
     </div>

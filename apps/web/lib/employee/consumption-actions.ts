@@ -48,9 +48,11 @@ interface ConsumptionReportLineDbRow {
   ingredient_id: number;
   default_item_id: number | null;
   quantity: number | string;
-  unit: string | null;
   note: string | null;
-  ingredients: { name?: string | null } | null;
+  ingredients: {
+    name?: string | null;
+    ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
+  } | null;
 }
 
 interface ConsumptionDefaultItemDbRow {
@@ -249,7 +251,7 @@ async function loadReportByAttendance(
   const { data: lines } = await service
     .from<ConsumptionReportLineDbRow[]>("attendance_consumption_report_lines")
     .select(
-      "id, ingredient_id, default_item_id, quantity, unit, note, ingredients ( name )",
+      "id, ingredient_id, default_item_id, quantity, note, ingredients ( name, ingredient_units!ingredient_units_ingredient_id_fkey(is_base, units!ingredient_units_unit_id_fkey(code)) )",
     )
     .eq("tenant_id", tenantId)
     .eq("report_id", report.id)
@@ -271,7 +273,7 @@ async function loadReportByAttendance(
       defaultItemId: line.default_item_id ?? null,
       ingredientName: line.ingredients?.name ?? `#${line.ingredient_id}`,
       quantity: Number(line.quantity ?? 0),
-      unit: line.unit ?? "",
+      unit: line.ingredients?.ingredient_units?.find((u: any) => u.is_base)?.units?.code || "kg",
       note: line.note ?? null,
     })),
   };

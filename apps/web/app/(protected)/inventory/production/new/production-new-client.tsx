@@ -21,6 +21,7 @@ import type { BranchOption, FinishedGoodOption } from "../../production-types";
 
 interface ProductionNewClientProps {
   branches: BranchOption[];
+  targetBranches: BranchOption[];
   finishedGoods: FinishedGoodOption[];
   initialBranchId?: number;
   basePath: string;
@@ -28,6 +29,7 @@ interface ProductionNewClientProps {
 
 export function ProductionNewClient({
   branches,
+  targetBranches,
   finishedGoods,
   initialBranchId,
   basePath,
@@ -36,7 +38,9 @@ export function ProductionNewClient({
   const [isPending, startTransition] = useTransition();
 
   const [branchId, setBranchId] = useState<number | undefined>(initialBranchId ?? branches[0]?.id);
-  const [targetBranchId, setTargetBranchId] = useState<number | undefined>(initialBranchId ?? branches[0]?.id);
+  const [targetBranchId, setTargetBranchId] = useState<number | undefined>(
+    initialBranchId ?? branches[0]?.id,
+  );
   const [finishedGoodId, setFinishedGoodId] = useState<number | undefined>();
   const [plannedQuantity, setPlannedQuantity] = useState<string>("");
   const [entryUnitId, setEntryUnitId] = useState<number | undefined>();
@@ -178,7 +182,7 @@ export function ProductionNewClient({
               <SelectValue placeholder="Chọn chi nhánh nhận" />
             </SelectTrigger>
             <SelectContent>
-              {branches.map((b) => (
+              {targetBranches.map((b) => (
                 <SelectItem key={b.id} value={b.id.toString()}>
                   {b.name}
                 </SelectItem>
@@ -258,7 +262,7 @@ export function ProductionNewClient({
 
       {recipeContext && recipeContext.ingredients.length > 0 && (
         <div className="grid gap-2">
-          <Label>Nguyên liệu tiêu hao (có thể điều chỉnh)</Label>
+          <Label>Bước 2: Điều chỉnh số lượng phần nguyên liệu thực tế</Label>
           <div className="rounded-md border text-sm overflow-hidden">
             <table className="w-full">
               <thead className="bg-muted/50 border-b">

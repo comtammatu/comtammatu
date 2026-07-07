@@ -206,7 +206,6 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
         ingredient_id: fx.ingredientId,
         received_quantity: 5,
         rejected_quantity: 7, // > received → must be rejected
-        unit: "kg",
         unit_cost: 10000,
         total_cost: 50000,
         quality_status: "partial",
@@ -259,7 +258,6 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
       rejected_quantity: 3,
       rejection_reason: "Hàng ẩm mốc 3 đơn vị",
       rejected_photo_url: "http://example.com/rejected.jpg",
-      unit: "kg",
       unit_cost: 15000,
       total_cost: 150000,
       quality_status: "partial",

@@ -26,7 +26,7 @@ export async function fetchReorderAlerts(
       branches ( name, branch_kind ),
       ingredients!inner (
         id, name, reorder_point, max_stock_level, is_active,
-        ingredient_units(is_base, units(code))
+        ingredient_units(is_base, units!ingredient_units_unit_id_fkey(code))
       )
     `,
     )

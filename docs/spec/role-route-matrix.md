@@ -115,7 +115,7 @@ by direct URL or as a redirect target.
 | `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `kds` | `/br/*/kds` | Chủ sở hữu, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `runner` | `/br/*/runner` | Chủ sở hữu, Thu ngân, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
-| `operator_home` | `/br/*` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm | (not advertised in nav — direct URL / redirect target only) |
+| `operator_home` | `/br/*` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Văn phòng | (not advertised in nav — direct URL / redirect target only) |
 | `branch_dashboard` | `/br/*/dashboard` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `branch_settings` | `/br/*/settings` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `branch_menu_limits` | `/br/*/menu-limits` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
@@ -198,11 +198,11 @@ separate gates (route bucket here, permission key at the mutation site).
 | hr | `/hr` | branch_manager/owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
 | notifications | `/notifications` | branch_manager/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-picker | `/br` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
-| operator-home | `/br/[branchId]`, `/br/[branchId]/more` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-home | `/br/[branchId]`, `/br/[branchId]/more` | branch_manager/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift-checkout-approvals | `/br/[branchId]/shift/checkout-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift-leave-approvals | `/br/[branchId]/shift/leave-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
-| operator-shift | `/br/[branchId]/shift` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
-| operator-profile | `/br/[branchId]/profile` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-shift | `/br/[branchId]/shift` | branch_manager/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-profile | `/br/[branchId]/profile` | branch_manager/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-stock | `/br/[branchId]/stock` | branch_manager/owner/production_manager/warehouse_manager | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:units_master`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
 | operator-orders | `/br/[branchId]/orders` | branch_manager/cashier/owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |
 | branch-menu-limits | `/br/[branchId]/menu-limits` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |

@@ -459,8 +459,8 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `stocktake`             | kiểm kê                             | Đếm thực tế và điều chỉnh.                                              | kiểm kho nếu cần term chuẩn           |
 | `raw_material`          | nguyên liệu                         | Item đầu vào.                                                           | vật tư nếu không phải ngữ cảnh rộng   |
 | `finished_good`         | thành phẩm                          | Hàng sản xuất tại Bếp Trung Tâm hoặc giữ tồn để cấp về chi nhánh.       | món bán nếu đang nói menu             |
-| `recipe`                | công thức món                       | Định mức nguyên liệu cho món bán.                                       | BOM nếu không phải production context |
-| `production_recipe`     | công thức sản xuất                  | BOM cho thành phẩm.                                                     | recipe khi cần phân biệt              |
+| `recipe`                | định mức (món bán)                  | Định mức nguyên liệu tiêu hao cho một món bán.                          | công thức (production)                                |
+| `production_recipe`     | công thức (sản xuất)                | Định mức nguyên liệu (BOM) để sản xuất ra thành phẩm.                   | định mức (POS)                                        |
 | `production_order`      | lệnh sản xuất                       | Lệnh sản xuất tại Bếp Trung Tâm.                                        | work order                            |
 | `three_way_matching`    | đối soát 3 chứng từ                 | Đối chiếu `PO`, `GRN`, `supplier_invoice`.                              | matching chung                        |
 | `weighted_average_cost` | giá vốn bình quân gia quyền (`WAC`) | Costing chuẩn hiện tại.                                                 | FIFO nếu hệ thống không dùng          |
@@ -628,8 +628,8 @@ viết tắt tiếng Việt chính thức. UI chỉ được dùng một biến 
 | `stocktake`             | Kiểm kê                     | —                | —       |
 | `raw_material`          | Nguyên liệu                 | —                | —       |
 | `finished_good`         | Thành phẩm                  | —                | —       |
-| `recipe`                | Công thức món               | Định mức         | —       |
-| `production_recipe`     | Công thức sản xuất          | Định mức SX      | `BOM`   |
+| `recipe`                | Định mức món bán            | Định mức         | Công thức (sản xuất) |
+| `production_recipe`     | Công thức sản xuất          | Công thức        | Định mức (POS)       |
 | `production_order`      | Lệnh sản xuất               | Lệnh SX          | —       |
 | `three_way_matching`    | Đối soát 3 chứng từ         | Đối soát 3 chiều | —       |
 | `weighted_average_cost` | Giá vốn bình quân gia quyền | Giá vốn BQ       | `WAC`   |

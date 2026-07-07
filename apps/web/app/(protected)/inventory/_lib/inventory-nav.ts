@@ -131,8 +131,16 @@ export function resolveInventoryNav({
         ? [
             {
               href: "/inventory/production",
-              label: "Sản xuất",
+              label: "Lệnh sản xuất",
               icon: IconToolsKitchen,
+              matchPrefixes: ["/inventory/production/new", "/inventory/production/"],
+              exact: true,
+            },
+            {
+              href: "/inventory/production?tab=recipes",
+              label: "Công thức",
+              icon: IconClipboardList,
+              matchPrefixes: [],
             },
           ]
         : []),

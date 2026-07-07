@@ -11,13 +11,18 @@ export default async function ProductionNewPage({
   const params = await searchParams;
   const routeBranchId = params.branchId ? parseInt(params.branchId, 10) : undefined;
   
-  const { productionBranches, finishedGoods } = await loadProductionSurfaceData({ routeBranchId });
+  const {
+    productionBranches,
+    targetBranches,
+    finishedGoods,
+  } = await loadProductionSurfaceData({ routeBranchId });
 
   return (
     <AppPage width="narrow" density="compact">
       <AppPageHeader title="Tạo lệnh sản xuất mới" />
       <ProductionNewClient 
         branches={productionBranches}
+        targetBranches={targetBranches}
         finishedGoods={finishedGoods}
         initialBranchId={routeBranchId}
         basePath="/inventory/production"

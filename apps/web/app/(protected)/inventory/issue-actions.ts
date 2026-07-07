@@ -202,7 +202,7 @@ export async function fetchStockIssueDetail(
     supabase
       .from("stock_issue_items")
       .select(
-        "id, ingredient_id, quantity, unit, entry_unit_id, unit_cost, total_cost, reason, ingredients ( id, name, ingredient_units(is_base, units(code)) )",
+        "id, ingredient_id, quantity, unit, entry_unit_id, unit_cost, total_cost, reason, ingredients ( id, name, ingredient_units(is_base, units!ingredient_units_unit_id_fkey(code)) )",
       )
       .eq("issue_id", id.data)
       .eq("tenant_id", claims.tenant_id)
@@ -298,7 +298,6 @@ export const upsertStockIssueLine = withAction(
         issue_id: d.issueId,
         ingredient_id: d.ingredientId,
         quantity: d.quantity,
-        unit: resolvedUnit.unit,
         entry_unit_id: d.entryUnitId ?? null,
         unit_cost: Number.isFinite(unitCost) ? unitCost : 0,
         reason: d.reason ?? null,
