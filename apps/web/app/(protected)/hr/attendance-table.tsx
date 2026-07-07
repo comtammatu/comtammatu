@@ -29,6 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -48,6 +50,7 @@ import {
   fetchAttendance,
   fetchAttendanceSummary,
   getAttendancePhotoUrl,
+  forceCloseStaleAttendance,
 } from "./actions";
 import { fetchApprovedLeaveMonth } from "./leave-request-actions";
 import type { BranchOption } from "./_types";
@@ -247,7 +250,10 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
       {view === "summary" ? (
         <SummaryView data={summary} />
       ) : (
-        <DetailView data={records} />
+        <DetailView 
+          data={records} 
+          onMutated={() => loadData(selectedBranch, selectedMonth, "clock")}
+        />
       )}
 
       <ApprovedLeavePanel leaves={leaves} />
@@ -413,7 +419,13 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
   );
 }
 
-function DetailView({ data }: { data: AttendanceRecord[] }) {
+function DetailView({ 
+  data, 
+  onMutated 
+}: { 
+  data: AttendanceRecord[]; 
+  onMutated: () => void; 
+}) {
   const [photoOpen, setPhotoOpen] = useState(false);
   const [checklistRecord, setChecklistRecord] =
     useState<AttendanceRecord | null>(null);
@@ -424,6 +436,10 @@ function DetailView({ data }: { data: AttendanceRecord[] }) {
   } | null>(null);
   const [pendingPhotoId, setPendingPhotoId] = useState<number | null>(null);
   const [, startPhotoTransition] = useTransition();
+
+  const [closingRecord, setClosingRecord] = useState<AttendanceRecord | null>(null);
+  const [isClosing, startCloseTransition] = useTransition();
+
   const todayStr = getVNDateString();
 
   function openPhoto(record: AttendanceRecord) {
@@ -447,6 +463,30 @@ function DetailView({ data }: { data: AttendanceRecord[] }) {
         date: record.date,
       });
       setPhotoOpen(true);
+    });
+  }
+
+  function handleForceClose(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!closingRecord) return;
+
+    const formData = new FormData(e.currentTarget);
+    const note = formData.get("note") as string;
+
+    startCloseTransition(async () => {
+      const result = await forceCloseStaleAttendance({
+        attendanceId: closingRecord.id,
+        note,
+      });
+
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Đã đóng ca thành công (0 giờ công)");
+      setClosingRecord(null);
+      onMutated();
     });
   }
 
@@ -501,6 +541,23 @@ function DetailView({ data }: { data: AttendanceRecord[] }) {
           <IconImage data-icon="inline-start" />
         )}
         {attendanceCopy.viewPhoto}
+      </Button>
+    );
+  }
+
+  function forceCloseAction(record: AttendanceRecord) {
+    const isStale =
+      !!record.check_in && !record.check_out && record.date < todayStr;
+    if (!isStale) return null;
+
+    return (
+      <Button
+        type="button"
+        variant="destructive"
+        size="sm"
+        onClick={() => setClosingRecord(record)}
+      >
+        Đóng ca
       </Button>
     );
   }
@@ -582,6 +639,11 @@ function DetailView({ data }: { data: AttendanceRecord[] }) {
       className: "max-w-48 truncate text-sm text-muted-foreground",
       render: (record) => record.note ?? "",
     },
+    {
+      key: "actions",
+      header: "Thao tác",
+      render: forceCloseAction,
+    },
   ];
 
   return (
@@ -612,7 +674,12 @@ function DetailView({ data }: { data: AttendanceRecord[] }) {
                 </p>
               ) : null}
             </ItemContent>
-            <ItemActions>{photoAction(record)}</ItemActions>
+            <ItemActions>
+              <div className="flex gap-2 items-center">
+                {photoAction(record)}
+                {forceCloseAction(record)}
+              </div>
+            </ItemActions>
           </Item>
         )}
       />
@@ -665,6 +732,54 @@ function DetailView({ data }: { data: AttendanceRecord[] }) {
           {checklistRecord ? (
             <ChecklistDetail record={checklistRecord} />
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={closingRecord !== null}
+        onOpenChange={(open) => {
+          if (!open) setClosingRecord(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Đóng ca làm việc treo</DialogTitle>
+            <DialogDescription>
+              Ca làm việc của {closingRecord?.employees?.profiles?.full_name} ngày {closingRecord?.date} chưa được kết ca.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleForceClose} className="flex flex-col gap-4">
+            <NoteCallout tone="muted">
+              Việc đóng ca sẽ đặt giờ ra bằng giờ vào (0 giờ công).
+            </NoteCallout>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="note" className="text-sm font-medium">
+                Ghi chú (tuỳ chọn)
+              </label>
+              <Textarea
+                id="note"
+                name="note"
+                placeholder="Lý do đóng ca..."
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setClosingRecord(null)}
+                disabled={isClosing}
+              >
+                Huỷ
+              </Button>
+              <Button type="submit" disabled={isClosing}>
+                {isClosing && <Spinner data-icon="inline-start" />}
+                Xác nhận đóng ca
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </>

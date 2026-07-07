@@ -36,12 +36,21 @@ export function ProductionDetailClient({ run, recipeContext }: ProductionDetailC
   const [ingredientUsages, setIngredientUsages] = useState<Record<number, string>>(() => {
     const usages: Record<number, string> = {};
     if (recipeContext?.ingredients) {
+      const overrides = Array.isArray(run.ingredients_override) ? run.ingredients_override : [];
+      const overrideMap = new Map();
+      overrides.forEach(o => {
+        if (o.ingredient_id != null && o.actual_quantity != null) {
+          overrideMap.set(o.ingredient_id, o.actual_quantity);
+        }
+      });
+
       for (const ing of recipeContext.ingredients) {
-        // Default usage: planned_quantity * recipe_quantity / yield_factor
-        // We just leave it empty by default to mean "use standard formula", but to allow editing,
-        // we can pre-populate the standard formula value.
-        const defaultQty = (run.planned_quantity * ing.recipe_quantity) / ing.yield_factor;
-        usages[ing.ingredient_id] = defaultQty.toFixed(3);
+        if (overrideMap.has(ing.ingredient_id)) {
+          usages[ing.ingredient_id] = overrideMap.get(ing.ingredient_id).toString();
+        } else {
+          const defaultQty = (run.planned_quantity * ing.recipe_quantity) / ing.yield_factor;
+          usages[ing.ingredient_id] = defaultQty.toFixed(3);
+        }
       }
     }
     return usages;
@@ -123,11 +132,16 @@ export function ProductionDetailClient({ run, recipeContext }: ProductionDetailC
   return (
     <AppSection className="p-6 space-y-6">
       <div className="grid grid-cols-2 gap-4">
-        <div>
+        <div className="col-span-2 md:col-span-1">
           <Label className="text-muted-foreground">Chi nhánh</Label>
-          <div className="font-medium">{run.branch_name}</div>
+          <div className="font-medium">
+            {run.branch_id === run.target_branch_id 
+              ? run.branch_name 
+              : <span className="flex items-center gap-1">Sản xuất: {run.branch_name} <span className="text-muted-foreground text-xs mx-1">➔</span> Nhận: {run.target_branch_name}</span>
+            }
+          </div>
         </div>
-        <div>
+        <div className="col-span-2 md:col-span-1">
           <Label className="text-muted-foreground">Ngày tạo</Label>
           <div className="font-medium">{formatVNDate(run.created_at)}</div>
         </div>

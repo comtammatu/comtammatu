@@ -11,7 +11,7 @@ export default async function ProductionNewPage({
   const params = await searchParams;
   const routeBranchId = params.branchId ? parseInt(params.branchId, 10) : undefined;
   
-  const { productionBranches, finishedGoods, recipes } = await loadProductionSurfaceData({ routeBranchId });
+  const { productionBranches, finishedGoods } = await loadProductionSurfaceData({ routeBranchId });
 
   return (
     <AppPage width="narrow" density="compact">
@@ -19,7 +19,6 @@ export default async function ProductionNewPage({
       <ProductionNewClient 
         branches={productionBranches}
         finishedGoods={finishedGoods}
-        recipes={recipes}
         initialBranchId={routeBranchId}
         basePath="/inventory/production"
       />
