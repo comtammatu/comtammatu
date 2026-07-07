@@ -77,7 +77,7 @@ export async function transferCashToBank(
       .from("webhook_events")
       .insert({
         tenant_id: claims.tenant_id,
-        provider: "manual",
+        provider: "sepay",
         request_id: "MANUAL_" + Date.now(),
         signature_valid: true,
         payload: payload as unknown as Json,

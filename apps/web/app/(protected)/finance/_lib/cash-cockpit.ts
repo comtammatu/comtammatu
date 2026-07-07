@@ -63,19 +63,40 @@ async function sumExpensesSinceByMethod(
   supabase: SupabaseClient,
   tenantId: number,
   sinceDate: string,
-): Promise<{ cash: number }> {
+): Promise<{ cash: number; unmatchedTransfer: number }> {
+  const { data: matchedEvents } = await supabase
+    .from("webhook_events")
+    .select("expense_id")
+    .eq("tenant_id", tenantId)
+    .not("expense_id", "is", null);
+
+  const matchedExpenseIds = new Set(
+    (matchedEvents ?? [])
+      .map((e) => e.expense_id)
+      .filter((id): id is number => id !== null),
+  );
+
   const { data } = await supabase
     .from("expenses")
-    .select("amount, payment_method")
+    .select("id, amount, payment_method")
     .eq("tenant_id", tenantId)
-    .eq("payment_method", "cash")
+    .in("payment_method", ["cash", "transfer"])
     .gte("expense_date", sinceDate);
+
   let cash = 0;
+  let unmatchedTransfer = 0;
   for (const row of data ?? []) {
     const amount = toNumber(row.amount);
-    if (row.payment_method === "cash") cash += amount;
+    if (row.payment_method === "cash") {
+      cash += amount;
+    } else if (
+      row.payment_method === "transfer" &&
+      !matchedExpenseIds.has(row.id)
+    ) {
+      unmatchedTransfer += amount;
+    }
   }
-  return { cash };
+  return { cash, unmatchedTransfer };
 }
 
 export async function fetchCashSummary(
@@ -144,7 +165,7 @@ export async function fetchCashSummary(
   const cashInSince = toNumber(revData?.cash_revenue);
   const cashOutSince = expensesSince.cash;
   const bankInSince = bankMovement.inAmount;
-  const bankOutSince = bankMovement.outAmount;
+  const bankOutSince = bankMovement.outAmount + expensesSince.unmatchedTransfer;
 
   const bankSettingRaw = settingMap.get(
     SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE,

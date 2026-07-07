@@ -176,7 +176,7 @@ export function resolveInventoryNav({
               },
             ]
           : []),
-        ...(showProcurement
+        ...(showProduction || showProcurement || showCatalogManagement
           ? [
               {
                 href: "/inventory/recipes",

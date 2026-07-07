@@ -32,8 +32,8 @@ function isStocktakeSessionPath(pathname: string | null): boolean {
   return segment !== "new" && segment !== "conflicts";
 }
 
-function isProductionPath(pathname: string | null): boolean {
-  return pathname === "/inventory/production";
+function isProductionPath(): boolean {
+  return false; // Removed lock on branch picker for production
 }
 
 export function InventoryShell({
@@ -51,7 +51,7 @@ export function InventoryShell({
   defaultBranchId,
 }: InventoryShellProps) {
   const pathname = usePathname();
-  const productionPath = isProductionPath(pathname);
+  const productionPath = isProductionPath();
   // Primary tabs use the home branch, so they must not rebuild on URL branch
   // changes — keyed on userRole/defaultBranchId only.
   const tier1 = useMemo(

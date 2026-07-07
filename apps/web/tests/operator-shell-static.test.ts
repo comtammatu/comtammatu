@@ -326,7 +326,7 @@ test("operator home renders the unified Cần xử lý queue before domain tile 
   assert.match(queueSource, /branchCopy\.queueTitle/);
 
   // Instead of checking order (queue was moved to sidebar), check that it's rendered conditionally
-  assert.match(home, /!\isFloorRole \|\| showOverview/);
+  assert.match(home, /!isFloorRole \|\| showOverview/);
   assert.match(home, /<HubQueueSection/);
 });
 

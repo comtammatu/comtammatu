@@ -1,12 +1,14 @@
 "use server";
 
 import { z } from "zod";
-import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  INVENTORY_OPS_ROLES,
+  INVENTORY_CATALOG_ROLES,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
-
-const ROLES = PROCUREMENT_ROLES;
 
 /* ─── Recipes (branch WAC + menu-item recipes) ─── */
 
@@ -28,8 +30,8 @@ const recipeBatchSchema = z.object({
 
 export async function fetchRecipes(): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.MENU_READ,
+    INVENTORY_CATALOG_ROLES,
+    PERMISSION_KEYS.INVENTORY_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
@@ -62,8 +64,8 @@ export async function fetchBranchWacMap(): Promise<
   ActionResult<Record<string, number>>
 > {
   const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.MENU_READ,
+    INVENTORY_OPS_ROLES,
+    PERMISSION_KEYS.INVENTORY_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
@@ -113,8 +115,8 @@ export async function fetchBranchMenuStockCapacity(
   }
 
   const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.MENU_READ,
+    INVENTORY_OPS_ROLES,
+    PERMISSION_KEYS.INVENTORY_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;
@@ -144,9 +146,9 @@ export async function fetchBranchMenuStockCapacity(
 
 export const upsertRecipeLines = withAction(
   {
-    roles: ROLES,
+    roles: INVENTORY_CATALOG_ROLES,
     schema: recipeBatchSchema,
-    permission: PERMISSION_KEYS.MENU_WRITE,
+    permission: PERMISSION_KEYS.INVENTORY_WRITE,
   },
   async (data, { supabase }) => {
     const lines = data.lines.map((line) => ({
@@ -175,8 +177,8 @@ export const upsertRecipeLines = withAction(
 
 export async function fetchMenuItemsForRecipes(): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.MENU_READ,
+    INVENTORY_CATALOG_ROLES,
+    PERMISSION_KEYS.INVENTORY_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
