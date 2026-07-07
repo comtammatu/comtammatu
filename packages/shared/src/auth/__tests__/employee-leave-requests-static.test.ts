@@ -56,6 +56,45 @@ test("Employee leave migration uses branch-scoped RLS and RPC workflow", () => {
   }
 });
 
+test("Current baseline keeps leave approval RPCs scoped to the request branch", () => {
+  const baseline = read("supabase/migrations/00000000000000_baseline.sql");
+  const approveStart = baseline.indexOf(
+    "CREATE FUNCTION public.approve_leave_request",
+  );
+  const rejectStart = baseline.indexOf(
+    "CREATE FUNCTION public.reject_leave_request",
+  );
+  const approveBody = baseline.slice(approveStart, rejectStart);
+  const rejectBody = baseline.slice(
+    rejectStart,
+    baseline.indexOf(
+      "COMMENT ON FUNCTION public.reject_leave_request",
+      rejectStart,
+    ),
+  );
+
+  for (const [name, body] of [
+    ["approve", approveBody],
+    ["reject", rejectBody],
+  ] as const) {
+    assert.match(
+      body,
+      /SELECT \* INTO v_request\s+FROM public\.leave_requests\s+WHERE id = p_request_id\s+AND tenant_id = v_tenant_id\s+FOR UPDATE;/,
+      `${name} RPC must lock the actual leave request row`,
+    );
+    assert.ok(
+      body.includes(
+        "public.has_permission(v_request.branch_id, 'hr:approve_leave_request')",
+      ),
+      `${name} RPC must authorize against the request branch`,
+    );
+    assert.ok(
+      body.includes("cannot review own request"),
+      `${name} RPC must block self-review`,
+    );
+  }
+});
+
 test("Employee leave permission and generated type mirrors are wired", () => {
   const permissions = read("packages/shared/src/auth/permissions.ts");
   const dbTypes = read("packages/database/src/types/database.types.ts");
