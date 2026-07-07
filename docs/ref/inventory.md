@@ -101,15 +101,16 @@ Ghi chú: `mv_food_cost` là dữ liệu recipe/theoretical để đối chiếu
 
 ## 2. Nguyên liệu (Ingredients)
 
-### 2.1 Đơn vị nhập / Đơn vị tính
+### 2.1 Hệ đơn vị
 
-`ingredients` là nơi duy nhất khai báo đơn vị:
+Đơn vị kho không còn nằm trên cột text của `ingredients`. Contract hiện tại:
 
-- **Đơn vị nhập (ĐVN) / `purchase_unit`:** đơn vị kho và mua hàng dùng để ghi `stock_levels`, `stock_movements`, PO, GRN, transfer, issue, waste, supplier return, stocktake và báo cáo kho.
-- **Đơn vị tính (ĐVT) / `measure_unit`:** đơn vị định lượng nhỏ hơn cho BOM sản xuất tại chi nhánh.
-- **Tỷ lệ quy đổi / `purchase_to_measure_factor`:** số ĐVT trong 1 ĐVN, ví dụ `1 thùng = 10 kg` thì factor = `10`.
+- `units`: registry đơn vị dùng chung theo tenant, gồm đơn vị chuẩn và đơn vị đóng gói.
+- `ingredient_units`: danh mục đơn vị cho từng nguyên liệu, có đúng một dòng `is_base = true`.
+- `entry_unit_id`: đơn vị người dùng nhập trên chứng từ; khóa tới `units.id`.
+- `to_base_factor`: hệ số quy đổi từ `entry_unit_id` về base unit của nguyên liệu.
 
-> **Quy tắc:** người dùng chỉ nhập/chọn ĐVN, ĐVT và tỷ lệ quy đổi ở danh mục **Nguyên liệu**. Các nghiệp vụ kho tái sử dụng ĐVN tự động. Ngoại lệ duy nhất là `production_recipes` của chi nhánh: BOM nhập theo ĐVT, nhưng khi xác nhận production phải quy đổi về ĐVN trước khi trừ tồn và tính WAC.
+> **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`, và WAC luôn lưu theo base unit. Mọi chứng từ PO, GRN, transfer, issue, waste, stocktake, recipe và production có thể nhập theo `entry_unit_id`; RPC/action phải quy đổi qua `ingredient_units`, không tin unit text từ client.
 
 ### 2.2 Database — bảng `ingredients`
 
@@ -121,14 +122,14 @@ Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients`
 ### 2.3 Tồn kho theo chi nhánh — bảng `stock_levels`
 
 - **Khóa:** theo `(tenant_id, branch_id, location_id, ingredient_id)` — flow mới chỉ cộng tồn vận hành từ stock-bearing locations.
-- **`current_quantity`:** tồn thực theo **Đơn vị nhập (`ingredients.purchase_unit`)** — tên cột trong DB.
+- **`current_quantity`:** tồn thực theo **base unit** của nguyên liệu trong `ingredient_units`.
 - **`avg_unit_cost`:** giá bình quân gia quyền (WAC) tại kho đó, cập nhật khi **GRN** (tại Kho CN của chi nhánh) và có thể dùng làm **đơn giá xuất nội bộ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: WAC tại thời điểm xuất).
 
 ---
 
 ## 3. Công thức (Recipes)
 
-Định mức nguyên liệu theo `menu_item`. Dùng để **xuất kho** (`consumption`) khi đơn hàng chuyển sang `completed` (thực hiện bằng RPC, không lặp HTTP). Đây là nghiệp vụ kho/POS nên `recipes.quantity` và `recipes.unit` dùng **Đơn vị nhập** của nguyên liệu, không dùng ĐVT.
+Định mức nguyên liệu theo `menu_item`. Dùng để **xuất kho** (`consumption`) khi đơn hàng chuyển sang `completed` (thực hiện bằng RPC, không lặp HTTP). `recipes.quantity` là số lượng theo `recipes.entry_unit_id`; khi ghi movement phải quy đổi về base unit trước khi trừ tồn và tính WAC.
 
 ```sql
 -- Mục tiêu schema (triển khai theo migration)
@@ -138,8 +139,9 @@ CREATE TABLE recipes (
   menu_item_id    BIGINT NOT NULL REFERENCES menu_items(id),
   ingredient_id   BIGINT NOT NULL REFERENCES ingredients(id),
   quantity        NUMERIC(15,3) NOT NULL,
-  unit            TEXT NOT NULL,
+  entry_unit_id   BIGINT REFERENCES units(id),
   note            TEXT,
+  yield_factor    NUMERIC(15,6) NOT NULL DEFAULT 1,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (menu_item_id, ingredient_id, tenant_id)
 );
@@ -149,7 +151,7 @@ CREATE TABLE recipes (
 
 Phần mở rộng cho chi nhánh dùng bộ bảng riêng:
 
-- `production_recipes`: BOM cho **thành phẩm** (`finished_good_id`) và các **nguyên liệu đầu vào** (`ingredient_id`), có `yield_factor`. Đây là ngoại lệ dùng **Đơn vị tính** của nguyên liệu.
+- `production_recipes`: BOM cho **thành phẩm** (`finished_good_id`) và các **nguyên liệu đầu vào** (`ingredient_id`), có `entry_unit_id` và `yield_factor`.
 - `production_orders`: lệnh sản xuất tại site có `branch_kind = central_kitchen`.
 - `production_order_items`: danh sách thành phẩm và số lượng thực hiện cho từng lệnh.
 
@@ -161,7 +163,7 @@ Workflow sản xuất chuẩn:
    - site phải là `central_kitchen`,
    - item đầu ra phải có `item_kind = finished_good`,
    - có đủ `production_recipes`,
-   - tồn kho nguyên liệu đủ để trừ sau khi quy đổi BOM từ ĐVT về ĐVN.
+   - tồn kho nguyên liệu đủ để trừ sau khi quy đổi BOM từ `entry_unit_id` về base unit.
 4. RPC ghi atomically:
    - `production_consumption` cho nguyên liệu đầu vào,
    - `production_output` cho thành phẩm đầu ra,

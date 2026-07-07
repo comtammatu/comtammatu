@@ -15,7 +15,14 @@ export default async function ProductionNewPage({
     productionBranches,
     targetBranches,
     finishedGoods,
+    recipes,
   } = await loadProductionSurfaceData({ routeBranchId });
+  const recipeFinishedGoodIds = new Set(
+    recipes.map((recipe) => recipe.finished_good_id),
+  );
+  const finishedGoodsWithRecipes = finishedGoods.filter((good) =>
+    recipeFinishedGoodIds.has(good.id),
+  );
 
   return (
     <AppPage width="narrow" density="compact">
@@ -23,7 +30,7 @@ export default async function ProductionNewPage({
       <ProductionNewClient 
         branches={productionBranches}
         targetBranches={targetBranches}
-        finishedGoods={finishedGoods}
+        finishedGoods={finishedGoodsWithRecipes}
         initialBranchId={routeBranchId}
         basePath="/inventory/production"
       />

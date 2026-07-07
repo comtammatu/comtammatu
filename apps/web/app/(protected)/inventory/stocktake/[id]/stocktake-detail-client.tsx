@@ -76,7 +76,6 @@ interface StocktakeLine {
     id: number;
     name: string;
     unit: string;
-    purchase_unit: string | null;
     category: string | null;
   } | null;
 }
@@ -477,9 +476,7 @@ function CountingPhase({
       header: FORM_VI.unit,
       render: (line) => (
         <span className="text-sm text-muted-foreground">
-          {line.ingredients?.purchase_unit ??
-            line.ingredients?.unit ??
-            inventoryCommon.noValue}
+          {line.ingredients?.unit ?? inventoryCommon.noValue}
         </span>
       ),
     },
@@ -540,9 +537,7 @@ function CountingPhase({
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {line.ingredients?.purchase_unit ??
-                line.ingredients?.unit ??
-                inventoryCommon.noValue}
+              {line.ingredients?.unit ?? inventoryCommon.noValue}
             </p>
             <div className="flex items-center gap-2">
               <FormattedNumberInput
@@ -618,9 +613,7 @@ function ResultsPhase({
       header: FORM_VI.unit,
       render: (line) => (
         <span className="text-sm text-muted-foreground">
-          {line.ingredients?.purchase_unit ??
-            line.ingredients?.unit ??
-            inventoryCommon.noValue}
+          {line.ingredients?.unit ?? inventoryCommon.noValue}
         </span>
       ),
     },

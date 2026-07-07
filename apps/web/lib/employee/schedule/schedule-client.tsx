@@ -46,6 +46,7 @@ import {
   getStatusDotClassName,
   StatusBadge,
 } from "@/components/status-badge";
+import { countCompletedShiftWorkdays } from "../_lib/workday-math";
 
 const copy = messages.employee.schedule;
 
@@ -204,7 +205,7 @@ function expandLeavesByDate(
 }
 
 function createScheduleMaps(data: ScheduleMonthData, monthStartStr: string) {
-  // Per-shift (D027): a day can hold the morning and the evening record.
+  // Per-shift (D027): a day can hold multiple named shift records.
   const attendanceByDate = new Map<string, ScheduleAttendance[]>();
   for (const attendance of data.attendance) {
     const list = attendanceByDate.get(attendance.date) ?? [];
@@ -590,14 +591,15 @@ export function ScheduleClient({
   const selectedAttendance = attendanceByDate.get(selectedDate) ?? [];
   const selectedLeave = leaveByDate.get(selectedDate);
 
-  // Per-shift (D027): 2 ca/ngày = 1 công, 1 ca = 0.5.
+  // Per-shift (D027): each completed shift contributes 0.5 workday.
   const shiftCountByDate = new Map<string, number>();
   for (const item of monthData.attendance) {
+    if (!item.check_out) continue;
     shiftCountByDate.set(item.date, (shiftCountByDate.get(item.date) ?? 0) + 1);
   }
   let workdaysCount = 0;
   for (const count of shiftCountByDate.values()) {
-    workdaysCount += Math.min(count, 2) * 0.5;
+    workdaysCount += countCompletedShiftWorkdays(count);
   }
   let leaveDaysCount = 0;
   for (const status of leaveByDate.values()) {

@@ -8,7 +8,7 @@ DECLARE
     v_tenant BIGINT := public.auth_tenant_id();
     v_run RECORD; v_recipe RECORD;
     v_raw_need_measure NUMERIC(15,3); v_raw_need_purchase NUMERIC(15,3);
-    v_conversion_factor NUMERIC(18,6); v_output_cost NUMERIC(15,2);
+    v_output_cost NUMERIC(15,2);
     v_old_q NUMERIC(15,3); v_old_wac NUMERIC(15,2);
     v_new_q NUMERIC(15,3); v_new_wac NUMERIC(15,2);
     v_need_map JSONB := '{}'::JSONB; v_cost_map JSONB := '{}'::JSONB;
@@ -45,7 +45,6 @@ BEGIN
     v_output_cost := 0; v_has_recipe := FALSE;
     FOR v_recipe IN
         SELECT pr.ingredient_id, pr.quantity, pr.yield_factor, pr.entry_unit_id,
-               ing.purchase_to_measure_factor,
                COALESCE(sl.avg_unit_cost, ing.unit_cost, 0) AS raw_unit_cost
         FROM public.production_recipes pr
         JOIN public.ingredients ing ON ing.id = pr.ingredient_id
@@ -72,8 +71,7 @@ BEGIN
         IF v_recipe.entry_unit_id IS NOT NULL THEN
             v_raw_need_purchase := ROUND(public.inv_to_base(v_recipe.ingredient_id, v_recipe.entry_unit_id, v_raw_need_measure), 3);
         ELSE
-            v_conversion_factor := COALESCE(v_recipe.purchase_to_measure_factor, 1);
-            v_raw_need_purchase := ROUND((v_raw_need_measure / v_conversion_factor)::NUMERIC, 3);
+            v_raw_need_purchase := ROUND(v_raw_need_measure, 3);
         END IF;
         
         v_key := v_recipe.ingredient_id::text;
@@ -85,7 +83,16 @@ BEGIN
 
     WITH shortages AS (
         SELECT (need.ingredient_id)::BIGINT AS ingredient_id, ing.name AS ingredient_name,
-               COALESCE(ing.purchase_unit, ing.unit) AS unit,
+               (
+                   SELECT COALESCE(u.name, u.code)
+                   FROM public.ingredient_units iu
+                   JOIN public.units u ON u.id = iu.unit_id
+                   WHERE iu.tenant_id = v_tenant
+                     AND iu.ingredient_id = ing.id
+                     AND iu.is_base = TRUE
+                     AND iu.is_active = TRUE
+                   LIMIT 1
+               ) AS unit,
                ROUND((need.need_qty)::NUMERIC, 3) AS needed,
                ROUND(COALESCE(sl.current_quantity, 0)::NUMERIC, 3) AS on_hand
         FROM jsonb_each_text(v_need_map) AS need(ingredient_id, need_qty)
@@ -175,16 +182,21 @@ BEGIN
         SELECT 
             pr.ingredient_id,
             ing.name as ingredient_name,
-            COALESCE(u.name, ing.unit) as unit_name,
+            COALESCE(u.name, u.code, base_u.name, base_u.code, '') as unit_name,
             pr.entry_unit_id,
             pr.quantity as recipe_quantity,
             COALESCE(pr.yield_factor, 1.0) as yield_factor,
-            ing.purchase_to_measure_factor,
             COALESCE(sl.current_quantity, 0) as current_quantity_base,
             iu.to_base_factor
         FROM public.production_recipes pr
         JOIN public.ingredients ing ON ing.id = pr.ingredient_id
         LEFT JOIN public.units u ON u.id = pr.entry_unit_id
+        LEFT JOIN public.ingredient_units base_iu
+          ON base_iu.tenant_id = v_tenant
+         AND base_iu.ingredient_id = pr.ingredient_id
+         AND base_iu.is_base = TRUE
+         AND base_iu.is_active = TRUE
+        LEFT JOIN public.units base_u ON base_u.id = base_iu.unit_id
         LEFT JOIN public.stock_levels sl ON sl.tenant_id = v_tenant AND sl.branch_id = p_branch_id AND sl.location_id = v_location_id AND sl.ingredient_id = pr.ingredient_id
         LEFT JOIN public.ingredient_units iu ON iu.tenant_id = v_tenant AND iu.ingredient_id = pr.ingredient_id AND iu.unit_id = pr.entry_unit_id AND iu.is_active = TRUE
         WHERE pr.tenant_id = v_tenant AND pr.finished_good_id = p_finished_good_id
@@ -195,13 +207,13 @@ BEGIN
             -- required_base_per_fg calculates how much of this ingredient in BASE unit is needed for 1 FINISHED GOOD
             CASE 
                 WHEN entry_unit_id IS NOT NULL THEN ( (1.0 * recipe_quantity) / yield_factor ) * COALESCE(to_base_factor, 1.0)
-                ELSE ( (1.0 * recipe_quantity) / yield_factor ) / COALESCE(purchase_to_measure_factor, 1.0)
+                ELSE ( (1.0 * recipe_quantity) / yield_factor )
             END as required_base_per_fg,
             
             -- max_ingredient_qty is the max amount of this ingredient we can use, expressed in its entry_unit_id
             CASE
                 WHEN entry_unit_id IS NOT NULL THEN current_quantity_base / COALESCE(to_base_factor, 1.0)
-                ELSE current_quantity_base * COALESCE(purchase_to_measure_factor, 1.0)
+                ELSE current_quantity_base
             END as max_ingredient_qty
         FROM base
     )

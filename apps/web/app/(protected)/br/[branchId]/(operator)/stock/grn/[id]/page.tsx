@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
-import { loadGrnDetail } from "@/(protected)/inventory/grn/[id]/page";
+import {
+  isGrnLookupParam,
+  loadGrnDetail,
+} from "@/(protected)/inventory/grn/[id]/page";
 import { GRNDetailClient } from "@/(protected)/inventory/grn/[id]/grn-detail-client";
 import { GrnReviewOperatorClient } from "./grn-review-operator-client";
 
@@ -10,11 +13,10 @@ export default async function OperatorStockGrnDetailPage({
 }) {
   const { branchId: rawBranchId, id: rawId } = await params;
   const branchId = Number(rawBranchId);
-  const grnId = Number(rawId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
-  if (!Number.isInteger(grnId) || grnId <= 0) notFound();
+  if (!isGrnLookupParam(rawId)) notFound();
 
-  const data = await loadGrnDetail(grnId, branchId);
+  const data = await loadGrnDetail(rawId, branchId);
   if (!data) notFound();
 
   const grnListBasePath = `/br/${branchId}/stock/grn`;

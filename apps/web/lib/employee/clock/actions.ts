@@ -109,7 +109,7 @@ function reuseExistingClockIn(
 
 function mapClockInError(message: string | undefined): string {
   if (message?.includes("duplicate_clock_in")) {
-    return "Bạn đã chấm công vào hôm nay rồi.";
+    return "Bạn đã chấm công vào ca này rồi.";
   }
   if (message?.includes("branch_not_found")) {
     return "Chi nhánh chưa sẵn sàng. Liên hệ quản lý.";
@@ -190,16 +190,32 @@ export async function clockInWithPhoto(
   const today = getTodayVN();
   const service = createServiceClient();
 
-  // Attendance is keyed per shift; resolve the shift for the current VN time
-  // first so the morning and evening shifts are independent records. Shifts are
-  // global (branch_id NULL) but a branch may still define its own.
-  const { data: branchShifts } = await service
-    .from("shifts")
-    .select("id, start_time, end_time")
-    .eq("tenant_id", ctx.claims.tenant_id)
-    .or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`)
-    .eq("is_active", true);
-  const shiftId = resolveDefaultShiftId(branchShifts ?? []);
+  // Attendance is keyed per shift; completed shifts today should not block the
+  // next shift's clock-in.
+  const [{ data: branchShifts }, { data: todayRecords }] = await Promise.all([
+    service
+      .from("shifts")
+      .select("id, start_time, end_time")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`)
+      .eq("is_active", true),
+    service
+      .from("attendance_records")
+      .select("shift_id, check_out")
+      .eq("employee_id", ctx.employeeId)
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("date", today),
+  ]);
+  const completedShiftIds = new Set(
+    (todayRecords ?? [])
+      .filter((item) => item.check_out)
+      .map((item) => item.shift_id),
+  );
+  const shiftId = resolveDefaultShiftId(
+    branchShifts ?? [],
+    undefined,
+    completedShiftIds,
+  );
 
   if (shiftId == null) {
     return {

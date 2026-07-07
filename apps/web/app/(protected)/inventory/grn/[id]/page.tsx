@@ -17,7 +17,7 @@ import type { GRNDetail } from "./grn-detail-client";
 import type { IngredientRow } from "../../page";
 
 interface GRNDetailPageContentProps {
-  grnId: number;
+  grnId: number | string;
   routeBranchId?: number;
   grnListBasePath?: string;
   grnMobileBackPath?: string;
@@ -38,13 +38,12 @@ type GrnDetailLoadResult =
   | { data: null; error?: string; notFound?: boolean };
 
 async function loadGrnDetailResult(
-  grnId: number,
+  grnId: number | string,
   routeBranchId?: number,
 ): Promise<GrnDetailLoadResult> {
-  const [res, ingredientsRes, auditLogs] = await Promise.all([
+  const [res, ingredientsRes] = await Promise.all([
     fetchGrnDetail(grnId),
     fetchIngredients(),
-    fetchEntityAuditLogs("goods_receipt_note", grnId, 50),
   ]);
   if (!res.success || !res.data) {
     return {
@@ -69,6 +68,7 @@ async function loadGrnDetailResult(
 
   const d = res.data as {
     grn: {
+      id: number;
       grn_number: string;
       status: string;
       received_date: string | null;
@@ -185,7 +185,7 @@ async function loadGrnDetailResult(
   const totalAmount = items.reduce((sum, i) => sum + i.cost * i.accepted, 0);
 
   const grn: GRNDetail = {
-    id: grnId,
+    id: d.grn.id,
     tenantId: ctx?.claims.tenant_id ?? 0,
     code: d.grn.grn_number ?? "",
     poCode: po?.po_number ?? "",
@@ -221,7 +221,7 @@ async function loadGrnDetailResult(
     data: {
       grn,
       ingredients: catalogIngredients,
-      auditLogs,
+      auditLogs: await fetchEntityAuditLogs("goods_receipt_note", d.grn.id, 50),
       canAdjustStock,
       canAmendConfirmed,
     },
@@ -229,11 +229,19 @@ async function loadGrnDetailResult(
 }
 
 export async function loadGrnDetail(
-  grnId: number,
+  grnId: number | string,
   routeBranchId?: number,
 ): Promise<GrnDetailData | null> {
   const result = await loadGrnDetailResult(grnId, routeBranchId);
   return result.data;
+}
+
+export function isGrnLookupParam(value: string): boolean {
+  if (/^\d+$/.test(value)) {
+    const numericId = Number(value);
+    return Number.isSafeInteger(numericId) && numericId > 0;
+  }
+  return /^GRN-[A-Za-z0-9_-]{1,64}$/.test(value);
 }
 
 function GrnDetailLoadError({ error }: { error: string }) {
@@ -289,7 +297,6 @@ export default async function GRNDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const grnId = Number(id);
-  if (!Number.isInteger(grnId) || grnId <= 0) notFound();
-  return <GRNDetailPageContent grnId={grnId} />;
+  if (!isGrnLookupParam(id)) notFound();
+  return <GRNDetailPageContent grnId={id} />;
 }

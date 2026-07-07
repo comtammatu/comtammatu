@@ -42,7 +42,7 @@ export async function fetchRecipes(): Promise<ActionResult> {
       id, name, updated_at,
       menu_categories ( name ),
       recipes (
-        ingredient_id, quantity, unit, entry_unit_id, note, yield_factor,
+        ingredient_id, quantity, entry_unit_id, note, yield_factor,
         ingredients (
           id,
           name,

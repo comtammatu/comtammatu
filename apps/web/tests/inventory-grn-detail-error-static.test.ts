@@ -17,3 +17,15 @@ test("GRN detail load failures render an error state instead of inventory not-fo
   assert.match(pageSource, /<GrnDetailLoadError error=\{result\.error\} \/>/);
   assert.match(pageSource, /result\.error && !result\.notFound/);
 });
+
+test("GRN detail route accepts numeric IDs and GRN document numbers", () => {
+  assert.match(actionsSource, /fetchGrnDetail\(\s*grnKey: number \| string,/);
+  assert.match(actionsSource, /\.eq\("id", lookup\.value\)/);
+  assert.match(actionsSource, /\.eq\("grn_number", lookup\.value\)/);
+  assert.match(
+    pageSource,
+    /fetchEntityAuditLogs\("goods_receipt_note", d\.grn\.id, 50\)/,
+  );
+  assert.match(pageSource, /function isGrnLookupParam\(value: string\)/);
+  assert.match(pageSource, /if \(!isGrnLookupParam\(id\)\) notFound\(\)/);
+});

@@ -23,9 +23,7 @@ export interface CountUnitChoice {
 export interface CountAssignment {
   ingredientId: number;
   ingredientName: string;
-  measureUnit: string;
-  // All active counting units for this ingredient, base first. Empty when the
-  // ingredient has no configured units (caller falls back to the measure unit).
+  // All active counting units for this ingredient, base first.
   countUnits: CountUnitChoice[];
 }
 
@@ -177,7 +175,6 @@ async function buildEmployeeCountSurface({
         .map((row) => ({
           ingredientId: row.ingredient_id,
           ingredientName: row.ingredients?.name ?? copy.ingredientFallback,
-          measureUnit: "",
           // Counting can use any of the ingredient's units (no role filter), base first.
           countUnits: (row.ingredients?.ingredient_units ?? [])
             .filter((u) => (u.units?.code ?? "") !== "")

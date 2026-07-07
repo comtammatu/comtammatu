@@ -12,6 +12,7 @@ import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compa
 import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
+import { getEmbeddedIngredientBaseUnitDisplayName } from "./_lib/unit-display";
 
 
 /* ─── Stocktake Schemas ─── */
@@ -243,7 +244,7 @@ export async function fetchStocktakeDetail(
 
   const { data: lines, error: linesError } = await supabase
     .from("stocktake_lines")
-    .select("*, ingredients(id, name, category, ingredient_units(is_base, units!ingredient_units_unit_id_fkey(code)))")
+    .select("*, ingredients(id, name, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)))")
     .eq("session_id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .order("ingredients(name)");
@@ -253,7 +254,27 @@ export async function fetchStocktakeDetail(
     return { success: false, error: "Không thể tải chi tiết kiểm kê." };
   }
 
-  return { success: true, data: { session, lines: lines ?? [] } };
+  const normalizedLines = (lines ?? []).map((line) => {
+    const ingredient = line.ingredients as {
+      id: number;
+      name: string;
+      category: string | null;
+    } | null;
+    const unit = getEmbeddedIngredientBaseUnitDisplayName(line.ingredients) ?? "";
+    return {
+      ...line,
+      ingredients: ingredient
+        ? {
+            id: ingredient.id,
+            name: ingredient.name,
+            category: ingredient.category,
+            unit,
+          }
+        : null,
+    };
+  });
+
+  return { success: true, data: { session, lines: normalizedLines } };
 }
 
 /* ─── updateStocktakeLine ─── */
@@ -438,4 +459,3 @@ export async function cancelStocktake(
 
   return { success: true };
 }
-

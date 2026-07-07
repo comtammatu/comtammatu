@@ -186,8 +186,6 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     .or(`branch_id.is.null,branch_id.eq.${ctx.branchId ?? -1}`)
     .eq("is_active", true)
     .order("start_time");
-  const currentShiftId = resolveDefaultShiftId(activeShifts ?? []);
-
   const { data: todayRecords } = await supabase
     .from("attendance_records")
     .select(
@@ -214,10 +212,19 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     .order("check_in", { ascending: true });
 
   const records = todayRecords ?? [];
+  const completedShiftIds = new Set(
+    records
+      .filter((item) => item.check_out)
+      .map((item) => item.shift_id),
+  );
+  const currentShiftId = resolveDefaultShiftId(
+    activeShifts ?? [],
+    undefined,
+    completedShiftIds,
+  );
   const record =
     records.find((item) => item.shift_id === currentShiftId) ??
     records.find((item) => !item.check_out) ??
-    records[0] ??
     null;
 
   const todayShifts: TodayShiftEntry[] = (activeShifts ?? []).map((s) => {

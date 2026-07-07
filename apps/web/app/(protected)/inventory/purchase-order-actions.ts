@@ -332,7 +332,9 @@ export async function fetchPurchaseOrderDetail(
     return { success: false, error: "Không tìm thấy đơn đặt hàng." };
   const { data: lines, error: e2 } = await supabase
     .from("purchase_order_items")
-    .select("*, ingredients ( id, name, ingredient_units(is_base, units!ingredient_units_unit_id_fkey(code)) )")
+    .select(
+      "*, ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) )",
+    )
     .eq("po_id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .order("id");
@@ -721,7 +723,7 @@ export const fetchPoSuggestions = withAction(
       current_quantity,
       ingredients!inner (
         id, name, reorder_point, max_stock_level, is_active,
-        ingredient_units(is_base, units!ingredient_units_unit_id_fkey(code))
+        ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code))
       )
     `,
       )

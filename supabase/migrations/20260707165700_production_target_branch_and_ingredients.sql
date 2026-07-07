@@ -64,7 +64,7 @@ DECLARE
     v_tenant BIGINT := public.auth_tenant_id();
     v_run RECORD; v_recipe RECORD;
     v_raw_need_measure NUMERIC(15,3); v_raw_need_purchase NUMERIC(15,3);
-    v_conversion_factor NUMERIC(18,6); v_output_cost NUMERIC(15,2);
+    v_output_cost NUMERIC(15,2);
     v_old_q NUMERIC(15,3); v_old_wac NUMERIC(15,2);
     v_new_q NUMERIC(15,3); v_new_wac NUMERIC(15,2);
     v_need_map JSONB := '{}'::JSONB; v_cost_map JSONB := '{}'::JSONB;
@@ -113,7 +113,6 @@ BEGIN
     v_output_cost := 0; v_has_recipe := FALSE;
     FOR v_recipe IN
         SELECT pr.ingredient_id, pr.quantity, pr.yield_factor, pr.entry_unit_id,
-               ing.purchase_to_measure_factor,
                COALESCE(sl.avg_unit_cost, ing.unit_cost, 0) AS raw_unit_cost
         FROM public.production_recipes pr
         JOIN public.ingredients ing ON ing.id = pr.ingredient_id
@@ -140,8 +139,7 @@ BEGIN
         IF v_recipe.entry_unit_id IS NOT NULL THEN
             v_raw_need_purchase := ROUND(public.inv_to_base(v_recipe.ingredient_id, v_recipe.entry_unit_id, v_raw_need_measure), 3);
         ELSE
-            v_conversion_factor := COALESCE(v_recipe.purchase_to_measure_factor, 1);
-            v_raw_need_purchase := ROUND((v_raw_need_measure / v_conversion_factor)::NUMERIC, 3);
+            v_raw_need_purchase := ROUND(v_raw_need_measure, 3);
         END IF;
         
         v_key := v_recipe.ingredient_id::text;
@@ -153,7 +151,16 @@ BEGIN
 
     WITH shortages AS (
         SELECT (need.ingredient_id)::BIGINT AS ingredient_id, ing.name AS ingredient_name,
-               COALESCE(ing.purchase_unit, ing.unit) AS unit,
+               (
+                   SELECT COALESCE(u.name, u.code)
+                   FROM public.ingredient_units iu
+                   JOIN public.units u ON u.id = iu.unit_id
+                   WHERE iu.tenant_id = v_tenant
+                     AND iu.ingredient_id = ing.id
+                     AND iu.is_base = TRUE
+                     AND iu.is_active = TRUE
+                   LIMIT 1
+               ) AS unit,
                ROUND((need.need_qty)::NUMERIC, 3) AS needed,
                ROUND(COALESCE(sl.current_quantity, 0)::NUMERIC, 3) AS on_hand
         FROM jsonb_each_text(v_need_map) AS need(ingredient_id, need_qty)

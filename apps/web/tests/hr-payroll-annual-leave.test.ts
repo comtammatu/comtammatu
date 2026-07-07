@@ -110,6 +110,16 @@ test("open attendance shifts do not count as workdays", () => {
   assert.equal(workdays.get(1), 1);
 });
 
+test("completed workdays do not cap multiple shifts on the same day", () => {
+  const workdays = buildCompletedWorkdays([
+    { employeeId: 1, date: "2026-06-10", checkOut: "2026-06-10T04:00:00Z" },
+    { employeeId: 1, date: "2026-06-10", checkOut: "2026-06-10T10:00:00Z" },
+    { employeeId: 1, date: "2026-06-10", checkOut: "2026-06-10T15:00:00Z" },
+  ]);
+
+  assert.equal(workdays.get(1), 1.5);
+});
+
 test("payable days are capped at standard days", () => {
   assert.equal(
     calculatePayableDays({

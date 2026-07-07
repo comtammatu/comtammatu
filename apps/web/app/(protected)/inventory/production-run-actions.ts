@@ -243,6 +243,24 @@ export const createProductionRun = withAction(
     const access = await requireProductionAccess(supabase, claims);
     if (!access.ok) return { success: false, error: access.error };
 
+    const { count: recipeLineCount, error: recipeCheckError } = await supabase
+      .from("production_recipes")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("finished_good_id", parsed.finishedGoodId);
+
+    if (recipeCheckError) {
+      console.error("createProductionRun recipe check error:", recipeCheckError);
+      return { success: false, error: "Lỗi kiểm tra công thức sản xuất" };
+    }
+
+    if (!recipeLineCount) {
+      return {
+        success: false,
+        error: "Thành phẩm này chưa có công thức sản xuất.",
+      };
+    }
+
     const { error, data } = await supabase.rpc("create_production_run", {
       p_branch_id: parsed.branchId,
       p_finished_good_id: parsed.finishedGoodId,
@@ -367,7 +385,6 @@ export interface ProductionRecipeIngredient {
   entry_unit_id: number | null;
   recipe_quantity: number;
   yield_factor: number;
-  purchase_to_measure_factor: number | null;
   current_quantity_base: number;
   required_base_per_fg: number;
   max_ingredient_qty: number;

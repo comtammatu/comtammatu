@@ -27,7 +27,6 @@ export default async function OperatorCatalogThresholdsPage({
         name: string;
         sku: string | null;
         unit: string;
-        purchase_unit: string | null;
         is_active: boolean;
         min_stock_level: number | string | null;
         max_stock_level: number | string | null;
@@ -42,7 +41,6 @@ export default async function OperatorCatalogThresholdsPage({
       name: row.name,
       sku: row.sku,
       unit: row.unit,
-      purchaseUnit: row.purchase_unit,
       minStock: row.min_stock_level == null ? "" : String(row.min_stock_level),
       reorderPoint: row.reorder_point == null ? "" : String(row.reorder_point),
       maxStock: row.max_stock_level == null ? "" : String(row.max_stock_level),

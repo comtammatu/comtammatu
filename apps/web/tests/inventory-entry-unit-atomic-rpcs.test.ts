@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
@@ -7,6 +7,17 @@ const root = fileURLToPath(new URL("../../../", import.meta.url));
 
 function read(path: string): string {
   return readFileSync(`${root}${path}`, "utf8");
+}
+
+function filesUnder(path: string): string[] {
+  return readdirSync(`${root}${path}`, { withFileTypes: true }).flatMap(
+    (entry) => {
+      const entryPath = `${path}/${entry.name}`;
+      if (entry.isDirectory()) return filesUnder(entryPath);
+      if (entry.isFile() && /\.(ts|tsx)$/.test(entry.name)) return [entryPath];
+      return [];
+    },
+  );
 }
 
 function escaped(pattern: string): RegExp {
@@ -37,6 +48,95 @@ function assertActionCallsDoNotSendUnit(
   }
   assert.ok(count > 0, `${callName} not found in ${path}`);
 }
+
+test("active inventory reads do not select dropped legacy unit columns", () => {
+  const checks = new Map([
+    [
+      "apps/web/app/(protected)/inventory/count-slips/page.tsx",
+      [/ingredients\s*\(\s*name,\s*unit\s*\)/],
+    ],
+    [
+      "apps/web/app/(protected)/inventory/transfer-actions.ts",
+      [/ingredients\s*\(\s*id,\s*name,\s*unit,\s*purchase_unit\s*\)/],
+    ],
+    [
+      "apps/web/app/(protected)/inventory/issues/page.tsx",
+      [/ingredients\s*\(\s*name,\s*unit\s*\)/],
+    ],
+    [
+      "apps/web/app/(protected)/inventory/issue-actions.ts",
+      [/\bquantity,\s*unit,\s*entry_unit_id\b/],
+    ],
+    [
+      "apps/web/app/(protected)/inventory/supplier-return-actions.ts",
+      [/ingredients\s*\(\s*id,\s*name,\s*unit,\s*purchase_unit\s*\)/],
+    ],
+    [
+      "apps/web/app/(protected)/inventory/recipe-actions.ts",
+      [/\bingredient_id,\s*quantity,\s*unit,\s*entry_unit_id\b/],
+    ],
+  ]);
+
+  for (const [path, patterns] of checks) {
+    const source = read(path);
+    for (const pattern of patterns) {
+      assert.doesNotMatch(source, pattern, path);
+    }
+  }
+});
+
+test("active inventory reads use explicit PostgREST unit relationships", () => {
+  for (const path of filesUnder("apps/web/app/(protected)/inventory")) {
+    const source = read(path);
+    assert.doesNotMatch(source, /\bingredient_units\s*\(/, path);
+    assert.doesNotMatch(source, /units!ingredient_units_unit_id_fkey/, path);
+  }
+});
+
+test("active app code does not use ambiguous or dropped inventory unit fields", () => {
+  for (const rootPath of ["apps/web/app", "apps/web/lib"]) {
+    for (const path of filesUnder(rootPath)) {
+      const source = read(path);
+      assert.doesNotMatch(source, /\bingredient_units\s*\(/, path);
+      assert.doesNotMatch(
+        source,
+        /ingredient_units_(?:ingredient|unit)_id_fkey/,
+        path,
+      );
+      assert.doesNotMatch(
+        source,
+        /\b(?:purchase_unit|measure_unit|purchase_to_measure_factor|allow_purchase|allow_issue|allow_production)\b/,
+        path,
+      );
+    }
+  }
+});
+
+test("post Phase C migrations do not reference dropped ingredient unit fields", () => {
+  const migrationDir = `${root}supabase/migrations`;
+  const files = readdirSync(migrationDir)
+    .filter((file) => /^\d+_.*\.sql$/.test(file))
+    .filter((file) => file > "20260707002300_inventory_unit_system_phase_c.sql");
+
+  for (const file of files) {
+    const sql = read(`supabase/migrations/${file}`);
+    assert.doesNotMatch(
+      sql,
+      /\bing\.(?:purchase_unit|measure_unit|purchase_to_measure_factor|unit)\b/,
+      file,
+    );
+    assert.doesNotMatch(
+      sql,
+      /\bingredients\.(?:purchase_unit|measure_unit|purchase_to_measure_factor|unit)\b/,
+      file,
+    );
+    assert.doesNotMatch(
+      sql,
+      /\ballow_(?:purchase|issue|production)\b/,
+      file,
+    );
+  }
+});
 
 test.skip("inventory entry units are persisted inside atomic RPCs", () => {
   const sql = read(

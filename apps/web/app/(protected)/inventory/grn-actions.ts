@@ -22,6 +22,33 @@ const ROLES = PROCUREMENT_ROLES;
 const grnLoadFailedError = "Không thể tải phiếu nhập.";
 const grnNotFoundError = "Không tìm thấy phiếu nhập.";
 
+type GrnLookup =
+  | { kind: "id"; value: number }
+  | { kind: "code"; value: string };
+
+const grnLookupInputSchema = z.union([
+  z.number().int().positive(),
+  z.string().trim().min(1).max(64),
+]);
+
+function parseGrnLookup(input: number | string): GrnLookup | null {
+  const parsed = grnLookupInputSchema.safeParse(input);
+  if (!parsed.success) return null;
+  if (typeof parsed.data === "number") return { kind: "id", value: parsed.data };
+
+  const value = parsed.data;
+  if (/^\d+$/.test(value)) {
+    const numericId = Number(value);
+    if (Number.isSafeInteger(numericId) && numericId > 0) {
+      return { kind: "id", value: numericId };
+    }
+  }
+  if (/^GRN-[A-Za-z0-9_-]+$/.test(value)) {
+    return { kind: "code", value };
+  }
+  return null;
+}
+
 /**
  * Cross-branch guard (D068 §Conflicts-resolved 3). `branch_manager` is a
  * branch-scoped procurement role (its claims carry a non-null `branch_id`), so
@@ -228,23 +255,27 @@ export async function fetchGrnIdsForDropdown(
 
 /* ─── fetchGrnDetail ─── */
 
-export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
-  const id = z.coerce.number().int().positive().safeParse(grnId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+export async function fetchGrnDetail(
+  grnKey: number | string,
+): Promise<ActionResult> {
+  const lookup = parseGrnLookup(grnKey);
+  if (!lookup) return { success: false, error: "ID không hợp lệ" };
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const { data: grn, error: e1 } = await supabase
+  const grnQuery = supabase
     .from("goods_received_notes")
     .select(
       "*, branches ( id, name, branch_kind ), suppliers ( id, name ), purchase_orders ( id, po_number )",
     )
-    .eq("id", id.data)
-    .eq("tenant_id", claims.tenant_id)
-    .maybeSingle();
+    .eq("tenant_id", claims.tenant_id);
+  const { data: grn, error: e1 } = await (lookup.kind === "id"
+    ? grnQuery.eq("id", lookup.value)
+    : grnQuery.eq("grn_number", lookup.value)
+  ).maybeSingle();
   if (e1) {
     return {
       success: false,
@@ -261,15 +292,17 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
   }
   const { data: lines, error: e2 } = await supabase
     .from("grn_items")
-    .select("*, ingredients ( id, name, ingredient_units(is_base, units!ingredient_units_unit_id_fkey(code)) )")
-    .eq("grn_id", id.data)
+    .select(
+      "*, ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) )",
+    )
+    .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id);
   if (e2)
     return { success: false, error: "Không thể tải chi tiết phiếu nhập." };
   const { data: invoice } = await supabase
     .from("supplier_invoices")
     .select("id")
-    .eq("grn_id", id.data)
+    .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
   return {

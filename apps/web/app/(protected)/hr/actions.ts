@@ -16,6 +16,7 @@ import {
   getVNMonthEndDateString,
 } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
+import { countCompletedShiftWorkdays } from "@lib/employee/_lib/workday-math";
 import { getAuthContext, probePermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/_lib/audit";
@@ -1156,9 +1157,8 @@ export const fetchAttendanceSummary = withAction(
       return { success: false, error: "Không thể tải tổng hợp chấm công." };
     }
 
-    // Per-shift attendance (D027): count shifts per day, then workdays =
-    // Σ min(shifts/day, 2) × 0.5 (2 shifts = 1 công, 1 shift = 0.5). open =
-    // shifts not yet closed (check_out NULL).
+    // Per-shift attendance (D027): each closed shift contributes 0.5 workday;
+    // open shifts are tracked separately until checkout.
     const summaryMap = new Map<
       number,
       {
@@ -1187,14 +1187,17 @@ export const fetchAttendanceSummary = withAction(
         });
       }
       const s = summaryMap.get(empId)!;
-      s.days.set(record.date, (s.days.get(record.date) ?? 0) + 1);
-      if (!record.check_out) s.open++;
+      if (record.check_out) {
+        s.days.set(record.date, (s.days.get(record.date) ?? 0) + 1);
+      } else {
+        s.open++;
+      }
     }
 
     const summary = Array.from(summaryMap.values()).map((s) => {
       let workdays = 0;
       for (const count of s.days.values()) {
-        workdays += Math.min(count, 2) * 0.5;
+        workdays += countCompletedShiftWorkdays(count);
       }
       return {
         employee_id: s.employee_id,

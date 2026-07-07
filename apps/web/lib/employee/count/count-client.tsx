@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
@@ -315,7 +316,16 @@ export function CountSlipClient({
                 const inputId = `count-${assignment.ingredientId}`;
                 const unitInputId = `${inputId}-unit`;
                 const baseUnit = getBaseCountUnit(assignment.countUnits);
-                const stockUnitLabel = baseUnit?.code ?? assignment.measureUnit;
+                const selectedUnit =
+                  entry?.entryUnitId == null
+                    ? baseUnit
+                    : (assignment.countUnits.find(
+                        (unit) => unit.unitId === entry.entryUnitId,
+                      ) ?? baseUnit);
+                const stockUnitLabel = baseUnit?.code ?? null;
+                const quantityPlaceholder = selectedUnit?.code
+                  ? `VD: 5 ${selectedUnit.code}`
+                  : "VD: 5";
                 const unitPreview = buildCountUnitPreview({
                   quantity: entry?.quantity ?? "",
                   entryUnitId: entry?.entryUnitId ?? null,
@@ -342,7 +352,7 @@ export function CountSlipClient({
                         <div
                           className={
                             assignment.countUnits.length > 0
-                              ? "grid grid-cols-[minmax(0,1fr)_minmax(7.5rem,9rem)] gap-2"
+                              ? "grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(7.5rem,9rem)]"
                               : "grid gap-2"
                           }
                         >
@@ -359,7 +369,7 @@ export function CountSlipClient({
                                   quantity: event.target.value,
                                 })
                               }
-                              placeholder={assignment.measureUnit || "Số lượng"}
+                              placeholder={quantityPlaceholder}
                               className="min-h-12 text-base tabular-nums md:text-sm"
                             />
                           </div>
@@ -412,17 +422,18 @@ export function CountSlipClient({
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <Label htmlFor={`${inputId}-note`}>Ghi chú</Label>
-                        <Input
+                        <Textarea
                           id={`${inputId}-note`}
                           value={entry?.note ?? ""}
                           disabled={locked || isPending}
+                          maxLength={500}
                           onChange={(event) =>
                             updateLine(assignment.ingredientId, {
                               note: event.target.value,
                             })
                           }
-                          placeholder="Tuỳ chọn"
-                          className="min-h-12 text-base md:text-sm"
+                          placeholder="Ví dụ: bao rách, thiếu 1 chai…"
+                          className="min-h-20 text-base md:text-sm"
                         />
                       </div>
                     </div>

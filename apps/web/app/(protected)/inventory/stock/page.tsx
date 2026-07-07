@@ -163,7 +163,6 @@ export async function StockPageContent({
         name: string;
         sku: string | null;
         unit: string;
-        purchase_unit: string;
         category: string | null;
         item_kind: string | null;
         unit_cost: number | null;
@@ -262,7 +261,7 @@ export async function StockPageContent({
       id: row.id,
       name: row.name,
       sku: row.sku ?? "",
-      unit: row.purchase_unit || row.unit,
+      unit: row.unit,
       units: row.units,
       category: row.category ?? "",
       itemKind: row.item_kind ?? "raw_material",

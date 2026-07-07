@@ -36,6 +36,12 @@ export const PRODUCTION_OPEN_PERMISSIONS = [
   PERMISSION_KEYS.MENU_WRITE,
 ] as const;
 
+const PRODUCTION_RECIPE_MANAGE_PERMISSIONS = [
+  PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
+  PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
+  PERMISSION_KEYS.MENU_WRITE,
+] as const;
+
 type InventorySupabase = Awaited<ReturnType<typeof createClient>>;
 
 type InventoryIngredientRow = {
@@ -144,7 +150,7 @@ export async function loadProductionSurfaceData({
   ] = await Promise.all([
     isOwner ? Promise.resolve(true) : currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
     currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
-    currentUserHasAnyPermission(supabase, PERMISSION_KEYS.MENU_WRITE),
+    currentUserHasAnyPermissionAny(PRODUCTION_RECIPE_MANAGE_PERMISSIONS),
     currentUserHasAnyPermission(
       supabase,
       PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,

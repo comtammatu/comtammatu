@@ -72,5 +72,10 @@ test("employee count UI previews the comparison unit before submission", () => {
   assert.match(clientSource, /buildCountUnitPreview/);
   assert.match(clientSource, /So sánh tồn/);
   assert.match(clientSource, /Tồn so theo/);
+  assert.match(clientSource, /Textarea/);
+  assert.match(clientSource, /maxLength=\{500\}/);
+  assert.match(clientSource, /selectedUnit\?\.code/);
+  assert.doesNotMatch(clientSource, /assignment\.measureUnit/);
+  assert.doesNotMatch(pageSource, /measureUnit/);
   assert.doesNotMatch(clientSource, /className="w-24 shrink-0"/);
 });

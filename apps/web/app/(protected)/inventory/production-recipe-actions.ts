@@ -5,10 +5,7 @@ import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDateString } from "@comtammatu/shared/time";
-import {
-  getAuthContextWithAnyPermission,
-  getAuthContextWithPermission,
-} from "./_lib/auth";
+import { getAuthContextWithAnyPermission } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { PG_ERR } from "./_lib/constants";
 import {
@@ -28,7 +25,15 @@ import {
 } from "./_lib/production-shared";
 
 const PRODUCTION_RECIPE_READ_PERMISSIONS = [
+  PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
+  PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
   PERMISSION_KEYS.MENU_READ,
+  PERMISSION_KEYS.MENU_WRITE,
+] as const;
+
+const PRODUCTION_RECIPE_MANAGE_PERMISSIONS = [
+  PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
+  PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
   PERMISSION_KEYS.MENU_WRITE,
 ] as const;
 
@@ -225,7 +230,6 @@ type ProductionRecipeQueryRow = {
   finished_good_id: number;
   ingredient_id: number;
   quantity: number | string;
-  unit: string;
   entry_unit_id: number | null;
   yield_factor: number | string | null;
   note: string | null;
@@ -237,7 +241,7 @@ type ProductionRecipeQueryRow = {
       unit_id: number;
       is_base: boolean;
       is_active: boolean;
-      units: { name: string | null } | null;
+      units: { code: string | null; name: string | null } | null;
     }> | null;
   } | null;
 };
@@ -291,7 +295,6 @@ export async function fetchProductionRecipes(): Promise<
       finished_good_id,
       ingredient_id,
       quantity,
-      unit,
       entry_unit_id,
       yield_factor,
       note,
@@ -303,7 +306,7 @@ export async function fetchProductionRecipes(): Promise<
           unit_id,
           is_base,
           is_active,
-          units!ingredient_units_unit_tenant_fkey ( name )
+          units!ingredient_units_unit_tenant_fkey ( code, name )
         )
       )
     `,
@@ -331,7 +334,7 @@ export async function fetchProductionRecipes(): Promise<
             unit_id: number;
             is_base: boolean;
             is_active: boolean;
-            units: { name: string | null } | null;
+            units: { code: string | null; name: string | null } | null;
           }> | null;
         } | null;
         const activeUnits =
@@ -340,14 +343,18 @@ export async function fetchProductionRecipes(): Promise<
           row.entry_unit_id != null
             ? activeUnits.find((unit) => unit.unit_id === row.entry_unit_id)
             : activeUnits.find((unit) => unit.is_base);
-	        return {
-	          id: row.id,
-	          finished_good_id: row.finished_good_id,
-	          finished_good_name: finishedGood?.name ?? "Thành phẩm",
-	          ingredient_id: row.ingredient_id,
-	          ingredient_name: ingredient?.name ?? "Nguyên liệu",
-	          quantity: Number(row.quantity),
-	          unit: selectedUnit?.units?.name?.trim() || row.unit,
+        const unitLabel =
+          selectedUnit?.units?.name?.trim() ||
+          selectedUnit?.units?.code?.trim() ||
+          "Đơn vị";
+        return {
+          id: row.id,
+          finished_good_id: row.finished_good_id,
+          finished_good_name: finishedGood?.name ?? "Thành phẩm",
+          ingredient_id: row.ingredient_id,
+          ingredient_name: ingredient?.name ?? "Nguyên liệu",
+          quantity: Number(row.quantity),
+          unit: unitLabel,
           entry_unit_id: row.entry_unit_id ?? null,
           yield_factor: Number(row.yield_factor ?? 1),
           note: row.note ?? null,
@@ -443,9 +450,9 @@ export async function exportProductionRecipes(
 export async function downloadProductionRecipeTemplate(): Promise<
   ActionResult<{ filename: string; base64: string; format: "xlsx" }>
 > {
-  const ctx = await getAuthContextWithPermission(
+  const ctx = await getAuthContextWithAnyPermission(
     PRODUCTION_ROLES,
-    PERMISSION_KEYS.MENU_WRITE,
+    PRODUCTION_RECIPE_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -534,9 +541,9 @@ function resolveByName<T extends { id: number; name: string }>(
 export async function importProductionRecipes(
   formData: FormData,
 ): Promise<ImportProductionRecipesResult> {
-  const ctx = await getAuthContextWithPermission(
+  const ctx = await getAuthContextWithAnyPermission(
     PRODUCTION_ROLES,
-    PERMISSION_KEYS.MENU_WRITE,
+    PRODUCTION_RECIPE_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -842,7 +849,7 @@ export const upsertProductionRecipeLines = withAction(
   {
     roles: PRODUCTION_ROLES,
     schema: productionRecipeLinesSchema,
-    permission: PERMISSION_KEYS.MENU_WRITE,
+    anyPermission: PRODUCTION_RECIPE_MANAGE_PERMISSIONS,
   },
   async (data, ctx) => {
     const { supabase, claims } = ctx;
@@ -854,12 +861,12 @@ export const upsertProductionRecipeLines = withAction(
     }
 
     const lines = data.lines.map((line) => ({
-        ingredient_id: line.ingredientId,
-        quantity: line.quantity,
-        entry_unit_id: line.entryUnitId ?? null,
-        note: line.note?.trim() ? line.note.trim() : null,
-        yield_factor: line.yieldFactor,
-      }));
+      ingredient_id: line.ingredientId,
+      quantity: line.quantity,
+      entry_unit_id: line.entryUnitId ?? null,
+      note: line.note?.trim() ? line.note.trim() : null,
+      yield_factor: line.yieldFactor,
+    }));
 
     const sb = supabase as unknown as RpcClient;
     const { error } = await sb.rpc("upsert_production_recipe_lines", {
@@ -908,9 +915,9 @@ export async function deleteProductionRecipe(
   const parsed = idSchema.safeParse(recipeId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContextWithPermission(
+  const ctx = await getAuthContextWithAnyPermission(
     PRODUCTION_ROLES,
-    PERMISSION_KEYS.MENU_WRITE,
+    PRODUCTION_RECIPE_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -941,9 +948,9 @@ export async function deleteProductionRecipeGroup(
   if (!parsed.success)
     return { success: false, error: "ID thành phẩm không hợp lệ" };
 
-  const ctx = await getAuthContextWithPermission(
+  const ctx = await getAuthContextWithAnyPermission(
     PRODUCTION_ROLES,
-    PERMISSION_KEYS.MENU_WRITE,
+    PRODUCTION_RECIPE_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 

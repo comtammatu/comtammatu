@@ -9,6 +9,7 @@ import {
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "./_lib/auth";
+import { getEmbeddedIngredientBaseUnitDisplayName } from "./_lib/unit-display";
 
 const ROLES = SUPPLIER_RETURN_ROLES;
 
@@ -103,7 +104,9 @@ export async function fetchSupplierReturnDetail(
 
   const { data: lines, error: linesErr } = await supabase
     .from("supplier_return_items")
-    .select("*, ingredients ( id, name, unit, purchase_unit )")
+    .select(
+      "*, ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+    )
     .eq("return_id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .order("id");
@@ -111,7 +114,26 @@ export async function fetchSupplierReturnDetail(
     return { success: false, error: "Không thể tải dòng phiếu trả hàng." };
   }
 
-  return { success: true, data: { header, lines: lines ?? [] } };
+  const normalizedLines = (lines ?? []).map((line) => {
+    const ingredient = line.ingredients as {
+      id: number;
+      name: string;
+    } | null;
+    const unit = getEmbeddedIngredientBaseUnitDisplayName(line.ingredients) ?? "";
+    return {
+      ...line,
+      unit,
+      ingredients: ingredient
+        ? {
+            id: ingredient.id,
+            name: ingredient.name,
+            unit,
+          }
+        : null,
+    };
+  });
+
+  return { success: true, data: { header, lines: normalizedLines } };
 }
 
 /* ─── fetchReturnableGrns (from-GRN picker source) ───
@@ -337,4 +359,3 @@ export async function transitionSupplierReturn(
   revalidatePath(`/inventory/supplier-returns/${parsed.data.returnId}`);
   return { success: true, data };
 }
-

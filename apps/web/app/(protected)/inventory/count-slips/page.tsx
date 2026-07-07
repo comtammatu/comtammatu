@@ -124,8 +124,8 @@ export async function CountSlipsPageContent({
         counted_quantity,
         entry_unit_id,
         note,
-        ingredients ( name, unit ),
-        units ( code )
+        ingredients ( name ),
+        units!inventory_count_slip_lines_entry_unit_id_fkey ( code )
       )
     `,
     )
@@ -157,7 +157,9 @@ export async function CountSlipsPageContent({
   if (ingredientIds.length > 0) {
     const { data: unitRows } = await supabase
       .from("ingredient_units")
-      .select("ingredient_id, unit_id, to_base_factor, is_base, units ( code )")
+      .select(
+        "ingredient_id, unit_id, to_base_factor, is_base, units!ingredient_units_unit_tenant_fkey(code)",
+      )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .in("ingredient_id", ingredientIds);
@@ -196,13 +198,6 @@ export async function CountSlipsPageContent({
       reviewedAt: slip.reviewed_at ?? null,
       lines: lines.map((line) => {
         const ingredient = embeddedName(line.ingredients);
-        const unitSource = Array.isArray(line.ingredients)
-          ? line.ingredients[0]
-          : line.ingredients;
-        const ingredientUnit =
-          unitSource && typeof unitSource === "object"
-            ? ((unitSource as { unit?: unknown }).unit ?? null)
-            : null;
         const ingredientId = Number(line.ingredient_id);
         const entryUnitId =
           line.entry_unit_id == null ? null : Number(line.entry_unit_id);
@@ -216,9 +211,7 @@ export async function CountSlipsPageContent({
           ingredientName: ingredient ?? `#${line.ingredient_id}`,
           entryUnitId,
           entryUnitCode: entryUnit?.code ?? embeddedCode(line.units),
-          baseUnitCode:
-            baseUnit?.code ??
-            (typeof ingredientUnit === "string" ? ingredientUnit : null),
+          baseUnitCode: baseUnit?.code ?? null,
           toBaseFactor: entryUnit?.toBaseFactor ?? null,
           systemQuantity: Number(line.system_quantity ?? 0),
           countedQuantity: Number(line.counted_quantity ?? 0),

@@ -1,3 +1,5 @@
+import { countCompletedShiftWorkdays } from "@lib/employee/_lib/workday-math";
+
 export interface LeaveRange {
   employeeId: number;
   startDate: string;
@@ -63,7 +65,7 @@ export function buildCompletedWorkdays(
   const workdays = new Map<number, number>();
   for (const [employeeId, days] of shiftsByEmpDay) {
     let total = 0;
-    for (const count of days.values()) total += Math.min(count, 2) * 0.5;
+    for (const count of days.values()) total += countCompletedShiftWorkdays(count);
     workdays.set(employeeId, total);
   }
 

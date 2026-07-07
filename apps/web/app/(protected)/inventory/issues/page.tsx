@@ -9,6 +9,7 @@ import {
 } from "../_lib/format";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { tRoute } from "../_lib/dictionary";
+import { getEmbeddedIngredientBaseUnitDisplayName } from "../_lib/unit-display";
 import { IssuesClient } from "./issues-client";
 import type {
   IssueBranchOption,
@@ -152,7 +153,7 @@ export async function IssuesPageContent({
     ? supabase
         .from("stock_movements")
         .select(
-          "id, branch_id, location_id, ingredient_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, unit )",
+          "id, branch_id, location_id, ingredient_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
         )
         .eq("tenant_id", claims.tenant_id)
         .eq("type", "consumption")
@@ -238,7 +239,7 @@ export async function IssuesPageContent({
       const ingredient = row.ingredients as Record<string, unknown> | null;
       const quantity = Math.abs(toNumber(row.quantity_change));
       const unitCost = toNumber(row.unit_cost);
-      const unit = (ingredient?.unit as string | null) ?? "";
+      const unit = getEmbeddedIngredientBaseUnitDisplayName(ingredient) ?? "";
 
       return {
         id: row.id as number,

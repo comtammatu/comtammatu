@@ -18,6 +18,7 @@ import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
+import { getEmbeddedUnitDisplayName } from "./_lib/unit-display";
 
 const ROLES = INVENTORY_OPS_ROLES;
 const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = [
@@ -222,7 +223,7 @@ export async function fetchStockTransferDetail(
   }
   const { data: lines, error: e2 } = await supabase
     .from("stock_transfer_items")
-    .select("*, ingredients ( id, name, unit, purchase_unit )")
+    .select("*, ingredients ( id, name )")
     .eq("transfer_id", id.data)
     .eq("tenant_id", claims.tenant_id);
   if (e2) return { success: false, error: "Không tải được dòng chuyển." };
@@ -243,42 +244,33 @@ export async function fetchStockTransferDetail(
   // entry_unit_id on the line is the unit `quantity` is expressed in;
   // unit_cost_at_ship is per BASE unit (set by stock_transfer_confirm_ship).
   // Look up to_base_factor so the caller can convert before pricing the line.
-  const entryUnitIds = [
-    ...new Set(
-      (lines ?? [])
-        .map((l) => l.entry_unit_id as number | null)
-        .filter((v): v is number => v != null),
-    ),
-  ];
   const ingredientIds = [
     ...new Set((lines ?? []).map((l) => l.ingredient_id as number)),
   ];
-  let toBaseFactorByKey = new Map<string, number>();
-  let unitLabelByKey = new Map<string, string>();
-  if (entryUnitIds.length > 0 && ingredientIds.length > 0) {
+  const toBaseFactorByKey = new Map<string, number>();
+  const unitLabelByKey = new Map<string, string>();
+  const baseUnitLabelByIngredient = new Map<number, string>();
+  if (ingredientIds.length > 0) {
     const { data: unitRows } = await supabase
       .from("ingredient_units")
       .select(
-        "ingredient_id, unit_id, to_base_factor, units!ingredient_units_unit_tenant_fkey(code, name)",
+        "ingredient_id, unit_id, to_base_factor, is_base, units!ingredient_units_unit_tenant_fkey(code, name)",
       )
       .eq("tenant_id", claims.tenant_id)
-      .in("ingredient_id", ingredientIds)
-      .in("unit_id", entryUnitIds);
-    toBaseFactorByKey = new Map(
-      (unitRows ?? []).map((row) => [
-        `${row.ingredient_id}:${row.unit_id}`,
-        Number(row.to_base_factor),
-      ]),
-    );
-    unitLabelByKey = new Map(
-      (unitRows ?? []).map((row) => {
-        const unit = row.units as { code: string | null; name: string | null };
-        return [
-          `${row.ingredient_id}:${row.unit_id}`,
-          unit.name?.trim() || unit.code || "",
-        ] as const;
-      }),
-    );
+      .eq("is_active", true)
+      .in("ingredient_id", ingredientIds);
+    for (const row of unitRows ?? []) {
+      const ingredientId = Number(row.ingredient_id);
+      const unitId = Number(row.unit_id);
+      if (!Number.isFinite(ingredientId) || !Number.isFinite(unitId)) continue;
+      const key = `${ingredientId}:${unitId}`;
+      const label = getEmbeddedUnitDisplayName(row.units);
+      toBaseFactorByKey.set(key, Number(row.to_base_factor));
+      if (label) unitLabelByKey.set(key, label);
+      if (row.is_base === true && label) {
+        baseUnitLabelByIngredient.set(ingredientId, label);
+      }
+    }
   }
   const linesWithFactor = (lines ?? []).map((l) => ({
     ...l,
@@ -289,7 +281,7 @@ export async function fetchStockTransferDetail(
           null),
     unit_label:
       l.entry_unit_id == null
-        ? null
+        ? (baseUnitLabelByIngredient.get(Number(l.ingredient_id)) ?? null)
         : (unitLabelByKey.get(`${l.ingredient_id}:${l.entry_unit_id}`) ?? null),
   }));
 

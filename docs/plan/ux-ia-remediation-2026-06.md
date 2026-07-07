@@ -75,7 +75,7 @@ Dùng `confirm()` SSoT (`@comtammatu/ui` confirm-dialog), KHÔNG tự chế dial
 | PR | Nội dung | Files | Tier |
 | --- | --- | --- | --- |
 | D1a | Form NV theo mô hình HKD đơn giản: profile-picker thay UUID thô, `base_salary`/`id_number`/bank/`dependents_count`; thêm `updateEmployee` + Edit dialog cho hồ sơ HR | `employee-form-dialog.tsx`, `hr/actions.ts`, `employee-table.tsx` | T2 |
-| D1b | Payroll engine HKD: `calculatePayroll` đọc `employees.base_salary`, eligibility `is_active && base_salary > 0`, 2 ca/ngày = 1 công, PIT legal-version; thêm `standard_days` owner nhập + clamp; chuyển calculate+status sang RPC nguyên tử trước go-live | `payroll-actions.ts`, shared payroll helpers, migration nếu cần RPC | **T3** |
+| D1b | Payroll engine HKD: `calculatePayroll` đọc `employees.base_salary`, eligibility `is_active && base_salary > 0`, mỗi ca đã kết = 0,5 công, PIT legal-version; thêm `standard_days` owner nhập + clamp; chuyển calculate+status sang RPC nguyên tử trước go-live | `payroll-actions.ts`, shared payroll helpers, migration nếu cần RPC | **T3** |
 | D1c | Overview/đối chiếu/export: KpiCards tổng net/TNCN/số NV + approved_by/at, paid_at; export CSV/Excel; StatusBadge domain `payroll-period` + labels | `payroll/[periodId]/page.tsx`, `status-badge.tsx`, `labels/vi.ts` | T2 |
 
 Dùng `calculatePayrollEntry` (versioned legal tables, KHÔNG hardcode). Không build surface hợp đồng lao động trong scope hiện tại; owner đã chốt payroll HKD đơn giản, không phụ thuộc `employment_contracts`. **Debt riêng (T3, trước go-live):** `calculatePayroll` upsert non-transactional → RPC nguyên tử. **Acceptance D1:** tạo/sửa NV có lương + phụ thuộc → "Tính lương" sinh entry thật theo ngày công ca → owner xem được tổng, PIT, trạng thái, export và duyệt/trả.

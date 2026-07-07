@@ -47,6 +47,7 @@ function distanceToShiftWindow(nowMin: number, shift: ParsedShiftWindow): number
 export function resolveDefaultShiftId(
   shifts: readonly BranchShiftWindow[],
   nowMinutes: number = getVNMinutesOfDay(),
+  completedShiftIds: ReadonlySet<number> = new Set(),
 ): number | null {
   const parsed: ParsedShiftWindow[] = [];
   for (const shift of shifts) {
@@ -77,5 +78,9 @@ export function resolveDefaultShiftId(
       return a.shift.id - b.shift.id;
     });
 
-  return ranked[0]?.shift.id ?? null;
+  return (
+    ranked.find((item) => !completedShiftIds.has(item.shift.id))?.shift.id ??
+    ranked[0]?.shift.id ??
+    null
+  );
 }

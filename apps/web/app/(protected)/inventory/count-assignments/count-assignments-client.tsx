@@ -395,7 +395,7 @@ export function CountAssignmentsClient({
         open={activeEmpId !== null}
         onOpenChange={(o) => !o && setActiveEmpId(null)}
       >
-        <DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden">
+        <DrawerContent className="flex h-dvh max-h-dvh-80 flex-col overflow-hidden">
           <DrawerHeader className="shrink-0">
             <DrawerTitle>Phân công đếm tồn: {activeEmp?.name}</DrawerTitle>
             <DrawerDescription>

@@ -12,6 +12,10 @@ import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import type { TenantSupabase } from "./_lib/types";
+import {
+  getEmbeddedIngredientBaseUnitDisplayName,
+  getEmbeddedUnitDisplayName,
+} from "./_lib/unit-display";
 
 const ROLES = INVENTORY_OPS_ROLES;
 
@@ -202,7 +206,7 @@ export async function fetchStockIssueDetail(
     supabase
       .from("stock_issue_items")
       .select(
-        "id, ingredient_id, quantity, unit, entry_unit_id, unit_cost, total_cost, reason, ingredients ( id, name, ingredient_units(is_base, units!ingredient_units_unit_id_fkey(code)) )",
+        "id, ingredient_id, quantity, entry_unit_id, unit_cost, total_cost, reason, unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
       )
       .eq("issue_id", id.data)
       .eq("tenant_id", claims.tenant_id)
@@ -224,10 +228,31 @@ export async function fetchStockIssueDetail(
       ? { ...branch, name: getBranchSiteDisplayName(branch) }
       : branch,
   };
+  const lines = (linesRes.data ?? []).map((line) => {
+    const ingredient = line.ingredients as {
+      id: number;
+      name: string;
+    } | null;
+    const unit =
+      getEmbeddedUnitDisplayName(line.unit_obj) ??
+      getEmbeddedIngredientBaseUnitDisplayName(line.ingredients) ??
+      "";
+    return {
+      ...line,
+      unit,
+      ingredients: ingredient
+        ? {
+            id: ingredient.id,
+            name: ingredient.name,
+            unit,
+          }
+        : null,
+    };
+  });
 
   return {
     success: true,
-    data: { issue, lines: linesRes.data ?? [] },
+    data: { issue, lines },
   };
 }
 

@@ -242,7 +242,7 @@ export const employee = {
   hrAttendance: {
     summaryView: "Tổng hợp",
     clockView: "Vào / ra",
-    workdayRule: "2 ca = 1 công · 1 ca = 0,5 công",
+    workdayRule: "Mỗi ca đã kết = 0,5 công",
     loadHint: "Chưa có dữ liệu chấm công cho chi nhánh và tháng đã chọn.",
     summaryEmptyTitle: "Chưa có ngày công",
     summaryEmptyDescription:

@@ -166,14 +166,14 @@
 
 ## D027: Chấm công theo CA (per-shift), không theo ngày (2026-06-15)
 
-**Context:** Toàn bộ NV Má Tư làm 2 ca/ngày (sáng 06–13, chiều 16–21). Mô hình cũ ràng 1 bản ghi/người/ngày → không ghi nổi 2 ca; adoption thấp.
+**Context:** NV Má Tư làm theo ca trong ngày; ban đầu phổ biến 2 ca/ngày (sáng 06–13, chiều 16–21) nhưng vận hành có thể mở thêm ca như trưa/tối. Mô hình cũ ràng 1 bản ghi/người/ngày → không ghi nổi nhiều ca; adoption thấp.
 
 **Decision:**
 
 1. **Đơn vị chấm công = CA.** Unique đổi `(employee_id, date, tenant_id)` → `(employee_id, date, shift_id, tenant_id)`; `shift_id` NOT NULL cho dòng mới. Migration backfill `shift_id` dòng cũ (theo `resolveDefaultShiftId` từ `check_in`) trước khi đổi constraint.
-2. **Ca = xương sống, Global.** 1 bộ ca chung 4 chi nhánh; `shifts.branch_id` NULL = global; seed 2 ca; auto-nhận ca theo giờ check-in.
-3. **Ngày công:** đủ 2 ca = 1 công; 1 ca = 0.5. `working_days = Σ_ngày( min(ca_có_mặt, 2) × 0.5 )`; clamp ≤ standard.
-4. **UX:** 4 mốc/ngày (vào sáng → ra trưa → vào chiều → ra tối); `today-work-state` thành máy trạng thái 2-ca.
+2. **Ca = xương sống, Global.** 1 bộ ca chung 4 chi nhánh; `shifts.branch_id` NULL = global; seed mặc định có thể là 2 ca nhưng công thức không hardcode số ca/ngày; auto-nhận ca theo giờ check-in.
+3. **Ngày công:** mỗi ca đã kết = 0.5 công. `working_days = Σ_ca_đã_kết(0.5)`; không cap theo ngày, chỉ clamp tổng lương bằng `standard_days`.
+4. **UX:** mỗi ca có một lượt vào/ra riêng trong ngày; `today-work-state` chọn ca hiện tại theo giờ và vẫn hiện ca chưa kết nếu còn tồn.
 5. **Checklist theo từng ca** (snapshot riêng mỗi bản ghi ca).
 
 **Consequences:** Thứ tự HRM: Thiết lập Ca → chấm công per-shift → ngày công → lương. T3 schema migration file→PR→owner (D015). Mở rộng (không đảo) D026.

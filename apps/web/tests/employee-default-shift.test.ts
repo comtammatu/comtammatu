@@ -40,6 +40,21 @@ test("khoảng trống giữa hai ca → chọn ca gần khung giờ nhất", ()
   assert.equal(resolveDefaultShiftId(DAT_DO, minutes("14:30")), 2);
 });
 
+test("ca đã kết trong ngày không chặn ca tiếp theo", () => {
+  assert.equal(resolveDefaultShiftId(DAT_DO, minutes("13:30"), new Set([1])), 2);
+  assert.equal(
+    resolveDefaultShiftId(PHUOC_HAI, minutes("13:00"), new Set([3])),
+    4,
+  );
+});
+
+test("khi mọi ca gần giờ hiện tại đã kết → giữ ca gần nhất", () => {
+  assert.equal(
+    resolveDefaultShiftId(DAT_DO, minutes("22:30"), new Set([1, 2])),
+    2,
+  );
+});
+
 test("đến sớm trước ca sáng → chọn ca sáng", () => {
   assert.equal(resolveDefaultShiftId(DAT_DO, minutes("04:30")), 1);
 });

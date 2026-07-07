@@ -313,7 +313,9 @@ export async function fetchConsumptionVariance(
   // Get ingredient names for display
   const { data: ingredients, error: ingErr } = await supabase
     .from("ingredients")
-    .select("id, name, ingredient_units!ingredient_units_ingredient_id_fkey(is_base, units!ingredient_units_unit_id_fkey(code))")
+    .select(
+      "id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code))",
+    )
     .eq("tenant_id", claims.tenant_id)
     .eq("is_active", true);
   if (ingErr) return { success: false, error: "Không tải được nguyên liệu." };

@@ -251,7 +251,7 @@ async function loadReportByAttendance(
   const { data: lines } = await service
     .from<ConsumptionReportLineDbRow[]>("attendance_consumption_report_lines")
     .select(
-      "id, ingredient_id, default_item_id, quantity, note, ingredients ( name, ingredient_units!ingredient_units_ingredient_id_fkey(is_base, units!ingredient_units_unit_id_fkey(code)) )",
+      "id, ingredient_id, default_item_id, quantity, note, ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) )",
     )
     .eq("tenant_id", tenantId)
     .eq("report_id", report.id)
@@ -304,7 +304,9 @@ export async function fetchConsumptionIngredients(
   const [ingredientsResult, defaultsResult] = await Promise.all([
     service
       .from("ingredients")
-      .select("id, name, category, ingredient_units!ingredient_units_ingredient_id_fkey(is_base, units!ingredient_units_unit_id_fkey(code))")
+      .select(
+        "id, name, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code))",
+      )
       .eq("tenant_id", ctx.claims.tenant_id)
       .eq("is_active", true)
       .order("name"),

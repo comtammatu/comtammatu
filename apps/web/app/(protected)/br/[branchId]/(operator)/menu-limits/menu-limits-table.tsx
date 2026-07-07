@@ -29,7 +29,6 @@ import {
   ItemContent,
   ItemDescription,
   ItemGroup,
-  ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
@@ -189,36 +188,38 @@ function MenuLimitRowItem({
         }}
         {...handlers}
       >
-        <Item variant="outline" className="flex flex-col p-4 pointer-events-none select-none h-full border-none">
-          <ItemHeader className="items-start">
-            <ItemContent className="min-w-0 gap-1 w-full">
-              <ItemTitle className="line-clamp-2 w-full flex-wrap text-sm">
-                <span className="min-w-0">{row.item_name}</span>
-                {renderItemBadge(row)}
-              </ItemTitle>
-              <ItemDescription className="flex flex-wrap items-center gap-2">
-                <span className="font-mono tabular-nums text-foreground">
-                  {formatVND(row.base_price)}
-                </span>
-                {row.stock_capacity != null && (
-                  <span>
-                    {messages.pos.menu.stockCapacityLabel}:{" "}
-                    <span className="font-mono text-sm tabular-nums">
-                      {row.stock_capacity}
-                    </span>
+        <Item
+          variant="outline"
+          size="sm"
+          className="flex-col flex-nowrap items-start rounded-none border-none px-3 py-2 pointer-events-none select-none sm:flex-row sm:items-center sm:px-4 sm:py-3"
+        >
+          <ItemContent className="min-w-0 w-full gap-1 sm:w-auto">
+            <ItemTitle className="line-clamp-2 w-full max-w-full flex-wrap text-sm">
+              <span className="min-w-0 break-words">{row.item_name}</span>
+              {renderItemBadge(row)}
+              {row.manual_limit_quantity != null && (
+                <Badge variant="outline" className="font-mono">
+                  Giới hạn: {row.manual_limit_quantity}
+                </Badge>
+              )}
+            </ItemTitle>
+            <ItemDescription className="flex flex-wrap items-center gap-2">
+              <span className="font-mono tabular-nums text-foreground">
+                {formatVND(row.base_price)}
+              </span>
+              {row.stock_capacity != null && (
+                <span>
+                  {messages.pos.menu.stockCapacityLabel}:{" "}
+                  <span className="font-mono tabular-nums text-foreground">
+                    {row.stock_capacity}
                   </span>
-                )}
-                {row.manual_limit_quantity != null && (
-                  <Badge variant="outline" className="text-xs font-mono ml-auto">
-                    Giới hạn: {row.manual_limit_quantity}
-                  </Badge>
-                )}
-              </ItemDescription>
-            </ItemContent>
-          </ItemHeader>
+                </span>
+              )}
+            </ItemDescription>
+          </ItemContent>
           {progress && (
-            <div className="mt-2 w-full">
-              <div className="flex items-center justify-between gap-2 text-xs mb-1.5">
+            <div className="w-full shrink-0 sm:w-56">
+              <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
                 <span className="font-mono tabular-nums text-destructive">
                   {messages.pos.menu.soldCount(progress.sold)}
                 </span>
@@ -226,10 +227,7 @@ function MenuLimitRowItem({
                   {messages.pos.menu.remainingCount(progress.remaining)}
                 </span>
               </div>
-              <Progress
-                value={progress.value}
-                tone="destructive"
-              />
+              <Progress value={progress.value} tone="destructive" />
             </div>
           )}
         </Item>
@@ -314,7 +312,11 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
 
   function openDrawer(row: MenuLimitRow) {
     setDrawerRow(row);
-    setDraftQty(row.manual_limit_quantity == null ? "" : String(row.manual_limit_quantity));
+    setDraftQty(
+      row.manual_limit_quantity == null
+        ? ""
+        : String(row.manual_limit_quantity),
+    );
     setDraftDisabled(row.is_disabled);
   }
 
@@ -440,45 +442,55 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
         <AppEmptyState title={messages.pos.menu.noResults} compact />
       ) : null}
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         {grouped.map((group) => (
           <AppSection
             key={group.categoryId}
             title={group.categoryName}
+            size="sm"
             badge={{
               children: messages.pos.menu.itemCount(group.items.length),
               variant: "outline",
             }}
             contentFlush
           >
-          <ItemGroup>
+            <ItemGroup className="gap-1">
               {group.items.map((row) => (
                 <MenuLimitRowItem
                   key={row.menu_item_id}
                   row={row}
                   onOpenDrawer={() => openDrawer(row)}
-                  onToggleStatus={(disabled) => handleToggleStatus(row, disabled)}
+                  onToggleStatus={(disabled) =>
+                    handleToggleStatus(row, disabled)
+                  }
                   isPending={isPending}
                   swipe={swipe}
                 />
               ))}
-          </ItemGroup>
+            </ItemGroup>
           </AppSection>
         ))}
       </div>
 
-      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
+      <Drawer
+        open={!!drawerRow}
+        onOpenChange={(open) => !open && setDrawerRow(null)}
+      >
         <DrawerContent>
           {drawerRow && (
             <>
               <DrawerHeader>
                 <DrawerTitle>{drawerRow.item_name}</DrawerTitle>
               </DrawerHeader>
-              <div className="px-4 py-2 flex flex-col gap-6 overflow-y-auto">
+              <div className="px-4 py-2 flex flex-col gap-4 overflow-y-auto">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="font-medium text-sm">Trạng thái phục vụ</span>
-                    <span className="text-xs text-muted-foreground">Khóa món nếu không thể phục vụ</span>
+                    <span className="font-medium text-sm">
+                      Trạng thái phục vụ
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Khóa món nếu không thể phục vụ
+                    </span>
                   </div>
                   <Switch
                     checked={draftDisabled}
@@ -488,8 +500,12 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
 
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1">
-                    <span className="font-medium text-sm">Giới hạn số lượng (Tùy chọn)</span>
-                    <span className="text-xs text-muted-foreground">Để trống nếu không giới hạn tay</span>
+                    <span className="font-medium text-sm">
+                      Giới hạn số lượng (Tùy chọn)
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Để trống nếu không giới hạn tay
+                    </span>
                   </div>
                   <QuantityInput
                     maxFractionDigits={0}
@@ -516,7 +532,11 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
                   onClick={handleSaveLimit}
                   disabled={isPending}
                 >
-                  {isPending ? <Spinner className="mr-2" /> : <IconSave className="mr-2 w-4 h-4" />}
+                  {isPending ? (
+                    <Spinner className="mr-2" />
+                  ) : (
+                    <IconSave className="mr-2 w-4 h-4" />
+                  )}
                   Lưu thay đổi
                 </Button>
               </DrawerFooter>

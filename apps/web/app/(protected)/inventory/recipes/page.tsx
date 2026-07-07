@@ -25,7 +25,6 @@ type MenuItemRow = {
   recipes: Array<{
     ingredient_id: number | null;
     quantity: number | string | null;
-    unit: string | null;
     entry_unit_id: number | string | null;
     note: string | null;
     yield_factor: number | string | null;
