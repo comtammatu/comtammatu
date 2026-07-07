@@ -131,6 +131,7 @@ export async function loadProductionSurfaceData({
   }
 
   const role = claims.user_role;
+  const isOwner = role === "owner";
   const [
     canOpenProduction,
     canManageCatalog,
@@ -140,7 +141,7 @@ export async function loadProductionSurfaceData({
     canAdjustStock,
     hasBranchAccess,
   ] = await Promise.all([
-    currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
+    isOwner ? Promise.resolve(true) : currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
     currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
     currentUserHasAnyPermission(supabase, PERMISSION_KEYS.MENU_WRITE),
     currentUserHasAnyPermission(

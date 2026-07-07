@@ -546,9 +546,8 @@ function DetailView({
   }
 
   function forceCloseAction(record: AttendanceRecord) {
-    const isStale =
-      !!record.check_in && !record.check_out && record.date < todayStr;
-    if (!isStale) return null;
+    const isOpen = !!record.check_in && !record.check_out;
+    if (!isOpen) return null;
 
     return (
       <Button
@@ -743,9 +742,9 @@ function DetailView({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Đóng ca làm việc treo</DialogTitle>
+            <DialogTitle>Đóng ca làm việc</DialogTitle>
             <DialogDescription>
-              Ca làm việc của {closingRecord?.employees?.profiles?.full_name} ngày {closingRecord?.date} chưa được kết ca.
+              Ca làm việc của {closingRecord?.employees?.profiles?.full_name} ngày {closingRecord?.date} đang mở.
             </DialogDescription>
           </DialogHeader>
 

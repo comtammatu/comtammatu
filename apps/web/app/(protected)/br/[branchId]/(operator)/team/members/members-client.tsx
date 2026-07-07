@@ -43,7 +43,7 @@ function EmployeeCard({
   });
 
   return (
-    <InteractiveCard minHeight="mobile" className="h-auto touch-none select-none cursor-pointer" {...longPress}>
+    <InteractiveCard minHeight="mobile" className="h-auto touch-pan-y select-none cursor-pointer" {...longPress}>
       <div className="flex min-w-0 flex-1 flex-col gap-1 pointer-events-none">
         <div className="flex items-center justify-between gap-2">
           <p className="truncate text-sm font-medium">{emp.name}</p>

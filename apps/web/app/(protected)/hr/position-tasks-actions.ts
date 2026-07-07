@@ -10,7 +10,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "@/_lib/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
 import {
@@ -89,7 +89,10 @@ function revalidatePositionTaskPaths() {
 export async function fetchPositionTasksData(): Promise<
   ActionResult<PositionTasksData>
 > {
-  const ctx = await getAuthContext(POSITION_TASK_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    POSITION_TASK_ROLES,
+    PERMISSION_KEYS.STAFF_MANAGE,
+  );
   if (!ctx) return { success: false, error: messages.common.forbidden };
 
   const service = createServiceClient();

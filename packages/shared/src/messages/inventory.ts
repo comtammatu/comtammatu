@@ -395,7 +395,7 @@ export const INVENTORY_VI = {
   countAssignEyebrow: "Kiểm kê",
   countAssignTitle: "Phân công đếm tồn",
   countAssignDescription:
-    "Giao danh sách thành phẩm cần kiểm kê cho từng nhân viên tại kho chi nhánh hiện tại.",
+    "Giao danh sách hàng cần kiểm kê cho từng nhân viên tại kho chi nhánh hiện tại.",
   countAssignNoWarehouseTitle: "Chưa có kho chi nhánh",
   countAssignNoWarehouseDescription:
     "Cần có kho chi nhánh đang hoạt động trước khi phân công kiểm kê.",
@@ -412,17 +412,17 @@ export const INVENTORY_VI = {
     "Chọn nhân viên và thành phẩm cần kiểm kê tại kho chi nhánh hiện tại.",
   countAssignSaveFailed: "Không thể lưu phân công.",
   countAssignSaved: (name: string, count: number) =>
-    `Đã lưu phân công cho ${name} (${count} thành phẩm)`,
+    `Đã lưu phân công cho ${name} (${count} mặt hàng)`,
   countAssignRemoved: (name: string) => `Đã xoá phân công cho ${name}`,
   countAssignAllAssigned: "Tất cả nhân viên đang có phân công.",
   selectEmployeePlaceholder: "Chọn nhân viên",
-  countAssignNoFinishedGoods: "Chưa có thành phẩm đang hoạt động để phân công.",
-  countAssignChecklistTitle: "Thành phẩm kiểm kê",
+  countAssignNoFinishedGoods: "Chưa có hàng đang hoạt động để phân công.",
+  countAssignChecklistTitle: "Danh sách hàng kiểm kê",
   selectedRatio: (selected: number, total: number) =>
     `${selected}/${total} đã chọn`,
   countAssignEditTitle: "Chỉnh sửa phân công",
   countAssignEditDescription: (name: string) =>
-    `${name} kiểm kê các thành phẩm được chọn dưới đây.`,
+    `${name} kiểm kê các mặt hàng được chọn dưới đây.`,
   countAssignRemoveAction: "Xoá",
   countedQtyHeader: "Số đếm",
   searchIngredientPlaceholder: "Tìm nguyên liệu…",

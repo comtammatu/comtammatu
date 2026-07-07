@@ -94,11 +94,19 @@ export async function CountAssignmentsPageContent({
   // Active finished-good catalog for the per-employee checklist.
   const ingredientsRes = await supabase
     .from("ingredients")
-    .select("id, name, ingredient_units(is_base, units!ingredient_units_unit_id_fkey(code))")
+    .select(
+      "id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code))",
+    )
     .eq("tenant_id", claims.tenant_id)
-    .eq("item_kind", "finished_good")
+    .in("item_kind", ["raw_material", "finished_good"])
     .eq("is_active", true)
     .order("name");
+  if (ingredientsRes.error) {
+    console.error("inventory.count_assignments.ingredients_fetch_failed", {
+      error: ingredientsRes.error.message,
+    });
+    throw new Error("Không đọc được danh sách nguyên liệu để phân công đếm tồn.");
+  }
   const ingredients: IngredientOption[] = (ingredientsRes.data ?? []).map(
     (i) => ({
       id: i.id,

@@ -149,7 +149,7 @@ function MobileTeamCard({
   });
 
   return (
-    <InteractiveCard minHeight="mobile" className="h-auto touch-none select-none cursor-pointer" {...longPress}>
+    <InteractiveCard minHeight="mobile" className="h-auto touch-pan-y select-none cursor-pointer" {...longPress}>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 pointer-events-none">
         <div className="flex items-center justify-between gap-2">
           <p className="truncate text-sm font-semibold">
@@ -278,7 +278,11 @@ export function TeamBoardClient({
         mobileBreakpoint={1024}
         onRowClick={(row) => {
           const href = rowHref(row);
-          if (href) router.push(href);
+          if (href) {
+            router.push(href);
+            return;
+          }
+          setDrawerRow(row);
         }}
         getRowAriaLabel={(row) => `${row.fullName} · ${row.positionLabel ?? ""}`}
         mobileCardRender={(row) => (

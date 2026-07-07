@@ -1016,28 +1016,85 @@ const forceCloseStaleAttendanceSchema = z.object({
 export const forceCloseStaleAttendance = withAction(
   { roles: HR_EMPLOYEE_VIEW_ROLES, schema: forceCloseStaleAttendanceSchema },
   async (data, { supabase, claims, user }) => {
-    // Rely on RPC for branch/tenant/permission validation
-    const { data: checkOutTime, error } = await supabase.rpc(
-      "admin_force_close_attendance" as any,
-      {
-        p_tenant_id: claims.tenant_id,
-        p_branch_id: claims.branch_id ?? 0, // RPC will validate against the record's branch_id
-        p_attendance_id: data.attendanceId,
-        p_approved_by: user.id,
-        p_note: data.note,
-      },
-    );
+    const { data: openRecord, error: fetchError } = await supabase
+      .from("attendance_records")
+      .select("id, branch_id, check_in")
+      .eq("id", data.attendanceId)
+      .eq("tenant_id", claims.tenant_id)
+      .not("check_in", "is", null)
+      .is("check_out", null)
+      .maybeSingle();
 
-    if (error || !checkOutTime) {
+    if (fetchError || !openRecord) {
       console.error(
         "[hr/actions:forceCloseStaleAttendance] Force close error:",
-        error,
+        fetchError,
       );
-      if (error?.message?.includes("forbidden")) {
-        return { success: false, error: "Không có quyền đóng ca tại chi nhánh này" };
+      if (claims.user_role === "branch_manager" && claims.branch_id == null) {
+        return {
+          success: false,
+          error: "Tài khoản chưa gắn chi nhánh. Liên hệ quản lý.",
+        };
       }
-      if (error?.message?.includes("stale_attendance_request_not_found")) {
-        return { success: false, error: "Ca không hợp lệ hoặc đã được đóng" };
+      if (
+        claims.user_role === "branch_manager" &&
+        claims.branch_id !== openRecord?.branch_id
+      ) {
+        return {
+          success: false,
+          error: "Không có quyền đóng ca tại chi nhánh này",
+        };
+      }
+      return {
+        success: false,
+        error: "Ca không hợp lệ hoặc đã được đóng",
+      };
+    }
+
+    if (openRecord.branch_id == null) {
+      return { success: false, error: "Không xác định được chi nhánh của ca." };
+    }
+
+    if (
+      claims.user_role === "branch_manager" &&
+      claims.branch_id !== openRecord.branch_id
+    ) {
+      return { success: false, error: "Không có quyền đóng ca tại chi nhánh này" };
+    }
+
+    const now = new Date().toISOString();
+    const checkOutTime = openRecord.check_in;
+    const note =
+      typeof data.note === "string" && data.note.trim().length > 0
+        ? data.note
+        : "Force closed: Quên kết ca trong ngày (không tính công)";
+
+    const { data: closedRecord, error } = await supabase
+      .from("attendance_records")
+      .update({
+        check_out: checkOutTime,
+        check_out_code_verified: false,
+        checkout_approved_at: now,
+        checkout_approved_by: user.id,
+        checkout_approval_note: note,
+        checkout_requested_at: null,
+        checkout_requested_by_role: null,
+        checkout_approval_target_roles: [],
+        updated_at: now,
+      })
+      .eq("id", data.attendanceId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", openRecord.branch_id)
+      .is("check_out", null)
+      .select("check_out")
+      .maybeSingle();
+
+    if (error || !closedRecord?.check_out) {
+      if (error) {
+        console.error(
+          "[hr/actions:forceCloseStaleAttendance] Force close update error:",
+          error,
+        );
       }
       return { success: false, error: "Không thể đóng ca. Vui lòng thử lại sau" };
     }

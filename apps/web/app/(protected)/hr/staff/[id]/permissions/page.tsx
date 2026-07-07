@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
-import { createClient } from "@comtammatu/database/supabase/server";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { messages } from "@lib/messages";
 import { AppPage, AppPageHeader } from "@/components/surface";
@@ -16,7 +17,12 @@ interface Props {
 
 export default async function StaffPermissionsPage({ params }: Props) {
   const { id } = await params;
-  const supabase = await createClient();
+  const ctx = await getAuthContextWithPermission(
+    ["owner", "branch_manager"],
+    PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
+  );
+  if (!ctx) notFound();
+  const { supabase } = ctx;
 
   // Target profile (RLS: viewer must have staff:view or hr:view_employee)
   const { data: profile } = await supabase

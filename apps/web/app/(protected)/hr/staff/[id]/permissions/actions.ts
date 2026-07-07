@@ -1,9 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import { createClient } from "@comtammatu/database/supabase/server";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { revalidatePath } from "next/cache";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 
 function rpcBranchId(branchId: number | null): number {
   // Supabase generated RPC arg types do not encode nullable BIGINT inputs.
@@ -45,7 +46,14 @@ export async function grantPermissionAction(
       error: parsed.error.issues[0]?.message ?? "Invalid input",
     };
   }
-  const supabase = await createClient();
+  const ctx = await getAuthContextWithPermission(
+    ["owner", "branch_manager"],
+    PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
+    parsed.data.branch_id,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase } = ctx;
+
   const { data, error } = await supabase.rpc("grant_permission", {
     p_target_user: parsed.data.target_user_id,
     p_branch_id: rpcBranchId(parsed.data.branch_id),
@@ -70,7 +78,14 @@ export async function revokePermissionAction(
       error: parsed.error.issues[0]?.message ?? "Invalid input",
     };
   }
-  const supabase = await createClient();
+  const ctx = await getAuthContextWithPermission(
+    ["owner", "branch_manager"],
+    PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
+    parsed.data.branch_id,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase } = ctx;
+
   const { data, error } = await supabase.rpc("revoke_permission", {
     p_target_user: parsed.data.target_user_id,
     p_branch_id: rpcBranchId(parsed.data.branch_id),
@@ -93,7 +108,14 @@ export async function applyTemplateAction(
       error: parsed.error.issues[0]?.message ?? "Invalid input",
     };
   }
-  const supabase = await createClient();
+  const ctx = await getAuthContextWithPermission(
+    ["owner", "branch_manager"],
+    PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
+    parsed.data.branch_id,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase } = ctx;
+
   const { data, error } = await supabase.rpc("apply_template_to_user", {
     p_target_user: parsed.data.target_user_id,
     p_branch_id: rpcBranchId(parsed.data.branch_id),
