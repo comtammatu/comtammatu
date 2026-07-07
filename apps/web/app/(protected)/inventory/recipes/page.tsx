@@ -61,6 +61,23 @@ export default async function RecipesPage({
     ]);
 
   const dbRows = recipesRes.success ? (recipesRes.data as MenuItemRow[]) : [];
+  
+  // DEBUG LOGGING
+  try {
+    const fs = require('fs');
+    fs.writeFileSync('debug-recipes.json', JSON.stringify({
+      recipesRes_success: recipesRes.success,
+      recipesRes_error: recipesRes.success ? null : recipesRes.error,
+      recipesRes_data_length: recipesRes.success ? recipesRes.data?.length : 0,
+      recipesRes_data_sample: recipesRes.success ? recipesRes.data?.slice(0, 3) : null,
+      menuItemsRes_success: menuItemsRes.success,
+      menuItemsRes_data_length: menuItemsRes.success ? menuItemsRes.data?.length : 0,
+      claims
+    }, null, 2));
+  } catch (e) {
+    console.error("Failed to write debug log", e);
+  }
+
   const wacMap = (wacRes.success ? wacRes.data : {}) as Record<string, number>;
   const stockCapacityByMenuItemId = (
     stockCapacityRes.success ? stockCapacityRes.data : {}
@@ -78,7 +95,6 @@ export default async function RecipesPage({
   );
 
   const recipes: RecipeRow[] = dbRows
-    .filter((row) => (row.recipes ?? []).length > 0)
     .map((row) => {
       const items: RecipeItem[] = (row.recipes ?? []).map((line) => {
         const qty = Number(line.quantity ?? 0);

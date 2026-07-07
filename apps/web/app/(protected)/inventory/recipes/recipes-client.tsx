@@ -1,3 +1,4 @@
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import { useMemo, useState } from "react";
@@ -142,10 +143,25 @@ export function RecipesClient({
         ),
     },
     {
-      key: "ingredientCount",
-      header: INVENTORY_VI.recipeColIngredientCount,
-      className: "font-mono",
-      render: (recipe) => recipe.items.length,
+      key: "ingredients",
+      header: "Định mức",
+      className: "min-w-[200px]",
+      render: (recipe) => (
+        <div className="flex flex-col gap-1 text-sm">
+          {recipe.items.length === 0 ? (
+            <span className="text-muted-foreground italic">Chưa có định mức</span>
+          ) : (
+            recipe.items.map((item, i) => (
+              <div key={i} className="flex justify-between gap-2">
+                <span className="text-muted-foreground">{item.ingredientName}</span>
+                <span className="font-mono">
+                  {item.qty} {item.unit}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      ),
     },
     {
       key: "cost",
@@ -284,6 +300,20 @@ function RecipeCard({
             formatVND(recipe.estimatedCost),
           )}
         </ItemDescription>
+        <div className="flex flex-col gap-1 rounded-md bg-muted/30 p-2 text-sm mt-2 mb-2">
+          {recipe.items.length === 0 ? (
+            <span className="text-muted-foreground italic">Chưa có định mức</span>
+          ) : (
+            recipe.items.map((item, i) => (
+              <div key={i} className="flex justify-between gap-2">
+                <span className="text-muted-foreground">{item.ingredientName}</span>
+                <span className="font-mono">
+                  {item.qty} {item.unit}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
         <ItemDescription>
           {INVENTORY_VI.recipeColStockCapacity}:{" "}
           {stockCapacity == null ? (

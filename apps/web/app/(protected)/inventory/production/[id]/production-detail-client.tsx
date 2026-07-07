@@ -9,17 +9,42 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { AppSection } from "@/components/surface";
 import { startProductionRun, confirmProductionRun, cancelProductionRun } from "../../production-run-actions";
-import type { ProductionRunRow } from "../../production-run-actions";
+import type { ProductionRunRow, ProductionRecipeIngredient } from "../../production-run-actions";
 import { formatVNDate } from "@comtammatu/shared/time";
 
 interface ProductionDetailClientProps {
   run: ProductionRunRow;
+  recipeContext: {
+    ingredients: ProductionRecipeIngredient[];
+    maxProductionQuantity: number | null;
+  } | null;
 }
 
-export function ProductionDetailClient({ run }: ProductionDetailClientProps) {
+export function ProductionDetailClient({ run, recipeContext }: ProductionDetailClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [actualQuantity, setActualQuantity] = useState<string>(run.actual_quantity?.toString() || "");
+  const maxProductionStr = recipeContext?.maxProductionQuantity != null ? recipeContext.maxProductionQuantity.toString() : null;
+
+  // Initialize ingredient states. Use planned quantity as default multiplier, unless actual_quantity is typed? 
+  // Normally the default is based on planned_quantity as the RPC does.
+  const [ingredientUsages, setIngredientUsages] = useState<Record<number, string>>(() => {
+    const usages: Record<number, string> = {};
+    if (recipeContext?.ingredients) {
+      for (const ing of recipeContext.ingredients) {
+        // Default usage: planned_quantity * recipe_quantity / yield_factor
+        // We just leave it empty by default to mean "use standard formula", but to allow editing,
+        // we can pre-populate the standard formula value.
+        const defaultQty = (run.planned_quantity * ing.recipe_quantity) / ing.yield_factor;
+        usages[ing.ingredient_id] = defaultQty.toFixed(3);
+      }
+    }
+    return usages;
+  });
+
+  const handleIngredientChange = (id: number, val: string) => {
+    setIngredientUsages(prev => ({ ...prev, [id]: val }));
+  };
 
   const handleStart = () => {
     startTransition(async () => {
@@ -36,7 +61,28 @@ export function ProductionDetailClient({ run }: ProductionDetailClientProps) {
   const handleConfirm = () => {
     startTransition(async () => {
       const actual = actualQuantity ? parseFloat(actualQuantity) : undefined;
-      const res = await confirmProductionRun({ id: run.id, actualQuantity: actual });
+      
+      const actualIngredients = [];
+      if (recipeContext?.ingredients) {
+        for (const ing of recipeContext.ingredients) {
+          const val = ingredientUsages[ing.ingredient_id];
+          if (val) {
+            const num = parseFloat(val);
+            if (!isNaN(num)) {
+              actualIngredients.push({
+                ingredient_id: ing.ingredient_id,
+                actual_quantity: num,
+              });
+            }
+          }
+        }
+      }
+
+      const res = await confirmProductionRun({ 
+        id: run.id, 
+        actualQuantity: actual,
+        actualIngredients: actualIngredients.length > 0 ? actualIngredients : undefined
+      });
       
       if (res.success) {
         toast.success("Đã xác nhận lệnh sản xuất");
@@ -104,14 +150,56 @@ export function ProductionDetailClient({ run }: ProductionDetailClientProps) {
                 type="number"
                 min="0"
                 step="0.01"
+                max={maxProductionStr ?? undefined}
                 value={actualQuantity}
                 onChange={(e) => setActualQuantity(e.target.value)}
               />
-              <span className="text-sm text-muted-foreground">{unit}</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">{unit}</span>
             </div>
+            {maxProductionStr && (
+              <div className="text-sm text-muted-foreground">
+                Tối đa có thể sản xuất: <span className="font-medium text-foreground">{maxProductionStr} {unit}</span>
+              </div>
+            )}
           </div>
 
-          <div className="flex gap-2">
+          {recipeContext && recipeContext.ingredients.length > 0 && (
+            <div className="pt-2 border-t mt-4">
+              <Label className="mb-2 block">Điều chỉnh nguyên liệu sử dụng</Label>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-4 items-center text-sm font-medium text-muted-foreground px-2">
+                  <div className="flex-1">Nguyên liệu</div>
+                  <div className="w-24 text-right">Tồn tối đa</div>
+                  <div className="w-32">Sử dụng thực tế</div>
+                </div>
+                {recipeContext.ingredients.map((ing) => {
+                  const maxQty = Math.floor(ing.max_ingredient_qty * 1000) / 1000;
+                  return (
+                    <div key={ing.ingredient_id} className="flex gap-4 items-center px-2 py-1 rounded-md hover:bg-muted/50">
+                      <div className="flex-1 text-sm font-medium">
+                        {ing.ingredient_name} <span className="text-muted-foreground font-normal">({ing.unit_name})</span>
+                      </div>
+                      <div className="w-24 text-right text-sm">
+                        {maxQty}
+                      </div>
+                      <div className="w-32">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.001"
+                          max={maxQty}
+                          value={ingredientUsages[ing.ingredient_id] ?? ""}
+                          onChange={(e) => handleIngredientChange(ing.ingredient_id, e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-4">
             {run.status === "draft" && (
               <Button onClick={handleStart} disabled={isPending}>
                 Bắt đầu sản xuất

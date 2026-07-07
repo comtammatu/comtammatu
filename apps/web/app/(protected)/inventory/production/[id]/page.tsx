@@ -1,6 +1,6 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 import { notFound } from "next/navigation";
-import { fetchProductionRunById } from "../../production-run-actions";
+import { fetchProductionRunById, fetchProductionRecipeContext } from "../../production-run-actions";
 import { ProductionDetailClient } from "./production-detail-client";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
@@ -22,6 +22,8 @@ export default async function ProductionDetailPage({
   }
 
   const run = res.data;
+  const recipeRes = await fetchProductionRecipeContext(run.finished_good_id, run.branch_id);
+  const recipeContext = recipeRes.success && recipeRes.data ? recipeRes.data : null;
 
   return (
     <AppPage width="narrow" density="compact">
@@ -37,7 +39,7 @@ export default async function ProductionDetailPage({
             </Link>
         }
       />
-      <ProductionDetailClient run={run} />
+      <ProductionDetailClient run={run} recipeContext={recipeContext} />
     </AppPage>
   );
 }

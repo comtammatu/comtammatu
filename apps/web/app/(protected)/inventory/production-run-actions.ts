@@ -226,6 +226,10 @@ export const createProductionRun = withAction(
 const confirmProductionRunSchema = z.object({
   id: z.coerce.number().int().positive(),
   actualQuantity: z.coerce.number().positive().optional(),
+  actualIngredients: z.array(z.object({
+    ingredient_id: z.coerce.number().int().positive(),
+    actual_quantity: z.coerce.number().nonnegative(),
+  })).optional(),
 });
 
 export const confirmProductionRun = withAction(
@@ -240,6 +244,7 @@ export const confirmProductionRun = withAction(
     const { error, data } = await supabase.rpc("confirm_production_run", {
       p_run_id: parsed.id,
       p_actual_quantity: (parsed.actualQuantity ?? null) as unknown as number,
+      p_actual_ingredients: (parsed.actualIngredients ?? null) as unknown as any,
     });
 
     if (error) {
@@ -314,3 +319,52 @@ export const startProductionRun = withAction(
     return { success: true, data };
   }
 );
+
+export interface ProductionRecipeIngredient {
+  ingredient_id: number;
+  ingredient_name: string;
+  unit_name: string;
+  entry_unit_id: number | null;
+  recipe_quantity: number;
+  yield_factor: number;
+  purchase_to_measure_factor: number | null;
+  current_quantity_base: number;
+  required_base_per_fg: number;
+  max_ingredient_qty: number;
+}
+
+export async function fetchProductionRecipeContext(
+  finishedGoodId: number,
+  branchId: number
+): Promise<ActionResult<{ ingredients: ProductionRecipeIngredient[], maxProductionQuantity: number | null }>> {
+  const ctx = await getAuthContextWithAnyPermission(PRODUCTION_ROLES, PRODUCTION_ORDER_PERMISSIONS);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+  const access = await requireProductionAccess(supabase, claims);
+  if (!access.ok) return { success: false, error: access.error };
+
+  const { data, error } = await (supabase.rpc as any)("get_production_recipe_context", {
+    p_finished_good_id: finishedGoodId,
+    p_branch_id: branchId,
+  });
+
+  if (error) {
+    console.error("fetchProductionRecipeContext error:", error);
+    return { success: false, error: "Lỗi lấy thông tin công thức" };
+  }
+
+  const ingredients = (data as unknown as ProductionRecipeIngredient[]) || [];
+  
+  let maxProductionQuantity: number | null = null;
+  for (const ing of ingredients) {
+    if (ing.required_base_per_fg > 0) {
+      const possible = Math.floor((ing.current_quantity_base / ing.required_base_per_fg) * 1000) / 1000;
+      if (maxProductionQuantity === null || possible < maxProductionQuantity) {
+        maxProductionQuantity = possible;
+      }
+    }
+  }
+
+  return { success: true, data: { ingredients, maxProductionQuantity } };
+}

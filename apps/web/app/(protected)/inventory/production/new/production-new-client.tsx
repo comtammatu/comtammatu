@@ -18,10 +18,12 @@ import {
 import { AppSection } from "@/components/surface";
 import { createProductionRun } from "../../production-run-actions";
 import type { BranchOption, FinishedGoodOption } from "../../production-types";
+import type { ProductionRecipeRow } from "../../production-recipe-actions";
 
 interface ProductionNewClientProps {
   branches: BranchOption[];
   finishedGoods: FinishedGoodOption[];
+  recipes: ProductionRecipeRow[];
   initialBranchId?: number;
   basePath: string;
 }
@@ -29,6 +31,7 @@ interface ProductionNewClientProps {
 export function ProductionNewClient({
   branches,
   finishedGoods,
+  recipes,
   initialBranchId,
   basePath,
 }: ProductionNewClientProps) {
@@ -42,7 +45,9 @@ export function ProductionNewClient({
   const [notes, setNotes] = useState<string>("");
 
   const selectedFg = finishedGoods.find((fg) => fg.id === finishedGoodId);
-  const unitOptions = selectedFg ? [{ id: 0, name: selectedFg.unit }, ...(selectedFg.units || []).map((u: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => ({ id: u.unit_id, name: (Array.isArray(u.units) ? u.units[0]?.name : u.units?.name) || "" }))] : [];
+  const unitOptions = selectedFg ? [{ id: 0, name: selectedFg.unit }, ...(selectedFg.units || []).map((u) => ({ id: u.unit_id, name: u.unit_name || "" }))] : [];
+
+  const selectedRecipes = recipes.filter(r => r.finished_good_id === finishedGoodId);
 
   const handleSave = () => {
     if (!branchId || !finishedGoodId || !plannedQuantity) {
@@ -104,6 +109,28 @@ export function ProductionNewClient({
           placeholder="Chọn thành phẩm..."
         />
       </div>
+
+      {selectedFg && (
+        <div className="grid gap-2">
+          <Label>Định mức món bán</Label>
+          {selectedRecipes.length > 0 ? (
+            <div className="flex flex-col gap-px bg-border">
+              {selectedRecipes.map((recipe) => (
+                <div key={recipe.id} className="flex items-center justify-between p-3 text-sm">
+                  <span>{recipe.ingredient_name}</span>
+                  <span className="text-muted-foreground font-medium">
+                    {recipe.quantity} {recipe.unit}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              Thành phẩm này chưa có định mức.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-2">
         <Label>Số lượng dự kiến</Label>
