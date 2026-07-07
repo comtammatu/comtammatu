@@ -366,11 +366,12 @@ export function CountAssignmentsClient({
               swipe={swipe}
             />
           ))}
-          {isPending && (
-            <div className="fixed bottom-4 right-4 z-50 bg-background/80 backdrop-blur rounded-full p-2 border flex items-center justify-center">
+          {isPending ? (
+            <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
               <Spinner className="size-4" />
+              <span>Đang cập nhật...</span>
             </div>
-          )}
+          ) : null}
         </ItemGroup>
       )}
 
@@ -385,7 +386,7 @@ export function CountAssignmentsClient({
               {INVENTORY_VI.countAssignEditDescription(activeEmp?.name ?? "")}
             </DrawerDescription>
           </DrawerHeader>
-          <ScrollArea className="px-4" style={{ maxHeight: "60vh" }}>
+          <ScrollArea className="px-4 max-h-dvh-80">
             <div className="flex flex-col gap-1 pb-4">
               {ingredients.length === 0 ? (
                 <p className="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">

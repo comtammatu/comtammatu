@@ -39,6 +39,14 @@ apps/web/tmp/
 *.pem
 *.tsbuildinfo
 
+# Local scratch / one-shot debug scripts
+scratch/
+test_output.log
+apps/web/test-fetch.mjs
+
+# One-shot Python codemods (Node/TS repo)
+/rewrite_*.py
+
 # supabase
 supabase/.temp/
 supabase/.branches/

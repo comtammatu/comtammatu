@@ -140,7 +140,7 @@ export function MembersClient({
               {activeEmp?.code ? `Mã NV: ${activeEmp.code}` : "Thông tin chi tiết nhân sự"}
             </DrawerDescription>
           </DrawerHeader>
-          <ScrollArea className="px-4" style={{ maxHeight: "70vh" }}>
+          <ScrollArea className="px-4 max-h-dvh-80">
             <div className="flex flex-col gap-4 pb-4">
               {/* Thông tin liên hệ */}
               <div className="flex flex-col gap-2">
@@ -148,11 +148,29 @@ export function MembersClient({
                 <div className="flex flex-col gap-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Phone className="size-4" />
-                    <span>{activeEmp?.phone || "Chưa cập nhật"}</span>
+                    {activeEmp?.phone ? (
+                      <a
+                        href={`tel:${activeEmp.phone.replace(/\s+/g, "")}`}
+                        className="text-primary hover:underline"
+                      >
+                        {activeEmp.phone}
+                      </a>
+                    ) : (
+                      <span>Chưa cập nhật</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <Mail className="size-4" />
-                    <span>{activeEmp?.email || "Chưa cập nhật"}</span>
+                    {activeEmp?.email ? (
+                      <a
+                        href={`mailto:${activeEmp.email}`}
+                        className="text-primary hover:underline"
+                      >
+                        {activeEmp.email}
+                      </a>
+                    ) : (
+                      <span>Chưa cập nhật</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <CalendarDays className="size-4" />

@@ -27,6 +27,11 @@ const createProductionRunSchema = z.object({
   plannedQuantity: z.coerce.number().positive(),
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   notes: z.string().optional(),
+  targetBranchId: z.coerce.number().int().positive().optional(),
+  ingredientsOverride: z.array(z.object({
+    ingredient_id: z.coerce.number().int().positive(),
+    actual_quantity: z.coerce.number().nonnegative(),
+  })).optional(),
 });
 
 const productionShortageListSchema = z.array(
@@ -61,6 +66,8 @@ export interface ProductionRunRow {
   id: number;
   branch_id: number;
   branch_name: string;
+  target_branch_id: number;
+  target_branch_name: string;
   production_number: string;
   finished_good_id: number;
   finished_good_name: string;
@@ -73,6 +80,7 @@ export interface ProductionRunRow {
   completed_at: string | null;
   created_at: string;
   started_at: string | null;
+  ingredients_override: any;
 }
 
 export async function fetchProductionRuns(): Promise<ActionResult<ProductionRunRow[]>> {
@@ -98,7 +106,10 @@ export async function fetchProductionRuns(): Promise<ActionResult<ProductionRunR
       completed_at,
       created_at,
       started_at,
-      branches!inner ( id, name, branch_kind ),
+      target_branch_id,
+      ingredients_override,
+      branches!production_runs_branch_id_fkey ( id, name, branch_kind ),
+      target_branch:branches!production_runs_target_branch_id_fkey ( id, name, branch_kind ),
       ingredients!inner (
         id,
         name,
@@ -128,6 +139,8 @@ export async function fetchProductionRuns(): Promise<ActionResult<ProductionRunR
     id: row.id,
     branch_id: row.branch_id,
     branch_name: row.branches?.name ?? "Unknown",
+    target_branch_id: row.target_branch_id ?? row.branch_id,
+    target_branch_name: (row as any).target_branch?.name ?? row.branches?.name ?? "Unknown",
     production_number: row.production_number,
     finished_good_id: row.finished_good_id,
     finished_good_name: row.ingredients?.name ?? "Unknown",
@@ -142,6 +155,7 @@ export async function fetchProductionRuns(): Promise<ActionResult<ProductionRunR
     completed_at: row.completed_at,
     created_at: row.created_at,
     started_at: row.started_at,
+    ingredients_override: row.ingredients_override,
   }));
 
   return { success: true, data: rows };
@@ -170,7 +184,10 @@ export async function fetchProductionRunById(id: number): Promise<ActionResult<P
       completed_at,
       created_at,
       started_at,
-      branches!inner ( id, name, branch_kind ),
+      target_branch_id,
+      ingredients_override,
+      branches!production_runs_branch_id_fkey ( id, name, branch_kind ),
+      target_branch:branches!production_runs_target_branch_id_fkey ( id, name, branch_kind ),
       ingredients!inner (
         id,
         name,
@@ -193,6 +210,8 @@ export async function fetchProductionRunById(id: number): Promise<ActionResult<P
     id: data.id,
     branch_id: data.branch_id,
     branch_name: data.branches?.name ?? "Unknown",
+    target_branch_id: data.target_branch_id ?? data.branch_id,
+    target_branch_name: (data as any).target_branch?.name ?? data.branches?.name ?? "Unknown",
     production_number: data.production_number,
     finished_good_id: data.finished_good_id,
     finished_good_name: data.ingredients?.name ?? "Unknown",
@@ -207,6 +226,7 @@ export async function fetchProductionRunById(id: number): Promise<ActionResult<P
     completed_at: data.completed_at,
     created_at: data.created_at,
     started_at: data.started_at,
+    ingredients_override: data.ingredients_override,
   };
 
   return { success: true, data: row };
@@ -229,6 +249,8 @@ export const createProductionRun = withAction(
       p_planned_quantity: parsed.plannedQuantity,
       p_entry_unit_id: (parsed.entryUnitId ?? null) as unknown as number,
       p_notes: (parsed.notes ?? null) as unknown as string,
+      p_target_branch_id: (parsed.targetBranchId ?? parsed.branchId) as unknown as number,
+      p_ingredients_override: (parsed.ingredientsOverride ?? null) as unknown as any,
     });
 
     if (error) {

@@ -95,7 +95,7 @@ export default async function BranchCommandPage({
       title={copy.commandTitle}
       description={copy.commandDescription(branch.name)}
     >
-      <KpiRow className="xl:grid-cols-4">
+      <KpiRow className="md:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           label={copy.dayRevenueLabel}
           value={formatVND(day.todayRevenue)}

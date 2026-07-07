@@ -181,7 +181,7 @@ export function BlindCountingGrid({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={INVENTORY_VI.searchIngredientPlaceholder}
-            className="pl-8"
+            className="h-10 pl-8"
             data-slot="blind-counting-grid-search"
           />
         </div>

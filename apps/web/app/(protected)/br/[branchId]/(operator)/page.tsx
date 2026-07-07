@@ -12,6 +12,7 @@ import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
+  EmployeeActionBar,
   EmployeeActionSection,
   EmployeePanel,
   EmployeePage,
@@ -208,30 +209,30 @@ export default async function OperatorHomePage({
 
   const isCentralKitchen = branchKind === "central_kitchen";
   const secondaryLinksSection = isCentral || showMoreLink ? (
-    <div className="flex flex-wrap items-center justify-center gap-2">
+    <EmployeeActionBar align="start" className="sm:justify-center">
       {isCentral ? (
-        <Button asChild variant="outline" size="touch">
+        <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
           <Link href={`${basePath}/shift/clock`}>
             {branchCopy.centralClockLink}
           </Link>
         </Button>
       ) : null}
       {isCentralKitchen ? (
-        <Button asChild variant="outline" size="touch">
+        <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
           <Link href={`${basePath}/stock/production/recipes`}>
             Công thức
           </Link>
         </Button>
       ) : null}
-      <Button asChild variant="outline" size="touch">
+      <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
         <Link href={`${basePath}/more`}>{branchCopy.centralMoreTitle}</Link>
       </Button>
-    </div>
+    </EmployeeActionBar>
   ) : null;
 
   return (
     <EmployeePage title={APP_COPY_VI.operatorHome} hideHeaderOnMobile>
-      <div className="flex flex-col lg:flex-row lg:items-start gap-3">
+      <div className="flex flex-col md:flex-row md:items-start gap-3">
         {/* Main Content Column */}
         <div className="flex-1 flex flex-col gap-3 min-w-0">
           {showTodayCard ? (
@@ -277,7 +278,7 @@ export default async function OperatorHomePage({
                   tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
               }))}
               columns={2}
-              mobileColumns={group.id === "sales_kitchen" ? 1 : 2}
+              mobileColumns={2}
               wideColumns
             />
           ))}
@@ -287,7 +288,7 @@ export default async function OperatorHomePage({
 
         {/* Sidebar Column */}
         {(!isFloorRole || showOverview) && (
-          <div className="w-full lg:w-80 xl:w-96 shrink-0 flex flex-col gap-3 lg:sticky lg:top-3">
+          <div className="w-full md:w-72 lg:w-80 xl:w-96 shrink-0 flex flex-col gap-3 md:sticky md:top-3">
             <Suspense fallback={<HubQueueSkeleton />}>
               <HubQueueSection branchId={context.branchId} branchKind={branchKind} />
             </Suspense>

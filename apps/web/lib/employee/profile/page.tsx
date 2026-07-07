@@ -136,13 +136,13 @@ export async function ProfilePageContent({
       badge={{ children: positionLabel, variant: "outline" }}
       hideHeaderOnMobile
     >
-      <div className="grid gap-3 lg:grid-cols-3 lg:items-start">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 lg:items-start">
         <EmployeePanel
           icon={IconUser}
           title={displayName}
           description={session.user.email ?? copy.noEmail}
           tone="info"
-          className="lg:sticky lg:top-3"
+          className="md:col-span-2 lg:col-span-1 lg:sticky lg:top-3"
         >
           <EmployeeStatusStrip
             items={[
@@ -174,7 +174,7 @@ export async function ProfilePageContent({
           title={copy.personalToolsTitle}
           links={resolvedPersonalLinks}
           columns={2}
-          className="lg:col-span-2"
+          className="md:col-span-2 lg:col-span-2"
         />
 
         <EmployeeActionBar className="lg:col-span-2">

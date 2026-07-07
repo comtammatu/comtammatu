@@ -1008,6 +1008,51 @@ export const getAttendancePhotoUrl = withAction(
   },
 );
 
+const forceCloseStaleAttendanceSchema = z.object({
+  attendanceId: z.coerce.number().int().positive(),
+  note: z.string().trim().optional(),
+});
+
+export const forceCloseStaleAttendance = withAction(
+  { roles: HR_EMPLOYEE_VIEW_ROLES, schema: forceCloseStaleAttendanceSchema },
+  async (data, { supabase, claims, user }) => {
+    // Rely on RPC for branch/tenant/permission validation
+    const { data: checkOutTime, error } = await supabase.rpc(
+      "admin_force_close_attendance" as any,
+      {
+        p_tenant_id: claims.tenant_id,
+        p_branch_id: claims.branch_id ?? 0, // RPC will validate against the record's branch_id
+        p_attendance_id: data.attendanceId,
+        p_approved_by: user.id,
+        p_note: data.note,
+      },
+    );
+
+    if (error || !checkOutTime) {
+      console.error(
+        "[hr/actions:forceCloseStaleAttendance] Force close error:",
+        error,
+      );
+      if (error?.message?.includes("forbidden")) {
+        return { success: false, error: "Không có quyền đóng ca tại chi nhánh này" };
+      }
+      if (error?.message?.includes("stale_attendance_request_not_found")) {
+        return { success: false, error: "Ca không hợp lệ hoặc đã được đóng" };
+      }
+      return { success: false, error: "Không thể đóng ca. Vui lòng thử lại sau" };
+    }
+
+    logAudit(supabase, {
+      action: "force_close_stale",
+      entityType: "attendance_record",
+      entityId: data.attendanceId,
+    });
+
+    revalidatePath("/hr");
+    return { success: true, data: checkOutTime };
+  },
+);
+
 /* ─── Attendance Summary ─── */
 
 const fetchAttendanceSummarySchema = z.object({

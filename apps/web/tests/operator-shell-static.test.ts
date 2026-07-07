@@ -126,10 +126,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
     home,
     /key: `\$\{group\.id\}-\$\{tile\.moduleKey\}-\$\{tile\.href\}`/,
   );
-  assert.match(
-    home,
-    /mobileColumns=\{group\.id === "sales_kitchen" \? 1 : 2\}/,
-  );
+  assert.match(home, /mobileColumns=\{2\}/);
   assert.doesNotMatch(home, /operatorRuntimeActions/);
   assert.doesNotMatch(home, /operatorOpsActions/);
   assert.doesNotMatch(home, /EmployeeStatusStrip/);
@@ -346,12 +343,12 @@ test("operator today shift and profile screens use responsive branch layout", ()
     "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
   );
 
-  assert.match(layout, /md:max-w-3xl lg:max-w-5xl xl:max-w-6xl/);
+  assert.match(layout, /md:max-w-5xl lg:max-w-5xl xl:max-w-6xl/);
   assert.doesNotMatch(layout, /\s+mobile\s+contentClassName=/);
   assert.match(bottomNav, /position="static"/);
   assert.match(bottomNav, /hideOnDesktop=\{false\}/);
-  assert.match(home, /flex-col lg:flex-row/);
-  assert.match(home, /lg:w-80 xl:w-96/);
+  assert.match(home, /flex-col md:flex-row/);
+  assert.match(home, /md:w-72 lg:w-80 xl:w-96/);
   assert.match(employeeHome, /workflowLayout === "stepper"/);
   assert.match(employeeHome, /lg:grid-cols-5/);
   assert.match(operatorProfile, /link\.key === "payslip"/);

@@ -275,9 +275,10 @@ export function TeamBoardClient({
         columns={columns}
         data={displayRows}
         getRowKey={(row) => row.key}
+        mobileBreakpoint={1024}
         onRowClick={(row) => {
           const href = rowHref(row);
-          if (href) window.location.assign(href);
+          if (href) router.push(href);
         }}
         getRowAriaLabel={(row) => `${row.fullName} · ${row.positionLabel ?? ""}`}
         mobileCardRender={(row) => (

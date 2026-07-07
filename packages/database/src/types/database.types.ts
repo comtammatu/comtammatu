@@ -5400,11 +5400,13 @@ export type Database = {
           entry_unit_id: number | null
           finished_good_id: number
           id: number
+          ingredients_override: Json | null
           notes: string | null
           planned_quantity: number
           production_number: string
           started_at: string | null
           status: string
+          target_branch_id: number
           tenant_id: number
           updated_at: string
         }
@@ -5417,11 +5419,13 @@ export type Database = {
           entry_unit_id?: number | null
           finished_good_id: number
           id?: never
+          ingredients_override?: Json | null
           notes?: string | null
           planned_quantity: number
           production_number: string
           started_at?: string | null
           status?: string
+          target_branch_id: number
           tenant_id: number
           updated_at?: string
         }
@@ -5434,11 +5438,13 @@ export type Database = {
           entry_unit_id?: number | null
           finished_good_id?: number
           id?: never
+          ingredients_override?: Json | null
           notes?: string | null
           planned_quantity?: number
           production_number?: string
           started_at?: string | null
           status?: string
+          target_branch_id?: number
           tenant_id?: number
           updated_at?: string
         }
@@ -5477,6 +5483,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ingredients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_runs_target_branch_id_fkey"
+            columns: ["target_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_runs_target_branch_id_fkey"
+            columns: ["target_branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
           },
           {
             foreignKeyName: "production_runs_tenant_id_fkey"
@@ -9228,10 +9248,19 @@ export type Database = {
         Returns: Json
       }
       confirm_production_order: { Args: { p_order_id: number }; Returns: Json }
-      confirm_production_run: {
-        Args: { p_actual_quantity?: number; p_run_id: number }
-        Returns: Json
-      }
+      confirm_production_run:
+        | {
+            Args: { p_actual_quantity?: number; p_run_id: number }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_actual_ingredients?: Json
+              p_actual_quantity?: number
+              p_run_id: number
+            }
+            Returns: Json
+          }
       confirm_sepay_payment: {
         Args: {
           p_account_number: string
@@ -9330,16 +9359,29 @@ export type Database = {
         }
         Returns: Json
       }
-      create_production_run: {
-        Args: {
-          p_branch_id: number
-          p_entry_unit_id: number
-          p_finished_good_id: number
-          p_notes?: string
-          p_planned_quantity: number
-        }
-        Returns: Json
-      }
+      create_production_run:
+        | {
+            Args: {
+              p_branch_id: number
+              p_entry_unit_id: number
+              p_finished_good_id: number
+              p_notes?: string
+              p_planned_quantity: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_branch_id: number
+              p_entry_unit_id: number
+              p_finished_good_id: number
+              p_ingredients_override?: Json
+              p_notes?: string
+              p_planned_quantity: number
+              p_target_branch_id?: number
+            }
+            Returns: Json
+          }
       create_purchase_order_with_lines: {
         Args: {
           p_branch_id: number
@@ -9734,6 +9776,10 @@ export type Database = {
         }[]
       }
       get_pos_session_report: { Args: { p_session_id: number }; Returns: Json }
+      get_production_recipe_context: {
+        Args: { p_branch_id: number; p_finished_good_id: number }
+        Returns: Json
+      }
       get_revenue_by_cashier: {
         Args: {
           p_branch_id?: number

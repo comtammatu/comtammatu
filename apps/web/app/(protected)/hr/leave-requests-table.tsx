@@ -372,7 +372,7 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
           value={selectedBranchId?.toString() ?? ""}
           onValueChange={(value) => setSelectedBranchId(Number(value))}
         >
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder={BRANCH_VI.select} />
           </SelectTrigger>
           <SelectContent>
@@ -413,6 +413,7 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
               columns={pendingColumns}
               data={pendingRows}
               getRowKey={(request) => request.id}
+              mobileBreakpoint={1024}
               rowClassName={() => (isPending ? "opacity-60" : undefined)}
               mobileCardRender={(request) =>
                 renderLeaveMobileCard(request, renderPendingActions(request))
@@ -433,6 +434,7 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
               columns={historyColumns}
               data={historyRows}
               getRowKey={(request) => request.id}
+              mobileBreakpoint={1024}
               rowClassName={() => (isPending ? "opacity-60" : undefined)}
               mobileCardRender={(request) => renderLeaveMobileCard(request)}
             />

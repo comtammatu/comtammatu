@@ -40,7 +40,6 @@ export function EmployeeTable({
   positionOptions,
   canManage,
 }: EmployeeTableProps) {
-  const [rows] = useState(employees);
   const [editEmployee, setEditEmployee] = useState<EmployeeRow | null>(null);
 
   function renderStatus(employee: EmployeeRow) {
@@ -157,7 +156,7 @@ export function EmployeeTable({
     <>
       <DataTable
         columns={columns}
-        data={rows}
+        data={employees}
         getRowKey={(employee) => employee.id}
         emptyTitle="Chưa có hồ sơ nhân viên nào"
         emptyIcon={<IconUsers />}

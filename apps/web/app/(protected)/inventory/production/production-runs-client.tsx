@@ -49,7 +49,9 @@ export function ProductionRunsClient({
       {
         key: "branch",
         header: "Chi nhánh",
-        render: (row) => row.branch_name,
+        render: (row) => row.branch_id === row.target_branch_id 
+          ? row.branch_name 
+          : <span className="flex items-center gap-1">{row.branch_name} <span className="text-muted-foreground text-xs mx-1">➔</span> {row.target_branch_name}</span>,
       },
       {
         key: "finished_good",
