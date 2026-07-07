@@ -301,7 +301,7 @@ const OPERATOR_TILE_GROUP_ORDER: OperatorTileGroupId[] = [
 ];
 
 export const OPERATOR_TILES: OperatorTileConfig[] = [
-  { moduleKey: "employee", icon: "ListChecks", group: "my_shift", hrefTemplate: "/employee" },
+  { moduleKey: "operator_home", icon: "ListChecks", group: "my_shift", hrefTemplate: "/br/{branchId}/shift" },
   { moduleKey: "pos", icon: "Cash", group: "floor", hrefTemplate: "/br/{branchId}/pos" },
   { moduleKey: "orders", icon: "Receipt", group: "floor", hrefTemplate: "/orders" },
   { moduleKey: "kds", icon: "ChefHat", group: "kitchen", hrefTemplate: "/br/{branchId}/kds" },
@@ -310,7 +310,7 @@ export const OPERATOR_TILES: OperatorTileConfig[] = [
   { moduleKey: "branch_menu_limits", icon: "ToggleRight", group: "branch_control", hrefTemplate: "/br/{branchId}/settings/menu-limits" },
   { moduleKey: "branch_settings", icon: "Settings", group: "branch_control", hrefTemplate: "/br/{branchId}/settings" },
   { moduleKey: "branch_dashboard", icon: "LayoutDashboard", group: "branch_control", hrefTemplate: "/br/{branchId}/dashboard" },
-  { moduleKey: "employee_checkout_approvals", icon: "CircleCheck", group: "branch_control", hrefTemplate: "/employee/checkout-approvals" },
+  { moduleKey: "employee_checkout_approvals", icon: "CircleCheck", group: "branch_control", hrefTemplate: "/br/{branchId}/shift/checkout-approvals" },
 ];
 
 export function resolveOperatorTiles(
@@ -386,9 +386,9 @@ describe("resolveBranchHubDestination", () => {
     expect(resolveBranchHubDestination(c("owner", null), { standaloneStation: null, isDesktop: false }))
       .toBe("/br");
   });
-  it("office on phone falls back to role default", () => {
+  it("office on phone lands on finance", () => {
     expect(resolveBranchHubDestination(c("office", null), { standaloneStation: null, isDesktop: false }))
-      .toBe("/employee");
+      .toBe("/finance");
   });
 });
 ```

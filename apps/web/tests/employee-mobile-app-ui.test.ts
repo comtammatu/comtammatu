@@ -11,13 +11,13 @@ test("retired employee app no longer exists as an App Router surface", () => {
   assert.equal(exists("apps/web/app/(protected)/employee"), false);
 
   for (const retiredShellFile of [
-    "apps/web/lib/employee/layout.tsx",
-    "apps/web/lib/employee/loading.tsx",
-    "apps/web/lib/employee/error.tsx",
-    "apps/web/lib/employee/attendance/page.tsx",
-    "apps/web/lib/employee/components/bottom-nav.tsx",
-    "apps/web/lib/employee/components/mobile-header.tsx",
-    "apps/web/lib/employee/components/employee-pwa-toolbar.tsx",
+    "apps/web/lib/staff-runtime/layout.tsx",
+    "apps/web/lib/staff-runtime/loading.tsx",
+    "apps/web/lib/staff-runtime/error.tsx",
+    "apps/web/lib/staff-runtime/attendance/page.tsx",
+    "apps/web/lib/staff-runtime/components/bottom-nav.tsx",
+    "apps/web/lib/staff-runtime/components/mobile-header.tsx",
+    "apps/web/lib/staff-runtime/components/staff-runtime-pwa-toolbar.tsx",
   ]) {
     assert.equal(exists(retiredShellFile), false, retiredShellFile);
   }
@@ -67,20 +67,35 @@ test("Operator Hub owns the mobile shell and keeps bottom nav outside scroll con
   assert.doesNotMatch(bottomNav, /\/employee/);
 });
 
-test("old employee URLs are redirect-only compatibility, before module ACL", () => {
+test("old employee URLs no longer have proxy compatibility redirects", () => {
   const proxy = read("apps/web/proxy.ts");
-  const redirectMap = read(
-    "apps/web/lib/employee/_lib/branch-runtime-redirect.ts",
-  );
 
-  assert.match(proxy, /pathname\.startsWith\("\/employee"\)/);
-  assert.ok(
-    proxy.indexOf('if (pathname.startsWith("/employee"))') <
-      proxy.indexOf("resolveModuleFromPath(pathname)"),
-    "retired /employee URLs must redirect before module ACL",
+  assert.equal(
+    exists("apps/web/lib/staff-runtime/_lib/branch-runtime-redirect.ts"),
+    false,
   );
-  assert.match(redirectMap, /"\/employee": "home"/);
-  assert.match(redirectMap, /"\/employee\/permissions": "profile"/);
+  assert.doesNotMatch(proxy, /pathname\.startsWith\("\/employee"\)/);
+  assert.doesNotMatch(proxy, /resolveLegacyEmployeeBranchRuntimePath/);
+});
+
+test("standalone employee route stays out of active nav and route contracts", () => {
+  const navConfig = read("packages/shared/src/auth/nav-config.ts");
+  const routeMap = read("packages/shared/src/auth/route-map.ts");
+  const routeResolution = read("packages/shared/src/auth/route-resolution.ts");
+  const scope = read("packages/shared/src/auth/scope.ts");
+
+  for (const source of [navConfig, routeMap, routeResolution]) {
+    assert.doesNotMatch(source, /moduleKey:\s*"employee"/);
+    assert.doesNotMatch(source, /MODULE_ACL\.employee(?!_)/);
+    assert.doesNotMatch(source, /hrefTemplate:\s*"\/employee/);
+    assert.doesNotMatch(source, /entryPath:\s*"\/employee/);
+  }
+  assert.match(scope, /targetUrl\.pathname\.startsWith\("\/employee"\)/);
+  assert.ok(
+    scope.indexOf('targetUrl.pathname.startsWith("/employee")') <
+      scope.indexOf("resolveModuleFromPath(targetUrl.pathname)"),
+    "old employee returnTo paths must fall back before route resolution",
+  );
 });
 
 test("Branch wrappers pass profile fallbacks into shared shift content", () => {
