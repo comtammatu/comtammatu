@@ -43,7 +43,7 @@ function parseGrnLookup(input: number | string): GrnLookup | null {
       return { kind: "id", value: numericId };
     }
   }
-  if (/^GRN-[A-Za-z0-9_-]+$/.test(value)) {
+  if (/^GRN-[A-Za-z0-9_-]{1,60}$/.test(value)) {
     return { kind: "code", value };
   }
   return null;

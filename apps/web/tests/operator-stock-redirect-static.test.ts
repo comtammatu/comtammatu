@@ -481,7 +481,8 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   // D067 §1: GRN detail forks presentation over the SHARED loader. Draft
   // review stays native, confirmed GRN uses the shared detail client in
   // embedded mode so branch stock never nests the office AppPage frame.
-  assert.match(grnDetailRoute, /loadGrnDetail\(grnId, branchId\)/);
+  assert.match(grnDetailRoute, /isGrnLookupParam\(rawId\)/);
+  assert.match(grnDetailRoute, /loadGrnDetail\(rawId, branchId\)/);
   assert.match(grnDetailRoute, /GrnReviewOperatorClient/);
   assert.match(grnDetailRoute, /GRNDetailClient/);
   assert.match(grnDetailRoute, /embedded/);

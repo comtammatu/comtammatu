@@ -241,7 +241,7 @@ export function isGrnLookupParam(value: string): boolean {
     const numericId = Number(value);
     return Number.isSafeInteger(numericId) && numericId > 0;
   }
-  return /^GRN-[A-Za-z0-9_-]{1,64}$/.test(value);
+  return /^GRN-[A-Za-z0-9_-]{1,60}$/.test(value);
 }
 
 function GrnDetailLoadError({ error }: { error: string }) {

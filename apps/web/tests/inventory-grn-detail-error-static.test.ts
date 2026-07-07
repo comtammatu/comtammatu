@@ -27,5 +27,7 @@ test("GRN detail route accepts numeric IDs and GRN document numbers", () => {
     /fetchEntityAuditLogs\("goods_receipt_note", d\.grn\.id, 50\)/,
   );
   assert.match(pageSource, /function isGrnLookupParam\(value: string\)/);
+  assert.match(actionsSource, /\^GRN-\[A-Za-z0-9_-\]\{1,60\}\$/);
+  assert.match(pageSource, /\^GRN-\[A-Za-z0-9_-\]\{1,60\}\$/);
   assert.match(pageSource, /if \(!isGrnLookupParam\(id\)\) notFound\(\)/);
 });
