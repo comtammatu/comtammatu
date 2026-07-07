@@ -72,11 +72,13 @@ export function RecipesClient({
   menuItems,
   ingredients,
   stockCapacityByMenuItemId = {},
+  loadError,
 }: {
   recipes: RecipeRow[];
   menuItems: MenuItemOption[];
   ingredients: IngredientOption[];
   stockCapacityByMenuItemId?: Record<string, number>;
+  loadError?: string | null;
 }) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -202,6 +204,15 @@ export function RecipesClient({
       ),
     },
   ];
+
+  if (loadError) {
+    return (
+      <AppPage width="xwide" density="compact">
+        <AppPageHeader eyebrow={messages.inventory.shell.moduleName} title={INVENTORY_VI.recipesPageTitle} />
+        <AppEmptyState mode="error" title="Không thể tải định mức món bán" description={loadError} />
+      </AppPage>
+    );
+  }
 
   return (
     <AppPage width="xwide" density="compact">

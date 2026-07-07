@@ -58,30 +58,24 @@ export default async function RecipesPage({
       branchId != null
         ? fetchBranchMenuStockCapacity(branchId)
         : Promise.resolve({ success: true as const, data: {} }),
-    ]);
+      ]);
 
   const dbRows = recipesRes.success ? (recipesRes.data as MenuItemRow[]) : [];
-  
-  // DEBUG LOGGING
-  try {
-    const fs = require('fs');
-    fs.writeFileSync('debug-recipes.json', JSON.stringify({
-      recipesRes_success: recipesRes.success,
-      recipesRes_error: recipesRes.success ? null : recipesRes.error,
-      recipesRes_data_length: recipesRes.success ? (recipesRes.data as any[])?.length : 0,
-      recipesRes_data_sample: recipesRes.success ? (recipesRes.data as any[])?.slice(0, 3) : null,
-      menuItemsRes_success: menuItemsRes.success,
-      menuItemsRes_data_length: menuItemsRes.success ? (menuItemsRes.data as any[])?.length : 0,
-      claims
-    }, null, 2));
-  } catch (e) {
-    console.error("Failed to write debug log", e);
-  }
 
   const wacMap = (wacRes.success ? wacRes.data : {}) as Record<string, number>;
   const stockCapacityByMenuItemId = (
     stockCapacityRes.success ? stockCapacityRes.data : {}
   ) as Record<string, number>;
+  const loadError = [
+    !recipesRes.success ? recipesRes.error : null,
+    !menuItemsRes.success ? menuItemsRes.error : null,
+    !ingredientsRes.success ? ingredientsRes.error : null,
+    !wacRes.success ? wacRes.error : null,
+    !stockCapacityRes.success ? stockCapacityRes.error : null,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(" · ");
+
   const ingredientRows = ingredientsRes.success
     ? (ingredientsRes.data as Array<{
         id: number;
@@ -159,6 +153,7 @@ export default async function RecipesPage({
       recipes={recipes}
       menuItems={menuItems}
       ingredients={ingredients}
+      loadError={loadError || null}
       stockCapacityByMenuItemId={stockCapacityByMenuItemId}
     />
   );

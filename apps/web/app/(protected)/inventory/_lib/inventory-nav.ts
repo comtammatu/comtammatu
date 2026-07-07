@@ -38,9 +38,6 @@ export function resolveInventoryNav({
   showCountAssignments: boolean;
   showCountSlips: boolean;
 }): ShellNavGroup[] {
-  const isBranchManager = userRole === "branch_manager";
-  const showBackOffice =
-    !isBranchManager && (showSettings || showProcurement || showCatalogManagement);
   const countHref = showCountAssignments
     ? "/inventory/count-assignments"
     : showCountSlips
@@ -142,50 +139,46 @@ export function resolveInventoryNav({
     ],
   });
 
-  if (showBackOffice) {
-    const settingsItems: ShellNavGroup["items"] = showSettings
-      ? [
-          {
-            href: "/inventory/settings",
-            label: tNav("settings", "navigation"),
-            icon: IconSettings,
-            matchPrefixes: ["/inventory/settings/"],
-          },
-        ]
-      : [];
+  const isBranchManager = userRole === "branch_manager";
+  const catalogItems: ShellNavGroup["items"] = [];
 
+  if (!isBranchManager) {
+    if (showSettings) {
+      catalogItems.push({
+        href: "/inventory/settings",
+        label: tNav("settings", "navigation"),
+        icon: IconSettings,
+        matchPrefixes: ["/inventory/settings/"],
+      });
+    }
+    if (showProcurement) {
+      catalogItems.push({
+        href: "/inventory/suppliers",
+        label: tNav("suppliers", "navigation"),
+        icon: IconUsers,
+      });
+    }
+    if (showCatalogManagement) {
+      catalogItems.push({
+        href: "/inventory/ingredients",
+        label: tNav("ingredients", "navigation"),
+        icon: IconFileText,
+      });
+    }
+  }
+
+  if (showProduction || showProcurement || showCatalogManagement) {
+    catalogItems.push({
+      href: "/inventory/recipes",
+      label: tNav("recipes", "navigation"),
+      icon: IconToolsKitchen,
+    });
+  }
+
+  if (catalogItems.length > 0) {
     groups.push({
       title: "4 · Danh mục & thiết lập",
-      items: [
-        ...settingsItems,
-        ...(showProcurement
-          ? [
-              {
-                href: "/inventory/suppliers",
-                label: tNav("suppliers", "navigation"),
-                icon: IconUsers,
-              },
-            ]
-          : []),
-        ...(showCatalogManagement
-          ? [
-              {
-                href: "/inventory/ingredients",
-                label: tNav("ingredients", "navigation"),
-                icon: IconFileText,
-              },
-            ]
-          : []),
-        ...(showProduction || showProcurement || showCatalogManagement
-          ? [
-              {
-                href: "/inventory/recipes",
-                label: tNav("recipes", "navigation"),
-                icon: IconToolsKitchen,
-              },
-            ]
-          : []),
-      ],
+      items: catalogItems,
     });
   }
 

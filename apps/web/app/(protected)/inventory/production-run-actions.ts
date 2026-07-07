@@ -99,7 +99,14 @@ export async function fetchProductionRuns(): Promise<ActionResult<ProductionRunR
       created_at,
       started_at,
       branches!inner ( id, name, branch_kind ),
-      ingredients!inner ( id, name ),
+      ingredients!inner (
+        id,
+        name,
+        ingredient_units!ingredient_units_ingredient_tenant_fkey (
+          is_base,
+          units!ingredient_units_unit_tenant_fkey ( name )
+        )
+      ),
       units ( id, name )
     `)
     .eq("tenant_id", claims.tenant_id)
@@ -127,7 +134,9 @@ export async function fetchProductionRuns(): Promise<ActionResult<ProductionRunR
     planned_quantity: Number(row.planned_quantity),
     actual_quantity: row.actual_quantity != null ? Number(row.actual_quantity) : null,
     entry_unit_id: row.entry_unit_id,
-    entry_unit_name: row.units?.name ?? null,
+    entry_unit_name: row.units?.name ??
+      (row.ingredients as any)?.ingredient_units?.find((u: any) => u.is_base)?.units?.name ??
+      null,
     status: row.status,
     notes: row.notes,
     completed_at: row.completed_at,
@@ -162,7 +171,14 @@ export async function fetchProductionRunById(id: number): Promise<ActionResult<P
       created_at,
       started_at,
       branches!inner ( id, name, branch_kind ),
-      ingredients!inner ( id, name ),
+      ingredients!inner (
+        id,
+        name,
+        ingredient_units!ingredient_units_ingredient_tenant_fkey (
+          is_base,
+          units!ingredient_units_unit_tenant_fkey ( name )
+        )
+      ),
       units ( id, name )
     `)
     .eq("tenant_id", claims.tenant_id)
@@ -183,7 +199,9 @@ export async function fetchProductionRunById(id: number): Promise<ActionResult<P
     planned_quantity: Number(data.planned_quantity),
     actual_quantity: data.actual_quantity != null ? Number(data.actual_quantity) : null,
     entry_unit_id: data.entry_unit_id,
-    entry_unit_name: (data as unknown as { units?: { name?: string } }).units?.name ?? null,
+    entry_unit_name: (data as unknown as { units?: { name?: string } }).units?.name ??
+      (data as any).ingredients?.ingredient_units?.find((u: any) => u.is_base)?.units?.name ??
+      null,
     status: data.status,
     notes: data.notes,
     completed_at: data.completed_at,

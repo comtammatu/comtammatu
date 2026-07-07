@@ -43,7 +43,15 @@ export async function fetchRecipes(): Promise<ActionResult> {
       menu_categories ( name ),
       recipes (
         ingredient_id, quantity, unit, entry_unit_id, note, yield_factor,
-        ingredients ( id, name, ingredient_units(is_base, units(code)), unit_cost )
+        ingredients (
+          id,
+          name,
+          ingredient_units!ingredient_units_ingredient_tenant_fkey (
+            is_base,
+            units!ingredient_units_unit_tenant_fkey ( code )
+          ),
+          unit_cost
+        )
       )
     `,
     )

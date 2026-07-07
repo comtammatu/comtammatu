@@ -231,10 +231,13 @@ export async function fetchIngredients(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .sort((a: any, b: any) => a.sort_order - b.sort_order);
 
+    const baseUnit = units.find((u) => u.is_base);
+
     return {
       ...rest,
       category_name: ingredient_categories?.name ?? null,
       units,
+      unit: baseUnit?.unit_name ?? "",
     };
   });
 

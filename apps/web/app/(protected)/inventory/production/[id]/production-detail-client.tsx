@@ -9,7 +9,11 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { AppSection } from "@/components/surface";
 import { startProductionRun, confirmProductionRun, cancelProductionRun } from "../../production-run-actions";
-import type { ProductionRunRow, ProductionRecipeIngredient } from "../../production-run-actions";
+import type {
+  ProductionRunRow,
+  ProductionRecipeIngredient,
+} from "../../production-run-actions";
+import type { ProductionShortageRow } from "../../production-types";
 import { formatVNDate } from "@comtammatu/shared/time";
 
 interface ProductionDetailClientProps {
@@ -25,6 +29,7 @@ export function ProductionDetailClient({ run, recipeContext }: ProductionDetailC
   const [isPending, startTransition] = useTransition();
   const [actualQuantity, setActualQuantity] = useState<string>(run.actual_quantity?.toString() || "");
   const maxProductionStr = recipeContext?.maxProductionQuantity != null ? recipeContext.maxProductionQuantity.toString() : null;
+  const [shortages, setShortages] = useState<ProductionShortageRow[]>([]);
 
   // Initialize ingredient states. Use planned quantity as default multiplier, unless actual_quantity is typed? 
   // Normally the default is based on planned_quantity as the RPC does.
@@ -85,14 +90,15 @@ export function ProductionDetailClient({ run, recipeContext }: ProductionDetailC
       });
       
       if (res.success) {
+        setShortages([]);
         toast.success("Đã xác nhận lệnh sản xuất");
         router.refresh();
       } else {
         toast.error(res.error || "Có lỗi xảy ra");
-        // TODO: Handle missing items rendering if any (res.data has shortages)
-        if (res.data && Array.isArray(res.data)) {
-            console.error("Shortages:", res.data);
-            toast.error("Thiếu nguyên liệu trong kho để sản xuất.");
+        const nextShortages = Array.isArray(res.data) ? (res.data as ProductionShortageRow[]) : [];
+        setShortages(nextShortages);
+        if (nextShortages.length > 0) {
+          toast.error("Thiếu nguyên liệu trong kho để sản xuất.");
         }
       }
     });
@@ -212,6 +218,24 @@ export function ProductionDetailClient({ run, recipeContext }: ProductionDetailC
               Hủy lệnh
             </Button>
           </div>
+
+          {shortages.length > 0 ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+              <p className="font-medium text-destructive">Thiếu nguyên liệu trong kho để sản xuất</p>
+              <div className="mt-2 space-y-1">
+                {shortages.map((row) => (
+                  <div key={row.ingredient_id} className="flex justify-between gap-2 text-muted-foreground">
+                    <span className="font-medium text-foreground">{row.ingredient_name}</span>
+                    <span>
+                      Cần <span className="font-mono">{row.needed.toFixed(3)}</span> {row.unit}, còn
+                      <span className="font-mono"> {row.on_hand.toFixed(3)} </span>
+                      {row.unit}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
       
