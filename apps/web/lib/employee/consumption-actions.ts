@@ -302,7 +302,7 @@ export async function fetchConsumptionIngredients(
   const [ingredientsResult, defaultsResult] = await Promise.all([
     service
       .from("ingredients")
-      .select("id, name, unit, purchase_unit, category")
+      .select("id, name, category, ingredient_units!ingredient_units_ingredient_id_fkey(is_base, units!ingredient_units_unit_id_fkey(code))")
       .eq("tenant_id", ctx.claims.tenant_id)
       .eq("is_active", true)
       .order("name"),
@@ -335,7 +335,7 @@ export async function fetchConsumptionIngredients(
       return {
         id: item.id,
         name: item.name,
-        unit: item.purchase_unit || item.unit,
+        unit: item.ingredient_units?.find((u: any) => u.is_base)?.units?.code || "kg",
         category: item.category ?? null,
         isDefault: Boolean(defaultItem),
         defaultItemId: defaultItem?.id ?? null,

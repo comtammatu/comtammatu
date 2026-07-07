@@ -313,15 +313,18 @@ export async function fetchConsumptionVariance(
   // Get ingredient names for display
   const { data: ingredients, error: ingErr } = await supabase
     .from("ingredients")
-    .select("id, name, unit, purchase_unit")
+    .select("id, name, ingredient_units!ingredient_units_ingredient_id_fkey(is_base, units!ingredient_units_unit_id_fkey(code))")
     .eq("tenant_id", claims.tenant_id)
     .eq("is_active", true);
   if (ingErr) return { success: false, error: "Không tải được nguyên liệu." };
   const ingMap = new Map(
-    (ingredients ?? []).map((i) => [
-      i.id,
-      { name: i.name, unit: i.purchase_unit || i.unit },
-    ]),
+    (ingredients ?? []).map((i) => {
+      const baseUnit = i.ingredient_units.find((u: any) => u.is_base)?.units?.code || "kg";
+      return [
+        i.id,
+        { name: i.name, unit: baseUnit },
+      ];
+    }),
   );
 
   // Compute theoretical: need order_items joined with recipes

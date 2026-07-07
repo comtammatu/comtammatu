@@ -2255,9 +2255,6 @@ export type Database = {
       }
       ingredient_units: {
         Row: {
-          allow_issue: boolean
-          allow_production: boolean
-          allow_purchase: boolean
           anchor_factor: number | null
           anchor_unit_id: number | null
           created_at: string
@@ -2272,9 +2269,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          allow_issue?: boolean
-          allow_production?: boolean
-          allow_purchase?: boolean
           anchor_factor?: number | null
           anchor_unit_id?: number | null
           created_at?: string
@@ -2289,9 +2283,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          allow_issue?: boolean
-          allow_production?: boolean
-          allow_purchase?: boolean
           anchor_factor?: number | null
           anchor_unit_id?: number | null
           created_at?: string
@@ -2359,18 +2350,14 @@ export type Database = {
           is_active: boolean
           item_kind: string
           max_stock_level: number | null
-          measure_unit: string
           min_stock_level: number
           name: string
-          purchase_to_measure_factor: number
-          purchase_unit: string
           reorder_point: number | null
           review_override: boolean | null
           shelf_life_days: number | null
           sku: string | null
           storage_type: string
           tenant_id: number
-          unit: string
           unit_cost: number | null
           updated_at: string
         }
@@ -2382,18 +2369,14 @@ export type Database = {
           is_active?: boolean
           item_kind?: string
           max_stock_level?: number | null
-          measure_unit: string
           min_stock_level?: number
           name: string
-          purchase_to_measure_factor?: number
-          purchase_unit: string
           reorder_point?: number | null
           review_override?: boolean | null
           shelf_life_days?: number | null
           sku?: string | null
           storage_type?: string
           tenant_id: number
-          unit: string
           unit_cost?: number | null
           updated_at?: string
         }
@@ -2405,18 +2388,14 @@ export type Database = {
           is_active?: boolean
           item_kind?: string
           max_stock_level?: number | null
-          measure_unit?: string
           min_stock_level?: number
           name?: string
-          purchase_to_measure_factor?: number
-          purchase_unit?: string
           reorder_point?: number | null
           review_override?: boolean | null
           shelf_life_days?: number | null
           sku?: string | null
           storage_type?: string
           tenant_id?: number
-          unit?: string
           unit_cost?: number | null
           updated_at?: string
         }

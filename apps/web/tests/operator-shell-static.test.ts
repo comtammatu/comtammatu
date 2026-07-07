@@ -101,28 +101,27 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   );
 
   assert.match(home, /resolveOperatorTiles/);
-  assert.match(home, /EmployeeHomePageContent/);
-  assert.match(home, /mode="compact-status"/);
+  assert.match(home, /EmployeePage/);
   assert.match(
     home,
     /showTodayCard =\s*canAccess\(claims\.user_role, "employee"\)(?: && claims\.user_role !== "owner")?/,
   );
   assert.match(home, /showManagementCard/);
-  assert.match(home, /APP_COPY_VI\.branchCommand/);
-  assert.match(home, /href=\{`\$\{basePath\}\/dashboard`\}/);
-  assert.match(home, /clock: `\$\{basePath\}\/shift\/clock`/);
-  assert.match(home, /count: `\$\{basePath\}\/stock\/count`/);
-  assert.match(home, /EmployeeActionSection/);
-  assert.match(home, /branchCopy\.centralSupplyTilesDescription/);
-  assert.match(home, /branchCopy\.centralKitchenTilesDescription/);
-  assert.match(home, /groups\.map/);
-  assert.match(home, /branchTodayGroup/);
-  assert.match(home, /group\.id === "sales_kitchen"/);
+  const todaySource = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-today-status.tsx",
+  );
+  assert.match(todaySource, /mode="compact-status"/);
   assert.match(
     home,
-    /tiles: branchTodayGroup\.tiles\.slice\(0, branchTodayTileLimit\)/,
+    /groups\.map/,
   );
-  assert.match(home, /showMoreLink/);
+  assert.match(home, /EmployeeActionSection/);
+  assert.match(home, /resolveOperatorTileIcon/);
+  assert.match(
+    home,
+    /isCentral\s*\?\s*centralGroups\s*:\s*branchTodayGroups/,
+  );
+  assert.match(home, /showTodayCard\s*\?/);
   assert.match(
     home,
     /key: `\$\{group\.id\}-\$\{tile\.moduleKey\}-\$\{tile\.href\}`/,
@@ -293,20 +292,24 @@ test("operator home overview KPIs are gated by branch_dashboard access", () => {
     home,
     /showOverview =\s*canAccess\(claims\.user_role, "branch_dashboard"\) && branchKind === "branch"/,
   );
-  assert.match(
-    home,
-    /showOverview\s*\?\s*fetchBranchDayStatus\(supabase, claims, context\.branchId\)/,
+  
+  const overviewSource = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-overview-section.tsx",
   );
-  assert.match(home, /getUnreadCount\(\)/);
-  assert.match(home, /formatVND\(day\.todayRevenue\)/);
-  assert.match(home, /showOverview && day \?/);
-  assert.match(home, /messages\.settings\.branch\.hubOverviewTitle/);
-  assert.match(home, /messages\.settings\.branch\.dayRevenueLabel/);
-  assert.match(home, /messages\.settings\.branch\.hubOverviewUnreadLabel/);
-  assert.match(home, /href=\{`\$\{basePath\}\/dashboard`\}/);
-  assert.match(home, /href="\/notifications"/);
-  assert.doesNotMatch(home, /count_unread_notifications/);
-  assert.doesNotMatch(home, /createServiceClient/);
+
+  assert.match(
+    overviewSource,
+    /fetchBranchDayStatus/,
+  );
+  assert.match(overviewSource, /getUnreadCount\(\)/);
+  assert.match(overviewSource, /formatVND\(day\.todayRevenue\)/);
+  assert.match(overviewSource, /messages\.settings\.branch\.hubOverviewTitle/);
+  assert.match(overviewSource, /messages\.settings\.branch\.dayRevenueLabel/);
+  assert.match(overviewSource, /messages\.settings\.branch\.hubOverviewUnreadLabel/);
+  assert.match(overviewSource, /href=\{`\$\{basePath\}\/dashboard`\}/);
+  assert.match(overviewSource, /href="\/notifications"/);
+  assert.doesNotMatch(overviewSource, /count_unread_notifications/);
+  assert.doesNotMatch(overviewSource, /createServiceClient/);
 });
 
 test("operator home renders the unified Cần xử lý queue before domain tile rows (V2, D059)", () => {

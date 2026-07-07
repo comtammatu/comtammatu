@@ -113,7 +113,6 @@ export async function ensureBranch(
 export interface TestIngredient {
   id: number;
   name: string;
-  unit: string;
 }
 
 export async function ensureIngredient(
@@ -130,7 +129,7 @@ export async function ensureIngredient(
     .eq("name", name)
     .maybeSingle();
 
-  if (existing) return { ...existing, unit: "kg" };
+  if (existing) return existing;
 
   const { data: inserted, error } = await supabase
     .from("ingredients")
@@ -139,9 +138,6 @@ export async function ensureIngredient(
       name,
       unit_cost: 10000,
       is_active: true,
-      unit: "kg",
-      measure_unit: "kg",
-      purchase_unit: "kg",
     })
     .select("id, name")
     .single();
@@ -150,7 +146,7 @@ export async function ensureIngredient(
     throw new Error(`Failed to create E2E ingredient: ${error?.message}`);
   }
 
-  return { ...inserted, unit: "kg" };
+  return inserted;
 }
 
 // ─── Supplier helpers ─────────────────────────────────────────────────────────
