@@ -68,10 +68,10 @@ export default async function RecipesPage({
     fs.writeFileSync('debug-recipes.json', JSON.stringify({
       recipesRes_success: recipesRes.success,
       recipesRes_error: recipesRes.success ? null : recipesRes.error,
-      recipesRes_data_length: recipesRes.success ? recipesRes.data?.length : 0,
-      recipesRes_data_sample: recipesRes.success ? recipesRes.data?.slice(0, 3) : null,
+      recipesRes_data_length: recipesRes.success ? (recipesRes.data as any[])?.length : 0,
+      recipesRes_data_sample: recipesRes.success ? (recipesRes.data as any[])?.slice(0, 3) : null,
       menuItemsRes_success: menuItemsRes.success,
-      menuItemsRes_data_length: menuItemsRes.success ? menuItemsRes.data?.length : 0,
+      menuItemsRes_data_length: menuItemsRes.success ? (menuItemsRes.data as any[])?.length : 0,
       claims
     }, null, 2));
   } catch (e) {
