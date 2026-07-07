@@ -39,6 +39,7 @@ export default async function OperatorMorePage({
     <EmployeePage
       title={copy.centralMoreTitle}
       description={copy.centralMoreDescription}
+      hideHeaderOnMobile
     >
       {groups.length > 0 ? (
         groups.map((group) => (

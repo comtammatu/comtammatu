@@ -35,10 +35,7 @@ export default async function TeamBoardPage({
   if (!canAccess(claims.user_role, "branch_team")) {
     return (
       <>
-        <AppPageHeader
-          title={copy.title}
-          className="sr-only sm:not-sr-only"
-        />
+        <AppPageHeader title={copy.title} />
         <AppEmptyState mode="no-access" />
       </>
     );
@@ -82,14 +79,10 @@ export default async function TeamBoardPage({
   );
 
   return (
-    <>
-      <AppPageHeader
-        title={copy.title}
-        description={copy.description}
-        className="sr-only sm:not-sr-only"
-        tabs={content}
-      />
-      <div className="sm:hidden">{content}</div>
-    </>
+    <AppPageHeader
+      title={copy.title}
+      description={copy.description}
+      tabs={content}
+    />
   );
 }
