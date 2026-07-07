@@ -19,10 +19,6 @@ export interface IngredientRow {
   id: number;
   name: string;
   sku: string | null;
-  unit: string;
-  purchase_unit: string;
-  measure_unit: string;
-  purchase_to_measure_factor: number;
   category: string | null;
   category_id: number | null;
   category_name?: string | null;

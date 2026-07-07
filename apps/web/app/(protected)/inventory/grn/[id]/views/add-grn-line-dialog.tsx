@@ -76,7 +76,7 @@ export function AddGrnLineDialog({
     const ingredient = ingredients.find((item) => item.id === Number(value));
     const defaultUnit = getDefaultPurchaseUnit(ingredient);
     setUnit(
-      defaultUnit?.label ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
+      defaultUnit?.label ?? ingredient?.units?.find((u) => u.is_base)?.unit_code ?? "",
     );
     setEntryUnitId(defaultUnit?.unitId ?? null);
     setUnitCost(
@@ -197,10 +197,7 @@ export function AddGrnLineDialog({
                 .map((ingredient) => ({
                   value: String(ingredient.id),
                   label: ingredient.name,
-                  hint:
-                    getDefaultPurchaseUnit(ingredient)?.label ??
-                    ingredient.purchase_unit ??
-                    ingredient.unit,
+                  hint: getDefaultPurchaseUnit(ingredient)?.label ?? "",
                   keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
                 }))}
               placeholder={grnCopy.addDialog.ingredientPlaceholder}

@@ -90,6 +90,7 @@ export async function fetchCashSummary(
     .from("expenses")
     .select("amount, payment_method")
     .eq("tenant_id", tenantId)
+    .neq("category", "bank_deposit")
     .gte("expense_date", resolved.start)
     .lte("expense_date", resolved.end);
   if (params.branch != null) {

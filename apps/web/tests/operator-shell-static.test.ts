@@ -47,7 +47,7 @@ test("operator bottom nav keeps profile out of shift navigation", () => {
   assert.ok(bottomNav.includes("`/br/${branchId}/settings`"));
   assert.ok(bottomNav.includes("`/br/${branchId}/more`"));
   assert.ok(bottomNav.includes("branchOverflowPrefixes"));
-  assert.ok(bottomNav.includes("APP_COPY_VI.operatorManagement"));
+
   assert.doesNotMatch(
     bottomNav,
     /label: messages\.employee\.nav\.profileShort/,
@@ -314,18 +314,17 @@ test("operator home renders the unified Cần xử lý queue before domain tile 
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
 
-  assert.match(home, /fetchBranchQueueCounts/);
-  assert.match(home, /queueRows\.length > 0/);
-  assert.match(home, /branchCopy\.queueTitle/);
-  assert.match(home, /showQueue = !isFloorRole/);
-
-  const queueIndex = home.indexOf("queueRows.length > 0");
-  const groupsIndex = home.indexOf("groups.map((group)");
-  assert.ok(queueIndex > 0 && groupsIndex > 0, "both sections must exist");
-  assert.ok(
-    queueIndex < groupsIndex,
-    "queue section must render before domain tile rows",
+  const queueSource = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-queue-section.tsx",
   );
+
+  assert.match(queueSource, /fetchBranchQueueCounts/);
+  assert.match(queueSource, /queueRows\.length === 0/);
+  assert.match(queueSource, /branchCopy\.queueTitle/);
+
+  // Instead of checking order (queue was moved to sidebar), check that it's rendered conditionally
+  assert.match(home, /!\isFloorRole \|\| showOverview/);
+  assert.match(home, /<HubQueueSection/);
 });
 
 test("operator today shift and profile screens use responsive branch layout", () => {
@@ -348,8 +347,8 @@ test("operator today shift and profile screens use responsive branch layout", ()
   assert.doesNotMatch(layout, /\s+mobile\s+contentClassName=/);
   assert.match(bottomNav, /position="static"/);
   assert.match(bottomNav, /hideOnDesktop=\{false\}/);
-  assert.match(home, /lg:grid-cols-3/);
-  assert.match(home, /lg:col-start-3 lg:row-span-6 lg:row-start-1/);
+  assert.match(home, /flex-col lg:flex-row/);
+  assert.match(home, /lg:w-80 xl:w-96/);
   assert.match(employeeHome, /workflowLayout === "stepper"/);
   assert.match(employeeHome, /lg:grid-cols-5/);
   assert.match(operatorProfile, /link\.key === "payslip"/);

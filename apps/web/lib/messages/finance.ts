@@ -302,6 +302,7 @@ export const finance = {
     categoryGroupLabels: {
       operating: "Chi vận hành",
       materials: "Chi nguyên liệu",
+      transfer: "Trung chuyển / Nội bộ",
     },
     categoryLabels: {
       rent: "Thuê mặt bằng",
@@ -313,6 +314,7 @@ export const finance = {
       repair: "Sửa chữa / bảo trì",
       marketing: "Marketing / khuyến mãi",
       fees_tax: "Phí ngân hàng / thuế",
+      bank_deposit: "Nộp tiền mặt vào NH",
       other: "Khác",
     },
     paymentMethodLabels: {
@@ -353,6 +355,14 @@ export const finance = {
     openingDateLabel: "Ngày đếm đủ hai số dư",
     openingSubmit: "Lưu tồn quỹ",
     openingSuccess: "Đã lưu tồn quỹ đầu kỳ",
+    transferTitle: "Chuyển tiền mặt vào ngân hàng",
+    transferAction: "Chuyển tiền",
+    transferDescription:
+      "Rút bớt tiền mặt trong quỹ để nộp vào tài khoản ngân hàng. Nếu có mã tham chiếu giao dịch (đã nộp), tiền trong ngân hàng sẽ không được cộng thêm lần nữa.",
+    transferAmountLabel: "Số tiền mặt nộp (VNĐ)",
+    transferRefLabel: "Mã tham chiếu SePay (không bắt buộc)",
+    transferSubmit: "Lưu chuyển tiền",
+    transferSuccess: "Đã chuyển tiền mặt vào ngân hàng",
   },
   bankTransactions: {
     eyebrow: "Tài chính",
@@ -372,6 +382,13 @@ export const finance = {
       failed: "Cần kiểm tra",
       received: "Đã nhận",
     },
+    matchedOrder: (id: number | string) => `Khớp đơn hàng #${id}`,
+    matchedExpense: (id: number | string) => `Khớp chi phí #${id}`,
+    matchExpensePlaceholder: "Chọn chi phí chưa khớp...",
+    matchAction: "Khớp",
+    unmatched: "Chưa khớp",
+    matchSuccess: "Đã khớp thành công",
+    matchError: "Không thể khớp giao dịch",
   },
   revenueReport: {
     granularityLabel: {

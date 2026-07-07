@@ -17,6 +17,7 @@ export const EXPENSE_CATEGORY_VALUES = [
   "repair",
   "marketing",
   "fees_tax",
+  "bank_deposit",
   "other",
 ] as const;
 
@@ -28,7 +29,7 @@ export type ExpenseCategory = (typeof EXPENSE_CATEGORY_VALUES)[number];
  * operating overhead vs raw-material cost for the capture form + reporting.
  * Labels live in `messages.finance.expenses.categoryGroupLabels`.
  */
-export const EXPENSE_CATEGORY_GROUPS = ["operating", "materials"] as const;
+export const EXPENSE_CATEGORY_GROUPS = ["operating", "materials", "transfer"] as const;
 
 export type ExpenseCategoryGroup = (typeof EXPENSE_CATEGORY_GROUPS)[number];
 
@@ -46,6 +47,7 @@ export const EXPENSE_CATEGORY_GROUP: Record<
   fees_tax: "operating",
   other: "operating",
   cogs_manual: "materials",
+  bank_deposit: "transfer",
 };
 
 export const EXPENSE_CATEGORIES_BY_GROUP: Record<
@@ -57,6 +59,9 @@ export const EXPENSE_CATEGORIES_BY_GROUP: Record<
   ),
   materials: EXPENSE_CATEGORY_VALUES.filter(
     (c) => EXPENSE_CATEGORY_GROUP[c] === "materials",
+  ),
+  transfer: EXPENSE_CATEGORY_VALUES.filter(
+    (c) => EXPENSE_CATEGORY_GROUP[c] === "transfer",
   ),
 };
 

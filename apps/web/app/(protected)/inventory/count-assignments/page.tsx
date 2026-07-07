@@ -94,7 +94,7 @@ export async function CountAssignmentsPageContent({
   // Active finished-good catalog for the per-employee checklist.
   const ingredientsRes = await supabase
     .from("ingredients")
-    .select("id, name, unit, purchase_unit")
+    .select("id, name, ingredient_units(is_base, units(code))")
     .eq("tenant_id", claims.tenant_id)
     .eq("item_kind", "finished_good")
     .eq("is_active", true)
@@ -103,7 +103,7 @@ export async function CountAssignmentsPageContent({
     (i) => ({
       id: i.id,
       name: i.name,
-      unit: i.purchase_unit ?? i.unit ?? "",
+      unit: (i as any).ingredient_units?.find((u: any) => u.is_base)?.units?.code ?? "",
     }),
   );
 

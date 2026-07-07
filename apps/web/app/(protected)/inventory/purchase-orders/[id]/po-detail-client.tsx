@@ -212,7 +212,7 @@ export function PODetailClient({
     const ingredient = ingredientById.get(Number(value));
     const defaultUnit = getDefaultPurchaseUnit(ingredient);
     setAddUnit(
-      defaultUnit?.label ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
+      defaultUnit?.label ?? ingredient?.units?.find((u) => u.is_base)?.unit_code ?? "",
     );
     setAddEntryUnitId(defaultUnit?.unitId ?? null);
     setAddPrice(
@@ -710,7 +710,7 @@ export function PODetailClient({
                     .map((ingredient) => ({
                       value: String(ingredient.id),
                       label: ingredient.name,
-                      hint: ingredient.purchase_unit ?? ingredient.unit,
+                      hint: ingredient.units?.find((u) => u.is_base)?.unit_code ?? "",
                       keywords: [
                         ingredient.sku ?? "",
                         ingredient.category ?? "",
@@ -1023,7 +1023,7 @@ export function PODetailClient({
                   .map((ingredient) => ({
                     value: String(ingredient.id),
                     label: ingredient.name,
-                    hint: ingredient.purchase_unit ?? ingredient.unit,
+                    hint: ingredient.units?.find((u) => u.is_base)?.unit_code ?? "",
                     keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
                   }))}
                 placeholder={poCopy.ingredientPlaceholder}

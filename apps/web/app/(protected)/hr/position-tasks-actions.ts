@@ -122,7 +122,9 @@ export async function fetchPositionTasksData(): Promise<
       .not("position_task_id", "is", null),
     service
       .from("ingredients")
-      .select("id, name, unit, purchase_unit")
+      .select(
+        "id, name, ingredient_units(is_base, units(code))",
+      )
       .eq("tenant_id", ctx.claims.tenant_id)
       .eq("is_active", true)
       .order("name", { ascending: true }),
@@ -209,10 +211,12 @@ export async function fetchPositionTasksData(): Promise<
 
   const ingredients = (
     ingredientsResult.data ?? []
-  ).map<PositionTaskIngredientOption>((ingredient) => ({
+  ).map<PositionTaskIngredientOption>((ingredient: any) => ({
     id: ingredient.id,
     name: ingredient.name,
-    unit: ingredient.purchase_unit || ingredient.unit,
+    unit:
+      ingredient.ingredient_units?.find((u: any) => u.is_base)?.units
+        ?.code ?? "",
   }));
 
   return {

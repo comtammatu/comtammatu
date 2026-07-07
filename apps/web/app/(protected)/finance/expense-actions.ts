@@ -250,3 +250,109 @@ export async function fetchActualFoodCostTotal(params: {
   );
   return { success: true, data: total };
 }
+
+const matchSepayExpenseSchema = z.object({
+  eventId: z.coerce.number().int().positive(),
+  expenseId: z.coerce.number().int().positive(),
+});
+
+export async function matchSepayTransactionWithExpense(
+  input: z.infer<typeof matchSepayExpenseSchema>,
+): Promise<ActionResult> {
+  const parsed = matchSepayExpenseSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_EXPENSE_CREATE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền sửa chi phí." };
+
+  const { supabase, claims } = ctx;
+
+  const { error } = await supabase
+    .from("webhook_events")
+    .update({ expense_id: parsed.data.expenseId })
+    .eq("tenant_id", claims.tenant_id)
+    .eq("id", parsed.data.eventId)
+    .eq("provider", "sepay");
+
+  if (error) {
+    return { success: false, error: "Không thể khớp giao dịch." };
+  }
+
+  await logAudit(supabase, {
+    action: "update",
+    entityType: "webhook_event",
+    entityId: parsed.data.eventId,
+    newData: { expense_id: parsed.data.expenseId },
+  });
+
+  return { success: true };
+}
+
+export async function fetchUnmatchedExpenses(): Promise<
+  ActionResult<ExpenseRow[]>
+> {
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền xem chi phí." };
+
+  const { supabase, claims } = ctx;
+
+  // Find all expenses that are "transfer" and don't exist in webhook_events.expense_id
+  const { data: matchedEvents, error: matchedErr } = await supabase
+    .from("webhook_events")
+    .select("expense_id")
+    .eq("tenant_id", claims.tenant_id)
+    .not("expense_id", "is", null);
+
+  if (matchedErr) {
+    return { success: false, error: "Lỗi tải dữ liệu khớp." };
+  }
+
+  const matchedExpenseIds = Array.from(
+    new Set((matchedEvents ?? []).map((e) => e.expense_id as number)),
+  );
+
+  let query = supabase
+    .from("expenses")
+    .select(
+      "id, branch_id, expense_date, category, amount, payment_method, paid_at, vendor_name, note, created_at",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .eq("payment_method", "transfer")
+    .order("expense_date", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(100);
+
+  if (matchedExpenseIds.length > 0) {
+    query = query.not("id", "in", `(${matchedExpenseIds.join(",")})`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return { success: false, error: "Không tải được danh sách chi phí." };
+  }
+
+  return {
+    success: true,
+    data: (data ?? []).map((r) => ({
+      id: r.id,
+      branch_id: r.branch_id,
+      expense_date: r.expense_date,
+      category: r.category,
+      amount: Number(r.amount),
+      payment_method: r.payment_method,
+      paid_at: r.paid_at,
+      vendor_name: r.vendor_name,
+      note: r.note,
+      created_at: r.created_at,
+    })),
+  };
+}

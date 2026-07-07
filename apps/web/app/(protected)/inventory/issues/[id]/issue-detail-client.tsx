@@ -143,7 +143,7 @@ const addIssueLineSchema = z.object({
 type AddIssueLineFormValues = z.infer<typeof addIssueLineSchema>;
 
 function getWarehouseUnit(ingredient: IngredientRow) {
-  return ingredient.purchase_unit || ingredient.unit;
+  return ingredient.units?.find((u) => u.is_base)?.unit_code || "";
 }
 
 function getIssueSurface(
@@ -1010,7 +1010,7 @@ function AddIssueLineDialog({
                   .map((ingredient) => ({
                     value: String(ingredient.id),
                     label: ingredient.name,
-                    hint: getWarehouseUnit(ingredient),
+                    hint: ingredient.units?.find((u) => u.is_base)?.unit_code ?? "",
                     keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
                   }))}
                 placeholder={ISSUES_VI.ingredientPlaceholder}
@@ -1143,7 +1143,7 @@ function AddIssueLineDialog({
                   </p>
                   <p className="font-mono font-semibold tabular-nums">
                     {selectedIngredient
-                      ? `${formatQty(availableQuantity)} ${selectedIngredient.unit}`
+                      ? `${formatQty(availableQuantity)} ${getWarehouseUnit(selectedIngredient)}`
                       : inventoryCommon.noValue}
                   </p>
                 </div>

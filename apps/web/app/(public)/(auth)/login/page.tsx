@@ -28,20 +28,16 @@ export default function LoginPage() {
           </div>
           <h1 className="font-heading sr-only">{BRAND_NAME}</h1>
         </div>
-        <div className="hidden lg:flex flex-col items-center gap-2">
-          <BrandMascot mood="waving" animated className="size-20" />
-          {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: mascot caption label */}
-          <span className="text-2xs text-muted-foreground uppercase tracking-widest">
-            Má Tư Mascot · Heo Cốt Lết
-          </span>
+        <div className="hidden lg:flex flex-col items-center justify-center h-32 w-32">
+          <BrandMascot mood="waving" animated className="shrink-0 scale-50" />
         </div>
       </div>
 
       {/* Login form */}
       <section className="relative z-10 flex flex-1 items-center justify-center p-6 sm:p-8">
         <div className="w-full max-w-sm">
-          <div className="flex flex-col items-center gap-3 mb-6 lg:hidden">
-            <BrandMascot mood="waving" animated className="size-12" />
+          <div className="flex flex-col items-center justify-center h-20 w-20 mb-4 lg:hidden">
+            <BrandMascot mood="waving" animated className="shrink-0 scale-[0.35]" />
           </div>
           <AppSection
             title={ACTIONS_VI.signIn}

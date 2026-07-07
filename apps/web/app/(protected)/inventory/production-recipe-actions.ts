@@ -151,8 +151,7 @@ function mapProductionRecipeImportError(
 type IngredientLookupRow = {
   id: number;
   name: string;
-  unit: string;
-  measure_unit: string;
+  ingredient_units?: { unit_id: number, is_base: boolean, is_active: boolean, sort_order: number, units: { code: string, name: string } | null }[];
   item_kind: string;
   is_active: boolean;
   units: Array<{
@@ -564,7 +563,7 @@ export async function importProductionRecipes(
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "id, name, unit, measure_unit, item_kind, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+      "id, name, item_kind, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
     )
     .eq("tenant_id", claims.tenant_id);
 

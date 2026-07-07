@@ -12,7 +12,7 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { ItemGroup } from "@comtammatu/ui/components/item";
+
 import { Switch } from "@comtammatu/ui/components/switch";
 import { Label } from "@comtammatu/ui/components/label";
 import {

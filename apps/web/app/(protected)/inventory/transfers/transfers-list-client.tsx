@@ -1,3 +1,4 @@
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import { useMemo, useState } from "react";

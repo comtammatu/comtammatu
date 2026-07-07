@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
+import { getVNDateString } from "@comtammatu/shared/time";
 import { issueTaxInvoiceForPaidOrder } from "@lib/hddt-per-order";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
@@ -256,6 +257,7 @@ async function markWebhookEvent(
   eventId: number,
   values: {
     payment_id?: number | null;
+    expense_id?: number | null;
     processing_status: "processed" | "failed" | "ignored";
     http_status: number;
     error_code?: string | null;
@@ -265,6 +267,7 @@ async function markWebhookEvent(
     .from("webhook_events")
     .update({
       payment_id: values.payment_id ?? null,
+      expense_id: values.expense_id ?? null,
       processing_status: values.processing_status,
       http_status: values.http_status,
       error_code: values.error_code ?? null,
@@ -399,6 +402,39 @@ export async function POST(request: Request) {
       processing_status: "ignored",
       http_status: 200,
       error_code: "transfer_type_out",
+    });
+    return sepayAcceptedResponse();
+  }
+
+  if ((payload.content || "").toUpperCase().includes("NOP TIEN MATU")) {
+    const expenseDate = payload.transactionDate
+      ? payload.transactionDate.substring(0, 10)
+      : getVNDateString();
+
+    const { data: expenseData, error: expenseError } = await supabase
+      .from("expenses")
+      .insert({
+        tenant_id: accountScope.tenantId,
+        category: "bank_deposit",
+        amount: payload.transferAmount,
+        payment_method: "cash",
+        expense_date: expenseDate,
+        note: payload.content || "Nộp tiền mặt vào ngân hàng",
+      })
+      .select("id")
+      .single();
+
+    if (expenseError) {
+      console.error(
+        "[sepay-webhook] failed to insert bank_deposit expense",
+        expenseError.code,
+      );
+    }
+
+    await markWebhookEvent(supabase, webhookEventId, {
+      expense_id: expenseData?.id,
+      processing_status: "processed",
+      http_status: 200,
     });
     return sepayAcceptedResponse();
   }

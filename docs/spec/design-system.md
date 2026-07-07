@@ -2,6 +2,17 @@
 
 > Version: 14.15.0 | Updated: 2026-07-05 | Status: locked single source for UI agents
 
+## Mục lục / Decision Index
+
+- [Single Source Decision](#single-source-decision)
+- [Authority Order](#authority-order)
+- [Product UX Thesis](#product-ux-thesis)
+- [Token Contract](#token-contract)
+- [Typography Contract](#typography-contract)
+- [Rhythm Contract (Spacing, Heading, Icon, Height, Radius, Motion)](#rhythm-contract)
+- [Elevation / Shadow](#elevation--shadow)
+- [Component Authority & Roles](#component-authority)
+
 ## Single Source Decision
 
 This file is the single design-system contract for agents building or reviewing

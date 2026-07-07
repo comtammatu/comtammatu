@@ -55,8 +55,7 @@ export async function TransferReceiveContent({
       ingredients: {
         id: number;
         name: string;
-        unit: string;
-        purchase_unit: string | null;
+        ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
       } | null;
     }>;
   };
@@ -76,7 +75,7 @@ export async function TransferReceiveContent({
       name: ing?.name ?? "—",
       sku: "",
       qty,
-      unit: l.unit_label ?? l.unit ?? ing?.purchase_unit ?? ing?.unit ?? "",
+      unit: l.unit_label ?? l.unit ?? ing?.ingredient_units?.find((u: any) => u.is_base)?.units?.code ?? "",
       cost,
       total,
       received:

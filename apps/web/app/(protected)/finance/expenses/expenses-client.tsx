@@ -211,7 +211,7 @@ export function ExpensesClient({
       key: "category",
       header: copy.table.category,
       render: (row) =>
-        copy.categoryLabels[row.category as ExpenseCategory] ?? row.category,
+        (copy.categoryLabels as Record<string, string>)[row.category] ?? row.category,
     },
     {
       key: "branch",
@@ -223,7 +223,7 @@ export function ExpensesClient({
       key: "method",
       header: copy.table.method,
       render: (row) =>
-        copy.paymentMethodLabels[row.payment_method as ExpensePaymentMethod] ??
+        (copy.paymentMethodLabels as Record<string, string>)[row.payment_method] ??
         row.payment_method,
     },
     {
@@ -310,7 +310,7 @@ export function ExpensesClient({
                 <ItemHeader>
                   <ItemContent>
                     <ItemTitle>
-                      {copy.categoryLabels[row.category as ExpenseCategory] ??
+                      {(copy.categoryLabels as Record<string, string>)[row.category] ??
                         row.category}
                     </ItemTitle>
                     <ItemDescription>

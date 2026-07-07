@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
+
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { resolveRoleHomeLink, type StaffRole } from "@comtammatu/shared/auth";
-import { Button } from "@comtammatu/ui/components/button";
+import type { StaffRole } from "@comtammatu/shared/auth";
 import { AppShell } from "@/components/app-shell";
 import { messages } from "@lib/messages";
 import { resolveOfficePrimaryTabs } from "@/lib/office-nav";
@@ -41,7 +40,6 @@ export function FinanceShell({
   const branchId =
     Number.isFinite(parsedBranch) && parsedBranch > 0 ? parsedBranch : null;
   useFinanceRealtimeRefresh({ branchId });
-  const homeLink = resolveRoleHomeLink(role, homeBranchId);
 
   return (
     <AppShell
@@ -51,11 +49,6 @@ export function FinanceShell({
       defaultPageTitle={financeCopy.shell.defaultPageTitle}
       pageHeader={{
         crumbLabel: financeCopy.shell.crumbLabel,
-        actions: (
-          <Button asChild variant="outline" size="sm">
-            <Link href={homeLink.href}>{homeLink.label}</Link>
-          </Button>
-        ),
       }}
     >
       {children}

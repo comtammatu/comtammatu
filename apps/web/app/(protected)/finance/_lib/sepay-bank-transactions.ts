@@ -9,7 +9,7 @@ import {
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
 const SEPAY_WEBHOOK_SELECT =
-  "id, request_id, created_at, processing_status, error_code, payment_id, payload" as const;
+  "id, request_id, created_at, processing_status, error_code, payment_id, expense_id, payload" as const;
 
 // ponytail: scan existing webhook ledger; add a bank_transactions table if this pilot account outgrows 5000 retained SePay rows.
 const SEPAY_BALANCE_SCAN_LIMIT = 5000;
@@ -24,7 +24,7 @@ async function fetchSepayWebhookRows(
     .from("webhook_events")
     .select(SEPAY_WEBHOOK_SELECT)
     .eq("tenant_id", tenantId)
-    .eq("provider", "sepay")
+    .in("provider", ["sepay", "manual"])
     .eq("signature_valid", true)
     .order("created_at", { ascending: false })
     .limit(limit);

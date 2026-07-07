@@ -197,7 +197,9 @@ export function OrdersClient({
             filter: realtimeFilter,
           },
           () => {
-            router.refresh();
+            startTransition(() => {
+              router.refresh();
+            });
           },
         )
         .subscribe((subscriptionStatus) => {
@@ -206,7 +208,9 @@ export function OrdersClient({
             initialSubscribeSeenRef.current = true;
             return;
           }
-          router.refresh();
+          startTransition(() => {
+            router.refresh();
+          });
         });
     },
     [currentBranchId, router],
@@ -216,7 +220,9 @@ export function OrdersClient({
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        router.refresh();
+        startTransition(() => {
+          router.refresh();
+        });
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, startTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Tabs } from "@comtammatu/ui/components/tabs";
 
@@ -34,7 +34,9 @@ export function UrlTabs({
       if (next === defaultValue) params.delete(paramKey);
       else params.set(paramKey, next);
       const q = params.toString();
-      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+      startTransition(() => {
+        router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+      });
     },
     [pathname, router, searchParams, paramKey, defaultValue],
   );

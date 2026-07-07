@@ -332,7 +332,7 @@ export async function fetchPurchaseOrderDetail(
     return { success: false, error: "Không tìm thấy đơn đặt hàng." };
   const { data: lines, error: e2 } = await supabase
     .from("purchase_order_items")
-    .select("*, ingredients ( id, name, unit, purchase_unit )")
+    .select("*, ingredients ( id, name, ingredient_units(is_base, units(code)) )")
     .eq("po_id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .order("id");
@@ -721,7 +721,8 @@ export const fetchPoSuggestions = withAction(
       ingredient_id,
       current_quantity,
       ingredients!inner (
-        id, name, unit, purchase_unit, reorder_point, max_stock_level, is_active
+        id, name, reorder_point, max_stock_level, is_active,
+        ingredient_units(is_base, units(code))
       )
     `,
       )
@@ -759,8 +760,7 @@ export const fetchPoSuggestions = withAction(
       const ing = sl.ingredients as unknown as {
         id: number;
         name: string;
-        unit: string;
-        purchase_unit: string | null;
+        ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
         reorder_point: number;
         max_stock_level: number | null;
       };
@@ -779,7 +779,7 @@ export const fetchPoSuggestions = withAction(
       suggestions.push({
         ingredient_id: ing.id,
         ingredient_name: ing.name,
-        unit: ing.purchase_unit ?? ing.unit,
+        unit: ing.ingredient_units?.find((u) => u.is_base)?.units?.code ?? "",
         hq_current_qty: currentQty,
         reorder_point: ing.reorder_point,
         max_stock_level: maxStock,

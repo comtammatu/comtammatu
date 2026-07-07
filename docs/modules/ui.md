@@ -233,37 +233,45 @@ lời "component X đang khóa vai trò gì, rule ở đâu". Muốn biết "com
 hoặc `pnpm audit:ui-components` (xem § Component Audit ở trên) — không
 grep-mò và không copy một file đã thấy làm mẫu.
 
+### Shared Primitives (`packages/ui/src/components/`)
+
+Các primitive cốt lõi từ thư viện UI chung, cần tuân thủ luật sử dụng thay vì bạ đâu dùng đó.
+
+| Primitive (File) | Vai trò | Rule khóa (DS) | Khi nào dùng | Ngoại lệ |
+|---|---|---|---|---|
+| `ContextMenu` (`context-menu.tsx`) | Menu ngữ cảnh mở bằng chuột phải (long press) | § Component Authority | Cung cấp action nâng cao trên hàng dữ liệu (grid/table) không làm rối UI | Không dùng thay `DropdownMenu` (click trái) hoặc `Select` |
+
 ### Page/surface adapters — `apps/web/app/components/surface.tsx`
 
 Layer adapter app-level duy nhất cho pattern lặp lại.
 
-| Export | Vai trò | Rule khóa (DS) |
-|---|---|---|
-| `AppPage` | Content container: width/scroll/density, padding nesting-aware | § Rhythm A (page padding từ AppPage) + § Structural E |
-| `AppShellPaddingBoundary` | Đánh dấu `AppShell main` sở hữu padding để `AppPage` lồng bên trong bỏ padding riêng | § Structural E (padding áp dụng đúng 1 lần) |
-| `AppPageHeader` | Page H1 lockup: eyebrow/title/badge/description/actions/breadcrumb/tabs/meta | § Rhythm B (Page H1 PHẢI từ AppPageHeader) |
-| `AppSection` | Card-backed section frame | § Card Roles + § Component Authority |
-| `AppToolbar` | Filter/action toolbar (search/filters/bulk/actions/reset) | § Layout Patterns (một toolbar/workflow) |
-| `AppEmptyState` | Empty/no-results/no-access/error panel | § Empty/Confirm lock |
-| `AppLinkCard` | Navigation/action card | § Card Roles + § Component Authority |
-| `LinkCardGrid` | Grid responsive (1/2/3 cột) bọc `AppLinkCard` | § Component Authority |
-| `KpiRow` | Grid responsive (1/2/3 cột) bọc `KpiCard` | § Component Authority + § Metric Card Role |
-| `DescriptionList` | `<dl>` term/description cho trang chi tiết | § Component Authority |
-| `DocumentFormFrame` | Khung trang document/line-form (header + body cuộn + footer), compose AppPage | § Component Authority — page-section adapter, không phải chrome shell |
-| `AppDetailFooter` | Hàng footer leading/trailing ở trang chi tiết | § Component Authority |
-| `OperationalTile` | Tile chọn được (Button-based) với tone + selected ring | § Card Roles; § Rhythm D `tile` size |
-| `OperationalBoardCard` | Card board POS/KDS/runner, ring tone `current` | § Card Roles + § Elevation Hover rung |
+| Export | Vai trò | Rule khóa (DS) | Khi nào dùng | Ngoại lệ |
+|---|---|---|---|---|
+| `AppPage` | Content container: width/scroll/density, padding nesting-aware | § Rhythm A (page padding từ AppPage) + § Structural E | Wrapper ngoài cùng của trang nội dung | Không bọc các màn fullscreen (KDS/Runner/Login) |
+| `AppShellPaddingBoundary` | Đánh dấu `AppShell main` sở hữu padding để `AppPage` lồng bên trong bỏ padding riêng | § Structural E (padding áp dụng đúng 1 lần) | Dùng ở cấp Shell để AppPage con không bị X2 padding | |
+| `AppPageHeader` | Page H1 lockup: eyebrow/title/badge/description/actions/breadcrumb/tabs/meta | § Rhythm B (Page H1 PHẢI từ AppPageHeader) | Mọi header của AppPage | |
+| `AppSection` | Card-backed section frame | § Card Roles + § Component Authority | Bọc 1 khối nội dung (vd: form block, chi tiết) | |
+| `AppToolbar` | Filter/action toolbar (search/filters/bulk/actions/reset) | § Layout Patterns (một toolbar/workflow) | Dải công cụ (tìm kiếm/lọc) phía trên danh sách | |
+| `AppEmptyState` | Empty/no-results/no-access/error panel | § Empty/Confirm lock | Thay thế nội dung chính khi không có dữ liệu / bị lỗi | Trong bảng (Table) thì dùng `TableEmptyStateRow` |
+| `AppLinkCard` | Navigation/action card | § Card Roles + § Component Authority | Card chứa link chuyển trang hoặc thao tác | |
+| `LinkCardGrid` | Grid responsive (1/2/3 cột) bọc `AppLinkCard` | § Component Authority | Danh sách các LinkCard | |
+| `KpiRow` | Grid responsive (1/2/3 cột) bọc `KpiCard` | § Component Authority + § Metric Card Role | Thể hiện một dãy các chỉ số KPI | |
+| `DescriptionList` | `<dl>` term/description cho trang chi tiết | § Component Authority | Hiển thị các cặp nhãn-giá trị (vd: thông tin KH) | |
+| `DocumentFormFrame` | Khung trang document/line-form (header + body cuộn + footer), compose AppPage | § Component Authority — page-section adapter, không phải chrome shell | Các trang tạo chứng từ có nhiều line (PO, GRN, Kiểm kê) | |
+| `AppDetailFooter` | Hàng footer leading/trailing ở trang chi tiết | § Component Authority | Action bar dưới cùng trang chi tiết (thường sticky) | |
+| `OperationalTile` | Tile chọn được (Button-based) với tone + selected ring | § Card Roles; § Rhythm D `tile` size | Nút bấm to như viên gạch (chọn khu vực, chọn bàn) | |
+| `OperationalBoardCard` | Card board POS/KDS/runner, ring tone `current` | § Card Roles + § Elevation Hover rung | Card hiển thị món/đơn trên KDS hoặc POS | |
 
 ### Data display / status / metric
 
-| Component | Vai trò | Rule khóa (DS) |
-|---|---|---|
-| `data-table/data-table.tsx` → `DataTable`, `DataTableColumn`, `DataTableFooterCell/Row` | List/table responsive DUY NHẤT: desktop Table + `mobileCardRender`, empty state + pagination chung, `desktopFooter`/`mobileFooter`, `(row,index)` cho inline-edit line sheet | § List Surface contract — twin tree `md:hidden`/`md:block` bị khóa bởi `responsive-double-render` (baseline 0) |
-| `data-table/interactive-card.tsx` → `InteractiveCard` | Card row có thể click (hover elevation) | § Card Roles + § Elevation Hover rung |
-| `kpi/kpi-card.tsx` → `KpiCard` | Metric/stat card DUY NHẤT: label 2xs uppercase, value `text-2xl font-bold tabular-nums`, CompareChip delta, sparkline, drill-down href | § Metric Card Role — `STATUS_*`/StatCard/SummaryCard cục bộ bị `stat-card-ssot` ratchet |
-| `status-badge.tsx` → `StatusBadge`, `getStatusBadgeMeta`, `getStatusDotClassName`, `StatusDomain` | Nguồn duy nhất label+variant badge business-state, khóa theo DB CHECK vocabulary qua `packages/shared/src/labels/vi.ts` | § Status vocabulary — `STATUS_*` map cục bộ mới bị cấm (`status-label-ssot`) |
-| `table-empty-state-row.tsx` → `TableEmptyStateRow` | Empty state BÊN TRONG Table | § Empty/Confirm lock |
-| `audit-history-list.tsx` → `AuditHistoryList` | Lịch sử audit entity (tab "Lịch sử") lọc theo `audit_logs` entity | § Inventory surface contract (audit inline ở trang chi tiết) |
+| Component | Vai trò | Rule khóa (DS) | Khi nào dùng | Ngoại lệ |
+|---|---|---|---|---|
+| `data-table/data-table.tsx` → `DataTable`, `DataTableColumn`, `DataTableFooterCell/Row` | List/table responsive DUY NHẤT: desktop Table + `mobileCardRender`, empty state + pagination chung, `desktopFooter`/`mobileFooter`, `(row,index)` cho inline-edit line sheet | § List Surface contract — twin tree `md:hidden`/`md:block` bị khóa bởi `responsive-double-render` (baseline 0) | Mọi danh sách dữ liệu có cột (Office, Inventory) | |
+| `data-table/interactive-card.tsx` → `InteractiveCard` | Card row có thể click (hover elevation) | § Card Roles + § Elevation Hover rung | Dòng trong data-table ở chế độ mobileCard | |
+| `kpi/kpi-card.tsx` → `KpiCard` | Metric/stat card DUY NHẤT: label 2xs uppercase, value `text-2xl font-bold tabular-nums`, CompareChip delta, sparkline, drill-down href | § Metric Card Role — `STATUS_*`/StatCard/SummaryCard cục bộ bị `stat-card-ssot` ratchet | Thể hiện 1 con số KPI quan trọng | Không dùng bọc list hay nội dung không phải số liệu |
+| `status-badge.tsx` → `StatusBadge`, `getStatusBadgeMeta`, `getStatusDotClassName`, `StatusDomain` | Nguồn duy nhất label+variant badge business-state, khóa theo DB CHECK vocabulary qua `packages/shared/src/labels/vi.ts` | § Status vocabulary — `STATUS_*` map cục bộ mới bị cấm (`status-label-ssot`) | Hiển thị trạng thái (Đã xác nhận, Hoàn thành...) | |
+| `table-empty-state-row.tsx` → `TableEmptyStateRow` | Empty state BÊN TRONG Table | § Empty/Confirm lock | Khi DataTable không có dòng nào | |
+| `audit-history-list.tsx` → `AuditHistoryList` | Lịch sử audit entity (tab "Lịch sử") lọc theo `audit_logs` entity | § Inventory surface contract (audit inline ở trang chi tiết) | Hiển thị log thay đổi của 1 đối tượng | |
 
 ### Route transition frames
 

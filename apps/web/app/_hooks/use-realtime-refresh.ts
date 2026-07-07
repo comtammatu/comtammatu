@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type DependencyList } from "react";
+import { useCallback, useEffect, useRef, startTransition, type DependencyList } from "react";
 import { useRouter } from "next/navigation";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
@@ -68,7 +68,9 @@ export function useRealtimeRefresh({
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
       lastRefreshAtRef.current = Date.now();
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     }, waitMs);
   }, [enabled, router]);
 

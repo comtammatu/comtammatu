@@ -1,71 +1,59 @@
-import { redirect } from "next/navigation";
-import { loadProductionSurfaceData } from "../production-data";
-import { ProductionHubClient } from "../production-client";
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
+import { notFound } from "next/navigation";
+import { loadAuthState } from "@/_lib/auth";
+import { fetchProductionRuns, type ProductionRunRow } from "../production-run-actions";
+import { ProductionRunsClient } from "./production-runs-client";
+import { resolveInventoryListScope } from "../_lib/inventory-scope";
+import { AppPage, AppPageHeader } from "@/components/surface";
 
-interface ProductionPageContentProps {
+interface ProductionPageProps {
   searchParams?: Promise<{ branchId?: string | string[] }>;
   routeBranchId?: number;
-  basePath?: string;
   embedded?: boolean;
 }
 
-/**
- * `basePath` is accepted for shell-contract parity with the other
- * `*PageContent` exports (`docs/spec/page-archetypes.md`), but the
- * production hub has no nested detail routes today — orders/recipes are
- * managed inline via dialogs, not navigation — so it is not threaded
- * further.
- */
 export async function ProductionPageContent({
+  searchParams,
   routeBranchId,
   embedded = false,
-}: ProductionPageContentProps) {
-  const {
-    canManageCatalog,
-    canManageRecipes,
-    canCreateProduction,
-    canConfirmProduction,
-    canAdjustStock,
-    productionBranches,
-    unitOptions,
-    ingredients,
-    finishedGoods,
-    orders,
-    recipes,
-  } = await loadProductionSurfaceData({ routeBranchId });
+}: ProductionPageProps) {
+  const params = searchParams ? await searchParams : {};
+  const { supabase, claims } = await loadAuthState();
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  
+  if (scope.outOfScope) notFound();
 
-  return (
-    <ProductionHubClient
-      canManageCatalog={canManageCatalog}
-      canManageRecipes={canManageRecipes}
-      canCreateProduction={canCreateProduction}
-      canConfirmProduction={canConfirmProduction}
-      canAdjustStock={canAdjustStock}
-      productionBranches={productionBranches}
-      unitOptions={unitOptions}
-      ingredients={ingredients}
-      finishedGoods={finishedGoods}
-      orders={orders}
-      recipes={recipes}
+  const res = await fetchProductionRuns();
+  const rows: ProductionRunRow[] = res.success ? (res.data as ProductionRunRow[]) : [];
+
+  const content = (
+    <ProductionRunsClient
+      initial={rows}
+      branchId={scope.selectedBranchId ?? undefined}
+      basePath="/inventory/production"
       embedded={embedded}
     />
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <AppPage width="xwide" density="compact">
+      <AppPageHeader title="Lệnh sản xuất" />
+      {content}
+    </AppPage>
   );
 }
 
 export default async function ProductionPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
-  const params = searchParams ? await searchParams : {};
-  const qParams = new URLSearchParams();
-  qParams.set("tab", "production");
-  if (params.branchId) {
-    if (Array.isArray(params.branchId)) {
-      params.branchId.forEach((id) => qParams.append("branchId", id));
-    } else {
-      qParams.set("branchId", params.branchId);
-    }
-  }
-  redirect(`/inventory/operations?${qParams.toString()}`);
+  return <ProductionPageContent searchParams={searchParams} />;
 }

@@ -107,7 +107,7 @@ export async function WasteNewPageContent({
     supabase
       .from("ingredients")
       .select(
-        "id, name, unit, purchase_unit, unit_cost, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, allow_issue, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        "id, name, unit_cost, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -164,8 +164,6 @@ export async function WasteNewPageContent({
         unit:
           issueUnits.find((unit) => unit.isBase)?.label ??
           issueUnits[0]?.label ??
-          i.purchase_unit ??
-          i.unit ??
           "kg",
         unitCost: i.unit_cost === null ? null : Number(i.unit_cost),
         issueUnits,

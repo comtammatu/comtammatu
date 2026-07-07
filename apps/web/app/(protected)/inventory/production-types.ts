@@ -1,8 +1,6 @@
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
-import type {
-  ProductionOrderRow,
-  ProductionRecipeRow,
-} from "./production-actions";
+import type { ProductionRunRow } from "./production-run-actions";
+import type { ProductionRecipeRow } from "./production-recipe-actions";
 import type { IngredientUnitRow } from "./_lib/types";
 
 export type BranchOption = {
@@ -165,4 +163,4 @@ export function defaultProductionNumber() {
   return `PRD-${stamp}-${suffix}`;
 }
 
-export type { ProductionOrderRow, ProductionRecipeRow };
+export type { ProductionRunRow, ProductionRecipeRow };

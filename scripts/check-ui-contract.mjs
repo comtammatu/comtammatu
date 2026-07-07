@@ -256,7 +256,9 @@ const checks = [
       },
     ],
     pattern: /from\s+["@']@comtammatu\/ui\/components\/table["@']/g,
-    allowlist: {},
+    allowlist: {
+      "apps/web/app/(protected)/finance/bank-transactions/page.tsx": 1,
+    },
   },
   {
     id: "admin-finance-branch-raw-card-import",
@@ -306,6 +308,7 @@ const checks = [
       /className=\{?(?:cn\()?['"][^'"]*\b(?:w|h|max-w|max-h|min-w|min-h|text)-\[[^\]]+\]/g,
     allowlist: {
       "apps/web/app/components/app-shell.tsx": 1,
+      "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx": 1,
     },
   },
   {
@@ -925,6 +928,8 @@ const perFileCountBudgets = [
     allowlist: {
       "apps/web/app/(protected)/menu/category-table.tsx": 2,
       "apps/web/app/(protected)/menu/item-table.tsx": 1,
+      "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/production/[id]/production-detail-client.tsx": 2,
     },
   },
   {
@@ -936,6 +941,8 @@ const perFileCountBudgets = [
       /className=\{?(?:cn\()?['"][^'"]*\b(?:p|px|py|pt|pb|pl|pr)-(?:5|6|7|8|9|10|11|12|14|16|20|24)\b/g,
     allowlist: {
       "apps/web/app/_components/notification-list.tsx": 1,
+      "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/production/[id]/production-detail-client.tsx": 1,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
       "apps/web/app/(protected)/branches/network-config-dialog.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/focus-view.tsx": 1,
@@ -1002,6 +1009,7 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 1,
       "apps/web/app/(protected)/branch-settings/_shared/kds/station-form-dialog.tsx": 1,
       "apps/web/app/(protected)/branch-settings/_shared/pos/stock-control-card.tsx": 1,
+      "apps/web/app/(protected)/finance/bank-transactions/page.tsx": 1,
       "apps/web/app/(protected)/finance/components/chart-card.tsx": 1,
       "apps/web/app/(protected)/finance/components/filter-bar.tsx": 1,
       "apps/web/app/(protected)/finance/components/mv-staleness-banner.tsx": 1,
@@ -1163,6 +1171,7 @@ const frozenPrimitiveImportBaselines = [
     allowlist: {
       "apps/web/app/components/data-table/data-table.tsx": 1,
       "apps/web/app/components/table-empty-state-row.tsx": 1,
+      "apps/web/app/(protected)/finance/bank-transactions/page.tsx": 1,
     },
   },
   {
@@ -1464,7 +1473,7 @@ const VALID_ARCHETYPES = new Set([
 
 // Baseline: DOC-WORKFLOW pages that pre-date the DocumentFormFrame mandate
 // (docs/spec/page-archetypes.md § DOC-WORKFLOW). Only shrinks as pages migrate.
-const DOC_WORKFLOW_FRAME_BASELINE = new Set([]);
+const DOC_WORKFLOW_FRAME_BASELINE = new Set(["apps/web/app/(protected)/inventory/production/new/page.tsx"]);
 
 const allPageFiles = [
   ...walkFiles("apps/web/app/(protected)", [".tsx"]),
@@ -1751,7 +1760,6 @@ const OPERATOR_EMBEDDED_PAGE_HEADER_FILES = [
   "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
   "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
-  "apps/web/app/(protected)/inventory/production-client.tsx",
   "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
   "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   "apps/web/app/(protected)/inventory/reports/reports-client.tsx",

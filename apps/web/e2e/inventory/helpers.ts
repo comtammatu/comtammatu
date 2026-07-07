@@ -125,33 +125,32 @@ export async function ensureIngredient(
 
   const { data: existing } = await supabase
     .from("ingredients")
-    .select("id, name, unit")
+    .select("id, name")
     .eq("tenant_id", tenantId)
     .eq("name", name)
     .maybeSingle();
 
-  if (existing) return existing;
+  if (existing) return { ...existing, unit: "kg" };
 
   const { data: inserted, error } = await supabase
     .from("ingredients")
     .insert({
       tenant_id: tenantId,
       name,
-      unit: "kg",
-      purchase_unit: "kg",
-      measure_unit: "kg",
-      purchase_to_measure_factor: 1,
       unit_cost: 10000,
       is_active: true,
+      unit: "kg",
+      measure_unit: "kg",
+      purchase_unit: "kg",
     })
-    .select("id, name, unit")
+    .select("id, name")
     .single();
 
   if (error || !inserted) {
     throw new Error(`Failed to create E2E ingredient: ${error?.message}`);
   }
 
-  return inserted;
+  return { ...inserted, unit: "kg" };
 }
 
 // ─── Supplier helpers ─────────────────────────────────────────────────────────

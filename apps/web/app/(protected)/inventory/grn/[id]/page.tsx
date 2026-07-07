@@ -87,8 +87,7 @@ export async function loadGrnDetail(
       ingredients: {
         id: number;
         name: string;
-        unit: string;
-        purchase_unit: string | null;
+        ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
       } | null;
     }>;
     invoiceId: number | null;
@@ -113,8 +112,7 @@ export async function loadGrnDetail(
     const ing = l.ingredients as {
       id: number;
       name: string;
-      unit: string;
-      purchase_unit: string | null;
+      ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
     } | null;
 
     const qsMap: Record<string, string> = {
@@ -127,7 +125,7 @@ export async function loadGrnDetail(
     const rejected = Number(l.rejected_quantity ?? 0);
     const entryUnitId = l.entry_unit_id ?? null;
     const catalogIngredient = ingredientById.get(l.ingredient_id ?? ing?.id ?? 0);
-    const fallbackUnit = l.unit || ing?.purchase_unit || ing?.unit || "";
+    const fallbackUnit = l.unit || ing?.ingredient_units?.find((u: any) => u.is_base)?.units?.code || "";
 
     return {
       lineId: l.id,

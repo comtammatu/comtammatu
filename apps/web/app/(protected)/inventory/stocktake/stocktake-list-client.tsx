@@ -1,3 +1,4 @@
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -21,7 +22,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
-  DrawerFooter,
+
 } from "@comtammatu/ui/components/drawer";
 import { cancelStocktake } from "../actions";
 import { useTransition } from "react";

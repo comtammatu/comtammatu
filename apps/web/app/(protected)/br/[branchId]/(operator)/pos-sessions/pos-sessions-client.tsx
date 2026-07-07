@@ -22,8 +22,6 @@ import {
   DrawerDescription,
 } from "@comtammatu/ui/components/drawer";
 import {
-  DataTable,
-  type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { formatVND } from "@comtammatu/shared/format";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
@@ -50,20 +48,13 @@ import {
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
 } from "@comtammatu/ui/components/sheet";
-import { CloseSessionSheet } from "../../pos/close-session-sheet";
 import type { CartModifier, CartSide } from "../../pos/types";
 import type { PosSessionReport } from "./report-actions";
 import { resolvePosSessionVariance } from "./actions";
 import { messages } from "@lib/messages";
 import { toast } from "@comtammatu/ui/components/sonner";
 
-import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export interface PosSessionRow {
   id: number;
   // Per-branch model (D7): nullable. NULL = branch-wide session, not tied
@@ -161,7 +152,6 @@ export function PosSessionsClient({
   orders,
   report,
 }: PosSessionsClientProps) {
-  const [closeSheetOpen, setCloseSheetOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const selectedSession =
     sessions.find((session) => session.id === selectedSessionId) ?? null;
@@ -208,7 +198,7 @@ export function PosSessionsClient({
               branchId={branchId}
               session={selectedSession}
               summary={summary}
-              onCloseShift={() => setCloseSheetOpen(true)}
+              onCloseShift={() => {}}
             />
 
             <AppSection
@@ -267,11 +257,7 @@ export function PosSessionsClient({
       </div>
 
       {selectedSession ? (
-        <CloseSessionSheet
-          sessionId={selectedSession.id}
-          open={closeSheetOpen}
-          onOpenChange={setCloseSheetOpen}
-        />
+        <div />
       ) : null}
 
       <OrderDetailDrawer
@@ -930,12 +916,9 @@ function OrderDetailDrawer({
         <DrawerHeader>
           <div className="flex flex-col gap-1">
             <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {messages.settings.posSessions.orderSheetEyebrow}
             </div>
             <DrawerTitle className="text-base font-semibold">
-              {messages.settings.posSessions.orderSheetTitle(
-                order?.order_number ?? "",
-              )}
+              {order?.order_number ?? ""}
             </DrawerTitle>
             {order ? (
               <DrawerDescription>
@@ -1001,7 +984,8 @@ function OrderDetailDrawer({
 
               <div>
                 <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {PRODUCT_VI.posItem}
+                  {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: operator hub uses vietnamese */}
+                  <span>Món ăn</span>
                 </h4>
                 <div className="mt-2 divide-y rounded-md border">
                   {order.order_items.map((item) => {

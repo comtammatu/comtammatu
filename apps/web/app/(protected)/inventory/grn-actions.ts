@@ -247,7 +247,7 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
     return { success: false, error: "Không tìm thấy phiếu nhập." };
   const { data: lines, error: e2 } = await supabase
     .from("grn_items")
-    .select("*, ingredients ( id, name, unit, purchase_unit )")
+    .select("*, ingredients ( id, name, ingredient_units(is_base, units(code)) )")
     .eq("grn_id", id.data)
     .eq("tenant_id", claims.tenant_id);
   if (e2)

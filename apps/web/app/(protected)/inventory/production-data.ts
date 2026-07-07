@@ -16,9 +16,9 @@ import {
   type ProductionOperatorRole,
 } from "./_lib/production-roles";
 import {
-  fetchProductionOrders,
+  fetchProductionRuns,
   fetchProductionRecipes,
-  type ProductionOrderRow,
+  type ProductionRunRow,
   type ProductionRecipeRow,
 } from "./production-actions";
 import type { IngredientUnitRow, UnitOption } from "./_lib/types";
@@ -65,7 +65,7 @@ export interface ProductionSurfaceData {
   unitOptions: UnitOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
-  orders: ProductionOrderRow[];
+  runs: ProductionRunRow[];
   recipes: ProductionRecipeRow[];
 }
 
@@ -165,7 +165,7 @@ export async function loadProductionSurfaceData({
         data: [] as ProductionRecipeRow[],
       });
 
-  const [branchesRes, ingredientsRes, ordersRes, recipesRes, unitOptionsRes] =
+    const [branchesRes, ingredientsRes, runsRes, recipesRes, unitOptionsRes] =
     await Promise.all([
       supabase
         .from("branches")
@@ -174,7 +174,7 @@ export async function loadProductionSurfaceData({
         .eq("is_active", true)
         .order("name"),
       fetchIngredients(),
-      fetchProductionOrders(),
+      fetchProductionRuns(),
       recipesPromise,
       fetchUnitOptions(),
     ]);
@@ -228,7 +228,7 @@ export async function loadProductionSurfaceData({
     unitOptions: unitOptionsRes.success ? (unitOptionsRes.data ?? []) : [],
     ingredients,
     finishedGoods,
-    orders: ordersRes.success ? (ordersRes.data ?? []) : [],
+    runs: runsRes.success ? (runsRes.data ?? []) : [],
     recipes: recipesRes.success ? (recipesRes.data ?? []) : [],
   };
 }

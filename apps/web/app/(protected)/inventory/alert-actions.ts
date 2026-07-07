@@ -25,7 +25,8 @@ export async function fetchReorderAlerts(
       branch_id,
       branches ( name, branch_kind ),
       ingredients!inner (
-        id, name, unit, purchase_unit, reorder_point, max_stock_level, is_active
+        id, name, reorder_point, max_stock_level, is_active,
+        ingredient_units(is_base, units(code))
       )
     `,
     )
@@ -58,8 +59,7 @@ export async function fetchReorderAlerts(
       const ing = sl.ingredients as unknown as {
         id: number;
         name: string;
-        unit: string;
-        purchase_unit: string | null;
+        ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
         reorder_point: number;
         max_stock_level: number | null;
       };
@@ -69,7 +69,7 @@ export async function fetchReorderAlerts(
       return {
         ingredient_id: ing.id,
         ingredient_name: ing.name,
-        unit: ing.purchase_unit || ing.unit,
+        unit: ing.ingredient_units?.find((u) => u.is_base)?.units?.code ?? "",
         current_quantity: sl.current_quantity,
         reorder_point: ing.reorder_point,
         max_stock_level: ing.max_stock_level,

@@ -243,7 +243,7 @@ export async function fetchStocktakeDetail(
 
   const { data: lines, error: linesError } = await supabase
     .from("stocktake_lines")
-    .select("*, ingredients(id, name, unit, purchase_unit, category)")
+    .select("*, ingredients(id, name, category, ingredient_units(is_base, units(code)))")
     .eq("session_id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .order("ingredients(name)");

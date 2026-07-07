@@ -220,7 +220,7 @@ test("operator shift landing renders the shared cockpit with branch-scoped route
   );
   assert.ok(source.includes("showNotificationControl={false}"));
   assert.doesNotMatch(source, /showPersonalActions/);
-  assert.ok(source.includes('workflowLayout="stepper"'));
+  assert.ok(source.includes('mode="manager-dashboard"'));
   assert.doesNotMatch(source, /EmployeeActionSection|AppLinkCard|LinkCardGrid/);
 });
 
@@ -256,6 +256,9 @@ test("operator home uses the shared employee action layout", () => {
   // single-line rows (Item/ItemMedia/ItemActions), not full AppLinkCard
   // tiles — domain tile rows below it still render through
   // EmployeeActionSection.
-  assert.match(source, /CompactQueueSection/);
-  assert.match(source, /QueueRowItem/);
+  const queueSource = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-queue-section.tsx",
+  );
+  assert.match(queueSource, /CompactQueueSection/);
+  assert.match(queueSource, /QueueRowItem/);
 });

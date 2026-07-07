@@ -1,3 +1,4 @@
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 import Link from "next/link";
 import {
   ArrowDownLeft as IconMoneyIn,
@@ -7,6 +8,14 @@ import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui/lib/utils";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
+import {
   AppEmptyState,
   AppPage,
   AppPageHeader,
@@ -14,6 +23,8 @@ import {
 } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchSepayBankTransactions } from "../_lib/sepay-bank-transactions";
+import { fetchUnmatchedExpenses } from "../expense-actions";
+import { MatchExpenseCell } from "./match-expense-cell";
 
 const copy = messages.finance.bankTransactions;
 
@@ -22,16 +33,16 @@ function compactDateTime(value: string | null): string {
   return value.replace("T", " ").slice(0, 16);
 }
 
-function statusLabel(status: string): string {
-  if (status === "processed") return copy.status.processed;
-  if (status === "ignored") return copy.status.ignored;
-  if (status === "failed") return copy.status.failed;
-  if (status === "received") return copy.status.received;
-  return status;
-}
-
 export default async function BankTransactionsPage() {
-  const transactions = await fetchSepayBankTransactions();
+  const [transactions, unmatchedExpensesRes] = await Promise.all([
+    fetchSepayBankTransactions(),
+    fetchUnmatchedExpenses(),
+  ]);
+
+  const unmatchedExpenses =
+    unmatchedExpensesRes.success && unmatchedExpensesRes.data
+      ? unmatchedExpensesRes.data
+      : [];
 
   return (
     <AppPage width="wide" density="compact">
@@ -54,52 +65,62 @@ export default async function BankTransactionsPage() {
             description={copy.emptyDescription}
           />
         ) : (
-          <div className="flex flex-col gap-3">
-            {transactions.map((tx) => {
-              const isIn = tx.transferType === "in";
-              const Icon = isIn ? IconMoneyIn : IconMoneyOut;
-              return (
-                <div
-                  key={tx.eventId}
-                  className="flex min-w-0 flex-col gap-2 border-b border-border pb-3 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex min-w-0 gap-3">
-                    <span
-                      className={cn(
-                        "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md",
-                        isIn
-                          ? "bg-success/10 text-success"
-                          : "bg-warning/10 text-warning",
-                      )}
-                    >
-                      <Icon className="size-4" aria-hidden />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {tx.content ?? tx.code ?? copy.noContent}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {compactDateTime(tx.transactionDate ?? tx.createdAt)} ·{" "}
-                        {statusLabel(tx.processingStatus)}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {copy.account}: {tx.accountNumber ?? "—"} ·{" "}
-                        {copy.reference}: {tx.referenceCode ?? tx.requestId}
-                      </p>
-                    </div>
-                  </div>
-                  <div
-                    className={cn(
-                      "shrink-0 font-mono text-sm font-semibold tabular-nums sm:text-right",
-                      isIn ? "text-success" : "text-warning",
-                    )}
-                  >
-                    {isIn ? "+" : "-"}
-                    {formatVND(tx.amount)}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-44">Thời gian</TableHead>
+                  <TableHead>Số Tiền</TableHead>
+                  <TableHead>Mã Tham Chiếu</TableHead>
+                  <TableHead className="w-72">Khớp</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((tx) => {
+                  const isIn = tx.transferType === "in";
+                  const Icon = isIn ? IconMoneyIn : IconMoneyOut;
+                  return (
+                    <TableRow key={tx.eventId}>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {compactDateTime(tx.transactionDate ?? tx.createdAt)}
+                      </TableCell>
+                      <TableCell>
+                        <div
+                          className={cn(
+                            "flex items-center gap-1.5 font-mono text-sm font-semibold tabular-nums",
+                            isIn ? "text-success" : "text-warning",
+                          )}
+                        >
+                          <Icon className="size-3.5" aria-hidden />
+                          {isIn ? "+" : "-"}
+                          {formatVND(tx.amount)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {tx.content ?? tx.code ?? copy.noContent}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {copy.account}: {tx.accountNumber ?? "—"} ·{" "}
+                            {copy.reference}: {tx.referenceCode ?? tx.requestId}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <MatchExpenseCell
+                          eventId={tx.eventId}
+                          paymentId={tx.paymentId}
+                          expenseId={tx.expenseId}
+                          transferType={tx.transferType}
+                          unmatchedExpenses={unmatchedExpenses}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         )}
       </AppSection>

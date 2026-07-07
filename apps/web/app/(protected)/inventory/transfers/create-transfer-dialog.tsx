@@ -92,7 +92,7 @@ type TransferTargetOption = {
 };
 
 function getWarehouseUnit(ingredient: IngredientRow) {
-  return ingredient.purchase_unit || ingredient.unit;
+  return ingredient.units?.find((u) => u.is_base)?.unit_code || "";
 }
 
 function withBranchQuery(path: string, branchId: number | null) {

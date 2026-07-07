@@ -8,10 +8,22 @@ import { resolve } from "node:path";
 // Dev-only: allow the local Supabase stack (supabase start → 127.0.0.1:54321)
 // so the browser can reach REST + realtime against a local DB. Production
 // NODE_ENV keeps the original byte-identical policy.
-const localSupabase =
-  process.env.NODE_ENV === "production"
-    ? ""
-    : " http://127.0.0.1:54321 ws://127.0.0.1:54321 http://127.0.0.1:55521 ws://127.0.0.1:55521 http://127.0.0.1:55421 ws://127.0.0.1:55421";
+let localSupabase = "";
+if (process.env.NODE_ENV !== "production") {
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    try {
+      const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL);
+      const wsProtocol = url.protocol === "https:" ? "wss:" : "ws:";
+      localSupabase = ` ${url.origin} ${wsProtocol}//${url.host}`;
+    } catch {
+      // Fallback if parsing fails
+    }
+  }
+  // Fallback to default ports if no env URL or parsing failed
+  if (!localSupabase) {
+    localSupabase = " http://127.0.0.1:54321 ws://127.0.0.1:54321 http://127.0.0.1:55521 ws://127.0.0.1:55521 http://127.0.0.1:55421 ws://127.0.0.1:55421";
+  }
+}
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",

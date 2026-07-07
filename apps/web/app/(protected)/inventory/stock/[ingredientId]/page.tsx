@@ -56,8 +56,6 @@ type IngredientRow = {
   id: number;
   name: string;
   sku: string | null;
-  unit: string;
-  purchase_unit: string;
   category: string | null;
   unit_cost: number | null;
   min_stock_level: number | null;
@@ -295,7 +293,7 @@ export async function StockIngredientDetailPageContent({
     supabase
       .from("ingredients")
       .select(
-        "id, name, sku, unit, purchase_unit, category, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, is_active, units!ingredient_units_unit_tenant_fkey(code))",
+        "id, name, sku, category, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, is_active, units!ingredient_units_unit_tenant_fkey(code))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("id", ingredientId)
@@ -354,7 +352,13 @@ export async function StockIngredientDetailPageContent({
 
   const stockRows = (stockRes.data ?? []) as StockLevelRow[];
   const movementRows = (movementRes.data ?? []) as MovementRow[];
-  const unit = ingredient.purchase_unit || ingredient.unit;
+  const unit =
+    ingredient.ingredient_units?.find((u: any) => u.is_base)
+      ?.units
+      ? Array.isArray(ingredient.ingredient_units.find((u: any) => u.is_base)?.units)
+        ? (ingredient.ingredient_units.find((u: any) => u.is_base)?.units as any)[0]?.code
+        : (ingredient.ingredient_units.find((u: any) => u.is_base)?.units as any)?.code
+      : "";
   const totalQty = stockRows.reduce(
     (sum, row) => sum + Number(row.current_quantity ?? 0),
     0,

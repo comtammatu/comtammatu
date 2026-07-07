@@ -57,7 +57,6 @@ interface AssignmentRow {
   location_id: number;
   ingredients: {
     name: string;
-    measure_unit: string;
     ingredient_units: AssignmentUnitRow[] | null;
   } | null;
 }
@@ -132,7 +131,7 @@ async function buildEmployeeCountSurface({
   const { data: assignmentData } = await countReadClient
     .from("inventory_count_assignments")
     .select(
-      "ingredient_id, location_id, ingredients ( name, measure_unit, ingredient_units!ingredient_units_ingredient_tenant_fkey ( unit_id, is_base, sort_order, to_base_factor, units!ingredient_units_unit_tenant_fkey ( code, name ) ) )",
+      "ingredient_id, location_id, ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey ( unit_id, is_base, sort_order, to_base_factor, units!ingredient_units_unit_tenant_fkey ( code, name ) ) )",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("employee_id", employeeId)
@@ -178,7 +177,7 @@ async function buildEmployeeCountSurface({
         .map((row) => ({
           ingredientId: row.ingredient_id,
           ingredientName: row.ingredients?.name ?? copy.ingredientFallback,
-          measureUnit: row.ingredients?.measure_unit ?? "",
+          measureUnit: "",
           // Counting can use any of the ingredient's units (no role filter), base first.
           countUnits: (row.ingredients?.ingredient_units ?? [])
             .filter((u) => (u.units?.code ?? "") !== "")

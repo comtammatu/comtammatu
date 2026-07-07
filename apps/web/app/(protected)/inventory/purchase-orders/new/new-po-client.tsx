@@ -826,7 +826,7 @@ function LineItemsSection({
     const defaultUnit = getDefaultPurchaseUnit(ing);
     patchDraft({
       ingredientId: val,
-      unit: defaultUnit?.label ?? ing?.purchase_unit ?? ing?.unit ?? "",
+      unit: defaultUnit?.label ?? ing?.units?.find((u) => u.is_base)?.unit_code ?? "",
       entryUnitId: defaultUnit?.unitId ?? null,
     });
   }
@@ -866,7 +866,7 @@ function LineItemsSection({
       return;
     }
     const ing = ingredients.find((x) => x.id === iid);
-    const resolvedUnit = draft.unit || ing?.purchase_unit || ing?.unit || "";
+    const resolvedUnit = draft.unit || ing?.units?.find((u) => u.is_base)?.unit_code || "";
     if (!resolvedUnit || draft.quantity <= 0) {
       toast.error(messages.inventory.po.validQuantityRequired);
       return;
@@ -1075,8 +1075,7 @@ function AddLineSheet({
                     label: i.name,
                     hint:
                       getDefaultPurchaseUnit(i)?.label ??
-                      i.purchase_unit ??
-                      i.unit,
+                      i.units?.find((u) => u.is_base)?.unit_code ?? "",
                     keywords: [i.sku ?? "", i.category ?? ""],
                   }))}
                   placeholder={messages.inventory.po.ingredientPlaceholder}

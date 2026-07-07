@@ -5411,6 +5411,103 @@ export type Database = {
           },
         ]
       }
+      production_runs: {
+        Row: {
+          actual_quantity: number | null
+          branch_id: number
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          entry_unit_id: number | null
+          finished_good_id: number
+          id: number
+          notes: string | null
+          planned_quantity: number
+          production_number: string
+          started_at: string | null
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          actual_quantity?: number | null
+          branch_id: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          entry_unit_id?: number | null
+          finished_good_id: number
+          id?: never
+          notes?: string | null
+          planned_quantity: number
+          production_number: string
+          started_at?: string | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          actual_quantity?: number | null
+          branch_id?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          entry_unit_id?: number | null
+          finished_good_id?: number
+          id?: never
+          notes?: string | null
+          planned_quantity?: number
+          production_number?: string
+          started_at?: string | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_runs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_runs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "production_runs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_runs_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_runs_finished_good_id_fkey"
+            columns: ["finished_good_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -6512,6 +6609,7 @@ export type Database = {
           movement_subtype: string | null
           order_id: number | null
           production_order_id: number | null
+          production_run_id: number | null
           quantity_change: number
           reason: string | null
           tenant_id: number
@@ -6533,6 +6631,7 @@ export type Database = {
           movement_subtype?: string | null
           order_id?: number | null
           production_order_id?: number | null
+          production_run_id?: number | null
           quantity_change: number
           reason?: string | null
           tenant_id: number
@@ -6554,6 +6653,7 @@ export type Database = {
           movement_subtype?: string | null
           order_id?: number | null
           production_order_id?: number | null
+          production_run_id?: number | null
           quantity_change?: number
           reason?: string | null
           tenant_id?: number
@@ -6630,6 +6730,13 @@ export type Database = {
             columns: ["production_order_id"]
             isOneToOne: false
             referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_production_run_id_fkey"
+            columns: ["production_run_id"]
+            isOneToOne: false
+            referencedRelation: "production_runs"
             referencedColumns: ["id"]
           },
           {
@@ -8492,6 +8599,7 @@ export type Database = {
         Row: {
           created_at: string
           error_code: string | null
+          expense_id: number | null
           http_status: number | null
           id: number
           payload: Json
@@ -8506,6 +8614,7 @@ export type Database = {
         Insert: {
           created_at?: string
           error_code?: string | null
+          expense_id?: number | null
           http_status?: number | null
           id?: never
           payload: Json
@@ -8520,6 +8629,7 @@ export type Database = {
         Update: {
           created_at?: string
           error_code?: string | null
+          expense_id?: number | null
           http_status?: number | null
           id?: never
           payload?: Json
@@ -8532,6 +8642,13 @@ export type Database = {
           tenant_id?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "webhook_events_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "webhook_events_payment_id_fkey"
             columns: ["payment_id"]
@@ -9011,6 +9128,7 @@ export type Database = {
         Returns: undefined
       }
       cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
+      cancel_production_run: { Args: { p_run_id: number }; Returns: Json }
       check_cron_jobs_health: { Args: never; Returns: undefined }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
       claim_print_job: {
@@ -9131,6 +9249,10 @@ export type Database = {
         Returns: Json
       }
       confirm_production_order: { Args: { p_order_id: number }; Returns: Json }
+      confirm_production_run: {
+        Args: { p_actual_quantity?: number; p_run_id: number }
+        Returns: Json
+      }
       confirm_sepay_payment: {
         Args: {
           p_account_number: string
@@ -9226,6 +9348,16 @@ export type Database = {
           p_items?: Json
           p_notes?: string
           p_production_number: string
+        }
+        Returns: Json
+      }
+      create_production_run: {
+        Args: {
+          p_branch_id: number
+          p_entry_unit_id: number
+          p_finished_good_id: number
+          p_notes?: string
+          p_planned_quantity: number
         }
         Returns: Json
       }
@@ -10314,6 +10446,7 @@ export type Database = {
         }
         Returns: Json
       }
+      start_production_run: { Args: { p_run_id: number }; Returns: Json }
       start_stocktake: {
         Args: {
           p_auditor_id?: string

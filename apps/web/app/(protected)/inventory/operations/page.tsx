@@ -1,22 +1,16 @@
 import { notFound, redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import {
-  currentUserHasAnyPermissionAny,
   currentUserHasPermissionAny,
 } from "@/_lib/permissions";
 import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import {
-  canAccessProductionSurface,
-  hasCurrentProductionBranchAccess,
-  PRODUCTION_OPEN_PERMISSIONS,
-} from "../production-data";
+
 import { resolveInventoryBranchScope } from "../_lib/inventory-scope";
 
 // Import original page content components
 import { PurchaseOrdersPageContent } from "../purchase-orders/page";
 import { GRNListPageContent } from "../grn/page";
 import { IssuesPageContent } from "../issues/page";
-import { ProductionPageContent } from "../production/page";
 import { TransfersPageContent } from "../transfers/page";
 
 import { AppPage, AppPageHeader } from "@/components/surface";
@@ -42,22 +36,15 @@ export default async function OperationsPage({
   const eyebrowText = "Kho hàng";
   const titleText = "Giao dịch kho";
 
-  const [hasProcurementRead, hasProductionPermission, hasProductionBranchAccess] =
+  const [hasProcurementRead] =
     await Promise.all([
       currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
-      currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
-      hasCurrentProductionBranchAccess(supabase, claims),
     ]);
 
   const showProcurement =
     isOwner ||
     (canAccess(claims.user_role, "inventory_procurement") &&
       hasProcurementRead);
-  const showProduction =
-    isOwner ||
-    (canAccessProductionSurface(claims.user_role) &&
-      hasProductionPermission &&
-      hasProductionBranchAccess);
 
   // Compute allowed tabs based on permissions
   const tabsList: Array<{ value: string; label: string }> = [];
@@ -69,10 +56,6 @@ export default async function OperationsPage({
 
   tabsList.push({ value: "consumption", label: "Tiêu hao / xuất bán" });
   tabsList.push({ value: "issues", label: "Xuất kho nội bộ" });
-
-  if (showProduction) {
-    tabsList.push({ value: "production", label: "Lệnh sản xuất" });
-  }
 
   tabsList.push({ value: "transfers", label: "Điều chuyển nội bộ" });
 
@@ -133,13 +116,6 @@ export default async function OperationsPage({
         searchParams={searchParams}
         scope="internal"
         listBasePath="/inventory/issues"
-        embedded={true}
-      />
-    );
-  } else if (activeTab === "production") {
-    tabContent = (
-      <ProductionPageContent
-        searchParams={searchParams}
         embedded={true}
       />
     );

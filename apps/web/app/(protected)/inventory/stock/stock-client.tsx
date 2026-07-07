@@ -1,3 +1,4 @@
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import Link from "next/link";
@@ -83,6 +84,7 @@ import {
 } from "../_lib/issue-units";
 import type { IngredientUnitRow } from "../_lib/types";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
+import { QuickInternalTransferDialog } from "./quick-internal-transfer-dialog";
 import { StockMobileGrid } from "./stock-mobile-grid";
 import {
   StockLocationBreakdownLine,
@@ -651,6 +653,8 @@ export function StockClient({
   );
   const [quickIssueTarget, setQuickIssueTarget] =
     useState<QuickIssueTarget | null>(null);
+  const [quickTransferTarget, setQuickTransferTarget] =
+    useState<StockIngredient | null>(null);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
 
   const categories = useMemo(() => {
@@ -774,6 +778,15 @@ export function StockClient({
             ingredient: item,
             issueType: "consumption",
           }),
+      });
+    }
+
+    if (actionPermissions.canCreateTransfer) {
+      rowActions.push({
+        key: "transfer",
+        label: "Chuyển Bếp",
+        icon: <IconArrowBarRight />,
+        onSelect: () => setQuickTransferTarget(item),
       });
     }
 
@@ -1279,6 +1292,7 @@ export function StockClient({
 
   const hasItemActions =
     actionPermissions.canCreateIssue ||
+    actionPermissions.canCreateTransfer ||
     Boolean(actionPermissions.canCreateStocktake && actionHrefs.stocktake) ||
     actionPermissions.canAdjustException;
 
@@ -1378,6 +1392,16 @@ export function StockClient({
               }
             >
               {ACTIONS_VI.export}
+            </Button>
+          ) : null}
+          {actionPermissions.canCreateTransfer ? (
+            <Button
+              type="button"
+              size="touch"
+              variant="outline"
+              onClick={() => setQuickTransferTarget(item)}
+            >
+              Chuyển Bếp
             </Button>
           ) : null}
           {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
@@ -1588,6 +1612,17 @@ export function StockClient({
           }
           onOpenChange={(open) => {
             if (!open) setQuickIssueTarget(null);
+          }}
+        />
+      ) : null}
+
+      {quickTransferTarget ? (
+        <QuickInternalTransferDialog
+          branchId={branchId}
+          open={quickTransferTarget !== null}
+          target={quickTransferTarget}
+          onOpenChange={(open) => {
+            if (!open) setQuickTransferTarget(null);
           }}
         />
       ) : null}

@@ -23,8 +23,7 @@ type Ingredient = {
   id: number;
   name: string;
   sku: string | null;
-  unit: string;
-  purchase_unit: string | null;
+  ingredient_units?: { id: number, unit_id: number, to_base_factor: number, is_base: boolean, is_active: boolean, sort_order: number, units: { code: string, name: string } | null }[];
   unit_cost: number | null;
   category: string | null;
   units?: IngredientUnitRow[];
@@ -76,7 +75,7 @@ export async function GrnCreatePageContent({
     supabase
       .from("ingredients")
       .select(
-        "id, name, sku, unit, purchase_unit, unit_cost, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        "id, name, sku, unit_cost, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -116,7 +115,7 @@ export async function GrnCreatePageContent({
         .sort((a, b) => a.sort_order - b.sort_order);
       return {
         ...ingredient,
-        unit: ingredient.purchase_unit ?? ingredient.unit,
+        unit: units.find((u) => u.is_base)?.unit_code ?? "",
         units,
       };
     },

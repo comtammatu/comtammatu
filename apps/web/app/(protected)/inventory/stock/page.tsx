@@ -171,6 +171,7 @@ export async function StockPageContent({
         max_stock_level: number | null;
         reorder_point: number | null;
         storage_type: string | null;
+        is_active: boolean;
         units?: IngredientUnitRow[];
       }>)
     : [];
@@ -244,11 +245,16 @@ export async function StockPageContent({
     });
   }
 
-  const ingredients: StockIngredient[] = dbIngredients.map((row) => {
-    const sl = stockMap.get(row.id);
-    const qty = sl?.current_quantity ?? 0;
-    const cost = sl?.avg_unit_cost ?? row.unit_cost ?? 0;
-    const min = row.min_stock_level ?? 0;
+  const ingredients: StockIngredient[] = dbIngredients
+    .filter((row) => {
+      const currentQty = stockMap.get(row.id)?.current_quantity ?? 0;
+      return row.is_active || currentQty > 0;
+    })
+    .map((row) => {
+      const sl = stockMap.get(row.id);
+      const qty = sl?.current_quantity ?? 0;
+      const cost = sl?.avg_unit_cost ?? row.unit_cost ?? 0;
+      const min = row.min_stock_level ?? 0;
     const max = row.max_stock_level ?? 0;
     const reorder = row.reorder_point ?? 0;
 

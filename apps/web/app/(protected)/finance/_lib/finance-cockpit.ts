@@ -211,6 +211,7 @@ export async function fetchOperatingExpenseTotal({
     .from("expenses")
     .select("amount")
     .eq("tenant_id", tenantId)
+    .neq("category", "bank_deposit")
     .gte("expense_date", startDate)
     .lte("expense_date", endDate);
 

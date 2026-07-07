@@ -10,8 +10,7 @@ export interface CountUnitOption {
 /**
  * Selectable counting units for an ingredient: every active ingredient_units
  * row, base unit first. Counting physical stock can be done in any of the
- * ingredient's units, so this is NOT filtered by role (allow_purchase/issue/
- * production).
+ * ingredient's units.
  */
 export function getCountUnitOptions(
   ingredient: IngredientRow | undefined,

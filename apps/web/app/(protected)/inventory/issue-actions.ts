@@ -202,7 +202,7 @@ export async function fetchStockIssueDetail(
     supabase
       .from("stock_issue_items")
       .select(
-        "id, ingredient_id, quantity, unit, entry_unit_id, unit_cost, total_cost, reason, ingredients ( id, name, unit, purchase_unit )",
+        "id, ingredient_id, quantity, unit, entry_unit_id, unit_cost, total_cost, reason, ingredients ( id, name, ingredient_units(is_base, units(code)) )",
       )
       .eq("issue_id", id.data)
       .eq("tenant_id", claims.tenant_id)

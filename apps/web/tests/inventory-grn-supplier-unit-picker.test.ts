@@ -16,7 +16,7 @@ function readRepo(path: string): string {
 
 test("GRN supplier line resolves a non-base purchase unit as the entry unit", () => {
   // "Thùng" (case, non-base) alongside "Lon" (base) — mirrors a real
-  // ingredient_units row shape (allow_purchase true, is_base false, 24x factor).
+  // ingredient_units row shape (is_base false, 24x factor).
   const ingredient = {
     units: [
       {
@@ -61,8 +61,8 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
   assert.equal(nonBase?.isBase, false);
 });
 
-test("getPurchaseUnitOptions excludes an is_active=false allow_purchase unit (inv_to_base would reject it)", () => {
-  // Mirrors the GRN-create bug: an ingredient_units row with allow_purchase
+test("getPurchaseUnitOptions excludes an is_active=false unit (inv_to_base would reject it)", () => {
+  // Mirrors the GRN-create bug: an ingredient_units row
   // true but is_active false must never reach the picker, because
   // inv_to_base(ingredient_id, entry_unit_id, qty) requires is_active and
   // raises 23503 otherwise, which confirm_goods_receipt_note surfaces as
@@ -113,7 +113,7 @@ test("getPurchaseUnitOptions excludes an is_active=false allow_purchase unit (in
   assert.equal(defaultUnit?.unitId, 100);
 });
 
-test("getPurchaseUnitOptions includes every active ingredient unit regardless of allow_purchase", () => {
+test("getPurchaseUnitOptions includes every active ingredient unit", () => {
   const ingredient = {
     units: [
       {

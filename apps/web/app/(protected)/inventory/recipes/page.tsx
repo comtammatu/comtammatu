@@ -32,8 +32,7 @@ type MenuItemRow = {
     ingredients: {
       id: number;
       name: string;
-      unit: string;
-      purchase_unit?: string | null;
+      ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
       unit_cost: number | string | null;
     } | null;
   }> | null;
@@ -70,8 +69,7 @@ export default async function RecipesPage({
     ? (ingredientsRes.data as Array<{
         id: number;
         name: string;
-        unit: string;
-        purchase_unit?: string | null;
+        ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
         units?: IngredientUnitRow[];
       }>)
     : [];
@@ -93,9 +91,7 @@ export default async function RecipesPage({
           line.entry_unit_id == null ? null : Number(line.entry_unit_id);
         const catalogIngredient = ingredientById.get(ingredientId);
         const fallbackUnit =
-          line.unit ??
-          line.ingredients?.purchase_unit ??
-          line.ingredients?.unit ??
+          line.ingredients?.ingredient_units?.find((u: any) => u.is_base)?.units?.code ??
           "";
         return {
           ingredientId,
@@ -137,7 +133,7 @@ export default async function RecipesPage({
     ? ingredientRows.map((i) => ({
         id: i.id,
         name: i.name,
-        unit: i.purchase_unit ?? i.unit,
+        unit: i.units?.find((u) => u.is_base)?.unit_code ?? "",
         units: i.units,
       }))
     : [];

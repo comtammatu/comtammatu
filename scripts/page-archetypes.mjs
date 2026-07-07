@@ -86,10 +86,7 @@ export const PAGE_ARCHETYPES = {
     "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx":
     "EMBED-WRAPPER",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx":
-    "HUB",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/page.tsx":
-    "EMBED-WRAPPER",
+
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/[id]/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/new/page.tsx":
@@ -164,6 +161,8 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/operations/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/page.tsx": "DASHBOARD",
   "apps/web/app/(protected)/inventory/production/page.tsx": "HUB",
+  "apps/web/app/(protected)/inventory/production/new/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/purchase-orders/new/page.tsx":
     "DOC-WORKFLOW",

@@ -7,6 +7,7 @@ export interface SepayWebhookRow {
   processing_status: string;
   error_code: string | null;
   payment_id: number | null;
+  expense_id: number | null;
   payload: unknown;
 }
 
@@ -17,6 +18,7 @@ export interface SepayBankTransaction {
   processingStatus: string;
   errorCode: string | null;
   paymentId: number | null;
+  expenseId: number | null;
   transactionDate: string | null;
   accountNumber: string | null;
   code: string | null;
@@ -82,7 +84,8 @@ export function mapSepayWebhookRow(
   if (!payload) return null;
 
   const transferType = readTransferType(payload);
-  const amount = readNumber(payload, "transferAmount");
+  const rawAmount = readNumber(payload, "transferAmount");
+  const amount = rawAmount != null ? Math.abs(rawAmount) : null;
   if (!transferType || amount == null || amount <= 0) return null;
 
   return {
@@ -92,6 +95,7 @@ export function mapSepayWebhookRow(
     processingStatus: row.processing_status,
     errorCode: row.error_code,
     paymentId: row.payment_id,
+    expenseId: row.expense_id,
     transactionDate: readString(payload, "transactionDate"),
     accountNumber: readString(payload, "accountNumber"),
     code: readString(payload, "code"),

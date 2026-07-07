@@ -1,15 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {
-  canAccess,
-  resolveRoleHomeLink,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI, MODULE_LABELS_VI } from "@comtammatu/shared/labels";
-import { Button } from "@comtammatu/ui/components/button";
 import { ManagementShell } from "@/components/management-chrome";
 import {
   findActiveNavItem,
@@ -30,17 +26,9 @@ export type OfficeModuleId = "admin" | "hr" | "menu" | "orders" | "branches";
 interface ModuleChrome {
   defaultPageTitle: string;
   crumbLabel: string;
-  description?: string;
   /** Render a multi-level breadcrumb from the active nav item instead of the
    *  static crumb badge. */
   breadcrumbFromNav?: boolean;
-  /** Header action overriding the default role-home link; hidden unless
-   *  `gateModule` is accessible. */
-  action?: {
-    href: string;
-    label: string;
-    gateModule?: Parameters<typeof canAccess>[1];
-  };
 }
 
 const hrShell = messages.hr.shell;
@@ -54,25 +42,18 @@ const OFFICE_MODULE_CHROME: Record<OfficeModuleId, ModuleChrome> = {
   hr: {
     defaultPageTitle: hrShell.defaultPageTitle,
     crumbLabel: APP_COPY_VI.hrWorkspaceSubtitle,
-    description: hrShell.pageDescription,
   },
   menu: {
     defaultPageTitle: MODULE_LABELS_VI.menu,
     crumbLabel: MODULE_LABELS_VI.menu,
-    description:
-      "Nhập danh mục, món ăn, biến thể và topping cho toàn chuỗi tại cùng một nơi.",
   },
   orders: {
     defaultPageTitle: "Đơn hàng",
     crumbLabel: "Đối soát · Đơn hàng",
-    description:
-      "Tra cứu lịch sử đơn hàng, xử lý hoàn tiền và đối soát doanh thu.",
   },
   branches: {
     defaultPageTitle: MODULE_LABELS_VI.branches,
     crumbLabel: MODULE_LABELS_VI.branches,
-    description:
-      "Quản lý danh sách Hub vận hành, địa chỉ liên hệ và cổng mạng tin cậy.",
   },
 };
 
@@ -117,18 +98,6 @@ export function OfficeModuleShell({
   const pathname = usePathname();
   const tier2 = resolveOfficeDeepNav(role, module, branchId);
 
-  let actionLink: { href: string; label: string } | null = resolveRoleHomeLink(
-    role,
-    branchId,
-  );
-  if (chrome.action) {
-    const allowed =
-      !chrome.action.gateModule || canAccess(role, chrome.action.gateModule);
-    actionLink = allowed
-      ? { href: chrome.action.href, label: chrome.action.label }
-      : null;
-  }
-
   return (
     <ManagementShell
       user={user}
@@ -141,12 +110,6 @@ export function OfficeModuleShell({
           ? buildBreadcrumbTrail(pathname, tier2).slice(0, -1)
           : undefined,
         crumbLabel: chrome.crumbLabel,
-        description: chrome.description,
-        actions: actionLink ? (
-          <Button asChild variant="outline" size="sm">
-            <Link href={actionLink.href}>{actionLink.label}</Link>
-          </Button>
-        ) : undefined,
       }}
     >
       {children}
