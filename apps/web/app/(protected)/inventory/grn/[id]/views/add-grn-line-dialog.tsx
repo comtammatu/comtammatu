@@ -27,13 +27,21 @@ import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
 } from "../../../_lib/purchase-units";
+import { getReferenceCostForUnit } from "../../../_lib/reference-cost";
 import type { IngredientRow } from "../../../page";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import {
-  grnCopy,
-  type EditableLine,
-  type GRNDetail,
-} from "./grn-detail-types";
+import { grnCopy, type EditableLine, type GRNDetail } from "./grn-detail-types";
+
+function isSameReferenceCost(
+  currentCost: number | null,
+  referenceCost: { value: number } | null,
+): boolean {
+  return (
+    currentCost != null &&
+    referenceCost != null &&
+    Math.abs(currentCost - referenceCost.value) < 0.01
+  );
+}
 
 export function AddGrnLineDialog({
   grn,
@@ -75,21 +83,45 @@ export function AddGrnLineDialog({
     setIngredientId(value);
     const ingredient = ingredients.find((item) => item.id === Number(value));
     const defaultUnit = getDefaultPurchaseUnit(ingredient);
-    setUnit(
-      defaultUnit?.label ?? ingredient?.units?.find((u) => u.is_base)?.unit_code ?? "",
+    const unitLabel =
+      defaultUnit?.label ??
+      ingredient?.units?.find((u) => u.is_base)?.unit_code ??
+      "";
+    const referenceCost = getReferenceCostForUnit(
+      ingredient,
+      defaultUnit?.unitId,
+      unitLabel,
     );
+    setUnit(unitLabel);
     setEntryUnitId(defaultUnit?.unitId ?? null);
-    setUnitCost(
-      ingredient?.unit_cost != null ? String(Number(ingredient.unit_cost)) : "",
-    );
+    setUnitCost(referenceCost != null ? String(referenceCost.value) : "");
   }
 
   function handleUnitChange(unitIdValue: string) {
-    setEntryUnitId(Number(unitIdValue));
     const opt = purchaseUnitOptions.find(
       (o) => String(o.unitId) === unitIdValue,
     );
-    if (opt) setUnit(opt.label);
+    if (!opt) return;
+    const currentReferenceCost = getReferenceCostForUnit(
+      selectedIngredient,
+      entryUnitId,
+      unit,
+    );
+    const nextReferenceCost = getReferenceCostForUnit(
+      selectedIngredient,
+      opt.unitId,
+      opt.label,
+    );
+    setEntryUnitId(Number(unitIdValue));
+    setUnit(opt.label);
+    if (
+      unitCost.trim() === "" ||
+      isSameReferenceCost(Number(unitCost), currentReferenceCost)
+    ) {
+      setUnitCost(
+        nextReferenceCost != null ? String(nextReferenceCost.value) : "",
+      );
+    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {

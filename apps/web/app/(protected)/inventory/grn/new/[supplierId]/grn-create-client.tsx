@@ -61,6 +61,10 @@ import {
   getPurchaseUnitOptions,
   type PurchaseUnitOption,
 } from "../../../_lib/purchase-units";
+import {
+  getDisplayReferenceCost,
+  getReferenceCostForUnit,
+} from "../../../_lib/reference-cost";
 import type { IngredientUnitRow } from "../../../_lib/types";
 import {
   createGrnDraft,
@@ -182,6 +186,15 @@ function useIsDesktopLineEdit(): boolean {
   );
 }
 
+function isSameReferenceCost(
+  currentCost: number,
+  referenceCost: { value: number } | null,
+): boolean {
+  return (
+    referenceCost != null && Math.abs(currentCost - referenceCost.value) < 0.01
+  );
+}
+
 export function GrnCreateClient({
   supplier,
   branchId: initialBranchId,
@@ -271,15 +284,25 @@ export function GrnCreateClient({
   function openEdit(ingredient: Ingredient) {
     const existing = addedMap.get(ingredient.id);
     const defaultUnit = getDefaultPurchaseUnit(ingredient);
+    const entryUnitId = existing
+      ? (existing.entryUnitId ?? null)
+      : (defaultUnit?.unitId ?? null);
+    const unit = existing?.unit ?? defaultUnit?.label ?? ingredient.unit;
+    const referenceCost = getReferenceCostForUnit(
+      ingredient,
+      entryUnitId,
+      unit,
+    );
     setEdit({
       ingredient,
       line: existing ?? null,
       quantity: existing?.quantity ?? 0,
-      unit: existing?.unit ?? defaultUnit?.label ?? ingredient.unit,
-      entryUnitId: existing
-        ? (existing.entryUnitId ?? null)
-        : (defaultUnit?.unitId ?? null),
-      unitCost: existing?.unitCost ?? Number(ingredient.unit_cost ?? 0),
+      unit,
+      entryUnitId,
+      unitCost:
+        existing?.unitCost ??
+        referenceCost?.value ??
+        Number(ingredient.unit_cost ?? 0),
       note: existing?.note ?? "",
     });
   }
@@ -576,6 +599,7 @@ export function GrnCreateClient({
         ) : (
           filtered.map((ingredient) => {
             const added = addedMap.has(ingredient.id);
+            const referenceCost = getDisplayReferenceCost(ingredient);
             return (
               <button
                 key={ingredient.id}
@@ -592,9 +616,12 @@ export function GrnCreateClient({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {ingredient.sku ? `${ingredient.sku} · ` : ""}
-                    {ingredient.unit}
-                    {ingredient.unit_cost
-                      ? ` · ~${formatVND(Number(ingredient.unit_cost))} đ`
+                    {referenceCost?.unit || ingredient.unit}
+                    {referenceCost
+                      ? ` · ~${GRN_CREATE_COPY.lastCost(
+                          referenceCost.value,
+                          referenceCost.unit,
+                        )}`
                       : ""}
                   </p>
                 </div>
@@ -785,16 +812,34 @@ function LineEditFields({
   onPatch: (patch: Partial<EditState>) => void;
   onOpenNumpad?: (key: "qty" | "cost") => void;
 }) {
-  const referenceCost = edit.ingredient.unit_cost
-    ? Number(edit.ingredient.unit_cost)
-    : null;
+  const referenceCost = getReferenceCostForUnit(
+    edit.ingredient,
+    edit.entryUnitId,
+    edit.unit,
+  );
   const variance =
-    referenceCost && referenceCost > 0
-      ? (edit.unitCost - referenceCost) / referenceCost
+    referenceCost && referenceCost.value > 0
+      ? (edit.unitCost - referenceCost.value) / referenceCost.value
       : null;
   const showVarianceWarning =
     variance != null && Math.abs(variance) > DEFAULT_VARIANCE_WARNING;
   const lineTotal = edit.quantity * edit.unitCost;
+
+  function handleUnitChange(unitId: number, label: string) {
+    const nextReferenceCost = getReferenceCostForUnit(
+      edit.ingredient,
+      unitId,
+      label,
+    );
+    onPatch({
+      entryUnitId: unitId,
+      unit: label,
+      ...(edit.unitCost === 0 ||
+      isSameReferenceCost(edit.unitCost, referenceCost)
+        ? { unitCost: nextReferenceCost?.value ?? edit.unitCost }
+        : {}),
+    });
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -802,9 +847,7 @@ function LineEditFields({
         options={getPurchaseUnitOptions(edit.ingredient)}
         entryUnitId={edit.entryUnitId}
         unit={edit.unit}
-        onUnitChange={(unitId, label) =>
-          onPatch({ entryUnitId: unitId, unit: label })
-        }
+        onUnitChange={handleUnitChange}
       />
       <div className="grid grid-cols-2 gap-3">
         <LineValueField
@@ -846,7 +889,10 @@ function LineEditFields({
         </div>
         {referenceCost ? (
           <p className="mt-1 text-xs text-muted-foreground">
-            {GRN_CREATE_COPY.lastCost(referenceCost, edit.unit)}
+            {GRN_CREATE_COPY.lastCost(
+              referenceCost.value,
+              referenceCost.unit || edit.unit,
+            )}
           </p>
         ) : null}
       </div>

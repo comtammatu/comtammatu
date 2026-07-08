@@ -52,6 +52,7 @@ import {
   getPurchaseUnitOptions,
   type PurchaseUnitOption,
 } from "../../_lib/purchase-units";
+import { getReferenceCostForUnit } from "../../_lib/reference-cost";
 import {
   AppDetailFooter,
   AppEmptyState,
@@ -96,6 +97,17 @@ const poHeaderSupplierFallback = "Chưa chọn nhà cung cấp";
 const poHeaderSupplierSelected = "Đã chọn";
 const poHeaderNotesPresent = "Có ghi chú";
 const poHeaderNotesEmpty = "Chưa ghi chú";
+
+function isSameReferencePrice(
+  currentPrice: number | null,
+  referenceCost: { value: number } | null,
+): boolean {
+  return (
+    currentPrice != null &&
+    referenceCost != null &&
+    Math.abs(currentPrice - referenceCost.value) < 0.01
+  );
+}
 
 interface LocalLine {
   ingredientId: number;
@@ -217,13 +229,18 @@ export function NewPoClient({
   function buildSuggestionLine(s: PoSuggestionRow): LocalLine {
     const ing = ingredients.find((x) => x.id === s.ingredient_id);
     const defaultUnit = getDefaultPurchaseUnit(ing);
+    const referenceCost = getReferenceCostForUnit(
+      ing,
+      defaultUnit?.unitId,
+      defaultUnit?.label ?? s.unit,
+    );
     return {
       ingredientId: s.ingredient_id,
       ingredientName: s.ingredient_name,
       quantity: s.suggested_qty,
       unit: defaultUnit?.label ?? s.unit,
       entryUnitId: defaultUnit?.unitId ?? null,
-      unitPriceEst: ing?.unit_cost ?? null,
+      unitPriceEst: referenceCost?.value ?? null,
     };
   }
 
@@ -803,20 +820,44 @@ function LineItemsSection({
     setAddRowDeviation(null);
     const ing = ingredients.find((x) => String(x.id) === val);
     const defaultUnit = getDefaultPurchaseUnit(ing);
+    const unit =
+      defaultUnit?.label ?? ing?.units?.find((u) => u.is_base)?.unit_code ?? "";
+    const referenceCost = getReferenceCostForUnit(
+      ing,
+      defaultUnit?.unitId,
+      unit,
+    );
     patchDraft({
       ingredientId: val,
-      unit: defaultUnit?.label ?? ing?.units?.find((u) => u.is_base)?.unit_code ?? "",
+      unit,
       entryUnitId: defaultUnit?.unitId ?? null,
+      unitPrice: referenceCost?.value ?? null,
     });
   }
 
   function handleUnitChange(unitIdValue: string) {
+    if (!draft) return;
     const opt = purchaseUnitOptions.find(
       (o) => String(o.unitId) === unitIdValue,
     );
+    const nextUnitId = Number(unitIdValue);
+    const currentReferenceCost = getReferenceCostForUnit(
+      selectedIngredient,
+      draft.entryUnitId,
+      draft.unit,
+    );
+    const nextReferenceCost = getReferenceCostForUnit(
+      selectedIngredient,
+      nextUnitId,
+      opt?.label ?? "",
+    );
     patchDraft({
-      entryUnitId: Number(unitIdValue),
+      entryUnitId: nextUnitId,
       unit: opt?.label ?? "",
+      ...(draft.unitPrice == null ||
+      isSameReferencePrice(draft.unitPrice, currentReferenceCost)
+        ? { unitPrice: nextReferenceCost?.value ?? draft.unitPrice }
+        : {}),
     });
   }
 

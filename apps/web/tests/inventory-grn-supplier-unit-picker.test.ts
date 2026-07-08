@@ -6,6 +6,10 @@ import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
 } from "../app/(protected)/inventory/_lib/purchase-units";
+import {
+  getDisplayReferenceCost,
+  getReferenceCostForUnit,
+} from "../app/(protected)/inventory/_lib/reference-cost";
 import { getIngredientUnitDisplayName } from "../app/(protected)/inventory/_lib/unit-display";
 
 const repoRoot = resolve(process.cwd(), "../..");
@@ -53,9 +57,10 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
     ["lon", "thùng"],
   );
 
-  // Default stays the base unit; the picker still lets the user pick "Thùng".
+  // Purchase defaults to the largest active unit so reference prices are useful
+  // for receiving/procurement instead of tiny base-unit prices.
   const defaultUnit = getDefaultPurchaseUnit(ingredient);
-  assert.equal(defaultUnit?.unitId, 100);
+  assert.equal(defaultUnit?.unitId, 200);
   const nonBase = options.find((o) => o.code === "Thùng");
   assert.equal(nonBase?.unitId, 200);
   assert.equal(nonBase?.isBase, false);
@@ -150,6 +155,40 @@ test("getPurchaseUnitOptions includes every active ingredient unit", () => {
   );
 });
 
+test("reference cost uses display and selected units instead of raw base-unit cost", () => {
+  const ingredient = {
+    unit_cost: 50,
+    units: [
+      {
+        id: 1,
+        unit_id: 100,
+        unit_code: "g",
+        unit_name: "g",
+        to_base_factor: 1,
+        is_base: true,
+        is_active: true,
+        sort_order: 0,
+      },
+      {
+        id: 2,
+        unit_id: 200,
+        unit_code: "bich",
+        unit_name: "bịch",
+        to_base_factor: 5000,
+        is_base: false,
+        is_active: true,
+        sort_order: 1,
+      },
+    ],
+  };
+
+  const display = getDisplayReferenceCost(ingredient);
+  assert.equal(display?.value, 250000);
+  assert.equal(display?.unit, "bịch");
+  assert.equal(getReferenceCostForUnit(ingredient, 100)?.value, 50);
+  assert.equal(getReferenceCostForUnit(ingredient, 200)?.value, 250000);
+});
+
 test("inventory unit display uses the catalog name, not the unit code", () => {
   const units = [
     {
@@ -178,6 +217,11 @@ test("inventory unit display uses the catalog name, not the unit code", () => {
 });
 
 test("inventory unit option helpers are not role-gated by allow flags", () => {
+  const sharedSource = readRepo(
+    "apps/web/app/(protected)/inventory/_lib/unit-options.ts",
+  );
+  assert.match(sharedSource, /unit\.is_active && unit\.unit_code !== ""/);
+
   for (const path of [
     "apps/web/app/(protected)/inventory/_lib/purchase-units.ts",
     "apps/web/app/(protected)/inventory/_lib/issue-units.ts",
@@ -185,7 +229,42 @@ test("inventory unit option helpers are not role-gated by allow flags", () => {
     "apps/web/app/(protected)/inventory/_lib/count-units.ts",
   ]) {
     const source = readRepo(path);
-    assert.match(source, /u\.is_active && u\.unit_code !== ""/, path);
+    assert.match(source, /getIngredientUnitOptions/, path);
+  }
+});
+
+test("ingredients list does not render raw base-unit reference cost", () => {
+  const source = readRepo(
+    "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx",
+  );
+
+  assert.match(source, /getDisplayReferenceCost/);
+  assert.doesNotMatch(source, /formatVND\(item\.unit_cost\)/);
+});
+
+test("GRN create reference cost follows the selected entry unit", () => {
+  const source = readRepo(
+    "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+  );
+
+  assert.match(
+    source,
+    /getReferenceCostForUnit\(\s*edit\.ingredient,\s*edit\.entryUnitId/,
+  );
+  assert.doesNotMatch(
+    source,
+    /const referenceCost = edit\.ingredient\.unit_cost/,
+  );
+});
+
+test("procurement line defaults scale ingredient cost by purchase unit", () => {
+  for (const path of [
+    "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx",
+    "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
+    "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
+  ]) {
+    const source = readRepo(path);
+    assert.match(source, /getReferenceCostForUnit/, path);
   }
 });
 

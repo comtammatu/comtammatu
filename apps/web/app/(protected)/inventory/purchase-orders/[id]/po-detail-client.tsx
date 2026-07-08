@@ -64,6 +64,7 @@ import {
   getPurchaseUnitOptions,
   type PurchaseUnitOption,
 } from "../../_lib/purchase-units";
+import { getReferenceCostForUnit } from "../../_lib/reference-cost";
 import type { IngredientRow } from "../../page";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
@@ -121,6 +122,17 @@ type EditablePoLine = PODetail["items"][number] & { dirty: boolean };
 
 function computePoLineTotal(line: Pick<EditablePoLine, "qty" | "price">) {
   return Number((line.qty * (line.price ?? 0)).toFixed(2));
+}
+
+function isSameReferencePrice(
+  currentPrice: number | null,
+  referenceCost: { value: number } | null,
+): boolean {
+  return (
+    currentPrice != null &&
+    referenceCost != null &&
+    Math.abs(currentPrice - referenceCost.value) < 0.01
+  );
 }
 
 export function PODetailClient({
@@ -212,13 +224,18 @@ export function PODetailClient({
     setAddIngredientId(value);
     const ingredient = ingredientById.get(Number(value));
     const defaultUnit = getDefaultPurchaseUnit(ingredient);
-    setAddUnit(
-      defaultUnit?.label ?? ingredient?.units?.find((u) => u.is_base)?.unit_code ?? "",
+    const unit =
+      defaultUnit?.label ??
+      ingredient?.units?.find((u) => u.is_base)?.unit_code ??
+      "";
+    const referenceCost = getReferenceCostForUnit(
+      ingredient,
+      defaultUnit?.unitId,
+      unit,
     );
+    setAddUnit(unit);
     setAddEntryUnitId(defaultUnit?.unitId ?? null);
-    setAddPrice(
-      ingredient?.unit_cost != null ? String(Number(ingredient.unit_cost)) : "",
-    );
+    setAddPrice(referenceCost != null ? String(referenceCost.value) : "");
   }
 
   function resetAddLine() {
@@ -237,14 +254,49 @@ export function PODetailClient({
       (item) => String(item.unitId) === value,
     );
     if (!option) return;
-    patchLine(index, { entryUnitId: option.unitId, unit: option.label });
+    const currentReferenceCost = getReferenceCostForUnit(
+      ingredient,
+      line.entryUnitId,
+      line.unit,
+    );
+    const nextReferenceCost = getReferenceCostForUnit(
+      ingredient,
+      option.unitId,
+      option.label,
+    );
+    patchLine(index, {
+      entryUnitId: option.unitId,
+      unit: option.label,
+      ...(line.price == null ||
+      isSameReferencePrice(line.price, currentReferenceCost)
+        ? { price: nextReferenceCost?.value ?? line.price }
+        : {}),
+    });
   }
 
   function handleAddUnitChange(value: string) {
     const option = addUnitOptions.find((item) => String(item.unitId) === value);
     if (!option) return;
+    const currentReferenceCost = getReferenceCostForUnit(
+      addIngredient,
+      addEntryUnitId,
+      addUnit,
+    );
+    const nextReferenceCost = getReferenceCostForUnit(
+      addIngredient,
+      option.unitId,
+      option.label,
+    );
     setAddEntryUnitId(option.unitId);
     setAddUnit(option.label);
+    if (
+      addPrice.trim() === "" ||
+      isSameReferencePrice(Number(addPrice), currentReferenceCost)
+    ) {
+      setAddPrice(
+        nextReferenceCost != null ? String(nextReferenceCost.value) : "",
+      );
+    }
   }
 
   function handleSaveLine(index: number) {

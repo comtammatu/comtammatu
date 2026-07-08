@@ -1,8 +1,8 @@
 import type { IngredientUnitRow } from "./types";
 import {
-  getDefaultIngredientUnit,
   getIngredientUnitOptions,
   type InventoryUnitOption,
+  type InventoryUnitOptionWithFactor,
 } from "./unit-options";
 
 export type PurchaseUnitOption = InventoryUnitOption;
@@ -21,12 +21,22 @@ export function getPurchaseUnitOptions(
   return getIngredientUnitOptions(ingredient);
 }
 
-/**
- * Default purchase unit for an ingredient: the base unit when present, else the
- * first active unit, else null.
- */
 export function getDefaultPurchaseUnit(
   ingredient: IngredientWithUnits | undefined,
 ): PurchaseUnitOption | null {
-  return getDefaultIngredientUnit(getPurchaseUnitOptions(ingredient));
+  const options = getIngredientUnitOptions(ingredient, {
+    includeToBaseFactor: true,
+  });
+  const largestUnit = options.reduce<InventoryUnitOptionWithFactor | null>(
+    (best, option) =>
+      best == null || option.toBaseFactor > best.toBaseFactor ? option : best,
+    null,
+  );
+  if (!largestUnit) return null;
+  return {
+    unitId: largestUnit.unitId,
+    code: largestUnit.code,
+    label: largestUnit.label,
+    isBase: largestUnit.isBase,
+  };
 }
