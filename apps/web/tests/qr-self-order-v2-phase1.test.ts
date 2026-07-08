@@ -71,3 +71,15 @@ test("status-pill renders mapped SELF_ORDER_VI labels by session state", () => {
   assert.match(pill, /variant: "success"/);
   assert.match(pill, /variant: "info"/);
 });
+
+test("order-summary lists SelfOrderOrderLine items with collapse at 5", () => {
+  const summary = readWeb("app/q/[token]/self-order/order-summary.tsx");
+
+  assert.match(summary, /import type \{ SelfOrderOrderLine \} from "@lib\/self-order\/contracts"/);
+  assert.match(summary, /SELF_ORDER_VI\.orderedItemsTitle/);
+  assert.match(summary, /SELF_ORDER_VI\.orderedItemsShowMore/);
+  assert.match(summary, /useState\(false\)/);
+  assert.match(summary, /COLLAPSE_THRESHOLD/);
+  assert.match(summary, /items\.slice\(0, COLLAPSE_THRESHOLD\)/);
+  assert.match(summary, /formatVND/);
+});
