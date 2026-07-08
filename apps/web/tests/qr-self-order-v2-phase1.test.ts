@@ -43,3 +43,17 @@ test("snapshot contract type includes order.items line type", () => {
   assert.match(contracts, /note: string \| null;/);
   assert.match(contracts, /items: SelfOrderOrderLine\[\];/);
 });
+
+test("SELF_ORDER_VI has v2 phase1 status and CTA keys", () => {
+  const messages = readRepo("packages/shared/src/messages/self-order.ts");
+
+  assert.match(messages, /statusPendingApproval:/);
+  assert.match(messages, /statusActive:/);
+  assert.match(messages, /statusAwaitingVietQr:/);
+  assert.match(messages, /statusAwaitingCash:/);
+  assert.match(messages, /statusClosed:/);
+  assert.match(messages, /ctaAwaitingApproval:/);
+  assert.match(messages, /ctaAwaitingApprovalHint:/);
+  assert.match(messages, /orderedItemsTitle:/);
+  assert.match(messages, /orderedItemsShowMore:/);
+});
