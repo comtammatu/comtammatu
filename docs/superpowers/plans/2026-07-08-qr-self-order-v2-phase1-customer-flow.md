@@ -1,4 +1,4 @@
-# QR Self-Order V2 — Phase 1: Customer Flow Implementation Plan
+# Table QR Ordering V2 — Phase 1: Customer Flow Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -628,8 +628,9 @@ test("order-summary lists SelfOrderOrderLine items with collapse at 5", () => {
   assert.match(summary, /import type \{ SelfOrderOrderLine \} from "@lib\/self-order\/contracts"/);
   assert.match(summary, /SELF_ORDER_VI\.orderedItemsTitle/);
   assert.match(summary, /SELF_ORDER_VI\.orderedItemsShowMore/);
-  assert.match(summary, /useState<boolean>/);
-  assert.match(summary, /items\.slice\(0, 5\)/);
+  assert.match(summary, /useState\(false\)/);
+  assert.match(summary, /COLLAPSE_THRESHOLD/);
+  assert.match(summary, /items\.slice\(0, COLLAPSE_THRESHOLD\)/);
   assert.match(summary, /formatVND/);
 });
 ```
@@ -965,17 +966,24 @@ Implements fix B — mobile FAB opens a bottom sheet cart; a slim sticky bottom 
 Append to `apps/web/tests/qr-self-order-v2-phase1.test.ts`:
 
 ```ts
-test("cart-sheet has FAB trigger, bottom Sheet, sticky subtotal and touch-lg CTA", () => {
+test("cart-sheet has FAB, sticky bottom bar, bottom Sheet, and ctaDisabled wiring", () => {
   const cart = readWeb("app/q/[token]/self-order/cart-sheet.tsx");
 
   assert.match(cart, /import \{ Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription \} from "@comtammatu\/ui\/components\/sheet"/);
-  assert.match(cart, /fixed right-3 bottom-20/);
+  // FAB + sticky bar positioned above each other
+  assert.match(cart, /fixed right-3 bottom-24/);
+  assert.match(cart, /fixed inset-x-0 bottom-0/);
   assert.match(cart, /side="bottom"/);
+  assert.match(cart, /max-h-dvh-95/);
+  assert.match(cart, /max-h-dvh-80/);
   assert.match(cart, /size="icon-touch"/);
+  assert.match(cart, /size="touch-lg"/);
   assert.match(cart, /SELF_ORDER_VI\.cartTitle/);
   assert.match(cart, /SELF_ORDER_VI\.subtotal/);
   assert.match(cart, /formatVND/);
-  assert.match(cart, /cartQuantity/);
+  // ctaDisabled must flow into SubmitCta (hard-disable: pending/closed only)
+  assert.match(cart, /ctaDisabled/);
+  assert.match(cart, /ctaDisabledHint/);
 });
 ```
 
@@ -1034,6 +1042,7 @@ export interface CartSheetProps {
   isSubmitting: boolean;
   canSubmit: boolean;
   ctaLabel: string;
+  ctaDisabled: boolean;
   ctaDisabledHint: string | null;
   customerNote: string;
   onCustomerNoteChange: (value: string) => void;
@@ -1097,21 +1106,20 @@ function NoteField({
 }
 
 function SubmitCta({
-  items,
-  total,
   isSubmitting,
   canSubmit,
+  ctaDisabled,
   ctaLabel,
   ctaDisabledHint,
   onSubmit,
-}: Pick<CartSheetProps, "items" | "total" | "isSubmitting" | "canSubmit" | "ctaLabel" | "ctaDisabledHint" | "onSubmit">) {
-  const disabled = !canSubmit || isSubmitting;
+}: Pick<CartSheetProps, "isSubmitting" | "canSubmit" | "ctaDisabled" | "ctaLabel" | "ctaDisabledHint" | "onSubmit">) {
+  const disabled = !canSubmit || isSubmitting || ctaDisabled;
   return (
     <div className="flex flex-col gap-1">
       <Button type="button" size="touch-lg" className="w-full" disabled={disabled} onClick={onSubmit}>
         {isSubmitting ? SELF_ORDER_VI.submitting : ctaLabel}
       </Button>
-      {disabled && ctaDisabledHint ? (
+      {ctaDisabled && ctaDisabledHint ? (
         <p className="text-center text-xs text-muted-foreground">{ctaDisabledHint}</p>
       ) : null}
     </div>
@@ -1119,7 +1127,7 @@ function SubmitCta({
 }
 
 export function CartSheet(props: CartSheetProps) {
-  const { items, total, quantity, customerNote, ctaLabel, ctaDisabledHint } = props;
+  const { items, total, quantity, customerNote, ctaLabel, ctaDisabled, ctaDisabledHint } = props;
   const [open, setOpen] = useState(false);
   const empty = items.length === 0;
 
@@ -1130,6 +1138,17 @@ export function CartSheet(props: CartSheetProps) {
     </div>
   );
 
+  const submitCta = (
+    <SubmitCta
+      isSubmitting={props.isSubmitting}
+      canSubmit={props.canSubmit}
+      ctaDisabled={ctaDisabled}
+      ctaLabel={ctaLabel}
+      ctaDisabledHint={ctaDisabledHint}
+      onSubmit={props.onSubmit}
+    />
+  );
+
   return (
     <>
       {/* Mobile: FAB opens bottom sheet */}
@@ -1137,7 +1156,7 @@ export function CartSheet(props: CartSheetProps) {
         type="button"
         variant="default"
         size="icon-touch"
-        className="fixed right-3 bottom-20 z-40 rounded-full shadow-lg lg:hidden"
+        className="fixed right-3 bottom-24 z-40 rounded-full shadow-lg lg:hidden"
         aria-label={SELF_ORDER_VI.cartTitle}
         onClick={() => setOpen(true)}
       >
@@ -1149,7 +1168,36 @@ export function CartSheet(props: CartSheetProps) {
         ) : null}
       </Button>
 
-      {/* Mobile: bottom sheet */}
+      {/* Mobile: sticky bottom action bar (subtotal + CTA), always visible above FAB */}
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-border/60 bg-background/95 px-3 py-2 backdrop-blur lg:hidden">
+        <Button
+          type="button"
+          variant="outline"
+          size="touch"
+          className="min-w-12 shrink-0 px-2"
+          onClick={() => setOpen(true)}
+          aria-label={SELF_ORDER_VI.cartTitle}
+        >
+          <IconCart />
+          {quantity > 0 ? <Badge variant="secondary">{quantity}</Badge> : null}
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-muted-foreground">{SELF_ORDER_VI.subtotal}</p>
+          <p className="font-mono text-base font-bold tabular-nums text-primary">{formatVND(total)}</p>
+        </div>
+        <div className="shrink-0">
+          <Button
+            type="button"
+            size="touch-lg"
+            disabled={!props.canSubmit || props.isSubmitting || ctaDisabled}
+            onClick={props.onSubmit}
+          >
+            {props.isSubmitting ? SELF_ORDER_VI.submitting : ctaLabel}
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile: bottom sheet (full cart editing) */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="max-h-dvh-95 p-0">
           <SheetHeader>
@@ -1160,7 +1208,7 @@ export function CartSheet(props: CartSheetProps) {
             </SheetTitle>
             <SheetDescription>{SELF_ORDER_VI.cartEmpty}</SheetDescription>
           </SheetHeader>
-          <div className="flex max-h-[70dvh] flex-col gap-3 overflow-y-auto p-3">
+          <div className="flex max-h-dvh-80 flex-col gap-3 overflow-y-auto p-3">
             {empty ? (
               <Item variant="outline" className="border-dashed">
                 <ItemDescription>{SELF_ORDER_VI.cartEmpty}</ItemDescription>
@@ -1175,15 +1223,7 @@ export function CartSheet(props: CartSheetProps) {
           </div>
           <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background p-3">
             {subtotalRow}
-            <SubmitCta
-              items={items}
-              total={total}
-              isSubmitting={props.isSubmitting}
-              canSubmit={props.canSubmit}
-              ctaLabel={ctaLabel}
-              ctaDisabledHint={ctaDisabledHint}
-              onSubmit={props.onSubmit}
-            />
+            {submitCta}
           </div>
         </SheetContent>
       </Sheet>
@@ -1209,15 +1249,7 @@ export function CartSheet(props: CartSheetProps) {
         )}
         <div className="sticky bottom-0 -mx-3 flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background px-3 py-3">
           {subtotalRow}
-          <SubmitCta
-            items={items}
-            total={total}
-            isSubmitting={props.isSubmitting}
-            canSubmit={props.canSubmit}
-            ctaLabel={ctaLabel}
-            ctaDisabledHint={ctaDisabledHint}
-            onSubmit={props.onSubmit}
-          />
+          {submitCta}
         </div>
       </section>
     </>
@@ -1226,9 +1258,11 @@ export function CartSheet(props: CartSheetProps) {
 ```
 
 Notes:
-- `max-h-dvh-95` is the authorized bottom-sheet height utility (design-system.md § Rhythm).
-- `size="icon-touch"` (48px) + `rounded-full` for the FAB, matching the approval-sheet FAB recipe but as a round cart button.
+- `max-h-dvh-95` (sheet) and `max-h-dvh-80` (scroll body) are the authorized bottom-sheet height utilities (design-system.md § Rhythm). No arbitrary `max-h-[..]`.
+- `size="icon-touch"` (48px) + `rounded-full` for the FAB.
+- The **mobile sticky bottom bar** (`fixed inset-x-0 bottom-0 lg:hidden`) shows subtotal + a compact cart button + the primary CTA, so submit is always one tap away even with the sheet closed. The FAB (`bottom-24`) sits above it.
 - `sticky bottom-0` desktop CTA follows the bill-receipt-sheet pattern (`-mx-4 -mb-4 ... border-t bg-...`); adjusted to `-mx-3`/`px-3` for the aside's `p-3` context.
+- `ctaDisabled` is the *hard* disable (pending_approval / closed). It does NOT include `paymentLocked`, so the cancel-then-add flow stays reachable (see Task 10).
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -1261,7 +1295,6 @@ Create `apps/web/app/q/[token]/self-order/menu-panel.tsx`. This holds `MenuItemG
 import { useCallback, type ChangeEvent } from "react";
 import Image from "next/image";
 import {
-  Minus as IconMinus,
   Plus as IconPlus,
   Search as IconSearch,
   Utensils as IconUtensils,
@@ -1534,7 +1567,7 @@ This is the capstone task: the orchestrator imports the folder modules, computes
 Append to `apps/web/tests/qr-self-order-v2-phase1.test.ts`:
 
 ```ts
-test("orchestrator locks CTA while first batch is pending approval", () => {
+test("orchestrator locks CTA while first batch is pending approval and keeps cancel-then-add reachable", () => {
   const orchestrator = readWeb("app/q/[token]/self-order-client.tsx");
 
   assert.match(orchestrator, /import \{ StatusPill \} from "\.\/self-order\/status-pill"/);
@@ -1543,8 +1576,18 @@ test("orchestrator locks CTA while first batch is pending approval", () => {
   assert.match(orchestrator, /import \{ MenuPanel \} from "\.\/self-order\/menu-panel"/);
   assert.match(orchestrator, /import \{ PaymentPanel \} from "\.\/self-order\/payment-panel"/);
   assert.match(orchestrator, /import \{ useSnapshotSync \} from "\.\/self-order\/hooks"/);
-  assert.match(orchestrator, /ctaAwaitingApproval/);
-  assert.match(orchestrator, /isPendingApproval/);
+
+  // Hard-disable tier: pending approval + closed block the CTA outright.
+  assert.match(orchestrator, /ctaHardDisabled = isClosed \|\| isPendingApproval/);
+  // submitBatch must guard on ctaHardDisabled, NOT on paymentLocked.
+  assert.match(orchestrator, /if \(cartItems\.length === 0 \|\| isPending \|\| ctaHardDisabled\) return/);
+  // isClosed: paid order on an active session is the realistic terminal signal.
+  assert.match(orchestrator, /activeOrder\?\.paymentStatus === "paid"/);
+  // The V1 cancel-then-add flow must remain reachable (paymentLocked does NOT block submit).
+  assert.match(orchestrator, /pending_payment_exists/);
+  assert.match(orchestrator, /cancel-pending-payment-and-add/);
+  // CartSheet receives the hard-disable flag.
+  assert.match(orchestrator, /ctaDisabled=\{ctaHardDisabled\}/);
 });
 ```
 
@@ -1563,8 +1606,6 @@ Replace the entire contents of `apps/web/app/q/[token]/self-order-client.tsx` wi
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { RefreshCw as IconRefresh } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
-import { formatVND } from "@comtammatu/shared/format";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { AppPage } from "@/components/surface";
@@ -1623,8 +1664,6 @@ function createCartItem(item: SelfOrderMenuItem, variant?: SelfOrderMenuVariant)
   };
 }
 
-interface ApiError { ok: false; code?: string; message?: string; }
-
 async function readApiResponse(response: Response) {
   const payload = (await response.json().catch(() => null)) as (Record<string, unknown> & { ok?: boolean }) | null;
   if (response.ok && payload?.ok !== false) return { ok: true, payload } as const;
@@ -1666,9 +1705,18 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
   const hasPendingCashCall = snapshot.paymentRequest?.status === "cash_call";
   const paymentLocked = hasPendingVietQr || hasPendingCashCall;
   const activeOrder = snapshot.order ?? null;
-  const isClosed = sessionStatus === "closed" || (activeOrder?.paymentStatus === "active" && activeOrder?.paymentStatus === "paid");
+  // Closed: order paid/terminal OR a closed session. The snapshot RPC only
+  // surfaces pending_approval/active sessions, so the realistic terminal
+  // signal here is a paid order on an active session.
+  const isClosed = sessionStatus === "closed" || activeOrder?.paymentStatus === "paid";
 
-  // CTA state (fix I)
+  // CTA state (fix I). Two distinct disable tiers:
+  //  - ctaHardDisabled: pending_approval (cannot submit a 2nd batch) or closed.
+  //    The button is truly disabled.
+  //  - paymentLocked (pending VietQR/cash_call): the button stays clickable so
+  //    the customer can still submit, hit the pending_payment_exists branch,
+  //    and choose to cancel the QR + add more. Blocking here would regress V1.
+  const ctaHardDisabled = isClosed || isPendingApproval;
   const ctaLabel = isClosed
     ? SELF_ORDER_VI.statusClosed
     : isPendingApproval
@@ -1676,8 +1724,9 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
       : isSessionActive
         ? SELF_ORDER_VI.submitAddMore
         : SELF_ORDER_VI.submitFirstBatch;
-  const ctaDisabled = isClosed || isPendingApproval || paymentLocked;
-  const ctaDisabledHint = isPendingApproval ? SELF_ORDER_VI.ctaAwaitingApprovalHint : null;
+  const ctaDisabledHint = isPendingApproval
+    ? SELF_ORDER_VI.ctaAwaitingApprovalHint
+    : null;
 
   function addItem(item: SelfOrderMenuItem, variant?: SelfOrderMenuVariant) {
     setSubmitError(null);
@@ -1723,7 +1772,10 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
   }
 
   function submitBatch() {
-    if (cartItems.length === 0 || isPending || ctaDisabled) return;
+    // Guard only on hard-disabled states. paymentLocked must NOT block here,
+    // otherwise the pending_payment_exists -> cancel-then-add flow (V1) is
+    // unreachable.
+    if (cartItems.length === 0 || isPending || ctaHardDisabled) return;
     setSubmitError(null);
     startTransition(async () => {
       const response = await postBatch("batches");
@@ -1844,6 +1896,7 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
                 isSubmitting={isPending}
                 canSubmit={cartItems.length > 0}
                 ctaLabel={ctaLabel}
+                ctaDisabled={ctaHardDisabled}
                 ctaDisabledHint={ctaDisabledHint}
                 customerNote={customerNote}
                 onCustomerNoteChange={setCustomerNote}
@@ -1884,12 +1937,12 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
 ```
 
 Key changes vs the old orchestrator:
-- `ctaLabel` / `ctaDisabled` / `ctaDisabledHint` derived from session state → fix I (locks CTA while `pending_approval`, while payment pending, and when closed).
-- `submitBatch` early-returns when `ctaDisabled`.
+- Two CTA disable tiers: `ctaHardDisabled` (pending_approval / closed) truly disables the button; `paymentLocked` (pending VietQR/cash_call) does NOT, so the V1 cancel-then-add flow stays reachable.
+- `submitBatch` guards only on `ctaHardDisabled`, preserving the `pending_payment_exists → confirm → cancel-pending-payment-and-add` branch.
 - `StatusPill` replaces `SessionStatus`.
 - `OrderSummary` shows `activeOrder.items` when active.
-- `CartSheet` (FAB + desktop aside) replaces the inline `CartPanel`.
-- `pb-28` on the page root gives room for the mobile FAB + bottom bar.
+- `CartSheet` (FAB + sticky mobile bottom bar + desktop aside) replaces the inline `CartPanel`.
+- `pb-28` on the page root gives room for the mobile FAB + sticky bottom bar.
 
 - [ ] **Step 4: Run the full test suite**
 
@@ -1920,22 +1973,24 @@ git commit -m "feat(self-order): rewire orchestrator with status pill, FAB cart,
 
 ---
 
-## Task 11: Apply migration + regenerate types + CodeGraph refresh
+## Task 11: Apply migration (preview branch) + regenerate types + CodeGraph refresh
 
 **Files:** none (operational)
 
 - [ ] **Step 1: Verify migration target ref**
 
-Per `docs/agent/rules/database.md`, confirm the dev/test Supabase ref against the Environment Registry before applying. Only apply to approved dev/test, never production.
+Per `docs/agent/rules/database.md`, confirm the Supabase ref against the Environment Registry. Never use file-based `db push` against production. The schema change must be applied to the **type-source schema** before regenerating types.
 
-- [ ] **Step 2: Apply the migration to the dev/test database**
+- [ ] **Step 2: Apply the migration on a preview branch (dev/test only)**
 
-Run: `corepack pnpm supabase db push` (or the project's documented apply command). Confirm `self_order_get_snapshot` now returns `order.items`.
+Open a Supabase Preview Branch (or the project's documented non-prod apply path) from the dev branch, then apply `20260708140000_self_order_snapshot_order_items.sql` there. Do NOT `supabase db push` to a persistent project ref.
 
-- [ ] **Step 3: Regenerate types**
+Confirm: `select self_order_get_snapshot('<a-valid-test-token>')` returns a jsonb `order.items` array for an active session with ordered items.
+
+- [ ] **Step 3: Regenerate types against the updated type-source schema**
 
 Run: `corepack pnpm db:types`
-Expected: `apps/web/types/supabase.ts` (or wherever generated types live) refreshed. The generated RPC return type may widen; consumers only read scalar fields so this is safe.
+Expected: the generated DB types refresh. The snapshot RPC return type widens (additive `items`); existing consumers only read scalar fields, so this is safe.
 
 - [ ] **Step 4: Re-typecheck after types regenerated**
 
@@ -1949,8 +2004,10 @@ Expected: success; graph reflects the new `self-order/` folder and split files.
 
 - [ ] **Step 6: Commit regenerated types**
 
+Stage ONLY the generated type files (do not `git add -A`, which could sweep unrelated working-tree changes):
+
 ```bash
-git add -A
+git add apps/web/types/ packages/*/types/
 git commit -m "chore(self-order): regenerate supabase types after snapshot items migration"
 ```
 
@@ -1975,7 +2032,7 @@ Run: `corepack pnpm dev`, then open a valid self-order token URL `/q/<token>`:
 
 - [ ] **Step 3: Update worklog**
 
-Append to `docs/worklog/2026-07-08-qr-self-order-v1.md` (or create a `docs/worklog/2026-07-08-qr-self-order-v2-phase1.md`) noting Phase 1 shipped, the one additive migration, and the file split. Commit.
+Append to `docs/worklog/2026-07-08-qr-self-order-v1.md` noting Phase 1 shipped, the one additive migration, and the file split. Commit.
 
 ---
 
@@ -1989,7 +2046,7 @@ Append to `docs/worklog/2026-07-08-qr-self-order-v1.md` (or create a `docs/workl
 - File split → Tasks 4, 5, 6, 7, 8, 9, 10. ✓
 - Additive snapshot change → Task 1. ✓
 
-**2. Placeholder scan:** No TBD/TODO. The only deferred item (print-agent job type) belongs to Phase 3, not this plan.
+**2. Placeholder scan:** No placeholders. The only deferred item (print-agent job type) belongs to Phase 3, not this plan.
 
 **3. Type consistency:**
 - `SelfOrderOrderLine` defined in Task 2, used in Task 6 (`OrderSummary`) and returned by the Task 1 RPC (`menuItemId`, `itemName`, `variantId`, `variantName`, `quantity`, `unitPrice`, `lineTotal`, `note` — camelCase matches the jsonb keys in the migration). ✓
@@ -1997,4 +2054,17 @@ Append to `docs/worklog/2026-07-08-qr-self-order-v1.md` (or create a `docs/workl
 - `CartSheetProps` fields match what the orchestrator passes in Task 10. ✓
 - `MenuPanelProps` fields match orchestrator usage. ✓
 
-**4. Ambiguity fixed:** Task 10's `isClosed` derivation simplified — closed state is `session.status === "closed"`; the payment-paid case surfaces via the pill. Removed a convoluted boolean.
+**4. Ambiguity fixed:** Task 10's `isClosed` now uses `sessionStatus === "closed" || activeOrder?.paymentStatus === "paid"` (the realistic terminal signal, since the snapshot RPC surfaces only `pending_approval`/`active` sessions). CTA disable is split into two tiers: `ctaHardDisabled` (pending_approval / closed) truly blocks submit; `paymentLocked` (pending VietQR/cash_call) does NOT block, preserving V1's cancel-then-add flow.
+
+## Codex review applied
+
+This plan was reviewed by Codex (GPT-5) against the live codebase. All findings were addressed:
+
+- **BLOCKER (Task 10):** `ctaDisabled` previously included `paymentLocked`, making `submitBatch` early-return before the `pending_payment_exists → cancel-then-add` branch — a V1 regression. Fixed: split into `ctaHardDisabled` (blocks submit) vs `paymentLocked` (does not).
+- **MAJOR (CartSheet):** `ctaDisabled` now flows into `CartSheetProps` + `SubmitCta` and visibly disables the button.
+- **MAJOR (isClosed):** impossible `paymentStatus === "active" && === "paid"` replaced with `activeOrder?.paymentStatus === "paid"`.
+- **MAJOR (mobile sticky bar):** added a `fixed inset-x-0 bottom-0 lg:hidden` bar with subtotal + CTA outside the Sheet, so submit is one tap away with the sheet closed.
+- **MAJOR (lint):** removed unused `formatVND`/`Badge`/`ApiError` (Task 10), `IconMinus` (Task 9), unused `items`/`total` in `SubmitCta` (Task 8).
+- **MAJOR (test assertions):** aligned `useState(false)` (Task 6), replaced `cartQuantity` with real `cart-sheet.tsx` tokens (Task 8), strengthened Task 10 test with negative + flow assertions.
+- **MAJOR (db apply):** replaced `supabase db push` with Preview Branch apply; replaced `git add -A` with scoped staging.
+- **NIT:** replaced arbitrary `max-h-[70dvh]` with `max-h-dvh-80`.
