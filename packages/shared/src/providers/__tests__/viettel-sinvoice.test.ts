@@ -1231,19 +1231,19 @@ test("downloadInvoice: PDF from fileType=PDF + XML from the ZIP (errorCode 200 =
   }
 });
 
-test("deriveInvoiceTypeFromTemplate: TT78 '1/001' → '1' (HĐ GTGT)", () => {
+test("deriveInvoiceTypeFromTemplate: digit template '1/001' → '1' (HĐ GTGT)", () => {
   assert.equal(deriveInvoiceTypeFromTemplate("1/001"), "1");
 });
 
-test("deriveInvoiceTypeFromTemplate: TT78 '2/001' → '2' (HĐ bán hàng từ MTT)", () => {
+test("deriveInvoiceTypeFromTemplate: digit template '2/001' → '2' (HĐ bán hàng từ MTT)", () => {
   assert.equal(deriveInvoiceTypeFromTemplate("2/001"), "2");
 });
 
-test("deriveInvoiceTypeFromTemplate: TT78 with multi-digit suffix '2/123' → '2'", () => {
+test("deriveInvoiceTypeFromTemplate: digit template with multi-digit suffix '2/123' → '2'", () => {
   assert.equal(deriveInvoiceTypeFromTemplate("2/123"), "2");
 });
 
-test("deriveInvoiceTypeFromTemplate: supports all 6 TT78 kinds", () => {
+test("deriveInvoiceTypeFromTemplate: supports all 6 digit template kinds", () => {
   for (const kind of ["1", "2", "3", "4", "5", "6"]) {
     assert.equal(deriveInvoiceTypeFromTemplate(`${kind}/001`), kind);
   }

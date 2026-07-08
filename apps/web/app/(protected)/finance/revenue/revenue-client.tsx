@@ -57,6 +57,7 @@ import { HeatmapGrid, type HeatmapCell } from "../components/heatmap-grid";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { MvStalenessBanner } from "../components/mv-staleness-banner";
 import { WorkQueueStrip } from "../components/work-queue-strip";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { messages } from "@lib/messages";
 import type {
   AccessibleBranch,
@@ -934,9 +935,9 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
       </div>
       {variance.worst_cashiers.length > 0 ? (
         <div className="flex flex-col gap-1.5 border-t pt-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <SectionLabel>
             {cashCopy.topVariance}
-          </p>
+          </SectionLabel>
           <ul className="flex flex-col gap-1">
             {variance.worst_cashiers.map((c) => (
               <li

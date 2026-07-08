@@ -19,6 +19,10 @@ import { fetchSepayBankMovementSince } from "./sepay-bank-transactions";
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
+interface ExpenseMatchRow {
+  expense_id: number;
+}
+
 function toNumber(value: number | string | null | undefined): number {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -64,17 +68,26 @@ async function sumExpensesSinceByMethod(
   tenantId: number,
   sinceDate: string,
 ): Promise<{ cash: number; unmatchedTransfer: number }> {
+  const matchedExpenseIds = new Set<number>();
+
+  const { data: matchedRows } = await supabase
+    .from("bank_transaction_expense_matches")
+    .select("expense_id")
+    .eq("tenant_id", tenantId);
+
+  for (const row of (matchedRows ?? []) as ExpenseMatchRow[]) {
+    matchedExpenseIds.add(row.expense_id);
+  }
+
   const { data: matchedEvents } = await supabase
     .from("webhook_events")
     .select("expense_id")
     .eq("tenant_id", tenantId)
     .not("expense_id", "is", null);
 
-  const matchedExpenseIds = new Set(
-    (matchedEvents ?? [])
-      .map((e) => e.expense_id)
-      .filter((id): id is number => id !== null),
-  );
+  for (const row of matchedEvents ?? []) {
+    if (row.expense_id != null) matchedExpenseIds.add(row.expense_id);
+  }
 
   const { data } = await supabase
     .from("expenses")

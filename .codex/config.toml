@@ -10,3 +10,6 @@ url = "https://mcp.supabase.com/mcp?project_ref=iexwsuaqqenyjiskawoj&read_only=t
 
 [mcp_servers.vercel]
 url = "https://mcp.vercel.com"
+
+[mcp_servers.openrouter]
+url = "https://mcp.openrouter.ai/mcp"

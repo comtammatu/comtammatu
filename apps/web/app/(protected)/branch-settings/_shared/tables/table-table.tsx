@@ -1,11 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import QRCode from "qrcode";
 import {
+  Copy as IconCopy,
+  ExternalLink as IconExternalLink,
   Pencil as IconPencil,
+  Power as IconPower,
+  PowerOff as IconPowerOff,
+  QrCode as IconQrCode,
+  RefreshCcw as IconRefreshCcw,
   Trash as IconTrash,
   Utensils as IconToolsKitchen,
 } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
 import {
   Item,
   ItemActions,
@@ -14,7 +31,12 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { deleteTable } from "./actions";
+import {
+  createTableSelfOrderQr,
+  deleteTable,
+  rotateTableSelfOrderQr,
+  setTableSelfOrderQrEnabled,
+} from "./actions";
 import { StatusBadge } from "@/components/status-badge";
 import { TableFormDialog } from "./table-form-dialog";
 import type { ZoneRow } from "./zone-table";
@@ -38,6 +60,9 @@ export interface TableRow {
   zone_id: number | null;
   number: number;
   status: string;
+  self_order_token: string | null;
+  self_order_enabled: boolean;
+  self_order_token_rotated_at: string | null;
   zone_name: string | null;
 }
 
@@ -46,14 +71,44 @@ interface TableTableProps {
   zones: ZoneRow[];
 }
 
+interface SelfOrderQrDialogState {
+  id: number;
+  number: number;
+  token: string;
+  enabled: boolean;
+  rotatedAt: string | null;
+}
+
+function qrDialogStateFromTable(
+  table: TableRow,
+): SelfOrderQrDialogState | null {
+  if (!table.self_order_token) return null;
+  return {
+    id: table.id,
+    number: table.number,
+    token: table.self_order_token,
+    enabled: table.self_order_enabled,
+    rotatedAt: table.self_order_token_rotated_at,
+  };
+}
+
+function buildSelfOrderUrl(token: string, origin: string) {
+  return origin ? `${origin}/q/${token}` : `/q/${token}`;
+}
+
 export function TableTable({ tables, zones }: TableTableProps) {
+  const router = useRouter();
   const [editTable, setEditTable] = useState<TableRow | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [pendingQrId, setPendingQrId] = useState<number | null>(null);
+  const [qrDialog, setQrDialog] = useState<SelfOrderQrDialogState | null>(null);
+
+  const tableMessages = messages.settings.tables;
 
   async function handleDelete(id: number) {
     const ok = await confirm({
-      title: messages.settings.tables.deleteTitle,
-      description: messages.settings.tables.deleteDescription,
+      title: tableMessages.deleteTitle,
+      description: tableMessages.deleteDescription,
       confirmText: ACTIONS_VI.delete,
       cancelText: ACTIONS_VI.cancel,
       variant: "destructive",
@@ -70,7 +125,163 @@ export function TableTable({ tables, zones }: TableTableProps) {
     }
   }
 
+  function showQrDialog(table: TableRow) {
+    const next = qrDialogStateFromTable(table);
+    if (next) setQrDialog(next);
+  }
+
+  async function handleCreateQr(table: TableRow) {
+    setPendingQrId(table.id);
+    try {
+      const result = await createTableSelfOrderQr({ id: table.id });
+      if (!result.success || !result.data) {
+        toast.error(result.error ?? tableMessages.qrActionFailed);
+        return;
+      }
+      toast.success(tableMessages.qrCreated);
+      setQrDialog({
+        id: table.id,
+        number: table.number,
+        token: result.data.token,
+        enabled: result.data.enabled,
+        rotatedAt: result.data.rotatedAt,
+      });
+      router.refresh();
+    } catch (error) {
+      console.error("[table-settings] create self-order QR failed", error);
+      toast.error(tableMessages.qrActionFailed);
+    } finally {
+      setPendingQrId(null);
+    }
+  }
+
+  async function handleSetQrEnabled(table: TableRow, enabled: boolean) {
+    setPendingQrId(table.id);
+    try {
+      const result = await setTableSelfOrderQrEnabled({
+        id: table.id,
+        enabled,
+      });
+      if (!result.success || !result.data) {
+        toast.error(result.error ?? tableMessages.qrActionFailed);
+        return;
+      }
+      toast.success(
+        enabled ? tableMessages.qrEnabledToast : tableMessages.qrDisabledToast,
+      );
+      if (enabled) {
+        setQrDialog({
+          id: table.id,
+          number: table.number,
+          token: result.data.token,
+          enabled: result.data.enabled,
+          rotatedAt: result.data.rotatedAt,
+        });
+      } else if (qrDialog?.id === table.id) {
+        setQrDialog(null);
+      }
+      router.refresh();
+    } catch (error) {
+      console.error("[table-settings] update self-order QR failed", error);
+      toast.error(tableMessages.qrActionFailed);
+    } finally {
+      setPendingQrId(null);
+    }
+  }
+
+  async function handleRotateQr(table: TableRow) {
+    const ok = await confirm({
+      title: tableMessages.rotateQrTitle,
+      description: tableMessages.rotateQrDescription,
+      confirmText: tableMessages.rotateQrConfirm,
+      cancelText: ACTIONS_VI.cancel,
+      variant: "destructive",
+    });
+    if (!ok) return;
+
+    setPendingQrId(table.id);
+    try {
+      const result = await rotateTableSelfOrderQr({ id: table.id });
+      if (!result.success || !result.data) {
+        toast.error(result.error ?? tableMessages.qrActionFailed);
+        return;
+      }
+      toast.success(tableMessages.qrRotatedToast);
+      setQrDialog({
+        id: table.id,
+        number: table.number,
+        token: result.data.token,
+        enabled: result.data.enabled,
+        rotatedAt: result.data.rotatedAt,
+      });
+      router.refresh();
+    } catch (error) {
+      console.error("[table-settings] rotate self-order QR failed", error);
+      toast.error(tableMessages.qrActionFailed);
+    } finally {
+      setPendingQrId(null);
+    }
+  }
+
+  function renderSelfOrderQrBadge(table: TableRow) {
+    if (!table.self_order_token) {
+      return <Badge variant="secondary">{tableMessages.qrNotCreated}</Badge>;
+    }
+    if (!table.self_order_enabled) {
+      return <Badge variant="secondary">{tableMessages.qrDisabled}</Badge>;
+    }
+    return <Badge variant="success">{tableMessages.qrEnabled}</Badge>;
+  }
+
+  function isRowPending(tableId: number) {
+    return pendingDeleteId === tableId || pendingQrId === tableId;
+  }
+
   function TableActions({ table }: { table: TableRow }) {
+    const qrPending = pendingQrId === table.id;
+    const qrItems = table.self_order_token
+      ? [
+          {
+            key: "view-qr",
+            label: tableMessages.viewQr,
+            icon: <IconQrCode data-icon="inline-start" />,
+            disabled: qrPending,
+            separatorBefore: true,
+            onSelect: () => showQrDialog(table),
+          },
+          {
+            key: table.self_order_enabled ? "disable-qr" : "enable-qr",
+            label: table.self_order_enabled
+              ? tableMessages.disableQr
+              : tableMessages.enableQr,
+            icon: table.self_order_enabled ? (
+              <IconPowerOff data-icon="inline-start" />
+            ) : (
+              <IconPower data-icon="inline-start" />
+            ),
+            disabled: qrPending,
+            onSelect: () =>
+              void handleSetQrEnabled(table, !table.self_order_enabled),
+          },
+          {
+            key: "rotate-qr",
+            label: tableMessages.rotateQr,
+            icon: <IconRefreshCcw data-icon="inline-start" />,
+            disabled: qrPending,
+            onSelect: () => void handleRotateQr(table),
+          },
+        ]
+      : [
+          {
+            key: "create-qr",
+            label: tableMessages.createQr,
+            icon: <IconQrCode data-icon="inline-start" />,
+            disabled: qrPending,
+            separatorBefore: true,
+            onSelect: () => void handleCreateQr(table),
+          },
+        ];
+
     return (
       <RowActionsMenu
         items={[
@@ -80,6 +291,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
             icon: <IconPencil data-icon="inline-start" />,
             onSelect: () => setEditTable(table),
           },
+          ...qrItems,
           {
             key: "delete",
             label: ACTIONS_VI.delete,
@@ -115,6 +327,11 @@ export function TableTable({ tables, zones }: TableTableProps) {
       render: (table) => <StatusBadge domain="table" value={table.status} />,
     },
     {
+      key: "self-order-qr",
+      header: tableMessages.qrColumn,
+      render: (table) => renderSelfOrderQrBadge(table),
+    },
+    {
       key: "actions",
       header: "",
       className: "w-12",
@@ -134,22 +351,23 @@ export function TableTable({ tables, zones }: TableTableProps) {
           <IconToolsKitchen className="mx-auto size-8 text-muted-foreground" />
         }
         rowClassName={(table) =>
-          pendingDeleteId === table.id ? "opacity-60" : undefined
+          isRowPending(table.id) ? "opacity-60" : undefined
         }
         mobileCardRender={(table) => (
           <Item
             variant="outline"
-            className={pendingDeleteId === table.id ? "opacity-60" : ""}
+            className={isRowPending(table.id) ? "opacity-60" : ""}
           >
             <ItemContent className="min-w-0">
               <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
-                {messages.settings.tables.tableLabel(table.number)}
+                {tableMessages.tableLabel(table.number)}
               </ItemTitle>
               <ItemDescription className="line-clamp-none text-sm leading-6">
                 {TABLE_VI.area}: {table.zone_name ?? "—"}
               </ItemDescription>
-              <div>
+              <div className="flex flex-wrap gap-2">
                 <StatusBadge domain="table" value={table.status} />
+                {renderSelfOrderQrBadge(table)}
               </div>
             </ItemContent>
             <ItemActions className="self-center">
@@ -168,6 +386,114 @@ export function TableTable({ tables, zones }: TableTableProps) {
           table={editTable}
         />
       )}
+
+      <SelfOrderQrDialog
+        table={qrDialog}
+        open={!!qrDialog}
+        onOpenChange={(open) => !open && setQrDialog(null)}
+      />
     </>
+  );
+}
+
+function SelfOrderQrDialog({
+  table,
+  open,
+  onOpenChange,
+}: {
+  table: SelfOrderQrDialogState | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [origin, setOrigin] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const tableMessages = messages.settings.tables;
+  const url = table ? buildSelfOrderUrl(table.token, origin) : "";
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
+  useEffect(() => {
+    if (!table || !origin) return;
+
+    let cancelled = false;
+    setQrDataUrl("");
+    QRCode.toDataURL(buildSelfOrderUrl(table.token, origin), {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 256,
+    })
+      .then((nextQrDataUrl) => {
+        if (!cancelled) setQrDataUrl(nextQrDataUrl);
+      })
+      .catch((error) => {
+        console.error("[table-settings] render self-order QR failed", error);
+        if (!cancelled) toast.error(tableMessages.qrRenderFailed);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [origin, table, tableMessages.qrRenderFailed]);
+
+  async function handleCopy() {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(tableMessages.qrCopied);
+    } catch (error) {
+      console.error("[table-settings] copy self-order QR link failed", error);
+      toast.error(tableMessages.qrCopyFailed);
+    }
+  }
+
+  if (!table) return null;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+      >
+        <SheetHeader>
+          <SheetTitle>{tableMessages.qrDialogTitle(table.number)}</SheetTitle>
+          <SheetDescription>
+            {tableMessages.qrDialogDescription}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="grid gap-3 px-3 py-4 sm:px-4">
+          <div className="mx-auto grid size-72 place-items-center bg-white p-3">
+            {qrDataUrl ? (
+              <img
+                src={qrDataUrl}
+                alt={tableMessages.qrAlt(table.number)}
+                className="size-full"
+              />
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                {tableMessages.qrGenerating}
+              </span>
+            )}
+          </div>
+          <div className="text-xs break-all text-muted-foreground">
+            {url}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button type="button" variant="outline" onClick={() => void handleCopy()}>
+              <IconCopy data-icon="inline-start" />
+              {tableMessages.copyLink}
+            </Button>
+            <Button asChild variant="outline">
+              <a href={url} target="_blank" rel="noreferrer">
+                <IconExternalLink data-icon="inline-start" />
+                {tableMessages.openLink}
+              </a>
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

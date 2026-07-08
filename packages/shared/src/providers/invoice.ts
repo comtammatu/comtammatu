@@ -26,7 +26,7 @@ export interface InvoiceLineItem {
 export const BUYER_NOT_GET_INVOICE_NAME = "Bán cho người tiêu dùng";
 
 /**
- * Replacement context per TT78/2021 §7 (Path C). When present in
+ * Replacement context per TT 32/2025 + NĐ 254/2026 (Path C). When present in
  * InvoiceRequest, provider MUST send the call as `adjustmentType=3`
  * (HĐ thay thế) and inject original-invoice cross-references in
  * `generalInvoiceInfo` per Viettel HDSD §III.2.
@@ -40,9 +40,9 @@ export interface InvoiceReplacementContext {
   originalInvoiceNumber: string;
   /** ISO8601 timestamp of original issuance. Provider converts to epoch ms. */
   originalIssuedAt: string;
-  /** TT78 digit form (e.g. "1", "2") matching original template prefix. */
+  /** Provider digit form (e.g. "1", "2") matching original template prefix. */
   originalInvoiceType: string;
-  /** TT78 digit form, e.g. "2" for template "2/001". */
+  /** Provider digit form, e.g. "2" for template "2/001". */
   originalTemplateCode: string;
   /** Lý do sai sót — ≤255 chars (Sinvoice `adjustedNote`). */
   reason: string;
@@ -83,7 +83,7 @@ export interface InvoiceRequest {
   totalAmount: number;
 
   /**
-   * Present iff this is a TT78 §7 replacement (Path C).
+   * Present iff this is an HĐĐT replacement (Path C).
    * Provider branches body shape: adjustmentType="3" + original refs
    * in generalInvoiceInfo. Caller MUST pass NEW row id as `orderId`
    * to ensure transactionUuid uniqueness vs original.

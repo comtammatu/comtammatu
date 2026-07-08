@@ -70,11 +70,18 @@ there, do not restate them here:
 
 ## Typography Rules
 
-- Ma Tu Concept 01 typography is fixed: Geist for body/content and headings/titles, and Geist Mono for tabular operational data.
-- Runtime source is `apps/web/app/layout.tsx` (the `geist` package) plus `packages/ui/src/styles/globals.css`; use `font-sans`, `font-heading`, and `font-mono` instead of raw `font-family`.
+- Ma Tu Concept 01 typography is fixed: Be Vietnam Pro for headings/titles, Geist for body/content, and Geist Mono for tabular operational data.
+- Runtime source is `apps/web/app/layout.tsx` (the `geist` package for Geist + Geist Mono; `next/font/google` for Be Vietnam Pro) plus `packages/ui/src/styles/globals.css`; use `font-sans`, `font-heading`, and `font-mono` instead of raw `font-family`.
 - NEVER add route-specific fonts, per-surface font variables, extra font families, or hardcoded fallback stacks.
-- NEVER reintroduce `Be Vietnam Pro`, `Inter`, `Montserrat`, `JetBrains Mono`, system-only typography, or route-specific font variables unless the design-system contract is explicitly changed first.
+- NEVER reintroduce `Inter`, `Montserrat`, `JetBrains Mono`, system-only typography, or route-specific font variables. `Be Vietnam Pro` is the approved heading face (per D039).
 - When changing typography, update `docs/spec/design-system.md`, `docs/modules/ui.md`, `tasks/regressions.md`, and runtime artifacts in the same change.
+- Section/panel/field eyebrow labels render via `SectionLabel` primitive (`@comtammatu/ui/components/section-label`), not inline `text-xs font-medium uppercase tracking-wide text-muted-foreground` class strings. Use `density="dense"` for KDS/audit/mobile chrome.
+
+## Theme Runtime Rules
+
+- Two theme modes only: `light` (default) and `night` (warm-dark "gạo cháy"). `night` maps to the `.dark` CSS selector.
+- `night` activates automatically 18:00–06:00 local time, or on user override via the `matu-theme` cookie (`light` | `night`). The auto-by-hour fallback must not depend on `prefers-color-scheme` or `matchMedia`.
+- The single theme toggle is `ThemeToggle` in `AppHeader`, the operations PWA toolbar, and the employee header. NEVER add a second theme context, a route-local toggle, or a localStorage theme key. Scope/branch/auth state stays out of browser storage per the Core Constraints.
 
 ## Operational UI Philosophy
 

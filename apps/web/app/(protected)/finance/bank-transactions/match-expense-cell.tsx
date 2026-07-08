@@ -1,44 +1,63 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { ChevronDown as IconChevronDown } from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
+import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@comtammatu/ui/components/popover";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
-import type { ExpenseRow } from "../expense-actions";
-import { matchSepayTransactionWithExpense } from "../expense-actions";
+import type { ExpenseMatchOption } from "../expense-actions";
+import { matchSepayTransactionWithExpenses } from "../expense-actions";
 
 const copy = messages.finance.bankTransactions;
 
 interface MatchExpenseCellProps {
   eventId: number;
   paymentId: number | null;
-  expenseId: number | null;
+  expenseIds: number[];
   transferType: "in" | "out";
-  unmatchedExpenses: ExpenseRow[];
+  expenseOptions: ExpenseMatchOption[];
+}
+
+function formatDate(value: string): string {
+  return value.split("-").reverse().join("/");
+}
+
+function expenseDetail(expense: ExpenseMatchOption): string {
+  return expense.note || expense.vendor_name || expense.category;
+}
+
+function sameIds(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  const left = new Set(a);
+  return b.every((id) => left.has(id));
 }
 
 export function MatchExpenseCell({
   eventId,
   paymentId,
-  expenseId,
+  expenseIds,
   transferType,
-  unmatchedExpenses,
+  expenseOptions,
 }: MatchExpenseCellProps) {
+  const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
-  const [optimisticExpenseId, setOptimisticExpenseId] = React.useState<
-    number | null
-  >(expenseId);
+  const [open, setOpen] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState<number[]>(expenseIds);
 
-  // If already matched, just show the badge
+  React.useEffect(() => {
+    setSelectedIds(expenseIds);
+  }, [expenseIds]);
+
   if (paymentId != null) {
     return (
       <Badge variant="outline" className="text-success font-normal">
@@ -47,63 +66,136 @@ export function MatchExpenseCell({
     );
   }
 
-  if (optimisticExpenseId != null) {
-    return (
-      <Badge variant="outline" className="text-warning font-normal">
-        {copy.matchedExpense(optimisticExpenseId)}
-      </Badge>
-    );
-  }
-
-  // Tiền Vào (Money In) - usually orders. We don't match expenses here.
   if (transferType === "in") {
     return <span className="text-muted-foreground">—</span>;
   }
 
-  const handleMatch = (selectedExpenseId: string) => {
-    const id = Number(selectedExpenseId);
+  const selectedSet = new Set(selectedIds);
+  const availableExpenses = expenseOptions.filter(
+    (exp) =>
+      exp.matchedEventId == null ||
+      exp.matchedEventId === eventId ||
+      selectedSet.has(exp.id),
+  );
+  const selectedExpenses = availableExpenses.filter((exp) =>
+    selectedSet.has(exp.id),
+  );
+  const selectedTotal = selectedExpenses.reduce(
+    (sum, exp) => sum + exp.amount,
+    0,
+  );
+  const hasChanges = !sameIds(selectedIds, expenseIds);
+
+  const triggerLabel =
+    selectedIds.length > 0
+      ? `${selectedIds.length} chi${
+          selectedExpenses.length > 0 ? ` · -${formatVND(selectedTotal)}` : ""
+        }`
+      : copy.matchExpensePlaceholder;
+
+  const toggleExpense = (id: number) => {
+    setSelectedIds((current) =>
+      current.includes(id)
+        ? current.filter((selectedId) => selectedId !== id)
+        : [...current, id],
+    );
+  };
+
+  const handleSave = () => {
     startTransition(async () => {
-      setOptimisticExpenseId(id);
-      const res = await matchSepayTransactionWithExpense({
+      const res = await matchSepayTransactionWithExpenses({
         eventId,
-        expenseId: id,
+        expenseIds: selectedIds,
       });
 
       if (!res.success) {
-        setOptimisticExpenseId(null);
         toast.error(res.error || copy.matchError);
       } else {
         toast.success(copy.matchSuccess);
+        setOpen(false);
+        router.refresh();
       }
     });
   };
 
   return (
-    <div className="w-full max-w-64">
-      <Select onValueChange={handleMatch} disabled={isPending}>
-        <SelectTrigger className="h-8 text-xs">
-          <SelectValue placeholder={copy.matchExpensePlaceholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {unmatchedExpenses.map((exp) => (
-            <SelectItem key={exp.id} value={String(exp.id)}>
-              <span className="flex items-center gap-2">
-                <span className="font-medium text-warning">
-                  -{formatVND(exp.amount)}
-                </span>
-                <span className="text-muted-foreground truncate w-40">
-                  ({exp.expense_date.split("-").reverse().join("/")}) {exp.note || exp.vendor_name || exp.category}
-                </span>
-              </span>
-            </SelectItem>
-          ))}
-          {unmatchedExpenses.length === 0 && (
-            <div className="p-2 text-xs text-muted-foreground text-center">
-              Không có chi phí chưa khớp
-            </div>
-          )}
-        </SelectContent>
-      </Select>
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 w-full max-w-64 justify-between gap-2 text-xs"
+        >
+          <span className="truncate">{triggerLabel}</span>
+          <IconChevronDown className="size-3.5 shrink-0" aria-hidden />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-96">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-medium">{copy.matchExpenseTitle}</span>
+          <span className="font-mono text-warning">
+            {selectedExpenses.length > 0
+              ? `-${formatVND(selectedTotal)}`
+              : selectedIds.length > 0
+                ? `${selectedIds.length} chi`
+                : "—"}
+          </span>
+        </div>
+        <ScrollArea className="max-h-72">
+          <div className="flex flex-col gap-1">
+            {availableExpenses.map((exp) => {
+              const checked = selectedSet.has(exp.id);
+              return (
+                <label
+                  key={exp.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-md hover:bg-muted/30"
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggleExpense(exp.id)}
+                    disabled={isPending}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm">
+                      {expenseDetail(exp)}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {formatDate(exp.expense_date)}
+                    </span>
+                  </span>
+                  <span className="font-mono text-xs font-medium text-warning">
+                    -{formatVND(exp.amount)}
+                  </span>
+                </label>
+              );
+            })}
+            {availableExpenses.length === 0 ? (
+              <div className="text-center text-xs text-muted-foreground">
+                {copy.noUnmatchedExpenses}
+              </div>
+            ) : null}
+          </div>
+        </ScrollArea>
+        <div className="flex items-center justify-between gap-2 border-t">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds([])}
+            disabled={isPending || selectedIds.length === 0}
+          >
+            {copy.clearExpenseMatch}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleSave}
+            disabled={isPending || !hasChanges}
+          >
+            {copy.saveExpenseMatch}
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

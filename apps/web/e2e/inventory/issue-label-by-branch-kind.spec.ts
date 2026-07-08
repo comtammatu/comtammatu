@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { createServiceClient, resolveTenantId } from "./helpers";
+import {
+  createServiceClient,
+  resolveIngredientBaseUnitId,
+  resolveTenantId,
+} from "./helpers";
 
 /**
  * E2E: Stock-issue label & movement_subtype wiring
@@ -94,6 +98,11 @@ test.describe("stock_issue retirement + movement_subtype schema", () => {
       .limit(1)
       .single();
     if (!ingredient) throw new Error("No ingredient seeded");
+    const entryUnitId = await resolveIngredientBaseUnitId(
+      supabase,
+      tenantId,
+      ingredient.id,
+    );
 
     const { data: location } = await supabase
       .from("inventory_locations")
@@ -119,6 +128,8 @@ test.describe("stock_issue retirement + movement_subtype schema", () => {
       type: "adjustment",
       movement_subtype: "not_a_valid_subtype",
       quantity_change: 0,
+      entry_unit_id: entryUnitId,
+      entry_quantity: 0,
       unit_cost: 0,
       reason: "schema check",
     });

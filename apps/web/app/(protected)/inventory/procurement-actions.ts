@@ -44,6 +44,7 @@ export {
 export {
   createSupplierInvoice,
   fetchSupplierInvoicesPage,
+  recordSupplierPayment,
   recomputeInvoiceMatching,
 } from "./supplier-invoice-actions";
 export type { SupplierInvoiceCursor } from "./supplier-invoice-actions";

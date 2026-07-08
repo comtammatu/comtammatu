@@ -14,7 +14,7 @@ import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Save as IconDeviceFloppy } from "lucide-react";
 import { AppSection } from "@/components/surface";
-import { FormattedNumberInput } from "@/components/form";
+import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import { messages } from "@lib/messages";
 import { saveQcSettings } from "../../notifications-actions";
 

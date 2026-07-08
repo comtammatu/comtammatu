@@ -13,7 +13,7 @@ import {
   reserveDailyLimitHoldsSchema,
   submitOrderSchema,
 } from "./_lib/schemas";
-import { posUseAuth } from "./_lib/auth";
+import { isPosBranchInScope, posUseAuth } from "./_lib/auth";
 import {
   appendOrderItemsRpcFallback,
   appendOrderItemsRpcMappings,
@@ -160,7 +160,7 @@ export const reserveDailyLimitHolds = withActionPositional(
       items?: unknown[];
     }>
   > => {
-    if (claims.branch_id !== branchId) {
+    if (!isPosBranchInScope(claims, branchId)) {
       return {
         success: false,
         error: "Không có quyền truy cập chi nhánh này",
@@ -215,7 +215,7 @@ export const releaseDailyLimitHolds = withActionPositional(
     { branchId, holdToken },
     { supabase, claims },
   ): Promise<ActionResult<{ hold_token: string; released_count?: number }>> => {
-    if (claims.branch_id !== branchId) {
+    if (!isPosBranchInScope(claims, branchId)) {
       return {
         success: false,
         error: "Không có quyền truy cập chi nhánh này",
@@ -289,9 +289,8 @@ export const submitOrder = withActionPositional(
     { branchId, cart, posSessionId, idempotencyKey, dailyLimitHoldToken },
     { supabase, claims, user },
   ): Promise<ActionResult<{ order_id: number; order_number: string }>> => {
-    // JWT branch_id defence in depth (proxy already routes by branch, but
-    // a manipulated request reaching here gets a distinct errorCode).
-    if (claims.branch_id !== branchId) {
+    // POS branch scope defence in depth keeps a distinct errorCode.
+    if (!isPosBranchInScope(claims, branchId)) {
       return {
         success: false,
         error: "Không có quyền truy cập chi nhánh này",
@@ -424,7 +423,7 @@ export const appendOrderItems = withActionPositional(
       discountWarning?: string;
     }>
   > => {
-    if (claims.branch_id !== branchId) {
+    if (!isPosBranchInScope(claims, branchId)) {
       return {
         success: false,
         error: "Không có quyền truy cập chi nhánh này",

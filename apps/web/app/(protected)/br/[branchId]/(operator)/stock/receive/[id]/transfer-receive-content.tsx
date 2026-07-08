@@ -75,7 +75,11 @@ export async function TransferReceiveContent({
       name: ing?.name ?? "—",
       sku: "",
       qty,
-      unit: l.unit_label ?? l.unit ?? ing?.ingredient_units?.find((u: any) => u.is_base)?.units?.code ?? "",
+      unit:
+        l.unit_label ??
+        l.unit ??
+        ing?.ingredient_units?.find((u) => u.is_base)?.units?.code ??
+        "",
       cost,
       total,
       received:

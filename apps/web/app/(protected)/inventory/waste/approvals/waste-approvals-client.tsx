@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -68,7 +68,9 @@ export function WasteApprovalsClient({
   const [rows, setRows] = useState(initial);
   const copy = messages.inventory.waste.approvals;
 
-
+  useEffect(() => {
+    setRows(initial);
+  }, [initial]);
 
   const content = (
     <>

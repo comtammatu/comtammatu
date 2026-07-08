@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,17 +14,14 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
-import { FormattedNumberInput } from "@/components/form";
+import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  DocumentStockCorrectionDialog,
-  type CorrectionBranchOption,
-} from "../../_components/document-stock-correction-dialog";
+import type { CorrectionBranchOption } from "../../_components/document-stock-correction-dialog";
 import {
   AppDetailFooter,
   AppEmptyState,
@@ -47,6 +45,15 @@ import {
 import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
+
+const DocumentStockCorrectionDialog = dynamic(
+  () =>
+    import("../../_components/document-stock-correction-dialog").then(
+      (mod) => mod.DocumentStockCorrectionDialog,
+    ),
+  { ssr: false },
+);
+
 const transferDetailTitle = "Chi tiết điều chuyển";
 const historySectionTitle = "Lịch sử chỉnh sửa";
 export type TransferDetail = {

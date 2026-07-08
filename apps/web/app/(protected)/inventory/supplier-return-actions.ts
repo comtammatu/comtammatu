@@ -9,6 +9,7 @@ import {
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "./_lib/auth";
+import { PG_ERR } from "./_lib/constants";
 import { getEmbeddedIngredientBaseUnitDisplayName } from "./_lib/unit-display";
 
 const ROLES = SUPPLIER_RETURN_ROLES;
@@ -34,6 +35,12 @@ const RPC_ERROR_VI: Record<string, string> = {
   must_be_sent_before_credit: "Phiếu phải ở trạng thái đã gửi trước khi ghi có.",
   resolution_mismatch_credit: "Cách xử lý không phải ghi có.",
   resolution_mismatch_refund: "Cách xử lý không phải hoàn tiền.",
+  supplier_return_duplicate_grn:
+    messages.inventory.supplierReturns.create.duplicateGrn,
+  active_supplier_return_duplicate_grn:
+    messages.inventory.supplierReturns.create.duplicateGrn,
+  uq_supplier_returns_active_grn:
+    messages.inventory.supplierReturns.create.duplicateGrn,
 };
 
 function mapRpcError(message: string | undefined, fallback: string): string {
@@ -241,9 +248,8 @@ export async function createSupplierReturnFromGrn(
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
-  // ponytail: pre-check covers human-speed re-submit (back-nav / multi-tab).
-  // A concurrent double-submit or direct-RPC call still needs a partial-unique
-  // index on grn_id (status <> 'cancelled') — follow-up migration.
+  // Pre-check keeps the common duplicate path friendly; the RPC/index enforce
+  // the invariant for concurrent submits and direct RPC calls.
   const { data: existing } = await supabase
     .from("supplier_returns")
     .select("id")
@@ -266,6 +272,12 @@ export async function createSupplierReturnFromGrn(
     p_notes: parsed.data.notes ?? undefined,
   });
   if (error) {
+    if (error.code === PG_ERR.UNIQUE_VIOLATION) {
+      return {
+        success: false,
+        error: messages.inventory.supplierReturns.create.duplicateGrn,
+      };
+    }
     return {
       success: false,
       error: mapRpcError(error.message, "Không thể tạo phiếu trả hàng."),

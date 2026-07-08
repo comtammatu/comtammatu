@@ -11,6 +11,7 @@ const setAssignmentsSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   locationId: z.coerce.number().int().positive(),
   employeeId: z.coerce.number().int().positive(),
+  shiftId: z.coerce.number().int().positive().nullable().optional(),
   ingredientIds: z.array(z.coerce.number().int().positive()),
 });
 
@@ -47,6 +48,7 @@ export const setCountAssignments = withAction(
       p_location_id: data.locationId,
       p_employee_id: data.employeeId,
       p_ingredient_ids: data.ingredientIds,
+      ...(data.shiftId == null ? {} : { p_shift_id: data.shiftId }),
     });
     if (error) {
       console.error("inventory.count_assignments.set_failed", {
@@ -55,6 +57,7 @@ export const setCountAssignments = withAction(
       return { success: false, error: mapCountAssignRpcError(error.code) };
     }
     revalidatePath("/inventory/count-assignments");
+    revalidatePath(`/br/${data.branchId}/stock/count-assignments`);
     return { success: true };
   },
 );

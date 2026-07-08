@@ -6,6 +6,7 @@ import { createServiceClient } from "@comtammatu/database";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
+import { isPosBranchInScope } from "./_lib/auth";
 import type { MenuItemDailyLimit } from "./pos-menu-types";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
@@ -126,8 +127,7 @@ export async function fetchMenuForPos(
 
   const { supabase, claims } = ctx;
 
-  // Verify branch_id matches JWT claim
-  if (claims.branch_id !== parsedBranchId.data) {
+  if (!isPosBranchInScope(claims, parsedBranchId.data)) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
@@ -250,7 +250,7 @@ export async function fetchDailyLimitsForPos(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (claims.branch_id !== parsedBranchId.data) {
+  if (!isPosBranchInScope(claims, parsedBranchId.data)) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 

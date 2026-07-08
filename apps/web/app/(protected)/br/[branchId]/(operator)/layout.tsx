@@ -13,7 +13,7 @@ import {
   ROLE_LABEL_VI,
   type BranchKind,
 } from "@comtammatu/shared/auth";
-import { APP_COPY_VI, getSiteKindLabelVi } from "@comtammatu/shared/labels";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage } from "@/components/surface";
 import { AppHeader } from "@/components/app-header";
@@ -56,22 +56,22 @@ export default async function OperatorLayout({
   if (branchId == null) notFound();
 
   const { supabase, claims } = await loadAuthState();
+  const unreadPromise = getUnreadCount().catch(() => null);
   const context = await resolveBranchContext(supabase, claims, branchId);
   if (!context) notFound();
 
   const canUseEmployeePortal =
-    canAccess(claims.user_role, "employee") ||
+    canAccess(claims.user_role, "operator_home") ||
     canAccess(claims.user_role, "employee_checkout_approvals");
   const canManageBranch =
     canAccess(claims.user_role, "branch_dashboard") ||
     canAccess(claims.user_role, "branch_settings") ||
     canAccess(claims.user_role, "branch_pos_sessions");
   const canUseBranchPicker = canAccess(claims.user_role, "branch_picker");
-  const unreadResult = await getUnreadCount().catch(() => null);
+  const unreadResult = await unreadPromise;
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
   const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
   const branchKind = context.branch.branch_kind as BranchKind;
-  const hubLabel = getSiteKindLabelVi(branchKind);
 
   return (
     <PwaRuntimeProvider>
@@ -79,7 +79,7 @@ export default async function OperatorLayout({
       <div className="flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
         <AppHeader
           title={context.branch.name}
-          subtitle={`Hub ${hubLabel} · ${ROLE_LABEL_VI[claims.user_role]}`}
+          subtitle={ROLE_LABEL_VI[claims.user_role]}
           homeHref={`/br/${context.branchId}`}
           homeAriaLabel={APP_COPY_VI.operatorHome}
           actions={

@@ -1,6 +1,6 @@
 # Khung pháp lý 2026 — Hộ Kinh Doanh (sổ đăng ký)
 
-> Last verified: 2026-06-16.
+> Last verified: 2026-07-08.
 >
 > **SSoT** cho danh mục văn bản pháp lý áp dụng cho Cơm Tấm Má Tư (HKD). Các doc
 > khác (`business-context.md`, `einvoice-tax.md`, `payroll-pit.md`,
@@ -18,6 +18,13 @@
 | NQ 198/2025/QH15 | 01/01/2026 | Bỏ thuế khoán + miễn lệ phí môn bài cho HKD/CNKD | `business-context.md`, `einvoice-tax.md` |
 | NĐ 68/2026/NĐ-CP | 05/03/2026 | Phân HKD thành 4 nhóm doanh thu (nghĩa vụ sổ sách/kê khai khác nhau) | `einvoice-tax.md` §1 |
 | NĐ 141/2026/NĐ-CP | 29/04/2026 (hồi tố 01/01/2026) | Nâng ngưỡng doanh thu không chịu GTGT/TNCN của HKD lên **1 tỷ/năm** | `einvoice-tax.md` |
+
+## 1.1. Quản lý thuế
+
+| Văn bản | Hiệu lực | Nội dung | Áp dụng ở |
+| --- | --- | --- | --- |
+| Luật Quản lý thuế 108/2025/QH15 | 01/07/2026 | Luật Quản lý thuế mới, nền cho quản lý kê khai/nộp thuế và HĐĐT/chứng từ điện tử | `einvoice-tax.md`, `business-context.md` |
+| NĐ 252/2026/NĐ-CP | 01/07/2026 | Quy định chi tiết Luật Quản lý thuế 108/2025/QH15 | `einvoice-tax.md` §6 |
 
 ## 2. Thuế GTGT
 
@@ -45,6 +52,8 @@
 | Văn bản | Hiệu lực | Nội dung | Áp dụng ở |
 | --- | --- | --- | --- |
 | Luật Thuế TNCN 109/2025/QH15 | Hiệu lực chung 01/07/2026; **quy định về thu nhập tiền lương/kinh doanh áp dụng từ kỳ tính thuế 2026 = 01/01/2026** | Biểu thuế lũy tiến **5 bậc** | `payroll-pit.md` §2 |
+| NĐ 253/2026/NĐ-CP | 01/07/2026 | Quy định chi tiết Luật Thuế TNCN 109/2025/QH15; chốt chuyển tiếp kỳ 2026, khoản tiền ăn ca/trưa, người phụ thuộc, quyết toán/khấu trừ | `payroll-pit.md` |
+| TT 87/2026/TT-BTC | 01/07/2026 | Hướng dẫn Luật Thuế TNCN và NĐ 253/2026; người phụ thuộc có thu nhập bình quân tháng không quá **3 triệu**; hồ sơ người phụ thuộc phải lưu để thanh tra/kiểm tra | `payroll-pit.md` |
 | NQ 110/2025/UBTVQH15 | từ kỳ tính thuế 2026 (01/01/2026) | Giảm trừ gia cảnh **15,5tr bản thân / 6,2tr người phụ thuộc** | `payroll-pit.md`, `glossary.md` |
 
 > **Hiệu lực biểu 5 bậc:** theo Luật 109/2025/QH15, biểu 5 bậc + giảm trừ mới áp
@@ -78,3 +87,7 @@
   > `2026-01-01` về `PIT_BRACKETS_2007` (một dòng), không đổi giảm trừ/trần.
 - Mã số thuế HKD + pháp danh nằm ở `tenants.tax_code` / `tenants.legal_name`
   (dùng cho HĐĐT `sellerName` + chứng từ in). Không hardcode trong code app.
+- Từ 01/07/2026, `payroll-pit.md` dùng NĐ 253/2026 + TT 87/2026 cho hai ngưỡng
+  nghiệp vụ mới: tiền ăn ca/trưa chi bằng tiền chỉ tính thuế phần vượt
+  1,2tr/người/tháng; người phụ thuộc có thu nhập bình quân tháng trong năm
+  không quá 3tr.

@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test.skip("operator inventory work routes expose touch progress steps", () => {
+test("operator inventory work routes expose touch progress steps", () => {
   const component = read(
     "apps/web/app/(protected)/inventory/_components/operator-flow-steps.tsx",
   );
@@ -27,7 +27,7 @@ test.skip("operator inventory work routes expose touch progress steps", () => {
     ],
     [
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/grn-review-operator-client.tsx",
-      /operatorFlow\.grnListTitle/,
+      /grnCopy\.inspectionItemsTitle/,
     ],
     [
       "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx",
@@ -74,6 +74,9 @@ test("transfer create gates embedded sections by touch workflow state", () => {
   const source = read(
     "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
   );
+  const pageSource = read(
+    "apps/web/app/(protected)/inventory/transfers/new/page.tsx",
+  );
 
   assert.doesNotMatch(source, /<OperatorFlowSteps/);
   assert.match(source, /@comtammatu\/ui\/components\/progress/);
@@ -82,6 +85,26 @@ test("transfer create gates embedded sections by touch workflow state", () => {
   assert.match(source, /const showNotesSection = !embedded \|\| draftLines/);
   assert.match(source, /showLineSection \? \(/);
   assert.match(source, /showNotesSection \? \(/);
+  assert.match(source, /export interface TransferIngredientOption/);
+  assert.match(pageSource, /function toTransferIngredientOption/);
+  assert.match(pageSource, /id: ingredient\.id/);
+  assert.match(pageSource, /units: ingredient\.units/);
+  assert.doesNotMatch(source, /ingredients: IngredientRow\[\]/);
+});
+
+test("transfer create uses compact branch-location labels", () => {
+  const source = read(
+    "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
+  );
+  const messageSource = read("apps/web/lib/messages/inventory.ts");
+
+  assert.match(source, /function formatTransferSiteLabel/);
+  assert.match(source, /return branch\.name/);
+  assert.match(source, /formatTransferSiteLabel\(option\.branch\)\}\$\{suffix\}/);
+  assert.match(source, /formatTransferOption\(from, requestDestinationBranchId\)/);
+  assert.match(messageSource, /defaultWarehouseSuffix: " - Kho"/);
+  assert.match(messageSource, /defaultKitchenSuffix: " - Bếp"/);
+  assert.doesNotMatch(messageSource, /default(?:Warehouse|Kitchen)Suffix: " · .*CN"/);
 });
 
 test("transfer receive keeps the phone first viewport on line receiving", () => {

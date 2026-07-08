@@ -68,7 +68,7 @@ test("resolveBranchHubDestination -> central-site roles land on their resolved h
   }
 });
 
-test("resolveBranchHubDestination -> central-site roles without a home site stop before old employee URLs", () => {
+test("resolveBranchHubDestination -> central-site roles without a home site fail closed", () => {
   for (const role of ["warehouse_manager", "production_manager"] as const) {
     assert.equal(
       resolveBranchHubDestination(claims(role, null), {

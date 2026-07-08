@@ -42,6 +42,7 @@ import { messages } from "@lib/messages";
 import { StatusBadge } from "@/components/status-badge";
 import { AppEmptyState } from "@/components/surface";
 import { FormDialog, TextareaField } from "@/components/form";
+import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import {
   DataTable,
   type DataTableColumn,
@@ -131,6 +132,16 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
   useEffect(() => {
     if (selectedBranchId !== null) load(selectedBranchId);
   }, [selectedBranchId, load]);
+
+  const reloadSelectedBranch = useCallback(() => {
+    if (selectedBranchId !== null) load(selectedBranchId);
+  }, [selectedBranchId, load]);
+
+  useBranchOpsEvents({
+    branchId: selectedBranchId,
+    enabled: selectedBranchId !== null,
+    onEvent: reloadSelectedBranch,
+  });
 
   const pendingRows = useMemo(
     () => requests.filter((request) => request.status === "pending"),

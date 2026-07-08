@@ -115,3 +115,4 @@ pos-after*.png
 
 # Supabase live baseline snapshots (local, regenerable via supabase db dump)
 .baseline-artifacts/
+.superpowers/

@@ -89,6 +89,19 @@ test("resolveOperatorTiles -> office has no operator plane tiles", () => {
   assert.deepEqual(resolveOperatorTiles("office", 1), []);
 });
 
+test("resolveOperatorTiles -> branch staff sees shift tools only", () => {
+  const groups = resolveOperatorTiles("branch_staff", 7);
+  const moduleKeys = groups.flatMap((group) =>
+    group.tiles.map((tile) => tile.moduleKey),
+  );
+
+  assert.ok(moduleKeys.includes("operator_home"));
+  assert.equal(moduleKeys.includes("pos"), false);
+  assert.equal(moduleKeys.includes("kds"), false);
+  assert.equal(moduleKeys.includes("orders"), false);
+  assert.equal(moduleKeys.includes("finance"), false);
+});
+
 test("resolveOperatorTiles -> central-site roles get stock tools without POS/KDS", () => {
   for (const role of ["warehouse_manager", "production_manager"] as const) {
     const groups = resolveOperatorTiles(role, 15);

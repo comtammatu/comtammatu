@@ -300,6 +300,16 @@ test.skip("direct table writes derive persisted unit text from the entry unit ca
   }
 });
 
+test("menu recipe editor resets entry unit when changing ingredient", () => {
+  const editor = section(
+    "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx",
+    "<RecipeLinesEditor",
+    "/>",
+  );
+
+  assert.match(editor, /\bunitEditable\b/);
+});
+
 test.skip("RPC-backed inventory writes let the RPC derive persisted unit text", () => {
   for (const path of [
     "apps/web/app/(protected)/inventory/production-run-actions.ts",
@@ -491,4 +501,127 @@ test.skip("GRN amend and legacy GRN movements use base quantities", () => {
   assert.match(sql, /entry_quantity = targets\.entry_quantity/);
   assert.match(sql, /current_quantity = sl\.current_quantity \+ agg\.delta/);
   assert.match(sql, /avg_unit_cost = CASE/);
+});
+
+test("inventory unit closure keeps transfer RPCs on entry units only", () => {
+  const sql = read(
+    "supabase/migrations/20260708103000_inventory_unit_closure.sql",
+  );
+
+  const draftStart = sql.indexOf(
+    "CREATE OR REPLACE FUNCTION public.create_stock_transfer_draft",
+  );
+  assert.ok(draftStart >= 0, "create_stock_transfer_draft override not found");
+  const draftBody = sql.slice(
+    draftStart,
+    sql.indexOf(
+      "CREATE OR REPLACE FUNCTION public.create_production_run",
+      draftStart,
+    ),
+  );
+  assert.match(
+    draftBody,
+    /NULLIF\(COALESCE\(v_line->>'entryUnitId', v_line->>'entry_unit_id'\), ''\)::bigint/,
+  );
+  assert.match(draftBody, /iu\.is_base = TRUE/);
+  assert.match(
+    draftBody,
+    /INSERT INTO public\.stock_transfer_items \([\s\S]*entry_unit_id[\s\S]*unit_cost_at_ship/,
+  );
+  assert.doesNotMatch(draftBody, /\bunit\s*,/);
+  assert.doesNotMatch(draftBody, /\bunit\s*\)/);
+
+  const intraStart = sql.indexOf(
+    "CREATE OR REPLACE FUNCTION public.commit_intra_branch_transfer",
+  );
+  assert.ok(intraStart >= 0, "commit_intra_branch_transfer override not found");
+  const intraBody = sql.slice(
+    intraStart,
+    sql.indexOf(
+      "COMMENT ON FUNCTION public.commit_intra_branch_transfer",
+      intraStart,
+    ),
+  );
+  assert.doesNotMatch(intraBody, /intra_branch_transfer_not_supported/);
+  assert.match(
+    intraBody,
+    /v_qty_base := public\.inv_to_base\(v_ingredient_id, v_entry_unit_id, v_entry_qty\)::numeric\(15,3\);/,
+  );
+  assert.match(intraBody, /'transfer_out',\s*\n\s*-v_qty_base/);
+  assert.match(intraBody, /'transfer_in',\s*\n\s*v_qty_base/);
+  assert.match(intraBody, /entry_unit_id,\s*\n\s*entry_quantity/);
+  assert.match(intraBody, /v_entry_unit_id,\s*\n\s*v_entry_qty/);
+  assert.match(intraBody, /quantity_received[\s\S]*v_entry_qty/);
+});
+
+test("inventory unit closure backfills old null entry units and resolves production run base unit", () => {
+  const sql = read(
+    "supabase/migrations/20260708103000_inventory_unit_closure.sql",
+  );
+
+  for (const table of [
+    "production_recipes",
+    "production_runs",
+    "stock_issue_items",
+    "stock_transfer_items",
+    "stocktake_lines",
+    "stock_movements",
+  ]) {
+    assert.match(
+      sql,
+      new RegExp(
+        `UPDATE public\\.${table}[\\s\\S]*entry_unit_id = bu\\.unit_id`,
+      ),
+      table,
+    );
+  }
+
+  assert.match(
+    sql,
+    /UPDATE public\.stock_movements sm[\s\S]*entry_quantity = COALESCE\(sm\.entry_quantity, ABS\(sm\.quantity_change\)\)/,
+  );
+
+  const productionStart = sql.indexOf(
+    "CREATE OR REPLACE FUNCTION public.create_production_run",
+  );
+  assert.ok(productionStart >= 0, "create_production_run override not found");
+  const productionBody = sql.slice(
+    productionStart,
+    sql.indexOf(
+      "CREATE OR REPLACE FUNCTION public.commit_intra_branch_transfer",
+      productionStart,
+    ),
+  );
+  assert.match(productionBody, /v_entry_unit_id bigint := p_entry_unit_id/);
+  assert.match(productionBody, /iu\.ingredient_id = p_finished_good_id/);
+  assert.match(productionBody, /iu\.is_base = TRUE/);
+  assert.match(productionBody, /entry_unit_id,[\s\S]*v_entry_unit_id/);
+});
+
+test("inventory unit constraints lock entry unit columns at the database boundary", () => {
+  const sql = read(
+    "supabase/migrations/20260707191741_inventory_unit_not_null_constraints.sql",
+  );
+
+  assert.match(sql, /WHERE entry_unit_id IS NULL/);
+  assert.match(sql, /entry_unit_id_not_null_precheck_failed/);
+  assert.doesNotMatch(sql, /ALTER COLUMN entry_quantity SET NOT NULL/);
+
+  for (const table of [
+    "production_recipes",
+    "production_runs",
+    "stock_issue_items",
+    "stock_transfer_items",
+    "stocktake_lines",
+    "stock_movements",
+  ]) {
+    assert.match(sql, new RegExp(`'${table}'`), table);
+    assert.match(
+      sql,
+      new RegExp(
+        `ALTER TABLE public\\.${table} ALTER COLUMN entry_unit_id SET NOT NULL`,
+      ),
+      table,
+    );
+  }
 });

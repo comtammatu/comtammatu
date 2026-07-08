@@ -16,20 +16,15 @@ import {
 } from "@/_lib/rpc-error-map";
 import {
   buildCompletedWorkdays,
+  calculateAnnualLeaveUsedThroughMonth,
   calculatePayableDays,
+  countAnnualLeaveAccruedThroughMonth,
   countOverlapDays,
   splitAnnualLeaveByQuota,
-  suggestAnnualLeaveEntitlement,
   type LeaveRange,
 } from "./payroll-day-math";
 
 const PAYROLL_ROLES: readonly StaffRole[] = ["owner"];
-
-function previousDate(date: string): string {
-  const [year, month, day] = date.split("-").map(Number);
-  const previous = new Date(Date.UTC(year!, month! - 1, day!) - 86_400_000);
-  return previous.toISOString().slice(0, 10);
-}
 
 /* ─── Fetch Payroll Periods ─── */
 
@@ -361,7 +356,7 @@ export const calculatePayroll = withAction(
       number,
       { annualLeaveDays: number; unpaidLeaveDays: number }
     >();
-    const annualUsedBeforePeriod = new Map<number, number>();
+    const annualLeavesByEmployee = new Map<number, LeaveRange[]>();
     for (const leave of leaveRanges) {
       const daysInPeriod = countOverlapDays(
         leave.startDate,
@@ -383,54 +378,30 @@ export const calculatePayroll = withAction(
       }
 
       if (leave.leaveType !== "annual") continue;
-      const usedBefore = countOverlapDays(
-        leave.startDate,
-        leave.endDate,
-        `${year}-01-01`,
-        previousDate(startDate),
-      );
-      if (usedBefore > 0) {
-        annualUsedBeforePeriod.set(
-          leave.employeeId,
-          (annualUsedBeforePeriod.get(leave.employeeId) ?? 0) + usedBefore,
-        );
-      }
+      const current = annualLeavesByEmployee.get(leave.employeeId) ?? [];
+      current.push(leave);
+      annualLeavesByEmployee.set(leave.employeeId, current);
     }
-
-    const { data: entitlementRows, error: entitlementErr } = await supabase
-      .from("annual_leave_entitlements")
-      .select("employee_id, entitlement_days")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("year", year)
-      .in("employee_id", employeeIds);
-
-    if (entitlementErr) {
-      console.error("[hr/payroll-actions:calculatePayroll] Fetch annual leave entitlements error:", entitlementErr);
-      return {
-        success: false,
-        error: "Không thể tải hạn mức phép năm. Tính lương bị hủy.",
-      };
-    }
-
-    const entitlementByEmployee = new Map(
-      (entitlementRows ?? []).map((row) => [
-        row.employee_id,
-        Number(row.entitlement_days ?? 0),
-      ]),
-    );
 
     const entries = eligibleEmployees.map((emp) => {
       const workingDays = workdaysByEmployee.get(emp.id) ?? 0;
       const periodLeave = periodLeaveSummary.get(emp.id) ?? {
-        annualLeaveDays: 0,
-        unpaidLeaveDays: 0,
-      };
-      const entitlementDays =
-        entitlementByEmployee.get(emp.id) ??
-        suggestAnnualLeaveEntitlement(emp.start_date, year);
+          annualLeaveDays: 0,
+          unpaidLeaveDays: 0,
+        };
+      const employeeAnnualLeaves = annualLeavesByEmployee.get(emp.id) ?? [];
       const annualSplit = splitAnnualLeaveByQuota({
-        entitlementDays,
-        usedBeforePeriodDays: annualUsedBeforePeriod.get(emp.id) ?? 0,
+        entitlementDays: countAnnualLeaveAccruedThroughMonth(
+          emp.start_date,
+          year,
+          month,
+        ),
+        usedBeforePeriodDays: calculateAnnualLeaveUsedThroughMonth({
+          leaves: employeeAnnualLeaves,
+          employeeStartDate: emp.start_date,
+          year,
+          throughMonth: month - 1,
+        }),
         annualLeaveDaysInPeriod: periodLeave.annualLeaveDays,
       });
       const paidLeaveDays = annualSplit.paidLeaveDays;

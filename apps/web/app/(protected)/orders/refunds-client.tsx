@@ -35,6 +35,7 @@ import {
 import { BRANCH_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { StatusBadge } from "@/components/status-badge";
 import { KpiCard } from "@/components/kpi/kpi-card";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { AppSection, AppToolbar } from "@/components/surface";
 /* ─── Props ─── */
 
@@ -232,9 +233,9 @@ export function RefundsClient({
 
       <AppToolbar className="justify-between">
           <div className="flex flex-col gap-1.5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <SectionLabel>
               Điều phối hoàn tiền
-            </p>
+            </SectionLabel>
             <p className="text-sm text-muted-foreground">
               {refunds.length} yêu cầu hoàn tiền trong danh sách hiện tại.
             </p>

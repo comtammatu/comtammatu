@@ -243,6 +243,7 @@ export const finance = {
       revenue: "Doanh thu ròng",
       bankTransactions: "Giao dịch ngân hàng",
       expenses: "Chi vận hành",
+      supplierPayables: "Phải trả NCC",
       invoices: "Hóa đơn điện tử",
       summary: "HĐ khách không lấy hóa đơn",
       foodCost: "Giá vốn món",
@@ -323,6 +324,15 @@ export const finance = {
       unpaid: "Chưa chi (ghi nợ)",
     },
   },
+  supplierInvoicesPage: {
+    eyebrow: "Tài chính",
+    title: "Hóa đơn NCC",
+    description:
+      "Đối soát hóa đơn mua và công nợ NCC; không tính vào Chi vận hành.",
+    noAccessTitle: "Không có quyền xem hóa đơn NCC",
+    noAccessDescription:
+      "Cần quyền xem đơn mua hàng và NCC để mở hàng đợi phải trả NCC.",
+  },
   cash: {
     onHandTitle: "Tiền mặt trong quỹ",
     setOpening: "Đặt tồn quỹ",
@@ -384,7 +394,11 @@ export const finance = {
     },
     matchedOrder: (id: number | string) => `Khớp đơn hàng #${id}`,
     matchedExpense: (id: number | string) => `Khớp chi phí #${id}`,
-    matchExpensePlaceholder: "Chọn chi phí chưa khớp...",
+    matchExpensePlaceholder: "Ghép chi",
+    matchExpenseTitle: "Chọn khoản chi",
+    noUnmatchedExpenses: "Không có chi chuyển khoản chưa khớp",
+    clearExpenseMatch: "Bỏ khớp",
+    saveExpenseMatch: "Lưu",
     matchAction: "Khớp",
     unmatched: "Chưa khớp",
     matchSuccess: "Đã khớp thành công",

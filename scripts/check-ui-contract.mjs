@@ -308,7 +308,7 @@ const checks = [
       /className=\{?(?:cn\()?['"][^'"]*\b(?:w|h|max-w|max-h|min-w|min-h|text)-\[[^\]]+\]/g,
     allowlist: {
       "apps/web/app/components/app-shell.tsx": 1,
-      "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx": 1,
     },
   },
   {
@@ -440,7 +440,7 @@ const checks = [
         dir: "apps/web/app/(protected)/br/[branchId]",
         extensions: [".ts", ".tsx"],
       },
-      { dir: "apps/web/lib/employee", extensions: [".ts", ".tsx"] },
+      { dir: "apps/web/lib/staff-runtime", extensions: [".ts", ".tsx"] },
     ],
     pattern:
       /\b(?:OfficeModuleShell|ManagementShell|AppShell|FinanceShell|InventoryShell|resolveOffice(?:PrimaryTabs|DeepNav))\b|["'][^"']*(?:office-module-shell|management-chrome|app-shell|office-nav|finance-shell|inventory-shell)["']/g,

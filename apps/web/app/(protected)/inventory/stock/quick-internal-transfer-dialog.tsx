@@ -57,12 +57,7 @@ export function QuickInternalTransferDialog({
   open,
   target,
   onOpenChange,
-}: {
-  branchId: number;
-  open: boolean;
-  target: StockIngredient;
-  onOpenChange: (open: boolean) => void;
-}) {
+}: QuickInternalTransferDialogProps) {
   const issueUnitOptions = useMemo(
     () => getIssueUnitOptions(target),
     [target],
@@ -169,4 +164,11 @@ export function QuickInternalTransferDialog({
       }}
     </FormDialog>
   );
+}
+
+export interface QuickInternalTransferDialogProps {
+  branchId: number;
+  open: boolean;
+  target: StockIngredient;
+  onOpenChange: (open: boolean) => void;
 }

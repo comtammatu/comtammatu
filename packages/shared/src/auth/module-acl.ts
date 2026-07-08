@@ -132,6 +132,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
       "branch_manager",
       "cashier",
       "chef",
+      "branch_staff",
       "warehouse_manager",
       "production_manager",
       "office",

@@ -9,6 +9,7 @@ import {
   Home,
   Package,
   Truck,
+  User,
   Users,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -123,26 +124,15 @@ export function OperatorBottomNav({
   branchKind?: BranchKind;
 }) {
   const pathname = usePathname();
-  
-  // Dynamic overflow based on role
-  const branchOverflowPrefixes = showBranchManagement
-    ? [
-        `/br/${branchId}/more`,
-        `/br/${branchId}/orders`,
-        `/br/${branchId}/dashboard`,
-        `/br/${branchId}/settings`,
-        `/br/${branchId}/pos-sessions`,
-        `/br/${branchId}/menu-limits`,
-        `/br/${branchId}/shift/schedule`,
-      ]
-    : [
-        `/br/${branchId}/more`,
-        `/br/${branchId}/stock`,
-        `/br/${branchId}/orders`,
-        `/br/${branchId}/dashboard`,
-        `/br/${branchId}/settings`,
-        `/br/${branchId}/team`,
-      ];
+  const branchManagementOverflowPrefixes = [
+    `/br/${branchId}/more`,
+    `/br/${branchId}/orders`,
+    `/br/${branchId}/dashboard`,
+    `/br/${branchId}/settings`,
+    `/br/${branchId}/pos-sessions`,
+    `/br/${branchId}/menu-limits`,
+    `/br/${branchId}/shift/schedule`,
+  ];
 
   const items: ShellNavItem[] =
     branchKind !== "branch"
@@ -185,28 +175,35 @@ export function OperatorBottomNav({
                   label: "Đội",
                   icon: Users,
                   exact: false,
-                  matchPrefixes: [
-                    `/br/${branchId}/team`,
-                  ],
+                  matchPrefixes: [`/br/${branchId}/team`],
                 },
                 {
                   href: `/br/${branchId}/stock`,
                   label: branchCopy.centralNavStock,
                   icon: Package,
                   exact: false,
-                  matchPrefixes: [
-                    `/br/${branchId}/stock`,
-                  ],
+                  matchPrefixes: [`/br/${branchId}/stock`],
                 },
               ]
             : []),
-          {
-            href: `/br/${branchId}/more`,
-            label: branchCopy.centralNavMore,
-            icon: Ellipsis,
-            exact: false,
-            matchPrefixes: branchOverflowPrefixes,
-          },
+          ...(showBranchManagement
+            ? [
+                {
+                  href: `/br/${branchId}/more`,
+                  label: branchCopy.centralNavMore,
+                  icon: Ellipsis,
+                  exact: false,
+                  matchPrefixes: branchManagementOverflowPrefixes,
+                },
+              ]
+            : [
+                {
+                  href: `/br/${branchId}/profile`,
+                  label: messages.employee.nav.profileShort,
+                  icon: User,
+                  exact: false,
+                },
+              ]),
         ];
 
   return (

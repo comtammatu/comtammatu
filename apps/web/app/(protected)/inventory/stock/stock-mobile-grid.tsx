@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { cn } from "@comtammatu/ui";
@@ -17,8 +17,8 @@ import { StockLocationBreakdownLine } from "./stock-location-breakdown";
 
 const stockCopy = messages.inventory.stock;
 
-const ALL_CATEGORY_VALUE = "all";
-const NO_CATEGORY_VALUE = "__none__";
+export const STOCK_ALL_CATEGORY_VALUE = "all";
+export const STOCK_NO_CATEGORY_VALUE = "__none__";
 
 // Standalone bg-muted/50 pill chips (mirrors pos-menu-grid.tsx unified tabs):
 // TabsTrigger defaults to flex-1, so !flex-none is required to keep chips at
@@ -97,51 +97,31 @@ function StockGridCard({ item }: { item: StockGridItem }) {
 
 export function StockMobileGrid({
   ingredients,
+  categories,
+  hasUncategorized,
+  activeCategory,
+  onCategoryChange,
   stockDetailHref,
 }: {
   ingredients: StockIngredient[];
+  categories: string[];
+  hasUncategorized: boolean;
+  activeCategory: string;
+  onCategoryChange: (value: string) => void;
   stockDetailHref: (ingredientId: number) => string;
 }) {
-  const [activeCategory, setActiveCategory] = useState(ALL_CATEGORY_VALUE);
-
-  const categories = useMemo(() => {
-    const values = [
-      ...new Set(
-        ingredients
-          .map((ingredient) => ingredient.category)
-          .filter((category) => category !== ""),
-      ),
-    ];
-    values.sort((left, right) => left.localeCompare(right, "vi"));
-    return values;
-  }, [ingredients]);
-
-  const hasUncategorized = useMemo(
-    () => ingredients.some((ingredient) => ingredient.category === ""),
-    [ingredients],
-  );
-
   const items = useMemo(() => {
-    const filtered =
-      activeCategory === ALL_CATEGORY_VALUE
-        ? ingredients
-        : activeCategory === NO_CATEGORY_VALUE
-          ? ingredients.filter((ingredient) => ingredient.category === "")
-          : ingredients.filter(
-              (ingredient) => ingredient.category === activeCategory,
-            );
-
-    return filtered.map((ingredient) => ({
+    return ingredients.map((ingredient) => ({
       ...ingredient,
       href: stockDetailHref(ingredient.id),
     }));
-  }, [ingredients, activeCategory, stockDetailHref]);
+  }, [ingredients, stockDetailHref]);
 
   return (
     <div className="flex flex-col gap-3">
       <Tabs
         value={activeCategory}
-        onValueChange={setActiveCategory}
+        onValueChange={onCategoryChange}
         className="min-w-0 overflow-x-auto overflow-y-hidden"
       >
         <TabsList
@@ -149,7 +129,7 @@ export function StockMobileGrid({
           className="!h-auto w-max min-w-full !justify-start gap-1.5 !bg-transparent !p-0"
         >
           <TabsTrigger
-            value={ALL_CATEGORY_VALUE}
+            value={STOCK_ALL_CATEGORY_VALUE}
             className={categoryTabClassName}
           >
             {stockCopy.filters.all}
@@ -165,7 +145,7 @@ export function StockMobileGrid({
           ))}
           {hasUncategorized ? (
             <TabsTrigger
-              value={NO_CATEGORY_VALUE}
+              value={STOCK_NO_CATEGORY_VALUE}
               className={categoryTabClassName}
             >
               {stockCopy.filters.noCategory}

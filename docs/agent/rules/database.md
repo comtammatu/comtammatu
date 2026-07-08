@@ -13,7 +13,7 @@ or agent memory.
 
 | Ref                    | What it is                                                                    | Agent rights                                                                                                  |
 | ---------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `iexwsuaqqenyjiskawoj` | **PRODUCTION** — the only comtammatu database                                | SELECT-only. NEVER apply migrations or write unless the owner explicitly delegates it in the current session. |
+| `iexwsuaqqenyjiskawoj` | **PRODUCTION** — the only comtammatu database                                | SELECT-only by default. Migrations or writes require explicit owner delegation in the current session.         |
 | `dyksphedgzqsqjqgxzog` | `matu-platform` production — a separate codebase used as design reference only | Do not touch.                                                                                                  |
 
 - There is currently NO persistent dev/test Supabase project. Non-prod
@@ -55,7 +55,7 @@ or agent memory.
 - Write the SQL migration file before applying it.
 - Agents MAY apply migrations directly on an approved dev/test Supabase server for verification. With no persistent dev/test project, spin up a Preview Branch (§Preview Branches (D047) below) for this.
 - Before applying to any non-prod ref, verify the target against the Environment Registry above and confirm it is not production.
-- NEVER apply migrations directly to production.
+- Production apply is owner-gated: verify the target is PRODUCTION, get explicit owner delegation in the current session, then follow Owner-Delegated Production Apply below. Without that delegation, default production flow is file → PR → merge → owner applies.
 - Production flow is migration-type aware. For additive migrations that dependent
   app code will call or read (new RPC, column, or RETURNS field), get production
   applied before the dependent code is merged/deployed; split a DB-first PR when

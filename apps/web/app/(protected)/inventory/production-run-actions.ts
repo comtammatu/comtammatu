@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import type { Json } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import {
@@ -80,7 +81,56 @@ export interface ProductionRunRow {
   completed_at: string | null;
   created_at: string;
   started_at: string | null;
-  ingredients_override: any;
+  ingredients_override: ProductionIngredientOverride[] | null;
+}
+
+export type ProductionIngredientOverride = {
+  ingredient_id: number;
+  actual_quantity: number;
+};
+
+type ProductionRunBranchJoin = {
+  id: number;
+  name: string | null;
+  branch_kind: string | null;
+} | null;
+
+type ProductionRunIngredientUnitJoin = {
+  is_base: boolean;
+  units: { name: string | null } | null;
+};
+
+type ProductionRunIngredientJoin = {
+  id: number;
+  name: string | null;
+  ingredient_units?: ProductionRunIngredientUnitJoin[] | null;
+} | null;
+
+type ProductionRunQueryRow = {
+  id: number;
+  branch_id: number;
+  production_number: string;
+  finished_good_id: number;
+  planned_quantity: number | string;
+  actual_quantity: number | string | null;
+  entry_unit_id: number | null;
+  status: string;
+  notes: string | null;
+  completed_at: string | null;
+  created_at: string;
+  started_at: string | null;
+  target_branch_id: number | null;
+  ingredients_override: Json | null;
+  branches: ProductionRunBranchJoin;
+  target_branch: ProductionRunBranchJoin;
+  ingredients: ProductionRunIngredientJoin;
+  units: { id: number; name: string | null } | null;
+};
+
+function productionIngredientOverrides(
+  value: Json | null,
+): ProductionIngredientOverride[] | null {
+  return Array.isArray(value) ? (value as ProductionIngredientOverride[]) : null;
 }
 
 export async function fetchProductionRuns(): Promise<ActionResult<ProductionRunRow[]>> {
@@ -135,12 +185,12 @@ export async function fetchProductionRuns(): Promise<ActionResult<ProductionRunR
     return { success: false, error: "Lỗi tải danh sách Lệnh sản xuất" };
   }
 
-  const rows: ProductionRunRow[] = (data || []).map((row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => ({
+  const rows: ProductionRunRow[] = ((data || []) as ProductionRunQueryRow[]).map((row) => ({
     id: row.id,
     branch_id: row.branch_id,
     branch_name: row.branches?.name ?? "Unknown",
     target_branch_id: row.target_branch_id ?? row.branch_id,
-    target_branch_name: (row as any).target_branch?.name ?? row.branches?.name ?? "Unknown",
+    target_branch_name: row.target_branch?.name ?? row.branches?.name ?? "Unknown",
     production_number: row.production_number,
     finished_good_id: row.finished_good_id,
     finished_good_name: row.ingredients?.name ?? "Unknown",
@@ -148,14 +198,14 @@ export async function fetchProductionRuns(): Promise<ActionResult<ProductionRunR
     actual_quantity: row.actual_quantity != null ? Number(row.actual_quantity) : null,
     entry_unit_id: row.entry_unit_id,
     entry_unit_name: row.units?.name ??
-      (row.ingredients as any)?.ingredient_units?.find((u: any) => u.is_base)?.units?.name ??
+      row.ingredients?.ingredient_units?.find((u) => u.is_base)?.units?.name ??
       null,
     status: row.status,
     notes: row.notes,
     completed_at: row.completed_at,
     created_at: row.created_at,
     started_at: row.started_at,
-    ingredients_override: row.ingredients_override,
+    ingredients_override: productionIngredientOverrides(row.ingredients_override),
   }));
 
   return { success: true, data: rows };
@@ -206,27 +256,28 @@ export async function fetchProductionRunById(id: number): Promise<ActionResult<P
     return { success: false, error: "Không tìm thấy Lệnh sản xuất" };
   }
 
+  const run = data as ProductionRunQueryRow;
   const row: ProductionRunRow = {
-    id: data.id,
-    branch_id: data.branch_id,
-    branch_name: data.branches?.name ?? "Unknown",
-    target_branch_id: data.target_branch_id ?? data.branch_id,
-    target_branch_name: (data as any).target_branch?.name ?? data.branches?.name ?? "Unknown",
-    production_number: data.production_number,
-    finished_good_id: data.finished_good_id,
-    finished_good_name: data.ingredients?.name ?? "Unknown",
-    planned_quantity: Number(data.planned_quantity),
-    actual_quantity: data.actual_quantity != null ? Number(data.actual_quantity) : null,
-    entry_unit_id: data.entry_unit_id,
-    entry_unit_name: (data as unknown as { units?: { name?: string } }).units?.name ??
-      (data as any).ingredients?.ingredient_units?.find((u: any) => u.is_base)?.units?.name ??
+    id: run.id,
+    branch_id: run.branch_id,
+    branch_name: run.branches?.name ?? "Unknown",
+    target_branch_id: run.target_branch_id ?? run.branch_id,
+    target_branch_name: run.target_branch?.name ?? run.branches?.name ?? "Unknown",
+    production_number: run.production_number,
+    finished_good_id: run.finished_good_id,
+    finished_good_name: run.ingredients?.name ?? "Unknown",
+    planned_quantity: Number(run.planned_quantity),
+    actual_quantity: run.actual_quantity != null ? Number(run.actual_quantity) : null,
+    entry_unit_id: run.entry_unit_id,
+    entry_unit_name: run.units?.name ??
+      run.ingredients?.ingredient_units?.find((u) => u.is_base)?.units?.name ??
       null,
-    status: data.status,
-    notes: data.notes,
-    completed_at: data.completed_at,
-    created_at: data.created_at,
-    started_at: data.started_at,
-    ingredients_override: data.ingredients_override,
+    status: run.status,
+    notes: run.notes,
+    completed_at: run.completed_at,
+    created_at: run.created_at,
+    started_at: run.started_at,
+    ingredients_override: productionIngredientOverrides(run.ingredients_override),
   };
 
   return { success: true, data: row };
@@ -268,7 +319,7 @@ export const createProductionRun = withAction(
       p_entry_unit_id: (parsed.entryUnitId ?? null) as unknown as number,
       p_notes: (parsed.notes ?? null) as unknown as string,
       p_target_branch_id: (parsed.targetBranchId ?? parsed.branchId) as unknown as number,
-      p_ingredients_override: (parsed.ingredientsOverride ?? null) as unknown as any,
+      p_ingredients_override: (parsed.ingredientsOverride ?? null) as Json,
     });
 
     if (error) {
@@ -277,7 +328,10 @@ export const createProductionRun = withAction(
       return { success: false, error: "Lỗi tạo Lệnh sản xuất" };
     }
 
-    return { success: true, data };
+    return {
+      success: true,
+      data: data as unknown as ProductionShortageRow[] | null,
+    };
   }
 );
 
@@ -302,7 +356,7 @@ export const confirmProductionRun = withAction(
     const { error, data } = await supabase.rpc("confirm_production_run", {
       p_run_id: parsed.id,
       p_actual_quantity: (parsed.actualQuantity ?? null) as unknown as number,
-      p_actual_ingredients: (parsed.actualIngredients ?? null) as unknown as any,
+      p_actual_ingredients: (parsed.actualIngredients ?? null) as Json,
     });
 
     if (error) {
@@ -328,7 +382,10 @@ export const confirmProductionRun = withAction(
       return { success: false, error: "Lỗi xác nhận Lệnh sản xuất" };
     }
 
-    return { success: true, data: data as any /* eslint-disable-line @typescript-eslint/no-explicit-any */ };
+    return {
+      success: true,
+      data: data as unknown as ProductionShortageRow[] | null,
+    };
   }
 );
 
@@ -385,10 +442,24 @@ export interface ProductionRecipeIngredient {
   entry_unit_id: number | null;
   recipe_quantity: number;
   yield_factor: number;
+  default_usage_per_fg: number;
   current_quantity_base: number;
   required_base_per_fg: number;
   max_ingredient_qty: number;
 }
+
+type ProductionRecipeContextRow = Omit<
+  ProductionRecipeIngredient,
+  "default_usage_per_fg"
+>;
+
+type ProductionRecipeContextRpc = (
+  fn: "get_production_recipe_context",
+  args: { p_finished_good_id: number; p_branch_id: number },
+) => Promise<{
+  data: ProductionRecipeContextRow[] | null;
+  error: { message: string; code?: string } | null;
+}>;
 
 export async function fetchProductionRecipeContext(
   finishedGoodId: number,
@@ -401,7 +472,7 @@ export async function fetchProductionRecipeContext(
   const access = await requireProductionAccess(supabase, claims);
   if (!access.ok) return { success: false, error: access.error };
 
-  const { data, error } = await (supabase.rpc as any)("get_production_recipe_context", {
+  const { data, error } = await (supabase.rpc as unknown as ProductionRecipeContextRpc)("get_production_recipe_context", {
     p_finished_good_id: finishedGoodId,
     p_branch_id: branchId,
   });
@@ -411,7 +482,16 @@ export async function fetchProductionRecipeContext(
     return { success: false, error: "Lỗi lấy thông tin công thức" };
   }
 
-  const ingredients = (data as unknown as ProductionRecipeIngredient[]) || [];
+  const ingredients = (data ?? []).map((ingredient) => {
+    const yieldFactor = Number(ingredient.yield_factor);
+    return {
+      ...ingredient,
+      default_usage_per_fg:
+        Number.isFinite(yieldFactor) && yieldFactor > 0
+          ? Number(ingredient.recipe_quantity) / yieldFactor
+          : 0,
+    };
+  });
   
   let maxProductionQuantity: number | null = null;
   for (const ing of ingredients) {

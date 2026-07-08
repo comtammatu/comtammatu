@@ -17,6 +17,7 @@ const lineSchema = z.object({
 const submitSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   locationId: z.coerce.number().int().positive(),
+  shiftId: z.coerce.number().int().positive().nullable().optional(),
   lines: z.array(lineSchema).min(1),
 });
 
@@ -62,6 +63,7 @@ export const submitCountSlip = withAction(
         p_branch_id: data.branchId,
         p_location_id: data.locationId,
         p_lines: pLines,
+        ...(data.shiftId == null ? {} : { p_shift_id: data.shiftId }),
       },
     );
 

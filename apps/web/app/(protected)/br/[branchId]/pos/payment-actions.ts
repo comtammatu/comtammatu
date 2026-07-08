@@ -30,7 +30,11 @@ import {
   type InvoiceOutcome,
 } from "./_lib/invoice-outcome";
 import { mapRpcError } from "@/_lib/rpc-error-map";
-import { posConfirmPaymentAuth, posUseAuth } from "./_lib/auth";
+import {
+  isPosBranchInScope,
+  posConfirmPaymentAuth,
+  posUseAuth,
+} from "./_lib/auth";
 import {
   branchOnlyReadSchema,
   cancelPendingPaymentSchema,
@@ -448,7 +452,7 @@ async function resolveAllowedPaymentMethods(
  *      the tag bust (both fire on the same admin save).
  *
  * Service-role client + explicit `tenant_id` filter inside cache; outer
- * Server Actions still validate caller's branch membership BEFORE invoking.
+ * Server Actions still validate caller's POS branch scope BEFORE invoking.
  */
 const getCachedPaymentSettings = unstable_cache(
   async (tenantId: number) => {
@@ -490,7 +494,7 @@ const getCachedPaymentSettings = unstable_cache(
  * Methods available on POS for this tenant: cash + enabled e-wallets
  * with registered providers (env credentials).
  *
- * Auth `posUseAuth` (POS_USE). The branch-claim guard is inline (not via
+ * Auth `posUseAuth` (POS_USE). The branch-scope guard is inline (not via
  * `customAuth`) to keep the specific "Không có quyền truy cập chi nhánh
  * này" copy — the helper's null-from-customAuth path collapses to the
  * generic "Không có quyền". `ensurePaymentProvidersRegistered()` runs after
@@ -506,7 +510,7 @@ export const fetchPaymentMethodsForPos = withActionPositional(
     { branchId },
     { claims },
   ): Promise<ActionResult<{ methods: PaymentMethod[] }>> => {
-    if (claims.branch_id !== branchId) {
+    if (!isPosBranchInScope(claims, branchId)) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
@@ -561,7 +565,7 @@ export const fetchPaymentMethodsForPos = withActionPositional(
  * confirm cash.
  *
  * Non-obvious constraints:
- *   - Branch-claim guard (`claims.branch_id !== branchId`) returns
+ *   - Branch-scope guard returns
  *     "Không có quyền truy cập chi nhánh này". The inline `orders` select
  *     returns "Đơn hàng không tồn tại." on miss and "Đơn hàng đã thanh
  *     toán." when `payment_status === "paid"`; the amount-vs-total equality
@@ -600,7 +604,7 @@ export const createPayment = withActionPositional(
     { branchId, orderId, method, amount },
     { supabase, claims },
   ): Promise<ActionResult<CreatePaymentSuccessData>> => {
-    if (claims.branch_id !== branchId) {
+    if (!isPosBranchInScope(claims, branchId)) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
@@ -861,7 +865,7 @@ export const createPayment = withActionPositional(
  * when there's no pending row to resume — caller (bill sheet) uses that
  * signal to start a fresh QR session vs reuse the existing one.
  *
- * Auth `posUseAuth` (POS_USE). The branch-claim guard is inline to keep the
+ * Auth `posUseAuth` (POS_USE). The branch-scope guard is inline to keep the
  * specific "Không có quyền truy cập chi nhánh này" copy. DB error returns
  * "Không thể tải phiên thanh toán."; non-pending or missing rows return
  * `{ success: true, data: null }`.
@@ -879,7 +883,7 @@ export const fetchPendingRemotePaymentForBill = withActionPositional(
     { branchId, orderId },
     { supabase, claims },
   ): Promise<ActionResult<PendingRemotePaymentForBillData | null>> => {
-    if (claims.branch_id !== branchId) {
+    if (!isPosBranchInScope(claims, branchId)) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
@@ -927,7 +931,7 @@ export const cancelPendingPayment = withActionPositional(
     { branchId, paymentId },
     { supabase, claims },
   ): Promise<ActionResult<{ payment_id: number }>> => {
-    if (claims.branch_id !== branchId) {
+    if (!isPosBranchInScope(claims, branchId)) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
@@ -1184,7 +1188,7 @@ export async function confirmCashPaymentWithInvoice(
   // Idempotent replay (flaky-Wi-Fi re-tap): payment already committed. Only
   // short-circuit when the order already has a genuinely-issued invoice —
   // a draft/orphan or missing row falls through to createTaxInvoice so the
-  // legally-required HĐĐT still gets issued/retried (NĐ70/2025).
+  // legally-required HĐĐT still gets issued/retried (NĐ 254/2026).
   if (paymentResult.data.status === "already_completed") {
     const replayInvoice = existingIssuedInvoiceOutcome(
       await resolveExistingInvoiceForOrder(orderId),
@@ -1250,7 +1254,7 @@ export const fetchVietQrConfig = withActionPositional(
     { branchId },
     { claims },
   ): Promise<ActionResult<VietQrConfig | null>> => {
-    if (claims.branch_id !== branchId) {
+    if (!isPosBranchInScope(claims, branchId)) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
@@ -1325,7 +1329,7 @@ export async function confirmVietQrPayment(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsedBranch.data) {
+  if (!isPosBranchInScope(claims, parsedBranch.data)) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
@@ -1445,7 +1449,7 @@ export async function confirmVietQrPaymentWithInvoice(
 
   // Idempotent replay: VietQR signals replay via `idempotent` (its result
   // carries no `status` field). Only short-circuit on a genuinely-issued
-  // invoice; otherwise fall through to createTaxInvoice (NĐ70/2025).
+  // invoice; otherwise fall through to createTaxInvoice (NĐ 254/2026).
   if (paymentResult.data.idempotent === true) {
     const replayInvoice = existingIssuedInvoiceOutcome(
       await resolveExistingInvoiceForOrder(orderId),

@@ -12,6 +12,7 @@ import {
   createTestGrnDraft,
   getGrnStatus,
   getStockLevel,
+  resolveIngredientBaseUnitId,
   resolveInventoryManagerUser,
 } from "./helpers";
 
@@ -250,6 +251,12 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
       .single();
     if (!grn) throw new Error("seed grn failed");
 
+    const entryUnitId = await resolveIngredientBaseUnitId(
+      supabase,
+      fx.tenantId,
+      fx.ingredientId,
+    );
+
     await supabase.from("grn_items").insert({
       tenant_id: fx.tenantId,
       grn_id: grn.id,
@@ -261,6 +268,7 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
       unit_cost: 15000,
       total_cost: 150000,
       quality_status: "partial",
+      entry_unit_id: entryUnitId,
     });
 
     try {

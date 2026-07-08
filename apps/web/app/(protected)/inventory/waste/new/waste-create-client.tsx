@@ -22,7 +22,8 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Trash as IconTrash } from "lucide-react";
 import { cn } from "@comtammatu/ui";
-import { Combobox, FormattedNumberInput } from "@/components/form";
+import { Combobox } from "@/components/form/combobox";
+import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import {
   WasteReasonDropdown,

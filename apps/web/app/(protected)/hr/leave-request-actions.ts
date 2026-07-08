@@ -7,8 +7,10 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
 import {
+  calculateAnnualLeaveUsedThroughMonth,
+  countAnnualLeaveAccruedThroughMonth,
   countOverlapDays,
-  suggestAnnualLeaveEntitlement,
+  type LeaveRange,
 } from "./payroll-day-math";
 
 const REVIEW_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
@@ -157,17 +159,8 @@ export const fetchLeaveRequests = withAction(
     }
 
     const [minYear, maxYear] = [Math.min(...years), Math.max(...years)];
-    const [
-      { data: entitlements, error: entitlementError },
-      { data: approvedAnnualLeaves, error: approvedAnnualError },
-    ] = await Promise.all([
-      leaveClient
-        .from("annual_leave_entitlements")
-        .select("employee_id, year, entitlement_days")
-        .eq("tenant_id", claims.tenant_id)
-        .in("employee_id", employeeIds)
-        .in("year", years),
-      leaveClient
+    const { data: approvedAnnualLeaves, error: approvedAnnualError } =
+      await leaveClient
         .from("leave_requests")
         .select("employee_id, start_date, end_date")
         .eq("tenant_id", claims.tenant_id)
@@ -175,29 +168,17 @@ export const fetchLeaveRequests = withAction(
         .eq("status", "approved")
         .in("employee_id", employeeIds)
         .lte("start_date", `${maxYear}-12-31`)
-        .gte("end_date", `${minYear}-01-01`),
-    ]);
+        .gte("end_date", `${minYear}-01-01`);
 
-    if (entitlementError || approvedAnnualError) {
+    if (approvedAnnualError) {
       console.error(
-        "[hr/leave-request-actions:fetchLeaveRequests] Fetch entitlements/approved leaves details error:",
-        {
-          entitlementError,
-          approvedAnnualError,
-        },
+        "[hr/leave-request-actions:fetchLeaveRequests] Fetch approved annual leaves details error:",
+        approvedAnnualError,
       );
       return { success: false, error: "Không thể tải hạn mức phép năm." };
     }
 
-    const entitlementByEmployeeYear = new Map<string, number>();
-    for (const entitlement of entitlements ?? []) {
-      entitlementByEmployeeYear.set(
-        `${entitlement.employee_id}:${entitlement.year}`,
-        Number(entitlement.entitlement_days ?? 0),
-      );
-    }
-
-    const usedByEmployeeYear = new Map<string, number>();
+    const annualLeavesByEmployeeYear = new Map<string, LeaveRange[]>();
     for (const leave of approvedAnnualLeaves ?? []) {
       for (const year of years) {
         const used = countOverlapDays(
@@ -208,7 +189,14 @@ export const fetchLeaveRequests = withAction(
         );
         if (used === 0) continue;
         const key = `${leave.employee_id}:${year}`;
-        usedByEmployeeYear.set(key, (usedByEmployeeYear.get(key) ?? 0) + used);
+        const current = annualLeavesByEmployeeYear.get(key) ?? [];
+        current.push({
+          employeeId: leave.employee_id,
+          startDate: leave.start_date,
+          endDate: leave.end_date,
+          leaveType: "annual",
+        });
+        annualLeavesByEmployeeYear.set(key, current);
       }
     }
 
@@ -218,11 +206,19 @@ export const fetchLeaveRequests = withAction(
       }
 
       const year = Number(request.start_date.slice(0, 4));
+      const month = Number(request.start_date.slice(5, 7));
       const key = `${request.employees.id}:${year}`;
-      const entitlementDays =
-        entitlementByEmployeeYear.get(key) ??
-        suggestAnnualLeaveEntitlement(request.employees.start_date, year);
-      const usedDays = usedByEmployeeYear.get(key) ?? 0;
+      const entitlementDays = countAnnualLeaveAccruedThroughMonth(
+        request.employees.start_date,
+        year,
+        month,
+      );
+      const usedDays = calculateAnnualLeaveUsedThroughMonth({
+        leaves: annualLeavesByEmployeeYear.get(key) ?? [],
+        employeeStartDate: request.employees.start_date,
+        year,
+        throughMonth: month,
+      });
 
       return {
         ...request,

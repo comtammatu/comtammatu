@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
+import { ThemeMenuItem } from "@/components/theme-toggle";
 import { PrinterStatusBadge } from "./printer-status-badge";
 import { usePosSession, usePosSound } from "./_providers/pos-desktop-provider";
 import {
@@ -129,6 +130,8 @@ function PosMoreMenu({
           {soundEnabled ? <IconVolume2 /> : <IconVolumeX />}
           {soundEnabled ? "Tắt âm báo POS" : "Bật âm báo POS"}
         </DropdownMenuItem>
+
+        <ThemeMenuItem />
 
         {canCloseShift ? (
           <>

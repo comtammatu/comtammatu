@@ -327,7 +327,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
           rowIsDirty(row)
             ? rowError(row)
               ? "bg-destructive/10"
-              : "bg-warning/5"
+              : "bg-warning/10"
             : rowError(row)
               ? "bg-destructive/10"
               : undefined
@@ -391,7 +391,7 @@ function ThresholdItem({
     <Item
       variant="outline"
       className={
-        error ? "bg-destructive/10" : dirty ? "bg-warning/5" : undefined
+        error ? "bg-destructive/10" : dirty ? "bg-warning/10" : undefined
       }
     >
       <ItemHeader>

@@ -1,11 +1,11 @@
 import type { IngredientUnitRow } from "./types";
+import {
+  getDefaultIngredientUnit,
+  getIngredientUnitOptions,
+  type InventoryUnitOption,
+} from "./unit-options";
 
-export interface ProductionUnitOption {
-  unitId: number;
-  code: string;
-  label: string;
-  isBase: boolean;
-}
+export type ProductionUnitOption = InventoryUnitOption;
 
 /** Minimal shape needed to derive unit options: any object carrying units[]. */
 type HasUnits = { units?: IngredientUnitRow[] };
@@ -17,19 +17,7 @@ type HasUnits = { units?: IngredientUnitRow[] };
 export function getProductionUnitOptions(
   ingredient: HasUnits | undefined,
 ): ProductionUnitOption[] {
-  const units = ingredient?.units ?? [];
-  return units
-    .filter((u: IngredientUnitRow) => u.is_active && u.unit_code !== "")
-    .sort((a, b) => {
-      if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
-      return a.sort_order - b.sort_order;
-    })
-    .map((u) => ({
-      unitId: u.unit_id,
-      code: u.unit_code,
-      label: u.unit_name?.trim() || u.unit_code,
-      isBase: u.is_base,
-    }));
+  return getIngredientUnitOptions(ingredient);
 }
 
 /**
@@ -39,8 +27,7 @@ export function getProductionUnitOptions(
 export function getDefaultProductionUnit(
   ingredient: HasUnits | undefined,
 ): ProductionUnitOption | null {
-  const options = getProductionUnitOptions(ingredient);
-  return options.find((o) => o.isBase) ?? options[0] ?? null;
+  return getDefaultIngredientUnit(getProductionUnitOptions(ingredient));
 }
 
 /**
@@ -51,19 +38,7 @@ export function getDefaultProductionUnit(
 export function getAnyUnitOptions(
   ingredient: HasUnits | undefined,
 ): ProductionUnitOption[] {
-  const units = ingredient?.units ?? [];
-  return units
-    .filter((u: IngredientUnitRow) => u.is_active && u.unit_code !== "")
-    .sort((a, b) => {
-      if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
-      return a.sort_order - b.sort_order;
-    })
-    .map((u) => ({
-      unitId: u.unit_id,
-      code: u.unit_code,
-      label: u.unit_name?.trim() || u.unit_code,
-      isBase: u.is_base,
-    }));
+  return getIngredientUnitOptions(ingredient);
 }
 
 /**
@@ -73,6 +48,5 @@ export function getAnyUnitOptions(
 export function getDefaultAnyUnit(
   ingredient: HasUnits | undefined,
 ): ProductionUnitOption | null {
-  const options = getAnyUnitOptions(ingredient);
-  return options.find((o) => o.isBase) ?? options[0] ?? null;
+  return getDefaultIngredientUnit(getAnyUnitOptions(ingredient));
 }

@@ -39,7 +39,7 @@ const DEFAULT_VALUES: AdjustStockFormValues = {
   reason: "",
 };
 
-interface AdjustStockDialogProps {
+export interface AdjustStockDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   branchId: number;

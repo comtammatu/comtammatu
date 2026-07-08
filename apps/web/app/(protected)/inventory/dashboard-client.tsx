@@ -21,6 +21,7 @@ import { formatVNTime, formatVNDate } from "@comtammatu/shared/time";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { KpiCard } from "@/components/kpi/kpi-card";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   AppEmptyState,
   AppLinkCard,
@@ -35,6 +36,7 @@ import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
 import { tNav, tStatus } from "./_lib/dictionary";
 import { messages } from "@lib/messages";
+import type { DashboardWarning } from "./_lib/dashboard-data";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -53,7 +55,9 @@ export type DashboardProps = {
   canAssignCounts: boolean;
   canApproveCounts: boolean;
   selectedBranchId: number | null;
-  totalStockValue: number;
+  canViewStockValue: boolean;
+  totalStockValue: number | null;
+  dashboardWarnings: DashboardWarning[];
   pendingPO: number;
   activeTransfers: number;
   activeStocktakes: number;
@@ -217,7 +221,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     ...(props.canAssignCounts
       ? [
           {
-            label: "Phân công đếm tồn",
+            label: messages.inventory.dashboard.assignCountsAction,
             href: paths.countAssignments,
           },
         ]
@@ -225,7 +229,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     ...(props.canApproveCounts
       ? [
           {
-            label: "Duyệt phiếu đếm tồn",
+            label: messages.inventory.dashboard.approveCountSlipsAction,
             href: paths.countSlips,
           },
         ]
@@ -245,7 +249,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
 
   if (props.showProduction) {
     movementActions.push({
-      label: "Lệnh sản xuất",
+      label: messages.inventory.dashboard.productionCommandAction,
       href: paths.production,
       primary: true,
     });
@@ -261,7 +265,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
   return [
     {
       key: "control",
-      title: "1. Kiểm soát tồn",
+      title: messages.inventory.dashboard.controlFlowTitle,
       description: messages.inventory.dashboard.controlDescription,
       href: paths.stocktake,
       icon: IconClipboardList,
@@ -289,7 +293,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     },
     {
       key: "source",
-      title: "2. Nhập/Nhận/Đối soát",
+      title: messages.inventory.dashboard.sourceFlowTitle,
       description: props.showProcurement
         ? INVENTORY_VI.dashboardSourceProcurementDescription
         : messages.inventory.dashboard.sourceBranchDescription,
@@ -314,7 +318,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     },
     {
       key: "production",
-      title: "3. Điều phối/Sản xuất",
+      title: messages.inventory.dashboard.productionFlowTitle,
       description: messages.inventory.dashboard.productionFlowDescription,
       href: props.showProduction ? paths.production : paths.transfers,
       icon: props.showProduction ? IconBuildingFactory : IconArrowLeftRight,
@@ -329,11 +333,11 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     },
     {
       key: "catalog",
-      title: "4. Danh mục & thiết lập",
+      title: messages.inventory.dashboard.catalogFlowTitle,
       description: messages.inventory.dashboard.catalogDescription,
       href: paths.ingredients,
       icon: IconSettings,
-      metric: "4",
+      metric: messages.inventory.dashboard.catalogMetricValue,
       metricLabel: messages.inventory.dashboard.catalogMetricLabel,
       statusLabel: messages.inventory.dashboard.catalogStatusLabel,
       tone: "default",
@@ -497,7 +501,9 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     if (pendingCountSlips > 0)
       items.push({
         key: "count-slips",
-        title: `${pendingCountSlips} phiếu đếm tồn chờ duyệt`,
+        title: messages.inventory.dashboard.countSlipsPendingTask(
+          pendingCountSlips,
+        ),
         description: messages.inventory.dashboard.countSlipsReviewHint,
         href: paths.countSlips,
         icon: <IconClipboardCheck className="size-4" />,
@@ -566,7 +572,9 @@ export function DashboardClient(props: DashboardProps) {
     siteName,
     showProcurement,
     showProduction,
+    canViewStockValue,
     totalStockValue,
+    dashboardWarnings,
     pendingPO,
     activeTransfers,
     reorderAlerts,
@@ -591,14 +599,7 @@ export function DashboardClient(props: DashboardProps) {
     (t) => t.fromBranch === siteName,
   ).length;
   const activeTransferList = transfers
-    .filter((t) =>
-      [
-        "in_transit",
-        "confirmed",
-        "confirmed_ship",
-        "confirmed_receive",
-      ].includes(t.status),
-    )
+    .filter((t) => isTransferOpen(t.status))
     .slice(0, 3);
   const activeStocktakeList = stocktakeSessions.filter(
     (s) => s.status === "in_progress",
@@ -611,6 +612,20 @@ export function DashboardClient(props: DashboardProps) {
 
   const siteKindLabel = getInventorySiteKindLabelVi(props.siteKind);
   const stockValueLabel = messages.inventory.value.inventoryValue;
+  const stockValueDegraded = dashboardWarnings.includes("stockValue");
+  const stockValueText = stockValueDegraded
+    ? messages.inventory.dashboard.stockValueUnavailable
+    : totalStockValue == null
+      ? messages.inventory.dashboard.stockValueMasked
+      : formatVND(totalStockValue);
+  const stockValueHint = stockValueDegraded
+    ? messages.inventory.dashboard.stockValueUnavailableHint
+    : !canViewStockValue
+      ? messages.inventory.dashboard.stockValueMaskedHint
+      : null;
+  const degradedItems = dashboardWarnings.map(
+    (warning) => messages.inventory.dashboard.degradedItems[warning],
+  );
   const dashboardKpis = [
     {
       label: showProcurement
@@ -678,14 +693,29 @@ export function DashboardClient(props: DashboardProps) {
           </div>
         }
         meta={
-          <span className="inline-flex items-center gap-2">
-            <span className="text-muted-foreground">{stockValueLabel}</span>
-            <span className="font-mono text-base font-semibold tabular-nums text-foreground">
-              {formatVND(totalStockValue)}
-            </span>
-          </span>
-        }
-      />
+	          <span className="inline-flex items-center gap-2">
+	            <span className="text-muted-foreground">{stockValueLabel}</span>
+	            <span
+	              className="font-mono text-base font-semibold tabular-nums text-foreground"
+	              title={stockValueHint ?? undefined}
+	            >
+	              {stockValueText}
+	            </span>
+	          </span>
+	        }
+	      />
+
+	      {dashboardWarnings.length > 0 ? (
+	        <NoteCallout
+	          tone="warning"
+	          icon={<IconAlertTriangle className="size-4" />}
+	          label={messages.inventory.dashboard.dataDegradedTitle}
+	        >
+	          {messages.inventory.dashboard.dataDegradedDescription(
+	            degradedItems.join(", "),
+	          )}
+	        </NoteCallout>
+	      ) : null}
 
       {!hasOpenInventoryWork ? (
         <AppSection contentClassName="items-center gap-3 py-6 text-center">

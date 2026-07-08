@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { Be_Vietnam_Pro } from "next/font/google";
+import { cookies } from "next/headers";
 
 import Script from "next/script";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
@@ -18,6 +20,13 @@ import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 
 
+
+const beVietnamPro = Be_Vietnam_Pro({
+  subsets: ["vietnamese", "latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-be-vietnam-pro",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Cơm Tấm Má Tư",
@@ -45,7 +54,6 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#fff6ee",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -53,16 +61,44 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+const THEME_COLORS = {
+  light: "#fff6ee",
+  night: "#1f1812",
+} as const;
+
+// Dynamic themeColor: read the `matu-theme` cookie so the browser chrome
+// matches the resolved theme from the very first SSR render (no flash).
+export async function generateViewport(): Promise<Viewport> {
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("matu-theme")?.value;
+  const resolved =
+    theme === "light" || theme === "night" ? theme : "light";
+  return {
+    themeColor: THEME_COLORS[resolved],
+  };
+}
+
+export default async function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const cookieStore = await cookies();
+  const cookieTheme = cookieStore.get("matu-theme")?.value;
+  const resolvedCookie =
+    cookieTheme === "light" || cookieTheme === "night" ? cookieTheme : "light";
+  const initialThemeClass = resolvedCookie === "night" ? "dark" : "light";
   return (
     <html
       lang="vi"
       className={cn(
         GeistSans.variable,
         GeistMono.variable,
-
+        beVietnamPro.variable,
+        initialThemeClass,
         "font-sans",
       )}
+      style={{ colorScheme: resolvedCookie === "night" ? "dark" : "light" }}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
@@ -70,7 +106,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           id="theme-bootstrap"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: getThemeScriptHtml({ forcedTheme: "light" }),
+            __html: getThemeScriptHtml(),
           }}
         />
         <a
@@ -79,12 +115,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           {messages.common.skipNavigation}
         </a>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          forcedTheme="light"
-          disableTransitionOnChange
-        >
+        <ThemeProvider defaultTheme="light" disableTransitionOnChange>
           <SerwistProvider
             swUrl="/sw.js"
             disable={process.env.NODE_ENV === "development"}

@@ -343,6 +343,24 @@ test("operator stock landing keeps manager action affordances visible", () => {
 
   assert.match(stockClientSource, /<AdjustStockDialog/);
   assert.match(stockClientSource, /<QuickStockIssueDialog/);
+  assert.match(stockClientSource, /import dynamic from "next\/dynamic"/);
+  assert.match(
+    stockClientSource,
+    /dynamic<AdjustStockDialogProps>\(\s*\(\) => import\("\.\/adjust-stock-dialog"\)/,
+  );
+  assert.match(
+    stockClientSource,
+    /dynamic<QuickInternalTransferDialogProps>[\s\S]*import\("\.\/quick-internal-transfer-dialog"\)/,
+  );
+  assert.match(
+    stockClientSource,
+    /dynamic<QuickStockIssueDialogProps>\(\s*\(\) =>[\s\S]*import\("\.\/quick-stock-issue-dialog"\)/,
+  );
+  assert.doesNotMatch(
+    stockClientSource,
+    /import \{\s*AdjustStockDialog|import \{\s*QuickInternalTransferDialog/,
+  );
+  assert.doesNotMatch(stockClientSource, /function QuickStockIssueDialog/);
   assert.doesNotMatch(stockClientSource, /expiryCount|actionHrefs\.expiry/);
   assert.match(
     stockClientSource,
@@ -350,7 +368,7 @@ test("operator stock landing keeps manager action affordances visible", () => {
   );
 });
 
-test("operator stock branch-native extensions keep PO, issue, and report actions in the branch shell", () => {
+test("operator stock branch-native extensions keep PO, GRN, issue, and report actions in the branch shell", () => {
   const issueRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/page.tsx",
   );
@@ -365,6 +383,9 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   );
   const poDetailRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/[id]/page.tsx",
+  );
+  const grnRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx",
   );
   const grnDetailRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx",
@@ -388,6 +409,7 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   const purchaseOrdersClient = read(
     "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
+  const grnPage = read("apps/web/app/(protected)/inventory/grn/page.tsx");
   const grnListClient = read(
     "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
   );
@@ -478,6 +500,17 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
     poDetailRoute,
     /afterCreateGrnHref=\{`\/br\/\$\{branchId\}\/stock\/receive\/:id`\}/,
   );
+  assert.match(grnRoute, /GRNListPageContent/);
+  assert.match(grnRoute, /routeBranchId=\{branchId\}/);
+  assert.match(
+    grnRoute,
+    /basePath=\{`\/br\/\$\{branchId\}\/stock\/grn`\}/,
+  );
+  assert.match(
+    grnRoute,
+    /purchaseOrdersPath=\{`\/br\/\$\{branchId\}\/stock\/purchase-orders`\}/,
+  );
+  assert.match(grnRoute, /embedded/);
   // D067 §1: GRN detail forks presentation over the SHARED loader. Draft
   // review stays native, confirmed GRN uses the shared detail client in
   // embedded mode so branch stock never nests the office AppPage frame.
@@ -580,6 +613,14 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(
     grnListClient,
     /<AppToolbar variant=\{isOperator \? "inline" : "card"\}>/,
+  );
+  assert.match(grnPage, /showDrafts \? listMyGrnDrafts\(routeBranchId\)/);
+  assert.match(grnPage, /drafts=\{showDrafts \? drafts : undefined\}/);
+  assert.match(grnListClient, /const isOperator = basePath\.startsWith\("\/br\/"\)/);
+  assert.match(grnListClient, /<GrnDraftsTab drafts=\{drafts\} basePath=\{basePath\} \/>/);
+  assert.match(
+    grnListClient,
+    /router\.push\(`\$\{basePath\}\/new\/\$\{draft\.supplierId\}`\)/,
   );
   assert.match(grnDetailClient, /embedded\?: boolean/);
   assert.match(grnDetailClient, /embedded = false/);
@@ -1223,7 +1264,9 @@ test("operator count assignments render branch-native inside the branch operator
   assert.match(officePage, /embedded\?: boolean/);
   assert.match(officePage, /embedded=\{embedded\}/);
   assert.match(client, /embedded\?: boolean/);
-  assert.match(client, embeddedContentWrapperPattern);
+  assert.match(client, /const content = \(\s*<>/);
+  assert.match(client, /if \(embedded\) \{\s*return content;\s*\}/);
+  assert.match(client, /return <AppPage scroll>\{content\}<\/AppPage>;/);
 
   assert.match(
     navConfig,
@@ -1323,18 +1366,24 @@ test("operator supplier returns render branch-native inside the branch operator 
   );
 });
 
-test.skip("operator production renders branch-native inside the central_kitchen operator shell (D059 §4 production)", () => {
+test("operator production renders branch-native inside the production operator shell (D059 §4 production)", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx",
+  );
+  const recipeRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/page.tsx",
+  );
+  const newRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx",
+  );
+  const detailRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx",
   );
   const officePage = read(
     "apps/web/app/(protected)/inventory/production/page.tsx",
   );
   const dataSource = read(
     "apps/web/app/(protected)/inventory/production-data.ts",
-  );
-  const clientSource = read(
-    "apps/web/app/(protected)/inventory/production/production-runs-client.tsx",
   );
   const operatorClientSource = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/production-operator-client.tsx",
@@ -1360,6 +1409,10 @@ test.skip("operator production renders branch-native inside the central_kitchen 
   assert.match(officePage, /routeBranchId\?: number/);
   assert.match(officePage, /embedded\?: boolean/);
   assert.match(officePage, /embedded=\{embedded\}/);
+  assert.match(recipeRoute, /<ProductionRecipePanel[\s\S]*embedded/);
+  assert.match(newRoute, /<ProductionNewClient[\s\S]*basePath=\{`\/br\/\$\{branchId\}\/stock\/production`\}/);
+  assert.match(detailRoute, /fetchProductionRunById\(runId\)/);
+  assert.match(detailRoute, /run\.branch_id !== branchId && run\.target_branch_id !== branchId/);
 
   // hasCurrentProductionBranchAccess must prefer routeBranchId over
   // claims.branch_id — production_manager claims stay tenant-level
@@ -1377,53 +1430,30 @@ test.skip("operator production renders branch-native inside the central_kitchen 
     /hasCurrentProductionBranchAccess\(supabase, claims, routeBranchId\)/,
   );
 
-  assert.match(clientSource, /embedded\?: boolean/);
-  // R1 — no nested page header. The embedded branch renders no AppPageHeader
-  // at all (just the create action); the AppPageHeader with the warehouse
-  // eyebrow lives only in the office (!embedded) branch, and the embedded
-  // return path is the bare flex wrapper (R2).
+  assert.match(operatorClientSource, /<OperatorFlowSteps/);
+  assert.match(operatorClientSource, /operatorFlow\.productionTitle/);
+  assert.match(operatorClientSource, /<LinkCardGrid>/);
+  assert.match(operatorClientSource, /<AppLinkCard/);
   assert.match(
-    clientSource,
-    /\{embedded \? \(\s*<div className="flex justify-end">\{createAction\}<\/div>\s*\) : \(\s*<AppPageHeader\s+eyebrow=\{INVENTORY_VI\.warehouse\}/,
-  );
-  assert.match(clientSource, embeddedContentWrapperPattern);
-
-  // HUB archetype (docs/spec/page-archetypes.md § HUB): the office landing is
-  // AppPage width="wide" wrapping a LinkCardGrid of AppLinkCard tiles into the
-  // production sub-surfaces — never a data table on the landing itself. The
-  // order list and recipe panel move behind a ?view= query-param sub-view, so
-  // the landing shows KPIs + link cards only.
-  assert.match(clientSource, /<AppPage width="wide">\{content\}<\/AppPage>/);
-  assert.match(clientSource, /<LinkCardGrid>/);
-  assert.match(
-    clientSource,
+    operatorClientSource,
     /import \{[^}]*\buseSearchParams\b[^}]*\} from "next\/navigation"/,
   );
-  assert.match(clientSource, /const view = searchParams\.get\("view"\)/);
+  assert.match(operatorClientSource, /const view = searchParams\.get\("view"\)/);
   assert.match(
-    clientSource,
+    operatorClientSource,
     /href=\{buildViewHref\(PRODUCTION_ORDERS_VIEW\)\}/,
   );
   assert.match(
-    clientSource,
+    operatorClientSource,
     /href=\{buildViewHref\(PRODUCTION_RECIPES_VIEW\)\}/,
   );
-  // Negative: the order list DataTable must NOT render on the hub landing. It
-  // is only reachable inside the orders sub-view (view === orders), so the
-  // sole <ProductionOrderList render must sit behind that guard.
   assert.match(
-    clientSource,
-    /view === PRODUCTION_ORDERS_VIEW[\s\S]*<ProductionOrderList/,
-  );
-  assert.equal(
-    (clientSource.match(/<ProductionOrderList/g) ?? []).length,
-    1,
-    "ProductionOrderList must render once, behind the orders sub-view",
+    operatorClientSource,
+    /view === PRODUCTION_ORDERS_VIEW[\s\S]*<ProductionRunSection/,
   );
 
-  // Native production tile is gated to branch_kind central_kitchen only —
-  // must never render at central_supply or retail branches. Curation is
-  // declarative: nav-config `kinds` + the operator-capabilities kind filter.
+  // Native production tile is gated to production-capable branch kinds.
+  // Curation is declarative: nav-config `kinds` + the operator-capabilities kind filter.
   assert.match(
     navConfig,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/production",\s*label: "Sản xuất",\s*kinds: \["central_kitchen", "branch"\]/,

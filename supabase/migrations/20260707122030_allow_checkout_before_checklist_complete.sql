@@ -93,7 +93,7 @@ BEGIN
     ),
     'attendance_record',
     p_attendance_id,
-    '/employee/checkout-approvals',
+    format('/br/%s/shift/checkout-approvals', v_record.branch_id),
     jsonb_build_object(
       'attendance_id', p_attendance_id,
       'employee_id', p_employee_id,

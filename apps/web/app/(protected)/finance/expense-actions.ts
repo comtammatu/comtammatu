@@ -37,6 +37,20 @@ export interface ExpenseRow {
   created_at: string;
 }
 
+export interface ExpenseMatchOption extends ExpenseRow {
+  matchedEventId: number | null;
+}
+
+interface ExpenseMatchRow {
+  webhook_event_id: number;
+  expense_id: number;
+}
+
+interface WebhookExpenseMatchRow {
+  id: number;
+  expense_id: number | null;
+}
+
 const createExpenseSchema = z.object({
   branchId: z.coerce.number().int().positive().nullable().optional(),
   expenseDate: z.string().regex(BUSINESS_DATE, "Ngày không hợp lệ"),
@@ -256,10 +270,43 @@ const matchSepayExpenseSchema = z.object({
   expenseId: z.coerce.number().int().positive(),
 });
 
+const matchSepayExpensesSchema = z.object({
+  eventId: z.coerce.number().int().positive(),
+  expenseIds: z.array(z.coerce.number().int().positive()).max(20),
+});
+
+function mapMatchExpenseError(code?: string): string {
+  if (code === "P0002") return "Không tìm thấy giao dịch hoặc khoản chi.";
+  if (code === "23505") return "Có khoản chi đã khớp giao dịch khác.";
+  if (code === "23514") return "Giao dịch này không thể khớp khoản chi.";
+  if (isExpenseMatchSchemaMissing(code)) {
+    return "Chưa cập nhật dữ liệu ghép nhiều khoản chi.";
+  }
+  return "Không thể khớp giao dịch.";
+}
+
+function isExpenseMatchSchemaMissing(code?: string): boolean {
+  return code === "PGRST202" || code === "PGRST205" || code === "42P01";
+}
+
 export async function matchSepayTransactionWithExpense(
   input: z.infer<typeof matchSepayExpenseSchema>,
 ): Promise<ActionResult> {
   const parsed = matchSepayExpenseSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
+  return matchSepayTransactionWithExpenses({
+    eventId: parsed.data.eventId,
+    expenseIds: [parsed.data.expenseId],
+  });
+}
+
+export async function matchSepayTransactionWithExpenses(
+  input: z.infer<typeof matchSepayExpensesSchema>,
+): Promise<ActionResult> {
+  const parsed = matchSepayExpensesSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
@@ -270,31 +317,81 @@ export async function matchSepayTransactionWithExpense(
   );
   if (!ctx) return { success: false, error: "Không có quyền sửa chi phí." };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
+  const expenseIds = Array.from(new Set(parsed.data.expenseIds));
 
-  const { error } = await supabase
-    .from("webhook_events")
-    .update({ expense_id: parsed.data.expenseId })
-    .eq("tenant_id", claims.tenant_id)
-    .eq("id", parsed.data.eventId)
-    .eq("provider", "sepay");
+  const { error } = await supabase.rpc("match_sepay_transaction_expenses", {
+    p_event_id: parsed.data.eventId,
+    p_expense_ids: expenseIds,
+  });
 
   if (error) {
-    return { success: false, error: "Không thể khớp giao dịch." };
+    if (!isExpenseMatchSchemaMissing(error.code)) {
+      console.error("[finance:expense-match] failed to match expenses", error.code);
+    }
+    return { success: false, error: mapMatchExpenseError(error.code) };
   }
 
   await logAudit(supabase, {
     action: "update",
     entityType: "webhook_event",
     entityId: parsed.data.eventId,
-    newData: { expense_id: parsed.data.expenseId },
+    newData: { expense_ids: expenseIds },
   });
 
   return { success: true };
 }
 
-export async function fetchUnmatchedExpenses(): Promise<
-  ActionResult<ExpenseRow[]>
+async function fetchExpenseMatchMap(
+  supabase: NonNullable<
+    Awaited<ReturnType<typeof getAuthContextWithPermission>>
+  >["supabase"],
+  tenantId: number,
+): Promise<Map<number, number>> {
+  const matchedByExpense = new Map<number, number>();
+
+  const { data: matchRows, error: matchErr } = await supabase
+    .from("bank_transaction_expense_matches")
+    .select("webhook_event_id, expense_id")
+    .eq("tenant_id", tenantId);
+
+  if (matchErr && !isExpenseMatchSchemaMissing(matchErr.code)) {
+    console.error(
+      "[finance:expense-match] failed to load bank_transaction_expense_matches",
+      matchErr.code,
+    );
+  } else if (!matchErr) {
+    for (const row of (matchRows ?? []) as ExpenseMatchRow[]) {
+      matchedByExpense.set(row.expense_id, row.webhook_event_id);
+    }
+  }
+
+  const { data: webhookRows, error: webhookErr } = await supabase
+    .from("webhook_events")
+    .select("id, expense_id")
+    .eq("tenant_id", tenantId)
+    .eq("provider", "sepay")
+    .not("expense_id", "is", null);
+
+  if (webhookErr) {
+    console.error(
+      "[finance:expense-match] failed to load webhook_event expense matches",
+      webhookErr.code,
+    );
+    return matchedByExpense;
+  }
+
+  for (const row of (webhookRows ?? []) as WebhookExpenseMatchRow[]) {
+    if (row.expense_id != null && !matchedByExpense.has(row.expense_id)) {
+      matchedByExpense.set(row.expense_id, row.id);
+    }
+  }
+
+  return matchedByExpense;
+}
+
+export async function fetchExpenseMatchOptions(): Promise<
+  ActionResult<ExpenseMatchOption[]>
 > {
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
@@ -303,23 +400,9 @@ export async function fetchUnmatchedExpenses(): Promise<
   if (!ctx) return { success: false, error: "Không có quyền xem chi phí." };
 
   const { supabase, claims } = ctx;
+  const matchedByExpense = await fetchExpenseMatchMap(supabase, claims.tenant_id);
 
-  // Find all expenses that are "transfer" and don't exist in webhook_events.expense_id
-  const { data: matchedEvents, error: matchedErr } = await supabase
-    .from("webhook_events")
-    .select("expense_id")
-    .eq("tenant_id", claims.tenant_id)
-    .not("expense_id", "is", null);
-
-  if (matchedErr) {
-    return { success: false, error: "Lỗi tải dữ liệu khớp." };
-  }
-
-  const matchedExpenseIds = Array.from(
-    new Set((matchedEvents ?? []).map((e) => e.expense_id as number)),
-  );
-
-  let query = supabase
+  const { data, error } = await supabase
     .from("expenses")
     .select(
       "id, branch_id, expense_date, category, amount, payment_method, paid_at, vendor_name, note, created_at",
@@ -328,13 +411,7 @@ export async function fetchUnmatchedExpenses(): Promise<
     .eq("payment_method", "transfer")
     .order("expense_date", { ascending: false })
     .order("id", { ascending: false })
-    .limit(100);
-
-  if (matchedExpenseIds.length > 0) {
-    query = query.not("id", "in", `(${matchedExpenseIds.join(",")})`);
-  }
-
-  const { data, error } = await query;
+    .limit(150);
 
   if (error) {
     return { success: false, error: "Không tải được danh sách chi phí." };
@@ -353,6 +430,18 @@ export async function fetchUnmatchedExpenses(): Promise<
       vendor_name: r.vendor_name,
       note: r.note,
       created_at: r.created_at,
+      matchedEventId: matchedByExpense.get(r.id) ?? null,
     })),
+  };
+}
+
+export async function fetchUnmatchedExpenses(): Promise<
+  ActionResult<ExpenseRow[]>
+> {
+  const res = await fetchExpenseMatchOptions();
+  if (!res.success) return res;
+  return {
+    success: true,
+    data: (res.data ?? []).filter((row) => row.matchedEventId == null),
   };
 }

@@ -119,6 +119,10 @@ export async function WasteApprovalsPageContent({
     list.push(it);
     itemsByIssue.set(it.issue_id, list);
   }
+  type UnitCodeJoin = { code: string };
+  type ItemRowWithUnit = ItemRow & {
+    unit_obj?: UnitCodeJoin | UnitCodeJoin[] | null;
+  };
 
   const rows: PendingWasteRow[] = (issues ?? []).map((si) => {
     const items = itemsByIssue.get(si.id) ?? [];
@@ -144,12 +148,16 @@ export async function WasteApprovalsPageContent({
         const ingredient = Array.isArray(it.ingredient)
           ? it.ingredient[0]
           : it.ingredient;
+        const itemWithUnit = it as ItemRowWithUnit;
+        const unitObj = Array.isArray(itemWithUnit.unit_obj)
+          ? itemWithUnit.unit_obj[0]
+          : itemWithUnit.unit_obj;
         return {
           itemId: it.id,
           ingredientId: it.ingredient_id,
           ingredientName: ingredient?.name ?? `#${it.ingredient_id}`,
           quantity: Number(it.quantity),
-          unit: (it as any).unit_obj?.code ?? "",
+          unit: unitObj?.code ?? "",
           unitCost: it.unit_cost !== null ? Number(it.unit_cost) : null,
           totalCost: it.total_cost !== null ? Number(it.total_cost) : 0,
           reasonCode: it.reason_code ?? "",

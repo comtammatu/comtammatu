@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight as IconArrowRight,
   FileText as IconFileText,
+  Search as IconSearch,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -30,20 +31,26 @@ import {
   DrawerDescription,
   DrawerFooter,
 } from "@comtammatu/ui/components/drawer";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { cn } from "@comtammatu/ui";
-import {
-  ACTIONS_VI,
-  INVENTORY_VI,
-} from "@comtammatu/shared/messages";
-import {
-  AppEmptyState,
-  AppPage,
-  AppPageHeader,
-} from "@/components/surface";
+import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { setCountAssignments } from "./actions";
 import { useSwipeReveal, type SwipeReveal } from "@lib/hooks/use-swipe-reveal";
 import { useLongPress } from "@lib/hooks/use-long-press";
+import { matchesSearch } from "@lib/search";
 
 export interface EmployeeRow {
   id: number;
@@ -56,15 +63,33 @@ export interface IngredientOption {
   unit: string;
 }
 
+export interface LocationOption {
+  id: number;
+  label: string;
+  kind: string | null;
+}
+
+export interface ShiftOption {
+  id: number;
+  name: string;
+  startTime: string;
+  endTime: string;
+}
+
 interface Props {
   selectedBranchId: number | null;
   selectedLocationId: number | null;
+  selectedShiftId: number | null;
+  locationOptions: LocationOption[];
+  shiftOptions: ShiftOption[];
   employees: EmployeeRow[];
   ingredients: IngredientOption[];
   assignmentsByEmployee: Record<string, number[]>;
   basePath?: string;
   embedded?: boolean;
 }
+
+const ALL_SHIFTS_VALUE = "all";
 
 function seedSelections(
   employees: readonly EmployeeRow[],
@@ -84,6 +109,31 @@ function buildBranchCountHref(
   if (branchId === null) return null;
   const href = `/br/${branchId}/stock/count`;
   return locationId === null ? href : `${href}?location=${locationId}`;
+}
+
+function formatShiftTime(value: string) {
+  return value.slice(0, 5);
+}
+
+function buildShiftScopeHref({
+  basePath,
+  embedded,
+  branchId,
+  locationId,
+  shiftId,
+}: {
+  basePath: string;
+  embedded: boolean;
+  branchId: number | null;
+  locationId: number | null;
+  shiftId: number | null;
+}) {
+  const params = new URLSearchParams();
+  if (!embedded && branchId !== null) params.set("branchId", String(branchId));
+  if (locationId !== null) params.set("locationId", String(locationId));
+  if (shiftId !== null) params.set("shiftId", String(shiftId));
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
 }
 
 function EmployeeAssignmentRow({
@@ -162,7 +212,7 @@ function EmployeeAssignmentRow({
       <div
         className={cn(
           "h-full cursor-pointer rounded-md border bg-card transition-transform duration-300 ease-out",
-          isRevealed ? "-translate-x-20" : "translate-x-0"
+          isRevealed ? "-translate-x-20" : "translate-x-0",
         )}
         {...handlers}
       >
@@ -172,14 +222,16 @@ function EmployeeAssignmentRow({
         >
           <ItemContent className="min-w-0 w-full">
             <div className="flex items-start justify-between gap-3 w-full">
-              <ItemTitle className="text-base font-semibold">{emp.name}</ItemTitle>
+              <ItemTitle className="text-base font-semibold">
+                {emp.name}
+              </ItemTitle>
               <Badge variant={hasAssignments ? "success" : "outline"}>
                 {hasAssignments ? `${selectedIds.length} mặt hàng` : "Chưa gán"}
               </Badge>
             </div>
             {hasAssignments && (
               <div className="flex flex-wrap gap-1.5 mt-2">
-                {selectedIds.slice(0, 5).map(id => (
+                {selectedIds.slice(0, 5).map((id) => (
                   <Badge key={id} variant="secondary" className="px-1.5 py-0">
                     {ingredientMap.get(id)?.name ?? `#${id}`}
                   </Badge>
@@ -201,6 +253,9 @@ function EmployeeAssignmentRow({
 export function CountAssignmentsClient({
   selectedBranchId,
   selectedLocationId,
+  selectedShiftId,
+  locationOptions,
+  shiftOptions,
   employees,
   ingredients,
   assignmentsByEmployee,
@@ -229,10 +284,18 @@ export function CountAssignmentsClient({
   const scopeReady = selectedBranchId !== null && selectedLocationId !== null;
   const countHref = buildBranchCountHref(selectedBranchId, selectedLocationId);
   const slipsHref = basePath.replace("count-assignments", "count-slips");
+  const shiftSelectValue =
+    selectedShiftId === null ? ALL_SHIFTS_VALUE : String(selectedShiftId);
+  const assignedEmployeeCount = Object.values(selectionByEmployee).filter(
+    (ids) => ids.length > 0,
+  ).length;
 
   // Drawer state
-  const activeEmp = activeEmpId ? employees.find((e) => e.id === activeEmpId) : null;
+  const activeEmp = activeEmpId
+    ? employees.find((e) => e.id === activeEmpId)
+    : null;
   const [draftIds, setDraftIds] = useState<number[]>([]);
+  const [drawerSearch, setDrawerSearch] = useState("");
 
   useEffect(() => {
     if (activeEmpId !== null) {
@@ -242,15 +305,29 @@ export function CountAssignmentsClient({
     }
   }, [activeEmpId, selectionByEmployee]);
 
+  useEffect(() => {
+    setDrawerSearch("");
+  }, [activeEmpId]);
+
+  const visibleIngredients = useMemo(() => {
+    const query = drawerSearch.trim();
+    if (!query) return ingredients;
+    return ingredients.filter((ingredient) =>
+      matchesSearch([ingredient.name, ingredient.unit], query),
+    );
+  }, [drawerSearch, ingredients]);
+
   function handleSave() {
-    if (!activeEmp || selectedBranchId === null || selectedLocationId === null) return;
+    if (!activeEmp || selectedBranchId === null || selectedLocationId === null)
+      return;
     const nextIds = [...draftIds];
-    
+
     startTransition(async () => {
       const result = await setCountAssignments({
         branchId: selectedBranchId,
         locationId: selectedLocationId,
         employeeId: activeEmp.id,
+        shiftId: selectedShiftId,
         ingredientIds: nextIds,
       });
       if (!result.success) {
@@ -273,12 +350,13 @@ export function CountAssignmentsClient({
 
   function handleClear(empId: number) {
     if (selectedBranchId === null || selectedLocationId === null) return;
-    
+
     startTransition(async () => {
       const result = await setCountAssignments({
         branchId: selectedBranchId,
         locationId: selectedLocationId,
         employeeId: empId,
+        shiftId: selectedShiftId,
         ingredientIds: [],
       });
       if (!result.success) {
@@ -290,7 +368,9 @@ export function CountAssignmentsClient({
         [String(empId)]: [],
       }));
       toast.success(
-        INVENTORY_VI.countAssignRemoved(employees.find(e => e.id === empId)?.name ?? "Nhân viên")
+        INVENTORY_VI.countAssignRemoved(
+          employees.find((e) => e.id === empId)?.name ?? "Nhân viên",
+        ),
       );
       router.refresh();
     });
@@ -304,6 +384,41 @@ export function CountAssignmentsClient({
     );
   }
 
+  function changeShiftScope(value: string) {
+    const parsedShiftId =
+      value === ALL_SHIFTS_VALUE ? null : Number.parseInt(value, 10);
+    const nextShiftId =
+      parsedShiftId !== null && Number.isFinite(parsedShiftId)
+        ? parsedShiftId
+        : null;
+    router.replace(
+      buildShiftScopeHref({
+        basePath,
+        embedded,
+        branchId: selectedBranchId,
+        locationId: selectedLocationId,
+        shiftId: nextShiftId,
+      }),
+    );
+  }
+
+  function changeLocationScope(value: string) {
+    const nextLocationId = Number.parseInt(value, 10);
+    if (!Number.isFinite(nextLocationId)) return;
+    router.replace(
+      buildShiftScopeHref({
+        basePath,
+        embedded,
+        branchId: selectedBranchId,
+        locationId: nextLocationId,
+        shiftId: selectedShiftId,
+      }),
+    );
+  }
+
+  const showLocationPicker = scopeReady && locationOptions.length > 1;
+  const showShiftPicker = scopeReady && shiftOptions.length > 0;
+
   const assignmentActions = (
     <div
       className={cn(
@@ -316,7 +431,11 @@ export function CountAssignmentsClient({
         asChild
         variant="outline"
         size={embedded ? "touch" : "default"}
-        className={embedded ? "min-w-0 whitespace-normal text-center leading-tight" : undefined}
+        className={
+          embedded
+            ? "min-w-0 justify-center whitespace-normal px-2 text-center leading-tight"
+            : undefined
+        }
       >
         <Link href={slipsHref}>
           <IconFileText className="size-4" />
@@ -328,7 +447,11 @@ export function CountAssignmentsClient({
           asChild
           variant="outline"
           size={embedded ? "touch" : "default"}
-          className={embedded ? "min-w-0 whitespace-normal text-center leading-tight" : undefined}
+          className={
+            embedded
+              ? "min-w-0 justify-center whitespace-normal px-2 text-center leading-tight"
+              : undefined
+          }
         >
           <Link href={countHref}>
             <IconArrowRight className="size-4" />
@@ -342,7 +465,28 @@ export function CountAssignmentsClient({
   const content = (
     <>
       {embedded ? (
-        assignmentActions
+        <section
+          className="flex flex-col gap-2"
+          aria-labelledby="count-assignments-embedded-title"
+        >
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <h3
+              id="count-assignments-embedded-title"
+              className="min-w-0 flex-1 font-heading text-base font-semibold leading-tight"
+            >
+              {INVENTORY_VI.countAssignTitle}
+            </h3>
+            {scopeReady ? (
+              <Badge variant="secondary">
+                {assignedEmployeeCount}/{employees.length} đã giao
+              </Badge>
+            ) : null}
+          </div>
+          <p className="hidden text-sm leading-5 text-muted-foreground sm:block">
+            {INVENTORY_VI.countAssignDescription}
+          </p>
+          {assignmentActions}
+        </section>
       ) : (
         <AppPageHeader
           eyebrow={INVENTORY_VI.countAssignEyebrow}
@@ -351,6 +495,53 @@ export function CountAssignmentsClient({
           actions={assignmentActions}
         />
       )}
+
+      {showLocationPicker || showShiftPicker ? (
+        <div className="grid gap-3 sm:max-w-xl sm:grid-cols-2">
+          {showLocationPicker ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="count-assignment-location">
+                {INVENTORY_VI.warehouseShort}
+              </Label>
+              <Select
+                value={String(selectedLocationId)}
+                onValueChange={changeLocationScope}
+              >
+                <SelectTrigger id="count-assignment-location" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {locationOptions.map((location) => (
+                    <SelectItem key={location.id} value={String(location.id)}>
+                      {location.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
+          {showShiftPicker ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="count-assignment-shift">Ca làm</Label>
+              <Select value={shiftSelectValue} onValueChange={changeShiftScope}>
+                <SelectTrigger id="count-assignment-shift" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_SHIFTS_VALUE}>Mỗi ca</SelectItem>
+                  {shiftOptions.map((shift) => (
+                    <SelectItem key={shift.id} value={String(shift.id)}>
+                      {shift.name} · {formatShiftTime(shift.startTime)}-
+                      {formatShiftTime(shift.endTime)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {!scopeReady && (
         <AppEmptyState
@@ -369,7 +560,7 @@ export function CountAssignmentsClient({
       )}
 
       {scopeReady && employees.length > 0 && (
-        <ItemGroup className="flex flex-col gap-2 overflow-hidden sm:overflow-visible">
+        <ItemGroup className="gap-2 overflow-hidden sm:overflow-visible">
           {employees.map((emp) => (
             <EmployeeAssignmentRow
               key={emp.id}
@@ -385,7 +576,7 @@ export function CountAssignmentsClient({
           {isPending ? (
             <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
               <Spinner className="size-4" />
-              <span>Đang cập nhật...</span>
+              <span>Đang cập nhật…</span>
             </div>
           ) : null}
         </ItemGroup>
@@ -402,14 +593,31 @@ export function CountAssignmentsClient({
               {INVENTORY_VI.countAssignEditDescription(activeEmp?.name ?? "")}
             </DrawerDescription>
           </DrawerHeader>
+          <div className="shrink-0 px-4 pb-3">
+            <InputGroup className="h-12">
+              <InputGroupAddon>
+                <IconSearch />
+              </InputGroupAddon>
+              <InputGroupInput
+                value={drawerSearch}
+                onChange={(event) => setDrawerSearch(event.target.value)}
+                placeholder={INVENTORY_VI.countAssignSearchPlaceholder}
+                inputMode="search"
+              />
+            </InputGroup>
+          </div>
           <ScrollArea className="min-h-0 flex-1 px-4">
             <div className="flex flex-col gap-1 pb-4 pr-2" data-vaul-no-drag>
               {ingredients.length === 0 ? (
                 <p className="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
                   {INVENTORY_VI.countAssignNoFinishedGoods}
                 </p>
+              ) : visibleIngredients.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-muted-foreground">
+                  {INVENTORY_VI.countAssignNoIngredientMatches}
+                </p>
               ) : (
-                ingredients.map((ingredient) => {
+                visibleIngredients.map((ingredient) => {
                   const checked = draftIds.includes(ingredient.id);
                   const checkboxId = `count-assignment-${activeEmp?.id}-${ingredient.id}`;
                   return (
@@ -418,8 +626,8 @@ export function CountAssignmentsClient({
                       className={cn(
                         "flex items-start gap-2 rounded-md border px-2 py-2 transition-colors",
                         checked
-                          ? "border-primary/30 bg-primary/5"
-                          : "border-transparent bg-card hover:bg-muted"
+                          ? "border-primary/20 bg-primary/10"
+                          : "border-transparent bg-card hover:bg-muted",
                       )}
                       onClick={() => toggleIngredient(ingredient.id)}
                     >
@@ -427,6 +635,7 @@ export function CountAssignmentsClient({
                         id={checkboxId}
                         size="touch"
                         checked={checked}
+                        onClick={(event) => event.stopPropagation()}
                         onCheckedChange={() => toggleIngredient(ingredient.id)}
                         disabled={isPending}
                       />
@@ -473,7 +682,7 @@ export function CountAssignmentsClient({
   );
 
   if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
+    return content;
   }
 
   return <AppPage scroll>{content}</AppPage>;

@@ -99,15 +99,22 @@ Allowed token families:
 
 Theme runtime:
 
-- `packages/ui/src/components/theme-script.tsx` applies the initial `light`
-  class before hydration.
+- Two modes: `light` (default, day shift) and `night` (warm-dark "gạo cháy",
+  evening/night shift). `night` maps to the `.dark` CSS selector so existing
+  `dark:` variants and the chart THEMES map resolve correctly.
+- `packages/ui/src/components/theme-script.tsx` applies the initial class before
+  hydration. It reads the `matu-theme` cookie (`light` | `night`); when absent
+  it falls back to local hour — `night` for 18:00–06:00, otherwise `light`.
+  The script must not depend on `prefers-color-scheme` or `matchMedia`; the
+  shift-aware decision is timezone-stable and OS-preference-independent.
 - `packages/ui/src/components/theme-provider.tsx` is the only runtime theme
-  state provider. Runtime theme is fixed to `light`; old `theme=dark` or
-  `theme=system` browser preferences are ignored while light mode is forced.
-  Scope, branch, workflow, and auth state must never use browser storage.
-- Do not add route-level theme toggles, a second theme context, or a route-local
-  theme storage key unless the design-system contract explicitly re-enables
-  dark mode.
+  state provider. `setTheme` writes the `matu-theme` cookie (SameSite=Lax,
+  1-year max-age). Scope, branch, workflow, and auth state must never use
+  browser storage; theme is the only browser-stored UI preference.
+- The single theme toggle is the `ThemeToggle` primitive (`apps/web/app/components/theme-toggle.tsx`)
+  mounted in `AppHeader`, the operations PWA toolbar, and the employee header.
+  Do not add a second theme context, a route-local toggle, or a localStorage
+  theme key.
 
 Approved project utilities:
 
@@ -149,9 +156,10 @@ Brand Concept 01 runtime mapping:
 - `ring` / chart accent: vang gao.
 - `success`: xanh la diu.
 - `muted-foreground` / supporting tone: nau go or xam am depending on theme.
-- Heading font: Geist.
+- Heading font: Be Vietnam Pro (identity display face).
 - Body font: Geist.
 - Mono font: Geist Mono for tabular operational data.
+- Night mode: warm-dark "gạo cháy" palette (see Theme runtime); auto 18:00–06:00 local or via `matu-theme` cookie override.
 
 ### Tint Opacity Scale
 
@@ -185,7 +193,7 @@ Any bordered / rounded `div` carrying a `bg-(warning|destructive|success|info)/N
 
 Runtime typography source:
 
-- `apps/web/app/layout.tsx` loads `GeistSans` and `GeistMono` through the `geist` package (next/font/local under the hood; full Vietnamese glyph coverage, self-hosted, offline). Geist Sans serves both body and headings (single-family roster).
+- `apps/web/app/layout.tsx` loads `GeistSans` and `GeistMono` through the `geist` package (next/font/local under the hood; full Vietnamese glyph coverage, self-hosted, offline) and `Be Vietnam Pro` through `next/font/google` (subset `vietnamese` + `latin`, self-hosted by Next.js). Be Vietnam Pro serves headings/titles; Geist serves body/content (two-family roster).
 - `packages/ui/src/styles/globals.css` maps those font variables into Tailwind utilities.
 
 Required utility mapping:
@@ -193,17 +201,17 @@ Required utility mapping:
 | Purpose           | Utility / variable                | Font       |
 | ----------------- | --------------------------------- | ---------- |
 | body/content text | `font-sans` / `--font-sans`       | Geist      |
-| headings/titles   | `font-heading` / `--font-heading` | Geist      |
+| headings/titles   | `font-heading` / `--font-heading` | Be Vietnam Pro |
 | operational data  | `font-mono` / `--font-mono`       | Geist Mono |
 
 Rules:
 
-- The `geist` package exposes `--font-geist-sans` / `--font-geist-mono`; `globals.css` binds `--font-sans` + `--font-heading` to `--font-geist-sans` and `--font-mono` to `--font-geist-mono`. App code consumes only `font-sans` / `font-heading` / `font-mono`.
+- The `geist` package exposes `--font-geist-sans` / `--font-geist-mono`; `next/font/google` exposes `--font-be-vietnam-pro`. `globals.css` binds `--font-sans` to `--font-geist-sans`, `--font-heading` to `--font-be-vietnam-pro`, and `--font-mono` to `--font-geist-mono`. App code consumes only `font-sans` / `font-heading` / `font-mono`.
 - Route/page headings, card titles, dialog titles, sheet titles, section titles, and brand lockup text use `font-heading` unless a Má Tư DS primitive already applies it.
 - Body text, controls, labels, descriptions, table text, and workflow copy inherit `font-sans`.
 - Use `font-mono` only for tabular operational data, IDs, codes, receipt/order numbers, prices, quantities, timestamps, and audit hashes.
 - Do not add route-specific `font-family`, custom font variables, or extra font families.
-- Do not reintroduce `Be Vietnam Pro`, `Inter`, `Montserrat`, `JetBrains Mono`, system-only stacks, custom font variables, or per-surface typography exceptions unless the design-system contract is explicitly changed first. The roster is Geist (sans — body + headings) + Geist Mono (data) only.
+- Do not reintroduce `Inter`, `Montserrat`, `JetBrains Mono`, system-only stacks, custom font variables, or per-surface typography exceptions. The roster is Be Vietnam Pro (headings) + Geist (body) + Geist Mono (data). `Be Vietnam Pro` is approved as the heading face (per D039); other fonts on the legacy forbid-list remain forbidden.
 - When changing typography runtime, update `apps/web/app/layout.tsx`, `packages/ui/src/styles/globals.css`, this contract, `docs/modules/ui.md`, `docs/agent/rules/ui.md`, and `tasks/regressions.md`.
 
 Rules:
@@ -261,7 +269,7 @@ Vertical rhythm uses flex gap, not `space-y-*`. Section / page / dialog / client
 | Section title           | `font-heading text-base font-semibold`                                  | `CardTitle`                                                            |
 | Sub-section / list head | `font-heading text-sm font-semibold`                                    | `Item title` slot                                                      |
 | Eyebrow / metadata      | `text-xs font-medium uppercase tracking-wide`                           | `AppPageHeader.eyebrow` (page-header lockup only)                      |
-| Panel / field / section uppercase label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome: `text-2xs font-medium uppercase tracking-wider`) | Panel / field / section eyebrow labels                 |
+| Panel / field / section uppercase label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome: `text-2xs font-medium uppercase tracking-wider`) | `SectionLabel` (default + `density="dense"`); page-header eyebrow stays on `AppPageHeader.eyebrow`                 |
 | Table column header     | `text-xs font-medium uppercase tracking-wider text-muted-foreground`    | `TableHead`                                                            |
 | Dense eyebrow           | `text-2xs font-medium uppercase tracking-wider`                         | KDS chrome, audit row meta, mobile chrome labels                       |
 | KDS kitchen item-name   | `text-base font-semibold leading-6 xl:text-lg xl:leading-6`             | KDS ticket item-name (wall boards scale up at `xl`)                    |
@@ -452,6 +460,7 @@ Default primitive mapping:
 | loading               | `Spinner`, `Skeleton`, `Progress`                                                                                 |
 | list row              | `Item`, `ItemGroup`                                                                                               |
 | search/filter shell   | `InputGroup`, `Combobox` helpers where appropriate                                                                |
+| section/panel/field eyebrow label | `SectionLabel` (`density="default"` / `"dense"`)                                                          |
 | route context         | `Sidebar`, `Breadcrumb`, `Separator`                                                                              |
 | keyboard hint         | `Kbd`, `KbdGroup`                                                                                                 |
 | transient feedback    | `Sonner`                                                                                                          |
@@ -612,10 +621,11 @@ do not add a one-off allowlist entry just to make a route compile.
 - Inventory money, quantity, tax-rate, and business-date inputs must use the shared app form wrappers instead of ad hoc parsing or `type="number"`.
 - Hide permanently unauthorized actions. Show disabled controls with explanatory copy only for temporary operational blockers such as missing shift, locked period, or incomplete prerequisite state.
 
-### Employee
+### Staff Runtime
 
 - Keep the surface narrow and task-led.
-- Do not turn `/employee` into a second admin shell.
+- Do not turn `/br/[branchId]/shift/*` or `/br/[branchId]/profile/*` into a
+  second admin shell.
 - Use the same typography, tokens, and state vocabulary as admin/POS/KDS.
 
 ## Layout Patterns
@@ -667,7 +677,7 @@ contract change; route-local chrome outside this list is drift.
    DataTable/toaster/POS is unchanged.
 2. Branch runtime chrome — the branch-scoped operator layout
    (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
-   branch hub, employee daily work under `/br/[branchId]/shift/*`, stock action
+   branch hub, staff daily work under `/br/[branchId]/shift/*`, stock action
    entry points under `/br/[branchId]/stock/*`, and branch management
    (`/br/[branchId]/dashboard`, `/br/[branchId]/settings/*`) when reached from
    the branch runtime. It uses the shared brand primitives, compact `AppPage`,
@@ -675,8 +685,8 @@ contract change; route-local chrome outside this list is drift.
    not a reason to return to office Management chrome or add another shell.
 3. Operations chrome — purpose-built, full-screen, single-job surfaces that
    legitimately cannot wear the management sidebar: POS (`/br/[branchId]/pos`),
-   KDS and Runner (`/br/[branchId]/{kds,runner}`), and the staff task surface
-   (`/employee/*`). These keep bespoke layout, but consume the same tokens,
+   KDS and Runner (`/br/[branchId]/{kds,runner}`). These keep bespoke layout,
+   but consume the same tokens,
    typography, status vocabulary, header lockup, and bottom-nav primitives as
    Management — a different layout, never a second visual language.
 4. Standalone chrome-less surfaces — a named, closed exception, not a fourth
@@ -911,8 +921,8 @@ false-positive):
 - `card-title-classname-baseline` — **mixed (count 13, D030)**: `CardTitle` now
   has a `size` variant (`sm`=text-sm, `lg`=text-2xl, `default`=text-base); the 8
   pure heading-scale hits migrated to it (21→13). The remaining 13 are
-  layout-only (`flex`/`truncate`, can't migrate), eyebrow small-caps (→ a
-  `SectionLabel` primitive not in current contract), or active-zone (finance D028).
+  layout-only (`flex`/`truncate`, can't migrate), or active-zone (finance D028).
+  The eyebrow small-caps subset migrated to `SectionLabel` (D070).
 - `use-is-mobile-budget` — **mixed (D030)**: 3 of the 5 flagged list-forks
   migrated to the DataTable adapter (`supplier-invoices` faithful; `issues` +
   `receiving` with an owner-approved small mobile spacing/frame delta); 2 can't
@@ -927,7 +937,7 @@ Tracker bridge: only open an active task for the named real-debt above when it
 is tied to current route-family work in `tasks/todo.md`. Current active links:
 HR D026/D027/payroll owns the remaining HR status-label maps and payroll
 `SummaryCard`; finance active-zone work waits for its owning finance task;
-`SectionLabel` waits for a design-system contract update before implementation.
+`SectionLabel` ships in `@comtammatu/ui/components/section-label` (D070); panel/field/section eyebrow labels render through it instead of inline class strings.
 Do not create cleanup PRs that chase `reframe` allowlists or permanent
 false-positives toward zero.
 

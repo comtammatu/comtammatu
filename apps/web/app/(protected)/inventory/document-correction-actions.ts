@@ -6,6 +6,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction, type ActionContext } from "@/_lib/with-action";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { PG_ERR } from "./_lib/constants";
+import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 
 const correctionDocumentTypes = [
   "grn",
@@ -298,6 +299,14 @@ export const createInventoryDocumentCorrection = withAction(
     const sourceLabel = `${correctionLabel(data.documentType)} ${source.code}${
       source.traceLabel ? ` - ${source.traceLabel}` : ""
     }`;
+    const resolvedUnit = await resolveEntryUnitCode(supabase, {
+      tenantId: claims.tenant_id,
+      ingredientId: data.ingredientId,
+      entryUnitId: null,
+    });
+    if (!resolvedUnit.success) {
+      return { success: false, error: resolvedUnit.error };
+    }
 
     const { data: row, error } = await supabase
       .from("stock_movements")
@@ -307,6 +316,8 @@ export const createInventoryDocumentCorrection = withAction(
         ingredient_id: data.ingredientId,
         type: "adjustment",
         quantity_change: data.quantityChange,
+        entry_unit_id: resolvedUnit.unitId,
+        entry_quantity: Math.abs(data.quantityChange),
         reason: `${sourceLabel}: ${data.reason}`,
         created_by: user.id,
         location_id: defaultLocationId,

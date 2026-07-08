@@ -1,3 +1,5 @@
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import {
   fetchGrnIdsForDropdown,
   fetchSupplierInvoicesPage,
@@ -5,10 +7,8 @@ import {
 import type { SupplierInvoiceCursor } from "../procurement-actions";
 import { fetchSuppliers } from "../supplier-actions";
 import { resolveRequestedBranchId } from "../_lib/inventory-scope";
-import {
-  SupplierInvoicesClient,
-  mapSupplierInvoiceRow,
-} from "./supplier-invoices-client";
+import { SupplierInvoicesClient } from "./supplier-invoices-client";
+import { mapSupplierInvoiceRow } from "./supplier-invoice-row";
 
 export default async function SupplierInvoicesPage({
   searchParams,
@@ -19,10 +19,11 @@ export default async function SupplierInvoicesPage({
   const branchFilter =
     (await resolveRequestedBranchId(params.branchId)) ?? undefined;
 
-  const [res, suppliersRes, grnsRes] = await Promise.all([
+  const [res, suppliersRes, grnsRes, canPaySupplier] = await Promise.all([
     fetchSupplierInvoicesPage({ branchId: branchFilter }),
     fetchSuppliers(),
     fetchGrnIdsForDropdown(branchFilter),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_AP_PAY),
   ]);
   const page = res.success
     ? res.data
@@ -63,6 +64,7 @@ export default async function SupplierInvoicesPage({
       initialHasMore={initialHasMore}
       initialNextCursor={initialNextCursor}
       branchId={branchFilter}
+      canPaySupplier={canPaySupplier}
     />
   );
 }

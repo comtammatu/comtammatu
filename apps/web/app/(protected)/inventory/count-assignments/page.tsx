@@ -1,10 +1,16 @@
 import { redirect } from "next/navigation";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { parseBranchIdParam } from "@/_lib/branch-context";
 import { CountAssignmentsClient } from "./count-assignments-client";
-import type { EmployeeRow, IngredientOption } from "./count-assignments-client";
+import type {
+  EmployeeRow,
+  IngredientOption,
+  LocationOption,
+  ShiftOption,
+} from "./count-assignments-client";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +18,29 @@ interface CountAssignmentsPageContentProps {
   searchParams?: Promise<{
     branchId?: string | string[];
     locationId?: string | string[];
+    shiftId?: string | string[];
   }>;
   routeBranchId?: number;
   basePath?: string;
   embedded?: boolean;
+}
+
+type IngredientCountOptionRow = {
+  id: number;
+  name: string;
+  ingredient_units?:
+    | { is_base: boolean; units: { code: string } | null }[]
+    | null;
+};
+
+function countLocationLabel(
+  branchName: string,
+  kind: string | null,
+  fallbackName: string | null,
+) {
+  const suffix =
+    kind === "warehouse" ? "Kho" : kind === "kitchen" ? "Bếp" : fallbackName;
+  return `${branchName} - ${suffix ?? "Kho"}`;
 }
 
 export async function CountAssignmentsPageContent({
@@ -33,6 +58,7 @@ export async function CountAssignmentsPageContent({
   );
   if (!ctx) redirect("/");
   const { supabase, claims } = ctx;
+  const rosterClient = createServiceClient();
 
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
@@ -41,21 +67,30 @@ export async function CountAssignmentsPageContent({
 
   const selectedBranchId = scope.selectedBranchId;
   const requestedLocationId = parseBranchIdParam(params.locationId);
+  const requestedShiftId = parseBranchIdParam(params.shiftId);
 
-  // Count assignments target the branch warehouse. URL scope stays supported
-  // for deep links.
-  const locations: Array<{ id: number; kind: string | null }> = [];
+  const selectedBranchName =
+    scope.allowedBranches.find((branch) => branch.id === selectedBranchId)
+      ?.name ?? "Chi nhánh";
+  const locations: LocationOption[] = [];
   if (selectedBranchId !== null) {
     const locationsRes = await supabase
       .from("inventory_locations")
-      .select("id, location_kind")
+      .select("id, name, location_kind")
+      .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", selectedBranchId)
       .eq("is_active", true)
-      .eq("location_kind", "warehouse")
-      .order("sort_order", { ascending: true });
+      .in("location_kind", ["warehouse", "kitchen"])
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true });
     for (const l of locationsRes.data ?? []) {
       locations.push({
         id: l.id,
+        label: countLocationLabel(
+          selectedBranchName,
+          l.location_kind ?? null,
+          l.name ?? null,
+        ),
         kind: l.location_kind ?? null,
       });
     }
@@ -69,24 +104,79 @@ export async function CountAssignmentsPageContent({
         locations[0]?.id ??
         null);
 
-  // Employees in the selected branch (branch lives on profiles, joined via
-  // employees.profile_id). Only resolve once a branch is chosen.
+  const shiftOptions: ShiftOption[] = [];
+  if (selectedBranchId !== null) {
+    const shiftsRes = await supabase
+      .from("shifts")
+      .select("id, name, start_time, end_time")
+      .eq("tenant_id", claims.tenant_id)
+      .or(`branch_id.is.null,branch_id.eq.${selectedBranchId}`)
+      .eq("is_active", true)
+      .order("start_time");
+    for (const shift of shiftsRes.data ?? []) {
+      shiftOptions.push({
+        id: shift.id,
+        name: shift.name,
+        startTime: shift.start_time,
+        endTime: shift.end_time,
+      });
+    }
+  }
+
+  const selectedShiftId =
+    requestedShiftId != null &&
+    shiftOptions.some((shift) => shift.id === requestedShiftId)
+      ? requestedShiftId
+      : null;
+
+  // Assignment access is permission-gated above; roster reads bypass self-scoped
+  // employee/profile RLS while writes still go through the assignment RPC.
   const employees: EmployeeRow[] = [];
   if (selectedBranchId !== null) {
-    const employeesRes = await supabase
-      .from("employees")
-      .select(
-        `id, is_active, profiles!inner ( full_name, branch_id, is_active )`,
-      )
+    const profilesRes = await rosterClient
+      .from("profiles")
+      .select("id, full_name, is_active")
       .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true)
-      .eq("profiles.branch_id", selectedBranchId)
-      .order("id");
-    for (const row of employeesRes.data ?? []) {
-      const profile = row.profiles as { full_name: string | null } | null;
+      .eq("branch_id", selectedBranchId)
+      .or("is_active.is.null,is_active.eq.true")
+      .order("full_name");
+    if (profilesRes.error) {
+      console.error("inventory.count_assignments.profiles_fetch_failed", {
+        code: profilesRes.error.code,
+      });
+      throw new Error("Không đọc được danh sách nhân viên để phân công đếm tồn.");
+    }
+
+    const profileIds = (profilesRes.data ?? []).map((profile) => profile.id);
+    const lookupProfileIds =
+      profileIds.length > 0
+        ? profileIds
+        : ["00000000-0000-0000-0000-000000000000"];
+    const employeesRes = await rosterClient
+      .from("employees")
+      .select("id, profile_id, is_active")
+      .eq("tenant_id", claims.tenant_id)
+      .in("profile_id", lookupProfileIds)
+      .eq("is_active", true);
+    if (employeesRes.error) {
+      console.error("inventory.count_assignments.employees_fetch_failed", {
+        code: employeesRes.error.code,
+      });
+      throw new Error("Không đọc được danh sách nhân viên để phân công đếm tồn.");
+    }
+
+    const employeeByProfileId = new Map(
+      (employeesRes.data ?? []).map((employee) => [
+        employee.profile_id,
+        employee,
+      ]),
+    );
+    for (const profile of profilesRes.data ?? []) {
+      const row = employeeByProfileId.get(profile.id);
+      if (!row) continue;
       employees.push({
         id: row.id,
-        name: profile?.full_name ?? "—",
+        name: profile.full_name ?? "—",
       });
     }
   }
@@ -107,25 +197,30 @@ export async function CountAssignmentsPageContent({
     });
     throw new Error("Không đọc được danh sách nguyên liệu để phân công đếm tồn.");
   }
-  const ingredients: IngredientOption[] = (ingredientsRes.data ?? []).map(
-    (i) => ({
-      id: i.id,
-      name: i.name,
-      unit: (i as any).ingredient_units?.find((u: any) => u.is_base)?.units?.code ?? "",
-    }),
-  );
+  const ingredients: IngredientOption[] = (
+    (ingredientsRes.data ?? []) as IngredientCountOptionRow[]
+  ).map((i) => ({
+    id: i.id,
+    name: i.name,
+    unit: i.ingredient_units?.find((u) => u.is_base)?.units?.code ?? "",
+  }));
 
   // Current active assignments at this branch+location, grouped per employee,
   // to prefill each checklist.
   const assignmentsByEmployee: Record<string, number[]> = {};
   if (selectedBranchId !== null && selectedLocationId !== null) {
-    const assignmentsRes = await supabase
+    let assignmentsQuery = supabase
       .from("inventory_count_assignments")
       .select("employee_id, ingredient_id")
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", selectedBranchId)
       .eq("location_id", selectedLocationId)
       .eq("is_active", true);
+    assignmentsQuery =
+      selectedShiftId === null
+        ? assignmentsQuery.is("shift_id", null)
+        : assignmentsQuery.eq("shift_id", selectedShiftId);
+    const assignmentsRes = await assignmentsQuery;
     for (const row of assignmentsRes.data ?? []) {
       const key = String(row.employee_id);
       (assignmentsByEmployee[key] ??= []).push(row.ingredient_id);
@@ -136,6 +231,9 @@ export async function CountAssignmentsPageContent({
     <CountAssignmentsClient
       selectedBranchId={selectedBranchId}
       selectedLocationId={selectedLocationId}
+      selectedShiftId={selectedShiftId}
+      locationOptions={locations}
+      shiftOptions={shiftOptions}
       employees={employees}
       ingredients={ingredients}
       assignmentsByEmployee={assignmentsByEmployee}
@@ -151,6 +249,7 @@ export default async function CountAssignmentsPage({
   searchParams?: Promise<{
     branchId?: string | string[];
     locationId?: string | string[];
+    shiftId?: string | string[];
   }>;
 }) {
   return <CountAssignmentsPageContent searchParams={searchParams} />;

@@ -30,8 +30,7 @@ corepack pnpm db:types     # Regenerate Supabase types after migration is applie
 - NEVER import `@comtammatu/database` barrel in `"use client"` components.
 - NEVER store scope in `localStorage` or React Context. Scope belongs in URL params only.
 - Multi-item atomic writes MUST use a Postgres RPC function.
-- Agents MAY apply migrations directly on approved dev/test Supabase servers only, after verifying the target ref against the Environment Registry in `docs/agent/rules/database.md`.
-- NEVER apply migrations directly to production. Production flow: write migration file → PR → merge → owner applies manually.
+- Agents MAY apply migrations directly only after verifying the target ref against the Environment Registry in `docs/agent/rules/database.md`; production apply additionally requires explicit owner delegation in the current session.
 - After SQL migration is applied to the schema used for generated types, run `corepack pnpm db:types`.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
 - NEVER add agent notes, dev commit notes, implementation explanations, or internal commentary to project UI.

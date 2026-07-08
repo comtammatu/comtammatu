@@ -382,6 +382,9 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
   const countGateMigrationSrc = read(
     "supabase/migrations/_archive/20260629183853_require_inventory_count_checkout_gate.sql",
   );
+  const branchStaffMigrationSrc = read(
+    "supabase/migrations/20260708115755_branch_staff_guard_mapper.sql",
+  );
   const approvalsPageSrc = read(
     "apps/web/lib/staff-runtime/checkout-approvals/page.tsx",
   );
@@ -446,6 +449,10 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
       workStateSrc.includes("approvalTargetLabel"),
     "expected work state to expose floor-staff checkout pending, required-only checklist progress, plus branch-manager attendance-only status",
   );
+  assert.ok(
+    workStateSrc.includes('"branch_staff"'),
+    "branch_staff must require the same staff-runtime attendance/checklist flow as cashier and chef",
+  );
   for (const src of [baselineSrc, countGateMigrationSrc]) {
     assert.ok(
       src.includes("AND i.task_kind <> 'inventory_count'") &&
@@ -454,6 +461,17 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
       "employee_request_clock_out must gate inventory_count from count slips, not the checklist checkbox",
     );
   }
+  assert.ok(
+    branchStaffMigrationSrc.includes("WHEN 'guard' THEN 'branch_staff'") &&
+      branchStaffMigrationSrc.includes("WHEN 'cleaner' THEN 'branch_staff'") &&
+      branchStaffMigrationSrc.includes(
+        "WHEN v_requester_role IN ('cashier', 'chef', 'branch_staff') THEN ARRAY['branch_manager']::text[]",
+      ) &&
+      branchStaffMigrationSrc.includes(
+        "IF v_requester_role NOT IN ('cashier', 'chef', 'branch_staff') THEN",
+      ),
+    "guard/cleaner must map to branch_staff and remain branch-manager checkout approvals",
+  );
   assert.ok(
     approvalsPageSrc.includes("CHECKOUT_APPROVER_ROLES") &&
       approvalsPageSrc.includes("checkout_approval_target_roles") &&

@@ -12,7 +12,7 @@ import {
   Save as IconSave,
   Trash as IconTrash,
 } from "lucide-react";
-import { NumberPadSheet } from "@/components/form";
+import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -36,7 +36,8 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { Combobox, FormattedNumberInput } from "@/components/form";
+import { Combobox } from "@/components/form/combobox";
+import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import { messages } from "@lib/messages";
 import {
   AppDetailFooter,
@@ -700,7 +701,7 @@ export function PODetailClient({
             {canEditLines ? (
               <form
                 onSubmit={handleAddLine}
-                className="grid gap-3 border-t bg-muted/5 p-4 sm:grid-cols-2 lg:grid-cols-5"
+                className="grid gap-3 border-t bg-muted/10 p-4 sm:grid-cols-2 lg:grid-cols-5"
               >
                 <Combobox
                   value={addIngredientId}

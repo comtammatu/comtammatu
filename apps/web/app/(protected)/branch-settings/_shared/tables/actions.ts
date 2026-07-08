@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
   BRANCH_FLOOR_SETTINGS_ROLES,
@@ -15,6 +16,48 @@ import { TABLE_STATE_VALUES } from "./constants";
 
 const SETTINGS_ROLES: readonly StaffRole[] = BRANCH_FLOOR_SETTINGS_ROLES;
 const ACTIVE_TABLE_ORDER_STATES = ["pending", "preparing", "ready", "served"];
+const SELF_ORDER_QR_SELECT =
+  "id, branch_id, self_order_token, self_order_enabled, self_order_token_rotated_at";
+
+interface SelfOrderTableRow {
+  id: number;
+  branch_id: number;
+  self_order_token: string | null;
+  self_order_enabled: boolean;
+  self_order_token_rotated_at: string | null;
+}
+
+interface SelfOrderQrActionData {
+  token: string;
+  enabled: boolean;
+  rotatedAt: string | null;
+}
+
+interface DbErrorLike {
+  code?: string;
+  message?: string;
+}
+
+type ReadBuilder<T> = {
+  eq(column: string, value: unknown): ReadBuilder<T>;
+  maybeSingle(): Promise<{ data: T | null; error: DbErrorLike | null }>;
+};
+
+type UpdateBuilder<T> = {
+  eq(column: string, value: unknown): UpdateBuilder<T>;
+  select(columns: string): {
+    maybeSingle(): Promise<{ data: T | null; error: DbErrorLike | null }>;
+  };
+};
+
+type UntypedTablesClient = {
+  select<T>(columns: string): ReadBuilder<T>;
+  update<T>(values: Record<string, unknown>): UpdateBuilder<T>;
+};
+
+type SupabaseFrom = {
+  from(table: string): unknown;
+};
 
 function revalidateTableSettings(branchId: number) {
   revalidatePath(`/br/${String(branchId)}/settings/tables`);
@@ -32,6 +75,83 @@ function mapTableDbError(code: string | undefined): string {
   if (code === "23505") return "Số bàn đã tồn tại";
   if (code === "23503") return "Dữ liệu tham chiếu không hợp lệ";
   return "Không thể thực hiện. Vui lòng thử lại.";
+}
+
+function mapSelfOrderQrDbError(code: string | undefined): string {
+  if (code === "23505") return "Không thể tạo mã QR. Vui lòng thử lại.";
+  return "Không xử lý được QR gọi món. Vui lòng thử lại.";
+}
+
+function tablesClient(supabase: unknown): UntypedTablesClient {
+  return (supabase as SupabaseFrom).from("tables") as UntypedTablesClient;
+}
+
+function generateSelfOrderToken() {
+  return randomBytes(24).toString("base64url");
+}
+
+function toQrActionData(row: SelfOrderTableRow): SelfOrderQrActionData | null {
+  if (!row.self_order_token) return null;
+  return {
+    token: row.self_order_token,
+    enabled: row.self_order_enabled,
+    rotatedAt: row.self_order_token_rotated_at,
+  };
+}
+
+async function loadSelfOrderTable(input: {
+  supabase: unknown;
+  tenantId: number;
+  branchId: number | null;
+  tableId: number;
+}) {
+  let query = tablesClient(input.supabase)
+    .select<SelfOrderTableRow>(SELF_ORDER_QR_SELECT)
+    .eq("id", input.tableId)
+    .eq("tenant_id", input.tenantId);
+
+  if (input.branchId) query = query.eq("branch_id", input.branchId);
+
+  const { data, error } = await query.maybeSingle();
+  if (error) {
+    console.error("[branch-settings/tables:selfOrderQr] Load table error:", error);
+    return { success: false as const, error: mapSelfOrderQrDbError(error.code) };
+  }
+  if (!data) {
+    return { success: false as const, error: "Không tìm thấy bàn" };
+  }
+  if (!canOperateBranch(input.branchId, data.branch_id)) {
+    return {
+      success: false as const,
+      error: "Không có quyền thao tác chi nhánh này",
+    };
+  }
+  return { success: true as const, data };
+}
+
+async function updateSelfOrderTable(input: {
+  supabase: unknown;
+  tenantId: number;
+  table: SelfOrderTableRow;
+  values: Record<string, unknown>;
+}) {
+  const { data, error } = await tablesClient(input.supabase)
+    .update<SelfOrderTableRow>(input.values)
+    .eq("id", input.table.id)
+    .eq("tenant_id", input.tenantId)
+    .eq("branch_id", input.table.branch_id)
+    .select(SELF_ORDER_QR_SELECT)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[branch-settings/tables:selfOrderQr] Update table error:", error);
+    return { success: false as const, error: mapSelfOrderQrDbError(error.code) };
+  }
+  if (!data) {
+    return { success: false as const, error: "Không tìm thấy bàn" };
+  }
+  revalidateTableSettings(data.branch_id);
+  return { success: true as const, data };
 }
 
 /* ─── Zone Schemas ─── */
@@ -67,6 +187,11 @@ const updateTableSchema = z.object({
   branch_id: z.coerce.number().int().positive({ error: "Chọn chi nhánh" }),
   zone_id: z.coerce.number().int().positive().optional(),
   status: z.enum(TABLE_STATE_VALUES).optional(),
+});
+
+const setTableSelfOrderQrEnabledSchema = z.object({
+  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  enabled: z.boolean(),
 });
 
 /* ─── Zone Actions ─── */
@@ -348,5 +473,122 @@ export const deleteTable = withAction(
 
     revalidateTableSettings(result[0]!.branch_id);
     return { success: true };
+  },
+);
+
+export const createTableSelfOrderQr = withAction<
+  typeof deleteIdSchema,
+  SelfOrderQrActionData
+>(
+  {
+    roles: SETTINGS_ROLES,
+    schema: deleteIdSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+    requireBranchScope: true,
+  },
+  async (data, { supabase, claims }) => {
+    const loaded = await loadSelfOrderTable({
+      supabase,
+      tenantId: claims.tenant_id,
+      branchId: claims.branch_id,
+      tableId: data.id,
+    });
+    if (!loaded.success) return { success: false, error: loaded.error };
+
+    const now = new Date().toISOString();
+    const token = loaded.data.self_order_token ?? generateSelfOrderToken();
+    const rotatedAt = loaded.data.self_order_token_rotated_at ?? now;
+    const updated = await updateSelfOrderTable({
+      supabase,
+      tenantId: claims.tenant_id,
+      table: loaded.data,
+      values: {
+        self_order_token: token,
+        self_order_enabled: true,
+        self_order_token_rotated_at: rotatedAt,
+      },
+    });
+    if (!updated.success) return { success: false, error: updated.error };
+
+    const qrData = toQrActionData(updated.data);
+    if (!qrData) return { success: false, error: mapSelfOrderQrDbError(undefined) };
+    return { success: true, data: qrData };
+  },
+);
+
+export const setTableSelfOrderQrEnabled = withAction<
+  typeof setTableSelfOrderQrEnabledSchema,
+  SelfOrderQrActionData
+>(
+  {
+    roles: SETTINGS_ROLES,
+    schema: setTableSelfOrderQrEnabledSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+    requireBranchScope: true,
+  },
+  async (data, { supabase, claims }) => {
+    const loaded = await loadSelfOrderTable({
+      supabase,
+      tenantId: claims.tenant_id,
+      branchId: claims.branch_id,
+      tableId: data.id,
+    });
+    if (!loaded.success) return { success: false, error: loaded.error };
+
+    const token = loaded.data.self_order_token ?? generateSelfOrderToken();
+    const rotatedAt =
+      loaded.data.self_order_token_rotated_at ?? new Date().toISOString();
+    const updated = await updateSelfOrderTable({
+      supabase,
+      tenantId: claims.tenant_id,
+      table: loaded.data,
+      values: {
+        self_order_token: token,
+        self_order_enabled: data.enabled,
+        self_order_token_rotated_at: rotatedAt,
+      },
+    });
+    if (!updated.success) return { success: false, error: updated.error };
+
+    const qrData = toQrActionData(updated.data);
+    if (!qrData) return { success: false, error: mapSelfOrderQrDbError(undefined) };
+    return { success: true, data: qrData };
+  },
+);
+
+export const rotateTableSelfOrderQr = withAction<
+  typeof deleteIdSchema,
+  SelfOrderQrActionData
+>(
+  {
+    roles: SETTINGS_ROLES,
+    schema: deleteIdSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+    requireBranchScope: true,
+  },
+  async (data, { supabase, claims }) => {
+    const loaded = await loadSelfOrderTable({
+      supabase,
+      tenantId: claims.tenant_id,
+      branchId: claims.branch_id,
+      tableId: data.id,
+    });
+    if (!loaded.success) return { success: false, error: loaded.error };
+
+    const updated = await updateSelfOrderTable({
+      supabase,
+      tenantId: claims.tenant_id,
+      table: loaded.data,
+      values: {
+        self_order_token: generateSelfOrderToken(),
+        self_order_enabled: true,
+        self_order_token_rotated_at: new Date().toISOString(),
+      },
+    });
+    if (!updated.success) return { success: false, error: updated.error };
+
+    const qrData = toQrActionData(updated.data);
+    if (!qrData) return { success: false, error: mapSelfOrderQrDbError(undefined) };
+    return { success: true, data: qrData };
   },
 );

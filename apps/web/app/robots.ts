@@ -12,7 +12,6 @@ export default function robots(): MetadataRoute.Robots {
           "/api/",
           "/login",
           "/access-denied",
-          "/employee/",
           "/br/",
           "/notifications",
           "/orders",

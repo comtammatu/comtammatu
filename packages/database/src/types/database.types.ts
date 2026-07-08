@@ -39,222 +39,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _ing_backup_a2fix: {
-        Row: {
-          id: number | null
-          measure_unit: string | null
-          purchase_to_measure_factor: number | null
-          purchase_unit: string | null
-          unit: string | null
-        }
-        Insert: {
-          id?: number | null
-          measure_unit?: string | null
-          purchase_to_measure_factor?: number | null
-          purchase_unit?: string | null
-          unit?: string | null
-        }
-        Update: {
-          id?: number | null
-          measure_unit?: string | null
-          purchase_to_measure_factor?: number | null
-          purchase_unit?: string | null
-          unit?: string | null
-        }
-        Relationships: []
-      }
-      _ingcost_backup_a2fix: {
-        Row: {
-          id: number | null
-          unit_cost: number | null
-        }
-        Insert: {
-          id?: number | null
-          unit_cost?: number | null
-        }
-        Update: {
-          id?: number | null
-          unit_cost?: number | null
-        }
-        Relationships: []
-      }
-      _ingthr_backup_a2fix: {
-        Row: {
-          id: number | null
-          max_stock_level: number | null
-          min_stock_level: number | null
-          reorder_point: number | null
-        }
-        Insert: {
-          id?: number | null
-          max_stock_level?: number | null
-          min_stock_level?: number | null
-          reorder_point?: number | null
-        }
-        Update: {
-          id?: number | null
-          max_stock_level?: number | null
-          min_stock_level?: number | null
-          reorder_point?: number | null
-        }
-        Relationships: []
-      }
-      _iu_backup_a2fix: {
-        Row: {
-          allow_issue: boolean | null
-          allow_production: boolean | null
-          allow_purchase: boolean | null
-          anchor_factor: number | null
-          anchor_unit_id: number | null
-          created_at: string | null
-          id: number | null
-          ingredient_id: number | null
-          is_active: boolean | null
-          is_base: boolean | null
-          sort_order: number | null
-          tenant_id: number | null
-          to_base_factor: number | null
-          unit_id: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          allow_issue?: boolean | null
-          allow_production?: boolean | null
-          allow_purchase?: boolean | null
-          anchor_factor?: number | null
-          anchor_unit_id?: number | null
-          created_at?: string | null
-          id?: number | null
-          ingredient_id?: number | null
-          is_active?: boolean | null
-          is_base?: boolean | null
-          sort_order?: number | null
-          tenant_id?: number | null
-          to_base_factor?: number | null
-          unit_id?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          allow_issue?: boolean | null
-          allow_production?: boolean | null
-          allow_purchase?: boolean | null
-          anchor_factor?: number | null
-          anchor_unit_id?: number | null
-          created_at?: string | null
-          id?: number | null
-          ingredient_id?: number | null
-          is_active?: boolean | null
-          is_base?: boolean | null
-          sort_order?: number | null
-          tenant_id?: number | null
-          to_base_factor?: number | null
-          unit_id?: number | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      _sl_backup_a2fix: {
-        Row: {
-          avg_unit_cost: number | null
-          branch_id: number | null
-          current_quantity: number | null
-          id: number | null
-          ingredient_id: number | null
-          last_counted_at: string | null
-          location_id: number | null
-          tenant_id: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          avg_unit_cost?: number | null
-          branch_id?: number | null
-          current_quantity?: number | null
-          id?: number | null
-          ingredient_id?: number | null
-          last_counted_at?: string | null
-          location_id?: number | null
-          tenant_id?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          avg_unit_cost?: number | null
-          branch_id?: number | null
-          current_quantity?: number | null
-          id?: number | null
-          ingredient_id?: number | null
-          last_counted_at?: string | null
-          location_id?: number | null
-          tenant_id?: number | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      _sm_backup_a2fix: {
-        Row: {
-          branch_id: number | null
-          created_at: string | null
-          created_by: string | null
-          entry_quantity: number | null
-          entry_unit_id: number | null
-          grn_id: number | null
-          id: number | null
-          ingredient_id: number | null
-          issue_id: number | null
-          location_id: number | null
-          movement_subtype: string | null
-          order_id: number | null
-          production_order_id: number | null
-          quantity_change: number | null
-          reason: string | null
-          tenant_id: number | null
-          transfer_id: number | null
-          type: string | null
-          unit_cost: number | null
-        }
-        Insert: {
-          branch_id?: number | null
-          created_at?: string | null
-          created_by?: string | null
-          entry_quantity?: number | null
-          entry_unit_id?: number | null
-          grn_id?: number | null
-          id?: number | null
-          ingredient_id?: number | null
-          issue_id?: number | null
-          location_id?: number | null
-          movement_subtype?: string | null
-          order_id?: number | null
-          production_order_id?: number | null
-          quantity_change?: number | null
-          reason?: string | null
-          tenant_id?: number | null
-          transfer_id?: number | null
-          type?: string | null
-          unit_cost?: number | null
-        }
-        Update: {
-          branch_id?: number | null
-          created_at?: string | null
-          created_by?: string | null
-          entry_quantity?: number | null
-          entry_unit_id?: number | null
-          grn_id?: number | null
-          id?: number | null
-          ingredient_id?: number | null
-          issue_id?: number | null
-          location_id?: number | null
-          movement_subtype?: string | null
-          order_id?: number | null
-          production_order_id?: number | null
-          quantity_change?: number | null
-          reason?: string | null
-          tenant_id?: number | null
-          transfer_id?: number | null
-          type?: string | null
-          unit_cost?: number | null
-        }
-        Relationships: []
-      }
       accounting_periods: {
         Row: {
           closed_by: string | null
@@ -505,6 +289,7 @@ export type Database = {
         Row: {
           created_at: string
           default_item_id: number | null
+          entry_unit_id: number
           id: number
           ingredient_id: number
           note: string | null
@@ -517,6 +302,7 @@ export type Database = {
         Insert: {
           created_at?: string
           default_item_id?: number | null
+          entry_unit_id: number
           id?: never
           ingredient_id: number
           note?: string | null
@@ -529,6 +315,7 @@ export type Database = {
         Update: {
           created_at?: string
           default_item_id?: number | null
+          entry_unit_id?: number
           id?: never
           ingredient_id?: number
           note?: string | null
@@ -545,6 +332,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "shift_checklist_consumption_default_items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_consumption_report_lines_entry_unit_tenant_fkey"
+            columns: ["entry_unit_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id", "tenant_id"]
           },
           {
             foreignKeyName: "attendance_consumption_report_lines_ingredient_id_fkey"
@@ -839,6 +633,55 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_transaction_expense_matches: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expense_id: number
+          id: number
+          tenant_id: number
+          webhook_event_id: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expense_id: number
+          id?: never
+          tenant_id: number
+          webhook_event_id: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expense_id?: number
+          id?: never
+          tenant_id?: number
+          webhook_event_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_transaction_expense_matches_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transaction_expense_matches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transaction_expense_matches_webhook_event_id_fkey"
+            columns: ["webhook_event_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_events"
             referencedColumns: ["id"]
           },
         ]
@@ -2427,6 +2270,7 @@ export type Database = {
           ingredient_id: number
           is_active: boolean
           location_id: number
+          shift_id: number | null
           tenant_id: number
           updated_at: string
         }
@@ -2439,6 +2283,7 @@ export type Database = {
           ingredient_id: number
           is_active?: boolean
           location_id: number
+          shift_id?: number | null
           tenant_id: number
           updated_at?: string
         }
@@ -2451,6 +2296,7 @@ export type Database = {
           ingredient_id?: number
           is_active?: boolean
           location_id?: number
+          shift_id?: number | null
           tenant_id?: number
           updated_at?: string
         }
@@ -2488,6 +2334,13 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_assignments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
             referencedColumns: ["id"]
           },
           {
@@ -2576,6 +2429,7 @@ export type Database = {
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          shift_id: number | null
           status: string
           submitted_at: string | null
           submitted_by: string | null
@@ -2593,6 +2447,7 @@ export type Database = {
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          shift_id?: number | null
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -2610,6 +2465,7 @@ export type Database = {
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          shift_id?: number | null
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -2643,6 +2499,13 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_slips_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
             referencedColumns: ["id"]
           },
           {
@@ -5313,7 +5176,7 @@ export type Database = {
       production_recipes: {
         Row: {
           created_at: string
-          entry_unit_id: number | null
+          entry_unit_id: number
           finished_good_id: number
           id: number
           ingredient_id: number
@@ -5325,7 +5188,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          entry_unit_id?: number | null
+          entry_unit_id: number
           finished_good_id: number
           id?: never
           ingredient_id: number
@@ -5337,7 +5200,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          entry_unit_id?: number | null
+          entry_unit_id?: number
           finished_good_id?: number
           id?: never
           ingredient_id?: number
@@ -5385,7 +5248,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           created_by: string | null
-          entry_unit_id: number | null
+          entry_unit_id: number
           finished_good_id: number
           id: number
           ingredients_override: Json | null
@@ -5404,7 +5267,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
-          entry_unit_id?: number | null
+          entry_unit_id: number
           finished_good_id: number
           id?: never
           ingredients_override?: Json | null
@@ -5423,7 +5286,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
-          entry_unit_id?: number | null
+          entry_unit_id?: number
           finished_good_id?: number
           id?: never
           ingredients_override?: Json | null
@@ -5498,6 +5361,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          birth_date: string | null
           branch_id: number | null
           created_at: string | null
           full_name: string
@@ -5510,6 +5374,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          birth_date?: string | null
           branch_id?: number | null
           created_at?: string | null
           full_name: string
@@ -5522,6 +5387,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          birth_date?: string | null
           branch_id?: number | null
           created_at?: string | null
           full_name?: string
@@ -5990,6 +5856,327 @@ export type Database = {
           },
         ]
       }
+      self_order_batches: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          branch_id: number
+          cart_payload: Json
+          client_op_id: string
+          created_at: string
+          customer_note: string | null
+          failure_reason: string | null
+          id: number
+          order_id: number | null
+          rejected_at: string | null
+          rejected_by: string | null
+          session_id: number
+          status: string
+          table_id: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          branch_id: number
+          cart_payload: Json
+          client_op_id: string
+          created_at?: string
+          customer_note?: string | null
+          failure_reason?: string | null
+          id?: never
+          order_id?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          session_id: number
+          status?: string
+          table_id: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          branch_id?: number
+          cart_payload?: Json
+          client_op_id?: string
+          created_at?: string
+          customer_note?: string | null
+          failure_reason?: string | null
+          id?: never
+          order_id?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          session_id?: number
+          status?: string
+          table_id?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "self_order_batches_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_batches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_batches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "self_order_batches_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_batches_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_batches_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "self_order_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_batches_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_batches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      self_order_payment_requests: {
+        Row: {
+          amount_snapshot: number
+          branch_id: number
+          cancelled_at: string | null
+          client_op_id: string
+          completed_at: string | null
+          created_at: string
+          expires_at: string | null
+          id: number
+          invoice_payload: Json
+          method: string
+          order_id: number
+          payment_id: number | null
+          session_id: number
+          status: string
+          table_id: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          amount_snapshot: number
+          branch_id: number
+          cancelled_at?: string | null
+          client_op_id: string
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: never
+          invoice_payload?: Json
+          method: string
+          order_id: number
+          payment_id?: number | null
+          session_id: number
+          status: string
+          table_id: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          amount_snapshot?: number
+          branch_id?: number
+          cancelled_at?: string | null
+          client_op_id?: string
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: never
+          invoice_payload?: Json
+          method?: string
+          order_id?: number
+          payment_id?: number | null
+          session_id?: number
+          status?: string
+          table_id?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "self_order_payment_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_payment_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "self_order_payment_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_payment_requests_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_payment_requests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "self_order_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_payment_requests_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_payment_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      self_order_sessions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          branch_id: number
+          close_reason: string | null
+          closed_at: string | null
+          created_at: string
+          id: number
+          order_id: number | null
+          status: string
+          table_id: number
+          tenant_id: number
+          token_rotated_at_snapshot: string | null
+          token_snapshot: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id: number
+          close_reason?: string | null
+          closed_at?: string | null
+          created_at?: string
+          id?: never
+          order_id?: number | null
+          status?: string
+          table_id: number
+          tenant_id: number
+          token_rotated_at_snapshot?: string | null
+          token_snapshot: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: number
+          close_reason?: string | null
+          closed_at?: string | null
+          created_at?: string
+          id?: never
+          order_id?: number | null
+          status?: string
+          table_id?: number
+          tenant_id?: number
+          token_rotated_at_snapshot?: string | null
+          token_snapshot?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "self_order_sessions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_sessions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_sessions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "self_order_sessions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_sessions_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_checklist_consumption_default_items: {
         Row: {
           created_at: string
@@ -6315,7 +6502,7 @@ export type Database = {
       stock_issue_items: {
         Row: {
           approval_required: boolean
-          entry_unit_id: number | null
+          entry_unit_id: number
           id: number
           ingredient_id: number
           issue_id: number
@@ -6333,7 +6520,7 @@ export type Database = {
         }
         Insert: {
           approval_required?: boolean
-          entry_unit_id?: number | null
+          entry_unit_id: number
           id?: never
           ingredient_id: number
           issue_id: number
@@ -6351,7 +6538,7 @@ export type Database = {
         }
         Update: {
           approval_required?: boolean
-          entry_unit_id?: number | null
+          entry_unit_id?: number
           id?: never
           ingredient_id?: number
           issue_id?: number
@@ -6578,7 +6765,7 @@ export type Database = {
           created_at: string
           created_by: string
           entry_quantity: number | null
-          entry_unit_id: number | null
+          entry_unit_id: number
           grn_id: number | null
           id: number
           ingredient_id: number
@@ -6600,7 +6787,7 @@ export type Database = {
           created_at?: string
           created_by: string
           entry_quantity?: number | null
-          entry_unit_id?: number | null
+          entry_unit_id: number
           grn_id?: number | null
           id?: never
           ingredient_id: number
@@ -6622,7 +6809,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           entry_quantity?: number | null
-          entry_unit_id?: number | null
+          entry_unit_id?: number
           grn_id?: number | null
           id?: never
           ingredient_id?: number
@@ -6735,7 +6922,7 @@ export type Database = {
       }
       stock_transfer_items: {
         Row: {
-          entry_unit_id: number | null
+          entry_unit_id: number
           id: number
           ingredient_id: number
           quantity: number
@@ -6746,7 +6933,7 @@ export type Database = {
           unit_cost_at_ship: number | null
         }
         Insert: {
-          entry_unit_id?: number | null
+          entry_unit_id: number
           id?: never
           ingredient_id: number
           quantity: number
@@ -6757,7 +6944,7 @@ export type Database = {
           unit_cost_at_ship?: number | null
         }
         Update: {
-          entry_unit_id?: number | null
+          entry_unit_id?: number
           id?: never
           ingredient_id?: number
           quantity?: number
@@ -7025,7 +7212,7 @@ export type Database = {
           counted_by: string | null
           counted_quantity: number | null
           created_at: string
-          entry_unit_id: number | null
+          entry_unit_id: number
           id: number
           ingredient_id: number
           is_final: boolean
@@ -7045,7 +7232,7 @@ export type Database = {
           counted_by?: string | null
           counted_quantity?: number | null
           created_at?: string
-          entry_unit_id?: number | null
+          entry_unit_id: number
           id?: never
           ingredient_id: number
           is_final?: boolean
@@ -7065,7 +7252,7 @@ export type Database = {
           counted_by?: string | null
           counted_quantity?: number | null
           created_at?: string
-          entry_unit_id?: number | null
+          entry_unit_id?: number
           id?: never
           ingredient_id?: number
           is_final?: boolean
@@ -7762,6 +7949,7 @@ export type Database = {
       }
       supplier_return_items: {
         Row: {
+          entry_unit_id: number
           grn_item_id: number | null
           id: number
           ingredient_id: number
@@ -7775,6 +7963,7 @@ export type Database = {
           unit_cost: number
         }
         Insert: {
+          entry_unit_id: number
           grn_item_id?: number | null
           id?: never
           ingredient_id: number
@@ -7788,6 +7977,7 @@ export type Database = {
           unit_cost: number
         }
         Update: {
+          entry_unit_id?: number
           grn_item_id?: number | null
           id?: never
           ingredient_id?: number
@@ -7801,6 +7991,13 @@ export type Database = {
           unit_cost?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "supplier_return_items_entry_unit_tenant_fkey"
+            columns: ["entry_unit_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id", "tenant_id"]
+          },
           {
             foreignKeyName: "supplier_return_items_grn_item_id_fkey"
             columns: ["grn_item_id"]
@@ -8039,6 +8236,9 @@ export type Database = {
           created_at: string
           id: number
           number: number
+          self_order_enabled: boolean
+          self_order_token: string | null
+          self_order_token_rotated_at: string | null
           status: string
           tenant_id: number
           updated_at: string
@@ -8050,6 +8250,9 @@ export type Database = {
           created_at?: string
           id?: never
           number: number
+          self_order_enabled?: boolean
+          self_order_token?: string | null
+          self_order_token_rotated_at?: string | null
           status?: string
           tenant_id: number
           updated_at?: string
@@ -8061,6 +8264,9 @@ export type Database = {
           created_at?: string
           id?: never
           number?: number
+          self_order_enabled?: boolean
+          self_order_token?: string | null
+          self_order_token_rotated_at?: string | null
           status?: string
           tenant_id?: number
           updated_at?: string
@@ -9308,29 +9514,18 @@ export type Database = {
         }
         Returns: Json
       }
-      create_production_run:
-        | {
-            Args: {
-              p_branch_id: number
-              p_entry_unit_id: number
-              p_finished_good_id: number
-              p_notes?: string
-              p_planned_quantity: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_branch_id: number
-              p_entry_unit_id: number
-              p_finished_good_id: number
-              p_ingredients_override?: Json
-              p_notes?: string
-              p_planned_quantity: number
-              p_target_branch_id?: number
-            }
-            Returns: Json
-          }
+      create_production_run: {
+        Args: {
+          p_branch_id: number
+          p_entry_unit_id: number
+          p_finished_good_id: number
+          p_ingredients_override?: Json
+          p_notes?: string
+          p_planned_quantity: number
+          p_target_branch_id?: number
+        }
+        Returns: Json
+      }
       create_purchase_order_with_lines: {
         Args: {
           p_branch_id: number
@@ -10006,6 +10201,10 @@ export type Database = {
         Returns: Json
       }
       mark_order_item_served: { Args: { p_item_id: number }; Returns: Json }
+      match_sepay_transaction_expenses: {
+        Args: { p_event_id: number; p_expense_ids: number[] }
+        Returns: Json
+      }
       materialize_print_document: {
         Args: {
           p_content: Json
@@ -10076,6 +10275,10 @@ export type Database = {
         Returns: Json
       }
       post_pos_sale_consumption_if_ready: {
+        Args: { p_actor_id?: string; p_order_id: number }
+        Returns: Json
+      }
+      post_pos_sale_refund_restore: {
         Args: { p_actor_id?: string; p_order_id: number }
         Returns: Json
       }
@@ -10366,6 +10569,81 @@ export type Database = {
           low_stock_count: number
         }[]
       }
+      self_order_active_payment_lock: {
+        Args: { p_order_id: number }
+        Returns: number
+      }
+      self_order_append_active_batch: {
+        Args: {
+          p_batch_id: number
+          p_client_op_id: string
+          p_items: Json
+          p_session_id: number
+        }
+        Returns: Json
+      }
+      self_order_approve_batch: {
+        Args: {
+          p_batch_id: number
+          p_idempotency_key?: string
+          p_pos_session_id?: number
+          p_target_order_id?: number
+        }
+        Returns: Json
+      }
+      self_order_branch_has_open_pos_session: {
+        Args: { p_branch_id: number; p_tenant_id: number }
+        Returns: boolean
+      }
+      self_order_cancel_pending_payment_and_add: {
+        Args: {
+          p_client_op_id: string
+          p_customer_note?: string
+          p_items: Json
+          p_token: string
+        }
+        Returns: Json
+      }
+      self_order_canonicalize_cart: {
+        Args: { p_items: Json; p_tenant_id: number }
+        Returns: Json
+      }
+      self_order_create_payment_request: {
+        Args: {
+          p_client_op_id: string
+          p_invoice_payload?: Json
+          p_method: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      self_order_get_snapshot: { Args: { p_token: string }; Returns: Json }
+      self_order_list_staff_queue: {
+        Args: { p_branch_id: number }
+        Returns: Json
+      }
+      self_order_menu_payload: { Args: { p_tenant_id: number }; Returns: Json }
+      self_order_normalize_invoice_payload: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
+      self_order_reject_batch: {
+        Args: { p_batch_id: number; p_reason?: string }
+        Returns: Json
+      }
+      self_order_set_actor_claims: {
+        Args: { p_actor: string; p_tenant_id: number }
+        Returns: undefined
+      }
+      self_order_submit_batch: {
+        Args: {
+          p_client_op_id: string
+          p_customer_note?: string
+          p_items: Json
+          p_token: string
+        }
+        Returns: Json
+      }
       set_branch_kind: {
         Args: { p_branch_id: number; p_kind?: string }
         Returns: undefined
@@ -10393,6 +10671,7 @@ export type Database = {
           p_employee_id: number
           p_ingredient_ids: number[]
           p_location_id: number
+          p_shift_id?: number
         }
         Returns: Json
       }
@@ -10433,6 +10712,18 @@ export type Database = {
         }
         Returns: Json
       }
+      stock_ledger_reconciliation: {
+        Args: { p_branch_id: number; p_location_id?: number }
+        Returns: {
+          drift: number
+          drift_pct: number
+          ingredient_id: number
+          ingredient_name: string
+          ledger_sum: number
+          location_id: number
+          stock_levels_qty: number
+        }[]
+      }
       stock_transfer_confirm_receive: {
         Args: { p_transfer_id: number }
         Returns: Json
@@ -10463,7 +10754,12 @@ export type Database = {
         Returns: Json
       }
       submit_inventory_count_slip: {
-        Args: { p_branch_id: number; p_lines: Json; p_location_id: number }
+        Args: {
+          p_branch_id: number
+          p_lines: Json
+          p_location_id: number
+          p_shift_id?: number
+        }
         Returns: number
       }
       submit_leave_request: {
@@ -10548,7 +10844,12 @@ export type Database = {
         Returns: undefined
       }
       update_my_profile: {
-        Args: { p_avatar_url?: string; p_full_name?: string; p_phone?: string }
+        Args: {
+          p_avatar_url?: string
+          p_birth_date?: string
+          p_full_name?: string
+          p_phone?: string
+        }
         Returns: undefined
       }
       update_pos_order_status: {

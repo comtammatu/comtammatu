@@ -7,6 +7,7 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import { Kbd, KbdGroup } from "@comtammatu/ui/components/kbd";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { POS_VI } from "@comtammatu/shared/messages";
 
@@ -66,9 +67,9 @@ export function HotkeyOverlay({ open, onOpenChange }: HotkeyOverlayProps) {
             <div className="grid gap-6 md:grid-cols-2">
               {GROUPS.map((group, idx) => (
                 <div key={group.title} className="flex flex-col gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  <SectionLabel>
                     {group.title}
-                  </p>
+                  </SectionLabel>
                   <ul className="flex flex-col gap-2">
                     {group.rows.map((row) => (
                       <li

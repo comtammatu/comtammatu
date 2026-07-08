@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { messages } from "@lib/messages";
-import { Combobox } from "@/components/form";
+import { Combobox } from "@/components/form/combobox";
 import {
   createSupplierReturnFromGrn,
   type ReturnableGrnRow,

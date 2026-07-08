@@ -118,10 +118,6 @@ export const INVENTORY_VI = {
   supplierSearchPlaceholder: "Tìm hoặc thêm nhà cung cấp",
   supplierNotFound: "Không tìm thấy nhà cung cấp",
   grnReviewLinesHint: "Kiểm từng dòng — chạm để sửa",
-  grnReviewSummary: (count: number, rejected: number) =>
-    rejected > 0
-      ? `${count} mặt hàng · ${rejected} từ chối`
-      : `${count} mặt hàng`,
   productionOperatorDraftsTitle: "Lệnh nháp",
   productionOperatorDoneTodayTitle: "Hoàn tất hôm nay",
   productionOperatorCreateTitle: "Tạo lệnh sản xuất",
@@ -133,7 +129,6 @@ export const INVENTORY_VI = {
   productionConfirmPrompt: (code: string) =>
     `Xác nhận lệnh ${code}? Kho sẽ trừ nguyên liệu và nhập thành phẩm.`,
   productionCancelPrompt: (code: string) => `Hủy lệnh ${code}?`,
-  noPoNeededHint: "Không cần đơn đặt hàng (PO)",
   grnCreateSupplierInline: (name: string) => `Tạo NCC "${name}"`,
   grnCreateSupplierPending: "Đang tạo nhà cung cấp…",
   grnCreateSupplierFailed: "Không thể tạo nhà cung cấp.",
@@ -417,6 +412,8 @@ export const INVENTORY_VI = {
   countAssignAllAssigned: "Tất cả nhân viên đang có phân công.",
   selectEmployeePlaceholder: "Chọn nhân viên",
   countAssignNoFinishedGoods: "Chưa có hàng đang hoạt động để phân công.",
+  countAssignSearchPlaceholder: "Tìm món hoặc đơn vị...",
+  countAssignNoIngredientMatches: "Không tìm thấy mặt hàng phù hợp.",
   countAssignChecklistTitle: "Danh sách hàng kiểm kê",
   selectedRatio: (selected: number, total: number) =>
     `${selected}/${total} đã chọn`,

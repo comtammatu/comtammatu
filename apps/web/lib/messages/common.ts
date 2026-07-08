@@ -5,6 +5,8 @@ export const common = {
   admin: "Quản trị",
   signOut: ACTIONS_VI.signOut,
   skipNavigation: "Bỏ qua điều hướng",
+  themeToggleToLight: "Chế độ ngày",
+  themeToggleToNight: "Chế độ tối",
   errorFallback: ERRORS_VI.fallback,
   saved: STATES_VI.saved,
   created: STATES_VI.created,

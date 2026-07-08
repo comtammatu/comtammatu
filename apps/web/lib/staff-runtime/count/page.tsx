@@ -2,8 +2,10 @@ import type { ReactNode } from "react";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getVNDateString } from "@comtammatu/shared/time";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { BranchOpsRefresh } from "@/_components/branch-ops-refresh";
 import { messages } from "@lib/messages";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
+import { resolveDefaultShiftId } from "../_lib/default-shift";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
@@ -51,8 +53,10 @@ interface AssignmentUnitRow {
 }
 
 interface AssignmentRow {
+  employee_id: number;
   ingredient_id: number;
   location_id: number;
+  shift_id: number | null;
   ingredients: {
     name: string;
     ingredient_units: AssignmentUnitRow[] | null;
@@ -77,6 +81,41 @@ interface SlipLineRow {
   note: string | null;
 }
 
+function assignmentCellKey(row: {
+  location_id: number;
+  ingredient_id: number;
+}) {
+  return `${row.location_id}:${row.ingredient_id}`;
+}
+
+async function resolveCurrentCountShiftId(
+  supabase: SupabaseClient,
+  tenantId: number,
+  branchId: number,
+  employeeId: number,
+  today: string,
+): Promise<number | null> {
+  const { data: activeShifts } = await supabase
+    .from("shifts")
+    .select("id, start_time, end_time")
+    .eq("tenant_id", tenantId)
+    .or(`branch_id.is.null,branch_id.eq.${branchId}`)
+    .eq("is_active", true)
+    .order("start_time");
+  const { data: todayRecords } = await supabase
+    .from("attendance_records")
+    .select("shift_id, check_out")
+    .eq("tenant_id", tenantId)
+    .eq("employee_id", employeeId)
+    .eq("date", today);
+  const completedShiftIds = new Set(
+    (todayRecords ?? [])
+      .filter((record) => record.check_out)
+      .map((record) => record.shift_id),
+  );
+  return resolveDefaultShiftId(activeShifts ?? [], undefined, completedShiftIds);
+}
+
 interface EmployeeCountSurfaceProps {
   searchParams: Promise<{ location?: string }>;
   routeBranchId?: number;
@@ -94,12 +133,14 @@ async function buildEmployeeCountSurface({
   baseHref,
   profileHref,
 }: EmployeeCountSurfaceProps): Promise<{
+  branchId: number | null;
   branchName: string | null;
   content: ReactNode;
 }> {
   const ctx = await getEmployeeContext();
   if (!ctx) {
     return {
+      branchId: null,
       branchName: null,
       content: <EmployeeMissingProfileEmpty profileHref={profileHref} />,
     };
@@ -114,6 +155,7 @@ async function buildEmployeeCountSurface({
 
   if (!branchId) {
     return {
+      branchId: null,
       branchName: null,
       content: (
         <EmployeeMissingProfileEmpty
@@ -126,20 +168,52 @@ async function buildEmployeeCountSurface({
   }
 
   const countReadClient = createServiceClient();
-  const { data: assignmentData } = await countReadClient
+  const today = getVNDateString();
+  const currentShiftId = await resolveCurrentCountShiftId(
+    supabase,
+    claims.tenant_id,
+    branchId,
+    employeeId,
+    today,
+  );
+  let assignmentQuery = countReadClient
     .from("inventory_count_assignments")
     .select(
-      "ingredient_id, location_id, ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey ( unit_id, is_base, sort_order, to_base_factor, units!ingredient_units_unit_tenant_fkey ( code, name ) ) )",
+      "employee_id, ingredient_id, location_id, shift_id, ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey ( unit_id, is_base, sort_order, to_base_factor, units!ingredient_units_unit_tenant_fkey ( code, name ) ) )",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("employee_id", employeeId)
     .eq("branch_id", branchId)
     .eq("is_active", true);
+  assignmentQuery =
+    currentShiftId === null
+      ? assignmentQuery.is("shift_id", null)
+      : assignmentQuery.or(`shift_id.is.null,shift_id.eq.${currentShiftId}`);
+  const { data: assignmentData } = await assignmentQuery;
 
-  const assignmentRows = (assignmentData ?? []) as unknown as AssignmentRow[];
+  const shiftSpecificCells = new Set<string>();
+  if (currentShiftId !== null) {
+    const { data: shiftSpecificAssignments } = await countReadClient
+      .from("inventory_count_assignments")
+      .select("location_id, ingredient_id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("shift_id", currentShiftId)
+      .eq("is_active", true);
+    for (const row of shiftSpecificAssignments ?? []) {
+      shiftSpecificCells.add(assignmentCellKey(row));
+    }
+  }
+
+  const assignmentRows = ((assignmentData ?? []) as unknown as AssignmentRow[])
+    .filter(
+      (row) =>
+        row.shift_id !== null || !shiftSpecificCells.has(assignmentCellKey(row)),
+    );
 
   if (assignmentRows.length === 0) {
     return {
+      branchId,
       branchName,
       content: (
         <EmployeeMissingProfileEmpty
@@ -201,15 +275,18 @@ async function buildEmployeeCountSurface({
     groups.find((group) => group.locationId === parsedLocation)?.locationId ??
     (groups.length === 1 ? groups[0]!.locationId : null);
 
-  const today = getVNDateString();
-
-  const { data: slipData } = await supabase
+  let slipQuery = supabase
     .from("inventory_count_slips")
     .select("id, location_id, status")
     .eq("tenant_id", claims.tenant_id)
     .eq("employee_id", employeeId)
     .eq("branch_id", branchId)
     .eq("count_date", today);
+  slipQuery =
+    currentShiftId === null
+      ? slipQuery.is("shift_id", null)
+      : slipQuery.eq("shift_id", currentShiftId);
+  const { data: slipData } = await slipQuery;
 
   const slipRows = (slipData ?? []) as SlipRow[];
   const slipByLocation = new Map<number, CountSlipHeader>(
@@ -233,13 +310,18 @@ async function buildEmployeeCountSurface({
 
   // review_note is read separately so the column list stays explicit.
   if (slipRows.length > 0) {
-    const { data: reviewData } = await supabase
+    let reviewQuery = supabase
       .from("inventory_count_slips")
       .select("id, review_note")
       .eq("tenant_id", claims.tenant_id)
       .eq("employee_id", employeeId)
       .eq("branch_id", branchId)
       .eq("count_date", today);
+    reviewQuery =
+      currentShiftId === null
+        ? reviewQuery.is("shift_id", null)
+        : reviewQuery.eq("shift_id", currentShiftId);
+    const { data: reviewData } = await reviewQuery;
     const reviewById = new Map(
       (
         (reviewData ?? []) as Array<{ id: number; review_note: string | null }>
@@ -278,10 +360,12 @@ async function buildEmployeeCountSurface({
   }
 
   return {
+    branchId,
     branchName,
     content: (
       <CountSlipClient
         branchId={branchId}
+        shiftId={currentShiftId}
         baseHref={
           baseHref ?? (routeBranchId ? `/br/${branchId}/stock/count` : "/br")
         }
@@ -305,7 +389,8 @@ export async function EmployeeCountPageContent({
   hideHeaderOnMobile,
   ...props
 }: EmployeeCountPageContentProps) {
-  const { branchName, content } = await buildEmployeeCountSurface(props);
+  const { branchId, branchName, content } =
+    await buildEmployeeCountSurface(props);
 
   return (
     <EmployeePage
@@ -313,6 +398,7 @@ export async function EmployeeCountPageContent({
       description={branchName ?? undefined}
       hideHeaderOnMobile={hideHeaderOnMobile}
     >
+      {branchId !== null ? <BranchOpsRefresh branchId={branchId} /> : null}
       {content}
     </EmployeePage>
   );

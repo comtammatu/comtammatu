@@ -23,6 +23,7 @@ import { useGrnLines } from "@/(protected)/inventory/grn/[id]/_hooks/use-grn-lin
 import { useGrnLineActions } from "@/(protected)/inventory/grn/[id]/_hooks/use-grn-line-actions";
 import { grnCopy } from "@/(protected)/inventory/grn/[id]/views/grn-detail-types";
 import { AddGrnLineDialog } from "@/(protected)/inventory/grn/[id]/views/add-grn-line-dialog";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { LineRow } from "@/(protected)/inventory/grn/[id]/views/grn-line-row";
 import type { GRNDetail } from "@/(protected)/inventory/grn/[id]/views/grn-detail-types";
 
@@ -87,16 +88,16 @@ export function GrnReviewOperatorClient({
       </p>
 
       <OperatorFlowSteps
-        title={operatorFlow.grnListTitle}
-        description={operatorFlow.grnListDescription}
+        title={grnCopy.inspectionItemsTitle}
+        description={grnCopy.draftSavedReviewHint}
         steps={operatorFlow.grnSteps}
         currentStep={reviewStep}
       />
 
       <div className="flex items-center justify-between gap-2 px-1">
-        <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+        <SectionLabel density="dense">
           {INVENTORY_VI.grnReviewLinesHint}
-        </p>
+        </SectionLabel>
         <Button
           type="button"
           variant="outline"
@@ -125,10 +126,6 @@ export function GrnReviewOperatorClient({
           />
         ))}
       </ItemGroup>
-
-      <p className="px-1 text-xs text-muted-foreground">
-        {INVENTORY_VI.grnReviewSummary(lines.length, stats.rejectedLines)}
-      </p>
 
       <AppDetailFooter
         sticky

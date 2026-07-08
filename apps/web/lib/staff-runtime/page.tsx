@@ -9,7 +9,6 @@ import {
   ListChecks as IconListChecks,
   LogOut as IconLogout,
   UserCircle as IconUserCircle,
-  Users as IconUsers,
 } from "lucide-react";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
@@ -24,6 +23,7 @@ import {
   ItemActions,
 } from "@comtammatu/ui/components/item";
 import { loadAuthState } from "@/_lib/auth";
+import { BranchOpsRefresh } from "@/_components/branch-ops-refresh";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
 import { messages } from "@lib/messages";
 import {
@@ -46,6 +46,13 @@ import { EmployeeCountPanelContent } from "./count/page";
 
 const copy = messages.employee.home;
 
+function assignmentCellKey(row: {
+  location_id: number;
+  ingredient_id: number;
+}) {
+  return `${row.location_id}:${row.ingredient_id}`;
+}
+
 // Must mirror CHECKOUT_APPROVER_ROLES in checkout-approvals/page.tsx —
 // the card and its destination route gate on the same set.
 const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
@@ -61,11 +68,7 @@ export type EmployeeHomeRoutes = {
   checkoutApprovals: string;
   count: string;
   wasteApprovals: string;
-  leaveApprovals?: string;
-  countSlips?: string;
-  countAssignments?: string;
   team?: string;
-  hr?: string;
 };
 
 const DEFAULT_HOME_ROUTES: EmployeeHomeRoutes = {
@@ -263,56 +266,30 @@ export async function EmployeeHomePageContent({
     }
   }
 
-  let pendingLeaveRequests = 0;
   let pendingCountSlips = 0;
   if (claims.user_role === "branch_manager" || claims.user_role === "owner") {
     const service = createServiceClient();
     const branchIdFilter = claims.branch_id ?? -1;
 
-    const [leavePermissionResult, countPermissionResult] = await Promise.all([
+    const countPermissionResult =
       typeof claims.branch_id === "number"
-        ? supabase.rpc("has_permission", {
-            p_branch_id: claims.branch_id,
-            p_key: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
-          })
-        : supabase.rpc("has_permission_any", {
-            p_key: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
-          }),
-      typeof claims.branch_id === "number"
-        ? supabase.rpc("has_permission", {
+        ? await supabase.rpc("has_permission", {
             p_branch_id: claims.branch_id,
             p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
           })
-        : supabase.rpc("has_permission_any", {
+        : await supabase.rpc("has_permission_any", {
             p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-          }),
-    ]);
+          });
 
-    const leavePromise = leavePermissionResult.data === true
-      ? service
-          .from("leave_requests")
-          .select("id", { count: "exact", head: true })
-          .eq("tenant_id", claims.tenant_id)
-          .eq("branch_id", branchIdFilter)
-          .eq("status", "pending")
-      : Promise.resolve(null);
-
-    const countPromise = countPermissionResult.data === true
-      ? service
-          .from("inventory_count_slips")
-          .select("id", { count: "exact", head: true })
-          .eq("tenant_id", claims.tenant_id)
-          .eq("branch_id", branchIdFilter)
-          .eq("status", "submitted")
-      : Promise.resolve(null);
-
-    const [leaveCountResult, countCountResult] = await Promise.all([
-      leavePromise,
-      countPromise,
-    ]);
-
-    if (leaveCountResult) pendingLeaveRequests = leaveCountResult.count ?? 0;
-    if (countCountResult) pendingCountSlips = countCountResult.count ?? 0;
+    if (countPermissionResult.data === true) {
+      const countCountResult = await service
+        .from("inventory_count_slips")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", branchIdFilter)
+        .eq("status", "submitted");
+      pendingCountSlips = countCountResult.count ?? 0;
+    }
   }
 
   // Surface the count-slip task only when this employee actually has active
@@ -320,21 +297,52 @@ export async function EmployeeHomePageContent({
   // (a manager who can read branch-wide assignments still only sees their own).
   let countAssignmentCount = 0;
   if (session?.user?.id) {
-    const { count } = await supabase
+    const service = createServiceClient();
+    const currentShiftId =
+      state.todayShifts.find((shift) => shift.isCurrent)?.shiftId ?? null;
+    const countBranchId = state.attendance?.branchId ?? state.branchId;
+    let countAssignmentQuery = service
       .from("inventory_count_assignments")
-      .select("id, employees!inner(profile_id)", { count: "exact", head: true })
+      .select(
+        "location_id, ingredient_id, shift_id, employees!inner(profile_id)",
+      )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .eq("employees.profile_id", session.user.id);
-    countAssignmentCount = count ?? 0;
+    if (countBranchId !== null) {
+      countAssignmentQuery = countAssignmentQuery.eq(
+        "branch_id",
+        countBranchId,
+      );
+    }
+    countAssignmentQuery =
+      currentShiftId === null
+        ? countAssignmentQuery.is("shift_id", null)
+        : countAssignmentQuery.or(
+            `shift_id.is.null,shift_id.eq.${currentShiftId}`,
+          );
+    const { data: countAssignments } = await countAssignmentQuery;
+    const shiftSpecificCells = new Set<string>();
+    if (currentShiftId !== null && countBranchId !== null) {
+      const { data: shiftSpecificAssignments } = await service
+        .from("inventory_count_assignments")
+        .select("location_id, ingredient_id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", countBranchId)
+        .eq("shift_id", currentShiftId)
+        .eq("is_active", true);
+      for (const row of shiftSpecificAssignments ?? []) {
+        shiftSpecificCells.add(assignmentCellKey(row));
+      }
+    }
+    countAssignmentCount = (countAssignments ?? []).filter(
+      (row) =>
+        row.shift_id !== null ||
+        !shiftSpecificCells.has(assignmentCellKey(row)),
+    ).length;
   }
   const activeBranchId = claims.branch_id ?? -1;
-  const checkoutApprovalsRoute = routes.checkoutApprovals ?? `/br/${activeBranchId}/shift/checkout-approvals`;
-  const leaveApprovalsRoute = routes.leaveApprovals ?? `/br/${activeBranchId}/shift/leave-approvals`;
-  const countSlipsRoute = routes.countSlips ?? `/br/${activeBranchId}/stock/count-slips`;
-  const countAssignmentsRoute = routes.countAssignments ?? `/br/${activeBranchId}/stock/count-assignments`;
   const teamRoute = routes.team ?? `/br/${activeBranchId}/team`;
-  const hrRoute = routes.hr ?? `/hr`;
 
   const tone = getWorkTone(state.status);
   const title = getWorkTitle(state);
@@ -582,6 +590,7 @@ export async function EmployeeHomePageContent({
         countHref={
           countAssignmentCount > 0 ? "#shift-inventory-count" : routes.count
         }
+        hideCountTask={Boolean(countPanel)}
         checkoutHref={
           state.status === "working" && !canRequestCheckout(state)
             ? routes.clock
@@ -702,130 +711,26 @@ export async function EmployeeHomePageContent({
 
   const isBranchManager = claims.user_role === "branch_manager";
 
+  const managerPendingTotal =
+    pendingCheckouts + pendingCountSlips + pendingWaste;
   const managerActionPanel = isBranchManager ? (
-    <div className="flex flex-col gap-3">
-      <EmployeePanel
-        icon={IconClipboardCheck}
-        title="Duyệt ca & kho"
-        tone="warning"
-        size="sm"
-      >
-        <div className="flex flex-col gap-2">
-          {/* Duyệt kết ca */}
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={checkoutApprovalsRoute}>
-              <ItemContent>
-                <ItemTitle className="text-sm font-semibold">Duyệt kết ca</ItemTitle>
-                <ItemDescription className="text-xs text-muted-foreground">
-                  Phê duyệt kết ca của nhân viên
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Badge variant={pendingCheckouts > 0 ? "warning" : "secondary"}>
-                  {pendingCheckouts}
-                </Badge>
-              </ItemActions>
-            </Link>
-          </Item>
-
-          {/* Duyệt kiểm kê */}
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={countSlipsRoute}>
-              <ItemContent>
-                <ItemTitle className="text-sm font-semibold">Duyệt kiểm kê</ItemTitle>
-                <ItemDescription className="text-xs text-muted-foreground">
-                  Duyệt chênh lệch phiếu kiểm kê
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Badge variant={pendingCountSlips > 0 ? "warning" : "secondary"}>
-                  {pendingCountSlips}
-                </Badge>
-              </ItemActions>
-            </Link>
-          </Item>
-
-          {/* Duyệt nghỉ phép */}
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={leaveApprovalsRoute}>
-              <ItemContent>
-                <ItemTitle className="text-sm font-semibold">Duyệt nghỉ phép</ItemTitle>
-                <ItemDescription className="text-xs text-muted-foreground">
-                  Phê duyệt yêu cầu nghỉ phép
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Badge variant={pendingLeaveRequests > 0 ? "warning" : "secondary"}>
-                  {pendingLeaveRequests}
-                </Badge>
-              </ItemActions>
-            </Link>
-          </Item>
-
-          {/* Duyệt hao hụt */}
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={routes.wasteApprovals}>
-              <ItemContent>
-                <ItemTitle className="text-sm font-semibold">Duyệt hao hụt</ItemTitle>
-                <ItemDescription className="text-xs text-muted-foreground">
-                  Duyệt báo cáo hao hụt nguyên liệu
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Badge variant={pendingWaste > 0 ? "warning" : "secondary"}>
-                  {pendingWaste}
-                </Badge>
-              </ItemActions>
-            </Link>
-          </Item>
-        </div>
-      </EmployeePanel>
-
-      <EmployeePanel
-        icon={IconUsers}
-        title="Nhân sự & Phân công"
-        tone="info"
-        size="sm"
-      >
-        <div className="flex flex-col gap-2">
-          {/* Đội hôm nay */}
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={teamRoute}>
-              <ItemContent>
-                <ItemTitle className="text-sm font-semibold">Đội hôm nay</ItemTitle>
-                <ItemDescription className="text-xs text-muted-foreground">
-                  Danh sách, ca làm, checklist nhân sự trong ca
-                </ItemDescription>
-              </ItemContent>
-            </Link>
-          </Item>
-
-          {/* Nhân sự chi nhánh */}
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={hrRoute}>
-              <ItemContent>
-                <ItemTitle className="text-sm font-semibold">Nhân sự chi nhánh</ItemTitle>
-                <ItemDescription className="text-xs text-muted-foreground">
-                  Xem thông tin nhân viên, ngày công, ngày nghỉ phép
-                </ItemDescription>
-              </ItemContent>
-            </Link>
-          </Item>
-
-          {/* Phân công đếm tồn */}
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={countAssignmentsRoute}>
-              <ItemContent>
-                <ItemTitle className="text-sm font-semibold">Phân công đếm tồn</ItemTitle>
-                <ItemDescription className="text-xs text-muted-foreground">
-                  Giao việc kiểm đếm nguyên liệu cho nhân sự
-                </ItemDescription>
-              </ItemContent>
-            </Link>
-          </Item>
-        </div>
-      </EmployeePanel>
-    </div>
+    <Item asChild variant="outline" size="sm" className="bg-card">
+      <Link href={teamRoute}>
+        <ItemContent>
+          <ItemTitle className="text-sm font-semibold">
+            Quản lý đội chi nhánh
+          </ItemTitle>
+          <ItemDescription className="text-xs text-muted-foreground">
+            Mở màn hình đội để duyệt ca, kho, nhân sự và phân công.
+          </ItemDescription>
+        </ItemContent>
+        {managerPendingTotal > 0 ? (
+          <ItemActions>
+            <Badge variant="warning">{managerPendingTotal}</Badge>
+          </ItemActions>
+        ) : null}
+      </Link>
+    </Item>
   ) : null;
 
   const notificationSection = showNotificationControl ? (
@@ -934,6 +839,7 @@ export async function EmployeeHomePageContent({
   const pageContent =
     mode === "manager-dashboard" ? (
       <div className="flex flex-col gap-3">
+        {todayCard}
         {managerActionPanel}
         {shiftsTodaySection}
         {staleOpenShiftSection}
@@ -974,6 +880,9 @@ export async function EmployeeHomePageContent({
       description={copy.description}
       hideHeaderOnMobile
     >
+      {state.branchId !== null ? (
+        <BranchOpsRefresh branchId={state.branchId} />
+      ) : null}
       {pageContent}
     </EmployeePageShell>
   );

@@ -1,10 +1,11 @@
 # Thuế TNCN & Lương — Personal Income Tax & Payroll
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
-> Khung pháp lý (đến 06/2026): Luật Thuế TNCN 2025 (109/2025/QH15, hiệu lực
+> Khung pháp lý (đến 07/2026): Luật Thuế TNCN 2025 (109/2025/QH15, hiệu lực
 > chung 01/07/2026, biểu thuế + giảm trừ mới áp dụng **từ kỳ tính thuế 2026 =
-> 01/01/2026**); NQ 110/2025/UBTVQH15 (giảm trừ gia cảnh mới từ kỳ tính thuế
-> 2026); Luật BHXH 2024 (41/2024/QH15) + NĐ 158/2025 (BHXH bắt buộc, gồm chủ
+> 01/01/2026**) + NĐ 253/2026/NĐ-CP + TT 87/2026/TT-BTC; NQ 110/2025/UBTVQH15
+> (giảm trừ gia cảnh mới từ kỳ tính thuế 2026); Luật BHXH 2024 (41/2024/QH15) +
+> NĐ 158/2025 (BHXH bắt buộc, gồm chủ
 > hộ kinh doanh); NĐ 73/2024 (lương cơ sở 2,34tr → trần BHXH 46,8tr, đến
 > 30/06/2026) → **NĐ 161/2026 (lương cơ sở 2,53tr → trần BHXH 50,6tr từ
 > 01/07/2026)**; NĐ 293/2025 (lương tối thiểu vùng từ 01/01/2026). Luật Thuế
@@ -25,7 +26,7 @@
 | Lương cơ bản         | ✅ Có                  | ✅ Có      |                            |
 | Phụ cấp chức vụ      | ✅ Có                  | ✅ Có      | Nếu ghi trong HĐ           |
 | Phụ cấp độc hại      | ❌ Miễn                | ❌ Không   | Theo quy định Nhà nước     |
-| Tiền ăn ca           | ❌ Miễn (≤ 730k/tháng) | ❌ Không   | Vượt → chịu thuế phần vượt |
+| Tiền ăn ca           | ❌ Miễn (≤ 1,2tr/tháng nếu chi tiền từ 01/07/2026) | ❌ Không   | Vượt → chịu thuế phần vượt; bữa ăn tổ chức trực tiếp/mua suất/cấp phiếu ăn không tính vào thu nhập chịu thuế |
 | Tiền xăng xe, gửi xe | ❌ Miễn (theo thực tế) | ❌ Không   | Phải có hóa đơn chứng từ   |
 | Tiền điện thoại      | ❌ Miễn (theo thực tế) | ❌ Không   |                            |
 | Tiền thưởng cuối năm | ✅ Có                  | ❌ Không   | Không nằm trong lương HĐ   |
@@ -64,13 +65,13 @@ Biểu 5 bậc theo Luật Thuế TNCN 2025 (109/2025/QH15), áp dụng từ k�
 
 > **Đồng bộ với mã nguồn:** payroll engine = `packages/shared/src/payroll/calculate.ts` + `legal-versions.ts` (versioned theo `effectiveFrom`). Code tính **mọi kỳ từ 2026-01** bằng **biểu 5 bậc** ở §2 (`PIT_BRACKETS_2026`) — cả version `effectiveFrom: 2026-01-01` lẫn `2026-07-01`. Giảm trừ 15.5M/6.2M áp dụng từ 2026-01; trần BHXH 46.8M đến 30/06/2026 rồi bước lên 50.6M từ 01/07/2026 (NĐ 161/2026). Test khoá: `packages/shared/src/payroll/__tests__/legal-versions.test.ts`; quy tắc `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP` (`tasks/regressions.md`).
 >
-> **Lưu ý kế toán (không phải lỗi code):** mức khấu trừ hàng tháng H1-2026 có thể chọn giữ biểu 7 bậc cũ chờ ngày hiệu lực chung 01/07/2026 rồi true-up khi quyết toán — nghĩa vụ cả năm không đổi. Nếu kế toán chốt phương án đó thì trỏ version `effectiveFrom: "2026-01-01"` về `PIT_BRACKETS_2007` (một dòng), không đổi giảm trừ/trần.
+> **Lưu ý kế toán (không phải lỗi code):** mức khấu trừ hàng tháng H1-2026 có thể chọn giữ biểu 7 bậc cũ chờ ngày hiệu lực chung 01/07/2026 rồi true-up khi quyết toán — nghĩa vụ cả năm không đổi. Theo NĐ 253/2026, hồ sơ khai tháng/quý đã nộp cho kỳ 2026 trước 01/07/2026 không phải nộp lại, điều chỉnh vào quyết toán năm 2026. Nếu kế toán chốt phương án bảo thủ cho H1 thì trỏ version `effectiveFrom: "2026-01-01"` về `PIT_BRACKETS_2007` (một dòng), không đổi giảm trừ/trần.
 
 ### Ví dụ tính thuế
 
 ```
 Branch Manager, lương gross: 25,000,000 VND/tháng
-Phụ cấp ăn ca: 730,000 (miễn thuế)
+Phụ cấp ăn ca: 1,200,000 (miễn thuế nếu chi tiền từ 01/07/2026)
 Lương BH: 25,000,000 (đăng ký đóng toàn phần)
 1 người phụ thuộc
 
@@ -106,10 +107,13 @@ Thuế = 675,000 × 5% = 33,750 VND
 | ----------------------- | -------------------------------------------------------------------- |
 | Con dưới 18 tuổi        | Không yêu cầu thu nhập                                               |
 | Con từ 18 tuổi đang học | Học đại học, cao đẳng, dạy nghề                                      |
-| Vợ/chồng                | Thu nhập < 1 triệu/tháng hoặc không có khả năng lao động             |
-| Cha/mẹ                  | Thu nhập < 1 triệu/tháng hoặc ≥ 60 tuổi / không có khả năng lao động |
+| Vợ/chồng                | Thu nhập bình quân tháng trong năm không quá 3 triệu hoặc không có khả năng lao động |
+| Cha/mẹ                  | Thu nhập bình quân tháng trong năm không quá 3 triệu hoặc ≥ 60 tuổi / không có khả năng lao động |
 
 > ⚠️ **Rule**: Một người phụ thuộc chỉ được đăng ký giảm trừ tại **1 nơi làm việc** duy nhất. NLĐ tự khai và chịu trách nhiệm về thông tin.
+> Từ 01/07/2026, mức thu nhập làm căn cứ xác định người phụ thuộc là không quá
+> **3 triệu đồng/tháng** theo TT 87/2026/TT-BTC; mức cũ 1 triệu chỉ dùng cho
+> kỳ trước khi quy định mới có hiệu lực.
 
 ### 3.3 Đăng ký người phụ thuộc
 
@@ -265,7 +269,8 @@ const row = calculatePayrollEntry({
   otherDeductions,
   effectiveDate: "2026-07-31", // T7/2026 → biểu 5 bậc + trần BHXH 50,6tr
 });
-// row.pitTax, row.totalInsuranceEmployee, row.netSalary, row.legalVersionEffectiveFrom
+// row.pitTax, row.totalInsuranceEmployee, row.netSalary
+// row.legalVersionEffectiveFrom is helper audit metadata; payroll_entries snapshots the money fields.
 ```
 
 Công thức biểu 5 bậc (kỳ tính thuế 2026) ở §2; biểu 7 bậc cũ chỉ dùng khi quyết

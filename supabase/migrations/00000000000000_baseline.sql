@@ -2597,7 +2597,7 @@ BEGIN
     'Phiếu đếm tồn của bạn đã được duyệt và điều chỉnh kho.',
     'inventory_count_slip',
     p_slip_id,
-    '/employee/count',
+    format('/br/%s/stock/count', v_slip.branch_id),
     jsonb_build_object(
       'slip_id', p_slip_id, 'employee_id', v_slip.employee_id,
       'branch_id', v_slip.branch_id, 'result', 'approved', 'adjusted_lines', v_adjusted
@@ -2784,7 +2784,7 @@ BEGIN
     ),
     'leave_request',
     p_request_id,
-    '/employee/leave',
+    format('/br/%s/shift/schedule/leave', v_request.branch_id),
     jsonb_build_object(
       'leave_request_id', p_request_id,
       'employee_id', v_request.employee_id,
@@ -10060,7 +10060,7 @@ BEGIN
     ),
     'attendance_record',
     p_attendance_id,
-    '/employee/checkout-approvals',
+    format('/br/%s/shift/checkout-approvals', v_record.branch_id),
     jsonb_build_object(
       'attendance_id', p_attendance_id,
       'employee_id', p_employee_id,
@@ -19413,7 +19413,8 @@ DECLARE
   v_inv      RECORD;
   v_grn_tot  NUMERIC(15,2);
   v_po_tot   NUMERIC(15,2);
-  v_status   TEXT := 'matched';
+  v_status   TEXT := 'pending';
+  v_reason   TEXT := 'missing_grn';
 BEGIN
   SELECT * INTO v_inv FROM public.supplier_invoices
   WHERE id = p_invoice_id AND tenant_id = v_tenant;
@@ -19422,11 +19423,27 @@ BEGIN
     RAISE EXCEPTION 'invoice_not_found' USING ERRCODE = 'P0002';
   END IF;
 
+  IF v_inv.grn_id IS NULL THEN
+    UPDATE public.supplier_invoices
+    SET matching_status = v_status, updated_at = now()
+    WHERE id = p_invoice_id;
+
+    RETURN jsonb_build_object(
+      'invoice_id', p_invoice_id,
+      'matching_status', v_status,
+      'reason', v_reason
+    );
+  END IF;
+
+  v_status := 'matched';
+  v_reason := 'grn_total_within_tolerance';
+
   IF v_inv.grn_id IS NOT NULL THEN
     SELECT COALESCE(SUM(gi.total_cost), 0) INTO v_grn_tot
     FROM public.grn_items gi WHERE gi.grn_id = v_inv.grn_id;
     IF v_inv.total_amount > v_grn_tot * 1.02 THEN
       v_status := 'discrepancy';
+      v_reason := 'grn_total_mismatch';
     END IF;
   END IF;
 
@@ -19435,6 +19452,9 @@ BEGIN
     FROM public.purchase_order_items poi WHERE poi.po_id = v_inv.po_id;
     IF v_po_tot > 0 AND abs(v_inv.subtotal - v_po_tot) / v_po_tot > 0.02 THEN
       v_status := 'discrepancy';
+      v_reason := 'po_total_mismatch';
+    ELSIF v_po_tot > 0 AND v_status = 'matched' THEN
+      v_reason := 'grn_and_po_total_within_tolerance';
     END IF;
   END IF;
 
@@ -19442,7 +19462,11 @@ BEGIN
   SET matching_status = v_status, updated_at = now()
   WHERE id = p_invoice_id;
 
-  RETURN jsonb_build_object('invoice_id', p_invoice_id, 'matching_status', v_status);
+  RETURN jsonb_build_object(
+    'invoice_id', p_invoice_id,
+    'matching_status', v_status,
+    'reason', v_reason
+  );
 END;
 $$;
 
@@ -20182,7 +20206,7 @@ BEGIN
     ),
     'leave_request',
     p_request_id,
-    '/employee/leave',
+    format('/br/%s/shift/schedule/leave', v_request.branch_id),
     jsonb_build_object(
       'leave_request_id', p_request_id,
       'employee_id', v_request.employee_id,
@@ -20461,7 +20485,7 @@ BEGIN
        'agreement_ref', p_agreement_ref,
        'agreement_date', p_agreement_date
      ),
-     'TT78 §7 replace: ' || p_reason,
+     'HĐĐT replace: ' || p_reason,
      v_actor,
      v_old.tenant_id),
     (v_new_id, NULL, 'draft',
@@ -20482,7 +20506,7 @@ $$;
 -- Name: FUNCTION replace_tax_invoice(p_old_id bigint, p_reason text, p_agreement_ref text, p_agreement_date timestamp with time zone, p_buyer_name text, p_buyer_tax_code text, p_buyer_address text, p_subtotal numeric, p_vat_rate numeric, p_vat_amount numeric, p_total_amount numeric, p_provider text); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.replace_tax_invoice(p_old_id bigint, p_reason text, p_agreement_ref text, p_agreement_date timestamp with time zone, p_buyer_name text, p_buyer_tax_code text, p_buyer_address text, p_subtotal numeric, p_vat_rate numeric, p_vat_amount numeric, p_total_amount numeric, p_provider text) IS 'TT78 §7 atomic replacement RPC. Locks OLD invoice, flips to replaced, INSERTs NEW draft, links both via replaced_by/replaced_for, audits via tax_invoice_events — all in single tx. Caller then transitions NEW: draft → signing → call provider with adjustmentType=3 → issued|submitted|draft. Requires settings:tenant + same tenant. Chain depth capped at 3.';
+COMMENT ON FUNCTION public.replace_tax_invoice(p_old_id bigint, p_reason text, p_agreement_ref text, p_agreement_date timestamp with time zone, p_buyer_name text, p_buyer_tax_code text, p_buyer_address text, p_subtotal numeric, p_vat_rate numeric, p_vat_amount numeric, p_total_amount numeric, p_provider text) IS 'NĐ 254/2026 + TT 32/2025 atomic replacement RPC. Locks OLD invoice, flips to replaced, INSERTs NEW draft, links both via replaced_by/replaced_for, audits via tax_invoice_events — all in single tx. Caller then transitions NEW: draft → signing → call provider with adjustmentType=3 → issued|submitted|draft. Requires settings:tenant + same tenant. Chain depth capped at 3.';
 
 
 --
@@ -20565,7 +20589,7 @@ BEGIN
     COALESCE(format('Quản lý yêu cầu đếm lại: %s', v_note), 'Quản lý yêu cầu đếm lại phiếu đếm tồn của bạn.'),
     'inventory_count_slip',
     p_slip_id,
-    '/employee/count',
+    format('/br/%s/stock/count', v_slip.branch_id),
     jsonb_build_object(
       'slip_id', p_slip_id, 'employee_id', v_slip.employee_id,
       'branch_id', v_slip.branch_id, 'result', 'needs_changes'
@@ -32458,7 +32482,7 @@ COMMENT ON COLUMN public.tax_invoices.summary_orders_count IS 'NULL cho per_orde
 -- Name: COLUMN tax_invoices.invoice_kind; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.tax_invoices.invoice_kind IS 'per_order = HĐ B2B realtime cho 1 order. daily_summary = HĐ tổng hợp B2C theo ngày/chi nhánh per TT 78/2021 §11.4.';
+COMMENT ON COLUMN public.tax_invoices.invoice_kind IS 'per_order = HĐ B2B realtime cho 1 order. daily_summary = HĐ tổng hợp B2C theo ngày/chi nhánh per TT 32/2025 + NĐ 254/2026.';
 
 
 --
@@ -32521,7 +32545,7 @@ COMMENT ON COLUMN public.tax_invoices.archive_attempts IS 'Incremented every rec
 -- Name: COLUMN tax_invoices.replaced_for; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.tax_invoices.replaced_for IS 'NEW-row pointer to OLD row in a TT78 §7 replace chain. NULL for originals. Balance to existing replaced_by (OLD→NEW); together they form a doubly-linked chain. ON DELETE RESTRICT ensures chain integrity (cannot hard-delete a row that other rows reference).';
+COMMENT ON COLUMN public.tax_invoices.replaced_for IS 'NEW-row pointer to OLD row in an HĐĐT replace chain. NULL for originals. Balance to existing replaced_by (OLD→NEW); together they form a doubly-linked chain. ON DELETE RESTRICT ensures chain integrity (cannot hard-delete a row that other rows reference).';
 
 
 --
@@ -40929,7 +40953,7 @@ CREATE POLICY employees_select_self ON public.employees FOR SELECT TO authentica
 -- Name: POLICY employees_select_self ON employees; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON POLICY employees_select_self ON public.employees IS 'Self-read regression fix: every authenticated user can read their own employees row even without hr:view_employee. Required for /employee/* portal (clock, schedule, attendance, payslip, shift-register).';
+COMMENT ON POLICY employees_select_self ON public.employees IS 'Self-read regression fix: every authenticated user can read their own employees row even without hr:view_employee. Required for branch staff runtime (clock, schedule, attendance, payslip, shift-register).';
 
 
 --

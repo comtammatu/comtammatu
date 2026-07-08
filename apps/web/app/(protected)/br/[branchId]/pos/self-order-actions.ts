@@ -5,6 +5,7 @@ import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
+import { isPosBranchInScope } from "./_lib/auth";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 
@@ -86,7 +87,7 @@ export async function fetchSelfOrderStaffQueue(
     PERMISSION_KEYS.POS_USE,
   );
   if (!ctx) return { success: false, error: SELF_ORDER_VI.staffLoadFailed };
-  if (ctx.claims.branch_id !== null && ctx.claims.branch_id !== parsedBranchId.data) {
+  if (!isPosBranchInScope(ctx.claims, parsedBranchId.data)) {
     return { success: false, error: SELF_ORDER_VI.staffLoadFailed };
   }
 

@@ -35,13 +35,14 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { FormattedNumberInput } from "@/components/form";
+import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import {
   AppDetailFooter,
   AppEmptyState,
   AppSection,
   DescriptionList,
 } from "@/components/surface";
+import type { IngredientUnitRow } from "../_lib/types";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import {
   clampIssueEntryQuantity,
@@ -52,7 +53,6 @@ import {
   getIssueUnitOptions,
 } from "../_lib/issue-units";
 import { createStockTransfer } from "../transfer-actions";
-import type { IngredientRow } from "../page";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
@@ -74,6 +74,13 @@ export interface BranchForTransfer {
   is_active: boolean;
 }
 
+export interface TransferIngredientOption {
+  id: number;
+  name: string;
+  is_active: boolean;
+  units?: IngredientUnitRow[];
+}
+
 type DraftLine = {
   key: string;
   ingredientId: number;
@@ -91,7 +98,7 @@ type TransferTargetOption = {
   kind: TransferTargetKind;
 };
 
-function getWarehouseUnit(ingredient: IngredientRow) {
+function getWarehouseUnit(ingredient: TransferIngredientOption) {
   return ingredient.units?.find((u) => u.is_base)?.unit_code || "";
 }
 
@@ -105,11 +112,16 @@ function isTransferSourceKind(kind: string | null | undefined): boolean {
   );
 }
 
+function formatTransferSiteLabel(branch: BranchForTransfer): string {
+  if ((branch.branch_kind ?? "branch") === "branch") return branch.name;
+  return formatBranchSiteLabel(branch);
+}
+
 function formatTransferOption(
   branch: BranchForTransfer,
   homeBranchId: number | null,
 ) {
-  const label = formatBranchSiteLabel(branch);
+  const label = formatTransferSiteLabel(branch);
   if (homeBranchId != null && branch.id === homeBranchId) {
     return `${label}${messages.inventory.transfer.defaultKitchenSuffix}`;
   }
@@ -139,7 +151,7 @@ function formatTransferTargetOption(option: TransferTargetOption): string {
     option.kind === "kitchen"
       ? messages.inventory.transfer.defaultKitchenSuffix
       : messages.inventory.transfer.defaultWarehouseSuffix;
-  return `${formatBranchSiteLabel(option.branch)}${suffix}`;
+  return `${formatTransferSiteLabel(option.branch)}${suffix}`;
 }
 
 export function CreateTransferForm({
@@ -152,7 +164,7 @@ export function CreateTransferForm({
   embedded = false,
 }: {
   branches: BranchForTransfer[];
-  ingredients: IngredientRow[];
+  ingredients: TransferIngredientOption[];
   sourceStockByBranch: Record<number, Record<number, number>>;
   userBranchId: number | null;
   userRole: StaffRole;
@@ -222,7 +234,9 @@ export function CreateTransferForm({
   const myBranchName = useMemo(() => {
     if (userBranchId == null) return null;
     const branch = branches.find((item) => item.id === userBranchId);
-    return branch ? formatBranchSiteLabel(branch) : null;
+    return branch
+      ? `${formatTransferSiteLabel(branch)}${messages.inventory.transfer.defaultWarehouseSuffix}`
+      : null;
   }, [branches, userBranchId]);
 
   const activeIngredients = useMemo(
@@ -237,10 +251,16 @@ export function CreateTransferForm({
       const from = branches.find(
         (branch) => String(branch.id) === inboundFromBranchId,
       );
-      return from ? formatBranchSiteLabel(from) : null;
+      return from ? formatTransferOption(from, requestDestinationBranchId) : null;
     }
     return myBranchName;
-  }, [branches, inboundFromBranchId, isBranchManager, myBranchName]);
+  }, [
+    branches,
+    inboundFromBranchId,
+    isBranchManager,
+    myBranchName,
+    requestDestinationBranchId,
+  ]);
   const outboundDestinationName = useMemo(() => {
     const option = outboundDestinationOptions.find(
       (item) => item.value === outboundToBranchId,
@@ -251,8 +271,8 @@ export function CreateTransferForm({
     const branch = branches.find(
       (item) => String(item.id) === inboundFromBranchId,
     );
-    return branch ? formatBranchSiteLabel(branch) : null;
-  }, [branches, inboundFromBranchId]);
+    return branch ? formatTransferOption(branch, requestDestinationBranchId) : null;
+  }, [branches, inboundFromBranchId, requestDestinationBranchId]);
 
   function resetForm() {
     setOutboundToBranchId("");

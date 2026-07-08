@@ -6,6 +6,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import type { InventoryValueVisibility } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Item,
   ItemContent,
@@ -220,9 +221,9 @@ function SummaryBlock({
 }) {
   return (
     <div className="rounded-md border bg-muted/30 p-4">
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+      <SectionLabel className="text-muted-foreground/70">
         {label}
-      </p>
+      </SectionLabel>
       <p
         className={`mt-2 font-semibold tracking-tight tabular-nums ${valueClassName ?? "text-2xl"}`}
       >

@@ -159,8 +159,8 @@ Branch Hub là surface mobile-first cho nhân viên và quản lý chi nhánh �
   quyền quản lý.
 - màn chi tiết giữ một primary action trong panel chính, không đặt CTA vận hành
   vào page header.
-- branch wrapper chỉ đổi href/scope sang `/br/[branchId]/*`; không redirect vòng
-  qua `/employee/*` và không fork lại layout.
+- branch wrapper chỉ đổi href/scope sang `/br/[branchId]/*`; không hồi sinh
+  `/employee/*` compatibility routes và không fork lại layout.
 - copy hiển thị sống trong `messages.employee.*`, `APP_COPY_VI`, hoặc registry
   domain tương ứng; route/component không hardcode copy vận hành mới.
 
@@ -308,7 +308,7 @@ Layer adapter app-level duy nhất cho pattern lặp lại.
 | `packages/ui/src/components/confirm-dialog.tsx` → `confirm()`, `ConfirmDialogProvider`, `ConfirmOptions` (+ `reason-confirm-dialog.tsx`) | Xác nhận destructive yes/no đơn giản, provider mount ở root layout | § Empty/Confirm — cấm `window.confirm/alert` (`no-native-dialog`); AlertDialog hand-roll chỉ cho flow cần input |
 
 Domain layer đã duyệt nhưng chưa vào registry trước bản này:
-`(protected)/employee/components/employee-page.tsx` export 12 `Employee*`
+`apps/web/lib/staff-runtime/components/staff-runtime-page.tsx` export 12 `Employee*`
 adapter (Page/Panel/Frame/ControlBar/ActionBar/ActionGrid/InlineState/
 BadgeList/StatusStrip/DetailList/ActionSection/MissingProfileEmpty), branch
 hub cũng dùng lại layer này (xem § Branch Operator Hub ở trên). Từ bản này nó

@@ -8,6 +8,7 @@ import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Sheet,
   SheetContent,
@@ -220,9 +221,9 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
         {/* ─── Payment info ─── */}
         {order.payment && (
           <div className="rounded-md border p-3 flex flex-col gap-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <SectionLabel>
               {ORDERS_VI.payment}
-            </p>
+            </SectionLabel>
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <Badge variant="outline">
@@ -239,9 +240,9 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
 
         {!order.payment && order.payment_method && (
           <div className="rounded-md border p-3 flex flex-col gap-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <SectionLabel>
               {ORDERS_VI.payment}
-            </p>
+            </SectionLabel>
             <div className="flex items-center gap-2 text-sm">
               <Badge variant="outline">
                 {getPaymentMethodLabelVi(order.payment_method)}
@@ -259,9 +260,9 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
         {/* ─── Items ─── */}
         <div>
           <div className="mb-2 flex items-baseline justify-between gap-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <SectionLabel>
               Món gọi{items ? ` (${items.length})` : ""}
-            </p>
+            </SectionLabel>
             {items && items.some((i) => i.status === "cancelled") && (
               <p className="text-xs text-muted-foreground">
                 Có {items.filter((i) => i.status === "cancelled").length} món đã

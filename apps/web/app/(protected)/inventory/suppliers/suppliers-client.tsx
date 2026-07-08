@@ -37,9 +37,9 @@ const suppliersCopy = messages.inventory.suppliers;
 
 const avatarColors = [
   { bg: "bg-primary/10", fg: "text-primary" },
-  { bg: "bg-success/12", fg: "text-success" },
-  { bg: "bg-info/12", fg: "text-info" },
-  { bg: "bg-destructive/12", fg: "text-destructive" },
+  { bg: "bg-success/10", fg: "text-success" },
+  { bg: "bg-info/10", fg: "text-info" },
+  { bg: "bg-destructive/10", fg: "text-destructive" },
   { bg: "bg-muted", fg: "text-muted-foreground" },
 ];
 

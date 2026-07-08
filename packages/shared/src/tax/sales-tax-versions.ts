@@ -6,7 +6,7 @@
  * the latest date ≤ the target date — same convention as payroll
  * `legal-versions.ts`.
  *
- * Sources (đến 06/2026, mô hình Hộ Kinh Doanh, phương pháp trực tiếp):
+ * Sources (đến 07/2026, mô hình Hộ Kinh Doanh, phương pháp trực tiếp):
  *   - NĐ 68/2026/NĐ-CP (05/03/2026): chia HKD 4 nhóm doanh thu/năm.
  *   - NĐ 141/2026/NĐ-CP (29/04/2026): nâng ngưỡng không chịu GTGT/TNCN lên
  *     1 tỷ/năm, hồi tố 01/01/2026.

@@ -353,9 +353,9 @@ function derivePostLoginHomes(accessBuckets, adminRoles, centralSiteKinds) {
     if (role === "office") {
       rows.push({
         role,
-        desktop: "/employee",
-        phone: "/employee",
-        note: "D055 §3: /employee stays home for office by explicit decision, not leftover. Read access to /finance added (D058 §3).",
+        desktop: "/finance",
+        phone: "/finance",
+        note: "Branch-less office lands on /finance. Staff day-flow lives under the branch Operator plane, not a standalone /employee app.",
       });
       continue;
     }
@@ -365,7 +365,7 @@ function derivePostLoginHomes(accessBuckets, adminRoles, centralSiteKinds) {
         role,
         desktop: `/br/{central-site-id} (home branch resolved server-side to the active ${centralKind} site)`,
         phone: `/br/{central-site-id} (same central site)`,
-        note: `D055 soft-routing: JWT branch_id stays null; Branch Hub resolves homeBranchId by matching branches.branch_kind="${centralKind}". Falls back to /employee until resolved.`,
+        note: `D055 soft-routing: JWT branch_id stays null; Branch Hub resolves homeBranchId by matching branches.branch_kind="${centralKind}". If unresolved, branch-scoped operator home blocks with branch-scope-mismatch.`,
       });
       continue;
     }
@@ -380,7 +380,7 @@ function derivePostLoginHomes(accessBuckets, adminRoles, centralSiteKinds) {
       continue;
     }
 
-    rows.push({ role, desktop: "/employee", phone: "/employee", note: "" });
+    rows.push({ role, desktop: "/finance", phone: "/finance", note: "" });
   }
   return rows;
 }

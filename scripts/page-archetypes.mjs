@@ -87,6 +87,14 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx":
     "EMBED-WRAPPER",
 
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx":
+    "DETAIL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx":
+    "SETTINGS-PANEL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx":
+    "HUB",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/page.tsx":
+    "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/[id]/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/new/page.tsx":
@@ -138,6 +146,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": "REPORT",
   "apps/web/app/(protected)/finance/revenue/page.tsx": "REPORT",
   "apps/web/app/(protected)/finance/summary/page.tsx": "REPORT",
+  "apps/web/app/(protected)/finance/supplier-invoices/page.tsx": "LIST",
   "apps/web/app/(protected)/hr/page.tsx": "LIST",
   "apps/web/app/(protected)/hr/payroll/[periodId]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/hr/payroll/page.tsx": "LIST",

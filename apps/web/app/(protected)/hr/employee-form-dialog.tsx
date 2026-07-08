@@ -129,7 +129,7 @@ function FormSection({
   children: ReactNode;
 }) {
   return (
-    <FieldGroup className="gap-3 rounded-lg border bg-muted/20 p-3">
+    <FieldGroup className="gap-3 p-3">
       <div className="flex flex-col gap-1">
         <p className="font-heading text-sm font-semibold">{title}</p>
         <p className="text-xs leading-5 text-muted-foreground">{description}</p>

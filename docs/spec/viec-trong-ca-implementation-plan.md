@@ -360,13 +360,13 @@ END IF;
 
 ---
 
-## Phase 4 — Employee runtime UI: unified "Việc trong ca"
+## Phase 4 — Staff runtime UI: unified "Việc trong ca"
 
 ### Task 7: `today-work-state.ts` — 2 phases + virtual count item
 
 **Files:**
 
-- Modify: `apps/web/app/(protected)/employee/_lib/today-work-state.ts`
+- Modify: `apps/web/lib/staff-runtime/_lib/today-work-state.ts`
 
 **Interfaces:**
 
@@ -377,7 +377,7 @@ END IF;
 ```ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { groupChecklistByPhase } from "../app/(protected)/employee/_lib/today-work-state";
+import { groupChecklistByPhase } from "../lib/staff-runtime/_lib/today-work-state";
 
 test("groups items into start/end only, count item lands in end", () => {
   const items = [
@@ -400,9 +400,9 @@ test("groups items into start/end only, count item lands in end", () => {
 
 **Files:**
 
-- Modify: `apps/web/app/(protected)/employee/tasks/tasks-client.tsx`, `tasks/page.tsx`
+- Modify: `apps/web/lib/staff-runtime/tasks/tasks-client.tsx`, `apps/web/lib/staff-runtime/tasks/page.tsx`
 
-- [ ] **Step 1:** Change `CHECKLIST_PHASES` to `['start_of_shift','end_of_shift']`; render the `inventory_count` item as a row that links to `/employee/count` (no checkbox; status from `done`); keep the consumption inline panel (gated on a `consumption_report` item being present, unchanged logic). Phase headings from `messages.employee.tasks.phaseLabels` (now 2 keys).
+- [ ] **Step 1:** Change `CHECKLIST_PHASES` to `['start_of_shift','end_of_shift']`; render the `inventory_count` item as a row that links to `/br/[branchId]/stock/count` (no checkbox; status from `done`); keep the consumption inline panel (gated on a `consumption_report` item being present, unchanged logic). Phase headings from `messages.employee.tasks.phaseLabels` (now 2 keys).
 - [ ] **Step 2:** `pnpm typecheck && pnpm lint` → PASS. Commit `feat(employee): unified Việc trong ca surface (D050 phase 4)`.
 
 ### Task 9: Coverage panel — position-based

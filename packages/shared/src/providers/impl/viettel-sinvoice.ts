@@ -47,15 +47,15 @@ import {
  * Env vars:
  *   - SINVOICE_USERNAME, SINVOICE_PASSWORD
  *   - COMPANY_TAX_CODE
- *   - SINVOICE_TEMPLATE_CODE   (TT78 form, e.g. "2/001" for HĐ bán hàng từ MTT)
+ *   - SINVOICE_TEMPLATE_CODE   (digit template form, e.g. "2/001" for HĐ bán hàng từ MTT)
  *   - SINVOICE_INVOICE_SERIES  (registered with CQT, e.g. "C26MAA")
  *   - SINVOICE_BASE_URL        (override host; same URL for prod + test)
  *   - SINVOICE_SANDBOX=true    (informational — server distinguishes via creds)
  *
- * Template ↔ invoiceType mapping (TT78, derived at runtime):
+ * Template ↔ invoiceType mapping (derived at runtime):
  *   - "1/..." → invoiceType "1" (HĐ GTGT / VAT-deductible)
  *   - "2/..." → invoiceType "2" (HĐ bán hàng từ MTT — F&B default)
- *   - 3/4/5/6 also supported per TT78 (see deriveInvoiceTypeFromTemplate)
+ *   - 3/4/5/6 also supported (see deriveInvoiceTypeFromTemplate)
  */
 
 const DEFAULT_BASE_URL = "https://api-vinvoice.viettel.vn";
@@ -161,7 +161,7 @@ export function buildSinvoiceTransactionUuid(invoiceId: number): string {
 }
 
 /**
- * Derive TT78 `invoiceType` from `templateCode`.
+ * Derive provider `invoiceType` from `templateCode`.
  *
  * Per Viettel HDSD line 580-598 + example bodies (HDSD §III.2, line
  * 869+ all show `invoiceType: "1"` paired with `templateCode: "1/001"`):
@@ -169,8 +169,8 @@ export function buildSinvoiceTransactionUuid(invoiceId: number): string {
  *   - Template `2/...` → invoiceType `"2"` (HĐ bán hàng — F&B/MTT)
  *   - Template `3/...` → invoiceType `"3"` ...
  *
- * Older pre-2026 (TT78-era) templates like `01GTKT0/001` map to the
- * `"01GTKT"` form; we do NOT support those (TT32-style codes only since 2026).
+ * Older pre-2026 templates like `01GTKT0/001` map to the `"01GTKT"` form;
+ * we do NOT support those digit codes since 2026.
  *
  * Throws if templateCode shape is unrecognised so misconfigured env
  * surfaces loudly at boot rather than producing rejected invoices.
@@ -180,7 +180,7 @@ export function deriveInvoiceTypeFromTemplate(templateCode: string): string {
   if (!match || !match[1]) {
     throw new Error(
       `Invalid SINVOICE_TEMPLATE_CODE format: "${templateCode}". ` +
-        `Expected TT78 form like "1/001" or "2/001".`,
+        `Expected digit template form like "1/001" or "2/001".`,
     );
   }
   return match[1];
@@ -285,8 +285,8 @@ function findNetDiscountForGrossTarget(
 /**
  * Compute Sinvoice itemInfo + reconciled sums.
  *
- * TT78 template `1/...` (HĐ GTGT) wants net unit prices + VAT in
- * `taxAmount`; TT78 template `2/...` (HĐ bán hàng, direct method) displays
+ * Template `1/...` (HĐ GTGT) wants net unit prices + VAT in
+ * `taxAmount`; template `2/...` (HĐ bán hàng, direct method) displays
  * the sale price itself, with no VAT split on the PDF. For template `2/...`,
  * never divide menu prices by `(1 + vatRate)` — Cơm Tấm Má Tư menu prices are
  * already VAT-inclusive and must appear on the invoice as sold.

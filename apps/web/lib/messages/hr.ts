@@ -109,6 +109,13 @@ export const hr = {
       "Mở bảng lương để đối soát ngày công, lương gộp và thực lĩnh trước khi chốt.",
     openPayroll: "Mở đối soát lương",
     employeeCount: (count: number) => `${count} nhân viên`,
+    readinessSummary: (params: {
+      active: number;
+      payrollReady: number;
+      insured: number;
+      contractMissing: number;
+    }) =>
+      `${params.active} đang làm · ${params.payrollReady} sẵn sàng tính lương · ${params.insured} đã BHXH · ${params.contractMissing} thiếu HĐ`,
     staffAccounts: "Tài khoản & quyền",
     addEmployee: "Thêm nhân viên",
     readiness: {

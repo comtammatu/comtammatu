@@ -37,6 +37,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useLongPress } from "@lib/hooks/use-long-press";
 import {
@@ -319,9 +320,9 @@ export function GrnListClient({
         {drafts && drafts.length > 0 ? (
           <>
             <div className="flex items-center gap-2 px-1">
-              <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+              <SectionLabel density="dense">
                 {INVENTORY_VI.draft}
-              </p>
+              </SectionLabel>
               <Badge variant="warning">{drafts.length}</Badge>
             </div>
             <GrnDraftsTab drafts={drafts} basePath={basePath} />

@@ -208,6 +208,7 @@ export async function EmployeeTasksPageContent({
             items={state.checklist.items}
             disabled={checkoutPending || checkoutDone}
             countHref={hasCountTask ? `#${countPanelId}` : countHref}
+            hideCountTask={hasCountTask}
             checkoutHref={
               !allRequiredDone && !checkoutPending && !checkoutDone
                 ? clockHref

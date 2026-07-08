@@ -13,6 +13,7 @@ import type { IngredientRow } from "../../page";
 import {
   CreateTransferForm,
   type BranchForTransfer,
+  type TransferIngredientOption,
 } from "../create-transfer-dialog";
 
 function withBranchQuery(path: string, branchId: number | null) {
@@ -43,6 +44,17 @@ function getTransferSourceBranchIds({
       );
     })
     .map((branch) => branch.id);
+}
+
+function toTransferIngredientOption(
+  ingredient: IngredientRow,
+): TransferIngredientOption {
+  return {
+    id: ingredient.id,
+    name: ingredient.name,
+    is_active: ingredient.is_active,
+    units: ingredient.units,
+  };
 }
 
 interface NewTransferPageContentProps {
@@ -77,8 +89,8 @@ export async function NewTransferPageContent({
   const branches: BranchForTransfer[] = brRes.success
     ? ((brRes.data ?? []) as BranchForTransfer[])
     : [];
-  const ingredients: IngredientRow[] = ingRes.success
-    ? ((ingRes.data ?? []) as IngredientRow[])
+  const ingredients: TransferIngredientOption[] = ingRes.success
+    ? ((ingRes.data ?? []) as IngredientRow[]).map(toTransferIngredientOption)
     : [];
   const sourceBranchIds = getTransferSourceBranchIds({
     branches,

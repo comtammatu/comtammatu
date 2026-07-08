@@ -1,12 +1,11 @@
 import type { IngredientUnitRow } from "./types";
+import {
+  getDefaultIngredientUnit,
+  getIngredientUnitOptions,
+  type InventoryUnitOptionWithFactor,
+} from "./unit-options";
 
-export interface IssueUnitOption {
-  unitId: number;
-  code: string;
-  label: string;
-  isBase: boolean;
-  toBaseFactor: number;
-}
+export type IssueUnitOption = InventoryUnitOptionWithFactor;
 
 type IssueUnitFactor = Pick<IssueUnitOption, "toBaseFactor"> | null | undefined;
 
@@ -21,20 +20,7 @@ type IngredientWithUnits = { units?: IngredientUnitRow[] };
 export function getIssueUnitOptions(
   ingredient: IngredientWithUnits | undefined,
 ): IssueUnitOption[] {
-  const units = ingredient?.units ?? [];
-  return units
-    .filter((u: IngredientUnitRow) => u.is_active && u.unit_code !== "")
-    .sort((a, b) => {
-      if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
-      return a.sort_order - b.sort_order;
-    })
-    .map((u) => ({
-      unitId: u.unit_id,
-      code: u.unit_code,
-      label: u.unit_name?.trim() || u.unit_code,
-      isBase: u.is_base,
-      toBaseFactor: u.to_base_factor,
-    }));
+  return getIngredientUnitOptions(ingredient, { includeToBaseFactor: true });
 }
 
 /**
@@ -44,8 +30,7 @@ export function getIssueUnitOptions(
 export function getDefaultIssueUnit(
   ingredient: IngredientWithUnits | undefined,
 ): IssueUnitOption | null {
-  const options = getIssueUnitOptions(ingredient);
-  return options.find((o) => o.isBase) ?? options[0] ?? null;
+  return getDefaultIngredientUnit(getIssueUnitOptions(ingredient));
 }
 
 function resolveToBaseFactor(issueUnit: IssueUnitFactor): number {

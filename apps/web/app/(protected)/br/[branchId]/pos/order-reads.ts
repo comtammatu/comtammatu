@@ -6,7 +6,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission, probePermission } from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
 import type { CartItem } from "./types";
-import { posUseAuth } from "./_lib/auth";
+import { isPosBranchInScope, posUseAuth } from "./_lib/auth";
 
 /* ─── Constants ─── */
 
@@ -81,7 +81,7 @@ export const fetchActiveOrders = withActionPositional(
     customAuth: posUseAuth,
   },
   async ({ branchId }, { supabase, claims }): Promise<ActionResult> => {
-    if (claims.branch_id !== branchId) {
+    if (!isPosBranchInScope(claims, branchId)) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
@@ -151,7 +151,7 @@ export async function fetchArchivedOrders(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsed.data.branchId) {
+  if (!isPosBranchInScope(claims, parsed.data.branchId)) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
@@ -260,7 +260,7 @@ export async function fetchActiveOrderForTable(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsed.data.branchId) {
+  if (!isPosBranchInScope(claims, parsed.data.branchId)) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 

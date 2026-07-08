@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Send as IconSend, Warehouse as IconWarehouse } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import {
@@ -22,6 +23,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { AppEmptyState } from "@/components/surface";
@@ -34,6 +44,7 @@ import {
 } from "../components/staff-runtime-page";
 import { submitCountSlip } from "./actions";
 import type {
+  CountAssignment,
   CountLocationGroup,
   CountSlipHeader,
   CountUnitChoice,
@@ -41,6 +52,7 @@ import type {
 
 interface CountSlipClientProps {
   branchId: number;
+  shiftId: number | null;
   baseHref?: string;
   groups: CountLocationGroup[];
   selectedLocationId: number | null;
@@ -108,8 +120,28 @@ function buildCountUnitPreview({
   return `${formatCountQuantity(quantityValue)} ${entryUnit.code} = ${formatCountQuantity(quantityValue * factor)} ${baseUnit.code}`;
 }
 
+function buildDraftSummary({
+  quantity,
+  entryUnitId,
+  units,
+}: {
+  quantity: string;
+  entryUnitId: number | null;
+  units: CountUnitChoice[];
+}): string | null {
+  const quantityValue = parseDraftQuantity(quantity);
+  if (quantityValue === null) return null;
+  const unit =
+    entryUnitId == null
+      ? getBaseCountUnit(units)
+      : (units.find((item) => item.unitId === entryUnitId) ??
+        getBaseCountUnit(units));
+  return `${formatCountQuantity(quantityValue)}${unit?.code ? ` ${unit.code}` : ""}`;
+}
+
 export function CountSlipClient({
   branchId,
+  shiftId,
   baseHref = "/br",
   groups,
   selectedLocationId,
@@ -134,6 +166,13 @@ export function CountSlipClient({
   const locked = slip?.status === "submitted" || slip?.status === "approved";
 
   const [draft, setDraft] = useState<Record<number, DraftLine>>({});
+  const [selectedIngredientId, setSelectedIngredientId] = useState<number | null>(
+    null,
+  );
+  const selectedAssignment =
+    activeGroup?.assignments.find(
+      (assignment) => assignment.ingredientId === selectedIngredientId,
+    ) ?? null;
 
   // Re-seed the draft whenever the active location or its prefill changes.
   useEffect(() => {
@@ -153,6 +192,12 @@ export function CountSlipClient({
     }
     setDraft(next);
   }, [activeGroup, prefill]);
+
+  useEffect(() => {
+    if (selectedIngredientId !== null && !selectedAssignment) {
+      setSelectedIngredientId(null);
+    }
+  }, [selectedIngredientId, selectedAssignment]);
 
   function changeLocation(value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -202,6 +247,7 @@ export function CountSlipClient({
       const result = await submitCountSlip({
         branchId,
         locationId: selectedLocationId,
+        shiftId,
         lines: lines.map((line) => ({
           ingredientId: line.ingredientId,
           countedQuantity: line.countedQuantity,
@@ -224,6 +270,152 @@ export function CountSlipClient({
     value: String(group.locationId),
     label: group.locationName,
   }));
+
+  function renderIngredientSheet(assignment: CountAssignment | null) {
+    const entry = assignment ? draft[assignment.ingredientId] : undefined;
+    const inputId = assignment ? `count-${assignment.ingredientId}` : "count";
+    const unitInputId = `${inputId}-unit`;
+    const baseUnit = assignment ? getBaseCountUnit(assignment.countUnits) : null;
+    const selectedUnit =
+      assignment == null
+        ? null
+        : entry?.entryUnitId == null
+          ? baseUnit
+          : (assignment.countUnits.find(
+              (unit) => unit.unitId === entry.entryUnitId,
+            ) ?? baseUnit);
+    const quantityPlaceholder = selectedUnit?.code
+      ? `VD: 5 ${selectedUnit.code}`
+      : "VD: 5";
+    const unitPreview = assignment
+      ? buildCountUnitPreview({
+          quantity: entry?.quantity ?? "",
+          entryUnitId: entry?.entryUnitId ?? null,
+          units: assignment.countUnits,
+        })
+      : null;
+
+    return (
+      <Sheet
+        open={assignment !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedIngredientId(null);
+        }}
+      >
+        <SheetContent side="right" className="w-full overflow-hidden sm:max-w-md">
+          {assignment ? (
+            <>
+              <SheetHeader>
+                <SheetTitle className="min-w-0 break-words pr-8">
+                  {assignment.ingredientName}
+                </SheetTitle>
+                <SheetDescription>
+                  {baseUnit?.code
+                    ? `Tồn so theo: ${baseUnit.code}`
+                    : "Nhập số đếm thực tế."}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 sm:p-4">
+                <div
+                  className={
+                    assignment.countUnits.length > 0
+                      ? "grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(7.5rem,9rem)]"
+                      : "grid gap-2"
+                  }
+                >
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <Label htmlFor={inputId}>Số đếm được</Label>
+                    <Input
+                      id={inputId}
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={entry?.quantity ?? ""}
+                      disabled={locked || isPending}
+                      onChange={(event) =>
+                        updateLine(assignment.ingredientId, {
+                          quantity: event.target.value,
+                        })
+                      }
+                      placeholder={quantityPlaceholder}
+                      className="min-h-12 text-base tabular-nums md:text-sm"
+                    />
+                  </div>
+                  {assignment.countUnits.length > 0 ? (
+                    <div className="flex min-w-0 flex-col gap-1.5">
+                      <Label htmlFor={unitInputId}>Đơn vị đếm</Label>
+                      <Select
+                        value={
+                          entry?.entryUnitId != null
+                            ? String(entry.entryUnitId)
+                            : ""
+                        }
+                        onValueChange={(value) =>
+                          updateLine(assignment.ingredientId, {
+                            entryUnitId: Number(value),
+                          })
+                        }
+                        disabled={locked || isPending}
+                      >
+                        <SelectTrigger
+                          id={unitInputId}
+                          size="touch"
+                          className="w-full min-w-0"
+                          aria-label={`Đơn vị đếm ${assignment.ingredientName}`}
+                        >
+                          <SelectValue placeholder="Đơn vị" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assignment.countUnits.map((unit) => (
+                            <SelectItem
+                              key={unit.unitId}
+                              value={String(unit.unitId)}
+                            >
+                              {unit.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
+                </div>
+                {unitPreview ? (
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    So sánh tồn:{" "}
+                    <span className="font-medium tabular-nums text-foreground">
+                      {unitPreview}
+                    </span>
+                  </p>
+                ) : null}
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <Label htmlFor={`${inputId}-note`}>Ghi chú</Label>
+                  <Textarea
+                    id={`${inputId}-note`}
+                    value={entry?.note ?? ""}
+                    disabled={locked || isPending}
+                    maxLength={500}
+                    onChange={(event) =>
+                      updateLine(assignment.ingredientId, {
+                        note: event.target.value,
+                      })
+                    }
+                    placeholder="Ví dụ: bao rách, thiếu 1 chai..."
+                    className="min-h-24 text-base md:text-sm"
+                  />
+                </div>
+              </div>
+              <SheetFooter>
+                <SheetClose asChild>
+                  <Button type="button" variant="outline" size="touch">
+                    Xong
+                  </Button>
+                </SheetClose>
+              </SheetFooter>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
+    );
+  }
 
   return (
     <>
@@ -310,137 +502,49 @@ export function CountSlipClient({
               </EmployeeFrame>
             ) : null}
 
-            <ItemGroup className="gap-2">
+            <ItemGroup className="grid grid-cols-2 gap-2">
               {activeGroup.assignments.map((assignment) => {
                 const entry = draft[assignment.ingredientId];
-                const inputId = `count-${assignment.ingredientId}`;
-                const unitInputId = `${inputId}-unit`;
                 const baseUnit = getBaseCountUnit(assignment.countUnits);
-                const selectedUnit =
-                  entry?.entryUnitId == null
-                    ? baseUnit
-                    : (assignment.countUnits.find(
-                        (unit) => unit.unitId === entry.entryUnitId,
-                      ) ?? baseUnit);
-                const stockUnitLabel = baseUnit?.code ?? null;
-                const quantityPlaceholder = selectedUnit?.code
-                  ? `VD: 5 ${selectedUnit.code}`
-                  : "VD: 5";
-                const unitPreview = buildCountUnitPreview({
+                const summary = buildDraftSummary({
                   quantity: entry?.quantity ?? "",
                   entryUnitId: entry?.entryUnitId ?? null,
                   units: assignment.countUnits,
                 });
+                const stockUnitLabel = baseUnit?.code ?? null;
                 return (
                   <Item
+                    asChild
                     key={assignment.ingredientId}
                     variant="outline"
-                    className="flex-col items-stretch gap-2 bg-card"
+                    className="min-h-24 cursor-pointer items-start gap-2 bg-card text-left hover:bg-muted/50"
                   >
-                    <ItemContent className="min-w-0">
-                      <ItemTitle className="text-sm font-semibold">
-                        {assignment.ingredientName}
-                      </ItemTitle>
-                      {stockUnitLabel ? (
-                        <ItemDescription className="text-xs">
-                          Tồn so theo: {stockUnitLabel}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedIngredientId(assignment.ingredientId)
+                      }
+                    >
+                      <ItemContent className="min-w-0 gap-1">
+                        <ItemTitle className="line-clamp-none w-full break-words text-sm font-semibold">
+                          {assignment.ingredientName}
+                        </ItemTitle>
+                        <ItemDescription className="line-clamp-none break-words text-xs">
+                          {summary ??
+                            (stockUnitLabel
+                              ? `Tồn so theo: ${stockUnitLabel}`
+                              : "Chưa nhập")}
                         </ItemDescription>
-                      ) : null}
-                    </ItemContent>
-                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                      <div className="flex flex-col gap-1.5">
-                        <div
-                          className={
-                            assignment.countUnits.length > 0
-                              ? "grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(7.5rem,9rem)]"
-                              : "grid gap-2"
-                          }
-                        >
-                          <div className="flex min-w-0 flex-col gap-1.5">
-                            <Label htmlFor={inputId}>Số đếm được</Label>
-                            <Input
-                              id={inputId}
-                              inputMode="decimal"
-                              autoComplete="off"
-                              value={entry?.quantity ?? ""}
-                              disabled={locked || isPending}
-                              onChange={(event) =>
-                                updateLine(assignment.ingredientId, {
-                                  quantity: event.target.value,
-                                })
-                              }
-                              placeholder={quantityPlaceholder}
-                              className="min-h-12 text-base tabular-nums md:text-sm"
-                            />
-                          </div>
-                          {assignment.countUnits.length > 0 ? (
-                            <div className="flex min-w-0 flex-col gap-1.5">
-                              <Label htmlFor={unitInputId}>Đơn vị đếm</Label>
-                              <Select
-                                value={
-                                  entry?.entryUnitId != null
-                                    ? String(entry.entryUnitId)
-                                    : ""
-                                }
-                                onValueChange={(value) =>
-                                  updateLine(assignment.ingredientId, {
-                                    entryUnitId: Number(value),
-                                  })
-                                }
-                                disabled={locked || isPending}
-                              >
-                                <SelectTrigger
-                                  id={unitInputId}
-                                  size="touch"
-                                  className="w-full min-w-0"
-                                  aria-label={`Đơn vị đếm ${assignment.ingredientName}`}
-                                >
-                                  <SelectValue placeholder="Đơn vị" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {assignment.countUnits.map((unit) => (
-                                    <SelectItem
-                                      key={unit.unitId}
-                                      value={String(unit.unitId)}
-                                    >
-                                      {unit.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          ) : null}
-                        </div>
-                        {unitPreview ? (
-                          <p className="text-xs leading-5 text-muted-foreground">
-                            So sánh tồn:{" "}
-                            <span className="font-medium tabular-nums text-foreground">
-                              {unitPreview}
-                            </span>
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`${inputId}-note`}>Ghi chú</Label>
-                        <Textarea
-                          id={`${inputId}-note`}
-                          value={entry?.note ?? ""}
-                          disabled={locked || isPending}
-                          maxLength={500}
-                          onChange={(event) =>
-                            updateLine(assignment.ingredientId, {
-                              note: event.target.value,
-                            })
-                          }
-                          placeholder="Ví dụ: bao rách, thiếu 1 chai…"
-                          className="min-h-20 text-base md:text-sm"
-                        />
-                      </div>
-                    </div>
+                      </ItemContent>
+                      <Badge variant={summary ? "success" : "secondary"}>
+                        {summary ? "Đã nhập" : "Chưa đếm"}
+                      </Badge>
+                    </button>
                   </Item>
                 );
               })}
             </ItemGroup>
+            {renderIngredientSheet(selectedAssignment)}
 
             {!locked ? (
               <EmployeeActionBar>

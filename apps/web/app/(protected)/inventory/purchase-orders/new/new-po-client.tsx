@@ -24,6 +24,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Select,
   SelectContent,
@@ -43,7 +44,8 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
-import { Combobox, NumberPadSheet } from "@/components/form";
+import { Combobox } from "@/components/form/combobox";
+import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { formatVND } from "../../_lib/format";
 import {
   getDefaultPurchaseUnit,
@@ -212,24 +214,25 @@ export function NewPoClient({
     refreshSuggestions(nextId, periodDays);
   }
 
+  function buildSuggestionLine(s: PoSuggestionRow): LocalLine {
+    const ing = ingredients.find((x) => x.id === s.ingredient_id);
+    const defaultUnit = getDefaultPurchaseUnit(ing);
+    return {
+      ingredientId: s.ingredient_id,
+      ingredientName: s.ingredient_name,
+      quantity: s.suggested_qty,
+      unit: defaultUnit?.label ?? s.unit,
+      entryUnitId: defaultUnit?.unitId ?? null,
+      unitPriceEst: ing?.unit_cost ?? null,
+    };
+  }
+
   function addSuggestionToLines(s: PoSuggestionRow) {
     if (lineIngredientIds.has(s.ingredient_id)) {
       toast.info(`${s.ingredient_name} ${toastIngredientAlreadyExists}`);
       return;
     }
-    const ing = ingredients.find((x) => x.id === s.ingredient_id);
-    const defaultUnit = getDefaultPurchaseUnit(ing);
-    setLines((prev) => [
-      ...prev,
-      {
-        ingredientId: s.ingredient_id,
-        ingredientName: s.ingredient_name,
-        quantity: s.suggested_qty,
-        unit: defaultUnit?.label ?? s.unit,
-        entryUnitId: defaultUnit?.unitId ?? null,
-        unitPriceEst: ing?.unit_cost ?? null,
-      },
-    ]);
+    setLines((prev) => [...prev, buildSuggestionLine(s)]);
     toast.success(`${toastAddedIngredient} ${s.ingredient_name}`);
   }
 
@@ -241,22 +244,10 @@ export function NewPoClient({
       toast.info(toastNoSuggestionsToAdd);
       return;
     }
-    setLines((prev) => [
-      ...prev,
-      ...toAdd.map((s) => {
-        const ing = ingredients.find((x) => x.id === s.ingredient_id);
-        const defaultUnit = getDefaultPurchaseUnit(ing);
-        return {
-          ingredientId: s.ingredient_id,
-          ingredientName: s.ingredient_name,
-          quantity: s.suggested_qty,
-          unit: defaultUnit?.label ?? s.unit,
-          entryUnitId: defaultUnit?.unitId ?? null,
-          unitPriceEst: ing?.unit_cost ?? null,
-        };
-      }),
-    ]);
-    toast.success(toastAddedIngredientsPrefix + toAdd.length + toastAddedIngredientsSuffix);
+    setLines((prev) => [...prev, ...toAdd.map(buildSuggestionLine)]);
+    toast.success(
+      toastAddedIngredientsPrefix + toAdd.length + toastAddedIngredientsSuffix,
+    );
   }
 
   function removeLine(idx: number) {
@@ -452,9 +443,6 @@ export function NewPoClient({
   );
 }
 
-// ---------------------------------------------------------------------------
-// SupplierSection
-// ---------------------------------------------------------------------------
 function SupplierSection({
   suppliers,
   supplierId,
@@ -563,9 +551,6 @@ function SupplierSection({
   );
 }
 
-// ---------------------------------------------------------------------------
-// SuggestionsPanel
-// ---------------------------------------------------------------------------
 function SuggestionsPanel({
   suggestions,
   periodDays,
@@ -702,7 +687,7 @@ function SuggestionsPanel({
                   "justify-between",
                   alreadyAdded
                     ? "bg-muted/30 opacity-60"
-                    : "bg-background/70 hover:bg-info/5",
+                    : "bg-background/70 hover:bg-info/10",
                 )}
               >
                 <ItemContent className="min-w-0">
@@ -754,9 +739,6 @@ function SuggestionsPanel({
   );
 }
 
-// ---------------------------------------------------------------------------
-// AddLineDraft — line editor state, mirroring GrnCreateClient's EditState.
-// ---------------------------------------------------------------------------
 type AddLineDraft = {
   ingredientId: string;
   unit: string;
@@ -773,9 +755,6 @@ const EMPTY_ADD_LINE: AddLineDraft = {
   unitPrice: null,
 };
 
-// ---------------------------------------------------------------------------
-// LineItemsSection — line list + sheet-driven add flow (mobile parity w/ GRN)
-// ---------------------------------------------------------------------------
 function LineItemsSection({
   lines,
   lineDeviations,
@@ -1007,9 +986,6 @@ function LineItemsSection({
   );
 }
 
-// ---------------------------------------------------------------------------
-// AddLineSheet — bottom sheet line editor (ingredient + qty/price via numpad).
-// ---------------------------------------------------------------------------
 function AddLineSheet({
   draft,
   ingredient,
@@ -1054,9 +1030,9 @@ function AddLineSheet({
         {draft ? (
           <>
             <SheetHeader>
-              <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+              <SectionLabel density="dense">
                 {messages.inventory.po.addLineTitle}
-              </p>
+              </SectionLabel>
               <SheetTitle className="text-lg font-semibold">
                 {ingredient?.name ?? messages.inventory.po.addLineTitle}
               </SheetTitle>
@@ -1157,9 +1133,6 @@ function AddLineSheet({
   );
 }
 
-// ---------------------------------------------------------------------------
-// NumpadValueButton — tappable value that opens a NumberPadSheet drawer.
-// ---------------------------------------------------------------------------
 function NumpadValueButton({
   label,
   display,
@@ -1177,18 +1150,15 @@ function NumpadValueButton({
       onClick={onClick}
       className="flex flex-col items-start gap-1 rounded-md bg-muted/50 px-3 py-3 text-left transition active:scale-[0.99]"
     >
-      <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+      <SectionLabel density="dense">
         {label}
-      </span>
+      </SectionLabel>
       <span className="text-2xl font-semibold tabular-nums">{display}</span>
       <span className="text-xs text-muted-foreground">{detail}</span>
     </button>
   );
 }
 
-// ---------------------------------------------------------------------------
-// UnitField — unit dropdown.
-// ---------------------------------------------------------------------------
 function UnitField({
   options,
   entryUnitId,
@@ -1229,9 +1199,6 @@ function UnitField({
   );
 }
 
-// ---------------------------------------------------------------------------
-// InlineDeviationHint
-// ---------------------------------------------------------------------------
 function InlineDeviationHint({
   deviation,
   unit,

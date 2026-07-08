@@ -72,7 +72,7 @@ async function fetchArchiveCandidates(
   branchId: number,
 ): Promise<ArchiveCandidate[]> {
   // Scope: status IN ('issued','replaced','cancelled') — all three
-  // require legal retention per TT78 §10 + NĐ 70/2025. `replaced`/
+  // require legal retention per TT 32/2025 + NĐ 254/2026. `replaced`/
   // `cancelled` rows reach the bucket BEFORE they transition (cron
   // runs every 15 min) OR after if pre-shipping; the partial index
   // covers them via the archive_attempts < 5 + pdf_url IS NULL gate.

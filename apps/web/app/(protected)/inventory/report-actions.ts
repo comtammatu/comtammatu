@@ -48,6 +48,17 @@ export interface BranchMovementSummaryRow {
   adjustment: number;
 }
 
+type IngredientUnitCodeJoin = {
+  is_base: boolean;
+  units: { code: string } | null;
+};
+
+type IngredientReportRow = {
+  id: number;
+  name: string;
+  ingredient_units: IngredientUnitCodeJoin[];
+};
+
 /* ─── fetchStockMovementReport ─── */
 
 export async function fetchStockMovementReport(
@@ -320,8 +331,9 @@ export async function fetchConsumptionVariance(
     .eq("is_active", true);
   if (ingErr) return { success: false, error: "Không tải được nguyên liệu." };
   const ingMap = new Map(
-    (ingredients ?? []).map((i) => {
-      const baseUnit = i.ingredient_units.find((u: any) => u.is_base)?.units?.code || "kg";
+    ((ingredients ?? []) as IngredientReportRow[]).map((i) => {
+      const baseUnit =
+        i.ingredient_units.find((u) => u.is_base)?.units?.code || "kg";
       return [
         i.id,
         { name: i.name, unit: baseUnit },

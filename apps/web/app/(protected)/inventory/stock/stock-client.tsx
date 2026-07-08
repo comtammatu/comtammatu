@@ -1,10 +1,9 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { z } from "zod";
 import { formatVNDate } from "@comtammatu/shared/time";
 import {
   ArrowRightToLine as IconArrowBarRight,
@@ -19,12 +18,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Item,
-  ItemContent,
-  ItemTitle,
-  ItemDescription,
-} from "@comtammatu/ui/components/item";
 import {
   Select,
   SelectContent,
@@ -41,19 +34,11 @@ import {
 import {
   InputGroup,
   InputGroupAddon,
-  InputGroupButton,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
-import {
-  FormattedNumberInput,
-  FormDialog,
-  SelectField,
-  TextareaField,
-} from "@/components/form";
 import {
   AppEmptyState,
   AppPage,
@@ -72,20 +57,15 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty, formatVND } from "../_lib/format";
 import { formatStockUnits } from "../_lib/stock-unit-format";
 import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
-import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
-import {
-  clampIssueEntryQuantity,
-  formatIssueMaxEntryQuantity,
-  getDefaultIssueUnit,
-  getIssueBaseQuantity,
-  getIssueMaxEntryQuantity,
-  getIssueUnitOptions,
-  type IssueUnitOption,
-} from "../_lib/issue-units";
 import type { IngredientUnitRow } from "../_lib/types";
-import { AdjustStockDialog } from "./adjust-stock-dialog";
-import { QuickInternalTransferDialog } from "./quick-internal-transfer-dialog";
-import { StockMobileGrid } from "./stock-mobile-grid";
+import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
+import type { QuickInternalTransferDialogProps } from "./quick-internal-transfer-dialog";
+import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
+import {
+  STOCK_ALL_CATEGORY_VALUE,
+  STOCK_NO_CATEGORY_VALUE,
+  StockMobileGrid,
+} from "./stock-mobile-grid";
 import {
   StockLocationBreakdownLine,
   type StockLocationBreakdown,
@@ -102,6 +82,28 @@ import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
 const operatorFlow = messages.inventory.operatorFlow;
+
+const AdjustStockDialog = dynamic<AdjustStockDialogProps>(
+  () => import("./adjust-stock-dialog").then((mod) => mod.AdjustStockDialog),
+  { ssr: false },
+);
+
+const QuickInternalTransferDialog =
+  dynamic<QuickInternalTransferDialogProps>(
+    () =>
+      import("./quick-internal-transfer-dialog").then(
+        (mod) => mod.QuickInternalTransferDialog,
+      ),
+    { ssr: false },
+  );
+
+const QuickStockIssueDialog = dynamic<QuickStockIssueDialogProps>(
+  () =>
+    import("./quick-stock-issue-dialog").then(
+      (mod) => mod.QuickStockIssueDialog,
+    ),
+  { ssr: false },
+);
 
 export type StockIngredient = {
   id: number;
@@ -161,28 +163,6 @@ const locationFilterOptions: { value: LocationFilter; label: string }[] = [
   { value: "kitchen", label: stockCopy.filters.locationKitchen },
 ];
 
-const quickIssueTypeOptions: {
-  value: QuickIssueType;
-  label: string;
-  reasonPlaceholder: string;
-}[] = [
-  {
-    value: "consumption",
-    label: stockCopy.quickIssue.options.consumption,
-    reasonPlaceholder: stockCopy.quickIssue.placeholders.consumption,
-  },
-  {
-    value: "writeoff",
-    label: stockCopy.quickIssue.options.writeoff,
-    reasonPlaceholder: stockCopy.quickIssue.placeholders.writeoff,
-  },
-  {
-    value: "other",
-    label: stockCopy.quickIssue.options.other,
-    reasonPlaceholder: stockCopy.quickIssue.placeholders.other,
-  },
-];
-
 // Two-line stock quantity: largest unit on top (emphasis class from caller),
 // base unit muted below. Single-unit ingredients collapse to one line.
 function StockQtyCell({
@@ -203,41 +183,6 @@ function StockQtyCell({
     </span>
   );
 }
-
-function createQuickIssueSchema(
-  maxBaseQuantity: number,
-  issueUnitOptions: IssueUnitOption[],
-) {
-  return z
-    .object({
-      issueType: z.enum(["consumption", "writeoff", "other"]),
-      quantity: z.string().refine((value) => Number(value) > 0, {
-        error: stockCopy.quickIssue.quantityPositive,
-      }),
-      entryUnitId: z.string().optional(),
-      reason: z
-        .string()
-        .trim()
-        .min(1, { error: stockCopy.quickIssue.reasonRequired }),
-    })
-    .refine(
-      (value) => {
-        const issueUnit = issueUnitOptions.find(
-          (option) => String(option.unitId) === value.entryUnitId,
-        );
-        return (
-          getIssueBaseQuantity(Number(value.quantity), issueUnit) <=
-          maxBaseQuantity + 1e-9
-        );
-      },
-      {
-        path: ["quantity"],
-        error: stockCopy.quickIssue.quantityExceedsStock,
-      },
-    );
-}
-
-type QuickIssueFormValues = z.infer<ReturnType<typeof createQuickIssueSchema>>;
 
 const STATUS_PRIORITY: Record<StockIngredient["status"], number> = {
   out: 0,
@@ -385,244 +330,6 @@ function QuickActionButton({
   );
 }
 
-function QuickStockIssueDialog({
-  branchId,
-  open,
-  target,
-  issueBasePath = "/inventory/issues",
-  onOpenChange,
-}: {
-  branchId: number;
-  open: boolean;
-  target: QuickIssueTarget;
-  issueBasePath?: string;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const router = useRouter();
-  const issueUnitOptions = useMemo(
-    () => getIssueUnitOptions(target.ingredient),
-    [target.ingredient],
-  );
-  const defaultIssueUnit = useMemo(
-    () => getDefaultIssueUnit(target.ingredient),
-    [target.ingredient],
-  );
-  const schema = useMemo(
-    () => createQuickIssueSchema(target.ingredient.qty, issueUnitOptions),
-    [issueUnitOptions, target.ingredient.qty],
-  );
-  const defaultValues = useMemo<QuickIssueFormValues>(
-    () => ({
-      issueType: target.issueType,
-      quantity: "",
-      entryUnitId: defaultIssueUnit ? String(defaultIssueUnit.unitId) : "",
-      reason: "",
-    }),
-    [defaultIssueUnit, target.issueType],
-  );
-  const title =
-    target.issueType === "writeoff"
-      ? stockCopy.quickIssue.writeoffTitle
-      : stockCopy.quickIssue.issueTitle;
-
-  async function handleSubmit(values: QuickIssueFormValues) {
-    const selectedIssueUnit = issueUnitOptions.find(
-      (option) => String(option.unitId) === values.entryUnitId,
-    );
-    const draftRes = await createStockIssueDraft({
-      branchId,
-      issueType: values.issueType,
-      notes: stockCopy.quickIssue.draftNotes(target.ingredient.name),
-    });
-    if (!draftRes.success || !draftRes.data) {
-      return {
-        success: false,
-        error: draftRes.error ?? stockCopy.quickIssue.createDraftFailed,
-      };
-    }
-
-    const issueId = Number((draftRes.data as { id: number }).id);
-    const lineRes = await upsertStockIssueLine({
-      issueId,
-      ingredientId: target.ingredient.id,
-      quantity: Number(values.quantity),
-      entryUnitId: selectedIssueUnit?.unitId ?? null,
-      reason: values.reason.trim(),
-    });
-    if (!lineRes.success) {
-      router.push(`${issueBasePath}/${issueId}`);
-      return {
-        success: false,
-        error: lineRes.error ?? stockCopy.quickIssue.addLineFailed,
-      };
-    }
-
-    router.push(`${issueBasePath}/${issueId}`);
-    return { success: true };
-  }
-
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      schema={schema}
-      defaultValues={defaultValues}
-      entityKey={`${target.ingredient.id}-${target.issueType}`}
-      onSubmit={handleSubmit}
-      successMessage={stockCopy.quickIssue.created(target.ingredient.name)}
-      submitLabel={stockCopy.quickIssue.createSlip}
-      cancelLabel={ACTIONS_VI.cancel}
-      contentClassName="sm:max-w-md"
-    >
-      {(form) => {
-        const activeIssueType = quickIssueTypeOptions.find(
-          (option) => option.value === form.watch("issueType"),
-        );
-        const quantityError = form.formState.errors.quantity;
-        const entryUnitId = form.watch("entryUnitId");
-        const selectedIssueUnit = issueUnitOptions.find(
-          (option) => String(option.unitId) === entryUnitId,
-        );
-        const maxEntryQuantity = getIssueMaxEntryQuantity(
-          target.ingredient.qty,
-          selectedIssueUnit,
-        );
-        const maxQuantityValue = formatIssueMaxEntryQuantity(maxEntryQuantity);
-        return (
-          <>
-            <Item variant="outline" size="sm">
-              <ItemContent className="min-w-0 flex-1">
-                <ItemTitle className="text-sm font-medium">
-                  {target.ingredient.name}
-                </ItemTitle>
-                <ItemDescription className="text-xs text-muted-foreground">
-                  {stockCopy.quickIssue.stockLine(
-                    target.ingredient.sku,
-                    target.ingredient.category,
-                    formatQty(target.ingredient.qty),
-                    target.ingredient.unit,
-                  )}
-                </ItemDescription>
-              </ItemContent>
-            </Item>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field data-invalid={!!quantityError}>
-                <FieldLabel htmlFor="quick-issue-quantity">
-                  {FORM_VI.quantity} *
-                </FieldLabel>
-                <InputGroup className="h-10">
-                  <FormattedNumberInput
-                    id="quick-issue-quantity"
-                    maxFractionDigits={3}
-                    value={form.watch("quantity")}
-                    onValueChange={(value) =>
-                      form.setValue(
-                        "quantity",
-                        clampIssueEntryQuantity(value, maxEntryQuantity),
-                        { shouldValidate: true },
-                      )
-                    }
-                    placeholder="0"
-                    className="h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-1 dark:bg-transparent"
-                  />
-                  {maxQuantityValue ? (
-                    <InputGroupAddon align="inline-end">
-                      <InputGroupButton
-                        type="button"
-                        onClick={() =>
-                          form.setValue("quantity", maxQuantityValue, {
-                            shouldDirty: true,
-                            shouldTouch: true,
-                            shouldValidate: true,
-                          })
-                        }
-                      >
-                        {FORM_VI.max}
-                      </InputGroupButton>
-                    </InputGroupAddon>
-                  ) : null}
-                </InputGroup>
-                {quantityError ? <FieldError errors={[quantityError]} /> : null}
-              </Field>
-              {issueUnitOptions.length > 0 ? (
-                <Field>
-                  <FieldLabel htmlFor="quick-issue-unit">
-                    {FORM_VI.unit} *
-                  </FieldLabel>
-                  <Select
-                    value={entryUnitId ?? ""}
-                    onValueChange={(value) => {
-                      form.setValue("entryUnitId", value, {
-                        shouldValidate: true,
-                      });
-                      const nextIssueUnit = issueUnitOptions.find(
-                        (option) => String(option.unitId) === value,
-                      );
-                      const nextMaxEntryQuantity = getIssueMaxEntryQuantity(
-                        target.ingredient.qty,
-                        nextIssueUnit,
-                      );
-                      form.setValue(
-                        "quantity",
-                        clampIssueEntryQuantity(
-                          form.watch("quantity"),
-                          nextMaxEntryQuantity,
-                        ),
-                        { shouldValidate: true },
-                      );
-                    }}
-                  >
-                    <SelectTrigger id="quick-issue-unit" className="h-10">
-                      <SelectValue placeholder={FORM_VI.unit} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {issueUnitOptions.map((option) => (
-                        <SelectItem
-                          key={option.unitId}
-                          value={String(option.unitId)}
-                        >
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <span className="text-sm font-medium">{FORM_VI.unit}</span>
-                  <Select disabled value="">
-                    <SelectTrigger>
-                      <SelectValue placeholder={FORM_VI.unit} />
-                    </SelectTrigger>
-                    <SelectContent />
-                  </Select>
-                </div>
-              )}
-            </div>
-
-            <SelectField
-              control={form.control}
-              name="issueType"
-              label={stockCopy.quickIssue.operation}
-              options={quickIssueTypeOptions}
-            />
-            <TextareaField
-              control={form.control}
-              name="reason"
-              label={FORM_VI.reason}
-              rows={3}
-              placeholder={activeIssueType?.reasonPlaceholder}
-              required
-            />
-          </>
-        );
-      }}
-    </FormDialog>
-  );
-}
-
 export function StockClient({
   ingredients,
   branchId,
@@ -644,7 +351,7 @@ export function StockClient({
 }) {
   const router = useRouter();
   const isCompactLayout = useStockCompactLayout();
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeCategory, setActiveCategory] = useState(STOCK_ALL_CATEGORY_VALUE);
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [locationFilter, setLocationFilter] = useState<LocationFilter>("all");
@@ -667,12 +374,19 @@ export function StockClient({
     return values;
   }, [ingredients]);
 
+  const hasUncategorized = useMemo(
+    () => ingredients.some((ingredient) => !ingredient.category),
+    [ingredients],
+  );
+
   const filtered = useMemo(() => {
     let result = ingredients.map((ingredient) =>
       locationScopedIngredient(ingredient, locationFilter),
     );
 
-    if (activeCategory !== "all") {
+    if (activeCategory === STOCK_NO_CATEGORY_VALUE) {
+      result = result.filter((ingredient) => !ingredient.category);
+    } else if (activeCategory !== STOCK_ALL_CATEGORY_VALUE) {
       result = result.filter(
         (ingredient) => ingredient.category === activeCategory,
       );
@@ -684,7 +398,7 @@ export function StockClient({
           ingredient.status === "normal" || ingredient.status === "over",
       );
     } else if (stockFilter === "low") {
-      result = result.filter((ingredient) => ingredient.status === "low");
+      result = result.filter(isReorderRisk);
     } else if (stockFilter === "out") {
       result = result.filter((ingredient) => ingredient.status === "out");
     }
@@ -708,7 +422,7 @@ export function StockClient({
 
   const filtersActive =
     searchQuery.trim() !== "" ||
-    activeCategory !== "all" ||
+    activeCategory !== STOCK_ALL_CATEGORY_VALUE ||
     stockFilter !== "all" ||
     locationFilter !== "all";
 
@@ -784,7 +498,7 @@ export function StockClient({
     if (actionPermissions.canCreateTransfer) {
       rowActions.push({
         key: "transfer",
-        label: "Chuyển Bếp",
+        label: stockCopy.actions.transferKitchen,
         icon: <IconArrowBarRight />,
         onSelect: () => setQuickTransferTarget(item),
       });
@@ -843,48 +557,6 @@ export function StockClient({
 
     return rowActions;
   };
-  const categoryColumnHeader = (
-    <Select value={activeCategory} onValueChange={setActiveCategory}>
-      <SelectTrigger
-        aria-label={stockCopy.filters.categoryPlaceholder}
-        size="sm"
-        className="min-w-32 bg-background normal-case tracking-normal text-foreground"
-      >
-        <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">
-          {stockCopy.filters.categoryPlaceholder}
-        </SelectItem>
-        {categories.map((cat) => (
-          <SelectItem key={cat} value={cat}>
-            {cat}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-  const stockColumnHeader = (
-    <Select
-      value={stockFilter}
-      onValueChange={(v) => setStockFilter(v as StockFilter)}
-    >
-      <SelectTrigger
-        aria-label={stockCopy.filters.statusPlaceholder}
-        size="sm"
-        className="ml-auto min-w-28 bg-background normal-case tracking-normal text-foreground"
-      >
-        <SelectValue placeholder={stockCopy.table.stock} />
-      </SelectTrigger>
-      <SelectContent>
-        {stockFilterOptions.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
-            {opt.value === "all" ? stockCopy.table.stock : opt.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
   const locationFilterControl = (
     <Select
       value={locationFilter}
@@ -924,7 +596,7 @@ export function StockClient({
     },
     {
       key: "category",
-      header: categoryColumnHeader,
+      header: stockCopy.filters.categoryPlaceholder,
       className: "min-w-32",
       render: (item) =>
         item.category ? (
@@ -954,7 +626,7 @@ export function StockClient({
     },
     {
       key: "stock",
-      header: stockColumnHeader,
+      header: stockCopy.table.stock,
       className: "min-w-24 text-right",
       render: (item) => (
         <div className="flex flex-col items-end gap-1">
@@ -1042,29 +714,17 @@ export function StockClient({
     </div>
   );
 
-  // Work signals: the under-threshold count doubles as a filter toggle; pending
-  // counts are read-only badges (no dedicated filter facet).
+  // Work signals stay read-only so status filtering has one control.
   const workSignalCluster = (
     <div className="flex flex-wrap items-center gap-2">
-      <Button
-        type="button"
-        size={embedded || isCompactLayout ? "touch" : "sm"}
-        variant="outline"
-        aria-pressed={stockFilter === "low"}
-        disabled={summary.underThresholdCount === 0}
-        onClick={() => setStockFilter(stockFilter === "low" ? "all" : "low")}
-        className={cn(
-          "gap-1.5",
-          stockFilter === "low" && "ring-2 ring-foreground",
-        )}
-      >
+      <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
         {stockCopy.metrics.underThreshold}
         <Badge
           variant={summary.underThresholdCount > 0 ? "warning" : "secondary"}
         >
           {summary.underThresholdCount}
         </Badge>
-      </Button>
+      </span>
       <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
         {stockCopy.metrics.pending}
         <Badge variant={summary.pendingWorkCount > 0 ? "warning" : "secondary"}>
@@ -1096,8 +756,7 @@ export function StockClient({
 
   const filterControls = (
     <>
-      {/* Operator category facet is owned by StockMobileGrid's chips (D066 §5);
-          only office renders the Select to avoid a second control on one facet. */}
+      {/* Operator category facet is owned by StockMobileGrid chips. */}
       {!embedded ? (
         <Select value={activeCategory} onValueChange={setActiveCategory}>
           <SelectTrigger
@@ -1115,6 +774,11 @@ export function StockClient({
                 {cat}
               </SelectItem>
             ))}
+            {hasUncategorized ? (
+              <SelectItem value={STOCK_NO_CATEGORY_VALUE}>
+                {stockCopy.filters.noCategory}
+              </SelectItem>
+            ) : null}
           </SelectContent>
         </Select>
       ) : null}
@@ -1401,7 +1065,7 @@ export function StockClient({
               variant="outline"
               onClick={() => setQuickTransferTarget(item)}
             >
-              Chuyển Bếp
+              {stockCopy.actions.transferKitchen}
             </Button>
           ) : null}
           {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
@@ -1473,7 +1137,7 @@ export function StockClient({
         bulk={
           !embedded && !isCompactLayout ? (
             <div className="flex flex-wrap items-center gap-2">
-              {locationFilterControl}
+              {filterControls}
               {workSignalCluster}
             </div>
           ) : undefined
@@ -1531,6 +1195,10 @@ export function StockClient({
         embedded ? (
           <StockMobileGrid
             ingredients={filtered}
+            categories={categories}
+            hasUncategorized={hasUncategorized}
+            activeCategory={activeCategory}
+            onCategoryChange={setActiveCategory}
             stockDetailHref={stockDetailHref}
           />
         ) : (

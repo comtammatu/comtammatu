@@ -107,7 +107,7 @@ export interface PayrollEntryResult {
  *
  * Constants are resolved from `effectiveDate` / `legalVersion` / now (in
  * that priority order). The result includes `legalVersionEffectiveFrom`
- * so the caller can persist it as a snapshot for audit + reproducibility.
+ * so callers can expose version metadata alongside the money snapshot.
  */
 export function calculatePayrollEntry(
   input: PayrollEntryInput,

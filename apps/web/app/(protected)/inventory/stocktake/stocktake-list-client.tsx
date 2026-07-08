@@ -1,7 +1,7 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -15,6 +15,7 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { useLongPress } from "@lib/hooks/use-long-press";
 import {
   Drawer,
@@ -22,10 +23,8 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
-
 } from "@comtammatu/ui/components/drawer";
 import { cancelStocktake } from "../actions";
-import { useTransition } from "react";
 import { toast } from "@comtammatu/ui/components/sonner";
 
 import {
@@ -143,8 +142,16 @@ export function StocktakeListClient({
   const [drawerRow, setDrawerRow] = useState<StocktakeSessionRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleCancelSession(id: number) {
-    if (!confirm("Bạn có chắc chắn muốn hủy phiếu này không?")) return;
+  async function handleCancelSession(id: number) {
+    const ok = await confirm({
+      title: "Hủy phiếu kiểm kê?",
+      description:
+        "Phiếu đang đếm sẽ chuyển sang trạng thái đã hủy và không thể hoàn tất.",
+      confirmText: "Hủy phiếu",
+      cancelText: ACTIONS_VI.cancel,
+      variant: "destructive",
+    });
+    if (!ok) return;
     startTransition(async () => {
       const res = await cancelStocktake(id);
       if (!res.success) {

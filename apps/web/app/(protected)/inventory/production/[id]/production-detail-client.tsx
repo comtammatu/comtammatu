@@ -4,6 +4,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -234,21 +239,35 @@ export function ProductionDetailClient({ run, recipeContext }: ProductionDetailC
           </div>
 
           {shortages.length > 0 ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
-              <p className="font-medium text-destructive">Thiếu nguyên liệu trong kho để sản xuất</p>
-              <div className="mt-2 space-y-1">
-                {shortages.map((row) => (
-                  <div key={row.ingredient_id} className="flex justify-between gap-2 text-muted-foreground">
-                    <span className="font-medium text-foreground">{row.ingredient_name}</span>
-                    <span>
-                      Cần <span className="font-mono">{row.needed.toFixed(3)}</span> {row.unit}, còn
-                      <span className="font-mono"> {row.on_hand.toFixed(3)} </span>
-                      {row.unit}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <Alert variant="destructive">
+              <AlertTitle>Thiếu nguyên liệu trong kho để sản xuất</AlertTitle>
+              <AlertDescription>
+                <div className="mt-2 space-y-1">
+                  {shortages.map((row) => (
+                    <div
+                      key={row.ingredient_id}
+                      className="flex justify-between gap-2 text-muted-foreground"
+                    >
+                      <span className="font-medium text-foreground">
+                        {row.ingredient_name}
+                      </span>
+                      <span>
+                        Cần{" "}
+                        <span className="font-mono">
+                          {row.needed.toFixed(3)}
+                        </span>{" "}
+                        {row.unit}, còn
+                        <span className="font-mono">
+                          {" "}
+                          {row.on_hand.toFixed(3)}{" "}
+                        </span>
+                        {row.unit}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </AlertDescription>
+            </Alert>
           ) : null}
         </div>
       )}

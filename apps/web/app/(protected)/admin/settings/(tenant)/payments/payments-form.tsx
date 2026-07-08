@@ -16,6 +16,8 @@ import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { messages } from "@lib/messages";
 import { updatePaymentSettings } from "./actions";
 
+const SAMPLE_PAYMENT_SUFFIX = "A1B2C3D4E5F6";
+
 const paymentsSchema = z.object({
   enable_vietqr: z.boolean(),
   enable_momo: z.boolean(),
@@ -45,6 +47,10 @@ const paymentsSchema = z.object({
 });
 
 type PaymentsFormValues = z.infer<typeof paymentsSchema>;
+
+function normalizePaymentCodePrefix(value: string): string {
+  return value.toUpperCase().replace(/\s+/g, " ").trim();
+}
 
 interface PaymentsFormProps {
   settings: Record<string, string>;
@@ -76,6 +82,12 @@ export function PaymentsForm({
         settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_CODE_PREFIX] ?? "",
     },
   });
+  const normalizedCodePrefix = normalizePaymentCodePrefix(
+    form.watch("vietqr_code_prefix"),
+  );
+  const paymentCodePreview = normalizedCodePrefix
+    ? `${normalizedCodePrefix} ${SAMPLE_PAYMENT_SUFFIX}`
+    : null;
 
   function onValid(values: PaymentsFormValues) {
     startTransition(async () => {
@@ -200,10 +212,14 @@ export function PaymentsForm({
             <Label htmlFor="vietqr-code-prefix" className="text-xs">
               {messages.settings.payments.codePrefix}
             </Label>
+            <p className="text-xs text-muted-foreground">
+              {messages.settings.payments.codePrefixIntro}
+            </p>
             <Input
               id="vietqr-code-prefix"
               autoCapitalize="characters"
               placeholder="QAJZRU5550 MBBMS01382716 1"
+              aria-describedby="vietqr-code-prefix-help vietqr-code-prefix-preview"
               {...form.register("vietqr_code_prefix")}
             />
             {form.formState.errors.vietqr_code_prefix && (
@@ -211,8 +227,56 @@ export function PaymentsForm({
                 {form.formState.errors.vietqr_code_prefix.message}
               </p>
             )}
-            <p className="text-2xs text-muted-foreground">
+            <p
+              id="vietqr-code-prefix-help"
+              className="text-2xs text-muted-foreground"
+            >
               {messages.settings.payments.codePrefixHelp}
+            </p>
+            <dl
+              id="vietqr-code-prefix-preview"
+              className="grid gap-2 text-xs sm:grid-cols-3"
+            >
+              <div className="flex flex-col gap-1">
+                <dt className="font-medium text-muted-foreground">
+                  {messages.settings.payments.codeModelAdminLabel}
+                </dt>
+                <dd>
+                  <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+                    {normalizedCodePrefix ||
+                      messages.settings.payments.codePreviewEmpty}
+                  </code>
+                </dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="font-medium text-muted-foreground">
+                  {messages.settings.payments.codeModelSuffixLabel}
+                </dt>
+                <dd>
+                  <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+                    {SAMPLE_PAYMENT_SUFFIX}
+                  </code>
+                </dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="font-medium text-muted-foreground">
+                  {messages.settings.payments.codeModelFinalLabel}
+                </dt>
+                <dd>
+                  {paymentCodePreview ? (
+                    <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+                      {paymentCodePreview}
+                    </code>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {messages.settings.payments.codePreviewEmpty}
+                    </span>
+                  )}
+                </dd>
+              </div>
+            </dl>
+            <p className="text-2xs text-muted-foreground">
+              {messages.settings.payments.codePreviewHelp}
             </p>
           </div>
         </div>

@@ -2,7 +2,6 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -12,15 +11,9 @@ import {
   probePermission,
 } from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
+import { isPosBranchInScope } from "./_lib/auth";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
-// Opening/closing a shift is an owner-capable operation: the DB already
-// authorizes owner (owner short-circuit in `has_permission` + owner holds
-// `pos:open_cashbox`/`pos:close_shift` tenant-wide), but `MODULE_ACL.pos`
-// omits owner from the operational POS roster. Widen the role gate for the
-// two shift actions only so the role check in `getAuthContext` does not
-// reject owner before the permission probe runs.
-const POS_SHIFT_ROLES: readonly StaffRole[] = [...POS_ROLES, "owner"];
 
 const branchIdSchema = z.coerce
   .number()
@@ -53,8 +46,8 @@ export async function fetchTablesForBranch(
 
   const { claims } = ctx;
 
-  // Verify branch_id matches JWT claim
-  if (claims.branch_id !== parsedBranchId.data) {
+  // Verify POS branch scope before using the service-role table snapshot.
+  if (!isPosBranchInScope(claims, parsedBranchId.data)) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
@@ -109,7 +102,7 @@ export async function fetchPosTerminals(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsedBranchId.data) {
+  if (!isPosBranchInScope(claims, parsedBranchId.data)) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
@@ -193,7 +186,7 @@ export async function fetchActiveSession(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsedBranchId.data) {
+  if (!isPosBranchInScope(claims, parsedBranchId.data)) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
@@ -260,7 +253,7 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
 
   const ctx = await getAuthContext(POS_ROLES);
   if (!ctx) return deny;
-  if (ctx.claims.branch_id !== parsedBranchId.data) return deny;
+  if (!isPosBranchInScope(ctx.claims, parsedBranchId.data)) return deny;
 
   const [openRes, closeRes, cashRes, splitMergeRes] = await Promise.all([
     ctx.supabase.rpc("has_permission", {
@@ -317,7 +310,7 @@ export const openPosSession = withActionPositional(
       terminalId?: number,
     ) => ({ branchId, openingCash, terminalId }),
     schema: openPosSessionSchema,
-    roles: POS_SHIFT_ROLES,
+    roles: POS_ROLES,
     permission: PERMISSION_KEYS.POS_OPEN_CASHBOX,
     permissionBranchId: (data) => data.branchId,
     forbiddenError: "Không có quyền mở ca",
@@ -326,10 +319,7 @@ export const openPosSession = withActionPositional(
     { branchId, openingCash, terminalId },
     { supabase, claims, user },
   ): Promise<ActionResult<{ session_id: number }>> => {
-    // A tenant-wide owner (claims.branch_id === null) is authorized on every
-    // branch — skip the branch-mismatch check for that case, mirroring
-    // `closePosSession`. Branch-scoped roles still must match their branch.
-    if (claims.branch_id !== null && claims.branch_id !== branchId) {
+    if (!isPosBranchInScope(claims, branchId)) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
@@ -398,7 +388,7 @@ export const closePosSession = withActionPositional(
       note,
     }),
     schema: closeSessionSchema,
-    roles: POS_SHIFT_ROLES,
+    roles: POS_ROLES,
     permission: PERMISSION_KEYS.POS_CLOSE_SHIFT,
   },
   async ({ sessionId, closingCash, note }, ctx): Promise<ActionResult> => {
@@ -438,7 +428,7 @@ export const closePosSession = withActionPositional(
       };
     }
 
-    if (claims.branch_id !== null && session.branch_id !== claims.branch_id) {
+    if (!isPosBranchInScope(claims, session.branch_id)) {
       return {
         success: false,
         error: "Không có quyền truy cập chi nhánh này",

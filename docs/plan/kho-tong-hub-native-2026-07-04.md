@@ -55,7 +55,7 @@
 
 | Route (dưới `(operator)/`) | Ruột hiện tại | Native target | Wave |
 |---|---|---|---|
-| `stock/grn/*` (`page`,`new`,`new/[supplierId]`,`[id]`) | `GRNListPageContent`+`GrnNewPageContent`+`GrnCreateClient` embed | Nhận hàng: NCC-first, banner "không cần PO", tạo NCC inline, nhập dòng cho ngón tay, chụp ảnh, xác nhận + tổng | **A** |
+| `stock/grn/*` (`page`,`new`,`new/[supplierId]`,`[id]`) | `GRNListPageContent`+`GrnNewPageContent`+`GrnCreateClient` embed | Nhận hàng: NCC-first, PO là lối tắt phụ, tạo NCC inline, nhập dòng cho ngón tay, chụp ảnh, xác nhận + tổng | **A** |
 | `stock/page.tsx` | `StockPageContent` embed | Tồn kho: chip lọc nhóm + tìm + grid card 2 cột, số `font-mono`, tap → on-hand; qty 0 trung tính (D066 §5) | **A** |
 | `stock/production` (Bếp TT) | `ProductionPageContent` embed — dashboard-of-zeros (ảnh owner 2026-07-04) | Sản xuất job-first: CTA "Tạo lệnh" + danh sách lệnh sống theo trạng thái; bỏ 5 thẻ KPI; trạng thái "chưa có công thức" nói 1 chỗ | **A′** |
 | `page.tsx` (home) | tile grid + queue + KPI | Home "Hôm nay" Kho: CTA "Nhận hàng" + feed duyệt + lưới tile (chỉ nhánh `central_supply`) | **B** |
@@ -74,7 +74,7 @@
 
 - **PO không bắt buộc**: đã đúng ở DB/RPC (`goods_received_notes.po_id` NULLABLE,
   `confirm_goods_receipt_note` xử lý po_id NULL). UI đổi khung: NCC-first, list PO
-  mở chỉ là lối tắt phụ (không dẫn dắt), banner "Không cần đơn đặt hàng (PO)".
+  mở chỉ là lối tắt phụ (không dẫn dắt).
 - **Tạo NCC nhanh inline**: trong picker NCC, khi gõ tên chưa có → hàng "+ Tạo
   NCC «tên»" → gọi `createSupplier({name, phone?})` (`supplier-actions.ts:47`,
   name unique/tenant, bắt lỗi trùng) → dùng ngay `id` cho `createGrnDraft`. KHÔNG
@@ -123,11 +123,6 @@ KEEP = đạt:
 | GRN create `[supplierId]` · transfer/new · stocktake list · count-assignments · employee/count · adjust/quick-issue dialogs · GRN confirmed detail | **KEEP** (9) | Đã đạt job-first |
 
 Phát hiện nghiêm trọng kèm theo:
-- **Operator không mở lại được nháp GRN của mình** (`showDrafts=false` ở
-  wrapper operator, drafts tab chỉ có ở office) — sửa trong lát GRN.
-- Banner "Không cần đơn đặt hàng (PO)" (slice 1 vừa thêm) chính là
-  process-prose vi phạm §0 → GỠ trong lát TRIM GRN; PO-optional truyền đạt
-  bằng cấu trúc (NCC-first, PO là hàng quick-pick phụ).
 - `supplier-returns/new` là placeholder "đang phát triển" (scaffold đã xóa
   theo D031 E4) — không đếm vào chương trình này.
 - Copy hệ thống: "phiếu" quá tải 6 loại chứng từ; "4 TP / 58 NL" đọc không
@@ -135,7 +130,7 @@ Phát hiện nghiêm trọng kèm theo:
 
 **Wave mới (job-critical trước):**
 - **Wave 1 — REBUILD các flow nhiều thao tác:** Home spine 2 kind +
-  bottom-nav curated → Sản xuất → GRN draft-review (+ mở lại drafts operator)
+  bottom-nav curated → Sản xuất → GRN draft-review
   → Receive per-line bấm số → màn Đếm + kết quả kiểm kê → PO detail.
   Mỗi màn: mockup trước → owner duyệt → build khớp.
 - **Wave 2 — TRIM 13 màn** theo family (giết filler, mobile card, đơn-tab

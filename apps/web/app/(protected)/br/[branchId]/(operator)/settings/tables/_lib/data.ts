@@ -8,6 +8,9 @@ interface TableQueryRow {
   zone_id: number | null;
   number: number;
   status: string;
+  self_order_token: string | null;
+  self_order_enabled: boolean;
+  self_order_token_rotated_at: string | null;
   branch_zones: { name: string } | null;
 }
 
@@ -18,6 +21,9 @@ export function shapeTableRows(rows: readonly TableQueryRow[]): TableRow[] {
     zone_id: row.zone_id,
     number: row.number,
     status: row.status,
+    self_order_token: row.self_order_token,
+    self_order_enabled: row.self_order_enabled,
+    self_order_token_rotated_at: row.self_order_token_rotated_at,
     zone_name: row.branch_zones?.name ?? null,
   }));
 }

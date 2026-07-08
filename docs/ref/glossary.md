@@ -63,7 +63,8 @@ Glossary này tổng hợp từ tài liệu dự án và nguồn thị trường
   metrics, FIXE bookkeeping glossary, BEP back-office glossary, meez
   actual-vs-theoretical food cost, BuyersEdge, Epos Now.
 - HKD/thuế/HĐĐT: Cổng thông tin Chính phủ, Tổng cục Thuế/Cục Thuế địa phương,
-  NĐ 68/2026, NĐ 141/2026, NĐ 70/2025, TT 152/2025, TT 32/2025.
+  NĐ 68/2026, NĐ 141/2026, Luật QLT 108/2025, NĐ 252/2026, NĐ 254/2026,
+  NĐ 253/2026, TT 87/2026, TT 152/2025, TT 32/2025.
 
 Luật, thuế suất, ngưỡng doanh thu, và biểu thuế là dữ liệu dễ thay đổi. Glossary
 chỉ khóa thuật ngữ; số luật cụ thể phải lấy từ `legal-framework-2026.md` và
@@ -423,7 +424,7 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `inventory_ops`                | điều hành kho                            | Có thể rút gọn `Kho hàng` trong nav.                                    |
 | `point_of_sale`                | POS                                      | Không ép dịch thành `điểm bán` trong UI.                                |
 | `kitchen_display_system`       | KDS                                      | Có thể chú thích `màn hình bếp` ở docs/onboarding.                      |
-| `employee_portal`              | trang nhân viên                          | Dùng cho `/employee`.                                                   |
+| `employee_portal`              | trang nhân viên                          | Legacy code label; route hiện tại là branch staff runtime dưới `/br/[branchId]/shift/*` và `/br/[branchId]/profile/*`. |
 | `content_management`           | quản trị nội dung                        | Banner, promo, landing content, media, SEO metadata.                    |
 
 ### Bán hàng, POS, và KDS
@@ -865,8 +866,11 @@ label phải dùng canonical metric vocabulary và nêu rõ denominator/scope.
 - Cục Thuế/GDT địa phương, hướng dẫn HKD, HĐĐT, tỷ lệ GTGT/TNCN:
   <https://gialai.gdt.gov.vn/wps/portal/news/detail?1dmy=&current=true&urile=wcm%3Apath%3A%2Fgialai%2Fsite%2Fnews%2Fcucthue%2F5e07f89c-32a0-4d6a-aabe-61029a38a6b0>,
   <https://vinhlong.gdt.gov.vn/wps/wcm/connect/VinhLong/site/news/cucthue/69e3ecd6-165e-4594-abd1-473c2cac0e93?presentationTemplate=Lib%2Fpt_new_detail_print>
-- HĐĐT máy tính tiền/NĐ 70/2025:
-  <https://xaydungchinhsach.chinhphu.vn/mot-so-noi-dung-moi-cua-nghi-dinh-so-70-2025-nd-cp-ve-hoa-don-chung-tu-119250403074719995.htm>
+- HĐĐT/chứng từ điện tử hiện hành từ 01/07/2026:
+  <https://vanban.chinhphu.vn/?docid=218689&pageid=27160>
+- Thuế TNCN hiện hành từ 01/07/2026:
+  <https://vanban.chinhphu.vn/?classid=1&docid=218684&pageid=27160&typegroupid=4>,
+  <https://vanban.chinhphu.vn/?docid=218772&pageid=27160>
 - TT 152/2025 kế toán HKD:
   <https://vanban.chinhphu.vn/?docid=216533&pageid=27160>
 

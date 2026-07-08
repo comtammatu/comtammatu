@@ -156,10 +156,11 @@ contracts (see Repository Boundary).
   `docs/ref/legal-framework-2026.md` (the SSoT law register) FIRST, then the
   specific domain doc (`einvoice-tax.md` / `payroll-pit.md` /
   `labor-contracts.md`) and `docs/ref/business-context.md`.
-- Cite the governing văn bản (NĐ 70/2025, NĐ 68/2026, NĐ 141/2026, TT 152/2025,
-  TT 32/2025, Luật TNCN 109/2025, NQ 110/2025) — never assert a tax/labor rule
-  from memory. When a doc and the code disagree (e.g. PIT bracket count), flag it
-  for owner/accountant; do not silently reconcile either side.
+- Cite the governing văn bản (Luật QLT 108/2025, NĐ 252/2026, NĐ 254/2026, NĐ
+  68/2026, NĐ 141/2026, TT 152/2025, TT 32/2025, Luật TNCN 109/2025, NĐ
+  253/2026, TT 87/2026, NQ 110/2025) — never assert a tax/labor rule from memory.
+  When a doc and the code disagree (e.g. PIT bracket count), flag it for
+  owner/accountant; do not silently reconcile either side.
 - Má Tư is a Hộ kinh doanh: no formal BCTC/VAS. Treat enterprise-accounting
   guidance as an advanced layer reachable by direct permission, not the default
   surface (D012/D020).

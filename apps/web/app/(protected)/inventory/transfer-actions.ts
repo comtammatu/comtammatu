@@ -652,11 +652,14 @@ export async function transferConfirmShip(
     };
   }
 
-  // GỘP: Nếu là điều chuyển liên chi nhánh, tự động chuyển sang đang vận chuyển (in_transit)
+  // Inter-site transfers move straight to transit after ship confirmation.
   if (authz.transfer.from_branch_id !== authz.transfer.to_branch_id) {
-    const { error: transitError } = await authz.supabase.rpc("stock_transfer_mark_in_transit", {
-      p_transfer_id: id.data,
-    });
+    const { error: transitError } = await authz.supabase.rpc(
+      "stock_transfer_mark_in_transit",
+      {
+        p_transfer_id: id.data,
+      },
+    );
     if (transitError) {
       console.error("inventory.transfer.mark_in_transit_auto_failed", {
         error: transitError,
@@ -753,14 +756,43 @@ export async function transferReceive(
   );
   if (!authz.success) return { success: false, error: authz.error };
 
-  // GỘP: Tự động chuyển sang 'confirmed_receive' (bắt đầu nhận) nếu phiếu đang ở 'in_transit'
-  if (authz.transfer.status === "in_transit") {
-    const { error: confirmReceiveError } = await authz.supabase.rpc("stock_transfer_confirm_receive", {
-      p_transfer_id: id.data,
-    });
+  if (authz.transfer.status === "confirmed_ship") {
+    const { error: transitError } = await authz.supabase.rpc(
+      "stock_transfer_mark_in_transit",
+      {
+        p_transfer_id: id.data,
+      },
+    );
+    if (transitError) {
+      console.error("inventory.transfer.mark_in_transit_auto_receive_failed", {
+        error:
+          transitError instanceof Error
+            ? transitError.message
+            : String(transitError),
+      });
+      return {
+        success: false,
+        error: "Phiếu đã xuất nhưng chưa chuyển sang đang vận chuyển.",
+      };
+    }
+  }
+
+  if (
+    authz.transfer.status === "confirmed_ship" ||
+    authz.transfer.status === "in_transit"
+  ) {
+    const { error: confirmReceiveError } = await authz.supabase.rpc(
+      "stock_transfer_confirm_receive",
+      {
+        p_transfer_id: id.data,
+      },
+    );
     if (confirmReceiveError) {
       console.error("inventory.transfer.confirm_receive_auto_failed", {
-        error: confirmReceiveError instanceof Error ? confirmReceiveError.message : String(confirmReceiveError),
+        error:
+          confirmReceiveError instanceof Error
+            ? confirmReceiveError.message
+            : String(confirmReceiveError),
       });
       return { success: false, error: "Không thể bắt đầu kiểm nhận hàng." };
     }

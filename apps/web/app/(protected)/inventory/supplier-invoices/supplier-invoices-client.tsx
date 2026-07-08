@@ -10,6 +10,11 @@ import {
   CircleCheck as IconCircleCheck,
   Search as IconSearch,
 } from "lucide-react";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -52,9 +57,14 @@ import {
 import {
   createSupplierInvoice,
   fetchSupplierInvoicesPage,
+  recordSupplierPayment,
   recomputeInvoiceMatching,
 } from "../procurement-actions";
 import type { SupplierInvoiceCursor } from "../procurement-actions";
+import {
+  mapSupplierInvoiceRow,
+  type SupplierInvoiceRow,
+} from "./supplier-invoice-row";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 
 import { formatVND } from "../_lib/format";
@@ -63,54 +73,9 @@ import { messages } from "@lib/messages";
 import { ACTIONS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 import {
   diffVNDateDays,
-  formatVNBusinessDate,
+  formatVNDate,
   getVNDateString,
 } from "@comtammatu/shared/time";
-export type SupplierInvoiceRow = {
-  id: number;
-  supplierId: number;
-  grnId: number | null;
-  code: string;
-  supplierName: string;
-  grnCode: string | null;
-  matchStatus: string;
-  paymentStatus: string;
-  amount: number;
-  paidAmount: number;
-  variance: number | null;
-  invoiceDate: string | null;
-  dueDate: string | null;
-};
-
-export function mapSupplierInvoiceRow(
-  row: Record<string, unknown>,
-): SupplierInvoiceRow {
-  return {
-    id: row.id as number,
-    supplierId: Number(row.supplier_id ?? 0),
-    grnId: row.grn_id != null ? Number(row.grn_id) : null,
-    code: (row.invoice_number as string) ?? "",
-    supplierName:
-      ((row.suppliers as Record<string, unknown>)?.name as string) ?? "—",
-    grnCode:
-      ((row.goods_received_notes as Record<string, unknown>)
-        ?.grn_number as string) ?? null,
-    matchStatus:
-      (row.matching_status as string | undefined) ??
-      (row.match_status as string | undefined) ??
-      "pending",
-    paymentStatus: (row.payment_status as string) ?? "unpaid",
-    amount: Number(row.total_amount ?? 0),
-    paidAmount: Number(row.paid_amount ?? 0),
-    variance:
-      (row.variance_pct as number | null | undefined) != null
-        ? Number(row.variance_pct)
-        : null,
-    invoiceDate: (row.invoice_date as string) ?? null,
-    dueDate: (row.due_date as string) ?? null,
-  };
-}
-
 type SupplierOption = {
   id: number;
   name: string;
@@ -121,6 +86,20 @@ type GrnOption = {
   code: string;
   supplierId: number;
   supplierName: string;
+};
+
+type SupplierInvoiceViewMode = "supplier" | "po";
+
+type SupplierInvoiceGroup = {
+  id: string;
+  title: string;
+  subtitle: string;
+  invoices: SupplierInvoiceRow[];
+  invoiceCount: number;
+  totalAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+  overdueCount: number;
 };
 
 const ALL_FILTER_VALUE = "_all";
@@ -160,6 +139,16 @@ const supplierInvoiceSchema = z.object({
 
 type SupplierInvoiceFormValues = z.infer<typeof supplierInvoiceSchema>;
 
+const supplierPaymentSchema = z.object({
+  amount: z.string().refine((value) => Number(value) > 0, {
+    error: FORM_VI.required,
+  }),
+  paymentMethod: z.enum(["cash", "bank_transfer"]),
+  referenceNote: z.string().trim().optional(),
+});
+
+type SupplierPaymentFormValues = z.infer<typeof supplierPaymentSchema>;
+
 function createSupplierInvoiceDefaultValues(
   preselectGrnId?: number | null,
 ): SupplierInvoiceFormValues {
@@ -176,13 +165,45 @@ function createSupplierInvoiceDefaultValues(
   };
 }
 
+function createSupplierPaymentDefaultValues(
+  invoice?: SupplierInvoiceRow | null,
+): SupplierPaymentFormValues {
+  return {
+    amount: invoice ? String(getOutstandingAmount(invoice)) : "",
+    paymentMethod: "bank_transfer",
+    referenceNote: "",
+  };
+}
+
 function formatDate(value: string | null) {
   if (!value) return "Chưa có";
-  return formatVNBusinessDate(value);
+  return formatVNDate(value, "Chưa có");
 }
 
 function getOutstandingAmount(invoice: SupplierInvoiceRow) {
   return Math.max(invoice.amount - invoice.paidAmount, 0);
+}
+
+function getPrimaryInvoice(group: SupplierInvoiceGroup) {
+  return (
+    group.invoices.find((invoice) => getOutstandingAmount(invoice) > 0) ??
+    group.invoices[0] ??
+    null
+  );
+}
+
+function sortSupplierInvoices(
+  left: SupplierInvoiceRow,
+  right: SupplierInvoiceRow,
+) {
+  const leftDate = left.invoiceDate ?? "";
+  const rightDate = right.invoiceDate ?? "";
+
+  if (leftDate !== rightDate) {
+    return rightDate.localeCompare(leftDate);
+  }
+
+  return right.id - left.id;
 }
 
 function isInvoiceOverdue(invoice: SupplierInvoiceRow) {
@@ -191,6 +212,16 @@ function isInvoiceOverdue(invoice: SupplierInvoiceRow) {
   }
 
   return diffVNDateDays(invoice.dueDate, getVNDateString()) > 0;
+}
+
+function getDisplayMatchStatus(invoice: SupplierInvoiceRow) {
+  return invoice.matchStatus === "matched" && invoice.grnId == null
+    ? "pending"
+    : invoice.matchStatus;
+}
+
+function isMissingMatchingEvidence(invoice: SupplierInvoiceRow) {
+  return invoice.grnId == null;
 }
 
 function SupplierInvoiceCreateFields({
@@ -328,6 +359,57 @@ function SupplierInvoiceCreateFields({
   );
 }
 
+function SupplierPaymentFields({
+  form,
+  copy,
+  outstanding,
+}: {
+  form: UseFormReturn<
+    SupplierPaymentFormValues,
+    unknown,
+    SupplierPaymentFormValues
+  >;
+  copy: typeof messages.inventory.supplierInvoices;
+  outstanding: number;
+}) {
+  const methodOptions = useMemo(
+    () => [
+      { value: "bank_transfer", label: copy.paymentMethods.bank_transfer },
+      { value: "cash", label: copy.paymentMethods.cash },
+    ],
+    [copy.paymentMethods.bank_transfer, copy.paymentMethods.cash],
+  );
+
+  return (
+    <>
+      <p className="text-sm font-medium text-muted-foreground">
+        {copy.paymentOutstanding(formatVND(outstanding))}
+      </p>
+      <MoneyVndField
+        control={form.control}
+        name="amount"
+        label={copy.paymentAmount}
+        placeholder="0"
+        required
+      />
+      <SelectField
+        control={form.control}
+        name="paymentMethod"
+        label={copy.paymentMethod}
+        options={methodOptions}
+        required
+      />
+      <TextareaField
+        control={form.control}
+        name="referenceNote"
+        label={copy.referenceNote}
+        rows={3}
+        placeholder={copy.referenceNotePlaceholder}
+      />
+    </>
+  );
+}
+
 export function SupplierInvoicesClient({
   invoices,
   suppliers,
@@ -336,6 +418,9 @@ export function SupplierInvoicesClient({
   initialNextCursor = null,
   branchId,
   grnBasePath = "/inventory/grn",
+  eyebrow = "Kho hàng",
+  description,
+  canPaySupplier = false,
 }: {
   invoices: SupplierInvoiceRow[];
   suppliers: SupplierOption[];
@@ -344,6 +429,9 @@ export function SupplierInvoicesClient({
   initialNextCursor?: SupplierInvoiceCursor | null;
   branchId?: number;
   grnBasePath?: string;
+  eyebrow?: string;
+  description?: string;
+  canPaySupplier?: boolean;
 }) {
   const searchParams = useSearchParams();
   const invoiceIdParam = searchParams.get("invoiceId");
@@ -362,6 +450,7 @@ export function SupplierInvoicesClient({
   const [matchStatusFilter, setMatchStatusFilter] = useState(ALL_FILTER_VALUE);
   const [paymentStatusFilter, setPaymentStatusFilter] =
     useState(ALL_FILTER_VALUE);
+  const [viewMode, setViewMode] = useState<SupplierInvoiceViewMode>("supplier");
   const [showOnlyOverdue, setShowOnlyOverdue] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
     preselectInvoiceId ?? invoices[0]?.id ?? null,
@@ -369,6 +458,7 @@ export function SupplierInvoicesClient({
   const [createOpen, setCreateOpen] = useState(
     preselectGrnId != null && preselectInvoiceId == null,
   );
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const copy = messages.inventory.supplierInvoices;
   const createDefaultValues = useMemo(
@@ -404,7 +494,7 @@ export function SupplierInvoicesClient({
 
       if (
         matchStatusFilter !== ALL_FILTER_VALUE &&
-        invoice.matchStatus !== matchStatusFilter
+        getDisplayMatchStatus(invoice) !== matchStatusFilter
       ) {
         return false;
       }
@@ -425,7 +515,7 @@ export function SupplierInvoicesClient({
       }
 
       return matchesSearch(
-        [invoice.code, invoice.supplierName, invoice.grnCode],
+        [invoice.code, invoice.supplierName, invoice.poCode, invoice.grnCode],
         query,
       );
     });
@@ -438,10 +528,82 @@ export function SupplierInvoicesClient({
     supplierFilter,
   ]);
 
+  const invoiceGroups = useMemo(() => {
+    const groups = new Map<string, SupplierInvoiceGroup>();
+
+    for (const invoice of filteredInvoices) {
+      const groupId =
+        viewMode === "supplier"
+          ? `supplier:${invoice.supplierId}`
+          : invoice.poId != null
+            ? `po:${invoice.poId}`
+            : `supplier:${invoice.supplierId}:no-po`;
+      let group = groups.get(groupId);
+
+      if (!group) {
+        group = {
+          id: groupId,
+          title:
+            viewMode === "supplier"
+              ? invoice.supplierName
+              : (invoice.poCode ?? copy.noLinkedPo),
+          subtitle:
+            viewMode === "supplier"
+              ? copy.invoiceGroupSummary(0)
+              : invoice.supplierName,
+          invoices: [],
+          invoiceCount: 0,
+          totalAmount: 0,
+          paidAmount: 0,
+          outstandingAmount: 0,
+          overdueCount: 0,
+        };
+        groups.set(groupId, group);
+      }
+
+      group.invoices.push(invoice);
+      group.invoiceCount += 1;
+      group.totalAmount += invoice.amount;
+      group.paidAmount += invoice.paidAmount;
+      group.outstandingAmount += getOutstandingAmount(invoice);
+      if (isInvoiceOverdue(invoice)) {
+        group.overdueCount += 1;
+      }
+    }
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        invoices: [...group.invoices].sort(sortSupplierInvoices),
+        subtitle:
+          viewMode === "supplier"
+            ? copy.invoiceGroupSummary(group.invoiceCount)
+            : `${group.subtitle} · ${copy.invoiceGroupSummary(group.invoiceCount)}`,
+      }))
+      .sort((left, right) => {
+        const amountDiff = right.outstandingAmount - left.outstandingAmount;
+        if (amountDiff !== 0) {
+          return amountDiff;
+        }
+
+        return left.title.localeCompare(right.title, "vi");
+      });
+  }, [copy, filteredInvoices, viewMode]);
+
   const selectedInvoice =
     filteredInvoices.find((invoice) => invoice.id === selectedInvoiceId) ??
     filteredInvoices[0] ??
     null;
+  const selectedOutstandingAmount = selectedInvoice
+    ? getOutstandingAmount(selectedInvoice)
+    : 0;
+  const selectedMissingMatchingEvidence = selectedInvoice
+    ? isMissingMatchingEvidence(selectedInvoice)
+    : false;
+  const paymentDefaultValues = useMemo(
+    () => createSupplierPaymentDefaultValues(selectedInvoice),
+    [selectedInvoice?.id, selectedOutstandingAmount],
+  );
 
   const showEmptyResults =
     filteredInvoices.length === 0 &&
@@ -531,6 +693,30 @@ export function SupplierInvoicesClient({
     return res;
   }
 
+  async function handleRecordPayment(values: SupplierPaymentFormValues) {
+    if (!selectedInvoice) {
+      return { success: false, error: copy.noPaymentInvoice };
+    }
+
+    const amount = Number(values.amount || 0);
+    if (amount > selectedOutstandingAmount) {
+      return { success: false, error: copy.paymentTooLarge };
+    }
+
+    const res = await recordSupplierPayment({
+      invoiceId: selectedInvoice.id,
+      amount,
+      paymentMethod: values.paymentMethod,
+      referenceNote: values.referenceNote?.trim() || undefined,
+    });
+
+    if (res.success) {
+      await reloadInvoices(selectedInvoice.id);
+    }
+
+    return res;
+  }
+
   function handleRecomputeMatching() {
     if (!selectedInvoice) return;
 
@@ -545,10 +731,11 @@ export function SupplierInvoicesClient({
     });
   }
 
-  const renderInvoiceCard = (invoice: SupplierInvoiceRow) => {
-    const outstandingAmount = getOutstandingAmount(invoice);
-    const overdue = isInvoiceOverdue(invoice);
-    const isActive = selectedInvoice?.id === invoice.id;
+  const renderInvoiceGroupCard = (group: SupplierInvoiceGroup) => {
+    const primaryInvoice = getPrimaryInvoice(group);
+    const isActive =
+      selectedInvoice != null &&
+      group.invoices.some((invoice) => invoice.id === selectedInvoice.id);
 
     return (
       <InteractiveCard
@@ -562,132 +749,124 @@ export function SupplierInvoicesClient({
       >
         <button
           type="button"
-          onClick={() => setSelectedInvoiceId(invoice.id)}
+          onClick={() => {
+            if (primaryInvoice) setSelectedInvoiceId(primaryInvoice.id);
+          }}
           aria-pressed={isActive}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1">
-              <p className="truncate font-mono text-sm font-semibold">
-                {invoice.code}
-              </p>
+              <p className="truncate text-sm font-semibold">{group.title}</p>
               <p className="truncate text-sm text-muted-foreground">
-                {invoice.supplierName}
+                {group.subtitle}
               </p>
             </div>
-            {overdue ? (
-              <StatusBadge domain="inventory" value="overdue" />
+            {group.overdueCount > 0 ? (
+              <Badge variant="outline" className="border-destructive/20">
+                {copy.overdueGroupSummary(group.overdueCount)}
+              </Badge>
             ) : null}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <StatusBadge domain="inventory" value={invoice.matchStatus} />
-            <StatusBadge domain="inventory" value={invoice.paymentStatus} />
           </div>
 
           <div className="mt-4 grid gap-2 text-sm">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{copy.invoiceDate}</span>
-              <span>{formatDate(invoice.invoiceDate)}</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{copy.dueDate}</span>
-              <span>{formatDate(invoice.dueDate)}</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{copy.remaining}</span>
+              <span className="text-muted-foreground">{copy.totalInvoice}</span>
               <span className="font-mono font-semibold">
                 {messages.inventory.common.currencyCompact(
-                  formatVND(outstandingAmount),
+                  formatVND(group.totalAmount),
+                )}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">
+                {copy.outstandingPayable}
+              </span>
+              <span className="font-mono font-semibold">
+                {messages.inventory.common.currencyCompact(
+                  formatVND(group.outstandingAmount),
+                )}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{copy.paidAmount}</span>
+              <span className="font-mono">
+                {messages.inventory.common.currencyCompact(
+                  formatVND(group.paidAmount),
                 )}
               </span>
             </div>
           </div>
 
           <span className="mt-4 text-sm font-medium text-primary">
-            {isActive ? copy.analyzing : copy.viewAnalysis}
+            {isActive ? copy.analyzing : copy.groupDetailAction}
           </span>
         </button>
       </InteractiveCard>
     );
   };
 
-  const invoiceColumns: DataTableColumn<SupplierInvoiceRow>[] = [
+  const invoiceGroupColumns: DataTableColumn<SupplierInvoiceGroup>[] = [
     {
-      key: "code",
-      header: copy.invoiceNumber,
-      className: "min-w-40",
-      render: (invoice) => (
-        <div className="flex flex-col gap-1">
-          <p className="font-mono font-semibold text-foreground">
-            {invoice.code}
+      key: "group",
+      header: viewMode === "supplier" ? copy.supplierGroup : copy.poGroup,
+      className: "min-w-56",
+      render: (group) => (
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="truncate font-semibold text-foreground">
+            {group.title}
           </p>
-          {invoice.grnCode && invoice.grnId != null ? (
-            <Link
-              href={`${grnBasePath}/${invoice.grnId}`}
-              className="text-xs text-primary hover:underline"
-              onClick={(event) => event.stopPropagation()}
+          <p className="text-xs text-muted-foreground">{group.subtitle}</p>
+          {group.overdueCount > 0 ? (
+            <Badge
+              variant="outline"
+              className="w-fit border-destructive/20 text-xs"
             >
-              GRN: {invoice.grnCode}
-            </Link>
+              {copy.overdueGroupSummary(group.overdueCount)}
+            </Badge>
           ) : null}
         </div>
       ),
     },
     {
-      key: "supplier",
-      header: copy.supplier,
-      className: "min-w-52",
-      render: (invoice) => (
-        <span className="text-muted-foreground">{invoice.supplierName}</span>
+      key: "invoiceCount",
+      header: copy.invoiceNumber,
+      className: "min-w-28",
+      render: (group) => (
+        <span className="text-sm text-muted-foreground">{group.subtitle}</span>
       ),
     },
     {
-      key: "dateDue",
-      header: copy.dateDue,
-      className: "min-w-44",
-      render: (invoice) => (
-        <div className="flex flex-col gap-1 text-sm">
-          <p>{formatDate(invoice.invoiceDate)}</p>
-          <p
-            className={cn(
-              "text-muted-foreground",
-              isInvoiceOverdue(invoice) && "font-medium text-destructive",
-            )}
-          >
-            {copy.duePrefix(formatDate(invoice.dueDate))}
-          </p>
-        </div>
-      ),
-    },
-    {
-      key: "matchStatus",
-      header: copy.matchingPlaceholder,
-      className: "min-w-36",
-      render: (invoice) => (
-        <StatusBadge domain="inventory" value={invoice.matchStatus} />
-      ),
-    },
-    {
-      key: "paymentStatus",
-      header: copy.paymentPlaceholder,
-      className: "min-w-36",
-      render: (invoice) => (
-        <div className="flex flex-wrap gap-2">
-          <StatusBadge domain="inventory" value={invoice.paymentStatus} />
-          {isInvoiceOverdue(invoice) ? (
-            <StatusBadge domain="inventory" value="overdue" />
-          ) : null}
-        </div>
-      ),
-    },
-    {
-      key: "remaining",
-      header: copy.remaining,
-      className: "min-w-32 text-right",
-      render: (invoice) => (
-        <span className="font-mono font-semibold">
+      key: "total",
+      header: copy.totalInvoice,
+      className: "min-w-36 text-right",
+      render: (group) => (
+        <span className="font-mono text-sm tabular-nums">
           {messages.inventory.common.currencyCompact(
-            formatVND(getOutstandingAmount(invoice)),
+            formatVND(group.totalAmount),
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "paid",
+      header: copy.paidAmount,
+      className: "min-w-36 text-right",
+      render: (group) => (
+        <span className="font-mono text-sm tabular-nums">
+          {messages.inventory.common.currencyCompact(
+            formatVND(group.paidAmount),
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "outstanding",
+      header: copy.outstandingPayable,
+      className: "min-w-40 text-right",
+      render: (group) => (
+        <span className="font-mono text-sm font-semibold tabular-nums">
+          {messages.inventory.common.currencyCompact(
+            formatVND(group.outstandingAmount),
           )}
         </span>
       ),
@@ -696,26 +875,89 @@ export function SupplierInvoicesClient({
       key: "action",
       header: FORM_VI.action,
       className: "w-28 text-right",
-      render: (invoice) => (
-        <Button
-          type="button"
-          size="sm"
-          variant={selectedInvoice?.id === invoice.id ? "default" : "outline"}
-          onClick={() => setSelectedInvoiceId(invoice.id)}
-        >
-          {selectedInvoice?.id === invoice.id
-            ? copy.analyzingShort
-            : copy.analysis}
-        </Button>
-      ),
+      render: (group) => {
+        const primaryInvoice = getPrimaryInvoice(group);
+        const isActive =
+          selectedInvoice != null &&
+          group.invoices.some((invoice) => invoice.id === selectedInvoice.id);
+
+        return (
+          <Button
+            type="button"
+            size="sm"
+            variant={isActive ? "default" : "outline"}
+            onClick={() => {
+              if (primaryInvoice) setSelectedInvoiceId(primaryInvoice.id);
+            }}
+          >
+            {isActive ? copy.analyzingShort : copy.groupDetailAction}
+          </Button>
+        );
+      },
     },
   ];
+
+  const viewModeActions = (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        type="button"
+        size="sm"
+        variant={viewMode === "supplier" ? "default" : "outline"}
+        onClick={() => setViewMode("supplier")}
+        aria-pressed={viewMode === "supplier"}
+      >
+        {copy.viewBySupplier}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={viewMode === "po" ? "default" : "outline"}
+        onClick={() => setViewMode("po")}
+        aria-pressed={viewMode === "po"}
+      >
+        {copy.viewByPo}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={showOnlyOverdue ? "default" : "outline"}
+        onClick={() => setShowOnlyOverdue((current) => !current)}
+        aria-pressed={showOnlyOverdue}
+      >
+        <IconAlertTriangle data-icon="inline-start" />
+        {copy.overdueOnly}
+      </Button>
+    </div>
+  );
+
+  const detailTitle =
+    selectedInvoice != null
+      ? viewMode === "supplier"
+        ? selectedInvoice.supplierName
+        : (selectedInvoice.poCode ?? copy.noLinkedPo)
+      : copy.noInvoiceSelected;
+
+  const selectedGroup = selectedInvoice
+    ? (invoiceGroups.find((group) =>
+        group.invoices.some((invoice) => invoice.id === selectedInvoice.id),
+      ) ?? null)
+    : null;
+
+  const detailSubtitle =
+    selectedGroup != null
+      ? `${copy.outstandingPayable}: ${messages.inventory.common.currencyCompact(
+          formatVND(selectedGroup.outstandingAmount),
+        )} · ${copy.invoiceGroupSummary(selectedGroup.invoiceCount)}`
+      : null;
+
+  const activeGroupId = selectedGroup?.id ?? null;
 
   return (
     <AppPage width="xwide">
       <AppPageHeader
-        eyebrow="Kho hàng"
+        eyebrow={eyebrow}
         title={copy.title}
+        description={description}
         actions={
           <Button type="button" onClick={() => setCreateOpen(true)}>
             {copy.createAction}
@@ -793,29 +1035,24 @@ export function SupplierInvoicesClient({
                 </Select>
               </>
             }
-            actions={
-              <Button
-                type="button"
-                size="sm"
-                variant={showOnlyOverdue ? "default" : "outline"}
-                onClick={() => setShowOnlyOverdue((current) => !current)}
-                aria-pressed={showOnlyOverdue}
-              >
-                <IconAlertTriangle data-icon="inline-start" />
-                {copy.overdueOnly}
-              </Button>
-            }
+            actions={viewModeActions}
           />
 
           <AppSection
-            title={copy.title}
-            headerHint={copy.invoiceCount(filteredInvoices.length, rows.length)}
+            title={
+              viewMode === "supplier" ? copy.viewBySupplier : copy.viewByPo
+            }
+            headerHint={copy.groupCount(
+              invoiceGroups.length,
+              filteredInvoices.length,
+            )}
             contentFlush
+            contentScroll
           >
             <DataTable
-              columns={invoiceColumns}
-              data={filteredInvoices}
-              getRowKey={(invoice) => invoice.id}
+              columns={invoiceGroupColumns}
+              data={invoiceGroups}
+              getRowKey={(group) => group.id}
               emptyTitle={
                 showEmptyResults
                   ? copy.emptyMatchedTitle
@@ -827,12 +1064,17 @@ export function SupplierInvoicesClient({
                   : copy.emptyInitialDescription
               }
               emptyMode={showEmptyResults ? "no-results" : "no-data"}
-              onRowClick={(invoice) => setSelectedInvoiceId(invoice.id)}
-              getRowAriaLabel={(invoice) => `${copy.analysis}: ${invoice.code}`}
-              getRowDataState={(invoice) =>
-                selectedInvoice?.id === invoice.id ? "selected" : undefined
+              onRowClick={(group) => {
+                const primaryInvoice = getPrimaryInvoice(group);
+                if (primaryInvoice) setSelectedInvoiceId(primaryInvoice.id);
+              }}
+              getRowAriaLabel={(group) =>
+                `${copy.groupDetailAction}: ${group.title}`
               }
-              mobileCardRender={renderInvoiceCard}
+              getRowDataState={(group) =>
+                group.id === activeGroupId ? "selected" : undefined
+              }
+              mobileCardRender={renderInvoiceGroupCard}
             />
             {hasMore ? (
               <div className="flex justify-center p-3">
@@ -851,10 +1093,25 @@ export function SupplierInvoicesClient({
         </div>
 
         <AppSection
-          title={selectedInvoice?.code ?? copy.noInvoiceSelected}
-          action={
-            selectedInvoice ? (
-              <div className="flex flex-wrap justify-end gap-2">
+          title={detailTitle}
+          headerHint={detailSubtitle ?? undefined}
+        >
+          {selectedInvoice ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className="font-mono">
+                  {selectedInvoice.code}
+                </Badge>
+                {canPaySupplier && selectedOutstandingAmount > 0 ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setPaymentOpen(true)}
+                    disabled={isPending}
+                  >
+                    {copy.payAction}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   size="sm"
@@ -866,19 +1123,15 @@ export function SupplierInvoicesClient({
                 </Button>
                 <StatusBadge
                   domain="inventory"
-                  value={selectedInvoice.matchStatus}
+                  value={getDisplayMatchStatus(selectedInvoice)}
                 />
                 <StatusBadge
                   domain="inventory"
                   value={selectedInvoice.paymentStatus}
                 />
               </div>
-            ) : null
-          }
-        >
-          {selectedInvoice ? (
-            <div className="flex flex-col gap-4">
-              <div className="grid gap-3 sm:grid-cols-2">
+
+              <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-md border bg-muted/30 p-3">
                   <Badge variant="secondary">{copy.totalInvoice}</Badge>
                   <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
@@ -891,13 +1144,21 @@ export function SupplierInvoicesClient({
                   <Badge variant="secondary">{copy.outstandingPayable}</Badge>
                   <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
                     {messages.inventory.common.currencyCompact(
-                      formatVND(getOutstandingAmount(selectedInvoice)),
+                      formatVND(selectedOutstandingAmount),
+                    )}
+                  </p>
+                </div>
+                <div className="rounded-md border bg-muted/30 p-3">
+                  <Badge variant="secondary">{copy.paidAmount}</Badge>
+                  <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
+                    {messages.inventory.common.currencyCompact(
+                      formatVND(selectedInvoice.paidAmount),
                     )}
                   </p>
                 </div>
               </div>
 
-              <dl className="grid gap-2">
+              <dl className="grid gap-2 sm:grid-cols-2">
                 <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
                   <dt className="text-sm text-muted-foreground">
                     {copy.invoiceDate}
@@ -921,20 +1182,11 @@ export function SupplierInvoicesClient({
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
                   <dt className="text-sm text-muted-foreground">
-                    {copy.paidAmount}
-                  </dt>
-                  <dd className="font-mono text-sm font-medium tabular-nums">
-                    {messages.inventory.common.currencyCompact(
-                      formatVND(selectedInvoice.paidAmount),
-                    )}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
-                  <dt className="text-sm text-muted-foreground">
                     {copy.linkedGrn}
                   </dt>
                   <dd className="text-sm font-medium">
-                    {selectedInvoice.grnCode && selectedInvoice.grnId != null ? (
+                    {selectedInvoice.grnCode &&
+                    selectedInvoice.grnId != null ? (
                       <Link
                         href={`${grnBasePath}/${selectedInvoice.grnId}`}
                         className="text-primary hover:underline"
@@ -946,45 +1198,60 @@ export function SupplierInvoicesClient({
                     )}
                   </dd>
                 </div>
+                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+                  <dt className="text-sm text-muted-foreground">
+                    {copy.linkedPo}
+                  </dt>
+                  <dd className="text-sm font-medium">
+                    {selectedInvoice.poCode && selectedInvoice.poId != null ? (
+                      <Link
+                        href={`/inventory/purchase-orders/${selectedInvoice.poId}`}
+                        className="text-primary hover:underline"
+                      >
+                        {selectedInvoice.poCode}
+                      </Link>
+                    ) : (
+                      copy.notLinked
+                    )}
+                  </dd>
+                </div>
               </dl>
 
-              {selectedInvoice.variance !== null &&
-              selectedInvoice.variance > 0 ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                  <div className="flex items-start gap-3">
-                    <IconAlertTriangle className="mt-0.5 size-4 text-destructive" />
-                    <div className="flex flex-col gap-1">
-                      <p className="text-sm font-semibold text-destructive">
-                        {copy.varianceTitle(selectedInvoice.variance)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {copy.varianceDescription}
-                      </p>
-                      {selectedInvoice.grnId != null ? (
-                        <Link
-                          href={`${grnBasePath}/${selectedInvoice.grnId}`}
-                          className="text-sm font-medium text-primary hover:underline"
-                        >
-                          {copy.viewGrnLine}
-                        </Link>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
+              {selectedMissingMatchingEvidence ? (
+                <Alert className="border-warning/20 bg-warning/10 text-warning">
+                  <IconAlertTriangle />
+                  <AlertTitle>{copy.missingGrnTitle}</AlertTitle>
+                  <AlertDescription className="text-muted-foreground">
+                    {copy.missingGrnDescription}
+                  </AlertDescription>
+                </Alert>
+              ) : selectedInvoice.variance !== null &&
+                selectedInvoice.variance > 0 ? (
+                <Alert variant="destructive">
+                  <IconAlertTriangle />
+                  <AlertTitle>
+                    {copy.varianceTitle(selectedInvoice.variance)}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {copy.varianceDescription}
+                    {selectedInvoice.grnId != null ? (
+                      <Link
+                        href={`${grnBasePath}/${selectedInvoice.grnId}`}
+                        className="block font-medium text-primary hover:underline"
+                      >
+                        {copy.viewGrnLine}
+                      </Link>
+                    ) : null}
+                  </AlertDescription>
+                </Alert>
               ) : (
-                <div className="rounded-md border border-success/30 bg-success/5 p-3">
-                  <div className="flex items-start gap-3">
-                    <IconCircleCheck className="mt-0.5 size-4 text-success" />
-                    <div className="flex flex-col gap-1">
-                      <p className="text-sm font-semibold text-success">
-                        {copy.safeTitle}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {copy.safeDescription}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <Alert className="border-success/20 bg-success/10 text-success">
+                  <IconCircleCheck />
+                  <AlertTitle>{copy.safeTitle}</AlertTitle>
+                  <AlertDescription className="text-muted-foreground">
+                    {copy.safeDescription}
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           ) : (
@@ -1016,6 +1283,29 @@ export function SupplierInvoicesClient({
             suppliers={suppliers}
             grns={grns}
             copy={copy}
+          />
+        )}
+      </FormDialog>
+
+      <FormDialog
+        open={paymentOpen}
+        onOpenChange={setPaymentOpen}
+        schema={supplierPaymentSchema}
+        defaultValues={paymentDefaultValues}
+        entityKey={selectedInvoice?.id ?? "supplier-payment"}
+        title={copy.recordPaymentTitle}
+        description={copy.recordPaymentDescription}
+        submitLabel={copy.payAction}
+        cancelLabel={ACTIONS_VI.cancel}
+        successMessage={copy.paymentRecorded}
+        contentClassName="sm:max-w-md"
+        onSubmit={handleRecordPayment}
+      >
+        {(form) => (
+          <SupplierPaymentFields
+            form={form}
+            copy={copy}
+            outstanding={selectedOutstandingAmount}
           />
         )}
       </FormDialog>

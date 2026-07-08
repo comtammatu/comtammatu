@@ -1,6 +1,6 @@
 # Bối cảnh nghiệp vụ — Hộ kinh doanh Cơm Tấm Má Tư
 
-> Last verified: 2026-06-12.
+> Last verified: 2026-07-08.
 
 ## Sản phẩm
 
@@ -23,7 +23,7 @@ Công ty Cổ phần. Trong docs hiện hành, `HKD` là thuật ngữ pháp lý
 chỉ được dùng khi nói về lịch sử, năng lực nâng cấp sau này, hoặc trường hợp
 chuyển đổi sang doanh nghiệp.
 
-Các nguyên tắc vận hành đến tháng 06/2026:
+Các nguyên tắc vận hành đến ngày 08/07/2026:
 
 - HKD do chủ hộ hoặc thành viên hộ gia đình đăng ký; chủ hộ/chủ thể đăng ký
   chịu trách nhiệm với hoạt động kinh doanh theo quy định về HKD.
@@ -32,10 +32,11 @@ Các nguyên tắc vận hành đến tháng 06/2026:
 - Từ 01/01/2026, HKD/cá nhân kinh doanh không áp dụng phương pháp thuế khoán
   và không còn nộp lệ phí môn bài theo NQ 198/2025/QH15; hệ thống phải ưu tiên
   số liệu doanh thu, hóa đơn, chứng từ và sổ theo dõi đủ để kê khai.
-- HKD doanh thu ≥ 1 tỷ/năm bán trực tiếp đến người tiêu dùng (gồm ăn uống) đã
-  thuộc diện bắt buộc HĐĐT khởi tạo từ máy tính tiền kết nối CQT từ 01/06/2025
-  (NĐ 70/2025); NĐ 68/2026 phân HKD thành 4 nhóm doanh thu với nghĩa vụ
-  sổ sách/kê khai khác nhau — chi tiết ở `einvoice-tax.md` §1.
+- HKD doanh thu ≥ 1 tỷ/năm bán trực tiếp đến người tiêu dùng (gồm ăn uống) thuộc
+  diện bắt buộc HĐĐT khởi tạo từ máy tính tiền kết nối CQT; từ 01/07/2026 văn bản
+  hiện hành cho HĐĐT/chứng từ điện tử là NĐ 254/2026/NĐ-CP. NĐ 68/2026 phân HKD
+  thành 4 nhóm doanh thu với nghĩa vụ sổ sách/kê khai khác nhau — chi tiết ở
+  `einvoice-tax.md` §1.
 - Chế độ kế toán HKD theo TT 152/2025/TT-BTC (thay TT 88/2021 từ 01/01/2026),
   bộ sổ tổ chức theo nhóm doanh thu; export của hệ thống phải đối chiếu được
   với bộ sổ này.
@@ -82,12 +83,14 @@ Các field này phục vụ HĐĐT, in chứng từ, export kế toán, và đ�
 được đồng bộ tự động `representative` với `owner_user_id`; một bên là thông tin
 đăng ký HKD, một bên là tài khoản auth owner trong hệ thống.
 
-## Căn cứ pháp lý theo dõi (đến 06/2026)
+## Căn cứ pháp lý theo dõi (đến 07/2026)
 
 Danh mục văn bản pháp lý đầy đủ (căn cứ + hiệu lực + tác động) là **SSoT** ở
 [`legal-framework-2026.md`](legal-framework-2026.md) — gồm đăng ký HKD, thuế
-HKD (NQ 198/2025, NĐ 68/2026, NĐ 141/2026), GTGT, HĐĐT (NĐ 70/2025, TT 32/2025),
-kế toán HKD (TT 152/2025), TNCN (Luật 109/2025, NQ 110/2025), và lao động/BHXH.
+HKD (NQ 198/2025, NĐ 68/2026, NĐ 141/2026), quản lý thuế (Luật QLT 108/2025,
+NĐ 252/2026), GTGT, HĐĐT/chứng từ điện tử (NĐ 254/2026, TT 32/2025), kế toán
+HKD (TT 152/2025), TNCN (Luật 109/2025, NĐ 253/2026, TT 87/2026, NQ 110/2025),
+và lao động/BHXH.
 Chi tiết áp dụng: thuế/hóa đơn ở `einvoice-tax.md`; lương/TNCN/BHXH ở
 `payroll-pit.md`; HĐLĐ ở `labor-contracts.md`.
 

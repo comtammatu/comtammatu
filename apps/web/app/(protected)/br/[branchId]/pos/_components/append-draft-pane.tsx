@@ -7,6 +7,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
@@ -182,9 +183,9 @@ function AppendDraftPaneComponent({
       <div className="flex shrink-0 flex-col gap-3 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <SectionLabel>
               {messages.pos.appendDraft.summaryLabel}
-            </p>
+            </SectionLabel>
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <Badge variant="outline">
                 {messages.pos.appendDraft.itemCount(quantity)}

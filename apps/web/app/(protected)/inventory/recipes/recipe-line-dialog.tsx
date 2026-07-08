@@ -237,6 +237,7 @@ export function RecipeLineDialog({
               errors={errors}
               ingredients={ingredients}
               bulkAdd
+              unitEditable
             />
 
             {linesRootError && (

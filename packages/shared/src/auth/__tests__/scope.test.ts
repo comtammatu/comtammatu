@@ -8,7 +8,6 @@ import {
 import { buildAccessDeniedPath } from "../blocked-state";
 import {
   ADMIN_ROLES,
-  STAFF_ROLES,
   type JwtClaims,
   type StaffRole,
 } from "../types";
@@ -52,6 +51,7 @@ test("getDefaultRedirect → non-admin roles land on their role home", () => {
     "production_manager",
     "cashier",
     "chef",
+    "branch_staff",
   ] as const) {
     assert.equal(getDefaultRedirect(makeClaims(role)), "/br");
   }
@@ -80,6 +80,7 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     "production_manager",
     "cashier",
     "chef",
+    "branch_staff",
     "office",
   ] as const) {
     assert.deepEqual(resolveRoleHomeLink(role, 3), {
@@ -93,6 +94,7 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     "production_manager",
     "cashier",
     "chef",
+    "branch_staff",
   ] as const) {
     assert.deepEqual(resolveRoleHomeLink(role), {
       label: "Nay",
@@ -229,7 +231,7 @@ test("resolvePostLoginRedirect → removed admin aliases fall back", () => {
   }
 });
 
-test("resolvePostLoginRedirect → admin returnTo to employee portal falls back to Finance", () => {
+test("resolvePostLoginRedirect → admin returnTo to retired employee route falls back to Finance", () => {
   for (const role of ADMIN_ROLES) {
     assert.equal(
       resolvePostLoginRedirect(makeClaims(role), "/employee"),
@@ -470,6 +472,12 @@ test("isPublicAppPath PWA manifests and Runner display bypass auth proxy", () =>
   assert.equal(isPublicAppPath("/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/sw.js"), true);
   assert.equal(isPublicAppPath("/payment/momo/return"), true);
+  assert.equal(isPublicAppPath("/q/table-token-123"), true);
+  assert.equal(isPublicAppPath("/api/self-order/table-token-123"), true);
+  assert.equal(
+    isPublicAppPath("/api/self-order/table-token-123/batches"),
+    true,
+  );
   assert.equal(
     isPublicAppPath("/brand/mascot/be-suon-tuoi-runner-idle.json"),
     true,
@@ -618,6 +626,7 @@ test("canAccess → branch command and branch settings include branch manager", 
     "production_manager",
     "cashier",
     "chef",
+    "branch_staff",
     "office",
   ] as const) {
     assert.equal(canAccess(role, "branch_dashboard"), false);
@@ -636,23 +645,10 @@ test("canAccess → tenant settings excludes branch floor roles", () => {
     "production_manager",
     "cashier",
     "chef",
+    "branch_staff",
     "office",
   ] as const) {
     assert.equal(canAccess(role, "settings"), false);
-  }
-});
-
-test("canAccess → employee portal includes owner but excludes other admin-level roles", () => {
-  assert.equal(canAccess("owner", "employee"), true);
-
-  for (const role of ADMIN_ROLES.filter((role) => role !== "owner")) {
-    assert.equal(canAccess(role, "employee"), false);
-  }
-
-  for (const role of STAFF_ROLES.filter(
-    (role) => !ADMIN_ROLES.includes(role),
-  )) {
-    assert.equal(canAccess(role, "employee"), true);
   }
 });
 
@@ -692,6 +688,7 @@ test("canAccess → owner can cover-ca POS/KDS/Runner; floor roles unchanged", (
   for (const role of [
     "warehouse_manager",
     "production_manager",
+    "branch_staff",
     "office",
   ] as const) {
     assert.equal(canAccess(role, "pos"), false);

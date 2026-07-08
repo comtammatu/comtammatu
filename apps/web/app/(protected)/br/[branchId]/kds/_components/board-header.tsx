@@ -3,14 +3,21 @@
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@comtammatu/ui/components/dropdown-menu";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@comtammatu/ui/components/tooltip";
+import { ThemeMenuItem } from "@/components/theme-toggle";
 import {
   History as IconHistory,
   Maximize2 as IconMaximize,
   Minimize2 as IconMinimize,
+  MoreVertical as IconMoreVertical,
   Volume2 as IconVolumeOn,
   VolumeX as IconVolumeOff,
 } from "lucide-react";
@@ -35,6 +42,7 @@ interface BoardHeaderProps {
 
 const KDS_HEADER_COPY = {
   completionHistory: "Lịch sử hoàn thành",
+  moreMenu: "Thao tác KDS",
 } as const;
 
 export function BoardHeader({
@@ -136,6 +144,21 @@ export function BoardHeader({
           </TooltipContent>
         </Tooltip>
         <ViewModeToggle mode={mode} onChange={onModeChange} />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-lg"
+              aria-label={KDS_HEADER_COPY.moreMenu}
+            >
+              <IconMoreVertical />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <ThemeMenuItem />
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

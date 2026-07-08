@@ -21,7 +21,6 @@ export type ModuleLabelKey =
   | "branch_menu_limits"
   | "branch_pos_sessions"
   | "branch_team"
-  | "employee"
   | "employee_checkout_approvals"
   | "employee_leave_approvals"
   | "notifications";
@@ -51,7 +50,6 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_menu_limits: "Giới hạn bán",
   branch_pos_sessions: "Đối soát ca POS",
   branch_team: "Đội hôm nay",
-  employee: "Ca của tôi",
   employee_checkout_approvals: "Duyệt kết ca",
   employee_leave_approvals: "Duyệt nghỉ phép",
   notifications: "Thông báo",

@@ -24,6 +24,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI, MODULE_LABELS_VI } from "@comtammatu/shared/labels";
+import type { OfficeModuleId } from "./office-module-contract";
 import type { ShellNavGroup, ShellNavItem } from "./shell-primitives";
 import { messages } from "@lib/messages";
 
@@ -161,7 +162,7 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
 // sidebar already filters out a sub-item whose href equals its parent tab).
 export function resolveOfficeDeepNav(
   role: StaffRole,
-  module: "admin" | "hr" | "menu" | "orders" | "branches",
+  module: OfficeModuleId,
   _branchId?: number | null,
 ): ShellNavGroup[] {
   if (module === "admin") {

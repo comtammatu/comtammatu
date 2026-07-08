@@ -53,6 +53,7 @@ import type { CartModifier, CartSide } from "../../pos/types";
 import type { PosSessionReport } from "./report-actions";
 import { resolvePosSessionVariance } from "./actions";
 import { messages } from "@lib/messages";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { toast } from "@comtammatu/ui/components/sonner";
 
 export interface PosSessionRow {
@@ -850,14 +851,6 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
   );
 }
 
-function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      {children}
-    </div>
-  );
-}
-
 function DetailFact({
   label,
   value,
@@ -915,8 +908,6 @@ function OrderDetailDrawer({
       <DrawerContent className="flex flex-col overflow-hidden">
         <DrawerHeader>
           <div className="flex flex-col gap-1">
-            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            </div>
             <DrawerTitle className="text-base font-semibold">
               {order?.order_number ?? ""}
             </DrawerTitle>
@@ -983,10 +974,10 @@ function OrderDetailDrawer({
               </div>
 
               <div>
-                <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <SectionLabel>
                   {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: operator hub uses vietnamese */}
                   <span>Món ăn</span>
-                </h4>
+                </SectionLabel>
                 <div className="mt-2 divide-y rounded-md border">
                   {order.order_items.map((item) => {
                     const hasAddOns =

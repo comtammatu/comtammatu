@@ -976,7 +976,7 @@ export function InvoiceList({
         title={FINANCE_VI.replaceConfirmTitle}
         description={`Tạo HĐ thay thế cho ${
           replaceTarget?.invoice_number ?? `#${replaceTarget?.id}`
-        }. HĐ gốc sẽ chuyển sang trạng thái "Đã thay thế". Cần văn bản thỏa thuận với người mua theo TT78 §7.`}
+        }. HĐ gốc sẽ chuyển sang trạng thái "Đã thay thế". Cần văn bản thỏa thuận với người mua theo TT 32/2025 và NĐ 254/2026.`}
         schema={replaceInvoiceSchema}
         defaultValues={replaceDefaultValues}
         entityKey={replaceTarget?.id ?? "replace-invoice"}

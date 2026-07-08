@@ -13,8 +13,22 @@ const countAssignmentsClientSource = readWeb(
 const countAssignmentsPageSource = readWeb(
   "app/(protected)/inventory/count-assignments/page.tsx",
 );
+const countAssignmentsActionsSource = readWeb(
+  "app/(protected)/inventory/count-assignments/actions.ts",
+);
+const countAssignmentShiftMigrationSource = readWeb(
+  "../../supabase/migrations/20260708064356_inventory_count_assignment_shift_scope.sql",
+);
 
-test.skip("count assignment UI reseeds from server props and refreshes after save", () => {
+test("count assignment checkbox click does not toggle the row twice", () => {
+  assert.match(
+    countAssignmentsClientSource,
+    /<Checkbox[\s\S]*onClick=\{\(event\) => event\.stopPropagation\(\)\}[\s\S]*onCheckedChange=\{\(\) => toggleIngredient\(ingredient\.id\)\}/,
+    "Ingredient checkbox clicks must not bubble to the row onClick and undo the checked state before save",
+  );
+});
+
+test("count assignment UI reseeds from server props and refreshes after save", () => {
   assert.match(
     countAssignmentsClientSource,
     /function seedSelections[\s\S]*assignmentsByEmployee\[String\(emp\.id\)\] \?\? \[\]/,
@@ -29,6 +43,125 @@ test.skip("count assignment UI reseeds from server props and refreshes after sav
     countAssignmentsClientSource,
     /await setCountAssignments\([\s\S]*toast\.success[\s\S]*router\.refresh\(\);/,
     "Saving assignments should refresh the server page so reassigned ingredients disappear from other employees",
+  );
+});
+
+test("count assignments uses the branch profile roster before employee ids", () => {
+  assert.match(countAssignmentsPageSource, /createServiceClient/);
+  assert.match(
+    countAssignmentsPageSource,
+    /const rosterClient = createServiceClient\(\)/,
+  );
+  assert.match(countAssignmentsPageSource, /rosterClient\s*\.from\("profiles"\)/);
+  assert.match(
+    countAssignmentsPageSource,
+    /rosterClient\s*\.from\("employees"\)/,
+  );
+  assert.match(countAssignmentsPageSource, /\.from\("profiles"\)/);
+  assert.match(countAssignmentsPageSource, /\.eq\("branch_id", selectedBranchId\)/);
+  assert.match(countAssignmentsPageSource, /\.in\("profile_id", lookupProfileIds\)/);
+  assert.doesNotMatch(countAssignmentsPageSource, /profilesRes = await supabase/);
+  assert.doesNotMatch(countAssignmentsPageSource, /employeesRes = await supabase/);
+  assert.doesNotMatch(countAssignmentsPageSource, /profiles!inner/);
+  assert.doesNotMatch(countAssignmentsPageSource, /\.eq\("profiles\.branch_id"/);
+});
+
+test("count assignment scope can target every shift or one active shift", () => {
+  assert.match(
+    countAssignmentsPageSource,
+    /shiftId\?: string \| string\[\]/,
+    "count assignments page should accept a shiftId URL scope",
+  );
+  assert.match(
+    countAssignmentsPageSource,
+    /\.from\("shifts"\)[\s\S]*\.or\(`branch_id\.is\.null,branch_id\.eq\.\$\{selectedBranchId\}`\)[\s\S]*\.eq\("is_active", true\)/,
+    "count assignments should load active global-or-branch shifts",
+  );
+  assert.match(
+    countAssignmentsPageSource,
+    /selectedShiftId === null[\s\S]*assignmentsQuery\.is\("shift_id", null\)[\s\S]*assignmentsQuery\.eq\("shift_id", selectedShiftId\)/,
+    "count assignment prefill should use the selected shift scope, with null meaning every shift",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /<SelectItem value=\{ALL_SHIFTS_VALUE\}>Mỗi ca<\/SelectItem>/,
+    "shift scope picker should default to every shift",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /shiftId: selectedShiftId/,
+    "saving assignments should send the selected shift scope to the action",
+  );
+  assert.match(
+    countAssignmentsActionsSource,
+    /shiftId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)\.nullable\(\)\.optional\(\)/,
+    "server action should validate optional shift scope",
+  );
+  assert.match(
+    countAssignmentsActionsSource,
+    /\.\.\.\(data\.shiftId == null \? \{\} : \{ p_shift_id: data\.shiftId \}\)/,
+    "server action should pass concrete shift scope to the RPC and omit the default every-shift scope",
+  );
+});
+
+test("count assignment location picker includes branch warehouse and kitchen", () => {
+  assert.match(
+    countAssignmentsPageSource,
+    /\.in\("location_kind", \["warehouse", "kitchen"\]\)/,
+    "count assignments should load both branch warehouse and branch kitchen locations",
+  );
+  assert.doesNotMatch(
+    countAssignmentsPageSource,
+    /\.eq\("location_kind", "warehouse"\)/,
+    "count assignments must not hardcode the location picker to warehouse only",
+  );
+  assert.match(
+    countAssignmentsPageSource,
+    /label: countLocationLabel\(/,
+    "server page should format operator-facing labels such as Phước Hải - Kho/Bếp",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /locationOptions: LocationOption\[\]/,
+    "client should receive concrete inventory locations for the dropdown",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /function changeLocationScope/,
+    "changing location should keep scope in the URL",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /locationOptions\.map\(\(location\) =>/,
+    "location Select should render every branch location option",
+  );
+});
+
+test("count assignment migration stores assignment and slip shift scope", () => {
+  assert.match(
+    countAssignmentShiftMigrationSource,
+    /ALTER TABLE public\.inventory_count_assignments[\s\S]*ADD COLUMN IF NOT EXISTS shift_id bigint/,
+    "assignment table should carry nullable shift_id",
+  );
+  assert.match(
+    countAssignmentShiftMigrationSource,
+    /ALTER TABLE public\.inventory_count_slips[\s\S]*ADD COLUMN IF NOT EXISTS shift_id bigint/,
+    "count slips should record the actual submitted shift",
+  );
+  assert.match(
+    countAssignmentShiftMigrationSource,
+    /CREATE UNIQUE INDEX uq_count_assignment_scope[\s\S]*COALESCE\(shift_id, 0::bigint\)/,
+    "assignment identity should include null-safe shift scope",
+  );
+  assert.match(
+    countAssignmentShiftMigrationSource,
+    /a\.shift_id IS NOT DISTINCT FROM v_shift_id/,
+    "assignment writer should only replace rows inside the selected scope",
+  );
+  assert.match(
+    countAssignmentShiftMigrationSource,
+    /p_shift_id bigint DEFAULT NULL[\s\S]*NOT EXISTS \([\s\S]*specific\.shift_id = v_shift_id[\s\S]*specific\.is_active/,
+    "count submit RPC should let current-shift assignments override every-shift assignments for the same cell",
   );
 });
 
@@ -105,8 +238,8 @@ test.skip("count assignment UI uses the branch warehouse checklist layout", () =
     "Selected checklist rows should have a visible selected state",
   );
   assert.match(
-    countAssignmentsPageSource,
-    /\.eq\("location_kind", "warehouse"\)[\s\S]*\.eq\("item_kind", "finished_good"\)/,
-    "Assignments should auto-target the branch warehouse and list active finished goods",
-  );
-});
+      countAssignmentsPageSource,
+      /\.in\("location_kind", \["warehouse", "kitchen"\]\)[\s\S]*\.in\("item_kind", \["raw_material", "finished_good"\]\)/,
+      "Assignments should target branch warehouse/kitchen locations and list active countable goods",
+    );
+  });

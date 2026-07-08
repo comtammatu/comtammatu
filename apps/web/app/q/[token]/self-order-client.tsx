@@ -5,13 +5,17 @@ import { RefreshCw as IconRefresh } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { AppPage } from "@/components/surface";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import type {
   PublicSelfOrderSnapshot,
   SelfOrderCartItem,
-  SelfOrderMenuItem,
-  SelfOrderMenuVariant,
 } from "@lib/self-order/contracts";
 import { useSnapshotSync } from "./self-order/hooks";
 import { StatusPill } from "./self-order/status-pill";
@@ -32,49 +36,38 @@ function newClientOpId() {
 }
 
 function lineTotal(item: SelfOrderCartItem) {
-  const modifierTotal = item.modifiers.reduce((sum, modifier) => sum + modifier.price, 0);
-  const sideTotal = item.sides.reduce((sum, side) => sum + side.price * side.quantity, 0);
+  const modifierTotal = item.modifiers.reduce(
+    (sum, modifier) => sum + modifier.price,
+    0,
+  );
+  const sideTotal = item.sides.reduce(
+    (sum, side) => sum + side.price * side.quantity,
+    0,
+  );
   return (item.unit_price + modifierTotal + sideTotal) * item.quantity;
 }
 
-function createCartItem(item: SelfOrderMenuItem, variant?: SelfOrderMenuVariant): SelfOrderCartItem {
-  const sides = item.menu_item_available_sides
-    .filter((side) => side.is_default)
-    .map((side) => ({
-      side_item_id: side.side_item.id,
-      name: side.side_item.name,
-      price: Number(side.side_item.base_price),
-      quantity: 1,
-      is_default: true,
-    }));
-
-  return {
-    key: `${item.id}:${variant?.id ?? "base"}:${newClientOpId()}`,
-    menu_item_id: item.id,
-    item_name: item.name,
-    variant_id: variant?.id,
-    variant_name: variant?.name,
-    quantity: 1,
-    unit_price: Number(item.base_price) + Number(variant?.price_adjustment ?? 0),
-    modifiers: [],
-    sides,
-  };
-}
-
 async function readApiResponse(response: Response) {
-  const payload = (await response.json().catch(() => null)) as (Record<string, unknown> & { ok?: boolean }) | null;
-  if (response.ok && payload?.ok !== false) return { ok: true, payload } as const;
+  const payload = (await response.json().catch(() => null)) as
+    | (Record<string, unknown> & { ok?: boolean })
+    | null;
+  if (response.ok && payload?.ok !== false)
+    return { ok: true, payload } as const;
   return {
     ok: false,
     error: {
       ok: false as const,
       code: typeof payload?.code === "string" ? payload.code : undefined,
-      message: typeof payload?.message === "string" ? payload.message : undefined,
+      message:
+        typeof payload?.message === "string" ? payload.message : undefined,
     },
   } as const;
 }
 
-export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps) {
+export function SelfOrderClient({
+  token,
+  initialSnapshot,
+}: SelfOrderClientProps) {
   const { snapshot, refreshSnapshot } = useSnapshotSync(token, initialSnapshot);
   const [cartItems, setCartItems] = useState<SelfOrderCartItem[]>([]);
   const [customerNote, setCustomerNote] = useState("");
@@ -87,13 +80,18 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
   const [buyerAddress, setBuyerAddress] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   const [activeCategoryValue, setActiveCategoryValue] = useState("all");
-  const [query, setQuery] = useState("");
-  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [activeMainTab, setActiveMainTab] = useState("menu");
   const [isPending, startTransition] = useTransition();
   const [isPaymentPending, startPaymentTransition] = useTransition();
 
-  const cartTotal = useMemo(() => cartItems.reduce((sum, item) => sum + lineTotal(item), 0), [cartItems]);
-  const cartQuantity = useMemo(() => cartItems.reduce((sum, item) => sum + item.quantity, 0), [cartItems]);
+  const cartTotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + lineTotal(item), 0),
+    [cartItems],
+  );
+  const cartQuantity = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
+    [cartItems],
+  );
 
   const sessionStatus = snapshot.session?.status ?? null;
   const isSessionActive = sessionStatus === "active";
@@ -102,7 +100,9 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
   // Closed: order paid/terminal OR a closed session. The snapshot RPC only
   // surfaces pending_approval/active sessions, so the realistic terminal
   // signal here is a paid order on an active session.
-  const isClosed = sessionStatus === "closed" || activeOrder?.paymentStatus === "paid";
+  const isClosed =
+    sessionStatus === "closed" || activeOrder?.paymentStatus === "paid";
+  const hasBillTab = Boolean(activeOrder || paymentError || vietQr);
 
   // CTA state (fix I). Two distinct disable tiers:
   //  - ctaHardDisabled: pending_approval (cannot submit a 2nd batch) or closed.
@@ -120,17 +120,23 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
       : isSessionActive
         ? SELF_ORDER_VI.submitAddMore
         : SELF_ORDER_VI.submitFirstBatch;
-  const ctaDisabledHint = isPendingApproval ? SELF_ORDER_VI.ctaAwaitingApprovalHint : null;
+  const ctaDisabledHint = isPendingApproval
+    ? SELF_ORDER_VI.ctaAwaitingApprovalHint
+    : null;
 
-  function addItem(item: SelfOrderMenuItem, variant?: SelfOrderMenuVariant) {
+  function addItem(cartItem: SelfOrderCartItem) {
     setSubmitError(null);
-    setCartItems((current) => [...current, createCartItem(item, variant)]);
+    setCartItems((current) => [...current, cartItem]);
   }
 
   function updateQuantity(key: string, delta: number) {
     setCartItems((current) =>
       current
-        .map((item) => (item.key === key ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item))
+        .map((item) =>
+          item.key === key
+            ? { ...item, quantity: Math.max(1, item.quantity + delta) }
+            : item,
+        )
         .filter((item) => item.quantity > 0),
     );
   }
@@ -161,7 +167,11 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
     return fetch(`/api/self-order/${encodeURIComponent(token)}/${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ clientOpId: newClientOpId(), items: cartItems, customerNote: customerNote.trim() || undefined }),
+      body: JSON.stringify({
+        clientOpId: newClientOpId(),
+        items: cartItems,
+        customerNote: customerNote.trim() || undefined,
+      }),
     });
   }
 
@@ -182,13 +192,19 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
           cancelText: SELF_ORDER_VI.keepPendingPayment,
         });
         if (!confirmed) {
-          setSubmitError(result.error.message ?? SELF_ORDER_VI.pendingPaymentBlocked);
+          setSubmitError(
+            result.error.message ?? SELF_ORDER_VI.pendingPaymentBlocked,
+          );
           return;
         }
-        const cancelResponse = await postBatch("cancel-pending-payment-and-add");
+        const cancelResponse = await postBatch(
+          "cancel-pending-payment-and-add",
+        );
         const cancelResult = await readApiResponse(cancelResponse);
         if (!cancelResult.ok) {
-          setSubmitError(cancelResult.error.message ?? SELF_ORDER_VI.submitFailed);
+          setSubmitError(
+            cancelResult.error.message ?? SELF_ORDER_VI.submitFailed,
+          );
           await refreshSnapshot();
           return;
         }
@@ -217,11 +233,18 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
         setPaymentError(invoice.error ?? SELF_ORDER_VI.paymentFailed);
         return;
       }
-      const response = await fetch(`/api/self-order/${encodeURIComponent(token)}/payment`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ clientOpId: newClientOpId(), method, invoice }),
-      });
+      const response = await fetch(
+        `/api/self-order/${encodeURIComponent(token)}/payment`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            clientOpId: newClientOpId(),
+            method,
+            invoice,
+          }),
+        },
+      );
       const result = await readApiResponse(response);
       if (!result.ok) {
         setPaymentError(result.error.message ?? SELF_ORDER_VI.paymentFailed);
@@ -236,68 +259,91 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
     });
   }
 
-  const handleCategoryChange = useCallback((value: string) => {
-    if (value !== "all" && !(snapshot.menu ?? []).some((c) => String(c.id) === value)) return;
-    setActiveCategoryValue(value);
-  }, [snapshot.menu]);
+  const handleCategoryChange = useCallback(
+    (value: string) => {
+      if (
+        value !== "all" &&
+        !(snapshot.menu ?? []).some((c) => String(c.id) === value)
+      )
+        return;
+      setActiveCategoryValue(value);
+    },
+    [snapshot.menu],
+  );
 
   return (
-    <AppPage width="full" density="compact" className="min-h-dvh bg-background text-foreground pb-28 lg:pb-0" contentClassName="min-h-dvh max-w-none">
-      <div className="flex min-h-dvh w-full flex-col">
-        <header className="sticky top-0 z-20 border-b border-border bg-background p-3">
-          <div className="flex items-center justify-between gap-3">
+    <AppPage
+      width="narrow"
+      density="compact"
+      mobile
+      className="min-h-dvh bg-background text-foreground"
+      contentClassName="min-h-dvh"
+    >
+      <Tabs
+        value={hasBillTab ? activeMainTab : "menu"}
+        onValueChange={setActiveMainTab}
+        className="flex min-h-dvh w-full flex-col gap-1"
+      >
+        <header className="sticky top-0 z-20 border-b border-border bg-background px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm text-muted-foreground">
+              <p className="truncate text-xs text-muted-foreground">
                 {snapshot.branch?.name ?? SELF_ORDER_VI.branchFallback}
               </p>
-              <h1 className="font-heading truncate text-xl font-semibold">
-                {snapshot.table ? SELF_ORDER_VI.tableLabel(snapshot.table.number) : SELF_ORDER_VI.menuTitle}
+              <h1 className="font-heading truncate text-lg font-semibold">
+                {snapshot.table
+                  ? SELF_ORDER_VI.tableLabel(snapshot.table.number)
+                  : SELF_ORDER_VI.menuTitle}
               </h1>
             </div>
-            <div className="flex items-center gap-2">
-              <StatusPill session={snapshot.session} paymentRequest={snapshot.paymentRequest} order={snapshot.order} />
-              <Button type="button" variant="outline" size="icon-touch" onClick={() => void refreshSnapshot()} aria-label="refresh">
+            <div className="flex items-center gap-1.5">
+              <StatusPill
+                session={snapshot.session}
+                paymentRequest={snapshot.paymentRequest}
+                order={snapshot.order}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-touch"
+                onClick={() => void refreshSnapshot()}
+                aria-label="refresh"
+              >
                 <IconRefresh />
               </Button>
             </div>
           </div>
+          {hasBillTab ? (
+            <TabsList className="mt-2 h-10 w-full">
+              <TabsTrigger value="menu" className="text-sm">
+                {SELF_ORDER_VI.menuTitle}
+              </TabsTrigger>
+              <TabsTrigger value="bill" className="text-sm">
+                {SELF_ORDER_VI.billTab}
+              </TabsTrigger>
+            </TabsList>
+          ) : null}
         </header>
 
-        {isSessionActive && activeOrder ? (
-          <div className="border-b border-border bg-background px-3 py-2">
-            <OrderSummary items={activeOrder.items} />
-          </div>
-        ) : null}
-
-        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <TabsContent
+          value="menu"
+          className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
+        >
           <MenuPanel
             categories={snapshot.menu ?? []}
             activeCategoryValue={activeCategoryValue}
-            query={query}
-            isSearchActive={isSearchActive}
-            onQueryChange={setQuery}
             onActiveCategoryChange={handleCategoryChange}
-            onSearchActiveChange={setIsSearchActive}
             onAdd={addItem}
           />
+        </TabsContent>
 
-          <aside className="border-t border-border bg-card lg:sticky lg:top-0 lg:z-10 lg:h-dvh lg:w-96 lg:overflow-y-auto lg:border-l lg:border-t-0">
-            <div className="flex flex-col gap-4 p-3">
-              <CartSheet
-                items={cartItems}
-                total={cartTotal}
-                quantity={cartQuantity}
-                isSubmitting={isPending}
-                canSubmit={cartItems.length > 0}
-                ctaLabel={ctaLabel}
-                ctaDisabled={ctaHardDisabled}
-                ctaDisabledHint={ctaDisabledHint}
-                customerNote={customerNote}
-                onCustomerNoteChange={setCustomerNote}
-                onQuantityChange={updateQuantity}
-                onRemove={removeItem}
-                onSubmit={submitBatch}
-              />
+        {hasBillTab ? (
+          <TabsContent
+            value="bill"
+            className="mt-0 min-h-0 flex-1 overflow-y-auto p-3 pb-32 data-[state=inactive]:hidden"
+          >
+            <div className="flex flex-col gap-3">
+              {activeOrder ? <OrderSummary items={activeOrder.items} /> : null}
               <PaymentPanel
                 disabled={!isSessionActive}
                 activeOrder={activeOrder}
@@ -317,11 +363,29 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
                 onRequestPayment={requestPayment}
               />
             </div>
-          </aside>
-        </div>
-      </div>
+          </TabsContent>
+        ) : null}
+      </Tabs>
+      <CartSheet
+        items={cartItems}
+        total={cartTotal}
+        quantity={cartQuantity}
+        isSubmitting={isPending}
+        canSubmit={cartItems.length > 0}
+        ctaLabel={ctaLabel}
+        ctaDisabled={ctaHardDisabled}
+        ctaDisabledHint={ctaDisabledHint}
+        customerNote={customerNote}
+        onCustomerNoteChange={setCustomerNote}
+        onQuantityChange={updateQuantity}
+        onRemove={removeItem}
+        onSubmit={submitBatch}
+      />
       {submitError ? (
-        <Alert variant="destructive" className="fixed inset-x-3 bottom-3 z-40 lg:left-3 lg:right-auto lg:max-w-md">
+        <Alert
+          variant="destructive"
+          className="fixed inset-x-3 bottom-24 z-40 mx-auto max-w-xl"
+        >
           <AlertDescription>{submitError}</AlertDescription>
         </Alert>
       ) : null}

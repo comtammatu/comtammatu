@@ -1,13 +1,13 @@
-# QR Self-Order V2 — Design Spec
+# Table QR Ordering V2 — Design Spec
 
 > Status: Approved design (pending written-spec review)
 > Date: 2026-07-08
-> Builds on: QR Self-Order V1 (`docs/worklog/2026-07-08-qr-self-order-v1.md`)
+> Builds on: Table QR ordering V1 (`docs/worklog/2026-07-08-qr-self-order-v1.md`)
 > Review tier: T3 (touches public API surface, snapshot RPC, POS, payment, realtime)
 
 ## Context
 
-QR Self-Order V1 is shipped end-to-end: customer page (`/q/[token]`), public API
+Table QR ordering V1 is shipped end-to-end: customer page (`/q/[token]`), public API
 (service-role + narrow RPCs), staff approval sheet, and table-token admin. The
 backend is solid (server-side canonicalization, atomic cancel+append, realtime
 broadcast + poll fallback). The weaknesses are in the UX layer:

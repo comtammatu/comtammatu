@@ -126,7 +126,10 @@ export async function GrnCreatePageContent({
     id: number;
     lines: Array<GrnDraftLine & { lineId: number }>;
   } | null = null;
-  const draftRes = await loadActiveGrnDraft({ supplierId });
+  const draftRes = await loadActiveGrnDraft({
+    supplierId,
+    branchId: defaultBranchId ?? undefined,
+  });
   const draftRow = (draftRes.success ? draftRes.data : null) as {
     id: number;
     branch_id: number;

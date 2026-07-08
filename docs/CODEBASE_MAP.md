@@ -202,7 +202,7 @@ sequenceDiagram
     H->>S: JWT + {tenant_id, branch_id, user_role}
     S->>A: Session + JWT
     A->>B: Redirect to post-login target
-    B->>P: GET /finance or /employee
+    B->>P: GET /finance or /br/{branchId}
     P->>P: extractClaims → canAccess(module)
     P->>B: Target page
 ```

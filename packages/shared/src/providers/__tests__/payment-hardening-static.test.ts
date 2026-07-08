@@ -51,8 +51,13 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   assert.match(source, /new URLSearchParams\(rawBody\)/);
   assert.match(
     source,
+    /transferAmount: z\.coerce\.number\(\)/,
+  );
+  assert.doesNotMatch(
+    source,
     /transferAmount: z\.coerce\.number\(\)\.nonnegative\(\)/,
   );
+  assert.match(source, /payload\.transferType !== "in"/);
   // Match regex is built per-webhook from the configured prefix (+ grandfather
   // branches), not a static literal.
   assert.match(

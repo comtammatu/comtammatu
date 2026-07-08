@@ -506,7 +506,7 @@ GIỮ NGUYÊN cho mọi correction khác; chỉ mở đúng nhánh full-void-aft
    **không bao giờ để lọt** hoá đơn đã kê khai (hoá đơn trong-tháng-hiện-tại luôn
    thuộc quý chưa kê khai), phần "chặn dư" chỉ thêm việc route sang kế toán, không
    sai thuế. → **KHÔNG đổi code**, mốc cross-period hiện tại đúng. Căn cứ huỷ HĐĐT
-   issued: biên bản huỷ theo NĐ 123/2020 (sửa NĐ 70/2025) + TT 32/2025.
+   issued: hồ sơ huỷ/thay thế theo NĐ 254/2026 + TT 32/2025.
 
 4. **HĐĐT actor (Q4):** `branch_manager` ĐƯỢC huỷ HĐĐT issued dưới cổng
    `pos:void_paid_order` — RPC **inline flip** `tax_invoices.status='cancelled'` +
@@ -895,3 +895,39 @@ liệt kê trong báo cáo (mục 7).
 6. **Grant per-branch** (không tenant-wide): `procurement:grn_create/grn_confirm/read/supplier_manage` + `inventory:production_create/production_confirm` vào `role_templates.branch_manager` — migration file → PR → owner apply.
 
 **Consequences:** Đảo mục branch_manager trong `docs/ref/inventory-rbac-matrix.md` (update cùng PR). Mở rộng D000 (Kho CN nhận NCC + sản xuất, không chỉ giữ branch stock/consumption); không đảo D012/D020/D066 §3/D059 §7 (PO vẫn central). Migration đụng RLS + hàm `is_inventory_production_operator()` → owner-delegated apply; đến khi apply, branch_manager chưa có grant → tính năng ngủ, không vỡ. Đảo mục 1–6 phải sửa bản ghi này trước.
+
+## D069: Be Vietnam Pro heading + Shift-aware night mode (2026-07-07)
+
+**Context:** Identity (font Việt cho brand F&B Việt) + ergonomics (ca tối 18:00–02:00 bếp/quầy mỏi mắt với light mode ép cứng). Hợp đồng cũ ép single-family Geist (D038) + forced-light (`theme-script.tsx` hardcode `const theme = "light"`). Owner duyệt qua `/design-consultation` preview 2 hướng song song: (1) Be Vietnam Pro cho heading/display — giữ Geist body + Geist Mono data; (2) night mode warm-dark "gạo cháy" auto theo giờ ca + cookie override.
+
+**Decision (owner duyệt 2026-07-07):**
+
+1. **Heading/display → Be Vietnam Pro** (next/font/google, subset `vietnamese` + `latin`, weights 400/500/600/700/800, variable `--font-be-vietnam-pro`, `display: "swap"`).
+2. **Body + data giữ Geist + Geist Mono** (không đổi) — bảng/số/hóa đơn ổn định, Geist Mono tabular-nums là locked operational-data face.
+3. **Night mode** = warm-dark "gạo cháy" palette (không phải navy generic): nền `oklch(0.155 0.016 50)` nâu gạo đậm ấm, text kem `oklch(0.94 0.018 75)`, đỏ gạch giảm saturation (`oklch(0.605 0.155 36)`), vàng gạo sáng hơn cho CTA (`oklch(0.845 0.145 80)`).
+4. **Trigger:** auto 18:00–06:00 local (`new Date().getHours()`) khi chưa override; override qua cookie `matu-theme` (`light` | `night`, SameSite=Lax, 1-year max-age). KHÔNG dùng `prefers-color-scheme`/`matchMedia` — shift-aware, OS-independent.
+5. **Night → class `.dark`** để tận dụng `dark:` variants trong primitives + chart THEMES map, không phải selector mới.
+6. **Scope: toàn bộ app** (POS/KDS/Runner/Employee/Admin/Inventory/HR/Finance). Receipts bảo vệ bằng `@media print` guard hiện có (globals.css force black-on-white cho `#pos-receipt`); ESC/POS pipeline (`packages/print-render`, `apps/print-agent`) theme-independent, không đụng.
+7. **Toggle duy nhất:** `ThemeToggle` primitive trong `AppHeader` + PWA toolbar + employee header. Không localStorage, không route-local toggle.
+
+**Reverses (partial):** phần heading của D038 (giữ phần Geist body + Geist Mono); mở lại item [OPEN] D032 §B(2) re: dark mode.
+
+**Cơ chế (lockstep 6 file):** `apps/web/app/layout.tsx` (add Be_Vietnam_Pro import + variable, bỏ `forcedTheme="light"`, SSR cookie read), `packages/ui/src/styles/globals.css` (bind `--font-heading → --font-be-vietnam-pro`; warm-dark palette cho 3 block `.dark`), `docs/spec/design-system.md` (Typography + Theme runtime + Brand mapping), `docs/modules/ui.md`, `docs/agent/rules/ui.md`, `tasks/regressions.md`. Thêm `packages/ui/src/components/theme-script.tsx` + `theme-provider.tsx` unlock; `apps/web/app/components/theme-toggle.tsx` new; `apps/web/app/global-error.tsx` đọc cookie server-side.
+
+**Out of scope (đợt này KHÔNG):** brand logo variant inverse cho night; SectionLabel primitive (→ D070); rút gọn ratchet false-positive (→ D070 §C); density-first redesign management surface (→ D070 §B cho HR).
+
+## D070: SectionLabel primitive + ratchet EASY WIN + HR density-first (2026-07-08)
+
+**Context:** Đợt redesign (D069) đánh dấu 3 item out-of-scope có chủ đích: SectionLabel primitive, rút gọn ratchet, density-first HR. Owner duyệt làm cả 3 qua các đợt sau.
+
+**Decision (owner duyệt 2026-07-08):**
+
+1. **SectionLabel primitive** — tạo `@comtammatu/ui/components/section-label` với 2 variant: `density="default"` (`text-xs font-medium uppercase tracking-wide text-muted-foreground`) + `density="dense"` (`text-2xs font-medium uppercase tracking-wider text-muted-foreground`). Render `<div>` (eyebrow là typographic role, không phải semantic heading). Primitive emit đúng contract; migration 24 clean sites normalize các deviation (`font-semibold`→`font-medium`, `tracking-widest`→`tracking-wide`/`wider`, missing `text-muted-foreground`).
+2. **HR density-first** — `/hr` bỏ KPI mosaic 4-card grid, đưa EmployeeTable lên focal point, readiness thành count strip 1 dòng, 2 action button lên AppPageHeader. Sửa drift so với LIST recipe.
+3. **Ratchet EASY WIN** — hạ `app-arbitrary-sizing` allowlist `production-new-client.tsx` 2→1 (actual chỉ 1; `w-[120px]` SelectTrigger).
+
+**Reverses (partial):** D069 out-of-scope list cho SectionLabel + ratchet + HR.
+
+**Cơ chế:** `packages/ui/src/components/section-label.tsx` (new); `docs/spec/design-system.md` (§ Component Authority + § Rhythm B + dòng 939 cập nhật); `docs/agent/rules/ui.md` (Typography Rules thêm SectionLabel rule); `tasks/regressions.md` (thêm [SECTION-LABEL-SSOT]); `scripts/check-ui-contract.mjs` (allowlist hạ); 24 app files migrate inline class string → `<SectionLabel>`; `apps/web/app/(protected)/hr/hr-client.tsx` (HR density).
+
+**Out of scope (đợt này KHÔNG):** SectionLabel group b (9 complex sites — mb-2, shrink-0, grid headers); SectionLabel group c (12 Label/Badge — khác concern); D3 logo night variant (vẫn trì hoãn).

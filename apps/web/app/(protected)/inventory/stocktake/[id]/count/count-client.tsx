@@ -39,6 +39,7 @@ interface Props {
   sessionId: number;
   branchId: number;
   status: string;
+  blindMode: boolean;
   currentRound: 1 | 2 | 3 | 4;
   initialLines: StocktakeLineBlind[];
   unitOptionsByIngredient: Record<number, CountUnitOption[]>;
@@ -50,6 +51,7 @@ export function StocktakeCountClient({
   sessionId,
   branchId,
   status,
+  blindMode,
   currentRound,
   initialLines,
   unitOptionsByIngredient,
@@ -93,9 +95,6 @@ export function StocktakeCountClient({
 
   // Session-wide zone id. Future: per-zone breakdown when layout supports it.
   const zoneId = `session-${sessionId}`;
-
-  // Blind count stays defensive: the payload never includes system quantity.
-  const blindMode = true;
 
   const currentRoundLines = useMemo(
     () => lines.filter((line) => line.roundNo === currentRound),

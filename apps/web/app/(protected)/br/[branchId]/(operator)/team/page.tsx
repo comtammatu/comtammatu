@@ -1,8 +1,18 @@
-import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import {
+  ClipboardCheck as IconClipboardCheck,
+  UsersRound as IconUsersRound,
+} from "lucide-react";
 import { canAccess } from "@comtammatu/shared/auth";
-import { AppEmptyState, AppPageHeader } from "@/components/surface";
-import { AppPageTabs } from "@/components/app-page-tabs";
-import { TabsContent } from "@comtammatu/ui/components/tabs";
+import { AppEmptyState, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
@@ -11,8 +21,17 @@ import { fetchTeamBoard, type TeamBoardRow } from "./data";
 import { TeamBoardClient } from "./team-board-client";
 import { TeamAssignmentsContent } from "./assignments/assignments-content";
 import { TeamMembersContent } from "./members/members-content";
+import {
+  TeamWorkspaceTabs,
+  type TeamWorkspaceTabValue,
+} from "./team-workspace-tabs";
 
 const copy = messages.employee.teamBoard;
+const validTabs = new Set<TeamWorkspaceTabValue>([
+  "board",
+  "members",
+  "assignments",
+]);
 
 export default async function TeamBoardPage({
   params,
@@ -23,7 +42,12 @@ export default async function TeamBoardPage({
 }) {
   const { branchId: rawBranchId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const activeTab = resolvedSearchParams.tab ?? "board";
+  const requestedTab = resolvedSearchParams.tab;
+  const activeTab: TeamWorkspaceTabValue = validTabs.has(
+    requestedTab as TeamWorkspaceTabValue,
+  )
+    ? (requestedTab as TeamWorkspaceTabValue)
+    : "board";
 
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
@@ -41,29 +65,90 @@ export default async function TeamBoardPage({
     );
   }
 
-  // Ensure valid tab
-  if (activeTab !== "board" && activeTab !== "assignments" && activeTab !== "members") {
-    redirect(`/br/${context.branchId}/team?tab=board`);
-  }
-
   const result = await fetchTeamBoard({ branchId: context.branchId });
   const rows: TeamBoardRow[] = result.success ? (result.data?.rows ?? []) : [];
   const basePath = `/br/${context.branchId}`;
 
-  const tabsList = [
-    { value: "board", label: "Tình trạng hôm nay" },
-    { value: "members", label: "Nhân sự" },
-    { value: "assignments", label: "Phân công" },
-  ];
+  const managerEntry = (
+    <section
+      aria-label={copy.managerEntryAriaLabel}
+      className="grid gap-3 lg:grid-cols-2"
+    >
+      <AppSection
+        title={copy.reviewGroupTitle}
+        description={copy.reviewGroupDescription}
+        icon={<IconClipboardCheck />}
+        tone="warning"
+        size="sm"
+      >
+        <ItemGroup className="gap-2">
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={`${basePath}/shift/checkout-approvals`}>
+              <ItemContent>
+                <ItemTitle>{copy.reviewCheckoutTitle}</ItemTitle>
+                <ItemDescription>
+                  {copy.reviewCheckoutDescription}
+                </ItemDescription>
+              </ItemContent>
+            </Link>
+          </Item>
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={`${basePath}/stock/count-slips`}>
+              <ItemContent>
+                <ItemTitle>{copy.reviewCountTitle}</ItemTitle>
+                <ItemDescription>{copy.reviewCountDescription}</ItemDescription>
+              </ItemContent>
+            </Link>
+          </Item>
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={`${basePath}/stock/waste-approvals`}>
+              <ItemContent>
+                <ItemTitle>{copy.reviewWasteTitle}</ItemTitle>
+                <ItemDescription>{copy.reviewWasteDescription}</ItemDescription>
+              </ItemContent>
+            </Link>
+          </Item>
+        </ItemGroup>
+      </AppSection>
+
+      <AppSection
+        title={copy.peopleGroupTitle}
+        description={copy.peopleGroupDescription}
+        icon={<IconUsersRound />}
+        tone="info"
+        size="sm"
+      >
+        <ItemGroup className="gap-2">
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={`${basePath}/team?tab=members`}>
+              <ItemContent>
+                <ItemTitle>{copy.membersEntryTitle}</ItemTitle>
+                <ItemDescription>
+                  {copy.membersEntryDescription}
+                </ItemDescription>
+              </ItemContent>
+            </Link>
+          </Item>
+          <Item asChild variant="outline" size="sm" className="bg-card">
+            <Link href={`${basePath}/team?tab=assignments`}>
+              <ItemContent>
+                <ItemTitle>{copy.assignmentsEntryTitle}</ItemTitle>
+                <ItemDescription>
+                  {copy.assignmentsEntryDescription}
+                </ItemDescription>
+              </ItemContent>
+            </Link>
+          </Item>
+        </ItemGroup>
+      </AppSection>
+    </section>
+  );
 
   const content = (
-    <AppPageTabs
-      items={tabsList}
-      defaultValue={activeTab}
-      className="flex flex-col gap-3"
-    >
-      <TabsContent value="board" className="mt-0">
-        {result.success ? (
+    <TeamWorkspaceTabs
+      initialValue={activeTab}
+      board={
+        result.success ? (
           <TeamBoardClient
             rows={rows}
             countSlipsHref={`${basePath}/stock/count-slips`}
@@ -71,25 +156,24 @@ export default async function TeamBoardPage({
           />
         ) : (
           <AppEmptyState mode="error" description={result.error} />
-        )}
-      </TabsContent>
-      <TabsContent value="members" className="mt-0">
-        <TeamMembersContent branchId={context.branchId} />
-      </TabsContent>
-      <TabsContent value="assignments" className="mt-0">
-        <TeamAssignmentsContent branchId={context.branchId} />
-      </TabsContent>
-    </AppPageTabs>
+        )
+      }
+      members={<TeamMembersContent branchId={context.branchId} />}
+      assignments={<TeamAssignmentsContent branchId={context.branchId} />}
+    />
   );
 
   return (
-    <div className="flex flex-col gap-3">
+    <>
       <AppPageHeader
         title={copy.title}
         description={copy.description}
-        className="sr-only sm:not-sr-only"
+        className="sr-only"
       />
-      {content}
-    </div>
+      <div className="flex flex-col gap-3">
+        {managerEntry}
+        {content}
+      </div>
+    </>
   );
 }

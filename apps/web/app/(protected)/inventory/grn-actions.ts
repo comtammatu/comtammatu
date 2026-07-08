@@ -361,9 +361,8 @@ export const createGrnDraft = withAction(
       .select("id")
       .single();
     if (error) {
-      // UNIQUE_VIOLATION on the partial index uq_grn_active_draft_per_user_supplier
-      // (Sprint 6 #3): a draft already exists for this user+supplier. Race-friendly
-      // fallback: return the existing draft so the caller can attach lines to it.
+      // Concurrent create on the same supplier+branch draft: return the existing
+      // draft so the caller can attach lines to it.
       if (error.code === "23505") {
         const { data: existing } = await supabase
           .from("goods_received_notes")
@@ -371,6 +370,7 @@ export const createGrnDraft = withAction(
           .eq("tenant_id", claims.tenant_id)
           .eq("created_by", user.id)
           .eq("supplier_id", data.supplierId)
+          .eq("branch_id", targetBranchId)
           .eq("status", "draft")
           .order("updated_at", { ascending: false })
           .limit(1)
@@ -389,6 +389,7 @@ export const createGrnDraft = withAction(
 
 const loadActiveDraftSchema = z.object({
   supplierId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().optional(),
 });
 
 export const loadActiveGrnDraft = withAction(
@@ -398,9 +399,7 @@ export const loadActiveGrnDraft = withAction(
     permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
   },
   async (data, { supabase, claims, user }) => {
-    // Partial UNIQUE index uq_grn_active_draft_per_user_supplier guarantees
-    // at most one row matches; maybeSingle is the safe shape.
-    const { data: row, error } = await supabase
+    let query = supabase
       .from("goods_received_notes")
       .select(
         "id, branch_id, po_id, supplier_id, grn_number, notes, updated_at",
@@ -410,8 +409,9 @@ export const loadActiveGrnDraft = withAction(
       .eq("supplier_id", data.supplierId)
       .eq("status", "draft")
       .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    if (data.branchId != null) query = query.eq("branch_id", data.branchId);
+    const { data: row, error } = await query.maybeSingle();
     if (error) {
       return { success: false, error: "Không thể tải phiếu nhập đang nháp." };
     }

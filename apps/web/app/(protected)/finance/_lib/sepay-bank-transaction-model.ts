@@ -19,6 +19,7 @@ export interface SepayBankTransaction {
   errorCode: string | null;
   paymentId: number | null;
   expenseId: number | null;
+  expenseIds: number[];
   transactionDate: string | null;
   accountNumber: string | null;
   code: string | null;
@@ -96,6 +97,7 @@ export function mapSepayWebhookRow(
     errorCode: row.error_code,
     paymentId: row.payment_id,
     expenseId: row.expense_id,
+    expenseIds: row.expense_id != null ? [row.expense_id] : [],
     transactionDate: readString(payload, "transactionDate"),
     accountNumber: readString(payload, "accountNumber"),
     code: readString(payload, "code"),

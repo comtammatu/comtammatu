@@ -9,6 +9,7 @@ import {
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
+import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 
 /* ─── Recipes (branch WAC + menu-item recipes) ─── */
 
@@ -156,7 +157,10 @@ export const upsertRecipeLines = withAction(
   {
     roles: INVENTORY_CATALOG_ROLES,
     schema: recipeBatchSchema,
-    permission: PERMISSION_KEYS.INVENTORY_WRITE,
+    anyPermission: [
+      ...CATALOG_MANAGE_PERMISSIONS,
+      PERMISSION_KEYS.MENU_WRITE,
+    ],
   },
   async (data, { supabase }) => {
     const lines = data.lines.map((line) => ({

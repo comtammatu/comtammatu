@@ -6,6 +6,7 @@ import type { JwtClaims } from "../types";
 import {
   centralSiteBranchKindForRole,
   requiredBranchKindForPositionCode,
+  staffRoleFromPositionCode,
 } from "../types";
 import { resolveModuleFromPath } from "../route-resolution";
 import { resolveRouteFamilyContract } from "../route-map";
@@ -51,8 +52,10 @@ test("operator routes resolve to ACL modules", () => {
 test("operator stock count does not require full inventory access", () => {
   assert.equal(canAccess("cashier", "operator_home"), true);
   assert.equal(canAccess("chef", "operator_home"), true);
+  assert.equal(canAccess("branch_staff", "operator_home"), true);
   assert.equal(canAccess("cashier", "inventory"), false);
   assert.equal(canAccess("chef", "inventory"), false);
+  assert.equal(canAccess("branch_staff", "inventory"), false);
 });
 
 test("operator route families use operator bottom nav", () => {
@@ -87,6 +90,7 @@ test("operator home includes every role including office", () => {
     "branch_manager",
     "cashier",
     "chef",
+    "branch_staff",
     "warehouse_manager",
     "production_manager",
     "office",
@@ -119,6 +123,10 @@ test("central-site role positions keep tenant-level branch claims", () => {
   assert.equal(requiredBranchKindForPositionCode("branch_manager"), "branch");
   assert.equal(requiredBranchKindForPositionCode("cashier"), "branch");
   assert.equal(requiredBranchKindForPositionCode("chef"), "branch");
+  assert.equal(requiredBranchKindForPositionCode("guard"), "branch");
+  assert.equal(requiredBranchKindForPositionCode("cleaner"), "branch");
+  assert.equal(staffRoleFromPositionCode("guard"), "branch_staff");
+  assert.equal(staffRoleFromPositionCode("cleaner"), "branch_staff");
 });
 
 test("post-login hub fallback is device and branch aware", () => {

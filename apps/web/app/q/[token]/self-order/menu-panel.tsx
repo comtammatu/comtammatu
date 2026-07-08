@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
+  Minus as IconMinus,
   Plus as IconPlus,
-  Search as IconSearch,
   Utensils as IconUtensils,
   X as IconX,
 } from "lucide-react";
@@ -12,17 +12,38 @@ import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from "@comtammatu/ui/components/input-group";
-import { Item } from "@comtammatu/ui/components/item";
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@comtammatu/ui/components/radio-group";
+import { Separator } from "@comtammatu/ui/components/separator";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
+import {
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@comtammatu/ui/components/field";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { AppEmptyState } from "@/components/surface";
-import { normalizeSearch } from "@lib/search";
 import type {
+  SelfOrderCartItem,
   SelfOrderMenuCategory,
   SelfOrderMenuItem,
   SelfOrderMenuVariant,
@@ -33,22 +54,14 @@ const ALL_MENU_VALUE = "all";
 export interface MenuPanelProps {
   categories: SelfOrderMenuCategory[];
   activeCategoryValue: string;
-  query: string;
-  isSearchActive: boolean;
-  onQueryChange: (value: string) => void;
   onActiveCategoryChange: (value: string) => void;
-  onSearchActiveChange: (value: boolean) => void;
-  onAdd: (item: SelfOrderMenuItem, variant?: SelfOrderMenuVariant) => void;
+  onAdd: (item: SelfOrderCartItem) => void;
 }
 
 export function MenuPanel({
   categories,
   activeCategoryValue,
-  query,
-  isSearchActive,
-  onQueryChange,
   onActiveCategoryChange,
-  onSearchActiveChange,
   onAdd,
 }: MenuPanelProps) {
   const availableCategories = categories.filter(
@@ -58,65 +71,18 @@ export function MenuPanel({
     (sum, category) => sum + category.menu_items.length,
     0,
   );
-  const normalizedQuery = normalizeSearch(query).trim();
-  const visibleCategories =
-    normalizedQuery === ""
-      ? availableCategories
-      : availableCategories
-          .map((category) => ({
-            ...category,
-            menu_items: category.menu_items.filter((item) =>
-              normalizeSearch(`${item.name} ${item.description ?? ""}`).includes(
-                normalizedQuery,
-              ),
-            ),
-          }))
-          .filter((category) => category.menu_items.length > 0);
   const visibleItems =
     activeCategoryValue === ALL_MENU_VALUE
-      ? visibleCategories.flatMap((category) => category.menu_items)
-      : visibleCategories.find(
+      ? availableCategories.flatMap((category) => category.menu_items)
+      : (availableCategories.find(
           (category) => String(category.id) === activeCategoryValue,
-        )?.menu_items ?? [];
+        )?.menu_items ?? []);
   const isAllMenuActive = activeCategoryValue === ALL_MENU_VALUE;
 
-  const handleQueryChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      onQueryChange(event.target.value);
-    },
-    [onQueryChange],
-  );
-
-  const searchInput = (
-    <InputGroup className="h-11 w-full md:max-w-md lg:w-72 lg:flex-none">
-      <InputGroupAddon>
-        <IconSearch />
-      </InputGroupAddon>
-      <InputGroupInput
-        id="self-order-menu-search"
-        value={query}
-        onChange={handleQueryChange}
-        autoFocus={isSearchActive}
-        placeholder={SELF_ORDER_VI.searchPlaceholder}
-        aria-label={SELF_ORDER_VI.searchAria}
-      />
-      {query.trim() !== "" ? (
-        <InputGroupAddon align="inline-end">
-          <InputGroupButton
-            size="icon-xs"
-            aria-label={SELF_ORDER_VI.clearSearchAria}
-            onClick={() => onQueryChange("")}
-          >
-            <IconX />
-          </InputGroupButton>
-        </InputGroupAddon>
-      ) : null}
-    </InputGroup>
-  );
   const tabPillClassName =
-    "group/tab !flex-none gap-1.5 bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground md:px-4";
+    "group/tab !flex-none gap-1.5 bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground";
   const tabBadgeClassName =
-    "hidden shrink-0 text-xs sm:inline-flex group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
+    "hidden shrink-0 text-xs group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
   const unifiedTabs = (
     <Tabs
       value={activeCategoryValue}
@@ -125,7 +91,7 @@ export function MenuPanel({
     >
       <TabsList
         aria-label={SELF_ORDER_VI.categoriesAria}
-        className="!h-auto w-max min-w-full !justify-start gap-1.5 !bg-transparent !p-0 md:gap-2"
+        className="!h-auto w-max min-w-full !justify-start gap-1.5 !bg-transparent !p-0"
       >
         <TabsTrigger value={ALL_MENU_VALUE} className={tabPillClassName}>
           {SELF_ORDER_VI.allCategories}
@@ -150,81 +116,46 @@ export function MenuPanel({
   );
 
   return (
-    <section className="min-h-0 flex-1 lg:border-r lg:border-border">
-      <div className="border-b border-border bg-background p-3">
-        <div className="flex items-center gap-1.5 md:hidden">
-          {isSearchActive ? (
-            <>
-              <div className="min-w-0 flex-1">{searchInput}</div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="touch"
-                className="shrink-0 px-3 text-sm font-semibold"
-                onClick={() => {
-                  onSearchActiveChange(false);
-                  onQueryChange("");
-                }}
+    <section className="flex min-h-0 flex-1 flex-col">
+      <div className="border-b border-border bg-background px-3 py-2">
+        <div className="flex items-center">{unifiedTabs}</div>
+      </div>
+      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex flex-col gap-4 px-2 pb-32 pt-2">
+          {availableCategories.length === 0 ? (
+            <AppEmptyState
+              title={SELF_ORDER_VI.menuEmpty}
+              icon={<IconUtensils />}
+              compact
+            />
+          ) : visibleItems.length === 0 ? (
+            <AppEmptyState
+              title={SELF_ORDER_VI.menuEmpty}
+              icon={<IconUtensils />}
+              compact
+            />
+          ) : isAllMenuActive ? (
+            availableCategories.map((category) => (
+              <section
+                key={category.id}
+                className="flex min-w-0 flex-col gap-3"
               >
-                {SELF_ORDER_VI.cancelSearch}
-              </Button>
-            </>
+                <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-2 backdrop-blur">
+                  <h2 className="font-heading truncate text-base font-semibold">
+                    {category.name}
+                  </h2>
+                  <Badge variant="outline" className="shrink-0 text-sm">
+                    {category.menu_items.length}
+                  </Badge>
+                </div>
+                <MenuItemGrid items={category.menu_items} onAdd={onAdd} />
+              </section>
+            ))
           ) : (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                size="touch"
-                className="min-w-12 shrink-0 bg-muted/50 px-0 text-muted-foreground hover:bg-muted"
-                aria-label={SELF_ORDER_VI.searchAria}
-                onClick={() => onSearchActiveChange(true)}
-              >
-                <IconSearch />
-              </Button>
-              {unifiedTabs}
-            </>
+            <MenuItemGrid items={visibleItems} onAdd={onAdd} />
           )}
         </div>
-        <div className="hidden md:flex md:items-center md:gap-3">
-          {searchInput}
-          {unifiedTabs}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between gap-3 px-3 pt-3">
-        <h2 className="font-heading text-base font-semibold">
-          {SELF_ORDER_VI.menuTitle}
-        </h2>
-      </div>
-      <div className="flex flex-col gap-4 p-3">
-        {availableCategories.length === 0 ? (
-          <AppEmptyState
-            title={SELF_ORDER_VI.menuEmpty}
-            icon={<IconUtensils />}
-            compact
-          />
-        ) : visibleItems.length === 0 ? (
-          <AppEmptyState
-            title={SELF_ORDER_VI.noResults}
-            icon={<IconSearch />}
-            compact
-          />
-        ) : isAllMenuActive ? (
-          visibleCategories.map((category) => (
-            <section key={category.id} className="flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-heading truncate text-base font-semibold">
-                  {category.name}
-                </h3>
-                <Badge variant="outline">{category.menu_items.length}</Badge>
-              </div>
-              <MenuItemGrid items={category.menu_items} onAdd={onAdd} />
-            </section>
-          ))
-        ) : (
-          <MenuItemGrid items={visibleItems} onAdd={onAdd} />
-        )}
-      </div>
+      </ScrollArea>
     </section>
   );
 }
@@ -234,10 +165,10 @@ export function MenuItemGrid({
   onAdd,
 }: {
   items: SelfOrderMenuItem[];
-  onAdd: (item: SelfOrderMenuItem, variant?: SelfOrderMenuVariant) => void;
+  onAdd: (item: SelfOrderCartItem) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3">
       {items.map((item) => (
         <MenuItemCard key={item.id} item={item} onAdd={onAdd} />
       ))}
@@ -250,39 +181,421 @@ function MenuItemCard({
   onAdd,
 }: {
   item: SelfOrderMenuItem;
-  onAdd: (item: SelfOrderMenuItem, variant?: SelfOrderMenuVariant) => void;
+  onAdd: (item: SelfOrderCartItem) => void;
 }) {
-  const variants = item.menu_item_variants;
-  if (variants.length === 0) {
-    return <MenuPhotoButton item={item} onClick={() => onAdd(item)} />;
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <MenuPhotoButton item={item} onClick={() => setOpen(true)} />
+      <SelfOrderItemSheet
+        item={item}
+        open={open}
+        onOpenChange={setOpen}
+        onAdd={onAdd}
+      />
+    </>
+  );
+}
+
+function SelfOrderItemSheet({
+  item,
+  open,
+  onOpenChange,
+  onAdd,
+}: {
+  item: SelfOrderMenuItem;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAdd: (item: SelfOrderCartItem) => void;
+}) {
+  const [selectedVariant, setSelectedVariant] =
+    useState<SelfOrderMenuVariant | null>(null);
+  const [selectedModifierIds, setSelectedModifierIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [selectedSideQuantities, setSelectedSideQuantities] = useState<
+    Map<number, number>
+  >(new Map());
+  const [note, setNote] = useState("");
+  const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    if (!open) return;
+    setSelectedVariant(item.menu_item_variants[0] ?? null);
+    setSelectedModifierIds(new Set());
+    setSelectedSideQuantities(
+      new Map(
+        item.menu_item_available_sides
+          .filter((side) => side.is_default)
+          .map((side) => [side.side_item.id, 1] as const),
+      ),
+    );
+    setNote("");
+    setQuantity(1);
+  }, [item, open]);
+
+  const unitPrice =
+    Number(item.base_price) + Number(selectedVariant?.price_adjustment ?? 0);
+  const modifierTotal = useMemo(
+    () =>
+      item.menu_item_modifiers
+        .filter((modifier) => selectedModifierIds.has(modifier.id))
+        .reduce((sum, modifier) => sum + Number(modifier.price), 0),
+    [item.menu_item_modifiers, selectedModifierIds],
+  );
+  const sideTotal = useMemo(
+    () =>
+      item.menu_item_available_sides
+        .filter((side) => selectedSideQuantities.has(side.side_item.id))
+        .reduce(
+          (sum, side) =>
+            sum +
+            Number(side.side_item.base_price) *
+              (selectedSideQuantities.get(side.side_item.id) ?? 1),
+          0,
+        ),
+    [item.menu_item_available_sides, selectedSideQuantities],
+  );
+  const total = (unitPrice + modifierTotal + sideTotal) * quantity;
+
+  function toggleModifier(id: number) {
+    setSelectedModifierIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleSide(id: number) {
+    setSelectedSideQuantities((current) => {
+      const next = new Map(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.set(id, 1);
+      }
+      return next;
+    });
+  }
+
+  function updateSideQuantity(id: number, delta: number) {
+    setSelectedSideQuantities((current) => {
+      const existing = current.get(id);
+      if (existing == null) {
+        if (delta <= 0) return current;
+        return new Map(current).set(id, 1);
+      }
+      const nextQuantity = Math.min(20, Math.max(0, existing + delta));
+      const next = new Map(current);
+      if (nextQuantity === 0) {
+        next.delete(id);
+      } else {
+        next.set(id, nextQuantity);
+      }
+      return next;
+    });
+  }
+
+  function updateQuantity(delta: number) {
+    setQuantity((current) => Math.min(99, Math.max(1, current + delta)));
+  }
+
+  function addCustomizedItem() {
+    const modifiers = item.menu_item_modifiers
+      .filter((modifier) => selectedModifierIds.has(modifier.id))
+      .map((modifier) => ({
+        modifier_id: modifier.id,
+        name: modifier.name,
+        price: Number(modifier.price),
+      }));
+    const sides = item.menu_item_available_sides
+      .filter((side) => selectedSideQuantities.has(side.side_item.id))
+      .map((side) => ({
+        side_item_id: side.side_item.id,
+        name: side.side_item.name,
+        price: Number(side.side_item.base_price),
+        quantity: selectedSideQuantities.get(side.side_item.id) ?? 1,
+        is_default: side.is_default,
+      }));
+    const trimmedNote = note.trim();
+    onAdd({
+      key: `${item.id}:${selectedVariant?.id ?? "base"}:${crypto.randomUUID()}`,
+      menu_item_id: item.id,
+      item_name: item.name,
+      variant_id: selectedVariant?.id,
+      variant_name: selectedVariant?.name,
+      quantity,
+      unit_price: unitPrice,
+      modifiers,
+      sides,
+      note: trimmedNote === "" ? undefined : trimmedNote,
+    });
+    onOpenChange(false);
   }
 
   return (
-    <Item variant="outline" className="block min-w-0 p-2">
-      <MenuPhotoFrame item={item} />
-      <div className="mt-2 grid gap-2">
-        {variants.map((variant) => (
-          <Button
-            key={variant.id}
-            type="button"
-            variant="outline"
-            size="touch"
-            className="w-full justify-between"
-            onClick={() => onAdd(item, variant)}
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <IconPlus data-icon="inline-start" />
-              <span className="min-w-0 truncate">{variant.name}</span>
-            </span>
-            <span className="shrink-0 tabular-nums">
-              {formatVND(
-                Number(item.base_price) + Number(variant.price_adjustment),
-              )}
-            </span>
-          </Button>
-        ))}
-      </div>
-    </Item>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        showCloseButton={false}
+        className="h-dvh max-h-dvh p-0"
+      >
+        <div className="flex h-full flex-col">
+          <SheetHeader>
+            <div className="flex items-center justify-between gap-3">
+              <SheetTitle className="min-w-0 flex-1 truncate text-left">
+                {item.name}
+              </SheetTitle>
+              <SheetClose asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 text-muted-foreground"
+                  aria-label={SELF_ORDER_VI.closeCustomizerAria}
+                >
+                  <IconX />
+                </Button>
+              </SheetClose>
+            </div>
+            <SheetDescription className="text-left">
+              {item.description ?? SELF_ORDER_VI.customizeDescription}
+            </SheetDescription>
+          </SheetHeader>
+
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="flex flex-col gap-4 px-4 pb-4">
+              {item.menu_item_variants.length > 0 ? (
+                <FieldSet className="gap-2">
+                  <FieldLegend>{SELF_ORDER_VI.variantLabel}</FieldLegend>
+                  <RadioGroup
+                    value={selectedVariant ? String(selectedVariant.id) : ""}
+                    onValueChange={(value) => {
+                      const nextVariant =
+                        item.menu_item_variants.find(
+                          (variant) => String(variant.id) === value,
+                        ) ?? null;
+                      setSelectedVariant(nextVariant);
+                    }}
+                    className="gap-2"
+                  >
+                    {item.menu_item_variants.map((variant) => (
+                      <Item
+                        key={variant.id}
+                        asChild
+                        variant="outline"
+                        className="cursor-pointer hover:bg-accent"
+                      >
+                        <FieldLabel
+                          htmlFor={`self-order-variant-${item.id}-${variant.id}`}
+                          className="w-full items-center gap-3 font-normal"
+                        >
+                          <RadioGroupItem
+                            id={`self-order-variant-${item.id}-${variant.id}`}
+                            value={String(variant.id)}
+                            size="touch"
+                          />
+                          <ItemContent>
+                            <ItemTitle className="text-base">
+                              {variant.name}
+                            </ItemTitle>
+                          </ItemContent>
+                          <ItemActions className="shrink-0 text-base text-muted-foreground">
+                            {formatVND(
+                              Number(item.base_price) +
+                                Number(variant.price_adjustment),
+                            )}
+                          </ItemActions>
+                        </FieldLabel>
+                      </Item>
+                    ))}
+                  </RadioGroup>
+                </FieldSet>
+              ) : null}
+
+              {item.menu_item_modifiers.length > 0 ? (
+                <FieldSet className="gap-2">
+                  <FieldLegend>{SELF_ORDER_VI.modifierLabel}</FieldLegend>
+                  <ItemGroup className="gap-2">
+                    {item.menu_item_modifiers.map((modifier) => (
+                      <Item
+                        key={modifier.id}
+                        asChild
+                        variant="outline"
+                        className="cursor-pointer hover:bg-accent"
+                      >
+                        <FieldLabel
+                          htmlFor={`self-order-modifier-${item.id}-${modifier.id}`}
+                          className="w-full items-center gap-3 font-normal"
+                        >
+                          <Checkbox
+                            id={`self-order-modifier-${item.id}-${modifier.id}`}
+                            size="touch"
+                            checked={selectedModifierIds.has(modifier.id)}
+                            onCheckedChange={() => toggleModifier(modifier.id)}
+                          />
+                          <ItemContent>
+                            <ItemTitle className="text-base">
+                              {modifier.name}
+                            </ItemTitle>
+                          </ItemContent>
+                          <ItemActions className="shrink-0 text-base text-muted-foreground">
+                            +{formatVND(Number(modifier.price))}
+                          </ItemActions>
+                        </FieldLabel>
+                      </Item>
+                    ))}
+                  </ItemGroup>
+                </FieldSet>
+              ) : null}
+
+              {item.menu_item_available_sides.length > 0 ? (
+                <FieldSet className="gap-2">
+                  <FieldLegend>{SELF_ORDER_VI.sidesLabel}</FieldLegend>
+                  <ItemGroup className="gap-2">
+                    {item.menu_item_available_sides.map((side) => {
+                      const sideQuantity =
+                        selectedSideQuantities.get(side.side_item.id) ?? 0;
+                      const selected = sideQuantity > 0;
+                      return (
+                        <Item
+                          key={side.id}
+                          variant="outline"
+                          className="flex-nowrap items-start gap-3"
+                        >
+                          <Checkbox
+                            id={`self-order-side-${item.id}-${side.id}`}
+                            className="mt-1.5"
+                            size="touch"
+                            checked={selected}
+                            onCheckedChange={() =>
+                              toggleSide(side.side_item.id)
+                            }
+                          />
+                          <ItemContent>
+                            <FieldLabel
+                              htmlFor={`self-order-side-${item.id}-${side.id}`}
+                              className="cursor-pointer text-base leading-snug font-normal"
+                            >
+                              {side.side_item.name}
+                            </FieldLabel>
+                            <ItemTitle className="text-sm font-normal text-muted-foreground">
+                              +{formatVND(Number(side.side_item.base_price))}
+                            </ItemTitle>
+                          </ItemContent>
+                          <ItemActions className="shrink-0 gap-1 self-center">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="touch"
+                              className="min-w-12 px-0"
+                              disabled={!selected}
+                              aria-label={SELF_ORDER_VI.decreaseSideAria(
+                                side.side_item.name,
+                              )}
+                              onClick={() =>
+                                updateSideQuantity(side.side_item.id, -1)
+                              }
+                            >
+                              <IconMinus />
+                            </Button>
+                            <span className="w-7 text-center text-base font-semibold tabular-nums">
+                              {sideQuantity}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="touch"
+                              className="min-w-12 px-0"
+                              aria-label={SELF_ORDER_VI.increaseSideAria(
+                                side.side_item.name,
+                              )}
+                              onClick={() =>
+                                updateSideQuantity(side.side_item.id, 1)
+                              }
+                            >
+                              <IconPlus />
+                            </Button>
+                          </ItemActions>
+                        </Item>
+                      );
+                    })}
+                  </ItemGroup>
+                </FieldSet>
+              ) : null}
+
+              <FieldSet className="gap-2">
+                <FieldLabel
+                  htmlFor={`self-order-item-note-${item.id}`}
+                  className="text-base font-semibold"
+                >
+                  {SELF_ORDER_VI.itemNoteLabel}
+                </FieldLabel>
+                <Textarea
+                  id={`self-order-item-note-${item.id}`}
+                  value={note}
+                  maxLength={300}
+                  rows={2}
+                  placeholder={SELF_ORDER_VI.itemNotePlaceholder}
+                  onChange={(event) => setNote(event.target.value)}
+                />
+              </FieldSet>
+            </div>
+          </ScrollArea>
+
+          <Separator />
+          <div className="flex shrink-0 items-center justify-between gap-2 p-4">
+            <div className="min-w-0">
+              <p className="text-sm text-muted-foreground">
+                {SELF_ORDER_VI.subtotal}
+              </p>
+              <p className="text-xl font-bold tabular-nums text-primary">
+                {formatVND(total)}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                className="min-w-12 px-0"
+                disabled={quantity <= 1}
+                aria-label={SELF_ORDER_VI.decreaseQuantityAria}
+                onClick={() => updateQuantity(-1)}
+              >
+                <IconMinus />
+              </Button>
+              <span className="w-7 text-center text-base font-bold tabular-nums">
+                {quantity}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                className="min-w-12 px-0"
+                aria-label={SELF_ORDER_VI.increaseQuantityAria}
+                onClick={() => updateQuantity(1)}
+              >
+                <IconPlus />
+              </Button>
+            </div>
+            <Button
+              type="button"
+              size="touch"
+              className="min-w-20"
+              onClick={addCustomizedItem}
+            >
+              {SELF_ORDER_VI.addToCart}
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -297,26 +610,10 @@ function MenuPhotoButton({
     <Button
       type="button"
       variant="outline"
-      aria-label={`${item.name}, ${formatVND(Number(item.base_price))}`}
-      className="group relative aspect-square h-auto min-w-0 w-full overflow-hidden p-0 text-left transition-transform active:scale-[0.97]"
+      aria-label={`${SELF_ORDER_VI.customizeItem}: ${item.name}, ${formatVND(Number(item.base_price))}`}
+      className="group relative aspect-[4/5] h-auto min-w-0 w-full overflow-hidden p-0 text-left"
       onClick={onClick}
     >
-      <MenuPhotoContent item={item} />
-    </Button>
-  );
-}
-
-function MenuPhotoFrame({ item }: { item: SelfOrderMenuItem }) {
-  return (
-    <div className="relative aspect-square w-full overflow-hidden rounded-md bg-muted/50">
-      <MenuPhotoContent item={item} />
-    </div>
-  );
-}
-
-function MenuPhotoContent({ item }: { item: SelfOrderMenuItem }) {
-  return (
-    <>
       <span className="absolute inset-0 block">
         {item.image_url ? (
           <Image
@@ -334,13 +631,13 @@ function MenuPhotoContent({ item }: { item: SelfOrderMenuItem }) {
           </span>
         )}
       </span>
-      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-      <span className="absolute right-2 top-2 inline-flex items-center rounded-md bg-primary px-2 py-1 text-sm font-bold tabular-nums text-primary-foreground">
+      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
+      <Badge className="absolute right-2 top-2 z-10 h-auto rounded-md px-2 py-1 text-sm font-bold tabular-nums">
         {formatVND(Number(item.base_price))}
-      </span>
-      <span className="absolute inset-x-2 bottom-2 line-clamp-2 text-sm font-bold leading-snug text-white">
+      </Badge>
+      <span className="pos-text-overlay absolute inset-x-3 bottom-3 z-10 line-clamp-2 text-base font-bold leading-snug text-white">
         {item.name}
       </span>
-    </>
+    </Button>
   );
 }

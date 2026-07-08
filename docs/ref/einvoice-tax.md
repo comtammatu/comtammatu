@@ -1,11 +1,11 @@
 # HĐĐT & Thuế GTGT — Hóa Đơn Điện Tử & Giá Trị Gia Tăng
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư — mô hình F&B multi-branch
-> Khung pháp lý (đến 06/2026):
-> Hóa đơn chứng từ — NĐ 123/2020 (sửa đổi bởi NĐ 70/2025, hiệu lực 01/06/2025) + TT 32/2025/TT-BTC (thay TT 78/2021, hiệu lực 01/06/2025).
-> Thuế HKD — NQ 198/2025/QH15 (bỏ thuế khoán, miễn lệ phí môn bài từ 01/01/2026) + NĐ 68/2026/NĐ-CP (05/03/2026, chính sách thuế & quản lý thuế HKD/CNKD) + NĐ 141/2026/NĐ-CP (29/04/2026, nâng ngưỡng không chịu GTGT/TNCN lên 1 tỷ/năm, hồi tố 01/01/2026) + Luật Thuế GTGT 48/2024/QH15 + NQ 204/2025/QH15 + NĐ 174/2025/NĐ-CP (giảm GTGT 01/07/2025–31/12/2026) + Luật Thuế TNCN sửa đổi 2025 (hiệu lực 01/07/2026).
+> Khung pháp lý (đến 07/2026):
+> Quản lý thuế/HĐĐT — Luật Quản lý thuế 108/2025/QH15 + NĐ 252/2026/NĐ-CP + NĐ 254/2026/NĐ-CP (cùng hiệu lực 01/07/2026, thay NĐ 123/2020 + NĐ 70/2025 cho HĐĐT/chứng từ điện tử) + TT 32/2025/TT-BTC (thay TT 78/2021, hiệu lực 01/06/2025).
+> Thuế HKD — NQ 198/2025/QH15 (bỏ thuế khoán, miễn lệ phí môn bài từ 01/01/2026) + NĐ 68/2026/NĐ-CP (05/03/2026, chính sách thuế & quản lý thuế HKD/CNKD) + NĐ 141/2026/NĐ-CP (29/04/2026, nâng ngưỡng không chịu GTGT/TNCN lên 1 tỷ/năm, hồi tố 01/01/2026) + Luật Thuế GTGT 48/2024/QH15 + NQ 204/2025/QH15 + NĐ 174/2025/NĐ-CP (giảm GTGT 01/07/2025–31/12/2026) + Luật Thuế TNCN 109/2025/QH15 + NĐ 253/2026/NĐ-CP + TT 87/2026/TT-BTC.
 > Kế toán HKD — TT 152/2025/TT-BTC (31/12/2025, thay TT 88/2021 từ 01/01/2026).
-> Last updated: 2026-06-16 (Viettel S-invoice only, HKD model)
+> Last updated: 2026-07-08 (Viettel S-invoice only, HKD model)
 
 ---
 
@@ -16,7 +16,7 @@ Cơm Tấm Má Tư hiện vận hành theo mô hình **Hộ kinh doanh (HKD)**. 
 HĐĐT, mẫu hóa đơn, phương pháp tính thuế, và kỳ khai thuế phải theo cấu hình
 HKD đã đăng ký với cơ quan thuế/provider.
 
-Các mốc chính đến tháng 06/2026:
+Các mốc chính đến ngày 08/07/2026:
 
 - Từ 01/01/2026: bỏ phương pháp thuế khoán và miễn lệ phí môn bài cho HKD
   (NQ 198/2025/QH15). Số liệu POS, HĐĐT, sổ doanh thu, chứng từ phải đủ để
@@ -37,12 +37,13 @@ Các mốc chính đến tháng 06/2026:
   GTGT/TNCN của HKD từ 500 triệu lên **1 tỷ đồng/năm**, áp dụng hồi tố từ
   01/01/2026; số thuế đã nộp thuộc phần được miễn xử lý theo Điều 12 NĐ
   68/2026. Ngưỡng phân nhóm kê khai/sổ sách NĐ 68/2026 và ngưỡng HĐĐT máy
-  tính tiền 1 tỷ (NĐ 70/2025) là các mốc riêng — kế toán xác nhận cách áp
+  tính tiền 1 tỷ theo NĐ 254/2026 là các mốc riêng — kế toán xác nhận cách áp
   dụng khi chốt hồ sơ.
 - HĐĐT: HKD doanh thu ≥ 1 tỷ/năm bán trực tiếp đến người tiêu dùng (gồm ăn
-  uống) bắt buộc dùng HĐĐT khởi tạo từ máy tính tiền kết nối CQT từ 01/06/2025
-  (NĐ 70/2025); NĐ 68/2026 giữ yêu cầu HĐĐT có mã CQT/máy tính tiền từ mức
-  doanh thu 1 tỷ. HKD doanh thu thấp hơn được dùng tự nguyện.
+  uống) bắt buộc dùng HĐĐT khởi tạo từ máy tính tiền kết nối CQT. Từ
+  01/07/2026, NĐ 254/2026/NĐ-CP là văn bản hiện hành cho HĐĐT/chứng từ điện
+  tử; NĐ 123/2020 và NĐ 70/2025 đã hết hiệu lực. HKD doanh thu thấp hơn được
+  dùng tự nguyện.
 - Kế toán: TT 152/2025/TT-BTC thay TT 88/2021 từ 01/01/2026 — bộ sổ kế toán
   tổ chức theo nhóm doanh thu (mẫu S1a / S2a–S2e / S3a-HKD); export của hệ
   thống phải đối chiếu được với bộ sổ này.
@@ -204,7 +205,7 @@ backfill hoặc khi chủ trương vận hành chuyển sang template tổng h�
 - Tổng tiền thanh toán
 - Chữ ký số của người bán
     + ⚠️ HĐĐT GTGT thường (mẫu `1/...`): BẮT BUỘC chữ ký số người bán
-    + HĐĐT khởi tạo từ máy tính tiền (mẫu `2/...`, NĐ 70/2025): KHÔNG bắt buộc
+    + HĐĐT khởi tạo từ máy tính tiền (mẫu `2/...`, NĐ 254/2026): KHÔNG bắt buộc
       chữ ký số — phù hợp đặc thù bán lẻ; mã CQT cấp tự động khi gửi
 ```
 
@@ -261,7 +262,7 @@ RPC raise `illegal_transition` (ERRCODE 22023) khi cố gắng nhảy ngoài mat
 | `cancelled` / `replaced` | `settings:tenant`   |
 | Tất cả transition khác   | `orders:write`      |
 
-`cancel`/`replace` cần owner (kèm biên bản hủy/thay thế theo NĐ 123/2020 sửa đổi + TT 32/2025). Issuance flow (`draft → signing → submitted → issued`) cho phép cashier+ thực hiện.
+`cancel`/`replace` cần owner (kèm hồ sơ hủy/thay thế theo NĐ 254/2026 + TT 32/2025). Issuance flow (`draft → signing → submitted → issued`) cho phép cashier+ thực hiện.
 
 #### Idempotency
 
@@ -626,7 +627,7 @@ Auth flow:
 
 ## 6. Kê khai & báo cáo thuế
 
-### 6.1 Kê khai thuế (HKD kê khai theo NĐ 68/2026)
+### 6.1 Kê khai thuế (HKD kê khai theo NĐ 68/2026, Luật QLT 108/2025 và NĐ 252/2026)
 
 - **Kỳ khai theo nhóm doanh thu**: nhóm > 500 triệu – 3 tỷ và nhóm > 3 – 50 tỷ
   khai **theo quý** (nhóm > 3 – 50 tỷ thêm quyết toán năm); nhóm > 50 tỷ khai
@@ -695,10 +696,10 @@ chốt** theo văn bản xử phạt hiện hành (không hardcode mức trong a
 
 | Hành vi | Căn cứ | Hệ quả |
 | --- | --- | --- |
-| Không lập HĐĐT khi bán hàng / không dùng HĐĐT máy tính tiền (HKD > 1 tỷ) | NĐ 70/2025 + NĐ 125/2020 (xử phạt hóa đơn) và sửa đổi | Phạt vi phạm về hóa đơn theo từng hành vi |
-| Chậm nộp **tiền thuế** | Luật Quản lý thuế | Tiền chậm nộp **0,03%/ngày** trên số thuế chậm nộp |
-| Chậm nộp **tờ khai** | Luật Quản lý thuế + NĐ xử phạt | Phạt theo số ngày chậm |
-| Kê khai sai dẫn đến thiếu thuế | Luật Quản lý thuế | Truy thu + tiền chậm nộp + phạt 20% số thiếu (tùy hành vi) |
+| Không lập HĐĐT khi bán hàng / không dùng HĐĐT máy tính tiền (HKD > 1 tỷ) | NĐ 254/2026 + NĐ xử phạt hóa đơn hiện hành | Phạt vi phạm về hóa đơn theo từng hành vi |
+| Chậm nộp **tiền thuế** | Luật Quản lý thuế 108/2025 + NĐ 252/2026 | Tiền chậm nộp theo quy định hiện hành |
+| Chậm nộp **tờ khai** | Luật Quản lý thuế 108/2025 + NĐ 252/2026 + NĐ xử phạt | Phạt theo số ngày chậm |
+| Kê khai sai dẫn đến thiếu thuế | Luật Quản lý thuế 108/2025 + NĐ 252/2026 | Truy thu + tiền chậm nộp + phạt theo hành vi |
 
 > Đây là dữ liệu để Finance/POS cảnh báo (vd: order chưa phát hành HĐĐT, kỳ kê khai
 > sắp đến hạn). Hệ thống **không** tự tính/áp mức phạt — chỉ surface rủi ro cho

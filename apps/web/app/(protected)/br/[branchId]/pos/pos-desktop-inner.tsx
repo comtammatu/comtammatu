@@ -41,6 +41,7 @@ import {
   PosOrderTargetRow,
   type OrderTarget,
 } from "./_components/pos-order-target-row";
+import { SelfOrderApprovalSheet } from "./_components/self-order-approval-sheet";
 
 // Lazy-load these modals OFF the cash path, code-splitting their JS out of
 // the initial POS bundle. Trims first-paint JS without affecting payment
@@ -1621,6 +1622,12 @@ export function PosDesktopInner({
         onSubmitNewOrder={() => handleSubmitOrder()}
         onSubmitAppendDraft={handleSubmitAppendDraft}
         onCancelAppend={cancelAppendWorkflow}
+      />
+      <SelfOrderApprovalSheet
+        branchId={branchId}
+        posSessionId={session.id}
+        orders={orders}
+        onUpdated={refreshOperational}
       />
       {mobileSidebarDrawer}
 

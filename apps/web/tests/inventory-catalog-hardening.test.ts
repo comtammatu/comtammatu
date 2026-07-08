@@ -12,6 +12,12 @@ function readRepo(path: string): string {
 const hardeningSql = readRepo(
   "supabase/migrations/_archive/20260629144952_ingredient_catalog_tenant_scope_hardening.sql",
 );
+const recipeActionSource = readRepo(
+  "apps/web/app/(protected)/inventory/recipe-actions.ts",
+);
+const recipeUpsertSql = readRepo(
+  "supabase/migrations/20260708112544_allow_inventory_recipe_upsert.sql",
+);
 
 test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows", () => {
   for (const constraint of [
@@ -56,5 +62,24 @@ test("ingredient catalog callable RPC privileges are explicit", () => {
   assert.match(
     hardeningSql,
     /GRANT EXECUTE ON FUNCTION public\.inv_to_base\(bigint, bigint, numeric\) TO authenticated;/,
+  );
+});
+
+test("recipe line upsert accepts inventory catalog permissions", () => {
+  assert.match(
+    recipeActionSource,
+    /anyPermission:\s*\[[\s\S]*CATALOG_MANAGE_PERMISSIONS[\s\S]*PERMISSION_KEYS\.MENU_WRITE/,
+  );
+  assert.doesNotMatch(
+    recipeActionSource,
+    /permission:\s*PERMISSION_KEYS\.INVENTORY_WRITE/,
+  );
+  assert.match(
+    recipeUpsertSql,
+    /public\.has_permission_any\('inventory:write'\)[\s\S]*OR public\.has_permission_any\('menu:write'\)/,
+  );
+  assert.match(
+    recipeUpsertSql,
+    /GRANT EXECUTE ON FUNCTION public\.upsert_recipe_lines\(bigint, jsonb, bigint\) TO authenticated, service_role;/,
   );
 });

@@ -137,12 +137,14 @@ export function NewStocktakeSessionClient({
 
   const content = (
     <>
-      <OperatorFlowSteps
-        title={operatorFlow.stocktakeListTitle}
-        description={operatorFlow.stocktakeListDescription}
-        steps={operatorFlow.stocktakeSteps}
-        currentStep={1}
-      />
+      {embedded ? (
+        <OperatorFlowSteps
+          title={operatorFlow.stocktakeListTitle}
+          description={operatorFlow.stocktakeListDescription}
+          steps={operatorFlow.stocktakeSteps}
+          currentStep={1}
+        />
+      ) : null}
       <div
         className={
           embedded ? "flex flex-col gap-4" : "grid gap-4 lg:grid-cols-3"

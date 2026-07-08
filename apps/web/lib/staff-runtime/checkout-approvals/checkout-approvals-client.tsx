@@ -2,7 +2,7 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing employee checkout approval surface keeps operational copy inline */
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import {
   CheckCircle2 as IconCheck,
@@ -224,6 +224,10 @@ export function CheckoutApprovalsClient({
   const [localItems, setLocalItems] = useState(items);
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setLocalItems(items);
+  }, [items]);
 
   const [rejectTarget, setRejectTarget] = useState<CheckoutApprovalItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");

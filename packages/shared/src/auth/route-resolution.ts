@@ -8,6 +8,8 @@ export const PUBLIC_APP_PATHS = [
   "/sw.js",
   "/access-denied",
   "/payment/momo",
+  "/q",
+  "/api/self-order",
 ] as const;
 
 export const INVENTORY_PROCUREMENT_PREFIXES = [

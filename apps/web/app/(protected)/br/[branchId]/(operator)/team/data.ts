@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
@@ -80,7 +81,7 @@ function emptyChecklistProgress(): Record<
 
 export const fetchTeamBoard = withAction(
   { roles: TEAM_BOARD_ROLES, schema: fetchTeamBoardSchema },
-  async (data, { supabase, claims }) => {
+  async (data, { claims }) => {
     if (
       claims.user_role === "branch_manager" &&
       claims.branch_id !== data.branchId
@@ -89,10 +90,12 @@ export const fetchTeamBoard = withAction(
     }
 
     const today = data.date ?? getVNDateString();
+    // Branch access is checked above; board reads bypass self-scoped HR RLS.
+    const readClient = createServiceClient();
 
     const [employeesResult, attendanceResult, countAssignmentsResult, leaveResult] =
       await Promise.all([
-        supabase
+        readClient
           .from("employees")
           .select(
             `
@@ -106,13 +109,20 @@ export const fetchTeamBoard = withAction(
           .eq("tenant_id", claims.tenant_id)
           .eq("profiles.branch_id", data.branchId)
           .eq("is_active", true),
-        supabase
+        readClient
           .from("attendance_records")
           .select(
             `
             id, employee_id, check_in, check_out,
             checkout_requested_at, checkout_approved_at,
             shifts ( name ),
+            employees (
+              employee_code, default_checklist_template_id,
+              profiles (
+                full_name,
+                positions ( label_vi, default_checklist_template_id )
+              )
+            ),
             attendance_checklist_items ( phase, is_required, is_done )
           `,
           )
@@ -120,13 +130,13 @@ export const fetchTeamBoard = withAction(
           .eq("branch_id", data.branchId)
           .eq("date", today)
           .order("check_in", { ascending: true }),
-        supabase
+        readClient
           .from("inventory_count_assignments")
           .select("employee_id, location_id")
           .eq("tenant_id", claims.tenant_id)
           .eq("branch_id", data.branchId)
           .eq("is_active", true),
-        supabase
+        readClient
           .from("leave_requests")
           .select("employee_id")
           .eq("tenant_id", claims.tenant_id)
@@ -185,8 +195,9 @@ export const fetchTeamBoard = withAction(
 
     const employeeIdsWithAssignments = [...assignedLocationsByEmployee.keys()];
     const countSlipsByEmployeeLocation = new Map<string, string>();
+    const employeeIdsWithCountSlips = new Set<number>();
     if (employeeIdsWithAssignments.length > 0) {
-      const { data: slipRows, error: slipError } = await supabase
+      const { data: slipRows, error: slipError } = await readClient
         .from("inventory_count_slips")
         .select("employee_id, location_id, status")
         .eq("tenant_id", claims.tenant_id)
@@ -200,6 +211,7 @@ export const fetchTeamBoard = withAction(
       }
 
       for (const row of slipRows ?? []) {
+        employeeIdsWithCountSlips.add(row.employee_id);
         countSlipsByEmployeeLocation.set(
           `${row.employee_id}:${row.location_id}`,
           row.status,
@@ -226,7 +238,28 @@ export const fetchTeamBoard = withAction(
 
     const shiftsByEmployee = new Map<number, TeamBoardShiftAttendance[]>();
     for (const record of attendanceRows) {
-      const meta = employeeMetaById.get(record.employee_id);
+      let meta = employeeMetaById.get(record.employee_id);
+      if (!meta) {
+        const employee = embeddedRecord(record.employees);
+        const profile = embeddedRecord(employee?.profiles);
+        const position = embeddedRecord(profile?.positions);
+        const positionTemplateId =
+          typeof position?.default_checklist_template_id === "number"
+            ? position.default_checklist_template_id
+            : null;
+        meta = {
+          employeeId: record.employee_id,
+          employeeCode: stringField(employee, "employee_code"),
+          fullName: stringField(profile, "full_name") ?? "Nhân viên",
+          positionLabel:
+            typeof position?.label_vi === "string" ? position.label_vi : null,
+          effectiveChecklistTemplateId:
+            (typeof employee?.default_checklist_template_id === "number"
+              ? employee.default_checklist_template_id
+              : null) ?? positionTemplateId,
+        };
+        employeeMetaById.set(record.employee_id, meta);
+      }
       const checklistItems = Array.isArray(record.attendance_checklist_items)
         ? record.attendance_checklist_items
         : [];
@@ -257,7 +290,7 @@ export const fetchTeamBoard = withAction(
 
     const signalEmployeeIds = new Set<number>([
       ...shiftsByEmployee.keys(),
-      ...assignedLocationsByEmployee.keys(),
+      ...employeeIdsWithCountSlips,
       ...leaveEmployeeIds,
     ]);
 

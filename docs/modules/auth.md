@@ -13,13 +13,31 @@ Canonical role/scope/route boundaries live in `docs/spec/role-route-matrix.md`.
 navigation, and default-landing changes must keep the spec, `module-acl.ts`,
 `route-map.ts`, and auth tests in sync.
 
+## Layer Meanings
+
+Do not use Auth, ACL, PBAC, and RLS interchangeably. They answer different
+questions:
+
+| Layer                         | Source of truth                                                                 | Owns                                                                                  | Does not own                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Auth identity                 | Supabase Auth + `profiles` + `positions`                                        | Who the signed-in user is, tenant/site assignment, active HR position                  | Route admission, action permission, row visibility                       |
+| Access bucket / route ACL     | `positions.code` mapper -> JWT `user_role`; `packages/shared/src/auth/module-acl.ts` | Whether a bucket can enter a module or route family                                    | Whether a button/action is allowed; whether DB rows are readable/writable |
+| PBAC permission grants        | `permission_keys`, `staff_permissions`, `role_templates`                        | Whether a user can perform an action, with branch/tenant scope and validity window     | Navigation, default home, HR display labels                              |
+| Server action / RPC gate      | `withAction`, `withFormAction`, direct RPC checks                               | Zod input validation, action-level roles + permission checks, atomic mutation boundary | Replacing RLS                                                            |
+| RLS                           | Postgres policies + `has_permission()` / `has_permission_any()`                 | Final row-level enforcement for PostgREST/Data API access                             | UI affordances, route taxonomy, staff management semantics               |
+
+Vocabulary rule: `position_code` is the HR position; `user_role` /
+`access_bucket` is the compatibility route bucket; `permission_key` is the PBAC
+action string. A department or position is not a route role unless the mapper
+explicitly derives a bucket from it.
+
 ## Components
 
 | File                                                  | Purpose                                                                                        | Lines                     |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------- |
 | `packages/shared/src/auth/types.ts`                   | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                |
-| `packages/shared/src/auth/module-acl.ts`              | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)  |
-| `packages/shared/src/auth/permissions.ts`             | `PERMISSION_KEYS` (83 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**         | Permission catalog        |
+| `packages/shared/src/auth/module-acl.ts`              | Module → allowed access buckets mapping, `canAccess()`                                         | Route-level ACL           |
+| `packages/shared/src/auth/permissions.ts`             | `PERMISSION_KEYS`, `PERMISSION_KEY_COUNT = 92`, `hasPermission()`, `hasAny/All` pure fns       | Permission catalog mirror |
 | `packages/shared/src/auth/scope.ts`                   | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
 | `packages/shared/src/auth/route-resolution.ts`        | Public route helpers + URL → `ModuleKey` mapping                                               | Proxy route mapping       |
 | `packages/shared/src/auth/route-map.ts`               | Route family contract: surface, entry point, chrome, back behavior, breadcrumb root            | Navigation contract       |
@@ -49,14 +67,14 @@ owner                          ← governance + tenant-wide oversight, vận hà
 ├── production_manager         ← Bếp Trung Tâm production workflow
 ├── cashier                    ← POS (/br/[branchId]/pos)
 ├── chef                       ← KDS (/br/[branchId]/kds)
-└── office                     ← back-office staff, explicit grants only
+└── office                     ← back-office staff, `/finance` entry, explicit action grants
 ```
 
 Compatibility access buckets (`owner`, `cashier`, …) still exist as `STAFF_ROLES` / `AccessBucket` TS constants and are emitted in JWT `user_role` for backward compatibility. They are derived from `positions.code` through the mapper in shared auth and SQL. HR display names live in `positions.label_vi` / `positions.label_en` and must not gate authz.
 
-## RLS Gate Choice — `has_permission()` vs `auth_role()`
+## RLS Gate Choice — Live PBAC vs JWT Bucket
 
-Two parallel ACL mechanisms exist; pick the right one:
+Two DB-side gates exist; pick the right one:
 
 - **`has_permission(branch_id, key)`** — queries `staff_permissions` live. Revoke is **immediate**. Use for destructive UPDATE/DELETE policies and any gate that must honor instant grant changes.
 - **`auth_role()`** — reads JWT `user_role` claim (cached up to ~1h until token refresh). Use ONLY for: (a) scope/side guards inside RPC bodies (e.g. `branch_manager` forbidden from inter-site ship), (b) "tenant sees all branches" SELECT pattern (`branch_id = auth_branch_id() OR auth_role() IN HQ_ROLES`), (c) named ABAC helpers (`is_inventory_production_operator()`), (d) module-ACL fast-path on non-destructive read-mostly tables (e.g. `branch_menu_item_daily_limits` — see regression rule `BMIDL-RLS-INTENTIONAL-ROLE-FASTPATH`).
@@ -81,7 +99,8 @@ Two parallel ACL mechanisms exist; pick the right one:
 | Concept        | Storage                                                                          | Purpose                                                                                                                                                                                                                        |
 | -------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Position**   | `positions` (per tenant) + `profiles.position_id`                                | HR chức vụ label. Codes are canonical English `lower_snake_case` ONLY — mapped by `POSITION_CODE_TO_STAFF_ROLE` (shared TS) / `private.staff_role_from_position_code` (SQL twin). Display via `label_vi`. Does not gate authz. |
-| **Permission** | `permission_keys` catalog (global)                                               | Canonical action strings: `inventory:read`, `pos:use`, 83 keys.                                                                                                                                                                |
+| **Access bucket** | JWT `user_role` / `access_bucket`                                             | Compatibility route bucket derived from `positions.code`. Feeds `MODULE_ACL` and route/default-home decisions. Not an action grant.                                                                                             |
+| **Permission** | `permission_keys` catalog (global)                                               | Canonical action strings such as `inventory:read`, `pos:use`, `staff:assign_position`.                                                                                                                                         |
 | **Grant**      | `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` | Source of truth for authz. `branch_id IS NULL` ⇒ tenant-wide. Temporal window.                                                                                                                                                 |
 | **Template**   | `role_templates(permission_keys[])`                                              | Preset bundle applied when assigning a position (snapshot; edits don't propagate).                                                                                                                                             |
 
@@ -94,6 +113,32 @@ Two parallel ACL mechanisms exist; pick the right one:
 - `apply_template_to_user(target, branch, template, valid_from?, valid_until?)`
 
 Owner is protected: RPCs refuse to touch a user whose position code is `owner` (governed separately via `tenants.representative`).
+
+## PBAC Operations
+
+| Operation           | API / table                                                              | Meaning                                                                                  |
+| ------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Create auth user    | Admin API + `handle_new_user()`                                          | Creates identity, profile, position, branch/site claim seed. Does not grant ad-hoc permissions. |
+| Assign position     | `admin_update_profile(..., p_role := position_code, p_branch_id := ...)` | Changes HR position and derived route bucket. Requires `staff:manage`; position/branch changes also require `staff:assign_position`. |
+| Grant permission    | `grant_permission(target, branch, key, ...)`                             | Adds one PBAC grant. Branch-scoped keys require `branch_id`; tenant-scoped keys require `branch_id IS NULL`. |
+| Apply template      | `apply_template_to_user(target, branch, template, ...)`                  | Copies a template snapshot into `staff_permissions`; later template edits do not auto-propagate. |
+| Revoke permission   | `revoke_permission(target, branch, key)`                                  | Ends a PBAC grant and writes audit.                                                       |
+| Enter route/module  | `proxy.ts` -> `resolveModuleFromPath()` -> `canAccess(user_role, module)` | Fast route admission only.                                                               |
+| Execute action/read row | `withAction` / RPC body / RLS policy -> `has_permission*()`           | Authoritative action and data gate.                                                      |
+
+## HR Permission Contract
+
+`/hr` is a management workspace. Daily staff runtime remains under
+`/br/[branchId]/shift/*` and `/br/[branchId]/profile/*`.
+
+| HR operation | Route ACL | PBAC / action gate | Server action / RPC | RLS / table boundary |
+| ------------ | --------- | ------------------ | ------------------- | -------------------- |
+| Staff access create/update/deactivate | `staff` -> owner-only `/hr/staff/*` | `staff:manage`, plus `staff:assign_position` when position/branch changes | `createStaff`, `updateStaff`, `toggleStaffActive`; `admin_update_profile`, `toggle_profile_active` | `profiles`, `positions`, `staff_permissions`; RPCs enforce role hierarchy and branch containment |
+| Permission grant/revoke/template | `staff` -> owner-only `/hr/staff/[id]/permissions` | `staff:assign_permission` | `grantPermissionAction`, `revokePermissionAction`, `applyTemplateAction`; `grant_permission`, `revoke_permission`, `apply_template_to_user` | `staff_permissions`, `permission_audit_log`; scope must match key definition |
+| Employee record, salary, HĐLĐ | `hr` -> owner + branch_manager | Owner writes; branch_manager reads own-branch safe subset only | `createEmployeeAccount`, `updateEmployee`, `fetchEmployees`; active contract write via `employment_contracts` | `employees`, `employment_contracts`, `profiles`; branch_manager payload excludes compensation, ID, and bank-account fields |
+| Global shift and position-task setup | `hr` -> owner + branch_manager workspace, owner-only mutation UI | Owner-only action roles | `createShift`, `updateShift`, `deactivateShift`, `setShiftBoundaries`, `savePositionTasks` | `shifts` and `position_shift_tasks` are tenant/global setup, not branch staff runtime |
+| Attendance and leave oversight | `hr` -> owner + branch_manager | Branch-safe gates: `hr:approve_leave_request`, `hr:view_employee`, `staff:manage` with branch containment | `fetchAttendance`, `fetchAttendanceSummary`, `getAttendancePhotoUrl`, `forceCloseStaleAttendance`, leave approval actions | `attendance_records`, `leave_requests`; branch_manager must stay inside own branch |
+| Payroll | `hr_payroll` -> owner-only `/hr/payroll/*` | `finance:payroll_calculate`, `finance:payroll_approve` | `createPayrollPeriod`, `calculatePayroll`, approve/payroll export actions; `upsert_payroll_calculation` | `payroll_periods`, `payroll_entries`; payroll writes stay atomic |
 
 ## Auth Flow
 
@@ -110,39 +155,53 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
 
 ## ACL Matrix
 
-Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — proxy.ts, admin shell, and layouts all read from here.
+Defined in `packages/shared/src/auth/module-acl.ts`. The generated, current
+table lives in `docs/spec/role-route-matrix.md` → `Module ACL (generated)`. Do
+not maintain a second full matrix here.
 
-| Module                                                  | owner | branch_mgr | wh_mgr | prod_mgr | cashier | chef | office |
-| ------------------------------------------------------- | ----- | ---------- | ------ | -------- | ------- | ---- | ------ |
-| menu                                                    | ✓     | ✓          |        |          |         |      |        |
-| inventory                                               | ✓     | ✓          | ✓      | ✓        |         |      |        |
-| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức) | ✓     |            | ✓      | ✓        |         |      |        |
-| orders                                                  | ✓     | ✓          |        |          | ✓       |      |        |
-| staff                                                   | ✓     |            |        |          |         |      |        |
-| hr                                                      | ✓     | ✓          |        |          |         |      |        |
-| finance                                                 | ✓     |            |        |          |         |      |        |
-| reports                                                 | ✓     |            |        |          |         |      |        |
-| settings                                                | ✓     |            |        |          |         |      |        |
-| pos                                                     | ✓     | ✓          |        |          | ✓       |      |        |
-| kds                                                     | ✓     | ✓          |        |          |         | ✓    |        |
-| runner (public display route)                           | ✓     | ✓          |        |          | ✓       | ✓    |        |
-| branch_dashboard                                        | ✓     | ✓          |        |          |         |      |        |
-| branch_settings                                         | ✓     | ✓          |        |          |         |      |        |
-| branch_menu_limits                                      | ✓     | ✓          |        |          |         |      |        |
-| employee                                                |       | ✓          | ✓      | ✓        | ✓       | ✓    | ✓      |
-| notifications                                           | ✓     | ✓          | ✓      | ✓        | ✓       | ✓    | ✓      |
+Current non-obvious route facts:
 
-> `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL reads `user_role` from the JWT, derived from `positions.code`. Row-level authz still goes through `has_permission(branch_id, key)` — this matrix is only a fast gate.
->
-> The main inventory mutating RPCs are permission-gated; the remaining `auth_role()` usages are route/side/scope guards or legacy helpers. See `docs/ref/inventory-rbac-matrix.md` §6.
->
-> Runner exception: `/br/[branchId]/runner` is an exact public customer display path. `MODULE_ACL.runner` remains for route metadata and protected future child routes, not for forcing Account Login on the board. Current pilot intentionally skips a public slug; add a tokenized URL again if live operational telemetry exposure or public load becomes a real issue.
+- `inventory_procurement` includes `branch_manager`, `warehouse_manager`, and
+  `production_manager`; inner procurement/production actions remain
+  PBAC/RLS-gated.
+- `finance` includes `office` for the route surface; finance actions still
+  require finance permission keys.
+- `staff`, `hr_payroll`, `branches`, `branch_picker`, and tenant `settings` are
+  owner route buckets.
+- Staff day-runtime routes (`/br/[branchId]/shift/*` and
+  `/br/[branchId]/profile/*`) use `operator_home`; manager approval routes use
+  `employee_checkout_approvals` / `employee_leave_approvals`.
+- The exact public Runner board path bypasses staff auth; `MODULE_ACL.runner`
+  still describes protected runner-family metadata and future child routes.
 
-**Employee page boundary:** `employee` is the self-service / operational-handoff surface for staff outside `ADMIN_ROLES`. `owner` does not enter `/employee/*`; a direct request is sent to the Admin default route.
+Route-level ACL reads `user_role` from the JWT, derived from `positions.code`.
+Row-level authz still goes through `has_permission(branch_id, key)` — route ACL
+is only a fast gate.
+
+The main inventory mutating RPCs are permission-gated; the remaining
+`auth_role()` usages are route/side/scope guards or legacy helpers. See
+`docs/ref/inventory-rbac-matrix.md` §6.
+
+**Staff runtime boundary:** daily staff execution lives under
+`/br/[branchId]/shift/*` and `/br/[branchId]/profile/*`. The old `/employee/*`
+compatibility redirect is removed; post-login `returnTo=/employee...` falls
+back to the role's default destination instead of preserving the retired URL.
 
 **Owner:** beyond the admin / monitoring modules, can also enter `orders` and `inventory` to directly inspect tenant-level operations. However, the owner is not treated as a daily operator in inventory docs/UI; the Inventory surfaces are currently optimized for `branch_manager`, `warehouse_manager`, `production_manager`.
 
-**Inventory sub-route ACL:** `inventory` allows `owner`, `branch_manager`, `warehouse_manager`, `production_manager` for stock on hand, real transfers, consumption, stocktake, expiry, reports, and branch operations. `inventory_procurement`: `owner`, `warehouse_manager`, `production_manager` access `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, and `receiving` per `route-resolution.ts`; the receiving site can be `branch`, `central_supply`, or `central_kitchen`. `production` does not use its own module; Server Actions and DB/RPC/RLS hard-deny `branch_manager` even with a manual production/menu grant. The production operator is `production_manager` at the Central Kitchen (Bếp Trung Tâm); `owner` has inspection/emergency access but is not led through the UX as a daily operator. `branch_manager` should therefore only see the branch-ops rhythm: receive inbound transfers, cấp Bếp CN bằng same-branch transfer, approve consumption, stocktake, adjustment/write-off.
+**Inventory sub-route ACL:** `inventory` allows `owner`, `branch_manager`,
+`warehouse_manager`, `production_manager` for stock on hand, real transfers,
+consumption, stocktake, expiry, reports, and branch operations.
+`inventory_procurement` also allows those buckets so branch stock receiving and
+central-site procurement/production paths can share the workspace, but
+PO/GRN/supplier/recipe actions remain narrowed by permission keys and RPC/RLS
+checks. `production` does not use its own module; Server Actions and DB/RPC/RLS
+hard-deny `branch_manager` for central production even with a manual
+production/menu grant. The production operator is `production_manager` at the
+Central Kitchen (Bếp Trung Tâm); `owner` has inspection/emergency access but is
+not led through the UX as a daily operator. `branch_manager` should therefore
+only see the branch-ops rhythm: receive inbound transfers, cấp Bếp CN bằng
+same-branch transfer, approve consumption, stocktake, adjustment/write-off.
 
 **Important UX boundary:** nav can be narrower than the module-level ACL to reduce operational noise. For example `branch_manager` can still reach `/inventory/transfers` to receive goods, but the UI should not promote the create-inter-site-transfer action as a default task for this role.
 
@@ -174,17 +233,17 @@ The `proxy(request)` function evaluates in order:
 
 1. **Public paths bypass auth:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied`, `/payment/momo/*`, and exact `/br/[branchId]/runner` (`route-resolution.ts:isPublicAppPath`). The access-denied page is public so a blocked-but-authenticated user can read the copy without re-entering the ACL loop.
 2. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo)`; unauthenticated users see the form.
-3. **Unauthenticated → `/login?returnTo=<current-url>`**.
+3. **Unauthenticated → `/login`**.
 4. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
-5. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`, except disallowed Admin URLs and admin-level `/employee/*` visits redirect to the role's Admin default route.
+5. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`, except disallowed Admin URLs redirect to the role's default route.
 6. **Branch-scope for POS/KDS/branch settings/menu limits:** if a protected branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS and future protected Runner child routes reject missing, inactive, or non-operational branches in proxy. The exact public Runner display rejects invalid/non-operational branches inside the page because it has no staff claims.
 
 The resolver `resolvePostLoginRedirect(claims, returnTo)` (`packages/shared/src/auth/scope.ts`) is the **single** post-login destination function. The underlying ACL + branch-scope rules are shared. Unit tests live in `packages/shared/src/auth/__tests__/scope.test.ts` (run `pnpm --filter @comtammatu/shared test`).
 
 Root `/` uses the same shared default resolver as post-login fallback. Branch
-Manager therefore lands in `/employee` by default; Branch Command remains a
-branch-scoped management route opened from Employee manager tools or direct
-links.
+Manager lands on the branch operator hub `/br/{branchId}` by default. Branch
+Command remains a branch-scoped management route opened from operator tools or
+direct links.
 
 ### Invariant
 

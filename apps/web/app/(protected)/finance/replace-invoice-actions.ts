@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * HĐĐT Replace flow — Path C (TT78/2021 §7 + NĐ 70/2025).
+ * HĐĐT Replace flow — Path C (TT 32/2025 + NĐ 254/2026).
  *
  * User-path: owner corrects buyer info errors on an
  * issued invoice. Server orchestrates:
@@ -283,7 +283,7 @@ export async function replaceTaxInvoice(
     Number(order.order_discount_amount ?? order.discount_amount ?? 0),
   );
 
-  // For TT78 originalTemplateCode: strip series, keep digit (e.g. "2/001" → "2").
+  // For provider originalTemplateCode: strip series, keep digit (e.g. "2/001" → "2").
   const originalTemplateCode =
     process.env["SINVOICE_TEMPLATE_CODE"]?.split("/")[0] ?? "2";
   const originalInvoiceType = originalTemplateCode;

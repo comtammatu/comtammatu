@@ -29,7 +29,7 @@ import {
 } from "@/components/data-table/data-table";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
-import { FormattedNumberInput } from "@/components/form";
+import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
   cancelStocktake,
@@ -485,7 +485,7 @@ function CountingPhase({
       header: stocktakeDetailCopy.countedQtyPlaceholder,
       render: (line) => (
         <FormattedNumberInput
-          key={`stocktake-desktop-${line.id}-${line.counted_quantity ?? ""}`}
+          key={`stocktake-desktop-${line.id}`}
           defaultValue={
             line.counted_quantity != null ? String(line.counted_quantity) : ""
           }
@@ -541,7 +541,7 @@ function CountingPhase({
             </p>
             <div className="flex items-center gap-2">
               <FormattedNumberInput
-                key={`stocktake-mobile-${line.id}-${line.counted_quantity ?? ""}`}
+                key={`stocktake-mobile-${line.id}`}
                 defaultValue={
                   line.counted_quantity != null
                     ? String(line.counted_quantity)
@@ -582,9 +582,9 @@ function getVarianceColor(line: StocktakeLine): string {
 function getVarianceBg(line: StocktakeLine): string {
   if (line.variance == null || line.system_quantity === 0) return "";
   const ratio = Math.abs(line.variance) / line.system_quantity;
-  if (ratio < 0.01) return "bg-success/5";
-  if (ratio < 0.05) return "bg-warning/5";
-  return "bg-destructive/5";
+  if (ratio < 0.01) return "bg-success/10";
+  if (ratio < 0.05) return "bg-warning/10";
+  return "bg-destructive/10";
 }
 
 function ResultsPhase({

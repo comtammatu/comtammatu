@@ -13,6 +13,7 @@
 import {
   MODULE_ACL,
   PERMISSION_KEYS,
+  type JwtClaims,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/_lib/auth";
@@ -40,6 +41,13 @@ function resolvePosPermission(
     permission,
     branchIdFromInput(input),
   );
+}
+
+export function isPosBranchInScope(
+  claims: Pick<JwtClaims, "user_role" | "branch_id">,
+  branchId: number,
+): boolean {
+  return claims.user_role === "owner" || claims.branch_id === branchId;
 }
 
 /**

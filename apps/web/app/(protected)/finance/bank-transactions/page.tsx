@@ -23,7 +23,7 @@ import {
 } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchSepayBankTransactions } from "../_lib/sepay-bank-transactions";
-import { fetchUnmatchedExpenses } from "../expense-actions";
+import { fetchExpenseMatchOptions } from "../expense-actions";
 import { MatchExpenseCell } from "./match-expense-cell";
 
 const copy = messages.finance.bankTransactions;
@@ -34,14 +34,14 @@ function compactDateTime(value: string | null): string {
 }
 
 export default async function BankTransactionsPage() {
-  const [transactions, unmatchedExpensesRes] = await Promise.all([
+  const [transactions, expenseOptionsRes] = await Promise.all([
     fetchSepayBankTransactions(),
-    fetchUnmatchedExpenses(),
+    fetchExpenseMatchOptions(),
   ]);
 
-  const unmatchedExpenses =
-    unmatchedExpensesRes.success && unmatchedExpensesRes.data
-      ? unmatchedExpensesRes.data
+  const expenseOptions =
+    expenseOptionsRes.success && expenseOptionsRes.data
+      ? expenseOptionsRes.data
       : [];
 
   return (
@@ -71,7 +71,8 @@ export default async function BankTransactionsPage() {
                 <TableRow>
                   <TableHead className="w-44">Thời gian</TableHead>
                   <TableHead>Số Tiền</TableHead>
-                  <TableHead>Mã Tham Chiếu</TableHead>
+                  <TableHead>Nội dung chuyển khoản</TableHead>
+                  <TableHead>Mã tham chiếu</TableHead>
                   <TableHead className="w-72">Khớp</TableHead>
                 </TableRow>
               </TableHeader>
@@ -79,6 +80,8 @@ export default async function BankTransactionsPage() {
                 {transactions.map((tx) => {
                   const isIn = tx.transferType === "in";
                   const Icon = isIn ? IconMoneyIn : IconMoneyOut;
+                  const referenceCode =
+                    tx.referenceCode ?? tx.code ?? tx.requestId;
                   return (
                     <TableRow key={tx.eventId}>
                       <TableCell className="text-xs text-muted-foreground">
@@ -99,22 +102,24 @@ export default async function BankTransactionsPage() {
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-medium">
-                            {tx.content ?? tx.code ?? copy.noContent}
+                            {tx.content ?? copy.noContent}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {copy.account}: {tx.accountNumber ?? "—"} ·{" "}
-                            {copy.reference}: {tx.referenceCode ?? tx.requestId}
+                            {copy.account}: {tx.accountNumber ?? "—"}
                           </span>
                         </div>
                       </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {referenceCode}
+                      </TableCell>
                       <TableCell>
                         <MatchExpenseCell
-                          eventId={tx.eventId}
-                          paymentId={tx.paymentId}
-                          expenseId={tx.expenseId}
-                          transferType={tx.transferType}
-                          unmatchedExpenses={unmatchedExpenses}
-                        />
+	                          eventId={tx.eventId}
+	                          paymentId={tx.paymentId}
+	                          expenseIds={tx.expenseIds}
+	                          transferType={tx.transferType}
+	                          expenseOptions={expenseOptions}
+	                        />
                       </TableCell>
                     </TableRow>
                   );

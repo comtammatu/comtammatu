@@ -1,7 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  PROCUREMENT_ROLES,
+  STAFF_ROLES,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { addVNDateDays } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
@@ -33,6 +37,15 @@ const invoiceSchema = z
     message: "Tổng tiền phải bằng tạm tính cộng thuế GTGT.",
     path: ["totalAmount"],
   });
+
+const supplierPaymentSchema = z.object({
+  invoiceId: z.coerce.number().int().positive(),
+  amount: z.coerce
+    .number()
+    .positive({ error: "Số tiền thanh toán phải lớn hơn 0." }),
+  paymentMethod: z.enum(["cash", "bank_transfer"]),
+  referenceNote: z.string().trim().max(500).optional(),
+});
 
 export const createSupplierInvoice = withAction(
   {
@@ -94,7 +107,8 @@ export const createSupplierInvoice = withAction(
       );
       if (matchErr) {
         console.error("inventory.supplier_invoice.auto_matching_failed", {
-          error: matchErr instanceof Error ? matchErr.message : String(matchErr),
+          error:
+            matchErr instanceof Error ? matchErr.message : String(matchErr),
         });
       }
     }
@@ -103,12 +117,73 @@ export const createSupplierInvoice = withAction(
   },
 );
 
+export const recordSupplierPayment = withAction(
+  {
+    roles: STAFF_ROLES,
+    schema: supplierPaymentSchema,
+    permission: PERMISSION_KEYS.FINANCE_AP_PAY,
+    forbiddenError: "Không có quyền thanh toán công nợ NCC.",
+  },
+  async (data, { supabase, claims }) => {
+    const { data: payment, error } = await supabase.rpc(
+      "create_supplier_payment",
+      {
+        p_tenant_id: claims.tenant_id,
+        p_supplier_invoice_id: data.invoiceId,
+        p_amount: data.amount,
+        p_payment_method: data.paymentMethod,
+        p_reference_note: data.referenceNote?.trim() || undefined,
+      },
+    );
+
+    if (error) {
+      const message = error.message ?? "";
+      if (error.code === "42501") {
+        return {
+          success: false,
+          error: "Không có quyền thanh toán công nợ NCC.",
+        };
+      }
+      if (message.includes("invoice_already_paid")) {
+        return { success: false, error: "Hóa đơn đã thanh toán đủ." };
+      }
+      if (message.includes("payment_exceeds_invoice_total")) {
+        return {
+          success: false,
+          error: "Số tiền trả vượt quá phần còn phải trả.",
+        };
+      }
+      if (message.includes("invoice_missing_grn_for_payment")) {
+        return {
+          success: false,
+          error: "Cần liên kết phiếu nhập trước khi thanh toán NCC.",
+        };
+      }
+      if (message.includes("invoice_not_matched_for_payment")) {
+        return {
+          success: false,
+          error: "Cần đối soát khớp hóa đơn với phiếu nhập trước khi thanh toán.",
+        };
+      }
+      if (message.includes("invalid_payment_method")) {
+        return {
+          success: false,
+          error: "Phương thức thanh toán không hợp lệ.",
+        };
+      }
+      return { success: false, error: "Không thể ghi nhận thanh toán NCC." };
+    }
+
+    return { success: true, data: payment };
+  },
+);
+
 const supplierInvoiceSelect = (branchId?: number) => {
   const grnSelect =
     branchId != null
       ? "goods_received_notes!inner ( id, grn_number, branch_id )"
       : "goods_received_notes ( id, grn_number )";
-  return `id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, due_date, payment_status, paid_amount, paid_at, suppliers ( id, name ), ${grnSelect}`;
+  return `id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), ${grnSelect}`;
 };
 
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;

@@ -20,7 +20,6 @@ import {
   formatVNDate,
   getVNDateString,
 } from "@comtammatu/shared/time";
-import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   AppPageHeader,
   AppSection,
@@ -172,9 +171,6 @@ export async function GrnNewPageContent({
         description={INVENTORY_VI.receiveBySupplierDescription}
       >
         <div className="flex flex-col gap-3">
-          <NoteCallout icon={<IconTruck />}>
-            {INVENTORY_VI.noPoNeededHint}
-          </NoteCallout>
           <SupplierPicker
             suppliers={pickerSuppliers}
             basePath={basePath}

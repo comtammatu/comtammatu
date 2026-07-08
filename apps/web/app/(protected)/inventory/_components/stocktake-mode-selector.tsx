@@ -99,7 +99,7 @@ export function StocktakeModeSelector({
             className={cn(
               "flex cursor-pointer flex-col gap-1.5 rounded-md border p-3 text-sm transition",
               checked
-                ? "border-primary bg-primary/5"
+                ? "border-primary bg-primary/10"
                 : "border-muted hover:border-primary/50",
               disabled && "cursor-not-allowed opacity-60",
             )}

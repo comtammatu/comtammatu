@@ -82,11 +82,12 @@ function getTicketBaseGroupKey(ticket: KdsTicket): string {
 
 function getKitchenQueueRank(order: KdsOrder): number {
   const statuses = order.tickets.map((ticket) => ticket.status);
+  if (statuses.some((status) => status === "preparing")) return 0;
   if (statuses.some(isKdsActiveTicketStatus)) {
-    return order.isPriority ? 0 : 1;
+    return order.isPriority ? 1 : 2;
   }
-  if (statuses.some((status) => status === "ready")) return 2;
-  return 3;
+  if (statuses.some((status) => status === "ready")) return 3;
+  return 4;
 }
 
 function compareKdsOrdersForKitchenQueue(a: KdsOrder, b: KdsOrder): number {

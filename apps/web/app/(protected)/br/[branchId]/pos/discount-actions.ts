@@ -5,6 +5,7 @@ import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { logAudit } from "@/_lib/audit";
+import { isPosBranchInScope } from "./_lib/auth";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 
 /* ─── Constants ─── */
@@ -222,7 +223,7 @@ export async function applyOrderDiscount(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsedBranch.data) {
+  if (!isPosBranchInScope(claims, parsedBranch.data)) {
     return {
       success: false,
       error: "Không có quyền truy cập chi nhánh này",
@@ -310,7 +311,7 @@ export async function clearOrderDiscount(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsedBranch.data) {
+  if (!isPosBranchInScope(claims, parsedBranch.data)) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
@@ -460,7 +461,7 @@ export async function applyOrderItemDiscount(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsedBranch.data) {
+  if (!isPosBranchInScope(claims, parsedBranch.data)) {
     return {
       success: false,
       error: "Không có quyền truy cập chi nhánh này",
@@ -548,7 +549,7 @@ export async function clearOrderItemDiscount(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsedBranch.data) {
+  if (!isPosBranchInScope(claims, parsedBranch.data)) {
     return {
       success: false,
       error: "Không có quyền truy cập chi nhánh này",
@@ -670,7 +671,7 @@ export async function splitOrder(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsedBranch.data) {
+  if (!isPosBranchInScope(claims, parsedBranch.data)) {
     return {
       success: false,
       error: "Không có quyền truy cập chi nhánh này",
@@ -790,7 +791,7 @@ export async function mergeOrders(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsedBranch.data) {
+  if (!isPosBranchInScope(claims, parsedBranch.data)) {
     return {
       success: false,
       error: "Không có quyền truy cập chi nhánh này",
@@ -883,7 +884,7 @@ export async function fetchSiblingOrdersForTable(input: {
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsed.data.branchId) {
+  if (!isPosBranchInScope(claims, parsed.data.branchId)) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 

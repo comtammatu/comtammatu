@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -39,6 +39,7 @@ export type CountSlipRow = {
   branchName: string;
   locationName: string;
   employeeName: string;
+  shiftName: string | null;
   countDate: string;
   status: CountSlipStatus;
   note: string | null;
@@ -83,6 +84,10 @@ export function CountSlipsClient({
   const [rows, setRows] = useState(initial);
   const assignmentsHref = basePath.replace("count-slips", "count-assignments");
 
+  useEffect(() => {
+    setRows(initial);
+  }, [initial]);
+
   const { pending, history } = useMemo(() => {
     const pendingRows: CountSlipRow[] = [];
     const historyRows: CountSlipRow[] = [];
@@ -99,8 +104,8 @@ export function CountSlipsClient({
     );
   }
 
-  const headerActions = (
-    <Button asChild variant="outline">
+  const assignmentAction = (
+    <Button asChild variant="outline" size={embedded ? "touch" : "default"}>
       <Link href={assignmentsHref}>
         <IconClipboardList className="size-4" />
         {INVENTORY_VI.countAssignTitle}
@@ -109,14 +114,7 @@ export function CountSlipsClient({
   );
 
   const toolbar = embedded ? (
-    <div className="flex justify-end mb-2">
-      <Button asChild variant="outline" size="touch">
-        <Link href={assignmentsHref}>
-          <IconClipboardList className="size-4" />
-          {INVENTORY_VI.countAssignTitle}
-        </Link>
-      </Button>
-    </div>
+    <div className="mb-2 flex justify-end">{assignmentAction}</div>
   ) : null;
 
   const content = (
@@ -126,7 +124,7 @@ export function CountSlipsClient({
         <AppPageHeader
           title={INVENTORY_VI.countSlipTitle}
           description={INVENTORY_VI.countSlipDescription}
-          actions={headerActions}
+          actions={assignmentAction}
           badge={{
             children: INVENTORY_VI.countSlipPendingBadge(pending.length),
             variant: pending.length > 0 ? "warning" : "secondary",
@@ -306,6 +304,11 @@ function CountSlipCard({
               <Badge variant="outline" className="text-xs">
                 {row.locationName}
               </Badge>
+              {row.shiftName ? (
+                <Badge variant="outline" className="text-xs">
+                  {row.shiftName}
+                </Badge>
+              ) : null}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {INVENTORY_VI.countDateAt(formatVNDate(row.countDate))}

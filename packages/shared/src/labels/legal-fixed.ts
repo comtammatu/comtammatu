@@ -4,9 +4,9 @@
 // for downstream lint enforcement.
 //
 // Source citations:
-//   NĐ 70/2025          — Hóa đơn điện tử mandate (≥200,000đ POS receipts)
-//   TT 78/2021          — invoice mandatory fields
-//   Luật QLT 2019 Art.30 — Mã số thuế requirement
+//   NĐ 254/2026         — e-invoice and POS HĐĐT requirements
+//   TT 32/2025          — e-invoice implementation guidance
+//   Luật QLT 108/2025   — Mã số thuế requirement
 //   Luật thuế GTGT       — VAT terminology
 //   Viettel S-invoice    — e-invoice provider API field names
 //

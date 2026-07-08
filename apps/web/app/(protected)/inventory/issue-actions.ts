@@ -36,8 +36,7 @@ const issueLineSchema = z.object({
   issueId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  // Issue-role unit the qty was entered in. NULL = already base;
-  // confirm_stock_issue converts to the ingredient base via inv_to_base().
+  // Missing value resolves to the ingredient base entry unit.
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   reason: z.string().trim().optional().nullable(),
 });
@@ -323,7 +322,7 @@ export const upsertStockIssueLine = withAction(
         issue_id: d.issueId,
         ingredient_id: d.ingredientId,
         quantity: d.quantity,
-        entry_unit_id: d.entryUnitId ?? null,
+        entry_unit_id: resolvedUnit.unitId,
         unit_cost: Number.isFinite(unitCost) ? unitCost : 0,
         reason: d.reason ?? null,
       },

@@ -21,8 +21,8 @@ Tenant (L0, single row: Hộ kinh doanh Cơm Tấm Má Tư)
 │  │ Orders   │ │ POS      │ │ KDS      │ │ Br Settings                    │
 │  │ /orders  │ │ /br/*/pos│ │ /br/*/kds│ │ /br/[id]/settings/*           │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ ┌──────────┐        │
-│                                                       │Employee  │        │
-│                                                       │/employee │        │
+│                                                       │Branch Hub│        │
+│                                                       │/br/[id]  │        │
 │                                                       └──────────┘        │
 └────────────────────┬─────────────────────────────────────────────────────┘
                      │
@@ -62,13 +62,15 @@ Defined in `getDefaultRedirect(claims)` (`packages/shared/src/auth/scope.ts`).
 
 | Role                  | Route              |
 | --------------------- | ------------------ |
-| `ADMIN_ROLES` = owner | `/finance` |
-| All non-admin staff   | `/employee`        |
+| `owner`               | `/finance` on office/desktop context; `/br` branch picker on operator context |
+| `office`              | `/finance` |
+| Branch-pinned staff   | `/br/{branchId}` |
+| Central-site staff    | `/br/{centralSiteId}` when soft-routing resolves a home site |
 
 Root `/` delegates to this same resolver. It does not render a separate hub.
 
 POS/KDS are not anyone's post-login fallback target — operators reach
-`/br/[branchId]/pos` or `/kds` via the employee shell or a direct link.
+`/br/[branchId]/pos` or `/br/[branchId]/kds` via Branch Hub or a direct link.
 
 ## RLS Pattern
 
@@ -157,8 +159,8 @@ Top-level surfaces (see `module-acl.ts` for canonical role lists):
 | KDS                | `/br/[branchId]/kds`         | owner, chef, branch_manager                                  |
 | Branch dashboard   | `/br/[branchId]/dashboard`   | owner, branch_manager                                        |
 | Branch settings    | `/br/[branchId]/settings/*`  | owner, branch_manager                                        |
-| Branch menu limits | `/br/[branchId]/settings/menu-limits` | owner, branch_manager                              |
-| Employee           | `/employee/*`                | all staff                                                    |
+| Branch menu limits | `/br/[branchId]/menu-limits` | owner, branch_manager                              |
+| Staff day runtime  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*` | branch-pinned and central-site operator roles       |
 | Access denied      | `/access-denied`             | public (rendered with reason copy from `blocked-state.ts`)   |
 | Payment return     | `/payment/momo/return`       | public (Momo redirect target)                                |
 

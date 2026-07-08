@@ -155,8 +155,8 @@ export function ReportsClient({
                     className={cn(
                       "rounded-md p-3",
                       isOverdue
-                        ? "border border-destructive/20 bg-destructive/12"
-                        : "bg-muted/35",
+                        ? "border border-destructive/20 bg-destructive/10"
+                        : "bg-muted/50",
                     )}
                   >
                     <div className="mb-1 flex justify-between text-xs">
@@ -222,7 +222,7 @@ export function ReportsClient({
               return (
                 <div
                   key={item.name}
-                  className="bg-muted/35 flex items-center justify-between rounded-md border p-3"
+                  className="flex items-center justify-between rounded-md border bg-muted/50 p-3"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex size-10 items-center justify-center rounded-md bg-card">

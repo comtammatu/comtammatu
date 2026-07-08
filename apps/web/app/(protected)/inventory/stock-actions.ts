@@ -5,6 +5,7 @@ import { INVENTORY_OPS_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { PG_ERR } from "./_lib/constants";
+import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 
 /* ─── adjustStock ─── */
 
@@ -50,6 +51,14 @@ export const adjustStock = withAction(
         error: "Chi nhánh chưa có kho mặc định. Vui lòng liên hệ quản trị.",
       };
     }
+    const resolvedUnit = await resolveEntryUnitCode(supabase, {
+      tenantId: claims.tenant_id,
+      ingredientId: data.ingredientId,
+      entryUnitId: null,
+    });
+    if (!resolvedUnit.success) {
+      return { success: false, error: resolvedUnit.error };
+    }
 
     const { error } = await supabase.from("stock_movements").insert({
       tenant_id: claims.tenant_id,
@@ -57,6 +66,8 @@ export const adjustStock = withAction(
       ingredient_id: data.ingredientId,
       type: data.type,
       quantity_change: data.quantityChange,
+      entry_unit_id: resolvedUnit.unitId,
+      entry_quantity: Math.abs(data.quantityChange),
       reason: data.reason ?? null,
       created_by: user.id,
       location_id: defaultLocationId,

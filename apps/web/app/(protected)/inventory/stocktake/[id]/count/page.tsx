@@ -32,7 +32,9 @@ export async function StocktakeCountPageContent({
   const supabase = await createClient();
   const { data: sessionRow } = await supabase
     .from("stocktake_sessions")
-    .select("id, tenant_id, branch_id, status, started_at, completed_at")
+    .select(
+      "id, tenant_id, branch_id, status, blind_mode, started_at, completed_at",
+    )
     .eq("id", sessionId)
     .maybeSingle();
 
@@ -103,6 +105,7 @@ export async function StocktakeCountPageContent({
       sessionId={sessionId}
       branchId={sessionBranchId}
       status={sessionRow.status as string}
+      blindMode={Boolean(sessionRow.blind_mode)}
       currentRound={Math.min(4, currentRound) as 1 | 2 | 3 | 4}
       initialLines={linesRes.data}
       unitOptionsByIngredient={unitOptionsByIngredient}

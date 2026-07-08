@@ -31,6 +31,8 @@ export { TOAST_VI } from "./toast";
 export type { ToastKey } from "./toast";
 export { POS_VI } from "./pos";
 export type { PosKey } from "./pos";
+export { SELF_ORDER_VI } from "./self-order";
+export type { SelfOrderKey } from "./self-order";
 export { KDS_VI } from "./kds";
 export type { KdsKey } from "./kds";
 export { FINANCE_VI } from "./finance";

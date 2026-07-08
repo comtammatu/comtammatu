@@ -13,6 +13,22 @@ export interface AttendanceShift {
   checkOut: string | null;
 }
 
+const MONTHLY_LEAVE_DAYS = 2;
+const MONTHLY_PAID_LEAVE_CAP_DAYS = 3;
+
+function clampThroughMonth(month: number): number {
+  if (!Number.isFinite(month)) return 0;
+  return Math.min(12, Math.max(0, Math.trunc(month)));
+}
+
+function monthDate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function monthEndDate(year: number, month: number): string {
+  return monthDate(year, month, new Date(Date.UTC(year, month, 0)).getUTCDate());
+}
+
 export function countInclusiveDays(startDate: string, endDate: string): number {
   const [startYear, startMonth, startDay] = startDate.split("-").map(Number);
   const [endYear, endMonth, endDay] = endDate.split("-").map(Number);
@@ -110,29 +126,94 @@ export function suggestAnnualLeaveEntitlement(
   startDate: string | null | undefined,
   year: number,
 ): number {
-  if (!startDate || startDate < `${year}-01-01`) return 12;
-  if (startDate > `${year}-12-31`) return 0;
+  return countAnnualLeaveAccruedThroughMonth(startDate, year, 12);
+}
 
-  const month = Number(startDate.slice(5, 7));
-  return Number.isFinite(month) ? Math.max(0, 13 - month) : 12;
+export function countAnnualLeaveAccruedThroughMonth(
+  startDate: string | null | undefined,
+  year: number,
+  throughMonth: number,
+): number {
+  const month = clampThroughMonth(throughMonth);
+  if (!Number.isFinite(year) || month === 0) return 0;
+  if (!startDate) return month;
+
+  const [startYear, startMonth] = startDate.split("-").map(Number);
+  if (!Number.isFinite(startYear) || !Number.isFinite(startMonth)) return month;
+  if (startYear! < year) return month;
+  if (startYear! > year || startMonth! > month) return 0;
+  return month - startMonth! + 1;
 }
 
 export function splitAnnualLeaveByQuota(input: {
   entitlementDays: number;
   usedBeforePeriodDays: number;
   annualLeaveDaysInPeriod: number;
-}): { paidLeaveDays: number; overflowLeaveDays: number } {
+}): {
+  paidLeaveDays: number;
+  overflowLeaveDays: number;
+  annualLeaveUsedDays: number;
+} {
+  const requestedDays = Math.max(0, input.annualLeaveDaysInPeriod);
+  const paidMonthlyDays = Math.min(requestedDays, MONTHLY_LEAVE_DAYS);
+  const annualLeaveCandidateDays = Math.max(0, requestedDays - paidMonthlyDays);
   const remainingDays = Math.max(
     0,
     input.entitlementDays - input.usedBeforePeriodDays,
   );
-  const annualLeaveDaysInPeriod = Math.max(0, input.annualLeaveDaysInPeriod);
-  const paidLeaveDays = Math.min(annualLeaveDaysInPeriod, remainingDays);
+  const annualLeaveUsedDays = Math.min(
+    annualLeaveCandidateDays,
+    remainingDays,
+    Math.max(0, MONTHLY_PAID_LEAVE_CAP_DAYS - paidMonthlyDays),
+  );
+  const paidLeaveDays = paidMonthlyDays + annualLeaveUsedDays;
 
   return {
     paidLeaveDays,
-    overflowLeaveDays: annualLeaveDaysInPeriod - paidLeaveDays,
+    overflowLeaveDays: requestedDays - paidLeaveDays,
+    annualLeaveUsedDays,
   };
+}
+
+export function calculateAnnualLeaveUsedThroughMonth(input: {
+  leaves: readonly LeaveRange[];
+  employeeStartDate: string | null | undefined;
+  year: number;
+  throughMonth: number;
+}): number {
+  const throughMonth = clampThroughMonth(input.throughMonth);
+  let usedAnnualDays = 0;
+
+  for (let month = 1; month <= throughMonth; month += 1) {
+    const periodStart = monthDate(input.year, month, 1);
+    const periodEnd = monthEndDate(input.year, month);
+    let annualLeaveDaysInPeriod = 0;
+
+    for (const leave of input.leaves) {
+      if (leave.leaveType !== "annual") continue;
+      annualLeaveDaysInPeriod += countOverlapDays(
+        leave.startDate,
+        leave.endDate,
+        periodStart,
+        periodEnd,
+      );
+    }
+
+    if (annualLeaveDaysInPeriod === 0) continue;
+
+    const split = splitAnnualLeaveByQuota({
+      entitlementDays: countAnnualLeaveAccruedThroughMonth(
+        input.employeeStartDate,
+        input.year,
+        month,
+      ),
+      usedBeforePeriodDays: usedAnnualDays,
+      annualLeaveDaysInPeriod,
+    });
+    usedAnnualDays += split.annualLeaveUsedDays;
+  }
+
+  return usedAnnualDays;
 }
 
 export function calculatePayableDays(input: {

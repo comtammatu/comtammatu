@@ -31,7 +31,12 @@ import {
 } from "@/components/data-table/data-table";
 import { matchesSearch } from "@lib/search";
 import type { BranchForTransfer } from "./create-transfer-dialog";
-import { AppPage, AppPageHeader, AppToolbar, AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppToolbar,
+} from "@/components/surface";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { ItemGroup } from "@comtammatu/ui/components/item";
 import { useLongPress } from "@lib/hooks/use-long-press";
@@ -339,6 +344,32 @@ export function TransfersListClient({
     },
   ];
 
+  const transferDrawer = (
+    <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
+      <DrawerContent>
+        {drawerRow && (
+          <>
+            <DrawerHeader>
+              <DrawerTitle>{drawerRow.transfer_number}</DrawerTitle>
+              <DrawerDescription>
+                {drawerRow.from_branch_name} → {drawerRow.to_branch_name}
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="flex flex-col gap-3 p-4">
+              <Button
+                variant="default"
+                className="w-full"
+                onClick={() => router.push(detailHref(drawerRow.id))}
+              >
+                Xem chi tiết
+              </Button>
+            </div>
+          </>
+        )}
+      </DrawerContent>
+    </Drawer>
+  );
+
   if (isOperator) {
     return (
       <div className="flex w-full flex-col gap-3">
@@ -418,23 +449,7 @@ export function TransfersListClient({
           </ItemGroup>
         )}
 
-      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
-        <DrawerContent>
-          {drawerRow && (
-            <>
-              <DrawerHeader>
-                <DrawerTitle>{drawerRow.transfer_number}</DrawerTitle>
-                <DrawerDescription>{drawerRow.from_branch_name} → {drawerRow.to_branch_name}</DrawerDescription>
-              </DrawerHeader>
-              <div className="p-4 flex flex-col gap-3">
-                <Button variant="default" className="w-full" onClick={() => router.push(detailHref(drawerRow.id))}>
-                  Xem chi tiết
-                </Button>
-              </div>
-            </>
-          )}
-        </DrawerContent>
-      </Drawer>
+        {transferDrawer}
       </div>
     );
   }
@@ -509,7 +524,12 @@ export function TransfersListClient({
       emptyMode={search ? "no-results" : "no-data"}
       emptyIcon={emptyIcon}
       mobileCardRender={(r) => (
-        <MobileTransferCard row={r} tab={activeTab} href={detailHref(r.id)} onOpenDrawer={setDrawerRow} />
+        <MobileTransferCard
+          row={r}
+          tab={activeTab}
+          href={detailHref(r.id)}
+          onOpenDrawer={setDrawerRow}
+        />
       )}
     />
   );
@@ -520,24 +540,7 @@ export function TransfersListClient({
         <div className="flex justify-end">{desktopCreateAction}</div>
         {desktopToolbar}
         {desktopTable}
-
-      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
-        <DrawerContent>
-          {drawerRow && (
-            <>
-              <DrawerHeader>
-                <DrawerTitle>{drawerRow.transfer_number}</DrawerTitle>
-                <DrawerDescription>{drawerRow.from_branch_name} → {drawerRow.to_branch_name}</DrawerDescription>
-              </DrawerHeader>
-              <div className="p-4 flex flex-col gap-3">
-                <Button variant="default" className="w-full" onClick={() => router.push(detailHref(drawerRow.id))}>
-                  Xem chi tiết
-                </Button>
-              </div>
-            </>
-          )}
-        </DrawerContent>
-      </Drawer>
+        {transferDrawer}
       </div>
     );
   }
@@ -551,29 +554,10 @@ export function TransfersListClient({
       />
       {desktopToolbar}
       {desktopTable}
-
-      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
-        <DrawerContent>
-          {drawerRow && (
-            <>
-              <DrawerHeader>
-                <DrawerTitle>{drawerRow.transfer_number}</DrawerTitle>
-                <DrawerDescription>{drawerRow.from_branch_name} → {drawerRow.to_branch_name}</DrawerDescription>
-              </DrawerHeader>
-              <div className="p-4 flex flex-col gap-3">
-                <Button variant="default" className="w-full" onClick={() => router.push(detailHref(drawerRow.id))}>
-                  Xem chi tiết
-                </Button>
-              </div>
-            </>
-          )}
-        </DrawerContent>
-      </Drawer>
+      {transferDrawer}
     </AppPage>
   );
 }
-
-// ─── Mobile card sub-component ────────────────────────────────────────
 
 function MobileTransferCard({
   row,
@@ -600,29 +584,33 @@ function MobileTransferCard({
   });
 
   return (
-    <InteractiveCard minHeight="mobile" className="h-auto touch-none select-none cursor-pointer" {...longPress}>
+    <InteractiveCard
+      minHeight="mobile"
+      className="h-auto touch-none select-none cursor-pointer"
+      {...longPress}
+    >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary pointer-events-none">
         <Icon className="size-5" />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1 pointer-events-none">
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate font-mono text-sm font-semibold">
-              {row.transfer_number}
-            </p>
-            <StatusBadge domain="inventory" value={row.status} size="sm" />
-          </div>
-          <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
-            <span className="truncate">{row.from_branch_name}</span>
-            <IconArrowRight className="size-3 shrink-0" />
-            <span className="truncate">{row.to_branch_name}</span>
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate font-mono text-sm font-semibold">
+            {row.transfer_number}
           </p>
-          {(row.shipped_at || row.created_at) && (
-            <p className="text-xs text-muted-foreground">
-              {formatVNDate(row.shipped_at ?? row.created_at)}
-            </p>
-          )}
+          <StatusBadge domain="inventory" value={row.status} size="sm" />
         </div>
-        <IconChevronRight className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
+        <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+          <span className="truncate">{row.from_branch_name}</span>
+          <IconArrowRight className="size-3 shrink-0" />
+          <span className="truncate">{row.to_branch_name}</span>
+        </p>
+        {(row.shipped_at || row.created_at) && (
+          <p className="text-xs text-muted-foreground">
+            {formatVNDate(row.shipped_at ?? row.created_at)}
+          </p>
+        )}
+      </div>
+      <IconChevronRight className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
     </InteractiveCard>
   );
 }

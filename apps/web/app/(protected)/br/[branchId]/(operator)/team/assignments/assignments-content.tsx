@@ -1,4 +1,3 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator hub uses vietnamese */
 import { Suspense } from "react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { CountAssignmentsPageContent } from "@/(protected)/inventory/count-assignments/page";

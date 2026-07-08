@@ -15,6 +15,7 @@ import {
   ItemGroup,
 } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Sheet,
   SheetContent,
@@ -140,9 +141,9 @@ export function KdsCompletionHistorySheet({
         </SheetHeader>
 
         <div className="flex items-center justify-between gap-2 border-y px-4 py-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <SectionLabel>
             {KDS_COMPLETION_HISTORY_COPY.sourceTitle}
-          </p>
+          </SectionLabel>
           <Button
             type="button"
             variant="outline"

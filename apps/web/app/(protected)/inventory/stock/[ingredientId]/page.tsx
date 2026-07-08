@@ -352,13 +352,8 @@ export async function StockIngredientDetailPageContent({
 
   const stockRows = (stockRes.data ?? []) as StockLevelRow[];
   const movementRows = (movementRes.data ?? []) as MovementRow[];
-  const unit =
-    ingredient.ingredient_units?.find((u: any) => u.is_base)
-      ?.units
-      ? Array.isArray(ingredient.ingredient_units.find((u: any) => u.is_base)?.units)
-        ? (ingredient.ingredient_units.find((u: any) => u.is_base)?.units as any)[0]?.code
-        : (ingredient.ingredient_units.find((u: any) => u.is_base)?.units as any)?.code
-      : "";
+  const baseUnit = ingredient.ingredient_units?.find((u) => u.is_base);
+  const unit = relatedOne(baseUnit?.units ?? null)?.code ?? "";
   const totalQty = stockRows.reduce(
     (sum, row) => sum + Number(row.current_quantity ?? 0),
     0,

@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   canAccess,
+  DOMAIN_WORKSPACE_ITEMS,
   MODULE_ACL,
   type ModuleKey,
   type StaffRole,
@@ -17,6 +18,10 @@ import {
   type ShellNavGroup,
   type ShellNavItem,
 } from "../app/lib/shell-primitives";
+import {
+  FLAT_OFFICE_MODULE_IDS,
+  OFFICE_MODULE_IDS,
+} from "../app/lib/office-module-contract";
 
 // Regression floor for the office navigation resolvers. Expectations are driven
 // from MODULE_ACL membership so the primary sidebar tabs stay single-sourced.
@@ -24,14 +29,9 @@ import {
 // Candidate modules the office sidebar can surface, in composition order:
 // one settings tab + cross-workspace modules. Branch-scoped routes live in Branch Hub.
 const SETTINGS_TAB_MODULE: ModuleKey = "settings";
-const WORKSPACE_TAB_MODULES: ModuleKey[] = [
-  "menu",
-  "orders",
-  "inventory",
-  "finance",
-  "hr",
-  "branches",
-];
+const WORKSPACE_TAB_MODULES: ModuleKey[] = DOMAIN_WORKSPACE_ITEMS.map(
+  (item) => item.moduleKey,
+);
 
 const RESTRICTED_ROLES: StaffRole[] = [
   "cashier",
@@ -159,22 +159,12 @@ test("primary tab hrefs and labels are deduplicated", () => {
 });
 
 test("deep-nav hrefs and labels are deduplicated", () => {
-  assertUniqueTabs(
-    flattenGroups(resolveOfficeDeepNav("owner", "admin")),
-    "admin sub-tabs",
-  );
-  assertUniqueTabs(
-    flattenGroups(resolveOfficeDeepNav("owner", "hr")),
-    "hr sub-tabs",
-  );
-  assertUniqueTabs(
-    flattenGroups(resolveOfficeDeepNav("owner", "menu")),
-    "menu sub-tabs",
-  );
-  assertUniqueTabs(
-    flattenGroups(resolveOfficeDeepNav("owner", "orders")),
-    "orders sub-tabs",
-  );
+  for (const officeModule of OFFICE_MODULE_IDS) {
+    assertUniqueTabs(
+      flattenGroups(resolveOfficeDeepNav("owner", officeModule)),
+      `${officeModule} sub-tabs`,
+    );
+  }
 });
 
 test("findActivePrimaryNavItem matches the primary tab for the current path", () => {
@@ -203,7 +193,7 @@ test("resolveOfficeDeepNav returns settings sub-pages for the admin surface", ()
   ]);
 });
 
-for (const surface of ["menu", "orders", "branches"] as const) {
+for (const surface of FLAT_OFFICE_MODULE_IDS) {
   test(`resolveOfficeDeepNav returns no deep-nav group for the flat ${surface} module`, () => {
     // menu/orders/branches are flat single-page modules: their own primary
     // tab already links to the module, so no group duplicating that same

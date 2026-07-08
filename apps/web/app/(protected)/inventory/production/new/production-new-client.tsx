@@ -7,7 +7,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
-import { Combobox } from "@/components/form";
+import { Combobox } from "@/components/form/combobox";
 import {
   Select,
   SelectContent,
@@ -89,8 +89,12 @@ export function ProductionNewClient({
       const parsedQty = parseFloat(plannedQuantity);
       const usages: Record<number, string> = {};
       for (const ing of recipeContext.ingredients) {
-        if (!Number.isNaN(parsedQty) && parsedQty > 0 && ing.yield_factor > 0) {
-          const defaultQty = (parsedQty * ing.recipe_quantity) / ing.yield_factor;
+        if (
+          !Number.isNaN(parsedQty) &&
+          parsedQty > 0 &&
+          ing.default_usage_per_fg > 0
+        ) {
+          const defaultQty = parsedQty * ing.default_usage_per_fg;
           usages[ing.ingredient_id] = defaultQty.toFixed(3);
         } else {
           usages[ing.ingredient_id] = "";
@@ -291,14 +295,14 @@ export function ProductionNewClient({
                     <td className="p-3 text-right text-muted-foreground">
                       {formatQty(ing.max_ingredient_qty)} {ing.unit_name}
                     </td>
-                    <td className="p-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">
-                          {hasValidPlannedQty && ing.yield_factor > 0
-                            ? `${formatQty((plannedQtyParsed * ing.recipe_quantity) / ing.yield_factor)} ${ing.unit_name}`
-                            : "Nhập số lượng để xem"}
-                        </span>
-                      </div>
+	                    <td className="p-2">
+	                      <div className="flex items-center gap-2">
+	                        <span className="font-medium text-sm">
+	                          {hasValidPlannedQty && ing.default_usage_per_fg > 0
+	                            ? `${formatQty(plannedQtyParsed * ing.default_usage_per_fg)} ${ing.unit_name}`
+	                            : "Nhập số lượng để xem"}
+	                        </span>
+	                      </div>
                     </td>
                     <td className="p-2">
                       <div className="flex items-center gap-2">

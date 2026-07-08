@@ -4,7 +4,10 @@ import { z } from "zod";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getVNDateString } from "@comtammatu/shared/time";
-import { issueTaxInvoiceForPaidOrder } from "@lib/hddt-per-order";
+import {
+  issueTaxInvoiceForPaidOrder,
+  type CreateInvoiceInput,
+} from "@lib/hddt-per-order";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
@@ -72,9 +75,25 @@ const sepayPayloadSchema = z
     content: nullableTrimmedStringSchema,
     transferType: transferTypeSchema,
     description: nullableTrimmedStringSchema.default(""),
-    transferAmount: z.coerce.number().nonnegative(),
+    transferAmount: z.coerce.number(),
     accumulated: z.coerce.number().optional().default(0),
     referenceCode: nullableTrimmedStringSchema.default(""),
+  })
+  .superRefine((payload, ctx) => {
+    if (payload.transferType === "in" && payload.transferAmount <= 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["transferAmount"],
+        message: "incoming transferAmount must be positive",
+      });
+    }
+    if (payload.transferType === "out" && payload.transferAmount === 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["transferAmount"],
+        message: "outgoing transferAmount must be non-zero",
+      });
+    }
   })
   .passthrough();
 
@@ -89,13 +108,49 @@ const sepayRpcResultSchema = z
 
 type SepayPayload = z.infer<typeof sepayPayloadSchema>;
 type ServiceClient = ReturnType<typeof createServiceClient>;
+type InvoiceBuyerInput = Omit<CreateInvoiceInput, "orderId">;
 type WebhookEventClaim =
   | { status: "claimed"; id: number }
   | { status: "already_final" }
   | { status: "error" };
 
+type UntypedQueryResponse<T> = {
+  data: T | null;
+  error: { code?: string | null; message?: string | null } | null;
+};
+
+type UntypedQueryBuilder<T> = {
+  select(columns: string): UntypedQueryBuilder<T>;
+  eq(column: string, value: unknown): UntypedQueryBuilder<T>;
+  order(column: string, options?: Record<string, unknown>): UntypedQueryBuilder<T>;
+  limit(count: number): UntypedQueryBuilder<T>;
+  maybeSingle(): Promise<UntypedQueryResponse<T>>;
+};
+
+type UntypedQueryClient = {
+  from<T>(table: string): UntypedQueryBuilder<T>;
+};
+
+const invoiceBuyerInputSchema = z.object({
+  buyerName: z.string().trim().max(200).optional(),
+  buyerTaxCode: z
+    .string()
+    .trim()
+    .regex(/^\d{10}(-\d{3})?$/)
+    .optional(),
+  buyerAddress: z.string().trim().max(500).optional(),
+  buyerEmail: z.email().optional(),
+  buyerNotGetInvoice: z.boolean().optional(),
+});
+
 function payloadToJson(payload: SepayPayload): Json {
   return JSON.parse(JSON.stringify(payload)) as Json;
+}
+
+function parseStoredInvoicePayload(value: unknown): InvoiceBuyerInput | null {
+  const parsed = invoiceBuyerInputSchema.safeParse(value);
+  if (!parsed.success) return null;
+  return parsed.data;
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -281,6 +336,41 @@ async function markWebhookEvent(
       error.code,
     );
   }
+}
+
+async function resolveSelfOrderInvoiceInput(
+  supabase: ServiceClient,
+  input: {
+    tenantId: number;
+    orderId: number;
+    paymentId: number | null;
+  },
+): Promise<InvoiceBuyerInput> {
+  if (!input.paymentId) return {};
+
+  const untyped = supabase as unknown as UntypedQueryClient;
+  const { data, error } = await untyped
+    .from<{ invoice_payload: unknown }>("self_order_payment_requests")
+    .select("invoice_payload")
+    .eq("tenant_id", input.tenantId)
+    .eq("order_id", input.orderId)
+    .eq("payment_id", input.paymentId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[sepay-webhook] self-order invoice payload lookup failed", {
+      code: error.code ?? "unknown",
+      orderId: input.orderId,
+      paymentId: input.paymentId,
+    });
+    return {};
+  }
+
+  const parsed = parseStoredInvoicePayload(data?.invoice_payload);
+  if (!parsed) return {};
+  return parsed;
 }
 
 async function claimWebhookEvent(
@@ -515,10 +605,15 @@ export async function POST(request: Request) {
   const status = rpcData?.status ?? "unknown";
   const paymentId = rpcData?.payment_id ?? null;
   if (status === "completed" || status === "already_completed") {
+    const invoiceInput = await resolveSelfOrderInvoiceInput(supabase, {
+      tenantId: accountScope.tenantId,
+      orderId: orderScope.orderId,
+      paymentId,
+    });
     const invoiceResult = await issueTaxInvoiceForPaidOrder({
       supabase,
       tenantId: accountScope.tenantId,
-      input: { orderId: orderScope.orderId },
+      input: { orderId: orderScope.orderId, ...invoiceInput },
       actorId: null,
       logPrefix: "sepay-webhook",
     });

@@ -1,6 +1,7 @@
 import { getEmployeeContext } from "./staff-runtime-context";
 import { resolveDefaultShiftId } from "./default-shift";
 import { getTodayVN } from "./vn-business-date";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { messages } from "@lib/messages";
 
@@ -85,6 +86,7 @@ export interface TodayWorkState {
 const DEFAULT_ATTENDANCE_ROLES: readonly StaffRole[] = [
   "cashier",
   "chef",
+  "branch_staff",
 ];
 
 const MANAGER_SIMPLE_ATTENDANCE_ROLES: readonly StaffRole[] = [
@@ -136,6 +138,13 @@ function normalizeTaskKind(value: unknown): TodayChecklistTaskKind {
 
 function normalizeChecklistPhase(value: unknown): TodayChecklistPhase {
   return value === "start_of_shift" ? "start_of_shift" : "end_of_shift";
+}
+
+function assignmentCellKey(row: {
+  location_id: number;
+  ingredient_id: number;
+}) {
+  return `${row.location_id}:${row.ingredient_id}`;
 }
 
 export function groupChecklistByPhase(items: readonly TodayChecklistItem[]) {
@@ -292,19 +301,42 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
 
   const countBranchId = attendance?.branchId ?? ctx.branchId;
   if (attendance && countBranchId !== null) {
-    const { data: countAssignments } = await supabase
+    const countReadClient = createServiceClient();
+    let countAssignmentsQuery = countReadClient
       .from("inventory_count_assignments")
-      .select("location_id")
+      .select("location_id, ingredient_id, shift_id")
       .eq("tenant_id", claims.tenant_id)
       .eq("employee_id", employeeId)
       .eq("branch_id", countBranchId)
       .eq("is_active", true);
+    countAssignmentsQuery =
+      currentShiftId === null
+        ? countAssignmentsQuery.is("shift_id", null)
+        : countAssignmentsQuery.or(`shift_id.is.null,shift_id.eq.${currentShiftId}`);
+    const { data: countAssignments } = await countAssignmentsQuery;
+    const shiftSpecificCells = new Set<string>();
+    if (currentShiftId !== null) {
+      const { data: shiftSpecificAssignments } = await countReadClient
+        .from("inventory_count_assignments")
+        .select("location_id, ingredient_id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", countBranchId)
+        .eq("shift_id", currentShiftId)
+        .eq("is_active", true);
+      for (const row of shiftSpecificAssignments ?? []) {
+        shiftSpecificCells.add(assignmentCellKey(row));
+      }
+    }
+    const effectiveCountAssignments = (countAssignments ?? []).filter(
+      (row) =>
+        row.shift_id !== null || !shiftSpecificCells.has(assignmentCellKey(row)),
+    );
     const countLocationIds = [
-      ...new Set((countAssignments ?? []).map((row) => row.location_id)),
+      ...new Set(effectiveCountAssignments.map((row) => row.location_id)),
     ];
 
     if (countLocationIds.length > 0) {
-      const { data: countSlips } = await supabase
+      let countSlipsQuery = supabase
         .from("inventory_count_slips")
         .select("location_id, status")
         .eq("tenant_id", claims.tenant_id)
@@ -312,6 +344,11 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
         .eq("branch_id", countBranchId)
         .eq("count_date", today)
         .in("location_id", countLocationIds);
+      countSlipsQuery =
+        currentShiftId === null
+          ? countSlipsQuery.is("shift_id", null)
+          : countSlipsQuery.eq("shift_id", currentShiftId);
+      const { data: countSlips } = await countSlipsQuery;
       const doneCountLocationIds = new Set(
         (countSlips ?? [])
           .filter(

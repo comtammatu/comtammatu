@@ -115,6 +115,84 @@ export interface TestIngredient {
   name: string;
 }
 
+async function ensureFixtureBaseUnit(
+  supabase: ServiceClient,
+  tenantId: number,
+): Promise<number> {
+  const { data: existing, error: existingErr } = await supabase
+    .from("units")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("code", "e2e-unit")
+    .maybeSingle();
+
+  if (existingErr) {
+    throw new Error(`Failed to resolve E2E base unit: ${existingErr.message}`);
+  }
+  if (existing) return existing.id;
+
+  const { data: inserted, error: insertErr } = await supabase
+    .from("units")
+    .insert({
+      tenant_id: tenantId,
+      code: "e2e-unit",
+      name: "E2E unit",
+      is_active: true,
+    })
+    .select("id")
+    .single();
+
+  if (insertErr || !inserted) {
+    throw new Error(`Failed to create E2E base unit: ${insertErr?.message}`);
+  }
+
+  return inserted.id;
+}
+
+export async function ensureIngredientBaseUnit(
+  supabase: ServiceClient,
+  tenantId: number,
+  ingredientId: number,
+): Promise<number> {
+  const { data: existing, error: existingErr } = await supabase
+    .from("ingredient_units")
+    .select("unit_id")
+    .eq("tenant_id", tenantId)
+    .eq("ingredient_id", ingredientId)
+    .eq("is_base", true)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingErr) {
+    throw new Error(
+      `Failed to resolve E2E ingredient base unit: ${existingErr.message}`,
+    );
+  }
+  if (existing?.unit_id != null) return existing.unit_id;
+
+  const unitId = await ensureFixtureBaseUnit(supabase, tenantId);
+  const { error: insertErr } = await supabase.from("ingredient_units").insert({
+    tenant_id: tenantId,
+    ingredient_id: ingredientId,
+    unit_id: unitId,
+    to_base_factor: 1,
+    is_base: true,
+    sort_order: 0,
+    is_active: true,
+  });
+
+  if (insertErr) {
+    throw new Error(
+      `Failed to create E2E ingredient base unit: ${insertErr.message}`,
+    );
+  }
+
+  return unitId;
+}
+
 export async function ensureIngredient(
   supabase: ServiceClient,
   tenantId: number,
@@ -129,7 +207,10 @@ export async function ensureIngredient(
     .eq("name", name)
     .maybeSingle();
 
-  if (existing) return existing;
+  if (existing) {
+    await ensureIngredientBaseUnit(supabase, tenantId, existing.id);
+    return existing;
+  }
 
   const { data: inserted, error } = await supabase
     .from("ingredients")
@@ -146,7 +227,33 @@ export async function ensureIngredient(
     throw new Error(`Failed to create E2E ingredient: ${error?.message}`);
   }
 
+  await ensureIngredientBaseUnit(supabase, tenantId, inserted.id);
+
   return inserted;
+}
+
+export async function resolveIngredientBaseUnitId(
+  supabase: ServiceClient,
+  tenantId: number,
+  ingredientId: number,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("ingredient_units")
+    .select("unit_id")
+    .eq("tenant_id", tenantId)
+    .eq("ingredient_id", ingredientId)
+    .eq("is_base", true)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || data?.unit_id == null) {
+    throw new Error(`Failed to resolve ingredient base unit: ${error?.message}`);
+  }
+
+  return data.unit_id;
 }
 
 // ─── Supplier helpers ─────────────────────────────────────────────────────────
@@ -346,6 +453,11 @@ export async function createTestGrnDraft(
   const grnNumber = `GRN-E2E-${Date.now()}`;
   const qty = opts.quantity ?? 10;
   const cost = opts.unitCost ?? 10000;
+  const entryUnitId = await resolveIngredientBaseUnitId(
+    supabase,
+    opts.tenantId,
+    opts.ingredientId,
+  );
 
   const { data: grn, error: grnErr } = await supabase
     .from("goods_received_notes")
@@ -372,6 +484,7 @@ export async function createTestGrnDraft(
     unit_cost: cost,
     total_cost: qty * cost,
     quality_status: "accepted",
+    entry_unit_id: entryUnitId,
   });
 
   if (lineErr) {
@@ -439,6 +552,11 @@ export async function createTestTransferDraft(
 ): Promise<TestTransfer> {
   const transferNumber = `TRF-E2E-${Date.now()}`;
   const qty = opts.quantity ?? 5;
+  const entryUnitId = await resolveIngredientBaseUnitId(
+    supabase,
+    opts.tenantId,
+    opts.ingredientId,
+  );
 
   const { data: transfer, error: tErr } = await supabase
     .from("stock_transfers")
@@ -466,6 +584,7 @@ export async function createTestTransferDraft(
       transfer_id: transfer.id,
       ingredient_id: opts.ingredientId,
       quantity: qty,
+      entry_unit_id: entryUnitId,
     });
 
   if (lineErr) {

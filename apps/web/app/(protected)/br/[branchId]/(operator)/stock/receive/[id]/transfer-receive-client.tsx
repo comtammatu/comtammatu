@@ -10,13 +10,15 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { ItemGroup } from "@comtammatu/ui/components/item";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
-import { NumberPadSheet } from "@/components/form";
+import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { transferReceive } from "@/(protected)/inventory/transfer-actions";
 import type { TransferDetail } from "@/(protected)/inventory/transfers/[id]/transfer-detail-client";
 import { messages } from "@lib/messages";
@@ -26,6 +28,8 @@ type TransferReceiveClientProps = {
   backHref: string;
   detailHref: string;
 };
+
+const RECEIVABLE_TRANSFER_STATUSES = new Set(["in_transit", "confirmed_receive"]);
 
 export function TransferReceiveClient({
   transfer,
@@ -48,13 +52,15 @@ export function TransferReceiveClient({
     return initial;
   });
   const [confirmed, setConfirmed] = useState<Set<number>>(() => new Set());
+  const [notes, setNotes] = useState<Record<number, string>>(() => ({}));
   // The line whose number-pad drawer is open (null = closed). The pad is a
   // bottom sheet so the line list stays scrollable and the keypad rises to the
   // thumb on tap — no scrolling to a fixed inline pad.
   const [sheetId, setSheetId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const isReceiveMode = transfer.status === "confirmed_receive";
+  const isReceiveMode = RECEIVABLE_TRANSFER_STATUSES.has(transfer.status);
+  const isWaitingForTransit = transfer.status === "confirmed_ship";
   const remaining = total - confirmed.size;
   const progress = total === 0 ? 0 : confirmed.size / total;
 
@@ -83,7 +89,7 @@ export function TransferReceiveClient({
   }
 
   function handleConfirm() {
-    const payload: Record<string, { qty: number }> = {};
+    const payload: Record<string, { qty: number; note?: string }> = {};
     for (const item of items) {
       const qty = values[item.ingredientId] ?? item.qty;
       if (!Number.isFinite(qty) || qty < 0 || qty > item.qty) {
@@ -91,7 +97,13 @@ export function TransferReceiveClient({
         toast.error(receiveCopy.receiveExceedsSent);
         return;
       }
-      payload[String(item.ingredientId)] = { qty };
+      const note = notes[item.ingredientId]?.trim() ?? "";
+      if (qty < item.qty && note.length < 3) {
+        toast.error(copy.shortageNoteMinLength);
+        return;
+      }
+      payload[String(item.ingredientId)] =
+        qty < item.qty ? { qty, note } : { qty };
     }
     startTransition(async () => {
       const result = await transferReceive(transfer.id, payload);
@@ -121,11 +133,23 @@ export function TransferReceiveClient({
         <AppEmptyState
           compact
           mode="no-data"
-          title={receiveCopy.receiveNotReady}
-          description={receiveCopy.receiveNotReadyDescription}
+          title={
+            isWaitingForTransit
+              ? receiveCopy.receiveWaitingTransit
+              : receiveCopy.receiveNotReady
+          }
+          description={
+            isWaitingForTransit
+              ? receiveCopy.receiveWaitingTransitDescription
+              : receiveCopy.receiveNotReadyDescription
+          }
         >
           <Button asChild variant="outline" size="sm">
-            <Link href={detailHref}>{receiveCopy.receiveOpenDetail}</Link>
+            <Link href={isWaitingForTransit ? backHref : detailHref}>
+              {isWaitingForTransit
+                ? receiveCopy.receiveBackToList
+                : receiveCopy.receiveOpenDetail}
+            </Link>
           </Button>
         </AppEmptyState>
       </>
@@ -171,9 +195,9 @@ export function TransferReceiveClient({
               className="w-full flex-col items-start justify-center text-left"
               onClick={() => setSheetId(nextItem.ingredientId)}
             >
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <SectionLabel>
                 {receiveCopy.receiveNextLine}
-              </span>
+              </SectionLabel>
               <span className="flex min-w-0 items-center gap-2">
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">
                   {nextItem.name}
@@ -192,17 +216,18 @@ export function TransferReceiveClient({
           const isConfirmed = confirmed.has(item.ingredientId);
           const isNext = nextItem?.ingredientId === item.ingredientId;
           const value = values[item.ingredientId] ?? item.qty;
+          const isShortage = isConfirmed && value < item.qty;
           return (
             <InteractiveCard
               key={item.ingredientId}
-              asChild
               padding="compact"
               minHeight="tap"
+              className="flex-col items-stretch gap-2"
             >
               <button
                 type="button"
                 onClick={() => setSheetId(item.ingredientId)}
-                className="w-full text-left"
+                className="flex w-full items-center gap-3 text-left"
               >
                 {isConfirmed ? (
                   <IconCheckCircle className="size-5 shrink-0 text-primary" />
@@ -230,6 +255,26 @@ export function TransferReceiveClient({
                   {isConfirmed ? value : receiveCopy.receiveTapToEnter}
                 </span>
               </button>
+              {isShortage ? (
+                <label className="flex flex-col gap-1.5" data-vaul-no-drag>
+                  <span className="text-xs font-medium text-destructive">
+                    {copy.shortageNoteTitle}
+                  </span>
+                  <Textarea
+                    value={notes[item.ingredientId] ?? ""}
+                    onChange={(event) =>
+                      setNotes((current) => ({
+                        ...current,
+                        [item.ingredientId]: event.target.value,
+                      }))
+                    }
+                    placeholder={copy.shortageNotePlaceholder}
+                    className="min-h-20"
+                    maxLength={300}
+                    disabled={isPending}
+                  />
+                </label>
+              ) : null}
             </InteractiveCard>
           );
         })}

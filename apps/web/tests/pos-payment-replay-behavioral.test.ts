@@ -50,7 +50,7 @@ test("replay with only a draft invoice falls through to issue (compliance)", () 
   );
 });
 
-test("replay with NO invoice row falls through to issue (NĐ70/2025: must issue)", () => {
+test("replay with NO invoice row falls through to issue (NĐ 254/2026: must issue)", () => {
   assert.equal(existingIssuedInvoiceOutcome(ok(null)), null);
 });
 

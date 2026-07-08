@@ -62,6 +62,7 @@ export function useGrnLineActions({
     }
     startSave(async () => {
       let okCount = 0;
+      const savedLineIds = new Set<number>();
       for (const l of dirtyLines) {
         const res = await upsertGrnLine({
           grnId: grn.id,
@@ -87,6 +88,7 @@ export function useGrnLineActions({
           continue;
         }
         okCount++;
+        savedLineIds.add(l.lineId);
       }
       if (okCount > 0) {
         notify.success(
@@ -95,8 +97,11 @@ export function useGrnLineActions({
             total: dirtyLines.length,
           }),
         );
-        // Mark saved rows clean; refresh server data via router
-        setLines((prev) => prev.map((l) => ({ ...l, dirty: false })));
+        setLines((prev) =>
+          prev.map((l) =>
+            savedLineIds.has(l.lineId) ? { ...l, dirty: false } : l,
+          ),
+        );
         router.refresh();
       }
     });

@@ -125,6 +125,7 @@ function buildQueueRows(
 }
 
 function QueueRowItem({ row }: { row: QueueRow }) {
+  const badgeVariant = row.count > 0 ? "warning" : "secondary";
   return (
     <Item
       asChild
@@ -145,7 +146,7 @@ function QueueRowItem({ row }: { row: QueueRow }) {
           </ItemTitle>
         </ItemContent>
         <ItemActions className="shrink-0 text-muted-foreground">
-          <Badge variant="warning">{row.count}</Badge>
+          <Badge variant={badgeVariant}>{row.count}</Badge>
           <ChevronRight />
         </ItemActions>
       </Link>
@@ -154,9 +155,7 @@ function QueueRowItem({ row }: { row: QueueRow }) {
 }
 
 function CompactQueueSection({ rows }: { rows: QueueRow[] }) {
-  const pendingRows = rows.filter((row) => row.count > 0);
-
-  if (pendingRows.length === 0) {
+  if (rows.length === 0) {
     return (
       <AppEmptyState compact title={branchCopy.queueEmpty} className="py-3" />
     );
@@ -164,7 +163,7 @@ function CompactQueueSection({ rows }: { rows: QueueRow[] }) {
 
   return (
     <ItemGroup className="gap-2">
-      {pendingRows.map((row) => (
+      {rows.map((row) => (
         <QueueRowItem key={row.key} row={row} />
       ))}
     </ItemGroup>

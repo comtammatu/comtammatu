@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
-import { FormattedNumberInput } from "@/components/form";
+import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Item,

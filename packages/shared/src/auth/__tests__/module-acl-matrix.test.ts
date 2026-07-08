@@ -75,6 +75,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "operator_home",
   ],
   chef: ["kds", "notifications", "operator_home", "runner"],
+  branch_staff: ["notifications", "operator_home"],
   office: ["finance", "notifications", "operator_home"],
 };
 

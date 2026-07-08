@@ -17,7 +17,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { Combobox } from "@/components/form";
+import { Combobox } from "@/components/form/combobox";
 import {
   Select,
   SelectContent,

@@ -55,7 +55,7 @@ export function mapTaxInvoiceOutcome(
  * so a replay reports the real HĐĐT and never re-issues. For a draft/orphan, no
  * invoice row, or an unreadable resolve, returns null — the caller MUST fall
  * through to createTaxInvoice so the legally-required HĐĐT is still issued
- * (NĐ70/2025). The replay gate itself (cash status==="already_completed" /
+ * (NĐ 254/2026). The replay gate itself (cash status==="already_completed" /
  * VietQR idempotent===true) stays at the call site.
  */
 export function existingIssuedInvoiceOutcome(

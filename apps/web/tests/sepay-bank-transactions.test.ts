@@ -10,6 +10,7 @@ function row(
   id: number,
   payload: Record<string, unknown>,
   createdAt = "2026-07-01T01:00:00.000Z",
+  expenseId: number | null = null,
 ): SepayWebhookRow {
   return {
     id,
@@ -18,6 +19,7 @@ function row(
     processing_status: "processed",
     error_code: null,
     payment_id: null,
+    expense_id: expenseId,
     payload,
   };
 }
@@ -38,15 +40,31 @@ test("SePay bank transaction maps incoming and outgoing webhook payloads", () =>
     row(2, {
       transactionDate: "2026-07-01 09:00:00",
       transferType: "out",
-      transferAmount: 40000,
+      transferAmount: -40000,
     }),
   );
 
   assert.equal(incoming?.transferType, "in");
   assert.equal(incoming?.amount, 150000);
   assert.equal(incoming?.accumulated, 1150000);
+  assert.deepEqual(incoming?.expenseIds, []);
   assert.equal(outgoing?.transferType, "out");
   assert.equal(outgoing?.amount, 40000);
+  assert.deepEqual(
+    mapSepayWebhookRow(
+      row(
+        3,
+        {
+          transactionDate: "2026-07-01 10:00:00",
+          transferType: "out",
+          transferAmount: 10000,
+        },
+        "2026-07-01T03:00:00.000Z",
+        42,
+      ),
+    )?.expenseIds,
+    [42],
+  );
 });
 
 test("SePay bank movement sums plus and minus from opening date", () => {

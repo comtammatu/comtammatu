@@ -141,7 +141,10 @@ async function loadGrnDetailResult(
     const rejected = Number(l.rejected_quantity ?? 0);
     const entryUnitId = l.entry_unit_id ?? null;
     const catalogIngredient = ingredientById.get(l.ingredient_id ?? ing?.id ?? 0);
-    const fallbackUnit = l.unit || ing?.ingredient_units?.find((u: any) => u.is_base)?.units?.code || "";
+    const fallbackUnit =
+      l.unit ||
+      ing?.ingredient_units?.find((u) => u.is_base)?.units?.code ||
+      "";
 
     return {
       lineId: l.id,

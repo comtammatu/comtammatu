@@ -37,7 +37,9 @@ export default async function BranchTablesSettingsPage({
       .order("name"),
     supabase
       .from("tables")
-      .select("id, branch_id, zone_id, number, status, branch_zones(name)")
+      .select(
+        "id, branch_id, zone_id, number, status, self_order_token, self_order_enabled, self_order_token_rotated_at, branch_zones(name)",
+      )
       .eq("branch_id", branchId)
       .order("number"),
   ]);

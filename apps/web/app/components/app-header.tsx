@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@comtammatu/ui";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface AppHeaderBrandProps {
   title: ReactNode;
@@ -123,9 +124,10 @@ export function AppHeader({
           ariaLabel={homeAriaLabel}
         />
         {nav}
-        {actions ? (
-          <div className="flex shrink-0 items-center gap-2">{actions}</div>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-2">
+          <ThemeToggle />
+          {actions}
+        </div>
       </div>
     </header>
   );

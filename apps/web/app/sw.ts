@@ -31,7 +31,6 @@ declare const self: ServiceWorkerGlobalScope;
 const AUTHED_NAV_PREFIXES = [
   "/admin",
   "/br",
-  "/employee",
   "/inventory",
   "/finance",
   "/hr",
@@ -131,8 +130,8 @@ const runtimeCaching: RuntimeCaching[] = [
       request.mode === "navigate" && isHubPath(url.pathname),
     handler: new NetworkOnly({ plugins: [hubOfflineFallback] }),
   },
-  // 8. Remaining authed navigations (POS/KDS/Runner stations, admin, and
-  //    retired `/employee` redirects): never cache, no offline fallback.
+  // 8. Remaining authed navigations (POS/KDS/Runner stations and admin/domain
+  //    workspaces): never cache, no offline fallback.
   //    Protected shells embed user identity in the SSR'd HTML, so the service
   //    worker must never persist a navigation response.
   {

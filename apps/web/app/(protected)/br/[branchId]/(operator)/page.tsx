@@ -1,6 +1,6 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator hub homepage displays inline vietnamese warning for clock-in gate */
 import { Suspense } from "react";
-import { ChefHat, LayoutDashboard, Truck } from "lucide-react";
+import { ChefHat, Truck } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -14,7 +14,6 @@ import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   EmployeeActionBar,
   EmployeeActionSection,
-  EmployeePanel,
   EmployeePage,
 } from "@lib/staff-runtime/components/staff-runtime-page";
 import { getTodayWorkState } from "@lib/staff-runtime/_lib/today-work-state";
@@ -73,7 +72,6 @@ export default async function OperatorHomePage({
   // sites keep their home to the curated job tiles (D066 no-hub-bloat).
   const showOverview =
     canAccess(claims.user_role, "branch_dashboard") && branchKind === "branch";
-  const showManagementCard = !showTodayCard && showOverview;
 
   // Pre-clock-in gate for cashier/chef roles
   const isFloorRole =
@@ -127,7 +125,6 @@ export default async function OperatorHomePage({
   const branchTodayTileLimit = branchTodayGroup
     ? getBranchHomeTileLimit(branchTodayGroup.id)
     : 0;
-  const branchTodayTileCount = branchTodayGroup?.tiles.length ?? 0;
 
   const branchTodayGroups = isBranchManagerOrOwner
     ? (() => {
@@ -160,25 +157,6 @@ export default async function OperatorHomePage({
 
   const groups = isCentral ? centralGroups : branchTodayGroups;
 
-  const showMoreLink =
-    !isCentral &&
-    (isBranchManagerOrOwner
-      ? (() => {
-          const managerHomeHrefs = getOperatorHomeTileHrefs(
-            rawGroups,
-            branchKind,
-            claims.user_role,
-          );
-          return rawGroups.some((group) =>
-            group.tiles.some((tile) => !managerHomeHrefs.has(tile.href)),
-          );
-        })()
-      : rawGroups.some((group) =>
-          group.id !== branchTodayGroup?.id
-            ? group.tiles.length > 0
-            : branchTodayTileCount > branchTodayTileLimit,
-        ));
-
   const centralAction = isCentral ? (
     <Button asChild size="touch-lg" className="w-full">
       <Link
@@ -209,15 +187,11 @@ export default async function OperatorHomePage({
     ) : null;
 
   const isCentralKitchen = branchKind === "central_kitchen";
-  const secondaryLinksSection = isCentral || showMoreLink ? (
+  const secondaryLinksSection = isCentral ? (
     <EmployeeActionBar align="start" className="sm:justify-center">
-      {isCentral ? (
-        <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
-          <Link href={`${basePath}/shift/clock`}>
-            {branchCopy.centralClockLink}
-          </Link>
-        </Button>
-      ) : null}
+      <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
+        <Link href={`${basePath}/shift/clock`}>{branchCopy.centralClockLink}</Link>
+      </Button>
       {isCentralKitchen ? (
         <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
           <Link href={`${basePath}/stock/production/recipes`}>
@@ -240,22 +214,8 @@ export default async function OperatorHomePage({
             <Suspense fallback={<HubTodayStatusSkeleton />}>
               <HubTodayStatus branchId={context.branchId} />
             </Suspense>
-          ) : showManagementCard ? (
-            <EmployeePanel
-              title={APP_COPY_VI.branchCommand}
-              description={context.branch.name}
-              tone="info"
-              size="sm"
-            >
-              <Button asChild size="touch-lg" className="w-full sm:w-fit">
-                <Link href={`${basePath}/dashboard`}>
-                  <LayoutDashboard data-icon="inline-start" />
-                  {APP_COPY_VI.branchCommand}
-                </Link>
-              </Button>
-            </EmployeePanel>
           ) : null}
-          
+
           {centralAction}
           {clockGateSection}
 
@@ -270,14 +230,27 @@ export default async function OperatorHomePage({
                     : branchCopy.centralKitchenTilesDescription
                   : undefined
               }
-              links={group.tiles.map((tile) => ({
-                key: `${group.id}-${tile.moduleKey}-${tile.href}`,
-                href: tile.href,
-                icon: resolveOperatorTileIcon(tile.icon),
-                title: tile.label,
-                disabled:
-                  tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
-              }))}
+              links={[
+                ...group.tiles.map((tile) => ({
+                  key: `${group.id}-${tile.moduleKey}-${tile.href}`,
+                  href: tile.href,
+                  icon: resolveOperatorTileIcon(tile.icon),
+                  title: tile.label,
+                  disabled:
+                    tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
+                })),
+                ...(group.id === "manager-home-jobs" && showOverview
+                  ? [
+                      {
+                        key: `${group.id}-branch-dashboard`,
+                        href: `${basePath}/dashboard`,
+                        icon: resolveOperatorTileIcon("LayoutDashboard"),
+                        title: APP_COPY_VI.branchCommand,
+                        disabled: false,
+                      },
+                    ]
+                  : []),
+              ]}
               columns={2}
               mobileColumns={2}
               wideColumns
@@ -290,14 +263,14 @@ export default async function OperatorHomePage({
         {/* Sidebar Column */}
         {(!isFloorRole || showOverview) && (
           <div className="w-full md:w-72 lg:w-80 xl:w-96 shrink-0 flex flex-col gap-3 md:sticky md:top-3">
-            <Suspense fallback={<HubQueueSkeleton />}>
-              <HubQueueSection branchId={context.branchId} branchKind={branchKind} />
-            </Suspense>
             {showOverview && (
               <Suspense fallback={<HubOverviewSkeleton />}>
                 <HubOverviewSection branchId={context.branchId} />
               </Suspense>
             )}
+            <Suspense fallback={<HubQueueSkeleton />}>
+              <HubQueueSection branchId={context.branchId} branchKind={branchKind} />
+            </Suspense>
           </div>
         )}
       </div>

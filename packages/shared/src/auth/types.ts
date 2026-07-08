@@ -9,6 +9,7 @@ export const ACCESS_BUCKETS = [
   "production_manager",
   "cashier",
   "chef",
+  "branch_staff",
   "office",
 ] as const;
 
@@ -48,6 +49,7 @@ export const BRANCH_REQUIRED_OPERATIONAL_ROLES: readonly StaffRole[] = [
   "cashier",
   "chef",
   "branch_manager",
+  "branch_staff",
 ] as const;
 
 /**
@@ -88,6 +90,7 @@ export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   production_manager: "Quản lý Bếp Trung Tâm",
   cashier: "Thu ngân",
   chef: "Bếp",
+  branch_staff: "Nhân sự chi nhánh",
   office: "Văn phòng",
 };
 
@@ -105,8 +108,8 @@ const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
   marketing: "office",
   technician: "office",
   design_construction: "office",
-  cleaner: "office",
-  guard: "office",
+  cleaner: "branch_staff",
+  guard: "branch_staff",
   warehouse_manager: "warehouse_manager",
   central_supply_manager: "warehouse_manager",
   production_manager: "production_manager",

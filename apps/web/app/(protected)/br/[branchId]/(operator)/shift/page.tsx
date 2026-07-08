@@ -21,11 +21,7 @@ export default async function OperatorShiftPage({
         checkoutApprovals: `/br/${branchId}/shift/checkout-approvals`,
         count: `/br/${branchId}/stock/count`,
         wasteApprovals: `/br/${branchId}/stock/waste-approvals`,
-        leaveApprovals: `/br/${branchId}/shift/leave-approvals`,
-        countSlips: `/br/${branchId}/stock/count-slips`,
-        countAssignments: `/br/${branchId}/stock/count-assignments`,
         team: `/br/${branchId}/team`,
-        hr: "/" + "hr",
       }}
       showNotificationControl={false}
       mode={isBranchManager ? "manager-dashboard" : "full"}

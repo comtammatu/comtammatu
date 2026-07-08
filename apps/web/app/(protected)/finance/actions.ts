@@ -474,7 +474,7 @@ const cancelInvoiceSchema = z.object({
     .max(500, "Lý do hủy quá dài"),
 });
 
-// NĐ70/2025 (and earlier 13/2023) requires every HĐĐT cancellation to
+// NĐ 254/2026 + TT 32/2025 require every HĐĐT cancellation to
 // carry a real, descriptive reason. Reason is REQUIRED — never default
 // to a placeholder like "Hủy theo yêu cầu" (15 chars, tells auditor
 // nothing).

@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js 16.2 dùng App Router. Các bề mặt chính: Admin settings (`/admin/settings/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), Branch Command (`/br/[branchId]/dashboard`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner customer display (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/settings/menu-limits`), Trang nhân viên cho non-admin staff (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho chi nhánh.
+Ứng dụng Next.js 16.2 dùng App Router. Các bề mặt chính: Admin settings (`/admin/settings/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), Branch Hub (`/br/[branchId]`), Branch Command (`/br/[branchId]/dashboard`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner customer display (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), staff day runtime (`/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`), plus public surfaces `/login`, `/access-denied`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho chi nhánh.
 
 **Phạm vi sở hữu:** `apps/web/`
 
@@ -28,12 +28,12 @@ owner; Branch Manager dùng L1 Branch Command dưới
 
 | Surface           | Route family                                                                                                 | Entry point                                            | Navigation / back contract                                                                                                                                                    | Breadcrumb / scope contract                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Root redirect     | `/`                                                                                                          | Shared role default                                    | Ủy quyền cho `getDefaultRedirect(claims)`: owner → `/finance`; staff non-admin gồm cả Branch Manager → `/employee`.                                                           | Không có hub surface phụ. Scope nằm trong JWT + route params.                                          |
+| Root redirect     | `/`                                                                                                          | Shared role default                                    | Ủy quyền cho `getDefaultRedirect(claims)`: owner/office → `/finance`; branch-pinned staff → `/br/{branchId}`; central-site staff → Branch Hub soft-routing khi có home site. | Không có hub surface phụ. Scope nằm trong JWT + route params.                                          |
 | Public / auth     | `/login`, `/access-denied`, `/payment/momo/return`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login`, external return URL, hoặc Runner display URL | Không dùng app shell. Không giữ app back link.                                                                                                                                | Không đọc tenant/branch scope từ UI state. Runner display tự validate branch trong page.               |
 | Admin foundation  | Tenant `/admin/settings/*`                                                                                   | `/admin/settings`                                      | `OfficeModuleShell` dùng cùng Office sidebar; Settings sub-pages là deep-nav của shell, không có SettingsNav riêng.                                                           | Breadcrumb root là `Thiết lập hệ thống`; OfficeModuleShell build breadcrumb từ active nav + path tail. |
 | Domain workspaces | `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/notifications/*`                            | `MODULE_ACL[module].path`                              | Workspace shell dùng sidebar/domain nav; link rời workspace phải đi qua `resolveRoleHomeLink(role)`. `/hr/payroll/*` là direct-support, không đưa vào discovery/nav mặc định. | Breadcrumb root là nhóm `Công việc`; filter/tab state giữ trong URL, không lưu local state.            |
-| Branch operations | `/br/[branchId]/dashboard`, `/pos/*`, `/kds/*`, `/settings/*` dưới cùng branch URL                           | `/br/[branchId]/{dashboard,pos,kds,settings}`          | Operational chrome hoặc in-flow controls. POS/KDS ưu tiên hành động trong ca, không quay về Admin. Staff discovery vẫn có thể link sang Runner display public.                | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.                 |
-| Employee portal   | `/employee/*`                                                                                                | `/employee`                                            | Employee dùng bottom/desktop nav trong surface; admin-level role không vào `/employee/*`.                                                                                     | Breadcrumb nhẹ theo task portal; không trộn HR admin/payroll thành hot path nhân viên.                 |
+| Branch operations | `/br/[branchId]/*`, gồm hub, dashboard, shift, profile, stock, pos, kds, runner, settings                    | `/br/[branchId]`                                       | Branch runtime chrome hoặc operational chrome. POS/KDS ưu tiên hành động trong ca, không quay về Admin. Staff discovery vẫn có thể link sang Runner display public.            | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.                 |
+| Staff day runtime | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                        | `/br/[branchId]/shift`                                 | Dùng Branch runtime bottom nav và shared Employee components; không có App Router surface `/employee`.                                                                        | Breadcrumb nhẹ theo task runtime; không trộn HR admin/payroll thành hot path nhân viên.                |
 
 Quy tắc history: thay đổi route đưa người dùng giữa các trang phải dùng
 `Link` / `router.push` thường để nút Back của trình duyệt quay lại route trước.
@@ -42,7 +42,7 @@ nơi Back không nên duyệt qua từng lần chỉnh filter.
 
 ```
 apps/web/app/
-├── layout.tsx              # Root: HTML, fonts (Geist / Geist Mono via geist pkg), metadata
+├── layout.tsx              # Root: HTML, fonts (Be Vietnam Pro + Geist / Geist Mono), metadata
 ├── page.tsx                # / → shared role default redirect
 ├── globals.css             # Tailwind 4.2 base styles
 │
@@ -65,7 +65,7 @@ apps/web/app/
 │   │   ├── expenses/       # HKD operating expense ledger
 │   │   ├── invoices/       # Viettel S-invoice register
 │   │   └── summary/        # B2C daily-summary trigger
-│   └── employee/           # Non-admin staff portal; URL remains /employee/*
+│   └── br/[branchId]/      # Branch runtime; shift/profile/stock/team/settings stay under /br/[branchId]/*
 │
 ├── components/
 │   └── office-module-shell.tsx # Shared Management shell (sidebar nav, role-based filtering) for admin/menu/hr/orders

@@ -21,6 +21,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Button } from "@comtammatu/ui/components/button";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Sheet,
   SheetClose,
@@ -38,11 +39,8 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import {
-  MoneyVndInput,
-  NumberPadSheet,
-  QuantityInput,
-} from "@/components/form";
+import { MoneyVndInput, QuantityInput } from "@/components/form/domain-number-inputs";
+import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { matchesSearch } from "@lib/search";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
@@ -474,15 +472,15 @@ export function GrnCreateClient({
     >
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="rounded-md bg-muted/50 px-3 py-2">
-          <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+          <SectionLabel density="dense">
             {messages.inventory.grn.supplier}
-          </p>
+          </SectionLabel>
           <p className="truncate text-sm font-semibold">{supplier.name}</p>
         </div>
         <div className="rounded-md bg-muted/50 px-3 py-2">
-          <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+          <SectionLabel density="dense">
             {messages.inventory.grn.receivingWarehouse}
-          </p>
+          </SectionLabel>
           <p className="truncate text-sm font-semibold">{selectedBranchName}</p>
         </div>
       </div>
@@ -540,7 +538,7 @@ export function GrnCreateClient({
                     type="button"
                     variant="outline"
                     size="icon-lg"
-                    className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => removeLine(line.ingredientId)}
                     aria-label={GRN_CREATE_COPY.deleteLineAria}
                   >
@@ -909,9 +907,9 @@ function LineEditSheet({
         {edit ? (
           <>
             <SheetHeader>
-              <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+              <SectionLabel density="dense">
                 {edit.line ? GRN_CREATE_COPY.editItem : GRN_CREATE_COPY.addItem}
-              </p>
+              </SectionLabel>
               <SheetTitle className="text-lg font-semibold">
                 {edit.ingredient.name}
               </SheetTitle>
@@ -1060,16 +1058,16 @@ function LineValueField({
         onClick={onOpenNumpad}
         className="flex flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition active:scale-[0.99] md:hidden"
       >
-        <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+        <SectionLabel density="dense">
           {label}
-        </span>
+        </SectionLabel>
         <span className="text-2xl font-semibold tabular-nums">{display}</span>
         <span className="text-xs text-muted-foreground">{detail}</span>
       </button>
       <label className="hidden cursor-text flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-foreground md:flex">
-        <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+        <SectionLabel density="dense">
           {label}
-        </span>
+        </SectionLabel>
         {children}
         <span className="text-xs text-muted-foreground">{detail}</span>
       </label>

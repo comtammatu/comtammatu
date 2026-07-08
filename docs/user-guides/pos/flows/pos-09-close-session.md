@@ -89,7 +89,7 @@ URL: `/br/{branchId}/pos` (đang trong ca POS)
 - Toast "Đóng ca thành công".
 - Sheet đóng.
 - `pos_sessions.status` chuyển `open` → `closed`, ghi `closing_cash`, `closed_at`, `closed_by`, `note`.
-- Bạn quay về màn `/employee` (cổng nhân viên).
+- Bạn ở lại POS của chi nhánh hoặc quay về Branch Hub `/br/[branchId]` theo điều hướng hiện tại.
 - **Phải mở ca mới (POS-01) để bán tiếp** — máy POS không nhận đơn cho đến khi có ca mới.
 
 > ⚠️ Quan trọng: Sau khi chốt, KHÔNG mở lại ca cũ. Mọi đơn mới phải vào ca mới. Báo cáo doanh thu chia theo từng ca.
@@ -126,7 +126,7 @@ URL: `/br/{branchId}/pos` (đang trong ca POS)
 
 ### Mở ca mới ngay sau khi chốt
 
-Sau khi chốt → màn `/employee` → tap "Bán hàng POS" → mở ca mới (POS-01) → tiếp tục.
+Sau khi chốt → quay về Branch Hub `/br/[branchId]` hoặc POS của chi nhánh → mở ca mới (POS-01) → tiếp tục.
 
 > 💡 Nếu là cùng cashier mở ca mới, "Tiền đầu ca" mới = "Tiền mặt thực đếm" của ca vừa chốt (bàn giao). Đỡ phải đếm lại.
 

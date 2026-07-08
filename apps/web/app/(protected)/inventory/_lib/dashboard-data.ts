@@ -45,6 +45,22 @@ type DashboardReorder = {
   branch_id: number;
 };
 
+export type DashboardWarning =
+  | "stockValue"
+  | "transfers"
+  | "stocktakes"
+  | "reorderAlerts"
+  | "priceReview"
+  | "countSlips";
+
+const OPEN_TRANSFER_STATUSES = new Set([
+  "draft",
+  "confirmed",
+  "confirmed_ship",
+  "in_transit",
+  "confirmed_receive",
+]);
+
 export type InventoryDashboardData = {
   siteName: string;
   siteKind: DashboardSiteKind;
@@ -54,7 +70,9 @@ export type InventoryDashboardData = {
   canAssignCounts: boolean;
   canApproveCounts: boolean;
   selectedBranchId: number | null;
-  totalStockValue: number;
+  canViewStockValue: boolean;
+  totalStockValue: number | null;
+  dashboardWarnings: DashboardWarning[];
   pendingPO: number;
   activeTransfers: number;
   activeStocktakes: number;
@@ -208,6 +226,16 @@ export async function loadInventoryDashboardData(
       : Promise.resolve({ count: 0, error: null }),
   ]);
 
+  const dashboardWarnings: DashboardWarning[] = [];
+  if (scope.selectedBranchId != null && dashboardRes?.success !== true) {
+    dashboardWarnings.push("stockValue");
+  }
+  if (!transferRes.success) dashboardWarnings.push("transfers");
+  if (!stocktakeRes.success) dashboardWarnings.push("stocktakes");
+  if (!reorderRes.success) dashboardWarnings.push("reorderAlerts");
+  if (priceReviewRes.error) dashboardWarnings.push("priceReview");
+  if (pendingCountSlipRes.error) dashboardWarnings.push("countSlips");
+
   const priceReviewCount = priceReviewRes.error
     ? 0
     : (priceReviewRes.count ?? 0);
@@ -215,22 +243,19 @@ export async function loadInventoryDashboardData(
     ? 0
     : (pendingCountSlipRes.count ?? 0);
 
-  // totalStockValue: prefer MV-backed RPC value (cost-gated NULL preserved).
-  // Falls back to 0 if branch scope is unresolved or user lacks cost permission.
-  const totalStockValue =
+  const dashboardData =
     dashboardRes != null && dashboardRes.success && dashboardRes.data
-      ? (dashboardRes.data.summary.totalValueVnd ?? 0)
-      : 0;
+      ? dashboardRes.data
+      : null;
+  const canViewStockValue = dashboardData?.canViewCost === true;
+  const totalStockValue = dashboardData?.summary.totalValueVnd ?? null;
 
   const rawTransfers: DashboardTransfer[] =
     transferRes.success && transferRes.data
       ? (transferRes.data as DashboardTransfer[])
       : [];
   const activeTransfers = rawTransfers.filter(
-    (t) =>
-      t.status === "confirmed_ship" ||
-      t.status === "in_transit" ||
-      t.status === "confirmed_receive",
+    (t) => OPEN_TRANSFER_STATUSES.has(t.status),
   ).length;
   const transfers = rawTransfers.map((t) => ({
     id: t.id,
@@ -283,7 +308,9 @@ export async function loadInventoryDashboardData(
     canAssignCounts,
     canApproveCounts,
     selectedBranchId: scope.selectedBranchId,
+    canViewStockValue,
     totalStockValue,
+    dashboardWarnings,
     pendingPO,
     activeTransfers,
     activeStocktakes,
@@ -292,9 +319,6 @@ export async function loadInventoryDashboardData(
     reorderAlerts,
     transfers,
     stocktakeSessions,
-    dataAsOf:
-      dashboardRes != null && dashboardRes.success && dashboardRes.data
-        ? dashboardRes.data.computedAt
-        : undefined,
+    dataAsOf: dashboardData?.computedAt,
   };
 }

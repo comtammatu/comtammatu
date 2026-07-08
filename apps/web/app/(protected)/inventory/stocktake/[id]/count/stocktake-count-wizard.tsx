@@ -112,33 +112,35 @@ export function StocktakeCountWizard({
     return null;
   }
 
-  const handleSaveNext = useCallback(() => {
-    if (activeLine == null) return;
+  const commitActiveBuffer = useCallback(() => {
+    if (activeLine == null) return false;
     const raw = values[activeLine.ingredientId] ?? "";
-    const qty = Number(raw);
-    if (
-      raw.length === 0 ||
-      raw.endsWith(".") ||
-      !Number.isFinite(qty) ||
-      qty < 0
-    ) {
-      toast.error(copy.countInvalidQty);
-      return;
+    if (raw.length === 0) {
+      onCountChange(activeLine.ingredientId, null);
+      return true;
     }
-    // Commit the final value explicitly so counts matches the buffer even if the
-    // last keypress was an uncommitted incomplete-decimal step.
+    const qty = Number(raw);
+    if (raw.endsWith(".") || !Number.isFinite(qty) || qty < 0) {
+      toast.error(copy.countInvalidQty);
+      return false;
+    }
     onCountChange(activeLine.ingredientId, qty);
+    return true;
+  }, [activeLine, values, onCountChange, copy.countInvalidQty]);
+
+  const handleSaveNext = useCallback(() => {
+    if (!commitActiveBuffer()) return;
     const nextIndex = nextUncountedIndex(activeIndex);
     if (nextIndex != null) setActiveIndex(nextIndex);
-  }, [
-    activeLine,
-    values,
-    onCountChange,
-    activeIndex,
-    lines,
-    counts,
-    copy.countInvalidQty,
-  ]);
+  }, [activeIndex, lines, counts, commitActiveBuffer]);
+
+  const moveActiveIndex = useCallback(
+    (nextIndex: (current: number) => number) => {
+      if (!commitActiveBuffer()) return;
+      setActiveIndex(nextIndex);
+    },
+    [commitActiveBuffer],
+  );
 
   useEffect(() => {
     if (!editable || activeLine == null) return;
@@ -162,20 +164,20 @@ export function StocktakeCountWizard({
       } else if (key === "Enter") {
         e.preventDefault();
         handleSaveNext();
-      } else if (key === "ArrowUp" || key === "ArrowLeft") {
-        e.preventDefault();
-        setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
-      } else if (key === "ArrowDown" || key === "ArrowRight") {
-        e.preventDefault();
-        setActiveIndex((prev) => (prev < total - 1 ? prev + 1 : prev));
-      }
+          } else if (key === "ArrowUp" || key === "ArrowLeft") {
+            e.preventDefault();
+            moveActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
+          } else if (key === "ArrowDown" || key === "ArrowRight") {
+            e.preventDefault();
+            moveActiveIndex((prev) => (prev < total - 1 ? prev + 1 : prev));
+          }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [editable, activeLine, handleKey, handleSaveNext, total]);
+  }, [editable, activeLine, handleKey, handleSaveNext, moveActiveIndex, total]);
 
   const activeBuffer =
     activeLine != null ? (values[activeLine.ingredientId] ?? "") : "";

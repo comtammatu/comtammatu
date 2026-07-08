@@ -20,7 +20,7 @@ Mô hình vận hành production: **Tenant → Chi nhánh**.
 | M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm) + Momo (IPN webhook). All live in production.   | SHIPPED |
 | M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, branch production               | SHIPPED |
 | M6  | Finance              | Finance Basic, HĐĐT HKD, reconciliation, accountant export. Advanced COA/Journal deferred | PARTIAL |
-| M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip. BHXH/PIT calc deferred                         | PARTIAL |
+| M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip, payroll calc. BHXH/PIT export/reconcile partial | PARTIAL |
 
 Active tracker: [`tasks/todo.md`](tasks/todo.md).
 
@@ -71,7 +71,7 @@ scripts/            # SQL seeds, lint helpers
 | `/admin/*`                  | Manager+          | Dashboard, settings, staff, reports                     |
 | `/menu`                     | Manager+          | Menu CRUD                                               |
 | `/inventory/*`              | Inventory roles   | Canonical inventory hub (PO, GRN, stocktake…)           |
-| `/finance/*`                | Finance roles     | Finance Basic, doanh thu ròng, food-cost, chi phí, HĐĐT |
+| `/finance/*`                | Finance roles     | Finance Basic, tiền đã thu, food-cost, chi phí, HĐĐT    |
 | `/hr/*`                     | HR/payroll        | Payroll periods, payslips                               |
 | `/orders`                   | Manager+          | Cross-branch order browser                              |
 | `/notifications`            | All staff         | Notification center                                     |

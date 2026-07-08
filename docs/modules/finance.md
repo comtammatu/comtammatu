@@ -98,6 +98,7 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 | `/finance/revenue`         | Revenue analytics            | Keep, but do not make it the only money-control entry                 |
 | `/finance/inventory-value` | Inventory value drilldown    | Link from Finance Basic, implemented in Finance                       |
 | `/finance/food-cost`       | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                 |
+| `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses  |
 | `/finance/invoices`        | HĐĐT queue                   | Keep as support workflow                                              |
 | `/finance/summary`         | HĐĐT summary trigger         | Keep admin-only by action permission                                  |
 

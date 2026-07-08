@@ -105,6 +105,7 @@ export async function CountSlipsPageContent({
       branch_id,
       location_id,
       employee_id,
+      shift_id,
       count_date,
       status,
       note,
@@ -112,6 +113,7 @@ export async function CountSlipsPageContent({
       submitted_at,
       reviewed_at,
       branches ( name ),
+      shifts ( name ),
       inventory_locations ( name ),
       employees (
         employee_code,
@@ -190,6 +192,7 @@ export async function CountSlipsPageContent({
       locationName:
         embeddedName(slip.inventory_locations) ?? `Kho #${slip.location_id}`,
       employeeName: employeeName(slip.employees) ?? "Nhân viên",
+      shiftName: embeddedName(slip.shifts),
       countDate: slip.count_date,
       status: normalizeStatus(slip.status),
       note: slip.note ?? null,

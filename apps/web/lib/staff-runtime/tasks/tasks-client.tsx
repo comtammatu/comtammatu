@@ -32,6 +32,7 @@ interface TasksClientProps {
   countHref?: string;
   checkoutHref?: string;
   checkoutLabel?: string;
+  hideCountTask?: boolean;
 }
 
 function sortPhaseItems(items: TodayChecklistItem[]) {
@@ -48,6 +49,7 @@ export function TasksClient({
   countHref = "/br",
   checkoutHref,
   checkoutLabel = homeCopy.clockOut,
+  hideCountTask = false,
 }: TasksClientProps) {
   const router = useRouter();
   const [localItems, setLocalItems] = useState(items);
@@ -137,11 +139,14 @@ export function TasksClient({
   const requiredRemaining = localItems.filter(
     (item) => item.isRequired && !item.done,
   ).length;
+  const visibleItems = hideCountTask
+    ? localItems.filter((item) => item.taskKind !== "inventory_count")
+    : localItems;
 
   return (
     <div className="flex flex-col gap-4">
       {CHECKLIST_PHASES.map((phase) => {
-        const phaseItems = localItems.filter((item) => item.phase === phase);
+        const phaseItems = visibleItems.filter((item) => item.phase === phase);
         if (phaseItems.length === 0) return null;
         const sortedPhaseItems = sortPhaseItems(phaseItems);
         const phaseDone = phaseItems.filter((item) => item.done).length;
@@ -237,28 +242,28 @@ export function TasksClient({
                           </Label>
                         )}
                       </ItemTitle>
-                      {item.doneDefinition ? (
+                      {!item.done && item.doneDefinition ? (
                         <ItemDescription className="line-clamp-none max-w-full whitespace-normal break-words text-xs leading-5">
                           {item.doneDefinition}
                         </ItemDescription>
                       ) : null}
-                      <div
-                        className="flex w-full flex-wrap items-center gap-1.5"
-                        data-shift-task-meta
-                      >
-                        {item.isRequired ? (
-                          <Badge variant="outline">{taskCopy.required}</Badge>
-                        ) : null}
-                        <Badge variant={item.done ? "success" : "secondary"}>
-                          {item.done ? taskCopy.done : taskCopy.todo}
-                        </Badge>
-                      </div>
-                      {isCountTask ? (
+                      {!item.done ? (
+                        <div
+                          className="flex w-full flex-wrap items-center gap-1.5"
+                          data-shift-task-meta
+                        >
+                          {item.isRequired ? (
+                            <Badge variant="outline">{taskCopy.required}</Badge>
+                          ) : null}
+                          <Badge variant="secondary">{taskCopy.todo}</Badge>
+                        </div>
+                      ) : null}
+                      {isCountTask && !item.done ? (
                         <Button
                           asChild
                           size="touch"
                           className="w-full sm:w-fit"
-                          variant={item.done ? "outline" : "default"}
+                          variant="default"
                         >
                           <Link href={countHref}>
                             <IconCount data-icon="inline-start" />

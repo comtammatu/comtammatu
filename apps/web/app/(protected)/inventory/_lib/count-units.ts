@@ -1,11 +1,11 @@
-import type { IngredientRow, IngredientUnitRow } from "./types";
+import type { IngredientRow } from "./types";
+import {
+  getDefaultIngredientUnit,
+  getIngredientUnitOptions,
+  type InventoryUnitOption,
+} from "./unit-options";
 
-export interface CountUnitOption {
-  unitId: number;
-  code: string;
-  label: string;
-  isBase: boolean;
-}
+export type CountUnitOption = InventoryUnitOption;
 
 /**
  * Selectable counting units for an ingredient: every active ingredient_units
@@ -15,19 +15,7 @@ export interface CountUnitOption {
 export function getCountUnitOptions(
   ingredient: IngredientRow | undefined,
 ): CountUnitOption[] {
-  const units = ingredient?.units ?? [];
-  return units
-    .filter((u: IngredientUnitRow) => u.is_active && u.unit_code !== "")
-    .sort((a, b) => {
-      if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
-      return a.sort_order - b.sort_order;
-    })
-    .map((u) => ({
-      unitId: u.unit_id,
-      code: u.unit_code,
-      label: u.unit_name?.trim() || u.unit_code,
-      isBase: u.is_base,
-    }));
+  return getIngredientUnitOptions(ingredient);
 }
 
 /**
@@ -37,6 +25,5 @@ export function getCountUnitOptions(
 export function getDefaultCountUnit(
   ingredient: IngredientRow | undefined,
 ): CountUnitOption | null {
-  const options = getCountUnitOptions(ingredient);
-  return options.find((o) => o.isBase) ?? options[0] ?? null;
+  return getDefaultIngredientUnit(getCountUnitOptions(ingredient));
 }

@@ -5,7 +5,7 @@
 > Shipped history lives in git; durable failure rules live in
 > `tasks/regressions.md`; decisions live in `docs/plan/decisions.md`.
 >
-> Reconciled-through `fd912b955` (2026-07-07). Before acting, verify the live
+> Reconciled-through `23500913b` (2026-07-08). Before acting, verify the live
 > checkout with `git status` and re-check production state for any migration or
 > runtime claim.
 
@@ -23,12 +23,18 @@
 
 ### Operator Stock Native Surfaces
 
-- [ ] **D067/D068 Wave 1 — rebuild job-critical operator flows.** One route
-  family per PR, shared data/actions, native mobile presentation only:
-  branch/Kho/Bếp home spine + curated bottom nav, `stock/production`, GRN
-  draft-review including operator drafts, `stock/receive/[id]`, stocktake
-  count/result, and PO detail. Acceptance: 3 viewport evidence, no Office
-  wrapper embed, no new schema/grant unless the route proves it truly needs one.
+- [ ] **D067/D068 Wave 1 — close data-gated operator evidence gaps.** Local
+  branch-3 smoke on 2026-07-07 covered desktop/tablet/mobile rendering for
+  production hub/detail, receive empty list, stocktake detail/result, PO empty
+  list, GRN list/detail, and GRN supplier entry; direct
+  `stock/receive/2198` renders the non-receivable guard. Current production
+  rows for branch 3 have no receivable transfer, no PO, and only cancelled
+  stocktake with `inv_stocktake_redesigned` off. Remaining runtime evidence
+  needs branch-scoped data or gate changes only: a receivable transfer for
+  `stock/receive/[id]`, a branch-3 PO for PO detail, and an enabled in-progress
+  stocktake session for `stocktake/[id]/count`. Keep shared data/actions, no
+  Office wrapper embed, and no new schema/grant unless a route proves it truly
+  needs one.
 - [ ] **Wave 2 — trim remaining operator stock screens.** Kill filler blocks,
   desktop tables/tabs, duplicate meters, and non-job copy across the 13 trim
   screens named in `docs/plan/kho-tong-hub-native-2026-07-04.md`.
@@ -54,12 +60,25 @@
 
 - [ ] **POS/KDS final-outcome inventory truth.** Run the full functional
   POS/KDS outcome browser smoke on a CSP-compatible local or preview env, then
-  re-check production apply and `db:types` needs before enabling any flag.
-- [ ] **Side-item recipe consumption.** Existing `consume_stock_for_order`
-  parity ignores side-item recipes; fix only with the same final-outcome posting
-  contract, not as a standalone patch.
-- [ ] **Refund restore when stock deduction is enabled.** Build movement-based
-  `refund_restore` only in the same batch that actually enables deduction.
+  re-check production apply and `db:types` needs before enabling any flag. The
+  `entry_unit_id` writer fixes (`20260708120000`–`122500`) and refund restore
+  (`20260708123500`) have landed as migration files but are not yet
+  owner-applied; re-verify the production migration ledger before claiming any
+  runtime state.
+- [x] **Side-item recipe consumption — IMPLEMENTED behind `pos_stock_outcome_posting`.**
+  `post_pos_sale_consumption_if_ready` and `enforce_branch_stock_availability`
+  already explode `order_items.sides[]` via UNION ALL into the consumption/gate
+  CTEs (`20260706085000_pos_stock_outcome_to_kitchen.sql:122-127, 208-216`). The
+  legacy `consume_stock_for_order` referenced in older notes is browser-revoked,
+  has no TS caller, and is superseded — do not rebuild it; the remaining work is
+  enabling the flag with runtime evidence (see item above).
+- [x] **Refund restore when stock deduction is enabled.** Built as
+  movement-based `post_pos_sale_refund_restore` (`20260708123500`): mirrors
+  `sale_consumption` rows into inverse `refund_restore` /
+  `sale_consumption_restore` rows, idempotent via a dedicated partial unique
+  index, wired into `refund_paid_order` and `reverse_payment_and_post`. Implicit
+  gate: no consumption rows → no-op. Goes live only when
+  `pos_stock_outcome_posting` is enabled (currently OFF on all branches).
 
 ### Verification Infrastructure
 
@@ -94,9 +113,9 @@
   files. Never direct-apply production from an agent.
 - [ ] **Finance metric definitions.** Decide `doanh thu` (HĐĐT issued vs money
   collected) and what `lãi gộp` subtracts before dashboard polish.
-- [ ] **HRM payroll scope.** Decide whether payroll leaves Excel in-app for Đợt 3:
-  base salary/dependents UI, CSV/Excel export, pre-approval review screen, PIT on
-  payslip, and IA under Người / Ngày công / Lương.
+- [ ] **HRM payroll closeout.** Payroll calc is in-app; decide the remaining
+  rollout: CSV/Excel/accountant export, pre-approval review, H1-2026 withholding
+  policy, PIT on payslip, and IA under Người / Ngày công / Lương.
 - [ ] **Supplier fallback.** Pick one GRN supplier path for "Khác": real supplier,
   `Mua ngoài` + note, or generic supplier.
 - [ ] **Ownership transfer.** Decide `transfer_ownership(p_new_user_id)` semantics
@@ -127,7 +146,8 @@
 - [ ] **`has_permission()` dual-source flip.** Tripwire only after a second
   silent-demotion incident.
 - [ ] **Login rate-limit `security_events` table.**
-- [ ] **Insurance/gross salary audit.** Wait until payroll is active in-app.
+- [ ] **Insurance/gross salary audit.** Run before first live payroll close,
+  after HĐLĐ rows carry production salary/BH data.
 - [ ] **Inventory unbuilt scaffolds.** Stocktake conflict dashboard, escalation
   flow, and auto-waste listing should be rebuilt only from a fresh approved
   requirement.

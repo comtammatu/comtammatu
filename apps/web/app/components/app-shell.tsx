@@ -7,15 +7,6 @@ import { LogOut as IconLogout } from "lucide-react";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { cn } from "@comtammatu/ui";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
-import { Badge } from "@comtammatu/ui/components/badge";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@comtammatu/ui/components/breadcrumb";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Sidebar,
@@ -35,9 +26,7 @@ import {
   SidebarTrigger,
 } from "@comtammatu/ui/components/sidebar";
 import {
-  findActiveNavItem,
   findActivePrimaryNavItem,
-  formatPathSegment,
   getInitials,
   isNavItemActive,
   type ShellNavGroup,
@@ -46,20 +35,16 @@ import {
 import { AppShellPaddingBoundary } from "@/components/surface";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
 import { WorkspaceBottomNav } from "@/components/workspace-bottom-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { messages } from "@lib/messages";
 
 export interface PageHeaderConfig {
-  /** Either a single Badge label or breadcrumb chain segments. */
-  crumbLabel?: ReactNode;
-  /** Segments with an href render as links; plain strings stay static. */
-  breadcrumbSegments?: Array<string | { label: string; href?: string }>;
-  description?: ReactNode;
   actions?: ReactNode;
-  /** Renders LEFT of actions in the desktop header row, after page title. */
+  /** Renders in the shell utility bar, left of actions. */
   headerExtras?: ReactNode;
-  /** Renders BELOW the existing header on screens < md, full-width sticky band. */
+  /** Renders below the utility bar on screens < md, full-width sticky band. */
   mobileTopBar?: ReactNode;
-  suppressTitleHeading?: boolean;
 }
 
 export interface AppShellProps {
@@ -95,30 +80,15 @@ export function AppShell({
   user,
   tier1,
   tier2,
-  defaultPageTitle,
   pageHeader,
   bottomNav = true,
 }: AppShellProps) {
   const pathname = usePathname();
   const copy = messages.common;
-  const pageTitle = useMemo(() => {
-    const active = findActiveNavItem(tier2, pathname);
-    if (!active) return defaultPageTitle;
-    const pathTail = pathname
-      .slice(active.href.length)
-      .split("/")
-      .filter(Boolean)
-      .map((segment) => formatPathSegment(segment));
-    const lastSegment = pathTail[pathTail.length - 1];
-    return lastSegment && !/^\d+$/.test(lastSegment) ? lastSegment : active.label;
-  }, [tier2, pathname, defaultPageTitle]);
-
   const activePrimaryItem = useMemo(
     () => findActivePrimaryNavItem(tier1, pathname),
     [tier1, pathname],
   );
-
-  const breadcrumbSegments = pageHeader.breadcrumbSegments ?? [];
 
   return (
     <SidebarProvider open={true}>
@@ -134,9 +104,9 @@ export function AppShell({
               />
             </BrandLogoBox>
             <div className="min-w-0 flex flex-1 flex-col gap-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
+              <SectionLabel className="text-sidebar-foreground/60">
                 {ROLE_LABEL_VI.office}
-              </p>
+              </SectionLabel>
               <p className="truncate font-heading text-base font-semibold leading-tight">
                 {copy.brandName}
               </p>
@@ -245,78 +215,16 @@ export function AppShell({
 
       <SidebarInset id="main-content">
         <header className="sticky top-0 z-30 border-b border-border/20 bg-background/80 px-4 py-2.5 backdrop-blur-md shadow-xs print:hidden">
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <SidebarTrigger className="lg:hidden" />
-              <div className="flex min-w-0 flex-1 flex-col justify-center">
-                {breadcrumbSegments.length > 0 ? (
-                  <Breadcrumb className="mb-0.5">
-                    <BreadcrumbList>
-                      {breadcrumbSegments.map((segment, idx) => {
-                        const label =
-                          typeof segment === "string" ? segment : segment.label;
-                        const href =
-                          typeof segment === "string"
-                            ? undefined
-                            : segment.href;
-                        return (
-                          <Fragment key={`${label}-${String(idx)}`}>
-                            <BreadcrumbItem>
-                              {href ? (
-                                <BreadcrumbLink
-                                  asChild
-                                  className="font-normal text-muted-foreground"
-                                >
-                                  <Link href={href}>{label}</Link>
-                                </BreadcrumbLink>
-                              ) : (
-                                <BreadcrumbPage className="font-normal text-muted-foreground">
-                                  {label}
-                                </BreadcrumbPage>
-                              )}
-                            </BreadcrumbItem>
-                            {idx < breadcrumbSegments.length - 1 && (
-                              <BreadcrumbSeparator />
-                            )}
-                          </Fragment>
-                        );
-                      })}
-                    </BreadcrumbList>
-                  </Breadcrumb>
-                ) : pageHeader.crumbLabel ? (
-                  <div className="mb-1">
-                    <Badge variant="outline">{pageHeader.crumbLabel}</Badge>
-                  </div>
-                ) : null}
-                <div className="flex flex-wrap items-center gap-3">
-                  {pageHeader.suppressTitleHeading ? (
-                    <span className="truncate font-heading text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                      {pageTitle}
-                    </span>
-                  ) : (
-                    <h1 className="truncate font-heading text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                      {pageTitle}
-                    </h1>
-                  )}
-                  {pageHeader.headerExtras ? (
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      {pageHeader.headerExtras}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
+          <div className="flex items-center gap-3">
+            <SidebarTrigger className="lg:hidden" />
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              {pageHeader.headerExtras}
             </div>
-            {pageHeader.actions ? (
-              <div className="flex shrink-0 flex-wrap items-center gap-2 lg:self-end">
-                {pageHeader.actions}
-              </div>
-            ) : null}
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <ThemeToggle />
+              {pageHeader.actions}
+            </div>
           </div>
-          {pageHeader.description ? (
-            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              {pageHeader.description}
-            </p>
-          ) : null}
           {pageHeader.mobileTopBar ? (
             <div className="sticky top-0 z-10 -mx-4 mt-3 w-[calc(100%+2rem)] border-t bg-background px-4 py-2 lg:hidden">
               {pageHeader.mobileTopBar}

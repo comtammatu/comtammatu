@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@comtammatu/ui";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { messages } from "@lib/messages";
 import { NotebookText as IconNote } from "lucide-react";
 
@@ -31,9 +32,9 @@ export function OrderNote({
         className={cn("shrink-0 text-warning", "mt-0.5 size-4")}
       />
       <div className="min-w-0">
-        <div className="text-xs font-semibold uppercase tracking-wide">
+        <SectionLabel>
           {messages.pos.kds.orderNote}
-        </div>
+        </SectionLabel>
         <div
           className={cn(
             "min-w-0 break-words font-semibold leading-snug",

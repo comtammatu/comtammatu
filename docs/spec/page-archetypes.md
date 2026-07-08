@@ -48,11 +48,12 @@ export default async function XPage({ searchParams }: { searchParams?: ... }) {
   Branch runtime chrome page can re-mount the same canonical `PageContent`
   instead of forking a second implementation. This is what makes the
   EMBED-WRAPPER archetype possible (§ 3) and is already live convention across
-  inventory and employee — this file promotes it to law.
+  inventory and staff-runtime screens — this file promotes it to law.
 - Exemplars: `apps/web/app/(protected)/inventory/purchase-orders/page.tsx`
   (`PurchaseOrdersPageContent`), `apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx`
   (`PODetailPageContent`), `apps/web/app/(protected)/inventory/transfers/new/page.tsx`,
-  `apps/web/app/(protected)/employee/clock/page.tsx` (`ClockPageContent`).
+  `apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx`
+  (`ClockPageContent` from `apps/web/lib/staff-runtime/clock/page.tsx`).
 
 **Shared state frames (all archetypes):**
 
@@ -87,7 +88,7 @@ rather than staying a near-empty category.
 | # | Archetype | Job |
 |---|---|---|
 | 1 | LIST | Browse/filter/search a collection, row actions, quick CRUD |
-| 2 | EMBED-WRAPPER | Branch-runtime re-mount of a canonical office/employee `PageContent` |
+| 2 | EMBED-WRAPPER | Branch-runtime re-mount of a canonical office/staff-runtime `PageContent` |
 | 3 | DETAIL | Single entity: metadata + lines/history + stage actions |
 | 4 | SETTINGS-PANEL | Single-entity or list-shaped configuration form |
 | 5 | DOC-WORKFLOW | Create/edit a line-array business document |
@@ -146,7 +147,7 @@ delegation:
 
 #### Operator Embedded Presentation Contract
 
-EMBED-WRAPPER re-mounts an office/employee `PageContent` inside Branch
+EMBED-WRAPPER re-mounts an office/staff-runtime `PageContent` inside Branch
 runtime chrome (`design-system.md` § Structural Governance § A.2). The
 wrapper itself is delegation-only (above); this contract is what the
 re-mounted `PageContent`'s own `embedded` branch must do so the operator
@@ -335,8 +336,8 @@ component — the same branch benefits both planes, and the office plane
 These 11 pages do not fit a single archetype cleanly. They are an explicit
 allowlist, not a precedent for stretching another archetype's definition:
 
-1. `apps/web/app/(protected)/employee/page.tsx` — portal home; a HUB/DASHBOARD
-   hybrid. Classified **HUB**.
+1. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx` — staff
+   day-flow home; a HUB/DASHBOARD hybrid. Classified **HUB**.
 2. `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx` — branch
    portal home; the same HUB/DASHBOARD hybrid inside Branch runtime chrome.
    Classified **HUB**.

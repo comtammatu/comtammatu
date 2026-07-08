@@ -269,12 +269,24 @@ test("SW offline fallback (PWA-2) only precaches/serves the Hub shell, never sta
     /handlerDidError: async \(\) => serwist\.matchPrecache\("\/offline"\)/,
   );
 
-  // Remaining authed navigations (stations + admin plus retired /employee
-  // redirects) stay NetworkOnly with no fallback plugin.
+  // Remaining authed navigations (stations + admin/domain workspaces) stay
+  // NetworkOnly with no fallback plugin.
   assert.match(
     swSource,
     /request\.mode === "navigate" && isAuthedPath\(url\.pathname\),\s*\n\s*handler: new NetworkOnly\(\),/,
   );
+});
+
+test("Serwist precache keeps install assets but skips mascot art", () => {
+  const configSource = readFileSync(
+    new URL("../serwist.config.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(configSource, /manifestTransforms/);
+  assert.match(configSource, /public\/brand\/mascot\//);
+  assert.match(configSource, /\/brand\/mascot\//);
+  assert.doesNotMatch(configSource, /globPublicPatterns/);
 });
 
 // Mirrors app/sw.ts's isHubPath — sw.ts runs in the SW global scope and can't

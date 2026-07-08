@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
-import { QuantityInput } from "@/components/form";
+import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   InputGroup,

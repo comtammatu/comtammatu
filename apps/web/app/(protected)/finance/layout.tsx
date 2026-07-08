@@ -10,9 +10,10 @@ export default async function FinanceLayout({
   children: ReactNode;
 }) {
   const { session, claims } = await loadAuthState();
-  const [showInvoices, showSummary] = await Promise.all([
+  const [showInvoices, showSummary, showSupplierPayables] = await Promise.all([
     currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
     currentUserHasPermissionAny(PERMISSION_KEYS.SETTINGS_TENANT),
+    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
   ]);
 
   return (
@@ -27,6 +28,7 @@ export default async function FinanceLayout({
       branchId={claims.branch_id}
       showInvoices={showInvoices}
       showSummary={showSummary}
+      showSupplierPayables={showSupplierPayables}
     >
       {children}
     </FinanceShell>

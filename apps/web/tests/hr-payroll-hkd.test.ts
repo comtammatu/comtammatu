@@ -22,6 +22,13 @@ const contractInsuranceMigrationSource = readFileSync(
   ),
   "utf8",
 );
+const monthlyAnnualLeaveMigrationSource = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260708050914_hr_leave_monthly_annual_policy.sql",
+  ),
+  "utf8",
+);
 
 const payrollActionsCode = payrollActionsSource
   .split("\n")
@@ -72,7 +79,8 @@ test("HKD payroll: attendance and leave day snapshots are explicit", () => {
   for (const expected of [
     '.select("employee_id, date, check_out")',
     "buildCompletedWorkdays",
-    "annual_leave_entitlements",
+    "countAnnualLeaveAccruedThroughMonth",
+    "calculateAnnualLeaveUsedThroughMonth",
     "splitAnnualLeaveByQuota",
     "calculatePayableDays",
     "paid_leave_days: paidLeaveDays",
@@ -84,6 +92,11 @@ test("HKD payroll: attendance and leave day snapshots are explicit", () => {
       `expected calculatePayroll to include ${expected}`,
     );
   }
+  assert.doesNotMatch(
+    payrollActionsSource,
+    /\.from\("annual_leave_entitlements"\)/,
+    "payroll leave accrual must not read stale year-level annual entitlement rows",
+  );
 });
 
 test("HKD payroll: list queries are bounded", () => {
@@ -135,6 +148,22 @@ test("HKD payroll migration adds annual leave quota and payroll day snapshots", 
       `expected annual leave migration to include ${expected}`,
     );
   }
+});
+
+test("HKD leave approval migration allows payroll to split unpaid overflow", () => {
+  assert.match(
+    monthlyAnnualLeaveMigrationSource,
+    /CREATE OR REPLACE FUNCTION public\.approve_leave_request/,
+  );
+  assert.match(
+    monthlyAnnualLeaveMigrationSource,
+    /pg_advisory_xact_lock\(v_request\.employee_id\)/,
+  );
+  assert.match(monthlyAnnualLeaveMigrationSource, /SET status = 'approved'/);
+  assert.doesNotMatch(
+    monthlyAnnualLeaveMigrationSource,
+    /annual leave quota exceeded/,
+  );
 });
 
 test("Contract insurance migration opens HĐLĐ writes and syncs BHXH cache", () => {

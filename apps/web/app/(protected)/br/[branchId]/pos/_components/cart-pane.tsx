@@ -10,6 +10,7 @@ import { Kbd, KbdGroup } from "@comtammatu/ui/components/kbd";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -474,9 +475,9 @@ function CartPaneComponent({
             <AppSection size="sm">
               <div className="relative flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <SectionLabel>
                     {messages.pos.pendingDraft.subtotal}
-                  </p>
+                  </SectionLabel>
                   <p className="ml-auto font-mono text-xl font-bold text-primary tabular-nums">
                     {formatVND(cart.total)}
                   </p>

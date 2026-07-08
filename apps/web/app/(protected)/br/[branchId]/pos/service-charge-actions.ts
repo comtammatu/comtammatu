@@ -5,6 +5,7 @@ import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { logAudit } from "@/_lib/audit";
 import { getAuthContextWithPermission } from "../../_lib/auth";
+import { isPosBranchInScope } from "./_lib/auth";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
@@ -118,7 +119,7 @@ export async function setOrderServiceCharge(
 
   const { supabase, claims } = ctx;
 
-  if (claims.branch_id !== parsedBranch.data) {
+  if (!isPosBranchInScope(claims, parsedBranch.data)) {
     return {
       success: false,
       error: "Không có quyền truy cập chi nhánh này",

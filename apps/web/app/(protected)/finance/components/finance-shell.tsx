@@ -19,6 +19,7 @@ export interface FinanceShellProps {
   branchId?: number | null;
   showInvoices: boolean;
   showSummary: boolean;
+  showSupplierPayables: boolean;
 }
 
 export function FinanceShell({
@@ -28,6 +29,7 @@ export function FinanceShell({
   branchId: homeBranchId,
   showInvoices,
   showSummary,
+  showSupplierPayables,
 }: FinanceShellProps) {
   // Lift the realtime subscription up to the shell so every Finance
   // route shares one Supabase channel (Architect §3 risk #3 + Critic R5).
@@ -45,11 +47,13 @@ export function FinanceShell({
     <AppShell
       user={user}
       tier1={resolveOfficePrimaryTabs(role, homeBranchId)}
-      tier2={resolveFinanceNav({ showInvoices, showSummary })}
+      tier2={resolveFinanceNav({
+        showInvoices,
+        showSummary,
+        showSupplierPayables,
+      })}
       defaultPageTitle={financeCopy.shell.defaultPageTitle}
-      pageHeader={{
-        crumbLabel: financeCopy.shell.crumbLabel,
-      }}
+      pageHeader={{}}
     >
       {children}
     </AppShell>

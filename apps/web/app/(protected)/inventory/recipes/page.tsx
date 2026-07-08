@@ -100,7 +100,7 @@ export default async function RecipesPage({
           line.entry_unit_id == null ? null : Number(line.entry_unit_id);
         const catalogIngredient = ingredientById.get(ingredientId);
         const fallbackUnit =
-          line.ingredients?.ingredient_units?.find((u: any) => u.is_base)?.units?.code ??
+          line.ingredients?.ingredient_units?.find((u) => u.is_base)?.units?.code ??
           "";
         return {
           ingredientId,
