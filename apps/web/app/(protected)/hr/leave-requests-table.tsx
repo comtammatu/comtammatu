@@ -143,7 +143,10 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
 
   function handleApprove(request: LeaveRequestRow) {
     startTransition(async () => {
-      const result = await approveLeaveRequest({ requestId: request.id });
+      const result = await approveLeaveRequest({
+        requestId: request.id,
+        branchId: request.branch_id,
+      });
       if (!result.success) {
         toast.error(result.error ?? "Không thể duyệt yêu cầu nghỉ");
         return;
@@ -161,6 +164,7 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
     const reason = values.reason?.trim() ?? "";
     const result = await rejectLeaveRequest({
       requestId: rejectTarget.id,
+      branchId: rejectTarget.branch_id,
       reason: reason || undefined,
     });
     if (!result.success) {

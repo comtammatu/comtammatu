@@ -252,8 +252,9 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
       {view === "summary" ? (
         <SummaryView data={summary} />
       ) : (
-        <DetailView 
-          data={records} 
+        <DetailView
+          branchId={selectedBranch}
+          data={records}
           onMutated={() => loadData(selectedBranch, selectedMonth, "clock")}
         />
       )}
@@ -421,12 +422,14 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
   );
 }
 
-function DetailView({ 
-  data, 
-  onMutated 
-}: { 
-  data: AttendanceRecord[]; 
-  onMutated: () => void; 
+function DetailView({
+  branchId,
+  data,
+  onMutated,
+}: {
+  branchId: number;
+  data: AttendanceRecord[];
+  onMutated: () => void;
 }) {
   const [photoOpen, setPhotoOpen] = useState(false);
   const [checklistRecord, setChecklistRecord] =
@@ -451,6 +454,7 @@ function DetailView({
     startPhotoTransition(async () => {
       const result = await getAttendancePhotoUrl({
         attendanceId: record.id,
+        branchId,
       });
       setPendingPhotoId(null);
 
@@ -478,6 +482,7 @@ function DetailView({
     startCloseTransition(async () => {
       const result = await forceCloseStaleAttendance({
         attendanceId: closingRecord.id,
+        branchId,
         note,
       });
 

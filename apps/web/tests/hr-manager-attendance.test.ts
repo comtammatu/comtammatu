@@ -107,8 +107,13 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
   );
   assert.match(
     attendanceTableSource,
-    /getAttendancePhotoUrl\(\{\s*attendanceId: record\.id,\s*\}\)/,
-    "Attendance table should request a checked signed URL per attendance row",
+    /getAttendancePhotoUrl\(\{\s*attendanceId: record\.id,\s*branchId,\s*\}\)/,
+    "Attendance table should request a branch-scoped signed URL per attendance row",
+  );
+  assert.match(
+    attendanceTableSource,
+    /forceCloseStaleAttendance\(\{\s*attendanceId: closingRecord\.id,\s*branchId,\s*note,\s*\}\)/,
+    "Attendance stale-close mutation should stay scoped to the selected branch",
   );
   assert.match(
     attendanceTableSource,

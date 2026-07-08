@@ -16,7 +16,7 @@ import {
   getVNMonthEndDateString,
 } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { countCompletedShiftWorkdays } from "@lib/employee/_lib/workday-math";
+import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
 import { getAuthContext, probePermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/_lib/audit";
@@ -285,7 +285,11 @@ export async function fetchEmployees(): Promise<ActionResult> {
 // transaction with the employee INSERT, so a post-create failure is rolled back
 // by deleting the orphan auth user (cascades to the profile via FK).
 export const createEmployeeAccount = withAction(
-  { roles: HR_ROLES, schema: createEmployeeAccountSchema },
+  {
+    roles: HR_ROLES,
+    schema: createEmployeeAccountSchema,
+    permission: PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
+  },
   async (data, { claims, supabase }) => {
     const role = staffRoleFromPositionCode(data.positionCode);
     if (role === "unassigned" || role === "owner") {
@@ -515,7 +519,11 @@ function mapRpcError(msg: string): string {
 // (HR_ROLES): base_salary/id_number/bank_account are owner PII.
 // Partial update: only provided fields are written.
 export const updateEmployee = withAction(
-  { roles: HR_ROLES, schema: updateEmployeeSchema },
+  {
+    roles: HR_ROLES,
+    schema: updateEmployeeSchema,
+    permission: PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
+  },
   async (data, { claims, supabase }) => {
     const service = createServiceClient();
 
@@ -750,7 +758,7 @@ function revalidateHrPaths() {
 // Service client read/write, gated by role at the action layer — RLS is
 // branch-scoped and would not match null-branch rows.
 export async function fetchShifts(): Promise<ActionResult> {
-  const ctx = await getAuthContext(HR_EMPLOYEE_VIEW_ROLES);
+  const ctx = await getAuthContext(HR_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { data, error } = await createServiceClient()
@@ -898,10 +906,17 @@ const fetchAttendanceSchema = z.object({
 
 const attendancePhotoSchema = z.object({
   attendanceId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive(),
 });
 
 export const fetchAttendance = withAction(
-  { roles: SHIFT_ROLES, schema: fetchAttendanceSchema },
+  {
+    roles: SHIFT_ROLES,
+    schema: fetchAttendanceSchema,
+    permission: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
   async (data, { supabase, claims }) => {
     if (
       claims.user_role === "branch_manager" &&
@@ -952,12 +967,19 @@ export const fetchAttendance = withAction(
 );
 
 export const getAttendancePhotoUrl = withAction(
-  { roles: SHIFT_ROLES, schema: attendancePhotoSchema },
+  {
+    roles: SHIFT_ROLES,
+    schema: attendancePhotoSchema,
+    permission: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
   async (data, { supabase, claims }) => {
     let query = supabase
       .from("attendance_records")
       .select("id, branch_id, check_in_photo_path")
       .eq("id", data.attendanceId)
+      .eq("branch_id", data.branchId)
       .eq("tenant_id", claims.tenant_id);
 
     if (claims.user_role === "branch_manager") {
@@ -1011,11 +1033,18 @@ export const getAttendancePhotoUrl = withAction(
 
 const forceCloseStaleAttendanceSchema = z.object({
   attendanceId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive(),
   note: z.string().trim().optional(),
 });
 
 export const forceCloseStaleAttendance = withAction(
-  { roles: HR_EMPLOYEE_VIEW_ROLES, schema: forceCloseStaleAttendanceSchema },
+  {
+    roles: HR_EMPLOYEE_VIEW_ROLES,
+    schema: forceCloseStaleAttendanceSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
   async (data, { supabase, claims, user }) => {
     const service = createServiceClient();
     const { data: openRecord, error: fetchError } = await service
@@ -1023,6 +1052,7 @@ export const forceCloseStaleAttendance = withAction(
       .select("id, branch_id, check_in")
       .eq("id", data.attendanceId)
       .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", data.branchId)
       .not("check_in", "is", null)
       .is("check_out", null)
       .maybeSingle();
@@ -1120,7 +1150,13 @@ const fetchAttendanceSummarySchema = z.object({
 });
 
 export const fetchAttendanceSummary = withAction(
-  { roles: SHIFT_ROLES, schema: fetchAttendanceSummarySchema },
+  {
+    roles: SHIFT_ROLES,
+    schema: fetchAttendanceSummarySchema,
+    permission: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
   async (data, { supabase, claims }) => {
     if (
       claims.user_role === "branch_manager" &&

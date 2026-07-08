@@ -30,8 +30,16 @@ export const fetchApprovedLeaveMonth = withAction(
     schema: fetchMonthSchema,
     permission: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
     permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
+    if (
+      claims.user_role === "branch_manager" &&
+      claims.branch_id !== data.branchId
+    ) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
+
     const [year, mon] = data.month.split("-").map(Number);
     const startDate = `${data.month}-01`;
     const endDate = getVNMonthEndDateString(year!, mon!);
@@ -72,8 +80,16 @@ export const fetchLeaveRequests = withAction(
     schema: fetchSchema,
     permission: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
     permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
+    if (
+      claims.user_role === "branch_manager" &&
+      claims.branch_id !== data.branchId
+    ) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
+
     const { data: result, error } = await supabase
       .from("leave_requests")
       .select(
@@ -218,6 +234,7 @@ export const fetchLeaveRequests = withAction(
 
 const requestIdSchema = z.object({
   requestId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive(),
 });
 
 function revalidateLeavePaths() {
@@ -230,6 +247,7 @@ export const approveLeaveRequest = withAction(
     roles: REVIEW_ROLES,
     schema: requestIdSchema,
     permission: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
+    permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
   async (data, { supabase }) => {
@@ -286,6 +304,7 @@ export const rejectLeaveRequest = withAction(
     roles: REVIEW_ROLES,
     schema: rejectSchema,
     permission: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
+    permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
   async (data, { supabase }) => {
