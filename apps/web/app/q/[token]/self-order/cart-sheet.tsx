@@ -146,12 +146,11 @@ export function CartSheet(props: CartSheetProps) {
 
   return (
     <>
-      {/* Mobile: FAB opens bottom sheet */}
       <Button
         type="button"
         variant="default"
         size="icon-touch"
-        className="fixed right-3 bottom-24 z-40 rounded-full shadow-lg lg:hidden"
+        className="fixed right-3 bottom-24 z-40 rounded-full lg:hidden"
         aria-label={SELF_ORDER_VI.cartTitle}
         onClick={() => setOpen(true)}
       >
@@ -163,7 +162,6 @@ export function CartSheet(props: CartSheetProps) {
         ) : null}
       </Button>
 
-      {/* Mobile: sticky bottom action bar (subtotal + CTA), always visible above FAB */}
       <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-border/60 bg-background/95 px-3 py-2 backdrop-blur lg:hidden">
         <Button
           type="button"
@@ -192,7 +190,6 @@ export function CartSheet(props: CartSheetProps) {
         </div>
       </div>
 
-      {/* Mobile: bottom sheet (full cart editing) */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="max-h-dvh-95 p-0">
           <SheetHeader>
@@ -223,7 +220,6 @@ export function CartSheet(props: CartSheetProps) {
         </SheetContent>
       </Sheet>
 
-      {/* Desktop (lg+): always-visible aside cart, pinned subtotal+CTA at bottom */}
       <section className="hidden flex-col gap-3 lg:flex">
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-heading flex items-center gap-2 text-base font-semibold">
