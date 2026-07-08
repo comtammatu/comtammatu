@@ -5,7 +5,6 @@ import {
   canAccess,
   centralSiteBranchKindForRole,
   extractClaimsFromAccessToken,
-  isAdminRole,
   isAdminRoutePath,
   isPublicAppPath,
   PERMISSION_KEYS,
@@ -19,7 +18,6 @@ import {
   resolveBranchHubContextFromHeaders,
   resolveCentralSiteHomeBranchId,
 } from "@/_lib/branch-hub-device";
-import { resolveLegacyEmployeeBranchRuntimePath } from "@lib/employee/_lib/branch-runtime-redirect";
 import { getClientIp } from "@lib/network/client-ip";
 
 // Module-level flag — emit one warning per warm Edge instance when the POS
@@ -200,24 +198,6 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  // Old /employee entrypoints: redirect before module ACL so the retired
-  // employee shell never renders as an independent app. Query string is
-  // preserved for mapped branch-runtime routes (payslip ?year, count ?location).
-  if (pathname.startsWith("/employee")) {
-    const homeBranchId = await resolveCentralSiteHomeBranchId(supabase, claims);
-    const branchRuntimePath = resolveLegacyEmployeeBranchRuntimePath(
-      claims,
-      pathname,
-      homeBranchId,
-    );
-    if (branchRuntimePath) {
-      const url = request.nextUrl.clone();
-      url.pathname = branchRuntimePath;
-      return redirectWithCookies(url, response);
-    }
-    return redirectToDefaultLanding(request, response, supabase, claims);
-  }
-
   if (
     (pathname === "/br" || pathname === "/br/") &&
     claims.user_role !== "owner"
@@ -232,10 +212,7 @@ export async function proxy(request: NextRequest) {
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
     if (!canAccess(claims.user_role, moduleKey)) {
-      if (
-        isAdminRoutePath(pathname) ||
-        (moduleKey === "employee" && isAdminRole(claims.user_role))
-      ) {
+      if (isAdminRoutePath(pathname)) {
         return redirectToDefaultLanding(request, response, supabase, claims);
       }
 

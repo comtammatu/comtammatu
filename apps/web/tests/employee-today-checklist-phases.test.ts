@@ -7,12 +7,12 @@ function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-const todayWorkStateSource = readWeb("lib/employee/_lib/today-work-state.ts");
+const todayWorkStateSource = readWeb("lib/staff-runtime/_lib/today-work-state.ts");
 const employeeTasksClientSource = readWeb(
-  "lib/employee/tasks/tasks-client.tsx",
+  "lib/staff-runtime/tasks/tasks-client.tsx",
 );
-const employeeTasksPageSource = readWeb("lib/employee/tasks/page.tsx");
-const employeeCountPageSource = readWeb("lib/employee/count/page.tsx");
+const employeeTasksPageSource = readWeb("lib/staff-runtime/tasks/page.tsx");
+const employeeCountPageSource = readWeb("lib/staff-runtime/count/page.tsx");
 const employeeMessagesSource = readWeb("lib/messages/employee.ts");
 
 test("today work state preserves inventory count and groups start/end phases", () => {

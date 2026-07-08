@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { PayslipPageContent } from "@lib/employee/payslip/page";
+import { PayslipPageContent } from "@lib/staff-runtime/payslip/page";
 
 export default async function OperatorProfilePayslipPage({
   params,

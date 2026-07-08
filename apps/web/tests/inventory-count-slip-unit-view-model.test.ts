@@ -59,11 +59,11 @@ test("count slip review no longer trusts mixed-unit generated variance", () => {
 
 test("employee count UI previews the comparison unit before submission", () => {
   const pageSource = readFileSync(
-    join(process.cwd(), "lib/employee/count/page.tsx"),
+    join(process.cwd(), "lib/staff-runtime/count/page.tsx"),
     "utf8",
   );
   const clientSource = readFileSync(
-    join(process.cwd(), "lib/employee/count/count-client.tsx"),
+    join(process.cwd(), "lib/staff-runtime/count/count-client.tsx"),
     "utf8",
   );
 

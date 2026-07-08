@@ -19,7 +19,7 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { EmployeePanel } from "@lib/employee/components/employee-page";
+import { EmployeePanel } from "@lib/staff-runtime/components/staff-runtime-page";
 import { AppEmptyState } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { loadAuthState } from "@/_lib/auth";

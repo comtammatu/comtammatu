@@ -16,8 +16,8 @@ import {
   EmployeeActionSection,
   EmployeePanel,
   EmployeePage,
-} from "@lib/employee/components/employee-page";
-import { getTodayWorkState } from "@lib/employee/_lib/today-work-state";
+} from "@lib/staff-runtime/components/staff-runtime-page";
+import { getTodayWorkState } from "@lib/staff-runtime/_lib/today-work-state";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
@@ -67,7 +67,8 @@ export default async function OperatorHomePage({
   );
   const basePath = `/br/${context.branchId}`;
   const showTodayCard =
-    canAccess(claims.user_role, "employee") && claims.user_role !== "owner";
+    canAccess(claims.user_role, "operator_home") &&
+    claims.user_role !== "owner";
   // Sales KPIs and the branch-command door are branch-floor chrome — central
   // sites keep their home to the curated job tiles (D066 no-hub-bloat).
   const showOverview =

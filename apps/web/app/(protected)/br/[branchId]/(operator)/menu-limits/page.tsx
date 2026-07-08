@@ -3,7 +3,7 @@ import { formatVNLongDate } from "@comtammatu/shared/time";
 import {
   EmployeePage,
   EmployeePanel,
-} from "@lib/employee/components/employee-page";
+} from "@lib/staff-runtime/components/staff-runtime-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { fetchBranchMenuDailyLimits } from "./actions";

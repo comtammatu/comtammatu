@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { CheckoutApprovalsPageContent } from "@lib/employee/checkout-approvals/page";
+import { CheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
 import { BranchOpsRefresh } from "../../branch-ops-refresh";
 
 interface PageProps {

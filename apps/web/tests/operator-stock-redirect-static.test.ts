@@ -132,8 +132,8 @@ test("operator stock count renders employee count inside the branch operator she
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx",
   );
-  const employeeCountPage = read("apps/web/lib/employee/count/page.tsx");
-  const countClient = read("apps/web/lib/employee/count/count-client.tsx");
+  const employeeCountPage = read("apps/web/lib/staff-runtime/count/page.tsx");
+  const countClient = read("apps/web/lib/staff-runtime/count/count-client.tsx");
 
   assert.match(source, /EmployeeCountPageContent/);
   assert.match(source, /routeBranchId=\{branchId\}/);
@@ -885,7 +885,7 @@ test("operator waste approvals render branch-locked inside the branch shell", ()
   const shiftPage = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
   );
-  const employeeHome = read("apps/web/lib/employee/page.tsx");
+  const employeeHome = read("apps/web/lib/staff-runtime/page.tsx");
 
   assert.match(route, /params: Promise<\{ branchId: string \}>/);
   assert.match(route, /WasteApprovalsPageContent/);

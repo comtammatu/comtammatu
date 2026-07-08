@@ -1,4 +1,4 @@
-import { countCompletedShiftWorkdays } from "@lib/employee/_lib/workday-math";
+import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
 
 export interface LeaveRange {
   employeeId: number;

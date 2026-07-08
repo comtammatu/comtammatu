@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { EmployeeCountPageContent } from "@lib/employee/count/page";
+import { EmployeeCountPageContent } from "@lib/staff-runtime/count/page";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;

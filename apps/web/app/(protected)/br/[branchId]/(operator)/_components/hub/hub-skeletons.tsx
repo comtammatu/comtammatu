@@ -1,5 +1,5 @@
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
-import { EmployeePanel } from "@lib/employee/components/employee-page";
+import { EmployeePanel } from "@lib/staff-runtime/components/staff-runtime-page";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
 

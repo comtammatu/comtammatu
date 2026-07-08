@@ -1,8 +1,5 @@
 import { notFound } from "next/navigation";
-import {
-  PERSONAL_LINKS,
-  ProfilePageContent,
-} from "@lib/employee/profile/page";
+import { ProfilePageContent } from "@lib/staff-runtime/profile/page";
 
 export default async function OperatorProfilePage({
   params,
@@ -13,14 +10,5 @@ export default async function OperatorProfilePage({
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  const personalLinks = PERSONAL_LINKS.filter(
-    (link) => link.key === "payslip",
-  ).map((link) => ({ ...link, href: `/br/${branchId}/profile/payslip` }));
-
-  return (
-    <ProfilePageContent
-      personalLinks={personalLinks}
-      showWorkspaceLinks={false}
-    />
-  );
+  return <ProfilePageContent />;
 }

@@ -1,4 +1,4 @@
-import { ClockPageContent } from "@lib/employee/clock/page";
+import { ClockPageContent } from "@lib/staff-runtime/clock/page";
 
 export default async function OperatorShiftClockPage({
   params,

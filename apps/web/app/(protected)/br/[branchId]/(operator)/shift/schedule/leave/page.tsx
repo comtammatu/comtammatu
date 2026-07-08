@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { EmployeeLeavePageContent } from "@lib/employee/leave/page";
+import { EmployeeLeavePageContent } from "@lib/staff-runtime/leave/page";
 
 export default async function OperatorShiftScheduleLeavePage({
   params,

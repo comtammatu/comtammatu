@@ -1,5 +1,5 @@
 import { loadAuthState } from "@/_lib/auth";
-import { EmployeeHomePageContent } from "@lib/employee/page";
+import { EmployeeHomePageContent } from "@lib/staff-runtime/page";
 
 export default async function OperatorShiftPage({
   params,

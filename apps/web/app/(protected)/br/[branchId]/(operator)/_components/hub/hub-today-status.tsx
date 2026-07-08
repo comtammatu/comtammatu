@@ -1,5 +1,5 @@
-import { EmployeeHomePageContent } from "@lib/employee/page";
-import { getTodayWorkState } from "@lib/employee/_lib/today-work-state";
+import { EmployeeHomePageContent } from "@lib/staff-runtime/page";
+import { getTodayWorkState } from "@lib/staff-runtime/_lib/today-work-state";
 import { loadAuthState } from "@/_lib/auth";
 
 export async function HubTodayStatus({

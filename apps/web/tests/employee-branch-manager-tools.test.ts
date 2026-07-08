@@ -4,27 +4,27 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 const employeeHomeSource = readFileSync(
-  join(process.cwd(), "lib/employee/page.tsx"),
+  join(process.cwd(), "lib/staff-runtime/page.tsx"),
   "utf8",
 );
 const employeeProfileSource = readFileSync(
-  join(process.cwd(), "lib/employee/profile/page.tsx"),
+  join(process.cwd(), "lib/staff-runtime/profile/page.tsx"),
   "utf8",
 );
 const employeeClockActionSource = readFileSync(
-  join(process.cwd(), "lib/employee/clock/actions.ts"),
+  join(process.cwd(), "lib/staff-runtime/clock/actions.ts"),
   "utf8",
 );
 const employeeClockClientSource = readFileSync(
-  join(process.cwd(), "lib/employee/clock/clock-client.tsx"),
+  join(process.cwd(), "lib/staff-runtime/clock/clock-client.tsx"),
   "utf8",
 );
 const employeeClockPageSource = readFileSync(
-  join(process.cwd(), "lib/employee/clock/page.tsx"),
+  join(process.cwd(), "lib/staff-runtime/clock/page.tsx"),
   "utf8",
 );
 const employeeTasksPageSource = readFileSync(
-  join(process.cwd(), "lib/employee/tasks/page.tsx"),
+  join(process.cwd(), "lib/staff-runtime/tasks/page.tsx"),
   "utf8",
 );
 
@@ -36,26 +36,31 @@ test("Employee home keeps Branch Manager tools out of the hot path", () => {
   );
 });
 
-test("Employee profile launcher is ACL-driven for every role", () => {
+test("Employee profile stays focused on self-service actions", () => {
   assert.match(
     employeeProfileSource,
     /const effectiveBranchId = ctx\?\.branchId \?\? claims\.branch_id \?\? null;/,
-    "Workspace launcher must fall back to JWT branch scope when employee context is missing",
+    "Profile self-service actions must fall back to JWT branch scope when employee context is missing",
   );
   assert.match(
     employeeProfileSource,
-    /resolveQuickLaunchGroups\(\s*claims\.user_role,\s*effectiveBranchId,?\s*\)/,
-    "Workspace launcher must derive direct links from the shared ACL nav resolvers for every role, admin and branch_manager included",
+    /<ProfileEditAction[\s\S]*branchId=\{effectiveBranchId\}/,
+    "Profile edit should keep the effective branch scope",
   );
   assert.match(
     employeeProfileSource,
-    /workspaceLinks\.length > 0[\s\S]*title=\{copy\.workspaceLauncherTitle\}[\s\S]*links=\{workspaceLinks\}/,
-    "Workspace launcher should render only when there are non-profile links",
+    /<ProfileAvatarAction[\s\S]*branchId=\{effectiveBranchId\}/,
+    "Avatar upload should keep the effective branch scope",
+  );
+  assert.match(
+    employeeProfileSource,
+    /<form action="\/api\/auth\/signout" method="post">/,
+    "Profile should keep sign-out as the only navigation-like action",
   );
   assert.doesNotMatch(
     employeeProfileSource,
-    /MANAGER_LINKS|ManagerToolsSheet/,
-    "Hand-maintained MANAGER_LINKS array must be gone — links come from the ACL resolvers",
+    /resolveQuickLaunchGroups|workspaceLinks|workspaceLauncherTitle|MANAGER_LINKS|ManagerToolsSheet|EmployeeHomePageContent|EmployeeActionSection/,
+    "Profile must not become a workspace launcher or manager-tools surface",
   );
 });
 

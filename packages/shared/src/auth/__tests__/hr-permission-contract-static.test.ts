@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { canAccess, MODULE_ACL } from "../module-acl";
 import type { StaffRole } from "../types";
@@ -291,6 +291,37 @@ test("retired employee route has no standalone module ACL key", () => {
     routeResolution.includes(
       'if (/^\\/br\\/\\d+\\/profile/.test(pathname)) return "operator_home";',
     ),
+  );
+});
+
+test("HR imports the shared staff runtime, not the retired employee runtime", () => {
+  const hrFiles = [
+    "apps/web/app/(protected)/hr/actions.ts",
+    "apps/web/app/(protected)/hr/payroll-day-math.ts",
+    "apps/web/app/(protected)/hr/leave-approvals-page-content.tsx",
+  ];
+
+  assert.equal(existsSync(resolve(repoRoot, "apps/web/lib/employee")), false);
+  assert.match(
+    read("apps/web/lib/staff-runtime/_lib/workday-math.ts"),
+    /export function countCompletedShiftWorkdays/,
+  );
+
+  for (const path of hrFiles) {
+    assert.doesNotMatch(read(path), /@lib\/employee\b/, path);
+  }
+
+  assert.match(
+    read("apps/web/app/(protected)/hr/actions.ts"),
+    /@lib\/staff-runtime\/_lib\/workday-math/,
+  );
+  assert.match(
+    read("apps/web/app/(protected)/hr/payroll-day-math.ts"),
+    /@lib\/staff-runtime\/_lib\/workday-math/,
+  );
+  assert.match(
+    read("apps/web/app/(protected)/hr/leave-approvals-page-content.tsx"),
+    /@lib\/staff-runtime\/components\/staff-runtime-page/,
   );
 });
 

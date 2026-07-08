@@ -6,7 +6,7 @@ import {
 import {
   EmployeeActionSection,
   EmployeePage,
-} from "@lib/employee/components/employee-page";
+} from "@lib/staff-runtime/components/staff-runtime-page";
 import { AppEmptyState } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";

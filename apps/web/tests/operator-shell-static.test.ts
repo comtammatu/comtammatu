@@ -104,7 +104,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /EmployeePage/);
   assert.match(
     home,
-    /showTodayCard =\s*canAccess\(claims\.user_role, "employee"\)(?: && claims\.user_role !== "owner")?/,
+    /showTodayCard =\s*canAccess\(claims\.user_role, "operator_home"\)(?: && claims\.user_role !== "owner")?/,
   );
   assert.match(home, /showManagementCard/);
   const todaySource = read(
@@ -334,8 +334,8 @@ test("operator today shift and profile screens use responsive branch layout", ()
   const home = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
-  const employeeHome = read("apps/web/lib/employee/page.tsx");
-  const profile = read("apps/web/lib/employee/profile/page.tsx");
+  const employeeHome = read("apps/web/lib/staff-runtime/page.tsx");
+  const profile = read("apps/web/lib/staff-runtime/profile/page.tsx");
   const operatorProfile = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/profile/page.tsx",
   );
@@ -361,7 +361,7 @@ test("operator today shift and profile screens use responsive branch layout", ()
 });
 
 test("manager smart card counts pending waste approvals with checkouts", () => {
-  const home = read("apps/web/lib/employee/page.tsx");
+  const home = read("apps/web/lib/staff-runtime/page.tsx");
 
   assert.match(home, /\.eq\("issue_type", "writeoff"\)/);
   assert.match(home, /\.eq\("approval_status", "pending"\)/);

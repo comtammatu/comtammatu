@@ -1,4 +1,4 @@
-import { SchedulePageContent } from "@lib/employee/schedule/page";
+import { SchedulePageContent } from "@lib/staff-runtime/schedule/page";
 
 export default async function OperatorShiftSchedulePage({
   params,

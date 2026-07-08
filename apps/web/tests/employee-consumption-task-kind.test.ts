@@ -14,14 +14,14 @@ function readRepo(path: string): string {
 const taskKindMigration = readRepo(
   "supabase/migrations/_archive/20260619042223_employee_consumption_task_kind.sql",
 );
-const todayWorkStateSource = readWeb("lib/employee/_lib/today-work-state.ts");
-const employeeTasksPageSource = readWeb("lib/employee/tasks/page.tsx");
-const checkoutActionSource = readWeb("lib/employee/clock/actions.ts");
+const todayWorkStateSource = readWeb("lib/staff-runtime/_lib/today-work-state.ts");
+const employeeTasksPageSource = readWeb("lib/staff-runtime/tasks/page.tsx");
+const checkoutActionSource = readWeb("lib/staff-runtime/clock/actions.ts");
 const checkoutApprovalsPageSource = readWeb(
-  "lib/employee/checkout-approvals/page.tsx",
+  "lib/staff-runtime/checkout-approvals/page.tsx",
 );
 const checkoutApprovalsClientSource = readWeb(
-  "lib/employee/checkout-approvals/checkout-approvals-client.tsx",
+  "lib/staff-runtime/checkout-approvals/checkout-approvals-client.tsx",
 );
 
 test("consumption task kind remains stable but no longer drives Employee tasks", () => {

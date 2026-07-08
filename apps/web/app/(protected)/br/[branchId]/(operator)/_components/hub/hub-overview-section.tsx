@@ -1,5 +1,5 @@
 import { formatVND } from "@comtammatu/shared/format";
-import { EmployeePanel } from "@lib/employee/components/employee-page";
+import { EmployeePanel } from "@lib/staff-runtime/components/staff-runtime-page";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { messages } from "@lib/messages";
 import { loadAuthState } from "@/_lib/auth";
