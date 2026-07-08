@@ -3,13 +3,15 @@
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { revalidatePath } from "next/cache";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 
 function rpcBranchId(branchId: number | null): number {
   // Supabase generated RPC arg types do not encode nullable BIGINT inputs.
   return branchId as number;
 }
+
+const STAFF_ADMIN_ROLES = MODULE_ACL.staff.allowedRoles;
 
 /* ─── Schemas ─── */
 
@@ -47,7 +49,7 @@ export async function grantPermissionAction(
     };
   }
   const ctx = await getAuthContextWithPermission(
-    ["owner", "branch_manager"],
+    STAFF_ADMIN_ROLES,
     PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
     parsed.data.branch_id,
   );
@@ -79,7 +81,7 @@ export async function revokePermissionAction(
     };
   }
   const ctx = await getAuthContextWithPermission(
-    ["owner", "branch_manager"],
+    STAFF_ADMIN_ROLES,
     PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
     parsed.data.branch_id,
   );
@@ -109,7 +111,7 @@ export async function applyTemplateAction(
     };
   }
   const ctx = await getAuthContextWithPermission(
-    ["owner", "branch_manager"],
+    STAFF_ADMIN_ROLES,
     PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
     parsed.data.branch_id,
   );

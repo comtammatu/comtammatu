@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { messages } from "@lib/messages";
@@ -11,6 +11,8 @@ import { PermissionsClient } from "./permissions-client";
 import { OverviewTab } from "./overview-tab";
 import { HistoryTab } from "./history-tab";
 
+const STAFF_ADMIN_ROLES = MODULE_ACL.staff.allowedRoles;
+
 interface Props {
   params: Promise<{ id: string }>;
 }
@@ -18,7 +20,7 @@ interface Props {
 export default async function StaffPermissionsPage({ params }: Props) {
   const { id } = await params;
   const ctx = await getAuthContextWithPermission(
-    ["owner", "branch_manager"],
+    STAFF_ADMIN_ROLES,
     PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
   );
   if (!ctx) notFound();

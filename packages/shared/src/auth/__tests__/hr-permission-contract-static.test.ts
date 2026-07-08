@@ -67,6 +67,22 @@ test("HR Server Action gates match the route contract", () => {
     staffActions,
     /const MANAGER_ROLES = MODULE_ACL\.staff\.allowedRoles/,
   );
+  assert.match(staffActions, /function validateStaffAssignment\(/);
+  assert.match(staffActions, /function branchManagerCanAssignPosition\(/);
+  assert.match(staffActions, /role === "cashier" \|\|\s*role === "chef"/);
+  assert.match(staffActions, /positionCode === "guard"/);
+  assert.match(staffActions, /positionCode === "cleaner"/);
+  assert.match(staffActions, /positionCode === "waiter"/);
+  assert.match(staffActions, /targetBranchId !== actorBranchId/);
+  assert.match(
+    staffActions,
+    /getAuthContextWithPermissions\(\s*MANAGER_ROLES,\s*POSITION_ASSIGN_PERMISSIONS,\s*effectiveBranchId \?\? null,\s*\)/,
+  );
+  assert.equal(
+    (staffActions.match(/const assignmentError = validateStaffAssignment\(/g) ??
+      []).length,
+    2,
+  );
   assert.match(
     permissionActions,
     /const STAFF_ADMIN_ROLES = MODULE_ACL\.staff\.allowedRoles/,
@@ -77,6 +93,14 @@ test("HR Server Action gates match the route contract", () => {
   );
   assert.doesNotMatch(permissionActions, /\["owner", "branch_manager"\]/);
   assert.doesNotMatch(permissionPage, /\["owner", "branch_manager"\]/);
+  assert.equal(
+    (
+      permissionActions.match(
+        /PERMISSION_KEYS\.STAFF_ASSIGN_PERMISSION,\s*parsed\.data\.branch_id/g,
+      ) ?? []
+    ).length,
+    3,
+  );
 
   assert.match(hrActions, /const HR_ROLES: readonly StaffRole\[\] = \["owner"\]/);
   assert.match(

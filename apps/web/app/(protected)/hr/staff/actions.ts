@@ -8,8 +8,8 @@ import {
   centralSiteBranchKindForRole,
   requiredBranchKindForPositionCode,
   staffRoleFromPositionCode,
+  type StaffRole,
 } from "@comtammatu/shared/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import {
@@ -50,18 +50,35 @@ type StaffActionClient = NonNullable<
   Awaited<ReturnType<typeof getAuthContextWithPermissions>>
 >["supabase"];
 
-/** Max role each actor can assign (hierarchy ceiling) */
-function canAssignRole(
+function branchManagerCanAssignPosition(
+  role: StaffRole,
+  positionCode: string,
+): boolean {
+  return (
+    role === "cashier" ||
+    role === "chef" ||
+    positionCode === "guard" ||
+    positionCode === "cleaner" ||
+    positionCode === "waiter"
+  );
+}
+
+function validateStaffAssignment(
   actorRole: StaffRole,
+  actorBranchId: number | null,
   targetRole: StaffRole,
+  targetPositionCode: string,
+  targetBranchId: number | undefined,
 ): string | null {
-  if (actorRole === "owner") return null; // unrestricted
-  if (actorRole === "branch_manager") {
-    if (!["cashier", "chef"].includes(targetRole))
-      return "Bạn chỉ có thể tạo thu ngân/bếp";
-    return null;
+  if (actorRole === "owner") return null;
+  if (actorRole !== "branch_manager") return "Không có quyền quản lý nhân viên";
+  if (!branchManagerCanAssignPosition(targetRole, targetPositionCode)) {
+    return "Bạn chỉ có thể gán nhân sự vận hành cấp chi nhánh";
   }
-  return "Không có quyền quản lý nhân viên";
+  if (actorBranchId === null || targetBranchId !== actorBranchId) {
+    return "Không có quyền quản lý nhân viên ở chi nhánh khác";
+  }
+  return null;
 }
 
 async function validatePositionSite(
@@ -93,21 +110,41 @@ async function validatePositionSite(
 function mapRpcError(msg: string): string {
   if (msg.includes("target profile not found"))
     return "Nhân viên không tồn tại";
-  if (msg.includes("cannot modify owner"))
+  if (msg.includes("target_profile_not_found_in_tenant"))
+    return "Nhân viên không tồn tại";
+  if (msg.includes("cannot modify owner") || msg.includes("cannot_modify_owner"))
     return "Không có quyền chỉnh sửa chủ sở hữu";
   if (msg.includes("cannot set role above"))
     return "Không có quyền gán vai trò cao hơn";
-  if (msg.includes("target not in your branch"))
+  if (
+    msg.includes("target not in your branch") ||
+    msg.includes("branch_manager_target_not_in_branch")
+  )
     return "Nhân viên không thuộc chi nhánh của bạn";
-  if (msg.includes("cannot modify peer"))
+  if (
+    msg.includes("cannot modify peer") ||
+    msg.includes("branch_manager_cannot_modify_peer")
+  )
     return "Không có quyền chỉnh sửa quản lý cùng cấp";
-  if (msg.includes("can only assign"))
-    return "Bạn chỉ có thể gán vai trò thu ngân/bếp";
-  if (msg.includes("cannot reassign to other branch"))
+  if (
+    msg.includes("can only assign") ||
+    msg.includes("branch_manager_can_only_assign_branch_staff")
+  )
+    return "Bạn chỉ có thể gán nhân sự vận hành cấp chi nhánh";
+  if (
+    msg.includes("cannot reassign to other branch") ||
+    msg.includes("branch_manager_cannot_reassign_branch")
+  )
     return "Không có quyền chuyển nhân viên sang chi nhánh khác";
-  if (msg.includes("operational roles require branch_id"))
+  if (
+    msg.includes("operational roles require branch_id") ||
+    msg.includes("branch_required_for_operational_position")
+  )
     return "Vai trò vận hành phải thuộc một chi nhánh";
-  if (msg.includes("branch_id does not belong"))
+  if (
+    msg.includes("branch_id does not belong") ||
+    msg.includes("branch_not_found_in_tenant")
+  )
     return "Chi nhánh không hợp lệ";
   if (msg.includes("position_site_kind_mismatch"))
     return "Chức vụ này không thuộc loại địa điểm đã chọn.";
@@ -149,16 +186,11 @@ export async function createStaff(
   const ctx = await getAuthContextWithPermissions(
     MANAGER_ROLES,
     POSITION_ASSIGN_PERMISSIONS,
+    effectiveBranchId ?? null,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { claims, supabase } = ctx;
-
-  // Hierarchy ceiling — can't create roles above your level
-  const roleError = canAssignRole(claims.user_role, role);
-  if (roleError) {
-    return { success: false, error: roleError };
-  }
 
   const siteError = await validatePositionSite(
     supabase,
@@ -168,15 +200,14 @@ export async function createStaff(
   );
   if (siteError) return { success: false, error: siteError };
 
-  // Branch managers can only create staff in their own branch
-  if (claims.user_role === "branch_manager") {
-    if (effectiveBranchId !== claims.branch_id) {
-      return {
-        success: false,
-        error: "Không có quyền tạo nhân viên ở chi nhánh khác",
-      };
-    }
-  }
+  const assignmentError = validateStaffAssignment(
+    claims.user_role,
+    claims.branch_id,
+    role,
+    position_code,
+    effectiveBranchId,
+  );
+  if (assignmentError) return { success: false, error: assignmentError };
 
   // Service role client for admin user creation
   const serviceClient = createServiceClient();
@@ -247,16 +278,11 @@ export async function updateStaff(
   const ctx = await getAuthContextWithPermissions(
     MANAGER_ROLES,
     POSITION_ASSIGN_PERMISSIONS,
+    effectiveBranchId ?? null,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-
-  // Hierarchy ceiling — can't assign roles above your level
-  const roleError = canAssignRole(claims.user_role, role);
-  if (roleError) {
-    return { success: false, error: roleError };
-  }
 
   const siteError = await validatePositionSite(
     supabase,
@@ -265,6 +291,15 @@ export async function updateStaff(
     effectiveBranchId,
   );
   if (siteError) return { success: false, error: siteError };
+
+  const assignmentError = validateStaffAssignment(
+    claims.user_role,
+    claims.branch_id,
+    role,
+    position_code,
+    effectiveBranchId,
+  );
+  if (assignmentError) return { success: false, error: assignmentError };
 
   const { error } = await supabase.rpc("admin_update_profile", {
     p_target_id: id,
