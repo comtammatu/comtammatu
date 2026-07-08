@@ -100,7 +100,7 @@ export async function CountAssignmentsPageContent({
     requestedLocationId != null &&
     locations.some((l) => l.id === requestedLocationId)
       ? requestedLocationId
-      : (locations.find((l) => l.kind === "warehouse")?.id ??
+      : (locations.find((l) => l.kind === "kitchen")?.id ??
         locations[0]?.id ??
         null);
 

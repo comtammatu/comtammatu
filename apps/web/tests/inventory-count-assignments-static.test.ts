@@ -19,6 +19,9 @@ const countAssignmentsActionsSource = readWeb(
 const countAssignmentShiftMigrationSource = readWeb(
   "../../supabase/migrations/20260708064356_inventory_count_assignment_shift_scope.sql",
 );
+const countAssignmentKitchenMigrationSource = readWeb(
+  "../../supabase/migrations/20260708191713_count_slips_branch_kitchen.sql",
+);
 
 test("count assignment checkbox click does not toggle the row twice", () => {
   assert.match(
@@ -134,6 +137,39 @@ test("count assignment location picker includes branch warehouse and kitchen", (
     countAssignmentsClientSource,
     /locationOptions\.map\(\(location\) =>/,
     "location Select should render every branch location option",
+  );
+  assert.match(
+    countAssignmentsPageSource,
+    /locations\.find\(\(l\) => l\.kind === "kitchen"\)\?\.id/,
+    "count assignments should default branch counting to Bếp CN when no locationId is provided",
+  );
+});
+
+test("count assignment RPCs normalize branch count slips to kitchen", () => {
+  assert.match(
+    countAssignmentKitchenMigrationSource,
+    /CREATE OR REPLACE FUNCTION public\.set_inventory_count_assignments/,
+    "manager assignment writer should be redefined in the kitchen-location migration",
+  );
+  assert.match(
+    countAssignmentKitchenMigrationSource,
+    /CREATE OR REPLACE FUNCTION public\.submit_inventory_count_slip/,
+    "employee count-slip submitter should be redefined in the kitchen-location migration",
+  );
+  assert.match(
+    countAssignmentKitchenMigrationSource,
+    /v_branch_kind = 'branch' AND v_location_kind <> 'kitchen'[\s\S]*l\.location_kind = 'kitchen'/,
+    "branch count writers should remap non-kitchen location inputs to Bếp CN",
+  );
+  assert.match(
+    countAssignmentKitchenMigrationSource,
+    /INSERT INTO public\.inventory_count_assignments[\s\S]*bk\.kitchen_location_id[\s\S]*UPDATE public\.inventory_count_assignments a[\s\S]*old_loc\.location_kind = 'warehouse'/,
+    "active branch count assignments should be moved off Kho CN and old warehouse rows deactivated",
+  );
+  assert.match(
+    countAssignmentKitchenMigrationSource,
+    /UPDATE public\.inventory_count_slips s[\s\S]*s\.status IN \('submitted', 'needs_changes'\)[\s\S]*SET system_quantity = COALESCE/,
+    "open branch count slips should move to Bếp CN and resnapshot system quantity there",
   );
 });
 
