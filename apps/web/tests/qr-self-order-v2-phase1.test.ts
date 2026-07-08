@@ -103,3 +103,36 @@ test("cart-sheet has FAB, sticky bottom bar, bottom Sheet, and ctaDisabled wirin
   assert.match(cart, /ctaDisabled/);
   assert.match(cart, /ctaDisabledHint/);
 });
+
+test("menu-panel owns search, category tabs, and menu grid after the split", () => {
+  const menu = readWeb("app/q/[token]/self-order/menu-panel.tsx");
+
+  assert.match(menu, /export function MenuPanel/);
+  assert.match(menu, /export function MenuItemGrid/);
+  assert.match(menu, /normalizeSearch/);
+  assert.match(menu, /SELF_ORDER_VI\.searchPlaceholder/);
+  assert.match(menu, /SELF_ORDER_VI\.allCategories/);
+  assert.match(menu, /AppEmptyState/);
+});
+
+test("orchestrator locks CTA while first batch is pending approval and keeps cancel-then-add reachable", () => {
+  const orchestrator = readWeb("app/q/[token]/self-order-client.tsx");
+
+  assert.match(orchestrator, /import \{ StatusPill \} from "\.\/self-order\/status-pill"/);
+  assert.match(orchestrator, /import \{ CartSheet \} from "\.\/self-order\/cart-sheet"/);
+  assert.match(orchestrator, /import \{ OrderSummary \} from "\.\/self-order\/order-summary"/);
+  assert.match(orchestrator, /import \{ MenuPanel \} from "\.\/self-order\/menu-panel"/);
+  assert.match(orchestrator, /import \{ PaymentPanel, type VietQrState \} from "\.\/self-order\/payment-panel"/);
+  assert.match(orchestrator, /import \{ useSnapshotSync \} from "\.\/self-order\/hooks"/);
+
+  assert.match(orchestrator, /ctaHardDisabled = isClosed \|\| isPendingApproval/);
+  assert.match(orchestrator, /if \(cartItems\.length === 0 \|\| isPending \|\| ctaHardDisabled\) return/);
+  assert.match(orchestrator, /activeOrder\?\.paymentStatus === "paid"/);
+  assert.match(orchestrator, /pending_payment_exists/);
+  assert.match(orchestrator, /cancel-pending-payment-and-add/);
+  assert.match(orchestrator, /ctaDisabled=\{ctaHardDisabled\}/);
+  assert.doesNotMatch(
+    orchestrator,
+    /cartItems\.length === 0 \|\| isPending \|\| paymentLocked/,
+  );
+});
