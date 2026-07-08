@@ -3,10 +3,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
-function readWeb(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
-}
-
 function readRepo(path: string): string {
   return readFileSync(join(process.cwd(), "../..", path), "utf8");
 }
@@ -19,6 +15,11 @@ test("snapshot migration returns order.items array", () => {
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.self_order_get_snapshot\(p_token text\)/);
   assert.match(migration, /v_order_items jsonb := NULL/);
   assert.match(migration, /jsonb_agg\([\s\S]*ORDER BY oi\.id\)/);
+  // COALESCE wraps jsonb_agg so empty orders return '[]' instead of null.
+  assert.match(migration, /COALESCE\(/);
+  assert.match(migration, /'\[\]'::jsonb/);
+  // Items subquery must be scoped by tenant.
+  assert.match(migration, /oi\.tenant_id = v_session\.tenant_id/);
   assert.match(migration, /oi\.status <> 'cancelled'/);
   assert.match(migration, /'items', v_order_items/);
   assert.match(migration, /REVOKE ALL ON FUNCTION public\.self_order_get_snapshot\(text\) FROM PUBLIC, anon, authenticated/);
