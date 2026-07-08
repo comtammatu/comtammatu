@@ -57,3 +57,17 @@ test("SELF_ORDER_VI has v2 phase1 status and CTA keys", () => {
   assert.match(messages, /orderedItemsTitle:/);
   assert.match(messages, /orderedItemsShowMore:/);
 });
+
+test("status-pill renders mapped SELF_ORDER_VI labels by session state", () => {
+  const pill = readWeb("app/q/[token]/self-order/status-pill.tsx");
+
+  assert.match(pill, /import \{ Badge, type BadgeProps \} from "@comtammatu\/ui\/components\/badge"/);
+  assert.match(pill, /SELF_ORDER_VI\.statusPendingApproval/);
+  assert.match(pill, /SELF_ORDER_VI\.statusActive/);
+  assert.match(pill, /SELF_ORDER_VI\.statusAwaitingVietQr/);
+  assert.match(pill, /SELF_ORDER_VI\.statusAwaitingCash/);
+  assert.match(pill, /SELF_ORDER_VI\.statusClosed/);
+  assert.match(pill, /variant: "warning"/);
+  assert.match(pill, /variant: "success"/);
+  assert.match(pill, /variant: "info"/);
+});
