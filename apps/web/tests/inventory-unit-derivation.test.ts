@@ -312,6 +312,10 @@ test("conversion input accepts anchor-to-unit entry while storing canonical unit
   assert.equal(displayAnchorFactor(stored, direction), "52");
 });
 
+test("conversion input hides reciprocal rounding drift from stored database factors", () => {
+  assert.equal(displayAnchorFactor("0.019230769", "anchor_to_unit"), "52");
+});
+
 test("conversion input can keep canonical unit-to-anchor entry", () => {
   const direction = "unit_to_anchor";
 
