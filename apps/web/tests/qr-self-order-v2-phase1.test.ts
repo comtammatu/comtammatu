@@ -83,3 +83,23 @@ test("order-summary lists SelfOrderOrderLine items with collapse at 5", () => {
   assert.match(summary, /items\.slice\(0, COLLAPSE_THRESHOLD\)/);
   assert.match(summary, /formatVND/);
 });
+
+test("cart-sheet has FAB, sticky bottom bar, bottom Sheet, and ctaDisabled wiring", () => {
+  const cart = readWeb("app/q/[token]/self-order/cart-sheet.tsx");
+
+  assert.match(cart, /import \{ Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription \} from "@comtammatu\/ui\/components\/sheet"/);
+  // FAB + sticky bar positioned above each other
+  assert.match(cart, /fixed right-3 bottom-24/);
+  assert.match(cart, /fixed inset-x-0 bottom-0/);
+  assert.match(cart, /side="bottom"/);
+  assert.match(cart, /max-h-dvh-95/);
+  assert.match(cart, /max-h-dvh-80/);
+  assert.match(cart, /size="icon-touch"/);
+  assert.match(cart, /size="touch-lg"/);
+  assert.match(cart, /SELF_ORDER_VI\.cartTitle/);
+  assert.match(cart, /SELF_ORDER_VI\.subtotal/);
+  assert.match(cart, /formatVND/);
+  // ctaDisabled must flow into SubmitCta (hard-disable: pending/closed only)
+  assert.match(cart, /ctaDisabled/);
+  assert.match(cart, /ctaDisabledHint/);
+});
