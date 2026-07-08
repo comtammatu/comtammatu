@@ -30,6 +30,13 @@ export const BRANCH_MANAGER_HOME_TILE_SUFFIXES = [
   "/stock/stocktake",
 ] as const;
 
+export const BRANCH_MANAGER_MORE_TILE_SUFFIXES = [
+  "/runner",
+  "/kds",
+  "/stock/production",
+  "/stock/grn",
+] as const;
+
 export function getBranchPrimaryHomeGroup(
   groups: ResolvedOperatorTileGroup[],
 ): ResolvedOperatorTileGroup | null {
@@ -97,7 +104,18 @@ export function getOperatorMoreGroups(
   return groups
     .map((group) => ({
       ...group,
-      tiles: group.tiles.filter((tile) => !homeTileHrefs.has(tile.href)),
+      tiles: group.tiles.filter((tile) => {
+        if (homeTileHrefs.has(tile.href)) return false;
+        if (
+          branchKind === "branch" &&
+          (role === "branch_manager" || role === "owner")
+        ) {
+          return BRANCH_MANAGER_MORE_TILE_SUFFIXES.some((suffix) =>
+            tile.href.endsWith(suffix),
+          );
+        }
+        return true;
+      }),
     }))
     .filter((group) => group.tiles.length > 0);
 }

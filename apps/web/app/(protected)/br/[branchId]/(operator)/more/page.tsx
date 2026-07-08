@@ -1,8 +1,5 @@
-import { notFound } from "next/navigation";
-import {
-  resolveOperatorTiles,
-  type BranchKind,
-} from "@comtammatu/shared/auth";
+import { notFound, redirect } from "next/navigation";
+import { resolveOperatorTiles, type BranchKind } from "@comtammatu/shared/auth";
 import {
   EmployeeActionSection,
   EmployeePage,
@@ -29,9 +26,18 @@ export default async function OperatorMorePage({
   if (!context) notFound();
 
   const branchKind = context.branch.branch_kind as BranchKind;
+  if (
+    branchKind === "branch" &&
+    claims.user_role !== "branch_manager" &&
+    claims.user_role !== "owner"
+  ) {
+    redirect(`/br/${context.branchId}/profile`);
+  }
+
   const groups = getOperatorMoreGroups(
     resolveOperatorTiles(claims.user_role, context.branchId, branchKind),
     branchKind,
+    claims.user_role,
   );
   const copy = messages.settings.branch;
 
