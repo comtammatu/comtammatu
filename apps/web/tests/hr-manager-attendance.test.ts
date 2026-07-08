@@ -23,6 +23,10 @@ const hrActionsSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/actions.ts"),
   "utf8",
 );
+const leaveRequestActionsSource = readFileSync(
+  join(process.cwd(), "app/(protected)/hr/leave-request-actions.ts"),
+  "utf8",
+);
 
 test("HR attendance is a manager read surface for clock in and clock out", () => {
   assert.match(
@@ -140,4 +144,32 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
       `HR actions must not expose ${forbidden}`,
     );
   }
+});
+
+test("branch manager HR reads survive owner-only personnel RLS", () => {
+  assert.match(
+    hrActionsSource,
+    /const attendanceClient =\s*claims\.user_role === "branch_manager" \? createServiceClient\(\) : supabase;/,
+    "Branch manager attendance reads should use a service client after action-level branch authorization",
+  );
+  assert.match(
+    hrActionsSource,
+    /await attendanceClient\s*\.from\("attendance_records"\)[\s\S]*employees \(/,
+    "Attendance reads embed employees through the branch-gated service client",
+  );
+  assert.match(
+    leaveRequestActionsSource,
+    /import \{ createServiceClient \} from "@comtammatu\/database\/supabase\/service";/,
+    "Leave review actions should have an explicit service client for branch-manager reads",
+  );
+  assert.match(
+    leaveRequestActionsSource,
+    /const leaveClient =\s*claims\.user_role === "branch_manager" \? createServiceClient\(\) : supabase;/,
+    "Branch manager leave reads should use a service client after action-level branch authorization",
+  );
+  assert.match(
+    leaveRequestActionsSource,
+    /await leaveClient\s*\.from\("leave_requests"\)[\s\S]*employees \(/,
+    "Leave review reads embed employees through the branch-gated service client",
+  );
 });

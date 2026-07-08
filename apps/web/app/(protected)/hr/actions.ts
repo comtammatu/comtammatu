@@ -929,7 +929,10 @@ export const fetchAttendance = withAction(
     const [year, mon] = data.month.split("-").map(Number);
     const endDate = getVNMonthEndDateString(year!, mon!);
 
-    const { data: result, error } = await supabase
+    const attendanceClient =
+      claims.user_role === "branch_manager" ? createServiceClient() : supabase;
+
+    const { data: result, error } = await attendanceClient
       .from("attendance_records")
       .select(
         `
@@ -1169,7 +1172,10 @@ export const fetchAttendanceSummary = withAction(
     const [year, mon] = data.month.split("-").map(Number);
     const endDate = getVNMonthEndDateString(year!, mon!);
 
-    const { data: result, error } = await supabase
+    const attendanceClient =
+      claims.user_role === "branch_manager" ? createServiceClient() : supabase;
+
+    const { data: result, error } = await attendanceClient
       .from("attendance_records")
       .select(
         `

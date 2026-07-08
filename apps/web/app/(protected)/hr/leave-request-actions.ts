@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
@@ -44,7 +45,10 @@ export const fetchApprovedLeaveMonth = withAction(
     const startDate = `${data.month}-01`;
     const endDate = getVNMonthEndDateString(year!, mon!);
 
-    const { data: result, error } = await supabase
+    const leaveClient =
+      claims.user_role === "branch_manager" ? createServiceClient() : supabase;
+
+    const { data: result, error } = await leaveClient
       .from("leave_requests")
       .select(
         `
@@ -90,7 +94,10 @@ export const fetchLeaveRequests = withAction(
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
-    const { data: result, error } = await supabase
+    const leaveClient =
+      claims.user_role === "branch_manager" ? createServiceClient() : supabase;
+
+    const { data: result, error } = await leaveClient
       .from("leave_requests")
       .select(
         `
@@ -154,13 +161,13 @@ export const fetchLeaveRequests = withAction(
       { data: entitlements, error: entitlementError },
       { data: approvedAnnualLeaves, error: approvedAnnualError },
     ] = await Promise.all([
-      supabase
+      leaveClient
         .from("annual_leave_entitlements")
         .select("employee_id, year, entitlement_days")
         .eq("tenant_id", claims.tenant_id)
         .in("employee_id", employeeIds)
         .in("year", years),
-      supabase
+      leaveClient
         .from("leave_requests")
         .select("employee_id, start_date, end_date")
         .eq("tenant_id", claims.tenant_id)
