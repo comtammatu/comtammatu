@@ -208,7 +208,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   },
   {
     id: "operator-shift",
-    label: MODULE_ACL.employee.label,
+    label: APP_COPY_VI.employeePortal,
     surface: "branch_operation",
     entryPath: "/br/[branchId]/shift",
     matchPrefixes: ["/br/[branchId]/shift"],
@@ -220,7 +220,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   },
   {
     id: "operator-profile",
-    label: MODULE_ACL.employee.label,
+    label: APP_COPY_VI.employeePortal,
     surface: "branch_operation",
     entryPath: "/br/[branchId]/profile",
     matchPrefixes: ["/br/[branchId]/profile"],

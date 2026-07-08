@@ -1,4 +1,4 @@
-import { ADMIN_ROLES, STAFF_ROLES, type StaffRole } from "./types";
+import { STAFF_ROLES, type StaffRole } from "./types";
 import { getModuleLabelVi } from "../labels";
 
 /**
@@ -27,7 +27,6 @@ export type ModuleKey =
   | "branch_menu_limits"
   | "branch_pos_sessions"
   | "branch_team"
-  | "employee"
   | "employee_checkout_approvals"
   | "employee_leave_approvals"
   | "notifications";
@@ -37,10 +36,6 @@ interface ModuleAcl {
   allowedRoles: readonly StaffRole[];
   label: string;
 }
-
-const EMPLOYEE_PORTAL_ROLES: readonly StaffRole[] = STAFF_ROLES.filter(
-  (role) => !ADMIN_ROLES.includes(role),
-);
 
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   menu: {
@@ -179,11 +174,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/team",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_team"),
-  },
-  employee: {
-    path: "/br/*/shift",
-    allowedRoles: EMPLOYEE_PORTAL_ROLES,
-    label: getModuleLabelVi("employee"),
   },
   employee_checkout_approvals: {
     path: "/br/*/shift/checkout-approvals",

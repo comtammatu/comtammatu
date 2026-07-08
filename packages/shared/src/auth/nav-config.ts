@@ -133,14 +133,14 @@ export const OPERATOR_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] = [
 
 export const OPERATOR_TILE_ITEMS = [
   {
-    moduleKey: "employee",
+    moduleKey: "operator_home",
     icon: "Clock",
     group: "my_shift",
     hrefTemplate: "/br/{branchId}/shift/clock",
     label: "Chấm công",
   },
   {
-    moduleKey: "employee",
+    moduleKey: "operator_home",
     icon: "ListChecks",
     group: "my_shift",
     hrefTemplate: "/br/{branchId}/shift",
