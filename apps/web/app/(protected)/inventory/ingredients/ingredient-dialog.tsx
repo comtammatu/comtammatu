@@ -2,15 +2,20 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: ingredient units table layout uses inline headers and helper labels */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Controller,
   useFieldArray,
   useWatch,
   type Control,
   type UseFormReturn,
+  type UseFormSetValue,
 } from "react-hook-form";
-import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
+import {
+  ArrowLeftRight as IconArrowLeftRight,
+  Plus as IconPlus,
+  Trash as IconTrash,
+} from "lucide-react";
 import { z } from "zod";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
@@ -37,6 +42,14 @@ import type { CategoryOption, IngredientRow, UnitOption } from "../_lib/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "../_lib/constants";
 import { parseOptionalNumber } from "../_lib/format";
 import {
+  DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION,
+  displayAnchorFactor,
+  formatConversionFactor,
+  preferredConversionInputDirection,
+  toStoredAnchorFactor,
+  type UnitConversionInputDirection,
+} from "../_lib/unit-conversion-input";
+import {
   deriveToBaseFactor,
   UnitDerivationError,
   type DerivationRow,
@@ -50,12 +63,7 @@ const dialogCopy = messages.inventory.ingredients.dialog;
 
 const NO_CATEGORY = "none";
 const NO_ANCHOR = "";
-
-// Conversion factors are not money; format without a locale to keep the VND
-// SSoT formatter reserved for currency. Trims trailing zeros to 6 places.
-function formatFactor(value: number): string {
-  return Number(value.toFixed(6)).toString();
-}
+const NEW_ROW_INPUT_DIRECTION: UnitConversionInputDirection = "anchor_to_unit";
 
 const unitRowSchema = z.object({
   unit_id: z.string().trim().min(1, { error: copy.units.selectUnit }),
@@ -72,6 +80,7 @@ const unitRowSchema = z.object({
     ),
   anchor_unit_id: z.string(),
   anchor_factor: z.string(),
+  anchor_input_direction: z.enum(["unit_to_anchor", "anchor_to_unit"]),
   is_base: z.boolean(),
 });
 
@@ -116,16 +125,18 @@ function makeBaseRow(unitId = ""): UnitFormRow {
     to_base_factor: "1",
     anchor_unit_id: NO_ANCHOR,
     anchor_factor: "",
+    anchor_input_direction: DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION,
     is_base: true,
   };
 }
 
-function makeSecondaryRow(): UnitFormRow {
+function makeSecondaryRow(anchorUnitId = NO_ANCHOR): UnitFormRow {
   return {
     unit_id: "",
     to_base_factor: "1",
-    anchor_unit_id: NO_ANCHOR,
+    anchor_unit_id: anchorUnitId,
     anchor_factor: "",
+    anchor_input_direction: NEW_ROW_INPUT_DIRECTION,
     is_base: false,
   };
 }
@@ -141,6 +152,9 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
           anchor_unit_id:
             u.anchor_unit_id != null ? String(u.anchor_unit_id) : NO_ANCHOR,
           anchor_factor: u.anchor_factor != null ? String(u.anchor_factor) : "",
+          anchor_input_direction: preferredConversionInputDirection(
+            u.anchor_factor != null ? String(u.anchor_factor) : "",
+          ),
           is_base: u.is_base,
         }))
     : [makeBaseRow()];
@@ -246,8 +260,9 @@ function UnitsField({
     name: "units",
   });
 
-  const watchedRows =
-    useWatch({ control: form.control, name: "units" }) ?? [];
+  const watchedRows = useWatch({ control: form.control, name: "units" }) ?? [];
+  const baseUnitId =
+    watchedRows.find((row) => row.is_base && row.unit_id)?.unit_id ?? NO_ANCHOR;
 
   function setBase(targetIndex: number) {
     fields.forEach((_, index) => {
@@ -279,7 +294,7 @@ function UnitsField({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => append(makeSecondaryRow())}
+          onClick={() => append(makeSecondaryRow(baseUnitId))}
         >
           <IconPlus className="size-4" />
           {copy.units.add}
@@ -289,7 +304,7 @@ function UnitsField({
       <div className="overflow-hidden rounded-lg border">
         <div className="hidden grid-cols-12 items-center gap-3 border-b bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid">
           <div className="col-span-3">{copy.units.colUnit}</div>
-          <div className="col-span-6">Hệ số quy đổi</div>
+          <div className="col-span-6">Quy đổi</div>
           <div className="text-center col-span-2">{copy.units.colBase}</div>
           <div className="col-span-1" />
         </div>
@@ -300,6 +315,7 @@ function UnitsField({
               key={row.id}
               control={form.control}
               index={index}
+              setValue={form.setValue}
               unitOptions={unitOptions}
               watchedRows={watchedRows}
               onSetBase={() => setBase(index)}
@@ -323,6 +339,7 @@ function UnitsField({
 function UnitRowCells({
   control,
   index,
+  setValue,
   unitOptions,
   watchedRows,
   onSetBase,
@@ -331,6 +348,7 @@ function UnitRowCells({
 }: {
   control: Control<IngredientFormValues>;
   index: number;
+  setValue: UseFormSetValue<IngredientFormValues>;
   unitOptions: UnitOption[];
   watchedRows: UnitFormRow[];
   onSetBase: () => void;
@@ -339,6 +357,11 @@ function UnitRowCells({
 }) {
   const isBase = useWatch({ control, name: `units.${index}.is_base` }) ?? false;
   const unitId = useWatch({ control, name: `units.${index}.unit_id` }) ?? "";
+  const anchorUnitId =
+    useWatch({ control, name: `units.${index}.anchor_unit_id` }) ?? NO_ANCHOR;
+  const inputDirection =
+    useWatch({ control, name: `units.${index}.anchor_input_direction` }) ??
+    DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION;
   const canRemove = rowCount > 1 && !isBase;
 
   const selectedUnit = useMemo(
@@ -346,7 +369,10 @@ function UnitRowCells({
     [unitOptions, unitId],
   );
 
-  const baseRow = useMemo(() => watchedRows.find((r) => r.is_base), [watchedRows]);
+  const baseRow = useMemo(
+    () => watchedRows.find((r) => r.is_base),
+    [watchedRows],
+  );
   const baseUnit = useMemo(() => {
     if (!baseRow?.unit_id) return null;
     return unitOptions.find((u) => String(u.id) === baseRow.unit_id) ?? null;
@@ -356,7 +382,24 @@ function UnitRowCells({
   const isStandard = selectedUnit?.is_standard && isBaseStandard;
   // A row is "packaging" if a non-standard unit is selected, OR if a standard unit
   // is selected but the base unit is non-standard (so it needs manual anchoring).
-  const isPackaging = selectedUnit != null && (!selectedUnit.is_standard || !isBaseStandard);
+  const isPackaging =
+    selectedUnit != null && (!selectedUnit.is_standard || !isBaseStandard);
+  const usesBaseAnchor =
+    baseUnit != null &&
+    (anchorUnitId === NO_ANCHOR || anchorUnitId === String(baseUnit.id));
+  const conversionInputDirection = usesBaseAnchor
+    ? inputDirection
+    : DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION;
+  const enterAnchorToUnit = conversionInputDirection === "anchor_to_unit";
+
+  useEffect(() => {
+    if (!isPackaging || isBase || !baseUnit || anchorUnitId !== NO_ANCHOR) {
+      return;
+    }
+    setValue(`units.${index}.anchor_unit_id`, String(baseUnit.id), {
+      shouldValidate: true,
+    });
+  }, [anchorUnitId, baseUnit, index, isBase, isPackaging, setValue]);
 
   // Anchor targets: every OTHER unit currently on this ingredient.
   const anchorOptions = useMemo(() => {
@@ -379,7 +422,7 @@ function UnitRowCells({
     );
     const baseUnit =
       baseUnitId != null
-        ? unitOptions.find((u) => u.id === baseUnitId) ?? null
+        ? (unitOptions.find((u) => u.id === baseUnitId) ?? null)
         : null;
     if (baseUnitId == null || !baseUnit) return { ok: false as const };
 
@@ -395,10 +438,10 @@ function UnitRowCells({
       );
       return {
         ok: true as const,
-        text: `${copy.units.previewPrefix(selectedUnit.code)} ${copy.units.previewValue(
-          formatFactor(factor),
-          baseUnit.code,
-        )}`,
+        text: copy.units.previewValue(
+          formatConversionFactor(factor),
+          baseUnit.name,
+        ),
       };
     } catch (error) {
       if (error instanceof UnitDerivationError) return { ok: false as const };
@@ -417,7 +460,10 @@ function UnitRowCells({
             render={({ field, fieldState }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger
-                  className={cn("h-9 w-full", fieldState.error && "border-destructive")}
+                  className={cn(
+                    "h-9 w-full",
+                    fieldState.error && "border-destructive",
+                  )}
                   aria-invalid={!!fieldState.error}
                   onBlur={field.onBlur}
                   ref={field.ref}
@@ -443,7 +489,7 @@ function UnitRowCells({
           size="icon"
           onClick={onRemove}
           disabled={!canRemove}
-          aria-label={copy.units.add}
+          aria-label={`${ACTIONS_VI.remove} ${copy.units.colUnit}`}
           className="h-9 w-9 md:hidden flex-shrink-0"
         >
           <IconTrash className="size-4 text-muted-foreground" />
@@ -460,13 +506,27 @@ function UnitRowCells({
           </div>
         ) : isPackaging ? (
           <div className="flex flex-wrap items-center gap-2">
+            <span className="whitespace-nowrap text-sm text-muted-foreground">
+              {copy.units.previewPrefix(
+                enterAnchorToUnit && baseUnit
+                  ? baseUnit.name
+                  : selectedUnit.name,
+              )}
+            </span>
             <Controller
               control={control}
               name={`units.${index}.anchor_factor`}
               render={({ field, fieldState }) => (
                 <FormattedNumberInput
-                  value={field.value ?? ""}
-                  onValueChange={field.onChange}
+                  value={displayAnchorFactor(
+                    field.value ?? "",
+                    conversionInputDirection,
+                  )}
+                  onValueChange={(value) =>
+                    field.onChange(
+                      toStoredAnchorFactor(value, conversionInputDirection),
+                    )
+                  }
                   onBlur={field.onBlur}
                   ref={field.ref}
                   name={field.name}
@@ -480,45 +540,70 @@ function UnitRowCells({
                 />
               )}
             />
-            <Controller
-              control={control}
-              name={`units.${index}.anchor_unit_id`}
-              render={({ field, fieldState }) => (
-                <Select
-                  value={field.value || undefined}
-                  onValueChange={field.onChange}
-                >
-                  <SelectTrigger
-                    className={cn(
-                      "h-9 w-28 flex-shrink-0",
-                      fieldState.error && "border-destructive",
-                    )}
-                    aria-invalid={!!fieldState.error}
-                    onBlur={field.onBlur}
-                    ref={field.ref}
-                    aria-label={copy.units.colAnchor}
-                  >
-                    <SelectValue placeholder={copy.units.anchorPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {anchorOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {preview?.ok ? (
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {preview.text}
+            {usesBaseAnchor && baseUnit ? (
+              <span className="whitespace-nowrap text-sm font-medium">
+                {enterAnchorToUnit ? selectedUnit.name : baseUnit.name}
               </span>
             ) : (
+              <Controller
+                control={control}
+                name={`units.${index}.anchor_unit_id`}
+                render={({ field, fieldState }) => (
+                  <Select
+                    value={field.value || undefined}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger
+                      className={cn(
+                        "h-9 w-28 flex-shrink-0",
+                        fieldState.error && "border-destructive",
+                      )}
+                      aria-invalid={!!fieldState.error}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      aria-label={copy.units.colAnchor}
+                    >
+                      <SelectValue placeholder={copy.units.anchorPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {anchorOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            )}
+            {usesBaseAnchor && baseUnit && selectedUnit ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                title="Đổi chiều quy đổi"
+                aria-label="Đổi chiều quy đổi"
+                className="h-9 w-9 flex-shrink-0"
+                onClick={() =>
+                  setValue(
+                    `units.${index}.anchor_input_direction`,
+                    enterAnchorToUnit ? "unit_to_anchor" : "anchor_to_unit",
+                    { shouldDirty: true },
+                  )
+                }
+              >
+                <IconArrowLeftRight className="size-4 text-muted-foreground" />
+              </Button>
+            ) : null}
+            {!usesBaseAnchor && preview?.ok ? (
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {copy.units.colBase}: {preview.text}
+              </span>
+            ) : !usesBaseAnchor ? (
               <span className="text-xs text-destructive whitespace-nowrap">
                 {copy.units.previewInvalid}
               </span>
-            )}
+            ) : null}
           </div>
         ) : isStandard ? (
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground h-9">
@@ -564,7 +649,7 @@ function UnitRowCells({
           size="icon"
           onClick={onRemove}
           disabled={!canRemove}
-          aria-label={copy.units.add}
+          aria-label={`${ACTIONS_VI.remove} ${copy.units.colUnit}`}
           className="h-9 w-9"
         >
           <IconTrash className="size-4 text-muted-foreground" />
@@ -633,7 +718,8 @@ export function IngredientDialog({
         const baseUnit = baseUnitId != null ? unitsById.get(baseUnitId) : null;
         const isBaseStandard = baseUnit?.is_standard ?? false;
         const isPackaging =
-          !u.is_base && (unitsById.get(unitId)?.is_standard === false || !isBaseStandard);
+          !u.is_base &&
+          (unitsById.get(unitId)?.is_standard === false || !isBaseStandard);
         return {
           unit_id: unitId,
           to_base_factor: toBase,
@@ -760,22 +846,18 @@ export function IngredientDialog({
               control={form.control}
               name="min_stock_level"
               label={dialogCopy.minStockLabel}
-              maxFractionDigits={2}
             />
             <QuantityField
               control={form.control}
               name="max_stock_level"
               label={dialogCopy.maxStockLabel}
-              maxFractionDigits={2}
             />
             <QuantityField
               control={form.control}
               name="reorder_point"
               label={dialogCopy.reorderPointLabel}
-              maxFractionDigits={2}
             />
           </div>
-
         </>
       )}
     </FormDialog>

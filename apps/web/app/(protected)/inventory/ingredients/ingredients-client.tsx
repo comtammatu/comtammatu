@@ -57,6 +57,10 @@ import {
 import { IngredientDialog } from "./ingredient-dialog";
 import type { CategoryOption, IngredientRow, UnitOption } from "../_lib/types";
 import { IngredientImportExportMenu } from "./import-export-menu";
+import {
+  getDisplayReferenceCost,
+  type ReferenceCost,
+} from "../_lib/reference-cost";
 
 import {
   ACTIONS_VI,
@@ -134,12 +138,17 @@ function unitsSummary(item: IngredientRow): string {
     .join(" · ");
 }
 
+function formatReferenceCost(cost: ReferenceCost): string {
+  const unitSuffix = cost.unit ? `/${cost.unit}` : "";
+  return `${formatVND(cost.value)}${unitSuffix}`;
+}
+
 function ThresholdBadges({ item }: { item: IngredientRow }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5">
       <Badge variant="destructive">Min {item.min_stock_level ?? 0}</Badge>
-      <Badge variant="secondary">Max {item.max_stock_level ?? 0}</Badge>
       <Badge variant="success">Re {item.reorder_point ?? 0}</Badge>
+      <Badge variant="secondary">Max {item.max_stock_level ?? 0}</Badge>
     </div>
   );
 }
@@ -158,6 +167,7 @@ function IngredientMobileCard({
   onEdit: (item: IngredientRow) => void;
 }) {
   const category = categoryLabel(item);
+  const referenceCost = getDisplayReferenceCost(item);
   return (
     <InteractiveCard
       minHeight="tap"
@@ -166,42 +176,55 @@ function IngredientMobileCard({
       <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-1">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate font-semibold">{item.name}</p>
-            {category ? (
-              <Badge
-                className={cn("text-xs", categoryToneClass(category, toneMap))}
-              >
-                {category}
-              </Badge>
-            ) : null}
-            <Badge variant="secondary" className="text-xs">
-              {itemKindLabel(item)}
-            </Badge>
+            <p className="min-w-0 truncate font-semibold">{item.name}</p>
             <StatusBadge
               domain="inventory"
               value={item.is_active ? "active" : "suspended"}
               size="sm"
             />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {item.sku ?? "—"} &middot; {unitsSummary(item)}
+          <p className="mt-1 font-mono text-xs text-muted-foreground">
+            {item.sku ?? "—"}
           </p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <Badge
+              className={cn("text-xs", categoryToneClass(category, toneMap))}
+            >
+              {category ?? ingredientFormCopy.category.none}
+            </Badge>
+            <Badge variant="secondary" className="text-xs">
+              {itemKindLabel(item)}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              {storageLabel(item.storage_type)}
+            </span>
+          </div>
         </div>
       </div>
-      <div className="px-4 py-1">
-        <ThresholdBadges item={item} />
+      <div className="flex flex-col gap-2 px-4 py-2 text-sm">
+        <div>
+          <p className="text-xs text-muted-foreground">{FORM_VI.unit}</p>
+          <p className="line-clamp-2 font-medium">{unitsSummary(item)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">
+            {ingredientListCopy.colThresholds}
+          </p>
+          <ThresholdBadges item={item} />
+        </div>
       </div>
       <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-1">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span>{storageLabel(item.storage_type)}</span>
-          {item.unit_cost != null ? (
-            <span className="font-mono">{formatVND(item.unit_cost)}</span>
+          {referenceCost ? (
+            <span className="font-mono">
+              {formatReferenceCost(referenceCost)}
+            </span>
           ) : null}
         </div>
         <div className="flex items-center gap-1">
           <Button
             type="button"
-            size="sm"
+            size="icon-touch"
             variant="ghost"
             onClick={() => onToggleActive(item)}
             aria-label={
@@ -219,13 +242,13 @@ function IngredientMobileCard({
           </Button>
           <Button
             type="button"
-            size="sm"
+            size="touch"
             variant="ghost"
             onClick={() => onEdit(item)}
             aria-label={ingredientListCopy.editAria(item.name)}
           >
-            <IconPencil className="size-4" />
-            <span className="ml-1">{ACTIONS_VI.edit}</span>
+            <IconPencil data-icon="inline-start" />
+            {ACTIONS_VI.edit}
           </Button>
         </div>
       </div>
@@ -261,8 +284,8 @@ export function IngredientsClient({
       .map((r) => r.updated_at)
       .filter((t): t is string => !!t);
     if (timestamps.length > 0) {
-      lastUpdatedAtRef.current = timestamps.reduce((latest, current) => 
-        new Date(current) > new Date(latest) ? current : latest
+      lastUpdatedAtRef.current = timestamps.reduce((latest, current) =>
+        new Date(current) > new Date(latest) ? current : latest,
       );
     }
   }
@@ -307,9 +330,27 @@ export function IngredientsClient({
     return result;
   }, [rows, activeFilter, category, itemKind, preservation, searchQuery]);
 
+  const hasActiveFilters =
+    searchQuery.trim() !== "" ||
+    category !== "all" ||
+    itemKind !== allItemKindsValue ||
+    preservation !== "all" ||
+    activeFilter !== "active";
+
+  function clearFilters() {
+    setSearchQuery("");
+    setCategory("all");
+    setItemKind(allItemKindsValue);
+    setPreservation("all");
+    setActiveFilter("active");
+  }
+
   async function reload() {
     try {
-      const response = await fetchIngredients(2000, lastUpdatedAtRef.current ?? undefined);
+      const response = await fetchIngredients(
+        2000,
+        lastUpdatedAtRef.current ?? undefined,
+      );
       if (response.success) {
         const delta = (response.data ?? []) as IngredientRow[];
         if (delta.length > 0) {
@@ -329,9 +370,10 @@ export function IngredientsClient({
             .map((r) => r.updated_at)
             .filter((t): t is string => !!t);
           if (timestamps.length > 0) {
-            lastUpdatedAtRef.current = timestamps.reduce((latest, current) => 
-              new Date(current) > new Date(latest) ? current : latest,
-              lastUpdatedAtRef.current ?? timestamps[0]!
+            lastUpdatedAtRef.current = timestamps.reduce(
+              (latest, current) =>
+                new Date(current) > new Date(latest) ? current : latest,
+              lastUpdatedAtRef.current ?? timestamps[0]!,
             );
           }
         }
@@ -374,149 +416,183 @@ export function IngredientsClient({
   }
 
   const filterBar = (
-    <AppToolbar>
-      <InputGroup className="h-10 flex-1">
-        <InputGroupAddon>
-          <IconSearch />
-        </InputGroupAddon>
-        <InputGroupInput
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder={ingredientListCopy.searchPlaceholder}
-        />
-      </InputGroup>
-
-      <Select value={category} onValueChange={setCategory}>
-        <SelectTrigger className="w-40">
-          <SelectValue placeholder={ingredientFormCopy.category.all} />
-        </SelectTrigger>
-        <SelectContent>
-          {categoryFilterOptions.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={itemKind} onValueChange={setItemKind}>
-        <SelectTrigger className="w-40">
-          <SelectValue
-            placeholder={messages.inventory.ingredients.dialog.itemKindLabel}
+    <AppToolbar
+      search={
+        <InputGroup className="h-10 min-w-0 flex-1 sm:min-w-72">
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            type="search"
+            name="ingredient-search"
+            inputMode="search"
+            autoComplete="off"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder={ingredientListCopy.searchPlaceholder}
           />
-        </SelectTrigger>
-        <SelectContent>
-          {itemKindOptions.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        </InputGroup>
+      }
+      filters={
+        <>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="w-36 sm:w-40">
+              <SelectValue placeholder={ingredientFormCopy.category.all} />
+            </SelectTrigger>
+            <SelectContent>
+              {categoryFilterOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      <Select value={preservation} onValueChange={setPreservation}>
-        <SelectTrigger className="w-40">
-          <SelectValue placeholder={ingredientListCopy.preservationAll} />
-        </SelectTrigger>
-        <SelectContent>
-          {preservationOptions.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <Select value={itemKind} onValueChange={setItemKind}>
+            <SelectTrigger className="w-36 sm:w-40">
+              <SelectValue
+                placeholder={
+                  messages.inventory.ingredients.dialog.itemKindLabel
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {itemKindOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      <Select
-        value={activeFilter}
-        onValueChange={(value) => setActiveFilter(value as "active" | "all")}
-      >
-        <SelectTrigger className="w-40">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {activeOptions.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <Select value={preservation} onValueChange={setPreservation}>
+            <SelectTrigger className="w-36 sm:w-40">
+              <SelectValue placeholder={ingredientListCopy.preservationAll} />
+            </SelectTrigger>
+            <SelectContent>
+              {preservationOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      <Badge variant="outline">
-        {ingredientListCopy.countSummary(filtered.length, rows.length)}
-      </Badge>
-    </AppToolbar>
+          <Select
+            value={activeFilter}
+            onValueChange={(value) =>
+              setActiveFilter(value as "active" | "all")
+            }
+          >
+            <SelectTrigger className="w-36 sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {activeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </>
+      }
+      reset={
+        <>
+          <Badge variant="outline">
+            {ingredientListCopy.countSummary(filtered.length, rows.length)}
+          </Badge>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+            >
+              {ACTIONS_VI.clearFilters}
+            </Button>
+          ) : null}
+        </>
+      }
+    />
   );
 
   const columns: DataTableColumn<IngredientRow>[] = [
     {
       key: "name",
       header: PRODUCT_VI.rawIngredient,
-      className: "min-w-52",
-      render: (item) => {
-        const category = categoryLabel(item);
-        return (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold">{item.name}</p>
-              {category ? (
-                <Badge className={categoryToneClass(category, toneMap)}>
-                  {category}
-                </Badge>
-              ) : null}
-              <Badge variant="secondary">{itemKindLabel(item)}</Badge>
-            </div>
-            {item.sku ? (
-              <span className="font-mono text-xs text-muted-foreground">
-                {item.sku}
-              </span>
-            ) : null}
-          </div>
-        );
-      },
-    },
-    {
-      key: "unit",
-      header: `${FORM_VI.unit} & ${ingredientListCopy.colStorage}`,
-      className: "min-w-44",
+      className: "min-w-56",
       render: (item) => (
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-foreground">
-            {unitsSummary(item)}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {storageLabel(item.storage_type)}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: "unit_cost",
-      header: ingredientListCopy.colReferenceCost,
-      className: "min-w-28 text-right",
-      render: (item) => (
-        <span className="font-mono">
-          {item.unit_cost != null ? formatVND(item.unit_cost) : "—"}
-        </span>
-      ),
-    },
-    {
-      key: "status",
-      header: `${FORM_VI.status} & ${ingredientListCopy.colThresholds}`,
-      className: "min-w-44",
-      render: (item) => (
-        <div className="flex flex-col gap-1.5">
-          <div>
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="min-w-0 truncate font-semibold">{item.name}</p>
             <StatusBadge
               domain="inventory"
               value={item.is_active ? "active" : "suspended"}
               size="sm"
             />
           </div>
+          <span className="font-mono text-xs text-muted-foreground">
+            {item.sku ?? "—"}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "classification",
+      header: messages.inventory.stock.table.kind,
+      className: "min-w-40",
+      render: (item) => {
+        const category = categoryLabel(item);
+        return (
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-wrap gap-1.5">
+              <Badge className={categoryToneClass(category, toneMap)}>
+                {category ?? ingredientFormCopy.category.none}
+              </Badge>
+              <Badge variant="secondary">{itemKindLabel(item)}</Badge>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {storageLabel(item.storage_type)}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "unit",
+      header: FORM_VI.unit,
+      className: "min-w-44",
+      render: (item) => (
+        <div className="flex flex-col gap-1">
+          <span className="line-clamp-2 text-sm font-medium text-foreground">
+            {unitsSummary(item)}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "thresholds",
+      header: ingredientListCopy.colThresholds,
+      className: "min-w-40",
+      render: (item) => (
+        <div className="flex flex-col gap-1">
           <ThresholdBadges item={item} />
         </div>
       ),
+    },
+    {
+      key: "unit_cost",
+      header: ingredientListCopy.colReferenceCost,
+      className: "min-w-36 text-right",
+      render: (item) => {
+        const referenceCost = getDisplayReferenceCost(item);
+        return (
+          <span className="font-mono tabular-nums">
+            {referenceCost ? formatReferenceCost(referenceCost) : "—"}
+          </span>
+        );
+      },
     },
     {
       key: "actions",

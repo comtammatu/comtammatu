@@ -10,6 +10,9 @@ function readWeb(path: string): string {
 const ingredientsClientSource = readWeb(
   "app/(protected)/inventory/ingredients/ingredients-client.tsx",
 );
+const ingredientDialogSource = readWeb(
+  "app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
+);
 const stockMobileGridSource = readWeb(
   "app/(protected)/inventory/stock/stock-mobile-grid.tsx",
 );
@@ -20,6 +23,46 @@ test("inventory ingredients list exposes item kind visibly and as a filter", () 
   assert.match(ingredientsClientSource, /const \[itemKind, setItemKind\]/);
   assert.match(ingredientsClientSource, /item\.item_kind === itemKind/);
   assert.match(ingredientsClientSource, /itemKindLabel\(item\)/);
+});
+
+test("inventory ingredients table separates classification and thresholds columns", () => {
+  assert.match(ingredientsClientSource, /key: "classification"/);
+  assert.match(
+    ingredientsClientSource,
+    /messages\.inventory\.stock\.table\.kind/,
+  );
+  assert.match(ingredientsClientSource, /key: "thresholds"/);
+  assert.match(ingredientsClientSource, /key: "unit_cost"/);
+});
+
+test("inventory ingredients filters expose search metadata and reset action", () => {
+  assert.match(ingredientsClientSource, /name="ingredient-search"/);
+  assert.match(ingredientsClientSource, /inputMode="search"/);
+  assert.match(ingredientsClientSource, /const hasActiveFilters =/);
+  assert.match(ingredientsClientSource, /function clearFilters\(\)/);
+  assert.match(ingredientsClientSource, /ACTIONS_VI\.clearFilters/);
+});
+
+test("ingredient unit conversion form reads as unit equals anchor quantity", () => {
+  assert.match(
+    ingredientDialogSource,
+    /append\(makeSecondaryRow\(baseUnitId\)\)/,
+  );
+  assert.match(ingredientDialogSource, /copy\.units\.previewPrefix\(/);
+  assert.match(ingredientDialogSource, /const usesBaseAnchor =/);
+  assert.match(ingredientDialogSource, /displayAnchorFactor/);
+  assert.match(ingredientDialogSource, /toStoredAnchorFactor/);
+  assert.match(ingredientDialogSource, /anchor_input_direction/);
+  assert.match(ingredientDialogSource, /IconArrowLeftRight/);
+  assert.match(
+    ingredientDialogSource,
+    /name=\{`units\.\$\{index\}\.anchor_factor`\}/,
+  );
+  assert.match(
+    ingredientDialogSource,
+    /name=\{`units\.\$\{index\}\.anchor_unit_id`\}/,
+  );
+  assert.match(ingredientDialogSource, /usesBaseAnchor && baseUnit/);
 });
 
 test("inventory stock mobile grid labels item kind separately from category", () => {

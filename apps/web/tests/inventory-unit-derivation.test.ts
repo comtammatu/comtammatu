@@ -6,6 +6,11 @@ import {
   type DerivationRow,
   type DerivationUnitInfo,
 } from "../app/(protected)/inventory/_lib/unit-derivation";
+import {
+  displayAnchorFactor,
+  preferredConversionInputDirection,
+  toStoredAnchorFactor,
+} from "../app/(protected)/inventory/_lib/unit-conversion-input";
 
 const KG = 1;
 const G = 2;
@@ -16,8 +21,14 @@ const L = 5;
 const unitsById = new Map<number, DerivationUnitInfo>([
   [KG, { id: KG, dimension: "mass", is_standard: true, standard_factor: 1000 }],
   [G, { id: G, dimension: "mass", is_standard: true, standard_factor: 1 }],
-  [BAO, { id: BAO, dimension: null, is_standard: false, standard_factor: null }],
-  [PHAN, { id: PHAN, dimension: null, is_standard: false, standard_factor: null }],
+  [
+    BAO,
+    { id: BAO, dimension: null, is_standard: false, standard_factor: null },
+  ],
+  [
+    PHAN,
+    { id: PHAN, dimension: null, is_standard: false, standard_factor: null },
+  ],
   [L, { id: L, dimension: "volume", is_standard: true, standard_factor: 1000 }],
 ]);
 
@@ -181,8 +192,7 @@ test("a cyclical anchor chain is rejected fail-closed", () => {
   assert.throws(
     () => deriveToBaseFactor(KG, baoRow, unitsWithGoi, rows),
     (err: unknown) =>
-      err instanceof UnitDerivationError &&
-      err.message === "unit_anchor_cycle",
+      err instanceof UnitDerivationError && err.message === "unit_anchor_cycle",
   );
 });
 
@@ -194,9 +204,18 @@ test("owner scenario: 1 Thung = 24 Chai, 1 Chai = 250 ml resolves on an ml base"
   const CHAI = 9;
   const THUNG = 10;
   const units = new Map<number, DerivationUnitInfo>([
-    [ML, { id: ML, dimension: "volume", is_standard: true, standard_factor: 1 }],
-    [CHAI, { id: CHAI, dimension: null, is_standard: false, standard_factor: null }],
-    [THUNG, { id: THUNG, dimension: null, is_standard: false, standard_factor: null }],
+    [
+      ML,
+      { id: ML, dimension: "volume", is_standard: true, standard_factor: 1 },
+    ],
+    [
+      CHAI,
+      { id: CHAI, dimension: null, is_standard: false, standard_factor: null },
+    ],
+    [
+      THUNG,
+      { id: THUNG, dimension: null, is_standard: false, standard_factor: null },
+    ],
   ]);
   const mlRow: DerivationRow = {
     unit_id: ML,
@@ -232,8 +251,14 @@ test("standard secondary on a packaging base is rejected (A2 RPC keeps the clien
   const ML = 8;
   const CHAI = 9;
   const units = new Map<number, DerivationUnitInfo>([
-    [ML, { id: ML, dimension: "volume", is_standard: true, standard_factor: 1 }],
-    [CHAI, { id: CHAI, dimension: null, is_standard: false, standard_factor: null }],
+    [
+      ML,
+      { id: ML, dimension: "volume", is_standard: true, standard_factor: 1 },
+    ],
+    [
+      CHAI,
+      { id: CHAI, dimension: null, is_standard: false, standard_factor: null },
+    ],
   ]);
   const mlRow: DerivationRow = {
     unit_id: ML,
@@ -253,8 +278,14 @@ test("standard secondary on a packaging base succeeds if it has a valid anchor",
   const ML = 8;
   const CHAI = 9;
   const units = new Map<number, DerivationUnitInfo>([
-    [ML, { id: ML, dimension: "volume", is_standard: true, standard_factor: 1 }],
-    [CHAI, { id: CHAI, dimension: null, is_standard: false, standard_factor: null }],
+    [
+      ML,
+      { id: ML, dimension: "volume", is_standard: true, standard_factor: 1 },
+    ],
+    [
+      CHAI,
+      { id: CHAI, dimension: null, is_standard: false, standard_factor: null },
+    ],
   ]);
   const mlRow: DerivationRow = {
     unit_id: ML,
@@ -271,4 +302,27 @@ test("standard secondary on a packaging base succeeds if it has a valid anchor",
   const rows = rowsMap([mlRow, chaiRow]);
   const mlToBase = deriveToBaseFactor(CHAI, mlRow, units, rows);
   assert.equal(mlToBase, 1 / 250);
+});
+
+test("conversion input accepts anchor-to-unit entry while storing canonical unit-to-anchor", () => {
+  const direction = "anchor_to_unit";
+  const stored = toStoredAnchorFactor("52", direction);
+
+  assert.equal(Number(stored), 1 / 52);
+  assert.equal(displayAnchorFactor(stored, direction), "52");
+});
+
+test("conversion input can keep canonical unit-to-anchor entry", () => {
+  const direction = "unit_to_anchor";
+
+  assert.equal(toStoredAnchorFactor("52", direction), "52");
+  assert.equal(displayAnchorFactor("52", direction), "52");
+});
+
+test("conversion input reopens reciprocal factors in anchor-to-unit direction", () => {
+  assert.equal(
+    preferredConversionInputDirection(String(1 / 52)),
+    "anchor_to_unit",
+  );
+  assert.equal(preferredConversionInputDirection("52"), "unit_to_anchor");
 });
