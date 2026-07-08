@@ -119,15 +119,27 @@ test("Employee leave permission and generated type mirrors are wired", () => {
   }
 });
 
-test("Cổng nhân viên exposes leave request self-service from Schedule", () => {
-  const schedule = read("apps/web/lib/employee/schedule/page.tsx");
-  const page = read("apps/web/lib/employee/leave/page.tsx");
-  const client = read("apps/web/lib/employee/leave/leave-client.tsx");
-  const actions = read("apps/web/lib/employee/leave/actions.ts");
+test("Branch staff runtime exposes leave request self-service from Schedule", () => {
+  const schedule = read("apps/web/lib/staff-runtime/schedule/page.tsx");
+  const scheduleActions = read("apps/web/lib/staff-runtime/schedule/actions.ts");
+  const page = read("apps/web/lib/staff-runtime/leave/page.tsx");
+  const client = read("apps/web/lib/staff-runtime/leave/leave-client.tsx");
+  const actions = read("apps/web/lib/staff-runtime/leave/actions.ts");
   const messages = read("apps/web/lib/messages/employee.ts");
 
-  for (const expected of ['leaveHref = "/br"', '.from("leave_requests")']) {
+  for (const expected of ['leaveHref = "/br"', "fetchMySchedule(monthStart)"]) {
     assert.ok(schedule.includes(expected), `expected schedule ${expected}`);
+  }
+
+  for (const expected of [
+    '.from("leave_requests")',
+    '.eq("employee_id", employeeId)',
+    '.eq("tenant_id", claims.tenant_id)',
+  ]) {
+    assert.ok(
+      scheduleActions.includes(expected),
+      `expected schedule actions ${expected}`,
+    );
   }
 
   for (const expected of [
@@ -196,6 +208,8 @@ test("HRM exposes branch-scoped leave approval tab", () => {
     "fetchLeaveRequests",
     "approveLeaveRequest",
     "rejectLeaveRequest",
+    "branchId: request.branch_id",
+    "branchId: rejectTarget.branch_id",
     "Textarea",
     "copy.emptyPendingTitle",
     'status !== "pending"',
