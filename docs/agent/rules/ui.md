@@ -60,7 +60,7 @@ there, do not restate them here:
   the default implementation path after `docs/spec/design-system.md` has
   selected the pattern.
 - NEVER treat external UI scaffold output as authority to override the Custom Theme contract.
-- NEVER treat `globals.css`, app wrappers, regression notes, external skill files, or worklogs as competing UI authorities.
+- NEVER treat `globals.css`, app wrappers, regression notes, external skill files, or task notes as competing UI authorities.
 - NEVER override the visual contract of core primitives through ad-hoc wrappers, custom themes, or parallel surface systems.
 - USE `apps/web/app/components/surface.tsx` for repeated app-level page/header/section/toolbar/empty/link-card patterns; domain wrappers must delegate to it instead of cloning layout/chrome. No separate visual-token layer or compatibility wrapper for app UI.
 - REMOVE stale UI rules; keep only live hard rails, workflows, contracts, or guards.

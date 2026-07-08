@@ -19,7 +19,7 @@ Mô hình vận hành production: **Tenant → Chi nhánh**.
 | M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                      | SHIPPED |
 | M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm) + Momo (IPN webhook). All live in production.   | SHIPPED |
 | M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, branch production               | SHIPPED |
-| M6  | Finance              | Finance Basic, HĐĐT HKD, reconciliation, accountant export. Advanced COA/Journal deferred | PARTIAL |
+| M6  | Finance              | Finance Basic, HĐĐT HKD, reconciliation, accountant export. Enterprise COA/Journal outside HKD scope | PARTIAL |
 | M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip, payroll calc. BHXH/PIT export/reconcile partial | PARTIAL |
 
 Active tracker: [`tasks/todo.md`](tasks/todo.md).
@@ -58,7 +58,7 @@ docs/
   ref/              # Business domain, inventory SOP, e-invoice, PIT, glossary
   runbooks/         # Pre-release QA, operator journeys, smoke gates
   user-guides/      # POS flow guides
-  worklog/          # Adoption matrix, evidence log
+  worklog/          # Policy only; no historical worklog archive
 tasks/              # regressions.md, lessons.md, todo.md
 scripts/            # SQL seeds, lint helpers
 ```
@@ -121,13 +121,13 @@ pnpm --filter @comtammatu/web guides:capture     # Capture POS flow screenshots
 | -------------------------------------------------------------- | ---------------------------------------------- |
 | [`AGENTS.md`](AGENTS.md)                                       | Canonical agent entrypoint + rule loading      |
 | [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index        |
-| [`tasks/todo.md`](tasks/todo.md)                               | Active work tracker                            |
-| [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Architecture decisions log                     |
+| [`tasks/todo.md`](tasks/todo.md)                               | Greenfield preparation gate tracker            |
+| [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Legacy decision index; no backlog             |
 | [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                            |
 | [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                      |
 | [`docs/spec/design-system.md`](docs/spec/design-system.md)     | UI design-system SSOT / Custom Theme contract  |
 | [`docs/modules/auth.md`](docs/modules/auth.md)                 | Auth v2 — Position ⟂ Permission model          |
-| [`docs/ref/setup.md`](docs/ref/setup.md)                       | Full setup (MCP, Supabase hook, seed accounts) |
+| [`docs/ref/setup.md`](docs/ref/setup.md)                       | Minimal local project setup                    |
 | [`tasks/regressions.md`](tasks/regressions.md)                 | Named regression rules — read before refactor  |
 
 ## License

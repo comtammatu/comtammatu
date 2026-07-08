@@ -99,6 +99,24 @@ function formatDisplayValue(raw: string) {
   return `${negative ? "-" : ""}${groupedInteger}${fractionPart.length > 0 ? `,${fractionPart}` : unsigned.endsWith(".") ? "," : ""}`;
 }
 
+export function resolveFormattedNumberInputDisplay(
+  rawValue: string,
+  {
+    focusedValue,
+    isFocused,
+    maxFractionDigits,
+  }: {
+    focusedValue: string | null;
+    isFocused: boolean;
+    maxFractionDigits: number;
+  },
+) {
+  if (isFocused && maxFractionDigits > 0) {
+    return focusedValue ?? rawValue;
+  }
+  return formatDisplayValue(rawValue);
+}
+
 export const FormattedNumberInput = React.forwardRef<
   HTMLInputElement,
   FormattedNumberInputProps
@@ -118,6 +136,7 @@ export const FormattedNumberInput = React.forwardRef<
   ref,
 ) {
   const [isFocused, setIsFocused] = React.useState(false);
+  const [focusedValue, setFocusedValue] = React.useState<string | null>(null);
   const isControlled = value != null;
   const [innerValue, setInnerValue] = React.useState(defaultValue ?? "");
 
@@ -128,7 +147,6 @@ export const FormattedNumberInput = React.forwardRef<
   }, [isControlled, value]);
 
   const rawValue = isControlled ? (value ?? "") : innerValue;
-  const shouldFormatWhileFocused = maxFractionDigits <= 0;
 
   return (
     <Input
@@ -138,11 +156,11 @@ export const FormattedNumberInput = React.forwardRef<
       autoComplete="off"
       spellCheck={false}
       inputMode={inputMode ?? (maxFractionDigits > 0 ? "decimal" : "numeric")}
-      value={
-        isFocused && !shouldFormatWhileFocused
-          ? rawValue
-          : formatDisplayValue(rawValue)
-      }
+      value={resolveFormattedNumberInputDisplay(rawValue, {
+        focusedValue,
+        isFocused,
+        maxFractionDigits,
+      })}
       onChange={(event) => {
         const nextValue = sanitizeNumericInput(event.target.value, {
           allowNegative,
@@ -151,15 +169,23 @@ export const FormattedNumberInput = React.forwardRef<
         if (!isControlled) {
           setInnerValue(nextValue);
         }
+        if (maxFractionDigits > 0) {
+          setFocusedValue(nextValue);
+        }
         onValueChange?.(nextValue);
       }}
       onFocus={(event) => {
         setIsFocused(true);
+        if (maxFractionDigits > 0) {
+          setFocusedValue(rawValue);
+        }
         onFocus?.(event);
       }}
       onBlur={(event) => {
         setIsFocused(false);
-        onValueBlur?.(rawValue, event);
+        const blurValue = focusedValue ?? rawValue;
+        setFocusedValue(null);
+        onValueBlur?.(blurValue, event);
         onBlur?.(event);
       }}
     />

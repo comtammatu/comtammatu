@@ -8,6 +8,7 @@ import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { loadProductionSurfaceData } from "../production-data";
 import { ProductionRecipePanel } from "../production-recipe-panel";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
 interface ProductionPageProps {
   searchParams?: Promise<{ branchId?: string | string[], tab?: string }>;
@@ -69,13 +70,17 @@ export async function ProductionPageContent({
   }
 
   const tabsList = [
-    { value: "runs", label: "Lệnh sản xuất" },
-    { value: "recipes", label: "Công thức" },
+    { value: "runs", label: INVENTORY_VI.productionOrdersTab },
+    { value: "recipes", label: INVENTORY_VI.productionRecipesTab },
   ];
 
   return (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader title="Sản xuất Bếp Trung Tâm" />
+      <AppPageHeader
+        eyebrow={INVENTORY_VI.warehouse}
+        title={INVENTORY_VI.productionTitle}
+        description={INVENTORY_VI.productionOrdersCardDescription}
+      />
       <AppPageTabs items={tabsList} defaultValue={activeTab}>
         <TabsContent value="runs" className="mt-0">
           {runsContent}

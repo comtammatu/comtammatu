@@ -2,6 +2,7 @@
 import { loadProductionSurfaceData } from "../../production-data";
 import { ProductionNewClient } from "./production-new-client";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
 export default async function ProductionNewPage({
   searchParams,
@@ -9,14 +10,12 @@ export default async function ProductionNewPage({
   searchParams: Promise<{ branchId?: string }>;
 }) {
   const params = await searchParams;
-  const routeBranchId = params.branchId ? parseInt(params.branchId, 10) : undefined;
-  
-  const {
-    productionBranches,
-    targetBranches,
-    finishedGoods,
-    recipes,
-  } = await loadProductionSurfaceData({ routeBranchId });
+  const routeBranchId = params.branchId
+    ? Number.parseInt(params.branchId, 10)
+    : undefined;
+
+  const { productionBranches, targetBranches, finishedGoods, recipes } =
+    await loadProductionSurfaceData({ routeBranchId });
   const recipeFinishedGoodIds = new Set(
     recipes.map((recipe) => recipe.finished_good_id),
   );
@@ -25,9 +24,13 @@ export default async function ProductionNewPage({
   );
 
   return (
-    <AppPage width="narrow" density="compact">
-      <AppPageHeader title="Tạo lệnh sản xuất mới" />
-      <ProductionNewClient 
+    <AppPage width="wide" density="compact">
+      <AppPageHeader
+        eyebrow={INVENTORY_VI.warehouse}
+        title="Tạo lệnh sản xuất mới"
+        description={INVENTORY_VI.productionOrdersCardDescription}
+      />
+      <ProductionNewClient
         branches={productionBranches}
         targetBranches={targetBranches}
         finishedGoods={finishedGoodsWithRecipes}

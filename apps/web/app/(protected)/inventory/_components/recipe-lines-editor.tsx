@@ -40,14 +40,14 @@ import {
 export interface RecipeLineIngredient {
   id: number;
   name: string;
-  unit: string;
+  unitLabel: string;
   units?: IngredientUnitRow[];
 }
 
 export interface RecipeLineRowValue {
   ingredient_id: string;
   quantity: string;
-  unit: string;
+  unitLabel: string;
   entry_unit_id?: string;
   yield_factor: string;
   note?: string;
@@ -58,7 +58,7 @@ const GRID_TEMPLATE = "grid-cols-1 md:grid-cols-12";
 const EMPTY_ROW: RecipeLineRowValue = {
   ingredient_id: "",
   quantity: "",
-  unit: "",
+  unitLabel: "",
   entry_unit_id: "",
   yield_factor: "1",
   note: "",
@@ -71,7 +71,7 @@ interface RecipeLinesEditorProps<T extends FieldValues> {
   errors: FieldErrors<T>;
   ingredients: RecipeLineIngredient[];
   name?: Path<T> & ArrayPath<T>;
-  /** false → unit Input readOnly + auto-fill only when empty; true → editable + auto-fill on change. */
+  /** false → unit label input readOnly + auto-fill only when empty; true → editable + auto-fill on change. */
   unitEditable?: boolean;
   /** true → render the bulk-add MultiSelectCombobox. */
   bulkAdd?: boolean;
@@ -119,7 +119,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
       return {
         ingredient_id: id,
         quantity: "",
-        unit: defaultUnit?.label ?? ing?.unit ?? "",
+        unitLabel: defaultUnit?.label ?? ing?.unitLabel ?? "",
         entry_unit_id: defaultUnit ? String(defaultUnit.unitId) : "",
         yield_factor: "1",
         note: "",
@@ -132,7 +132,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
       .map((row) => ({
         ingredient_id: row.ingredient_id,
         quantity: row.quantity,
-        unit: row.unit,
+        unitLabel: row.unitLabel,
         entry_unit_id: row.entry_unit_id ?? "",
         yield_factor: row.yield_factor,
         note: row.note ?? "",
@@ -143,11 +143,11 @@ export function RecipeLinesEditor<T extends FieldValues>({
   function handleIngredientChange(index: number, value: string) {
     const ing = ingredientMap.get(Number(value));
     if (!ing) return;
-    const unitPath = `${name}.${index}.unit` as Path<T>;
+    const unitLabelPath = `${name}.${index}.unitLabel` as Path<T>;
     const entryUnitPath = `${name}.${index}.entry_unit_id` as Path<T>;
     const defaultUnit = getDefaultProductionUnit(ing);
     if (unitEditable) {
-      setValue(unitPath, (defaultUnit?.label ?? ing.unit) as never, {
+      setValue(unitLabelPath, (defaultUnit?.label ?? ing.unitLabel) as never, {
         shouldDirty: true,
         shouldValidate: true,
       });
@@ -157,9 +157,9 @@ export function RecipeLinesEditor<T extends FieldValues>({
         { shouldDirty: true },
       );
     } else {
-      const currentUnit = getValues(unitPath);
+      const currentUnit = getValues(unitLabelPath);
       if (!currentUnit) {
-        setValue(unitPath, (defaultUnit?.label ?? ing.unit) as never);
+        setValue(unitLabelPath, (defaultUnit?.label ?? ing.unitLabel) as never);
         setValue(
           entryUnitPath,
           (defaultUnit ? String(defaultUnit.unitId) : "") as never,
@@ -173,12 +173,12 @@ export function RecipeLinesEditor<T extends FieldValues>({
       <div className="flex items-center justify-end gap-2">
         {bulkAdd ? (
           <MultiSelectCombobox
-                options={ingredients.map((ing) => ({
-                  value: String(ing.id),
-                  label: ing.name,
-                  hint: getDefaultProductionUnit(ing)?.label ?? ing.unit,
-                  alreadySelected: alreadySelectedIds.has(String(ing.id)),
-                }))}
+            options={ingredients.map((ing) => ({
+              value: String(ing.id),
+              label: ing.name,
+              hint: getDefaultProductionUnit(ing)?.label ?? ing.unitLabel,
+              alreadySelected: alreadySelectedIds.has(String(ing.id)),
+            }))}
             onConfirm={handleBulkAdd}
             triggerLabel={INVENTORY_VI.selectMultipleIngredients}
             confirmLabel={(n) =>
@@ -262,7 +262,7 @@ function RecipeLineRow<T extends FieldValues>({
 }) {
   const ingredientName = `${name}.${index}.ingredient_id` as Path<T>;
   const quantityName = `${name}.${index}.quantity` as Path<T>;
-  const unitName = `${name}.${index}.unit` as Path<T>;
+  const unitLabelName = `${name}.${index}.unitLabel` as Path<T>;
   const entryUnitName = `${name}.${index}.entry_unit_id` as Path<T>;
   const yieldName = `${name}.${index}.yield_factor` as Path<T>;
   const noteName = `${name}.${index}.note` as Path<T>;
@@ -292,7 +292,7 @@ function RecipeLineRow<T extends FieldValues>({
                 options={ingredients.map((ing) => ({
                   value: String(ing.id),
                   label: ing.name,
-                  hint: getDefaultProductionUnit(ing)?.label ?? ing.unit,
+                  hint: getDefaultProductionUnit(ing)?.label ?? ing.unitLabel,
                 }))}
                 placeholder={INVENTORY_VI.selectIngredientPlaceholder}
                 searchPlaceholder={INVENTORY_VI.searchByName}
@@ -343,7 +343,7 @@ function RecipeLineRow<T extends FieldValues>({
                       (o) => String(o.unitId) === value,
                     );
                     if (opt) {
-                      setValue(unitName, opt.label as never, {
+                      setValue(unitLabelName, opt.label as never, {
                         shouldDirty: true,
                         shouldValidate: true,
                       });
@@ -353,9 +353,9 @@ function RecipeLineRow<T extends FieldValues>({
                   <SelectTrigger
                     className={cn(
                       "h-9",
-                      rowError?.unit && "border-destructive",
+                      rowError?.unitLabel && "border-destructive",
                     )}
-                    aria-invalid={!!rowError?.unit}
+                    aria-invalid={!!rowError?.unitLabel}
                     aria-label={FORM_VI.unit}
                   >
                     <SelectValue placeholder={INVENTORY_VI.selectUnit} />
@@ -373,7 +373,7 @@ function RecipeLineRow<T extends FieldValues>({
           ) : (
             <Controller
               control={control}
-              name={unitName}
+              name={unitLabelName}
               render={({ field }) => (
                 <Input
                   placeholder={INVENTORY_VI.unitPlaceholder}
@@ -381,11 +381,11 @@ function RecipeLineRow<T extends FieldValues>({
                   value={field.value ?? ""}
                   readOnly
                   aria-readonly="true"
-                  aria-invalid={!!rowError?.unit}
+                  aria-invalid={!!rowError?.unitLabel}
                   className={cn(
                     "h-9",
                     "bg-muted/30",
-                    rowError?.unit && "border-destructive",
+                    rowError?.unitLabel && "border-destructive",
                   )}
                 />
               )}
@@ -445,7 +445,7 @@ function RecipeLineRow<T extends FieldValues>({
         <p className="px-3 text-xs text-destructive" role="alert">
           {rowError.ingredient_id?.message ??
             rowError.quantity?.message ??
-            rowError.unit?.message ??
+            rowError.unitLabel?.message ??
             rowError.yield_factor?.message}
         </p>
       )}

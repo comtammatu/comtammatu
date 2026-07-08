@@ -66,7 +66,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-:root {
+:root,
+.theme-light-only {
+  color-scheme: light;
   --background: oklch(0.978 0.014 64.3);
   --foreground: oklch(0.218 0.036 251.3);
   --card: oklch(1 0 0);
@@ -177,7 +179,8 @@
   --color-tier-note-foreground: var(--tier-note-foreground);
 }
 
-:root {
+:root,
+.theme-light-only {
   --success: oklch(0.609 0.086 137);
   --success-foreground: oklch(0.218 0.036 251.3);
   --warning: oklch(0.77 0.164 73.2);
@@ -220,7 +223,8 @@
   --color-effect-scrim: var(--effect-scrim);
 }
 
-:root {
+:root,
+.theme-light-only {
   --effect-scrim: rgba(13, 27, 42, 0.45);
   --effect-drawer-blur: blur(2px);
   --effect-ring-hairline: inset 0 0 0 1px rgba(13, 27, 42, 0.1);

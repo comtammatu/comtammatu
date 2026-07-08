@@ -90,6 +90,8 @@ export type GrnRow = {
 export type GrnDraftRow = {
   grnId: number;
   supplierId: number;
+  poId: number | null;
+  poCode: string | null;
   supplierName: string;
   branchName: string;
   grnNumber: string;
@@ -404,7 +406,11 @@ function GrnDraftsTab({
   const [pending, setPending] = useState(false);
 
   function openDraft(draft: GrnDraftRow) {
-    router.push(`${basePath}/new/${draft.supplierId}`);
+    router.push(
+      draft.poId != null
+        ? `${basePath}/${draft.grnId}?review=1`
+        : `${basePath}/new/${draft.supplierId}`,
+    );
   }
 
   async function handleDiscard(draft: GrnDraftRow) {
@@ -445,7 +451,9 @@ function GrnDraftsTab({
             <div className="min-w-0">
               <ItemTitle className="text-base">{draft.supplierName}</ItemTitle>
               <ItemDescription>
-                {draft.grnNumber} • {draft.branchName}
+                {draft.poCode
+                  ? `${draft.grnNumber} • ${draft.branchName} • PO ${draft.poCode}`
+                  : `${draft.grnNumber} • ${draft.branchName}`}
               </ItemDescription>
               <p className="mt-1 text-sm text-muted-foreground">
                 {INVENTORY_VI.grnDraftUpdatedAt(
@@ -514,7 +522,7 @@ function GrnMobileCard({
         <p className="truncate text-xs text-muted-foreground">
           {grn.supplierName}
           {` • ${grn.branchName}`}
-          {grn.poCode && ` • PO ${grn.poCode}`}
+          {grn.poId != null && grn.poCode ? ` • PO ${grn.poCode}` : ""}
         </p>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1 pointer-events-none">

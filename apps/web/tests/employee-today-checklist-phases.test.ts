@@ -121,6 +121,24 @@ test("employee inventory count is scoped to the current shift", () => {
   );
 });
 
+test("employee inventory count keeps in-progress input across same-data refreshes", () => {
+  assert.match(
+    employeeCountClientSource,
+    /const draftSeedKeyRef = useRef<string \| null>\(null\)/,
+    "employee count draft should remember the last server seed",
+  );
+  assert.match(
+    employeeCountClientSource,
+    /JSON\.stringify\(\[activeGroup\.locationId, seedRows\]\)/,
+    "employee count draft seed should be based on location, assignments, and prefill values",
+  );
+  assert.match(
+    employeeCountClientSource,
+    /if \(draftSeedKeyRef\.current === nextSeedKey\) return;[\s\S]*setDraft\(next\);/,
+    "same-data RSC refreshes must not wipe local count input before submit",
+  );
+});
+
 test("employee task UI renders inventory count as a count link, not a checkbox", () => {
   assert.match(
     employeeTasksClientSource,

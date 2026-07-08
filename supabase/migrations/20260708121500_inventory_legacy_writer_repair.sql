@@ -1,26 +1,21 @@
--- Repair the latent stock_movements writers that omit entry_unit_id /
--- entry_quantity. These have no TypeScript caller in apps/web today
--- (service_role / legacy production_order path), but they still raise 23502 at
--- INSERT under the 20260707191741 NOT NULL constraint if invoked, and an audit
--- must close every writer.
+-- Repair stock_movements writers that omit entry_unit_id / entry_quantity.
+-- These have no TypeScript caller in apps/web today, but they still raise 23502
+-- at INSERT under the 20260707191741 NOT NULL constraint if invoked, and an
+-- audit must close every writer.
 --
 -- Strategy: re-declare each function from its latest active definition with
 -- ONLY the raw-material stock_movements INSERT extended to carry entry_unit_id
 -- + entry_quantity. entry_unit_id resolves to the ingredient's active base unit;
 -- entry_quantity mirrors the base quantity_change for these aggregate writers.
 -- Signatures, return types, guards, recipe joins, idempotency, and surrounding
--- logic are preserved verbatim. Legacy references to the dropped
--- ingredients.purchase_to_measure_factor / purchase_unit columns (removed in
--- phase C) are replaced with inv_to_base so these functions run again.
+-- logic are preserved verbatim. Unit conversion uses inv_to_base.
 
 SET search_path = '';
 SET check_function_bodies = off;
 
 -- ============================================================
 -- 1) confirm_production_order — re-declared from 20260706230000 with two changes:
---    (a) the raw-material recipe loop drops the removed
---        ing.purchase_to_measure_factor / purchase_unit fallback and relies on
---        pr.entry_unit_id + inv_to_base (phase C contract);
+--    (a) the raw-material recipe loop relies on pr.entry_unit_id + inv_to_base;
 --    (b) the raw-material stock_movements INSERT now carries entry_unit_id +
 --        entry_quantity resolved from the ingredient's active base unit.
 --    The output leg already writes entry_unit_id + entry_quantity.

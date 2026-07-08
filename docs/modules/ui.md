@@ -44,8 +44,8 @@ runtime. Role split:
 - `tasks/regressions.md`: negative rules from incidents; not an authority to
   invent new visual language.
 - `docs/runbooks/*`: verification checklists only.
-- `docs/worklog/*`: temporary staging only; promote stable decisions back to
-  spec/modules/tasks, then remove stale worklog claims.
+- `docs/worklog/README.md`: policy only; transient UI review notes belong in PR
+  or task notes, then any durable contract is promoted to spec/modules/tasks.
 
 Không được coi external UI scaffold output là authority cao hơn Custom Theme
 contract. Pattern mới được route-scoped nếu vẫn giữ token, primitive, route

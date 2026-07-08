@@ -219,7 +219,7 @@ export interface ProductionRecipeRow {
   ingredient_id: number;
   ingredient_name: string;
   quantity: number;
-  unit: string;
+  unitLabel: string;
   entry_unit_id: number | null;
   yield_factor: number;
   note: string | null;
@@ -354,7 +354,7 @@ export async function fetchProductionRecipes(): Promise<
           ingredient_id: row.ingredient_id,
           ingredient_name: ingredient?.name ?? "Nguyên liệu",
           quantity: Number(row.quantity),
-          unit: unitLabel,
+          unitLabel,
           entry_unit_id: row.entry_unit_id ?? null,
           yield_factor: Number(row.yield_factor ?? 1),
           note: row.note ?? null,
@@ -393,7 +393,7 @@ function productionRecipeToSheetRow(
     ingredient_id: recipe.ingredient_id,
     ingredient_name: recipe.ingredient_name,
     quantity: recipe.quantity,
-    unit: recipe.unit,
+    unit: recipe.unitLabel,
     yield_factor: recipe.yield_factor,
     note: recipe.note ?? "",
   };

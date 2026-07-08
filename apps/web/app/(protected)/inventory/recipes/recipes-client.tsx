@@ -50,7 +50,7 @@ export type RecipeItem = {
   ingredientId: number;
   ingredientName: string;
   qty: number;
-  unit: string;
+  unitLabel: string;
   entryUnitId: number | null;
   yieldFactor: number;
   note: string | null;
@@ -115,7 +115,7 @@ export function RecipesClient({
       recipe.items.map((item) => ({
         ingredientId: item.ingredientId,
         quantity: item.qty,
-        unit: item.unit,
+        unitLabel: item.unitLabel,
         entryUnitId: item.entryUnitId,
         yieldFactor: item.yieldFactor,
         note: item.note,
@@ -157,7 +157,7 @@ export function RecipesClient({
               <div key={i} className="flex justify-between gap-2">
                 <span className="text-muted-foreground">{item.ingredientName}</span>
                 <span className="font-mono">
-                  {item.qty} {item.unit}
+                  {item.qty} {item.unitLabel}
                 </span>
               </div>
             ))
@@ -319,7 +319,7 @@ function RecipeCard({
               <div key={i} className="flex justify-between gap-2">
                 <span className="text-muted-foreground">{item.ingredientName}</span>
                 <span className="font-mono">
-                  {item.qty} {item.unit}
+                  {item.qty} {item.unitLabel}
                 </span>
               </div>
             ))

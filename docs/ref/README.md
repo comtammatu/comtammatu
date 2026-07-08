@@ -1,49 +1,25 @@
 # Reference Docs
 
-Tài liệu tham chiếu dài hạn cho repo này.
+Tài liệu tham chiếu dài hạn cho nghiệp vụ Cơm Tấm Má Tư. Không dùng thư mục này
+để lưu session notes, backlog, checklist tạm, hoặc ghi chú agent.
 
-- Dùng khi cần hiểu business context, boundary, và canonical rules.
-- Không dùng thư mục này cho session notes hay checklist vận hành ngắn hạn.
+## Đọc theo nhu cầu
 
-## Đọc trước nếu mới vào dự án
+| Khi cần | Đọc |
+| --- | --- |
+| Bối cảnh HKD, mục tiêu sản phẩm, phạm vi không làm | `business-context.md` |
+| Thuật ngữ và tên gọi canonical | `glossary.md` |
+| Kiến thức nền F&B / finance / tax / labor | `domain-encyclopedia.md` |
+| Metric, KPI, card, workflow data contract | `operational-data-contract.md` |
+| Pháp lý HKD, HĐĐT, PIT, lao động | `legal-framework-2026.md` trước, rồi `einvoice-tax.md`, `payroll-pit.md`, hoặc `labor-contracts.md` |
+| Inventory | `inventory.md`, `inventory-sop.md`, `inventory-rbac-matrix.md`, `inventory-role-handoff.md`, `inventory-taxonomy-v1.md` |
+| Tích hợp bên thứ ba | `third-party-integrations.md` |
+| Setup local project | `setup.md` |
+| Screen context / UI workflow | `screen-context-map.md` |
 
-- [glossary.md](glossary.md)
-- [domain-encyclopedia.md](domain-encyclopedia.md)
-- [operational-data-contract.md](operational-data-contract.md)
-- [business-context.md](business-context.md)
-- [setup.md](setup.md)
-- [inventory.md](inventory.md)
+## Hygiene
 
-## Metric và contract tổng quan
-
-- [operational-data-contract.md](operational-data-contract.md): khung ngữ nghĩa
-  dữ liệu, metric, card, KPI, và contract tổng quan cho Admin, Inventory,
-  Finance, Reports
-
-## Bách khoa nghiệp vụ
-
-- [domain-encyclopedia.md](domain-encyclopedia.md): kiến thức nền cho Agent về
-  F&B ăn uống, bán hàng, tài chính vận hành, kho/giá vốn, thuế/HĐĐT, HKD,
-  doanh nghiệp, lao động, payroll, và quy tắc xử lý số liệu/chứng từ.
-
-## Inventory
-
-- [inventory.md](inventory.md): canonical reference cho Inventory
-- [../spec/inventory-overview-diagrams.md](../spec/inventory-overview-diagrams.md): sơ đồ tổng quan business flow + data flow
-- [inventory-sop.md](inventory-sop.md): SOP vận hành Inventory hiện tại
-- [inventory-role-handoff.md](inventory-role-handoff.md): training 1 trang
-- [inventory-rbac-matrix.md](inventory-rbac-matrix.md): ma trận quyền Inventory
-
-## Các tài liệu khác
-
-- [legal-framework-2026.md](legal-framework-2026.md): **SSoT** danh mục văn bản pháp lý HKD (đăng ký, GTGT, HĐĐT, kế toán, TNCN, BHXH) — các doc khác tham chiếu file này
-- [einvoice-tax.md](einvoice-tax.md)
-- [labor-contracts.md](labor-contracts.md)
-- [payroll-pit.md](payroll-pit.md)
-- [third-party-integrations.md](third-party-integrations.md)
-
-## Vệ sinh tài liệu tham chiếu
-
-Không lưu lại các bộ tham chiếu đã bị thay thế ở đây. Hãy đưa quy tắc nghiệp vụ
-hiện hành lên các file canonical phía trên, hoặc xóa ghi chú không còn hiệu lực
-thay vì liên kết tới một bộ tài liệu đã cũ.
+- Một fact chỉ có một source of truth. Nếu ref chuyên sâu đổi nghĩa, cập nhật
+  file chuyên sâu thay vì thêm ghi chú cạnh tranh ở đây.
+- Không giữ ref đã bị thay thế. Promote rule hiện hành vào file canonical hoặc
+  xóa ghi chú cũ; git history là archive.

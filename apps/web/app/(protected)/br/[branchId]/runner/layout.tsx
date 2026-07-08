@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { OperationalPwaProvider } from "../_components/operational-pwa/provider";
 import { RunnerPwaToolbar } from "../_components/operational-pwa/toolbar";
+import { RunnerLightMode } from "./runner-light-mode";
 
 export async function generateMetadata({
   params,
@@ -29,7 +30,8 @@ export default async function RunnerLayout({
   const { branchId } = await params;
 
   return (
-    <main className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation">
+    <main className="theme-light-only flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation">
+      <RunnerLightMode />
       <OperationalPwaProvider>
         <RunnerPwaToolbar branchId={branchId} />
         {children}

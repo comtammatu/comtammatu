@@ -316,7 +316,6 @@ export async function fetchGrnDetail(
 const grnCreateSchema = z.object({
   supplierId: z.coerce.number().int().positive(),
   branchId: z.coerce.number().int().positive(),
-  poId: z.coerce.number().int().positive().optional().nullable(),
   notes: z.string().optional(),
 });
 
@@ -352,7 +351,7 @@ export const createGrnDraft = withAction(
         tenant_id: claims.tenant_id,
         branch_id: targetBranchId,
         supplier_id: data.supplierId,
-        po_id: data.poId ?? null,
+        po_id: null,
         grn_number: grnNumber,
         status: "draft",
         notes: data.notes ?? null,
@@ -372,6 +371,7 @@ export const createGrnDraft = withAction(
           .eq("supplier_id", data.supplierId)
           .eq("branch_id", targetBranchId)
           .eq("status", "draft")
+          .is("po_id", null)
           .order("updated_at", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -408,6 +408,7 @@ export const loadActiveGrnDraft = withAction(
       .eq("created_by", user.id)
       .eq("supplier_id", data.supplierId)
       .eq("status", "draft")
+      .is("po_id", null)
       .order("updated_at", { ascending: false })
       .limit(1);
     if (data.branchId != null) query = query.eq("branch_id", data.branchId);
@@ -433,7 +434,7 @@ export async function listMyGrnDrafts(
   let query = supabase
     .from("goods_received_notes")
     .select(
-      "id, supplier_id, branch_id, grn_number, updated_at, branches ( id, name ), suppliers ( id, name ), grn_items ( id )",
+      "id, supplier_id, branch_id, po_id, grn_number, updated_at, branches ( id, name ), suppliers ( id, name ), purchase_orders ( id, po_number ), grn_items ( id )",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("created_by", user.id)

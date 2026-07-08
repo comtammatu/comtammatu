@@ -1,4 +1,4 @@
--- Phase A of the 2-tier inventory unit system (docs/plan/inventory-unit-system-2026-07-03.md).
+-- Phase A of the 2-tier inventory unit system.
 -- Additive only: new nullable/defaulted columns, a derivation helper, a backfill
 -- of existing ingredient_units rows into the anchor model, and an idempotent
 -- seed. Does NOT touch upsert_ingredient_catalog or any of the 11 posting RPCs

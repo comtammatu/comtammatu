@@ -49,6 +49,24 @@ function assertActionCallsDoNotSendUnit(
   assert.ok(count > 0, `${callName} not found in ${path}`);
 }
 
+function latestMigrationDefining(functionName: string): {
+  file: string;
+  sql: string;
+} {
+  const migrationDir = `${root}supabase/migrations`;
+  const matches = readdirSync(migrationDir)
+    .filter((file) => /^\d+_.*\.sql$/.test(file))
+    .filter((file) =>
+      read(`supabase/migrations/${file}`).includes(
+        `CREATE OR REPLACE FUNCTION public.${functionName}`,
+      ),
+    )
+    .sort();
+  const file = matches.at(-1);
+  assert.ok(file, `${functionName} migration not found`);
+  return { file, sql: read(`supabase/migrations/${file}`) };
+}
+
 test("active inventory reads do not select dropped legacy unit columns", () => {
   const checks = new Map([
     [
@@ -136,6 +154,22 @@ test("post Phase C migrations do not reference dropped ingredient unit fields", 
       file,
     );
   }
+});
+
+test("latest menu recipe upsert RPC does not write dropped unit text", () => {
+  const { file, sql } = latestMigrationDefining("upsert_recipe_lines");
+  const body = section(
+    `supabase/migrations/${file}`,
+    "CREATE OR REPLACE FUNCTION public.upsert_recipe_lines",
+    "REVOKE ALL ON FUNCTION public.upsert_recipe_lines",
+  );
+
+  assert.match(sql, /public\.inventory_entry_unit_code\(/);
+  assert.doesNotMatch(
+    body,
+    /INSERT INTO public\.recipes[\s\S]*\bunit\b[\s\S]*VALUES/,
+  );
+  assert.doesNotMatch(body, /\bunit\s*=\s*EXCLUDED\.unit\b/);
 });
 
 test.skip("inventory entry units are persisted inside atomic RPCs", () => {
@@ -308,6 +342,73 @@ test("menu recipe editor resets entry unit when changing ingredient", () => {
   );
 
   assert.match(editor, /\bunitEditable\b/);
+});
+
+test("recipe runtime DTOs expose unitLabel instead of legacy unit", () => {
+  const sections = new Map([
+    [
+      "RecipeLineIngredient",
+      section(
+        "apps/web/app/(protected)/inventory/_components/recipe-lines-editor.tsx",
+        "export interface RecipeLineIngredient",
+        "export interface RecipeLineRowValue",
+      ),
+    ],
+    [
+      "RecipeLineRowValue",
+      section(
+        "apps/web/app/(protected)/inventory/_components/recipe-lines-editor.tsx",
+        "export interface RecipeLineRowValue",
+        "const GRID_TEMPLATE",
+      ),
+    ],
+    [
+      "RecipeLineDraft",
+      section(
+        "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx",
+        "export interface RecipeLineDraft",
+        "const recipeLineRowSchema",
+      ),
+    ],
+    [
+      "RecipeItem",
+      section(
+        "apps/web/app/(protected)/inventory/recipes/recipes-client.tsx",
+        "export type RecipeItem",
+        "export type RecipeRow",
+      ),
+    ],
+    [
+      "ProductionRecipeRow",
+      section(
+        "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
+        "export interface ProductionRecipeRow",
+        "type ProductionRecipeQueryRow",
+      ),
+    ],
+  ]);
+
+  for (const [name, source] of sections) {
+    assert.match(source, /\bunitLabel\b/, name);
+    assert.doesNotMatch(source, /\bunit:\s*string\b/, name);
+  }
+
+  assert.doesNotMatch(
+    read("apps/web/app/(protected)/inventory/recipes/recipes-client.tsx"),
+    /\bitem\.unit\b/,
+  );
+  assert.doesNotMatch(
+    read("apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx"),
+    /\b(?:l|row)\.unit\b/,
+  );
+  assert.doesNotMatch(
+    read("apps/web/app/(protected)/inventory/production-recipe-panel.tsx"),
+    /\brecipe\.unit\b/,
+  );
+  assert.doesNotMatch(
+    read("apps/web/app/(protected)/inventory/production-recipe-actions.ts"),
+    /\brow\.unit\b/,
+  );
 });
 
 test.skip("RPC-backed inventory writes let the RPC derive persisted unit text", () => {

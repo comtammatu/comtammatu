@@ -90,7 +90,7 @@ DO UPDATE SET
 --     path (branch_manager already held grn_create before D068), so deferring is
 --     not a regression. Re-introduce as a separate migration AFTER normalizing
 --     grn_create grants (owner → tenant-wide/null grant, or explicit per-central
---     grants). See docs/worklog/t3-branch-operator-receiving-production-2026-07-05.md.
+--     grants).
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- ─────────────────────────────────────────────────────────────────────────────

@@ -35,7 +35,7 @@ Before implementation, read the applicable rule files:
 - Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
 - Read `docs/agent/rules/workflow.md` for behavior changes, review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates. T1 doc-only or typo-only work may skip after stating the skip reason.
-- Read `docs/agent/rules/team.md` only for T3 work, cross-runtime review/arbitration, or standing mission handoff.
+- Read `docs/agent/rules/team.md` only for T3 second-runtime review or arbitration.
 - Read `docs/agent/rules/orchestration.md` only when routing work across subagents, multi-agent Workflow, parallel runtimes, or a real context-budget problem. Inline single-agent tasks may skip it.
 - Read `docs/agent/rules/notifications.md` before adding any notification, alert, anomaly detector, or scheduled report (the producer / dedup / routing contract).
 - Read `docs/agent/rules/references.md` when onboarding or choosing the source-of-truth docs for a task.
@@ -64,7 +64,7 @@ it elsewhere — point here.
 - **Owner-facing chat replies → Vietnamese.** Answer the owner in Vietnamese — concise but complete (gọn gàng, không bỏ chi tiết cần truyền đạt). Keep code, symbols, commands, file paths, identifiers, and log/error excerpts verbatim; never translate them.
 - **Persisted docs follow a declared per-surface default; never flip an existing file's language as a side effect.** Language is assigned by purpose. Each surface has a default for NEW files; existing files are grandfathered — if a file already differs from its surface default, keep it.
   - **Vietnamese** (owner/human planning, domain, operator-facing): `docs/ref/`, `docs/user-guides/`, `docs/plan/` (incl. `docs/plan/decisions.md`), `docs/architecture/`, `docs/README.md`, business/legal docs.
-  - **English** (agent rules, technical contracts, agent-internal staging): `docs/agent/rules/`, `docs/modules/`, `docs/spec/`, `docs/plan/adr/`, `docs/worklog/`, `docs/CODEBASE_MAP.md`, `tasks/` (incl. `tasks/todo.md`, `tasks/lessons.md`, `tasks/regressions.md`), and root `AGENTS.md` / `CLAUDE.md`.
+  - **English** (agent rules, technical contracts, agent-internal staging): `docs/agent/rules/`, `docs/modules/`, `docs/spec/`, `docs/plan/adr/`, `docs/worklog/README.md`, `docs/CODEBASE_MAP.md`, `tasks/` (incl. `tasks/todo.md`, `tasks/lessons.md`, `tasks/regressions.md`), and root `AGENTS.md` / `CLAUDE.md`.
   - **English default, Vietnamese allowed for operator-facing checklists:** `docs/runbooks/`.
   - Root `README.md` is intentionally bilingual: Vietnamese mission/overview + English tech stack.
 - **One prose language per doc.** Within a single doc, explanatory prose stays in one language. Vietnamese domain/legal terms, UI-copy strings, role labels, env vars, and code identifiers are kept verbatim inside prose of either language and do NOT count as mixing — an English doc carrying verbatim Vietnamese domain nouns (e.g. HĐĐT, HKD, "doanh thu") is a correct English doc, not a half-translated one.
@@ -89,7 +89,7 @@ it elsewhere — point here.
 - Code comments MUST be English and only state non-obvious constraints. NEVER add narrative, explanatory, or change-log comments (no "đã xóa/đã gỡ", no owner-decision dates in code).
 - Put durable explanations, guides, operational notes, and task notes in Markdown docs, guides, or note files inside the source tree.
 - MUST follow `docs/agent/rules/skills.md` for skill/plugin/tool selection on non-trivial tasks.
-- NEVER create a separate agent-only documentation tree such as `docs/llm-wiki/`; use `AGENTS.md`, `docs/agent/rules/`, `docs/CODEBASE_MAP.md`, module docs, specs, runbooks, tasks, or worklogs according to the content type.
+- NEVER create a separate agent-only documentation tree such as `docs/llm-wiki/` or `docs/superpowers/`; use `AGENTS.md`, `docs/agent/rules/`, `docs/CODEBASE_MAP.md`, module docs, specs, runbooks, tasks, decisions, or ADRs according to the content type; `docs/worklog/` is policy-only.
 
 <!-- MIRROR:constraints:end -->
 
@@ -132,6 +132,5 @@ corepack pnpm db:types     # Regenerate Supabase types after migration is applie
 
 Review depth (T1/T2/T3), tier triggers, and the four perspectives (PM / BA /
 Senior Dev / QA) are owned by `docs/agent/rules/workflow.md` → Review Depth —
-Tier By Risk. For how these tiers sit inside the end-to-end team loop
-(intake → land → learn) and the cross-runtime Codex review pass, see
-`docs/agent/rules/team.md`.
+Tier By Risk. Use `docs/agent/rules/team.md` only for T3 second-runtime review
+or arbitration.

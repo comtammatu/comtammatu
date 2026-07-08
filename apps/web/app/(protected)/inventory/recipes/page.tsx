@@ -106,7 +106,7 @@ export default async function RecipesPage({
           ingredientId,
           ingredientName: line.ingredients?.name ?? "—",
           qty,
-          unit: getIngredientUnitDisplayName(
+          unitLabel: getIngredientUnitDisplayName(
             catalogIngredient?.units,
             entryUnitId,
             fallbackUnit,
@@ -142,7 +142,7 @@ export default async function RecipesPage({
     ? ingredientRows.map((i) => ({
         id: i.id,
         name: i.name,
-        unit: i.units?.find((u) => u.is_base)?.unit_code ?? "",
+        unitLabel: i.units?.find((u) => u.is_base)?.unit_code ?? "",
         units: i.units,
       }))
     : [];

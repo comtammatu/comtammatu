@@ -206,6 +206,10 @@ export function useGrnLineActions({
         (res.data && typeof res.data === "object" && !Array.isArray(res.data)
           ? (res.data as { review_count?: number }).review_count
           : 0) ?? 0;
+      const confirmedPoId =
+        (res.data && typeof res.data === "object" && !Array.isArray(res.data)
+          ? (res.data as { po_id?: number | null }).po_id
+          : null) ?? null;
       notify.success(
         reviewCount > 0
           ? m(messages.inventory.grn.confirmedWithReview, {
@@ -215,8 +219,8 @@ export function useGrnLineActions({
       );
       if (isMobile) {
         router.push(grnMobileBackPath);
-      } else if (grn.poId) {
-        router.push(`${purchaseOrdersBasePath}/${grn.poId}`);
+      } else if (confirmedPoId) {
+        router.push(`${purchaseOrdersBasePath}/${confirmedPoId}`);
       } else {
         router.push(grnListBasePath);
       }

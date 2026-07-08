@@ -27,14 +27,14 @@ export interface MenuItemOption {
 export interface IngredientOption {
   id: number;
   name: string;
-  unit: string;
+  unitLabel: string;
   units?: IngredientUnitRow[];
 }
 
 export interface RecipeLineDraft {
   ingredientId: number;
   quantity: number;
-  unit: string;
+  unitLabel: string;
   entryUnitId: number | null;
   yieldFactor: number;
   note: string | null;
@@ -48,7 +48,7 @@ const recipeLineRowSchema = z.object({
     .string()
     .min(1, { error: INVENTORY_VI.enterQuantity })
     .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
-  unit: z.string().optional(),
+  unitLabel: z.string().optional(),
   entry_unit_id: z.string().optional(),
   yield_factor: z
     .string()
@@ -77,7 +77,7 @@ type RecipeLineRow = z.infer<typeof recipeLineRowSchema>;
 const EMPTY_ROW: RecipeLineRow = {
   ingredient_id: "",
   quantity: "",
-  unit: "",
+  unitLabel: "",
   entry_unit_id: "",
   yield_factor: "1",
   note: "",
@@ -116,7 +116,7 @@ export function RecipeLineDialog({
           ? editingLines.map((l) => ({
               ingredient_id: String(l.ingredientId),
               quantity: String(l.quantity),
-              unit: l.unit,
+              unitLabel: l.unitLabel,
               entry_unit_id: l.entryUnitId ? String(l.entryUnitId) : "",
               yield_factor: String(l.yieldFactor),
               note: l.note ?? "",

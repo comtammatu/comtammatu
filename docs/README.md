@@ -4,9 +4,11 @@
 
 ## Trạng thái hiện tại
 
-- Active delivery track: production đang vận hành in-place trên repo `comtammatu`; ongoing work là hardening + feature follow-ups.
+- Active delivery track: production đang vận hành in-place trên repo
+  `comtammatu`; current repo work is Greenfield preparation plus explicitly
+  owner-confirmed production fixes.
 - Active tracker: [tasks/todo.md](../tasks/todo.md)
-- Superseded docs are not retained in this repo. Current decisions must live in `tasks/todo.md`, `docs/plan/adr/`, `docs/plan/decisions.md`, module docs, specs, runbooks, or canonical references.
+- Superseded docs are not retained in this repo. Current contracts must live in `tasks/todo.md`, `docs/plan/adr/`, module docs, specs, runbooks, or canonical references.
 
 ## Đọc theo nhu cầu
 
@@ -20,9 +22,9 @@
 - Finance active boundary: [modules/finance.md](modules/finance.md)
 - Canonical business/reference docs: [ref/README.md](ref/README.md)
 - Feature/module architecture: `docs/modules/*`, `docs/spec/*`
-- Active planning: `tasks/todo.md`, `docs/plan/adr/*`, `docs/plan/decisions.md`
+- Active planning: `tasks/todo.md`, `docs/plan/adr/*`
 - Readiness checklist và smoke gates: [runbooks/README.md](runbooks/README.md)
-- Temporary implementation staging: [worklog/README.md](worklog/README.md)
+- Worklog policy: [worklog/README.md](worklog/README.md)
 - Xuất tri thức agent dạng OKF tạm thời: `pnpm docs:okf` -> `.tmp/okf/`
   (generated, không phải SSOT)
 
@@ -52,4 +54,4 @@
 - `spec/design-system.md`: single source of truth cho UI design-system; runtime tokens, primitives, adapters, runbooks, worklogs, and regression rules only implement, verify, or enforce it
 - `plan/`: active decisions and ADRs
 - `runbooks/`: operational verification
-- `worklog/`: temporary staging for implementation contracts before promotion or removal
+- `worklog/`: policy only; use PR/task notes for transient implementation artifacts

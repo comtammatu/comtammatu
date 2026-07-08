@@ -1,13 +1,18 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
-import { Combobox } from "@/components/form/combobox";
 import {
   Select,
   SelectContent,
@@ -15,8 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { AppSection } from "@/components/surface";
-import { createProductionRun, fetchProductionRecipeContext, ProductionRecipeIngredient } from "../../production-run-actions";
+import { Textarea } from "@comtammatu/ui/components/textarea";
+import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
+import { Combobox } from "@/components/form/combobox";
+import { AppDetailFooter, AppEmptyState, AppSection } from "@/components/surface";
+import {
+  createProductionRun,
+  fetchProductionRecipeContext,
+  type ProductionRecipeIngredient,
+} from "../../production-run-actions";
 import type { BranchOption, FinishedGoodOption } from "../../production-types";
 
 interface ProductionNewClientProps {
@@ -25,6 +37,7 @@ interface ProductionNewClientProps {
   finishedGoods: FinishedGoodOption[];
   initialBranchId?: number;
   basePath: string;
+  embedded?: boolean;
 }
 
 export function ProductionNewClient({
@@ -33,11 +46,14 @@ export function ProductionNewClient({
   finishedGoods,
   initialBranchId,
   basePath,
+  embedded = false,
 }: ProductionNewClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const [branchId, setBranchId] = useState<number | undefined>(initialBranchId ?? branches[0]?.id);
+  const [branchId, setBranchId] = useState<number | undefined>(
+    initialBranchId ?? branches[0]?.id,
+  );
   const [targetBranchId, setTargetBranchId] = useState<number | undefined>(
     initialBranchId ?? branches[0]?.id,
   );
@@ -46,29 +62,41 @@ export function ProductionNewClient({
   const [entryUnitId, setEntryUnitId] = useState<number | undefined>();
   const [notes, setNotes] = useState<string>("");
 
-  const [recipeContext, setRecipeContext] = useState<{ ingredients: ProductionRecipeIngredient[], maxProductionQuantity: number | null } | null>(null);
+  const [recipeContext, setRecipeContext] = useState<{
+    ingredients: ProductionRecipeIngredient[];
+    maxProductionQuantity: number | null;
+  } | null>(null);
   const [isLoadingContext, setIsLoadingContext] = useState(false);
-  const [ingredientUsages, setIngredientUsages] = useState<Record<number, string>>({});
+  const [ingredientUsages, setIngredientUsages] = useState<
+    Record<number, string>
+  >({});
 
   const selectedFg = finishedGoods.find((fg) => fg.id === finishedGoodId);
   const unitOptions = selectedFg
-    ? [{ id: 0, name: selectedFg.unit }, ...(selectedFg.units || []).map((u) => ({ id: u.unit_id, name: u.unit_name || "" }))]
+    ? [
+        { id: 0, name: selectedFg.unit },
+        ...(selectedFg.units || []).map((u) => ({
+          id: u.unit_id,
+          name: u.unit_name || "",
+        })),
+      ]
     : [];
   const canUseRecipeControls = branchId != null && finishedGoodId != null;
-  const plannedQtyParsed = parseFloat(plannedQuantity);
-  const hasValidPlannedQty = !Number.isNaN(plannedQtyParsed) && plannedQtyParsed > 0;
+  const plannedQtyParsed = Number.parseFloat(plannedQuantity);
+  const hasValidPlannedQty =
+    !Number.isNaN(plannedQtyParsed) && plannedQtyParsed > 0;
+  const controlSize = embedded ? "touch" : "default";
 
   const formatQty = (value: number | null | undefined) => {
     if (value == null) return "N/A";
-    return Math.floor(value * 1000) / 1000;
+    return String(Math.floor(value * 1000) / 1000);
   };
 
-  // Fetch recipe context when branch or finished good changes
   useEffect(() => {
     if (branchId && finishedGoodId) {
       setIsLoadingContext(true);
       fetchProductionRecipeContext(finishedGoodId, branchId)
-        .then(res => {
+        .then((res) => {
           if (res.success && res.data) {
             setRecipeContext(res.data);
           } else {
@@ -83,10 +111,9 @@ export function ProductionNewClient({
     }
   }, [branchId, finishedGoodId]);
 
-  // Update default ingredient usages when planned quantity changes
   useEffect(() => {
     if (recipeContext?.ingredients) {
-      const parsedQty = parseFloat(plannedQuantity);
+      const parsedQty = Number.parseFloat(plannedQuantity);
       const usages: Record<number, string> = {};
       for (const ing of recipeContext.ingredients) {
         if (
@@ -113,7 +140,7 @@ export function ProductionNewClient({
   };
 
   const handleIngredientChange = (id: number, val: string) => {
-    setIngredientUsages(prev => ({ ...prev, [id]: val }));
+    setIngredientUsages((prev) => ({ ...prev, [id]: val }));
   };
 
   const handleSave = () => {
@@ -122,19 +149,22 @@ export function ProductionNewClient({
       return;
     }
 
-    const parsedQty = parseFloat(plannedQuantity);
-    if (isNaN(parsedQty) || parsedQty <= 0) {
+    const parsedQty = Number.parseFloat(plannedQuantity);
+    if (Number.isNaN(parsedQty) || parsedQty <= 0) {
       toast.error("Số lượng phải lớn hơn 0");
       return;
     }
 
-    const ingredientsOverride: { ingredient_id: number; actual_quantity: number }[] = [];
+    const ingredientsOverride: {
+      ingredient_id: number;
+      actual_quantity: number;
+    }[] = [];
     if (recipeContext?.ingredients) {
       for (const ing of recipeContext.ingredients) {
         const val = ingredientUsages[ing.ingredient_id];
         if (val) {
-          const num = parseFloat(val);
-          if (!isNaN(num) && num >= 0) {
+          const num = Number.parseFloat(val);
+          if (!Number.isNaN(num) && num >= 0) {
             ingredientsOverride.push({
               ingredient_id: ing.ingredient_id,
               actual_quantity: num,
@@ -152,7 +182,8 @@ export function ProductionNewClient({
         entryUnitId: entryUnitId || undefined,
         notes,
         targetBranchId: targetBranchId || branchId,
-        ingredientsOverride: ingredientsOverride.length > 0 ? ingredientsOverride : undefined,
+        ingredientsOverride:
+          ingredientsOverride.length > 0 ? ingredientsOverride : undefined,
       });
 
       if (res.success) {
@@ -164,188 +195,315 @@ export function ProductionNewClient({
     });
   };
 
-  return (
-    <AppSection className="p-6 space-y-6">
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="grid gap-2">
-          <Label>Chi nhánh sản xuất (Tiêu hao nguyên liệu)</Label>
-          <Select
-            value={branchId?.toString()}
-            onValueChange={(val) => setBranchId(parseInt(val, 10))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Chọn chi nhánh sản xuất" />
-            </SelectTrigger>
-            <SelectContent>
-              {branches.map((b) => (
-                <SelectItem key={b.id} value={b.id.toString()}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+  const renderNeededQuantity = (ingredient: ProductionRecipeIngredient) => {
+    if (!hasValidPlannedQty || ingredient.default_usage_per_fg <= 0) {
+      return "Nhập sản lượng để xem";
+    }
 
-        <div className="grid gap-2">
-          <Label>Chi nhánh nhận (Nhập kho thành phẩm)</Label>
-          <Select
-            value={targetBranchId?.toString()}
-            onValueChange={(val) => setTargetBranchId(parseInt(val, 10))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Chọn chi nhánh nhận" />
-            </SelectTrigger>
-            <SelectContent>
-              {targetBranches.map((b) => (
-                <SelectItem key={b.id} value={b.id.toString()}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+    return `${formatQty(plannedQtyParsed * ingredient.default_usage_per_fg)} ${
+      ingredient.unit_name
+    }`;
+  };
 
-      <div className="grid gap-2">
-        <Label>Thành phẩm</Label>
-        <Combobox
-          options={finishedGoods.map((fg) => ({
-            value: fg.id.toString(),
-            label: fg.name,
-          }))}
-          value={finishedGoodId?.toString() || ""}
-          onValueChange={(val: string) => {
-            setFinishedGoodId(val ? parseInt(val, 10) : undefined);
-            setEntryUnitId(undefined); // Reset unit on change
-          }}
-          placeholder="Chọn thành phẩm..."
-        />
-      </div>
+  const renderIngredientInput = (ingredient: ProductionRecipeIngredient) => (
+    <div className="flex min-w-0 items-center gap-2">
+      <Input
+        className="min-w-0 text-right"
+        type="number"
+        min="0"
+        step="0.001"
+        value={ingredientUsages[ingredient.ingredient_id] ?? ""}
+        onChange={(event) =>
+          handleIngredientChange(ingredient.ingredient_id, event.target.value)
+        }
+      />
+      <span className="w-10 shrink-0 text-xs text-muted-foreground">
+        {ingredient.unit_name}
+      </span>
+    </div>
+  );
 
-      <div className="grid gap-2">
-        <Label>Số lượng dự kiến</Label>
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={plannedQuantity}
-              onChange={(e) => setPlannedQuantity(e.target.value)}
-              className="pr-16"
-              placeholder="Nhập số lượng..."
-            />
-            {canUseRecipeControls && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="absolute right-1 top-1 h-7 text-xs px-2"
-                onClick={handleSetMaxQuantity}
-                disabled={isLoadingContext || recipeContext == null}
-              >
-                Tối đa
-              </Button>
-            )}
-          </div>
-          {unitOptions.length > 0 && (
+  const ingredientColumns: DataTableColumn<ProductionRecipeIngredient>[] = [
+    {
+      key: "ingredient",
+      header: "Nguyên liệu",
+      className: "min-w-48",
+      render: (ingredient) => (
+        <span className="font-medium">{ingredient.ingredient_name}</span>
+      ),
+    },
+    {
+      key: "stock",
+      header: "Tồn khả dụng",
+      className: "text-right",
+      render: (ingredient) => (
+        <span className="text-muted-foreground">
+          {formatQty(ingredient.max_ingredient_qty)} {ingredient.unit_name}
+        </span>
+      ),
+    },
+    {
+      key: "needed",
+      header: "Cần dùng",
+      className: "text-right",
+      render: (ingredient) => (
+        <span className="font-medium">{renderNeededQuantity(ingredient)}</span>
+      ),
+    },
+    {
+      key: "actual",
+      header: "Sử dụng thực tế",
+      className: "min-w-48",
+      render: (ingredient) => renderIngredientInput(ingredient),
+    },
+  ];
+
+  const body = (
+    <>
+      <AppSection
+        title="Phạm vi sản xuất"
+        description="Chọn nơi tiêu hao nguyên liệu và nơi nhập kho thành phẩm sau khi hoàn tất."
+      >
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="grid gap-2">
+            <Label htmlFor="production-source-branch">
+              Chi nhánh xuất nguyên liệu
+            </Label>
             <Select
-              value={entryUnitId?.toString() || "0"}
-              onValueChange={(val) => setEntryUnitId(val === "0" ? undefined : parseInt(val, 10))}
+              value={branchId?.toString()}
+              onValueChange={(val) => setBranchId(Number.parseInt(val, 10))}
             >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue />
+              <SelectTrigger id="production-source-branch" size={controlSize}>
+                <SelectValue placeholder="Chọn chi nhánh sản xuất" />
               </SelectTrigger>
               <SelectContent>
-                {unitOptions.map((u) => (
-                  <SelectItem key={u.id} value={u.id.toString()}>
-                    {u.name}
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id.toString()}>
+                    {branch.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          )}
-        </div>
-        {recipeContext?.maxProductionQuantity != null && (
-          <p className="text-xs text-muted-foreground">
-            Có thể sản xuất tối đa: <span className="font-medium text-foreground">{recipeContext.maxProductionQuantity}</span>
-            {selectedFg?.unit ? ` ${selectedFg.unit}` : ""}
-          </p>
-        )}
-      </div>
+          </div>
 
-      {isLoadingContext && <p className="text-sm text-muted-foreground italic">Đang tải định mức nguyên liệu...</p>}
-
-      {recipeContext && recipeContext.ingredients.length > 0 && (
-        <div className="grid gap-2">
-          <Label>Bước 2: Điều chỉnh số lượng phần nguyên liệu thực tế</Label>
-          <div className="rounded-md border text-sm overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted/50 border-b">
-                <tr className="text-left text-muted-foreground">
-                  <th className="p-3 font-medium">Tên nguyên liệu</th>
-                  <th className="p-3 font-medium text-right">Tồn kho tối đa</th>
-                  <th className="p-3 font-medium w-36">Cần dùng</th>
-                  <th className="p-3 font-medium w-36">Sử dụng thực tế</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recipeContext.ingredients.map((ing) => (
-                  <tr key={ing.ingredient_id} className="border-b last:border-0 bg-background">
-                    <td className="p-3">{ing.ingredient_name}</td>
-                    <td className="p-3 text-right text-muted-foreground">
-                      {formatQty(ing.max_ingredient_qty)} {ing.unit_name}
-                    </td>
-	                    <td className="p-2">
-	                      <div className="flex items-center gap-2">
-	                        <span className="font-medium text-sm">
-	                          {hasValidPlannedQty && ing.default_usage_per_fg > 0
-	                            ? `${formatQty(plannedQtyParsed * ing.default_usage_per_fg)} ${ing.unit_name}`
-	                            : "Nhập số lượng để xem"}
-	                        </span>
-	                      </div>
-                    </td>
-                    <td className="p-2">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          className="h-8 text-right bg-background"
-                          type="number"
-                          min="0"
-                          step="0.001"
-                          value={ingredientUsages[ing.ingredient_id] ?? ""}
-                          onChange={(e) => handleIngredientChange(ing.ingredient_id, e.target.value)}
-                        />
-                        <span className="text-muted-foreground w-8 shrink-0">{ing.unit_name}</span>
-                      </div>
-                    </td>
-                  </tr>
+          <div className="grid gap-2">
+            <Label htmlFor="production-target-branch">
+              Chi nhánh nhập thành phẩm
+            </Label>
+            <Select
+              value={targetBranchId?.toString()}
+              onValueChange={(val) =>
+                setTargetBranchId(Number.parseInt(val, 10))
+              }
+            >
+              <SelectTrigger id="production-target-branch" size={controlSize}>
+                <SelectValue placeholder="Chọn chi nhánh nhận" />
+              </SelectTrigger>
+              <SelectContent>
+                {targetBranches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id.toString()}>
+                    {branch.name}
+                  </SelectItem>
                 ))}
-              </tbody>
-            </table>
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      )}
+      </AppSection>
 
-      {recipeContext && recipeContext.ingredients.length === 0 && (
-        <p className="text-sm text-muted-foreground italic">Thành phẩm này chưa có định mức nguyên liệu.</p>
-      )}
+      <AppSection
+        title="Sản lượng thành phẩm"
+        description="Chọn món cần sản xuất, nhập sản lượng dự kiến rồi kiểm tra định mức nguyên liệu."
+        action={
+          canUseRecipeControls ? (
+            <Button
+              type="button"
+              variant="outline"
+              size={embedded ? "touch" : "sm"}
+              onClick={handleSetMaxQuantity}
+              disabled={isLoadingContext || recipeContext == null}
+            >
+              Tối đa theo tồn
+            </Button>
+          ) : null
+        }
+      >
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="grid gap-2">
+            <Label htmlFor="production-finished-good">Thành phẩm</Label>
+            <Combobox
+              id="production-finished-good"
+              options={finishedGoods.map((fg) => ({
+                value: fg.id.toString(),
+                label: fg.name,
+              }))}
+              value={finishedGoodId?.toString() || ""}
+              onValueChange={(val: string) => {
+                setFinishedGoodId(val ? Number.parseInt(val, 10) : undefined);
+                setEntryUnitId(undefined);
+              }}
+              placeholder="Chọn thành phẩm..."
+              size={controlSize}
+            />
+          </div>
 
-      <div className="grid gap-2">
-        <Label>Ghi chú</Label>
-        <Input
+          <div className="grid gap-2">
+            <Label htmlFor="production-planned-quantity">
+              Số lượng dự kiến
+            </Label>
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+              <Input
+                id="production-planned-quantity"
+                type="number"
+                min="0"
+                step="0.01"
+                value={plannedQuantity}
+                onChange={(event) => setPlannedQuantity(event.target.value)}
+                placeholder="Nhập số lượng..."
+              />
+              {unitOptions.length > 0 && (
+                <Select
+                  value={entryUnitId?.toString() || "0"}
+                  onValueChange={(val) =>
+                    setEntryUnitId(
+                      val === "0" ? undefined : Number.parseInt(val, 10),
+                    )
+                  }
+                >
+                  <SelectTrigger className="w-full sm:w-36" size={controlSize}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unitOptions.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id.toString()}>
+                        {unit.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            {recipeContext?.maxProductionQuantity != null ? (
+              <p className="text-xs text-muted-foreground">
+                Tối đa theo tồn hiện tại:{" "}
+                <span className="font-medium text-foreground">
+                  {formatQty(recipeContext.maxProductionQuantity)}
+                  {selectedFg?.unit ? ` ${selectedFg.unit}` : ""}
+                </span>
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </AppSection>
+
+      {isLoadingContext ? (
+        <AppSection title="Định mức nguyên liệu" size="sm" tone="info">
+          <p className="text-sm text-muted-foreground">
+            Đang tải định mức nguyên liệu...
+          </p>
+        </AppSection>
+      ) : null}
+
+      {!isLoadingContext && recipeContext?.ingredients.length ? (
+        <AppSection
+          title="Định mức nguyên liệu"
+          description="Hệ thống đề xuất lượng cần dùng theo sản lượng dự kiến. Bếp có thể chỉnh lượng thực tế trước khi tạo lệnh."
+          contentFlush
+        >
+          <DataTable
+            columns={ingredientColumns}
+            data={recipeContext.ingredients}
+            getRowKey={(ingredient) => ingredient.ingredient_id}
+            emptyTitle="Chưa có nguyên liệu"
+            emptyDescription="Thành phẩm này chưa có định mức nguyên liệu."
+            mobileCardRender={(ingredient) => (
+              <Item variant="outline" size="sm" className="items-start">
+                <ItemContent className="basis-full">
+                  <ItemTitle>{ingredient.ingredient_name}</ItemTitle>
+                  <ItemDescription>
+                    Tồn khả dụng: {formatQty(ingredient.max_ingredient_qty)}{" "}
+                    {ingredient.unit_name} · Cần dùng:{" "}
+                    {renderNeededQuantity(ingredient)}
+                  </ItemDescription>
+                </ItemContent>
+                <div className="grid w-full gap-2">
+                  <Label>Sử dụng thực tế</Label>
+                  {renderIngredientInput(ingredient)}
+                </div>
+              </Item>
+            )}
+          />
+        </AppSection>
+      ) : null}
+
+      {!isLoadingContext && recipeContext?.ingredients.length === 0 ? (
+        <AppSection title="Định mức nguyên liệu">
+          <AppEmptyState
+            compact
+            align="start"
+            title="Thành phẩm này chưa có định mức nguyên liệu"
+            description="Hãy cập nhật công thức trước khi tạo lệnh sản xuất để kho trừ đúng."
+          />
+        </AppSection>
+      ) : null}
+
+      <AppSection
+        title="Ghi chú"
+        description="Thông tin thêm cho ca sản xuất."
+      >
+        <Textarea
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={(event) => setNotes(event.target.value)}
           placeholder="Ghi chú thêm..."
+          rows={3}
+        />
+      </AppSection>
+    </>
+  );
+
+  const footerLeading = (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={() => router.back()}
+      disabled={isPending}
+      size={embedded ? "touch" : "default"}
+    >
+      Hủy
+    </Button>
+  );
+  const footerTrailing = (
+    <Button
+      type="button"
+      onClick={handleSave}
+      disabled={isPending}
+      size={embedded ? "touch-lg" : "default"}
+    >
+      {isPending ? "Đang lưu..." : "Tạo lệnh"}
+    </Button>
+  );
+
+  if (embedded) {
+    return (
+      <div className="flex w-full flex-col gap-3">
+        <div className="flex flex-col gap-3">{body}</div>
+        <AppDetailFooter
+          sticky
+          leading={footerLeading}
+          trailing={footerTrailing}
         />
       </div>
+    );
+  }
 
-      <div className="flex justify-end gap-2 pt-4 border-t">
-        <Button variant="outline" onClick={() => router.back()} disabled={isPending}>
-          Hủy
-        </Button>
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "Đang lưu..." : "Tạo mới"}
-        </Button>
-      </div>
-    </AppSection>
+  return (
+    <div className="flex w-full flex-col gap-3">
+      <div className="flex flex-col gap-3">{body}</div>
+      <AppDetailFooter
+        className="border-0 py-0"
+        leading={footerLeading}
+        trailing={footerTrailing}
+      />
+    </div>
   );
 }

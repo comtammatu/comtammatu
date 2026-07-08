@@ -1,11 +1,12 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
+import { Button } from "@comtammatu/ui/components/button";
 import { fetchProductionRunById, fetchProductionRecipeContext } from "../../production-run-actions";
 import { ProductionDetailClient } from "./production-detail-client";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 
 export default async function ProductionDetailPage({
   params,
@@ -13,8 +14,8 @@ export default async function ProductionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const runId = parseInt(id, 10);
-  if (isNaN(runId)) notFound();
+  const runId = Number.parseInt(id, 10);
+  if (Number.isNaN(runId)) notFound();
 
   const res = await fetchProductionRunById(runId);
   if (!res.success || !res.data) {
@@ -26,17 +27,19 @@ export default async function ProductionDetailPage({
   const recipeContext = recipeRes.success && recipeRes.data ? recipeRes.data : null;
 
   return (
-    <AppPage width="narrow" density="compact">
+    <AppPage width="wide" density="compact">
       <AppPageHeader 
         title={`Lệnh sản xuất ${run.production_number}`} 
         actions={<StatusBadge domain="inventory" value={run.status} />}
         breadcrumb={
+          <Button asChild variant="ghost" size="sm" className="px-2">
             <Link
               href="/inventory/production"
-              className="text-muted-foreground hover:text-foreground text-sm flex items-center mb-2"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" /> Quay lại
+              <IconArrowLeft data-icon="inline-start" />
+              Quay lại
             </Link>
+          </Button>
         }
       />
       <ProductionDetailClient run={run} recipeContext={recipeContext} />

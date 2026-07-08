@@ -25,10 +25,6 @@ Checklist vận hành và readiness gates.
 - [../spec/database-schema.md](../spec/database-schema.md): source ladder, migration status vocabulary, and baseline-first layout
 - [../../supabase/migrations/README.md](../../supabase/migrations/README.md): fresh-env install order for the public baseline and managed surfaces
 
-## Agent Tooling
-
-- [agent-headroom.md](agent-headroom.md): local Headroom workflow for compressing long agent sessions without making it a repo dependency
-
 ## Cách dùng
 
 1. Đọc canonical doc tương ứng trong `docs/ref/`

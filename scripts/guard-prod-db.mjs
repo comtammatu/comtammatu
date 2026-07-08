@@ -53,11 +53,10 @@ const HTTP_CLIENT = /\b(curl|wget|httpie|xh)\b/;
 const HTTP_WRITE =
   /(-X|--request|--method)[= ]?\s*(POST|PUT|PATCH|DELETE)\b|--(data|data-raw|data-binary|data-urlencode|json|form|form-string|upload-file|post-data|post-file|body-data|body-file)\b|\s-(d|F|T)\s/i;
 
-// Trailing separator is `[._]` (not just `__`) so connector-wrapped names like
-// `mcp__codex_apps__supabase._execute_sql` are caught, not only the direct
-// `mcp__supabase__execute_sql` shape. The action stays anchored to `$`.
+// The final separator accepts direct MCP names (`mcp__supabase__execute_sql`)
+// and connector-wrapped names (`mcp__codex_apps__supabase._execute_sql`).
 const MCP_WRITE_TOOL =
-  /^mcp__.+?[._](apply_migration|execute_sql|deploy_edge_function|pause_project|restore_project|create_branch|delete_branch|merge_branch|reset_branch|rebase_branch)$/;
+  /^mcp__.+?(?:__|[._]+)(apply_migration|execute_sql|deploy_edge_function|pause_project|restore_project|create_branch|delete_branch|merge_branch|reset_branch|rebase_branch)$/;
 
 function block(reason) {
   console.error(

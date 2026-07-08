@@ -1,5 +1,4 @@
--- Phase A2 of the 2-tier inventory unit system
--- (docs/plan/inventory-unit-system-2026-07-03.md §5 Catalog).
+-- Phase A2 of the 2-tier inventory unit system.
 -- Wires upsert_ingredient_catalog to the anchor model added in Phase A
 -- (20260703160000): each unit's to_base_factor is derived server-side from an
 -- anchor chain via inv_derive_to_base_factor, and anchor_unit_id/anchor_factor

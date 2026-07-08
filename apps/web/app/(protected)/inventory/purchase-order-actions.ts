@@ -590,15 +590,42 @@ export interface OpenPurchaseOrderRow {
   total_est: number | null;
 }
 
-export async function fetchOpenPurchaseOrdersForReceiving(): Promise<
+const fetchOpenPurchaseOrdersForReceivingSchema = z.object({
+  branchId: z.coerce.number().int().positive().optional(),
+});
+
+export async function fetchOpenPurchaseOrdersForReceiving(
+  input: z.input<typeof fetchOpenPurchaseOrdersForReceivingSchema> = {},
+): Promise<
   ActionResult<OpenPurchaseOrderRow[]>
 > {
+  const parsed = fetchOpenPurchaseOrdersForReceivingSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Tham số tải PO chờ nhận không hợp lệ" };
+  }
+
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
+  const requestedBranchId = parsed.data.branchId ?? null;
+  let branchFilter = requestedBranchId;
+
+  if (requestedBranchId != null) {
+    const allowed = await canAccessProcurementBranch(
+      supabase,
+      claims,
+      requestedBranchId,
+    );
+    if (!allowed) return { success: false, error: "Không có quyền" };
+  } else if (isBranchScopedProcurementRole(claims.user_role)) {
+    branchFilter =
+      claims.branch_id ??
+      (await resolveCentralSiteHomeBranchId(supabase, claims));
+    if (branchFilter == null) return { success: true, data: [] };
+  }
 
   let query = supabase
     .from("purchase_orders")
@@ -610,13 +637,7 @@ export async function fetchOpenPurchaseOrdersForReceiving(): Promise<
     .order("ordered_at", { ascending: false })
     .limit(100);
 
-  if (
-    (claims.user_role === "warehouse_manager" ||
-      claims.user_role === "production_manager") &&
-    claims.branch_id != null
-  ) {
-    query = query.eq("branch_id", claims.branch_id);
-  }
+  if (branchFilter != null) query = query.eq("branch_id", branchFilter);
 
   const { data, error } = await query;
   if (error) return { success: false, error: "Không thể tải PO chờ nhận." };

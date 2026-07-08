@@ -6,8 +6,8 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 
 - Agent entrypoint: `AGENTS.md`
 - Skill/plugin/tool routing: `docs/agent/rules/skills.md`
-- Optional T3 / cross-runtime team loop: `docs/agent/rules/team.md`
-- Optional subagent / multi-agent routing: `docs/agent/rules/orchestration.md`
+- Optional T3 second-runtime review: `docs/agent/rules/team.md`
+- Optional subagent/context routing: `docs/agent/rules/orchestration.md`
 - Codebase map + module index: `docs/CODEBASE_MAP.md`
 - Auth & ACL: `docs/modules/auth.md`
 - Database: `docs/modules/database.md`
@@ -42,18 +42,10 @@ A new IDE without a registered adapter runs **UNGUARDED against the production
 DB** — add the adapter and register it in `check-guard-sync.mjs` before using it.
 Until then, keep production-affecting tools read-only in that IDE adapter.
 
-Per-user toolsets are not repo-pinned: the reproducible Claude plugin set lives in
-`.claude/settings.json`, while `gstack` QA/review/deploy skills are self-installed
-(`~/.claude/skills/gstack/`, own installer) and optional. Details and per-layer
-fallbacks: `docs/agent/rules/skills.md` → Toolset Reproducibility.
-
-Claude-runtime accelerators tracked in-repo: `.claude/agents/t3-lens.md` (a
-generic read-only T3 debate lens subagent) and `.claude/commands/t3-debate.md` +
-`.claude/commands/verify-gate.md` (pointer-only launchers). They carry section
-pointers into `docs/agent/rules/`, never rule copies. The asymmetry is
-intentional: Codex has no equivalent surface and runs the same loop from the
-rule docs directly — the written transcript stays the canonical form
-(`docs/agent/rules/team.md` → Runtime-Neutral Mandate).
+Per-user toolsets are not repo authority. `.claude/settings.json` may pin a
+small reusable Claude tool shelf, but every task still routes through
+`docs/agent/rules/skills.md`. The only tracked repo skill is
+`.claude/skills/tax-vn/`, which is a wrapper around the legal/tax reference docs.
 
 ## Intentional Mirrors
 
@@ -69,8 +61,9 @@ Two duplications are deliberate and machine-enforced — do NOT "de-duplicate" t
 ## Planning And Specs
 
 - Active work tracker: `tasks/todo.md`
-- Architecture decisions: `docs/plan/decisions.md`
 - Active ADRs: `docs/plan/adr/`
+- Legacy decision index: `docs/plan/decisions.md` (do not add backlog,
+  implementation plans, or transient debate records)
 - System architecture: `docs/spec/architecture.md`
 - Role/scope/route matrix: `docs/spec/role-route-matrix.md` — hand-authored
   preamble (product frame, principles, navigation contract) plus a
@@ -104,7 +97,7 @@ regressions/lessons stores (Memory Maintenance Rules below) own their own
 registration. Unique to this section:
 
 - Runbook index: `docs/runbooks/README.md`
-- Worklog index: `docs/worklog/README.md`
+- Worklog policy: `docs/worklog/README.md`
 
 ## Memory Maintenance Rules
 
@@ -112,7 +105,8 @@ Which store each fact type lives in is routed by `AGENTS.md` → "Instruction
 memory and learning memory stay separate". This section owns how those stores
 are maintained.
 
-- No separate agent-only doc tree (`docs/llm-wiki/` and the like) — owned by
+- No separate agent-only doc tree (`docs/llm-wiki/`, `docs/superpowers/`, and
+  the like) — owned by
   `engineering.md` → Core Constraints (`MIRROR:constraints`); place durable
   content in the normal source-of-truth docs above.
 - Put incident-specific failure prevention in `tasks/regressions.md`.
@@ -128,14 +122,23 @@ are maintained.
 - Keep rules concrete and verifiable. Avoid vague guidance such as "write good code" or "be careful".
 - Do not add an archive tree or keep superseded implementation plans in the repo. When a decision is current, promote it into the source-of-truth doc above; when it is not current, remove it.
 
-## Transient Snapshot Docs
+## No Snapshot Backlog
 
-`docs/plan/*` dated audit/remediation files and `docs/worklog/*` are **point-in-time snapshots, not source of truth**. Their findings get fixed by later PRs; an unreconciled snapshot reads as if every finding is still open and misleads the next agent (and any model reading the repo cold).
+`docs/plan/*` is restricted to active ADRs and the legacy `decisions.md` index.
+`docs/worklog/*` is restricted to its README policy file unless a PR-local
+staging note is explicitly removed or promoted before closeout. Dated audits,
+implementation plans, debate transcripts, mockups, and backlog snapshots do not
+belong in the shared repo.
 
-- **Verify before acting.** Treat a finding in a snapshot doc as a claim to re-verify against current code + git history, never a live fact. Durable truth lives in the `docs/agent/rules/`, `docs/ref/`, `docs/spec/`, `docs/modules/` zones above.
-- **Required banner.** Every snapshot doc MUST carry, in its first 15 lines, a status line naming the commit it was last reconciled against: `Reconciled-through <git-sha>`. `corepack pnpm lint:doc-staleness` flags snapshot docs missing it (fail-closed in CI via `DOC_STALENESS_STRICT=1`; advisory locally). `docs/plan/decisions.md`, `docs/plan/adr/`, and `README.md` are durable and exempt.
-- **Reconcile-on-merge.** When a PR lands a finding tracked in a snapshot doc, tag that finding `✅ #<PR>` in place and bump the doc's `Reconciled-through` sha. Never leave a landed finding presented as open.
-- **Retire when empty.** When all findings have landed, delete the doc (git is the archive) or promote any durable rule to its canonical doc above. Do not keep a fully-resolved audit as a tombstone.
+- **Promote or delete.** Current contracts move into the owned source-of-truth
+  docs above. Resolved or obsolete findings are deleted; git history is the
+  archive.
+- **Do not legitimize staleness with banners.** `Reconciled-through` status lines
+  are not enough. `corepack pnpm lint:doc-staleness` fails when non-durable
+  plan/worklog snapshots remain.
+- **Use PR bodies for transient review artifacts.** T2/T3 debate summaries,
+  second-runtime notes, and implementation checklists should live in the PR or
+  task note first. Only promote durable rules, contracts, or lessons.
 
 ## Open Knowledge Format Export
 

@@ -138,10 +138,13 @@ export async function GrnNewPageContent({
     queryBranchId: params.branchId,
   });
   if (scope.outOfScope) notFound();
+  const branchId = scope.selectedBranchId;
 
   const [suppliers, openPosRes] = await Promise.all([
     loadSuppliers(claims.tenant_id, supabase),
-    fetchOpenPurchaseOrdersForReceiving(),
+    fetchOpenPurchaseOrdersForReceiving(
+      branchId != null ? { branchId } : undefined,
+    ),
   ]);
 
   const openPos: OpenPurchaseOrderRow[] = openPosRes.success

@@ -8,8 +8,8 @@ Supabase skill family when available.
 ## Environment Registry
 
 Verify the project ref against this registry before EVERY Supabase MCP, CLI, or
-SQL call. This registry wins over any older label found in regressions, worklogs,
-or agent memory.
+SQL call. This registry wins over any older label found in regressions, task
+notes, or agent memory.
 
 | Ref                    | What it is                                                                    | Agent rights                                                                                                  |
 | ---------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
@@ -17,8 +17,8 @@ or agent memory.
 | `dyksphedgzqsqjqgxzog` | `matu-platform` production — a separate codebase used as design reference only | Do not touch.                                                                                                  |
 
 - There is currently NO persistent dev/test Supabase project. Non-prod
-  verification uses an on-demand Preview Branch instead — see §Preview
-  Branches (D047) below. Production migrations still go file → PR → owner
+  verification uses an on-demand Preview Branch instead — see Preview Branches
+  below. Production migrations still go file → PR → owner
   applies, except under Owner-Delegated Production Apply.
 - Historical notes may label `iexwsuaqqenyjiskawoj` as "dev"; those labels are
   stale history. This registry is the SSoT.
@@ -53,7 +53,7 @@ or agent memory.
 ## Migration Policy
 
 - Write the SQL migration file before applying it.
-- Agents MAY apply migrations directly on an approved dev/test Supabase server for verification. With no persistent dev/test project, spin up a Preview Branch (§Preview Branches (D047) below) for this.
+- Agents MAY apply migrations directly on an approved dev/test Supabase server for verification. With no persistent dev/test project, spin up a Preview Branch (see Preview Branches below) for this.
 - Before applying to any non-prod ref, verify the target against the Environment Registry above and confirm it is not production.
 - Production apply is owner-gated: verify the target is PRODUCTION, get explicit owner delegation in the current session, then follow Owner-Delegated Production Apply below. Without that delegation, default production flow is file → PR → merge → owner applies.
 - Production flow is migration-type aware. For additive migrations that dependent
@@ -111,7 +111,7 @@ session; never as a default. The mechanics that work in practice:
   will try to re-apply. A full ledger re-baseline is owner-gated (ADR 0006);
   apply via `apply_migration` only.
 
-### Preview Branches (D047)
+### Preview Branches
 
 `create_branch` and `delete_branch` (org-scoped Supabase MCP) are ALLOWED by the
 `guard-prod-db.mjs` hook — preview/dev branches are children of prod and do not

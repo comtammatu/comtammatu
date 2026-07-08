@@ -38,7 +38,7 @@ corepack pnpm db:types     # Regenerate Supabase types after migration is applie
 - Code comments MUST be English and only state non-obvious constraints. NEVER add narrative, explanatory, or change-log comments (no "đã xóa/đã gỡ", no owner-decision dates in code).
 - Put durable explanations, guides, operational notes, and task notes in Markdown docs, guides, or note files inside the source tree.
 - MUST follow `docs/agent/rules/skills.md` for skill/plugin/tool selection on non-trivial tasks.
-- NEVER create a separate agent-only documentation tree such as `docs/llm-wiki/`; use `AGENTS.md`, `docs/agent/rules/`, `docs/CODEBASE_MAP.md`, module docs, specs, runbooks, tasks, or worklogs according to the content type.
+- NEVER create a separate agent-only documentation tree such as `docs/llm-wiki/` or `docs/superpowers/`; use `AGENTS.md`, `docs/agent/rules/`, `docs/CODEBASE_MAP.md`, module docs, specs, runbooks, tasks, decisions, or ADRs according to the content type; `docs/worklog/` is policy-only.
 
 <!-- MIRROR:constraints:end -->
 

@@ -7,6 +7,17 @@ const runnerPageOnlySource = readFileSync(
   join(process.cwd(), "app/(protected)/br/[branchId]/runner/page.tsx"),
   "utf8",
 );
+const runnerLayoutSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/runner/layout.tsx"),
+  "utf8",
+);
+const runnerLightModeSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/runner/runner-light-mode.tsx",
+  ),
+  "utf8",
+);
 const runnerOrderBoardSource = readFileSync(
   join(
     process.cwd(),
@@ -14,7 +25,7 @@ const runnerOrderBoardSource = readFileSync(
   ),
   "utf8",
 );
-const runnerPageSource = `${runnerPageOnlySource}\n${runnerOrderBoardSource}`;
+const runnerPageSource = `${runnerLayoutSource}\n${runnerPageOnlySource}\n${runnerOrderBoardSource}`;
 const runnerWaitTimeSource = readFileSync(
   join(
     process.cwd(),
@@ -110,6 +121,19 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   );
   assert.match(runnerPageSource, /className="flex h-dvh min-h-0 w-full/);
   assert.match(runnerPageSource, /className="flex h-full min-h-0 w-full/);
+  assert.match(
+    runnerPageSource,
+    /className="theme-light-only flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation"/,
+  );
+  assert.match(runnerPageSource, /<RunnerLightMode \/>/);
+  assert.match(uiGlobalsSource, /:root,\n\.theme-light-only \{/);
+  assert.match(uiGlobalsSource, /color-scheme: light;/);
+  assert.match(runnerLightModeSource, /root\.classList\.remove\("dark"\)/);
+  assert.match(runnerLightModeSource, /root\.classList\.add\("light"\)/);
+  assert.match(runnerLightModeSource, /root\.style\.colorScheme = "light"/);
+  assert.match(runnerLightModeSource, /window\.setTimeout\(applyLightMode, 0\)/);
+  assert.doesNotMatch(runnerLightModeSource, /matu-theme/);
+  assert.doesNotMatch(runnerLightModeSource, /localStorage/);
   assert.match(runnerPageSource, /grid-rows-4/);
   assert.match(runnerPageSource, /grid-cols-12/);
   assert.match(runnerPageSource, /const RUNNER_COLUMN_SPAN = \{/);

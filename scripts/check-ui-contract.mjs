@@ -784,7 +784,7 @@ const textChecks = [
       "`docs/spec/design-system.md`: Custom Theme authority",
       "`docs/modules/ui.md`: implementation guide",
       "`docs/runbooks/*`: verification checklists only.",
-      "`docs/worklog/*`: temporary staging only",
+      "`docs/worklog/README.md`: policy only",
     ],
   },
   {

@@ -27,6 +27,7 @@ export default async function OperatorProductionNewPage({ params }: PageProps) {
       finishedGoods={finishedGoodsWithRecipes}
       initialBranchId={branchId}
       basePath={`/br/${branchId}/stock/production`}
+      embedded
     />
   );
 }

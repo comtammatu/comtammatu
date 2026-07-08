@@ -52,7 +52,7 @@ export default async function OperatorProductionDetailPage({
         </Button>
         <StatusBadge domain="inventory" value={run.status} />
       </div>
-      <ProductionDetailClient run={run} recipeContext={recipeContext} />
+      <ProductionDetailClient run={run} recipeContext={recipeContext} embedded />
     </div>
   );
 }

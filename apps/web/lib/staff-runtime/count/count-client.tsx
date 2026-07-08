@@ -2,7 +2,7 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: employee inventory count slip keeps operational copy close to the workflow controls */
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Send as IconSend, Warehouse as IconWarehouse } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -151,6 +151,7 @@ export function CountSlipClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const draftSeedKeyRef = useRef<string | null>(null);
 
   const activeGroup = useMemo(
     () =>
@@ -174,22 +175,36 @@ export function CountSlipClient({
       (assignment) => assignment.ingredientId === selectedIngredientId,
     ) ?? null;
 
-  // Re-seed the draft whenever the active location or its prefill changes.
   useEffect(() => {
     if (!activeGroup) {
-      setDraft({});
+      if (draftSeedKeyRef.current !== null) {
+        draftSeedKeyRef.current = null;
+        setDraft({});
+      }
       return;
     }
     const next: Record<number, DraftLine> = {};
+    const seedRows: Array<[number, string, number | null, string]> = [];
     for (const assignment of activeGroup.assignments) {
       const prior = prefill[assignment.ingredientId];
       const baseUnit = getBaseCountUnit(assignment.countUnits);
-      next[assignment.ingredientId] = {
+      const line = {
         quantity: prior?.quantity ?? "",
         note: prior?.note ?? "",
         entryUnitId: prior?.entryUnitId ?? baseUnit?.unitId ?? null,
       };
+      next[assignment.ingredientId] = line;
+      seedRows.push([
+        assignment.ingredientId,
+        line.quantity,
+        line.entryUnitId,
+        line.note,
+      ]);
     }
+    const nextSeedKey = JSON.stringify([activeGroup.locationId, seedRows]);
+    // Guard identical RSC refresh payloads; count inputs are local until submit.
+    if (draftSeedKeyRef.current === nextSeedKey) return;
+    draftSeedKeyRef.current = nextSeedKey;
     setDraft(next);
   }, [activeGroup, prefill]);
 

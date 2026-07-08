@@ -8,7 +8,7 @@ Pick review depth by the task's blast radius, not by file count. Higher tiers AD
 
 | Tier                           | Triggers                                                                                                                                                                                                                 | Required review                                                                                                                                                                           |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **T3 — Full debate**           | Auth/RLS, money (payments/refunds/invoices/journal), multi-row writes, new RPC with `SECURITY DEFINER`, schema migration touching constraints, production data backfill, anything that can silently corrupt or leak data | **All 4 perspectives below, written out** before implementation. Spawn 4 parallel subagents (one per role) via the Agent tool, OR write a debate transcript in the PR / worklog yourself. |
+| **T3 — Full debate**           | Auth/RLS, money (payments/refunds/invoices/journal), multi-row writes, new RPC with `SECURITY DEFINER`, schema migration touching constraints, production data backfill, anything that can silently corrupt or leak data | **All 4 perspectives below, written out** before implementation. Spawn 4 parallel subagents (one per role) via the Agent tool, OR write a debate transcript in the PR/task note yourself. |
 | **T2 — Self-review checklist** | New feature, non-trivial bug fix, refactor that changes a public boundary, UI surface change beyond a single component, route-resolution change                                                                          | **All 4 perspectives below, condensed**. Write 2–4 lines per role in the task notes or PR body before coding. Subagents optional.                                                         |
 | **T1 — Skip**                  | Typo fixes under 3 changed lines, doc-only changes, dependency version bumps with no API change                                                                                                                          | Verify the diff and state why the debate was skipped in the commit/PR body.                                                                                                               |
 
@@ -75,7 +75,9 @@ After all four return, synthesize:
 2. List conflicts and resolve each explicitly.
 3. Produce a unified task contract (scope + business rules + implementation plan + test plan).
 
-For T3 changes, attach the synthesized contract to the PR description or to a worklog note under `docs/worklog/`.
+For T3 changes, attach the synthesized contract to the PR description or task
+note. Do not create a dated `docs/worklog/` file unless the note is deleted or
+promoted before closeout.
 
 ## Running A T2 Self-Review
 
@@ -101,12 +103,12 @@ Before marking implementation work complete:
 2. **CodeGraph freshness.** Re-index per `AGENTS.md` → CodeGraph after the final source/SQL/generated-type changes and before closeout (for database changes, after `corepack pnpm db:types`). N/A for doc-only changes.
 3. **Cross-boundary coherence.** When the change spans more than one module/shell or crosses an API ↔ hook ↔ nav boundary (e.g. the finance/hr/inventory/menu/orders shells), cross-compare response shape ↔ consumer type and route ↔ link at each pair's completion rather than batching the whole slice — generic casts and `any` compile clean. N/A for T1 or single-component changes.
 4. **Self-attestation (advisory, not CI-gated).** Contract-vs-diff is irreducibly semantic; a reviewer subagent judging "are the business rules implemented?" is itself a non-deterministic call, not a gate. The four-perspective debate is a thinking tool — its only enforcement is that the artifact below is present for owner review:
-   - T3: paste a 3-line attestation into the PR / worklog contract — test-plan items covered vs deferred-with-reason; each BA rule mapped to the implementing file/line; known out-of-scope gaps.
+   - T3: paste a 3-line attestation into the PR/task contract — test-plan items covered vs out-of-scope-with-reason; each BA rule mapped to the implementing file/line; known out-of-scope gaps.
    - T2: a 1-line attestation that the diff matches the self-review block.
    - T1: state why the debate was skipped in the commit body.
 5. **Tier floor.** Run `corepack pnpm lint:review-tier`; semantics owned by Review Depth above.
 6. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every PR and on push to `main` — a push to a working branch alone triggers nothing. Landed work is complete only with green CI.
 7. Learning-loop hygiene (T2/T3) — one pass before closing, so the loop stays bounded:
    - A recurring failure surfaced → add a `tasks/regressions.md` rule. If its detection is a deterministic code pattern, add a guard row to `scripts/check-regression-guards.mjs` instead of relying on prose — an enforced rule costs zero context.
-   - The task's worklog has landed → promote any durable rule to its canonical doc (`docs/agent/rules/`, a module/ref doc) and delete the worklog; git history is the archive.
+   - A transient task note has landed → promote any durable rule to its canonical doc (`docs/agent/rules/`, a module/ref doc) and delete the staging note; git history is the archive.
    - State the learning (or "none") in the commit/PR body.

@@ -8,7 +8,7 @@ later — the LLM advisory layer) writes into the SAME `notifications` table und
 this contract.
 
 Status legend per item: **[live]** exists in code/prod · **[designed]** contract
-agreed, not yet built · **[future]** deferred behind a gate.
+agreed, not yet built · **[future]** outside the current build gate.
 
 ## The spine
 
@@ -159,8 +159,7 @@ emits zero rows of any trigger-owned `kind`.
 - **LLM never holds a DB connection, an RPC, or a number.** It receives rows the
   deterministic layer already selected and emits prose only. A hallucinated number
   is impossible-by-construction. `advisory.*` / digest is the LAST thing built.
-- **Money / tax / labor producers are capped at R1 (alert) forever** — never
-  auto-act. See the autonomy ladder in `docs/plan/agentic-os-blueprint.md`.
+- **Money / tax / labor producers are alert-only forever** — never auto-act.
 - **Agent action surface = existing `SECURITY DEFINER` RPCs** (allowlist + caps).
   No new action API.
 - **Migration/prod posture is owned by `database.md`** (Environment Registry +
@@ -169,5 +168,5 @@ emits zero rows of any trigger-owned `kind`.
 - **Single tenant** (`tenant_id = 1`); still scope every query by
   `tenant_id` + `branch_id` explicitly (service-role bypasses RLS).
 
-Phasing, agent constellation, the autonomy ladder, the sprint plan, and the
-agent-team delivery model are in `docs/plan/agentic-os-blueprint.md`.
+Phasing and delivery planning belong in `tasks/todo.md` or a PR body when a
+slice is active. Do not recreate a standalone Agentic OS blueprint.

@@ -7,9 +7,17 @@
 
 ## Trạng thái
 
-- **Operating track:** production đang vận hành in-place trên repo `comtammatu`; ongoing work tập trung vào hardening + bổ sung tính năng theo phản hồi vận hành. Current decisions live in `tasks/todo.md`, `docs/plan/decisions.md`, and active ADRs.
-- **Current surface:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo) đang là surface vận hành thật. HĐĐT active qua Viettel S-invoice. Finance/HR/Notifications/Reporting còn các blocker thật trong `tasks/todo.md`.
-- **Current priority:** tiếp tục hardening trên mô hình `tenant -> chi nhánh`; chỉ các blocker/current work ở `tasks/todo.md` là work queue hợp lệ.
+- **Operating track:** production đang vận hành in-place trên repo `comtammatu`;
+  Greenfield preparation is the active cleanup track. Current work lives only in
+  `tasks/todo.md`; durable architecture choices live in active ADRs or the
+  owning spec/ref/rule doc.
+- **Current surface:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS,
+  Print, Payments (Cash + VietQR + Momo), Finance Basic, HR/payroll basics, and
+  HĐĐT via Viettel S-invoice are the production surface to re-derive for
+  Greenfield.
+- **Current priority:** keep the production baseline factual, classify current
+  dirty WIP, verify the Greenfield target, and rebuild only the minimal product
+  spine. Historical backlog is not a work queue.
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
 
 ## Chỉ mục phân hệ
@@ -34,7 +42,7 @@ Khi cần đi sâu hơn theo loại tài liệu:
 - [docs/architecture/README.md](architecture/README.md) — kiến trúc hệ thống và cross-cutting docs
 - [ref/README.md](ref/README.md) — canonical reference docs
 - [runbooks/README.md](runbooks/README.md) — readiness và smoke gates
-- [worklog/README.md](worklog/README.md) — temporary implementation staging only
+- [worklog/README.md](worklog/README.md) — worklog policy; no historical archive
 
 ## Tổng quan kiến trúc
 

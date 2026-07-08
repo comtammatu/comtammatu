@@ -1,4 +1,4 @@
--- Canonical hardening for the units registry (docs/plan/inventory-unit-system-2026-07-03.md).
+-- Canonical hardening for the units registry.
 -- The registry is owner-editable via /inventory/settings/units; this migration keeps
 -- the canonical shape (name = code, lowercase codes, accented packaging, symbol
 -- standards) enforced going forward without hardcoding the list. Self-heal UPDATEs

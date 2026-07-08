@@ -34,7 +34,10 @@ import {
 } from "@/components/data-table/data-table";
 import { Combobox, FormDialog } from "@/components/form";
 import { AppEmptyState, AppSection } from "@/components/surface";
-import { RecipeLinesEditor } from "./_components/recipe-lines-editor";
+import {
+  RecipeLinesEditor,
+  type RecipeLineIngredient,
+} from "./_components/recipe-lines-editor";
 import {
   deleteProductionRecipeGroup,
   deleteProductionRecipe,
@@ -80,7 +83,7 @@ const recipeLineItemSchema = z.object({
     .string()
     .min(1, { error: INVENTORY_VI.enterQuantity })
     .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
-  unit: z.string().optional(),
+  unitLabel: z.string().optional(),
   entry_unit_id: z.string().optional(),
   yield_factor: z
     .string()
@@ -125,7 +128,7 @@ function emptyRecipeLine(): RecipeLineItemFormValues {
   return {
     ingredient_id: "",
     quantity: "1",
-    unit: "",
+    unitLabel: "",
     entry_unit_id: "",
     yield_factor: "1",
     note: "",
@@ -138,7 +141,7 @@ function recipeToLineFormValue(
   return {
     ingredient_id: String(recipe.ingredient_id),
     quantity: String(recipe.quantity),
-    unit: recipe.unit,
+    unitLabel: recipe.unitLabel,
     entry_unit_id:
       recipe.entry_unit_id != null ? String(recipe.entry_unit_id) : "",
     yield_factor: String(recipe.yield_factor),
@@ -198,7 +201,7 @@ function RecipeDialogFields({
   finishedGoodsOptions: FinishedGoodOption[];
   unitOptions: UnitOption[];
   groupedRecipes: ProductionRecipeGroup[];
-  recipeLinesEditorIngredients: RawIngredientOption[];
+  recipeLinesEditorIngredients: RecipeLineIngredient[];
   rawIngredientsOptions: RawIngredientOption[];
   onFinishedGoodCreated: (good: FinishedGoodOption) => void;
   onRawIngredientCreated: (ingredient: RawIngredientOption) => void;
@@ -233,14 +236,14 @@ function RecipeDialogFields({
       appendRecipeLine({
         ...emptyRecipeLine(),
         ingredient_id: String(ingredient.id),
-        unit: ingredient.unit,
+        unitLabel: ingredient.unit,
       });
     } else {
       form.setValue(
         `lines.${targetIndex}.ingredient_id`,
         String(ingredient.id),
       );
-      form.setValue(`lines.${targetIndex}.unit`, ingredient.unit);
+      form.setValue(`lines.${targetIndex}.unitLabel`, ingredient.unit);
     }
   }
 
@@ -465,7 +468,7 @@ export function ProductionRecipePanel({
       rawIngredientsOptions.map((item) => ({
         id: item.id,
         name: item.name,
-        unit: item.unit,
+        unitLabel: item.unit,
         units: item.units,
       })),
     [rawIngredientsOptions],
@@ -600,7 +603,7 @@ export function ProductionRecipePanel({
       render: (recipe) => (
         <div>
           <div className="font-medium">{recipe.ingredient_name}</div>
-          <div className="text-xs text-muted-foreground">{recipe.unit}</div>
+          <div className="text-xs text-muted-foreground">{recipe.unitLabel}</div>
         </div>
       ),
     },
@@ -609,7 +612,7 @@ export function ProductionRecipePanel({
       header: FORM_VI.quantity,
       render: (recipe) => (
         <span>
-          {recipe.quantity} {recipe.unit}
+          {recipe.quantity} {recipe.unitLabel}
         </span>
       ),
     },
@@ -629,7 +632,7 @@ export function ProductionRecipePanel({
           {
             key: "actions",
             header: "",
-            className: "w-24",
+            className: "text-right",
             render: (recipe) => (
               <div className="flex items-center justify-end gap-1">
                 <Button
@@ -862,7 +865,7 @@ function RecipeLineItemCard({
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium">{recipe.ingredient_name}</span>
             <Badge variant={badgeVariantFromTone("neutral")} className="shrink-0 font-mono text-xs">
-              {recipe.quantity} {recipe.unit}
+              {recipe.quantity} {recipe.unitLabel}
             </Badge>
           </div>
           <ItemDescription className="truncate text-xs">
@@ -901,7 +904,7 @@ function RecipeLineItemCard({
       <ItemHeader>
         <ItemTitle>{recipe.ingredient_name}</ItemTitle>
         <Badge variant={badgeVariantFromTone("neutral")}>
-          {recipe.quantity} {recipe.unit}
+          {recipe.quantity} {recipe.unitLabel}
         </Badge>
       </ItemHeader>
       <ItemContent>

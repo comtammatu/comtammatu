@@ -1,15 +1,12 @@
--- Add real entry_unit_id to the two source-line tables that carried a legacy
--- free-text `unit` column (already dropped by 20260707174300). This unblocks the
--- LIVE stock_movements writers (confirm_supplier_return,
--- branch_manager_approve_consumption_report) to store a real entry unit and
--- convert quantity to base via inv_to_base.
+-- Add entry_unit_id to the source-line tables used by LIVE stock_movements
+-- writers (confirm_supplier_return, branch_manager_approve_consumption_report)
+-- so they store a real entry unit and convert quantity to base via inv_to_base.
 --
 -- Sequence: add nullable column -> backfill (prefer the authoritative source
 -- where one exists: grn_items.entry_unit_id for supplier returns; otherwise the
 -- ingredient's active base unit) -> patch the three upstream line writers so
--- future inserts populate entry_unit_id and no longer reference the dropped
--- `unit` column or ingredients.purchase_unit -> precheck -> composite FK ->
--- SET NOT NULL.
+-- future inserts populate entry_unit_id -> precheck -> composite FK -> SET NOT
+-- NULL.
 --
 -- Patches are minimal: only the INSERT column lists + SELECT change to carry
 -- entry_unit_id. Signatures, return types, guards, and surrounding logic are
@@ -75,8 +72,7 @@ WHERE l.entry_unit_id IS NULL
 
 -- 4. Patch create_supplier_return_from_grn — verbatim from baseline signature
 --    (p_resolution DEFAULT 'replacement', p_reason DEFAULT 'damaged'). Only the
---    supplier_return_items INSERT column list + SELECT gain entry_unit_id; the
---    dropped `unit` column is no longer referenced.
+--    supplier_return_items INSERT column list + SELECT gain entry_unit_id.
 CREATE OR REPLACE FUNCTION public.create_supplier_return_from_grn(
   p_grn_id bigint,
   p_resolution text DEFAULT 'replacement'::text,
@@ -193,8 +189,8 @@ END;
 $$;
 
 -- 5. Patch create_supplier_return_from_stock — verbatim from baseline. Only the
---    supplier_return_items INSERT gains entry_unit_id (resolved from ingredient
---    base unit) and drops the dropped `unit`/ingredients.unit references.
+--    supplier_return_items INSERT gains entry_unit_id resolved from the
+--    ingredient base unit.
 CREATE OR REPLACE FUNCTION public.create_supplier_return_from_stock(
   p_branch_id bigint,
   p_supplier_id bigint,
@@ -301,10 +297,9 @@ $$;
 
 -- 6. Patch employee_submit_consumption_report — verbatim from the active 5-arg
 --    signature (p_tenant_id, p_attendance_id, p_lines, p_note, p_no_consumption)
---    RETURNS bigint. Only the report-lines INSERT drops the removed `unit`/
---    ingredients.purchase_unit references and gains entry_unit_id resolved from
---    the ingredient's active base unit. All validation, checklist, notification,
---    and checklist-item logic is preserved.
+--    RETURNS bigint. The report-lines INSERT stores entry_unit_id resolved from
+--    the ingredient's active base unit. All validation, checklist,
+--    notification, and checklist-item logic is preserved.
 CREATE OR REPLACE FUNCTION public.employee_submit_consumption_report(
   p_tenant_id bigint,
   p_attendance_id bigint,

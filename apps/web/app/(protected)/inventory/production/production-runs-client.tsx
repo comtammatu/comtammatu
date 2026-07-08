@@ -1,16 +1,34 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus as IconPlus } from "lucide-react";
+import {
+  ArrowRight as IconArrowRight,
+  ChevronRight as IconChevronRight,
+  ListChecks as IconListChecks,
+  Plus as IconPlus,
+} from "lucide-react";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
-import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
+import { INVENTORY_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
+import {
+  BRANCH_VI,
+  FORM_VI,
+  INVENTORY_VI,
+  PRODUCT_VI,
+} from "@comtammatu/shared/messages";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
-import { AppSection, AppToolbar } from "@/components/surface";
+import { AppSection } from "@/components/surface";
+import { matchesSearch } from "@lib/search";
 import type { ProductionRunRow } from "../production-run-actions";
+
+const ALL_STATUS_VALUE = "_all";
+const STATUS_LABELS: Record<string, string> = INVENTORY_STATUS_LABELS_VI;
 
 interface ProductionRunsClientProps {
   initial: ProductionRunRow[];
@@ -26,12 +44,43 @@ export function ProductionRunsClient({
   embedded,
 }: ProductionRunsClientProps) {
   const [items] = useState<ProductionRunRow[]>(initial);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState(ALL_STATUS_VALUE);
+
+  const statusOptions = useMemo(() => {
+    return Array.from(new Set(items.map((item) => item.status))).sort((a, b) =>
+      statusLabel(a).localeCompare(statusLabel(b), "vi"),
+    );
+  }, [items]);
+
+  const filteredItems = useMemo(() => {
+    const query = search.trim();
+
+    return items.filter((row) => {
+      if (statusFilter !== ALL_STATUS_VALUE && row.status !== statusFilter) {
+        return false;
+      }
+
+      if (!query) return true;
+
+      return matchesSearch(
+        [
+          row.production_number,
+          row.finished_good_name,
+          row.branch_name,
+          row.target_branch_name,
+          row.notes,
+        ],
+        query,
+      );
+    });
+  }, [items, search, statusFilter]);
 
   const columns = useMemo<DataTableColumn<ProductionRunRow>[]>(() => {
     return [
       {
         key: "production_number",
-        header: "Mã Lệnh",
+        header: INVENTORY_VI.productionNumber,
         render: (row) => (
           <Link
             href={`${basePath}/${row.id}`}
@@ -43,62 +92,166 @@ export function ProductionRunsClient({
       },
       {
         key: "created_at",
-        header: "Ngày tạo",
+        header: INVENTORY_VI.createdDate,
         render: (row) => formatVNDate(row.created_at),
       },
       {
         key: "branch",
-        header: "Chi nhánh",
-        render: (row) => row.branch_id === row.target_branch_id 
-          ? row.branch_name 
-          : <span className="flex items-center gap-1">{row.branch_name} <span className="text-muted-foreground text-xs mx-1">➔</span> {row.target_branch_name}</span>,
+        header: BRANCH_VI.long,
+        render: (row) => (
+          <ProductionRoute
+            from={row.branch_name}
+            to={row.target_branch_name}
+            sameBranch={row.branch_id === row.target_branch_id}
+          />
+        ),
       },
       {
         key: "finished_good",
-        header: "Thành phẩm",
+        header: PRODUCT_VI.finishedGood,
         render: (row) => row.finished_good_name,
       },
       {
         key: "planned_quantity",
-        header: "SL Dự kiến",
+        header: FORM_VI.quantity,
         render: (row) => {
-            const unit = row.entry_unit_name || "";
-            return `${row.planned_quantity} ${unit}`;
-        }
+          const unit = row.entry_unit_name || "";
+          return `${row.planned_quantity} ${unit}`;
+        },
       },
       {
         key: "status",
-        header: "Trạng thái",
-        render: (row) => {
-            return <StatusBadge domain="inventory" value={row.status} />;
-        },
+        header: FORM_VI.status,
+        render: (row) => (
+          <StatusBadge domain="inventory" value={row.status} size="sm" />
+        ),
       },
     ];
   }, [basePath]);
 
   return (
-    <AppSection>
-      <AppToolbar>
-        <div className="flex-1" />
-        <Button asChild>
-          <Link href={`${basePath}/new${branchId ? `?branchId=${branchId}` : ""}`}>
-            <IconPlus className="h-4 w-4 mr-2" />
-            Tạo Lệnh
+    <AppSection
+      className="overflow-hidden"
+      contentFlush
+      icon={<IconListChecks />}
+      title={INVENTORY_VI.productionOrdersTab}
+      description={INVENTORY_VI.productionOrdersCardDescription}
+      badge={{
+        children: `${filteredItems.length} / ${items.length} ${INVENTORY_VI.productionOrdersMetricLabel}`,
+        variant: "secondary",
+      }}
+      action={
+        <Button asChild size={embedded ? "touch" : "default"}>
+          <Link
+            href={`${basePath}/new${branchId ? `?branchId=${branchId}` : ""}`}
+          >
+            <IconPlus data-icon="inline-start" />
+            {INVENTORY_VI.createOrderShort}
           </Link>
         </Button>
-      </AppToolbar>
-
+      }
+    >
       <DataTable
-        data={items}
+        data={filteredItems}
         columns={columns}
         getRowKey={(row) => row.id.toString()}
+        searchable
+        searchPlaceholder="Tìm số lệnh, thành phẩm, chi nhánh..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        filters={[
+          {
+            key: "status",
+            placeholder: FORM_VI.status,
+            options: [
+              { value: ALL_STATUS_VALUE, label: "Tất cả trạng thái" },
+              ...statusOptions.map((status) => ({
+                value: status,
+                label: statusLabel(status),
+              })),
+            ],
+          },
+        ]}
+        filterValues={{ status: statusFilter }}
+        onFilterChange={(_key, value) => setStatusFilter(value)}
+        emptyTitle={
+          search || statusFilter !== ALL_STATUS_VALUE
+            ? "Không tìm thấy lệnh phù hợp"
+            : INVENTORY_VI.productionOrdersEmptyTitle
+        }
+        emptyDescription={
+          search || statusFilter !== ALL_STATUS_VALUE
+            ? "Đổi từ khóa hoặc trạng thái để xem lại danh sách lệnh."
+            : INVENTORY_VI.productionOrdersEmptyDescription
+        }
+        emptyMode={
+          search || statusFilter !== ALL_STATUS_VALUE ? "no-results" : "no-data"
+        }
         mobileCardRender={(row) => (
-          <div className="flex flex-col gap-1 text-sm">
-            <span>{row.production_number}</span>
-            <span className="font-semibold">{row.finished_good_name}</span>
-          </div>
+          <ProductionRunCard row={row} href={`${basePath}/${row.id}`} />
         )}
       />
     </AppSection>
+  );
+}
+
+function statusLabel(status: string) {
+  return STATUS_LABELS[status] ?? status;
+}
+
+function ProductionRoute({
+  from,
+  to,
+  sameBranch,
+}: {
+  from: string;
+  to: string;
+  sameBranch: boolean;
+}) {
+  if (sameBranch) return <span>{from}</span>;
+
+  return (
+    <span className="flex min-w-0 items-center gap-1">
+      <span className="truncate">{from}</span>
+      <IconArrowRight className="size-3 shrink-0 text-muted-foreground" />
+      <span className="truncate">{to}</span>
+    </span>
+  );
+}
+
+function ProductionRunCard({
+  row,
+  href,
+}: {
+  row: ProductionRunRow;
+  href: string;
+}) {
+  const unit = row.entry_unit_name ?? "";
+
+  return (
+    <InteractiveCard asChild minHeight="mobile" padding="default">
+      <Link href={href} className="min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <p className="truncate font-mono text-sm font-semibold">
+              {row.production_number}
+            </p>
+            <StatusBadge domain="inventory" value={row.status} size="sm" />
+          </div>
+          <p className="truncate text-sm font-medium">{row.finished_good_name}</p>
+          <p className="text-xs text-muted-foreground">
+            {formatVNDate(row.created_at)} · {row.planned_quantity} {unit}
+          </p>
+          <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+            <ProductionRoute
+              from={row.branch_name}
+              to={row.target_branch_name}
+              sameBranch={row.branch_id === row.target_branch_id}
+            />
+          </p>
+        </div>
+        <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+      </Link>
+    </InteractiveCard>
   );
 }
