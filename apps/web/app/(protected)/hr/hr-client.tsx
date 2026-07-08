@@ -15,11 +15,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import {
-  CalendarCheck as IconCalendarCheck,
-  FileSignature as IconFileSignature,
-  HeartPulse as IconHeartPulse,
   ShieldCheck as IconShieldCheck,
   UserPlus as IconUserPlus,
   WalletCards as IconWalletCards,
@@ -58,7 +54,9 @@ export function HrClient({
   const [isPending, startTransition] = useTransition();
   const defaultTab =
     canManageEmployees && canViewEmployees ? "employees" : "attendance";
-  const activeEmployees = employees.filter((employee) => employee.is_active);
+  const activeEmployees = canManageEmployees
+    ? employees.filter((employee) => employee.is_active)
+    : [];
   const payrollReadyCount = activeEmployees.filter(
     (employee) => Number(employee.base_salary ?? 0) > 0,
   ).length;
@@ -91,7 +89,7 @@ export function HrClient({
   // Shifts back the setup tab; UrlTabs owns tab state so the lazy fetch is
   // tied to mount rather than tab activation.
   useEffect(() => {
-    if (shiftsLoaded) return;
+    if (!canManageEmployees || shiftsLoaded) return;
     startTransition(async () => {
       const result = await fetchShifts();
       if (result.success) {
@@ -101,7 +99,7 @@ export function HrClient({
         toast.error(result.error ?? SHIFTS_LOAD_FAILED);
       }
     });
-  }, [shiftsLoaded]);
+  }, [canManageEmployees, shiftsLoaded]);
 
   const tabItems = [
     ...(canViewEmployees
@@ -109,9 +107,11 @@ export function HrClient({
       : []),
     { value: "attendance", label: copy.tabs.attendance },
     ...(canManageEmployees
-      ? [{ value: "payroll", label: copy.tabs.payroll }]
+      ? [
+          { value: "payroll", label: copy.tabs.payroll },
+          { value: "setup", label: copy.tabs.setup },
+        ]
       : []),
-    { value: "setup", label: copy.tabs.setup },
   ];
 
   return (
@@ -128,84 +128,37 @@ export function HrClient({
             ? workspaceCopy.branchManagerDescription
             : workspaceCopy.ownerDescription
         }
+        actions={
+          canManageEmployees ? (
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="ghost">
+                <Link href="/hr/staff">
+                  <IconShieldCheck data-icon="inline-start" />
+                  {copy.staffAccounts}
+                </Link>
+              </Button>
+              <Button onClick={() => setAddOpen(true)}>
+                <IconUserPlus data-icon="inline-start" />
+                {copy.addEmployee}
+              </Button>
+            </div>
+          ) : null
+        }
       />
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard
-          label={copy.readiness.activePeople}
-          value={activeEmployees.length}
-          hint={copy.readiness.totalPeople(employees.length)}
-          density="compact"
-          icon={<IconCalendarCheck aria-hidden />}
-        />
-        <KpiCard
-          label={copy.readiness.payrollReady}
-          value={payrollReadyCount}
-          hint={copy.readiness.payrollReadyHint}
-          tone={payrollReadyCount > 0 ? "success" : "warning"}
-          density="compact"
-          icon={<IconWalletCards aria-hidden />}
-        />
-        {canManageEmployees ? (
-          <KpiCard
-            label={copy.readiness.insured}
-            value={insuredEmployees}
-            hint={copy.readiness.insuredHint}
-            tone={insuredEmployees > 0 ? "primary" : "neutral"}
-            density="compact"
-            icon={<IconHeartPulse aria-hidden />}
-          />
-        ) : (
-          <KpiCard
-            label={copy.readiness.branches}
-            value={branches.length}
-            hint={copy.readiness.branchScope}
-            density="compact"
-            icon={<IconShieldCheck aria-hidden />}
-          />
-        )}
-        {canManageEmployees ? (
-          <KpiCard
-            label={copy.readiness.contractMissing}
-            value={missingContractCount}
-            hint={copy.readiness.contractMissingHint}
-            tone={missingContractCount > 0 ? "warning" : "success"}
-            density="compact"
-            icon={<IconFileSignature aria-hidden />}
-          />
-        ) : (
-          <KpiCard
-            label={copy.readiness.shifts}
-            value={shifts.length}
-            hint={copy.readiness.shiftHint}
-            density="compact"
-            icon={<IconFileSignature aria-hidden />}
-          />
-        )}
-      </div>
 
       <AppPageTabs items={tabItems} defaultValue={defaultTab}>
         {canViewEmployees ? (
           <TabsContent value="employees" className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">
-                {copy.employeeCount(employees.length)}
-              </p>
-              {canManageEmployees ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button asChild variant="ghost">
-                    <Link href="/hr/staff">
-                      <IconShieldCheck data-icon="inline-start" />
-                      {copy.staffAccounts}
-                    </Link>
-                  </Button>
-                  <Button onClick={() => setAddOpen(true)}>
-                    <IconUserPlus data-icon="inline-start" />
-                    {copy.addEmployee}
-                  </Button>
-                </div>
-              ) : null}
-            </div>
+            <p className="text-sm text-muted-foreground">
+              {canManageEmployees
+                ? copy.readinessSummary({
+                    active: activeEmployees.length,
+                    payrollReady: payrollReadyCount,
+                    insured: insuredEmployees,
+                    contractMissing: missingContractCount,
+                  })
+                : copy.employeeCount(employees.length)}
+            </p>
             <EmployeeTable
               employees={employees}
               branches={branches}
@@ -257,45 +210,47 @@ export function HrClient({
           </TabsContent>
         ) : null}
 
-        <TabsContent value="setup" className="flex flex-col gap-4">
-          <div className="flex max-w-3xl flex-col gap-1">
-            <p className="font-heading text-base font-semibold">
-              {copy.setupTitle}
-            </p>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {copy.setupDescription}
-            </p>
-          </div>
-          <AppSection
-            title={copy.setupSteps.shifts.title}
-            description={copy.setupSteps.shifts.description}
-            headerHint={copy.setupSteps.shifts.hint}
-          >
-            <ShiftsTable
-              shifts={shifts}
-              isPending={isPending}
-              canManage={canManageEmployees}
-              onShiftSaved={(shift) =>
-                setShifts((prev) => {
-                  const exists = prev.some((item) => item.id === shift.id);
-                  if (!exists) return [...prev, shift];
-                  return prev.map((item) =>
-                    item.id === shift.id ? { ...item, ...shift } : item,
-                  );
-                })
-              }
-            />
-          </AppSection>
-          {canManagePositionTasks ? (
+        {canManageEmployees ? (
+          <TabsContent value="setup" className="flex flex-col gap-4">
+            <div className="flex max-w-3xl flex-col gap-1">
+              <p className="font-heading text-base font-semibold">
+                {copy.setupTitle}
+              </p>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {copy.setupDescription}
+              </p>
+            </div>
             <AppSection
-              title={copy.positionTasks.title}
-              description={copy.positionTasks.description}
-              headerHint={copy.positionTasks.hint}
+              title={copy.setupSteps.shifts.title}
+              description={copy.setupSteps.shifts.description}
+              headerHint={copy.setupSteps.shifts.hint}
             >
-              <PositionTasksClient initialData={positionTasksData} />
+              <ShiftsTable
+                shifts={shifts}
+                isPending={isPending}
+                canManage={canManageEmployees}
+                onShiftSaved={(shift) =>
+                  setShifts((prev) => {
+                    const exists = prev.some((item) => item.id === shift.id);
+                    if (!exists) return [...prev, shift];
+                    return prev.map((item) =>
+                      item.id === shift.id ? { ...item, ...shift } : item,
+                    );
+                  })
+                }
+              />
             </AppSection>
-          ) : null}
-        </TabsContent>
+            {canManagePositionTasks ? (
+              <AppSection
+                title={copy.positionTasks.title}
+                description={copy.positionTasks.description}
+                headerHint={copy.positionTasks.hint}
+              >
+                <PositionTasksClient initialData={positionTasksData} />
+              </AppSection>
+            ) : null}
+          </TabsContent>
+        ) : null}
       </AppPageTabs>
     </AppPage>
   );

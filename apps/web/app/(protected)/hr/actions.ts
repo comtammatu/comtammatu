@@ -184,12 +184,8 @@ async function loadChecklistTemplateBranch(
   return data?.branch_id;
 }
 
-// Compensation and government-ID PII (base_salary, id_number, bank_account)
-// is owner-only. branch_manager reads a column subset without it: the
-// branch_manager HR list/attendance UI never renders these fields, and the
-// create/edit path is gated to owner. Narrowing the column list keeps the PII
-// out of the branch_manager response payload entirely, not just out of the
-// rendered table.
+// Owner-only personnel/payroll fields stay out of branch_manager payloads, not
+// only out of the rendered table.
 const EMPLOYEE_SELECT_OWNER = `
       id, employee_code, id_number, bank_account, bank_name,
       base_salary, insurance_base_salary, start_date, contract_type, dependents_count, is_active,
@@ -206,12 +202,10 @@ const EMPLOYEE_SELECT_OWNER = `
     `;
 
 const EMPLOYEE_SELECT_BRANCH_MANAGER = `
-      id, employee_code, bank_name,
-      start_date, contract_type, dependents_count, is_active,
-      default_checklist_template_id,
+      id, employee_code, is_active,
       profiles!inner (
-        id, full_name, phone, branch_id,
-        positions ( code, label_vi, default_checklist_template_id ),
+        full_name, branch_id,
+        positions ( code, label_vi ),
         branches ( name )
       )
     `;

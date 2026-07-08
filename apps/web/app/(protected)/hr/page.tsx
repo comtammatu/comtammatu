@@ -16,7 +16,7 @@ export default async function HrPage() {
   const canManageEmployees = claims.user_role === "owner";
   const isBranchManager = claims.user_role === "branch_manager";
   const canViewEmployees = canManageEmployees || isBranchManager;
-  const canManagePositionTasks = canViewEmployees;
+  const canManagePositionTasks = canManageEmployees;
 
   const branchesPromise =
     isBranchManager && claims.branch_id == null

@@ -22,7 +22,7 @@ import {
   type PositionTaskRow,
 } from "./position-task-types";
 
-const POSITION_TASK_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
+const POSITION_TASK_ROLES: readonly StaffRole[] = ["owner"];
 
 const taskErrors = messages.hr.client.positionTasks.errors;
 
@@ -62,6 +62,13 @@ type ConsumptionDefaultDbRow = {
 };
 type ProfilePositionDbRow = {
   position_id: number | null;
+};
+type PositionTaskIngredientDbRow = {
+  id: number;
+  name: string;
+  ingredient_units?:
+    | { is_base: boolean; units: { code: string } | null }[]
+    | null;
 };
 type ConsumptionDefaultInsert =
   Database["public"]["Tables"]["shift_checklist_consumption_default_items"]["Insert"];
@@ -213,12 +220,12 @@ export async function fetchPositionTasksData(): Promise<
   );
 
   const ingredients = (
-    ingredientsResult.data ?? []
-  ).map<PositionTaskIngredientOption>((ingredient: any) => ({
+    (ingredientsResult.data ?? []) as PositionTaskIngredientDbRow[]
+  ).map<PositionTaskIngredientOption>((ingredient) => ({
     id: ingredient.id,
     name: ingredient.name,
     unit:
-      ingredient.ingredient_units?.find((u: any) => u.is_base)?.units
+      ingredient.ingredient_units?.find((u) => u.is_base)?.units
         ?.code ?? "",
   }));
 
