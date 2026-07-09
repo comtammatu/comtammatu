@@ -404,7 +404,7 @@ function RecipeLineRow<T extends FieldValues>({
                 onBlur={field.onBlur}
                 ref={field.ref}
                 name={field.name}
-                maxFractionDigits={2}
+                maxFractionDigits={6}
                 aria-invalid={!!rowError?.yield_factor}
                 className={cn(
                   "h-9",

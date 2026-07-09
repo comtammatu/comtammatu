@@ -124,7 +124,7 @@ by direct URL or as a redirect target.
 | `hr_payroll` | `/hr/payroll` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
 | `finance` | `/finance` | Chủ sở hữu, Văn phòng | Workspace nav |
 | `branches` | `/branches` | Chủ sở hữu | Workspace nav |
-| `branch_picker` | `/br` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
+| `branch_picker` | `/` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Văn phòng | (not advertised in nav — direct URL / redirect target only) |
 | `settings` | `/admin/settings` | Chủ sở hữu | Admin sidebar |
 | `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `kds` | `/br/*/kds` | Chủ sở hữu, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
@@ -158,8 +158,8 @@ declared before their broader siblings.
 | `branches` | workspace | `/branches` | `/branches` | `branches` | no |
 | `hr` | workspace | `/hr` | `/hr` | `hr`, `hr_payroll`, `staff` | no |
 | `notifications` | workspace | `/notifications` | `/notifications` | `notifications` | no |
-| `branch-picker` | branch_operation | `/br` | `/br` | `branch_picker` | no |
-| `operator-home` | branch_operation | `/br/[branchId]` | `/br/[branchId]`, `/br/[branchId]/more` | `operator_home` | yes |
+| `branch-picker` | branch_operation | `/` | `/`, `/br` | `branch_picker` | no |
+| `operator-home` | branch_operation | `/br/[branchId]` | `/br/[branchId]` | `operator_home` | yes |
 | `operator-shift-checkout-approvals` | branch_operation | `/br/[branchId]/shift/checkout-approvals` | `/br/[branchId]/shift/checkout-approvals` | `employee_checkout_approvals` | yes |
 | `operator-shift-leave-approvals` | branch_operation | `/br/[branchId]/shift/leave-approvals` | `/br/[branchId]/shift/leave-approvals` | `employee_leave_approvals` | yes |
 | `operator-shift` | branch_operation | `/br/[branchId]/shift` | `/br/[branchId]/shift` | `operator_home` | yes |
@@ -211,8 +211,8 @@ separate gates (route bucket here, permission key at the mutation site).
 | branches | `/branches` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | hr | `/hr` | branch_manager/owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
 | notifications | `/notifications` | branch_manager/branch_staff/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
-| branch-picker | `/br` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
-| operator-home | `/br/[branchId]`, `/br/[branchId]/more` | branch_manager/branch_staff/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| branch-picker | `/`, `/br` | branch_manager/branch_staff/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-home | `/br/[branchId]` | branch_manager/branch_staff/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift-checkout-approvals | `/br/[branchId]/shift/checkout-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift-leave-approvals | `/br/[branchId]/shift/leave-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift | `/br/[branchId]/shift` | branch_manager/branch_staff/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |

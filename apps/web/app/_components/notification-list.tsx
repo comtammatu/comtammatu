@@ -113,7 +113,7 @@ function NotificationListSkeletonFallback() {
           key={index}
           className="flex items-start gap-3 rounded-md border bg-card p-3"
         >
-          <Skeleton className="size-8 shrink-0 rounded-full" />
+          <Skeleton className="size-8 shrink-0 rounded-md" />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-full" />

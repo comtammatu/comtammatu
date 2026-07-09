@@ -85,7 +85,7 @@ test("POS validates HĐĐT buyer payload before committing payment", () => {
   );
   assert.ok(
     cashBlock.indexOf("parseInvoicePayload(invoice)") <
-      cashBlock.indexOf("confirmCashPayment(orderId, cashReceived)"),
+      cashBlock.indexOf("confirmCashPayment(branchId, orderId, cashReceived)"),
     "cash HĐĐT buyer validation must happen before payment commit",
   );
   assert.ok(

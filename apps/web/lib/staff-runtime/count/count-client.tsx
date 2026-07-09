@@ -2,11 +2,21 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: employee inventory count slip keeps operational copy close to the workflow controls */
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  type ComponentProps,
+  type ElementType,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Send as IconSend, Warehouse as IconWarehouse } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
@@ -34,6 +44,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { formatQty } from "@/(protected)/inventory/_lib/format";
 import { AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
@@ -42,6 +53,12 @@ import {
   EmployeePanel,
   EmployeeStatusStrip,
 } from "../components/staff-runtime-page";
+import {
+  BranchOperatorActionBar,
+  BranchOperatorFrame,
+  BranchOperatorPanel,
+  BranchOperatorStatusStrip,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { submitCountSlip } from "./actions";
 import type {
   CountAssignment,
@@ -50,10 +67,70 @@ import type {
   CountUnitChoice,
 } from "./page";
 
+export type CountPlane = "employee" | "branch";
+
+type CountTone = "default" | "success" | "warning" | "info" | "destructive";
+
+type CountPanelComponent = (props: {
+  title?: string;
+  description?: string;
+  headerHint?: ReactNode;
+  icon?: ElementType;
+  tone?: CountTone;
+  badge?: { children: ReactNode; variant?: BadgeProps["variant"] };
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  contentClassName?: string;
+  size?: "default" | "sm";
+}) => ReactNode;
+
+type CountFrameComponent = (
+  props: ComponentProps<"div"> & { pad?: "none" | "sm" },
+) => ReactNode;
+
+type CountActionBarComponent = (props: {
+  children: ReactNode;
+  align?: "start" | "end";
+  className?: string;
+}) => ReactNode;
+
+type CountStatusStripComponent = (props: {
+  items: Array<{
+    label: string;
+    value: ReactNode;
+    muted?: boolean;
+    mono?: boolean;
+  }>;
+  className?: string;
+}) => ReactNode;
+
+type CountRenderPrimitives = {
+  Panel: CountPanelComponent;
+  Frame: CountFrameComponent;
+  ActionBar: CountActionBarComponent;
+  StatusStrip: CountStatusStripComponent;
+};
+
+const EMPLOYEE_COUNT_PRIMITIVES: CountRenderPrimitives = {
+  Panel: EmployeePanel,
+  Frame: EmployeeFrame,
+  ActionBar: EmployeeActionBar,
+  StatusStrip: EmployeeStatusStrip,
+};
+
+const BRANCH_COUNT_PRIMITIVES: CountRenderPrimitives = {
+  Panel: BranchOperatorPanel,
+  Frame: BranchOperatorFrame,
+  ActionBar: BranchOperatorActionBar,
+  StatusStrip: BranchOperatorStatusStrip,
+};
+
 interface CountSlipClientProps {
   branchId: number;
   shiftId: number | null;
   baseHref?: string;
+  plane?: CountPlane;
   groups: CountLocationGroup[];
   selectedLocationId: number | null;
   slipByLocation: Record<number, CountSlipHeader>;
@@ -77,12 +154,7 @@ function parseDraftQuantity(value: string): number | null {
 }
 
 function formatCountQuantity(value: number): string {
-  return value % 1 === 0
-    ? value.toLocaleString("vi-VN")
-    : value.toLocaleString("vi-VN", {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 3,
-      });
+  return formatQty(value);
 }
 
 function getBaseCountUnit(units: CountUnitChoice[]) {
@@ -109,15 +181,12 @@ function buildCountUnitPreview({
 
   const quantityValue = parseDraftQuantity(quantity);
   const factor = entryUnit.toBaseFactor;
-  if (
-    quantityValue === null ||
-    factor === null ||
-    !Number.isFinite(factor)
-  ) {
-    return null;
+  if (factor === null || !Number.isFinite(factor) || factor <= 0) {
+    return INVENTORY_VI.conversionMissing;
   }
 
-  return `${formatCountQuantity(quantityValue)} ${entryUnit.code} = ${formatCountQuantity(quantityValue * factor)} ${baseUnit.code}`;
+  const displayQuantity = quantityValue ?? 1;
+  return `${INVENTORY_VI.convertedColon} ${formatCountQuantity(displayQuantity)} ${entryUnit.code} = ${formatCountQuantity(displayQuantity * factor)} ${baseUnit.code}`;
 }
 
 function buildDraftSummary({
@@ -143,11 +212,14 @@ export function CountSlipClient({
   branchId,
   shiftId,
   baseHref = "/br",
+  plane = "employee",
   groups,
   selectedLocationId,
   slipByLocation,
   prefill,
 }: CountSlipClientProps) {
+  const { Panel, Frame, ActionBar, StatusStrip } =
+    plane === "branch" ? BRANCH_COUNT_PRIMITIVES : EMPLOYEE_COUNT_PRIMITIVES;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -326,7 +398,7 @@ export function CountSlipClient({
                 </SheetTitle>
                 <SheetDescription>
                   {baseUnit?.code
-                    ? `Tồn so theo: ${baseUnit.code}`
+                    ? `Đơn vị tồn chuẩn: ${baseUnit.code}`
                     : "Nhập số đếm thực tế."}
                 </SheetDescription>
               </SheetHeader>
@@ -395,7 +467,6 @@ export function CountSlipClient({
                 </div>
                 {unitPreview ? (
                   <p className="text-xs leading-5 text-muted-foreground">
-                    So sánh tồn:{" "}
                     <span className="font-medium tabular-nums text-foreground">
                       {unitPreview}
                     </span>
@@ -435,7 +506,7 @@ export function CountSlipClient({
   return (
     <>
       {groups.length > 1 ? (
-        <EmployeePanel
+        <Panel
           icon={IconWarehouse}
           title="Khu vực kiểm kê"
           description="Chọn kho bạn đang đếm."
@@ -457,19 +528,19 @@ export function CountSlipClient({
               ))}
             </SelectContent>
           </Select>
-        </EmployeePanel>
+        </Panel>
       ) : null}
 
       {!activeGroup ? (
-        <EmployeePanel title="Kiểm kê tồn">
+        <Panel title="Kiểm kê tồn">
           <AppEmptyState
             title="Chọn kho để bắt đầu"
             description="Chọn kho ở trên để xem danh sách nguyên liệu cần đếm."
             icon={<IconWarehouse />}
           />
-        </EmployeePanel>
+        </Panel>
       ) : (
-        <EmployeePanel
+        <Panel
           title={activeGroup.locationName}
           description="Nhập số đếm được cho từng nguyên liệu."
           badge={
@@ -482,7 +553,7 @@ export function CountSlipClient({
           }
         >
           <div className="flex flex-col gap-3">
-            <EmployeeStatusStrip
+            <StatusStrip
               items={[
                 {
                   label: "Nguyên liệu",
@@ -497,24 +568,24 @@ export function CountSlipClient({
             />
 
             {slip?.status === "needs_changes" && slip.reviewNote ? (
-              <EmployeeFrame
+              <Frame
                 pad="sm"
-                className="border-destructive/30 bg-destructive/5 text-sm leading-5"
+                className="border-destructive/20 bg-destructive/10 text-sm leading-5"
               >
                 <span className="font-medium">Quản lý yêu cầu đếm lại: </span>
                 {slip.reviewNote}
-              </EmployeeFrame>
+              </Frame>
             ) : null}
 
             {locked ? (
-              <EmployeeFrame
+              <Frame
                 pad="sm"
                 className="bg-muted/30 text-sm text-muted-foreground"
               >
                 {slip?.status === "approved"
                   ? "Phiếu hôm nay đã được duyệt."
                   : "Phiếu đã gửi, đang chờ quản lý duyệt."}
-              </EmployeeFrame>
+              </Frame>
             ) : null}
 
             <ItemGroup className="grid grid-cols-2 gap-2">
@@ -547,7 +618,7 @@ export function CountSlipClient({
                         <ItemDescription className="line-clamp-none break-words text-xs">
                           {summary ??
                             (stockUnitLabel
-                              ? `Tồn so theo: ${stockUnitLabel}`
+                              ? `Đơn vị tồn chuẩn: ${stockUnitLabel}`
                               : "Chưa nhập")}
                         </ItemDescription>
                       </ItemContent>
@@ -562,7 +633,7 @@ export function CountSlipClient({
             {renderIngredientSheet(selectedAssignment)}
 
             {!locked ? (
-              <EmployeeActionBar>
+              <ActionBar>
                 <Button
                   type="button"
                   size="touch"
@@ -575,10 +646,10 @@ export function CountSlipClient({
                     ? "Gửi lại phiếu"
                     : "Gửi phiếu"}
                 </Button>
-              </EmployeeActionBar>
+              </ActionBar>
             ) : null}
           </div>
-        </EmployeePanel>
+        </Panel>
       )}
     </>
   );

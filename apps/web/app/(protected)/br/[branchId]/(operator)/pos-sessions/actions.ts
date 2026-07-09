@@ -8,6 +8,7 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withActionPositional } from "@/_lib/with-action";
+import { messages } from "@lib/messages";
 
 const resolveVarianceSchema = z.object({
   branchId: z.coerce
@@ -58,7 +59,7 @@ export const resolvePosSessionVariance = withActionPositional(
     if (sessionError) {
       return {
         success: false,
-        error: "Không thể tải ca POS. Vui lòng thử lại.",
+        error: messages.settings.branch.posSessionsLoadFailed,
       };
     }
 

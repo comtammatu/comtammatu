@@ -3,13 +3,6 @@
 import { useState } from "react";
 import type { FormEvent, TransitionStartFunction } from "react";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -21,7 +14,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Plus as IconPlus } from "lucide-react";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { Combobox, FormattedNumberInput } from "@/components/form";
+import { AppDialog, Combobox, FormattedNumberInput } from "@/components/form";
 import { upsertGrnLine } from "../../../grn-actions";
 import {
   getDefaultPurchaseUnit,
@@ -31,6 +24,8 @@ import { getReferenceCostForUnit } from "../../../_lib/reference-cost";
 import type { IngredientRow } from "../../../page";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { grnCopy, type EditableLine, type GRNDetail } from "./grn-detail-types";
+
+const ADD_GRN_LINE_FORM_ID = "add-grn-line-form";
 
 function isSameReferenceCost(
   currentCost: number | null,
@@ -77,6 +72,11 @@ export function AddGrnLineDialog({
     setUnit("");
     setEntryUnitId(null);
     setUnitCost("");
+  }
+
+  function handleDialogOpenChange(open: boolean) {
+    onOpenChange(open);
+    if (!open) resetForm();
   }
 
   function handleIngredientChange(value: string) {
@@ -198,117 +198,114 @@ export function AddGrnLineDialog({
         dirty: false,
       });
       notify.success(grnCopy.addDialog.success);
-      onOpenChange(false);
-      resetForm();
+      handleDialogOpenChange(false);
     });
   }
 
   return (
-    <Sheet
+    <AppDialog
       open={isOpen}
-      onOpenChange={(open) => {
-        onOpenChange(open);
-        if (!open) resetForm();
-      }}
+      onOpenChange={handleDialogOpenChange}
+      title={grnCopy.addDialog.title}
+      contentClassName="sm:max-w-2xl"
+      footer={
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleDialogOpenChange(false)}
+          >
+            {ACTIONS_VI.cancel}
+          </Button>
+          <Button
+            type="submit"
+            form={ADD_GRN_LINE_FORM_ID}
+            disabled={isPending}
+          >
+            <IconPlus className="size-4" />
+            {grnCopy.addDialog.saveAction}
+          </Button>
+        </>
+      }
     >
-      <SheetContent className="gap-0 overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>{grnCopy.addDialog.title}</SheetTitle>
-        </SheetHeader>
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-1 flex-col gap-4 p-4"
-        >
+      <form
+        id={ADD_GRN_LINE_FORM_ID}
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-4"
+      >
+        <div className="flex flex-col gap-1.5">
+          <Label>{grnCopy.addDialog.ingredientLabel}</Label>
+          <Combobox
+            value={ingredientId}
+            onValueChange={handleIngredientChange}
+            options={ingredients
+              .filter((ingredient) => ingredient.is_active)
+              .map((ingredient) => ({
+                value: String(ingredient.id),
+                label: ingredient.name,
+                hint: getDefaultPurchaseUnit(ingredient)?.label ?? "",
+                keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
+              }))}
+            placeholder={grnCopy.addDialog.ingredientPlaceholder}
+            searchPlaceholder={grnCopy.addDialog.ingredientSearchPlaceholder}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
           <div className="flex flex-col gap-1.5">
-            <Label>{grnCopy.addDialog.ingredientLabel}</Label>
-            <Combobox
-              value={ingredientId}
-              onValueChange={handleIngredientChange}
-              options={ingredients
-                .filter((ingredient) => ingredient.is_active)
-                .map((ingredient) => ({
-                  value: String(ingredient.id),
-                  label: ingredient.name,
-                  hint: getDefaultPurchaseUnit(ingredient)?.label ?? "",
-                  keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
-                }))}
-              placeholder={grnCopy.addDialog.ingredientPlaceholder}
-              searchPlaceholder={grnCopy.addDialog.ingredientSearchPlaceholder}
+            <Label htmlFor="grn-line-qty">
+              {grnCopy.addDialog.quantityLabel}
+            </Label>
+            <FormattedNumberInput
+              id="grn-line-qty"
+              value={quantity}
+              onValueChange={setQuantity}
+              maxFractionDigits={3}
+              placeholder="0"
             />
           </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="grn-line-qty">
-                {grnCopy.addDialog.quantityLabel}
-              </Label>
-              <FormattedNumberInput
-                id="grn-line-qty"
-                value={quantity}
-                onValueChange={setQuantity}
-                maxFractionDigits={3}
-                placeholder="0"
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="grn-line-unit">{grnCopy.addDialog.unitLabel}</Label>
+            {purchaseUnitOptions.length > 0 ? (
+              <Select
+                value={entryUnitId != null ? String(entryUnitId) : ""}
+                onValueChange={handleUnitChange}
+              >
+                <SelectTrigger id="grn-line-unit" aria-label={unit}>
+                  <SelectValue placeholder={grnCopy.addDialog.selectUnit} />
+                </SelectTrigger>
+                <SelectContent>
+                  {purchaseUnitOptions.map((o) => (
+                    <SelectItem key={o.unitId} value={String(o.unitId)}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id="grn-line-unit"
+                value={unit}
+                readOnly
+                aria-readonly="true"
+                placeholder="kg"
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="grn-line-unit">
-                {grnCopy.addDialog.unitLabel}
-              </Label>
-              {purchaseUnitOptions.length > 0 ? (
-                <Select
-                  value={entryUnitId != null ? String(entryUnitId) : ""}
-                  onValueChange={handleUnitChange}
-                >
-                  <SelectTrigger id="grn-line-unit" aria-label={unit}>
-                    <SelectValue placeholder={grnCopy.addDialog.selectUnit} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {purchaseUnitOptions.map((o) => (
-                      <SelectItem key={o.unitId} value={String(o.unitId)}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  id="grn-line-unit"
-                  value={unit}
-                  readOnly
-                  aria-readonly="true"
-                  placeholder="kg"
-                />
-              )}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="grn-line-cost">
-                {grnCopy.addDialog.unitCostLabel}
-              </Label>
-              <FormattedNumberInput
-                id="grn-line-cost"
-                value={unitCost}
-                onValueChange={setUnitCost}
-                maxFractionDigits={0}
-                placeholder="0"
-              />
-            </div>
+            )}
           </div>
-
-          <SheetFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              <IconPlus className="size-4" />
-              {grnCopy.addDialog.saveAction}
-            </Button>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="grn-line-cost">
+              {grnCopy.addDialog.unitCostLabel}
+            </Label>
+            <FormattedNumberInput
+              id="grn-line-cost"
+              value={unitCost}
+              onValueChange={setUnitCost}
+              maxFractionDigits={0}
+              placeholder="0"
+            />
+          </div>
+        </div>
+      </form>
+    </AppDialog>
   );
 }

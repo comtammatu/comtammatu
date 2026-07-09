@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
-import { OrdersPageContent } from "@/(protected)/orders/page";
-import { BranchOpsRefresh } from "../branch-ops-refresh";
+import { ORDER_VI } from "@comtammatu/shared/messages";
+import { AppEmptyState } from "@/components/surface";
+import { fetchOrders } from "@/(protected)/orders/actions";
+import { ORDERS_COPY } from "@/(protected)/orders/orders-copy";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import { parseOperatorBranchId } from "../../_lib/parse-branch-id";
+import { OperatorOrdersClient } from "./operator-orders-client";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
@@ -8,13 +13,29 @@ interface PageProps {
 
 export default async function OperatorOrdersPage({ params }: PageProps) {
   const { branchId: rawBranchId } = await params;
-  const branchId = Number(rawBranchId);
-  if (!Number.isInteger(branchId) || branchId <= 0) notFound();
+  const branchId = parseOperatorBranchId(rawBranchId);
+  if (branchId == null) notFound();
+
+  const result = await fetchOrders({ branchId });
 
   return (
-    <>
-      <BranchOpsRefresh branchId={branchId} />
-      <OrdersPageContent routeBranchId={branchId} embedded />
-    </>
+    <BranchOperatorPage
+      title={ORDER_VI.long}
+      description={ORDERS_COPY.operatorDescription}
+      hideHeaderOnMobile
+    >
+      {result.success && result.data ? (
+        <OperatorOrdersClient
+          orders={result.data.orders}
+          totalCount={result.data.summary.totalCount}
+        />
+      ) : (
+        <AppEmptyState
+          mode="error"
+          description={result.error ?? ORDERS_COPY.loadFailed}
+          compact
+        />
+      )}
+    </BranchOperatorPage>
   );
 }

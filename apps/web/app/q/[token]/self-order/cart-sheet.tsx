@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -27,6 +28,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@comtammatu/ui/components/sheet";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import type { SelfOrderCartItem } from "@lib/self-order/contracts";
 
@@ -63,6 +65,7 @@ export interface CartSheetProps {
   ctaLabel: string;
   ctaDisabled: boolean;
   ctaDisabledHint: string | null;
+  submitError: string | null;
   customerNote: string;
   onCustomerNoteChange: (value: string) => void;
   onQuantityChange: (key: string, delta: number) => void;
@@ -120,8 +123,9 @@ function CartLine({
           type="button"
           variant="outline"
           size="icon-sm"
+          disabled={item.quantity <= 1}
           onClick={() => onQuantityChange(item.key, -1)}
-          aria-label="decrease"
+          aria-label={SELF_ORDER_VI.decreaseQuantityAria}
         >
           <IconMinus />
         </Button>
@@ -133,7 +137,7 @@ function CartLine({
           variant="outline"
           size="icon-sm"
           onClick={() => onQuantityChange(item.key, 1)}
-          aria-label="increase"
+          aria-label={SELF_ORDER_VI.increaseQuantityAria}
         >
           <IconPlus />
         </Button>
@@ -196,6 +200,7 @@ function SubmitCta({
         disabled={disabled}
         onClick={onSubmit}
       >
+        {isSubmitting ? <Spinner className="size-4" /> : null}
         {isSubmitting ? SELF_ORDER_VI.submitting : ctaLabel}
       </Button>
       {ctaDisabled && ctaDisabledHint ? (
@@ -241,33 +246,48 @@ export function CartSheet(props: CartSheetProps) {
   return (
     <>
       {!empty ? (
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-xl items-center gap-3 border-t border-border/60 bg-background/95 px-3 py-2 backdrop-blur">
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            className="min-w-12 shrink-0 px-2"
-            onClick={() => setOpen(true)}
-            aria-label={SELF_ORDER_VI.cartTitle}
-          >
-            <IconCart />
-            <Badge variant="secondary">{quantity}</Badge>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted-foreground">
-              {SELF_ORDER_VI.subtotal}
-            </p>
-            <p className="font-mono text-base font-bold tabular-nums text-primary">
-              {formatVND(total)}
-            </p>
-          </div>
-          <div className="shrink-0">
+        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-xl flex-col gap-2 border-t border-border/60 bg-background/95 px-3 py-2 backdrop-blur">
+          {props.submitError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{props.submitError}</AlertDescription>
+            </Alert>
+          ) : null}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="min-w-12 shrink-0 px-2"
+              onClick={() => setOpen(true)}
+              aria-label={SELF_ORDER_VI.cartTitle}
+            >
+              <IconCart />
+              <Badge variant="secondary">{quantity}</Badge>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="touch"
+              className="h-auto min-w-0 flex-1 justify-start px-2 py-1 text-left"
+              onClick={() => setOpen(true)}
+            >
+              <span className="flex min-w-0 flex-col items-start">
+                <span className="text-xs text-muted-foreground">
+                  {SELF_ORDER_VI.subtotal}
+                </span>
+                <span className="font-mono text-base font-bold tabular-nums text-primary">
+                  {formatVND(total)}
+                </span>
+              </span>
+            </Button>
             <Button
               type="button"
               size="touch-lg"
+              className="min-w-28 shrink-0"
               disabled={!props.canSubmit || props.isSubmitting || ctaDisabled}
               onClick={props.onSubmit}
             >
+              {props.isSubmitting ? <Spinner className="size-4" /> : null}
               {props.isSubmitting ? SELF_ORDER_VI.submitting : ctaLabel}
             </Button>
           </div>
@@ -310,6 +330,11 @@ export function CartSheet(props: CartSheetProps) {
             )}
           </div>
           <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background p-3">
+            {props.submitError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{props.submitError}</AlertDescription>
+              </Alert>
+            ) : null}
             {subtotalRow}
             {submitCta}
           </div>

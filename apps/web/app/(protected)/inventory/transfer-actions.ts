@@ -11,6 +11,7 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { resolveCentralSiteHomeBranchId } from "@/_lib/branch-hub-device";
+import { messages } from "@lib/messages";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import type { TenantSupabase } from "./_lib/types";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
@@ -204,10 +205,7 @@ export async function fetchStockTransferDetail(
     const ownBranchId =
       claims.branch_id ??
       (await resolveCentralSiteHomeBranchId(supabase, claims));
-    if (
-      ownBranchId == null ||
-      !transferInvolvesBranch(tr, ownBranchId)
-    ) {
+    if (ownBranchId == null || !transferInvolvesBranch(tr, ownBranchId)) {
       console.error("fetchStockTransferDetail.failed_involves_branch", {
         ownBranchId,
         from_branch_id: tr.from_branch_id,
@@ -323,7 +321,9 @@ export async function fetchStockTransfers(
   const { data: transfers, error } = await transferQuery.order("created_at", {
     ascending: false,
   });
-  if (error) return { success: false, error: "Không thể tải phiếu chuyển." };
+  if (error) {
+    return { success: false, error: messages.inventory.transfer.loadFailed };
+  }
   const { data: branches } = await supabase
     .from("branches")
     .select("id, name, branch_kind")
@@ -355,7 +355,9 @@ const transferCreateSchema = z.object({
   toLocationKind: z.enum(["default_receive", "branch_kitchen"]).optional(),
   notes: z.string().max(500, { error: "Ghi chú tối đa 500 ký tự" }).optional(),
   vehicleInfo: z.string().optional(),
-  lines: z.array(transferLineInputSchema).optional(),
+  lines: z
+    .array(transferLineInputSchema)
+    .min(1, { error: messages.inventory.transfer.emptyIngredientsDescription }),
 });
 
 async function loadBranchKind(
@@ -543,7 +545,7 @@ export async function createStockTransfer(
     };
   }
 
-  const transferLines = (parsed.data.lines ?? []).map((line) => ({
+  const transferLines = parsed.data.lines.map((line) => ({
     ingredientId: line.ingredientId,
     quantity: line.quantity,
     entryUnitId: line.entryUnitId ?? null,
@@ -560,7 +562,10 @@ export async function createStockTransfer(
       .eq("location_id", fromLocationId)
       .in("ingredient_id", ingredientIds);
     if (stockLevelError) {
-      return { success: false, error: "Không thể tải tồn kho gửi." };
+      return {
+        success: false,
+        error: messages.inventory.transfer.stockLoadFailed,
+      };
     }
     const availableByIngredient = new Map(
       (stockLevels ?? []).map((level) => [
@@ -666,7 +671,8 @@ export async function transferConfirmShip(
       });
       return {
         success: false,
-        error: "Đã xác nhận xuất kho nhưng không thể tự động chuyển sang đang vận chuyển.",
+        error:
+          "Đã xác nhận xuất kho nhưng không thể tự động chuyển sang đang vận chuyển.",
       };
     }
   }
@@ -821,8 +827,12 @@ export async function fetchBranchesForTransfer(): Promise<ActionResult> {
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   const { data, error } = await supabase.rpc("stock_transfer_list_branches");
-  if (error)
-    return { success: false, error: "Không thể tải danh sách chi nhánh." };
+  if (error) {
+    return {
+      success: false,
+      error: messages.inventory.transfer.branchesLoadFailed,
+    };
+  }
   const branches = data ?? [];
   if (claims.user_role === "branch_manager") {
     return {
@@ -870,7 +880,10 @@ export async function quickInternalTransfer(
       claims.branch_id ??
       (await resolveCentralSiteHomeBranchId(supabase, claims));
     if (ownBranchId == null || ownBranchId !== branchId) {
-      return { success: false, error: "Bạn chỉ được thao tác tại chi nhánh của mình." };
+      return {
+        success: false,
+        error: "Bạn chỉ được thao tác tại chi nhánh của mình.",
+      };
     }
   }
 
@@ -891,7 +904,7 @@ export async function quickInternalTransfer(
     branchId,
     "issue",
   );
-  
+
   const toLocationId = await resolveBranchKitchenLocation(
     supabase,
     claims.tenant_id,
@@ -899,9 +912,12 @@ export async function quickInternalTransfer(
   );
 
   if (!fromLocationId || !toLocationId) {
-    return { success: false, error: "Chưa cấu hình kho xuất mặc định hoặc Bếp CN." };
+    return {
+      success: false,
+      error: "Chưa cấu hình kho xuất mặc định hoặc Bếp CN.",
+    };
   }
-  
+
   const { data: stockLevels, error: stockLevelError } = await supabase
     .from("stock_levels")
     .select("current_quantity")
@@ -912,7 +928,10 @@ export async function quickInternalTransfer(
     .maybeSingle();
 
   if (stockLevelError) {
-    return { success: false, error: "Không thể tải tồn kho gửi." };
+    return {
+      success: false,
+      error: messages.inventory.transfer.stockLoadFailed,
+    };
   }
 
   const availableQuantity = Number(stockLevels?.current_quantity ?? 0);
@@ -925,10 +944,7 @@ export async function quickInternalTransfer(
   if (!resolvedUnit.success) {
     return { success: false, error: resolvedUnit.error };
   }
-  const requestedBaseQuantity = getIssueBaseQuantity(
-    quantity,
-    resolvedUnit,
-  );
+  const requestedBaseQuantity = getIssueBaseQuantity(quantity, resolvedUnit);
   if (requestedBaseQuantity > availableQuantity + 1e-9) {
     return { success: false, error: "Số lượng vượt tồn hiện tại." };
   }
@@ -941,7 +957,13 @@ export async function quickInternalTransfer(
     p_to_location_id: toLocationId,
     p_transfer_number: transferNumber,
     p_notes: reason,
-    p_lines: [{ ingredient_id: ingredientId, quantity, entry_unit_id: entryUnitId ?? null }],
+    p_lines: [
+      {
+        ingredient_id: ingredientId,
+        quantity,
+        entry_unit_id: entryUnitId ?? null,
+      },
+    ],
   });
 
   if (error) {

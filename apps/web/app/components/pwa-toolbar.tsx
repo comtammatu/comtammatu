@@ -65,8 +65,8 @@ export interface PwaToolbarProps {
   layout: "contained" | "full-bleed";
   /** Persist the install-dismiss flag under this key; omit to skip persistence. */
   dismissStorageKey?: string;
-  /** Leading hub-link button for active full-bleed banners. */
-  hubLink?: ReactNode;
+  /** Leading entry-link button for active full-bleed banners. */
+  entryLink?: ReactNode;
 }
 
 /**
@@ -80,7 +80,7 @@ export function PwaToolbar({
   copy,
   layout,
   dismissStorageKey,
-  hubLink,
+  entryLink,
 }: PwaToolbarProps) {
   const isOnline = useIsOnline();
   const isStandalone = useIsStandalone();
@@ -190,7 +190,7 @@ export function PwaToolbar({
           role="region"
           aria-label={copy.regionLabel}
         >
-          {hubLink}
+          {entryLink}
           <div
             className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground"
             role="alert"
@@ -228,7 +228,7 @@ export function PwaToolbar({
           role="region"
           aria-label={copy.regionLabel}
         >
-          {hubLink}
+          {entryLink}
           {!isOnline ? (
             <div
               className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-destructive"
@@ -364,7 +364,7 @@ export function PwaToolbar({
   );
 }
 
-export function PwaToolbarHubLink({
+export function PwaToolbarEntryLink({
   href,
   label,
 }: {

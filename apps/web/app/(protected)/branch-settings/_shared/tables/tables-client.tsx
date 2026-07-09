@@ -20,7 +20,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import { Plus as IconPlus } from "lucide-react";
 import { ZoneTable } from "./zone-table";
 import { ZoneFormDialog } from "./zone-form-dialog";
-import { TableTable } from "./table-table";
+import { DiningTableSettingsList } from "./table-table";
 import { TableFormDialog } from "./table-form-dialog";
 import type { ZoneRow } from "./zone-table";
 import type { TableRow } from "./table-table";
@@ -37,9 +37,15 @@ interface TablesClientProps {
   branches: BranchOption[];
   zones: ZoneRow[];
   tables: TableRow[];
+  embedded?: boolean;
 }
 
-export function TablesClient({ branches, zones, tables }: TablesClientProps) {
+export function TablesClient({
+  branches,
+  zones,
+  tables,
+  embedded = false,
+}: TablesClientProps) {
   const copy = messages.settings.tables;
   const commonCopy = messages.settings.common;
   const firstBranch = branches[0];
@@ -66,6 +72,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
     <>
       {canSwitchBranch ? (
         <AppToolbar
+          variant={embedded ? "inline" : "card"}
           filters={
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               <Label htmlFor="branch-select" className="text-sm font-medium">
@@ -103,6 +110,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
 
         <TabsContent value="zones" className="flex flex-col gap-4">
           <AppToolbar
+            variant={embedded ? "inline" : "card"}
             actions={
               <Button
                 size="touch"
@@ -119,6 +127,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
 
         <TabsContent value="tables" className="flex flex-col gap-4">
           <AppToolbar
+            variant={embedded ? "inline" : "card"}
             actions={
               <Button
                 size="touch"
@@ -130,7 +139,10 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
               </Button>
             }
           />
-          <TableTable tables={filteredTables} zones={filteredZones} />
+          <DiningTableSettingsList
+            tables={filteredTables}
+            zones={filteredZones}
+          />
         </TabsContent>
       </Tabs>
 

@@ -34,6 +34,13 @@ import {
   EmployeeStatusStrip,
 } from "./components/staff-runtime-page";
 import {
+  BranchOperatorControlBar,
+  BranchOperatorInlineState,
+  BranchOperatorPanel,
+  BranchOperatorPage as BranchOperatorPageShell,
+  BranchOperatorStatusStrip,
+} from "@lib/branch-operator/components/branch-operator-page";
+import {
   getTodayWorkState,
   type TodayShiftEntry,
   type TodayWorkState,
@@ -42,9 +49,147 @@ import {
 import { formatDateVN, formatTimeVN } from "./_lib/vn-business-date";
 import { AppEmptyState } from "@/components/surface";
 import { TasksClient } from "./tasks/tasks-client";
-import { EmployeeCountPanelContent } from "./count/page";
+import { StaffCountPanelContent } from "./count/page";
 
-const copy = messages.employee.home;
+type WorkdayTone = "default" | "success" | "warning" | "info" | "destructive";
+
+type WorkdayCopy = {
+  title: string;
+  description: string;
+  statusWorking: string;
+  statusCheckoutPending: string;
+  statusNotRequired: string;
+  statusDone: string;
+  statusNotStarted: string;
+  statusNoProfile: string;
+  statusNoBranch: string;
+  descriptionCheckoutPending: string;
+  descriptionNotRequired: string;
+  checkInShort: string;
+  checkOutShort: string;
+  clockIn: string;
+  clockOut: string;
+  clockOutDirect: string;
+  checkoutPending: string;
+  completed: string;
+  shiftTasks: string;
+  tasksShort: string;
+  managerAttendanceTitle: string;
+  managerProgressInShift: string;
+  workProgress: string;
+  notYet: string;
+  workflowTitle: string;
+  workflowStep: (step: number) => string;
+  workflowCurrent: string;
+  workflowWaiting: string;
+  workflowReady: string;
+  workflowClockInStep: string;
+  workflowTasksStep: string;
+  workflowTasksDescription: string;
+  workflowCheckoutStep: string;
+  workflowManagerCheckoutStep: string;
+  workflowCheckoutDescription: string;
+  viewSchedule: string;
+  profileTitle: string;
+  checkoutApprovalsTitle: string;
+  approvalsQueueTitle: string;
+  approvalsCheckoutUnit: string;
+  approvalsWasteUnit: string;
+  wasteApprovalsTitle: string;
+  staleShiftTitle: string;
+  staleShiftDescription: (date: string) => string;
+  shiftsTodayTitle: string;
+  shiftDone: string;
+  shiftWorking: string;
+  shiftPending: string;
+  shiftNotStarted: string;
+};
+
+type WorkdayTasksCopy = {
+  checklistTitle: string;
+  noChecklistTitle: string;
+  noChecklistDescription: string;
+  requiredRemaining: string;
+};
+
+type WorkdayPageComponent = (props: {
+  title: string;
+  description?: string;
+  hideHeaderOnMobile?: boolean;
+  badge?: { children: ReactNode; variant?: BadgeProps["variant"] };
+  action?: ReactNode;
+  children: ReactNode;
+}) => ReactNode;
+
+type WorkdayPanelComponent = (props: {
+  title?: string;
+  description?: string;
+  headerHint?: ReactNode;
+  icon?: ElementType;
+  tone?: WorkdayTone;
+  badge?: { children: ReactNode; variant?: BadgeProps["variant"] };
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  contentClassName?: string;
+  size?: "default" | "sm";
+}) => ReactNode;
+
+type WorkdayInlineStateComponent = (props: {
+  icon?: ElementType;
+  media?: ReactNode;
+  title?: ReactNode;
+  description?: ReactNode;
+  children?: ReactNode;
+  actions?: ReactNode;
+  tone?: Exclude<WorkdayTone, "destructive">;
+  className?: string;
+  mediaClassName?: string;
+}) => ReactNode;
+
+type WorkdayControlBarComponent = (props: {
+  children: ReactNode;
+  className?: string;
+}) => ReactNode;
+
+type WorkdayStatusStripComponent = (props: {
+  items: Array<{
+    label: string;
+    value: ReactNode;
+    muted?: boolean;
+    mono?: boolean;
+  }>;
+  className?: string;
+}) => ReactNode;
+
+type WorkdayRenderPrimitives = {
+  PageShell: WorkdayPageComponent;
+  Panel: WorkdayPanelComponent;
+  InlineState: WorkdayInlineStateComponent;
+  ControlBar: WorkdayControlBarComponent;
+  StatusStrip: WorkdayStatusStripComponent;
+};
+
+type WorkdayPlane = "employee" | "branch";
+
+const EMPLOYEE_WORKDAY_PRIMITIVES: WorkdayRenderPrimitives = {
+  PageShell: EmployeePageShell,
+  Panel: EmployeePanel,
+  InlineState: EmployeeInlineState,
+  ControlBar: EmployeeControlBar,
+  StatusStrip: EmployeeStatusStrip,
+};
+
+const BRANCH_WORKDAY_PRIMITIVES: WorkdayRenderPrimitives = {
+  PageShell: BranchOperatorPageShell,
+  Panel: BranchOperatorPanel,
+  InlineState: BranchOperatorInlineState,
+  ControlBar: BranchOperatorControlBar,
+  StatusStrip: BranchOperatorStatusStrip,
+};
+
+const employeeWorkdayCopy: WorkdayCopy = messages.employee.home;
+const employeeWorkdayTasksCopy: WorkdayTasksCopy = messages.employee.tasks;
 
 function assignmentCellKey(row: {
   location_id: number;
@@ -98,9 +243,19 @@ type ShiftWorkflowStep = {
   content?: ReactNode;
 };
 
-function ShiftWorkflowPanel({ steps }: { steps: ShiftWorkflowStep[] }) {
+function ShiftWorkflowPanel({
+  steps,
+  copy,
+  Panel,
+  InlineState,
+}: {
+  steps: ShiftWorkflowStep[];
+  copy: WorkdayCopy;
+  Panel: WorkdayPanelComponent;
+  InlineState: WorkdayInlineStateComponent;
+}) {
   return (
-    <EmployeePanel
+    <Panel
       icon={IconListChecks}
       title={copy.workflowTitle}
       contentClassName="gap-2"
@@ -110,7 +265,7 @@ function ShiftWorkflowPanel({ steps }: { steps: ShiftWorkflowStep[] }) {
         {steps.map((step) => {
           const hasContent = Boolean(step.content);
           return (
-            <EmployeeInlineState
+            <InlineState
               key={step.key}
               icon={step.icon}
               title={
@@ -135,15 +290,18 @@ function ShiftWorkflowPanel({ steps }: { steps: ShiftWorkflowStep[] }) {
                   {step.content}
                 </div>
               ) : null}
-            </EmployeeInlineState>
+            </InlineState>
           );
         })}
       </div>
-    </EmployeePanel>
+    </Panel>
   );
 }
 
-function getShiftStateBadge(shift: TodayShiftEntry): {
+function getShiftStateBadge(
+  shift: TodayShiftEntry,
+  copy: WorkdayCopy,
+): {
   label: string;
   variant: "success" | "warning" | "info" | "secondary";
 } {
@@ -168,7 +326,7 @@ function canRequestCheckout(state: TodayWorkState): boolean {
   return state.managerAttendanceOnly || state.checklist.requiredRemaining === 0;
 }
 
-function getWorkTitle(state: TodayWorkState): string {
+function getWorkTitle(state: TodayWorkState, copy: WorkdayCopy): string {
   const status = state.status;
   if (state.managerAttendanceOnly) {
     if (status === "working") return copy.managerAttendanceTitle;
@@ -185,19 +343,34 @@ function getWorkTitle(state: TodayWorkState): string {
   return copy.statusDone;
 }
 
-export async function EmployeeHomePageContent({
-  routes = DEFAULT_HOME_ROUTES,
-  authState,
-  showNotificationControl = true,
-  mode = "full",
-  workflowLayout = "standard",
-}: {
+export type StaffWorkdayPageContentProps = {
   routes?: EmployeeHomeRoutes;
   authState?: EmployeeHomeAuthState;
   showNotificationControl?: boolean;
+  enableBranchOpsRefresh?: boolean;
   mode?: "full" | "today-card" | "compact-status" | "manager-dashboard";
   workflowLayout?: EmployeeHomeWorkflowLayout;
-} = {}) {
+  plane?: WorkdayPlane;
+  copy?: WorkdayCopy;
+  tasksCopy?: WorkdayTasksCopy;
+};
+
+export async function StaffWorkdayPageContent({
+  routes = DEFAULT_HOME_ROUTES,
+  authState,
+  showNotificationControl = true,
+  enableBranchOpsRefresh = true,
+  mode = "full",
+  workflowLayout = "standard",
+  plane = "employee",
+  copy = employeeWorkdayCopy,
+  tasksCopy = employeeWorkdayTasksCopy,
+}: StaffWorkdayPageContentProps = {}) {
+  const primitives =
+    plane === "branch"
+      ? BRANCH_WORKDAY_PRIMITIVES
+      : EMPLOYEE_WORKDAY_PRIMITIVES;
+  const { PageShell, Panel, InlineState, ControlBar, StatusStrip } = primitives;
   const { supabase, claims, session } = authState ?? (await loadAuthState());
   const state = await getTodayWorkState();
 
@@ -345,7 +518,7 @@ export async function EmployeeHomePageContent({
   const teamRoute = routes.team ?? `/br/${activeBranchId}/team`;
 
   const tone = getWorkTone(state.status);
-  const title = getWorkTitle(state);
+  const title = getWorkTitle(state, copy);
   const currentShiftName = state.attendance?.shiftName ?? null;
   const currentShiftRange = state.attendance?.shiftStartTime
     ? `${state.attendance.shiftStartTime.slice(0, 5)} - ${state.attendance.shiftEndTime?.slice(0, 5) ?? "—"}`
@@ -510,7 +683,7 @@ export async function EmployeeHomePageContent({
     );
 
   const todayCard = (
-    <EmployeePanel tone={tone} size="sm" contentClassName="gap-3">
+    <Panel tone={tone} size="sm" contentClassName="gap-3">
       <div className="flex flex-col gap-3">
         <div className="flex min-w-0 items-start justify-between gap-2">
           <div className="min-w-0">
@@ -537,9 +710,9 @@ export async function EmployeeHomePageContent({
           </div>
           <Progress value={progressValue} tone={progressTone} className="h-2" />
         </div>
-        <EmployeeStatusStrip items={todaySummaryItems} />
+        <StatusStrip items={todaySummaryItems} />
       </div>
-    </EmployeePanel>
+    </Panel>
   );
 
   if (mode === "today-card") return todayCard;
@@ -556,13 +729,13 @@ export async function EmployeeHomePageContent({
       ) : null;
 
     return (
-      <EmployeeControlBar>
+      <ControlBar>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{title}</p>
           <p className="truncate text-xs text-muted-foreground">{todayMeta}</p>
         </div>
         {compactCta}
-      </EmployeeControlBar>
+      </ControlBar>
     );
   }
 
@@ -573,10 +746,11 @@ export async function EmployeeHomePageContent({
   const countPanel =
     countAssignmentCount > 0 && activeWorkStatus ? (
       <div id="shift-inventory-count" className="flex flex-col gap-3">
-        <EmployeeCountPanelContent
+        <StaffCountPanelContent
           searchParams={Promise.resolve({})}
           routeBranchId={state.branchId ?? undefined}
           baseHref={routes.tasks}
+          plane={plane}
         />
       </div>
     ) : null;
@@ -602,22 +776,22 @@ export async function EmployeeHomePageContent({
       />
     ) : (
       <AppEmptyState
-        title={messages.employee.tasks.noChecklistTitle}
-        description={messages.employee.tasks.noChecklistDescription}
+        title={tasksCopy.noChecklistTitle}
+        description={tasksCopy.noChecklistDescription}
         icon={<IconListChecks />}
       />
     );
   const shiftsTodaySection =
     state.todayShifts.length > 0 ? (
-      <EmployeePanel icon={IconClock} title={copy.shiftsTodayTitle} size="sm">
+      <Panel icon={IconClock} title={copy.shiftsTodayTitle} size="sm">
         <div className="flex flex-col gap-2">
           {state.todayShifts.map((shift) => {
-            const badge = getShiftStateBadge(shift);
+            const badge = getShiftStateBadge(shift, copy);
             const shiftTimeRange = `${shift.checkIn ? formatTimeVN(shift.checkIn) : "—"} - ${
               shift.checkOut ? formatTimeVN(shift.checkOut) : "—"
             }`;
             return (
-              <EmployeeInlineState
+              <InlineState
                 key={shift.shiftId}
                 title={shift.shiftName ?? "—"}
                 description={
@@ -631,10 +805,10 @@ export async function EmployeeHomePageContent({
             );
           })}
         </div>
-      </EmployeePanel>
+      </Panel>
     ) : null;
   const staleOpenShiftSection = state.staleOpenShift ? (
-    <EmployeePanel
+    <Panel
       icon={IconClock}
       title={copy.staleShiftTitle}
       tone="warning"
@@ -643,12 +817,12 @@ export async function EmployeeHomePageContent({
       <p className="text-sm text-muted-foreground">
         {copy.staleShiftDescription(formatDateVN(state.staleOpenShift.date))}
       </p>
-    </EmployeePanel>
+    </Panel>
   ) : null;
   const pendingApprovalsTotal = pendingCheckouts + pendingWaste;
   const checkoutApprovalsSection =
     pendingApprovalsTotal > 0 ? (
-      <EmployeePanel
+      <Panel
         icon={IconClipboardCheck}
         title={copy.approvalsQueueTitle}
         description={[
@@ -688,12 +862,12 @@ export async function EmployeeHomePageContent({
             </Button>
           ) : null}
         </div>
-      </EmployeePanel>
+      </Panel>
     ) : null;
   const checklistSection = activeWorkStatus ? (
-    <EmployeePanel
+    <Panel
       icon={state.status === "done" ? IconDone : IconListChecks}
-      title={messages.employee.tasks.checklistTitle}
+      title={tasksCopy.checklistTitle}
       headerHint={`${state.checklist.done}/${state.checklist.total}`}
       tone={
         state.status === "checkout_pending"
@@ -706,7 +880,7 @@ export async function EmployeeHomePageContent({
       size="sm"
     >
       {checklistContent}
-    </EmployeePanel>
+    </Panel>
   ) : null;
 
   const isBranchManager = claims.user_role === "branch_manager";
@@ -734,9 +908,9 @@ export async function EmployeeHomePageContent({
   ) : null;
 
   const notificationSection = showNotificationControl ? (
-    <EmployeePanel tone="info" size="sm">
+    <Panel tone="info" size="sm">
       <NotificationPopupControl compact />
-    </EmployeePanel>
+    </Panel>
   ) : null;
 
   const hasClockedIn = Boolean(state.attendance?.checkIn);
@@ -787,7 +961,7 @@ export async function EmployeeHomePageContent({
     statusLabel: tasksDone
       ? copy.shiftDone
       : tasksActive
-        ? `${state.checklist.requiredRemaining} ${messages.employee.tasks.requiredRemaining}`
+        ? `${state.checklist.requiredRemaining} ${tasksCopy.requiredRemaining}`
         : copy.workflowWaiting,
     statusVariant: tasksDone
       ? "success"
@@ -834,7 +1008,14 @@ export async function EmployeeHomePageContent({
   const shiftStepItems = state.managerAttendanceOnly
     ? [clockStep, checkoutStep]
     : [clockStep, taskStep, checkoutStep];
-  const workflowSection = <ShiftWorkflowPanel steps={shiftStepItems} />;
+  const workflowSection = (
+    <ShiftWorkflowPanel
+      steps={shiftStepItems}
+      copy={copy}
+      Panel={Panel}
+      InlineState={InlineState}
+    />
+  );
 
   const pageContent =
     mode === "manager-dashboard" ? (
@@ -875,17 +1056,31 @@ export async function EmployeeHomePageContent({
     );
 
   return (
-    <EmployeePageShell
+    <PageShell
       title={copy.title}
       description={copy.description}
       hideHeaderOnMobile
     >
-      {state.branchId !== null ? (
+      {enableBranchOpsRefresh && state.branchId !== null ? (
         <BranchOpsRefresh branchId={state.branchId} />
       ) : null}
       {pageContent}
-    </EmployeePageShell>
+    </PageShell>
   );
+}
+
+export async function EmployeeHomePageContent(
+  props: Omit<
+    StaffWorkdayPageContentProps,
+    "plane" | "copy" | "tasksCopy"
+  > = {},
+) {
+  return StaffWorkdayPageContent({
+    ...props,
+    plane: "employee",
+    copy: employeeWorkdayCopy,
+    tasksCopy: employeeWorkdayTasksCopy,
+  });
 }
 
 export default async function EmployeePage() {

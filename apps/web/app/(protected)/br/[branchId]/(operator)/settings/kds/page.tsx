@@ -1,6 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import { EmployeePage } from "@lib/staff-runtime/components/staff-runtime-page";
+import {
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { StationsClient } from "@/(protected)/branch-settings/_shared/kds/stations-client";
@@ -61,8 +64,10 @@ export default async function BranchKdsSettingsPage({
   ]);
 
   if (branchRes.error || !branchRes.data) notFound();
-  if (stationsRes.error) throw new Error("Không thể tải trạm KDS");
-  if (categoriesRes.error) throw new Error("Không thể tải danh mục");
+  if (stationsRes.error)
+    throw new Error(messages.settings.branch.kdsStationsLoadFailed);
+  if (categoriesRes.error)
+    throw new Error(messages.settings.branch.categoriesLoadFailed);
 
   const stations = mapStationRows(
     (stationsRes.data ?? []) as KdsStationQueryRow[],
@@ -70,15 +75,18 @@ export default async function BranchKdsSettingsPage({
   const categories = categoriesRes.data as CategoryOption[];
 
   return (
-    <EmployeePage
+    <BranchOperatorPage
       title={messages.settings.pages.kdsTitle}
-      description={messages.settings.pages.kdsDescription}
+      description={`${branchRes.data.name} · ${messages.settings.branch.kdsSetupDescription}`}
     >
-      <StationsClient
-        branches={[branchRes.data]}
-        stations={stations}
-        categories={categories}
-      />
-    </EmployeePage>
+      <BranchOperatorPanel>
+        <StationsClient
+          branches={[branchRes.data]}
+          stations={stations}
+          categories={categories}
+          embedded
+        />
+      </BranchOperatorPanel>
+    </BranchOperatorPage>
   );
 }

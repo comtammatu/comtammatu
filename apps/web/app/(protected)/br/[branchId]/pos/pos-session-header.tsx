@@ -12,9 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
-import { BrandLogoBox, BrandMark } from "@/components/brand";
+import { AppHeaderBrand } from "@/components/app-header";
 import { ThemeMenuItem } from "@/components/theme-toggle";
-import { PrinterStatusBadge } from "./printer-status-badge";
+import { PrinterStatusIndicator } from "./printer-status-badge";
 import { usePosSession, usePosSound } from "./_providers/pos-desktop-provider";
 import {
   ArrowLeft as IconArrowLeft,
@@ -25,7 +25,7 @@ import {
   VolumeX as IconVolumeX,
 } from "lucide-react";
 
-interface PosSessionHeaderProps {
+interface PosSessionTopBarProps {
   /** Ẩn nút "Chốt ca" cho role không có `pos:close_shift`. */
   canCloseShift: boolean;
   onShowCloseSession: () => void;
@@ -42,12 +42,12 @@ interface PosSessionHeaderProps {
   onBack?: () => void;
 }
 
-function PosSessionHeaderComponent({
+function PosSessionTopBarComponent({
   canCloseShift,
   onShowCloseSession,
   contextLabel,
   onBack,
-}: PosSessionHeaderProps) {
+}: PosSessionTopBarProps) {
   const { branchId } = usePosSession();
 
   return (
@@ -67,9 +67,11 @@ function PosSessionHeaderComponent({
         ) : null}
 
         <div className="flex min-w-0 flex-1 items-center justify-start gap-1.5 md:justify-center">
-          <BrandLogoBox tone="card">
-            <BrandMark decorative className="size-full" />
-          </BrandLogoBox>
+          <AppHeaderBrand
+            title={null}
+            subtitleHiddenOnMobile={false}
+            showText={false}
+          />
           {contextLabel ? (
             <span className="font-heading min-w-0 truncate text-base font-bold text-foreground md:text-sm md:font-semibold">
               {contextLabel}
@@ -82,7 +84,7 @@ function PosSessionHeaderComponent({
             avoid a mis-tap on "Chốt ca" mid-payment. The F10 hotkey still
             opens close-shift quickly on desktop. */}
         <div className="flex shrink-0 items-center gap-1">
-          <PrinterStatusBadge branchId={branchId} />
+          <PrinterStatusIndicator branchId={branchId} />
           <PosMoreMenu
             branchId={branchId}
             canCloseShift={canCloseShift}
@@ -150,4 +152,4 @@ function PosMoreMenu({
   );
 }
 
-export const PosSessionHeader = memo(PosSessionHeaderComponent);
+export const PosSessionTopBar = memo(PosSessionTopBarComponent);

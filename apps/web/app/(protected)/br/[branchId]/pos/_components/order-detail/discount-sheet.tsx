@@ -201,8 +201,7 @@ export function DiscountSheet({
                 rows={2}
               />
               <FieldDescription>
-                Tối thiểu 3 ký tự. ({noteTrimLen}/3) — dùng cho cả "Áp dụng" và
-                "Bỏ chiết khấu" (lưu vào nhật ký kiểm toán).
+                {POS_VI.discountNoteHint(noteTrimLen)}
               </FieldDescription>
             </Field>
           </FieldGroup>
@@ -220,7 +219,7 @@ export function DiscountSheet({
             )}
             <div className="flex justify-between text-muted-foreground">
               <span>
-                Giảm
+                {POS_VI.discountReduceLabel}
                 {type === "pct" && numericValue > 0
                   ? ` (${numericValue}%)`
                   : ""}

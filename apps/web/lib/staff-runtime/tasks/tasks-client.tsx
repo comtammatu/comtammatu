@@ -194,7 +194,7 @@ export function TasksClient({
                       item.done
                         ? "border-success/20 bg-success/10"
                         : "hover:bg-muted/50",
-                      disabled && "bg-muted/40",
+                      disabled && "bg-muted/30",
                     )}
                   >
                     {isCountTask ? (

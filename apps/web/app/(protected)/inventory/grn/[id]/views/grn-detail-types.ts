@@ -39,6 +39,7 @@ export type GRNDetail = {
   poId?: number;
   invoiceId: number | null;
   branchId: number;
+  locationId: number | null;
   branchName: string;
   supplierId: number;
   supplier: string;
@@ -53,6 +54,16 @@ export type GRNDetail = {
     priceVarianceReviewPct: number;
     rejectRequiresPhoto: boolean;
   };
+};
+
+export type RecreateReceivingLocationOption = {
+  id: number;
+  name: string;
+  branchId: number;
+  branchName: string;
+  branchKind: string | null;
+  kind: string | null;
+  isDefaultReceive: boolean;
 };
 
 export type EditableLine = GRNDetailItem & { dirty: boolean };

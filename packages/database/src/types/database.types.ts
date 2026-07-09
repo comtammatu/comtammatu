@@ -1533,6 +1533,7 @@ export type Database = {
           express_approved: boolean | null
           grn_number: string
           id: number
+          location_id: number | null
           notes: string | null
           po_id: number | null
           received_by: string | null
@@ -1549,6 +1550,7 @@ export type Database = {
           express_approved?: boolean | null
           grn_number: string
           id?: never
+          location_id?: number | null
           notes?: string | null
           po_id?: number | null
           received_by?: string | null
@@ -1565,6 +1567,7 @@ export type Database = {
           express_approved?: boolean | null
           grn_number?: string
           id?: never
+          location_id?: number | null
           notes?: string | null
           po_id?: number | null
           received_by?: string | null
@@ -1594,6 +1597,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_received_notes_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
             referencedColumns: ["id"]
           },
           {
@@ -5255,9 +5265,11 @@ export type Database = {
           notes: string | null
           planned_quantity: number
           production_number: string
+          source_location_id: number
           started_at: string | null
           status: string
           target_branch_id: number
+          target_location_id: number
           tenant_id: number
           updated_at: string
         }
@@ -5274,9 +5286,11 @@ export type Database = {
           notes?: string | null
           planned_quantity: number
           production_number: string
+          source_location_id: number
           started_at?: string | null
           status?: string
           target_branch_id: number
+          target_location_id: number
           tenant_id: number
           updated_at?: string
         }
@@ -5293,9 +5307,11 @@ export type Database = {
           notes?: string | null
           planned_quantity?: number
           production_number?: string
+          source_location_id?: number
           started_at?: string | null
           status?: string
           target_branch_id?: number
+          target_location_id?: number
           tenant_id?: number
           updated_at?: string
         }
@@ -5336,6 +5352,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "production_runs_source_location_id_fkey"
+            columns: ["source_location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "production_runs_target_branch_id_fkey"
             columns: ["target_branch_id"]
             isOneToOne: false
@@ -5348,6 +5371,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_print_agent_fleet"
             referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "production_runs_target_location_id_fkey"
+            columns: ["target_location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "production_runs_tenant_id_fkey"
@@ -8845,6 +8875,47 @@ export type Database = {
       }
     }
     Views: {
+      mv_daily_revenue: {
+        Row: {
+          branch_id: number | null
+          cash_revenue: number | null
+          date: string | null
+          dine_in_revenue: number | null
+          discount_amount: number | null
+          momo_revenue: number | null
+          order_count: number | null
+          subtotal_revenue: number | null
+          takeaway_revenue: number | null
+          tenant_id: number | null
+          total_covers: number | null
+          total_revenue: number | null
+          total_tax: number | null
+          vietqr_revenue: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mv_food_cost: {
         Row: {
           branch_id: number | null
@@ -9094,6 +9165,24 @@ export type Database = {
         }
         Returns: Json
       }
+      add_menu_item_kitchen_stock_exception: {
+        Args: {
+          p_branch_id: number
+          p_extra_portions: number
+          p_menu_item_id: number
+          p_reason: string
+        }
+        Returns: Json
+      }
+      adjust_stock_exception: {
+        Args: {
+          p_branch_id: number
+          p_ingredient_id: number
+          p_quantity_change: number
+          p_reason: string
+        }
+        Returns: Json
+      }
       admin_force_close_attendance: {
         Args: {
           p_approved_by: string
@@ -9228,6 +9317,16 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: string
+      }
+      branch_manager_reject_employee_clock_out: {
+        Args: {
+          p_attendance_id: number
+          p_branch_id: number
+          p_note?: string
+          p_rejected_by: string
+          p_tenant_id: number
+        }
+        Returns: boolean
       }
       branch_manager_request_consumption_adjustment: {
         Args: {
@@ -9523,6 +9622,20 @@ export type Database = {
           p_notes?: string
           p_planned_quantity: number
           p_target_branch_id?: number
+        }
+        Returns: Json
+      }
+      create_production_run_with_locations: {
+        Args: {
+          p_branch_id: number
+          p_entry_unit_id: number
+          p_finished_good_id: number
+          p_ingredients_override?: Json
+          p_notes?: string
+          p_planned_quantity: number
+          p_source_location_id?: number
+          p_target_branch_id?: number
+          p_target_location_id?: number
         }
         Returns: Json
       }
@@ -9924,6 +10037,14 @@ export type Database = {
         Args: { p_branch_id: number; p_finished_good_id: number }
         Returns: Json
       }
+      get_production_recipe_context_for_location: {
+        Args: {
+          p_branch_id: number
+          p_finished_good_id: number
+          p_source_location_id?: number
+        }
+        Returns: Json
+      }
       get_revenue_by_cashier: {
         Args: {
           p_branch_id?: number
@@ -10142,6 +10263,10 @@ export type Database = {
         Returns: boolean
       }
       is_inventory_production_operator: { Args: never; Returns: boolean }
+      link_sepay_transaction_to_payment: {
+        Args: { p_event_id: number; p_payment_id: number }
+        Returns: Json
+      }
       list_branch_menu_daily_limits: {
         Args: { p_branch_id: number; p_limit_date?: string }
         Returns: {
@@ -10393,6 +10518,19 @@ export type Database = {
       recall_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       recompute_supplier_invoice_matching: {
         Args: { p_invoice_id: number }
+        Returns: Json
+      }
+      record_sepay_cash_deposit_as_system: {
+        Args: { p_event_id: number }
+        Returns: Json
+      }
+      recreate_grn_at_receiving_site: {
+        Args: {
+          p_grn_id: number
+          p_reason: string
+          p_target_branch_id: number
+          p_target_location_id: number
+        }
         Returns: Json
       }
       reduce_order_item_quantity: {

@@ -4,6 +4,7 @@ import { PERMISSION_KEYS, INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { parseBranchIdParam } from "@/_lib/branch-context";
+import { resolveDefaultShiftId } from "@lib/staff-runtime/_lib/default-shift";
 import { CountAssignmentsClient } from "./count-assignments-client";
 import type {
   EmployeeRow,
@@ -13,6 +14,8 @@ import type {
 } from "./count-assignments-client";
 
 export const dynamic = "force-dynamic";
+
+const ALL_SHIFTS_PARAM = "all";
 
 interface CountAssignmentsPageContentProps {
   searchParams?: Promise<{
@@ -67,7 +70,11 @@ export async function CountAssignmentsPageContent({
 
   const selectedBranchId = scope.selectedBranchId;
   const requestedLocationId = parseBranchIdParam(params.locationId);
+  const rawShiftId = Array.isArray(params.shiftId)
+    ? params.shiftId[0]
+    : params.shiftId;
   const requestedShiftId = parseBranchIdParam(params.shiftId);
+  const requestedAllShifts = rawShiftId === ALL_SHIFTS_PARAM;
 
   const selectedBranchName =
     scope.allowedBranches.find((branch) => branch.id === selectedBranchId)
@@ -123,11 +130,19 @@ export async function CountAssignmentsPageContent({
     }
   }
 
-  const selectedShiftId =
-    requestedShiftId != null &&
-    shiftOptions.some((shift) => shift.id === requestedShiftId)
+  const defaultShiftId = resolveDefaultShiftId(
+    shiftOptions.map((shift) => ({
+      id: shift.id,
+      start_time: shift.startTime,
+      end_time: shift.endTime,
+    })),
+  );
+  const selectedShiftId = requestedAllShifts
+    ? null
+    : requestedShiftId != null &&
+        shiftOptions.some((shift) => shift.id === requestedShiftId)
       ? requestedShiftId
-      : null;
+      : defaultShiftId;
 
   // Assignment access is permission-gated above; roster reads bypass self-scoped
   // employee/profile RLS while writes still go through the assignment RPC.

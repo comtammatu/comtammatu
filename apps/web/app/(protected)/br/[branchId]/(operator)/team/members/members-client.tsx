@@ -18,6 +18,7 @@ import {
   AvatarImage,
 } from "@comtammatu/ui/components/avatar";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Drawer,
   DrawerContent,
@@ -35,10 +36,7 @@ import {
   formatVNBusinessDate as formatDateVN,
   formatVNTime as formatTimeVN,
 } from "@comtammatu/shared/time";
-import {
-  fetchEmployeeSummary,
-  type EmployeeMonthlySummary,
-} from "./actions";
+import { fetchEmployeeSummary, type EmployeeMonthlySummary } from "./actions";
 
 export type TeamMemberTodayStatus =
   | "working"
@@ -72,11 +70,7 @@ export interface TeamMemberRow {
   countStatus: TeamMemberCountStatus;
 }
 
-type TeamMemberFilter =
-  | "all"
-  | "working"
-  | "on_leave"
-  | "count_assigned";
+type TeamMemberFilter = "all" | "working" | "on_leave" | "count_assigned";
 
 type BadgeTone = NonNullable<BadgeProps["variant"]>;
 
@@ -216,7 +210,7 @@ function MemberCard({
   );
 }
 
-function MiniSection({
+function MemberDetailBlock({
   title,
   action,
   children,
@@ -267,8 +261,9 @@ export function MembersClient({
   const [activeMember, setActiveMember] = useState<TeamMemberRow | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<TeamMemberFilter>("all");
-  const [summaryData, setSummaryData] =
-    useState<EmployeeMonthlySummary | null>(null);
+  const [summaryData, setSummaryData] = useState<EmployeeMonthlySummary | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -390,27 +385,27 @@ export function MembersClient({
             {filterChips.map((chip) => {
               const active = chip.value === statusFilter;
               return (
-                <Badge
+                <Button
                   key={chip.value}
-                  asChild
-                  variant={active ? "default" : chip.variant}
-                  className="h-7 cursor-pointer px-3"
+                  type="button"
+                  variant={active ? "secondary" : "outline"}
+                  size="touch"
+                  className="shrink-0 gap-2 px-3"
+                  aria-pressed={active}
+                  onClick={() => setStatusFilter(chip.value)}
                 >
-                  <button
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setStatusFilter(chip.value)}
-                  >
-                    {chip.count} {chip.label}
-                  </button>
-                </Badge>
+                  <Badge variant={active ? "default" : chip.variant}>
+                    {chip.count}
+                  </Badge>
+                  <span className="whitespace-nowrap">{chip.label}</span>
+                </Button>
               );
             })}
           </div>
         </div>
 
         {filteredMembers.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {filteredMembers.map((member) => (
               <MemberCard
                 key={member.id}
@@ -450,8 +445,11 @@ export function MembersClient({
               </DrawerHeader>
 
               <ScrollArea className="min-h-0 flex-1 px-4">
-                <div className="flex flex-col gap-4 pb-4 pr-2" data-vaul-no-drag>
-                  <MiniSection title="Hồ sơ">
+                <div
+                  className="flex flex-col gap-4 pb-4 pr-2"
+                  data-vaul-no-drag
+                >
+                  <MemberDetailBlock title="Hồ sơ">
                     <div className="grid grid-cols-2 gap-2">
                       <InfoTile
                         icon={<UserRound />}
@@ -495,9 +493,9 @@ export function MembersClient({
                         value={formatOptionalDate(activeMember.birthDate)}
                       />
                     </div>
-                  </MiniSection>
+                  </MemberDetailBlock>
 
-                  <MiniSection title="Hôm nay">
+                  <MemberDetailBlock title="Hôm nay">
                     <div className="grid grid-cols-2 gap-2">
                       <InfoTile
                         icon={<CheckCircle2 />}
@@ -528,9 +526,9 @@ export function MembersClient({
                         value={activeCountStatus?.label ?? "Không giao"}
                       />
                     </div>
-                  </MiniSection>
+                  </MemberDetailBlock>
 
-                  <MiniSection
+                  <MemberDetailBlock
                     title="Tháng này"
                     action={isLoading ? <Spinner className="size-4" /> : null}
                   >
@@ -552,7 +550,7 @@ export function MembersClient({
                         />
                       </div>
                     )}
-                  </MiniSection>
+                  </MemberDetailBlock>
                 </div>
               </ScrollArea>
             </>

@@ -17,6 +17,7 @@ import {
 } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
+import { messages } from "@lib/messages";
 import { getAuthContext, probePermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/_lib/audit";
@@ -30,6 +31,7 @@ const SHIFT_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
 const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";
 const ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS = 300;
 const CONTRACT_TYPES = ["probation", "fixed_term", "indefinite"] as const;
+const hrActionCopy = messages.hr.actions;
 
 /* ─── Employees ─── */
 
@@ -267,7 +269,7 @@ export async function fetchEmployees(): Promise<ActionResult> {
 
   if (error) {
     console.error("[hr/actions:fetchEmployees] Fetch employees error:", error);
-    return { success: false, error: "Không thể tải danh sách nhân viên." };
+    return { success: false, error: hrActionCopy.fetchEmployeesFailed };
   }
 
   return { success: true, data: data ?? [] };
@@ -764,7 +766,7 @@ export async function fetchShifts(): Promise<ActionResult> {
 
   if (error) {
     console.error("[hr/actions:fetchShifts] Fetch shifts error:", error);
-    return { success: false, error: "Không thể tải danh sách ca." };
+    return { success: false, error: hrActionCopy.fetchShiftsFailed };
   }
 
   return { success: true, data: data ?? [] };
@@ -956,7 +958,7 @@ export const fetchAttendance = withAction(
         "[hr/actions:fetchAttendance] Fetch attendance records error:",
         error,
       );
-      return { success: false, error: "Không thể tải bảng chấm công." };
+      return { success: false, error: hrActionCopy.fetchAttendanceFailed };
     }
 
     return { success: true, data: result ?? [] };
@@ -1034,6 +1036,19 @@ const forceCloseStaleAttendanceSchema = z.object({
   note: z.string().trim().optional(),
 });
 
+function mapForceCloseAttendanceError(message: string | undefined): string {
+  if (message?.includes("stale_attendance_request_not_found")) {
+    return "Chỉ có thể đóng ca treo từ ngày trước.";
+  }
+  if (
+    message?.includes("forbidden_checkout_approval") ||
+    message?.includes("not_authenticated_or_mismatch")
+  ) {
+    return "Không có quyền đóng ca tại chi nhánh này.";
+  }
+  return "Không thể đóng ca. Vui lòng thử lại sau";
+}
+
 export const forceCloseStaleAttendance = withAction(
   {
     roles: HR_EMPLOYEE_VIEW_ROLES,
@@ -1043,89 +1058,37 @@ export const forceCloseStaleAttendance = withAction(
     requireBranchScope: true,
   },
   async (data, { supabase, claims, user }) => {
-    const service = createServiceClient();
-    const { data: openRecord, error: fetchError } = await service
-      .from("attendance_records")
-      .select("id, branch_id, check_in")
-      .eq("id", data.attendanceId)
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", data.branchId)
-      .not("check_in", "is", null)
-      .is("check_out", null)
-      .maybeSingle();
-
-    if (fetchError || !openRecord) {
-      console.error(
-        "[hr/actions:forceCloseStaleAttendance] Force close error:",
-        fetchError,
-      );
-      if (claims.user_role === "branch_manager" && claims.branch_id == null) {
-        return {
-          success: false,
-          error: "Tài khoản chưa gắn chi nhánh. Liên hệ quản lý.",
-        };
-      }
-      if (
-        claims.user_role === "branch_manager" &&
-        claims.branch_id !== openRecord?.branch_id
-      ) {
-        return {
-          success: false,
-          error: "Không có quyền đóng ca tại chi nhánh này",
-        };
-      }
-      return {
-        success: false,
-        error: "Ca không hợp lệ hoặc đã được đóng",
-      };
-    }
-
-    if (openRecord.branch_id == null) {
-      return { success: false, error: "Không xác định được chi nhánh của ca." };
-    }
-
     if (
       claims.user_role === "branch_manager" &&
-      claims.branch_id !== openRecord.branch_id
+      claims.branch_id !== data.branchId
     ) {
       return { success: false, error: "Không có quyền đóng ca tại chi nhánh này" };
     }
 
-    const now = new Date().toISOString();
-    const checkOutTime = openRecord.check_in;
     const note =
       typeof data.note === "string" && data.note.trim().length > 0
         ? data.note
         : "Force closed: Quên kết ca trong ngày (không tính công)";
 
-    const { data: closedRecord, error } = await service
-      .from("attendance_records")
-      .update({
-        check_out: checkOutTime,
-        check_out_code_verified: false,
-        checkout_approved_at: now,
-        checkout_approved_by: user.id,
-        checkout_approval_note: note,
-        checkout_requested_at: null,
-        checkout_requested_by_role: null,
-        checkout_approval_target_roles: [],
-        updated_at: now,
-      })
-      .eq("id", data.attendanceId)
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", openRecord.branch_id)
-      .is("check_out", null)
-      .select("check_out")
-      .maybeSingle();
+    const { data: checkOutTime, error } = await supabase.rpc(
+      "admin_force_close_attendance",
+      {
+        p_tenant_id: claims.tenant_id,
+        p_branch_id: data.branchId,
+        p_attendance_id: data.attendanceId,
+        p_approved_by: user.id,
+        p_note: note,
+      },
+    );
 
-    if (error || !closedRecord?.check_out) {
+    if (error || !checkOutTime) {
       if (error) {
         console.error(
-          "[hr/actions:forceCloseStaleAttendance] Force close update error:",
-          error,
+          "[hr/actions:forceCloseStaleAttendance] Force close rpc error:",
+          { code: error.code },
         );
       }
-      return { success: false, error: "Không thể đóng ca. Vui lòng thử lại sau" };
+      return { success: false, error: mapForceCloseAttendanceError(error?.message) };
     }
 
     logAudit(supabase, {
@@ -1190,7 +1153,7 @@ export const fetchAttendanceSummary = withAction(
         "[hr/actions:fetchAttendanceSummary] Fetch attendance summary error:",
         error,
       );
-      return { success: false, error: "Không thể tải tổng hợp chấm công." };
+      return { success: false, error: hrActionCopy.fetchAttendanceSummaryFailed };
     }
 
     // Per-shift attendance (D027): each closed shift contributes 0.5 workday;

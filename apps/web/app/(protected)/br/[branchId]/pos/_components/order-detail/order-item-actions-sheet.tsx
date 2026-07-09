@@ -111,7 +111,7 @@ export function OrderItemActionsSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="pos-safe-bottom max-h-dvh-80 gap-0 px-0 sm:mx-auto sm:max-w-md"
+        className="pos-safe-bottom max-h-dvh-80 gap-1 px-0 sm:mx-auto sm:max-w-md"
       >
         <SheetHeader>
           <SheetTitle className="text-base">{POS_VI.itemActionsTitle}</SheetTitle>

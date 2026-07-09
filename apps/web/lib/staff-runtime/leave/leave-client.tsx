@@ -25,6 +25,11 @@ import {
   EmployeePanel,
   EmployeeStatusStrip,
 } from "../components/staff-runtime-page";
+import {
+  BranchOperatorActionBar,
+  BranchOperatorPanel,
+  BranchOperatorStatusStrip,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { cancelLeaveRequest, submitLeaveRequest } from "./actions";
 import type { LeaveRequestRow } from "./page";
 import { messages } from "@lib/messages";
@@ -41,6 +46,7 @@ interface LeaveRequestClientProps {
   branchId: number;
   branchName: string | null;
   initialRequests: LeaveRequestRow[];
+  plane?: "employee" | "branch";
 }
 
 const copy = messages.employee.leave;
@@ -107,6 +113,7 @@ export function LeaveRequestClient({
   branchId,
   branchName,
   initialRequests,
+  plane = "employee",
 }: LeaveRequestClientProps) {
   const [requests, setRequests] = useState<LeaveRequestRow[]>(initialRequests);
   const [isPending, startTransition] = useTransition();
@@ -117,6 +124,11 @@ export function LeaveRequestClient({
     defaultValues.startDate,
     defaultValues.endDate,
   );
+  const Panel = plane === "branch" ? BranchOperatorPanel : EmployeePanel;
+  const ActionBar =
+    plane === "branch" ? BranchOperatorActionBar : EmployeeActionBar;
+  const StatusStrip =
+    plane === "branch" ? BranchOperatorStatusStrip : EmployeeStatusStrip;
 
   async function handleSubmit(values: LeaveRequestFormValues) {
     const reason = values.reason?.trim() ?? "";
@@ -173,13 +185,13 @@ export function LeaveRequestClient({
 
   return (
     <>
-      <EmployeePanel
+      <Panel
         icon={IconCalendarX}
         title={copy.newRequestTitle}
         description={copy.newRequestDescription}
       >
         <div className="flex flex-col gap-3">
-          <EmployeeStatusStrip
+          <StatusStrip
             items={[
               {
                 label: BRANCH_VI.long,
@@ -194,7 +206,7 @@ export function LeaveRequestClient({
               },
             ]}
           />
-          <EmployeeActionBar>
+          <ActionBar>
             <Button
               type="button"
               size="touch"
@@ -205,11 +217,11 @@ export function LeaveRequestClient({
               <IconPlus data-icon="inline-start" />
               {copy.newRequestButton}
             </Button>
-          </EmployeeActionBar>
+          </ActionBar>
         </div>
-      </EmployeePanel>
+      </Panel>
 
-      <EmployeePanel
+      <Panel
         title={copy.myRequestsTitle}
         description={copy.myRequestsDescription}
       >
@@ -266,7 +278,7 @@ export function LeaveRequestClient({
             })}
           </ItemGroup>
         )}
-      </EmployeePanel>
+      </Panel>
 
       <FormDialog
         open={open}

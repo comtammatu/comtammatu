@@ -1,6 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import { EmployeePage } from "@lib/staff-runtime/components/staff-runtime-page";
+import {
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { TablesClient } from "@/(protected)/branch-settings/_shared/tables/tables-client";
@@ -45,23 +48,26 @@ export default async function BranchTablesSettingsPage({
   ]);
 
   if (branchRes.error || !branchRes.data) notFound();
-  if (zonesRes.error) throw new Error("Không thể tải khu vực");
-  if (tablesRes.error) throw new Error("Không thể tải bàn");
+  if (zonesRes.error) throw new Error(messages.settings.branch.zonesLoadFailed);
+  if (tablesRes.error) throw new Error(messages.settings.branch.tablesLoadFailed);
 
   const tables = shapeTableRows(tablesRes.data ?? []);
 
   return (
-    <EmployeePage
+    <BranchOperatorPage
       title={messages.settings.pages.tablesTitle}
       description={messages.settings.branch.tablesDescription(
         branchRes.data.name,
       )}
     >
-      <TablesClient
-        branches={[branchRes.data]}
-        zones={zonesRes.data ?? []}
-        tables={tables}
-      />
-    </EmployeePage>
+      <BranchOperatorPanel>
+        <TablesClient
+          branches={[branchRes.data]}
+          zones={zonesRes.data ?? []}
+          tables={tables}
+          embedded
+        />
+      </BranchOperatorPanel>
+    </BranchOperatorPage>
   );
 }

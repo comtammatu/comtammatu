@@ -339,7 +339,7 @@ function HeatmapCard({
         // shrink-0: Card sets overflow-hidden, which collapses a flex item's
         // auto min-height to 0 — without this the lane's flex column squeezes
         // cards instead of scrolling, clipping their content.
-        "min-w-0 shrink-0 gap-0 overflow-hidden border-l-2 p-2 transition-colors duration-150 xl:p-3",
+        "min-w-0 shrink-0 gap-1 overflow-hidden border-l-2 p-2 transition-colors duration-150 xl:p-3",
         ageStyle.bg,
         getCardLeftAccent(status, elapsed),
       )}

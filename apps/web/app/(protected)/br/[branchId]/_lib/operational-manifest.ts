@@ -1,4 +1,6 @@
-type OperationalApp = "pos" | "kds" | "runner" | "hub";
+import { BROWSER_CHROME_THEME_COLORS } from "@/_lib/theme-tokens";
+
+type OperationalApp = "pos" | "kds" | "runner" | "operator";
 type OperationalOrientation = "portrait" | "landscape";
 
 const APP_LABELS: Record<
@@ -20,17 +22,17 @@ const APP_LABELS: Record<
     description: "Màn gọi số - Cơm Tấm Má Tư",
     orientation: "landscape",
   },
-  hub: {
-    label: "Hub",
-    description: "Vận hành Hub - Cơm Tấm Má Tư",
+  operator: {
+    label: "Cổng vận hành",
+    description: "Cổng vận hành - Cơm Tấm Má Tư",
     orientation: "portrait",
   },
 };
 
-// The hub app covers the whole operator plane (dashboard/shift/stock/team/
-// settings/...), not one leaf route, so its manifest scope/start_url is the
-// branch root rather than `/br/{branchId}/{app}` like the single-job stations.
-const HUB_APP: OperationalApp = "hub";
+// The operator app is one installable app for the whole operator plane. Its
+// identity/start URL stay on the root work-location picker; branch remains URL
+// state. Single-job stations still keep route-specific install identities.
+const OPERATOR_APP: OperationalApp = "operator";
 
 const OPERATIONAL_MANIFEST_REVALIDATE_SECONDS = 3600;
 
@@ -51,26 +53,26 @@ function normalizeManifestBranchId(rawBranchId: string): string | null {
 
 function buildOperationalManifest(app: OperationalApp, branchId: string) {
   const appConfig = APP_LABELS[app];
-  const isHub = app === HUB_APP;
+  const isOperator = app === OPERATOR_APP;
   const rootUrl = `/br/${branchId}`;
-  const appUrl = isHub ? rootUrl : `${rootUrl}/${app}`;
+  const appUrl = isOperator ? "/" : `${rootUrl}/${app}`;
 
   return {
     id: appUrl,
-    name: isHub
-      ? `Cơm Tấm Má Tư - Hub CN${branchId}`
+    name: isOperator
+      ? "Cơm Tấm Má Tư - Cổng vận hành"
       : `Cơm Tấm Má Tư - ${appConfig.label} CN${branchId}`,
-    short_name: `Má Tư ${appConfig.label}`,
+    short_name: isOperator ? "Cổng Má Tư" : `Má Tư ${appConfig.label}`,
     description: appConfig.description,
     lang: "vi",
     display: "standalone",
     start_url: appUrl,
-    // The hub and all single-job stations scope the entire origin so that
-    // navigations between them (including the toolbar's "Về Má Tư Hub" link and
+    // The operator app and all single-job stations scope the entire origin so that
+    // navigations between them (including the toolbar return link and
     // auth redirects) do not drop the installed PWA back into a browser tab.
     scope: "/",
-    background_color: "#fff6ee",
-    theme_color: "#fff6ee",
+    background_color: BROWSER_CHROME_THEME_COLORS.light,
+    theme_color: BROWSER_CHROME_THEME_COLORS.light,
     orientation: appConfig.orientation,
     categories: ["business", "productivity"],
     prefer_related_applications: false,

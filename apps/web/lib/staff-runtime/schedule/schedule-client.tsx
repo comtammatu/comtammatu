@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@comtammatu/ui";
 import {
   Alert,
@@ -33,6 +34,12 @@ import {
   EmployeePanel,
   EmployeeStatusStrip,
 } from "../components/staff-runtime-page";
+import {
+  BranchOperatorControlBar,
+  BranchOperatorFrame,
+  BranchOperatorPanel,
+  BranchOperatorStatusStrip,
+} from "@lib/branch-operator/components/branch-operator-page";
 import {
   fetchMySchedule,
   type ScheduleAttendance,
@@ -69,7 +76,51 @@ interface ScheduleClientProps {
   initialMonthStart: string;
   leaveHref?: string;
   monthlySalary?: number;
+  plane?: SchedulePlane;
 }
+
+type ScheduleFrameComponent = (
+  props: ComponentProps<"div"> & { pad?: "none" | "sm" },
+) => ReactNode;
+type SchedulePanelComponent = (props: {
+  children: ReactNode;
+  contentClassName?: string;
+  className?: string;
+}) => ReactNode;
+type ScheduleControlBarComponent = (
+  props: ComponentProps<"div"> & { children: ReactNode },
+) => ReactNode;
+type ScheduleStatusStripComponent = (props: {
+  items: Array<{
+    label: string;
+    value: ReactNode;
+    muted?: boolean;
+    mono?: boolean;
+  }>;
+  className?: string;
+}) => ReactNode;
+type SchedulePlanePrimitives = {
+  Panel: SchedulePanelComponent;
+  ControlBar: ScheduleControlBarComponent;
+  StatusStrip: ScheduleStatusStripComponent;
+  Frame: ScheduleFrameComponent;
+};
+
+export type SchedulePlane = "employee" | "branch";
+
+const EMPLOYEE_SCHEDULE_PRIMITIVES: SchedulePlanePrimitives = {
+  Panel: EmployeePanel,
+  ControlBar: EmployeeControlBar,
+  StatusStrip: EmployeeStatusStrip,
+  Frame: EmployeeFrame,
+};
+
+const BRANCH_SCHEDULE_PRIMITIVES: SchedulePlanePrimitives = {
+  Panel: BranchOperatorPanel,
+  ControlBar: BranchOperatorControlBar,
+  StatusStrip: BranchOperatorStatusStrip,
+  Frame: BranchOperatorFrame,
+};
 
 function formatDate(dateStr: string): string {
   const parts = parseISODateParts(dateStr);
@@ -245,11 +296,15 @@ const SCHEDULE_SKELETON_FIXTURE: ScheduleMonthData = {
   monthlyAnnualLeaveDays: 2,
 };
 
-function ScheduleSkeletonFallback() {
+function ScheduleSkeletonFallback({
+  Frame,
+}: {
+  Frame: ScheduleFrameComponent;
+}) {
   return (
-    <EmployeeFrame>
+    <Frame>
       <div role="grid" className="overflow-hidden">
-        <div role="row" className="grid grid-cols-7 bg-muted/40">
+        <div role="row" className="grid grid-cols-7 bg-muted/30">
           {copy.monthWeekdays.map((day) => (
             <div
               key={day}
@@ -278,7 +333,7 @@ function ScheduleSkeletonFallback() {
           </div>
         ))}
       </div>
-    </EmployeeFrame>
+    </Frame>
   );
 }
 
@@ -322,17 +377,18 @@ function CalendarCellContent({
   ];
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       aria-label={ariaParts.join(". ")}
       aria-pressed={selected}
       onClick={() => {
         if (cell.dateStr) onSelectDate(cell.dateStr);
       }}
       className={cn(
-        "flex aspect-square w-full flex-col gap-1 rounded-md bg-background p-1.5 text-left transition-[background-color,box-shadow,transform] duration-150 sm:aspect-video sm:p-2",
-        cell.isToday && "bg-primary/5 ring-1 ring-primary/30",
-        selected && "bg-info/10 shadow-sm ring-2 ring-info/40",
+        "aspect-square w-full flex-col items-stretch justify-start gap-1 rounded-md bg-background p-1.5 text-left transition-[background-color,box-shadow,transform] duration-150 sm:aspect-video sm:p-2",
+        cell.isToday && "bg-primary/10 ring-1 ring-primary/20",
+        selected && "bg-info/10 shadow-sm ring-2 ring-info/20",
       )}
     >
       <div className="flex items-start justify-between gap-1">
@@ -382,19 +438,21 @@ function CalendarCellContent({
           </div>
         ) : null}
       </div>
-    </button>
+    </Button>
   );
 }
 
-function ScheduleMonthCalendarTable({
+function ScheduleMonthCalendarGrid({
   attendanceByDate,
   leaveByDate,
+  Frame,
   monthStart,
   onSelectDate,
   selectedDate,
 }: {
   attendanceByDate: Map<string, ScheduleAttendance[]>;
   leaveByDate: Map<string, LeaveDayStatus>;
+  Frame: ScheduleFrameComponent;
   monthStart: string;
   onSelectDate: (dateStr: string) => void;
   selectedDate: string | null;
@@ -402,9 +460,9 @@ function ScheduleMonthCalendarTable({
   const rows = chunkCalendarRows(generateMonthCalendarCells(monthStart));
 
   return (
-    <EmployeeFrame className="overflow-hidden">
+    <Frame className="overflow-hidden">
       <div role="grid" className="overflow-hidden">
-        <div role="row" className="grid grid-cols-7 bg-muted/40">
+        <div role="row" className="grid grid-cols-7 bg-muted/30">
           {copy.monthWeekdays.map((day) => (
             <div
               key={day}
@@ -441,19 +499,21 @@ function ScheduleMonthCalendarTable({
           </div>
         ))}
       </div>
-    </EmployeeFrame>
+    </Frame>
   );
 }
 
 function SelectedDayDetail({
   attendances,
   dateStr,
+  Frame,
   leave,
   leaveHref,
   todayStr,
 }: {
   attendances: ScheduleAttendance[];
   dateStr: string;
+  Frame: ScheduleFrameComponent;
   leave: LeaveDayStatus | undefined;
   leaveHref: string;
   todayStr: string;
@@ -463,7 +523,7 @@ function SelectedDayDetail({
   return (
     <>
       <div className="px-4 pb-4">
-        <EmployeeFrame pad="sm" className="flex flex-col gap-3 bg-background">
+        <Frame pad="sm" className="flex flex-col gap-3 bg-background">
           <div className="flex flex-wrap items-center gap-1.5">
             {leave ? (
               <Badge variant={leave === "approved" ? "info" : "outline"}>
@@ -507,7 +567,7 @@ function SelectedDayDetail({
               })}
             </div>
           )}
-        </EmployeeFrame>
+        </Frame>
       </div>
 
       {canRequestLeave ? (
@@ -534,7 +594,12 @@ export function ScheduleClient({
   initialMonthStart,
   leaveHref = "/br",
   monthlySalary = 0,
+  plane = "employee",
 }: ScheduleClientProps) {
+  const { ControlBar, Frame, Panel, StatusStrip } =
+    plane === "branch"
+      ? BRANCH_SCHEDULE_PRIMITIVES
+      : EMPLOYEE_SCHEDULE_PRIMITIVES;
   const [monthStart, setMonthStart] = useState(initialMonthStart);
   const [monthData, setMonthData] = useState<ScheduleMonthData>(initialData);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -603,8 +668,8 @@ export function ScheduleClient({
 
   return (
     <>
-      <EmployeePanel contentClassName="gap-3">
-        <EmployeeControlBar>
+      <Panel contentClassName="gap-3">
+        <ControlBar>
           <Button
             variant="outline"
             size="touch"
@@ -642,9 +707,9 @@ export function ScheduleClient({
           >
             <IconChevronRight />
           </Button>
-        </EmployeeControlBar>
+        </ControlBar>
 
-        <EmployeeStatusStrip
+        <StatusStrip
           className="grid-cols-2"
           items={[
             {
@@ -697,29 +762,31 @@ export function ScheduleClient({
             name="employee-schedule-month"
             loading={isPending}
             fixture={
-              <ScheduleMonthCalendarTable
+              <ScheduleMonthCalendarGrid
                 {...createScheduleMaps(
                   SCHEDULE_SKELETON_FIXTURE,
                   SCHEDULE_SKELETON_FIXTURE_MONTH,
                 )}
+                Frame={Frame}
                 monthStart={SCHEDULE_SKELETON_FIXTURE_MONTH}
                 onSelectDate={() => undefined}
                 selectedDate={null}
               />
             }
-            fallback={<ScheduleSkeletonFallback />}
+            fallback={<ScheduleSkeletonFallback Frame={Frame} />}
             snapshotConfig={{ excludeSelectors: ["svg"] }}
           >
-            <ScheduleMonthCalendarTable
+            <ScheduleMonthCalendarGrid
               attendanceByDate={attendanceByDate}
               leaveByDate={leaveByDate}
+              Frame={Frame}
               monthStart={monthStart}
               onSelectDate={setSelectedDate}
               selectedDate={selectedDate}
             />
           </AppBoneyardSkeleton>
         )}
-      </EmployeePanel>
+      </Panel>
 
       <Drawer
         open={selectedDate !== null}
@@ -740,6 +807,7 @@ export function ScheduleClient({
             <SelectedDayDetail
               attendances={selectedAttendance}
               dateStr={selectedDate}
+              Frame={Frame}
               leave={selectedLeave}
               leaveHref={leaveHref}
               todayStr={todayStr}

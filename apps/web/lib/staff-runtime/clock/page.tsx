@@ -5,12 +5,13 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { messages } from "@lib/messages";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/staff-runtime-page";
 import { getTodayWorkState } from "../_lib/today-work-state";
-import { ClockClient } from "./clock-client";
+import { ClockClient, type ClockPlane } from "./clock-client";
 
 const copy = messages.employee.home;
 
@@ -30,23 +31,28 @@ const DEFAULT_CLOCK_ROUTES: EmployeeClockRoutes = {
   managerHr: "/hr",
 };
 
-export async function ClockPageContent({
-  routes = DEFAULT_CLOCK_ROUTES,
-}: {
+type StaffClockPageContentProps = {
   routes?: EmployeeClockRoutes;
-} = {}) {
+  plane?: ClockPlane;
+};
+
+export async function StaffClockPageContent({
+  routes = DEFAULT_CLOCK_ROUTES,
+  plane = "employee",
+}: StaffClockPageContentProps = {}) {
   const state = await getTodayWorkState();
+  const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
 
   if (state.status === "missing_profile") {
     return (
-      <EmployeePage title={copy.clockTodayTitle} hideHeaderOnMobile>
+      <PageShell title={copy.clockTodayTitle} hideHeaderOnMobile>
         <EmployeeMissingProfileEmpty profileHref={routes.profile} />
-      </EmployeePage>
+      </PageShell>
     );
   }
 
   return (
-    <EmployeePage
+    <PageShell
       title={copy.clockTodayTitle}
       hideHeaderOnMobile
       action={
@@ -71,11 +77,13 @@ export async function ClockPageContent({
         </Button>
       }
     >
-      <ClockClient state={state} routes={routes} />
-    </EmployeePage>
+      <ClockClient state={state} routes={routes} plane={plane} />
+    </PageShell>
   );
 }
 
+export const ClockPageContent = StaffClockPageContent;
+
 export default function ClockPage() {
-  return <ClockPageContent />;
+  return <StaffClockPageContent />;
 }

@@ -6,6 +6,7 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { calculatePayrollEntry } from "@comtammatu/shared/payroll";
 import { getVNMonthEndDateString } from "@comtammatu/shared/time";
+import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/_lib/audit";
@@ -25,6 +26,7 @@ import {
 } from "./payroll-day-math";
 
 const PAYROLL_ROLES: readonly StaffRole[] = ["owner"];
+const payrollActionCopy = messages.hr.payroll.server;
 
 /* ─── Fetch Payroll Periods ─── */
 
@@ -33,7 +35,7 @@ export async function fetchPayrollPeriods(): Promise<ActionResult> {
     PAYROLL_ROLES,
     PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  if (!ctx) return { success: false, error: payrollActionCopy.forbidden };
 
   const { supabase, claims } = ctx;
 
@@ -47,7 +49,7 @@ export async function fetchPayrollPeriods(): Promise<ActionResult> {
 
   if (error) {
     console.error("[hr/payroll-actions:fetchPayrollPeriods] Fetch payroll periods error:", error);
-    return { success: false, error: "Không thể tải kỳ lương." };
+    return { success: false, error: payrollActionCopy.periodLoadFailed };
   }
 
   return { success: true, data: data ?? [] };
@@ -84,10 +86,10 @@ export const createPayrollPeriod = withAction(
       if (error.code === "23505") {
         return {
           success: false,
-          error: `Kỳ lương ${data.month}/${data.year} đã tồn tại.`,
+          error: payrollActionCopy.periodExists(data.month, data.year),
         };
       }
-      return { success: false, error: "Không thể tạo kỳ lương." };
+      return { success: false, error: payrollActionCopy.createPeriodFailed };
     }
 
     return { success: true, data: result };
@@ -120,7 +122,7 @@ export const fetchPayrollPeriod = withAction(
       if (error) {
         console.error("[hr/payroll-actions:fetchPayrollPeriod] Fetch payroll period error:", error);
       }
-      return { success: false, error: "Kỳ lương không tồn tại." };
+      return { success: false, error: payrollActionCopy.periodNotFound };
     }
 
     return { success: true, data: period };
@@ -153,7 +155,7 @@ export const updatePayrollPeriodStandardDays = withAction(
       }
       return {
         success: false,
-        error: "Chỉ có thể sửa ngày công chuẩn cho kỳ nháp hoặc đã tính.",
+        error: payrollActionCopy.standardDaysEditableOnly,
       };
     }
 
@@ -170,27 +172,27 @@ const payrollCalcMappings: readonly RpcErrorMapping[] = [
     match: (m, c) =>
       m.includes("forbidden") || m.includes("tenant_mismatch") || c === "42501",
     errorCode: "payroll.calculate.forbidden",
-    userMessage: "Không có quyền tính lương.",
+    userMessage: payrollActionCopy.calculate.forbidden,
   },
   {
     match: (m, c) => m.includes("payroll_period_not_found") || c === "P0002",
     errorCode: "payroll.calculate.period_not_found",
-    userMessage: "Kỳ lương không tồn tại.",
+    userMessage: payrollActionCopy.calculate.periodNotFound,
   },
   {
     match: (m) => m.includes("payroll_locked"),
     errorCode: "payroll.calculate.locked",
-    userMessage: "Chỉ có thể tính lương cho kỳ nháp hoặc đã tính.",
+    userMessage: payrollActionCopy.calculate.locked,
   },
   {
     match: (m) => m.includes("invalid_payroll_entries"),
     errorCode: "payroll.calculate.invalid_entries",
-    userMessage: "Dữ liệu bảng lương không hợp lệ.",
+    userMessage: payrollActionCopy.calculate.invalidEntries,
   },
 ];
 
 const payrollCalcFallback: RpcErrorFallback = {
-  userMessage: "Không thể tính lương. Vui lòng thử lại.",
+  userMessage: payrollActionCopy.calculate.fallback,
   errorCode: "payroll.calculate.unknown",
 };
 
@@ -213,13 +215,13 @@ export const calculatePayroll = withAction(
       if (periodErr) {
         console.error("[hr/payroll-actions:calculatePayroll] Fetch payroll period error:", periodErr);
       }
-      return { success: false, error: "Kỳ lương không tồn tại." };
+      return { success: false, error: payrollActionCopy.calculate.periodNotFound };
     }
 
     if (period.status !== "draft" && period.status !== "calculated") {
       return {
         success: false,
-        error: "Chỉ có thể tính lương cho kỳ nháp hoặc đã tính.",
+        error: payrollActionCopy.calculate.locked,
       };
     }
 
@@ -229,7 +231,10 @@ export const calculatePayroll = withAction(
     const standardDays = Number(period.standard_days ?? 0);
 
     if (standardDays === 0) {
-      return { success: false, error: "Kỳ lương không có ngày công chuẩn." };
+      return {
+        success: false,
+        error: payrollActionCopy.calculate.missingStandardDays,
+      };
     }
 
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -243,14 +248,17 @@ export const calculatePayroll = withAction(
 
     if (empErr) {
       console.error("[hr/payroll-actions:calculatePayroll] Fetch employees error:", empErr);
-      return { success: false, error: "Không thể tải danh sách nhân viên." };
+      return {
+        success: false,
+        error: payrollActionCopy.calculate.employeesLoadFailed,
+      };
     }
 
     const activeEmployees = employees.filter((emp) => emp.is_active);
     if (activeEmployees.length === 0) {
       return {
         success: false,
-        error: "Không có nhân viên đang làm việc trong kỳ này.",
+        error: payrollActionCopy.calculate.noActiveEmployees,
       };
     }
 
@@ -271,7 +279,7 @@ export const calculatePayroll = withAction(
       console.error("[hr/payroll-actions:calculatePayroll] Fetch employment contracts error:", contractErr);
       return {
         success: false,
-        error: "Không thể tải hợp đồng lao động. Tính lương bị hủy.",
+        error: payrollActionCopy.calculate.contractsLoadFailed,
       };
     }
 
@@ -299,8 +307,7 @@ export const calculatePayroll = withAction(
     if (eligibleEmployees.length === 0) {
       return {
         success: false,
-        error:
-          "Không có nhân viên đang làm việc có lương cơ bản hoặc hợp đồng trong kỳ này.",
+        error: payrollActionCopy.calculate.noEligibleEmployees,
       };
     }
 
@@ -315,7 +322,7 @@ export const calculatePayroll = withAction(
       console.error("[hr/payroll-actions:calculatePayroll] Fetch attendance records error:", attendanceErr);
       return {
         success: false,
-        error: "Không thể tải dữ liệu chấm công. Tính lương bị hủy.",
+        error: payrollActionCopy.calculate.attendanceLoadFailed,
       };
     }
 
@@ -341,7 +348,7 @@ export const calculatePayroll = withAction(
       console.error("[hr/payroll-actions:calculatePayroll] Fetch leave requests error:", leaveErr);
       return {
         success: false,
-        error: "Không thể tải dữ liệu nghỉ phép. Tính lương bị hủy.",
+        error: payrollActionCopy.calculate.leaveLoadFailed,
       };
     }
 
@@ -534,7 +541,7 @@ export const fetchPayrollEntries = withAction(
 
     if (error) {
       console.error("[hr/payroll-actions:fetchPayrollEntries] Fetch payroll entries error:", error);
-      return { success: false, error: "Không thể tải bảng lương." };
+      return { success: false, error: payrollActionCopy.entriesLoadFailed };
     }
 
     return { success: true, data: result ?? [] };
@@ -571,7 +578,7 @@ export const approvePayroll = withAction(
       if (error) {
         console.error("[hr/payroll-actions:approvePayroll] Update payroll period to approved error:", error);
       }
-      return { success: false, error: "Không thể duyệt bảng lương." };
+      return { success: false, error: payrollActionCopy.approveFailed };
     }
 
     logAudit(supabase, {
@@ -614,7 +621,7 @@ export const markPayrollPaid = withAction(
       if (error) {
         console.error("[hr/payroll-actions:markPayrollPaid] Update payroll period to paid error:", error);
       }
-      return { success: false, error: "Không thể đánh dấu đã thanh toán." };
+      return { success: false, error: payrollActionCopy.markPaidFailed };
     }
 
     logAudit(supabase, {

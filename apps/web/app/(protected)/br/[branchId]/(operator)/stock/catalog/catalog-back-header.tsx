@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 
-export function CatalogBackHeader({
+export function CatalogBackControl({
   title,
   backHref,
 }: {

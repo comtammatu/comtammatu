@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Plus as IconPlus, Trash2 as IconTrash, X as IconX } from "lucide-react";
+import {
+  Plus as IconPlus,
+  Trash2 as IconTrash,
+  X as IconX,
+} from "lucide-react";
 import {
   Controller,
   useFieldArray,
@@ -16,9 +20,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { Label } from "@comtammatu/ui/components/label";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  FieldLabel,
-} from "@comtammatu/ui/components/field";
+import { FieldLabel } from "@comtammatu/ui/components/field";
 import {
   Select,
   SelectContent,
@@ -26,7 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { TextField, SelectField, TextareaField, MultiSelectCombobox } from "@/components/form";
+import {
+  TextField,
+  SelectField,
+  TextareaField,
+  MultiSelectCombobox,
+} from "@/components/form";
 import {
   fetchPositionTasksData,
   savePositionTasks,
@@ -108,7 +115,9 @@ function IngredientPicker({
         return (
           <div className="flex flex-col gap-2 rounded-md border bg-muted/20 p-3">
             <p className="text-sm font-medium">{copy.ingredientsLabel}</p>
-            <p className="text-xs text-muted-foreground">{copy.ingredientsHint}</p>
+            <p className="text-xs text-muted-foreground">
+              {copy.ingredientsHint}
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {selected.length === 0 ? (
                 <span className="text-xs text-muted-foreground">
@@ -120,16 +129,18 @@ function IngredientPicker({
                   return (
                     <Badge key={id} variant="secondary" className="gap-1">
                       {ingredient?.name ?? id}
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon-xs"
                         aria-label={copy.removeIngredient}
-                        className="ml-0.5"
+                        className="-mr-1 ml-0.5 size-5"
                         onClick={() =>
                           field.onChange(selected.filter((x) => x !== id))
                         }
                       >
                         <IconX className="size-3" />
-                      </button>
+                      </Button>
                     </Badge>
                   );
                 })
@@ -249,7 +260,10 @@ function TaskRow({
                 checked={field.value}
                 onCheckedChange={(value) => field.onChange(value === true)}
               />
-              <Label htmlFor={`task-required-${index}`} className="text-sm font-normal">
+              <Label
+                htmlFor={`task-required-${index}`}
+                className="text-sm font-normal"
+              >
                 {copy.requiredLabel}
               </Label>
             </div>

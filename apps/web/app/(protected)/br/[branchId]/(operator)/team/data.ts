@@ -3,6 +3,14 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
+import { messages } from "@lib/messages";
+import {
+  resolveCountStatusForShift,
+  resolveCountStatusFromAnySlip,
+  type TeamCountAssignmentRow,
+  type TeamCountSlipRow,
+  type TeamCountStatus,
+} from "./count-status";
 
 const TEAM_BOARD_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
 
@@ -23,6 +31,7 @@ export interface TeamBoardChecklistPhaseProgress {
 
 export interface TeamBoardShiftAttendance {
   attendanceId: number;
+  shiftId: number | null;
   shiftName: string | null;
   checkIn: string | null;
   checkOut: string | null;
@@ -30,13 +39,10 @@ export interface TeamBoardShiftAttendance {
   checkoutApprovedAt: string | null;
   checklistConfigured: boolean;
   checklist: Record<TeamBoardChecklistPhase, TeamBoardChecklistPhaseProgress>;
+  countStatus: TeamCountStatus;
 }
 
-export type TeamBoardCountStatus =
-  | "not_assigned"
-  | "not_submitted"
-  | "submitted"
-  | "approved";
+export type TeamBoardCountStatus = TeamCountStatus;
 
 export interface TeamBoardRow {
   employeeId: number;
@@ -113,7 +119,7 @@ export const fetchTeamBoard = withAction(
           .from("attendance_records")
           .select(
             `
-            id, employee_id, check_in, check_out,
+            id, employee_id, shift_id, check_in, check_out,
             checkout_requested_at, checkout_approved_at,
             shifts ( name ),
             employees (
@@ -132,7 +138,7 @@ export const fetchTeamBoard = withAction(
           .order("check_in", { ascending: true }),
         readClient
           .from("inventory_count_assignments")
-          .select("employee_id, location_id")
+          .select("employee_id, location_id, ingredient_id, shift_id")
           .eq("tenant_id", claims.tenant_id)
           .eq("branch_id", data.branchId)
           .eq("is_active", true),
@@ -148,19 +154,31 @@ export const fetchTeamBoard = withAction(
 
     if (employeesResult.error) {
       console.error("[team/data:fetchTeamBoard] Fetch employees error:", employeesResult.error);
-      return { success: false, error: "Không thể tải danh sách nhân viên." };
+      return {
+        success: false,
+        error: messages.operator.teamBoard.loadEmployeesFailed,
+      };
     }
     if (attendanceResult.error) {
       console.error("[team/data:fetchTeamBoard] Fetch attendance error:", attendanceResult.error);
-      return { success: false, error: "Không thể tải chấm công hôm nay." };
+      return {
+        success: false,
+        error: messages.operator.teamBoard.loadAttendanceFailed,
+      };
     }
     if (countAssignmentsResult.error) {
       console.error("[team/data:fetchTeamBoard] Fetch count assignments error:", countAssignmentsResult.error);
-      return { success: false, error: "Không thể tải phân công kiểm kê." };
+      return {
+        success: false,
+        error: messages.operator.teamBoard.loadCountAssignmentsFailed,
+      };
     }
     if (leaveResult.error) {
       console.error("[team/data:fetchTeamBoard] Fetch leave requests error:", leaveResult.error);
-      return { success: false, error: "Không thể tải nghỉ phép." };
+      return {
+        success: false,
+        error: messages.operator.teamBoard.loadLeaveFailed,
+      };
     }
 
     const employeeRows = employeesResult.data ?? [];
@@ -186,52 +204,28 @@ export const fetchTeamBoard = withAction(
       });
     }
 
-    const assignedLocationsByEmployee = new Map<number, Set<number>>();
-    for (const row of countAssignmentRows) {
-      const set = assignedLocationsByEmployee.get(row.employee_id) ?? new Set<number>();
-      set.add(row.location_id);
-      assignedLocationsByEmployee.set(row.employee_id, set);
-    }
-
-    const employeeIdsWithAssignments = [...assignedLocationsByEmployee.keys()];
-    const countSlipsByEmployeeLocation = new Map<string, string>();
+    const assignmentRows = countAssignmentRows as TeamCountAssignmentRow[];
+    const countSlipRows: TeamCountSlipRow[] = [];
     const employeeIdsWithCountSlips = new Set<number>();
-    if (employeeIdsWithAssignments.length > 0) {
-      const { data: slipRows, error: slipError } = await readClient
-        .from("inventory_count_slips")
-        .select("employee_id, location_id, status")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("branch_id", data.branchId)
-        .eq("count_date", today)
-        .in("employee_id", employeeIdsWithAssignments);
 
-      if (slipError) {
-        console.error("[team/data:fetchTeamBoard] Fetch count slips error:", slipError);
-        return { success: false, error: "Không thể tải phiếu kiểm kê hôm nay." };
-      }
+    const { data: slipRows, error: slipError } = await readClient
+      .from("inventory_count_slips")
+      .select("employee_id, location_id, status, shift_id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", data.branchId)
+      .eq("count_date", today);
 
-      for (const row of slipRows ?? []) {
-        employeeIdsWithCountSlips.add(row.employee_id);
-        countSlipsByEmployeeLocation.set(
-          `${row.employee_id}:${row.location_id}`,
-          row.status,
-        );
-      }
+    if (slipError) {
+      console.error("[team/data:fetchTeamBoard] Fetch count slips error:", slipError);
+      return {
+        success: false,
+        error: messages.operator.teamBoard.loadCountSlipsFailed,
+      };
     }
 
-    function resolveCountStatus(employeeId: number): TeamBoardCountStatus {
-      const locations = assignedLocationsByEmployee.get(employeeId);
-      if (!locations || locations.size === 0) return "not_assigned";
-
-      const statuses = [...locations].map(
-        (locationId) =>
-          countSlipsByEmployeeLocation.get(`${employeeId}:${locationId}`) ?? null,
-      );
-      if (statuses.every((status) => status === "approved")) return "approved";
-      if (statuses.every((status) => status === "submitted" || status === "approved")) {
-        return "submitted";
-      }
-      return "not_submitted";
+    for (const row of (slipRows ?? []) as TeamCountSlipRow[]) {
+      countSlipRows.push(row);
+      employeeIdsWithCountSlips.add(row.employee_id);
     }
 
     const leaveEmployeeIds = new Set(leaveRows.map((row) => row.employee_id));
@@ -274,6 +268,7 @@ export const fetchTeamBoard = withAction(
 
       const entry: TeamBoardShiftAttendance = {
         attendanceId: record.id,
+        shiftId: record.shift_id,
         shiftName: stringField(record.shifts, "name"),
         checkIn: record.check_in,
         checkOut: record.check_out,
@@ -281,6 +276,12 @@ export const fetchTeamBoard = withAction(
         checkoutApprovedAt: record.checkout_approved_at,
         checklistConfigured: meta?.effectiveChecklistTemplateId != null,
         checklist,
+        countStatus: resolveCountStatusForShift(
+          assignmentRows,
+          countSlipRows,
+          record.employee_id,
+          record.shift_id,
+        ) as TeamBoardCountStatus,
       };
 
       const list = shiftsByEmployee.get(record.employee_id) ?? [];
@@ -304,7 +305,12 @@ export const fetchTeamBoard = withAction(
           fullName: meta.fullName,
           positionLabel: meta.positionLabel,
           shifts: shiftsByEmployee.get(employeeId) ?? [],
-          countStatus: resolveCountStatus(employeeId),
+          countStatus: leaveEmployeeIds.has(employeeId)
+            ? "not_assigned"
+            : (resolveCountStatusFromAnySlip(
+                countSlipRows,
+                employeeId,
+              ) as TeamBoardCountStatus),
           onApprovedLeave: leaveEmployeeIds.has(employeeId),
         };
         return row;

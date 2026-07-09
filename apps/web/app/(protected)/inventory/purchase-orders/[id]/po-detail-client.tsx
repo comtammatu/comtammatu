@@ -596,7 +596,7 @@ export function PODetailClient({
       const destination = afterCreateGrnHref
         ? afterCreateGrnHref.replace(":id", String(created.id))
         : `/inventory/grn/${created.id}`;
-      router.push(`${destination}?review=1`);
+      router.push(destination);
     });
   }
 
@@ -677,9 +677,7 @@ export function PODetailClient({
                       {FORM_VI.totalAmount}
                     </span>
                     <span className="font-mono font-semibold tabular-nums text-primary">
-                      {inventoryCommon.currencyCompact(
-                        formatVND(grandTotal),
-                      )}
+                      {inventoryCommon.currencyCompact(formatVND(grandTotal))}
                     </span>
                   </div>
                 </Item>
@@ -763,7 +761,9 @@ export function PODetailClient({
                     .map((ingredient) => ({
                       value: String(ingredient.id),
                       label: ingredient.name,
-                      hint: ingredient.units?.find((u) => u.is_base)?.unit_code ?? "",
+                      hint:
+                        ingredient.units?.find((u) => u.is_base)?.unit_code ??
+                        "",
                       keywords: [
                         ingredient.sku ?? "",
                         ingredient.category ?? "",
@@ -785,9 +785,7 @@ export function PODetailClient({
                 />
                 {addUnitOptions.length > 0 ? (
                   <Select
-                    value={
-                      addEntryUnitId != null ? String(addEntryUnitId) : ""
-                    }
+                    value={addEntryUnitId != null ? String(addEntryUnitId) : ""}
                     onValueChange={handleAddUnitChange}
                   >
                     <SelectTrigger
@@ -930,17 +928,13 @@ export function PODetailClient({
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">
                     {poDetailCopy.contactPerson}
                   </p>
-                  <p className="mt-1 font-medium">
-                    {po.supplierInfo.contact}
-                  </p>
+                  <p className="mt-1 font-medium">{po.supplierInfo.contact}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">
                     {poDetailCopy.paymentTerm}
                   </p>
-                  <p className="mt-1 font-medium">
-                    {po.supplierInfo.payment}
-                  </p>
+                  <p className="mt-1 font-medium">{po.supplierInfo.payment}</p>
                 </div>
               </div>
             ) : (
@@ -999,7 +993,9 @@ export function PODetailClient({
             },
             {
               term: poDetailCopy.goodsTotal,
-              description: messages.inventory.common.currency(formatVND(totalAmount)),
+              description: messages.inventory.common.currency(
+                formatVND(totalAmount),
+              ),
             },
             {
               term: FORM_VI.totalAmount,
@@ -1018,23 +1014,34 @@ export function PODetailClient({
 
       {/* 3. Supplier info (chỉ hiển thị nếu có thông tin thực tế) */}
       {supplierInfoAvailable && (
-        <AppSection title={poDetailCopy.supplierInfoTitle} size="sm" collapsible defaultOpen={false}>
+        <AppSection
+          title={poDetailCopy.supplierInfoTitle}
+          size="sm"
+          collapsible
+          defaultOpen={false}
+        >
           <div className="flex flex-col gap-3 text-sm">
             {po.supplierInfo.address && po.supplierInfo.address !== "—" && (
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">{poDetailCopy.invoiceAddress}</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {poDetailCopy.invoiceAddress}
+                </p>
                 <p className="mt-0.5 font-medium">{po.supplierInfo.address}</p>
               </div>
             )}
             {po.supplierInfo.contact && po.supplierInfo.contact !== "—" && (
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">{poDetailCopy.contactPerson}</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {poDetailCopy.contactPerson}
+                </p>
                 <p className="mt-0.5 font-medium">{po.supplierInfo.contact}</p>
               </div>
             )}
             {po.supplierInfo.payment && po.supplierInfo.payment !== "—" && (
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">{poDetailCopy.paymentTerm}</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {poDetailCopy.paymentTerm}
+                </p>
                 <p className="mt-0.5 font-medium">{po.supplierInfo.payment}</p>
               </div>
             )}
@@ -1056,7 +1063,9 @@ export function PODetailClient({
               index={index}
               canEditLines={canEditLines}
               isPending={isPending}
-              unitOptions={getPurchaseUnitOptions(ingredientById.get(item.ingredientId))}
+              unitOptions={getPurchaseUnitOptions(
+                ingredientById.get(item.ingredientId),
+              )}
               patchLine={patchLine}
               onUnitChange={handleLineUnitChange}
               onSaveLine={handleSaveLine}
@@ -1067,7 +1076,10 @@ export function PODetailClient({
 
         {canEditLines ? (
           <form onSubmit={handleAddLine} className="mt-4">
-            <Item variant="outline" className="flex flex-col items-stretch gap-3 bg-muted/30 p-3">
+            <Item
+              variant="outline"
+              className="flex flex-col items-stretch gap-3 bg-muted/30 p-3"
+            >
               <Combobox
                 value={addIngredientId}
                 onValueChange={handleAddIngredientChange}
@@ -1076,7 +1088,8 @@ export function PODetailClient({
                   .map((ingredient) => ({
                     value: String(ingredient.id),
                     label: ingredient.name,
-                    hint: ingredient.units?.find((u) => u.is_base)?.unit_code ?? "",
+                    hint:
+                      ingredient.units?.find((u) => u.is_base)?.unit_code ?? "",
                     keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
                   }))}
                 placeholder={poCopy.ingredientPlaceholder}
@@ -1093,20 +1106,37 @@ export function PODetailClient({
                   required
                 />
                 {addUnitOptions.length > 0 ? (
-                  <Select value={addEntryUnitId != null ? String(addEntryUnitId) : ""} onValueChange={handleAddUnitChange}>
-                    <SelectTrigger size="touch" className="min-h-12" aria-label={FORM_VI.unit}>
+                  <Select
+                    value={addEntryUnitId != null ? String(addEntryUnitId) : ""}
+                    onValueChange={handleAddUnitChange}
+                  >
+                    <SelectTrigger
+                      size="touch"
+                      className="min-h-12"
+                      aria-label={FORM_VI.unit}
+                    >
                       <SelectValue placeholder={poCopy.unitShort} />
                     </SelectTrigger>
                     <SelectContent>
                       {addUnitOptions.map((option) => (
-                        <SelectItem key={option.unitId} value={String(option.unitId)}>
+                        <SelectItem
+                          key={option.unitId}
+                          value={String(option.unitId)}
+                        >
                           {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Input value={addUnit} readOnly aria-readonly="true" placeholder={poCopy.unitShort} className="h-12" required />
+                  <Input
+                    value={addUnit}
+                    readOnly
+                    aria-readonly="true"
+                    placeholder={poCopy.unitShort}
+                    className="h-12"
+                    required
+                  />
                 )}
               </div>
               <FormattedNumberInput
@@ -1116,7 +1146,12 @@ export function PODetailClient({
                 placeholder={poCopy.pricePlaceholder}
                 className="h-12"
               />
-              <Button type="submit" disabled={isPending || !addIngredientId} size="touch-lg" className="w-full">
+              <Button
+                type="submit"
+                disabled={isPending || !addIngredientId}
+                size="touch-lg"
+                className="w-full"
+              >
                 <IconPlus className="size-4" />
                 {ACTIONS_VI.add}
               </Button>
@@ -1126,7 +1161,12 @@ export function PODetailClient({
       </AppSection>
 
       {/* 5. Lịch sử */}
-      <AppSection title={historySectionTitle} size="sm" collapsible defaultOpen={false}>
+      <AppSection
+        title={historySectionTitle}
+        size="sm"
+        collapsible
+        defaultOpen={false}
+      >
         <AuditHistoryList logs={auditLogs} />
       </AppSection>
     </div>
@@ -1223,16 +1263,18 @@ function PoLineMobileCard({
         <div>
           <p className="text-muted-foreground">{FORM_VI.quantity}</p>
           {canEditLines ? (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="touch-lg"
               onClick={() => setNumpad("qty")}
-              className="mt-1 flex w-full flex-col items-start gap-1 rounded-md bg-muted/50 px-3 py-2 text-left transition active:scale-[0.99]"
+              className="mt-1 h-auto w-full flex-col items-start justify-start gap-1 bg-muted/50 px-3 py-2 text-left whitespace-normal"
             >
               <span className="text-lg font-semibold tabular-nums">
                 {item.qty}
               </span>
               <span className="text-xs text-muted-foreground">{item.unit}</span>
-            </button>
+            </Button>
           ) : (
             <p className="font-semibold">
               {item.qty} {item.unit}
@@ -1242,10 +1284,12 @@ function PoLineMobileCard({
         <div>
           <p className="text-muted-foreground">{FORM_VI.unitPrice}</p>
           {canEditLines ? (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="touch-lg"
               onClick={() => setNumpad("price")}
-              className="mt-1 flex w-full flex-col items-start gap-1 rounded-md bg-muted/50 px-3 py-2 text-left transition active:scale-[0.99]"
+              className="mt-1 h-auto w-full flex-col items-start justify-start gap-1 bg-muted/50 px-3 py-2 text-left whitespace-normal"
             >
               <span className="text-lg font-semibold tabular-nums">
                 {item.price != null
@@ -1253,7 +1297,7 @@ function PoLineMobileCard({
                   : poCopy.pricePlaceholder}
               </span>
               <span className="text-xs text-muted-foreground">{item.unit}</span>
-            </button>
+            </Button>
           ) : (
             <p className="font-semibold">
               {item.price != null
@@ -1345,8 +1389,6 @@ function PoLineMobileCard({
     </Item>
   );
 }
-
-
 
 function PoLinkedGrns({
   grns,

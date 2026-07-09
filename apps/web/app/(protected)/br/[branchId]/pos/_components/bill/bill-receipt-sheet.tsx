@@ -20,14 +20,6 @@ import {
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   InputGroup,
@@ -47,6 +39,7 @@ import {
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
 import { AppSection } from "@/components/surface";
+import { AppDialog } from "@/components/form/form-dialog";
 import { FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import { fetchOrderForBill } from "../../actions";
@@ -204,7 +197,7 @@ function buildCashSuggestions(totalAmount: number): number[] {
     .slice(0, 6);
 }
 
-function PaymentSkeleton() {
+function PaymentPendingPreview() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2">
@@ -289,7 +282,7 @@ function PaymentLoadingFixture() {
   );
 }
 
-function PaymentQrSkeleton() {
+function PaymentQrPendingPreview() {
   return (
     <div className="flex flex-col gap-3">
       <Skeleton className="mx-auto size-48" />
@@ -587,7 +580,7 @@ export function BillReceipt({
         setError(null);
         setCashInput(String(Math.round(Number(nextOrder.total_amount))));
       } else {
-        setError(orderResult.error ?? "Không thể tải đơn hàng");
+        setError(orderResult.error ?? messages.pos.order.loadFailed);
       }
     });
 
@@ -867,6 +860,7 @@ export function BillReceipt({
     startActionTransition(async () => {
       if (selectedMethod === "cash") {
         const result = await confirmCashPaymentWithInvoice(
+          branchId,
           orderId,
           cashReceived,
           invoicePayload,
@@ -1078,109 +1072,114 @@ export function BillReceipt({
     selectedMethod === "cash" || selectedMethod === "vietqr";
 
   return (
-    <Dialog open={orderId !== null} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{dialogTitle}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {dialogDescription}
-          </DialogDescription>
-        </DialogHeader>
-
-        {!order && !error ? (
-          isReceiptIntent ? (
-            <AppBoneyardSkeleton
-              name="pos-bill-receipt-view"
-              loading
-              fixture={<ReceiptLoadingFixture />}
-              fallback={
-                <div className="flex items-center justify-center py-10">
-                  <Spinner />
-                </div>
-              }
-              snapshotConfig={{ excludeSelectors: ["svg"] }}
-            >
-              <ReceiptLoadingFixture />
-            </AppBoneyardSkeleton>
-          ) : (
-            <AppBoneyardSkeleton
-              name="pos-bill-receipt-payment"
-              loading
-              fixture={<PaymentLoadingFixture />}
-              fallback={<PaymentSkeleton />}
-              snapshotConfig={{ excludeSelectors: ["svg"] }}
-            >
-              <PaymentLoadingFixture />
-            </AppBoneyardSkeleton>
-          )
-        ) : error ? (
-          <p className="text-base text-destructive">{error}</p>
-        ) : isReadOnlyOrder && order ? (
-          <div className="flex flex-col gap-3">
-            <BillReceiptSummary order={order} />
-            <DialogFooter className="sticky bottom-0 -mx-4 -mb-4 border-t bg-popover px-4 py-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                onClick={handleReprintReceipt}
-                disabled={printPending}
-              >
-                {printPending ? (
-                  <Spinner data-icon="inline-start" />
-                ) : (
-                  <IconPrinter data-icon="inline-start" />
-                )}
-                {messages.pos.payment.reprint}
-              </Button>
-              <Button type="button" size="touch-lg" onClick={onClose}>
-                {ACTIONS_VI.close}
-              </Button>
-            </DialogFooter>
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-2">
-                {methods.map((method) => {
-                  const meta = METHOD_META[method] ?? {
-                    label: method,
-                    icon: IconCreditCard,
-                  };
-                  const Icon = meta.icon;
-                  return (
-                    <Button
-                      key={method}
-                      data-testid={`bill-pay-${method}`}
-                      type="button"
-                      variant={
-                        selectedMethod === method ? "default" : "outline"
-                      }
-                      size="touch-lg"
-                      className="flex-col gap-2"
-                      onClick={() => handleSelectMethod(method)}
-                      disabled={actionPending || methodPending}
-                    >
-                      <Icon data-icon="inline-start" />
-                      {meta.label}
-                    </Button>
-                  );
-                })}
+    <AppDialog
+      open={orderId !== null}
+      onOpenChange={handleOpenChange}
+      title={dialogTitle}
+      description={<span className="sr-only">{dialogDescription}</span>}
+      contentClassName="sm:max-w-lg"
+    >
+      {!order && !error ? (
+        isReceiptIntent ? (
+          <AppBoneyardSkeleton
+            name="pos-bill-receipt-view"
+            loading
+            fixture={<ReceiptLoadingFixture />}
+            fallback={
+              <div className="flex items-center justify-center py-10">
+                <Spinner />
               </div>
-
-              {pendingOfflineMethod !== null && (
-                <p className="text-sm text-muted-foreground">
-                  {messages.pos.payment.offlineWillSelect}{" "}
-                  <span className="font-medium text-foreground">
-                    {METHOD_META[pendingOfflineMethod].label}
-                  </span>{" "}
-                  {messages.pos.payment.offlineWhenOnline}
-                </p>
+            }
+            snapshotConfig={{ excludeSelectors: ["svg"] }}
+          >
+            <ReceiptLoadingFixture />
+          </AppBoneyardSkeleton>
+        ) : (
+          <AppBoneyardSkeleton
+            name="pos-bill-receipt-payment"
+            loading
+            fixture={<PaymentLoadingFixture />}
+            fallback={<PaymentPendingPreview />}
+            snapshotConfig={{ excludeSelectors: ["svg"] }}
+          >
+            <PaymentLoadingFixture />
+          </AppBoneyardSkeleton>
+        )
+      ) : error ? (
+        <p className="text-base text-destructive">{error}</p>
+      ) : isReadOnlyOrder && order ? (
+        <div className="flex flex-col gap-3">
+          <BillReceiptSummary order={order} />
+          <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse gap-2 border-t bg-popover px-4 py-3 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              onClick={handleReprintReceipt}
+              disabled={printPending}
+            >
+              {printPending ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <IconPrinter data-icon="inline-start" />
               )}
+              {messages.pos.payment.reprint}
+            </Button>
+            <Button type="button" size="touch-lg" onClick={onClose}>
+              {ACTIONS_VI.close}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-4">
+            <AppSection
+              title={messages.pos.payment.stepTitle}
+              description={messages.pos.payment.stepDescription}
+              icon={<IconCreditCard />}
+              size="sm"
+              contentClassName="gap-3"
+            >
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {methods.map((method) => {
+                    const meta = METHOD_META[method] ?? {
+                      label: method,
+                      icon: IconCreditCard,
+                    };
+                    const Icon = meta.icon;
+                    return (
+                      <Button
+                        key={method}
+                        data-testid={`bill-pay-${method}`}
+                        type="button"
+                        variant={
+                          selectedMethod === method ? "default" : "outline"
+                        }
+                        size="touch-lg"
+                        className="flex-col gap-2"
+                        onClick={() => handleSelectMethod(method)}
+                        disabled={actionPending || methodPending}
+                      >
+                        <Icon data-icon="inline-start" />
+                        {meta.label}
+                      </Button>
+                    );
+                  })}
+                </div>
 
-              {selectedMethod === "cash" ? (
-                <AppSection size="sm" contentClassName="gap-3">
-                  <>
+                {pendingOfflineMethod !== null && (
+                  <p className="text-sm text-muted-foreground">
+                    {messages.pos.payment.offlineWillSelect}{" "}
+                    <span className="font-medium text-foreground">
+                      {METHOD_META[pendingOfflineMethod].label}
+                    </span>{" "}
+                    {messages.pos.payment.offlineWhenOnline}
+                  </p>
+                )}
+
+                {selectedMethod === "cash" ? (
+                  <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-3">
                     {order && (
                       <OrderTotalsSummary
                         subtotal={order.subtotal}
@@ -1245,11 +1244,9 @@ export function BillReceipt({
                           : formatVND(cashChange)}
                       </span>
                     </div>
-                  </>
-                </AppSection>
-              ) : (
-                <AppSection size="sm" contentClassName="gap-3">
-                  <>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-3">
                     {order && (
                       <OrderTotalsSummary
                         subtotal={order.subtotal}
@@ -1269,7 +1266,7 @@ export function BillReceipt({
                         name="pos-bill-receipt-qr"
                         loading
                         fixture={<PaymentQrLoadingFixture />}
-                        fallback={<PaymentQrSkeleton />}
+                        fallback={<PaymentQrPendingPreview />}
                         snapshotConfig={{ excludeSelectors: ["svg"] }}
                       >
                         <PaymentQrLoadingFixture />
@@ -1332,73 +1329,71 @@ export function BillReceipt({
                         ) : null}
                       </>
                     )}
-                  </>
-                </AppSection>
-              )}
-              {showInvoiceForm ? (
-                <InvoiceFormSection
-                  state={invoiceForm}
-                  totalAmount={totalAmount}
-                  disabled={actionPending}
-                  onChange={setInvoiceForm}
-                />
-              ) : null}
-            </div>
+                  </div>
+                )}
+              </>
+            </AppSection>
+            {showInvoiceForm ? (
+              <InvoiceFormSection
+                state={invoiceForm}
+                totalAmount={totalAmount}
+                disabled={actionPending}
+                onChange={setInvoiceForm}
+              />
+            ) : null}
+          </div>
 
-            <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col gap-2 border-t bg-popover px-4 py-3">
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="flex-1"
-                  onClick={() => void handlePrintProvisional()}
-                  disabled={
-                    isPending || methodPending || actionPending || printPending
-                  }
-                >
-                  {printPending ? (
-                    <Spinner data-icon="inline-start" />
-                  ) : (
-                    <IconReceipt data-icon="inline-start" />
-                  )}
-                  {messages.pos.payment.printProvisional}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="flex-1"
-                  onClick={onClose}
-                  disabled={actionPending}
-                >
-                  {ACTIONS_VI.cancel}
-                </Button>
-              </div>
-              {disabledReason ? (
-                <p className="text-sm text-muted-foreground">
-                  {disabledReason}
-                </p>
-              ) : null}
+          <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col gap-2 border-t bg-popover px-4 py-3">
+            <div className="flex gap-2">
               <Button
-                data-testid={
-                  selectedMethod === "cash" ? "bill-confirm-cash" : undefined
-                }
                 type="button"
-                size="touch-lg"
-                onClick={() => void handleConfirmPaid()}
+                variant="outline"
+                size="touch"
+                className="flex-1"
+                onClick={() => void handlePrintProvisional()}
                 disabled={
-                  isPending || methodPending || actionPending || !canConfirmPaid
+                  isPending || methodPending || actionPending || printPending
                 }
-                title={disabledReason ?? undefined}
               >
-                {actionPending ? <Spinner data-icon="inline-start" /> : null}
-                {messages.pos.payment.paidConfirm}
+                {printPending ? (
+                  <Spinner data-icon="inline-start" />
+                ) : (
+                  <IconReceipt data-icon="inline-start" />
+                )}
+                {messages.pos.payment.printProvisional}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                className="flex-1"
+                onClick={onClose}
+                disabled={actionPending}
+              >
+                {ACTIONS_VI.cancel}
               </Button>
             </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+            {disabledReason ? (
+              <p className="text-sm text-muted-foreground">{disabledReason}</p>
+            ) : null}
+            <Button
+              data-testid={
+                selectedMethod === "cash" ? "bill-confirm-cash" : undefined
+              }
+              type="button"
+              size="touch-lg"
+              onClick={() => void handleConfirmPaid()}
+              disabled={
+                isPending || methodPending || actionPending || !canConfirmPaid
+              }
+              title={disabledReason ?? undefined}
+            >
+              {actionPending ? <Spinner data-icon="inline-start" /> : null}
+              {messages.pos.payment.paidConfirm}
+            </Button>
+          </div>
+        </>
+      )}
+    </AppDialog>
   );
 }

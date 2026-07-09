@@ -30,7 +30,7 @@ import {
   updateUnit,
   type UnitRow,
 } from "@/(protected)/inventory/settings/units/units-actions";
-import { CatalogBackHeader } from "../catalog-back-header";
+import { CatalogBackControl } from "../catalog-back-header";
 
 const copy = messages.catalog.units;
 const formCopy = messages.inventoryMaster.units;
@@ -125,7 +125,7 @@ export function CatalogUnitsClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <CatalogBackHeader title={copy.title} backHref={backHref} />
+      <CatalogBackControl title={copy.title} backHref={backHref} />
 
       {packagingRows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} />

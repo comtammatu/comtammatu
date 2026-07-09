@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { canAccess } from "@comtammatu/shared/auth";
-import { formatVND } from "@comtammatu/shared/format";
-import { AppSection, KpiRow } from "@/components/surface";
-import { KpiCard } from "@/components/kpi/kpi-card";
-import { EmployeePage } from "@lib/staff-runtime/components/staff-runtime-page";
+import {
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { fetchBranchDayStatus } from "./data";
@@ -91,45 +91,31 @@ export default async function BranchCommandPage({
   const tileGroups = buildVisibleTileGroups(branchId, role, copy);
 
   return (
-    <EmployeePage
+    <BranchOperatorPage
       title={copy.commandTitle}
       description={copy.commandDescription(branch.name)}
     >
-      <KpiRow className="md:grid-cols-2 lg:grid-cols-4">
-        <KpiCard
-          label={copy.dayRevenueLabel}
-          value={formatVND(day.todayRevenue)}
-          hint={copy.dayRevenueHint}
-        />
-        <KpiCard
-          label={copy.dayPaidOrdersLabel}
-          value={String(day.paidOrders)}
-          hint={copy.dayPaidOrdersHint}
-        />
-        <KpiCard
-          label={copy.dayTablesLabel}
-          value={`${String(day.tablesOccupied)}/${String(day.tablesTotal)}`}
-          hint={copy.dayTablesHint}
-          href={posHref}
-        />
-        <KpiCard
-          label={copy.dayKitchenLabel}
-          value={String(day.kitchenActiveOrders)}
-          hint={copy.dayKitchenHint}
-          tone={day.kitchenActiveOrders > 0 ? "warning" : "neutral"}
-          href={kdsHref}
-        />
-      </KpiRow>
+      {tileGroups.liveOperations.length > 0 ? (
+        <BranchOperatorPanel
+          title={copy.liveOperationsTitle}
+          description={copy.liveOperationsDescription}
+        >
+          <BranchCommandTileGrid
+            tiles={tileGroups.liveOperations}
+            ctaLabel={copy.openAction}
+          />
+        </BranchOperatorPanel>
+      ) : null}
 
-      <AppSection
+      <BranchOperatorPanel
         title={copy.readinessTitle}
         description={copy.readinessDescription}
       >
         <BranchReadinessList items={readinessItems} />
-      </AppSection>
+      </BranchOperatorPanel>
 
       {tileGroups.endDay.length > 0 ? (
-        <AppSection
+        <BranchOperatorPanel
           title={copy.endDayTitle}
           description={copy.endDayDescription}
         >
@@ -137,11 +123,11 @@ export default async function BranchCommandPage({
             tiles={tileGroups.endDay}
             ctaLabel={copy.openAction}
           />
-        </AppSection>
+        </BranchOperatorPanel>
       ) : null}
 
       {tileGroups.drilldown.length > 0 ? (
-        <AppSection
+        <BranchOperatorPanel
           title={copy.drilldownTitle}
           description={copy.drilldownDescription}
         >
@@ -149,8 +135,8 @@ export default async function BranchCommandPage({
             tiles={tileGroups.drilldown}
             ctaLabel={copy.openAction}
           />
-        </AppSection>
+        </BranchOperatorPanel>
       ) : null}
-    </EmployeePage>
+    </BranchOperatorPage>
   );
 }

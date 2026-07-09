@@ -4,25 +4,24 @@ import { cn } from "@comtammatu/ui";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-interface AppHeaderBrandProps {
+export interface AppHeaderBrandProps {
   title: ReactNode;
   subtitle?: ReactNode;
   subtitleHiddenOnMobile: boolean;
+  showText: boolean;
   href?: string;
   ariaLabel?: string;
 }
 
 /**
- * Brand mark + title/subtitle text block shared by the standalone header
- * lockup (design-system.md § B). Internal to `AppHeader` — the Management
- * sidebar keeps its own brand block because it renders a different box
- * (icon-or-seal, sidebar tone) and text hierarchy (uppercase label above the
- * bold name, not title-above-subtitle).
+ * Brand mark + title/subtitle text block shared by approved standalone chrome
+ * and compact header fragments (design-system.md § B).
  */
-function AppHeaderBrand({
+export function AppHeaderBrand({
   title,
   subtitle,
   subtitleHiddenOnMobile,
+  showText,
   href,
   ariaLabel,
 }: AppHeaderBrandProps) {
@@ -31,21 +30,23 @@ function AppHeaderBrand({
       <BrandLogoBox>
         <BrandMark decorative className="size-full" />
       </BrandLogoBox>
-      <div className="min-w-0">
-        <p className="font-heading truncate text-sm font-semibold sm:text-base">
-          {title}
-        </p>
-        {subtitle ? (
-          <p
-            className={cn(
-              "truncate text-xs text-muted-foreground",
-              subtitleHiddenOnMobile && "hidden sm:block",
-            )}
-          >
-            {subtitle}
+      {showText ? (
+        <div className="min-w-0">
+          <p className="font-heading truncate text-sm font-semibold sm:text-base">
+            {title}
           </p>
-        ) : null}
-      </div>
+          {subtitle ? (
+            <p
+              className={cn(
+                "truncate text-xs text-muted-foreground",
+                subtitleHiddenOnMobile && "hidden sm:block",
+              )}
+            >
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </>
   );
   const className = "flex min-w-0 items-center gap-2";
@@ -56,7 +57,7 @@ function AppHeaderBrand({
       aria-label={ariaLabel}
       className={cn(
         className,
-        "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground",
       )}
     >
       {content}
@@ -73,6 +74,8 @@ export interface AppHeaderProps {
   subtitle?: ReactNode;
   /** Hide the subtitle line below `sm:` — matches the pre-extraction Employee header. */
   subtitleHiddenOnMobile?: boolean;
+  /** Hide title/subtitle when compact app chrome should keep only the brand mark. */
+  showBrandText?: boolean;
   /** Optional middle slot between the brand block and actions (e.g. desktop tab nav). */
   nav?: ReactNode;
   /** Optional brand link, used by app-like shells as a home affordance. */
@@ -96,6 +99,7 @@ export function AppHeader({
   title,
   subtitle,
   subtitleHiddenOnMobile = false,
+  showBrandText = true,
   nav,
   homeHref,
   homeAriaLabel,
@@ -120,12 +124,13 @@ export function AppHeader({
           title={title}
           subtitle={subtitle}
           subtitleHiddenOnMobile={subtitleHiddenOnMobile}
+          showText={showBrandText}
           href={homeHref}
           ariaLabel={homeAriaLabel}
         />
         {nav}
         <div className="flex shrink-0 items-center gap-2">
-          <ThemeToggle />
+          <ThemeToggle variant="outline" size="icon-touch" />
           {actions}
         </div>
       </div>

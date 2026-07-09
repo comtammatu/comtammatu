@@ -6,6 +6,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { VALIDATION_VI } from "@comtammatu/shared/messages";
 import { INVENTORY_CATALOG_ROLES } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
+import { messages } from "@lib/messages";
 import { getAuthContextWithAnyPermission } from "../../_lib/auth";
 import { UNITS_MASTER_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { PG_ERR } from "../../_lib/constants";
@@ -68,7 +69,10 @@ export async function fetchUnits(): Promise<ActionResult<UnitRow[]>> {
   ]);
 
   if (unitsResult.error || mappingsResult.error) {
-    return { success: false, error: "Không thể tải danh sách đơn vị." };
+    return {
+      success: false,
+      error: messages.inventory.settings.units.loadFailed,
+    };
   }
 
   const referencedUnitIds = new Set<number>();

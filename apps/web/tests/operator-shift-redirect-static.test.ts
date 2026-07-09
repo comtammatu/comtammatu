@@ -23,7 +23,7 @@ test("operator shift tasks is folded into the branch shift workflow", () => {
   assert.doesNotMatch(shiftSource, /shift\/tasks/);
 });
 
-test("operator shift schedule renders inside the branch operator shell", () => {
+test("operator shift schedule renders the branch schedule plane", () => {
   const path =
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/page.tsx";
 
@@ -32,7 +32,7 @@ test("operator shift schedule renders inside the branch operator shell", () => {
   const source = read(path);
   assert.ok(
     source.includes(
-      'import { SchedulePageContent } from "@lib/staff-runtime/schedule/page"',
+      'import { StaffSchedulePageContent } from "@lib/staff-runtime/schedule/page"',
     ),
     path,
   );
@@ -40,7 +40,17 @@ test("operator shift schedule renders inside the branch operator shell", () => {
     source.includes("leaveHref={`/br/${branchId}/shift/schedule/leave`}"),
     path,
   );
+  assert.ok(source.includes('plane="branch"'), path);
   assert.doesNotMatch(source, /redirect\("\/employee\/schedule"\)/);
+
+  const schedulePageSource = read("apps/web/lib/staff-runtime/schedule/page.tsx");
+  const scheduleClientSource = read(
+    "apps/web/lib/staff-runtime/schedule/schedule-client.tsx",
+  );
+  assert.match(schedulePageSource, /plane === "branch" \? BranchOperatorPage/);
+  assert.match(schedulePageSource, /ScheduleClient[\s\S]*plane=\{plane\}/);
+  assert.match(scheduleClientSource, /BRANCH_SCHEDULE_PRIMITIVES/);
+  assert.match(scheduleClientSource, /plane === "branch"/);
 });
 
 test("operator shift leave renders inside the schedule route family", () => {
@@ -77,15 +87,30 @@ test("operator payslip renders inside the profile route family", () => {
   const source = read(path);
   assert.ok(
     source.includes(
-      'import { PayslipPageContent } from "@lib/staff-runtime/payslip/page"',
+      'import { StaffPayslipPageContent } from "@lib/staff-runtime/payslip/page"',
     ),
     path,
   );
   assert.ok(source.includes("hideHeaderOnMobile"), path);
+  assert.ok(source.includes('plane="branch"'), path);
   assert.doesNotMatch(source, /redirect\("\/employee\/payslip"\)/);
+
+  const payslipPageSource = read("apps/web/lib/staff-runtime/payslip/page.tsx");
+  const payslipClientSource = read(
+    "apps/web/lib/staff-runtime/payslip/payslip-client.tsx",
+  );
+  const yearPickerSource = read(
+    "apps/web/lib/staff-runtime/payslip/year-picker.tsx",
+  );
+  assert.match(payslipPageSource, /plane === "branch" \? BranchOperatorPage/);
+  assert.match(payslipPageSource, /PayslipClient[\s\S]*plane=\{props\.plane\}/);
+  assert.match(payslipClientSource, /plane === "branch"/);
+  assert.match(payslipClientSource, /BranchOperatorPanel/);
+  assert.match(payslipClientSource, /BranchOperatorDetailList/);
+  assert.match(yearPickerSource, /BranchOperatorControlBar/);
 });
 
-test("operator checkout approvals render inside the branch operator shell", () => {
+test("operator checkout approvals render the branch approvals plane", () => {
   const path =
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx";
 
@@ -98,17 +123,20 @@ test("operator checkout approvals render inside the branch operator shell", () =
 
   assert.ok(
     source.includes(
-      'import { CheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page"',
+      'import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page"',
     ),
     path,
   );
   assert.ok(source.includes("routeBranchId={branchId}"), path);
   assert.ok(source.includes("hideHeaderOnMobile"), path);
+  assert.ok(source.includes('plane="branch"'), path);
   assert.doesNotMatch(source, /redirect\("\/employee\/checkout-approvals"\)/);
   assert.match(employeeSource, /routeBranchId\?: number/);
+  assert.match(employeeSource, /plane === "branch" \? BranchOperatorPage/);
+  assert.match(employeeSource, /plane === "branch" \? BranchOperatorPanel/);
 });
 
-test("operator stock count renders employee count inside the branch operator shell", () => {
+test("operator stock count renders the branch count plane", () => {
   const path =
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx";
 
@@ -117,12 +145,13 @@ test("operator stock count renders employee count inside the branch operator she
   const source = read(path);
   assert.ok(
     source.includes(
-      'import { EmployeeCountPageContent } from "@lib/staff-runtime/count/page"',
+      'import { StaffCountPageContent } from "@lib/staff-runtime/count/page"',
     ),
     path,
   );
   assert.ok(source.includes("routeBranchId={branchId}"), path);
   assert.ok(source.includes("hideHeaderOnMobile"), path);
+  assert.ok(source.includes('plane="branch"'), path);
   assert.doesNotMatch(source, /redirect\(`\/inventory\/stocktake/);
 });
 
@@ -149,7 +178,7 @@ test("employee count page takes visible copy from employee messages", () => {
   }
 });
 
-test("operator shift clock renders inside the branch operator shell", () => {
+test("operator shift clock renders the branch clock plane", () => {
   const path =
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx";
 
@@ -158,10 +187,11 @@ test("operator shift clock renders inside the branch operator shell", () => {
   const source = read(path);
   assert.ok(
     source.includes(
-      'import { ClockPageContent } from "@lib/staff-runtime/clock/page"',
+      'import { StaffClockPageContent } from "@lib/staff-runtime/clock/page"',
     ),
     path,
   );
+  assert.ok(source.includes('plane="branch"'), path);
   for (const expected of [
     "home: `/br/${branchId}/shift`",
     "tasks: `/br/${branchId}/shift`",
@@ -170,6 +200,15 @@ test("operator shift clock renders inside the branch operator shell", () => {
     assert.ok(source.includes(expected), expected);
   }
   assert.doesNotMatch(source, /redirect\("\/employee\/clock"\)/);
+
+  const clockPageSource = read("apps/web/lib/staff-runtime/clock/page.tsx");
+  const clockClientSource = read(
+    "apps/web/lib/staff-runtime/clock/clock-client.tsx",
+  );
+  assert.match(clockPageSource, /plane === "branch" \? BranchOperatorPage/);
+  assert.match(clockPageSource, /ClockClient[\s\S]*plane=\{plane\}/);
+  assert.match(clockClientSource, /BRANCH_CLOCK_PRIMITIVES/);
+  assert.match(clockClientSource, /plane === "branch"/);
 });
 
 test("operator profile renders inside the branch operator shell", () => {
@@ -185,20 +224,32 @@ test("operator profile renders inside the branch operator shell", () => {
   assert.ok(source.includes('import { notFound } from "next/navigation";'), path);
   assert.ok(
     source.includes(
-      'import { ProfilePageContent } from "@lib/staff-runtime/profile/page";',
+      'import { StaffProfilePageContent } from "@lib/staff-runtime/profile/page";',
     ),
     path,
   );
   assert.ok(source.includes("params: Promise<{ branchId: string }>"), path);
   assert.ok(source.includes("const branchId = Number(rawBranchId);"), path);
   assert.ok(source.includes("notFound()"), path);
-  assert.ok(source.includes("return <ProfilePageContent />;"), path);
+  assert.ok(
+    source.includes('return <StaffProfilePageContent plane="branch" />;'),
+    path,
+  );
   assert.doesNotMatch(source, /PERSONAL_LINKS/);
   assert.doesNotMatch(source, /profile\/payslip/);
   assert.doesNotMatch(source, /shift\/leave/);
   assert.doesNotMatch(source, /shift\/payslip/);
   assert.doesNotMatch(source, /export \{ default \}/);
   assert.doesNotMatch(source, /redirect\("\/employee\/profile"\)/);
+
+  const profileSource = read("apps/web/lib/staff-runtime/profile/page.tsx");
+  assert.match(profileSource, /StaffProfilePageContent/);
+  assert.match(profileSource, /plane === "branch"/);
+  assert.match(profileSource, /BranchOperatorPage/);
+  assert.match(profileSource, /BranchOperatorPanel/);
+  assert.match(profileSource, /BranchOperatorActionBar/);
+  assert.match(profileSource, /BranchOperatorDetailList/);
+  assert.doesNotMatch(profileSource, /text-4xl/);
 });
 
 test("operator shift landing renders the shared cockpit with branch-scoped routes", () => {
@@ -207,7 +258,7 @@ test("operator shift landing renders the shared cockpit with branch-scoped route
   );
 
   assert.ok(
-    source.includes("EmployeeHomePageContent"),
+    source.includes("StaffWorkdayPageContent"),
     "shift route uses the shared daily cockpit",
   );
   assert.ok(source.includes("tasks: `/br/${branchId}/shift`"));
@@ -228,6 +279,9 @@ test("operator shift landing renders the shared cockpit with branch-scoped route
     ),
   );
   assert.ok(source.includes("showNotificationControl={false}"));
+  assert.ok(source.includes('plane="branch"'));
+  assert.ok(source.includes("copy={messages.operator.shift}"));
+  assert.ok(source.includes("tasksCopy={messages.operator.shiftTasks}"));
   assert.doesNotMatch(source, /showPersonalActions/);
   assert.match(source, /const authState = await loadAuthState\(\)/);
   assert.match(
@@ -239,14 +293,20 @@ test("operator shift landing renders the shared cockpit with branch-scoped route
     /mode=\{isBranchManager \? "manager-dashboard" : "full"\}/,
   );
   assert.doesNotMatch(source, /mode="manager-dashboard"/);
-  assert.doesNotMatch(source, /EmployeeActionSection|AppLinkCard|LinkCardGrid/);
+  assert.doesNotMatch(
+    source,
+    /BranchOperatorActionSection|AppLinkCard|LinkCardGrid/,
+  );
 });
 
 test("employee daily cockpit does not own profile or leave self-service", () => {
   const source = read("apps/web/lib/staff-runtime/page.tsx");
 
   assert.match(source, /mode = "full"/);
-  assert.match(source, /mode\?: "full" \| "today-card"/);
+  assert.match(
+    source,
+    /mode\?: "full" \| "today-card" \| "compact-status" \| "manager-dashboard"/,
+  );
   assert.match(source, /if \(mode === "today-card"\) return todayCard/);
   assert.doesNotMatch(source, /showPersonalActions/);
   assert.doesNotMatch(
@@ -257,23 +317,23 @@ test("employee daily cockpit does not own profile or leave self-service", () => 
   assert.doesNotMatch(source, /href: routes\.(payslip|leave)/);
 });
 
-test("operator home uses the shared employee action layout", () => {
+test("operator home uses the Branch operator action layout", () => {
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
 
   assert.ok(
-    source.includes("EmployeePage"),
-    "operator home uses shared page shell",
+    source.includes("BranchOperatorPage"),
+    "operator home uses Branch operator page shell",
   );
   assert.ok(
-    source.includes("EmployeeActionSection"),
-    "operator home uses domain tile rows via shared action rows",
+    source.includes("BranchOperatorActionSection"),
+    "operator home uses domain tile rows via Branch action rows",
   );
   // Hub hierarchy W2: the unified "Cần xử lý" queue collapses to compact
   // single-line rows (Item/ItemMedia/ItemActions), not full AppLinkCard
   // tiles — domain tile rows below it still render through
-  // EmployeeActionSection.
+  // BranchOperatorActionSection.
   const queueSource = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-queue-section.tsx",
   );

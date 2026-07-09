@@ -45,25 +45,33 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
 
   assert.match(source, /function buildPaymentCodeRe/);
   assert.match(source, /function resolvePaymentCodePrefix/);
-  assert.match(source, /"payment_vietqr_code_prefix"/);
+  assert.match(source, /SYSTEM_SETTING_KEYS\.PAYMENT_VIETQR_CODE_PREFIX/);
+  assert.match(source, /function resolveBankContentSettings/);
+  assert.match(source, /function extractBankContentCommand/);
+  assert.match(source, /SYSTEM_SETTING_KEYS\.PAYMENT_CONTENT_PREFIX/);
+  assert.match(source, /SYSTEM_SETTING_KEYS\.PAYMENT_CONTENT_EXPENSE_TOKEN/);
+  assert.match(
+    source,
+    /SYSTEM_SETTING_KEYS\.PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN/,
+  );
+  assert.doesNotMatch(source, /NOP TIEN MATU/);
   assert.match(source, /LEGACY_PAYMENT_CODE_RE/);
   assert.match(source, /id: z\.coerce\.number\(\)\.int\(\)\.nonnegative\(\)/);
   assert.match(source, /new URLSearchParams\(rawBody\)/);
-  assert.match(
-    source,
-    /transferAmount: z\.coerce\.number\(\)/,
-  );
+  assert.match(source, /transferAmount: z\.coerce\.number\(\)/);
   assert.doesNotMatch(
     source,
     /transferAmount: z\.coerce\.number\(\)\.nonnegative\(\)/,
   );
-  assert.match(source, /payload\.transferType !== "in"/);
+  assert.match(source, /payload\.transferType === "out"/);
+  assert.match(source, /bankCommand\?\.kind === "expense"/);
+  assert.match(source, /bankCommand\?\.kind === "cash_deposit"/);
+  assert.match(source, /\.rpc\(\s*"match_sepay_transaction_expenses"/);
+  assert.match(source, /"record_sepay_cash_deposit_as_system"/);
+  assert.doesNotMatch(source, /\.from\("expenses"\)[\s\S]*\.insert\(/);
   // Match regex is built per-webhook from the configured prefix (+ grandfather
   // branches), not a static literal.
-  assert.match(
-    source,
-    /LEGACY_SOUNDBOX_PREFIX = "VQRLOAMB20260626100157757"/,
-  );
+  assert.match(source, /LEGACY_SOUNDBOX_PREFIX = "VQRLOAMB20260626100157757"/);
   assert.match(source, /\$\{configured\} \[A-Z0-9\]\{12\}/);
   assert.match(source, /\$\{LEGACY_SOUNDBOX_PREFIX\} \[A-Z0-9\]\{12\}/);
   assert.match(source, /DH\[A-Z0-9\]\{3,12\}/);
@@ -76,7 +84,10 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   assert.match(source, /function extractPaymentCode/);
   assert.match(source, /function resolveAccountScope/);
   assert.match(source, /\.from\("system_settings"\)/);
-  assert.match(source, /\.eq\("key", "payment_vietqr_account_no"\)/);
+  assert.match(
+    source,
+    /\.eq\("key", SYSTEM_SETTING_KEYS\.PAYMENT_VIETQR_ACCOUNT_NO\)/,
+  );
   assert.match(source, /\.eq\("value", normalizedAccount\)/);
   assert.match(source, /function resolveOrderScope/);
   assert.match(source, /\.from\("orders"\)/);
@@ -112,8 +123,9 @@ test("SePay webhook prefers full transfer content code over truncated code field
   assert.match(block, /payload\.content/);
   assert.match(block, /payload\.description/);
   assert.match(block, /payload\.code/);
-  assert.match(block, /sort\(/);
-  assert.match(block, /replace\(\/\\s\+\/g, ""\)\.length/);
+  assert.match(block, /pickLongestPaymentCode/);
+  assert.match(source, /function pickLongestPaymentCode[\s\S]*sort\(/);
+  assert.match(source, /replace\(\/\\s\+\/g, ""\)\.length/);
   assert.doesNotMatch(
     block,
     /normalizePaymentCodeCandidate\(payload\.code \?\? null\)\s*\?\?/,
@@ -370,10 +382,16 @@ test("Order money mutations are locked after VietQR code exposure", () => {
     cancelFixMigration,
     /FROM public\.payments p[\s\S]*p\.method = 'vietqr'[\s\S]*p\.status = 'pending'[\s\S]*lower\(p\.provider_ref\) = lower\(p_payment_code\)/,
   );
-  assert.doesNotMatch(cancelFixMigration, /p\.status IN \('pending', 'failed'\)/);
+  assert.doesNotMatch(
+    cancelFixMigration,
+    /p\.status IN \('pending', 'failed'\)/,
+  );
   assert.doesNotMatch(migration, /FROM public\.print_jobs/);
   assert.match(migration, /CREATE TRIGGER trg_orders_zz_payment_code_lock/);
-  assert.match(migration, /BEFORE UPDATE OF[\s\S]*updated_at[\s\S]*ON public\.orders/);
+  assert.match(
+    migration,
+    /BEFORE UPDATE OF[\s\S]*updated_at[\s\S]*ON public\.orders/,
+  );
   assert.match(migration, /RAISE EXCEPTION 'payment_code_locked'/);
   assert.match(
     migration,

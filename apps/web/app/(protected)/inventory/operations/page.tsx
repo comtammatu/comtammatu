@@ -54,8 +54,8 @@ export default async function OperationsPage({
     tabsList.push({ value: "grn", label: "Phiếu nhập kho" });
   }
 
-  tabsList.push({ value: "consumption", label: "Tiêu hao / xuất bán" });
-  tabsList.push({ value: "issues", label: "Xuất kho nội bộ" });
+  tabsList.push({ value: "consumption", label: "Tiêu hao vận hành" });
+  tabsList.push({ value: "issues", label: "Sự cố kho" });
 
   tabsList.push({ value: "transfers", label: "Điều chuyển nội bộ" });
 

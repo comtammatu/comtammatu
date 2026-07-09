@@ -20,6 +20,7 @@ const teamBoardSource = readWeb(
   "app/(protected)/br/[branchId]/(operator)/team/team-board-client.tsx",
 );
 const employeeMessagesSource = readWeb("lib/messages/employee.ts");
+const operatorMessagesSource = readWeb("lib/messages/operator.ts");
 const teamMembersSource = readWeb(
   "app/(protected)/br/[branchId]/(operator)/team/members/members-client.tsx",
 );
@@ -54,6 +55,17 @@ test("operator team tabs use shared Tabs and preserve client-side switching", ()
   assert.doesNotMatch(teamPageSource, /AppPageTabs/);
 });
 
+test("operator team copy stays in the Branch operator plane", () => {
+  assert.match(teamPageSource, /messages\.operator\.teamBoard/);
+  assert.match(teamTabsSource, /messages\.operator\.teamBoard/);
+  assert.match(teamBoardSource, /messages\.operator\.teamBoard/);
+  assert.match(operatorMessagesSource, /teamBoard:\s*\{/);
+  assert.doesNotMatch(employeeMessagesSource, /teamBoard:\s*\{/);
+  assert.doesNotMatch(teamPageSource, /messages\.employee\.teamBoard/);
+  assert.doesNotMatch(teamTabsSource, /messages\.employee\.teamBoard/);
+  assert.doesNotMatch(teamBoardSource, /messages\.employee\.teamBoard/);
+});
+
 test("operator team board exposes a real status filter", () => {
   assert.match(teamBoardSource, /type TeamBoardFilter/);
   assert.match(teamBoardSource, /function matchesTeamBoardFilter/);
@@ -62,6 +74,8 @@ test("operator team board exposes a real status filter", () => {
     teamBoardSource,
     /className="flex gap-1\.5 overflow-x-auto pb-1"/,
   );
+  assert.match(teamBoardSource, /size="touch"/);
+  assert.match(teamBoardSource, /className="shrink-0 gap-2 px-3"/);
   assert.match(teamBoardSource, /minHeight="tap"/);
   assert.match(teamBoardSource, /padding="compact"/);
   assert.match(teamBoardSource, /const filteredRows = displayRows\.filter/);
@@ -69,24 +83,27 @@ test("operator team board exposes a real status filter", () => {
     teamBoardSource,
     /const filteredGroups = groupRowsByShift\(filteredRows\)/,
   );
-  assert.match(
-    teamBoardSource,
-    /const filteredGroupedRows = filteredGroups\.flatMap/,
-  );
   assert.match(teamBoardSource, /function groupRowsByShift/);
   assert.match(teamBoardSource, /firstCheckIn/);
   assert.match(teamBoardSource, /function TeamBoardMobileGroups/);
-  assert.match(teamBoardSource, /className="lg:hidden"/);
-  assert.match(teamBoardSource, /className="hidden lg:block"/);
+  assert.match(teamBoardSource, /<TeamBoardMobileGroups/);
   assert.match(teamBoardSource, /showShiftName=\{false\}/);
-  assert.match(teamBoardSource, /renderTable\(filteredRows\)/);
-  assert.match(teamBoardSource, /renderTable\(filteredGroupedRows\)/);
+  assert.match(
+    teamBoardSource,
+    /mode=\{filter === "all" \? "no-data" : "no-results"\}/,
+  );
+  assert.doesNotMatch(teamBoardSource, /DataTable/);
+  assert.doesNotMatch(teamBoardSource, /DataTableColumn/);
+  assert.doesNotMatch(teamBoardSource, /className="lg:hidden"/);
+  assert.doesNotMatch(teamBoardSource, /className="hidden lg:block"/);
+  assert.doesNotMatch(teamBoardSource, /renderTable/);
+  assert.doesNotMatch(teamBoardSource, /filteredGroupedRows/);
   assert.doesNotMatch(teamBoardSource, /renderTable\(group\.rows\)/);
-  assert.match(employeeMessagesSource, /label:\s*"Ca & Kho"/);
-  assert.match(employeeMessagesSource, /label:\s*"Nhân sự"/);
-  assert.match(employeeMessagesSource, /label:\s*"Phân công"/);
-  assert.match(employeeMessagesSource, /all:\s*"Tất cả ca"/);
-  assert.match(employeeMessagesSource, /shiftGroupCount/);
+  assert.match(operatorMessagesSource, /label:\s*"Ca & Kho"/);
+  assert.match(operatorMessagesSource, /label:\s*"Nhân sự"/);
+  assert.match(operatorMessagesSource, /label:\s*"Phân công"/);
+  assert.match(operatorMessagesSource, /all:\s*"Tất cả ca"/);
+  assert.match(operatorMessagesSource, /shiftGroupCount/);
   assert.doesNotMatch(teamBoardSource, /ActionSection/);
   assert.doesNotMatch(teamBoardSource, /copy\.actionSectionTitle/);
   assert.doesNotMatch(teamBoardSource, /copy\.boardSectionDescription/);
@@ -104,17 +121,17 @@ test("operator team is the branch manager entry for reviews and assignments", ()
   assert.match(teamPageSource, /peopleGroupTitle/);
   assert.match(
     teamPageSource,
-    /href=\{`\$\{basePath\}\/shift\/checkout-approvals`\}/,
+    /href:\s*`\$\{basePath\}\/shift\/checkout-approvals`/,
   );
-  assert.match(teamPageSource, /href=\{`\$\{basePath\}\/stock\/count-slips`\}/);
+  assert.match(teamPageSource, /href:\s*`\$\{basePath\}\/stock\/count-slips`/);
   assert.match(
     teamPageSource,
-    /href=\{`\$\{basePath\}\/stock\/waste-approvals`\}/,
+    /href:\s*`\$\{basePath\}\/stock\/waste-approvals`/,
   );
-  assert.match(teamPageSource, /href=\{`\$\{basePath\}\/team\?tab=members`\}/);
+  assert.match(teamPageSource, /href:\s*`\$\{basePath\}\/team\?tab=members`/);
   assert.match(
     teamPageSource,
-    /href=\{`\$\{basePath\}\/team\?tab=assignments`\}/,
+    /href:\s*`\$\{basePath\}\/team\?tab=assignments`/,
   );
 
   assert.match(
@@ -187,8 +204,11 @@ test("operator team members use a roster grid with real profile fields", () => {
   );
   assert.match(
     teamMembersSource,
-    /grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5/,
+    /grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5/,
   );
+  assert.match(teamMembersSource, /size="touch"/);
+  assert.doesNotMatch(teamMembersSource, /h-7 cursor-pointer/);
+  assert.doesNotMatch(teamMembersSource, /sm:grid-cols-3/);
   assert.match(
     teamMembersSource,
     /min-h-24 flex-col justify-center text-center/,
@@ -244,7 +264,7 @@ test("embedded count assignments does not add an extra team tab wrapper", () => 
   assert.match(countAssignmentsSource, /grid grid-cols-2 gap-2/);
   assert.match(
     countAssignmentsSource,
-    /hidden text-sm leading-5 text-muted-foreground sm:block/,
+    /hidden text-sm leading-5 text-muted-foreground lg:block/,
   );
   assert.doesNotMatch(
     countAssignmentsSource,

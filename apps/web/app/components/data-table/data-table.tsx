@@ -289,7 +289,7 @@ export function DataTable<T>({
                   data-state={dataState}
                   aria-label={getRowAriaLabel?.(row, index)}
                   className={cn(
-                    highlighted && "hover:bg-muted/45",
+                    highlighted && "hover:bg-muted/50",
                     clickable &&
                       "cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground",
                     hasContextMenu && !clickable && "cursor-context-menu",

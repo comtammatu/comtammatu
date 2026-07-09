@@ -23,10 +23,10 @@ export function TableEmptyStateRow({
   mode = "no-data",
   description,
   icon,
-  paddingClassName = "py-12",
+  paddingClassName = "py-10",
 }: TableEmptyStateRowProps) {
   return (
-    <TableRow>
+    <TableRow className="border-0 hover:bg-transparent">
       <TableCell
         colSpan={colSpan}
         className={cn(paddingClassName, "text-center")}
@@ -37,7 +37,7 @@ export function TableEmptyStateRow({
           mode={mode}
           description={description}
           icon={icon}
-          className="mx-auto max-w-sm"
+          className="mx-auto max-w-none border-0 bg-transparent p-0 shadow-none"
         />
       </TableCell>
     </TableRow>

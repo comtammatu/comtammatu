@@ -187,7 +187,7 @@ const MenuItemButton = memo(function MenuItemButton({
       {/* Price — top right, primary badge with shadow. */}
       <span
         className={cn(
-          "absolute right-2 top-2 z-10 inline-flex items-center rounded-md bg-primary px-2 py-1 text-sm font-bold tabular-nums text-primary-foreground shadow-md md:right-3 md:top-3 md:text-base",
+          "absolute right-2 top-2 z-10 inline-flex items-center rounded-md bg-primary px-2 py-1 text-sm font-bold tabular-nums text-primary-foreground md:right-3 md:top-3 md:text-base",
           sparseMenu && "md:text-lg",
         )}
       >
@@ -379,14 +379,14 @@ function PosMenuGridComponent({
   // TabsList width) — `!flex-none` is required so chips keep content width
   // and overflow scrolls horizontally.
   const tabPillClassName =
-    "group/tab !flex-none gap-1.5 bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm md:gap-2 md:px-4";
+    "group/tab !flex-none gap-1.5 bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground md:gap-2 md:px-4";
   const tabBadgeClassName =
     "hidden shrink-0 text-xs sm:inline-flex group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
   const unifiedTabs = (
     <Tabs
       value={activeTabValue}
       onValueChange={handleCategoryChange}
-      className="min-w-0 flex-1 gap-0 overflow-x-auto overflow-y-hidden xl:flex-1"
+      className="min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden xl:flex-1"
     >
       <TabsList
         aria-label={messages.pos.menu.categoriesAria}

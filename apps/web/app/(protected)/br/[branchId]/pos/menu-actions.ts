@@ -5,6 +5,7 @@ import { unstable_cache, revalidateTag } from "next/cache";
 import { createServiceClient } from "@comtammatu/database";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { isPosBranchInScope } from "./_lib/auth";
 import type { MenuItemDailyLimit } from "./pos-menu-types";
@@ -157,7 +158,7 @@ export async function fetchMenuForPos(
     categories = structure;
     limitRows = limitsRes.data;
   } catch {
-    return { success: false, error: "Không thể tải menu. Vui lòng thử lại." };
+    return { success: false, error: messages.pos.menu.loadFailed };
   }
 
   // Build item lookup for resolving side_item references
@@ -272,7 +273,7 @@ export async function fetchDailyLimitsForPos(
   });
 
   if (limitsRes.error) {
-    return { success: false, error: "Không thể tải giới hạn bán hàng." };
+    return { success: false, error: messages.pos.menu.loadMenuLimitsFailed };
   }
 
   return {

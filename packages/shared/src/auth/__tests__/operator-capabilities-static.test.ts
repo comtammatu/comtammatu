@@ -38,11 +38,12 @@ test("resolveOperatorTiles -> branch manager sees branch workflows in operator h
   assert.equal(
     groups
       .find((group) => group.id === "stock")
-      ?.tiles.find((tile) => tile.href === "/br/3/stock/receive")?.label,
+      ?.tiles.find((tile) => tile.href === "/br/3/stock/transfer?queue=receive")
+      ?.label,
     "Nhận hàng",
   );
   assert.equal(hrefs.includes("/br/3/stock"), true);
-  assert.equal(hrefs.includes("/br/3/stock/receive"), true);
+  assert.equal(hrefs.includes("/br/3/stock/transfer?queue=receive"), true);
   assert.equal(hrefs.includes("/br/3/stock/transfer"), true);
   assert.equal(hrefs.includes("/br/3/stock/stocktake"), true);
   assert.equal(hrefs.includes("/br/3/stock/waste"), true);
@@ -56,15 +57,15 @@ test("resolveOperatorTiles -> approvals group dissolves into the hub queue, not 
 
   assert.equal(groupIds.includes("approvals"), false);
   assert.equal(
-    groups.flatMap((group) => group.tiles.map((tile) => tile.href)).includes(
-      "/br/3/shift/checkout-approvals",
-    ),
+    groups
+      .flatMap((group) => group.tiles.map((tile) => tile.href))
+      .includes("/br/3/shift/checkout-approvals"),
     false,
   );
   assert.equal(
-    groups.flatMap((group) => group.tiles.map((tile) => tile.href)).includes(
-      "/br/3/stock/count-slips",
-    ),
+    groups
+      .flatMap((group) => group.tiles.map((tile) => tile.href))
+      .includes("/br/3/stock/count-slips"),
     false,
   );
 });
@@ -139,7 +140,11 @@ test("resolveOperatorTiles -> central_supply/central_kitchen branchKind hides sa
       const groupIds = groups.map((group) => group.id);
       const stock = groups.find((group) => group.id === "stock");
 
-      assert.equal(groupIds.includes("sales_kitchen"), false, `${role}/${branchKind}`);
+      assert.equal(
+        groupIds.includes("sales_kitchen"),
+        false,
+        `${role}/${branchKind}`,
+      );
       assert.ok(
         stock?.tiles.some(
           (tile) => tile.href === "/br/15/stock/purchase-orders",
@@ -189,7 +194,11 @@ test("resolveOperatorTiles -> operator hub does not duplicate office workspace l
 });
 
 test("resolveOperatorTiles -> production tile is native under stock at central_kitchen, not office_bridge", () => {
-  const groups = resolveOperatorTiles("production_manager", 15, "central_kitchen");
+  const groups = resolveOperatorTiles(
+    "production_manager",
+    15,
+    "central_kitchen",
+  );
   const groupIds = groups.map((group) => String(group.id));
   const stock = groups.find((group) => group.id === "stock");
 
@@ -198,7 +207,10 @@ test("resolveOperatorTiles -> production tile is native under stock at central_k
   const productionTile = stock?.tiles.find(
     (tile) => tile.href === "/br/15/stock/production",
   );
-  assert.ok(productionTile, "production_manager must see native production tile");
+  assert.ok(
+    productionTile,
+    "production_manager must see native production tile",
+  );
   assert.equal(productionTile?.label, "Sản xuất");
 });
 

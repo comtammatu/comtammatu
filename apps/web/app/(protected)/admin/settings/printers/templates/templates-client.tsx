@@ -433,7 +433,7 @@ export function TemplatesClient({
                 <img
                   src={preview}
                   alt={copy.previewAlt(KIND_LABEL[kind])}
-                  className="mx-auto w-72 max-w-full border bg-white shadow-sm"
+                  className="mx-auto w-72 max-w-full border bg-white"
                 />
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">

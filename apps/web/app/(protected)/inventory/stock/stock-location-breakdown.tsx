@@ -1,34 +1,13 @@
 import { cn } from "@comtammatu/ui";
 import { formatQty } from "../_lib/format";
+import {
+  shouldShowStockLocationBreakdown,
+  stockLocationLabel,
+  visibleStockLocationRows,
+  type StockLocationBreakdown,
+} from "@lib/inventory/stock-on-hand-model";
 
-export type StockLocationBreakdown = {
-  locationId: number;
-  name: string;
-  code: string;
-  locationKind: string;
-  qty: number;
-  avgUnitCost: number | null;
-  lastCountedAt: string | null;
-};
-
-function visibleLocationRows(rows: StockLocationBreakdown[]) {
-  return rows.filter((row) => row.qty !== 0);
-}
-
-function shouldShowLocationBreakdown(rows: StockLocationBreakdown[]) {
-  const visibleRows = visibleLocationRows(rows);
-  return (
-    visibleRows.length > 1 ||
-    visibleRows.some((row) => row.locationKind === "kitchen")
-  );
-}
-
-function stockLocationLabel(row: StockLocationBreakdown) {
-  if (row.locationKind === "warehouse") return "Kho";
-  if (row.locationKind === "kitchen") return "Bếp";
-
-  return row.name;
-}
+export type { StockLocationBreakdown } from "@lib/inventory/stock-on-hand-model";
 
 export function StockLocationBreakdownLine({
   rows = [],
@@ -37,7 +16,7 @@ export function StockLocationBreakdownLine({
   rows?: StockLocationBreakdown[];
   className?: string;
 }) {
-  if (!shouldShowLocationBreakdown(rows)) return null;
+  if (!shouldShowStockLocationBreakdown(rows)) return null;
 
   return (
     <span
@@ -46,7 +25,7 @@ export function StockLocationBreakdownLine({
         className,
       )}
     >
-      {visibleLocationRows(rows)
+      {visibleStockLocationRows(rows)
         .map((row) => `${stockLocationLabel(row)}: ${formatQty(row.qty)}`)
         .join(" | ")}
     </span>

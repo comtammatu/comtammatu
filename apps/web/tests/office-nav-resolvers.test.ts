@@ -27,7 +27,7 @@ import {
 // from MODULE_ACL membership so the primary sidebar tabs stay single-sourced.
 
 // Candidate modules the office sidebar can surface, in composition order:
-// one settings tab + cross-workspace modules. Branch-scoped routes live in Branch Hub.
+// one settings tab + cross-workspace modules. Branch-scoped routes live in the operator plane.
 const SETTINGS_TAB_MODULE: ModuleKey = "settings";
 const WORKSPACE_TAB_MODULES: ModuleKey[] = DOMAIN_WORKSPACE_ITEMS.map(
   (item) => item.moduleKey,
@@ -110,7 +110,17 @@ test("owner sidebar tabs include settings + all tenant workspaces", () => {
   assert.deepEqual(
     branchTabs,
     [],
-    "branch-scoped tabs must stay in Branch Hub, not office sidebar",
+    "branch-scoped tabs must stay out of the office sidebar",
+  );
+
+  const branchWorkspace = items.find(
+    (item) => item.href === MODULE_ACL.branches.path,
+  );
+  assert.equal(branchWorkspace?.label, "Chi nhánh");
+  assert.notEqual(
+    MODULE_ACL.branches.label,
+    MODULE_ACL.branch_picker.label,
+    "tenant branch label must stay distinct from the work-location picker label",
   );
 });
 

@@ -78,7 +78,7 @@ export async function StocktakeCountPageContent({
     const { data: unitRows } = await supabase
       .from("ingredients")
       .select(
-        "id, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        "id, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", sessionRow.tenant_id)
       .in("id", ingredientIds);
@@ -96,6 +96,7 @@ export async function StocktakeCountPageContent({
           code: u.units?.code ?? "",
           label: u.units?.name ?? u.units?.code ?? "",
           isBase: u.is_base,
+          toBaseFactor: Number(u.to_base_factor ?? 0),
         }));
     }
   }

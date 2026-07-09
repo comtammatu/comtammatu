@@ -5,13 +5,6 @@ import type { FormEvent, TransitionStartFunction } from "react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
@@ -19,10 +12,13 @@ import {
   Save as IconDeviceFloppy,
 } from "lucide-react";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { FormattedNumberInput } from "@/components/form";
+import { AppDialog, FormattedNumberInput } from "@/components/form";
 import { amendGrnLine } from "../../../grn-actions";
+import { formatVND } from "../../../_lib/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { grnCopy, type EditableLine } from "./grn-detail-types";
+
+const AMEND_OWNER_FORM_ID = "amend-owner-form";
 
 export function AmendOwnerDialog({
   grnId,
@@ -110,82 +106,90 @@ export function AmendOwnerDialog({
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      <SheetContent className="gap-0 overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>{grnCopy.amend.title}</SheetTitle>
-        </SheetHeader>
-        {line ? (
-          <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 p-4">
-            <Alert>
-              <IconAlertTriangle className="size-4" />
-              <AlertDescription>{grnCopy.amend.warning}</AlertDescription>
-            </Alert>
+    <AppDialog
+      open={isOpen}
+      onOpenChange={handleOpenChange}
+      title={grnCopy.amend.title}
+      footer={
+        line ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isPending}
+            >
+              {ACTIONS_VI.cancel}
+            </Button>
+            <Button
+              type="submit"
+              form={AMEND_OWNER_FORM_ID}
+              disabled={isPending}
+            >
+              <IconDeviceFloppy className="size-4" />
+              {grnCopy.amend.saveAction}
+            </Button>
+          </>
+        ) : null
+      }
+    >
+      {line ? (
+        <form
+          id={AMEND_OWNER_FORM_ID}
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4"
+        >
+          <Alert>
+            <IconAlertTriangle className="size-4" />
+            <AlertDescription>{grnCopy.amend.warning}</AlertDescription>
+          </Alert>
 
-            <Item variant="outline" className="flex-col items-stretch gap-1 p-3">
-              <p className="font-bold">{line.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {grnCopy.amend.current(
-                  line.actual,
-                  line.unit,
-                  line.cost.toLocaleString("vi-VN"),
-                )}
-              </p>
-            </Item>
+          <Item variant="outline" className="flex-col items-stretch gap-1 p-3">
+            <p className="font-bold">{line.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {grnCopy.amend.current(
+                line.actual,
+                line.unit,
+                formatVND(line.cost).replace(/đ$/, ""),
+              )}
+            </p>
+          </Item>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="amend-qty">{grnCopy.amend.quantityLabel}</Label>
-                <FormattedNumberInput
-                  id="amend-qty"
-                  value={quantity}
-                  onValueChange={setQuantity}
-                  maxFractionDigits={3}
-                  placeholder="0"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="amend-cost">
-                  {grnCopy.amend.unitCostLabel}
-                </Label>
-                <FormattedNumberInput
-                  id="amend-cost"
-                  value={unitCost}
-                  onValueChange={setUnitCost}
-                  maxFractionDigits={0}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="amend-reason">{grnCopy.amend.reasonLabel}</Label>
-              <Textarea
-                id="amend-reason"
-                rows={3}
-                value={reason}
-                placeholder={grnCopy.amend.reasonPlaceholder}
-                onChange={(event) => setReason(event.target.value)}
+              <Label htmlFor="amend-qty">{grnCopy.amend.quantityLabel}</Label>
+              <FormattedNumberInput
+                id="amend-qty"
+                value={quantity}
+                onValueChange={setQuantity}
+                maxFractionDigits={3}
+                placeholder="0"
               />
             </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="amend-cost">{grnCopy.amend.unitCostLabel}</Label>
+              <FormattedNumberInput
+                id="amend-cost"
+                value={unitCost}
+                onValueChange={setUnitCost}
+                maxFractionDigits={0}
+                placeholder="0"
+              />
+            </div>
+          </div>
 
-            <SheetFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleOpenChange(false)}
-                disabled={isPending}
-              >
-                {ACTIONS_VI.cancel}
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                <IconDeviceFloppy className="size-4" />
-                {grnCopy.amend.saveAction}
-              </Button>
-            </SheetFooter>
-          </form>
-        ) : null}
-      </SheetContent>
-    </Sheet>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="amend-reason">{grnCopy.amend.reasonLabel}</Label>
+            <Textarea
+              id="amend-reason"
+              rows={3}
+              value={reason}
+              placeholder={grnCopy.amend.reasonPlaceholder}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </div>
+        </form>
+      ) : null}
+    </AppDialog>
   );
 }

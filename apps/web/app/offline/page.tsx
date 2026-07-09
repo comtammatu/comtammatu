@@ -5,8 +5,8 @@ import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppEmptyState, AppPage } from "@/components/surface";
 
-// Precached Serwist navigation fallback for the Branch Operator Hub (see
-// hubOfflineFallback in app/sw.ts) — served only when a Hub navigation fails
+// Precached Serwist navigation fallback for the operator entry/shell (see
+// operatorOfflineFallback in app/sw.ts) — served only when operator navigation fails
 // offline, never as a substitute for a real page while online.
 export default function OfflinePage() {
   return (

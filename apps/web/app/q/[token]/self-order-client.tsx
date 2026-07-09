@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
-import { RefreshCw as IconRefresh } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
-import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { AppPage } from "@/components/surface";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import type {
@@ -19,6 +19,7 @@ import type {
 } from "@lib/self-order/contracts";
 import { useSnapshotSync } from "./self-order/hooks";
 import { StatusPill } from "./self-order/status-pill";
+import { SessionStatePanel } from "./self-order/session-state-panel";
 import { OrderSummary } from "./self-order/order-summary";
 import { MenuPanel } from "./self-order/menu-panel";
 import { CartSheet } from "./self-order/cart-sheet";
@@ -68,7 +69,8 @@ export function SelfOrderClient({
   token,
   initialSnapshot,
 }: SelfOrderClientProps) {
-  const { snapshot, refreshSnapshot } = useSnapshotSync(token, initialSnapshot);
+  const { snapshot, refreshSnapshot, isRefreshing, refreshError } =
+    useSnapshotSync(token, initialSnapshot);
   const [cartItems, setCartItems] = useState<SelfOrderCartItem[]>([]);
   const [customerNote, setCustomerNote] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -96,33 +98,65 @@ export function SelfOrderClient({
   const sessionStatus = snapshot.session?.status ?? null;
   const isSessionActive = sessionStatus === "active";
   const isPendingApproval = sessionStatus === "pending_approval";
+  const isSessionRevoked = sessionStatus === "revoked";
   const activeOrder = snapshot.order ?? null;
-  // Closed: order paid/terminal OR a closed session. The snapshot RPC only
-  // surfaces pending_approval/active sessions, so the realistic terminal
-  // signal here is a paid order on an active session.
+  // Closed: order paid/terminal OR a closed session.
   const isClosed =
     sessionStatus === "closed" || activeOrder?.paymentStatus === "paid";
-  const hasBillTab = Boolean(activeOrder || paymentError || vietQr);
-
   // CTA state (fix I). Two distinct disable tiers:
-  //  - ctaHardDisabled: pending_approval (cannot submit a 2nd batch) or closed.
-  //    The button is truly disabled.
+  //  - ctaHardDisabled: pending_approval, closed, or revoked. The button is
+  //    truly disabled.
   //  - paymentLocked (pending VietQR/cash_call): the button stays clickable so
   //    the customer can still submit, hit the pending_payment_exists branch,
   //    and choose to cancel the QR + add more. Blocking here would regress V1.
   // paymentLocked is intentionally NOT computed as a guard: submitBatch must
   // stay reachable so the cancel-then-add flow works.
-  const ctaHardDisabled = isClosed || isPendingApproval;
-  const ctaLabel = isClosed
-    ? SELF_ORDER_VI.statusClosed
+  const ctaHardDisabled = isClosed || isPendingApproval || isSessionRevoked;
+  const ctaLabel = isSessionRevoked
+    ? SELF_ORDER_VI.ctaRejected
+    : isClosed
+      ? SELF_ORDER_VI.statusClosed
+      : isPendingApproval
+        ? SELF_ORDER_VI.ctaAwaitingApproval
+        : isSessionActive
+          ? SELF_ORDER_VI.submitAddMore
+          : SELF_ORDER_VI.submitFirstBatch;
+  const ctaDisabledHint = isSessionRevoked
+    ? SELF_ORDER_VI.ctaRejectedHint
     : isPendingApproval
-      ? SELF_ORDER_VI.ctaAwaitingApproval
-      : isSessionActive
-        ? SELF_ORDER_VI.submitAddMore
-        : SELF_ORDER_VI.submitFirstBatch;
-  const ctaDisabledHint = isPendingApproval
-    ? SELF_ORDER_VI.ctaAwaitingApprovalHint
-    : null;
+      ? SELF_ORDER_VI.ctaAwaitingApprovalHint
+      : null;
+
+  const batches = snapshot.batches ?? [];
+  const billRoundCount = batches.length;
+  const prevSessionStatusRef = useRef(sessionStatus);
+  const prevBatchCountRef = useRef(billRoundCount);
+  useEffect(() => {
+    const previous = prevSessionStatusRef.current;
+    prevSessionStatusRef.current = sessionStatus;
+    if (
+      previous === "pending_approval" &&
+      sessionStatus === "active" &&
+      activeOrder
+    ) {
+      setActiveMainTab("bill");
+      return;
+    }
+    if (
+      previous !== "pending_approval" &&
+      sessionStatus === "pending_approval"
+    ) {
+      setActiveMainTab("bill");
+    }
+  }, [sessionStatus, activeOrder]);
+
+  useEffect(() => {
+    const previousCount = prevBatchCountRef.current;
+    prevBatchCountRef.current = billRoundCount;
+    if (billRoundCount > previousCount) {
+      setActiveMainTab("bill");
+    }
+  }, [billRoundCount]);
 
   function addItem(cartItem: SelfOrderCartItem) {
     setSubmitError(null);
@@ -130,18 +164,18 @@ export function SelfOrderClient({
   }
 
   function updateQuantity(key: string, delta: number) {
+    setSubmitError(null);
     setCartItems((current) =>
-      current
-        .map((item) =>
-          item.key === key
-            ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-            : item,
-        )
-        .filter((item) => item.quantity > 0),
+      current.map((item) =>
+        item.key === key
+          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
+          : item,
+      ),
     );
   }
 
   function removeItem(key: string) {
+    setSubmitError(null);
     setCartItems((current) => current.filter((item) => item.key !== key));
   }
 
@@ -225,7 +259,7 @@ export function SelfOrderClient({
   }
 
   function requestPayment(method: "cash_call" | "vietqr") {
-    if (!isSessionActive || isPaymentPending) return;
+    if (!isSessionActive || !activeOrder || isPaymentPending) return;
     setPaymentError(null);
     startPaymentTransition(async () => {
       const invoice = buildInvoicePayload();
@@ -271,6 +305,13 @@ export function SelfOrderClient({
     [snapshot.menu],
   );
 
+  const billBadgeCount =
+    billRoundCount > 0
+      ? billRoundCount
+      : (activeOrder?.items.length ?? 0);
+  const showSessionPanel =
+    isPendingApproval || isSessionRevoked || isClosed;
+
   return (
     <AppPage
       width="narrow"
@@ -280,50 +321,72 @@ export function SelfOrderClient({
       contentClassName="min-h-dvh"
     >
       <Tabs
-        value={hasBillTab ? activeMainTab : "menu"}
+        value={activeMainTab}
         onValueChange={setActiveMainTab}
         className="flex min-h-dvh w-full flex-col gap-1"
       >
         <header className="sticky top-0 z-20 border-b border-border bg-background px-3 py-2">
           <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="truncate text-xs text-muted-foreground">
-                {snapshot.branch?.name ?? SELF_ORDER_VI.branchFallback}
-              </p>
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <p className="min-w-0 truncate text-xs text-muted-foreground">
+                  {snapshot.branch?.name ?? SELF_ORDER_VI.branchFallback}
+                </p>
+                <div className="shrink-0">
+                  <StatusPill
+                    session={snapshot.session}
+                    paymentRequest={snapshot.paymentRequest}
+                    order={snapshot.order}
+                  />
+                </div>
+              </div>
               <h1 className="font-heading truncate text-lg font-semibold">
                 {snapshot.table
                   ? SELF_ORDER_VI.tableLabel(snapshot.table.number)
                   : SELF_ORDER_VI.menuTitle}
               </h1>
             </div>
-            <div className="flex items-center gap-1.5">
-              <StatusPill
-                session={snapshot.session}
-                paymentRequest={snapshot.paymentRequest}
-                order={snapshot.order}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-touch"
-                onClick={() => void refreshSnapshot()}
-                aria-label="refresh"
-              >
-                <IconRefresh />
-              </Button>
-            </div>
-          </div>
-          {hasBillTab ? (
-            <TabsList className="mt-2 h-10 w-full">
+            <TabsList className="h-11 w-44 shrink-0">
               <TabsTrigger value="menu" className="text-sm">
                 {SELF_ORDER_VI.menuTitle}
               </TabsTrigger>
-              <TabsTrigger value="bill" className="text-sm">
+              <TabsTrigger value="bill" className="gap-1 text-sm">
                 {SELF_ORDER_VI.billTab}
+                {billBadgeCount > 0 ? (
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1">
+                    {billBadgeCount}
+                  </Badge>
+                ) : null}
               </TabsTrigger>
             </TabsList>
+          </div>
+          {refreshError ? (
+            <NoteCallout tone="warning" className="mt-2">
+              <div className="flex items-center justify-between gap-2">
+                <span>{refreshError}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  disabled={isRefreshing}
+                  onClick={() => void refreshSnapshot()}
+                >
+                  {SELF_ORDER_VI.retryRefresh}
+                </Button>
+              </div>
+            </NoteCallout>
           ) : null}
         </header>
+
+        {showSessionPanel ? (
+          <SessionStatePanel
+            session={snapshot.session}
+            order={snapshot.order}
+            onViewBill={
+              isClosed ? () => setActiveMainTab("bill") : undefined
+            }
+          />
+        ) : null}
 
         <TabsContent
           value="menu"
@@ -337,15 +400,20 @@ export function SelfOrderClient({
           />
         </TabsContent>
 
-        {hasBillTab ? (
-          <TabsContent
-            value="bill"
-            className="mt-0 min-h-0 flex-1 overflow-y-auto p-3 pb-32 data-[state=inactive]:hidden"
-          >
-            <div className="flex flex-col gap-3">
-              {activeOrder ? <OrderSummary items={activeOrder.items} /> : null}
+        <TabsContent
+          value="bill"
+          className="mt-0 min-h-0 flex-1 overflow-y-auto p-3 pb-32 data-[state=inactive]:hidden"
+        >
+          <div className="flex flex-col gap-3">
+            <OrderSummary
+              batches={batches}
+              items={activeOrder?.items ?? []}
+            />
+            {isSessionActive &&
+            activeOrder &&
+            activeOrder.paymentStatus !== "paid" ? (
               <PaymentPanel
-                disabled={!isSessionActive}
+                disabled={false}
                 activeOrder={activeOrder}
                 buyerNotGetInvoice={buyerNotGetInvoice}
                 buyerName={buyerName}
@@ -362,9 +430,9 @@ export function SelfOrderClient({
                 onBuyerEmailChange={setBuyerEmail}
                 onRequestPayment={requestPayment}
               />
-            </div>
-          </TabsContent>
-        ) : null}
+            ) : null}
+          </div>
+        </TabsContent>
       </Tabs>
       <CartSheet
         items={cartItems}
@@ -375,20 +443,13 @@ export function SelfOrderClient({
         ctaLabel={ctaLabel}
         ctaDisabled={ctaHardDisabled}
         ctaDisabledHint={ctaDisabledHint}
+        submitError={submitError}
         customerNote={customerNote}
         onCustomerNoteChange={setCustomerNote}
         onQuantityChange={updateQuantity}
         onRemove={removeItem}
         onSubmit={submitBatch}
       />
-      {submitError ? (
-        <Alert
-          variant="destructive"
-          className="fixed inset-x-3 bottom-24 z-40 mx-auto max-w-xl"
-        >
-          <AlertDescription>{submitError}</AlertDescription>
-        </Alert>
-      ) : null}
     </AppPage>
   );
 }

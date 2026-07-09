@@ -53,13 +53,18 @@ export function CatalogList<TRow>({
           {rows.map((row) => {
             const secondary = renderSecondary?.(row);
             return (
-              <Item key={getRowKey(row)} variant="outline" size="sm">
+              <Item
+                key={getRowKey(row)}
+                variant="outline"
+                size="sm"
+                className="min-h-12"
+              >
                 <ItemContent className="min-w-0">
-                  <ItemTitle className="truncate text-sm font-medium">
+                  <ItemTitle className="line-clamp-2 min-w-0 break-words text-sm font-medium">
                     {renderPrimary(row)}
                   </ItemTitle>
                   {secondary ? (
-                    <ItemDescription className="truncate text-xs">
+                    <ItemDescription className="line-clamp-2 break-words text-xs">
                       {secondary}
                     </ItemDescription>
                   ) : null}
@@ -92,14 +97,16 @@ export function CatalogList<TRow>({
         onClick={onAdd}
         className="w-full border-dashed"
       >
-        <IconPlus data-icon="inline-start" />
+        <IconPlus aria-hidden="true" data-icon="inline-start" />
         {addLabel}
       </Button>
     </div>
   );
 }
 
-export const CATALOG_EDIT_ICON = <IconPencil className="size-4" />;
+export const CATALOG_EDIT_ICON = (
+  <IconPencil aria-hidden="true" className="size-4" />
+);
 export const CATALOG_DELETE_ICON = (
-  <IconTrash className="size-4 text-destructive" />
+  <IconTrash aria-hidden="true" className="size-4 text-destructive" />
 );

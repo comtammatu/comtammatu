@@ -55,6 +55,18 @@ interface SelfOrderApprovalSheetProps {
 
 type TargetChoice = "new" | `order:${number}`;
 
+function batchItemOptionSummary(item: SelfOrderPendingBatch["items"][number]) {
+  return [
+    ...item.modifiers.map((modifier) => modifier.name),
+    ...item.sides.map((side) =>
+      side.quantity > 1 ? `${side.quantity}x ${side.name}` : side.name,
+    ),
+    item.note ? `${SELF_ORDER_VI.itemNoteLabel}: ${item.note}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export function SelfOrderApprovalSheet({
   branchId,
   posSessionId,
@@ -283,21 +295,31 @@ function PendingBatchCard({
       </ItemHeader>
 
       <ul className="flex flex-col gap-1 text-sm">
-        {batch.items.map((item, index) => (
-          <li
-            key={`${batch.id}:${item.menu_item_id}:${index}`}
-            className="flex justify-between gap-3"
-          >
-            <span className="min-w-0 truncate">
-              {item.variant_name
-                ? `${item.item_name} ${item.variant_name}`
-                : item.item_name}
-            </span>
-            <span className="shrink-0 font-semibold tabular-nums">
-              x{item.quantity}
-            </span>
-          </li>
-        ))}
+        {batch.items.map((item, index) => {
+          const optionSummary = batchItemOptionSummary(item);
+          return (
+            <li
+              key={`${batch.id}:${item.menu_item_id}:${index}`}
+              className="flex min-w-0 flex-col gap-1"
+            >
+              <div className="flex min-w-0 justify-between gap-3">
+                <span className="min-w-0 break-words">
+                  {item.variant_name
+                    ? `${item.item_name} ${item.variant_name}`
+                    : item.item_name}
+                </span>
+                <span className="shrink-0 font-semibold tabular-nums">
+                  x{item.quantity}
+                </span>
+              </div>
+              {optionSummary ? (
+                <p className="break-words text-xs text-muted-foreground">
+                  {optionSummary}
+                </p>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
 
       {batch.customerNote ? (

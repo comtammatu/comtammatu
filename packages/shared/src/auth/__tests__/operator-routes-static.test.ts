@@ -23,6 +23,7 @@ function claims(
 }
 
 test("operator routes resolve to ACL modules", () => {
+  assert.equal(resolveModuleFromPath("/"), "branch_picker");
   assert.equal(resolveModuleFromPath("/br"), "branch_picker");
   assert.equal(resolveModuleFromPath("/br/7"), "operator_home");
   assert.equal(resolveModuleFromPath("/br/7/shift"), "operator_home");
@@ -59,6 +60,7 @@ test("operator stock count does not require full inventory access", () => {
 });
 
 test("operator route families use operator bottom nav", () => {
+  assert.equal(resolveRouteFamilyContract("/")?.id, "branch-picker");
   assert.equal(resolveRouteFamilyContract("/br")?.id, "branch-picker");
 
   for (const [path, id] of [
@@ -135,7 +137,7 @@ test("post-login hub fallback is device and branch aware", () => {
 
   assert.equal(
     resolvePostLoginRedirect(claims("owner", null), null, phone),
-    "/br",
+    "/",
   );
   assert.equal(
     resolvePostLoginRedirect(claims("owner", null), null, desktop),

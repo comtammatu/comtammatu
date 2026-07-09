@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { formatVNDate } from "@comtammatu/shared/time";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   InputGroup,
@@ -24,17 +23,24 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@comtammatu/ui/components/input-group";
-import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { matchesSearch } from "@lib/search";
-import type { BranchForTransfer } from "./create-transfer-dialog";
+import type { BranchForTransfer } from "@lib/inventory/transfer-create-model";
 import {
   AppEmptyState,
   AppPage,
   AppPageHeader,
+  AppSection,
   AppToolbar,
 } from "@/components/surface";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
@@ -50,31 +56,19 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import { messages } from "@lib/messages";
+import {
+  classifyTransfer,
+  compareTransferQueue,
+  type TransferListRow,
+  type TransferTab,
+} from "./transfer-list-model";
 
-import { FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 export type { BranchForTransfer };
-
-export interface TransferListRow {
-  id: number;
-  transfer_number: string;
-  status: string;
-  notes: string | null;
-  vehicle_info: string | null;
-  shipped_at: string | null;
-  received_at: string | null;
-  receive_started_at: string | null;
-  from_branch_id: number;
-  to_branch_id: number;
-  created_at: string;
-  from_branch_name: string;
-  to_branch_name: string;
-}
-
-export type TransferTab = "receive" | "dispatch" | "history";
+export type { TransferListRow, TransferTab };
 
 const copy = messages.inventory.transfer;
 
-const requestGoodsLabel = "Yêu cầu hàng";
 const shippedLabelPrefix = "Xuất: ";
 const receivedLabelPrefix = "Nhận: ";
 
@@ -83,56 +77,6 @@ const TAB_LABELS: Record<TransferTab, string> = {
   dispatch: copy.list.tabs.dispatch,
   history: copy.list.tabs.history,
 };
-
-const TRANSFER_QUEUE_PRIORITY: Record<string, number> = {
-  in_transit: 0,
-  confirmed_ship: 1,
-  confirmed_receive: 2,
-  draft: 3,
-  received: 20,
-  completed: 21,
-  cancelled: 22,
-};
-
-function compareTransferQueue(a: TransferListRow, b: TransferListRow): number {
-  const aCreatedAt = Date.parse(a.created_at);
-  const bCreatedAt = Date.parse(b.created_at);
-  return (
-    (TRANSFER_QUEUE_PRIORITY[a.status] ?? 10) -
-      (TRANSFER_QUEUE_PRIORITY[b.status] ?? 10) ||
-    (Number.isNaN(bCreatedAt) ? 0 : bCreatedAt) -
-      (Number.isNaN(aCreatedAt) ? 0 : aCreatedAt)
-  );
-}
-
-function classifyTransfer(
-  status: string,
-  viewerBranchId: number | null,
-  fromId: number,
-  toId: number,
-  userRole: StaffRole,
-): TransferTab {
-  const receiveStates = ["in_transit", "confirmed_ship", "confirmed_receive"];
-  const dispatchStates = ["draft"];
-  const terminal = ["received", "cancelled", "completed"];
-
-  if (terminal.includes(status)) return "history";
-  if (receiveStates.includes(status)) {
-    if (viewerBranchId != null && viewerBranchId !== toId) {
-      return "history";
-    }
-    return "receive";
-  }
-  if (dispatchStates.includes(status)) {
-    if (userRole === "branch_manager" && viewerBranchId === toId) {
-      return "receive";
-    }
-    if (viewerBranchId != null && viewerBranchId !== fromId) return "history";
-    if (userRole === "branch_manager" && fromId !== toId) return "history";
-    return "dispatch";
-  }
-  return "history";
-}
 
 export function TransfersListClient({
   initial,
@@ -191,7 +135,7 @@ export function TransfersListClient({
   const [drawerRow, setDrawerRow] = useState<TransferListRow | null>(null);
   const router = useRouter();
 
-  const createLabel = isBranchManager ? requestGoodsLabel : copy.createSlip;
+  const createLabel = isBranchManager ? copy.requestGoods : copy.createSlip;
   const pageTitle = pageTitleOverride ?? copy.internalTransferTitle;
   const tabLabels: Record<TransferTab, string> = TAB_LABELS;
   const createPathBase = createBasePath ?? basePath;
@@ -292,14 +236,16 @@ export function TransfersListClient({
     {
       key: "transfer_number",
       header: copy.list.transferNumber,
-      className: "font-medium",
-      render: (r) => r.transfer_number,
+      className: "min-w-36",
+      render: (r) => (
+        <span className="font-mono tabular-nums">{r.transfer_number}</span>
+      ),
     },
     {
       key: "route",
       header: copy.list.route,
       render: (r) => (
-        <div className="flex items-center gap-1.5 text-sm">
+        <div className="flex items-center gap-1.5">
           <span>{r.from_branch_name}</span>
           <IconArrowRight className="size-3 text-muted-foreground" />
           <span>{r.to_branch_name}</span>
@@ -316,13 +262,15 @@ export function TransfersListClient({
     {
       key: "created_at",
       header: copy.list.createdAt,
-      className: "text-sm text-muted-foreground",
-      render: (r) => formatVNDate(r.created_at),
+      render: (r) => (
+        <span className="font-mono tabular-nums text-muted-foreground">
+          {formatVNDate(r.created_at)}
+        </span>
+      ),
     },
     {
       key: "movement",
       header: copy.list.shippedReceivedAt,
-      className: "text-sm text-muted-foreground",
       render: (r) =>
         r.shipped_at
           ? `${shippedLabelPrefix}${formatVNDate(r.shipped_at)}`
@@ -335,7 +283,12 @@ export function TransfersListClient({
       header: "",
       className: "w-10",
       render: (r) => (
-        <Button variant="ghost" size="icon-sm" asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          asChild
+          aria-label={`${ACTIONS_VI.viewDetails} ${r.transfer_number}`}
+        >
           <Link href={detailHref(r.id)}>
             <IconArrowRight className="size-4" />
           </Link>
@@ -345,7 +298,10 @@ export function TransfersListClient({
   ];
 
   const transferDrawer = (
-    <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
+    <Drawer
+      open={!!drawerRow}
+      onOpenChange={(open) => !open && setDrawerRow(null)}
+    >
       <DrawerContent>
         {drawerRow && (
           <>
@@ -455,7 +411,7 @@ export function TransfersListClient({
   }
 
   const desktopCreateAction = canCreate ? (
-    <Button size="sm" asChild>
+    <Button size={isOperator ? "touch" : "sm"} asChild>
       <Link href={createHref}>
         <IconPlus data-icon="inline-start" />
         {createLabel}
@@ -465,10 +421,16 @@ export function TransfersListClient({
 
   const desktopToolbar = (
     <AppToolbar
-      variant="card"
+      variant="inline"
       className="items-stretch sm:items-center"
       search={
-        <InputGroup className="min-h-10 w-full sm:h-10 sm:flex-1">
+        <InputGroup
+          className={
+            isOperator
+              ? "min-h-12 w-full sm:h-10 sm:flex-1"
+              : "min-h-10 w-full sm:h-10 sm:flex-1"
+          }
+        >
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -486,36 +448,33 @@ export function TransfersListClient({
         </InputGroup>
       }
       filters={
-        <Tabs
+        <Select
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as TransferTab)}
         >
-          <TabsList variant="toolbar" className="p-1">
-            {(Object.keys(tabLabels) as TransferTab[]).map((tab) => {
-              return (
-                <TabsTrigger
-                  key={tab}
-                  value={tab}
-                  className="min-h-9 min-w-0"
-                >
-                  {tabLabels[tab]}
-                  {tabCounts[tab] > 0 && (
-                    <Badge variant="secondary" className="ml-1.5 font-mono">
-                      {tabCounts[tab]}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-        </Tabs>
+          <SelectTrigger
+            size={isOperator ? "touch" : "default"}
+            className={
+              isOperator ? "w-full sm:w-56" : "min-h-10 w-full sm:h-10 sm:w-56"
+            }
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(tabLabels) as TransferTab[]).map((tab) => (
+              <SelectItem key={tab} value={tab}>
+                {tabLabels[tab]} ({tabCounts[tab]})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       }
+      actions={embedded ? desktopCreateAction : null}
     />
   );
 
   const desktopTable = (
     <DataTable
-      className="md:rounded-md md:border"
       columns={columns}
       data={searchFiltered}
       getRowKey={(r) => r.id}
@@ -533,13 +492,17 @@ export function TransfersListClient({
       )}
     />
   );
+  const desktopList = (
+    <AppSection className="overflow-hidden" contentFlush>
+      {desktopToolbar}
+      {desktopTable}
+    </AppSection>
+  );
 
   if (embedded) {
     return (
       <div className="flex w-full flex-col gap-3">
-        <div className="flex justify-end">{desktopCreateAction}</div>
-        {desktopToolbar}
-        {desktopTable}
+        {desktopList}
         {transferDrawer}
       </div>
     );
@@ -552,8 +515,7 @@ export function TransfersListClient({
         title={pageTitle}
         actions={desktopCreateAction}
       />
-      {desktopToolbar}
-      {desktopTable}
+      {desktopList}
       {transferDrawer}
     </AppPage>
   );

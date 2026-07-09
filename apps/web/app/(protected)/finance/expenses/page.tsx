@@ -9,6 +9,7 @@ import {
   parseFinanceParams,
   resolveFinanceRange,
 } from "../_lib/finance-params";
+import { isOperatingExpenseCategory } from "../_lib/expense-categories";
 import { ExpensesClient } from "./expenses-client";
 
 const copy = messages.finance.expenses;
@@ -43,7 +44,11 @@ export default async function ExpensesPage({
     name: string;
   }[];
   const rows = expensesRes.success ? (expensesRes.data ?? []) : [];
-  const totalAmount = rows.reduce((sum, row) => sum + row.amount, 0);
+  const totalAmount = rows.reduce(
+    (sum, row) =>
+      isOperatingExpenseCategory(row.category) ? sum + row.amount : sum,
+    0,
+  );
   const actualFoodCost = foodCostRes.success ? (foodCostRes.data ?? 0) : 0;
   const todayBusinessDate = getVNDateString();
 

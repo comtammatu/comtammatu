@@ -189,19 +189,19 @@ export const OPERATOR_TILE_ITEMS = [
     kinds: ["branch"],
   },
   {
-    moduleKey: "runner",
-    icon: "MonitorUp",
-    group: "sales_kitchen",
-    hrefTemplate: "/br/{branchId}/runner",
-    label: APP_COPY_VI.branchOperationsRunner,
-    kinds: ["branch"],
-  },
-  {
     moduleKey: "kds",
     icon: "ChefHat",
     group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/kds",
     label: APP_COPY_VI.branchOperationsKds,
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "runner",
+    icon: "MonitorUp",
+    group: "sales_kitchen",
+    hrefTemplate: "/br/{branchId}/runner",
+    label: APP_COPY_VI.branchOperationsRunner,
     kinds: ["branch"],
   },
   {
@@ -238,7 +238,7 @@ export const OPERATOR_TILE_ITEMS = [
     moduleKey: "inventory",
     icon: "Truck",
     group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/receive",
+    hrefTemplate: "/br/{branchId}/stock/transfer?queue=receive",
     label: "Nhận hàng",
   },
   {

@@ -30,6 +30,9 @@ function resolvePillConfig({
     if (status === "closed") {
       return { label: SELF_ORDER_VI.statusClosed, variant: "secondary" };
     }
+    if (status === "revoked") {
+      return { label: SELF_ORDER_VI.statusRejected, variant: "destructive" };
+    }
     return null;
   }
 

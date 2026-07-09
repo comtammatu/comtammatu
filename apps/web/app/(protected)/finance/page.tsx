@@ -1,14 +1,27 @@
 import Link from "next/link";
 import {
+  ArrowRight as IconArrowRight,
   Boxes as IconBoxes,
   ReceiptText as IconReceiptText,
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
 } from "lucide-react";
-import { getInventoryValueVisibility, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { formatVND } from "@comtammatu/shared/format";
+import {
+  getInventoryValueVisibility,
+  PERMISSION_KEYS,
+} from "@comtammatu/shared/auth";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
 import { getVNDateString } from "@comtammatu/shared/time";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   AppEmptyState,
@@ -30,6 +43,7 @@ import {
 import {
   fetchFinanceCockpit,
   type FinanceCockpitData,
+  type FinanceException,
 } from "./_lib/finance-cockpit";
 import { fetchCashSummary } from "./_lib/cash-cockpit";
 import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types";
@@ -38,16 +52,11 @@ import { CashPanel } from "./components/cash-panel";
 const financeCopy = messages.finance;
 const powerLiteCopy = financeCopy.powerLite;
 const HKD_RANGES: readonly FinanceRange[] = ["today", "yesterday", "7d", "mtd"];
-
-function formatCount(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(value);
-}
+const FINANCE_INVOICE_QUEUE_HREF = "/finance/invoices";
 
 function formatPercent(value: number): string {
   if (!Number.isFinite(value)) return "0%";
-  return `${new Intl.NumberFormat("vi-VN", {
-    maximumFractionDigits: 1,
-  }).format(value)}%`;
+  return `${value.toFixed(1)}%`;
 }
 
 function HddtComplianceBand({
@@ -106,6 +115,67 @@ function HddtComplianceBand({
   );
 }
 
+function FinanceAttentionSection({
+  exceptions,
+}: {
+  exceptions: FinanceException[];
+}) {
+  const actionable = exceptions.filter(
+    (item): item is FinanceException & { href: string } =>
+      item.tone !== "neutral" &&
+      item.href != null &&
+      item.href !== FINANCE_INVOICE_QUEUE_HREF,
+  );
+  const needsWork = actionable.length > 0;
+
+  return (
+    <AppSection
+      size="sm"
+      title={powerLiteCopy.ownerNewsTitle}
+      description={powerLiteCopy.exceptionsDescription}
+    >
+      {needsWork ? (
+        <ItemGroup>
+          {actionable.map((item) => (
+            <Item
+              key={`${item.href}:${item.label}`}
+              asChild
+              variant="outline"
+              size="sm"
+              role="listitem"
+            >
+              <Link href={item.href}>
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="line-clamp-none">
+                    {item.label}
+                  </ItemTitle>
+                  <ItemDescription className="line-clamp-none">
+                    {item.hint}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions className="ml-auto">
+                  <Badge
+                    variant={
+                      item.tone === "destructive" ? "destructive" : "warning"
+                    }
+                  >
+                    {item.value}
+                  </Badge>
+                  <IconArrowRight className="size-4" aria-hidden />
+                </ItemActions>
+              </Link>
+            </Item>
+          ))}
+        </ItemGroup>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          {powerLiteCopy.noOwnerNews}
+        </p>
+      )}
+    </AppSection>
+  );
+}
+
 export default async function FinancePage({
   searchParams,
 }: {
@@ -127,13 +197,16 @@ export default async function FinancePage({
     fetchCashSummary(params, resolved),
     currentUserHasPermissionAny(PERMISSION_KEYS.SETTINGS_TENANT),
   ]);
-  const cashDeltaAfterPaidExpenses =
-    cockpit.kpis.totalCollected - cash.expensesPaidPeriod;
+  const cashDeltaAfterPaidOut =
+    cockpit.kpis.totalCollected - cash.cashOutPaidPeriod;
   const todayBusinessDate = getVNDateString();
 
   return (
     <AppPage width="wide" density="compact">
-      <AppPageHeader title={powerLiteCopy.title} />
+      <AppPageHeader
+        title={powerLiteCopy.title}
+        description={powerLiteCopy.description}
+      />
 
       <FilterBar
         params={params}
@@ -142,22 +215,6 @@ export default async function FinancePage({
         ranges={HKD_RANGES}
         hide={["granularity", "compare", "payment"]}
         compact
-      />
-
-      <CashPanel
-        cashOnHand={cash.hasOpening ? cash.cashOnHand : null}
-        openingBalance={cash.openingBalance}
-        openingDate={cash.openingDate}
-        cashInSince={cash.cashInSince}
-        cashOutSince={cash.cashOutSince}
-        hasBankOpening={cash.hasBankOpening}
-        bankOnHand={cash.bankOnHand}
-        bankOpeningBalance={cash.bankOpeningBalance}
-        bankInSince={cash.bankInSince}
-        bankOutSince={cash.bankOutSince}
-        cashDeltaAfterPaidExpenses={cashDeltaAfterPaidExpenses}
-        todayBusinessDate={todayBusinessDate}
-        canManageCashOpening={canManageCashOpening}
       />
 
       <KpiRow density="compact" className="xl:grid-cols-4">
@@ -187,9 +244,7 @@ export default async function FinancePage({
           label={financeCopy.basic.kpis.inventoryValue}
           value={formatVND(cockpit.kpis.inventoryValue)}
           hint={financeCopy.basic.kpis.inventoryValueHint}
-          href={
-            canViewInventoryValue ? "/finance/inventory-value" : undefined
-          }
+          href={canViewInventoryValue ? "/finance/inventory-value" : undefined}
         />
 
         <KpiCard
@@ -206,7 +261,7 @@ export default async function FinancePage({
           value={
             cockpit.kpis.costAvailable
               ? formatVND(cockpit.kpis.grossProfit)
-              : financeCopy.common.noValue
+              : financeCopy.basic.kpis.grossProfitNeedsReview
           }
           hint={
             cockpit.kpis.costAvailable
@@ -214,18 +269,21 @@ export default async function FinancePage({
                   formatVND(cockpit.kpis.ingredientCost),
                   formatPercent(cockpit.kpis.grossMargin),
                 )
-              : powerLiteCopy.exceptions.missingCostHint
+              : financeCopy.basic.kpis.grossProfitCoverageHint(
+                  formatCount(cockpit.kpis.costCoverageOrderCount),
+                  formatCount(cockpit.kpis.orderCount),
+                )
           }
           tone={
-            cockpit.kpis.costAvailable
-              ? cockpit.kpis.grossProfit >= 0
+            !cockpit.kpis.costAvailable
+              ? "warning"
+              : cockpit.kpis.grossProfit >= 0
                 ? "success"
                 : "warning"
-              : undefined
           }
           href="/finance/food-cost"
           delta={
-            cockpit.kpis.costAvailable && cockpit.compareKpis
+            cockpit.kpis.costAvailable && cockpit.compareKpis?.costAvailable
               ? buildCompareDelta(
                   cockpit.kpis.grossProfit,
                   cockpit.compareKpis.grossProfit,
@@ -235,6 +293,24 @@ export default async function FinancePage({
           }
         />
       </KpiRow>
+
+      <FinanceAttentionSection exceptions={cockpit.exceptions} />
+
+      <CashPanel
+        cashOnHand={cash.hasOpening ? cash.cashOnHand : null}
+        openingBalance={cash.openingBalance}
+        openingDate={cash.openingDate}
+        cashInSince={cash.cashInSince}
+        cashOutSince={cash.cashOutSince}
+        hasBankOpening={cash.hasBankOpening}
+        bankOnHand={cash.bankOnHand}
+        bankOpeningBalance={cash.bankOpeningBalance}
+        bankInSince={cash.bankInSince}
+        bankOutSince={cash.bankOutSince}
+        cashDeltaAfterPaidOut={cashDeltaAfterPaidOut}
+        todayBusinessDate={todayBusinessDate}
+        canManageCashOpening={canManageCashOpening}
+      />
 
       <HddtComplianceBand summary={cockpit.dashboardSummary} />
     </AppPage>

@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { ORDERS_VI } from "@comtammatu/shared/messages";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission, probePermission } from "@/_lib/auth";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
@@ -204,7 +205,7 @@ export async function fetchRefunds(
   const { data, error } = await query;
 
   if (error) {
-    return { success: false, error: "Không thể tải danh sách hoàn tiền" };
+    return { success: false, error: ORDERS_VI.loadRefundsFailed };
   }
 
   const rows = data ?? [];

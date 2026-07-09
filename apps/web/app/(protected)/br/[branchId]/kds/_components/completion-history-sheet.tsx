@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
+import { KDS_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -39,9 +40,6 @@ const KDS_COMPLETION_HISTORY_COPY = {
   description: "Các phiếu bếp đã bấm xong hôm nay.",
   sourceTitle: "Đã hoàn thành",
   reload: "Tải lại",
-  loading: "Đang tải lịch sử hoàn thành...",
-  empty: "Chưa có phiếu bếp nào hoàn thành hôm nay.",
-  loadError: "Không thể tải lịch sử hoàn thành.",
   done: "Đã xong",
   itemUnit: "món",
   portionUnit: "phần",
@@ -106,7 +104,7 @@ export function KdsCompletionHistorySheet({
         return;
       }
       setHistory([]);
-      setError(result.error ?? KDS_COMPLETION_HISTORY_COPY.loadError);
+      setError(result.error ?? KDS_VI.completionHistoryLoadFailed);
     });
   }, [branchId]);
 
@@ -170,7 +168,7 @@ export function KdsCompletionHistorySheet({
               >
                 <Spinner data-icon="inline-start" />
                 <ItemContent className="flex-none">
-                  {KDS_COMPLETION_HISTORY_COPY.loading}
+                  {KDS_VI.completionHistoryLoading}
                 </ItemContent>
               </Item>
             )}
@@ -184,7 +182,7 @@ export function KdsCompletionHistorySheet({
             {!isPending && !error && history !== null && history.length === 0 && (
               <AppEmptyState
                 compact
-                title={KDS_COMPLETION_HISTORY_COPY.empty}
+                title={KDS_VI.completionHistoryEmpty}
               />
             )}
 

@@ -19,7 +19,7 @@ import {
   getDefaultIssueUnit,
   type IssueUnitOption,
 } from "../_lib/issue-units";
-import type { StockIngredient } from "./stock-client";
+import type { StockIngredient } from "@lib/inventory/stock-on-hand-model";
 
 function createQuickTransferSchema(
   maxBaseQuantity: number,
@@ -50,7 +50,9 @@ function createQuickTransferSchema(
     );
 }
 
-type QuickTransferFormValues = z.infer<ReturnType<typeof createQuickTransferSchema>>;
+type QuickTransferFormValues = z.infer<
+  ReturnType<typeof createQuickTransferSchema>
+>;
 
 export function QuickInternalTransferDialog({
   branchId,
@@ -58,14 +60,8 @@ export function QuickInternalTransferDialog({
   target,
   onOpenChange,
 }: QuickInternalTransferDialogProps) {
-  const issueUnitOptions = useMemo(
-    () => getIssueUnitOptions(target),
-    [target],
-  );
-  const defaultIssueUnit = useMemo(
-    () => getDefaultIssueUnit(target),
-    [target],
-  );
+  const issueUnitOptions = useMemo(() => getIssueUnitOptions(target), [target]);
+  const defaultIssueUnit = useMemo(() => getDefaultIssueUnit(target), [target]);
   const schema = useMemo(
     () => createQuickTransferSchema(target.qty, issueUnitOptions),
     [issueUnitOptions, target.qty],

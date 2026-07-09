@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
@@ -17,6 +17,7 @@ interface AntiSplitRollingMeterProps {
   pendingDelta?: number;
   ingredientName?: string;
   className?: string;
+  onStatusChange?: (status: IngredientRollingStatus | null) => void;
 }
 
 /**
@@ -35,22 +36,38 @@ export function AntiSplitRollingMeter({
   pendingDelta,
   ingredientName,
   className,
+  onStatusChange,
 }: AntiSplitRollingMeterProps) {
   const [status, setStatus] = useState<IngredientRollingStatus | null>(null);
   const [loading, setLoading] = useState(false);
+  const onStatusChangeRef = useRef(onStatusChange);
+
+  useEffect(() => {
+    onStatusChangeRef.current = onStatusChange;
+  }, [onStatusChange]);
 
   useEffect(() => {
     if (ingredientId === null) {
       setStatus(null);
+      onStatusChangeRef.current?.(null);
       return;
     }
     let cancelled = false;
     setLoading(true);
-    void getIngredientRollingWaste(branchId, ingredientId).then((res) => {
-      if (cancelled) return;
-      setLoading(false);
-      if (res.success && res.data) setStatus(res.data);
-    });
+    void getIngredientRollingWaste(branchId, ingredientId)
+      .then((res) => {
+        if (cancelled) return;
+        setLoading(false);
+        const nextStatus = res.success && res.data ? res.data : null;
+        setStatus(nextStatus);
+        onStatusChangeRef.current?.(nextStatus);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoading(false);
+        setStatus(null);
+        onStatusChangeRef.current?.(null);
+      });
     return () => {
       cancelled = true;
     };

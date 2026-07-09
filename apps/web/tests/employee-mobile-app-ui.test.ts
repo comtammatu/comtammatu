@@ -23,7 +23,7 @@ test("retired employee app no longer exists as an App Router surface", () => {
   }
 });
 
-test("root PWA manifest opens Operator Hub, not the retired employee app", () => {
+test("root PWA manifest opens the operator entry, not the retired employee app", () => {
   const manifest = JSON.parse(read("apps/web/public/manifest.webmanifest")) as {
     id?: unknown;
     name?: unknown;
@@ -33,18 +33,18 @@ test("root PWA manifest opens Operator Hub, not the retired employee app", () =>
     shortcuts?: Array<{ url?: unknown }>;
   };
 
-  assert.equal(manifest.id, "/br");
-  assert.equal(manifest.name, "Cơm Tấm Má Tư - Hub");
-  assert.equal(manifest.short_name, "Má Tư Hub");
-  assert.equal(manifest.start_url, "/br");
+  assert.equal(manifest.id, "/");
+  assert.equal(manifest.name, "Cơm Tấm Má Tư - Cổng vận hành");
+  assert.equal(manifest.short_name, "Cổng Má Tư");
+  assert.equal(manifest.start_url, "/");
   assert.equal(manifest.scope, "/");
   assert.deepEqual(
     manifest.shortcuts?.map((shortcut) => shortcut.url),
-    ["/br", "/br", "/br", "/br"],
+    ["/", "/", "/", "/"],
   );
 });
 
-test("Operator Hub owns the mobile shell and keeps bottom nav outside scroll content", () => {
+test("operator entry owns the mobile shell and keeps bottom nav outside scroll content", () => {
   const layout = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
   );

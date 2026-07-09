@@ -30,7 +30,7 @@ function RadioGroupItem({
       data-slot="radio-group-item"
       data-size={size}
       className={cn(
-        "group/radio-group-item peer relative flex aspect-square shrink-0 rounded-full border border-input outline-none data-[size=default]:size-4 data-[size=touch]:size-5 after:absolute data-[size=default]:after:-inset-x-3 data-[size=default]:after:-inset-y-2 data-[size=touch]:after:-inset-3 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 aria-invalid:aria-checked:border-primary dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground dark:data-checked:bg-primary",
+        "group/radio-group-item peer relative flex aspect-square shrink-0 rounded-full border border-input outline-none data-[size=default]:size-4 data-[size=touch]:size-5 after:absolute data-[size=default]:after:-inset-x-3 data-[size=default]:after:-inset-y-2 data-[size=touch]:after:-inset-3 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 aria-invalid:aria-checked:border-primary dark:bg-input/30 dark:aria-invalid:border-destructive/20 dark:aria-invalid:ring-destructive/20 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground dark:data-checked:bg-primary",
         className,
       )}
       {...props}

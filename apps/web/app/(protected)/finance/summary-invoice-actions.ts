@@ -27,6 +27,7 @@ import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import { getVNDateStringDaysAgo } from "@comtammatu/shared/time";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { executeSummaryRun } from "@lib/hddt-daily-summary";
+import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 
@@ -35,6 +36,7 @@ const READ_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
 ];
+const financeActionErrors = messages.finance.actionErrors;
 
 const runSchema = z.object({
   branchId: z.coerce.number().int().positive(),
@@ -180,7 +182,7 @@ export async function listSummaryRunQueue(
 
   const { data, error } = await query;
   if (error) {
-    return { success: false, error: "Không thể tải hàng đợi." };
+    return { success: false, error: financeActionErrors.loadSummaryQueueFailed };
   }
 
   return { success: true, data: data ?? [] };

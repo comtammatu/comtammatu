@@ -56,6 +56,7 @@ interface StationsClientProps {
   branches: BranchOption[];
   stations: StationRow[];
   categories: CategoryOption[];
+  embedded?: boolean;
 }
 
 /* ─── Component ─── */
@@ -64,6 +65,7 @@ export function StationsClient({
   branches,
   stations,
   categories,
+  embedded = false,
 }: StationsClientProps) {
   const firstBranch = branches[0];
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
@@ -165,6 +167,7 @@ export function StationsClient({
   return (
     <>
       <AppToolbar
+        variant={embedded ? "inline" : "card"}
         filters={
           canSwitchBranch ? (
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">

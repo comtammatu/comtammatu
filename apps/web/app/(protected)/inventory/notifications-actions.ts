@@ -8,6 +8,7 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
+import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "./_lib/auth";
 
 const ROLES = SUPPLIER_RETURN_ROLES;
@@ -30,7 +31,12 @@ export async function fetchQcSettingsForForm(): Promise<ActionResult> {
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
 
-  if (error) return { success: false, error: "Không thể tải cấu hình QC." };
+  if (error) {
+    return {
+      success: false,
+      error: messages.inventory.settings.qc.loadFailed,
+    };
+  }
   return {
     success: true,
     data: data ?? {

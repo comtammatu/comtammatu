@@ -304,9 +304,7 @@ function CartPaneComponent({
             >
               <IconToolsKitchen data-icon="inline-start" />
               {messages.pos.desktop.dineIn}
-              <Kbd className="hidden [@media(hover:hover)]:inline-flex">
-                D
-              </Kbd>
+              <Kbd className="hidden [@media(hover:hover)]:inline-flex">D</Kbd>
             </ToggleGroupItem>
             <ToggleGroupItem
               value="takeaway"
@@ -316,9 +314,7 @@ function CartPaneComponent({
             >
               <IconPackage data-icon="inline-start" />
               {messages.pos.desktop.takeaway}
-              <Kbd className="hidden [@media(hover:hover)]:inline-flex">
-                T
-              </Kbd>
+              <Kbd className="hidden [@media(hover:hover)]:inline-flex">T</Kbd>
             </ToggleGroupItem>
           </ToggleGroup>
         )}
@@ -380,7 +376,7 @@ function CartPaneComponent({
                     <Item
                       variant="outline"
                       className={cn(
-                        "relative touch-pan-y rounded-none bg-card p-0 text-left transition-all duration-150 ease-out hover:shadow-sm",
+                        "relative touch-pan-y rounded-none bg-card p-0 text-left transition-[background-color,opacity,transform] duration-150 ease-out hover:shadow-sm",
                         isRemoving &&
                           "bg-destructive/10 opacity-0 motion-safe:scale-95",
                       )}
@@ -388,8 +384,9 @@ function CartPaneComponent({
                       <Button
                         type="button"
                         variant="ghost"
+                        size="touch"
                         className={cn(
-                          "h-auto min-h-24 w-full justify-start py-2 pl-2 text-left whitespace-normal hover:bg-card sm:pl-3",
+                          "w-full justify-start py-2 pl-2 text-left whitespace-normal hover:bg-card sm:pl-3",
                           itemPaddingClass,
                         )}
                         disabled={isRemoving}

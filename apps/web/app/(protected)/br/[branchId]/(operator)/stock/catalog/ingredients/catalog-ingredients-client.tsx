@@ -39,7 +39,7 @@ import type {
   IngredientRow,
   UnitOption,
 } from "@/(protected)/inventory/_lib/types";
-import { CatalogBackHeader } from "../catalog-back-header";
+import { CatalogBackControl } from "../catalog-back-header";
 
 const copy = messages.catalog.ingredients;
 
@@ -120,7 +120,7 @@ export function CatalogIngredientsClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <CatalogBackHeader title={copy.title} backHref={backHref} />
+      <CatalogBackControl title={copy.title} backHref={backHref} />
 
       <InputGroup className="h-11">
         <InputGroupAddon>

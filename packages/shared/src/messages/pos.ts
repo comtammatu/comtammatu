@@ -65,6 +65,9 @@ export const POS_VI = {
   options: "Tuỳ chọn",
   sides: "Ăn kèm",
   buyerNoInvoice: "Khách không lấy hóa đơn (vẫn xuất HĐĐT)",
+  hddtTitle: "HĐĐT",
+  hddtDescription:
+    "Hệ thống phát hành HĐĐT sau khi thu tiền. Chỉ nhập thông tin người mua khi khách cần ghi MST.",
   buyerNameLabel: "Tên người mua / công ty",
   buyerNamePlaceholder: "Tên khách / công ty",
   taxCodeLabel: "Mã số thuế",
@@ -114,6 +117,13 @@ export const POS_VI = {
   notePrefix: "Ghi chú: ",
   statusPrefix: "Trạng thái: ",
   itemDiscountLabel: "Chiết khấu món",
+  discountReduceLabel: "Giảm",
+  discountTitle: "Chiết khấu",
+  reasonPrefix: "Lý do: ",
+  discountNoteHint: (trimLen: number) =>
+    `Tối thiểu 3 ký tự. (${trimLen}/3) — dùng cho cả "Áp dụng" và "Bỏ chiết khấu" (lưu vào nhật ký kiểm toán).`,
+  serviceChargeNoteHint: (trimLen: number) =>
+    `Tối thiểu 3 ký tự. (${trimLen}/3)`,
 } as const;
 
 export type PosKey = keyof typeof POS_VI;

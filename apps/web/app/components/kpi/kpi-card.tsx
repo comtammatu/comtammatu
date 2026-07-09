@@ -68,7 +68,7 @@ export function KpiCard({
       className={cn(
         "relative flex h-full flex-col",
         isCompact ? "min-h-24 gap-2" : "min-h-32 gap-3",
-        href ? "transition-colors hover:bg-muted/40" : undefined,
+        href ? "transition-colors hover:bg-muted/50" : undefined,
       )}
     >
       <div

@@ -31,6 +31,9 @@ function literalWith(pattern: string, flags = "i"): RegExp {
 
 test("finance basic landing only promotes direct-contract KPI cards", () => {
   const page = read(FINANCE_PAGE);
+  const pageBody = page.slice(
+    page.indexOf("export default async function FinancePage"),
+  );
   const cashPanel = read(FINANCE_CASH_PANEL);
   const copy = read(FINANCE_COPY);
 
@@ -43,9 +46,35 @@ test("finance basic landing only promotes direct-contract KPI cards", () => {
   assert.doesNotMatch(page, /cockpit\.kpis\.netProfit/);
   assert.doesNotMatch(page, /IconPiggyBank/);
   assert.doesNotMatch(page, /xl:grid-cols-5/);
-  assert.match(page, /cashDeltaAfterPaidExpenses/);
-  assert.match(cashPanel, /cashDeltaAfterPaidExpenses/);
+  assert.match(page, /cashDeltaAfterPaidOut/);
+  assert.match(cashPanel, /cashDeltaAfterPaidOut/);
   assert.doesNotMatch(cashPanel, /\bnetProfit\b/);
+  assert.match(
+    page,
+    /title=\{powerLiteCopy\.title\}[\s\S]{0,120}?description=\{powerLiteCopy\.description\}/,
+  );
+  assert.match(
+    page,
+    /<FinanceAttentionSection exceptions=\{cockpit\.exceptions\}/,
+  );
+  assert.match(page, /item\.tone !== "neutral"/);
+  assert.match(page, /item\.href !== FINANCE_INVOICE_QUEUE_HREF/);
+  assert.ok(
+    pageBody.indexOf("<KpiRow") < pageBody.indexOf("<FinanceAttentionSection"),
+    "Finance Basic KPIs must appear before the exception queue",
+  );
+  assert.ok(
+    pageBody.indexOf("<FinanceAttentionSection") <
+      pageBody.indexOf("<CashPanel"),
+    "the exception queue must appear before supporting cash detail",
+  );
+  assert.ok(
+    pageBody.indexOf("<CashPanel") < pageBody.indexOf("<HddtComplianceBand"),
+    "HĐĐT detail must remain a supporting section after cash detail",
+  );
+  assert.match(copy, /title: "Sức khỏe tài chính"/);
+  assert.match(copy, /doanh thu ròng \$\{beforeVat\}/);
+  assert.match(copy, /cashDeltaTitle: "Dòng tiền trong kỳ"/);
   assert.doesNotMatch(copy, /netProfit:/);
   assert.doesNotMatch(copy, /netProfitHint/);
 });
@@ -87,10 +116,10 @@ test("finance and admin copy keep domain vocabulary explicit", () => {
   }
 
   assert.match(copy, /Tiền đã thu/);
-  assert.match(copy, /Doanh thu ròng trước VAT/);
+  assert.match(copy, /Doanh thu ròng/);
   assert.match(copy, /Lãi gộp/);
   assert.match(copy, /Giá vốn món/);
-  assert.match(copy, /Dòng tiền sau chi đã trả/);
+  assert.match(copy, /Dòng tiền trong kỳ/);
 });
 
 test("inventory copy uses Vietnamese operational labels on active surfaces", () => {

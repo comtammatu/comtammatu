@@ -27,14 +27,11 @@ import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import { PosTableGate } from "./pos-table-gate";
 import { PosTakeawayGate } from "./pos-takeaway-gate";
 import { ItemCustomizer } from "./item-customizer";
-import { PosSessionHeader } from "./pos-session-header";
+import { PosSessionTopBar } from "./pos-session-header";
 import { MenuPane } from "./_components/menu-pane";
 import { PosMobileActionBar } from "./_components/pos-mobile-action-bar";
 import type { SubmitOrderOptions } from "./_components/cart-pane";
-import {
-  SplitSidebar,
-  TabbedSidebar,
-} from "./_components/pos-sidebar-variants";
+import { SplitSidebar } from "./_components/pos-sidebar-variants";
 import { PosSidebarContent } from "./pos-sidebar-panel";
 import { formatOrderTargetLabel } from "./_utils/order-display";
 import {
@@ -109,7 +106,6 @@ import {
 } from "./_hooks/use-add-to-cart-gate";
 import { useBillSurface } from "./_hooks/use-bill-surface";
 import { useOrderDetailSurface } from "./_hooks/use-order-detail-surface";
-import { useIsLargeUp } from "./_hooks/use-is-large-up";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
@@ -335,8 +331,7 @@ export function PosDesktopInner({
   const [allowOccupiedTableId, setAllowOccupiedTableId] = useState<
     number | null
   >(null);
-  const isMobile = useIsMobile();
-  const lgUp = useIsLargeUp();
+  const isTouchLayout = useIsMobile(1280);
 
   const menuItemById = useMemo(() => {
     const map = new Map<number, MenuItem>();
@@ -1358,7 +1353,7 @@ export function PosDesktopInner({
     setActiveTable(null);
   }, [setActiveTable]);
 
-  // Memo so memo'd children (TabbedSidebar / SplitSidebar / PosSidebarContent)
+  // Memo so memo'd children (SplitSidebar / PosSidebarContent)
   // see the same props identity across realtime ticks; without this, the
   // surrounding `usePosOrders` / cart subscriptions trigger a fresh object
   // every render → all sidebars re-render even when nothing they read changed.
@@ -1468,7 +1463,9 @@ export function PosDesktopInner({
 
   const orderTargetLabel = currentOrderTarget?.label ?? null;
   const orderTargetRow =
-    menuContextReady && orderTargetLabel != null && currentOrderTarget != null ? (
+    menuContextReady &&
+    orderTargetLabel != null &&
+    currentOrderTarget != null ? (
       <PosOrderTargetRow
         target={currentOrderTarget}
         appendDraftQuantity={appendDraftQuantity}
@@ -1481,7 +1478,7 @@ export function PosDesktopInner({
     ? (orderTargetLabel ?? undefined)
     : undefined;
 
-  const mobileSidebarDrawer = isMobile ? (
+  const mobileSidebarDrawer = isTouchLayout ? (
     <Drawer
       open={cartDrawerOpen}
       onOpenChange={setCartDrawerOpen}
@@ -1510,39 +1507,21 @@ export function PosDesktopInner({
     </Drawer>
   ) : null;
 
-  // Mobile uses `mobileSidebarDrawer` exclusively; on larger screens render
-  // exactly one of TabbedSidebar (md–lg) / SplitSidebar (lg+). JS-gating (not
-  // CSS hide) keeps the unused variant unmounted so its OrderListPane/CartPane
-  // don't re-render on every realtime tick. The lg gate must match the
-  // sidebar-variants Tailwind breakpoints. Both hooks return false during
-  // SSR/first paint, so first paint is the TabbedSidebar tree; the client
-  // corrects to SplitSidebar in one commit on lg+.
-  const sidebars = isMobile ? null : (
-    <>
-      {!lgUp ? (
-        <TabbedSidebar
-          canCloseShift={canCloseShift}
-          onShowCloseSession={openCloseSession}
-          isContextGate={!menuContextReady}
-          showOrders={showOrders}
-          onShowOrdersChange={setShowOrders}
-          sidebarContentProps={sidebarContentProps}
-        />
-      ) : (
-        <SplitSidebar
-          canCloseShift={canCloseShift}
-          onShowCloseSession={openCloseSession}
-          isContextGate={!menuContextReady}
-          sidebarContentProps={sidebarContentProps}
-        />
-      )}
-    </>
+  // POS stays touch-first through tablet widths. The desktop split pane starts
+  // at xl so tablet portrait/landscape keeps the drawer + sticky CTA workflow.
+  const sidebars = isTouchLayout ? null : (
+    <SplitSidebar
+      canCloseShift={canCloseShift}
+      onShowCloseSession={openCloseSession}
+      isContextGate={!menuContextReady}
+      sidebarContentProps={sidebarContentProps}
+    />
   );
 
   return (
     <>
-      <div className="md:hidden">
-        <PosSessionHeader
+      <div className="xl:hidden">
+        <PosSessionTopBar
           canCloseShift={canCloseShift}
           onShowCloseSession={openCloseSession}
           contextLabel={mobileHeaderContextLabel}
@@ -1596,7 +1575,7 @@ export function PosDesktopInner({
       )}
 
       <PosMobileActionBar
-        isMobile={isMobile}
+        isTouchLayout={isTouchLayout}
         isAppendingToOrder={isAppendingToOrder}
         menuContextReady={menuContextReady}
         cartQuantity={cartQuantity}

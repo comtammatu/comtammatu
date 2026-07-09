@@ -1,6 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import { EmployeePage } from "@lib/staff-runtime/components/staff-runtime-page";
+import {
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
@@ -51,22 +54,29 @@ export default async function BranchPosSettingsPage({
     ]);
 
   if (branchRes.error || !branchRes.data) notFound();
-  if (terminalsRes.error) throw new Error("Không thể tải máy POS");
+  if (terminalsRes.error)
+    throw new Error(messages.settings.branch.posTerminalsLoadFailed);
 
   return (
-    <EmployeePage
+    <BranchOperatorPage
       title={messages.settings.pages.posTitle}
-      description={branchRes.data.name}
+      description={`${branchRes.data.name} · ${messages.settings.branch.posSetupDescription}`}
     >
-      <TerminalsClient
-        branches={[branchRes.data] as BranchOption[]}
-        terminals={(terminalsRes.data ?? []) as TerminalRow[]}
-      />
-      <StockControlCard
-        branchId={branchId}
-        initialPostingEnabled={stockOutcomePostingEnabled}
-        canToggle={claims.user_role === "owner"}
-      />
-    </EmployeePage>
+      <BranchOperatorPanel>
+        <TerminalsClient
+          branches={[branchRes.data] as BranchOption[]}
+          terminals={(terminalsRes.data ?? []) as TerminalRow[]}
+          embedded
+        />
+      </BranchOperatorPanel>
+      <BranchOperatorPanel title={messages.settings.pos.stockControlTitle}>
+        <StockControlCard
+          branchId={branchId}
+          initialPostingEnabled={stockOutcomePostingEnabled}
+          canToggle={claims.user_role === "owner"}
+          embedded
+        />
+      </BranchOperatorPanel>
+    </BranchOperatorPage>
   );
 }

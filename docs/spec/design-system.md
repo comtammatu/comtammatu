@@ -41,6 +41,11 @@ class-variance-authority are implementation dependencies, not design-system
 authorities. External scaffold output is not part of the runtime contract and
 must never be used to overrule this file.
 
+shadcn-ui and Web Interface Guidelines are advisory checklists only. They can
+surface missing accessibility, interaction, or component-selection signals, but
+they cannot create a second preset, scaffold config, token source, or primitive
+authority for this repo.
+
 Custom Theme means the locked Ma Tu Concept 01 semantic tokens, typography,
 spacing rhythm, component roles, brand primitives, and app surface adapters
 documented here. It does not mean a route-local theme layer, a new component
@@ -165,11 +170,11 @@ Brand Concept 01 runtime mapping:
 
 Status-token tints use a locked three-step opacity scale so a "10% surface tint" reads the same everywhere instead of drifting across `/8`, `/12`, `/25`, `/35` …:
 
-| Step             | Opacity | Role                                           |
-| ---------------- | ------- | ---------------------------------------------- |
-| `fill`           | `/10`   | Default status-surface tint (`bg-warning/10`)  |
-| `fill-strong`    | `/15`   | Callout / emphasis surface (`bg-warning/15`)   |
-| `hairline-border`| `/20`   | Hairline border/ring on a tint (`border-…/20`) |
+| Step              | Opacity | Role                                           |
+| ----------------- | ------- | ---------------------------------------------- |
+| `fill`            | `/10`   | Default status-surface tint (`bg-warning/10`)  |
+| `fill-strong`     | `/15`   | Callout / emphasis surface (`bg-warning/15`)   |
+| `hairline-border` | `/20`   | Hairline border/ring on a tint (`border-…/20`) |
 
 - Applies to `(bg|border|ring|text|fill|stroke)-(warning|success|destructive|info|primary|accent|secondary)`.
 - Neutral muted fills are limited to `/30` and `/50` ONLY (`bg-muted/30`, `bg-muted/50`).
@@ -198,11 +203,11 @@ Runtime typography source:
 
 Required utility mapping:
 
-| Purpose           | Utility / variable                | Font       |
-| ----------------- | --------------------------------- | ---------- |
-| body/content text | `font-sans` / `--font-sans`       | Geist      |
+| Purpose           | Utility / variable                | Font           |
+| ----------------- | --------------------------------- | -------------- |
+| body/content text | `font-sans` / `--font-sans`       | Geist          |
 | headings/titles   | `font-heading` / `--font-heading` | Be Vietnam Pro |
-| operational data  | `font-mono` / `--font-mono`       | Geist Mono |
+| operational data  | `font-mono` / `--font-mono`       | Geist Mono     |
 
 Rules:
 
@@ -263,22 +268,22 @@ Vertical rhythm uses flex gap, not `space-y-*`. Section / page / dialog / client
 
 ### B. Heading Scale (locked per role)
 
-| Role                    | Class                                                                   | Source                                                                 |
-| ----------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Page H1                 | `font-heading text-xl sm:text-2xl font-semibold tracking-tight`         | `AppPageHeader`                                                        |
-| Section title           | `font-heading text-base font-semibold`                                  | `CardTitle`                                                            |
-| Sub-section / list head | `font-heading text-sm font-semibold`                                    | `Item title` slot                                                      |
-| Eyebrow / metadata      | `text-xs font-medium uppercase tracking-wide`                           | `AppPageHeader.eyebrow` (page-header lockup only)                      |
-| Panel / field / section uppercase label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome: `text-2xs font-medium uppercase tracking-wider`) | `SectionLabel` (default + `density="dense"`); page-header eyebrow stays on `AppPageHeader.eyebrow`                 |
-| Table column header     | `text-xs font-medium uppercase tracking-wider text-muted-foreground`    | `TableHead`                                                            |
-| Dense eyebrow           | `text-2xs font-medium uppercase tracking-wider`                         | KDS chrome, audit row meta, mobile chrome labels                       |
-| KDS kitchen item-name   | `text-base font-semibold leading-6 xl:text-lg xl:leading-6`             | KDS ticket item-name (wall boards scale up at `xl`)                    |
-| Numeric input echo      | `text-3xl font-semibold tabular-nums`                                   | Number pad readout, scale display                                      |
-| Runner board header     | `text-runner-header font-semibold`                                      | Runner/KDS order board column headers, height-responsive display token |
-| Runner board row text   | `text-runner-board font-semibold`                                       | Runner/KDS order board data cells, height-responsive display token     |
-| Runner empty secondary  | `text-runner-empty-secondary font-semibold`                             | Runner/KDS empty-state secondary line, height-responsive display token |
-| Runner board footer     | `text-runner-footer font-semibold`                                      | Runner/KDS order board footer, height-responsive display token         |
-| Display call target     | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing runner / queue display only                            |
+| Role                                    | Class                                                                                                                                   | Source                                                                                             |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Page H1                                 | `font-heading text-xl sm:text-2xl font-semibold tracking-tight`                                                                         | `AppPageHeader`                                                                                    |
+| Section title                           | `font-heading text-base font-semibold`                                                                                                  | `CardTitle`                                                                                        |
+| Sub-section / list head                 | `font-heading text-sm font-semibold`                                                                                                    | `Item title` slot                                                                                  |
+| Eyebrow / metadata                      | `text-xs font-medium uppercase tracking-wide`                                                                                           | `AppPageHeader.eyebrow` (page-header lockup only)                                                  |
+| Panel / field / section uppercase label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome: `text-2xs font-medium uppercase tracking-wider`) | `SectionLabel` (default + `density="dense"`); page-header eyebrow stays on `AppPageHeader.eyebrow` |
+| Table column header                     | `text-xs font-medium uppercase tracking-wider text-muted-foreground`                                                                    | `TableHead`                                                                                        |
+| Dense eyebrow                           | `text-2xs font-medium uppercase tracking-wider`                                                                                         | KDS chrome, audit row meta, mobile chrome labels                                                   |
+| KDS kitchen item-name                   | `text-base font-semibold leading-6 xl:text-lg xl:leading-6`                                                                             | KDS ticket item-name (wall boards scale up at `xl`)                                                |
+| Numeric input echo                      | `text-3xl font-semibold tabular-nums`                                                                                                   | Number pad readout, scale display                                                                  |
+| Runner board header                     | `text-runner-header font-semibold`                                                                                                      | Runner/KDS order board column headers, height-responsive display token                             |
+| Runner board row text                   | `text-runner-board font-semibold`                                                                                                       | Runner/KDS order board data cells, height-responsive display token                                 |
+| Runner empty secondary                  | `text-runner-empty-secondary font-semibold`                                                                                             | Runner/KDS empty-state secondary line, height-responsive display token                             |
+| Runner board footer                     | `text-runner-footer font-semibold`                                                                                                      | Runner/KDS order board footer, height-responsive display token                                     |
+| Display call target                     | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums`                                                                 | Customer-facing runner / queue display only                                                        |
 
 One role = one size (uppercase labels never scale by viewport). An uppercase eyebrow / panel / field / section label is a single locked role: `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome variant `text-2xs font-medium uppercase tracking-wider`). It is NEVER scaled by viewport — no `sm:text-sm` on eyebrows — and it NEVER uses `text-sm uppercase` / `text-base uppercase`. Every `text-sm uppercase` / `text-base uppercase` label is retired to this role. Enforced by the `uppercase-label-scale` gate (`uppercase` co-occurring with `text-sm` / `text-base`), frozen per file and burning down.
 
@@ -316,6 +321,7 @@ Eyebrow tracking is locked per surface: `tracking-wide` for the single page-head
 | `sm`         | `h-7`                              | Compact toolbars, dialog footers                                                         |
 | `default`    | `h-8`                              | Standard CTA, form submit                                                                |
 | `lg`         | `h-9`                              | Primary CTA, page-header action                                                          |
+| `field`      | `h-10`                             | Composite form trigger only (`form/*` date/combobox/multi-select popover buttons)        |
 | `touch`      | `min-h-12`                         | Mobile touch button (POS, KDS, mobile inventory) — meets WCAG 2.5.5 enhanced target size |
 | `touch-lg`   | `min-h-14`                         | Hero CTA / mobile action bar primary (POS bottom bar, KDS bump)                          |
 | `icon-xs`    | `size-6`                           | Icon-only inline                                                                         |
@@ -329,7 +335,7 @@ Fixed heights `h-10`, `h-11`, `h-12`, `h-14`, `h-16` MUST NOT be applied to `<bu
 
 If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to `Button` cva once. Never fake a button by setting `<button className="min-h-12 ...">` outside the primitive. The `tile` (POS table-gate selectable tile) and `icon-touch` (48px icon-only) `Button` sizes, and the `touch` / `touch-lg` sizes on the `Toggle` / `ToggleGroup` cva (POS segmented service-mode control), were added under this rule — consume them via `size=`, never a raw `h-*` / `min-h-*` on the group or item `className`. The `button-height-on-button` gate (below) enforces this for `<Button>`. The bare form-control primitives `Select` (trigger), `Switch`, `Checkbox`, and `RadioGroupItem` expose a `touch` value on their own cva `size` prop (`min-h-12` trigger / enlarged 20px box + ≥44px hit area), added under this same rule for POS/KDS order-flow controls — consume via `size="touch"`, never a raw `h-*` / `size-*` on the control `className`.
 
-`Input` (the bare primitive) is fixed at `h-7`. Composite form controls rendered through the `apps/web/app/components/form/*` layer use a taller `h-10` so labels, addons, and touch targets sit comfortably — set once in that layer, never per page.
+`Input` (the bare primitive) is fixed at `h-7`. Composite form controls rendered through the `apps/web/app/components/form/*` layer use a taller `h-10` so labels, addons, and touch targets sit comfortably — set once in that layer via `Button size="field"` / `SelectTrigger size="field"`, never per page.
 
 | Control role                                                | Height | Source                                                                                          |
 | ----------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------- |
@@ -387,6 +393,7 @@ Arbitrary `duration-[…]` is NOT allowed in app code.
 
 - Decorative, looping, kinetic, parallax, or scroll-reveal motion on any ERP surface (POS / KDS / Admin / Inventory / Employee).
 - Animating layout/size properties that thrash (`width` / `height` / `top` / `left`); animate `transform` / `opacity` / `box-shadow` / `color` instead.
+- `transition-all` in app or primitive source. Name the transitioned properties explicitly.
 - Any third-party animation library (framer-motion, gsap, react-spring), or the reference's marketing-layer reveal curves (600–820 ms) and kinetic-text keyframes.
 
 ## Elevation / Shadow
@@ -446,28 +453,28 @@ route-scoped adapter that still renders `Card`.
 
 Default primitive mapping:
 
-| Need                  | Use                                                                                                               |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| command/action        | `Button`, `Toggle`, `ToggleGroup`                                                                                 |
-| state label           | `Badge`                                                                                                           |
-| framed repeated item  | `Card`                                                                                                            |
-| disclosure            | `Accordion`                                                                                                       |
-| dense data            | `Table`                                                                                                           |
-| segmented view        | `Tabs`                                                                                                            |
-| form input            | `Input`, `Textarea`, `Select`, `Checkbox`, `RadioGroup`, `Switch`, `Combobox`, `DatePicker`, `Slider`, `TagInput` |
-| dialog flow           | `Dialog`, `AlertDialog`, `Sheet`, `Drawer`                                                                        |
-| empty/no result/error | `Empty` or approved wrappers around `Empty`                                                                       |
-| loading               | `Spinner`, `Skeleton`, `Progress`                                                                                 |
-| list row              | `Item`, `ItemGroup`                                                                                               |
-| search/filter shell   | `InputGroup`, `Combobox` helpers where appropriate                                                                |
-| section/panel/field eyebrow label | `SectionLabel` (`density="default"` / `"dense"`)                                                          |
-| route context         | `Sidebar`, `Breadcrumb`, `Separator`                                                                              |
-| keyboard hint         | `Kbd`, `KbdGroup`                                                                                                 |
-| transient feedback    | `Sonner`                                                                                                          |
-| table navigation      | `Pagination`                                                                                                      |
-| split pane            | `Resizable`                                                                                                       |
-| filter/action row     | `Toolbar`                                                                                                         |
-| metric block          | `Stat` in primitive demos; app metric cards use `KpiCard` only for numeric/stat values                            |
+| Need                              | Use                                                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| command/action                    | `Button`, `Toggle`, `ToggleGroup`                                                                                 |
+| state label                       | `Badge`                                                                                                           |
+| framed repeated item              | `Card`                                                                                                            |
+| disclosure                        | `Accordion`                                                                                                       |
+| dense data                        | `Table`                                                                                                           |
+| segmented view                    | `Tabs`                                                                                                            |
+| form input                        | `Input`, `Textarea`, `Select`, `Checkbox`, `RadioGroup`, `Switch`, `Combobox`, `DatePicker`, `Slider`, `TagInput` |
+| dialog flow                       | `Dialog`, `AlertDialog`, `Sheet`, `Drawer`                                                                        |
+| empty/no result/error             | `Empty` or approved wrappers around `Empty`                                                                       |
+| loading                           | `Spinner`, `Skeleton`, `Progress`                                                                                 |
+| list row                          | `Item`, `ItemGroup`                                                                                               |
+| search/filter shell               | `InputGroup`, `Combobox` helpers where appropriate                                                                |
+| section/panel/field eyebrow label | `SectionLabel` (`density="default"` / `"dense"`)                                                                  |
+| route context                     | `Sidebar`, `Breadcrumb`, `Separator`                                                                              |
+| keyboard hint                     | `Kbd`, `KbdGroup`                                                                                                 |
+| transient feedback                | `Sonner`                                                                                                          |
+| table navigation                  | `Pagination`                                                                                                      |
+| split pane                        | `Resizable`                                                                                                       |
+| filter/action row                 | `Toolbar`                                                                                                         |
+| metric block                      | `Stat` in primitive demos; app metric cards use `KpiCard` only for numeric/stat values                            |
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
 
@@ -481,6 +488,14 @@ twin JSX trees (`md:hidden` card list + `hidden … md:block` table) are frozen
 by the `responsive-double-render` ratchet and migrate to `DataTable` per
 route family. Mobile and desktop MUST expose the same fields, status colors,
 and actions for the same row. Route-local data-table suites are not allowed.
+
+Branch runtime has one explicit presentation-plane exception: a declared
+Branch-native touch `LIST` under `/br/[branchId]/*` may use `Item`/`ItemGroup`
+at every supported phone/tablet width when the corresponding Office route owns
+the dense `DataTable`. The two planes MUST share the server loader, pure model,
+status vocabulary, and mutation authority; Branch MUST NOT maintain separate
+mobile/tablet JSX trees or switch to the Office table at tablet landscape.
+Each exception is named in `docs/spec/page-archetypes.md` § Named Exceptions.
 
 Inline-edit document sheets (PO/transfer/issue lines) use the same adapter:
 `render`/`mobileCardRender` receive `(row, index)` so per-line mutations
@@ -511,6 +526,7 @@ Business-state labels and badge colors are single-sourced:
 - Labels: `packages/shared/src/labels/vi.ts` (`*_STATUS_LABELS_VI`; keys are the DB CHECK vocabulary, never invented states).
 - Variant + rendering: `apps/web/app/components/status-badge.tsx` (`StatusBadge`, `getStatusBadgeMeta`).
 - New page-local `STATUS_*` label/variant maps are forbidden (ratchet `status-label-ssot`); register the domain instead.
+- New page-local `*StatusBadge` components and `*_BADGE_VARIANT` maps are forbidden (ratchet `status-chip-wrapper-baseline`); reuse `StatusBadge`, `getStatusBadgeMeta`, or register the missing domain in `status-badge.tsx`.
 - Unknown values render as the raw key with `outline` — never throw on DB data.
 - Intentional exceptions: `pos/_lib/order-status-display.ts` (cashier 5-label collapse; variants must still match the registry), `kds/lib/status-config.ts` (hot path), `inventory/_lib/dictionary.ts` + `inventory/_lib/ui.ts` (per-entity re-model is a later wave).
 
@@ -537,7 +553,7 @@ Money, quantity, unit-price, tax-rate, ID/code, and timestamp cells render with 
 | ID / code / order / receipt no. | `font-mono tabular-nums` (left-aligned allowed) |
 | Right-aligned non-numeric label | `text-right` (no `tabular-nums`)                |
 
-Money values render through `formatVND` from `@comtammatu/shared/format` (single style `45.000đ`); page-local VND formatters and raw `toLocaleString("vi-VN")` money calls are ratcheted by `vnd-format-ssot`. `font-mono` is mandatory on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` WITHOUT `font-mono` is contract drift — Geist Mono is the locked operational-data face, not Geist sans. These classes go on `TableCell` / `TableHead`, never on a page-specific Table clone; a shared numeric-cell wrapper is allowed only if it renders the shared `Table` primitive and emits exactly this class set. Forbidden: `text-left` money columns, numeric columns missing `tabular-nums`, money/quantity cells missing `font-mono`.
+Money values render through `formatVND` from `@comtammatu/shared/format` (single style `45.000đ`); page-local VND formatters and raw `toLocaleString("vi-VN")` money calls are ratcheted by `vnd-format-ssot`. App-local `Intl.NumberFormat` / `toLocaleString` number formatters are blocked by `app-page-local-number-formatter`; Finance route-local `Intl`/`toLocale*` formatters are also blocked by `finance-page-local-formatter`. Counts use `formatCount`, dates/times use `@comtammatu/shared/time`. `scripts/audit-ui-components.mjs` reports this family as `pageLocalFormatter`, bound to the `formatterGuardBaselines` guard group (`finance-page-local-formatter`, `app-page-local-number-formatter`, `vnd-format-ssot`, `date-format-ssot`) so audit coverage and lint enforcement stay in lockstep. `font-mono` is mandatory on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` WITHOUT `font-mono` is contract drift — Geist Mono is the locked operational-data face, not Geist sans. These classes go on `TableCell` / `TableHead`, never on a page-specific Table clone; a shared numeric-cell wrapper is allowed only if it renders the shared `Table` primitive and emits exactly this class set. Forbidden: `text-left` money columns, numeric columns missing `tabular-nums`, money/quantity cells missing `font-mono`.
 
 Date and time values render through `@comtammatu/shared/time` (`formatVNDate`, `formatVNDateTime`, `formatVNTime`, `getVNDateString`, …), which pin `Asia/Ho_Chi_Minh` so server-rendered receipts and reports never drift to the host zone. Page-local `Intl.DateTimeFormat` / `toLocaleDateString` / `toLocaleTimeString` in app code are ratcheted by `date-format-ssot`. The `packages/ui` calendar/chart primitives are locale-param-driven UI and stay out of scope.
 
@@ -560,20 +576,27 @@ Forbidden wrappers:
 ### High-level primitive import governance
 
 `Card`, `Table`, `Dialog`, and `AlertDialog` are high-level composition
-primitives. Existing direct app imports are a frozen per-file baseline, not a
-license to spread the pattern. New app code must pick the owning adapter first:
+primitives. Route code must pick the owning adapter first. Direct app imports
+are blocked except for the exact registered adapter implementations that own
+the corresponding composition contract:
 
 | Primitive import                         | Default route for new app code                                                                                                               |
 | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@comtammatu/ui/components/card`         | App card role: `AppSection`, `AppLinkCard`, `KpiCard` for metrics only, `InteractiveCard`, `OperationalBoardCard`, or a route-scoped adapter |
 | `@comtammatu/ui/components/table`        | `DataTable`, `TableEmptyStateRow`, or a documented document/line-sheet adapter                                                               |
-| `@comtammatu/ui/components/dialog`       | `FormDialog`, `Sheet`, Page flow, or an approved short contextual dialog                                                                     |
+| `@comtammatu/ui/components/dialog`       | `AppDialog` for short non-form detail/task overlays, `FormDialog` for CRUD forms, `Sheet`, Page flow, or an approved exceptional dialog      |
 | `@comtammatu/ui/components/alert-dialog` | shared `confirm()`, `FormDialog` with reason input, or an approved destructive flow                                                          |
 
 `scripts/check-ui-contract.mjs` enforces this with the
-`raw-*-import-file-baseline` gates. The baseline only shrinks. Expanding a file's
-allowance requires a contract-level reason here or in the relevant module doc;
+`raw-*-import-file-baseline` gates. The remaining allowlist is a closed set of
+named adapter implementation exceptions, not route debt or a pattern that can
+grow. Adding or replacing an implementation requires a contract-level reason
+here or in the relevant module doc plus a matching component-registry update;
 do not add a one-off allowlist entry just to make a route compile.
+`scripts/audit-ui-components.mjs` reports the same family as
+`rawPrimitiveImportBaseline`, bound to the `frozenPrimitiveImportBaselines`
+guard group with `blocking-exception` status and an exact guard-matched
+allowlist, so audit coverage and lint enforcement stay in lockstep.
 
 ## Surface Contracts
 
@@ -585,6 +608,10 @@ do not add a one-off allowlist entry just to make a route compile.
 - After submit, mutations happen through order detail or order history flows.
 - Session, table, and branch context must compact after selection.
 - Payment/destructive flows require confirmation or safe recovery.
+- POS/KDS touch surfaces must not introduce hover-only reveal mechanisms:
+  native `title=` on lowercase HTML content and new `<Tooltip>` usage are frozen
+  by `pos-kds-touch-reveal-baseline`. Use visible copy, `NoteCallout`,
+  tap-to-expand Sheet/Drawer, or multi-line layout instead.
 
 ### KDS
 
@@ -631,6 +658,7 @@ do not add a one-off allowlist entry just to make a route compile.
 ## Layout Patterns
 
 - Mobile layout is the baseline. Desktop may add density and faster scanning, but not a different information architecture.
+- Root viewport must allow user zoom. Do not set `maximumScale: 1`, `userScalable: false`, or equivalent `user-scalable=no` on runtime app surfaces.
 - Use standard spacing/radius utilities and primitives before custom layout code.
 - Prefer one clear toolbar per workflow.
 - Search, filters, counts, and bulk actions should live together.
@@ -721,9 +749,10 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
   `(protected)/br/[branchId]/(operator)/layout.tsx`; and the approved Operations
   chrome (the POS desktop shell, the operational PWA toolbar, the employee
   header + bottom-nav). The baseline only shrinks.
-- The canonical header lockup and bottom-nav MUST be exported primitives that
-  approved chrome families consume, not re-implemented per surface. (Stage 0
-  extracts `AppHeader` / `AppBottomNav` from `AppShell`.)
+- The canonical standalone header lockup and bottom-nav MUST be exported
+  primitives (`AppHeader`, `AppBottomNav`) that approved non-sidebar chrome
+  families consume, not re-implemented per surface. `AppShell` keeps its own
+  sidebar utility bar.
 - Branch runtime, Operations, and employee-lib surfaces MUST NOT import or render
   Management/Office chrome (`AppShell`, `ManagementShell`, `OfficeModuleShell`,
   `resolveOffice*`, `office-nav`, `finance-shell`, `inventory-shell`). They must
@@ -817,15 +846,17 @@ drift.
 
 ### F. Page Archetypes
 
-Every `(protected)/**/page.tsx` renders exactly one page archetype — a locked
+Every `apps/web/app/**/page.tsx` renders exactly one page archetype — a locked
 recipe for its layout skeleton, data-display idiom, states, and shared
 status/money/date/navigation vocabulary. The archetype taxonomy and
 per-archetype recipes live in `docs/spec/page-archetypes.md`, a subordinate
 contract under this file (on conflict, this file wins). A new archetype is a
 contract change here first, the same rule that governs Chrome Archetypes in
 § A. Enforcement is a mapping-presence gate in `scripts/check-ui-contract.mjs`
-(`PAGE_ARCHETYPES`): every protected page must be declared with a valid
-archetype id, and an undeclared new page fails CI pointing at the spec.
+(`PAGE_ARCHETYPES`): every route page must be declared with a valid archetype
+id, and an undeclared new page fails CI pointing at the spec. Public customer
+transactions use the `PUBLIC-WORKFLOW` recipe; offline/pre-context screens use
+`GATE/AUTH`.
 
 ### Enforcement Status
 
@@ -833,6 +864,40 @@ This section is contract today; the behavioral gates land in Stage 0 (`D019`).
 Each structural rule is tracked here as gated or prose-only so the distance
 between documented and enforced stays visible — closing that gap is the point,
 because an unenforced structural rule is exactly how this layer drifted.
+`scripts/audit-ui-components.mjs` owns the audit-to-guard map, and
+`lint:ui-contract` validates it: every reported UI drift signal must point at an
+existing guard, a baseline ratchet, or an explicit advisory reason before it can
+become a new audit column.
+Guard-family signals must declare the exact guard group they summarize.
+Named `blocking-exception` entries are approved implementation/composition
+exceptions with a reason and an exact guard-matched `exceptionAllowlist`, not a
+baseline that can grow.
+`rawPrimitiveImportBaseline` is one such closed exception family: its current
+hits are registered adapter implementations only. `pageLocalFormatter` is
+`blocking-zero`; route-local money, number, date, and time formatters have no
+remaining allowance.
+`scripts/ui-contract-guard-reporting.mjs` owns the reverse inventory: every
+guard id detected in `scripts/check-ui-contract.mjs` must be audit-visible or
+belong to one reasoned lint-only group. Ratchet-maintenance ids are classified
+separately from runtime guards. `lint:ui-contract` fails when a guard is
+unclassified, stale, multiply owned, or both audit-visible and lint-only, and
+`audit:ui-components` exposes the counts under `Guard Reporting Closure`.
+`scripts/ui-component-registry.mjs` owns component-selection completeness.
+Every primitive file declares `need`, `use`, `fallback`, `forbidden`,
+`exemplar`, and one access class (`direct`, `adapter-only`, `workflow-only`, or
+`internal`). Approved app adapters and every Branch Operator / Employee adapter
+export are registered there as well. A new primitive file or domain-adapter
+export without a decision route fails `lint:ui-contract`; the audit exposes the
+inventory under `Component Selection Coverage`.
+`scripts/ui-contract-scope.mjs` owns the app/runtime source roots shared by the
+audit and matching guards, so Branch Operator and Employee runtime code cannot
+fall outside enforcement through a root-list mismatch.
+Every baseline ratchet also has a policy in
+`scripts/ui-contract-guard-reporting.mjs`. `audit:ui-components` reports its
+live `actual`, `allowed`, `delta`, `debt`, and `permanent exception` totals under
+`Baseline Ratchet Truth`. Green lint means `actual <= allowed`; it does not turn
+legacy debt into an approved exception. A permanent exception must name the
+contract-owned adapter or archetype implementation explicitly.
 
 Stage 0 gate status (each flips to **live** as its ratchet lands in
 `scripts/check-ui-contract.mjs`):
@@ -842,11 +907,19 @@ Stage 0 gate status (each flips to **live** as its ratchet lands in
 - `operator-office-shell-boundary` (§ B) — **live**: Branch runtime,
   Operations, and employee-lib code cannot import or render Management/Office
   shell modules; additions fail CI.
+- `operator-office-route-boundary` (§ B) — **live**: Branch operator routes
+  cannot link or redirect into Office roots (`/admin`, `/finance`,
+  `/inventory`, `/menu`, `/orders`, `/branches`, `/hr`). Keep operator work
+  inside `/br/[branchId]` or a shared non-office surface.
 - `operator-embedded-page-header-boundary` (§ F / page-archetypes.md R1) —
   **live**: embedded canonical content mounted under Branch runtime cannot leak
   a shared `AppPageHeader` into the operator plane; Office headers must be
   gated on `!embedded` or split so `AppPageTabs`/content render without page
   header chrome.
+- `operator-embedded-button-density` (§ F / page-archetypes.md R3) — **live**:
+  embedded operator primary actions cannot keep Office-density `Button`
+  `size="sm"` / `size="xs"` debt above baseline. Branch through `embedded` and
+  use `size="touch"` for thumb-hit actions.
 - route-manifest (§ C) — **live**: every `(protected)/**/page.tsx` resolves to
   exactly one MODULE_ACL family (redirect shims allowlisted), and every
   family-root has a landing page; a new unclassified route fails CI.
@@ -863,11 +936,15 @@ Stage 0 gate status (each flips to **live** as its ratchet lands in
   pages stop double-padding without un-padding pages that rely on `AppShell`
   main.
 - `page-archetype` (§ F / D058 W5) — **live**: a `PAGE_ARCHETYPES` map in
-  `scripts/check-ui-contract.mjs` asserts every protected `page.tsx` is
+  `scripts/page-archetypes.mjs` asserts every app route `page.tsx` is
   declared with a valid archetype id from `docs/spec/page-archetypes.md`; an
-  undeclared page fails CI. Mapping-presence only — recipe-internal
+  undeclared or stale page fails CI. Mapping-presence only — recipe-internal
   compliance (which primitives a page actually uses) stays review-owned, not
   regex-enforced.
+- `route-boundary-coverage` (§ F) — **live**: every route page must resolve an
+  inherited `loading.tsx` and `error.tsx`; the existing
+  `route-boundary-adapters` gate then requires those concrete boundaries to use
+  `PageSkeleton` / `PageSpinner` and `ErrorPanel`.
 - `status-label-ssot` regex un-blinding (W1 ratchet) — **live**: the ratchet
   now also catches `STATUS`-first names (`STATUS_LABELS`, `STATUS_CONFIG`, …)
   and multi-line type annotations (`const X_STATUS: Record<…> = {`)
@@ -878,9 +955,106 @@ Stage 0 gate status (each flips to **live** as its ratchet lands in
   `<Button>`/`<TouchButton>`. The POS table-gate tile moved to a `tile` Button
   size; a few bespoke single-use tap tiles (≥`h-20`: append-draft, cart row,
   order-item ghost, bill payment tiles) are baselined as the accepted floor.
+- `primitive-transition-all` (§ Motion Contract) — **live**: shared UI
+  primitives must name the transitioned properties; `transition-all` is blocked
+  in `packages/ui/src/components`.
+- `app-transition-all` (§ Motion Contract) — **live**: app UI motion must name
+  the transitioned properties; `transition-all` and `motion-safe:transition-all`
+  are blocked in app source.
+- `native-interactive-element` (§ Component Authority / § D) — **live**: raw
+  `<button>` / app-local `<a>` actions are blocked in `apps/web/app` and
+  `apps/web/lib/staff-runtime`. Use
+  `Button` / `Link` via Má Tư DS primitives; allowed raw anchors are limited to
+  hash/tel/mailto/external links or direct children of an approved primitive `asChild`.
+  `global-error.tsx` remains the root-CSS fallback exception.
+- `icon-button-accessible-name` (§ Component Authority / Accessibility) —
+  **live**: icon-only `Button` controls must expose `aria-label`,
+  `aria-labelledby`, or `sr-only` text. `Button asChild` is allowed when the
+  child carries the accessible name.
+- `root-viewport-allows-zoom` (§ Layout Patterns / Accessibility) — **live**:
+  runtime app surfaces must not disable user zoom through viewport settings.
+- `focus-ring-contrast` (§ Accessibility / Token Contract) — **live**: focus
+  affordances use `ring-foreground`; `ring-ring` / `ring-ring/*` is blocked
+  because the gold ring is too low-contrast on cream surfaces.
+- `radius-scale` / `gap-scale` / `primitive-radius-scale` (§ Token Contract) —
+  **live**: app surfaces stay on the locked radius and gap scale, and primitives
+  cannot add new oversized radii (`rounded-xl` through `rounded-4xl`).
+- `app-loading-spinner-ssot` (§ Loading/Error/Not-found) — **live**: app
+  surfaces use `Spinner`, `PageSpinner`, `PageSkeleton`, or approved loading
+  adapters. Raw `Loader2`/`LoaderCircle` icons and app-authored `animate-spin`
+  classes are primitive-owned drift.
+- `primitive-runtime-arbitrary-px-rem-sizing` (§ Token Contract / Component
+  Authority) — **live**: primitives and app adapters cannot add raw px/rem
+  arbitrary sizing (`text-[Npx]`, `w-[Npx]`, `h-[Npx]`, `min-*`, `max-*`).
+  Use the locked Tailwind/theme token scale instead.
+- `primitive-arbitrary-shadow` / `primitive-shadow-overrun` (§ Elevation /
+  Shadow) — **live**: primitives and app adapters cannot add raw `shadow-[...]`
+  values, and primitives cannot add raw `shadow-xl` / `shadow-2xl`. Use the
+  named `shadow-effect-*` overlay/card tokens already in the contract.
+- `card-content-named-layout-props` /
+  `app-section-content-named-layout-props` (§ Spacing Rhythm / Component
+  Authority) — **live**: app routes cannot add local `p-0` /
+  `overflow-x-auto` overrides on `CardContent className` or
+  `AppSection contentClassName`; use `CardContent flush` / `scroll` and
+  `AppSection contentFlush` / `contentScroll`.
+- `scrollarea-no-max-height-only` (§ Layout Patterns) — **live**:
+  `ScrollArea` cannot be used with only `max-h-*`; use a definite height/flex
+  constraint, plain flow layout, or let `DataTable` own scrolling.
+- `route-boundary-adapters` (§ Loading/Error/Not-found) — **live**:
+  `loading.tsx` files render `PageSkeleton` / `PageSpinner`; `error.tsx` files
+  delegate to `ErrorPanel`.
+- `raw-empty-import-route-code` (§ Empty / Error states) — **live**: route code
+  cannot import raw `@comtammatu/ui/components/empty`; use `AppEmptyState` or
+  `TableEmptyStateRow`. Raw Empty primitives stay reserved for approved
+  wrappers such as `surface.tsx`.
+- `raw-table-element` (§ Component Authority) — **live**: app source cannot
+  render raw `<table>` elements; list/table surfaces route through `DataTable`,
+  `TableEmptyStateRow`, or an approved adapter around the shared `Table`
+  primitive.
+- `surface-clone-ssot` (§ Component Authority) — **live**: route-local
+  components named like `*Table`, `*Dialog`, `*Header`, `*Toolbar`,
+  `*EmptyState`, `*Skeleton`, or metric/status adapters must route through an
+  existing Má Tư DS adapter or use a workflow-specific name. Adapter
+  implementations and the POS `PosPageSkeleton` exception are the only frozen
+  baseline.
+- `status-chip-wrapper-baseline` (§ Status vocabulary) — **live**:
+  page-local `*StatusBadge` wrappers and `*_BADGE_VARIANT` maps are frozen to
+  baseline; new business-state chips must route through `StatusBadge` /
+  `getStatusBadgeMeta` or register the domain in `status-badge.tsx`.
+- `pos-kds-touch-reveal-baseline` (§ Surface Contracts → POS/KDS) — **live**:
+  POS/KDS hover-only reveal affordances are frozen to baseline; new touch
+  content must be visible, expandable by tap, or rendered in a multiline block
+  instead of relying on native `title=` or Tooltip.
+- `hand-rolled-page-heading-baseline` (§ Rhythm B / Page H1) — **live**:
+  app page H1 lockups are frozen to baseline; new page headings must render
+  through `AppPageHeader` unless the surface is an approved standalone/operator
+  exception.
 - `hover-shadow-rung` (§ Elevation / Shadow) — **live**: `hover:shadow-md` /
   `lg` / `xl` / `2xl` in app code fails CI. Hover elevation caps at the
   `shadow-sm` Hover rung; resting surfaces separate with `--border`.
+- `app-effect-shadow-rung` (§ Elevation / Shadow) — **live**: app surfaces
+  cannot use primitive float shadows (`shadow-effect-popover`, `dialog`,
+  `drawer`, `tooltip`, `toast`). Those tokens are owned by overlay primitives;
+  route cards/sections use border, tone, or `shadow-effect-card-hover`.
+- `resting-shadow-rung` (§ Elevation / Shadow) — **live**: resting
+  `shadow-sm` / `md` / `lg` / `xl` / `2xl` in app code is fixed baseline debt
+  and must not spread. Selected/active state uses ring, border, and background,
+  not new resting elevation. The total debt is also capped by
+  `resting-shadow-baseline`.
+- `raw-padding-baseline` (§ Spacing Rhythm / Page Padding) — **live**:
+  large local `p-*` / `px-*` / `py-*` / side-padding debt is frozen per file.
+  New page spacing must route through `AppPage`, `AppSection`, `FieldGroup`, or
+  a named adapter prop instead of ad-hoc padding.
+- `gap-atypical-baseline` (§ Spacing Rhythm) — **live**: atypical `gap-0`,
+  `gap-0.5`, and `gap-2.5` values are frozen per file. New stacks use the
+  documented gap scale or a named density prop.
+- `inline-chrome-baseline` (§ Component Authority) — **live**: raw rounded +
+  bordered card/inset clones are frozen per file. New chrome routes through
+  `AppSection`, `Card`, `Item`, `NoteCallout`, `Alert`, or an approved adapter.
+- `custom-shadow-baseline` (§ Elevation / Shadow) — **live**: custom shadow
+  values (`shadow-[...]`, `boxShadow`, `box-shadow`, route-local `--shadow-*`)
+  are frozen per file. New elevation uses the documented shadow rungs or
+  primitive-owned overlay tokens.
 - `motion-color-duration` (§ Motion Contract) — **live**: a `transition-colors`
   className paired with `duration-300` fails CI. Color/border feedback is locked
   to `duration-150`; `duration-300` is the overlay enter/exit token.
@@ -906,12 +1080,13 @@ false-positive):
   (real `<Image>`), not icons.
 - `button-height-on-button` — **Button-scoped (D030)**: flags raw heights only
   on `<Button>`/`<TouchButton>` via a brace/string-aware tag scanner (covers
-  `cn()` + multi-line). 4 allowlisted = form-control trigger buttons (h-10; no
-  40px Button variant exists). The ~37 non-button heights (Input/Select/
-  Skeleton/container) the old "any raw height" gate flagged are out of scope —
-  they were never debt.
-- `vnd-format-ssot` — **reframe**: ~1 of ~28 migratable; the rest are non-money
-  locale formatters (counts/quantities/dates). See `docs/plan/decisions.md` D029.
+  `cn()` + multi-line). 0 allowlisted; form-control trigger buttons use
+  `size="field"`. The ~37 non-button heights (Input/Select/Skeleton/container)
+  the old "any raw height" gate flagged are out of scope — they were never debt.
+- `vnd-format-ssot` — **reframe**: remaining allowlist is inventory/domain-number
+  debt. Formatter drift is reported as `pageLocalFormatter` and bound to
+  `formatterGuardBaselines`: finance-local formatters, app-local number
+  formatters, VND formatter drift, and date/time formatter drift.
 - `status-label-ssot` — **reframe**: ~3 real label maps, all HR-owned
   (D026/D027); ~20 are status value-arrays / variant-only / already-shared.
 - `card-content-classname-baseline` — **reframe (count 81, D030)**: the named
@@ -957,6 +1132,10 @@ regex. **Left open by intent:**
 (`surface.tsx`/`kpi-card.tsx`) and should be exempt, not counted. Const-map size
 tokens (`brand.tsx`) and multi-arg `cn()` (token in a later arg) remain
 uncaught — preventive-only, low value.
+`native-interactive-element` and `icon-button-accessible-name` use the same
+brace/string-aware JSX scanner plus tag spans to avoid the old `asChild`
+false-positive/false-negative edge. `app-loading-spinner-ssot` is the matching
+loading-state SSoT guard for raw spinner drift.
 
 ## Loading / Error / Not-found Frame
 
@@ -967,6 +1146,7 @@ Route-level transition states are part of the design system, not per-page improv
 - Every route family exposes `error.tsx` delegating to `ErrorPanel` (`apps/web/app/components/error-panel.tsx`): `AppEmptyState mode="error"`, retry via `reset()`, and the error digest in small mono print. `apps/web/app/global-error.tsx` is the single surface allowed to use inline styles, because root CSS may be unavailable when it renders.
 - Not-found renders through `NotFoundPanel` (`apps/web/app/components/not-found-panel.tsx`); `apps/web/app/not-found.tsx` covers the app, and per-family `not-found.tsx` exists only where `notFound()` is called and a shell is worth preserving.
 - Copy for these frames comes from `@comtammatu/shared/messages` (`ACTIONS_VI`, `STATES_VI`, `ERRORS_VI`); do not inline new Vietnamese strings here.
+- App presentation surfaces have a zero baseline for route-local loading/empty/error copy; `app-presentation-state-copy` keeps those states in shared messages/adapters across `apps/web/app/**/*.tsx`. Payment/action/data `.ts` copy is reported as `actionDataStateCopy` by `audit:ui-components` and blocked by the zero-baseline `app-action-data-state-copy` guard.
 
 ## Copy Contract
 

@@ -5,7 +5,6 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
   ItemContent,
@@ -21,28 +20,106 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { Combobox } from "@/components/form/combobox";
-import { AppDetailFooter, AppEmptyState, AppSection } from "@/components/surface";
+import {
+  AppDetailFooter,
+  AppEmptyState,
+  AppSection,
+} from "@/components/surface";
+import { QuantityInput } from "@/components/form/domain-number-inputs";
 import {
   createProductionRun,
   fetchProductionRecipeContext,
   type ProductionRecipeIngredient,
 } from "../../production-run-actions";
-import type { BranchOption, FinishedGoodOption } from "../../production-types";
+import { tTerm } from "../../_lib/dictionary";
+import { messages } from "@lib/messages";
+import type {
+  BranchOption,
+  FinishedGoodOption,
+  InventoryLocationOption,
+} from "../../production-types";
+import { formatQty } from "../../_lib/format";
+import { formatDecimalInputValue } from "@comtammatu/shared/format";
 
 interface ProductionNewClientProps {
   branches: BranchOption[];
   targetBranches: BranchOption[];
+  locations: InventoryLocationOption[];
   finishedGoods: FinishedGoodOption[];
   initialBranchId?: number;
   basePath: string;
   embedded?: boolean;
 }
 
+function locationKindLabel(location: InventoryLocationOption) {
+  if (location.branchKind === "branch" && location.kind === "kitchen") {
+    return tTerm("branchKitchen", "button");
+  }
+  if (location.branchKind === "branch" && location.kind === "warehouse") {
+    return tTerm("branchWarehouse", "button");
+  }
+  if (
+    location.branchKind === "central_kitchen" &&
+    location.kind === "production_storage"
+  ) {
+    return tTerm("productionStorage", "button");
+  }
+  return location.name;
+}
+
+function locationLabel(location: InventoryLocationOption) {
+  return `${location.branchName} - ${locationKindLabel(location)}`;
+}
+
+function pickSourceLocation(
+  locations: InventoryLocationOption[],
+  branchId: number | undefined,
+) {
+  const candidates = branchId
+    ? locations.filter((location) => location.branchId === branchId)
+    : locations;
+  return (
+    candidates.find(
+      (location) =>
+        location.branchKind === "branch" && location.kind === "kitchen",
+    ) ??
+    candidates.find(
+      (location) =>
+        location.branchKind === "central_kitchen" &&
+        location.kind === "production_storage",
+    ) ??
+    candidates.find((location) => location.isDefaultConsumption) ??
+    candidates.find((location) => location.isDefaultReceive) ??
+    candidates[0]
+  );
+}
+
+function pickTargetLocation(
+  locations: InventoryLocationOption[],
+  branchId: number | undefined,
+) {
+  const candidates = branchId
+    ? locations.filter((location) => location.branchId === branchId)
+    : locations;
+  return (
+    candidates.find(
+      (location) =>
+        location.branchKind === "branch" && location.kind === "kitchen",
+    ) ??
+    candidates.find((location) => location.isDefaultReceive) ??
+    candidates[0]
+  );
+}
+
 export function ProductionNewClient({
   branches,
   targetBranches,
+  locations,
   finishedGoods,
   initialBranchId,
   basePath,
@@ -50,12 +127,34 @@ export function ProductionNewClient({
 }: ProductionNewClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  const [branchId, setBranchId] = useState<number | undefined>(
+  const productionBranchIds = new Set(branches.map((branch) => branch.id));
+  const targetBranchIds = new Set(targetBranches.map((branch) => branch.id));
+  const sourceLocations = locations.filter((location) =>
+    productionBranchIds.has(location.branchId),
+  );
+  const targetLocations = locations.filter((location) =>
+    targetBranchIds.has(location.branchId),
+  );
+  const initialSourceLocation = pickSourceLocation(
+    sourceLocations,
     initialBranchId ?? branches[0]?.id,
   );
+  const initialTargetLocation = pickTargetLocation(
+    targetLocations,
+    initialBranchId ?? initialSourceLocation?.branchId ?? targetBranches[0]?.id,
+  );
+
+  const [branchId, setBranchId] = useState<number | undefined>(
+    initialSourceLocation?.branchId ?? initialBranchId ?? branches[0]?.id,
+  );
+  const [sourceLocationId, setSourceLocationId] = useState<number | undefined>(
+    initialSourceLocation?.id,
+  );
   const [targetBranchId, setTargetBranchId] = useState<number | undefined>(
-    initialBranchId ?? branches[0]?.id,
+    initialTargetLocation?.branchId ?? initialBranchId ?? targetBranches[0]?.id,
+  );
+  const [targetLocationId, setTargetLocationId] = useState<number | undefined>(
+    initialTargetLocation?.id,
   );
   const [finishedGoodId, setFinishedGoodId] = useState<number | undefined>();
   const [plannedQuantity, setPlannedQuantity] = useState<string>("");
@@ -81,21 +180,17 @@ export function ProductionNewClient({
         })),
       ]
     : [];
-  const canUseRecipeControls = branchId != null && finishedGoodId != null;
+  const canUseRecipeControls =
+    branchId != null && sourceLocationId != null && finishedGoodId != null;
   const plannedQtyParsed = Number.parseFloat(plannedQuantity);
   const hasValidPlannedQty =
     !Number.isNaN(plannedQtyParsed) && plannedQtyParsed > 0;
   const controlSize = embedded ? "touch" : "default";
 
-  const formatQty = (value: number | null | undefined) => {
-    if (value == null) return "N/A";
-    return String(Math.floor(value * 1000) / 1000);
-  };
-
   useEffect(() => {
-    if (branchId && finishedGoodId) {
+    if (branchId && sourceLocationId && finishedGoodId) {
       setIsLoadingContext(true);
-      fetchProductionRecipeContext(finishedGoodId, branchId)
+      fetchProductionRecipeContext(finishedGoodId, branchId, sourceLocationId)
         .then((res) => {
           if (res.success && res.data) {
             setRecipeContext(res.data);
@@ -109,7 +204,7 @@ export function ProductionNewClient({
     } else {
       setRecipeContext(null);
     }
-  }, [branchId, finishedGoodId]);
+  }, [branchId, sourceLocationId, finishedGoodId]);
 
   useEffect(() => {
     if (recipeContext?.ingredients) {
@@ -122,7 +217,7 @@ export function ProductionNewClient({
           ing.default_usage_per_fg > 0
         ) {
           const defaultQty = parsedQty * ing.default_usage_per_fg;
-          usages[ing.ingredient_id] = defaultQty.toFixed(3);
+          usages[ing.ingredient_id] = formatDecimalInputValue(defaultQty, 3);
         } else {
           usages[ing.ingredient_id] = "";
         }
@@ -133,9 +228,13 @@ export function ProductionNewClient({
 
   const handleSetMaxQuantity = () => {
     if (recipeContext?.maxProductionQuantity != null) {
-      setPlannedQuantity(recipeContext.maxProductionQuantity.toString());
+      setPlannedQuantity(
+        formatDecimalInputValue(recipeContext.maxProductionQuantity, 3),
+      );
     } else {
-      toast.error("Không thể tính toán số lượng tối đa (có thể kho đang trống)");
+      toast.error(
+        "Không thể tính toán số lượng tối đa (có thể kho đang trống)",
+      );
     }
   };
 
@@ -143,8 +242,37 @@ export function ProductionNewClient({
     setIngredientUsages((prev) => ({ ...prev, [id]: val }));
   };
 
+  const handleSourceLocationChange = (value: string) => {
+    const nextId = Number.parseInt(value, 10);
+    const nextLocation = sourceLocations.find(
+      (location) => location.id === nextId,
+    );
+    setSourceLocationId(nextId);
+    if (nextLocation) {
+      setBranchId(nextLocation.branchId);
+    }
+  };
+
+  const handleTargetLocationChange = (value: string) => {
+    const nextId = Number.parseInt(value, 10);
+    const nextLocation = targetLocations.find(
+      (location) => location.id === nextId,
+    );
+    setTargetLocationId(nextId);
+    if (nextLocation) {
+      setTargetBranchId(nextLocation.branchId);
+    }
+  };
+
   const handleSave = () => {
-    if (!branchId || !finishedGoodId || !plannedQuantity) {
+    if (
+      !branchId ||
+      !sourceLocationId ||
+      !targetBranchId ||
+      !targetLocationId ||
+      !finishedGoodId ||
+      !plannedQuantity
+    ) {
       toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
@@ -181,14 +309,20 @@ export function ProductionNewClient({
         plannedQuantity: parsedQty,
         entryUnitId: entryUnitId || undefined,
         notes,
-        targetBranchId: targetBranchId || branchId,
+        targetBranchId,
+        sourceLocationId,
+        targetLocationId,
         ingredientsOverride:
           ingredientsOverride.length > 0 ? ingredientsOverride : undefined,
       });
 
       if (res.success) {
+        if (!res.data) {
+          toast.error("Có lỗi xảy ra");
+          return;
+        }
         toast.success("Tạo lệnh sản xuất thành công");
-        router.push(basePath);
+        router.push(`${basePath}/${res.data.productionRunId}`);
       } else {
         toast.error(res.error || "Có lỗi xảy ra");
       }
@@ -207,14 +341,13 @@ export function ProductionNewClient({
 
   const renderIngredientInput = (ingredient: ProductionRecipeIngredient) => (
     <div className="flex min-w-0 items-center gap-2">
-      <Input
+      <QuantityInput
         className="min-w-0 text-right"
-        type="number"
         min="0"
-        step="0.001"
+        maxFractionDigits={3}
         value={ingredientUsages[ingredient.ingredient_id] ?? ""}
-        onChange={(event) =>
-          handleIngredientChange(ingredient.ingredient_id, event.target.value)
+        onValueChange={(value) =>
+          handleIngredientChange(ingredient.ingredient_id, value)
         }
       />
       <span className="w-10 shrink-0 text-xs text-muted-foreground">
@@ -266,20 +399,20 @@ export function ProductionNewClient({
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="grid gap-2">
-            <Label htmlFor="production-source-branch">
-              Chi nhánh xuất nguyên liệu
+            <Label htmlFor="production-source-location">
+              Nơi xuất nguyên liệu
             </Label>
             <Select
-              value={branchId?.toString()}
-              onValueChange={(val) => setBranchId(Number.parseInt(val, 10))}
+              value={sourceLocationId?.toString()}
+              onValueChange={handleSourceLocationChange}
             >
-              <SelectTrigger id="production-source-branch" size={controlSize}>
-                <SelectValue placeholder="Chọn chi nhánh sản xuất" />
+              <SelectTrigger id="production-source-location" size={controlSize}>
+                <SelectValue placeholder="Chọn nơi xuất" />
               </SelectTrigger>
               <SelectContent>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id.toString()}>
-                    {branch.name}
+                {sourceLocations.map((location) => (
+                  <SelectItem key={location.id} value={location.id.toString()}>
+                    {locationLabel(location)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -287,22 +420,20 @@ export function ProductionNewClient({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="production-target-branch">
-              Chi nhánh nhập thành phẩm
+            <Label htmlFor="production-target-location">
+              Nơi nhập thành phẩm
             </Label>
             <Select
-              value={targetBranchId?.toString()}
-              onValueChange={(val) =>
-                setTargetBranchId(Number.parseInt(val, 10))
-              }
+              value={targetLocationId?.toString()}
+              onValueChange={handleTargetLocationChange}
             >
-              <SelectTrigger id="production-target-branch" size={controlSize}>
-                <SelectValue placeholder="Chọn chi nhánh nhận" />
+              <SelectTrigger id="production-target-location" size={controlSize}>
+                <SelectValue placeholder="Chọn nơi nhập" />
               </SelectTrigger>
               <SelectContent>
-                {targetBranches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id.toString()}>
-                    {branch.name}
+                {targetLocations.map((location) => (
+                  <SelectItem key={location.id} value={location.id.toString()}>
+                    {locationLabel(location)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -352,13 +483,12 @@ export function ProductionNewClient({
               Số lượng dự kiến
             </Label>
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
-              <Input
+              <QuantityInput
                 id="production-planned-quantity"
-                type="number"
                 min="0"
-                step="0.01"
+                maxFractionDigits={3}
                 value={plannedQuantity}
-                onChange={(event) => setPlannedQuantity(event.target.value)}
+                onValueChange={setPlannedQuantity}
                 placeholder="Nhập số lượng..."
               />
               {unitOptions.length > 0 && (
@@ -399,7 +529,7 @@ export function ProductionNewClient({
       {isLoadingContext ? (
         <AppSection title="Định mức nguyên liệu" size="sm" tone="info">
           <p className="text-sm text-muted-foreground">
-            Đang tải định mức nguyên liệu...
+            {messages.inventory.operatorFlow.productionRecipeLoading}
           </p>
         </AppSection>
       ) : null}
@@ -447,10 +577,7 @@ export function ProductionNewClient({
         </AppSection>
       ) : null}
 
-      <AppSection
-        title="Ghi chú"
-        description="Thông tin thêm cho ca sản xuất."
-      >
+      <AppSection title="Ghi chú" description="Thông tin thêm cho ca sản xuất.">
         <Textarea
           value={notes}
           onChange={(event) => setNotes(event.target.value)}

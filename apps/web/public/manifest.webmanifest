@@ -1,12 +1,12 @@
 {
-  "id": "/br",
-  "name": "Cơm Tấm Má Tư - Hub",
-  "short_name": "Má Tư Hub",
-  "description": "Hub vận hành Cơm Tấm Má Tư",
+  "id": "/",
+  "name": "Cơm Tấm Má Tư - Cổng vận hành",
+  "short_name": "Cổng Má Tư",
+  "description": "Cổng vận hành Cơm Tấm Má Tư",
   "lang": "vi",
   "display": "standalone",
   "orientation": "portrait",
-  "start_url": "/br",
+  "start_url": "/",
   "scope": "/",
   "background_color": "#fff6ee",
   "theme_color": "#fff6ee",
@@ -24,22 +24,22 @@
   "shortcuts": [
     {
       "name": "Nay",
-      "url": "/br",
+      "url": "/",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Chấm công vào",
-      "url": "/br",
+      "url": "/",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Việc trong ca",
-      "url": "/br",
+      "url": "/",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Lịch hôm nay",
-      "url": "/br",
+      "url": "/",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]

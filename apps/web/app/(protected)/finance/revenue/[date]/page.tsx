@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
 import {
   AppEmptyState,
   AppPage,
@@ -146,7 +146,7 @@ export default async function RevenueDrillPage({
         eyebrow={copy.eyebrow}
         title={copy.detailTitle(branchName, date)}
         description={copy.detailDescription(
-          totalOrders.toLocaleString("vi-VN"),
+          formatCount(totalOrders),
           formatVND(totalRevenue),
         )}
         breadcrumb={<BackToRevenue />}

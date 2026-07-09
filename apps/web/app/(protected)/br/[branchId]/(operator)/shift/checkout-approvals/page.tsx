@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
-import { CheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
-import { BranchOpsRefresh } from "../../branch-ops-refresh";
+import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
@@ -14,12 +13,10 @@ export default async function OperatorCheckoutApprovalsPage({
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
   return (
-    <>
-      <BranchOpsRefresh branchId={branchId} />
-      <CheckoutApprovalsPageContent
-        routeBranchId={branchId}
-        hideHeaderOnMobile
-      />
-    </>
+    <StaffCheckoutApprovalsPageContent
+      routeBranchId={branchId}
+      hideHeaderOnMobile
+      plane="branch"
+    />
   );
 }

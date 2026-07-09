@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { messages } from "@lib/messages";
 import { getAuthContextWithPermission, probePermission } from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
 import type { CartItem } from "./types";
@@ -95,7 +96,7 @@ export const fetchActiveOrders = withActionPositional(
       .order("created_at", { ascending: false });
 
     if (error) {
-      return { success: false, error: "Không thể tải danh sách đơn hàng." };
+      return { success: false, error: messages.pos.order.loadFailed };
     }
 
     return { success: true, data: orders ?? [] };
@@ -201,7 +202,7 @@ export async function fetchArchivedOrders(
     .limit(pageSize + 1);
 
   if (error) {
-    return { success: false, error: "Không thể tải lịch sử đơn." };
+    return { success: false, error: messages.pos.archivedOrders.loadFailed };
   }
 
   const fetched = (data ?? []) as Array<{
@@ -340,7 +341,7 @@ export async function fetchActiveOrderForTable(
   if (error) {
     return {
       success: false,
-      error: "Không thể tải đơn của bàn. Vui lòng thử lại.",
+      error: messages.pos.order.loadFailed,
     };
   }
 
@@ -451,7 +452,7 @@ export async function fetchOrderForBill(
     }
     return {
       success: false,
-      error: "Không thể tải đơn hàng. Vui lòng thử lại.",
+      error: messages.pos.order.loadFailed,
     };
   }
 
@@ -566,7 +567,7 @@ export const fetchOrderDetail = withActionPositional(
       }
       return {
         success: false,
-        error: "Không thể tải đơn hàng. Vui lòng thử lại.",
+        error: messages.pos.order.loadFailed,
       };
     }
 
@@ -631,7 +632,7 @@ export async function fetchOrderItemsForReorder(orderId: number): Promise<
   if (error) {
     return {
       success: false,
-      error: "Không thể tải món để đặt lại.",
+      error: messages.pos.order.reorderLoadFailed,
     };
   }
 

@@ -10,10 +10,37 @@
 export function formatVND(amount: number): string {
   if (!Number.isFinite(amount)) return "0đ";
   const rounded = Math.round(amount);
-  const isNegative = rounded < 0;
-  const abs = Math.abs(rounded).toString();
-  const formatted = abs.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${isNegative ? "-" : ""}${formatted}đ`;
+  return `${formatDecimal(rounded, 0)}đ`;
+}
+
+export function formatDecimalInputValue(
+  value: number,
+  maximumFractionDigits = 3,
+): string {
+  if (!Number.isFinite(value)) return "";
+  const fractionDigits = Math.max(0, Math.trunc(maximumFractionDigits));
+  const fixed = Math.abs(value).toFixed(fractionDigits);
+  const [whole = "0", rawFraction] = fixed.split(".");
+  const fraction = rawFraction?.replace(/0+$/, "");
+  const normalized = fraction ? `${whole}.${fraction}` : whole;
+  return value < 0 && normalized !== "0" ? `-${normalized}` : normalized;
+}
+
+export function formatDecimal(
+  value: number,
+  maximumFractionDigits = 3,
+): string {
+  const raw = formatDecimalInputValue(value, maximumFractionDigits);
+  if (!raw) return "0";
+  const sign = raw.startsWith("-") ? "-" : "";
+  const unsigned = sign ? raw.slice(1) : raw;
+  const [whole = "0", fraction] = unsigned.split(".");
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return fraction ? `${sign}${grouped},${fraction}` : `${sign}${grouped}`;
+}
+
+export function formatQuantity(value: number): string {
+  return formatDecimal(value, 3);
 }
 
 /**
@@ -28,8 +55,5 @@ export function formatVND(amount: number): string {
 export function formatCount(value: number): string {
   if (!Number.isFinite(value)) return "0";
   const rounded = Math.round(value);
-  const isNegative = rounded < 0;
-  const abs = Math.abs(rounded).toString();
-  const formatted = abs.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${isNegative ? "-" : ""}${formatted}`;
+  return formatDecimal(rounded, 0);
 }

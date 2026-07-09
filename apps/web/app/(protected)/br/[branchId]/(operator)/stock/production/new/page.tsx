@@ -11,8 +11,13 @@ export default async function OperatorProductionNewPage({ params }: PageProps) {
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  const { productionBranches, targetBranches, finishedGoods, recipes } =
-    await loadProductionSurfaceData({ routeBranchId: branchId });
+  const {
+    productionBranches,
+    targetBranches,
+    locations,
+    finishedGoods,
+    recipes,
+  } = await loadProductionSurfaceData({ routeBranchId: branchId });
   const recipeFinishedGoodIds = new Set(
     recipes.map((recipe) => recipe.finished_good_id),
   );
@@ -24,6 +29,7 @@ export default async function OperatorProductionNewPage({ params }: PageProps) {
     <ProductionNewClient
       branches={productionBranches.filter((branch) => branch.id === branchId)}
       targetBranches={targetBranches}
+      locations={locations}
       finishedGoods={finishedGoodsWithRecipes}
       initialBranchId={branchId}
       basePath={`/br/${branchId}/stock/production`}

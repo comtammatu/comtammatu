@@ -27,19 +27,14 @@ import {
   type KdsNewTicketSignalTone,
 } from "./_lib/sound-alerts";
 import { isKdsActiveTicketStatus } from "./_lib/order-status";
-import { BoardHeader } from "./_components/board-header";
+import { KdsBoardTopBar } from "./_components/board-header";
 import { StationToggleBar } from "./_components/station-toggle-bar";
 import { FilterBar } from "./_components/filter-bar";
 import { FocusView } from "./_components/focus-view";
 import { OrderGrid } from "./_components/order-grid";
 import { KdsCompletionHistorySheet } from "./_components/completion-history-sheet";
 import { UnassignedBanner } from "./_components/unassigned-banner";
-import type {
-  KdsBoardProps,
-  KdsOrder,
-  KdsOrderItem,
-  KdsTicket,
-} from "./types";
+import type { KdsBoardProps, KdsOrder, KdsOrderItem, KdsTicket } from "./types";
 
 /* ─── Helpers ─── */
 
@@ -167,16 +162,13 @@ export function KdsBoard({
   const boardRootRef = useRef<HTMLDivElement | null>(null);
   const lastMissingItemRefreshRef = useRef<string | null>(null);
 
-  const {
-    handleRecall,
-    handleCompleteTickets,
-    pendingTicketIds,
-  } = useKdsMutations({
-    branchId,
-    tickets,
-    setTickets,
-    refreshBoardSnapshot,
-  });
+  const { handleRecall, handleCompleteTickets, pendingTicketIds } =
+    useKdsMutations({
+      branchId,
+      tickets,
+      setTickets,
+      refreshBoardSnapshot,
+    });
 
   const fallbackStationSet = useMemo(
     () => new Set(fallbackStationIds),
@@ -484,8 +476,8 @@ export function KdsBoard({
         ref={boardRootRef}
         className="flex h-dvh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-background"
       >
-        <div className="sticky top-0 z-30 shrink-0 border-b bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/85">
-          <BoardHeader
+        <div className="sticky top-0 z-30 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+          <KdsBoardTopBar
             branchId={branchId}
             pendingCount={pendingCount}
             mode={mode}

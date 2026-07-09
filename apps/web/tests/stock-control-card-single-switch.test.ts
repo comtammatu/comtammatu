@@ -27,6 +27,11 @@ test("StockControlCard renders exactly one Switch, wired to the single posting f
 
   assert.match(source, /copy\.stockOutcomePostingLabel/);
   assert.match(source, /copy\.stockOutcomePostingHelp/);
+  assert.match(source, /@comtammatu\/ui\/components\/item/);
+  assert.match(source, /<Item variant="outline"/);
+  assert.match(source, /htmlFor=\{switchId\}/);
+  assert.match(source, /id=\{switchId\}/);
+  assert.doesNotMatch(source, /rounded-md border p-3/);
 });
 
 test("branch-settings pos actions: gate-flag action removed", () => {

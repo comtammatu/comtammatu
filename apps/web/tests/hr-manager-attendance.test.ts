@@ -121,8 +121,23 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
   );
   assert.match(
     attendanceTableSource,
-    /<DialogTitle>\{attendanceCopy\.photoDialogTitle\}<\/DialogTitle>/,
+    /<AppDialog[\s\S]*title=\{attendanceCopy\.photoDialogTitle\}/,
     "Attendance photo preview should render in an accessible dialog",
+  );
+  assert.match(
+    attendanceTableSource,
+    /function canForceCloseRecord[\s\S]*record\.date < todayStr/,
+    "Force-close UI should only expose the stale-close path for prior-day open attendance",
+  );
+  assert.match(
+    hrActionsSource,
+    /supabase\.rpc\(\s*"admin_force_close_attendance"/,
+    "Force-close action should use the guarded stale attendance RPC",
+  );
+  assert.doesNotMatch(
+    hrActionsSource,
+    /\.from\("attendance_records"\)[\s\S]*\.update\(\{[\s\S]*check_out: checkOutTime/,
+    "Force-close action must not bypass the stale attendance RPC with a direct update",
   );
 
   for (const forbidden of [

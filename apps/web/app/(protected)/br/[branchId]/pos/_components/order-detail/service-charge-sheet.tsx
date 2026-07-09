@@ -128,7 +128,7 @@ export function ServiceChargeSheet({
                 rows={2}
               />
               <FieldDescription>
-                Tối thiểu 3 ký tự. ({noteTrimLen}/3)
+                {POS_VI.serviceChargeNoteHint(noteTrimLen)}
               </FieldDescription>
             </Field>
           </FieldGroup>
@@ -150,7 +150,7 @@ export function ServiceChargeSheet({
             </div>
             {discountAmount > 0 && (
               <div className="flex justify-between text-success">
-                <span>Chiết khấu</span>
+                <span>{POS_VI.discountTitle}</span>
                 <span className="tabular-nums">
                   -{formatVND(discountAmount)}
                 </span>

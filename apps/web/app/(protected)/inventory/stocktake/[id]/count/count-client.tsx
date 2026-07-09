@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { STOCKTAKE_SESSION_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -12,8 +13,8 @@ import {
   DocumentFormFrame,
 } from "@/components/surface";
 import {
+  BlindCountingGridActions,
   BlindCountingGrid,
-  BlindCountingGridToolbar,
 } from "../../../_components/blind-counting-grid";
 import {
   StocktakeDraftSaverBadge,
@@ -21,6 +22,7 @@ import {
   type DraftCounts,
 } from "../../../_components/stocktake-draft-saver";
 import { ZoneLockIndicator } from "../../../_components/zone-lock-indicator";
+import { formatQty } from "../../../_lib/format";
 import { StocktakeCountWizard } from "./stocktake-count-wizard";
 import { messages } from "@lib/messages";
 import {
@@ -34,6 +36,33 @@ const toastSubmitRoundFailed = "Không submit được round";
 const toastSavedCounts = (count: number) => `Đã lưu ${count} dòng đếm`;
 const labelWizardQuick = "Nhập nhanh (Wizard)";
 const labelSwitchTable = "Chuyển sang Nhập Bảng";
+
+function buildCountUnitPreview({
+  quantity,
+  selectedUnitId,
+  options,
+}: {
+  quantity: number | null;
+  selectedUnitId: number | null;
+  options: CountUnitOption[];
+}): string | null {
+  const baseUnit =
+    options.find((option) => option.isBase) ?? options[0] ?? null;
+  const selectedUnit =
+    selectedUnitId == null
+      ? baseUnit
+      : (options.find((option) => option.unitId === selectedUnitId) ??
+        baseUnit);
+  if (!baseUnit || !selectedUnit || selectedUnit.isBase) return null;
+
+  const factor = selectedUnit.toBaseFactor;
+  if (!Number.isFinite(factor) || factor <= 0) {
+    return INVENTORY_VI.conversionMissing;
+  }
+
+  const displayQuantity = quantity ?? 1;
+  return `${INVENTORY_VI.convertedColon} ${formatQty(displayQuantity)} ${selectedUnit.code} = ${formatQty(displayQuantity * factor)} ${baseUnit.code}`;
+}
 
 interface Props {
   sessionId: number;
@@ -116,6 +145,19 @@ export function StocktakeCountClient({
     }
     return map;
   }, [unitOptionsByIngredient, unitByIngredient]);
+
+  const unitPreviewByIngredient = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const line of currentRoundLines) {
+      const preview = buildCountUnitPreview({
+        quantity: counts[String(line.ingredientId)]?.qty ?? null,
+        selectedUnitId: unitByIngredient[line.ingredientId] ?? null,
+        options: unitOptionsByIngredient[line.ingredientId] ?? [],
+      });
+      if (preview) map[line.ingredientId] = preview;
+    }
+    return map;
+  }, [counts, currentRoundLines, unitOptionsByIngredient, unitByIngredient]);
 
   function onCountChange(ingredientId: number, qty: number | null) {
     setCounts((prev) => {
@@ -217,12 +259,13 @@ export function StocktakeCountClient({
           onCountChange={onCountChange}
           unitOptionsByIngredient={unitOptionsByIngredient}
           unitByIngredient={unitByIngredient}
+          unitPreviewByIngredient={unitPreviewByIngredient}
           onUnitChange={onUnitChange}
           blindMode={blindMode}
           readOnly={!editable}
           onlyNeedsRecount={currentRound > 1 ? true : undefined}
         />
-        <BlindCountingGridToolbar
+        <BlindCountingGridActions
           onSubmit={submit}
           submitting={pending}
           canSubmit={editable && Object.keys(counts).length > 0}
@@ -256,7 +299,7 @@ export function StocktakeCountClient({
                 : messages.inventory.stocktake.detail.updateFailed}
             </Button>
           ) : null}
-        </BlindCountingGridToolbar>
+        </BlindCountingGridActions>
       </AppSection>
     </>
   );
@@ -285,6 +328,7 @@ export function StocktakeCountClient({
           editable={editable}
           currentRound={currentRound}
           unitLabelByIngredient={unitLabelByIngredient}
+          unitPreviewByIngredient={unitPreviewByIngredient}
           chrome={safetyChrome}
         />
       </div>

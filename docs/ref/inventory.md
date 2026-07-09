@@ -18,7 +18,7 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Nội dung                        | Current contract                                                                                                                                                                                        | Boundary                                               |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ PO, GRN, tồn kho, production, và recipe                                                                                                                                 | Không mở item master ERP nhiều lớp                     |
-| Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo WAC khi có dữ liệu                                                                                                                              | Không chuyển sang FIFO engine                          |
+| Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo giá vốn BQ khi có dữ liệu, fallback giá nhập tham chiếu khi cần hiển thị                                                                        | Không chuyển sang FIFO engine                          |
 | Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*`                                                                                     | Không mở lot-first ledger / batch accounting           |
 | Mô hình site                    | `branches.branch_kind IN ('branch', 'central_supply', 'central_kitchen')`; `branch` giữ Kho CN, `central_supply` là Kho Tổng, `central_kitchen` là Bếp Trung Tâm                                        | V1 không tạo bảng `inventory_sites`                    |
 | PO / GRN / NCC                  | Bảng PO/GRN/NCC + RPC `confirm_goods_receipt_note`; QC và price variance là control trong luồng nhập                                                                                                    | Không mở PR workflow nhiều bước                        |
@@ -106,15 +106,15 @@ Ghi chú: `mv_food_cost` là dữ liệu recipe/theoretical để đối chiếu
 Đơn vị kho không còn nằm trên cột text của `ingredients`. Contract hiện tại:
 
 - `units`: registry đơn vị dùng chung theo tenant, gồm đơn vị chuẩn và đơn vị đóng gói.
-- `ingredient_units`: danh mục đơn vị cho từng nguyên liệu, có đúng một dòng `is_base = true`.
-- `entry_unit_id`: đơn vị người dùng nhập trên chứng từ; khóa tới `units.id`.
-- `to_base_factor`: hệ số quy đổi từ `entry_unit_id` về base unit của nguyên liệu.
+- `ingredient_units`: danh mục đơn vị cho từng nguyên liệu, có đúng một dòng `is_base = true`; UI gọi dòng này là **Đơn vị tồn chuẩn**.
+- `entry_unit_id`: đơn vị người dùng nhập trên chứng từ; UI gọi là **Đơn vị nhập** trong PO/GRN/transfer/issue/waste và **Đơn vị đếm** trong kiểm kê; khóa tới `units.id`.
+- `to_base_factor`: **Quy đổi về tồn chuẩn**, luôn hiểu là `1 đơn vị nhập/đếm = N đơn vị tồn chuẩn`; UI hiển thị canonical như `1 thùng = 24 chai`.
 
-> **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`, và WAC luôn lưu theo base unit. Mọi chứng từ PO, GRN, transfer, issue, waste, stocktake, recipe và production có thể nhập theo `entry_unit_id`; RPC/action phải quy đổi qua `ingredient_units`, không tin unit text từ client.
+> **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`, và giá vốn BQ luôn lưu theo **đơn vị tồn chuẩn**. Mọi chứng từ PO, GRN, transfer, issue, waste, stocktake, recipe và production có thể nhập theo `entry_unit_id`; RPC/action phải quy đổi qua `ingredient_units`, không tin unit text từ client.
 
 ### 2.2 Database — bảng `ingredients`
 
-Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` có thể phản ánh **giá mua gần nhất** (tham chiếu); **giá tồn kho** theo từng kho nằm ở `stock_levels.avg_unit_cost` (WAC).
+Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` là **giá nhập tham chiếu**; **giá vốn bình quân** theo từng kho nằm ở `stock_levels.avg_unit_cost` và tính trên **đơn vị tồn chuẩn**.
 
 - `item_kind = raw_material`: nguyên liệu đầu vào.
 - `item_kind = finished_good`: thành phẩm sản xuất tại Bếp Trung Tâm hoặc hàng chuẩn bị sẵn được giữ ở stock-bearing site trước khi transfer về Kho CN.
@@ -122,8 +122,8 @@ Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients`
 ### 2.3 Tồn kho theo chi nhánh — bảng `stock_levels`
 
 - **Khóa:** theo `(tenant_id, branch_id, location_id, ingredient_id)` — flow mới chỉ cộng tồn vận hành từ stock-bearing locations.
-- **`current_quantity`:** tồn thực theo **base unit** của nguyên liệu trong `ingredient_units`.
-- **`avg_unit_cost`:** giá bình quân gia quyền (WAC) tại kho đó, cập nhật khi **GRN** (tại Kho CN của chi nhánh) và có thể dùng làm **đơn giá xuất nội bộ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: WAC tại thời điểm xuất).
+- **`current_quantity`:** tồn thực theo **đơn vị tồn chuẩn** của nguyên liệu trong `ingredient_units`.
+- **`avg_unit_cost`:** **giá vốn bình quân** tại kho đó, tính theo **đơn vị tồn chuẩn**, cập nhật khi **GRN** (tại Kho CN của chi nhánh) và có thể dùng làm **đơn giá ghi sổ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: giá vốn BQ tại thời điểm xuất).
 
 ---
 
@@ -199,7 +199,7 @@ Ngoài phạm vi v1:
 
 - **Append-only** (không UPDATE/DELETE dòng movement).
 - Các loại `type` mở rộng như bảng ở §1b.
-- Liên kết tùy loại: `order_id`, `grn_id`, `transfer_id`, `unit_cost` (snapshot tại thời điểm ghi).
+- Liên kết tùy loại: `order_id`, `grn_id`, `transfer_id`, `unit_cost` (**đơn giá ghi sổ** snapshot tại thời điểm ghi, theo đơn vị tồn chuẩn; không gọi là WAC trên lịch sử movement).
 
 ### POS food-cost boundary
 
@@ -218,10 +218,10 @@ line không có KDS chỉ được trừ sau khi đã dispatch qua phiếu bếp
 1. Thiết lập **NCC**, điều khoản thanh toán.
 2. Tạo **PO** gắn **branch_id** = site nhận hàng (`branch`, `central_supply`, hoặc `central_kitchen`).
 3. NCC giao hàng → kiểm đếm, QC.
-4. Lập **GRN** (số thực nhận theo ĐVN, đơn giá theo ĐVN) → **xác nhận GRN** (RPC) → cập nhật tồn stock-bearing location + **WAC**.
+4. Lập **GRN** (số thực nhận theo **đơn vị nhập**, đơn giá nhập theo **đơn vị nhập**) → **xác nhận GRN** (RPC) → quy đổi về đơn vị tồn chuẩn, cập nhật tồn stock-bearing location + **giá vốn BQ**.
 5. Nếu Finance cần đối soát ngay: nhập **supplier_invoice** → **3-way matching** với PO & GRN (§7). Bước này là Finance P1/handoff, không chặn luồng tồn kho.
 
-**Nguyên tắc:** Food cost nhập mua theo **GRN** (thực nhận), không theo số đặt PO. GRN chỉ được tạo tại site stock-bearing: `branch`, `central_supply`, hoặc `central_kitchen`.
+**Nguyên tắc:** Giá nhập theo **GRN** (thực nhận), không theo số đặt PO. `grn_items.unit_cost` là **Đơn giá nhập** (`₫ / đơn vị nhập`), không phải giá vốn BQ. GRN chỉ được tạo tại site stock-bearing: `branch`, `central_supply`, hoặc `central_kitchen`.
 
 ### 5.2 Schema tham chiếu — `goods_received_notes` / `grn_items`
 
@@ -237,8 +237,8 @@ line không có KDS chỉ được trừ sau khi đã dispatch qua phiếu bếp
 Công thức WAC sau mỗi dòng nhập (đơn giản hóa):
 
 ```
-Q_new = Q_old + Q_recv
-WAC_new = (Q_old × WAC_old + Q_recv × đơn_giá_nhập) / Q_new   (khi Q_new > 0)
+Q_new = Q_old + Q_recv_base
+WAC_new = (Q_old × WAC_old + Q_recv_base × đơn_giá_nhập_quy_đổi_về_tồn_chuẩn) / Q_new   (khi Q_new > 0)
 ```
 
 ### 6.1 Price Variance — boundary cho v1

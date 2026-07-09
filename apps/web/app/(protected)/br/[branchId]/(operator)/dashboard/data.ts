@@ -11,7 +11,7 @@ import { ensurePaymentProvidersRegistered } from "@lib/payment-providers-init";
 
 type ServerClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
-// Mirrors PrinterStatusBadge: an agent is online when its heartbeat is
+// Mirrors PrinterStatusIndicator: an agent is online when its heartbeat is
 // younger than this threshold.
 const AGENT_OFFLINE_THRESHOLD_MS = 60_000;
 

@@ -77,7 +77,10 @@ export async function fetchSupplierReturns(
   const { data, error } = await query;
 
   if (error) {
-    return { success: false, error: "Không thể tải phiếu trả hàng NCC." };
+    return {
+      success: false,
+      error: messages.inventory.supplierReturns.loadFailed,
+    };
   }
   return { success: true, data: data ?? [] };
 }
@@ -118,7 +121,10 @@ export async function fetchSupplierReturnDetail(
     .eq("tenant_id", claims.tenant_id)
     .order("id");
   if (linesErr) {
-    return { success: false, error: "Không thể tải dòng phiếu trả hàng." };
+    return {
+      success: false,
+      error: messages.inventory.supplierReturns.detail.linesLoadFailed,
+    };
   }
 
   const normalizedLines = (lines ?? []).map((line) => {
@@ -183,7 +189,10 @@ export async function fetchReturnableGrns(
 
   const { data, error } = await query;
   if (error) {
-    return { success: false, error: "Không thể tải phiếu nhập." };
+    return {
+      success: false,
+      error: messages.inventory.supplierReturns.create.grnLoadFailed,
+    };
   }
 
   const rows: ReturnableGrnRow[] = [];

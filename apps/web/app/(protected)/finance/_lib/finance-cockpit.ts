@@ -1,4 +1,5 @@
-import { formatVND } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
+import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchInventoryValueByBranch } from "@/(protected)/inventory/inventory-value-actions";
 import { messages } from "@lib/messages";
@@ -14,6 +15,7 @@ import {
 import { fetchFoodCost } from "@/_lib/food-cost-actions";
 import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
 import { fetchStockBearingLocationIds } from "../../inventory/_lib/stock-bearing-locations";
+import { isOperatingExpenseCategory } from "./expense-categories";
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
@@ -49,6 +51,11 @@ interface FoodCostRow {
   food_cost_pct: number | null;
 }
 
+interface ActualFoodCostSnapshot {
+  rows: FoodCostRow[];
+  orderCount: number;
+}
+
 interface TopItemRow {
   branch_id: number;
   menu_item_id: number;
@@ -79,6 +86,8 @@ interface FinanceCockpitKpis {
   grossMargin: number;
   netProfit: number;
   costAvailable: boolean;
+  costCoverageOrderCount: number;
+  costCoverageRatio: number;
   cashRevenue: number;
   vietqrRevenue: number;
   momoRevenue: number;
@@ -126,6 +135,7 @@ export interface FinanceCockpitData {
     | "ingredientCost"
     | "grossProfit"
     | "netProfit"
+    | "costAvailable"
   > | null;
   revenueTrend: FinanceTrendPoint[];
   grossProfitTrend: FinanceTrendPoint[];
@@ -141,32 +151,27 @@ function toNumber(value: number | string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function formatCount(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(value);
-}
-
 function formatPercent(value: number): string {
   if (!Number.isFinite(value)) return "0%";
-  return `${new Intl.NumberFormat("vi-VN", {
-    maximumFractionDigits: 1,
-  }).format(value)}%`;
+  return `${value.toFixed(1)}%`;
 }
 
 function buildKpis({
   kpis,
-  actualFoodCostRows,
+  actualFoodCost,
   inventoryValue,
   operatingExpense,
 }: {
   kpis: KpiBundle | null;
-  actualFoodCostRows: FoodCostRow[];
+  actualFoodCost: ActualFoodCostSnapshot;
   inventoryValue: number;
   operatingExpense: number;
 }): FinanceCockpitKpis {
   const totalCollected = toNumber(kpis?.net_revenue);
+  const orderCount = toNumber(kpis?.order_count);
   const netRevenueBeforeVat =
     toNumber(kpis?.subtotal_revenue) - toNumber(kpis?.discount_amount);
-  const ingredientCost = actualFoodCostRows.reduce(
+  const ingredientCost = actualFoodCost.rows.reduce(
     (sum, row) => sum + toNumber(row.ingredient_cost),
     0,
   );
@@ -174,12 +179,15 @@ function buildKpis({
   const grossMargin =
     netRevenueBeforeVat > 0 ? (grossProfit / netRevenueBeforeVat) * 100 : 0;
   const netProfit = grossProfit - operatingExpense;
-  // Actual food cost is posted only after manager-approved consumption.
-  const costAvailable = !(ingredientCost <= 0 && netRevenueBeforeVat > 0);
+  const costCoverageOrderCount = actualFoodCost.orderCount;
+  const costCoverageRatio =
+    orderCount > 0 ? costCoverageOrderCount / orderCount : 1;
+  const costAvailable =
+    orderCount === 0 || costCoverageOrderCount >= orderCount;
 
   return {
     totalCollected,
-    orderCount: toNumber(kpis?.order_count),
+    orderCount,
     netRevenueBeforeVat,
     inventoryValue,
     operatingExpense,
@@ -188,6 +196,8 @@ function buildKpis({
     grossMargin,
     netProfit,
     costAvailable,
+    costCoverageOrderCount,
+    costCoverageRatio,
     cashRevenue: toNumber(kpis?.cash_revenue),
     vietqrRevenue: toNumber(kpis?.vietqr_revenue),
     momoRevenue: toNumber(kpis?.momo_revenue),
@@ -209,9 +219,8 @@ export async function fetchOperatingExpenseTotal({
 }): Promise<number> {
   let query = supabase
     .from("expenses")
-    .select("amount")
+    .select("amount, category")
     .eq("tenant_id", tenantId)
-    .neq("category", "bank_deposit")
     .gte("expense_date", startDate)
     .lte("expense_date", endDate);
 
@@ -221,25 +230,49 @@ export async function fetchOperatingExpenseTotal({
 
   const { data, error } = await query;
   if (error) return 0;
-  return (data ?? []).reduce((sum, row) => sum + toNumber(row.amount), 0);
+  return (data ?? []).reduce(
+    (sum, row) =>
+      isOperatingExpenseCategory(row.category)
+        ? sum + toNumber(row.amount)
+        : sum,
+    0,
+  );
 }
 
 async function fetchUnpaidSupplierInvoiceRisk({
   supabase,
   tenantId,
+  branchId,
 }: {
   supabase: SupabaseClient;
   tenantId: number;
+  branchId: number | null;
 }): Promise<{ count: number; amount: number }> {
-  const { data, error } = await supabase
+  const select =
+    branchId != null
+      ? "total_amount, paid_amount, payment_status, goods_received_notes!inner(branch_id)"
+      : "total_amount, paid_amount, payment_status";
+
+  let query = supabase
     .from("supplier_invoices")
-    .select("total_amount, paid_amount, payment_status")
+    .select(select)
     .eq("tenant_id", tenantId)
     .neq("payment_status", "paid");
 
+  if (branchId != null) {
+    query = query.eq("goods_received_notes.branch_id", branchId);
+  }
+
+  const { data, error } = await query;
+
   if (error) return { count: 0, amount: 0 };
 
-  return (data ?? []).reduce(
+  const rows = (data ?? []) as unknown as Array<{
+    total_amount: number | string | null;
+    paid_amount: number | string | null;
+  }>;
+
+  return rows.reduce(
     (acc, row) => {
       acc.count += 1;
       acc.amount += Math.max(
@@ -337,13 +370,13 @@ async function fetchInventoryCashTiedItems({
     .slice(0, 5);
 }
 
-function nextDate(date: string): string {
-  const parsed = new Date(`${date}T00:00:00.000Z`);
-  parsed.setUTCDate(parsed.getUTCDate() + 1);
-  return parsed.toISOString().slice(0, 10);
+function getVNDateRangeUtc(startDate: string, endDate: string) {
+  const { startIso } = getVNDayUtcRange(startDate);
+  const { endIso } = getVNDayUtcRange(endDate);
+  return { startIso, endIso };
 }
 
-async function fetchActualFoodCostRows({
+async function fetchActualFoodCostSnapshot({
   supabase,
   tenantId,
   branchId,
@@ -355,27 +388,30 @@ async function fetchActualFoodCostRows({
   branchId: number | null;
   startDate: string;
   endDate: string;
-}): Promise<FoodCostRow[]> {
+}): Promise<ActualFoodCostSnapshot> {
+  const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
   let query = supabase
     .from("stock_movements")
-    .select("branch_id, quantity_change, unit_cost, created_at")
+    .select("branch_id, order_id, quantity_change, unit_cost, created_at")
     .eq("tenant_id", tenantId)
     .eq("type", "consumption")
     .eq("movement_subtype", "sale_consumption")
-    .gte("created_at", startDate)
-    .lt("created_at", nextDate(endDate));
+    .gte("created_at", startIso)
+    .lt("created_at", endIso);
 
   if (branchId != null) {
     query = query.eq("branch_id", branchId);
   }
 
   const { data, error } = await query;
-  if (error) return [];
+  if (error) return { rows: [], orderCount: 0 };
 
   const rows = new Map<string, FoodCostRow>();
+  const orderIds = new Set<number>();
   for (const row of data ?? []) {
-    const period = String(row.created_at ?? "").slice(0, 10);
-    if (!period || row.branch_id == null) continue;
+    if (!row.created_at || row.branch_id == null) continue;
+    if (row.order_id != null) orderIds.add(row.order_id);
+    const period = getVNDateString(row.created_at);
     const key = `${period}:${row.branch_id}`;
     const current =
       rows.get(key) ??
@@ -393,7 +429,7 @@ async function fetchActualFoodCostRows({
     rows.set(key, current);
   }
 
-  return Array.from(rows.values());
+  return { rows: Array.from(rows.values()), orderCount: orderIds.size };
 }
 
 function buildTrends(rollups: RollupRow[], foodCostRows: FoodCostRow[]) {
@@ -501,15 +537,19 @@ function buildExceptions({
   paymentDesync,
 }: {
   kpis: FinanceCockpitKpis;
-  dashboardSummary: Pick<FinanceDashboardSummary, "invoice_attention_count"> | null;
+  dashboardSummary: Pick<
+    FinanceDashboardSummary,
+    "invoice_attention_count"
+  > | null;
   cashVariance: CashVarianceSummary | null;
   foodCostRows: FoodCostRow[];
   unpaidSupplierInvoices: { count: number; amount: number };
   paymentDesync: { count: number; amount: number };
 }): FinanceException[] {
-  const missingCostCount = foodCostRows.filter(
-    (row) => toNumber(row.revenue) > 0 && toNumber(row.ingredient_cost) <= 0,
-  ).length;
+  const missingCostCount = Math.max(
+    0,
+    kpis.orderCount - kpis.costCoverageOrderCount,
+  );
   const highFoodCost = foodCostRows
     .filter((row) => toNumber(row.food_cost_pct) >= 60)
     .sort((a, b) => toNumber(b.food_cost_pct) - toNumber(a.food_cost_pct))[0];
@@ -547,7 +587,10 @@ function buildExceptions({
       value: formatCount(missingCostCount),
       hint:
         missingCostCount > 0
-          ? copy.exceptions.missingCostHint
+          ? copy.exceptions.missingCostCoverageHint(
+              formatCount(kpis.costCoverageOrderCount),
+              formatCount(kpis.orderCount),
+            )
           : highFoodCost
             ? copy.exceptions.highFoodCostHint(
                 highFoodCost.item_name ?? copy.exceptions.unnamedMenuItem,
@@ -601,8 +644,8 @@ export async function fetchFinanceCockpit(
     compareKpisRes,
     rollupRes,
     foodCostRes,
-    actualFoodCostRows,
-    compareActualFoodCostRows,
+    actualFoodCost,
+    compareActualFoodCost,
     inventoryValueRes,
     cashVarianceRes,
     dashboardSummaryRes,
@@ -627,7 +670,7 @@ export async function fetchFinanceCockpit(
       endDate: resolved.end,
       ...(params.branch != null ? { branchId: params.branch } : {}),
     }),
-    fetchActualFoodCostRows({
+    fetchActualFoodCostSnapshot({
       supabase,
       tenantId: claims.tenant_id,
       branchId: params.branch,
@@ -635,14 +678,14 @@ export async function fetchFinanceCockpit(
       endDate: resolved.end,
     }),
     resolved.compare
-      ? fetchActualFoodCostRows({
+      ? fetchActualFoodCostSnapshot({
           supabase,
           tenantId: claims.tenant_id,
           branchId: params.branch,
           startDate: resolved.compare.start,
           endDate: resolved.compare.end,
         })
-      : Promise.resolve([]),
+      : Promise.resolve({ rows: [], orderCount: 0 }),
     fetchInventoryValueByBranch(),
     fetchCashVarianceSummary(params.branch, resolved.start, resolved.end),
     fetchFinanceDashboardSummary(params.branch, resolved.start, resolved.end),
@@ -666,6 +709,7 @@ export async function fetchFinanceCockpit(
     fetchUnpaidSupplierInvoiceRisk({
       supabase,
       tenantId: claims.tenant_id,
+      branchId: params.branch,
     }),
     fetchPaymentOrderDesync({ supabase, since: resolved.start }),
   ]);
@@ -687,7 +731,7 @@ export async function fetchFinanceCockpit(
 
   const kpis = buildKpis({
     kpis: kpisRes.success ? (kpisRes.data as KpiBundle | null) : null,
-    actualFoodCostRows,
+    actualFoodCost,
     inventoryValue,
     operatingExpense,
   });
@@ -697,7 +741,7 @@ export async function fetchFinanceCockpit(
         kpis: compareKpisRes.success
           ? (compareKpisRes.data as KpiBundle | null)
           : null,
-        actualFoodCostRows: compareActualFoodCostRows,
+        actualFoodCost: compareActualFoodCost,
         inventoryValue,
         operatingExpense: compareOperatingExpense,
       })
@@ -708,7 +752,7 @@ export async function fetchFinanceCockpit(
   ) as RollupRow[];
   const { revenueTrend, grossProfitTrend } = buildTrends(
     rollups,
-    actualFoodCostRows,
+    actualFoodCost.rows,
   );
 
   const branchCashVariance = new Map<number, number>();
@@ -745,6 +789,7 @@ export async function fetchFinanceCockpit(
           ingredientCost: compareKpis.ingredientCost,
           grossProfit: compareKpis.grossProfit,
           netProfit: compareKpis.netProfit,
+          costAvailable: compareKpis.costAvailable,
         }
       : null,
     revenueTrend,
@@ -752,7 +797,7 @@ export async function fetchFinanceCockpit(
     branchRows: buildBranchRows({
       branches,
       rollups,
-      foodCostRows: actualFoodCostRows,
+      foodCostRows: actualFoodCost.rows,
       inventoryRows,
       cashVarianceByBranch: branchCashVariance,
     }),

@@ -1,8 +1,8 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 import { notFound } from "next/navigation";
 import { AppEmptyState } from "@/components/surface";
 import { loadProductionSurfaceData } from "@/(protected)/inventory/production-data";
 import { ProductionRecipePanel } from "@/(protected)/inventory/production-recipe-panel";
+import { messages } from "@lib/messages";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
@@ -21,7 +21,7 @@ export default async function OperatorProductionRecipesPage({
     return (
       <AppEmptyState
         mode="error"
-        title="Không thể tải công thức sản xuất"
+        title={messages.inventory.operatorFlow.productionRecipeLoadFailed}
         description={data.recipeLoadError}
       />
     );

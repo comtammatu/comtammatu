@@ -1,5 +1,4 @@
 import {
-  ArrowLeftRight as IconArrowLeftRight,
   ChartBar as IconChartBar,
   ClipboardCheck as IconClipboardCheck,
   ClipboardList as IconClipboardList,
@@ -15,6 +14,27 @@ import {
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ShellNavGroup } from "@/lib/shell-primitives";
 import { tNav } from "./dictionary";
+
+function appendBranchId(href: string, branchId: number): string {
+  const [path, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  params.set("branchId", String(branchId));
+  return `${path}?${params.toString()}`;
+}
+
+export function withInventoryBranchNavScope(
+  groups: ShellNavGroup[],
+  branchId: number | null,
+): ShellNavGroup[] {
+  if (branchId == null) return groups;
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.map((item) => ({
+      ...item,
+      linkHref: appendBranchId(item.href, branchId),
+    })),
+  }));
+}
 
 // Inventory sidebar nav as data (D019 § D). Role/scope-computed, so it is a
 // resolver rather than a static record; it stays in the inventory _lib
@@ -100,7 +120,14 @@ export function resolveInventoryNav({
         href: "/inventory/operations",
         label: "Giao dịch kho",
         icon: IconFileText,
-        matchPrefixes: ["/inventory/operations"],
+        matchPrefixes: [
+          "/inventory/operations",
+          "/inventory/purchase-orders",
+          "/inventory/grn",
+          "/inventory/consumption",
+          "/inventory/issues",
+          "/inventory/transfers",
+        ],
       },
       ...(showProcurement
         ? [
@@ -119,33 +146,20 @@ export function resolveInventoryNav({
     ],
   });
 
-  groups.push({
-    title: "3 · Điều phối/Sản xuất",
-    items: [
-      {
-        href: "/inventory/transfers",
-        label: tNav("transfers", "navigation"),
-        icon: IconArrowLeftRight,
-      },
-      ...(showProduction
-        ? [
-            {
-              href: "/inventory/production",
-              label: "Lệnh sản xuất",
-              icon: IconToolsKitchen,
-              matchPrefixes: ["/inventory/production/new", "/inventory/production/"],
-              exact: true,
-            },
-            {
-              href: "/inventory/production?tab=recipes",
-              label: "Công thức",
-              icon: IconClipboardList,
-              matchPrefixes: [],
-            },
-          ]
-        : []),
-    ],
-  });
+  if (showProduction) {
+    groups.push({
+      title: "3 · Sản xuất",
+      items: [
+        {
+          href: "/inventory/production",
+          label: "Sản xuất",
+          icon: IconToolsKitchen,
+          matchPrefixes: ["/inventory/production/new", "/inventory/production/"],
+          exact: true,
+        },
+      ],
+    });
+  }
 
   const isBranchManager = userRole === "branch_manager";
   const catalogItems: ShellNavGroup["items"] = [];

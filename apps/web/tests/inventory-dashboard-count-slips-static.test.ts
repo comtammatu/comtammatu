@@ -13,6 +13,7 @@ test("inventory dashboard surfaces pending count slips for Branch Manager review
   const dataSrc = readWebFile("app/(protected)/inventory/_lib/dashboard-data.ts");
   const clientSrc = readWebFile("app/(protected)/inventory/dashboard-client.tsx");
   const pathsSrc = readWebFile("app/(protected)/inventory/_lib/paths.ts");
+  const messagesSrc = readWebFile("lib/messages/inventory.ts");
 
   assert.match(
     dataSrc,
@@ -41,13 +42,24 @@ test("inventory dashboard surfaces pending count slips for Branch Manager review
   );
   assert.match(
     clientSrc,
-    /props\.canAssignCounts[\s\S]*Phân công đếm tồn[\s\S]*href: paths\.countAssignments/,
+    /props\.canAssignCounts[\s\S]*messages\.inventory\.dashboard\.assignCountsAction[\s\S]*href: paths\.countAssignments/,
     "dashboard control flow must link count assignment after the sidebar is compressed",
   );
   assert.match(
     clientSrc,
-    /pendingCountSlips > 0[\s\S]*phiếu đếm tồn chờ duyệt[\s\S]*href: paths\.countSlips/,
+    /props\.canApproveCounts[\s\S]*messages\.inventory\.dashboard\.approveCountSlipsAction[\s\S]*href: paths\.countSlips/,
+    "dashboard control flow must link count-slip approvals after the sidebar is compressed",
+  );
+  assert.match(
+    clientSrc,
+    /pendingCountSlips > 0[\s\S]*messages\.inventory\.dashboard\.countSlipsPendingTask[\s\S]*href: paths\.countSlips/,
     "dashboard tasks must link pending count slips to the review queue",
+  );
+  assert.match(messagesSrc, /assignCountsAction: "Phân công đếm tồn"/);
+  assert.match(messagesSrc, /approveCountSlipsAction: "Duyệt phiếu đếm tồn"/);
+  assert.match(
+    messagesSrc,
+    /countSlipsPendingTask: \(count: number\) =>[\s\S]*`\$\{count\} phiếu đếm tồn chờ duyệt`/,
   );
 });
 

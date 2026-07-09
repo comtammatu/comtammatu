@@ -9,6 +9,7 @@ import {
 import type { ActionResult } from "@comtammatu/shared/types";
 import { addVNDateDays } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
+import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { PG_ERR } from "./_lib/constants";
 
@@ -183,7 +184,7 @@ const supplierInvoiceSelect = (branchId?: number) => {
     branchId != null
       ? "goods_received_notes!inner ( id, grn_number, branch_id )"
       : "goods_received_notes ( id, grn_number )";
-  return `id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), ${grnSelect}`;
+  return `id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), ${grnSelect}`;
 };
 
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;
@@ -264,7 +265,9 @@ export async function fetchSupplierInvoicesPage(
     .order("id", { ascending: false })
     .limit(pageSize + 1);
 
-  if (error) return { success: false, error: "Không thể tải hóa đơn NCC." };
+  if (error) {
+    return { success: false, error: messages.inventory.supplierInvoices.loadFailed };
+  }
 
   const fetched = (data ?? []) as unknown as Array<{
     id: number;

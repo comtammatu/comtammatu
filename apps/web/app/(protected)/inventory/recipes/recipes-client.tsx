@@ -209,7 +209,11 @@ export function RecipesClient({
     return (
       <AppPage width="xwide" density="compact">
         <AppPageHeader eyebrow={messages.inventory.shell.moduleName} title={INVENTORY_VI.recipesPageTitle} />
-        <AppEmptyState mode="error" title="Không thể tải định mức món bán" description={loadError} />
+        <AppEmptyState
+          mode="error"
+          title={messages.inventory.recipes.loadFailedTitle}
+          description={loadError}
+        />
       </AppPage>
     );
   }

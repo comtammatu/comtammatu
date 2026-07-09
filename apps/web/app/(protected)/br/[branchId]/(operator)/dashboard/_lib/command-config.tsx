@@ -3,8 +3,10 @@ import {
   Armchair as IconArmchair,
   ChefHat as IconChefHat,
   ClipboardCheck as IconClipboardCheck,
+  ClipboardList as IconClipboardList,
   CreditCard as IconCreditCard,
   Monitor as IconMonitor,
+  MonitorUp as IconMonitorUp,
   Package as IconPackage,
   Printer as IconPrinter,
   ReceiptText as IconReceiptText,
@@ -43,6 +45,7 @@ export type BranchReadinessItem = {
 };
 
 export type BranchCommandTileGroups = {
+  liveOperations: BranchCommandTile[];
   endDay: BranchCommandTile[];
   drilldown: BranchCommandTile[];
 };
@@ -52,6 +55,43 @@ function buildTileGroups(
   copy: BranchCopy,
 ): BranchCommandTileGroups {
   return {
+    liveOperations: [
+      {
+        moduleKey: "pos",
+        href: `/br/${branchId}/pos`,
+        title: "POS",
+        description: copy.commandPosDescription,
+        icon: <IconMonitor />,
+      },
+      {
+        moduleKey: "kds",
+        href: `/br/${branchId}/kds`,
+        title: "KDS",
+        description: copy.commandKdsDescription,
+        icon: <IconChefHat />,
+      },
+      {
+        moduleKey: "runner",
+        href: `/br/${branchId}/runner`,
+        title: "Gọi món",
+        description: copy.commandRunnerDescription,
+        icon: <IconMonitorUp />,
+      },
+      {
+        moduleKey: "branch_menu_limits",
+        href: `/br/${branchId}/menu-limits`,
+        title: "Giới hạn bán",
+        description: copy.commandMenuLimitsDescription,
+        icon: <IconUtensils />,
+      },
+      {
+        moduleKey: "orders",
+        href: `/br/${branchId}/orders`,
+        title: "Đơn hàng",
+        description: copy.commandOrdersDescription,
+        icon: <IconClipboardList />,
+      },
+    ],
     endDay: [
       {
         moduleKey: "branch_pos_sessions",
@@ -87,6 +127,7 @@ export function buildVisibleTileGroups(
   const visible = (tiles: BranchCommandTile[]) =>
     tiles.filter((tile) => canAccess(role, tile.moduleKey));
   return {
+    liveOperations: visible(groups.liveOperations),
     endDay: visible(groups.endDay),
     drilldown: visible(groups.drilldown),
   };

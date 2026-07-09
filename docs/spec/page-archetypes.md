@@ -8,7 +8,7 @@
 
 ## 0. What This File Is For
 
-Every `(protected)/**/page.tsx` renders one of a fixed set of page archetypes.
+Every `apps/web/app/**/page.tsx` renders one of a fixed set of page archetypes.
 An archetype is a locked recipe: layout skeleton, data-display idiom, state
 handling, and the shared status/money/date/navigation vocabulary it must use.
 This file is the recipe book; `scripts/check-ui-contract.mjs` is the mapping
@@ -18,6 +18,46 @@ This file does not own navigation facts (route home, back behavior,
 breadcrumb root, primary nav). Those live in `ROUTE_FAMILY_CONTRACTS`
 (`packages/shared/src/auth/route-map.ts`) — recipes below point at that
 contract, never restate it.
+
+## 0.1 UI Advisor Gate
+
+Before a non-trivial UI change adds or changes a screen, workflow, layout,
+data presentation, primary action, or responsive behavior, record this gate in
+the task plan, task note, or owner-facing work summary. A pull request may
+carry the same gate when one exists; a PR is not required. T1 typo-only changes
+may skip it with the skip reason.
+
+```text
+UI Advisor Gate
+- Surface: <route>; route family: <id>; plane: <Branch | Office | station | public>; change: <visual | flow | copy | behavior>
+- Context: <screen-context-map entry or nearest parent workflow>; actor: <role>; job: <outcome>
+- Journey: <entry state> -> <decision> -> <primary action> -> <success>; recovery: <safe retry/undo/exit>
+- Information order: 1) <first viewport> 2) <decision context> 3) <secondary detail>; exclude: <out-of-scope data>
+- Pattern: <archetype>; exemplar: <path>; data display: <table | board | document | detail | ...>
+- States: <loading | empty | error | success | partial | blocked | permission | offline, as applicable>
+- Components: <shared primitives/adapters>; fallback: <next approved composition if no exact match>
+- Responsive/accessibility: <same-IA viewport changes>; input: <touch | keyboard | mixed>; risks: <focus/label/contrast/target>
+- Verification: <routes, viewports, states, and browser evidence for meaningful runtime UI changes>
+```
+
+Decision order:
+
+1. Use `docs/ref/screen-context-map.md` to lock the actor, job, workflow, data
+   priority, and information that must stay out of the surface. If the exact
+   route is absent, use its nearest parent workflow. Update the context map
+   first only when the route introduces a materially different actor, job, or
+   workflow.
+2. Select the archetype and named exemplar in this file. The archetype owns
+   page shape; the context map does not.
+3. Select shared primitives and adapters from `docs/modules/ui.md` § Shared
+   Component Registry. External design output may advise but cannot select or
+   override the project contract.
+4. If no exact component fits, compose existing primitives behind a
+   route-scoped adapter. If the proposed fallback changes a shared visual role,
+   token, or behavior, update `docs/spec/design-system.md` before adding or
+   changing a shared adapter or primitive.
+5. Do not start implementation while any gate field that affects hierarchy,
+   workflow, state behavior, or component choice is unresolved.
 
 ## 1. Universal Shell Rule
 
@@ -85,19 +125,20 @@ an existing archetype better (a line-array create/edit flow is DOC-WORKFLOW;
 a single-entity RHF+Zod edit is SETTINGS-PANEL), so it folds into those two
 rather than staying a near-empty category.
 
-| # | Archetype | Job |
-|---|---|---|
-| 1 | LIST | Browse/filter/search a collection, row actions, quick CRUD |
-| 2 | EMBED-WRAPPER | Branch-runtime re-mount of a canonical office/staff-runtime `PageContent` |
-| 3 | DETAIL | Single entity: metadata + lines/history + stage actions |
-| 4 | SETTINGS-PANEL | Single-entity or list-shaped configuration form |
-| 5 | DOC-WORKFLOW | Create/edit a line-array business document |
-| 6 | REDIRECT-SHIM | No-JSX route alias to the canonical home |
-| 7 | HUB | Link-card menu into a group of capabilities |
-| 8 | REPORT | Filtered analytics: KPIs + chart + breakdown table |
-| 9 | DASHBOARD | Home-surface KPI summary with drill-downs |
-| 10 | GATE/AUTH | Pre-context or terminal decision screen |
-| 11 | BOARD | Realtime operational queue (full-screen Operations chrome) |
+| #   | Archetype       | Job                                                                       |
+| --- | --------------- | ------------------------------------------------------------------------- |
+| 1   | LIST            | Browse/filter/search a collection, row actions, quick CRUD                |
+| 2   | EMBED-WRAPPER   | Branch-runtime re-mount of a canonical office/staff-runtime `PageContent` |
+| 3   | DETAIL          | Single entity: metadata + lines/history + stage actions                   |
+| 4   | SETTINGS-PANEL  | Single-entity or list-shaped configuration form                           |
+| 5   | DOC-WORKFLOW    | Create/edit a line-array business document                                |
+| 6   | REDIRECT-SHIM   | No-JSX route alias to the canonical home                                  |
+| 7   | HUB             | Link-card menu into a group of capabilities                               |
+| 8   | REPORT          | Filtered analytics: KPIs + chart + breakdown table                        |
+| 9   | DASHBOARD       | Home-surface KPI summary with drill-downs                                 |
+| 10  | GATE/AUTH       | Pre-context or terminal decision screen                                   |
+| 11  | BOARD           | Realtime operational queue (full-screen Operations chrome)                |
+| 12  | PUBLIC-WORKFLOW | Token-scoped customer transaction without Management chrome               |
 
 ## 3. Locked Recipes
 
@@ -132,6 +173,11 @@ This is the repo's second-largest archetype (32 of the 135 pages) and its
 hard rules are stricter than the other archetypes because its only job is
 delegation:
 
+- Branch runtime landing pages and hub roots MUST NOT use this archetype. A
+  Branch plane entry such as `/br/[branchId]`, `/br/[branchId]/stock`, or
+  `/br/[branchId]/orders` owns a native operator presentation first, then links
+  into deeper workflow screens. Sharing data loaders is fine; wrapping the
+  Office screen as the Branch entry UI is drift.
 - **≤ 40 lines.**
 - Parse and validate `branchId` from `params`; `notFound()` on a bad id.
 - Render the canonical `*PageContent` export (§ 1) with `routeBranchId`, a
@@ -171,7 +217,7 @@ component — the same branch benefits both planes, and the office plane
 - **R2 — No nested page shell.** An embedded branch MUST NOT wrap its content
   in `AppPage` (or an `AppPage`-backed adapter such as
   `InventoryPageContent`) — the operator layout's own `AppPage
-  density="compact"` already owns width/padding. Return a bare flex
+density="compact"` already owns width/padding. Return a bare flex
   container (`<div className="flex w-full flex-col gap-3">{content}</div>`)
   per the `purchase-orders-client.tsx` exemplar (§ EMBED-WRAPPER exemplar's
   wrapped `PageContent`).
@@ -234,13 +280,18 @@ component — the same branch benefits both planes, and the office plane
   `mobileFooter` (block under the card list).
 - Sticky CTA: `sticky chrome-safe-bottom` + `shadow-lg` per the Elevation
   contract's Sticky CTA rung.
+- Branch touch variant: route pages under `/br/[branchId]` use
+  `BranchOperatorPage`; their direct client owner composes
+  `BranchOperatorPanel` sections and a sticky `AppDetailFooter`. The Branch
+  variant uses progressive disclosure on phone, may expand to a two-column
+  touch layout on tablet, keeps controls at least 44px high, and does not
+  import `DocumentFormFrame`, `DataTable`, or an Office form presentation.
 - Status/money/date: per § 1.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
-- **Baseline note:** the DOC-WORKFLOW gate accepts `DocumentFormFrame` in the
-  route page or its direct client owner, because embedded operator routes must
-  short-circuit before the office frame. Inventory DOC-WORKFLOW pages now use
-  `DocumentFormFrame`; the remaining hand-rolled baseline is outside Inventory
-  and only shrinks as it migrates.
+- **Guard note:** the DOC-WORKFLOW gate accepts the Office
+  `DocumentFormFrame` recipe or the Branch touch recipe above in the route page
+  and its direct client owner. The remaining hand-rolled baseline is outside
+  Inventory and only shrinks as it migrates.
 - `employee/count` folds FORM-PAGE into this archetype: it collects a
   line-array count slip and is DOC-WORKFLOW in shape even though it does not
   yet use `DocumentFormFrame`.
@@ -261,10 +312,14 @@ component — the same branch benefits both planes, and the office plane
 
 - Skeleton: `AppPage width="wide"` → `AppPageHeader` → `AppSection` per group
   → `LinkCardGrid` of `AppLinkCard` (`{title, description, href, icon, tone,
-  badge}`).
+badge}`).
 - No data tables. No KPI values beyond a small count badge on a link card.
 - Operator variant: `apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx`
-  (`buildHubTiles`) — same recipe, branch-scoped tile set.
+  (`buildHubTiles`) uses the Branch plane recipe:
+  `BranchOperatorPage` → `BranchOperatorActionSection` from
+  `@lib/branch-operator/components/branch-operator-page`. It does not render
+  `AppPageHeader`, `AppSection`, `AppLinkCard`, or an Office `*PageContent`
+  wrapper at the Branch hub/root level.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 
 ### REPORT
@@ -283,9 +338,9 @@ component — the same branch benefits both planes, and the office plane
 
 **Exemplar:** `apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx`.
 
-- Skeleton: `AppPage` → `KpiRow` of `KpiCard` (`{label, value, delta, hint,
-  icon, href}` — `href` drill-down is mandatory per the owner Q-spec) →
-  `AppSection size="sm"` secondary panels.
+- Skeleton: `BranchOperatorPage` → `KpiRow` of `KpiCard` (`{label, value,
+delta, hint, icon, href}` — `href` drill-down is mandatory per the owner
+  Q-spec) → `BranchOperatorPanel size="sm"` secondary panels.
 - Every metric value binds to a key in
   `docs/ref/operational-data-contract.md`; do not add a metric card without a
   contract key.
@@ -294,7 +349,7 @@ component — the same branch benefits both planes, and the office plane
 
 ### GATE/AUTH
 
-**Exemplars:** `apps/web/app/(protected)/br/page.tsx` (branch picker:
+**Exemplars:** `apps/web/app/page.tsx` (work-location picker:
 `AppPage` + `LinkCardGrid`) and `apps/web/app/(public)/access-denied/page.tsx`
 (`?reason=` contract).
 
@@ -317,6 +372,23 @@ component — the same branch benefits both planes, and the office plane
   `StatusBadge` registry lock, documented in `design-system.md` § Status
   vocabulary.
 
+### PUBLIC-WORKFLOW
+
+**Exemplar:** `apps/web/app/q/[token]/page.tsx` + `self-order-client.tsx`.
+
+- Standalone, mobile-first customer workflow with no Management or Operations
+  chrome. The route token establishes the workflow context; invalid or expired
+  tokens fail closed through `notFound()` or one shared unavailable state.
+- Skeleton: `AppPage mobile` or an equivalent full-height standalone frame;
+  touch-sized controls; one visible primary action per decision step.
+- Data display follows the transaction journey rather than a Management list:
+  browse/select → review cart → submit → success or recoverable failure. Reuse
+  `Item`, shared form controls, money/date helpers, and status vocabulary; do
+  not copy Office `DataTable`, page header, or shell composition into it.
+- Loading/error/offline behavior must preserve the in-progress transaction and
+  expose an explicit retry or safe exit. Route-local status, formatter, and
+  empty/loading implementations remain forbidden by the shared guards.
+
 ### SETTINGS-PANEL
 
 **Exemplar:** `apps/web/app/(protected)/admin/settings/(tenant)/general/page.tsx`.
@@ -333,7 +405,7 @@ component — the same branch benefits both planes, and the office plane
 
 ## 4. Named Exceptions
 
-These 11 pages do not fit a single archetype cleanly. They are an explicit
+These 13 pages do not fit a single archetype cleanly. They are an explicit
 allowlist, not a precedent for stretching another archetype's definition:
 
 1. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx` — staff
@@ -374,13 +446,25 @@ allowlist, not a precedent for stretching another archetype's definition:
     `ItemGroup`, tier badges, photo links, and an inline review-note field; the
     decision surface is the card, not a row. Classified **LIST** (queue
     variant); exempt from the LIST `DataTable` / `width="xwide"` gate.
+12. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx`
+    — Branch-runtime transfer queue. It uses `BranchOperatorPage`,
+    `BranchOperatorPanel`, and full-row `Item` links because the supported
+    phone/tablet runtime must keep one touch information architecture in both
+    orientations. Classified **LIST** (Branch touch variant); the Office
+    transfer route remains the canonical desktop `DataTable` LIST.
+13. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx`
+    — Branch-runtime on-hand lookup. It shares the stock loader and pure filter
+    model with Office but owns a full-row touch list that never changes into a
+    desktop table at tablet landscape widths. Classified **LIST** (Branch touch
+    variant); the Office stock route retains its responsive management LIST.
 
 ## 5. Agent Lookup Flow
 
 Before building or changing any `(protected)/**/page.tsx`:
 
-1. Read `docs/agent/rules/ui.md` Guardrails (fast-loading pointer).
-2. Come here, find the target route's archetype in § 2/§ 4, and read its
+1. Read `docs/agent/rules/ui.md` Guardrails and complete the UI Advisor Gate in
+   § 0.1.
+2. Find the target route's archetype in § 2/§ 4, and read its
    locked recipe in § 3.
 3. Read the recipe's named exemplar file(s) in full.
 4. Run `codegraph explore "<adapter name>"` (or MCP `codegraph_explore`) for
@@ -403,20 +487,20 @@ The brief that seeded this file's first draft counted 134 pages — `main` had
 moved by one page since; the count below is a fresh recount, not a copy of
 that number.
 
-| Archetype | Count |
-|---|---|
-| EMBED-WRAPPER | 32 |
-| LIST | 32 |
-| SETTINGS-PANEL | 15 |
-| DETAIL | 13 |
-| REDIRECT-SHIM | 10 |
-| DOC-WORKFLOW | 10 |
-| REPORT | 7 |
-| HUB | 5 |
-| DASHBOARD | 4 |
-| GATE/AUTH | 4 |
-| BOARD | 3 |
-| **Total** | **135** |
+| Archetype      | Count   |
+| -------------- | ------- |
+| EMBED-WRAPPER  | 32      |
+| LIST           | 32      |
+| SETTINGS-PANEL | 15      |
+| DETAIL         | 13      |
+| REDIRECT-SHIM  | 10      |
+| DOC-WORKFLOW   | 10      |
+| REPORT         | 7       |
+| HUB            | 5       |
+| DASHBOARD      | 4       |
+| GATE/AUTH      | 4       |
+| BOARD          | 3       |
+| **Total**      | **135** |
 
 This table is a point-in-time count, not a gate — the gate (§ 4 above,
 mechanics in `scripts/check-ui-contract.mjs`) is the `PAGE_ARCHETYPES` mapping

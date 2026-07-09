@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction, withActionPositional } from "@/_lib/with-action";
+import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { PG_ERR } from "./_lib/constants";
 
@@ -40,7 +41,9 @@ export async function fetchSuppliers(): Promise<ActionResult> {
     .select("*")
     .eq("tenant_id", claims.tenant_id)
     .order("name");
-  if (error) return { success: false, error: "Không thể tải nhà cung cấp." };
+  if (error) {
+    return { success: false, error: messages.inventory.suppliers.loadFailed };
+  }
   return { success: true, data: data ?? [] };
 }
 

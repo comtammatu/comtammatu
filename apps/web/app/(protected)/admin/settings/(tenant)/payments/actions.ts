@@ -11,6 +11,15 @@ import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
+const paymentContentTokenSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(16)
+  .regex(/^[A-Za-z0-9]+$/, {
+    error: "Mã nội dung chỉ chứa chữ và số, không khoảng trắng.",
+  });
+
 const paymentSettingsSchema = z.object({
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]: z.enum(["true", "false"]),
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]: z.enum(["true", "false"]),
@@ -37,6 +46,12 @@ const paymentSettingsSchema = z.object({
     .regex(/^[A-Za-z0-9 ]+$/, {
       error: "Tiền tố chỉ chứa chữ, số và khoảng trắng.",
     }),
+  [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX]: paymentContentTokenSchema,
+  [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN]: paymentContentTokenSchema,
+  [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN]:
+    paymentContentTokenSchema,
+  [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN]:
+    paymentContentTokenSchema,
 });
 
 export async function updatePaymentSettings(
@@ -44,6 +59,7 @@ export async function updatePaymentSettings(
   formData: FormData,
 ): Promise<ActionResult> {
   const str = (k: string) => (formData.get(k) ?? "").toString();
+  const contentToken = (k: string) => str(k).toUpperCase().replace(/\s+/g, "");
   const raw = {
     [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]:
       formData.get(SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR) === "true"
@@ -68,6 +84,18 @@ export async function updatePaymentSettings(
       .toUpperCase()
       .replace(/\s+/g, " ")
       .trim(),
+    [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX]: contentToken(
+      SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX,
+    ),
+    [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN]: contentToken(
+      SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN,
+    ),
+    [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN]: contentToken(
+      SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN,
+    ),
+    [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN]: contentToken(
+      SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN,
+    ),
   };
 
   const parsed = paymentSettingsSchema.safeParse(raw);
@@ -75,6 +103,18 @@ export async function updatePaymentSettings(
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const contentTokens = [
+    parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN],
+    parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN],
+    parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN],
+  ];
+  if (new Set(contentTokens).size !== contentTokens.length) {
+    return {
+      success: false,
+      error: "Các mã DON, CHI, NOP phải khác nhau để SePay không nhận nhầm.",
     };
   }
 

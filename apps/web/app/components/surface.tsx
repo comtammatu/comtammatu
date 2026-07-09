@@ -12,6 +12,7 @@ import {
   ArrowRight as IconArrowRight,
   ChevronDown as IconChevronDown,
 } from "lucide-react";
+import { ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -438,7 +439,9 @@ export function AppToolbar({
       ) : null}
       {actions ? (
         <>
-          <Separator orientation="vertical" className="h-6" />
+          {search || filters || bulk ? (
+            <Separator orientation="vertical" className="h-6" />
+          ) : null}
           <ToolbarGroup className="gap-2">{actions}</ToolbarGroup>
         </>
       ) : null}
@@ -553,7 +556,7 @@ const OPERATIONAL_BOARD_CURRENT_CLASSNAME: Record<SurfaceTone, string> = {
   success: "relative z-10 bg-success/10 ring-2 ring-success/20",
   warning: "relative z-10 bg-warning/15 ring-2 ring-warning/20",
   info: "relative z-10 bg-info/10 ring-2 ring-info/20",
-  secondary: "relative z-10 bg-secondary/10 ring-2 ring-secondary",
+  secondary: "relative z-10 bg-secondary/10 ring-2 ring-secondary/20",
 };
 
 export type OperationalBoardCardProps = ComponentProps<typeof Card> & {
@@ -589,10 +592,10 @@ export type AppEmptyStateMode =
   | "error";
 
 const EMPTY_STATE_COPY: Record<AppEmptyStateMode, string> = {
-  "no-data": "Chưa có dữ liệu",
-  "no-results": "Không có kết quả phù hợp",
-  "no-access": "Không có quyền truy cập",
-  error: "Không thể tải dữ liệu",
+  "no-data": STATES_VI.empty,
+  "no-results": STATES_VI.noResults,
+  "no-access": STATES_VI.noAccess,
+  error: ERRORS_VI.loadFailed,
 };
 
 type AppEmptyRootProps = Omit<

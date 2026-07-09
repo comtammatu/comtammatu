@@ -1,3 +1,5 @@
+import { formatCount } from "@comtammatu/shared/format";
+
 export const settings = {
   nav: {
     ariaLabel: "Mục cài đặt",
@@ -251,6 +253,8 @@ export const settings = {
   payments: {
     saved: "Đã lưu cài đặt thanh toán",
     sectionTitle: "Phương thức thanh toán trên POS",
+    connectionTab: "Kết nối",
+    editTab: "Chỉnh sửa",
     vietqrLabel: "VietQR (chuyển khoản QR)",
     vietqrDescription:
       "Nhập tài khoản nhận tiền tại đây; POS sẽ dùng cấu hình này để tạo QR chuyển khoản.",
@@ -278,6 +282,20 @@ export const settings = {
     envStatus: "Trạng thái env:",
     envConfigured: "✓ Đã cấu hình",
     envMissing: "Chưa đủ biến môi trường",
+    contentSectionTitle: "Map nội dung chuyển khoản",
+    contentPrefix: "Tiền tố nhận diện",
+    contentOrderToken: "Mã đơn",
+    contentExpenseToken: "Mã chi",
+    contentCashDepositToken: "Mã nộp tiền mặt",
+    contentHelp:
+      "SePay chỉ tự xử lý khi nội dung có đúng tiền tố và mã đã lưu tại đây.",
+    contentOrderPreview: "Đơn",
+    contentExpensePreview: "Chi",
+    contentCashDepositPreview: "Nộp tiền",
+    contentExpenseHelp:
+      "MATU CHI cần mã chi đã có sẵn; thiếu hoặc sai mã thì đưa về đối soát.",
+    contentCashDepositHelp:
+      "MATU NOP ghi nhận nộp tiền mặt vào ngân hàng, không tính là chi vận hành.",
     saveSettings: "Lưu cài đặt",
   },
   pos: {
@@ -321,6 +339,11 @@ export const settings = {
     errorColumn: "Lỗi",
     actionColumn: "Hành động",
     emptyJobs: "Chưa có job in nào khớp bộ lọc",
+    loadPrintersFailed: "Không thể tải máy in",
+    loadAgentStatusFailed: "Không thể tải trạng thái agent in",
+    loadPrintTypesFailed: "Không thể tải loại phiếu in",
+    loadCategoryRoutesFailed: "Không thể tải routing danh mục",
+    loadCategoriesFailed: "Không thể tải danh mục",
     retrySuccess: (id: number) => `Đã đẩy lại job #${id} vào hàng đợi`,
     retryFailed: "Không thể thử lại",
     jobTypes: {
@@ -367,8 +390,6 @@ export const settings = {
       "Đặt số phần tối đa hoặc tắt món trong ngày cho POS và bếp.",
     dayRevenueLabel: "Doanh thu hôm nay",
     dayRevenueHint: "Tiền đã thu tại chi nhánh.",
-    hubOverviewTitle: "Tổng quan hôm nay",
-    hubOverviewUnreadLabel: "Thông báo chưa đọc của bạn",
     dayPaidOrdersLabel: "Đơn đã thanh toán",
     dayPaidOrdersHint: "Số đơn đã thu tiền hôm nay.",
     dayTablesLabel: "Bàn đang dùng",
@@ -384,17 +405,17 @@ export const settings = {
     readinessSetupCta: "Mở thiết lập",
     readinessMenuTitle: "Giới hạn bán",
     readinessMenuReady: (count: number) =>
-      `${count.toLocaleString("vi-VN")} món có thể mở bán trên POS.`,
+      `${formatCount(count)} món có thể mở bán trên POS.`,
     readinessMenuMissing: "Chưa có món khả dụng để POS bán.",
     readinessMenuCta: "Mở giới hạn bán",
     readinessFloorTitle: "Bàn & máy POS",
     readinessFloorReady: (tables: number, terminals: number) =>
-      `${tables.toLocaleString("vi-VN")} bàn và ${terminals.toLocaleString("vi-VN")} máy POS active.`,
+      `${formatCount(tables)} bàn và ${formatCount(terminals)} máy POS active.`,
     readinessFloorMissing: (tables: number, terminals: number) =>
-      `${tables.toLocaleString("vi-VN")} bàn, ${terminals.toLocaleString("vi-VN")} máy POS active. Cần đủ cả hai để bán tại quán.`,
+      `${formatCount(tables)} bàn, ${formatCount(terminals)} máy POS active. Cần đủ cả hai để bán tại quán.`,
     readinessKdsSetupTitle: "Trạm KDS",
     readinessKdsSetupReady: (count: number) =>
-      `${count.toLocaleString("vi-VN")} trạm bếp active.`,
+      `${formatCount(count)} trạm bếp active.`,
     readinessKdsSetupMissing:
       "Chưa có trạm bếp active; có thể bán thủ công nếu quản lý chấp nhận fallback.",
     readinessPaymentTitle: "Thanh toán & HĐĐT",
@@ -413,10 +434,10 @@ export const settings = {
     readinessPosCta: "Mở POS",
     readinessKdsTitle: "Bếp/KDS",
     readinessKdsActive: (count: number) =>
-      `${count.toLocaleString("vi-VN")} đơn bếp đang mở.`,
+      `${formatCount(count)} đơn bếp đang mở.`,
     readinessKdsEmpty: "Không có đơn bếp đang mở.",
     readinessKdsBadge: (count: number) =>
-      count > 0 ? `${count.toLocaleString("vi-VN")} đơn` : "0 đơn",
+      count > 0 ? `${formatCount(count)} đơn` : "0 đơn",
     readinessKdsCta: "Mở KDS",
     readinessPrinterTitle: "Máy in",
     readinessPrinterOnline: "Agent in đang hoạt động.",
@@ -430,9 +451,17 @@ export const settings = {
     readinessPrinterOfflineBadge: "Offline",
     readinessPrinterNoConfigBadge: "Fallback",
     readinessPrinterCta: "Mở máy in",
+    posSessionsLoadFailed: "Không thể tải ca POS",
+    posSessionBillsLoadFailed: "Không thể tải bill của ca POS",
+    posSessionReportLoadFailed: "Không thể tải báo cáo ca. Vui lòng thử lại.",
+    posTerminalsLoadFailed: "Không thể tải máy POS",
+    kdsStationsLoadFailed: "Không thể tải trạm KDS",
+    categoriesLoadFailed: "Không thể tải danh mục",
+    zonesLoadFailed: "Không thể tải khu vực",
+    tablesLoadFailed: "Không thể tải bàn",
     readinessStaffTitle: "Nhân sự trong ngày",
     readinessStaffReady: (count: number) =>
-      `${count.toLocaleString("vi-VN")} nhân sự active được gán chi nhánh.`,
+      `${formatCount(count)} nhân sự active được gán chi nhánh.`,
     readinessStaffMissing:
       "Chưa thấy nhân sự active gán chi nhánh; kiểm tra trước khi mở ca thật.",
     readinessStaffCta: "Mở nhân sự",
@@ -443,28 +472,28 @@ export const settings = {
     readinessCheckoutCta: "Mở duyệt kết ca",
     queueTitle: "Cần xử lý",
     queueCheckoutMeta: (count: number) =>
-      `${count.toLocaleString("vi-VN")} nhân viên đang chờ`,
+      `${formatCount(count)} nhân viên đang chờ`,
     queueLeaveTitle: "Duyệt nghỉ phép",
     queueLeaveMeta: (count: number) =>
-      `${count.toLocaleString("vi-VN")} yêu cầu chờ duyệt`,
+      `${formatCount(count)} yêu cầu chờ duyệt`,
     queueCountSlipsTitle: "Duyệt kiểm kê",
     queueCountSlipsMeta: (count: number) =>
-      `${count.toLocaleString("vi-VN")} phiếu chờ duyệt`,
+      `${formatCount(count)} phiếu chờ duyệt`,
     queueWasteTitle: "Duyệt hao hụt",
     queueWasteMeta: (count: number) =>
-      `${count.toLocaleString("vi-VN")} báo cáo chờ duyệt`,
+      `${formatCount(count)} báo cáo chờ duyệt`,
     queueDraftGrnsTitle: "Phiếu nhập dở",
     queueDraftGrnsMeta: (count: number) =>
-      `${count.toLocaleString("vi-VN")} phiếu nhập chưa xong`,
+      `${formatCount(count)} phiếu nhập chưa xong`,
     queueOpenPosTitle: "Đơn chờ nhận",
     queueOpenPosMeta: (count: number) =>
-      `${count.toLocaleString("vi-VN")} đơn đặt hàng chờ giao`,
+      `${formatCount(count)} đơn đặt hàng chờ giao`,
     queueDraftProductionTitle: "Lệnh nháp cần chốt",
     queueDraftProductionMeta: (count: number) =>
-      `${count.toLocaleString("vi-VN")} lệnh sản xuất nháp`,
+      `${formatCount(count)} lệnh sản xuất nháp`,
     queueInboundTransfersTitle: "Chờ nhận nguyên liệu",
     queueInboundTransfersMeta: (count: number) =>
-      `${count.toLocaleString("vi-VN")} chuyến hàng đang đến`,
+      `${formatCount(count)} chuyến hàng đang đến`,
     centralSupplyTilesTitle: "Kho Tổng - Inventory",
     centralSupplyTilesDescription:
       "Chỉ xử lý tồn kho, nhập - chuyển - kiểm; không có POS, KDS hoặc Runner.",
@@ -477,18 +506,13 @@ export const settings = {
     centralNavStock: "Tồn",
     centralNavStocktake: "Kiểm",
     centralNavProduction: "Sản xuất",
-    centralNavMore: "Khác",
-    centralMoreTitle: "Mục khác",
-    centralMoreDescription: "Các mục không nằm trực tiếp trên Nay.",
-    moreEmptyTitle: "Không có mục khác",
-    moreEmptyDescription: "Các việc chính đã nằm trên Nay.",
     centralClockLink: "Chấm công",
     queueEmpty: "Không có việc cần xử lý",
     settingsBack: "Thiết lập",
     posBack: "Về POS",
     employeeBack: "Về Cổng",
     branchSettingsBack: "Cài đặt chi nhánh",
-    hubTitle: "Cài đặt chi nhánh",
+    hubTitle: "Thiết lập vận hành chi nhánh",
     hubDescription: (branchName: string) =>
       `${branchName} · Bàn, POS, bếp và in`,
     hubEmptyTitle: "Không có mục thiết lập khả dụng",
@@ -509,12 +533,10 @@ export const settings = {
     kdsSetupTitle: "Trạm bếp (KDS)",
     kdsSetupDescription:
       "Trạm hiển thị bếp và danh mục món ăn được gán cho từng trạm.",
-    attendanceChecklistTitle: "Cấu hình chấm công",
-    attendanceChecklistDescription:
-      "Checklist template và phân công công việc được quản lý trong HR.",
-    attendanceChecklistAction: "Mở HR",
-    attendanceChecklistMetric: "việc",
     menuLimitsTitle: "Giới hạn bán",
+    menuLimitsGuideTitle: "Quy tắc mở bán hôm nay",
+    menuLimitsGuideDescription:
+      "Ưu tiên món hết suất, đang tắt và món bị giới hạn bởi Tồn Bếp CN.",
     menuLimitsIntroBefore:
       "Điều chỉnh số phần sẵn bán theo tồn kho và định mức của chi nhánh. Bật",
     menuLimitsDisabledAction: "Tắt món",
@@ -549,8 +571,8 @@ export const settings = {
       "Khi nhân viên mở ca từ màn hình POS, lịch sử ca sẽ xuất hiện tại đây.",
     sessionHistory: "Lịch sử ca",
     sessionHistoryDescription: (openCount: number, varianceCount: number) =>
-      `${openCount.toLocaleString("vi-VN")} ca đang mở · ${varianceCount.toLocaleString("vi-VN")} ca lệch quỹ chưa xử lý`,
-    sessionCount: (count: number) => `${count.toLocaleString("vi-VN")} ca`,
+      `${formatCount(openCount)} ca đang mở · ${formatCount(varianceCount)} ca lệch quỹ chưa xử lý`,
+    sessionCount: (count: number) => `${formatCount(count)} ca`,
     sessionVarianceLine: (difference: string) => `Lệch quỹ ${difference}`,
     settlementTitle: "Đối soát quỹ",
     varianceShort: "Lệch",

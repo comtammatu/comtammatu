@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { GET as getHubManifest } from "../app/(protected)/br/[branchId]/(operator)/manifest.webmanifest/route";
+import { GET as getOperatorManifest } from "../app/(protected)/br/[branchId]/(operator)/manifest.webmanifest/route";
 import { GET as getKdsManifest } from "../app/(protected)/br/[branchId]/kds/manifest.webmanifest/route";
 import { GET as getPosManifest } from "../app/(protected)/br/[branchId]/pos/manifest.webmanifest/route";
 
-test("root PWA manifest opens Operator Hub instead of the retired employee app", () => {
+test("root PWA manifest opens the operator entry instead of the retired employee app", () => {
   const manifest = JSON.parse(
     readFileSync(
       new URL("../public/manifest.webmanifest", import.meta.url),
@@ -13,6 +13,7 @@ test("root PWA manifest opens Operator Hub instead of the retired employee app",
     ),
   ) as {
     categories?: unknown;
+    id?: unknown;
     name?: unknown;
     orientation?: unknown;
     scope?: unknown;
@@ -21,15 +22,16 @@ test("root PWA manifest opens Operator Hub instead of the retired employee app",
     start_url?: unknown;
   };
 
-  assert.equal(manifest.name, "Cơm Tấm Má Tư - Hub");
+  assert.equal(manifest.id, "/");
+  assert.equal(manifest.name, "Cơm Tấm Má Tư - Cổng vận hành");
   assert.equal(manifest.orientation, "portrait");
   assert.equal(manifest.scope, "/");
-  assert.equal(manifest.short_name, "Má Tư Hub");
-  assert.equal(manifest.start_url, "/br");
+  assert.equal(manifest.short_name, "Cổng Má Tư");
+  assert.equal(manifest.start_url, "/");
   assert.deepEqual(manifest.categories, ["business", "productivity"]);
   assert.deepEqual(
     manifest.shortcuts?.map((shortcut) => shortcut.url),
-    ["/br", "/br", "/br", "/br"],
+    ["/", "/", "/", "/"],
   );
 });
 
@@ -79,16 +81,17 @@ test("KDS PWA manifest requests landscape orientation per branch", async () => {
   assert.equal(manifest.orientation, "landscape");
 });
 
-test("Operator Hub PWA manifest is installable per branch", async () => {
-  const response = await getHubManifest(
+test("operator PWA manifest shares the root app identity from branch routes", async () => {
+  const response = await getOperatorManifest(
     new Request("https://app.test/br/3/manifest.webmanifest") as Parameters<
-      typeof getHubManifest
+      typeof getOperatorManifest
     >[0],
     { params: Promise.resolve({ branchId: "3" }) },
   );
   const manifest = (await response.json()) as {
     id?: unknown;
     display?: unknown;
+    name?: unknown;
     orientation?: unknown;
     scope?: unknown;
     short_name?: unknown;
@@ -101,14 +104,14 @@ test("Operator Hub PWA manifest is installable per branch", async () => {
     response.headers.get("Content-Type"),
     "application/manifest+json; charset=utf-8",
   );
-  assert.equal(manifest.id, "/br/3");
-  assert.equal(manifest.start_url, "/br/3");
-  // Hub scopes the whole origin so in-app navigation to shared routes
-  // (notifications, office bridges) stays standalone instead of dropping the
-  // installed PWA into a browser tab; `id` keeps the install distinct.
+  assert.equal(manifest.id, "/");
+  assert.equal(manifest.name, "Cơm Tấm Má Tư - Cổng vận hành");
+  assert.equal(manifest.start_url, "/");
+  // Branch routes must advertise the same operator app identity as the root
+  // manifest; otherwise the browser can treat them as distinct installed apps.
   assert.equal(manifest.scope, "/");
   assert.equal(manifest.display, "standalone");
-  assert.equal(manifest.short_name, "Má Tư Hub");
+  assert.equal(manifest.short_name, "Cổng Má Tư");
   assert.equal(manifest.orientation, "portrait");
   assert.ok(manifest.icons && manifest.icons.length >= 2);
   assert.ok(
@@ -118,10 +121,10 @@ test("Operator Hub PWA manifest is installable per branch", async () => {
   );
 });
 
-test("Operator Hub PWA manifest keeps rejecting invalid branch ids", async () => {
-  const response = await getHubManifest(
+test("operator PWA manifest keeps rejecting invalid branch ids", async () => {
+  const response = await getOperatorManifest(
     new Request("https://app.test/br/abc/manifest.webmanifest") as Parameters<
-      typeof getHubManifest
+      typeof getOperatorManifest
     >[0],
     { params: Promise.resolve({ branchId: "abc" }) },
   );
@@ -169,7 +172,7 @@ test("operational PWA install dismissal is isolated by app and branch", () => {
   assert.doesNotMatch(toolbarSource, /pos-pwa-install-dismissed/);
 });
 
-test("POS and KDS toolbars render a return-to-hub link; runner never does", () => {
+test("POS and KDS toolbars render a return-to-entry link; runner never does", () => {
   const toolbarSource = readFileSync(
     new URL(
       "../app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx",
@@ -184,31 +187,31 @@ test("POS and KDS toolbars render a return-to-hub link; runner never does", () =
 
   // Runner is a guest-facing display: staff navigation is excluded there.
   assert.match(toolbarSource, /surface !== "runner"/);
-  assert.match(toolbarSource, /<PwaToolbarHubLink/);
+  assert.match(toolbarSource, /<PwaToolbarEntryLink/);
   assert.match(toolbarSource, /surface="pos"/);
   assert.match(toolbarSource, /surface="kds"/);
   assert.match(toolbarSource, /surface="runner"/);
 
-  // The link targets the operator hub home for the current branch, carries an
+  // The link targets the operator entry for the current branch, carries an
   // accessible label from the copy catalog, and uses the 48px touch size.
   assert.match(
     toolbarSource,
-    /<PwaToolbarHubLink\s+href=\{`\/br\/\$\{branchId\}`\}\s+label=\{copy\.hubLinkLabel\}/,
+    /<PwaToolbarEntryLink\s+href=\{`\/br\/\$\{branchId\}`\}\s+label=\{copy\.entryLinkLabel\}/,
   );
-  assert.match(toolbarSource, /hubLinkLabel: "Về Má Tư Hub"/);
+  assert.match(toolbarSource, /entryLinkLabel: "Về Cổng vận hành"/);
   assert.match(pwaToolbarSource, /<Link href=\{href\} aria-label=\{label\}>/);
   assert.match(
     pwaToolbarSource,
     /asChild\s+variant="ghost"\s+size="icon-touch"/,
   );
 
-  // Quiet POS/KDS state should not reserve a hub-link-only toolbar row over the
+  // Quiet POS/KDS state should not reserve an entry-link-only toolbar row over the
   // operational surface; real offline/update/install banners still carry it.
   assert.match(
     pwaToolbarSource,
     /if \(!showInstallRow\) \{\s*return null;\s*\}/,
   );
-  assert.doesNotMatch(pwaToolbarSource, /if \(hubLink == null\) return null;/);
+  assert.doesNotMatch(pwaToolbarSource, /if \(entryLink == null\) return null;/);
 });
 
 test("station layouts mount the branch-scoped PWA toolbars", () => {
@@ -229,7 +232,7 @@ test("station layouts mount the branch-scoped PWA toolbars", () => {
   );
 });
 
-test("Operator Hub layout mounts its manifest link and install toolbar", () => {
+test("operator layout mounts its manifest link and install toolbar", () => {
   const layoutSource = readFileSync(
     new URL(
       "../app/(protected)/br/[branchId]/(operator)/layout.tsx",
@@ -240,22 +243,22 @@ test("Operator Hub layout mounts its manifest link and install toolbar", () => {
 
   assert.match(
     layoutSource,
-    /manifest: `\/br\/\$\{branchId\}\/manifest\.webmanifest`/,
+    /manifest: "\/manifest\.webmanifest"/,
   );
   assert.match(layoutSource, /<OperatorPwaToolbar \/>/);
 });
 
-test("SW offline fallback (PWA-2) only precaches/serves the Hub shell, never station or authed data", () => {
+test("SW offline fallback (PWA-2) only precaches/serves the operator shell, never station or authed data", () => {
   const swSource = readFileSync(
     new URL("../app/sw.ts", import.meta.url),
     "utf8",
   );
 
-  // Hub navigations get a fallback plugin; POS/KDS/Runner stay plain NetworkOnly.
-  assert.match(swSource, /isHubPath\(url\.pathname\)/);
+  // Operator navigations get a fallback plugin; POS/KDS/Runner stay plain NetworkOnly.
+  assert.match(swSource, /isOperatorShellPath\(url\.pathname\)/);
   assert.match(
     swSource,
-    /handler: new NetworkOnly\(\{ plugins: \[hubOfflineFallback\] \}\)/,
+    /handler: new NetworkOnly\(\{ plugins: \[operatorOfflineFallback\] \}\)/,
   );
   assert.match(
     swSource,
@@ -289,10 +292,11 @@ test("Serwist precache keeps install assets but skips mascot art", () => {
   assert.doesNotMatch(configSource, /globPublicPatterns/);
 });
 
-// Mirrors app/sw.ts's isHubPath — sw.ts runs in the SW global scope and can't
-// be imported directly from a Node test.
+// Mirrors app/sw.ts's isOperatorShellPath — sw.ts runs in the SW global scope
+// and can't be imported directly from a Node test.
 const BRANCH_STATION_SEGMENTS = ["pos", "kds", "runner"];
-function isHubPath(pathname: string) {
+function isOperatorShellPath(pathname: string) {
+  if (pathname === "/") return true;
   if (!pathname.startsWith("/br/")) return false;
   const segments = pathname.split("/").filter(Boolean);
   const stationSegment = segments[2];
@@ -301,15 +305,31 @@ function isHubPath(pathname: string) {
   );
 }
 
-test("isHubPath matches the Hub root and its sub-routes but excludes POS/KDS/Runner", () => {
-  assert.equal(isHubPath("/br/3"), true);
-  assert.equal(isHubPath("/br/3/dashboard"), true);
-  assert.equal(isHubPath("/br/3/stock/on-hand"), true);
-  assert.equal(isHubPath("/br/3/pos"), false);
-  assert.equal(isHubPath("/br/3/kds"), false);
-  assert.equal(isHubPath("/br/3/runner"), false);
-  assert.equal(isHubPath("/admin"), false);
-  assert.equal(isHubPath("/employee"), false);
+test("isOperatorShellPath matches the operator entry/root and excludes POS/KDS/Runner", () => {
+  assert.equal(isOperatorShellPath("/"), true);
+  assert.equal(isOperatorShellPath("/br/3"), true);
+  assert.equal(isOperatorShellPath("/br/3/dashboard"), true);
+  assert.equal(isOperatorShellPath("/br/3/stock/on-hand"), true);
+  assert.equal(isOperatorShellPath("/br/3/pos"), false);
+  assert.equal(isOperatorShellPath("/br/3/kds"), false);
+  assert.equal(isOperatorShellPath("/br/3/runner"), false);
+  assert.equal(isOperatorShellPath("/admin"), false);
+  assert.equal(isOperatorShellPath("/employee"), false);
+});
+
+test("self-order QR preview keeps staff inside the PWA scope", () => {
+  const tableSettingsSource = readFileSync(
+    new URL(
+      "../app/(protected)/branch-settings/_shared/tables/table-table.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(tableSettingsSource, /buildSelfOrderUrl\(table\.token, origin\)/);
+  assert.match(tableSettingsSource, /const previewHref = table \? `\/q\/\$\{table\.token\}` : "";/);
+  assert.match(tableSettingsSource, /<a href=\{previewHref\}>/);
+  assert.doesNotMatch(tableSettingsSource, /target="_blank"/);
 });
 
 test("offline page precaches statically and reuses the shared error copy", () => {

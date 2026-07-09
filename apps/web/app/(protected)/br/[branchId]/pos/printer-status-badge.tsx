@@ -10,7 +10,7 @@ import {
   PrinterX as IconPrinterOff,
 } from "lucide-react";
 
-interface PrinterStatusBadgeProps {
+interface PrinterStatusIndicatorProps {
   branchId: number;
   settingsHref?: string;
 }
@@ -47,10 +47,10 @@ function computeStatus(
   };
 }
 
-export function PrinterStatusBadge({
+export function PrinterStatusIndicator({
   branchId,
   settingsHref,
-}: PrinterStatusBadgeProps) {
+}: PrinterStatusIndicatorProps) {
   const [status, setStatus] = useState<AgentStatus>({
     agentId: null,
     lastSeenAt: null,

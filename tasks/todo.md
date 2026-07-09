@@ -26,26 +26,96 @@
 ## Active Greenfield Gates
 
 - [ ] **G0 — classify the dirty working tree.** For every changed file and new
-  migration, decide `keep for production`, `port to Greenfield`, or `drop`.
-  Do not start a schema copy while mixed production WIP is unresolved.
+      migration, decide `keep for production`, `port to Greenfield`, or `drop`.
+      Do not start a schema copy while mixed production WIP is unresolved.
 - [ ] **G1 — verify the Greenfield environment.** Confirm the active project ref,
-  access posture, and connector visibility. Add the target to
-  `docs/agent/rules/database.md` only after owner confirmation.
+      access posture, and connector visibility. Add the target to
+      `docs/agent/rules/database.md` only after owner confirmation.
 - [ ] **G2 — derive from the current schema baseline only.** Build Greenfield from
-  the current schema/baseline contract, not from historical plans. Any
-  `supabase/greenfield/` material is rehearsal-only unless promoted.
+      the current schema/baseline contract, not from historical plans. Any
+      `supabase/greenfield/` material is rehearsal-only unless promoted.
 - [ ] **G3 — re-derive the product spine.** Freshly confirm the minimal spine:
-  owner/auth, branch context, POS -> payment -> KDS/print -> HĐĐT, inventory
-  receive/production/stocktake, and HR/payroll basics. Anything outside this
-  spine needs a fresh owner decision.
+      owner/auth, branch context, POS -> payment -> KDS/print -> HĐĐT, inventory
+      receive/production/stocktake, and HR/payroll basics. Anything outside this
+      spine needs a fresh owner decision.
 - [ ] **G4 — define runtime smokes.** One real-auth smoke per spine flow, using
-  current scopes and current routes. Keep the proof as tests or a runbook, not a
-  backlog essay.
-- [ ] **G5 — keep docs lean.** Source-of-truth docs are `AGENTS.md`,
-  `docs/agent/rules/`, `docs/CODEBASE_MAP.md`, `docs/modules/`, `docs/spec/`,
-  `docs/ref/`, `docs/runbooks/`, `docs/plan/decisions.md`,
-  `docs/plan/adr/`, and `tasks/{todo,regressions,lessons}.md`. Do not add dated
-  plan/worklog archives.
+      current scopes and current routes. Keep the proof as tests or a runbook, not a
+      backlog essay.
+- [ ] **G5 — keep docs lean.** Use `docs/agent/rules/references.md` as the
+      source-of-truth map. For Greenfield, promote only current facts into those
+      owned docs; do not add dated plan/worklog archives or re-copy the map here.
+
+## Owner-Confirmed UI Follow-ups
+
+- [ ] **Route shell/header refactor.** Collapse route-local shell/header
+      bypasses into approved chrome primitives after the primitive/guard cleanup is
+      green.
+- [ ] **Branch Hub touch-plane cutover.** Keep moving `/br/[branchId]/*` away
+      from Office presentation while preserving Office as the desktop management
+      plane.
+  - [x] Document the durable Branch-vs-Office presentation contract in
+        `docs/modules/ui.md`.
+  - [x] Convert `/br/[branchId]/stock` landing to a Branch-native stock hub.
+  - [x] Convert `/br/[branchId]/stock/transfer` list to a Branch-native
+        touch list over the shared transfer data/action model.
+  - [x] Convert `/br/[branchId]/stock/transfer/[id]` to a Branch-native
+        touch detail and route receiving actions into the native receive flow.
+  - [x] Merge `/br/[branchId]/stock/receive` into the native transfer receive
+        queue while preserving the deep receive route for number-pad entry.
+  - [x] Convert `/br/[branchId]/stock/transfer/new` to a Branch-native
+        progressive touch workflow while keeping the Office create route in
+        `DocumentFormFrame`; share only the server loader, pure rules, client
+        controller, and mutation authority.
+  - [x] Convert `/br/[branchId]/stock/on-hand` to a Branch-native touch list at
+        phone/tablet widths; share `loadStockOnHandPageData` and the pure
+        filter/status model while keeping Office `StockClient` management-only.
+  - [ ] Continue replacing stock deep workflow EMBED-WRAPPER transition routes:
+        on-hand detail, GRN list/create, stocktake, issue, supplier-return, and
+        reports.
+  - [ ] Run runtime QA across phone `390x844`, tablet portrait `768x1024`,
+        tablet landscape `1024x768`, and Office desktop `1440x900` once local
+        Supabase/Docker auth is available.
+
+## Motion gap-fill (Codex rewrite)
+
+Owner-facing plan (Vietnamese): `docs/plan/motion-gap-fill.md`.
+Rewritten 2026-07-10 after Codex Outside Voice rejected the prior 7-item Phase 1.
+**No UI implementation until Step 0 is owner-confirmed.**
+
+### Step 0 — Motion Contract gate (blocked)
+
+- [ ] Owner picks A / B / C in `docs/plan/motion-gap-fill.md` (recommend **A**:
+      allow one-shot content enter at `duration-150` + `motion-safe:` only; keep
+      `duration-300` for overlay/dialog/sheet enter–exit per § G).
+- [ ] If A or C: update `docs/spec/design-system.md` § G before or with the first
+      implementation PR.
+
+### Phase 1 — 3 items only (after Step 0)
+
+- [ ] **POS cart line enter** on add-item — one-shot keys; `motion-safe:`; prefer
+      `duration-150` per Step 0. File: `pos/_components/cart-pane.tsx` (+ optional
+      helper).
+- [ ] **KDS genuine new-ticket signal** — testable hook that classifies realtime
+      INSERT vs snapshot refresh / filter / station / mode / ready removal. Do **not**
+      animate all `displayOrders` by key. Narrow ring/fade; avoid decorative
+      slide-from-top-300 unless contract explicitly allows.
+- [ ] **Operator route loading skeletons** — `(operator)/loading.tsx` +
+      shift/team/orders as needed with `PageSkeleton` compact.
+
+### Explicitly cut from Phase 1
+
+- POS category/search grid fade (later: category-only, never on search typing)
+- KDS Focus↔Overview crossfade
+- POS order sidebar status pulse (later: toast/badge/ring; reorder is separate)
+- List press scale on orders/dashboard
+- Self-order decorative — blocked until browser QA evidence
+- Page transitions / decorative ERP — needs explicit policy override
+
+### Verification (when implementing)
+
+`corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` **plus**
+browser smoke: KDS multi-ticket / reconnect / filter / reduced-motion; POS cart
+one-shot enter; operator skeleton on bottom-nav.
 
 ## Removed From The Board
 

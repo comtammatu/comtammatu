@@ -57,6 +57,24 @@ test("count slip review no longer trusts mixed-unit generated variance", () => {
   assert.match(source, /buildCountSlipLineView/);
 });
 
+test("count slip review resolves submitted employee names through service lookup", () => {
+  const source = readFileSync(
+    join(process.cwd(), "app/(protected)/inventory/count-slips/page.tsx"),
+    "utf8",
+  );
+
+  assert.match(source, /createServiceClient/);
+  assert.match(source, /const employeeNameById = new Map<number, string>\(\)/);
+  assert.match(
+    source,
+    /\.from\("employees"\)[\s\S]*\.select\("id, profiles\(full_name\)"\)[\s\S]*\.in\("id", employeeIds\)/,
+  );
+  assert.match(
+    source,
+    /employeeNameById\.get\(Number\(slip\.employee_id\)\)\s*\?\?/,
+  );
+});
+
 test("employee count UI previews the comparison unit before submission", () => {
   const pageSource = readFileSync(
     join(process.cwd(), "lib/staff-runtime/count/page.tsx"),
@@ -66,16 +84,67 @@ test("employee count UI previews the comparison unit before submission", () => {
     join(process.cwd(), "lib/staff-runtime/count/count-client.tsx"),
     "utf8",
   );
+  const sharedInventoryMessages = readFileSync(
+    join(process.cwd(), "../../packages/shared/src/messages/inventory.ts"),
+    "utf8",
+  );
 
   assert.match(pageSource, /to_base_factor/);
   assert.match(pageSource, /toBaseFactor/);
+  assert.match(clientSource, /formatQty/);
   assert.match(clientSource, /buildCountUnitPreview/);
-  assert.match(clientSource, /So sánh tồn/);
-  assert.match(clientSource, /Tồn so theo/);
+  assert.match(clientSource, /INVENTORY_VI\.convertedColon/);
+  assert.match(clientSource, /Đơn vị tồn chuẩn/);
+  assert.match(clientSource, /INVENTORY_VI\.conversionMissing/);
+  assert.doesNotMatch(clientSource, /\.toLocaleString\("vi-VN"/);
+  assert.match(sharedInventoryMessages, /convertedColon: "Quy đổi về tồn chuẩn:"/);
+  assert.match(sharedInventoryMessages, /conversionMissing: "Chưa cấu hình quy đổi"/);
   assert.match(clientSource, /Textarea/);
   assert.match(clientSource, /maxLength=\{500\}/);
   assert.match(clientSource, /selectedUnit\?\.code/);
   assert.doesNotMatch(clientSource, /assignment\.measureUnit/);
   assert.doesNotMatch(pageSource, /measureUnit/);
   assert.doesNotMatch(clientSource, /className="w-24 shrink-0"/);
+});
+
+test("stocktake count UI previews conversion to base unit before submission", () => {
+  const pageSource = readFileSync(
+    join(process.cwd(), "app/(protected)/inventory/stocktake/[id]/count/page.tsx"),
+    "utf8",
+  );
+  const clientSource = readFileSync(
+    join(
+      process.cwd(),
+      "app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
+    ),
+    "utf8",
+  );
+  const gridSource = readFileSync(
+    join(
+      process.cwd(),
+      "app/(protected)/inventory/_components/blind-counting-grid.tsx",
+    ),
+    "utf8",
+  );
+  const wizardSource = readFileSync(
+    join(
+      process.cwd(),
+      "app/(protected)/inventory/stocktake/[id]/count/stocktake-count-wizard.tsx",
+    ),
+    "utf8",
+  );
+  const sharedInventoryMessages = readFileSync(
+    join(process.cwd(), "../../packages/shared/src/messages/inventory.ts"),
+    "utf8",
+  );
+
+  assert.match(pageSource, /to_base_factor/);
+  assert.match(pageSource, /toBaseFactor/);
+  assert.match(clientSource, /buildCountUnitPreview/);
+  assert.match(clientSource, /INVENTORY_VI\.convertedColon/);
+  assert.match(clientSource, /INVENTORY_VI\.conversionMissing/);
+  assert.match(sharedInventoryMessages, /convertedColon: "Quy đổi về tồn chuẩn:"/);
+  assert.match(sharedInventoryMessages, /conversionMissing: "Chưa cấu hình quy đổi"/);
+  assert.match(gridSource, /unitPreviewByIngredient/);
+  assert.match(wizardSource, /unitPreviewByIngredient/);
 });

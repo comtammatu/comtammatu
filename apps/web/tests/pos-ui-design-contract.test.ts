@@ -4,11 +4,17 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 const posShellSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx"),
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",
+  ),
   "utf8",
 );
 const posDesktopInnerSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx"),
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
+  ),
   "utf8",
 );
 const posDesktopSource = `${posShellSource}\n${posDesktopInnerSource}`;
@@ -22,7 +28,10 @@ const appendDraftSource = readFileSync(
 );
 
 const takeawayGateSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-takeaway-gate.tsx"),
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/pos/pos-takeaway-gate.tsx",
+  ),
   "utf8",
 );
 
@@ -48,7 +57,10 @@ const sidebarVariantsSource = readFileSync(
 );
 
 const sidebarPanelSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-sidebar-panel.tsx"),
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/pos/pos-sidebar-panel.tsx",
+  ),
   "utf8",
 );
 
@@ -102,8 +114,9 @@ const orderSyncSource = readFileSync(
 );
 
 const serviceModeSelector =
-  /const serviceModeSelector = \([\s\S]*?\n\s*\);/.exec(posDesktopSource)?.[0] ??
-  "";
+  /const serviceModeSelector = \([\s\S]*?\n\s*\);/.exec(
+    posDesktopSource,
+  )?.[0] ?? "";
 
 test("POS service mode uses ToggleGroup primitive state instead of route-local state colors", () => {
   assert.match(serviceModeSelector, /<ToggleGroup[\s\S]*variant="outline"/);
@@ -145,10 +158,7 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
     posDesktopSource,
     /const isTakeawayGateActive\s*=\s*!menuContextReady\s*&&\s*cartOrderType === "takeaway";/,
   );
-  assert.match(
-    posDesktopSource,
-    /hideTakeawayOrders: isTakeawayGateActive/,
-  );
+  assert.match(posDesktopSource, /hideTakeawayOrders: isTakeawayGateActive/);
   assert.match(posDesktopSource, /currentOrderTarget/);
   assert.match(posDesktopSource, /orderTargetRow/);
   assert.match(posDesktopSource, /headerAction=\{serviceModeSelector\}/);
@@ -158,18 +168,33 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   assert.match(takeawayGateSource, /headerAction\?: ReactNode/);
   assert.doesNotMatch(takeawayGateSource, /takeawayGate\.activeCount/);
   assert.match(posDesktopSource, /onCancelAppend=\{cancelAppendWorkflow\}/);
-  assert.match(posDesktopSource, /isAppendingToOrder\s*\?\s*cancelAppendWorkflow/);
+  assert.match(
+    posDesktopSource,
+    /isAppendingToOrder\s*\?\s*cancelAppendWorkflow/,
+  );
   assert.doesNotMatch(posDesktopSource, /appendBannerRow/);
   assert.doesNotMatch(posDesktopSource, /appendBannerTitle/);
-  assert.doesNotMatch(posDesktopSource, /border-b border-border\/60 bg-background p-0 md:px-4 md:py-3/);
+  assert.doesNotMatch(
+    posDesktopSource,
+    /border-b border-border\/60 bg-background p-0 md:px-4 md:py-3/,
+  );
   assert.doesNotMatch(posDesktopSource, /bg-background p-0 md:hidden/);
   assert.match(mobileActionBarSource, /onCancelAppend/);
   assert.match(mobileActionBarSource, /messages\.pos\.appendDraft\.cancel/);
   assert.match(mobileActionBarSource, /messages\.pos\.appendDraft\.cancelAria/);
-  assert.match(posDesktopSource, /const sidebars = isMobile \? null : \(/);
+  assert.match(posDesktopSource, /const isTouchLayout = useIsMobile\(1280\);/);
+  assert.match(posDesktopSource, /const sidebars = isTouchLayout \? null : \(/);
+  assert.match(posDesktopSource, /className="xl:hidden"/);
+  assert.match(mobileActionBarSource, /isTouchLayout/);
+  assert.match(mobileActionBarSource, /xl:hidden/);
+  assert.match(sidebarVariantsSource, /bg-background xl:flex/);
+  assert.doesNotMatch(posDesktopSource, /useIsLargeUp/);
+  assert.doesNotMatch(posDesktopSource, /<TabbedSidebar/);
+  assert.doesNotMatch(posDesktopSource, /className="md:hidden"/);
+  assert.doesNotMatch(mobileActionBarSource, /md:hidden/);
   assert.doesNotMatch(
     posDesktopSource,
-    /const sidebars = isMobile \|\| isTakeawayGateActive \? null : \(/,
+    /const sidebars = isTouchLayout \|\| isTakeawayGateActive \? null : \(/,
   );
   assert.doesNotMatch(
     posDesktopSource,
@@ -184,11 +209,20 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
     orderListPaneSource,
     /messages\.pos\.orderHistory\.dineInSessionOrders/,
   );
-  assert.match(sidebarVariantsSource, /hideTakeawayOrders=\{hideTakeawayOrders\}/);
+  assert.match(
+    sidebarVariantsSource,
+    /hideTakeawayOrders=\{hideTakeawayOrders\}/,
+  );
   assert.match(sidebarVariantsSource, /isContextGate/);
-  assert.match(sidebarVariantsSource, /showOrders: true/);
   assert.match(sidebarVariantsSource, /if \(isContextGate\)/);
-  assert.match(sidebarVariantsSource, /targetLabel=\{appendDraft\.target\.targetLabel\}/);
+  assert.match(
+    sidebarVariantsSource,
+    /<OrderListPane[\s\S]*hideTakeawayOrders=\{hideTakeawayOrders\}/,
+  );
+  assert.match(
+    sidebarVariantsSource,
+    /targetLabel=\{appendDraft\.target\.targetLabel\}/,
+  );
   assert.match(sidebarPanelSource, /hideTakeawayOrders=\{hideTakeawayOrders\}/);
   assert.match(sidebarPanelSource, /pendingNewTitle/);
   assert.match(posDesktopSource, /<PosTakeawayGate/);
@@ -226,7 +260,10 @@ test("POS active order sidebar stays a single queue without status section heade
 
   assert.doesNotMatch(activeOrdersListSource, /getOrderSectionKey/);
   assert.doesNotMatch(activeOrdersListSource, /OrderSectionKey/);
-  assert.doesNotMatch(activeOrdersListSource, /messages\.pos\.orderHistory\.sections/);
+  assert.doesNotMatch(
+    activeOrdersListSource,
+    /messages\.pos\.orderHistory\.sections/,
+  );
   assert.doesNotMatch(activeOrdersListSource, /sections\.map/);
   assert.doesNotMatch(activeOrdersListSource, /showHeaders/);
 });
@@ -236,7 +273,10 @@ test("POS order cards show compact operational sequence instead of full order co
   assert.match(orderHistorySource, /function getCompactOrderTitle/);
   assert.match(orderHistorySource, /order\.order_type === "takeaway"/);
   assert.match(orderHistorySource, /\$\{contextLabel\} #\$\{sequence\}/);
-  assert.match(orderHistorySource, /messages\.pos\.orderHistory\.orderSequence/);
+  assert.match(
+    orderHistorySource,
+    /messages\.pos\.orderHistory\.orderSequence/,
+  );
   assert.match(orderHistorySource, /showDineInSequence === true/);
   assert.match(orderHistorySource, /return contextLabel;/);
   assert.match(orderHistorySource, /return formatTime\(order\.created_at\);/);
@@ -246,7 +286,10 @@ test("POS order cards show compact operational sequence instead of full order co
   );
   assert.doesNotMatch(orderCardSummarySource, /\|/);
   assert.doesNotMatch(orderCardSummarySource, /#\{order\.order_number\}/);
-  assert.doesNotMatch(orderCardSummarySource, /getOrderContextLabel\(order\)} -/);
+  assert.doesNotMatch(
+    orderCardSummarySource,
+    /getOrderContextLabel\(order\)} -/,
+  );
 });
 
 test("POS archived orders sort by archived transition time, not order creation time", () => {

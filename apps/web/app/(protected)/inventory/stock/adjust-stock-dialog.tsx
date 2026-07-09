@@ -2,21 +2,10 @@
 
 import { z } from "zod";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
-import {
-  FormDialog,
-  NumberField,
-  SelectField,
-  TextareaField,
-} from "@/components/form";
+import { FormDialog, NumberField, TextareaField } from "@/components/form";
 import { adjustStock } from "../stock-actions";
 
-const ADJUST_TYPE_OPTIONS = [
-  { value: "adjustment", label: INVENTORY_VI.adjustTypeManual },
-  { value: "count_adjustment", label: INVENTORY_VI.adjustTypeCount },
-] as const;
-
 const adjustStockSchema = z.object({
-  adjust_type: z.enum(["adjustment", "count_adjustment"]),
   quantity_change: z
     .string()
     .trim()
@@ -28,13 +17,14 @@ const adjustStockSchema = z.object({
       },
       { error: INVENTORY_VI.adjustQuantityNonZero },
     ),
-  reason: z.string().trim().optional(),
+  reason: z.string().trim().min(5, {
+    error: INVENTORY_VI.adjustReasonRequired,
+  }),
 });
 
 type AdjustStockFormValues = z.infer<typeof adjustStockSchema>;
 
 const DEFAULT_VALUES: AdjustStockFormValues = {
-  adjust_type: "adjustment",
   quantity_change: "",
   reason: "",
 };
@@ -64,8 +54,7 @@ export function AdjustStockDialog({
       branchId,
       ingredientId,
       quantityChange: parsedQuantityChange,
-      type: values.adjust_type,
-      reason: values.reason || undefined,
+      reason: values.reason,
     });
     if (result.success) {
       onAdjusted();
@@ -89,19 +78,12 @@ export function AdjustStockDialog({
     >
       {(form) => (
         <>
-          <SelectField
-            control={form.control}
-            name="adjust_type"
-            label={INVENTORY_VI.adjustTypeLabel}
-            options={ADJUST_TYPE_OPTIONS}
-          />
-
           <NumberField
             control={form.control}
             name="quantity_change"
             label={INVENTORY_VI.adjustQuantityLabel(unit)}
             allowNegative
-            maxFractionDigits={2}
+            maxFractionDigits={3}
             placeholder={INVENTORY_VI.adjustQuantityPlaceholder}
             required
           />
@@ -112,6 +94,7 @@ export function AdjustStockDialog({
             label={INVENTORY_VI.adjustReasonLabel}
             placeholder={INVENTORY_VI.adjustReasonPlaceholder}
             rows={3}
+            required
           />
         </>
       )}

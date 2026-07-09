@@ -1,5 +1,6 @@
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 import { PayslipClient } from "./payslip-client";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
@@ -10,19 +11,23 @@ import { messages } from "@lib/messages";
 
 const copy = messages.employee.payslip;
 
-export async function PayslipPageContent(props: {
+type PayslipPlane = "employee" | "branch";
+
+export async function StaffPayslipPageContent(props: {
   searchParams: Promise<{ year?: string }>;
   hideHeaderOnMobile?: boolean;
   profileHref?: string;
+  plane?: PayslipPlane;
 }) {
   const ctx = await getEmployeeContext();
   const { year: yearParam } = await props.searchParams;
   const currentYear = Number(getTodayVN().slice(0, 4));
   const year = isValidYear(yearParam) ? Number(yearParam) : currentYear;
+  const PageShell = props.plane === "branch" ? BranchOperatorPage : EmployeePage;
 
   if (!ctx) {
     return (
-      <EmployeePage
+      <PageShell
         title={copy.title}
         description={copy.description}
         hideHeaderOnMobile={props.hideHeaderOnMobile}
@@ -32,7 +37,7 @@ export async function PayslipPageContent(props: {
           description={copy.missingProfileDescription}
           profileHref={props.profileHref}
         />
-      </EmployeePage>
+      </PageShell>
     );
   }
 
@@ -58,21 +63,30 @@ export async function PayslipPageContent(props: {
     .limit(12);
 
   return (
-    <EmployeePage
+    <PageShell
       title={copy.title}
       description={copy.description}
       hideHeaderOnMobile={props.hideHeaderOnMobile}
     >
-      <YearPicker selectedYear={year} currentYear={currentYear} />
-      <PayslipClient entries={(entries ?? []) as unknown as PayslipEntry[]} />
-    </EmployeePage>
+      <YearPicker
+        selectedYear={year}
+        currentYear={currentYear}
+        plane={props.plane}
+      />
+      <PayslipClient
+        entries={(entries ?? []) as unknown as PayslipEntry[]}
+        plane={props.plane}
+      />
+    </PageShell>
   );
 }
+
+export const PayslipPageContent = StaffPayslipPageContent;
 
 export default function PayslipPage(props: {
   searchParams: Promise<{ year?: string }>;
 }) {
-  return <PayslipPageContent searchParams={props.searchParams} />;
+  return <StaffPayslipPageContent searchParams={props.searchParams} />;
 }
 
 function isValidYear(s: string | undefined): boolean {

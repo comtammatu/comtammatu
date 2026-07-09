@@ -5,7 +5,13 @@
 import type { ReactNode } from "react";
 import { z } from "zod";
 import { FieldGroup } from "@comtammatu/ui/components/field";
-import { FormDialog, SelectField, TextField, MoneyVndField, NumberField } from "@/components/form";
+import {
+  FormDialog,
+  SelectField,
+  TextField,
+  MoneyVndField,
+  NumberField,
+} from "@/components/form";
 import { requiredBranchKindForPositionCode } from "@comtammatu/shared/auth";
 import { createEmployeeAccount, updateEmployee } from "./actions";
 import type { BranchOption, EmployeeRow } from "./_types";
@@ -119,7 +125,7 @@ function activeContract(employee: EmployeeRow) {
     .sort((a, b) => b.start_date.localeCompare(a.start_date))[0];
 }
 
-function FormSection({
+function FormGroupBlock({
   title,
   description,
   children,
@@ -235,9 +241,8 @@ export function EmployeeFormDialog({
       >
         {(form) => {
           const selectedPosition = form.watch("position_code");
-          const requiredBranchKind = requiredBranchKindForPositionCode(
-            selectedPosition,
-          );
+          const requiredBranchKind =
+            requiredBranchKindForPositionCode(selectedPosition);
           const isSiteOptional = requiredBranchKind === null;
           const branchChoices =
             requiredBranchKind && requiredBranchKind !== "unassigned"
@@ -257,7 +262,7 @@ export function EmployeeFormDialog({
                 required
               />
 
-              <FormSection
+              <FormGroupBlock
                 title="Hồ sơ làm việc"
                 description="Thông tin dùng cho phân quyền, chi nhánh, checklist và trạng thái đi làm."
               >
@@ -309,80 +314,80 @@ export function EmployeeFormDialog({
                     { value: STATUS_INACTIVE, label: "Tạm ngưng" },
                   ]}
                 />
-              </FormSection>
+              </FormGroupBlock>
 
-            <FormSection
-              title="HĐLĐ, lương và BHXH"
-              description="Nguồn tính lương tháng, mức đóng BH và thuế TNCN khi tạo kỳ payroll."
-            >
-              <SelectField
-                control={form.control}
-                name="contract_type"
-                label="Loại hợp đồng"
-                options={CONTRACT_TYPE_OPTIONS}
-                placeholder="Chưa ghi nhận"
-              />
-              <TextField
-                control={form.control}
-                name="contract_number"
-                label="Số HĐLĐ"
-                placeholder="HD-2026-001"
-              />
-              <TextField
-                control={form.control}
-                name="contract_signed_date"
-                label="Ngày ký HĐ"
-                type="date"
-              />
-              <TextField
-                control={form.control}
-                name="contract_end_date"
-                label="Ngày hết hạn HĐ"
-                type="date"
-              />
-              <MoneyVndField
-                control={form.control}
-                name="base_salary"
-                label="Lương tháng (VND)"
-                placeholder="12.000.000"
-                description="Lương gộp/tháng — dùng để tính lương"
-              />
-              <MoneyVndField
-                control={form.control}
-                name="insurance_base_salary"
-                label="Lương đóng BH (VND)"
-                placeholder="0"
-                description="0 = chưa tham gia BHXH"
-              />
-              <NumberField
-                control={form.control}
-                name="dependents_count"
-                label="Số người phụ thuộc"
-                placeholder="0"
-                description="Chỉ ảnh hưởng thuế TNCN"
-                allowNegative={false}
-              />
-            </FormSection>
+              <FormGroupBlock
+                title="HĐLĐ, lương và BHXH"
+                description="Nguồn tính lương tháng, mức đóng BH và thuế TNCN khi tạo kỳ payroll."
+              >
+                <SelectField
+                  control={form.control}
+                  name="contract_type"
+                  label="Loại hợp đồng"
+                  options={CONTRACT_TYPE_OPTIONS}
+                  placeholder="Chưa ghi nhận"
+                />
+                <TextField
+                  control={form.control}
+                  name="contract_number"
+                  label="Số HĐLĐ"
+                  placeholder="HD-2026-001"
+                />
+                <TextField
+                  control={form.control}
+                  name="contract_signed_date"
+                  label="Ngày ký HĐ"
+                  type="date"
+                />
+                <TextField
+                  control={form.control}
+                  name="contract_end_date"
+                  label="Ngày hết hạn HĐ"
+                  type="date"
+                />
+                <MoneyVndField
+                  control={form.control}
+                  name="base_salary"
+                  label="Lương tháng (VND)"
+                  placeholder="12.000.000"
+                  description="Lương gộp/tháng — dùng để tính lương"
+                />
+                <MoneyVndField
+                  control={form.control}
+                  name="insurance_base_salary"
+                  label="Lương đóng BH (VND)"
+                  placeholder="0"
+                  description="0 = chưa tham gia BHXH"
+                />
+                <NumberField
+                  control={form.control}
+                  name="dependents_count"
+                  label="Số người phụ thuộc"
+                  placeholder="0"
+                  description="Chỉ ảnh hưởng thuế TNCN"
+                  allowNegative={false}
+                />
+              </FormGroupBlock>
 
-            <FormSection
-              title="Định danh và thanh toán"
-              description="Thông tin nhạy cảm chỉ owner được nhập và xem."
-            >
-              <TextField
-                control={form.control}
-                name="id_number"
-                label="CMND/CCCD"
-              />
-              <TextField
-                control={form.control}
-                name="bank_account"
-                label="Số tài khoản"
-              />
-            </FormSection>
-          </>
-        );
-      }}
-    </FormDialog>
+              <FormGroupBlock
+                title="Định danh và thanh toán"
+                description="Thông tin nhạy cảm chỉ owner được nhập và xem."
+              >
+                <TextField
+                  control={form.control}
+                  name="id_number"
+                  label="CMND/CCCD"
+                />
+                <TextField
+                  control={form.control}
+                  name="bank_account"
+                  label="Số tài khoản"
+                />
+              </FormGroupBlock>
+            </>
+          );
+        }}
+      </FormDialog>
     );
   }
 
@@ -431,9 +436,8 @@ export function EmployeeFormDialog({
     >
       {(form) => {
         const selectedPosition = form.watch("position_code");
-        const requiredBranchKind = requiredBranchKindForPositionCode(
-          selectedPosition,
-        );
+        const requiredBranchKind =
+          requiredBranchKindForPositionCode(selectedPosition);
         const isSiteOptional = requiredBranchKind === null;
         const branchChoices =
           requiredBranchKind && requiredBranchKind !== "unassigned"
@@ -445,151 +449,151 @@ export function EmployeeFormDialog({
 
         return (
           <>
-          <TextField
-            control={form.control}
-            name="full_name"
-            label="Họ tên"
-            placeholder="Nguyễn Văn A"
-            required
-          />
-
-          <FormSection
-            title="Tài khoản đăng nhập"
-            description="Tạo tài khoản app và gắn vai trò vận hành ban đầu."
-          >
             <TextField
               control={form.control}
-              name="email"
-              label="Email đăng nhập"
-              type="email"
-              placeholder="nhanvien@comtammatu.vn"
-              required
-            />
-            <TextField
-              control={form.control}
-              name="password"
-              label="Mật khẩu"
-              type="password"
-              placeholder="Tối thiểu 8 ký tự"
+              name="full_name"
+              label="Họ tên"
+              placeholder="Nguyễn Văn A"
               required
             />
 
-            <TextField
-              control={form.control}
-              name="phone"
-              label="Số điện thoại"
-              placeholder="0901234567"
-            />
-            <SelectField
-              control={form.control}
-              name="position_code"
-              label="Chức vụ"
-              options={positionOptions}
-              placeholder="Chọn chức vụ"
-            />
-          </FormSection>
+            <FormGroupBlock
+              title="Tài khoản đăng nhập"
+              description="Tạo tài khoản app và gắn vai trò vận hành ban đầu."
+            >
+              <TextField
+                control={form.control}
+                name="email"
+                label="Email đăng nhập"
+                type="email"
+                placeholder="nhanvien@comtammatu.vn"
+                required
+              />
+              <TextField
+                control={form.control}
+                name="password"
+                label="Mật khẩu"
+                type="password"
+                placeholder="Tối thiểu 8 ký tự"
+                required
+              />
 
-          <FormSection
-            title="Hồ sơ làm việc"
-            description="Thông tin dùng cho chi nhánh, checklist, mã nhân viên và ngày bắt đầu."
-          >
-            <SelectField
-              control={form.control}
-              name="branch_id"
-              label="Chi nhánh / địa điểm"
-              options={[
-                { value: NO_BRANCH, label: "Không thuộc địa điểm" },
-                ...branchChoices.map((branch) => ({
-                  value: branch.id.toString(),
-                  label: branch.name,
-                })),
-              ]}
-              placeholder="Không thuộc địa điểm"
-              disabled={isSiteOptional}
-            />
-            <TextField
-              control={form.control}
-              name="employee_code"
-              label="Mã nhân viên"
-              placeholder="NV001"
-            />
+              <TextField
+                control={form.control}
+                name="phone"
+                label="Số điện thoại"
+                placeholder="0901234567"
+              />
+              <SelectField
+                control={form.control}
+                name="position_code"
+                label="Chức vụ"
+                options={positionOptions}
+                placeholder="Chọn chức vụ"
+              />
+            </FormGroupBlock>
 
-            <TextField
-              control={form.control}
-              name="start_date"
-              label="Ngày bắt đầu"
-              type="date"
-            />
-          </FormSection>
+            <FormGroupBlock
+              title="Hồ sơ làm việc"
+              description="Thông tin dùng cho chi nhánh, checklist, mã nhân viên và ngày bắt đầu."
+            >
+              <SelectField
+                control={form.control}
+                name="branch_id"
+                label="Chi nhánh / địa điểm"
+                options={[
+                  { value: NO_BRANCH, label: "Không thuộc địa điểm" },
+                  ...branchChoices.map((branch) => ({
+                    value: branch.id.toString(),
+                    label: branch.name,
+                  })),
+                ]}
+                placeholder="Không thuộc địa điểm"
+                disabled={isSiteOptional}
+              />
+              <TextField
+                control={form.control}
+                name="employee_code"
+                label="Mã nhân viên"
+                placeholder="NV001"
+              />
 
-          <FormSection
-            title="HĐLĐ, lương và BHXH"
-            description="Có thể để trống số HĐ nếu chỉ cần tạo hồ sơ trước."
-          >
-            <SelectField
-              control={form.control}
-              name="contract_type"
-              label="Loại hợp đồng"
-              options={CONTRACT_TYPE_OPTIONS}
-              placeholder="Chưa ghi nhận"
-            />
-            <TextField
-              control={form.control}
-              name="contract_number"
-              label="Số HĐLĐ"
-              placeholder="HD-2026-001"
-            />
-            <TextField
-              control={form.control}
-              name="contract_signed_date"
-              label="Ngày ký HĐ"
-              type="date"
-            />
-            <TextField
-              control={form.control}
-              name="contract_end_date"
-              label="Ngày hết hạn HĐ"
-              type="date"
-            />
-            <MoneyVndField
-              control={form.control}
-              name="base_salary"
-              label="Lương tháng (VND)"
-              placeholder="12.000.000"
-              description="Lương gộp/tháng — dùng để tính lương"
-            />
-            <MoneyVndField
-              control={form.control}
-              name="insurance_base_salary"
-              label="Lương đóng BH (VND)"
-              placeholder="0"
-              description="0 = chưa tham gia BHXH"
-            />
-            <NumberField
-              control={form.control}
-              name="dependents_count"
-              label="Số người phụ thuộc"
-              placeholder="0"
-              description="Chỉ ảnh hưởng thuế TNCN"
-              allowNegative={false}
-            />
-          </FormSection>
+              <TextField
+                control={form.control}
+                name="start_date"
+                label="Ngày bắt đầu"
+                type="date"
+              />
+            </FormGroupBlock>
 
-          <FormSection
-            title="Định danh và thanh toán"
-            description="CCCD và tài khoản nhận lương, có thể bổ sung sau."
-          >
-            <TextField
-              control={form.control}
-              name="id_number"
-              label="CMND/CCCD"
-            />
-            <TextField
-              control={form.control}
-              name="bank_account"
-              label="Số tài khoản"
-            />
-          </FormSection>
+            <FormGroupBlock
+              title="HĐLĐ, lương và BHXH"
+              description="Có thể để trống số HĐ nếu chỉ cần tạo hồ sơ trước."
+            >
+              <SelectField
+                control={form.control}
+                name="contract_type"
+                label="Loại hợp đồng"
+                options={CONTRACT_TYPE_OPTIONS}
+                placeholder="Chưa ghi nhận"
+              />
+              <TextField
+                control={form.control}
+                name="contract_number"
+                label="Số HĐLĐ"
+                placeholder="HD-2026-001"
+              />
+              <TextField
+                control={form.control}
+                name="contract_signed_date"
+                label="Ngày ký HĐ"
+                type="date"
+              />
+              <TextField
+                control={form.control}
+                name="contract_end_date"
+                label="Ngày hết hạn HĐ"
+                type="date"
+              />
+              <MoneyVndField
+                control={form.control}
+                name="base_salary"
+                label="Lương tháng (VND)"
+                placeholder="12.000.000"
+                description="Lương gộp/tháng — dùng để tính lương"
+              />
+              <MoneyVndField
+                control={form.control}
+                name="insurance_base_salary"
+                label="Lương đóng BH (VND)"
+                placeholder="0"
+                description="0 = chưa tham gia BHXH"
+              />
+              <NumberField
+                control={form.control}
+                name="dependents_count"
+                label="Số người phụ thuộc"
+                placeholder="0"
+                description="Chỉ ảnh hưởng thuế TNCN"
+                allowNegative={false}
+              />
+            </FormGroupBlock>
+
+            <FormGroupBlock
+              title="Định danh và thanh toán"
+              description="CCCD và tài khoản nhận lương, có thể bổ sung sau."
+            >
+              <TextField
+                control={form.control}
+                name="id_number"
+                label="CMND/CCCD"
+              />
+              <TextField
+                control={form.control}
+                name="bank_account"
+                label="Số tài khoản"
+              />
+            </FormGroupBlock>
           </>
         );
       }}

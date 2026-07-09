@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { logAudit } from "@/_lib/audit";
 import { isPosBranchInScope } from "./_lib/auth";
@@ -917,7 +918,7 @@ export async function fetchSiblingOrdersForTable(input: {
   if (error) {
     return {
       success: false,
-      error: "Không thể tải danh sách đơn cùng bàn.",
+      error: messages.pos.multiOrderTablePicker.siblingOrdersLoadFailed,
     };
   }
 

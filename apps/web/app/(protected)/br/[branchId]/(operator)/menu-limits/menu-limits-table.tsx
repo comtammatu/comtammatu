@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import {
   Ban,
   CheckCircle,
+  CookingPot,
   Save as IconSave,
   Search as IconSearch,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { Button } from "@comtammatu/ui/components/button";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   InputGroup,
   InputGroupAddon,
@@ -34,10 +36,19 @@ import {
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
   DrawerFooter,
 } from "@comtammatu/ui/components/drawer";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@comtammatu/ui/components/field";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { formatVND } from "@comtammatu/shared/format";
 import { normalizeSearch } from "@lib/search";
 import { useSwipeReveal, type SwipeReveal } from "@lib/hooks/use-swipe-reveal";
@@ -45,6 +56,7 @@ import { useLongPress } from "@lib/hooks/use-long-press";
 import {
   type MenuLimitRow,
   clearBranchMenuDailyLimit,
+  replenishMenuItemKitchenStock,
   setBranchMenuDailyLimit,
 } from "./actions";
 import { messages } from "@lib/messages";
@@ -191,7 +203,7 @@ function MenuLimitRowItem({
         <Item
           variant="outline"
           size="sm"
-          className="flex-col flex-nowrap items-start rounded-none border-none px-3 py-2 pointer-events-none select-none sm:flex-row sm:items-center sm:px-4 sm:py-3"
+          className="flex-col flex-nowrap items-start rounded-none border-none px-3 py-2 pointer-events-none select-none lg:flex-row lg:items-center lg:px-4 lg:py-3"
         >
           <ItemContent className="min-w-0 w-full gap-1 sm:w-auto">
             <ItemTitle className="line-clamp-2 w-full max-w-full flex-wrap text-sm">
@@ -218,7 +230,7 @@ function MenuLimitRowItem({
             </ItemDescription>
           </ItemContent>
           {progress && (
-            <div className="w-full shrink-0 sm:w-56">
+            <div className="w-full shrink-0 lg:w-56">
               <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
                 <span className="font-mono tabular-nums text-destructive">
                   {messages.pos.menu.soldCount(progress.sold)}
@@ -236,7 +248,7 @@ function MenuLimitRowItem({
   );
 }
 
-export function MenuLimitsTable({ branchId, rows }: Props) {
+export function MenuLimitsClient({ branchId, rows }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -246,6 +258,7 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
   const [drawerRow, setDrawerRow] = useState<MenuLimitRow | null>(null);
   const [draftQty, setDraftQty] = useState<string>("");
   const [draftDisabled, setDraftDisabled] = useState<boolean>(false);
+  const [replenishReason, setReplenishReason] = useState("");
 
   const grouped = useMemo(() => {
     const needle = normalizeSearch(query).trim();
@@ -309,6 +322,7 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     }),
     [rows],
   );
+  const actionCount = summary.exhausted + summary.disabled;
 
   function openDrawer(row: MenuLimitRow) {
     setDrawerRow(row);
@@ -318,6 +332,7 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
         : String(row.manual_limit_quantity),
     );
     setDraftDisabled(row.is_disabled);
+    setReplenishReason("");
   }
 
   function handleSaveLimit() {
@@ -386,6 +401,39 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     });
   }
 
+  function handleReplenishKitchen(extraPortions: 1 | 2) {
+    if (!drawerRow) return;
+    const reason = replenishReason.trim();
+    if (reason.length < 5) {
+      toast.error(messages.pos.menu.replenishKitchenReasonMin);
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await replenishMenuItemKitchenStock({
+        branchId,
+        menuItemId: drawerRow.menu_item_id,
+        extraPortions,
+        reason,
+      });
+
+      if (!result.success) {
+        toast.error(result.error ?? messages.pos.menu.replenishKitchenFailed);
+        return;
+      }
+
+      toast.success(
+        messages.pos.menu.replenishKitchenSuccess(
+          drawerRow.item_name,
+          extraPortions,
+        ),
+      );
+      setDrawerRow(null);
+      setReplenishReason("");
+      router.refresh();
+    });
+  }
+
   if (rows.length === 0) {
     return (
       <AppEmptyState
@@ -405,7 +453,7 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     <>
       <AppToolbar
         search={
-          <InputGroup className="w-full sm:w-80">
+          <InputGroup className="w-full lg:w-80">
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>
@@ -419,6 +467,11 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
         }
         filters={
           <div className="flex flex-wrap gap-1.5">
+            {actionCount > 0 ? (
+              <Badge variant="warning">
+                {messages.pos.menu.attentionCount(actionCount)}
+              </Badge>
+            ) : null}
             <Badge variant="outline">
               {messages.pos.menu.itemCount(summary.total)}
             </Badge>
@@ -428,12 +481,16 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
             <Badge variant="outline">
               {messages.pos.menu.stockCapacityCount(summary.stockLimited)}
             </Badge>
-            <Badge variant="warning">
-              {messages.pos.menu.exhaustedCount(summary.exhausted)}
-            </Badge>
-            <Badge variant="destructive">
-              {messages.pos.menu.disabledCount(summary.disabled)}
-            </Badge>
+            {summary.exhausted > 0 ? (
+              <Badge variant="warning">
+                {messages.pos.menu.exhaustedCount(summary.exhausted)}
+              </Badge>
+            ) : null}
+            {summary.disabled > 0 ? (
+              <Badge variant="destructive">
+                {messages.pos.menu.disabledCount(summary.disabled)}
+              </Badge>
+            ) : null}
           </div>
         }
       />
@@ -476,58 +533,138 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
         open={!!drawerRow}
         onOpenChange={(open) => !open && setDrawerRow(null)}
       >
-        <DrawerContent>
+        <DrawerContent className="overflow-hidden">
           {drawerRow && (
             <>
               <DrawerHeader>
                 <DrawerTitle>{drawerRow.item_name}</DrawerTitle>
+                <DrawerDescription asChild>
+                  <div className="flex flex-wrap justify-center gap-1.5 lg:justify-start">
+                    {renderItemBadge(drawerRow)}
+                    <Badge variant="outline" className="font-mono">
+                      {formatVND(drawerRow.base_price)}
+                    </Badge>
+                    {drawerRow.stock_capacity != null ? (
+                      <Badge variant="outline" className="font-mono">
+                        {messages.pos.menu.stockCapacityLabel}:{" "}
+                        {drawerRow.stock_capacity}
+                      </Badge>
+                    ) : null}
+                  </div>
+                </DrawerDescription>
               </DrawerHeader>
-              <div className="px-4 py-2 flex flex-col gap-4 overflow-y-auto">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="font-medium text-sm">
-                      Trạng thái phục vụ
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Khóa món nếu không thể phục vụ
-                    </span>
-                  </div>
-                  <Switch
-                    checked={draftDisabled}
-                    onCheckedChange={setDraftDisabled}
-                  />
-                </div>
+              <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pb-2">
+                <FieldGroup className="gap-4">
+                  <Item
+                    asChild
+                    variant="muted"
+                    className="items-center justify-between"
+                  >
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel htmlFor="menu-limit-disabled">
+                          {messages.pos.menu.servingStatusLabel}
+                        </FieldLabel>
+                        <FieldDescription>
+                          {messages.pos.menu.servingStatusHint}
+                        </FieldDescription>
+                      </FieldContent>
+                      <Switch
+                        id="menu-limit-disabled"
+                        size="touch"
+                        checked={draftDisabled}
+                        onCheckedChange={setDraftDisabled}
+                      />
+                    </Field>
+                  </Item>
 
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="font-medium text-sm">
-                      Giới hạn số lượng (Tùy chọn)
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Để trống nếu không giới hạn tay
-                    </span>
+                  <Field>
+                    <FieldLabel htmlFor="menu-limit-quantity">
+                      {messages.pos.menu.manualLimitOptionalLabel}
+                    </FieldLabel>
+                    <QuantityInput
+                      id="menu-limit-quantity"
+                      maxFractionDigits={0}
+                      max={9999}
+                      placeholder={messages.pos.menu.manualLimitExample}
+                      value={draftQty}
+                      onValueChange={setDraftQty}
+                      aria-label={messages.pos.menu.manualLimitInputAria(
+                        drawerRow.item_name,
+                      )}
+                    />
+                    <FieldDescription>
+                      {messages.pos.menu.manualLimitOptionalHint}
+                    </FieldDescription>
+                  </Field>
+                </FieldGroup>
+
+                <div className="flex flex-col gap-3 border-t pt-3">
+                  <SectionLabel>
+                    {messages.pos.menu.replenishKitchenTitle}
+                  </SectionLabel>
+                  <p className="text-xs text-muted-foreground">
+                    {messages.pos.menu.replenishKitchenHint}
+                  </p>
+                  <Field>
+                    <FieldLabel htmlFor="menu-limit-replenish-reason">
+                      {messages.pos.menu.replenishKitchenReasonLabel}
+                    </FieldLabel>
+                    <Textarea
+                      id="menu-limit-replenish-reason"
+                      data-vaul-no-drag
+                      value={replenishReason}
+                      onChange={(event) =>
+                        setReplenishReason(event.target.value)
+                      }
+                      placeholder={
+                        messages.pos.menu.replenishKitchenPlaceholder
+                      }
+                      disabled={isPending}
+                      className="min-h-20 resize-none text-base"
+                    />
+                    <FieldDescription>
+                      {messages.pos.menu.replenishKitchenReasonHint}
+                    </FieldDescription>
+                  </Field>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      disabled={isPending}
+                      onClick={() => handleReplenishKitchen(1)}
+                    >
+                      <CookingPot />
+                      +1 suất
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      disabled={isPending}
+                      onClick={() => handleReplenishKitchen(2)}
+                    >
+                      <CookingPot />
+                      +2 suất
+                    </Button>
                   </div>
-                  <QuantityInput
-                    maxFractionDigits={0}
-                    max={9999}
-                    placeholder="VD: 50"
-                    value={draftQty}
-                    onValueChange={setDraftQty}
-                  />
                 </div>
               </div>
-              <DrawerFooter className="flex-row gap-3">
+              <DrawerFooter className="flex-row gap-2">
                 {drawerRow.manual_limit_quantity != null && (
                   <Button
                     variant="outline"
+                    size="touch"
                     className="flex-1"
                     onClick={handleClearLimit}
                     disabled={isPending}
                   >
-                    Xóa giới hạn
+                    {messages.pos.menu.clearLimit}
                   </Button>
                 )}
                 <Button
+                  size="touch"
                   className="flex-1"
                   onClick={handleSaveLimit}
                   disabled={isPending}
@@ -535,9 +672,9 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
                   {isPending ? (
                     <Spinner className="mr-2" />
                   ) : (
-                    <IconSave className="mr-2 w-4 h-4" />
+                    <IconSave className="mr-2 size-4" />
                   )}
-                  Lưu thay đổi
+                  {messages.pos.menu.saveChanges}
                 </Button>
               </DrawerFooter>
             </>

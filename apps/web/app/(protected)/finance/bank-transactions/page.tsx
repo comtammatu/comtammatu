@@ -1,48 +1,67 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 import Link from "next/link";
-import {
-  ArrowDownLeft as IconMoneyIn,
-  ArrowUpRight as IconMoneyOut,
-} from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
-import { cn } from "@comtammatu/ui/lib/utils";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
-import {
-  AppEmptyState,
   AppPage,
   AppPageHeader,
   AppSection,
+  KpiRow,
 } from "@/components/surface";
+import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
-import { fetchSepayBankTransactions } from "../_lib/sepay-bank-transactions";
+import { buildSepayReconciliationSummary } from "../_lib/sepay-bank-transaction-model";
+import {
+  fetchSepayBankTransactions,
+  fetchSepayPaymentWebhookSummary,
+} from "../_lib/sepay-bank-transactions";
+import { FilterBar } from "../components/filter-bar";
+import {
+  type FinanceParams,
+  parseFinanceParams,
+  resolveFinanceRange,
+} from "../_lib/finance-params";
 import { fetchExpenseMatchOptions } from "../expense-actions";
-import { MatchExpenseCell } from "./match-expense-cell";
+import { BankTransactionsTable } from "./bank-transactions-table";
 
 const copy = messages.finance.bankTransactions;
 
-function compactDateTime(value: string | null): string {
-  if (!value) return "—";
-  return value.replace("T", " ").slice(0, 16);
-}
-
-export default async function BankTransactionsPage() {
-  const [transactions, expenseOptionsRes] = await Promise.all([
-    fetchSepayBankTransactions(),
-    fetchExpenseMatchOptions(),
-  ]);
+export default async function BankTransactionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const params: FinanceParams = {
+    ...parseFinanceParams(sp),
+    branch: null,
+    gran: "day",
+    compare: "prev_month",
+    payment: "all",
+    cashier: null,
+  };
+  const resolved = resolveFinanceRange(params);
+  const range = { start: resolved.start, end: resolved.end };
+  const [authState, transactions, expenseOptionsRes, paymentWebhookSummary] =
+    await Promise.all([
+      loadAuthState(),
+      fetchSepayBankTransactions(range),
+      fetchExpenseMatchOptions(),
+      fetchSepayPaymentWebhookSummary(range),
+    ]);
 
   const expenseOptions =
     expenseOptionsRes.success && expenseOptionsRes.data
       ? expenseOptionsRes.data
       : [];
+  const summary = buildSepayReconciliationSummary(transactions);
+  const needsReviewCount =
+    summary.needsReviewCount +
+    paymentWebhookSummary.openMissingBankWebhookCount;
+  const needsReviewAmount =
+    summary.needsReviewAmount +
+    paymentWebhookSummary.openMissingBankWebhookAmount;
+  const canLinkPayments = authState.claims.user_role === "owner";
 
   return (
     <AppPage width="wide" density="compact">
@@ -50,84 +69,84 @@ export default async function BankTransactionsPage() {
         eyebrow={copy.eyebrow}
         title={copy.title}
         description={copy.description}
+        meta={messages.finance.basic.periodMeta(resolved.start, resolved.end)}
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/finance">{messages.finance.common.backToFinance}</Link>
           </Button>
         }
       />
+      <FilterBar
+        params={params}
+        branches={[]}
+        basePath="/finance/bank-transactions"
+        hide={["branch", "granularity", "compare", "payment"]}
+        compact
+      />
+
+      <KpiRow density="compact">
+        <KpiCard
+          label={copy.reconciliation.matched}
+          value={String(summary.matchedCount)}
+          hint={copy.reconciliation.matchedHint}
+          tone={needsReviewCount === 0 ? "success" : "neutral"}
+          density="compact"
+        />
+        <KpiCard
+          label={copy.reconciliation.needsReview}
+          value={String(needsReviewCount)}
+          hint={copy.reconciliation.needsReviewHint(
+            formatVND(needsReviewAmount),
+            String(summary.needsReviewCount),
+            String(paymentWebhookSummary.openMissingBankWebhookCount),
+          )}
+          tone={needsReviewCount > 0 ? "warning" : "success"}
+          density="compact"
+        />
+        <KpiCard
+          label={copy.reconciliation.unmatchedMoneyIn}
+          value={formatVND(summary.unmatchedMoneyInAmount)}
+          hint={copy.reconciliation.unmatchedMoneyInHint(
+            String(summary.unmatchedMoneyInCount),
+          )}
+          tone={summary.unmatchedMoneyInCount > 0 ? "warning" : "neutral"}
+          density="compact"
+        />
+        <KpiCard
+          label={copy.reconciliation.missingBankWebhook}
+          value={formatVND(paymentWebhookSummary.missingBankWebhookAmount)}
+          hint={copy.reconciliation.missingBankWebhookHint(
+            String(paymentWebhookSummary.missingBankWebhookCount),
+            String(paymentWebhookSummary.checkedPaymentCount),
+            String(paymentWebhookSummary.openMissingBankWebhookCount),
+          )}
+          tone={
+            paymentWebhookSummary.missingBankWebhookCount > 0
+              ? "warning"
+              : "success"
+          }
+          density="compact"
+        />
+        <KpiCard
+          label={copy.reconciliation.unmatchedMoneyOut}
+          value={formatVND(summary.unmatchedMoneyOutAmount)}
+          hint={copy.reconciliation.unmatchedMoneyOutHint(
+            String(summary.unmatchedMoneyOutCount),
+          )}
+          tone={summary.unmatchedMoneyOutCount > 0 ? "warning" : "neutral"}
+          density="compact"
+        />
+      </KpiRow>
 
       <AppSection size="sm" title={copy.listTitle}>
-        {transactions.length === 0 ? (
-          <AppEmptyState
-            compact
-            title={copy.emptyTitle}
-            description={copy.emptyDescription}
-          />
-        ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-44">Thời gian</TableHead>
-                  <TableHead>Số Tiền</TableHead>
-                  <TableHead>Nội dung chuyển khoản</TableHead>
-                  <TableHead>Mã tham chiếu</TableHead>
-                  <TableHead className="w-72">Khớp</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((tx) => {
-                  const isIn = tx.transferType === "in";
-                  const Icon = isIn ? IconMoneyIn : IconMoneyOut;
-                  const referenceCode =
-                    tx.referenceCode ?? tx.code ?? tx.requestId;
-                  return (
-                    <TableRow key={tx.eventId}>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {compactDateTime(tx.transactionDate ?? tx.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <div
-                          className={cn(
-                            "flex items-center gap-1.5 font-mono text-sm font-semibold tabular-nums",
-                            isIn ? "text-success" : "text-warning",
-                          )}
-                        >
-                          <Icon className="size-3.5" aria-hidden />
-                          {isIn ? "+" : "-"}
-                          {formatVND(tx.amount)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {tx.content ?? copy.noContent}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {copy.account}: {tx.accountNumber ?? "—"}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {referenceCode}
-                      </TableCell>
-                      <TableCell>
-                        <MatchExpenseCell
-	                          eventId={tx.eventId}
-	                          paymentId={tx.paymentId}
-	                          expenseIds={tx.expenseIds}
-	                          transferType={tx.transferType}
-	                          expenseOptions={expenseOptions}
-	                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        <BankTransactionsTable
+          transactions={transactions}
+          missingBankWebhookPayments={
+            paymentWebhookSummary.missingBankWebhookPayments
+          }
+          expenseOptions={expenseOptions}
+          canLinkPayments={canLinkPayments}
+        />
       </AppSection>
     </AppPage>
   );

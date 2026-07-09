@@ -12,7 +12,7 @@ import {
 import { messages } from "@lib/messages";
 
 export interface PosMobileActionBarProps {
-  isMobile: boolean;
+  isTouchLayout: boolean;
   isAppendingToOrder: boolean;
   menuContextReady: boolean;
   cartQuantity: number;
@@ -34,10 +34,10 @@ export interface PosMobileActionBarProps {
 }
 
 const ACTION_BAR_CLASS =
-  "fixed inset-x-3 bottom-0 z-40 flex gap-2 rounded-lg bg-card/95 p-2 shadow-2xl ring-1 ring-border backdrop-blur pos-safe-bottom md:hidden";
+  "fixed inset-x-3 bottom-0 z-40 flex gap-2 rounded-lg bg-card/95 p-2 shadow-2xl ring-1 ring-border backdrop-blur pos-safe-bottom xl:hidden";
 
 const SESSION_ORDERS_BAR_CLASS =
-  "fixed inset-x-3 bottom-0 z-40 flex justify-end pos-safe-bottom md:hidden";
+  "fixed inset-x-3 bottom-0 z-40 flex justify-end pos-safe-bottom xl:hidden";
 
 const ACTION_PRIMARY_BUTTON_CLASS =
   "min-w-14 flex-1 text-sm font-bold sm:text-base";
@@ -52,7 +52,7 @@ const SESSION_ORDERS_BUTTON_CLASS =
   "min-w-14 bg-card/95 px-4 text-sm font-bold ring-1 ring-border backdrop-blur sm:text-base";
 
 function PosMobileActionBarComponent({
-  isMobile,
+  isTouchLayout,
   isAppendingToOrder,
   menuContextReady,
   cartQuantity,
@@ -69,7 +69,7 @@ function PosMobileActionBarComponent({
   onSubmitAppendDraft,
   onCancelAppend,
 }: PosMobileActionBarProps) {
-  if (!isMobile) return null;
+  if (!isTouchLayout) return null;
 
   if (isAppendingToOrder) {
     if (appendDraftQuantity > 0) {
@@ -190,9 +190,7 @@ function PosMobileActionBarComponent({
             disabled={!canSubmitNewOrder || isSubmittingNewOrder}
             onClick={onSubmitNewOrder}
           >
-            {isSubmittingNewOrder ? (
-              <Spinner data-icon="inline-start" />
-            ) : null}
+            {isSubmittingNewOrder ? <Spinner data-icon="inline-start" /> : null}
             <span>{messages.pos.mobileActionBar.submitNew}</span>
           </Button>
         </>

@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { TransfersPageContent } from "@/(protected)/inventory/transfers/page";
+import { notFound, permanentRedirect } from "next/navigation";
+import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
@@ -7,18 +7,8 @@ interface PageProps {
 
 export default async function OperatorStockReceivePage({ params }: PageProps) {
   const { branchId: rawBranchId } = await params;
-  const branchId = Number(rawBranchId);
-  if (!Number.isInteger(branchId) || branchId <= 0) notFound();
+  const branchId = parseOperatorBranchId(rawBranchId);
+  if (branchId == null) notFound();
 
-  return (
-    <TransfersPageContent
-      routeBranchId={branchId}
-      basePath={`/br/${branchId}/stock/receive`}
-      createBasePath={`/br/${branchId}/stock/transfer`}
-      supplierGrnBasePath={`/br/${branchId}/stock/grn`}
-      initialTab="receive"
-      pageTitle="Nhận hàng"
-      embedded
-    />
-  );
+  permanentRedirect(`/br/${branchId}/stock/transfer?queue=receive`);
 }

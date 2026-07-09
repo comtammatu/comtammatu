@@ -39,7 +39,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { messages } from "@lib/messages";
 
-export interface PageHeaderConfig {
+export interface AppShellHeaderConfig {
   actions?: ReactNode;
   /** Renders in the shell utility bar, left of actions. */
   headerExtras?: ReactNode;
@@ -54,8 +54,7 @@ export interface AppShellProps {
   tier1: ShellNavItem[];
   /** Sub-tabs for the active primary tab. */
   tier2: ShellNavGroup[];
-  defaultPageTitle: string;
-  pageHeader: PageHeaderConfig;
+  shellHeader?: AppShellHeaderConfig;
   /**
    * Mobile-only workspace bottom navbar (same nav model as the sidebar +
    * drawer trigger). Default true for all back-office shells.
@@ -80,7 +79,7 @@ export function AppShell({
   user,
   tier1,
   tier2,
-  pageHeader,
+  shellHeader = {},
   bottomNav = true,
 }: AppShellProps) {
   const pathname = usePathname();
@@ -166,7 +165,7 @@ export function AppShell({
                                       className="relative data-active:text-primary data-active:font-semibold dark:data-active:text-primary-foreground before:absolute before:-left-2.5 before:top-3 before:size-1.5 before:rounded-full before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity"
                                     >
                                       <Link
-                                        href={subItem.href}
+                                        href={subItem.linkHref ?? subItem.href}
                                         aria-current={
                                           subActive ? "page" : undefined
                                         }
@@ -218,16 +217,16 @@ export function AppShell({
           <div className="flex items-center gap-3">
             <SidebarTrigger className="lg:hidden" />
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              {pageHeader.headerExtras}
+              {shellHeader.headerExtras}
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <ThemeToggle />
-              {pageHeader.actions}
+              {shellHeader.actions}
             </div>
           </div>
-          {pageHeader.mobileTopBar ? (
+          {shellHeader.mobileTopBar ? (
             <div className="sticky top-0 z-10 -mx-4 mt-3 w-[calc(100%+2rem)] border-t bg-background px-4 py-2 lg:hidden">
-              {pageHeader.mobileTopBar}
+              {shellHeader.mobileTopBar}
             </div>
           ) : null}
         </header>

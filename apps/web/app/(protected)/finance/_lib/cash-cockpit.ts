@@ -1,5 +1,5 @@
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
-import { getVNDateString } from "@comtammatu/shared/time";
+import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchRevenueKpis } from "../actions";
 import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
@@ -23,9 +23,43 @@ interface ExpenseMatchRow {
   expense_id: number;
 }
 
+interface SupplierPaymentRow {
+  amount: number | string | null;
+  payment_method: string | null;
+  supplier_invoices?:
+    | {
+        goods_received_notes?:
+          | {
+              branch_id: number | string | null;
+            }
+          | Array<{ branch_id: number | string | null }>
+          | null;
+      }
+    | Array<{
+        goods_received_notes?:
+          | {
+              branch_id: number | string | null;
+            }
+          | Array<{ branch_id: number | string | null }>
+          | null;
+      }>
+    | null;
+}
+
 function toNumber(value: number | string | null | undefined): number {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
+
+function getSupplierPaymentBranchId(row: SupplierPaymentRow): number | null {
+  const invoice = firstRelation(row.supplier_invoices);
+  const grn = firstRelation(invoice?.goods_received_notes);
+  const branchId = grn?.branch_id;
+  return branchId == null ? null : toNumber(branchId);
 }
 
 export interface CashSummary {
@@ -45,6 +79,10 @@ export interface CashSummary {
   bankOnHand: number;
   /** Period expenses actually paid out (cash + transfer, excludes 'unpaid'). */
   expensesPaidPeriod: number;
+  /** Period supplier AP payments actually paid out. */
+  supplierPaymentsPaidPeriod: number;
+  /** Period cash out: expenses paid + supplier AP payments paid. */
+  cashOutPaidPeriod: number;
   /** Period cash-only expenses. */
   cashExpensePeriod: number;
 }
@@ -112,6 +150,44 @@ async function sumExpensesSinceByMethod(
   return { cash, unmatchedTransfer };
 }
 
+async function sumSupplierPaymentsByMethod(
+  supabase: SupabaseClient,
+  tenantId: number,
+  startIso: string,
+  endIso?: string,
+  branchId?: number | null,
+): Promise<{ cash: number; bankTransfer: number }> {
+  let query = supabase
+    .from("supplier_payments")
+    .select(
+      "amount, payment_method, supplier_invoices ( goods_received_notes ( branch_id ) )",
+    )
+    .eq("tenant_id", tenantId)
+    .gte("payment_date", startIso);
+
+  if (endIso) {
+    query = query.lt("payment_date", endIso);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("[finance:cash] failed to load supplier_payments", error.code);
+    return { cash: 0, bankTransfer: 0 };
+  }
+
+  let cash = 0;
+  let bankTransfer = 0;
+  for (const row of (data ?? []) as SupplierPaymentRow[]) {
+    if (branchId != null && getSupplierPaymentBranchId(row) !== branchId) {
+      continue;
+    }
+    const amount = toNumber(row.amount);
+    if (row.payment_method === "cash") cash += amount;
+    if (row.payment_method === "bank_transfer") bankTransfer += amount;
+  }
+  return { cash, bankTransfer };
+}
+
 export async function fetchCashSummary(
   params: FinanceParams,
   resolved: ResolvedFinanceRange,
@@ -138,6 +214,18 @@ export async function fetchCashSummary(
     if (row.payment_method !== "unpaid") expensesPaidPeriod += amount;
     if (row.payment_method === "cash") cashExpensePeriod += amount;
   }
+  const periodStart = getVNDayUtcRange(resolved.start).startIso;
+  const periodEnd = getVNDayUtcRange(resolved.end).endIso;
+  const supplierPaymentsPeriod = await sumSupplierPaymentsByMethod(
+    supabase,
+    tenantId,
+    periodStart,
+    periodEnd,
+    params.branch,
+  );
+  const supplierPaymentsPaidPeriod =
+    supplierPaymentsPeriod.cash + supplierPaymentsPeriod.bankTransfer;
+  const cashOutPaidPeriod = expensesPaidPeriod + supplierPaymentsPaidPeriod;
 
   // Opening anchor (tenant-level).
   const { data: settingRows } = await supabase
@@ -159,26 +247,38 @@ export async function fetchCashSummary(
   );
 
   if (!openingDate) {
-    return { ...EMPTY_OPENING, expensesPaidPeriod, cashExpensePeriod };
+    return {
+      ...EMPTY_OPENING,
+      expensesPaidPeriod,
+      supplierPaymentsPaidPeriod,
+      cashOutPaidPeriod,
+      cashExpensePeriod,
+    };
   }
 
   // Running balances are tenant-wide from the anchor date: cash uses POS cash,
-  // bank uses signed SePay account movement.
+  // bank uses signed SePay account movement plus recorded transfer spend.
   const today = getVNDateString();
-  const [revRes, expensesSince, bankMovement] = await Promise.all([
-    fetchRevenueKpis(null, openingDate, today),
-    sumExpensesSinceByMethod(supabase, tenantId, openingDate),
-    fetchSepayBankMovementSince(supabase, tenantId, openingDate),
-  ]);
+  const openingStart = getVNDayUtcRange(openingDate).startIso;
+  const [revRes, expensesSince, supplierPaymentsSince, bankMovement] =
+    await Promise.all([
+      fetchRevenueKpis(null, openingDate, today),
+      sumExpensesSinceByMethod(supabase, tenantId, openingDate),
+      sumSupplierPaymentsByMethod(supabase, tenantId, openingStart),
+      fetchSepayBankMovementSince(supabase, tenantId, openingDate),
+    ]);
   const revData = revRes.success
     ? (revRes.data as {
         cash_revenue?: number;
       } | null)
     : null;
   const cashInSince = toNumber(revData?.cash_revenue);
-  const cashOutSince = expensesSince.cash;
+  const cashOutSince = expensesSince.cash + supplierPaymentsSince.cash;
   const bankInSince = bankMovement.inAmount;
-  const bankOutSince = bankMovement.outAmount + expensesSince.unmatchedTransfer;
+  const bankOutSince =
+    bankMovement.outAmount +
+    expensesSince.unmatchedTransfer +
+    supplierPaymentsSince.bankTransfer;
 
   const bankSettingRaw = settingMap.get(
     SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE,
@@ -199,6 +299,8 @@ export async function fetchCashSummary(
     bankOutSince,
     bankOnHand: bankOpeningBalance + bankInSince - bankOutSince,
     expensesPaidPeriod,
+    supplierPaymentsPaidPeriod,
+    cashOutPaidPeriod,
     cashExpensePeriod,
   };
 }

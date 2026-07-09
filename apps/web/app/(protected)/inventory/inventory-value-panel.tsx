@@ -52,7 +52,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
     startTransition(async () => {
       const res = await fetchInventoryValueSystem();
       if (!res.success) {
-        toast.error(res.error ?? "Không thể tải dữ liệu");
+        toast.error(res.error ?? messages.inventory.value.loadFailed);
         return;
       }
       setSystemTotal(res.data?.totalValue ?? 0);
@@ -63,7 +63,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
     startTransition(async () => {
       const res = await fetchInventoryValueByBranch();
       if (!res.success) {
-        toast.error(res.error ?? "Không thể tải dữ liệu");
+        toast.error(res.error ?? messages.inventory.value.loadFailed);
         return;
       }
       setBranchRows(res.data?.rows ?? []);
@@ -186,7 +186,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                 variant: "secondary",
               }}
               contentFlush
-              contentClassName="gap-0"
+              contentClassName="gap-1"
             >
               <div className="border-b p-4">
                 <SummaryBlock

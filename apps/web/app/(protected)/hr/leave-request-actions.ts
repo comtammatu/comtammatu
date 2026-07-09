@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { getVNMonthEndDateString } from "@comtammatu/shared/time";
+import { messages } from "@lib/messages";
 import { withAction } from "@/_lib/with-action";
 import {
   calculateAnnualLeaveUsedThroughMonth,
@@ -14,6 +15,7 @@ import {
 } from "./payroll-day-math";
 
 const REVIEW_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
+const leaveCopy = messages.hr.leave;
 
 const fetchSchema = z.object({
   branchId: z.coerce.number().int().positive(),
@@ -73,7 +75,7 @@ export const fetchApprovedLeaveMonth = withAction(
         "[hr/leave-request-actions:fetchApprovedLeaveMonth] Fetch approved leaves error:",
         error,
       );
-      return { success: false, error: "Không thể tải nghỉ phép trong tháng." };
+      return { success: false, error: leaveCopy.monthLoadFailed };
     }
 
     return { success: true, data: result ?? [] };
@@ -122,7 +124,7 @@ export const fetchLeaveRequests = withAction(
         "[hr/leave-request-actions:fetchLeaveRequests] Fetch leave requests error:",
         error,
       );
-      return { success: false, error: "Không thể tải danh sách nghỉ phép." };
+      return { success: false, error: leaveCopy.loadFailed };
     }
 
     const rows = result ?? [];
@@ -175,7 +177,7 @@ export const fetchLeaveRequests = withAction(
         "[hr/leave-request-actions:fetchLeaveRequests] Fetch approved annual leaves details error:",
         approvedAnnualError,
       );
-      return { success: false, error: "Không thể tải hạn mức phép năm." };
+      return { success: false, error: leaveCopy.quotaLoadFailed };
     }
 
     const annualLeavesByEmployeeYear = new Map<string, LeaveRange[]>();

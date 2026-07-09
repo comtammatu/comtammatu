@@ -24,12 +24,10 @@ import { Label } from "@comtammatu/ui/components/label";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@comtammatu/ui/components/sheet";
 import {
   Select,
@@ -39,8 +37,10 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import { MoneyVndInput, QuantityInput } from "@/components/form/domain-number-inputs";
-import { NumberPadSheet } from "@/components/form/number-pad-sheet";
+import {
+  MoneyVndInput,
+  QuantityInput,
+} from "@/components/form/domain-number-inputs";
 import { matchesSearch } from "@lib/search";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
@@ -50,12 +50,15 @@ import {
   AppSection,
   DocumentFormFrame,
 } from "@/components/surface";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import {
   draftTotal,
+  lineTotalFromUnitCost,
+  unitCostFromLineTotal,
   type GrnDraft,
   type GrnDraftLine,
 } from "../../../_lib/grn-draft";
-import { formatVND } from "../../../_lib/format";
+import { formatQty, formatVND } from "../../../_lib/format";
 import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
@@ -68,8 +71,10 @@ import {
 import type { IngredientUnitRow } from "../../../_lib/types";
 import {
   createGrnDraft,
+  confirmGrn,
   deleteGrnLine,
   discardGrnDraft,
+  updateDraftGrnReceivingSite,
   upsertGrnLine,
 } from "../../../grn-actions";
 
@@ -89,13 +94,27 @@ type ServerDraftLine = GrnDraftLine & { lineId: number };
 
 type ProcurementBranchOption = { id: number; name: string };
 
+type ProcurementLocationOption = {
+  id: number;
+  name: string;
+  branchId: number;
+  branchName: string;
+  branchKind: string | null;
+  kind: string | null;
+  isDefaultReceive: boolean;
+  isDefaultConsumption: boolean;
+};
+
 type Props = {
   supplier: { id: number; name: string };
   branchId: number | null;
   procurementBranches: ProcurementBranchOption[];
+  locationOptions: ProcurementLocationOption[];
+  initialLocationId: number | null;
   canSwitchBranch: boolean;
   ingredients: Ingredient[];
   existingDraft: { id: number; lines: ServerDraftLine[] } | null;
+  canConfirm: boolean;
   basePath?: string;
   grnBasePath?: string;
   embedded?: boolean;
@@ -107,10 +126,10 @@ const GRN_CREATE_COPY = {
   changeSupplier: "Đổi nhà cung cấp",
   newReceiptEyebrow: "Phiếu nhập mới",
   newReceiptDescription:
-    "Thêm nguyên liệu rồi lưu nháp. Bước chốt nhập kho nằm ở màn hình chi tiết.",
+    "Thêm nguyên liệu, kiểm tra kho nhận, rồi chốt nhập kho ngay tại đây.",
   discardDraft: "Hủy nháp",
   addItemToContinue: "Thêm mặt hàng để tiếp tục",
-  unitCostTitle: "Đơn giá nhập",
+  unitCostTitle: "Đơn giá tự tính",
   editItem: "Sửa mặt hàng",
   addItem: "Thêm mặt hàng",
   editLineAria: "Sửa dòng",
@@ -123,19 +142,34 @@ const GRN_CREATE_COPY = {
   optionalNote: "Ghi chú (tùy chọn)",
   notePlaceholder: "Tình trạng, nhiệt độ...",
   addedSummary: (lineCount: number) => `Đã thêm ${lineCount} mặt hàng`,
-  saveDraft: (lineCount: number, total: number) =>
-    `Lưu phiếu nháp · ${lineCount} mặt hàng · ${formatVND(total)}`,
+  confirmNowAction: "Chốt nhập kho",
+  confirmNow: (lineCount: number, total: number) =>
+    `Chốt nhập kho · ${lineCount} mặt hàng · ${formatVND(total)}`,
+  reviewBeforeConfirm: (lineCount: number, total: number) =>
+    `Xem lại trước khi chốt · ${lineCount} mặt hàng · ${formatVND(total)}`,
   lineUnitCost: (quantity: number, unit: string, unitCost: number) =>
-    `${quantity} ${unit} · ${formatVND(unitCost)}/${unit} ·`,
-  unitLabel: (unit: string) => `Đơn vị: ${unit}`,
-  unitPriceUnit: (unit: string) => `đ / ${unit}`,
+    `${formatQty(quantity)} ${unit} · ${formatVND(lineTotalFromUnitCost(quantity, unitCost))} · Đơn giá ${formatVND(unitCost)} / ${unit} ·`,
+  unitLabel: (unit: string) => `Đơn vị nhập: ${unit}`,
+  unitPriceUnit: (unit: string, unitCost: number) =>
+    `Đơn giá ${formatVND(unitCost)} / ${unit}`,
+  baseConversionPreview: (
+    quantity: string,
+    entryUnit: string,
+    baseQuantity: string,
+    baseUnit: string,
+  ) =>
+    `Quy đổi về tồn chuẩn: ${quantity} ${entryUnit} = ${baseQuantity} ${baseUnit}`,
+  conversionMissing: "Chưa cấu hình quy đổi",
   moneyVnd: (value: number) => formatVND(value),
   lastCost: (value: number, unit: string) => `${formatVND(value)}/${unit}`,
   varianceWarning: (variance: number) =>
     `Giá chênh ${(variance * 100).toFixed(0)}% so với lần trước — kiểm tra lại trước khi lưu.`,
-  currencySuffix: "đ",
   branchUnselected: "Chưa chọn kho nhận",
+  locationUnselected: "Chưa chọn nơi nhập",
+  receivingLocation: "Nơi nhập",
+  receivingLocationSaving: STATES_VI.saving,
   toastChooseBranch: "Chưa có kho nhận hàng cho phiếu nhập.",
+  toastChooseLocation: "Chưa chọn nơi nhập hàng cho phiếu nhập.",
   toastCreateDraftFailed: "Không thể tạo phiếu nháp.",
   toastSaveLineFailed: "Không lưu được dòng.",
   toastDeleteLineFailed: "Không xóa được dòng.",
@@ -143,7 +177,6 @@ const GRN_CREATE_COPY = {
   toastDiscardDraftDesc: "Các dòng đã nhập sẽ mất.",
   toastDiscardDraftFailed: "Không thể hủy phiếu nháp.",
   toastNoLines: "Phiếu chưa có dòng nào.",
-  labelQuantity: (unit: string) => `Số lượng (${unit})`,
 };
 
 type EditState = {
@@ -152,7 +185,7 @@ type EditState = {
   quantity: number;
   unit: string;
   entryUnitId: number | null;
-  unitCost: number;
+  lineTotal: number;
   note: string;
 };
 
@@ -186,6 +219,54 @@ function useIsDesktopLineEdit(): boolean {
   );
 }
 
+function locationKindLabel(location: ProcurementLocationOption) {
+  if (location.branchKind === "branch" && location.kind === "kitchen") {
+    return "Bếp CN";
+  }
+  if (location.branchKind === "branch" && location.kind === "warehouse") {
+    return "Kho CN";
+  }
+  if (
+    location.branchKind === "central_kitchen" &&
+    location.kind === "production_storage"
+  ) {
+    return "Kho sản xuất";
+  }
+  return location.name;
+}
+
+function locationLabel(location: ProcurementLocationOption) {
+  return `${location.branchName} · ${locationKindLabel(location)}`;
+}
+
+function pickReceivingLocation(
+  locations: ProcurementLocationOption[],
+  branchId: number | null,
+  preferredLocationId: number | null = null,
+  preferBranchKitchen = true,
+) {
+  const candidates = branchId
+    ? locations.filter((location) => location.branchId === branchId)
+    : locations;
+  return (
+    candidates.find((location) => location.id === preferredLocationId) ??
+    (preferBranchKitchen
+      ? candidates.find(
+          (location) =>
+            location.branchKind === "branch" && location.kind === "kitchen",
+        )
+      : undefined) ??
+    candidates.find(
+      (location) =>
+        location.branchKind === "central_kitchen" &&
+        location.kind === "production_storage",
+    ) ??
+    candidates.find((location) => location.isDefaultReceive) ??
+    candidates[0] ??
+    null
+  );
+}
+
 function isSameReferenceCost(
   currentCost: number,
   referenceCost: { value: number } | null,
@@ -195,13 +276,43 @@ function isSameReferenceCost(
   );
 }
 
+function unitDisplay(unit: IngredientUnitRow): string {
+  return unit.unit_name?.trim() || unit.unit_code;
+}
+
+function buildBaseConversionPreview(edit: EditState): string | null {
+  const baseUnit = edit.ingredient.units?.find((unit) => unit.is_base) ?? null;
+  const entryUnit =
+    edit.entryUnitId == null
+      ? null
+      : (edit.ingredient.units?.find(
+          (unit) => unit.unit_id === edit.entryUnitId,
+        ) ?? null);
+  if (!baseUnit || !entryUnit || entryUnit.is_base) return null;
+
+  const factor = Number(entryUnit.to_base_factor);
+  if (!Number.isFinite(factor) || factor <= 0) {
+    return GRN_CREATE_COPY.conversionMissing;
+  }
+
+  return GRN_CREATE_COPY.baseConversionPreview(
+    formatQty(edit.quantity),
+    unitDisplay(entryUnit),
+    formatQty(edit.quantity * factor),
+    unitDisplay(baseUnit),
+  );
+}
+
 export function GrnCreateClient({
   supplier,
   branchId: initialBranchId,
   procurementBranches,
+  locationOptions,
+  initialLocationId,
   canSwitchBranch,
   ingredients,
   existingDraft,
+  canConfirm,
   basePath = "/inventory/grn/new",
   grnBasePath = "/inventory/grn",
   embedded = false,
@@ -210,6 +321,13 @@ export function GrnCreateClient({
   // Desktop 2-column line-edit is an office-surface upgrade only; the branch
   // operator root (embedded) always stays single-column regardless of viewport.
   const isDesktopLineEdit = useIsDesktopLineEdit() && !embedded;
+  const initialLocation = pickReceivingLocation(
+    locationOptions,
+    initialBranchId,
+    initialLocationId,
+    existingDraft == null,
+  );
+  const initialDraftBranchId = initialLocation?.branchId ?? initialBranchId;
   // Sprint 6 #3: server-side draft is the source of truth. React state mirrors
   // server state for UI rendering; lazy-create on first saveLine when no
   // draft exists yet.
@@ -219,22 +337,25 @@ export function GrnCreateClient({
       : `pending-${supplier.id}`,
     supplierId: supplier.id,
     supplierName: supplier.name,
-    branchId: initialBranchId,
+    branchId: initialDraftBranchId,
     lines: existingDraft?.lines ?? [],
     updatedAt: new Date().toISOString(),
   }));
   const [serverGrnId, setServerGrnId] = React.useState<number | null>(
     existingDraft?.id ?? null,
   );
-  // Receiving warehouse for the receipt. Locked once a server draft exists,
-  // since createGrnDraft binds branch_id at creation and never rewrites it.
+  // Receiving location for the receipt; server drafts can still move before
+  // confirmation because no stock movement has been posted yet.
   const [branchId, setBranchId] = React.useState<number | null>(
-    initialBranchId,
+    initialDraftBranchId,
+  );
+  const [locationId, setLocationId] = React.useState<number | null>(
+    initialLocation?.id ?? null,
   );
   const [query, setQuery] = React.useState("");
   const [edit, setEdit] = React.useState<EditState | null>(null);
-  const [numpad, setNumpad] = React.useState<"qty" | "cost" | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const [receivingSiteSaving, setReceivingSiteSaving] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   // Lazy-create the server-side draft on first interaction, returning grnId.
@@ -246,9 +367,14 @@ export function GrnCreateClient({
       setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
       return null;
     }
+    if (!locationId) {
+      setSubmitError(GRN_CREATE_COPY.toastChooseLocation);
+      return null;
+    }
     const created = await createGrnDraft({
       supplierId: supplier.id,
       branchId,
+      locationId,
     });
     if (!created.success) {
       setSubmitError(created.error ?? GRN_CREATE_COPY.toastCreateDraftFailed);
@@ -293,28 +419,30 @@ export function GrnCreateClient({
       entryUnitId,
       unit,
     );
+    const quantity = existing?.quantity ?? 0;
+    const unitCost =
+      existing?.unitCost ??
+      referenceCost?.value ??
+      Number(ingredient.unit_cost ?? 0);
     setEdit({
       ingredient,
       line: existing ?? null,
-      quantity: existing?.quantity ?? 0,
+      quantity,
       unit,
       entryUnitId,
-      unitCost:
-        existing?.unitCost ??
-        referenceCost?.value ??
-        Number(ingredient.unit_cost ?? 0),
+      lineTotal: existing ? lineTotalFromUnitCost(quantity, unitCost) : 0,
       note: existing?.note ?? "",
     });
   }
 
   function closeEdit() {
     setEdit(null);
-    setNumpad(null);
   }
 
   async function saveLine() {
     if (!edit) return;
-    if (edit.quantity <= 0 || edit.unitCost < 0) return;
+    if (edit.quantity <= 0 || edit.lineTotal < 0) return;
+    const unitCost = unitCostFromLineTotal(edit.quantity, edit.lineTotal);
     setSubmitError(null);
     try {
       const grnId = await ensureServerDraft();
@@ -324,7 +452,7 @@ export function GrnCreateClient({
         ingredientId: edit.ingredient.id,
         receivedQuantity: edit.quantity,
         entryUnitId: edit.entryUnitId,
-        unitCost: edit.unitCost,
+        unitCost,
         qualityStatus: "accepted",
       });
       if (!lineRes.success) {
@@ -338,7 +466,7 @@ export function GrnCreateClient({
         unit: edit.unit,
         entryUnitId: edit.entryUnitId,
         quantity: edit.quantity,
-        unitCost: edit.unitCost,
+        unitCost,
         note: edit.note.trim() ? edit.note.trim() : undefined,
       };
       if (lineId) (nextLine as ServerDraftLine).lineId = lineId;
@@ -403,6 +531,10 @@ export function GrnCreateClient({
       setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
       return;
     }
+    if (!locationId) {
+      setSubmitError(GRN_CREATE_COPY.toastChooseLocation);
+      return;
+    }
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -424,75 +556,184 @@ export function GrnCreateClient({
     }
   }
 
+  async function confirmNow() {
+    if (draft.lines.length === 0) {
+      setSubmitError(GRN_CREATE_COPY.toastNoLines);
+      return;
+    }
+    if (!branchId) {
+      setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
+      return;
+    }
+    if (!locationId) {
+      setSubmitError(GRN_CREATE_COPY.toastChooseLocation);
+      return;
+    }
+    const ok = await confirm({
+      title: messages.inventory.grn.confirmGrnTitle,
+      description: messages.inventory.grn.confirmGrnDesc,
+      variant: "destructive",
+      confirmText: GRN_CREATE_COPY.confirmNowAction,
+    });
+    if (!ok) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const grnId = await ensureServerDraft();
+      if (grnId === null) return;
+      const res = await confirmGrn(grnId);
+      if (!res.success) {
+        setSubmitError(res.error ?? messages.inventory.grn.confirmFailed);
+        return;
+      }
+      router.push(grnBasePath);
+      router.refresh();
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error && err.message
+          ? err.message
+          : messages.inventory.grn.confirmFailed,
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const total = draftTotal(draft);
   const lineCount = draft.lines.length;
-  const canSubmit = lineCount > 0 && !submitting;
-  const branchLocked = serverGrnId !== null;
-  const showWarehousePicker = canSwitchBranch && procurementBranches.length > 1;
-  const showWarehouseEditor = showWarehousePicker && !branchLocked;
+  const canSubmit = lineCount > 0 && !submitting && !receivingSiteSaving;
+  const branchLocations = locationOptions.filter(
+    (location) => location.branchId === branchId,
+  );
+  const showBranchPicker = canSwitchBranch && procurementBranches.length > 1;
+  const showLocationPicker = branchLocations.length > 1;
+  const showWarehouseEditor = showBranchPicker || showLocationPicker;
   const selectedBranchName =
     procurementBranches.find((branch) => branch.id === branchId)?.name ??
     (branchId ? `#${branchId}` : GRN_CREATE_COPY.branchUnselected);
+  const selectedLocation = locationOptions.find(
+    (location) => location.id === locationId,
+  );
+  const selectedLocationName =
+    (selectedLocation ? locationKindLabel(selectedLocation) : null) ??
+    (locationId ? `#${locationId}` : GRN_CREATE_COPY.locationUnselected);
+
+  async function commitReceivingSite(
+    nextBranchId: number | null,
+    nextLocationId: number | null,
+  ) {
+    if (!nextBranchId) {
+      setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
+      return;
+    }
+    if (!nextLocationId) {
+      setSubmitError(GRN_CREATE_COPY.toastChooseLocation);
+      return;
+    }
+
+    if (serverGrnId === null) {
+      setBranchId(nextBranchId);
+      setLocationId(nextLocationId);
+      setSubmitError(null);
+      return;
+    }
+
+    setReceivingSiteSaving(true);
+    setSubmitError(null);
+    try {
+      const res = await updateDraftGrnReceivingSite({
+        grnId: serverGrnId,
+        targetBranchId: nextBranchId,
+        targetLocationId: nextLocationId,
+      });
+      if (!res.success) {
+        setSubmitError(res.error ?? "Không thể đổi nơi nhập phiếu nháp.");
+        return;
+      }
+      setBranchId(nextBranchId);
+      setLocationId(nextLocationId);
+      router.refresh();
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Không thể đổi nơi nhập phiếu nháp.",
+      );
+    } finally {
+      setReceivingSiteSaving(false);
+    }
+  }
+
+  function handleBranchChange(value: string) {
+    const nextBranchId = Number(value) || null;
+    const nextLocationId =
+      pickReceivingLocation(locationOptions, nextBranchId)?.id ?? null;
+    void commitReceivingSite(nextBranchId, nextLocationId);
+  }
+
+  function handleLocationChange(value: string) {
+    void commitReceivingSite(branchId, Number(value) || null);
+  }
 
   const warehouseField = (
-    <div className="flex flex-col gap-1.5">
-      <Label className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-        {messages.inventory.grn.receivingWarehouse}
-      </Label>
-      {procurementBranches.length > 0 ? (
-        <Select
-          value={branchId != null ? String(branchId) : ""}
-          onValueChange={(v) => setBranchId(Number(v) || null)}
-          disabled={!showWarehousePicker || branchLocked}
-        >
-          <SelectTrigger className="h-11 w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {procurementBranches.map((b) => (
-              <SelectItem key={b.id} value={String(b.id)}>
-                {b.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : (
-        <p className="text-sm font-medium">{selectedBranchName}</p>
-      )}
+    <div className="grid gap-3">
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+          {messages.inventory.grn.receivingWarehouse}
+        </Label>
+        {procurementBranches.length > 0 ? (
+          <Select
+            value={branchId != null ? String(branchId) : ""}
+            onValueChange={handleBranchChange}
+            disabled={!showBranchPicker || submitting || receivingSiteSaving}
+          >
+            <SelectTrigger className="h-11 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {procurementBranches.map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <p className="text-sm font-medium">{selectedBranchName}</p>
+        )}
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+          {GRN_CREATE_COPY.receivingLocation}
+        </Label>
+        {branchLocations.length > 0 ? (
+          <Select
+            value={locationId != null ? String(locationId) : ""}
+            onValueChange={handleLocationChange}
+            disabled={!showLocationPicker || submitting || receivingSiteSaving}
+          >
+            <SelectTrigger className="h-11 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {branchLocations.map((location) => (
+                <SelectItem key={location.id} value={String(location.id)}>
+                  {locationLabel(location)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <p className="text-sm font-medium">
+            {GRN_CREATE_COPY.locationUnselected}
+          </p>
+        )}
+      </div>
     </div>
   );
 
   const documentSummary = (
-    <AppSection
-      size="sm"
-      title={messages.inventory.grn.documentLabel}
-      action={
-        showWarehouseEditor ? (
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size={embedded ? "touch" : "sm"}
-              >
-                {ACTIONS_VI.edit}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="max-h-dvh-95 p-0">
-              <SheetHeader>
-                <SheetTitle>{messages.inventory.grn.receivingWarehouse}</SheetTitle>
-              </SheetHeader>
-              <div className="px-3 py-3 sm:px-4">{warehouseField}</div>
-              <SheetFooter>
-                <Button type="button" size="touch-lg" asChild>
-                  <SheetClose>{ACTIONS_VI.close}</SheetClose>
-                </Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-        ) : undefined
-      }
-    >
+    <AppSection size="sm" title={messages.inventory.grn.documentLabel}>
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="rounded-md bg-muted/50 px-3 py-2">
           <SectionLabel density="dense">
@@ -500,12 +741,25 @@ export function GrnCreateClient({
           </SectionLabel>
           <p className="truncate text-sm font-semibold">{supplier.name}</p>
         </div>
-        <div className="rounded-md bg-muted/50 px-3 py-2">
-          <SectionLabel density="dense">
-            {messages.inventory.grn.receivingWarehouse}
-          </SectionLabel>
-          <p className="truncate text-sm font-semibold">{selectedBranchName}</p>
-        </div>
+        {showWarehouseEditor ? (
+          <div className="rounded-md border bg-card p-3 sm:col-span-2">
+            {warehouseField}
+            {receivingSiteSaving ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {GRN_CREATE_COPY.receivingLocationSaving}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <div className="rounded-md bg-muted/50 px-3 py-2">
+            <SectionLabel density="dense">
+              {GRN_CREATE_COPY.receivingLocation}
+            </SectionLabel>
+            <p className="truncate text-sm font-semibold">
+              {selectedBranchName} · {selectedLocationName}
+            </p>
+          </div>
+        )}
       </div>
     </AppSection>
   );
@@ -601,36 +855,43 @@ export function GrnCreateClient({
             const added = addedMap.has(ingredient.id);
             const referenceCost = getDisplayReferenceCost(ingredient);
             return (
-              <button
+              <InteractiveCard
+                asChild
                 key={ingredient.id}
-                type="button"
-                onClick={() => openEdit(ingredient)}
-                className="flex items-center gap-3 rounded-lg border bg-card px-3 py-3 text-left transition hover:bg-accent/10 active:scale-[0.99]"
+                padding="compact"
+                minHeight="tap"
+                className="rounded-lg"
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-2xs font-bold uppercase text-muted-foreground">
-                  {(ingredient.sku ?? ingredient.name).slice(0, 2)}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold leading-tight">
-                    {ingredient.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {ingredient.sku ? `${ingredient.sku} · ` : ""}
-                    {referenceCost?.unit || ingredient.unit}
-                    {referenceCost
-                      ? ` · ~${GRN_CREATE_COPY.lastCost(
-                          referenceCost.value,
-                          referenceCost.unit,
-                        )}`
-                      : ""}
-                  </p>
-                </div>
-                {added ? (
-                  <IconCircleCheck className="size-5 shrink-0 text-success" />
-                ) : (
-                  <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => openEdit(ingredient)}
+                  className="w-full text-left"
+                >
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-2xs font-bold uppercase text-muted-foreground">
+                    {(ingredient.sku ?? ingredient.name).slice(0, 2)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold leading-tight">
+                      {ingredient.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {ingredient.sku ? `${ingredient.sku} · ` : ""}
+                      {referenceCost?.unit || ingredient.unit}
+                      {referenceCost
+                        ? ` · ~${GRN_CREATE_COPY.lastCost(
+                            referenceCost.value,
+                            referenceCost.unit,
+                          )}`
+                        : ""}
+                    </p>
+                  </div>
+                  {added ? (
+                    <IconCircleCheck className="size-5 shrink-0 text-success" />
+                  ) : (
+                    <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                  )}
+                </button>
+              </InteractiveCard>
             );
           })
         )}
@@ -663,7 +924,7 @@ export function GrnCreateClient({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size={embedded ? "touch" : "sm"}
             className="h-8 gap-1 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={discardDraft}
           >
@@ -717,34 +978,6 @@ export function GrnCreateClient({
         onPatch={(patch) =>
           setEdit((current) => (current ? { ...current, ...patch } : current))
         }
-        onOpenNumpad={setNumpad}
-      />
-
-      <NumberPadSheet
-        open={numpad === "qty"}
-        onOpenChange={(next) => setNumpad(next ? "qty" : null)}
-        title={GRN_CREATE_COPY.labelQuantity(edit?.unit ?? "")}
-        initialValue={edit?.quantity ?? 0}
-        suffix={edit?.unit ?? ""}
-        onConfirm={(value) =>
-          setEdit((current) =>
-            current ? { ...current, quantity: value } : current,
-          )
-        }
-        allowDecimal
-      />
-      <NumberPadSheet
-        open={numpad === "cost"}
-        onOpenChange={(next) => setNumpad(next ? "cost" : null)}
-        title={GRN_CREATE_COPY.unitCostTitle}
-        initialValue={edit?.unitCost ?? 0}
-        suffix={GRN_CREATE_COPY.currencySuffix}
-        onConfirm={(value) =>
-          setEdit((current) =>
-            current ? { ...current, unitCost: value } : current,
-          )
-        }
-        allowDecimal={false}
       />
     </>
   );
@@ -754,23 +987,45 @@ export function GrnCreateClient({
       sticky={embedded}
       className={embedded ? undefined : "border-0 p-0 shadow-none"}
       trailing={
-        <Button
-          type="button"
-          size="touch-lg"
-          onClick={submit}
-          disabled={!canSubmit}
-        >
-          {submitting ? (
-            <>
-              <Spinner className="size-5" />
-              {STATES_VI.saving}
-            </>
-          ) : lineCount === 0 ? (
-            GRN_CREATE_COPY.addItemToContinue
-          ) : (
-            GRN_CREATE_COPY.saveDraft(lineCount, total)
-          )}
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-80">
+          {canConfirm ? (
+            <Button
+              type="button"
+              size="touch-lg"
+              onClick={confirmNow}
+              disabled={!canSubmit}
+            >
+              {submitting ? (
+                <>
+                  <Spinner className="size-5" />
+                  {STATES_VI.saving}
+                </>
+              ) : lineCount === 0 ? (
+                GRN_CREATE_COPY.addItemToContinue
+              ) : (
+                GRN_CREATE_COPY.confirmNow(lineCount, total)
+              )}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant={canConfirm ? "outline" : "default"}
+            size="touch-lg"
+            onClick={submit}
+            disabled={!canSubmit}
+          >
+            {submitting && !canConfirm ? (
+              <>
+                <Spinner className="size-5" />
+                {STATES_VI.saving}
+              </>
+            ) : lineCount === 0 ? (
+              GRN_CREATE_COPY.addItemToContinue
+            ) : (
+              GRN_CREATE_COPY.reviewBeforeConfirm(lineCount, total)
+            )}
+          </Button>
+        </div>
       }
     />
   );
@@ -797,7 +1052,6 @@ type LineEditSheetProps = {
   onSave: () => void;
   onRemove: () => void;
   onPatch: (patch: Partial<EditState>) => void;
-  onOpenNumpad: (key: "qty" | "cost") => void;
 };
 
 // Shared field body for the GRN line editor: the mobile bottom LineEditSheet
@@ -806,24 +1060,23 @@ type LineEditSheetProps = {
 function LineEditFields({
   edit,
   onPatch,
-  onOpenNumpad,
 }: {
   edit: EditState;
   onPatch: (patch: Partial<EditState>) => void;
-  onOpenNumpad?: (key: "qty" | "cost") => void;
 }) {
   const referenceCost = getReferenceCostForUnit(
     edit.ingredient,
     edit.entryUnitId,
     edit.unit,
   );
+  const unitCost = unitCostFromLineTotal(edit.quantity, edit.lineTotal);
   const variance =
-    referenceCost && referenceCost.value > 0
-      ? (edit.unitCost - referenceCost.value) / referenceCost.value
+    edit.lineTotal > 0 && referenceCost && referenceCost.value > 0
+      ? (unitCost - referenceCost.value) / referenceCost.value
       : null;
   const showVarianceWarning =
     variance != null && Math.abs(variance) > DEFAULT_VARIANCE_WARNING;
-  const lineTotal = edit.quantity * edit.unitCost;
+  const baseConversionPreview = buildBaseConversionPreview(edit);
 
   function handleUnitChange(unitId: number, label: string) {
     const nextReferenceCost = getReferenceCostForUnit(
@@ -834,9 +1087,13 @@ function LineEditFields({
     onPatch({
       entryUnitId: unitId,
       unit: label,
-      ...(edit.unitCost === 0 ||
-      isSameReferenceCost(edit.unitCost, referenceCost)
-        ? { unitCost: nextReferenceCost?.value ?? edit.unitCost }
+      ...(edit.lineTotal === 0 || isSameReferenceCost(unitCost, referenceCost)
+        ? {
+            lineTotal: lineTotalFromUnitCost(
+              edit.quantity,
+              nextReferenceCost?.value ?? unitCost,
+            ),
+          }
         : {}),
     });
   }
@@ -854,7 +1111,6 @@ function LineEditFields({
           label={FORM_VI.quantity}
           display={edit.quantity}
           detail={edit.unit}
-          onOpenNumpad={() => onOpenNumpad?.("qty")}
         >
           <QuantityInput
             value={String(edit.quantity)}
@@ -866,14 +1122,13 @@ function LineEditFields({
           />
         </LineValueField>
         <LineValueField
-          label={FORM_VI.unitPrice}
-          display={formatVND(edit.unitCost)}
-          detail={GRN_CREATE_COPY.unitPriceUnit(edit.unit)}
-          onOpenNumpad={() => onOpenNumpad?.("cost")}
+          label={FORM_VI.amount}
+          display={formatVND(edit.lineTotal)}
+          detail={GRN_CREATE_COPY.unitPriceUnit(edit.unit, unitCost)}
         >
           <MoneyVndInput
-            value={String(edit.unitCost)}
-            onValueChange={(v) => onPatch({ unitCost: Number(v) || 0 })}
+            value={String(edit.lineTotal)}
+            onValueChange={(v) => onPatch({ lineTotal: Number(v) || 0 })}
             onFocus={(e) => e.currentTarget.select()}
             className="h-auto border-0 bg-transparent p-0 text-2xl font-semibold tabular-nums shadow-none ring-0 focus-visible:border-0 focus-visible:ring-0"
           />
@@ -882,9 +1137,15 @@ function LineEditFields({
 
       <div className="rounded-md bg-muted/50 px-3 py-3">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">{FORM_VI.amount}</span>
+          <span className="text-muted-foreground">
+            {GRN_CREATE_COPY.unitCostTitle}
+          </span>
           <span className="text-base font-semibold">
-            {GRN_CREATE_COPY.moneyVnd(lineTotal)}
+            {GRN_CREATE_COPY.moneyVnd(unitCost)}
+            <span className="text-xs font-normal text-muted-foreground">
+              {" "}
+              / {edit.unit}
+            </span>
           </span>
         </div>
         {referenceCost ? (
@@ -893,6 +1154,11 @@ function LineEditFields({
               referenceCost.value,
               referenceCost.unit || edit.unit,
             )}
+          </p>
+        ) : null}
+        {baseConversionPreview ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {baseConversionPreview}
           </p>
         ) : null}
       </div>
@@ -933,10 +1199,9 @@ function LineEditSheet({
   onSave,
   onRemove,
   onPatch,
-  onOpenNumpad,
 }: LineEditSheetProps) {
   const open = edit != null;
-  const valid = edit != null && edit.quantity > 0 && edit.unitCost >= 0;
+  const valid = edit != null && edit.quantity > 0 && edit.lineTotal >= 0;
 
   return (
     <Sheet
@@ -947,7 +1212,7 @@ function LineEditSheet({
     >
       <SheetContent
         side="bottom"
-        className="h-auto max-h-dvh-95 gap-0 bg-background p-0 text-foreground"
+        className="h-auto max-h-dvh-95 gap-1 bg-background p-0 text-foreground"
         showCloseButton={false}
       >
         {edit ? (
@@ -966,11 +1231,7 @@ function LineEditSheet({
             </SheetHeader>
 
             <div className="p-4">
-              <LineEditFields
-                edit={edit}
-                onPatch={onPatch}
-                onOpenNumpad={onOpenNumpad}
-              />
+              <LineEditFields edit={edit} onPatch={onPatch} />
             </div>
 
             <SheetFooter>
@@ -1022,8 +1283,8 @@ function LineEditPanel({
   onSave,
   onRemove,
   onPatch,
-}: Omit<LineEditSheetProps, "onOpenNumpad">) {
-  const valid = edit != null && edit.quantity > 0 && edit.unitCost >= 0;
+}: LineEditSheetProps) {
+  const valid = edit != null && edit.quantity > 0 && edit.lineTotal >= 0;
 
   if (!edit) {
     return (
@@ -1088,36 +1349,20 @@ function LineValueField({
   label,
   display,
   detail,
-  onOpenNumpad,
   children,
 }: {
   label: string;
   display: React.ReactNode;
   detail: React.ReactNode;
-  onOpenNumpad: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <>
-      <button
-        type="button"
-        onClick={onOpenNumpad}
-        className="flex flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition active:scale-[0.99] md:hidden"
-      >
-        <SectionLabel density="dense">
-          {label}
-        </SectionLabel>
-        <span className="text-2xl font-semibold tabular-nums">{display}</span>
-        <span className="text-xs text-muted-foreground">{detail}</span>
-      </button>
-      <label className="hidden cursor-text flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-foreground md:flex">
-        <SectionLabel density="dense">
-          {label}
-        </SectionLabel>
-        {children}
-        <span className="text-xs text-muted-foreground">{detail}</span>
-      </label>
-    </>
+    <label className="flex cursor-text flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-foreground">
+      <SectionLabel density="dense">{label}</SectionLabel>
+      <span className="sr-only">{display}</span>
+      {children}
+      <span className="text-xs text-muted-foreground">{detail}</span>
+    </label>
   );
 }
 

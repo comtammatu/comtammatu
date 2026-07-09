@@ -7,19 +7,20 @@ const messageSource = readFileSync("lib/messages/inventory.ts", "utf8");
 
 test("inventory dashboard keeps the four owner entrypoint groups visible", () => {
   for (const text of [
-    'title: "1. Kiểm soát tồn"',
-    'title: "2. Nhập/Nhận/Đối soát"',
-    'title: "3. Điều phối/Sản xuất"',
-    'title: "4. Danh mục & thiết lập"',
+    "title: messages.inventory.dashboard.controlFlowTitle",
+    "title: messages.inventory.dashboard.sourceFlowTitle",
+    "title: messages.inventory.dashboard.productionFlowTitle",
+    "title: messages.inventory.dashboard.catalogFlowTitle",
     "href: paths.ingredients",
     "href: paths.units",
     "href: paths.suppliers",
-    "href: paths.recipes",
     "href: paths.countAssignments",
     "href: paths.countSlips",
-    "href: props.showProduction ? paths.production : paths.transfers",
-    "primary: !props.showProduction",
-    'label: "Lệnh sản xuất"',
+    "paths.operationTab(\"purchase-orders\")",
+    "paths.operationTab(\"transfers\")",
+    "if (props.showProduction)",
+    "href: paths.production",
+    "label: messages.inventory.dashboard.productionCommandAction",
     "primary: true",
     "const secondaryActions = flow.actions.filter",
     "{secondaryActions.map((action) => (",
@@ -28,9 +29,16 @@ test("inventory dashboard keeps the four owner entrypoint groups visible", () =>
     assert.match(source, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
 
-  assert.match(messageSource, /mainFlowsTitle: "4 điểm vào vận hành chính"/);
+  assert.match(messageSource, /mainFlowsTitle: "Điểm vào vận hành chính"/);
+  assert.match(messageSource, /controlFlowTitle: "1\. Kiểm soát tồn"/);
+  assert.match(messageSource, /sourceFlowTitle: "2\. Nhập\/Nhận\/Đối soát"/);
+  assert.match(messageSource, /productionFlowTitle: "3\. Sản xuất"/);
+  assert.match(messageSource, /catalogFlowTitle: "4\. Danh mục & thiết lập"/);
+  assert.match(messageSource, /productionCommandAction: "Sản xuất"/);
+  assert.match(messageSource, /catalogMetricValue: "3"/);
+  assert.match(messageSource, /catalogStatusLabel: "Nguyên liệu \/ ĐVT \/ NCC"/);
   assert.match(
     messageSource,
-    /headerTagline:\s*"4 điểm vào: kiểm soát tồn · nhập\/nhận · điều phối · danh mục."/,
+    /headerTagline:\s*"Điểm vào: kiểm soát tồn · giao dịch kho · sản xuất · danh mục."/,
   );
 });

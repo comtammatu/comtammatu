@@ -14,7 +14,48 @@ export type SupplierInvoiceRow = {
   variance: number | null;
   invoiceDate: string | null;
   dueDate: string | null;
+  paymentCount: number;
+  lastPayment: SupplierInvoicePaymentSummary | null;
 };
+
+export type SupplierInvoicePaymentSummary = {
+  id: number;
+  amount: number;
+  paymentMethod: string;
+  paymentDate: string;
+  referenceNote: string | null;
+};
+
+export function getSupplierInvoiceOutstandingAmount(
+  invoice: Pick<SupplierInvoiceRow, "amount" | "paidAmount">,
+) {
+  return Math.max(invoice.amount - invoice.paidAmount, 0);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function getSupplierPayments(row: Record<string, unknown>) {
+  const raw = row.supplier_payments;
+  if (Array.isArray(raw)) return raw.filter(isRecord);
+  return isRecord(raw) ? [raw] : [];
+}
+
+function mapSupplierPayment(
+  row: Record<string, unknown>,
+): SupplierInvoicePaymentSummary {
+  return {
+    id: Number(row.id ?? 0),
+    amount: Number(row.amount ?? 0),
+    paymentMethod: String(row.payment_method ?? ""),
+    paymentDate: String(row.payment_date ?? ""),
+    referenceNote:
+      typeof row.reference_note === "string" && row.reference_note.trim()
+        ? row.reference_note
+        : null,
+  };
+}
 
 export function mapSupplierInvoiceRow(
   row: Record<string, unknown>,
@@ -25,6 +66,12 @@ export function mapSupplierInvoiceRow(
     (row.matching_status as string | undefined) ??
     (row.match_status as string | undefined) ??
     "pending";
+  const payments = getSupplierPayments(row)
+    .map(mapSupplierPayment)
+    .sort((left, right) => {
+      const dateDiff = right.paymentDate.localeCompare(left.paymentDate);
+      return dateDiff !== 0 ? dateDiff : right.id - left.id;
+    });
 
   return {
     id: row.id as number,
@@ -53,5 +100,7 @@ export function mapSupplierInvoiceRow(
         : null,
     invoiceDate: (row.invoice_date as string) ?? null,
     dueDate: (row.due_date as string) ?? null,
+    paymentCount: payments.length,
+    lastPayment: payments[0] ?? null,
   };
 }

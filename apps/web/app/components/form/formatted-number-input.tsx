@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Input } from "@comtammatu/ui/components/input";
+import { formatDecimal } from "@comtammatu/shared/format";
 
 type FormattedNumberInputProps = Omit<
   React.ComponentProps<typeof Input>,
@@ -86,17 +87,13 @@ export function sanitizeNumericInput(
   return `${negative ? "-" : ""}${normalizedInteger}${hasTrailingSeparator || fractionPart.length > 0 ? `.${fractionPart}` : ""}`;
 }
 
-function formatDisplayValue(raw: string) {
+function formatDisplayValue(raw: string, maxFractionDigits: number) {
   if (!raw || raw === "-") {
     return raw;
   }
 
-  const negative = raw.startsWith("-");
-  const unsigned = negative ? raw.slice(1) : raw;
-  const [integerPart = "0", fractionPart = ""] = unsigned.split(".");
-  const groupedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
-  return `${negative ? "-" : ""}${groupedInteger}${fractionPart.length > 0 ? `,${fractionPart}` : unsigned.endsWith(".") ? "," : ""}`;
+  const value = Number(raw);
+  return Number.isFinite(value) ? formatDecimal(value, maxFractionDigits) : raw;
 }
 
 export function resolveFormattedNumberInputDisplay(
@@ -114,7 +111,7 @@ export function resolveFormattedNumberInputDisplay(
   if (isFocused && maxFractionDigits > 0) {
     return focusedValue ?? rawValue;
   }
-  return formatDisplayValue(rawValue);
+  return formatDisplayValue(rawValue, maxFractionDigits);
 }
 
 export const FormattedNumberInput = React.forwardRef<

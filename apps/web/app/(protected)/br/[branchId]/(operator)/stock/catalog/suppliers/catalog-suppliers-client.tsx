@@ -20,7 +20,7 @@ import {
   SupplierDialog,
   type SupplierRow,
 } from "@/(protected)/inventory/suppliers/supplier-dialog";
-import { CatalogBackHeader } from "../catalog-back-header";
+import { CatalogBackControl } from "../catalog-back-header";
 import {
   CatalogList,
   CATALOG_DELETE_ICON,
@@ -87,7 +87,7 @@ export function CatalogSuppliersClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <CatalogBackHeader title={copy.title} backHref={backHref} />
+      <CatalogBackControl title={copy.title} backHref={backHref} />
 
       <InputGroup className="h-11">
         <InputGroupAddon>

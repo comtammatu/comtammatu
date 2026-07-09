@@ -10,33 +10,88 @@ const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 const migration = read(
   "supabase/migrations/20260708055851_bank_transaction_expense_matches.sql",
 );
+const manyToManyMigration = read(
+  "supabase/migrations/20260709050752_allow_expense_multiple_bank_transactions.sql",
+);
+const serviceMatchMigration = read(
+  "supabase/migrations/20260709075048_sepay_service_expense_match.sql",
+);
+const sepayWebhookRoute = read("apps/web/app/api/webhooks/sepay/route.ts");
 const actions = read("apps/web/app/(protected)/finance/expense-actions.ts");
 const cell = read(
   "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
 );
+const financeMessages = read("apps/web/lib/messages/finance.ts");
 const loader = read(
   "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
 );
 
-test("SePay expense matching is a transaction-to-many-expenses relation", () => {
+test("SePay expense matching is a many-to-many relation", () => {
   assert.match(
     migration,
     /CREATE TABLE public\.bank_transaction_expense_matches/,
   );
   assert.match(migration, /UNIQUE \(tenant_id, webhook_event_id, expense_id\)/);
-  assert.match(migration, /UNIQUE \(tenant_id, expense_id\)/);
   assert.match(
-    migration,
+    manyToManyMigration,
+    /DROP CONSTRAINT IF EXISTS bank_transaction_expense_matches_expense_key/,
+  );
+  assert.doesNotMatch(manyToManyMigration, /expense_already_matched/);
+  assert.match(
+    manyToManyMigration,
     /CREATE OR REPLACE FUNCTION public\.match_sepay_transaction_expenses/,
   );
+  assert.match(serviceMatchMigration, /auth\.role\(\) = 'service_role'/);
+  assert.match(
+    serviceMatchMigration,
+    /payment_method IN \('transfer', 'unpaid'\)/,
+  );
+  assert.match(serviceMatchMigration, /expense_amount_mismatch/);
+  assert.match(
+    serviceMatchMigration,
+    /UPDATE public\.expenses[\s\S]*payment_method = 'transfer'/,
+  );
+  assert.match(
+    serviceMatchMigration,
+    /CREATE OR REPLACE FUNCTION public\.record_sepay_cash_deposit_as_system/,
+  );
+  assert.match(serviceMatchMigration, /cash_deposit_amount_invalid/);
 });
 
 test("SePay expense matching UI and actions use the plural RPC path", () => {
+  const page = read(
+    "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
+  );
+  const table = read(
+    "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
+  );
+
   assert.match(actions, /\.rpc\("match_sepay_transaction_expenses"/);
+  assert.match(
+    sepayWebhookRoute,
+    /\.rpc\(\s*"match_sepay_transaction_expenses"/,
+  );
   assert.doesNotMatch(actions, /\.update\(\{\s*expense_id:/);
   assert.match(cell, /matchSepayTransactionWithExpenses/);
   assert.match(cell, /Checkbox/);
+  assert.match(cell, /copy\.bankTransactionAmount/);
+  assert.match(cell, /copy\.selectedExpenseAmount/);
+  assert.match(cell, /copy\.expenseMatchDelta/);
+  assert.match(cell, /href="\/finance\/expenses"/);
+  assert.match(financeMessages, /matchExpensePlaceholder: "Gán chi phí"/);
+  assert.match(financeMessages, /openExpenses: "Mở chi phí"/);
+  assert.match(financeMessages, /matchedExpenseCount/);
+  assert.doesNotMatch(cell, /matchedEventId/);
+  assert.match(actions, /matchedEventIds/);
   assert.match(loader, /bank_transaction_expense_matches/);
+  assert.match(table, /amount=\{tx\.amount\}/);
+  assert.match(cell, /Math\.abs\(left\.amount - amount\)/);
+  assert.match(table, /type BankReconciliationRow/);
+  assert.match(table, /variant=\{filter === value \? "default" : "outline"\}/);
+  assert.match(table, /missingBankWebhookPayments/);
+  assert.match(table, /ReviewStatusSelect/);
+  assert.doesNotMatch(page, /UnmatchedMoneyInTable/);
+  assert.doesNotMatch(page, /MissingBankWebhookPaymentsTable/);
 });
 
 test("SePay expense matching handles unapplied migration schema errors", () => {

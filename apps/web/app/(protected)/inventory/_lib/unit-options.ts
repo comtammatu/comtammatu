@@ -51,3 +51,13 @@ export function getDefaultIngredientUnit<T extends InventoryUnitOption>(
 ): T | null {
   return options.find((option) => option.isBase) ?? options[0] ?? null;
 }
+
+export function getLargestIngredientUnit<T extends InventoryUnitOptionWithFactor>(
+  options: readonly T[],
+): T | null {
+  return options.reduce<T | null>(
+    (best, option) =>
+      best == null || option.toBaseFactor > best.toBaseFactor ? option : best,
+    null,
+  );
+}

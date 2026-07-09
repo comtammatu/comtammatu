@@ -2,6 +2,7 @@
 
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
@@ -65,7 +66,10 @@ export async function fetchInventoryValueSystem(
   const { data, error } = await query;
 
   if (error) {
-    return { success: false, error: "Không thể tính giá trị tồn kho." };
+    return {
+      success: false,
+      error: messages.inventory.value.calculateFailed,
+    };
   }
 
   let totalValue = 0;
@@ -124,7 +128,10 @@ export async function fetchInventoryValueByBranch(): Promise<
   const { data: branchList, error: brError } = await branchesQuery;
 
   if (brError) {
-    return { success: false, error: "Không thể tải danh sách chi nhánh." };
+    return {
+      success: false,
+      error: messages.inventory.value.branchesLoadFailed,
+    };
   }
 
   const branchIds = (branchList ?? []).map((b) => b.id);
@@ -154,7 +161,10 @@ export async function fetchInventoryValueByBranch(): Promise<
       : { data: [], error: null };
 
   if (stockError) {
-    return { success: false, error: "Không thể tải tồn kho." };
+    return {
+      success: false,
+      error: messages.inventory.value.stockLoadFailed,
+    };
   }
 
   const totals = new Map<number, number>();

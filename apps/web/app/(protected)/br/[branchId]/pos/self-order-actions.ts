@@ -4,6 +4,7 @@ import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import type { ActionResult } from "@comtammatu/shared/types";
+import type { SelfOrderCartItem } from "@lib/self-order/contracts";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { isPosBranchInScope } from "./_lib/auth";
 
@@ -21,12 +22,7 @@ export interface SelfOrderPendingBatch {
   tableId: number;
   tableNumber: number;
   status: string;
-  items: Array<{
-    menu_item_id: number;
-    item_name: string;
-    variant_name?: string | null;
-    quantity: number;
-  }>;
+  items: SelfOrderCartItem[];
   customerNote: string | null;
   createdAt: string;
 }

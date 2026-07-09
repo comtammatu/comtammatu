@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { PayslipPageContent } from "@lib/staff-runtime/payslip/page";
+import { StaffPayslipPageContent } from "@lib/staff-runtime/payslip/page";
 
 export default async function OperatorProfilePayslipPage({
   params,
@@ -13,10 +13,11 @@ export default async function OperatorProfilePayslipPage({
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
   return (
-    <PayslipPageContent
+    <StaffPayslipPageContent
       searchParams={searchParams}
       hideHeaderOnMobile
       profileHref={`/br/${branchId}/profile`}
+      plane="branch"
     />
   );
 }

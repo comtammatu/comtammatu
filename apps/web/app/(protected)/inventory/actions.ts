@@ -3,6 +3,7 @@
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { INVENTORY_OPS_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { messages } from "@lib/messages";
 import {
   getAuthContext,
   getAuthContextWithPermission,
@@ -151,7 +152,7 @@ export async function fetchStocktakeSessions(
 
   if (error) {
     console.error("[inventory/actions:fetchStocktakeSessions] Fetch stocktake sessions error:", error);
-    return { success: false, error: "Không thể tải danh sách kiểm kê." };
+    return { success: false, error: messages.inventory.stocktake.loadFailed };
   }
 
   const sessions = data ?? [];
@@ -168,7 +169,7 @@ export async function fetchStocktakeSessions(
 
   if (linesError) {
     console.error("[inventory/actions:fetchStocktakeSessions] Fetch stocktake lines aggregate error:", linesError);
-    return { success: false, error: "Không thể tải danh sách kiểm kê." };
+    return { success: false, error: messages.inventory.stocktake.loadFailed };
   }
 
   const bySession = new Map<number, { total: number; counted: number }>();
@@ -232,7 +233,7 @@ export async function fetchStocktakeDetail(
     if (sessionError) {
       console.error("[inventory/actions:fetchStocktakeDetail] Fetch stocktake session detail error:", sessionError);
     }
-    return { success: false, error: "Không thể tải chi tiết kiểm kê." };
+    return { success: false, error: messages.inventory.stocktake.detailLoadFailed };
   }
 
   if (
@@ -251,7 +252,7 @@ export async function fetchStocktakeDetail(
 
   if (linesError) {
     console.error("[inventory/actions:fetchStocktakeDetail] Fetch stocktake lines error:", linesError);
-    return { success: false, error: "Không thể tải chi tiết kiểm kê." };
+    return { success: false, error: messages.inventory.stocktake.detailLoadFailed };
   }
 
   const normalizedLines = (lines ?? []).map((line) => {
@@ -377,6 +378,21 @@ export async function completeStocktake(
     return { success: false, error: "Còn nguyên liệu chưa được đếm." };
   }
 
+  const { data: recountLines } = await supabase
+    .from("stocktake_lines")
+    .select("id")
+    .eq("session_id", parsedId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("needs_recount", true)
+    .limit(1);
+
+  if (recountLines && recountLines.length > 0) {
+    return {
+      success: false,
+      error: "Còn dòng cần đếm lại trước khi hoàn tất.",
+    };
+  }
+
   const { data, error } = await supabase.rpc("complete_stocktake", {
     p_session_id: parsedId.data,
   });
@@ -386,6 +402,12 @@ export async function completeStocktake(
     const msg = error.message;
     if (msg.includes("uncounted_lines_exist")) {
       return { success: false, error: "Còn nguyên liệu chưa được đếm." };
+    }
+    if (msg.includes("recount_lines_exist")) {
+      return {
+        success: false,
+        error: "Còn dòng cần đếm lại trước khi hoàn tất.",
+      };
     }
     if (msg.includes("session_not_in_progress")) {
       return {

@@ -18,6 +18,7 @@ import {
 } from "@comtammatu/shared/providers";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { ensurePaymentProvidersRegistered } from "@lib/payment-providers-init";
+import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
 import {
@@ -521,7 +522,7 @@ export const fetchPaymentMethodsForPos = withActionPositional(
     } catch {
       return {
         success: false,
-        error: "Không thể tải cấu hình thanh toán. Vui lòng thử lại.",
+        error: messages.pos.payment.methodsConfigLoadFailed,
       };
     }
 
@@ -866,9 +867,9 @@ export const createPayment = withActionPositional(
  * signal to start a fresh QR session vs reuse the existing one.
  *
  * Auth `posUseAuth` (POS_USE). The branch-scope guard is inline to keep the
- * specific "Không có quyền truy cập chi nhánh này" copy. DB error returns
- * "Không thể tải phiên thanh toán."; non-pending or missing rows return
- * `{ success: true, data: null }`.
+ * specific "Không có quyền truy cập chi nhánh này" copy. DB errors use
+ * `messages.pos.payment.pendingSessionLoadFailed`; non-pending or missing rows
+ * return `{ success: true, data: null }`.
  */
 export const fetchPendingRemotePaymentForBill = withActionPositional(
   {
@@ -899,7 +900,10 @@ export const fetchPendingRemotePaymentForBill = withActionPositional(
       .maybeSingle();
 
     if (error) {
-      return { success: false, error: "Không thể tải phiên thanh toán." };
+      return {
+        success: false,
+        error: messages.pos.payment.pendingSessionLoadFailed,
+      };
     }
 
     if (!payment || payment.status !== "pending") {
@@ -1024,12 +1028,13 @@ export interface CashPaymentResult {
  *     `amount_mismatch_recomputed` stays inside the handler: the RPC can
  *     RETURN those even when the SQL does not raise, so they cannot be
  *     mapped via `RpcErrorMapping` (which only inspects `error.message`).
- *   - `branch_id === null` guard (operator with no branch grant) returns
- *     "Không xác định được chi nhánh" inside the handler.
+ *   - Branch scope comes from the POS route, not only JWT claims, so owner can
+ *     confirm payment while still keeping branch-scoped grants tight.
  */
 export const confirmCashPayment = withActionPositional(
   {
-    argsToInput: (orderId: number, cashReceived: number) => ({
+    argsToInput: (branchId: number, orderId: number, cashReceived: number) => ({
+      branchId,
       orderId,
       cashReceived,
     }),
@@ -1037,13 +1042,13 @@ export const confirmCashPayment = withActionPositional(
     customAuth: posConfirmPaymentAuth,
   },
   async (
-    { orderId, cashReceived },
+    { branchId, orderId, cashReceived },
     { supabase, claims },
   ): Promise<ActionResult<CashPaymentResult>> => {
-    if (claims.branch_id === null) {
+    if (!isPosBranchInScope(claims, branchId)) {
       return {
         success: false,
-        error: "Không xác định được chi nhánh",
+        error: "Không có quyền truy cập chi nhánh này",
         errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
       };
     }
@@ -1171,6 +1176,7 @@ function parseInvoicePayload(
  *     so the cashier UI can confirm "Đã thu tiền" and show a soft toast.
  */
 export async function confirmCashPaymentWithInvoice(
+  branchId: number,
   orderId: number,
   cashReceived: number,
   invoice: InvoicePayload,
@@ -1180,7 +1186,7 @@ export async function confirmCashPaymentWithInvoice(
     return invoicePayload as ActionResult<CashPaymentWithInvoiceResult>;
   }
 
-  const paymentResult = await confirmCashPayment(orderId, cashReceived);
+  const paymentResult = await confirmCashPayment(branchId, orderId, cashReceived);
   if (!paymentResult.success || !paymentResult.data) {
     return paymentResult as ActionResult<CashPaymentWithInvoiceResult>;
   }
@@ -1264,7 +1270,7 @@ export const fetchVietQrConfig = withActionPositional(
     } catch {
       return {
         success: false,
-        error: "Không thể tải cấu hình VietQR. Vui lòng thử lại.",
+        error: messages.pos.payment.vietQrConfigLoadFailed,
       };
     }
 

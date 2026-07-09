@@ -45,12 +45,13 @@ const isAuthedPath = (pathname: string) =>
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
 
-// Branch Operator Hub only (PWA-2, D062) — the operator plane's own routes
-// under `/br/{branchId}` (dashboard/orders/profile/settings/shift/stock/
-// team), excluding the POS/KDS/Runner station apps. Stations keep their
-// existing offline handling untouched; only the Hub gets the offline shell.
+// Operator entry and shell only (PWA-2, D062) — `/` plus the operator plane's
+// own routes under `/br/{branchId}` (dashboard/orders/profile/settings/shift/
+// stock/team), excluding the POS/KDS/Runner station apps. Stations keep their
+// existing offline handling untouched.
 const BRANCH_STATION_SEGMENTS = ["pos", "kds", "runner"];
-const isHubPath = (pathname: string) => {
+const isOperatorShellPath = (pathname: string) => {
+  if (pathname === "/") return true;
   if (!pathname.startsWith("/br/")) return false;
   const segments = pathname.split("/").filter(Boolean);
   const stationSegment = segments[2];
@@ -59,19 +60,19 @@ const isHubPath = (pathname: string) => {
   );
 };
 
-// Assigned once below, after `runtimeCaching` is built. `hubOfflineFallback`
+// Assigned once below, after `runtimeCaching` is built. `operatorOfflineFallback`
 // only reads it lazily inside handlerDidError (called on an actual failed
 // navigation, always after module init finishes), so the forward reference
 // is safe.
 // eslint-disable-next-line prefer-const -- assigned once, after declaration, by design (forward reference)
 let serwist: Serwist;
 
-// Serves the precached offline shell when a Hub navigation fails (offline).
+// Serves the precached offline shell when an operator navigation fails offline.
 // Equivalent to serwist's PrecacheFallbackPlugin, written inline because that
 // plugin resolves its `serwist` reference eagerly at construction time — too
 // early here, since this plugin is built while assembling the `runtimeCaching`
 // array that `new Serwist(...)` itself consumes.
-const hubOfflineFallback: SerwistPlugin = {
+const operatorOfflineFallback: SerwistPlugin = {
   handlerDidError: async () => serwist.matchPrecache("/offline"),
 };
 
@@ -121,14 +122,14 @@ const runtimeCaching: RuntimeCaching[] = [
         url.pathname.endsWith(".woff")),
     handler: new StaleWhileRevalidate({ cacheName: "static-assets" }),
   },
-  // 7. Branch Operator Hub navigations: never cache the response (same
+  // 7. Operator entry/shell navigations: never cache the response (same
   //    identity-leak rule as #8), but on network failure serve the precached
   //    offline shell instead of the browser's default error page. Data stays
   //    correct — this only replaces the error page, never the live HTML.
   {
     matcher: ({ request, url }) =>
-      request.mode === "navigate" && isHubPath(url.pathname),
-    handler: new NetworkOnly({ plugins: [hubOfflineFallback] }),
+      request.mode === "navigate" && isOperatorShellPath(url.pathname),
+    handler: new NetworkOnly({ plugins: [operatorOfflineFallback] }),
   },
   // 8. Remaining authed navigations (POS/KDS/Runner stations and admin/domain
   //    workspaces): never cache, no offline fallback.

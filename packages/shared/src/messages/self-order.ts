@@ -5,11 +5,15 @@ export const SELF_ORDER_VI = {
   branchFallback: "Cơm Tấm Má Tư",
   tableLabel: (tableNumber: number | string) => `Bàn ${tableNumber}`,
   pendingApprovalTitle: "Đã gửi món",
-  pendingApprovalDescription: "Nhân viên đã nhận lượt gọi món của bàn.",
+  pendingApprovalDescription:
+    "Nhân viên đã nhận lượt gọi món của bàn. Vui lòng đợi một chút để gọi thêm.",
   activeSessionTitle: "Đang gọi món",
   addMoreTitle: "Gọi thêm món",
+  closedTitle: "Đã thanh toán",
+  closedDescription: "Cảm ơn quý khách. Nếu cần hỗ trợ thêm, vui lòng gọi nhân viên.",
   menuTitle: "Thực đơn",
   billTab: "Hoá đơn",
+  viewBill: "Xem hoá đơn",
   allCategories: "Tất cả",
   categoriesAria: "Danh mục món",
   menuEmpty: "Thực đơn hiện chưa có món để gọi.",
@@ -41,6 +45,8 @@ export const SELF_ORDER_VI = {
   sentOk: "Đã gửi món.",
   addedOk: "Đã gọi thêm món.",
   loadFailed: "Không tải được QR gọi món. Vui lòng thử lại.",
+  refreshFailed: "Không cập nhật được, đang dùng dữ liệu cũ.",
+  retryRefresh: "Thử lại",
   submitFailed: "Không gửi được món. Vui lòng gọi nhân viên.",
   posSessionClosed: "Ca POS đang đóng. Vui lòng gọi nhân viên để được hỗ trợ.",
   staffPosSessionClosed: "Ca POS đang đóng. Mở ca trước khi duyệt QR gọi món.",
@@ -51,6 +57,8 @@ export const SELF_ORDER_VI = {
   keepPendingPayment: "Giữ mã QR",
   paymentCompletedBlocked:
     "Đơn đã thanh toán hoặc đang được chốt. Vui lòng gọi nhân viên nếu cần hỗ trợ.",
+  orderRejectedBlocked:
+    "Yêu cầu gọi món đã bị từ chối. Vui lòng gọi nhân viên để được hỗ trợ.",
   paymentTitle: "Thanh toán",
   cashCall: "Gọi nhân viên thu tiền mặt",
   vietQrCreate: "Tạo mã QR thanh toán",
@@ -59,7 +67,10 @@ export const SELF_ORDER_VI = {
   vietQrPendingDescription:
     "Vui lòng chuyển đúng số tiền. Khách không tự xác nhận đã thanh toán.",
   paymentFailed: "Không tạo được yêu cầu thanh toán. Vui lòng gọi nhân viên.",
+  paymentDescription: "Chọn cách thanh toán sau khi nhân viên đã duyệt món.",
   buyerTitle: "Thông tin HĐĐT",
+  buyerDescription:
+    "HĐĐT vẫn được phát hành cho đơn đã thanh toán. Chỉ nhập MST khi khách cần thông tin người mua.",
   buyerNoInvoice: "Khách không lấy hóa đơn (vẫn xuất HĐĐT)",
   buyerName: "Tên người mua / công ty",
   buyerTaxCode: "Mã số thuế",
@@ -90,11 +101,23 @@ export const SELF_ORDER_VI = {
   statusAwaitingVietQr: "Đang chờ thanh toán QR",
   statusAwaitingCash: "Đang chờ nhân viên thu tiền",
   statusClosed: "Đã thanh toán",
+  statusRejected: "Đã từ chối",
   ctaAwaitingApproval: "Đã gửi món",
   ctaAwaitingApprovalHint:
     "Nhân viên đã nhận lượt gọi món đầu tiên. Vui lòng đợi một chút để gọi thêm.",
+  ctaRejected: "Đã từ chối",
+  ctaRejectedHint:
+    "Lượt gọi đã bị huỷ. Xem chi tiết ở tab Hoá đơn, hoặc gọi nhân viên để được hỗ trợ.",
   orderedItemsTitle: "Món đã gọi",
   orderedItemsShowMore: "Xem thêm",
+  roundsTitle: "Lượt gọi món",
+  roundLabel: (roundIndex: number) => `Lượt ${roundIndex}`,
+  roundStatusPending: "Đang chờ duyệt",
+  roundStatusApproved: "Đã duyệt",
+  roundStatusRejected: "Đã huỷ",
+  billEmptyTitle: "Chưa có hoá đơn",
+  billEmptyDescription:
+    "Gửi món từ thực đơn để xem lượt gọi ở đây. Thanh toán mở sau khi nhân viên duyệt.",
 } as const;
 
 export type SelfOrderKey = keyof typeof SELF_ORDER_VI;

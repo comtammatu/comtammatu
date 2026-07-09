@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
 import {
@@ -143,6 +144,38 @@ export async function CountSlipsPageContent({
   });
 
   const slipRows = slips ?? [];
+  const employeeIds = [
+    ...new Set(
+      slipRows
+        .map((slip) => Number(slip.employee_id))
+        .filter((id) => Number.isFinite(id)),
+    ),
+  ];
+  const employeeNameById = new Map<number, string>();
+
+  if (employeeIds.length > 0) {
+    // Review access is permission-gated above; this lookup only bypasses
+    // self-scoped profile RLS for slips already visible to the reviewer.
+    const { data: employeeRows, error: employeeRowsError } =
+      await createServiceClient()
+        .from("employees")
+        .select("id, profiles(full_name)")
+        .eq("tenant_id", claims.tenant_id)
+        .in("id", employeeIds);
+
+    if (employeeRowsError) {
+      console.error("inventory.count_slips.employee_names_fetch_failed", {
+        code: employeeRowsError.code,
+      });
+    }
+
+    for (const employee of employeeRows ?? []) {
+      const id = Number(employee.id);
+      const name = employeeName(employee);
+      if (Number.isFinite(id) && name) employeeNameById.set(id, name);
+    }
+  }
+
   const allLines = slipRows.flatMap((slip) =>
     slipLines(slip.inventory_count_slip_lines),
   );
@@ -191,7 +224,10 @@ export async function CountSlipsPageContent({
       branchName: embeddedName(slip.branches) ?? `CN #${slip.branch_id}`,
       locationName:
         embeddedName(slip.inventory_locations) ?? `Kho #${slip.location_id}`,
-      employeeName: employeeName(slip.employees) ?? "Nhân viên",
+      employeeName:
+        employeeNameById.get(Number(slip.employee_id)) ??
+        employeeName(slip.employees) ??
+        "Nhân viên",
       shiftName: embeddedName(slip.shifts),
       countDate: slip.count_date,
       status: normalizeStatus(slip.status),

@@ -15,6 +15,10 @@ import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
+import {
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { EmployeePage, EmployeePanel } from "../components/staff-runtime-page";
 import { formatDateVN, formatTimeVN } from "../_lib/vn-business-date";
 import {
@@ -103,12 +107,18 @@ async function loadVisibleBranchIds({
 interface CheckoutApprovalsPageContentProps {
   routeBranchId?: number;
   hideHeaderOnMobile?: boolean;
+  plane?: CheckoutApprovalsPlane;
 }
 
-export async function CheckoutApprovalsPageContent({
+type CheckoutApprovalsPlane = "employee" | "branch";
+
+export async function StaffCheckoutApprovalsPageContent({
   routeBranchId,
   hideHeaderOnMobile,
+  plane = "employee",
 }: CheckoutApprovalsPageContentProps = {}) {
+  const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
+  const Panel = plane === "branch" ? BranchOperatorPanel : EmployeePanel;
   const { supabase, claims } = await loadAuthState();
   const branchId = claims.branch_id;
   const homeLink =
@@ -121,7 +131,7 @@ export async function CheckoutApprovalsPageContent({
 
   if (!canUseApprovalRoute) {
     return (
-      <EmployeePage
+      <PageShell
         title={copy.checkoutApprovalsTitle}
         description={copy.checkoutApprovalsDescriptionAll}
         hideHeaderOnMobile={hideHeaderOnMobile}
@@ -144,7 +154,7 @@ export async function CheckoutApprovalsPageContent({
           description="Chỉ tài khoản quản lý có quyền nhân sự mới duyệt yêu cầu kết ca."
           icon={<IconShieldAlert />}
         />
-      </EmployeePage>
+      </PageShell>
     );
   }
 
@@ -255,7 +265,7 @@ export async function CheckoutApprovalsPageContent({
   });
 
   return (
-    <EmployeePage
+    <PageShell
       title={copy.checkoutApprovalsTitle}
       description={copy.checkoutApprovalsDescriptionAll}
       hideHeaderOnMobile={hideHeaderOnMobile}
@@ -273,7 +283,7 @@ export async function CheckoutApprovalsPageContent({
         </Button>
       }
     >
-      <EmployeePanel
+      <Panel
         icon={IconClipboardCheck}
         title="Yêu cầu đang chờ"
         description="Duyệt xong thì giờ ra được ghi theo lúc nhân viên gửi yêu cầu."
@@ -287,11 +297,13 @@ export async function CheckoutApprovalsPageContent({
           items={items}
           canApprove={canApprove === true}
         />
-      </EmployeePanel>
-    </EmployeePage>
+      </Panel>
+    </PageShell>
   );
 }
 
+export const CheckoutApprovalsPageContent = StaffCheckoutApprovalsPageContent;
+
 export default async function CheckoutApprovalsPage() {
-  return <CheckoutApprovalsPageContent />;
+  return <StaffCheckoutApprovalsPageContent />;
 }

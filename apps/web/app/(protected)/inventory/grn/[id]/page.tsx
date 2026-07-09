@@ -11,9 +11,11 @@ import { fetchQcSettings, type QcSettings } from "../../_lib/qc-settings";
 import { formatDate } from "../../_lib/format";
 import { getIngredientUnitDisplayName } from "../../_lib/unit-display";
 import { tRoute } from "../../_lib/dictionary";
+import { fetchProcurementBranches } from "../../_lib/procurement-branches";
 import { fetchEntityAuditLogs, type AuditLogRow } from "@/_lib/audit";
 import { GRNDetailClient } from "./grn-detail-client";
 import type { GRNDetail } from "./grn-detail-client";
+import type { RecreateReceivingLocationOption } from "./views/grn-detail-types";
 import type { IngredientRow } from "../../page";
 
 interface GRNDetailPageContentProps {
@@ -31,7 +33,16 @@ export interface GrnDetailData {
   auditLogs: AuditLogRow[];
   canAdjustStock: boolean;
   canAmendConfirmed: boolean;
+  recreateLocationOptions: RecreateReceivingLocationOption[];
 }
+
+type InventoryLocationRow = {
+  id: number;
+  name: string;
+  branch_id: number;
+  location_kind: string | null;
+  is_default_receive: boolean | null;
+};
 
 type GrnDetailLoadResult =
   | { data: GrnDetailData; error?: never }
@@ -73,6 +84,7 @@ async function loadGrnDetailResult(
       status: string;
       received_date: string | null;
       branch_id: number;
+      location_id: number | null;
       supplier_id: number;
       branches: { id: number; name: string } | null;
       suppliers: { id: number; name: string } | null;
@@ -101,7 +113,10 @@ async function loadGrnDetailResult(
       ingredients: {
         id: number;
         name: string;
-        ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
+        ingredient_units?: {
+          is_base: boolean;
+          units: { code: string } | null;
+        }[];
       } | null;
     }>;
     invoiceId: number | null;
@@ -140,7 +155,9 @@ async function loadGrnDetailResult(
     const delivered = Number(l.received_quantity ?? 0);
     const rejected = Number(l.rejected_quantity ?? 0);
     const entryUnitId = l.entry_unit_id ?? null;
-    const catalogIngredient = ingredientById.get(l.ingredient_id ?? ing?.id ?? 0);
+    const catalogIngredient = ingredientById.get(
+      l.ingredient_id ?? ing?.id ?? 0,
+    );
     const fallbackUnit =
       l.unit ||
       ing?.ingredient_units?.find((u) => u.is_base)?.units?.code ||
@@ -195,6 +212,7 @@ async function loadGrnDetailResult(
     poId: po?.id,
     invoiceId: d.invoiceId ?? null,
     branchId: d.grn.branch_id,
+    locationId: d.grn.location_id ?? null,
     branchName: branch?.name ?? `#${d.grn.branch_id}`,
     supplierId: d.grn.supplier_id,
     supplier: supplier?.name ?? "—",
@@ -219,14 +237,111 @@ async function loadGrnDetailResult(
     d.grn.branch_id,
     PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
   );
+  let recreateLocationOptions: RecreateReceivingLocationOption[] = [];
+  if (ctx && d.grn.status === "draft") {
+    const branches = await fetchProcurementBranches(
+      ctx.supabase,
+      ctx.claims.tenant_id,
+    );
+    const allowedTargetBranches = [];
+    for (const targetBranch of branches) {
+      const canCreateTarget = await currentUserHasPermission(
+        targetBranch.id,
+        PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+      );
+      if (canCreateTarget) {
+        allowedTargetBranches.push(targetBranch);
+      }
+    }
+
+    const targetBranchIds = allowedTargetBranches.map((branch) => branch.id);
+    if (targetBranchIds.length > 0) {
+      const { data: locations } = await ctx.supabase
+        .from("inventory_locations")
+        .select("id, name, branch_id, location_kind, is_default_receive")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("is_active", true)
+        .in("branch_id", targetBranchIds)
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true });
+      const branchById = new Map(
+        allowedTargetBranches.map((branch) => [branch.id, branch]),
+      );
+      recreateLocationOptions = (
+        (locations ?? []) as InventoryLocationRow[]
+      ).map((location) => {
+        const branch = branchById.get(location.branch_id);
+        return {
+          id: location.id,
+          name: location.name,
+          branchId: location.branch_id,
+          branchName: branch?.name ?? "Chi nhánh",
+          branchKind: branch?.branch_kind ?? null,
+          kind: location.location_kind,
+          isDefaultReceive: location.is_default_receive === true,
+        };
+      });
+    }
+  } else if (ctx && canAmendConfirmed && d.grn.status === "confirmed") {
+    const branches = await fetchProcurementBranches(
+      ctx.supabase,
+      ctx.claims.tenant_id,
+    );
+    const allowedTargetBranches = [];
+    for (const targetBranch of branches) {
+      const canAmendTarget = await currentUserHasPermission(
+        targetBranch.id,
+        PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
+      );
+      const canConfirmTarget = await currentUserHasPermission(
+        targetBranch.id,
+        PERMISSION_KEYS.PROCUREMENT_GRN_CONFIRM,
+      );
+      if (canAmendTarget && canConfirmTarget) {
+        allowedTargetBranches.push(targetBranch);
+      }
+    }
+
+    const targetBranchIds = allowedTargetBranches.map((branch) => branch.id);
+    if (targetBranchIds.length > 0) {
+      const { data: locations } = await ctx.supabase
+        .from("inventory_locations")
+        .select("id, name, branch_id, location_kind, is_default_receive")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("is_active", true)
+        .in("branch_id", targetBranchIds)
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true });
+      const branchById = new Map(
+        allowedTargetBranches.map((branch) => [branch.id, branch]),
+      );
+      recreateLocationOptions = ((locations ?? []) as InventoryLocationRow[])
+        .map((location) => {
+          const branch = branchById.get(location.branch_id);
+          return {
+            id: location.id,
+            name: location.name,
+            branchId: location.branch_id,
+            branchName: branch?.name ?? "Chi nhánh",
+            branchKind: branch?.branch_kind ?? null,
+            kind: location.location_kind,
+            isDefaultReceive: location.is_default_receive === true,
+          };
+        })
+        .filter((location) => location.id !== d.grn.location_id);
+    }
+  }
+
+  const auditLogs = await fetchEntityAuditLogs("goods_received_note", d.grn.id, 50);
 
   return {
     data: {
       grn,
       ingredients: catalogIngredients,
-      auditLogs: await fetchEntityAuditLogs("goods_received_note", d.grn.id, 50),
+      auditLogs,
       canAdjustStock,
       canAmendConfirmed,
+      recreateLocationOptions,
     },
   };
 }
@@ -285,6 +400,7 @@ export async function GRNDetailPageContent({
       ingredients={result.data.ingredients}
       canAdjustStock={result.data.canAdjustStock}
       canAmendConfirmed={result.data.canAmendConfirmed}
+      recreateLocationOptions={result.data.recreateLocationOptions}
       auditLogs={result.data.auditLogs}
       grnListBasePath={grnListBasePath}
       grnMobileBackPath={grnMobileBackPath}

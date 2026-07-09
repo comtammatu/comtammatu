@@ -134,7 +134,7 @@ export function MenuImageInput({
               onClick={() => inputRef.current?.click()}
             >
               {uploading ? <Spinner /> : <IconUpload className="size-4" />}
-              {uploading ? "Đang tải…" : MENU_VI.changeImage}
+              {uploading ? MENU_VI.imageUploading : MENU_VI.changeImage}
             </Button>
             <Button
               type="button"
@@ -158,7 +158,7 @@ export function MenuImageInput({
           onClick={() => inputRef.current?.click()}
         >
           {uploading ? <Spinner /> : <IconUpload className="size-4" />}
-          {uploading ? "Đang tải…" : MENU_VI.uploadImage}
+          {uploading ? MENU_VI.imageUploading : MENU_VI.uploadImage}
         </Button>
       )}
     </div>

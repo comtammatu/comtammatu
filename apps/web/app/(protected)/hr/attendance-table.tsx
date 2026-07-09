@@ -8,13 +8,6 @@ import { Image as IconImage, ListChecks as IconListChecks } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import {
   Item,
   ItemActions,
   ItemContent,
@@ -58,6 +51,7 @@ import { fetchApprovedLeaveMonth } from "./leave-request-actions";
 import type { BranchOption } from "./_types";
 import { StatusBadge } from "@/components/status-badge";
 import { AppEmptyState } from "@/components/surface";
+import { AppDialog } from "@/components/form/form-dialog";
 import {
   DataTable,
   type DataTableColumn,
@@ -442,7 +436,9 @@ function DetailView({
   const [pendingPhotoId, setPendingPhotoId] = useState<number | null>(null);
   const [, startPhotoTransition] = useTransition();
 
-  const [closingRecord, setClosingRecord] = useState<AttendanceRecord | null>(null);
+  const [closingRecord, setClosingRecord] = useState<AttendanceRecord | null>(
+    null,
+  );
   const [isClosing, startCloseTransition] = useTransition();
 
   const todayStr = getVNDateString();
@@ -508,6 +504,10 @@ function DetailView({
     return getVNMinutesOfDay() >= end;
   }
 
+  function canForceCloseRecord(record: AttendanceRecord): boolean {
+    return !!record.check_in && !record.check_out && record.date < todayStr;
+  }
+
   function recordStateBadge(record: AttendanceRecord) {
     if (isStaleOpenRecord(record)) {
       return <StatusBadge domain="attendance" value="stale_open" />;
@@ -562,9 +562,7 @@ function DetailView({
   }
 
   function forceCloseAction(record: AttendanceRecord) {
-    const isOpen = !!record.check_in && !record.check_out;
-    if (!isOpen) return null;
-    const isStale = isStaleOpenRecord(record);
+    if (!canForceCloseRecord(record)) return null;
 
     return (
       <Button
@@ -573,7 +571,7 @@ function DetailView({
         size="sm"
         onClick={() => setClosingRecord(record)}
       >
-        {isStale ? "Đóng ca treo" : "Đóng ca"}
+        Đóng ca treo
       </Button>
     );
   }
@@ -700,104 +698,83 @@ function DetailView({
         )}
       />
 
-      <Dialog
+      <AppDialog
         open={photoOpen}
         onOpenChange={(open) => {
           setPhotoOpen(open);
           if (!open) setPhotoPreview(null);
         }}
+        title={attendanceCopy.photoDialogTitle}
+        description={attendanceCopy.photoDialogDescription}
+        contentClassName="sm:max-w-lg"
       >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{attendanceCopy.photoDialogTitle}</DialogTitle>
-            <DialogDescription>
-              {attendanceCopy.photoDialogDescription}
-            </DialogDescription>
-          </DialogHeader>
-          {photoPreview ? (
-            <Image
-              src={photoPreview.url}
-              alt={attendanceCopy.photoAlt(
-                photoPreview.employeeName,
-                photoPreview.date,
-              )}
-              width={960}
-              height={720}
-              className="h-auto max-h-dvh-80 w-full rounded-md object-contain"
-              unoptimized
-            />
-          ) : null}
-        </DialogContent>
-      </Dialog>
+        {photoPreview ? (
+          <Image
+            src={photoPreview.url}
+            alt={attendanceCopy.photoAlt(
+              photoPreview.employeeName,
+              photoPreview.date,
+            )}
+            width={960}
+            height={720}
+            className="h-auto max-h-dvh-80 w-full rounded-md object-contain"
+            unoptimized
+          />
+        ) : null}
+      </AppDialog>
 
-      <Dialog
+      <AppDialog
         open={checklistRecord !== null}
         onOpenChange={(open) => {
           if (!open) setChecklistRecord(null);
         }}
+        title="Checklist ca làm"
+        description={
+          checklistRecord
+            ? `${checklistRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${checklistRecord.date}`
+            : ""
+        }
+        contentClassName="sm:max-w-2xl"
       >
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Checklist ca làm</DialogTitle>
-            <DialogDescription>
-              {checklistRecord
-                ? `${checklistRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${checklistRecord.date}`
-                : ""}
-            </DialogDescription>
-          </DialogHeader>
-          {checklistRecord ? (
-            <ChecklistDetail record={checklistRecord} />
-          ) : null}
-        </DialogContent>
-      </Dialog>
+        {checklistRecord ? <ChecklistDetail record={checklistRecord} /> : null}
+      </AppDialog>
 
-      <Dialog
+      <AppDialog
         open={closingRecord !== null}
         onOpenChange={(open) => {
           if (!open) setClosingRecord(null);
         }}
+        title="Đóng ca làm việc"
+        description={`Ca làm việc của ${closingRecord?.employees?.profiles?.full_name ?? "nhân viên"} ngày ${closingRecord?.date ?? ""} đang mở.`}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Đóng ca làm việc</DialogTitle>
-            <DialogDescription>
-              Ca làm việc của {closingRecord?.employees?.profiles?.full_name} ngày {closingRecord?.date} đang mở.
-            </DialogDescription>
-          </DialogHeader>
+        <form onSubmit={handleForceClose} className="flex flex-col gap-4">
+          <NoteCallout tone="muted">
+            Việc đóng ca sẽ đặt giờ ra bằng giờ vào (0 giờ công).
+          </NoteCallout>
 
-          <form onSubmit={handleForceClose} className="flex flex-col gap-4">
-            <NoteCallout tone="muted">
-              Việc đóng ca sẽ đặt giờ ra bằng giờ vào (0 giờ công).
-            </NoteCallout>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="note" className="text-sm font-medium">
+              Ghi chú (tuỳ chọn)
+            </label>
+            <Textarea id="note" name="note" placeholder="Lý do đóng ca..." />
+          </div>
 
-            <div className="flex flex-col gap-2">
-              <label htmlFor="note" className="text-sm font-medium">
-                Ghi chú (tuỳ chọn)
-              </label>
-              <Textarea
-                id="note"
-                name="note"
-                placeholder="Lý do đóng ca..."
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setClosingRecord(null)}
-                disabled={isClosing}
-              >
-                Huỷ
-              </Button>
-              <Button type="submit" disabled={isClosing}>
-                {isClosing && <Spinner data-icon="inline-start" />}
-                Xác nhận đóng ca
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setClosingRecord(null)}
+              disabled={isClosing}
+            >
+              Huỷ
+            </Button>
+            <Button type="submit" disabled={isClosing}>
+              {isClosing && <Spinner data-icon="inline-start" />}
+              Xác nhận đóng ca
+            </Button>
+          </div>
+        </form>
+      </AppDialog>
     </>
   );
 }

@@ -3,6 +3,7 @@ import {
   ATTENDANCE_STATUS_LABELS_VI,
   CONSUMPTION_REPORT_STATUS_LABELS_VI,
   COUNT_SLIP_STATUS_LABELS_VI,
+  EXPENSE_PAYMENT_STATE_LABELS_VI,
   INVENTORY_STATUS_LABELS_VI,
   LEAVE_REQUEST_STATUS_LABELS_VI,
   ORDER_ITEM_STATUS_LABELS_VI,
@@ -73,6 +74,15 @@ const STATUS_DOMAINS = {
       completed: "success",
       failed: "destructive",
       refunded: "secondary",
+    },
+  },
+  "expense-payment": {
+    labels: EXPENSE_PAYMENT_STATE_LABELS_VI,
+    variants: {
+      unpaid: "warning",
+      cash_paid: "secondary",
+      transfer_matched: "success",
+      transfer_needs_match: "warning",
     },
   },
   refund: {

@@ -1,6 +1,9 @@
 # Agent Reference Map
 
 Use this file to find the source-of-truth docs for onboarding, implementation planning, and review.
+It is an index, not a context bundle: load only the target docs needed for the
+current task, and never treat runtime adapters, ignored local tool state, or
+`tasks/todo.md` as parallel authority.
 
 ## System Overview
 
@@ -17,7 +20,6 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Security: `docs/modules/security.md`
 - Infrastructure: `docs/modules/infrastructure.md`
 - Architecture hub: `docs/architecture/README.md`
-- User guides (operator-facing): `docs/user-guides/README.md`
 
 ## Agent Entrypoints Per IDE
 
@@ -61,7 +63,8 @@ Two duplications are deliberate and machine-enforced — do NOT "de-duplicate" t
 ## Planning And Specs
 
 - Active work tracker: `tasks/todo.md`
-- Active ADRs: `docs/plan/adr/`
+- ADRs: `docs/plan/adr/` (accepted, rejected, superseded, or parked owner-kept
+  future options)
 - Legacy decision index: `docs/plan/decisions.md` (do not add backlog,
   implementation plans, or transient debate records)
 - System architecture: `docs/spec/architecture.md`
@@ -75,6 +78,7 @@ Two duplications are deliberate and machine-enforced — do NOT "de-duplicate" t
 - Design system contract: `docs/spec/design-system.md`
 - Inventory overview diagrams: `docs/spec/inventory-overview-diagrams.md`
 - Toast/notification UX spec: `docs/spec/toast-notification-system.md`
+- Operational audio (POS/KDS beep + voice): `docs/spec/operational-audio-alerts.md` (ADR `docs/plan/adr/0008-operational-audio-alerts.md`)
 
 ## Business Domain
 
@@ -120,25 +124,31 @@ are maintained.
 - Keep secrets, generated sessions, cache files, and per-user local notes out of
   version-controlled shared rule files.
 - Keep rules concrete and verifiable. Avoid vague guidance such as "write good code" or "be careful".
-- Do not add an archive tree or keep superseded implementation plans in the repo. When a decision is current, promote it into the source-of-truth doc above; when it is not current, remove it.
+- Do not add an archive tree or keep superseded implementation plans in the
+  repo. Current decisions move into the source-of-truth docs above. Owner-kept
+  future options may be parked in `docs/plan/adr/` only when the ADR states
+  `Status: Parked`, why it is not being built now, and the concrete revisit
+  trigger; otherwise delete them.
 
 ## No Snapshot Backlog
 
-`docs/plan/*` is restricted to active ADRs and the legacy `decisions.md` index.
+`docs/plan/*` is restricted to ADRs and the legacy `decisions.md` index.
 `docs/worklog/*` is restricted to its README policy file unless a PR-local
-staging note is explicitly removed or promoted before closeout. Dated audits,
-implementation plans, debate transcripts, mockups, and backlog snapshots do not
-belong in the shared repo.
+staging note is explicitly removed, promoted, or parked before closeout. Dated
+audits, implementation plans, debate transcripts, mockups, and backlog snapshots
+do not belong in the shared repo.
 
-- **Promote or delete.** Current contracts move into the owned source-of-truth
-  docs above. Resolved or obsolete findings are deleted; git history is the
-  archive.
+- **Promote, park, or delete.** Current contracts move into the owned
+  source-of-truth docs above. Owner-kept future options that are not current work
+  become Parked ADRs with a concrete revisit trigger. Resolved or obsolete
+  findings are deleted; git history is the archive.
 - **Do not legitimize staleness with banners.** `Reconciled-through` status lines
   are not enough. `corepack pnpm lint:doc-staleness` fails when non-durable
   plan/worklog snapshots remain.
 - **Use PR bodies for transient review artifacts.** T2/T3 debate summaries,
   second-runtime notes, and implementation checklists should live in the PR or
-  task note first. Only promote durable rules, contracts, or lessons.
+  task note first. Only promote durable rules, contracts, or lessons; park only
+  owner-kept future options with a revisit trigger.
 
 ## Open Knowledge Format Export
 

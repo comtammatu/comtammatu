@@ -2,6 +2,7 @@ import type { ElementType } from "react";
 
 export interface ShellNavItem {
   href: string;
+  linkHref?: string;
   label: string;
   icon: ElementType;
   exact?: boolean;

@@ -6,6 +6,18 @@ import type { IngredientUnitRow } from "./_lib/types";
 export type BranchOption = {
   id: number;
   name: string;
+  branchKind?: string | null;
+};
+
+export type InventoryLocationOption = {
+  id: number;
+  name: string;
+  branchId: number;
+  branchName: string;
+  branchKind: string | null;
+  kind: string | null;
+  isDefaultReceive: boolean;
+  isDefaultConsumption: boolean;
 };
 
 export type IngredientOption = {

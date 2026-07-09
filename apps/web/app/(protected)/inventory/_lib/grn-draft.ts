@@ -18,6 +18,28 @@ export type GrnDraft = {
   updatedAt: string;
 };
 
+export function lineTotalFromUnitCost(
+  quantity: number,
+  unitCost: number,
+): number {
+  if (!Number.isFinite(quantity) || !Number.isFinite(unitCost)) return 0;
+  return Math.round(quantity * unitCost);
+}
+
+export function unitCostFromLineTotal(
+  quantity: number,
+  lineTotal: number,
+): number {
+  if (
+    !Number.isFinite(quantity) ||
+    quantity <= 0 ||
+    !Number.isFinite(lineTotal)
+  ) {
+    return 0;
+  }
+  return lineTotal / quantity;
+}
+
 /** Sum line totals (qty x unit cost). Pure helper; safe in client + server. */
 export function draftTotal(draft: GrnDraft | null): number {
   if (!draft) return 0;

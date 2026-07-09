@@ -178,7 +178,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         key: "oversight-movement",
         title: messages.inventory.dashboard.oversightMovementTitle,
         description: messages.inventory.dashboard.oversightMovementDescription,
-        href: paths.transfers,
+        href: paths.operationTab("transfers"),
         icon: IconArrowLeftRight,
         metric: String(props.activeTransfers),
         metricLabel: messages.inventory.dashboard.runningSlipsMetricLabel,
@@ -190,7 +190,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         actions: [
           {
             label: messages.inventory.dashboard.trackAction,
-            href: paths.transfers,
+            href: paths.operationTab("transfers"),
             primary: true,
           },
           { label: tNav("reports", "navigation"), href: paths.reports },
@@ -203,15 +203,15 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     ? [
         {
           label: tNav("purchaseOrders", "navigation"),
-          href: paths.purchaseOrders,
+          href: paths.operationTab("purchase-orders"),
           primary: true,
         },
-        { label: tNav("grn", "navigation"), href: paths.grn },
+        { label: tNav("grn", "navigation"), href: paths.operationTab("grn") },
       ]
     : [
         {
           label: messages.inventory.dashboard.inboundSlipsAction,
-          href: paths.transfers,
+          href: paths.operationTab("transfers"),
           primary: true,
         },
         { label: tNav("stock", "navigation"), href: paths.stock },
@@ -242,8 +242,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         props.siteKind === "branch"
           ? messages.inventory.dashboard.receiveTransferAction
           : tNav("transfers", "navigation"),
-      href: paths.transfers,
-      primary: !props.showProduction,
+      href: paths.operationTab("transfers"),
     },
   ];
 
@@ -262,7 +261,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     });
   }
 
-  return [
+  const cards: FlowCard[] = [
     {
       key: "control",
       title: messages.inventory.dashboard.controlFlowTitle,
@@ -297,7 +296,9 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
       description: props.showProcurement
         ? INVENTORY_VI.dashboardSourceProcurementDescription
         : messages.inventory.dashboard.sourceBranchDescription,
-      href: props.showProcurement ? paths.purchaseOrders : paths.transfers,
+      href: props.showProcurement
+        ? paths.operationTab("purchase-orders")
+        : paths.operationTab("transfers"),
       icon: props.showProcurement ? IconShoppingCart : IconTruck,
       metric: String(props.showProcurement ? props.pendingPO : inbound.length),
       metricLabel: props.showProcurement
@@ -316,12 +317,15 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
           : "default",
       actions: sourceActions,
     },
-    {
+  ];
+
+  if (props.showProduction) {
+    cards.push({
       key: "production",
       title: messages.inventory.dashboard.productionFlowTitle,
       description: messages.inventory.dashboard.productionFlowDescription,
-      href: props.showProduction ? paths.production : paths.transfers,
-      icon: props.showProduction ? IconBuildingFactory : IconArrowLeftRight,
+      href: paths.production,
+      icon: IconBuildingFactory,
       metric: String(props.activeTransfers),
       metricLabel: messages.inventory.dashboard.runningSlipsMetricLabel,
       statusLabel: messages.inventory.dashboard.inboundOutboundStatus(
@@ -330,7 +334,10 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
       ),
       tone: props.activeTransfers > 0 ? "info" : "default",
       actions: movementActions,
-    },
+    });
+  }
+
+  cards.push(
     {
       key: "catalog",
       title: messages.inventory.dashboard.catalogFlowTitle,
@@ -352,10 +359,11 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
           href: paths.units,
         },
         { label: tNav("suppliers", "navigation"), href: paths.suppliers },
-        { label: tNav("recipes", "navigation"), href: paths.recipes },
       ],
     },
-  ];
+  );
+
+  return cards;
 }
 
 /* ------------------------------------------------------------------ */
@@ -468,7 +476,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
         key: "oversight-flow",
         title: messages.inventory.dashboard.flowsAwaitingWatch(activeTransfers),
         description: messages.inventory.dashboard.watchBetweenSites,
-        href: paths.transfers,
+        href: paths.operationTab("transfers"),
         icon: <IconArrowLeftRight className="size-4" />,
         severity: "info",
       });
@@ -514,7 +522,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
         key: "recv",
         title: messages.inventory.dashboard.inboundConfirmTask(inbound.length),
         description: messages.inventory.dashboard.inboundReceiveHint,
-        href: paths.transfers,
+        href: paths.operationTab("transfers"),
         icon: <IconTruck className="size-4" />,
         severity: "primary",
       });
@@ -546,7 +554,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
         reorderAlerts.length,
       ),
       description: INVENTORY_VI.dashboardPreparePoHint,
-      href: paths.purchaseOrders,
+      href: paths.operationTab("purchase-orders"),
       icon: <IconShoppingCart className="size-4" />,
       severity: "destructive",
     });
@@ -555,7 +563,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
       key: "price-review",
       title: INVENTORY_VI.dashboardGrnPriceReviewTask(props.priceReviewCount),
       description: INVENTORY_VI.dashboardGrnPriceVarianceHint,
-      href: paths.grn,
+      href: paths.operationTab("grn"),
       icon: <IconReceipt className="size-4" />,
       severity: "warning",
     });
@@ -640,7 +648,9 @@ export function DashboardClient(props: DashboardProps) {
         ? messages.inventory.dashboard.kpiSourceHint
         : messages.inventory.dashboard.kpiMovementHint,
       tone: "neutral" as const,
-      href: showProcurement ? paths.purchaseOrders : paths.transfers,
+      href: showProcurement
+        ? paths.operationTab("purchase-orders")
+        : paths.operationTab("transfers"),
       icon: <IconShoppingCart className="size-4" />,
     },
     {
@@ -651,7 +661,7 @@ export function DashboardClient(props: DashboardProps) {
         outboundTransferCount,
       ),
       tone: activeTransfers > 0 ? ("primary" as const) : ("neutral" as const),
-      href: paths.transfers,
+      href: paths.operationTab("transfers"),
       icon: <IconArrowLeftRight className="size-4" />,
     },
     ...(showProcurement
@@ -664,7 +674,7 @@ export function DashboardClient(props: DashboardProps) {
               props.priceReviewCount > 0
                 ? ("destructive" as const)
                 : ("neutral" as const),
-            href: paths.grn,
+            href: paths.operationTab("grn"),
             icon: <IconReceipt className="size-4" />,
           },
         ]
@@ -719,7 +729,7 @@ export function DashboardClient(props: DashboardProps) {
 
       {!hasOpenInventoryWork ? (
         <AppSection contentClassName="items-center gap-3 py-6 text-center">
-          <div className="flex size-12 items-center justify-center rounded-full bg-success/15 text-success">
+          <div className="flex size-12 items-center justify-center rounded-md bg-success/15 text-success">
             <IconSquareCheck className="size-6" />
           </div>
           <div className="flex flex-col gap-1">
@@ -782,7 +792,13 @@ export function DashboardClient(props: DashboardProps) {
             size="sm"
             action={
               <Button variant="ghost" size="sm" asChild>
-                <Link href={withBranch(showProcurement ? paths.purchaseOrders : paths.stock)}>
+                <Link
+                  href={withBranch(
+                    showProcurement
+                      ? paths.operationTab("purchase-orders")
+                      : paths.stock,
+                  )}
+                >
                   {ACTIONS_VI.viewAll}
                 </Link>
               </Button>
@@ -793,7 +809,9 @@ export function DashboardClient(props: DashboardProps) {
                 <AppLinkCard
                   key={`r-${item.ingredientId}-${item.branchId}`}
                   href={withBranch(
-                    showProcurement ? paths.purchaseOrders : paths.stock,
+                    showProcurement
+                      ? paths.operationTab("purchase-orders")
+                      : paths.stock,
                   )}
                   title={item.name}
                   description={messages.inventory.dashboard.reorderStatus(
@@ -920,7 +938,7 @@ export function DashboardClient(props: DashboardProps) {
             size="sm"
             action={
               <Button variant="ghost" size="sm" asChild>
-                <Link href={withBranch(paths.transfers)}>
+                <Link href={withBranch(paths.operationTab("transfers"))}>
                   {ACTIONS_VI.viewAll}
                 </Link>
               </Button>

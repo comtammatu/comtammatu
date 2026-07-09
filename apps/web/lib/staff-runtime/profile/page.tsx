@@ -12,6 +12,12 @@ import {
 } from "@comtammatu/ui/components/avatar";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
+import {
+  BranchOperatorActionBar,
+  BranchOperatorDetailList,
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import {
   EmployeeActionBar,
@@ -23,6 +29,12 @@ import { ProfileAvatarAction, ProfileEditAction } from "./profile-actions";
 
 const employeeCopy = messages.employee;
 const copy = employeeCopy.profile;
+
+type ProfilePlane = "employee" | "branch";
+
+type StaffProfilePageContentProps = {
+  plane?: ProfilePlane;
+};
 
 function getInitials(name: string): string {
   return name
@@ -41,7 +53,9 @@ function formatBirthDate(value: string | null): string | null {
   return `${day} / ${month} / ${year}`;
 }
 
-export async function ProfilePageContent() {
+export async function StaffProfilePageContent({
+  plane = "employee",
+}: StaffProfilePageContentProps = {}) {
   const { session, claims, supabase } = await loadAuthState();
   const ctx = await getEmployeeContext();
   const positionCode = claims.position ?? claims.position_code ?? null;
@@ -88,6 +102,129 @@ export async function ProfilePageContent() {
   const branchName = ctx?.branchName ?? copy.noBranch;
   const employeeCode = employee?.employee_code ?? copy.noEmployeeCode;
   const birthDateDisplay = formatBirthDate(birthDate);
+  const profileEditDefaults = {
+    fullName: displayName,
+    phone: phone ?? "",
+    birthDate: birthDate ?? "",
+  };
+  const signOutAction = (
+    <form action="/api/auth/signout" method="post">
+      <Button
+        type="submit"
+        variant="ghost"
+        size="touch"
+        className="w-full sm:w-fit"
+      >
+        <IconLogout data-icon="inline-start" />
+        {ACTIONS_VI.signOut}
+      </Button>
+    </form>
+  );
+
+  if (plane === "branch") {
+    return (
+      <BranchOperatorPage
+        title={copy.title}
+        description={copy.description}
+        badge={{ children: positionLabel, variant: "outline" }}
+        hideHeaderOnMobile
+      >
+        <BranchOperatorPanel tone="info">
+          <div className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start">
+              <div className="grid justify-items-start gap-2">
+                <div className="relative size-24 shrink-0 overflow-hidden rounded-full sm:size-28">
+                  <Avatar className="size-full min-h-full min-w-full">
+                    {avatarUrl ? (
+                      <AvatarImage src={avatarUrl} alt={displayName} />
+                    ) : null}
+                    <AvatarFallback className="text-3xl font-semibold">
+                      {getInitials(displayName)}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+
+                <ProfileAvatarAction
+                  branchId={effectiveBranchId}
+                  buttonSize="sm"
+                  buttonVariant="outline"
+                  className="w-full sm:w-28"
+                />
+              </div>
+
+              <div className="grid min-w-0 gap-3">
+                <div className="min-w-0">
+                  <p className="break-words text-lg font-semibold leading-6">
+                    {displayName}
+                  </p>
+                  <p className="min-w-0 break-words text-sm text-muted-foreground">
+                    {positionLabel} - {branchName}
+                  </p>
+                  <p className="mt-1 break-words font-mono text-xs text-muted-foreground">
+                    {copy.employeeCode}: {employeeCode}
+                  </p>
+                </div>
+
+                <ProfileEditAction
+                  branchId={effectiveBranchId}
+                  buttonSize="touch"
+                  buttonVariant="default"
+                  className="w-full sm:w-fit"
+                  triggerLabel={copy.editProfileShort}
+                  defaultValues={profileEditDefaults}
+                />
+              </div>
+            </div>
+
+            <BranchOperatorDetailList
+              columns={3}
+              rows={[
+                {
+                  label: copy.phone,
+                  value: phone ? (
+                    <a
+                      aria-label={`${copy.phone}: ${phone}`}
+                      className="text-primary hover:underline"
+                      href={`tel:${phone.replace(/\s+/g, "")}`}
+                    >
+                      {phone}
+                    </a>
+                  ) : (
+                    copy.noPhone
+                  ),
+                  muted: !phone,
+                },
+                {
+                  label: copy.birthDate,
+                  value: birthDateDisplay ?? copy.noBirthDate,
+                  muted: !birthDateDisplay,
+                },
+                {
+                  label: copy.email,
+                  value: email ? (
+                    <a
+                      aria-label={`${copy.email}: ${email}`}
+                      className="text-primary hover:underline"
+                      href={`mailto:${email}`}
+                    >
+                      {email}
+                    </a>
+                  ) : (
+                    copy.noEmail
+                  ),
+                  muted: !email,
+                },
+              ]}
+            />
+          </div>
+        </BranchOperatorPanel>
+
+        <BranchOperatorActionBar align="end">
+          {signOutAction}
+        </BranchOperatorActionBar>
+      </BranchOperatorPage>
+    );
+  }
 
   return (
     <EmployeePage
@@ -104,7 +241,7 @@ export async function ProfilePageContent() {
                 {avatarUrl ? (
                   <AvatarImage src={avatarUrl} alt={displayName} />
                 ) : null}
-                <AvatarFallback className="text-3xl font-semibold sm:text-4xl">
+                <AvatarFallback className="text-3xl font-semibold">
                   {getInitials(displayName)}
                 </AvatarFallback>
               </Avatar>
@@ -118,7 +255,7 @@ export async function ProfilePageContent() {
             </div>
 
             <div className="min-w-0 pt-1">
-              <p className="truncate font-heading text-xl font-semibold">
+              <p className="truncate text-lg font-semibold leading-6">
                 {displayName}
               </p>
               <p className="min-w-0 break-words text-sm text-muted-foreground">
@@ -135,11 +272,7 @@ export async function ProfilePageContent() {
               buttonVariant="outline"
               className="justify-self-end"
               triggerLabel={copy.editProfileShort}
-              defaultValues={{
-                fullName: displayName,
-                phone: phone ?? "",
-                birthDate: birthDate ?? "",
-              }}
+              defaultValues={profileEditDefaults}
             />
           </div>
 
@@ -215,23 +348,13 @@ export async function ProfilePageContent() {
         </div>
       </EmployeePanel>
 
-      <EmployeeActionBar align="end">
-        <form action="/api/auth/signout" method="post">
-          <Button
-            type="submit"
-            variant="ghost"
-            size="touch"
-            className="w-full sm:w-fit"
-          >
-            <IconLogout data-icon="inline-start" />
-            {ACTIONS_VI.signOut}
-          </Button>
-        </form>
-      </EmployeeActionBar>
+      <EmployeeActionBar align="end">{signOutAction}</EmployeeActionBar>
     </EmployeePage>
   );
 }
 
+export const ProfilePageContent = StaffProfilePageContent;
+
 export default function ProfilePage() {
-  return <ProfilePageContent />;
+  return <StaffProfilePageContent />;
 }

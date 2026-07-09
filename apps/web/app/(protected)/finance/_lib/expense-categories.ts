@@ -29,7 +29,11 @@ export type ExpenseCategory = (typeof EXPENSE_CATEGORY_VALUES)[number];
  * operating overhead vs raw-material cost for the capture form + reporting.
  * Labels live in `messages.finance.expenses.categoryGroupLabels`.
  */
-export const EXPENSE_CATEGORY_GROUPS = ["operating", "materials", "transfer"] as const;
+export const EXPENSE_CATEGORY_GROUPS = [
+  "operating",
+  "materials",
+  "transfer",
+] as const;
 
 export type ExpenseCategoryGroup = (typeof EXPENSE_CATEGORY_GROUPS)[number];
 
@@ -50,6 +54,10 @@ export const EXPENSE_CATEGORY_GROUP: Record<
   bank_deposit: "transfer",
 };
 
+export function isOperatingExpenseCategory(category: string): boolean {
+  return EXPENSE_CATEGORY_GROUP[category as ExpenseCategory] === "operating";
+}
+
 export const EXPENSE_CATEGORIES_BY_GROUP: Record<
   ExpenseCategoryGroup,
   readonly ExpenseCategory[]
@@ -68,3 +76,30 @@ export const EXPENSE_CATEGORIES_BY_GROUP: Record<
 export const EXPENSE_PAYMENT_METHODS = ["cash", "transfer", "unpaid"] as const;
 
 export type ExpensePaymentMethod = (typeof EXPENSE_PAYMENT_METHODS)[number];
+
+export const EXPENSE_PAYMENT_STATES = [
+  "unpaid",
+  "cash_paid",
+  "transfer_matched",
+  "transfer_needs_match",
+] as const;
+
+export type ExpensePaymentState = (typeof EXPENSE_PAYMENT_STATES)[number];
+
+export function classifyExpensePaymentState(expense: {
+  payment_method: string;
+  paid_at: string | null;
+  matchedEventIds?: readonly number[];
+}): ExpensePaymentState {
+  if (expense.payment_method === "unpaid" || expense.paid_at == null) {
+    return "unpaid";
+  }
+
+  if (expense.payment_method === "transfer") {
+    return (expense.matchedEventIds?.length ?? 0) > 0
+      ? "transfer_matched"
+      : "transfer_needs_match";
+  }
+
+  return "cash_paid";
+}

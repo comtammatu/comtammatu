@@ -33,10 +33,7 @@ function section(path: string, start: string, end: string): string {
   return source.slice(from, to);
 }
 
-function assertActionCallsDoNotSendUnit(
-  path: string,
-  callName: string,
-): void {
+function assertActionCallsDoNotSendUnit(path: string, callName: string): void {
   const source = read(path);
   const calls = source.matchAll(
     new RegExp(`${callName}\\(\\{[\\s\\S]*?\\}\\);`, "g"),
@@ -134,7 +131,9 @@ test("post Phase C migrations do not reference dropped ingredient unit fields", 
   const migrationDir = `${root}supabase/migrations`;
   const files = readdirSync(migrationDir)
     .filter((file) => /^\d+_.*\.sql$/.test(file))
-    .filter((file) => file > "20260707002300_inventory_unit_system_phase_c.sql");
+    .filter(
+      (file) => file > "20260707002300_inventory_unit_system_phase_c.sql",
+    );
 
   for (const file of files) {
     const sql = read(`supabase/migrations/${file}`);
@@ -148,11 +147,7 @@ test("post Phase C migrations do not reference dropped ingredient unit fields", 
       /\bingredients\.(?:purchase_unit|measure_unit|purchase_to_measure_factor|unit)\b/,
       file,
     );
-    assert.doesNotMatch(
-      sql,
-      /\ballow_(?:purchase|issue|production)\b/,
-      file,
-    );
+    assert.doesNotMatch(sql, /\ballow_(?:purchase|issue|production)\b/, file);
   }
 });
 
@@ -452,7 +447,10 @@ test.skip("inventory RPCs derive persisted unit text from the unit catalog", () 
 
   for (const sql of [migration, baseline]) {
     assert.doesNotMatch(sql, /NULLIF\(btrim\(line->>'unit'\), ''\)/i);
-    assert.doesNotMatch(sql, /line \? 'finishedGoodId' AND line \? 'quantity' AND line \? 'unit'/);
+    assert.doesNotMatch(
+      sql,
+      /line \? 'finishedGoodId' AND line \? 'quantity' AND line \? 'unit'/,
+    );
     assert.doesNotMatch(sql, /\bx\.unit\b/);
     assert.doesNotMatch(sql, /line\.value \? 'unit'/);
     assert.doesNotMatch(sql, /line\.value->>'unit'/);
@@ -544,7 +542,10 @@ test.skip("stock transfer receive converts received entry quantities to base uni
   assert.ok(fnStart >= 0, "stock_transfer_receive override not found");
   const fnBody = sql.slice(
     fnStart,
-    sql.indexOf("REVOKE ALL ON FUNCTION public.stock_transfer_receive", fnStart),
+    sql.indexOf(
+      "REVOKE ALL ON FUNCTION public.stock_transfer_receive",
+      fnStart,
+    ),
   );
 
   assert.match(fnBody, /v_recv_base\s+NUMERIC\(15,3\)/);
@@ -570,7 +571,9 @@ test.skip("GRN amend and legacy GRN movements use base quantities", () => {
   const sql = read(
     "supabase/migrations/20260706084233_grn_base_quantity_legacy_cleanup.sql",
   );
-  const fnStart = sql.indexOf("CREATE OR REPLACE FUNCTION public.amend_grn_line");
+  const fnStart = sql.indexOf(
+    "CREATE OR REPLACE FUNCTION public.amend_grn_line",
+  );
   assert.ok(fnStart >= 0, "amend_grn_line override not found");
   const fnBody = sql.slice(fnStart, sql.indexOf("DO $$", fnStart));
 
@@ -697,6 +700,40 @@ test("inventory unit closure backfills old null entry units and resolves product
   assert.match(productionBody, /iu\.ingredient_id = p_finished_good_id/);
   assert.match(productionBody, /iu\.is_base = TRUE/);
   assert.match(productionBody, /entry_unit_id,[\s\S]*v_entry_unit_id/);
+});
+
+test("production runs store and use explicit inventory locations", () => {
+  const sql = read(
+    "supabase/migrations/20260708182845_production_run_locations.sql",
+  );
+
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS source_location_id bigint/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS target_location_id bigint/);
+  assert.match(
+    sql,
+    /b\.branch_kind = 'branch' AND il\.location_kind = 'kitchen'/,
+  );
+  assert.match(
+    sql,
+    /CREATE OR REPLACE FUNCTION public\.create_production_run_with_locations/,
+  );
+
+  const confirmStart = sql.indexOf(
+    "CREATE OR REPLACE FUNCTION public.confirm_production_run",
+  );
+  assert.ok(confirmStart >= 0, "confirm_production_run override not found");
+  const confirmBody = sql.slice(
+    confirmStart,
+    sql.indexOf(
+      "REVOKE ALL ON FUNCTION public.create_production_run_with_locations",
+      confirmStart,
+    ),
+  );
+  assert.match(confirmBody, /il\.id = v_run\.source_location_id/);
+  assert.match(confirmBody, /il\.id = v_run\.target_location_id/);
+  assert.match(confirmBody, /sl\.location_id = v_source_location_id/);
+  assert.match(confirmBody, /sl\.location_id = v_target_location_id/);
+  assert.doesNotMatch(confirmBody, /is_default_receive = TRUE/);
 });
 
 test("inventory unit constraints lock entry unit columns at the database boundary", () => {

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { MODULE_ACL } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../../../_lib/auth";
+import { messages } from "@lib/messages";
 
 const LIMITS_ROLES = MODULE_ACL.branch_menu_limits.allowedRoles;
 
@@ -64,7 +65,7 @@ export async function fetchBranchMenuDailyLimits(
   if (error) {
     return {
       success: false,
-      error: "Không thể tải giới hạn bán. Vui lòng thử lại.",
+      error: messages.pos.menu.loadMenuLimitsFailed,
     };
   }
 
@@ -88,6 +89,15 @@ const setLimitSchema = z.object({
     ])
     .optional(),
   isDisabled: z.boolean(),
+});
+
+const replenishKitchenSchema = z.object({
+  branchId: branchIdSchema,
+  menuItemId: menuItemIdSchema,
+  extraPortions: z.union([z.literal(1), z.literal(2)]),
+  reason: z.string().trim().min(5, {
+    error: "Nhập lý do bổ sung tối thiểu 5 ký tự.",
+  }),
 });
 
 export async function setBranchMenuDailyLimit(
@@ -141,7 +151,7 @@ export async function setBranchMenuDailyLimit(
     if (msg.includes("exceeds stock capacity")) {
       return {
         success: false,
-        error: "Giới hạn bán không được vượt Tồn kho.",
+        error: "Giới hạn bán không được vượt Tồn Bếp CN.",
       };
     }
     if (msg.includes("nonnegative")) {
@@ -153,7 +163,7 @@ export async function setBranchMenuDailyLimit(
     if (msg.includes("stock capacity required")) {
       return {
         success: false,
-        error: "Chưa tính được Tồn kho để đặt Giới hạn bán.",
+        error: "Chưa tính được Tồn Bếp CN để đặt Giới hạn bán.",
       };
     }
     return {
@@ -227,4 +237,111 @@ export async function clearBranchMenuDailyLimit(
 
   const row = (data ?? { deleted: 0 }) as { deleted: number; cleared?: number };
   return { success: true, data: row };
+}
+
+export async function replenishMenuItemKitchenStock(
+  input: z.input<typeof replenishKitchenSchema>,
+): Promise<
+  ActionResult<{
+    portions_added: number;
+    movements_created: number;
+    stock_capacity: number | null;
+  }>
+> {
+  const parsed = replenishKitchenSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContext(LIMITS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const isHqRole = ctx.claims.user_role === "owner";
+  if (!isHqRole && ctx.claims.branch_id !== parsed.data.branchId) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { data, error } = await ctx.supabase.rpc(
+    "add_menu_item_kitchen_stock_exception",
+    {
+      p_branch_id: parsed.data.branchId,
+      p_menu_item_id: parsed.data.menuItemId,
+      p_extra_portions: parsed.data.extraPortions,
+      p_reason: parsed.data.reason,
+    },
+  );
+
+  if (error) {
+    const msg = String(error.message ?? "").toLowerCase();
+    if (msg.includes("forbidden") || msg.includes("scope mismatch")) {
+      return { success: false, error: "Không có quyền bổ sung Bếp CN." };
+    }
+    if (msg.includes("extra_portions_range")) {
+      return { success: false, error: "Chỉ bổ sung 1 hoặc 2 suất mỗi lần." };
+    }
+    if (msg.includes("reason_required")) {
+      return {
+        success: false,
+        error: "Nhập lý do bổ sung tối thiểu 5 ký tự.",
+      };
+    }
+    if (
+      msg.includes("branch_not_found") ||
+      msg.includes("menu_item_not_found")
+    ) {
+      return { success: false, error: "Không tìm thấy món hoặc chi nhánh." };
+    }
+    if (
+      msg.includes("branch_kitchen_required") ||
+      msg.includes("default_kitchen_location_required")
+    ) {
+      return {
+        success: false,
+        error: "Chi nhánh chưa cấu hình Bếp CN.",
+      };
+    }
+    if (
+      msg.includes("menu_recipe_required") ||
+      msg.includes("recipe_unit_config_required") ||
+      msg.includes("entry_unit_not_found") ||
+      msg.includes("recipe_ingredient_inactive") ||
+      msg.includes("no_positive_recipe_quantity")
+    ) {
+      return {
+        success: false,
+        error: "Chưa đủ định mức nguyên liệu để bổ sung Bếp CN.",
+      };
+    }
+
+    console.error(
+      "[menu-limits:replenishMenuItemKitchenStock] [unmapped] rpc error:",
+      error,
+    );
+    return {
+      success: false,
+      error: "Không thể bổ sung Bếp CN. Vui lòng thử lại.",
+    };
+  }
+
+  revalidatePath(`/br/${parsed.data.branchId}/menu-limits`);
+  revalidatePath(`/br/${parsed.data.branchId}/pos`);
+  revalidatePath(`/br/${parsed.data.branchId}/kds`);
+
+  const row = (data ?? null) as {
+    portions_added?: number;
+    movements_created?: number;
+    stock_capacity?: number | null;
+  } | null;
+
+  return {
+    success: true,
+    data: {
+      portions_added: row?.portions_added ?? parsed.data.extraPortions,
+      movements_created: row?.movements_created ?? 0,
+      stock_capacity: row?.stock_capacity ?? null,
+    },
+  };
 }

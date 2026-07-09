@@ -14,12 +14,6 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import {
@@ -34,6 +28,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { createClient } from "@comtammatu/database/supabase/client";
 import type { ItemRow } from "./item-table";
 import { AppEmptyState } from "@/components/surface";
+import { AppDialog } from "@/components/form/form-dialog";
 import { FormattedNumberInput } from "@/components/form";
 
 import { FORM_VI, MENU_VI } from "@comtammatu/shared/messages";
@@ -265,242 +260,232 @@ export function ItemDetailDialog({
   if (!item) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{MENU_VI.itemDetailTitle(item.name)}</DialogTitle>
-        </DialogHeader>
+    <AppDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={MENU_VI.itemDetailTitle(item.name)}
+    >
+      {isLoading ? (
+        <div className="flex justify-center py-6">
+          <Spinner className="size-6 text-muted-foreground" />
+        </div>
+      ) : loadError ? (
+        <Alert variant="destructive">
+          <AlertDescription>{loadError}</AlertDescription>
+        </Alert>
+      ) : (
+        <Tabs defaultValue="variants" className="w-full">
+          <TabsList className="w-full">
+            <TabsTrigger value="variants" className="flex-1">
+              {MENU_VI.variantsTab} ({variants.length})
+            </TabsTrigger>
+            <TabsTrigger value="modifiers" className="flex-1">
+              {MENU_VI.modifiersTab} ({modifiers.length})
+            </TabsTrigger>
+            <TabsTrigger value="sides" className="flex-1">
+              {MENU_VI.sidesTab} ({sides.length})
+            </TabsTrigger>
+          </TabsList>
 
-        {isLoading ? (
-          <div className="flex justify-center py-6">
-            <Spinner className="size-6 text-muted-foreground" />
-          </div>
-        ) : loadError ? (
-          <Alert variant="destructive">
-            <AlertDescription>{loadError}</AlertDescription>
-          </Alert>
-        ) : (
-          <Tabs defaultValue="variants" className="w-full">
-            <TabsList className="w-full">
-              <TabsTrigger value="variants" className="flex-1">
-                {MENU_VI.variantsTab} ({variants.length})
-              </TabsTrigger>
-              <TabsTrigger value="modifiers" className="flex-1">
-                {MENU_VI.modifiersTab} ({modifiers.length})
-              </TabsTrigger>
-              <TabsTrigger value="sides" className="flex-1">
-                {MENU_VI.sidesTab} ({sides.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="variants" className="flex flex-col gap-3">
-              {variants.map((v, idx) => (
-                <div
-                  key={v.id ?? `new-${idx}`}
-                  className="flex items-end gap-2"
-                >
-                  <Field className="min-w-0 flex-1 gap-1">
-                    <FieldLabel className="text-xs">{FORM_VI.name}</FieldLabel>
-                    <Input
-                      value={v.name}
-                      onChange={(e) =>
-                        updateVariant(idx, "name", e.target.value)
+          <TabsContent value="variants" className="flex flex-col gap-3">
+            {variants.map((v, idx) => (
+              <div key={v.id ?? `new-${idx}`} className="flex items-end gap-2">
+                <Field className="min-w-0 flex-1 gap-1">
+                  <FieldLabel className="text-xs">{FORM_VI.name}</FieldLabel>
+                  <Input
+                    value={v.name}
+                    onChange={(e) => updateVariant(idx, "name", e.target.value)}
+                    placeholder={MENU_VI.variantNamePlaceholder}
+                  />
+                </Field>
+                <Field className="w-28 shrink-0 gap-1">
+                  <FieldLabel className="text-xs">
+                    {MENU_VI.priceDeltaLabel}
+                  </FieldLabel>
+                  <FormattedNumberInput
+                    defaultValue={String(v.price_adjustment)}
+                    allowNegative
+                    maxFractionDigits={0}
+                    key={v.id ?? `price-${idx}`}
+                    onValueBlur={(value) => {
+                      const num = Number(value);
+                      if (!Number.isNaN(num)) {
+                        updateVariant(idx, "price_adjustment", num);
                       }
-                      placeholder={MENU_VI.variantNamePlaceholder}
-                    />
-                  </Field>
-                  <Field className="w-28 shrink-0 gap-1">
-                    <FieldLabel className="text-xs">
-                      {MENU_VI.priceDeltaLabel}
-                    </FieldLabel>
-                    <FormattedNumberInput
-                      defaultValue={String(v.price_adjustment)}
-                      allowNegative
-                      maxFractionDigits={0}
-                      key={v.id ?? `price-${idx}`}
-                      onValueBlur={(value) => {
-                        const num = Number(value);
-                        if (!Number.isNaN(num)) {
-                          updateVariant(idx, "price_adjustment", num);
-                        }
-                      }}
-                    />
-                  </Field>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0"
-                    onClick={() => removeVariant(idx)}
-                  >
-                    <IconTrash className="size-4" />
-                    <span className="sr-only">{MENU_VI.removeVariant}</span>
-                  </Button>
-                </div>
-              ))}
-              <div className="flex items-center justify-between pt-2">
+                    }}
+                  />
+                </Field>
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addVariant}
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => removeVariant(idx)}
                 >
-                  <IconPlus className="mr-1 size-3" />
-                  {MENU_VI.addVariant}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleSaveVariants}
-                  disabled={isPending}
-                >
-                  {isPending && <Spinner className="mr-1 size-3" />}
-                  {MENU_VI.saveVariants}
+                  <IconTrash className="size-4" />
+                  <span className="sr-only">{MENU_VI.removeVariant}</span>
                 </Button>
               </div>
-            </TabsContent>
+            ))}
+            <div className="flex items-center justify-between pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addVariant}
+              >
+                <IconPlus className="mr-1 size-3" />
+                {MENU_VI.addVariant}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveVariants}
+                disabled={isPending}
+              >
+                {isPending && <Spinner className="mr-1 size-3" />}
+                {MENU_VI.saveVariants}
+              </Button>
+            </div>
+          </TabsContent>
 
-            <TabsContent value="modifiers" className="flex flex-col gap-3">
-              {modifiers.map((m, idx) => (
-                <div
-                  key={m.id ?? `new-${idx}`}
-                  className="flex items-end gap-2"
-                >
-                  <Field className="min-w-0 flex-1 gap-1">
-                    <FieldLabel className="text-xs">{FORM_VI.name}</FieldLabel>
-                    <Input
-                      value={m.name}
-                      onChange={(e) =>
-                        updateModifier(idx, "name", e.target.value)
+          <TabsContent value="modifiers" className="flex flex-col gap-3">
+            {modifiers.map((m, idx) => (
+              <div key={m.id ?? `new-${idx}`} className="flex items-end gap-2">
+                <Field className="min-w-0 flex-1 gap-1">
+                  <FieldLabel className="text-xs">{FORM_VI.name}</FieldLabel>
+                  <Input
+                    value={m.name}
+                    onChange={(e) =>
+                      updateModifier(idx, "name", e.target.value)
+                    }
+                    placeholder={MENU_VI.modifierNamePlaceholder}
+                  />
+                </Field>
+                <Field className="w-28 shrink-0 gap-1">
+                  <FieldLabel className="text-xs">{FORM_VI.price}</FieldLabel>
+                  <FormattedNumberInput
+                    defaultValue={String(m.price)}
+                    maxFractionDigits={0}
+                    key={m.id ?? `mod-price-${idx}`}
+                    onValueBlur={(value) => {
+                      const num = Number(value);
+                      if (!Number.isNaN(num)) {
+                        updateModifier(idx, "price", num);
                       }
-                      placeholder={MENU_VI.modifierNamePlaceholder}
-                    />
-                  </Field>
-                  <Field className="w-28 shrink-0 gap-1">
-                    <FieldLabel className="text-xs">{FORM_VI.price}</FieldLabel>
-                    <FormattedNumberInput
-                      defaultValue={String(m.price)}
-                      maxFractionDigits={0}
-                      key={m.id ?? `mod-price-${idx}`}
-                      onValueBlur={(value) => {
-                        const num = Number(value);
-                        if (!Number.isNaN(num)) {
-                          updateModifier(idx, "price", num);
-                        }
-                      }}
-                    />
-                  </Field>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0"
-                    onClick={() => removeModifier(idx)}
-                  >
-                    <IconTrash className="size-4" />
-                    <span className="sr-only">{MENU_VI.removeModifier}</span>
-                  </Button>
-                </div>
-              ))}
-              <div className="flex items-center justify-between pt-2">
+                    }}
+                  />
+                </Field>
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addModifier}
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => removeModifier(idx)}
                 >
-                  <IconPlus className="mr-1 size-3" />
-                  {MENU_VI.addModifier}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleSaveModifiers}
-                  disabled={isPending}
-                >
-                  {isPending && <Spinner className="mr-1 size-3" />}
-                  {MENU_VI.saveModifiers}
+                  <IconTrash className="size-4" />
+                  <span className="sr-only">{MENU_VI.removeModifier}</span>
                 </Button>
               </div>
-            </TabsContent>
+            ))}
+            <div className="flex items-center justify-between pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addModifier}
+              >
+                <IconPlus className="mr-1 size-3" />
+                {MENU_VI.addModifier}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveModifiers}
+                disabled={isPending}
+              >
+                {isPending && <Spinner className="mr-1 size-3" />}
+                {MENU_VI.saveModifiers}
+              </Button>
+            </div>
+          </TabsContent>
 
-            <TabsContent value="sides" className="flex flex-col gap-3">
-              {sideItems.length === 0 ? (
-                <AppEmptyState
-                  compact
-                  className="bg-transparent"
-                  title={MENU_VI.sidesEmptyTitle}
-                  description={MENU_VI.sidesEmptyDescription}
-                />
-              ) : (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    {MENU_VI.sidesSelectHint}
-                  </p>
-                  <ItemGroup className="gap-2">
-                    {sideItems.map((si) => {
-                      const selected = sides.find(
-                        (s) => s.side_item_id === si.id,
-                      );
-                      const sideCheckboxId = `${checkboxIdPrefix}-item-${item.id}-side-${si.id}`;
-                      const defaultCheckboxId = `${checkboxIdPrefix}-item-${item.id}-default-side-${si.id}`;
+          <TabsContent value="sides" className="flex flex-col gap-3">
+            {sideItems.length === 0 ? (
+              <AppEmptyState
+                compact
+                className="bg-transparent"
+                title={MENU_VI.sidesEmptyTitle}
+                description={MENU_VI.sidesEmptyDescription}
+              />
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  {MENU_VI.sidesSelectHint}
+                </p>
+                <ItemGroup className="gap-2">
+                  {sideItems.map((si) => {
+                    const selected = sides.find(
+                      (s) => s.side_item_id === si.id,
+                    );
+                    const sideCheckboxId = `${checkboxIdPrefix}-item-${item.id}-side-${si.id}`;
+                    const defaultCheckboxId = `${checkboxIdPrefix}-item-${item.id}-default-side-${si.id}`;
 
-                      return (
-                        <Item
-                          key={si.id}
-                          variant="outline"
-                          size="sm"
-                          className="justify-between"
-                        >
-                          <div className="flex min-w-0 flex-1 items-center gap-2">
+                    return (
+                      <Item
+                        key={si.id}
+                        variant="outline"
+                        size="sm"
+                        className="justify-between"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <Checkbox
+                            id={sideCheckboxId}
+                            checked={!!selected}
+                            onCheckedChange={() => toggleSide(si.id, si.name)}
+                          />
+                          <FieldLabel
+                            htmlFor={sideCheckboxId}
+                            className="min-w-0 flex-1 truncate text-sm font-normal"
+                          >
+                            {si.name}
+                          </FieldLabel>
+                        </div>
+                        {selected && (
+                          <div className="flex shrink-0 items-center gap-1">
                             <Checkbox
-                              id={sideCheckboxId}
-                              checked={!!selected}
-                              onCheckedChange={() => toggleSide(si.id, si.name)}
+                              id={defaultCheckboxId}
+                              checked={selected.is_default}
+                              onCheckedChange={() => toggleSideDefault(si.id)}
                             />
                             <FieldLabel
-                              htmlFor={sideCheckboxId}
-                              className="min-w-0 flex-1 truncate text-sm font-normal"
+                              htmlFor={defaultCheckboxId}
+                              className="text-xs font-normal text-muted-foreground"
                             >
-                              {si.name}
+                              {MENU_VI.sideDefault}
                             </FieldLabel>
                           </div>
-                          {selected && (
-                            <div className="flex shrink-0 items-center gap-1">
-                              <Checkbox
-                                id={defaultCheckboxId}
-                                checked={selected.is_default}
-                                onCheckedChange={() => toggleSideDefault(si.id)}
-                              />
-                              <FieldLabel
-                                htmlFor={defaultCheckboxId}
-                                className="text-xs font-normal text-muted-foreground"
-                              >
-                                {MENU_VI.sideDefault}
-                              </FieldLabel>
-                            </div>
-                          )}
-                        </Item>
-                      );
-                    })}
-                  </ItemGroup>
-                </>
-              )}
-              <div className="flex justify-end pt-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleSaveSides}
-                  disabled={isPending}
-                >
-                  {isPending && <Spinner className="mr-1 size-3" />}
-                  {MENU_VI.saveSides}
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-        )}
-      </DialogContent>
-    </Dialog>
+                        )}
+                      </Item>
+                    );
+                  })}
+                </ItemGroup>
+              </>
+            )}
+            <div className="flex justify-end pt-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveSides}
+                disabled={isPending}
+              >
+                {isPending && <Spinner className="mr-1 size-3" />}
+                {MENU_VI.saveSides}
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
+    </AppDialog>
   );
 }

@@ -18,7 +18,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { messages } from "@lib/messages";
-import { CatalogBackHeader } from "./catalog-back-header";
+import { CatalogBackControl } from "./catalog-back-header";
 
 const copy = messages.catalog.index;
 
@@ -79,7 +79,7 @@ export function CatalogIndexClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <CatalogBackHeader
+      <CatalogBackControl
         title={copy.title}
         backHref={basePath.replace(/\/catalog$/, "")}
       />
@@ -90,14 +90,14 @@ export function CatalogIndexClient({
             asChild
             variant="outline"
             size="sm"
-            className="chrome-tap min-h-12 select-none bg-card transition-transform active:scale-[0.97]"
+            className="chrome-tap min-h-12 select-none bg-card"
           >
             <Link href={row.href}>
               <ItemMedia
                 variant="icon"
                 className="rounded-md bg-muted p-2 text-muted-foreground"
               >
-                <row.icon />
+                <row.icon aria-hidden="true" />
               </ItemMedia>
               <ItemContent className="min-w-0">
                 <ItemTitle className="text-sm font-semibold">
@@ -108,7 +108,7 @@ export function CatalogIndexClient({
                 <span className="font-mono text-sm tabular-nums">
                   {counts[row.key]}
                 </span>
-                <ChevronRight />
+                <ChevronRight aria-hidden="true" className="size-4" />
               </ItemActions>
             </Link>
           </Item>

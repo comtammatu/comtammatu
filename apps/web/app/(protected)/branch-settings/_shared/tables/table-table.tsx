@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import {
@@ -16,13 +17,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
 import {
   Item,
   ItemActions,
@@ -52,6 +46,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { AppDialog } from "@/components/form";
 import { RowActionsMenu } from "@/components/row-actions-menu";
 
 export interface TableRow {
@@ -66,7 +61,7 @@ export interface TableRow {
   zone_name: string | null;
 }
 
-interface TableTableProps {
+interface DiningTableSettingsListProps {
   tables: TableRow[];
   zones: ZoneRow[];
 }
@@ -96,7 +91,10 @@ function buildSelfOrderUrl(token: string, origin: string) {
   return origin ? `${origin}/q/${token}` : `/q/${token}`;
 }
 
-export function TableTable({ tables, zones }: TableTableProps) {
+export function DiningTableSettingsList({
+  tables,
+  zones,
+}: DiningTableSettingsListProps) {
   const router = useRouter();
   const [editTable, setEditTable] = useState<TableRow | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
@@ -409,6 +407,7 @@ function SelfOrderQrDialog({
   const [qrDataUrl, setQrDataUrl] = useState("");
   const tableMessages = messages.settings.tables;
   const url = table ? buildSelfOrderUrl(table.token, origin) : "";
+  const previewHref = table ? `/q/${table.token}` : "";
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -451,49 +450,47 @@ function SelfOrderQrDialog({
   if (!table) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="data-[side=right]:w-full data-[side=right]:sm:max-w-md"
-      >
-        <SheetHeader>
-          <SheetTitle>{tableMessages.qrDialogTitle(table.number)}</SheetTitle>
-          <SheetDescription>
-            {tableMessages.qrDialogDescription}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="grid gap-3 px-3 py-4 sm:px-4">
-          <div className="mx-auto grid size-72 place-items-center bg-white p-3">
-            {qrDataUrl ? (
-              <img
-                src={qrDataUrl}
-                alt={tableMessages.qrAlt(table.number)}
-                className="size-full"
-              />
-            ) : (
-              <span className="text-xs text-muted-foreground">
-                {tableMessages.qrGenerating}
-              </span>
-            )}
-          </div>
-          <div className="text-xs break-all text-muted-foreground">
-            {url}
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Button type="button" variant="outline" onClick={() => void handleCopy()}>
-              <IconCopy data-icon="inline-start" />
-              {tableMessages.copyLink}
-            </Button>
-            <Button asChild variant="outline">
-              <a href={url} target="_blank" rel="noreferrer">
-                <IconExternalLink data-icon="inline-start" />
-                {tableMessages.openLink}
-              </a>
-            </Button>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+    <AppDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={tableMessages.qrDialogTitle(table.number)}
+      description={tableMessages.qrDialogDescription}
+      contentClassName="sm:max-w-md"
+      bodyClassName="gap-3"
+    >
+      <div className="mx-auto grid size-72 place-items-center bg-white p-3">
+        {qrDataUrl ? (
+          <Image
+            src={qrDataUrl}
+            alt={tableMessages.qrAlt(table.number)}
+            width={256}
+            height={256}
+            className="size-full"
+            unoptimized
+          />
+        ) : (
+          <span className="text-xs text-muted-foreground">
+            {tableMessages.qrGenerating}
+          </span>
+        )}
+      </div>
+      <div className="text-xs break-all text-muted-foreground">{url}</div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void handleCopy()}
+        >
+          <IconCopy data-icon="inline-start" />
+          {tableMessages.copyLink}
+        </Button>
+        <Button asChild variant="outline">
+          <a href={previewHref}>
+            <IconExternalLink data-icon="inline-start" />
+            {tableMessages.openLink}
+          </a>
+        </Button>
+      </div>
+    </AppDialog>
   );
 }

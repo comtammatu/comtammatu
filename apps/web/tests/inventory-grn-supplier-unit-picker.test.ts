@@ -3,6 +3,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import {
+  lineTotalFromUnitCost,
+  unitCostFromLineTotal,
+} from "../app/(protected)/inventory/_lib/grn-draft";
+import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
 } from "../app/(protected)/inventory/_lib/purchase-units";
@@ -64,6 +68,13 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
   const nonBase = options.find((o) => o.code === "Thùng");
   assert.equal(nonBase?.unitId, 200);
   assert.equal(nonBase?.isBase, false);
+});
+
+test("GRN line amount entry derives unit cost from the entered line total", () => {
+  const unitCost = unitCostFromLineTotal(0.3, 30000);
+
+  assert.equal(unitCost, 100000);
+  assert.equal(lineTotalFromUnitCost(0.3, unitCost), 30000);
 });
 
 test("getPurchaseUnitOptions excludes an is_active=false unit (inv_to_base would reject it)", () => {

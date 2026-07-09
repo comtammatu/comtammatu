@@ -21,6 +21,38 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function assertRouteContract({
+  routeMap,
+  id,
+  surface,
+  entryPath,
+  moduleKey,
+  primaryNav,
+}: {
+  routeMap: string;
+  id: string;
+  surface: string;
+  entryPath: string;
+  moduleKey: string;
+  primaryNav: string;
+}) {
+  const routePattern = new RegExp(
+    [
+      `id: "${escapeRegExp(id)}"`,
+      `surface: "${escapeRegExp(surface)}"`,
+      `entryPath: "${escapeRegExp(entryPath)}"`,
+      `moduleKeys: \\[[^\\]]*"${escapeRegExp(moduleKey)}"[^\\]]*\\]`,
+      `primaryNav: "${escapeRegExp(primaryNav)}"`,
+    ].join("[\\s\\S]*?"),
+  );
+
+  assert.match(
+    routeMap,
+    routePattern,
+    `${id} route contract must stay ${surface} via ${primaryNav}`,
+  );
+}
+
 function listSourceFiles(dir: string): string[] {
   const absDir = resolve(repoRoot, dir);
   return readdirSync(absDir).flatMap((entry) => {
@@ -33,143 +65,234 @@ function listSourceFiles(dir: string): string[] {
   });
 }
 
-test.skip("Branch command and settings routes belong to the operator contract", () => {
+test("Branch command and secondary routes stay in the operator touch plane", () => {
   const routeMap = read("packages/shared/src/auth/route-map.ts");
 
-  assert.match(
-    routeMap,
-    /id: "branch-settings"[\s\S]*?surface: "branch_management"[\s\S]*?primaryNav: "operator-bottom-nav"/,
-    "branch settings must use branch runtime chrome without being a staff operation route",
-  );
-  assert.match(
-    routeMap,
-    /id: "branch-dashboard"[\s\S]*?surface: "branch_management"[\s\S]*?primaryNav: "operator-bottom-nav"/,
-    "branch dashboard must use branch runtime chrome without being a staff operation route",
-  );
-  assert.match(
-    routeMap,
-    /id: "branch-menu-limits"[\s\S]*?surface: "branch_operation"[\s\S]*?primaryNav: "operator-bottom-nav"/,
-    "menu limits are manager-owned day-operation controls, not branch setup",
-  );
-  assert.match(
-    routeMap,
-    /id: "branch-pos-sessions"[\s\S]*?surface: "branch_operation"[\s\S]*?primaryNav: "operator-bottom-nav"/,
-    "POS session reconciliation is an end-day operation route, not branch setup",
-  );
-  assert.equal(
-    existsSync(
-      resolve(
-        repoRoot,
-        "apps/web/app/(protected)/br/[branchId]/_components/branch-management-chrome.tsx",
-      ),
-    ),
-    false,
-    "branch command/settings must not keep a second management shell wrapper",
-  );
-  assert.equal(
-    existsSync(
-      resolve(repoRoot, "apps/web/app/(protected)/br/[branchId]/layout.tsx"),
-    ),
-    false,
-    "do not add a parent /br/[branchId]/layout.tsx; it would wrap POS/KDS/Runner",
-  );
-});
-
-test.skip("Station apps keep standalone operational chrome, not operator or admin shell", () => {
-  const routeMap = read("packages/shared/src/auth/route-map.ts");
-  const posLayout = read(
-    "apps/web/app/(protected)/br/[branchId]/pos/layout.tsx",
-  );
-  const kdsLayout = read(
-    "apps/web/app/(protected)/br/[branchId]/kds/layout.tsx",
-  );
-  const runnerLayout = read(
-    "apps/web/app/(protected)/br/[branchId]/runner/layout.tsx",
-  );
-  const kdsPage = read("apps/web/app/(protected)/br/[branchId]/kds/page.tsx");
-  const runnerPage = read(
-    "apps/web/app/(protected)/br/[branchId]/runner/page.tsx",
-  );
-  const foregroundNotificationsHook = read(
-    "apps/web/app/_hooks/use-foreground-notifications.ts",
-  );
-
-  assert.match(
-    routeMap,
-    /id: "pos"[\s\S]*?surface: "branch_operation"[\s\S]*?primaryNav: "operational-chrome"/,
-    "POS must stay a standalone station app, not bottom-nav branch shell",
-  );
-  assert.match(
-    routeMap,
-    /id: "kds"[\s\S]*?surface: "branch_operation"[\s\S]*?primaryNav: "operational-chrome"/,
-    "KDS must stay a standalone station app, not bottom-nav branch shell",
-  );
-  assert.match(
-    routeMap,
-    /id: "runner"[\s\S]*?surface: "branch_operation"[\s\S]*?primaryNav: "operational-chrome"/,
-    "Runner must stay a standalone station app, not bottom-nav branch shell",
-  );
-  assert.equal(
-    existsSync(
-      resolve(
-        repoRoot,
-        "apps/web/app/(protected)/br/[branchId]/(operator)/pos",
-      ),
-    ),
-    false,
-    "do not move POS under the operator shell",
-  );
-  assert.equal(
-    existsSync(
-      resolve(
-        repoRoot,
-        "apps/web/app/(protected)/br/[branchId]/(operator)/kds",
-      ),
-    ),
-    false,
-    "do not move KDS under the operator shell",
-  );
-  assert.equal(
-    existsSync(
-      resolve(
-        repoRoot,
-        "apps/web/app/(protected)/br/[branchId]/(operator)/runner",
-      ),
-    ),
-    false,
-    "do not move Runner under the operator shell",
-  );
-
-  for (const [label, source] of [
-    ["POS", posLayout],
-    ["KDS", kdsLayout],
-    ["Runner", runnerLayout],
-  ] as const) {
-    assert.match(
-      source,
-      /<main/,
-      `${label} layout must own its own main shell`,
-    );
-    assert.match(source, /h-dvh/, `${label} layout must be viewport-first`);
-    assert.doesNotMatch(source, /<AppPage|OperatorBottomNav|management-chrome/);
+  for (const contract of [
+    {
+      id: "operator-home",
+      surface: "branch_operation",
+      entryPath: "/br/[branchId]",
+      moduleKey: "operator_home",
+      primaryNav: "operator-bottom-nav",
+    },
+    {
+      id: "branch-dashboard",
+      surface: "branch_management",
+      entryPath: "/br/[branchId]/dashboard",
+      moduleKey: "branch_dashboard",
+      primaryNav: "operator-bottom-nav",
+    },
+    {
+      id: "branch-settings",
+      surface: "branch_management",
+      entryPath: "/br/[branchId]/settings",
+      moduleKey: "branch_settings",
+      primaryNav: "operator-bottom-nav",
+    },
+    {
+      id: "branch-menu-limits",
+      surface: "branch_operation",
+      entryPath: "/br/[branchId]/menu-limits",
+      moduleKey: "branch_menu_limits",
+      primaryNav: "operator-bottom-nav",
+    },
+    {
+      id: "branch-pos-sessions",
+      surface: "branch_operation",
+      entryPath: "/br/[branchId]/pos-sessions",
+      moduleKey: "branch_pos_sessions",
+      primaryNav: "operator-bottom-nav",
+    },
+  ]) {
+    assertRouteContract({ routeMap, ...contract });
   }
 
-  assert.match(kdsPage, /function KdsStatusShell/);
-  assert.match(kdsPage, /<AppEmptyState/);
-  assert.doesNotMatch(kdsPage, /@comtammatu\/ui\/components\/alert/);
-  assert.match(runnerPage, /function RunnerErrorState/);
-  assert.match(runnerPage, /<AppEmptyState/);
-  assert.doesNotMatch(runnerPage, /@comtammatu\/ui\/components\/alert/);
-  assert.match(foregroundNotificationsHook, /isRunnerPublicDisplayPath/);
-  assert.match(foregroundNotificationsHook, /if \(disabled\) return null/);
+  for (const forbiddenPath of [
+    "apps/web/app/(protected)/br/[branchId]/layout.tsx",
+    "apps/web/app/(protected)/br/[branchId]/_components/branch-management-chrome.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/more",
+  ]) {
+    assert.equal(
+      existsSync(resolve(repoRoot, forbiddenPath)),
+      false,
+      `${forbiddenPath} must not exist in the Branch touch plane`,
+    );
+  }
 });
 
-test.skip("Branch command dashboard is split into readiness, end-day, and drilldown lanes", () => {
+test("Branch bottom nav only contains persistent daily job families", () => {
+  const bottomNav = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
+  );
+
+  for (const expected of [
+    "`/br/${branchId}`",
+    "`/br/${branchId}/shift`",
+    "`/br/${branchId}/team`",
+    "`/br/${branchId}/stock`",
+  ]) {
+    assert.ok(bottomNav.includes(expected), `expected bottom nav ${expected}`);
+  }
+
+  assert.match(
+    bottomNav,
+    /href: `\/br\/\$\{branchId\}\/shift`[\s\S]*?exact: false/,
+    "shift tab must stay prefix-active for /shift/* deep routes",
+  );
+
+  for (const forbiddenRoute of [
+    "/dashboard",
+    "/settings",
+    "/menu-limits",
+    "/pos-sessions",
+    "/profile",
+    "/notifications",
+    "/more",
+  ]) {
+    assert.doesNotMatch(
+      bottomNav,
+      new RegExp(`\`/br/\\$\\{branchId\\}${escapeRegExp(forbiddenRoute)}`),
+      `${forbiddenRoute} must stay out of the persistent bottom nav`,
+    );
+  }
+
+  assert.doesNotMatch(bottomNav, /\bEllipsis\b|\bUser\b/);
+});
+
+test("POS, KDS, and Runner stay standalone station apps", () => {
+  const routeMap = read("packages/shared/src/auth/route-map.ts");
+
+  for (const contract of [
+    {
+      id: "pos",
+      surface: "branch_operation",
+      entryPath: "/br/[branchId]/pos",
+      moduleKey: "pos",
+      primaryNav: "operational-chrome",
+    },
+    {
+      id: "kds",
+      surface: "branch_operation",
+      entryPath: "/br/[branchId]/kds",
+      moduleKey: "kds",
+      primaryNav: "operational-chrome",
+    },
+    {
+      id: "runner",
+      surface: "branch_operation",
+      entryPath: "/br/[branchId]/runner",
+      moduleKey: "runner",
+      primaryNav: "operational-chrome",
+    },
+  ]) {
+    assertRouteContract({ routeMap, ...contract });
+  }
+
+  for (const [label, dir, layoutPath] of [
+    [
+      "POS",
+      "apps/web/app/(protected)/br/[branchId]/(operator)/pos",
+      "apps/web/app/(protected)/br/[branchId]/pos/layout.tsx",
+    ],
+    [
+      "KDS",
+      "apps/web/app/(protected)/br/[branchId]/(operator)/kds",
+      "apps/web/app/(protected)/br/[branchId]/kds/layout.tsx",
+    ],
+    [
+      "Runner",
+      "apps/web/app/(protected)/br/[branchId]/(operator)/runner",
+      "apps/web/app/(protected)/br/[branchId]/runner/layout.tsx",
+    ],
+  ] as const) {
+    assert.equal(
+      existsSync(resolve(repoRoot, dir)),
+      false,
+      `${label} must not move under the operator route group`,
+    );
+
+    const layout = read(layoutPath);
+    assert.match(layout, /<main/);
+    assert.match(layout, /h-dvh/);
+    assert.match(layout, /touch-manipulation/);
+    assert.doesNotMatch(layout, /<AppPage|OperatorBottomNav|OfficeModuleShell/);
+  }
+});
+
+test("Branch operator routes do not link, redirect, or revalidate Office routes", () => {
+  for (const dir of [
+    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/settings",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits",
+    "apps/web/app/(protected)/branch-settings/_shared",
+  ]) {
+    if (!existsSync(resolve(repoRoot, dir))) continue;
+    for (const file of listSourceFiles(dir)) {
+      const source = read(file);
+      for (const prefix of OFFICE_ROUTE_PREFIXES) {
+        const route = `${escapeRegExp(prefix)}${ROUTE_LITERAL_END}`;
+        for (const [label, pattern] of [
+          ["href prop", new RegExp(`href\\s*=\\s*(?:{\\s*)?["'\`]${route}`)],
+          ["href field", new RegExp(`href\\s*:\\s*["'\`]${route}`)],
+          ["redirect", new RegExp(`redirect\\(\\s*["'\`]${route}`)],
+          [
+            "router navigation",
+            new RegExp(`router\\.(?:push|replace)\\(\\s*["'\`]${route}`),
+          ],
+          [
+            "path revalidation",
+            new RegExp(`revalidatePath\\(\\s*["'\`]${route}`),
+          ],
+        ] as const) {
+          assert.doesNotMatch(
+            source,
+            pattern,
+            `${file} must not use ${label} into ${prefix}`,
+          );
+        }
+      }
+    }
+  }
+});
+
+test("Branch operator routes do not import management shell chrome", () => {
+  const forbiddenShells = [
+    ["BranchManagementShell", /\bBranchManagementShell\b/],
+    ["OfficeModuleShell", /\bOfficeModuleShell\b/],
+    ["InventoryShell", /\bInventoryShell\b/],
+    ["FinanceShell", /\bFinanceShell\b/],
+    ["ManagementShell", /\bManagementShell\b/],
+    ["AppShell", /\bAppShell\b/],
+  ] as const;
+
+  for (const dir of [
+    "apps/web/app/(protected)/br/[branchId]/pos",
+    "apps/web/app/(protected)/br/[branchId]/kds",
+    "apps/web/app/(protected)/br/[branchId]/runner",
+    "apps/web/app/(protected)/br/[branchId]/(operator)",
+  ]) {
+    if (!existsSync(resolve(repoRoot, dir))) continue;
+    for (const file of listSourceFiles(dir)) {
+      const source = read(file);
+      for (const [label, forbiddenShell] of forbiddenShells) {
+        assert.doesNotMatch(
+          source,
+          forbiddenShell,
+          `${file} must not import or render ${label}`,
+        );
+      }
+    }
+  }
+});
+
+test("Branch command dashboard is a branch-native command surface", () => {
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
-  // Wave 6 extracted the lane tile/readiness config and lane-rendering markup
-  // into co-located files; assert the moved strings against their new homes.
   const commandConfig = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
   );
@@ -181,22 +304,31 @@ test.skip("Branch command dashboard is split into readiness, end-day, and drilld
   );
   const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
-  // Lane titles still drive the page's section layout.
-  for (const expected of ["readinessTitle", "endDayTitle", "drilldownTitle"]) {
+  assert.match(dashboard, /<BranchOperatorPage/);
+  assert.match(dashboard, /branch\.branch_kind !== "branch"/);
+  assert.doesNotMatch(dashboard, /<AppPage|<AppLinkCard|<LinkCardGrid|<KpiRow/);
+
+  for (const expected of [
+    "liveOperationsTitle",
+    "readinessTitle",
+    "endDayTitle",
+    "drilldownTitle",
+  ]) {
     assert.ok(dashboard.includes(expected), `expected ${expected}`);
   }
-  // Lane hrefs now live in the extracted tile config (buildTileGroups).
-  for (const expected of ["/br/${branchId}/pos-sessions"]) {
+
+  for (const expected of [
+    "/br/${branchId}/pos",
+    "/br/${branchId}/kds",
+    "/br/${branchId}/runner",
+    "/br/${branchId}/menu-limits",
+    "/br/${branchId}/orders",
+    "/br/${branchId}/pos-sessions",
+    "/br/${branchId}/stock",
+  ]) {
     assert.ok(commandConfig.includes(expected), `expected ${expected}`);
   }
-  assert.doesNotMatch(
-    commandConfig,
-    /moduleKey: "branch_menu_limits"|menu-limits/,
-    "Giới hạn bán must stay a readiness row, not a duplicate Dashboard drilldown tile",
-  );
-  assert.doesNotMatch(dashboard, /liveOperationsTitle/);
-  assert.doesNotMatch(commandConfig, /liveOperations/);
-  // Nav lanes and readiness now share the mobile-first action-row rhythm.
+
   assert.match(
     commandSections,
     /<BranchActionItem/,
@@ -232,18 +364,8 @@ test.skip("Branch command dashboard is split into readiness, end-day, and drilld
     /line-clamp-none/,
     "Branch Command must not clamp critical readiness/action descriptions",
   );
-  // KPI density now flows through <KpiRow>: base grid-cols-1 sm:grid-cols-2
-  // lg:grid-cols-3 with the page adding xl:grid-cols-4 via className.
-  assert.match(
-    dashboard,
-    /<KpiRow className="xl:grid-cols-4"/,
-    "KPI cards should be one column on mobile, then add density at wider breakpoints",
-  );
-  assert.doesNotMatch(
-    dashboard,
-    /grid-cols-2 gap-3 lg:grid-cols-4/,
-    "KPI cards must not force two columns on phone-width viewports",
-  );
+  assert.match(actionItem, /size="touch"/);
+  assert.match(actionItem, /className="w-full sm:w-auto"/);
   assert.match(
     settingsMessages,
     /commandPosSessionsTitle: "Đối soát ca POS"/,
@@ -270,7 +392,7 @@ test.skip("Branch command dashboard is split into readiness, end-day, and drilld
   assert.doesNotMatch(settingsMessages, /Chưa có món active/);
 });
 
-test.skip("Branch settings hub exposes setup controls only", () => {
+test("Branch settings hub exposes setup controls only", () => {
   const settingsHub = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
   );
@@ -281,8 +403,8 @@ test.skip("Branch settings hub exposes setup controls only", () => {
   );
   const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
-  assert.match(settingsHub, /<EmployeePage/);
-  assert.match(settingsHub, /<EmployeeActionSection/);
+  assert.match(settingsHub, /<BranchOperatorPage/);
+  assert.match(settingsHub, /<BranchOperatorActionSection/);
   assert.doesNotMatch(settingsHub, /<AppLinkCard/);
   assert.doesNotMatch(settingsHub, /<LinkCardGrid/);
   // Per-tile ACL gating keeps each tile to surfaces the role can open.
@@ -319,36 +441,7 @@ test.skip("Branch settings hub exposes setup controls only", () => {
   );
 });
 
-test.skip("Branch More is overflow, not a duplicate Dashboard or Settings hub", () => {
-  const more = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/more/page.tsx",
-  );
-  const homeContract = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/_lib/operator-home-contract.ts",
-  );
-  const bottomNav = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
-  );
-  const settingsMessages = read("apps/web/lib/messages/settings.ts");
-
-  assert.match(more, /getOperatorMoreGroups/);
-  assert.match(homeContract, /getOperatorHomeTileHrefs/);
-  assert.match(homeContract, /getBranchPrimaryHomeGroup/);
-  assert.match(homeContract, /CENTRAL_HOME_TILE_SUFFIXES/);
-  assert.match(
-    bottomNav,
-    /branchOverflowPrefixes = \[[\s\S]*`\/br\/\$\{branchId\}\/more`[\s\S]*`\/br\/\$\{branchId\}\/stock`[\s\S]*`\/br\/\$\{branchId\}\/orders`/,
-  );
-  assert.doesNotMatch(
-    bottomNav,
-    /APP_COPY_VI\.operatorManagement[\s\S]{0,360}`\/br\/\$\{branchId\}\/stock`/,
-    "stock overflow must not light the management tab",
-  );
-  assert.match(settingsMessages, /centralMoreDescription/);
-  assert.match(settingsMessages, /moreEmptyTitle: "Không có mục khác"/);
-});
-
-test.skip("Branch setup clients keep mobile-stable toolbars and table surfaces", () => {
+test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => {
   const terminalsClient = read(
     "apps/web/app/(protected)/branch-settings/_shared/pos/terminals-client.tsx",
   );
@@ -390,12 +483,19 @@ test.skip("Branch setup clients keep mobile-stable toolbars and table surfaces",
   assert.match(terminalsClient, /mobileBreakpoint=\{1024\}/);
   assert.match(stationsClient, /mobileBreakpoint=\{1024\}/);
   assert.match(tableTable, /mobileBreakpoint=\{1024\}/);
-  assert.match(posSessionsClient, /mobileBreakpoint=\{1024\}/);
+  assert.doesNotMatch(
+    posSessionsClient,
+    /<DataTable|mobileBreakpoint=\{1024\}/,
+  );
+  assert.match(posSessionsClient, /<ItemGroup>/);
+  assert.match(posSessionsClient, /<Drawer/);
+  assert.match(posSessionsClient, /<BranchOperatorFrame/);
+  assert.match(posSessionsClient, /min-w-0/);
   assert.match(tablesClient, /w-full sm:w-60/);
   assert.match(tablesClient, /<TabsList className="h-11 w-full"/);
   assert.match(terminalsClient, /size="icon-touch"/);
   assert.match(stationsClient, /size="icon-touch"/);
-  assert.match(stockControlCard, /<Switch\s+size="touch"/);
+  assert.match(stockControlCard, /<Switch[\s\S]*?size="touch"/);
   assert.match(sheet, /size="icon-touch"/);
   assert.match(terminalsClient, /const canSwitchBranch = branches\.length > 1/);
   assert.match(stationsClient, /const canSwitchBranch = branches\.length > 1/);
@@ -417,12 +517,13 @@ test.skip("Branch setup clients keep mobile-stable toolbars and table surfaces",
   );
   assert.match(
     printersClient,
-    /flex flex-col-reverse gap-2 sm:flex-row sm:justify-end/,
-    "printer form actions should stack full-width on mobile and align right on desktop",
+    /basis-full justify-start pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0/,
+    "printer row actions should occupy their own mobile row and align right on desktop",
   );
+  assert.match(printersClient, /className="w-full sm:w-auto"/);
 });
 
-test.skip("Branch settings pages do not import admin route-local settings clients", () => {
+test("Branch settings pages do not import admin route-local settings clients", () => {
   for (const file of listSourceFiles(
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings",
   )) {
@@ -435,7 +536,7 @@ test.skip("Branch settings pages do not import admin route-local settings client
   }
 });
 
-test.skip("Branch setup category lookups stay tenant-scoped", () => {
+test("Branch setup category lookups stay tenant-scoped", () => {
   for (const file of [
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/kds/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/printers/page.tsx",
@@ -449,7 +550,7 @@ test.skip("Branch setup category lookups stay tenant-scoped", () => {
   }
 });
 
-test.skip("Branch operator settings and stock navigation fallbacks stay branch-native", () => {
+test("Branch operator settings and stock navigation fallbacks stay branch-native", () => {
   for (const dir of [
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock",
@@ -497,7 +598,7 @@ test.skip("Branch operator settings and stock navigation fallbacks stay branch-n
   );
 });
 
-test.skip("Branch-scoped operational routes do not use management shell", () => {
+test("Branch-scoped operational routes do not use management shell", () => {
   const forbiddenShells = [
     ["BranchManagementShell", /BranchManagementShell/],
     ["OfficeModuleShell", /OfficeModuleShell/],

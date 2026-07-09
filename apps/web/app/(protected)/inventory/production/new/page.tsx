@@ -14,8 +14,13 @@ export default async function ProductionNewPage({
     ? Number.parseInt(params.branchId, 10)
     : undefined;
 
-  const { productionBranches, targetBranches, finishedGoods, recipes } =
-    await loadProductionSurfaceData({ routeBranchId });
+  const {
+    productionBranches,
+    targetBranches,
+    locations,
+    finishedGoods,
+    recipes,
+  } = await loadProductionSurfaceData({ routeBranchId });
   const recipeFinishedGoodIds = new Set(
     recipes.map((recipe) => recipe.finished_good_id),
   );
@@ -33,6 +38,7 @@ export default async function ProductionNewPage({
       <ProductionNewClient
         branches={productionBranches}
         targetBranches={targetBranches}
+        locations={locations}
         finishedGoods={finishedGoodsWithRecipes}
         initialBranchId={routeBranchId}
         basePath="/inventory/production"

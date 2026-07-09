@@ -114,10 +114,11 @@ export function BusinessDateField<TFieldValues extends FieldValues>({
             id={fieldId}
             type="button"
             variant="outline"
+            size="field"
             aria-invalid={hasError}
             disabled={disabled}
             className={cn(
-              "h-10 justify-start text-left font-normal",
+              "justify-start text-left font-normal",
               !rawValue && "text-muted-foreground",
               className,
             )}

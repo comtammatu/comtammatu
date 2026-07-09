@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { messages } from "@lib/messages";
 import { fetchArchivedOrders } from "../actions";
 import type { SessionOrder } from "../order-history";
 import { usePosArchivedInvalidationToken } from "../_providers/pos-desktop-provider";
@@ -96,7 +97,7 @@ export function useArchivedOrders({
         setCursor(result.data.nextCursor);
         setHasMore(result.data.nextCursor !== null);
       } else {
-        setError(result.error ?? "Không thể tải lịch sử đơn.");
+        setError(result.error ?? messages.pos.archivedOrders.loadFailed);
       }
 
       if (isFirst) setIsLoading(false);

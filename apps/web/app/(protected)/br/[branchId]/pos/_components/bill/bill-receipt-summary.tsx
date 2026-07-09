@@ -73,7 +73,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
 
       <Separator className="my-2" />
 
-      <div className="flex flex-col gap-0.5 text-xs">
+      <div className="flex flex-col gap-1 text-xs">
         <div className="flex justify-between">
           <span>{messages.pos.receipt.order}</span>
           <span className="font-medium">#{order.order_number}</span>
@@ -142,7 +142,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
             const note = item.note?.trim();
 
             return (
-              <div key={item.id} className="flex flex-col gap-0.5 py-2">
+              <div key={item.id} className="flex flex-col gap-1 py-2">
                 <div className="flex gap-3">
                   <div className="min-w-0 flex-1 break-words font-medium leading-snug">
                     {displayName}

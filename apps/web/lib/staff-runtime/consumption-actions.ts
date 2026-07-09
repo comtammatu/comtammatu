@@ -6,6 +6,7 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "@/_lib/auth";
+import { messages } from "@lib/messages";
 import { getEmployeeContext } from "./_lib/staff-runtime-context";
 
 type RpcClient = {
@@ -326,7 +327,10 @@ export async function fetchConsumptionIngredients(
   ]);
 
   if (ingredientsResult.error) {
-    return { success: false, error: "Không thể tải danh sách nguyên liệu." };
+    return {
+      success: false,
+      error: messages.inventory.ingredients.list.loadFailed,
+    };
   }
 
   const defaultsByIngredient = new Map<number, ConsumptionDefaultItemDbRow>();

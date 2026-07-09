@@ -20,6 +20,14 @@ export const SYSTEM_SETTING_KEYS = {
    * collapse whitespace before matching.
    */
   PAYMENT_VIETQR_CODE_PREFIX: "payment_vietqr_code_prefix",
+  /** Bank transfer memo command prefix used by SePay webhook routing. */
+  PAYMENT_CONTENT_PREFIX: "payment_content_prefix",
+  /** Memo token for order payments after PAYMENT_CONTENT_PREFIX. */
+  PAYMENT_CONTENT_ORDER_TOKEN: "payment_content_order_token",
+  /** Memo token for expense-bank transaction matching after PAYMENT_CONTENT_PREFIX. */
+  PAYMENT_CONTENT_EXPENSE_TOKEN: "payment_content_expense_token",
+  /** Memo token for cash-to-bank deposits after PAYMENT_CONTENT_PREFIX. */
+  PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN: "payment_content_cash_deposit_token",
   /** Cash-book anchor — owner-counted opening cash balance (VND integer as string). */
   CASH_OPENING_BALANCE: "cash_opening_balance",
   /** Cash-book anchor date (YYYY-MM-DD); running cash-on-hand sums cash in/out from here. */
@@ -40,7 +48,12 @@ export const SYSTEM_SETTING_DEFAULTS: Record<SystemSettingKey, string> = {
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE]: "",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO]: "",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME]: "",
-  [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_CODE_PREFIX]: "QAJZRU5550 MBBMS01382716 1",
+  [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_CODE_PREFIX]:
+    "QAJZRU5550 MBBMS01382716 1",
+  [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX]: "MATU",
+  [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN]: "DON",
+  [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN]: "CHI",
+  [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN]: "NOP",
   [SYSTEM_SETTING_KEYS.CASH_OPENING_BALANCE]: "",
   [SYSTEM_SETTING_KEYS.CASH_OPENING_DATE]: "",
   [SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE]: "",

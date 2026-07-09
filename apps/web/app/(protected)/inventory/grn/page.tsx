@@ -82,6 +82,7 @@ export async function GRNListPageContent({
   const drafts: GrnDraftRow[] = draftDbRows.map((row) => ({
     grnId: row.id as number,
     supplierId: row.supplier_id as number,
+    branchId: row.branch_id as number,
     poId: row.po_id != null ? Number(row.po_id) : null,
     poCode:
       ((row.purchase_orders as Record<string, unknown>)?.po_number as string) ??

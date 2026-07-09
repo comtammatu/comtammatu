@@ -4,11 +4,6 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@comtammatu/ui/components/tooltip";
 import { Focus as IconFocus, LayoutGrid as IconLayoutGrid } from "lucide-react";
 import { KDS_VI } from "@comtammatu/shared/messages";
 import type { KdsViewMode } from "../_hooks/use-kds-view-mode";
@@ -29,32 +24,22 @@ export function ViewModeToggle({ mode, onChange }: ViewModeToggleProps) {
         onChange(v as KdsViewMode);
       }}
       aria-label={KDS_VI.viewModeAria}
-      className="h-8"
+      className="h-11"
     >
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <ToggleGroupItem
-            value="focus"
-            aria-label={KDS_VI.viewModeFocusAria}
-            className="px-2"
-          >
-            <IconFocus aria-hidden />
-          </ToggleGroupItem>
-        </TooltipTrigger>
-        <TooltipContent>{KDS_VI.viewModeFocusTooltip}</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <ToggleGroupItem
-            value="comprehensive"
-            aria-label={KDS_VI.viewModeOverviewAria}
-            className="px-2"
-          >
-            <IconLayoutGrid aria-hidden />
-          </ToggleGroupItem>
-        </TooltipTrigger>
-        <TooltipContent>{KDS_VI.viewModeOverviewTooltip}</TooltipContent>
-      </Tooltip>
+      <ToggleGroupItem
+        value="focus"
+        aria-label={KDS_VI.viewModeFocusAria}
+        className="min-h-11 px-3"
+      >
+        <IconFocus aria-hidden />
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value="comprehensive"
+        aria-label={KDS_VI.viewModeOverviewAria}
+        className="min-h-11 px-3"
+      >
+        <IconLayoutGrid aria-hidden />
+      </ToggleGroupItem>
     </ToggleGroup>
   );
 }

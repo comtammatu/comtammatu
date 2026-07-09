@@ -124,7 +124,7 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
       if (result.success) {
         setRequests((result.data as LeaveRequestRow[]) ?? []);
       } else {
-        toast.error(result.error ?? "Không thể tải danh sách nghỉ phép");
+        toast.error(result.error ?? copy.loadFailed);
       }
     });
   }, []);

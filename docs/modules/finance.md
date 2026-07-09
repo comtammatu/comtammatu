@@ -4,11 +4,12 @@
 
 Enterprise accounting is outside the current Finance product boundary.
 
-Finance Basic is the default Finance experience when the first screen answers
-four owner-level questions without ambiguous revenue labels:
+Finance Basic is the default Finance experience when `/finance` opens as
+`Sức khỏe tài chính` and answers four owner-level questions without ambiguous
+revenue labels:
 
-- **Tiền đã thu / doanh thu ròng trước VAT**: kỳ này đã thu bao nhiêu tiền, và
-  doanh thu thuần dùng cho margin là bao nhiêu?
+- **Tiền đã thu / doanh thu ròng**: kỳ này đã thu bao nhiêu tiền, và doanh thu
+  ròng trước VAT dùng cho margin là bao nhiêu?
 - **Giá trị tồn kho**: hiện đang giữ bao nhiêu tiền trong kho?
 - **Chi vận hành**: kỳ này đã ghi nhận bao nhiêu chi phí vận hành?
 - **Lợi nhuận gộp**: doanh thu sau giảm giá/trước VAT trừ giá vốn món còn bao nhiêu?
@@ -50,7 +51,7 @@ Finance Basic is the current finance surface. It owns four primary metrics:
    - Completed paid orders by branch/date.
    - Revenue must be bucketed by completed payment time in Vietnam local date.
    - `Tiền đã thu` is money collected from completed payments.
-   - `Doanh thu ròng trước VAT` / `doanh thu thuần` is net sales after
+   - `Doanh thu ròng` on the owner-facing surface means net sales after
      discounts/refunds and before VAT; this is the margin denominator.
    - Never ask the owner to choose the meaning of `doanh thu ròng`; adapt legacy
      source fields into either `total_collected` or `net_sales_before_vat`.

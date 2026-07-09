@@ -9,6 +9,7 @@ export const STATES_VI = {
   emptyHint: "Dữ liệu sẽ hiển thị ở đây khi có",
   noResults: "Không tìm thấy kết quả",
   noResultsHint: "Thử đổi từ khóa hoặc bộ lọc",
+  noAccess: "Không có quyền truy cập",
   saved: "Đã lưu thay đổi",
   created: "Tạo mới thành công",
   updated: "Cập nhật thành công",

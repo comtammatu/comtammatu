@@ -10,13 +10,11 @@ export const hr = {
     branchManagerDescription:
       "Theo dõi ca, ngày công, kết ca và nghỉ phép của chi nhánh được gán.",
   },
-  shell: {
-    navTitle: "Nhân sự",
-    navMain: "Nhân viên, ca, công",
-    brandSubLabel: "Hộ kinh doanh",
-    defaultPageTitle: "Tổng quan",
-    pageDescription:
-      "Theo dõi nhân viên, ca làm, ngày công và nghỉ phép cho vận hành hằng ngày.",
+  actions: {
+    fetchEmployeesFailed: "Không thể tải danh sách nhân viên.",
+    fetchShiftsFailed: "Không thể tải danh sách ca.",
+    fetchAttendanceFailed: "Không thể tải bảng chấm công.",
+    fetchAttendanceSummaryFailed: "Không thể tải tổng hợp chấm công.",
   },
   client: {
     tabs: {
@@ -47,6 +45,11 @@ export const hr = {
       saved: "Đã cập nhật ca mở/đóng",
       saveFailed: "Không thể cập nhật ca mở/đóng",
     },
+    shiftsLoadFailed: "Không thể tải ca làm việc",
+    shiftsLoading: "Đang tải...",
+    shiftsSummary: (count: number) =>
+      `${count} ca làm việc · dùng chung mọi chi nhánh`,
+    shiftsEmptyTitle: "Chưa có ca làm việc nào",
     positionTasks: {
       title: "Việc trong ca",
       description: "Gán checklist nhân viên nhận khi chấm công vào.",
@@ -155,6 +158,9 @@ export const hr = {
     emptyHistoryTitle: "Chưa có lịch sử nghỉ phép",
     emptyHistoryDescription:
       "Yêu cầu đã duyệt, từ chối, hoặc đã huỷ sẽ hiện ở đây.",
+    monthLoadFailed: "Không thể tải nghỉ phép trong tháng.",
+    loadFailed: "Không thể tải danh sách nghỉ phép",
+    quotaLoadFailed: "Không thể tải hạn mức phép năm.",
     table: {
       dateRange: "Khoảng nghỉ",
       employee: "Nhân viên",
@@ -185,6 +191,37 @@ export const hr = {
     supportBadge: "Hỗ trợ",
     backToHr: "Về nhân sự",
     backToPayroll: "Về bảng lương",
+    server: {
+      forbidden: "Không có quyền",
+      periodLoadFailed: "Không thể tải kỳ lương.",
+      periodExists: (month: number, year: number) =>
+        `Kỳ lương ${month}/${year} đã tồn tại.`,
+      createPeriodFailed: "Không thể tạo kỳ lương.",
+      periodNotFound: "Kỳ lương không tồn tại.",
+      standardDaysEditableOnly:
+        "Chỉ có thể sửa ngày công chuẩn cho kỳ nháp hoặc đã tính.",
+      calculate: {
+        forbidden: "Không có quyền tính lương.",
+        periodNotFound: "Kỳ lương không tồn tại.",
+        locked: "Chỉ có thể tính lương cho kỳ nháp hoặc đã tính.",
+        invalidEntries: "Dữ liệu bảng lương không hợp lệ.",
+        fallback: "Không thể tính lương. Vui lòng thử lại.",
+        missingStandardDays: "Kỳ lương không có ngày công chuẩn.",
+        employeesLoadFailed: "Không thể tải danh sách nhân viên.",
+        noActiveEmployees: "Không có nhân viên đang làm việc trong kỳ này.",
+        noEligibleEmployees:
+          "Không có nhân viên đang làm việc có lương cơ bản hoặc hợp đồng trong kỳ này.",
+        contractsLoadFailed:
+          "Không thể tải hợp đồng lao động. Tính lương bị hủy.",
+        attendanceLoadFailed:
+          "Không thể tải dữ liệu chấm công. Tính lương bị hủy.",
+        leaveLoadFailed:
+          "Không thể tải dữ liệu nghỉ phép. Tính lương bị hủy.",
+      },
+      entriesLoadFailed: "Không thể tải bảng lương.",
+      approveFailed: "Không thể duyệt bảng lương.",
+      markPaidFailed: "Không thể đánh dấu đã thanh toán.",
+    },
     list: {
       title: "Đối soát lương",
       description:

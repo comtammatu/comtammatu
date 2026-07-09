@@ -18,10 +18,6 @@ test("operator inventory work routes expose touch progress steps", () => {
 
   const routeClients = [
     [
-      "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
-      /operatorFlow\.stockTitle/,
-    ],
-    [
       "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
       /operatorFlow\.grnListTitle/,
     ],
@@ -52,6 +48,13 @@ test("operator inventory work routes expose touch progress steps", () => {
     assert.match(source, /<OperatorFlowSteps/);
     assert.match(source, marker);
   }
+
+  const branchOnHand = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
+  );
+  assert.doesNotMatch(branchOnHand, /OperatorFlowSteps/);
+  assert.match(branchOnHand, /BranchOperatorPanel/);
+  assert.match(branchOnHand, /StockTouchRow/);
 
   const recipeRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/page.tsx",
@@ -100,11 +103,20 @@ test("transfer create uses compact branch-location labels", () => {
 
   assert.match(source, /function formatTransferSiteLabel/);
   assert.match(source, /return branch\.name/);
-  assert.match(source, /formatTransferSiteLabel\(option\.branch\)\}\$\{suffix\}/);
-  assert.match(source, /formatTransferOption\(from, requestDestinationBranchId\)/);
+  assert.match(
+    source,
+    /formatTransferSiteLabel\(option\.branch\)\}\$\{suffix\}/,
+  );
+  assert.match(
+    source,
+    /formatTransferOption\(from, requestDestinationBranchId\)/,
+  );
   assert.match(messageSource, /defaultWarehouseSuffix: " - Kho"/);
   assert.match(messageSource, /defaultKitchenSuffix: " - Bếp"/);
-  assert.doesNotMatch(messageSource, /default(?:Warehouse|Kitchen)Suffix: " · .*CN"/);
+  assert.doesNotMatch(
+    messageSource,
+    /default(?:Warehouse|Kitchen)Suffix: " · .*CN"/,
+  );
 });
 
 test("transfer receive keeps the phone first viewport on line receiving", () => {

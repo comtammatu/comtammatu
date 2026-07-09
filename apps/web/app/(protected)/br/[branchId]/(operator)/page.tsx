@@ -3,19 +3,15 @@ import { Suspense } from "react";
 import { ChefHat, Truck } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  canAccess,
-  resolveOperatorTiles,
-  type BranchKind,
-} from "@comtammatu/shared/auth";
+import { resolveOperatorTiles, type BranchKind } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
-  EmployeeActionBar,
-  EmployeeActionSection,
-  EmployeePage,
-} from "@lib/staff-runtime/components/staff-runtime-page";
+  BranchOperatorActionBar,
+  BranchOperatorActionSection,
+  BranchOperatorPage,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { getTodayWorkState } from "@lib/staff-runtime/_lib/today-work-state";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
@@ -29,21 +25,16 @@ import {
 } from "./_lib/operator-home-contract";
 import { resolveOperatorTileIcon } from "./operator-tile-icons";
 
-// Bóc tách các thành phần ra components để dùng Suspense (UX loading mượt hơn)
 import { HubQueueSection } from "./_components/hub/hub-queue-section";
-import { HubOverviewSection } from "./_components/hub/hub-overview-section";
 import { HubTodayStatus } from "./_components/hub/hub-today-status";
 import {
-  HubTodayStatusSkeleton,
-  HubQueueSkeleton,
-  HubOverviewSkeleton,
+  HubTodayStatusPending,
+  HubQueuePending,
 } from "./_components/hub/hub-skeletons";
 
 const branchCopy = messages.settings.branch;
 
-// Approved home tile curation per central kind (design contract screens 1+4):
-// four job tiles; every other job stays reachable via the CTA, the queue feed,
-// the bottom nav, and /more. Suffixes are matched against tile hrefs.
+// Approved home tile curation per central kind. Suffixes are matched against tile hrefs.
 export default async function OperatorHomePage({
   params,
 }: {
@@ -65,13 +56,7 @@ export default async function OperatorHomePage({
     branchKind,
   );
   const basePath = `/br/${context.branchId}`;
-  const showTodayCard =
-    canAccess(claims.user_role, "operator_home") &&
-    claims.user_role !== "owner";
-  // Sales KPIs and the branch-command door are branch-floor chrome — central
-  // sites keep their home to the curated job tiles (D066 no-hub-bloat).
-  const showOverview =
-    canAccess(claims.user_role, "branch_dashboard") && branchKind === "branch";
+  const showTodayCard = claims.user_role !== "owner";
 
   // Pre-clock-in gate for cashier/chef roles
   const isFloorRole =
@@ -90,8 +75,7 @@ export default async function OperatorHomePage({
   const isCentral = branchKind !== "branch";
   const isCentralSupply = branchKind === "central_supply";
   const centralSuffixes = CENTRAL_HOME_TILE_SUFFIXES[branchKind] ?? null;
-  // Central homes render one curated job-tile group; the full tile directory
-  // lives on /more (design contract screens 1+4).
+  // Central homes render one curated job-tile group; deeper jobs stay under Stock.
   const centralGroups =
     isCentral && centralSuffixes
       ? (() => {
@@ -133,18 +117,14 @@ export default async function OperatorHomePage({
           branchKind,
           claims.user_role,
         );
-        const homeTiles = rawGroups
-          .flatMap((group) => group.tiles)
-          .filter((tile) => managerHomeHrefs.has(tile.href));
-        return homeTiles.length > 0
-          ? [
-              {
-                id: "manager-home-jobs",
-                title: "Vận hành chi nhánh",
-                tiles: homeTiles,
-              },
-            ]
-          : [];
+        return rawGroups
+          .map((group) => ({
+            ...group,
+            tiles: group.tiles.filter((tile) =>
+              managerHomeHrefs.has(tile.href),
+            ),
+          }))
+          .filter((group) => group.tiles.length > 0);
       })()
     : branchTodayGroup
       ? [
@@ -188,92 +168,73 @@ export default async function OperatorHomePage({
 
   const isCentralKitchen = branchKind === "central_kitchen";
   const secondaryLinksSection = isCentral ? (
-    <EmployeeActionBar align="start" className="sm:justify-center">
-      <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
-        <Link href={`${basePath}/shift/clock`}>{branchCopy.centralClockLink}</Link>
+    <BranchOperatorActionBar align="start" className="sm:justify-center">
+      <Button
+        asChild
+        variant="outline"
+        size="touch"
+        className="w-full sm:w-fit"
+      >
+        <Link href={`${basePath}/shift/clock`}>
+          {branchCopy.centralClockLink}
+        </Link>
       </Button>
       {isCentralKitchen ? (
-        <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
-          <Link href={`${basePath}/stock/production/recipes`}>
-            Công thức
-          </Link>
+        <Button
+          asChild
+          variant="outline"
+          size="touch"
+          className="w-full sm:w-fit"
+        >
+          <Link href={`${basePath}/stock/production/recipes`}>Công thức</Link>
         </Button>
       ) : null}
-      <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
-        <Link href={`${basePath}/more`}>{branchCopy.centralMoreTitle}</Link>
-      </Button>
-    </EmployeeActionBar>
+    </BranchOperatorActionBar>
   ) : null;
 
   return (
-    <EmployeePage title={APP_COPY_VI.operatorHome} hideHeaderOnMobile>
-      <div className="flex flex-col md:flex-row md:items-start gap-3">
-        {/* Main Content Column */}
-        <div className="flex-1 flex flex-col gap-3 min-w-0">
-          {showTodayCard ? (
-            <Suspense fallback={<HubTodayStatusSkeleton />}>
-              <HubTodayStatus branchId={context.branchId} />
-            </Suspense>
-          ) : null}
+    <BranchOperatorPage title={APP_COPY_VI.operatorHome} hideHeaderOnMobile>
+      {showTodayCard ? (
+        <Suspense fallback={<HubTodayStatusPending />}>
+          <HubTodayStatus branchId={context.branchId} />
+        </Suspense>
+      ) : null}
 
-          {centralAction}
-          {clockGateSection}
+      {centralAction}
+      {clockGateSection}
 
-          {groups.map((group) => (
-            <EmployeeActionSection
-              key={group.id}
-              title={group.title}
-              description={
-                isCentral
-                  ? isCentralSupply
-                    ? branchCopy.centralSupplyTilesDescription
-                    : branchCopy.centralKitchenTilesDescription
-                  : undefined
-              }
-              links={[
-                ...group.tiles.map((tile) => ({
-                  key: `${group.id}-${tile.moduleKey}-${tile.href}`,
-                  href: tile.href,
-                  icon: resolveOperatorTileIcon(tile.icon),
-                  title: tile.label,
-                  disabled:
-                    tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
-                })),
-                ...(group.id === "manager-home-jobs" && showOverview
-                  ? [
-                      {
-                        key: `${group.id}-branch-dashboard`,
-                        href: `${basePath}/dashboard`,
-                        icon: resolveOperatorTileIcon("LayoutDashboard"),
-                        title: APP_COPY_VI.branchCommand,
-                        disabled: false,
-                      },
-                    ]
-                  : []),
-              ]}
-              columns={2}
-              mobileColumns={2}
-              wideColumns
-            />
-          ))}
+      <Suspense fallback={<HubQueuePending />}>
+        <HubQueueSection branchId={context.branchId} branchKind={branchKind} />
+      </Suspense>
 
-          {secondaryLinksSection}
-        </div>
+      {groups.map((group) => (
+        <BranchOperatorActionSection
+          key={group.id}
+          title={group.title}
+          description={
+            isCentral
+              ? isCentralSupply
+                ? branchCopy.centralSupplyTilesDescription
+                : branchCopy.centralKitchenTilesDescription
+              : undefined
+          }
+          links={[
+            ...group.tiles.map((tile) => ({
+              key: `${group.id}-${tile.moduleKey}-${tile.href}`,
+              href: tile.href,
+              icon: resolveOperatorTileIcon(tile.icon),
+              title: tile.label,
+              disabled:
+                tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
+            })),
+          ]}
+          columns={2}
+          mobileColumns={2}
+          wideColumns
+        />
+      ))}
 
-        {/* Sidebar Column */}
-        {(!isFloorRole || showOverview) && (
-          <div className="w-full md:w-72 lg:w-80 xl:w-96 shrink-0 flex flex-col gap-3 md:sticky md:top-3">
-            {showOverview && (
-              <Suspense fallback={<HubOverviewSkeleton />}>
-                <HubOverviewSection branchId={context.branchId} />
-              </Suspense>
-            )}
-            <Suspense fallback={<HubQueueSkeleton />}>
-              <HubQueueSection branchId={context.branchId} branchKind={branchKind} />
-            </Suspense>
-          </div>
-        )}
-      </div>
-    </EmployeePage>
+      {secondaryLinksSection}
+    </BranchOperatorPage>
   );
 }

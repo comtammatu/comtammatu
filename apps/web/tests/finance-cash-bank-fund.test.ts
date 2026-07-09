@@ -33,6 +33,31 @@ test("bank fund pulls SePay in and out with the right sign", () => {
   );
   assert.match(
     cockpit,
+    /\.from\("supplier_payments"\)/,
+    "cash summary must include supplier AP payments as paid cash out",
+  );
+  assert.match(
+    cockpit,
+    /getVNDayUtcRange\(resolved\.start\)\.startIso/,
+    "supplier payments must be bucketed by Vietnam-local period range",
+  );
+  assert.match(
+    cockpit,
+    /cashOutSince\s*=\s*expensesSince\.cash\s*\+\s*supplierPaymentsSince\.cash/,
+    "cash supplier payments must reduce running cash on hand",
+  );
+  assert.match(
+    cockpit,
+    /bankMovement\.outAmount\s*\+\s*expensesSince\.unmatchedTransfer\s*\+\s*supplierPaymentsSince\.bankTransfer/,
+    "bank-transfer supplier payments must reduce running bank balance",
+  );
+  assert.match(
+    cockpit,
+    /cashOutPaidPeriod\s*=\s*expensesPaidPeriod\s*\+\s*supplierPaymentsPaidPeriod/,
+    "period cash out must include paid expenses and paid supplier AP",
+  );
+  assert.match(
+    cockpit,
     /bankOnHand:\s*bankOpeningBalance\s*\+\s*bankInSince\s*-\s*bankOutSince/,
     "bank on hand = opening + in - out",
   );

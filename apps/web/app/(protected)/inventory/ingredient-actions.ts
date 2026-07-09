@@ -13,6 +13,7 @@ import {
 } from "@comtammatu/shared/auth";
 import { getAuthContext, getAuthContextWithAnyPermission } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
+import { messages } from "@lib/messages";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
   STORAGE_TYPE_BY_LABEL,
@@ -77,7 +78,7 @@ function refineUnits(
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["units"],
-      message: "Phải có đúng 1 đơn vị gốc",
+      message: "Phải có đúng 1 đơn vị tồn chuẩn",
     });
   }
   const baseRow = baseRows[0];
@@ -85,7 +86,7 @@ function refineUnits(
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["units"],
-      message: "Đơn vị gốc phải có hệ số = 1",
+      message: "Đơn vị tồn chuẩn phải có hệ số = 1",
     });
   }
   const unitIds = units.map((u) => u.unit_id);
@@ -113,7 +114,7 @@ function mapCatalogRpcError(
   message: string | undefined,
 ): string {
   if (message?.includes("inventory_unit_ladder_locked_by_stock_movements")) {
-    return "Nguyên liệu đã có lịch sử tồn kho; không thể đổi đơn vị gốc hoặc hệ số quy đổi. Hãy tạo nguyên liệu mới hoặc xử lý điều chỉnh tồn kho.";
+    return "Nguyên liệu đã có lịch sử tồn kho; không thể đổi đơn vị tồn chuẩn hoặc quy đổi về tồn chuẩn. Hãy tạo nguyên liệu mới hoặc xử lý điều chỉnh tồn kho.";
   }
 
   switch (code) {
@@ -122,7 +123,7 @@ function mapCatalogRpcError(
     case PG_ERR.CHECK_VIOLATION:
       return "Dữ liệu đơn vị không hợp lệ";
     case PG_ERR.FK_VIOLATION:
-      return "Đơn vị gốc không hợp lệ";
+      return "Đơn vị tồn chuẩn không hợp lệ";
     case PG_ERR.UNIQUE_VIOLATION:
       return "Tên/đơn vị bị trùng";
     default:
@@ -209,7 +210,7 @@ export async function fetchIngredients(
   );
 
   if (error) {
-    return { success: false, error: "Không thể tải danh sách nguyên liệu." };
+    return { success: false, error: messages.inventory.ingredients.list.loadFailed };
   }
 
   const rows = (data ?? []).map((row) => {
@@ -514,8 +515,8 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
       columns: [
         { header: "Tên nguyên liệu", key: "ingredient_name", width: 32 },
         { header: "Mã đơn vị", key: "unit_code", width: 14 },
-        { header: "Hệ số quy đổi", key: "to_base_factor", width: 16 },
-        { header: "Đơn vị gốc", key: "is_base", width: 12 },
+        { header: "Quy đổi về tồn chuẩn", key: "to_base_factor", width: 20 },
+        { header: "Đơn vị tồn chuẩn", key: "is_base", width: 18 },
       ],
       rows: rows.flatMap((r) =>
         r.units.map((u) => ({
@@ -556,7 +557,10 @@ export async function exportIngredients(
     .order("name");
 
   if (error) {
-    return { success: false, error: "Không thể tải nguyên liệu." };
+    return {
+      success: false,
+      error: messages.inventory.ingredients.list.exportLoadFailed,
+    };
   }
 
   const rows: ExportIngredientRow[] = (data ?? []).map((r) => ({

@@ -11,6 +11,7 @@
 
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
@@ -35,11 +36,10 @@ export interface ExpenseRow {
   vendor_name: string | null;
   note: string | null;
   created_at: string;
+  matchedEventIds: number[];
 }
 
-export interface ExpenseMatchOption extends ExpenseRow {
-  matchedEventId: number | null;
-}
+export type ExpenseMatchOption = ExpenseRow;
 
 interface ExpenseMatchRow {
   webhook_event_id: number;
@@ -84,7 +84,18 @@ export async function createExpense(
   const { supabase, claims, user } = ctx;
   const branchId = parsed.data.branchId ?? null;
 
-  if (branchId != null && !(await canAccessBranch(supabase, claims, branchId))) {
+  if (parsed.data.category === "cogs_manual") {
+    return {
+      success: false,
+      error:
+        "Giá vốn món lấy từ tiêu hao kho; không nhập thủ công ở chi vận hành.",
+    };
+  }
+
+  if (
+    branchId != null &&
+    !(await canAccessBranch(supabase, claims, branchId))
+  ) {
     return { success: false, error: "Không có quyền cho chi nhánh này." };
   }
 
@@ -200,27 +211,37 @@ export async function fetchExpenses(params: {
     return { success: false, error: "Không tải được danh sách chi phí." };
   }
 
+  const rows = (data ?? []).map((r) => ({
+    id: r.id,
+    branch_id: r.branch_id,
+    expense_date: r.expense_date,
+    category: r.category,
+    amount: Number(r.amount),
+    payment_method: r.payment_method,
+    paid_at: r.paid_at,
+    vendor_name: r.vendor_name,
+    note: r.note,
+    created_at: r.created_at,
+  }));
+  const matchedByExpense = await fetchExpenseMatchMap(
+    supabase,
+    claims.tenant_id,
+    rows.map((r) => r.id),
+  );
+
   return {
     success: true,
-    data: (data ?? []).map((r) => ({
-      id: r.id,
-      branch_id: r.branch_id,
-      expense_date: r.expense_date,
-      category: r.category,
-      amount: Number(r.amount),
-      payment_method: r.payment_method,
-      paid_at: r.paid_at,
-      vendor_name: r.vendor_name,
-      note: r.note,
-      created_at: r.created_at,
+    data: rows.map((row) => ({
+      ...row,
+      matchedEventIds: matchedByExpense.get(row.id) ?? [],
     })),
   };
 }
 
-function nextDate(date: string): string {
-  const parsed = new Date(`${date}T00:00:00.000Z`);
-  parsed.setUTCDate(parsed.getUTCDate() + 1);
-  return parsed.toISOString().slice(0, 10);
+function getVNDateRangeUtc(startDate: string, endDate: string) {
+  const { startIso } = getVNDayUtcRange(startDate);
+  const { endIso } = getVNDayUtcRange(endDate);
+  return { startIso, endIso };
 }
 
 // Read-only actual food cost (giá vốn món) from approved consumption, mirroring
@@ -232,6 +253,22 @@ export async function fetchActualFoodCostTotal(params: {
   startDate: string;
   endDate: string;
 }): Promise<ActionResult<number>> {
+  const summary = await fetchActualFoodCostSummary(params);
+  if (!summary.success) {
+    return {
+      success: false,
+      error: summary.error ?? "Không tải được giá vốn món.",
+      errorCode: summary.errorCode,
+    };
+  }
+  return { success: true, data: summary.data?.total ?? 0 };
+}
+
+export async function fetchActualFoodCostSummary(params: {
+  branchId?: number | null;
+  startDate: string;
+  endDate: string;
+}): Promise<ActionResult<{ total: number; orderCount: number }>> {
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
@@ -239,15 +276,19 @@ export async function fetchActualFoodCostTotal(params: {
   if (!ctx) return { success: false, error: "Không có quyền xem giá vốn." };
 
   const { supabase, claims } = ctx;
+  const { startIso, endIso } = getVNDateRangeUtc(
+    params.startDate,
+    params.endDate,
+  );
 
   let query = supabase
     .from("stock_movements")
-    .select("quantity_change, unit_cost")
+    .select("order_id, quantity_change, unit_cost")
     .eq("tenant_id", claims.tenant_id)
     .eq("type", "consumption")
     .eq("movement_subtype", "sale_consumption")
-    .gte("created_at", params.startDate)
-    .lt("created_at", nextDate(params.endDate));
+    .gte("created_at", startIso)
+    .lt("created_at", endIso);
 
   if (params.branchId != null) {
     query = query.eq("branch_id", params.branchId);
@@ -258,11 +299,12 @@ export async function fetchActualFoodCostTotal(params: {
     return { success: false, error: "Không tải được giá vốn món." };
   }
 
-  const total = (data ?? []).reduce(
-    (sum, r) => sum + Math.abs(Number(r.quantity_change)) * Number(r.unit_cost),
-    0,
-  );
-  return { success: true, data: total };
+  const orderIds = new Set<number>();
+  const total = (data ?? []).reduce((sum, r) => {
+    if (r.order_id != null) orderIds.add(r.order_id);
+    return sum + Math.abs(Number(r.quantity_change)) * Number(r.unit_cost);
+  }, 0);
+  return { success: true, data: { total, orderCount: orderIds.size } };
 }
 
 const matchSepayExpenseSchema = z.object({
@@ -277,7 +319,7 @@ const matchSepayExpensesSchema = z.object({
 
 function mapMatchExpenseError(code?: string): string {
   if (code === "P0002") return "Không tìm thấy giao dịch hoặc khoản chi.";
-  if (code === "23505") return "Có khoản chi đã khớp giao dịch khác.";
+  if (code === "23505") return "Có dòng khớp bị trùng.";
   if (code === "23514") return "Giao dịch này không thể khớp khoản chi.";
   if (isExpenseMatchSchemaMissing(code)) {
     return "Chưa cập nhật dữ liệu ghép nhiều khoản chi.";
@@ -327,7 +369,10 @@ export async function matchSepayTransactionWithExpenses(
 
   if (error) {
     if (!isExpenseMatchSchemaMissing(error.code)) {
-      console.error("[finance:expense-match] failed to match expenses", error.code);
+      console.error(
+        "[finance:expense-match] failed to match expenses",
+        error.code,
+      );
     }
     return { success: false, error: mapMatchExpenseError(error.code) };
   }
@@ -347,13 +392,31 @@ async function fetchExpenseMatchMap(
     Awaited<ReturnType<typeof getAuthContextWithPermission>>
   >["supabase"],
   tenantId: number,
-): Promise<Map<number, number>> {
-  const matchedByExpense = new Map<number, number>();
+  expenseIds?: readonly number[],
+): Promise<Map<number, number[]>> {
+  const matchedByExpense = new Map<number, Set<number>>();
+  const addMatch = (expenseId: number, eventId: number) => {
+    const current = matchedByExpense.get(expenseId) ?? new Set<number>();
+    current.add(eventId);
+    matchedByExpense.set(expenseId, current);
+  };
+  const toEventIdMap = () =>
+    new Map(
+      Array.from(matchedByExpense, ([expenseId, eventIds]) => [
+        expenseId,
+        Array.from(eventIds),
+      ]),
+    );
 
-  const { data: matchRows, error: matchErr } = await supabase
+  let matchQuery = supabase
     .from("bank_transaction_expense_matches")
     .select("webhook_event_id, expense_id")
     .eq("tenant_id", tenantId);
+  if (expenseIds != null) {
+    if (expenseIds.length === 0) return new Map();
+    matchQuery = matchQuery.in("expense_id", [...expenseIds]);
+  }
+  const { data: matchRows, error: matchErr } = await matchQuery;
 
   if (matchErr && !isExpenseMatchSchemaMissing(matchErr.code)) {
     console.error(
@@ -362,32 +425,36 @@ async function fetchExpenseMatchMap(
     );
   } else if (!matchErr) {
     for (const row of (matchRows ?? []) as ExpenseMatchRow[]) {
-      matchedByExpense.set(row.expense_id, row.webhook_event_id);
+      addMatch(row.expense_id, row.webhook_event_id);
     }
   }
 
-  const { data: webhookRows, error: webhookErr } = await supabase
+  let webhookQuery = supabase
     .from("webhook_events")
     .select("id, expense_id")
     .eq("tenant_id", tenantId)
     .eq("provider", "sepay")
     .not("expense_id", "is", null);
+  if (expenseIds != null) {
+    webhookQuery = webhookQuery.in("expense_id", [...expenseIds]);
+  }
+  const { data: webhookRows, error: webhookErr } = await webhookQuery;
 
   if (webhookErr) {
     console.error(
       "[finance:expense-match] failed to load webhook_event expense matches",
       webhookErr.code,
     );
-    return matchedByExpense;
+    return toEventIdMap();
   }
 
   for (const row of (webhookRows ?? []) as WebhookExpenseMatchRow[]) {
-    if (row.expense_id != null && !matchedByExpense.has(row.expense_id)) {
-      matchedByExpense.set(row.expense_id, row.id);
+    if (row.expense_id != null) {
+      addMatch(row.expense_id, row.id);
     }
   }
 
-  return matchedByExpense;
+  return toEventIdMap();
 }
 
 export async function fetchExpenseMatchOptions(): Promise<
@@ -400,7 +467,10 @@ export async function fetchExpenseMatchOptions(): Promise<
   if (!ctx) return { success: false, error: "Không có quyền xem chi phí." };
 
   const { supabase, claims } = ctx;
-  const matchedByExpense = await fetchExpenseMatchMap(supabase, claims.tenant_id);
+  const matchedByExpense = await fetchExpenseMatchMap(
+    supabase,
+    claims.tenant_id,
+  );
 
   const { data, error } = await supabase
     .from("expenses")
@@ -430,7 +500,7 @@ export async function fetchExpenseMatchOptions(): Promise<
       vendor_name: r.vendor_name,
       note: r.note,
       created_at: r.created_at,
-      matchedEventId: matchedByExpense.get(r.id) ?? null,
+      matchedEventIds: matchedByExpense.get(r.id) ?? [],
     })),
   };
 }
@@ -442,6 +512,6 @@ export async function fetchUnmatchedExpenses(): Promise<
   if (!res.success) return res;
   return {
     success: true,
-    data: (res.data ?? []).filter((row) => row.matchedEventId == null),
+    data: (res.data ?? []).filter((row) => row.matchedEventIds.length === 0),
   };
 }

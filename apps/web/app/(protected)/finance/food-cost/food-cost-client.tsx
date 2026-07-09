@@ -24,6 +24,9 @@ interface Props {
   params: FinanceParams;
   branches: { id: number; name: string }[];
   rows: FoodCostRow[];
+  actualFoodCost: number;
+  coveredOrderCount: number;
+  totalOrderCount: number;
 }
 
 const foodCopy = messages.finance.foodCost;
@@ -59,14 +62,19 @@ export function FoodCostClient({
   params,
   branches,
   rows,
+  actualFoodCost,
+  coveredOrderCount,
+  totalOrderCount,
 }: Props) {
   const totalRevenue = rows.reduce((s, r) => s + Number(r.revenue ?? 0), 0);
-  const totalCost = rows.reduce(
+  const estimatedFoodCost = rows.reduce(
     (s, r) => s + Number(r.ingredient_cost ?? 0),
     0,
   );
   const avgMarginPct =
-    totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : null;
+    totalRevenue > 0
+      ? ((totalRevenue - estimatedFoodCost) / totalRevenue) * 100
+      : null;
   const avgMarginTone =
     avgMarginPct == null
       ? "neutral"
@@ -126,12 +134,35 @@ export function FoodCostClient({
 
       <KpiRow>
         <KpiCard
+          label={foodCopy.actualFoodCost}
+          value={formatVND(actualFoodCost)}
+          hint={foodCopy.actualFoodCostHint}
+          tone={
+            totalOrderCount > 0 && coveredOrderCount < totalOrderCount
+              ? "warning"
+              : "primary"
+          }
+        />
+        <KpiCard
+          label={foodCopy.coverage}
+          value={foodCopy.coverageValue(
+            formatCount(coveredOrderCount),
+            formatCount(totalOrderCount),
+          )}
+          hint={foodCopy.coverageHint}
+          tone={
+            totalOrderCount > 0 && coveredOrderCount < totalOrderCount
+              ? "warning"
+              : "success"
+          }
+        />
+        <KpiCard
           label={foodCopy.totalFoodCost}
-          value={formatVND(totalCost)}
+          value={formatVND(estimatedFoodCost)}
           hint={
             totalRevenue > 0
               ? foodCopy.shareOfRevenueHint(
-                  ((totalCost / totalRevenue) * 100).toFixed(1),
+                  ((estimatedFoodCost / totalRevenue) * 100).toFixed(1),
                 )
               : "—"
           }

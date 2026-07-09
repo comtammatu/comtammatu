@@ -74,7 +74,7 @@ export function WorkspaceBottomNav({
       className="lg:hidden"
       itemClassName="min-w-16"
       items={items.map((item) => ({
-        href: item.href,
+        href: item.linkHref ?? item.href,
         label: item.label,
         icon: item.icon,
         active: isNavItemActive(item, pathname),

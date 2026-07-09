@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { getVNDateString } from "@comtammatu/shared/time";
+import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import {
   issueTaxInvoiceForPaidOrder,
   type CreateInvoiceInput,
@@ -20,6 +20,31 @@ const FALLBACK_CODE_PREFIX = "QAJZRU5550 MBBMS01382716 1";
 const LEGACY_SOUNDBOX_PREFIX = "VQRLOAMB20260626100157757";
 const LEGACY_PAYMENT_CODE_RE = /\bDH\s+\d{6}\s+[A-Z0-9]{5}\b/gi;
 
+type BankContentSettings = {
+  prefix: string;
+  orderToken: string;
+  expenseToken: string;
+  cashDepositToken: string;
+};
+
+const FALLBACK_BANK_CONTENT_SETTINGS = {
+  prefix: "MATU",
+  orderToken: "DON",
+  expenseToken: "CHI",
+  cashDepositToken: "NOP",
+} as const satisfies BankContentSettings;
+const BANK_CONTENT_SETTING_KEYS = [
+  SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX,
+  SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN,
+  SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN,
+  SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN,
+] as const;
+
+type BankContentCommand =
+  | { kind: "order"; value: string | null }
+  | { kind: "expense"; value: string | null }
+  | { kind: "cash_deposit"; value: string | null };
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -32,6 +57,64 @@ function sanitizeCodePrefix(value: string | null | undefined): string {
     .replace(/[^A-Z0-9]+/g, " ")
     .trim();
   return cleaned || FALLBACK_CODE_PREFIX;
+}
+
+function normalizeBankContentMemo(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function sanitizeContentToken(
+  value: string | null | undefined,
+  fallback: string,
+): string {
+  return normalizeBankContentMemo(value).replace(/\s+/g, "") || fallback;
+}
+
+function commandValue(words: string[], startIndex: number): string | null {
+  const value = words.slice(startIndex).join(" ").trim();
+  return value || null;
+}
+
+function findBankContentCommand(
+  memo: string,
+  settings: BankContentSettings,
+): BankContentCommand | null {
+  const words = normalizeBankContentMemo(memo).split(" ").filter(Boolean);
+  for (let index = 0; index < words.length - 1; index += 1) {
+    if (words[index] !== settings.prefix) continue;
+    const token = words[index + 1];
+    const value = commandValue(words, index + 2);
+    if (token === settings.orderToken) return { kind: "order", value };
+    if (token === settings.expenseToken) return { kind: "expense", value };
+    if (token === settings.cashDepositToken) {
+      return { kind: "cash_deposit", value };
+    }
+  }
+  return null;
+}
+
+function extractBankContentCommand(
+  payload: SepayPayload,
+  settings: BankContentSettings,
+): BankContentCommand | null {
+  return (
+    findBankContentCommand(payload.content, settings) ??
+    findBankContentCommand(payload.description, settings) ??
+    findBankContentCommand(payload.code ?? "", settings)
+  );
+}
+
+function parseExpenseCommandId(value: string | null): number | null {
+  const token = value?.split(/\s+/)[0] ?? "";
+  if (!/^[0-9]+$/.test(token)) return null;
+  const id = Number(token);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 function buildPaymentCodeRe(prefix: string): RegExp {
@@ -106,6 +189,12 @@ const sepayRpcResultSchema = z
   })
   .passthrough();
 
+const cashDepositRpcResultSchema = z
+  .object({
+    expense_id: z.number().nullable().optional(),
+  })
+  .passthrough();
+
 type SepayPayload = z.infer<typeof sepayPayloadSchema>;
 type ServiceClient = ReturnType<typeof createServiceClient>;
 type InvoiceBuyerInput = Omit<CreateInvoiceInput, "orderId">;
@@ -122,13 +211,23 @@ type UntypedQueryResponse<T> = {
 type UntypedQueryBuilder<T> = {
   select(columns: string): UntypedQueryBuilder<T>;
   eq(column: string, value: unknown): UntypedQueryBuilder<T>;
-  order(column: string, options?: Record<string, unknown>): UntypedQueryBuilder<T>;
+  order(
+    column: string,
+    options?: Record<string, unknown>,
+  ): UntypedQueryBuilder<T>;
   limit(count: number): UntypedQueryBuilder<T>;
   maybeSingle(): Promise<UntypedQueryResponse<T>>;
 };
 
 type UntypedQueryClient = {
   from<T>(table: string): UntypedQueryBuilder<T>;
+};
+
+type UntypedRpcClient = {
+  rpc<T>(
+    name: string,
+    args: Record<string, unknown>,
+  ): Promise<UntypedQueryResponse<T>>;
 };
 
 const invoiceBuyerInputSchema = z.object({
@@ -211,19 +310,30 @@ function normalizePaymentCodeCandidates(
   ];
 }
 
+function pickLongestPaymentCode(candidates: string[]): string | null {
+  return (
+    candidates.sort(
+      (a, b) => b.replace(/\s+/g, "").length - a.replace(/\s+/g, "").length,
+    )[0] ?? null
+  );
+}
+
+function extractPaymentCodeFromText(
+  value: string | null | undefined,
+  codeRe: RegExp,
+): string | null {
+  return pickLongestPaymentCode(normalizePaymentCodeCandidates(value, codeRe));
+}
+
 function extractPaymentCode(
   payload: SepayPayload,
   codeRe: RegExp,
 ): string | null {
-  return (
-    [
-      ...normalizePaymentCodeCandidates(payload.content, codeRe),
-      ...normalizePaymentCodeCandidates(payload.description, codeRe),
-      ...normalizePaymentCodeCandidates(payload.code ?? null, codeRe),
-    ].sort(
-      (a, b) => b.replace(/\s+/g, "").length - a.replace(/\s+/g, "").length,
-    )[0] ?? null
-  );
+  return pickLongestPaymentCode([
+    ...normalizePaymentCodeCandidates(payload.content, codeRe),
+    ...normalizePaymentCodeCandidates(payload.description, codeRe),
+    ...normalizePaymentCodeCandidates(payload.code ?? null, codeRe),
+  ]);
 }
 
 function normalizeAccountNumber(value: string): string {
@@ -243,7 +353,7 @@ async function resolveAccountScope(
   const { data, error } = await supabase
     .from("system_settings")
     .select("tenant_id, value")
-    .eq("key", "payment_vietqr_account_no")
+    .eq("key", SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO)
     .eq("value", normalizedAccount);
 
   if (error) {
@@ -271,13 +381,50 @@ async function resolvePaymentCodePrefix(
     .from("system_settings")
     .select("value")
     .eq("tenant_id", tenantId)
-    .eq("key", "payment_vietqr_code_prefix")
+    .eq("key", SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_CODE_PREFIX)
     .maybeSingle();
 
   if (error) {
     console.warn("[sepay-webhook] code prefix lookup failed", error.code);
   }
   return sanitizeCodePrefix(data?.value ?? null);
+}
+
+async function resolveBankContentSettings(
+  supabase: ServiceClient,
+  tenantId: number,
+): Promise<BankContentSettings> {
+  const { data, error } = await supabase
+    .from("system_settings")
+    .select("key, value")
+    .eq("tenant_id", tenantId)
+    .in("key", [...BANK_CONTENT_SETTING_KEYS]);
+
+  if (error) {
+    console.warn("[sepay-webhook] bank content settings lookup failed", {
+      code: error.code,
+    });
+  }
+
+  const values = new Map((data ?? []).map((row) => [row.key, row.value]));
+  return {
+    prefix: sanitizeContentToken(
+      values.get(SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX),
+      FALLBACK_BANK_CONTENT_SETTINGS.prefix,
+    ),
+    orderToken: sanitizeContentToken(
+      values.get(SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN),
+      FALLBACK_BANK_CONTENT_SETTINGS.orderToken,
+    ),
+    expenseToken: sanitizeContentToken(
+      values.get(SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN),
+      FALLBACK_BANK_CONTENT_SETTINGS.expenseToken,
+    ),
+    cashDepositToken: sanitizeContentToken(
+      values.get(SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN),
+      FALLBACK_BANK_CONTENT_SETTINGS.cashDepositToken,
+    ),
+  };
 }
 
 async function resolveOrderScope(
@@ -486,43 +633,99 @@ export async function POST(request: Request) {
   }
 
   const webhookEventId = webhookClaim.id;
+  const bankContentSettings = await resolveBankContentSettings(
+    supabase,
+    accountScope.tenantId,
+  );
+  const bankCommand = extractBankContentCommand(payload, bankContentSettings);
 
-  if (payload.transferType !== "in") {
+  if (payload.transferType === "out") {
+    if (bankCommand?.kind === "expense") {
+      const expenseId = parseExpenseCommandId(bankCommand.value);
+      if (!expenseId) {
+        await markWebhookEvent(supabase, webhookEventId, {
+          processing_status: "failed",
+          http_status: 200,
+          error_code: "missing_expense_id",
+        });
+        return sepayAcceptedResponse();
+      }
+
+      const { error: expenseMatchError } = await supabase.rpc(
+        "match_sepay_transaction_expenses",
+        {
+          p_event_id: webhookEventId,
+          p_expense_ids: [expenseId],
+        },
+      );
+
+      if (expenseMatchError) {
+        console.error(
+          "[sepay-webhook] expense match failed",
+          expenseMatchError.code,
+        );
+        await markWebhookEvent(supabase, webhookEventId, {
+          processing_status: "failed",
+          http_status: 200,
+          error_code: expenseMatchError.code ?? "expense_match_failed",
+        });
+        return sepayAcceptedResponse();
+      }
+
+      await markWebhookEvent(supabase, webhookEventId, {
+        expense_id: expenseId,
+        processing_status: "processed",
+        http_status: 200,
+      });
+      return sepayAcceptedResponse();
+    }
+
     await markWebhookEvent(supabase, webhookEventId, {
-      processing_status: "ignored",
+      processing_status: bankCommand ? "failed" : "ignored",
       http_status: 200,
-      error_code: "transfer_type_out",
+      error_code: bankCommand
+        ? "bank_content_wrong_transfer_type"
+        : "transfer_type_out",
     });
     return sepayAcceptedResponse();
   }
 
-  if ((payload.content || "").toUpperCase().includes("NOP TIEN MATU")) {
-    const expenseDate = payload.transactionDate
-      ? payload.transactionDate.substring(0, 10)
-      : getVNDateString();
+  if (bankCommand?.kind === "expense") {
+    await markWebhookEvent(supabase, webhookEventId, {
+      processing_status: "failed",
+      http_status: 200,
+      error_code: "bank_content_wrong_transfer_type",
+    });
+    return sepayAcceptedResponse();
+  }
 
-    const { data: expenseData, error: expenseError } = await supabase
-      .from("expenses")
-      .insert({
-        tenant_id: accountScope.tenantId,
-        category: "bank_deposit",
-        amount: payload.transferAmount,
-        payment_method: "cash",
-        expense_date: expenseDate,
-        note: payload.content || "Nộp tiền mặt vào ngân hàng",
-      })
-      .select("id")
-      .single();
+  if (bankCommand?.kind === "cash_deposit") {
+    const untyped = supabase as unknown as UntypedRpcClient;
+    const { data: rawCashDepositData, error: cashDepositError } =
+      await untyped.rpc("record_sepay_cash_deposit_as_system", {
+        p_event_id: webhookEventId,
+      });
 
-    if (expenseError) {
+    if (cashDepositError) {
       console.error(
-        "[sepay-webhook] failed to insert bank_deposit expense",
-        expenseError.code,
+        "[sepay-webhook] failed to record bank_deposit expense",
+        cashDepositError.code,
       );
+      await markWebhookEvent(supabase, webhookEventId, {
+        processing_status: "failed",
+        http_status: 500,
+        error_code: "bank_deposit_insert_failed",
+      });
+      return NextResponse.json({ success: false }, { status: 500 });
     }
 
+    const parsedCashDepositData =
+      cashDepositRpcResultSchema.safeParse(rawCashDepositData);
+    const expenseId = parsedCashDepositData.success
+      ? (parsedCashDepositData.data.expense_id ?? null)
+      : null;
     await markWebhookEvent(supabase, webhookEventId, {
-      expense_id: expenseData?.id,
+      expense_id: expenseId,
       processing_status: "processed",
       http_status: 200,
     });
@@ -532,7 +735,12 @@ export async function POST(request: Request) {
   const codeRe = buildPaymentCodeRe(
     await resolvePaymentCodePrefix(supabase, accountScope.tenantId),
   );
-  const paymentCode = extractPaymentCode(payload, codeRe);
+  const commandPaymentCode =
+    bankCommand?.kind === "order" && bankCommand.value
+      ? (extractPaymentCodeFromText(bankCommand.value, codeRe) ??
+        bankCommand.value)
+      : null;
+  const paymentCode = commandPaymentCode ?? extractPaymentCode(payload, codeRe);
   if (!paymentCode) {
     console.warn("[sepay-webhook] missing payment code", { id: payload.id });
     await markWebhookEvent(supabase, webhookEventId, {

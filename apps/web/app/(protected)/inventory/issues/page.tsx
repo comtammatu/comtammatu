@@ -80,10 +80,9 @@ function vnBusinessDateBoundaryUtc(value: string, offsetDays = 0): string {
   ).toISOString();
 }
 
-// Scope splits the shared stock_issues surface into two route variants:
-// "consumption" (Tiêu hao) and "internal" (Xuất kho nội bộ). "all" keeps the
-// prior full-list behavior so callers that omit scope (operator branch shell)
-// are unaffected.
+// Scope splits the shared stock_issues surface into route variants:
+// "consumption" (Tiêu hao) and "internal" (hủy hỏng/xuất khác). "all" remains
+// available only for callers that intentionally need the full stock_issues list.
 type IssuesScope = "all" | "consumption" | "internal";
 
 interface ScopeConfig {

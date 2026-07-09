@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import { EmployeePage } from "@lib/staff-runtime/components/staff-runtime-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { messages } from "@lib/messages";
@@ -81,7 +81,7 @@ export default async function BranchPosSessionsPage({
     ]);
 
   if (branchError || !branch) notFound();
-  if (error) throw new Error("Không thể tải ca POS");
+  if (error) throw new Error(messages.settings.branch.posSessionsLoadFailed);
 
   const sessionRows = normalizeSessionRows(sessions);
 
@@ -130,7 +130,8 @@ export default async function BranchPosSessionsPage({
       .eq("pos_session_id", selectedSessionId)
       .order("created_at", { ascending: false });
 
-    if (orderError) throw new Error("Không thể tải bill của ca POS");
+    if (orderError)
+      throw new Error(messages.settings.branch.posSessionBillsLoadFailed);
     orders = normalizeOrderRows(orderRows);
 
     const reportResult = await getPosSessionReport(selectedSessionId);
@@ -139,7 +140,7 @@ export default async function BranchPosSessionsPage({
     }
   }
   return (
-    <EmployeePage
+    <BranchOperatorPage
       title={messages.settings.pages.posSessionsTitle}
       description={messages.settings.pages.posSessionsDescription}
     >
@@ -150,6 +151,6 @@ export default async function BranchPosSessionsPage({
         orders={orders}
         report={report}
       />
-    </EmployeePage>
+    </BranchOperatorPage>
   );
 }

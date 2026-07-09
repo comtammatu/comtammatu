@@ -53,6 +53,42 @@ function getTodayVN(): string {
   return getVNDateString();
 }
 
+type StaffRuntimeContext = NonNullable<
+  Awaited<ReturnType<typeof getEmployeeContext>>
+>;
+type ServiceClient = ReturnType<typeof createServiceClient>;
+
+async function resolveCurrentShiftIdForEmployee(
+  service: ServiceClient,
+  ctx: StaffRuntimeContext,
+  today: string,
+): Promise<number | null> {
+  if (ctx.branchId == null) return null;
+
+  const [{ data: branchShifts }, { data: todayRecords }] = await Promise.all([
+    service
+      .from("shifts")
+      .select("id, start_time, end_time")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`)
+      .eq("is_active", true),
+    service
+      .from("attendance_records")
+      .select("shift_id, check_out")
+      .eq("employee_id", ctx.employeeId)
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("date", today),
+  ]);
+
+  const completedShiftIds = new Set(
+    (todayRecords ?? [])
+      .filter((item) => item.check_out)
+      .map((item) => item.shift_id),
+  );
+
+  return resolveDefaultShiftId(branchShifts ?? [], undefined, completedShiftIds);
+}
+
 function revalidateEmployeeWorkPaths(branchId?: number | null) {
   revalidatePath("/br");
   if (typeof branchId !== "number") return;
@@ -192,30 +228,7 @@ export async function clockInWithPhoto(
 
   // Attendance is keyed per shift; completed shifts today should not block the
   // next shift's clock-in.
-  const [{ data: branchShifts }, { data: todayRecords }] = await Promise.all([
-    service
-      .from("shifts")
-      .select("id, start_time, end_time")
-      .eq("tenant_id", ctx.claims.tenant_id)
-      .or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`)
-      .eq("is_active", true),
-    service
-      .from("attendance_records")
-      .select("shift_id, check_out")
-      .eq("employee_id", ctx.employeeId)
-      .eq("tenant_id", ctx.claims.tenant_id)
-      .eq("date", today),
-  ]);
-  const completedShiftIds = new Set(
-    (todayRecords ?? [])
-      .filter((item) => item.check_out)
-      .map((item) => item.shift_id),
-  );
-  const shiftId = resolveDefaultShiftId(
-    branchShifts ?? [],
-    undefined,
-    completedShiftIds,
-  );
+  const shiftId = await resolveCurrentShiftIdForEmployee(service, ctx, today);
 
   if (shiftId == null) {
     return {
@@ -470,14 +483,36 @@ export async function requestCheckoutApproval(
 
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+  if (!ctx.branchId) {
+    return {
+      success: false,
+      error: "Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý.",
+    };
+  }
 
   const service = createServiceClient();
+  const today = getTodayVN();
+  const currentShiftId = await resolveCurrentShiftIdForEmployee(
+    service,
+    ctx,
+    today,
+  );
+  if (currentShiftId == null) {
+    return {
+      success: false,
+      error: "Chi nhánh chưa khai ca làm. Liên hệ quản lý.",
+    };
+  }
+
   const { data: record } = await service
     .from("attendance_records")
     .select("id")
     .eq("id", parsed.data.attendanceId)
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
+    .eq("branch_id", ctx.branchId)
+    .eq("date", today)
+    .eq("shift_id", currentShiftId)
     .is("check_out", null)
     .maybeSingle();
 
@@ -769,21 +804,16 @@ export async function rejectCheckoutRequest(input: {
     };
   }
 
-  const now = new Date().toISOString();
-  const { data: result, error } = await service
-    .from("attendance_records")
-    .update({
-      checkout_requested_at: null,
-      checkout_requested_by_role: null,
-      checkout_approval_target_roles: [],
-      checkout_approval_note: parsed.data.note ?? null,
-      updated_at: now,
-    })
-    .eq("id", parsed.data.attendanceId)
-    .eq("tenant_id", ctx.claims.tenant_id)
-    .is("check_out", null)
-    .select("id")
-    .maybeSingle();
+  const { data: result, error } = await service.rpc(
+    "branch_manager_reject_employee_clock_out",
+    {
+      p_tenant_id: ctx.claims.tenant_id,
+      p_branch_id: branchId,
+      p_attendance_id: parsed.data.attendanceId,
+      p_rejected_by: ctx.user.id,
+      p_note: parsed.data.note ?? undefined,
+    },
+  );
 
   if (error || !result) {
     if (error) {

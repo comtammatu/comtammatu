@@ -32,6 +32,7 @@ DECLARE
   v_part_unit bigint;
   v_pack_unit bigint;
   v_limit_menu bigint;
+  v_pool_menu bigint;
   v_side_menu bigint;
   v_drink_menu bigint;
   v_empty_menu bigint;
@@ -153,20 +154,28 @@ BEGIN
   RETURNING id INTO v_limit_menu;
 
   INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
-  VALUES (v_tenant, v_category, '__g5_side_item_' || gen_random_uuid()::text, 7000, 2)
+  VALUES (v_tenant, v_category, '__g5_shared_pool_item_' || gen_random_uuid()::text, 45000, 2)
+  RETURNING id INTO v_pool_menu;
+
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
+  VALUES (v_tenant, v_category, '__g5_side_item_' || gen_random_uuid()::text, 7000, 3)
   RETURNING id INTO v_side_menu;
 
   INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
-  VALUES (v_tenant, v_drink_category, '__g5_drink_item_' || gen_random_uuid()::text, 15000, 3)
+  VALUES (v_tenant, v_drink_category, '__g5_drink_item_' || gen_random_uuid()::text, 15000, 4)
   RETURNING id INTO v_drink_menu;
 
   INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
-  VALUES (v_tenant, v_category, '__g5_missing_config_item_' || gen_random_uuid()::text, 45000, 4)
+  VALUES (v_tenant, v_category, '__g5_missing_config_item_' || gen_random_uuid()::text, 45000, 5)
   RETURNING id INTO v_empty_menu;
 
   INSERT INTO public.recipes
     (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, yield_factor)
   VALUES (v_tenant, v_limit_menu, v_ingredient, 1, 'Bich', v_pack_unit, 1);
+
+  INSERT INTO public.recipes
+    (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, yield_factor)
+  VALUES (v_tenant, v_pool_menu, v_ingredient, 1, 'Bich', v_pack_unit, 1);
 
   INSERT INTO public.recipes
     (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, yield_factor)
@@ -252,6 +261,35 @@ BEGIN
   SET current_quantity = 10
   WHERE tenant_id = v_tenant AND branch_id = v_branch
     AND ingredient_id = v_side_ingredient AND location_id = v_location;
+
+  INSERT INTO public.orders (
+    tenant_id, branch_id, order_number, status, payment_status,
+    subtotal, total_amount, created_by
+  )
+  VALUES (
+    v_tenant, v_branch, '__g5_shared_pool_pending_' || gen_random_uuid()::text,
+    'confirmed', 'unpaid', 90000, 90000, v_profile
+  )
+  RETURNING id INTO v_order;
+
+  INSERT INTO public.order_items (
+    tenant_id, order_id, menu_item_id, item_name,
+    quantity, unit_price, subtotal, vat_rate
+  )
+  VALUES (v_tenant, v_order, v_limit_menu, 'G5 pending shared pool item', 2, 45000, 90000, 8)
+  RETURNING id INTO v_item;
+
+  SELECT a.available_to_sell, a.stock_capacity, a.pending_unfinalized_demand
+    INTO v_available, v_stock_live, v_manual_limit
+  FROM public.branch_menu_limit_availability(v_tenant, v_branch, v_today, true) a
+  WHERE a.menu_item_id = v_pool_menu;
+
+  IF v_available <> 1 OR v_stock_live <> 3 OR v_manual_limit <> 2 THEN
+    RAISE EXCEPTION 'TEST 3B FAILED: shared ingredient pool expected available=1 stock=3 pending=2, got available=% stock=% pending=%',
+      v_available, v_stock_live, v_manual_limit;
+  END IF;
+
+  UPDATE public.orders SET status = 'cancelled' WHERE id = v_order;
 
   INSERT INTO public.orders (
     tenant_id, branch_id, order_number, status, payment_status,

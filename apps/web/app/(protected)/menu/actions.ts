@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { MENU_VI } from "@comtammatu/shared/messages";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
@@ -613,7 +614,7 @@ export async function exportMenu(
     modifierRes.error ||
     sideRes.error
   ) {
-    return { success: false, error: "Không thể tải dữ liệu menu." };
+    return { success: false, error: MENU_VI.loadDataFailed };
   }
 
   const categories: MenuExportCategory[] = (catRes.data ?? []).map((c) => ({

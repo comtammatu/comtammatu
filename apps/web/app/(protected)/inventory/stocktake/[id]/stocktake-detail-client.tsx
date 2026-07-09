@@ -84,7 +84,7 @@ export function StocktakeDetailClient({
   session: initialSession,
   lines: initialLines,
   routeBase = "/inventory/stocktake",
-  wasteBasePath = "/inventory/waste/new",
+  reportsBasePath = "/inventory/reports",
   embedded = false,
   auditLogs = [],
 }: {
@@ -92,7 +92,7 @@ export function StocktakeDetailClient({
   lines: StocktakeLine[];
   routeBase?: string;
   inventoryBasePath?: string;
-  wasteBasePath?: string;
+  reportsBasePath?: string;
   embedded?: boolean;
   auditLogs?: AuditLogRow[];
 }) {
@@ -348,7 +348,11 @@ export function StocktakeDetailClient({
         <ResultsPhase
           lines={lines}
           varianceCount={varianceCount}
-          wasteHref={`${wasteBasePath}?branchId=${session.branch_id}`}
+          reviewHref={
+            embedded
+              ? reportsBasePath
+              : `${reportsBasePath}?branchId=${session.branch_id}`
+          }
           embedded={embedded}
         />
       )}
@@ -590,12 +594,12 @@ function getVarianceBg(line: StocktakeLine): string {
 function ResultsPhase({
   lines,
   varianceCount,
-  wasteHref,
+  reviewHref,
   embedded = false,
 }: {
   lines: StocktakeLine[];
   varianceCount: number;
-  wasteHref: string;
+  reviewHref: string;
   embedded?: boolean;
 }) {
   const resultColumns: DataTableColumn<StocktakeLine>[] = [
@@ -703,7 +707,7 @@ function ResultsPhase({
         </p>
       </div>
       <Button asChild size={embedded ? "touch" : "sm"}>
-        <Link href={wasteHref}>
+        <Link href={reviewHref}>
           {stocktakeDetailCopy.results.nextActionCta}
           <IconArrowRight className="size-4" />
         </Link>

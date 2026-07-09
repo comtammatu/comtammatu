@@ -198,13 +198,6 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  if (
-    (pathname === "/br" || pathname === "/br/") &&
-    claims.user_role !== "owner"
-  ) {
-    return redirectToDefaultLanding(request, response, supabase, claims);
-  }
-
   // Module ACL: each route resolves to a ModuleKey, and the user's role
   // must be in that module's allowedRoles. Admin routes that fail ACL
   // redirect to the role's default landing page; non-admin routes redirect

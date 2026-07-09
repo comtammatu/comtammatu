@@ -7,6 +7,7 @@ import { Controller } from "react-hook-form";
 import { z } from "zod";
 import { Label } from "@comtammatu/ui/components/label";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -141,7 +142,7 @@ export function StationFormDialog({
                     Chọn danh mục để trạm này tiếp nhận. Để trống = nhận tất cả
                     món (fallback).
                   </p>
-                  <div className="flex max-h-48 flex-col gap-2 overflow-y-auto rounded-md border p-3">
+                  <Frame className="flex max-h-48 flex-col gap-2 overflow-y-auto p-3">
                     {categories.map((cat) => (
                       <div key={cat.id} className="flex items-center gap-2">
                         <Checkbox
@@ -167,7 +168,7 @@ export function StationFormDialog({
                         compact
                       />
                     )}
-                  </div>
+                  </Frame>
                 </div>
               );
             }}

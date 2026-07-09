@@ -2,6 +2,7 @@
 
 import type { ActionResult } from "@comtammatu/shared/types";
 import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
+import { messages } from "@lib/messages";
 import { getAuthContext } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
@@ -44,7 +45,10 @@ export async function fetchReorderAlerts(
 
   if (error) {
     console.error("[inventory/alert-actions:fetchReorderAlerts] Fetch reorder alerts error:", error);
-    return { success: false, error: "Không thể tải cảnh báo đặt hàng." };
+    return {
+      success: false,
+      error: messages.inventory.dashboard.reorderAlertsLoadFailed,
+    };
   }
 
   const alerts = (data ?? [])

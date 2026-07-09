@@ -9,6 +9,7 @@ import {
   markNotificationRead,
   type NotificationItem,
 } from "@/(protected)/notifications/actions";
+import { messages } from "@lib/messages";
 
 interface UseNotificationsArgs {
   tenantId: number;
@@ -90,7 +91,7 @@ export function useNotifications({
         setHasMore(list.data.hasMore);
         setError(null);
       } else if (!list.success) {
-        setError(list.error ?? "Không thể tải thông báo");
+        setError(list.error ?? messages.notifications.loadFailed);
       }
       if (count.success && count.data) {
         setUnreadCount(count.data.count);
@@ -122,7 +123,7 @@ export function useNotifications({
         setHasMore(list.data.hasMore);
         setError(null);
       } else if (!list.success) {
-        setError(list.error ?? "Không thể tải thông báo");
+        setError(list.error ?? messages.notifications.loadFailed);
       }
     } finally {
       inflightRef.current = false;

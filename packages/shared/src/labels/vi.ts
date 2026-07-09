@@ -38,8 +38,8 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   hr: "Nhân sự",
   hr_payroll: "Lương",
   finance: "Tài chính",
-  branches: "Hub",
-  branch_picker: "Chọn Hub",
+  branches: "Chi nhánh",
+  branch_picker: "Vào việc",
   settings: "Cài đặt",
   pos: "POS",
   kds: "KDS",
@@ -84,11 +84,15 @@ export const APP_COPY_VI = {
   operatorOpsActions: "Cấu hình chi nhánh",
   operatorShift: "Ca",
   operatorManagement: "Quản lý",
+  operations: "Điều hành",
   operatorAriaLabel: "Điều hướng hôm nay",
   loading: "Đang tải…",
   refresh: "Làm mới",
   noAreaData: "Không có dữ liệu khu vực",
-  noScopedBranches: "Không có Hub trong phạm vi",
+  noScopedBranches: "Không có nơi làm việc trong phạm vi",
+  officePlaneTitle: "Văn phòng",
+  officePlaneDescription: "Tài chính và công việc bàn giấy",
+  officePlaneCta: "Mở Văn phòng",
 } as const;
 
 const SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
@@ -362,6 +366,14 @@ export const PAYMENT_RECORD_STATUS_LABELS_VI = {
   completed: "Đã thanh toán",
   failed: "Thất bại",
   refunded: "Hoàn tiền",
+} as const;
+
+/** Derived payment reconciliation state for operating expenses. */
+export const EXPENSE_PAYMENT_STATE_LABELS_VI = {
+  unpaid: "Chưa trả",
+  cash_paid: "Đã chi TM",
+  transfer_matched: "Đã khớp NH",
+  transfer_needs_match: "Cần khớp NH",
 } as const;
 
 /** refunds.status (DB refunds_status_check). */

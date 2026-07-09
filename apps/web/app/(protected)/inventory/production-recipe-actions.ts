@@ -17,6 +17,7 @@ import {
   stringToBase64,
   type SheetDef,
 } from "@/_lib/spreadsheet";
+import { messages } from "@lib/messages";
 import {
   idSchema,
   PRODUCTION_ROLES,
@@ -316,7 +317,10 @@ export async function fetchProductionRecipes(): Promise<
     .order("ingredient_id", { ascending: true });
 
   if (error) {
-    return { success: false, error: "Không thể tải công thức sản xuất." };
+    return {
+      success: false,
+      error: messages.inventory.productionRecipes.loadFailed,
+    };
   }
 
   return {
@@ -406,7 +410,8 @@ export async function exportProductionRecipes(
   if (!recipesRes.success) {
     return {
       success: false,
-      error: recipesRes.error ?? "Không thể tải công thức sản xuất.",
+      error:
+        recipesRes.error ?? messages.inventory.productionRecipes.loadFailed,
     };
   }
 
@@ -575,7 +580,10 @@ export async function importProductionRecipes(
     .eq("tenant_id", claims.tenant_id);
 
   if (error) {
-    return { success: false, error: "Không thể tải dữ liệu đối chiếu." };
+    return {
+      success: false,
+      error: messages.inventory.productionRecipes.lookupLoadFailed,
+    };
   }
 
   const ingredients = ((data ?? []) as IngredientLookupQueryRow[])

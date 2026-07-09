@@ -196,6 +196,10 @@ export function IssuesClient({
   );
   const [recordedSearch, setRecordedSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const isOperator = listBasePath.startsWith("/br/");
+  const controlSize = isOperator ? "touch" : "default";
+  const compactActionSize = isOperator ? "touch" : "sm";
+  const fieldClassName = isOperator ? "h-12 w-full sm:h-10" : "h-10 w-full";
   const createIssueDefaultValues = useMemo<CreateIssueValues>(
     () => ({
       branchId: defaultBranchId ? String(defaultBranchId) : "",
@@ -211,6 +215,23 @@ export function IssuesClient({
     (option) =>
       option.value === "all" || allowedIssueTypes.includes(option.value),
   );
+  const isConsumptionScope =
+    allowedIssueTypes.length === 1 && allowedIssueTypes[0] === "consumption";
+  const issueListTitle = isConsumptionScope
+    ? INVENTORY_VI.manualConsumptionSlipsTitle
+    : INVENTORY_VI.issueSlipsTitle;
+  const createIssueActionLabel = isConsumptionScope
+    ? INVENTORY_VI.manualConsumptionCreateAction
+    : INVENTORY_VI.issueCreateAction;
+  const createIssueDialogDescription = isConsumptionScope
+    ? INVENTORY_VI.manualConsumptionCreateDescription
+    : INVENTORY_VI.issueCreateDialogDescription;
+  const issueEmptyNoDataTitle = isConsumptionScope
+    ? INVENTORY_VI.manualConsumptionEmptyTitle
+    : INVENTORY_VI.issueEmptyNoData;
+  const issueEmptyDescription = isConsumptionScope
+    ? INVENTORY_VI.manualConsumptionEmptyDescription
+    : INVENTORY_VI.issueEmptyDescription;
   // Capability-gated only — the CSV builds client-side and downloads fine
   // on phones; hiding it by breakpoint forced warehouse staff back to a
   // desktop just to press one button.
@@ -333,7 +354,11 @@ export function IssuesClient({
       .replaceAll(":", "-")
       .replace("T", "-");
 
-    downloadCsv(toUtf8Base64(csv), `phieu-xuat-kho-${stamp}.csv`);
+    const filePrefix = isConsumptionScope
+      ? "phieu-tieu-hao-thu-cong"
+      : "wo-pxk-khac";
+
+    downloadCsv(toUtf8Base64(csv), `${filePrefix}-${stamp}.csv`);
     toast.success(INVENTORY_VI.issueExportSuccess(filtered.length));
   }
 
@@ -411,43 +436,36 @@ export function IssuesClient({
     router.push(buildListHref(listBasePath, next));
   }
 
+  const issueActions = (
+    <>
+      <Button
+        type="button"
+        size={controlSize}
+        onClick={() => setCreateOpen(true)}
+      >
+        <IconPlus className="size-4" />
+        {createIssueActionLabel}
+      </Button>
+      {showExportAction ? (
+        <Button
+          type="button"
+          variant="outline"
+          size={controlSize}
+          onClick={handleExportIssuesCsv}
+        >
+          <IconFileDownload className="size-4" />
+          {INVENTORY_VI.exportReportAction}
+        </Button>
+      ) : null}
+    </>
+  );
+
   const filterBar = (
-    <AppToolbar variant="inline">
-      <div className="flex flex-1 flex-wrap items-end gap-3">
-        <Select value={activeStatus} onValueChange={setActiveStatus}>
-          <SelectTrigger
-            size={embedded ? "touch" : "default"}
-            className={embedded ? "w-full" : "w-48"}
-          >
-            <SelectValue placeholder={INVENTORY_VI.allStatusesOption} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{INVENTORY_VI.allStatusesOption}</SelectItem>
-            {STATE_FILTER_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={activeType} onValueChange={setActiveType}>
-          <SelectTrigger
-            size={embedded ? "touch" : "default"}
-            className={embedded ? "w-full" : "w-48"}
-          >
-            <SelectValue placeholder={INVENTORY_VI.issueTypeFilterAll} />
-          </SelectTrigger>
-          <SelectContent>
-            {allowedTypeFilterOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <InputGroup className="h-12 flex-1 basis-full sm:h-10 sm:basis-auto">
+    <AppToolbar
+      variant="inline"
+      className="items-stretch sm:items-center"
+      search={
+        <InputGroup className={fieldClassName}>
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -458,17 +476,57 @@ export function IssuesClient({
             inputMode="search"
           />
         </InputGroup>
-      </div>
+      }
+      filters={
+        <>
+          <Select value={activeStatus} onValueChange={setActiveStatus}>
+            <SelectTrigger
+              size={controlSize}
+              className={isOperator ? "w-full sm:w-48" : "w-48"}
+            >
+              <SelectValue placeholder={INVENTORY_VI.allStatusesOption} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                {INVENTORY_VI.allStatusesOption}
+              </SelectItem>
+              {STATE_FILTER_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      <div className="flex items-center gap-2">
+          <Select value={activeType} onValueChange={setActiveType}>
+            <SelectTrigger
+              size={controlSize}
+              className={isOperator ? "w-full sm:w-48" : "w-48"}
+            >
+              <SelectValue placeholder={INVENTORY_VI.issueTypeFilterAll} />
+            </SelectTrigger>
+            <SelectContent>
+              {allowedTypeFilterOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </>
+      }
+      bulk={
         <Badge variant="outline" className="rounded-full">
           {filtered.length}/{issues.length}
         </Badge>
-        {hasActiveFilters && (
+      }
+      actions={embedded ? issueActions : null}
+      reset={
+        hasActiveFilters ? (
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size={compactActionSize}
             onClick={() => {
               setActiveStatus("all");
               setActiveType("all");
@@ -478,94 +536,20 @@ export function IssuesClient({
             <IconFilterX className="mr-1 size-4" />
             {ACTIONS_VI.clearFilter}
           </Button>
-        )}
-      </div>
-    </AppToolbar>
+        ) : null
+      }
+    />
   );
 
   const recordedConsumptionFilterBar = (
-    <AppToolbar variant="inline">
-      <div className="flex flex-1 flex-wrap items-end gap-3">
-        <Select
-          value={selectedRecordedBranchId}
-          onValueChange={setRecordedBranchId}
-        >
-          <SelectTrigger
-            size={embedded ? "touch" : "default"}
-            className={embedded ? "w-full" : "w-48"}
-          >
-            <SelectValue placeholder={BRANCH_VI.select} />
-          </SelectTrigger>
-          <SelectContent>
-            {canSelectAllRecordedBranches ? (
-              <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
-            ) : null}
-            {visibleRecordedBranchOptions.map((branch) => (
-              <SelectItem key={branch.id} value={String(branch.id)}>
-                {branch.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div
-          className={cn(
-            "flex flex-col gap-1",
-            embedded ? "w-full sm:w-auto sm:min-w-40" : "min-w-40",
-          )}
-        >
-          <Label
-            htmlFor="recorded-start-date"
-            className="text-xs font-medium text-muted-foreground font-normal"
-          >
-            {FORM_VI.fromDate}
-          </Label>
-          <Input
-            id="recorded-start-date"
-            type="date"
-            value={recordedStartDate}
-            onChange={(event) => setRecordedStartDate(event.target.value)}
-            className={cn(
-              "bg-background",
-              embedded ? "h-12 w-full" : "h-10 w-40",
-            )}
-          />
-        </div>
-        <div
-          className={cn(
-            "flex flex-col gap-1",
-            embedded ? "w-full sm:w-auto sm:min-w-40" : "min-w-40",
-          )}
-        >
-          <Label
-            htmlFor="recorded-end-date"
-            className="text-xs font-medium text-muted-foreground font-normal"
-          >
-            {FORM_VI.toDate}
-          </Label>
-          <Input
-            id="recorded-end-date"
-            type="date"
-            value={recordedEndDate}
-            onChange={(event) => setRecordedEndDate(event.target.value)}
-            className={cn(
-              "bg-background",
-              embedded ? "h-12 w-full" : "h-10 w-40",
-            )}
-          />
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size={embedded ? "touch" : "default"}
-          className={embedded ? "w-full sm:w-auto" : undefined}
-          onClick={applyRecordedDateFilter}
-        >
-          {ACTIONS_VI.filter}
-        </Button>
+    <AppToolbar
+      variant="inline"
+      className="items-stretch sm:items-center"
+      search={
         <InputGroup
           className={cn(
             "min-w-56 flex-1",
-            embedded ? "h-12 basis-full sm:h-10 sm:basis-auto" : "h-10",
+            isOperator ? "h-12 sm:h-10" : "h-10",
           )}
         >
           <InputGroupAddon>
@@ -578,20 +562,103 @@ export function IssuesClient({
             inputMode="search"
           />
         </InputGroup>
-      </div>
-
-      {hasRecordedServerFilter ? (
+      }
+      filters={
+        <>
+          <Select
+            value={selectedRecordedBranchId}
+            onValueChange={setRecordedBranchId}
+          >
+            <SelectTrigger
+              size={controlSize}
+              className={isOperator ? "w-full" : "w-48"}
+            >
+              <SelectValue placeholder={BRANCH_VI.select} />
+            </SelectTrigger>
+            <SelectContent>
+              {canSelectAllRecordedBranches ? (
+                <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
+              ) : null}
+              {visibleRecordedBranchOptions.map((branch) => (
+                <SelectItem key={branch.id} value={String(branch.id)}>
+                  {branch.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div
+            className={cn(
+              "flex flex-col gap-1",
+              isOperator ? "w-full sm:w-auto sm:min-w-40" : "min-w-40",
+            )}
+          >
+            <Label
+              htmlFor="recorded-start-date"
+              className="text-xs font-medium text-muted-foreground font-normal"
+            >
+              {FORM_VI.fromDate}
+            </Label>
+            <Input
+              id="recorded-start-date"
+              type="date"
+              value={recordedStartDate}
+              onChange={(event) => setRecordedStartDate(event.target.value)}
+              className={cn(
+                "bg-background",
+                isOperator ? "h-12 w-full" : "h-10 w-40",
+              )}
+            />
+          </div>
+          <div
+            className={cn(
+              "flex flex-col gap-1",
+              isOperator ? "w-full sm:w-auto sm:min-w-40" : "min-w-40",
+            )}
+          >
+            <Label
+              htmlFor="recorded-end-date"
+              className="text-xs font-medium text-muted-foreground font-normal"
+            >
+              {FORM_VI.toDate}
+            </Label>
+            <Input
+              id="recorded-end-date"
+              type="date"
+              value={recordedEndDate}
+              onChange={(event) => setRecordedEndDate(event.target.value)}
+              className={cn(
+                "bg-background",
+                isOperator ? "h-12 w-full" : "h-10 w-40",
+              )}
+            />
+          </div>
+        </>
+      }
+      actions={
         <Button
           type="button"
-          variant="ghost"
-          size={embedded ? "touch" : "sm"}
-          onClick={clearRecordedDateFilter}
+          variant="outline"
+          size={controlSize}
+          className={isOperator ? "w-full sm:w-auto" : undefined}
+          onClick={applyRecordedDateFilter}
         >
-          <IconFilterX className="mr-1 size-4" />
-          {ACTIONS_VI.clearFilter}
+          {ACTIONS_VI.filter}
         </Button>
-      ) : null}
-    </AppToolbar>
+      }
+      reset={
+        hasRecordedServerFilter ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size={compactActionSize}
+            onClick={clearRecordedDateFilter}
+          >
+            <IconFilterX className="mr-1 size-4" />
+            {ACTIONS_VI.clearFilter}
+          </Button>
+        ) : null
+      }
+    />
   );
 
   const issueColumns: DataTableColumn<IssueRow>[] = [
@@ -601,7 +668,7 @@ export function IssuesClient({
       render: (item) => (
         <Link
           href={`${listBasePath}/${item.id}`}
-          className="text-sm font-semibold text-primary hover:underline"
+          className="font-mono text-primary hover:underline"
         >
           {item.code}
         </Link>
@@ -610,24 +677,20 @@ export function IssuesClient({
     {
       key: "type",
       header: INVENTORY_VI.issueTypeLabel,
-      render: (item) => (
-        <span className="text-sm font-medium">
-          {issueTypeLabel(item.type, item.branchKind)}
-        </span>
-      ),
+      render: (item) => issueTypeLabel(item.type, item.branchKind),
     },
     {
       key: "branchName",
       header: BRANCH_VI.long,
-      render: (item) => (
-        <span className="text-sm text-muted-foreground">{item.branchName}</span>
-      ),
+      render: (item) => item.branchName,
     },
     {
       key: "date",
       header: INVENTORY_VI.createdDate,
       render: (item) => (
-        <span className="text-sm text-muted-foreground">{item.date}</span>
+        <span className="font-mono tabular-nums text-muted-foreground">
+          {item.date}
+        </span>
       ),
     },
     {
@@ -642,7 +705,12 @@ export function IssuesClient({
       header: "",
       className: "w-10",
       render: (item) => (
-        <Button variant="ghost" size="icon-sm" asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          asChild
+          aria-label={`${ACTIONS_VI.viewDetails} ${item.code}`}
+        >
           <Link href={`${listBasePath}/${item.id}`}>
             <IconDotsVertical className="size-4" />
           </Link>
@@ -651,77 +719,62 @@ export function IssuesClient({
     },
   ];
 
-  const recordedConsumptionColumns: DataTableColumn<RecordedConsumptionRow>[] =
-    [
-      {
-        key: "recordedAt",
-        header: INVENTORY_VI.recordedAtLabel,
-        render: (item) => (
-          <span className="text-sm text-muted-foreground">
-            {item.recordedAt}
-          </span>
-        ),
-      },
-      {
-        key: "ingredientName",
-        header: PRODUCT_VI.rawIngredient,
-        render: (item) => (
-          <span className="text-sm font-medium">{item.ingredientName}</span>
-        ),
-      },
-      {
-        key: "branchName",
-        header: BRANCH_VI.long,
-        render: (item) => (
-          <span className="text-sm text-muted-foreground">
-            {item.branchName}
-          </span>
-        ),
-      },
-      {
-        key: "locationName",
-        header: INVENTORY_VI.deductLocationLabel,
-        render: (item) => (
-          <span className="text-sm text-muted-foreground">
-            {item.locationName}
-          </span>
-        ),
-      },
-      {
-        key: "quantity",
-        header: FORM_VI.quantity,
-        render: (item) => (
-          <span className="font-mono text-sm">{item.quantity}</span>
-        ),
-      },
-      {
-        key: "unitCost",
-        header: INVENTORY_VI.unitCostLabel,
-        render: (item) => (
-          <span className="font-mono text-sm">{item.unitCost}</span>
-        ),
-      },
-      {
-        key: "totalCost",
-        header: FORM_VI.amount,
-        className: "text-right",
-        render: (item) => (
-          <span className="font-mono text-sm font-medium">
-            {item.totalCost}
-          </span>
-        ),
-      },
-      {
-        key: "sourceLabel",
-        header: INVENTORY_VI.sourceLabel,
-        className: "min-w-44",
-        render: (item) => (
-          <span className="text-sm text-muted-foreground">
-            {item.sourceLabel}
-          </span>
-        ),
-      },
-    ];
+  const recordedConsumptionColumns: DataTableColumn<RecordedConsumptionRow>[] = [
+    {
+      key: "recordedAt",
+      header: INVENTORY_VI.recordedAtLabel,
+      render: (item) => (
+        <span className="font-mono tabular-nums text-muted-foreground">
+          {item.recordedAt}
+        </span>
+      ),
+    },
+    {
+      key: "ingredientName",
+      header: PRODUCT_VI.rawIngredient,
+      render: (item) => item.ingredientName,
+    },
+    {
+      key: "branchName",
+      header: BRANCH_VI.long,
+      render: (item) => item.branchName,
+    },
+    {
+      key: "locationName",
+      header: INVENTORY_VI.deductLocationLabel,
+      render: (item) => item.locationName,
+    },
+    {
+      key: "quantity",
+      header: FORM_VI.quantity,
+      render: (item) => (
+        <span className="font-mono tabular-nums">{item.quantity}</span>
+      ),
+    },
+    {
+      key: "unitCost",
+      header: INVENTORY_VI.unitCostLabel,
+      render: (item) => (
+        <span className="font-mono tabular-nums">{item.unitCost}</span>
+      ),
+    },
+    {
+      key: "totalCost",
+      header: FORM_VI.amount,
+      className: "text-right",
+      render: (item) => (
+        <span className="font-mono font-medium tabular-nums">
+          {item.totalCost}
+        </span>
+      ),
+    },
+    {
+      key: "sourceLabel",
+      header: INVENTORY_VI.sourceLabel,
+      className: "min-w-44",
+      render: (item) => item.sourceLabel,
+    },
+  ];
 
   const renderIssueCard = (item: IssueRow) => (
     <InteractiveCard asChild minHeight="mobile" padding="default">
@@ -767,50 +820,15 @@ export function IssuesClient({
 
   const content = (
     <>
-      {embedded ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="touch" onClick={() => setCreateOpen(true)}>
-            <IconPlus className="size-4" />
-            {INVENTORY_VI.createSlipAction}
-          </Button>
-          {showExportAction && (
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              onClick={handleExportIssuesCsv}
-            >
-              <IconFileDownload className="size-4" />
-              {INVENTORY_VI.exportReportAction}
-            </Button>
-          )}
-        </div>
-      ) : (
+      {embedded ? null : (
         <AppPageHeader
           eyebrow={messages.inventory.shell.moduleName}
           title={pageTitle ?? tNav("consumption", "navigation")}
-          actions={
-            <>
-              <Button type="button" onClick={() => setCreateOpen(true)}>
-                <IconPlus className="size-4" />
-                {INVENTORY_VI.createSlipAction}
-              </Button>
-              {showExportAction && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleExportIssuesCsv}
-                >
-                  <IconFileDownload className="size-4" />
-                  {INVENTORY_VI.exportReportAction}
-                </Button>
-              )}
-            </>
-          }
+          actions={issueActions}
         />
       )}
 
-      {recordedConsumptions.length > 0 && (
+      {(recordedConsumptions.length > 0 || isConsumptionScope) && (
         <AppSection
           title={INVENTORY_VI.recordedConsumptionTitle}
           headerHint={visibleRecordedConsumptionHint}
@@ -818,7 +836,7 @@ export function IssuesClient({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size={compactActionSize}
               onClick={handleExportRecordedCsv}
             >
               <IconFileDownload className="size-4" />
@@ -870,7 +888,11 @@ export function IssuesClient({
         </AppSection>
       )}
 
-      <AppSection className="overflow-hidden" contentFlush>
+      <AppSection
+        title={issueListTitle}
+        className="overflow-hidden"
+        contentFlush
+      >
         {filterBar}
         <DataTable
           columns={issueColumns}
@@ -879,9 +901,9 @@ export function IssuesClient({
           emptyTitle={
             hasActiveFilters
               ? INVENTORY_VI.issueEmptyFiltered
-              : INVENTORY_VI.issueEmptyNoData
+              : issueEmptyNoDataTitle
           }
-          emptyDescription={INVENTORY_VI.issueEmptyDescription}
+          emptyDescription={issueEmptyDescription}
           emptyMode={hasActiveFilters ? "no-results" : "no-data"}
           mobileCardRender={renderIssueCard}
         />
@@ -890,14 +912,14 @@ export function IssuesClient({
       <FormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        title={INVENTORY_VI.createSlipAction}
-        description={INVENTORY_VI.issueCreateDialogDescription}
+        title={createIssueActionLabel}
+        description={createIssueDialogDescription}
         schema={createIssueSchema}
         defaultValues={createIssueDefaultValues}
         entityKey={defaultBranchId ?? "new-issue"}
         onSubmit={handleCreate}
         successMessage={INVENTORY_VI.issueCreated}
-        submitLabel={INVENTORY_VI.createSlipAction}
+        submitLabel={createIssueActionLabel}
         cancelLabel={ACTIONS_VI.cancel}
       >
         {(form) => {

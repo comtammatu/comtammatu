@@ -1,19 +1,30 @@
 "use client";
 
+import type { ComponentProps } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@comtammatu/ui/components/theme-provider";
 import { Button } from "@comtammatu/ui/components/button";
 import { DropdownMenuItem } from "@comtammatu/ui/components/dropdown-menu";
 import { messages } from "@lib/messages";
 
-export function ThemeToggle() {
+type ThemeToggleProps = Pick<
+  ComponentProps<typeof Button>,
+  "className" | "size" | "variant"
+>;
+
+export function ThemeToggle({
+  className,
+  size = "icon",
+  variant = "ghost",
+}: ThemeToggleProps = {}) {
   const { theme, toggleTheme } = useTheme();
   const isNight = theme === "night";
   return (
     <Button
       type="button"
-      variant="ghost"
-      size="icon"
+      variant={variant}
+      size={size}
+      className={className}
       aria-label={
         isNight
           ? messages.common.themeToggleToLight

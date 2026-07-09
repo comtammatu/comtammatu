@@ -228,10 +228,10 @@ export function EmployeeActionGrid({
 
 const inlineStateToneClassName = {
   default: "",
-  success: "border-success/30 bg-success/5",
-  warning: "border-warning/30 bg-warning/5",
-  info: "border-info/30 bg-info/5",
-  destructive: "border-destructive/30 bg-destructive/5",
+  success: "border-success/20 bg-success/10",
+  warning: "border-warning/20 bg-warning/10",
+  info: "border-info/20 bg-info/10",
+  destructive: "border-destructive/20 bg-destructive/10",
 } satisfies Record<EmployeeTone, string>;
 
 interface EmployeeInlineStateProps {
@@ -561,6 +561,7 @@ interface EmployeeActionSectionProps {
   mobileColumns?: 1 | 2;
   wideColumns?: boolean;
   size?: "default" | "sm";
+  tone?: EmployeeTone;
   className?: string;
 }
 
@@ -572,6 +573,7 @@ export function EmployeeActionSection({
   mobileColumns = 1,
   wideColumns = false,
   size = "sm",
+  tone = "default",
   className,
 }: EmployeeActionSectionProps) {
   if (links.length === 0) return null;
@@ -581,6 +583,7 @@ export function EmployeeActionSection({
       title={title}
       description={description}
       size={size}
+      tone={tone}
       className={className}
     >
       <EmployeeActionList

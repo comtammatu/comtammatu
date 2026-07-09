@@ -29,3 +29,11 @@ test("POS payment confirmation runs from the Đã thanh toán button without an 
   assert.doesNotMatch(billReceiptSource, /confirm-dialog/);
   assert.doesNotMatch(posMessagesSource, /confirmIssue/);
 });
+
+test("POS payment sheet separates payment step from HĐĐT details", () => {
+  assert.match(billReceiptSource, /messages\.pos\.payment\.stepTitle/);
+  assert.match(billReceiptSource, /messages\.pos\.payment\.stepDescription/);
+  assert.match(billReceiptSource, /<InvoiceFormSection/);
+  assert.match(posMessagesSource, /stepTitle: "Bước thanh toán"/);
+  assert.match(posMessagesSource, /stepDescription:/);
+});

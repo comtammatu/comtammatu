@@ -18,9 +18,11 @@ import { SerwistProvider } from "./serwist-provider";
 import "@comtammatu/ui/globals.css";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
-
-
-
+import {
+  BROWSER_CHROME_THEME_COLORS,
+  MATU_THEME_COOKIE_NAME,
+  resolveMatuThemeMode,
+} from "./_lib/theme-tokens";
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ["vietnamese", "latin"],
   weight: ["400", "500", "600", "700", "800"],
@@ -56,25 +58,17 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
 };
-
-const THEME_COLORS = {
-  light: "#fff6ee",
-  night: "#1f1812",
-} as const;
 
 // Dynamic themeColor: read the `matu-theme` cookie so the browser chrome
 // matches the resolved theme from the very first SSR render (no flash).
 export async function generateViewport(): Promise<Viewport> {
   const cookieStore = await cookies();
-  const theme = cookieStore.get("matu-theme")?.value;
-  const resolved =
-    theme === "light" || theme === "night" ? theme : "light";
+  const theme = cookieStore.get(MATU_THEME_COOKIE_NAME)?.value;
+  const resolved = resolveMatuThemeMode(theme) ?? "light";
   return {
-    themeColor: THEME_COLORS[resolved],
+    themeColor: BROWSER_CHROME_THEME_COLORS[resolved],
   };
 }
 
@@ -84,9 +78,8 @@ export default async function RootLayout({
   children: ReactNode;
 }) {
   const cookieStore = await cookies();
-  const cookieTheme = cookieStore.get("matu-theme")?.value;
-  const resolvedCookie =
-    cookieTheme === "light" || cookieTheme === "night" ? cookieTheme : "light";
+  const cookieTheme = cookieStore.get(MATU_THEME_COOKIE_NAME)?.value;
+  const resolvedCookie = resolveMatuThemeMode(cookieTheme) ?? "light";
   const initialThemeClass = resolvedCookie === "night" ? "dark" : "light";
   return (
     <html

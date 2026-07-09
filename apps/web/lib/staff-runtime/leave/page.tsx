@@ -6,32 +6,38 @@ import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/staff-runtime-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { LeaveRequestClient } from "./leave-client";
 import { messages } from "@lib/messages";
 
 const copy = messages.employee.leave;
+type LeavePlane = "employee" | "branch";
 
 export async function EmployeeLeavePageContent({
   returnHref = "/br",
   routeBranchId,
   hideHeaderOnMobile,
   profileHref,
+  plane = "employee",
 }: {
   returnHref?: string;
   routeBranchId?: number;
   hideHeaderOnMobile?: boolean;
   profileHref?: string;
+  plane?: LeavePlane;
 } = {}) {
   const ctx = await getEmployeeContext();
+  const Page = plane === "branch" ? BranchOperatorPage : EmployeePage;
+
   if (!ctx) {
     return (
-      <EmployeePage
+      <Page
         title={copy.title}
         description={copy.description}
         hideHeaderOnMobile={hideHeaderOnMobile}
       >
         <EmployeeMissingProfileEmpty profileHref={profileHref} />
-      </EmployeePage>
+      </Page>
     );
   }
 
@@ -43,7 +49,7 @@ export async function EmployeeLeavePageContent({
 
   if (!branchId) {
     return (
-      <EmployeePage
+      <Page
         title={copy.unavailableTitle}
         description={copy.description}
         hideHeaderOnMobile={hideHeaderOnMobile}
@@ -53,7 +59,7 @@ export async function EmployeeLeavePageContent({
           description={copy.missingBranchDescription}
           profileHref={profileHref}
         />
-      </EmployeePage>
+      </Page>
     );
   }
 
@@ -75,7 +81,7 @@ export async function EmployeeLeavePageContent({
   const initialRequests = (requestsData ?? []) as LeaveRequestRow[];
 
   return (
-    <EmployeePage
+    <Page
       title={copy.title}
       description={copy.description}
       hideHeaderOnMobile={hideHeaderOnMobile}
@@ -97,8 +103,9 @@ export async function EmployeeLeavePageContent({
         branchId={branchId}
         branchName={branchName}
         initialRequests={initialRequests}
+        plane={plane}
       />
-    </EmployeePage>
+    </Page>
   );
 }
 

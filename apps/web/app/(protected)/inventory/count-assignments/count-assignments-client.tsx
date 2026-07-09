@@ -90,6 +90,7 @@ interface Props {
 }
 
 const ALL_SHIFTS_VALUE = "all";
+type ShiftScopeValue = number | typeof ALL_SHIFTS_VALUE | null;
 
 function seedSelections(
   employees: readonly EmployeeRow[],
@@ -126,7 +127,7 @@ function buildShiftScopeHref({
   embedded: boolean;
   branchId: number | null;
   locationId: number | null;
-  shiftId: number | null;
+  shiftId: ShiftScopeValue;
 }) {
   const params = new URLSearchParams();
   if (!embedded && branchId !== null) params.set("branchId", String(branchId));
@@ -197,7 +198,9 @@ function EmployeeAssignmentRow({
     <div className="relative overflow-hidden rounded-md bg-transparent">
       <div className="absolute inset-y-0 right-0 flex w-20 items-center justify-end">
         <Button
+          type="button"
           variant="destructive"
+          aria-label={`Xóa phân công đếm tồn của ${emp.name}`}
           className="h-full w-full rounded-none"
           disabled={isPending || !hasAssignments}
           onClick={() => {
@@ -205,7 +208,7 @@ function EmployeeAssignmentRow({
             onClear(emp.id);
           }}
         >
-          <Trash2 className="size-4" />
+          <Trash2 className="size-4" aria-hidden="true" />
         </Button>
       </div>
 
@@ -388,9 +391,11 @@ export function CountAssignmentsClient({
     const parsedShiftId =
       value === ALL_SHIFTS_VALUE ? null : Number.parseInt(value, 10);
     const nextShiftId =
-      parsedShiftId !== null && Number.isFinite(parsedShiftId)
-        ? parsedShiftId
-        : null;
+      value === ALL_SHIFTS_VALUE
+        ? ALL_SHIFTS_VALUE
+        : parsedShiftId !== null && Number.isFinite(parsedShiftId)
+          ? parsedShiftId
+          : null;
     router.replace(
       buildShiftScopeHref({
         basePath,
@@ -405,19 +410,32 @@ export function CountAssignmentsClient({
   function changeLocationScope(value: string) {
     const nextLocationId = Number.parseInt(value, 10);
     if (!Number.isFinite(nextLocationId)) return;
+    const nextShiftScope =
+      showShiftPicker && selectedShiftId === null
+        ? ALL_SHIFTS_VALUE
+        : selectedShiftId;
     router.replace(
       buildShiftScopeHref({
         basePath,
         embedded,
         branchId: selectedBranchId,
         locationId: nextLocationId,
-        shiftId: selectedShiftId,
+        shiftId: nextShiftScope,
       }),
     );
   }
 
   const showLocationPicker = scopeReady && locationOptions.length > 1;
   const showShiftPicker = scopeReady && shiftOptions.length > 0;
+  const scopePickerClassName = cn(
+    "grid gap-3",
+    embedded ? "lg:max-w-xl lg:grid-cols-2" : "sm:max-w-xl sm:grid-cols-2",
+  );
+  const scopeTriggerClassName = cn("w-full", embedded && "min-h-11");
+  const employeeListClassName = cn(
+    "gap-2 overflow-hidden",
+    embedded ? "lg:overflow-visible" : "sm:overflow-visible",
+  );
 
   const assignmentActions = (
     <div
@@ -482,7 +500,7 @@ export function CountAssignmentsClient({
               </Badge>
             ) : null}
           </div>
-          <p className="hidden text-sm leading-5 text-muted-foreground sm:block">
+          <p className="hidden text-sm leading-5 text-muted-foreground lg:block">
             {INVENTORY_VI.countAssignDescription}
           </p>
           {assignmentActions}
@@ -497,7 +515,7 @@ export function CountAssignmentsClient({
       )}
 
       {showLocationPicker || showShiftPicker ? (
-        <div className="grid gap-3 sm:max-w-xl sm:grid-cols-2">
+        <div className={scopePickerClassName}>
           {showLocationPicker ? (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="count-assignment-location">
@@ -507,7 +525,10 @@ export function CountAssignmentsClient({
                 value={String(selectedLocationId)}
                 onValueChange={changeLocationScope}
               >
-                <SelectTrigger id="count-assignment-location" className="w-full">
+                <SelectTrigger
+                  id="count-assignment-location"
+                  className={scopeTriggerClassName}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -523,13 +544,18 @@ export function CountAssignmentsClient({
 
           {showShiftPicker ? (
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="count-assignment-shift">Ca làm</Label>
+              <Label htmlFor="count-assignment-shift">Ca đếm tồn</Label>
               <Select value={shiftSelectValue} onValueChange={changeShiftScope}>
-                <SelectTrigger id="count-assignment-shift" className="w-full">
+                <SelectTrigger
+                  id="count-assignment-shift"
+                  className={scopeTriggerClassName}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ALL_SHIFTS_VALUE}>Mỗi ca</SelectItem>
+                  <SelectItem value={ALL_SHIFTS_VALUE}>
+                    Áp dụng mọi ca
+                  </SelectItem>
                   {shiftOptions.map((shift) => (
                     <SelectItem key={shift.id} value={String(shift.id)}>
                       {shift.name} · {formatShiftTime(shift.startTime)}-
@@ -560,7 +586,7 @@ export function CountAssignmentsClient({
       )}
 
       {scopeReady && employees.length > 0 && (
-        <ItemGroup className="gap-2 overflow-hidden sm:overflow-visible">
+        <ItemGroup className={employeeListClassName}>
           {employees.map((emp) => (
             <EmployeeAssignmentRow
               key={emp.id}
@@ -660,6 +686,7 @@ export function CountAssignmentsClient({
             <Button
               type="button"
               variant="outline"
+              size={embedded ? "touch" : "default"}
               className="flex-1"
               disabled={isPending}
               onClick={() => setActiveEmpId(null)}
@@ -668,6 +695,7 @@ export function CountAssignmentsClient({
             </Button>
             <Button
               type="button"
+              size={embedded ? "touch" : "default"}
               className="flex-1"
               disabled={isPending || ingredients.length === 0}
               onClick={handleSave}

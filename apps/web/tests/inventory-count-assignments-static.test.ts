@@ -55,25 +55,48 @@ test("count assignments uses the branch profile roster before employee ids", () 
     countAssignmentsPageSource,
     /const rosterClient = createServiceClient\(\)/,
   );
-  assert.match(countAssignmentsPageSource, /rosterClient\s*\.from\("profiles"\)/);
+  assert.match(
+    countAssignmentsPageSource,
+    /rosterClient\s*\.from\("profiles"\)/,
+  );
   assert.match(
     countAssignmentsPageSource,
     /rosterClient\s*\.from\("employees"\)/,
   );
   assert.match(countAssignmentsPageSource, /\.from\("profiles"\)/);
-  assert.match(countAssignmentsPageSource, /\.eq\("branch_id", selectedBranchId\)/);
-  assert.match(countAssignmentsPageSource, /\.in\("profile_id", lookupProfileIds\)/);
-  assert.doesNotMatch(countAssignmentsPageSource, /profilesRes = await supabase/);
-  assert.doesNotMatch(countAssignmentsPageSource, /employeesRes = await supabase/);
+  assert.match(
+    countAssignmentsPageSource,
+    /\.eq\("branch_id", selectedBranchId\)/,
+  );
+  assert.match(
+    countAssignmentsPageSource,
+    /\.in\("profile_id", lookupProfileIds\)/,
+  );
+  assert.doesNotMatch(
+    countAssignmentsPageSource,
+    /profilesRes = await supabase/,
+  );
+  assert.doesNotMatch(
+    countAssignmentsPageSource,
+    /employeesRes = await supabase/,
+  );
   assert.doesNotMatch(countAssignmentsPageSource, /profiles!inner/);
-  assert.doesNotMatch(countAssignmentsPageSource, /\.eq\("profiles\.branch_id"/);
+  assert.doesNotMatch(
+    countAssignmentsPageSource,
+    /\.eq\("profiles\.branch_id"/,
+  );
 });
 
-test("count assignment scope can target every shift or one active shift", () => {
+test("count assignment scope defaults to the current shift unless all-shifts is explicit", () => {
   assert.match(
     countAssignmentsPageSource,
     /shiftId\?: string \| string\[\]/,
     "count assignments page should accept a shiftId URL scope",
+  );
+  assert.match(
+    countAssignmentsPageSource,
+    /import \{ resolveDefaultShiftId \} from "@lib\/staff-runtime\/_lib\/default-shift"/,
+    "count assignments should reuse the shared current-shift resolver",
   );
   assert.match(
     countAssignmentsPageSource,
@@ -82,13 +105,43 @@ test("count assignment scope can target every shift or one active shift", () => 
   );
   assert.match(
     countAssignmentsPageSource,
+    /const requestedAllShifts = rawShiftId === ALL_SHIFTS_PARAM/,
+    "the URL should have an explicit all-shifts sentinel",
+  );
+  assert.match(
+    countAssignmentsPageSource,
+    /const defaultShiftId = resolveDefaultShiftId\([\s\S]*start_time: shift\.startTime[\s\S]*end_time: shift\.endTime[\s\S]*\)/,
+    "missing shiftId should resolve to the current or nearest shift",
+  );
+  assert.match(
+    countAssignmentsPageSource,
+    /const selectedShiftId = requestedAllShifts[\s\S]*\? null[\s\S]*: requestedShiftId != null[\s\S]*: defaultShiftId/,
+    "all-shifts should only be selected when shiftId=all is present",
+  );
+  assert.match(
+    countAssignmentsPageSource,
     /selectedShiftId === null[\s\S]*assignmentsQuery\.is\("shift_id", null\)[\s\S]*assignmentsQuery\.eq\("shift_id", selectedShiftId\)/,
-    "count assignment prefill should use the selected shift scope, with null meaning every shift",
+    "count assignment prefill should use the selected shift scope, with null reserved for explicit all-shifts",
   );
   assert.match(
     countAssignmentsClientSource,
-    /<SelectItem value=\{ALL_SHIFTS_VALUE\}>Mỗi ca<\/SelectItem>/,
-    "shift scope picker should default to every shift",
+    /<Label htmlFor="count-assignment-shift">Ca đếm tồn<\/Label>/,
+    "shift scope picker should be labeled as count assignment scope, not shift setup",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /<SelectItem value=\{ALL_SHIFTS_VALUE\}>[\s\S]*Áp dụng mọi ca[\s\S]*<\/SelectItem>/,
+    "shift scope picker should still allow an intentional every-shift assignment",
+  );
+  assert.doesNotMatch(
+    countAssignmentsClientSource,
+    /\/hr\?tab=setup|Thiết lập ca|canManageShiftSetup/,
+    "count assignments should not send operators to HR shift setup",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /value === ALL_SHIFTS_VALUE[\s\S]*\? ALL_SHIFTS_VALUE[\s\S]*: parsedShiftId/,
+    "choosing every shift should keep shiftId=all in the URL instead of clearing the default scope",
   );
   assert.match(
     countAssignmentsClientSource,
@@ -142,6 +195,52 @@ test("count assignment location picker includes branch warehouse and kitchen", (
     countAssignmentsPageSource,
     /locations\.find\(\(l\) => l\.kind === "kitchen"\)\?\.id/,
     "count assignments should default branch counting to Bếp CN when no locationId is provided",
+  );
+});
+
+test("embedded branch count assignments keep tablet touch layout", () => {
+  assert.match(
+    countAssignmentsClientSource,
+    /const scopePickerClassName = cn\([\s\S]*embedded \? "lg:max-w-xl lg:grid-cols-2" : "sm:max-w-xl sm:grid-cols-2"/,
+    "Branch embedded count assignment picker should not switch to desktop columns at sm/md",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /const scopeTriggerClassName = cn\("w-full", embedded && "min-h-11"\)/,
+    "Branch embedded count assignment scope controls should keep touch-height select triggers",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /const employeeListClassName = cn\([\s\S]*embedded \? "lg:overflow-visible" : "sm:overflow-visible"/,
+    "Branch embedded count assignment rows should keep swipe reveal contained until desktop width",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /className="hidden text-sm leading-5 text-muted-foreground lg:block"/,
+    "Branch embedded helper copy should stay hidden on phone and tablet widths",
+  );
+  assert.doesNotMatch(
+    countAssignmentsClientSource,
+    /className="grid gap-3 sm:max-w-xl sm:grid-cols-2"/,
+    "The shared count assignment picker must not hardcode the Office sm two-column layout for Branch",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /aria-label=\{`Xóa phân công đếm tồn của \$\{emp\.name\}`\}/,
+    "Swipe delete icon button should have an accessible label on touch devices",
+  );
+  assert.match(
+    countAssignmentsClientSource,
+    /<Trash2 className="size-4" aria-hidden="true" \/>/,
+    "Decorative delete icon should be hidden from assistive tech",
+  );
+  const embeddedTouchButtons =
+    countAssignmentsClientSource.match(
+      /size=\{embedded \? "touch" : "default"\}/g,
+    ) ?? [];
+  assert.ok(
+    embeddedTouchButtons.length >= 4,
+    "Embedded Branch count assignment actions and drawer footer should use touch-size buttons",
   );
 });
 
@@ -274,8 +373,8 @@ test.skip("count assignment UI uses the branch warehouse checklist layout", () =
     "Selected checklist rows should have a visible selected state",
   );
   assert.match(
-      countAssignmentsPageSource,
-      /\.in\("location_kind", \["warehouse", "kitchen"\]\)[\s\S]*\.in\("item_kind", \["raw_material", "finished_good"\]\)/,
-      "Assignments should target branch warehouse/kitchen locations and list active countable goods",
-    );
-  });
+    countAssignmentsPageSource,
+    /\.in\("location_kind", \["warehouse", "kitchen"\]\)[\s\S]*\.in\("item_kind", \["raw_material", "finished_good"\]\)/,
+    "Assignments should target branch warehouse/kitchen locations and list active countable goods",
+  );
+});

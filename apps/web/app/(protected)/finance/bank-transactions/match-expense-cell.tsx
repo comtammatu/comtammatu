@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown as IconChevronDown } from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -12,9 +13,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@comtammatu/ui/components/popover";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
+import type { SepaySupplierPaymentMatch } from "../_lib/sepay-bank-transaction-model";
 import type { ExpenseMatchOption } from "../expense-actions";
 import { matchSepayTransactionWithExpenses } from "../expense-actions";
 
@@ -22,8 +23,10 @@ const copy = messages.finance.bankTransactions;
 
 interface MatchExpenseCellProps {
   eventId: number;
+  amount: number;
   paymentId: number | null;
   expenseIds: number[];
+  supplierPaymentMatches: SepaySupplierPaymentMatch[];
   transferType: "in" | "out";
   expenseOptions: ExpenseMatchOption[];
 }
@@ -42,10 +45,16 @@ function sameIds(a: number[], b: number[]): boolean {
   return b.every((id) => left.has(id));
 }
 
+function supplierInvoiceHref(invoiceId: number): string {
+  return `/finance/supplier-invoices?invoiceId=${invoiceId}`;
+}
+
 export function MatchExpenseCell({
   eventId,
+  amount,
   paymentId,
   expenseIds,
+  supplierPaymentMatches,
   transferType,
   expenseOptions,
 }: MatchExpenseCellProps) {
@@ -66,29 +75,53 @@ export function MatchExpenseCell({
     );
   }
 
+  if (supplierPaymentMatches.length > 0) {
+    return (
+      <div className="flex flex-col gap-1">
+        {supplierPaymentMatches.map((match) => (
+          <Badge
+            key={match.id}
+            asChild
+            variant="outline"
+            className="w-fit text-success font-normal"
+          >
+            <Link href={supplierInvoiceHref(match.invoiceId)}>
+              {copy.matchedSupplierPayment(match.id)}
+            </Link>
+          </Badge>
+        ))}
+        <span className="truncate text-xs text-muted-foreground">
+          {copy.matchedSupplierPaymentDetail(
+            supplierPaymentMatches[0]?.supplierName ?? "—",
+            supplierPaymentMatches[0]?.invoiceNumber ?? "—",
+          )}
+        </span>
+      </div>
+    );
+  }
+
   if (transferType === "in") {
     return <span className="text-muted-foreground">—</span>;
   }
 
   const selectedSet = new Set(selectedIds);
-  const availableExpenses = expenseOptions.filter(
-    (exp) =>
-      exp.matchedEventId == null ||
-      exp.matchedEventId === eventId ||
-      selectedSet.has(exp.id),
+  const availableExpenses = [...expenseOptions].sort(
+    (left, right) =>
+      Math.abs(left.amount - amount) - Math.abs(right.amount - amount),
   );
-  const selectedExpenses = availableExpenses.filter((exp) =>
+  const selectedExpenses = expenseOptions.filter((exp) =>
     selectedSet.has(exp.id),
   );
   const selectedTotal = selectedExpenses.reduce(
     (sum, exp) => sum + exp.amount,
     0,
   );
+  const delta = selectedTotal - amount;
   const hasChanges = !sameIds(selectedIds, expenseIds);
 
   const triggerLabel =
     selectedIds.length > 0
-      ? `${selectedIds.length} chi${
+      ? `${copy.matchedExpenseCount(selectedIds.length)}${
           selectedExpenses.length > 0 ? ` · -${formatVND(selectedTotal)}` : ""
         }`
       : copy.matchExpensePlaceholder;
@@ -126,10 +159,10 @@ export function MatchExpenseCell({
           size="sm"
           className="h-8 w-full max-w-64 justify-between gap-2 text-xs"
         >
-          <span className="truncate">{triggerLabel}</span>
-          <IconChevronDown className="size-3.5 shrink-0" aria-hidden />
-        </Button>
-      </PopoverTrigger>
+            <span className="truncate">{triggerLabel}</span>
+            <IconChevronDown className="size-3.5 shrink-0" aria-hidden />
+          </Button>
+        </PopoverTrigger>
       <PopoverContent align="end" className="w-96">
         <div className="flex items-center justify-between gap-2">
           <span className="font-medium">{copy.matchExpenseTitle}</span>
@@ -141,8 +174,34 @@ export function MatchExpenseCell({
                 : "—"}
           </span>
         </div>
-        <ScrollArea className="max-h-72">
-          <div className="flex flex-col gap-1">
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <span className="flex flex-col gap-1">
+            <span className="text-muted-foreground">
+              {copy.bankTransactionAmount}
+            </span>
+            <span className="font-mono font-medium text-warning">
+              -{formatVND(amount)}
+            </span>
+          </span>
+          <span className="flex flex-col gap-1">
+            <span className="text-muted-foreground">
+              {copy.selectedExpenseAmount}
+            </span>
+            <span className="font-mono font-medium text-warning">
+              -{formatVND(selectedTotal)}
+            </span>
+          </span>
+          <span className="flex flex-col gap-1">
+            <span className="text-muted-foreground">
+              {copy.expenseMatchDelta}
+            </span>
+            <span className="font-mono font-medium">
+              {delta === 0 ? formatVND(0) : formatVND(Math.abs(delta))}
+            </span>
+          </span>
+        </div>
+        <div className="max-h-72 overflow-x-hidden overflow-y-auto">
+          <div className="flex flex-col gap-1 pr-1">
             {availableExpenses.map((exp) => {
               const checked = selectedSet.has(exp.id);
               return (
@@ -175,17 +234,22 @@ export function MatchExpenseCell({
               </div>
             ) : null}
           </div>
-        </ScrollArea>
+        </div>
         <div className="flex items-center justify-between gap-2 border-t">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedIds([])}
-            disabled={isPending || selectedIds.length === 0}
-          >
-            {copy.clearExpenseMatch}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild type="button" variant="ghost" size="sm">
+              <Link href="/finance/expenses">{copy.openExpenses}</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedIds([])}
+              disabled={isPending || selectedIds.length === 0}
+            >
+              {copy.clearExpenseMatch}
+            </Button>
+          </div>
           <Button
             type="button"
             size="sm"

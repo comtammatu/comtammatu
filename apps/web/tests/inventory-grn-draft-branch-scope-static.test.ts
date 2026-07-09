@@ -17,6 +17,12 @@ const grnListClient = readRepo(
   "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
 );
 const grnNewPage = readRepo("apps/web/app/(protected)/inventory/grn/new/page.tsx");
+const grnSupplierPicker = readRepo(
+  "apps/web/app/(protected)/inventory/grn/new/supplier-picker.tsx",
+);
+const grnCreateClient = readRepo(
+  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+);
 const purchaseOrderActions = readRepo(
   "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
 );
@@ -118,10 +124,31 @@ test("GRN free drafts and PO-linked drafts do not share the same unique slot", (
   );
   assert.match(
     grnListClient,
-    /:\s*`\$\{basePath\}\/new\/\$\{draft\.supplierId\}`/,
+    /:\s*newGrnSupplierHref\(basePath,\s*draft\.supplierId,\s*draft\.branchId\)/,
   );
+  assert.match(grnListClient, /branchId: number/);
+  assert.match(grnListClient, /branchId: String\(branchId\)/);
   assert.match(grnListClient, /draft\.poCode\s*\?/);
   assert.match(grnListClient, /grn\.poId != null && grn\.poCode/);
+});
+
+test("GRN supplier receiving can stay on the same new-receipt page", () => {
+  assert.match(grnNewPage, /supplierId\?: string \| string\[\]/);
+  assert.match(grnNewPage, /const selectedSupplierId = parseSupplierIdParam/);
+  assert.match(grnNewPage, /selectedSupplierId \? \(/);
+  assert.match(grnNewPage, /supplierId=\{selectedSupplierId\}/);
+  assert.match(grnNewPage, /searchParams=\{Promise\.resolve\(params\)\}/);
+  assert.match(grnNewPage, /branchId=\{branchId\}/);
+
+  assert.match(grnSupplierPicker, /function supplierHref\(supplierId: number\)/);
+  assert.match(grnSupplierPicker, /new URLSearchParams\(\{ supplierId: String\(supplierId\) \}\)/);
+  assert.match(grnSupplierPicker, /params\.set\("branchId", String\(branchId\)\)/);
+  assert.doesNotMatch(grnSupplierPicker, /\$\{basePath\}\/\$\{supplier\.id\}/);
+
+  assert.match(grnCreateClient, /confirmGrn/);
+  assert.match(grnCreateClient, /GRN_CREATE_COPY\.confirmNow/);
+  assert.doesNotMatch(grnCreateClient, /NumberPadSheet/);
+  assert.doesNotMatch(grnCreateClient, /onOpenNumpad/);
 });
 
 test("GRN new PO picker follows the selected receiving branch", () => {

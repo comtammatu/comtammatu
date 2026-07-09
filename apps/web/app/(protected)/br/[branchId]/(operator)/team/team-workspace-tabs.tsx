@@ -20,7 +20,7 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { messages } from "@lib/messages";
 
-const copy = messages.employee.teamBoard;
+const copy = messages.operator.teamBoard;
 
 export type TeamWorkspaceTabValue = "board" | "members" | "assignments";
 

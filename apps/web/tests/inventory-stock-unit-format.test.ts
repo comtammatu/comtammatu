@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { formatQty } from "../app/(protected)/inventory/_lib/format";
 import { formatStockUnits } from "../app/(protected)/inventory/_lib/stock-unit-format";
 import type { IngredientUnitRow } from "../app/(protected)/inventory/_lib/types";
 
@@ -19,6 +20,12 @@ function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
 // Plain formatter so the assertions stay independent of the vi-VN Intl
 // output used in the app.
 const plain = (n: number): string => String(n);
+
+test("quantity formatter hides meaningless 3-digit decimal tails", () => {
+  assert.equal(formatQty(300), "300");
+  assert.equal(formatQty(300.0001), "300");
+  assert.equal(formatQty(300.125), "300,125");
+});
 
 test("multi-unit stock shows a whole-count step breakdown on top", () => {
   const units = [

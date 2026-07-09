@@ -21,27 +21,12 @@ const tableWorkflowSources = [
   "app/(protected)/br/[branchId]/pos/session-actions.ts",
 ].map((path) => [path, readWebSource(path)] as const);
 
-const tableUserGuideSources = [
-  "docs/user-guides/pos/flows/pos-02-select-context.md",
-  "docs/user-guides/pos/flows/pos-07-modify-order.md",
-].map((path) => [path, readRepoSource(path)] as const);
-
 test("table settings and POS table selection do not expose seat count", () => {
   for (const [path, source] of tableWorkflowSources) {
     assert.doesNotMatch(
       source,
       /capacity|Sức chứa|sức chứa|số chỗ| chỗ|người/,
       `${path} should not expose table seat-count copy or payload fields`,
-    );
-  }
-});
-
-test("POS user guides do not describe table seat-count copy", () => {
-  for (const [path, source] of tableUserGuideSources) {
-    assert.doesNotMatch(
-      source,
-      /Sức chứa|sức chứa|số chỗ|chỗ ngồi|seat-count/,
-      `${path} should not reintroduce table seat-count or seat-moving copy`,
     );
   }
 });

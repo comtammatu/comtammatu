@@ -55,7 +55,16 @@ there, do not restate them here:
   cards/titles/KPIs, read `docs/ref/operational-data-contract.md`. Every metric
   card must bind to a contract key or an existing workflow/entity contract; if
   no contract exists, update the contract before changing UI.
-- BEFORE modifying or creating any screen or flow, read and follow `docs/ref/screen-context-map.md`. Every interface element, input, button, widget, or tab must align with the business goal, user persona, and step-by-step workflow defined there. NEVER add arbitrary fields, buttons, or components that do not serve the screen's primary purpose.
+- BEFORE non-trivial UI surface work, complete the UI Advisor Gate in
+  `docs/spec/page-archetypes.md` § 0.1. It binds the relevant
+  `docs/ref/screen-context-map.md` workflow to the route archetype, information
+  order, primary action, states, primitive choice, responsive behavior, and
+  verification. Record it in the task plan, task note, or owner-facing work
+  summary; include it in the PR when a PR exists. T1 typo-only work may skip it
+  with the skip reason.
+- Every interface element, input, button, widget, or tab must serve the actor,
+  job, and workflow locked by that gate. NEVER add arbitrary controls or data
+  outside the screen's primary purpose.
 - USE Má Tư DS primitives from `@comtammatu/ui` and the app surface adapters as
   the default implementation path after `docs/spec/design-system.md` has
   selected the pattern.
@@ -65,8 +74,11 @@ there, do not restate them here:
 - USE `apps/web/app/components/surface.tsx` for repeated app-level page/header/section/toolbar/empty/link-card patterns; domain wrappers must delegate to it instead of cloning layout/chrome. No separate visual-token layer or compatibility wrapper for app UI.
 - REMOVE stale UI rules; keep only live hard rails, workflows, contracts, or guards.
 - BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked Custom Theme contract.
-- BEFORE building or changing any page, consult `docs/spec/page-archetypes.md` (archetype recipe + exemplar) and the Shared Component Registry in `docs/modules/ui.md` § Shared Component Registry. Answer "where is component X used" with `codegraph_explore` / `codegraph_callers` or `pnpm audit:ui-components` — NEVER by grep-guessing or by cloning a component you found once.
-- UI/UX rebuild PRs MUST state the surface, primary user job, route family, change type, and primitives used before implementation.
+- BEFORE building or changing any page, follow the selected archetype recipe +
+  exemplar and the Shared Component Registry in `docs/modules/ui.md`. Answer
+  "where is component X used" with `codegraph_explore` / `codegraph_callers`
+  or `pnpm audit:ui-components` — NEVER by grep-guessing or by cloning a
+  component you found once.
 
 ## Typography Rules
 

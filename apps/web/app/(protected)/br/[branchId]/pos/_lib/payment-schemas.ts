@@ -7,12 +7,16 @@
 import { z } from "zod";
 
 /**
- * Schema for `confirmCashPayment(orderId, cashReceived)`. The cashier UI
+ * Schema for `confirmCashPayment(branchId, orderId, cashReceived)`. The cashier UI
  * clamps `cashReceived >= total` client-side, but the server-side RPC is
  * the authoritative gate (this schema only enforces non-negative; the
  * `must be >=` sentinel comes from the RPC for under-payment).
  */
 export const cashConfirmSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Branch ID không hợp lệ" }),
   orderId: z.coerce.number().int().positive({ error: "Order ID không hợp lệ" }),
   cashReceived: z.coerce
     .number()

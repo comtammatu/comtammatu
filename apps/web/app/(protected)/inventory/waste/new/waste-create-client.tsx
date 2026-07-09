@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -111,13 +111,26 @@ const labelLocationStock = (qty: string, unit: string) =>
 
 function previewTier(line: {
   value: number;
+  baseQuantity: number;
+  availableQuantity: number;
   reasonCode: string;
   projectedShiftSum: number;
   projectedBranchSum: number;
   branchCap: number;
+  rollingSum: number | null;
+  pendingIngredientValue: number;
 }): { tier: 0 | 1 | 2; photoRequired: boolean; approvalRequired: boolean } {
+  const qtyRatio =
+    line.availableQuantity > 0 ? line.baseQuantity / line.availableQuantity : 0;
+  const projectedRollingSum =
+    line.rollingSum === null
+      ? null
+      : line.rollingSum + line.pendingIngredientValue;
   const photoRequired =
-    line.value >= TIER_1_VALUE || isRiskyReason(line.reasonCode);
+    line.value >= TIER_1_VALUE ||
+    qtyRatio >= 0.5 ||
+    (projectedRollingSum !== null && projectedRollingSum >= TIER_1_VALUE) ||
+    isRiskyReason(line.reasonCode);
   const approvalRequired =
     line.value >= TIER_2_VALUE ||
     isAlwaysTier2Reason(line.reasonCode) ||
@@ -139,6 +152,12 @@ type LineState = {
   reasonCode: string;
   note: string;
   photoUrls: string[];
+};
+
+type RollingStatus = {
+  rollingSum: number;
+  lineCount: number;
+  tierOneThreshold: number;
 };
 
 function newLine(uid: string): LineState {
@@ -173,6 +192,12 @@ export function WasteCreateClient({
   );
   const [formNotes, setFormNotes] = useState("");
   const [lines, setLines] = useState<LineState[]>(() => [newLine("line-0")]);
+  const [rollingByLine, setRollingByLine] = useState<
+    Record<string, RollingStatus | undefined>
+  >({});
+  const [forcePhotoLineUids, setForcePhotoLineUids] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [isSubmitting, startSubmit] = useTransition();
 
   const ingredientOptions = useMemo(
@@ -208,6 +233,49 @@ export function WasteCreateClient({
     setLines((prev) =>
       prev.map((l) => (l.uid === uid ? { ...l, ...patch } : l)),
     );
+  }
+
+  const handleRollingStatusChange = useCallback(
+    (uid: string, status: RollingStatus | null) => {
+      setRollingByLine((prev) => {
+        if (status === null) {
+          if (!prev[uid]) return prev;
+          const next = { ...prev };
+          delete next[uid];
+          return next;
+        }
+        return { ...prev, [uid]: status };
+      });
+    },
+    [],
+  );
+
+  function getLineBaseQuantity(
+    line: LineState,
+    ingredient: WasteFormContext["ingredients"][number] | null | undefined,
+  ) {
+    const issueUnit = ingredient?.issueUnits.find(
+      (u) => String(u.unitId) === line.entryUnitId,
+    );
+    return getIssueBaseQuantity(Number(line.quantity) || 0, issueUnit);
+  }
+
+  function getLineValue(
+    line: LineState,
+    ingredient: WasteFormContext["ingredients"][number] | null | undefined,
+  ) {
+    return getLineBaseQuantity(line, ingredient) * (Number(line.unitCost) || 0);
+  }
+
+  function getPendingIngredientValue(ingredientId: number) {
+    return lines.reduce((sum, line) => {
+      if (line.ingredientId !== ingredientId) return sum;
+      return sum + getLineValue(line, ingredientById.get(ingredientId));
+    }, 0);
+  }
+
+  function revealPhotoUploadForCurrentLines() {
+    setForcePhotoLineUids(new Set(lines.map((line) => line.uid)));
   }
 
   function resolveLocationStock(
@@ -260,6 +328,12 @@ export function WasteCreateClient({
     setLines((prev) =>
       prev.length <= 1 ? prev : prev.filter((l) => l.uid !== uid),
     );
+    setForcePhotoLineUids((prev) => {
+      if (!prev.has(uid)) return prev;
+      const next = new Set(prev);
+      next.delete(uid);
+      return next;
+    });
   }
 
   function addLine() {
@@ -332,7 +406,7 @@ export function WasteCreateClient({
       const issueUnit = ingredient.issueUnits.find(
         (u) => String(u.unitId) === l.entryUnitId,
       );
-      if (ingredient.issueUnits.length > 0 && !issueUnit) {
+      if (!issueUnit) {
         toast.error(toastSelectUnitForEachLine);
         return;
       }
@@ -347,10 +421,14 @@ export function WasteCreateClient({
       const value = baseQty * cost;
       const pv = previewTier({
         value,
+        baseQuantity: baseQty,
+        availableQuantity,
         reasonCode: l.reasonCode,
         projectedShiftSum,
         projectedBranchSum,
         branchCap: context.capStatus.branchCap,
+        rollingSum: rollingByLine[l.uid]?.rollingSum ?? null,
+        pendingIngredientValue: getPendingIngredientValue(l.ingredientId),
       });
       if (pv.photoRequired && l.photoUrls.length === 0) {
         toast.error(
@@ -364,36 +442,44 @@ export function WasteCreateClient({
     }
 
     startSubmit(async () => {
-      const res = await createWasteEntry({
-        branchId: context.branch.id,
-        locationId,
-        items: lines.map((l) => ({
-          ingredient_id: l.ingredientId!,
-          quantity: Number(l.quantity),
-          entry_unit_id: l.entryUnitId ? Number(l.entryUnitId) : null,
-          unit_cost: Number(l.unitCost),
-          reason_code: l.reasonCode as never,
-          note: l.note || undefined,
-          photo_urls: l.photoUrls,
-        })),
-        notes: formNotes || undefined,
-        sourceType: "manual",
-      });
-      if (!res.success) {
-        toast.error(res.error ?? toastCreateFailed);
-        return;
+      try {
+        const res = await createWasteEntry({
+          branchId: context.branch.id,
+          locationId,
+          items: lines.map((l) => ({
+            ingredient_id: l.ingredientId!,
+            quantity: Number(l.quantity),
+            entry_unit_id: l.entryUnitId ? Number(l.entryUnitId) : null,
+            unit_cost: Number(l.unitCost),
+            reason_code: l.reasonCode as never,
+            note: l.note || undefined,
+            photo_urls: l.photoUrls,
+          })),
+          notes: formNotes || undefined,
+          sourceType: "manual",
+        });
+        if (!res.success) {
+          if (res.error?.includes("bằng chứng") || res.error?.includes("ảnh")) {
+            revealPhotoUploadForCurrentLines();
+          }
+          toast.error(res.error ?? toastCreateFailed);
+          return;
+        }
+        toast.success(
+          toastCreateSuccess(
+            res.data?.issueNumber ?? "",
+            res.data?.itemsCreated ?? 0,
+            res.data?.requiresApproval ?? false,
+          ),
+        );
+        const fallbackSuccessHref = embedded
+          ? `/br/${context.branch.id}/stock`
+          : `/inventory/issues/${res.data?.issueId}`;
+        router.push(successHref ?? fallbackSuccessHref);
+      } catch (error) {
+        console.error("inventory.waste.create_failed", error);
+        toast.error(toastCreateFailed);
       }
-      toast.success(
-        toastCreateSuccess(
-          res.data?.issueNumber ?? "",
-          res.data?.itemsCreated ?? 0,
-          res.data?.requiresApproval ?? false,
-        ),
-      );
-      const fallbackSuccessHref = embedded
-        ? `/br/${context.branch.id}/stock`
-        : `/inventory/issues/${res.data?.issueId}`;
-      router.push(successHref ?? fallbackSuccessHref);
     });
   }
 
@@ -509,8 +595,9 @@ export function WasteCreateClient({
           const locationStock = selectedIngredient
             ? resolveLocationStock(selectedIngredient, locationId)
             : null;
+          const availableQuantity = Number(locationStock?.quantity ?? 0);
           const maxEntryQuantity = getIssueMaxEntryQuantity(
-            locationStock?.quantity ?? 0,
+            availableQuantity,
             selectedUnit,
           );
           const maxQuantityValue =
@@ -518,11 +605,22 @@ export function WasteCreateClient({
           const lineIssueUnits = selectedIngredient?.issueUnits ?? [];
           const preview = previewTier({
             value,
+            baseQuantity: baseQty,
+            availableQuantity,
             reasonCode: line.reasonCode,
             projectedShiftSum,
             projectedBranchSum,
             branchCap: context.capStatus.branchCap,
+            rollingSum: rollingByLine[line.uid]?.rollingSum ?? null,
+            pendingIngredientValue:
+              line.ingredientId === null
+                ? value
+                : getPendingIngredientValue(line.ingredientId),
           });
+          const showPhotoUpload =
+            preview.photoRequired ||
+            forcePhotoLineUids.has(line.uid) ||
+            line.photoUrls.length > 0;
           return (
             <Item
               key={line.uid}
@@ -626,6 +724,9 @@ export function WasteCreateClient({
                       ? ingredientById.get(line.ingredientId)?.name
                       : undefined
                   }
+                  onStatusChange={(status) =>
+                    handleRollingStatusChange(line.uid, status)
+                  }
                 />
 
                 <div className="grid grid-cols-2 gap-3">
@@ -708,10 +809,12 @@ export function WasteCreateClient({
                   />
                 </div>
 
-                {preview.photoRequired ? (
+                {showPhotoUpload ? (
                   <div>
                     <Label>
-                      {messages.inventory.waste.proofPhotoLabel(preview.tier)}
+                      {messages.inventory.waste.proofPhotoLabel(
+                        preview.tier === 0 ? 1 : preview.tier,
+                      )}
                     </Label>
                     <WastePhotoUpload
                       tenantId={context.tenantId}

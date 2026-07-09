@@ -11,6 +11,7 @@ import {
   resolveRequestedBranchId,
 } from "../_lib/inventory-scope";
 import { formatDate } from "../_lib/format";
+import { getRecipeLineBaseQuantity } from "../_lib/recipe-cost";
 import { getIngredientUnitDisplayName } from "../_lib/unit-display";
 import { RecipesClient } from "./recipes-client";
 import type { RecipeRow, RecipeItem } from "./recipes-client";
@@ -53,7 +54,7 @@ export default async function RecipesPage({
       fetchRecipes(),
       fetchMenuItemsForRecipes(),
       fetchIngredients(),
-      fetchBranchWacMap(),
+      fetchBranchWacMap(branchId),
       branchId != null
         ? fetchBranchMenuStockCapacity(branchId)
         : Promise.resolve({ success: true as const, data: {} }),
@@ -98,7 +99,14 @@ export default async function RecipesPage({
           wac != null ? wac : Number(line.ingredients?.unit_cost ?? 0);
         const entryUnitId =
           line.entry_unit_id == null ? null : Number(line.entry_unit_id);
+        const yieldFactor = Number(line.yield_factor ?? 1);
         const catalogIngredient = ingredientById.get(ingredientId);
+        const baseQuantity = getRecipeLineBaseQuantity({
+          quantity: qty,
+          yieldFactor,
+          entryUnitId,
+          units: catalogIngredient?.units,
+        });
         const fallbackUnit =
           line.ingredients?.ingredient_units?.find((u) => u.is_base)?.units?.code ??
           "";
@@ -112,9 +120,9 @@ export default async function RecipesPage({
             fallbackUnit,
           ),
           entryUnitId,
-          yieldFactor: Number(line.yield_factor ?? 1),
+          yieldFactor,
           note: line.note ?? null,
-          lineCost: qty * unitCost,
+          lineCost: baseQuantity * unitCost,
         };
       });
 

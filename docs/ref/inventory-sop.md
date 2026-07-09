@@ -39,7 +39,7 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 | ----------------------------------- | ------------------------------- | --------------------------------------------------------------- |
 | NCC giao Kho Tổng                   | `PO`, `GRN`                     | Tăng tồn Kho Tổng                                               |
 | NCC giao Bếp Trung Tâm              | `PO`, `GRN`                     | Tăng tồn Bếp Trung Tâm                                          |
-| NCC giao chi nhánh                  | `PO`, `GRN`                     | Tăng tồn Kho CN                                                 |
+| NCC giao chi nhánh                  | `PO`, `GRN`                     | Tăng tồn Kho CN hoặc Bếp CN theo nơi nhập đã chọn               |
 | Kho Tổng cấp chi nhánh              | `stock_transfer`                | Kho Tổng giảm, Kho CN tăng                                      |
 | Bếp Trung Tâm cấp chi nhánh         | `stock_transfer`                | Bếp Trung Tâm giảm, Kho CN tăng                                 |
 | Chi nhánh chuyển chi nhánh          | `stock_transfer`                | Chi nhánh gửi giảm, chi nhánh nhận tăng                         |
@@ -76,9 +76,9 @@ Luồng dùng state machine 5 bước: `draft -> confirmed_ship -> in_transit ->
 - Không dùng transfer để ghi tiêu hao chi nhánh.
 - Nếu nhận thiếu, nhập số thực nhận và ghi lý do.
 
-### 4.3 Sản xuất tại Bếp Trung Tâm
+### 4.3 Sản xuất tại Bếp Trung Tâm / Bếp Chi Nhánh
 
-1. Bếp Trung Tâm tạo `production_order`.
+1. Bếp Trung Tâm hoặc chi nhánh tạo `production_order`.
 2. Chọn thành phẩm `finished_good` và số lượng cần sản xuất.
 3. Hệ thống kiểm tra BOM (`production_recipes`) và tồn nguyên liệu.
 4. Xác nhận lệnh sản xuất.
@@ -89,7 +89,7 @@ Luồng dùng state machine 5 bước: `draft -> confirmed_ship -> in_transit ->
 
 Điểm kiểm soát:
 
-- New production order chỉ tạo cho `central_kitchen`.
+- New production order tạo cho `central_kitchen` hoặc `branch` có Bếp CN stock-bearing.
 - Nếu thiếu nguyên liệu hoặc thiếu BOM, không xác nhận lệnh.
 
 ### 4.4 Tiêu hao chi nhánh

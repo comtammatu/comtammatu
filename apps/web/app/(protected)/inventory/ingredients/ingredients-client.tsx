@@ -44,7 +44,7 @@ import {
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
-import { formatVND } from "../_lib/format";
+import { formatDecimal, formatVND } from "../_lib/format";
 import {
   CATEGORY_TONE_CLASS,
   ITEM_KIND_LABELS,
@@ -98,10 +98,6 @@ function storageLabel(type: string | null): string {
   return ingredientListCopy.storageAmbient;
 }
 
-const conversionNumberFormatter = new Intl.NumberFormat("vi-VN", {
-  maximumFractionDigits: 6,
-});
-
 function categoryLabel(item: IngredientRow): string | null {
   return item.category_name ?? item.category ?? null;
 }
@@ -130,11 +126,11 @@ function unitsSummary(item: IngredientRow): string {
   return units
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)
-    .map((u) =>
-      u.is_base
-        ? `${u.unit_code} (${ingredientFormCopy.units.baseTag})`
-        : `${u.unit_code} ×${conversionNumberFormatter.format(u.to_base_factor)}`,
-    )
+	    .map((u) =>
+	      u.is_base
+	        ? `${u.unit_code} (${ingredientFormCopy.units.baseTag})`
+	        : `${u.unit_code} ×${formatDecimal(u.to_base_factor, 6)}`,
+	    )
     .join(" · ");
 }
 
@@ -171,7 +167,7 @@ function IngredientMobileCard({
   return (
     <InteractiveCard
       minHeight="tap"
-      className="flex-col items-stretch gap-0 p-0"
+      className="flex-col items-stretch gap-1 p-0"
     >
       <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-1">
         <div className="min-w-0 flex-1">

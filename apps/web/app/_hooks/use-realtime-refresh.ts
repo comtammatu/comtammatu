@@ -42,6 +42,7 @@ interface UseRealtimeRefreshOptions {
   /** Re-subscribe when any of these change (e.g. [branchId]). */
   deps: DependencyList;
   enabled?: boolean;
+  pollMs?: number | false;
 }
 
 /**
@@ -54,6 +55,7 @@ export function useRealtimeRefresh({
   setupChannel,
   deps,
   enabled = true,
+  pollMs = AUTO_REFRESH_MS,
 }: UseRealtimeRefreshOptions): void {
   const router = useRouter();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -74,6 +76,15 @@ export function useRealtimeRefresh({
     }, waitMs);
   }, [enabled, router]);
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
+
   useRealtimeChannel(
     (supabase, token) => {
       if (!enabled) return null;
@@ -85,7 +96,8 @@ export function useRealtimeRefresh({
   );
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || pollMs === false || pollMs <= 0) return;
+    const intervalMs = pollMs;
 
     // Pause polling when the tab is hidden. Mobile CPUs throttle background
     // tabs; refreshing while hidden does nothing useful and stacks work for
@@ -101,7 +113,7 @@ export function useRealtimeRefresh({
 
     function startInterval() {
       if (interval !== null) return;
-      interval = setInterval(tick, AUTO_REFRESH_MS);
+      interval = setInterval(tick, intervalMs);
     }
     function stopInterval() {
       if (interval !== null) {
@@ -112,7 +124,7 @@ export function useRealtimeRefresh({
 
     function handleVisibilityChange() {
       if (document.visibilityState === "visible") {
-        if (Date.now() - lastRefreshAt >= AUTO_REFRESH_MS) {
+        if (Date.now() - lastRefreshAt >= intervalMs) {
           lastRefreshAt = Date.now();
           scheduleRefresh();
         }
@@ -132,5 +144,5 @@ export function useRealtimeRefresh({
         timerRef.current = null;
       }
     };
-  }, [enabled, scheduleRefresh]);
+  }, [enabled, pollMs, scheduleRefresh]);
 }

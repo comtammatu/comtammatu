@@ -105,7 +105,13 @@ export function InvoiceFormSection({
     state.enabled && mstTrim.length > 0 && state.buyerName.trim().length === 0;
 
   return (
-    <AppSection size="sm" contentClassName="gap-3">
+    <AppSection
+      title={POS_VI.hddtTitle}
+      description={POS_VI.hddtDescription}
+      icon={<IconReceipt />}
+      size="sm"
+      contentClassName="gap-3"
+    >
       <>
         <Field orientation="horizontal">
           <Checkbox
@@ -129,7 +135,6 @@ export function InvoiceFormSection({
             htmlFor={checkboxId}
             className="flex flex-1 items-center gap-2 text-sm font-medium"
           >
-            <IconReceipt />
             {POS_VI.buyerNoInvoice}
           </FieldLabel>
         </Field>

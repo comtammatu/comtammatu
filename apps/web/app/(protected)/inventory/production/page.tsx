@@ -1,4 +1,3 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchProductionRuns, type ProductionRunRow } from "../production-run-actions";
@@ -9,6 +8,7 @@ import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { loadProductionSurfaceData } from "../production-data";
 import { ProductionRecipePanel } from "../production-recipe-panel";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
 
 interface ProductionPageProps {
   searchParams?: Promise<{ branchId?: string | string[], tab?: string }>;
@@ -50,7 +50,7 @@ export async function ProductionPageContent({
   const recipesContent = surfaceData.recipeLoadError ? (
     <AppEmptyState
       mode="error"
-      title="Không thể tải công thức sản xuất"
+      title={messages.inventory.operatorFlow.productionRecipeLoadFailed}
       description={surfaceData.recipeLoadError}
     />
   ) : (

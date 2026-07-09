@@ -62,6 +62,7 @@ import {
 } from "../procurement-actions";
 import type { SupplierInvoiceCursor } from "../procurement-actions";
 import {
+  getSupplierInvoiceOutstandingAmount,
   mapSupplierInvoiceRow,
   type SupplierInvoiceRow,
 } from "./supplier-invoice-row";
@@ -99,7 +100,9 @@ type SupplierInvoiceGroup = {
   totalAmount: number;
   paidAmount: number;
   outstandingAmount: number;
+  overdueAmount: number;
   overdueCount: number;
+  nextDueDate: string | null;
 };
 
 const ALL_FILTER_VALUE = "_all";
@@ -169,7 +172,7 @@ function createSupplierPaymentDefaultValues(
   invoice?: SupplierInvoiceRow | null,
 ): SupplierPaymentFormValues {
   return {
-    amount: invoice ? String(getOutstandingAmount(invoice)) : "",
+    amount: invoice ? String(getSupplierInvoiceOutstandingAmount(invoice)) : "",
     paymentMethod: "bank_transfer",
     referenceNote: "",
   };
@@ -180,13 +183,11 @@ function formatDate(value: string | null) {
   return formatVNDate(value, "Chưa có");
 }
 
-function getOutstandingAmount(invoice: SupplierInvoiceRow) {
-  return Math.max(invoice.amount - invoice.paidAmount, 0);
-}
-
 function getPrimaryInvoice(group: SupplierInvoiceGroup) {
   return (
-    group.invoices.find((invoice) => getOutstandingAmount(invoice) > 0) ??
+    group.invoices.find(
+      (invoice) => getSupplierInvoiceOutstandingAmount(invoice) > 0,
+    ) ??
     group.invoices[0] ??
     null
   );
@@ -222,6 +223,34 @@ function getDisplayMatchStatus(invoice: SupplierInvoiceRow) {
 
 function isMissingMatchingEvidence(invoice: SupplierInvoiceRow) {
   return invoice.grnId == null;
+}
+
+function getInvoiceAgingLabel(
+  invoice: SupplierInvoiceRow,
+  copy: typeof messages.inventory.supplierInvoices,
+) {
+  if (
+    invoice.paymentStatus === "paid" ||
+    getSupplierInvoiceOutstandingAmount(invoice) <= 0
+  ) {
+    return copy.agingPaid;
+  }
+  if (!invoice.dueDate) return copy.agingNoDueDate;
+
+  const days = diffVNDateDays(invoice.dueDate, getVNDateString());
+  if (days > 0) return copy.agingOverdue(days);
+  if (days === 0) return copy.agingDueToday;
+  return copy.agingDueIn(Math.abs(days));
+}
+
+function getPaymentMethodLabel(
+  method: string,
+  copy: typeof messages.inventory.supplierInvoices,
+) {
+  if (method === "cash" || method === "bank_transfer") {
+    return copy.paymentMethods[method];
+  }
+  return method || copy.unknownPaymentMethod;
 }
 
 function SupplierInvoiceCreateFields({
@@ -556,18 +585,28 @@ export function SupplierInvoicesClient({
           totalAmount: 0,
           paidAmount: 0,
           outstandingAmount: 0,
+          overdueAmount: 0,
           overdueCount: 0,
+          nextDueDate: null,
         };
         groups.set(groupId, group);
       }
 
+      const outstandingAmount = getSupplierInvoiceOutstandingAmount(invoice);
       group.invoices.push(invoice);
       group.invoiceCount += 1;
       group.totalAmount += invoice.amount;
       group.paidAmount += invoice.paidAmount;
-      group.outstandingAmount += getOutstandingAmount(invoice);
+      group.outstandingAmount += outstandingAmount;
+      if (outstandingAmount > 0 && invoice.dueDate) {
+        group.nextDueDate =
+          group.nextDueDate == null || invoice.dueDate < group.nextDueDate
+            ? invoice.dueDate
+            : group.nextDueDate;
+      }
       if (isInvoiceOverdue(invoice)) {
         group.overdueCount += 1;
+        group.overdueAmount += outstandingAmount;
       }
     }
 
@@ -595,7 +634,7 @@ export function SupplierInvoicesClient({
     filteredInvoices[0] ??
     null;
   const selectedOutstandingAmount = selectedInvoice
-    ? getOutstandingAmount(selectedInvoice)
+    ? getSupplierInvoiceOutstandingAmount(selectedInvoice)
     : 0;
   const selectedMissingMatchingEvidence = selectedInvoice
     ? isMissingMatchingEvidence(selectedInvoice)
@@ -788,6 +827,23 @@ export function SupplierInvoicesClient({
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{copy.aging}</span>
+              <span
+                className={cn(
+                  "text-right font-mono font-semibold",
+                  group.overdueAmount > 0 && "text-destructive",
+                )}
+              >
+                {group.overdueAmount > 0
+                  ? messages.inventory.common.currencyCompact(
+                      formatVND(group.overdueAmount),
+                    )
+                  : group.nextDueDate
+                    ? formatDate(group.nextDueDate)
+                    : copy.noOpenDueDate}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">{copy.paidAmount}</span>
               <span className="font-mono">
                 {messages.inventory.common.currencyCompact(
@@ -833,6 +889,34 @@ export function SupplierInvoicesClient({
       className: "min-w-28",
       render: (group) => (
         <span className="text-sm text-muted-foreground">{group.subtitle}</span>
+      ),
+    },
+    {
+      key: "aging",
+      header: copy.aging,
+      className: "min-w-40 text-right",
+      render: (group) => (
+        <div className="flex flex-col items-end gap-1 text-right">
+          <span
+            className={cn(
+              "font-mono text-sm tabular-nums",
+              group.overdueAmount > 0 && "font-semibold text-destructive",
+            )}
+          >
+            {group.overdueAmount > 0
+              ? messages.inventory.common.currencyCompact(
+                  formatVND(group.overdueAmount),
+                )
+              : group.nextDueDate
+                ? formatDate(group.nextDueDate)
+                : copy.noOpenDueDate}
+          </span>
+          {group.overdueCount > 0 ? (
+            <span className="text-xs text-muted-foreground">
+              {copy.overdueGroupSummary(group.overdueCount)}
+            </span>
+          ) : null}
+        </div>
       ),
     },
     {
@@ -951,6 +1035,10 @@ export function SupplierInvoicesClient({
       : null;
 
   const activeGroupId = selectedGroup?.id ?? null;
+  const selectedAgingLabel = selectedInvoice
+    ? getInvoiceAgingLabel(selectedInvoice, copy)
+    : null;
+  const selectedLastPayment = selectedInvoice?.lastPayment ?? null;
 
   return (
     <AppPage width="xwide">
@@ -1156,10 +1244,24 @@ export function SupplierInvoicesClient({
                     )}
                   </p>
                 </div>
+                <div className="rounded-md border bg-muted/30 p-3">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      isInvoiceOverdue(selectedInvoice) &&
+                        "border-destructive/20 text-destructive",
+                    )}
+                  >
+                    {copy.aging}
+                  </Badge>
+                  <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
+                    {selectedAgingLabel}
+                  </p>
+                </div>
               </div>
 
               <dl className="grid gap-2 sm:grid-cols-2">
-                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+                <div className="flex items-center justify-between gap-3 px-3 py-2">
                   <dt className="text-sm text-muted-foreground">
                     {copy.invoiceDate}
                   </dt>
@@ -1167,7 +1269,7 @@ export function SupplierInvoicesClient({
                     {formatDate(selectedInvoice.invoiceDate)}
                   </dd>
                 </div>
-                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+                <div className="flex items-center justify-between gap-3 px-3 py-2">
                   <dt className="text-sm text-muted-foreground">
                     {copy.dueDate}
                   </dt>
@@ -1180,6 +1282,50 @@ export function SupplierInvoicesClient({
                     {formatDate(selectedInvoice.dueDate)}
                   </dd>
                 </div>
+                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+                  <dt className="text-sm text-muted-foreground">
+                    {copy.payableFormulaLabel}
+                  </dt>
+                  <dd className="text-right text-sm font-medium">
+                    {copy.payableFormula(
+                      messages.inventory.common.currencyCompact(
+                        formatVND(selectedInvoice.amount),
+                      ),
+                      messages.inventory.common.currencyCompact(
+                        formatVND(selectedInvoice.paidAmount),
+                      ),
+                    )}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+                  <dt className="text-sm text-muted-foreground">
+                    {copy.lastPayment}
+                  </dt>
+                  <dd className="text-right text-sm font-medium">
+                    {selectedLastPayment
+                      ? copy.lastPaymentSummary(
+                          formatDate(selectedLastPayment.paymentDate),
+                          getPaymentMethodLabel(
+                            selectedLastPayment.paymentMethod,
+                            copy,
+                          ),
+                          messages.inventory.common.currencyCompact(
+                            formatVND(selectedLastPayment.amount),
+                          ),
+                        )
+                      : copy.noPaymentHistory}
+                  </dd>
+                </div>
+                {selectedLastPayment?.referenceNote ? (
+                  <div className="flex items-center justify-between gap-3 px-3 py-2">
+                    <dt className="text-sm text-muted-foreground">
+                      {copy.paymentReference}
+                    </dt>
+                    <dd className="text-right text-sm font-medium">
+                      {selectedLastPayment.referenceNote}
+                    </dd>
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
                   <dt className="text-sm text-muted-foreground">
                     {copy.linkedGrn}

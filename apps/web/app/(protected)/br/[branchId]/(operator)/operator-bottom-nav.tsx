@@ -1,15 +1,12 @@
 "use client";
 
 import {
-  CalendarDays,
   ChefHat,
   ClipboardCheck,
   Clock,
-  Ellipsis,
   Home,
   Package,
   Truck,
-  User,
   Users,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -21,8 +18,6 @@ import { messages } from "@lib/messages";
 
 const branchCopy = messages.settings.branch;
 
-// Curated central-site tabs (design contract screens 1+4): the site's core
-// jobs get first-class tabs; everything else lives on /more.
 function centralNavItems(
   branchId: number,
   branchKind: BranchKind,
@@ -48,18 +43,6 @@ function centralNavItems(
     exact: false,
     matchPrefixes: [`${base}/stock/count-slips`, `${base}/stock/count`],
   };
-  // Overflow routes reachable only via /more light the More tab so the
-  // bottom nav never loses its active indicator (review PR #249).
-  const moreOverflow = [
-    `${base}/stock/waste`,
-    `${base}/stock/supplier-returns`,
-    `${base}/stock/transfer`,
-    `${base}/shift`,
-    `${base}/team`,
-    `${base}/pos-sessions`,
-    `${base}/settings`,
-    `${base}/profile`,
-  ];
   if (branchKind === "central_supply") {
     return [
       home,
@@ -72,13 +55,6 @@ function centralNavItems(
       },
       stock,
       stocktake,
-      {
-        href: `${base}/more`,
-        label: branchCopy.centralNavMore,
-        icon: Ellipsis,
-        exact: false,
-        matchPrefixes: moreOverflow,
-      },
     ];
   }
   return [
@@ -97,18 +73,6 @@ function centralNavItems(
       exact: false,
       matchPrefixes: [`${base}/stock/grn`],
     },
-    {
-      href: `${base}/more`,
-      label: branchCopy.centralNavMore,
-      icon: Ellipsis,
-      exact: false,
-      matchPrefixes: [
-        ...moreOverflow,
-        `${base}/stock/purchase-orders`,
-        `${base}/stock/stocktake`,
-        `${base}/stock/count-slips`,
-      ],
-    },
   ];
 }
 
@@ -124,15 +88,6 @@ export function OperatorBottomNav({
   branchKind?: BranchKind;
 }) {
   const pathname = usePathname();
-  const branchManagementOverflowPrefixes = [
-    `/br/${branchId}/more`,
-    `/br/${branchId}/orders`,
-    `/br/${branchId}/dashboard`,
-    `/br/${branchId}/settings`,
-    `/br/${branchId}/pos-sessions`,
-    `/br/${branchId}/menu-limits`,
-    `/br/${branchId}/shift/schedule`,
-  ];
 
   const items: ShellNavItem[] =
     branchKind !== "branch"
@@ -150,22 +105,12 @@ export function OperatorBottomNav({
                   href: `/br/${branchId}/shift`,
                   label: APP_COPY_VI.operatorShift,
                   icon: Clock,
-                  exact: true,
+                  exact: false,
                   matchPrefixes: [
                     `/br/${branchId}/shift/clock`,
                     `/br/${branchId}/shift/checkout-approvals`,
                   ],
                 },
-                ...(!showBranchManagement
-                  ? [
-                      {
-                        href: `/br/${branchId}/shift/schedule`,
-                        label: messages.employee.nav.schedule,
-                        icon: CalendarDays,
-                        exact: false,
-                      },
-                    ]
-                  : []),
               ]
             : []),
           ...(showBranchManagement
@@ -186,24 +131,6 @@ export function OperatorBottomNav({
                 },
               ]
             : []),
-          ...(showBranchManagement
-            ? [
-                {
-                  href: `/br/${branchId}/more`,
-                  label: branchCopy.centralNavMore,
-                  icon: Ellipsis,
-                  exact: false,
-                  matchPrefixes: branchManagementOverflowPrefixes,
-                },
-              ]
-            : [
-                {
-                  href: `/br/${branchId}/profile`,
-                  label: messages.employee.nav.profileShort,
-                  icon: User,
-                  exact: false,
-                },
-              ]),
         ];
 
   return (

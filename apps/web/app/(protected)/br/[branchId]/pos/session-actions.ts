@@ -5,6 +5,7 @@ import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { messages } from "@lib/messages";
 import {
   getAuthContext,
   getAuthContextWithPermission,
@@ -74,7 +75,7 @@ export async function fetchTablesForBranch(
   if (error) {
     return {
       success: false,
-      error: "Không thể tải danh sách bàn. Vui lòng thử lại.",
+      error: messages.pos.tableGate.loadFailed,
     };
   }
 
@@ -133,7 +134,7 @@ export async function fetchPosTerminals(
   if (error) {
     return {
       success: false,
-      error: "Không thể tải danh sách máy POS. Vui lòng thử lại.",
+      error: messages.pos.sessionGate.terminalsLoadFailed,
     };
   }
 
@@ -141,7 +142,7 @@ export async function fetchPosTerminals(
   if (sessionError) {
     return {
       success: false,
-      error: "Không thể tải trạng thái máy POS. Vui lòng thử lại.",
+      error: messages.pos.sessionGate.terminalStatusLoadFailed,
     };
   }
 
@@ -215,7 +216,7 @@ export async function fetchActiveSession(
   if (error) {
     return {
       success: false,
-      error: "Không thể tải thông tin ca. Vui lòng thử lại.",
+      error: messages.pos.sessionGate.activeSessionLoadFailed,
     };
   }
 
@@ -403,7 +404,7 @@ export const closePosSession = withActionPositional(
     if (sessionFetchError) {
       return {
         success: false,
-        error: "Không thể tải thông tin ca. Vui lòng thử lại.",
+        error: messages.pos.sessionGate.activeSessionLoadFailed,
         meta: { code: "unknown" },
       };
     }

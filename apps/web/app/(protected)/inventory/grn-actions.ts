@@ -11,6 +11,7 @@ import {
   isProcurementBranchInScope,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { messages } from "@lib/messages";
 import { withAction } from "@/_lib/with-action";
 import { resolveCentralSiteHomeBranchId } from "@/_lib/branch-hub-device";
 import { getAuthContextWithPermission } from "./_lib/auth";
@@ -19,8 +20,8 @@ import { fetchProcurementBranches } from "./_lib/procurement-branches";
 import { dispatchNotificationOutbox } from "./notifications-actions";
 
 const ROLES = PROCUREMENT_ROLES;
-const grnLoadFailedError = "Không thể tải phiếu nhập.";
-const grnNotFoundError = "Không tìm thấy phiếu nhập.";
+const grnLoadFailedError = messages.inventory.grn.loadFailed;
+const grnNotFoundError = messages.inventory.grn.notFound;
 
 type GrnLookup =
   | { kind: "id"; value: number }
@@ -34,7 +35,8 @@ const grnLookupInputSchema = z.union([
 function parseGrnLookup(input: number | string): GrnLookup | null {
   const parsed = grnLookupInputSchema.safeParse(input);
   if (!parsed.success) return null;
-  if (typeof parsed.data === "number") return { kind: "id", value: parsed.data };
+  if (typeof parsed.data === "number")
+    return { kind: "id", value: parsed.data };
 
   const value = parsed.data;
   if (/^\d+$/.test(value)) {
@@ -135,7 +137,10 @@ export async function fetchRecentActivity(
   ]);
 
   if (poRes.error || grnRes.error || invRes.error) {
-    return { success: false, error: "Không thể tải hoạt động gần đây." };
+    return {
+      success: false,
+      error: messages.inventory.grn.recentActivityLoadFailed,
+    };
   }
 
   const items: RecentActivityItem[] = [
@@ -272,9 +277,10 @@ export async function fetchGrnDetail(
       "*, branches ( id, name, branch_kind ), suppliers ( id, name ), purchase_orders ( id, po_number )",
     )
     .eq("tenant_id", claims.tenant_id);
-  const { data: grn, error: e1 } = await (lookup.kind === "id"
-    ? grnQuery.eq("id", lookup.value)
-    : grnQuery.eq("grn_number", lookup.value)
+  const { data: grn, error: e1 } = await (
+    lookup.kind === "id"
+      ? grnQuery.eq("id", lookup.value)
+      : grnQuery.eq("grn_number", lookup.value)
   ).maybeSingle();
   if (e1) {
     return {
@@ -298,7 +304,10 @@ export async function fetchGrnDetail(
     .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id);
   if (e2)
-    return { success: false, error: "Không thể tải chi tiết phiếu nhập." };
+    return {
+      success: false,
+      error: messages.inventory.grn.detailLoadFailed,
+    };
   const { data: invoice } = await supabase
     .from("supplier_invoices")
     .select("id")
@@ -316,6 +325,7 @@ export async function fetchGrnDetail(
 const grnCreateSchema = z.object({
   supplierId: z.coerce.number().int().positive(),
   branchId: z.coerce.number().int().positive(),
+  locationId: z.coerce.number().int().positive().optional(),
   notes: z.string().optional(),
 });
 
@@ -344,12 +354,44 @@ export const createGrnDraft = withAction(
       };
     }
 
+    let targetLocationId = data.locationId ?? null;
+    if (targetLocationId != null) {
+      const { data: location, error: locationError } = await supabase
+        .from("inventory_locations")
+        .select("id")
+        .eq("id", targetLocationId)
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", targetBranchId)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (locationError || !location) {
+        return { success: false, error: "Nơi nhập hàng không hợp lệ." };
+      }
+    } else {
+      const { data: location, error: locationError } = await supabase
+        .from("inventory_locations")
+        .select("id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", targetBranchId)
+        .eq("is_active", true)
+        .eq("is_default_receive", true)
+        .order("sort_order", { ascending: true, nullsFirst: false })
+        .order("id", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (locationError || !location) {
+        return { success: false, error: "Chưa cấu hình nơi nhập hàng." };
+      }
+      targetLocationId = location.id;
+    }
+
     const grnNumber = `GRN-${randomUUID().slice(0, 8)}`;
     const { data: row, error } = await supabase
       .from("goods_received_notes")
       .insert({
         tenant_id: claims.tenant_id,
         branch_id: targetBranchId,
+        location_id: targetLocationId,
         supplier_id: data.supplierId,
         po_id: null,
         grn_number: grnNumber,
@@ -402,7 +444,7 @@ export const loadActiveGrnDraft = withAction(
     let query = supabase
       .from("goods_received_notes")
       .select(
-        "id, branch_id, po_id, supplier_id, grn_number, notes, updated_at",
+        "id, branch_id, location_id, po_id, supplier_id, grn_number, notes, updated_at",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("created_by", user.id)
@@ -414,7 +456,10 @@ export const loadActiveGrnDraft = withAction(
     if (data.branchId != null) query = query.eq("branch_id", data.branchId);
     const { data: row, error } = await query.maybeSingle();
     if (error) {
-      return { success: false, error: "Không thể tải phiếu nhập đang nháp." };
+      return {
+        success: false,
+        error: messages.inventory.grn.activeDraftLoadFailed,
+      };
     }
     return { success: true, data: row ?? null };
   },
@@ -447,7 +492,10 @@ export async function listMyGrnDrafts(
     ascending: false,
   });
   if (error) {
-    return { success: false, error: "Không thể tải danh sách phiếu nháp." };
+    return {
+      success: false,
+      error: messages.inventory.grn.draftListLoadFailed,
+    };
   }
   return { success: true, data: data ?? [] };
 }
@@ -485,6 +533,95 @@ export const discardGrnDraft = withAction(
         error: "Phiếu nháp không tồn tại hoặc đã được xử lý.",
       };
     }
+    return { success: true, data: { id: row.id } };
+  },
+);
+
+const updateDraftGrnReceivingSiteSchema = z.object({
+  grnId: z.coerce.number().int().positive(),
+  targetBranchId: z.coerce.number().int().positive(),
+  targetLocationId: z.coerce.number().int().positive(),
+});
+
+export const updateDraftGrnReceivingSite = withAction(
+  {
+    roles: ROLES,
+    schema: updateDraftGrnReceivingSiteSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+  },
+  async (data, { supabase, claims }) => {
+    const { data: grn, error: grnError } = await supabase
+      .from("goods_received_notes")
+      .select("id, status, branch_id, location_id, po_id")
+      .eq("id", data.grnId)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
+
+    if (grnError || !grn) {
+      return { success: false, error: "Không tìm thấy phiếu nhập." };
+    }
+    if (grn.status !== "draft") {
+      return {
+        success: false,
+        error: "Chỉ đổi nơi nhập khi phiếu nhập đang ở trạng thái nháp.",
+      };
+    }
+    if (!(await canAccessProcurementBranch(supabase, claims, grn.branch_id))) {
+      return {
+        success: false,
+        error: "Bạn chỉ được chỉnh sửa phiếu nhập của nơi mình phụ trách.",
+      };
+    }
+    if (grn.po_id != null && data.targetBranchId !== grn.branch_id) {
+      return {
+        success: false,
+        error:
+          "Phiếu nháp đang gắn đơn mua; chỉ được đổi nơi nhập trong cùng chi nhánh.",
+      };
+    }
+    if (
+      !(await canAccessProcurementBranch(supabase, claims, data.targetBranchId))
+    ) {
+      return {
+        success: false,
+        error: "Bạn chưa có quyền tạo phiếu nhập cho nơi nhập mới.",
+      };
+    }
+
+    const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
+    if (!branches.some((branch) => branch.id === data.targetBranchId)) {
+      return { success: false, error: "Chi nhánh không hợp lệ." };
+    }
+
+    const { data: location, error: locationError } = await supabase
+      .from("inventory_locations")
+      .select("id")
+      .eq("id", data.targetLocationId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", data.targetBranchId)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (locationError || !location) {
+      return { success: false, error: "Nơi nhập mới không hợp lệ." };
+    }
+
+    const { data: row, error } = await supabase
+      .from("goods_received_notes")
+      .update({
+        branch_id: data.targetBranchId,
+        location_id: data.targetLocationId,
+      })
+      .eq("id", data.grnId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "draft")
+      .select("id")
+      .single();
+    if (error || !row) {
+      return { success: false, error: "Không thể đổi nơi nhập phiếu nháp." };
+    }
+
+    revalidatePath("/inventory/grn");
+    revalidatePath(`/inventory/grn/${data.grnId}`);
     return { success: true, data: { id: row.id } };
   },
 );
@@ -703,15 +840,35 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
 
 /* ─── amendGrnLine (Owner force-edit on confirmed GRN) ─── */
 
+const GRN_NUMERIC_15_3_MAX = 999_999_999_999.999;
+const GRN_NUMERIC_15_2_MAX = 9_999_999_999_999.99;
+
 const amendGrnLineSchema = z
   .object({
     grnId: z.coerce.number().int().positive(),
     lineId: z.coerce.number().int().positive(),
-    receivedQuantity: z.coerce.number().min(0, {
-      error: "Số lượng phải >= 0",
-    }),
-    rejectedQuantity: z.coerce.number().min(0).optional().nullable(),
-    unitCost: z.coerce.number().min(0, { error: "Đơn giá phải >= 0" }),
+    receivedQuantity: z.coerce
+      .number()
+      .min(0, {
+        error: "Số lượng phải >= 0",
+      })
+      .max(GRN_NUMERIC_15_3_MAX, {
+        error: "Số lượng vượt giới hạn hệ thống.",
+      }),
+    rejectedQuantity: z.coerce
+      .number()
+      .min(0)
+      .max(GRN_NUMERIC_15_3_MAX, {
+        error: "Số trả NCC vượt giới hạn hệ thống.",
+      })
+      .optional()
+      .nullable(),
+    unitCost: z.coerce
+      .number()
+      .min(0, { error: "Đơn giá phải >= 0" })
+      .max(GRN_NUMERIC_15_2_MAX, {
+        error: "Đơn giá vượt giới hạn hệ thống.",
+      }),
     reason: z
       .string()
       .trim()
@@ -725,7 +882,17 @@ const amendGrnLineSchema = z
       error: "Số trả NCC không được vượt số đã giao.",
       path: ["rejectedQuantity"],
     },
-  );
+  )
+  .superRefine((d, ctx) => {
+    if (d.receivedQuantity * d.unitCost > GRN_NUMERIC_15_2_MAX) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Thành tiền vượt giới hạn hệ thống. Kiểm tra lại số lượng và đơn giá.",
+        path: ["unitCost"],
+      });
+    }
+  });
 
 export const amendGrnLine = withAction(
   {
@@ -777,6 +944,26 @@ export const amendGrnLine = withAction(
           error: "Sửa làm tồn kho âm — không cho phép.",
         };
       }
+      if (msg.includes("grn_receive_location_invalid")) {
+        return {
+          success: false,
+          error:
+            "Nơi nhập của phiếu không còn hợp lệ. Kiểm tra lại cấu hình kho.",
+        };
+      }
+      if (msg.includes("grn_receive_location_missing")) {
+        return {
+          success: false,
+          error: "Phiếu chưa có nơi nhập hợp lệ để điều chỉnh tồn kho.",
+        };
+      }
+      if (error.code === "22003" || msg.includes("numeric field overflow")) {
+        return {
+          success: false,
+          error:
+            "Số lượng hoặc đơn giá vượt giới hạn hệ thống. Kiểm tra lại đơn vị và giá nhập.",
+        };
+      }
       if (msg.includes("rejected_exceeds_received")) {
         return {
           success: false,
@@ -798,6 +985,130 @@ export const amendGrnLine = withAction(
     revalidatePath("/inventory/grn");
     revalidatePath(`/inventory/grn/${data.grnId}`);
     return { success: true, data: row };
+  },
+);
+
+const recreateGrnReceivingSiteSchema = z.object({
+  grnId: z.coerce.number().int().positive(),
+  targetBranchId: z.coerce.number().int().positive(),
+  targetLocationId: z.coerce.number().int().positive(),
+  reason: z
+    .string()
+    .trim()
+    .min(10, { error: "Lý do tối thiểu 10 ký tự." })
+    .max(500, { error: "Lý do tối đa 500 ký tự." }),
+});
+
+const recreateGrnReceivingSiteResultSchema = z
+  .object({
+    old_grn_id: z.coerce.number().int().positive(),
+    old_grn_number: z.string(),
+    new_grn_id: z.coerce.number().int().positive(),
+    new_grn_number: z.string(),
+    new_po_id: z.coerce.number().int().positive().nullable().optional(),
+    old_auto_po_cancelled: z.boolean().optional(),
+  })
+  .passthrough();
+
+function mapRecreateGrnReceivingSiteError(message: string, code?: string) {
+  if (message.includes("same_branch_use_location_amend")) {
+    return "Kho nhận mới vẫn cùng chi nhánh. Dùng điều chỉnh nơi nhập trong cùng kho/chi nhánh.";
+  }
+  if (message.includes("source_po_attached")) {
+    return "Phiếu đang gắn đơn mua thật; chưa thể hủy và tạo lại tự động.";
+  }
+  if (message.includes("source_po_shared")) {
+    return "Đơn mua nguồn đang dùng bởi phiếu nhập khác; chưa thể hủy và tạo lại.";
+  }
+  if (message.includes("has_active_supplier_return")) {
+    return "Phiếu đã có phiếu trả NCC liên kết — không thể hủy và tạo lại.";
+  }
+  if (message.includes("has_paid_invoice")) {
+    return "Phiếu đã có hóa đơn NCC đang/đã thanh toán — không thể hủy và tạo lại.";
+  }
+  if (message.includes("insufficient_source_stock")) {
+    return "Kho cũ không còn đủ tồn để hủy phiếu nhập và tạo lại ở kho mới.";
+  }
+  if (message.includes("source_location_missing")) {
+    return "Phiếu cũ chưa có nơi nhập hợp lệ để đảo tồn kho.";
+  }
+  if (message.includes("target_location_invalid")) {
+    return "Kho nhận mới không hợp lệ hoặc không thuộc chi nhánh đã chọn.";
+  }
+  if (message.includes("grn_not_confirmed")) {
+    return "Chỉ áp dụng cho phiếu nhập đã chốt.";
+  }
+  if (message.includes("grn_not_found")) {
+    return "Không tìm thấy phiếu nhập.";
+  }
+  if (message.includes("reason_required_min_10_chars")) {
+    return "Lý do tối thiểu 10 ký tự.";
+  }
+  if (message.includes("invalid_amount") || code === "22003") {
+    return "Số lượng hoặc đơn giá vượt giới hạn hệ thống.";
+  }
+  if (
+    message.includes("forbidden_source_branch") ||
+    message.includes("forbidden_target_branch") ||
+    code === "42501"
+  ) {
+    return "Bạn chưa có quyền hủy và tạo lại phiếu nhập cho kho nguồn hoặc kho nhận mới.";
+  }
+  return "Không thể hủy và tạo lại phiếu nhập ở kho nhận mới.";
+}
+
+export const recreateGrnAtReceivingSite = withAction(
+  {
+    roles: ROLES,
+    schema: recreateGrnReceivingSiteSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
+  },
+  async (data, { supabase }) => {
+    const { data: row, error } = await supabase.rpc(
+      "recreate_grn_at_receiving_site",
+      {
+        p_grn_id: data.grnId,
+        p_target_branch_id: data.targetBranchId,
+        p_target_location_id: data.targetLocationId,
+        p_reason: data.reason,
+      },
+    );
+
+    if (error) {
+      console.error("inventory.grn.recreate_receiving_site_failed", {
+        code: error.code,
+        error: error.message,
+      });
+      return {
+        success: false,
+        error: mapRecreateGrnReceivingSiteError(
+          error.message || "",
+          error.code,
+        ),
+      };
+    }
+
+    const parsed = recreateGrnReceivingSiteResultSchema.safeParse(row);
+    if (!parsed.success) {
+      return { success: false, error: "Phản hồi không hợp lệ từ máy chủ." };
+    }
+
+    revalidatePath("/inventory/grn");
+    revalidatePath(`/inventory/grn/${data.grnId}`);
+    revalidatePath(`/inventory/grn/${parsed.data.new_grn_id}`);
+    revalidatePath("/inventory/stock");
+
+    return {
+      success: true,
+      data: {
+        oldId: parsed.data.old_grn_id,
+        oldGrnNumber: parsed.data.old_grn_number,
+        newId: parsed.data.new_grn_id,
+        newGrnNumber: parsed.data.new_grn_number,
+        newPoId: parsed.data.new_po_id ?? null,
+        oldAutoPoCancelled: parsed.data.old_auto_po_cancelled ?? false,
+      },
+    };
   },
 );
 

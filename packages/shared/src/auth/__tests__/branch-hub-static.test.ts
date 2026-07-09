@@ -107,7 +107,7 @@ test("resolveBranchHubDestination -> owner phone without branch lands on picker"
       standaloneStation: null,
       isDesktop: false,
     }),
-    "/br",
+    "/",
   );
 });
 

@@ -1,5 +1,5 @@
 // page-archetype census (design-system.md § F / D058 W5): maps every
-// protected page.tsx to the archetype id it declares from
+// route page.tsx to the archetype id it declares from
 // docs/spec/page-archetypes.md. Pure data — the enforcement gate lives in
 // scripts/check-ui-contract.mjs, which imports this map.
 export const PAGE_ARCHETYPES = {
@@ -15,9 +15,7 @@ export const PAGE_ARCHETYPES = {
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx":
     "DASHBOARD",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/more/page.tsx": "HUB",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx":
-    "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx": "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx": "HUB",
   "apps/web/app/(protected)/br/[branchId]/(operator)/profile/page.tsx":
     "EMBED-WRAPPER",
@@ -62,6 +60,8 @@ export const PAGE_ARCHETYPES = {
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx":
     "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/[id]/page.tsx":
+    "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/page.tsx":
@@ -83,9 +83,8 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx":
-    "REDIRECT-SHIM",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx": "HUB",
 
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx":
     "DETAIL",
@@ -104,7 +103,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/page.tsx":
-    "EMBED-WRAPPER",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/reports/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/[id]/count/page.tsx":
@@ -122,11 +121,11 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/page.tsx":
-    "EMBED-WRAPPER",
+    "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx":
-    "EMBED-WRAPPER",
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx":
@@ -135,7 +134,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/pos/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": "BOARD",
-  "apps/web/app/(protected)/br/page.tsx": "GATE/AUTH",
+  "apps/web/app/(protected)/br/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/branches/page.tsx": "LIST",
   "apps/web/app/(protected)/finance/bank-transactions/page.tsx": "LIST",
   "apps/web/app/(protected)/finance/expenses/page.tsx": "REPORT",
@@ -210,5 +209,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(public)/(auth)/login/page.tsx": "GATE/AUTH",
   "apps/web/app/(public)/access-denied/page.tsx": "GATE/AUTH",
   "apps/web/app/(public)/payment/momo/return/page.tsx": "GATE/AUTH",
-  "apps/web/app/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/offline/page.tsx": "GATE/AUTH",
+  "apps/web/app/page.tsx": "GATE/AUTH",
+  "apps/web/app/q/[token]/page.tsx": "PUBLIC-WORKFLOW",
 };

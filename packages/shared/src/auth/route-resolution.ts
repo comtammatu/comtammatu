@@ -96,9 +96,9 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (pathname.startsWith("/hr/staff")) return "staff";
   if (pathname.startsWith("/hr/payroll")) return "hr_payroll";
   if (pathname.startsWith("/hr")) return "hr";
-  if (pathname === "/br" || pathname === "/br/") return "branch_picker";
+  if (pathname === "/" || pathname === "/br" || pathname === "/br/")
+    return "branch_picker";
   if (/^\/br\/\d+\/?$/.test(pathname)) return "operator_home";
-  if (/^\/br\/\d+\/more(?:\/|$)/.test(pathname)) return "operator_home";
   // checkout-approvals gets its own module key (D058 §5) — must precede the
   // generic /shift prefix match below so cashier/chef fail the route gate.
   if (/^\/br\/\d+\/shift\/checkout-approvals(?:\/|$)/.test(pathname)) {

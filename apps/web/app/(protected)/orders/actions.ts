@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { ORDERS_VI } from "@comtammatu/shared/messages";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
@@ -218,7 +219,7 @@ export async function fetchOrders(
   const { data, error } = await query;
 
   if (error) {
-    return { success: false, error: "Không thể tải đơn hàng" };
+    return { success: false, error: ORDERS_VI.loadOrdersFailed };
   }
 
   const orders: OrderRow[] = (data ?? []).map((row) => {
@@ -492,7 +493,7 @@ export async function fetchOrderAuditLog(
   if (error) {
     return {
       success: false,
-      error: "Không thể tải lịch sử thao tác. Vui lòng thử lại.",
+      error: ORDERS_VI.loadHistoryFailed,
     };
   }
 
@@ -556,7 +557,7 @@ export async function fetchOrderItems(
   if (error) {
     return {
       success: false,
-      error: "Không thể tải món của đơn. Vui lòng thử lại.",
+      error: ORDERS_VI.loadItemsFailed,
     };
   }
 

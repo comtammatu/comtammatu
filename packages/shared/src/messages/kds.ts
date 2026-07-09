@@ -16,6 +16,13 @@ export const KDS_VI = {
   queueDetailLoadFailed:
     "Không tải được chi tiết món chờ chế biến. Vui lòng tải lại trang.",
   ticketCountLoadFailed: "Không tải được số phiếu bếp. Vui lòng tải lại trang.",
+  completionHistoryLoading: "Đang tải lịch sử hoàn thành...",
+  completionHistoryEmpty: "Chưa có phiếu bếp nào hoàn thành hôm nay.",
+  completionHistoryLoadFailed:
+    "Không thể tải lịch sử hoàn thành. Vui lòng thử lại.",
+  completionHistoryDetailLoadFailed:
+    "Không thể tải chi tiết lịch sử hoàn thành. Vui lòng thử lại.",
+  unitOrder: "đơn",
 } as const;
 
 export type KdsKey = keyof typeof KDS_VI;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Bell as IconBell,
   Building2 as IconBuilding2,
+  LayoutDashboard as IconLayoutDashboard,
   User as IconUser,
 } from "lucide-react";
 import {
@@ -28,18 +29,13 @@ import { BranchOpsRefresh } from "./branch-ops-refresh";
 import { OperatorBottomNav } from "./operator-bottom-nav";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ branchId: string }>;
-}): Promise<Metadata> {
-  const { branchId } = await params;
+export function generateMetadata(): Metadata {
   return {
-    manifest: `/br/${branchId}/manifest.webmanifest`,
+    manifest: "/manifest.webmanifest",
     appleWebApp: {
       capable: true,
       statusBarStyle: "black-translucent",
-      title: "Má Tư Hub",
+      title: "Cổng Má Tư",
     },
   };
 }
@@ -75,11 +71,15 @@ export default async function OperatorLayout({
 
   return (
     <PwaRuntimeProvider>
-      <BranchOpsRefresh branchId={context.branchId} />
+      <BranchOpsRefresh
+        branchId={context.branchId}
+        disabledPathPrefixes={[`/br/${context.branchId}/shift/leave-approvals`]}
+      />
       <div className="flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
         <AppHeader
           title={context.branch.name}
           subtitle={ROLE_LABEL_VI[claims.user_role]}
+          showBrandText={false}
           homeHref={`/br/${context.branchId}`}
           homeAriaLabel={APP_COPY_VI.operatorHome}
           actions={
@@ -98,11 +98,24 @@ export default async function OperatorLayout({
                   </Link>
                 </Button>
               ) : null}
+              {canManageBranch ? (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="icon-touch"
+                  aria-label={APP_COPY_VI.branchCommand}
+                  title={APP_COPY_VI.branchCommand}
+                >
+                  <Link href={`/br/${context.branchId}/dashboard`}>
+                    <IconLayoutDashboard />
+                  </Link>
+                </Button>
+              ) : null}
               <Button
                 asChild
                 variant="outline"
                 size="icon-touch"
-                aria-label={messages.employee.nav.profileShort}
+                aria-label={messages.operator.nav.profileShort}
               >
                 <Link href={`/br/${context.branchId}/profile`}>
                   <IconUser />
@@ -112,7 +125,7 @@ export default async function OperatorLayout({
                 asChild
                 variant="outline"
                 size="icon-touch"
-                aria-label={messages.employee.header.notificationsAria}
+                aria-label={messages.operator.header.notificationsAria}
                 className="relative"
               >
                 <Link href={notificationsHref}>
@@ -131,7 +144,7 @@ export default async function OperatorLayout({
         >
           <AppPage
             density="compact"
-            contentClassName="max-w-lg md:max-w-5xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-screen-2xl"
+            contentClassName="max-w-lg md:max-w-2xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-screen-2xl"
           >
             {children}
           </AppPage>

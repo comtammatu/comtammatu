@@ -66,6 +66,13 @@ function mapSelfOrderError(error: unknown): {
       message: SELF_ORDER_VI.paymentCompletedBlocked,
     };
   }
+  if (message.includes("self_order_session_revoked")) {
+    return {
+      status: 409,
+      code: "session_revoked",
+      message: SELF_ORDER_VI.orderRejectedBlocked,
+    };
+  }
   if (
     message.includes("self_order_pos_session_closed") ||
     message.includes("POS session does not belong to this branch or is not open")

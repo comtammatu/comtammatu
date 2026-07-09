@@ -31,7 +31,7 @@ repo root), keep the graph fresh instead of trusting a previous session:
 Before implementation, read the applicable rule files:
 
 - Always read `docs/agent/rules/engineering.md` for repo commands, architecture, import boundaries, and core constraints.
-- Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. Its **Layer Index** and **Required Routing Matrix** give layer-first and task-signal routing into the rules, skills, and verification a task needs.
+- Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. Its **Authority Order** and **Required Routing Matrix** give layer-first and task-signal routing into the rules, skills, and verification a task needs.
 - Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
 - Read `docs/agent/rules/workflow.md` for behavior changes, review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates. T1 doc-only or typo-only work may skip after stating the skip reason.
@@ -89,7 +89,7 @@ it elsewhere — point here.
 - Code comments MUST be English and only state non-obvious constraints. NEVER add narrative, explanatory, or change-log comments (no "đã xóa/đã gỡ", no owner-decision dates in code).
 - Put durable explanations, guides, operational notes, and task notes in Markdown docs, guides, or note files inside the source tree.
 - MUST follow `docs/agent/rules/skills.md` for skill/plugin/tool selection on non-trivial tasks.
-- NEVER create a separate agent-only documentation tree such as `docs/llm-wiki/` or `docs/superpowers/`; use `AGENTS.md`, `docs/agent/rules/`, `docs/CODEBASE_MAP.md`, module docs, specs, runbooks, tasks, decisions, or ADRs according to the content type; `docs/worklog/` is policy-only.
+- NEVER create a separate agent-only documentation tree such as `docs/llm-wiki/` or `docs/superpowers/`; use `AGENTS.md`, `docs/agent/rules/`, `docs/CODEBASE_MAP.md`, module docs, specs, runbooks, tasks, decisions, or ADRs (including Parked ADRs for owner-kept future options with a revisit trigger) according to the content type; `docs/worklog/` is policy-only.
 
 <!-- MIRROR:constraints:end -->
 

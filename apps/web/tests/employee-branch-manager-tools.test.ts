@@ -133,3 +133,21 @@ test("Staff checkout request stays single tap while manager direct checkout conf
     "Checkout approval should not require a consumption report before approving checkout",
   );
 });
+
+test("checkout request and reject stay on the current branch shift contract", () => {
+  assert.match(
+    employeeClockActionSource,
+    /async function resolveCurrentShiftIdForEmployee[\s\S]*resolveDefaultShiftId/,
+    "Checkout should reuse the same current-shift resolver as clock-in",
+  );
+  assert.match(
+    employeeClockActionSource,
+    /export async function requestCheckoutApproval[\s\S]*\.eq\("branch_id", ctx\.branchId\)[\s\S]*\.eq\("date", today\)[\s\S]*\.eq\("shift_id", currentShiftId\)/,
+    "Checkout request must not close stale or other-branch attendance rows",
+  );
+  assert.match(
+    employeeClockActionSource,
+    /branch_manager_reject_employee_clock_out[\s\S]*p_rejected_by: ctx\.user\.id/,
+    "Checkout reject should use the same DB-side hierarchy contract as approval",
+  );
+});

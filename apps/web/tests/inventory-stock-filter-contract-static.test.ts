@@ -10,8 +10,9 @@ function readWeb(path: string): string {
 const stockClientSource = readWeb(
   "app/(protected)/inventory/stock/stock-client.tsx",
 );
-const stockMobileGridSource = readWeb(
-  "app/(protected)/inventory/stock/stock-mobile-grid.tsx",
+const stockModelSource = readWeb("lib/inventory/stock-on-hand-model.ts");
+const branchStockClientSource = readWeb(
+  "app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
 );
 
 test("inventory stock status and category filters have one control source", () => {
@@ -22,35 +23,36 @@ test("inventory stock status and category filters have one control source", () =
     /header: stockCopy\.filters\.categoryPlaceholder/,
   );
   assert.match(stockClientSource, /header: stockCopy\.table\.stock/);
-
   assert.match(
     stockClientSource,
-    /bulk=\{\s*!embedded && !isCompactLayout \? \(\s*<div[^>]*>\s*\{filterControls\}\s*\{workSignalCluster\}/s,
+    /bulk=\{\s*!isCompactLayout \? \(\s*<div[^>]*>\s*\{filterControls\}\s*\{workSignalCluster\}/s,
   );
-  assert.doesNotMatch(stockClientSource, /aria-pressed=\{stockFilter === "low"\}/);
   assert.doesNotMatch(
     stockClientSource,
-    /setStockFilter\(stockFilter === "low" \? "all" : "low"\)/,
+    /aria-pressed=\{stockFilter === "low"\}/,
   );
 });
 
-test("inventory stock low filter matches the under-threshold badge predicate", () => {
-  assert.match(stockClientSource, /function isReorderRisk/);
-  assert.match(stockClientSource, /result = result\.filter\(isReorderRisk\);/);
+test("inventory stock low filter matches the under-threshold predicate", () => {
+  assert.match(stockModelSource, /export function isStockReorderRisk/);
+  assert.match(
+    stockModelSource,
+    /result = result\.filter\(isStockReorderRisk\);/,
+  );
 });
 
-test("operator stock category chips use parent filter state", () => {
-  assert.doesNotMatch(stockMobileGridSource, /useState/);
-  assert.match(stockMobileGridSource, /activeCategory: string/);
-  assert.match(stockMobileGridSource, /onCategoryChange: \(value: string\) => void/);
-  assert.match(stockMobileGridSource, /value=\{activeCategory\}/);
-  assert.match(stockMobileGridSource, /onValueChange=\{onCategoryChange\}/);
-  assert.doesNotMatch(stockMobileGridSource, /activeCategory === STOCK_ALL_CATEGORY_VALUE/);
-  assert.doesNotMatch(stockMobileGridSource, /ingredient\.category === activeCategory/);
-
-  assert.match(stockClientSource, /<StockMobileGrid\s+ingredients=\{filtered\}/);
-  assert.match(stockClientSource, /categories=\{categories\}/);
-  assert.match(stockClientSource, /hasUncategorized=\{hasUncategorized\}/);
-  assert.match(stockClientSource, /activeCategory=\{activeCategory\}/);
-  assert.match(stockClientSource, /onCategoryChange=\{setActiveCategory\}/);
+test("branch stock facets share one model and stay touch-native", () => {
+  assert.match(branchStockClientSource, /filterStockOnHandIngredients/);
+  assert.match(branchStockClientSource, /getStockOnHandCategories/);
+  assert.match(branchStockClientSource, /value=\{category\}/);
+  assert.match(branchStockClientSource, /onValueChange=\{setCategory\}/);
+  assert.match(branchStockClientSource, /value=\{status\}/);
+  assert.match(branchStockClientSource, /value=\{location\}/);
+  assert.equal(
+    (branchStockClientSource.match(/<SelectTrigger size="touch"/g) ?? [])
+      .length,
+    3,
+  );
+  assert.doesNotMatch(branchStockClientSource, /StockMobileGrid|DataTable/);
+  assert.doesNotMatch(branchStockClientSource, /overflow-x-auto/);
 });

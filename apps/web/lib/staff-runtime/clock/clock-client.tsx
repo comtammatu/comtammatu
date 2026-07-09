@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import type { ComponentProps, ElementType, ReactNode } from "react";
 import {
   Camera as IconCamera,
   CircleCheck as IconCircleCheck,
@@ -16,13 +17,21 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
+import type { BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { formatVNTime } from "@comtammatu/shared/time";
+import { formatVNTime, getVNMinutesOfDay } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
+import {
+  BranchOperatorActionGrid,
+  BranchOperatorDetailList,
+  BranchOperatorFrame,
+  BranchOperatorInlineState,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import {
   EmployeeActionGrid,
   EmployeeDetailList,
@@ -42,7 +51,72 @@ import {
 interface ClockClientProps {
   state: TodayWorkState;
   routes: EmployeeClockRoutes;
+  plane?: ClockPlane;
 }
+
+type ClockTone = "default" | "success" | "warning" | "info" | "destructive";
+type ClockPlanePrimitives = {
+  Panel: (props: {
+    title?: string;
+    description?: string;
+    headerHint?: ReactNode;
+    icon?: ElementType;
+    tone?: ClockTone;
+    badge?: {
+      children: ReactNode;
+      variant?: BadgeProps["variant"];
+    };
+    action?: ReactNode;
+    children: ReactNode;
+    className?: string;
+    contentClassName?: string;
+    size?: "default" | "sm";
+  }) => ReactNode;
+  DetailList: (props: {
+    rows: Array<{
+      label: string;
+      value: ReactNode;
+      muted?: boolean;
+    }>;
+    columns?: 1 | 2 | 3;
+    className?: string;
+  }) => ReactNode;
+  InlineState: (props: {
+    icon?: ElementType;
+    media?: ReactNode;
+    title?: ReactNode;
+    description?: ReactNode;
+    children?: ReactNode;
+    actions?: ReactNode;
+    tone?: ClockTone;
+    className?: string;
+    mediaClassName?: string;
+  }) => ReactNode;
+  Frame: (props: ComponentProps<"div"> & { pad?: "none" | "sm" }) => ReactNode;
+  ActionGrid: (props: {
+    children: ReactNode;
+    columns?: 1 | 2;
+    className?: string;
+  }) => ReactNode;
+};
+
+export type ClockPlane = "employee" | "branch";
+
+const EMPLOYEE_CLOCK_PRIMITIVES: ClockPlanePrimitives = {
+  Panel: EmployeePanel,
+  DetailList: EmployeeDetailList,
+  InlineState: EmployeeInlineState,
+  Frame: EmployeeFrame,
+  ActionGrid: EmployeeActionGrid,
+};
+
+const BRANCH_CLOCK_PRIMITIVES: ClockPlanePrimitives = {
+  Panel: BranchOperatorPanel,
+  DetailList: BranchOperatorDetailList,
+  InlineState: BranchOperatorInlineState,
+  Frame: BranchOperatorFrame,
+  ActionGrid: BranchOperatorActionGrid,
+};
 
 type PhotoState =
   | "idle"
@@ -82,18 +156,6 @@ function timeToMinutes(value: string | null | undefined): number | null {
   return hour * 60 + minute;
 }
 
-function getCurrentVNMinutes(): number {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date());
-  const hour = Number(parts.find((part) => part.type === "hour")?.value);
-  const minute = Number(parts.find((part) => part.type === "minute")?.value);
-  return hour * 60 + minute;
-}
-
 function isPastShiftEnd(state: TodayWorkState): boolean {
   const attendance = state.attendance;
   if (!attendance?.checkIn || attendance.checkOut || attendance.checkoutRequestedAt) {
@@ -107,7 +169,7 @@ function isPastShiftEnd(state: TodayWorkState): boolean {
   if (start === null || end === null) return false;
 
   const effectiveEnd = end > start ? end : end + 1440;
-  const now = getCurrentVNMinutes();
+  const now = getVNMinutesOfDay();
   const effectiveNow = effectiveEnd > 1440 && now < start ? now + 1440 : now;
   return effectiveNow >= effectiveEnd;
 }
@@ -199,7 +261,13 @@ async function normalizePhotoFile(file: File): Promise<File | null> {
   }
 }
 
-export function ClockClient({ state, routes }: ClockClientProps) {
+export function ClockClient({
+  state,
+  routes,
+  plane = "employee",
+}: ClockClientProps) {
+  const { ActionGrid, DetailList, Frame, InlineState, Panel } =
+    plane === "branch" ? BRANCH_CLOCK_PRIMITIVES : EMPLOYEE_CLOCK_PRIMITIVES;
   const router = useRouter();
   const [photoState, setPhotoState] = useState<PhotoState>("idle");
   const [cameraState, setCameraState] = useState<CameraState>("idle");
@@ -470,13 +538,13 @@ export function ClockClient({ state, routes }: ClockClientProps) {
 
   if (state.status === "not_required") {
     return (
-      <EmployeePanel
+      <Panel
         icon={IconClock}
         title={clockCopy.notRequiredTitle}
         tone="info"
         badge={{ children: clockCopy.noShiftBadge, variant: "info" }}
       >
-        <EmployeeDetailList
+        <DetailList
           rows={[
             {
               label: clockCopy.branchLabel,
@@ -498,19 +566,19 @@ export function ClockClient({ state, routes }: ClockClientProps) {
         >
           <Link href={routes.schedule}>{clockCopy.viewSchedule}</Link>
         </Button>
-      </EmployeePanel>
+      </Panel>
     );
   }
 
   if (state.status === "done") {
     return (
-      <EmployeePanel
+      <Panel
         icon={IconCircleCheck}
         title={clockCopy.doneTitle}
         tone="success"
         badge={{ children: clockCopy.doneBadge, variant: "success" }}
       >
-        <EmployeeDetailList
+        <DetailList
           rows={[
             {
               label: clockCopy.branchLabel,
@@ -527,13 +595,13 @@ export function ClockClient({ state, routes }: ClockClientProps) {
             },
           ]}
         />
-      </EmployeePanel>
+      </Panel>
     );
   }
 
   if (state.status === "checkout_pending") {
     return (
-      <EmployeePanel
+      <Panel
         icon={IconClock}
         title={clockCopy.checkoutPendingTitle}
         description={`${clockCopy.checkoutPendingDescriptionPrefix} ${getCheckoutApprovalTargetLabel(
@@ -542,7 +610,7 @@ export function ClockClient({ state, routes }: ClockClientProps) {
         tone="warning"
         badge={{ children: clockCopy.checkoutPendingBadge, variant: "warning" }}
       >
-        <EmployeeDetailList
+        <DetailList
           rows={[
             {
               label: clockCopy.branchLabel,
@@ -571,7 +639,7 @@ export function ClockClient({ state, routes }: ClockClientProps) {
             ? clockCopy.cancelCheckoutPending
             : clockCopy.cancelCheckoutButton}
         </Button>
-      </EmployeePanel>
+      </Panel>
     );
   }
 
@@ -633,7 +701,7 @@ export function ClockClient({ state, routes }: ClockClientProps) {
         ];
 
     return (
-      <EmployeePanel
+      <Panel
         icon={IconClock}
         title={checkoutTitle}
         description={checkoutDescription}
@@ -643,7 +711,7 @@ export function ClockClient({ state, routes }: ClockClientProps) {
           variant: pastShiftEnd ? "warning" : "success",
         }}
       >
-        <EmployeeDetailList rows={detailRows} />
+        <DetailList rows={detailRows} />
 
         {error ? <ErrorAlert message={error} /> : null}
 
@@ -662,17 +730,17 @@ export function ClockClient({ state, routes }: ClockClientProps) {
         </Button>
 
         {checkoutState === "submitting" ? (
-          <EmployeeInlineState
+          <InlineState
             media={<Spinner />}
             title={checkoutPendingLabel}
           />
         ) : null}
-      </EmployeePanel>
+      </Panel>
     );
   }
 
   return (
-    <EmployeePanel
+    <Panel
       icon={IconCamera}
       title={clockCopy.clockInTitle}
       tone="info"
@@ -684,7 +752,7 @@ export function ClockClient({ state, routes }: ClockClientProps) {
         variant: photoState === "success" ? "success" : "info",
       }}
     >
-      <EmployeeDetailList
+      <DetailList
         rows={[
           {
             label: clockCopy.branchLabel,
@@ -700,7 +768,7 @@ export function ClockClient({ state, routes }: ClockClientProps) {
       />
 
       {cameraActive ? (
-        <EmployeeFrame className="overflow-hidden bg-muted/40">
+        <Frame className="overflow-hidden bg-muted/30">
           <div className="relative aspect-[4/3] w-full">
             <video
               ref={videoRef}
@@ -720,11 +788,11 @@ export function ClockClient({ state, routes }: ClockClientProps) {
               </div>
             )}
           </div>
-        </EmployeeFrame>
+        </Frame>
       ) : null}
 
       {!cameraActive && previewUrl ? (
-        <EmployeeInlineState
+        <InlineState
           media={
             <Image
               src={previewUrl}
@@ -738,13 +806,13 @@ export function ClockClient({ state, routes }: ClockClientProps) {
           mediaClassName="size-12 rounded-md"
           title={clockCopy.photoReadyTitle}
           description={photo?.name}
-          className="bg-muted/40"
+          className="bg-muted/30"
         />
       ) : !cameraActive ? (
-        <EmployeeInlineState
+        <InlineState
           icon={IconCamera}
           description={clockCopy.cameraNotOpen}
-          className="bg-muted/40"
+          className="bg-muted/30"
         />
       ) : null}
 
@@ -765,7 +833,7 @@ export function ClockClient({ state, routes }: ClockClientProps) {
       />
 
       {cameraState === "ready" || cameraState === "capturing" ? (
-        <EmployeeActionGrid>
+        <ActionGrid>
           <Button
             type="button"
             size="touch"
@@ -791,9 +859,9 @@ export function ClockClient({ state, routes }: ClockClientProps) {
           >
             {ACTIONS_VI.cancel}
           </Button>
-        </EmployeeActionGrid>
+        </ActionGrid>
       ) : photo ? (
-        <EmployeeActionGrid>
+        <ActionGrid>
           <Button
             type="button"
             variant="outline"
@@ -840,9 +908,9 @@ export function ClockClient({ state, routes }: ClockClientProps) {
             )}
             {clockCopy.clockInButton}
           </Button>
-        </EmployeeActionGrid>
+        </ActionGrid>
       ) : cameraState === "starting" ? null : (
-        <EmployeeActionGrid>
+        <ActionGrid>
           <Button
             type="button"
             size="touch"
@@ -868,8 +936,8 @@ export function ClockClient({ state, routes }: ClockClientProps) {
               ? clockCopy.uploadProcessing
               : clockCopy.uploadPhoto}
           </Button>
-        </EmployeeActionGrid>
+        </ActionGrid>
       )}
-    </EmployeePanel>
+    </Panel>
   );
 }

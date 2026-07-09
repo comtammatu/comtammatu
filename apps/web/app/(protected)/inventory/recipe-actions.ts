@@ -7,6 +7,7 @@ import {
   INVENTORY_CATALOG_ROLES,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { messages } from "@lib/messages";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
@@ -14,6 +15,12 @@ import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 /* ─── Recipes (branch WAC + menu-item recipes) ─── */
 
 const branchIdSchema = z.coerce.number().int().positive();
+const optionalBranchIdSchema = z.coerce
+  .number()
+  .int()
+  .positive()
+  .nullable()
+  .optional();
 
 const recipeLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
@@ -63,15 +70,22 @@ export async function fetchRecipes(): Promise<ActionResult> {
     console.error("inventory.recipe.fetch_recipes_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { success: false, error: "Không thể tải định mức món bán." };
+    return { success: false, error: messages.inventory.recipes.loadFailed };
   }
   return { success: true, data: data ?? [] };
 }
 
 // WAC = the actual average cost (avg_unit_cost) in branch stock levels.
-export async function fetchBranchWacMap(): Promise<
+export async function fetchBranchWacMap(
+  branchId?: number | null,
+): Promise<
   ActionResult<Record<string, number>>
 > {
+  const parsedBranchId = optionalBranchIdSchema.safeParse(branchId);
+  if (!parsedBranchId.success) {
+    return { success: false, error: "Chi nhánh không hợp lệ." };
+  }
+
   const ctx = await getAuthContextWithPermission(
     INVENTORY_OPS_ROLES,
     PERMISSION_KEYS.INVENTORY_READ,
@@ -79,18 +93,29 @@ export async function fetchBranchWacMap(): Promise<
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("stock_levels")
-    .select("ingredient_id, avg_unit_cost, branches!inner ( branch_kind )")
+    .select(
+      "ingredient_id, avg_unit_cost, branch_id, branches!inner ( branch_kind )",
+    )
     .eq("tenant_id", claims.tenant_id)
     .eq("branches.branch_kind", "branch")
     .not("avg_unit_cost", "is", null);
+
+  if (parsedBranchId.data != null) {
+    query = query.eq("branch_id", parsedBranchId.data);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("inventory.recipe.fetch_branch_wac_map_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { success: false, error: "Không thể tải WAC chi nhánh." };
+    return {
+      success: false,
+      error: messages.inventory.recipes.branchWacLoadFailed,
+    };
   }
 
   type WacRow = {
@@ -138,7 +163,10 @@ export async function fetchBranchMenuStockCapacity(
     console.error("inventory.recipe.fetch_branch_menu_stock_capacity_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { success: false, error: "Không thể tải phần bán được." };
+    return {
+      success: false,
+      error: messages.inventory.recipes.capacityLoadFailed,
+    };
   }
 
   const map: Record<string, number> = {};
@@ -180,7 +208,7 @@ export const upsertRecipeLines = withAction(
       console.error("inventory.recipe.upsert_recipe_lines_failed", {
         error: error instanceof Error ? error.message : String(error),
       });
-      return { success: false, error: "Không thể lưu định mức món bán." };
+      return { success: false, error: messages.inventory.recipes.saveFailed };
     }
 
     return { success: true };
@@ -199,6 +227,10 @@ export async function fetchMenuItemsForRecipes(): Promise<ActionResult> {
     .select("id, name, is_active")
     .eq("tenant_id", claims.tenant_id)
     .order("name");
-  if (error) return { success: false, error: "Không thể tải món." };
+  if (error)
+    return {
+      success: false,
+      error: messages.inventory.recipes.menuItemsLoadFailed,
+    };
   return { success: true, data: data ?? [] };
 }

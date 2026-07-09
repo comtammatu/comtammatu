@@ -1,33 +1,62 @@
-import { EmployeeHomePageContent } from "@lib/staff-runtime/page";
-import { getTodayWorkState } from "@lib/staff-runtime/_lib/today-work-state";
-import { loadAuthState } from "@/_lib/auth";
+import Link from "next/link";
+import { Camera as IconCamera } from "lucide-react";
+import { Button } from "@comtammatu/ui/components/button";
+import { BranchOperatorControlBar } from "@lib/branch-operator/components/branch-operator-page";
+import {
+  getTodayWorkState,
+  type TodayWorkState,
+} from "@lib/staff-runtime/_lib/today-work-state";
+import { formatDateVN } from "@lib/staff-runtime/_lib/vn-business-date";
+import { messages } from "@lib/messages";
+
+const copy = messages.operator.todayStatus;
+
+function getWorkTitle(state: TodayWorkState): string {
+  const status = state.status;
+  if (state.managerAttendanceOnly) {
+    if (status === "working") return copy.managerAttendanceTitle;
+    if (status === "done") return copy.statusDone;
+    if (status === "not_started") return copy.statusNotStarted;
+  }
+
+  if (status === "missing_profile") return copy.statusNoProfile;
+  if (status === "missing_branch") return copy.statusNoBranch;
+  if (status === "not_required") return copy.statusNotRequired;
+  if (status === "not_started") return copy.statusNotStarted;
+  if (status === "working") return copy.statusWorking;
+  if (status === "checkout_pending") return copy.statusCheckoutPending;
+  return copy.statusDone;
+}
 
 export async function HubTodayStatus({
   branchId,
 }: {
   branchId: number;
 }) {
-  const authState = await loadAuthState();
-  
-  // Notice we can await getTodayWorkState here instead of at the page level
-  await getTodayWorkState();
-  
-  const basePath = `/br/${branchId}`;
+  const state = await getTodayWorkState();
+  const title = getWorkTitle(state);
+  const currentShiftName = state.attendance?.shiftName ?? null;
+  const currentShiftRange = state.attendance?.shiftStartTime
+    ? `${state.attendance.shiftStartTime.slice(0, 5)} - ${state.attendance.shiftEndTime?.slice(0, 5) ?? "—"}`
+    : "—";
+  const todayMeta = currentShiftName
+    ? `${formatDateVN(state.today)} · ${currentShiftName} ${currentShiftRange}`
+    : formatDateVN(state.today);
 
   return (
-    <EmployeeHomePageContent
-      authState={authState}
-      mode="compact-status"
-      routes={{
-        clock: `${basePath}/shift/clock`,
-        tasks: `${basePath}/shift`,
-        schedule: `${basePath}/shift/schedule`,
-        profile: `${basePath}/profile`,
-        checkoutApprovals: `${basePath}/shift/checkout-approvals`,
-        count: `${basePath}/stock/count`,
-        wasteApprovals: `${basePath}/stock/waste-approvals`,
-      }}
-      showNotificationControl={false}
-    />
+    <BranchOperatorControlBar>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">{title}</p>
+        <p className="truncate text-xs text-muted-foreground">{todayMeta}</p>
+      </div>
+      {state.status === "not_started" ? (
+        <Button asChild size="touch">
+          <Link href={`/br/${branchId}/shift/clock`}>
+            <IconCamera data-icon="inline-start" />
+            {copy.clockIn}
+          </Link>
+        </Button>
+      ) : null}
+    </BranchOperatorControlBar>
   );
 }

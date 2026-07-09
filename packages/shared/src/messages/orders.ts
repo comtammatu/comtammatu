@@ -1,7 +1,10 @@
 // Orders module Vietnamese copy (extracted from orders JSX).
 export const ORDERS_VI = {
+  loadOrdersFailed: "Không thể tải đơn hàng",
+  loadRefundsFailed: "Không thể tải danh sách hoàn tiền",
   loadHistoryFailed: "Không thể tải lịch sử",
   loadItemsFailed: "Không thể tải món",
+  noOrders: "Chưa có đơn hàng",
   orderedBy: "Người order",
   time: "Thời gian",
   orderType: "Loại đơn",

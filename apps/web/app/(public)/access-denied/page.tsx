@@ -38,7 +38,6 @@ export default async function AccessDeniedPage({
       <AppHeader title={BRAND_NAME} className="static" />
 
       <AppSection
-        className="shadow-sm"
         title={copy.title}
         description={copy.description}
         icon={<IconShieldExclamation />}

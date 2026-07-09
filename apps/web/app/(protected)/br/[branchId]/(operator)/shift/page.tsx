@@ -1,5 +1,6 @@
 import { loadAuthState } from "@/_lib/auth";
-import { EmployeeHomePageContent } from "@lib/staff-runtime/page";
+import { messages } from "@lib/messages";
+import { StaffWorkdayPageContent } from "@lib/staff-runtime/page";
 
 export default async function OperatorShiftPage({
   params,
@@ -11,7 +12,7 @@ export default async function OperatorShiftPage({
   const isBranchManager = authState.claims.user_role === "branch_manager";
 
   return (
-    <EmployeeHomePageContent
+    <StaffWorkdayPageContent
       authState={authState}
       routes={{
         clock: `/br/${branchId}/shift/clock`,
@@ -23,8 +24,12 @@ export default async function OperatorShiftPage({
         wasteApprovals: `/br/${branchId}/stock/waste-approvals`,
         team: `/br/${branchId}/team`,
       }}
+      enableBranchOpsRefresh={false}
       showNotificationControl={false}
       mode={isBranchManager ? "manager-dashboard" : "full"}
+      plane="branch"
+      copy={messages.operator.shift}
+      tasksCopy={messages.operator.shiftTasks}
     />
   );
 }

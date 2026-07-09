@@ -52,6 +52,7 @@ import {
   AppEmptyState,
   AppPage,
   AppPageHeader,
+  AppSection,
   AppToolbar,
 } from "@/components/surface";
 import { OperatorFlowSteps } from "../_components/operator-flow-steps";
@@ -90,6 +91,7 @@ export type GrnRow = {
 export type GrnDraftRow = {
   grnId: number;
   supplierId: number;
+  branchId: number;
   poId: number | null;
   poCode: string | null;
   supplierName: string;
@@ -115,6 +117,18 @@ function grnDetailHref(basePath: string, id: number) {
   return `${basePath}/${id}`;
 }
 
+function newGrnSupplierHref(
+  basePath: string,
+  supplierId: number,
+  branchId: number,
+) {
+  const params = new URLSearchParams({
+    supplierId: String(supplierId),
+    branchId: String(branchId),
+  });
+  return `${basePath}/new?${params.toString()}`;
+}
+
 export function GrnListClient({
   grns,
   basePath = "/inventory/grn",
@@ -135,6 +149,11 @@ export function GrnListClient({
   const [statusFilter, setStatusFilter] = useState("all");
   const [drawerRow, setDrawerRow] = useState<GrnRow | null>(null);
   const router = useRouter();
+  const controlSize = isOperator ? "touch" : "default";
+  const compactActionSize = isOperator ? "touch" : "sm";
+  const fieldClassName = isOperator
+    ? "min-h-12 w-full sm:h-10"
+    : "min-h-10 w-full sm:h-10";
   const grnColumns: DataTableColumn<GrnRow>[] = [
     {
       key: "code",
@@ -142,7 +161,7 @@ export function GrnListClient({
       render: (g) => (
         <Link
           href={grnDetailHref(basePath, g.id)}
-          className="font-medium text-primary hover:underline"
+          className="font-mono text-primary hover:underline"
         >
           {g.code}
         </Link>
@@ -151,24 +170,21 @@ export function GrnListClient({
     {
       key: "supplier",
       header: INVENTORY_VI.supplier,
-      className: "text-sm font-medium",
       render: (g) => g.supplierName,
     },
     {
       key: "branch",
       header: messages.inventory.grn.receivingWarehouse,
-      className: "text-sm text-muted-foreground",
       render: (g) => g.branchName,
     },
     {
       key: "po",
       header: INVENTORY_VI.linkedPo,
-      className: "text-sm text-muted-foreground",
       render: (g) =>
         g.poId != null && g.poCode ? (
           <Link
             href={`${purchaseOrdersPath}/${g.poId}`}
-            className="font-medium text-primary hover:underline"
+            className="font-mono text-primary hover:underline"
           >
             {g.poCode}
           </Link>
@@ -179,14 +195,24 @@ export function GrnListClient({
     {
       key: "date",
       header: INVENTORY_VI.receiveDate,
-      className: "text-sm text-muted-foreground",
-      render: (g) => g.date || "—",
+      render: (g) =>
+        g.date ? (
+          <span className="font-mono tabular-nums text-muted-foreground">
+            {g.date}
+          </span>
+        ) : (
+          "—"
+        ),
     },
     {
       key: "total",
       header: FORM_VI.totalAmount,
-      className: "text-sm font-medium",
-      render: (g) => formatVND(g.total),
+      className: "text-right",
+      render: (g) => (
+        <span className="font-mono font-medium tabular-nums">
+          {formatVND(g.total)}
+        </span>
+      ),
     },
     {
       key: "status",
@@ -200,7 +226,12 @@ export function GrnListClient({
       header: "",
       className: "w-10",
       render: (g) => (
-        <Button asChild variant="ghost" size="icon-sm">
+        <Button
+          asChild
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`${ACTIONS_VI.viewDetails} ${g.code}`}
+        >
           <Link href={grnDetailHref(basePath, g.id)}>
             <IconDotsVertical className="size-4" />
           </Link>
@@ -226,41 +257,69 @@ export function GrnListClient({
   const hasActiveFilters = search.trim() !== "" || statusFilter !== "all";
   const operatorFlow = messages.inventory.operatorFlow;
 
-  const listBody = (
+  const desktopActions = (
     <>
-      <AppToolbar variant={isOperator ? "inline" : "card"}>
-        <InputGroup className="h-12 basis-full flex-1 md:h-7 md:basis-auto">
-          <InputGroupAddon>
-            <IconSearch />
-          </InputGroupAddon>
-          <InputGroupInput
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={INVENTORY_VI.grnSearchPlaceholder}
-            inputMode="search"
-          />
-        </InputGroup>
+      <Button asChild variant="outline" size={compactActionSize}>
+        <Link href={purchaseOrdersPath}>
+          <IconClipboardList className="size-4" />
+          {INVENTORY_VI.choosePoToCreateGrn}
+        </Link>
+      </Button>
+      <Button asChild size={compactActionSize}>
+        <Link href={`${basePath}/new`}>
+          <IconPlus className="size-4" />
+          {INVENTORY_VI.newGrn}
+        </Link>
+      </Button>
+    </>
+  );
 
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger
-            size={isOperator ? "touch" : "default"}
-            className={isOperator ? "w-full" : "min-w-40"}
-          >
-            <SelectValue placeholder={FORM_VI.status} />
-          </SelectTrigger>
-          <SelectContent>
-            {statusFilterOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Badge variant="outline">
-          {filtered.length}/{grns.length}
-        </Badge>
-      </AppToolbar>
+  const listTable = (
+    <>
+      <AppToolbar
+        variant="inline"
+        className="items-stretch sm:items-center"
+        search={
+          <InputGroup className={fieldClassName}>
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={INVENTORY_VI.grnSearchPlaceholder}
+              inputMode="search"
+            />
+          </InputGroup>
+        }
+        filters={
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger
+              size={controlSize}
+              className={
+                isOperator
+                  ? "w-full sm:w-44"
+                  : "min-h-10 w-full sm:h-10 sm:w-44"
+              }
+            >
+              <SelectValue placeholder={FORM_VI.status} />
+            </SelectTrigger>
+            <SelectContent>
+              {statusFilterOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+        bulk={
+          <Badge variant="outline">
+            {filtered.length}/{grns.length}
+          </Badge>
+        }
+        actions={embedded ? desktopActions : null}
+      />
 
       <DataTable
         columns={grnColumns}
@@ -278,7 +337,18 @@ export function GrnListClient({
         }
         mobileCardRender={(g) => <GrnMobileCard grn={g} basePath={basePath} onOpenDrawer={setDrawerRow} />}
       />
+    </>
+  );
 
+  const listBody = (
+    <>
+      {isOperator ? (
+        listTable
+      ) : (
+        <AppSection className="overflow-hidden" contentFlush>
+          {listTable}
+        </AppSection>
+      )}
       <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
         <DrawerContent>
           {drawerRow && (
@@ -296,7 +366,6 @@ export function GrnListClient({
           )}
         </DrawerContent>
       </Drawer>
-
     </>
   );
 
@@ -336,26 +405,23 @@ export function GrnListClient({
     );
   }
 
-  const desktopActions = (
-    <div className="flex items-center gap-2">
-      <Button asChild variant="outline" size={embedded ? "touch" : "sm"}>
-        <Link href={purchaseOrdersPath}>
-          <IconClipboardList className="size-4" />
-          {INVENTORY_VI.choosePoToCreateGrn}
-        </Link>
-      </Button>
-      <Button asChild size={embedded ? "touch" : "sm"}>
-        <Link href={`${basePath}/new`}>
-          <IconPlus className="size-4" />
-          {INVENTORY_VI.newGrn}
-        </Link>
-      </Button>
-    </div>
-  );
+  const embeddedDraftSection =
+    embedded && drafts && drafts.length > 0 ? (
+      <AppSection
+        title={INVENTORY_VI.draft}
+        badge={{ children: drafts.length, variant: "warning" }}
+      >
+        <GrnDraftsTab drafts={drafts} basePath={basePath} />
+      </AppSection>
+    ) : null;
 
-  const officeBody = drafts ? (
+  const officeBody = embedded ? (
+    <>
+      {embeddedDraftSection}
+      {listBody}
+    </>
+  ) : drafts ? (
     <AppPageTabs
-      paramKey={embedded ? "grnTab" : undefined}
       items={[
         { value: "list", label: INVENTORY_VI.grnListTab },
         {
@@ -377,7 +443,6 @@ export function GrnListClient({
   if (embedded) {
     return (
       <div className="flex w-full flex-col gap-3">
-        <div className="flex justify-end">{desktopActions}</div>
         {officeBody}
       </div>
     );
@@ -409,7 +474,7 @@ function GrnDraftsTab({
     router.push(
       draft.poId != null
         ? `${basePath}/${draft.grnId}?review=1`
-        : `${basePath}/new/${draft.supplierId}`,
+        : newGrnSupplierHref(basePath, draft.supplierId, draft.branchId),
     );
   }
 

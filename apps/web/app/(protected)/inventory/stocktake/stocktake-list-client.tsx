@@ -4,11 +4,9 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { z } from "zod";
 import {
   ArrowRight as IconArrowRight,
   ClipboardCheck as IconClipboardCheck,
-  Plus as IconPlus,
   Search as IconSearch,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
@@ -41,7 +39,6 @@ import {
 } from "@comtammatu/ui/components/select";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
-import { FormDialog, SelectField } from "@/components/form";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import {
@@ -50,18 +47,9 @@ import {
 } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/status-badge";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { createStocktakeSession } from "../actions";
 import { Ban as IconBan } from "lucide-react";
 
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
-
-const createStocktakeSchema = z.object({
-  branchId: z.string().min(1, {
-    error: messages.inventory.stocktake.selectBranch,
-  }),
-});
-
-type CreateStocktakeValues = z.infer<typeof createStocktakeSchema>;
 
 export interface StocktakeSessionRow {
   id: number;
@@ -120,7 +108,6 @@ function StocktakeSessionCard({
 
 export function StocktakeListClient({
   initial,
-  branches,
   userRole: _userRole,
   userBranchId,
   routeBase = "/inventory/stocktake",
@@ -137,7 +124,6 @@ export function StocktakeListClient({
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
   const branchQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
   const [drawerRow, setDrawerRow] = useState<StocktakeSessionRow | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -189,41 +175,6 @@ export function StocktakeListClient({
     }
     return list;
   }, [rows, search, statusFilter]);
-
-  const branchOptions = useMemo(
-    () =>
-      branches.map((branch) => ({
-        value: String(branch.id),
-        label: branch.name,
-      })),
-    [branches],
-  );
-
-  const createDefaultValues = useMemo<CreateStocktakeValues>(
-    () => ({
-      branchId: userBranchId != null ? String(userBranchId) : "",
-    }),
-    [userBranchId],
-  );
-
-  function handleCreate() {
-    setDialogOpen(true);
-  }
-
-  async function handleCreateSession(values: CreateStocktakeValues) {
-    const branchId = Number(values.branchId);
-    const res = await createStocktakeSession(branchId);
-    if (!res.success || !res.data) {
-      return {
-        success: false,
-        error: res.error ?? messages.inventory.stocktake.createClassicFailed,
-      };
-    }
-
-    const id = (res.data as { id: number }).id;
-    router.push(`${routeBase}/${id}?branchId=${branchId}`);
-    return { success: true };
-  }
 
   const isFiltered = Boolean(search) || statusFilter !== "all";
   const operatorFlow = messages.inventory.operatorFlow;
@@ -279,20 +230,10 @@ export function StocktakeListClient({
         size={embedded ? "touch" : "default"}
         asChild
       >
-        {/* S13a pilot entry. Route is feature-flag gated server-side —
-            non-pilot branches redirect to list with error=stocktake_redesigned_not_enabled. */}
         <Link href={`${routeBase}/new${branchQuery}`}>
           <IconClipboardCheck className="size-4" />
-          {messages.inventory.stocktake.v2}
+          {messages.inventory.stocktake.openSession}
         </Link>
-      </Button>
-      <Button
-        type="button"
-        size={embedded ? "touch" : "default"}
-        onClick={handleCreate}
-      >
-        <IconPlus className="size-4" />
-        {messages.inventory.stocktake.openSession}
       </Button>
     </div>
   );
@@ -387,30 +328,6 @@ export function StocktakeListClient({
           <StocktakeSessionCard row={r} routeBase={routeBase} onOpenDrawer={setDrawerRow} />
         )}
       />
-      <FormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        title={messages.inventory.stocktake.chooseBranchTitle}
-        schema={createStocktakeSchema}
-        defaultValues={createDefaultValues}
-        entityKey={`stocktake-${createDefaultValues.branchId || "new"}`}
-        onSubmit={handleCreateSession}
-        successMessage={messages.inventory.stocktake.classicCreated}
-        submitLabel={messages.inventory.stocktake.createClassic}
-        cancelLabel={ACTIONS_VI.cancel}
-        contentClassName="sm:max-w-sm"
-      >
-        {(form) => (
-          <SelectField
-            control={form.control}
-            name="branchId"
-            label={BRANCH_VI.long}
-            options={branchOptions}
-            placeholder={messages.inventory.stocktake.chooseBranchPlaceholder}
-            required
-          />
-        )}
-      </FormDialog>
       <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
         <DrawerContent>
           {drawerRow && (

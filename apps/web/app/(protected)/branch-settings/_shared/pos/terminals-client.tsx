@@ -50,9 +50,14 @@ export interface BranchOption {
 interface TerminalsClientProps {
   branches: BranchOption[];
   terminals: TerminalRow[];
+  embedded?: boolean;
 }
 
-export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
+export function TerminalsClient({
+  branches,
+  terminals,
+  embedded = false,
+}: TerminalsClientProps) {
   const firstBranch = branches[0];
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
     firstBranch?.id ?? null,
@@ -126,6 +131,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
   return (
     <>
       <AppToolbar
+        variant={embedded ? "inline" : "card"}
         filters={
           canSwitchBranch ? (
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">

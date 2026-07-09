@@ -20,6 +20,9 @@ contracts inside the repo.
 
 - Root adapter directories (`.claude/`, `.codex/`, `.agents/`, ...) wire tools
   back to this repo. They do not own project rules.
+- Ignored local tool state (`.agents/skills/`, `.mcp.json`,
+  `.claude/settings.local.json`, caches, logs, sessions) is runtime wiring, not
+  task input or project authority.
 - Do not vendor external skills into the repo unless the owner explicitly asks.
 - Skill names below are capability contracts. If the exact skill is unavailable,
   use the closest installed equivalent and state the fallback.
@@ -37,6 +40,8 @@ Skill plan: repo rules = engineering + <topic rules>; external skills = <names o
 
 Put the plan in the PR body, task note, or owner-facing work summary. Do not
 create a dated worklog file for it.
+Name only the rules, tools, and skills actually used for this task; do not paste
+the full routing matrix or installed-skill list into prompts.
 
 ## Required Routing Matrix
 
@@ -45,7 +50,7 @@ create a dated worklog file for it.
 | Broad repo/code orientation | `engineering.md`, `references.md`, `docs/CODEBASE_MAP.md` | CodeGraph first when `.codegraph/` exists; otherwise a read-only search helper | Cite evidence paths; do not claim runtime state without smoke evidence |
 | Code review, PR review, regression hunt | `engineering.md`, `workflow.md`, relevant module docs, `tasks/regressions.md` | review/security-review tools only when they add evidence | Findings first with file/line refs; targeted checks when feasible |
 | Next.js, React, Server Actions, proxy | `engineering.md`; `database.md` if data/auth touched | Next.js/React best-practices skill | `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` |
-| UI, UX, route surface, copy, forms, POS/KDS | `ui.md`, `docs/spec/design-system.md`, `docs/modules/ui.md`, relevant refs | UI/UX checklist or browser tooling after project UI authority is loaded | Browser/runtime smoke for meaningful UI; no design-system drift |
+| UI, UX, route surface, copy, forms, POS/KDS | `ui.md`, `docs/spec/design-system.md`, `docs/spec/page-archetypes.md`, `docs/ref/screen-context-map.md`, `docs/modules/ui.md`, relevant regressions | At most one design-review capability for a real unresolved design question; browser tooling for runtime evidence after the UI Advisor Gate is complete | Browser/runtime smoke for meaningful UI; no design-system drift |
 | Supabase, migrations, RLS, auth, RPC, generated types | `database.md`, `workflow.md`, `tasks/regressions.md`, schema docs | Supabase and Postgres best-practices skills; MCP/CLI only after target ref verification | T3 for schema/RLS/security-definer/backfill; migration file before apply; `db:types` after applied type-source schema |
 | Money, payments, HĐĐT, payroll, tax, labor | `database.md`, `workflow.md`, `docs/ref/legal-framework-2026.md`, specific legal refs | `tax-vn` in Claude, or direct doc routing in other runtimes; Supabase if DB touched | T3; cite governing law doc; targeted tests plus full gates |
 | Browser QA, route smoke, responsive/layout evidence | `workflow.md`, relevant UI/module docs | Playwright/browser/QA tools | Capture URL, viewport, route, observed state, and blockers |
@@ -76,8 +81,16 @@ create a dated worklog file for it.
 
 - Load `docs/spec/design-system.md`, `docs/modules/ui.md`, `ui.md`, and relevant
   regressions before external design advice.
+- Complete `docs/spec/page-archetypes.md` § 0.1 UI Advisor Gate before using an
+  external design skill or plugin. Project context and archetypes choose the
+  workflow and page shape; external output may review the decision but cannot
+  replace it.
 - Product UI uses Má Tư DS primitives and `apps/web/app/components/surface.tsx`
   first. External UI output is advisory only.
+- Use the minimum capability that closes a known gap: a design review for an
+  unresolved interaction or hierarchy decision, and browser tooling for
+  runtime evidence. Do not install or stack tools merely because the agent
+  lacks a completed UI Advisor Gate.
 - Do not create tool-specific context files (`PRODUCT.md`, `DESIGN.md`,
   design-system folders, route-local theme docs). Map the request to existing
   repo sources.
@@ -104,4 +117,5 @@ create a dated worklog file for it.
 - Do not claim a tool was used unless its instructions or output informed the
   work.
 - Do not add dated snapshot docs for plans, debates, audits, or backlog. Promote
-  durable facts to the owned source doc, or delete them.
+  durable facts to the owned source doc, park owner-kept future options as ADRs
+  with revisit triggers, or delete them.

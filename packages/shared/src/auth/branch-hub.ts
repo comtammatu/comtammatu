@@ -29,7 +29,7 @@ export function getDefaultRedirect(claims: JwtClaims): string {
   }
 
   if (canAccess(claims.user_role, "operator_home")) {
-    return claims.branch_id != null ? `/br/${claims.branch_id}` : "/br";
+    return claims.branch_id != null ? `/br/${claims.branch_id}` : "/";
   }
 
   return "/finance";
@@ -61,7 +61,7 @@ export function resolveBranchHubDestination(
   }
 
   if (isAdminRole(claims.user_role)) {
-    return "/br";
+    return "/";
   }
 
   if (canAccess(claims.user_role, "operator_home")) {

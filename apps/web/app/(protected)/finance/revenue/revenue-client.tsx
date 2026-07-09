@@ -12,7 +12,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
 import {
   AppEmptyState,
   AppPage,
@@ -51,7 +51,10 @@ const RevenueChartsBlock = dynamic(
     ),
   },
 );
-import { ExportToolbar, type CsvSection } from "../components/export-toolbar";
+import {
+  FinanceExportActions,
+  type CsvSection,
+} from "../components/export-toolbar";
 import { FilterBar } from "../components/filter-bar";
 import { HeatmapGrid, type HeatmapCell } from "../components/heatmap-grid";
 import { KpiCard } from "@/components/kpi/kpi-card";
@@ -99,7 +102,7 @@ interface PeriodAggregateRow {
   period_end: string;
   period_label: string;
   order_count: number;
-  /** Sum of orders.total_amount (post-discount, post-VAT — what customer paid) */
+  /** Sum of payments.amount (post-discount, post-VAT — money collected) */
   total_revenue: number;
   /** Sum of orders.subtotal (PRE-discount, pre-VAT) */
   gross_sales: number;
@@ -248,7 +251,7 @@ export function RevenueClient({
   // RPC `get_revenue_kpis` field naming differs from BA contract:
   //   • RPC.subtotal_revenue = sum(orders.subtotal) = PRE-discount, PRE-VAT
   //     → this is what BA calls "gross_sales"
-  //   • RPC.net_revenue = sum(orders.total_amount) = customer paid total
+  //   • RPC.net_revenue = sum(payments.amount) = money collected
   //     (post-discount, post-VAT)
   //
   // BA hero "Doanh thu thuần" = post-discount, PRE-VAT = gross - discount
@@ -426,7 +429,7 @@ export function RevenueClient({
       key: "orders",
       header: revCopy.periodTable.colOrders,
       className: "text-right font-mono tabular-nums",
-      render: (row) => row.order_count.toLocaleString("vi-VN"),
+      render: (row) => formatCount(row.order_count),
     },
     {
       key: "net_revenue",
@@ -472,7 +475,7 @@ export function RevenueClient({
         },
         {
           key: "orders",
-          content: (kpis?.order_count ?? 0).toLocaleString("vi-VN"),
+          content: formatCount(kpis?.order_count ?? 0),
           className: "text-right font-mono tabular-nums font-medium",
         },
         {
@@ -516,7 +519,7 @@ export function RevenueClient({
       key: "orders",
       header: revCopy.cashierTable.colOrders,
       className: "text-right font-mono tabular-nums",
-      render: (row) => Number(row.order_count).toLocaleString("vi-VN"),
+      render: (row) => formatCount(Number(row.order_count)),
     },
     {
       key: "net",
@@ -544,7 +547,7 @@ export function RevenueClient({
       key: "qty",
       header: revCopy.topItems.colQty,
       className: "text-right font-mono tabular-nums",
-      render: (row) => Number(row.quantity_sold).toLocaleString("vi-VN"),
+      render: (row) => formatCount(Number(row.quantity_sold)),
     },
     {
       key: "revenue",
@@ -567,7 +570,7 @@ export function RevenueClient({
           granularityLabel,
         )}
         actions={
-          <ExportToolbar
+          <FinanceExportActions
             filename={csvFilename}
             signature={{
               branchLabel,
@@ -618,7 +621,7 @@ export function RevenueClient({
         />
         <KpiCard
           label={revCopy.kpi.orderCount}
-          value={(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
+          value={formatCount(kpis?.order_count ?? 0)}
           hint={revCopy.kpi.orderCountHint}
           delta={delta(
             kpis?.order_count ?? 0,
@@ -702,19 +705,19 @@ export function RevenueClient({
             : revCopy.heatmap.tooLargeRange
         }
       >
-          {hourlyEnabled && heatmapCells.length > 0 ? (
-            <HeatmapGrid cells={heatmapCells} />
-          ) : (
-            <AppEmptyState
-              compact
-              className="h-32 border-dashed bg-transparent py-0"
-              title={
-                hourlyEnabled
-                  ? revCopy.heatmap.empty
-                  : revCopy.heatmap.tooLargeEmpty
-              }
-            />
-          )}
+        {hourlyEnabled && heatmapCells.length > 0 ? (
+          <HeatmapGrid cells={heatmapCells} />
+        ) : (
+          <AppEmptyState
+            compact
+            className="h-32 border-dashed bg-transparent py-0"
+            title={
+              hourlyEnabled
+                ? revCopy.heatmap.empty
+                : revCopy.heatmap.tooLargeEmpty
+            }
+          />
+        )}
       </AppSection>
 
       <SectionHeading
@@ -755,7 +758,7 @@ export function RevenueClient({
                     )}
                   </ItemTitle>
                   <ItemDescription>
-                    {row.order_count.toLocaleString("vi-VN")}{" "}
+                    {formatCount(row.order_count)}{" "}
                     {revCopy.periodTable.colOrders}
                   </ItemDescription>
                 </ItemContent>
@@ -808,7 +811,7 @@ export function RevenueClient({
                 <ItemContent>
                   <ItemTitle>{row.cashier_name}</ItemTitle>
                   <ItemDescription>
-                    {Number(row.order_count).toLocaleString("vi-VN")}{" "}
+                    {formatCount(Number(row.order_count))}{" "}
                     {revCopy.cashierTable.colOrders}
                   </ItemDescription>
                 </ItemContent>
@@ -842,7 +845,7 @@ export function RevenueClient({
                 <ItemContent>
                   <ItemTitle>{row.item_name}</ItemTitle>
                   <ItemDescription>
-                    {Number(row.quantity_sold).toLocaleString("vi-VN")}{" "}
+                    {formatCount(Number(row.quantity_sold))}{" "}
                     {revCopy.topItems.colQty}
                   </ItemDescription>
                 </ItemContent>
@@ -898,11 +901,13 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
             {cashCopy.closedSessions}
           </p>
           <p className="text-lg font-semibold font-mono tabular-nums">
-            {variance.session_count.toLocaleString("vi-VN")}
+            {formatCount(variance.session_count)}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">{cashCopy.netVariance}</p>
+          <p className="text-xs text-muted-foreground">
+            {cashCopy.netVariance}
+          </p>
           <p
             className={
               tone === "good"
@@ -935,9 +940,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
       </div>
       {variance.worst_cashiers.length > 0 ? (
         <div className="flex flex-col gap-1.5 border-t pt-3">
-          <SectionLabel>
-            {cashCopy.topVariance}
-          </SectionLabel>
+          <SectionLabel>{cashCopy.topVariance}</SectionLabel>
           <ul className="flex flex-col gap-1">
             {variance.worst_cashiers.map((c) => (
               <li

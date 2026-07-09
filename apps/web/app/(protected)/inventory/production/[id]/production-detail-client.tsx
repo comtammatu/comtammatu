@@ -11,28 +11,31 @@ import {
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
   ItemContent,
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  AppDetailFooter,
-  AppSection,
-} from "@/components/surface";
+import { AppDetailFooter, AppSection } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { startProductionRun, confirmProductionRun, cancelProductionRun } from "../../production-run-actions";
+import { QuantityInput } from "@/components/form/domain-number-inputs";
+import {
+  startProductionRun,
+  confirmProductionRun,
+  cancelProductionRun,
+} from "../../production-run-actions";
 import type {
   ProductionRunRow,
   ProductionRecipeIngredient,
 } from "../../production-run-actions";
 import type { ProductionShortageRow } from "../../production-types";
 import { formatVNDate } from "@comtammatu/shared/time";
+import { formatDecimalInputValue } from "@comtammatu/shared/format";
+import { formatQty } from "../../_lib/format";
 
 interface ProductionDetailClientProps {
   run: ProductionRunRow;
@@ -43,11 +46,6 @@ interface ProductionDetailClientProps {
   embedded?: boolean;
 }
 
-function formatProductionQuantity(value: number) {
-  const rounded = Math.floor(value * 1000) / 1000;
-  return String(Object.is(rounded, -0) ? 0 : rounded);
-}
-
 export function ProductionDetailClient({
   run,
   recipeContext,
@@ -55,18 +53,25 @@ export function ProductionDetailClient({
 }: ProductionDetailClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [actualQuantity, setActualQuantity] = useState<string>(run.actual_quantity?.toString() || "");
-  const maxProductionStr = recipeContext?.maxProductionQuantity != null
-    ? formatProductionQuantity(recipeContext.maxProductionQuantity)
-    : null;
+  const [actualQuantity, setActualQuantity] = useState<string>(
+    run.actual_quantity?.toString() || "",
+  );
+  const maxProductionRaw =
+    recipeContext?.maxProductionQuantity != null
+      ? formatDecimalInputValue(recipeContext.maxProductionQuantity, 3)
+      : null;
   const [shortages, setShortages] = useState<ProductionShortageRow[]>([]);
 
-  const [ingredientUsages, setIngredientUsages] = useState<Record<number, string>>(() => {
+  const [ingredientUsages, setIngredientUsages] = useState<
+    Record<number, string>
+  >(() => {
     const usages: Record<number, string> = {};
     if (recipeContext?.ingredients) {
-      const overrides = Array.isArray(run.ingredients_override) ? run.ingredients_override : [];
+      const overrides = Array.isArray(run.ingredients_override)
+        ? run.ingredients_override
+        : [];
       const overrideMap = new Map();
-      overrides.forEach(o => {
+      overrides.forEach((o) => {
         if (o.ingredient_id != null && o.actual_quantity != null) {
           overrideMap.set(o.ingredient_id, o.actual_quantity);
         }
@@ -74,10 +79,13 @@ export function ProductionDetailClient({
 
       for (const ing of recipeContext.ingredients) {
         if (overrideMap.has(ing.ingredient_id)) {
-          usages[ing.ingredient_id] = overrideMap.get(ing.ingredient_id).toString();
+          usages[ing.ingredient_id] = overrideMap
+            .get(ing.ingredient_id)
+            .toString();
         } else {
-          const defaultQty = (run.planned_quantity * ing.recipe_quantity) / ing.yield_factor;
-          usages[ing.ingredient_id] = defaultQty.toFixed(3);
+          const defaultQty =
+            (run.planned_quantity * ing.recipe_quantity) / ing.yield_factor;
+          usages[ing.ingredient_id] = formatDecimalInputValue(defaultQty, 3);
         }
       }
     }
@@ -85,7 +93,7 @@ export function ProductionDetailClient({
   });
 
   const handleIngredientChange = (id: number, val: string) => {
-    setIngredientUsages(prev => ({ ...prev, [id]: val }));
+    setIngredientUsages((prev) => ({ ...prev, [id]: val }));
   };
 
   const handleStart = () => {
@@ -105,10 +113,11 @@ export function ProductionDetailClient({
       const parsedActual = actualQuantity.trim()
         ? Number.parseFloat(actualQuantity)
         : undefined;
-      const actual = parsedActual != null && !Number.isNaN(parsedActual)
-        ? parsedActual
-        : undefined;
-      
+      const actual =
+        parsedActual != null && !Number.isNaN(parsedActual)
+          ? parsedActual
+          : undefined;
+
       const actualIngredients = [];
       if (recipeContext?.ingredients) {
         for (const ing of recipeContext.ingredients) {
@@ -125,19 +134,22 @@ export function ProductionDetailClient({
         }
       }
 
-      const res = await confirmProductionRun({ 
-        id: run.id, 
+      const res = await confirmProductionRun({
+        id: run.id,
         actualQuantity: actual,
-        actualIngredients: actualIngredients.length > 0 ? actualIngredients : undefined
+        actualIngredients:
+          actualIngredients.length > 0 ? actualIngredients : undefined,
       });
-      
+
       if (res.success) {
         setShortages([]);
         toast.success("Đã xác nhận lệnh sản xuất");
         router.refresh();
       } else {
         toast.error(res.error || "Có lỗi xảy ra");
-        const nextShortages = Array.isArray(res.data) ? (res.data as ProductionShortageRow[]) : [];
+        const nextShortages = Array.isArray(res.data)
+          ? (res.data as ProductionShortageRow[])
+          : [];
         setShortages(nextShortages);
         if (nextShortages.length > 0) {
           toast.error("Thiếu nguyên liệu trong kho để sản xuất.");
@@ -148,7 +160,7 @@ export function ProductionDetailClient({
 
   const handleCancel = () => {
     if (!confirm("Bạn có chắc chắn muốn hủy lệnh này?")) return;
-    
+
     startTransition(async () => {
       const res = await cancelProductionRun(run.id);
       if (res.success) {
@@ -164,15 +176,16 @@ export function ProductionDetailClient({
   const canEdit = run.status === "draft" || run.status === "in_progress";
   const actionSize = embedded ? "touch" : "default";
   const ingredients = recipeContext?.ingredients ?? [];
-  const branchSummary: ReactNode = run.branch_id === run.target_branch_id ? (
-    run.branch_name
-  ) : (
-    <span className="inline-flex flex-wrap items-center gap-2">
-      <span>Sản xuất: {run.branch_name}</span>
-      <IconArrowRight className="size-4 text-muted-foreground" />
-      <span>Nhận: {run.target_branch_name}</span>
-    </span>
-  );
+  const branchSummary: ReactNode =
+    run.branch_id === run.target_branch_id ? (
+      run.branch_name
+    ) : (
+      <span className="inline-flex flex-wrap items-center gap-2">
+        <span>Sản xuất: {run.branch_name}</span>
+        <IconArrowRight className="size-4 text-muted-foreground" />
+        <span>Nhận: {run.target_branch_name}</span>
+      </span>
+    );
   const summaryItems: Array<{
     term: string;
     description: ReactNode;
@@ -185,7 +198,10 @@ export function ProductionDetailClient({
     },
     { term: "Ngày tạo", description: formatVNDate(run.created_at) },
     { term: "Thành phẩm", description: run.finished_good_name },
-    { term: "Số lượng dự kiến", description: `${run.planned_quantity} ${unit}` },
+    {
+      term: "Số lượng dự kiến",
+      description: `${formatQty(run.planned_quantity)} ${unit}`,
+    },
   ];
 
   if (run.notes) {
@@ -197,18 +213,17 @@ export function ProductionDetailClient({
   }
 
   function renderIngredientUsageInput(ingredient: ProductionRecipeIngredient) {
-    const maxQty = Math.floor(ingredient.max_ingredient_qty * 1000) / 1000;
+    const maxQty = formatDecimalInputValue(ingredient.max_ingredient_qty, 3);
     return (
       <div className="flex min-w-0 items-center justify-end gap-2">
-        <Input
+        <QuantityInput
           aria-label={`Sử dụng thực tế ${ingredient.ingredient_name}`}
-          type="number"
           min="0"
-          step="0.001"
+          maxFractionDigits={3}
           max={maxQty}
           value={ingredientUsages[ingredient.ingredient_id] ?? ""}
-          onChange={(event) =>
-            handleIngredientChange(ingredient.ingredient_id, event.target.value)
+          onValueChange={(value) =>
+            handleIngredientChange(ingredient.ingredient_id, value)
           }
           disabled={isPending}
           className="min-w-0 text-right"
@@ -241,7 +256,7 @@ export function ProductionDetailClient({
       className: "text-right",
       render: (ingredient) => (
         <span className="font-mono tabular-nums">
-          {formatProductionQuantity(ingredient.max_ingredient_qty)}
+          {formatQty(ingredient.max_ingredient_qty)}
         </span>
       ),
     },
@@ -280,21 +295,25 @@ export function ProductionDetailClient({
         >
           <div className="grid gap-2 sm:max-w-md">
             <div className="flex items-center gap-2">
-              <Input
+              <QuantityInput
                 aria-label="Số lượng thực tế"
-                type="number"
                 min="0"
-                step="0.01"
-                max={maxProductionStr ?? undefined}
+                maxFractionDigits={3}
+                max={maxProductionRaw ?? undefined}
                 value={actualQuantity}
-                onChange={(e) => setActualQuantity(e.target.value)}
+                onValueChange={setActualQuantity}
                 disabled={isPending}
               />
-              <span className="text-sm text-muted-foreground whitespace-nowrap">{unit}</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                {unit}
+              </span>
             </div>
-            {maxProductionStr && (
+            {maxProductionRaw && (
               <div className="text-sm text-muted-foreground">
-                Tối đa có thể sản xuất: <span className="font-medium text-foreground">{maxProductionStr} {unit}</span>
+                Tối đa có thể sản xuất:{" "}
+                <span className="font-medium text-foreground">
+                  {formatQty(recipeContext?.maxProductionQuantity ?? 0)} {unit}
+                </span>
               </div>
             )}
           </div>
@@ -316,8 +335,7 @@ export function ProductionDetailClient({
                 <ItemContent>
                   <ItemTitle>{ingredient.ingredient_name}</ItemTitle>
                   <ItemDescription>
-                    Tồn tối đa{" "}
-                    {formatProductionQuantity(ingredient.max_ingredient_qty)}{" "}
+                    Tồn tối đa {formatQty(ingredient.max_ingredient_qty)}{" "}
                     {ingredient.unit_name}
                   </ItemDescription>
                 </ItemContent>
@@ -345,13 +363,9 @@ export function ProductionDetailClient({
                   </span>
                   <span>
                     Cần{" "}
-                    <span className="font-mono">
-                      {row.needed.toFixed(3)}
-                    </span>{" "}
+                    <span className="font-mono">{formatQty(row.needed)}</span>{" "}
                     {row.unit}, còn{" "}
-                    <span className="font-mono">
-                      {row.on_hand.toFixed(3)}
-                    </span>{" "}
+                    <span className="font-mono">{formatQty(row.on_hand)}</span>{" "}
                     {row.unit}
                   </span>
                 </div>
@@ -369,7 +383,7 @@ export function ProductionDetailClient({
                 Số lượng thực tế
               </dt>
               <dd className="text-sm leading-6 font-medium">
-                {run.actual_quantity} {unit}
+                {formatQty(run.actual_quantity ?? 0)} {unit}
               </dd>
             </div>
           </dl>

@@ -1,6 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import { EmployeePage } from "@lib/staff-runtime/components/staff-runtime-page";
+import {
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
@@ -72,12 +75,16 @@ export default async function BranchPrintersPage({
   ]);
 
   if (branchRes.error || !branchRes.data) notFound();
-  if (printersRes.error) throw new Error("Không thể tải máy in");
-  if (agentRes.error) throw new Error("Không thể tải trạng thái agent in");
-  if (printTypesRes.error) throw new Error("Không thể tải loại phiếu in");
+  if (printersRes.error)
+    throw new Error(messages.settings.printers.loadPrintersFailed);
+  if (agentRes.error)
+    throw new Error(messages.settings.printers.loadAgentStatusFailed);
+  if (printTypesRes.error)
+    throw new Error(messages.settings.printers.loadPrintTypesFailed);
   if (categoryRoutesRes.error)
-    throw new Error("Không thể tải routing danh mục");
-  if (categoriesRes.error) throw new Error("Không thể tải danh mục");
+    throw new Error(messages.settings.printers.loadCategoryRoutesFailed);
+  if (categoriesRes.error)
+    throw new Error(messages.settings.printers.loadCategoriesFailed);
 
   const printers = attachPrinterRouting(
     printersRes.data ?? [],
@@ -86,17 +93,21 @@ export default async function BranchPrintersPage({
   );
 
   return (
-    <EmployeePage
+    <BranchOperatorPage
       title={messages.settings.pages.printersTitle}
-      description={branchRes.data.name}
+      description={messages.settings.branch.printersDescription(
+        branchRes.data.name,
+      )}
     >
-      <PrintersClient
-        branches={[branchRes.data]}
-        printers={printers as Printer[]}
-        agents={(agentRes.data ?? []) as Agent[]}
-        categories={(categoriesRes.data ?? []) as Category[]}
-        embedded
-      />
-    </EmployeePage>
+      <BranchOperatorPanel>
+        <PrintersClient
+          branches={[branchRes.data]}
+          printers={printers as Printer[]}
+          agents={(agentRes.data ?? []) as Agent[]}
+          categories={(categoriesRes.data ?? []) as Category[]}
+          embedded
+        />
+      </BranchOperatorPanel>
+    </BranchOperatorPage>
   );
 }

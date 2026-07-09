@@ -8,11 +8,48 @@ import { test } from "node:test";
 // it silently receives nothing. These asserts pin both sides together so a
 // rename on either side fails CI instead of shipping a dead subscription.
 
-const client = readFileSync(
+const branchOpsRefresh = readFileSync(
+  new URL("../app/_components/branch-ops-refresh.tsx", import.meta.url),
+  "utf8",
+);
+
+const branchOpsChannel = readFileSync(
+  new URL("../app/_hooks/use-branch-ops-events.ts", import.meta.url),
+  "utf8",
+);
+
+const operatorLayout = readFileSync(
   new URL(
-    "../app/(protected)/br/[branchId]/(operator)/branch-ops-refresh.tsx",
+    "../app/(protected)/br/[branchId]/(operator)/layout.tsx",
     import.meta.url,
   ),
+  "utf8",
+);
+
+const operatorChildPages = [
+  "../app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx",
+  "../app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx",
+  "../app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
+  "../app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx",
+  "../app/(protected)/br/[branchId]/(operator)/stock/count-slips/page.tsx",
+  "../app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx",
+].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
+
+const hubTodayStatus = readFileSync(
+  new URL(
+    "../app/(protected)/br/[branchId]/(operator)/_components/hub/hub-today-status.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
+const leaveRequestsTable = readFileSync(
+  new URL("../app/(protected)/hr/leave-requests-table.tsx", import.meta.url),
+  "utf8",
+);
+
+const staffRuntimeHome = readFileSync(
+  new URL("../lib/staff-runtime/page.tsx", import.meta.url),
   "utf8",
 );
 
@@ -62,9 +99,39 @@ const posMenuMigration = readFileSync(
 );
 
 test("client subscribes to the branch:{id}:ops private broadcast, event 'ops'", () => {
-  assert.match(client, /`branch:\$\{String\(branchId\)\}:ops`/);
-  assert.match(client, /private:\s*true/);
-  assert.match(client, /"broadcast",\s*\{\s*event:\s*"ops"\s*\}/);
+  assert.match(branchOpsChannel, /`branch:\$\{String\(branchId\)\}:ops`/);
+  assert.match(branchOpsChannel, /private:\s*true/);
+  assert.match(branchOpsChannel, /"broadcast",\s*\{\s*event:\s*"ops"\s*\}/);
+  assert.match(branchOpsRefresh, /pollMs:\s*false/);
+});
+
+test("operator layout owns the branch ops subscriber without child duplicates", () => {
+  assert.match(
+    operatorLayout,
+    /<BranchOpsRefresh[\s\S]*branchId=\{context\.branchId\}/,
+  );
+  for (const page of operatorChildPages) {
+    assert.doesNotMatch(page, /<BranchOpsRefresh/);
+  }
+  assert.match(staffRuntimeHome, /enableBranchOpsRefresh\s*=\s*true/);
+  assert.match(
+    staffRuntimeHome,
+    /enableBranchOpsRefresh && state\.branchId !== null/,
+  );
+  for (const page of operatorChildPages) {
+    if (page.includes("EmployeeHomePageContent")) {
+      assert.match(page, /enableBranchOpsRefresh=\{false\}/);
+    }
+  }
+  assert.doesNotMatch(hubTodayStatus, /<BranchOpsRefresh/);
+});
+
+test("operator leave approvals uses the table subscriber without layout duplication", () => {
+  assert.match(
+    operatorLayout,
+    /disabledPathPrefixes=\{\[\s*`\/br\/\$\{context\.branchId\}\/shift\/leave-approvals`,\s*\]\}/,
+  );
+  assert.match(leaveRequestsTable, /useBranchOpsEvents\(\{/);
 });
 
 test("DB trigger broadcasts to the matching topic/event on a private channel", () => {
@@ -80,15 +147,17 @@ test("realtime.messages receive policy is scoped to branch ops topics", () => {
   assert.match(migration, /can_read_branch_ops/);
 });
 
-test("POS layout mounts branch ops refresh so stock updates refetch sale limits", () => {
-  assert.match(posLayout, /BranchOpsRefresh/);
-  assert.match(posLayout, /<BranchOpsRefresh branchId=\{numericBranchId\} \/>/);
+test("POS menu sync owns branch ops refresh without a layout duplicate", () => {
+  assert.doesNotMatch(posLayout, /BranchOpsRefresh/);
+  assert.match(posMenuClient, /`branch:\$\{String\(branchId\)\}:ops`/);
 });
 
 test("POS menu sync listens for matching branch ops menu broadcasts", () => {
   assert.match(posMenuClient, /`branch:\$\{String\(branchId\)\}:ops`/);
   assert.match(posMenuClient, /private:\s*true/);
-  assert.match(posMenuClient, /payload\.payload\?\.domain\s*===\s*"pos"/);
+  assert.match(posMenuClient, /event\?\.domain\s*===\s*"pos"/);
+  assert.match(posMenuClient, /event\?\.domain\s*===\s*"inventory"/);
+  assert.match(posMenuClient, /event\?\.table\s*===\s*"stock_levels"/);
   assert.match(posMenuClient, /\.subscribe\(\(status\)\s*=>/);
   assert.match(posMenuMigration, /'domain',\s*'pos'/);
   assert.match(

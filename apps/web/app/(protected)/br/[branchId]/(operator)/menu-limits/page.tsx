@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation";
+import { ListChecks } from "lucide-react";
 import { formatVNLongDate } from "@comtammatu/shared/time";
 import {
-  EmployeePage,
-  EmployeePanel,
-} from "@lib/staff-runtime/components/staff-runtime-page";
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { fetchBranchMenuDailyLimits } from "./actions";
-import { MenuLimitsTable } from "./menu-limits-table";
+import { MenuLimitsClient } from "./menu-limits-table";
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +40,17 @@ export default async function BranchMenuLimitsPage({
   const today = formatVNLongDate(new Date());
 
   return (
-    <EmployeePage
+    <BranchOperatorPage
       title={messages.settings.branch.menuLimitsTitle}
       description={`${branch.name} · ${today}`}
     >
-      <EmployeePanel tone="info" size="sm">
+      <BranchOperatorPanel
+        title={messages.settings.branch.menuLimitsGuideTitle}
+        description={messages.settings.branch.menuLimitsGuideDescription}
+        icon={ListChecks}
+        tone="info"
+        size="sm"
+      >
         <p>
           {messages.settings.branch.menuLimitsIntroBefore}{" "}
           <span className="font-medium text-foreground">
@@ -57,9 +64,9 @@ export default async function BranchMenuLimitsPage({
             {result.error ?? messages.settings.branch.menuLimitsLoadFailed}
           </p>
         ) : null}
-      </EmployeePanel>
+      </BranchOperatorPanel>
 
-      <MenuLimitsTable branchId={branchId} rows={rows} />
-    </EmployeePage>
+      <MenuLimitsClient branchId={branchId} rows={rows} />
+    </BranchOperatorPage>
   );
 }

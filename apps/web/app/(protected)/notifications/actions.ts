@@ -3,6 +3,7 @@
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { loadAuthState } from "@/_lib/auth";
+import { messages } from "@lib/messages";
 
 export interface NotificationItem {
   id: number;
@@ -56,7 +57,7 @@ export async function listNotifications(
     p_before: before ?? undefined,
     p_unread_only: unreadOnly,
   });
-  if (error) return { success: false, error: "Không thể tải thông báo" };
+  if (error) return { success: false, error: messages.notifications.loadFailed };
 
   const rows = data ?? [];
   const hasMore = rows.length > limit;

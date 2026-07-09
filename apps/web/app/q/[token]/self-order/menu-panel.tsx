@@ -125,13 +125,13 @@ export function MenuPanel({
           {availableCategories.length === 0 ? (
             <AppEmptyState
               title={SELF_ORDER_VI.menuEmpty}
-              icon={<IconUtensils />}
+              symbol="riceBowl"
               compact
             />
           ) : visibleItems.length === 0 ? (
             <AppEmptyState
               title={SELF_ORDER_VI.menuEmpty}
-              icon={<IconUtensils />}
+              symbol="riceBowl"
               compact
             />
           ) : isAllMenuActive ? (

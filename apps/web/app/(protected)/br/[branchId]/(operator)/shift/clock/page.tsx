@@ -1,4 +1,4 @@
-import { ClockPageContent } from "@lib/staff-runtime/clock/page";
+import { StaffClockPageContent } from "@lib/staff-runtime/clock/page";
 
 export default async function OperatorShiftClockPage({
   params,
@@ -8,7 +8,7 @@ export default async function OperatorShiftClockPage({
   const { branchId } = await params;
 
   return (
-    <ClockPageContent
+    <StaffClockPageContent
       routes={{
         home: `/br/${branchId}/shift`,
         tasks: `/br/${branchId}/shift`,
@@ -16,6 +16,7 @@ export default async function OperatorShiftClockPage({
         profile: `/br/${branchId}/profile`,
         managerHr: `/br/${branchId}/team`,
       }}
+      plane="branch"
     />
   );
 }

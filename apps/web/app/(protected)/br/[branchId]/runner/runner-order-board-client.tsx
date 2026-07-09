@@ -90,18 +90,18 @@ export function RunnerOrderBoardClient({
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <div className="grid grid-cols-12 divide-x divide-border/70 border-b border-border bg-muted/70">
-        <RunnerColumnHeader span={RUNNER_COLUMN_SPAN.order}>
+        <RunnerColumnHeading span={RUNNER_COLUMN_SPAN.order}>
           {RUNNER_BOARD_COPY.tableHeaders.order}
-        </RunnerColumnHeader>
-        <RunnerColumnHeader span={RUNNER_COLUMN_SPAN.quantity}>
+        </RunnerColumnHeading>
+        <RunnerColumnHeading span={RUNNER_COLUMN_SPAN.quantity}>
           {RUNNER_BOARD_COPY.tableHeaders.quantity}
-        </RunnerColumnHeader>
-        <RunnerColumnHeader span={RUNNER_COLUMN_SPAN.status}>
+        </RunnerColumnHeading>
+        <RunnerColumnHeading span={RUNNER_COLUMN_SPAN.status}>
           {RUNNER_BOARD_COPY.tableHeaders.status}
-        </RunnerColumnHeader>
-        <RunnerColumnHeader span={RUNNER_COLUMN_SPAN.wait} align="right">
+        </RunnerColumnHeading>
+        <RunnerColumnHeading span={RUNNER_COLUMN_SPAN.wait} align="right">
           {RUNNER_BOARD_COPY.tableHeaders.wait}
-        </RunnerColumnHeader>
+        </RunnerColumnHeading>
       </div>
       <ItemGroup
         role="list"
@@ -236,7 +236,7 @@ function RunnerIdleAtmosphere({ state }: { state: RunnerIdleState }) {
   );
 }
 
-function RunnerColumnHeader({
+function RunnerColumnHeading({
   children,
   span,
   align = "left",
@@ -279,7 +279,7 @@ function RunnerOrderListRow({
       data-runner-exiting={row.exiting ? "true" : undefined}
       data-runner-featured={featured ? "true" : undefined}
       className={cn(
-        "grid h-full min-h-0 w-full grid-cols-12 items-stretch divide-x divide-border/70 border-b border-l-4 p-0 rounded-none border-x-0 motion-safe:transition-all motion-safe:duration-300 motion-safe:ease-out",
+        "grid h-full min-h-0 w-full grid-cols-12 items-stretch divide-x divide-border/70 border-b border-l-4 p-0 rounded-none border-x-0 motion-safe:transition-[background-color,border-color,opacity,transform] motion-safe:duration-300 motion-safe:ease-out",
         getRunnerRowClass(),
         featured && "border-l-primary",
         featured && "bg-warning/15 ring-1 ring-inset ring-warning/40",

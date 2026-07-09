@@ -3,6 +3,11 @@
 import { Printer as IconPrinter } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  BranchOperatorActionBar,
+  BranchOperatorDetailList,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
+import {
   EmployeeActionBar,
   EmployeeDetailList,
   EmployeePanel,
@@ -17,7 +22,21 @@ const copy = messages.employee.payslip;
 
 const fmt = formatVND;
 
-export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
+type PayslipPlane = "employee" | "branch";
+
+export function PayslipClient({
+  entries,
+  plane = "employee",
+}: {
+  entries: PayslipEntry[];
+  plane?: PayslipPlane;
+}) {
+  const ActionBar =
+    plane === "branch" ? BranchOperatorActionBar : EmployeeActionBar;
+  const Panel = plane === "branch" ? BranchOperatorPanel : EmployeePanel;
+  const DetailList =
+    plane === "branch" ? BranchOperatorDetailList : EmployeeDetailList;
+
   if (entries.length === 0) {
     return (
       <AppEmptyState
@@ -29,7 +48,7 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <EmployeeActionBar align="end" className="print:hidden">
+      <ActionBar align="end" className="print:hidden">
         <Button
           type="button"
           variant="outline"
@@ -39,14 +58,14 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
           <IconPrinter data-icon="inline-start" />
           {copy.print}
         </Button>
-      </EmployeeActionBar>
+      </ActionBar>
       {entries.map((entry) => {
         const period = entry.payroll_periods;
         const status = period?.status ?? "paid";
         const statusMeta = getStatusBadgeMeta("payroll-period", status);
 
         return (
-          <EmployeePanel
+          <Panel
             key={entry.id}
             title={
               period?.period_month && period?.period_year
@@ -59,7 +78,7 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
             )}
             badge={{ children: statusMeta.label, variant: statusMeta.variant }}
           >
-            <EmployeeDetailList
+            <DetailList
               columns={1}
               rows={[
                 {
@@ -139,7 +158,7 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
                 },
               ]}
             />
-          </EmployeePanel>
+          </Panel>
         );
       })}
     </div>

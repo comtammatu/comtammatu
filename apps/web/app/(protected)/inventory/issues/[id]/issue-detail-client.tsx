@@ -387,6 +387,7 @@ export function IssueDetailClient({
             onClick={() => handleDeleteLine(line.id)}
             disabled={isPending}
             className="text-muted-foreground hover:text-destructive"
+            aria-label={ISSUES_VI.deleteLineAction}
           >
             <IconTrash className="size-4" />
           </Button>

@@ -14,6 +14,9 @@ function readRepo(path: string): string {
 const taskKindMigration = readRepo(
   "supabase/migrations/_archive/20260619042223_employee_consumption_task_kind.sql",
 );
+const attendanceShiftIntegrityMigration = readRepo(
+  "supabase/migrations/20260709094314_attendance_shift_integrity.sql",
+);
 const todayWorkStateSource = readWeb("lib/staff-runtime/_lib/today-work-state.ts");
 const employeeTasksPageSource = readWeb("lib/staff-runtime/tasks/page.tsx");
 const checkoutActionSource = readWeb("lib/staff-runtime/clock/actions.ts");
@@ -80,6 +83,31 @@ test("HR per-position editor exposes the consumption task kind", () => {
     positionTasksActionsSource,
     /upsert_position_shift_tasks/,
     "HR position-task save should call the upsert RPC",
+  );
+  assert.match(
+    positionTasksActionsSource,
+    /ingredientIds: task\.ingredientIds/,
+    "HR position-task save should pass consumption ingredients into the RPC payload",
+  );
+  assert.doesNotMatch(
+    positionTasksActionsSource,
+    /\.from\("shift_checklist_consumption_default_items"\)[\s\S]{0,300}\.(?:update|insert)\(/,
+    "HR position-task save should not write consumption defaults outside the RPC transaction",
+  );
+  assert.match(
+    attendanceShiftIntegrityMigration,
+    /CREATE OR REPLACE FUNCTION public\.upsert_position_shift_tasks/,
+    "active migration should replace upsert_position_shift_tasks",
+  );
+  assert.match(
+    attendanceShiftIntegrityMigration,
+    /jsonb_array_elements_text\(v_ingredient_ids\)/,
+    "upsert_position_shift_tasks should read consumption ingredient ids from the RPC payload",
+  );
+  assert.match(
+    attendanceShiftIntegrityMigration,
+    /INSERT INTO public\.shift_checklist_consumption_default_items/,
+    "upsert_position_shift_tasks should persist consumption defaults inside the same RPC",
   );
   assert.match(
     positionTasksClientSource,

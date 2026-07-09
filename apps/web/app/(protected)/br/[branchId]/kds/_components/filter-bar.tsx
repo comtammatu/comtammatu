@@ -43,7 +43,7 @@ export function FilterBar({
           onValueChange={(v) => onOrderTypeChange(v as OrderTypeFilter)}
         >
           <SelectTrigger
-            className="w-auto min-w-24 shrink-0 text-sm"
+            className="w-auto min-h-11 min-w-28 shrink-0 text-sm"
             aria-label={KDS_VI.filterOrderTypeAria}
           >
             <SelectValue placeholder={KDS_VI.filterOrderTypePlaceholder} />
@@ -67,7 +67,7 @@ export function FilterBar({
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
+            size="icon-touch"
             className="shrink-0"
             aria-label={ACTIONS_VI.clearFilter}
             onClick={onClearAll}
@@ -77,8 +77,8 @@ export function FilterBar({
         )}
 
         {displayCount > 0 && (
-          <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
-            {displayCount} đơn
+          <span className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold tabular-nums text-muted-foreground">
+            {displayCount} {KDS_VI.unitOrder}
           </span>
         )}
       </div>

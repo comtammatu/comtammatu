@@ -6,11 +6,12 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("root route uses Branch Hub context instead of raw role default", () => {
+test("root route renders work location picker instead of post-login redirect", () => {
   const rootPage = read("apps/web/app/page.tsx");
 
-  assert.match(rootPage, /resolvePostLoginRedirect/);
-  assert.match(rootPage, /resolveBranchHubContextFromHeaders/);
+  assert.match(rootPage, /WorkLocationPickerPage/);
+  assert.doesNotMatch(rootPage, /resolvePostLoginRedirect/);
+  assert.doesNotMatch(rootPage, /resolveBranchHubContextFromHeaders/);
   assert.doesNotMatch(rootPage, /redirect\(getDefaultRedirect\(claims\)\)/);
 });
 
@@ -40,7 +41,6 @@ test("login action passes device context into post-login redirect", () => {
 
 test("post-login redirect call sites resolve the central-site home branch (D055 §1)", () => {
   for (const path of [
-    "apps/web/app/page.tsx",
     "apps/web/app/(public)/(auth)/login/actions.ts",
     "apps/web/proxy.ts",
   ]) {
@@ -60,7 +60,10 @@ test("proxy no longer carries /employee compatibility redirects", () => {
   assert.doesNotMatch(proxy, /pathname\.startsWith\("\/employee"\)/);
   assert.equal(
     existsSync(
-      resolve(repoRoot, "apps/web/lib/staff-runtime/_lib/branch-runtime-redirect.ts"),
+      resolve(
+        repoRoot,
+        "apps/web/lib/staff-runtime/_lib/branch-runtime-redirect.ts",
+      ),
     ),
     false,
   );
@@ -72,15 +75,79 @@ test("branch shift route keeps floor-staff daily work visible", () => {
   );
 
   assert.match(shiftPage, /const authState = await loadAuthState\(\)/);
-  assert.match(
-    shiftPage,
-    /authState\.claims\.user_role === "branch_manager"/,
-  );
+  assert.match(shiftPage, /authState\.claims\.user_role === "branch_manager"/);
   assert.match(
     shiftPage,
     /mode=\{isBranchManager \? "manager-dashboard" : "full"\}/,
   );
   assert.doesNotMatch(shiftPage, /mode="manager-dashboard"/);
+});
+
+test("branch orders route owns operator UI instead of wrapping Office orders", () => {
+  const ordersPage = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx",
+  );
+  const ordersClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/orders/operator-orders-client.tsx",
+  );
+
+  assert.match(ordersPage, /BranchOperatorPage/);
+  assert.match(ordersPage, /OperatorOrdersClient/);
+  assert.match(ordersPage, /fetchOrders\(\{ branchId \}\)/);
+  assert.match(ordersPage, /parseOperatorBranchId/);
+  assert.doesNotMatch(ordersPage, /OrdersPageContent/);
+  assert.doesNotMatch(ordersPage, /BranchOpsRefresh/);
+  assert.doesNotMatch(ordersPage, /fetchRefunds/);
+  assert.match(ordersClient, /ItemGroup/);
+  assert.match(ordersClient, /OrderDetailSheet/);
+  assert.doesNotMatch(ordersClient, /OrdersPageBody|DataTable|AppPageHeader/);
+});
+
+test("native branch hub pages use the Branch operator interface contract", () => {
+  const branchOperatorPage = read(
+    "apps/web/lib/branch-operator/components/branch-operator-page.tsx",
+  );
+  const nativePages = [
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/page.tsx",
+  ] as const;
+
+  assert.doesNotMatch(
+    branchOperatorPage,
+    /<div className="flex w-full flex-col gap-3">/,
+  );
+  assert.doesNotMatch(
+    branchOperatorPage,
+    /<div className="flex flex-col gap-3">\{children\}<\/div>/,
+  );
+
+  for (const path of nativePages) {
+    const source = read(path);
+    assert.match(
+      source,
+      /@lib\/branch-operator\/components\/branch-operator-page/,
+      path,
+    );
+    assert.match(source, /BranchOperatorPage/, path);
+    assert.doesNotMatch(
+      source,
+      /@lib\/staff-runtime\/components\/staff-runtime-page/,
+      path,
+    );
+    assert.doesNotMatch(source, /AppPageHeader/, path);
+    assert.doesNotMatch(source, /[A-Za-z]+PageContent/, path);
+    assert.doesNotMatch(
+      source,
+      /<BranchOperatorPage[\s\S]*?<div className="flex flex-col gap-3"[\s\S]*?<\/BranchOperatorPage>/,
+      path,
+    );
+  }
 });
 
 test("employee pages no longer run page-level branch runtime redirects", () => {
@@ -100,7 +167,9 @@ test("employee pages no longer run page-level branch runtime redirects", () => {
     assert.doesNotMatch(source, /resolveEmployeeBranchRuntimePath/, path);
   }
   assert.equal(
-    existsSync(resolve(repoRoot, "apps/web/lib/staff-runtime/attendance/page.tsx")),
+    existsSync(
+      resolve(repoRoot, "apps/web/lib/staff-runtime/attendance/page.tsx"),
+    ),
     false,
   );
 

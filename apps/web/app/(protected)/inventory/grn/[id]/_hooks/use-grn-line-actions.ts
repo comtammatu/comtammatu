@@ -139,7 +139,6 @@ export function useGrnLineActions({
       if (existingIndex < 0) return [...prev, line];
       return prev.map((item, index) => (index === existingIndex ? line : item));
     });
-    router.refresh();
   }
 
   function validateBeforeConfirm(): string | null {

@@ -7,6 +7,7 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getVNDateString } from "@comtammatu/shared/time";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { loadAuthState } from "@/_lib/auth";
+import { messages } from "@lib/messages";
 
 const PROFILE_AVATAR_BUCKET = "menu-images";
 const MAX_AVATAR_BYTES = 1_500_000;
@@ -118,7 +119,10 @@ export async function uploadMyAvatar(
     });
 
   if (uploadError) {
-    return { success: false, error: "Không thể tải ảnh đại diện lên." };
+    return {
+      success: false,
+      error: messages.employee.profile.avatarUploadError,
+    };
   }
 
   const { data } = service.storage

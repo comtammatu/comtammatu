@@ -13,7 +13,7 @@ const SparklineChart = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-full w-full rounded-md bg-muted/40" aria-hidden />
+      <div className="h-full w-full rounded-md bg-muted/30" aria-hidden />
     ),
   },
 );

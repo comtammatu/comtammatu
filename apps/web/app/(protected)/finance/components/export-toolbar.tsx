@@ -41,7 +41,7 @@ export interface CsvSection {
   footer?: Array<string | number>;
 }
 
-interface ExportToolbarProps {
+interface FinanceExportActionsProps {
   filename: string;
   signature: CsvFilterSignature;
   sections: CsvSection[];
@@ -94,13 +94,13 @@ function buildCsv(
 
 type CopyState = "idle" | "ok" | "error";
 
-export function ExportToolbar({
+export function FinanceExportActions({
   filename,
   signature,
   sections,
   className,
   disabled,
-}: ExportToolbarProps) {
+}: FinanceExportActionsProps) {
   const [copyState, setCopyState] = useState<CopyState>("idle");
 
   function handleDownload() {

@@ -123,7 +123,7 @@ function ApprovalRow({
 
   return (
     <div className="relative overflow-hidden">
-      <div className="absolute inset-y-0 right-0 flex w-[140px] items-stretch justify-end">
+      <div className="absolute inset-y-0 right-0 flex w-35 items-stretch justify-end">
         <Button
           variant="destructive"
           className="h-full rounded-none w-1/2 flex flex-col items-center justify-center p-0 gap-1"
@@ -134,10 +134,10 @@ function ApprovalRow({
           }}
         >
           <IconX className="size-5" />
-          <span className="text-[10px] font-medium uppercase">Từ chối</span>
+          <span className="text-2xs font-medium uppercase">Từ chối</span>
         </Button>
         <Button
-          className="bg-success text-success-foreground hover:bg-success/90 h-full rounded-none w-1/2 flex flex-col items-center justify-center p-0 gap-1"
+          className="bg-success text-success-foreground h-full rounded-none w-1/2 flex flex-col items-center justify-center p-0 gap-1"
           disabled={!canApprove || approving || isPending}
           onClick={() => {
             swipe.clearReveal();
@@ -145,14 +145,14 @@ function ApprovalRow({
           }}
         >
           {approving ? <Spinner className="size-5" /> : <IconCheck className="size-5" />}
-          <span className="text-[10px] font-medium uppercase">Duyệt</span>
+          <span className="text-2xs font-medium uppercase">Duyệt</span>
         </Button>
       </div>
 
       <div
         className={cn(
           "bg-background transition-transform duration-300 ease-out cursor-pointer h-full border-r",
-          isRevealed ? "-translate-x-[140px]" : "translate-x-0"
+          isRevealed ? "-translate-x-35" : "translate-x-0"
         )}
         {...handlers}
       >
@@ -321,7 +321,7 @@ export function CheckoutApprovalsClient({
   return (
     <div className="flex flex-col gap-3">
       {!canApprove ? (
-        <Alert className="border-warning/30 bg-warning/10">
+        <Alert className="border-warning/20 bg-warning/10">
           <AlertDescription>
             Tài khoản này chưa có quyền duyệt kết ca cho chi nhánh hiện tại.
           </AlertDescription>
@@ -383,7 +383,7 @@ export function CheckoutApprovalsClient({
                           {c.title}
                         </span>
                         {c.isRequired ? (
-                          <span className="text-[10px] leading-none bg-destructive/10 text-destructive px-1.5 py-0.5 rounded shrink-0 font-medium">
+                          <span className="text-2xs leading-none bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-md shrink-0 font-medium">
                             Bắt buộc
                           </span>
                         ) : null}
@@ -411,7 +411,7 @@ export function CheckoutApprovalsClient({
               Từ chối
             </Button>
             <Button
-              className="flex-1 bg-success text-success-foreground hover:bg-success/90"
+              className="flex-1 bg-success text-success-foreground"
               disabled={!canApprove || isPending}
               onClick={() => {
                 if (detailsTarget) approve(detailsTarget);

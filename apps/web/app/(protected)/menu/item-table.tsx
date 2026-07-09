@@ -151,7 +151,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
               {item.description}
             </p>
           )}
-          <div className="mt-1 space-y-1 sm:hidden">
+          <div className="mt-1 flex flex-col gap-1 sm:hidden">
             <p className="text-xs text-muted-foreground">{item.category_name}</p>
             <p className="text-xs font-medium text-foreground">
               {formatVND(item.base_price)}

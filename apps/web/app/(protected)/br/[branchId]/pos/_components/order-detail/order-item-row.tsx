@@ -168,7 +168,8 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
         <Button
           type="button"
           variant="ghost"
-          className="h-auto min-h-24 w-full min-w-0 max-w-full justify-start whitespace-normal rounded-none px-2 py-2 text-left hover:bg-transparent sm:px-3"
+          size="touch"
+          className="w-full min-w-0 max-w-full justify-start whitespace-normal rounded-none px-2 py-2 text-left hover:bg-transparent sm:px-3"
           aria-label={`${displayName}, ${statusInfo.label}`}
           onClick={() => onTap?.(row.id)}
         >

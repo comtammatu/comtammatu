@@ -9,8 +9,15 @@ import {
   type TeamMemberRow,
   type TeamMemberTodayStatus,
 } from "./members-client";
+import {
+  resolveCountStatusForShift,
+  resolveCountStatusFromAnySlip,
+  type TeamCountAssignmentRow,
+  type TeamCountSlipRow,
+} from "../count-status";
 
 type TodayAttendance = {
+  shiftId: number | null;
   shiftName: string | null;
   checkIn: string | null;
   checkOut: string | null;
@@ -39,40 +46,6 @@ function resolveTodayStatus(
   if (attendance?.checkIn && attendance.checkOut) return "checked_out";
   if (attendance?.checkIn) return "working";
   return "not_started";
-}
-
-function resolveCountStatus(
-  employeeId: number | null,
-  assignedLocationsByEmployee: Map<number, Set<number>>,
-  countSlipsByEmployeeLocation: Map<string, string>,
-): TeamMemberCountStatus {
-  if (employeeId == null) return "not_assigned";
-
-  const locations = assignedLocationsByEmployee.get(employeeId);
-  if (!locations || locations.size === 0) return "not_assigned";
-
-  let submittedCount = 0;
-  let approvedCount = 0;
-  let needsChangesCount = 0;
-
-  for (const locationId of locations) {
-    const status = countSlipsByEmployeeLocation.get(
-      `${employeeId}:${locationId}`,
-    );
-    if (!status) return "not_submitted";
-    if (status === "approved") {
-      approvedCount += 1;
-    } else if (status === "submitted") {
-      submittedCount += 1;
-    } else {
-      needsChangesCount += 1;
-    }
-  }
-
-  if (needsChangesCount > 0) return "needs_changes";
-  if (approvedCount === locations.size) return "approved";
-  if (submittedCount > 0 || approvedCount > 0) return "submitted";
-  return "not_submitted";
 }
 
 export async function TeamMembersContent({ branchId }: { branchId: number }) {
@@ -142,6 +115,7 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
       .from("attendance_records")
       .select(`
         employee_id,
+        shift_id,
         check_in,
         check_out,
         shifts(name)
@@ -150,18 +124,18 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
       .eq("branch_id", branchId)
       .eq("date", today)
       .order("check_in", { ascending: false }),
-    readClient
-      .from("inventory_count_assignments")
-      .select("employee_id, location_id")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("is_active", true),
-    readClient
-      .from("inventory_count_slips")
-      .select("employee_id, location_id, status")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("count_date", today),
+      readClient
+        .from("inventory_count_assignments")
+        .select("employee_id, location_id, ingredient_id, shift_id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", branchId)
+        .eq("is_active", true),
+      readClient
+        .from("inventory_count_slips")
+        .select("employee_id, location_id, status, shift_id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", branchId)
+        .eq("count_date", today),
     readClient
       .from("leave_requests")
       .select("employee_id")
@@ -201,27 +175,16 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
     if (attendanceByEmployee.has(record.employee_id)) continue;
     const shift = embeddedRecord(record.shifts);
     attendanceByEmployee.set(record.employee_id, {
+      shiftId: record.shift_id,
       shiftName: stringField(shift, "name"),
       checkIn: record.check_in,
       checkOut: record.check_out,
     });
   }
 
-  const assignedLocationsByEmployee = new Map<number, Set<number>>();
-  for (const assignment of countAssignmentsResult.data ?? []) {
-    const locations =
-      assignedLocationsByEmployee.get(assignment.employee_id) ?? new Set();
-    locations.add(assignment.location_id);
-    assignedLocationsByEmployee.set(assignment.employee_id, locations);
-  }
-
-  const countSlipsByEmployeeLocation = new Map<string, string>();
-  for (const slip of countSlipsResult.data ?? []) {
-    countSlipsByEmployeeLocation.set(
-      `${slip.employee_id}:${slip.location_id}`,
-      slip.status,
-    );
-  }
+  const countAssignmentRows =
+    (countAssignmentsResult.data ?? []) as TeamCountAssignmentRow[];
+  const countSlipRows = (countSlipsResult.data ?? []) as TeamCountSlipRow[];
 
   const leaveEmployeeIds = new Set(
     (leaveResult.data ?? []).map((leave) => leave.employee_id),
@@ -264,11 +227,22 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
         checkIn: attendance?.checkIn ?? null,
         checkOut: attendance?.checkOut ?? null,
         onApprovedLeave,
-        countStatus: resolveCountStatus(
-          employeeId,
-          assignedLocationsByEmployee,
-          countSlipsByEmployeeLocation,
-        ),
+        countStatus:
+          onApprovedLeave && !attendance
+            ? "not_assigned"
+            : attendance
+              ? (resolveCountStatusForShift(
+                  countAssignmentRows,
+                  countSlipRows,
+                  employeeId,
+                  attendance.shiftId,
+                  { includeNeedsChanges: true },
+                ) as TeamMemberCountStatus)
+              : (resolveCountStatusFromAnySlip(
+                  countSlipRows,
+                  employeeId,
+                  true,
+                ) as TeamMemberCountStatus),
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "vi"));

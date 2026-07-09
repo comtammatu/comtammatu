@@ -1,16 +1,24 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { UserCircle as IconUserCircle } from "lucide-react";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getVNDateString } from "@comtammatu/shared/time";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BranchOpsRefresh } from "@/_components/branch-ops-refresh";
+import { AppEmptyState } from "@/components/surface";
 import { messages } from "@lib/messages";
+import { Button } from "@comtammatu/ui/components/button";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 import { resolveDefaultShiftId } from "../_lib/default-shift";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/staff-runtime-page";
-import { CountSlipClient } from "./count-client";
+import {
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
+import { CountSlipClient, type CountPlane } from "./count-client";
 
 const copy = messages.employee.count;
 
@@ -121,6 +129,7 @@ interface EmployeeCountSurfaceProps {
   routeBranchId?: number;
   baseHref?: string;
   profileHref?: string;
+  plane?: CountPlane;
 }
 
 interface EmployeeCountPageContentProps extends EmployeeCountSurfaceProps {
@@ -132,6 +141,7 @@ async function buildEmployeeCountSurface({
   routeBranchId,
   baseHref,
   profileHref,
+  plane = "employee",
 }: EmployeeCountSurfaceProps): Promise<{
   branchId: number | null;
   branchName: string | null;
@@ -142,7 +152,7 @@ async function buildEmployeeCountSurface({
     return {
       branchId: null,
       branchName: null,
-      content: <EmployeeMissingProfileEmpty profileHref={profileHref} />,
+      content: renderCountUnavailableState({ plane, profileHref }),
     };
   }
 
@@ -158,7 +168,8 @@ async function buildEmployeeCountSurface({
       branchId: null,
       branchName: null,
       content: (
-        <EmployeeMissingProfileEmpty
+        <CountUnavailableState
+          plane={plane}
           title={copy.unavailableTitle}
           description={copy.missingBranchDescription}
           profileHref={profileHref}
@@ -216,7 +227,8 @@ async function buildEmployeeCountSurface({
       branchId,
       branchName,
       content: (
-        <EmployeeMissingProfileEmpty
+        <CountUnavailableState
+          plane={plane}
           title={copy.noAssignmentsTitle}
           description={copy.noAssignmentsDescription}
           profileHref={profileHref}
@@ -366,6 +378,7 @@ async function buildEmployeeCountSurface({
       <CountSlipClient
         branchId={branchId}
         shiftId={currentShiftId}
+        plane={plane}
         baseHref={
           baseHref ?? (routeBranchId ? `/br/${branchId}/stock/count` : "/br")
         }
@@ -378,31 +391,91 @@ async function buildEmployeeCountSurface({
   };
 }
 
-export async function EmployeeCountPanelContent(
+function CountUnavailableState({
+  plane,
+  title,
+  description,
+  profileHref,
+}: {
+  plane: CountPlane;
+  title?: string;
+  description?: string;
+  profileHref?: string;
+}) {
+  if (plane === "employee") {
+    return (
+      <EmployeeMissingProfileEmpty
+        title={title}
+        description={description}
+        profileHref={profileHref}
+      />
+    );
+  }
+
+  return (
+    <BranchOperatorPanel tone="info" size="sm">
+      <AppEmptyState
+        title={title ?? messages.employee.profile.missingProfileTitle}
+        description={description ?? messages.employee.profile.missingProfileDescription}
+        icon={<IconUserCircle />}
+      >
+        <Button
+          asChild
+          variant="outline"
+          size="touch"
+          className="w-full sm:w-fit"
+        >
+          <Link href={profileHref ?? "/br"}>
+            <IconUserCircle data-icon="inline-start" />
+            {messages.employee.profile.openProfile}
+          </Link>
+        </Button>
+      </AppEmptyState>
+    </BranchOperatorPanel>
+  );
+}
+
+function renderCountUnavailableState(props: {
+  plane: CountPlane;
+  title?: string;
+  description?: string;
+  profileHref?: string;
+}) {
+  return <CountUnavailableState {...props} />;
+}
+
+export async function StaffCountPanelContent(
   props: EmployeeCountSurfaceProps,
 ) {
   const { content } = await buildEmployeeCountSurface(props);
   return content;
 }
 
-export async function EmployeeCountPageContent({
+export const EmployeeCountPanelContent = StaffCountPanelContent;
+
+export async function StaffCountPageContent({
   hideHeaderOnMobile,
   ...props
 }: EmployeeCountPageContentProps) {
   const { branchId, branchName, content } =
     await buildEmployeeCountSurface(props);
+  const PageShell = props.plane === "branch" ? BranchOperatorPage : EmployeePage;
 
   return (
-    <EmployeePage
+    <PageShell
       title={copy.title}
       description={branchName ?? undefined}
       hideHeaderOnMobile={hideHeaderOnMobile}
     >
-      {branchId !== null ? <BranchOpsRefresh branchId={branchId} /> : null}
+      {branchId !== null && props.routeBranchId == null ? (
+        <BranchOpsRefresh branchId={branchId} />
+      ) : null}
       {content}
-    </EmployeePage>
+    </PageShell>
   );
 }
+
+export const EmployeeCountPageContent = StaffCountPageContent;
 
 async function resolveBranchName(
   supabase: SupabaseClient,

@@ -7,6 +7,7 @@ import {
 } from "@comtammatu/ui/components/chart";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { AppSection } from "@/components/surface";
+import { messages } from "@lib/messages";
 
 // Section shell + ChartContainer wrapper. The actual <LineChart>/<BarChart>
 // children are passed in by the caller — this lets each consumer keep
@@ -44,7 +45,7 @@ export function ChartCard({
   config,
   children,
   empty,
-  emptyLabel = "Chưa có dữ liệu trong khoảng này.",
+  emptyLabel = messages.finance.common.emptyInRange,
   chartClassName,
   className,
 }: ChartCardProps) {

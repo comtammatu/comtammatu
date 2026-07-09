@@ -1,6 +1,6 @@
 # Toast And Notification System
 
-> Status: design contract | Updated: 2026-06-10 | Scope: app-wide transient toast, durable in-app notifications, installed-PWA push, and external notification outbox
+> Status: design contract | Updated: 2026-07-09 | Scope: app-wide transient toast, durable in-app notifications, installed-PWA push, external notification outbox, and boundary vs operational audio
 
 ## UI Scope Declaration
 
@@ -12,14 +12,15 @@
 
 ## Decision
 
-The system has three feedback channels with different durability:
+The system has these feedback channels with different durability:
 
 - Toast: short-lived client feedback for the action currently happening on screen. Use `toast` from `@comtammatu/ui/components/sonner`.
 - In-app notification: durable, role/branch-scoped work item stored in `public.notifications`, read state in `public.notification_reads`, and surfaced through `/notifications`, Cổng nhân viên, or an approved bell/entry point.
 - Foreground popup: device-level OS notification fired by the open PWA via the `Notification` API for new unread durable notifications the user can see, shown through the service worker and linked back to `/notifications` or the notification action URL. Fires only while the app is open — there is no closed-app delivery.
 - External outbox: delivery attempt queue in `public.notification_outbox` for configured webhook-style workers.
+- Operational audio (POS/KDS): device-local beep and optional pre-recorded voice on the open board/terminal. Not durable, not role-feed, not Telegram. Contract: `docs/spec/operational-audio-alerts.md`.
 
-Do not collapse these channels. A toast is not an audit trail. An in-app notification is not a replacement for immediate form feedback. The foreground popup is only an attention layer over durable notifications. The external outbox is not the unread feed.
+Do not collapse these channels. A toast is not an audit trail. An in-app notification is not a replacement for immediate form feedback. The foreground popup is only an attention layer over durable notifications. The external outbox is not the unread feed. Operational audio is not a notification row and must not be routed through `public.notifications`.
 
 ## Authority
 
@@ -338,7 +339,9 @@ Current runtime pieces:
 - `apps/web/app/_components/notification-list.tsx`: feed composition.
 - `apps/web/app/_components/notification-item.tsx`: item row and action URL navigation.
 - `apps/web/app/(protected)/notifications/page.tsx`: full feed route.
-- Chuông desktop floating: ĐÃ XÓA 2026-06-10 (stub return null từ 24/04, owner quyết xóa). Mobile dùng chuông trong mobile-header; nếu mở lại desktop bell cần shell placement được duyệt + khôi phục component từ git history (`7649253e`).
+- Desktop notification chrome is not part of the current approved shell. Mobile
+  uses the bell entry point in the mobile header; restoring a desktop shortcut
+  requires approved shell placement first.
 
 UI rules:
 
@@ -361,6 +364,7 @@ UI rules:
 - Live queue is the primary notification surface for kitchen work.
 - Use toast only for mutation feedback such as bump/undo/cancel failure.
 - Avoid creating notification rows for every ticket movement unless another station/role needs handoff.
+- New-ticket attention sound/voice is operational audio (`docs/spec/operational-audio-alerts.md`), not a durable notification.
 
 ### Admin
 

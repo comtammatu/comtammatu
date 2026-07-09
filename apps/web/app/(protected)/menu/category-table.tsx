@@ -102,9 +102,9 @@ export function CategoryTable({ categories }: CategoryTableProps) {
       key: "name",
       header: "Tên danh mục",
       render: (cat) => (
-        <div className="space-y-1">
+        <div className="flex flex-col gap-1">
           <span className="font-medium">{cat.name}</span>
-          <div className="space-y-1 sm:hidden">
+          <div className="flex flex-col gap-1 sm:hidden">
             <p className="text-xs text-muted-foreground">
               {CATEGORY_TYPE_LABELS[cat.type] ?? cat.type}
             </p>

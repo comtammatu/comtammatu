@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { KDS_VI } from "@comtammatu/shared/messages";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import { getAuthContext } from "../../_lib/auth";
@@ -88,7 +89,7 @@ export async function fetchKdsCompletionHistory(
   if (ticketError) {
     return {
       success: false,
-      error: "Không thể tải lịch sử hoàn thành. Vui lòng thử lại.",
+      error: KDS_VI.completionHistoryLoadFailed,
     };
   }
 
@@ -144,7 +145,7 @@ export async function fetchKdsCompletionHistory(
   if (ordersResult.error || itemsResult.error || batchesResult.error) {
     return {
       success: false,
-      error: "Không thể tải chi tiết lịch sử hoàn thành. Vui lòng thử lại.",
+      error: KDS_VI.completionHistoryDetailLoadFailed,
     };
   }
 

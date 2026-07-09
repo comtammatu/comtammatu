@@ -1,4 +1,7 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { loadStockOnHandPageData } from "@lib/inventory/stock-on-hand-data";
+import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
+import { BranchStockOnHandClient } from "./branch-stock-on-hand-client";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
@@ -6,8 +9,21 @@ interface PageProps {
 
 export default async function OperatorStockOnHandPage({ params }: PageProps) {
   const { branchId: rawBranchId } = await params;
-  const branchId = Number(rawBranchId);
-  if (!Number.isInteger(branchId) || branchId <= 0) notFound();
+  const branchId = parseOperatorBranchId(rawBranchId);
+  if (branchId == null) notFound();
 
-  redirect(`/br/${branchId}/stock`);
+  const data = await loadStockOnHandPageData({
+    routeBranchId: branchId,
+    includeValuation: false,
+  });
+
+  return (
+    <BranchStockOnHandClient
+      branchId={data.branchId}
+      coreDataLoadFailed={data.coreDataLoadFailed}
+      ingredients={data.ingredients}
+      canCreatePurchaseOrder={data.permissions.canCreatePurchaseOrder}
+      underThresholdCount={data.summary.underThresholdCount}
+    />
+  );
 }

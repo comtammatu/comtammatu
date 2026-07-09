@@ -23,10 +23,6 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/components/data-table/data-table";
 import { useLongPress } from "@lib/hooks/use-long-press";
 import type {
   TeamBoardChecklistPhase,
@@ -35,7 +31,7 @@ import type {
   TeamBoardShiftAttendance,
 } from "./data";
 
-const copy = messages.employee.teamBoard;
+const copy = messages.operator.teamBoard;
 
 type AttendanceState = "not_started" | "working" | "checkout_pending" | "done";
 type TeamBoardFilter = "all" | "working" | "needs_action" | "count_missing";
@@ -82,7 +78,7 @@ function buildDisplayRows(rows: TeamBoardRow[]): TeamBoardDisplayRow[] {
       fullName: row.fullName,
       positionLabel: row.positionLabel,
       shift,
-      countStatus: row.countStatus,
+      countStatus: shift.countStatus,
       onApprovedLeave: row.onApprovedLeave,
     }));
   });
@@ -178,6 +174,7 @@ function CountBadge({ status }: { status: TeamBoardCountStatus }) {
 }
 
 function rowNeedsAction(row: TeamBoardDisplayRow) {
+  if (row.onApprovedLeave) return false;
   return (
     attendanceState(row.shift) === "checkout_pending" ||
     row.countStatus === "submitted" ||
@@ -274,9 +271,9 @@ function TeamBoardFilters({
             key={filter.value}
             type="button"
             variant={active ? "secondary" : "outline"}
-            size="sm"
+            size="touch"
             aria-pressed={active}
-            className="h-9 shrink-0 gap-2 px-3"
+            className="shrink-0 gap-2 px-3"
             onClick={() => onChange(filter.value)}
           >
             <span className="whitespace-nowrap">{filter.label}</span>
@@ -407,7 +404,6 @@ export function TeamBoardClient({
     matchesTeamBoardFilter(row, filter),
   );
   const filteredGroups = groupRowsByShift(filteredRows);
-  const filteredGroupedRows = filteredGroups.flatMap((group) => group.rows);
 
   if (displayRows.length === 0) {
     return (
@@ -422,6 +418,7 @@ export function TeamBoardClient({
   function rowHref(row: TeamBoardDisplayRow): string | undefined {
     const state = attendanceState(row.shift);
     if (state === "checkout_pending") return checkoutApprovalsHref;
+    if (row.onApprovedLeave) return undefined;
     if (
       row.countStatus === "submitted" ||
       row.countStatus === "not_submitted"
@@ -429,123 +426,6 @@ export function TeamBoardClient({
       return countSlipsHref;
     }
     return undefined;
-  }
-
-  const columns: DataTableColumn<TeamBoardDisplayRow>[] = [
-    {
-      key: "employee",
-      header: copy.columnEmployee,
-      render: (row) => (
-        <div className="flex flex-col">
-          <span className="font-medium">{row.fullName}</span>
-          <span className="text-xs text-muted-foreground">
-            {row.positionLabel ?? copy.positionUnknown}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: "shift",
-      header: copy.columnShift,
-      className: "text-sm",
-      render: (row) => row.shift?.shiftName ?? copy.shiftNone,
-    },
-    {
-      key: "attendance",
-      header: copy.columnAttendance,
-      render: (row) => <AttendanceBadge shift={row.shift} />,
-    },
-    {
-      key: "checklist",
-      header: copy.columnChecklist,
-      className: "text-sm",
-      render: (row) => (
-        <div className="flex flex-col gap-1">
-          <span>
-            {copy.phaseStart}: {checklistLabel(row.shift, "start_of_shift")}
-          </span>
-          <span>
-            {copy.phaseEnd}: {checklistLabel(row.shift, "end_of_shift")}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: "count",
-      header: copy.columnCount,
-      render: (row) => <CountBadge status={row.countStatus} />,
-    },
-    {
-      key: "leave",
-      header: copy.columnLeave,
-      render: (row) =>
-        row.onApprovedLeave ? (
-          <StatusBadge
-            domain="leave-request"
-            value="approved"
-            label={copy.leaveApproved}
-          />
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        ),
-    },
-    {
-      key: "checkTimes",
-      header: copy.columnCheckTimes,
-      className: "font-mono text-sm",
-      render: (row) =>
-        row.shift
-          ? `${row.shift.checkIn ? formatVNTime(row.shift.checkIn) : "—"} - ${
-              row.shift.checkOut ? formatVNTime(row.shift.checkOut) : "—"
-            }`
-          : "—",
-    },
-  ];
-
-  function renderTable(data: TeamBoardDisplayRow[]) {
-    return (
-      <DataTable
-        columns={columns}
-        data={data}
-        getRowKey={(row) => row.key}
-        mobileBreakpoint={1024}
-        emptyIcon={<IconUsers />}
-        emptyMode={filter === "all" ? "no-data" : "no-results"}
-        emptyTitle={
-          filter === "all" ? copy.emptyTitle : copy.filteredEmptyTitle
-        }
-        emptyDescription={
-          filter === "all"
-            ? copy.emptyDescription
-            : copy.filteredEmptyDescription
-        }
-        onRowClick={(row) => {
-          const href = rowHref(row);
-          if (href) {
-            router.push(href);
-            return;
-          }
-          setDrawerRow(row);
-        }}
-        getRowAriaLabel={(row) =>
-          `${row.fullName} · ${row.positionLabel ?? ""}`
-        }
-        rowClassName={(row) => {
-          const state = attendanceState(row.shift);
-          if (state === "checkout_pending") return "bg-warning/10";
-          if (row.countStatus === "submitted") return "bg-info/10";
-          if (row.onApprovedLeave) return "bg-muted/50";
-          return undefined;
-        }}
-        mobileCardRender={(row) => (
-          <MobileTeamCard
-            row={row}
-            href={rowHref(row)}
-            onOpenDrawer={setDrawerRow}
-          />
-        )}
-      />
-    );
   }
 
   return (
@@ -561,20 +441,22 @@ export function TeamBoardClient({
         />
 
         {filteredGroups.length === 0 ? (
-          renderTable(filteredRows)
+          <AppEmptyState
+            title={filter === "all" ? copy.emptyTitle : copy.filteredEmptyTitle}
+            description={
+              filter === "all"
+                ? copy.emptyDescription
+                : copy.filteredEmptyDescription
+            }
+            icon={<IconUsers />}
+            mode={filter === "all" ? "no-data" : "no-results"}
+          />
         ) : (
-          <>
-            <div className="lg:hidden">
-              <TeamBoardMobileGroups
-                groups={filteredGroups}
-                rowHref={rowHref}
-                onOpenDrawer={setDrawerRow}
-              />
-            </div>
-            <div className="hidden lg:block">
-              {renderTable(filteredGroupedRows)}
-            </div>
-          </>
+          <TeamBoardMobileGroups
+            groups={filteredGroups}
+            rowHref={rowHref}
+            onOpenDrawer={setDrawerRow}
+          />
         )}
       </section>
 

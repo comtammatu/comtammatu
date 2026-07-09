@@ -8,6 +8,7 @@ import {
   isBranchScopedProcurementRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { messages } from "@lib/messages";
 import { withAction, withActionPositional } from "@/_lib/with-action";
 import { resolveCentralSiteHomeBranchId } from "@/_lib/branch-hub-device";
 import { getAuthContextWithPermission } from "./_lib/auth";
@@ -123,7 +124,7 @@ export async function fetchPurchaseOrdersPage(
     .order("id", { ascending: false })
     .limit(pageSize + 1);
 
-  if (error) return { success: false, error: "Không thể tải đơn đặt hàng." };
+  if (error) return { success: false, error: messages.inventory.po.loadFailed };
 
   const fetched = (data ?? []) as unknown as Array<{
     id: number;
@@ -339,7 +340,10 @@ export async function fetchPurchaseOrderDetail(
     .eq("tenant_id", claims.tenant_id)
     .order("id");
   if (e2)
-    return { success: false, error: "Không thể tải chi tiết đơn đặt hàng." };
+    return {
+      success: false,
+      error: messages.inventory.po.detailLoadFailed,
+    };
   const { data: grns, error: e3 } = await supabase
     .from("goods_received_notes")
     .select("id, grn_number, status, received_date")
@@ -347,7 +351,10 @@ export async function fetchPurchaseOrderDetail(
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false });
   if (e3)
-    return { success: false, error: "Không thể tải phiếu nhập liên kết." };
+    return {
+      success: false,
+      error: messages.inventory.po.linkedGrnsLoadFailed,
+    };
   return { success: true, data: { po, lines: lines ?? [], grns: grns ?? [] } };
 }
 
@@ -640,7 +647,11 @@ export async function fetchOpenPurchaseOrdersForReceiving(
   if (branchFilter != null) query = query.eq("branch_id", branchFilter);
 
   const { data, error } = await query;
-  if (error) return { success: false, error: "Không thể tải PO chờ nhận." };
+  if (error)
+    return {
+      success: false,
+      error: messages.inventory.po.receivingLoadFailed,
+    };
 
   const rows: OpenPurchaseOrderRow[] = (data ?? [])
     .map((po) => {
@@ -754,7 +765,10 @@ export const fetchPoSuggestions = withAction(
       .not("ingredients.reorder_point", "is", null);
 
     if (e1)
-      return { success: false, error: "Không thể tải tồn kho chi nhánh." };
+      return {
+        success: false,
+        error: messages.inventory.po.branchStockLoadFailed,
+      };
 
     // 2. Consumption aggregated tenant-wide over the period.
     // Proxy until branches.primary_warehouse_id FK exists (see inventory.md §10).
@@ -766,7 +780,11 @@ export const fetchPoSuggestions = withAction(
       .eq("type", "consumption")
       .gte("created_at", cutoff.toISOString());
 
-    if (e2) return { success: false, error: "Không thể tải dữ liệu tiêu thụ." };
+    if (e2)
+      return {
+        success: false,
+        error: messages.inventory.po.consumptionLoadFailed,
+      };
 
     // Aggregate consumption per ingredient (quantity_change is negative for consumption)
     const consumptionMap = new Map<number, number>();

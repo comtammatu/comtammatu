@@ -133,7 +133,7 @@ function getOrderContextLabel(order: SessionOrder): string {
   return messages.pos.orderHistory.takeaway;
 }
 
-export function OrderStatusBadge({ order }: { order: SessionOrder }) {
+export function OrderStatePill({ order }: { order: SessionOrder }) {
   const statusInfo = getPosOrderStatusInfo(order);
 
   return (
@@ -229,7 +229,7 @@ const OrderCard = memo(function OrderCard({
                 {messages.pos.orderHistory.priority}
               </Badge>
             ) : null}
-            <OrderStatusBadge order={order} />
+            <OrderStatePill order={order} />
           </>
         }
       />

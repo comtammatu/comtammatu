@@ -38,6 +38,9 @@ const kdsActionsSource = readSource(
 const managerActionsSource = readSource(
   "app/(protected)/br/[branchId]/(operator)/menu-limits/actions.ts",
 );
+const managerTableSource = readSource(
+  "app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
+);
 const managerPageSource = readSource(
   "app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
 );
@@ -65,7 +68,10 @@ test("KDS no longer exposes menu-limit or out-of-stock controls", () => {
   assert.doesNotMatch(kdsMutationSource, /onMenuLimitChanged/);
   assert.doesNotMatch(kdsMutationSource, /markKdsItemOutOfStock/);
   assert.doesNotMatch(kdsMutationSource, /handleOutOfStock/);
-  assert.doesNotMatch(kdsActionsSource, /export async function markKdsItemOutOfStock/);
+  assert.doesNotMatch(
+    kdsActionsSource,
+    /export async function markKdsItemOutOfStock/,
+  );
   assert.equal(
     existsSync(
       join(
@@ -85,5 +91,33 @@ test("branch menu-limit management remains on the manager day-control surface", 
   assert.match(managerActionsSource, /list_branch_menu_daily_limits/);
   assert.match(managerActionsSource, /set_branch_menu_daily_limit/);
   assert.match(managerActionsSource, /clear_branch_menu_daily_limit/);
-  assert.match(managerPageSource, /MenuLimitsTable/);
+  assert.match(managerActionsSource, /add_menu_item_kitchen_stock_exception/);
+  assert.match(managerTableSource, /replenishKitchenTitle/);
+  assert.match(managerTableSource, /handleReplenishKitchen\(1\)/);
+  assert.match(managerTableSource, /handleReplenishKitchen\(2\)/);
+  assert.match(managerPageSource, /MenuLimitsClient/);
+});
+
+test("branch menu-limit drawer uses Ma Tu DS field and operator panel primitives", () => {
+  assert.match(managerPageSource, /BranchOperatorPanel/);
+  assert.match(managerPageSource, /icon=\{ListChecks\}/);
+  assert.match(managerTableSource, /DrawerDescription/);
+  assert.match(managerTableSource, /FieldGroup/);
+  assert.match(managerTableSource, /FieldLabel/);
+  assert.match(managerTableSource, /SectionLabel/);
+  assert.match(managerTableSource, /size="touch"/);
+});
+
+test("branch menu-limit list keeps tablet widths on touch-first rows", () => {
+  assert.match(managerTableSource, /lg:flex-row/);
+  assert.match(managerTableSource, /lg:items-center/);
+  assert.match(managerTableSource, /lg:w-56/);
+  assert.match(managerTableSource, /lg:w-80/);
+  assert.match(managerTableSource, /lg:justify-start/);
+
+  assert.doesNotMatch(managerTableSource, /sm:flex-row/);
+  assert.doesNotMatch(managerTableSource, /sm:items-center/);
+  assert.doesNotMatch(managerTableSource, /sm:w-56/);
+  assert.doesNotMatch(managerTableSource, /sm:w-80/);
+  assert.doesNotMatch(managerTableSource, /md:justify-start/);
 });

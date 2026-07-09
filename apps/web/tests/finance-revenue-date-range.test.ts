@@ -97,6 +97,180 @@ test("Finance top-items decomposes side-items without double-counting revenue", 
   );
 });
 
+test("Finance cockpit actual food cost follows the VN business-day window", () => {
+  const cockpit = read(
+    "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
+  );
+
+  assert.match(cockpit, /getVNDayUtcRange/);
+  assert.match(cockpit, /getVNDateString/);
+  assert.match(cockpit, /\.gte\("created_at",\s*startIso\)/);
+  assert.match(cockpit, /\.lt\("created_at",\s*endIso\)/);
+  assert.match(cockpit, /const period = getVNDateString\(row\.created_at\)/);
+  assert.doesNotMatch(
+    cockpit,
+    /String\(row\.created_at \?\? ""\)\.slice\(0,\s*10\)/,
+  );
+  assert.doesNotMatch(cockpit, /function nextDate/);
+});
+
+test("Finance expenses actual food cost follows the VN business-day window", () => {
+  const expenseActions = read(
+    "apps/web/app/(protected)/finance/expense-actions.ts",
+  );
+
+  assert.match(expenseActions, /getVNDayUtcRange/);
+  assert.match(expenseActions, /\.gte\("created_at",\s*startIso\)/);
+  assert.match(expenseActions, /\.lt\("created_at",\s*endIso\)/);
+  assert.doesNotMatch(expenseActions, /function nextDate/);
+});
+
+test("Finance operating expense excludes food-cost and transfer categories", () => {
+  const cockpit = read(
+    "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
+  );
+  const categories = read(
+    "apps/web/app/(protected)/finance/_lib/expense-categories.ts",
+  );
+  const expenseActions = read(
+    "apps/web/app/(protected)/finance/expense-actions.ts",
+  );
+  const expensesClient = read(
+    "apps/web/app/(protected)/finance/expenses/expenses-client.tsx",
+  );
+  const dataContract = read("docs/ref/operational-data-contract.md");
+
+  assert.match(categories, /cogs_manual: "materials"/);
+  assert.match(categories, /bank_deposit: "transfer"/);
+  assert.match(categories, /isOperatingExpenseCategory/);
+  assert.match(cockpit, /select\("amount, category"\)/);
+  assert.match(cockpit, /isOperatingExpenseCategory\(row\.category\)/);
+  assert.match(expenseActions, /parsed\.data\.category === "cogs_manual"/);
+  assert.match(expensesClient, /group !== "materials"/);
+  assert.match(dataContract, /category thuộc nhóm `operating`/);
+  assert.doesNotMatch(dataContract, /category='bank_deposit'/);
+});
+
+test("Finance revenue money-collected fields use payment amount", () => {
+  const migration = read(
+    "supabase/migrations/20260709050743_finance_revenue_payment_amount_contract.sql",
+  );
+  const revenueClient = read(
+    "apps/web/app/(protected)/finance/revenue/revenue-client.tsx",
+  );
+  const dataContract = read("docs/ref/operational-data-contract.md");
+
+  assert.match(
+    migration,
+    /p\.amount AS payment_amount/,
+    "revenue migration should carry payment amount as the money-collected source",
+  );
+  assert.match(
+    migration,
+    /SUM\(pp\.payment_amount\)[\s\S]*AS net_revenue/,
+    "KPI net_revenue should mean money collected from payments.amount",
+  );
+  assert.match(
+    migration,
+    /SUM\(pp\.payment_amount\) FILTER \(WHERE pp\.method = 'cash'\)/,
+    "cash revenue should sum payment amount by payment method",
+  );
+  assert.match(
+    migration,
+    /COUNT\(\*\)::BIGINT AS order_count/,
+    "order_count should be calculated from distinct order facts, not payment rows",
+  );
+  assert.match(
+    migration,
+    /SELECT DISTINCT ON \(pp\.tenant_id, pp\.branch_id, pp\.order_id\)/,
+    "KPI order facts should deduplicate paid orders",
+  );
+  assert.match(
+    migration,
+    /SELECT DISTINCT ON \(pp\.paid_date, pp\.branch_id, pp\.tenant_id, pp\.order_id\)/,
+    "daily and rollup order facts should deduplicate paid orders per paid date",
+  );
+  assert.doesNotMatch(
+    migration,
+    /SUM\(o\.total_amount\) FILTER \(WHERE p\.method/,
+    "method breakdowns must not bucket order totals by payment method",
+  );
+  assert.match(revenueClient, /Sum of payments\.amount/);
+  assert.match(dataContract, /Tổng `payments\.amount` theo `payments\.method`/);
+  assert.match(dataContract, /`COUNT\(DISTINCT orders\.id\)`/);
+});
+
+test("Finance food-cost page shows actual cost coverage before estimate rows", () => {
+  const page = read("apps/web/app/(protected)/finance/food-cost/page.tsx");
+  const client = read(
+    "apps/web/app/(protected)/finance/food-cost/food-cost-client.tsx",
+  );
+  const expenseActions = read(
+    "apps/web/app/(protected)/finance/expense-actions.ts",
+  );
+  const financeMessages = read("apps/web/lib/messages/finance.ts");
+
+  assert.match(page, /fetchActualFoodCostSummary/);
+  assert.match(
+    page,
+    /fetchRevenueKpis\(params\.branch, resolved\.start, resolved\.end\)/,
+  );
+  assert.match(page, /actualFoodCost=\{actualSummary\.total\}/);
+  assert.match(page, /coveredOrderCount=\{actualSummary\.orderCount\}/);
+  assert.match(client, /label=\{foodCopy\.actualFoodCost\}/);
+  assert.match(client, /foodCopy\.coverageValue/);
+  assert.match(client, /const estimatedFoodCost = rows\.reduce/);
+  assert.match(
+    expenseActions,
+    /select\("order_id, quantity_change, unit_cost"\)/,
+  );
+  assert.match(expenseActions, /orderIds\.add\(r\.order_id\)/);
+  assert.match(financeMessages, /actualFoodCost: "Giá vốn đã ghi nhận"/);
+});
+
+test("Finance gross profit is gated by actual food-cost order coverage", () => {
+  const cockpit = read(
+    "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
+  );
+  const page = read("apps/web/app/(protected)/finance/page.tsx");
+  const financeMessages = read("apps/web/lib/messages/finance.ts");
+
+  assert.match(
+    cockpit,
+    /\.select\("branch_id, order_id, quantity_change, unit_cost, created_at"\)/,
+    "actual food cost must keep order_id for coverage",
+  );
+  assert.match(cockpit, /const orderIds = new Set<number>\(\)/);
+  assert.match(cockpit, /orderIds\.add\(row\.order_id\)/);
+  assert.match(
+    cockpit,
+    /const costAvailable =\s*orderCount === 0 \|\| costCoverageOrderCount >= orderCount/,
+    "gross profit must not be trusted when only a subset of paid orders has posted consumption",
+  );
+  assert.match(cockpit, /missingCostCoverageHint/);
+  assert.match(page, /grossProfitNeedsReview/);
+  assert.match(page, /grossProfitCoverageHint/);
+  assert.match(page, /cockpit\.compareKpis\?\.costAvailable/);
+  assert.match(financeMessages, /grossProfitNeedsReview: "Cần rà soát"/);
+});
+
+test("Finance cockpit branch filter also scopes supplier payable risk", () => {
+  const cockpit = read(
+    "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
+  );
+
+  assert.match(cockpit, /branchId: number \| null/);
+  assert.match(cockpit, /goods_received_notes!inner/);
+  assert.match(
+    cockpit,
+    /query = query\.eq\("goods_received_notes\.branch_id", branchId\)/,
+  );
+  assert.match(
+    cockpit,
+    /fetchUnpaidSupplierInvoiceRisk\(\{[\s\S]*branchId: params\.branch,[\s\S]*\}\)/,
+  );
+});
+
 test("Finance top-items side-item fanout avoids PL/pgSQL output-column ambiguity", () => {
   const migration = read(
     "supabase/migrations/_archive/20260701000214_fix_top_items_branch_ambiguity.sql",
@@ -141,4 +315,15 @@ test("Finance live copy stays HKD operating-first without two-mode labels", () =
     "default Finance workspace should stay operating-first (framed under Vận hành)",
   );
   assert.doesNotMatch(financeMessages, /Hệ thống tài khoản|Sổ nhật ký|B01-DN/);
+  assert.match(
+    financeMessages,
+    /summary: "HĐ bán cho người tiêu dùng"/,
+    "summary invoices should use the current HKD buyer wording",
+  );
+  assert.match(financeMessages, /Thuế tạm tính/);
+  assert.doesNotMatch(
+    financeMessages,
+    /khách không lấy hóa đơn|khách hàng không lấy hóa đơn|khách lẻ không yêu cầu MST|trước VAT|VAT đầu ra/,
+    "Finance live copy should keep HKD-facing labels terse and current",
+  );
 });

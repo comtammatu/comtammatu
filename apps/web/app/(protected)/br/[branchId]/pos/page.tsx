@@ -22,7 +22,7 @@ import type { MenuCategory } from "./pos-menu-types";
 import type { SessionOrder } from "./order-history";
 import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
-import { PosStatusShell } from "./pos-status-shell";
+import { PosStatusPanel } from "./pos-status-panel";
 import { PosPageSkeleton } from "./pos-page-skeleton";
 
 export default async function PosPage({
@@ -56,7 +56,7 @@ export default async function PosPage({
   // (DB UNIQUE(branch_id) WHERE status='open').
   //
   // Session + permission flags are awaited here because they are the access
-  // guard: they decide *which* surface renders (error shell, no-shift shell,
+  // guard: they decide *which* surface renders (error panel, no-shift panel,
   // SessionGate, or the desktop). They must resolve before render and cannot
   // be streamed. The heavier menu/tables/payment fetches feeding the desktop
   // are deferred into <PosDesktopData> behind the Suspense boundary so the
@@ -68,7 +68,7 @@ export default async function PosPage({
 
   if (!sessionResult.success) {
     return (
-      <PosStatusShell
+      <PosStatusPanel
         icon={<IconDeviceDesktop />}
         title={POS_VI.shellSessionErrorTitle}
         description={sessionResult.error ?? POS_VI.shellSessionErrorFallback}
@@ -89,7 +89,7 @@ export default async function PosPage({
   if (session === null) {
     if (!permFlags.canOpenShift) {
       return (
-        <PosStatusShell
+        <PosStatusPanel
           icon={<IconDeviceDesktop />}
           title={POS_VI.shellNoShiftTitle}
           description={POS_VI.shellNoShiftDescription}
@@ -106,7 +106,7 @@ export default async function PosPage({
 
     if (!terminalsResult.success) {
       return (
-        <PosStatusShell
+        <PosStatusPanel
           icon={<IconDeviceDesktop />}
           title={POS_VI.shellTerminalsErrorTitle}
           description={
@@ -210,7 +210,7 @@ async function PosDesktopData({
 
   if (!menuResult.success || !menuResult.data) {
     return (
-      <PosStatusShell
+      <PosStatusPanel
         icon={<IconDeviceDesktop />}
         title={POS_VI.shellMenuErrorTitle}
         description={menuResult.error ?? POS_VI.shellMenuErrorFallback}

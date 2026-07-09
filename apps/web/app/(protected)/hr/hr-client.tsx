@@ -26,8 +26,6 @@ import { messages } from "@lib/messages";
 
 const workspaceCopy = messages.hr.workspace;
 const copy = messages.hr.client;
-// Page-local: shift fetch failure toast, scoped to this client's lazy load.
-const SHIFTS_LOAD_FAILED = "Không thể tải ca làm việc";
 
 interface HrClientProps {
   employees: EmployeeRow[];
@@ -96,7 +94,7 @@ export function HrClient({
         setShifts((result.data as ShiftRow[]) ?? []);
         setShiftsLoaded(true);
       } else {
-        toast.error(result.error ?? SHIFTS_LOAD_FAILED);
+        toast.error(result.error ?? copy.shiftsLoadFailed);
       }
     });
   }, [canManageEmployees, shiftsLoaded]);

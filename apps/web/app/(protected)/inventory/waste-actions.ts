@@ -6,6 +6,7 @@ import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "./_lib/auth";
+import { messages } from "@lib/messages";
 import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 
@@ -101,7 +102,7 @@ export async function createWasteEntry(
     .eq("location_id", parsed.data.locationId)
     .in("ingredient_id", ingredientIds);
   if (stockLevelError) {
-    return { success: false, error: "Không thể tải WAG cho phiếu hủy." };
+    return { success: false, error: messages.inventory.waste.wacLoadFailed };
   }
 
   const stockByIngredient = new Map(
@@ -131,7 +132,7 @@ export async function createWasteEntry(
       .in("unit_id", entryUnitIds);
 
     if (unitError) {
-      return { success: false, error: "Không thể tải đơn vị xuất kho." };
+      return { success: false, error: messages.inventory.waste.unitsLoadFailed };
     }
     for (const row of unitRows ?? []) {
       factorByIngredientUnit.set(
@@ -151,12 +152,12 @@ export async function createWasteEntry(
         error: "Chưa có WAG cho nguyên liệu tại vị trí kho này.",
       };
     }
-    const toBaseFactor =
-      item.entry_unit_id == null
-        ? 1
-        : factorByIngredientUnit.get(
-            `${item.ingredient_id}:${item.entry_unit_id}`,
-          );
+    if (item.entry_unit_id == null) {
+      return { success: false, error: "Chọn đơn vị xuất kho cho từng dòng." };
+    }
+    const toBaseFactor = factorByIngredientUnit.get(
+      `${item.ingredient_id}:${item.entry_unit_id}`,
+    );
     const toBaseFactorValue = Number(toBaseFactor ?? 0);
     if (!Number.isFinite(toBaseFactorValue) || toBaseFactorValue <= 0) {
       return { success: false, error: "Đơn vị không thuộc nguyên liệu." };
@@ -193,6 +194,9 @@ export async function createWasteEntry(
         success: false,
         error: "Dữ liệu hủy hàng không hợp lệ hoặc thiếu bằng chứng bắt buộc.",
       };
+    }
+    if (error.code === "23503") {
+      return { success: false, error: "Đơn vị không thuộc nguyên liệu." };
     }
     return { success: false, error: "Không tạo được phiếu hủy" };
   }

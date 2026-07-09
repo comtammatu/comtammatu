@@ -108,10 +108,11 @@ export function MultiSelectCombobox({
         <Button
           type="button"
           variant="outline"
+          size="field"
           role="combobox"
           aria-expanded={open}
           disabled={disabled || selectableCount === 0}
-          className={cn("h-10 justify-between font-normal", triggerClassName)}
+          className={cn("justify-between font-normal", triggerClassName)}
         >
           <span className="inline-flex items-center gap-2 truncate">
             <IconPlus className="size-4 shrink-0" />

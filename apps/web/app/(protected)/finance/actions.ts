@@ -5,6 +5,7 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
+import { messages } from "@lib/messages";
 import {
   createInvoiceSchema,
   issueTaxInvoiceForPaidOrder,
@@ -121,6 +122,7 @@ export async function createTaxInvoice(
 const REISSUE_ALL_CAP = 20;
 const REISSUE_ALL_BUDGET_MS = 40_000;
 const SEPAY_MISSING_SCAN_CAP = 200;
+const financeActionErrors = messages.finance.actionErrors;
 
 /**
  * Bulk-reissue draft invoices (status='draft' with no invoice_number — i.e.
@@ -678,7 +680,7 @@ export async function fetchTaxInvoicesPage(
 
   if (error) {
     console.error("[finance/actions:fetchTaxInvoicesPage] Fetch tax invoices error:", error);
-    return { success: false, error: "Không thể tải danh sách hóa đơn." };
+    return { success: false, error: financeActionErrors.loadTaxInvoicesFailed };
   }
 
   const fetched = (data ?? []) as Array<{
@@ -733,7 +735,7 @@ export async function fetchTaxInvoicesPage(
   };
 }
 
-/* ─── fetchRevenueRollup — aggregate mv_daily_revenue theo day/week/month ─ */
+/* ─── fetchRevenueRollup — live paid-at revenue by day/week/month ─ */
 
 const REVENUE_GRANULARITY = ["day", "week", "month"] as const;
 export type RevenueGranularity = (typeof REVENUE_GRANULARITY)[number];
@@ -789,7 +791,7 @@ export async function fetchRevenueRollup(
 
   if (error) {
     console.error("[finance/actions:fetchRevenueRollup] RPC get_revenue_rollup error:", error);
-    return { success: false, error: "Không thể tải dữ liệu doanh thu." };
+    return { success: false, error: financeActionErrors.loadRevenueRollupFailed };
   }
 
   return { success: true, data: data ?? [] };
@@ -833,7 +835,7 @@ export async function fetchRevenueKpis(
 
   if (error) {
     console.error("[finance/actions:fetchRevenueKpis] RPC get_revenue_kpis error:", error);
-    return { success: false, error: "Không thể tải chỉ số KPI." };
+    return { success: false, error: financeActionErrors.loadRevenueKpisFailed };
   }
 
   // RPC returns a single-row resultset.
@@ -886,7 +888,7 @@ export async function fetchFinanceDashboardSummary(
 
   if (error) {
     console.error("[finance/actions:fetchFinanceDashboardSummary] RPC get_finance_dashboard_summary error:", error);
-    return { success: false, error: "Không thể tải chỉ số dashboard." };
+    return { success: false, error: financeActionErrors.loadDashboardSummaryFailed };
   }
 
   return { success: true, data: data?.[0] ?? null };
@@ -921,7 +923,7 @@ export async function fetchOrdersForDay(
 
   if (error) {
     console.error("[finance/actions:fetchOrdersForDay] RPC get_orders_for_day error:", error);
-    return { success: false, error: "Không thể tải danh sách đơn." };
+    return { success: false, error: financeActionErrors.loadOrdersFailed };
   }
 
   return { success: true, data: data ?? [] };
@@ -965,7 +967,7 @@ export async function fetchCashVarianceSummary(
 
   if (error) {
     console.error("[finance/actions:fetchCashVarianceSummary] RPC get_cash_variance_summary error:", error);
-    return { success: false, error: "Không thể tải dữ liệu lệch tiền." };
+    return { success: false, error: financeActionErrors.loadCashVarianceFailed };
   }
 
   return { success: true, data: data?.[0] ?? null };
@@ -1012,7 +1014,7 @@ export async function fetchRevenueByHour(
     console.error("[finance/actions:fetchRevenueByHour] RPC get_revenue_by_hour error:", error);
     return {
       success: false,
-      error: "Không thể tải dữ liệu doanh thu theo giờ.",
+      error: financeActionErrors.loadRevenueByHourFailed,
     };
   }
 
@@ -1055,7 +1057,7 @@ export async function fetchRevenueByCashier(
 
   if (error) {
     console.error("[finance/actions:fetchRevenueByCashier] RPC get_revenue_by_cashier error:", error);
-    return { success: false, error: "Không thể tải dữ liệu thu ngân." };
+    return { success: false, error: financeActionErrors.loadRevenueByCashierFailed };
   }
 
   return { success: true, data: data ?? [] };
@@ -1085,7 +1087,7 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
       .order("name");
     if (error) {
       console.error("[finance/actions:fetchAccessibleBranches] Fetch branches error (owner):", error);
-      return { success: false, error: "Không thể tải danh sách chi nhánh." };
+      return { success: false, error: financeActionErrors.loadBranchesFailed };
     }
     return { success: true, data: data ?? [] };
   }
@@ -1156,7 +1158,7 @@ export async function fetchTopItems(
 
   if (error) {
     console.error("[finance/actions:fetchTopItems] RPC get_top_items error:", error);
-    return { success: false, error: "Không thể tải dữ liệu top món." };
+    return { success: false, error: financeActionErrors.loadTopItemsFailed };
   }
 
   return { success: true, data: data ?? [] };

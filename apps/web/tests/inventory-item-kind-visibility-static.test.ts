@@ -13,8 +13,11 @@ const ingredientsClientSource = readWeb(
 const ingredientDialogSource = readWeb(
   "app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
 );
-const stockMobileGridSource = readWeb(
-  "app/(protected)/inventory/stock/stock-mobile-grid.tsx",
+const stockClientSource = readWeb(
+  "app/(protected)/inventory/stock/stock-client.tsx",
+);
+const branchStockClientSource = readWeb(
+  "app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
 );
 
 test("inventory ingredients list exposes item kind visibly and as a filter", () => {
@@ -65,11 +68,16 @@ test("ingredient unit conversion form reads as unit equals anchor quantity", () 
   assert.match(ingredientDialogSource, /usesBaseAnchor && baseUnit/);
 });
 
-test("inventory stock mobile grid labels item kind separately from category", () => {
-  assert.match(stockMobileGridSource, /ITEM_KIND_LABELS/);
+test("inventory stock responsive cards label item kind separately from category", () => {
+  assert.match(stockClientSource, /ITEM_KIND_LABELS/);
   assert.match(
-    stockMobileGridSource,
+    stockClientSource,
     /ITEM_KIND_LABELS\[item\.itemKind\] \?\? item\.itemKind/,
   );
-  assert.match(stockMobileGridSource, /CATEGORY_TONE_CLASS/);
+  assert.match(stockClientSource, /CATEGORY_TONE_CLASS/);
+  assert.match(branchStockClientSource, /ITEM_KIND_LABELS/);
+  assert.match(
+    branchStockClientSource,
+    /ITEM_KIND_LABELS\[item\.itemKind\] \?\? item\.itemKind/,
+  );
 });

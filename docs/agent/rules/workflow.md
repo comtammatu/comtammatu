@@ -76,8 +76,8 @@ After all four return, synthesize:
 3. Produce a unified task contract (scope + business rules + implementation plan + test plan).
 
 For T3 changes, attach the synthesized contract to the PR description or task
-note. Do not create a dated `docs/worklog/` file unless the note is deleted or
-promoted before closeout.
+note. Do not create a dated `docs/worklog/` file unless the note is deleted,
+parked as an ADR, or promoted before closeout.
 
 ## Running A T2 Self-Review
 
@@ -95,6 +95,66 @@ QA:   tests = …, regressions to recheck = …
 
 This is for the next reader (future you, the owner, a reviewer) — make it stand on its own.
 
+## Operating Tech Specs
+
+Use this template for T2/T3 implementation slices when a change needs a concrete
+contract before coding. Keep it in the PR body or active task note. Do not create
+a `docs/tech-specs/` tree: a tech spec is transient until each durable fact is
+promoted into its owning source-of-truth doc, parked as an ADR, or deleted.
+
+```md
+# Tech Spec: <slice name>
+
+## Decision
+Build:
+Review tier:
+Owner outcome:
+
+## Operating Slice
+Workflow:
+Mission check:
+Event chain: source event -> state/posting -> exception -> correction/reversal -> confidence -> owner action
+
+## Current Truth
+Code:
+DB/RPC:
+Docs:
+
+## Product Contract
+Roles:
+Routes:
+States:
+Out of scope:
+
+## Data Contract
+Source of truth:
+Writes:
+RLS/ACL:
+Confidence:
+Correction/reversal:
+
+## UI/Workflow Contract
+Primary action:
+States:
+Mobile/touch:
+Design system:
+
+## Failure And Recovery
+Failure paths:
+Recovery:
+Unsafe states blocked:
+
+## Verification
+Commands:
+Runtime smoke:
+Evidence:
+
+## Promotion Map
+Docs to update:
+ADR needed:
+Runbook needed:
+```
+
 ## Verification
 
 Before marking implementation work complete:
@@ -110,5 +170,5 @@ Before marking implementation work complete:
 6. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every PR and on push to `main` — a push to a working branch alone triggers nothing. Landed work is complete only with green CI.
 7. Learning-loop hygiene (T2/T3) — one pass before closing, so the loop stays bounded:
    - A recurring failure surfaced → add a `tasks/regressions.md` rule. If its detection is a deterministic code pattern, add a guard row to `scripts/check-regression-guards.mjs` instead of relying on prose — an enforced rule costs zero context.
-   - A transient task note has landed → promote any durable rule to its canonical doc (`docs/agent/rules/`, a module/ref doc) and delete the staging note; git history is the archive.
+   - A transient task note has landed → promote any durable rule to its canonical doc (`docs/agent/rules/`, a module/ref doc), park any owner-kept future option as an ADR with a revisit trigger, and delete the staging note; git history is the archive.
    - State the learning (or "none") in the commit/PR body.

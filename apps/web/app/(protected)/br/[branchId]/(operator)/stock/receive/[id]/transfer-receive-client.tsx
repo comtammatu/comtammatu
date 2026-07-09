@@ -9,7 +9,7 @@ import {
   Circle as IconCircle,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { ItemGroup } from "@comtammatu/ui/components/item";
+import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -20,7 +20,10 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { transferReceive } from "@/(protected)/inventory/transfer-actions";
-import type { TransferDetail } from "@/(protected)/inventory/transfers/[id]/transfer-detail-client";
+import {
+  isTransferReceiveReady,
+  type TransferDetail,
+} from "@lib/inventory/transfer-detail-model";
 import { messages } from "@lib/messages";
 
 type TransferReceiveClientProps = {
@@ -28,8 +31,6 @@ type TransferReceiveClientProps = {
   backHref: string;
   detailHref: string;
 };
-
-const RECEIVABLE_TRANSFER_STATUSES = new Set(["in_transit", "confirmed_receive"]);
 
 export function TransferReceiveClient({
   transfer,
@@ -59,7 +60,7 @@ export function TransferReceiveClient({
   const [sheetId, setSheetId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const isReceiveMode = RECEIVABLE_TRANSFER_STATUSES.has(transfer.status);
+  const isReceiveMode = isTransferReceiveReady(transfer.status);
   const isWaitingForTransit = transfer.status === "confirmed_ship";
   const remaining = total - confirmed.size;
   const progress = total === 0 ? 0 : confirmed.size / total;
@@ -121,7 +122,12 @@ export function TransferReceiveClient({
     return (
       <>
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon" className="shrink-0">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon-touch"
+            className="shrink-0"
+          >
             <Link href={backHref} aria-label={ACTIONS_VI.back}>
               <IconArrowLeft className="size-4" />
             </Link>
@@ -159,7 +165,7 @@ export function TransferReceiveClient({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="icon" className="shrink-0">
+        <Button asChild variant="ghost" size="icon-touch" className="shrink-0">
           <Link href={backHref} aria-label={ACTIONS_VI.back}>
             <IconArrowLeft className="size-4" />
           </Link>
@@ -195,9 +201,7 @@ export function TransferReceiveClient({
               className="w-full flex-col items-start justify-center text-left"
               onClick={() => setSheetId(nextItem.ingredientId)}
             >
-              <SectionLabel>
-                {receiveCopy.receiveNextLine}
-              </SectionLabel>
+              <SectionLabel>{receiveCopy.receiveNextLine}</SectionLabel>
               <span className="flex min-w-0 items-center gap-2">
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">
                   {nextItem.name}
@@ -218,64 +222,67 @@ export function TransferReceiveClient({
           const value = values[item.ingredientId] ?? item.qty;
           const isShortage = isConfirmed && value < item.qty;
           return (
-            <InteractiveCard
-              key={item.ingredientId}
-              padding="compact"
-              minHeight="tap"
-              className="flex-col items-stretch gap-2"
-            >
-              <button
-                type="button"
-                onClick={() => setSheetId(item.ingredientId)}
-                className="flex w-full items-center gap-3 text-left"
-              >
-                {isConfirmed ? (
-                  <IconCheckCircle className="size-5 shrink-0 text-primary" />
-                ) : (
-                  <IconCircle className="size-5 shrink-0 text-muted-foreground" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">
-                    {item.name}
-                  </div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {receiveCopy.receiveSent(String(item.qty), item.unit)}
-                  </div>
-                </div>
-                <span
-                  className={cn(
-                    "shrink-0 rounded-md px-3 py-1 font-mono text-sm font-semibold tabular-nums",
-                    isConfirmed
-                      ? "bg-primary/10 text-primary"
-                      : isNext
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground",
-                  )}
+            <div key={item.ingredientId} className="flex flex-col gap-2">
+              <InteractiveCard asChild padding="compact" minHeight="tap">
+                <button
+                  type="button"
+                  onClick={() => setSheetId(item.ingredientId)}
+                  className="flex w-full items-center gap-3 text-left"
                 >
-                  {isConfirmed ? value : receiveCopy.receiveTapToEnter}
-                </span>
-              </button>
-              {isShortage ? (
-                <label className="flex flex-col gap-1.5" data-vaul-no-drag>
-                  <span className="text-xs font-medium text-destructive">
-                    {copy.shortageNoteTitle}
+                  {isConfirmed ? (
+                    <IconCheckCircle className="size-5 shrink-0 text-primary" />
+                  ) : (
+                    <IconCircle className="size-5 shrink-0 text-muted-foreground" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">
+                      {item.name}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {receiveCopy.receiveSent(String(item.qty), item.unit)}
+                    </div>
+                  </div>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-md px-3 py-1 font-mono text-sm font-semibold tabular-nums",
+                      isConfirmed
+                        ? "bg-primary/10 text-primary"
+                        : isNext
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground",
+                    )}
+                  >
+                    {isConfirmed ? value : receiveCopy.receiveTapToEnter}
                   </span>
-                  <Textarea
-                    value={notes[item.ingredientId] ?? ""}
-                    onChange={(event) =>
-                      setNotes((current) => ({
-                        ...current,
-                        [item.ingredientId]: event.target.value,
-                      }))
-                    }
-                    placeholder={copy.shortageNotePlaceholder}
-                    className="min-h-20"
-                    maxLength={300}
-                    disabled={isPending}
-                  />
-                </label>
+                </button>
+              </InteractiveCard>
+              {isShortage ? (
+                <Item
+                  asChild
+                  variant="outline"
+                  className="flex-col items-stretch gap-1.5"
+                >
+                  <label data-vaul-no-drag>
+                    <span className="text-xs font-medium text-destructive">
+                      {copy.shortageNoteTitle}
+                    </span>
+                    <Textarea
+                      value={notes[item.ingredientId] ?? ""}
+                      onChange={(event) =>
+                        setNotes((current) => ({
+                          ...current,
+                          [item.ingredientId]: event.target.value,
+                        }))
+                      }
+                      placeholder={copy.shortageNotePlaceholder}
+                      className="min-h-20"
+                      maxLength={300}
+                      disabled={isPending}
+                    />
+                  </label>
+                </Item>
               ) : null}
-            </InteractiveCard>
+            </div>
           );
         })}
       </ItemGroup>

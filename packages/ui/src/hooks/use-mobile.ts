@@ -21,9 +21,8 @@ function getServerSnapshot(): boolean {
   return false;
 }
 
-// `breakpoint` defaults to the phone cutover (768). The Management sidebar
-// passes a larger value so tablet-portrait resolves to the drawer chrome
-// while data-table/toaster/POS stay on the phone breakpoint.
+// `breakpoint` defaults to the phone cutover (768). Route-specific shells may
+// pass a larger value when tablet widths should stay on touch-first chrome.
 export function useIsMobile(breakpoint: number = MOBILE_BREAKPOINT): boolean {
   const subscribe = React.useCallback(
     (onStoreChange: () => void): (() => void) => {

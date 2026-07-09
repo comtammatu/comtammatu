@@ -46,6 +46,7 @@
     "inventory:matu-platform:reconcile": "node --env-file=.env.local scripts/inventory-matu-platform-reconcile.mjs",
     "hddt:export": "corepack pnpm --filter @comtammatu/web hddt:export",
     "inventory:cleanup:dry-run": "corepack pnpm --filter @comtammatu/web inventory:cleanup:dry-run",
+    "inventory:csv-reseed:dry-run": "corepack pnpm --filter @comtammatu/web inventory:csv-reseed:dry-run",
     "clean:web": "node scripts/clean-web.mjs",
     "docs:okf": "node scripts/export-okf.mjs"
   },

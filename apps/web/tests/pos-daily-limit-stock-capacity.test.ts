@@ -27,6 +27,14 @@ const stockOutcomeAvailabilityMigration = readFileSync(
   "utf8",
 );
 
+const ingredientPoolAvailabilityMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260709143000_pos_menu_availability_ingredient_pool.sql",
+  ),
+  "utf8",
+);
+
 test("remaining is unbounded when available_to_sell is null", () => {
   assert.equal(remainingDailyQuotaAfterDemand(limit({}), 3), null);
 });
@@ -160,5 +168,37 @@ test("stock-outcome availability SQL separates stock outcome and fallback counte
   assert.match(
     stockOutcomeAvailabilityMigration,
     /ELSE\s+r\.stock_capacity_live - r\.accepted_today - r\.active_hold_demand/,
+  );
+});
+
+test("stock availability reserves shared recipe ingredients across menu items", () => {
+  assert.match(
+    ingredientPoolAvailabilityMigration,
+    /pending_ingredient AS \(/,
+  );
+  assert.match(ingredientPoolAvailabilityMigration, /holds_ingredient AS \(/);
+  assert.match(
+    ingredientPoolAvailabilityMigration,
+    /JOIN recipe_lines rl ON rl\.menu_item_id = pi\.menu_item_id/,
+  );
+  assert.match(
+    ingredientPoolAvailabilityMigration,
+    /JOIN recipe_lines rl ON rl\.menu_item_id = hi\.menu_item_id/,
+  );
+  assert.match(
+    ingredientPoolAvailabilityMigration,
+    /pi\.ingredient_id = rl\.ingredient_id/,
+  );
+  assert.match(
+    ingredientPoolAvailabilityMigration,
+    /hi\.ingredient_id = rl\.ingredient_id/,
+  );
+  assert.match(
+    ingredientPoolAvailabilityMigration,
+    /ELSE r\.manual_limit_quantity - r\.sold_today - r\.item_active_hold_demand/,
+  );
+  assert.doesNotMatch(
+    ingredientPoolAvailabilityMigration,
+    /ELSE r\.manual_limit_quantity - r\.sold_today - r\.active_hold_demand/,
   );
 });

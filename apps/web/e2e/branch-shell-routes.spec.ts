@@ -5,7 +5,6 @@ import { E2E_AUTH_STORAGE_OWNER } from "../playwright.config";
 
 test.use({ storageState: E2E_AUTH_STORAGE_OWNER });
 
-
 const MOBILE = { width: 390, height: 844 };
 const DESKTOP = { width: 1440, height: 900 };
 
@@ -79,6 +78,15 @@ async function expectHealthyRoute(page: Page, path: string) {
   expect(state.isAdminSurface).toBe(false);
 }
 
+function expectedBottomNavCurrentCount(path: string, branchId: number) {
+  const base = `/br/${branchId}`;
+  if (path === base) return 1;
+  if (path.startsWith(`${base}/shift`)) return 1;
+  if (path.startsWith(`${base}/team`)) return 1;
+  if (path.startsWith(`${base}/stock`)) return 1;
+  return 0;
+}
+
 test.describe("branch route shell ownership", () => {
   test("POS and KDS keep standalone station chrome", async ({ page }) => {
     test.setTimeout(90_000);
@@ -134,7 +142,9 @@ test.describe("branch route shell ownership", () => {
         name: APP_COPY_VI.operatorAriaLabel,
       });
       await expect(operatorNav).toBeVisible();
-      await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(1);
+      await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(
+        expectedBottomNavCurrentCount(path, branchId),
+      );
     }
 
     expect(health.consoleErrors).toEqual([]);
@@ -162,16 +172,16 @@ test.describe("branch route shell ownership", () => {
     ]) {
       await expectHealthyRoute(page, path);
       if (path === `/br/${branchId}`) {
-        await expect(
-          page.getByText(/Tiến độ|Điều hành chi nhánh/).first(),
-        ).toBeVisible();
+        await expect(page.getByText("Cần xử lý")).toBeVisible();
+        await expect(page.getByText("Bán hàng")).toBeVisible();
+        await expect(page.getByText("Kho hàng")).toBeVisible();
       }
       const operatorNav = page.getByRole("navigation", {
         name: APP_COPY_VI.operatorAriaLabel,
       });
       await expect(operatorNav).toBeVisible();
       await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(
-        path.startsWith(`/br/${branchId}/profile`) ? 0 : 1,
+        expectedBottomNavCurrentCount(path, branchId),
       );
     }
 

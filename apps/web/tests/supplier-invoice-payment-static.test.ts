@@ -2,12 +2,81 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import {
+  getSupplierInvoiceOutstandingAmount,
+  mapSupplierInvoiceRow,
+  type SupplierInvoiceRow,
+} from "../app/(protected)/inventory/supplier-invoices/supplier-invoice-row";
 
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
 
 const readRoot = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "../../..", path), "utf8");
+
+test("supplier invoice outstanding amount is total minus paid and never negative", () => {
+  const invoice = {
+    id: 1,
+    supplierId: 1,
+    grnId: 1,
+    poId: null,
+    code: "NCC-001",
+    supplierName: "NCC",
+    grnCode: "GRN-001",
+    poCode: null,
+    matchStatus: "matched",
+    paymentStatus: "partial",
+    amount: 100_000,
+    paidAmount: 40_000,
+    variance: null,
+    invoiceDate: "2026-07-09",
+    dueDate: "2026-07-16",
+    paymentCount: 0,
+    lastPayment: null,
+  } satisfies SupplierInvoiceRow;
+
+  assert.equal(getSupplierInvoiceOutstandingAmount(invoice), 60_000);
+  assert.equal(
+    getSupplierInvoiceOutstandingAmount({ ...invoice, paidAmount: 120_000 }),
+    0,
+  );
+});
+
+test("supplier invoice mapper keeps latest supplier payment for AP drilldown", () => {
+  const row = mapSupplierInvoiceRow({
+    id: 1,
+    supplier_id: 2,
+    invoice_number: "NCC-001",
+    total_amount: 100_000,
+    paid_amount: 50_000,
+    payment_status: "partial",
+    matching_status: "matched",
+    invoice_date: "2026-07-09",
+    due_date: "2026-07-16",
+    suppliers: { name: "NCC A" },
+    supplier_payments: [
+      {
+        id: 10,
+        amount: 20_000,
+        payment_method: "cash",
+        payment_date: "2026-07-09T02:00:00Z",
+        reference_note: null,
+      },
+      {
+        id: 11,
+        amount: 30_000,
+        payment_method: "bank_transfer",
+        payment_date: "2026-07-10T02:00:00Z",
+        reference_note: "SEPAY-001",
+      },
+    ],
+  });
+
+  assert.equal(row.paymentCount, 2);
+  assert.equal(row.lastPayment?.id, 11);
+  assert.equal(row.lastPayment?.paymentMethod, "bank_transfer");
+  assert.equal(row.lastPayment?.referenceNote, "SEPAY-001");
+});
 
 test("supplier invoice payment action uses the canonical AP RPC", () => {
   const source = readWeb(
@@ -43,13 +112,20 @@ test("supplier invoice client groups payable review by supplier and PO", () => {
   );
 
   assert.match(actionSource, /purchase_orders \( id, po_number \)/);
+  assert.match(
+    actionSource,
+    /supplier_payments \( id, amount, payment_method, payment_date, reference_note \)/,
+  );
   assert.match(mapper, /poId/);
   assert.match(mapper, /poCode/);
+  assert.match(mapper, /lastPayment/);
   assert.match(client, /SupplierInvoiceViewMode/);
   assert.match(client, /viewBySupplier/);
   assert.match(client, /viewByPo/);
   assert.match(client, /invoiceGroups/);
   assert.match(client, /outstandingAmount/);
+  assert.match(client, /overdueAmount/);
+  assert.match(client, /lastPaymentSummary/);
 });
 
 test("supplier invoice desktop layout does not squeeze the detail pane", () => {

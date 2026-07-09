@@ -38,3 +38,41 @@ test("POS server code does not reintroduce raw branch-claim rejects", () => {
     );
   }
 });
+
+test("POS cash payment uses route branch scope instead of rejecting owner null-branch claims", () => {
+  const actionSource = readSource(
+    "app/(protected)/br/[branchId]/pos/payment-actions.ts",
+  );
+  const schemaSource = readSource(
+    "app/(protected)/br/[branchId]/pos/_lib/payment-schemas.ts",
+  );
+  const billSource = readSource(
+    "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
+  );
+
+  assert.match(schemaSource, /branchId: z\.coerce\s*\.number\(\)/);
+
+  const cashActionBlock = actionSource.slice(
+    actionSource.indexOf("export const confirmCashPayment"),
+    actionSource.indexOf("/* ─── Cash payment + mandatory HĐĐT issuance"),
+  );
+  assert.match(
+    cashActionBlock,
+    /argsToInput: \(branchId: number, orderId: number, cashReceived: number\) => \(\{/,
+  );
+  assert.match(cashActionBlock, /if \(!isPosBranchInScope\(claims, branchId\)\)/);
+  assert.doesNotMatch(cashActionBlock, /claims\.branch_id\s*===\s*null/);
+
+  assert.match(
+    actionSource,
+    /export async function confirmCashPaymentWithInvoice\(\s*branchId: number,/,
+  );
+  assert.match(
+    actionSource,
+    /confirmCashPayment\(branchId, orderId, cashReceived\)/,
+  );
+  assert.match(
+    billSource,
+    /confirmCashPaymentWithInvoice\(\s*branchId,\s*orderId,\s*cashReceived,/,
+  );
+});

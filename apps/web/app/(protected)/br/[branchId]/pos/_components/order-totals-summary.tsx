@@ -94,7 +94,7 @@ export function OrderTotalsSummary({
         <>
           <div className={cn(lineClass, "text-success")}>
             <span>
-              {visibleItemDiscount > 0 ? "Chiết khấu đơn" : "Chiết khấu"}
+              {visibleItemDiscount > 0 ? POS_VI.orderDiscountLabel : POS_VI.discountTitle}
               {discountType === "pct" && discountValue != null
                 ? ` (${discountValue}%)`
                 : ""}
@@ -105,7 +105,7 @@ export function OrderTotalsSummary({
           </div>
           {discountNote && (
             <div className="text-xs italic text-muted-foreground">
-              Lý do: {discountNote}
+              {POS_VI.reasonPrefix}{discountNote}
             </div>
           )}
         </>

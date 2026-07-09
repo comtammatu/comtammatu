@@ -37,6 +37,7 @@ import { FORM_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 
 const boundaryCopy = messages.hr.client.shiftBoundaries;
+const shiftsCopy = messages.hr.client;
 
 interface ShiftsTableProps {
   shifts: ShiftRow[];
@@ -62,8 +63,8 @@ function MobileShiftCard({
   });
 
   return (
-    <InteractiveCard 
-      minHeight="mobile" 
+    <InteractiveCard
+      minHeight="mobile"
       className={`h-auto touch-none select-none cursor-pointer ${isPending ? "opacity-60" : ""}`}
       {...longPress}
     >
@@ -260,8 +261,8 @@ export function ShiftsTable({
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {isPending
-            ? "Đang tải..."
-            : `${shifts.length} ca làm việc · dùng chung mọi chi nhánh`}
+            ? shiftsCopy.shiftsLoading
+            : shiftsCopy.shiftsSummary(shifts.length)}
         </p>
         {canManage ? (
           <Button onClick={() => setAddOpen(true)}>
@@ -275,7 +276,7 @@ export function ShiftsTable({
         columns={columns}
         data={shifts}
         getRowKey={(shift) => shift.id}
-        emptyTitle="Chưa có ca làm việc nào"
+        emptyTitle={shiftsCopy.shiftsEmptyTitle}
         emptyIcon={<IconCalendarClock />}
         rowClassName={() => (isPending ? "opacity-60" : undefined)}
         mobileCardRender={(shift) => (

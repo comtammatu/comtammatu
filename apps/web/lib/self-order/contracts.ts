@@ -85,6 +85,8 @@ export const selfOrderPaymentRequestSchema = z.object({
 });
 
 export type SelfOrderCartItem = z.infer<typeof selfOrderCartItemSchema>;
+export type SelfOrderCartModifier = z.infer<typeof selfOrderModifierSchema>;
+export type SelfOrderCartSide = z.infer<typeof selfOrderSideSchema>;
 export type SelfOrderPaymentRequest = z.infer<
   typeof selfOrderPaymentRequestSchema
 >;
@@ -137,7 +139,36 @@ export interface SelfOrderOrderLine {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  modifiers: SelfOrderCartModifier[];
+  sides: SelfOrderCartSide[];
   note: string | null;
+}
+
+export type SelfOrderGuestBatchStatus =
+  | "pending_approval"
+  | "approved"
+  | "rejected";
+
+export interface SelfOrderGuestBatchItem {
+  menuItemId: number;
+  itemName: string;
+  variantId: number | null;
+  variantName: string | null;
+  quantity: number;
+  unitPrice: number;
+  modifiers: SelfOrderCartModifier[];
+  sides: SelfOrderCartSide[];
+  note: string | null;
+}
+
+export interface SelfOrderGuestBatch {
+  id: number;
+  roundIndex: number;
+  status: SelfOrderGuestBatchStatus;
+  items: SelfOrderGuestBatchItem[];
+  customerNote: string | null;
+  createdAt: string;
+  decidedAt: string | null;
 }
 
 export interface PublicSelfOrderSnapshot {
@@ -159,6 +190,7 @@ export interface PublicSelfOrderSnapshot {
     itemCount: number;
     items: SelfOrderOrderLine[];
   } | null;
+  batches?: SelfOrderGuestBatch[];
   paymentRequest?: {
     status: string;
     method: string;

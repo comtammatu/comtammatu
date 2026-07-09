@@ -7,6 +7,7 @@ import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
+import { messages } from "@lib/messages";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
@@ -58,25 +59,22 @@ async function resolveIssueSourceLocation(
   supabase: TenantSupabase,
   tenantId: number,
   branchId: number,
-  issueType: string,
 ): Promise<number | null> {
-  if (issueType === "consumption") {
-    const { data, error } = await supabase
-      .from("inventory_locations")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .eq("branch_id", branchId)
-      .eq("location_kind", "kitchen")
-      .eq("is_active", true)
-      .order("is_default_consumption", { ascending: false })
-      .order("sort_order", { ascending: true })
-      .order("id", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from("inventory_locations")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("branch_id", branchId)
+    .eq("location_kind", "kitchen")
+    .eq("is_active", true)
+    .order("is_default_consumption", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
 
-    if (error) throw error;
-    if (data?.id) return data.id;
-  }
+  if (error) throw error;
+  if (data?.id) return data.id;
 
   return resolveDefaultInventoryLocation(supabase, tenantId, branchId, "issue");
 }
@@ -120,7 +118,7 @@ export async function fetchStockIssues(opts?: {
 
   const { data, error } = await query;
   if (error) {
-    return { success: false, error: "Không thể tải danh sách phiếu xuất." };
+    return { success: false, error: messages.inventory.issues.listLoadFailed };
   }
   return { success: true, data: data ?? [] };
 }
@@ -143,7 +141,6 @@ export const createStockIssueDraft = withAction(
       supabase,
       claims.tenant_id,
       d.branchId,
-      d.issueType,
     );
     if (!sourceLocationId) {
       return { success: false, error: "Chưa cấu hình vị trí xuất kho." };
@@ -297,7 +294,7 @@ export const upsertStockIssueLine = withAction(
       if (stockLevelRes.error) {
         return {
           success: false,
-          error: "Không thể tải WAG cho dòng phiếu xuất.",
+          error: messages.inventory.issues.lineWacLoadFailed,
         };
       }
       stockLevel = stockLevelRes.data;

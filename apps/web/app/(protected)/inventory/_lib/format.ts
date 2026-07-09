@@ -1,7 +1,11 @@
-import { formatVND } from "@comtammatu/shared/format";
+import {
+  formatDecimal,
+  formatQuantity,
+  formatVND,
+} from "@comtammatu/shared/format";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 
-export { formatVND };
+export { formatDecimal, formatVND };
 
 export function parseOptionalNumber(
   value: string | undefined,
@@ -12,12 +16,7 @@ export function parseOptionalNumber(
 }
 
 export function formatQty(n: number): string {
-  return n % 1 === 0
-    ? n.toLocaleString("vi-VN")
-    : n.toLocaleString("vi-VN", {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 3,
-      });
+  return formatQuantity(n);
 }
 
 export function formatDate(iso: string): string {

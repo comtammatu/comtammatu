@@ -46,7 +46,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form/combobox";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
-import { formatVND } from "../../_lib/format";
+import { formatQty, formatVND } from "../../_lib/format";
 import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
@@ -80,7 +80,6 @@ import {
   STATES_VI,
 } from "@comtammatu/shared/messages";
 
-const toastLoadSuggestionsFailed = "Không thể tải gợi ý.";
 const toastIngredientAlreadyExists = "đã có trong PO";
 const toastAddedIngredient = "Đã thêm";
 const toastNoSuggestionsToAdd = "Không có gợi ý nào để thêm";
@@ -97,6 +96,10 @@ const poHeaderSupplierFallback = "Chưa chọn nhà cung cấp";
 const poHeaderSupplierSelected = "Đã chọn";
 const poHeaderNotesPresent = "Có ghi chú";
 const poHeaderNotesEmpty = "Chưa ghi chú";
+
+function formatDongForSuffix(amount: number): string {
+  return formatVND(amount).replace(/đ$/, "");
+}
 
 function isSameReferencePrice(
   currentPrice: number | null,
@@ -209,7 +212,7 @@ export function NewPoClient({
       if (res.success) {
         setSuggestions((res.data ?? []) as PoSuggestionRow[]);
       } else {
-        toast.error(res.error ?? toastLoadSuggestionsFailed);
+        toast.error(res.error ?? messages.inventory.po.suggestionsLoadFailed);
       }
     });
   }
@@ -397,9 +400,7 @@ export function NewPoClient({
 
   const footerLeading = (
     <Button variant="ghost" size={embedded ? "touch" : "default"} asChild>
-      <Link
-        href={branchId ? `${poBasePath}?branchId=${branchId}` : poBasePath}
-      >
+      <Link href={branchId ? `${poBasePath}?branchId=${branchId}` : poBasePath}>
         {ACTIONS_VI.cancel}
       </Link>
     </Button>
@@ -411,7 +412,7 @@ export function NewPoClient({
           {messages.inventory.po.lineCount(lines.length)}
           {hasValue
             ? messages.inventory.po.totalAmountSuffix(
-                totalValue.toLocaleString("vi-VN"),
+                formatDongForSuffix(totalValue),
               )
             : ""}
         </span>
@@ -489,7 +490,11 @@ function SupplierSection({
       action={
         <Sheet>
           <SheetTrigger asChild>
-            <Button type="button" variant="outline" size={embedded ? "touch" : "sm"}>
+            <Button
+              type="button"
+              variant="outline"
+              size={embedded ? "touch" : "sm"}
+            >
               {ACTIONS_VI.edit}
             </Button>
           </SheetTrigger>
@@ -598,7 +603,8 @@ function SuggestionsPanel({
   embedded: boolean;
 }) {
   const branchLabel =
-    procurementBranches.find((b) => b.id === branchId)?.name ?? branchUnselected;
+    procurementBranches.find((b) => b.id === branchId)?.name ??
+    branchUnselected;
   const showBranchSwitcher = canSwitchBranch && procurementBranches.length > 1;
   return (
     <AppSection
@@ -718,14 +724,14 @@ function SuggestionsPanel({
                   </ItemTitle>
                   <ItemDescription>
                     {messages.inventory.po.suggestionDescription(
-                      s.hq_current_qty.toLocaleString("vi-VN"),
-                      s.avg_daily_consumption.toLocaleString("vi-VN"),
+                      formatQty(s.hq_current_qty),
+                      formatQty(s.avg_daily_consumption),
                     )}
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions className="flex-wrap justify-end">
                   <span className="font-mono text-sm font-semibold">
-                    {s.suggested_qty.toLocaleString("vi-VN")}{" "}
+                    {formatQty(s.suggested_qty)}{" "}
                     <span className="text-xs font-normal text-muted-foreground">
                       {s.unit}
                     </span>
@@ -886,7 +892,8 @@ function LineItemsSection({
       return;
     }
     const ing = ingredients.find((x) => x.id === iid);
-    const resolvedUnit = draft.unit || ing?.units?.find((u) => u.is_base)?.unit_code || "";
+    const resolvedUnit =
+      draft.unit || ing?.units?.find((u) => u.is_base)?.unit_code || "";
     if (!resolvedUnit || draft.quantity <= 0) {
       toast.error(messages.inventory.po.validQuantityRequired);
       return;
@@ -927,18 +934,18 @@ function LineItemsSection({
             const dev = lineDeviations.get(line.ingredientId);
             return (
               <Item key={line.ingredientId} variant="outline" size="sm">
-                <ItemContent className="min-w-0">
-                  <ItemTitle className="w-full">
-                    <span className="truncate">{line.ingredientName}</span>
-                  </ItemTitle>
-                  <ItemDescription>
-                    {line.quantity.toLocaleString("vi-VN")} {line.unit}
-                    {line.unitPriceEst != null
-                      ? messages.inventory.po.totalAmountSuffix(
-                          line.unitPriceEst.toLocaleString("vi-VN"),
-                        )
-                      : ""}
-                  </ItemDescription>
+	                <ItemContent className="min-w-0">
+	                  <ItemTitle className="w-full">
+	                    <span className="truncate">{line.ingredientName}</span>
+	                  </ItemTitle>
+	                  <ItemDescription>
+	                    {formatQty(line.quantity)} {line.unit}
+	                    {line.unitPriceEst != null
+	                      ? messages.inventory.po.totalAmountSuffix(
+	                          formatDongForSuffix(line.unitPriceEst),
+	                        )
+	                      : ""}
+	                  </ItemDescription>
                   {dev && Math.abs(dev.deviation_pct) > 5 ? (
                     <InlineDeviationHint deviation={dev} unit={line.unit} />
                   ) : null}
@@ -1065,7 +1072,7 @@ function AddLineSheet({
     >
       <SheetContent
         side="bottom"
-        className="h-auto max-h-dvh-95 gap-0 bg-background p-0 text-foreground"
+        className="h-auto max-h-dvh-95 gap-1 bg-background p-0 text-foreground"
         showCloseButton={false}
       >
         {draft ? (
@@ -1092,7 +1099,8 @@ function AddLineSheet({
                     label: i.name,
                     hint:
                       getDefaultPurchaseUnit(i)?.label ??
-                      i.units?.find((u) => u.is_base)?.unit_code ?? "",
+                      i.units?.find((u) => u.is_base)?.unit_code ??
+                      "",
                     keywords: [i.sku ?? "", i.category ?? ""],
                   }))}
                   placeholder={messages.inventory.po.ingredientPlaceholder}
@@ -1110,12 +1118,12 @@ function AddLineSheet({
               />
 
               <div className="grid grid-cols-2 gap-3">
-                <NumpadValueButton
-                  label={FORM_VI.quantity}
-                  display={draft.quantity.toLocaleString("vi-VN")}
-                  detail={draft.unit}
-                  onClick={() => onOpenNumpad("qty")}
-                />
+	                <NumpadValueButton
+	                  label={FORM_VI.quantity}
+	                  display={formatQty(draft.quantity)}
+	                  detail={draft.unit}
+	                  onClick={() => onOpenNumpad("qty")}
+	                />
                 <NumpadValueButton
                   label={messages.inventory.po.unitPrice}
                   display={
@@ -1186,17 +1194,17 @@ function NumpadValueButton({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="touch-lg"
       onClick={onClick}
-      className="flex flex-col items-start gap-1 rounded-md bg-muted/50 px-3 py-3 text-left transition active:scale-[0.99]"
+      className="h-auto w-full flex-col items-start justify-start gap-1 bg-muted/50 px-3 py-3 text-left whitespace-normal"
     >
-      <SectionLabel density="dense">
-        {label}
-      </SectionLabel>
+      <SectionLabel density="dense">{label}</SectionLabel>
       <span className="text-2xl font-semibold tabular-nums">{display}</span>
       <span className="text-xs text-muted-foreground">{detail}</span>
-    </button>
+    </Button>
   );
 }
 
@@ -1259,12 +1267,12 @@ function InlineDeviationHint({
     >
       <Icon className="size-3" />
       <span>
-        {messages.inventory.po.deviationHint(
-          deviation.sample_count,
-          deviation.avg_price.toLocaleString("vi-VN"),
-          unit,
-          sign,
-          deviation.deviation_pct,
+	        {messages.inventory.po.deviationHint(
+	          deviation.sample_count,
+	          formatDongForSuffix(deviation.avg_price),
+	          unit,
+	          sign,
+	          deviation.deviation_pct,
         )}
       </span>
     </span>

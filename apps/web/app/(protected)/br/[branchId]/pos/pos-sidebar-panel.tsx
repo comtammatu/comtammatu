@@ -34,7 +34,7 @@ function PosSidebarTabsComponent({
           onShowOrdersChange(nextShowOrders);
           if (nextShowOrders) void refreshOrders();
         }}
-        className="gap-0"
+        className="gap-1"
       >
         <TabsList
           aria-label="POS sidebar"

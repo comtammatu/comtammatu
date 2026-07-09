@@ -101,8 +101,17 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: getModuleLabelVi("branches"),
   },
   branch_picker: {
-    path: "/br",
-    allowedRoles: ["owner"],
+    path: "/",
+    allowedRoles: [
+      "owner",
+      "branch_manager",
+      "cashier",
+      "chef",
+      "branch_staff",
+      "warehouse_manager",
+      "production_manager",
+      "office",
+    ],
     label: getModuleLabelVi("branch_picker"),
   },
   settings: {

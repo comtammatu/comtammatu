@@ -1,5 +1,5 @@
 "use client";
- 
+
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -35,19 +35,24 @@ import { AddGrnLineDialog } from "./views/add-grn-line-dialog";
 import { AmendOwnerDialog } from "./views/amend-owner-dialog";
 import { GrnSummaryRow } from "./views/grn-summary-row";
 import { LineRow } from "./views/grn-line-row";
+import { RecreateReceivingSiteDialog } from "./views/recreate-receiving-site-dialog";
 
- 
 export type { GRNDetail } from "./views/grn-detail-types";
- 
-import type { EditableLine, GRNDetail } from "./views/grn-detail-types";
+
+import type {
+  EditableLine,
+  GRNDetail,
+  RecreateReceivingLocationOption,
+} from "./views/grn-detail-types";
 const qcStatusTitle = "Trạng thái kiểm kê QC";
 const historySectionTitle = "Lịch sử chỉnh sửa";
- 
+
 export function GRNDetailClient({
   grn,
   ingredients,
   canAdjustStock,
   canAmendConfirmed = false,
+  recreateLocationOptions = [],
   auditLogs = [],
   grnListBasePath = "/inventory/grn",
   grnMobileBackPath = "/inventory/grn/new",
@@ -59,6 +64,7 @@ export function GRNDetailClient({
   ingredients: IngredientRow[];
   canAdjustStock: boolean;
   canAmendConfirmed?: boolean;
+  recreateLocationOptions?: RecreateReceivingLocationOption[];
   auditLogs?: AuditLogRow[];
   grnListBasePath?: string;
   grnMobileBackPath?: string;
@@ -111,9 +117,7 @@ export function GRNDetailClient({
       {isReview && isDraft ? (
         <Alert>
           <IconInfoCircle className="size-4" />
-          <AlertDescription>
-            {grnCopy.draftSavedReviewHint}
-          </AlertDescription>
+          <AlertDescription>{grnCopy.draftSavedReviewHint}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -256,6 +260,21 @@ export function GRNDetailClient({
                 </Link>
               </Button>
             ) : null}
+            {isDraft ? (
+              <RecreateReceivingSiteDialog
+                mode="draft"
+                grnId={grn.id}
+                grnCode={grn.code}
+                currentLocationId={grn.locationId}
+                locationOptions={recreateLocationOptions}
+                grnListBasePath={grnListBasePath}
+                disabledReason={
+                  dirtyLines.length > 0
+                    ? grnCopy.draftReceiving.saveBeforeSwitch
+                    : undefined
+                }
+              />
+            ) : null}
             {!isDraft && canAdjustStock && lines.length > 0 ? (
               <DocumentStockCorrectionDialog
                 documentType="grn"
@@ -274,6 +293,15 @@ export function GRNDetailClient({
                 }))}
               />
             ) : null}
+            {showAmendAffordance ? (
+              <RecreateReceivingSiteDialog
+                grnId={grn.id}
+                grnCode={grn.code}
+                currentLocationId={grn.locationId}
+                locationOptions={recreateLocationOptions}
+                grnListBasePath={grnListBasePath}
+              />
+            ) : null}
             {!isDraft ? (
               <Button asChild variant="outline">
                 <Link
@@ -284,9 +312,7 @@ export function GRNDetailClient({
                   }
                 >
                   <IconReceipt className="size-5" />
-                  {grn.invoiceId
-                    ? grnCopy.viewInvoice
-                    : grnCopy.createInvoice}
+                  {grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice}
                 </Link>
               </Button>
             ) : null}
@@ -324,9 +350,7 @@ export function GRNDetailClient({
       {isReview && isDraft ? (
         <Alert>
           <IconInfoCircle className="size-4" />
-          <AlertDescription>
-            {grnCopy.draftSavedReviewHint}
-          </AlertDescription>
+          <AlertDescription>{grnCopy.draftSavedReviewHint}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -438,7 +462,12 @@ export function GRNDetailClient({
       </AppSection>
 
       {/* 4. Lịch sử */}
-      <AppSection title={historySectionTitle} size="sm" collapsible defaultOpen={false}>
+      <AppSection
+        title={historySectionTitle}
+        size="sm"
+        collapsible
+        defaultOpen={false}
+      >
         <AuditHistoryList logs={auditLogs} />
       </AppSection>
 
@@ -454,6 +483,22 @@ export function GRNDetailClient({
                   {grnCopy.back}
                 </Link>
               </Button>
+            ) : null}
+            {isDraft ? (
+              <RecreateReceivingSiteDialog
+                mode="draft"
+                grnId={grn.id}
+                grnCode={grn.code}
+                currentLocationId={grn.locationId}
+                locationOptions={recreateLocationOptions}
+                grnListBasePath={grnListBasePath}
+                buttonSize="touch"
+                disabledReason={
+                  dirtyLines.length > 0
+                    ? grnCopy.draftReceiving.saveBeforeSwitch
+                    : undefined
+                }
+              />
             ) : null}
             {!isDraft && canAdjustStock && lines.length > 0 ? (
               <DocumentStockCorrectionDialog
@@ -473,6 +518,16 @@ export function GRNDetailClient({
                 }))}
               />
             ) : null}
+            {showAmendAffordance ? (
+              <RecreateReceivingSiteDialog
+                grnId={grn.id}
+                grnCode={grn.code}
+                currentLocationId={grn.locationId}
+                locationOptions={recreateLocationOptions}
+                grnListBasePath={grnListBasePath}
+                buttonSize="touch"
+              />
+            ) : null}
             {!isDraft ? (
               <Button asChild variant="outline" size="touch">
                 <Link
@@ -483,9 +538,7 @@ export function GRNDetailClient({
                   }
                 >
                   <IconReceipt className="size-5" />
-                  {grn.invoiceId
-                    ? grnCopy.viewInvoice
-                    : grnCopy.createInvoice}
+                  {grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice}
                 </Link>
               </Button>
             ) : null}

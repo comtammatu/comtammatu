@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@comtammatu/database/supabase/client";
+import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import type { PublicSelfOrderSnapshot } from "@lib/self-order/contracts";
 
 async function readApiResponse(response: Response) {
@@ -25,15 +26,31 @@ export function useSnapshotSync(
   initialSnapshot: PublicSelfOrderSnapshot,
 ) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+
+  const clearRefreshError = useCallback(() => setRefreshError(null), []);
 
   const refreshSnapshot = useCallback(async () => {
-    const response = await fetch(`/api/self-order/${encodeURIComponent(token)}`, {
-      method: "GET",
-      cache: "no-store",
-    });
-    const result = await readApiResponse(response);
-    if (result.ok && result.payload) {
-      setSnapshot(result.payload as unknown as PublicSelfOrderSnapshot);
+    setIsRefreshing(true);
+    try {
+      const response = await fetch(`/api/self-order/${encodeURIComponent(token)}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      const result = await readApiResponse(response);
+      if (result.ok && result.payload) {
+        setSnapshot(result.payload as unknown as PublicSelfOrderSnapshot);
+        setRefreshError(null);
+        return true;
+      }
+      setRefreshError(SELF_ORDER_VI.refreshFailed);
+      return false;
+    } catch {
+      setRefreshError(SELF_ORDER_VI.refreshFailed);
+      return false;
+    } finally {
+      setIsRefreshing(false);
     }
   }, [token]);
 
@@ -59,5 +76,12 @@ export function useSnapshotSync(
     return () => window.clearInterval(timer);
   }, [refreshSnapshot]);
 
-  return { snapshot, setSnapshot, refreshSnapshot };
+  return {
+    snapshot,
+    setSnapshot,
+    refreshSnapshot,
+    isRefreshing,
+    refreshError,
+    clearRefreshError,
+  };
 }

@@ -39,6 +39,7 @@ export default async function OperatorStockGrnDetailPage({
       ingredients={data.ingredients}
       canAdjustStock={data.canAdjustStock}
       canAmendConfirmed={data.canAmendConfirmed}
+      recreateLocationOptions={data.recreateLocationOptions}
       auditLogs={data.auditLogs}
       grnListBasePath={grnListBasePath}
       grnMobileBackPath={grnListBasePath}

@@ -45,6 +45,7 @@ const BROWSER_EXECUTE_GRANT =
   /GRANT\s+(?:EXECUTE|ALL)\s+ON\s+FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([^;]*?\)\s+TO\s+[^;]*\b(?:PUBLIC|anon|authenticated)\b[^;]*;/gi;
 const FUNCTION_BODY =
   /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)[\s\S]*?\bAS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
+const FUNCTION_CALL = /\b(?:public\.)?([a-zA-Z_][\w]*)\s*\(/g;
 
 function forwardMigrationFiles(): string[] {
   return readdirSync(migrationsDir)
@@ -92,29 +93,42 @@ test("browser-executable RPC grants have an auth boundary or an explicit allowli
   assert.ok(files.length > 0, "expected at least one forward migration");
 
   const violations: string[] = [];
+  const functionBodies = new Map<string, string[]>();
+
+  function bodyHasAuthBoundary(
+    functionName: string,
+    visited = new Set<string>(),
+  ): boolean {
+    if (visited.has(functionName)) return false;
+    visited.add(functionName);
+
+    for (const body of functionBodies.get(functionName) ?? []) {
+      if (AUTH_BOUNDARY_TOKENS.some((token) => body.includes(token))) {
+        return true;
+      }
+
+      for (const match of body.matchAll(FUNCTION_CALL)) {
+        const callee = match[1];
+        if (callee && bodyHasAuthBoundary(callee, visited)) return true;
+      }
+    }
+
+    return false;
+  }
 
   for (const name of files) {
     const sql = readFileSync(resolve(migrationsDir, name), "utf8");
-    const functionBodies = new Map<string, string[]>();
     for (const match of sql.matchAll(FUNCTION_BODY)) {
       const functionName = match[1];
       const body = match[3] ?? "";
-      functionBodies.set(functionName, [
-        ...(functionBodies.get(functionName) ?? []),
-        body,
-      ]);
+      if (functionName) functionBodies.set(functionName, [body]);
     }
 
     for (const match of sql.matchAll(BROWSER_EXECUTE_GRANT)) {
       const functionName = match[1];
       if (BROAD_GRANT_ALLOWLIST.has(functionName)) continue;
 
-      const bodies = functionBodies.get(functionName) ?? [];
-      const hasAuthBoundary = bodies.some((body) =>
-        AUTH_BOUNDARY_TOKENS.some((token) => body.includes(token)),
-      );
-
-      if (!hasAuthBoundary) {
+      if (!bodyHasAuthBoundary(functionName)) {
         violations.push(`${name}: ${functionName}`);
       }
     }

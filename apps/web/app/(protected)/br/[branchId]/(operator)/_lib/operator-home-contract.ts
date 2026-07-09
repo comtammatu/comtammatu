@@ -22,17 +22,15 @@ export const CENTRAL_HOME_TILE_SUFFIXES: Partial<
 
 export const BRANCH_MANAGER_HOME_TILE_SUFFIXES = [
   "/pos",
+  "/kds",
+  "/runner",
   "/menu-limits",
   "/" + "orders",
+  "/team",
   "/stock",
   "/stock/receive",
   "/stock/waste",
   "/stock/stocktake",
-] as const;
-
-export const BRANCH_MANAGER_MORE_TILE_SUFFIXES = [
-  "/runner",
-  "/kds",
   "/stock/production",
   "/stock/grn",
 ] as const;
@@ -86,36 +84,10 @@ export function getOperatorHomeTileHrefs(
   const suffixes = CENTRAL_HOME_TILE_SUFFIXES[branchKind];
   if (!suffixes) return new Set();
 
-  const stockTiles =
-    groups.find((group) => group.id === "stock")?.tiles ?? [];
+  const stockTiles = groups.find((group) => group.id === "stock")?.tiles ?? [];
   return new Set(
     stockTiles
       .filter((tile) => suffixes.some((suffix) => tile.href.endsWith(suffix)))
       .map((tile) => tile.href),
   );
-}
-
-export function getOperatorMoreGroups(
-  groups: ResolvedOperatorTileGroup[],
-  branchKind: BranchKind,
-  role?: string,
-): ResolvedOperatorTileGroup[] {
-  const homeTileHrefs = getOperatorHomeTileHrefs(groups, branchKind, role);
-  return groups
-    .map((group) => ({
-      ...group,
-      tiles: group.tiles.filter((tile) => {
-        if (homeTileHrefs.has(tile.href)) return false;
-        if (
-          branchKind === "branch" &&
-          (role === "branch_manager" || role === "owner")
-        ) {
-          return BRANCH_MANAGER_MORE_TILE_SUFFIXES.some((suffix) =>
-            tile.href.endsWith(suffix),
-          );
-        }
-        return true;
-      }),
-    }))
-    .filter((group) => group.tiles.length > 0);
 }

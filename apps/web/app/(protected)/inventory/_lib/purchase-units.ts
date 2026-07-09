@@ -1,8 +1,8 @@
 import type { IngredientUnitRow } from "./types";
 import {
   getIngredientUnitOptions,
+  getLargestIngredientUnit,
   type InventoryUnitOption,
-  type InventoryUnitOptionWithFactor,
 } from "./unit-options";
 
 export type PurchaseUnitOption = InventoryUnitOption;
@@ -24,13 +24,10 @@ export function getPurchaseUnitOptions(
 export function getDefaultPurchaseUnit(
   ingredient: IngredientWithUnits | undefined,
 ): PurchaseUnitOption | null {
-  const options = getIngredientUnitOptions(ingredient, {
-    includeToBaseFactor: true,
-  });
-  const largestUnit = options.reduce<InventoryUnitOptionWithFactor | null>(
-    (best, option) =>
-      best == null || option.toBaseFactor > best.toBaseFactor ? option : best,
-    null,
+  const largestUnit = getLargestIngredientUnit(
+    getIngredientUnitOptions(ingredient, {
+      includeToBaseFactor: true,
+    }),
   );
   if (!largestUnit) return null;
   return {

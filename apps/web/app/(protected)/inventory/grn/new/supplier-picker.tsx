@@ -35,10 +35,12 @@ export type PickerSupplier = {
 export function SupplierPicker({
   suppliers,
   basePath,
+  branchId,
   canCreate,
 }: {
   suppliers: PickerSupplier[];
   basePath: string;
+  branchId?: number | null;
   canCreate: boolean;
 }) {
   const router = useRouter();
@@ -61,6 +63,12 @@ export function SupplierPicker({
     [suppliers, needle],
   );
 
+  function supplierHref(supplierId: number) {
+    const params = new URLSearchParams({ supplierId: String(supplierId) });
+    if (branchId != null) params.set("branchId", String(branchId));
+    return `${basePath}?${params.toString()}`;
+  }
+
   async function handleCreate() {
     if (!needle || creating || !canCreate) return;
     setCreating(true);
@@ -77,7 +85,7 @@ export function SupplierPicker({
       setCreating(false);
       return;
     }
-    router.push(`${basePath}/${id}`);
+    router.push(supplierHref(id));
   }
 
   return (
@@ -152,8 +160,8 @@ export function SupplierPicker({
               padding="default"
               className="h-auto"
             >
-              <Link href={`${basePath}/${supplier.id}`}>
-                <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-muted text-sm font-bold uppercase text-muted-foreground">
+              <Link href={supplierHref(supplier.id)}>
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold uppercase text-muted-foreground">
                   {initials}
                 </span>
                 <div className="min-w-0 flex-1">

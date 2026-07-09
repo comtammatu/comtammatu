@@ -166,7 +166,7 @@ export function PrintersClient(props: {
                   <Item
                     key={role}
                     variant="outline"
-                    className="items-start gap-3 bg-card p-3 sm:flex-nowrap sm:items-center"
+                    className="items-start gap-3 sm:flex-nowrap sm:items-center"
                   >
                     <ItemContent className="min-w-0">
                       <ItemHeader className="justify-start gap-2">

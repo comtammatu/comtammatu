@@ -38,7 +38,19 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
-import { matchesSearch } from "@lib/search";
+import {
+  STOCK_ALL_CATEGORY_VALUE,
+  STOCK_NO_CATEGORY_VALUE,
+  filterStockOnHandIngredients,
+  getStockOnHandCategories,
+  hasStockOnHandFilters,
+  isPristineStockOnHand,
+  type StockActionPermissions,
+  type StockFilter,
+  type StockIngredient,
+  type StockLocationFilter,
+  type StockWorkSummary,
+} from "@lib/inventory/stock-on-hand-model";
 import {
   AppEmptyState,
   AppPage,
@@ -57,20 +69,10 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty, formatVND } from "../_lib/format";
 import { formatStockUnits } from "../_lib/stock-unit-format";
 import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
-import type { IngredientUnitRow } from "../_lib/types";
 import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
 import type { QuickInternalTransferDialogProps } from "./quick-internal-transfer-dialog";
 import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
-import {
-  STOCK_ALL_CATEGORY_VALUE,
-  STOCK_NO_CATEGORY_VALUE,
-  StockMobileGrid,
-} from "./stock-mobile-grid";
-import {
-  StockLocationBreakdownLine,
-  type StockLocationBreakdown,
-} from "./stock-location-breakdown";
-import { OperatorFlowSteps } from "../_components/operator-flow-steps";
+import { StockLocationBreakdownLine } from "./stock-location-breakdown";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -81,21 +83,19 @@ import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 
 const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
-const operatorFlow = messages.inventory.operatorFlow;
 
 const AdjustStockDialog = dynamic<AdjustStockDialogProps>(
   () => import("./adjust-stock-dialog").then((mod) => mod.AdjustStockDialog),
   { ssr: false },
 );
 
-const QuickInternalTransferDialog =
-  dynamic<QuickInternalTransferDialogProps>(
-    () =>
-      import("./quick-internal-transfer-dialog").then(
-        (mod) => mod.QuickInternalTransferDialog,
-      ),
-    { ssr: false },
-  );
+const QuickInternalTransferDialog = dynamic<QuickInternalTransferDialogProps>(
+  () =>
+    import("./quick-internal-transfer-dialog").then(
+      (mod) => mod.QuickInternalTransferDialog,
+    ),
+  { ssr: false },
+);
 
 const QuickStockIssueDialog = dynamic<QuickStockIssueDialogProps>(
   () =>
@@ -105,45 +105,6 @@ const QuickStockIssueDialog = dynamic<QuickStockIssueDialogProps>(
   { ssr: false },
 );
 
-export type StockIngredient = {
-  id: number;
-  name: string;
-  sku: string;
-  unit: string;
-  units?: IngredientUnitRow[];
-  category: string;
-  itemKind: string;
-  qty: number;
-  cost: number;
-  min: number;
-  max: number;
-  reorder: number;
-  status: "normal" | "low" | "out" | "over";
-  lastCount: string;
-  temp: string | null;
-  locationBreakdown?: StockLocationBreakdown[];
-};
-
-export type StockWorkSummary = {
-  underThresholdCount: number;
-  pendingGrnCount: number;
-  pendingTransferCount: number;
-  pendingWorkCount: number;
-};
-
-export type StockActionPermissions = {
-  canReceiveGrn: boolean;
-  canReceiveTransfer: boolean;
-  canCreateIssue: boolean;
-  canCreateTransfer: boolean;
-  canCreateStocktake: boolean;
-  canWriteoff: boolean;
-  canCreatePurchaseOrder: boolean;
-  canAdjustException: boolean;
-};
-
-type StockFilter = "all" | "in_stock" | "low" | "out";
-type LocationFilter = "all" | "warehouse" | "kitchen";
 type QuickIssueType = "consumption" | "writeoff" | "other";
 type QuickIssueTarget = {
   ingredient: StockIngredient;
@@ -151,14 +112,14 @@ type QuickIssueTarget = {
 };
 
 const stockFilterOptions: { value: StockFilter; label: string }[] = [
-  { value: "all", label: stockCopy.filters.all },
+  { value: "all", label: stockCopy.filters.allStatuses },
   { value: "in_stock", label: stockCopy.filters.inStock },
   { value: "low", label: stockCopy.filters.low },
   { value: "out", label: stockCopy.filters.out },
 ];
 
-const locationFilterOptions: { value: LocationFilter; label: string }[] = [
-  { value: "all", label: stockCopy.filters.all },
+const locationFilterOptions: { value: StockLocationFilter; label: string }[] = [
+  { value: "all", label: stockCopy.filters.allLocations },
   { value: "warehouse", label: stockCopy.filters.locationWarehouse },
   { value: "kitchen", label: stockCopy.filters.locationKitchen },
 ];
@@ -184,58 +145,7 @@ function StockQtyCell({
   );
 }
 
-const STATUS_PRIORITY: Record<StockIngredient["status"], number> = {
-  out: 0,
-  low: 1,
-  over: 2,
-  normal: 3,
-};
-
 const STOCK_COMPACT_QUERY = "(max-width: 1023px)";
-
-function computeStockStatus(
-  qty: number,
-  min: number,
-  max: number,
-): StockIngredient["status"] {
-  if (qty <= 0) return "out";
-  if (qty < min) return "low";
-  if (max > 0 && qty > max) return "over";
-  return "normal";
-}
-
-function locationScopedIngredient(
-  ingredient: StockIngredient,
-  locationFilter: LocationFilter,
-): StockIngredient {
-  if (locationFilter === "all") return ingredient;
-
-  const rows =
-    ingredient.locationBreakdown?.filter(
-      (row) => row.locationKind === locationFilter,
-    ) ?? [];
-  const qty = rows.reduce((sum, row) => sum + row.qty, 0);
-  const costBasis = rows.reduce(
-    (sum, row) => sum + row.qty * (row.avgUnitCost ?? 0),
-    0,
-  );
-  const latestCount = rows
-    .map((row) => row.lastCountedAt)
-    .filter((value): value is string => Boolean(value))
-    .sort()
-    .at(-1);
-
-  return {
-    ...ingredient,
-    qty,
-    cost: qty > 0 ? costBasis / qty : ingredient.cost,
-    status: computeStockStatus(qty, ingredient.min, ingredient.max),
-    lastCount: latestCount
-      ? formatVNDate(latestCount)
-      : inventoryCommon.noValue,
-    locationBreakdown: rows,
-  };
-}
 
 function subscribeStockCompactLayout(callback: () => void) {
   const media = window.matchMedia(STOCK_COMPACT_QUERY);
@@ -263,18 +173,8 @@ function branchHref(branchId: number, path: string): string {
   return `${path}?branchId=${branchId}`;
 }
 
-function branchStockHref(basePath: string, segment: string): string {
-  return `${basePath}${segment}`;
-}
-
 function stockValue(item: StockIngredient): number {
   return item.qty * item.cost;
-}
-
-function isReorderRisk(item: StockIngredient): boolean {
-  return (
-    item.status === "out" || item.status === "low" || item.qty <= item.reorder
-  );
 }
 
 function StockAlertBadges({
@@ -334,27 +234,28 @@ export function StockClient({
   ingredients,
   branchId,
   branchValue,
+  coreDataLoadFailed,
   totalValue,
   summary,
   permissions,
-  branchStockBasePath,
-  embedded = false,
 }: {
   ingredients: StockIngredient[];
   branchId: number;
   branchValue: number | null;
+  coreDataLoadFailed: boolean;
   totalValue: number | null;
   summary: StockWorkSummary;
   permissions: StockActionPermissions;
-  branchStockBasePath?: string;
-  embedded?: boolean;
 }) {
   const router = useRouter();
   const isCompactLayout = useStockCompactLayout();
-  const [activeCategory, setActiveCategory] = useState(STOCK_ALL_CATEGORY_VALUE);
+  const [activeCategory, setActiveCategory] = useState(
+    STOCK_ALL_CATEGORY_VALUE,
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
-  const [locationFilter, setLocationFilter] = useState<LocationFilter>("all");
+  const [locationFilter, setLocationFilter] =
+    useState<StockLocationFilter>("all");
   const [adjustTarget, setAdjustTarget] = useState<StockIngredient | null>(
     null,
   );
@@ -364,79 +265,51 @@ export function StockClient({
     useState<StockIngredient | null>(null);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
 
-  const categories = useMemo(() => {
-    const values = [
-      ...new Set(
-        ingredients.map((ingredient) => ingredient.category).filter(Boolean),
-      ),
-    ];
-    values.sort((left, right) => left.localeCompare(right, "vi"));
-    return values;
-  }, [ingredients]);
-
-  const hasUncategorized = useMemo(
-    () => ingredients.some((ingredient) => !ingredient.category),
+  const { categories, hasUncategorized } = useMemo(
+    () => getStockOnHandCategories(ingredients),
     [ingredients],
   );
 
-  const filtered = useMemo(() => {
-    let result = ingredients.map((ingredient) =>
-      locationScopedIngredient(ingredient, locationFilter),
-    );
-
-    if (activeCategory === STOCK_NO_CATEGORY_VALUE) {
-      result = result.filter((ingredient) => !ingredient.category);
-    } else if (activeCategory !== STOCK_ALL_CATEGORY_VALUE) {
-      result = result.filter(
-        (ingredient) => ingredient.category === activeCategory,
-      );
-    }
-
-    if (stockFilter === "in_stock") {
-      result = result.filter(
-        (ingredient) =>
-          ingredient.status === "normal" || ingredient.status === "over",
-      );
-    } else if (stockFilter === "low") {
-      result = result.filter(isReorderRisk);
-    } else if (stockFilter === "out") {
-      result = result.filter((ingredient) => ingredient.status === "out");
-    }
-
-    if (searchQuery.trim()) {
-      result = result.filter((ingredient) =>
-        matchesSearch([ingredient.name, ingredient.sku], searchQuery),
-      );
-    }
-
-    const sorted = [...result];
-    sorted.sort(
-      (a, b) =>
-        STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status] ||
-        Number(isReorderRisk(b)) - Number(isReorderRisk(a)) ||
-        a.name.localeCompare(b.name, "vi"),
-    );
-
-    return sorted;
-  }, [ingredients, activeCategory, stockFilter, searchQuery, locationFilter]);
-
-  const filtersActive =
-    searchQuery.trim() !== "" ||
-    activeCategory !== STOCK_ALL_CATEGORY_VALUE ||
-    stockFilter !== "all" ||
-    locationFilter !== "all";
+  const filters = {
+    category: activeCategory,
+    location: locationFilter,
+    query: searchQuery,
+    status: stockFilter,
+  } as const;
+  const filtered = useMemo(
+    () => filterStockOnHandIngredients(ingredients, filters),
+    [ingredients, activeCategory, stockFilter, searchQuery, locationFilter],
+  );
+  const filtersActive = hasStockOnHandFilters(filters);
 
   // Pristine first-load: ingredients exist in catalog but no GRN has ever
   // happened for this branch. Suppress the 87/87 "Hết hàng" alarm storm
   // (real signal is "no data yet", not "stock-out emergency").
-  const isFirstLoadEmpty =
-    !filtersActive &&
-    ingredients.length > 0 &&
-    ingredients.every(
-      (item) =>
-        item.qty === 0 &&
-        (!item.lastCount || item.lastCount === inventoryCommon.noValue),
+  const isFirstLoadEmpty = !filtersActive && isPristineStockOnHand(ingredients);
+
+  if (coreDataLoadFailed) {
+    return (
+      <AppPage
+        width={isCompactLayout ? "narrow" : "xwide"}
+        density="compact"
+        scroll
+      >
+        <AppPageHeader
+          eyebrow={messages.inventory.shell.moduleName}
+          title={stockCopy.title}
+        />
+        <AppEmptyState
+          mode="error"
+          title={stockCopy.loadFailed}
+          description={stockCopy.loadFailedDescription}
+        >
+          <Button type="button" onClick={() => router.refresh()}>
+            {ACTIONS_VI.retry}
+          </Button>
+        </AppEmptyState>
+      </AppPage>
     );
+  }
 
   const filteredValue = filtered.reduce(
     (sum, item) => sum + stockValue(item),
@@ -444,41 +317,22 @@ export function StockClient({
   );
   const visibleTotalValue = branchValue ?? filteredValue;
   const liveLabel = formatVNDate(new Date());
-  const stockRootPath = branchStockBasePath ?? `/br/${branchId}/stock`;
   const stockDetailHref = (ingredientId: number) =>
-    embedded
-      ? branchStockHref(stockRootPath, `/on-hand/${ingredientId}`)
-      : branchHref(branchId, `/inventory/stock/${ingredientId}`);
-  const actionHrefs = embedded
-    ? {
-        receive: branchStockHref(stockRootPath, "/receive"),
-        transfer: branchStockHref(stockRootPath, "/transfer"),
-        stocktake: branchStockHref(stockRootPath, "/stocktake"),
-        waste: branchStockHref(stockRootPath, "/waste"),
-        purchaseSuggestion: branchStockHref(
-          stockRootPath,
-          "/purchase-orders/new",
-        ),
-        reports: branchStockHref(stockRootPath, "/reports"),
-      }
-    : {
-        receive: branchHref(branchId, "/inventory/grn"),
-        transfer: branchHref(branchId, "/inventory/transfers"),
-        stocktake: branchHref(branchId, "/inventory/stocktake"),
-        waste: branchHref(branchId, "/inventory/waste/new"),
-        purchaseSuggestion: branchHref(
-          branchId,
-          "/inventory/purchase-orders/new",
-        ),
-        reports: branchHref(branchId, "/inventory/reports"),
-      };
+    branchHref(branchId, `/inventory/stock/${ingredientId}`);
+  const actionHrefs = {
+    receive: branchHref(branchId, "/inventory/grn"),
+    transfer: branchHref(branchId, "/inventory/transfers"),
+    stocktake: branchHref(branchId, "/inventory/stocktake"),
+    waste: branchHref(branchId, "/inventory/waste/new"),
+    purchaseSuggestion: branchHref(branchId, "/inventory/purchase-orders/new"),
+  };
+  const quickIssueBasePath = (issueType: QuickIssueType) =>
+    issueType === "consumption"
+      ? "/inventory/consumption"
+      : "/inventory/issues";
   const actionPermissions = permissions;
-  const canReceiveStock = embedded
-    ? actionPermissions.canReceiveTransfer
-    : actionPermissions.canReceiveGrn;
-  const receiveActionLabel = embedded
-    ? stockCopy.actions.receive
-    : stockCopy.actions.receiveGrn;
+  const canReceiveStock = actionPermissions.canReceiveGrn;
+  const receiveActionLabel = stockCopy.actions.receiveGrn;
   const getStockRowActions = (item: StockIngredient): RowActionItem[] => {
     const rowActions: RowActionItem[] = [];
 
@@ -514,27 +368,17 @@ export function StockClient({
     }
 
     if (actionPermissions.canWriteoff) {
-      rowActions.push(
-        embedded
-          ? {
-              key: "waste",
-              label: stockCopy.actions.waste,
-              icon: <IconTrash />,
-              href: actionHrefs.waste,
-              destructive: true,
-            }
-          : {
-              key: "waste",
-              label: stockCopy.actions.waste,
-              icon: <IconTrash />,
-              destructive: true,
-              onSelect: () =>
-                setQuickIssueTarget({
-                  ingredient: item,
-                  issueType: "writeoff",
-                }),
-            },
-      );
+      rowActions.push({
+        key: "waste",
+        label: stockCopy.actions.waste,
+        icon: <IconTrash />,
+        destructive: true,
+        onSelect: () =>
+          setQuickIssueTarget({
+            ingredient: item,
+            issueType: "writeoff",
+          }),
+      });
     }
 
     rowActions.push({
@@ -560,7 +404,7 @@ export function StockClient({
   const locationFilterControl = (
     <Select
       value={locationFilter}
-      onValueChange={(v) => setLocationFilter(v as LocationFilter)}
+      onValueChange={(v) => setLocationFilter(v as StockLocationFilter)}
     >
       <SelectTrigger
         size={isCompactLayout ? "touch" : "default"}
@@ -650,9 +494,12 @@ export function StockClient({
       header: stockCopy.table.wac,
       className: "min-w-28 text-right",
       render: (item) => (
-        <span className="font-mono tabular-nums">
-          {item.cost > 0 ? formatVND(item.cost) : inventoryCommon.noValue}
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span className="font-mono tabular-nums">
+            {item.cost > 0 ? formatVND(item.cost) : inventoryCommon.noValue}
+          </span>
+          <span className="text-xs text-muted-foreground">₫ / {item.unit}</span>
+        </div>
       ),
     },
     {
@@ -693,11 +540,8 @@ export function StockClient({
     },
   ];
 
-  // Pure-numeric value tiles route through the single-sourced KpiCard
-  // (§ Metric Card). Count tiles are work signals, not KPIs — they live in
-  // the filter/badge cluster below. Operator surface shows no KPI value tiles
-  // (D067 §0 — numbers are badges/work-signals only), so gate to office.
-  const summaryMetrics = embedded ? null : (
+  // Pure-numeric value tiles route through the single-sourced KpiCard.
+  const summaryMetrics = (
     <div className="grid grid-cols-2 gap-2">
       <KpiCard
         density="compact"
@@ -736,11 +580,7 @@ export function StockClient({
 
   const searchControl = (
     <InputGroup
-      className={cn(
-        "w-full min-w-0",
-        embedded && "min-h-12",
-        !isCompactLayout && "min-w-56 flex-1",
-      )}
+      className={cn("w-full min-w-0", !isCompactLayout && "min-w-56 flex-1")}
     >
       <InputGroupAddon>
         <IconSearch />
@@ -756,32 +596,27 @@ export function StockClient({
 
   const filterControls = (
     <>
-      {/* Operator category facet is owned by StockMobileGrid chips. */}
-      {!embedded ? (
-        <Select value={activeCategory} onValueChange={setActiveCategory}>
-          <SelectTrigger
-            size={isCompactLayout ? "touch" : "default"}
-            className={isCompactLayout ? "w-full" : "min-w-40"}
-          >
-            <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">
-              {stockCopy.filters.categoryPlaceholder}
+      <Select value={activeCategory} onValueChange={setActiveCategory}>
+        <SelectTrigger
+          size={isCompactLayout ? "touch" : "default"}
+          className={isCompactLayout ? "w-full" : "min-w-40"}
+        >
+          <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{stockCopy.filters.allCategories}</SelectItem>
+          {categories.map((cat) => (
+            <SelectItem key={cat} value={cat}>
+              {cat}
             </SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-            {hasUncategorized ? (
-              <SelectItem value={STOCK_NO_CATEGORY_VALUE}>
-                {stockCopy.filters.noCategory}
-              </SelectItem>
-            ) : null}
-          </SelectContent>
-        </Select>
-      ) : null}
+          ))}
+          {hasUncategorized ? (
+            <SelectItem value={STOCK_NO_CATEGORY_VALUE}>
+              {stockCopy.filters.noCategory}
+            </SelectItem>
+          ) : null}
+        </SelectContent>
+      </Select>
 
       <Select
         value={stockFilter}
@@ -818,7 +653,7 @@ export function StockClient({
       icon={IconReceipt}
       label={receiveActionLabel}
       primary
-      size={isCompactLayout || embedded ? "touch" : "sm"}
+      size={isCompactLayout ? "touch" : "sm"}
       className={isCompactLayout ? "w-full sm:w-auto" : undefined}
     />
   ) : null;
@@ -830,7 +665,7 @@ export function StockClient({
           href={actionHrefs.transfer}
           icon={IconTruck}
           label={stockCopy.actions.transfer}
-          size={embedded || isCompactLayout ? "touch" : "sm"}
+          size={isCompactLayout ? "touch" : "sm"}
         />
       ) : null}
       {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
@@ -838,7 +673,7 @@ export function StockClient({
           href={actionHrefs.stocktake}
           icon={IconClipboardList}
           label={stockCopy.actions.stocktake}
-          size={embedded || isCompactLayout ? "touch" : "sm"}
+          size={isCompactLayout ? "touch" : "sm"}
         />
       ) : null}
       {actionPermissions.canWriteoff ? (
@@ -846,7 +681,7 @@ export function StockClient({
           href={actionHrefs.waste}
           icon={IconTrash}
           label={stockCopy.actions.waste}
-          size={embedded || isCompactLayout ? "touch" : "sm"}
+          size={isCompactLayout ? "touch" : "sm"}
         />
       ) : null}
       {actionPermissions.canCreatePurchaseOrder &&
@@ -855,7 +690,7 @@ export function StockClient({
           href={actionHrefs.purchaseSuggestion}
           icon={IconShoppingCart}
           label={stockCopy.actions.purchaseSuggestion}
-          size={embedded || isCompactLayout ? "touch" : "sm"}
+          size={isCompactLayout ? "touch" : "sm"}
         />
       ) : null}
     </>
@@ -871,11 +706,7 @@ export function StockClient({
   const desktopSecondaryActionsDropdown = hasSecondaryActions ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size={embedded ? "touch" : "sm"}
-          className="gap-1.5"
-        >
+        <Button variant="outline" size="sm" className="gap-1.5">
           {stockCopy.actions.actionsDropdown}
           <IconChevronDown className="size-3.5" />
         </Button>
@@ -925,33 +756,6 @@ export function StockClient({
         ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
-  ) : null;
-
-  const operatorTaskSection = embedded ? (
-    <AppSection
-      title={stockCopy.filters.operatorTasksTitle}
-      badge={{
-        children: String(summary.pendingWorkCount),
-        variant: summary.pendingWorkCount > 0 ? "warning" : "secondary",
-      }}
-      size="sm"
-    >
-      <OperatorFlowSteps
-        title={operatorFlow.stockTitle}
-        description={operatorFlow.stockDescription}
-        steps={operatorFlow.stockSteps}
-        currentStep={1}
-      />
-      {primaryReceiveAction ? (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {primaryReceiveAction}
-          <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
-      )}
-      {workSignalCluster}
-    </AppSection>
   ) : null;
 
   const hasItemActions =
@@ -1026,7 +830,9 @@ export function StockClient({
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">{stockCopy.table.wac}</p>
+          <p className="text-xs text-muted-foreground">
+            {stockCopy.table.wacPerUnit(item.unit)}
+          </p>
           <p className="font-mono tabular-nums">
             {item.cost > 0
               ? inventoryCommon.currencyCompact(formatVND(item.cost))
@@ -1055,7 +861,7 @@ export function StockClient({
                 })
               }
             >
-              {ACTIONS_VI.export}
+              {stockCopy.actions.issueStock}
             </Button>
           ) : null}
           {actionPermissions.canCreateTransfer ? (
@@ -1095,22 +901,19 @@ export function StockClient({
 
   const content = (
     <>
-      {!embedded ? (
-        <AppPageHeader
-          eyebrow={messages.inventory.shell.moduleName}
-          title={stockCopy.title}
-          actions={
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="hidden sm:inline-flex">
-                {liveLabel}
-              </Badge>
-              <Badge variant="success">Live</Badge>
-            </div>
-          }
-        />
-      ) : null}
-      {operatorTaskSection}
-      {!embedded && !isCompactLayout ? (
+      <AppPageHeader
+        eyebrow={messages.inventory.shell.moduleName}
+        title={stockCopy.title}
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="hidden sm:inline-flex">
+              {liveLabel}
+            </Badge>
+            <Badge variant="success">Live</Badge>
+          </div>
+        }
+      />
+      {!isCompactLayout ? (
         <div className="flex flex-col gap-3">
           <KpiRow density="compact">
             <KpiCard
@@ -1132,10 +935,10 @@ export function StockClient({
       ) : null}
 
       <AppToolbar
-        variant={embedded ? "inline" : "card"}
+        variant="card"
         search={searchControl}
         bulk={
-          !embedded && !isCompactLayout ? (
+          !isCompactLayout ? (
             <div className="flex flex-wrap items-center gap-2">
               {filterControls}
               {workSignalCluster}
@@ -1143,7 +946,7 @@ export function StockClient({
           ) : undefined
         }
         actions={
-          embedded ? undefined : isCompactLayout ? (
+          isCompactLayout ? (
             primaryReceiveAction
           ) : (
             <>
@@ -1166,12 +969,10 @@ export function StockClient({
           collapsible
           defaultOpen={false}
         >
-          {!embedded ? summaryMetrics : null}
-          {!embedded ? workSignalCluster : null}
+          {summaryMetrics}
+          {workSignalCluster}
           <div className="grid gap-2 sm:grid-cols-2">{filterControls}</div>
-          {!embedded ? (
-            <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
-          ) : null}
+          <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
         </AppSection>
       ) : null}
 
@@ -1183,7 +984,7 @@ export function StockClient({
         >
           {actionPermissions.canCreatePurchaseOrder &&
           actionHrefs.purchaseSuggestion ? (
-            <Button asChild size={embedded ? "touch" : "sm"}>
+            <Button asChild size="sm">
               <Link href={actionHrefs.purchaseSuggestion}>
                 <IconShoppingCart className="size-4" />
                 {stockCopy.actions.purchaseSuggestion}
@@ -1192,36 +993,25 @@ export function StockClient({
           ) : null}
         </AppEmptyState>
       ) : isCompactLayout ? (
-        embedded ? (
-          <StockMobileGrid
-            ingredients={filtered}
-            categories={categories}
-            hasUncategorized={hasUncategorized}
-            activeCategory={activeCategory}
-            onCategoryChange={setActiveCategory}
-            stockDetailHref={stockDetailHref}
-          />
-        ) : (
-          <div className="flex flex-col gap-2">
-            {filtered.length === 0 ? (
-              <AppEmptyState
-                compact
-                title={
-                  searchQuery.trim()
-                    ? stockCopy.empty.search
-                    : stockCopy.empty.noData
-                }
-                description={
-                  searchQuery.trim()
-                    ? stockCopy.empty.searchDescription
-                    : stockCopy.empty.noDataDescription
-                }
-              />
-            ) : (
-              filtered.map((item) => renderStockMobileCard(item))
-            )}
-          </div>
-        )
+        <div className="flex flex-col gap-2">
+          {filtered.length === 0 ? (
+            <AppEmptyState
+              compact
+              title={
+                searchQuery.trim()
+                  ? stockCopy.empty.search
+                  : stockCopy.empty.noData
+              }
+              description={
+                searchQuery.trim()
+                  ? stockCopy.empty.searchDescription
+                  : stockCopy.empty.noDataDescription
+              }
+            />
+          ) : (
+            filtered.map((item) => renderStockMobileCard(item))
+          )}
+        </div>
       ) : (
         <AppSection className="overflow-hidden" contentFlush>
           <DataTable
@@ -1273,11 +1063,7 @@ export function StockClient({
           branchId={branchId}
           open={quickIssueTarget !== null}
           target={quickIssueTarget}
-          issueBasePath={
-            embedded
-              ? branchStockHref(stockRootPath, "/issues")
-              : "/inventory/issues"
-          }
+          issueBasePath={quickIssueBasePath(quickIssueTarget.issueType)}
           onOpenChange={(open) => {
             if (!open) setQuickIssueTarget(null);
           }}
@@ -1296,10 +1082,6 @@ export function StockClient({
       ) : null}
     </>
   );
-
-  if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
-  }
 
   return (
     <AppPage

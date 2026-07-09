@@ -23,14 +23,14 @@ import {
 import { matchesSearch } from "@lib/search";
 import {
   Search as IconSearch,
-  Check as IconCheck,
-  FlagTriangleRight as IconFlag3,
 } from "lucide-react";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { FormattedNumberInput } from "@/components/form";
+import { AppDetailFooter } from "@/components/surface";
+import { StatusBadge } from "@/components/status-badge";
 import { AbcClassChip } from "./abc-class-chip";
 import type { StocktakeLineBlind } from "../stocktake-actions";
 import type { CountUnitOption } from "../_lib/count-units";
@@ -46,6 +46,7 @@ interface BlindCountingGridProps {
   unitOptionsByIngredient: Record<number, CountUnitOption[]>;
   /** Selected counting unit (entry_unit_id) per ingredient. */
   unitByIngredient: Record<number, number>;
+  unitPreviewByIngredient: Record<number, string>;
   onUnitChange: (ingredientId: number, unitId: number) => void;
   /**
    * When true, the counter has no idea what system expected. Default for
@@ -78,6 +79,7 @@ export function BlindCountingGrid({
   onCountChange,
   unitOptionsByIngredient,
   unitByIngredient,
+  unitPreviewByIngredient,
   onUnitChange,
   blindMode,
   readOnly,
@@ -145,26 +147,33 @@ export function BlindCountingGrid({
       header: INVENTORY_VI.countedQtyHeader,
       className: "text-right",
       render: (line) => (
-        <FormattedNumberInput
-          value={
-            counts[line.ingredientId]?.qty == null
-              ? ""
-              : String(counts[line.ingredientId]?.qty)
-          }
-          disabled={readOnly || line.isFinal}
-          maxFractionDigits={3}
-          className="ml-auto h-9 w-32 text-right tabular-nums"
-          onValueChange={(raw) => handleQtyChange(line.ingredientId, raw)}
-          data-slot="blind-counting-grid-qty"
-          data-ingredient-id={line.ingredientId}
-        />
+        <div className="flex flex-col items-end gap-1">
+          <FormattedNumberInput
+            value={
+              counts[line.ingredientId]?.qty == null
+                ? ""
+                : String(counts[line.ingredientId]?.qty)
+            }
+            disabled={readOnly || line.isFinal}
+            maxFractionDigits={3}
+            className="ml-auto h-9 w-32 text-right tabular-nums"
+            onValueChange={(raw) => handleQtyChange(line.ingredientId, raw)}
+            data-slot="blind-counting-grid-qty"
+            data-ingredient-id={line.ingredientId}
+          />
+          {unitPreviewByIngredient[line.ingredientId] ? (
+            <p className="max-w-56 text-right text-xs text-muted-foreground">
+              {unitPreviewByIngredient[line.ingredientId]}
+            </p>
+          ) : null}
+        </div>
       ),
     },
     {
       key: "status",
       header: FORM_VI.status,
       className: "text-right",
-      render: (line) => <CountStatusBadge line={line} />,
+      render: (line) => <CountState line={line} />,
     },
   ];
 
@@ -225,6 +234,7 @@ export function BlindCountingGrid({
             onChange={(raw) => handleQtyChange(line.ingredientId, raw)}
             unitOptions={unitOptionsByIngredient[line.ingredientId] ?? []}
             unitValue={unitByIngredient[line.ingredientId] ?? null}
+            unitPreview={unitPreviewByIngredient[line.ingredientId] ?? null}
             onUnitChange={(unitId) => onUnitChange(line.ingredientId, unitId)}
           />
         )}
@@ -240,6 +250,7 @@ function CountLineItem({
   onChange,
   unitOptions,
   unitValue,
+  unitPreview,
   onUnitChange,
 }: {
   line: StocktakeLineBlind;
@@ -248,6 +259,7 @@ function CountLineItem({
   onChange: (raw: string) => void;
   unitOptions: CountUnitOption[];
   unitValue: number | null;
+  unitPreview: string | null;
   onUnitChange: (unitId: number) => void;
 }) {
   return (
@@ -263,11 +275,16 @@ function CountLineItem({
     >
       <ItemHeader>
         <ItemTitle>{line.ingredientName}</ItemTitle>
-        <CountStatusBadge line={line} />
+        <CountState line={line} />
       </ItemHeader>
       <ItemContent>
-        <ItemDescription className="flex items-center gap-2">
+        <ItemDescription className="flex flex-col gap-1">
           <AbcClassChip class_={line.abcClass} compact withTooltip />
+          {unitPreview ? (
+            <span className="text-xs text-muted-foreground">
+              {unitPreview}
+            </span>
+          ) : null}
         </ItemDescription>
       </ItemContent>
       <ItemFooter className="gap-2">
@@ -341,30 +358,40 @@ function CountUnitSelect({
   );
 }
 
-function CountStatusBadge({ line }: { line: StocktakeLineBlind }) {
+function CountState({ line }: { line: StocktakeLineBlind }) {
   if (line.isFinal) {
     return (
-      <Badge variant="outline" className="gap-1 border-success/20 text-success">
-        <IconCheck className="size-3.5" /> Final
-      </Badge>
+      <StatusBadge
+        domain="inventory"
+        value="confirmed"
+        label="Final"
+        size="sm"
+      />
     );
   }
 
   if (line.needsRecount) {
     return (
-      <Badge
-        variant="outline"
-        className="gap-1 border-tier-note/20 text-tier-note-foreground"
-      >
-        <IconFlag3 className="size-3.5" /> {INVENTORY_VI.needsRecheckBadge}
-      </Badge>
+      <StatusBadge
+        domain="inventory"
+        value="warning"
+        label={INVENTORY_VI.needsRecheckBadge}
+        size="sm"
+      />
     );
   }
 
-  return <Badge variant="outline">R{line.roundNo}</Badge>;
+  return (
+    <StatusBadge
+      domain="inventory"
+      value="draft"
+      label={`R${line.roundNo}`}
+      size="sm"
+    />
+  );
 }
 
-interface BlindCountingGridToolbarProps {
+interface BlindCountingGridActionsProps {
   onSubmit: () => void;
   submitting: boolean;
   canSubmit: boolean;
@@ -377,40 +404,45 @@ interface BlindCountingGridToolbarProps {
  * Footer toolbar paired with the grid. The host page decides how submit
  * wiring happens — this is just the button group.
  */
-export function BlindCountingGridToolbar({
+export function BlindCountingGridActions({
   onSubmit,
   submitting,
   canSubmit,
   onToggleOnlyRecount,
   onlyRecount,
   children,
-}: BlindCountingGridToolbarProps) {
+}: BlindCountingGridActionsProps) {
   return (
-    <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 border-t bg-background/90 px-3 pt-3 chrome-safe-pb backdrop-blur">
-      <div className="flex items-center gap-2">
-        {onToggleOnlyRecount ? (
-          <Button
-            type="button"
-            size="sm"
-            variant={onlyRecount ? "default" : "outline"}
-            onClick={onToggleOnlyRecount}
-          >
-            {onlyRecount
-              ? INVENTORY_VI.recheckFilterOn
-              : INVENTORY_VI.recheckFilterOff}
-          </Button>
-        ) : null}
-        {children}
-      </div>
-      <Button
-        type="button"
-        onClick={onSubmit}
-        disabled={!canSubmit || submitting}
-      >
-        {submitting
-          ? INVENTORY_VI.submittingEllipsis
-          : INVENTORY_VI.saveCountsAction}
-      </Button>
-    </div>
+    <AppDetailFooter
+      sticky
+      leading={
+        <>
+          {onToggleOnlyRecount ? (
+            <Button
+              type="button"
+              size="sm"
+              variant={onlyRecount ? "default" : "outline"}
+              onClick={onToggleOnlyRecount}
+            >
+              {onlyRecount
+                ? INVENTORY_VI.recheckFilterOn
+                : INVENTORY_VI.recheckFilterOff}
+            </Button>
+          ) : null}
+          {children}
+        </>
+      }
+      trailing={
+        <Button
+          type="button"
+          onClick={onSubmit}
+          disabled={!canSubmit || submitting}
+        >
+          {submitting
+            ? INVENTORY_VI.submittingEllipsis
+            : INVENTORY_VI.saveCountsAction}
+        </Button>
+      }
+    />
   );
 }

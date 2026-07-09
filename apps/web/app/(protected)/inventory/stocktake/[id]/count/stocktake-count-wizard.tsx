@@ -28,6 +28,7 @@ interface StocktakeCountWizardProps {
   currentRound: number;
   /** Label of the unit each count is recorded in — shown so display == submit. */
   unitLabelByIngredient: Record<number, string>;
+  unitPreviewByIngredient: Record<number, string>;
   /** Slot for the compact draft-saver badge and zone-lock indicator. */
   chrome?: React.ReactNode;
 }
@@ -45,6 +46,7 @@ export function StocktakeCountWizard({
   editable,
   currentRound,
   unitLabelByIngredient,
+  unitPreviewByIngredient,
   chrome,
 }: StocktakeCountWizardProps) {
   const copy = messages.inventory.stocktake.countNative;
@@ -215,6 +217,12 @@ export function StocktakeCountWizard({
               : null}
           </span>
         </div>
+        {activeLine != null &&
+        unitPreviewByIngredient[activeLine.ingredientId] ? (
+          <div className="text-xs text-muted-foreground">
+            {unitPreviewByIngredient[activeLine.ingredientId]}
+          </div>
+        ) : null}
         {upNext.length > 0 ? (
           <div className="text-xs text-muted-foreground">
             {copy.countUpNext(upNext)}

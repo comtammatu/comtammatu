@@ -289,7 +289,7 @@ function FocusOrderPanel({
           <OperationalBoardCard
             data-testid={`kds-focus-card-${order.groupKey}`}
             className={cn(
-              "gap-0 overflow-hidden border-l-4 py-0",
+              "gap-1 overflow-hidden border-l-4 py-0",
               getCardLeftAccent(overallStatus, elapsedMinutes),
             )}
           >

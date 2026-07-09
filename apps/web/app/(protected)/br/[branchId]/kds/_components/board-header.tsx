@@ -7,11 +7,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@comtammatu/ui/components/tooltip";
 import { ThemeMenuItem } from "@/components/theme-toggle";
 import {
   History as IconHistory,
@@ -26,7 +21,7 @@ import { EmployeePortalBackControl } from "../../employee-portal-back-control";
 import { ViewModeToggle } from "./view-mode-toggle";
 import type { KdsViewMode } from "../_hooks/use-kds-view-mode";
 
-interface BoardHeaderProps {
+interface KdsBoardTopBarProps {
   branchId: number;
   pendingCount: number;
   mode: KdsViewMode;
@@ -45,7 +40,7 @@ const KDS_HEADER_COPY = {
   moreMenu: "Thao tác KDS",
 } as const;
 
-export function BoardHeader({
+export function KdsBoardTopBar({
   branchId,
   pendingCount,
   mode,
@@ -57,13 +52,13 @@ export function BoardHeader({
   onFullscreenToggle,
   stationControls,
   filterControls,
-}: BoardHeaderProps) {
+}: KdsBoardTopBarProps) {
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2 px-2 py-2 md:flex-nowrap md:px-3">
+    <div className="flex min-w-0 flex-wrap items-center gap-2 px-2 py-2 xl:flex-nowrap xl:px-3">
       <div className="flex shrink-0 items-center gap-1.5">
         <EmployeePortalBackControl
           branchId={branchId}
-          className="h-8 px-2 text-sm"
+          className="h-11 min-h-11 px-3 text-sm"
         />
         <span className="font-heading text-base font-semibold text-foreground">
           KDS
@@ -72,10 +67,10 @@ export function BoardHeader({
           #{branchId}
         </Badge>
       </div>
-      <div className="order-3 min-w-0 basis-full overflow-x-auto md:order-none md:basis-auto md:flex-1">
+      <div className="order-3 min-w-0 basis-full overflow-x-auto xl:order-none xl:basis-auto xl:flex-1">
         {stationControls}
       </div>
-      <div className="order-2 flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5 md:order-none md:min-w-max md:shrink-0 md:flex-nowrap">
+      <div className="order-2 flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5 xl:order-none xl:min-w-max xl:shrink-0 xl:flex-nowrap">
         {filterControls}
         <Badge
           role="status"
@@ -85,64 +80,45 @@ export function BoardHeader({
         >
           {pendingCount > 0 ? `${pendingCount} chờ` : "0 chờ"}
         </Badge>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-lg"
-              aria-label={KDS_HEADER_COPY.completionHistory}
-              onClick={onCompletionHistoryOpen}
-            >
-              <IconHistory aria-hidden />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{KDS_HEADER_COPY.completionHistory}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant={soundEnabled ? "secondary" : "ghost"}
-              size="icon-lg"
-              aria-label={soundEnabled ? "Tắt chuông KDS" : "Bật chuông KDS"}
-              aria-pressed={soundEnabled}
-              onClick={onSoundToggle}
-            >
-              {soundEnabled ? (
-                <IconVolumeOn aria-hidden />
-              ) : (
-                <IconVolumeOff aria-hidden />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {soundEnabled ? "Tắt chuông" : "Bật chuông"}
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant={isFullscreen ? "secondary" : "ghost"}
-              size="icon-lg"
-              aria-label={
-                isFullscreen ? "Thoát toàn màn hình" : "Mở toàn màn hình"
-              }
-              aria-pressed={isFullscreen}
-              onClick={onFullscreenToggle}
-            >
-              {isFullscreen ? (
-                <IconMinimize aria-hidden />
-              ) : (
-                <IconMaximize aria-hidden />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}
-          </TooltipContent>
-        </Tooltip>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-lg"
+          aria-label={KDS_HEADER_COPY.completionHistory}
+          onClick={onCompletionHistoryOpen}
+        >
+          <IconHistory aria-hidden />
+        </Button>
+        <Button
+          type="button"
+          variant={soundEnabled ? "secondary" : "ghost"}
+          size="icon-lg"
+          aria-label={soundEnabled ? "Tắt chuông KDS" : "Bật chuông KDS"}
+          aria-pressed={soundEnabled}
+          onClick={onSoundToggle}
+        >
+          {soundEnabled ? (
+            <IconVolumeOn aria-hidden />
+          ) : (
+            <IconVolumeOff aria-hidden />
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant={isFullscreen ? "secondary" : "ghost"}
+          size="icon-lg"
+          aria-label={
+            isFullscreen ? "Thoát toàn màn hình" : "Mở toàn màn hình"
+          }
+          aria-pressed={isFullscreen}
+          onClick={onFullscreenToggle}
+        >
+          {isFullscreen ? (
+            <IconMinimize aria-hidden />
+          ) : (
+            <IconMaximize aria-hidden />
+          )}
+        </Button>
         <ViewModeToggle mode={mode} onChange={onModeChange} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

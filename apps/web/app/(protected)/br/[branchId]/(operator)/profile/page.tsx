@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ProfilePageContent } from "@lib/staff-runtime/profile/page";
+import { StaffProfilePageContent } from "@lib/staff-runtime/profile/page";
 
 export default async function OperatorProfilePage({
   params,
@@ -10,5 +10,5 @@ export default async function OperatorProfilePage({
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  return <ProfilePageContent />;
+  return <StaffProfilePageContent plane="branch" />;
 }

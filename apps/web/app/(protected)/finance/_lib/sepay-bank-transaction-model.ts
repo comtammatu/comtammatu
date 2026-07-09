@@ -1,4 +1,11 @@
+import { getVNDateString } from "@comtammatu/shared/time";
+
 export type SepayTransferType = "in" | "out";
+
+export interface SepayDateRange {
+  start: string;
+  end: string;
+}
 
 export interface SepayWebhookRow {
   id: number;
@@ -11,6 +18,16 @@ export interface SepayWebhookRow {
   payload: unknown;
 }
 
+export interface SepaySupplierPaymentMatch {
+  id: number;
+  invoiceId: number;
+  amount: number;
+  paymentDate: string;
+  referenceNote: string | null;
+  invoiceNumber: string | null;
+  supplierName: string | null;
+}
+
 export interface SepayBankTransaction {
   eventId: number;
   requestId: string;
@@ -20,6 +37,7 @@ export interface SepayBankTransaction {
   paymentId: number | null;
   expenseId: number | null;
   expenseIds: number[];
+  supplierPaymentMatches: SepaySupplierPaymentMatch[];
   transactionDate: string | null;
   accountNumber: string | null;
   code: string | null;
@@ -35,10 +53,149 @@ export interface SepayBankMovement {
   outAmount: number;
 }
 
+export type SepayUnmatchedMoneyInReason =
+  | "webhook_error"
+  | "missing_reference"
+  | "unmatched_reference";
+
+export type SepayReconciliationState =
+  | "matched"
+  | "needs_review"
+  | "webhook_error";
+
+export const SEPAY_BANK_WEBHOOK_REVIEW_VALUES = [
+  "reviewing",
+  "resolved",
+  "ignored",
+] as const;
+
+export type SepayBankWebhookReviewStatus =
+  (typeof SEPAY_BANK_WEBHOOK_REVIEW_VALUES)[number];
+
+export interface SepayBankWebhookReview {
+  status: SepayBankWebhookReviewStatus | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+}
+
+export interface SepayMissingBankWebhookPayment {
+  paymentId: number;
+  orderId: number | null;
+  amount: number;
+  paidAt: string | null;
+  providerRef: string | null;
+  bankWebhookReviewStatus: SepayBankWebhookReviewStatus | null;
+  bankWebhookReviewedAt: string | null;
+  bankWebhookReviewedBy: string | null;
+}
+
+export type SepayPaymentWebhookCheck = SepayMissingBankWebhookPayment;
+
+export interface SepayPaymentWebhookSummary {
+  checkedPaymentCount: number;
+  matchedPaymentCount: number;
+  missingBankWebhookCount: number;
+  missingBankWebhookAmount: number;
+  openMissingBankWebhookCount: number;
+  openMissingBankWebhookAmount: number;
+  missingBankWebhookPayments: SepayMissingBankWebhookPayment[];
+}
+
+export interface SepayReconciliationSummary {
+  matchedCount: number;
+  needsReviewCount: number;
+  needsReviewAmount: number;
+  unmatchedMoneyInCount: number;
+  unmatchedMoneyInAmount: number;
+  unmatchedMoneyOutCount: number;
+  unmatchedMoneyOutAmount: number;
+  failedCount: number;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
+}
+
+function isSepayBankWebhookReviewStatus(
+  value: unknown,
+): value is SepayBankWebhookReviewStatus {
+  return SEPAY_BANK_WEBHOOK_REVIEW_VALUES.some((status) => status === value);
+}
+
+export function isOpenSepayBankWebhookReview(
+  status: SepayBankWebhookReviewStatus | null,
+): boolean {
+  return status !== "resolved" && status !== "ignored";
+}
+
+export function readSepayBankWebhookReview(
+  providerData: unknown,
+): SepayBankWebhookReview {
+  const review = asRecord(asRecord(providerData)?.bankWebhookReview);
+  const status = review?.status;
+  return {
+    status: isSepayBankWebhookReviewStatus(status) ? status : null,
+    reviewedAt:
+      typeof review?.reviewedAt === "string" ? review.reviewedAt : null,
+    reviewedBy:
+      typeof review?.reviewedBy === "string" ? review.reviewedBy : null,
+  };
+}
+
+export function classifySepayUnmatchedMoneyIn(
+  transaction: Pick<
+    SepayBankTransaction,
+    "code" | "content" | "errorCode" | "processingStatus" | "referenceCode"
+  >,
+): SepayUnmatchedMoneyInReason {
+  if (
+    transaction.processingStatus === "failed" ||
+    transaction.errorCode != null
+  ) {
+    return "webhook_error";
+  }
+
+  if (
+    transaction.referenceCode == null &&
+    transaction.code == null &&
+    transaction.content == null
+  ) {
+    return "missing_reference";
+  }
+
+  return "unmatched_reference";
+}
+
+export function classifySepayReconciliationState(
+  transaction: Pick<
+    SepayBankTransaction,
+    | "errorCode"
+    | "expenseIds"
+    | "paymentId"
+    | "processingStatus"
+    | "supplierPaymentMatches"
+    | "transferType"
+  >,
+): SepayReconciliationState {
+  if (
+    transaction.processingStatus === "failed" ||
+    transaction.errorCode != null
+  ) {
+    return "webhook_error";
+  }
+
+  if (
+    (transaction.transferType === "in" && transaction.paymentId != null) ||
+    (transaction.transferType === "out" &&
+      (transaction.expenseIds.length > 0 ||
+        transaction.supplierPaymentMatches.length > 0))
+  ) {
+    return "matched";
+  }
+
+  return "needs_review";
 }
 
 function readString(
@@ -73,9 +230,28 @@ function readTransferType(
 export function sepayTransactionBusinessDate(
   transaction: Pick<SepayBankTransaction, "createdAt" | "transactionDate">,
 ): string {
-  const raw = transaction.transactionDate ?? transaction.createdAt;
-  const match = raw.match(/^\d{4}-\d{2}-\d{2}/);
-  return match?.[0] ?? transaction.createdAt.slice(0, 10);
+  if (transaction.transactionDate) {
+    const match = transaction.transactionDate.match(/^\d{4}-\d{2}-\d{2}/);
+    if (match?.[0]) return match[0];
+  }
+  return getVNDateString(transaction.createdAt);
+}
+
+export function isSepayBusinessDateInRange(
+  businessDate: string,
+  range: SepayDateRange,
+): boolean {
+  return businessDate >= range.start && businessDate <= range.end;
+}
+
+export function isSepayTransactionInDateRange(
+  transaction: Pick<SepayBankTransaction, "createdAt" | "transactionDate">,
+  range: SepayDateRange,
+): boolean {
+  return isSepayBusinessDateInRange(
+    sepayTransactionBusinessDate(transaction),
+    range,
+  );
 }
 
 export function mapSepayWebhookRow(
@@ -98,6 +274,7 @@ export function mapSepayWebhookRow(
     paymentId: row.payment_id,
     expenseId: row.expense_id,
     expenseIds: row.expense_id != null ? [row.expense_id] : [],
+    supplierPaymentMatches: [],
     transactionDate: readString(payload, "transactionDate"),
     accountNumber: readString(payload, "accountNumber"),
     code: readString(payload, "code"),
@@ -107,6 +284,82 @@ export function mapSepayWebhookRow(
     accumulated: readNumber(payload, "accumulated"),
     referenceCode: readString(payload, "referenceCode"),
   };
+}
+
+function moneyEqual(left: number, right: number): boolean {
+  return Math.abs(left - right) <= 1;
+}
+
+function normalizeRef(value: string | null): string | null {
+  const normalized = value?.trim().toLowerCase().replace(/\s+/g, " ");
+  return normalized && normalized.length >= 4 ? normalized : null;
+}
+
+function supplierPaymentMatchesTransaction(
+  payment: Pick<SepaySupplierPaymentMatch, "referenceNote">,
+  transaction: Pick<SepayBankTransaction, "code" | "content" | "referenceCode">,
+): boolean {
+  const note = normalizeRef(payment.referenceNote);
+  if (!note) return false;
+
+  const txRefs = [
+    normalizeRef(transaction.referenceCode),
+    normalizeRef(transaction.code),
+    normalizeRef(transaction.content),
+  ].filter((ref): ref is string => ref != null);
+
+  return txRefs.some((ref) => ref.includes(note) || note.includes(ref));
+}
+
+export function attachSupplierPaymentMatches(
+  transactions: SepayBankTransaction[],
+  payments: SepaySupplierPaymentMatch[],
+): SepayBankTransaction[] {
+  const usedPaymentIds = new Set<number>();
+
+  return transactions.map((transaction) => {
+    if (
+      transaction.transferType !== "out" ||
+      transaction.expenseIds.length > 0 ||
+      transaction.processingStatus === "failed" ||
+      transaction.errorCode != null
+    ) {
+      return transaction;
+    }
+
+    const businessDate = sepayTransactionBusinessDate(transaction);
+    const candidates = payments.filter(
+      (payment) =>
+        !usedPaymentIds.has(payment.id) &&
+        getVNDateString(payment.paymentDate) === businessDate &&
+        supplierPaymentMatchesTransaction(payment, transaction),
+    );
+    if (candidates.length === 0) return transaction;
+
+    const totalAmount = candidates.reduce(
+      (sum, payment) => sum + payment.amount,
+      0,
+    );
+    const matches = moneyEqual(totalAmount, transaction.amount)
+      ? candidates
+      : candidates.filter((payment) =>
+          moneyEqual(payment.amount, transaction.amount),
+        );
+
+    if (
+      matches.length === 0 ||
+      (!moneyEqual(totalAmount, transaction.amount) && matches.length !== 1)
+    ) {
+      return transaction;
+    }
+
+    for (const match of matches) usedPaymentIds.add(match.id);
+
+    return {
+      ...transaction,
+      supplierPaymentMatches: matches,
+    };
+  });
 }
 
 export function sumSepayBankMovementSince(
@@ -124,4 +377,81 @@ export function sumSepayBankMovementSince(
           : { ...sum, outAmount: sum.outAmount + tx.amount },
       { inAmount: 0, outAmount: 0 },
     );
+}
+
+export function buildSepayReconciliationSummary(
+  transactions: SepayBankTransaction[],
+): SepayReconciliationSummary {
+  return transactions.reduce<SepayReconciliationSummary>(
+    (summary, tx) => {
+      const state = classifySepayReconciliationState(tx);
+      if (state === "webhook_error") {
+        summary.failedCount += 1;
+        summary.needsReviewCount += 1;
+        summary.needsReviewAmount += tx.amount;
+        return summary;
+      }
+
+      if (state === "matched") {
+        summary.matchedCount += 1;
+        return summary;
+      }
+
+      if (tx.transferType === "in") {
+        summary.unmatchedMoneyInCount += 1;
+        summary.unmatchedMoneyInAmount += tx.amount;
+        summary.needsReviewCount += 1;
+        summary.needsReviewAmount += tx.amount;
+        return summary;
+      }
+
+      summary.unmatchedMoneyOutCount += 1;
+      summary.unmatchedMoneyOutAmount += tx.amount;
+      summary.needsReviewCount += 1;
+      summary.needsReviewAmount += tx.amount;
+      return summary;
+    },
+    {
+      matchedCount: 0,
+      needsReviewCount: 0,
+      needsReviewAmount: 0,
+      unmatchedMoneyInCount: 0,
+      unmatchedMoneyInAmount: 0,
+      unmatchedMoneyOutCount: 0,
+      unmatchedMoneyOutAmount: 0,
+      failedCount: 0,
+    },
+  );
+}
+
+export function buildSepayPaymentWebhookSummary(
+  payments: SepayPaymentWebhookCheck[],
+  matchedWebhookPaymentIds: Set<number>,
+): SepayPaymentWebhookSummary {
+  return payments.reduce<SepayPaymentWebhookSummary>(
+    (summary, payment) => {
+      summary.checkedPaymentCount += 1;
+      if (matchedWebhookPaymentIds.has(payment.paymentId)) {
+        summary.matchedPaymentCount += 1;
+      } else {
+        summary.missingBankWebhookCount += 1;
+        summary.missingBankWebhookAmount += payment.amount;
+        if (isOpenSepayBankWebhookReview(payment.bankWebhookReviewStatus)) {
+          summary.openMissingBankWebhookCount += 1;
+          summary.openMissingBankWebhookAmount += payment.amount;
+        }
+        summary.missingBankWebhookPayments.push(payment);
+      }
+      return summary;
+    },
+    {
+      checkedPaymentCount: 0,
+      matchedPaymentCount: 0,
+      missingBankWebhookCount: 0,
+      missingBankWebhookAmount: 0,
+      openMissingBankWebhookCount: 0,
+      openMissingBankWebhookAmount: 0,
+      missingBankWebhookPayments: [],
+    },
+  );
 }

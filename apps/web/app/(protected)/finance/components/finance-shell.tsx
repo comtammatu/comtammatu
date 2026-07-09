@@ -5,12 +5,9 @@ import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { AppShell } from "@/components/app-shell";
-import { messages } from "@lib/messages";
 import { resolveOfficePrimaryTabs } from "@/lib/office-nav";
 import { resolveFinanceNav } from "./finance-nav";
 import { useFinanceRealtimeRefresh } from "../use-finance-realtime-refresh";
-
-const financeCopy = messages.finance;
 
 export interface FinanceShellProps {
   children: ReactNode;
@@ -52,8 +49,6 @@ export function FinanceShell({
         showSummary,
         showSupplierPayables,
       })}
-      defaultPageTitle={financeCopy.shell.defaultPageTitle}
-      pageHeader={{}}
     >
       {children}
     </AppShell>

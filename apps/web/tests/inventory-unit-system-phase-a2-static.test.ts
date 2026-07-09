@@ -123,7 +123,7 @@ test("ingredient actions surface locked unit ladders with operator-safe copy", (
   );
   assert.match(
     ingredientActions,
-    /Nguyên liệu đã có lịch sử tồn kho; không thể đổi đơn vị gốc hoặc hệ số quy đổi\./,
+    /Nguyên liệu đã có lịch sử tồn kho; không thể đổi đơn vị tồn chuẩn hoặc quy đổi về tồn chuẩn\./,
   );
   assert.match(
     ingredientActions,

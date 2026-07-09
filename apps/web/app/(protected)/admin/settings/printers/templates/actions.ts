@@ -13,6 +13,7 @@ import {
 } from "@comtammatu/print-render";
 import { renderDocumentToPng } from "@comtammatu/print-render/png";
 import { getAuthContextWithPermission } from "@/_lib/auth";
+import { messages } from "@lib/messages";
 
 const TENANT_TEMPLATE_ROLES = ["owner"] as const;
 
@@ -225,7 +226,10 @@ export async function testPrintTemplate(
     .eq("is_active", true);
 
   if (printersError) {
-    return { success: false, error: "Không thể tải máy in chi nhánh" };
+    return {
+      success: false,
+      error: messages.settings.printers.loadPrintersFailed,
+    };
   }
   const printer =
     (printers ?? []).find((p) => p.role === preferredRole) ?? printers?.[0];

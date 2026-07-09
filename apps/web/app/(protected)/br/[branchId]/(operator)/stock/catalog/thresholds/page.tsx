@@ -7,7 +7,7 @@ import {
 import { messages } from "@lib/messages";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
-import { CatalogBackHeader } from "../catalog-back-header";
+import { CatalogBackControl } from "../catalog-back-header";
 
 const copy = messages.catalog.thresholds;
 
@@ -48,7 +48,7 @@ export default async function OperatorCatalogThresholdsPage({
 
   return (
     <div className="flex flex-col gap-3">
-      <CatalogBackHeader
+      <CatalogBackControl
         title={copy.title}
         backHref={`/br/${branchId}/stock/catalog`}
       />

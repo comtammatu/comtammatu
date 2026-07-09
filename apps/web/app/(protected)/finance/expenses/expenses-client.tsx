@@ -19,6 +19,7 @@ import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { KpiCard } from "@/components/kpi/kpi-card";
+import { StatusBadge } from "@/components/status-badge";
 import { AppSection, KpiRow } from "@/components/surface";
 import {
   DataTable,
@@ -39,6 +40,7 @@ import {
   EXPENSE_CATEGORY_GROUP,
   EXPENSE_CATEGORY_GROUPS,
   EXPENSE_PAYMENT_METHODS,
+  classifyExpensePaymentState,
   type ExpenseCategory,
   type ExpensePaymentMethod,
 } from "../_lib/expense-categories";
@@ -51,7 +53,6 @@ import {
 
 const copy = messages.finance.expenses;
 const TENANT_LEVEL_BRANCH_VALUE = "__tenant__";
-
 interface Branch {
   id: number;
   name: string;
@@ -84,7 +85,11 @@ const expenseFormSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
-const CATEGORY_GROUPS = EXPENSE_CATEGORY_GROUPS.map((group) => ({
+const EXPENSE_FORM_CATEGORY_GROUPS = EXPENSE_CATEGORY_GROUPS.filter(
+  (group) => group !== "materials",
+);
+
+const CATEGORY_GROUPS = EXPENSE_FORM_CATEGORY_GROUPS.map((group) => ({
   label: copy.categoryGroupLabels[group],
   options: EXPENSE_CATEGORIES_BY_GROUP[group].map((value) => ({
     value,
@@ -211,7 +216,8 @@ export function ExpensesClient({
       key: "category",
       header: copy.table.category,
       render: (row) =>
-        (copy.categoryLabels as Record<string, string>)[row.category] ?? row.category,
+        (copy.categoryLabels as Record<string, string>)[row.category] ??
+        row.category,
     },
     {
       key: "branch",
@@ -223,8 +229,20 @@ export function ExpensesClient({
       key: "method",
       header: copy.table.method,
       render: (row) =>
-        (copy.paymentMethodLabels as Record<string, string>)[row.payment_method] ??
-        row.payment_method,
+        (copy.paymentMethodLabels as Record<string, string>)[
+          row.payment_method
+        ] ?? row.payment_method,
+    },
+    {
+      key: "payment_state",
+      header: copy.table.paymentState,
+      className: "w-32",
+      render: (row) => (
+        <StatusBadge
+          domain="expense-payment"
+          value={classifyExpensePaymentState(row)}
+        />
+      ),
     },
     {
       key: "amount",
@@ -310,8 +328,9 @@ export function ExpensesClient({
                 <ItemHeader>
                   <ItemContent>
                     <ItemTitle>
-                      {(copy.categoryLabels as Record<string, string>)[row.category] ??
-                        row.category}
+                      {(copy.categoryLabels as Record<string, string>)[
+                        row.category
+                      ] ?? row.category}
                     </ItemTitle>
                     <ItemDescription>
                       {row.expense_date} · {branchLabel(row.branch_id)}
@@ -333,9 +352,15 @@ export function ExpensesClient({
                 </ItemHeader>
                 <ItemFooter>
                   <ItemDescription>{detail || "—"}</ItemDescription>
-                  <span className="font-mono text-sm font-semibold tabular-nums">
-                    {formatVND(row.amount)}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <StatusBadge
+                      domain="expense-payment"
+                      value={classifyExpensePaymentState(row)}
+                    />
+                    <span className="font-mono text-sm font-semibold tabular-nums">
+                      {formatVND(row.amount)}
+                    </span>
+                  </div>
                 </ItemFooter>
               </Item>
             );

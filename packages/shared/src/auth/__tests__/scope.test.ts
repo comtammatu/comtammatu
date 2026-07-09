@@ -40,9 +40,9 @@ test("getDefaultRedirect → owner lands on finance workspace", () => {
   assert.equal(getDefaultRedirect(makeClaims("owner")), "/finance");
 });
 
-test("getDefaultRedirect → branch_manager lands on Branch Hub", () => {
+test("getDefaultRedirect → branch_manager lands on work entry", () => {
   assert.equal(getDefaultRedirect(makeClaims("branch_manager", 3)), "/br/3");
-  assert.equal(getDefaultRedirect(makeClaims("branch_manager", null)), "/br");
+  assert.equal(getDefaultRedirect(makeClaims("branch_manager", null)), "/");
 });
 
 test("getDefaultRedirect → non-admin roles land on their role home", () => {
@@ -53,7 +53,7 @@ test("getDefaultRedirect → non-admin roles land on their role home", () => {
     "chef",
     "branch_staff",
   ] as const) {
-    assert.equal(getDefaultRedirect(makeClaims(role)), "/br");
+    assert.equal(getDefaultRedirect(makeClaims(role)), "/");
   }
   assert.equal(getDefaultRedirect(makeClaims("office")), "/finance");
 });
@@ -70,7 +70,7 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
   });
   assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
     label: "Nay",
-    href: "/br",
+    href: "/",
   });
 
   // Operator-plane roles with a branch in scope go home to the operator hub.
@@ -98,7 +98,7 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
   ] as const) {
     assert.deepEqual(resolveRoleHomeLink(role), {
       label: "Nay",
-      href: "/br",
+      href: "/",
     });
   }
   assert.deepEqual(resolveRoleHomeLink("office"), {
@@ -186,7 +186,7 @@ test("unknown inventory paths are not active route contracts", () => {
     assert.equal(resolveRouteFamilyContract(pathname), null);
     assert.equal(
       resolvePostLoginRedirect(makeClaims("warehouse_manager"), pathname),
-      "/br",
+      "/",
     );
   }
 });
@@ -307,7 +307,7 @@ test("resolvePostLoginRedirect → cashier on wrong branch → fallback", () => 
 test("resolvePostLoginRedirect → cashier with null branch_id visiting POS → fallback", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("cashier", null), "/br/3/pos"),
-    "/br",
+    "/",
   );
 });
 

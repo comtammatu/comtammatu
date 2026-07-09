@@ -15,7 +15,7 @@ import {
   updateCategory,
   type CategoryRow,
 } from "@/(protected)/inventory/settings/categories/categories-actions";
-import { CatalogBackHeader } from "../catalog-back-header";
+import { CatalogBackControl } from "../catalog-back-header";
 import {
   CatalogList,
   CATALOG_DELETE_ICON,
@@ -99,7 +99,7 @@ export function CatalogCategoriesClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <CatalogBackHeader title={copy.title} backHref={backHref} />
+      <CatalogBackControl title={copy.title} backHref={backHref} />
 
       <CatalogList
         rows={rows}

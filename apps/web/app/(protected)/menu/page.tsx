@@ -12,8 +12,7 @@ import { ItemTable } from "./item-table";
 import { AddItemButton } from "./add-item-button";
 import { MenuImportExportMenu } from "./import-export-menu";
 
-import { FORM_VI, ERRORS_VI } from "@comtammatu/shared/messages";
-import { MENU_VI } from "./menu-copy";
+import { FORM_VI, ERRORS_VI, MENU_VI } from "@comtammatu/shared/messages";
 
 export default async function MenuPage() {
   const { supabase, claims } = await loadAuthState();

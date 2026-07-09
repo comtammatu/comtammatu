@@ -50,13 +50,12 @@ export function Combobox({
   disabled,
   className,
   triggerClassName,
-  size = "default",
+  size = "field",
   id,
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
-  const isTouchSize = size === "touch" || size === "touch-lg";
 
   const selected = useMemo(
     () => options.find((opt) => opt.value === value),
@@ -78,11 +77,6 @@ export function Combobox({
           disabled={disabled}
           className={cn(
             "w-full justify-between font-normal",
-            size === "xs" && "h-6 text-2xs px-2",
-            size === "sm" && "h-7 text-xs px-2.5",
-            size === "lg" && "h-9 px-3",
-            size === "default" && "h-10 px-3",
-            isTouchSize && "h-auto min-h-12 text-sm px-3",
             !selected && "text-muted-foreground",
             triggerClassName ?? className,
           )}

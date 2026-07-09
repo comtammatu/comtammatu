@@ -2,10 +2,10 @@ import type { IngredientRow } from "./types";
 import {
   getDefaultIngredientUnit,
   getIngredientUnitOptions,
-  type InventoryUnitOption,
+  type InventoryUnitOptionWithFactor,
 } from "./unit-options";
 
-export type CountUnitOption = InventoryUnitOption;
+export type CountUnitOption = InventoryUnitOptionWithFactor;
 
 /**
  * Selectable counting units for an ingredient: every active ingredient_units
@@ -15,7 +15,7 @@ export type CountUnitOption = InventoryUnitOption;
 export function getCountUnitOptions(
   ingredient: IngredientRow | undefined,
 ): CountUnitOption[] {
-  return getIngredientUnitOptions(ingredient);
+  return getIngredientUnitOptions(ingredient, { includeToBaseFactor: true });
 }
 
 /**

@@ -294,7 +294,7 @@ test.skip("stock and inventory value include branch kitchen stock locations", ()
   const stockBearing = readWeb(
     "app/(protected)/inventory/_lib/stock-bearing-locations.ts",
   );
-  const stockPage = readWeb("app/(protected)/inventory/stock/page.tsx");
+  const stockData = readWeb("lib/inventory/stock-on-hand-data.ts");
   const inventoryValue = readWeb(
     "app/(protected)/inventory/inventory-value-actions.ts",
   );
@@ -315,7 +315,7 @@ test.skip("stock and inventory value include branch kitchen stock locations", ()
   );
 
   for (const [name, source] of [
-    ["stock page", stockPage],
+    ["stock loader", stockData],
     ["inventory value", inventoryValue],
     ["finance inventory tied cash", financeCockpit],
   ] as const) {
@@ -330,45 +330,45 @@ test.skip("stock and inventory value include branch kitchen stock locations", ()
       `${name} should filter by stock-bearing location ids`,
     );
   }
+  const stockModel = readWeb("lib/inventory/stock-on-hand-model.ts");
   assert.match(
-    stockPage,
+    stockData,
     /inventory_locations \( id, name, code, location_kind \)/,
-    "stock page should fetch location metadata for per-location display",
+    "stock loader should fetch location metadata for per-location display",
   );
   assert.match(
-    stockPage,
-    /stockLocationMap/,
-    "stock page should preserve location breakdown beside aggregate quantity",
+    stockData,
+    /const locationMap = new Map/,
+    "stock loader should preserve location breakdown beside aggregate quantity",
   );
 
   const stockClient = readWeb(
     "app/(protected)/inventory/stock/stock-client.tsx",
   );
   const stockMessages = readWeb("lib/messages/inventory.ts");
-  const stockMobileGrid = readWeb(
-    "app/(protected)/inventory/stock/stock-mobile-grid.tsx",
+  const branchStockClient = readWeb(
+    "app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
   );
   const stockBreakdown = readWeb(
     "app/(protected)/inventory/stock/stock-location-breakdown.tsx",
   );
-  assert.match(stockClient, /locationBreakdown\?: StockLocationBreakdown/);
+  assert.match(stockModel, /locationBreakdown\?: StockLocationBreakdown/);
   assert.match(
-    stockClient,
-    /type LocationFilter = "all" \| "warehouse" \| "kitchen"/,
+    stockModel,
+    /type StockLocationFilter = "all" \| "warehouse" \| "kitchen"/,
   );
   assert.match(stockClient, /locationFilterOptions/);
-  assert.match(stockClient, /locationScopedIngredient/);
-  assert.match(stockClient, /row\.locationKind === locationFilter/);
+  assert.match(stockModel, /scopeStockIngredientToLocation/);
+  assert.match(stockModel, /row\.locationKind === location/);
   assert.match(stockClient, /locationFilterControl/);
   assert.match(stockClient, /StockLocationBreakdownLine/);
   assert.match(stockMessages, /locationWarehouse: "Kho"/);
   assert.match(stockMessages, /locationKitchen: "Bếp"/);
-  assert.match(stockMobileGrid, /StockLocationBreakdownLine/);
-  assert.match(stockBreakdown, /avgUnitCost: number \| null/);
-  assert.match(stockBreakdown, /lastCountedAt: string \| null/);
-  assert.match(stockBreakdown, /locationKind === "kitchen"/);
-  assert.match(stockBreakdown, /return "Kho"/);
-  assert.match(stockBreakdown, /return "Bếp"/);
+  assert.match(branchStockClient, /StockLocationSummary/);
+  assert.match(stockModel, /avgUnitCost: number \| null/);
+  assert.match(stockModel, /lastCountedAt: string \| null/);
+  assert.match(stockModel, /locationKind === "kitchen"/);
+  assert.match(stockBreakdown, /stockLocationLabel/);
 
   // Movement report delegates stock-bearing filtering to the SECURITY DEFINER
   // RPC, which replicates the same predicate in SQL.

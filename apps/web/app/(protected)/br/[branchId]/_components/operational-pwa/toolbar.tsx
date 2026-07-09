@@ -1,6 +1,6 @@
 "use client";
 
-import { PwaToolbar, PwaToolbarHubLink } from "@/components/pwa-toolbar";
+import { PwaToolbar, PwaToolbarEntryLink } from "@/components/pwa-toolbar";
 
 type OperationalPwaSurface = "pos" | "kds" | "runner";
 
@@ -23,7 +23,7 @@ function buildCopy(surface: OperationalPwaSurface) {
 
   return {
     regionLabel: `${appLabel} - cài đặt và trạng thái kết nối`,
-    hubLinkLabel: "Về Má Tư Hub",
+    entryLinkLabel: "Về Cổng vận hành",
     offline: `Mất kết nối - không thể cập nhật ${jobLabel}.`,
     iosInstallHint: `iOS: dùng Chia sẻ để thêm ${appLabel} vào Màn hình chính.`,
     iosInstallHintShort: "iOS: thêm vào Màn hình",
@@ -56,13 +56,13 @@ export function OperationalPwaToolbar({
 }) {
   const copy = buildCopy(surface);
   // Runner is a guest-facing display: it never gets staff navigation.
-  // POS/KDS keep the hub link in every toolbar state (including standalone,
-  // where browser chrome is absent) so staff can always return to the hub.
-  const hubLink =
+  // POS/KDS keep the entry link in every toolbar state (including standalone,
+  // where browser chrome is absent) so staff can always return to the entry.
+  const entryLink =
     surface !== "runner" ? (
-      <PwaToolbarHubLink
+      <PwaToolbarEntryLink
         href={`/br/${branchId}`}
-        label={copy.hubLinkLabel}
+        label={copy.entryLinkLabel}
       />
     ) : undefined;
 
@@ -71,7 +71,7 @@ export function OperationalPwaToolbar({
       layout="full-bleed"
       copy={copy}
       dismissStorageKey={getDismissStorageKey(surface, branchId)}
-      hubLink={hubLink}
+      entryLink={entryLink}
     />
   );
 }

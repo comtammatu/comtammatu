@@ -1,18 +1,14 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ClipboardCheck as IconClipboardCheck,
   UsersRound as IconUsersRound,
 } from "lucide-react";
 import { canAccess } from "@comtammatu/shared/auth";
-import { AppEmptyState, AppPageHeader, AppSection } from "@/components/surface";
+import { AppEmptyState } from "@/components/surface";
 import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
+  BranchOperatorActionSection,
+  BranchOperatorPage,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
@@ -26,7 +22,7 @@ import {
   type TeamWorkspaceTabValue,
 } from "./team-workspace-tabs";
 
-const copy = messages.employee.teamBoard;
+const copy = messages.operator.teamBoard;
 const validTabs = new Set<TeamWorkspaceTabValue>([
   "board",
   "members",
@@ -58,10 +54,9 @@ export default async function TeamBoardPage({
 
   if (!canAccess(claims.user_role, "branch_team")) {
     return (
-      <>
-        <AppPageHeader title={copy.title} />
+      <BranchOperatorPage title={copy.title}>
         <AppEmptyState mode="no-access" />
-      </>
+      </BranchOperatorPage>
     );
   }
 
@@ -74,73 +69,60 @@ export default async function TeamBoardPage({
       aria-label={copy.managerEntryAriaLabel}
       className="grid gap-3 lg:grid-cols-2"
     >
-      <AppSection
+      <BranchOperatorActionSection
         title={copy.reviewGroupTitle}
         description={copy.reviewGroupDescription}
-        icon={<IconClipboardCheck />}
+        links={[
+          {
+            key: "checkout-approvals",
+            href: `${basePath}/shift/checkout-approvals`,
+            icon: IconClipboardCheck,
+            title: copy.reviewCheckoutTitle,
+            description: copy.reviewCheckoutDescription,
+          },
+          {
+            key: "count-slips",
+            href: `${basePath}/stock/count-slips`,
+            icon: IconClipboardCheck,
+            title: copy.reviewCountTitle,
+            description: copy.reviewCountDescription,
+          },
+          {
+            key: "waste-approvals",
+            href: `${basePath}/stock/waste-approvals`,
+            icon: IconClipboardCheck,
+            title: copy.reviewWasteTitle,
+            description: copy.reviewWasteDescription,
+          },
+        ]}
+        columns={1}
         tone="warning"
         size="sm"
-      >
-        <ItemGroup className="gap-2">
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={`${basePath}/shift/checkout-approvals`}>
-              <ItemContent>
-                <ItemTitle>{copy.reviewCheckoutTitle}</ItemTitle>
-                <ItemDescription>
-                  {copy.reviewCheckoutDescription}
-                </ItemDescription>
-              </ItemContent>
-            </Link>
-          </Item>
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={`${basePath}/stock/count-slips`}>
-              <ItemContent>
-                <ItemTitle>{copy.reviewCountTitle}</ItemTitle>
-                <ItemDescription>{copy.reviewCountDescription}</ItemDescription>
-              </ItemContent>
-            </Link>
-          </Item>
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={`${basePath}/stock/waste-approvals`}>
-              <ItemContent>
-                <ItemTitle>{copy.reviewWasteTitle}</ItemTitle>
-                <ItemDescription>{copy.reviewWasteDescription}</ItemDescription>
-              </ItemContent>
-            </Link>
-          </Item>
-        </ItemGroup>
-      </AppSection>
+      />
 
-      <AppSection
+      <BranchOperatorActionSection
         title={copy.peopleGroupTitle}
         description={copy.peopleGroupDescription}
-        icon={<IconUsersRound />}
+        links={[
+          {
+            key: "members",
+            href: `${basePath}/team?tab=members`,
+            icon: IconUsersRound,
+            title: copy.membersEntryTitle,
+            description: copy.membersEntryDescription,
+          },
+          {
+            key: "assignments",
+            href: `${basePath}/team?tab=assignments`,
+            icon: IconUsersRound,
+            title: copy.assignmentsEntryTitle,
+            description: copy.assignmentsEntryDescription,
+          },
+        ]}
+        columns={1}
         tone="info"
         size="sm"
-      >
-        <ItemGroup className="gap-2">
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={`${basePath}/team?tab=members`}>
-              <ItemContent>
-                <ItemTitle>{copy.membersEntryTitle}</ItemTitle>
-                <ItemDescription>
-                  {copy.membersEntryDescription}
-                </ItemDescription>
-              </ItemContent>
-            </Link>
-          </Item>
-          <Item asChild variant="outline" size="sm" className="bg-card">
-            <Link href={`${basePath}/team?tab=assignments`}>
-              <ItemContent>
-                <ItemTitle>{copy.assignmentsEntryTitle}</ItemTitle>
-                <ItemDescription>
-                  {copy.assignmentsEntryDescription}
-                </ItemDescription>
-              </ItemContent>
-            </Link>
-          </Item>
-        </ItemGroup>
-      </AppSection>
+      />
     </section>
   );
 
@@ -164,16 +146,13 @@ export default async function TeamBoardPage({
   );
 
   return (
-    <>
-      <AppPageHeader
-        title={copy.title}
-        description={copy.description}
-        className="sr-only"
-      />
-      <div className="flex flex-col gap-3">
-        {managerEntry}
-        {content}
-      </div>
-    </>
+    <BranchOperatorPage
+      title={copy.title}
+      description={copy.description}
+      hideHeaderOnMobile
+    >
+      {managerEntry}
+      {content}
+    </BranchOperatorPage>
   );
 }

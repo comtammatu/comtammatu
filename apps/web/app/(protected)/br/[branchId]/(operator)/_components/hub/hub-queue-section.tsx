@@ -19,7 +19,7 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { EmployeePanel } from "@lib/staff-runtime/components/staff-runtime-page";
+import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { AppEmptyState } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { loadAuthState } from "@/_lib/auth";
@@ -200,7 +200,7 @@ export async function HubQueueSection({
   if (queueRows.length === 0 && !isCentral) return null;
 
   return (
-    <EmployeePanel
+    <BranchOperatorPanel
       title={branchCopy.queueTitle}
       icon={ClipboardCheck}
       tone="warning"
@@ -212,6 +212,6 @@ export async function HubQueueSection({
       }
     >
       <CompactQueueSection rows={queueRows} />
-    </EmployeePanel>
+    </BranchOperatorPanel>
   );
 }

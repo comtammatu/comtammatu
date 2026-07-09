@@ -13,7 +13,7 @@ interface StocktakeDetailPageContentProps {
   }>;
   routeBranchId?: number;
   routeBase?: string;
-  wasteBasePath?: string;
+  reportsBasePath?: string;
   embedded?: boolean;
 }
 
@@ -22,7 +22,7 @@ export async function StocktakeDetailPageContent({
   searchParams,
   routeBranchId,
   routeBase = "/inventory/stocktake",
-  wasteBasePath = "/inventory/waste/new",
+  reportsBasePath = "/inventory/reports",
   embedded = false,
 }: StocktakeDetailPageContentProps) {
   const sessionId = stocktakeId;
@@ -97,7 +97,7 @@ export async function StocktakeDetailPageContent({
       session={stocktakeSession}
       lines={lines}
       routeBase={routeBase}
-      wasteBasePath={wasteBasePath}
+      reportsBasePath={reportsBasePath}
       auditLogs={auditLogs}
       embedded={embedded}
     />

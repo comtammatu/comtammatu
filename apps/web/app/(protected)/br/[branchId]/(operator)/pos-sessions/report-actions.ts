@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
+import { messages } from "@lib/messages";
 
 /* ─── Types & Zod schemas ──────────────────────────────────────────────── */
 
@@ -149,7 +150,7 @@ export async function getPosSessionReport(
       success: false,
       error: error.message.includes("session_not_found")
         ? "Không tìm thấy ca"
-        : "Không thể tải báo cáo ca. Vui lòng thử lại.",
+        : messages.settings.branch.posSessionReportLoadFailed,
     };
   }
 

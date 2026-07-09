@@ -2,13 +2,6 @@
 
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import {
   Field,
   FieldDescription,
   FieldGroup,
@@ -23,6 +16,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { POS_VI } from "@comtammatu/shared/messages";
+import { AppDialog } from "@/components/form/form-dialog";
 import type { BranchTable } from "../../page";
 
 interface TransferTableDialogProps {
@@ -66,6 +60,7 @@ export function TransferTableDialog({
   const targetLabel = selectedTable
     ? `bàn ${selectedTable.number}`
     : "bàn trống";
+  const dialogTitle = `${POS_VI.transferTable}${orderNumber ? ` · ${orderNumber}` : ""} · từ ${currentTableLabel}`;
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) onTableIdChange("");
@@ -73,55 +68,12 @@ export function TransferTableDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            Chuyển bàn{orderNumber ? ` · ${orderNumber}` : ""} · từ{" "}
-            {currentTableLabel}
-          </DialogTitle>
-        </DialogHeader>
-
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="transfer-table">{POS_VI.transferTargetLabel}</FieldLabel>
-            <Select value={tableId} onValueChange={onTableIdChange}>
-              <SelectTrigger id="transfer-table">
-                <SelectValue placeholder={POS_VI.transferSelectPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {availableTables.map((table) => {
-                    const isCurrent = table.id === currentTableId;
-                    const orderCount = orderCountByTable?.get(table.id) ?? 0;
-                    const suffix = isCurrent
-                      ? " (hiện tại)"
-                      : orderCount > 0
-                        ? ` — ${orderCount} đơn`
-                        : "";
-                    return (
-                      <SelectItem
-                        key={table.id}
-                        value={String(table.id)}
-                        disabled={isCurrent}
-                      >
-                        Bàn {table.number}
-                        {suffix}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <FieldDescription>
-              {selectedTable
-                ? `Sẵn sàng chuyển sang ${targetLabel}.`
-                : "Chọn bàn đích trước khi xác nhận."}
-            </FieldDescription>
-          </Field>
-        </FieldGroup>
-
-        <DialogFooter>
+    <AppDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      title={dialogTitle}
+      footer={
+        <>
           <Button
             type="button"
             variant="outline"
@@ -139,8 +91,49 @@ export function TransferTableDialog({
           >
             {POS_VI.transferTable}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="transfer-table">
+            {POS_VI.transferTargetLabel}
+          </FieldLabel>
+          <Select value={tableId} onValueChange={onTableIdChange}>
+            <SelectTrigger id="transfer-table">
+              <SelectValue placeholder={POS_VI.transferSelectPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {availableTables.map((table) => {
+                  const isCurrent = table.id === currentTableId;
+                  const orderCount = orderCountByTable?.get(table.id) ?? 0;
+                  const suffix = isCurrent
+                    ? " (hiện tại)"
+                    : orderCount > 0
+                      ? ` — ${orderCount} đơn`
+                      : "";
+                  const tableLabel = `Bàn ${table.number}${suffix}`;
+                  return (
+                    <SelectItem
+                      key={table.id}
+                      value={String(table.id)}
+                      disabled={isCurrent}
+                    >
+                      {tableLabel}
+                    </SelectItem>
+                  );
+                })}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <FieldDescription>
+            {selectedTable
+              ? `Sẵn sàng chuyển sang ${targetLabel}.`
+              : "Chọn bàn đích trước khi xác nhận."}
+          </FieldDescription>
+        </Field>
+      </FieldGroup>
+    </AppDialog>
   );
 }

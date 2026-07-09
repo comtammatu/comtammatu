@@ -1,11 +1,16 @@
 // Menu-management Vietnamese copy (extracted from menu JSX).
 export const MENU_VI = {
+  title: "Thực đơn",
+  eyebrow: "Danh mục kinh doanh",
+  itemsTab: "Món ăn",
   importMenuItem: "Import từ file",
   exportXlsxFull: "Export .xlsx (đầy đủ)",
   exportCsvItems: "Export .csv (món ăn)",
   importSuccess: "Import thành công",
   importDialogTitle: "Import Menu từ file",
   itemDetailTitle: (name: string) => `${name} — Chi tiết`,
+  loadItemsFailed: "Không thể tải món ăn",
+  loadDataFailed: "Không thể tải dữ liệu menu.",
   loadDataFailedRetry: "Không thể tải dữ liệu. Vui lòng thử lại.",
   variantsSaved: "Đã lưu biến thể",
   modifiersSaved: "Đã lưu tùy chọn",
@@ -60,6 +65,7 @@ export const MENU_VI = {
   imageAlt: "Ảnh món",
   changeImage: "Đổi ảnh",
   uploadImage: "Tải ảnh món (≤ 5 MB)",
+  imageUploading: "Đang tải…",
   sidesSaved: "Đã lưu món ăn kèm",
 } as const;
 

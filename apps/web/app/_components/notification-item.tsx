@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { cn } from "@comtammatu/ui";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   TriangleAlert as IconAlertTriangle,
   CircleCheck as IconCircleCheck,
@@ -81,29 +82,22 @@ interface Props {
 }
 
 export function NotificationItem({ item, onRead, onNavigate }: Props) {
-  const router = useRouter();
   const Icon = iconFor(item.kind);
   const tone = toneFor(item.severity);
   const unread = item.read_at === null;
   const kindLabel = messages.notifications.kindLabel[item.kind] ?? item.kind;
 
-  const handleClick = () => {
+  const handleRead = () => {
     if (unread) onRead(item.id);
-    if (item.action_url) {
-      router.push(item.action_url);
-      onNavigate?.();
-    }
   };
-
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className={cn(
-        "flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/60",
-        unread ? "bg-primary/5 border-primary/20" : "bg-card",
-      )}
-    >
+  const className = cn(
+    "flex h-auto w-full items-start justify-start gap-3 whitespace-normal rounded-lg border p-3 text-left font-normal transition-colors",
+    unread
+      ? "border-primary/20 bg-primary/5 hover:bg-primary/10"
+      : "border-border bg-card hover:bg-muted/60",
+  );
+  const content = (
+    <>
       <span
         className={cn(
           "inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-muted",
@@ -139,6 +133,33 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
           {kindLabel} · {relativeTime(item.created_at)}
         </p>
       </div>
-    </button>
+    </>
+  );
+
+  if (item.action_url) {
+    return (
+      <Button asChild variant="ghost" className={className}>
+        <Link
+          href={item.action_url}
+          onClick={() => {
+            handleRead();
+            onNavigate?.();
+          }}
+        >
+          {content}
+        </Link>
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      className={className}
+      onClick={handleRead}
+    >
+      {content}
+    </Button>
   );
 }

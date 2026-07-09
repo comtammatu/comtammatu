@@ -94,9 +94,7 @@ export function RevenueChartsBlock({
             tickLine={false}
             axisLine={false}
             width={70}
-            tickFormatter={(v: number) =>
-              new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(v)
-            }
+            tickFormatter={(v: number) => formatVND(v)}
           />
           <Tooltip
             formatter={(value) => [
@@ -205,11 +203,7 @@ export function RevenueChartsBlock({
               type="number"
               tickLine={false}
               axisLine={false}
-              tickFormatter={(v: number) =>
-                new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(
-                  v,
-                )
-              }
+              tickFormatter={(v: number) => formatVND(v)}
             />
             <YAxis
               type="category"

@@ -1,8 +1,14 @@
 import { notFound, redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
-import { canAccess, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
+import {
+  canAccess,
+  PERMISSION_KEYS,
+  PROCUREMENT_ROLES,
+} from "@comtammatu/shared/auth";
+import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { resolveInventoryListScope } from "../../../_lib/inventory-scope";
 import { fetchProcurementBranches } from "../../../_lib/procurement-branches";
+import { isStockBearingLocationKind } from "../../../_lib/stock-bearing-locations";
 import { fetchGrnDetail, loadActiveGrnDraft } from "../../../grn-actions";
 import type { GrnDraftLine } from "../../../_lib/grn-draft";
 import type { IngredientUnitRow } from "../../../_lib/types";
@@ -27,6 +33,16 @@ type Ingredient = {
   unit_cost: number | null;
   category: string | null;
   units?: IngredientUnitRow[];
+};
+
+type InventoryLocationRow = {
+  id: number;
+  name: string;
+  branch_id: number;
+  location_kind: string | null;
+  is_default_receive: boolean | null;
+  is_default_consumption: boolean | null;
+  is_active: boolean | null;
 };
 
 interface GrnCreatePageContentProps {
@@ -65,7 +81,7 @@ export async function GrnCreatePageContent({
   });
   if (scope.outOfScope) notFound();
 
-  const [supplierRes, ingredientsRes] = await Promise.all([
+  const [supplierRes, ingredientsRes, locationsRes] = await Promise.all([
     supabase
       .from("suppliers")
       .select("id, name")
@@ -81,11 +97,23 @@ export async function GrnCreatePageContent({
       .eq("is_active", true)
       .order("name")
       .limit(500),
+    supabase
+      .from("inventory_locations")
+      .select(
+        "id, name, branch_id, location_kind, is_default_receive, is_default_consumption, is_active",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true }),
   ]);
 
   if (!supplierRes.data) redirect(basePath);
 
   const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
+  const canConfirm = await currentUserHasAnyPermissionAny([
+    PERMISSION_KEYS.PROCUREMENT_GRN_CONFIRM,
+  ]);
   const defaultBranchId =
     scope.selectedBranchId != null &&
     branches.some((b) => b.id === scope.selectedBranchId)
@@ -93,6 +121,34 @@ export async function GrnCreatePageContent({
       : claims.branch_id && branches.some((b) => b.id === claims.branch_id)
         ? claims.branch_id
         : (branches[0]?.id ?? null);
+  const branchById = new Map(branches.map((branch) => [branch.id, branch]));
+  const procurementBranchIds = new Set(branches.map((branch) => branch.id));
+  const locationOptions = (
+    (locationsRes.data ?? []) as InventoryLocationRow[]
+  )
+    .filter((location) => {
+      const branch = branchById.get(location.branch_id);
+      return (
+        procurementBranchIds.has(location.branch_id) &&
+        isStockBearingLocationKind({
+          siteKind: branch?.branch_kind,
+          locationKind: location.location_kind,
+        })
+      );
+    })
+    .map((location) => {
+      const branch = branchById.get(location.branch_id);
+      return {
+        id: location.id,
+        name: location.name,
+        branchId: location.branch_id,
+        branchName: branch?.name ?? "Chi nhánh",
+        branchKind: branch?.branch_kind ?? null,
+        kind: location.location_kind,
+        isDefaultReceive: location.is_default_receive === true,
+        isDefaultConsumption: location.is_default_consumption === true,
+      };
+    });
 
   type IngredientJoinRow = Omit<Ingredient, "units"> & {
     ingredient_units: IngredientUnitJoinRow[] | null;
@@ -133,6 +189,7 @@ export async function GrnCreatePageContent({
   const draftRow = (draftRes.success ? draftRes.data : null) as {
     id: number;
     branch_id: number;
+    location_id: number | null;
   } | null;
   if (draftRow?.id) {
     const detailRes = await fetchGrnDetail(draftRow.id);
@@ -172,6 +229,7 @@ export async function GrnCreatePageContent({
   // An existing draft is branch-bound (branch_id set at creation), so honor it
   // over the scope default; a fresh receipt starts on the scope default branch.
   const initialBranchId = draftRow?.branch_id ?? defaultBranchId;
+  const initialLocationId = draftRow?.location_id ?? null;
   const isBranchScoped =
     claims.user_role === "warehouse_manager" ||
     claims.user_role === "production_manager";
@@ -181,9 +239,12 @@ export async function GrnCreatePageContent({
       supplier={{ id: supplierRes.data.id, name: supplierRes.data.name }}
       branchId={initialBranchId}
       procurementBranches={branches.map((b) => ({ id: b.id, name: b.name }))}
+      locationOptions={locationOptions}
+      initialLocationId={initialLocationId}
       canSwitchBranch={routeBranchId == null && !isBranchScoped}
       ingredients={ingredients}
       existingDraft={existingDraft}
+      canConfirm={canConfirm}
       basePath={basePath}
       grnBasePath={grnBasePath}
       embedded={embedded}

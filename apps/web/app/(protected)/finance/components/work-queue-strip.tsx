@@ -1,5 +1,5 @@
 import { cn } from "@comtammatu/ui/lib/utils";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
 import { AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import type {
@@ -35,9 +35,9 @@ const DEFAULT_TILES: WorkQueueTile[] = [
   "webhook",
 ];
 
-function formatCount(value: number | null | undefined): string {
+function formatNullableCount(value: number | null | undefined): string {
   if (value == null) return messages.finance.common.noValue;
-  return value.toLocaleString("vi-VN");
+  return formatCount(value);
 }
 
 function formatMoney(value: number | null | undefined): string {
@@ -99,60 +99,58 @@ export function WorkQueueStrip({
       className={className}
       contentClassName="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
     >
-        {visible.includes("invoices") && (
-          <Metric
-            label={copy.workQueue.invoicesAttention}
-            value={formatCount(summary?.invoice_attention_count)}
-            hint={copy.workQueue.invoicesAttentionHint}
-            tone={
+      {visible.includes("invoices") && (
+        <Metric
+          label={copy.workQueue.invoicesAttention}
+          value={formatNullableCount(summary?.invoice_attention_count)}
+          hint={copy.workQueue.invoicesAttentionHint}
+          tone={
               (summary?.invoice_attention_count ?? 0) > 0
                 ? "warning"
+            : "neutral"
+          }
+        />
+      )}
+      {visible.includes("cash") && (
+        <Metric
+          label={copy.workQueue.cashVariance}
+          value={formatNullableCount(health.cashVarianceSessionCount)}
+          hint={copy.workQueue.absoluteVarianceHint(
+            formatMoney(health.cashVarianceAbsAmount),
+          )}
+          tone={
+            health.cashVarianceAbsAmount >= 500_000
+              ? "destructive"
+              : health.cashVarianceAbsAmount > 0
+                ? "warning"
                 : "neutral"
-            }
-          />
-        )}
-        {visible.includes("cash") && (
-          <Metric
-            label={copy.workQueue.cashVariance}
-            value={formatCount(health.cashVarianceSessionCount)}
-            hint={copy.workQueue.absoluteVarianceHint(
-              formatMoney(health.cashVarianceAbsAmount),
-            )}
-            tone={
-              health.cashVarianceAbsAmount >= 500_000
-                ? "destructive"
-                : health.cashVarianceAbsAmount > 0
-                  ? "warning"
-                  : "neutral"
-            }
-          />
-        )}
-        {visible.includes("foodCost") && (
-          <Metric
-            label={copy.workQueue.foodCostAlert}
-            value={formatCount(health.foodCostExceptionCount)}
-            hint={
-              health.topFoodCostExceptionName
-                ? `${health.topFoodCostExceptionName} · ${formatPercent(health.topFoodCostExceptionPct)}`
-                : copy.workQueue.thresholdHint(
-                    formatPercent(FOOD_COST_EXCEPTION_THRESHOLD),
-                  )
-            }
-            tone={health.foodCostExceptionCount > 0 ? "warning" : "neutral"}
-          />
-        )}
-        {visible.includes("webhook") && (
-          <Metric
-            label={copy.workQueue.webhookFailures}
-            value={formatCount(summary?.failed_webhook_count)}
-            hint={copy.workQueue.webhookFailuresHint}
-            tone={
-              (summary?.failed_webhook_count ?? 0) > 0
-                ? "destructive"
-                : "neutral"
-            }
-          />
-        )}
+          }
+        />
+      )}
+      {visible.includes("foodCost") && (
+        <Metric
+          label={copy.workQueue.foodCostAlert}
+          value={formatNullableCount(health.foodCostExceptionCount)}
+          hint={
+            health.topFoodCostExceptionName
+              ? `${health.topFoodCostExceptionName} · ${formatPercent(health.topFoodCostExceptionPct)}`
+              : copy.workQueue.thresholdHint(
+                  formatPercent(FOOD_COST_EXCEPTION_THRESHOLD),
+                )
+          }
+          tone={health.foodCostExceptionCount > 0 ? "warning" : "neutral"}
+        />
+      )}
+      {visible.includes("webhook") && (
+        <Metric
+          label={copy.workQueue.webhookFailures}
+          value={formatNullableCount(summary?.failed_webhook_count)}
+          hint={copy.workQueue.webhookFailuresHint}
+          tone={
+            (summary?.failed_webhook_count ?? 0) > 0 ? "destructive" : "neutral"
+          }
+        />
+      )}
     </AppSection>
   );
 }

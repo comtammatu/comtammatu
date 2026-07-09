@@ -7,6 +7,7 @@ import {
   type PermissionKey,
 } from "@comtammatu/shared/auth";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
+import { messages } from "@lib/messages";
 import { fetchIngredients, fetchUnitOptions } from "./ingredient-actions";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
@@ -26,6 +27,7 @@ import type {
   BranchOption,
   FinishedGoodOption,
   IngredientOption,
+  InventoryLocationOption,
 } from "./production-types";
 
 export { canAccessProductionSurface };
@@ -60,6 +62,16 @@ type BranchPreviewRow = {
   is_active: boolean | null;
 };
 
+type InventoryLocationPreviewRow = {
+  id: number;
+  name: string;
+  branch_id: number;
+  location_kind: string | null;
+  is_default_receive: boolean | null;
+  is_default_consumption: boolean | null;
+  is_active: boolean | null;
+};
+
 export interface ProductionSurfaceData {
   role: ProductionOperatorRole;
   canManageCatalog: boolean;
@@ -69,6 +81,7 @@ export interface ProductionSurfaceData {
   canAdjustStock: boolean;
   productionBranches: BranchOption[];
   targetBranches: BranchOption[];
+  locations: InventoryLocationOption[];
   unitOptions: UnitOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
@@ -148,7 +161,9 @@ export async function loadProductionSurfaceData({
     canAdjustStock,
     hasBranchAccess,
   ] = await Promise.all([
-    isOwner ? Promise.resolve(true) : currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
+    isOwner
+      ? Promise.resolve(true)
+      : currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
     currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
     currentUserHasAnyPermissionAny(PRODUCTION_RECIPE_MANAGE_PERMISSIONS),
     currentUserHasAnyPermission(
@@ -174,31 +189,49 @@ export async function loadProductionSurfaceData({
         data: [] as ProductionRecipeRow[],
       });
 
-    const [branchesRes, ingredientsRes, runsRes, recipesRes, unitOptionsRes] =
-    await Promise.all([
-      supabase
-        .from("branches")
-        .select("id, name, branch_kind, is_active")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("is_active", true)
-        .order("name"),
-      fetchIngredients(),
-      fetchProductionRuns(),
-      recipesPromise,
-      fetchUnitOptions(),
-    ]);
+  const [
+    branchesRes,
+    locationsRes,
+    ingredientsRes,
+    runsRes,
+    recipesRes,
+    unitOptionsRes,
+  ] = await Promise.all([
+    supabase
+      .from("branches")
+      .select("id, name, branch_kind, is_active")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .order("name"),
+    supabase
+      .from("inventory_locations")
+      .select(
+        "id, name, branch_id, location_kind, is_default_receive, is_default_consumption, is_active",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true }),
+    fetchIngredients(),
+    fetchProductionRuns(),
+    recipesPromise,
+    fetchUnitOptions(),
+  ]);
 
   const branches = (branchesRes.data ?? []) as BranchPreviewRow[];
+  const branchById = new Map(branches.map((branch) => [branch.id, branch]));
   // Production site choices must remain production-compatible locations only (D068).
   const productionBranchesList: BranchOption[] = branches
     .filter((branch) => isProductionBranchKind(branch.branch_kind))
     .map((branch) => ({
       id: branch.id,
       name: branch.name,
+      branchKind: branch.branch_kind,
     }));
   const allTargetBranches: BranchOption[] = branches.map((branch) => ({
     id: branch.id,
     name: branch.name,
+    branchKind: branch.branch_kind,
   }));
   const scopedBranchId = claims.branch_id ?? routeBranchId;
   let productionBranches: BranchOption[] = productionBranchesList;
@@ -231,6 +264,24 @@ export async function loadProductionSurfaceData({
       units: ingredient.units,
     }));
 
+  const locations: InventoryLocationOption[] = (
+    (locationsRes.data ?? []) as InventoryLocationPreviewRow[]
+  )
+    .filter((location) => location.is_active !== false)
+    .map((location) => {
+      const branch = branchById.get(location.branch_id);
+      return {
+        id: location.id,
+        name: location.name,
+        branchId: location.branch_id,
+        branchName: branch?.name ?? "Chi nhánh",
+        branchKind: branch?.branch_kind ?? null,
+        kind: location.location_kind,
+        isDefaultReceive: location.is_default_receive === true,
+        isDefaultConsumption: location.is_default_consumption === true,
+      };
+    });
+
   return {
     role,
     canManageCatalog,
@@ -240,6 +291,7 @@ export async function loadProductionSurfaceData({
     canAdjustStock,
     productionBranches,
     targetBranches: allTargetBranches,
+    locations,
     unitOptions: unitOptionsRes.success ? (unitOptionsRes.data ?? []) : [],
     ingredients,
     finishedGoods,
@@ -247,6 +299,6 @@ export async function loadProductionSurfaceData({
     recipes: recipesRes.success ? (recipesRes.data ?? []) : [],
     recipeLoadError: recipesRes.success
       ? null
-      : (recipesRes.error ?? "Không thể tải công thức sản xuất."),
+      : (recipesRes.error ?? messages.inventory.productionRecipes.loadFailed),
   };
 }

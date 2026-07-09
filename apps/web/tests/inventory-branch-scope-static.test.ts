@@ -90,9 +90,6 @@ test("shared inventory PageContents route scope-read through resolveInventoryLis
     "purchase-orders/page.tsx",
     "purchase-orders/new/page.tsx",
     "transfers/page.tsx",
-    "transfers/new/page.tsx",
-    "transfers/[id]/page.tsx",
-    "stock/page.tsx",
     "stock/[ingredientId]/page.tsx",
     "stocktake/page.tsx",
     "stocktake/new/page.tsx",
@@ -117,6 +114,27 @@ test("shared inventory PageContents route scope-read through resolveInventoryLis
       `${relPath} does not use the unified list-scope engine`,
     );
   }
+
+  const stockLoaderSource = readFileSync(
+    new URL("../lib/inventory/stock-on-hand-data.ts", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(stockLoaderSource, legacyDualityPattern);
+  assert.match(stockLoaderSource, /resolveInventoryListScope/);
+
+  const transferCreateLoaderSource = readFileSync(
+    new URL("../lib/inventory/transfer-create-data.ts", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(transferCreateLoaderSource, legacyDualityPattern);
+  assert.match(transferCreateLoaderSource, /resolveInventoryListScope/);
+
+  const transferDetailLoaderSource = readFileSync(
+    new URL("../lib/inventory/transfer-detail-data.ts", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(transferDetailLoaderSource, legacyDualityPattern);
+  assert.match(transferDetailLoaderSource, /resolveInventoryListScope/);
 });
 
 test("adapter -> office sees every active branch kind and can select all", async () => {

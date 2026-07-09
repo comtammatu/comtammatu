@@ -42,7 +42,7 @@ export default function LoginPage() {
           <AppSection
             title={ACTIONS_VI.signIn}
             description="Nhập tài khoản nhân viên được cấp để tiếp tục."
-            className="bg-card/50 shadow-effect-card-resting backdrop-blur-md transition-all border-border/20 hover:border-border/30"
+            className="bg-card/50 shadow-effect-card-resting backdrop-blur-md transition-[background-color,border-color] border-border/20 hover:border-border/30"
           >
             <LoginForm />
           </AppSection>

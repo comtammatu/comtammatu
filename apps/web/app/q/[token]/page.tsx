@@ -26,6 +26,7 @@ export default async function SelfOrderPage({
       <AppPage
         width="narrow"
         density="compact"
+        mobile
         className="min-h-dvh bg-background"
         contentClassName="min-h-dvh justify-center"
       >

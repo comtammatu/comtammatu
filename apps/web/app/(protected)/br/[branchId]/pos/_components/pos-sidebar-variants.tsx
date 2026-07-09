@@ -1,8 +1,8 @@
 "use client";
 
 import { memo, type ComponentProps } from "react";
-import { PosSessionHeader } from "../pos-session-header";
-import { PosSidebarContent, PosSidebarTabs } from "../pos-sidebar-panel";
+import { PosSessionTopBar } from "../pos-session-header";
+import { PosSidebarContent } from "../pos-sidebar-panel";
 import { AppendDraftPane } from "./append-draft-pane";
 import { CartPane } from "./cart-pane";
 import { OrderListPane } from "./order-list-pane";
@@ -14,51 +14,12 @@ interface SidebarHeaderInputs {
   onShowCloseSession: () => void;
 }
 
-export interface TabbedSidebarProps extends SidebarHeaderInputs {
-  isContextGate: boolean;
-  showOrders: boolean;
-  onShowOrdersChange: (show: boolean) => void;
-  sidebarContentProps: SidebarContentProps;
-}
-
-/** Tablet-class layout (md through lg-1): tabs-based sidebar. */
-function TabbedSidebarComponent({
-  canCloseShift,
-  onShowCloseSession,
-  isContextGate,
-  showOrders,
-  onShowOrdersChange,
-  sidebarContentProps,
-}: TabbedSidebarProps) {
-  const contentProps = isContextGate
-    ? { ...sidebarContentProps, showOrders: true }
-    : sidebarContentProps;
-
-  return (
-    <div className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background md:flex lg:hidden">
-      <PosSessionHeader
-        canCloseShift={canCloseShift}
-        onShowCloseSession={onShowCloseSession}
-      />
-      {!isContextGate && sidebarContentProps.appendDraft.target == null && (
-        <PosSidebarTabs
-          showOrders={showOrders}
-          onShowOrdersChange={onShowOrdersChange}
-        />
-      )}
-      <PosSidebarContent {...contentProps} />
-    </div>
-  );
-}
-
-export const TabbedSidebar = memo(TabbedSidebarComponent);
-
 export interface SplitSidebarProps extends SidebarHeaderInputs {
   isContextGate: boolean;
   sidebarContentProps: SidebarContentProps;
 }
 
-/** Wide layout (lg+): cart + order-list side by side. */
+/** Wide layout (xl+): cart + order-list side by side. */
 function SplitSidebarComponent({
   canCloseShift,
   onShowCloseSession,
@@ -81,8 +42,8 @@ function SplitSidebarComponent({
 
   if (isContextGate) {
     return (
-      <div className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background lg:flex xl:w-96">
-        <PosSessionHeader
+      <div className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background xl:flex 2xl:w-96">
+        <PosSessionTopBar
           canCloseShift={canCloseShift}
           onShowCloseSession={onShowCloseSession}
         />
@@ -97,8 +58,8 @@ function SplitSidebarComponent({
   }
 
   return (
-    <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background lg:flex">
-      <PosSessionHeader
+    <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
+      <PosSessionTopBar
         canCloseShift={canCloseShift}
         onShowCloseSession={onShowCloseSession}
       />

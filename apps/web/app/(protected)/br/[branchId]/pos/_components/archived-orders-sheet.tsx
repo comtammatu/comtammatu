@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import {
   OrderCardSummary,
-  OrderStatusBadge,
+  OrderStatePill,
   type SessionOrder,
 } from "../order-history";
 import {
@@ -134,7 +134,7 @@ export function ArchivedOrdersSheet({
           }}
           variant="outline"
           size="touch"
-          className="grid w-full grid-cols-2 gap-0"
+          className="grid w-full grid-cols-2 gap-1"
         >
           <ToggleGroupItem
             value="session"
@@ -281,7 +281,7 @@ function ArchivedOrderRow({
     >
       <OrderCardSummary
         order={order}
-        rightMeta={<OrderStatusBadge order={order} />}
+        rightMeta={<OrderStatePill order={order} />}
       />
       <ItemFooter className="mt-2 justify-end border-t border-border/60 pt-2">
         <Button

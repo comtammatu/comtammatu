@@ -6,13 +6,11 @@ import {
   Printer as IconPrinter,
 } from "lucide-react";
 import { canAccess } from "@comtammatu/shared/auth";
+import { AppEmptyState } from "@/components/surface";
 import {
-  AppEmptyState,
-} from "@/components/surface";
-import {
-  EmployeeActionSection,
-  EmployeePage,
-} from "@lib/staff-runtime/components/staff-runtime-page";
+  BranchOperatorActionSection,
+  BranchOperatorPage,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { buildHubTiles } from "./_lib/hub-tiles";
@@ -52,12 +50,12 @@ export default async function BranchSettingsHubPage({
   const hasContent = visibleTiles.length > 0;
 
   return (
-    <EmployeePage
+    <BranchOperatorPage
       title={copy.hubTitle}
       description={copy.hubDescription(branch.name)}
     >
       {hasContent ? (
-        <EmployeeActionSection
+        <BranchOperatorActionSection
           title={copy.setupEssentialsTitle}
           description={copy.setupLaneDescription}
           links={visibleTiles.map((tile) => ({
@@ -67,7 +65,6 @@ export default async function BranchSettingsHubPage({
             title: tile.title,
             description: tile.description,
           }))}
-          columns={1}
         />
       ) : (
         <AppEmptyState
@@ -76,6 +73,6 @@ export default async function BranchSettingsHubPage({
           description={copy.hubEmptyDescription}
         />
       )}
-    </EmployeePage>
+    </BranchOperatorPage>
   );
 }

@@ -44,7 +44,11 @@ export function usePosMenuSync({ branchId, setCategories }: UsePosMenuSyncArgs) 
           config: { broadcast: { self: false }, private: true },
         })
         .on("broadcast", { event: "ops" }, (payload) => {
-          if (payload.payload?.domain === "pos") {
+          const event = payload.payload;
+          if (
+            event?.domain === "pos" ||
+            (event?.domain === "inventory" && event?.table === "stock_levels")
+          ) {
             handleMenuRefetch();
           }
         })

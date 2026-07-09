@@ -39,7 +39,7 @@ interface Props {
   bankOpeningBalance: number;
   bankInSince: number;
   bankOutSince: number;
-  cashDeltaAfterPaidExpenses: number;
+  cashDeltaAfterPaidOut: number;
   todayBusinessDate: string;
   canManageCashOpening: boolean;
 }
@@ -79,7 +79,7 @@ export function CashPanel({
   bankOpeningBalance,
   bankInSince,
   bankOutSince,
-  cashDeltaAfterPaidExpenses,
+  cashDeltaAfterPaidOut,
   todayBusinessDate,
   canManageCashOpening,
 }: Props) {
@@ -204,10 +204,10 @@ export function CashPanel({
         <p
           className={cn(
             "truncate font-mono text-2xl font-semibold tabular-nums",
-            cashDeltaAfterPaidExpenses >= 0 ? "text-success" : "text-warning",
+            cashDeltaAfterPaidOut >= 0 ? "text-success" : "text-warning",
           )}
         >
-          {formatVND(cashDeltaAfterPaidExpenses)}
+          {formatVND(cashDeltaAfterPaidOut)}
         </p>
         <p className="text-xs text-muted-foreground">{copy.cashDeltaHint}</p>
       </AppSection>

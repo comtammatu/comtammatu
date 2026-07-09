@@ -125,6 +125,12 @@ export function PurchaseOrdersClient({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_FILTER_VALUE);
   const [supplierFilter, setSupplierFilter] = useState(ALL_FILTER_VALUE);
+  const isOperator = purchaseOrdersBasePath.startsWith("/br/");
+  const controlSize = isOperator ? "touch" : "default";
+  const compactActionSize = isOperator ? "touch" : "sm";
+  const fieldClassName = isOperator
+    ? "min-h-12 w-full sm:h-10"
+    : "min-h-10 w-full sm:h-10";
 
   // Total across the whole tenant/branch (server count-only queries), so the
   // status tabs stay accurate even though the table is keyset-paginated.
@@ -189,7 +195,7 @@ export function PurchaseOrdersClient({
       header: columnPoNumber,
       className: "min-w-40",
       render: (row) => (
-        <span className="font-mono font-medium">
+        <span className="font-mono font-medium tabular-nums">
           {row.display_id ?? row.po_number}
         </span>
       ),
@@ -198,11 +204,7 @@ export function PurchaseOrdersClient({
       key: "supplier",
       header: columnSupplier,
       className: "min-w-52",
-      render: (row) => (
-        <span className="text-muted-foreground">
-          {row.suppliers?.name ?? poCopy.supplierFallback}
-        </span>
-      ),
+      render: (row) => row.suppliers?.name ?? poCopy.supplierFallback,
     },
     {
       key: "status",
@@ -218,7 +220,7 @@ export function PurchaseOrdersClient({
       className: "min-w-32",
       render: (row) => (
         <span
-          className="text-muted-foreground"
+          className="font-mono tabular-nums text-muted-foreground"
           title={formatRelative(row.ordered_at)}
         >
           {formatDate(row.ordered_at)}
@@ -231,7 +233,7 @@ export function PurchaseOrdersClient({
       render: (row) => (
         <p
           className={cn(
-            "max-w-md truncate text-sm text-muted-foreground",
+            "max-w-md truncate text-muted-foreground",
             !row.notes && "text-muted-foreground/60",
           )}
         >
@@ -244,7 +246,7 @@ export function PurchaseOrdersClient({
       header: FORM_VI.action,
       className: "w-28 text-right",
       render: (row) => (
-        <Button asChild size="sm" variant="outline">
+        <Button asChild size={compactActionSize} variant="outline">
           <Link href={`${purchaseOrdersBasePath}/${row.id}`}>
             {actionView}
             <IconArrowRight className="size-4" />
@@ -258,7 +260,7 @@ export function PurchaseOrdersClient({
     <Button
       asChild
       disabled={suppliers.length === 0}
-      size={embedded ? "touch" : "default"}
+      size={controlSize}
     >
       <Link href={`${purchaseOrdersBasePath}/new`}>
         <IconPlus className="size-4" />
@@ -269,9 +271,7 @@ export function PurchaseOrdersClient({
 
   const content = (
     <>
-      {embedded ? (
-        <div className="flex justify-end">{createPoAction}</div>
-      ) : (
+      {embedded ? null : (
         <AppPageHeader
           eyebrow={inventoryShellCopy.moduleName}
           title={tRoute("/inventory/purchase-orders", "heading")}
@@ -304,7 +304,7 @@ export function PurchaseOrdersClient({
             reorderSuggestionsCount,
           )}
           action={
-            <Button asChild size={embedded ? "touch" : "sm"}>
+            <Button asChild size={compactActionSize}>
               <Link
                 href={`${purchaseOrdersBasePath}/new?branchId=${reorderSuggestionsBranchId}`}
               >
@@ -318,75 +318,84 @@ export function PurchaseOrdersClient({
         </AppSection>
       ) : null}
 
-      <AppToolbar
-        variant={embedded ? "inline" : "card"}
-        className="items-stretch sm:items-center"
-      >
-        <InputGroup
-          className={
-            embedded ? "min-h-12 w-full" : "min-h-10 w-full sm:h-10 sm:flex-1"
+      <AppSection className="overflow-hidden" contentFlush>
+        <AppToolbar
+          variant="inline"
+          className="items-stretch sm:items-center"
+          search={
+            <InputGroup className={fieldClassName}>
+              <InputGroupAddon>
+                <IconSearch />
+              </InputGroupAddon>
+              <InputGroupInput
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={poCopy.searchPlaceholder}
+              />
+            </InputGroup>
           }
-        >
-          <InputGroupAddon>
-            <IconSearch />
-          </InputGroupAddon>
-          <InputGroupInput
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={poCopy.searchPlaceholder}
-          />
-        </InputGroup>
+          filters={
+            <>
+              <Select
+                value={statusFilter}
+                onValueChange={(val) =>
+                  setStatusFilter((current) =>
+                    current === val ? ALL_FILTER_VALUE : val,
+                  )
+                }
+              >
+                <SelectTrigger
+                  size={controlSize}
+                  className={
+                    isOperator
+                      ? "w-full sm:w-44"
+                      : "min-h-10 w-full sm:h-10 sm:w-44"
+                  }
+                >
+                  <SelectValue placeholder={poCopy.statusPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_FILTER_VALUE}>
+                    {poCopy.allStatuses}
+                  </SelectItem>
+                  {PO_FILTER_KEYS.map((statusKey) => (
+                    <SelectItem key={statusKey} value={statusKey}>
+                      {tStatus(statusKey, "table")} (
+                      {statusCounts[statusKey] ?? 0})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-        <Select
-          value={statusFilter}
-          onValueChange={(val) =>
-            setStatusFilter((current) =>
-              current === val ? ALL_FILTER_VALUE : val,
-            )
+              <Combobox
+                value={supplierFilter}
+                onValueChange={setSupplierFilter}
+                options={[
+                  { value: ALL_FILTER_VALUE, label: poCopy.allSuppliers },
+                  ...suppliers.map((supplier) => ({
+                    value: String(supplier.id),
+                    label: supplier.name,
+                  })),
+                ]}
+                placeholder={poCopy.supplierRequired}
+                searchPlaceholder={poCopy.supplierSearchPlaceholder}
+                aria-label={poCopy.supplierFilterAria}
+                triggerClassName={
+                  isOperator
+                    ? "min-h-12 w-full sm:w-48"
+                    : "min-h-10 w-full sm:h-10 sm:w-48"
+                }
+              />
+            </>
           }
-        >
-          <SelectTrigger
-            size={embedded ? "touch" : "default"}
-            className={embedded ? "w-full" : "min-h-10 w-full sm:h-10 sm:w-44"}
-          >
-            <SelectValue placeholder={poCopy.statusPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_FILTER_VALUE}>
-              {poCopy.allStatuses}
-            </SelectItem>
-            {PO_FILTER_KEYS.map((statusKey) => (
-              <SelectItem key={statusKey} value={statusKey}>
-                {tStatus(statusKey, "table")} ({statusCounts[statusKey] ?? 0})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Combobox
-          value={supplierFilter}
-          onValueChange={setSupplierFilter}
-          options={[
-            { value: ALL_FILTER_VALUE, label: poCopy.allSuppliers },
-            ...suppliers.map((supplier) => ({
-              value: String(supplier.id),
-              label: supplier.name,
-            })),
-          ]}
-          placeholder={poCopy.supplierRequired}
-          searchPlaceholder={poCopy.supplierSearchPlaceholder}
-          aria-label={poCopy.supplierFilterAria}
-          triggerClassName={
-            embedded ? "min-h-12 w-full" : "min-h-10 w-full sm:h-10 sm:w-48"
+          bulk={
+            <Badge variant="outline" className="rounded-full">
+              {filteredRows.length} / {totalCount} PO
+            </Badge>
           }
+          actions={embedded ? createPoAction : null}
         />
 
-        <Badge variant="outline" className="rounded-full">
-          {filteredRows.length} / {totalCount} PO
-        </Badge>
-      </AppToolbar>
-
-      <AppSection className="overflow-hidden" contentFlush>
         <DataTable
           columns={columns}
           data={filteredRows}

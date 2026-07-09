@@ -5,8 +5,10 @@ import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/staff-runtime-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { getVNMonthStartDateString } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
+import type { SchedulePlane } from "./schedule-client";
 
 const copy = messages.employee.home;
 
@@ -17,20 +19,25 @@ const EMPTY_SCHEDULE: ScheduleMonthData = {
   monthlyAnnualLeaveDays: 0,
 };
 
-export async function SchedulePageContent({
-  leaveHref = "/br",
-  profileHref,
-}: {
+type StaffSchedulePageContentProps = {
   leaveHref?: string;
   profileHref?: string;
-} = {}) {
+  plane?: SchedulePlane;
+};
+
+export async function StaffSchedulePageContent({
+  leaveHref = "/br",
+  profileHref,
+  plane = "employee",
+}: StaffSchedulePageContentProps = {}) {
   const ctx = await getEmployeeContext();
+  const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
 
   if (!ctx) {
     return (
-      <EmployeePage title={copy.scheduleTitle} hideHeaderOnMobile>
+      <PageShell title={copy.scheduleTitle} hideHeaderOnMobile>
         <EmployeeMissingProfileEmpty profileHref={profileHref} />
-      </EmployeePage>
+      </PageShell>
     );
   }
 
@@ -49,7 +56,7 @@ export async function SchedulePageContent({
   ]);
 
   return (
-    <EmployeePage title={copy.scheduleTitle} hideHeaderOnMobile>
+    <PageShell title={copy.scheduleTitle} hideHeaderOnMobile>
       <ScheduleClient
         initialData={
           scheduleResult.success
@@ -59,11 +66,14 @@ export async function SchedulePageContent({
         initialMonthStart={monthStart}
         leaveHref={leaveHref}
         monthlySalary={employeeResult.data?.base_salary ?? 0}
+        plane={plane}
       />
-    </EmployeePage>
+    </PageShell>
   );
 }
 
+export const SchedulePageContent = StaffSchedulePageContent;
+
 export default function SchedulePage() {
-  return <SchedulePageContent />;
+  return <StaffSchedulePageContent />;
 }

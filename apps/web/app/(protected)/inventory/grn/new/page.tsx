@@ -30,6 +30,7 @@ import {
   type OpenPurchaseOrderRow,
 } from "../../purchase-order-actions";
 import { GrnFromPoList } from "./grn-from-po-list";
+import { GrnCreatePageContent } from "./[supplierId]/page";
 import { SupplierPicker } from "./supplier-picker";
 
 type SupplierRow = {
@@ -109,8 +110,18 @@ function formatRecentGrnCount(count: number): string {
   return `${count} phiếu`;
 }
 
+function parseSupplierIdParam(raw: string | string[] | undefined): number | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value) return null;
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 interface GrnNewPageContentProps {
-  searchParams?: Promise<{ branchId?: string | string[] }>;
+  searchParams?: Promise<{
+    branchId?: string | string[];
+    supplierId?: string | string[];
+  }>;
   routeBranchId?: number;
   basePath?: string;
   grnListBasePath?: string;
@@ -125,6 +136,7 @@ export async function GrnNewPageContent({
   embedded = false,
 }: GrnNewPageContentProps) {
   const params = searchParams ? await searchParams : {};
+  const selectedSupplierId = parseSupplierIdParam(params.supplierId);
   const { supabase, claims } = await loadAuthState();
   if (
     !PROCUREMENT_ROLES.includes(claims.user_role) ||
@@ -166,7 +178,16 @@ export async function GrnNewPageContent({
     lastLabel: formatLastGrn(supplier.last_grn_at),
   }));
 
-  const content = (
+  const content = selectedSupplierId ? (
+    <GrnCreatePageContent
+      supplierId={selectedSupplierId}
+      searchParams={Promise.resolve(params)}
+      routeBranchId={routeBranchId}
+      basePath={basePath}
+      grnBasePath={grnListBasePath}
+      embedded
+    />
+  ) : (
     <>
       <AppSection
         icon={<IconTruck />}
@@ -177,6 +198,7 @@ export async function GrnNewPageContent({
           <SupplierPicker
             suppliers={pickerSuppliers}
             basePath={basePath}
+            branchId={branchId}
             canCreate={canCreateSupplier}
           />
         </div>
@@ -199,7 +221,7 @@ export async function GrnNewPageContent({
   }
 
   const header = (
-    <AppPageHeader
+      <AppPageHeader
       breadcrumb={
         <Link
           href={grnListBasePath}
@@ -209,8 +231,14 @@ export async function GrnNewPageContent({
         </Link>
       }
       eyebrow={INVENTORY_VI.receivingEyebrow}
-      title={INVENTORY_VI.chooseSourceTitle}
-      description={INVENTORY_VI.chooseSourceDescription}
+      title={
+        selectedSupplierId ? INVENTORY_VI.newGrn : INVENTORY_VI.chooseSourceTitle
+      }
+      description={
+        selectedSupplierId
+          ? INVENTORY_VI.receiveBySupplierDescription
+          : INVENTORY_VI.chooseSourceDescription
+      }
     />
   );
 
@@ -224,7 +252,10 @@ export async function GrnNewPageContent({
 export default async function GrnNewPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ branchId?: string | string[] }>;
+  searchParams?: Promise<{
+    branchId?: string | string[];
+    supplierId?: string | string[];
+  }>;
 }) {
   return <GrnNewPageContent searchParams={searchParams} />;
 }

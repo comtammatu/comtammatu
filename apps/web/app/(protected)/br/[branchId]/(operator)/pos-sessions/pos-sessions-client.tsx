@@ -14,6 +14,7 @@ import {
   ChevronRight as IconChevronRight,
 } from "lucide-react";
 import { AppEmptyState, AppSection } from "@/components/surface";
+import { BranchOperatorFrame } from "@lib/branch-operator/components/branch-operator-page";
 import {
   Drawer,
   DrawerContent,
@@ -21,8 +22,7 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from "@comtammatu/ui/components/drawer";
-import {
-} from "@/components/data-table/data-table";
+import {} from "@/components/data-table/data-table";
 import { formatVND } from "@comtammatu/shared/format";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import { formatVNDateTime, formatVNTime } from "@comtammatu/shared/time";
@@ -47,8 +47,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
-import {
-} from "@comtammatu/ui/components/sheet";
+import {} from "@comtammatu/ui/components/sheet";
 import type { CartModifier, CartSide } from "../../pos/types";
 import type { PosSessionReport } from "./report-actions";
 import { resolvePosSessionVariance } from "./actions";
@@ -169,7 +168,6 @@ export function PosSessionsClient({
   ).length;
 
   const summary = useMemo(() => buildSummary(orders), [orders]);
-  
 
   if (sessions.length === 0) {
     return (
@@ -257,9 +255,7 @@ export function PosSessionsClient({
         {report ? <SessionReportCard report={report} /> : null}
       </div>
 
-      {selectedSession ? (
-        <div />
-      ) : null}
+      {selectedSession ? <div /> : null}
 
       <OrderDetailDrawer
         order={selectedOrder}
@@ -548,7 +544,7 @@ function SessionDetailCard({
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
         <Metric
           icon={<IconReceipt className="size-4" />}
           label={messages.settings.posSessions.totalBills}
@@ -584,7 +580,7 @@ function SessionDetailCard({
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 lg:grid-cols-3">
         <CashLine
           label={messages.settings.posSessions.openingCash}
           value={session.opening_cash}
@@ -601,7 +597,7 @@ function SessionDetailCard({
 
       <Separator />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 text-sm">
+      <div className="grid gap-3 text-sm lg:grid-cols-2 xl:grid-cols-4">
         <KV
           label={messages.settings.posSessions.cashCollected}
           value={formatVND(summary.cashRevenue)}
@@ -691,8 +687,6 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
     1,
     ...category_breakdown.map((c) => c.revenue),
   );
-  
-  
 
   return (
     <AppSection
@@ -700,7 +694,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
       description={messages.settings.posSessions.reportDescription}
       contentClassName="gap-4"
     >
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
         <Metric
           icon={<IconReceipt className="size-4" />}
           label={messages.settings.posSessions.aov}
@@ -928,7 +922,7 @@ function OrderDetailDrawer({
         <ScrollArea className="min-h-0 flex-1">
           {order ? (
             <div className="flex flex-col gap-4">
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 lg:grid-cols-2">
                 <DetailFact
                   label={messages.settings.posSessions.orderNumber}
                   value={order.order_number}
@@ -978,7 +972,7 @@ function OrderDetailDrawer({
                   {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: operator hub uses vietnamese */}
                   <span>Món ăn</span>
                 </SectionLabel>
-                <div className="mt-2 divide-y rounded-md border">
+                <BranchOperatorFrame className="mt-2 divide-y">
                   {order.order_items.map((item) => {
                     const hasAddOns =
                       item.modifiers.length > 0 || item.sides.length > 0;
@@ -1071,10 +1065,10 @@ function OrderDetailDrawer({
                       </div>
                     );
                   })}
-                </div>
+                </BranchOperatorFrame>
               </div>
 
-              <div className="flex flex-col gap-1.5 rounded-md border px-3 py-2 text-sm">
+              <BranchOperatorFrame className="flex flex-col gap-1.5 px-3 py-2 text-sm">
                 <KVRow
                   label={messages.settings.posSessions.subtotal}
                   value={formatVND(order.subtotal)}
@@ -1104,7 +1098,7 @@ function OrderDetailDrawer({
                   value={formatVND(order.total_amount)}
                   bold
                 />
-              </div>
+              </BranchOperatorFrame>
 
               {order.note ? (
                 <NoteCallout label={messages.settings.posSessions.billNote}>

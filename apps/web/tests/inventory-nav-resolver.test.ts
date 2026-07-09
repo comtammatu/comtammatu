@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { resolveInventoryNav } from "../app/(protected)/inventory/_lib/inventory-nav";
+import {
+  resolveInventoryNav,
+  withInventoryBranchNavScope,
+} from "../app/(protected)/inventory/_lib/inventory-nav";
 
 function hrefs(groups: ReturnType<typeof resolveInventoryNav>): Set<string> {
   return new Set(groups.flatMap((group) => group.items.map((item) => item.href)));
@@ -12,6 +15,7 @@ const shellSource = readFileSync(
   "app/(protected)/inventory/_components/inventory-shell.tsx",
   "utf8",
 );
+const appShellSource = readFileSync("app/components/app-shell.tsx", "utf8");
 const settingsLayoutSource = readFileSync(
   "app/(protected)/inventory/settings/layout.tsx",
   "utf8",
@@ -30,6 +34,10 @@ const settingsUnitsSource = readFileSync(
 );
 const qcSettingsSource = readFileSync(
   "app/(protected)/inventory/settings/qc/qc-settings-client.tsx",
+  "utf8",
+);
+const workspaceBottomNavSource = readFileSync(
+  "app/components/workspace-bottom-nav.tsx",
   "utf8",
 );
 
@@ -51,7 +59,6 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
     "/inventory/operations",
     "/inventory/supplier-invoices",
     "/inventory/supplier-returns",
-    "/inventory/transfers",
     "/inventory/production",
     "/inventory/settings",
     "/inventory/suppliers",
@@ -59,6 +66,14 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
     "/inventory/recipes",
   ]) {
     assert.equal(visible.has(href), true, `owner inventory nav must include ${href}`);
+  }
+
+  for (const href of ["/inventory/transfers"]) {
+    assert.equal(
+      visible.has(href),
+      false,
+      `${href} is covered by a parent workflow entry, not its own sidebar row`,
+    );
   }
 });
 
@@ -120,6 +135,29 @@ test("inventory sidebar sends count-approval-only users to count slips", () => {
   assert.equal(visible.has("/inventory/count-slips"), true);
 });
 
+test("inventory nav click targets preserve branch URL scope", () => {
+  const groups = resolveInventoryNav({
+    userRole: "owner",
+    showProcurement: true,
+    showProduction: true,
+    showCatalogManagement: true,
+    showSettings: true,
+    showWasteApprovals: true,
+    showCountAssignments: true,
+    showCountSlips: true,
+  });
+  const scoped = withInventoryBranchNavScope(groups, 3);
+  const stockItem = scoped
+    .flatMap((group) => group.items)
+    .find((item) => item.href === "/inventory/stock");
+
+  assert.equal(stockItem?.href, "/inventory/stock");
+  assert.equal(stockItem?.linkHref, "/inventory/stock?branchId=3");
+  assert.match(appShellSource, /href=\{subItem\.linkHref \?\? subItem\.href\}/);
+  assert.match(workspaceBottomNavSource, /href: item\.linkHref \?\? item\.href/);
+  assert.equal(withInventoryBranchNavScope(groups, null), groups);
+});
+
 test("owner inventory nav excludes /inventory/drafts (folded into GRN list drafts tab)", () => {
   const visible = hrefs(
     resolveInventoryNav({
@@ -141,24 +179,25 @@ test("owner inventory nav excludes /inventory/drafts (folded into GRN list draft
   );
 });
 
-test("office inventory nav shows on-hand, stocktake, and transfers as cross-branch oversight (D061, amends D058 W3)", () => {
-  const visible = hrefs(
-    resolveInventoryNav({
-      userRole: "owner",
-      showProcurement: true,
-      showProduction: true,
-      showCatalogManagement: true,
-      showSettings: true,
-      showWasteApprovals: true,
-      showCountAssignments: true,
-      showCountSlips: true,
-    }),
-  );
+test("office inventory nav keeps transfer routes under Giao dịch kho", () => {
+  const groups = resolveInventoryNav({
+    userRole: "owner",
+    showProcurement: true,
+    showProduction: true,
+    showCatalogManagement: true,
+    showSettings: true,
+    showWasteApprovals: true,
+    showCountAssignments: true,
+    showCountSlips: true,
+  });
+  const visible = hrefs(groups);
+  const operationsItem = groups
+    .flatMap((group) => group.items)
+    .find((item) => item.href === "/inventory/operations");
 
   for (const href of [
     "/inventory/stock",
     "/inventory/stocktake",
-    "/inventory/transfers",
   ]) {
     assert.equal(
       visible.has(href),
@@ -166,6 +205,12 @@ test("office inventory nav shows on-hand, stocktake, and transfers as cross-bran
       `office inventory nav must advertise ${href} as an oversight entry — additive to the branch operator door at /br/[id]/stock/*`,
     );
   }
+
+  assert.equal(visible.has("/inventory/transfers"), false);
+  assert.ok(
+    operationsItem?.matchPrefixes?.includes("/inventory/transfers"),
+    "Giao dịch kho must own the transfer route active state",
+  );
 });
 
 test("inventory desktop workflow groups keep the canonical operator order", () => {
@@ -186,7 +231,7 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
       "0 · Nay",
       "1 · Kiểm soát tồn",
       "2 · Nhập/Nhận/Đối soát",
-      "3 · Điều phối/Sản xuất",
+      "3 · Sản xuất",
       "4 · Danh mục & thiết lập",
     ],
   );
@@ -196,7 +241,7 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
       "/inventory",
       "/inventory/stock",
       "/inventory/operations",
-      "/inventory/transfers",
+      "/inventory/production",
       "/inventory/settings",
     ],
   );

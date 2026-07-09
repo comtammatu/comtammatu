@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { Database, Json } from "@comtammatu/database";
+import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
   PERMISSION_KEYS,
@@ -70,8 +70,6 @@ type PositionTaskIngredientDbRow = {
     | { is_base: boolean; units: { code: string } | null }[]
     | null;
 };
-type ConsumptionDefaultInsert =
-  Database["public"]["Tables"]["shift_checklist_consumption_default_items"]["Insert"];
 
 export interface PositionTasksData {
   positions: PositionOption[];
@@ -284,6 +282,7 @@ export const savePositionTasks = withAction(
       phase: task.phase,
       isRequired: task.isRequired,
       doneDefinition: task.doneDefinition,
+      ingredientIds: task.ingredientIds,
     }));
 
     const { error: rpcError } = await service.rpc(
@@ -295,73 +294,6 @@ export const savePositionTasks = withAction(
     );
     if (rpcError) {
       return { success: false, error: mapPositionTaskError(rpcError.message) };
-    }
-
-    // The RPC reinserts tasks ordered by input position (sort_order 1..N);
-    // re-read to recover the fresh ids, then re-key consumption defaults.
-    const { data: savedTasks, error: reloadError } = await service
-      .from("position_shift_tasks")
-      .select("id, kind, sort_order")
-      .eq("tenant_id", ctx.claims.tenant_id)
-      .eq("position_id", data.positionId)
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true });
-    if (reloadError) {
-      return {
-        success: false,
-        error: messages.hr.client.positionTasks.saveFailed,
-      };
-    }
-
-    const savedIds = (savedTasks ?? []).map((task) => task.id);
-    if (savedIds.length > 0) {
-      const { error: clearError } = await service
-        .from("shift_checklist_consumption_default_items")
-        .update({ is_active: false })
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .in("position_task_id", savedIds)
-        .eq("is_active", true);
-      if (clearError) {
-        return {
-          success: false,
-          error: messages.hr.client.positionTasks.ingredientsSaveFailed,
-        };
-      }
-    }
-
-    const reloadedTasks = savedTasks ?? [];
-    if (reloadedTasks.length !== data.tasks.length) {
-      return {
-        success: false,
-        error: messages.hr.client.positionTasks.saveFailed,
-      };
-    }
-
-    const inserts: ConsumptionDefaultInsert[] = [];
-    reloadedTasks.forEach((saved, index) => {
-      const input = data.tasks[index];
-      if (!input || saved.kind !== "consumption_report") return;
-      input.ingredientIds.forEach((ingredientId, ingredientIndex) => {
-        inserts.push({
-          tenant_id: ctx.claims.tenant_id,
-          template_item_id: null,
-          position_task_id: saved.id,
-          ingredient_id: ingredientId,
-          sort_order: ingredientIndex + 1,
-        });
-      });
-    });
-
-    if (inserts.length > 0) {
-      const { error: insertError } = await service
-        .from("shift_checklist_consumption_default_items")
-        .insert(inserts);
-      if (insertError) {
-        return {
-          success: false,
-          error: messages.hr.client.positionTasks.ingredientsSaveFailed,
-        };
-      }
     }
 
     revalidatePositionTaskPaths();

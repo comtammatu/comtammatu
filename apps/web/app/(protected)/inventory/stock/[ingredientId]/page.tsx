@@ -422,7 +422,7 @@ export async function StockIngredientDetailPageContent({
               value={formatVND(totalValue)}
             />
             <StockMetric
-              label={stockCopy.table.wac}
+              label={stockCopy.table.wacPerUnit(unit || inventoryCommon.noValue)}
               value={wac > 0 ? formatVND(wac) : inventoryCommon.noValue}
             />
             <StockMetric
@@ -488,7 +488,7 @@ export async function StockIngredientDetailPageContent({
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">
-                            {FORM_VI.value}
+                            {stockCopy.table.stockValue}
                           </p>
                           <p className="font-mono font-semibold tabular-nums">
                             {formatVND(qty * cost)}
@@ -577,8 +577,9 @@ export async function StockIngredientDetailPageContent({
                           ) : null}
                           {movement.unit_cost != null ? (
                             <p>
-                              {stockCopy.table.wac}:{" "}
-                              {formatVND(movement.unit_cost)}
+                              {stockCopy.table.movementUnitCost}:{" "}
+                              {formatVND(movement.unit_cost)} /{" "}
+                              {unit || inventoryCommon.noValue}
                             </p>
                           ) : null}
                         </div>

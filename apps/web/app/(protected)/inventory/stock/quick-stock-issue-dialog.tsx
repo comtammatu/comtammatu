@@ -26,7 +26,6 @@ import {
 import {
   FormattedNumberInput,
   FormDialog,
-  SelectField,
   TextareaField,
 } from "@/components/form";
 import { messages } from "@lib/messages";
@@ -41,7 +40,7 @@ import {
 } from "../_lib/issue-units";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
 import { formatQty } from "../_lib/format";
-import type { StockIngredient } from "./stock-client";
+import type { StockIngredient } from "@lib/inventory/stock-on-hand-model";
 
 const stockCopy = messages.inventory.stock;
 
@@ -148,6 +147,9 @@ export function QuickStockIssueDialog({
     target.issueType === "writeoff"
       ? stockCopy.quickIssue.writeoffTitle
       : stockCopy.quickIssue.issueTitle;
+  const activeIssueType = quickIssueTypeOptions.find(
+    (option) => option.value === target.issueType,
+  );
 
   async function handleSubmit(values: QuickIssueFormValues) {
     const selectedIssueUnit = issueUnitOptions.find(
@@ -174,7 +176,6 @@ export function QuickStockIssueDialog({
       reason: values.reason.trim(),
     });
     if (!lineRes.success) {
-      router.push(`${issueBasePath}/${issueId}`);
       return {
         success: false,
         error: lineRes.error ?? stockCopy.quickIssue.addLineFailed,
@@ -200,9 +201,6 @@ export function QuickStockIssueDialog({
       contentClassName="sm:max-w-md"
     >
       {(form) => {
-        const activeIssueType = quickIssueTypeOptions.find(
-          (option) => option.value === form.watch("issueType"),
-        );
         const quantityError = form.formState.errors.quantity;
         const entryUnitId = form.watch("entryUnitId");
         const selectedIssueUnit = issueUnitOptions.find(
@@ -215,6 +213,7 @@ export function QuickStockIssueDialog({
         const maxQuantityValue = formatIssueMaxEntryQuantity(maxEntryQuantity);
         return (
           <>
+            <input type="hidden" {...form.register("issueType")} />
             <Item variant="outline" size="sm">
               <ItemContent className="min-w-0 flex-1">
                 <ItemTitle className="text-sm font-medium">
@@ -326,12 +325,6 @@ export function QuickStockIssueDialog({
               )}
             </div>
 
-            <SelectField
-              control={form.control}
-              name="issueType"
-              label={stockCopy.quickIssue.operation}
-              options={quickIssueTypeOptions}
-            />
             <TextareaField
               control={form.control}
               name="reason"

@@ -30,6 +30,7 @@ import {
   formatVNDateTime,
   getYesterdayVNDateString,
 } from "@/_lib/format-datetime";
+import { messages } from "@lib/messages";
 import {
   listSummaryRunQueue,
   runDailySummaryForBranch,
@@ -145,7 +146,7 @@ export function SummaryClient({ initialBranches, initialQueue }: Props) {
       if (result.success) {
         setQueue((result.data ?? []) as SummaryQueueRow[]);
       } else {
-        toast.error(result.error ?? "Không thể tải hàng đợi.");
+        toast.error(result.error ?? messages.finance.summaryPage.queueLoadFailed);
       }
     });
   };

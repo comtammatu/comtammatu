@@ -43,6 +43,12 @@ import {
   transferReceive,
 } from "../../transfer-actions";
 import { messages } from "@lib/messages";
+import {
+  getTransferActionConfig,
+  isTransferReceiveReady,
+  type TransferActionKind,
+  type TransferDetail,
+} from "@lib/inventory/transfer-detail-model";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 
@@ -56,33 +62,15 @@ const DocumentStockCorrectionDialog = dynamic(
 
 const transferDetailTitle = "Chi tiết điều chuyển";
 const historySectionTitle = "Lịch sử chỉnh sửa";
-export type TransferDetail = {
-  id: number;
-  code: string;
-  status: string;
-  fromBranchId: number;
-  toBranchId: number;
-  fromBranch: string;
-  toBranch: string;
-  createdBy: string;
-  date: string;
-  note: string | null;
-  subtotal: number;
-  shipping: number;
-  total: number;
-  items: Array<{
-    ingredientId: number;
-    name: string;
-    sku: string;
-    qty: number;
-    unit: string;
-    cost: number;
-    total: number;
-    received: number | null;
-  }>;
-};
-
 type TransferLineItem = TransferDetail["items"][number];
+
+function getTransferActionLabel(kind: TransferActionKind): string {
+  const actions = messages.inventory.transfer.actions;
+  if (kind === "confirm_kitchen") return actions.confirmKitchen;
+  if (kind === "confirm_ship") return actions.confirmShip;
+  if (kind === "mark_in_transit") return actions.markInTransit;
+  return actions.receive;
+}
 
 export function TransferDetailClient({
   transfer,
@@ -113,10 +101,7 @@ export function TransferDetailClient({
     return initial;
   });
   const [shortNote, setShortNote] = useState("");
-  const isReceiveMode = transfer.status === "in_transit" || transfer.status === "confirmed_receive";
-  const isIntraBranch = transfer.fromBranchId === transfer.toBranchId;
-  const isBranchScopedOps =
-    userRole === "warehouse_manager" || userRole === "production_manager";
+  const isReceiveMode = isTransferReceiveReady(transfer.status);
   const transferListHref =
     listHref ??
     (userBranchId != null
@@ -157,68 +142,13 @@ export function TransferDetailClient({
       active: transfer.status === "confirmed_receive",
     },
   ];
-  const actionConfig = useMemo(() => {
-    if (transfer.status === "draft") {
-      return {
-        label: isIntraBranch
-          ? copy.actions.confirmKitchen
-          : copy.actions.confirmShip,
-        action: "confirm_ship" as const,
-        enabled:
-          userRole === "branch_manager"
-            ? isIntraBranch && userBranchId === transfer.fromBranchId
-            : isBranchScopedOps
-              ? userBranchId === transfer.fromBranchId
-              : true,
-      };
-    }
-    if (transfer.status === "confirmed_ship") {
-      return {
-        label: copy.actions.markInTransit,
-        action: "mark_in_transit" as const,
-        enabled:
-          userRole === "branch_manager"
-            ? false
-            : isBranchScopedOps
-              ? userBranchId === transfer.fromBranchId
-              : true,
-      };
-    }
-    if (transfer.status === "in_transit") {
-      return {
-        label: copy.actions.receive,
-        action: "receive" as const,
-        enabled:
-          userRole === "branch_manager"
-            ? userBranchId === transfer.toBranchId
-            : isBranchScopedOps
-              ? userBranchId === transfer.toBranchId
-              : true,
-      };
-    }
-    if (transfer.status === "confirmed_receive") {
-      return {
-        label: copy.actions.receive,
-        action: "receive" as const,
-        enabled:
-          userRole === "branch_manager"
-            ? userBranchId === transfer.toBranchId
-            : isBranchScopedOps
-              ? userBranchId === transfer.toBranchId
-              : true,
-      };
-    }
-
-    return null;
-  }, [
-    transfer.fromBranchId,
-    transfer.status,
-    transfer.toBranchId,
-    isIntraBranch,
-    isBranchScopedOps,
-    userBranchId,
-    userRole,
-  ]);
+  const actionConfig = useMemo(
+    () => getTransferActionConfig({ transfer, userRole, userBranchId }),
+    [transfer, userBranchId, userRole],
+  );
+  const actionLabel = actionConfig
+    ? getTransferActionLabel(actionConfig.kind)
+    : copy.completedSlip;
 
   function handlePrimaryAction() {
     if (!actionConfig) return;
@@ -226,9 +156,12 @@ export function TransferDetailClient({
     startTransition(async () => {
       let res: { success: boolean; error?: string | null } | undefined;
 
-      if (actionConfig.action === "confirm_ship") {
+      if (
+        actionConfig.kind === "confirm_ship" ||
+        actionConfig.kind === "confirm_kitchen"
+      ) {
         res = await transferConfirmShip(transfer.id);
-      } else if (actionConfig.action === "mark_in_transit") {
+      } else if (actionConfig.kind === "mark_in_transit") {
         res = await transferMarkInTransit(transfer.id);
       } else {
         if (!noteOk) {
@@ -263,7 +196,7 @@ export function TransferDetailClient({
         return;
       }
 
-      toast.success(actionConfig.label);
+      toast.success(actionLabel);
       router.refresh();
     });
   }
@@ -493,7 +426,9 @@ export function TransferDetailClient({
                   term: copy.totalValue,
                   description: (
                     <span className="text-primary font-bold">
-                      {messages.inventory.common.currencyCompact(formatVND(transfer.total))}
+                      {messages.inventory.common.currencyCompact(
+                        formatVND(transfer.total),
+                      )}
                     </span>
                   ),
                 },
@@ -578,16 +513,14 @@ export function TransferDetailClient({
             disabled={
               isPending ||
               !actionConfig?.enabled ||
-              (isReceiveMode &&
-                actionConfig?.action === "receive" &&
-                !noteOk)
+              (isReceiveMode && actionConfig?.kind === "receive" && !noteOk)
             }
             size={embedded ? "touch" : "default"}
             className="px-4 font-bold"
             onClick={handlePrimaryAction}
           >
             <IconCircleCheck className="size-5" />
-            {actionConfig?.label ?? copy.completedSlip}
+            {actionLabel}
           </Button>
         }
       />
@@ -606,7 +539,9 @@ export function TransferDetailClient({
               term: copy.totalValue,
               description: (
                 <span className="text-primary font-bold">
-                  {messages.inventory.common.currencyCompact(formatVND(transfer.total))}
+                  {messages.inventory.common.currencyCompact(
+                    formatVND(transfer.total),
+                  )}
                 </span>
               ),
             },
@@ -647,7 +582,12 @@ export function TransferDetailClient({
 
       {/* Ghi chú vận chuyển nếu có */}
       {transfer.note && (
-        <AppSection title={copy.transportNote} size="sm" collapsible defaultOpen={false}>
+        <AppSection
+          title={copy.transportNote}
+          size="sm"
+          collapsible
+          defaultOpen={false}
+        >
           <p className="break-words text-sm italic">
             &ldquo;{transfer.note}&rdquo;
           </p>
@@ -658,9 +598,7 @@ export function TransferDetailClient({
       <AppSection
         title={tTerm("ingredientsList")}
         description={
-          isReceiveMode
-            ? copy.receiveInstructions
-            : copy.receivedReadonlyHint
+          isReceiveMode ? copy.receiveInstructions : copy.receivedReadonlyHint
         }
         size="sm"
       >
@@ -692,23 +630,34 @@ export function TransferDetailClient({
         )}
 
         {transfer.items.length > 0 && (
-          <Item variant="outline" className="mt-4 flex-col items-stretch gap-2 p-3 text-sm bg-muted/30">
+          <Item
+            variant="outline"
+            className="mt-4 flex-col items-stretch gap-2 p-3 text-sm bg-muted/30"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{copy.ingredientValue}</span>
+              <span className="text-muted-foreground">
+                {copy.ingredientValue}
+              </span>
               <span className="font-bold">
-                {messages.inventory.common.currencyCompact(formatVND(transfer.subtotal))}
+                {messages.inventory.common.currencyCompact(
+                  formatVND(transfer.subtotal),
+                )}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">{copy.shippingFee}</span>
               <span className="font-bold">
-                {messages.inventory.common.currencyCompact(formatVND(transfer.shipping))}
+                {messages.inventory.common.currencyCompact(
+                  formatVND(transfer.shipping),
+                )}
               </span>
             </div>
             <div className="flex items-center justify-between border-t border-border pt-2">
               <span className="font-bold">{copy.totalValue}</span>
               <span className="font-mono font-semibold text-primary">
-                {messages.inventory.common.currencyCompact(formatVND(transfer.total))}
+                {messages.inventory.common.currencyCompact(
+                  formatVND(transfer.total),
+                )}
               </span>
             </div>
           </Item>
@@ -732,14 +681,19 @@ export function TransferDetailClient({
           />
           {!noteOk ? (
             <p className="text-xs text-destructive">
-               {copy.shortageNoteMinLength}
+              {copy.shortageNoteMinLength}
             </p>
           ) : null}
         </AppSection>
       ) : null}
 
       {/* 3. Lịch sử */}
-      <AppSection title={historySectionTitle} size="sm" collapsible defaultOpen={false}>
+      <AppSection
+        title={historySectionTitle}
+        size="sm"
+        collapsible
+        defaultOpen={false}
+      >
         <AuditHistoryList logs={auditLogs} />
       </AppSection>
 
@@ -760,17 +714,17 @@ export function TransferDetailClient({
             {transfer.status !== "draft" &&
             correctionBranches.length > 0 &&
             transfer.items.length > 0 ? (
-               <DocumentStockCorrectionDialog
-                 documentType="transfer"
-                 documentId={transfer.id}
-                 documentCode={transfer.code}
-                 branchOptions={correctionBranches}
-                 itemOptions={transfer.items.map((item) => ({
-                   ingredientId: item.ingredientId,
-                   name: item.name,
-                   unit: item.unit,
-                 }))}
-               />
+              <DocumentStockCorrectionDialog
+                documentType="transfer"
+                documentId={transfer.id}
+                documentCode={transfer.code}
+                branchOptions={correctionBranches}
+                itemOptions={transfer.items.map((item) => ({
+                  ingredientId: item.ingredientId,
+                  name: item.name,
+                  unit: item.unit,
+                }))}
+              />
             ) : null}
           </>
         }
@@ -780,16 +734,14 @@ export function TransferDetailClient({
             disabled={
               isPending ||
               !actionConfig?.enabled ||
-              (isReceiveMode &&
-                actionConfig?.action === "receive" &&
-                !noteOk)
+              (isReceiveMode && actionConfig?.kind === "receive" && !noteOk)
             }
             size="touch"
             className="px-4 font-bold"
             onClick={handlePrimaryAction}
           >
             <IconCircleCheck className="size-5" />
-            {actionConfig?.label ?? copy.completedSlip}
+            {actionLabel}
           </Button>
         }
       />

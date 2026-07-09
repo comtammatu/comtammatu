@@ -16,7 +16,7 @@ import {
 } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { BrandMark } from "@/components/brand";
+import { AppHeaderBrand } from "@/components/app-header";
 import { FormattedNumberInput } from "@/components/form";
 import { AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
@@ -91,10 +91,10 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
             variant: "outline",
           }}
           action={
-            <BrandMark
-              decorative
-              size="lg"
-              className="shrink-0 rounded-md bg-card p-1 ring-1 ring-border"
+            <AppHeaderBrand
+              title={null}
+              subtitleHiddenOnMobile={false}
+              showText={false}
             />
           }
           footer={

@@ -51,17 +51,17 @@ export function buildHubTiles(
     },
     {
       moduleKey: "branch_settings",
-      href: `/br/${branchId}/settings/printers`,
-      title: copy.printersSetupTitle,
-      description: copy.printersSetupDescription,
-      icon: icons.printers,
-    },
-    {
-      moduleKey: "branch_settings",
       href: `/br/${branchId}/settings/kds`,
       title: copy.kdsSetupTitle,
       description: copy.kdsSetupDescription,
       icon: icons.kds,
+    },
+    {
+      moduleKey: "branch_settings",
+      href: `/br/${branchId}/settings/printers`,
+      title: copy.printersSetupTitle,
+      description: copy.printersSetupDescription,
+      icon: icons.printers,
     },
   ];
 }

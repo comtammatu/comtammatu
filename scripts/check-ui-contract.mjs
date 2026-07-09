@@ -3,10 +3,25 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { PAGE_ARCHETYPES } from "./page-archetypes.mjs";
+import {
+  APP_ADAPTER_REGISTRY,
+  DOMAIN_ADAPTER_FAMILIES,
+  validateUiComponentRegistry,
+} from "./ui-component-registry.mjs";
+import {
+  UI_CONTRACT_BASELINE_POLICIES,
+  buildUiContractBaselineReporting,
+  buildUiContractGuardReporting,
+} from "./ui-contract-guard-reporting.mjs";
+import {
+  UI_RUNTIME_SOURCE_ROOTS,
+  uiRuntimeRoots,
+} from "./ui-contract-scope.mjs";
 
 const REPO_ROOT = process.cwd();
 const SELF_PATH = fileURLToPath(import.meta.url);
 const WRITE_MODE = process.argv.includes("--write");
+const BASELINE_REPORT_MODE = process.argv.includes("--report-baselines=json");
 
 function walkFiles(rootDir, extensions) {
   const absoluteRoot = path.join(REPO_ROOT, rootDir);
@@ -45,8 +60,360 @@ function toPosix(filePath) {
   return path.relative(REPO_ROOT, filePath).split(path.sep).join("/");
 }
 
+function walkUiRuntimeFiles(extensions) {
+  return UI_RUNTIME_SOURCE_ROOTS.flatMap((root) => walkFiles(root, extensions));
+}
+
 function countMatches(content, pattern) {
   return [...content.matchAll(pattern)].length;
+}
+
+function extractConstObjectBody(content, name) {
+  const anchor = content.indexOf(`const ${name} = {`);
+  if (anchor === -1) return null;
+  const start = content.indexOf("{", anchor);
+  if (start === -1) return null;
+
+  let depth = 0;
+  for (let index = start; index < content.length; index += 1) {
+    const char = content.charAt(index);
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return content.slice(start + 1, index);
+    }
+  }
+
+  return null;
+}
+
+function extractConstArrayBody(content, name) {
+  const anchor = content.indexOf(`const ${name} = [`);
+  if (anchor === -1) return null;
+  const start = content.indexOf("[", anchor);
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = null;
+  for (let index = start; index < content.length; index += 1) {
+    const char = content.charAt(index);
+    if (inString) {
+      if (char === inString && content[index - 1] !== "\\") inString = null;
+    } else if (char === '"' || char === "'" || char === "`") {
+      inString = char;
+    } else if (char === "[") {
+      depth += 1;
+    } else if (char === "]") {
+      depth -= 1;
+      if (depth === 0) return content.slice(start + 1, index);
+    }
+  }
+
+  return null;
+}
+
+function extractTopLevelObjectKeys(body) {
+  return [...body.matchAll(/^\s{2}([A-Za-z][A-Za-z0-9]*):/gm)].map(
+    (match) => match[1],
+  );
+}
+
+function extractTopLevelObjectEntries(body) {
+  const entries = new Map();
+  const entryStartRe = /^\s{2}([A-Za-z][A-Za-z0-9]*):\s*\{/gm;
+  for (const match of body.matchAll(entryStartRe)) {
+    const key = match[1];
+    if (!key) continue;
+    const openBrace = body.indexOf("{", match.index);
+    let depth = 0;
+    for (let index = openBrace; index < body.length; index += 1) {
+      const char = body.charAt(index);
+      if (char === "{") depth += 1;
+      if (char === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          entries.set(key, body.slice(openBrace + 1, index));
+          break;
+        }
+      }
+    }
+  }
+  return entries;
+}
+
+function extractArrayObjectIds(body) {
+  if (!body) return null;
+  return [...body.matchAll(/\bid:\s*"([^"]+)"/g)]
+    .map((match) => match[1])
+    .filter(Boolean)
+    .sort();
+}
+
+function extractGuardIds(body) {
+  const guardIds = new Set();
+  for (const match of body.matchAll(/guardIds:\s*\[([\s\S]*?)\]/g)) {
+    for (const guardIdMatch of (match[1] ?? "").matchAll(/"([a-z0-9-]+)"/g)) {
+      guardIds.add(guardIdMatch[1]);
+    }
+  }
+  return [...guardIds].sort();
+}
+
+function extractStringProperty(body, name) {
+  return new RegExp(`${name}:\\s*"([^"]+)"`).exec(body)?.[1] ?? null;
+}
+
+function extractObjectPropertyBody(body, name) {
+  const anchor = body.indexOf(`${name}: {`);
+  if (anchor === -1) return null;
+  const start = body.indexOf("{", anchor);
+  if (start === -1) return null;
+
+  let depth = 0;
+  for (let index = start; index < body.length; index += 1) {
+    const char = body.charAt(index);
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return body.slice(start + 1, index);
+    }
+  }
+
+  return null;
+}
+
+function extractStringNumberObjectEntries(body) {
+  const entries = new Map();
+  if (!body) return entries;
+  for (const match of body.matchAll(/"([^"]+)":\s*(\d+)/g)) {
+    const key = match[1];
+    const value = Number(match[2]);
+    if (key) entries.set(key, value);
+  }
+  return entries;
+}
+
+function hasUiContractGuard(contractSource, guardId) {
+  return (
+    contractSource.includes(`id: "${guardId}"`) ||
+    contractSource.includes(`${guardId}:`)
+  );
+}
+
+function extractGuardAllowlist(contractSource, guardId) {
+  for (const varName of [
+    "checks",
+    "perFileCountBudgets",
+    "frozenPrimitiveImportBaselines",
+    "formatterGuardBaselines",
+  ]) {
+    const span = locateGateValueSpan(
+      contractSource,
+      varName,
+      guardId,
+      "allowlist",
+    );
+    if (!span) continue;
+    return extractStringNumberObjectEntries(
+      contractSource.slice(span.valueStart, span.valueEnd),
+    );
+  }
+  return null;
+}
+
+function extractGuardGroupIds(contractSource, guardGroup) {
+  const body = extractConstArrayBody(contractSource, guardGroup);
+  return extractArrayObjectIds(body);
+}
+
+function formatMapDiff(expected, actual) {
+  const expectedKeys = [...expected.keys()].sort();
+  const actualKeys = [...actual.keys()].sort();
+  const missing = expectedKeys.filter((key) => !actual.has(key));
+  const extra = actualKeys.filter((key) => !expected.has(key));
+  const changed = expectedKeys
+    .filter((key) => actual.has(key) && expected.get(key) !== actual.get(key))
+    .map(
+      (key) => `${key} expected ${expected.get(key)}, got ${actual.get(key)}`,
+    );
+  return [
+    missing.length > 0 ? `missing ${missing.join(", ")}` : null,
+    extra.length > 0 ? `extra ${extra.join(", ")}` : null,
+    changed.length > 0 ? `changed ${changed.join(", ")}` : null,
+  ].filter(Boolean);
+}
+
+function validateAuditSignalGuardCoverage(contractSource) {
+  const auditPath = path.join(REPO_ROOT, "scripts/audit-ui-components.mjs");
+  if (!fs.existsSync(auditPath)) {
+    return ["audit-to-guard-map: scripts/audit-ui-components.mjs is missing"];
+  }
+
+  const auditSource = fs.readFileSync(auditPath, "utf8");
+  const signalsBody = extractConstObjectBody(auditSource, "SIGNALS");
+  const guardCoverageBody = extractConstObjectBody(
+    auditSource,
+    "SIGNAL_GUARD_COVERAGE",
+  );
+  const errors = [];
+
+  if (!signalsBody) errors.push("SIGNALS object is missing");
+  if (!guardCoverageBody) {
+    errors.push("SIGNAL_GUARD_COVERAGE object is missing");
+  }
+  if (!signalsBody || !guardCoverageBody) {
+    return errors.map((error) => `audit-to-guard-map: ${error}`);
+  }
+
+  const signalKeys = extractTopLevelObjectKeys(signalsBody).sort();
+  const coverageEntries = extractTopLevelObjectEntries(guardCoverageBody);
+  const coverageKeys = [...coverageEntries.keys()].sort();
+  const missing = signalKeys.filter((key) => !coverageKeys.includes(key));
+  const extra = coverageKeys.filter((key) => !signalKeys.includes(key));
+  const allowedStatuses = new Set([
+    "blocking-zero",
+    "blocking-baseline",
+    "blocking-mixed",
+    "blocking-exception",
+    "advisory",
+  ]);
+
+  if (missing.length > 0) {
+    errors.push(`missing coverage for signal(s): ${missing.join(", ")}`);
+  }
+  if (extra.length > 0) {
+    errors.push(`stale coverage for removed signal(s): ${extra.join(", ")}`);
+  }
+
+  for (const [signal, entryBody] of coverageEntries) {
+    const status = /status:\s*"([^"]+)"/.exec(entryBody)?.[1];
+    const guardIds = extractGuardIds(entryBody);
+    const guardGroup = extractStringProperty(entryBody, "guardGroup");
+    const exceptionAllowlistGuard = extractStringProperty(
+      entryBody,
+      "exceptionAllowlistGuard",
+    );
+    const exceptionAllowlistGroup = extractStringProperty(
+      entryBody,
+      "exceptionAllowlistGroup",
+    );
+    const exceptionAllowlistBody = extractObjectPropertyBody(
+      entryBody,
+      "exceptionAllowlist",
+    );
+    if (!status) {
+      errors.push(`${signal} is missing a status`);
+      continue;
+    }
+    if (!allowedStatuses.has(status)) {
+      errors.push(`${signal} has unknown status "${status}"`);
+    }
+    if (
+      (status === "advisory" || status === "blocking-exception") &&
+      !/reason:\s*["']/.test(entryBody)
+    ) {
+      errors.push(`${signal} is ${status} without a reason`);
+    }
+    if (guardGroup) {
+      const groupIds = extractGuardGroupIds(contractSource, guardGroup);
+      if (!groupIds) {
+        errors.push(`${signal} points at missing guard group "${guardGroup}"`);
+      } else {
+        const diffs = formatMapDiff(
+          new Map(groupIds.map((id) => [id, 1])),
+          new Map(guardIds.map((id) => [id, 1])),
+        );
+        if (diffs.length > 0) {
+          errors.push(
+            `${signal} guardIds do not match ${guardGroup}: ${diffs.join("; ")}`,
+          );
+        }
+      }
+    }
+    if (status === "blocking-exception") {
+      if (exceptionAllowlistGuard && exceptionAllowlistGroup) {
+        errors.push(
+          `${signal} cannot declare both exceptionAllowlistGuard and exceptionAllowlistGroup`,
+        );
+      } else if (
+        exceptionAllowlistGuard &&
+        !guardIds.includes(exceptionAllowlistGuard)
+      ) {
+        errors.push(
+          `${signal} exceptionAllowlistGuard is not listed in guardIds`,
+        );
+      } else if (
+        exceptionAllowlistGroup &&
+        exceptionAllowlistGroup !== guardGroup
+      ) {
+        errors.push(`${signal} exceptionAllowlistGroup must match guardGroup`);
+      } else if (!exceptionAllowlistGuard && !exceptionAllowlistGroup) {
+        errors.push(
+          `${signal} is blocking-exception without an exception allowlist owner`,
+        );
+      }
+
+      if (!exceptionAllowlistBody) {
+        errors.push(
+          `${signal} is blocking-exception without exceptionAllowlist`,
+        );
+      } else if (exceptionAllowlistGuard || exceptionAllowlistGroup) {
+        const auditAllowlist = extractStringNumberObjectEntries(
+          exceptionAllowlistBody,
+        );
+        const guardAllowlist = new Map();
+        const ownerGuardIds = exceptionAllowlistGroup
+          ? guardIds
+          : [exceptionAllowlistGuard];
+        for (const ownerGuardId of ownerGuardIds) {
+          const ownerAllowlist = extractGuardAllowlist(
+            contractSource,
+            ownerGuardId,
+          );
+          if (!ownerAllowlist) {
+            errors.push(
+              `${signal} exception owner "${ownerGuardId}" has no guard allowlist`,
+            );
+            continue;
+          }
+          for (const [file, count] of ownerAllowlist) {
+            guardAllowlist.set(file, (guardAllowlist.get(file) ?? 0) + count);
+          }
+        }
+        const diffs = formatMapDiff(guardAllowlist, auditAllowlist);
+        if (diffs.length > 0) {
+          errors.push(
+            `${signal} exceptionAllowlist does not match its guard allowance: ${diffs.join("; ")}`,
+          );
+        }
+      }
+    } else if (
+      exceptionAllowlistGuard ||
+      exceptionAllowlistGroup ||
+      exceptionAllowlistBody
+    ) {
+      errors.push(
+        `${signal} has exception metadata without blocking-exception status`,
+      );
+    }
+
+    if (status === "advisory") continue;
+
+    if (guardIds.length === 0) {
+      errors.push(`${signal} is ${status} without guardIds`);
+      continue;
+    }
+
+    for (const guardId of guardIds) {
+      if (!hasUiContractGuard(contractSource, guardId)) {
+        errors.push(
+          `${signal} points at missing UI contract guard "${guardId}"`,
+        );
+      }
+    }
+  }
+
+  return errors.map((error) => `audit-to-guard-map: ${error}`);
 }
 
 function resolveRelativeTsxImport(fromFile, specifier) {
@@ -74,11 +441,34 @@ function pageOrDirectClientUsesDocumentFormFrame(file) {
   return false;
 }
 
+function branchPageOrDirectClientUsesOperatorWorkflowFrame(file) {
+  if (!file.includes("/br/") || !file.includes("/(operator)/")) return false;
+
+  const absoluteFile = path.join(REPO_ROOT, file);
+  const pageContent = fs.readFileSync(absoluteFile, "utf8");
+  if (!pageContent.includes("BranchOperatorPage")) return false;
+
+  const sources = [pageContent];
+  const importPattern = /from\s+["'](\.{1,2}\/[^"']+)["']/g;
+  for (const match of pageContent.matchAll(importPattern)) {
+    const imported = resolveRelativeTsxImport(file, match[1]);
+    if (!imported) continue;
+    sources.push(fs.readFileSync(imported, "utf8"));
+  }
+
+  const combined = sources.join("\n");
+  return (
+    combined.includes("BranchOperatorPanel") &&
+    combined.includes("AppDetailFooter") &&
+    !combined.includes("DocumentFormFrame")
+  );
+}
+
 // Extract JSX opening tags for a component, brace/paren/bracket/string aware so
 // that `=>` arrows and `{...}` expression props (which contain `>`) do not
 // terminate the tag. Lets a gate inspect a whole opening tag — including a
 // multi-line `className={cn("…")}` — which a className-literal regex cannot.
-function extractJsxOpeningTags(content, tagName) {
+function extractJsxOpeningTagSpans(content, tagName) {
   const tags = [];
   const re = new RegExp(`<${tagName}\\b`, "g");
   let match;
@@ -97,9 +487,130 @@ function extractJsxOpeningTags(content, tagName) {
       else if (ch === ">" && depth === 0) break;
       i += 1;
     }
-    tags.push(content.slice(match.index, i + 1));
+    tags.push({
+      tag: content.slice(match.index, i + 1),
+      start: match.index,
+      end: i + 1,
+    });
   }
   return tags;
+}
+
+function extractJsxOpeningTags(content, tagName) {
+  return extractJsxOpeningTagSpans(content, tagName).map(({ tag }) => tag);
+}
+
+function hasDirectAsChildPrimitiveParent(content, start) {
+  const before = content.slice(Math.max(0, start - 320), start);
+  const tail = before.slice(before.lastIndexOf("<"));
+  return /^<(?:Button|InteractiveCard|Item|Badge)\b[^>]*\basChild\b[^>]*>\s*$/.test(
+    tail,
+  );
+}
+
+function isSemanticNativeLink(tag) {
+  return (
+    /\bhref=["']#/.test(tag) ||
+    /\bhref=(?:"(?:tel|mailto):|'(?:tel|mailto):|\{`(?:tel|mailto):|\{phoneHref\()/.test(
+      tag,
+    ) ||
+    /\btarget=["']_blank["']/.test(tag)
+  );
+}
+
+function countNativeInteractiveElement(content) {
+  let count = 0;
+  for (const tagName of ["button", "a"]) {
+    for (const { tag, start } of extractJsxOpeningTagSpans(content, tagName)) {
+      if (hasDirectAsChildPrimitiveParent(content, start)) continue;
+      if (tagName === "a" && isSemanticNativeLink(tag)) continue;
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function countIconButtonAriaRisk(content) {
+  let count = 0;
+  for (const { tag, end } of extractJsxOpeningTagSpans(content, "Button")) {
+    if (!/\bsize=["']icon(?:-[^"']*)?["']/.test(tag)) continue;
+    if (/\baria-label=|\baria-labelledby=/.test(tag)) continue;
+    const closeIndex = content.indexOf("</Button>", end);
+    const buttonBody =
+      closeIndex === -1
+        ? content.slice(end, end + 360)
+        : content.slice(end, closeIndex);
+    if (/\bsr-only\b/.test(buttonBody)) continue;
+    if (/\basChild\b/.test(tag)) {
+      const childWindow = content.slice(end, end + 240);
+      if (/\baria-label=|\baria-labelledby=/.test(childWindow)) continue;
+    }
+    count += 1;
+  }
+  return count;
+}
+
+const SURFACE_CLONE_ADAPTER_IMPLEMENTATIONS = new Set([
+  ...Object.values(APP_ADAPTER_REGISTRY).map((entry) => entry.source),
+  ...Object.values(DOMAIN_ADAPTER_FAMILIES).map((entry) => entry.source),
+]);
+
+const SURFACE_CLONE_EXCEPTIONS = new Set([
+  "apps/web/app/(protected)/br/[branchId]/pos/pos-page-skeleton.tsx",
+]);
+
+const LOCAL_SURFACE_CLONE_RE =
+  /\b(?:export\s+)?(?:function|const)\s+[A-Z][A-Za-z0-9]*(?:PageHeader|Header|EmptyState|LoadingState|Skeleton|StatCard|SummaryCard|MetricCard|KpiCard|StatusBadge)\b/g;
+const LOCAL_SECTION_CLONE_RE =
+  /\b(?:export\s+)?(?:function|const)\s+[A-Z][A-Za-z0-9]*Section\b/g;
+const LOCAL_TOOLBAR_CLONE_RE =
+  /\b(?:export\s+)?(?:function|const)\s+[A-Z][A-Za-z0-9]*Toolbar\b/g;
+const LOCAL_TABLE_CLONE_RE =
+  /\b(?:export\s+)?(?:function|const)\s+[A-Z][A-Za-z0-9]*Table\b/g;
+const LOCAL_DIALOG_CLONE_RE =
+  /\b(?:export\s+)?(?:function|const)\s+[A-Z][A-Za-z0-9]*Dialog\b/g;
+
+function countLocalDefinition(content, pattern, { skipDynamic = false } = {}) {
+  let count = 0;
+  for (const match of content.matchAll(pattern)) {
+    if (skipDynamic) {
+      const tail = content.slice(
+        match.index + match[0].length,
+        match.index + match[0].length + 40,
+      );
+      if (/^\s*=\s*dynamic\b/.test(tail)) continue;
+    }
+    count += 1;
+  }
+  return count;
+}
+
+function countLocalSurfaceClone(content, file) {
+  if (SURFACE_CLONE_ADAPTER_IMPLEMENTATIONS.has(file)) return 0;
+  if (SURFACE_CLONE_EXCEPTIONS.has(file)) return 0;
+
+  let count = countLocalDefinition(content, LOCAL_SURFACE_CLONE_RE);
+  if (
+    !/\b(?:AppSection|BranchOperatorPanel|SettingsFormSection)\b/.test(content)
+  ) {
+    count += countLocalDefinition(content, LOCAL_SECTION_CLONE_RE);
+  }
+  if (!/\b(?:AppToolbar|PwaToolbar)\b/.test(content)) {
+    count += countLocalDefinition(content, LOCAL_TOOLBAR_CLONE_RE);
+  }
+  if (!/\bDataTable\b/.test(content)) {
+    count += countLocalDefinition(content, LOCAL_TABLE_CLONE_RE);
+  }
+  if (
+    !/\b(?:AppDialog|FormDialog|FileImportDialog|ReasonConfirmDialog)\b/.test(
+      content,
+    )
+  ) {
+    count += countLocalDefinition(content, LOCAL_DIALOG_CLONE_RE, {
+      skipDynamic: true,
+    });
+  }
+  return count;
 }
 
 function extractConstExpressions(content, name) {
@@ -138,6 +649,49 @@ function extractConstExpressions(content, name) {
   return expressions;
 }
 
+const formatterGuardBaselines = [
+  {
+    id: "finance-page-local-formatter",
+    description:
+      "Finance routes format money, counts, dates, and times through shared helpers, not page-local Intl/toLocale formatters.",
+    roots: [
+      {
+        dir: "apps/web/app/(protected)/finance",
+        extensions: [".ts", ".tsx"],
+      },
+    ],
+    pattern:
+      /\b(?:new\s+Intl\.(?:NumberFormat|DateTimeFormat)|Intl\.(?:NumberFormat|DateTimeFormat)|\.toLocaleString\(|\.toLocaleDateString\(|\.toLocaleTimeString\()/g,
+    allowlist: {},
+  },
+  {
+    id: "app-page-local-number-formatter",
+    description:
+      "App UI formats money and counts through shared helpers, not page-local Intl.NumberFormat/toLocaleString formatters.",
+    roots: uiRuntimeRoots([".ts", ".tsx"]),
+    pattern: /\b(?:new\s+)?Intl\.NumberFormat\b|\.toLocaleString\(/g,
+    allowlist: {},
+  },
+  {
+    id: "vnd-format-ssot",
+    description:
+      "VND money rendering goes through formatVND from @comtammatu/shared/format; local vi-VN formatters must not spread.",
+    roots: uiRuntimeRoots([".ts", ".tsx"]),
+    pattern:
+      /toLocaleString\(\s*(?:"vi-VN"|'vi-VN')|Intl\.NumberFormat\(\s*(?:"vi-VN"|'vi-VN')|\b(?:function|const)\s+formatVND\b/g,
+    allowlist: {},
+  },
+  {
+    id: "date-format-ssot",
+    description:
+      "VN date/time rendering goes through @comtammatu/shared/time (formatVNDate/formatVNDateTime/getVNDateString/..., which pin Asia/Ho_Chi_Minh); ad-hoc Intl.DateTimeFormat / toLocaleDateString / toLocaleTimeString in app code must not spread.",
+    roots: uiRuntimeRoots([".ts", ".tsx"]),
+    pattern:
+      /Intl\.DateTimeFormat\b|\.toLocaleDateString\(|\.toLocaleTimeString\(/g,
+    allowlist: {},
+  },
+];
+
 const checks = [
   {
     id: "non-current-visual-layer",
@@ -155,7 +709,11 @@ const checks = [
     id: "focus-ring-contrast",
     description:
       "Focus rings must use the high-contrast keyline (ring-foreground), not the diluted gold ring-ring/NN which fails WCAG 1.4.11 (gold ≈ 2:1 on cream). Mirrors the @matu/design-system contrast gate.",
-    roots: [{ dir: "packages/ui/src/components", extensions: [".tsx"] }],
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+      { dir: "packages/ui/src/components", extensions: [".tsx"] },
+    ],
     pattern: /\bring-ring(?:\/\d+)?\b/g,
     allowlist: {},
   },
@@ -163,7 +721,10 @@ const checks = [
     id: "heading-scale",
     description:
       "Locked heading scale forbids app-surface text-4xl/text-5xl/font-black drift.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*\b(text-4xl|text-5xl|font-black)\b/g,
     allowlist: {},
@@ -172,7 +733,10 @@ const checks = [
     id: "icon-size",
     description:
       "Banned icon-size classes size-7/9/11 must not spread; size-14/16 stay limited to media thumbnails.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
     pattern: /className=\{?(?:cn\()?['"][^'"]*\b(size-(7|9|11|14|16))\b/g,
     allowlist: {
       "apps/web/app/(protected)/inventory/_components/photo-upload-input.tsx": 2,
@@ -183,7 +747,10 @@ const checks = [
     id: "radius-scale",
     description:
       "App surfaces use only rounded-md, rounded-lg, rounded-full, or rounded-none.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*(\brounded\b(?!-(?:md|lg|full|none|t|b|l|r))|\brounded-(sm|xl|2xl|3xl|4xl)\b)/g,
     allowlist: {},
@@ -192,7 +759,10 @@ const checks = [
     id: "gap-scale",
     description:
       "App surfaces use the documented gap scale only: gap-1/1.5/2/3/4/6. gap-5/7/8+ is blocked at zero.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*\bgap-(?:5|7|[89]|[1-9]\d|\[[^\]]+\])\b/g,
     allowlist: {},
@@ -214,6 +784,114 @@ const checks = [
     allowlist: {},
   },
   {
+    id: "app-transition-all",
+    description:
+      "App UI motion must name the transitioned properties instead of using transition-all.",
+    roots: uiRuntimeRoots([".ts", ".tsx"]),
+    pattern: /\b(?:motion-safe:)?transition-all\b/g,
+    allowlist: {},
+  },
+  {
+    id: "app-loading-spinner-ssot",
+    description:
+      "App loading indicators use Spinner/PageSpinner; raw Loader2/LoaderCircle icons with animate-spin are primitive-owned.",
+    roots: uiRuntimeRoots([".tsx"]),
+    pattern: /\b(?:Loader2|LoaderCircle|IconLoader2|animate-spin)\b/g,
+    allowlist: {},
+  },
+  {
+    id: "surface-clone-ssot",
+    description:
+      "Route-local components named like DS surfaces must route through existing adapters or use workflow-specific names.",
+    custom: () => {
+      for (const filePath of walkUiRuntimeFiles([".tsx"])) {
+        const normalized = toPosix(filePath);
+        const content = fs.readFileSync(filePath, "utf8");
+        const count = countLocalSurfaceClone(content, normalized);
+        if (count > 0) {
+          failures.push(
+            `surface-clone-ssot: ${normalized} has ${count} route-local surface clone definition(s). Use an existing adapter or a workflow-specific name; expanding this baseline needs a design-system contract reason.`,
+          );
+        }
+      }
+    },
+  },
+  {
+    id: "app-presentation-state-copy",
+    description:
+      "App presentation surfaces keep loading, empty, and error copy in shared messages/adapters, not route-local literals.",
+    roots: uiRuntimeRoots([".tsx"]),
+    pattern:
+      /["'`](?:[^\n"'`]*(?:Đang tải|Không có dữ liệu|Chưa có dữ liệu|Không thể tải|No data|Loading|Error loading)[^\n"'`]*)["'`]/g,
+    allowlist: {},
+  },
+  {
+    id: "app-action-data-state-copy",
+    description:
+      "Action/data files keep user-facing loading, empty, and error copy in shared messages instead of route-local literals.",
+    roots: uiRuntimeRoots([".ts"]),
+    pattern:
+      /["'`](?:[^\n"'`]*(?:Đang tải|Không có dữ liệu|Chưa có dữ liệu|Không thể tải|No data|Loading|Error loading)[^\n"'`]*)["'`]/g,
+    allowlist: {},
+  },
+  ...formatterGuardBaselines,
+  {
+    id: "browser-chrome-theme-color-source",
+    description:
+      "Browser/PWA chrome theme colors are single-sourced in apps/web/app/_lib/theme-tokens.ts.",
+    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    pattern: /#(?:fff6ee|1f1812)\b/gi,
+    allowlist: {
+      "apps/web/app/_lib/theme-tokens.ts": 2,
+    },
+  },
+  {
+    id: "root-viewport-allows-zoom",
+    description:
+      "Root viewport must not disable user zoom; mobile/touch UX must stay accessible.",
+    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    pattern:
+      /\b(?:maximumScale:\s*1|userScalable:\s*false|maximum-scale\s*=\s*1|user-scalable\s*=\s*no)\b/g,
+    allowlist: {},
+  },
+  {
+    id: "scrollarea-no-max-height-only",
+    description:
+      "ScrollArea must not be used with max-h-* only; use a definite height/flex constraint or plain overflow.",
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
+    pattern: /<ScrollArea\b[^>]*\bmax-h-/g,
+    allowlist: {},
+  },
+  {
+    id: "primitive-runtime-arbitrary-px-rem-sizing",
+    description:
+      "Primitive and app-adapter sizing must use named Tailwind/theme tokens instead of raw px/rem arbitrary values.",
+    roots: [
+      { dir: "packages/ui/src/components", extensions: [".tsx"] },
+      { dir: "apps/web/app/components", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".ts", ".tsx"] },
+    ],
+    pattern: /\b(?:text|w|h|min-w|min-h|max-w|max-h)-\[[0-9.]+(?:px|rem)\]/g,
+    allowlist: {
+      "apps/web/app/components/surface.tsx": 1,
+    },
+  },
+  {
+    id: "primitive-arbitrary-shadow",
+    description:
+      "Primitive and app-adapter shadows must use named shadow/ring tokens instead of arbitrary box-shadow values.",
+    roots: [
+      { dir: "packages/ui/src/components", extensions: [".tsx"] },
+      { dir: "apps/web/app/components", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".ts", ".tsx"] },
+    ],
+    pattern: /\bshadow-\[[^\]]+\]/g,
+    allowlist: {},
+  },
+  {
     id: "primitive-shadow-overrun",
     description:
       "Primitive overlays use the named shadow-effect-* family (popover/select/dropdown → shadow-effect-popover, dialog/alert-dialog → shadow-effect-dialog, sheet/drawer → shadow-effect-drawer, tooltip → shadow-effect-tooltip); raw shadow-xl/2xl stays capped to POS/KDS ceiling surfaces (design-system.md § Elevation).",
@@ -225,7 +903,10 @@ const checks = [
     id: "card-content-named-layout-props",
     description:
       "Use CardContent flush/scroll instead of local p-0 or overflow-x-auto layout overrides.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
     pattern:
       /<CardContent\b[^>]*className=["'][^"']*\b(?:p-0|overflow-x-auto)\b/g,
     allowlist: {},
@@ -234,7 +915,10 @@ const checks = [
     id: "app-section-content-named-layout-props",
     description:
       "Use AppSection contentFlush/contentScroll instead of contentClassName p-0 or overflow-x-auto.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
     pattern:
       /<AppSection\b[^>]*contentClassName=["'][^"']*\b(?:p-0|overflow-x-auto)\b/g,
     allowlist: {},
@@ -256,9 +940,7 @@ const checks = [
       },
     ],
     pattern: /from\s+["@']@comtammatu\/ui\/components\/table["@']/g,
-    allowlist: {
-      "apps/web/app/(protected)/finance/bank-transactions/page.tsx": 1,
-    },
+    allowlist: {},
   },
   {
     id: "admin-finance-branch-raw-card-import",
@@ -303,19 +985,21 @@ const checks = [
     id: "app-arbitrary-sizing",
     description:
       "Arbitrary app sizing remains baseline debt and must not spread.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*\b(?:w|h|max-w|max-h|min-w|min-h|text)-\[[^\]]+\]/g,
     allowlist: {
       "apps/web/app/components/app-shell.tsx": 1,
-      "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx": 1,
     },
   },
   {
     id: "status-label-ssot",
     description:
       "Status label/variant maps are single-sourced in @comtammatu/shared labels + apps/web/app/components/status-badge.tsx; page-local STATUS* maps (including STATUS-first names and multi-line type annotations) must not spread.",
-    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    roots: uiRuntimeRoots([".ts", ".tsx"]),
     pattern:
       /\bconst\s+(?![A-Z0-9_]*STATUS[A-Z0-9_]*(?:RANK|PRIORITY)[A-Z0-9_]*\b)[A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:[^=]*?)?\s*=\s*[{[]/g,
     allowlist: {
@@ -328,39 +1012,10 @@ const checks = [
     },
   },
   {
-    id: "vnd-format-ssot",
-    description:
-      "VND money rendering goes through formatVND from @comtammatu/shared/format; local vi-VN formatters must not spread.",
-    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
-    pattern:
-      /toLocaleString\(\s*["']vi-VN["']|Intl\.NumberFormat\(\s*["']vi-VN["']|\b(?:function|const)\s+formatVND\b/g,
-    allowlist: {
-      "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts": 2,
-      "apps/web/app/(protected)/finance/components/work-queue-strip.tsx": 1,
-      "apps/web/app/(protected)/finance/page.tsx": 2,
-      "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": 1,
-      "apps/web/app/(protected)/finance/revenue/revenue-charts-internal.tsx": 2,
-      "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 9,
-      "apps/web/app/(protected)/inventory/_lib/format.ts": 2,
-      "apps/web/app/(protected)/inventory/grn/[id]/views/amend-owner-dialog.tsx": 1,
-      "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 8,
-    },
-  },
-  {
-    id: "date-format-ssot",
-    description:
-      "VN date/time rendering goes through @comtammatu/shared/time (formatVNDate/formatVNDateTime/getVNDateString/…, which pin Asia/Ho_Chi_Minh); ad-hoc Intl.DateTimeFormat / toLocaleDateString / toLocaleTimeString in app code must not spread.",
-    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
-    pattern:
-      /Intl\.DateTimeFormat\b|\.toLocaleDateString\(|\.toLocaleTimeString\(/g,
-    allowlist: {},
-  },
-  {
     id: "stat-card-ssot",
     description:
       "KPI/stat metric cards are single-sourced in apps/web/app/components/kpi/; page-local StatCard/StatTile/SummaryCard/SummaryMetric/MetricCard/MetricTile definitions must not spread.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    roots: uiRuntimeRoots([".tsx"]),
     pattern:
       /\b(?:function|const)\s+\w*(?:StatCard|StatTile|SummaryCard|SummaryMetric|MetricCard|MetricTile|KpiCard)\b/g,
     allowlist: {
@@ -371,7 +1026,7 @@ const checks = [
     id: "no-native-dialog",
     description:
       "Use confirm() from @comtammatu/ui/components/confirm-dialog and Sonner toasts; native window.confirm/alert are forbidden.",
-    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    roots: uiRuntimeRoots([".ts", ".tsx"]),
     pattern: /window\.(?:confirm|alert)\(/g,
     allowlist: {},
   },
@@ -379,7 +1034,7 @@ const checks = [
     id: "responsive-double-render",
     description:
       "Parallel mobile/desktop JSX trees (hidden … md:block twins) must not spread; migrate list surfaces to the shared DataTable adapter instead.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    roots: uiRuntimeRoots([".tsx"]),
     pattern: /\bhidden\b[^"'\n]*\bmd:block\b/g,
     allowlist: {},
   },
@@ -387,7 +1042,7 @@ const checks = [
     id: "use-is-mobile-budget",
     description:
       "useIsMobile is for composition-level switches (page width, drawer vs sheet, wizard density) — list surfaces use the shared DataTable adapter. Budget only shrinks.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    roots: uiRuntimeRoots([".tsx"]),
     pattern: /\buseIsMobile\b/g,
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 2,
@@ -484,15 +1139,9 @@ const checks = [
       "Resting app shadows are fixed baseline debt and must not spread; selected/active state uses ring, border, and background instead.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
-      /(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
+      /(?<!drop-)(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
     allowlist: {
-      "apps/web/app/(public)/access-denied/page.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/runner/runner-idle-visual.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-status-shell.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/kds-board.tsx": 1,
-      "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
       "apps/web/app/components/surface.tsx": 1,
     },
   },
@@ -503,6 +1152,24 @@ const checks = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*\btransition-colors\b[^'"]*\bduration-300\b/g,
+    allowlist: {},
+  },
+  {
+    id: "pos-kds-touch-reveal-baseline",
+    description:
+      "POS/KDS touch surfaces must not add hover-only reveal mechanisms; use visible copy, NoteCallout, tap-to-expand, or multi-line layout instead of native title attributes or Tooltip.",
+    roots: [
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/pos",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/kds",
+        extensions: [".tsx"],
+      },
+    ],
+    pattern:
+      /<(?:div|span|p|button|a|li|h[1-6]|td|th)\b[^>]*\btitle\s*=|<Tooltip\b/g,
     allowlist: {},
   },
 ];
@@ -517,7 +1184,6 @@ const SHELL_REGISTRY_BASELINE = new Set([
   "apps/web/app/(protected)/finance/components/finance-shell.tsx",
   "apps/web/app/(protected)/inventory/_components/inventory-shell.tsx",
   "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",
-  "apps/web/app/(protected)/br/[branchId]/pos/pos-status-shell.tsx",
 ]);
 
 // header-lockup-registry (D058 W2, design-system.md § B): freeze the file set
@@ -529,11 +1195,28 @@ const SHELL_REGISTRY_BASELINE = new Set([
 const HEADER_LOCKUP_REGISTRY_BASELINE = new Set([
   "apps/web/app/components/app-header.tsx",
   "apps/web/app/components/app-shell.tsx",
-  "apps/web/app/(protected)/br/[branchId]/pos/pos-session-header.tsx",
-  "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx",
 ]);
 
 const failures = [];
+const UI_CONTRACT_SOURCE = fs.readFileSync(SELF_PATH, "utf8");
+const UI_AUDIT_SOURCE = fs.readFileSync(
+  path.join(REPO_ROOT, "scripts/audit-ui-components.mjs"),
+  "utf8",
+);
+failures.push(...validateAuditSignalGuardCoverage(UI_CONTRACT_SOURCE));
+const guardReporting = buildUiContractGuardReporting(
+  UI_CONTRACT_SOURCE,
+  UI_AUDIT_SOURCE,
+);
+failures.push(
+  ...guardReporting.errors.map((error) => `guard-reporting-closure: ${error}`),
+);
+const componentRegistry = validateUiComponentRegistry(REPO_ROOT);
+failures.push(
+  ...componentRegistry.errors.map(
+    (error) => `component-selection-coverage: ${error}`,
+  ),
+);
 
 if (fs.existsSync(path.join(REPO_ROOT, "docs/archive"))) {
   failures.push("legacy-docs: docs/archive must not exist");
@@ -909,8 +1592,8 @@ const countBudgets = [
       "Resting shadow debt only burns down; new app-surface shadows must route through an approved overlay/fixed-chrome adapter.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
-      /(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
-    maxCount: 9,
+      /(?<!drop-)(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
+    maxCount: 2,
   },
 ];
 
@@ -922,12 +1605,7 @@ const perFileCountBudgets = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /\bspace-y-(?:px|0|0\.5|1|1\.5|2|2\.5|3|3\.5|4|5|6|7|8|9|10|11|12|14|16|20|24|\[[^\]]+\])\b/g,
-    allowlist: {
-      "apps/web/app/(protected)/menu/category-table.tsx": 2,
-      "apps/web/app/(protected)/menu/item-table.tsx": 1,
-      "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/production/[id]/production-detail-client.tsx": 3,
-    },
+    allowlist: {},
   },
   {
     id: "raw-padding-baseline",
@@ -938,8 +1616,6 @@ const perFileCountBudgets = [
       /className=\{?(?:cn\()?['"][^'"]*\b(?:p|px|py|pt|pb|pl|pr)-(?:5|6|7|8|9|10|11|12|14|16|20|24)\b/g,
     allowlist: {
       "apps/web/app/_components/notification-list.tsx": 1,
-      "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/production/[id]/production-detail-client.tsx": 1,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
       "apps/web/app/(protected)/branches/network-config-dialog.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/focus-view.tsx": 1,
@@ -968,21 +1644,7 @@ const perFileCountBudgets = [
       "Gap values outside the documented app scale are frozen per file until they are normalized.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /\bgap-(?:0|0\.5|2\.5)\b/g,
-    allowlist: {
-      "apps/web/app/(protected)/br/[branchId]/kds/_components/focus-view.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/_components/order-grid.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-actions-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-sidebar-panel.tsx": 1,
-      "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx": 1,
-      "apps/web/app/(protected)/inventory/grn/[id]/views/amend-owner-dialog.tsx": 1,
-      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 1,
-      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 1,
-    },
+    allowlist: {},
   },
   {
     id: "inline-chrome-baseline",
@@ -992,20 +1654,14 @@ const perFileCountBudgets = [
     pattern:
       /className=\{?(?:cn\()?\s*['"](?=[^'"]*\brounded-(?:md|lg)\b)(?=[^'"]*\bborder\b)[^'"]*['"]/g,
     allowlist: {
-      "apps/web/app/_components/notification-item.tsx": 1,
       "apps/web/app/_components/notification-list.tsx": 1,
-      "apps/web/app/(protected)/admin/settings/(tenant)/payments/payments-form.tsx": 3,
+      "apps/web/app/(protected)/admin/settings/(tenant)/payments/payments-form.tsx": 2,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/discount-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/service-charge-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-page-skeleton.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 1,
-      "apps/web/app/(protected)/branch-settings/_shared/kds/station-form-dialog.tsx": 1,
-      "apps/web/app/(protected)/branch-settings/_shared/pos/stock-control-card.tsx": 1,
-      "apps/web/app/(protected)/finance/bank-transactions/page.tsx": 1,
       "apps/web/app/(protected)/finance/components/chart-card.tsx": 1,
       "apps/web/app/(protected)/finance/components/filter-bar.tsx": 1,
       "apps/web/app/(protected)/finance/components/mv-staleness-banner.tsx": 1,
@@ -1013,7 +1669,6 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx": 1,
       "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 1,
       "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
-      "apps/web/app/(protected)/hr/employee-form-dialog.tsx": 1,
       "apps/web/app/(protected)/hr/position-tasks-client.tsx": 2,
       "apps/web/app/(protected)/inventory/_components/anti-split-rolling-meter.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/inventory-branch-filter.tsx": 1,
@@ -1025,21 +1680,18 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/inventory/_components/zone-lock-indicator.tsx": 1,
       "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 3,
       "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 3,
+      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 2,
       "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx": 1,
       "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 1,
       "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 2,
       "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 1,
       "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 9,
-      "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx": 1,
       "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx": 1,
       "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx": 1,
       "apps/web/app/(protected)/menu/menu-image-input.tsx": 1,
       "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 7,
       "apps/web/app/(public)/(auth)/login/page.tsx": 1,
       "apps/web/app/(public)/access-denied/page.tsx": 1,
-      "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/production/[id]/production-detail-client.tsx": 1,
     },
   },
   {
@@ -1049,10 +1701,7 @@ const perFileCountBudgets = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /className=\{?(?:cn\()?['"](?:(?=[^'"]*\brounded-full\b)(?=[^'"]*\bsize-(?:8|10|12|14|16)\b)|(?=[^'"]*\brounded-lg\b)(?=[^'"]*\bsize-(?:8|10|12)\b))[^'"]*['"]/g,
-    allowlist: {
-      "apps/web/app/_components/notification-list.tsx": 1,
-      "apps/web/app/(protected)/inventory/dashboard-client.tsx": 1,
-    },
+    allowlist: {},
   },
   {
     id: "custom-shadow-baseline",
@@ -1063,23 +1712,19 @@ const perFileCountBudgets = [
       { dir: "packages/ui/src/components", extensions: [".tsx"] },
     ],
     pattern:
-      /\bshadow-\[[^\]]+\]|\bboxShadow\b|\bbox-shadow\b|--shadow-[\w-]+/g,
-    allowlist: {
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx": 1,
-      "packages/ui/src/components/badge.tsx": 1,
-      "packages/ui/src/components/button.tsx": 1,
-      "packages/ui/src/components/scroll-area.tsx": 1,
-      "packages/ui/src/components/sidebar.tsx": 2,
-      "packages/ui/src/components/switch.tsx": 1,
-      "packages/ui/src/components/tabs.tsx": 1,
-      "packages/ui/src/components/toggle.tsx": 1,
-    },
+      /\bshadow-\[[^\]]+\]|\bboxShadow\s*:|\bbox-shadow\s*:|--shadow-[\w-]+/g,
+    allowlist: {},
   },
   {
     id: "tint-opacity",
     description:
       "Status-token tints use the locked opacity scale only: fill /10, fill-strong /15, hairline-border /20 (and muted /30 or /50). Every other step (/5,/8,/12,/25,/35,/45,/55,/60,/90,/95,…) is frozen per file and burns down; solid status backgrounds use the bare token, not /95 (design-system.md § Token Contract → Tint Opacity Scale).",
-    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    roots: [
+      { dir: "apps/web/app", extensions: [".ts", ".tsx"] },
+      { dir: "apps/web/lib/branch-operator", extensions: [".ts", ".tsx"] },
+      { dir: "apps/web/lib/staff-runtime", extensions: [".ts", ".tsx"] },
+      { dir: "packages/ui/src/components", extensions: [".tsx"] },
+    ],
     pattern:
       /\b(?:bg|border|ring|text|fill|stroke)-(?:warning|success|destructive|info|primary|accent|secondary)\/(?!(?:10|15|20)\b)\d+\b|\b(?:bg|border|ring|text|fill|stroke)-muted\/(?!(?:30|50)\b)\d+\b/g,
     allowlist: {
@@ -1104,27 +1749,15 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/branches/network-config-dialog.tsx": 4,
       "apps/web/app/(protected)/finance/components/mv-staleness-banner.tsx": 3,
       "apps/web/app/(protected)/finance/components/work-queue-strip.tsx": 4,
-      "apps/web/app/(protected)/hr/employee-form-dialog.tsx": 1,
       "apps/web/app/(protected)/hr/position-tasks-client.tsx": 1,
       "apps/web/app/(protected)/hr/staff/[id]/permissions/permissions-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/_components/stocktake-mode-selector.tsx": 2,
-      "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/_components/stocktake-mode-selector.tsx": 1,
       "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
       "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 1,
       "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/production/[id]/production-detail-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 3,
-      "apps/web/app/(protected)/inventory/settings/thresholds/thresholds-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 3,
-      "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 5,
-      "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx": 3,
+      "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 1,
       "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 8,
       "apps/web/app/(public)/access-denied/page.tsx": 3,
-      "apps/web/app/components/data-table/data-table.tsx": 1,
-      "apps/web/app/components/kpi/kpi-card.tsx": 1,
-      "apps/web/app/components/kpi/trend-sparkline.tsx": 1,
     },
   },
   {
@@ -1134,8 +1767,28 @@ const perFileCountBudgets = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /className=\{?(?:cn\()?['"](?=[^'"]*\buppercase\b)(?=[^'"]*\b(?:text-sm|text-base)\b)[^'"]*['"]/g,
+    allowlist: {},
+  },
+  {
+    id: "status-chip-wrapper-baseline",
+    description:
+      "Page-local status chip wrappers and badge-variant maps are frozen; route business states through StatusBadge/getStatusBadgeMeta instead of adding another *StatusBadge or *_BADGE_VARIANT map.",
+    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    pattern:
+      /\b(?:function|const)\s+[A-Z]\w*StatusBadge\b|\bconst\s+[A-Z0-9_]*BADGE_VARIANT[A-Z0-9_]*\s*=\s*[{[]/g,
+    allowlist: {},
+  },
+  {
+    id: "hand-rolled-page-heading-baseline",
+    description:
+      "Hand-rolled font-heading <h1> page titles are frozen; app page H1 must route through AppPageHeader unless the surface is an approved standalone/operator exception.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /<h1\b[^>]*className=["'][^"']*\bfont-heading\b(?=[^"']*\b(?:text-lg|text-xl|text-2xl|text-3xl|sm:text-2xl|sm:text-3xl)\b)[^"']*["']/g,
     allowlist: {
-      "apps/web/app/(protected)/inventory/grn/new/supplier-picker.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/catalog-back-header.tsx": 1,
+      "apps/web/app/(public)/payment/momo/return/page.tsx": 1,
+      "apps/web/app/q/[token]/self-order-client.tsx": 1,
     },
   },
 ];
@@ -1161,7 +1814,6 @@ const frozenPrimitiveImportBaselines = [
     allowlist: {
       "apps/web/app/components/data-table/data-table.tsx": 1,
       "apps/web/app/components/table-empty-state-row.tsx": 1,
-      "apps/web/app/(protected)/finance/bank-transactions/page.tsx": 1,
     },
   },
   {
@@ -1170,11 +1822,6 @@ const frozenPrimitiveImportBaselines = [
     label: "Dialog",
     replacement: "FormDialog, Sheet, Page, or an approved contextual dialog",
     allowlist: {
-      "apps/web/app/(protected)/branches/network-config-dialog.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/transfer-table-dialog.tsx": 1,
-      "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
-      "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 1,
       "apps/web/app/components/form/form-dialog.tsx": 1,
       "apps/web/app/components/pwa-install-help-dialog.tsx": 1,
     },
@@ -1266,7 +1913,7 @@ for (const gate of frozenPrimitiveImportBaselines) {
     "g",
   );
 
-  for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
+  for (const filePath of walkUiRuntimeFiles([".tsx"])) {
     const normalized = toPosix(filePath);
     const content = fs.readFileSync(filePath, "utf8");
     const count = countMatches(content, pattern);
@@ -1282,6 +1929,11 @@ for (const gate of frozenPrimitiveImportBaselines) {
 }
 
 for (const check of checks) {
+  if (typeof check.custom === "function") {
+    check.custom();
+    continue;
+  }
+
   const seen = new Map();
 
   for (const root of check.roots) {
@@ -1317,7 +1969,7 @@ for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
 // header-lockup-registry (D058 W2, design-system.md § B): a direct
 // BrandLogoBox/BrandMark caller outside the frozen baseline means a new
 // hand-rolled header lockup instead of consuming the shared AppHeader.
-for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
+for (const filePath of walkUiRuntimeFiles([".tsx"])) {
   const normalized = toPosix(filePath);
   if (normalized === "apps/web/app/components/brand.tsx") continue;
   const content = fs.readFileSync(filePath, "utf8");
@@ -1342,7 +1994,11 @@ const ACL_PATHS = [
 ].map((match) => match[1]);
 
 // Redirect shims legitimately resolve to no family (they only call redirect()).
-const ROUTE_MANIFEST_SHIM_ROUTES = new Set(["/admin", "/inventory/drafts"]);
+const ROUTE_MANIFEST_SHIM_ROUTES = new Set([
+  "/admin",
+  "/br",
+  "/inventory/drafts",
+]);
 // ACL family roots without a landing page still resolve through shared ACL.
 const ROUTE_MANIFEST_NO_PAGE_ACL = new Set();
 
@@ -1372,7 +2028,11 @@ function resolveFamilyPath(route) {
 const protectedPages = walkFiles("apps/web/app/(protected)", [".tsx"])
   .map(toPosix)
   .filter((file) => file.endsWith("/page.tsx"));
-const landingRouteSet = new Set(protectedPages.map(routePathFromPageFile));
+const rootPage = "apps/web/app/page.tsx";
+const routeManifestPages = fs.existsSync(path.join(REPO_ROOT, rootPage))
+  ? [...protectedPages, rootPage]
+  : protectedPages;
+const landingRouteSet = new Set(routeManifestPages.map(routePathFromPageFile));
 
 for (const file of protectedPages) {
   const route = routePathFromPageFile(file);
@@ -1390,13 +2050,24 @@ for (const file of protectedPages) {
 const RAW_EMPTY_IMPORT_ALLOWLIST = new Set([
   "apps/web/app/components/surface.tsx",
 ]);
-for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
+for (const filePath of walkUiRuntimeFiles([".tsx"])) {
   const normalized = toPosix(filePath);
   if (RAW_EMPTY_IMPORT_ALLOWLIST.has(normalized)) continue;
   const content = fs.readFileSync(filePath, "utf8");
   if (content.includes('"@comtammatu/ui/components/empty"')) {
     failures.push(
       `raw-empty-import-route-code: ${normalized} imports raw Empty primitives. Use AppEmptyState or TableEmptyStateRow; raw Empty* is reserved for approved wrappers (design-system.md Empty / Confirm).`,
+    );
+  }
+}
+
+for (const filePath of walkUiRuntimeFiles([".tsx"])) {
+  const normalized = toPosix(filePath);
+  const content = fs.readFileSync(filePath, "utf8");
+  const count = countMatches(content, /<table\b/g);
+  if (count > 0) {
+    failures.push(
+      `raw-table-element: ${normalized} renders ${count} raw <table> element(s). Use DataTable, TableEmptyStateRow, or the shared Table primitive through an approved adapter.`,
     );
   }
 }
@@ -1459,21 +2130,18 @@ const VALID_ARCHETYPES = new Set([
   "DASHBOARD",
   "GATE/AUTH",
   "BOARD",
+  "PUBLIC-WORKFLOW",
 ]);
 
 // Baseline: DOC-WORKFLOW pages that pre-date the DocumentFormFrame mandate
 // (docs/spec/page-archetypes.md § DOC-WORKFLOW). Only shrinks as pages migrate.
-const DOC_WORKFLOW_FRAME_BASELINE = new Set(["apps/web/app/(protected)/inventory/production/new/page.tsx"]);
+const DOC_WORKFLOW_FRAME_BASELINE = new Set([
+  "apps/web/app/(protected)/inventory/production/new/page.tsx",
+]);
 
-const allPageFiles = [
-  ...walkFiles("apps/web/app/(protected)", [".tsx"]),
-  ...walkFiles("apps/web/app/(public)", [".tsx"]),
-]
+const allPageFiles = walkFiles("apps/web/app", [".tsx"])
   .map(toPosix)
   .filter((file) => file.endsWith("/page.tsx"));
-if (fs.existsSync(path.join(REPO_ROOT, "apps/web/app/page.tsx"))) {
-  allPageFiles.push("apps/web/app/page.tsx");
-}
 
 for (const file of allPageFiles) {
   const archetype = PAGE_ARCHETYPES[file];
@@ -1498,6 +2166,29 @@ for (const file of Object.keys(PAGE_ARCHETYPES)) {
   }
 }
 
+function findNearestRouteBoundary(pageFile, boundaryFile) {
+  const appRoot = path.join(REPO_ROOT, "apps/web/app");
+  let currentDir = path.dirname(path.join(REPO_ROOT, pageFile));
+
+  while (currentDir.startsWith(appRoot)) {
+    const candidate = path.join(currentDir, boundaryFile);
+    if (fs.existsSync(candidate)) return toPosix(candidate);
+    if (currentDir === appRoot) break;
+    currentDir = path.dirname(currentDir);
+  }
+
+  return null;
+}
+
+for (const file of allPageFiles) {
+  for (const boundaryFile of ["loading.tsx", "error.tsx"]) {
+    if (findNearestRouteBoundary(file, boundaryFile)) continue;
+    failures.push(
+      `route-boundary-coverage: ${file} cannot resolve an inherited ${boundaryFile}. Add a route-family boundary using the shared adapter or restore the app-level boundary.`,
+    );
+  }
+}
+
 for (const file of allPageFiles) {
   if (PAGE_ARCHETYPES[file] !== "EMBED-WRAPPER") continue;
   const content = fs.readFileSync(path.join(REPO_ROOT, file), "utf8");
@@ -1518,10 +2209,11 @@ for (const file of allPageFiles) {
   if (PAGE_ARCHETYPES[file] !== "DOC-WORKFLOW") continue;
   if (
     !pageOrDirectClientUsesDocumentFormFrame(file) &&
+    !branchPageOrDirectClientUsesOperatorWorkflowFrame(file) &&
     !DOC_WORKFLOW_FRAME_BASELINE.has(file)
   ) {
     failures.push(
-      `page-archetype: ${file} is a DOC-WORKFLOW page without DocumentFormFrame in the page or its direct client owner. DocumentFormFrame is mandatory for new DOC-WORKFLOW pages (docs/spec/page-archetypes.md § DOC-WORKFLOW); the hand-rolled baseline is frozen and only shrinks.`,
+      `page-archetype: ${file} is a DOC-WORKFLOW page without an approved frame in the page or its direct client owner. Office uses DocumentFormFrame; Branch touch uses BranchOperatorPage + BranchOperatorPanel + AppDetailFooter (docs/spec/page-archetypes.md § DOC-WORKFLOW).`,
     );
   }
 }
@@ -1652,18 +2344,58 @@ for (const file of walkFiles("apps/web/app", [".tsx"])) {
 // scope by design (design-system.md § Enforcement Status — the old "any raw
 // height" gate was ~37 non-button false-positives). The tag scanner is
 // brace/string-aware, so cn() and multi-line className props are covered. The
-// baseline = form-control trigger buttons (40px field row) plus a few bespoke
-// single-use tap tiles (≥h-20) that do not warrant a shared size variant.
-const BUTTON_HEIGHT_BASELINE = {
-  "apps/web/app/components/form/business-date-field.tsx": 1,
-  "apps/web/app/components/form/combobox.tsx": 1,
-  "apps/web/app/components/form/multi-select-combobox.tsx": 1,
-  "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
-  "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-row.tsx": 1,
-};
+// baseline = 0; form-control trigger buttons route through size="field".
+const BUTTON_HEIGHT_BASELINE = {};
 const BUTTON_HEIGHT_TOKEN =
   /\b(?:h-(?:10|11|12|14|16|20|24|28|32|36|40|44)|min-h-(?:12|14|16|20|24))\b/;
-for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
+const NATIVE_INTERACTIVE_EXCEPTIONS = new Set([
+  "apps/web/app/global-error.tsx",
+]);
+for (const filePath of walkUiRuntimeFiles([".tsx"])) {
+  const normalized = toPosix(filePath);
+  if (NATIVE_INTERACTIVE_EXCEPTIONS.has(normalized)) continue;
+  const content = fs.readFileSync(filePath, "utf8");
+  const count = countNativeInteractiveElement(content);
+  if (count > 0) {
+    failures.push(
+      `native-interactive-element: ${normalized} has ${count} raw native action(s). Use Button/Link via a Má Tư DS primitive; keep raw anchors only for hash/tel/external links or primitive asChild children.`,
+    );
+  }
+}
+for (const filePath of walkUiRuntimeFiles([".tsx"])) {
+  const normalized = toPosix(filePath);
+  const content = fs.readFileSync(filePath, "utf8");
+  const count = countIconButtonAriaRisk(content);
+  if (count > 0) {
+    failures.push(
+      `icon-button-accessible-name: ${normalized} has ${count} icon-only Button(s) without an accessible name. Add aria-label/aria-labelledby or sr-only text.`,
+    );
+  }
+}
+for (const filePath of walkUiRuntimeFiles([".tsx"])) {
+  const normalized = toPosix(filePath);
+  if (
+    !normalized.endsWith("/loading.tsx") &&
+    !normalized.endsWith("/error.tsx")
+  ) {
+    continue;
+  }
+  const content = fs.readFileSync(filePath, "utf8");
+  if (
+    normalized.endsWith("/loading.tsx") &&
+    !/\b(PageSkeleton|PageSpinner)\b/.test(content)
+  ) {
+    failures.push(
+      `route-boundary-adapters: ${normalized} must render PageSkeleton or PageSpinner.`,
+    );
+  }
+  if (normalized.endsWith("/error.tsx") && !/\bErrorPanel\b/.test(content)) {
+    failures.push(
+      `route-boundary-adapters: ${normalized} must delegate to ErrorPanel.`,
+    );
+  }
+}
+for (const filePath of walkUiRuntimeFiles([".tsx"])) {
   const normalized = toPosix(filePath);
   const content = fs.readFileSync(filePath, "utf8");
   let count = 0;
@@ -1692,7 +2424,6 @@ for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
 // the embedded-mounted client files named in D058/D059, not every
 // EMBED-WRAPPER target — widen the file list only with a contract reason.
 const OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES = [
-  "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
   "apps/web/app/(protected)/orders/orders-page-body.tsx",
   "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
   "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
@@ -1706,12 +2437,7 @@ const OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES = [
   "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
   "apps/web/app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
 ];
-const OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE = {
-  "apps/web/app/(protected)/orders/orders-page-body.tsx": 1,
-  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
-  "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 2,
-  "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx": 1,
-};
+const OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE = {};
 const OPERATOR_EMBEDDED_BUTTON_SIZE_TOKEN =
   /\bsize=(?:"(?:sm|xs)"|'(?:sm|xs)'|\{["'](?:sm|xs)["']\})/;
 function countOperatorEmbeddedButtonDensity(content) {
@@ -1754,7 +2480,6 @@ const OPERATOR_EMBEDDED_PAGE_HEADER_FILES = [
   "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   "apps/web/app/(protected)/inventory/reports/reports-client.tsx",
   "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx",
-  "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
   "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
   "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
   "apps/web/app/(protected)/inventory/supplier-returns/[id]/page.tsx",
@@ -1837,6 +2562,79 @@ function computeTotalActual(roots, pattern) {
     }
   }
   return count;
+}
+
+function actualMapToRecord(actuals) {
+  return Object.fromEntries(actuals.entries());
+}
+
+const baselineGuardIds = new Set(Object.keys(UI_CONTRACT_BASELINE_POLICIES));
+const baselineDefinitions = [
+  ...checks
+    .filter(
+      (gate) =>
+        baselineGuardIds.has(gate.id) &&
+        Array.isArray(gate.roots) &&
+        gate.pattern instanceof RegExp,
+    )
+    .map((gate) => ({
+      id: gate.id,
+      actualByFile: actualMapToRecord(
+        computePerFileActuals(gate.roots, gate.pattern),
+      ),
+      allowed: Object.values(gate.allowlist).reduce(
+        (sum, count) => sum + count,
+        0,
+      ),
+      allowedByFile: gate.allowlist,
+    })),
+  ...countBudgets
+    .filter((gate) => baselineGuardIds.has(gate.id))
+    .map((gate) => ({
+      id: gate.id,
+      actualByFile: actualMapToRecord(
+        computePerFileActuals(gate.roots, gate.pattern),
+      ),
+      allowed: gate.maxCount,
+    })),
+  ...perFileCountBudgets
+    .filter((gate) => baselineGuardIds.has(gate.id))
+    .map((gate) => ({
+      id: gate.id,
+      actualByFile: actualMapToRecord(
+        computePerFileActuals(gate.roots, gate.pattern),
+      ),
+      allowed: Object.values(gate.allowlist).reduce(
+        (sum, count) => sum + count,
+        0,
+      ),
+      allowedByFile: gate.allowlist,
+    })),
+  {
+    id: "operator-embedded-button-density",
+    actualByFile: Object.fromEntries(
+      OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES.map((file) => {
+        const filePath = path.join(REPO_ROOT, file);
+        return [
+          file,
+          fs.existsSync(filePath)
+            ? countOperatorEmbeddedButtonDensity(
+                fs.readFileSync(filePath, "utf8"),
+              )
+            : 0,
+        ];
+      }).filter(([, count]) => count > 0),
+    ),
+    allowed: Object.values(OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE).reduce(
+      (sum, count) => sum + count,
+      0,
+    ),
+    allowedByFile: OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE,
+  },
+];
+const baselineReporting = buildUiContractBaselineReporting(baselineDefinitions);
+for (const error of baselineReporting.errors) {
+  failures.push(`baseline-reporting-closure: ${error}`);
 }
 
 // Ratchet a {file:count} allowlist downward: keep only files still present in
@@ -1980,13 +2778,25 @@ if (WRITE_MODE) {
 
   // checks + perFileCountBudgets + frozenPrimitiveImportBaselines: ratchet
   // `allowlist`.
+  const formatterGuardIds = new Set(
+    formatterGuardBaselines.map((gate) => gate.id),
+  );
   const allowlistGates = [
-    ...checks.map((gate) => ({
-      varName: "checks",
-      id: gate.id,
-      oldAllowlist: gate.allowlist,
-      actuals: computePerFileActuals(gate.roots, gate.pattern),
-    })),
+    ...checks
+      .filter(
+        (gate) =>
+          Array.isArray(gate.roots) &&
+          gate.pattern instanceof RegExp &&
+          gate.allowlist != null,
+      )
+      .map((gate) => ({
+        varName: formatterGuardIds.has(gate.id)
+          ? "formatterGuardBaselines"
+          : "checks",
+        id: gate.id,
+        oldAllowlist: gate.allowlist,
+        actuals: computePerFileActuals(gate.roots, gate.pattern),
+      })),
     ...perFileCountBudgets.map((gate) => ({
       varName: "perFileCountBudgets",
       id: gate.id,
@@ -2307,4 +3117,8 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("UI contract check: baseline không tăng.");
+if (BASELINE_REPORT_MODE) {
+  console.log(JSON.stringify(baselineReporting));
+} else {
+  console.log("UI contract check: baseline không tăng.");
+}
