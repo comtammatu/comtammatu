@@ -194,9 +194,23 @@ Branch stock workflow áp dụng cùng ranh giới này:
 - On-hand Branch là lookup surface, không lặp cụm mutation của Hub trên đầu
   danh sách. Nhận/điều chuyển/kiểm kê/hủy hỏng vẫn mở từ stock Hub; action theo
   nguyên liệu nằm trong thẻ kho chi tiết theo permission hiện có.
+- `/br/[branchId]/stock/grn` là Branch-native touch `LIST`: dùng shared
+  `loadGrnListPageData` + pure filter model, hiển thị nháp của người đang thao
+  tác trước hàng đợi GRN, và giữ bỏ nháp là action có xác nhận. Danh sách Branch
+  chỉ giữ mã phiếu, NCC, ngày, trạng thái và PO liên kết; không hiển thị tổng
+  tiền/tên chi nhánh, không dùng `DataTable` hoặc long-press, và không đổi sang
+  Office presentation tại tablet landscape.
+- `/br/[branchId]/stock/grn/new` là Branch-native touch `LIST` cho bước chọn
+  nguồn: dùng shared `loadGrnSourcePageData` + pure source model, có tìm NCC,
+  tạo NCC khi được cấp quyền, và mở PO chờ nhận bằng full-row touch action.
+  Supplier entry canonical tại `/br/[branchId]/stock/grn/new/[supplierId]`; màn
+  source không render `DocumentFormFrame`, `DataTable`, hoặc Office picker.
 - Office `/inventory/stock` dùng cùng loader/model nhưng giữ management
   `StockClient`: compact cards khi viewport hẹp và dense `DataTable` trên
   desktop. Office client không có `embedded` mode hoặc Branch route branching.
+- Office `/inventory/operations?tab=grn` dùng cùng GRN loader/model nhưng giữ
+  `GrnListClient` management presentation: branch, tổng giá trị và desktop
+  `DataTable` vẫn thuộc Office; client này không nhận diện `/br/` để đổi layout.
 - detail điều chuyển trong Branch chỉ giữ thao tác giao/nhận và số lượng từng
   dòng; audit history và correction sau khi chốt thuộc Office management.
 - tạo điều chuyển tại `/br/[branchId]/stock/transfer/new` là Branch-native

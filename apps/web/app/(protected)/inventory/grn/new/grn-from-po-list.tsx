@@ -42,7 +42,10 @@ function formatOrderedAt(iso: string | null): string {
   return formatVNDate(iso);
 }
 
-export function GrnFromPoList({ openPos, grnBasePath = "/inventory/grn" }: Props) {
+export function GrnFromPoList({
+  openPos,
+  grnBasePath = "/inventory/grn",
+}: Props) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
   const [pendingPoId, setPendingPoId] = React.useState<number | null>(null);
@@ -57,7 +60,7 @@ export function GrnFromPoList({ openPos, grnBasePath = "/inventory/grn" }: Props
         return;
       }
       const grn = res.data as { id: number };
-      router.push(`${grnBasePath}/${grn.id}?review=1`);
+      router.push(`${grnBasePath}/${grn.id}`);
       router.refresh();
     });
   }
@@ -100,7 +103,9 @@ export function GrnFromPoList({ openPos, grnBasePath = "/inventory/grn" }: Props
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span>{INVENTORY_VI.lineItemCount(po.line_count)}</span>
                   {po.total_est != null ? (
-                    <span>~{INVENTORY_VI.amountDong(formatVND(po.total_est))}</span>
+                    <span>
+                      ~{INVENTORY_VI.amountDong(formatVND(po.total_est))}
+                    </span>
                   ) : null}
                   <span>{formatOrderedAt(po.ordered_at)}</span>
                 </div>

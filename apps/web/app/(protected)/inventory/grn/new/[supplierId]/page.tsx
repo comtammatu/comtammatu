@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { loadAuthState } from "@/_lib/auth";
+import { loadAuthState, probePermission } from "@/_lib/auth";
 import {
   canAccess,
   PERMISSION_KEYS,
@@ -29,7 +29,15 @@ type Ingredient = {
   id: number;
   name: string;
   sku: string | null;
-  ingredient_units?: { id: number, unit_id: number, to_base_factor: number, is_base: boolean, is_active: boolean, sort_order: number, units: { code: string, name: string } | null }[];
+  ingredient_units?: {
+    id: number;
+    unit_id: number;
+    to_base_factor: number;
+    is_base: boolean;
+    is_active: boolean;
+    sort_order: number;
+    units: { code: string; name: string } | null;
+  }[];
   unit_cost: number | null;
   category: string | null;
   units?: IngredientUnitRow[];
@@ -67,7 +75,8 @@ export async function GrnCreatePageContent({
   }
 
   const queryParams = searchParams ? await searchParams : {};
-  const { supabase, claims } = await loadAuthState();
+  const auth = await loadAuthState();
+  const { supabase, claims } = auth;
   if (
     !PROCUREMENT_ROLES.includes(claims.user_role) ||
     !canAccess(claims.user_role, "inventory_procurement")
@@ -80,6 +89,12 @@ export async function GrnCreatePageContent({
     queryBranchId: queryParams.branchId,
   });
   if (scope.outOfScope) notFound();
+  const canCreate = await probePermission(
+    auth,
+    PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+    scope.selectedBranchId,
+  );
+  if (!canCreate) redirect("/access-denied?reason=insufficient-permission");
 
   const [supplierRes, ingredientsRes, locationsRes] = await Promise.all([
     supabase
@@ -123,9 +138,7 @@ export async function GrnCreatePageContent({
         : (branches[0]?.id ?? null);
   const branchById = new Map(branches.map((branch) => [branch.id, branch]));
   const procurementBranchIds = new Set(branches.map((branch) => branch.id));
-  const locationOptions = (
-    (locationsRes.data ?? []) as InventoryLocationRow[]
-  )
+  const locationOptions = ((locationsRes.data ?? []) as InventoryLocationRow[])
     .filter((location) => {
       const branch = branchById.get(location.branch_id);
       return (

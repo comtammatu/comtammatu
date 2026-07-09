@@ -129,7 +129,7 @@ const GRN_CREATE_COPY = {
     "Thêm nguyên liệu, kiểm tra kho nhận, rồi chốt nhập kho ngay tại đây.",
   discardDraft: "Hủy nháp",
   addItemToContinue: "Thêm mặt hàng để tiếp tục",
-  unitCostTitle: "Đơn giá tự tính",
+  unitCostTitle: "Đơn giá nhập",
   editItem: "Sửa mặt hàng",
   addItem: "Thêm mặt hàng",
   editLineAria: "Sửa dòng",

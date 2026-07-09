@@ -82,7 +82,7 @@ test("inventory-scope's list-scope reader delegates to the shared resolveListSco
   assert.match(INVENTORY_SCOPE_SOURCE, /from "@\/_lib\/branch-context"/);
 });
 
-test("shared inventory PageContents route scope-read through resolveInventoryListScope, not a hand-rolled routeBranchId/query merge (D058 W3b)", () => {
+test("shared inventory PageContents and extracted loaders route scope-read through resolveInventoryListScope (D058 W3b)", () => {
   const legacyDualityPattern =
     /routeBranchId\s*\?\?\s*\(await resolveRequestedBranchId/;
 
@@ -94,7 +94,6 @@ test("shared inventory PageContents route scope-read through resolveInventoryLis
     "stocktake/page.tsx",
     "stocktake/new/page.tsx",
     "issues/page.tsx",
-    "grn/page.tsx",
     "waste/approvals/page.tsx",
   ];
 
@@ -121,6 +120,13 @@ test("shared inventory PageContents route scope-read through resolveInventoryLis
   );
   assert.doesNotMatch(stockLoaderSource, legacyDualityPattern);
   assert.match(stockLoaderSource, /resolveInventoryListScope/);
+
+  const grnListLoaderSource = readFileSync(
+    new URL("../lib/inventory/grn-list-data.ts", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(grnListLoaderSource, legacyDualityPattern);
+  assert.match(grnListLoaderSource, /resolveInventoryListScope/);
 
   const transferCreateLoaderSource = readFileSync(
     new URL("../lib/inventory/transfer-create-data.ts", import.meta.url),

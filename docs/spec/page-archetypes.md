@@ -405,7 +405,7 @@ delta, hint, icon, href}` — `href` drill-down is mandatory per the owner
 
 ## 4. Named Exceptions
 
-These 13 pages do not fit a single archetype cleanly. They are an explicit
+These 14 pages do not fit a single archetype cleanly. They are an explicit
 allowlist, not a precedent for stretching another archetype's definition:
 
 1. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx` — staff
@@ -457,6 +457,18 @@ allowlist, not a precedent for stretching another archetype's definition:
     model with Office but owns a full-row touch list that never changes into a
     desktop table at tablet landscape widths. Classified **LIST** (Branch touch
     variant); the Office stock route retains its responsive management LIST.
+14. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx`
+    — Branch-runtime GRN queue. It shares the GRN list loader and pure filter
+    model with Office but orders the operator's drafts before the touch queue,
+    keeps delete as an explicit confirmed action, and never changes into the
+    Office table at tablet landscape widths. Classified **LIST** (Branch touch
+    variant); Office retains the management `DataTable` LIST.
+15. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx`
+    — Branch-runtime GRN source selection. It shares the source loader and
+    pure supplier model with Office, but presents suppliers and open POs as
+    full-row touch actions and canonicalizes supplier selection into the
+    Branch route. Classified **LIST** (Branch touch source variant); the
+    document-line form remains a separate workflow stage.
 
 ## 5. Agent Lookup Flow
 

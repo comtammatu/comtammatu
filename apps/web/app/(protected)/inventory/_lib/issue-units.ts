@@ -10,6 +10,12 @@ export type IssueUnitOption = InventoryUnitOptionWithFactor;
 type IssueUnitFactor = Pick<IssueUnitOption, "toBaseFactor"> | null | undefined;
 
 const ISSUE_QUANTITY_FRACTION_DIGITS = 3;
+const ISSUE_INTEGER_EPSILON = 5e-6;
+
+function snapNearIntegerQuantity(value: number): number {
+  const integer = Math.round(value);
+  return Math.abs(value - integer) <= ISSUE_INTEGER_EPSILON ? integer : value;
+}
 
 /**
  * Selectable issue units for an ingredient: every active ingredient_units row,
@@ -45,7 +51,7 @@ export function getIssueBaseQuantity(
   const quantity = Number(entryQuantity);
   const factor = resolveToBaseFactor(issueUnit);
   if (!Number.isFinite(quantity) || quantity <= 0 || factor <= 0) return 0;
-  return quantity * factor;
+  return snapNearIntegerQuantity(quantity * factor);
 }
 
 export function getIssueMaxEntryQuantity(
@@ -55,7 +61,7 @@ export function getIssueMaxEntryQuantity(
   const quantity = Number(baseQuantity);
   const factor = resolveToBaseFactor(issueUnit);
   if (!Number.isFinite(quantity) || quantity <= 0 || factor <= 0) return 0;
-  return quantity / factor;
+  return snapNearIntegerQuantity(quantity / factor);
 }
 
 export function formatIssueMaxEntryQuantity(quantity: number): string {
@@ -63,7 +69,7 @@ export function formatIssueMaxEntryQuantity(quantity: number): string {
   if (!Number.isFinite(value) || value <= 0) return "";
 
   const scale = 10 ** ISSUE_QUANTITY_FRACTION_DIGITS;
-  const floored = Math.floor(value * scale) / scale;
+  const floored = Math.floor(snapNearIntegerQuantity(value) * scale) / scale;
   return floored > 0
     ? String(Number(floored.toFixed(ISSUE_QUANTITY_FRACTION_DIGITS)))
     : "";

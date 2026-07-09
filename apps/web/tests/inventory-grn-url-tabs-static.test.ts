@@ -11,7 +11,7 @@ const grnListClientSource = readFileSync(
   "utf8",
 );
 
-test("operations GRN list uses a separate URL key for nested drafts tabs", () => {
+test("operations GRN list embeds drafts without nested URL tabs", () => {
   assert.match(
     operationsPageSource,
     /<AppPageTabs items=\{tabsList\} defaultValue=\{activeTab\}>/,
@@ -20,13 +20,12 @@ test("operations GRN list uses a separate URL key for nested drafts tabs", () =>
   const officeBodySource = grnListClientSource.slice(
     grnListClientSource.indexOf("const officeBody"),
     grnListClientSource.indexOf(
-      "if (embedded)",
+      "if (withinOfficeTabs)",
       grnListClientSource.indexOf("const officeBody"),
     ),
   );
 
-  assert.match(
-    officeBodySource,
-    /paramKey=\{embedded \? "grnTab" : undefined\}/,
-  );
+  assert.match(officeBodySource, /draftSectionWithinOfficeTabs/);
+  assert.match(officeBodySource, /listBody/);
+  assert.doesNotMatch(officeBodySource, /paramKey=/);
 });

@@ -8,8 +8,8 @@ const source = readFileSync(
 );
 
 test("operations keeps sale consumption separate from internal issues", () => {
-  assert.match(source, /value: "consumption", label: "Tiêu hao \/ xuất bán"/);
-  assert.match(source, /value: "issues", label: "Xuất kho nội bộ"/);
+  assert.match(source, /value: "consumption", label: "Tiêu hao vận hành"/);
+  assert.match(source, /value: "issues", label: "Sự cố kho"/);
   assert.match(
     source,
     /activeTab === "consumption"[\s\S]*scope="consumption"[\s\S]*listBasePath="\/inventory\/consumption"/,

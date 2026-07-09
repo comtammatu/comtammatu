@@ -1,7 +1,7 @@
-# Inventory operator — viewport & flow (điều tra + đề xuất)
+# ADR 0009 — Inventory operator viewport & flow
 
-**Trạng thái:** Chờ owner chốt hướng — **chưa implement UI**.\
-**Ngày:** 2026-07-09\
+**Trạng thái:** Parked (2026-07-09) — **chưa implement UI**.\
+**Điều kiện xem lại:** Owner tiếp tục cutover deep workflow của Branch Stock hoặc runtime QA tại `390x844`, `768x1024`, `1024x768` xác nhận document-scroll gây mất CTA/filter.\
 **Phạm vi:** Branch operator Inventory (`/br/[branchId]/stock/**`) và pattern embed từ Office Inventory.\
 **Nguồn ràng buộc:** `docs/agent/rules/ui.md`, `docs/spec/design-system.md`, `docs/modules/ui.md` (Inventory / EMBED-WRAPPER).
 

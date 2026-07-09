@@ -132,6 +132,7 @@ export const INVENTORY_VI = {
   grnCreateSupplierInline: (name: string) => `Tạo NCC "${name}"`,
   grnCreateSupplierPending: "Đang tạo nhà cung cấp…",
   grnCreateSupplierFailed: "Không thể tạo nhà cung cấp.",
+  grnSupplierLoadFailed: "Không thể tải nhà cung cấp.",
   grnCode: "Mã GRN",
   linkedPo: "PO liên kết",
   receiveDate: "Ngày kiểm nhận",
@@ -353,8 +354,7 @@ export const INVENTORY_VI = {
   issueCreateAction: "Tạo WO/PXK khác",
   issueEmptyFiltered: "Không tìm thấy phiếu phù hợp",
   issueEmptyNoData: "Chưa có phiếu nào",
-  issueEmptyDescription:
-    "Điều chỉnh bộ lọc hoặc tạo phiếu mới để bắt đầu.",
+  issueEmptyDescription: "Điều chỉnh bộ lọc hoặc tạo phiếu mới để bắt đầu.",
   issueCreated: "Đã tạo phiếu.",
   issueNotesPlaceholder: "Nhập ghi chú cho phiếu",
   countSlipTitle: "Duyệt phiếu đếm tồn",

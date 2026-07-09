@@ -118,8 +118,8 @@ export const inventory = {
     noActiveStocktakes: "Không có phiên kiểm kê đang thực hiện",
     topAlerts: "5 cảnh báo ưu tiên",
     noAlertShort: "Không có cảnh báo.",
-    stockLevel: (locationName: string, currentQuantity: number | string) =>
-      `${locationName} • Tồn: ${currentQuantity}`,
+    stockLevel: (siteName: string, currentQuantity: number | string) =>
+      `${siteName} • Tồn: ${currentQuantity}`,
     reorderPointSuffix: (reorderPoint: number | string) =>
       ` / ngưỡng ${reorderPoint}`,
     inTransitTitle: "Đang vận chuyển",
@@ -445,7 +445,7 @@ export const inventory = {
       reasonMinLength: "Lý do tối thiểu 10 ký tự.",
       reasonMaxLength: "Lý do tối đa 500 ký tự.",
       warning:
-        "Không dùng cho hàng đã chuyển kho thực tế. Nếu hàng thật đã đi qua kho cũ, tạo Transfer thay vì tạo lại GRN.",
+        "Không dùng cho hàng đã chuyển kho thực tế. Nếu hàng thật đã đi qua kho cũ, tạo phiếu điều chuyển nội bộ thay vì tạo lại phiếu nhập kho.",
       submit: "Tạo lại phiếu",
       success: (code: string) => `Đã tạo phiếu nhập mới ${code}.`,
       invalidLocation: "Chọn kho nhận mới hợp lệ.",
@@ -525,7 +525,7 @@ export const inventory = {
     loadFailed: "Không thể tải đơn đặt hàng.",
     detailLoadFailed: "Không thể tải chi tiết đơn đặt hàng.",
     linkedGrnsLoadFailed: "Không thể tải phiếu nhập liên kết.",
-    receivingLoadFailed: "Không thể tải PO chờ nhận.",
+    receivingLoadFailed: "Không thể tải đơn mua chờ nhận.",
     branchStockLoadFailed: "Không thể tải tồn kho chi nhánh.",
     consumptionLoadFailed: "Không thể tải dữ liệu tiêu thụ.",
     emptySearchTitle: "Không tìm thấy đơn đặt hàng phù hợp",
@@ -682,7 +682,7 @@ export const inventory = {
       operatorTasksTitle: "Việc kho hôm nay",
       resultSummary: (visible: number, total: number) =>
         `${visible}/${total} nguyên liệu`,
-      locationScope: (location: string) => `Đang xem: ${location}`,
+      locationScope: (site: string) => `Đang xem: ${site}`,
     },
     actions: {
       receiveGrn: "Nhận phiếu nhập",

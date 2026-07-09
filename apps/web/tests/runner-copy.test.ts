@@ -131,7 +131,10 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerLightModeSource, /root\.classList\.remove\("dark"\)/);
   assert.match(runnerLightModeSource, /root\.classList\.add\("light"\)/);
   assert.match(runnerLightModeSource, /root\.style\.colorScheme = "light"/);
-  assert.match(runnerLightModeSource, /window\.setTimeout\(applyLightMode, 0\)/);
+  assert.match(
+    runnerLightModeSource,
+    /window\.setTimeout\(applyLightMode, 0\)/,
+  );
   assert.doesNotMatch(runnerLightModeSource, /matu-theme/);
   assert.doesNotMatch(runnerLightModeSource, /localStorage/);
   assert.match(runnerPageSource, /grid-rows-4/);
@@ -141,7 +144,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /quantity: 3/);
   assert.match(runnerPageSource, /status: 4/);
   assert.match(runnerPageSource, /wait: 1/);
-  assert.match(runnerPageSource, /RunnerColumnHeader/);
+  assert.match(runnerPageSource, /RunnerColumnHeading/);
   assert.match(runnerPageSource, /items-stretch/);
   assert.match(runnerPageSource, /divide-x divide-border\/70/);
   assert.match(runnerPageSource, /role="list"/);
@@ -239,19 +242,19 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /sortAt: item\.sortAt/);
   assert.match(
     runnerPageSource,
-    /<RunnerColumnHeader span=\{RUNNER_COLUMN_SPAN\.order\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.order\}\s*<\/RunnerColumnHeader>/,
+    /<RunnerColumnHeading span=\{RUNNER_COLUMN_SPAN\.order\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.order\}\s*<\/RunnerColumnHeading>/,
   );
   assert.match(
     runnerPageSource,
-    /<RunnerColumnHeader span=\{RUNNER_COLUMN_SPAN\.quantity\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.quantity\}\s*<\/RunnerColumnHeader>/,
+    /<RunnerColumnHeading span=\{RUNNER_COLUMN_SPAN\.quantity\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.quantity\}\s*<\/RunnerColumnHeading>/,
   );
   assert.match(
     runnerPageSource,
-    /<RunnerColumnHeader span=\{RUNNER_COLUMN_SPAN\.status\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.status\}\s*<\/RunnerColumnHeader>/,
+    /<RunnerColumnHeading span=\{RUNNER_COLUMN_SPAN\.status\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.status\}\s*<\/RunnerColumnHeading>/,
   );
   assert.match(
     runnerPageSource,
-    /<RunnerColumnHeader span=\{RUNNER_COLUMN_SPAN\.wait\} align="right">/,
+    /<RunnerColumnHeading span=\{RUNNER_COLUMN_SPAN\.wait\} align="right">/,
   );
   assert.match(
     runnerPageSource,
@@ -263,7 +266,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   );
   assert.doesNotMatch(
     runnerPageSource,
-    /<RunnerColumnHeader align="right">\s*\{RUNNER_COPY\.tableHeaders\.quantity\}/,
+    /<RunnerColumnHeading align="right">\s*\{RUNNER_COPY\.tableHeaders\.quantity\}/,
   );
   assert.doesNotMatch(
     runnerPageSource,

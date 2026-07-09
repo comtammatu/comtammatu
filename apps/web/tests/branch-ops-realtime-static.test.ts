@@ -129,7 +129,7 @@ test("operator layout owns the branch ops subscriber without child duplicates", 
 test("operator leave approvals uses the table subscriber without layout duplication", () => {
   assert.match(
     operatorLayout,
-    /disabledPathPrefixes=\{\[\s*`\/br\/\$\{context\.branchId\}\/shift\/leave-approvals`,\s*\]\}/,
+    /disabledPathPrefixes=\{\[\s*`\/br\/\$\{context\.branchId\}\/shift\/leave-approvals`,?\s*\]\}/,
   );
   assert.match(leaveRequestsTable, /useBranchOpsEvents\(\{/);
 });

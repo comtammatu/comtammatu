@@ -110,7 +110,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.5. Phân hệ Kho hàng (Inventory Workspace) — `/inventory` & `/br/[branchId]/stock`
 
-- **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `HUB`; `/inventory/stock` và `/br/[branchId]/stock/on-hand` đều là `LIST` nhưng khác presentation plane.
+- **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `HUB`; `/inventory/stock`, `/br/[branchId]/stock/on-hand`, `/inventory/operations?tab=grn`, `/br/[branchId]/stock/grn`, và bước chọn nguồn `/br/[branchId]/stock/grn/new` là `LIST` nhưng khác presentation plane. Form dòng GRN thuộc `DOC-WORKFLOW`.
 - **Đối tượng sử dụng chính:** Quản lý kho (`warehouse_manager`), Quản lý bếp (`production_manager`), Quản lý chi nhánh (`branch_manager`), Chủ cửa hàng (`owner`).
 - **Mục tiêu Nghiệp vụ (Why?):**
   - Kiểm soát chính xác số lượng nguyên liệu tồn kho thực tế, tính toán giá vốn hàng bán (WAC), giảm thiểu hao hụt/thất thoát nguyên liệu và tối ưu hóa chi phí mua hàng.
@@ -125,13 +125,15 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Quy chuẩn UX/UI:**
   - Office `/inventory/stock` dùng management list responsive: compact card khi hẹp và `DataTable` khi desktop cần đối chiếu WAC/giá trị tồn.
   - Branch `/br/[branchId]/stock/on-hand` dùng full-row touch list ở mọi viewport điện thoại/tablet, kể cả `1024px` landscape; chỉ hiển thị tên/SKU, tồn + đơn vị, vị trí và cảnh báo thiếu hàng. Không đưa WAC, giá trị tồn hoặc KPI Office vào màn tra cứu trong ca.
+  - Branch `/br/[branchId]/stock/grn` ưu tiên nháp của người đang nhận hàng, sau đó là hàng đợi GRN có tìm kiếm/lọc trạng thái. Mỗi row chỉ hiển thị mã, NCC, ngày, trạng thái và PO liên kết; chạm để tiếp tục/xem phiếu, bỏ nháp là action riêng có xác nhận. Không đưa tổng tiền, tên chi nhánh, `DataTable` hay long-press từ Office sang route này.
+  - Branch `/br/[branchId]/stock/grn/new` dùng source list touch-native: chọn NCC hoặc PO chờ nhận, giữ context chi nhánh từ route, và chuyển sang URL supplier Branch canonical. Không lặp branch picker, tổng giá trị PO hoặc khung form Office tại bước chọn nguồn.
   - Mọi hành động làm thay đổi số lượng tồn kho (Nhập, Xuất, Điều chuyển, Kiểm kê) bắt buộc phải tạo ra một dòng chứng từ `stock_movements` (chỉ ghi thêm - append-only) để phục vụ việc kiểm toán dữ liệu. Nghiêm cấm việc thay đổi trực tiếp số lượng tồn kho bằng lệnh UPDATE thô trong DB.
 
 ---
 
-### 2.6. Lập phiếu nhập kho (GRN) — `/inventory/grn/new`
+### 2.6. Lập phiếu nhập kho (GRN) — `/inventory/grn/new` & `/br/[branchId]/stock/grn/new`
 
-- **Archetype:** `DOC-WORKFLOW`.
+- **Archetype:** Office dùng `DOC-WORKFLOW`; Branch source selection dùng touch `LIST`, sau đó mở form dòng GRN.
 - **Đối tượng sử dụng chính:** Quản lý kho, Nhân viên nhận hàng.
 - **Mục tiêu Nghiệp vụ (Why?):** Ghi nhận chính xác số lượng nguyên liệu thực tế nhận từ nhà cung cấp để cập nhật tồn kho tức thời và xác lập cơ sở tính giá vốn hàng bán chính xác.
 - **Mục tiêu Người dùng (Goal):** Đối chiếu hàng thực giao với phiếu đặt (PO), ghi nhận số lượng chênh lệch và hoàn thành phiếu nhập kho nhanh nhất để giải phóng xe giao hàng.
