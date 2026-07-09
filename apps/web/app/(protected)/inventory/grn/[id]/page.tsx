@@ -224,7 +224,7 @@ async function loadGrnDetailResult(
     data: {
       grn,
       ingredients: catalogIngredients,
-      auditLogs: await fetchEntityAuditLogs("goods_receipt_note", d.grn.id, 50),
+      auditLogs: await fetchEntityAuditLogs("goods_received_note", d.grn.id, 50),
       canAdjustStock,
       canAmendConfirmed,
     },
