@@ -14,20 +14,29 @@ import {
   Search as IconSearch,
   Trash as IconTrash,
 } from "lucide-react";
+import {
+  ACTIONS_VI,
+  FORM_VI,
+  INVENTORY_VI,
+  KDS_VI,
+  STATES_VI,
+} from "@comtammatu/shared/messages";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@comtammatu/ui/components/drawer";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import {
   Item,
   ItemContent,
@@ -36,18 +45,15 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { SectionLabel } from "@comtammatu/ui/components/section-label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useLongPress } from "@lib/hooks/use-long-press";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from "@comtammatu/ui/components/drawer";
-import { matchesSearch } from "@lib/search";
 import {
   AppEmptyState,
   AppPage,
@@ -55,7 +61,6 @@ import {
   AppSection,
   AppToolbar,
 } from "@/components/surface";
-import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
   DataTable,
@@ -63,130 +68,90 @@ import {
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
+import { discardGrnDraft } from "../grn-actions";
 import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";
-import { discardGrnDraft } from "../grn-actions";
+import {
+  filterGrnListRows,
+  grnDetailHref,
+  hasGrnListFilters,
+  newGrnSupplierHref,
+  type GrnDraftRow,
+  type GrnListStatusFilter,
+  type GrnRow,
+} from "@lib/inventory/grn-list-model";
 import { messages } from "@lib/messages";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { formatVNDateTime } from "@comtammatu/shared/time";
-import {
-  FORM_VI,
-  INVENTORY_VI,
-  KDS_VI,
-  STATES_VI,
-} from "@comtammatu/shared/messages";
-export type GrnRow = {
-  id: number;
-  code: string;
-  supplierName: string;
-  branchName: string;
-  poId: number | null;
-  poCode: string;
-  date: string;
-  total: number;
-  status: string;
-};
-
-export type GrnDraftRow = {
-  grnId: number;
-  supplierId: number;
-  branchId: number;
-  poId: number | null;
-  poCode: string | null;
-  supplierName: string;
-  branchName: string;
-  grnNumber: string;
-  updatedAt: string;
-  lineCount: number;
-};
+export type { GrnDraftRow, GrnRow } from "@lib/inventory/grn-list-model";
 
 const statusConfirmed = "Đã xác nhận";
 const toastDiscardDraftFailed = "Không thể hủy phiếu nháp.";
 const dialogDiscardTitlePrefix = "Xóa nháp của ";
 const dialogDiscardTitleSuffix = "?";
 
-const statusFilterOptions = [
+const statusFilterOptions: { value: GrnListStatusFilter; label: string }[] = [
   { value: "all", label: KDS_VI.filterAll },
   { value: "draft", label: INVENTORY_VI.draft },
   { value: "confirmed", label: statusConfirmed },
   { value: "cancelled", label: STATES_VI.cancelled },
 ];
 
-function grnDetailHref(basePath: string, id: number) {
-  return `${basePath}/${id}`;
-}
-
-function newGrnSupplierHref(
-  basePath: string,
-  supplierId: number,
-  branchId: number,
-) {
-  const params = new URLSearchParams({
-    supplierId: String(supplierId),
-    branchId: String(branchId),
-  });
-  return `${basePath}/new?${params.toString()}`;
-}
-
 export function GrnListClient({
   grns,
   basePath = "/inventory/grn",
   purchaseOrdersPath = "/inventory/purchase-orders",
   drafts,
-  embedded = false,
-  canCreate = true,
+  canCreate,
+  draftsLoadFailed = false,
+  grnsLoadFailed = false,
+  withinOfficeTabs = false,
 }: {
   grns: GrnRow[];
   basePath?: string;
   purchaseOrdersPath?: string;
   drafts?: GrnDraftRow[];
-  embedded?: boolean;
-  canCreate?: boolean;
+  canCreate: boolean;
+  draftsLoadFailed?: boolean;
+  grnsLoadFailed?: boolean;
+  withinOfficeTabs?: boolean;
 }) {
-  const isOperator = basePath.startsWith("/br/");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<GrnListStatusFilter>("all");
   const [drawerRow, setDrawerRow] = useState<GrnRow | null>(null);
   const router = useRouter();
-  const controlSize = isOperator ? "touch" : "default";
-  const compactActionSize = isOperator ? "touch" : "sm";
-  const fieldClassName = isOperator
-    ? "min-h-12 w-full sm:h-10"
-    : "min-h-10 w-full sm:h-10";
   const grnColumns: DataTableColumn<GrnRow>[] = [
     {
       key: "code",
       header: INVENTORY_VI.grnCode,
-      render: (g) => (
+      render: (grn) => (
         <Link
-          href={grnDetailHref(basePath, g.id)}
+          href={grnDetailHref(basePath, grn.id)}
           className="font-mono text-primary hover:underline"
         >
-          {g.code}
+          {grn.code}
         </Link>
       ),
     },
     {
       key: "supplier",
       header: INVENTORY_VI.supplier,
-      render: (g) => g.supplierName,
+      render: (grn) => grn.supplierName,
     },
     {
       key: "branch",
       header: messages.inventory.grn.receivingWarehouse,
-      render: (g) => g.branchName,
+      render: (grn) => grn.branchName,
     },
     {
       key: "po",
       header: INVENTORY_VI.linkedPo,
-      render: (g) =>
-        g.poId != null && g.poCode ? (
+      render: (grn) =>
+        grn.poId != null && grn.poCode ? (
           <Link
-            href={`${purchaseOrdersPath}/${g.poId}`}
+            href={`${purchaseOrdersPath}/${grn.poId}`}
             className="font-mono text-primary hover:underline"
           >
-            {g.poCode}
+            {grn.poCode}
           </Link>
         ) : (
           "—"
@@ -195,10 +160,10 @@ export function GrnListClient({
     {
       key: "date",
       header: INVENTORY_VI.receiveDate,
-      render: (g) =>
-        g.date ? (
+      render: (grn) =>
+        grn.date ? (
           <span className="font-mono tabular-nums text-muted-foreground">
-            {g.date}
+            {grn.date}
           </span>
         ) : (
           "—"
@@ -208,31 +173,31 @@ export function GrnListClient({
       key: "total",
       header: FORM_VI.totalAmount,
       className: "text-right",
-      render: (g) => (
+      render: (grn) => (
         <span className="font-mono font-medium tabular-nums">
-          {formatVND(g.total)}
+          {formatVND(grn.total)}
         </span>
       ),
     },
     {
       key: "status",
       header: FORM_VI.status,
-      render: (g) => (
-        <StatusBadge domain="inventory" value={g.status} size="sm" />
+      render: (grn) => (
+        <StatusBadge domain="inventory" value={grn.status} size="sm" />
       ),
     },
     {
       key: "actions",
       header: "",
       className: "w-10",
-      render: (g) => (
+      render: (grn) => (
         <Button
           asChild
           variant="ghost"
           size="icon-sm"
-          aria-label={`${ACTIONS_VI.viewDetails} ${g.code}`}
+          aria-label={`${ACTIONS_VI.viewDetails} ${grn.code}`}
         >
-          <Link href={grnDetailHref(basePath, g.id)}>
+          <Link href={grnDetailHref(basePath, grn.id)}>
             <IconDotsVertical className="size-4" />
           </Link>
         </Button>
@@ -240,74 +205,75 @@ export function GrnListClient({
     },
   ];
 
-  const filtered = useMemo(() => {
-    let result = grns;
-    if (statusFilter !== "all") {
-      result = result.filter((g) => g.status === statusFilter);
-    }
-    const q = search.trim();
-    if (q) {
-      result = result.filter((g) =>
-        matchesSearch([g.code, g.supplierName, g.poCode], q),
-      );
-    }
-    return result;
-  }, [grns, search, statusFilter]);
-
-  const hasActiveFilters = search.trim() !== "" || statusFilter !== "all";
-  const operatorFlow = messages.inventory.operatorFlow;
-
-  const desktopActions = (
+  const filters = { query: search, status: statusFilter };
+  const filtered = useMemo(
+    () => filterGrnListRows(grns, filters),
+    [grns, search, statusFilter],
+  );
+  const hasActiveFilters = hasGrnListFilters(filters);
+  const desktopActions = canCreate ? (
     <>
-      <Button asChild variant="outline" size={compactActionSize}>
+      <Button asChild variant="outline" size="sm">
         <Link href={purchaseOrdersPath}>
           <IconClipboardList className="size-4" />
           {INVENTORY_VI.choosePoToCreateGrn}
         </Link>
       </Button>
-      <Button asChild size={compactActionSize}>
+      <Button asChild size="sm">
         <Link href={`${basePath}/new`}>
           <IconPlus className="size-4" />
           {INVENTORY_VI.newGrn}
         </Link>
       </Button>
     </>
-  );
+  ) : null;
 
-  const listTable = (
+  const listTable = grnsLoadFailed ? (
+    <AppEmptyState
+      compact
+      mode="error"
+      icon={<IconReceipt />}
+      title={messages.inventory.grn.loadFailed}
+    >
+      <Button type="button" size="sm" onClick={() => router.refresh()}>
+        {ACTIONS_VI.retry}
+      </Button>
+    </AppEmptyState>
+  ) : (
     <>
       <AppToolbar
         variant="inline"
         className="items-stretch sm:items-center"
         search={
-          <InputGroup className={fieldClassName}>
+          <InputGroup className="min-h-10 w-full sm:h-10">
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>
             <InputGroupInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(event) => setSearch(event.target.value)}
               placeholder={INVENTORY_VI.grnSearchPlaceholder}
               inputMode="search"
             />
           </InputGroup>
         }
         filters={
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) =>
+              setStatusFilter(value as GrnListStatusFilter)
+            }
+          >
             <SelectTrigger
-              size={controlSize}
-              className={
-                isOperator
-                  ? "w-full sm:w-44"
-                  : "min-h-10 w-full sm:h-10 sm:w-44"
-              }
+              size="default"
+              className="min-h-10 w-full sm:h-10 sm:w-44"
             >
               <SelectValue placeholder={FORM_VI.status} />
             </SelectTrigger>
             <SelectContent>
-              {statusFilterOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
+              {statusFilterOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -318,13 +284,13 @@ export function GrnListClient({
             {filtered.length}/{grns.length}
           </Badge>
         }
-        actions={embedded ? desktopActions : null}
+        actions={withinOfficeTabs ? desktopActions : null}
       />
 
       <DataTable
         columns={grnColumns}
         data={filtered}
-        getRowKey={(g) => g.id}
+        getRowKey={(grn) => grn.id}
         emptyTitle={
           hasActiveFilters
             ? INVENTORY_VI.grnNotFoundFiltered
@@ -332,92 +298,88 @@ export function GrnListClient({
         }
         emptyMode={hasActiveFilters ? "no-results" : "no-data"}
         emptyIcon={<IconReceipt className="size-5" />}
-        rowClassName={(g) =>
-          g.status === "cancelled" ? "opacity-60" : undefined
+        rowClassName={(grn) =>
+          grn.status === "cancelled" ? "opacity-60" : undefined
         }
-        mobileCardRender={(g) => <GrnMobileCard grn={g} basePath={basePath} onOpenDrawer={setDrawerRow} />}
+        mobileCardRender={(grn) => (
+          <GrnMobileCard
+            grn={grn}
+            basePath={basePath}
+            onOpenDrawer={setDrawerRow}
+          />
+        )}
       />
     </>
   );
 
   const listBody = (
     <>
-      {isOperator ? (
-        listTable
-      ) : (
-        <AppSection className="overflow-hidden" contentFlush>
-          {listTable}
-        </AppSection>
-      )}
-      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
+      <AppSection className="overflow-hidden" contentFlush>
+        {listTable}
+      </AppSection>
+      <Drawer
+        open={drawerRow != null}
+        onOpenChange={(open) => !open && setDrawerRow(null)}
+      >
         <DrawerContent>
-          {drawerRow && (
+          {drawerRow ? (
             <>
               <DrawerHeader>
                 <DrawerTitle>{drawerRow.code}</DrawerTitle>
-                <DrawerDescription>{drawerRow.supplierName} • {drawerRow.branchName}</DrawerDescription>
+                <DrawerDescription>
+                  {drawerRow.supplierName} • {drawerRow.branchName}
+                </DrawerDescription>
               </DrawerHeader>
-              <div className="p-4 flex flex-col gap-3">
-                <Button variant="default" className="w-full" onClick={() => router.push(grnDetailHref(basePath, drawerRow.id))}>
+              <div className="flex flex-col gap-3 p-4">
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() =>
+                    router.push(grnDetailHref(basePath, drawerRow.id))
+                  }
+                >
                   Xem chi tiết
                 </Button>
               </div>
             </>
-          )}
+          ) : null}
         </DrawerContent>
       </Drawer>
     </>
   );
 
-  if (isOperator) {
-    return (
-      <div className="flex w-full flex-col gap-3">
-        <OperatorFlowSteps
-          title={operatorFlow.grnListTitle}
-          description={operatorFlow.grnListDescription}
-          steps={operatorFlow.grnSteps}
-          currentStep={1}
-        />
+  const draftsContent = draftsLoadFailed ? (
+    <AppEmptyState
+      compact
+      mode="error"
+      icon={<IconFileText />}
+      title={messages.inventory.grn.draftListLoadFailed}
+    >
+      <Button type="button" size="sm" onClick={() => router.refresh()}>
+        {ACTIONS_VI.retry}
+      </Button>
+    </AppEmptyState>
+  ) : (
+    <GrnDraftsTab drafts={drafts ?? []} basePath={basePath} />
+  );
 
-        {canCreate ? (
-          <Button asChild size="touch" className="w-full">
-            <Link href={`${basePath}/new`}>
-              <IconPlus className="size-4" />
-              {INVENTORY_VI.receivingEyebrow}
-            </Link>
-          </Button>
-        ) : null}
-
-        {drafts && drafts.length > 0 ? (
-          <>
-            <div className="flex items-center gap-2 px-1">
-              <SectionLabel density="dense">
-                {INVENTORY_VI.draft}
-              </SectionLabel>
-              <Badge variant="warning">{drafts.length}</Badge>
-            </div>
-            <GrnDraftsTab drafts={drafts} basePath={basePath} />
-          </>
-        ) : null}
-
-        {listBody}
-      </div>
-    );
-  }
-
-  const embeddedDraftSection =
-    embedded && drafts && drafts.length > 0 ? (
+  const draftSectionWithinOfficeTabs =
+    withinOfficeTabs && drafts && (drafts.length > 0 || draftsLoadFailed) ? (
       <AppSection
         title={INVENTORY_VI.draft}
-        badge={{ children: drafts.length, variant: "warning" }}
+        badge={
+          draftsLoadFailed
+            ? undefined
+            : { children: drafts.length, variant: "warning" }
+        }
       >
-        <GrnDraftsTab drafts={drafts} basePath={basePath} />
+        {draftsContent}
       </AppSection>
     ) : null;
 
-  const officeBody = embedded ? (
+  const officeBody = withinOfficeTabs ? (
     <>
-      {embeddedDraftSection}
+      {draftSectionWithinOfficeTabs}
       {listBody}
     </>
   ) : drafts ? (
@@ -432,20 +394,14 @@ export function GrnListClient({
       ]}
     >
       <TabsContent value="list">{listBody}</TabsContent>
-      <TabsContent value="drafts">
-        <GrnDraftsTab drafts={drafts} basePath={basePath} />
-      </TabsContent>
+      <TabsContent value="drafts">{draftsContent}</TabsContent>
     </AppPageTabs>
   ) : (
     listBody
   );
 
-  if (embedded) {
-    return (
-      <div className="flex w-full flex-col gap-3">
-        {officeBody}
-      </div>
-    );
+  if (withinOfficeTabs) {
+    return <div className="flex w-full flex-col gap-3">{officeBody}</div>;
   }
 
   return (
@@ -473,7 +429,7 @@ function GrnDraftsTab({
   function openDraft(draft: GrnDraftRow) {
     router.push(
       draft.poId != null
-        ? `${basePath}/${draft.grnId}?review=1`
+        ? `${basePath}/${draft.grnId}`
         : newGrnSupplierHref(basePath, draft.supplierId, draft.branchId),
     );
   }
@@ -484,11 +440,12 @@ function GrnDraftsTab({
       variant: "destructive",
     });
     if (!ok) return;
+
     setPending(true);
     try {
-      const res = await discardGrnDraft({ grnId: draft.grnId });
-      if (!res.success) {
-        toast.error(res.error ?? toastDiscardDraftFailed);
+      const result = await discardGrnDraft({ grnId: draft.grnId });
+      if (!result.success) {
+        toast.error(result.error ?? toastDiscardDraftFailed);
         return;
       }
       router.refresh();
@@ -571,15 +528,19 @@ function GrnMobileCard({
   onOpenDrawer: (grn: GrnRow) => void;
 }) {
   const router = useRouter();
-
   const longPress = useLongPress({
     onLongPress: () => onOpenDrawer(grn),
     onClick: () => router.push(grnDetailHref(basePath, grn.id)),
   });
 
   return (
-    <InteractiveCard minHeight="mobile" padding="default" className="justify-between touch-none select-none cursor-pointer" {...longPress}>
-      <div className="min-w-0 flex-1 flex flex-col gap-1 pointer-events-none">
+    <InteractiveCard
+      minHeight="mobile"
+      padding="default"
+      className="justify-between touch-manipulation select-none cursor-pointer"
+      {...longPress}
+    >
+      <div className="min-w-0 flex flex-1 flex-col gap-1 pointer-events-none">
         <div className="flex items-center gap-2">
           <span className="font-mono text-sm font-semibold">{grn.code}</span>
           <StatusBadge domain="inventory" value={grn.status} size="sm" />
@@ -591,9 +552,7 @@ function GrnMobileCard({
         </p>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1 pointer-events-none">
-        <span className="text-xs text-muted-foreground">
-          {grn.date || "—"}
-        </span>
+        <span className="text-xs text-muted-foreground">{grn.date || "—"}</span>
         <span className="font-mono text-sm font-semibold">
           {formatVND(grn.total)}
         </span>

@@ -1,7 +1,7 @@
-# Kế hoạch lấp khoảng trống motion (viết lại sau Codex Outside Voice)
+# ADR 0010 — Motion contract và gap-fill
 
-**Trạng thái:** Chờ owner chốt Step 0 (Motion Contract) — **chưa implement UI**.\
-**Ngày viết lại:** 2026-07-10\
+**Trạng thái:** Parked (2026-07-10) — chờ owner chốt Step 0, **chưa implement UI**.\
+**Điều kiện xem lại:** Owner chọn A / B / C cho content-enter motion hoặc mở implementation POS cart/KDS new-ticket/operator skeleton.\
 **Nguồn ràng buộc:** Codex Outside Voice review (session `019f47e0-d4d8-76b2-8ac0-ee40afa261e7`) — owner đã đồng ý làm theo.\
 **Tracker agent (English):** `tasks/todo.md` → section *Motion gap-fill (Codex rewrite)*.\
 **Hợp đồng motion:** `docs/spec/design-system.md` § G.

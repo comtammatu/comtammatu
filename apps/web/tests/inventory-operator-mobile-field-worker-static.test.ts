@@ -13,6 +13,9 @@ const hubQueueSource = readWeb(
 const receiveClientSource = readWeb(
   "app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx",
 );
+const transferDetailModelSource = readWeb(
+  "lib/inventory/transfer-detail-model.ts",
+);
 const transferActionsSource = readWeb(
   "app/(protected)/inventory/transfer-actions.ts",
 );
@@ -24,23 +27,34 @@ const countAssignmentsSource = readWeb(
 );
 
 test("operator hub queue keeps zero-count browse doors visible", () => {
-  assert.doesNotMatch(hubQueueSource, /rows\.filter\(\(row\) => row\.count > 0\)/);
+  assert.doesNotMatch(
+    hubQueueSource,
+    /rows\.filter\(\(row\) => row\.count > 0\)/,
+  );
   assert.match(hubQueueSource, /if \(rows\.length === 0\)/);
   assert.match(hubQueueSource, /\{rows\.map\(\(row\) => \(/);
   assert.match(hubQueueSource, /row\.count > 0 \? "warning" : "secondary"/);
 });
 
 test("operator transfer receive requires shortage notes and accepts transit state", () => {
-  assert.match(receiveClientSource, /RECEIVABLE_TRANSFER_STATUSES/);
-  assert.match(receiveClientSource, /"in_transit"/);
-  assert.match(receiveClientSource, /"confirmed_receive"/);
-  assert.doesNotMatch(receiveClientSource, /transfer\.status === "confirmed_receive"/);
+  assert.match(receiveClientSource, /isTransferReceiveReady/);
+  assert.match(
+    transferDetailModelSource,
+    /return status === "in_transit" \|\| status === "confirmed_receive";/,
+  );
+  assert.doesNotMatch(
+    receiveClientSource,
+    /transfer\.status === "confirmed_receive"/,
+  );
   assert.match(
     receiveClientSource,
     /const isWaitingForTransit = transfer\.status === "confirmed_ship"/,
   );
   assert.match(receiveClientSource, /receiveCopy\.receiveWaitingTransit/);
-  assert.match(receiveClientSource, /isWaitingForTransit \? backHref : detailHref/);
+  assert.match(
+    receiveClientSource,
+    /isWaitingForTransit \? backHref : detailHref/,
+  );
   assert.match(receiveClientSource, /receiveCopy\.receiveBackToList/);
   assert.match(receiveClientSource, /const \[notes, setNotes\]/);
   assert.match(receiveClientSource, /qty < item\.qty && note\.length < 3/);
@@ -74,9 +88,15 @@ test("stocktake list uses styled confirm dialog instead of browser confirm", () 
 
 test("count assignment drawer has searchable ingredient list", () => {
   assert.match(countAssignmentsSource, /Search as IconSearch/);
-  assert.match(countAssignmentsSource, /const \[drawerSearch, setDrawerSearch\]/);
+  assert.match(
+    countAssignmentsSource,
+    /const \[drawerSearch, setDrawerSearch\]/,
+  );
   assert.match(countAssignmentsSource, /const visibleIngredients = useMemo/);
-  assert.match(countAssignmentsSource, /matchesSearch\(\[ingredient\.name, ingredient\.unit\]/);
+  assert.match(
+    countAssignmentsSource,
+    /matchesSearch\(\[ingredient\.name, ingredient\.unit\]/,
+  );
   assert.match(countAssignmentsSource, /countAssignSearchPlaceholder/);
   assert.match(countAssignmentsSource, /countAssignNoIngredientMatches/);
   assert.match(countAssignmentsSource, /visibleIngredients\.map/);

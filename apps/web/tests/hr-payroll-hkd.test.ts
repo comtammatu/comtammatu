@@ -8,6 +8,10 @@ const payrollActionsSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/payroll-actions.ts"),
   "utf8",
 );
+const payrollMessagesSource = readFileSync(
+  join(process.cwd(), "lib/messages/hr.ts"),
+  "utf8",
+);
 const annualLeaveMigrationSource = readFileSync(
   join(
     process.cwd(),
@@ -65,8 +69,13 @@ test("HKD payroll: standardDays === 0 guard", () => {
   );
   assert.match(
     payrollActionsSource,
-    /if \(standardDays === 0\) \{[\s\S]*?Kỳ lương không có ngày công chuẩn/,
+    /if \(standardDays === 0\) \{[\s\S]*?payrollActionCopy\.calculate\.missingStandardDays/,
     "calculatePayroll must guard against a zero standard-day period",
+  );
+  assert.match(
+    payrollMessagesSource,
+    /missingStandardDays: "Kỳ lương không có ngày công chuẩn\."/,
+    "the zero standard-day guard must keep an operator-facing message",
   );
   assert.doesNotMatch(
     payrollActionsSource,

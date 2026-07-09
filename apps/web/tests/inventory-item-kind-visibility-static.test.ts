@@ -46,17 +46,17 @@ test("inventory ingredients filters expose search metadata and reset action", ()
   assert.match(ingredientsClientSource, /ACTIONS_VI\.clearFilters/);
 });
 
-test("ingredient unit conversion form reads as unit equals anchor quantity", () => {
+test("ingredient unit conversion form previews the canonical base quantity", () => {
   assert.match(
     ingredientDialogSource,
     /append\(makeSecondaryRow\(baseUnitId\)\)/,
   );
-  assert.match(ingredientDialogSource, /copy\.units\.previewPrefix\(/);
+  assert.match(ingredientDialogSource, /copy\.units\.previewCanonical\(/);
   assert.match(ingredientDialogSource, /const usesBaseAnchor =/);
-  assert.match(ingredientDialogSource, /displayAnchorFactor/);
-  assert.match(ingredientDialogSource, /toStoredAnchorFactor/);
   assert.match(ingredientDialogSource, /anchor_input_direction/);
-  assert.match(ingredientDialogSource, /IconArrowLeftRight/);
+  assert.doesNotMatch(ingredientDialogSource, /displayAnchorFactor/);
+  assert.doesNotMatch(ingredientDialogSource, /toStoredAnchorFactor/);
+  assert.doesNotMatch(ingredientDialogSource, /IconArrowLeftRight/);
   assert.match(
     ingredientDialogSource,
     /name=\{`units\.\$\{index\}\.anchor_factor`\}/,

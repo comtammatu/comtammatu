@@ -437,6 +437,9 @@ test("operator stock branch-native extensions keep PO, GRN, issue, and report ac
   const grnRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx",
   );
+  const branchGrnListClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/branch-grn-list-client.tsx",
+  );
   const grnDetailRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx",
   );
@@ -460,6 +463,7 @@ test("operator stock branch-native extensions keep PO, GRN, issue, and report ac
     "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
   const grnPage = read("apps/web/app/(protected)/inventory/grn/page.tsx");
+  const grnListData = read("apps/web/lib/inventory/grn-list-data.ts");
   const grnListClient = read(
     "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
   );
@@ -550,14 +554,12 @@ test("operator stock branch-native extensions keep PO, GRN, issue, and report ac
     poDetailRoute,
     /afterCreateGrnHref=\{`\/br\/\$\{branchId\}\/stock\/receive\/:id`\}/,
   );
-  assert.match(grnRoute, /GRNListPageContent/);
-  assert.match(grnRoute, /routeBranchId=\{branchId\}/);
-  assert.match(grnRoute, /basePath=\{`\/br\/\$\{branchId\}\/stock\/grn`\}/);
   assert.match(
     grnRoute,
-    /purchaseOrdersPath=\{`\/br\/\$\{branchId\}\/stock\/purchase-orders`\}/,
+    /loadGrnListPageData\(\{ routeBranchId: branchId \}\)/,
   );
-  assert.match(grnRoute, /embedded/);
+  assert.match(grnRoute, /<BranchGrnListClient/);
+  assert.doesNotMatch(grnRoute, /GRNListPageContent|embedded|DataTable/);
   // D067 §1: GRN detail forks presentation over the SHARED loader. Draft
   // review stays native, confirmed GRN uses the shared detail client in
   // embedded mode so branch stock never nests the office AppPage frame.
@@ -660,30 +662,58 @@ test("operator stock branch-native extensions keep PO, GRN, issue, and report ac
     /<InputGroup className=\{fieldClassName\}/,
   );
   assert.match(purchaseOrdersClient, /suppliersPath \?/);
+  assert.match(grnPage, /loadGrnListPageData/);
+  assert.match(grnPage, /includeDrafts: showDrafts/);
+  assert.match(grnPage, /canCreate=\{data\.canCreate\}/);
   assert.match(
-    grnListClient,
-    /const isOperator = basePath\.startsWith\("\/br\/"\)/,
+    grnPage,
+    /drafts=\{showDrafts && data\.canCreate \? data\.drafts : undefined\}/,
   );
   assert.match(
-    grnListClient,
-    /const controlSize = isOperator \? "touch" : "default"/,
+    grnPage,
+    /draftsLoadFailed=\{showDrafts && data\.canCreate && data\.draftsLoadFailed\}/,
   );
-  assert.match(grnListClient, /<AppToolbar\s+variant="inline"/);
-  assert.match(grnListClient, /<InputGroup className=\{fieldClassName\}/);
-  assert.match(grnPage, /showDrafts \? listMyGrnDrafts\(routeBranchId\)/);
-  assert.match(grnPage, /drafts=\{showDrafts \? drafts : undefined\}/);
+  assert.match(grnPage, /grnsLoadFailed=\{data\.grnsLoadFailed\}/);
+  assert.doesNotMatch(grnPage, /routeBranchId/);
+  assert.match(grnListClient, /<DataTable/);
+  assert.doesNotMatch(
+    grnListClient,
+    /basePath\.startsWith\("\/br\/"\)|OperatorFlowSteps|embedded/,
+  );
+  assert.match(grnListData, /import "server-only"/);
+  assert.match(grnListData, /listMyGrnDrafts\(routeBranchId\)/);
+  assert.match(branchGrnListClient, /BranchOperatorPage/);
+  assert.match(branchGrnListClient, /BranchOperatorPanel/);
+  assert.match(branchGrnListClient, /ItemGroup/);
+  assert.match(branchGrnListClient, /size="touch"/);
+  assert.match(branchGrnListClient, /discardGrnDraft/);
   assert.match(
-    grnListClient,
-    /const isOperator = basePath\.startsWith\("\/br\/"\)/,
+    branchGrnListClient,
+    /className="min-h-20 items-center gap-2 p-0 touch-manipulation"/,
   );
   assert.match(
-    grnListClient,
-    /<GrnDraftsTab drafts=\{drafts\} basePath=\{basePath\} \/>/,
+    branchGrnListClient,
+    /self-stretch items-center gap-3 px-3 py-2/,
   );
   assert.match(
-    grnListClient,
-    /draft\.poId != null\s*\?\s*`\$\{basePath\}\/\$\{draft\.grnId\}\?review=1`\s*:\s*newGrnSupplierHref\(basePath,\s*draft\.supplierId,\s*draft\.branchId\)/,
+    branchGrnListClient,
+    /aria-disabled=\{disabled \|\| undefined\}/,
   );
+  assert.equal(
+    (branchGrnListClient.match(/role="listitem"/g) ?? []).length,
+    2,
+    "Branch GRN list rows must retain listitem semantics",
+  );
+  assert.match(
+    branchGrnListClient,
+    /draft\.poId != null\s*\?\s*`\$\{basePath\}\/\$\{draft\.grnId\}`/,
+  );
+  assert.doesNotMatch(
+    branchGrnListClient,
+    /\bDataTable\b|\bGrnListClient\b|\bembedded\b|\buseLongPress\b|\bformatVND\b|overflow-x-auto/,
+  );
+  assert.match(grnListClient, /touch-manipulation select-none cursor-pointer/);
+  assert.doesNotMatch(grnListClient, /touch-none/);
   assert.match(grnDetailClient, /embedded\?: boolean/);
   assert.match(grnDetailClient, /embedded = false/);
   assert.match(grnDetailClient, embeddedContentWrapperPattern);
@@ -775,9 +805,12 @@ test("operator stock branch-native extensions keep PO, GRN, issue, and report ac
   );
 });
 
-test("operator stock GRN create routes stay branch-native (D059 §4 slice 1)", () => {
+test("operator stock GRN source selection is native while the detail form stays scoped", () => {
   const grnNewRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx",
+  );
+  const branchGrnSourceClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/branch-grn-source-picker-client.tsx",
   );
   const grnCreateRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx",
@@ -785,6 +818,8 @@ test("operator stock GRN create routes stay branch-native (D059 §4 slice 1)", (
   const grnNewPage = read(
     "apps/web/app/(protected)/inventory/grn/new/page.tsx",
   );
+  const grnSourceData = read("apps/web/lib/inventory/grn-source-data.ts");
+  const grnSourceModel = read("apps/web/lib/inventory/grn-source-model.ts");
   const grnFromPoList = read(
     "apps/web/app/(protected)/inventory/grn/new/grn-from-po-list.tsx",
   );
@@ -800,17 +835,42 @@ test("operator stock GRN create routes stay branch-native (D059 §4 slice 1)", (
   );
 
   assert.match(grnNewRoute, /params: Promise<\{ branchId: string \}>/);
-  assert.match(grnNewRoute, /GrnNewPageContent/);
-  assert.match(grnNewRoute, /routeBranchId=\{branchId\}/);
+  assert.match(grnNewRoute, /BranchGrnSourcePickerClient/);
+  assert.match(grnNewRoute, /loadGrnSourcePageData/);
+  assert.match(grnNewRoute, /routeBranchId: branchId/);
   assert.match(
     grnNewRoute,
-    /basePath=\{`\/br\/\$\{branchId\}\/stock\/grn\/new`\}/,
+    /redirect\(grnSourceSupplierHref\(sourceBasePath, selectedSupplierId\)\)/,
   );
-  assert.match(
+  assert.doesNotMatch(
     grnNewRoute,
-    /grnListBasePath=\{`\/br\/\$\{branchId\}\/stock\/grn`\}/,
+    /GrnNewPageContent|DocumentFormFrame|DataTable|embedded/,
   );
-  assert.match(grnNewRoute, /embedded/);
+  assert.match(branchGrnSourceClient, /BranchOperatorPage/);
+  assert.match(branchGrnSourceClient, /BranchOperatorPanel/);
+  assert.match(branchGrnSourceClient, /AppDetailFooter/);
+  assert.match(
+    branchGrnSourceClient,
+    /href=\{`\/br\/\$\{branchId\}\/stock\/grn`\}/,
+  );
+  assert.match(branchGrnSourceClient, /ItemGroup/);
+  assert.match(branchGrnSourceClient, /createSupplier/);
+  assert.match(branchGrnSourceClient, /createGrnFromPo/);
+  assert.match(branchGrnSourceClient, /grnSourceSupplierHref/);
+  assert.match(branchGrnSourceClient, /min-h-20 touch-manipulation/);
+  assert.doesNotMatch(
+    branchGrnSourceClient,
+    /GrnNewPageContent|DocumentFormFrame|DataTable|embedded|formatVND|overflow-x-auto/,
+  );
+  assert.match(grnSourceData, /import "server-only"/);
+  assert.match(grnSourceData, /resolveInventoryListScope/);
+  assert.match(
+    grnSourceData,
+    /probePermission\(auth, PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE, branchId\)/,
+  );
+  assert.match(grnSourceData, /fetchOpenPurchaseOrdersForReceiving/);
+  assert.match(grnSourceModel, /export function grnSourceSupplierHref/);
+  assert.match(grnSourceModel, /export function parseGrnSupplierIdParam/);
 
   assert.match(
     grnCreateRoute,
@@ -829,19 +889,18 @@ test("operator stock GRN create routes stay branch-native (D059 §4 slice 1)", (
   );
   assert.match(grnCreateRoute, /embedded/);
 
-  assert.match(grnNewPage, /routeBranchId\?: number/);
-  assert.match(grnNewPage, /basePath\?: string/);
-  assert.match(grnNewPage, /grnListBasePath\?: string/);
-  assert.match(grnNewPage, /embedded\?: boolean/);
   assert.match(grnNewPage, /supplierId\?: string \| string\[\]/);
-  assert.match(grnNewPage, /selectedSupplierId \? \(/);
+  assert.match(grnNewPage, /loadGrnSourcePageData/);
+  assert.match(grnNewPage, /selectedSupplierId != null/);
   assert.match(grnNewPage, /supplierId=\{selectedSupplierId\}/);
-  assert.match(grnNewPage, /scope\.outOfScope/);
-  assert.match(grnNewPage, embeddedContentWrapperPattern);
+  assert.doesNotMatch(
+    grnNewPage,
+    /routeBranchId\?: number|embedded\?: boolean/,
+  );
   assert.match(grnFromPoList, /grnBasePath = "\/inventory\/grn"/);
   assert.match(
     grnFromPoList,
-    /router\.push\(`\$\{grnBasePath\}\/\$\{grn\.id\}\?review=1`\)/,
+    /router\.push\(`\$\{grnBasePath\}\/\$\{grn\.id\}`\)/,
   );
 
   assert.match(grnCreatePage, /supplierId: number/);
@@ -850,6 +909,10 @@ test("operator stock GRN create routes stay branch-native (D059 §4 slice 1)", (
   assert.match(grnCreatePage, /grnBasePath\?: string/);
   assert.match(grnCreatePage, /embedded\?: boolean/);
   assert.match(grnCreatePage, /scope\.outOfScope/);
+  assert.match(
+    grnCreatePage,
+    /probePermission\(\s*auth,\s*PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE,\s*scope\.selectedBranchId,\s*\)/,
+  );
   assert.match(grnCreateClient, /basePath\?: string/);
   assert.match(grnCreateClient, /grnBasePath\?: string/);
   assert.match(grnCreateClient, /embedded\?: boolean/);

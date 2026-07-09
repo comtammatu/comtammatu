@@ -40,7 +40,8 @@ test("GRN entry labels purchase price and conversion without calling it cost bas
   );
 
   assert.match(source, /unitCostTitle: "Đơn giá nhập"/);
-  assert.match(source, /unitPriceUnit: \(unit: string\) => `₫ \/ \$\{unit\}`/);
+  assert.match(source, /unitPriceUnit: \(unit: string, unitCost: number\) =>/);
+  assert.match(source, /Đơn giá \$\{formatVND\(unitCost\)\} \/ \$\{unit\}/);
   assert.match(source, /baseConversionPreview/);
   assert.match(source, /Quy đổi về tồn chuẩn/);
   assert.doesNotMatch(source, /label=\{FORM_VI\.unitPrice\}/);

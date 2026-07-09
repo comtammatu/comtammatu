@@ -9,14 +9,29 @@ function readRepo(path: string): string {
   return readFileSync(resolve(repoRoot, path), "utf8");
 }
 
-const grnActions = readRepo("apps/web/app/(protected)/inventory/grn-actions.ts");
+const grnActions = readRepo(
+  "apps/web/app/(protected)/inventory/grn-actions.ts",
+);
 const grnCreatePage = readRepo(
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx",
 );
 const grnListClient = readRepo(
   "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
 );
-const grnNewPage = readRepo("apps/web/app/(protected)/inventory/grn/new/page.tsx");
+const grnListModel = readRepo("apps/web/lib/inventory/grn-list-model.ts");
+const grnListData = readRepo("apps/web/lib/inventory/grn-list-data.ts");
+const grnSourceData = readRepo("apps/web/lib/inventory/grn-source-data.ts");
+const grnSourceModel = readRepo("apps/web/lib/inventory/grn-source-model.ts");
+const grnListPage = readRepo("apps/web/app/(protected)/inventory/grn/page.tsx");
+const draftsPage = readRepo(
+  "apps/web/app/(protected)/inventory/drafts/page.tsx",
+);
+const branchGrnListClient = readRepo(
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/branch-grn-list-client.tsx",
+);
+const grnNewPage = readRepo(
+  "apps/web/app/(protected)/inventory/grn/new/page.tsx",
+);
 const grnSupplierPicker = readRepo(
   "apps/web/app/(protected)/inventory/grn/new/supplier-picker.tsx",
 );
@@ -71,10 +86,7 @@ test("GRN supplier draft uniqueness includes the receiving branch", () => {
     migration,
     /ON public\.goods_received_notes \(tenant_id, created_by, supplier_id, branch_id\)/,
   );
-  assert.match(
-    migration,
-    /WHERE status = 'draft' AND created_by IS NOT NULL;/,
-  );
+  assert.match(migration, /WHERE status = 'draft' AND created_by IS NOT NULL;/);
 
   const createStart = grnActions.indexOf("export const createGrnDraft");
   assert.ok(createStart >= 0, "createGrnDraft not found");
@@ -120,29 +132,46 @@ test("GRN free drafts and PO-linked drafts do not share the same unique slot", (
   );
   assert.match(
     grnListClient,
-    /draft\.poId != null\s*\?\s*`\$\{basePath\}\/\$\{draft\.grnId\}\?review=1`/,
+    /draft\.poId != null\s*\?\s*`\$\{basePath\}\/\$\{draft\.grnId\}`/,
   );
   assert.match(
     grnListClient,
     /:\s*newGrnSupplierHref\(basePath,\s*draft\.supplierId,\s*draft\.branchId\)/,
   );
-  assert.match(grnListClient, /branchId: number/);
-  assert.match(grnListClient, /branchId: String\(branchId\)/);
+  assert.match(grnListModel, /export function newGrnSupplierHref/);
+  assert.match(grnListModel, /branchId: number/);
+  assert.match(grnListModel, /branchId: String\(branchId\)/);
+  assert.match(
+    branchGrnListClient,
+    /grnSourceSupplierHref\(`\$\{basePath\}\/new`, draft\.supplierId\)/,
+  );
   assert.match(grnListClient, /draft\.poCode\s*\?/);
   assert.match(grnListClient, /grn\.poId != null && grn\.poCode/);
 });
 
 test("GRN supplier receiving can stay on the same new-receipt page", () => {
   assert.match(grnNewPage, /supplierId\?: string \| string\[\]/);
-  assert.match(grnNewPage, /const selectedSupplierId = parseSupplierIdParam/);
-  assert.match(grnNewPage, /selectedSupplierId \? \(/);
+  assert.match(
+    grnNewPage,
+    /const selectedSupplierId = parseGrnSupplierIdParam/,
+  );
+  assert.match(grnNewPage, /selectedSupplierId != null/);
   assert.match(grnNewPage, /supplierId=\{selectedSupplierId\}/);
   assert.match(grnNewPage, /searchParams=\{Promise\.resolve\(params\)\}/);
-  assert.match(grnNewPage, /branchId=\{branchId\}/);
+  assert.match(grnNewPage, /branchId=\{data\.branchId\}/);
 
-  assert.match(grnSupplierPicker, /function supplierHref\(supplierId: number\)/);
-  assert.match(grnSupplierPicker, /new URLSearchParams\(\{ supplierId: String\(supplierId\) \}\)/);
-  assert.match(grnSupplierPicker, /params\.set\("branchId", String\(branchId\)\)/);
+  assert.match(
+    grnSupplierPicker,
+    /function supplierHref\(supplierId: number\)/,
+  );
+  assert.match(
+    grnSupplierPicker,
+    /new URLSearchParams\(\{ supplierId: String\(supplierId\) \}\)/,
+  );
+  assert.match(
+    grnSupplierPicker,
+    /params\.set\("branchId", String\(branchId\)\)/,
+  );
   assert.doesNotMatch(grnSupplierPicker, /\$\{basePath\}\/\$\{supplier\.id\}/);
 
   assert.match(grnCreateClient, /confirmGrn/);
@@ -151,12 +180,55 @@ test("GRN supplier receiving can stay on the same new-receipt page", () => {
   assert.doesNotMatch(grnCreateClient, /onOpenNumpad/);
 });
 
-test("GRN new PO picker follows the selected receiving branch", () => {
-  assert.match(grnNewPage, /const branchId = scope\.selectedBranchId;/);
+test("GRN list creation and drafts follow the resolved branch grant", () => {
+  assert.match(grnListData, /PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE/);
   assert.match(
-    grnNewPage,
+    grnListData,
+    /probePermission\(\s*auth,\s*PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE,\s*branchId,\s*\)/,
+  );
+  assert.match(
+    grnListData,
+    /const shouldLoadDrafts = includeDrafts && canCreate/,
+  );
+  assert.match(
+    grnListData,
+    /shouldLoadDrafts \? listMyGrnDrafts\(routeBranchId\) : Promise\.resolve\(null\)/,
+  );
+  assert.match(grnListPage, /canCreate=\{data\.canCreate\}/);
+  assert.match(
+    grnListPage,
+    /drafts=\{showDrafts && data\.canCreate \? data\.drafts : undefined\}/,
+  );
+  assert.match(grnListClient, /canCreate: boolean/);
+  assert.match(grnListClient, /const desktopActions = canCreate \?/);
+});
+
+test("GRN drafts route keeps the branch scope in the canonical queue", () => {
+  assert.match(
+    draftsPage,
+    /searchParams: Promise<\{ branchId\?: string \| string\[\] \}>/,
+  );
+  assert.match(draftsPage, /new URLSearchParams\(\{ tab: "grn" \}\)/);
+  assert.match(draftsPage, /qParams\.append\("branchId", id\)/);
+  assert.match(draftsPage, /qParams\.set\("branchId", params\.branchId\)/);
+  assert.match(
+    draftsPage,
+    /redirect\(`\/inventory\/operations\?\$\{qParams\.toString\(\)\}`\)/,
+  );
+  assert.doesNotMatch(draftsPage, /\/inventory\/grn\?tab=drafts/);
+});
+
+test("GRN new PO picker follows the selected receiving branch", () => {
+  assert.match(grnSourceData, /const branchId = scope\.selectedBranchId;/);
+  assert.match(
+    grnSourceData,
     /fetchOpenPurchaseOrdersForReceiving\(\s*branchId != null \? \{ branchId \} : undefined,\s*\)/,
   );
+  assert.match(
+    grnSourceData,
+    /probePermission\(auth, PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE, branchId\)/,
+  );
+  assert.match(grnSourceModel, /export function grnSourceSupplierHref/);
 
   const fetchStart = purchaseOrderActions.indexOf(
     "export async function fetchOpenPurchaseOrdersForReceiving",
@@ -164,7 +236,10 @@ test("GRN new PO picker follows the selected receiving branch", () => {
   assert.ok(fetchStart >= 0, "fetchOpenPurchaseOrdersForReceiving not found");
   const fetchBody = purchaseOrderActions.slice(
     fetchStart,
-    purchaseOrderActions.indexOf("const { data, error } = await query", fetchStart),
+    purchaseOrderActions.indexOf(
+      "const { data, error } = await query",
+      fetchStart,
+    ),
   );
 
   assert.match(fetchBody, /fetchOpenPurchaseOrdersForReceivingSchema/);

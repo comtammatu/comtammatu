@@ -1,26 +1,57 @@
 import { notFound } from "next/navigation";
-import { GRNListPageContent } from "@/(protected)/inventory/grn/page";
+import { loadGrnListPageData } from "@lib/inventory/grn-list-data";
+import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
+import { BranchGrnListClient } from "./branch-grn-list-client";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
-  searchParams: Promise<{ branchId?: string | string[] }>;
 }
 
-export default async function OperatorStockGrnPage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function OperatorStockGrnPage({ params }: PageProps) {
   const { branchId: rawBranchId } = await params;
-  const branchId = Number(rawBranchId);
-  if (!Number.isInteger(branchId) || branchId <= 0) notFound();
+  const branchId = parseOperatorBranchId(rawBranchId);
+  if (branchId == null) notFound();
+
+  const data = await loadGrnListPageData({ routeBranchId: branchId });
 
   return (
-    <GRNListPageContent
-      searchParams={searchParams}
-      routeBranchId={branchId}
-      basePath={`/br/${branchId}/stock/grn`}
-      purchaseOrdersPath={`/br/${branchId}/stock/purchase-orders`}
-      embedded
+    <BranchGrnListClient
+      branchId={branchId}
+      canCreate={data.canCreate}
+      drafts={data.drafts.map(
+        ({
+          grnId,
+          supplierId,
+          poId,
+          poCode,
+          supplierName,
+          grnNumber,
+          updatedAt,
+          lineCount,
+        }) => ({
+          grnId,
+          supplierId,
+          poId,
+          poCode,
+          supplierName,
+          grnNumber,
+          updatedAt,
+          lineCount,
+        }),
+      )}
+      draftsLoadFailed={data.draftsLoadFailed}
+      grns={data.grns.map(
+        ({ id, code, supplierName, poId, poCode, date, status }) => ({
+          id,
+          code,
+          supplierName,
+          poId,
+          poCode,
+          date,
+          status,
+        }),
+      )}
+      grnsLoadFailed={data.grnsLoadFailed}
     />
   );
 }

@@ -18,10 +18,6 @@ test("operator inventory work routes expose touch progress steps", () => {
 
   const routeClients = [
     [
-      "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
-      /operatorFlow\.grnListTitle/,
-    ],
-    [
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/grn-review-operator-client.tsx",
       /grnCopy\.inspectionItemsTitle/,
     ],
@@ -56,6 +52,14 @@ test("operator inventory work routes expose touch progress steps", () => {
   assert.match(branchOnHand, /BranchOperatorPanel/);
   assert.match(branchOnHand, /StockTouchRow/);
 
+  const branchGrnList = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/branch-grn-list-client.tsx",
+  );
+  assert.doesNotMatch(branchGrnList, /OperatorFlowSteps/);
+  assert.match(branchGrnList, /BranchOperatorPage/);
+  assert.match(branchGrnList, /BranchOperatorPanel/);
+  assert.match(branchGrnList, /ItemGroup/);
+
   const recipeRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/page.tsx",
   );
@@ -75,42 +79,41 @@ test("operator inventory work routes expose touch progress steps", () => {
 
 test("transfer create gates embedded sections by touch workflow state", () => {
   const source = read(
-    "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/branch-transfer-create-client.tsx",
   );
-  const pageSource = read(
-    "apps/web/app/(protected)/inventory/transfers/new/page.tsx",
-  );
+  const dataSource = read("apps/web/lib/inventory/transfer-create-data.ts");
+  const modelSource = read("apps/web/lib/inventory/transfer-create-model.ts");
 
   assert.doesNotMatch(source, /<OperatorFlowSteps/);
   assert.match(source, /@comtammatu\/ui\/components\/progress/);
-  assert.match(source, /flowProgressValue/);
-  assert.match(source, /const showLineSection = !embedded \|\| selectedBranch/);
-  assert.match(source, /const showNotesSection = !embedded \|\| draftLines/);
-  assert.match(source, /showLineSection \? \(/);
-  assert.match(source, /showNotesSection \? \(/);
-  assert.match(source, /export interface TransferIngredientOption/);
-  assert.match(pageSource, /function toTransferIngredientOption/);
-  assert.match(pageSource, /id: ingredient\.id/);
-  assert.match(pageSource, /units: ingredient\.units/);
-  assert.doesNotMatch(source, /ingredients: IngredientRow\[\]/);
+  assert.match(source, /controller\.flowProgressValue/);
+  assert.match(source, /controller\.selectedBranch \? \(/);
+  assert.match(source, /controller\.draftLines\.length > 0 \? \(/);
+  assert.match(modelSource, /export interface TransferIngredientOption/);
+  assert.match(dataSource, /function toTransferIngredientOption/);
+  assert.match(dataSource, /id: ingredient\.id/);
+  assert.match(dataSource, /units: ingredient\.units/);
+  assert.doesNotMatch(source, /IngredientRow/);
 });
 
 test("transfer create uses compact branch-location labels", () => {
   const source = read(
-    "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/branch-transfer-create-client.tsx",
   );
+  const modelSource = read("apps/web/lib/inventory/transfer-create-model.ts");
   const messageSource = read("apps/web/lib/messages/inventory.ts");
 
-  assert.match(source, /function formatTransferSiteLabel/);
-  assert.match(source, /return branch\.name/);
+  assert.match(modelSource, /export function formatTransferSiteLabel/);
+  assert.match(modelSource, /return branch\.name/);
   assert.match(
-    source,
+    modelSource,
     /formatTransferSiteLabel\(option\.branch\)\}\$\{suffix\}/,
   );
   assert.match(
     source,
-    /formatTransferOption\(from, requestDestinationBranchId\)/,
+    /formatTransferOption\(\s*branch,\s*controller\.requestDestinationBranchId/,
   );
+  assert.match(modelSource, /const label = formatTransferSiteLabel\(branch\)/);
   assert.match(messageSource, /defaultWarehouseSuffix: " - Kho"/);
   assert.match(messageSource, /defaultKitchenSuffix: " - Bếp"/);
   assert.doesNotMatch(

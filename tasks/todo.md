@@ -69,8 +69,32 @@
   - [x] Convert `/br/[branchId]/stock/on-hand` to a Branch-native touch list at
         phone/tablet widths; share `loadStockOnHandPageData` and the pure
         filter/status model while keeping Office `StockClient` management-only.
+  - [x] Convert `/br/[branchId]/stock/grn` to a Branch-native touch list;
+        share `loadGrnListPageData` and the pure list model while keeping Office
+        `GrnListClient` management-only.
+  - [x] Convert `/br/[branchId]/stock/grn/new` to a native Branch source step
+        before extracting the detail-form controller.
+    - T2 plan: Skill plan: repo rules = engineering + skills + ui + workflow;
+      external skill = next-best-practices; runtime tools = CodeGraph + local
+      browser smoke; skipped = external design review because the locked Branch
+      touch LIST recipe resolves the hierarchy and interaction model.
+      PM: source selection is the bounded MVP; BA: the route branch is fixed
+      and supplier/PO actions retain their existing server authority; Dev:
+      shared loader/model plus Branch-only client; QA: route canonicalization,
+      permission, error, touch target, and Office-regression coverage.
+    - UI Advisor Gate: Surface: `/br/[branchId]/stock/grn/new`; route family:
+      Branch stock GRN; plane: Branch; change: visual + flow. Context: Inventory
+      receiving; actor: branch procurement operator; job: choose supplier or
+      open PO then start a GRN. Journey: queue -> source choice -> Branch detail
+      form; recovery: back to queue/retry. Information order: source action,
+      supplier search, open POs; exclude: Office totals/branch switching.
+      Pattern: LIST Branch source step; exemplar:
+      `branch-grn-list-client.tsx`; data display: touch list. States:
+      loading, empty, error, permission. Components: `BranchOperatorPage`,
+      `BranchOperatorPanel`, `ItemGroup`; input: touch + keyboard; risks:
+      target size, disabled state, scoped navigation.
   - [ ] Continue replacing stock deep workflow EMBED-WRAPPER transition routes:
-        on-hand detail, GRN list/create, stocktake, issue, supplier-return, and
+        on-hand detail, GRN create, stocktake, issue, supplier-return, and
         reports.
   - [ ] Run runtime QA across phone `390x844`, tablet portrait `768x1024`,
         tablet landscape `1024x768`, and Office desktop `1440x900` once local
@@ -78,13 +102,13 @@
 
 ## Motion gap-fill (Codex rewrite)
 
-Owner-facing plan (Vietnamese): `docs/plan/motion-gap-fill.md`.
+Owner-facing parked ADR (Vietnamese): `docs/plan/adr/0010-motion-contract-gap-fill.md`.
 Rewritten 2026-07-10 after Codex Outside Voice rejected the prior 7-item Phase 1.
 **No UI implementation until Step 0 is owner-confirmed.**
 
 ### Step 0 — Motion Contract gate (blocked)
 
-- [ ] Owner picks A / B / C in `docs/plan/motion-gap-fill.md` (recommend **A**:
+- [ ] Owner picks A / B / C in `docs/plan/adr/0010-motion-contract-gap-fill.md` (recommend **A**:
       allow one-shot content enter at `duration-150` + `motion-safe:` only; keep
       `duration-300` for overlay/dialog/sheet enter–exit per § G).
 - [ ] If A or C: update `docs/spec/design-system.md` § G before or with the first

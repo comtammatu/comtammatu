@@ -58,12 +58,12 @@ test("operator entry owns the mobile shell and keeps bottom nav outside scroll c
   assert.match(layout, /id="main-content"[\s\S]*overflow-y-auto/);
   assert.match(
     layout,
-    /contentClassName="max-w-lg md:max-w-5xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-screen-2xl"/,
+    /contentClassName="max-w-lg md:max-w-2xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-screen-2xl"/,
   );
   assert.match(bottomNav, /position="static"/);
   assert.match(appBottomNav, /"static shrink-0"/);
   assert.match(bottomNav, /`\/br\/\$\{branchId\}\/shift`/);
-  assert.match(bottomNav, /`\/br\/\$\{branchId\}\/shift\/schedule`/);
+  assert.match(bottomNav, /`\/br\/\$\{branchId\}\/shift\/checkout-approvals`/);
   assert.doesNotMatch(bottomNav, /\/employee/);
 });
 

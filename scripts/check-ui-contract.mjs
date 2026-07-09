@@ -2425,7 +2425,6 @@ for (const filePath of walkUiRuntimeFiles([".tsx"])) {
 // EMBED-WRAPPER target — widen the file list only with a contract reason.
 const OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES = [
   "apps/web/app/(protected)/orders/orders-page-body.tsx",
-  "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
   "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
   "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
@@ -2473,7 +2472,6 @@ for (const relPath of OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES) {
 const OPERATOR_EMBEDDED_PAGE_HEADER_FILES = [
   "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
   "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
-  "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
   "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
   "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",

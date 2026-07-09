@@ -164,7 +164,11 @@ test("operations tabs use the same sectioned list chrome", () => {
   }
 
   assert.match(po, /actions=\{embedded \? createPoAction : null\}/);
-  assert.match(grn, /actions=\{embedded \? desktopActions : null\}/);
+  assert.match(grn, /actions=\{withinOfficeTabs \? desktopActions : null\}/);
+  assert.match(grn, /const listTable = grnsLoadFailed \? \(/);
+  assert.match(grn, /title=\{messages\.inventory\.grn\.loadFailed\}/);
+  assert.match(grn, /const draftsContent = draftsLoadFailed \? \(/);
+  assert.match(grn, /title=\{messages\.inventory\.grn\.draftListLoadFailed\}/);
   assert.match(issues, /actions=\{embedded \? issueActions : null\}/);
   assert.match(transfers, /actions=\{embedded \? desktopCreateAction : null\}/);
 
@@ -184,7 +188,7 @@ test("operations embedded lists keep office density instead of touch sizing", ()
   );
 
   assert.match(po, /purchaseOrdersBasePath\.startsWith\("\/br\/"\)/);
-  assert.match(grn, /basePath\.startsWith\("\/br\/"\)/);
+  assert.doesNotMatch(grn, /basePath\.startsWith\("\/br\/"\)/);
   assert.match(issues, /listBasePath\.startsWith\("\/br\/"\)/);
   assert.match(transfers, /basePath\.startsWith\("\/br\/"\)/);
 
