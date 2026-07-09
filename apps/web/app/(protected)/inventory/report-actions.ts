@@ -303,24 +303,6 @@ export async function fetchConsumptionVariance(
       ? claims.branch_id
       : branchId;
 
-  // 1. Theoretical consumption from completed orders in period
-  //    SUM(order_items.quantity * recipes.quantity / recipes.yield_factor)
-  //    grouped by ingredient
-  let ordersQuery = supabase
-    .from("orders")
-    .select("id")
-    .eq("tenant_id", claims.tenant_id)
-    .in("status", ["completed", "paid"])
-    .gte("created_at", startRange.startIso)
-    .lt("created_at", endRange.endIso);
-  if (effectiveBranchId) {
-    ordersQuery = ordersQuery.eq("branch_id", effectiveBranchId);
-  }
-  const { data: orders, error: ordErr } = await ordersQuery;
-  if (ordErr) return { success: false, error: "Không tải được đơn hàng." };
-
-  const orderIds = (orders ?? []).map((o) => o.id);
-
   // Get ingredient names for display
   const { data: ingredients, error: ingErr } = await supabase
     .from("ingredients")
@@ -341,73 +323,25 @@ export async function fetchConsumptionVariance(
     }),
   );
 
-  // Compute theoretical: need order_items joined with recipes
-  // Since we can't do a cross-table aggregation in supabase-js easily,
-  // we fetch order_items + recipes separately and compute in JS
+  // Theoretical consumption per ingredient over the FULL period, aggregated in
+  // SQL: SUM(order_items.quantity * recipes.quantity / yield_factor). Replaces a
+  // client loop that fetched order ids (silently capped at 1000 rows -> wrong
+  // variance past ~2 weeks) then paged order_items in 200-id chunks.
+  const { data: theoRows, error: theoErr } = await supabase.rpc(
+    "get_theoretical_consumption",
+    {
+      p_branch_id: effectiveBranchId ?? undefined,
+      p_from: startRange.startIso,
+      p_to: endRange.endIso,
+      p_order_statuses: ["completed", "paid"],
+    },
+  );
+  if (theoErr) return { success: false, error: "Không tải được đơn hàng." };
+
   const theoreticalMap = new Map<number, number>();
-
-  if (orderIds.length > 0) {
-    // Batch order_items in chunks of 200 to avoid URL length limits
-    const chunkSize = 200;
-    for (let i = 0; i < orderIds.length; i += chunkSize) {
-      const chunk = orderIds.slice(i, i + chunkSize);
-      const { data: orderItems, error: oiErr } = await supabase
-        .from("order_items")
-        .select("menu_item_id, quantity")
-        .eq("tenant_id", claims.tenant_id)
-        .in("order_id", chunk)
-        .neq("status", "cancelled");
-      if (oiErr) continue;
-
-      // For each order_item, look up recipes
-      const menuItemIds = [
-        ...new Set((orderItems ?? []).map((oi) => oi.menu_item_id)),
-      ];
-      if (menuItemIds.length === 0) continue;
-
-      const { data: recipes, error: rErr } = await supabase
-        .from("recipes")
-        .select("menu_item_id, ingredient_id, quantity, yield_factor")
-        .eq("tenant_id", claims.tenant_id)
-        .in("menu_item_id", menuItemIds);
-      if (rErr) continue;
-
-      // Build a map: menu_item_id -> recipe lines
-      const recipeMap = new Map<
-        number,
-        Array<{
-          ingredient_id: number;
-          quantity: number;
-          yield_factor: number;
-        }>
-      >();
-      for (const r of recipes ?? []) {
-        const yf = Number(r.yield_factor ?? 1);
-        let list = recipeMap.get(r.menu_item_id);
-        if (!list) {
-          list = [];
-          recipeMap.set(r.menu_item_id, list);
-        }
-        list.push({
-          ingredient_id: r.ingredient_id,
-          quantity: Number(r.quantity),
-          yield_factor: yf > 0 ? yf : 1,
-        });
-      }
-
-      // Compute theoretical per ingredient
-      for (const oi of orderItems ?? []) {
-        const recipeLines = recipeMap.get(oi.menu_item_id);
-        if (!recipeLines) continue;
-        for (const rl of recipeLines) {
-          const need = (oi.quantity * rl.quantity) / rl.yield_factor;
-          theoreticalMap.set(
-            rl.ingredient_id,
-            (theoreticalMap.get(rl.ingredient_id) ?? 0) + need,
-          );
-        }
-      }
-    }
+  for (const row of theoRows ?? []) {
+    if (row.ingredient_id == null) continue;
+    theoreticalMap.set(row.ingredient_id, Number(row.theoretical_qty ?? 0));
   }
 
   // 2. Actual sale consumption from stock_movements movement_subtype.

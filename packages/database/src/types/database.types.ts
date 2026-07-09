@@ -10020,16 +10020,33 @@ export type Database = {
           total_amount: number
         }[]
       }
-      get_orders_paid_summary: {
+      get_menu_item_sales_agg: {
         Args: {
           p_branch_id?: number
-          p_date_from?: string
-          p_date_to?: string
-          p_status?: string
+          p_from?: string
+          p_order_statuses?: string[]
+          p_to?: string
         }
         Returns: {
+          branch_id: number
+          item_name: string
+          menu_item_id: number
+          quantity_sold: number
+          revenue: number
+        }[]
+      }
+      get_orders_summary: {
+        Args: {
+          p_branch_id?: number
+          p_from?: string
+          p_status?: string
+          p_to?: string
+        }
+        Returns: {
+          in_progress_count: number
           paid_count: number
           paid_revenue: number
+          total_count: number
         }[]
       }
       get_pos_session_report: { Args: { p_session_id: number }; Returns: Json }
@@ -10150,6 +10167,18 @@ export type Database = {
           needs_recount: boolean
           round_no: number
           unit: string
+        }[]
+      }
+      get_theoretical_consumption: {
+        Args: {
+          p_branch_id?: number
+          p_from?: string
+          p_order_statuses?: string[]
+          p_to?: string
+        }
+        Returns: {
+          ingredient_id: number
+          theoretical_qty: number
         }[]
       }
       get_top_items:

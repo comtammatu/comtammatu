@@ -16,7 +16,6 @@ import {
 import type { IngredientUnitRow } from "../(protected)/inventory/_lib/types";
 
 const REPORT_ROLES: readonly StaffRole[] = ["owner"];
-const FOOD_COST_PAGE_SIZE = 1000;
 const foodCostCopy = messages.finance.foodCost;
 
 const fetchFoodCostSchema = z.object({
@@ -49,65 +48,31 @@ export async function fetchFoodCost(
     ? getVNDayUtcRange(parsed.data.endDate).endIso
     : null;
 
-  function buildOrderQuery() {
-    let query = supabase
-      .from("order_items")
-      .select(
-        "menu_item_id, item_name, quantity, subtotal, orders!inner(branch_id, created_at, status)",
-      )
-      .eq("tenant_id", tenantId)
-      .neq("status", "cancelled")
-      .neq("orders.status", "cancelled")
-      .order("id", { ascending: true });
-
-    if (branchId != null) {
-      query = query.eq("orders.branch_id", branchId);
-    }
-    if (startIso != null) {
-      query = query.gte("orders.created_at", startIso);
-    }
-    if (endIso != null) {
-      query = query.lt("orders.created_at", endIso);
-    }
-    return query;
+  // Per-(branch, menu item) sale totals aggregated in SQL under one permission
+  // check, instead of paging every order_items row through PostgREST (each page
+  // paid per-row RLS; long ranges also silently truncated at the 1000-row cap).
+  // Recipe/unit-cost math stays in TS below against the small recipes table.
+  const { data: salesRows, error: salesError } = await supabase.rpc(
+    "get_menu_item_sales_agg",
+    {
+      p_branch_id: branchId ?? undefined,
+      p_from: startIso ?? undefined,
+      p_to: endIso ?? undefined,
+    },
+  );
+  if (salesError) {
+    return { success: false, error: foodCostCopy.loadSalesFailed };
   }
 
-  const orderData: unknown[] = [];
-  for (let from = 0; ; from += FOOD_COST_PAGE_SIZE) {
-    const { data, error } = await buildOrderQuery().range(
-      from,
-      from + FOOD_COST_PAGE_SIZE - 1,
-    );
-
-    if (error) {
-      return { success: false, error: foodCostCopy.loadSalesFailed };
-    }
-
-    orderData.push(...(data ?? []));
-    if ((data?.length ?? 0) < FOOD_COST_PAGE_SIZE) break;
-  }
-
-  type OrderRelation = { branch_id: number | null } | null;
-  type OrderItemRow = {
-    menu_item_id: number | null;
-    item_name: string | null;
-    quantity: number | string | null;
-    subtotal: number | string | null;
-    orders: OrderRelation | OrderRelation[];
-  };
-
-  const saleLines: FoodCostSaleLine[] = [];
-  for (const row of orderData as OrderItemRow[]) {
-    const order = Array.isArray(row.orders) ? row.orders[0] : row.orders;
-    if (order?.branch_id == null || row.menu_item_id == null) continue;
-    saleLines.push({
-      branchId: order.branch_id,
-      menuItemId: row.menu_item_id,
+  const saleLines: FoodCostSaleLine[] = (salesRows ?? [])
+    .filter((row) => row.branch_id != null && row.menu_item_id != null)
+    .map((row) => ({
+      branchId: row.branch_id as number,
+      menuItemId: row.menu_item_id as number,
       itemName: row.item_name,
-      quantity: Number(row.quantity ?? 0),
-      revenue: Number(row.subtotal ?? 0),
-    });
-  }
+      quantity: Number(row.quantity_sold ?? 0),
+      revenue: Number(row.revenue ?? 0),
+    }));
 
   const menuItemIds = [...new Set(saleLines.map((row) => row.menuItemId))];
   if (menuItemIds.length === 0) return { success: true, data: [] };

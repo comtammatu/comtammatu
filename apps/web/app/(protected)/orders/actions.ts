@@ -253,45 +253,26 @@ export async function fetchOrders(
     };
   });
 
-  // Aggregates over the FULL filtered set, not the 50-row list window.
-  // Each query re-applies the same status/branch/date scope as the list.
-  const buildOrdersQuery = () => {
-    let q = supabase.from("orders").select("*", {
-      count: "exact",
-      head: true,
-    });
-    if (parsed.data.status) q = q.eq("status", parsed.data.status);
-    if (effectiveBranchId) q = q.eq("branch_id", effectiveBranchId);
-    if (parsed.data.dateFrom)
-      q = q.gte("created_at", getVNDayUtcRange(parsed.data.dateFrom).startIso);
-    if (parsed.data.dateTo)
-      q = q.lt("created_at", getVNDayUtcRange(parsed.data.dateTo).endIso);
-    return q;
-  };
-
-  // Revenue + paid count over the FULL filtered paid set via a server-side
-  // aggregate RPC. The previous JS reduce summed only the PostgREST-capped page
-  // (silent undercount above the row cap). VN-day boundaries computed in SQL, so
-  // pass the raw YYYY-MM-DD strings (not ISO).
-  const paidSummaryPromise = supabase.rpc("get_orders_paid_summary", {
+  // All four counters over the FULL filtered set (not the 50-row list window)
+  // via one SECURITY DEFINER aggregate that checks orders:read/kds:use once,
+  // instead of two count-exact scans + an invoker RPC each paying per-row RLS.
+  const { data: summaryRows } = await supabase.rpc("get_orders_summary", {
     p_status: parsed.data.status || undefined,
     p_branch_id: effectiveBranchId,
-    p_date_from: parsed.data.dateFrom || undefined,
-    p_date_to: parsed.data.dateTo || undefined,
+    p_from: parsed.data.dateFrom
+      ? getVNDayUtcRange(parsed.data.dateFrom).startIso
+      : undefined,
+    p_to: parsed.data.dateTo
+      ? getVNDayUtcRange(parsed.data.dateTo).endIso
+      : undefined,
   });
 
-  const [totalRes, inProgressRes, paidSummaryRes] = await Promise.all([
-    buildOrdersQuery(),
-    buildOrdersQuery().neq("status", "completed").neq("status", "cancelled"),
-    paidSummaryPromise,
-  ]);
-
-  const paidSummary = paidSummaryRes.data?.[0];
+  const summaryRow = summaryRows?.[0];
   const summary: OrdersSummary = {
-    totalCount: totalRes.count ?? 0,
-    inProgressCount: inProgressRes.count ?? 0,
-    paidCount: Number(paidSummary?.paid_count ?? 0),
-    paidRevenue: Number(paidSummary?.paid_revenue ?? 0),
+    totalCount: Number(summaryRow?.total_count ?? 0),
+    inProgressCount: Number(summaryRow?.in_progress_count ?? 0),
+    paidCount: Number(summaryRow?.paid_count ?? 0),
+    paidRevenue: Number(summaryRow?.paid_revenue ?? 0),
   };
 
   // Fetch branches list (for filter select — managers see all, branch_manager sees only theirs)

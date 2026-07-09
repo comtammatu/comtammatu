@@ -74,10 +74,12 @@ test("finance food cost uses recipe unit conversion, yield, and branch WAC", () 
   assert.equal(branchTwo?.food_cost_pct, 33.33);
 });
 
-test("finance food cost action pages order item rows", () => {
+test("finance food cost action aggregates sales via SQL RPC", () => {
   const source = read("apps/web/app/_lib/food-cost-actions.ts");
 
-  assert.match(source, /const FOOD_COST_PAGE_SIZE = 1000/);
-  assert.match(source, /buildOrderQuery\(\)\.range\(/);
-  assert.match(source, /from \+ FOOD_COST_PAGE_SIZE - 1/);
+  // Sales totals come from one permission-checked SQL aggregate, not a paged
+  // raw-row fetch (which silently truncated at the PostgREST 1000-row cap).
+  assert.match(source, /\.rpc\(\s*\n?\s*"get_menu_item_sales_agg"/);
+  assert.doesNotMatch(source, /FOOD_COST_PAGE_SIZE/);
+  assert.doesNotMatch(source, /\.range\(/);
 });
