@@ -40,6 +40,8 @@ function formatAction(action: string): string {
     reject: "Từ chối",
     complete: "Hoàn thành",
     void: "Vô hiệu",
+    "inventory.grn.created_from_po": "Tạo phiếu nhập từ PO",
+    "inventory.grn.line_amended": "Sửa dòng phiếu nhập",
   };
   return map[action] ?? action;
 }
