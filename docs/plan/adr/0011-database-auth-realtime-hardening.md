@@ -1,8 +1,26 @@
 # ADR 0011 — Database, auth, and realtime hardening
 
-**Status:** Parked (2026-07-10) — evidence captured; no remediation in this ADR has been implemented.\
-**Revisit trigger:** Owner prioritizes one of the confirmed P1 findings, resolves one of the listed policy decisions, or production metrics show further regression in the affected path.\
+**Status:** Partially implemented (2026-07-10) — the six confirmed P1 findings are remediated in code
+and migration files; the migrations await the owner's production apply. P2/P3 remain parked.\
+**Revisit trigger:** Owner prioritizes one of the remaining P2/P3 findings, resolves one of the listed
+policy decisions, or production metrics show further regression in the affected path.\
 **Evidence snapshot:** 2026-07-10 production schema, query statistics, and Supabase Advisor output.
+
+## Implementation status
+
+| Finding | Status | Where |
+|---------|--------|-------|
+| P1-1 per-row `has_permission` in orders RLS | Addressed indirectly: the three aggregate RPCs below remove the full-set scans that made it hurt. The policies themselves are unchanged — a row-column argument can never be initplan-hoisted. | `20260710090000_orders_and_sales_aggregate_rpcs.sql` |
+| P1-2 `/orders` summary | Implemented — `get_orders_summary` replaces two count-exact scans plus the SECURITY INVOKER `get_orders_paid_summary`, which is dropped. | same migration + `orders/actions.ts` |
+| P1-3 food-cost | Implemented, **deviating from the fix proposed below** — see the deviation note in that section. | same migration + `_lib/food-cost-actions.ts` |
+| P1-4 deactivated staff keep access | Implemented — `is_active` predicate added to the staff-grant branch of both `has_permission` and `has_permission_any`. | `20260710091000_has_permission_active_profile_guard.sql` |
+| P1-5 GRN write RLS | Implemented — `grn_items_write` FOR ALL split into branch + draft-scoped INSERT/UPDATE/DELETE; `grn_update` branch-scoped and draft-gated, with WITH CHECK admitting `cancelled` so the discard path still works. | `20260710092000_grn_write_branch_draft_scope.sql` |
+| P1-6 variance truncation | Implemented — `get_theoretical_consumption` aggregates the theoretical side in SQL. | `20260710090000_*.sql` + `inventory/report-actions.ts` |
+
+The migrations are additive and DB-first: apply all three, run `corepack pnpm db:types`, then deploy the
+code. DDL was validated on a throwaway preview branch, which also caught a real defect: policy bodies
+using bare `auth_tenant_id()` / `has_permission()` do not resolve under `SET search_path = ''`, so every
+policy expression is schema-qualified.
 
 Scope: 7 parallel lanes over `apps/web`, `packages/shared`, `supabase/migrations`, plus SELECT-only
 evidence from PROD (`iexwsuaqqenyjiskawoj`) and Supabase Advisor (security + performance).
@@ -66,6 +84,19 @@ Worse: this fetch sits on the finance cockpit critical render path
 
 Fix: reconcile `get_food_cost`'s unit-conversion/yield logic with the TS implementation, then call it
 and delete the pagination loop.
+
+**Deviation (implemented).** `get_food_cost` was *not* adopted. It reads `mv_food_cost`, which buckets by
+`date_trunc('week', …)` and costs recipes off a `DISTINCT ON` latest-GRN price with **no entry-unit → base
+conversion and no yield factor**. `9b20f3eda` had deliberately replaced that RPC with the TypeScript
+`buildFoodCostRows` path precisely to get unit-conversion-aware costing, so calling `get_food_cost` again
+would have regressed correctness to buy performance.
+
+What shipped instead: `get_menu_item_sales_agg` aggregates only the *sales* side —
+`SUM(quantity)`, `SUM(subtotal)` and the first `item_name` per `(branch_id, menu_item_id)` — under one
+permission check. `buildFoodCostRows` consumes that pre-grouped input unchanged (it already sums per
+group, so pre-aggregation is behaviour-preserving) and keeps the recipe/unit-cost math in TS against the
+small `recipes` table. This removes the 18k-row PostgREST dump and the row-cap truncation without
+touching the costing model.
 
 ### 4. Deactivated staff keep full data-plane write access
 
@@ -163,11 +194,14 @@ table once per 200-order chunk, sequentially.)
 
 ## Recommended order
 
-1. **Perf, one migration + one code change**: SECURITY DEFINER aggregate RPC for `/orders` summary (P1-2)
-   and switch food-cost to `get_food_cost` (P1-3). These two remove the bulk of measured DB CPU.
-2. **Security, one migration**: `is_active` predicate in `has_permission`/`has_permission_any` (P1-4).
-3. **Security, one migration**: branch + draft scope on `grn_items_write` / `grn_update` (P1-5).
-4. **Correctness**: aggregate RPC for consumption variance (P1-6).
+Steps 1–4 are done (see "Implementation status" above); step 5 remains.
+
+1. ~~**Perf, one migration + one code change**: SECURITY DEFINER aggregate RPC for `/orders` summary (P1-2)
+   and switch food-cost to `get_food_cost` (P1-3).~~ Done, except food-cost uses the new
+   `get_menu_item_sales_agg` rather than `get_food_cost` — see the deviation note under P1-3.
+2. ~~**Security, one migration**: `is_active` predicate in `has_permission`/`has_permission_any` (P1-4).~~ Done.
+3. ~~**Security, one migration**: branch + draft scope on `grn_items_write` / `grn_update` (P1-5).~~ Done.
+4. ~~**Correctness**: aggregate RPC for consumption variance (P1-6).~~ Done.
 5. Then P2 sweeps: default-privileges revoke (7), replica identity (10, 11), realtime coalescing (9, 12),
    initplan rewrite (15), index cleanup (20, 21).
 
