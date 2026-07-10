@@ -1,10 +1,11 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.15.0 | Updated: 2026-07-05 | Status: locked single source for UI agents
+> Version: 14.16.0 | Updated: 2026-07-10 | Status: locked single source for UI agents
 
 ## Mục lục / Decision Index
 
 - [Single Source Decision](#single-source-decision)
+- [Surface Scope](#surface-scope)
 - [Authority Order](#authority-order)
 - [Product UX Thesis](#product-ux-thesis)
 - [Token Contract](#token-contract)
@@ -32,6 +33,22 @@ This is intentionally **one source of truth**, not a source-of-truth bundle.
 evidence or enforcement. They must point back to this contract. If they conflict
 with it, the conflict is a bug to resolve, not permission to choose whichever
 file is convenient.
+
+## Surface Scope
+
+This contract governs route UI in `apps/web/app` built on Má Tư Design System
+primitives. A small set of non-route surfaces sit outside it with their own
+sanctioned binding — they are not drift, and this contract's token/typography/
+primitive rules do not apply to them:
+
+- Print pipeline (`packages/print-render`) — the thermal ESC/POS bitmap
+  surface. The embedded Roboto Mono (`packages/print-render/src/fonts.ts`) is
+  sanctioned there because the DS font roster (Be Vietnam Pro / Geist / Geist
+  Mono) does not apply to raster receipts; brand voice on printed output is
+  mirrored from `packages/print-render/src/labels.ts`.
+- PWA / browser chrome — `apps/web/app/_lib/theme-tokens.ts` (browser
+  `theme-color`, global-error palette) and `apps/web/public/manifest.webmanifest`.
+- OS notification assets — `apps/web/public/icons`.
 
 ## Decision
 
@@ -97,7 +114,7 @@ Allowed token families:
 - Action: `primary`, `secondary`, `destructive`
 - State: `success`, `warning`, `info`, `destructive`
 - Tier: `tier-elite`, `tier-note` for trust/variance/waste tier badges only
-- Data: `chart-1` through `chart-5`
+- Data: `chart-1` through `chart-5` — a **categorical** ramp. `chart-1`/`chart-2` swap hue identity between light and night, so a semantic tone (success / warning / destructive) MUST bind to its status token, never to a `chart-N` index.
 - Navigation: `sidebar-*`
 - Radius: documented radius token scale only
 - Typography: runtime font variables from `apps/web/app/layout.tsx` and `packages/ui/src/styles/globals.css`
@@ -120,6 +137,14 @@ Theme runtime:
   mounted in `AppHeader`, the operations PWA toolbar, and the employee header.
   Do not add a second theme context, a route-local toggle, or a localStorage
   theme key.
+- `.theme-light-only` (`globals.css`) forces a subtree onto the light token
+  block regardless of the `.dark` class on `html`; the Runner customer display
+  (`apps/web/app/(protected)/br/[branchId]/runner/layout.tsx`) is the sanctioned
+  use. It is token-level only: `dark:` variants and chart THEMES are not
+  neutralized — the `dark` custom variant (`&:is(.dark *)`) and the chart
+  `THEMES` map (`packages/ui/src/components/chart.tsx`, keyed on the `.dark`
+  selector) still fire for elements inside it whenever `html` carries `.dark`.
+  Do not use them inside a forced-light surface.
 
 Approved project utilities:
 
@@ -129,12 +154,16 @@ Approved project utilities:
 - `pos-safe-bottom` is limited to POS PWA floating bottom bars.
 - `chrome-safe-pb` / `chrome-safe-bottom` are limited to fixed or sticky app
   shell chrome affected by mobile safe areas.
+- `chrome-tap` disables the mobile tap-highlight/callout flash on app chrome
+  (nav, tiles, headers, buttons) so the installed operator PWA doesn't read as
+  a website; do not apply it to data content that must stay selectable
+  (tables, detail text, copyable IDs).
 - `no-scrollbar` hides scrollbars on horizontally scrolling chrome rails
   (sidebar, command list, bottom-nav, filter rails) without disabling scroll.
 - `mascot-cotlet` + `animate-cotlet-idle` / `animate-cotlet-waiting` /
   `animate-cotlet-waving` render the Cốt Lết sprite-sheet status loops; limited
-  to the runner idle board (the documented § G full-screen idle exception) and
-  always gated with `motion-safe:`.
+  to the § G idle-mascot placements (Runner idle board + login brand panel,
+  D072) and always gated with `motion-safe:`.
 - `shadow-effect-*` (popover / dialog / drawer / tooltip / card-hover),
   `bg-effect-scrim`, and `drawer-scrim` are the Má Tư DS depth utilities backed by
   the `--effect-*` token family (see § Elevation). The `--motion-*` / `--ease-*`
@@ -158,13 +187,37 @@ Brand Concept 01 runtime mapping:
 - `background`: kem gao foundation.
 - `foreground` / dark mode foundation: xanh dam.
 - `primary`: do gach.
-- `ring` / chart accent: vang gao.
+- `ring` / chart accent: vang gao. The brand gold lives here and on `chart-2`; it is a decorative accent, never ink.
 - `success`: xanh la diu.
+- `warning`: vang gach nung (deep ochre). It is NOT the brand gold: the gold measures 1.99:1 on kem gao and cannot carry text or a glyph.
 - `muted-foreground` / supporting tone: nau go or xam am depending on theme.
 - Heading font: Be Vietnam Pro (identity display face).
 - Body font: Geist.
 - Mono font: Geist Mono for tabular operational data.
 - Night mode: warm-dark "gạo cháy" palette (see Theme runtime); auto 18:00–06:00 local or via `matu-theme` cookie override.
+
+### Status ink vs status fill (locked)
+
+Each status family carries two tokens with non-interchangeable roles:
+
+| Token                  | Role                                                  | Example                                     |
+| ---------------------- | ----------------------------------------------------- | ------------------------------------------- |
+| `--{status}`           | Ink on a page/tint surface, and the solid fill itself | `text-warning` on `bg-warning/15`           |
+| `--{status}-foreground` | Text that sits ON the solid fill only                 | `text-success-foreground` on `bg-success`   |
+
+- `--{status}-foreground` on a `/10` `/15` `/20` tint is forbidden. It inverts
+  per theme — light-mode navy reads on a pale tint, but the night-mode value is
+  the dark surface color and lands at ~1.3:1 on the same tint. Enforced by the
+  `status-foreground-on-tint` gate (baseline 0).
+- Every `--{status}` value is dark enough in light mode to clear WCAG AA (4.5:1)
+  as text on `background`, `card`, and its own `/10` and `/15` tints. Retuning a
+  status hue lighter than that re-breaks the ink role.
+- A status focus ring at `/NN` alpha (1.1–1.4:1) is a halo, never the focus
+  indicator. Either let the base `ring-foreground` keyline win, or pair the halo
+  with a solid `focus-visible:border-{status}`. The form-control primitives use
+  the paired form (`focus-visible:border-primary` + `ring-primary/20`); status
+  `Button`/`Badge` variants use the base keyline. Enforced by the
+  `status-focus-ring-contrast` gate (baseline 0).
 
 ### Tint Opacity Scale
 
@@ -226,7 +279,7 @@ Rules:
 - Use `BrandSymbol` for Concept 01 symbol assets and `BrandMascot` for the Cốt Lết mascot; do not reference `/brand/symbols/*` or `/brand/mascot/cotlet*` directly from route components.
 - Purpose-specific mascot assets may be used as decorative public images in customer-facing empty or splash states; they must not replace core workflow content.
 - `BrandSymbol` is approved as decorative, static `EmptyMedia` content for any `AppEmptyState` (any surface, ERP included) via the adapter's `symbol` prop; it is not a mascot and carries no motion.
-- The three brand patterns (`ke-caro`, `hat-gao`, `vong-to`) ship as tileable SVG under `/brand/patterns` with the `brand-pattern-caro` / `brand-pattern-hat-gao` / `brand-pattern-vong-to` and `brand-strip` utilities in `globals.css`. Use them only as decorative footer strips, packaging trim, or section separators — never as a background behind body text. Sanctioned placements: the login brand panel footer and the Runner display footer.
+- The three brand patterns (`ke-caro`, `hat-gao`, `vong-to`) ship as tileable SVG under `/brand/patterns` with the `brand-pattern-caro` / `brand-pattern-hat-gao` / `brand-pattern-vong-to` and `brand-strip` utilities in `globals.css`. Use them only as decorative footer strips, packaging trim, or section separators — never as an opaque background behind body text. Sanctioned placements (D072, closed list enforced by the `brand-pattern-placement` gate): the Runner display footer strip; the login page full-surface caro wash; the Management sidebar header caro wash. A full-surface wash is legal ONLY as `aria-hidden`/`pointer-events-none` decoration at `opacity-10` or lower — at that opacity it does not compete with body text. New placements require an owner decision and a gate-allowlist entry here.
 - Do not hardcode raw palette classes for status meaning (`amber`, `emerald`, `zinc`, etc.) when a semantic token exists.
 - Do not add arbitrary dimensions such as `text-[10px]`, `w-[200px]`, or `h-[3rem]`.
 - Do not add static inline styles for presentation.
@@ -272,7 +325,7 @@ Vertical rhythm uses flex gap, not `space-y-*`. Section / page / dialog / client
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Page H1                                 | `font-heading text-xl sm:text-2xl font-semibold tracking-tight`                                                                         | `AppPageHeader`                                                                                    |
 | Section title                           | `font-heading text-base font-semibold`                                                                                                  | `CardTitle`                                                                                        |
-| Sub-section / list head                 | `font-heading text-sm font-semibold`                                                                                                    | `Item title` slot                                                                                  |
+| Sub-section / list head                 | `font-heading text-sm font-semibold`                                                                                                    | `ItemTitle size="heading"`                                                                          |
 | Eyebrow / metadata                      | `text-xs font-medium uppercase tracking-wide`                                                                                           | `AppPageHeader.eyebrow` (page-header lockup only)                                                  |
 | Panel / field / section uppercase label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome: `text-2xs font-medium uppercase tracking-wider`) | `SectionLabel` (default + `density="dense"`); page-header eyebrow stays on `AppPageHeader.eyebrow` |
 | Table column header                     | `text-xs font-medium uppercase tracking-wider text-muted-foreground`                                                                    | `TableHead`                                                                                        |
@@ -284,6 +337,8 @@ Vertical rhythm uses flex gap, not `space-y-*`. Section / page / dialog / client
 | Runner empty secondary                  | `text-runner-empty-secondary font-semibold`                                                                                             | Runner/KDS empty-state secondary line, height-responsive display token                             |
 | Runner board footer                     | `text-runner-footer font-semibold`                                                                                                      | Runner/KDS order board footer, height-responsive display token                                     |
 | Display call target                     | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums`                                                                 | Customer-facing runner / queue display only                                                        |
+
+`ItemTitle`'s default size (no `size` prop) is the dense list-row title role, not the sub-section role above — it stays `text-xs/relaxed leading-snug font-medium` for card/list rows; pass `size="heading"` only where the title is acting as a sub-section head.
 
 One role = one size (uppercase labels never scale by viewport). An uppercase eyebrow / panel / field / section label is a single locked role: `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome variant `text-2xs font-medium uppercase tracking-wider`). It is NEVER scaled by viewport — no `sm:text-sm` on eyebrows — and it NEVER uses `text-sm uppercase` / `text-base uppercase`. Every `text-sm uppercase` / `text-base uppercase` label is retired to this role. Enforced by the `uppercase-label-scale` gate (`uppercase` co-occurring with `text-sm` / `text-base`), frozen per file and burning down.
 
@@ -381,9 +436,19 @@ The primitive layer's finer timings are the **`--motion-*` / `--ease-*` token fa
 
 Arbitrary `duration-[…]` is NOT allowed in app code.
 
+**One-shot content enter (app, narrow — D071 / ADR 0010 Step 0-A).** When a
+state change lands on a list/card/line (a new cart line, a genuinely new KDS
+ticket from a realtime INSERT), app surfaces MAY signal it with
+`motion-safe:animate-in` using `fade-in` and/or a narrow ring/opacity/transform
+accent, at **`duration-150` only**. `duration-300` stays overlay-only — never
+content/card/list enter. No long slides, nothing decorative. One-shot: clear
+the trigger key after the animation. Never fires for search typing,
+filter/mode/station switches, snapshot refreshes, reconnects, or ready-removal
+reordering — only a proven new-item event.
+
 **Easing.** Use Tailwind defaults: bare `transition*` (default ease), `ease-out` for enter, `ease-linear` only for continuous indicators (spinner, progress). Arbitrary `ease-[cubic-bezier(…)]` is reserved for the shared primitive layer and is not allowed in app surfaces.
 
-**Allowed animations.** `animate-spin` (only via `Spinner`), `animate-pulse` (skeleton / loading placeholders), `animate-in` / `animate-out` and `animate-accordion-*` (Radix-driven, via primitives), `animate-caret-blink` (input caret), `motion-safe:animate-cotlet-idle` / `motion-safe:animate-cotlet-waiting` / `motion-safe:animate-cotlet-waving` (runner idle mascot only — the § G full-screen idle exception). No custom `@keyframes` outside `globals.css`.
+**Allowed animations.** `animate-spin` (only via `Spinner`), `animate-pulse` (skeleton / loading placeholders), `animate-in` / `animate-out` and `animate-accordion-*` (Radix-driven, via primitives), `animate-caret-blink` (input caret), `motion-safe:animate-cotlet-idle` / `motion-safe:animate-cotlet-waiting` / `motion-safe:animate-cotlet-waving` (the § G idle-mascot exception — sanctioned on full-screen waiting/idle states ONLY, per D072: the Runner idle board, `PageSpinner fullScreen`, and the login brand panel; never on interactive controls or in-page chrome; enforced by the `mascot-animation-placement` gate). No custom `@keyframes` outside `globals.css`.
 
 **Press feedback.** `active:scale-[…]` (≥ `0.97`) is allowed on tap targets for tactile press feedback. `hover:scale-*` grow/shrink on hover is forbidden on ERP surfaces — it reads as decorative.
 
@@ -398,7 +463,7 @@ Arbitrary `duration-[…]` is NOT allowed in app code.
 
 ## Elevation / Shadow
 
-The system is **border-first**: resting surfaces are separated by `--border`, not by shadow. Shadow is reserved for surfaces that genuinely float above the page. Float elevation is the named **`--effect-*` depth token family** (Má Tư Design System; defined in `globals.css` ZONE B as rgba-by-design — an explicit exception to the OKLCH-only token rule — and consumed as `shadow-effect-*` utilities plus `bg-effect-scrim` / `drawer-scrim`). Sticky-CTA and POS/KDS ceiling surfaces still use the Tailwind `shadow-lg` / `shadow-xl` / `shadow-2xl` rungs. Each is locked per role below. Arbitrary `box-shadow`, retired `--shadow-*` vars, and unnamed `--effect-*` values remain forbidden.
+The system is **border-first**: resting surfaces are separated by `--border`, not by shadow. The single exception is the named Rest rung below — the `Card` primitive carries `shadow-effect-card-resting`. Every other resting surface (page section, table row, resting tile) stays border-only, and shadow is otherwise reserved for surfaces that genuinely float above the page. Float elevation is the named **`--effect-*` depth token family** (Má Tư Design System; defined in `globals.css` ZONE B as rgba-by-design — an explicit exception to the OKLCH-only token rule — and consumed as `shadow-effect-*` utilities plus `bg-effect-scrim` / `drawer-scrim`). Sticky-CTA and POS/KDS ceiling surfaces still use the Tailwind `shadow-lg` / `shadow-xl` / `shadow-2xl` rungs. Each is locked per role below. Arbitrary `box-shadow`, retired `--shadow-*` vars, and unnamed `--effect-*` values remain forbidden.
 
 | Rung           | Utility                            | Locked role                                                                                                                                                                                  |
 | -------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -417,7 +482,7 @@ The system is **border-first**: resting surfaces are separated by `--border`, no
 
 **Forbidden:**
 
-- No drop shadow on a resting `Card`, section, or table row — separate with `--border` instead.
+- No resting drop shadow outside the `shadow-effect-card-resting` rung owned by the `Card` primitive — sections, table rows, and resting tiles separate with `--border` instead.
 - No ad-hoc `box-shadow`, no retired `--shadow-*` vars, and no unnamed `--effect-*` value — use the approved `shadow-effect-*` / `bg-effect-scrim` / `drawer-scrim` set, or the Tailwind sticky/ceiling rungs, only.
 - No `shadow-effect-dialog` / `shadow-effect-drawer` / `shadow-lg`+ on a non-floating surface (e.g. a CTA in a non-sticky resting footer) to "make it pop."
 - One rung per role: a popover is `shadow-effect-popover`, not `shadow-effect-dialog`.
@@ -528,7 +593,7 @@ Business-state labels and badge colors are single-sourced:
 - New page-local `STATUS_*` label/variant maps are forbidden (ratchet `status-label-ssot`); register the domain instead.
 - New page-local `*StatusBadge` components and `*_BADGE_VARIANT` maps are forbidden (ratchet `status-chip-wrapper-baseline`); reuse `StatusBadge`, `getStatusBadgeMeta`, or register the missing domain in `status-badge.tsx`.
 - Unknown values render as the raw key with `outline` — never throw on DB data.
-- Intentional exceptions: `pos/_lib/order-status-display.ts` (cashier 5-label collapse; variants must still match the registry), `kds/lib/status-config.ts` (hot path), `inventory/_lib/dictionary.ts` + `inventory/_lib/ui.ts` (per-entity re-model is a later wave).
+- Intentional exceptions: `pos/_lib/order-status-display.ts` (cashier 5-label collapse; variants must still match the registry), `kds/_lib/status-config.ts` (hot path), `inventory/_lib/dictionary.ts` + `inventory/_lib/ui.ts` (per-entity re-model is a later wave).
 
 ### Metric Card Role (lock KPI/stat values to KpiCard)
 
@@ -953,8 +1018,9 @@ Stage 0 gate status (each flips to **live** as its ratchet lands in
 - `button-height-on-button` (§ D / Height Scale) — **live, widened**: the
   raw-height token now spans `h-10`–`h-44` and `min-h-12`–`min-h-24` on
   `<Button>`/`<TouchButton>`. The POS table-gate tile moved to a `tile` Button
-  size; a few bespoke single-use tap tiles (≥`h-20`: append-draft, cart row,
-  order-item ghost, bill payment tiles) are baselined as the accepted floor.
+  size; the allowlist is now 0 — every bespoke single-use tap tile has
+  migrated to a `Button` size variant, and any new raw height on an action
+  element fails CI.
 - `primitive-transition-all` (§ Motion Contract) — **live**: shared UI
   primitives must name the transitioned properties; `transition-all` is blocked
   in `packages/ui/src/components`.
@@ -976,6 +1042,19 @@ Stage 0 gate status (each flips to **live** as its ratchet lands in
 - `focus-ring-contrast` (§ Accessibility / Token Contract) — **live**: focus
   affordances use `ring-foreground`; `ring-ring` / `ring-ring/*` is blocked
   because the gold ring is too low-contrast on cream surfaces.
+- `status-focus-ring-contrast` (§ Token Contract → Status ink vs status fill) —
+  **live**: `focus-visible:ring-(destructive|success|warning|info)/NN` is
+  blocked (1.1–1.4:1, below the WCAG 1.4.11 3:1 floor). `ring-primary/NN` is
+  exempt because the form-control primitives pair it with a solid
+  `focus-visible:border-primary`.
+- `status-foreground-on-tint` (§ Token Contract → Status ink vs status fill) —
+  **live**: a `--{status}-foreground` ink on a `/NN` status tint is blocked; it
+  reads in light mode and collapses to ~1.3:1 on the night surface. Tinted
+  chrome uses the plain ink token.
+- `operator-no-stat-metric` (§ Structural C → Canonical operator-home skeleton)
+  — **live**: `AppLinkCard`'s `metric` slot renders a mono stat readout, so it
+  is blocked under `apps/web/app/(protected)/br/`. Operator counts belong in the
+  `badge` slot; the slot itself stays available to Office surfaces.
 - `radius-scale` / `gap-scale` / `primitive-radius-scale` (§ Token Contract) —
   **live**: app surfaces stay on the locked radius and gap scale, and primitives
   cannot add new oversized radii (`rounded-xl` through `rounded-4xl`).

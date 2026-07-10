@@ -612,7 +612,7 @@ export function CountSlipClient({
                       }
                     >
                       <ItemContent className="min-w-0 gap-1">
-                        <ItemTitle className="line-clamp-none w-full break-words text-sm font-semibold">
+                        <ItemTitle size="heading" className="line-clamp-none w-full break-words">
                           {assignment.ingredientName}
                         </ItemTitle>
                         <ItemDescription className="line-clamp-none break-words text-xs">

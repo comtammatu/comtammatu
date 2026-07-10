@@ -37,6 +37,7 @@ const KDS_TICKET_SELECT =
 const KDS_ACTIVE_STATUSES = ["pending", "preparing"];
 const KDS_VISIBLE_STATUSES = ["pending", "preparing", "ready"];
 const KDS_VISIBLE_STATUS_SET = new Set<string>(KDS_VISIBLE_STATUSES);
+const EMPTY_INSERTED_TICKET_IDS: readonly number[] = [];
 
 type KdsQueryResult = {
   data: unknown[] | null;
@@ -312,6 +313,14 @@ export interface KdsRealtimeState {
   kitchenBatches: Map<number, KdsKitchenSendBatch>;
   setTickets: React.Dispatch<React.SetStateAction<KdsTicket[]>>;
   refreshBoardSnapshot: () => Promise<void>;
+  /**
+   * Drains the ids of tickets that arrived via a realtime INSERT since the
+   * previous call. This is the only provable "genuinely new ticket" source —
+   * snapshot refresh / reconnect / poll / visibility refetch replace state
+   * wholesale and never fill this buffer, so consumers can distinguish a real
+   * new ticket from a refetch that merely re-lists it.
+   */
+  consumeRealtimeInsertedTicketIds: () => readonly number[];
 }
 
 export function useKdsRealtime({
@@ -338,6 +347,9 @@ export function useKdsRealtime({
   const kitchenBatchesRef = useRef(kitchenBatches);
   const lastSnapshotSyncRef = useRef(Date.now());
   const initialSubscribeSeenRef = useRef(false);
+  // Buffer of ticket ids delivered by realtime INSERT events only. Filled in
+  // the INSERT branch below and drained by consumeRealtimeInsertedTicketIds.
+  const insertedTicketIdsRef = useRef<number[]>([]);
 
   useEffect(() => {
     branchIdRef.current = branchId;
@@ -577,6 +589,9 @@ export function useKdsRealtime({
             if (payload.eventType === "INSERT") {
               const newTicket = payload.new as KdsTicket;
               if (!isVisibleKdsTicket(newTicket)) return;
+              // Provable new-ticket source: only realtime INSERT records the id
+              // here. UPDATE / DELETE / snapshot refresh below never do.
+              insertedTicketIdsRef.current.push(newTicket.id);
               setTickets((prev) => {
                 if (prev.some((t) => t.id === newTicket.id)) return prev;
                 return [...prev, newTicket];
@@ -695,6 +710,13 @@ export function useKdsRealtime({
     };
   }, []);
 
+  const consumeRealtimeInsertedTicketIds = useCallback((): readonly number[] => {
+    const ids = insertedTicketIdsRef.current;
+    if (ids.length === 0) return EMPTY_INSERTED_TICKET_IDS;
+    insertedTicketIdsRef.current = [];
+    return ids;
+  }, []);
+
   return {
     tickets,
     orders,
@@ -702,5 +724,6 @@ export function useKdsRealtime({
     kitchenBatches,
     setTickets,
     refreshBoardSnapshot,
+    consumeRealtimeInsertedTicketIds,
   };
 }

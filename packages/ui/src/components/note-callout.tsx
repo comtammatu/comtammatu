@@ -6,7 +6,7 @@ import { cn } from "../lib/utils";
 const noteCalloutVariants = cva("flex items-start gap-2 rounded-md px-3 py-2", {
   variants: {
     tone: {
-      warning: "bg-warning/15 text-warning-foreground",
+      warning: "bg-warning/15 text-warning",
       muted: "border bg-muted/30 text-foreground",
     },
   },

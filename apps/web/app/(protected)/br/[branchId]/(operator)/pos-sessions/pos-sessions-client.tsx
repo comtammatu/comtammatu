@@ -174,6 +174,7 @@ export function PosSessionsClient({
       <AppEmptyState
         title={messages.settings.posSessions.emptyTitle}
         description={messages.settings.posSessions.emptyDescription}
+        symbol="roof"
       />
     );
   }
@@ -244,6 +245,7 @@ export function PosSessionsClient({
                 <AppEmptyState
                   title={messages.settings.posSessions.noBills}
                   compact
+                  symbol="riceBowl"
                 />
               )}
             </AppSection>

@@ -56,7 +56,7 @@ export function BranchActionItem({
         {icon}
       </ItemMedia>
       <ItemContent className="min-w-0">
-        <ItemTitle className="line-clamp-none flex w-full flex-wrap items-center gap-2 text-sm font-semibold sm:text-base">
+        <ItemTitle size="heading" className="line-clamp-none flex w-full flex-wrap items-center gap-2 sm:text-base">
           {title}
           {badge ? (
             <Badge variant={badge.variant} className="shrink-0">

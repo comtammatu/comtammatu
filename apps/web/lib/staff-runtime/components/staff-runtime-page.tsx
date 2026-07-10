@@ -283,7 +283,7 @@ export function EmployeeInlineState({
       {title || description ? (
         <ItemContent className="min-w-0">
           {title ? (
-            <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+            <ItemTitle size="heading" className="line-clamp-none w-full">
               {title}
             </ItemTitle>
           ) : null}
@@ -370,8 +370,9 @@ export function EmployeeStatusStrip({
               {item.label}
             </ItemDescription>
             <ItemTitle
+              size="heading"
               className={cn(
-                "max-w-full whitespace-normal break-words text-sm font-semibold leading-5",
+                "max-w-full whitespace-normal break-words leading-5",
                 item.mono && "font-mono tabular-nums",
                 item.muted ? "text-muted-foreground" : "text-foreground",
               )}
@@ -496,7 +497,7 @@ function EmployeeActionItem({
           </ItemMedia>
         ) : null}
         <ItemContent className="min-w-0">
-          <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+          <ItemTitle size="heading" className="line-clamp-none w-full">
             {title}
           </ItemTitle>
           {description ? (
@@ -529,7 +530,7 @@ function EmployeeActionItem({
           </ItemMedia>
         ) : null}
         <ItemContent className="min-w-0">
-          <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+          <ItemTitle size="heading" className="line-clamp-none w-full">
             {title}
           </ItemTitle>
           {description ? (

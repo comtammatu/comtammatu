@@ -163,7 +163,7 @@ export function EmployeeTable({
         mobileCardRender={(employee) => (
           <Item variant="outline">
             <ItemContent>
-              <ItemTitle className="line-clamp-none text-sm font-semibold">
+              <ItemTitle size="heading" className="line-clamp-none">
                 {employee.profiles?.full_name ?? "—"}
               </ItemTitle>
               <ItemDescription className="line-clamp-none text-sm leading-6">

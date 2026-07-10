@@ -58,6 +58,7 @@ export async function SupplierReturnNewPageContent({
         mode="no-data"
         title={CREATE.branchRequired}
         description={CREATE.description}
+        symbol="riceGrain"
       />
     );
     if (embedded) {

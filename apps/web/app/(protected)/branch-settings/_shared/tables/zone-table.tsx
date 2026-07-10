@@ -119,7 +119,7 @@ export function ZoneTable({ zones }: ZoneTableProps) {
         mobileCardRender={(zone) => (
           <Item variant="outline" className={isPending ? "opacity-60" : ""}>
             <ItemContent>
-              <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+              <ItemTitle size="heading" className="line-clamp-none w-full">
                 {zone.name}
               </ItemTitle>
               <ItemDescription className="line-clamp-none text-sm leading-6">

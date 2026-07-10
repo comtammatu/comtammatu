@@ -304,7 +304,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
           mobileCardRender={(row) => (
             <Item variant="outline">
               <ItemContent className="min-w-0">
-                <ItemTitle className="font-mono text-sm font-semibold">
+                <ItemTitle size="heading" className="font-mono">
                   {row.code}
                 </ItemTitle>
                 <ItemDescription className="text-sm leading-6">

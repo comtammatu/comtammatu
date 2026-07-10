@@ -147,7 +147,7 @@ export function CatalogIngredientsClient({
       </Field>
 
       {filtered.length === 0 ? (
-        <AppEmptyState compact title={copy.empty} />
+        <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (
         <div className="flex flex-col gap-2">
           {filtered.map((row) => (

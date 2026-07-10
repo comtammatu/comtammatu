@@ -23,6 +23,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { CorrectionBranchOption } from "../../_components/document-stock-correction-dialog";
 import {
+  AppBackLink,
   AppDetailFooter,
   AppEmptyState,
   AppPage,
@@ -791,12 +792,9 @@ export function TransferDetailClient({
         variant: statusBadge.variant,
       }}
       breadcrumb={
-        <Link
-          href={transferListHref}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-        >
-          <IconArrowLeft className="size-4" /> {tRoute("/inventory/transfers")}
-        </Link>
+        <AppBackLink href={transferListHref}>
+          {tRoute("/inventory/transfers")}
+        </AppBackLink>
       }
     />
   );

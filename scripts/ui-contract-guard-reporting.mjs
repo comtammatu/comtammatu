@@ -46,6 +46,8 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
       "admin-finance-branch-toolbar-fixed-control",
       "app-arbitrary-sizing",
       "app-effect-shadow-rung",
+      "brand-pattern-placement",
+      "mascot-animation-placement",
       "app-section-content-named-layout-props",
       "card-content-named-layout-props",
       "focus-ring-contrast",
@@ -63,7 +65,10 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
       "radius-scale",
       "resting-shadow-rung",
       "root-viewport-allows-zoom",
+      "operator-no-stat-metric",
       "scrollarea-no-max-height-only",
+      "status-focus-ring-contrast",
+      "status-foreground-on-tint",
     ],
   },
   "baseline-ratchet": {
@@ -174,6 +179,15 @@ export const UI_CONTRACT_BASELINE_POLICIES = {
   "raw-padding-baseline": {
     debtReason:
       "Large local padding must migrate to a named density or surface prop.",
+    permanentReason:
+      "POS Operations chrome owns its full-screen frame spacing; station surfaces do not mount AppPage, so no density prop can absorb these.",
+    permanentExceptions: {
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 2,
+    },
   },
   "resting-shadow-baseline": {
     debtReason:

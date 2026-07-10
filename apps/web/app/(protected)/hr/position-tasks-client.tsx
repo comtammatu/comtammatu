@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { Label } from "@comtammatu/ui/components/label";
@@ -113,7 +114,7 @@ function IngredientPicker({
         const selected = field.value ?? [];
         const selectedSet = new Set(selected);
         return (
-          <div className="flex flex-col gap-2 rounded-md border bg-muted/20 p-3">
+          <Frame className="flex flex-col gap-2 bg-muted/30 p-3">
             <p className="text-sm font-medium">{copy.ingredientsLabel}</p>
             <p className="text-xs text-muted-foreground">
               {copy.ingredientsHint}
@@ -165,7 +166,7 @@ function IngredientPicker({
               searchPlaceholder={copy.ingredientSearch}
               triggerClassName="w-full"
             />
-          </div>
+          </Frame>
         );
       }}
     />
@@ -186,7 +187,7 @@ function TaskRow({
   watchedKind: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-md border p-3">
+    <Frame className="flex flex-col gap-3 p-3">
       <div className="grid gap-3 lg:grid-cols-[1fr_170px_150px_150px_auto]">
         <TextField
           control={control}
@@ -278,7 +279,7 @@ function TaskRow({
           ingredients={ingredients}
         />
       ) : null}
-    </div>
+    </Frame>
   );
 }
 

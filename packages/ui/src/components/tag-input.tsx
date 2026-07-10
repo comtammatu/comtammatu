@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check as IconCheck, X as IconX } from "lucide-react";
 
 import { cn } from "../lib/utils";
+import { fieldTriggerChrome } from "../lib/field-trigger";
 import { Badge } from "./badge";
 import {
   Command,
@@ -35,6 +36,7 @@ type TagInputProps = Omit<React.ComponentProps<"div">, "onChange"> & {
   emptyText?: string;
   allowCreate?: boolean;
   disabled?: boolean;
+  "aria-invalid"?: boolean;
 };
 
 function Tag({
@@ -72,6 +74,7 @@ function TagInput({
   allowCreate = true,
   disabled = false,
   className,
+  "aria-invalid": ariaInvalid,
   ...props
 }: TagInputProps) {
   const [open, setOpen] = React.useState(false);
@@ -135,7 +138,12 @@ function TagInput({
           <button
             type="button"
             disabled={disabled}
-            className="flex min-h-8 w-full flex-wrap items-center gap-1.5 rounded-md border border-input bg-input/20 px-2 py-1 text-left text-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            aria-invalid={ariaInvalid}
+            data-placeholder={selectedOptions.length ? undefined : true}
+            className={cn(
+              "flex min-h-8 w-full flex-wrap items-center gap-1.5 px-2 py-1 text-left text-xs",
+              fieldTriggerChrome,
+            )}
           >
             {selectedOptions.length ? (
               selectedOptions.map((option) => (

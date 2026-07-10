@@ -457,6 +457,14 @@ export const APP_ADAPTER_REGISTRY = {
     "management page header",
     true,
   ),
+  AppBackLink: adapter(
+    "apps/web/app/components/surface.tsx",
+    "back navigation affordance",
+    "AppBackLink",
+    "Button asChild ghost icon Link for a combined back-plus-title row",
+    "route-local ArrowLeft anchor with duplicated classes",
+    "AppPageHeader breadcrumb slot",
+  ),
   AppShellPaddingBoundary: adapter(
     "apps/web/app/components/surface.tsx",
     "shell padding ownership",

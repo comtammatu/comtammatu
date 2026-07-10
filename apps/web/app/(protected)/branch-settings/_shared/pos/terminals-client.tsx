@@ -196,7 +196,7 @@ export function TerminalsClient({
         mobileCardRender={(terminal) => (
           <Item variant="outline">
             <ItemContent className="min-w-0">
-              <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+              <ItemTitle size="heading" className="line-clamp-none w-full">
                 {terminal.name}
               </ItemTitle>
               <ItemDescription className="line-clamp-none text-sm leading-6">

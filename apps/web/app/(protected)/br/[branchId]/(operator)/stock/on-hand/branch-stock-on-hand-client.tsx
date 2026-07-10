@@ -152,7 +152,7 @@ function StockTouchRow({
         aria-label={stockCopy.actions.viewDetailAria(item.name)}
       >
         <ItemContent className="min-w-0 gap-1.5">
-          <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+          <ItemTitle size="heading" className="line-clamp-none w-full">
             {item.name}
           </ItemTitle>
           <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-1.5">
@@ -464,6 +464,7 @@ export function BranchStockOnHandClient({
                     ? stockCopy.empty.searchDescription
                     : stockCopy.empty.noDataDescription
                 }
+                symbol="riceGrain"
               >
                 {filtersActive ? (
                   <Button

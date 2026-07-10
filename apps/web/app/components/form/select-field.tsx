@@ -62,6 +62,10 @@ export function SelectField<TFieldValues extends FieldValues>({
   const { field, fieldState } = useController({ control, name });
   const fieldId = id ?? `field-${String(name)}`;
   const hasError = !!fieldState.error;
+  const descriptionId = description ? `${fieldId}-description` : undefined;
+  const errorId = hasError ? `${fieldId}-error` : undefined;
+  const describedBy =
+    [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
 
   const renderItem = (opt: SelectFieldOption) => (
     <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
@@ -85,6 +89,7 @@ export function SelectField<TFieldValues extends FieldValues>({
           size="field"
           className={cn("w-full", className)}
           aria-invalid={hasError}
+          aria-describedby={describedBy}
           onBlur={field.onBlur}
           ref={field.ref}
         >
@@ -101,8 +106,12 @@ export function SelectField<TFieldValues extends FieldValues>({
             : options?.map(renderItem)}
         </SelectContent>
       </Select>
-      {description ? <FieldDescription>{description}</FieldDescription> : null}
-      {fieldState.error ? <FieldError errors={[fieldState.error]} /> : null}
+      {description ? (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      ) : null}
+      {fieldState.error ? (
+        <FieldError id={errorId} errors={[fieldState.error]} />
+      ) : null}
     </Field>
   );
 }

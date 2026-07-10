@@ -15,6 +15,10 @@ import {
   useKdsRowEffects,
 } from "./_hooks/use-kds-row-effects";
 import {
+  KdsNewTicketSignalProvider,
+  useKdsNewTicketSignal,
+} from "./_hooks/use-kds-new-ticket-signal";
+import {
   getKdsOrderItemColumnId,
   getKdsScopedGroupKey,
 } from "./_lib/order-columns";
@@ -140,12 +144,19 @@ export function KdsBoard({
     kitchenBatches,
     setTickets,
     refreshBoardSnapshot,
+    consumeRealtimeInsertedTicketIds,
   } = useKdsRealtime({
     branchId,
     initialTickets,
     initialOrders,
     initialOrderItems,
     initialKitchenBatches,
+  });
+
+  const newTicketSignalIds = useKdsNewTicketSignal({
+    scopeKey: branchId,
+    tickets,
+    consumeInsertedTicketIds: consumeRealtimeInsertedTicketIds,
   });
 
   const filters = useKdsFilters(stations);
@@ -515,27 +526,29 @@ export function KdsBoard({
         </div>
 
         <KdsRowEffectsProvider value={rowEffects}>
-          {mode === "focus" ? (
-            <FocusView
-              orders={displayOrders}
-              hasGroupedOrders={activeGroupedOrders.length > 0}
-              pendingTicketIds={pendingTicketIds}
-              canMarkReady={canMarkReady}
-              canRecall={canRecall}
-              onRecall={handleRecall}
-              onCompleteTickets={handleCompleteTickets}
-            />
-          ) : (
-            <OrderGrid
-              displayOrders={displayOrders}
-              hasGroupedOrders={activeGroupedOrders.length > 0}
-              pendingTicketIds={pendingTicketIds}
-              canMarkReady={canMarkReady}
-              canRecall={canRecall}
-              onRecall={handleRecall}
-              onCompleteTickets={handleCompleteTickets}
-            />
-          )}
+          <KdsNewTicketSignalProvider value={newTicketSignalIds}>
+            {mode === "focus" ? (
+              <FocusView
+                orders={displayOrders}
+                hasGroupedOrders={activeGroupedOrders.length > 0}
+                pendingTicketIds={pendingTicketIds}
+                canMarkReady={canMarkReady}
+                canRecall={canRecall}
+                onRecall={handleRecall}
+                onCompleteTickets={handleCompleteTickets}
+              />
+            ) : (
+              <OrderGrid
+                displayOrders={displayOrders}
+                hasGroupedOrders={activeGroupedOrders.length > 0}
+                pendingTicketIds={pendingTicketIds}
+                canMarkReady={canMarkReady}
+                canRecall={canRecall}
+                onRecall={handleRecall}
+                onCompleteTickets={handleCompleteTickets}
+              />
+            )}
+          </KdsNewTicketSignalProvider>
         </KdsRowEffectsProvider>
 
         <KdsCompletionHistorySheet

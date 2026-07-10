@@ -1007,6 +1007,7 @@ export function StockClient({
                   ? stockCopy.empty.searchDescription
                   : stockCopy.empty.noDataDescription
               }
+              symbol="riceGrain"
             />
           ) : (
             filtered.map((item) => renderStockMobileCard(item))

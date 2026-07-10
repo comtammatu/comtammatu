@@ -132,7 +132,7 @@ function BranchGrnDraftItem({
         }`}
       >
         <ItemContent className="min-w-0 gap-1">
-          <ItemTitle className="line-clamp-none text-sm font-semibold">
+          <ItemTitle size="heading" className="line-clamp-none">
             {draft.supplierName}
           </ItemTitle>
           <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -188,7 +188,7 @@ function BranchGrnListItem({
       >
         <Link href={grnDetailHref(`/br/${branchId}/stock/grn`, grn.id)}>
           <ItemContent className="min-w-0 gap-1">
-            <ItemTitle className="line-clamp-none font-mono text-sm font-semibold">
+            <ItemTitle size="heading" className="line-clamp-none font-mono">
               {grn.code}
             </ItemTitle>
             <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">

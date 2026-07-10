@@ -439,6 +439,7 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
       <AppEmptyState
         title={messages.pos.menu.empty}
         description={messages.pos.menu.menuLimitsEmptyDescription}
+        symbol="roundPlate"
       >
         <Button asChild variant="outline" size="touch">
           <Link href={`/br/${branchId}/settings`}>
@@ -496,7 +497,11 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
       />
 
       {grouped.length === 0 ? (
-        <AppEmptyState title={messages.pos.menu.noResults} compact />
+        <AppEmptyState
+          title={messages.pos.menu.noResults}
+          compact
+          symbol="roundPlate"
+        />
       ) : null}
 
       <div className="flex flex-col gap-3">

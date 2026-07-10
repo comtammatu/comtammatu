@@ -3,11 +3,15 @@
 import * as React from "react";
 import {
   Check as IconCheck,
-  ChevronsUpDown as IconChevronsUpDown,
+  ChevronDown as IconChevronDown,
 } from "lucide-react";
 
 import { cn } from "../lib/utils";
-import { Button } from "./button";
+import {
+  fieldTriggerChrome,
+  fieldTriggerSize,
+  type FieldTriggerSize,
+} from "../lib/field-trigger";
 import {
   Command,
   CommandEmpty,
@@ -26,7 +30,7 @@ export type ComboboxOption = {
 };
 
 type ComboboxProps = Omit<
-  React.ComponentProps<typeof Button>,
+  React.ComponentProps<"button">,
   "children" | "onChange" | "value"
 > & {
   options: ComboboxOption[];
@@ -36,6 +40,7 @@ type ComboboxProps = Omit<
   searchPlaceholder?: string;
   emptyText?: string;
   contentClassName?: string;
+  size?: FieldTriggerSize;
 };
 
 function Combobox({
@@ -48,6 +53,7 @@ function Combobox({
   contentClassName,
   className,
   disabled,
+  size = "default",
   ...props
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
@@ -56,22 +62,23 @@ function Combobox({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
+        <button
           type="button"
-          variant="outline"
           role="combobox"
           aria-expanded={open}
+          data-placeholder={selected ? undefined : true}
           disabled={disabled}
           className={cn(
-            "w-full justify-between",
-            !selected && "text-muted-foreground",
+            "flex w-full items-center justify-between gap-1.5 px-2 py-1.5 text-xs/relaxed whitespace-nowrap",
+            fieldTriggerChrome,
+            fieldTriggerSize({ size }),
             className,
           )}
           {...props}
         >
           <span className="truncate">{selected?.label ?? placeholder}</span>
-          <IconChevronsUpDown className="size-3.5 shrink-0 opacity-50" />
-        </Button>
+          <IconChevronDown className="pointer-events-none size-3.5 shrink-0 text-muted-foreground" />
+        </button>
       </PopoverTrigger>
       <PopoverContent
         className={cn(

@@ -126,7 +126,11 @@ export function SupplierReturnsClient({
         />
       ) : null}
       {initialReturns.length === 0 ? (
-        <AppEmptyState mode="no-data" title={INVENTORY_VI.noSupplierReturns} />
+        <AppEmptyState
+          mode="no-data"
+          title={INVENTORY_VI.noSupplierReturns}
+          symbol="riceGrain"
+        />
       ) : (
         <>
           {!embedded ? (

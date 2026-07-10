@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft as IconArrowLeft,
   Lightbulb as IconBulb,
   Package as IconPackage,
   Plus as IconPlus,
@@ -54,6 +53,7 @@ import {
 } from "../../_lib/purchase-units";
 import { getReferenceCostForUnit } from "../../_lib/reference-cost";
 import {
+  AppBackLink,
   AppDetailFooter,
   AppEmptyState,
   AppPageHeader,
@@ -339,13 +339,7 @@ export function NewPoClient({
       title={messages.inventory.po.newTitle}
       description={messages.inventory.po.draftDescription}
       breadcrumb={
-        <Link
-          href={poBasePath}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-        >
-          <IconArrowLeft className="size-4" />
-          {messages.inventory.po.list}
-        </Link>
+        <AppBackLink href={poBasePath}>{messages.inventory.po.list}</AppBackLink>
       }
     />
   );

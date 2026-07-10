@@ -5,7 +5,6 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   CircleX as IconCircleX,
   CircleCheck as IconCircleCheck,
   Plus as IconPlus,
@@ -40,6 +39,7 @@ import { Combobox } from "@/components/form/combobox";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import { messages } from "@lib/messages";
 import {
+  AppBackLink,
   AppDetailFooter,
   AppPage,
   AppPageHeader,
@@ -751,7 +751,7 @@ export function PODetailClient({
             {canEditLines ? (
               <form
                 onSubmit={handleAddLine}
-                className="grid gap-3 border-t bg-muted/10 p-4 sm:grid-cols-2 lg:grid-cols-5"
+                className="grid gap-3 border-t bg-muted/30 p-4 sm:grid-cols-2 lg:grid-cols-5"
               >
                 <Combobox
                   value={addIngredientId}
@@ -1198,13 +1198,9 @@ export function PODetailClient({
           variant: statusBadge.variant,
         }}
         breadcrumb={
-          <Link
-            href={purchaseOrdersBasePath}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />{" "}
+          <AppBackLink href={purchaseOrdersBasePath}>
             {tRoute("/inventory/purchase-orders", "heading")}
-          </Link>
+          </AppBackLink>
         }
         actions={headerActions}
       />

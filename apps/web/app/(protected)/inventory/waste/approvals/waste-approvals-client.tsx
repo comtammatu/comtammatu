@@ -84,7 +84,7 @@ export function WasteApprovalsClient({
       ) : null}
 
       {rows.length === 0 ? (
-        <AppEmptyState compact title={copy.empty} />
+        <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (
         <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
           {rows.map((row) => (
@@ -179,7 +179,7 @@ function WasteApprovalCard({
               <p className="mt-1 text-sm text-muted-foreground">
                 {row.createdByName}
                 {row.isSelfCreated ? (
-                  <Badge className="ml-2 bg-warning/15 text-warning-foreground border-warning/20 border text-xs">
+                  <Badge className="ml-2 bg-warning/15 text-warning border-warning/20 border text-xs">
                     {copy.selfCreatedBadge}
                   </Badge>
                 ) : null}

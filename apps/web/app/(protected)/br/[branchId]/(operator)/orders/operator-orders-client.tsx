@@ -36,6 +36,7 @@ export function OperatorOrdersClient({
         title={ORDERS_COPY.emptyTitle}
         description={ORDERS_COPY.emptyDescription}
         compact
+        symbol="riceBowl"
       />
     );
   }

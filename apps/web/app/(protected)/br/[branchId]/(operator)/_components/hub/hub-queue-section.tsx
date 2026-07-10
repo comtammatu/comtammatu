@@ -141,7 +141,7 @@ function QueueRowItem({ row }: { row: QueueRow }) {
           <row.icon />
         </ItemMedia>
         <ItemContent className="min-w-0">
-          <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+          <ItemTitle size="heading" className="line-clamp-none w-full">
             {row.title}
           </ItemTitle>
         </ItemContent>
@@ -157,7 +157,12 @@ function QueueRowItem({ row }: { row: QueueRow }) {
 function CompactQueueSection({ rows }: { rows: QueueRow[] }) {
   if (rows.length === 0) {
     return (
-      <AppEmptyState compact title={branchCopy.queueEmpty} className="py-3" />
+      <AppEmptyState
+        compact
+        title={branchCopy.queueEmpty}
+        className="py-3"
+        symbol="riceBowl"
+      />
     );
   }
 

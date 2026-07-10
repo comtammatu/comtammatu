@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { SettingsFormSection } from "@/components/settings-form-section";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -206,7 +207,7 @@ export function PaymentsForm({
 
         <TabsContent value="connection" className="mt-0 flex flex-col gap-4">
           <SettingsFormSection title={messages.settings.payments.sectionTitle}>
-            <div className="flex flex-col gap-3 rounded-md border p-4">
+            <Frame className="flex flex-col gap-3 p-4">
               <Controller
                 control={form.control}
                 name="enable_vietqr"
@@ -354,7 +355,7 @@ export function PaymentsForm({
                   {messages.settings.payments.codePreviewHelp}
                 </p>
               </div>
-            </div>
+            </Frame>
 
             <div className="flex flex-col gap-2">
               <div className="flex flex-col gap-1">
@@ -386,7 +387,7 @@ export function PaymentsForm({
               control={form.control}
               name="enable_momo"
               render={({ field }) => (
-                <div className="flex flex-row items-start justify-between gap-2 rounded-md border p-4">
+                <Frame className="flex flex-row items-start justify-between gap-2 p-4">
                   <div className="flex flex-col gap-1">
                     <Label htmlFor="enable-momo" className="text-base">
                       MoMo
@@ -426,7 +427,7 @@ export function PaymentsForm({
                     disabled={!momoEnvConfigured}
                     className="mt-1"
                   />
-                </div>
+                </Frame>
               )}
             />
           </SettingsFormSection>

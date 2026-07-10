@@ -31,15 +31,17 @@ interface TrendSparklineProps {
   className?: string;
   /** ARIA description for screen readers (e.g. "Doanh thu 14 ngày") */
   ariaLabel: string;
-  /** Use semantic-token color (Q4 design tokens). Default = chart-1 */
+  /** Use semantic-token color (Q4 design tokens). Default = primary */
   tone?: "primary" | "success" | "warning" | "destructive";
 }
 
+// Semantic tones bind to status tokens, not chart-N: the chart ramp is
+// categorical and reorders its hues between light and night themes.
 const TONE_VAR: Record<NonNullable<TrendSparklineProps["tone"]>, string> = {
-  primary: "var(--chart-1)",
-  success: "var(--chart-2)",
-  warning: "var(--chart-3)",
-  destructive: "var(--chart-4)",
+  primary: "var(--primary)",
+  success: "var(--success)",
+  warning: "var(--warning)",
+  destructive: "var(--destructive)",
 };
 
 export function TrendSparkline({

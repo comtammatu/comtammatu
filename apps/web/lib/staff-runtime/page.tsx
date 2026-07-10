@@ -891,7 +891,7 @@ export async function StaffWorkdayPageContent({
     <Item asChild variant="outline" size="sm" className="bg-card">
       <Link href={teamRoute}>
         <ItemContent>
-          <ItemTitle className="text-sm font-semibold">
+          <ItemTitle size="heading">
             Quản lý đội chi nhánh
           </ItemTitle>
           <ItemDescription className="text-xs text-muted-foreground">

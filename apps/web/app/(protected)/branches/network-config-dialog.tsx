@@ -145,7 +145,7 @@ export function NetworkConfigDialog({
     >
       <div className="flex flex-col gap-4">
         {!loading && activeRows.length === 0 && (
-          <Alert className="border-warning/40 bg-warning/10">
+          <Alert className="border-warning/20 bg-warning/10">
             <IconAlertTriangle className="size-4 text-warning" />
             <AlertTitle>{messages.settings.network.noTrustedTitle}</AlertTitle>
             <AlertDescription>
@@ -155,7 +155,7 @@ export function NetworkConfigDialog({
         )}
 
         {!loading && activeRows.length > 0 && !hasFreshTrust && (
-          <Alert className="border-warning/40 bg-warning/10">
+          <Alert className="border-warning/20 bg-warning/10">
             <IconAlertTriangle className="size-4 text-warning" />
             <AlertTitle>{messages.settings.network.staleTitle}</AlertTitle>
             <AlertDescription>
@@ -218,7 +218,7 @@ export function NetworkConfigDialog({
                         variant="outline"
                         className={
                           row.registered_via === "agent"
-                            ? "border-success/40 text-success"
+                            ? "border-success/20 text-success"
                             : "border-border"
                         }
                       >
@@ -229,7 +229,7 @@ export function NetworkConfigDialog({
                       {!isFresh(row.last_seen_at) && (
                         <Badge
                           variant="outline"
-                          className="border-warning/40 text-warning"
+                          className="border-warning/20 text-warning"
                         >
                           {messages.settings.network.expired}
                         </Badge>

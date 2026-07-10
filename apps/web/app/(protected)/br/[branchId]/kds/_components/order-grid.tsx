@@ -26,6 +26,10 @@ import {
   useKdsRowEffect,
 } from "../_hooks/use-kds-row-effects";
 import {
+  getKdsNewTicketSignalClass,
+  useKdsNewTicketSignalIds,
+} from "../_hooks/use-kds-new-ticket-signal";
+import {
   getKdsOrderLabelOverride,
   groupKdsOrdersByColumn,
 } from "../_lib/order-columns";
@@ -302,6 +306,10 @@ function HeatmapCard({
     () => getOrderElapsedMinutes(order, now),
     [now, order],
   );
+  const newTicketSignalIds = useKdsNewTicketSignalIds();
+  const isNewTicket = order.tickets.some((ticket) =>
+    newTicketSignalIds.has(ticket.id),
+  );
   const status = getKdsOrderDisplayStatus({ tickets: order.tickets });
   const ageStyle = getAgeStyle(elapsed, status === "ready");
   const contextLabel = getKdsOrderLabelOverride(order);
@@ -342,6 +350,7 @@ function HeatmapCard({
         "min-w-0 shrink-0 gap-1 overflow-hidden border-l-2 p-2 transition-colors duration-150 xl:p-3",
         ageStyle.bg,
         getCardLeftAccent(status, elapsed),
+        isNewTicket && getKdsNewTicketSignalClass(),
       )}
     >
       <div className="flex min-w-0 flex-col gap-1.5 xl:flex-row xl:items-start xl:justify-between xl:gap-2">

@@ -827,3 +827,30 @@ liệt kê trong báo cáo (mục 7).
 **Cơ chế:** `packages/ui/src/components/section-label.tsx` (new); `docs/spec/design-system.md` (§ Component Authority + § Rhythm B + dòng 939 cập nhật); `docs/agent/rules/ui.md` (Typography Rules thêm SectionLabel rule); `tasks/regressions.md` (thêm [SECTION-LABEL-SSOT]); `scripts/check-ui-contract.mjs` (allowlist hạ); 24 app files migrate inline class string → `<SectionLabel>`; `apps/web/app/(protected)/hr/hr-client.tsx` (HR density).
 
 **Out of scope (đợt này KHÔNG):** SectionLabel group b (9 complex sites — mb-2, shrink-0, grid headers); SectionLabel group c (12 Label/Badge — khác concern); D3 logo night variant (vẫn trì hoãn).
+
+## D071: DS contrast wave + 4 hạng mục adapter + Motion Step 0-A (2026-07-10)
+
+**Context:** Audit sâu DS (44 agent, 34 finding confirmed) lộ cụm lỗi contrast ở tầng giá trị token mà 111 guard class-pattern không thấy được, cộng 4 hạng mục adapter/primitive cần owner quyết hướng.
+
+**Decision (owner duyệt 2026-07-10):**
+
+1. **Status ink vs status fill** — `--{status}` là mực (đọc được trên nền + tint của chính nó, AA 4.5:1 cả 2 theme); `--{status}-foreground` chỉ là chữ trên nền đặc. Light `--warning` rời brand gold (`#f2a100`→`#8e5400`), light `--success` đậm hơn (`#6a8f5b`→`#446935`); vàng gạo vẫn là accent trên `--ring`/`--chart-2`. Night CTA lật foreground về nền tối (theo convention success/warning/info sẵn có). Enforce: gate `status-foreground-on-tint` + `status-focus-ring-contrast` (baseline 0) + test `design-token-contrast-static.test.ts` đọc OKLCH từ globals.css.
+2. **4 hạng mục adapter:** `ItemTitle` giữ default dense, role contract thành `size="heading"` (sửa contract, không re-weight 232 hàng); field-trigger grammar hợp nhất qua `packages/ui/src/lib/field-trigger.ts` (Select/Combobox/TagInput + form/combobox + multi-select); POS/KDS touch target lên rung `icon-touch`/`touch`; `DataTable` tự own client-side paging (slice + clamp + absolute index), 6 growth list bật `pageSize={50}`. Sort/sticky header (#4b) chờ UI Advisor Gate.
+3. **Motion Step 0 = phương án A** (ADR 0010): mở hẹp one-shot content enter `duration-150` + `motion-safe:` cho new cart line / KDS ticket mới thật (realtime INSERT); `duration-300` vẫn khóa overlay-only. §G đã cập nhật cùng đợt; Phase 1 triển khai theo thứ tự ADR (KDS hook → cart → operator skeletons).
+
+**Cơ chế:** `packages/ui/src/styles/globals.css` (Zone A/B token), `badge/button/avatar/accordion/item/select/combobox/tag-input` primitives, `packages/ui/src/lib/field-trigger.ts` (new), `apps/web/app/components/data-table/*`, `surface.tsx` (`AppBackLink`), 6 list clients, `scripts/check-ui-contract.mjs` (+3 gate mới, gồm `operator-no-stat-metric`), `docs/spec/design-system.md` (§ Status ink, § Rhythm B ItemTitle, §G content-enter, v14.16.0), `tasks/regressions.md` ([SEMANTIC-TONE-NOT-CHART-INDEX]).
+
+**Out of scope (đợt này KHÔNG):** hợp thức login pattern-wash + mascot login `animated` (chờ owner); ring emphasis `/40`/`/50` POS/KDS normalize (chờ browser smoke night theme); DataTable sort/sticky (#4b).
+
+## D072: Hợp thức hóa brand expression đang sống + mở compact-empty symbol (2026-07-10)
+
+**Context:** Audit DS phát hiện pattern caro và mascot động chạy production ngoài danh sách sanction của contract (login full-page wash, sidebar header wash, mascot động ở login ×2 — và khi viết guard mới lộ thêm `PageSpinner fullScreen` + Runner idle vốn dùng sprite qua JSX đa dòng mà census dòng-đơn trượt). Owner chốt phương án (a): hợp thức hóa thay vì gỡ.
+
+**Decision (owner duyệt 2026-07-10):**
+
+1. **Pattern placements = danh sách đóng:** Runner footer strip, login full-surface wash, Management sidebar header wash. Full-surface wash chỉ hợp lệ ở dạng trang trí `aria-hidden`/`pointer-events-none`, opacity ≤10. Enforce: gate `brand-pattern-placement` (allowlist đích danh 3 file).
+2. **Mascot động = full-screen waiting/idle states only:** Runner idle board, `PageSpinner fullScreen`, login brand panel. Không bao giờ trên control tương tác hay chrome trong trang. Enforce: gate `mascot-animation-placement`.
+3. **Compact-empty mở cho BrandSymbol:** `symbol` được phép trên `AppEmptyState compact` khi empty đó là trạng thái chính của trang/section (queue trống, catalog trống); giữ text-only cho compact inline/row-level.
+4. Xóa `transition-transform duration-200` chết trên card lockup login (vi phạm §G duration, không có state transform nào).
+
+**Cơ chế:** `docs/spec/design-system.md` (§ brand-patterns bullet, § utilities mascot bullet, §G Allowed animations), `scripts/check-ui-contract.mjs` (+2 gate), `scripts/ui-contract-guard-reporting.mjs`, `apps/web/app/(public)/(auth)/login/page.tsx`, ~15 site compact-empty.

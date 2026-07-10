@@ -53,7 +53,7 @@ export default async function OperatorCatalogThresholdsPage({
         backHref={`/br/${branchId}/stock/catalog`}
       />
       {rows.length === 0 ? (
-        <AppEmptyState compact title={copy.empty} />
+        <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (
         <AppSection contentFlush>
           <ThresholdsClient rows={rows} />

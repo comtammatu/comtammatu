@@ -718,6 +718,70 @@ const checks = [
     allowlist: {},
   },
   {
+    id: "brand-pattern-placement",
+    description:
+      "Brand pattern / brand-strip utilities are a closed sanction list (design-system.md § Typography Rules brand bullet, D072): Runner footer strip, login full-surface wash, Management sidebar header wash. A new placement needs an owner decision plus an allowlist entry here.",
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
+    pattern: /\bbrand-(?:pattern-(?:caro|hat-gao|vong-to)|strip)\b/g,
+    allowlist: {
+      "apps/web/app/(public)/(auth)/login/page.tsx": 1,
+      "apps/web/app/components/app-shell.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 2,
+    },
+  },
+  {
+    id: "mascot-animation-placement",
+    description:
+      "The animated Cốt Lết mascot is sanctioned on full-screen waiting/idle states ONLY (§ G idle-mascot exception, D072): the Runner idle board, PageSpinner fullScreen, and the login brand panel. brand.tsx entries are the implementation. A new placement needs an owner decision plus an allowlist entry here.",
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
+    pattern: /\banimate-cotlet-\w+|\bmascot-cotlet\b|<BrandMascot\b[^>]*\banimated\b/g,
+    allowlist: {
+      "apps/web/app/components/brand.tsx": 7,
+      "apps/web/app/components/page-skeleton.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/runner/runner-idle-visual.tsx": 1,
+      "apps/web/app/(public)/(auth)/login/page.tsx": 2,
+    },
+  },
+  {
+    id: "operator-no-stat-metric",
+    description:
+      "Operator surfaces are job-first, not dashboards: numbers appear as badges on tiles/sections ONLY (design-system.md § Structural C -> Canonical operator-home skeleton). AppLinkCard's `metric` slot renders a mono stat readout and belongs to Office surfaces; under /br/ route the count through the `badge` slot.",
+    roots: [{ dir: "apps/web/app/(protected)/br", extensions: [".tsx"] }],
+    pattern: /\bmetric=\{/g,
+    allowlist: {},
+  },
+  {
+    id: "status-focus-ring-contrast",
+    description:
+      "A status-token focus ring at /NN alpha measures 1.1-1.4:1 and cannot serve as the focus indicator (WCAG 1.4.11 needs 3:1). Let the base ring-foreground keyline win, or pair the halo with a solid focus-visible:border-{status}. focus-visible:ring-primary/NN is exempt: the form-control primitives pair it with a solid focus-visible:border-primary.",
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+      { dir: "packages/ui/src/components", extensions: [".tsx"] },
+    ],
+    pattern: /focus-visible:ring-(?:destructive|success|warning|info)\/\d+/g,
+    allowlist: {},
+  },
+  {
+    id: "status-foreground-on-tint",
+    description:
+      "--{status}-foreground is text on the SOLID status fill. On a /NN tint it inverts per theme: it reads in light mode but lands at ~1.3:1 on the night surface. Tinted chrome uses the plain ink token (text-warning on bg-warning/15).",
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+      { dir: "packages/ui/src/components", extensions: [".tsx"] },
+    ],
+    pattern:
+      /['"`][^'"`]*(?:(?<![:\w-])(?:dark:)?bg-(warning|success|destructive|info)\/\d+\b[^'"`]*\btext-\1-foreground\b|\btext-(warning|success|destructive|info)-foreground\b[^'"`]*(?<![:\w-])(?:dark:)?bg-\2\/\d+\b)/g,
+    allowlist: {},
+  },
+  {
     id: "heading-scale",
     description:
       "Locked heading scale forbids app-surface text-4xl/text-5xl/font-black drift.",
@@ -840,7 +904,7 @@ const checks = [
     description:
       "Browser/PWA chrome theme colors are single-sourced in apps/web/app/_lib/theme-tokens.ts.",
     roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
-    pattern: /#(?:fff6ee|1f1812)\b/gi,
+    pattern: /#(?:fff6ee|120a06)\b/gi,
     allowlist: {
       "apps/web/app/_lib/theme-tokens.ts": 2,
     },
@@ -1632,7 +1696,6 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 2,
       "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": 1,
       "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 1,
-      "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 2,
       "apps/web/app/(public)/(auth)/login/page.tsx": 2,
       "apps/web/app/(public)/access-denied/layout.tsx": 1,
       "apps/web/app/components/data-table/data-table.tsx": 1,
@@ -1654,44 +1717,22 @@ const perFileCountBudgets = [
     pattern:
       /className=\{?(?:cn\()?\s*['"](?=[^'"]*\brounded-(?:md|lg)\b)(?=[^'"]*\bborder\b)[^'"]*['"]/g,
     allowlist: {
-      "apps/web/app/_components/notification-list.tsx": 1,
-      "apps/web/app/(protected)/admin/settings/(tenant)/payments/payments-form.tsx": 2,
-      "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/discount-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/service-charge-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-page-skeleton.tsx": 1,
-      "apps/web/app/(protected)/finance/components/chart-card.tsx": 1,
-      "apps/web/app/(protected)/finance/components/filter-bar.tsx": 1,
-      "apps/web/app/(protected)/finance/components/mv-staleness-banner.tsx": 1,
       "apps/web/app/(protected)/finance/components/work-queue-strip.tsx": 1,
-      "apps/web/app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx": 1,
-      "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 1,
-      "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
-      "apps/web/app/(protected)/hr/position-tasks-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/_components/anti-split-rolling-meter.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/inventory-branch-filter.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/photo-upload-input.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/recipe-lines-editor.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/shift-cap-meter.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/stocktake-draft-saver.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/stocktake-mode-selector.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/zone-lock-indicator.tsx": 1,
       "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 3,
-      "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 1,
       "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 2,
       "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx": 1,
-      "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 1,
-      "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 9,
       "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx": 1,
       "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx": 1,
-      "apps/web/app/(protected)/menu/menu-image-input.tsx": 1,
-      "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 7,
+      "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 1,
       "apps/web/app/(public)/(auth)/login/page.tsx": 1,
-      "apps/web/app/(public)/access-denied/page.tsx": 1,
     },
   },
   {
@@ -1728,7 +1769,6 @@ const perFileCountBudgets = [
     pattern:
       /\b(?:bg|border|ring|text|fill|stroke)-(?:warning|success|destructive|info|primary|accent|secondary)\/(?!(?:10|15|20)\b)\d+\b|\b(?:bg|border|ring|text|fill|stroke)-muted\/(?!(?:30|50)\b)\d+\b/g,
     allowlist: {
-      "apps/web/app/_components/notification-item.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/age-badge.tsx": 3,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/order-grid.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/unassigned-banner.tsx": 1,
@@ -1745,19 +1785,6 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/br/[branchId]/pos/printer-status-badge.tsx": 3,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/runner-order-board-client.tsx": 5,
-      "apps/web/app/(protected)/branch-settings/_shared/printers/printers-client.tsx": 2,
-      "apps/web/app/(protected)/branches/network-config-dialog.tsx": 4,
-      "apps/web/app/(protected)/finance/components/mv-staleness-banner.tsx": 3,
-      "apps/web/app/(protected)/finance/components/work-queue-strip.tsx": 4,
-      "apps/web/app/(protected)/hr/position-tasks-client.tsx": 1,
-      "apps/web/app/(protected)/hr/staff/[id]/permissions/permissions-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/_components/stocktake-mode-selector.tsx": 1,
-      "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 1,
-      "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 8,
-      "apps/web/app/(public)/access-denied/page.tsx": 3,
     },
   },
   {

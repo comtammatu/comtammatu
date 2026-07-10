@@ -5,6 +5,7 @@ import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Lock as IconLock,
   LockOpen as IconLockOpen,
@@ -167,12 +168,12 @@ export function ZoneLockIndicator({
   }, [state.kind]);
 
   return (
-    <div
+    <Frame
       data-slot="zone-lock-indicator"
       data-kind={state.kind}
       data-zone-id={zoneId}
       className={cn(
-        "flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-xs",
+        "flex flex-wrap items-center gap-2 px-3 py-2 text-xs",
         toneFor(state.kind),
         className,
       )}
@@ -244,7 +245,7 @@ export function ZoneLockIndicator({
       ) : (
         <span className="text-muted-foreground">{INVENTORY_VI.noLock}</span>
       )}
-    </div>
+    </Frame>
   );
 }
 

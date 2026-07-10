@@ -93,8 +93,8 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
   const className = cn(
     "flex h-auto w-full items-start justify-start gap-3 whitespace-normal rounded-lg border p-3 text-left font-normal transition-colors",
     unread
-      ? "border-primary/20 bg-primary/5 hover:bg-primary/10"
-      : "border-border bg-card hover:bg-muted/60",
+      ? "border-primary/20 bg-primary/10 hover:bg-primary/15"
+      : "border-border bg-card hover:bg-muted/50",
   );
   const content = (
     <>

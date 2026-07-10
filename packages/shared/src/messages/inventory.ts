@@ -34,14 +34,16 @@ export const INVENTORY_VI = {
   productionOrdersMetricLabel: "lệnh",
   productionOpenOrders: "Mở lệnh sản xuất",
   productionDraftBadge: (count: number) => `${count} lệnh nháp`,
+  productionOrdersBadge: (count: number) => `${count} lệnh`,
   productionRecipesCardDescription:
     "Cấu hình Công thức thành phẩm: nguyên liệu và định lượng cho từng mẻ sản xuất.",
-  productionRecipesMetricLabel: "Công thức thành phẩm",
+  productionRecipesBadge: (count: number) => `${count} công thức`,
   productionOpenRecipes: "Mở công thức",
   productionCatalogCardTitle: "Danh mục nguyên liệu",
   productionCatalogCardDescription:
     "Quản lý thành phẩm và nguyên liệu đầu vào dùng cho nhập kho và sản xuất.",
-  productionCatalogMetricLabel: "danh mục",
+  productionCatalogBadge: (finishedGoods: number, rawIngredients: number) =>
+    `${finishedGoods}/${rawIngredients} danh mục`,
   productionOpenCatalog: "Mở danh mục",
   selectIngredient: "Chọn nguyên liệu",
   selectIngredientPlaceholder: "Chọn nguyên liệu...",

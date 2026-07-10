@@ -45,6 +45,148 @@
       source-of-truth map. For Greenfield, promote only current facts into those
       owned docs; do not add dated plan/worklog archives or re-copy the map here.
 
+## Design-system contrast wave (branch `ds-a11y-upgrade`)
+
+Status: implemented, gates green, owner approved the palette change on 2026-07-10.
+Not committed yet.
+
+```
+Skill plan: repo rules = engineering + ui + workflow + skills; external skills = none;
+            runtime tools = node (OKLCH→sRGB→WCAG checker); skipped = none.
+PM:   scope = close the contrast defects the 111 className gates structurally cannot see
+      (they check class patterns, not token values). Acceptance = every shipped status
+      pair clears its WCAG floor in BOTH themes, no call-site regressions, gates green.
+      Priority = P0: the failures land on operator surfaces during the 18:00–06:00 shift.
+BA:   rules = `--{status}` is ink (page + its own /10 /15 tints); `--{status}-foreground`
+      is text on the SOLID fill only. Edge case found: light-mode tokens had these two
+      roles inverted, so every tinted callout using `-foreground` reads in light and
+      collapses at night. Data flow = globals.css tokens → primitive cva → route class.
+Dev:  approach = fix at the token layer where one value covers many call sites; migrate
+      call sites only where the token cannot be split (warning ink vs solid fill had no
+      single satisfying L — verified numerically). Files = globals.css, badge/button/
+      avatar/accordion + 6 form primitives, 13 tint call sites, 2 tone maps, 4 form
+      wrappers, check-ui-contract + guard-reporting, design-system.md, regressions.md.
+      Risk = `--warning` and `--success` shift visibly darker; `text-primary` (94 sites)
+      would have broken under the naive "darken the fill" fix, so the dark CTAs were
+      fixed by flipping their foreground instead.
+QA:   tests = new `apps/web/tests/design-token-contrast-static.test.ts` reads the shipped
+      OKLCH from globals.css and asserts 22 pairs; negative-tested by reverting --warning
+      (3 suites fail). Regressions rechecked = RUNNER-BOARD-LARGE-SCAN-TOKENS (runner
+      copy tests still green), DESIGN-SYSTEM-ONE-SOURCE-ONLY (contract updated first).
+Attestation: diff matches this block. Guards `status-focus-ring-contrast` and
+      `status-foreground-on-tint` land at baseline 0 with positive+negative regex checks.
+```
+
+- [x] **Palette change approved (owner, 2026-07-10).** Light `--warning` moved off
+      the brand gold (`#f2a100` → `#8e5400`, ink was 1.99:1 on kem gạo) and light
+      `--success` deepened (`#6a8f5b` → `#446935`). The gold stays the accent on
+      `--ring` / `--chart-2`.
+- [x] **Night browser-chrome color** realigned to the dark `--background` token
+      (`#1f1812` → `#120a06`). The `browser-chrome-theme-color-source` gate
+      single-sources the hex string but cannot check it against the token, so the
+      equality (plus the out-of-scope static `manifest.webmanifest`) is asserted in
+      `design-token-contrast-static.test.ts`.
+- [ ] **Browser smoke in both themes** once local Supabase/Docker auth is available:
+      NoteCallout warning, Badge status set, POS/KDS operator surfaces, KPI sparklines,
+      night-mode primary/destructive CTAs, keyboard focus on a destructive Button.
+      This is the only unverified surface of the wave — the numbers are proven, the
+      perceived weight of the new ochre/green is not.
+
+### Second pass — debt burn, adapters, doc truth
+
+Frozen UI-contract debt `158 -> 132`, `delta = 0` on every ratchet:
+`inline-chrome 60 -> 45`, `tint-opacity 71 -> 62`, `raw-padding 27 -> 25`.
+`orders/order-detail-sheet.tsx` went `17 -> 1` hit (the one status-tinted list row
+is deliberate); `inventory/supplier-invoices/supplier-invoices-client.tsx` went
+`10 -> 0`. New: `AppBackLink` adapter (8 duplicated call sites collapsed), the
+`operator-no-stat-metric` gate, and the two `chrome-tap` / `.theme-light-only`
+utilities finally documented.
+
+**Concurrency hazard, for the next agent that burns debt in parallel:** two agents
+each ran `node scripts/check-ui-contract.mjs --write` against the same script. The
+second one's whole-file write clobbered the first one's lowered baselines. Only a
+re-run of `--write` after all edits had landed produced correct counts. Burn debt in
+parallel if you like, but ratchet ONCE, at the end, from the lead thread.
+
+### Third pass — the four deferred items, owner-approved directions (2026-07-10)
+
+- [x] **`ItemTitle`**: contract amended, not the default. `ItemTitle` now has a
+      `size` cva (`default` = dense list-row title, byte-identical for the ~232
+      existing call sites; `heading` = the § Rhythm B sub-section role). The 23
+      hand-patched call sites migrated to `size="heading"`; § Rhythm B points at
+      the variant.
+- [x] **Field-trigger grammar unified.** `packages/ui/src/lib/field-trigger.ts`
+      exports `fieldTriggerChrome` + `fieldTriggerSize`; `SelectTrigger` composes
+      it (effective class set proven unchanged, 41 tokens set-equal). The ui
+      `Combobox`/`TagInput` primitives adopted it — and since the ui `Combobox`
+      has ZERO app consumers, the user-visible fix landed in the real ones:
+      `form/combobox.tsx` and `form/multi-select-combobox.tsx` (field fill/focus/
+      invalid grammar + ChevronDown in muted, replacing outline-button chrome).
+- [x] **POS/KDS touch targets**: split-bill steppers and KDS focus prev/next →
+      `icon-touch` (48px); reason chips → `size="touch"` (the raw `h-8` had to be
+      removed — it silently clobbered `min-h-12` via tailwind-merge order);
+      clear-search keeps the 24px glyph but gains a 44px hit area via
+      `after:-inset-2.5` (checkbox/radio pattern; InputGroup does not clip).
+- [x] **`DataTable` pagination (#4a)**: the adapter now owns client-side paging —
+      when `pageSize` is set without `totalCount` it slices internally with an
+      uncontrolled page state, derives the page clamped (a shrinking filter result
+      can never strand an empty page), and passes the ABSOLUTE row index to
+      `render`/`mobileCardRender` so inline line-edit sheets stay correct across
+      pages. `totalCount` still signals server paging (no slice; controlled props
+      honored). Opted in at `pageSize={50}`: orders, refunds, GRN list, supplier
+      invoices, print jobs, permission audit. Locked by
+      `apps/web/tests/data-table-pagination-static.test.ts`.
+
+### Fourth pass — mechanical sweep, Motion Phase 1, brand W4 (2026-07-10, D071)
+
+- [x] **Mechanical debt sweep**: 29 files; every in-scope `tint-opacity` hit
+      resolved; 21/30 inline-chrome hits migrated (Frame/NoteCallout/Item/
+      AppEmptyState). Frozen totals `132 -> 88` (75 real debt + 13 permanent).
+      9 chrome hits left with named reasons (radio-label semantics, card-tier
+      frame needs a new adapter decision, status-row exemption, login branding).
+- [x] **Raw-padding floor reclassified**: 5 POS Operations-chrome files (7 hits)
+      are permanent exceptions — station surfaces do not mount `AppPage`, no
+      density prop can absorb their frame spacing.
+- [x] **Motion Phase 1 (ADR 0010, Step 0-A per D071)**: `§ G` gained the
+      one-shot content-enter clause; `use-kds-new-ticket-signal` classifies
+      genuinely new tickets by draining ids filled ONLY in the realtime INSERT
+      branch of `use-kds-realtime` (snapshot/reconnect/poll provably never fill
+      it); POS cart line one-shot enter via `_lib/cart-line-enter.ts`; operator
+      `loading.tsx` for root/shift/team/orders. 16 new unit tests.
+- [x] **Brand W4 (partial by census reality)**: 10 top-level empty states gained
+      `BrandSymbol` (riceGrain/roundPlate/roof) + the Runner footer carries the
+      sanctioned `brand-strip brand-pattern-hat-gao` trim (`vong-to` is banned
+      by runner-copy.test.ts). Census: most bare empties are `compact` — the
+      skip-compact rule caps this sweep at ~12 candidates, not the audit's 76.
+      Lever if owner wants more: allow symbols on compact empties that are
+      full-page early returns (~15-20 sites).
+
+### Still deferred (product decisions)
+
+- **`DataTable` sorting + sticky header (#4b)**: new feature — needs the UI
+  Advisor Gate and one exemplar route (GRN list) before rollout. Client-side
+  sort, `aria-sort`, no new libraries. Virtualization stays rejected (YAGNI at
+  single-tenant scale).
+
+### Browser-smoke checklist (one session covers all three waves)
+
+Both themes (light + night 18:00–06:00), phone 390×844 + tablet 1024×768 +
+desktop 1440×900:
+
+1. Palette: `NoteCallout tone="warning"`, Badge status set, KPI sparklines
+   (success=green not terracotta at night), solid primary/destructive CTAs at
+   night, keyboard focus on a destructive Button (visible keyline).
+2. Field grammar: any Inventory form with Select + Combobox side by side — same
+   fill, border, focus ring, chevron; invalid state reads on both; multi-select
+   trigger matches.
+3. Touch: POS split-bill steppers (48px, no overflow at 390px), KDS focus
+   prev/next, void/discount reason chips (taller pills), search-clear halo taps.
+4. Pagination: orders + GRN lists >50 rows — pager appears, mobile card list
+   pages too, filters never strand an empty page, row actions on page 2+ hit the
+   right row.
+5. `AppLinkCard` badges on the operator production hub (counts as badges, no
+   mono stat block).
+
 ## Owner-Confirmed UI Follow-ups
 
 - [ ] **Route shell/header refactor.** Collapse route-local shell/header
@@ -102,17 +244,14 @@
 
 ## Motion gap-fill (Codex rewrite)
 
-Owner-facing parked ADR (Vietnamese): `docs/plan/adr/0010-motion-contract-gap-fill.md`.
+Owner-facing ADR (Vietnamese): `docs/plan/adr/0010-motion-contract-gap-fill.md`.
 Rewritten 2026-07-10 after Codex Outside Voice rejected the prior 7-item Phase 1.
-**No UI implementation until Step 0 is owner-confirmed.**
 
-### Step 0 — Motion Contract gate (blocked)
+### Step 0 — Motion Contract gate (cleared)
 
-- [ ] Owner picks A / B / C in `docs/plan/adr/0010-motion-contract-gap-fill.md` (recommend **A**:
-      allow one-shot content enter at `duration-150` + `motion-safe:` only; keep
-      `duration-300` for overlay/dialog/sheet enter–exit per § G).
-- [ ] If A or C: update `docs/spec/design-system.md` § G before or with the first
-      implementation PR.
+- [x] Owner picked **A** (2026-07-10, D071): one-shot content enter at
+      `duration-150` + `motion-safe:` only; `duration-300` stays overlay-only.
+- [x] `docs/spec/design-system.md` § G amended (One-shot content enter, D071).
 
 ### Phase 1 — 3 items only (after Step 0)
 

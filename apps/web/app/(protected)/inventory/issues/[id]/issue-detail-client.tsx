@@ -15,6 +15,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   InputGroup,
   InputGroupAddon,
@@ -49,6 +50,7 @@ import {
 } from "@/components/data-table/data-table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
+  AppBackLink,
   AppDetailFooter,
   AppEmptyState,
   AppPage,
@@ -478,7 +480,7 @@ export function IssueDetailClient({
               />
             )}
 
-            <div className="flex justify-end rounded-md border border-border/60 bg-muted/30 p-4">
+            <Frame className="flex justify-end border-border/60 bg-muted/30 p-4">
               <div className="flex w-full max-w-sm flex-col gap-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
@@ -507,7 +509,7 @@ export function IssueDetailClient({
                   </div>
                 </div>
               </div>
-            </div>
+            </Frame>
           </AppSection>
 
           {/* Audit History (Collapsible) */}
@@ -873,13 +875,9 @@ export function IssueDetailClient({
           variant: statusBadge.variant,
         }}
         breadcrumb={
-          <Link
-            href={listBasePath}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />{" "}
+          <AppBackLink href={listBasePath}>
             {tRoute("/inventory/consumption")}
-          </Link>
+          </AppBackLink>
         }
       />
       {pageLayout}
@@ -1128,7 +1126,7 @@ function AddIssueLineDialog({
               )}
             </div>
 
-            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+            <Frame className="border-border/60 bg-muted/30 p-3">
               <div className="grid gap-2 text-sm sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-muted-foreground">
@@ -1162,7 +1160,7 @@ function AddIssueLineDialog({
               <p className="mt-2 text-xs text-muted-foreground">
                 {ISSUES_VI.wacAutoHint}
               </p>
-            </div>
+            </Frame>
 
             <TextareaField
               control={form.control}
@@ -1195,7 +1193,7 @@ function IssueLineMobileCard({
   onDelete: (lineId: number) => void;
 }) {
   return (
-    <Item variant="outline" className="bg-muted/20">
+    <Item variant="outline" className="bg-muted/30">
       <ItemHeader>
         <div>
           <ItemTitle>

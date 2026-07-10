@@ -149,6 +149,7 @@ export function TransferReceiveClient({
               ? receiveCopy.receiveWaitingTransitDescription
               : receiveCopy.receiveNotReadyDescription
           }
+          symbol="riceGrain"
         >
           <Button asChild variant="outline" size="sm">
             <Link href={isWaitingForTransit ? backHref : detailHref}>

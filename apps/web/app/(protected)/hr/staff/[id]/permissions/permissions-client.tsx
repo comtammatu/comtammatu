@@ -381,6 +381,7 @@ export function PermissionsClient({
           compact
           title={`${targetFullName} chưa có quyền nào.`}
           description="Gán đơn lẻ hoặc áp dụng template ở trên."
+          symbol="chopsticks"
         />
       )}
     </div>
@@ -409,9 +410,9 @@ function GrantList({
             key={g.id}
             className={`flex items-center gap-1.5 rounded-md border px-2 py-1 ${
               expired
-                ? "border-destructive/40 bg-destructive/10"
+                ? "border-destructive/20 bg-destructive/10"
                 : expiringSoon
-                  ? "border-warning/40 bg-warning/10"
+                  ? "border-warning/20 bg-warning/10"
                   : "border-border/60 bg-muted/30"
             }`}
           >

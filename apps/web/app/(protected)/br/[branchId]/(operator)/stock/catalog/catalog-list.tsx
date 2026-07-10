@@ -47,7 +47,7 @@ export function CatalogList<TRow>({
   return (
     <div className="flex flex-col gap-3">
       {rows.length === 0 ? (
-        <AppEmptyState compact title={emptyTitle} />
+        <AppEmptyState compact title={emptyTitle} symbol="riceGrain" />
       ) : (
         <ItemGroup className="gap-2">
           {rows.map((row) => {

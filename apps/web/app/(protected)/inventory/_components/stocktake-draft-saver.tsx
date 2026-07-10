@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   CloudCheck as IconCloudCheck,
   CloudUpload as IconCloudUpload,
@@ -161,17 +162,17 @@ export function StocktakeDraftSaverBadge({
         : IconCloudCheck;
 
   return (
-    <span
+    <Frame
       data-slot="stocktake-draft-saver-badge"
       data-status={status}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs",
+        "inline-flex items-center gap-1.5 px-2 py-1 text-xs",
         tone,
         className,
       )}
     >
       <Icon className="size-3.5" />
       {label}
-    </span>
+    </Frame>
   );
 }

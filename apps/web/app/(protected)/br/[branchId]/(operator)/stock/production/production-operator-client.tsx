@@ -132,10 +132,7 @@ export function ProductionOperatorClient({
             icon={<IconClipboardList />}
             tone="primary"
             ctaLabel={INVENTORY_VI.productionOpenRecipes}
-            metric={{
-              value: recipesCount,
-              label: INVENTORY_VI.productionRecipesMetricLabel,
-            }}
+            badge={INVENTORY_VI.productionRecipesBadge(recipesCount)}
           />
         </LinkCardGrid>
       </div>
@@ -160,14 +157,14 @@ export function ProductionOperatorClient({
           href={buildViewHref(PRODUCTION_ORDERS_VIEW)}
           title={INVENTORY_VI.productionOrdersTab}
           description={INVENTORY_VI.productionOrdersCardDescription}
-          badge={activeRuns.length > 0 ? INVENTORY_VI.productionDraftBadge(activeRuns.length) : undefined}
+          badge={
+            activeRuns.length > 0
+              ? INVENTORY_VI.productionDraftBadge(activeRuns.length)
+              : INVENTORY_VI.productionOrdersBadge(runs.length)
+          }
           badgeVariant={badgeVariantFromTone(activeRuns.length > 0 ? "warning" : "neutral")}
           icon={<IconListChecks />}
           ctaLabel={INVENTORY_VI.productionOpenOrders}
-          metric={{
-            value: runs.length,
-            label: INVENTORY_VI.productionOrdersMetricLabel,
-          }}
         />
         <AppLinkCard
           href={buildViewHref(PRODUCTION_RECIPES_VIEW)}
@@ -178,10 +175,7 @@ export function ProductionOperatorClient({
           ctaLabel={INVENTORY_VI.productionOpenRecipes}
           disabled={!canManageRecipes}
           disabledReason={!canManageRecipes ? "Chưa có quyền sửa công thức." : undefined}
-          metric={{
-            value: recipesCount,
-            label: INVENTORY_VI.productionRecipesMetricLabel,
-          }}
+          badge={INVENTORY_VI.productionRecipesBadge(recipesCount)}
         />
         <AppLinkCard
           href={`/br/${branchId}/stock/catalog/ingredients`}
@@ -190,10 +184,10 @@ export function ProductionOperatorClient({
           icon={<IconChefHat />}
           tone="info"
           ctaLabel={INVENTORY_VI.productionOpenCatalog}
-          metric={{
-            value: `${finishedGoodsCount}/${rawIngredientsCount}`,
-            label: INVENTORY_VI.productionCatalogMetricLabel,
-          }}
+          badge={INVENTORY_VI.productionCatalogBadge(
+            finishedGoodsCount,
+            rawIngredientsCount,
+          )}
         />
       </LinkCardGrid>
     </div>

@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   TriangleAlert as IconAlertTriangle,
   CircleCheck as IconCircleCheck,
   ChevronRight as IconChevronRight,
@@ -44,6 +42,7 @@ import {
 import { matchesSearch } from "@lib/search";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
+  AppBackLink,
   AppDetailFooter,
   AppEmptyState,
   AppPageHeader,
@@ -909,12 +908,9 @@ export function GrnCreateClient({
   const header = (
     <AppPageHeader
       breadcrumb={
-        <Link
-          href={basePath}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-        >
-          <IconArrowLeft className="size-4" /> {GRN_CREATE_COPY.changeSupplier}
-        </Link>
+        <AppBackLink href={basePath}>
+          {GRN_CREATE_COPY.changeSupplier}
+        </AppBackLink>
       }
       eyebrow={GRN_CREATE_COPY.newReceiptEyebrow}
       title={supplier.name}

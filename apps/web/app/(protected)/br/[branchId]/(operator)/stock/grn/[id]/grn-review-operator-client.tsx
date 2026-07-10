@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import {
-  ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
   Plus as IconPlus,
   Save as IconDeviceFloppy,
@@ -14,7 +12,7 @@ import { ItemGroup } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
-import { AppDetailFooter } from "@/components/surface";
+import { AppBackLink, AppDetailFooter } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { formatVND } from "@/(protected)/inventory/_lib/format";
 import { OperatorFlowSteps } from "@/(protected)/inventory/_components/operator-flow-steps";
@@ -70,13 +68,7 @@ export function GrnReviewOperatorClient({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex items-center gap-2">
-        <Link
-          href={grnListBasePath}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-          aria-label={grnCopy.back}
-        >
-          <IconArrowLeft className="size-4" />
-        </Link>
+        <AppBackLink href={grnListBasePath} aria-label={grnCopy.back} />
         <span className="min-w-0 flex-1 truncate font-mono text-sm font-semibold">
           {grn.code}
         </span>

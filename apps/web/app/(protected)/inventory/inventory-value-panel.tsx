@@ -6,6 +6,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import type { InventoryValueVisibility } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Item,
@@ -177,7 +178,11 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               {APP_COPY_VI.loading}
             </p>
           ) : branchRows.length === 0 ? (
-            <AppEmptyState compact title={APP_COPY_VI.noScopedBranches} />
+            <AppEmptyState
+              compact
+              title={APP_COPY_VI.noScopedBranches}
+              symbol="riceGrain"
+            />
           ) : (
             <AppSection
               title={messages.inventory.value.tabs.branch}
@@ -220,7 +225,7 @@ function SummaryBlock({
   valueClassName?: string;
 }) {
   return (
-    <div className="rounded-md border bg-muted/30 p-4">
+    <Frame className="bg-muted/30 p-4">
       <SectionLabel className="text-muted-foreground/70">
         {label}
       </SectionLabel>
@@ -230,7 +235,7 @@ function SummaryBlock({
         {value}
       </p>
       {hint ? <p className="mt-1 text-sm text-muted-foreground">{hint}</p> : null}
-    </div>
+    </Frame>
   );
 }
 

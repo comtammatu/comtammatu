@@ -10,6 +10,7 @@ import {
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Item } from "@comtammatu/ui/components/item";
 import {
   AppEmptyState,
   AppLinkCard,
@@ -220,9 +221,10 @@ export function ReportsClient({
             {consumptionVariance.map((item) => {
               const isUp = item.trend === "up";
               return (
-                <div
+                <Item
                   key={item.name}
-                  className="flex items-center justify-between rounded-md border bg-muted/50 p-3"
+                  variant="muted"
+                  className="flex items-center justify-between p-3"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex size-10 items-center justify-center rounded-md bg-card">
@@ -252,7 +254,7 @@ export function ReportsClient({
                         : messages.inventory.reports.saving}
                     </Badge>
                   </div>
-                </div>
+                </Item>
               );
             })}
           </div>

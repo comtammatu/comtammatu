@@ -179,7 +179,7 @@ test("DataTable renders the toolbar contract it exposes", () => {
   assert.match(dataTable, /searchable === true/);
   assert.match(dataTable, /filters\.map/);
   assert.match(dataTable, /actions=\{actions\}/);
-  assert.match(dataTable, /mobileCardRender\(row, index\)/);
+  assert.match(dataTable, /mobileCardRender\(row, index \+ pageOffset\)/);
   assert.match(surface, /variant\?: "card" \| "inline"/);
 });
 

@@ -15,6 +15,7 @@ import {
   Plus as IconPlus,
 } from "lucide-react";
 import {
+  AppBackLink,
   AppDetailFooter,
   AppPage,
   AppPageHeader,
@@ -641,13 +642,9 @@ export function GRNDetailClient({
           variant: statusBadge.variant,
         }}
         breadcrumb={
-          <Link
-            href={backHref}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />{" "}
+          <AppBackLink href={backHref}>
             {isMobile ? grnCopy.back : tRoute("/inventory/grn", "heading")}
-          </Link>
+          </AppBackLink>
         }
       />
       {pageLayout}

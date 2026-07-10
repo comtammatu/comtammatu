@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@comtammatu/ui";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Progress,
   type ProgressTone,
@@ -62,12 +63,8 @@ export function ShiftCapMeter({
         : "border-muted";
 
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-1.5 rounded-md border p-3 text-xs",
-        wrapTone,
-        className,
-      )}
+    <Frame
+      className={cn("flex flex-col gap-1.5 p-3 text-xs", wrapTone, className)}
       data-slot="shift-cap-meter"
       data-tone={tone}
     >
@@ -89,10 +86,10 @@ export function ShiftCapMeter({
           {INVENTORY_VI.shiftCapTier2Warn}
         </p>
       ) : pct >= 0.7 ? (
-        <p className="text-warning-foreground">
+        <p className="text-warning">
           {INVENTORY_VI.shiftCapNearWarning(formatVND(shiftCap - projected))}
         </p>
       ) : null}
-    </div>
+    </Frame>
   );
 }

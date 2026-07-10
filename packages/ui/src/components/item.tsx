@@ -120,14 +120,32 @@ function ItemContent({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
+const itemTitleVariants = cva(
+  "font-heading line-clamp-1 flex w-fit items-center gap-2",
+  {
+    variants: {
+      size: {
+        // The `text-xs/relaxed` + `leading-snug` overlap is load-bearing for
+        // existing consumers; do not normalize it.
+        default: "text-xs/relaxed leading-snug font-medium underline-offset-4",
+        heading: "text-sm font-semibold underline-offset-4",
+      },
+    },
+    defaultVariants: {
+      size: "default",
+    },
+  },
+);
+
+function ItemTitle({
+  className,
+  size = "default",
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof itemTitleVariants>) {
   return (
     <div
       data-slot="item-title"
-      className={cn(
-        "font-heading line-clamp-1 flex w-fit items-center gap-2 text-xs/relaxed leading-snug font-medium underline-offset-4",
-        className,
-      )}
+      className={cn(itemTitleVariants({ size, className }))}
       {...props}
     />
   );

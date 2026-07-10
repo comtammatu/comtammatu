@@ -291,6 +291,7 @@ export function GrnListClient({
         columns={grnColumns}
         data={filtered}
         getRowKey={(grn) => grn.id}
+        pageSize={50}
         emptyTitle={
           hasActiveFilters
             ? INVENTORY_VI.grnNotFoundFiltered

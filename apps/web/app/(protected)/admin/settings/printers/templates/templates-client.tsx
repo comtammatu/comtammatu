@@ -7,6 +7,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { AppSection } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Input } from "@comtammatu/ui/components/input";
@@ -427,7 +428,7 @@ export function TemplatesClient({
             title={copy.previewTitle}
             description={copy.previewDescription}
           >
-            <div className="relative overflow-auto rounded-md border bg-muted/30 p-3">
+            <Frame className="relative overflow-auto bg-muted/30 p-3">
               {preview ? (
                 // eslint-disable-next-line @next/next/no-img-element -- data URL preview rendered server-side
                 <img
@@ -445,7 +446,7 @@ export function TemplatesClient({
                   <Spinner className="size-5" />
                 </div>
               ) : null}
-            </div>
+            </Frame>
             {previewError && preview ? (
               <p className="mt-2 text-sm text-destructive">{previewError}</p>
             ) : null}

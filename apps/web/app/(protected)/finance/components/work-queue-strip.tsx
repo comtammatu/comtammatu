@@ -62,8 +62,8 @@ function Metric({ label, value, hint, tone = "neutral" }: MetricProps) {
     <div
       className={cn(
         "rounded-md border p-3",
-        tone === "warning" && "border-warning/30 bg-warning/5",
-        tone === "destructive" && "border-destructive/30 bg-destructive/5",
+        tone === "warning" && "border-warning/20 bg-warning/10",
+        tone === "destructive" && "border-destructive/20 bg-destructive/10",
       )}
     >
       <p className="text-xs text-muted-foreground">{label}</p>

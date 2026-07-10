@@ -1,11 +1,10 @@
-import Link from "next/link";
 import {
-  ArrowLeft as IconArrowLeft,
   ClipboardList as IconClipboardList,
   Truck as IconTruck,
 } from "lucide-react";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
+  AppBackLink,
   AppEmptyState,
   AppPageHeader,
   AppSection,
@@ -97,13 +96,9 @@ export async function GrnNewPageContent({ searchParams }: GrnNewPageProps) {
       header={
         <AppPageHeader
           breadcrumb={
-            <Link
-              href="/inventory/grn"
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-            >
-              <IconArrowLeft className="size-4" />{" "}
+            <AppBackLink href="/inventory/grn">
               {INVENTORY_VI.grnListBackLabel}
-            </Link>
+            </AppBackLink>
           }
           eyebrow={INVENTORY_VI.receivingEyebrow}
           title={INVENTORY_VI.chooseSourceTitle}

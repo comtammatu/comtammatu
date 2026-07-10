@@ -13,7 +13,7 @@ export default function LoginPage() {
       <div className="relative z-10 flex flex-col items-center gap-3 px-6 pt-10 pb-4 lg:justify-between lg:p-12 lg:bg-primary/10">
         <span aria-hidden="true" className="hidden lg:block" />
         <div className="flex flex-col items-center gap-6 lg:flex-1 lg:justify-center">
-          <div className="rounded-lg border border-border/20 bg-card/90 p-3 shadow-effect-card-resting transition-transform duration-200">
+          <div className="rounded-lg border border-border/20 bg-card/90 p-3 shadow-effect-card-resting">
             <BrandLockup decorative size="md" priority className="lg:h-28" />
           </div>
           <div className="flex flex-col items-center text-center gap-2">

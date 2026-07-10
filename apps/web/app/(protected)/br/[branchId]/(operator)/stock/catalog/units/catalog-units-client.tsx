@@ -128,7 +128,7 @@ export function CatalogUnitsClient({
       <CatalogBackControl title={copy.title} backHref={backHref} />
 
       {packagingRows.length === 0 ? (
-        <AppEmptyState compact title={copy.empty} />
+        <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (
         <div className="flex flex-col gap-2">
           {packagingRows.map((row) => (

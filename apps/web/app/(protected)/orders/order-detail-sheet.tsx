@@ -36,19 +36,19 @@ import {
 } from "@comtammatu/shared/messages";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
-import { DescriptionList } from "@/components/surface";
+import { AppEmptyState, DescriptionList } from "@/components/surface";
+import { Frame } from "@comtammatu/ui/components/frame";
 
 function itemStatusToneClass(status: string): string {
   switch (status) {
     case "pending":
     case "preparing":
-      return "border-warning/30 bg-warning/5";
+      return "border-warning/20 bg-warning/10";
     case "ready":
-      return "border-success/30 bg-success/5";
     case "served":
-      return "border-success/30 bg-success/5";
+      return "border-success/20 bg-success/10";
     case "cancelled":
-      return "border-destructive/40 bg-destructive/5 border-dashed";
+      return "border-destructive/20 bg-destructive/10 border-dashed";
     default:
       return "bg-card";
   }
@@ -220,7 +220,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
 
         {/* ─── Payment info ─── */}
         {order.payment && (
-          <div className="rounded-md border p-3 flex flex-col gap-2">
+          <Frame className="p-3 flex flex-col gap-2">
             <SectionLabel>
               {ORDERS_VI.payment}
             </SectionLabel>
@@ -235,11 +235,11 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
                 {formatVND(order.payment.amount)}
               </span>
             </div>
-          </div>
+          </Frame>
         )}
 
         {!order.payment && order.payment_method && (
-          <div className="rounded-md border p-3 flex flex-col gap-2">
+          <Frame className="p-3 flex flex-col gap-2">
             <SectionLabel>
               {ORDERS_VI.payment}
             </SectionLabel>
@@ -254,7 +254,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
                 />
               )}
             </div>
-          </div>
+          </Frame>
         )}
 
         {/* ─── Items ─── */}
@@ -274,14 +274,10 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
             <p className="mb-2 text-sm text-destructive">{itemsError}</p>
           )}
           {!itemsError && items === null && itemsPending && (
-            <div className="rounded-md border px-4 py-6 text-center text-sm text-muted-foreground">
-              {ORDERS_VI.loadingItems}
-            </div>
+            <AppEmptyState compact title={ORDERS_VI.loadingItems} />
           )}
           {!itemsError && items !== null && items.length === 0 && (
-            <div className="rounded-md border px-4 py-6 text-center text-sm text-muted-foreground">
-              {ORDERS_VI.noItems}
-            </div>
+            <AppEmptyState compact title={ORDERS_VI.noItems} />
           )}
           {!itemsError && items !== null && items.length > 0 && (
             <ul className="flex flex-col gap-2">
@@ -459,7 +455,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
         </div>
 
         {/* ─── Totals ─── */}
-        <div className="rounded-md border p-3 flex flex-col gap-2 text-sm">
+        <Frame className="p-3 flex flex-col gap-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">{FORM_VI.subtotal}</span>
             <span className="font-mono">{formatVND(order.subtotal)}</span>
@@ -492,7 +488,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
             <span>{FORM_VI.totalAmount}</span>
             <span className="font-mono">{formatVND(order.total_amount)}</span>
           </div>
-        </div>
+        </Frame>
 
         {/* ─── Audit timeline ─── */}
         <div>
@@ -513,25 +509,27 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
           {!auditPending && !auditError && audit && audit.length > 0 && (
             <ol className="flex flex-col gap-2">
               {audit.map((entry) => (
-                <li key={entry.id} className="rounded-md border p-3 text-sm">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-medium">{entry.label}</span>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {formatVNDateTime(entry.at)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Bởi{" "}
-                    <span className="font-medium text-foreground">
-                      {entry.by_name}
-                    </span>
-                  </p>
-                  {entry.reason && (
-                    <p className="mt-1 text-sm">
-                      <span className="text-muted-foreground">Lý do: </span>
-                      {entry.reason}
+                <li key={entry.id}>
+                  <Frame className="p-3 text-sm">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="font-medium">{entry.label}</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {formatVNDateTime(entry.at)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Bởi{" "}
+                      <span className="font-medium text-foreground">
+                        {entry.by_name}
+                      </span>
                     </p>
-                  )}
+                    {entry.reason && (
+                      <p className="mt-1 text-sm">
+                        <span className="text-muted-foreground">Lý do: </span>
+                        {entry.reason}
+                      </p>
+                    )}
+                  </Frame>
                 </li>
               ))}
             </ol>

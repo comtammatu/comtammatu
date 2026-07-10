@@ -9,6 +9,7 @@ import {
   ItemFooter,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { formatVND } from "@comtammatu/shared/format";
 import { AppEmptyState, AppSection } from "@/components/surface";
@@ -191,7 +192,11 @@ export function RevenueDrillTabs({
       <TabsContent value="theo-gio">
         <AppSection title="Doanh thu theo giờ">
           {hours.length === 0 ? (
-            <AppEmptyState compact title="Không có đơn trong ngày này." />
+            <AppEmptyState
+              compact
+              title="Không có đơn trong ngày này."
+              symbol="riceBowl"
+            />
           ) : (
             hours.map((hour) => {
               const pct = totalRevenue
@@ -255,12 +260,12 @@ export function RevenueDrillTabs({
             )}
             desktopFooterRows={footerRows}
             mobileFooter={
-              <div className="flex items-center justify-between rounded-md border bg-muted/30 p-3 text-sm">
+              <Frame className="flex items-center justify-between bg-muted/30 p-3 text-sm">
                 <span className="font-medium">Tổng</span>
                 <span className="font-mono font-semibold tabular-nums">
                   {formatVND(totalRevenue)}
                 </span>
-              </div>
+              </Frame>
             }
           />
         </AppSection>

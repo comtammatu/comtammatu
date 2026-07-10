@@ -211,7 +211,7 @@ export function PayrollListClient({
           mobileCardRender={(period) => (
             <Item variant="outline">
               <ItemContent>
-                <ItemTitle className="line-clamp-none text-sm font-semibold">
+                <ItemTitle size="heading" className="line-clamp-none">
                   {copy.periodName(period.period_month, period.period_year)}
                 </ItemTitle>
                 <ItemDescription className="line-clamp-none text-sm leading-6">
