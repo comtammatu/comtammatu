@@ -853,6 +853,18 @@ desktop 1440×900:
 > `inventory:count_approve`, or `inventory:waste_approve`. That role has two
 > duplicate rows in `role_templates`; investigate separately.
 
+- [ ] **S0 — clear the nine red wave tests so the gate means something again.**
+      Pre-existing failures landed with the 2026-07-10 wave (bisect-confirmed at
+      `5b5e8d037`); every later slice's "full gate fresh" requirement is void
+      while they stay red. Clusters: waste form (explicit cancel fallback +
+      photo-upload gate) in `branch-waste-create-client`; Office inventory
+      dashboard (pending count slips for Branch Manager + four owner entrypoint
+      groups); operator stock statics (PO/GRN/issue/report actions in the branch
+      shell, GRN source presentation, consumption-vs-issue role split); form
+      barrel import; `resolveInventoryListScope` routing (D058 W3b). Fix code to
+      contract where the contract is right; fix the test only where the wave
+      legitimately changed the contract, and say which in the commit message.
+
 - [ ] **S1 — extend the operator/Office import boundary guard before converting
       anything.** Widen `operator-office-shell-boundary` in
       `scripts/check-ui-contract.mjs` so `(operator)/**` may not import
@@ -980,13 +992,19 @@ desktop 1440×900:
 
 ### Defects found while scoping Central Kitchen — separate slices, not D067
 
-- [ ] **The operator hub counts the wrong table.** `(operator)/dashboard/data.ts:343`
-      counts draft production work from `production_orders`, which holds zero rows
-      tenant-wide and has no create UI; only `document-correction-actions.ts:209`
-      reads it. The live entity is `production_runs`, and branch 16 holds three, all
-      `completed`. The hub's draft-production queue row can therefore never exceed
-      zero, so an unfinished run never surfaces as work. Confirm whether
-      `production_orders` is dead before repointing the count.
+- [x] **The operator hub counts the wrong table.** Fixed: the hub queue counts
+      `production_runs` in `draft`/`in_progress`, matching the production page's
+      work-queue definition. `production_orders` holds zero rows tenant-wide and
+      has no writer anywhere in the app.
+
+- [ ] **Retire the dead `production_orders` entity.** `document-correction-actions.ts`
+      still loads correction sources from `production_orders`/`production_order_items`,
+      so a correction request for a production document always resolves "not found"
+      even though completed `production_runs` exist. The RPC family
+      (`create/confirm/cancel_production_order`,
+      `ensure_production_order_central_kitchen`) has zero callers. Decide with the
+      owner: repoint the correction source to `production_runs` (the output check
+      becomes `run.finished_good_id`), then drop the table and RPCs in one migration.
 
 - [ ] **`confirm_production_run` overwrites a tenant-wide cost column.** The RPC ends
       with `UPDATE ingredients SET unit_cost = v_out_unit_cost WHERE id =
@@ -997,24 +1015,20 @@ desktop 1440×900:
       food-cost deviation recorded in ADR 0011. Confirm the intended semantics with the
       owner before changing anything.
 
-- [ ] **Eleven modules describe one unit model.** `(protected)/inventory/_lib/` carries
-      `count-units`, `entry-unit-code`, `issue-units`, `production-unit-conversion`,
-      `production-units`, `purchase-units`, `stock-unit-format`, `unit-conversion-input`,
-      `unit-derivation`, `unit-display`, and `unit-options`: 608 lines over a single unit
-      system, where `units` is the master, `ingredient_units` carries `anchor_unit_id`,
-      and `entry_unit_id` on a document line records which unit the operator typed in.
-      `purchase-units.ts` is two pure aliases plus one real function, and its name invents
-      a "purchase unit" concept the domain does not have. Consolidate onto
-      `unit-options.ts` and rename `getDefaultPurchaseUnit` to `getDefaultEntryUnit`. The
-      repo already tracks this as `inventory-counting-production-unit-debt-static.test.ts`.
-      Office-wide debt; it does not block Central Kitchen.
-
-- [ ] **Dead lot and expiry schema.** `grn_items.batch_number` and `grn_items.expiry_date`
-      hold zero non-null values across 150 rows, and `ingredients.shelf_life_days` holds
-      zero. No UI reads or writes them. The survivors are `ingredient-actions.ts:167`
-      (`p_shelf_life_days: null as never`, a cast forced by the RPC signature) and a
-      column reference in `scripts/inventory-csv-reseed.ts`. Drop the columns and the RPC
-      parameter in one migration; the `as never` dies with it.
+- [ ] **Retire the dead lot/expiry columns — full plumbing scope, not a drive-by.**
+      `grn_items.batch_number`, `grn_items.expiry_date`, and
+      `ingredients.shelf_life_days` hold zero non-null values and no UI reads or
+      writes them, but they remain wired through live RPC plumbing: the waste
+      write-off RPC (`20260709131500_fix_waste_writeoff_rpc_unit_drop.sql`), the
+      expiry alert scanner (baseline `scan_inventory_alerts` family — can never fire
+      on all-null data), the GRN receiving-site recreate
+      (`20260709125638_grn_recreate_receiving_site.sql`), plus
+      `upsert_ingredient_catalog` (dropping `p_shelf_life_days` changes the
+      signature — DROP FUNCTION the old overload before CREATE) and
+      `bulk_import_ingredients`. One migration rewriting those RPCs and dropping the
+      three columns; then `ingredient-actions.ts` (the `null as never` dies),
+      `scripts/inventory-csv-reseed.ts`, and `db:types` after apply. The apply must
+      land before any deploy of the code side (migration-before-deploy lesson).
 
 ### Owner decisions still open
 
@@ -1028,7 +1042,7 @@ desktop 1440×900:
 
 - Owner decree 2026-07-10: a single local agent works directly on `main`; no PRs.
   The 2026-07-10 working-tree wave is landed; each slice below is one commit.
-- One route family per slice commit. T2 front-end; zero migrations across S1
+- One route family per slice commit. T2 front-end; zero migrations across S0
   through S9.
 - Run the full gate fresh before each slice commit. A green result served from
   the turbo cache is not evidence.
