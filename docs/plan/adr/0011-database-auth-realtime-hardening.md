@@ -11,16 +11,30 @@ policy decisions, or production metrics show further regression in the affected 
 | Finding | Status | Where |
 |---------|--------|-------|
 | P1-1 per-row `has_permission` in orders RLS | Addressed indirectly: the three aggregate RPCs below remove the full-set scans that made it hurt. The policies themselves are unchanged — a row-column argument can never be initplan-hoisted. | `20260710090000_orders_and_sales_aggregate_rpcs.sql` |
-| P1-2 `/orders` summary | Implemented — `get_orders_summary` replaces two count-exact scans plus the SECURITY INVOKER `get_orders_paid_summary`, which is dropped. | same migration + `orders/actions.ts` |
+| P1-2 `/orders` summary | Implemented — `get_orders_summary` replaces two count-exact scans plus the SECURITY INVOKER `get_orders_paid_summary`, whose drop is deferred to `20260710093000` (see Apply order). | same migration + `orders/actions.ts` |
 | P1-3 food-cost | Implemented, **deviating from the fix proposed below** — see the deviation note in that section. | same migration + `_lib/food-cost-actions.ts` |
 | P1-4 deactivated staff keep access | Implemented — `is_active` predicate added to the staff-grant branch of both `has_permission` and `has_permission_any`. | `20260710091000_has_permission_active_profile_guard.sql` |
 | P1-5 GRN write RLS | Implemented — `grn_items_write` FOR ALL split into branch + draft-scoped INSERT/UPDATE/DELETE; `grn_update` branch-scoped and draft-gated, with WITH CHECK admitting `cancelled` so the discard path still works. | `20260710092000_grn_write_branch_draft_scope.sql` |
 | P1-6 variance truncation | Implemented — `get_theoretical_consumption` aggregates the theoretical side in SQL. | `20260710090000_*.sql` + `inventory/report-actions.ts` |
 
-The migrations are additive and DB-first: apply all three, run `corepack pnpm db:types`, then deploy the
-code. DDL was validated on a throwaway preview branch, which also caught a real defect: policy bodies
-using bare `auth_tenant_id()` / `has_permission()` do not resolve under `SET search_path = ''`, so every
-policy expression is schema-qualified.
+### Apply order
+
+`20260710090000` is additive while `20260710093000` is destructive, so they cannot be applied as one
+step: the deployment currently running in production still calls `get_orders_paid_summary`, whereas the
+code on `main` already calls the three new RPCs. Dropping before the deploy breaks `/orders` on the live
+app; deploying before the additive migration breaks it the other way. Hence:
+
+1. Apply `20260710090000` (three new RPCs). Production then holds both the old and the new functions, so
+   the running deployment is unaffected.
+2. Apply `20260710091000` (`is_active` guard) and `20260710092000` (GRN write RLS). Neither is coupled to
+   an app version.
+3. Run `corepack pnpm db:types`, then deploy `main`. Nothing calls `get_orders_paid_summary` any more.
+4. Apply `20260710093000`, which drops it. `_rollback/20260710093000_*_down.sql` recreates the function if
+   the deploy has to be rolled back.
+
+DDL was validated on a throwaway preview branch, which also caught a real defect: policy bodies using bare
+`auth_tenant_id()` / `has_permission()` do not resolve under `SET search_path = ''`, so every policy
+expression is schema-qualified.
 
 Scope: 7 parallel lanes over `apps/web`, `packages/shared`, `supabase/migrations`, plus SELECT-only
 evidence from PROD (`iexwsuaqqenyjiskawoj`) and Supabase Advisor (security + performance).
