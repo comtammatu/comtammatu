@@ -5236,6 +5236,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "production_recipes_ingredient_entry_unit_fkey"
+            columns: ["ingredient_id", "entry_unit_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_units"
+            referencedColumns: ["ingredient_id", "unit_id", "tenant_id"]
+          },
+          {
             foreignKeyName: "production_recipes_ingredient_id_fkey"
             columns: ["ingredient_id"]
             isOneToOne: false
@@ -9991,6 +9998,21 @@ export type Database = {
         }[]
       }
       get_inventory_dashboard: { Args: { p_branch_id: number }; Returns: Json }
+      get_menu_item_sales_agg: {
+        Args: {
+          p_branch_id?: number
+          p_from?: string
+          p_order_statuses?: string[]
+          p_to?: string
+        }
+        Returns: {
+          branch_id: number
+          item_name: string
+          menu_item_id: number
+          quantity_sold: number
+          revenue: number
+        }[]
+      }
       get_my_count_slip: {
         Args: { p_slip_id: number }
         Returns: {
@@ -10020,19 +10042,16 @@ export type Database = {
           total_amount: number
         }[]
       }
-      get_menu_item_sales_agg: {
+      get_orders_paid_summary: {
         Args: {
           p_branch_id?: number
-          p_from?: string
-          p_order_statuses?: string[]
-          p_to?: string
+          p_date_from?: string
+          p_date_to?: string
+          p_status?: string
         }
         Returns: {
-          branch_id: number
-          item_name: string
-          menu_item_id: number
-          quantity_sold: number
-          revenue: number
+          paid_count: number
+          paid_revenue: number
         }[]
       }
       get_orders_summary: {
