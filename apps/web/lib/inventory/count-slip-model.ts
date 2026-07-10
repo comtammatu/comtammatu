@@ -1,3 +1,5 @@
+export type CountSlipStatus = "submitted" | "needs_changes" | "approved";
+
 export type CountSlipLineViewInput = {
   id: number;
   ingredientName: string;
@@ -21,6 +23,21 @@ export type CountSlipLineView = {
   variance: number | null;
   varianceUnit: string;
   note: string | null;
+};
+
+export type CountSlipRow = {
+  id: number;
+  branchName: string;
+  locationName: string;
+  employeeName: string;
+  shiftName: string | null;
+  countDate: string;
+  status: CountSlipStatus;
+  note: string | null;
+  reviewNote: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  lines: CountSlipLineView[];
 };
 
 export function buildCountSlipLineView(

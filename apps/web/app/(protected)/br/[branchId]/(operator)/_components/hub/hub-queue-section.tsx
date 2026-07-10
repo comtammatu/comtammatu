@@ -5,7 +5,6 @@ import {
   ChevronRight,
   ClipboardCheck,
   FileText,
-  Package,
   Truck,
 } from "lucide-react";
 import Link from "next/link";
@@ -51,16 +50,6 @@ function buildQueueRows(
       title: branchCopy.queueDraftGrnsTitle,
       meta: branchCopy.queueDraftGrnsMeta(counts.draftGrns),
       count: counts.draftGrns,
-    });
-  }
-  if (counts.openPurchaseOrders != null) {
-    rows.push({
-      key: "open-pos",
-      href: `${basePath}/stock/purchase-orders`,
-      icon: Package,
-      title: branchCopy.queueOpenPosTitle,
-      meta: branchCopy.queueOpenPosMeta(counts.openPurchaseOrders),
-      count: counts.openPurchaseOrders,
     });
   }
   if (counts.draftProductionOrders != null) {

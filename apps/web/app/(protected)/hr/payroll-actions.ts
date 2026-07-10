@@ -23,7 +23,7 @@ import {
   countOverlapDays,
   splitAnnualLeaveByQuota,
   type LeaveRange,
-} from "./payroll-day-math";
+} from "@lib/hr/payroll-day-math";
 
 const PAYROLL_ROLES: readonly StaffRole[] = ["owner"];
 const payrollActionCopy = messages.hr.payroll.server;

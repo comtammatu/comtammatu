@@ -1,6 +1,7 @@
 import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
 
-export type BranchStockIssueType = "writeoff" | "other";
+export type BranchInternalIssueType = "writeoff" | "other";
+export type BranchStockIssueType = BranchInternalIssueType | "consumption";
 export type BranchStockIssueStatus = "draft" | "confirmed" | "cancelled";
 export type BranchStockIssueStatusFilter = "all" | BranchStockIssueStatus;
 
@@ -49,6 +50,12 @@ export type BranchStockIssueDetail = {
 export function isBranchStockIssueType(
   value: string,
 ): value is BranchStockIssueType {
+  return value === "writeoff" || value === "other" || value === "consumption";
+}
+
+export function isBranchInternalIssueType(
+  value: string,
+): value is BranchInternalIssueType {
   return value === "writeoff" || value === "other";
 }
 
@@ -61,7 +68,7 @@ export function toBranchStockIssueStatus(
 
 export function getBranchStockIssueCreateTypes(
   permissions: BranchStockIssuePermissions,
-): BranchStockIssueType[] {
+): BranchInternalIssueType[] {
   return [
     ...(permissions.canCreateWriteoff ? (["writeoff"] as const) : []),
     ...(permissions.canCreateOther ? (["other"] as const) : []),

@@ -56,7 +56,6 @@ function centralNavItems(
         label: branchCopy.centralNavReceive,
         icon: Truck,
         exact: false,
-        matchPrefixes: [`${base}/stock/purchase-orders`],
       },
       stock,
       stocktake,
@@ -69,7 +68,6 @@ function centralNavItems(
       label: branchCopy.centralKitchenNavReceive,
       icon: Truck,
       exact: false,
-      matchPrefixes: [`${base}/stock/purchase-orders`],
     },
     {
       href: `${base}/stock/production`,

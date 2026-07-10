@@ -268,15 +268,11 @@ test("GRN create reference cost follows the selected entry unit", () => {
   );
 });
 
-test("procurement line defaults scale ingredient cost by purchase unit", () => {
-  for (const path of [
-    "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx",
-    "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
+test("GRN line defaults scale ingredient cost by receiving unit", () => {
+  const source = readRepo(
     "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
-  ]) {
-    const source = readRepo(path);
-    assert.match(source, /getReferenceCostForUnit/, path);
-  }
+  );
+  assert.match(source, /getReferenceCostForUnit/);
 });
 
 test("quickCreateIngredient refuses units outside the catalog instead of creating a new unit", () => {

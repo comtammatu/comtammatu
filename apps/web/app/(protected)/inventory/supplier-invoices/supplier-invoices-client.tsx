@@ -1332,12 +1332,7 @@ export function SupplierInvoicesClient({
                     description:
                       selectedInvoice.poCode &&
                       selectedInvoice.poId != null ? (
-                        <Link
-                          href={`/inventory/purchase-orders/${selectedInvoice.poId}`}
-                          className="text-primary hover:underline"
-                        >
-                          {selectedInvoice.poCode}
-                        </Link>
+                        <span className="font-mono">{selectedInvoice.poCode}</span>
                       ) : (
                         copy.notLinked
                       ),

@@ -22,10 +22,8 @@ const VI_DICTIONARY: InventoryDictionary = {
   navigation: {
     home: { long: "Tổng quan" },
     stock: { long: "Tồn kho" },
-    purchaseOrders: { short: "Đơn đặt hàng", long: "Đơn đặt hàng NCC" },
     grn: { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     supplierInvoices: { long: "Hóa đơn NCC" },
-    supplierReturns: { short: "Trả hàng NCC", long: "Phiếu trả hàng NCC" },
     transfers: { short: "Điều chuyển", long: "Điều chuyển nội bộ" },
     stocktake: { long: "Kiểm kê đối chiếu" },
     issues: { short: "Sự cố kho", long: "Sự cố kho" },
@@ -44,10 +42,6 @@ const VI_DICTIONARY: InventoryDictionary = {
   routes: {
     "/inventory": { long: "Tổng quan" },
     "/inventory/stock": { long: "Tồn kho" },
-    "/inventory/purchase-orders": {
-      short: "Đơn đặt hàng",
-      long: "Danh sách đơn đặt hàng NCC",
-    },
     "/inventory/grn": { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     "/inventory/supplier-invoices": { long: "Hóa đơn NCC" },
     "/inventory/settings/qc": {

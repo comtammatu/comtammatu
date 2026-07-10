@@ -83,10 +83,6 @@ test("active inventory reads do not select dropped legacy unit columns", () => {
       [/\bquantity,\s*unit,\s*entry_unit_id\b/],
     ],
     [
-      "apps/web/app/(protected)/inventory/supplier-return-actions.ts",
-      [/ingredients\s*\(\s*id,\s*name,\s*unit,\s*purchase_unit\s*\)/],
-    ],
-    [
       "apps/web/app/(protected)/inventory/recipe-actions.ts",
       [/\bingredient_id,\s*quantity,\s*unit,\s*entry_unit_id\b/],
     ],
@@ -236,7 +232,6 @@ test.skip("server action payload keys match the RPC contract", () => {
 test.skip("transaction write callers do not send unit text/code", () => {
   for (const path of [
     "apps/web/app/(protected)/inventory/grn-actions.ts",
-    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
     "apps/web/app/(protected)/inventory/issue-actions.ts",
     "apps/web/app/(protected)/inventory/waste-actions.ts",
     "apps/web/app/(protected)/inventory/production-run-actions.ts",
@@ -260,14 +255,6 @@ test.skip("transaction write callers do not send unit text/code", () => {
     [
       "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
       "upsertGrnLine",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx",
-      "createPurchaseOrderWithLines",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
-      "upsertPurchaseOrderLine",
     ],
     [
       "apps/web/app/(protected)/inventory/production-order-form.tsx",
@@ -316,7 +303,6 @@ test.skip("direct table writes derive persisted unit text from the entry unit ca
 
   for (const path of [
     "apps/web/app/(protected)/inventory/grn-actions.ts",
-    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
     "apps/web/app/(protected)/inventory/issue-actions.ts",
   ]) {
     const source = read(path);
@@ -418,15 +404,6 @@ test.skip("RPC-backed inventory writes let the RPC derive persisted unit text", 
     read("apps/web/app/(protected)/inventory/transfer-actions.ts"),
     /unit:\s*resolvedUnit\.unit/,
   );
-
-  const createPo = section(
-    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
-    "export const createPurchaseOrderWithLines",
-    "/* ─── fetchPurchaseOrderDetail",
-  );
-  assert.doesNotMatch(createPo, /resolveEntryUnitCode/);
-  assert.doesNotMatch(createPo, /\bunit\s*:/);
-  assert.match(createPo, /entry_unit_id:\s*line\.entryUnitId \?\? null/);
 });
 
 test.skip("inventory RPCs derive persisted unit text from the unit catalog", () => {

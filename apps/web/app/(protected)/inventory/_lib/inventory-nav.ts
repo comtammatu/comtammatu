@@ -6,7 +6,6 @@ import {
   FileText as IconFileText,
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
-  RotateCcw as IconRotateCcw,
   Settings as IconSettings,
   Users as IconUsers,
   Utensils as IconToolsKitchen,
@@ -122,7 +121,6 @@ export function resolveInventoryNav({
         icon: IconFileText,
         matchPrefixes: [
           "/inventory/operations",
-          "/inventory/purchase-orders",
           "/inventory/grn",
           "/inventory/consumption",
           "/inventory/issues",
@@ -135,11 +133,6 @@ export function resolveInventoryNav({
               href: "/inventory/supplier-invoices",
               label: tNav("supplierInvoices", "navigation"),
               icon: IconFileCheck,
-            },
-            {
-              href: "/inventory/supplier-returns",
-              label: tNav("supplierReturns", "navigation"),
-              icon: IconRotateCcw,
             },
           ]
         : []),

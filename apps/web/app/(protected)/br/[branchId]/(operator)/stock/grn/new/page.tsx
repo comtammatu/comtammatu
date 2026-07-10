@@ -41,8 +41,6 @@ export default async function OperatorStockGrnNewPage({
       canCreateSupplier={data.canCreateSupplier}
       suppliers={data.suppliers}
       suppliersLoadFailed={data.suppliersLoadFailed}
-      openPurchaseOrders={data.openPurchaseOrders}
-      openPurchaseOrdersLoadFailed={data.openPurchaseOrdersLoadFailed}
     />
   );
 }

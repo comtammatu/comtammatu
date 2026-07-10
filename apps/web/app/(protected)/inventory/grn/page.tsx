@@ -5,7 +5,6 @@ import { GrnListClient } from "./grn-list-client";
 interface GRNListPageContentProps {
   searchParams: Promise<{ branchId?: string | string[] }>;
   basePath?: string;
-  purchaseOrdersPath?: string;
   showDrafts?: boolean;
   embedded?: boolean;
 }
@@ -13,7 +12,6 @@ interface GRNListPageContentProps {
 export async function GRNListPageContent({
   searchParams,
   basePath = "/inventory/grn",
-  purchaseOrdersPath = "/inventory/purchase-orders",
   showDrafts = true,
   embedded = false,
 }: GRNListPageContentProps) {
@@ -27,7 +25,6 @@ export async function GRNListPageContent({
     <GrnListClient
       grns={data.grns}
       basePath={basePath}
-      purchaseOrdersPath={purchaseOrdersPath}
       canCreate={data.canCreate}
       drafts={showDrafts && data.canCreate ? data.drafts : undefined}
       draftsLoadFailed={showDrafts && data.canCreate && data.draftsLoadFailed}

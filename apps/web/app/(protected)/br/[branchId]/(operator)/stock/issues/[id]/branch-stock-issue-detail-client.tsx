@@ -87,15 +87,11 @@ import {
 const issuesCopy = messages.inventory.issues;
 
 function issueTypeLabel(type: BranchStockIssueType) {
-  return type === "writeoff"
-    ? issuesCopy.surface.writeoff.label
-    : issuesCopy.surface.other.label;
+  return issuesCopy.surface[type].label;
 }
 
 function issueSurface(type: BranchStockIssueType) {
-  return type === "writeoff"
-    ? issuesCopy.surface.writeoff
-    : issuesCopy.surface.other;
+  return issuesCopy.surface[type];
 }
 
 type BranchStockIssueLineSheetProps = {
@@ -213,7 +209,7 @@ function BranchStockIssueLineSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-dvh-95 overflow-y-auto bg-background p-0 text-foreground"
+        className="max-h-dvh-95 overflow-y-auto overscroll-contain bg-background p-0 text-foreground"
       >
         <SheetHeader>
           <SheetTitle>
@@ -359,9 +355,11 @@ function BranchStockIssueLineSheet({
 export function BranchStockIssueDetailClient({
   data,
   stockBasePath,
+  listBasePath = `${stockBasePath}/issues`,
 }: {
   data: BranchStockIssueDetail;
   stockBasePath: string;
+  listBasePath?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -371,7 +369,7 @@ export function BranchStockIssueDetailClient({
   const [editingLine, setEditingLine] = useState<BranchStockIssueLine | null>(
     null,
   );
-  const issuesBasePath = `${stockBasePath}/issues`;
+  const issuesBasePath = listBasePath;
   const surface = issueSurface(issue.type);
   const statusBadge = getStatusBadgeMeta("inventory", issue.status);
   const isDraft = issue.status === "draft";
@@ -481,8 +479,13 @@ export function BranchStockIssueDetailClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-28">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={issuesBasePath} aria-label="Quay lại phiếu xuất">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon-touch"
+            title={ACTIONS_VI.back}
+          >
+            <Link href={issuesBasePath} aria-label={ACTIONS_VI.back}>
               <IconArrowLeft />
             </Link>
           </Button>
@@ -497,7 +500,7 @@ export function BranchStockIssueDetailClient({
           <StatusBadge domain="inventory" value={issue.status} size="sm" />
         </BranchOperatorControlBar>
 
-        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
+        <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] md:items-start">
           <BranchOperatorPanel
             title={issuesCopy.linesTab}
             description={

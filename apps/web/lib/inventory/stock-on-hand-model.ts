@@ -54,7 +54,6 @@ export type StockActionPermissions = {
   canCreateTransfer: boolean;
   canCreateStocktake: boolean;
   canWriteoff: boolean;
-  canCreatePurchaseOrder: boolean;
   canAdjustException: boolean;
 };
 

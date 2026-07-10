@@ -10,16 +10,12 @@ import type { IngredientRow } from "../../page";
 
 interface IssueDetailPageContentProps {
   issueId: number;
-  routeBranchId?: number;
   listBasePath?: string;
-  embedded?: boolean;
 }
 
 export async function IssueDetailPageContent({
   issueId,
-  routeBranchId,
   listBasePath = "/inventory/consumption",
-  embedded = false,
 }: IssueDetailPageContentProps) {
   if (!Number.isFinite(issueId) || issueId <= 0) notFound();
 
@@ -61,7 +57,6 @@ export async function IssueDetailPageContent({
       ingredients: { id: number; name: string; unit: string } | null;
     }>;
   };
-  if (routeBranchId != null && d.issue.branch_id !== routeBranchId) notFound();
   const baseIngredients: IngredientRow[] = ingredientsRes.success
     ? ((ingredientsRes.data ?? []) as IngredientRow[])
     : [];
@@ -107,7 +102,6 @@ export async function IssueDetailPageContent({
       canAdjustStock={canAdjustStock}
       auditLogs={auditLogs}
       listBasePath={listBasePath}
-      embedded={embedded}
     />
   );
 }

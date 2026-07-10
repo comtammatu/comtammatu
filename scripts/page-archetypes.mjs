@@ -39,7 +39,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/leave/page.tsx":
@@ -59,13 +59,13 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/units/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/[id]/page.tsx":
-    "EMBED-WRAPPER",
+    "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx":
@@ -98,14 +98,8 @@ export const PAGE_ARCHETYPES = {
     "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/[finishedGoodId]/page.tsx":
     "DOC-WORKFLOW",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/[id]/page.tsx":
-    "EMBED-WRAPPER",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/new/page.tsx":
-    "EMBED-WRAPPER",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/page.tsx":
-    "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/page.tsx":
-    "EMBED-WRAPPER",
+    "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/page.tsx":
     "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/reports/page.tsx":
@@ -117,12 +111,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/new/page.tsx":
     "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/page.tsx":
-    "LIST",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/[id]/page.tsx":
-    "DETAIL",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/new/page.tsx":
-    "DOC-WORKFLOW",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/page.tsx":
     "DETAIL",
@@ -175,10 +163,12 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/production/page.tsx": "HUB",
   "apps/web/app/(protected)/inventory/production/new/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "DETAIL",
-  "apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx":
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/purchase-orders/new/page.tsx":
-    "DOC-WORKFLOW",
-  "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": "LIST",
+    "REDIRECT-SHIM",
+  "apps/web/app/(protected)/inventory/purchase-orders/page.tsx":
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/recipes/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/reports/page.tsx": "REPORT",
   "apps/web/app/(protected)/inventory/settings/categories/page.tsx":
@@ -197,10 +187,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/stocktake/new/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/stocktake/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/supplier-invoices/page.tsx": "LIST",
-  "apps/web/app/(protected)/inventory/supplier-returns/[id]/page.tsx": "DETAIL",
-  "apps/web/app/(protected)/inventory/supplier-returns/new/page.tsx":
-    "DOC-WORKFLOW",
-  "apps/web/app/(protected)/inventory/supplier-returns/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/suppliers/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/transfers/new/page.tsx": "DOC-WORKFLOW",

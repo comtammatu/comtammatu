@@ -68,7 +68,7 @@ const GUARDS = [
     expect: "present",
     pattern:
       /return\s+Math\.min\(\s*Math\.max\(0,\s*input\.workingDays\)\s*\+\s*Math\.max\(0,\s*input\.paidLeaveDays\)\s*,\s*Math\.max\(0,\s*input\.standardDays\)\s*,?\s*\)/,
-    paths: ["apps/web/app/(protected)/hr/payroll-day-math.ts"],
+    paths: ["apps/web/lib/hr/payroll-day-math.ts"],
     reason:
       "calculatePayableDays caps completed workdays + paid annual leave at standard_days, preventing overpay when attendance exceeds the standard period",
   },

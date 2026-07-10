@@ -205,7 +205,6 @@ export interface BranchQueueCounts {
   pendingCountSlips: number | null;
   pendingWaste: number | null;
   draftGrns: number | null;
-  openPurchaseOrders: number | null;
   draftProductionOrders: number | null;
   inboundTransfers: number | null;
 }
@@ -233,7 +232,6 @@ export async function fetchBranchQueueCounts(
     countPermission,
     wastePermission,
     grnPermission,
-    poPermission,
     productionPermission,
     transferPermission,
   ] = await Promise.all([
@@ -259,12 +257,6 @@ export async function fetchBranchQueueCounts(
           p_key: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
         })
       : Promise.resolve({ data: false }),
-    isCentralSupply
-      ? supabase.rpc("has_permission", {
-          p_branch_id: branchId,
-          p_key: PERMISSION_KEYS.PROCUREMENT_READ,
-        })
-      : Promise.resolve({ data: false }),
     isCentralKitchen
       ? supabase.rpc("has_permission", {
           p_branch_id: branchId,
@@ -284,7 +276,6 @@ export async function fetchBranchQueueCounts(
     countRes,
     wasteRes,
     draftGrnRes,
-    openPoRes,
     draftProductionRes,
     inboundTransferRes,
   ] = await Promise.all([
@@ -330,14 +321,6 @@ export async function fetchBranchQueueCounts(
             .eq("branch_id", branchId)
             .eq("status", "draft")
         : Promise.resolve(null),
-      poPermission.data === true
-        ? supabase
-            .from("purchase_orders")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("branch_id", branchId)
-            .in("status", ["sent", "partially_received"])
-        : Promise.resolve(null),
       productionPermission.data === true
         ? supabase
             .from("production_runs")
@@ -362,7 +345,6 @@ export async function fetchBranchQueueCounts(
     pendingCountSlips: countRes ? (countRes.count ?? 0) : null,
     pendingWaste: wasteRes ? (wasteRes.count ?? 0) : null,
     draftGrns: draftGrnRes ? (draftGrnRes.count ?? 0) : null,
-    openPurchaseOrders: openPoRes ? (openPoRes.count ?? 0) : null,
     draftProductionOrders: draftProductionRes
       ? (draftProductionRes.count ?? 0)
       : null,

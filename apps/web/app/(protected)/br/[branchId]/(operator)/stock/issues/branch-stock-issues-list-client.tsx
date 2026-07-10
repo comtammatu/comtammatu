@@ -58,6 +58,7 @@ import {
   type BranchStockIssue,
   type BranchStockIssuePermissions,
   type BranchStockIssueStatusFilter,
+  type BranchInternalIssueType,
   type BranchStockIssueType,
 } from "@lib/inventory/stock-issue-model";
 import { messages } from "@lib/messages";
@@ -85,9 +86,9 @@ const statusOptions: Array<{
 ];
 
 function issueTypeLabel(type: BranchStockIssueType) {
-  return type === "writeoff"
-    ? INVENTORY_VI.issueTypeWriteoff
-    : INVENTORY_VI.issueTypeOther;
+  if (type === "writeoff") return INVENTORY_VI.issueTypeWriteoff;
+  if (type === "consumption") return INVENTORY_VI.issueTypeConsumption;
+  return INVENTORY_VI.issueTypeOther;
 }
 
 function BranchStockIssueCreateSheet({
@@ -106,7 +107,7 @@ function BranchStockIssueCreateSheet({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const createTypes = getBranchStockIssueCreateTypes(permissions);
-  const [issueType, setIssueType] = useState<BranchStockIssueType>(
+  const [issueType, setIssueType] = useState<BranchInternalIssueType>(
     permissions.canCreateWriteoff ? "writeoff" : "other",
   );
   const [notes, setNotes] = useState("");
@@ -163,7 +164,7 @@ function BranchStockIssueCreateSheet({
                 value={issueType}
                 disabled={createTypes.length === 1}
                 onValueChange={(value) =>
-                  setIssueType(value as BranchStockIssueType)
+                  setIssueType(value as BranchInternalIssueType)
                 }
               >
                 <SelectTrigger

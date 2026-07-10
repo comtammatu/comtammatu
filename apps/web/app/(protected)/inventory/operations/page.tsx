@@ -7,8 +7,6 @@ import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 
 import { resolveInventoryBranchScope } from "../_lib/inventory-scope";
 
-// Import original page content components
-import { PurchaseOrdersPageContent } from "../purchase-orders/page";
 import { GRNListPageContent } from "../grn/page";
 import { IssuesPageContent } from "../issues/page";
 import { TransfersPageContent } from "../transfers/page";
@@ -50,7 +48,6 @@ export default async function OperationsPage({
   const tabsList: Array<{ value: string; label: string }> = [];
 
   if (showProcurement) {
-    tabsList.push({ value: "purchase-orders", label: "Đặt hàng NCC" });
     tabsList.push({ value: "grn", label: "Phiếu nhập kho" });
   }
 
@@ -85,15 +82,7 @@ export default async function OperationsPage({
 
   // Render tab content on demand
   let tabContent = null;
-  if (activeTab === "purchase-orders") {
-    tabContent = (
-      <PurchaseOrdersPageContent
-        searchParams={searchParams}
-        embedded={true}
-        basePath="/inventory/purchase-orders"
-      />
-    );
-  } else if (activeTab === "grn") {
+  if (activeTab === "grn") {
     tabContent = (
       <GRNListPageContent
         searchParams={searchParams}

@@ -8,7 +8,7 @@ import {
   countAnnualLeaveAccruedThroughMonth,
   splitAnnualLeaveByQuota,
   summarizeLeaveDays,
-} from "../app/(protected)/hr/payroll-day-math";
+} from "../lib/hr/payroll-day-math";
 
 test("payroll payable days include annual leave inside the period", () => {
   const leaves = summarizeLeaveDays(

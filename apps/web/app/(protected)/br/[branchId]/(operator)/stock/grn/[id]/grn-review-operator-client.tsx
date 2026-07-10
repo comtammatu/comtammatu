@@ -50,7 +50,6 @@ interface GrnReviewOperatorClientProps {
   canEditDraft: boolean;
   canConfirm: boolean;
   grnListBasePath: string;
-  purchaseOrdersBasePath: string;
 }
 
 export function GrnReviewOperatorClient({
@@ -59,7 +58,6 @@ export function GrnReviewOperatorClient({
   canEditDraft,
   canConfirm,
   grnListBasePath,
-  purchaseOrdersBasePath,
 }: GrnReviewOperatorClientProps) {
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();
@@ -81,7 +79,6 @@ export function GrnReviewOperatorClient({
       startConfirm,
       grnListBasePath,
       grnMobileBackPath: grnListBasePath,
-      purchaseOrdersBasePath,
     });
   const editingLine =
     lines.find((line) => line.lineId === editingLineId) ?? null;

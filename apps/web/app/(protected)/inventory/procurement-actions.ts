@@ -4,7 +4,6 @@
  *
  * Prefer importing directly from the domain-specific files:
  * - supplier-actions.ts   — supplier CRUD
- * - purchase-order-actions.ts — PO lifecycle + price intelligence
  * - grn-actions.ts — GRN + invoices + recipes + AP payment
  */
 export {
@@ -15,31 +14,11 @@ export {
 } from "./supplier-actions";
 
 export {
-  fetchPurchaseOrdersPage,
-  fetchPurchaseOrderStatusCounts,
-  createPurchaseOrder,
-  createPurchaseOrderWithLines,
-  fetchPurchaseOrderDetail,
-  upsertPurchaseOrderLine,
-  deletePurchaseOrderLine,
-  updatePurchaseOrderStatus,
-  fetchPoSuggestions,
-  fetchSinglePriceDeviation,
-} from "./purchase-order-actions";
-export type {
-  PoSuggestionRow,
-  SinglePriceDeviation,
-  PurchaseOrderCursor,
-  PurchaseOrderPage,
-} from "./purchase-order-actions";
-
-export {
   fetchRecentActivity,
   fetchGrns,
   fetchGrnIdsForDropdown,
   fetchGrnDetail,
   confirmGrn,
-  createGrnFromPo,
 } from "./grn-actions";
 export {
   createSupplierInvoice,

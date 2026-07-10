@@ -4,6 +4,8 @@ import {
   canConfirmBranchStockIssue,
   filterBranchStockIssues,
   getBranchStockIssueCreateTypes,
+  isBranchInternalIssueType,
+  isBranchStockIssueType,
   toBranchStockIssueStatus,
   type BranchStockIssue,
   type BranchStockIssueLine,
@@ -60,6 +62,8 @@ test("Branch issue model only creates the permitted internal issue types", () =>
     [],
   );
   assert.equal(toBranchStockIssueStatus("unexpected"), "draft");
+  assert.equal(isBranchStockIssueType("consumption"), true);
+  assert.equal(isBranchInternalIssueType("consumption"), false);
 });
 
 test("Branch issue filters retain fixed-branch draft and final records", () => {

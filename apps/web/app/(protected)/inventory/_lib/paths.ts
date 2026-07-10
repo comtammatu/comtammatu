@@ -5,10 +5,9 @@ export type InventoryPaths = {
   stock: string;
   operations: string;
   operationTab: (
-    tab: "purchase-orders" | "grn" | "consumption" | "issues" | "transfers",
+    tab: "grn" | "consumption" | "issues" | "transfers",
   ) => string;
   receiving: string;
-  purchaseOrders: string;
   grn: string;
   supplierInvoices: string;
   transfers: string;
@@ -40,7 +39,6 @@ export function getInventoryPaths(base: InventoryRouteBase): InventoryPaths {
     operations: joinInventoryPath(base, "/operations"),
     operationTab: (tab) => `${joinInventoryPath(base, "/operations")}?tab=${tab}`,
     receiving: joinInventoryPath(base, "/receiving"),
-    purchaseOrders: joinInventoryPath(base, "/purchase-orders"),
     grn: joinInventoryPath(base, "/grn"),
     supplierInvoices: joinInventoryPath(base, "/supplier-invoices"),
     transfers: joinInventoryPath(base, "/transfers"),

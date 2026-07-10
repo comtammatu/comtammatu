@@ -20,6 +20,24 @@ import {
 
 const ROLES = INVENTORY_OPS_ROLES;
 
+function revalidateStockIssueSurfaces({
+  issueId,
+  branchId,
+  issueType,
+}: {
+  issueId: number;
+  branchId: number;
+  issueType: string;
+}) {
+  revalidatePath("/inventory/issues");
+  revalidatePath("/inventory/consumption");
+  revalidatePath(`/inventory/issues/${issueId}`);
+  revalidatePath(`/inventory/consumption/${issueId}`);
+  const branchSurface = issueType === "consumption" ? "consumption" : "issues";
+  revalidatePath(`/br/${branchId}/stock/${branchSurface}`);
+  revalidatePath(`/br/${branchId}/stock/${branchSurface}/${issueId}`);
+}
+
 /* ─── Schemas ─── */
 
 const issueCreateSchema = z.object({
@@ -167,6 +185,11 @@ export const createStockIssueDraft = withAction(
     if (error || !data) {
       return { success: false, error: "Không thể tạo phiếu xuất." };
     }
+    revalidateStockIssueSurfaces({
+      issueId: data.id,
+      branchId: d.branchId,
+      issueType: d.issueType,
+    });
     return { success: true, data };
   },
 );
@@ -259,7 +282,7 @@ export const upsertStockIssueLine = withAction(
   async (d, { supabase, claims }) => {
     const { data: issue } = await supabase
       .from("stock_issues")
-      .select("branch_id, source_location_id, status")
+      .select("branch_id, source_location_id, status, issue_type")
       .eq("id", d.issueId)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();
@@ -329,7 +352,11 @@ export const upsertStockIssueLine = withAction(
     if (error) {
       return { success: false, error: "Không thể lưu dòng phiếu xuất." };
     }
-    revalidatePath(`/inventory/issues/${d.issueId}`);
+    revalidateStockIssueSurfaces({
+      issueId: d.issueId,
+      branchId: issue.branch_id,
+      issueType: issue.issue_type,
+    });
     return { success: true };
   },
 );
@@ -342,7 +369,7 @@ export const deleteStockIssueLine = withAction(
     // Verify issue is still draft
     const { data: issue } = await supabase
       .from("stock_issues")
-      .select("status")
+      .select("status, branch_id, issue_type")
       .eq("id", d.issueId)
       .eq("tenant_id", claims.tenant_id)
       .single();
@@ -364,7 +391,11 @@ export const deleteStockIssueLine = withAction(
     if (error) {
       return { success: false, error: "Không thể xóa dòng." };
     }
-    revalidatePath(`/inventory/issues/${d.issueId}`);
+    revalidateStockIssueSurfaces({
+      issueId: d.issueId,
+      branchId: issue.branch_id,
+      issueType: issue.issue_type,
+    });
     return { success: true };
   },
 );
@@ -380,7 +411,14 @@ export async function confirmStockIssue(
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+  const { data: issue } = await supabase
+    .from("stock_issues")
+    .select("branch_id, issue_type")
+    .eq("id", id.data)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+  if (!issue) return { success: false, error: "Không tìm thấy phiếu xuất." };
 
   const { data, error } = await supabase.rpc("confirm_stock_issue", {
     p_issue_id: id.data,
@@ -399,8 +437,11 @@ export async function confirmStockIssue(
     return { success: false, error: "Không thể xác nhận phiếu xuất." };
   }
 
-  revalidatePath("/inventory/issues");
-  revalidatePath(`/inventory/issues/${id.data}`);
+  revalidateStockIssueSurfaces({
+    issueId: id.data,
+    branchId: issue.branch_id,
+    issueType: issue.issue_type,
+  });
   return { success: true, data };
 }
 
@@ -421,7 +462,7 @@ export async function cancelStockIssue(issueId: number): Promise<ActionResult> {
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .eq("status", "draft")
-    .select("id");
+    .select("id, branch_id, issue_type");
 
   if (error) {
     return { success: false, error: "Không thể hủy phiếu xuất." };
@@ -429,7 +470,14 @@ export async function cancelStockIssue(issueId: number): Promise<ActionResult> {
   if (!data || data.length === 0) {
     return { success: false, error: "Không tìm thấy phiếu xuất nháp để hủy." };
   }
-  revalidatePath("/inventory/issues");
-  revalidatePath(`/inventory/issues/${id.data}`);
+  const issue = data[0];
+  if (!issue) {
+    return { success: false, error: "Không tìm thấy phiếu xuất nháp để hủy." };
+  }
+  revalidateStockIssueSurfaces({
+    issueId: id.data,
+    branchId: issue.branch_id,
+    issueType: issue.issue_type,
+  });
   return { success: true };
 }

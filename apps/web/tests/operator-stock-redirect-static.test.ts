@@ -1396,105 +1396,14 @@ test("operator count assignments render branch-native inside the branch operator
   assert.match(officePage, /export async function CountAssignmentsPageContent/);
   assert.doesNotMatch(officePage, /routeBranchId|embedded/);
   assert.doesNotMatch(client, /embedded/);
-  assert.match(client, /const content = \(\s*<>/);
-  assert.match(client, /return <AppPage scroll>\{content\}<\/AppPage>;/);
+  assert.match(client, /<AppPage width="xwide"/);
+  assert.match(client, /<DataTable/);
+  assert.match(client, /<AppDialog/);
+  assert.doesNotMatch(client, /<Drawer|useSwipeReveal|useLongPress/);
 
   assert.match(
     navConfig,
     /moduleKey: "employee_checkout_approvals",\s*icon: "ClipboardList",\s*group: "stock",\s*hrefTemplate: "\/br\/\{branchId\}\/stock\/count-assignments"/,
-  );
-});
-
-test("operator supplier returns keep the rejected-GRN workflow native to Branch", () => {
-  const listRoute = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/page.tsx",
-  );
-  const newRoute = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/new/page.tsx",
-  );
-  const detailRoute = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/[id]/page.tsx",
-  );
-  const listClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/branch-supplier-returns-list-client.tsx",
-  );
-  const createClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/new/branch-supplier-return-create-client.tsx",
-  );
-  const detailClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/[id]/branch-supplier-return-detail-client.tsx",
-  );
-  const dataSource = read(
-    "apps/web/lib/inventory/branch-supplier-return-data.ts",
-  );
-  const modelSource = read("apps/web/lib/inventory/supplier-return-model.ts");
-  const navConfig = read("packages/shared/src/auth/nav-config.ts");
-
-  assert.match(listRoute, /params: Promise<\{ branchId: string \}>/);
-  assert.match(listRoute, /loadBranchSupplierReturnListData/);
-  assert.match(listRoute, /BranchSupplierReturnsListClient/);
-  assert.doesNotMatch(
-    listRoute,
-    /SupplierReturnsPageContent|embedded|@\/\(protected\)\/inventory\/supplier-returns/,
-  );
-
-  assert.match(newRoute, /params: Promise<\{ branchId: string \}>/);
-  assert.match(newRoute, /loadBranchSupplierReturnCreateData/);
-  assert.match(newRoute, /BranchSupplierReturnCreateClient/);
-  assert.doesNotMatch(
-    newRoute,
-    /SupplierReturnNewPageContent|embedded|@\/\(protected\)\/inventory\/supplier-returns/,
-  );
-
-  assert.match(
-    detailRoute,
-    /params: Promise<\{ branchId: string; id: string \}>/,
-  );
-  assert.match(detailRoute, /loadBranchSupplierReturnDetailData/);
-  assert.match(detailRoute, /BranchSupplierReturnDetailClient/);
-  assert.doesNotMatch(
-    detailRoute,
-    /SupplierReturnDetailPageContent|embedded|@\/\(protected\)\/inventory\/supplier-returns/,
-  );
-
-  assert.match(listClient, /BranchOperatorPage/);
-  assert.match(listClient, /BranchOperatorPanel/);
-  assert.match(listClient, /ItemGroup/);
-  assert.match(listClient, /size="touch"/);
-  assert.doesNotMatch(listClient, /DataTable|AppPage|embedded/);
-
-  assert.match(createClient, /BranchOperatorPage/);
-  assert.match(createClient, /BranchOperatorPanel/);
-  assert.match(createClient, /AppDetailFooter/);
-  assert.match(createClient, /<Combobox[\s\S]*size="touch"/);
-  assert.match(createClient, /size="touch"/);
-  assert.match(createClient, /sm:grid-cols-2/);
-  assert.doesNotMatch(createClient, /DocumentFormFrame|embedded/);
-
-  assert.match(detailClient, /BranchOperatorPage/);
-  assert.match(detailClient, /BranchOperatorPanel/);
-  assert.match(detailClient, /ItemGroup/);
-  assert.match(detailClient, /AppDetailFooter/);
-  assert.match(detailClient, /confirmSupplierReturn/);
-  assert.match(detailClient, /transitionSupplierReturn/);
-  assert.doesNotMatch(
-    detailClient,
-    /DataTable|AuditHistoryList|\bformatVND\b|embedded/,
-  );
-
-  assert.match(dataSource, /import "server-only"/);
-  assert.match(dataSource, /resolveInventoryListScope/);
-  assert.match(dataSource, /resolveInventoryBranchScope/);
-  assert.match(dataSource, /fetchSupplierReturns/);
-  assert.match(dataSource, /fetchReturnableGrns/);
-  assert.match(dataSource, /fetchSupplierReturnDetail/);
-  assert.doesNotMatch(dataSource, /total_value|fetchEntityAuditLogs/);
-  assert.match(modelSource, /filterBranchSupplierReturns/);
-  assert.match(modelSource, /canProgressBranchSupplierReturn/);
-
-  assert.match(
-    navConfig,
-    /moduleKey: "inventory",\s*icon: "Undo2",\s*group: "stock",\s*hrefTemplate: "\/br\/\{branchId\}\/stock\/supplier-returns"/,
   );
 });
 

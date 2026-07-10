@@ -22,7 +22,7 @@ export default async function OperatorStockOnHandPage({ params }: PageProps) {
       branchId={data.branchId}
       coreDataLoadFailed={data.coreDataLoadFailed}
       ingredients={data.ingredients}
-      canCreatePurchaseOrder={data.permissions.canCreatePurchaseOrder}
+      canCreateGrn={data.permissions.canReceiveGrn}
       underThresholdCount={data.summary.underThresholdCount}
     />
   );

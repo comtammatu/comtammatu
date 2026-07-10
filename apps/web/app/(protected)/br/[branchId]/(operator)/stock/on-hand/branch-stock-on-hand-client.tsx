@@ -9,7 +9,7 @@ import {
   ListFilter as IconFilter,
   RotateCcw as IconReset,
   Search as IconSearch,
-  ShoppingCart as IconShoppingCart,
+  Truck as IconTruck,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
@@ -194,7 +194,7 @@ function StockTouchRow({
 
 interface BranchStockOnHandClientProps {
   branchId: number;
-  canCreatePurchaseOrder: boolean;
+  canCreateGrn: boolean;
   coreDataLoadFailed: boolean;
   ingredients: StockIngredient[];
   underThresholdCount: number;
@@ -202,7 +202,7 @@ interface BranchStockOnHandClientProps {
 
 export function BranchStockOnHandClient({
   branchId,
-  canCreatePurchaseOrder,
+  canCreateGrn,
   coreDataLoadFailed,
   ingredients,
   underThresholdCount,
@@ -289,11 +289,11 @@ export function BranchStockOnHandClient({
             description={stockCopy.empty.firstLoadHint}
             symbol="riceGrain"
           >
-            {canCreatePurchaseOrder ? (
+            {canCreateGrn ? (
               <Button asChild size="touch">
-                <Link href={`/br/${branchId}/stock/purchase-orders/new`}>
-                  <IconShoppingCart />
-                  {stockCopy.actions.purchaseSuggestion}
+                <Link href={`/br/${branchId}/stock/grn/new`}>
+                  <IconTruck />
+                  {stockCopy.actions.receiveGrn}
                 </Link>
               </Button>
             ) : null}

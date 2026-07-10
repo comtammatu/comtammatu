@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { FormField } from "@/components/form";
+import { FormField } from "@/components/form/form-field";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import {
   AppEmptyState,

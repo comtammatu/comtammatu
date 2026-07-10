@@ -1,22 +1,29 @@
 import { notFound } from "next/navigation";
-import { CountAssignmentsPageContent } from "@/(protected)/inventory/count-assignments/page";
+import { loadBranchCountAssignmentData } from "@lib/inventory/branch-count-assignment-data";
+import { BranchCountAssignmentsClient } from "./branch-count-assignments-client";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
+  searchParams: Promise<{
+    locationId?: string | string[];
+    shiftId?: string | string[];
+  }>;
 }
 
 export default async function OperatorCountAssignmentsPage({
   params,
+  searchParams,
 }: PageProps) {
   const { branchId: rawBranchId } = await params;
+  const query = await searchParams;
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  return (
-    <CountAssignmentsPageContent
-      routeBranchId={branchId}
-      basePath={`/br/${branchId}/stock/count-assignments`}
-      embedded
-    />
-  );
+  const data = await loadBranchCountAssignmentData({
+    routeBranchId: branchId,
+    locationParam: query.locationId,
+    shiftParam: query.shiftId,
+  });
+
+  return <BranchCountAssignmentsClient data={data} />;
 }

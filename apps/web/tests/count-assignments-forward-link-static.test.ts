@@ -7,20 +7,30 @@ const source = readFileSync(
   "utf8",
 );
 
-test("count assignments links managers into the branch counting surface", () => {
+const branchSource = readFileSync(
+  "app/(protected)/br/[branchId]/(operator)/stock/count-assignments/branch-count-assignments-client.tsx",
+  "utf8",
+);
+
+test("count assignments keep manager follow-up links inside their own plane", () => {
   assert.match(
-    source,
-    /const href = `\/br\/\$\{branchId\}\/stock\/count`;/,
-    "count assignment forward link must stay branch-scoped",
+    branchSource,
+    /href=\{`\/br\/\$\{data\.branchId\}\/stock\/count-slips`\}/,
+    "branch count assignment follow-up must link to the branch count-slip review surface",
   );
-  assert.match(
+  assert.doesNotMatch(
+    branchSource,
+    /\/inventory\/count-slips/,
+    "branch count assignment follow-up should not leave the branch operator shell",
+  );
+  assert.doesNotMatch(
     source,
-    /\?location=\$\{locationId\}/,
-    "count assignment forward link must preserve the selected count location",
+    /`\/br\/\$\{/,
+    "office count assignment client should not hardcode branch operator shell paths",
   );
   assert.doesNotMatch(
     source,
     /\/employee\/count/,
-    "manager forward link should not leave the branch operator shell",
+    "manager follow-up link should not target the retired employee route family",
   );
 });

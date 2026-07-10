@@ -39,6 +39,11 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { messages } from "@lib/messages";
+import {
+  getLeaveRequestEmployeeName,
+  type LeaveRequestRow,
+} from "@lib/hr/leave-request-model";
+import { countInclusiveDays } from "@lib/hr/payroll-day-math";
 import { StatusBadge } from "@/components/status-badge";
 import { AppEmptyState } from "@/components/surface";
 import { FormDialog, TextareaField } from "@/components/form";
@@ -52,36 +57,7 @@ import {
   fetchLeaveRequests,
   rejectLeaveRequest,
 } from "./leave-request-actions";
-import { countInclusiveDays } from "./payroll-day-math";
 import type { BranchOption } from "./_types";
-
-type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
-type LeaveType = "annual" | "sick" | "unpaid" | "personal" | "other";
-
-interface LeaveRequestRow {
-  id: number;
-  status: LeaveStatus;
-  start_date: string;
-  end_date: string;
-  leave_type: LeaveType;
-  reason: string | null;
-  rejected_reason: string | null;
-  created_at: string;
-  reviewed_at: string | null;
-  branch_id: number;
-  employees: {
-    id: number;
-    employee_code: string | null;
-    start_date: string | null;
-    profiles: { full_name: string } | null;
-  } | null;
-  annual_leave_balance: {
-    year: number;
-    entitlementDays: number;
-    usedDays: number;
-    remainingDays: number;
-  } | null;
-}
 
 interface LeaveRequestsTableProps {
   branches: BranchOption[];
@@ -101,11 +77,7 @@ function formatDateRange(startDate: string, endDate: string): string {
 }
 
 function getEmployeeName(request: LeaveRequestRow): string {
-  return (
-    request.employees?.profiles?.full_name ??
-    request.employees?.employee_code ??
-    copy.fallbackEmployee
-  );
+  return getLeaveRequestEmployeeName(request, copy.fallbackEmployee);
 }
 
 export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {

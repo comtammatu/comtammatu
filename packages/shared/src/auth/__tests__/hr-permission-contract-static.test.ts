@@ -297,8 +297,9 @@ test("retired employee route has no standalone module ACL key", () => {
 test("HR imports the shared staff runtime, not the retired employee runtime", () => {
   const hrFiles = [
     "apps/web/app/(protected)/hr/actions.ts",
-    "apps/web/app/(protected)/hr/payroll-day-math.ts",
-    "apps/web/app/(protected)/hr/leave-approvals-page-content.tsx",
+    "apps/web/lib/hr/payroll-day-math.ts",
+    "apps/web/lib/hr/leave-request-data.ts",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
   ];
 
   assert.equal(existsSync(resolve(repoRoot, "apps/web/lib/employee")), false);
@@ -316,12 +317,14 @@ test("HR imports the shared staff runtime, not the retired employee runtime", ()
     /@lib\/staff-runtime\/_lib\/workday-math/,
   );
   assert.match(
-    read("apps/web/app/(protected)/hr/payroll-day-math.ts"),
+    read("apps/web/lib/hr/payroll-day-math.ts"),
     /@lib\/staff-runtime\/_lib\/workday-math/,
   );
   assert.match(
-    read("apps/web/app/(protected)/hr/leave-approvals-page-content.tsx"),
-    /@lib\/staff-runtime\/components\/staff-runtime-page/,
+    read(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
+    ),
+    /@lib\/branch-operator\/components\/branch-operator-page/,
   );
 });
 

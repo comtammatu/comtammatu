@@ -6,6 +6,8 @@ import { E2E_AUTH_STORAGE_OWNER } from "../playwright.config";
 test.use({ storageState: E2E_AUTH_STORAGE_OWNER });
 
 const MOBILE = { width: 390, height: 844 };
+const TABLET_PORTRAIT = { width: 768, height: 1024 };
+const TABLET_LANDSCAPE = { width: 1024, height: 768 };
 const DESKTOP = { width: 1440, height: 900 };
 
 const OFFICE_PREFIXES = [
@@ -127,10 +129,7 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}/pos-sessions`,
       `/br/${branchId}/stock`,
       `/br/${branchId}/stock/issues`,
-      `/br/${branchId}/stock/purchase-orders`,
-      `/br/${branchId}/stock/purchase-orders/new`,
       `/br/${branchId}/stock/reports`,
-      `/br/${branchId}/stock/receive`,
       `/br/${branchId}/stock/transfer`,
       `/br/${branchId}/stock/transfer/new`,
       `/br/${branchId}/stock/count`,
@@ -146,6 +145,11 @@ test.describe("branch route shell ownership", () => {
         expectedBottomNavCurrentCount(path, branchId),
       );
     }
+
+    await page.goto(`/br/${branchId}/stock/receive`);
+    await expect(page).toHaveURL(
+      `/br/${branchId}/stock/transfer?queue=receive`,
+    );
 
     expect(health.consoleErrors).toEqual([]);
     expect(health.pageErrors).toEqual([]);
@@ -183,6 +187,67 @@ test.describe("branch route shell ownership", () => {
       await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(
         expectedBottomNavCurrentCount(path, branchId),
       );
+    }
+
+    expect(health.consoleErrors).toEqual([]);
+    expect(health.pageErrors).toEqual([]);
+    expect(health.serverErrors).toEqual([]);
+  });
+
+  test("native review queues keep one Branch touch IA across phone and tablet", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    const { branchId } = await getCashierProfile();
+    const health = watchPageHealth(page);
+    const paths = [
+      `/br/${branchId}/stock/consumption`,
+      `/br/${branchId}/stock/count-assignments`,
+      `/br/${branchId}/stock/count-slips`,
+      `/br/${branchId}/shift/leave-approvals`,
+    ];
+
+    for (const viewport of [MOBILE, TABLET_PORTRAIT, TABLET_LANDSCAPE]) {
+      await page.setViewportSize(viewport);
+      for (const path of paths) {
+        await expectHealthyRoute(page, path);
+        const operatorNav = page.getByRole("navigation", {
+          name: APP_COPY_VI.operatorAriaLabel,
+        });
+        await expect(operatorNav).toBeVisible();
+        await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(
+          expectedBottomNavCurrentCount(path, branchId),
+        );
+      }
+    }
+
+    expect(health.consoleErrors).toEqual([]);
+    expect(health.pageErrors).toEqual([]);
+    expect(health.serverErrors).toEqual([]);
+  });
+
+  test("Office count management keeps desktop tables", async ({ page }) => {
+    test.setTimeout(90_000);
+    const { branchId } = await getCashierProfile();
+    const health = watchPageHealth(page);
+    await page.setViewportSize(DESKTOP);
+
+    for (const path of [
+      `/inventory/count-assignments?branchId=${branchId}`,
+      "/inventory/count-slips",
+    ]) {
+      await page.goto(path, { waitUntil: "domcontentloaded" });
+      await page.waitForLoadState("load");
+      await page.waitForTimeout(800);
+      await expect(page.locator("table").first()).toBeVisible();
+      const overflowX = await page.evaluate(
+        () =>
+          Math.max(
+            document.documentElement.scrollWidth,
+            document.body.scrollWidth,
+          ) - window.innerWidth,
+      );
+      expect(overflowX).toBeLessThanOrEqual(2);
     }
 
     expect(health.consoleErrors).toEqual([]);

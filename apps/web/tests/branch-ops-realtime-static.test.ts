@@ -43,8 +43,11 @@ const hubTodayStatus = readFileSync(
   "utf8",
 );
 
-const leaveRequestsTable = readFileSync(
-  new URL("../app/(protected)/hr/leave-requests-table.tsx", import.meta.url),
+const branchLeaveApprovals = readFileSync(
+  new URL(
+    "../app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
+    import.meta.url,
+  ),
   "utf8",
 );
 
@@ -126,12 +129,12 @@ test("operator layout owns the branch ops subscriber without child duplicates", 
   assert.doesNotMatch(hubTodayStatus, /<BranchOpsRefresh/);
 });
 
-test("operator leave approvals uses the table subscriber without layout duplication", () => {
+test("operator leave approvals owns its realtime subscriber without layout duplication", () => {
   assert.match(
     operatorLayout,
     /disabledPathPrefixes=\{\[\s*`\/br\/\$\{context\.branchId\}\/shift\/leave-approvals`,?\s*\]\}/,
   );
-  assert.match(leaveRequestsTable, /useBranchOpsEvents\(\{/);
+  assert.match(branchLeaveApprovals, /useBranchOpsEvents\(\{/);
 });
 
 test("DB trigger broadcasts to the matching topic/event on a private channel", () => {

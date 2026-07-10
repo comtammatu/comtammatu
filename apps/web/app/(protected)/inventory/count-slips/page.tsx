@@ -2,12 +2,12 @@ import { redirect } from "next/navigation";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
+import { CountSlipsClient } from "./count-slips-client";
 import {
-  CountSlipsClient,
+  buildCountSlipLineView,
   type CountSlipRow,
   type CountSlipStatus,
-} from "./count-slips-client";
-import { buildCountSlipLineView } from "./line-view-model";
+} from "@lib/inventory/count-slip-model";
 
 export const dynamic = "force-dynamic";
 
@@ -53,12 +53,6 @@ function employeeName(value: unknown): string | null {
   return typeof fullName === "string" ? fullName : null;
 }
 
-interface CountSlipsPageContentProps {
-  routeBranchId?: number;
-  embedded?: boolean;
-  basePath?: string;
-}
-
 interface CountSlipQueryLine {
   id: number;
   ingredient_id: number;
@@ -84,11 +78,7 @@ function unitKey(ingredientId: number, unitId: number): string {
   return `${ingredientId}:${unitId}`;
 }
 
-export async function CountSlipsPageContent({
-  routeBranchId,
-  embedded = false,
-  basePath = "/inventory/count-slips",
-}: CountSlipsPageContentProps = {}) {
+export async function CountSlipsPageContent() {
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
@@ -98,7 +88,7 @@ export async function CountSlipsPageContent({
 
   // RLS limits these rows to branches where the manager holds
   // `inventory:count_approve`; the employee-facing RLS hides system quantity.
-  let slipsQuery = supabase
+  const { data: slips } = await supabase
     .from("inventory_count_slips")
     .select(
       `
@@ -133,15 +123,8 @@ export async function CountSlipsPageContent({
     `,
     )
     .eq("tenant_id", claims.tenant_id)
-    .in("status", REVIEW_STATES);
-
-  if (routeBranchId !== undefined) {
-    slipsQuery = slipsQuery.eq("branch_id", routeBranchId);
-  }
-
-  const { data: slips } = await slipsQuery.order("submitted_at", {
-    ascending: false,
-  });
+    .in("status", REVIEW_STATES)
+    .order("submitted_at", { ascending: false });
 
   const slipRows = slips ?? [];
   const employeeIds = [
@@ -260,14 +243,7 @@ export async function CountSlipsPageContent({
     };
   });
 
-  return (
-    <CountSlipsClient
-      initial={rows}
-      branchScoped={routeBranchId != null}
-      embedded={embedded}
-      basePath={basePath}
-    />
-  );
+  return <CountSlipsClient initial={rows} />;
 }
 
 export default async function CountSlipsPage() {

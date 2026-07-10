@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { IssueDetailPageContent } from "@/(protected)/inventory/issues/[id]/page";
+import { loadBranchStockIssueDetailData } from "@lib/inventory/branch-stock-issue-data";
+import { BranchStockIssueDetailClient } from "../../issues/[id]/branch-stock-issue-detail-client";
 
 interface PageProps {
   params: Promise<{ branchId: string; id: string }>;
@@ -20,12 +21,18 @@ export default async function OperatorStockConsumptionDetailPage({
     notFound();
   }
 
+  const data = await loadBranchStockIssueDetailData(
+    issueId,
+    branchId,
+    "consumption",
+  );
+  const stockBasePath = `/br/${branchId}/stock`;
+
   return (
-    <IssueDetailPageContent
-      issueId={issueId}
-      routeBranchId={branchId}
-      listBasePath={`/br/${branchId}/stock/consumption`}
-      embedded
+    <BranchStockIssueDetailClient
+      data={data}
+      stockBasePath={stockBasePath}
+      listBasePath={`${stockBasePath}/consumption`}
     />
   );
 }

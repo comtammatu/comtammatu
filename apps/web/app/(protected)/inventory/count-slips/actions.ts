@@ -40,7 +40,14 @@ export async function approveCountSlip(
     PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
   );
   if (!ctx) return { success: false, error: "Không có quyền duyệt phiếu đếm" };
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+  const { data: slip } = await supabase
+    .from("inventory_count_slips")
+    .select("branch_id")
+    .eq("id", parsed.data.slipId)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+  if (!slip) return { success: false, error: "Không tìm thấy phiếu đếm." };
 
   const { data, error } = await supabase.rpc("approve_inventory_count_slip", {
     p_slip_id: parsed.data.slipId,
@@ -52,6 +59,7 @@ export async function approveCountSlip(
 
   const raw = (data ?? {}) as Record<string, unknown>;
   revalidatePath("/inventory/count-slips");
+  revalidatePath(`/br/${slip.branch_id}/stock/count-slips`);
 
   return {
     success: true,
@@ -89,7 +97,14 @@ export async function requestCountRecount(
     PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
   );
   if (!ctx) return { success: false, error: "Không có quyền duyệt phiếu đếm" };
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+  const { data: slip } = await supabase
+    .from("inventory_count_slips")
+    .select("branch_id")
+    .eq("id", parsed.data.slipId)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+  if (!slip) return { success: false, error: "Không tìm thấy phiếu đếm." };
 
   const { error } = await supabase.rpc("request_inventory_count_recount", {
     p_slip_id: parsed.data.slipId,
@@ -101,6 +116,7 @@ export async function requestCountRecount(
   }
 
   revalidatePath("/inventory/count-slips");
+  revalidatePath(`/br/${slip.branch_id}/stock/count-slips`);
   return { success: true };
 }
 

@@ -129,7 +129,6 @@ export async function loadStockOnHandPageData({
     canCreateTransfer,
     canCreateStocktake,
     canWriteoff,
-    canCreatePurchaseOrder,
     canAdjustException,
   ] = await Promise.all([
     fetchIngredients(),
@@ -176,7 +175,6 @@ export async function loadStockOnHandPageData({
       PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
     ),
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITEOFF),
-    currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_PO_CREATE),
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITE),
   ]);
 
@@ -346,7 +344,6 @@ export async function loadStockOnHandPageData({
     canCreateTransfer,
     canCreateStocktake,
     canWriteoff,
-    canCreatePurchaseOrder,
     canAdjustException,
   };
 

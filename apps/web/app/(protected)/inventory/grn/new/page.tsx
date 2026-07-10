@@ -1,7 +1,4 @@
-import {
-  ClipboardList as IconClipboardList,
-  Truck as IconTruck,
-} from "lucide-react";
+import { Truck as IconTruck } from "lucide-react";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   AppBackLink,
@@ -12,9 +9,7 @@ import {
 } from "@/components/surface";
 import { loadGrnSourcePageData } from "@lib/inventory/grn-source-data";
 import { parseGrnSupplierIdParam } from "@lib/inventory/grn-source-model";
-import { messages } from "@lib/messages";
 import { GrnCreatePageContent } from "./[supplierId]/page";
-import { GrnFromPoList } from "./grn-from-po-list";
 import { SupplierPicker } from "./supplier-picker";
 
 interface GrnNewPageProps {
@@ -41,54 +36,26 @@ export async function GrnNewPageContent({ searchParams }: GrnNewPageProps) {
     queryBranchId: params.branchId,
   });
   const content = (
-    <>
-      <AppSection
-        icon={<IconTruck />}
-        title={INVENTORY_VI.receiveBySupplierTitle}
-        description={INVENTORY_VI.receiveBySupplierDescription}
-      >
-        {data.suppliersLoadFailed ? (
-          <AppEmptyState
-            compact
-            mode="error"
-            title={INVENTORY_VI.grnSupplierLoadFailed}
-          />
-        ) : (
-          <SupplierPicker
-            suppliers={data.suppliers}
-            basePath="/inventory/grn/new"
-            branchId={data.branchId}
-            canCreate={data.canCreateSupplier}
-          />
-        )}
-      </AppSection>
-
-      {data.openPurchaseOrdersLoadFailed ||
-      data.openPurchaseOrders.length > 0 ? (
-        <AppSection
-          icon={<IconClipboardList />}
-          title={INVENTORY_VI.receiveByPoTitle}
-          badge={
-            data.openPurchaseOrdersLoadFailed
-              ? undefined
-              : {
-                  children: data.openPurchaseOrders.length,
-                  variant: "secondary",
-                }
-          }
-        >
-          {data.openPurchaseOrdersLoadFailed ? (
-            <AppEmptyState
-              compact
-              mode="error"
-              title={messages.inventory.po.receivingLoadFailed}
-            />
-          ) : (
-            <GrnFromPoList openPos={data.openPurchaseOrders} />
-          )}
-        </AppSection>
-      ) : null}
-    </>
+    <AppSection
+      icon={<IconTruck />}
+      title={INVENTORY_VI.receiveBySupplierTitle}
+      description={INVENTORY_VI.receiveBySupplierDescription}
+    >
+      {data.suppliersLoadFailed ? (
+        <AppEmptyState
+          compact
+          mode="error"
+          title={INVENTORY_VI.grnSupplierLoadFailed}
+        />
+      ) : (
+        <SupplierPicker
+          suppliers={data.suppliers}
+          basePath="/inventory/grn/new"
+          branchId={data.branchId}
+          canCreate={data.canCreateSupplier}
+        />
+      )}
+    </AppSection>
   );
 
   return (

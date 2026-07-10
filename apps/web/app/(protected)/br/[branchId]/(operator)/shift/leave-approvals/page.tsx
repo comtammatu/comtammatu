@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { LeaveApprovalsPageContent } from "@/(protected)/hr/leave-approvals-page-content";
+import { loadBranchLeaveApprovalData } from "@lib/hr/branch-leave-approval-data";
+import { BranchLeaveApprovalsClient } from "./branch-leave-approvals-client";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
@@ -12,5 +13,15 @@ export default async function OperatorLeaveApprovalsPage({
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  return <LeaveApprovalsPageContent routeBranchId={branchId} hideHeaderOnMobile />;
+  const data = await loadBranchLeaveApprovalData(branchId);
+
+  return (
+    <BranchLeaveApprovalsClient
+      branchId={data.branchId}
+      branchName={data.branchName}
+      canApprove={data.canApprove}
+      initialRows={data.rows}
+      loadFailed={data.loadFailed}
+    />
+  );
 }

@@ -174,10 +174,16 @@ không gọi trực tiếp vocabulary Employee ở các route Branch:
   `AppShell`, `OfficeModuleShell`, `FinanceShell`, hoặc `InventoryShell`.
 - màn chi tiết giữ một primary action trong panel chính, không đặt CTA vận hành
   vào page header.
-- branch wrapper chỉ đổi href/scope sang `/br/[branchId]/*`; không hồi sinh
-  `/employee/*` compatibility routes và không fork lại layout.
+- staff-runtime wrapper chỉ đổi href/scope sang `/br/[branchId]/*`; workflow
+  quản lý Branch phải sở hữu presenter touch-native và chỉ chia sẻ
+  loader/model/action với Office. Không hồi sinh `/employee/*` compatibility
+  routes.
 - copy hiển thị sống trong `messages.employee.*`, `APP_COPY_VI`, hoặc registry
   domain tương ứng; route/component không hardcode copy vận hành mới.
+- `/br/[branchId]/shift/leave-approvals` là Branch-native touch `LIST`: tab
+  trạng thái + full-row items để quét nhanh, chi tiết và approve/reject nằm
+  trong bottom `Sheet` có action sticky. Office giữ `LeaveRequestsTable`;
+  Branch không import bảng hoặc page presenter HR Office.
 
 Branch stock workflow áp dụng cùng ranh giới này:
 
@@ -204,13 +210,13 @@ Branch stock workflow áp dụng cùng ranh giới này:
 - `/br/[branchId]/stock/grn` là Branch-native touch `LIST`: dùng shared
   `loadGrnListPageData` + pure filter model, hiển thị nháp của người đang thao
   tác trước hàng đợi GRN, và giữ bỏ nháp là action có xác nhận. Danh sách Branch
-  chỉ giữ mã phiếu, NCC, ngày, trạng thái và PO liên kết; không hiển thị tổng
+  chỉ giữ mã phiếu, NCC, ngày và trạng thái; không hiển thị tổng
   tiền/tên chi nhánh, không dùng `DataTable` hoặc long-press, và không đổi sang
   Office presentation tại tablet landscape.
 - `/br/[branchId]/stock/grn/new` là Branch-native touch `LIST` cho bước chọn
   nguồn: dùng shared `loadGrnSourcePageData` + pure source model, có tìm NCC,
-  tạo NCC khi được cấp quyền, và mở PO chờ nhận bằng full-row touch action.
-  Supplier entry canonical tại `/br/[branchId]/stock/grn/new/[supplierId]`; màn
+  tạo NCC khi được cấp quyền, và không còn cửa PO. Supplier entry canonical tại
+  `/br/[branchId]/stock/grn/new/[supplierId]`; màn
   source không render `DocumentFormFrame`, `DataTable`, hoặc Office picker.
 - `/br/[branchId]/stock/grn/new/[supplierId]` là Branch-native touch
   `DOC-WORKFLOW`: dùng shared `loadGrnCreatePageData`,
@@ -258,6 +264,21 @@ Branch stock workflow áp dụng cùng ranh giới này:
   Server Action/RPC hiện có. Phiếu đã xác nhận/hủy chỉ đọc. Không đưa WAC, tổng
   giá trị, audit history, `DocumentStockCorrectionDialog`, Office detail client,
   hay branch/source picker vào Branch.
+- `/br/[branchId]/stock/consumption` là Branch-native touch `LIST`: segmented
+  view tách ledger tiêu hao đã ghi khỏi chứng từ thủ công, row giữ nguồn,
+  trạng thái và thời điểm. `/stock/consumption/[id]` là typed `DETAIL` chỉ nhận
+  record tiêu hao; cả hai route dùng Branch presenter và không import Office
+  `DataTable`/page content.
+- `/br/[branchId]/stock/count-assignments` và `/stock/count-slips` là hai
+  Branch-native touch `LIST`: assignment nhóm theo nhân viên; review slip mở
+  chênh lệch và approve/request-recount trong bottom `Sheet` với footer sticky.
+  Không có CTA mở nhầm phiếu đếm cá nhân của quản lý, không nhận
+  `routeBranchId`/`embedded` từ Office clients.
+- Office `/inventory/count-assignments` và `/inventory/count-slips` là hai
+  management `LIST` responsive độc lập: desktop dùng `DataTable`, thao tác hiển
+  thị bằng nút và mở `AppDialog`; mobile fallback chỉ là card responsive của
+  cùng table adapter. Office không dùng swipe, long-press, `Drawer`, `Sheet` hay
+  presenter Branch.
 - `/br/[branchId]/stock/waste` là Branch-native touch `DOC-WORKFLOW`: URL khóa
   chi nhánh, màn chính giữ location/cap và `ItemGroup` của các dòng đã chọn;
   điện thoại sửa một dòng trong bottom `Sheet`, tablet chỉ mở rộng thành hai
@@ -271,20 +292,10 @@ Branch stock workflow áp dụng cùng ranh giới này:
   four-eye rule và xác nhận mutation; phiếu tự tạo chỉ đọc. Không import
   `WasteApprovalsPageContent`, `WasteApprovalsClient`, `DocumentFormFrame`,
   `DataTable`, hoặc chrome Office.
-- `/br/[branchId]/stock/supplier-returns` là Branch-native touch `LIST`: dùng
-  shared Branch loader/model để chỉ hiển thị mã phiếu, NCC, GRN gốc, ngày và
-  trạng thái của đúng chi nhánh URL. Tạo mới chỉ mở cho quyền tạo phiếu; không
-  đưa branch picker, `DataTable`, tổng giá trị, export, audit, hoặc chrome Office
-  vào list điện thoại/tablet.
-- `/br/[branchId]/stock/supplier-returns/new` là Branch-native
-  `DOC-WORKFLOW`: chỉ chọn GRN có dòng bị từ chối, cách xử lý, lý do và ghi chú,
-  rồi gọi RPC/Server Action hiện có để tự sao chép các dòng trả. URL khóa branch;
-  không dùng `DocumentFormFrame`, source picker Office, hay giá trị tiền.
-- `/br/[branchId]/stock/supplier-returns/[id]` là Branch-native touch `DETAIL`:
-  ưu tiên dòng hàng, NCC/GRN gốc, lý do, cách xử lý và trạng thái; gửi NCC,
-  ghi có/hoàn tiền/hủy vẫn gọi state machine hiện có qua `AppDetailFooter` và
-  xác nhận an toàn. Terminal record chỉ đọc. Audit, tổng giá trị, accounting
-  credit-note detail và Office detail presenter thuộc `/inventory/supplier-returns`.
+- Purchase orders và supplier returns đã rút khỏi UI hằng ngày ở cả Branch và
+  Office theo D073. GRN supplier-first; hàng NCC bị từ chối đi qua Báo hao hụt.
+  DB/RPC/history và integrity gate của chứng từ cũ vẫn được giữ, nhưng không có
+  nav, route mutation hay presenter để tạo mới.
 - `/br/[branchId]/stock/reports` là Branch-native touch `REPORT`: cố định đúng
   chi nhánh URL và tháng hiện tại, ưu tiên chênh lệch tiêu hao warning/critical
   rồi biến động của từng nguyên liệu có drill-in vào tồn thực. Mỗi số lượng luôn
@@ -580,7 +591,7 @@ thêm primitive/wrapper mới.
 | Need                          | Use                                                                        | Fallback                                                                 | Forbidden                                                         | Exemplar                             |
 | ----------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------- | ------------------------------------ |
 | List / searchable table       | `DataTable`                                                                | `TableEmptyStateRow` trong table đã có sẵn                               | raw `Table`, double mobile/desktop JSX tree                       | inventory GRN, HR list               |
-| Detail / record review        | `AppPage` + `AppPageHeader` + `AppSection` + `DescriptionList`             | route-scoped detail adapter delegate về surface components               | page-local card grid tự style                                     | inventory PO detail                  |
+| Detail / record review        | `AppPage` + `AppPageHeader` + `AppSection` + `DescriptionList`             | route-scoped detail adapter delegate về surface components               | page-local card grid tự style                                     | inventory GRN detail                 |
 | Document workflow / line form | `DocumentFormFrame`                                                        | `AppPage` + sticky `AppDetailFooter` nếu không phải document             | hand-rolled document shell, fixed footer tự do                    | GRN create, production run           |
 | Form field                    | `Field` / `FieldGroup` + shared form controls                              | route field wrapper delegate về `Field`                                  | raw label/input spacing, missing `name` / label                   | shared form components               |
 | Form dialog / CRUD            | `FormDialog`                                                               | Sheet/Page cho flow dài hoặc nhiều line                                  | raw `Dialog` + `useForm` + `zodResolver`                          | HR employee dialog                   |
@@ -640,7 +651,7 @@ Layer adapter app-level duy nhất cho pattern lặp lại.
 | `LinkCardGrid`            | Grid responsive (1/2/3 cột) bọc `AppLinkCard`                                        | § Component Authority                                                 | Danh sách các LinkCard                                  |                                                  |
 | `KpiRow`                  | Grid responsive (1/2/3 cột) bọc `KpiCard`                                            | § Component Authority + § Metric Card Role                            | Thể hiện một dãy các chỉ số KPI                         |                                                  |
 | `DescriptionList`         | `<dl>` term/description cho trang chi tiết                                           | § Component Authority                                                 | Hiển thị các cặp nhãn-giá trị (vd: thông tin KH)        |                                                  |
-| `DocumentFormFrame`       | Khung trang document/line-form (header + body cuộn + footer), compose AppPage        | § Component Authority — page-section adapter, không phải chrome shell | Các trang tạo chứng từ có nhiều line (PO, GRN, Kiểm kê) |                                                  |
+| `DocumentFormFrame`       | Khung trang document/line-form (header + body cuộn + footer), compose AppPage        | § Component Authority — page-section adapter, không phải chrome shell | Các trang tạo chứng từ có nhiều line (GRN, transfer, Kiểm kê) |                                                  |
 | `AppDetailFooter`         | Hàng footer leading/trailing ở trang chi tiết                                        | § Component Authority                                                 | Action bar dưới cùng trang chi tiết (thường sticky)     |                                                  |
 | `OperationalTile`         | Tile chọn được (Button-based) với tone + selected ring                               | § Card Roles; § Rhythm D `tile` size                                  | Nút bấm to như viên gạch (chọn khu vực, chọn bàn)       |                                                  |
 | `OperationalBoardCard`    | Card board POS/KDS/runner, ring tone `current`                                       | § Card Roles + § Elevation Hover rung                                 | Card hiển thị món/đơn trên KDS hoặc POS                 |                                                  |
@@ -785,7 +796,7 @@ Schema: luôn dùng Zod 4 với `{ error: "..." }` (không dùng `{ message }`).
 
 ### Form Mode Decision
 
-- Dùng RHF + Zod khi form có line array, hơn 4 field, cần inline validation trước submit, hoặc cần pending/dirty submit UX. PO, GRN, transfer lines, stocktake, adjustment, và production forms thuộc nhóm này.
+- Dùng RHF + Zod khi form có line array, hơn 4 field, cần inline validation trước submit, hoặc cần pending/dirty submit UX. GRN, transfer lines, stocktake, adjustment, và production forms thuộc nhóm này.
 - Dùng plain `<form action>` cho login, sign out, và single-reason confirm đơn giản khi state đã reload qua redirect.
 - Shared schema cần import cả client và server thì đặt tại `packages/shared/src/forms/<name>.ts`; schema chỉ dùng nội bộ route có thể đặt gần route.
 - Validation field-level hiển thị inline. Business error không map được field thì hiển thị toast/action message an toàn, không expose raw Supabase/Postgres error.

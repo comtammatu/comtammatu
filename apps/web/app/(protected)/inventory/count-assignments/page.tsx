@@ -7,11 +7,11 @@ import { parseBranchIdParam } from "@/_lib/branch-context";
 import { resolveDefaultShiftId } from "@lib/staff-runtime/_lib/default-shift";
 import { CountAssignmentsClient } from "./count-assignments-client";
 import type {
-  EmployeeRow,
-  IngredientOption,
-  LocationOption,
-  ShiftOption,
-} from "./count-assignments-client";
+  CountAssignmentEmployee as EmployeeRow,
+  CountAssignmentIngredient as IngredientOption,
+  CountAssignmentLocation as LocationOption,
+  CountAssignmentShift as ShiftOption,
+} from "@lib/inventory/count-assignment-model";
 
 export const dynamic = "force-dynamic";
 
@@ -23,9 +23,6 @@ interface CountAssignmentsPageContentProps {
     locationId?: string | string[];
     shiftId?: string | string[];
   }>;
-  routeBranchId?: number;
-  basePath?: string;
-  embedded?: boolean;
 }
 
 type IngredientCountOptionRow = {
@@ -48,23 +45,18 @@ function countLocationLabel(
 
 export async function CountAssignmentsPageContent({
   searchParams,
-  routeBranchId,
-  basePath = "/inventory/count-assignments",
-  embedded = false,
 }: CountAssignmentsPageContentProps) {
   const params = searchParams ? await searchParams : {};
 
   const ctx = await getAuthContextWithPermission(
     INVENTORY_OPS_ROLES,
     PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
-    routeBranchId,
   );
   if (!ctx) redirect("/");
   const { supabase, claims } = ctx;
   const rosterClient = createServiceClient();
 
   const scope = await resolveInventoryListScope(supabase, claims, {
-    routeBranchId,
     queryBranchId: params.branchId,
   });
 
@@ -159,7 +151,9 @@ export async function CountAssignmentsPageContent({
       console.error("inventory.count_assignments.profiles_fetch_failed", {
         code: profilesRes.error.code,
       });
-      throw new Error("Không đọc được danh sách nhân viên để phân công đếm tồn.");
+      throw new Error(
+        "Không đọc được danh sách nhân viên để phân công đếm tồn.",
+      );
     }
 
     const profileIds = (profilesRes.data ?? []).map((profile) => profile.id);
@@ -177,7 +171,9 @@ export async function CountAssignmentsPageContent({
       console.error("inventory.count_assignments.employees_fetch_failed", {
         code: employeesRes.error.code,
       });
-      throw new Error("Không đọc được danh sách nhân viên để phân công đếm tồn.");
+      throw new Error(
+        "Không đọc được danh sách nhân viên để phân công đếm tồn.",
+      );
     }
 
     const employeeByProfileId = new Map(
@@ -210,7 +206,9 @@ export async function CountAssignmentsPageContent({
     console.error("inventory.count_assignments.ingredients_fetch_failed", {
       error: ingredientsRes.error.message,
     });
-    throw new Error("Không đọc được danh sách nguyên liệu để phân công đếm tồn.");
+    throw new Error(
+      "Không đọc được danh sách nguyên liệu để phân công đếm tồn.",
+    );
   }
   const ingredients: IngredientOption[] = (
     (ingredientsRes.data ?? []) as IngredientCountOptionRow[]
@@ -252,8 +250,6 @@ export async function CountAssignmentsPageContent({
       employees={employees}
       ingredients={ingredients}
       assignmentsByEmployee={assignmentsByEmployee}
-      basePath={basePath}
-      embedded={embedded}
     />
   );
 }

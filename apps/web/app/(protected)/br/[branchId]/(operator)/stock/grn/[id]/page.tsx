@@ -26,7 +26,6 @@ export default async function OperatorStockGrnDetailPage({
         canEditDraft={data.canEditDraft}
         canConfirm={data.canConfirm}
         grnListBasePath={grnListBasePath}
-        purchaseOrdersBasePath={`/br/${branchId}/stock/purchase-orders`}
       />
     );
   }

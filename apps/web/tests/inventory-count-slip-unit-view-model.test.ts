@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { buildCountSlipLineView } from "../app/(protected)/inventory/count-slips/line-view-model";
+import { buildCountSlipLineView } from "../lib/inventory/count-slip-model";
 
 test("count slip review keeps entry unit separate from base comparison", () => {
   const line = buildCountSlipLineView({
@@ -97,8 +97,14 @@ test("employee count UI previews the comparison unit before submission", () => {
   assert.match(clientSource, /Đơn vị tồn chuẩn/);
   assert.match(clientSource, /INVENTORY_VI\.conversionMissing/);
   assert.doesNotMatch(clientSource, /\.toLocaleString\("vi-VN"/);
-  assert.match(sharedInventoryMessages, /convertedColon: "Quy đổi về tồn chuẩn:"/);
-  assert.match(sharedInventoryMessages, /conversionMissing: "Chưa cấu hình quy đổi"/);
+  assert.match(
+    sharedInventoryMessages,
+    /convertedColon: "Quy đổi về tồn chuẩn:"/,
+  );
+  assert.match(
+    sharedInventoryMessages,
+    /conversionMissing: "Chưa cấu hình quy đổi"/,
+  );
   assert.match(clientSource, /Textarea/);
   assert.match(clientSource, /maxLength=\{500\}/);
   assert.match(clientSource, /selectedUnit\?\.code/);
@@ -109,7 +115,10 @@ test("employee count UI previews the comparison unit before submission", () => {
 
 test("stocktake count UI previews conversion to base unit before submission", () => {
   const pageSource = readFileSync(
-    join(process.cwd(), "app/(protected)/inventory/stocktake/[id]/count/page.tsx"),
+    join(
+      process.cwd(),
+      "app/(protected)/inventory/stocktake/[id]/count/page.tsx",
+    ),
     "utf8",
   );
   const clientSource = readFileSync(
@@ -143,8 +152,14 @@ test("stocktake count UI previews conversion to base unit before submission", ()
   assert.match(clientSource, /buildCountUnitPreview/);
   assert.match(clientSource, /INVENTORY_VI\.convertedColon/);
   assert.match(clientSource, /INVENTORY_VI\.conversionMissing/);
-  assert.match(sharedInventoryMessages, /convertedColon: "Quy đổi về tồn chuẩn:"/);
-  assert.match(sharedInventoryMessages, /conversionMissing: "Chưa cấu hình quy đổi"/);
+  assert.match(
+    sharedInventoryMessages,
+    /convertedColon: "Quy đổi về tồn chuẩn:"/,
+  );
+  assert.match(
+    sharedInventoryMessages,
+    /conversionMissing: "Chưa cấu hình quy đổi"/,
+  );
   assert.match(gridSource, /unitPreviewByIngredient/);
   assert.match(wizardSource, /unitPreviewByIngredient/);
 });

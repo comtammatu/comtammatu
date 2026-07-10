@@ -168,16 +168,11 @@ test("supplier returns are unique per active GRN", () => {
   const migration = readRoot(
     "supabase/migrations/20260708130500_inventory_supplier_integrity_gates.sql",
   );
-  const actionSource = readWeb(
-    "app/(protected)/inventory/supplier-return-actions.ts",
-  );
 
   assert.match(migration, /CREATE UNIQUE INDEX IF NOT EXISTS uq_supplier_returns_active_grn/);
   assert.match(migration, /ON public\.supplier_returns \(tenant_id, grn_id\)/);
   assert.match(migration, /status <> 'cancelled'/);
   assert.match(migration, /supplier_return_duplicate_grn/);
-  assert.match(actionSource, /PG_ERR\.UNIQUE_VIOLATION/);
-  assert.match(actionSource, /supplier_return_duplicate_grn/);
 });
 
 test("supplier invoice matching requires linked GRN evidence", () => {

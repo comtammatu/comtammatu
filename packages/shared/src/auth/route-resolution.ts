@@ -36,7 +36,6 @@ export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/reports",
   "/inventory/stock",
   "/inventory/stocktake",
-  "/inventory/supplier-returns",
   "/inventory/transfers",
   "/inventory/waste",
 ] as const;

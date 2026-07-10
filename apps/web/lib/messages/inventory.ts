@@ -401,7 +401,7 @@ export const inventory = {
       rejectPhotoRequired: (name: string) =>
         `${name}: phải đính kèm ảnh khi có hàng từ chối.`,
       rejectedExceedsDelivered: (name: string) =>
-        `${name}: số trả NCC không được vượt số đã giao.`,
+        `${name}: số lượng từ chối không được vượt số đã giao.`,
       shortageActionRequired: (name: string, tolerance: string) =>
         `${name}: thiếu hàng vượt ngưỡng ${tolerance} — phải chọn cách xử lý.`,
       priceReasonRequired: (name: string, variance: string) =>
@@ -488,7 +488,7 @@ export const inventory = {
         unit: string,
       ) =>
         rejected > 0
-          ? `${formatQuantity(ordered)} ${unit} đặt → ${formatQuantity(delivered)} ${unit} giao → Nhập kho ${formatQuantity(accepted)} ${unit} (trả ${formatQuantity(rejected)} ${unit})`
+          ? `${formatQuantity(ordered)} ${unit} đặt → ${formatQuantity(delivered)} ${unit} giao → Nhập kho ${formatQuantity(accepted)} ${unit} (từ chối ${formatQuantity(rejected)} ${unit})`
           : `${formatQuantity(ordered)} ${unit} đặt → ${formatQuantity(delivered)} ${unit} nhập kho`,
       importPrice: "Đơn giá nhập",
       poPrice: "Giá đơn mua",
@@ -501,7 +501,7 @@ export const inventory = {
       unsaved: "chưa lưu",
       deleteLineAria: "Xóa dòng",
       actualLabel: (unit: string) => `Số đã giao (${unit})`,
-      rejectedLabel: (unit: string) => `Trả NCC (${unit})`,
+      rejectedLabel: (unit: string) => `Từ chối nhận (${unit})`,
       unitCostCurrency: "Đơn giá nhập (₫)",
       rejectReasonRequired: "Lý do từ chối *",
       rejectReasonPlaceholder:
@@ -917,83 +917,6 @@ export const inventory = {
       "Giá vốn BQ tự áp dụng thành đơn giá ghi sổ tại thời điểm xác nhận phiếu.",
     reasonLabel: "Lý do xuất",
     reasonPlaceholder: "Ví dụ: cấp phát cho bếp chuẩn bị ca chiều",
-  },
-  supplierReturns: {
-    reasonLabels: {
-      damaged: "Hàng hỏng",
-      wrong_item: "Sai hàng",
-      expired: "Hết hạn",
-      quality_fail: "Không đạt chất lượng",
-      short_delivery_credit: "Thiếu hàng (ghi nhận)",
-      other: "Khác",
-    },
-    resolutionLabels: {
-      replacement: "Đổi hàng",
-      credit_note: "Ghi có",
-      cash_refund: "Hoàn tiền",
-    },
-    returnNumber: "Số phiếu",
-    viewDetail: "Chi tiết",
-    searchPlaceholder: "Tìm theo số phiếu, nhà cung cấp hoặc chi nhánh",
-    emptyFiltered: "Không tìm thấy phiếu trả hàng phù hợp",
-    emptyNoData: "Chưa có phiếu trả hàng NCC",
-    allStatuses: "Tất cả trạng thái",
-    statusLabels: {
-      draft: "Nháp",
-      sent: "Đã gửi",
-      credited: "Đã ghi có",
-      refunded: "Đã hoàn tiền",
-      cancelled: "Đã hủy",
-    },
-    branchQueueDescription:
-      "Theo dõi hàng trả từ các phiếu nhập bị từ chối của chi nhánh.",
-    loadFailed: "Không thể tải phiếu trả hàng NCC.",
-    resolutionLabel: "Xử lý",
-    linesTitle: "Dòng trả hàng",
-    emptyLines: "Chưa có dòng hàng",
-    create: {
-      eyebrow: "Trả hàng NCC",
-      title: "Tạo phiếu trả hàng",
-      description: "Chọn nguồn hàng cần trả, cách xử lý và lý do.",
-      grnPickerLabel: "Phiếu nhập có hàng bị từ chối",
-      grnPickerPlaceholder: "Chọn phiếu nhập",
-      grnPickerSearch: "Tìm số phiếu hoặc nhà cung cấp",
-      grnPickerEmpty: "Không có phiếu nhập nào có hàng bị từ chối.",
-      grnRejectedLines: (count: number) =>
-        `${formatCount(count)} dòng bị từ chối`,
-      grnAutoLinesHint:
-        "Các dòng bị từ chối trên phiếu nhập sẽ tự chuyển sang phiếu trả.",
-      resolutionLabel: "Cách xử lý",
-      reasonLabel: "Lý do",
-      notesLabel: "Ghi chú (tùy chọn)",
-      notesPlaceholder: "Ghi chú thêm cho phiếu trả...",
-      submitFromGrn: "Tạo phiếu trả từ phiếu nhập",
-      submitDisabledGrn: "Chọn phiếu nhập để tiếp tục",
-      createdOk: "Đã tạo phiếu trả hàng.",
-      createFailed: "Không thể tạo phiếu trả hàng.",
-      duplicateGrn: "Phiếu nhập này đã có phiếu trả đang xử lý.",
-      branchRequired: "Chưa xác định chi nhánh cho phiếu trả.",
-      grnLoadFailed: "Không thể tải phiếu nhập.",
-    },
-    detail: {
-      informationTitle: "Thông tin phiếu",
-      sourceGrnLabel: "Phiếu nhập gốc",
-      createdAtLabel: "Ngày tạo",
-      sentAtLabel: "Ngày gửi NCC",
-      lineCountLabel: "Số dòng",
-      confirmCta: "Xác nhận & gửi NCC",
-      confirmHint: "Chuyển phiếu sang trạng thái đã gửi cho nhà cung cấp.",
-      confirmingState: "Đang xác nhận...",
-      confirmedOk: "Đã gửi phiếu trả cho NCC.",
-      creditCta: "Ghi có",
-      refundCta: "Xác nhận hoàn tiền",
-      cancelCta: "Hủy phiếu",
-      cancelConfirmTitle: "Hủy phiếu trả này?",
-      cancelConfirmBody: "Phiếu sẽ chuyển sang trạng thái đã hủy.",
-      transitionedOk: "Đã cập nhật phiếu trả.",
-      actionFailed: "Không thể cập nhật phiếu trả.",
-      linesLoadFailed: "Không thể tải dòng phiếu trả hàng.",
-    },
   },
   reports: {
     pageTitle: "Báo cáo",

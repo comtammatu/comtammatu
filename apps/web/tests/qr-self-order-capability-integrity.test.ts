@@ -13,6 +13,15 @@ const migration = readFileSync(
   "utf8",
 );
 
+const rpcOnlyGrantMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../..",
+    "supabase/migrations/20260710084328_self_order_rpc_only_table_grants.sql",
+  ),
+  "utf8",
+);
+
 function functionBody(name: string, nextName: string): string {
   const start = migration.indexOf(`CREATE OR REPLACE FUNCTION public.${name}`);
   const end = migration.indexOf(
@@ -86,6 +95,14 @@ test("v2 rollout is additive, table-scoped, and defaults every table to version 
     /self_order_guard_capability_version_change[\s\S]*pg_try_advisory_xact_lock/,
   );
   assert.match(migration, /set_config\(\s*'app\.self_order_capability_flip'/);
+});
+
+test("self-order RPC-only tables deny direct DML while preserving staff reads", () => {
+  assert.match(
+    rpcOnlyGrantMigration,
+    /REVOKE INSERT, UPDATE, DELETE ON TABLE[\s\S]*public\.self_order_sessions,[\s\S]*public\.self_order_batches,[\s\S]*public\.self_order_payment_requests[\s\S]*FROM PUBLIC, anon, authenticated/,
+  );
+  assert.doesNotMatch(rpcOnlyGrantMigration, /REVOKE SELECT/);
 });
 
 test("version 1 token-only mutation RPCs fail closed only after a table is on v2", () => {

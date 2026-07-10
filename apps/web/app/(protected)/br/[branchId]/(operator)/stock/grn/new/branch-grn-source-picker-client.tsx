@@ -5,10 +5,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronRight as IconChevronRight,
-  FileClock as IconFileClock,
   Phone as IconPhone,
   Plus as IconPlus,
-  Receipt as IconReceipt,
   Search as IconSearch,
   Truck as IconTruck,
   Users as IconUsers,
@@ -16,9 +14,7 @@ import {
 import {
   ACTIONS_VI,
   INVENTORY_VI,
-  TOAST_VI,
 } from "@comtammatu/shared/messages";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   InputGroup,
@@ -36,7 +32,6 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { createSupplier } from "@/(protected)/inventory/procurement-actions";
-import { createGrnFromPo } from "@/(protected)/inventory/grn-actions";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -47,13 +42,10 @@ import {
   grnSourceSupplierHref,
   type GrnSourceSupplier,
 } from "@lib/inventory/grn-source-model";
-import { messages } from "@lib/messages";
 
 type BranchGrnSourcePickerClientProps = Pick<
   GrnSourcePageData,
   | "canCreateSupplier"
-  | "openPurchaseOrders"
-  | "openPurchaseOrdersLoadFailed"
   | "suppliers"
   | "suppliersLoadFailed"
 > & {
@@ -100,20 +92,13 @@ function BranchSupplierRow({
 export function BranchGrnSourcePickerClient({
   branchId,
   canCreateSupplier,
-  openPurchaseOrders,
-  openPurchaseOrdersLoadFailed,
   suppliers,
   suppliersLoadFailed,
 }: BranchGrnSourcePickerClientProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [supplierError, setSupplierError] = useState<string | null>(null);
-  const [purchaseOrderError, setPurchaseOrderError] = useState<string | null>(
-    null,
-  );
-  const [pendingPoId, setPendingPoId] = useState<number | null>(null);
   const [isCreatingSupplier, startCreateSupplier] = useTransition();
-  const [isCreatingFromPo, startCreateFromPo] = useTransition();
   const sourceBasePath = `/br/${branchId}/stock/grn/new`;
   const supplierHref = (supplierId: number) =>
     grnSourceSupplierHref(sourceBasePath, supplierId);
@@ -150,23 +135,6 @@ export function BranchGrnSourcePickerClient({
       }
 
       router.push(supplierHref(supplierId));
-    });
-  }
-
-  function handleCreateFromPo(poId: number) {
-    setPendingPoId(poId);
-    startCreateFromPo(async () => {
-      setPurchaseOrderError(null);
-      const result = await createGrnFromPo(poId);
-      if (!result.success || !result.data) {
-        setPurchaseOrderError(result.error ?? TOAST_VI.createGrnFromPoFailed);
-        setPendingPoId(null);
-        return;
-      }
-
-      const grn = result.data as { id: number };
-      router.push(`/br/${branchId}/stock/grn/${grn.id}`);
-      router.refresh();
     });
   }
 
@@ -281,108 +249,6 @@ export function BranchGrnSourcePickerClient({
           </>
         )}
       </BranchOperatorPanel>
-
-      {openPurchaseOrdersLoadFailed || openPurchaseOrders.length > 0 ? (
-        <BranchOperatorPanel
-          title={INVENTORY_VI.receiveByPoTitle}
-          icon={IconFileClock}
-          badge={
-            openPurchaseOrdersLoadFailed
-              ? undefined
-              : { children: openPurchaseOrders.length, variant: "secondary" }
-          }
-          contentClassName="gap-3"
-        >
-          {purchaseOrderError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {purchaseOrderError}
-            </p>
-          ) : null}
-
-          {openPurchaseOrdersLoadFailed ? (
-            <AppEmptyState
-              compact
-              mode="error"
-              icon={<IconFileClock />}
-              title={messages.inventory.po.receivingLoadFailed}
-            >
-              <Button
-                type="button"
-                size="touch"
-                onClick={() => router.refresh()}
-              >
-                {ACTIONS_VI.retry}
-              </Button>
-            </AppEmptyState>
-          ) : (
-            <ItemGroup className="gap-2">
-              {openPurchaseOrders.map((purchaseOrder) => {
-                const isPending =
-                  isCreatingFromPo && pendingPoId === purchaseOrder.id;
-                return (
-                  <div key={purchaseOrder.id} role="listitem">
-                    <Item
-                      asChild
-                      variant="outline"
-                      className="min-h-20 touch-manipulation"
-                    >
-                      <button
-                        type="button"
-                        className="w-full text-left"
-                        disabled={isCreatingFromPo}
-                        onClick={() => handleCreateFromPo(purchaseOrder.id)}
-                      >
-                        <ItemContent className="min-w-0 gap-1">
-                          <ItemTitle size="heading" className="line-clamp-none font-mono">
-                            {purchaseOrder.po_number}
-                            {purchaseOrder.status === "partially_received" ? (
-                              <Badge
-                                variant="outline"
-                                className="h-5 px-1.5 text-3xs"
-                              >
-                                {INVENTORY_VI.partialReceive}
-                              </Badge>
-                            ) : null}
-                          </ItemTitle>
-                          <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <span>{purchaseOrder.supplier_name}</span>
-                            <span>
-                              {INVENTORY_VI.lineItemCount(
-                                purchaseOrder.line_count,
-                              )}
-                            </span>
-                          </ItemDescription>
-                        </ItemContent>
-                        <ItemActions className="shrink-0">
-                          {isPending ? (
-                            <Spinner className="size-4 text-primary" />
-                          ) : (
-                            <IconChevronRight className="size-4 text-muted-foreground" />
-                          )}
-                        </ItemActions>
-                      </button>
-                    </Item>
-                  </div>
-                );
-              })}
-            </ItemGroup>
-          )}
-        </BranchOperatorPanel>
-      ) : null}
-
-      {openPurchaseOrders.length === 0 && !openPurchaseOrdersLoadFailed ? (
-        <BranchOperatorPanel
-          title={INVENTORY_VI.receiveByPoTitle}
-          icon={IconReceipt}
-          size="sm"
-        >
-          <AppEmptyState
-            compact
-            icon={<IconReceipt />}
-            title={INVENTORY_VI.choosePoToCreateGrn}
-          />
-        </BranchOperatorPanel>
-      ) : null}
 
       <AppDetailFooter
         sticky

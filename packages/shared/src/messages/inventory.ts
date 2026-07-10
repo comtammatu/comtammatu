@@ -151,14 +151,7 @@ export const INVENTORY_VI = {
   grnDraftUpdatedAt: (date: string) => `Cập nhật lúc ${date}`,
   grnDraftLineCount: (count: number) => `${formatCount(count)} dòng`,
   grnDraftContinue: "Tiếp tục",
-  createSupplierReturnTitle: "Tạo phiếu trả hàng NCC",
-  createSupplierReturnDescription: "Tạo phiếu trả hàng mới cho nhà cung cấp.",
   featureInDevelopmentTitle: "Tính năng đang phát triển",
-  supplierReturnFromGrnHint:
-    "Tạo phiếu trả hàng trực tiếp trong màn chi tiết GRN.",
-  supplierReturnsTitle: "Phiếu trả hàng NCC",
-  supplierReturnsDescription: "Quản lý các phiếu trả hàng nhà cung cấp.",
-  noSupplierReturns: "Chưa có phiếu trả hàng",
   createWasteTitle: "Tạo phiếu hao hụt",
   wasteFeatureDisabledTitle: "Chưa bật ghi nhận hao hụt",
   wasteFeatureDisabledBranchHint:
@@ -340,21 +333,21 @@ export const INVENTORY_VI = {
   recordedSearchPlaceholder: "Tìm nguyên liệu, nguồn...",
   createSlipAction: "Tạo phiếu",
   exportReportAction: "Xuất báo cáo",
-  recordedConsumptionTitle: "Tiêu hao POS đã ghi nhận",
+  recordedConsumptionTitle: "Tiêu hao đã ghi nhận",
   exportCsvAction: "Xuất CSV",
   visibleRowsLabel: "Dòng hiển thị",
   totalAmountLabel: "Tổng thành tiền",
   scopeLabel: "Phạm vi",
-  recordedEmptyTitle: "Chưa có tiêu hao POS đã ghi nhận",
+  recordedEmptyTitle: "Chưa có tiêu hao đã ghi nhận",
   recordedEmptyDescription:
-    "Khi POS bán hàng đủ điều kiện trừ tồn, dòng tiêu hao sẽ xuất hiện ở đây.",
+    "Tiêu hao từ POS, phiếu thủ công và nguồn vận hành khác sẽ xuất hiện ở đây sau khi ghi sổ.",
   manualConsumptionSlipsTitle: "Phiếu tiêu hao thủ công",
   manualConsumptionCreateAction: "Tạo phiếu tiêu hao thủ công",
   manualConsumptionCreateDescription:
     "Phiếu này chỉ dùng cho tiêu hao nhập tay ngoài đơn POS.",
   manualConsumptionEmptyTitle: "Chưa có phiếu tiêu hao thủ công",
   manualConsumptionEmptyDescription:
-    "POS vẫn ghi ở phần tiêu hao đã ghi nhận; phần này chỉ dành cho tiêu hao nhập tay ngoài đơn POS.",
+    "Phần này chỉ theo dõi chứng từ nhập tay; các dòng đã ghi sổ nằm ở mục tiêu hao đã ghi nhận.",
   issueSlipsTitle: "WO / PXK khác",
   issueCreateAction: "Tạo WO/PXK khác",
   issueEmptyFiltered: "Không tìm thấy phiếu phù hợp",
@@ -376,6 +369,7 @@ export const INVENTORY_VI = {
   warehouseShort: "Kho",
   lineCountLabel: "Số dòng",
   countSlipApproveFailed: "Không duyệt được phiếu đếm.",
+  countSlipLoadFailed: "Không tải được phiếu đếm.",
   countSlipApprovedAdjusted: (count: number) =>
     `Đã duyệt và điều chỉnh ${formatCount(count)} dòng kho.`,
   countSlipApproved: "Đã duyệt phiếu đếm tồn.",
@@ -383,6 +377,8 @@ export const INVENTORY_VI = {
   recountRequestFailed: "Không gửi được yêu cầu đếm lại.",
   recountRequested: "Đã yêu cầu nhân viên đếm lại.",
   countDateAt: (date: string) => `Ngày đếm ${date}`,
+  countDateLabel: "Ngày đếm",
+  submittedAtLabel: "Thời điểm gửi",
   submittedAtSuffix: (date: string) => ` • Gửi ${date}`,
   systemStockColon: "Tồn hệ thống:",
   countedColon: "Số đếm:",
@@ -405,6 +401,10 @@ export const INVENTORY_VI = {
   countAssignTitle: "Phân công đếm tồn",
   countAssignDescription:
     "Giao danh sách hàng cần kiểm kê cho từng nhân viên tại kho chi nhánh hiện tại.",
+  countAssignShiftLabel: "Ca đếm tồn",
+  countAssignAllShifts: "Áp dụng mọi ca",
+  countAssignAssignedSummary: (assigned: number, total: number) =>
+    `${formatCount(assigned)}/${formatCount(total)} đã giao`,
   countAssignNoWarehouseTitle: "Chưa có kho chi nhánh",
   countAssignNoWarehouseDescription:
     "Cần có kho chi nhánh đang hoạt động trước khi phân công kiểm kê.",
@@ -495,14 +495,14 @@ export const INVENTORY_VI = {
     `Tạo mới ${inserted} · Cập nhật ${updated}`,
   importIssueLine: (row: number, message: string) => `[dòng ${row}] ${message}`,
   dashboardSourceProcurementDescription:
-    "Theo dõi PO, GRN, hóa đơn NCC và lệch giá/số lượng trước khi hàng vào tồn.",
-  dashboardPendingPoLabel: "PO đang chờ",
-  dashboardPreparePoHint: "Chuẩn bị PO.",
+    "Theo dõi GRN, hóa đơn NCC và lệch giá/số lượng trước khi hàng vào tồn.",
+  dashboardDraftGrnLabel: "GRN nháp",
+  dashboardPrepareReceivingHint: "Mở phiếu nhập và chọn NCC.",
   dashboardGrnPriceReviewLabel: "GRN cần kiểm tra giá",
   dashboardGrnPriceReviewTask: (count: number) =>
     `${formatCount(count)} dòng GRN cần kiểm tra giá`,
   dashboardGrnPriceVarianceHint:
-    "Giá nhập lệch lớn so với PO trong 30 ngày qua.",
+    "Giá nhập cần rà soát trong 30 ngày qua.",
   // Production surface guards — generalized copy (D068): production runs at the
   // central kitchen or at a branch, not central-kitchen-only.
   productionSiteRequired:

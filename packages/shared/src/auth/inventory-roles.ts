@@ -19,7 +19,7 @@ export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
  * Coarse route/action gate for GRN + shared procurement reads + suppliers.
  * `branch_manager` is admitted (D068) so a branch can receive directly from a
  * supplier; the fine differentiation is the per-action permission key + grant
- * (branch_manager holds GRN/supplier/production keys, never PO/recipe/invoice).
+ * (branch_manager holds GRN/supplier/production keys, never recipe/invoice).
  */
 export const PROCUREMENT_ROLES: readonly StaffRole[] = [
   "owner",
@@ -29,22 +29,10 @@ export const PROCUREMENT_ROLES: readonly StaffRole[] = [
 ];
 
 /**
- * Purchase-order lifecycle gate. PO stays closed to branches (D068 §5 /
- * D066 §3 / D059 §7): only central procurement roles may create/edit POs, so
- * every `purchase-order-actions.ts` entry points here — rejecting
- * `branch_manager` by role independent of any grant.
- */
-export const PROCUREMENT_PO_ROLES: readonly StaffRole[] = [
-  "owner",
-  "warehouse_manager",
-  "production_manager",
-];
-
-/**
  * Procurement roles whose write scope is a single pinned branch. Their claims
  * carry a non-null `branch_id` (or resolve to one central home), so the
  * caller compares `effectiveBranchId === targetBranchId` for strict own-branch
- * writes. Shared by GRN + PO actions (one copy — no MIRROR drift). Roles NOT
+ * writes. Shared by GRN actions (one copy — no MIRROR drift). Roles NOT
  * listed here (e.g. owner) are tenant-wide and bypass the equality check.
  */
 export function isBranchScopedProcurementRole(role: string): boolean {

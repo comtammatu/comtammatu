@@ -1,12 +1,15 @@
 import { Suspense } from "react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { CountAssignmentsPageContent } from "@/(protected)/inventory/count-assignments/page";
+import { loadBranchCountAssignmentData } from "@lib/inventory/branch-count-assignment-data";
+import { BranchCountAssignmentsClient } from "../../stock/count-assignments/branch-count-assignments-client";
 
-export function TeamAssignmentsContent({
+export async function TeamAssignmentsContent({
   branchId,
 }: {
   branchId: number;
 }) {
+  const data = await loadBranchCountAssignmentData({ routeBranchId: branchId });
+
   return (
     <Suspense
       fallback={
@@ -15,11 +18,7 @@ export function TeamAssignmentsContent({
         </div>
       }
     >
-      <CountAssignmentsPageContent
-        routeBranchId={branchId}
-        embedded={true}
-        basePath={`/br/${branchId}/stock/count-assignments`}
-      />
+      <BranchCountAssignmentsClient data={data} embeddedInTeam />
     </Suspense>
   );
 }

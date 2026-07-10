@@ -5907,6 +5907,9 @@ export type Database = {
           order_id: number | null
           rejected_at: string | null
           rejected_by: string | null
+          request_fingerprint: string
+          request_fingerprint_version: string
+          session_device_id: number | null
           session_id: number
           status: string
           table_id: number
@@ -5926,6 +5929,9 @@ export type Database = {
           order_id?: number | null
           rejected_at?: string | null
           rejected_by?: string | null
+          request_fingerprint: string
+          request_fingerprint_version: string
+          session_device_id?: number | null
           session_id: number
           status?: string
           table_id: number
@@ -5945,6 +5951,9 @@ export type Database = {
           order_id?: number | null
           rejected_at?: string | null
           rejected_by?: string | null
+          request_fingerprint?: string
+          request_fingerprint_version?: string
+          session_device_id?: number | null
           session_id?: number
           status?: string
           table_id?: number
@@ -5988,6 +5997,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "self_order_batches_session_device_id_fkey"
+            columns: ["session_device_id"]
+            isOneToOne: false
+            referencedRelation: "self_order_session_devices"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "self_order_batches_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
@@ -6014,59 +6030,83 @@ export type Database = {
         Row: {
           amount_snapshot: number
           branch_id: number
+          cancel_reason: string | null
           cancelled_at: string | null
           client_op_id: string
           completed_at: string | null
           created_at: string
+          expired_at: string | null
           expires_at: string | null
           id: number
           invoice_payload: Json
           method: string
           order_id: number
+          payment_code_snapshot: string | null
           payment_id: number | null
+          qr_payload_snapshot: string | null
+          request_fingerprint: string
+          request_fingerprint_version: string
+          session_device_id: number | null
           session_id: number
           status: string
           table_id: number
           tenant_id: number
           updated_at: string
+          vietqr_config_snapshot: Json
         }
         Insert: {
           amount_snapshot: number
           branch_id: number
+          cancel_reason?: string | null
           cancelled_at?: string | null
           client_op_id: string
           completed_at?: string | null
           created_at?: string
+          expired_at?: string | null
           expires_at?: string | null
           id?: never
           invoice_payload?: Json
           method: string
           order_id: number
+          payment_code_snapshot?: string | null
           payment_id?: number | null
+          qr_payload_snapshot?: string | null
+          request_fingerprint: string
+          request_fingerprint_version: string
+          session_device_id?: number | null
           session_id: number
           status: string
           table_id: number
           tenant_id: number
           updated_at?: string
+          vietqr_config_snapshot?: Json
         }
         Update: {
           amount_snapshot?: number
           branch_id?: number
+          cancel_reason?: string | null
           cancelled_at?: string | null
           client_op_id?: string
           completed_at?: string | null
           created_at?: string
+          expired_at?: string | null
           expires_at?: string | null
           id?: never
           invoice_payload?: Json
           method?: string
           order_id?: number
+          payment_code_snapshot?: string | null
           payment_id?: number | null
+          qr_payload_snapshot?: string | null
+          request_fingerprint?: string
+          request_fingerprint_version?: string
+          session_device_id?: number | null
           session_id?: number
           status?: string
           table_id?: number
           tenant_id?: number
           updated_at?: string
+          vietqr_config_snapshot?: Json
         }
         Relationships: [
           {
@@ -6098,6 +6138,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "self_order_payment_requests_session_device_id_fkey"
+            columns: ["session_device_id"]
+            isOneToOne: false
+            referencedRelation: "self_order_session_devices"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "self_order_payment_requests_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
@@ -6120,6 +6167,187 @@ export type Database = {
           },
         ]
       }
+      self_order_rate_buckets: {
+        Row: {
+          created_at: string
+          expires_at: string
+          hits: number
+          purpose: string
+          scope_hash: string
+          scope_type: string
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          hits: number
+          purpose: string
+          scope_hash: string
+          scope_type: string
+          updated_at?: string
+          window_start: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          hits?: number
+          purpose?: string
+          scope_hash?: string
+          scope_type?: string
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      self_order_session_devices: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          branch_id: number
+          created_at: string
+          device_token_hash: string
+          expired_at: string | null
+          expires_at: string
+          id: number
+          kind: string
+          last_seen_at: string | null
+          pairing_attempts: number
+          pairing_code_expires_at: string | null
+          pairing_code_hash: string | null
+          pairing_code_salt: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          request_batch_id: number | null
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_reason: string | null
+          session_id: number
+          status: string
+          table_id: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id: number
+          created_at?: string
+          device_token_hash: string
+          expired_at?: string | null
+          expires_at: string
+          id?: never
+          kind: string
+          last_seen_at?: string | null
+          pairing_attempts?: number
+          pairing_code_expires_at?: string | null
+          pairing_code_hash?: string | null
+          pairing_code_salt?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          request_batch_id?: number | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          session_id: number
+          status: string
+          table_id: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: number
+          created_at?: string
+          device_token_hash?: string
+          expired_at?: string | null
+          expires_at?: string
+          id?: never
+          kind?: string
+          last_seen_at?: string | null
+          pairing_attempts?: number
+          pairing_code_expires_at?: string | null
+          pairing_code_hash?: string | null
+          pairing_code_salt?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          request_batch_id?: number | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          session_id?: number
+          status?: string
+          table_id?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "self_order_session_devices_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_session_devices_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_session_devices_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "self_order_session_devices_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_session_devices_request_batch_id_fkey"
+            columns: ["request_batch_id"]
+            isOneToOne: false
+            referencedRelation: "self_order_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_session_devices_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_session_devices_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "self_order_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_session_devices_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_session_devices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       self_order_sessions: {
         Row: {
           approved_at: string | null
@@ -6130,6 +6358,7 @@ export type Database = {
           created_at: string
           id: number
           order_id: number | null
+          realtime_topic_token: string
           status: string
           table_id: number
           tenant_id: number
@@ -6146,6 +6375,7 @@ export type Database = {
           created_at?: string
           id?: never
           order_id?: number | null
+          realtime_topic_token: string
           status?: string
           table_id: number
           tenant_id: number
@@ -6162,6 +6392,7 @@ export type Database = {
           created_at?: string
           id?: never
           order_id?: number | null
+          realtime_topic_token?: string
           status?: string
           table_id?: number
           tenant_id?: number
@@ -8273,6 +8504,7 @@ export type Database = {
           created_at: string
           id: number
           number: number
+          self_order_capability_version: number
           self_order_enabled: boolean
           self_order_token: string | null
           self_order_token_rotated_at: string | null
@@ -8287,6 +8519,7 @@ export type Database = {
           created_at?: string
           id?: never
           number: number
+          self_order_capability_version?: number
           self_order_enabled?: boolean
           self_order_token?: string | null
           self_order_token_rotated_at?: string | null
@@ -8301,6 +8534,7 @@ export type Database = {
           created_at?: string
           id?: never
           number?: number
+          self_order_capability_version?: number
           self_order_enabled?: boolean
           self_order_token?: string | null
           self_order_token_rotated_at?: string | null
@@ -9498,6 +9732,10 @@ export type Database = {
         Args: { p_cash_received: number; p_order_id: number }
         Returns: Json
       }
+      confirm_cash_payment_with_invoice_binding: {
+        Args: { p_cash_received: number; p_order_id: number }
+        Returns: Json
+      }
       confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json }
       confirm_payment_and_post: {
         Args: {
@@ -10040,18 +10278,6 @@ export type Database = {
           subtotal: number
           tax_amount: number
           total_amount: number
-        }[]
-      }
-      get_orders_paid_summary: {
-        Args: {
-          p_branch_id?: number
-          p_date_from?: string
-          p_date_to?: string
-          p_status?: string
-        }
-        Returns: {
-          paid_count: number
-          paid_revenue: number
         }[]
       }
       get_orders_summary: {
@@ -10722,6 +10948,10 @@ export type Database = {
         Args: { p_branch_id: number; p_new_code: string }
         Returns: undefined
       }
+      rotate_table_self_order_qr: {
+        Args: { p_table_id: number }
+        Returns: Json
+      }
       route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
       save_item_modifiers: {
         Args: { p_item_id: number; p_modifiers: Json }
@@ -10777,9 +11007,31 @@ export type Database = {
         }
         Returns: Json
       }
+      self_order_approve_batch_v2: {
+        Args: {
+          p_batch_id: number
+          p_idempotency_key?: string
+          p_pairing_code: string
+          p_pos_session_id?: number
+          p_target_order_id?: number
+        }
+        Returns: Json
+      }
+      self_order_approve_device_join_v2: {
+        Args: { p_device_id: number; p_pairing_code: string }
+        Returns: Json
+      }
+      self_order_batch_request_fingerprint: {
+        Args: { p_customer_note: string; p_items: Json }
+        Returns: string
+      }
       self_order_branch_has_open_pos_session: {
         Args: { p_branch_id: number; p_tenant_id: number }
         Returns: boolean
+      }
+      self_order_cancel_payment_request: {
+        Args: { p_reason?: string; p_request_id: number }
+        Returns: Json
       }
       self_order_cancel_pending_payment_and_add: {
         Args: {
@@ -10794,6 +11046,18 @@ export type Database = {
         Args: { p_items: Json; p_tenant_id: number }
         Returns: Json
       }
+      self_order_consume_rate_limits: {
+        Args: {
+          p_device_hash: string
+          p_ip_hash: string
+          p_purpose: string
+          p_session_id: number
+          p_table_id: number
+          p_tenant_id: number
+          p_token: string
+        }
+        Returns: Json
+      }
       self_order_create_payment_request: {
         Args: {
           p_client_op_id: string
@@ -10803,20 +11067,94 @@ export type Database = {
         }
         Returns: Json
       }
+      self_order_create_payment_request_v2: {
+        Args: {
+          p_client_op_id: string
+          p_device_hash: string
+          p_invoice_payload?: Json
+          p_ip_hash: string
+          p_method: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      self_order_create_pending_device: {
+        Args: { p_device_hash: string; p_kind: string; p_session_id: number }
+        Returns: Json
+      }
+      self_order_expire_payment_request: {
+        Args: { p_request_id: number }
+        Returns: boolean
+      }
+      self_order_get_public_context_v2: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       self_order_get_snapshot: { Args: { p_token: string }; Returns: Json }
+      self_order_get_snapshot_v2: {
+        Args: { p_device_hash: string; p_token: string }
+        Returns: Json
+      }
       self_order_list_staff_queue: {
         Args: { p_branch_id: number }
         Returns: Json
       }
+      self_order_list_staff_queue_v2: {
+        Args: { p_branch_id: number }
+        Returns: Json
+      }
       self_order_menu_payload: { Args: { p_tenant_id: number }; Returns: Json }
+      self_order_new_pairing_code: { Args: never; Returns: string }
       self_order_normalize_invoice_payload: {
         Args: { p_payload: Json }
+        Returns: Json
+      }
+      self_order_pairing_code_hash: {
+        Args: { p_code: string; p_salt: string }
+        Returns: string
+      }
+      self_order_payment_request_fingerprint: {
+        Args: { p_invoice_payload: Json; p_method: string }
+        Returns: string
+      }
+      self_order_payment_request_public_payload: {
+        Args: { p_request_id: number }
+        Returns: Json
+      }
+      self_order_random_token: { Args: { p_bytes: number }; Returns: string }
+      self_order_reconcile_expired_payment_requests: {
+        Args: { p_branch_id: number; p_tenant_id: number }
+        Returns: number
+      }
+      self_order_refresh_pairing_code: {
+        Args: { p_device_id: number }
+        Returns: Json
+      }
+      self_order_refresh_pairing_code_v2: {
+        Args: { p_device_hash: string; p_ip_hash: string; p_token: string }
         Returns: Json
       }
       self_order_reject_batch: {
         Args: { p_batch_id: number; p_reason?: string }
         Returns: Json
       }
+      self_order_reject_batch_v2: {
+        Args: { p_batch_id: number; p_reason?: string }
+        Returns: Json
+      }
+      self_order_reject_device_join_v2: {
+        Args: { p_device_id: number; p_reason?: string }
+        Returns: Json
+      }
+      self_order_request_device_join_v2: {
+        Args: { p_device_hash: string; p_ip_hash: string; p_token: string }
+        Returns: Json
+      }
+      self_order_revoke_session_device_v2: {
+        Args: { p_device_id: number; p_reason?: string }
+        Returns: Json
+      }
+      self_order_scope_hash: { Args: { p_value: string }; Returns: string }
       self_order_set_actor_claims: {
         Args: { p_actor: string; p_tenant_id: number }
         Returns: undefined
@@ -10829,6 +11167,27 @@ export type Database = {
           p_token: string
         }
         Returns: Json
+      }
+      self_order_submit_batch_v2: {
+        Args: {
+          p_client_op_id: string
+          p_customer_note?: string
+          p_device_hash: string
+          p_ip_hash: string
+          p_items: Json
+          p_token: string
+        }
+        Returns: Json
+      }
+      self_order_take_rate_bucket: {
+        Args: {
+          p_limit: number
+          p_purpose: string
+          p_scope_hash: string
+          p_scope_type: string
+          p_window_seconds: number
+        }
+        Returns: number
       }
       set_branch_kind: {
         Args: { p_branch_id: number; p_kind?: string }
@@ -10875,6 +11234,10 @@ export type Database = {
       }
       set_pos_order_priority: {
         Args: { p_is_priority: boolean; p_note?: string; p_order_id: number }
+        Returns: Json
+      }
+      set_table_self_order_capability_version: {
+        Args: { p_table_id: number; p_version: number }
         Returns: Json
       }
       split_order: {

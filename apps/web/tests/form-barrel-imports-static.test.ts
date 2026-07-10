@@ -14,7 +14,6 @@ const directFormImportFiles = [
   "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx",
   "apps/web/app/(protected)/inventory/settings/qc/qc-settings-client.tsx",
   "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
-  "apps/web/app/(protected)/inventory/supplier-returns/new/supplier-return-create-client.tsx",
   "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
   "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx",
 ];

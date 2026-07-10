@@ -13,10 +13,6 @@ import {
   getVNDateString,
 } from "@comtammatu/shared/time";
 import { loadAuthState, probePermission } from "@/_lib/auth";
-import {
-  fetchOpenPurchaseOrdersForReceiving,
-  type OpenPurchaseOrderRow,
-} from "@/(protected)/inventory/purchase-order-actions";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import type { TenantSupabase } from "@/(protected)/inventory/_lib/types";
 import type { GrnSourceSupplier } from "./grn-source-model";
@@ -42,8 +38,6 @@ export type GrnSourcePageData = {
   canCreateSupplier: boolean;
   suppliers: GrnSourceSupplier[];
   suppliersLoadFailed: boolean;
-  openPurchaseOrders: OpenPurchaseOrderRow[];
-  openPurchaseOrdersLoadFailed: boolean;
 };
 
 async function loadSuppliers(
@@ -143,15 +137,11 @@ export async function loadGrnSourcePageData({
   if (scope.outOfScope) notFound();
 
   const branchId = scope.selectedBranchId;
-  const [canCreateGrn, canCreateSupplier, supplierResult, openPosResult] =
-    await Promise.all([
-      probePermission(auth, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE, branchId),
-      probePermission(auth, PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE),
-      loadSuppliers(claims.tenant_id, supabase, branchId),
-      fetchOpenPurchaseOrdersForReceiving(
-        branchId != null ? { branchId } : undefined,
-      ),
-    ]);
+  const [canCreateGrn, canCreateSupplier, supplierResult] = await Promise.all([
+    probePermission(auth, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE, branchId),
+    probePermission(auth, PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE),
+    loadSuppliers(claims.tenant_id, supabase, branchId),
+  ]);
 
   if (!canCreateGrn) {
     redirect("/access-denied?reason=insufficient-permission");
@@ -162,7 +152,5 @@ export async function loadGrnSourcePageData({
     canCreateSupplier,
     suppliers: supplierResult.suppliers,
     suppliersLoadFailed: supplierResult.loadFailed,
-    openPurchaseOrders: openPosResult.success ? (openPosResult.data ?? []) : [],
-    openPurchaseOrdersLoadFailed: !openPosResult.success,
   };
 }

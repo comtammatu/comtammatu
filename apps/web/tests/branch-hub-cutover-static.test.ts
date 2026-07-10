@@ -154,7 +154,6 @@ test("employee pages no longer run page-level branch runtime redirects", () => {
   const pages = [
     "page.tsx",
     "clock/page.tsx",
-    "tasks/page.tsx",
     "schedule/page.tsx",
     "profile/page.tsx",
     "leave/page.tsx",

@@ -133,7 +133,7 @@ test("resolveOperatorTiles -> drops empty groups", () => {
   );
 });
 
-test("resolveOperatorTiles -> central_supply/central_kitchen branchKind hides sales_kitchen and adds PO tile", () => {
+test("resolveOperatorTiles -> central site kinds hide sales and omit retired PO", () => {
   for (const branchKind of ["central_supply", "central_kitchen"] as const) {
     for (const role of ["warehouse_manager", "production_manager"] as const) {
       const groups = resolveOperatorTiles(role, 15, branchKind);
@@ -145,11 +145,10 @@ test("resolveOperatorTiles -> central_supply/central_kitchen branchKind hides sa
         false,
         `${role}/${branchKind}`,
       );
-      assert.ok(
-        stock?.tiles.some(
-          (tile) => tile.href === "/br/15/stock/purchase-orders",
-        ),
-        `${role}/${branchKind} must see the purchase-orders tile`,
+      assert.equal(
+        stock?.tiles.some((tile) => tile.href.includes("purchase-orders")),
+        false,
+        `${role}/${branchKind}`,
       );
     }
 
@@ -160,16 +159,15 @@ test("resolveOperatorTiles -> central_supply/central_kitchen branchKind hides sa
       false,
       `owner/${branchKind}`,
     );
-    assert.ok(
-      ownerStock?.tiles.some(
-        (tile) => tile.href === "/br/15/stock/purchase-orders",
-      ),
-      `owner/${branchKind} must see the purchase-orders tile`,
+    assert.equal(
+      ownerStock?.tiles.some((tile) => tile.href.includes("purchase-orders")),
+      false,
+      `owner/${branchKind}`,
     );
   }
 });
 
-test("resolveOperatorTiles -> default branchKind ('branch') keeps sales_kitchen and omits the PO tile", () => {
+test("resolveOperatorTiles -> default branchKind keeps sales and omits retired PO", () => {
   const groups = resolveOperatorTiles("owner", 3, "branch");
   const groupIds = groups.map((group) => group.id);
   const stock = groups.find((group) => group.id === "stock");
@@ -179,6 +177,27 @@ test("resolveOperatorTiles -> default branchKind ('branch') keeps sales_kitchen 
     stock?.tiles.some((tile) => tile.href === "/br/3/stock/purchase-orders"),
     false,
   );
+});
+
+test("resolveOperatorTiles -> retired supplier returns stay out of every branch kind", () => {
+  for (const branchKind of [
+    "branch",
+    "central_supply",
+    "central_kitchen",
+  ] as const) {
+    const tiles = resolveOperatorTiles("owner", 3, branchKind).flatMap(
+      (group) => group.tiles,
+    );
+
+    assert.equal(
+      tiles.some(
+        (tile) =>
+          tile.href.includes("supplier-returns") || tile.label === "Trả hàng NCC",
+      ),
+      false,
+      branchKind,
+    );
+  }
 });
 
 test("resolveOperatorTiles -> operator hub does not duplicate office workspace links", () => {
@@ -262,9 +281,8 @@ test("resolveOperatorTiles -> central-site stock groups are curated whitelists (
       "Chuyển hàng",
       "Kiểm kê",
       "Báo hao hụt",
-      "Trả hàng NCC",
+      "Tiêu hao",
       "Phiếu nhập",
-      "Đơn đặt hàng",
       "Danh mục",
     ],
   );
@@ -284,8 +302,8 @@ test("resolveOperatorTiles -> central-site stock groups are curated whitelists (
       "Chuyển hàng",
       "Kiểm kê",
       "Báo hao hụt",
+      "Tiêu hao",
       "Phiếu nhập",
-      "Đơn đặt hàng",
     ],
   );
 });

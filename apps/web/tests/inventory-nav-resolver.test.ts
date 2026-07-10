@@ -58,7 +58,6 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
   for (const href of [
     "/inventory/operations",
     "/inventory/supplier-invoices",
-    "/inventory/supplier-returns",
     "/inventory/production",
     "/inventory/settings",
     "/inventory/suppliers",
@@ -68,7 +67,10 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
     assert.equal(visible.has(href), true, `owner inventory nav must include ${href}`);
   }
 
-  for (const href of ["/inventory/transfers"]) {
+  for (const href of [
+    "/inventory/transfers",
+    "/inventory/supplier-returns",
+  ]) {
     assert.equal(
       visible.has(href),
       false,

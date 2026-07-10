@@ -8,7 +8,6 @@ import {
 } from "@/_lib/permissions";
 import { fetchStocktakeSessions } from "../actions";
 import { fetchReorderAlerts } from "../alert-actions";
-import { countOpenPurchaseOrders } from "./receiving-counts";
 import { fetchStockTransfers } from "../transfer-actions";
 import { getInventoryDashboard } from "../dashboard-actions";
 import { resolveInventoryBranchScope } from "./inventory-scope";
@@ -73,7 +72,7 @@ export type InventoryDashboardData = {
   canViewStockValue: boolean;
   totalStockValue: number | null;
   dashboardWarnings: DashboardWarning[];
-  pendingPO: number;
+  draftGrns: number;
   activeTransfers: number;
   activeStocktakes: number;
   pendingCountSlips: number;
@@ -202,9 +201,18 @@ export async function loadInventoryDashboardData(
     pendingCountSlipQuery = pendingCountSlipQuery.eq("branch_id", branchFilter);
   }
 
+  let draftGrnQuery = supabase
+    .from("goods_received_notes")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", claims.tenant_id)
+    .eq("status", "draft");
+  if (branchFilter !== undefined) {
+    draftGrnQuery = draftGrnQuery.eq("branch_id", branchFilter);
+  }
+
   const [
     dashboardRes,
-    pendingPO,
+    draftGrnRes,
     transferRes,
     stocktakeRes,
     reorderRes,
@@ -214,7 +222,9 @@ export async function loadInventoryDashboardData(
     scope.selectedBranchId != null
       ? getInventoryDashboard(scope.selectedBranchId)
       : Promise.resolve(null),
-    countOpenPurchaseOrders(branchFilter),
+    showProcurement
+      ? draftGrnQuery
+      : Promise.resolve({ count: 0, error: null }),
     fetchStockTransfers(branchFilter),
     fetchStocktakeSessions(branchFilter),
     fetchReorderAlerts(branchFilter),
@@ -242,6 +252,7 @@ export async function loadInventoryDashboardData(
   const pendingCountSlips = pendingCountSlipRes.error
     ? 0
     : (pendingCountSlipRes.count ?? 0);
+  const draftGrns = draftGrnRes.error ? 0 : (draftGrnRes.count ?? 0);
 
   const dashboardData =
     dashboardRes != null && dashboardRes.success && dashboardRes.data
@@ -311,7 +322,7 @@ export async function loadInventoryDashboardData(
     canViewStockValue,
     totalStockValue,
     dashboardWarnings,
-    pendingPO,
+    draftGrns,
     activeTransfers,
     activeStocktakes,
     pendingCountSlips,

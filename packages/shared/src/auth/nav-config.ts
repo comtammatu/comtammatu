@@ -289,11 +289,10 @@ export const OPERATOR_TILE_ITEMS = [
   },
   {
     moduleKey: "inventory",
-    icon: "Undo2",
+    icon: "ChartBar",
     group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/supplier-returns",
-    label: "Trả hàng NCC",
-    kinds: ["central_supply"],
+    hrefTemplate: "/br/{branchId}/stock/consumption",
+    label: "Tiêu hao",
   },
   {
     moduleKey: "inventory",
@@ -301,14 +300,6 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/grn",
     label: "Phiếu nhập",
-  },
-  {
-    moduleKey: "inventory_procurement",
-    icon: "FileText",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/purchase-orders",
-    label: "Đơn đặt hàng",
-    kinds: ["central_supply", "central_kitchen"],
   },
   {
     moduleKey: "inventory",

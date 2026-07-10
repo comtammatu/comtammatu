@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  PROCUREMENT_PO_ROLES,
   PROCUREMENT_ROLES,
   isBranchScopedProcurementRole,
   isProcurementBranchInScope,
@@ -44,23 +43,6 @@ test("central-site scoped roles keep strict own-branch equality (no regression)"
 test("owner is tenant-wide — not branch-scoped, any target allowed", () => {
   assert.equal(isBranchScopedProcurementRole("owner"), false);
   assert.equal(isProcurementBranchInScope("owner", 1, 999), true);
-});
-
-// D068 §Conflicts-resolved 2 — PO stays closed to branches. All
-// purchase-order-actions.ts entries gate on PROCUREMENT_PO_ROLES, which must
-// reject branch_manager by role (independent of any grant). RED before the
-// PROCUREMENT_PO_ROLES split (branch_manager was in the shared PROCUREMENT_ROLES
-// the PO actions pointed at), GREEN after.
-test("branch_manager is REJECTED by role on createPurchaseOrder / createPurchaseOrderWithLines (PROCUREMENT_PO_ROLES)", () => {
-  assert.equal(PROCUREMENT_PO_ROLES.includes("branch_manager"), false);
-});
-
-test("PROCUREMENT_PO_ROLES stays exactly the central procurement roles", () => {
-  assert.deepEqual([...PROCUREMENT_PO_ROLES], [
-    "owner",
-    "warehouse_manager",
-    "production_manager",
-  ]);
 });
 
 test("branch_manager IS admitted by the coarse PROCUREMENT_ROLES gate (GRN + supplier + shared reads)", () => {

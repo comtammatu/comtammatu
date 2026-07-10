@@ -32,12 +32,6 @@ test("Office Inventory entry surfaces use the shared field contract", () => {
   const grnLineEditor = readWorkspaceFile(
     "app/components/inventory/grn-line-editor.tsx",
   );
-  const purchaseOrder = readWorkspaceFile(
-    "app/(protected)/inventory/purchase-orders/new/new-po-client.tsx",
-  );
-  const supplierReturn = readWorkspaceFile(
-    "app/(protected)/inventory/supplier-returns/new/supplier-return-create-client.tsx",
-  );
   const productionRecipe = readWorkspaceFile(
     "app/(protected)/inventory/production-recipe-panel.tsx",
   );
@@ -57,9 +51,6 @@ test("Office Inventory entry surfaces use the shared field contract", () => {
   assert.match(grnCreate, /controlSize="field"/);
   assert.match(grnLineEditor, /controlSize\?: GrnLineEditorControlSize/);
   assert.match(grnLineEditor, /<FormField[\s\S]*?controlId="grn-line-unit"/);
-  assert.match(purchaseOrder, /<FormField[\s\S]*controlId="po-supplier"/);
-  assert.match(purchaseOrder, /<FormField controlId="po-line-unit"/);
-  assert.match(supplierReturn, /controlId="supplier-return-grn"/);
   assert.match(productionRecipe, /<ComboboxField/);
   assert.match(newStocktake, /controlId="stocktake-branch"/);
   assert.match(newStocktake, /size=\{embedded \? "touch" : "field"\}/);

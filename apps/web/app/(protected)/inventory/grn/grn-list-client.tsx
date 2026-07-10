@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ClipboardList as IconClipboardList,
   EllipsisVertical as IconDotsVertical,
   FileText as IconFileText,
   Pencil as IconPencil,
@@ -99,7 +98,6 @@ const statusFilterOptions: { value: GrnListStatusFilter; label: string }[] = [
 export function GrnListClient({
   grns,
   basePath = "/inventory/grn",
-  purchaseOrdersPath = "/inventory/purchase-orders",
   drafts,
   canCreate,
   draftsLoadFailed = false,
@@ -108,7 +106,6 @@ export function GrnListClient({
 }: {
   grns: GrnRow[];
   basePath?: string;
-  purchaseOrdersPath?: string;
   drafts?: GrnDraftRow[];
   canCreate: boolean;
   draftsLoadFailed?: boolean;
@@ -147,12 +144,7 @@ export function GrnListClient({
       header: INVENTORY_VI.linkedPo,
       render: (grn) =>
         grn.poId != null && grn.poCode ? (
-          <Link
-            href={`${purchaseOrdersPath}/${grn.poId}`}
-            className="font-mono text-primary hover:underline"
-          >
-            {grn.poCode}
-          </Link>
+          <span className="font-mono">{grn.poCode}</span>
         ) : (
           "—"
         ),
@@ -212,20 +204,12 @@ export function GrnListClient({
   );
   const hasActiveFilters = hasGrnListFilters(filters);
   const desktopActions = canCreate ? (
-    <>
-      <Button asChild variant="outline" size="sm">
-        <Link href={purchaseOrdersPath}>
-          <IconClipboardList className="size-4" />
-          {INVENTORY_VI.choosePoToCreateGrn}
-        </Link>
-      </Button>
-      <Button asChild size="sm">
-        <Link href={`${basePath}/new`}>
-          <IconPlus className="size-4" />
-          {INVENTORY_VI.newGrn}
-        </Link>
-      </Button>
-    </>
+    <Button asChild size="sm">
+      <Link href={`${basePath}/new`}>
+        <IconPlus className="size-4" />
+        {INVENTORY_VI.newGrn}
+      </Link>
+    </Button>
   ) : null;
 
   const listTable = grnsLoadFailed ? (

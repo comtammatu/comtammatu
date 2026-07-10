@@ -655,7 +655,7 @@ const grnLineSchema = z
       .nullable(),
   })
   .refine((d) => (d.rejectedQuantity ?? 0) <= d.receivedQuantity, {
-    error: "Số trả NCC không được vượt số đã giao.",
+    error: "Số lượng từ chối không được vượt số đã giao.",
     path: ["rejectedQuantity"],
   });
 
@@ -813,17 +813,12 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
     return { success: false, error: "Không thể xác nhận phiếu nhập." };
   }
 
-  const poId =
-    data && typeof data === "object" && !Array.isArray(data)
-      ? ((data as { po_id?: number | null }).po_id ?? null)
-      : null;
   const reviewCount =
     data && typeof data === "object" && !Array.isArray(data)
       ? ((data as { review_count?: number }).review_count ?? 0)
       : 0;
 
   revalidatePath("/inventory/grn");
-  if (poId) revalidatePath(`/inventory/purchase-orders/${poId}`);
 
   // Fire-and-forget dispatch when there are review-flagged lines (real-time alert).
   // Errors are swallowed — outbox row remains pending and will be retried on next dispatch.
@@ -859,7 +854,7 @@ const amendGrnLineSchema = z
       .number()
       .min(0)
       .max(GRN_NUMERIC_15_3_MAX, {
-        error: "Số trả NCC vượt giới hạn hệ thống.",
+        error: "Số lượng từ chối vượt giới hạn hệ thống.",
       })
       .optional()
       .nullable(),
@@ -879,7 +874,7 @@ const amendGrnLineSchema = z
     (d) =>
       d.rejectedQuantity == null || d.rejectedQuantity <= d.receivedQuantity,
     {
-      error: "Số trả NCC không được vượt số đã giao.",
+      error: "Số lượng từ chối không được vượt số đã giao.",
       path: ["rejectedQuantity"],
     },
   )
@@ -967,7 +962,7 @@ export const amendGrnLine = withAction(
       if (msg.includes("rejected_exceeds_received")) {
         return {
           success: false,
-          error: "Số trả NCC không được vượt số đã giao.",
+          error: "Số lượng từ chối không được vượt số đã giao.",
         };
       }
       if (msg.includes("reason_required_min_5_chars")) {
@@ -1111,55 +1106,3 @@ export const recreateGrnAtReceivingSite = withAction(
     };
   },
 );
-
-/* ─── createGrnFromPo ───
- * Sprint 5 #2: collapsed to a single atomic Postgres RPC call.
- * The RPC `create_grn_from_po` (migration 20260508072423) validates PO
- * status, branch eligibility, supplier active, computes remaining qty,
- * locks the PO row FOR UPDATE to serialize concurrent callers, and
- * inserts header + items in one transaction. Any RAISE rolls back
- * atomically — no orphan headers possible.
- */
-
-const PG_ERR_TO_VI: Record<string, string> = {
-  insufficient_privilege: "Bạn không có quyền tạo phiếu nhập từ PO này.",
-  no_data_found: "PO không tồn tại hoặc đã nhận đủ hàng.",
-  check_violation:
-    "PO không đủ điều kiện (trạng thái, kho nhận, hoặc NCC không hợp lệ).",
-  invalid_parameter_value: "Tham số đầu vào không hợp lệ.",
-};
-
-export async function createGrnFromPo(poId: number): Promise<ActionResult> {
-  const id = z.coerce.number().int().positive().safeParse(poId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase } = ctx;
-
-  const { data, error } = await supabase.rpc("create_grn_from_po", {
-    p_po_id: id.data,
-  });
-
-  if (error) {
-    return {
-      success: false,
-      error: PG_ERR_TO_VI[error.code ?? ""] ?? "Không thể tạo phiếu nhập.",
-    };
-  }
-
-  const parsed = z
-    .object({
-      grn_id: z.coerce.number().int().positive(),
-      grn_number: z.string(),
-      lines: z.coerce.number().int().min(0),
-    })
-    .safeParse(data);
-  if (!parsed.success) {
-    return { success: false, error: "Phản hồi không hợp lệ từ máy chủ." };
-  }
-
-  return { success: true, data: { id: parsed.data.grn_id } };
-}

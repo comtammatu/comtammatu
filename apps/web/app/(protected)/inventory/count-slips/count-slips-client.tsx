@@ -1,3 +1,4 @@
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory count review management copy */
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -9,14 +10,20 @@ import {
   ClipboardList as IconClipboardList,
   RotateCcw as IconRecount,
 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Label } from "@comtammatu/ui/components/label";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { Item, ItemGroup } from "@comtammatu/ui/components/item";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import { Label } from "@comtammatu/ui/components/label";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import { Spinner } from "@comtammatu/ui/components/spinner";
+import { Textarea } from "@comtammatu/ui/components/textarea";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import {
   ACTIONS_VI,
@@ -24,30 +31,20 @@ import {
   STAFF_VI,
 } from "@comtammatu/shared/messages";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
+import { AppDialog } from "@/components/form";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
+import type {
+  CountSlipLineView as CountSlipLine,
+  CountSlipRow,
+  CountSlipStatus,
+} from "@lib/inventory/count-slip-model";
 import { formatQty } from "../_lib/format";
 import { approveCountSlip, requestCountRecount } from "./actions";
-import type { CountSlipLineView } from "./line-view-model";
-
-export type CountSlipStatus = "submitted" | "needs_changes" | "approved";
-
-export type CountSlipLine = CountSlipLineView;
-
-export type CountSlipRow = {
-  id: number;
-  branchName: string;
-  locationName: string;
-  employeeName: string;
-  shiftName: string | null;
-  countDate: string;
-  status: CountSlipStatus;
-  note: string | null;
-  reviewNote: string | null;
-  submittedAt: string | null;
-  reviewedAt: string | null;
-  lines: CountSlipLine[];
-};
 
 function formatVariance(value: number | null): string {
   if (value === null) return "—";
@@ -64,25 +61,74 @@ function varianceClassName(value: number | null): string {
   return "text-muted-foreground";
 }
 
-function hasVariance(
-  line: CountSlipLine,
-): line is CountSlipLine & { variance: number } {
-  return line.variance !== null;
+function summarizeVariance(row: CountSlipRow) {
+  const knownLines = row.lines.filter(
+    (line): line is CountSlipLine & { variance: number } =>
+      line.variance !== null,
+  );
+  const total = knownLines.reduce((sum, line) => sum + line.variance, 0);
+  const units = new Set(
+    knownLines.map((line) => line.varianceUnit).filter(Boolean),
+  );
+  const unit = units.size === 1 ? (units.values().next().value ?? "") : "";
+  const changedLineCount = knownLines.filter(
+    (line) => line.variance !== 0,
+  ).length;
+  return {
+    total,
+    unit,
+    changedLineCount,
+    showTotal: knownLines.length === row.lines.length && unit !== "",
+  };
 }
 
-export function CountSlipsClient({
-  initial,
-  branchScoped = false,
-  embedded = false,
-  basePath = "/inventory/count-slips",
-}: {
-  initial: CountSlipRow[];
-  branchScoped?: boolean;
-  embedded?: boolean;
-  basePath?: string;
-}) {
+function renderSlipMobileRow(row: CountSlipRow, onOpen: () => void) {
+  const variance = summarizeVariance(row);
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      className="h-auto w-full justify-stretch p-0 text-left"
+      aria-label={`Xem phiếu đếm của ${row.employeeName}`}
+      onClick={onOpen}
+    >
+      <Item variant="outline" className="items-start">
+        <ItemContent className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <ItemTitle className="min-w-0 truncate">
+              {row.employeeName}
+            </ItemTitle>
+            <StatusBadge domain="count-slip" value={row.status} />
+          </div>
+          <ItemDescription className="break-words">
+            {row.branchName} · {row.locationName}
+            {row.shiftName ? ` · ${row.shiftName}` : ""}
+          </ItemDescription>
+          <ItemDescription>
+            {INVENTORY_VI.countDateAt(formatVNDate(row.countDate))} ·{" "}
+            {INVENTORY_VI.grnDraftLineCount(row.lines.length)}
+          </ItemDescription>
+        </ItemContent>
+        <ItemActions>
+          <span
+            className={cn(
+              "font-mono text-sm font-semibold tabular-nums",
+              varianceClassName(variance.total),
+            )}
+          >
+            {variance.showTotal
+              ? `${formatVariance(variance.total)} ${variance.unit}`
+              : INVENTORY_VI.varianceLineCount(variance.changedLineCount)}
+          </span>
+        </ItemActions>
+      </Item>
+    </Button>
+  );
+}
+
+export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
   const [rows, setRows] = useState(initial);
-  const assignmentsHref = basePath.replace("count-slips", "count-assignments");
+  const [selectedSlipId, setSelectedSlipId] = useState<number | null>(null);
 
   useEffect(() => {
     setRows(initial);
@@ -97,109 +143,181 @@ export function CountSlipsClient({
     }
     return { pending: pendingRows, history: historyRows };
   }, [rows]);
+  const selectedRow =
+    selectedSlipId === null
+      ? null
+      : (rows.find((row) => row.id === selectedSlipId) ?? null);
 
   function applyStatus(slipId: number, status: CountSlipStatus) {
-    setRows((prev) =>
-      prev.map((row) => (row.id === slipId ? { ...row, status } : row)),
+    setRows((current) =>
+      current.map((row) => (row.id === slipId ? { ...row, status } : row)),
+    );
+    setSelectedSlipId(null);
+  }
+
+  const columns: DataTableColumn<CountSlipRow>[] = [
+    {
+      key: "employee",
+      header: "Nhân viên",
+      className: "min-w-48",
+      render: (row) => (
+        <div>
+          <div className="font-medium">{row.employeeName}</div>
+          {row.shiftName ? (
+            <div className="text-xs text-muted-foreground">{row.shiftName}</div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "scope",
+      header: "Chi nhánh / kho",
+      className: "min-w-56",
+      render: (row) => (
+        <div>
+          <div>{row.branchName}</div>
+          <div className="text-xs text-muted-foreground">
+            {row.locationName}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "date",
+      header: "Ngày đếm",
+      className: "w-40",
+      render: (row) => (
+        <div>
+          <div>{formatVNDate(row.countDate)}</div>
+          {row.submittedAt ? (
+            <div className="text-xs text-muted-foreground">
+              {formatVNDateTime(row.submittedAt)}
+            </div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "lines",
+      header: "Số dòng",
+      className: "w-24 text-right",
+      render: (row) => (
+        <span className="block font-mono tabular-nums text-right">
+          {row.lines.length}
+        </span>
+      ),
+    },
+    {
+      key: "variance",
+      header: "Chênh lệch",
+      className: "w-40 text-right",
+      render: (row) => {
+        const variance = summarizeVariance(row);
+        return (
+          <span
+            className={cn(
+              "block font-mono font-semibold tabular-nums text-right",
+              varianceClassName(variance.total),
+            )}
+          >
+            {variance.showTotal
+              ? `${formatVariance(variance.total)} ${variance.unit}`
+              : INVENTORY_VI.varianceLineCount(variance.changedLineCount)}
+          </span>
+        );
+      },
+    },
+    {
+      key: "status",
+      header: "Trạng thái",
+      className: "w-36",
+      render: (row) => (
+        <StatusBadge domain="count-slip" value={row.status} />
+      ),
+    },
+  ];
+
+  function renderTable(data: CountSlipRow[], historyTable = false) {
+    return (
+      <DataTable
+        columns={columns}
+        data={data}
+        getRowKey={(row) => row.id}
+        onRowClick={(row) => setSelectedSlipId(row.id)}
+        getRowAriaLabel={(row) => `Xem phiếu đếm của ${row.employeeName}`}
+        emptyTitle={
+          historyTable
+            ? "Chưa có lịch sử phiếu đếm"
+            : INVENTORY_VI.countSlipEmptyTitle
+        }
+        emptyDescription={
+          historyTable
+            ? "Phiếu đã duyệt hoặc yêu cầu đếm lại sẽ xuất hiện tại đây."
+            : INVENTORY_VI.countSlipEmptyDescription
+        }
+        emptyIcon={<IconClipboardCheck />}
+        mobileCardRender={(row) =>
+          renderSlipMobileRow(row, () => setSelectedSlipId(row.id))
+        }
+      />
     );
   }
 
-  const assignmentAction = (
-    <Button asChild variant="outline" size={embedded ? "touch" : "default"}>
-      <Link href={assignmentsHref}>
-        <IconClipboardList className="size-4" />
-        {INVENTORY_VI.countAssignTitle}
-      </Link>
-    </Button>
-  );
+  return (
+    <AppPage width="xwide" density="compact">
+      <AppPageHeader
+        title={INVENTORY_VI.countSlipTitle}
+        description={INVENTORY_VI.countSlipDescription}
+        actions={
+          <Button asChild variant="outline">
+            <Link href="/inventory/count-assignments">
+              <IconClipboardList aria-hidden="true" />
+              {INVENTORY_VI.countAssignTitle}
+            </Link>
+          </Button>
+        }
+        badge={{
+          children: INVENTORY_VI.countSlipPendingBadge(pending.length),
+          variant: pending.length > 0 ? "warning" : "secondary",
+        }}
+      />
 
-  const toolbar = embedded ? (
-    <div className="mb-2 flex justify-end">{assignmentAction}</div>
-  ) : null;
-
-  const content = (
-    <>
-      {toolbar}
-      {!embedded ? (
-        <AppPageHeader
-          title={INVENTORY_VI.countSlipTitle}
-          description={INVENTORY_VI.countSlipDescription}
-          actions={assignmentAction}
-          badge={{
-            children: INVENTORY_VI.countSlipPendingBadge(pending.length),
-            variant: pending.length > 0 ? "warning" : "secondary",
-          }}
-        />
-      ) : null}
-
-      {pending.length === 0 ? (
-        <AppEmptyState
-          compact
-          title={INVENTORY_VI.countSlipEmptyTitle}
-          description={INVENTORY_VI.countSlipEmptyDescription}
-          icon={<IconClipboardCheck />}
-        />
-      ) : (
-        <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
-          {pending.map((row) => (
-            <CountSlipCard
-              key={row.id}
-              row={row}
-              branchScoped={branchScoped}
-              embedded={embedded}
-              onApproved={() => applyStatus(row.id, "approved")}
-              onRecount={() => applyStatus(row.id, "needs_changes")}
-            />
-          ))}
-        </ItemGroup>
-      )}
+      <section className="flex flex-col gap-3" aria-labelledby="pending-slips">
+        <h2 id="pending-slips" className="font-heading text-base font-semibold">
+          Chờ duyệt
+        </h2>
+        {renderTable(pending)}
+      </section>
 
       {history.length > 0 ? (
-        <section className="flex flex-col gap-3">
-          <h2 className="font-heading text-base font-semibold tracking-tight">
+        <section className="flex flex-col gap-3" aria-labelledby="slip-history">
+          <h2
+            id="slip-history"
+            className="font-heading text-base font-semibold"
+          >
             {INVENTORY_VI.countSlipHistoryTitle}
           </h2>
-          <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
-            {history.map((row) => (
-              <CountSlipCard
-                key={row.id}
-                row={row}
-                branchScoped={branchScoped}
-                embedded={embedded}
-                readOnly
-              />
-            ))}
-          </ItemGroup>
+          {renderTable(history, true)}
         </section>
       ) : null}
-    </>
-  );
 
-  if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
-  }
-
-  return (
-    <AppPage width="wide" density="compact">
-      {content}
+      <CountSlipReviewDialog
+        row={selectedRow}
+        onClose={() => setSelectedSlipId(null)}
+        onStatusChange={applyStatus}
+      />
     </AppPage>
   );
 }
 
-function CountSlipCard({
+function CountSlipReviewDialog({
   row,
-  branchScoped = false,
-  readOnly = false,
-  embedded = false,
-  onApproved,
-  onRecount,
+  onClose,
+  onStatusChange,
 }: {
-  row: CountSlipRow;
-  branchScoped?: boolean;
-  readOnly?: boolean;
-  embedded?: boolean;
-  onApproved?: () => void;
-  onRecount?: () => void;
+  row: CountSlipRow | null;
+  onClose: () => void;
+  onStatusChange: (slipId: number, status: CountSlipStatus) => void;
 }) {
   const router = useRouter();
   const [recounting, setRecounting] = useState(false);
@@ -209,56 +327,51 @@ function CountSlipCard({
   >(null);
   const [, startTransition] = useTransition();
 
-  const knownVarianceLines = row.lines.filter(hasVariance);
-  const totalVariance = knownVarianceLines.reduce(
-    (sum, line) => sum + (line.variance ?? 0),
-    0,
-  );
-  const varianceUnits = new Set(
-    knownVarianceLines.map((line) => line.varianceUnit).filter(Boolean),
-  );
-  const totalVarianceUnit =
-    varianceUnits.size === 1 ? (varianceUnits.values().next().value ?? "") : "";
-  const showTotalVariance =
-    knownVarianceLines.length === row.lines.length && totalVarianceUnit !== "";
-  const changedLineCount = knownVarianceLines.filter(
-    (line) => line.variance !== 0,
-  ).length;
-  const hasShrinkage = row.lines.some(
-    (line) => line.variance !== null && line.variance < 0,
-  );
+  useEffect(() => {
+    setRecounting(false);
+    setNote("");
+    setPendingAction(null);
+  }, [row?.id]);
+
+  if (row === null) return null;
+  const activeRow = row;
+  const variance = summarizeVariance(activeRow);
+  const readOnly = activeRow.status !== "submitted";
 
   async function handleApprove() {
-    const ok = await confirm({
+    const accepted = await confirm({
       title: INVENTORY_VI.countSlipApproveTitle,
       description: INVENTORY_VI.countSlipApproveDescription,
       details: [
-        { label: STAFF_VI.long, value: row.employeeName },
-        { label: INVENTORY_VI.warehouseShort, value: row.locationName },
+        { label: STAFF_VI.long, value: activeRow.employeeName },
+        {
+          label: INVENTORY_VI.warehouseShort,
+          value: activeRow.locationName,
+        },
         {
           label: INVENTORY_VI.lineCountLabel,
-          value: INVENTORY_VI.ingredientCountBadge(row.lines.length),
+          value: INVENTORY_VI.ingredientCountBadge(activeRow.lines.length),
         },
       ],
       confirmText: ACTIONS_VI.approve,
       variant: "destructive",
     });
-    if (!ok) return;
+    if (!accepted) return;
 
     setPendingAction("approve");
     startTransition(async () => {
-      const res = await approveCountSlip({ slipId: row.id });
+      const result = await approveCountSlip({ slipId: activeRow.id });
       setPendingAction(null);
-      if (!res.success) {
-        toast.error(res.error ?? INVENTORY_VI.countSlipApproveFailed);
+      if (!result.success) {
+        toast.error(result.error ?? INVENTORY_VI.countSlipApproveFailed);
         return;
       }
       toast.success(
-        res.data && res.data.adjustedLines > 0
-          ? INVENTORY_VI.countSlipApprovedAdjusted(res.data.adjustedLines)
+        result.data && result.data.adjustedLines > 0
+          ? INVENTORY_VI.countSlipApprovedAdjusted(result.data.adjustedLines)
           : INVENTORY_VI.countSlipApproved,
       );
-      onApproved?.();
+      onStatusChange(activeRow.id, "approved");
       router.refresh();
     });
   }
@@ -270,221 +383,240 @@ function CountSlipCard({
     }
     setPendingAction("recount");
     startTransition(async () => {
-      const res = await requestCountRecount({ slipId: row.id, note });
+      const result = await requestCountRecount({
+        slipId: activeRow.id,
+        note,
+      });
       setPendingAction(null);
-      if (!res.success) {
-        toast.error(res.error ?? INVENTORY_VI.recountRequestFailed);
+      if (!result.success) {
+        toast.error(result.error ?? INVENTORY_VI.recountRequestFailed);
         return;
       }
       toast.success(INVENTORY_VI.recountRequested);
-      setRecounting(false);
-      setNote("");
-      onRecount?.();
+      onStatusChange(activeRow.id, "needs_changes");
       router.refresh();
     });
   }
 
-  return (
-    <div role="listitem">
-      <div
-        className={cn(
-          "rounded-lg border bg-card",
-          !readOnly && hasShrinkage && "border-destructive/20",
-        )}
-      >
-        <div className="flex items-start justify-between gap-2 p-4 pb-3">
-          <div className="min-w-0">
-            <div className="font-heading flex flex-wrap items-center gap-2 text-base font-semibold">
-              {row.employeeName}
-              {branchScoped ? null : (
-                <Badge variant="outline" className="text-xs">
-                  {row.branchName}
-                </Badge>
-              )}
-              <Badge variant="outline" className="text-xs">
-                {row.locationName}
-              </Badge>
-              {row.shiftName ? (
-                <Badge variant="outline" className="text-xs">
-                  {row.shiftName}
-                </Badge>
-              ) : null}
+  const lineColumns: DataTableColumn<CountSlipLine>[] = [
+    {
+      key: "ingredient",
+      header: "Nguyên liệu",
+      className: "min-w-56",
+      render: (line) => (
+        <div>
+          <div className="font-medium">{line.ingredientName}</div>
+          {line.note ? (
+            <div className="max-w-md break-words text-xs italic text-muted-foreground">
+              {line.note}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {INVENTORY_VI.countDateAt(formatVNDate(row.countDate))}
-              {row.submittedAt
-                ? INVENTORY_VI.submittedAtSuffix(
-                    formatVNDateTime(row.submittedAt),
-                  )
-                : ""}
-            </p>
-          </div>
-          <StatusBadge domain="count-slip" value={row.status} />
+          ) : null}
         </div>
+      ),
+    },
+    {
+      key: "system",
+      header: "Hệ thống",
+      className: "w-40 text-right",
+      render: (line) => (
+        <span className="block whitespace-nowrap text-right font-mono tabular-nums">
+          {formatQty(line.systemQuantity)} {line.systemUnit}
+        </span>
+      ),
+    },
+    {
+      key: "counted",
+      header: "Thực đếm",
+      className: "w-40 text-right",
+      render: (line) => (
+        <div className="whitespace-nowrap text-right font-mono tabular-nums">
+          {formatQty(line.countedQuantity)} {line.countedUnit}
+          {line.countedBaseQuantity !== null &&
+          line.countedUnit !== line.systemUnit ? (
+            <div className="text-xs text-muted-foreground">
+              {formatQty(line.countedBaseQuantity)} {line.systemUnit}
+            </div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "variance",
+      header: "Chênh lệch",
+      className: "w-40 text-right",
+      render: (line) => (
+        <span
+          className={cn(
+            "block whitespace-nowrap text-right font-mono font-semibold tabular-nums",
+            varianceClassName(line.variance),
+          )}
+        >
+          {formatVariance(line.variance)}
+          {line.variance !== null ? ` ${line.varianceUnit}` : ""}
+        </span>
+      ),
+    },
+  ];
 
-        <div className="flex flex-col gap-3 p-4 pt-0">
-          <ItemGroup className="flex flex-col gap-2 p-0 rounded-none border-0">
-            {row.lines.map((line) => (
-              <Item
-                key={line.id}
-                variant="muted"
-                className="p-3 text-sm flex flex-col items-stretch"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium">{line.ingredientName}</div>
-                    <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-                      <span>
-                        {INVENTORY_VI.systemStockColon}{" "}
-                        <span className="font-mono tabular-nums text-foreground">
-                          {formatQty(line.systemQuantity)} {line.systemUnit}
-                        </span>
-                      </span>
-                      <span>
-                        {INVENTORY_VI.countedColon}{" "}
-                        <span className="font-mono tabular-nums text-foreground">
-                          {formatQty(line.countedQuantity)} {line.countedUnit}
-                        </span>
-                      </span>
-                      {line.countedBaseQuantity !== null &&
-                      line.countedUnit !== line.systemUnit ? (
-                        <span>
-                          {INVENTORY_VI.convertedColon}{" "}
-                          <span className="font-mono tabular-nums text-foreground">
-                            {formatQty(line.countedBaseQuantity)}{" "}
-                            {line.systemUnit}
-                          </span>
-                        </span>
-                      ) : null}
-                    </div>
-                    {line.note ? (
-                      <p className="mt-1 text-xs italic text-muted-foreground">
-                        {line.note}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="text-right">
-                    <div
-                      className={cn(
-                        "font-mono text-sm font-semibold tabular-nums",
-                        varianceClassName(line.variance),
-                      )}
-                    >
-                      {formatVariance(line.variance)}
-                      {line.variance !== null ? ` ${line.varianceUnit}` : ""}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {INVENTORY_VI.varianceShort}
-                    </div>
-                  </div>
-                </div>
-              </Item>
-            ))}
-          </ItemGroup>
+  const footer = readOnly ? (
+    <Button type="button" variant="outline" onClick={onClose}>
+      {ACTIONS_VI.close}
+    </Button>
+  ) : recounting ? (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={pendingAction !== null}
+        onClick={() => {
+          setRecounting(false);
+          setNote("");
+        }}
+      >
+        {ACTIONS_VI.cancel}
+      </Button>
+      <Button
+        type="button"
+        disabled={pendingAction !== null}
+        onClick={handleRecount}
+      >
+        {pendingAction === "recount" ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <IconRecount aria-hidden="true" />
+        )}
+        {INVENTORY_VI.sendRecountRequest}
+      </Button>
+    </>
+  ) : (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={pendingAction !== null}
+        onClick={() => setRecounting(true)}
+      >
+        <IconRecount aria-hidden="true" />
+        {INVENTORY_VI.requestRecount}
+      </Button>
+      <Button
+        type="button"
+        disabled={pendingAction !== null}
+        onClick={() => void handleApprove()}
+      >
+        {pendingAction === "approve" ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <IconCheck aria-hidden="true" />
+        )}
+        {ACTIONS_VI.approve}
+      </Button>
+    </>
+  );
 
-          {row.note ? (
-            <p className="text-xs italic text-muted-foreground">
-              {INVENTORY_VI.employeeNoteLine(row.note)}
+  return (
+    <AppDialog
+      open
+      onOpenChange={(open) => {
+        if (!open && pendingAction === null) onClose();
+      }}
+      title={
+        <div className="flex flex-wrap items-center gap-2">
+          <span>{activeRow.employeeName}</span>
+          <StatusBadge domain="count-slip" value={activeRow.status} />
+        </div>
+      }
+      description={
+        <span className="break-words">
+          {activeRow.branchName} · {activeRow.locationName}
+          {activeRow.shiftName ? ` · ${activeRow.shiftName}` : ""} ·{" "}
+          {INVENTORY_VI.countDateAt(formatVNDate(activeRow.countDate))}
+        </span>
+      }
+      contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-5xl"
+      bodyClassName="min-h-0 overflow-hidden"
+      footer={footer}
+    >
+      <ScrollArea className="h-96 min-h-0 rounded-md border">
+        <DataTable
+          columns={lineColumns}
+          data={activeRow.lines}
+          getRowKey={(line) => line.id}
+          emptyTitle="Phiếu chưa có dòng kiểm đếm"
+          mobileCardRender={(line) => (
+            <Item variant="muted" className="items-start">
+              <ItemContent className="min-w-0">
+                <ItemTitle className="break-words">
+                  {line.ingredientName}
+                </ItemTitle>
+                <ItemDescription>
+                  Hệ thống: {formatQty(line.systemQuantity)} {line.systemUnit}
+                </ItemDescription>
+                <ItemDescription>
+                  Thực đếm: {formatQty(line.countedQuantity)} {line.countedUnit}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <span
+                  className={cn(
+                    "font-mono font-semibold tabular-nums",
+                    varianceClassName(line.variance),
+                  )}
+                >
+                  {formatVariance(line.variance)}
+                  {line.variance !== null ? ` ${line.varianceUnit}` : ""}
+                </span>
+              </ItemActions>
+            </Item>
+          )}
+        />
+      </ScrollArea>
+
+      <div className="grid gap-2 text-sm sm:grid-cols-[1fr_auto] sm:items-start">
+        <div className="flex min-w-0 flex-col gap-1">
+          {activeRow.note ? (
+            <p className="break-words italic text-muted-foreground">
+              {INVENTORY_VI.employeeNoteLine(activeRow.note)}
             </p>
           ) : null}
-
-          {row.reviewNote ? (
-            <p className="text-xs italic text-warning">
-              {INVENTORY_VI.recountReasonLine(row.reviewNote)}
+          {activeRow.reviewNote ? (
+            <p className="break-words italic text-warning">
+              {INVENTORY_VI.recountReasonLine(activeRow.reviewNote)}
             </p>
           ) : null}
-
-          <div className="flex items-center justify-between gap-2 text-sm">
-            <span className="text-muted-foreground">
-              {INVENTORY_VI.grnDraftLineCount(row.lines.length)}
-            </span>
-            <span
-              className={cn(
-                "font-mono font-semibold tabular-nums",
-                varianceClassName(totalVariance),
-              )}
-            >
-              {showTotalVariance
-                ? INVENTORY_VI.totalVarianceSummary(
-                    formatVariance(totalVariance),
-                    totalVarianceUnit,
-                  )
-                : INVENTORY_VI.varianceLineCount(changedLineCount)}
-            </span>
-          </div>
-
-          {!readOnly ? (
-            <>
-              {recounting ? (
-                <div className="flex flex-col gap-2">
-                  <Label>{INVENTORY_VI.recountReasonLabel}</Label>
-                  <Textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    disabled={pendingAction !== null}
-                    rows={2}
-                    placeholder={INVENTORY_VI.recountReasonPlaceholder}
-                  />
-                </div>
-              ) : null}
-
-              <div className="flex justify-end gap-2">
-                {recounting ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      size={embedded ? "touch" : "default"}
-                      onClick={() => {
-                        setRecounting(false);
-                        setNote("");
-                      }}
-                      disabled={pendingAction !== null}
-                    >
-                      {ACTIONS_VI.cancel}
-                    </Button>
-                    <Button
-                      size={embedded ? "touch" : "default"}
-                      onClick={handleRecount}
-                      disabled={pendingAction !== null}
-                    >
-                      {pendingAction === "recount" ? (
-                        <Spinner data-icon="inline-start" />
-                      ) : (
-                        <IconRecount data-icon="inline-start" />
-                      )}
-                      {INVENTORY_VI.sendRecountRequest}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      size={embedded ? "touch" : "default"}
-                      onClick={() => setRecounting(true)}
-                      disabled={pendingAction !== null}
-                    >
-                      <IconRecount data-icon="inline-start" />
-                      {INVENTORY_VI.requestRecount}
-                    </Button>
-                    <Button
-                      size={embedded ? "touch" : "default"}
-                      onClick={handleApprove}
-                      disabled={pendingAction !== null}
-                    >
-                      {pendingAction === "approve" ? (
-                        <Spinner data-icon="inline-start" />
-                      ) : (
-                        <IconCheck data-icon="inline-start" />
-                      )}
-                      {ACTIONS_VI.approve}
-                    </Button>
-                  </>
-                )}
-              </div>
-            </>
-          ) : null}
+        </div>
+        <div
+          className={cn(
+            "font-mono font-semibold tabular-nums sm:text-right",
+            varianceClassName(variance.total),
+          )}
+        >
+          {variance.showTotal
+            ? INVENTORY_VI.totalVarianceSummary(
+                formatVariance(variance.total),
+                variance.unit,
+              )
+            : INVENTORY_VI.varianceLineCount(variance.changedLineCount)}
         </div>
       </div>
-    </div>
+
+      {!readOnly && recounting ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="count-slip-recount-note">
+            {INVENTORY_VI.recountReasonLabel}
+          </Label>
+          <Textarea
+            id="count-slip-recount-note"
+            name="count-slip-recount-note"
+            autoComplete="off"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            disabled={pendingAction !== null}
+            rows={3}
+            placeholder={INVENTORY_VI.recountReasonPlaceholder}
+          />
+        </div>
+      ) : null}
+    </AppDialog>
   );
 }

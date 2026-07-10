@@ -30,6 +30,7 @@ const STOCK_PRIMARY_SUFFIXES = [
   "/stock/count-slips",
   "/stock/waste-approvals",
   "/stock/waste",
+  "/stock/consumption",
   "/stock/production",
   "/stock/production/recipes",
 ] as const;
@@ -37,8 +38,6 @@ const STOCK_PRIMARY_SUFFIXES = [
 const STOCK_LOOKUP_SUFFIXES = [
   "/stock/on-hand",
   "/stock/grn",
-  "/stock/purchase-orders",
-  "/stock/supplier-returns",
 ] as const;
 
 const STOCK_CATALOG_SUFFIXES = ["/stock/catalog"] as const;

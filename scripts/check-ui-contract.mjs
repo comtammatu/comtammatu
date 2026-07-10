@@ -1737,7 +1737,6 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/blind-counting-grid.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/inventory-branch-filter.tsx": 1,
-      "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 2,
       "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": 1,
       "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 1,
       "apps/web/app/(public)/(auth)/login/page.tsx": 2,
@@ -1769,7 +1768,7 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/finance/components/work-queue-strip.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/recipe-lines-editor.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/stocktake-mode-selector.tsx": 1,
-      "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 3,
+      "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 2,
       "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 1,
       "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx": 1,
@@ -2319,19 +2318,15 @@ for (const file of allPageFiles) {
 // InventoryPageContent (width union is "wide" | "narrow") needs that adapter to
 // gain the `xwide` tier first.
 const LIST_WIDTH_TIER_QUEUE_EXCEPTIONS = new Set([
-  "apps/web/app/(protected)/inventory/count-slips/page.tsx",
-  "apps/web/app/(protected)/inventory/count-assignments/page.tsx",
   "apps/web/app/(protected)/inventory/waste/approvals/page.tsx",
 ]);
 const LIST_WIDTH_TIER_PINNED_PAGES = [
   "apps/web/app/(protected)/inventory/grn/page.tsx",
   "apps/web/app/(protected)/inventory/ingredients/page.tsx",
   "apps/web/app/(protected)/inventory/issues/page.tsx",
-  "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
   "apps/web/app/(protected)/inventory/recipes/page.tsx",
   "apps/web/app/(protected)/inventory/stocktake/page.tsx",
   "apps/web/app/(protected)/inventory/supplier-invoices/page.tsx",
-  "apps/web/app/(protected)/inventory/supplier-returns/page.tsx",
   "apps/web/app/(protected)/inventory/transfers/page.tsx",
 ];
 
@@ -2496,10 +2491,6 @@ for (const filePath of walkUiRuntimeFiles([".tsx"])) {
 // EMBED-WRAPPER target — widen the file list only with a contract reason.
 const OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES = [
   "apps/web/app/(protected)/orders/orders-page-body.tsx",
-  "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
-  "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
-  "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx",
-  "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
   "apps/web/app/(protected)/branch-settings/_shared/printers/printers-client.tsx",
 ];
 const OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE = {};
@@ -2536,10 +2527,6 @@ for (const relPath of OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES) {
 // headers remain valid when explicitly gated by `embedded ? … : <AppPageHeader>`
 // or `!embedded ? <AppPageHeader> : …`.
 const OPERATOR_EMBEDDED_PAGE_HEADER_FILES = [
-  "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
-  "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
-  "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
-  "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx",
   "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx",
   "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx",

@@ -119,7 +119,6 @@ interface IssuesPageContentProps {
     endDate?: string | string[];
     startDate?: string | string[];
   }>;
-  routeBranchId?: number;
   listBasePath?: string;
   scope?: IssuesScope;
   embedded?: boolean;
@@ -127,7 +126,6 @@ interface IssuesPageContentProps {
 
 export async function IssuesPageContent({
   searchParams,
-  routeBranchId,
   listBasePath = "/inventory/consumption",
   scope: scopeVariant = "all",
   embedded = false,
@@ -139,7 +137,6 @@ export async function IssuesPageContent({
   const hasRecordedDateFilter = startDate != null || endDate != null;
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
-    routeBranchId,
     queryBranchId: params.branchId,
   });
   if (scope.outOfScope) notFound();
@@ -192,9 +189,7 @@ export async function IssuesPageContent({
   const [res, recordedConsumptionRes] = await Promise.all([
     fetchStockIssues({
       ...(branchFilter != null ? { branchId: branchFilter } : {}),
-      ...(scopeConfig.issueTypes
-        ? { issueTypes: scopeConfig.issueTypes }
-        : {}),
+      ...(scopeConfig.issueTypes ? { issueTypes: scopeConfig.issueTypes } : {}),
     }),
     recordedConsumptionQuery,
   ]);
@@ -205,11 +200,7 @@ export async function IssuesPageContent({
   const recordedConsumptionRows = (recordedConsumptionRes?.data ?? []) as Array<
     Record<string, unknown>
   >;
-  const scopedBranchOptions =
-    routeBranchId != null
-      ? scope.allowedBranches.filter((branch) => branch.id === routeBranchId)
-      : scope.allowedBranches;
-  const branches: IssueBranchOption[] = scopedBranchOptions.map((b) => ({
+  const branches: IssueBranchOption[] = scope.allowedBranches.map((b) => ({
     id: b.id,
     name: b.name,
     branchKind: b.branch_kind,
@@ -263,8 +254,7 @@ export async function IssuesPageContent({
   // Desktop route variants derive their heading/section title from the route
   // dictionary so each variant shows its own label; "all" (operator shell)
   // leaves it undefined so the client keeps its Tiêu hao default.
-  const pageTitle =
-    scopeVariant === "all" ? undefined : tRoute(listBasePath);
+  const pageTitle = scopeVariant === "all" ? undefined : tRoute(listBasePath);
 
   return (
     <IssuesClient
@@ -306,11 +296,15 @@ export default async function IssuesPage({
   }
   // forward date parameters if they exist
   if (params.startDate) {
-    const sd = Array.isArray(params.startDate) ? params.startDate[0] : params.startDate;
+    const sd = Array.isArray(params.startDate)
+      ? params.startDate[0]
+      : params.startDate;
     if (sd) qParams.set("startDate", sd);
   }
   if (params.endDate) {
-    const ed = Array.isArray(params.endDate) ? params.endDate[0] : params.endDate;
+    const ed = Array.isArray(params.endDate)
+      ? params.endDate[0]
+      : params.endDate;
     if (ed) qParams.set("endDate", ed);
   }
   redirect(`/inventory/operations?${qParams.toString()}`);

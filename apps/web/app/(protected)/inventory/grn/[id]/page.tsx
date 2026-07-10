@@ -12,7 +12,6 @@ interface GRNDetailPageContentProps {
   routeBranchId?: number;
   grnListBasePath?: string;
   grnMobileBackPath?: string;
-  purchaseOrdersBasePath?: string;
   supplierInvoicesBasePath?: string;
 }
 
@@ -37,7 +36,6 @@ export async function GRNDetailPageContent({
   routeBranchId,
   grnListBasePath = "/inventory/grn",
   grnMobileBackPath = "/inventory/grn/new",
-  purchaseOrdersBasePath = "/inventory/purchase-orders",
   supplierInvoicesBasePath = "/inventory/supplier-invoices",
 }: GRNDetailPageContentProps) {
   const result = await loadGrnDetailResult(grnId, routeBranchId);
@@ -58,7 +56,6 @@ export async function GRNDetailPageContent({
       auditLogs={result.data.auditLogs}
       grnListBasePath={grnListBasePath}
       grnMobileBackPath={grnMobileBackPath}
-      purchaseOrdersBasePath={purchaseOrdersBasePath}
       supplierInvoicesBasePath={supplierInvoicesBasePath}
     />
   );

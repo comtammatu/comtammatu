@@ -11,7 +11,6 @@ import {
   Pencil as IconPencil,
   Receipt as IconReceipt,
   Search as IconSearch,
-  ShoppingCart as IconShoppingCart,
   Trash as IconTrash,
   Truck as IconTruck,
   ChevronDown as IconChevronDown,
@@ -324,7 +323,6 @@ export function StockClient({
     transfer: branchHref(branchId, "/inventory/transfers"),
     stocktake: branchHref(branchId, "/inventory/stocktake"),
     waste: branchHref(branchId, "/inventory/waste/new"),
-    purchaseSuggestion: branchHref(branchId, "/inventory/purchase-orders/new"),
   };
   const quickIssueBasePath = (issueType: QuickIssueType) =>
     issueType === "consumption"
@@ -684,24 +682,13 @@ export function StockClient({
           size={isCompactLayout ? "touch" : "sm"}
         />
       ) : null}
-      {actionPermissions.canCreatePurchaseOrder &&
-      actionHrefs.purchaseSuggestion ? (
-        <QuickActionButton
-          href={actionHrefs.purchaseSuggestion}
-          icon={IconShoppingCart}
-          label={stockCopy.actions.purchaseSuggestion}
-          size={isCompactLayout ? "touch" : "sm"}
-        />
-      ) : null}
     </>
   );
 
   const hasSecondaryActions =
     actionPermissions.canCreateTransfer ||
     (actionPermissions.canCreateStocktake && actionHrefs.stocktake) ||
-    actionPermissions.canWriteoff ||
-    (actionPermissions.canCreatePurchaseOrder &&
-      actionHrefs.purchaseSuggestion);
+    actionPermissions.canWriteoff;
 
   const desktopSecondaryActionsDropdown = hasSecondaryActions ? (
     <DropdownMenu>
@@ -739,18 +726,6 @@ export function StockClient({
             <Link href={actionHrefs.waste} className="flex items-center gap-2">
               <IconTrash className="size-4 text-muted-foreground" />
               <span>{stockCopy.actions.waste}</span>
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
-        {actionPermissions.canCreatePurchaseOrder &&
-        actionHrefs.purchaseSuggestion ? (
-          <DropdownMenuItem asChild>
-            <Link
-              href={actionHrefs.purchaseSuggestion}
-              className="flex items-center gap-2"
-            >
-              <IconShoppingCart className="size-4 text-muted-foreground" />
-              <span>{stockCopy.actions.purchaseSuggestion}</span>
             </Link>
           </DropdownMenuItem>
         ) : null}
@@ -982,12 +957,11 @@ export function StockClient({
           description={stockCopy.empty.firstLoadHint}
           symbol="riceGrain"
         >
-          {actionPermissions.canCreatePurchaseOrder &&
-          actionHrefs.purchaseSuggestion ? (
+          {actionPermissions.canReceiveGrn && actionHrefs.receive ? (
             <Button asChild size="sm">
-              <Link href={actionHrefs.purchaseSuggestion}>
-                <IconShoppingCart className="size-4" />
-                {stockCopy.actions.purchaseSuggestion}
+              <Link href={actionHrefs.receive}>
+                <IconTruck className="size-4" />
+                {stockCopy.actions.receiveGrn}
               </Link>
             </Button>
           ) : null}

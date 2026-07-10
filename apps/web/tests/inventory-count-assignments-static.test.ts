@@ -23,18 +23,23 @@ const countAssignmentKitchenMigrationSource = readWeb(
   "../../supabase/migrations/20260708191713_count_slips_branch_kitchen.sql",
 );
 
-test("count assignment checkbox click does not toggle the row twice", () => {
+test("count assignment checklist uses one labeled hit target", () => {
   assert.match(
     countAssignmentsClientSource,
-    /<Checkbox[\s\S]*onClick=\{\(event\) => event\.stopPropagation\(\)\}[\s\S]*onCheckedChange=\{\(\) => toggleIngredient\(ingredient\.id\)\}/,
-    "Ingredient checkbox clicks must not bubble to the row onClick and undo the checked state before save",
+    /<Label[\s\S]*htmlFor=\{checkboxId\}[\s\S]*<Checkbox[\s\S]*id=\{checkboxId\}[\s\S]*onCheckedChange=\{\(\) => toggleIngredient\(ingredient\.id\)\}/,
+    "Ingredient checkbox and row label should share one accessible hit target",
+  );
+  assert.doesNotMatch(
+    countAssignmentsClientSource,
+    /<div[\s\S]*onClick=\{\(\) => toggleIngredient\(ingredient\.id\)\}/,
+    "The checklist must not keep a second row click handler that double-toggles the checkbox",
   );
 });
 
 test("count assignment UI reseeds from server props and refreshes after save", () => {
   assert.match(
     countAssignmentsClientSource,
-    /function seedSelections[\s\S]*assignmentsByEmployee\[String\(emp\.id\)\] \?\? \[\]/,
+    /function seedSelections[\s\S]*assignmentsByEmployee\[String\(employee\.id\)\][\s\S]*\?\? \[\]/,
     "Count assignment state should be seeded from server assignments for the current scope",
   );
   assert.match(
@@ -198,49 +203,32 @@ test("count assignment location picker includes branch warehouse and kitchen", (
   );
 });
 
-test("embedded branch count assignments keep tablet touch layout", () => {
+test("Branch stays touch-native while Office uses a management table and dialog", () => {
+  const branchClientSource = readWeb(
+    "app/(protected)/br/[branchId]/(operator)/stock/count-assignments/branch-count-assignments-client.tsx",
+  );
+
   assert.match(
-    countAssignmentsClientSource,
-    /const scopePickerClassName = cn\([\s\S]*embedded \? "lg:max-w-xl lg:grid-cols-2" : "sm:max-w-xl sm:grid-cols-2"/,
-    "Branch embedded count assignment picker should not switch to desktop columns at sm/md",
+    branchClientSource,
+    /<ItemGroup className="grid gap-2 md:grid-cols-2">/,
+    "Branch count assignment rows should keep a touch grid instead of a desktop table",
   );
   assert.match(
-    countAssignmentsClientSource,
-    /const scopeTriggerClassName = cn\("w-full", embedded && "min-h-11"\)/,
-    "Branch embedded count assignment scope controls should keep touch-height select triggers",
+    branchClientSource,
+    /className="min-h-20 touch-manipulation"/,
+    "Branch count assignment rows should keep touch-height targets",
   );
-  assert.match(
-    countAssignmentsClientSource,
-    /const employeeListClassName = cn\([\s\S]*embedded \? "lg:overflow-visible" : "sm:overflow-visible"/,
-    "Branch embedded count assignment rows should keep swipe reveal contained until desktop width",
+  const touchButtons = branchClientSource.match(/size="touch"/g) ?? [];
+  assert.ok(
+    touchButtons.length >= 3,
+    "Branch count assignment actions and drawer footer should use touch-size buttons",
   );
-  assert.match(
-    countAssignmentsClientSource,
-    /className="hidden text-sm leading-5 text-muted-foreground lg:block"/,
-    "Branch embedded helper copy should stay hidden on phone and tablet widths",
-  );
+  assert.match(countAssignmentsClientSource, /<DataTable/);
+  assert.match(countAssignmentsClientSource, /<AppDialog/);
   assert.doesNotMatch(
     countAssignmentsClientSource,
-    /className="grid gap-3 sm:max-w-xl sm:grid-cols-2"/,
-    "The shared count assignment picker must not hardcode the Office sm two-column layout for Branch",
-  );
-  assert.match(
-    countAssignmentsClientSource,
-    /aria-label=\{`Xóa phân công đếm tồn của \$\{emp\.name\}`\}/,
-    "Swipe delete icon button should have an accessible label on touch devices",
-  );
-  assert.match(
-    countAssignmentsClientSource,
-    /<Trash2 className="size-4" aria-hidden="true" \/>/,
-    "Decorative delete icon should be hidden from assistive tech",
-  );
-  const embeddedTouchButtons =
-    countAssignmentsClientSource.match(
-      /size=\{embedded \? "touch" : "default"\}/g,
-    ) ?? [];
-  assert.ok(
-    embeddedTouchButtons.length >= 4,
-    "Embedded Branch count assignment actions and drawer footer should use touch-size buttons",
+    /useSwipeReveal|useLongPress|<Drawer/,
+    "Office count assignment must not carry hidden touch gestures or a mobile drawer",
   );
 });
 

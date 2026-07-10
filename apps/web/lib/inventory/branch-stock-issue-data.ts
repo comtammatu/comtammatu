@@ -16,6 +16,7 @@ import {
   fetchStockIssues,
 } from "@/(protected)/inventory/issue-actions";
 import {
+  isBranchInternalIssueType,
   isBranchStockIssueType,
   toBranchStockIssueStatus,
   type BranchStockIssue,
@@ -74,6 +75,13 @@ function toBranchStockIssue(row: StockIssueListRow): BranchStockIssue | null {
     notes: row.notes,
     branchId: row.branch_id,
   };
+}
+
+function toBranchInternalStockIssue(
+  row: StockIssueListRow,
+): BranchStockIssue | null {
+  if (!isBranchInternalIssueType(row.issue_type)) return null;
+  return toBranchStockIssue(row);
 }
 
 function toBranchStockIssueLine(
@@ -136,7 +144,7 @@ export async function loadBranchStockIssueListData(routeBranchId: number) {
   );
   const issues = issuesResult.success
     ? ((issuesResult.data ?? []) as StockIssueListRow[])
-        .map(toBranchStockIssue)
+        .map(toBranchInternalStockIssue)
         .filter((issue): issue is BranchStockIssue => issue !== null)
     : [];
 
@@ -153,6 +161,7 @@ export async function loadBranchStockIssueListData(routeBranchId: number) {
 export async function loadBranchStockIssueDetailData(
   issueId: number,
   routeBranchId: number,
+  expectedType?: BranchStockIssue["type"],
 ): Promise<BranchStockIssueDetail> {
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryBranchScope(
@@ -172,7 +181,8 @@ export async function loadBranchStockIssueDetailData(
   const detail = detailResult.data as StockIssueDetailRow;
   if (
     detail.issue.branch_id !== routeBranchId ||
-    !isBranchStockIssueType(detail.issue.issue_type)
+    !isBranchStockIssueType(detail.issue.issue_type) ||
+    (expectedType != null && detail.issue.issue_type !== expectedType)
   ) {
     notFound();
   }

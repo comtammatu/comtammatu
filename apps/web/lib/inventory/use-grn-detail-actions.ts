@@ -27,7 +27,6 @@ interface UseGrnDetailActionsArgs {
   startConfirm: TransitionStartFunction;
   grnListBasePath?: string;
   grnMobileBackPath?: string;
-  purchaseOrdersBasePath?: string;
   isMobile: boolean;
 }
 
@@ -47,7 +46,6 @@ export function useGrnDetailActions({
   startConfirm,
   grnListBasePath = "/inventory/grn",
   grnMobileBackPath = "/inventory/grn/new",
-  purchaseOrdersBasePath = "/inventory/purchase-orders",
   isMobile,
 }: UseGrnDetailActionsArgs): UseGrnDetailActionsReturn {
   const router = useRouter();
@@ -216,12 +214,6 @@ export function useGrnDetailActions({
         !Array.isArray(result.data)
           ? (result.data as { review_count?: number }).review_count
           : 0) ?? 0;
-      const confirmedPoId =
-        (result.data &&
-        typeof result.data === "object" &&
-        !Array.isArray(result.data)
-          ? (result.data as { po_id?: number | null }).po_id
-          : null) ?? null;
       notify.success(
         reviewCount > 0
           ? m(messages.inventory.grn.confirmedWithReview, {
@@ -231,8 +223,6 @@ export function useGrnDetailActions({
       );
       if (isMobile) {
         router.push(grnMobileBackPath);
-      } else if (confirmedPoId) {
-        router.push(`${purchaseOrdersBasePath}/${confirmedPoId}`);
       } else {
         router.push(grnListBasePath);
       }

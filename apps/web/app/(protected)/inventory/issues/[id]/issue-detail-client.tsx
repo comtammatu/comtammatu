@@ -1,17 +1,14 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import {
-  ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
   CirclePlus as IconCirclePlus,
   Trash as IconTrash,
   X as IconX,
 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
@@ -125,7 +122,6 @@ type AddIssueLineDialogProps = {
   issueId: number;
   onOpenChange: (open: boolean) => void;
   onSaved: () => Promise<void>;
-  embedded?: boolean;
 };
 
 const addIssueLineSchema = z.object({
@@ -193,7 +189,6 @@ export function IssueDetailClient({
   canAdjustStock,
   auditLogs = [],
   listBasePath = "/inventory/consumption",
-  embedded = false,
 }: {
   issueId: number;
   initialIssue: IssueRecord;
@@ -202,7 +197,6 @@ export function IssueDetailClient({
   canAdjustStock: boolean;
   auditLogs?: AuditLogRow[];
   listBasePath?: string;
-  embedded?: boolean;
 }) {
   const router = useRouter();
   const [issue, setIssue] = useState(initialIssue);
@@ -415,7 +409,6 @@ export function IssueDetailClient({
               isDraft ? (
                 <Button
                   onClick={() => setAddDialogOpen(true)}
-                  size={embedded ? "touch" : "default"}
                   className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
                 >
                   <IconCirclePlus className="size-4" />
@@ -470,7 +463,6 @@ export function IssueDetailClient({
                 mobileCardRender={(item) => (
                   <IssueLineMobileCard
                     item={item}
-                    embedded={embedded}
                     isDraft={isDraft}
                     isPending={isPending}
                     amount={lineAmount(item)}
@@ -571,12 +563,10 @@ export function IssueDetailClient({
 
       {isDraft ? (
         <AppDetailFooter
-          sticky={embedded}
           leading={
             <Button
               type="button"
               variant="ghost"
-              size={embedded ? "touch" : "default"}
               onClick={handleCancelIssue}
               className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-60"
               disabled={isPending}
@@ -587,17 +577,11 @@ export function IssueDetailClient({
           }
           trailing={
             <>
-              <Button
-                type="button"
-                variant="secondary"
-                size={embedded ? "touch" : "default"}
-                disabled
-              >
+              <Button type="button" variant="secondary" disabled>
                 {ISSUES_VI.draftAutoSaved}
               </Button>
               <Button
                 type="button"
-                size={embedded ? "touch-lg" : "default"}
                 onClick={handleConfirmIssue}
                 disabled={isPending || lines.length === 0}
                 className="transition-transform hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
@@ -728,7 +712,6 @@ export function IssueDetailClient({
               <IssueLineMobileCard
                 key={item.id}
                 item={item}
-                embedded={embedded}
                 isDraft={isDraft}
                 isPending={isPending}
                 amount={lineAmount(item)}
@@ -816,49 +799,12 @@ export function IssueDetailClient({
     </div>
   );
 
-  const embeddedContent = (
+  const content = (
     <>
-      <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="icon" className="shrink-0">
-          <Link
-            href={listBasePath}
-            aria-label={tRoute("/inventory/consumption")}
-          >
-            <IconArrowLeft className="size-4" />
-          </Link>
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-mono text-sm font-semibold">
-            {issue.issue_number}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {ISSUES_VI.headerMeta(
-              surface.label,
-              issueBranchName,
-              issue.issued_at ? formatDateTime(issue.issued_at) : "—",
-            )}
-          </p>
-        </div>
-        <Badge variant={statusBadge.variant} className="shrink-0">
-          {statusBadge.label}
-        </Badge>
-      </div>
-      {mobileLayout}
-
-      <AddIssueLineDialog
-        ingredients={ingredients}
-        isOpen={addDialogOpen}
-        issueId={issueId}
-        onOpenChange={setAddDialogOpen}
-        onSaved={reload}
-        embedded={embedded}
-      />
+      <div className="lg:hidden">{mobileLayout}</div>
+      <div className="hidden lg:block">{pageLayout}</div>
     </>
   );
-
-  if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{embeddedContent}</div>;
-  }
 
   return (
     <AppPage width="xwide" density="compact">
@@ -880,14 +826,13 @@ export function IssueDetailClient({
           </AppBackLink>
         }
       />
-      {pageLayout}
+      {content}
       <AddIssueLineDialog
         ingredients={ingredients}
         isOpen={addDialogOpen}
         issueId={issueId}
         onOpenChange={setAddDialogOpen}
         onSaved={reload}
-        embedded={embedded}
       />
     </AppPage>
   );
@@ -899,7 +844,6 @@ function AddIssueLineDialog({
   issueId,
   onOpenChange,
   onSaved,
-  embedded = false,
 }: AddIssueLineDialogProps) {
   const defaultValues = useMemo<AddIssueLineFormValues>(
     () => ({
@@ -943,7 +887,6 @@ function AddIssueLineDialog({
       successMessage={ISSUES_VI.saveLineOk}
       submitLabel={ISSUES_VI.saveLineAction}
       cancelLabel={ACTIONS_VI.cancel}
-      actionSize={embedded ? "touch" : "default"}
     >
       {(form) => {
         const ingredientError = form.formState.errors.ingredientId;
@@ -1009,12 +952,12 @@ function AddIssueLineDialog({
                   .map((ingredient) => ({
                     value: String(ingredient.id),
                     label: ingredient.name,
-                    hint: ingredient.units?.find((u) => u.is_base)?.unit_code ?? "",
+                    hint:
+                      ingredient.units?.find((u) => u.is_base)?.unit_code ?? "",
                     keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
                   }))}
                 placeholder={ISSUES_VI.ingredientPlaceholder}
                 searchPlaceholder={ISSUES_VI.ingredientSearchPlaceholder}
-                size={embedded ? "touch" : "default"}
               />
               {ingredientError ? (
                 <FieldError errors={[ingredientError]} />
@@ -1026,7 +969,7 @@ function AddIssueLineDialog({
                 <FieldLabel htmlFor="issue-line-quantity">
                   {ISSUES_VI.quantityLabel} *
                 </FieldLabel>
-                <InputGroup className={embedded ? "h-12" : "h-10"}>
+                <InputGroup className="h-10">
                   <FormattedNumberInput
                     id="issue-line-quantity"
                     maxFractionDigits={3}
@@ -1092,7 +1035,6 @@ function AddIssueLineDialog({
                   >
                     <SelectTrigger
                       id="issue-line-unit"
-                      size={embedded ? "touch" : "default"}
                       className="w-full"
                       aria-label={ISSUES_VI.unitLabel}
                     >
@@ -1115,7 +1057,6 @@ function AddIssueLineDialog({
                   <Select disabled value="">
                     <SelectTrigger
                       id="issue-line-unit-missing"
-                      size={embedded ? "touch" : "default"}
                       className="w-full"
                     >
                       <SelectValue placeholder={ISSUES_VI.selectUnit} />
@@ -1179,14 +1120,12 @@ function AddIssueLineDialog({
 
 function IssueLineMobileCard({
   item,
-  embedded,
   isDraft,
   isPending,
   amount,
   onDelete,
 }: {
   item: IssueLine;
-  embedded?: boolean;
   isDraft: boolean;
   isPending: boolean;
   amount: number;
@@ -1206,10 +1145,11 @@ function IssueLineMobileCard({
             <Button
               type="button"
               variant="ghost"
-              size={embedded ? "icon-touch" : "icon"}
+              size="icon"
               onClick={() => onDelete(item.id)}
               disabled={isPending}
               className="text-muted-foreground hover:text-destructive"
+              aria-label={ISSUES_VI.deleteLineAction}
             >
               <IconTrash className="size-4" />
             </Button>

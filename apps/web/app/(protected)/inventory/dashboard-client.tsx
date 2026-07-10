@@ -13,7 +13,6 @@ import {
   Factory as IconBuildingFactory,
   Receipt as IconReceipt,
   Settings as IconSettings,
-  ShoppingCart as IconShoppingCart,
   Truck as IconTruck,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
@@ -59,7 +58,7 @@ export type DashboardProps = {
   canViewStockValue: boolean;
   totalStockValue: number | null;
   dashboardWarnings: DashboardWarning[];
-  pendingPO: number;
+  draftGrns: number;
   activeTransfers: number;
   activeStocktakes: number;
   pendingCountSlips: number;
@@ -203,11 +202,10 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
   const sourceActions: FlowAction[] = props.showProcurement
     ? [
         {
-          label: tNav("purchaseOrders", "navigation"),
-          href: paths.operationTab("purchase-orders"),
+          label: tNav("grn", "navigation"),
+          href: paths.operationTab("grn"),
           primary: true,
         },
-        { label: tNav("grn", "navigation"), href: paths.operationTab("grn") },
       ]
     : [
         {
@@ -298,12 +296,12 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         ? INVENTORY_VI.dashboardSourceProcurementDescription
         : messages.inventory.dashboard.sourceBranchDescription,
       href: props.showProcurement
-        ? paths.operationTab("purchase-orders")
+        ? paths.operationTab("grn")
         : paths.operationTab("transfers"),
-      icon: props.showProcurement ? IconShoppingCart : IconTruck,
-      metric: String(props.showProcurement ? props.pendingPO : inbound.length),
+      icon: props.showProcurement ? IconReceipt : IconTruck,
+      metric: String(props.showProcurement ? props.draftGrns : inbound.length),
       metricLabel: props.showProcurement
-        ? INVENTORY_VI.dashboardPendingPoLabel
+        ? INVENTORY_VI.dashboardDraftGrnLabel
         : messages.inventory.dashboard.inboundSlipsMetricLabel,
       statusLabel: props.showProcurement
         ? messages.inventory.dashboard.priceReviewLinesStatus(
@@ -311,7 +309,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
           )
         : messages.inventory.dashboard.inboundNeedReceiveStatus(inbound.length),
       tone:
-        (props.showProcurement && props.pendingPO > 0) || inbound.length > 0
+        (props.showProcurement && props.draftGrns > 0) || inbound.length > 0
           ? "info"
           : "default",
       actions: sourceActions,
@@ -496,7 +494,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
         ),
         description: messages.inventory.dashboard.watchReplenishPoints,
         href: paths.stock,
-        icon: <IconShoppingCart className="size-4" />,
+        icon: <IconReceipt className="size-4" />,
         severity: "destructive",
       });
     return items.slice(0, 6);
@@ -549,9 +547,9 @@ function buildTasks(props: DashboardProps): TaskItem[] {
       title: messages.inventory.dashboard.reorderThresholdTask(
         reorderAlerts.length,
       ),
-      description: INVENTORY_VI.dashboardPreparePoHint,
-      href: paths.operationTab("purchase-orders"),
-      icon: <IconShoppingCart className="size-4" />,
+      description: INVENTORY_VI.dashboardPrepareReceivingHint,
+      href: paths.operationTab("grn"),
+      icon: <IconReceipt className="size-4" />,
       severity: "destructive",
     });
   if (showProcurement && props.priceReviewCount > 0)
@@ -579,7 +577,7 @@ export function DashboardClient(props: DashboardProps) {
     canViewStockValue,
     totalStockValue,
     dashboardWarnings,
-    pendingPO,
+    draftGrns,
     activeTransfers,
     reorderAlerts,
     transfers,
@@ -635,21 +633,21 @@ export function DashboardClient(props: DashboardProps) {
   const dashboardKpis = [
     {
       label: showProcurement
-        ? INVENTORY_VI.dashboardPendingPoLabel
+        ? INVENTORY_VI.dashboardDraftGrnLabel
         : isOversight
           ? messages.inventory.dashboard.kpiInboundDocsPending
           : messages.inventory.dashboard.kpiInboundSlipsPending,
       value: String(
-        showProcurement || isOversight ? pendingPO : inboundTransferCount,
+        showProcurement || isOversight ? draftGrns : inboundTransferCount,
       ),
       hint: showProcurement
         ? messages.inventory.dashboard.kpiSourceHint
         : messages.inventory.dashboard.kpiMovementHint,
       tone: "neutral" as const,
       href: showProcurement
-        ? paths.operationTab("purchase-orders")
+        ? paths.operationTab("grn")
         : paths.operationTab("transfers"),
-      icon: <IconShoppingCart className="size-4" />,
+      icon: <IconReceipt className="size-4" />,
     },
     {
       label: messages.inventory.dashboard.activeFlowsTitle,
@@ -795,7 +793,7 @@ export function DashboardClient(props: DashboardProps) {
                 <Link
                   href={withBranch(
                     showProcurement
-                      ? paths.operationTab("purchase-orders")
+                      ? paths.operationTab("grn")
                       : paths.stock,
                   )}
                 >
@@ -810,7 +808,7 @@ export function DashboardClient(props: DashboardProps) {
                   key={`r-${item.ingredientId}-${item.branchId}`}
                   href={withBranch(
                     showProcurement
-                      ? paths.operationTab("purchase-orders")
+                      ? paths.operationTab("grn")
                       : paths.stock,
                   )}
                   title={item.name}

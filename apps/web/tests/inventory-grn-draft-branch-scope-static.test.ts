@@ -36,9 +36,6 @@ const grnSupplierPicker = readRepo(
 const grnCreateController = readRepo(
   "apps/web/lib/inventory/use-grn-create-controller.ts",
 );
-const purchaseOrderActions = readRepo(
-  "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
-);
 const migration = readRepo(
   "supabase/migrations/20260708111916_fix_grn_draft_branch_scope.sql",
 );
@@ -216,37 +213,15 @@ test("GRN drafts route keeps the branch scope in the canonical queue", () => {
   assert.doesNotMatch(draftsPage, /\/inventory\/grn\?tab=drafts/);
 });
 
-test("GRN new PO picker follows the selected receiving branch", () => {
+test("GRN source stays supplier-first and follows the selected receiving branch", () => {
   assert.match(grnSourceData, /const branchId = scope\.selectedBranchId;/);
-  assert.match(
-    grnSourceData,
-    /fetchOpenPurchaseOrdersForReceiving\(\s*branchId != null \? \{ branchId \} : undefined,\s*\)/,
-  );
   assert.match(
     grnSourceData,
     /probePermission\(auth, PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE, branchId\)/,
   );
   assert.match(grnSourceModel, /export function grnSourceSupplierHref/);
-
-  const fetchStart = purchaseOrderActions.indexOf(
-    "export async function fetchOpenPurchaseOrdersForReceiving",
-  );
-  assert.ok(fetchStart >= 0, "fetchOpenPurchaseOrdersForReceiving not found");
-  const fetchBody = purchaseOrderActions.slice(
-    fetchStart,
-    purchaseOrderActions.indexOf(
-      "const { data, error } = await query",
-      fetchStart,
-    ),
-  );
-
-  assert.match(fetchBody, /fetchOpenPurchaseOrdersForReceivingSchema/);
-  assert.match(fetchBody, /requestedBranchId/);
-  assert.match(fetchBody, /canAccessProcurementBranch\(/);
-  assert.match(fetchBody, /isBranchScopedProcurementRole\(claims\.user_role\)/);
-  assert.match(fetchBody, /resolveCentralSiteHomeBranchId\(supabase, claims\)/);
-  assert.match(
-    fetchBody,
-    /if \(branchFilter != null\) query = query\.eq\("branch_id", branchFilter\)/,
+  assert.doesNotMatch(
+    grnSourceData,
+    /fetchOpenPurchaseOrdersForReceiving|openPurchaseOrders/,
   );
 });

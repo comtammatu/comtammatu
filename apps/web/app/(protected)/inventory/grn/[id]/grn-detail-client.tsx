@@ -61,7 +61,6 @@ export function GRNDetailClient({
   auditLogs = [],
   grnListBasePath = "/inventory/grn",
   grnMobileBackPath = "/inventory/grn/new",
-  purchaseOrdersBasePath = "/inventory/purchase-orders",
   supplierInvoicesBasePath = "/inventory/supplier-invoices",
   embedded = false,
 }: {
@@ -73,7 +72,6 @@ export function GRNDetailClient({
   auditLogs?: AuditLogRow[];
   grnListBasePath?: string;
   grnMobileBackPath?: string;
-  purchaseOrdersBasePath?: string;
   supplierInvoicesBasePath?: string;
   embedded?: boolean;
 }) {
@@ -112,7 +110,6 @@ export function GRNDetailClient({
       startConfirm,
       grnListBasePath,
       grnMobileBackPath,
-      purchaseOrdersBasePath,
     });
 
   const backHref = isMobile ? grnMobileBackPath : grnListBasePath;
@@ -191,12 +188,7 @@ export function GRNDetailClient({
                   term: grnCopy.linkedPo,
                   description:
                     grn.poCode && grn.poId ? (
-                      <Link
-                        href={`${purchaseOrdersBasePath}/${grn.poId}`}
-                        className="text-primary hover:underline"
-                      >
-                        {grn.poCode}
-                      </Link>
+                      <span className="font-mono">{grn.poCode}</span>
                     ) : (
                       <span className="text-muted-foreground">
                         {inventoryCommon.noValue}
@@ -254,9 +246,7 @@ export function GRNDetailClient({
                   href={
                     isMobile
                       ? grnMobileBackPath
-                      : grn.poId
-                        ? `${purchaseOrdersBasePath}/${grn.poId}`
-                        : grnListBasePath
+                      : grnListBasePath
                   }
                 >
                   <IconArrowLeft className="size-5" />
@@ -368,12 +358,7 @@ export function GRNDetailClient({
               term: grnCopy.linkedPo,
               description:
                 grn.poCode && grn.poId ? (
-                  <Link
-                    href={`${purchaseOrdersBasePath}/${grn.poId}`}
-                    className="text-primary hover:underline"
-                  >
-                    {grn.poCode}
-                  </Link>
+                  <span className="font-mono">{grn.poCode}</span>
                 ) : (
                   <span className="text-muted-foreground">
                     {inventoryCommon.noValue}

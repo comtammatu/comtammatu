@@ -6,7 +6,6 @@ export const TOAST_VI = {
   exportedBom: "Đã xuất file công thức sản xuất",
   imageUploaded: "Đã tải ảnh lên.",
   productionOrderCreated: "Đã tạo lệnh sản xuất",
-  createGrnFromPoFailed: "Không thể tạo phiếu nhập từ PO.",
 } as const;
 
 export type ToastKey = keyof typeof TOAST_VI;

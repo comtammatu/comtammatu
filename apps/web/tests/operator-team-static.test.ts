@@ -257,21 +257,23 @@ test("operator team members use a roster grid with real profile fields", () => {
 });
 
 test("embedded count assignments does not add an extra team tab wrapper", () => {
-  assert.match(
-    countAssignmentsSource,
-    /if \(embedded\) \{\s*return content;\s*\}/,
+  const teamAssignmentsContentSource = readWeb(
+    "app/(protected)/br/[branchId]/(operator)/team/assignments/assignments-content.tsx",
   );
-  assert.match(countAssignmentsSource, /grid grid-cols-2 gap-2/);
+  const branchCountAssignmentsSource = readWeb(
+    "app/(protected)/br/[branchId]/(operator)/stock/count-assignments/branch-count-assignments-client.tsx",
+  );
+
   assert.match(
-    countAssignmentsSource,
-    /hidden text-sm leading-5 text-muted-foreground lg:block/,
+    teamAssignmentsContentSource,
+    /<BranchCountAssignmentsClient data=\{data\} embeddedInTeam \/>/,
+  );
+  assert.match(
+    branchCountAssignmentsSource,
+    /const page = embeddedInTeam \? \(\s*panel\s*\) : \(\s*<BranchOperatorPage/,
   );
   assert.doesNotMatch(
     countAssignmentsSource,
     /return <div className="flex w-full flex-col gap-3">\{content\}<\/div>/,
-  );
-  assert.doesNotMatch(
-    countAssignmentsSource,
-    /grid grid-cols-1 gap-2 sm:grid-cols-2/,
   );
 });
