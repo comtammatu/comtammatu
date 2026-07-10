@@ -378,17 +378,27 @@ export function useTransferCreateController({
         toast.error(messages.inventory.transfer.chooseSourceError);
         return;
       }
-      toLocationKind =
-        fromBranchId === toBranchId ? "branch_kitchen" : "default_receive";
+      if (fromBranchId === toBranchId) {
+        toast.error(
+          "Bếp chi nhánh đã tắt. Chi nhánh chỉ còn một kho duy nhất.",
+        );
+        return;
+      }
+      toLocationKind = "default_receive";
     } else {
       const target = parseTransferTargetValue(outboundToBranchId);
       if (!target) {
         toast.error(messages.inventory.transfer.chooseTargetError);
         return;
       }
+      if (target.kind === "kitchen" || target.branchId === fromBranchId) {
+        toast.error(
+          "Bếp chi nhánh đã tắt. Chi nhánh chỉ còn một kho duy nhất.",
+        );
+        return;
+      }
       toBranchId = target.branchId;
-      toLocationKind =
-        target.kind === "kitchen" ? "branch_kitchen" : "default_receive";
+      toLocationKind = "default_receive";
     }
     if (!fromBranchId || !toBranchId || selectedSourceLocationId == null) {
       toast.error(messages.inventory.transfer.chooseSourceError);

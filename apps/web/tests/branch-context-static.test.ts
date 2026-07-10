@@ -28,19 +28,23 @@ function claims(
   };
 }
 
-test("selectOperatorBranchScope -> owner operates every active site kind (D059 §3)", () => {
-  const selected = selectOperatorBranchScope(claims("owner", null), BRANCHES, null);
+test("selectOperatorBranchScope -> owner operates active branch-kind sites only", () => {
+  const selected = selectOperatorBranchScope(
+    claims("owner", null),
+    BRANCHES,
+    null,
+  );
 
   assert.deepEqual(
     selected.allowedBranches.map((branch) => branch.id),
-    [1, 2, 10, 20],
+    [1, 2],
   );
   assert.equal(selected.currentBranchId, 1);
   assert.equal(selected.defaultBranchId, 1);
   assert.equal(selected.canSwitchBranch, true);
 });
 
-test("selectOperatorBranchScope -> requested branch wins only when allowed", () => {
+test("selectOperatorBranchScope -> requested operating branch wins only when allowed", () => {
   assert.equal(
     selectOperatorBranchScope(claims("owner", null), BRANCHES, 2)
       .currentBranchId,
@@ -49,12 +53,12 @@ test("selectOperatorBranchScope -> requested branch wins only when allowed", () 
   assert.equal(
     selectOperatorBranchScope(claims("owner", null), BRANCHES, 10)
       .currentBranchId,
-    10,
+    1,
   );
   assert.equal(
     selectOperatorBranchScope(claims("owner", null), BRANCHES, 20)
       .currentBranchId,
-    20,
+    1,
   );
   assert.equal(
     selectOperatorBranchScope(claims("cashier", 2), BRANCHES, 1)
@@ -64,7 +68,11 @@ test("selectOperatorBranchScope -> requested branch wins only when allowed", () 
 });
 
 test("selectOperatorBranchScope -> pinned staff only sees own branch", () => {
-  const selected = selectOperatorBranchScope(claims("cashier", 2), BRANCHES, null);
+  const selected = selectOperatorBranchScope(
+    claims("cashier", 2),
+    BRANCHES,
+    null,
+  );
 
   assert.deepEqual(
     selected.allowedBranches.map((branch) => branch.id),
@@ -102,9 +110,7 @@ test("selectBranchScope -> tenant-wide roles see every branch kind", () => {
 });
 
 test("selectBranchScope -> pinned role locked to own branch, requested ignored", () => {
-  const scope = selectBranchScope(claims("cashier", 2), BRANCHES, 1, [
-    "owner",
-  ]);
+  const scope = selectBranchScope(claims("cashier", 2), BRANCHES, 1, ["owner"]);
 
   assert.deepEqual(
     scope.allowedBranches.map((branch) => branch.id),
@@ -152,7 +158,11 @@ test("resolveBranchContext queries active sites once and returns current branch"
     },
   };
 
-  const context = await resolveBranchContext(supabase, claims("owner", null), 2);
+  const context = await resolveBranchContext(
+    supabase,
+    claims("owner", null),
+    2,
+  );
 
   assert.equal(selectedColumns, "id, name, branch_kind");
   assert.deepEqual(filters, {
@@ -162,6 +172,13 @@ test("resolveBranchContext queries active sites once and returns current branch"
   assert.equal(context?.branchId, 2);
   assert.equal(context?.branch.id, 2);
   assert.equal(context?.role, "owner");
+
+  const centralContext = await resolveBranchContext(
+    supabase,
+    claims("owner", null),
+    10,
+  );
+  assert.equal(centralContext, null);
 });
 
 /* ─── parseBranchIdParam / resolveListScope (D058 W3b) ─── */
@@ -180,32 +197,30 @@ test("parseBranchIdParam -> parses a single numeric value, rejects malformed/non
 test("resolveListScope -> routeBranchId (embedded) and queryBranchId (office) requesting the same branch resolve identically", () => {
   const tenantWideRoles: readonly JwtClaims["user_role"][] = ["owner"];
 
-  const embedded = resolveListScope(
-    {},
-    claims("owner", 1),
-    BRANCHES,
-    { routeBranchId: 2, tenantWideRoles },
-  );
-  const office = resolveListScope(
-    {},
-    claims("owner", 1),
-    BRANCHES,
-    { queryBranchId: "2", tenantWideRoles },
-  );
-
-  return Promise.all([embedded, office]).then(([embeddedScope, officeScope]) => {
-    assert.equal(embeddedScope.selectedBranchId, 2);
-    assert.equal(officeScope.selectedBranchId, 2);
-    assert.deepEqual(
-      embeddedScope.allowedBranches.map((b) => b.id),
-      officeScope.allowedBranches.map((b) => b.id),
-    );
-    assert.equal(embeddedScope.canSelectAll, officeScope.canSelectAll);
-    assert.equal(embeddedScope.defaultBranchId, officeScope.defaultBranchId);
-    // outOfScope is embedded-only semantics — office callers never notFound().
-    assert.equal(embeddedScope.outOfScope, false);
-    assert.equal(officeScope.outOfScope, false);
+  const embedded = resolveListScope({}, claims("owner", 1), BRANCHES, {
+    routeBranchId: 2,
+    tenantWideRoles,
   });
+  const office = resolveListScope({}, claims("owner", 1), BRANCHES, {
+    queryBranchId: "2",
+    tenantWideRoles,
+  });
+
+  return Promise.all([embedded, office]).then(
+    ([embeddedScope, officeScope]) => {
+      assert.equal(embeddedScope.selectedBranchId, 2);
+      assert.equal(officeScope.selectedBranchId, 2);
+      assert.deepEqual(
+        embeddedScope.allowedBranches.map((b) => b.id),
+        officeScope.allowedBranches.map((b) => b.id),
+      );
+      assert.equal(embeddedScope.canSelectAll, officeScope.canSelectAll);
+      assert.equal(embeddedScope.defaultBranchId, officeScope.defaultBranchId);
+      // outOfScope is embedded-only semantics — office callers never notFound().
+      assert.equal(embeddedScope.outOfScope, false);
+      assert.equal(officeScope.outOfScope, false);
+    },
+  );
 });
 
 test("resolveListScope -> routeBranchId outside the allowed set flags outOfScope; queryBranchId never does", async () => {

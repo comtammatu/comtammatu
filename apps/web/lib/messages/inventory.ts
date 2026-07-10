@@ -85,15 +85,8 @@ export const inventory = {
     mainFlowsOversightDescription:
       "Theo dõi tồn và luồng đang chạy theo đúng phạm vi.",
     mainFlowsOperatorDescription: "Mở nhanh đúng phần kho cần xử lý hôm nay.",
-    operatorStockPrimaryTitle: "Việc kho trong ca",
-    operatorStockPrimaryDescription:
-      "Nhận hàng, điều chuyển, kiểm kê, báo hao hụt hoặc sản xuất ngay trên màn hình cảm ứng.",
-    operatorStockLookupTitle: "Tra cứu & hồ sơ kho",
-    operatorStockLookupDescription:
-      "Xem tồn, phiếu nhập và chứng từ kho theo phạm vi chi nhánh hiện tại.",
-    operatorStockCatalogTitle: "Danh mục & thiết lập",
-    operatorStockCatalogDescription:
-      "Mở danh mục nguyên liệu, đơn vị và nhà cung cấp khi cần chỉnh nền dữ liệu.",
+    operatorStockPrimaryTitle: "Thao tác kho",
+    operatorStockSecondaryTitle: "Theo dõi & thiết lập",
     operationalMetricsTitle: "Số liệu vận hành",
     operationalMetricsDescription:
       "Theo dõi nhanh số lượng việc đang mở; xử lý qua phiếu ở các mục bên dưới.",
@@ -159,7 +152,7 @@ export const inventory = {
       count > 0 ? `${formatCount(count)} tồn thấp` : "Đầy đủ tồn",
     stocktakeStatus: (count: number) =>
       count > 0 ? `${formatCount(count)} kiểm kê` : "Không có kiểm kê",
-    viewStockAction: "Xem tồn",
+    viewStockAction: "Tồn kho",
     oversightAlertsTitle: "2. Cảnh báo ưu tiên",
     oversightAlertsDescription:
       "Theo dõi tồn thấp và điểm lệch cần quản lý xử lý tiếp.",

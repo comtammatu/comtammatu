@@ -165,21 +165,21 @@ test("count assignment scope defaults to the current shift unless all-shifts is 
   );
 });
 
-test("count assignment location picker includes branch warehouse and kitchen", () => {
+test("count assignment location picker is warehouse-only (D078)", () => {
   assert.match(
     countAssignmentsPageSource,
-    /\.in\("location_kind", \["warehouse", "kitchen"\]\)/,
-    "count assignments should load both branch warehouse and branch kitchen locations",
+    /\.in\("location_kind", \["warehouse"\]\)/,
+    "count assignments should load the branch warehouse only",
   );
   assert.doesNotMatch(
     countAssignmentsPageSource,
-    /\.eq\("location_kind", "warehouse"\)/,
-    "count assignments must not hardcode the location picker to warehouse only",
+    /\.in\("location_kind", \["warehouse", "kitchen"\]\)/,
+    "count assignments must not offer retired branch kitchen locations",
   );
   assert.match(
     countAssignmentsPageSource,
     /label: countLocationLabel\(/,
-    "server page should format operator-facing labels such as Phước Hải - Kho/Bếp",
+    "server page should format operator-facing warehouse labels",
   );
   assert.match(
     countAssignmentsClientSource,
@@ -198,8 +198,8 @@ test("count assignment location picker includes branch warehouse and kitchen", (
   );
   assert.match(
     countAssignmentsPageSource,
-    /locations\.find\(\(l\) => l\.kind === "kitchen"\)\?\.id/,
-    "count assignments should default branch counting to Bếp CN when no locationId is provided",
+    /locations\.find\(\(l\) => l\.kind === "warehouse"\)\?\.id/,
+    "count assignments should default branch counting to Kho when no locationId is provided",
   );
 });
 
@@ -362,7 +362,7 @@ test.skip("count assignment UI uses the branch warehouse checklist layout", () =
   );
   assert.match(
     countAssignmentsPageSource,
-    /\.in\("location_kind", \["warehouse", "kitchen"\]\)[\s\S]*\.in\("item_kind", \["raw_material", "finished_good"\]\)/,
-    "Assignments should target branch warehouse/kitchen locations and list active countable goods",
+    /\.in\("location_kind", \["warehouse"\]\)[\s\S]*\.in\("item_kind", \["raw_material", "finished_good"\]\)/,
+    "Assignments should target the branch warehouse and list active countable goods",
   );
 });

@@ -35,16 +35,9 @@ test("resolveOperatorTiles -> branch manager sees branch workflows in operator h
   );
   const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));
 
-  assert.equal(
-    groups
-      .find((group) => group.id === "stock")
-      ?.tiles.find((tile) => tile.href === "/br/3/stock/transfer?queue=receive")
-      ?.label,
-    "Nhận hàng",
-  );
   assert.equal(hrefs.includes("/br/3/stock"), true);
-  assert.equal(hrefs.includes("/br/3/stock/transfer?queue=receive"), true);
-  assert.equal(hrefs.includes("/br/3/stock/transfer"), true);
+  assert.equal(hrefs.includes("/br/3/stock/transfer?queue=receive"), false);
+  assert.equal(hrefs.includes("/br/3/stock/transfer"), false);
   assert.equal(hrefs.includes("/br/3/stock/stocktake"), true);
   assert.equal(hrefs.includes("/br/3/stock/waste"), true);
   assert.equal(moduleKeys.includes("branch_dashboard"), false);
@@ -169,13 +162,11 @@ test("resolveOperatorTiles -> branch stock group renders the branch tile set", (
     [
       "Sản xuất",
       "Tồn kho",
-      "Nhận hàng",
-      "Yêu cầu hàng",
-      "Kiểm kê",
-      "Phân công đếm tồn",
-      "Báo hao hụt",
+            "Kiểm kê",
+      "Giao đếm",
+      "Hao hụt",
       "Tiêu hao",
-      "Phiếu nhập",
+      "Nhập hàng",
       "Danh mục",
     ],
   );
@@ -188,17 +179,18 @@ test("resolveOperatorTiles -> office_bridge group is retired", () => {
   assert.equal(branchGroupIds.includes("office_bridge"), false);
 });
 
-test("resolveOperatorTiles -> transfer tile reads as request at branches", () => {
-  const branchStock = resolveOperatorTiles("branch_manager", 3, "branch").find(
-    (group) => group.id === "stock",
-  );
-  assert.deepEqual(
-    branchStock?.tiles
-      .filter((tile) => tile.href === "/br/3/stock/transfer")
-      .map((tile) => tile.label),
-    ["Yêu cầu hàng"],
+test("resolveOperatorTiles -> branch kitchen transfer tile is retired", () => {
+  const groups = resolveOperatorTiles("branch_manager", 3, "branch");
+  const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));
+  assert.equal(hrefs.includes("/br/3/stock/transfer"), false);
+  assert.equal(
+    groups
+      .find((group) => group.id === "stock")
+      ?.tiles.some((tile) => tile.label === "Điều chuyển"),
+    false,
   );
 });
+
 
 test("resolveOperatorTiles -> orders tile is branch-native under sales_kitchen, not office_bridge", () => {
   const groups = resolveOperatorTiles("owner", 3);

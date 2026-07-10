@@ -23,6 +23,202 @@
 - Active work must be one of the gates below or a fresh owner-confirmed blocker.
   Everything else belongs in code, canonical docs, tests, runbooks, or nowhere.
 
+## Branch Hub Single-Branch Entry (D077)
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + workflow + UI; external skills
+= Supabase for production truth; runtime tools = refreshed CodeGraph, read-only
+production SQL, focused Node tests, full repo gates, and browser verification.
+Skipped = schema changes, production writes, Office-shell deletion, and moving
+Owner workspace routes.
+
+- **PM:** Make Branch Hub the promoted home for every active role while keeping
+  Owner-only workspaces reachable. Acceptance is one operable-branch entry,
+  no central-site advertisement, and no duplicate new shell.
+- **BA:** Only `branch_kind = branch` is operable. One allowed branch opens
+  directly; multiple allowed branches retain the picker. Owner can cross into
+  Finance/HR/Payroll/Settings, but those shortcuts do not widen action ACL.
+- **Senior Dev:** Reuse `selectOperatorBranchScope`, `resolveBranchContext`,
+  `MODULE_ACL`, and existing Branch action sections. Resolve from DB, never
+  hardcode branch 3, and return null for a requested branch outside the allowed
+  set instead of silently substituting another branch.
+- **QA/QC:** Unit-test owner fallback, owner home links, branch-kind filtering,
+  and wrong-route rejection. Static-test sole-branch redirect, picker gating,
+  the management/Owner Hub groups, and route-boundary compliance; then run
+  typecheck, lint, build, tests, and desktop/mobile Hub smoke.
+
+Agreement: this slice changes entry and presentation only. It does not mutate
+production rows or remove Owner workspaces. Route visibility remains separate
+from Server Action/RLS authorization.
+
+- [x] **B1 — single-branch entry contract.** Owner falls back to `/`; the root
+      resolver auto-opens one allowed operating branch and retains the picker
+      only for real multi-branch scope.
+- [x] **B2 — fail-closed Branch scope.** Central kinds are excluded for every
+      role and a mismatched `/br/[branchId]` does not render another branch.
+- [x] **B3 — self-operating Hub presentation.** Add Branch management and
+      Owner-only workspace shortcuts with existing ACL labels/primitives; hide
+      the branch switcher when `canSwitchBranch` is false.
+- [x] **B4 — automated verification.** Focused auth/Hub tests and the full repo
+      typecheck, lint, build, and test gates are green.
+- [ ] **B5 — authenticated visual smoke.** Rerun the Playwright desktop/mobile
+      Branch Hub smoke after restoring the owner/cashier credentials and the
+      manager test Supabase connection; the current auth setup fails before the
+      scenarios execute.
+
+## Branch Stock Hub Viewport
+
+### T2 contract
+
+Skill plan: repo rules = engineering + skills + workflow + UI; external skills
+= none; runtime tools = refreshed CodeGraph, in-app browser, focused Node tests,
+and full repo gates. Skipped = new navigation primitives, inventory queries,
+and workflow changes below the Hub.
+
+- **PM:** Keep the Branch Stock Hub as a fast launcher, but fit daily work into
+  the first viewport. Done means no duplicate transfer entry, two concise job
+  groups, and a bottom-nav label that names the whole module.
+- **BA:** The transfer screen already owns `Cần nhận`, `Cần giao`, and `Lịch sử`,
+  so Hub exposes one `Điều chuyển` entry. `Kho` opens the full stock workspace;
+  `Tồn kho` remains the narrower on-hand lookup.
+- **Senior Dev:** Remove the duplicate at shared `nav-config`, reuse
+  `BranchOperatorActionSection`, and regroup the existing role-filtered links.
+  Do not add a second tab model or fetch queue data only for presentation.
+- **QA/QC:** Static-test the canonical transfer link, compact two-column groups,
+  and `Kho` bottom-nav copy. Smoke `/br/3/stock` at `390x844` and `622x837`,
+  checking overflow, tap targets, labels, and the transfer destination.
+
+UI Advisor Gate: surface = `/br/[branchId]/stock`; route family =
+`operator-stock`; plane = Branch; change = visual + copy. Context = Inventory
+Workspace; actor = owner/branch manager; job = open the correct stock workflow
+without scanning duplicate entries. Journey = Branch bottom nav -> choose one
+job -> open its native workflow -> return to Stock Hub. Information order = four
+daily stock actions first, then lookup/production/counting/consumption/catalog;
+exclude = Office metrics and repeated queue facets. Pattern = Branch touch HUB;
+components = `BranchOperatorPage` + `BranchOperatorActionSection`; states =
+permission-filtered links or existing empty state. Responsive = same two groups
+on phone/tablet with two-column touch tiles; verification = authenticated
+browser evidence at both target viewports plus repo gates.
+
+- [x] **S1 — canonical navigation.** Remove the duplicate receive-only transfer
+      tile and label the remaining route `Điều chuyển`; rename bottom tab `Kho`.
+- [x] **S2 — compact Hub.** Render two two-column groups without repeated
+      explanatory copy while preserving role-filtered fallback links.
+- [x] **S3 — verification.** Focused tests, typecheck, lint, build, and
+      phone/tablet browser smoke are green.
+
+Attestation: the diff matches the T2 contract; canonical navigation owns one
+transfer entry, Stock Hub owns two compact groups, and no inventory data flow or
+authorization boundary changed. No new regression rule was needed.
+
+## Branch Today Hub Viewport
+
+### T2 contract
+
+Skill plan: repo rules = engineering + skills + workflow + UI; external skills
+= none; runtime tools = CodeGraph, in-app browser, focused Node tests, and repo
+gates. Skipped = new queue queries, components, routes, and permission changes.
+
+- **PM:** `Nay` must surface real pending work before daily station entry. Done
+  means zero-count rows and bottom-nav duplicates no longer consume viewport.
+- **BA:** `Ca`, `Đội`, and `Kho` own their workflows in bottom nav. The Today Hub
+  keeps sales/kitchen/order entry plus management shortcuts; the header already
+  owns the Branch command link.
+- **Senior Dev:** Filter the existing queue model, narrow the existing home href
+  contract, and delete duplicate presentation. Keep ACL-resolved tiles intact.
+- **QA/QC:** Lock positive-only queue rows and manager Today suffixes with static
+  tests; smoke owner `/br/3` at phone and desktop, including the nonzero queue.
+
+UI Advisor Gate: surface = `/br/[branchId]`; family = `operator-home`; plane =
+Branch; change = visual + flow. Context = Branch day-flow home; actor =
+owner/branch manager; job = act on pending work, then enter the relevant station.
+Information order = positive pending queue, sales/kitchen/order tiles, management
+shortcuts; exclude = repeated Team/Stock directories and duplicate Branch command.
+Pattern = Branch touch HUB; components = existing `BranchOperatorPage`, queue
+panel, and action sections; responsive = same IA at phone/desktop with 2-column
+touch tiles; verification = route DOM/screenshot plus full repo gates.
+
+- [x] **N1 — positive queue.** Hide zero-count queue rows and suppress the panel
+      when no work is pending.
+- [x] **N2 — one owner per workflow.** Keep sales/kitchen/order tiles on `Nay`;
+      remove repeated Team/Stock groups and the duplicate command control bar.
+- [x] **N3 — verification.** Focused tests, repo gates, and phone/desktop browser
+      smoke are green.
+
+Attestation: the diff matches the T2 contract; `Nay` now renders only positive
+work signals and station/management entry, with no data query, ACL, or action
+change. No new regression rule was needed.
+
+## Branch Shift Tab Semantics
+
+### T2 contract
+
+Skill plan: repo rules = engineering + skills + workflow + UI; external skills
+= none; runtime tools = CodeGraph, in-app browser, focused tests, and repo gates.
+Skipped = attendance data/model changes and a new manager shift dashboard.
+
+- **PM/BA:** `Ca` is personal attendance/workday, so it is useful to scheduled
+  staff and Branch Manager but not Owner. Owner shift oversight stays in `Nay`
+  queues and `Đội`; a direct old `/shift` link safely returns to `Đội`.
+- **Senior Dev:** Gate only the bottom-nav membership and root route. Keep all
+  approval/detail routes, ACL, attendance actions, and staff presentation intact.
+- **QA/QC:** Static-test Owner tab exclusion and redirect while preserving the
+  Branch Manager `manager-dashboard` and employee `full` modes.
+
+UI Advisor Gate: surface = `/br/[branchId]/shift`; family = `operator-shift`;
+plane = Branch; change = navigation behavior. Actor/job = scheduled staff manage
+their workday; Owner monitors through Team/Today. Pattern and components remain
+the existing Branch workday surface; verification = Owner runtime redirect plus
+static and full repo gates.
+
+- [x] **C1 — truthful membership.** Hide `Ca` for Owner and redirect the Owner
+      shift root to `Đội`; leave staff/manager workday flows unchanged.
+- [x] **C2 — verification.** Focused tests, repo gates, and Owner browser smoke
+      are green.
+
+Attestation: the diff matches the T2 contract; only Owner tab membership and the
+Owner root redirect changed. Attendance data, approval routes, actions, and ACL
+remain intact. No new regression rule was needed.
+
+## Branch Team Tab Viewport
+
+### T2 contract
+
+Skill plan: repo rules = engineering + skills + workflow + UI; external skills
+= none; runtime tools = CodeGraph, in-app browser, focused tests, and repo gates.
+Skipped = new team data, routes, filters, and approval workflows.
+
+- **PM/BA:** `Đội` opens the actual workspace tabs immediately. Approval entry
+  cards repeat `Nay`, while People/Assignments cards repeat their tabs. The first
+  tab is shift monitoring, not a generic `Ca & Kho` directory.
+- **Senior Dev:** Delete the duplicate entry composition, reuse existing tabs,
+  select the highest-signal existing filter (`Cần xử lý` -> `Đang làm` -> all),
+  and omit zero-count filters.
+- **QA/QC:** Lock the three tab labels, initial-filter priority, zero-filter
+  suppression, and absence of the old manager-entry action sections.
+
+UI Advisor Gate: surface = `/br/[branchId]/team`; family = `branch-team`; plane
+= Branch; change = visual + filter behavior. Actor/job = manager or Owner scans
+active/exception shifts, then opens people or assignments. Information order =
+tablist, high-signal shift filter, rows; exclude = repeated approval/entry cards.
+Pattern = Branch touch LIST workspace; responsive = sticky three-tab strip and
+existing touch rows; verification = phone/desktop browser plus repo gates.
+
+- [x] **T1 — direct workspace.** Remove the five repeated entry cards and rename
+      the board tab `Theo dõi ca`.
+- [x] **T2 — signal-first list.** Default to action/working rows before all rows
+      and hide filters whose result count is zero.
+- [x] **T3 — child screens.** Hide zero-result roster chips and place employees
+      with count assignments before unassigned employees without removing anyone.
+- [x] **T4 — verification.** Focused tests, repo gates, and browser smoke are
+      green.
+
+Attestation: the diff matches the T2 contract; `Đội` now opens the direct
+three-tab workspace, prioritizes real signals, and preserves every roster and
+assignment row. No data loader, mutation, or authorization boundary changed. No
+new regression rule was needed.
+
 ## Self-Order Rebuild (D075)
 
 Contract: `docs/spec/self-order-guest-ui.md`. Owner decision: `docs/plan/decisions.md`
@@ -222,8 +418,8 @@ frontend-testing-debugging; runtime tools = CodeGraph + in-app Browser; skipped
 the composition.
 
 - **PM:** Finish only the four visible contract gaps: sticky categories,
-  compact non-main rows, the pending round inside the bill, and hidden bill
-  access for multi-bill ambiguity.
+  compact non-main rows, the pending round inside the bill, and safe bill
+  access for every table state.
 - **BA:** Main dishes keep photo cards; side dishes, drinks, and desserts use
   compact rows. Pending requests show submitted lines without a payable total.
   Multi-bill guests cannot read or pay a bill.
@@ -233,11 +429,13 @@ the composition.
   `390x844`: page identity, first viewport, console, item sheet, cart, and bill
   drawer.
 
-- [x] **S4 — guest UI.** Menu becomes the only page: header is `[table label]` +
-      a `Hoá đơn` button with a `Badge` opening a `Drawer` that never auto-opens.
+- [x] **S4 — guest UI.** Menu becomes the only page: header is `[table label]`;
+      `Hoá đơn` is always a lower-right button with a `Badge` opening a `Drawer`
+      that never auto-opens.
       Delete `self-order/status-pill.tsx`, `self-order/device-access-panel.tsx`,
       and `self-order/session-state-panel.tsx`; the awaiting and rejected states
-      render as inline `NoteCallout` / `Alert` above the item list. Create
+      render in `Dialog`, while refresh failures use toast rather than header
+      copy. Create
       `self-order/bill-drawer.tsx` holding the canonical order lines, the round
       history read from `kitchen_send_batches`, and `payment-panel.tsx`. Group
       the menu by `menu_categories.type`: `main_dish` as large photo cards, the
@@ -246,6 +444,204 @@ the composition.
       `self-order/hooks.ts`: 3s while awaiting confirmation or paying, 15s
       otherwise, refetch on focus and bfcache restore. G0 renders a static
       `BrandMascot animated={false}`.
+
+### Guest chrome correction T2 self-review
+
+Skill plan: repo rules = engineering + UI + workflow; external skill =
+frontend-testing-debugging; runtime tools = CodeGraph + Browser; skipped = new
+workflow/data state because the owner changed only the guest presentation.
+
+UI Advisor Gate
+
+- Surface: `/q/[token]`; route family: PUBLIC-WORKFLOW; actor: guest; job:
+  browse the menu and inspect the bill at any point.
+- Information order: table label -> menu -> cart; `Hoá đơn` is an always-visible
+  fixed lower-right action. An unopened or multi-bill table shows no order data.
+- States: awaiting and rejected use a dismissible `Dialog`; refresh failure and
+  successful add-more use `toast`; bill and payment remain in the existing
+  `Drawer`.
+- Components: existing `Button`, `Badge`, `AppDialog`, `Drawer`, and Sonner toast;
+  mobile keeps touch targets and avoids overlap with the sticky cart bar.
+
+- **PM:** Scope is only bill placement/visibility and guest notification chrome.
+  Acceptance is no header notification copy, bill visible before a first request,
+  and no change to ordering or payment authority.
+- **BA:** Pending/rejected requests still need a visible recovery path; unopened
+  and multi-bill states show no order data, and payment fields remain drawer-only.
+- **Senior Dev:** Reuse the current snapshot state, bill drawer, and primitives;
+  add no new persistence, fetch, or state store.
+- **QA/QC:** Lock the source contract with focused static tests; smoke the menu,
+  first submit, dialog, bill launcher, and cart overlap at `390x844`.
+
+Attestation: the diff matches this T2 contract. The bill launcher is always
+available, while multi-bill privacy remains fail-closed and the existing
+drawer/payment path is unchanged. Focused Web tests, typecheck, lint, and build
+pass; browser smoke is deliberately unverified because local dev uses production
+Supabase credentials.
+
+- [x] **Guest chrome correction.** Keep `Hoá đơn` as an always-visible
+      lower-right fixed action, replace header callouts with dialog/toast
+      feedback, and update the Self-Order UI and feedback contracts.
+
+### Guest bill state T2 self-review
+
+Skill plan: repo rules = engineering + UI + workflow; external skills = none;
+runtime tools = CodeGraph + focused static tests; skipped = browser smoke
+because local dev uses production Supabase credentials.
+
+- **PM:** Bill starts with only the ordered lines and one payment CTA.
+- **BA:** No order or multi-bill keeps the safe empty state and cannot enter
+  payment; Back from payment returns to the bill without changing the order.
+- **Senior Dev:** Reuse `BillDrawer` and `PaymentPanel`; add one local
+  drawer-view state, no route, query, or payment-contract change.
+- **QA/QC:** Assert payment is absent from the bill view and rerun the focused
+  suite plus full gates.
+
+Attestation: the diff matches this T2 contract. Bill and payment remain one
+Drawer with explicit local state; the active order and payment intent stay the
+only payment authorities.
+
+### Guest cart edit + layout cleanup T2 self-review
+
+Skill plan: repo rules = engineering + UI + workflow; external skills = none;
+runtime tools = focused tests.
+
+UI Advisor Gate
+
+- Surface: `/q/[token]` G3 cart; change: visual cleanup + edit cart line.
+- Journey: open cart -> Sửa -> item sheet hydrated from draft -> Cập nhật
+  replaces same key; recovery: close sheet keeps prior line.
+- Components: extracted `item-sheet.tsx`, quiet Item list + separators.
+- Verification: static guards for edit/replace; ui-contract.
+
+Attestation: the diff matches this T2 contract.
+
+- [x] **Guest cart edit + layout cleanup.** Quieter list layout; **Sửa** reopens
+      customizer and replaces the cart line in place.
+
+### Guest cart sheet redesign T2 self-review
+
+Skill plan: repo rules = engineering + UI + workflow; external skills = none;
+runtime tools = focused tests; skipped = Three.js / new commerce flow.
+
+UI Advisor Gate
+
+- Surface: `/q/[token]` cart sheet; route family: PUBLIC-WORKFLOW; plane: public;
+  change: visual composition of G3.
+- Context: seated guest; job: review cart lines, adjust qty, send.
+- Journey: sticky launcher -> full-height sheet -> edit lines/note -> Gửi món;
+  recovery: close sheet, keep cart.
+- Information order: lines -> note -> subtotal + CTA; exclude bill/payment.
+- Pattern: PUBLIC-WORKFLOW; exemplar: `cart-sheet.tsx`; data display: review list.
+- States: empty, editable, submitting, CTA-disabled (awaiting/payment lock).
+- Components: Sheet, ScrollArea, Badge, Button, AppEmptyState, Alert, Spinner.
+- Responsive/accessibility: touch targets, closeCartAria, quantity aria labels.
+- Verification: focused static tests + typecheck/lint.
+
+- **PM:** Visual/review composition only; send paths unchanged.
+- **BA:** Same cart payload and CTA state rules; tags display-only.
+- **Senior Dev:** Reuse menu-display split helper; no schema change.
+- **QA/QC:** Guard full-height sheet, large total, no direct sticky submit.
+
+Attestation: the diff matches this T2 contract.
+
+- [x] **Guest cart sheet redesign.** Full-height review sheet with larger line
+      typography, single footer total, and press-scale controls.
+
+### Guest menu visual scale T2 self-review
+
+Skill plan: repo rules = engineering + UI + workflow; external skills = none;
+runtime tools = focused tests; skipped = Three.js / framer-motion because the
+Motion Contract forbids animation libraries.
+
+- **PM:** Bigger type + thumb + press feedback only; no new commerce flow.
+- **BA:** Display-only; cart/KDS names unchanged.
+- **Senior Dev:** CSS `duration-150` + `active:scale-[0.97]` only.
+- **QA/QC:** Static guards for scale classes; lint/ui-contract.
+
+Attestation: the diff matches this T2 contract.
+
+- [x] **Guest menu visual scale.** Larger title/price/thumbs; CSS press motion
+      only (no Three.js).
+
+### Guest menu row layout T2 self-review
+
+Skill plan: repo rules = engineering + UI + workflow; external skills = none;
+runtime tools = focused tests; skipped = design-review plugin because the owner
+locked the row composition and badge treatment.
+
+UI Advisor Gate
+
+- Surface: `/q/[token]`; route family: PUBLIC-WORKFLOW; plane: public; change:
+  visual menu composition + default category.
+- Context: seated guest; actor: guest; job: land on Cơm, scan dish rows, open
+  the item sheet, add to cart.
+- Journey: default Cơm filter -> row tap -> item sheet -> cart -> send;
+  recovery: switch category pill or open Tất cả.
+- Information order: category rail -> image + category eyebrow + title + price;
+  exclude bill/payment from the row.
+- Pattern: PUBLIC-WORKFLOW; exemplar: `apps/web/app/q/[token]/self-order/menu-panel.tsx`;
+  data display: horizontal menu rows (larger thumb for main_dish).
+- States: available menu, empty menu, awaiting, rejected, payment-locked.
+- Components: `Button`, `Badge`, `ScrollArea`, existing item sheet; fallback:
+  span with SectionLabel dense classes inside the button (no nested `div`).
+- Responsive/accessibility: same mobile IA; aria-label keeps the raw item name;
+  touch targets stay `size="touch"`.
+- Verification: focused Self-Order static + menu-display unit tests,
+  typecheck/lint/build.
+
+- **PM:** Scope is browse composition only. Acceptance is default Cơm, row
+  layout, and parenthetical tags as image badges.
+- **BA:** Cart/customizer/KDS keep raw `menu_items.name`; only the menu row
+  splits a trailing `(tag)`.
+- **Senior Dev:** Pure helpers in `menu-display.ts`; no schema or RPC change.
+- **QA/QC:** Guard default category, row markers, and tag split; no browser
+  smoke against production credentials.
+
+Attestation: the diff matches this T2 contract.
+
+- [x] **Guest menu row layout.** Default category is Cơm; menu rows are
+      image-left / title-right; trailing `(tag)` notes render as image badges.
+
+### Guest menu and cart layout T2 self-review
+
+Skill plan: repo rules = engineering + UI + workflow; external skill =
+frontend-testing-debugging; runtime tools = CodeGraph + Browser; skipped = new
+menu data, images, state, and payment changes because this is a composition-only
+correction.
+
+UI Advisor Gate
+
+- Surface: `/q/[token]`; route family: PUBLIC-WORKFLOW; actor: a seated guest;
+  job: recognize the restaurant, choose a meal, review the cart, then submit.
+- Information order: Má Tư + table -> "Hôm nay ăn gì?" -> category rail ->
+  main-dish photo menu / compact secondary rows -> one cart action.
+- Primary action: the sticky cart opens the cart sheet; **Gửi món** and **Gửi
+  thêm món** stay inside that review sheet only.
+- Responsive/accessibility: image is a visual aid only; names/prices remain
+  regular text, each menu item and bottom action remain touch-sized, and the
+  bill launcher sits above the compact cart bar.
+
+- **PM:** Scope is the visible guest composition, not a new commerce flow.
+  Acceptance is a recognizable menu surface and no direct submit from browsing.
+- **BA:** The same item customizer, cart payload, first-order approval, and
+  payment lock remain authoritative; only the point at which a guest confirms
+  the cart moves into the sheet.
+- **Senior Dev:** Reuse `MenuPanel`, `MenuPhotoButton`, `CartSheet`, shared
+  `Button`/`Badge`, and existing message SSOT. No new components or queries.
+- **QA/QC:** Add static guards for text-under-image cards and cart-sheet-only
+  submission; rerun the focused suite and full gates. Browser remains blocked
+  until a non-production runtime exists.
+
+Attestation: the diff preserves the current customizer, cart payload,
+approval, payment, and bill paths while moving browse-time confirmation into
+the cart sheet. The full Web test suite (927 passed, 33 skipped), typecheck,
+lint, and production build pass. Browser smoke remains intentionally
+unverified because local dev uses production Supabase credentials.
+
+- [x] **Guest menu and cart layout.** Replace image-overlay product tiles and
+      direct sticky submission with the agreed menu hierarchy and one cart entry
+      point.
 
 ### Featured main dishes T2 self-review
 
@@ -417,6 +813,81 @@ table QR. It never did. Do not grow one inside this rebuild.
         Branch/Office shells with local Supabase E2E auth. The theme contrast
         contract remains covered by the design-system guard suite.
 
+## Single-warehouse cutover (D078)
+
+### T3 contract (condensed)
+
+Skill plan: repo rules = engineering + skills + workflow + UI + database;
+external = none; runtime = migration file only (no PROD apply). Focused tests +
+typecheck/lint/build.
+
+- **PM:** Owner tắt Bếp CN; một kho/chi nhánh. Done = no Kho↔Bếp UX, defaults
+  warehouse, decision/docs/tests aligned, migration ready for owner apply.
+- **BA:** Stock-bearing = warehouse only. Kitchen inactive. POS/issue/GRN/
+  stocktake/count/production → warehouse. KDS workflow unchanged.
+- **Dev:** App defaults + nav/copy; migration consolidates + rewires RPCs;
+  do not apply prod without delegation.
+- **QA:** Update static/unit tests locking 2-location model; verify gates.
+
+- [x] **W1 — decision + docs.** D078; fold D000/D073 §5; inventory.md,
+      screen-context, regressions, todo S11.
+- [x] **W2 — app cutover.** Warehouse defaults; remove Điều chuyển / Chuyển Bếp;
+      kitchen filters; POS copy.
+- [x] **W3 — migration file.** `20260710220000_single_warehouse_retire_branch_kitchen.sql`
+      (awaiting owner apply).
+- [x] **W4 — owner-applied warehouse cutover.** Production migration
+      `single_warehouse_retire_branch_kitchen` recorded as `20260710232715`;
+      9.000 kitchen units moved to the branch warehouse, kitchen deactivated,
+      and POS/gate functions now resolve warehouse.
+
+Attestation: app/docs/tests match D078 single-warehouse product truth; DB
+rewire lands only after owner applies the migration.
+
+### POS sale deduction at branch warehouse (D078 follow-up)
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + database + workflow;
+external skills = Supabase; runtime tools = official Supabase documentation,
+focused static tests, and full repo gates. Skipped = production apply, generated
+types (no schema shape changes), and a new UI because the Owner-only branch
+setting already owns the reversible control.
+
+- **PM:** POS sales may reduce stock at the branch warehouse by default. Done
+  means every active branch is enabled, every future branch starts enabled, and
+  the Owner can still turn it off per branch.
+- **BA:** A sale posts only through the existing outcome path: paid and eligible
+  after kitchen dispatch/readiness. The same flag keeps the hard availability
+  gate, idempotency, and no-negative-stock rule; a posting-time shortage must
+  not fail the payment or create a partial movement.
+- **Senior Dev:** Apply after the D078 warehouse rewire. Upsert active `branch`
+  rows to enabled, then extend the existing branch-default trigger with an
+  `ON CONFLICT DO NOTHING` seed so an explicit Owner-off override is preserved.
+  No client-side ACL or direct stock writer is added.
+- **QA/QC:** Lock migration order, active-branch scope, disabled-row reset,
+  future-branch defaulting, and the retained Owner toggle with focused tests;
+  run typecheck, lint, build, and review-tier checks. Production runtime smoke
+  follows owner-applied migrations only.
+
+Agreement: this reverses D016's default only. It does not change the POS event
+boundary, refund behavior, or stock correction workflow.
+
+- [x] **W5 — enable POS sale consumption at Kho chi nhánh.** Production migration
+      `enable_pos_sale_stock_deduction_at_branch_warehouse` recorded as
+      `20260710232737`; active branches have posting enabled and new branches
+      seed the same reversible Owner override.
+
+Attestation:
+
+- Covered: active-branch enablement, new-branch defaulting, D078 preconditions,
+  Owner-off preservation, POS outcome behavior, and browser-role revokes.
+- BA mapping: `20260711120000_enable_pos_sale_stock_deduction_at_branch_warehouse.sql`
+  writes the branch flag and trigger; D016 plus inventory/Finance contracts
+  prohibit manual duplicate consumption.
+- Out of scope: a synthetic paid POS order in production. The post-apply
+  function/location/flag smoke and `db:types` completed; observe the next
+  eligible real POS outcome for the sale movement evidence.
+
 ## Branch Stock Cutover (D073 — supersedes the D067 round-2 scope)
 
 > `docs/plan/decisions.md` D073 (2026-07-10): the Central Kitchen site (branch 16) is being decommissioned — stock transfers to Phước Hải (branch 3), then
@@ -425,18 +896,18 @@ table QR. It never did. Do not grow one inside this rebuild.
 > `branch`. D067 §1 still governs the layering: share the server action and
 > data loader; fork only presentation.
 >
+> **D078 (2026-07-10 owner):** Branch kitchen (`Bếp CN` / `location_kind='kitchen'`)
+> is retired. Each branch keeps **one warehouse** only. S11 (Kho↔Bếp one-step)
+> is cancelled — do not build it. Migration
+> `20260710220000_single_warehouse_retire_branch_kitchen.sql` consolidates
+> kitchen stock into warehouse and rewires RPCs; **not applied to production
+> until owner delegates**.
+>
 > Owner-approved mockup (3 screens; the build must match it, re-anchored to a
 > branch): `https://claude.ai/code/artifact/778026d5-8d60-4dfe-acc7-296efe75a30c`
-> One mockup deviation is expected: Phước Hải has TWO active locations
-> (`Kho CN`/`Bếp CN`), so the GRN receiving-location card RENDERS there — the
-> rule stays conditional (hide only when `branchLocations.length <= 1`).
->
-> Production facts verified 2026-07-10, SELECT-only; re-verify before acting.
-> Active sites: Phước Hải (3, `branch`, 2 locations, 97 stock rows) and Bếp TT
-> (16, `central_kitchen`, 1 location, 29 stock rows — pending transfer-out).
-> Kho Tổng (15) was already re-kinded to `branch` and deactivated.
-> `role_templates.production_manager` has two duplicate rows; investigate
-> separately.
+> GRN receiving-location card stays conditional (hide when
+> `branchLocations.length <= 1`) — after D078 apply, Phước Hải has one active
+> warehouse so the card stays hidden.
 
 - [ ] **S0 — clear the nine red wave tests so the gate means something again.**
       Pre-existing failures landed with the 2026-07-10 wave (bisect-confirmed at
@@ -599,29 +1070,17 @@ v_out_base`. Do not rescale consumption by actual output.
       Clean deletes, no tombstones. The DB enum keeps all three kinds for
       history.
 
-- [ ] **S11 — one-step Kho ↔ Bếp move, both directions (D073 §5). UNBLOCKED:
-      the site-16 transfer-out ran 2026-07-10; cross-branch flow is no longer
-      needed by any active pair of sites.**
-      The carrier already exists: `commit_intra_branch_transfer`
-      (`20260708103000_inventory_unit_closure.sql`, used by
-      `quickInternalTransfer`) posts `transfer_out`+`transfer_in` and lands on
-      `received` in one shot — but only warehouse → kitchen. One migration
-      generalizes it to both directions. Operator UI: one "Điều chuyển" tile →
-      direction toggle + ingredient picker + `NumberPadSheet`, committing
-      through the quick RPC; the draft → confirm intra path retires from the
-      operator. Known live hazard the sweep confirmed on PROD: the wave's
-      create-model already offers kitchen → warehouse, but
-      `20260710010833_allow_kitchen_return_transfers.sql` is unapplied AND
-      `stock_transfer_confirm_ship` (baseline) still hard-rejects that
-      direction (`intra_branch_location_invalid`) — do not deploy the wave
-      before either this slice's migration or 010833 + a confirm_ship fix
-      lands. Then retire the cross-branch lifecycle from the operator: tiles
-      "Yêu cầu hàng" / "Nhận hàng" / "Chuyển hàng", the `stock/receive/**`
-      queue, and the `inboundTransfers` hub-queue row; Office
-      `/inventory/transfers` stays read-only for history. Guard entries to
-      retire with the routes: `stock/receive/**` rows in
-      `scripts/page-archetypes.mjs` (the route-manifest gate in
-      `scripts/check-ui-contract.mjs` rejects dead entries).
+- [x] **S11 — retire Kho↔Bếp and operator transfer (D078 supersedes D073 §5).**
+      Owner cancelled the one-step Kho↔Bếp build. App cutover: remove
+      "Điều chuyển" tile, `Chuyển Bếp` / `quickInternalTransfer`, kitchen
+      targets, kitchen filters/defaults; GRN/issue/count/stocktake/production
+      prefer warehouse. Migration
+      `20260710220000_single_warehouse_retire_branch_kitchen.sql` merges kitchen
+      stock → warehouse, deactivates kitchens, retires
+      `commit_intra_branch_transfer`, rewires POS/count/stocktake helpers —
+      **awaiting owner apply**. Remaining cleanup (optional follow-up): delete
+      dead `stock/transfer/**` + `stock/receive/**` route files and archetype
+      rows once migration is live.
 
 - [x] **S12 — retire supplier returns end-to-end (D073 §4).** Delete the
       operator routes (`stock/supplier-returns/**`, 3 pages + 3 clients), the
@@ -716,7 +1175,19 @@ destructive lot/expiry + production_orders drops).
       recreate / upsert / bulk_import / scan_inventory_alerts (also fixes
       stale `ing.unit` in low-stock alerts), rebuilds
       `mv_inventory_stock_current`, drops the three columns. App +
-      `database.types.ts` updated.
+      `database.types.ts` updated. Upsert/bulk_import bodies patched
+      2026-07-11 to sync `ingredient_units` (no delete-all) so
+      `production_recipes` FK does not block catalog saves.
+
+- [x] **Catalog save blocked by `production_recipes` FK (misleading
+      "Đơn vị tồn chuẩn không hợp lệ").** Forward migration ready (not
+      applied): `20260710193250_upsert_ingredient_units_preserve_recipe_fk.sql`
+      (sorts before `193300`) replaces live 12-arg `upsert_ingredient_catalog`
+      + `bulk_import_ingredients` with identity-preserving unit sync +
+      explicit REVOKE/GRANT; app error map distinguishes recipe-in-use /
+      unit / category. Apply this hotfix alone on PROD (12-arg still live);
+      do NOT apply `193300` until app/types drop `p_shelf_life_days`.
+      `193300` already carries the same sync body for the future 11-arg RPC.
 
 ### Apply sequencing (Codex review 2026-07-10 — do not half-apply)
 

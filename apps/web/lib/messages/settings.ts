@@ -504,7 +504,7 @@ export const settings = {
     queueInboundTransfersTitle: "Chờ nhận nguyên liệu",
     queueInboundTransfersMeta: (count: number) =>
       `${formatCount(count)} chuyến hàng đang đến`,
-    centralNavStock: "Tồn",
+    centralNavStock: "Kho",
     queueEmpty: "Không có việc cần xử lý",
     settingsBack: "Thiết lập",
     posBack: "Về POS",
@@ -534,7 +534,7 @@ export const settings = {
     menuLimitsTitle: "Giới hạn bán",
     menuLimitsGuideTitle: "Quy tắc mở bán hôm nay",
     menuLimitsGuideDescription:
-      "Ưu tiên món hết suất, đang tắt và món bị giới hạn bởi Tồn Bếp chi nhánh.",
+      "Ưu tiên món hết suất, đang tắt và món bị giới hạn bởi Tồn kho chi nhánh.",
     menuLimitsIntroBefore:
       "Điều chỉnh số phần sẵn bán theo tồn kho và định mức của chi nhánh. Bật",
     menuLimitsDisabledAction: "Tắt món",
@@ -577,8 +577,7 @@ export const settings = {
     varianceResolvedShort: "Đã xử lý",
     open: "Đang mở",
     closed: "Đã chốt",
-    billsInSession: (count: number) =>
-      `Bill trong ca (${formatCount(count)})`,
+    billsInSession: (count: number) => `Bill trong ca (${formatCount(count)})`,
     billsDescription:
       "Bấm vào dòng để xem chi tiết bill (món, giảm giá, phí dịch vụ, thanh toán).",
     bill: "Bill",

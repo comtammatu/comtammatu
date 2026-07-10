@@ -313,7 +313,7 @@ export function MembersClient({
     [employees],
   );
 
-  const filterChips: {
+  const filterChipOptions: {
     value: TeamMemberFilter;
     label: string;
     count: number;
@@ -344,6 +344,9 @@ export function MembersClient({
       variant: stats.countAssigned > 0 ? "info" : "secondary",
     },
   ];
+  const filterChips = filterChipOptions.filter(
+    (chip) => chip.value === "all" || chip.count > 0,
+  );
 
   const filteredMembers = useMemo(
     () =>

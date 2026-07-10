@@ -26,14 +26,14 @@ const countAssignmentsSource = readWeb(
   "app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
 );
 
-test("operator hub queue keeps zero-count browse doors visible", () => {
-  assert.doesNotMatch(
+test("operator hub queue only renders positive pending work", () => {
+  assert.match(
     hubQueueSource,
-    /rows\.filter\(\(row\) => row\.count > 0\)/,
+    /buildQueueRows\(basePath, queueCounts\)\.filter\(\s*\(row\) => row\.count > 0/,
   );
-  assert.match(hubQueueSource, /if \(rows\.length === 0\)/);
+  assert.match(hubQueueSource, /if \(queueRows\.length === 0\) return null/);
   assert.match(hubQueueSource, /\{rows\.map\(\(row\) => \(/);
-  assert.match(hubQueueSource, /row\.count > 0 \? "warning" : "secondary"/);
+  assert.match(hubQueueSource, /<Badge variant="warning">/);
 });
 
 test("operator transfer receive requires shortage notes and accepts transit state", () => {

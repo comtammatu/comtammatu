@@ -39,8 +39,8 @@ function countLocationLabel(
   fallbackName: string | null,
 ) {
   const suffix =
-    kind === "warehouse" ? "Kho" : kind === "kitchen" ? "Bếp" : fallbackName;
-  return `${branchName} - ${suffix ?? "Kho"}`;
+    kind === "warehouse" ? "Kho" : (fallbackName ?? "Kho");
+  return `${branchName} - ${suffix}`;
 }
 
 export async function CountAssignmentsPageContent({
@@ -79,7 +79,7 @@ export async function CountAssignmentsPageContent({
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", selectedBranchId)
       .eq("is_active", true)
-      .in("location_kind", ["warehouse", "kitchen"])
+      .in("location_kind", ["warehouse"])
       .order("sort_order", { ascending: true })
       .order("id", { ascending: true });
     for (const l of locationsRes.data ?? []) {
@@ -99,7 +99,7 @@ export async function CountAssignmentsPageContent({
     requestedLocationId != null &&
     locations.some((l) => l.id === requestedLocationId)
       ? requestedLocationId
-      : (locations.find((l) => l.kind === "kitchen")?.id ??
+      : (locations.find((l) => l.kind === "warehouse")?.id ??
         locations[0]?.id ??
         null);
 

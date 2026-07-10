@@ -70,7 +70,6 @@ const locationFilterOptions: {
 }[] = [
   { value: "all", label: stockCopy.filters.allLocations },
   { value: "warehouse", label: stockCopy.filters.locationWarehouse },
-  { value: "kitchen", label: stockCopy.filters.locationKitchen },
 ];
 
 function StockQuantity({ item }: { item: StockIngredient }) {
@@ -166,11 +165,7 @@ export function BranchStockOnHandClient({
   ].filter(Boolean).length;
   const isFirstLoadEmpty = !filtersActive && isPristineStockOnHand(ingredients);
   const locationScopeLabel =
-    location === "warehouse"
-      ? stockCopy.filters.locationWarehouse
-      : location === "kitchen"
-        ? stockCopy.filters.locationKitchen
-        : null;
+    location === "warehouse" ? stockCopy.filters.locationWarehouse : null;
 
   function resetFilters() {
     setQuery("");

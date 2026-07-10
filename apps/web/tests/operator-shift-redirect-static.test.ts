@@ -43,7 +43,9 @@ test("operator shift schedule renders the branch schedule plane", () => {
   assert.ok(source.includes('plane="branch"'), path);
   assert.doesNotMatch(source, /redirect\("\/employee\/schedule"\)/);
 
-  const schedulePageSource = read("apps/web/lib/staff-runtime/schedule/page.tsx");
+  const schedulePageSource = read(
+    "apps/web/lib/staff-runtime/schedule/page.tsx",
+  );
   const scheduleClientSource = read(
     "apps/web/lib/staff-runtime/schedule/schedule-client.tsx",
   );
@@ -221,7 +223,10 @@ test("operator profile renders inside the branch operator shell", () => {
   assert.equal(exists(path), true, path);
 
   const source = read(path);
-  assert.ok(source.includes('import { notFound } from "next/navigation";'), path);
+  assert.ok(
+    source.includes('import { notFound } from "next/navigation";'),
+    path,
+  );
   assert.ok(
     source.includes(
       'import { StaffProfilePageContent } from "@lib/staff-runtime/profile/page";',
@@ -286,8 +291,9 @@ test("operator shift landing renders the shared cockpit with branch-scoped route
   assert.match(source, /const authState = await loadAuthState\(\)/);
   assert.match(
     source,
-    /authState\.claims\.user_role === "branch_manager"/,
+    /authState\.claims\.user_role === "owner"[\s\S]*redirect\(`\/br\/\$\{branchId\}\/team`\)/,
   );
+  assert.match(source, /authState\.claims\.user_role === "branch_manager"/);
   assert.match(
     source,
     /mode=\{isBranchManager \? "manager-dashboard" : "full"\}/,

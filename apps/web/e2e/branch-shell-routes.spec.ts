@@ -46,7 +46,11 @@ function watchPageHealth(page: Page) {
   return { consoleErrors, pageErrors, serverErrors };
 }
 
-async function expectHealthyRoute(page: Page, path: string) {
+async function expectHealthyRoute(
+  page: Page,
+  path: string,
+  options: { allowOwnerWorkspaceLinks?: boolean } = {},
+) {
   await page.goto(path, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("load");
   await page.waitForTimeout(800);
@@ -75,7 +79,11 @@ async function expectHealthyRoute(page: Page, path: string) {
 
   expect(state.pathname).toBe(path);
   expect(state.overflowX).toBeLessThanOrEqual(2);
-  expect(state.officeLinkCount).toBe(0);
+  if (options.allowOwnerWorkspaceLinks) {
+    expect(state.officeLinkCount).toBeGreaterThan(0);
+  } else {
+    expect(state.officeLinkCount).toBe(0);
+  }
   expect(state.isLoginSurface).toBe(false);
   expect(state.isAdminSurface).toBe(false);
 }
@@ -174,11 +182,17 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}/shift/clock`,
       `/br/${branchId}/shift/checkout-approvals`,
     ]) {
-      await expectHealthyRoute(page, path);
+      await expectHealthyRoute(page, path, {
+        allowOwnerWorkspaceLinks: path === `/br/${branchId}`,
+      });
       if (path === `/br/${branchId}`) {
         await expect(page.getByText("Cần xử lý")).toBeVisible();
         await expect(page.getByText("Bán hàng")).toBeVisible();
         await expect(page.getByText("Kho hàng")).toBeVisible();
+        await expect(page.getByText("Quản lý cửa hàng")).toBeVisible();
+        await expect(page.getByText("Tài chính")).toBeVisible();
+        await expect(page.getByText("Nhân sự")).toBeVisible();
+        await expect(page.getByText("Lương")).toBeVisible();
       }
       const operatorNav = page.getByRole("navigation", {
         name: APP_COPY_VI.operatorAriaLabel,

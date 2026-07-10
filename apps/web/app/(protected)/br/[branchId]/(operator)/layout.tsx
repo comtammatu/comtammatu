@@ -51,9 +51,10 @@ export default async function OperatorLayout({
   const context = await resolveBranchContext(supabase, claims, branchId);
   if (!context) notFound();
 
-  const canUseEmployeePortal =
-    canAccess(claims.user_role, "operator_home") ||
-    canAccess(claims.user_role, "employee_checkout_approvals");
+  const canUseShiftTab =
+    claims.user_role !== "owner" &&
+    (canAccess(claims.user_role, "operator_home") ||
+      canAccess(claims.user_role, "employee_checkout_approvals"));
   const canManageBranch =
     canAccess(claims.user_role, "branch_dashboard") ||
     canAccess(claims.user_role, "branch_settings") ||
@@ -78,7 +79,7 @@ export default async function OperatorLayout({
           homeAriaLabel={APP_COPY_VI.operatorHome}
           actions={
             <>
-              {canUseBranchPicker ? (
+              {canUseBranchPicker && context.canSwitchBranch ? (
                 <Button
                   asChild
                   variant="outline"
@@ -148,7 +149,7 @@ export default async function OperatorLayout({
         </div>
         <OperatorBottomNav
           branchId={context.branchId}
-          showEmployeeLinks={canUseEmployeePortal}
+          showEmployeeLinks={canUseShiftTab}
           showBranchManagement={canManageBranch}
         />
       </div>

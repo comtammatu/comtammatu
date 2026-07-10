@@ -128,7 +128,7 @@ test("retired central/office position codes resolve to unassigned", () => {
   assert.equal(staffRoleFromPositionCode("office"), "unassigned");
 });
 
-test("post-login hub fallback is device and branch aware", () => {
+test("post-login hub fallback promotes Branch entry on every device", () => {
   const phone = { standaloneStation: null, isDesktop: false } as const;
   const desktop = { standaloneStation: null, isDesktop: true } as const;
 
@@ -138,7 +138,7 @@ test("post-login hub fallback is device and branch aware", () => {
   );
   assert.equal(
     resolvePostLoginRedirect(claims("owner", null), null, desktop),
-    "/finance",
+    "/",
   );
   assert.equal(
     resolvePostLoginRedirect(claims("cashier", 7), null, phone),
@@ -159,7 +159,11 @@ test("post-login returnTo cannot cross branch-scoped operator routes", () => {
   );
   // Unassigned/tenant-level operational claims (branch_id null) fail closed.
   assert.equal(
-    resolvePostLoginRedirect(claims("branch_staff", null), "/br/8/stock", phone),
+    resolvePostLoginRedirect(
+      claims("branch_staff", null),
+      "/br/8/stock",
+      phone,
+    ),
     "/access-denied?reason=branch-scope-mismatch",
   );
 });

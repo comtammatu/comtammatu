@@ -104,6 +104,16 @@ export function BranchCountAssignmentsClient({
   const assignedEmployeeCount = Object.values(selectionByEmployee).filter(
     (ids) => ids.length > 0,
   ).length;
+  const orderedEmployees = [...data.employees].sort((left, right) => {
+    const leftAssigned =
+      (selectionByEmployee[String(left.id)]?.length ?? 0) > 0;
+    const rightAssigned =
+      (selectionByEmployee[String(right.id)]?.length ?? 0) > 0;
+    return (
+      Number(rightAssigned) - Number(leftAssigned) ||
+      left.name.localeCompare(right.name, "vi")
+    );
+  });
 
   useEffect(() => {
     setSelectionByEmployee(seedSelections(data));
@@ -258,7 +268,7 @@ export function BranchCountAssignmentsClient({
         />
       ) : (
         <ItemGroup className="grid gap-2 md:grid-cols-2">
-          {data.employees.map((employee) => {
+          {orderedEmployees.map((employee) => {
             const selectedIds = selectionByEmployee[String(employee.id)] ?? [];
             return (
               <Item

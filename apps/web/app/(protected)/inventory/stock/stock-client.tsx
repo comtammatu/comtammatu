@@ -69,7 +69,6 @@ import { formatQty, formatVND } from "../_lib/format";
 import { formatStockUnits } from "../_lib/stock-unit-format";
 import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
 import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
-import type { QuickInternalTransferDialogProps } from "./quick-internal-transfer-dialog";
 import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
 import { StockLocationBreakdownLine } from "./stock-location-breakdown";
 import {
@@ -85,14 +84,6 @@ const inventoryCommon = messages.inventory.common;
 
 const AdjustStockDialog = dynamic<AdjustStockDialogProps>(
   () => import("./adjust-stock-dialog").then((mod) => mod.AdjustStockDialog),
-  { ssr: false },
-);
-
-const QuickInternalTransferDialog = dynamic<QuickInternalTransferDialogProps>(
-  () =>
-    import("./quick-internal-transfer-dialog").then(
-      (mod) => mod.QuickInternalTransferDialog,
-    ),
   { ssr: false },
 );
 
@@ -120,7 +111,6 @@ const stockFilterOptions: { value: StockFilter; label: string }[] = [
 const locationFilterOptions: { value: StockLocationFilter; label: string }[] = [
   { value: "all", label: stockCopy.filters.allLocations },
   { value: "warehouse", label: stockCopy.filters.locationWarehouse },
-  { value: "kitchen", label: stockCopy.filters.locationKitchen },
 ];
 
 // Two-line stock quantity: largest unit on top (emphasis class from caller),
@@ -260,8 +250,6 @@ export function StockClient({
   );
   const [quickIssueTarget, setQuickIssueTarget] =
     useState<QuickIssueTarget | null>(null);
-  const [quickTransferTarget, setQuickTransferTarget] =
-    useState<StockIngredient | null>(null);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
 
   const { categories, hasUncategorized } = useMemo(
@@ -344,15 +332,6 @@ export function StockClient({
             ingredient: item,
             issueType: "consumption",
           }),
-      });
-    }
-
-    if (actionPermissions.canCreateTransfer) {
-      rowActions.push({
-        key: "transfer",
-        label: stockCopy.actions.transferKitchen,
-        icon: <IconArrowBarRight />,
-        onSelect: () => setQuickTransferTarget(item),
       });
     }
 
@@ -658,14 +637,6 @@ export function StockClient({
 
   const secondaryStockActions = (
     <>
-      {actionPermissions.canCreateTransfer ? (
-        <QuickActionButton
-          href={actionHrefs.transfer}
-          icon={IconTruck}
-          label={stockCopy.actions.transfer}
-          size={isCompactLayout ? "touch" : "sm"}
-        />
-      ) : null}
       {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
         <QuickActionButton
           href={actionHrefs.stocktake}
@@ -686,7 +657,6 @@ export function StockClient({
   );
 
   const hasSecondaryActions =
-    actionPermissions.canCreateTransfer ||
     (actionPermissions.canCreateStocktake && actionHrefs.stocktake) ||
     actionPermissions.canWriteoff;
 
@@ -699,17 +669,6 @@ export function StockClient({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        {actionPermissions.canCreateTransfer ? (
-          <DropdownMenuItem asChild>
-            <Link
-              href={actionHrefs.transfer}
-              className="flex items-center gap-2"
-            >
-              <IconTruck className="size-4 text-muted-foreground" />
-              <span>{stockCopy.actions.transfer}</span>
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
         {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
           <DropdownMenuItem asChild>
             <Link
@@ -837,16 +796,6 @@ export function StockClient({
               }
             >
               {stockCopy.actions.issueStock}
-            </Button>
-          ) : null}
-          {actionPermissions.canCreateTransfer ? (
-            <Button
-              type="button"
-              size="touch"
-              variant="outline"
-              onClick={() => setQuickTransferTarget(item)}
-            >
-              {stockCopy.actions.transferKitchen}
             </Button>
           ) : null}
           {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
@@ -1045,16 +994,6 @@ export function StockClient({
         />
       ) : null}
 
-      {quickTransferTarget ? (
-        <QuickInternalTransferDialog
-          branchId={branchId}
-          open={quickTransferTarget !== null}
-          target={quickTransferTarget}
-          onOpenChange={(open) => {
-            if (!open) setQuickTransferTarget(null);
-          }}
-        />
-      ) : null}
     </>
   );
 

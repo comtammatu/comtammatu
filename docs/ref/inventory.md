@@ -20,9 +20,9 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ PO, GRN, tồn kho, production, và recipe                                                                                                                                         | Không mở item master ERP nhiều lớp                     |
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo giá vốn BQ khi có dữ liệu, fallback giá nhập tham chiếu khi cần hiển thị                                                                                | Không chuyển sang FIFO engine                          |
 | Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*`                                                                                             | Không mở lot-first ledger / batch accounting           |
-| Mô hình site                    | `branches.branch_kind IN ('branch', 'central_supply', 'central_kitchen')`; site active là chi nhánh (`branch`) giữ Kho CN + Bếp CN; `central_supply` và `central_kitchen` chỉ còn là giá trị enum lịch sử — không có site active                    | V1 không tạo bảng `inventory_sites`                    |
+| Mô hình site                    | `branches.branch_kind` enum giữ lịch sử; site active là chi nhánh (`branch`) với **một** location stock-bearing `warehouse` (Kho chi nhánh). `location_kind='kitchen'` (Bếp CN) và site `central_*` đã nghỉ vận hành (D078). | V1 không tạo bảng `inventory_sites`                    |
 | PO / GRN / NCC                  | Bảng PO/GRN/NCC + RPC `confirm_goods_receipt_note`; QC và price variance là control trong luồng nhập                                                                                                            | Không mở PR workflow nhiều bước                        |
-| Luân chuyển nội bộ              | `stock_transfers` dùng khi nơi nhận vẫn giữ tồn: chi nhánh -> chi nhánh, hoặc Kho CN -> Bếp CN cùng chi nhánh                                                                                                   | Không dùng `stock_transfer` cho tiêu hao/xuất hủy thật |
+| Luân chuyển nội bộ              | Operator không mở Kho↔Bếp hay cross-branch mới (D078). `stock_transfers` lịch sử giữ trong DB/Office read-only.                                                                                                   | Không dùng `stock_transfer` cho tiêu hao/xuất hủy thật |
 | HĐ NCC + 3-way matching         | `supplier_invoices` + matching logic là Finance handoff                                                                                                                                                         | Không mở payment proposal engine trong Inventory       |
 | `recipes` + xuất kho theo order | `recipes` + RPC tiêu hao theo order                                                                                                                                                                             | Không mở multi-level BOM                               |
 | Thành phẩm + production hub     | `item_kind`, `production_recipes`, `production_runs`, route production tại chi nhánh (`branch`, D068)                                                                                                           | Không mở labor / overhead / WIP accounting đầy đủ      |
@@ -46,25 +46,24 @@ Những thứ dưới đây không thuộc Inventory current contract dù có xu
 
 **Nguyên tắc vận hành:**
 
-- **Chi nhánh (`branch_kind = 'branch'`):** giữ tồn vận hành tại **Kho CN** (`location_kind = 'warehouse'`) và **Bếp CN** (`location_kind = 'kitchen'`). `Kho CN -> Bếp CN` là luân chuyển nội bộ cùng chi nhánh, không làm giảm tổng tồn chi nhánh; chỉ phiếu xuất/tiêu hao/hủy hỏng mới làm giảm tồn. Chi nhánh nhập NCC qua GRN và tự sản xuất bằng `production_run` (D068).
+- **Chi nhánh (`branch_kind = 'branch'`):** giữ toàn bộ tồn vận hành tại **Kho CN** (`location_kind = 'warehouse'`). `location_kind = 'kitchen'` là lịch sử đã nghỉ vận hành; chỉ phiếu xuất/tiêu hao/hủy hỏng mới làm giảm tồn. Chi nhánh nhập NCC qua GRN và tự sản xuất bằng `production_run` (D068, D078).
 - **`central_supply`, `central_kitchen`:** giá trị enum lịch sử trong `branch_kind`; hiện không có site active thuộc các kind này.
-- **Phiếu luân chuyển tồn thật:** dùng state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`. Hướng hợp lệ hiện tại: `branch -> branch` và same-branch `Kho CN -> Bếp CN`.
-- **Tiêu hao chi nhánh:** nguyên liệu đã dùng để tạo doanh thu được ghi bằng `stock_movements.type = 'consumption'`, `movement_subtype = 'sale_consumption'`; đây mới là bước giảm tồn chi nhánh.
+- **Phiếu luân chuyển tồn thật:** chỉ giữ lịch sử; vận hành mới không mở Kho↔Bếp hay điều chuyển cross-branch từ operator (D078).
+- **Tiêu hao chi nhánh:** nguyên liệu đã dùng để tạo doanh thu được ghi tại Kho CN bằng `stock_movements.type = 'consumption'`, `movement_subtype = 'sale_consumption'`; đây mới là bước giảm tồn chi nhánh.
 
 ```
-NCC → [GRN] → Kho CN hoặc Bếp CN (`branch/warehouse`, `branch/kitchen`)
+NCC → [GRN] → Kho CN (`branch/warehouse`)
 
 Chi nhánh ── [production_run] → trừ nguyên liệu, cộng thành phẩm tại chính chi nhánh
 
-Kho CN → [stock_transfer cùng chi nhánh] → Bếp CN (`branch/kitchen`)
-Kho CN hoặc Bếp CN → [phiếu xuất/tiêu hao] → `stock_movements.consumption`
+Kho CN → [phiếu xuất/tiêu hao] → `stock_movements.consumption`
 ```
 
 ### 1b. Luân chuyển nội bộ (cùng state machine)
 
 | Bước                           | Trạng thái (DB)     | Việc làm                                                                                                                     |
 | ------------------------------ | ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Tạo phiếu                      | `draft`             | Chọn chi nhánh **gửi** / **nhận** (ví dụ `chi nhánh -> chi nhánh` hoặc cùng chi nhánh để cấp Bếp CN), liệt kê mặt hàng và SL |
+| Tạo phiếu                      | `draft`             | Lịch sử luân chuyển giữ nguồn và đích theo chi nhánh; vận hành mới không tạo phiếu từ operator |
 | Xác nhận xuất tại kho gửi      | `confirmed_ship`    | Trừ tồn tại `from_branch_id` (`transfer_out`), snapshot WAC vào dòng phiếu                                                   |
 | Đang vận chuyển                | `in_transit`        | Theo dõi (biển số / ghi chú — tùy pha UI)                                                                                    |
 | Bắt đầu kiểm nhận tại kho nhận | `confirmed_receive` | Kho nhận mở kiểm đếm (`receive_started_at`); chưa cộng tồn                                                                   |
@@ -72,7 +71,7 @@ Kho CN hoặc Bếp CN → [phiếu xuất/tiêu hao] → `stock_movements.consu
 
 Trạng thái `cancelled` khi hủy phiếu (theo quyền); không ghi nhận tồn nếu chưa từng `confirmed_ship` (hoặc hoàn tác theo policy nội bộ — ưu tiên tránh xóa bản ghi, dùng workflow hủy).
 
-Với `Kho CN -> Bếp CN`, xác nhận phiếu ghi `transfer_out` ở nơi đi và `transfer_in` ở nơi đến trong cùng chi nhánh; tổng tồn chi nhánh không giảm. Phiếu xuất/tiêu hao sau đó mới ghi `consumption/sale_consumption`.
+Kho↔Bếp chỉ là lịch sử audit. Phiếu xuất/tiêu hao tại Kho CN mới ghi `consumption/sale_consumption`.
 
 ### Các loại phiếu kho
 
@@ -195,11 +194,12 @@ Ngoài phạm vi v1:
 
 ### POS food-cost boundary
 
-Mặc định giá vốn món và tiêu hao nguyên liệu vẫn đến từ chứng từ vận hành
-kho/bếp đã được xác nhận. Với chi nhánh bật `pos_stock_outcome_posting`, Sale
-Runtime được phép ghi `stock_movements.consumption/sale_consumption` bằng RPC
-atomic khi đơn đã `paid` + `completed`: line có KDS chờ `first_ready_at`, còn
-line không có KDS chỉ được trừ sau khi đã dispatch qua phiếu bếp in.
+Mặc định Sale Runtime ghi `stock_movements.consumption/sale_consumption` tại
+Kho chi nhánh bằng RPC atomic khi đơn đã `paid` + `completed`: line có KDS chờ
+`first_ready_at`, còn line không có KDS chỉ được trừ sau khi đã dispatch qua
+phiếu bếp in. `pos_stock_outcome_posting` là một switch Owner-only để tắt riêng
+một chi nhánh khi cần rollback; khi tắt, POS không trừ và không rào tồn. Báo
+cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ từ bán POS.
 
 ---
 
@@ -217,7 +217,7 @@ line không có KDS chỉ được trừ sau khi đã dispatch qua phiếu bếp
 
 ### 5.2 Schema tham chiếu — `goods_received_notes` / `grn_items`
 
-**`branch_id` trên GRN là inventory site nhận hàng.** GRN nhận vào location stock-bearing của chi nhánh — form tạo GRN ưu tiên Bếp CN (`kitchen`) nếu chi nhánh đã cấu hình, fallback Kho CN.
+**`branch_id` trên GRN là inventory site nhận hàng.** GRN nhận vào Kho CN (`warehouse`), location stock-bearing active duy nhất của chi nhánh.
 
 ---
 
@@ -378,7 +378,7 @@ Business-action matrix chi tiết cho Inventory xem ở [inventory-rbac-matrix.m
 
 Tóm tắt quyền hiện tại:
 
-- `owner`: full access Inventory tenant-wide — procurement, Kho CN, Bếp CN, production, và giám sát; cũng xem qua `reports` / `finance`.
+- `owner`: full access Inventory tenant-wide — procurement, Kho CN, production, và giám sát; cũng xem qua `reports` / `finance`.
 - `warehouse_manager`: role procurement và outbound transfer theo grant; không gắn site trực riêng (D073 §1).
 - `production_manager`: role production theo grant; sản xuất hằng ngày chạy tại chi nhánh (D068).
 - `branch_manager`: vận hành tồn Kho CN, nhận transfer, stocktake, và duyệt tiêu hao trong ngày; theo D068 có own-branch GRN (tạo/xác nhận), production (tạo/xác nhận), `procurement:read`, và tạo nhanh NCC (`procurement:supplier_manage`).
@@ -391,6 +391,6 @@ Chi tiết enforcement: RLS + `packages/shared/src/auth/module-acl.ts`.
 ## Tài liệu liên quan
 
 - [einvoice-tax.md](einvoice-tax.md) — VAT đầu vào, HĐ NCC
-- [inventory-sop.md](inventory-sop.md) — SOP vận hành cho topology `tenant / chi nhánh / Kho CN / Bếp CN / tiêu hao`
+- [inventory-sop.md](inventory-sop.md) — SOP vận hành cho topology `tenant / chi nhánh / Kho CN / tiêu hao`
 - [inventory-role-handoff.md](inventory-role-handoff.md) — bản handoff 1 trang cho training vận hành
 - [inventory-rbac-matrix.md](inventory-rbac-matrix.md) — ma trận quyền Inventory theo boundary hiện tại

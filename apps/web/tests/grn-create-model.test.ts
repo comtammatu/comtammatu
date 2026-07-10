@@ -40,9 +40,9 @@ const locations: GrnCreateProcurementLocationOption[] = [
   },
 ];
 
-test("GRN create model keeps a branch receipt on its kitchen and honors draft location", () => {
-  assert.equal(pickGrnReceivingLocation(locations, 1)?.id, 11);
-  assert.equal(pickGrnReceivingLocation(locations, 1, 10)?.id, 10);
+test("GRN create model keeps a branch receipt on its warehouse and honors draft location", () => {
+  assert.equal(pickGrnReceivingLocation(locations, 1)?.id, 10);
+  assert.equal(pickGrnReceivingLocation(locations, 1, 11)?.id, 11);
   assert.equal(pickGrnReceivingLocation(locations, 2)?.id, 20);
   assert.equal(pickGrnReceivingLocation([], 1), null);
 });

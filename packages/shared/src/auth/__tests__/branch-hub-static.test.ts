@@ -34,13 +34,13 @@ test("resolveBranchHubDestination -> inaccessible station falls back to branch h
   );
 });
 
-test("resolveBranchHubDestination -> desktop owner stays on office plane", () => {
+test("resolveBranchHubDestination -> desktop owner enters the branch resolver", () => {
   assert.equal(
     resolveBranchHubDestination(claims("owner", null), {
       standaloneStation: null,
       isDesktop: true,
     }),
-    "/finance",
+    "/",
   );
 });
 

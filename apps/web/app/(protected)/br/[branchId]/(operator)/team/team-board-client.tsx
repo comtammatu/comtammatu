@@ -220,6 +220,12 @@ function filterCount(rows: TeamBoardDisplayRow[], filter: TeamBoardFilter) {
   return rows.filter((row) => matchesTeamBoardFilter(row, filter)).length;
 }
 
+function initialTeamBoardFilter(rows: TeamBoardDisplayRow[]): TeamBoardFilter {
+  if (filterCount(rows, "needs_action") > 0) return "needs_action";
+  if (filterCount(rows, "working") > 0) return "working";
+  return "all";
+}
+
 function groupRowsByShift(rows: TeamBoardDisplayRow[]): TeamBoardShiftGroup[] {
   const groups = new Map<string, TeamBoardShiftGroup>();
 
@@ -274,12 +280,15 @@ function TeamBoardFilters({
   value: TeamBoardFilter;
   onChange: (value: TeamBoardFilter) => void;
 }) {
-  const filters: { value: TeamBoardFilter; label: string }[] = [
+  const filterOptions: { value: TeamBoardFilter; label: string }[] = [
     { value: "all", label: copy.filters.all },
     { value: "working", label: copy.filters.working },
     { value: "needs_action", label: copy.filters.needsAction },
     { value: "count_missing", label: copy.filters.countMissing },
   ];
+  const filters = filterOptions.filter(
+    (filter) => filter.value === "all" || filterCount(rows, filter.value) > 0,
+  );
 
   return (
     <div
@@ -422,7 +431,9 @@ export function TeamBoardClient({
   checkoutApprovalsHref: string;
 }) {
   const displayRows = buildDisplayRows(rows);
-  const [filter, setFilter] = useState<TeamBoardFilter>("all");
+  const [filter, setFilter] = useState<TeamBoardFilter>(() =>
+    initialTeamBoardFilter(displayRows),
+  );
   const [drawerRow, setDrawerRow] = useState<TeamBoardDisplayRow | null>(null);
   const [isForceClosing, startForceCloseTransition] = useTransition();
   const router = useRouter();

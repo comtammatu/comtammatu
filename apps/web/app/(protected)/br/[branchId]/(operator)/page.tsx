@@ -1,7 +1,11 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator hub homepage displays inline vietnamese warning for clock-in gate */
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { resolveOperatorTiles, type BranchKind } from "@comtammatu/shared/auth";
+import {
+  MODULE_ACL,
+  resolveOperatorTiles,
+  type BranchKind,
+} from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
@@ -46,8 +50,6 @@ export default async function OperatorHomePage({
     context.branchId,
     branchKind,
   );
-  const showTodayCard = claims.user_role !== "owner";
-
   // Pre-clock-in gate for cashier/chef roles
   const isFloorRole =
     claims.user_role === "cashier" || claims.user_role === "chef";
@@ -58,7 +60,6 @@ export default async function OperatorHomePage({
   // Pre-clock-in: tiles stay VISIBLE but disabled (owner decision, cutover
   // spec "Open implementation notes") — the greyed tile plus the banner is
   // the clock-in prompt.
-  const lockedGroupIds = new Set(["sales_kitchen", "stock"]);
   const tilesLockedBeforeClockIn = isFloorRole && beforeClockIn;
 
   const isBranchManagerOrOwner =
@@ -93,6 +94,53 @@ export default async function OperatorHomePage({
         ].filter((group) => group.tiles.length > 0)
       : [];
 
+  const branchManagementLinks = isBranchManagerOrOwner
+    ? [
+        {
+          key: "branch-menu",
+          href: MODULE_ACL.menu.path,
+          icon: resolveOperatorTileIcon("Utensils"),
+          title: MODULE_ACL.menu.label,
+        },
+        {
+          key: "branch-settings",
+          href: `/br/${context.branchId}/settings`,
+          icon: resolveOperatorTileIcon("Settings"),
+          title: MODULE_ACL.branch_settings.label,
+        },
+      ]
+    : [];
+
+  const ownerWorkspaceLinks =
+    claims.user_role === "owner"
+      ? [
+          {
+            key: "owner-finance",
+            href: MODULE_ACL.finance.path,
+            icon: resolveOperatorTileIcon("ChartBar"),
+            title: MODULE_ACL.finance.label,
+          },
+          {
+            key: "owner-hr",
+            href: MODULE_ACL.hr.path,
+            icon: resolveOperatorTileIcon("Users"),
+            title: MODULE_ACL.hr.label,
+          },
+          {
+            key: "owner-payroll",
+            href: MODULE_ACL.hr_payroll.path,
+            icon: resolveOperatorTileIcon("Briefcase"),
+            title: MODULE_ACL.hr_payroll.label,
+          },
+          {
+            key: "owner-settings",
+            href: MODULE_ACL.settings.path,
+            icon: resolveOperatorTileIcon("Settings"),
+            title: MODULE_ACL.settings.label,
+          },
+        ]
+      : [];
+
   const clockGateSection =
     isFloorRole && beforeClockIn ? (
       <NoteCallout tone="warning">
@@ -103,7 +151,7 @@ export default async function OperatorHomePage({
 
   return (
     <BranchOperatorPage title={APP_COPY_VI.operatorHome} hideHeaderOnMobile>
-      {showTodayCard ? (
+      {claims.user_role !== "owner" ? (
         <Suspense fallback={<HubTodayStatusPending />}>
           <HubTodayStatus branchId={context.branchId} />
         </Suspense>
@@ -126,7 +174,7 @@ export default async function OperatorHomePage({
               icon: resolveOperatorTileIcon(tile.icon),
               title: tile.label,
               disabled:
-                tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
+                tilesLockedBeforeClockIn && group.id === "sales_kitchen",
             })),
           ]}
           columns={2}
@@ -134,6 +182,22 @@ export default async function OperatorHomePage({
           wideColumns
         />
       ))}
+
+      <BranchOperatorActionSection
+        title={APP_COPY_VI.operatorOpsActions}
+        links={branchManagementLinks}
+        columns={2}
+        mobileColumns={2}
+        wideColumns
+      />
+
+      <BranchOperatorActionSection
+        title={APP_COPY_VI.storeManagement}
+        links={ownerWorkspaceLinks}
+        columns={2}
+        mobileColumns={2}
+        wideColumns
+      />
     </BranchOperatorPage>
   );
 }

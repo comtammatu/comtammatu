@@ -96,7 +96,7 @@ function pickSourceLocation(
   return (
     candidates.find(
       (location) =>
-        location.branchKind === "branch" && location.kind === "kitchen",
+        location.branchKind === "branch" && location.kind === "warehouse",
     ) ??
     candidates.find(
       (location) =>
@@ -119,7 +119,7 @@ function pickTargetLocation(
   return (
     candidates.find(
       (location) =>
-        location.branchKind === "branch" && location.kind === "kitchen",
+        location.branchKind === "branch" && location.kind === "warehouse",
     ) ??
     candidates.find((location) => location.isDefaultReceive) ??
     candidates[0]

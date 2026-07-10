@@ -103,19 +103,19 @@ test("branch warehouse outbound destinations include Central Kitchen and active 
   assert.equal(policy.canCreateInboundRequest, false);
   assert.deepEqual(
     policy.outboundDestinationOptions.map((option) => option.value),
-    ["10:kitchen", "30:warehouse", "40:warehouse", "40:kitchen"],
+    ["30:warehouse", "40:warehouse"],
   );
 });
 
-test("branch kitchen can return stock to its warehouse or Central Kitchen only", () => {
+test("branch source has no same-branch kitchen destination after D078", () => {
   assert.deepEqual(
     getTransferOutboundDestinationOptions({
       branches,
       sourceBranchId: 10,
       sourceBranchKind: "branch",
-      sourceLocationKind: "kitchen",
+      sourceLocationKind: "warehouse",
     }).map((option) => option.value),
-    ["10:warehouse", "30:warehouse"],
+    ["30:warehouse", "40:warehouse"],
   );
 });
 
@@ -129,7 +129,7 @@ test("central operators can dispatch only to active branch warehouse or kitchen 
   assert.equal(policy.canCreateOutbound, true);
   assert.deepEqual(
     policy.outboundDestinationOptions.map((option) => option.value),
-    ["10:warehouse", "10:kitchen", "40:warehouse", "40:kitchen"],
+    ["10:warehouse", "40:warehouse"],
   );
 });
 
@@ -166,7 +166,7 @@ test("Central Kitchen dispatches finished goods from its preferred output locati
       sourceBranchKind: "central_kitchen",
       sourceLocationKind: "production_storage",
     }).map((option) => option.value),
-    ["10:kitchen", "40:kitchen"],
+    ["10:warehouse", "40:warehouse"],
   );
 
   assert.deepEqual(

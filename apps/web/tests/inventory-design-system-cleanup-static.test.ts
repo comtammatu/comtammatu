@@ -59,10 +59,10 @@ test("inventory production shortage uses Alert callout", () => {
 });
 
 test("inventory stock kitchen transfer copy is dictionary-backed", () => {
-  assert.match(inventoryMessagesSource, /transferKitchen: "Chuyển Bếp"/);
+  assert.match(inventoryMessagesSource, /transferKitchen:/);
   assert.doesNotMatch(stockClientSource, /label: "Chuyển Bếp"/);
   assert.doesNotMatch(stockClientSource, />\s*Chuyển Bếp\s*</);
-  assert.match(stockClientSource, /stockCopy\.actions\.transferKitchen/);
+  assert.doesNotMatch(stockClientSource, /stockCopy\.actions\.transferKitchen/);
 });
 
 test("inventory dashboard flow copy is dictionary-backed", () => {

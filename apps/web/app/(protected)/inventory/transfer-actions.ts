@@ -360,28 +360,6 @@ async function loadBranchKind(
   return data.branch_kind;
 }
 
-async function resolveBranchKitchenLocation(
-  supabase: TenantSupabase,
-  tenantId: number,
-  branchId: number,
-): Promise<number | null> {
-  const { data, error } = await supabase
-    .from("inventory_locations")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .eq("branch_id", branchId)
-    .eq("location_kind", "kitchen")
-    .eq("is_active", true)
-    .order("is_default_consumption", { ascending: false })
-    .order("sort_order", { ascending: true })
-    .order("id", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data?.id ?? null;
-}
-
 export async function createStockTransfer(
   input: z.infer<typeof transferCreateSchema>,
 ): Promise<ActionResult> {
@@ -408,12 +386,10 @@ export async function createStockTransfer(
   if (!fromKind || !toKind) {
     return { success: false, error: "Điểm vận hành không hợp lệ." };
   }
-  const wantsBranchKitchenTarget =
-    parsed.data.toLocationKind === "branch_kitchen";
-  if (wantsBranchKitchenTarget && toKind !== "branch") {
+  if (isIntraBranch || parsed.data.toLocationKind === "branch_kitchen") {
     return {
       success: false,
-      error: "Bếp chi nhánh chỉ áp dụng cho chi nhánh.",
+      error: "Bếp chi nhánh đã tắt. Chi nhánh chỉ còn một kho duy nhất.",
     };
   }
   if (!isAllowedInterSiteDirection(fromKind, toKind)) {
@@ -484,25 +460,17 @@ export async function createStockTransfer(
     ));
   const toLocationId =
     parsed.data.toLocationId ??
-    (wantsBranchKitchenTarget
-      ? await resolveBranchKitchenLocation(
-          supabase,
-          claims.tenant_id,
-          toBranchId,
-        )
-      : await resolveDefaultInventoryLocation(
-          supabase,
-          claims.tenant_id,
-          toBranchId,
-          "receive",
-        ));
+    (await resolveDefaultInventoryLocation(
+      supabase,
+      claims.tenant_id,
+      toBranchId,
+      "receive",
+    ));
 
   if (!fromLocationId || !toLocationId) {
     return {
       success: false,
-      error: wantsBranchKitchenTarget
-        ? "Chưa cấu hình Bếp chi nhánh để nhận hàng."
-        : "Chưa cấu hình vị trí kho gửi hoặc kho nhận mặc định.",
+      error: "Chưa cấu hình vị trí kho gửi hoặc kho nhận mặc định.",
     };
   }
 
@@ -812,124 +780,16 @@ export async function fetchBranchesForTransfer(): Promise<ActionResult> {
   return { success: true, data: branches };
 }
 
-const quickInternalTransferSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
-  ingredientId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
-  entryUnitId: z.coerce.number().int().positive().nullable().optional(),
-  reason: z.string().optional(),
-});
-
-export async function quickInternalTransfer(
-  input: z.infer<typeof quickInternalTransferSchema>,
-): Promise<ActionResult> {
-  const parsed = quickInternalTransferSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-  const { branchId, ingredientId, quantity, entryUnitId, reason } = parsed.data;
-
-  const ctx = await getAuthContext(ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-
-  if (isBranchScopedTransferRole(claims.user_role)) {
-    const ownBranchId = claims.branch_id;
-    if (ownBranchId == null || ownBranchId !== branchId) {
-      return {
-        success: false,
-        error: "Bạn chỉ được thao tác tại chi nhánh của mình.",
-      };
-    }
-  }
-
-  const { data: canCreate, error: canCreateError } = await supabase.rpc(
-    "has_permission",
-    {
-      p_branch_id: branchId,
-      p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
-    },
-  );
-  if (canCreateError || canCreate !== true) {
-    return { success: false, error: "Không có quyền tạo phiếu chuyển." };
-  }
-
-  const fromLocationId = await resolveDefaultInventoryLocation(
-    supabase,
-    claims.tenant_id,
-    branchId,
-    "issue",
-  );
-
-  const toLocationId = await resolveBranchKitchenLocation(
-    supabase,
-    claims.tenant_id,
-    branchId,
-  );
-
-  if (!fromLocationId || !toLocationId) {
-    return {
-      success: false,
-      error: "Chưa cấu hình kho xuất mặc định hoặc Bếp chi nhánh.",
-    };
-  }
-
-  const { data: stockLevels, error: stockLevelError } = await supabase
-    .from("stock_levels")
-    .select("current_quantity")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("branch_id", branchId)
-    .eq("location_id", fromLocationId)
-    .eq("ingredient_id", ingredientId)
-    .maybeSingle();
-
-  if (stockLevelError) {
-    return {
-      success: false,
-      error: messages.inventory.transfer.stockLoadFailed,
-    };
-  }
-
-  const availableQuantity = Number(stockLevels?.current_quantity ?? 0);
-
-  const resolvedUnit = await resolveEntryUnitCode(supabase, {
-    tenantId: claims.tenant_id,
-    ingredientId: ingredientId,
-    entryUnitId: entryUnitId ?? null,
-  });
-  if (!resolvedUnit.success) {
-    return { success: false, error: resolvedUnit.error };
-  }
-  const requestedBaseQuantity = getIssueBaseQuantity(quantity, resolvedUnit);
-  if (requestedBaseQuantity > availableQuantity + 1e-9) {
-    return { success: false, error: "Số lượng vượt tồn hiện tại." };
-  }
-
-  const transferNumber = `INT-${randomUUID().slice(0, 8)}`;
-
-  const { error } = await supabase.rpc("commit_intra_branch_transfer", {
-    p_branch_id: branchId,
-    p_from_location_id: fromLocationId,
-    p_to_location_id: toLocationId,
-    p_transfer_number: transferNumber,
-    p_notes: reason,
-    p_lines: [
-      {
-        ingredient_id: ingredientId,
-        quantity,
-        entry_unit_id: entryUnitId ?? null,
-      },
-    ],
-  });
-
-  if (error) {
-    console.error("quickInternalTransfer.failed", error);
-    return { success: false, error: "Không thể thực hiện chuyển nội bộ." };
-  }
-
-  revalidatePath("/inventory/stock");
-  return { success: true };
+export async function quickInternalTransfer(_input: {
+  branchId: number;
+  ingredientId: number;
+  quantity: number;
+  entryUnitId?: number | null;
+  reason?: string;
+}): Promise<ActionResult> {
+  return {
+    success: false,
+    error: "Bếp chi nhánh đã tắt. Chi nhánh chỉ còn một kho duy nhất.",
+  };
 }
+

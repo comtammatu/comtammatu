@@ -2,7 +2,7 @@
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
 > Phạm vi: luồng vận hành Inventory hiện tại cho nguyên liệu, thành phẩm, điều chuyển tồn thật, và tiêu hao chi nhánh.
-> Mô hình: `branches` là site table; site active có `branch_kind = 'branch'` (`central_supply`, `central_kitchen` là giá trị enum lịch sử, không có site active).
+> Mô hình: `branches` là site table; site active có `branch_kind = 'branch'` (`central_supply`, `central_kitchen` là giá trị enum lịch sử, không có site active). Mỗi chi nhánh giữ **một** location stock-bearing `warehouse` (D078). `location_kind='kitchen'` (Bếp CN) đã nghỉ.
 
 ---
 
@@ -38,10 +38,14 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 | Chi nhánh chuyển chi nhánh          | `stock_transfer`                | Chi nhánh gửi giảm, chi nhánh nhận tăng                         |
 | Kho CN cấp Bếp CN                   | `stock_transfer` cùng chi nhánh | Kho CN giảm, Bếp CN tăng; tổng tồn chi nhánh không giảm         |
 | Chi nhánh sản xuất                  | `production_runs`               | Nguyên liệu giảm, thành phẩm tăng                               |
-| Chi nhánh dùng nguyên liệu bán hàng | consumption report duyệt/apply  | Kho CN giảm bằng `stock_movements.consumption/sale_consumption` |
+| Chi nhánh bán POS                  | Đơn `paid` + outcome bếp hợp lệ | Kho CN giảm bằng `stock_movements.consumption/sale_consumption` |
+| Tiêu hao ngoài bán POS              | consumption report duyệt/apply  | Kho CN giảm bằng `stock_movements.consumption`                  |
 | Kiểm kê                             | `stocktake` / `adjustment`      | Điều chỉnh về tồn thực tế                                       |
 
 `stock_transfers` dùng khi hàng vẫn còn tồn tại ở nơi nhận. `Kho CN -> Bếp CN` là transfer nội bộ cùng chi nhánh; phiếu xuất/tiêu hao mới là bước giảm tồn.
+
+Không lập consumption report để ghi lại nguyên liệu của đơn đã được POS trừ;
+đó là hai nguồn khác nhau và sẽ làm giảm tồn hai lần.
 
 ## 4. Quy trình chuẩn
 

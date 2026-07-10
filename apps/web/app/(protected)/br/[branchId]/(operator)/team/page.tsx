@@ -1,14 +1,7 @@
 import { notFound } from "next/navigation";
-import {
-  ClipboardCheck as IconClipboardCheck,
-  UsersRound as IconUsersRound,
-} from "lucide-react";
 import { canAccess } from "@comtammatu/shared/auth";
 import { AppEmptyState } from "@/components/surface";
-import {
-  BranchOperatorActionSection,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
@@ -64,68 +57,6 @@ export default async function TeamBoardPage({
   const rows: TeamBoardRow[] = result.success ? (result.data?.rows ?? []) : [];
   const basePath = `/br/${context.branchId}`;
 
-  const managerEntry = (
-    <section
-      aria-label={copy.managerEntryAriaLabel}
-      className="grid gap-3 lg:grid-cols-2"
-    >
-      <BranchOperatorActionSection
-        title={copy.reviewGroupTitle}
-        description={copy.reviewGroupDescription}
-        links={[
-          {
-            key: "checkout-approvals",
-            href: `${basePath}/shift/checkout-approvals`,
-            icon: IconClipboardCheck,
-            title: copy.reviewCheckoutTitle,
-            description: copy.reviewCheckoutDescription,
-          },
-          {
-            key: "count-slips",
-            href: `${basePath}/stock/count-slips`,
-            icon: IconClipboardCheck,
-            title: copy.reviewCountTitle,
-            description: copy.reviewCountDescription,
-          },
-          {
-            key: "waste-approvals",
-            href: `${basePath}/stock/waste-approvals`,
-            icon: IconClipboardCheck,
-            title: copy.reviewWasteTitle,
-            description: copy.reviewWasteDescription,
-          },
-        ]}
-        columns={1}
-        tone="warning"
-        size="sm"
-      />
-
-      <BranchOperatorActionSection
-        title={copy.peopleGroupTitle}
-        description={copy.peopleGroupDescription}
-        links={[
-          {
-            key: "members",
-            href: `${basePath}/team?tab=members`,
-            icon: IconUsersRound,
-            title: copy.membersEntryTitle,
-            description: copy.membersEntryDescription,
-          },
-          {
-            key: "assignments",
-            href: `${basePath}/team?tab=assignments`,
-            icon: IconUsersRound,
-            title: copy.assignmentsEntryTitle,
-            description: copy.assignmentsEntryDescription,
-          },
-        ]}
-        columns={1}
-        tone="info"
-        size="sm"
-      />
-    </section>
-  );
-
   const content = (
     <TeamWorkspaceTabs
       initialValue={activeTab}
@@ -152,7 +83,6 @@ export default async function TeamBoardPage({
       description={copy.description}
       hideHeaderOnMobile
     >
-      {managerEntry}
       {content}
     </BranchOperatorPage>
   );

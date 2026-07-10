@@ -51,7 +51,6 @@ export function useGrnCreateController({
     locationOptions,
     initialBranchId,
     initialLocationId,
-    existingDraft == null,
   );
   const initialDraftBranchId = initialLocation?.branchId ?? initialBranchId;
   const [draft, setDraft] = useState<GrnDraft>(() => ({

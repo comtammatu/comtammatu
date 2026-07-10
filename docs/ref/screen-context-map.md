@@ -108,6 +108,19 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ---
 
+### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`, `/shift`, `/team`
+
+- **Archetype:** `/br/[branchId]` dùng `HUB`; `/shift` là màn ngày làm việc cá nhân; `/team` là `LIST` workspace ba tab.
+- **Đối tượng sử dụng chính:** Nhân viên trong ca, Quản lý chi nhánh (`branch_manager`), Chủ cửa hàng (`owner`) theo đúng phạm vi từng tab.
+- **Mục tiêu Nghiệp vụ (Why?):** Cho người vận hành đi từ việc cần xử lý đến đúng trạm hoặc đúng workspace trong một viewport ngắn, không lặp lại các thư mục đã có ở bottom nav.
+- **Quy chuẩn UX/UI:**
+  - `Nay` chỉ hiển thị các hàng chờ có số lượng lớn hơn 0, sau đó là điểm vào bán hàng/bếp/đơn hàng và lối tắt quản lý. Không lặp lại thư mục `Đội`, `Kho` hoặc lệnh vào Branch Dashboard đã có ở header.
+  - `Ca` sở hữu ngày làm việc cá nhân. Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`. Các route duyệt và chi tiết vẫn giữ nguyên ACL riêng.
+  - `Đội` mở trực tiếp ba tab `Theo dõi ca`, `Nhân sự`, `Phân công`. Tab theo dõi ưu tiên `Cần xử lý`, rồi `Đang làm`, rồi toàn bộ; không hiển thị bộ lọc có kết quả bằng 0.
+  - `Nhân sự` giữ đủ danh sách nhưng bỏ chip lọc bằng 0. `Phân công` đưa nhân sự đã có mục kiểm kê lên trước, không ẩn người chưa được phân công.
+
+---
+
 ### 2.5. Phân hệ Kho hàng (Inventory Workspace) — `/inventory` & `/br/[branchId]/stock`
 
 - **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `HUB`; `/inventory/stock`, `/br/[branchId]/stock/on-hand`, `/inventory/operations?tab=grn`, `/br/[branchId]/stock/grn`, bước chọn NCC `/br/[branchId]/stock/grn/new`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. Detail consumption và issue Branch thuộc `DETAIL`; form dòng GRN và phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
@@ -118,7 +131,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Luồng thao tác (Workflow):**
   - **Nhập kho (GRN):** Tạo phiếu nhập kho từ nhà cung cấp -> Kiểm đếm thực tế -> Xác nhận nhập kho (cập nhật tồn kho và tính lại giá vốn).
   - **Kiểm kê (Stocktake):** Tạo đợt kiểm kê -> Nhân viên đi đếm thực tế (kiểm kê mù - blind stocktake) -> Quản lý đối chiếu chênh lệch -> Xác nhận cân đối kho.
-  - **Điều chuyển (Transfer):** Chọn đúng nơi đi/nơi đến còn giữ tồn: Kho CN -> Bếp CN cùng chi nhánh, hoặc chi nhánh -> chi nhánh -> Vận chuyển khi khác site -> Bên nhận xác nhận thực nhận và ghi nhận hao hụt đường đi.
+  - **Điều chuyển (Transfer):** Operator không mở điều chuyển Kho↔Bếp hay cross-branch mới (D078 — một kho/chi nhánh). Lịch sử transfer còn ở Office khi cần audit.
   - **Xuất nội bộ (Issue):** Mở phiếu hủy hỏng hoặc xuất khác tại chi nhánh -> thêm từng nguyên liệu với đơn vị, số lượng và lý do -> rà soát phiếu nháp -> xác nhận để ghi giảm tồn hoặc hủy trước khi chốt.
   - **Hao hụt thủ công (Waste):** Chọn đúng vị trí kho của chi nhánh -> thêm từng nguyên liệu trong một dòng chạm riêng -> nhập số lượng không vượt tồn, lý do và ảnh khi được yêu cầu -> xem cảnh báo cap theo ca/ngày -> tạo phiếu để ghi giảm hoặc chờ quản lý duyệt theo tier. WAC, đơn vị và bằng chứng được server kiểm tra lại khi submit.
   - **Hàng NCC bị từ chối:** Ghi nhận qua luồng Báo hao hụt; giao diện tạo phiếu trả NCC và PO đã rút khỏi sử dụng hằng ngày theo D073, nhưng lịch sử dữ liệu vẫn được giữ.
@@ -127,6 +140,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - **Nên hiển thị:** Danh sách nguyên liệu kèm tồn khả dụng, đơn vị tính; Trạng thái các phiếu kho (Nháp / Đang giao / Hoàn thành); Cảnh báo tồn dưới mức an toàn.
   - **KHÔNG hiển thị:** Doanh thu bán hàng chi tiết, thông tin thẻ tín dụng của khách, bảng lương nhân sự.
 - **Quy chuẩn UX/UI:**
+  - Branch `/br/[branchId]/stock` giữ đúng hai nhóm tile chạm 2 cột: bốn thao tác kho trong ca trước, tra cứu/sản xuất/đếm/tiêu hao/danh mục sau. Điều chuyển chỉ có một điểm vào vì màn đích đã sở hữu `Cần nhận`, `Cần giao` và `Lịch sử`; bottom nav gọi toàn workspace là `Kho`, còn tra cứu số lượng gọi là `Tồn kho`.
   - `/br/[branchId]/stock/production` là HUB/LIST Branch-native: ưu tiên lệnh đang sản xuất, sau đó lệnh nháp, CTA tạo lệnh và lịch sử hoàn tất. Không dùng `AppLinkCard` mosaic, `DataTable`, query-view trung gian hoặc presenter Office.
   - `/br/[branchId]/stock/production/new` là `DOC-WORKFLOW` Branch-native: URL khóa chi nhánh sản xuất; người dùng chọn thành phẩm/sản lượng, nơi xuất nguyên liệu và nơi nhận thành phẩm trong chính chi nhánh, kiểm tra định mức và tạo lệnh. Điện thoại giữ một cột; tablet ngang có panel thông tin và panel nguyên liệu. Không import `ProductionNewClient`, `DocumentFormFrame` hoặc `DataTable` Office.
   - `/br/[branchId]/stock/production/[id]` là `DETAIL` Branch-native: ưu tiên trạng thái, sản lượng dự kiến/thực tế, nguyên liệu thực dùng, thiếu hụt và đúng một hành động tiếp theo theo state machine. Lệnh nháp bắt đầu sản xuất; lệnh đang làm mới hoàn thành; hủy luôn xác nhận. Không import `ProductionDetailClient` hoặc presenter Office.

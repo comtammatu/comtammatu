@@ -104,20 +104,15 @@ export function selectBranchScope(
 }
 
 /**
- * Operator scope diverges from inventory scope on purpose: every non-owner
- * role operates branch_kind "branch" sites only. Owner is tenant-wide across
- * every active site kind (D059 §3 context picker) — station surfaces stay
- * branch-only via the proxy gate, not here.
+ * Branch Hub scope is tenant-wide for privileged roles, but every role only
+ * operates active sites whose branch_kind is "branch" (D077).
  */
 export function selectOperatorBranchScope(
   claims: JwtClaims,
   branches: readonly OperatorBranchOption[],
   requestedBranchId: number | null,
 ): BranchScopeSelection {
-  const operableBranches =
-    claims.user_role === "owner"
-      ? [...branches]
-      : operatorBranches(branches, "branch");
+  const operableBranches = operatorBranches(branches, "branch");
   const scope = selectBranchScope(
     claims,
     operableBranches,
@@ -219,6 +214,12 @@ export const resolveBranchContext = cache(async function resolveBranchContext(
     requestedBranchId,
   );
   if (selection.currentBranchId == null) return null;
+  if (
+    requestedBranchId != null &&
+    selection.currentBranchId !== requestedBranchId
+  ) {
+    return null;
+  }
 
   const branch =
     selection.allowedBranches.find(

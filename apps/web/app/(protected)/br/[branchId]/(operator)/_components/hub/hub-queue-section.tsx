@@ -19,7 +19,6 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
-import { AppEmptyState } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchBranchQueueCounts } from "../../dashboard/data";
@@ -114,7 +113,6 @@ function buildQueueRows(
 }
 
 function QueueRowItem({ row }: { row: QueueRow }) {
-  const badgeVariant = row.count > 0 ? "warning" : "secondary";
   return (
     <Item
       asChild
@@ -135,7 +133,7 @@ function QueueRowItem({ row }: { row: QueueRow }) {
           </ItemTitle>
         </ItemContent>
         <ItemActions className="shrink-0 text-muted-foreground">
-          <Badge variant={badgeVariant}>{formatCount(row.count)}</Badge>
+          <Badge variant="warning">{formatCount(row.count)}</Badge>
           <ChevronRight />
         </ItemActions>
       </Link>
@@ -144,17 +142,6 @@ function QueueRowItem({ row }: { row: QueueRow }) {
 }
 
 function CompactQueueSection({ rows }: { rows: QueueRow[] }) {
-  if (rows.length === 0) {
-    return (
-      <AppEmptyState
-        compact
-        title={branchCopy.queueEmpty}
-        className="py-3"
-        symbol="riceBowl"
-      />
-    );
-  }
-
   return (
     <ItemGroup className="gap-2">
       {rows.map((row) => (
@@ -176,7 +163,9 @@ export async function HubQueueSection({ branchId }: { branchId: number }) {
   if (!queueCounts) return null;
 
   const basePath = `/br/${branchId}`;
-  const queueRows = buildQueueRows(basePath, queueCounts);
+  const queueRows = buildQueueRows(basePath, queueCounts).filter(
+    (row) => row.count > 0,
+  );
   const queuePendingTotal = queueRows.reduce((sum, row) => sum + row.count, 0);
 
   if (queueRows.length === 0) return null;
@@ -187,11 +176,7 @@ export async function HubQueueSection({ branchId }: { branchId: number }) {
       icon={ClipboardCheck}
       tone="warning"
       size="sm"
-      badge={
-        queuePendingTotal > 0
-          ? { children: String(queuePendingTotal), variant: "warning" }
-          : undefined
-      }
+      badge={{ children: String(queuePendingTotal), variant: "warning" }}
     >
       <CompactQueueSection rows={queueRows} />
     </BranchOperatorPanel>

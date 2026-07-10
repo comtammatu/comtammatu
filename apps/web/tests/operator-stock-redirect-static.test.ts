@@ -89,9 +89,13 @@ test("operator stock receive merges into the native transfer queue and keeps nat
     transferRoute,
     /`\/br\/\$\{branchId\}\/stock\/receive\/\$\{row\.id\}`/,
   );
-  assert.match(
+  assert.doesNotMatch(
     navConfig,
-    /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer\?queue=receive",\s*label: "Nhận hàng"/,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer\?queue=receive"/,
+  );
+  assert.doesNotMatch(
+    navConfig,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/,
   );
 
   // D067 §2: the receive detail route forks to a mobile-native receive
@@ -199,28 +203,32 @@ test("operator stock landing is a branch-native hub, not the office stock page w
   assert.match(source, /BranchOperatorActionSection/);
   assert.match(source, /resolveOperatorTiles/);
   assert.match(source, /STOCK_PRIMARY_SUFFIXES/);
-  assert.match(source, /STOCK_LOOKUP_SUFFIXES/);
-  assert.match(source, /STOCK_CATALOG_SUFFIXES/);
+  assert.match(source, /STOCK_SECONDARY_SUFFIXES/);
   assert.match(
     source,
-    /const STOCK_PRIMARY_SUFFIXES = \[\s*"\/stock\/grn",\s*"\/stock\/production"/,
+    /const STOCK_PRIMARY_SUFFIXES = \[\s*"\/stock\/grn",\s*"\/stock\/stocktake",\s*"\/stock\/waste"/,
   );
   assert.match(
     source,
-    /const STOCK_LOOKUP_SUFFIXES = \["\/stock\/on-hand"\]/,
+    /const STOCK_SECONDARY_SUFFIXES = \[\s*"\/stock\/on-hand",\s*"\/stock\/production"/,
   );
   assert.match(source, /operatorStockPrimaryTitle/);
-  assert.match(source, /operatorStockLookupTitle/);
-  assert.match(source, /operatorStockCatalogTitle/);
+  assert.match(source, /operatorStockSecondaryTitle/);
   assert.match(
     source,
     /tile\.href === stockRoot\s*\?\s*`\$\{stockRoot\}\/on-hand`/,
   );
   assert.equal(
-    (source.match(/mobileColumns=\{1\}/g) ?? []).length >= 3,
-    true,
-    "stock landing action sections must render as full-width touch rows on mobile",
+    (source.match(/mobileColumns=\{2\}/g) ?? []).length,
+    2,
+    "stock landing must use two compact two-column action groups",
   );
+  assert.equal(
+    (source.match(/<BranchOperatorActionSection/g) ?? []).length,
+    2,
+    "stock landing must not restore the old three-panel launcher",
+  );
+  assert.doesNotMatch(source, /operatorStockPrimaryDescription/);
   assert.doesNotMatch(source, /StockPageContent/);
   assert.doesNotMatch(source, /embedded/);
   assert.doesNotMatch(source, /href: `\/br\/\$\{branchId\}\/stock\/count`/);
@@ -412,12 +420,15 @@ test("office stock workbench keeps manager action affordances after the plane sp
 
   for (const expected of [
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.receive\}[\s\S]*label=\{receiveActionLabel\}[\s\S]*primary/,
-    /<QuickActionButton[\s\S]*href=\{actionHrefs\.transfer\}[\s\S]*label=\{stockCopy\.actions\.transfer\}/,
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.stocktake\}[\s\S]*label=\{stockCopy\.actions\.stocktake\}/,
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.waste\}[\s\S]*label=\{stockCopy\.actions\.waste\}/,
   ]) {
     assert.match(stockClientSource, expected);
   }
+  assert.doesNotMatch(
+    stockClientSource,
+    /<QuickActionButton[\s\S]*href=\{actionHrefs\.transfer\}[\s\S]*label=\{stockCopy\.actions\.transfer\}/,
+  );
 
   for (const expected of [
     /const primaryReceiveAction = canReceiveStock \?[\s\S]*href=\{actionHrefs\.receive\}/,
@@ -435,10 +446,7 @@ test("office stock workbench keeps manager action affordances after the plane sp
     stockClientSource,
     /dynamic<AdjustStockDialogProps>\(\s*\(\) => import\("\.\/adjust-stock-dialog"\)/,
   );
-  assert.match(
-    stockClientSource,
-    /dynamic<QuickInternalTransferDialogProps>[\s\S]*import\("\.\/quick-internal-transfer-dialog"\)/,
-  );
+  assert.doesNotMatch(stockClientSource, /QuickInternalTransferDialog/);
   assert.match(
     stockClientSource,
     /dynamic<QuickStockIssueDialogProps>\(\s*\(\) =>[\s\S]*import\("\.\/quick-stock-issue-dialog"\)/,
@@ -787,7 +795,10 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
   );
   assert.match(branchGrnSourceClient, /ItemGroup/);
   assert.match(branchGrnSourceClient, /createSupplier/);
-  assert.doesNotMatch(branchGrnSourceClient, /createGrnFromPo|openPurchaseOrders/);
+  assert.doesNotMatch(
+    branchGrnSourceClient,
+    /createGrnFromPo|openPurchaseOrders/,
+  );
   assert.match(branchGrnSourceClient, /grnSourceSupplierHref/);
   assert.match(branchGrnSourceClient, /min-h-20 touch-manipulation/);
   assert.doesNotMatch(

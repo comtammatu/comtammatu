@@ -305,7 +305,7 @@ test("GRN create flow sends an explicit receiving location", () => {
 
   assert.match(grnCreateController, /pickGrnReceivingLocation\(/);
   assert.match(grnCreateController, /locationId,/);
-  assert.match(grnCreateModel, /location\.kind === "kitchen"/);
+  assert.match(grnCreateModel, /location\.kind === "warehouse"/);
   assert.match(grnCreateClient, /GRN_CREATE_COPY\.receivingLocation/);
   assert.match(grnCreateController, /updateDraftGrnReceivingSite/);
   assert.match(
@@ -324,7 +324,7 @@ test("GRN create flow sends an explicit receiving location", () => {
   assert.doesNotMatch(grnCreateClient, /branchLocked/);
 });
 
-test("production defaults branch output into Bep CN before default receive", () => {
+test("production defaults branch output into warehouse before default receive", () => {
   const targetStart = productionNewClient.indexOf(
     "function pickTargetLocation",
   );
@@ -338,11 +338,11 @@ test("production defaults branch output into Bep CN before default receive", () 
   );
 
   assert.match(targetBody, /location\.branchKind === "branch"/);
-  assert.match(targetBody, /location\.kind === "kitchen"/);
+  assert.match(targetBody, /location\.kind === "warehouse"/);
   assert.match(targetBody, /location\.isDefaultReceive/);
   assert.ok(
-    targetBody.indexOf('location.kind === "kitchen"') <
+    targetBody.indexOf('location.kind === "warehouse"') <
       targetBody.indexOf("location.isDefaultReceive"),
-    "branch kitchen must be preferred before default receive",
+    "branch warehouse must be preferred before default receive",
   );
 });

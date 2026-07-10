@@ -24,20 +24,17 @@ interface OperatorStockLink {
 
 const STOCK_PRIMARY_SUFFIXES = [
   "/stock/grn",
-  "/stock/production",
-  "/stock/receive",
-  "/stock/transfer",
   "/stock/stocktake",
-  "/stock/count-assignments",
-  "/stock/count-slips",
-  "/stock/waste-approvals",
   "/stock/waste",
-  "/stock/consumption",
 ] as const;
 
-const STOCK_LOOKUP_SUFFIXES = ["/stock/on-hand"] as const;
-
-const STOCK_CATALOG_SUFFIXES = ["/stock/catalog"] as const;
+const STOCK_SECONDARY_SUFFIXES = [
+  "/stock/on-hand",
+  "/stock/production",
+  "/stock/count-assignments",
+  "/stock/consumption",
+  "/stock/catalog",
+] as const;
 
 function toOperatorStockLink(
   tile: ResolvedOperatorTile,
@@ -92,8 +89,11 @@ export default async function OperatorStockPage({
     stockGroup?.tiles.map((tile) => toOperatorStockLink(tile, stockRoot)) ?? [];
   const usedLinks = new Set<string>();
   const primaryLinks = pickStockLinks(links, STOCK_PRIMARY_SUFFIXES, usedLinks);
-  const lookupLinks = pickStockLinks(links, STOCK_LOOKUP_SUFFIXES, usedLinks);
-  const catalogLinks = pickStockLinks(links, STOCK_CATALOG_SUFFIXES, usedLinks);
+  const secondaryLinks = pickStockLinks(
+    links,
+    STOCK_SECONDARY_SUFFIXES,
+    usedLinks,
+  );
   const fallbackLinks = links.filter((link) => !usedLinks.has(link.key));
   const hasLinks = links.length > 0;
 
@@ -107,36 +107,19 @@ export default async function OperatorStockPage({
         <>
           <BranchOperatorActionSection
             title={messages.inventory.dashboard.operatorStockPrimaryTitle}
-            description={
-              messages.inventory.dashboard.operatorStockPrimaryDescription
-            }
-            links={[...primaryLinks, ...fallbackLinks]}
+            links={primaryLinks}
             columns={2}
-            mobileColumns={1}
+            mobileColumns={2}
             wideColumns
           />
 
           <BranchOperatorActionSection
-            title={messages.inventory.dashboard.operatorStockLookupTitle}
-            description={
-              messages.inventory.dashboard.operatorStockLookupDescription
-            }
-            links={lookupLinks}
+            title={messages.inventory.dashboard.operatorStockSecondaryTitle}
+            links={[...secondaryLinks, ...fallbackLinks]}
             columns={2}
-            mobileColumns={1}
+            mobileColumns={2}
+            wideColumns
             tone="info"
-          />
-
-          <BranchOperatorActionSection
-            title={messages.inventory.dashboard.operatorStockCatalogTitle}
-            description={
-              messages.inventory.dashboard.operatorStockCatalogDescription
-            }
-            links={catalogLinks}
-            columns={2}
-            mobileColumns={1}
-            tone="info"
-            size="sm"
           />
         </>
       ) : (

@@ -20,11 +20,11 @@
 
 ## D000: Inventory branch and central site operating model (2026-06-19)
 
-**Decision:** Inventory dùng `branches` làm site table; `branches.branch_kind` active với `branch`, `central_supply`, `central_kitchen`. PO/GRN/stock levels/production orders/stock transfers ref `branch_id` trực tiếp. Branch kind quyết hành vi site: Kho CN và Bếp CN giữ branch stock, Kho Tổng giữ supply stock, Bếp TT giữ production stock. Chuyển `Kho CN → Bếp CN` là transfer cùng chi nhánh; chỉ phiếu xuất/tiêu hao/write-off sau đó mới giảm tồn chi nhánh.
+**Decision (net, sau D078):** Inventory dùng `branches` làm site table; `branches.branch_kind` enum giữ `branch`, `central_supply`, `central_kitchen` cho lịch sử. Site vận hành active chỉ `branch`. Mỗi chi nhánh giữ **một** location stock-bearing `warehouse` (Kho chi nhánh). `central_supply` / `central_kitchen` và `location_kind='kitchen'` (Bếp CN) đã nghỉ vận hành — không seed/active mới. PO/GRN/stock levels/production/stock transfers ref `branch_id` trực tiếp.
 
-**Transfer matrix** (trigger `enforce_stock_transfer_direction`): cho phép `central_supply → branch`, `central_kitchen → branch`, `branch → central_supply`, `branch → central_kitchen`, `central_supply ↔ central_kitchen`, `branch → branch`, và same-branch `Kho CN → Bếp CN` cho site `branch`; chặn thiếu ref, central direction lạ, và same-branch ngoài site `branch`.
+**Transfer matrix** (trigger `enforce_stock_transfer_direction`): giữ cho lịch sử + đợt chuyển tồn cũ; vận hành mới không mở same-branch Kho↔Bếp và không mở cross-branch từ operator (D073/D078). Chỉ phiếu xuất/tiêu hao/write-off giảm tồn chi nhánh.
 
-Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi nhánh). Canonical vận hành: `docs/ref/inventory.md`.
+Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi nhánh); siết bởi D078 (một kho/chi nhánh). Canonical vận hành: `docs/ref/inventory.md`.
 
 ## D002: Tenant-Branch 2-level thay vì Company-Brand-Branch 3-level (2026-04-01)
 
@@ -68,11 +68,13 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 **Consequences:** Chấm dứt re-litigate hướng platform. Mọi đề xuất rebuild/cutover phải sửa quyết định này trước, kèm số liệu thắng phương án absorb.
 
-## D016: POS không trừ kho khi thanh toán — mặc định (2026-05-28)
+## D016: POS trừ Kho chi nhánh theo outcome bán hàng — mặc định (2026-05-28, sửa 2026-07-11)
 
-**Decision (net, sau D053/D064/D065):** Mặc định thanh toán POS KHÔNG trừ kho; action-layer đã gỡ, webhook stock leg disabled; amount-recompute + `finalize_paid_order` giữ nguyên. Chi nhánh bật `pos_stock_outcome_posting` thì trừ kho theo outcome thật theo D053 + D065 (một công tắc, rào cứng, kho không âm). Shortage lúc ghi sổ: payment vẫn hoàn tất, không ghi movement (D065 §3).
+**Decision (net, sau D053/D064/D065/D078):** Mặc định chi nhánh đang hoạt động được bật `pos_stock_outcome_posting`: POS Sale Runtime ghi giảm tại Kho chi nhánh theo outcome thật, không phải ngay khi thanh toán đơn thuần. Mỗi chi nhánh mới cũng khởi tạo bật; Chủ quán vẫn có thể tắt riêng từng chi nhánh bằng một switch, khi đó không trừ kho và không rào tồn. Khi bật, một công tắc vẫn đồng thời áp rào cứng không âm; sale movement chỉ post sau điều kiện paid/completed + kitchen outcome theo D053/D065. Shortage lúc ghi sổ không được làm payment fail và không được ghi movement một phần.
 
-**Đuôi còn lại:** remove `consume_stock_for_order` + RPC liên quan (owner-gated); REVOKE `transition_order_status` khỏi `authenticated` trước khi re-enable posting (D064 §8); số phận cột `payments.stock_consumed_status` còn mở. Đảo policy mặc định phải sửa quyết định này trước.
+**Boundary:** Báo cáo tiêu hao thủ công chỉ ghi phần dùng ngoài bán POS; không được nhập lại nguyên liệu đã có `source_type='pos_sale'` cho cùng bán hàng. `finalize_paid_order`, idempotency, refund boundary, và amount recompute giữ nguyên.
+
+**Đuôi còn lại:** remove `consume_stock_for_order` + RPC liên quan (owner-gated); REVOKE `transition_order_status` khỏi `authenticated`; số phận cột `payments.stock_consumed_status` còn mở. Đảo policy mặc định phải sửa quyết định này trước.
 
 ## D017: Admin là L0 Tenant Command; Branch Manager dùng L1 Branch Command (2026-06-13)
 
@@ -276,8 +278,8 @@ Scope: Office-side People/Branch IA thuộc D048; "Việc trong ca" thuộc D052
 
 **Decision (net, flag theo D065):**
 
-1. **Rollout:** trừ-kho-khi-bán gate bằng MỘT branch flag `pos_stock_outcome_posting` (D065), default OFF; rollback = tắt flag theo chi nhánh.
-2. **D016 supersede có điều kiện:** chi nhánh chưa bật flag giữ nguyên D016.
+1. **Rollout:** trừ-kho-khi-bán gate bằng MỘT branch flag `pos_stock_outcome_posting` (D065), default ON cho mọi chi nhánh vận hành; rollback = Chủ quán tắt flag theo chi nhánh.
+2. **D016:** flag bật là policy mặc định; chi nhánh được Chủ quán tắt giữ trạng thái không trừ kho và không rào tồn.
 3. **UI ownership:** quản lý sell state ở branch manager surface (`Tồn | Sẵn bán | Còn`); POS/KDS chỉ thấy trạng thái bán được/khóa món.
 4. **Pending demand:** POS create/append chỉ tạo demand/reservation qua `branch_menu_item_daily_holds` — không reservation table thứ hai.
 5. **Payment-before-ready (Option B):** stock outcome chỉ post khi đủ cả hai: order paid/completed VÀ stock-tracked KDS ticket đã từng ready.
@@ -455,10 +457,10 @@ Canonical presentation rule: `docs/modules/ui.md` § Branch Operator Hub. Đảo
 2. **Một kind vận hành duy nhất `branch`.** Mọi nâng cấp stock đã chuẩn bị cho đợt Bếp (mockup GRN 3 bước · Ghi mẻ một màn · Tồn 44px, đã owner-duyệt) áp cho `/br/[branchId]/(operator)/stock/*` kind `branch`. Plan sống ở `tasks/todo.md` § Branch Stock Cutover.
 3. **Công thức = Office-only:** operator dùng công thức để prefill định mức khi ghi mẻ, không sửa; tile `production/recipes` rời operator, quản trị công thức về `/inventory` (owner/quản lý).
 4. **Chỉ "Danh mục" mở cho chi nhánh; PO và Trả hàng NCC NGHỈ HẲN cả hai plane** (owner siết lại cùng ngày): GRN đã NCC-first (`po_id` nullable) nên không cần PO; hàng lỗi xử qua Báo hao hụt (ảnh + lý do) thay Trả NCC. Bảng + lịch sử DB giữ nguyên; gỡ tile/route/action khỏi operator lẫn Office. Catalog mở cho `branch` KHÔNG cần grant mới — categories/units/ingredients gate bằng RLS/module, suppliers dùng `supplier_manage` đã cấp ở D068 §4.
-5. **Mô hình tồn kho tối giản — 1 chi nhánh · 2 location (Kho, Bếp):** bỏ lô/HSD (cột + plumbing RPC, slice riêng trong tracker); điều chuyển nội bộ Kho ↔ Bếp là MOVE MỘT BƯỚC hai chiều qua `commit_intra_branch_transfer` (mở rộng RPC hiện warehouse→kitchen-only; vòng Yêu cầu → Gửi → Nhận và transfer cross-branch nghỉ SAU khi chuyển tồn site 16 → 3 xong, vì đợt chuyển đó cần đúng luồng cross-branch một lần cuối).
+5. **Mô hình tồn kho tối giản — (sửa bởi D078) 1 chi nhánh · 1 location (Kho):** bỏ lô/HSD (cột + plumbing RPC, slice riêng trong tracker). Kho↔Bếp và `commit_intra_branch_transfer` nghỉ hẳn; vòng Yêu cầu → Gửi → Nhận / transfer cross-branch operator cũng nghỉ sau khi chuyển tồn site 16 → 3 xong.
 6. **Sau khi site 16 tắt, gỡ fork central khỏi operator UI** — `CENTRAL_HOME_TILE_SUFFIXES`, CTA home central, các nhánh `isCentralKitchen`/`isCentralSupply` trong loader hub, entries `kinds` central trong nav-config, archetype exceptions #19–#23, mục central trong `docs/ref/screen-context-map.md` §2.5 — xóa sạch, không tombstone.
 
-**Consequences:** D066 §3/§4/§7a hết hiệu lực; D067 §2 hết "đợt Bếp"; D068 §5 net cuối = PO nghỉ hẳn (không mở cho branch). D000 transfer matrix giữ (cần cho lịch sử + đợt chuyển tồn). Đảo mục 1–6 phải sửa bản ghi này trước.
+**Consequences:** D066 §3/§4/§7a hết hiệu lực; D067 §2 hết "đợt Bếp"; D068 §5 net cuối = PO nghỉ hẳn (không mở cho branch). D000 transfer matrix giữ cho lịch sử. §5 net cuối = D078. Đảo mục 1–6 phải sửa bản ghi này trước.
 
 ## D074: Voice alert KDS chạy bằng TTS trình duyệt, không clip thu sẵn (2026-07-10)
 
@@ -483,7 +485,7 @@ Canonical presentation rule: `docs/modules/ui.md` § Branch Operator Hub. Đảo
 2. **Gate 1 lần mỗi seating, không phải mỗi lượt.** Bàn chưa có order mở → lượt đầu vào hàng đợi `pending`, staff duyệt → `create_order` → `route_order_to_kds` chạy sẵn. Bàn đã có order mở (POS tạo hay QR tạo đều được) → khách gửi món là `append_order_items` thẳng xuống bếp, không ai duyệt. Bàn có ≥2 bill mở → rơi về `pending`, staff chọn bill đích lúc duyệt; hệ thống KHÔNG đoán bill.
 3. **Bỏ sạch ràng buộc thiết bị.** Xoá cookie `device_token`, mã ghép, xin join, thu hồi thiết bị, nhánh 428-retry ở client. Đánh đổi được owner chấp nhận có ý thức: ai có ảnh chụp QR bàn đều đọc được bill và thêm món khi bàn đang mở. Duyệt lượt đầu chặn người lạ MỞ bàn, không chặn người lạ THÊM món vào bàn đang mở. Phòng ăn là biên tin cậy; món lạ ra bàn thì nhân viên thấy. Rate limit (`self_order_rate_buckets`) giữ nguyên.
 4. **Luồng thanh toán giữ nguyên ở cấp sản phẩm** (owner không đánh dấu sai): đúng 1 intent sống trên mỗi order, khách không tự huỷ, staff huỷ. `self_order_payment_requests` bỏ phụ thuộc session và bind trực tiếp bằng `order_id`; bàn có nhiều bill thì khách không được xem/khởi tạo thanh toán cho tới khi staff chọn bill. Nút huỷ dời từ `SelfOrderApprovalSheet` (bị xoá) vào sheet bill của bàn ở table map — nếu không dời, khách kẹt vĩnh viễn sau VietQR hết hạn.
-5. **IA khách: menu là trang duy nhất.** Bỏ `Tabs`, bỏ `StatusPill`, bỏ tên chi nhánh khỏi header. `Hoá đơn` thành nút + `Badge` ở góc phải header, mở `Drawer`, **không tự bật** (quy tắc auto-switch-to-Bill của spec cũ chết theo Tabs). Trạng thái workflow chỉ nói ở `NoteCallout`/`Alert`, một chỗ duy nhất.
+5. **IA khách: menu là trang duy nhất.** Bỏ `Tabs`, bỏ `StatusPill`, bỏ tên chi nhánh khỏi header. Header chỉ đặt `Cơm Tấm Má Tư` và số bàn. Món chính dùng ảnh như chất liệu menu, còn tên/giá luôn nằm dưới ảnh; món phụ/nước giữ hàng gọn. Sticky cart chỉ mở giỏ để khách rà soát, còn `Gửi món` chỉ ở trong sheet. `Hoá đơn` là nút + `Badge` cố định ở góc phải dưới, luôn hiện và mở `Drawer`, **không tự bật** (quy tắc auto-switch-to-Bill của spec cũ chết theo Tabs). Drawer mặc định chỉ hiện món đã gọi và CTA `Thanh toán`; CTA chuyển cùng Drawer sang Payment, có nút trở lại Hoá đơn. Bàn chưa có món hoặc có nhiều bill chỉ xem trạng thái trống an toàn; thanh toán vẫn khoá. Trạng thái chờ/từ chối dùng `Dialog`; lỗi làm mới và phản hồi không chặn dùng toast. Header không mang thông báo workflow.
 6. **Mascot mở cho G0.** `BrandMascot animated={false}` hợp lệ trên màn "bàn không khả dụng" — đảo dòng `BrandMascot = Forbidden` của spec cũ. Không asset mới, không keyframe mới (mascot chỉ có 1 ảnh `cotlet.png`, mood là CSS).
 7. **Nổi bật món chính bằng `menu_categories.type`** (`main_dish` → thẻ lớn có ảnh; `side_dish | drink | dessert` → hàng gọn). Không thêm cột `is_featured` trên `menu_items`.
 8. **Bỏ realtime, dùng polling thích ứng:** 3s khi `Chờ xác nhận` / `Đang thanh toán`, 15s lúc khác, refetch khi tab focus + bfcache. Xoá topic token, trigger broadcast, policy realtime.
@@ -506,3 +508,64 @@ Canonical presentation rule: `docs/modules/ui.md` § Branch Operator Hub. Đảo
 6. **Office ACL của `branch_manager` giữ nguyên như trước** — quyết định này không đụng tới quyền branch_manager đã có trên inventory/hr/menu/orders.
 
 **Consequences:** D055 §1 hết hiệu lực (sửa tại chỗ). D073 §1 "owner sắp xếp lại role production_manager" sửa thành xoá tài khoản. Canonical: `packages/shared/src/auth/types.ts` (`ACCESS_BUCKETS`), bảng generated trong `docs/spec/role-route-matrix.md`.
+
+## D077: Branch Hub là cửa vào mặc định — chỉ `branch` được vận hành (2026-07-10)
+
+**Context:** Sau D073/D076, app chỉ còn một kind vận hành là `branch`, nhưng
+owner desktop vẫn vào `/finance`, picker vẫn quảng bá mọi site active, và
+Branch Hub chưa có cửa rõ ràng tới cấu hình chi nhánh cùng các workspace riêng
+của Owner. Production có thể còn row site trung tâm chưa deactive đồng bộ; row
+đó không được quay lại thành một nơi vận hành chỉ vì `is_active = true`.
+
+**Decision (owner 2026-07-10):**
+
+1. **Branch Hub là home mặc định của mọi access bucket.** Owner không còn mặc
+   định vào Finance; khi chưa có `branch_id`, fallback là `/`, nơi resolver mở
+   thẳng branch vận hành duy nhất.
+2. **Operator scope chỉ nhận `branch_kind = branch`.** Owner vẫn có quyền đọc
+   lịch sử tenant-wide ở các workspace quản trị, nhưng `/br/[branchId]` không
+   mở central-kind site. Route branch ngoài allowed set phải fail closed, không
+   âm thầm render branch mặc định dưới URL sai.
+3. **Một branch thì tự mở; nhiều branch mới hiện picker.** Header Branch chỉ
+   hiện nút đổi branch khi resolver trả `canSwitchBranch = true`; không hardcode
+   id Phước Hải.
+4. **Branch Hub có hai nhóm quản trị có kiểm quyền:** Owner/Branch Manager mở
+   Menu + Cài đặt chi nhánh; chỉ Owner mở Finance + HR + Payroll + Thiết lập hệ
+   thống. Đây là shortcut quản trị, không cho phép operator workflow import hay
+   render Office chrome.
+5. **Workspace Owner giữ nguyên route kỹ thuật trong lát này.** Không move
+   `/finance`, `/hr`, `/menu`, `/admin/settings`; việc bỏ Office shell là lát
+   riêng sau khi Hub entry ổn định.
+
+**Consequences:** D050 §1 và D058 §1/§5 hết hiệu lực ở phần home mặc định của
+Owner; hai-plane presentation vẫn tồn tại tạm thời nhưng Branch Hub là cửa vào
+duy nhất được quảng bá. Canonical runtime: `branch-hub.ts`,
+`branch-context.ts`, `nav-resolution.ts`, và Branch Hub page.
+
+## D078: Tắt Bếp chi nhánh — một kho duy nhất mỗi chi nhánh (2026-07-10)
+
+**Context:** D073 §5 còn khóa mô hình `1 chi nhánh · 2 location (Kho, Bếp)` và
+slice S11 (`commit_intra_branch_transfer` Kho↔Bếp). Owner 2026-07-10 chốt tắt
+hẳn Bếp CN: kho hàng chỉ còn một kho.
+
+**Decision (owner):**
+
+1. **Một location stock-bearing / chi nhánh:** `location_kind = 'warehouse'`
+   (Kho chi nhánh). `location_kind = 'kitchen'` (Bếp CN) nghỉ vận hành —
+   deactivate, không seed mới, không cộng vào tồn vận hành.
+2. **Mọi luồng tồn dùng kho duy nhất:** GRN nhận, kiểm kê/giao đếm, xuất/
+   tiêu hao, sản xuất, POS stock gate/posting, menu-limits capacity — đều
+   trỏ warehouse / `is_default_*` trên warehouse.
+3. **Điều chuyển Kho↔Bếp nghỉ hẳn:** gỡ UI `Chuyển Bếp` /
+   `quickInternalTransfer` / same-branch kitchen target; RPC
+   `commit_intra_branch_transfer` retire (raise). Tile operator "Điều chuyển"
+   và vòng cross-branch nhận/gửi cũng nghỉ theo D073 S11 (một kho + một
+   chi nhánh vận hành không còn cặp nguồn-đích).
+4. **KDS/POS "bếp" giữ nguyên** — `kitchen_send_batches`, `/kds`,
+   `pos:send_kitchen` là workflow nấu món, không phải stock location.
+5. **Enum/history giữ:** `location_kind` và `branch_kind` enum không DROP;
+   row kitchen inactive + ledger lịch sử giữ để audit.
+
+**Consequences:** D073 §5 và D000 phần Kho+Bếp sửa tại chỗ. S11 trong
+`tasks/todo.md` đảo thành retire (không mở rộng Kho↔Bếp). Canonical:
+`docs/ref/inventory.md`, migration single-warehouse, app defaults warehouse-only.

@@ -57,22 +57,6 @@ function parseRoleLabels(source) {
   return labels;
 }
 
-// D076: central-site soft-routing (and its CENTRAL_SITE_ROLE_BRANCH_KINDS
-// map) is retired from types.ts. Tolerate its absence — every role's
-// central-site kind is then simply unset — instead of failing loudly, since
-// the map is not coming back.
-function parseCentralSiteRoleBranchKinds(source) {
-  const block = source.match(
-    /const CENTRAL_SITE_ROLE_BRANCH_KINDS: Partial<Record<StaffRole, BranchKind>> = \{([\s\S]*?)\};/,
-  );
-  if (!block) return {};
-  const kinds = {};
-  for (const m of block[1].matchAll(/(\w+):\s*"([a-z_]+)"/g)) {
-    kinds[m[1]] = m[2];
-  }
-  return kinds;
-}
-
 // ---------------------------------------------------------------------------
 // Parse packages/shared/src/auth/module-acl.ts
 // ---------------------------------------------------------------------------
@@ -296,10 +280,7 @@ function parseNavAdvertisementSources(source) {
       const moduleKeyMatch = entry.match(/moduleKey:\s*"(\w+)"/);
       const groupMatch = entry.match(/group:\s*"(\w+)"/);
       if (moduleKeyMatch && groupMatch) {
-        addSource(
-          moduleKeyMatch[1],
-          `Operator tile (${groupMatch[1]})`,
-        );
+        addSource(moduleKeyMatch[1], `Operator tile (${groupMatch[1]})`);
       }
     }
   }
@@ -334,46 +315,25 @@ function parsePermissionKeysByNamespace(source) {
 // actual "log in fresh, land where" outcome documented per role.
 // ---------------------------------------------------------------------------
 
-function derivePostLoginHomes(accessBuckets, adminRoles, centralSiteKinds) {
+function derivePostLoginHomes(accessBuckets) {
   const rows = [];
   for (const role of accessBuckets) {
-    const isAdmin = adminRoles.includes(role);
-    // D076: central-site soft-routing is retired — centralSiteKinds is
-    // always empty now. Kept as a parameter so a future reintroduction only
-    // needs to repopulate the map, not touch this decision tree.
-    const centralKind = centralSiteKinds[role] ?? null;
-
     if (role === "owner") {
       rows.push({
         role,
-        desktop: "/finance (Office plane)",
-        phone: "/br (Operator plane branch picker, >1 branch) or /br/{branchId} directly",
-        note: "Device-aware split (D050 §5): desktop/office context -> Office; phone -> Operator. Owner may also open any active branch POS/KDS/Runner to cover a shift.",
+        desktop: "/ (auto-opens the sole operating branch)",
+        phone: "/ (auto-opens the sole operating branch)",
+        note: "D077: only branch-kind sites are operable; multiple operating branches retain the picker. Owner-only workspaces remain permission-gated shortcuts from Branch Hub.",
       });
       continue;
     }
 
-    if (centralKind) {
-      rows.push({
-        role,
-        desktop: `/br/{central-site-id} (home branch resolved server-side to the active ${centralKind} site)`,
-        phone: `/br/{central-site-id} (same central site)`,
-        note: `D055 soft-routing: JWT branch_id stays null; Branch Hub resolves homeBranchId by matching branches.branch_kind="${centralKind}". If unresolved, branch-scoped operator home blocks with branch-scope-mismatch.`,
-      });
-      continue;
-    }
-
-    if (!isAdmin) {
-      rows.push({
-        role,
-        desktop: "/br/{branchId} (Operator hub for the claimed branch)",
-        phone: "/br/{branchId} (Operator hub for the claimed branch)",
-        note: "D050 §5: non-admin, branch-pinned roles land in the Operator plane home for their JWT branch_id.",
-      });
-      continue;
-    }
-
-    rows.push({ role, desktop: "/finance", phone: "/finance", note: "" });
+    rows.push({
+      role,
+      desktop: "/br/{branchId} (Operator hub for the claimed branch)",
+      phone: "/br/{branchId} (Operator hub for the claimed branch)",
+      note: "Branch-pinned roles land in the Branch Hub for their JWT branch_id.",
+    });
   }
   return rows;
 }
@@ -456,7 +416,10 @@ function renderActionGateTable(moduleAcl, families, permissionsByNamespace) {
       const prefixes = f.matchPrefixes.map((p) => `\`${p}\``).join(", ");
       const gateKeys =
         keys.size > 0
-          ? [...keys].sort().map((k) => `\`${k}\``).join(", ")
+          ? [...keys]
+              .sort()
+              .map((k) => `\`${k}\``)
+              .join(", ")
           : "(module-level ACL gate only — no dedicated action-permission namespace)";
       return `| ${f.id} | ${prefixes} | ${[...roleSet].sort().join("/")} | ${gateKeys} |`;
     });
@@ -488,8 +451,8 @@ function buildGeneratedBody({
     "",
     "## Module ACL (generated)",
     "",
-    "Single source: `packages/shared/src/auth/module-acl.ts`. \"Nav/tile",
-    "advertisement source\" lists every nav array in `nav-config.ts` that",
+    'Single source: `packages/shared/src/auth/module-acl.ts`. "Nav/tile',
+    'advertisement source" lists every nav array in `nav-config.ts` that',
     "surfaces the module to a role; a module with no source is reachable only",
     "by direct URL or as a redirect target.",
     "",
@@ -510,7 +473,7 @@ function buildGeneratedBody({
     "Derived from `resolvePostLoginRedirect` (`scope.ts`) falling through to",
     "`resolveBranchHubDestination` (`branch-hub.ts`) for the no-`returnTo`,",
     "no-standalone-station case — i.e. where a fresh login actually lands.",
-    "Device-aware split and central-site soft-routing per D050/D055.",
+    "D077 promotes Branch Hub for every active access bucket and excludes central-kind sites.",
     "",
     renderPostLoginHomeTable(postLoginHomes, roleLabels),
     "",
@@ -541,7 +504,6 @@ function collectGeneratedData() {
 
   const accessBuckets = parseAccessBuckets(typesSource);
   const roleLabels = parseRoleLabels(typesSource);
-  const centralSiteKinds = parseCentralSiteRoleBranchKinds(typesSource);
   const adminRolesMatch = typesSource.match(
     /export const ADMIN_ROLES: readonly StaffRole\[\] = \[([\s\S]*?)\] as const;/,
   );
@@ -555,14 +517,9 @@ function collectGeneratedData() {
   );
   const navSources = parseNavAdvertisementSources(navConfigSource);
   const families = parseRouteFamilyContracts(routeMapSource, moduleAclByKey);
-  const permissionsByNamespace = parsePermissionKeysByNamespace(
-    permissionsSource,
-  );
-  const postLoginHomes = derivePostLoginHomes(
-    accessBuckets,
-    adminRoles,
-    centralSiteKinds,
-  );
+  const permissionsByNamespace =
+    parsePermissionKeysByNamespace(permissionsSource);
+  const postLoginHomes = derivePostLoginHomes(accessBuckets);
 
   return {
     moduleAcl,
@@ -588,9 +545,7 @@ function regenerateDoc() {
   }
 
   const preambleBefore = current.slice(0, beginIndex).replace(/\s+$/, "");
-  const preambleAfter = current
-    .slice(endIndex + GENERATED_END.length)
-    .trim();
+  const preambleAfter = current.slice(endIndex + GENERATED_END.length).trim();
 
   const generatedBody = buildGeneratedBody(collectGeneratedData());
 

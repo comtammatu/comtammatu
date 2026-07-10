@@ -236,21 +236,6 @@ export const OPERATOR_TILE_ITEMS = [
   },
   {
     moduleKey: "inventory",
-    icon: "Truck",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/transfer?queue=receive",
-    label: "Nhận hàng",
-  },
-  {
-    moduleKey: "inventory",
-    icon: "Package",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/transfer",
-    label: "Yêu cầu hàng",
-    kinds: ["branch"],
-  },
-  {
-    moduleKey: "inventory",
     icon: "ClipboardCheck",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/stocktake",
@@ -261,7 +246,7 @@ export const OPERATOR_TILE_ITEMS = [
     icon: "ClipboardList",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/count-assignments",
-    label: "Phân công đếm tồn",
+    label: "Giao đếm",
     kinds: ["branch"],
   },
   {
@@ -269,7 +254,7 @@ export const OPERATOR_TILE_ITEMS = [
     icon: "Package",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/waste",
-    label: "Báo hao hụt",
+    label: "Hao hụt",
   },
   {
     moduleKey: "inventory",
@@ -283,7 +268,7 @@ export const OPERATOR_TILE_ITEMS = [
     icon: "FileText",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/grn",
-    label: "Phiếu nhập",
+    label: "Nhập hàng",
   },
   {
     moduleKey: "inventory",

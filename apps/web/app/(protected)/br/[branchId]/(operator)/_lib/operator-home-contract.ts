@@ -6,13 +6,6 @@ export const BRANCH_MANAGER_HOME_TILE_SUFFIXES = [
   "/runner",
   "/menu-limits",
   "/" + "orders",
-  "/team",
-  "/stock",
-  "/stock/receive",
-  "/stock/waste",
-  "/stock/stocktake",
-  "/stock/production",
-  "/stock/grn",
 ] as const;
 
 export function getBranchPrimaryHomeGroup(

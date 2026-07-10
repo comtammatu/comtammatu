@@ -200,45 +200,22 @@ export function getTransferOutboundDestinationOptions({
   sourceLocationKind: TransferSourceKind;
 }): TransferTargetOption[] {
   if (sourceBranchId == null || sourceBranchKind == null) return [];
+  void sourceLocationKind;
 
   return branches.flatMap((branch) => {
     if (!branch.is_active) return [];
-
-    if (branch.id === sourceBranchId) {
-      if (sourceBranchKind !== "branch") return [];
-      const targetKind =
-        sourceLocationKind === "warehouse" ? "kitchen" : "warehouse";
-      return [
-        {
-          value: transferTargetValue(branch.id, targetKind),
-          branch,
-          kind: targetKind,
-        },
-      ];
-    }
+    if (branch.id === sourceBranchId) return [];
 
     const branchKind = branch.branch_kind ?? "branch";
     if (sourceBranchKind === "central_kitchen") {
       if (branchKind !== "branch") return [];
       return [
         {
-          value: transferTargetValue(branch.id, "kitchen"),
+          value: transferTargetValue(branch.id, "warehouse"),
           branch,
-          kind: "kitchen" as const,
+          kind: "warehouse" as const,
         },
       ];
-    }
-
-    if (sourceBranchKind === "branch" && sourceLocationKind === "kitchen") {
-      return branchKind === "central_kitchen"
-        ? [
-            {
-              value: transferTargetValue(branch.id, "warehouse"),
-              branch,
-              kind: "warehouse" as const,
-            },
-          ]
-        : [];
     }
 
     if (sourceBranchKind === "branch" && branchKind === "central_kitchen") {
@@ -256,11 +233,6 @@ export function getTransferOutboundDestinationOptions({
         value: transferTargetValue(branch.id, "warehouse"),
         branch,
         kind: "warehouse" as const,
-      },
-      {
-        value: transferTargetValue(branch.id, "kitchen"),
-        branch,
-        kind: "kitchen" as const,
       },
     ];
   });

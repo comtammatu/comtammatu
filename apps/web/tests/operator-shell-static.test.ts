@@ -27,6 +27,10 @@ test("operator bottom nav stays limited to daily jobs", () => {
   const bottomNav = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
   );
+  const layout = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
+  );
+  const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
   for (const expected of ["`/br/${branchId}`", "`/br/${branchId}/shift`"]) {
     assert.ok(bottomNav.includes(expected), expected);
@@ -59,6 +63,12 @@ test("operator bottom nav stays limited to daily jobs", () => {
   assert.doesNotMatch(bottomNav, /icon: User\b/);
   assert.doesNotMatch(bottomNav, /"\/notifications"/);
   assert.doesNotMatch(bottomNav, /MAX_VISIBLE_ITEMS/);
+  assert.match(settingsMessages, /centralNavStock: "Kho"/);
+  assert.match(
+    layout,
+    /const canUseShiftTab =\s*claims\.user_role !== "owner"/,
+  );
+  assert.match(layout, /showEmployeeLinks=\{canUseShiftTab\}/);
 });
 
 test("operator header keeps profile and notifications in chrome", () => {
@@ -119,10 +129,13 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   const home = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
+  const homeContract = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_lib/operator-home-contract.ts",
+  );
 
   assert.match(home, /resolveOperatorTiles/);
   assert.match(home, /BranchOperatorPage/);
-  assert.match(home, /showTodayCard = claims\.user_role !== "owner"/);
+  assert.match(home, /claims\.user_role !== "owner"/);
   const todaySource = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-today-status.tsx",
   );
@@ -135,7 +148,11 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /BranchOperatorActionSection/);
   assert.match(home, /resolveOperatorTileIcon/);
   assert.match(home, /getBranchPrimaryHomeGroup/);
-  assert.match(home, /showTodayCard\s*\?/);
+  assert.doesNotMatch(home, /BranchOperatorControlBar|LayoutDashboard/);
+  assert.doesNotMatch(homeContract, /"\/team"|"\/stock(?:\/|")/);
+  for (const suffix of ["/pos", "/kds", "/runner", "/menu-limits"]) {
+    assert.ok(homeContract.includes(`"${suffix}"`), suffix);
+  }
   assert.match(
     home,
     /key: `\$\{group\.id\}-\$\{tile\.moduleKey\}-\$\{tile\.href\}`/,
@@ -146,7 +163,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.doesNotMatch(home, /showOverview/);
   assert.doesNotMatch(home, /HubOverviewSection/);
   assert.doesNotMatch(home, /operatorRuntimeActions/);
-  assert.doesNotMatch(home, /operatorOpsActions/);
+  assert.match(home, /operatorOpsActions/);
   assert.doesNotMatch(home, /EmployeeStatusStrip/);
   assert.doesNotMatch(home, /operatorShortcutsStatus/);
   assert.doesNotMatch(home, /OPERATION_HANDOFFS/);
@@ -241,13 +258,13 @@ test("operator hub owns branch workflow entry tiles", () => {
     /hrefTemplate: "\/inventory\/count-slips"/,
   );
   assert.match(operatorTiles, /hrefTemplate: "\/br\/\{branchId\}\/stock"/);
-  assert.match(
+  assert.doesNotMatch(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer\?queue=receive"/,
   );
   assert.match(
     operatorTiles,
-    /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer",\s*label: "Điều chuyển"/,
   );
   assert.match(
     operatorTiles,
@@ -338,7 +355,7 @@ test("pre-clock-in gate disables floor tiles instead of hiding them", () => {
 
   assert.match(
     page,
-    /tilesLockedBeforeClockIn && lockedGroupIds\.has\(group\.id\)/,
+    /tilesLockedBeforeClockIn && group\.id === "sales_kitchen"/,
   );
   assert.doesNotMatch(page, /tiles: \[\]/);
 });
@@ -548,6 +565,8 @@ test("operator home renders the unified Cần xử lý queue before domain tile 
 
   assert.match(queueSource, /fetchBranchQueueCounts/);
   assert.match(queueSource, /queueRows\.length === 0/);
+  assert.match(queueSource, /\.filter\(\s*\(row\) => row\.count > 0/);
+  assert.doesNotMatch(queueSource, /variant=\{badgeVariant\}/);
   assert.match(queueSource, /branchCopy\.queueTitle/);
 
   assert.ok(

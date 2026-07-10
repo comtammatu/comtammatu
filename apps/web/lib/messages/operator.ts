@@ -110,28 +110,11 @@ export const operator = {
   },
   teamBoard: {
     title: "Đội chi nhánh",
-    description: "Điểm vào cho duyệt ca, kho, nhân sự và phân công trong ngày.",
-    managerEntryAriaLabel: "Điểm vào quản lý đội chi nhánh",
-    reviewGroupTitle: "Duyệt ca & kho",
-    reviewGroupDescription:
-      "Duyệt kết ca, phiếu kiểm kê và hao hụt kho cần xử lý hôm nay.",
-    reviewCheckoutTitle: "Duyệt kết ca",
-    reviewCheckoutDescription: "Xem các yêu cầu ra ca đang chờ duyệt.",
-    reviewCountTitle: "Duyệt kiểm kê",
-    reviewCountDescription: "Xem phiếu đếm tồn đã nộp của chi nhánh.",
-    reviewWasteTitle: "Duyệt hao hụt",
-    reviewWasteDescription: "Xem báo cáo hao hụt nguyên liệu đang chờ duyệt.",
-    peopleGroupTitle: "Nhân sự & Phân công",
-    peopleGroupDescription:
-      "Xem nhân sự chi nhánh và giao việc kiểm kê cho từng người.",
-    membersEntryTitle: "Nhân sự chi nhánh",
-    membersEntryDescription: "Thông tin liên hệ, ca hôm nay và ngày công.",
-    assignmentsEntryTitle: "Phân công đếm tồn",
-    assignmentsEntryDescription: "Giao mặt hàng cần đếm cho từng nhân viên.",
+    description: "Theo dõi ca, nhân sự và phân công trong ngày.",
     tabsAriaLabel: "Mục đội chi nhánh",
     tabs: {
       board: {
-        label: "Ca & Kho",
+        label: "Theo dõi ca",
         title: "Từng ca hôm nay",
         description:
           "Mỗi dòng là một lượt ca; bấm dòng cần xử lý để mở duyệt ca hoặc kiểm kê.",

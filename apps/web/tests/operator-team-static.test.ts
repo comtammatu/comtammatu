@@ -70,6 +70,15 @@ test("operator team board exposes a real status filter", () => {
   assert.match(teamBoardSource, /type TeamBoardFilter/);
   assert.match(teamBoardSource, /function matchesTeamBoardFilter/);
   assert.match(teamBoardSource, /function TeamBoardFilters/);
+  assert.match(teamBoardSource, /function initialTeamBoardFilter/);
+  assert.match(
+    teamBoardSource,
+    /filterCount\(rows, "needs_action"\) > 0[\s\S]*filterCount\(rows, "working"\) > 0/,
+  );
+  assert.match(
+    teamBoardSource,
+    /filter\.value === "all" \|\| filterCount\(rows, filter\.value\) > 0/,
+  );
   assert.match(
     teamBoardSource,
     /className="flex gap-1\.5 overflow-x-auto pb-1"/,
@@ -99,7 +108,7 @@ test("operator team board exposes a real status filter", () => {
   assert.doesNotMatch(teamBoardSource, /renderTable/);
   assert.doesNotMatch(teamBoardSource, /filteredGroupedRows/);
   assert.doesNotMatch(teamBoardSource, /renderTable\(group\.rows\)/);
-  assert.match(operatorMessagesSource, /label:\s*"Ca & Kho"/);
+  assert.match(operatorMessagesSource, /label:\s*"Theo dõi ca"/);
   assert.match(operatorMessagesSource, /label:\s*"Nhân sự"/);
   assert.match(operatorMessagesSource, /label:\s*"Phân công"/);
   assert.match(operatorMessagesSource, /all:\s*"Tất cả ca"/);
@@ -115,23 +124,16 @@ test("operator team board exposes a real status filter", () => {
   );
 });
 
-test("operator team is the branch manager entry for reviews and assignments", () => {
-  assert.match(teamPageSource, /managerEntryAriaLabel/);
-  assert.match(teamPageSource, /reviewGroupTitle/);
-  assert.match(teamPageSource, /peopleGroupTitle/);
-  assert.match(
+test("operator team opens the workspace tabs without a duplicate entry hub", () => {
+  assert.match(teamPageSource, /<TeamWorkspaceTabs/);
+  assert.doesNotMatch(
     teamPageSource,
-    /href:\s*`\$\{basePath\}\/shift\/checkout-approvals`/,
+    /managerEntryAriaLabel|reviewGroupTitle|peopleGroupTitle/,
   );
-  assert.match(teamPageSource, /href:\s*`\$\{basePath\}\/stock\/count-slips`/);
-  assert.match(
-    teamPageSource,
-    /href:\s*`\$\{basePath\}\/stock\/waste-approvals`/,
-  );
-  assert.match(teamPageSource, /href:\s*`\$\{basePath\}\/team\?tab=members`/);
-  assert.match(
-    teamPageSource,
-    /href:\s*`\$\{basePath\}\/team\?tab=assignments`/,
+  assert.doesNotMatch(teamPageSource, /BranchOperatorActionSection/);
+  assert.doesNotMatch(
+    operatorMessagesSource,
+    /managerEntryAriaLabel|reviewGroupTitle|peopleGroupTitle/,
   );
 
   assert.match(
@@ -184,7 +186,10 @@ test("operator team board reads branch runtime rows after branch access is check
 
 test("operator team can force-close a shift only after its scheduled end", () => {
   assert.match(teamBoardSource, /function isPastShiftEnd/);
-  assert.match(teamBoardSource, /parseClockTimeToMinutes\(shift\.shiftStartTime/);
+  assert.match(
+    teamBoardSource,
+    /parseClockTimeToMinutes\(shift\.shiftStartTime/,
+  );
   assert.match(teamBoardSource, /parseClockTimeToMinutes\(shift\.shiftEndTime/);
   assert.match(teamBoardSource, /effectiveEnd > 1440 && now < start/);
   assert.match(teamBoardSource, /isPastShiftEnd\(row\.shift\)/);
@@ -230,6 +235,10 @@ test("operator team members use a roster grid with real profile fields", () => {
   );
   assert.match(teamMembersSource, /aria-pressed=\{active\}/);
   assert.match(teamMembersSource, /filterChips\.map/);
+  assert.match(
+    teamMembersSource,
+    /\.filter\(\s*\(chip\) => chip\.value === "all" \|\| chip\.count > 0,?\s*\)/,
+  );
   assert.match(teamMembersSource, /grid grid-cols-2 gap-2/);
   assert.match(teamMembersSource, /typeof value === "string"/);
   assert.doesNotMatch(teamMembersSource, /DataTable/);
@@ -287,6 +296,12 @@ test("embedded count assignments does not add an extra team tab wrapper", () => 
     branchCountAssignmentsSource,
     /const page = embeddedInTeam \? \(\s*panel\s*\) : \(\s*<BranchOperatorPage/,
   );
+  assert.match(branchCountAssignmentsSource, /const orderedEmployees =/);
+  assert.match(
+    branchCountAssignmentsSource,
+    /Number\(rightAssigned\) - Number\(leftAssigned\)/,
+  );
+  assert.match(branchCountAssignmentsSource, /orderedEmployees\.map/);
   assert.doesNotMatch(
     countAssignmentsSource,
     /return <div className="flex w-full flex-col gap-3">\{content\}<\/div>/,

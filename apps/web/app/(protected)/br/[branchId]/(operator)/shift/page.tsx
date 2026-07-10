@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { StaffWorkdayPageContent } from "@lib/staff-runtime/page";
@@ -9,6 +10,9 @@ export default async function OperatorShiftPage({
 }) {
   const { branchId } = await params;
   const authState = await loadAuthState();
+  if (authState.claims.user_role === "owner") {
+    redirect(`/br/${branchId}/team`);
+  }
   const isBranchManager = authState.claims.user_role === "branch_manager";
 
   return (

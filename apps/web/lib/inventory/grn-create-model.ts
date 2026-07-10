@@ -70,7 +70,6 @@ export function pickGrnReceivingLocation(
   locations: GrnCreateProcurementLocationOption[],
   branchId: number | null,
   preferredLocationId: number | null = null,
-  preferBranchKitchen = true,
 ): GrnCreateProcurementLocationOption | null {
   const candidates = branchId
     ? locations.filter((location) => location.branchId === branchId)
@@ -78,12 +77,10 @@ export function pickGrnReceivingLocation(
 
   return (
     candidates.find((location) => location.id === preferredLocationId) ??
-    (preferBranchKitchen
-      ? candidates.find(
-          (location) =>
-            location.branchKind === "branch" && location.kind === "kitchen",
-        )
-      : undefined) ??
+    candidates.find(
+      (location) =>
+        location.branchKind === "branch" && location.kind === "warehouse",
+    ) ??
     candidates.find(
       (location) =>
         location.branchKind === "central_kitchen" &&

@@ -1,9 +1,6 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
-import {
-  Building2 as IconBuilding2,
-  Wallet as IconWallet,
-} from "lucide-react";
+import { Building2 as IconBuilding2, Wallet as IconWallet } from "lucide-react";
 import { canAccess, MODULE_ACL } from "@comtammatu/shared/auth";
 import {
   APP_COPY_VI,
@@ -57,6 +54,11 @@ export async function WorkLocationPickerPage() {
   const { allowedBranches } = selectOperatorBranchScope(claims, data, null);
   const showOfficeCard = canAccess(claims.user_role, "finance");
   const orderedSites = [...allowedBranches].sort((a, b) => a.id - b.id);
+  const [soleBranch] = orderedSites;
+
+  if (soleBranch && orderedSites.length === 1) {
+    redirect(`/br/${soleBranch.id}`);
+  }
 
   return (
     <AppPage density="compact" width="default">

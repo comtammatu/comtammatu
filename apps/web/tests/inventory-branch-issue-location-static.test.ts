@@ -14,7 +14,7 @@ const migration = read(
   "supabase/migrations/20260709104156_branch_issue_location_to_kitchen.sql",
 );
 
-test("branch stock issue drafts prefer kitchen before default issue", () => {
+test("branch stock issue drafts prefer warehouse before default issue", () => {
   const resolverStart = issueActions.indexOf(
     "async function resolveIssueSourceLocation",
   );
@@ -24,16 +24,16 @@ test("branch stock issue drafts prefer kitchen before default issue", () => {
     issueActions.indexOf("export async function fetchStockIssues", resolverStart),
   );
 
-  assert.match(resolverBody, /\.eq\("location_kind", "kitchen"\)/);
-  assert.match(resolverBody, /\.order\("is_default_consumption"/);
+  assert.match(resolverBody, /\.eq\("location_kind", "warehouse"\)/);
+  assert.match(resolverBody, /\.order\("is_default_issue"/);
   assert.ok(
-    resolverBody.indexOf('.eq("location_kind", "kitchen")') <
-      resolverBody.indexOf('resolveDefaultInventoryLocation('),
-    "branch kitchen must be tried before default issue fallback",
+    resolverBody.indexOf('.eq("location_kind", "warehouse")') <
+      resolverBody.indexOf("resolveDefaultInventoryLocation("),
+    "branch warehouse must be tried before default issue fallback",
   );
 });
 
-test("branch stock writers use kitchen/default consumption, not default issue", () => {
+test("historical kitchen issue-location migration remains on record", () => {
   assert.match(
     migration,
     /ORDER BY il\.is_default_consumption DESC, il\.sort_order NULLS LAST, il\.id/,

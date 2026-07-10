@@ -6,13 +6,33 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("root route renders work location picker instead of post-login redirect", () => {
+test("root route delegates single-branch entry to the work location resolver", () => {
   const rootPage = read("apps/web/app/page.tsx");
+  const picker = read("apps/web/app/_components/work-location-picker-page.tsx");
 
   assert.match(rootPage, /WorkLocationPickerPage/);
   assert.doesNotMatch(rootPage, /resolvePostLoginRedirect/);
   assert.doesNotMatch(rootPage, /resolveBranchHubContextFromHeaders/);
   assert.doesNotMatch(rootPage, /redirect\(getDefaultRedirect\(claims\)\)/);
+  assert.match(picker, /notFound, redirect/);
+  assert.match(picker, /orderedSites\.length === 1/);
+  assert.match(picker, /redirect\(`\/br\/\$\{soleBranch\.id\}`\)/);
+});
+
+test("Branch Hub promotes branch management and owner workspaces", () => {
+  const hub = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+  );
+  const layout = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
+  );
+
+  assert.match(hub, /MODULE_ACL\.menu\.path/);
+  assert.match(hub, /MODULE_ACL\.finance\.path/);
+  assert.match(hub, /MODULE_ACL\.hr_payroll\.path/);
+  assert.match(hub, /APP_COPY_VI\.operatorOpsActions/);
+  assert.match(hub, /APP_COPY_VI\.storeManagement/);
+  assert.match(layout, /canUseBranchPicker && context\.canSwitchBranch/);
 });
 
 test("proxy passes device context into post-login redirect", () => {
@@ -72,6 +92,10 @@ test("branch shift route keeps floor-staff daily work visible", () => {
   );
 
   assert.match(shiftPage, /const authState = await loadAuthState\(\)/);
+  assert.match(
+    shiftPage,
+    /authState\.claims\.user_role === "owner"[\s\S]*redirect\(`\/br\/\$\{branchId\}\/team`\)/,
+  );
   assert.match(shiftPage, /authState\.claims\.user_role === "branch_manager"/);
   assert.match(
     shiftPage,

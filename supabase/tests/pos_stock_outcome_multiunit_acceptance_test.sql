@@ -185,22 +185,18 @@ BEGIN
     (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, yield_factor)
   VALUES (v_tenant, v_drink_menu, v_drink_ingredient, 1, 'Phan', v_part_unit, 1);
 
-  INSERT INTO public.inventory_locations (
-    tenant_id, branch_id, code, name, location_kind,
-    is_default_issue, is_default_receive, is_active, sort_order
-  )
-  VALUES (
-    v_tenant,
-    v_branch,
-    '__g5_wh_' || floor(random() * 1000000)::text,
-    '__g5 kitchen',
-    'kitchen',
-    true,
-    true,
-    true,
-    999
-  )
-  RETURNING id INTO v_location;
+  SELECT il.id INTO v_location
+  FROM public.inventory_locations il
+  WHERE il.tenant_id = v_tenant
+    AND il.branch_id = v_branch
+    AND il.location_kind = 'warehouse'
+    AND il.is_active = true
+  ORDER BY il.is_default_issue DESC, il.sort_order NULLS LAST, il.id
+  LIMIT 1;
+
+  IF v_location IS NULL THEN
+    RAISE EXCEPTION 'TEST SETUP FAILED: active branch warehouse missing for %', v_branch;
+  END IF;
 
   INSERT INTO public.stock_levels (
     tenant_id, branch_id, ingredient_id, location_id, current_quantity, avg_unit_cost
@@ -337,6 +333,17 @@ BEGIN
 
   IF v_qty <> -40 THEN
     RAISE EXCEPTION 'TEST 4 FAILED: expected sale quantity_change=-40, got %', v_qty;
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM public.stock_movements
+  WHERE tenant_id = v_tenant AND order_id = v_order
+    AND movement_subtype = 'sale_consumption'
+    AND location_id IS DISTINCT FROM v_location;
+
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'TEST 4 FAILED: % sale-consumption row(s) were not posted at branch warehouse %',
+      v_count, v_location;
   END IF;
 
   SELECT quantity_change INTO v_qty
