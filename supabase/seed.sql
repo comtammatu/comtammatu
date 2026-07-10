@@ -13,8 +13,6 @@
 -- Tài khoản QA được seed (password: Test1234!):
 --   • owner@comtammatu.vn              – owner (tenant-level, pinned to a dev branch)
 --   • keeper@comtammatu.vn       – owner (keeper, không bị xoá)
---   • warehouse@comtammatu.vn          – warehouse_manager
---   • production@comtammatu.vn        – production_manager
 --   • manager.datdo@comtammatu.vn      – branch_manager Đất Đỏ
 --   • cashier.datdo@comtammatu.vn      – cashier Đất Đỏ
 --   • cashier.service.datdo@comtammatu.vn – cashier service Đất Đỏ
@@ -23,7 +21,6 @@
 --   • cashier.phuochai@comtammatu.vn   – cashier Phước Hải
 --   • cashier.service.phuochai@comtammatu.vn – cashier service Phước Hải
 --   • chef.phuochai@comtammatu.vn      – chef Phước Hải
---   • office@comtammatu.vn             – office (tenant-level, branch NULL)
 --
 -- Idempotent: DELETE user theo email (CASCADE profile + employees) rồi INSERT lại.
 --
@@ -76,9 +73,6 @@ DECLARE
     'a0000005-0000-4000-8000-000000000005'::uuid, -- cashier.service.datdo
     'a0000006-0000-4000-8000-000000000006'::uuid, -- chef.datdo
     'a0000007-0000-4000-8000-000000000007'::uuid, -- cashier.phuochai
-    'a0000008-0000-4000-8000-000000000008'::uuid, -- office
-    'a000000a-0000-4000-8000-00000000000a'::uuid, -- warehouse
-    'a000000b-0000-4000-8000-00000000000b'::uuid, -- production
     'a000000c-0000-4000-8000-00000000000c'::uuid, -- manager.phuochai
     'a000000d-0000-4000-8000-00000000000d'::uuid, -- cashier.service.phuochai
     'a000000e-0000-4000-8000-00000000000e'::uuid  -- chef.phuochai
@@ -148,9 +142,6 @@ WHERE email IN (
   'cashier.service.datdo@comtammatu.vn',
   'chef.datdo@comtammatu.vn',
   'cashier.phuochai@comtammatu.vn',
-  'office@comtammatu.vn',
-  'warehouse@comtammatu.vn',
-  'production@comtammatu.vn',
   'manager.phuochai@comtammatu.vn',
   'cashier.service.phuochai@comtammatu.vn',
   'chef.phuochai@comtammatu.vn'
@@ -162,8 +153,6 @@ DECLARE
   v_datdo    BIGINT;
   v_phuochai BIGINT;
   v_dev_branch BIGINT;
-  v_central_supply BIGINT;
-  v_central_kitchen BIGINT;
   v_pw       TEXT := 'Test1234!';
   v_crypt    TEXT;
 
@@ -188,22 +177,6 @@ BEGIN
     RAISE EXCEPTION 'Thiếu chi nhánh active — chạy seed tenant trước.';
   END IF;
 
-  SELECT id INTO v_central_supply
-  FROM public.branches
-  WHERE tenant_id = v_tenant AND branch_kind = 'central_supply' AND is_active = true
-  ORDER BY (name = 'Kho Tổng') DESC, id
-  LIMIT 1;
-
-  SELECT id INTO v_central_kitchen
-  FROM public.branches
-  WHERE tenant_id = v_tenant AND branch_kind = 'central_kitchen' AND is_active = true
-  ORDER BY (name = 'Bếp Trung Tâm') DESC, id
-  LIMIT 1;
-
-  IF v_central_supply IS NULL OR v_central_kitchen IS NULL THEN
-    RAISE EXCEPTION 'Thiếu Kho Tổng hoặc Bếp Trung Tâm active.';
-  END IF;
-
   FOR r IN
     SELECT *
     FROM (
@@ -222,13 +195,6 @@ BEGIN
       SELECT 'a0000006-0000-4000-8000-000000000006'::uuid, 'chef.datdo@comtammatu.vn'::text, 'chef'::text, v_datdo, 'Bếp Đất Đỏ'::text, 'EMP-CHEF-DD'::text
       UNION ALL
       SELECT 'a0000007-0000-4000-8000-000000000007'::uuid, 'cashier.phuochai@comtammatu.vn'::text, 'cashier'::text, v_phuochai, 'Thu ngân Phước Hải'::text, 'EMP-CASH-PH'::text
-      UNION ALL
-      SELECT 'a0000008-0000-4000-8000-000000000008'::uuid, 'office@comtammatu.vn'::text, 'office'::text, NULL::bigint, 'Văn phòng'::text, 'EMP-OFF'::text
-      UNION ALL
-      -- Central-site managers keep branch_id null; Branch Hub resolves the active site by role domain.
-      SELECT 'a000000a-0000-4000-8000-00000000000a'::uuid, 'warehouse@comtammatu.vn'::text, 'warehouse_manager'::text, NULL::bigint, 'QL Kho Tổng'::text, 'EMP-WH'::text
-      UNION ALL
-      SELECT 'a000000b-0000-4000-8000-00000000000b'::uuid, 'production@comtammatu.vn'::text, 'production_manager'::text, NULL::bigint, 'QL Bếp Trung Tâm'::text, 'EMP-PROD'::text
       UNION ALL
       SELECT 'a000000c-0000-4000-8000-00000000000c'::uuid, 'manager.phuochai@comtammatu.vn'::text, 'branch_manager'::text, v_phuochai, 'QL Chi nhánh Phước Hải'::text, 'EMP-MGR-PH'::text
       UNION ALL

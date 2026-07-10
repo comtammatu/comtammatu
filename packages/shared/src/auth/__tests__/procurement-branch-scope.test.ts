@@ -7,17 +7,15 @@ import {
 } from "../inventory-roles";
 
 // D068 cross-branch guard. The real guard `canAccessProcurementBranch`
-// (grn-actions.ts) resolves the actor's own operable branch into
+// (grn-actions.ts) uses the actor's own claims.branch_id as
 // `effectiveBranchId`, then returns
-// `isProcurementBranchInScope(role, effectiveBranchId, targetBranchId)`. For a
-// pinned branch role (branch_manager / warehouse_manager / production_manager)
-// claims carry a non-null branch_id, so `effectiveBranchId` is that claim and
-// the async central-home fallback never fires. These tests exercise the REAL
-// exported decision function (not a reconstruction), so a regression in the
-// guard body itself is caught: RED before branch_manager is added to
-// `isBranchScopedProcurementRole` (the decision falls through to the
-// tenant-wide `return true` and wrongly admits a foreign-branch write), and
-// RED if the `===` own-branch check is flipped. GREEN after.
+// `isProcurementBranchInScope(role, effectiveBranchId, targetBranchId)`. These
+// tests exercise the REAL exported decision function (not a reconstruction),
+// so a regression in the guard body itself is caught: RED before
+// branch_manager is added to `isBranchScopedProcurementRole` (the decision
+// falls through to the tenant-wide `return true` and wrongly admits a
+// foreign-branch write), and RED if the `===` own-branch check is flipped.
+// GREEN after.
 
 test("branch_manager is a branch-scoped procurement role (own-branch equality applies)", () => {
   assert.equal(isBranchScopedProcurementRole("branch_manager"), true);
@@ -31,13 +29,6 @@ test("branch_manager (branch_id=X) is REJECTED writing a GRN for a foreign branc
 
 test("branch_manager (branch_id=X) is ALLOWED writing a GRN for its own branch X", () => {
   assert.equal(isProcurementBranchInScope("branch_manager", 1, 1), true);
-});
-
-test("central-site scoped roles keep strict own-branch equality (no regression)", () => {
-  for (const role of ["warehouse_manager", "production_manager"] as const) {
-    assert.equal(isProcurementBranchInScope(role, 3, 4), false);
-    assert.equal(isProcurementBranchInScope(role, 3, 3), true);
-  }
 });
 
 test("owner is tenant-wide — not branch-scoped, any target allowed", () => {

@@ -116,20 +116,20 @@ by direct URL or as a redirect target.
 | Module key | Route path | Allowed roles | Nav/tile advertisement source |
 | ---------- | ---------- | ------------- | ------------------------------ |
 | `menu` | `/menu` | Chủ sở hữu, Quản lý chi nhánh | Workspace nav |
-| `inventory` | `/inventory` | Chủ sở hữu, Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm | Operator tile (approvals); Operator tile (stock); Workspace nav |
-| `inventory_procurement` | `/inventory/suppliers` | Chủ sở hữu, Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm | Operator tile (stock) |
+| `inventory` | `/inventory` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals); Operator tile (stock); Workspace nav |
+| `inventory_procurement` | `/inventory/suppliers` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (stock) |
 | `orders` | `/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | Operator tile (sales_kitchen); Workspace nav |
 | `staff` | `/hr/staff` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
 | `hr` | `/hr` | Chủ sở hữu, Quản lý chi nhánh | Workspace nav |
 | `hr_payroll` | `/hr/payroll` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
-| `finance` | `/finance` | Chủ sở hữu, Văn phòng | Workspace nav |
+| `finance` | `/finance` | Chủ sở hữu | Workspace nav |
 | `branches` | `/branches` | Chủ sở hữu | Workspace nav |
-| `branch_picker` | `/` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Văn phòng | (not advertised in nav — direct URL / redirect target only) |
+| `branch_picker` | `/` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 | `settings` | `/admin/settings` | Chủ sở hữu | Admin sidebar |
 | `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `kds` | `/br/*/kds` | Chủ sở hữu, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `runner` | `/br/*/runner` | Chủ sở hữu, Thu ngân, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
-| `operator_home` | `/br/*` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Văn phòng | Operator tile (my_shift) |
+| `operator_home` | `/br/*` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | Operator tile (my_shift) |
 | `branch_dashboard` | `/br/*/dashboard` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `branch_settings` | `/br/*/settings` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `branch_menu_limits` | `/br/*/menu-limits` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
@@ -137,7 +137,7 @@ by direct URL or as a redirect target.
 | `branch_team` | `/br/*/team` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (my_shift) |
 | `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals); Operator tile (stock) |
 | `employee_leave_approvals` | `/br/*/shift/leave-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
-| `notifications` | `/notifications` | Chủ sở hữu, Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Thu ngân, Bếp, Nhân sự chi nhánh, Văn phòng | (not advertised in nav — direct URL / redirect target only) |
+| `notifications` | `/notifications` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 
 ## Route Family Contracts (generated)
 
@@ -185,13 +185,10 @@ Device-aware split and central-site soft-routing per D050/D055.
 | Role | Desktop / office context | Phone / station context | Notes |
 | ---- | ------------------------- | ------------------------ | ----- |
 | Chủ sở hữu (`owner`) | /finance (Office plane) | /br (Operator plane branch picker, >1 branch) or /br/{branchId} directly | Device-aware split (D050 §5): desktop/office context -> Office; phone -> Operator. Owner may also open any active branch POS/KDS/Runner to cover a shift. |
-| Quản lý chi nhánh (`branch_manager`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, non-office, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
-| Quản lý Kho Tổng (`warehouse_manager`) | /br/{central-site-id} (home branch resolved server-side to the active central_supply site) | /br/{central-site-id} (same central site) | D055 soft-routing: JWT branch_id stays null; Branch Hub resolves homeBranchId by matching branches.branch_kind="central_supply". If unresolved, branch-scoped operator home blocks with branch-scope-mismatch. |
-| Quản lý Bếp Trung Tâm (`production_manager`) | /br/{central-site-id} (home branch resolved server-side to the active central_kitchen site) | /br/{central-site-id} (same central site) | D055 soft-routing: JWT branch_id stays null; Branch Hub resolves homeBranchId by matching branches.branch_kind="central_kitchen". If unresolved, branch-scoped operator home blocks with branch-scope-mismatch. |
-| Thu ngân (`cashier`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, non-office, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
-| Bếp (`chef`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, non-office, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
-| Nhân sự chi nhánh (`branch_staff`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, non-office, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
-| Văn phòng (`office`) | /finance | /finance | Branch-less office lands on /finance. Staff day-flow lives under the branch Operator plane, not a standalone /employee app. |
+| Quản lý chi nhánh (`branch_manager`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
+| Thu ngân (`cashier`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
+| Bếp (`chef`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
+| Nhân sự chi nhánh (`branch_staff`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
 
 ## Permission Boundary (generated)
 
@@ -206,18 +203,18 @@ separate gates (route bucket here, permission key at the mutation site).
 | admin | `/admin` | owner | `settings:branch`, `settings:branch_network`, `settings:integrations`, `settings:tenant` |
 | menu | `/menu` | branch_manager/owner | `menu:manage_category`, `menu:publish`, `menu:read`, `menu:write` |
 | orders | `/orders` | branch_manager/cashier/owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |
-| inventory | `/inventory` | branch_manager/owner/production_manager/warehouse_manager | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:units_master`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
-| finance | `/finance` | office/owner | `finance:ap_pay`, `finance:expense_approve`, `finance:expense_create`, `finance:payroll_approve`, `finance:payroll_calculate`, `finance:view` |
+| inventory | `/inventory` | branch_manager/owner | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:units_master`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
+| finance | `/finance` | owner | `finance:ap_pay`, `finance:expense_approve`, `finance:expense_create`, `finance:payroll_approve`, `finance:payroll_calculate`, `finance:view` |
 | branches | `/branches` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | hr | `/hr` | branch_manager/owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
-| notifications | `/notifications` | branch_manager/branch_staff/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
-| branch-picker | `/`, `/br` | branch_manager/branch_staff/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
-| operator-home | `/br/[branchId]` | branch_manager/branch_staff/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| notifications | `/notifications` | branch_manager/branch_staff/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| branch-picker | `/`, `/br` | branch_manager/branch_staff/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-home | `/br/[branchId]` | branch_manager/branch_staff/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift-checkout-approvals | `/br/[branchId]/shift/checkout-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift-leave-approvals | `/br/[branchId]/shift/leave-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
-| operator-shift | `/br/[branchId]/shift` | branch_manager/branch_staff/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
-| operator-profile | `/br/[branchId]/profile` | branch_manager/branch_staff/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
-| operator-stock | `/br/[branchId]/stock` | branch_manager/owner/production_manager/warehouse_manager | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:units_master`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
+| operator-shift | `/br/[branchId]/shift` | branch_manager/branch_staff/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-profile | `/br/[branchId]/profile` | branch_manager/branch_staff/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-stock | `/br/[branchId]/stock` | branch_manager/owner | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:units_master`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
 | operator-orders | `/br/[branchId]/orders` | branch_manager/cashier/owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |
 | branch-menu-limits | `/br/[branchId]/menu-limits` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-pos-sessions | `/br/[branchId]/pos-sessions` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |

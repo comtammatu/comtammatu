@@ -51,7 +51,7 @@ export type GrnLineEditState = {
   quantity: number;
   unit: string;
   entryUnitId: number | null;
-  lineTotal: number;
+  unitCost: number | null;
   note: string;
 };
 

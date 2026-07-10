@@ -72,7 +72,7 @@ const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
     id: 3,
     tenant_id: 1,
     target_branch_id: null,
-    target_roles: ["office"],
+    target_roles: ["owner"],
     kind: "workflow.grn_pending",
     severity: "info",
     title: "GRN dang cho duyet",

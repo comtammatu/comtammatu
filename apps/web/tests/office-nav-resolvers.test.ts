@@ -35,8 +35,6 @@ const WORKSPACE_TAB_MODULES: ModuleKey[] = DOMAIN_WORKSPACE_ITEMS.map(
 
 const RESTRICTED_ROLES: StaffRole[] = [
   "cashier",
-  "warehouse_manager",
-  "production_manager",
   "branch_manager",
 ];
 

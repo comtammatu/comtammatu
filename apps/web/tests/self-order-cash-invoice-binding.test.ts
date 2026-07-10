@@ -214,9 +214,9 @@ test("a post-payment binding read failure stays invoice-fail-soft", () => {
   );
 });
 
-test("staff queue contract does not expose stored buyer PII", () => {
+test("staff payment request contract does not expose stored buyer PII", () => {
   const requestInterface =
-    /export interface SelfOrderPaymentRequest \{[\s\S]*?\n\}/.exec(
+    /export interface SelfOrderPendingPaymentRequest \{[\s\S]*?\n\}/.exec(
       staffActions,
     )?.[0];
   assert.ok(requestInterface);

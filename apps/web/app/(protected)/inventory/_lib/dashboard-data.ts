@@ -158,9 +158,7 @@ export async function loadInventoryDashboardData(
 
   const siteName =
     selectedBranch?.name ??
-    (claims.user_role === "owner" || claims.user_role === "office"
-      ? "Kho hàng"
-      : "Điểm vận hành");
+    (claims.user_role === "owner" ? "Kho hàng" : "Điểm vận hành");
   const siteKind: DashboardSiteKind = "branch";
 
   const branchFilter = scope.selectedBranchId ?? undefined;

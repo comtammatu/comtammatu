@@ -4,7 +4,7 @@ import { Fragment, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut as IconLogout } from "lucide-react";
-import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
+import { ROLE_LABEL_VI, type StaffRole } from "@comtammatu/shared/auth";
 import { cn } from "@comtammatu/ui";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Button } from "@comtammatu/ui/components/button";
@@ -50,6 +50,8 @@ export interface AppShellHeaderConfig {
 export interface AppShellProps {
   children: ReactNode;
   user: { name: string };
+  /** Current user's role — drives the sidebar eyebrow label. */
+  role: StaffRole;
   /** Primary module tabs for the single sidebar. */
   tier1: ShellNavItem[];
   /** Sub-tabs for the active primary tab. */
@@ -77,6 +79,7 @@ function getSidebarSubNavGroups(
 export function AppShell({
   children,
   user,
+  role,
   tier1,
   tier2,
   shellHeader = {},
@@ -104,7 +107,7 @@ export function AppShell({
             </BrandLogoBox>
             <div className="min-w-0 flex flex-1 flex-col gap-1">
               <SectionLabel className="text-sidebar-foreground/60">
-                {ROLE_LABEL_VI.office}
+                {ROLE_LABEL_VI[role]}
               </SectionLabel>
               <p className="truncate font-heading text-base font-semibold leading-tight">
                 {copy.brandName}

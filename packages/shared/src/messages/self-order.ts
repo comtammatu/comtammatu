@@ -1,7 +1,13 @@
 export const SELF_ORDER_VI = {
   unavailableTitle: "QR gọi món chưa sẵn sàng",
   unavailableDescription:
-    "Mã QR này đã bị tắt hoặc bàn không còn nhận gọi món qua QR.",
+    "Mã QR này không hợp lệ. Vui lòng quét lại mã trên bàn hoặc gọi nhân viên.",
+  unavailableInvalidTokenDescription:
+    "Mã QR này không hợp lệ. Vui lòng quét lại mã trên bàn hoặc gọi nhân viên.",
+  unavailableDisabledDescription:
+    "Bàn này hiện không nhận gọi món qua QR. Vui lòng gọi nhân viên để được hỗ trợ.",
+  unavailablePosClosedDescription:
+    "Ca bán hàng chưa mở nên bàn chưa thể nhận món qua QR. Vui lòng gọi nhân viên.",
   deviceApprovalRequired:
     "Thiết bị này chưa được xác nhận cho lượt bàn hiện tại.",
   joinRequiredTitle: "Xác nhận thiết bị cho bàn này",
@@ -44,6 +50,7 @@ export const SELF_ORDER_VI = {
   billTab: "Hoá đơn",
   viewBill: "Xem hoá đơn",
   allCategories: "Tất cả",
+  featuredMainDishes: "Món chính",
   categoriesAria: "Danh mục món",
   menuEmpty: "Thực đơn hiện chưa có món để gọi.",
   cartTitle: "Món đang chọn",
@@ -71,7 +78,8 @@ export const SELF_ORDER_VI = {
   noteLabel: "Ghi chú",
   notePlaceholder: "Ví dụ: ít mỡ, không hành...",
   submitFirstBatch: "Gửi món",
-  submitAddMore: "Gọi thêm món",
+  submitAddMore: "Gửi thêm món",
+  firstSubmitHint: "Nhân viên sẽ xác nhận yêu cầu đầu tiên để mở bàn.",
   submitting: "Đang gửi...",
   sentOk: "Đã gửi món.",
   addedOk: "Đã gọi thêm món.",
@@ -148,6 +156,9 @@ export const SELF_ORDER_VI = {
     "Thiết bị sẽ mất quyền xem hoá đơn, gọi thêm và thanh toán cho đến khi lượt bàn này kết thúc.",
   staffDeviceRevoked: "Đã thu hồi quyền thiết bị.",
   staffPaymentRequests: "Yêu cầu thanh toán",
+  staffCustomerNote: "Ghi chú của khách",
+  staffDestinationLabel: "Chọn đơn nhận món",
+  staffOrderLabel: (orderNumber: string) => `Đơn #${orderNumber}`,
   staffApproveNewOrder: "Tạo đơn mới",
   staffApproveAppend: "Gộp vào đơn",
   staffCanonicalTarget: "Đơn đang phục vụ của bàn",
@@ -170,6 +181,9 @@ export const SELF_ORDER_VI = {
   staffCancelPaymentDescription:
     "Chỉ huỷ sau khi đã kiểm tra chưa nhận tiền. Khách sẽ có thể gọi thêm món hoặc tạo yêu cầu thanh toán mới.",
   staffPaymentCancelled: "Đã huỷ yêu cầu thanh toán.",
+  staffPaymentWaitingTitle: "Khách đang chờ thanh toán",
+  staffPaymentWaitingDescription:
+    "Yêu cầu từ QR của bàn đang chờ nhân viên xử lý.",
   staffLoadFailed: "Không tải được yêu cầu QR.",
   staffActionFailed: "Không xử lý được yêu cầu QR.",
   cashCallStaff: "Khách gọi thu tiền mặt",
@@ -183,12 +197,19 @@ export const SELF_ORDER_VI = {
   ctaAwaitingApproval: "Đã gửi món",
   ctaAwaitingApprovalHint:
     "Nhân viên đã nhận lượt gọi món đầu tiên. Vui lòng đợi một chút để gọi thêm.",
+  awaitingCalloutTitle: "Đang chờ nhân viên xác nhận",
+  awaitingCalloutDescription:
+    "Yêu cầu mở bàn đã được gửi. Bạn vẫn có thể xem thực đơn trong lúc chờ.",
   ctaAwaitingDevice: "Đang chờ xác nhận thiết bị",
   ctaAwaitingDeviceHint:
     "Giỏ món chưa được gửi. Sau khi nhân viên xác nhận thiết bị, hãy bấm Gửi món.",
   ctaRejected: "Đã từ chối",
   ctaRejectedHint:
     "Lượt gọi đã bị huỷ. Xem chi tiết ở tab Hoá đơn, hoặc gọi nhân viên để được hỗ trợ.",
+  rejectedCalloutTitle: "Yêu cầu gọi món bị từ chối",
+  rejectedCalloutDescription:
+    "Món chưa được thêm vào đơn của bàn. Kiểm tra lại giỏ hoặc gọi nhân viên, rồi gửi lại.",
+  resubmitRejected: "Gửi lại",
   orderedItemsTitle: "Món đã gọi",
   orderedItemsDescription:
     "Đây là các món và tổng tiền đang được dùng để thanh toán.",

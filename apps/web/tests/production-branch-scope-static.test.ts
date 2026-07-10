@@ -37,11 +37,6 @@ test("branch_manager (branch_id=X) is ALLOWED creating a production order for it
   assert.equal(productionTargetAllowed("branch_manager", 1, 1), true);
 });
 
-test("production_manager keeps strict own-branch pin (no regression)", () => {
-  assert.equal(productionTargetAllowed("production_manager", 3, 4), false);
-  assert.equal(productionTargetAllowed("production_manager", 3, 3), true);
-});
-
 test("owner is tenant-wide for production — not branch-scoped", () => {
   assert.equal(isProductionBranchScopedRole("owner"), false);
   assert.equal(productionTargetAllowed("owner", 1, 999), true);

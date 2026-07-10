@@ -10,7 +10,6 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { resolveCentralSiteHomeBranchId } from "@/_lib/branch-hub-device";
 import { messages } from "@lib/messages";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import type { TenantSupabase } from "./_lib/types";
@@ -22,11 +21,7 @@ import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import { getEmbeddedUnitDisplayName } from "./_lib/unit-display";
 
 const ROLES = INVENTORY_OPS_ROLES;
-const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = [
-  "branch_manager",
-  "warehouse_manager",
-  "production_manager",
-];
+const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = ["branch_manager"];
 const BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR =
   "Quản lý chi nhánh chỉ được nhận phiếu chuyển về chi nhánh.";
 
@@ -59,22 +54,15 @@ function isAllowedInterSiteDirection(
   );
 }
 
-async function enforceTransferActionScope(
-  supabase: Parameters<typeof resolveCentralSiteHomeBranchId>[0],
+function enforceTransferActionScope(
   claims: JwtClaims,
   transfer: TransferPermissionRow,
   side: "from" | "to",
   requiredPermission: string,
-): Promise<string | null> {
+): string | null {
   if (!isBranchScopedTransferRole(claims.user_role)) return null;
 
-  // Central-site operators (warehouse_manager, production_manager) carry
-  // branch_id null in claims (D055 §1); resolve their central home before the
-  // scope comparison. Pinned branch roles keep the strict claim value. Only a
-  // genuinely unassigned account (no claim, no resolvable home) is rejected.
-  const ownBranchId =
-    claims.branch_id ??
-    (await resolveCentralSiteHomeBranchId(supabase, claims));
+  const ownBranchId = claims.branch_id;
   if (ownBranchId == null) {
     return "Tài khoản cần gắn với kho vận hành.";
   }
@@ -151,8 +139,7 @@ async function loadTransferForPermission(
     side === "from" ? transfer.from_branch_id : transfer.to_branch_id;
   const requiredPermission =
     typeof permission === "function" ? permission(transfer) : permission;
-  const scopeError = await enforceTransferActionScope(
-    supabase,
+  const scopeError = enforceTransferActionScope(
     claims,
     transfer,
     side,
@@ -202,9 +189,7 @@ export async function fetchStockTransferDetail(
   }
   const requestedBranchId = branchId ?? null;
   if (isBranchScopedTransferRole(claims.user_role)) {
-    const ownBranchId =
-      claims.branch_id ??
-      (await resolveCentralSiteHomeBranchId(supabase, claims));
+    const ownBranchId = claims.branch_id;
     if (ownBranchId == null || !transferInvolvesBranch(tr, ownBranchId)) {
       console.error("fetchStockTransferDetail.failed_involves_branch", {
         ownBranchId,
@@ -414,27 +399,6 @@ export async function createStockTransfer(
 
   const isIntraBranch = fromBranchId === toBranchId;
 
-  if (
-    claims.user_role === "warehouse_manager" ||
-    claims.user_role === "production_manager"
-  ) {
-    // Central-site operators carry branch_id null (D055 §1); resolve their
-    // central home before comparing against the source branch so they can
-    // issue transfers from their own Kho Tổng / Bếp Trung Tâm.
-    const effectiveFromBranchId =
-      claims.branch_id ??
-      (await resolveCentralSiteHomeBranchId(supabase, claims));
-    if (
-      effectiveFromBranchId == null ||
-      fromBranchId !== effectiveFromBranchId
-    ) {
-      return {
-        success: false,
-        error: "Bạn chỉ được tạo phiếu xuất từ kho của mình.",
-      };
-    }
-  }
-
   const fromKind = await loadBranchKind(
     supabase,
     claims.tenant_id,
@@ -497,13 +461,7 @@ export async function createStockTransfer(
   }
 
   // Branch-scoped role check
-  if (
-    claims.user_role &&
-    ["branch_manager", "warehouse_manager", "production_manager"].includes(
-      claims.user_role,
-    ) &&
-    claims.branch_id != null
-  ) {
+  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
     const my = claims.branch_id;
     if (fromBranchId !== my && toBranchId !== my) {
       return {
@@ -879,9 +837,7 @@ export async function quickInternalTransfer(
   const { supabase, claims } = ctx;
 
   if (isBranchScopedTransferRole(claims.user_role)) {
-    const ownBranchId =
-      claims.branch_id ??
-      (await resolveCentralSiteHomeBranchId(supabase, claims));
+    const ownBranchId = claims.branch_id;
     if (ownBranchId == null || ownBranchId !== branchId) {
       return {
         success: false,

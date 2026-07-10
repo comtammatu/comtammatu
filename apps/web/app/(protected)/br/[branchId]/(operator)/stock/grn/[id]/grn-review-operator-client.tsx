@@ -42,7 +42,7 @@ import { messages } from "@lib/messages";
 import {
   BranchGrnAddLineSheet,
   BranchGrnReviewLineSheet,
-} from "./branch-grn-review-line-sheet";
+} from "@/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet";
 
 interface GrnReviewOperatorClientProps {
   grn: GrnDetail;

@@ -364,7 +364,7 @@ export function BranchCountSlipsClient({
                   </div>
                 ) : null}
               </div>
-              <SheetFooter className="workflow-safe-pb sticky bottom-0 z-10 shrink-0 bg-background/95 backdrop-blur">
+              <SheetFooter className="workflow-safe-pb shrink-0 bg-background/95 backdrop-blur">
                 {selected.status === "submitted" ? (
                   recounting ? (
                     <>

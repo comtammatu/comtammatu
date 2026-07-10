@@ -1,27 +1,27 @@
 "use client";
 
 import { formatVND } from "@comtammatu/shared/format";
+import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Item,
   ItemContent,
   ItemDescription,
   ItemGroup,
-  ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import type {
-  SelfOrderGuestBatch,
-  SelfOrderGuestBatchItem,
-  SelfOrderGuestBatchStatus,
+  SelfOrderCartItem,
   SelfOrderOrderLine,
+  SelfOrderRound,
+  SelfOrderRoundItem,
 } from "@lib/self-order/contracts";
 
 interface OrderSummaryProps {
-  batches?: SelfOrderGuestBatch[] | null;
+  pendingItems?: Array<Omit<SelfOrderCartItem, "key"> & { key?: string }>;
+  rounds?: SelfOrderRound[] | null;
   items?: SelfOrderOrderLine[];
   totalAmount?: number | null;
 }
@@ -42,80 +42,23 @@ function optionSummary(item: {
     .join(" · ");
 }
 
-function batchItemLineTotal(item: SelfOrderGuestBatchItem) {
-  const modifierTotal = item.modifiers.reduce(
-    (sum, modifier) => sum + Number(modifier.price ?? 0),
-    0,
-  );
-  const sideTotal = item.sides.reduce(
-    (sum, side) => sum + Number(side.price ?? 0) * Number(side.quantity ?? 1),
-    0,
-  );
-  return (Number(item.unitPrice) + modifierTotal + sideTotal) * item.quantity;
-}
-
-function roundStatusBadge(status: SelfOrderGuestBatchStatus): {
-  label: string;
-  variant: "warning" | "success" | "destructive" | "secondary";
-} {
-  if (status === "pending_approval") {
-    return { label: SELF_ORDER_VI.roundStatusPending, variant: "warning" };
-  }
-  if (status === "approved") {
-    return { label: SELF_ORDER_VI.roundStatusApproved, variant: "success" };
-  }
-  return { label: SELF_ORDER_VI.roundStatusRejected, variant: "destructive" };
-}
-
-function BatchRound({ batch }: { batch: SelfOrderGuestBatch }) {
-  const status = roundStatusBadge(batch.status);
-  const muted = batch.status === "rejected";
-
+function RoundItem({ item }: { item: SelfOrderRoundItem }) {
+  const summary = optionSummary(item);
   return (
-    <Item variant="outline" size="sm" className="flex-col items-stretch gap-2">
-      <ItemHeader>
-        <SectionLabel density="dense">
-          {SELF_ORDER_VI.roundLabel(batch.roundIndex)}
-        </SectionLabel>
-        <Badge variant={status.variant}>{status.label}</Badge>
-      </ItemHeader>
-      <ItemGroup data-size="xs" className={muted ? "opacity-60" : undefined}>
-        {batch.items.map((item, index) => {
-          const summary = optionSummary(item);
-          const lineTotal = batchItemLineTotal(item);
-          return (
-            <Item key={`${batch.id}:${item.menuItemId}:${index}`} size="xs">
-              <ItemContent className="min-w-0">
-                <ItemTitle
-                  className={`break-words text-sm font-normal ${muted ? "line-through" : ""}`}
-                >
-                  {item.variantName
-                    ? `${item.itemName} ${item.variantName}`
-                    : item.itemName}
-                  <span className="ml-1 text-muted-foreground">
-                    x{item.quantity}
-                  </span>
-                </ItemTitle>
-                {summary ? (
-                  <ItemDescription className="break-words text-xs">
-                    {summary}
-                  </ItemDescription>
-                ) : null}
-              </ItemContent>
-              <ItemDescription
-                className={`shrink-0 font-mono tabular-nums ${muted ? "line-through" : ""}`}
-              >
-                {formatVND(lineTotal)}
-              </ItemDescription>
-            </Item>
-          );
-        })}
-      </ItemGroup>
-      {batch.customerNote ? (
-        <p className="text-xs text-muted-foreground">
-          {SELF_ORDER_VI.noteLabel}: {batch.customerNote}
-        </p>
-      ) : null}
+    <Item size="xs">
+      <ItemContent className="min-w-0">
+        <ItemTitle className="break-words text-sm font-normal">
+          {item.variantName
+            ? `${item.itemName} ${item.variantName}`
+            : item.itemName}
+          <span className="ml-1 text-muted-foreground">x{item.quantity}</span>
+        </ItemTitle>
+        {summary ? (
+          <ItemDescription className="break-words text-xs">
+            {summary}
+          </ItemDescription>
+        ) : null}
+      </ItemContent>
     </Item>
   );
 }
@@ -123,10 +66,10 @@ function BatchRound({ batch }: { batch: SelfOrderGuestBatch }) {
 function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
   return (
     <ItemGroup data-size="xs">
-      {items.map((item, index) => {
+      {items.map((item) => {
         const summary = optionSummary(item);
         return (
-          <Item key={`${item.menuItemId}:${index}`} size="xs">
+          <Item key={item.id} size="xs">
             <ItemContent className="min-w-0">
               <ItemTitle className="break-words text-sm font-normal">
                 {item.variantName
@@ -152,13 +95,51 @@ function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
   );
 }
 
+function PendingRequestLines({
+  items,
+}: {
+  items: Array<Omit<SelfOrderCartItem, "key"> & { key?: string }>;
+}) {
+  return (
+    <ItemGroup data-size="xs">
+      {items.map((item, index) => {
+        const summary = optionSummary(item);
+        return (
+          <Item key={item.key ?? index} size="xs">
+            <ItemContent className="min-w-0">
+              <ItemTitle className="break-words text-sm font-normal">
+                {item.variant_name
+                  ? `${item.item_name} ${item.variant_name}`
+                  : item.item_name}
+                <span className="ml-1 text-muted-foreground">
+                  x{item.quantity}
+                </span>
+              </ItemTitle>
+              {summary ? (
+                <ItemDescription className="break-words text-xs">
+                  {summary}
+                </ItemDescription>
+              ) : null}
+            </ItemContent>
+          </Item>
+        );
+      })}
+    </ItemGroup>
+  );
+}
+
 export function OrderSummary({
-  batches,
+  pendingItems = [],
+  rounds,
   items = [],
   totalAmount,
 }: OrderSummaryProps) {
-  const rounds = batches ?? [];
-  if (items.length === 0 && rounds.length === 0) {
+  const visibleRounds = rounds ?? [];
+  if (
+    pendingItems.length === 0 &&
+    items.length === 0 &&
+    visibleRounds.length === 0
+  ) {
     return (
       <AppEmptyState
         title={SELF_ORDER_VI.billEmptyTitle}
@@ -171,6 +152,17 @@ export function OrderSummary({
 
   return (
     <div className="flex flex-col gap-3">
+      {pendingItems.length > 0 ? (
+        <AppSection
+          title={SELF_ORDER_VI.awaitingCalloutTitle}
+          description={SELF_ORDER_VI.awaitingCalloutDescription}
+          badge={{ children: "⏳", variant: "warning" }}
+          size="sm"
+        >
+          <PendingRequestLines items={pendingItems} />
+        </AppSection>
+      ) : null}
+
       {items.length > 0 ? (
         <AppSection
           title={SELF_ORDER_VI.orderedItemsTitle}
@@ -193,17 +185,34 @@ export function OrderSummary({
         </AppSection>
       ) : null}
 
-      {rounds.length > 0 ? (
+      {visibleRounds.length > 0 ? (
         <AppSection
           title={SELF_ORDER_VI.roundsTitle}
           description={SELF_ORDER_VI.roundsDescription}
-          badge={{ children: rounds.length, variant: "outline" }}
+          badge={{ children: visibleRounds.length, variant: "outline" }}
           size="sm"
           contentClassName="gap-3"
         >
           <>
-            {rounds.map((batch) => (
-              <BatchRound key={batch.id} batch={batch} />
+            {visibleRounds.map((round) => (
+              <Item
+                key={round.id}
+                variant="outline"
+                size="sm"
+                className="flex-col items-stretch gap-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <SectionLabel density="dense">
+                    {SELF_ORDER_VI.roundLabel(round.sendSeq)}
+                  </SectionLabel>
+                  <Badge variant="outline">{round.ticketNumber}</Badge>
+                </div>
+                <ItemGroup data-size="xs">
+                  {round.items.map((item) => (
+                    <RoundItem key={item.id} item={item} />
+                  ))}
+                </ItemGroup>
+              </Item>
             ))}
           </>
         </AppSection>

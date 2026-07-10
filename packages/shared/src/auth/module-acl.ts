@@ -45,12 +45,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   inventory: {
     path: "/inventory",
-    allowedRoles: [
-      "owner",
-      "branch_manager",
-      "warehouse_manager",
-      "production_manager",
-    ],
+    allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("inventory"),
   },
   /**
@@ -61,12 +56,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
    */
   inventory_procurement: {
     path: "/inventory/suppliers",
-    allowedRoles: [
-      "owner",
-      "branch_manager",
-      "warehouse_manager",
-      "production_manager",
-    ],
+    allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("inventory_procurement"),
   },
   orders: {
@@ -91,7 +81,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   finance: {
     path: "/finance",
-    allowedRoles: ["owner", "office"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("finance"),
   },
   branches: {
@@ -107,9 +97,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
       "cashier",
       "chef",
       "branch_staff",
-      "warehouse_manager",
-      "production_manager",
-      "office",
     ],
     label: getModuleLabelVi("branch_picker"),
   },
@@ -141,9 +128,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
       "cashier",
       "chef",
       "branch_staff",
-      "warehouse_manager",
-      "production_manager",
-      "office",
     ],
     label: getModuleLabelVi("operator_home"),
   },
@@ -174,10 +158,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   /**
    * "Đội hôm nay" branch team board (D059). Scoped to owner/branch_manager
    * only — the underlying aggregate read (attendance, checklist, leave)
-   * relies on `hr:view_employee` / `hr:approve_leave_request`, which
-   * warehouse_manager/production_manager role templates do not grant
-   * (`supabase/_local-dev/dev-tenant-seed.sql`). Extending this ACL to those
-   * roles requires a permission-grant change first, not just a nav entry.
+   * relies on `hr:view_employee` / `hr:approve_leave_request`.
    */
   branch_team: {
     path: "/br/*/team",

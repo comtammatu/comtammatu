@@ -49,12 +49,12 @@ test("branch manager only confirms an intra-branch kitchen request", () => {
   );
 });
 
-test("warehouse roles can advance transfers only from their source branch", () => {
+test("non-branch-manager roles (e.g. owner) can advance transfers regardless of branch", () => {
   const transfer = makeTransfer();
   assert.deepEqual(
     getTransferActionConfig({
       transfer,
-      userRole: "warehouse_manager",
+      userRole: "owner",
       userBranchId: 10,
     }),
     { kind: "confirm_ship", enabled: true },
@@ -62,23 +62,23 @@ test("warehouse roles can advance transfers only from their source branch", () =
   assert.deepEqual(
     getTransferActionConfig({
       transfer,
-      userRole: "warehouse_manager",
+      userRole: "owner",
       userBranchId: 20,
     }),
-    { kind: "confirm_ship", enabled: false },
+    { kind: "confirm_ship", enabled: true },
   );
 
   assert.deepEqual(
     getTransferActionConfig({
       transfer: makeTransfer({ status: "confirmed_ship" }),
-      userRole: "production_manager",
+      userRole: "owner",
       userBranchId: 10,
     }),
     { kind: "mark_in_transit", enabled: true },
   );
 });
 
-test("receiving action follows the destination branch for scoped roles", () => {
+test("receiving action follows the destination branch for branch_manager", () => {
   const transfer = makeTransfer({ status: "in_transit" });
   assert.deepEqual(
     getTransferActionConfig({
@@ -91,7 +91,7 @@ test("receiving action follows the destination branch for scoped roles", () => {
   assert.deepEqual(
     getTransferActionConfig({
       transfer,
-      userRole: "warehouse_manager",
+      userRole: "branch_manager",
       userBranchId: 10,
     }),
     { kind: "receive", enabled: false },

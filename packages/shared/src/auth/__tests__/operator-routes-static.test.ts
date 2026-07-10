@@ -4,7 +4,6 @@ import { canAccess } from "../module-acl";
 import { resolvePostLoginRedirect } from "../scope";
 import type { JwtClaims } from "../types";
 import {
-  centralSiteBranchKindForRole,
   requiredBranchKindForPositionCode,
   staffRoleFromPositionCode,
 } from "../types";
@@ -86,42 +85,38 @@ test("operator route families use operator bottom nav", () => {
   }
 });
 
-test("operator home includes every role including office", () => {
+test("operator home includes every surviving role", () => {
   for (const role of [
     "owner",
     "branch_manager",
     "cashier",
     "chef",
     "branch_staff",
-    "warehouse_manager",
-    "production_manager",
-    "office",
   ] as const) {
     assert.equal(canAccess(role, "operator_home"), true, role);
   }
 });
 
-test("central-site role positions keep tenant-level branch claims", () => {
-  assert.equal(requiredBranchKindForPositionCode("warehouse_manager"), null);
+test("retired central/office position codes resolve to unassigned", () => {
+  assert.equal(
+    requiredBranchKindForPositionCode("warehouse_manager"),
+    "unassigned",
+  );
   assert.equal(
     requiredBranchKindForPositionCode("central_supply_manager"),
-    null,
+    "unassigned",
   );
-  assert.equal(requiredBranchKindForPositionCode("production_manager"), null);
+  assert.equal(
+    requiredBranchKindForPositionCode("production_manager"),
+    "unassigned",
+  );
   assert.equal(
     requiredBranchKindForPositionCode("central_kitchen_manager"),
-    null,
+    "unassigned",
   );
-  assert.equal(requiredBranchKindForPositionCode("head_chef"), null);
+  assert.equal(requiredBranchKindForPositionCode("head_chef"), "unassigned");
+  assert.equal(requiredBranchKindForPositionCode("office"), "unassigned");
 
-  assert.equal(
-    centralSiteBranchKindForRole("warehouse_manager"),
-    "central_supply",
-  );
-  assert.equal(
-    centralSiteBranchKindForRole("production_manager"),
-    "central_kitchen",
-  );
   assert.equal(requiredBranchKindForPositionCode("branch_manager"), "branch");
   assert.equal(requiredBranchKindForPositionCode("cashier"), "branch");
   assert.equal(requiredBranchKindForPositionCode("chef"), "branch");
@@ -129,6 +124,8 @@ test("central-site role positions keep tenant-level branch claims", () => {
   assert.equal(requiredBranchKindForPositionCode("cleaner"), "branch");
   assert.equal(staffRoleFromPositionCode("guard"), "branch_staff");
   assert.equal(staffRoleFromPositionCode("cleaner"), "branch_staff");
+  assert.equal(staffRoleFromPositionCode("warehouse_manager"), "unassigned");
+  assert.equal(staffRoleFromPositionCode("office"), "unassigned");
 });
 
 test("post-login hub fallback is device and branch aware", () => {
@@ -147,10 +144,6 @@ test("post-login hub fallback is device and branch aware", () => {
     resolvePostLoginRedirect(claims("cashier", 7), null, phone),
     "/br/7",
   );
-  assert.equal(
-    resolvePostLoginRedirect(claims("office", null), null, phone),
-    "/finance",
-  );
 });
 
 test("post-login returnTo cannot cross branch-scoped operator routes", () => {
@@ -164,22 +157,9 @@ test("post-login returnTo cannot cross branch-scoped operator routes", () => {
     resolvePostLoginRedirect(claims("cashier", 7), "/br/8/shift", phone),
     "/br/7",
   );
-  // Central-site role without a resolved home site stops before the retired
-  // employee shell (claims stay tenant-level, D055 §1).
+  // Unassigned/tenant-level operational claims (branch_id null) fail closed.
   assert.equal(
-    resolvePostLoginRedirect(
-      claims("warehouse_manager", null),
-      "/br/8/stock",
-      phone,
-    ),
+    resolvePostLoginRedirect(claims("branch_staff", null), "/br/8/stock", phone),
     "/access-denied?reason=branch-scope-mismatch",
-  );
-  // With a resolved central home site, the fallback is that site's hub.
-  assert.equal(
-    resolvePostLoginRedirect(claims("warehouse_manager", null), "/br/8/stock", {
-      ...phone,
-      homeBranchId: 10,
-    }),
-    "/br/10",
   );
 });

@@ -26,6 +26,8 @@ interface PosTableGateProps {
   orderCountByTable?: Map<number, number>;
   /** Map<table_id, visual state derived from active unpaid orders. */
   tableOrderVisualStateByTable?: Map<number, PosTableOrderVisualState>;
+  /** Tables carrying a pending guest request from the public QR flow. */
+  pendingSelfOrderTableIds?: ReadonlySet<number>;
   headerAction?: ReactNode;
   className?: string;
 }
@@ -35,6 +37,7 @@ interface TableButtonProps {
   isSelected: boolean;
   orderCount: number;
   orderVisualState?: PosTableOrderVisualState;
+  hasPendingSelfOrderRequest: boolean;
   onTableSelect: (table: BranchTable) => void;
 }
 
@@ -43,6 +46,7 @@ const TableButton = memo(function TableButton({
   isSelected,
   orderCount,
   orderVisualState,
+  hasPendingSelfOrderRequest,
   onTableSelect,
 }: TableButtonProps) {
   const handleClick = useCallback(
@@ -73,7 +77,7 @@ const TableButton = memo(function TableButton({
       selected={isSelected}
       tone={tileTone}
       size="tile"
-      aria-label={messages.pos.tableGate.tableAria(table.number, statusLabel)}
+      aria-label={`${messages.pos.tableGate.tableAria(table.number, statusLabel)}${hasPendingSelfOrderRequest ? ", QR đang chờ duyệt" : ""}`}
       className={cn(
         "w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-sm sm:gap-3 lg:p-4",
         tileVisualState === "ready" && !isSelected && "bg-success/20",
@@ -108,11 +112,15 @@ const TableButton = memo(function TableButton({
         <p className="text-2xl font-semibold leading-none tabular-nums">
           {table.number}
         </p>
-        {orderCount >= 2 && (
+        {hasPendingSelfOrderRequest ? (
+          <Badge variant="warning" className="w-fit text-xs font-semibold">
+            QR ⏳
+          </Badge>
+        ) : orderCount >= 2 ? (
           <Badge variant="secondary" className="w-fit text-xs font-semibold">
             {messages.pos.tableGate.multiBill(orderCount)}
           </Badge>
-        )}
+        ) : null}
       </div>
     </OperationalTile>
   );
@@ -124,6 +132,7 @@ function PosTableGateComponent({
   onTableSelect,
   orderCountByTable,
   tableOrderVisualStateByTable,
+  pendingSelfOrderTableIds,
   headerAction,
   className,
 }: PosTableGateProps) {
@@ -185,6 +194,9 @@ function PosTableGateComponent({
                       orderVisualState={tableOrderVisualStateByTable?.get(
                         table.id,
                       )}
+                      hasPendingSelfOrderRequest={
+                        pendingSelfOrderTableIds?.has(table.id) ?? false
+                      }
                       onTableSelect={onTableSelect}
                     />
                   ))}

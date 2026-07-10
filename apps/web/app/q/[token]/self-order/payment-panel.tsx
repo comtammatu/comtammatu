@@ -20,7 +20,7 @@ import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppSection } from "@/components/surface";
 import { QrCodeImage } from "@/components/qr-code-image";
-import type { PublicSelfOrderSnapshot } from "@lib/self-order/contracts";
+import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
 
 export interface GuestPaymentRequestState {
   id?: number | null;
@@ -49,7 +49,7 @@ export interface InvoiceErrorFocusRequest {
 
 export interface PaymentPanelProps {
   disabled: boolean;
-  activeOrder: PublicSelfOrderSnapshot["order"] | null;
+  activeOrder: PublicSelfOrderAvailableSnapshot["order"];
   activePaymentRequest: GuestPaymentRequestState | null;
   buyerNotGetInvoice: boolean;
   buyerName: string;

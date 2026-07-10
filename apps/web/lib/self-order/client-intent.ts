@@ -26,7 +26,7 @@ export function buildBatchIntentKey(input: {
   customerNote?: string;
 }): string {
   return intentKey({
-    items: input.items,
+    items: input.items.map(({ key: _key, ...item }) => item),
     customerNote: input.customerNote?.trim() || null,
   });
 }

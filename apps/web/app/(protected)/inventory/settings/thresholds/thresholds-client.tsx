@@ -19,7 +19,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppToolbar } from "@/components/surface";
+import { AppDetailFooter, AppToolbar } from "@/components/surface";
 import { FormDialog, QuantityField, QuantityInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import { bulkUpdateIngredientThresholds } from "./actions";
@@ -342,26 +342,32 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
         )}
       />
 
-      <div className="sticky bottom-0 flex items-center justify-between border-t bg-card/95 px-4 py-3 backdrop-blur">
-        <span className="text-xs text-muted-foreground">
-          {dirtyCount > 0
-            ? copy.dirtySummary(dirtyCount, errorCount)
-            : copy.save.nothing}
-        </span>
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={isPending || dirtyCount === 0 || errorCount > 0}
-          size="lg"
-        >
-          {isPending ? (
-            <Spinner className="mr-2" />
-          ) : (
-            <IconSave className="size-4" />
-          )}
-          {copy.save.action(dirtyCount)}
-        </Button>
-      </div>
+      <AppDetailFooter
+        sticky
+        className="bg-card/95 px-4 py-3 backdrop-blur"
+        leading={
+          <span className="text-xs text-muted-foreground">
+            {dirtyCount > 0
+              ? copy.dirtySummary(dirtyCount, errorCount)
+              : copy.save.nothing}
+          </span>
+        }
+        trailing={
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={isPending || dirtyCount === 0 || errorCount > 0}
+            size="lg"
+          >
+            {isPending ? (
+              <Spinner className="mr-2" />
+            ) : (
+              <IconSave className="size-4" />
+            )}
+            {copy.save.action(dirtyCount)}
+          </Button>
+        }
+      />
 
       <BulkApplyDialog
         open={bulkOpen}

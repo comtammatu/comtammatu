@@ -80,8 +80,6 @@ const OPERATIONAL_DELETE_TABLES = [
   "goods_received_notes",
   "purchase_order_items",
   "purchase_orders",
-  "production_order_items",
-  "production_orders",
   "stock_transfer_items",
   "stock_transfers",
   "stock_issue_items",
@@ -690,13 +688,13 @@ WITH ingredient_rows(id, name, sku, category, item_kind, storage_type, unit_cost
 )
 INSERT INTO public.ingredients (
   id, tenant_id, name, sku, unit_cost, category, min_stock_level,
-  max_stock_level, reorder_point, storage_type, shelf_life_days,
+  max_stock_level, reorder_point, storage_type,
   is_active, item_kind, review_override, category_id
 )
 OVERRIDING SYSTEM VALUE
 SELECT
   i.id, t.id, i.name, i.sku, i.unit_cost::numeric, i.category, i.min_stock_level::numeric,
-  i.max_stock_level::numeric, i.reorder_point::numeric, i.storage_type, NULL,
+  i.max_stock_level::numeric, i.reorder_point::numeric, i.storage_type,
   i.is_active, i.item_kind, NULL, c.id
 FROM target_tenants t
 CROSS JOIN ingredient_rows i

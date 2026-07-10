@@ -171,17 +171,8 @@ export function resolvePostLoginRedirect(
 
   if (routeBranchId != null) {
     const allowCrossBranchBranchSurface = claims.user_role === "owner";
-    // Server-computed central-site home (D055 §1): non-null only for
-    // warehouse/production claims, resolved to their kind-matched active
-    // site — the same policy the proxy branch-kind gate enforces.
-    const matchesCentralSiteHome =
-      branchHubContext?.homeBranchId === routeBranchId;
 
-    if (
-      !allowCrossBranchBranchSurface &&
-      claims.branch_id !== routeBranchId &&
-      !matchesCentralSiteHome
-    ) {
+    if (!allowCrossBranchBranchSurface && claims.branch_id !== routeBranchId) {
       return fallback;
     }
   }

@@ -230,9 +230,6 @@ export async function loadGrnCreatePageData({
 
   const initialBranchId = draftRow?.branch_id ?? defaultBranchId;
   const initialLocationId = draftRow?.location_id ?? null;
-  const isBranchScoped =
-    claims.user_role === "warehouse_manager" ||
-    claims.user_role === "production_manager";
 
   return {
     supplier: { id: supplierRes.data.id, name: supplierRes.data.name },
@@ -243,7 +240,7 @@ export async function loadGrnCreatePageData({
     })),
     locationOptions,
     initialLocationId,
-    canSwitchBranch: routeBranchId == null && !isBranchScoped,
+    canSwitchBranch: routeBranchId == null,
     ingredients,
     existingDraft,
     canConfirm,

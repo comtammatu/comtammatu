@@ -96,7 +96,7 @@ test("branch warehouse outbound destinations include Central Kitchen and active 
   const policy = resolveTransferCreatePolicy({
     branches,
     userBranchId: 10,
-    userRole: "warehouse_manager",
+    userRole: "owner",
   });
 
   assert.equal(policy.canCreateOutbound, true);
@@ -123,7 +123,7 @@ test("central operators can dispatch only to active branch warehouse or kitchen 
   const policy = resolveTransferCreatePolicy({
     branches,
     userBranchId: 20,
-    userRole: "warehouse_manager",
+    userRole: "owner",
   });
 
   assert.equal(policy.canCreateOutbound, true);
@@ -205,7 +205,7 @@ test("source stock loader scope follows the operator role", () => {
     getTransferSourceBranchIds({
       branches,
       userBranchId: 20,
-      userRole: "warehouse_manager",
+      userRole: "owner",
     }),
     [20],
   );

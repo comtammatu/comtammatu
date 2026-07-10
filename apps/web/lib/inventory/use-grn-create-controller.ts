@@ -15,16 +15,12 @@ import {
 } from "@/(protected)/inventory/grn-actions";
 import {
   draftTotal,
-  lineTotalFromUnitCost,
-  unitCostFromLineTotal,
   type GrnDraft,
   type GrnDraftLine,
 } from "@/(protected)/inventory/_lib/grn-draft";
 import { getDefaultPurchaseUnit } from "@/(protected)/inventory/_lib/purchase-units";
-import { getReferenceCostForUnit } from "@/(protected)/inventory/_lib/reference-cost";
 import { GRN_CREATE_COPY } from "./grn-create-copy";
 import {
-  isSameGrnReferenceCost,
   getGrnLocationKindLabel,
   pickGrnReceivingLocation,
   type GrnCreatePageData,
@@ -153,23 +149,15 @@ export function useGrnCreateController({
       ? (existing.entryUnitId ?? null)
       : (defaultUnit?.unitId ?? null);
     const unit = existing?.unit ?? defaultUnit?.label ?? ingredient.unit;
-    const referenceCost = getReferenceCostForUnit(
-      ingredient,
-      entryUnitId,
-      unit,
-    );
     const quantity = existing?.quantity ?? 0;
-    const unitCost =
-      existing?.unitCost ??
-      referenceCost?.value ??
-      Number(ingredient.unit_cost ?? 0);
+    const unitCost = existing?.unitCost ?? null;
     setEdit({
       ingredient,
       line: existing ?? null,
       quantity,
       unit,
       entryUnitId,
-      lineTotal: existing ? lineTotalFromUnitCost(quantity, unitCost) : 0,
+      unitCost,
       note: existing?.note ?? "",
     });
   }
@@ -186,42 +174,26 @@ export function useGrnCreateController({
     setEdit((current) => {
       if (!current) return current;
 
-      const referenceCost = getReferenceCostForUnit(
-        current.ingredient,
-        current.entryUnitId,
-        current.unit,
-      );
-      const unitCost = unitCostFromLineTotal(
-        current.quantity,
-        current.lineTotal,
-      );
-      const nextReferenceCost = getReferenceCostForUnit(
-        current.ingredient,
-        unitId,
-        label,
-      );
-
       return {
         ...current,
         entryUnitId: unitId,
         unit: label,
-        ...(current.lineTotal === 0 ||
-        isSameGrnReferenceCost(unitCost, referenceCost)
-          ? {
-              lineTotal: lineTotalFromUnitCost(
-                current.quantity,
-                nextReferenceCost?.value ?? unitCost,
-              ),
-            }
-          : {}),
+        unitCost: null,
       };
     });
   }
 
   async function saveLine() {
-    if (!edit || edit.quantity <= 0 || edit.lineTotal < 0) return;
+    if (
+      !edit ||
+      edit.quantity <= 0 ||
+      edit.unitCost == null ||
+      edit.unitCost <= 0
+    ) {
+      return;
+    }
 
-    const unitCost = unitCostFromLineTotal(edit.quantity, edit.lineTotal);
+    const unitCost = edit.unitCost;
     setSubmitError(null);
     try {
       const grnId = await ensureServerDraft();

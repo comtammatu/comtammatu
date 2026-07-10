@@ -57,15 +57,15 @@ function parseRoleLabels(source) {
   return labels;
 }
 
+// D076: central-site soft-routing (and its CENTRAL_SITE_ROLE_BRANCH_KINDS
+// map) is retired from types.ts. Tolerate its absence — every role's
+// central-site kind is then simply unset — instead of failing loudly, since
+// the map is not coming back.
 function parseCentralSiteRoleBranchKinds(source) {
   const block = source.match(
     /const CENTRAL_SITE_ROLE_BRANCH_KINDS: Partial<Record<StaffRole, BranchKind>> = \{([\s\S]*?)\};/,
   );
-  if (!block) {
-    throw new Error(
-      "types.ts: could not find CENTRAL_SITE_ROLE_BRANCH_KINDS",
-    );
-  }
+  if (!block) return {};
   const kinds = {};
   for (const m of block[1].matchAll(/(\w+):\s*"([a-z_]+)"/g)) {
     kinds[m[1]] = m[2];
@@ -338,6 +338,9 @@ function derivePostLoginHomes(accessBuckets, adminRoles, centralSiteKinds) {
   const rows = [];
   for (const role of accessBuckets) {
     const isAdmin = adminRoles.includes(role);
+    // D076: central-site soft-routing is retired — centralSiteKinds is
+    // always empty now. Kept as a parameter so a future reintroduction only
+    // needs to repopulate the map, not touch this decision tree.
     const centralKind = centralSiteKinds[role] ?? null;
 
     if (role === "owner") {
@@ -346,16 +349,6 @@ function derivePostLoginHomes(accessBuckets, adminRoles, centralSiteKinds) {
         desktop: "/finance (Office plane)",
         phone: "/br (Operator plane branch picker, >1 branch) or /br/{branchId} directly",
         note: "Device-aware split (D050 §5): desktop/office context -> Office; phone -> Operator. Owner may also open any active branch POS/KDS/Runner to cover a shift.",
-      });
-      continue;
-    }
-
-    if (role === "office") {
-      rows.push({
-        role,
-        desktop: "/finance",
-        phone: "/finance",
-        note: "Branch-less office lands on /finance. Staff day-flow lives under the branch Operator plane, not a standalone /employee app.",
       });
       continue;
     }
@@ -375,7 +368,7 @@ function derivePostLoginHomes(accessBuckets, adminRoles, centralSiteKinds) {
         role,
         desktop: "/br/{branchId} (Operator hub for the claimed branch)",
         phone: "/br/{branchId} (Operator hub for the claimed branch)",
-        note: "D050 §5: non-admin, non-office, branch-pinned roles land in the Operator plane home for their JWT branch_id.",
+        note: "D050 §5: non-admin, branch-pinned roles land in the Operator plane home for their JWT branch_id.",
       });
       continue;
     }

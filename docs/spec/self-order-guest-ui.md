@@ -24,14 +24,15 @@ Self-order owns no lifecycle of its own. A seating **is** an open POS order on a
 Guest-visible state is **derived**, never stored. There is exactly one stored enum:
 `self_order_requests.status ∈ {pending, accepted, rejected}`.
 
-| Derived from | Guest state | Guest may |
-| --- | --- | --- |
-| no pending request, no open order on table | `Chưa mở bàn` | browse, build cart, **Gửi món** (first round) |
-| a `pending` request exists | `Chờ xác nhận` | browse; cart CTA hard-disabled |
-| the last request is `rejected` | `Bị từ chối` | resubmit immediately (same cart) |
-| an open order exists, no live payment intent | `Bàn đang mở` | **Gửi thêm món** (straight to KDS), view bill |
-| an open order exists, a live payment intent | `Đang thanh toán` | view bill, wait; add-more locked |
-| `orders.payment_status = 'paid'` | `Đã thanh toán` | see the receipt for this browser session only |
+| Derived from                                      | Guest state               | Guest may                                                                        |
+| ------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------- |
+| no pending request, no open order on table        | `Chưa mở bàn`             | browse, build cart, **Gửi món** (first round)                                    |
+| a `pending` request exists                        | `Chờ xác nhận`            | browse; cart CTA hard-disabled                                                   |
+| the last request is `rejected`                    | `Bị từ chối`              | resubmit immediately (same cart)                                                 |
+| an open order exists, no live payment intent      | `Bàn đang mở`             | **Gửi thêm món** (straight to KDS), view bill                                    |
+| an open order exists, a live payment intent       | `Đang thanh toán`         | view bill, wait; add-more locked                                                 |
+| two or more open orders exist, no pending request | `Cần nhân viên chọn bill` | browse, build cart, **Gửi món** for staff approval; bill and payment stay hidden |
+| `orders.payment_status = 'paid'`                  | `Đã thanh toán`           | see the receipt for this browser session only                                    |
 
 An **open order** = `orders.table_id = <table>` AND `payment_status <> 'paid'` AND `status NOT IN ('completed','cancelled')`.
 
@@ -54,6 +55,21 @@ If the table already carries an open order — whether a staff member created it
 
 If the table carries **two or more** open orders (POS permits multi-bill), the submit falls back to `pending`. Staff pick the destination bill when approving. The system never guesses which bill owes the money.
 
+The stable table token never chooses a bill in the multi-bill case. Until staff
+accepts the pending request, the guest cannot read a bill or create a payment
+intent for that table.
+
+### Request replay and rejected carts
+
+`clientOpId` is tenant-scoped. A replay returns the original request outcome;
+reusing the same ID with a different canonical cart or customer note is rejected.
+Direct appends also persist an `accepted` request row after
+`append_order_items`, so replay remains stable even if the table state changes.
+
+A rejected cart is returned only when the browser supplies that request's
+`clientOpId`. A reload without the in-memory ID returns a clean menu; the next
+seating never inherits the previous guest's rejected cart.
+
 ## Guest screens
 
 ### G0 · Unavailable
@@ -67,7 +83,11 @@ Header is one row:
 - Left: table label (H1).
 - Right: `Hoá đơn` button + `Badge` (approved item count, or `⏳` while a request is pending). Opens a `Drawer`. **It never auto-opens.**
 
-Body: category pills (sticky under the header, one scrollable row), then items grouped by `menu_categories.type`:
+Body: category pills (sticky under the header, one scrollable row), then a
+dedicated first section for the first three `main_dish` items in the current
+menu order. The first card spans the row; the next two complete the lead grid.
+They appear once only on the all-menu view. Remaining items then group by
+`menu_categories.type`:
 
 - `main_dish` → large photo cards.
 - `side_dish | drink | dessert` → compact rows.
@@ -156,7 +176,15 @@ create unique index self_order_requests_client_op_id_uidx
   on public.self_order_requests (tenant_id, client_op_id);
 ```
 
-RLS follows the existing self-order convention: staff-select only, writes exclusively through `SECURITY DEFINER` RPCs, no direct table grants.
+RLS follows the existing self-order convention: direct table access is
+staff-select only; `INSERT`, `UPDATE`, and `DELETE` are revoked and writes run
+exclusively through `SECURITY DEFINER` RPCs.
+
+`self_order_payment_requests` is keyed by `order_id`, not by a self-order
+session. S1 makes the legacy `session_id` nullable for the compatibility window,
+adds one-active-intent-per-order and sessionless-operation-id unique indexes, and
+rewrites create/expire/cancel/order-close paths so new rows do not carry a
+session. S6 removes the legacy column and foreign key after the runtime cutover.
 
 Kept: `self_order_payment_requests`, `self_order_rate_buckets`, `tables.self_order_token`, `tables.self_order_enabled`. The `origin` and `join` values of `self_order_rate_buckets.purpose` die with device binding; `batch` and `payment` remain.
 
@@ -164,14 +192,24 @@ Deleted: `self_order_sessions`, `self_order_batches`, `self_order_session_device
 
 Six RPCs survive:
 
-| RPC | Caller | Effect |
-| --- | --- | --- |
-| `self_order_get_snapshot(token)` | guest | table + menu + open order + pending request + live intent |
-| `self_order_submit(token, cart, note, op_id)` | guest | exactly one open order → `append_order_items`; otherwise insert `pending` |
-| `self_order_create_payment_request(...)` | guest | unchanged |
-| `self_order_accept_request(req_id, target_order_id?)` | staff | `create_order` or `append_order_items` |
-| `self_order_reject_request(req_id)` | staff | `status = 'rejected'` |
-| `self_order_cancel_payment_request(...)` | staff | unchanged |
+| RPC                                                   | Caller | Effect                                                                                                   |
+| ----------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------- |
+| `self_order_get_snapshot(token, op_id?)`              | guest  | table + menu + unambiguous open order + pending request or this browser's rejected request + live intent |
+| `self_order_submit(token, cart, note, op_id)`         | guest  | exactly one open order → `append_order_items`; otherwise insert `pending`                                |
+| `self_order_create_payment_request(...)`              | guest  | same product flow, but binds directly to the only open order and rejects multi-bill ambiguity            |
+| `self_order_accept_request(req_id, target_order_id?)` | staff  | `create_order` or `append_order_items`                                                                   |
+| `self_order_reject_request(req_id)`                   | staff  | `status = 'rejected'`                                                                                    |
+| `self_order_cancel_payment_request(...)`              | staff  | same product flow, keyed by request/order rather than session                                            |
+
+The one-argument snapshot overload remains as a compatibility wrapper during
+S1; it supplies no rejected request context. S3 calls the two-argument overload.
+
+## Deployment boundary
+
+S1 is additive at the table/column level but changes the public snapshot
+contract. Land and verify its migration file locally first. Do not apply it to
+production ahead of the S2-S5 runtime; production apply and the runtime deploy
+belong to the same cutover window. S6 remains a later destructive cleanup.
 
 ## Freshness
 
@@ -179,24 +217,25 @@ Adaptive polling, no realtime. 3s while `Chờ xác nhận` or `Đang thanh toá
 
 ## Trust boundary
 
-Device binding is removed by owner decision. Anyone holding a photograph of a table's QR can read that table's bill and append items while the table is open. Staff approval gates *opening* a table, not *appending* to an open one. The dining room is the trust boundary; a wrong dish arriving at a table is visible to staff.
+Device binding is removed by owner decision. Anyone holding a photograph of a table's QR can read that table's bill and append items while the table is open. Staff approval gates _opening_ a table, not _appending_ to an open one. The dining room is the trust boundary; a wrong dish arriving at a table is visible to staff.
 
 Public snapshot, submit, and payment endpoints keep bounded per-token and per-network rate limits (`self_order_rate_buckets`) and return one shared fail-closed recovery state. Responses stay `private, no-store`.
 
 ## Brand placement
 
-| Asset | On `/q/[token]` |
-| --- | --- |
-| `BrandMascot` | Static only (G0 unavailable). Never animated, never on the ordering surface |
-| `BrandLockup` / `BrandMark` / `BrandLogoBox` | **Forbidden** |
-| `brand-pattern-caro` | **Forbidden** |
-| `BrandSymbol` via `AppEmptyState.symbol` | Allowed for an empty menu only |
+| Asset                                        | On `/q/[token]`                                                             |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| `BrandMascot`                                | Static only (G0 unavailable). Never animated, never on the ordering surface |
+| `BrandLockup` / `BrandMark` / `BrandLogoBox` | **Forbidden**                                                               |
+| `brand-pattern-caro`                         | **Forbidden**                                                               |
+| `BrandSymbol` via `AppEmptyState.symbol`     | Allowed for an empty menu only                                              |
 
 ## Non-goals
 
 - No desktop IA fork.
 - No change to `finalize_paid_order`, paid-order table release, KDS ticket/item status, or cashier POS pay-before-ready semantics.
-- No `is_featured` column on `menu_items`; prominence derives from `menu_categories.type`.
+- No `is_featured` column on `menu_items`; the lead three derive from the
+  existing `main_dish` type and menu order.
 - No admin surface for toggling `self_order_enabled` or printing table QRs. None exists today; that gap is out of scope here.
 - No new palette, typography, radius, elevation, or decorative token. `workflow-safe-pb` remains approved for public workflow fixed action bars and bottom-sheet footers.
 

@@ -12,7 +12,7 @@ const correctionDocumentTypes = [
   "grn",
   "issue",
   "transfer",
-  "production_order",
+  "production_run",
 ] as const;
 
 const correctionSchema = z.object({
@@ -45,7 +45,7 @@ type SourceDocument = {
     grn_id?: number;
     issue_id?: number;
     transfer_id?: number;
-    production_order_id?: number;
+    production_run_id?: number;
   };
 };
 
@@ -205,33 +205,29 @@ async function loadProductionSource(
   tenantId: number,
   input: CorrectionInput,
 ): Promise<SourceDocument | null> {
-  const { data: order, error } = await supabase
-    .from("production_orders")
-    .select("id, branch_id, status, production_number")
+  const { data: run, error } = await supabase
+    .from("production_runs")
+    .select("id, branch_id, target_branch_id, status, production_number, finished_good_id")
     .eq("id", input.documentId)
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
-  if (error || !order) return null;
-  if (order.branch_id !== input.branchId) return null;
-  if (!isPostedStatus(order.status, ["completed"])) return null;
-
-  const { data: outputLine, error: outputLineError } = await supabase
-    .from("production_order_items")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .eq("production_order_id", order.id)
-    .eq("finished_good_id", input.ingredientId)
-    .maybeSingle();
-
-  if (outputLineError || !outputLine) return null;
+  if (error || !run) return null;
+  if (
+    run.branch_id !== input.branchId &&
+    run.target_branch_id !== input.branchId
+  ) {
+    return null;
+  }
+  if (!isPostedStatus(run.status, ["completed"])) return null;
+  if (run.finished_good_id !== input.ingredientId) return null;
 
   return {
-    branchId: order.branch_id,
-    code: order.production_number,
-    status: order.status,
+    branchId: run.target_branch_id,
+    code: run.production_number,
+    status: run.status,
     traceLabel: null,
-    link: { production_order_id: order.id },
+    link: { production_run_id: run.id },
   };
 }
 
@@ -249,7 +245,10 @@ async function loadSourceDocument(
   if (input.documentType === "transfer") {
     return loadTransferSource(supabase, tenantId, input);
   }
-  return loadProductionSource(supabase, tenantId, input);
+  if (input.documentType === "production_run") {
+    return loadProductionSource(supabase, tenantId, input);
+  }
+  return null;
 }
 
 function correctionLabel(documentType: InventoryCorrectionDocumentType) {

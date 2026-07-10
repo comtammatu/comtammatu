@@ -8,27 +8,7 @@ import {
   type ListScopeResolution,
   type OperatorBranchOption,
 } from "@/_lib/branch-context";
-import { resolveCentralSiteHomeBranchId } from "@/_lib/branch-hub-device";
 import type { TenantSupabase } from "./types";
-
-/**
- * Central-site operators (D055 §1 soft-routing) carry `branch_id` null in
- * their claims; their home site is resolved by matching `branch_kind`, the
- * same way the operator Branch Hub does. Inventory scope resolution locks
- * non-tenant-wide roles to `claims.branch_id`, so without pinning the
- * resolved home branch a central-site operator would fall out of scope on
- * every embedded inventory surface. This mirrors `selectOperatorBranchScope`
- * by binding the home branch into the claims the scope engine reads.
- */
-async function withCentralSiteHomeBranch(
-  supabase: TenantSupabase,
-  claims: JwtClaims,
-): Promise<JwtClaims> {
-  if (claims.branch_id != null) return claims;
-  const homeBranchId = await resolveCentralSiteHomeBranchId(supabase, claims);
-  if (homeBranchId == null) return claims;
-  return { ...claims, branch_id: homeBranchId };
-}
 
 export type InventoryBranchOption = OperatorBranchOption;
 
@@ -58,9 +38,8 @@ export const resolveInventoryListScope = cache(
       queryBranchId?: string | string[] | undefined;
     },
   ): Promise<InventoryListScope> => {
-    const scopedClaims = await withCentralSiteHomeBranch(supabase, claims);
-    const branches = await fetchActiveBranches(supabase, scopedClaims.tenant_id);
-    return resolveListScope(supabase, scopedClaims, branches, {
+    const branches = await fetchActiveBranches(supabase, claims.tenant_id);
+    return resolveListScope(supabase, claims, branches, {
       ...options,
       tenantWideRoles: TENANT_LEVEL_ROLES,
     });
@@ -82,10 +61,9 @@ export const resolveInventoryBranchScope = cache(
     claims: JwtClaims,
     requestedBranchId: number | null,
   ): Promise<InventoryBranchScope> => {
-    const scopedClaims = await withCentralSiteHomeBranch(supabase, claims);
-    const branches = await fetchActiveBranches(supabase, scopedClaims.tenant_id);
+    const branches = await fetchActiveBranches(supabase, claims.tenant_id);
     return selectBranchScope(
-      scopedClaims,
+      claims,
       branches,
       requestedBranchId,
       TENANT_LEVEL_ROLES,

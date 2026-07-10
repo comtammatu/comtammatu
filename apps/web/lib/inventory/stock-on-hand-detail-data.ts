@@ -64,7 +64,7 @@ type MovementRow = {
   transfer_id: number | null;
   issue_id: number | null;
   order_id: number | null;
-  production_order_id: number | null;
+  production_run_id: number | null;
   inventory_locations: LocationRef | LocationRef[] | null;
 };
 
@@ -123,7 +123,7 @@ function movementSelect(includeValuation: boolean): string {
     "transfer_id",
     "issue_id",
     "order_id",
-    "production_order_id",
+    "production_run_id",
     "inventory_locations ( name, code, location_kind )",
   ]
     .filter((field): field is string => Boolean(field))
@@ -248,7 +248,7 @@ export async function loadStockIngredientDetailData({
       transferId: row.transfer_id,
       issueId: row.issue_id,
       orderId: row.order_id,
-      productionOrderId: row.production_order_id,
+      productionRunId: row.production_run_id,
       locationName: location?.name ?? null,
       locationCode: location?.code ?? null,
     };

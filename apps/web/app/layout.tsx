@@ -94,7 +94,7 @@ export default async function RootLayout({
       style={{ colorScheme: resolvedCookie === "night" ? "dark" : "light" }}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+      <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
         <Script
           id="theme-bootstrap"
           strategy="beforeInteractive"

@@ -74,61 +74,22 @@ test("selectOperatorBranchScope -> pinned staff only sees own branch", () => {
   assert.equal(selected.canSwitchBranch, false);
 });
 
-test("selectOperatorBranchScope -> office has no operator branch scope", () => {
-  const selected = selectOperatorBranchScope(claims("office", null), BRANCHES, 1);
-
-  assert.deepEqual(selected.allowedBranches, []);
-  assert.equal(selected.currentBranchId, null);
-  assert.equal(selected.defaultBranchId, null);
-  assert.equal(selected.canSwitchBranch, false);
-});
-
-test("selectOperatorBranchScope -> warehouse manager operates only central_supply sites", () => {
+test("selectOperatorBranchScope -> branch-scoped roles never see central-kind sites", () => {
   const selected = selectOperatorBranchScope(
-    claims("warehouse_manager", null),
+    claims("branch_manager", 1),
     BRANCHES,
     null,
   );
 
   assert.deepEqual(
     selected.allowedBranches.map((branch) => branch.id),
-    [20],
-  );
-  assert.equal(selected.currentBranchId, 20);
-  assert.equal(selected.canSwitchBranch, false);
-});
-
-test("selectOperatorBranchScope -> production manager operates only central_kitchen sites", () => {
-  const selected = selectOperatorBranchScope(
-    claims("production_manager", null),
-    BRANCHES,
-    null,
-  );
-
-  assert.deepEqual(
-    selected.allowedBranches.map((branch) => branch.id),
-    [10],
-  );
-  assert.equal(selected.currentBranchId, 10);
-});
-
-test("selectOperatorBranchScope -> central-site roles cannot select regular or foreign-kind sites", () => {
-  assert.equal(
-    selectOperatorBranchScope(claims("warehouse_manager", null), BRANCHES, 1)
-      .currentBranchId,
-    20,
-  );
-  assert.equal(
-    selectOperatorBranchScope(claims("warehouse_manager", null), BRANCHES, 10)
-      .currentBranchId,
-    20,
+    [1],
   );
 });
 
 test("selectBranchScope -> tenant-wide roles see every branch kind", () => {
-  const scope = selectBranchScope(claims("office", null), BRANCHES, null, [
+  const scope = selectBranchScope(claims("owner", null), BRANCHES, null, [
     "owner",
-    "office",
   ]);
 
   assert.deepEqual(
@@ -143,7 +104,6 @@ test("selectBranchScope -> tenant-wide roles see every branch kind", () => {
 test("selectBranchScope -> pinned role locked to own branch, requested ignored", () => {
   const scope = selectBranchScope(claims("cashier", 2), BRANCHES, 1, [
     "owner",
-    "office",
   ]);
 
   assert.deepEqual(
@@ -218,7 +178,7 @@ test("parseBranchIdParam -> parses a single numeric value, rejects malformed/non
 });
 
 test("resolveListScope -> routeBranchId (embedded) and queryBranchId (office) requesting the same branch resolve identically", () => {
-  const tenantWideRoles: readonly JwtClaims["user_role"][] = ["owner", "office"];
+  const tenantWideRoles: readonly JwtClaims["user_role"][] = ["owner"];
 
   const embedded = resolveListScope(
     {},

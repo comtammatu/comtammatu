@@ -21,6 +21,10 @@ import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { transferReceive } from "@/(protected)/inventory/transfer-actions";
 import {
+  BranchOperatorControlBar,
+  BranchOperatorPage,
+} from "@lib/branch-operator/components/branch-operator-page";
+import {
   isTransferReceiveReady,
   type TransferDetail,
 } from "@lib/inventory/transfer-detail-model";
@@ -120,62 +124,77 @@ export function TransferReceiveClient({
 
   if (!isReceiveMode) {
     return (
-      <>
-        <div className="flex items-center gap-2">
-          <Button
-            asChild
-            variant="ghost"
-            size="icon-touch"
-            className="shrink-0"
+      <BranchOperatorPage
+        title={transfer.code}
+        description={receiveCopy.receiveFrom(transfer.fromBranch)}
+        hideHeaderOnMobile
+      >
+        <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-28">
+          <BranchOperatorControlBar className="sm:hidden">
+            <Button asChild variant="ghost" size="icon-touch">
+              <Link href={backHref} aria-label={ACTIONS_VI.back}>
+                <IconArrowLeft />
+              </Link>
+            </Button>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-mono text-sm font-semibold tabular-nums">
+                {transfer.code}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {receiveCopy.receiveFrom(transfer.fromBranch)}
+              </p>
+            </div>
+          </BranchOperatorControlBar>
+          <AppEmptyState
+            compact
+            mode="no-data"
+            title={
+              isWaitingForTransit
+                ? receiveCopy.receiveWaitingTransit
+                : receiveCopy.receiveNotReady
+            }
+            description={
+              isWaitingForTransit
+                ? receiveCopy.receiveWaitingTransitDescription
+                : receiveCopy.receiveNotReadyDescription
+            }
+            symbol="riceGrain"
           >
-            <Link href={backHref} aria-label={ACTIONS_VI.back}>
-              <IconArrowLeft className="size-4" />
-            </Link>
-          </Button>
-          <span className="min-w-0 flex-1 truncate font-mono text-sm font-semibold">
-            {transfer.code}
-          </span>
+            <Button asChild variant="outline" size="sm">
+              <Link href={isWaitingForTransit ? backHref : detailHref}>
+                {isWaitingForTransit
+                  ? receiveCopy.receiveBackToList
+                  : receiveCopy.receiveOpenDetail}
+              </Link>
+            </Button>
+          </AppEmptyState>
         </div>
-        <AppEmptyState
-          compact
-          mode="no-data"
-          title={
-            isWaitingForTransit
-              ? receiveCopy.receiveWaitingTransit
-              : receiveCopy.receiveNotReady
-          }
-          description={
-            isWaitingForTransit
-              ? receiveCopy.receiveWaitingTransitDescription
-              : receiveCopy.receiveNotReadyDescription
-          }
-          symbol="riceGrain"
-        >
-          <Button asChild variant="outline" size="sm">
-            <Link href={isWaitingForTransit ? backHref : detailHref}>
-              {isWaitingForTransit
-                ? receiveCopy.receiveBackToList
-                : receiveCopy.receiveOpenDetail}
-            </Link>
-          </Button>
-        </AppEmptyState>
-      </>
+      </BranchOperatorPage>
     );
   }
 
   return (
-    <div className="flex w-full flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="icon-touch" className="shrink-0">
-          <Link href={backHref} aria-label={ACTIONS_VI.back}>
-            <IconArrowLeft className="size-4" />
-          </Link>
-        </Button>
-        <span className="font-mono text-sm font-semibold">{transfer.code}</span>
-        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-          {receiveCopy.receiveFrom(transfer.fromBranch)}
-        </span>
-      </div>
+    <BranchOperatorPage
+      title={transfer.code}
+      description={receiveCopy.receiveFrom(transfer.fromBranch)}
+      hideHeaderOnMobile
+    >
+      <div className="flex w-full touch-manipulation flex-col gap-3 pb-28">
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button asChild variant="ghost" size="icon-touch" className="shrink-0">
+            <Link href={backHref} aria-label={ACTIONS_VI.back}>
+              <IconArrowLeft />
+            </Link>
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-mono text-sm font-semibold tabular-nums">
+              {transfer.code}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {receiveCopy.receiveFrom(transfer.fromBranch)}
+            </p>
+          </div>
+        </BranchOperatorControlBar>
 
       <div className="rounded-md bg-muted/50 p-2.5">
         <div className="flex items-center gap-2">
@@ -290,6 +309,14 @@ export function TransferReceiveClient({
 
       <AppDetailFooter
         sticky
+        leading={
+          <Button variant="outline" size="touch" asChild>
+            <Link href={backHref}>
+              <IconArrowLeft data-icon="inline-start" />
+              {ACTIONS_VI.back}
+            </Link>
+          </Button>
+        }
         trailing={
           <Button
             type="button"
@@ -327,6 +354,7 @@ export function TransferReceiveClient({
         onConfirm={handleSheetConfirm}
         allowDecimal
       />
-    </div>
+      </div>
+    </BranchOperatorPage>
   );
 }

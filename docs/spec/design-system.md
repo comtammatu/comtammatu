@@ -131,7 +131,7 @@ Approved project utilities:
   bottom-sheet footers that sit above a mobile home indicator;
   `workflow-safe-pt` protects public workflow headers below standalone-PWA
   status chrome.
-- `chrome-safe-pb` / `chrome-safe-bottom` / `chrome-safe-top` are limited to
+- `chrome-safe-pb` / `chrome-safe-top` are limited to
   fixed or sticky app shell chrome affected by mobile safe areas. Side
   `SheetContent` owns its top/bottom safe-area inset padding by default.
 - `chrome-tap` disables the mobile tap-highlight/callout flash on app chrome
@@ -418,7 +418,7 @@ The system is **border-first**: resting surfaces are separated by `--border`, no
 | Sheet / Drawer | `shadow-effect-drawer`             | `sheet` content and `drawer` (vaul `before:`) panel.                                                                                                                                         |
 | Tooltip        | `shadow-effect-tooltip`            | `tooltip` content.                                                                                                                                                                           |
 | Toast          | `--effect-toast` (on `.cn-toast`)  | Sonner toasts — `box-shadow: var(--effect-toast)` is applied directly on `.cn-toast` in `globals.css`; there is no separate utility class.                                                   |
-| Sticky CTA     | `shadow-lg`                        | CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky chrome-safe-bottom` footers).                                                              |
+| Sticky CTA     | `shadow-lg`                        | CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky bottom-0 chrome-safe-pb` footers).                                                              |
 | Ceiling        | `shadow-xl` / `shadow-2xl`         | **Only** fixed surfaces floating over scrolling content: POS mobile action bar (`shadow-2xl`), KDS focus card / chart tooltip (`shadow-xl`). Nowhere else.                                   |
 | Overlay scrim  | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop = `bg-effect-scrim`; Drawer backdrop = `drawer-scrim` (scrim + `--effect-drawer-blur`).                                                                                |
 

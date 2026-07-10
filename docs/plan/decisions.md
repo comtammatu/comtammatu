@@ -291,11 +291,11 @@ Scope: Office-side People/Branch IA thuộc D048; "Việc trong ca" thuộc D052
 
 ## D055: Operator plane cho warehouse/production qua central site (2026-07-02)
 
-**Decision (owner, net — §1 đã thi công soft-routing; số hiệu § giữ vì code auth cite trực tiếp):**
+**Decision (owner, net — §1 hết hiệu lực, sửa bởi D076; số hiệu § giữ vì code auth cite trực tiếp):**
 
-1. **§1:** `warehouse_manager` + `production_manager` home = central site của mình (`/br/{central-site-id}` theo `branches.branch_kind`, D000) — operator hub là home thống nhất cho mọi role gắn site. Thi công soft-routing: claims giữ tenant-level (`branch_id` null); proxy gate `/br/{id}` theo branch-kind khớp domain role (site active); station POS/KDS/Runner vẫn khóa kind `branch`; `returnTo` deep-link giữ qua `homeBranchId` server-computed; DB auth/profile twins normalize 2 role này về `branch_id = null` (migration trong chain).
-2. §2 (thi công là workstream riêng) — đã hoàn thành trong §1 + D066/D067.
-3. §3 (`/employee` làm home cho `office`) — **hết hiệu lực:** `/employee` đã retired; `office` home = `/finance` (D058 §3).
+1. **§1 — hết hiệu lực (D076):** soft-routing `warehouse_manager`/`production_manager` → central site đã bị xoá cùng lúc hai bucket này bị retire. Xem D076.
+2. §2 (thi công là workstream riêng) — đã hoàn thành trong §1 + D066/D067; §1 nay retired theo D076 nhưng D066/D067 không đảo.
+3. §3 (`/employee` làm home cho `office`) — **hết hiệu lực:** `/employee` đã retired; `office` bucket cũng đã retired theo D076.
 
 Canonical: bảng generated "Post-Login Home By Role" trong `docs/spec/role-route-matrix.md`. Mở rộng D050, không đảo.
 
@@ -451,7 +451,7 @@ Canonical presentation rule: `docs/modules/ui.md` § Branch Operator Hub. Đảo
 
 **Decision (owner 2026-07-10):**
 
-1. **Site 16 tắt hẳn:** chuyển toàn bộ tồn về Phước Hải (site 3) qua luồng transfer sẵn có (`central_kitchen → branch` hợp lệ theo transfer matrix D000) rồi `is_active = false`. Nhân sự bucket `production_manager` do owner sắp xếp lại role. DB enum `branch_kind` GIỮ nguyên (lịch sử data); chỉ vận hành và UI hết fork.
+1. **Site 16 tắt hẳn:** chuyển toàn bộ tồn về Phước Hải (site 3) qua luồng transfer sẵn có (`central_kitchen → branch` hợp lệ theo transfer matrix D000) rồi `is_active = false`. Nhân sự bucket `production_manager` — **sửa bởi D076:** không sắp xếp lại role, tài khoản bị xoá cùng lượt retire bucket (không auto-remap). DB enum `branch_kind` GIỮ nguyên (lịch sử data); chỉ vận hành và UI hết fork.
 2. **Một kind vận hành duy nhất `branch`.** Mọi nâng cấp stock đã chuẩn bị cho đợt Bếp (mockup GRN 3 bước · Ghi mẻ một màn · Tồn 44px, đã owner-duyệt) áp cho `/br/[branchId]/(operator)/stock/*` kind `branch`. Plan sống ở `tasks/todo.md` § Branch Stock Cutover.
 3. **Công thức = Office-only:** operator dùng công thức để prefill định mức khi ghi mẻ, không sửa; tile `production/recipes` rời operator, quản trị công thức về `/inventory` (owner/quản lý).
 4. **Chỉ "Danh mục" mở cho chi nhánh; PO và Trả hàng NCC NGHỈ HẲN cả hai plane** (owner siết lại cùng ngày): GRN đã NCC-first (`po_id` nullable) nên không cần PO; hàng lỗi xử qua Báo hao hụt (ảnh + lý do) thay Trả NCC. Bảng + lịch sử DB giữ nguyên; gỡ tile/route/action khỏi operator lẫn Office. Catalog mở cho `branch` KHÔNG cần grant mới — categories/units/ingredients gate bằng RLS/module, suppliers dùng `supplier_manage` đã cấp ở D068 §4.
@@ -482,7 +482,7 @@ Canonical presentation rule: `docs/modules/ui.md` § Branch Operator Hub. Đảo
 1. **Order của POS là sự thật duy nhất.** Một seating = một `orders` mở trên bàn (`payment_status <> 'paid'` và `status not in (completed, cancelled)`). Xoá `self_order_sessions`, `self_order_batches`, `self_order_session_devices`, `tables.self_order_capability_version`, `tables.realtime_topic_token`, toàn bộ RPC `self_order_*_v2`. Còn đúng 1 bảng mới `self_order_requests` với 1 enum 3 giá trị `pending | accepted | rejected`, unique partial index 1 hàng đợi/bàn.
 2. **Gate 1 lần mỗi seating, không phải mỗi lượt.** Bàn chưa có order mở → lượt đầu vào hàng đợi `pending`, staff duyệt → `create_order` → `route_order_to_kds` chạy sẵn. Bàn đã có order mở (POS tạo hay QR tạo đều được) → khách gửi món là `append_order_items` thẳng xuống bếp, không ai duyệt. Bàn có ≥2 bill mở → rơi về `pending`, staff chọn bill đích lúc duyệt; hệ thống KHÔNG đoán bill.
 3. **Bỏ sạch ràng buộc thiết bị.** Xoá cookie `device_token`, mã ghép, xin join, thu hồi thiết bị, nhánh 428-retry ở client. Đánh đổi được owner chấp nhận có ý thức: ai có ảnh chụp QR bàn đều đọc được bill và thêm món khi bàn đang mở. Duyệt lượt đầu chặn người lạ MỞ bàn, không chặn người lạ THÊM món vào bàn đang mở. Phòng ăn là biên tin cậy; món lạ ra bàn thì nhân viên thấy. Rate limit (`self_order_rate_buckets`) giữ nguyên.
-4. **Luồng thanh toán giữ nguyên** (owner không đánh dấu sai): đúng 1 intent sống, khách không tự huỷ, staff huỷ. Nút huỷ dời từ `SelfOrderApprovalSheet` (bị xoá) vào sheet bill của bàn ở table map — nếu không dời, khách kẹt vĩnh viễn sau VietQR hết hạn.
+4. **Luồng thanh toán giữ nguyên ở cấp sản phẩm** (owner không đánh dấu sai): đúng 1 intent sống trên mỗi order, khách không tự huỷ, staff huỷ. `self_order_payment_requests` bỏ phụ thuộc session và bind trực tiếp bằng `order_id`; bàn có nhiều bill thì khách không được xem/khởi tạo thanh toán cho tới khi staff chọn bill. Nút huỷ dời từ `SelfOrderApprovalSheet` (bị xoá) vào sheet bill của bàn ở table map — nếu không dời, khách kẹt vĩnh viễn sau VietQR hết hạn.
 5. **IA khách: menu là trang duy nhất.** Bỏ `Tabs`, bỏ `StatusPill`, bỏ tên chi nhánh khỏi header. `Hoá đơn` thành nút + `Badge` ở góc phải header, mở `Drawer`, **không tự bật** (quy tắc auto-switch-to-Bill của spec cũ chết theo Tabs). Trạng thái workflow chỉ nói ở `NoteCallout`/`Alert`, một chỗ duy nhất.
 6. **Mascot mở cho G0.** `BrandMascot animated={false}` hợp lệ trên màn "bàn không khả dụng" — đảo dòng `BrandMascot = Forbidden` của spec cũ. Không asset mới, không keyframe mới (mascot chỉ có 1 ảnh `cotlet.png`, mood là CSS).
 7. **Nổi bật món chính bằng `menu_categories.type`** (`main_dish` → thẻ lớn có ảnh; `side_dish | drink | dessert` → hàng gọn). Không thêm cột `is_featured` trên `menu_items`.
@@ -491,3 +491,18 @@ Canonical presentation rule: `docs/modules/ui.md` § Branch Operator Hub. Đảo
 10. **Sau khi trả tiền, order biến khỏi snapshot.** Màn "Đã thanh toán" chỉ sống trong phiên trình duyệt hiện tại; reload → menu sạch. Khách bàn sau không bao giờ thấy bill cũ.
 
 **Consequences:** Bàn kẹt và `revoked ⇒ in lại QR` biến mất vì không còn session để kẹt và không còn `revoked`; `trg_order_release_table` có sẵn lo phần trả bàn. `self_order_batches` chết vì lịch sử lượt đã nằm sẵn ở `kitchen_send_batches`. Còn 6 RPC. Chưa có màn admin bật/tắt `self_order_enabled` hay in QR bàn — lỗ hổng đã biết, ngoài scope đợt này. Canonical: `docs/spec/self-order-guest-ui.md`. `docs/spec/self-order-motion-design.md` phải rà lại vì nó tham chiếu Tabs + cart cũ.
+
+## D076: Retire bucket `office`, `warehouse_manager`, `production_manager` — 5 bucket còn lại, xoá tài khoản không remap (2026-07-10)
+
+**Context:** Site trung tâm (Kho Tổng, Bếp Trung Tâm) đã tắt hẳn theo D073; `warehouse_manager`/`production_manager` không còn site để soft-route vào (D055 §1 chết theo). `office` chỉ còn nghĩa "đọc `/finance`" mà owner tự làm qua bucket `owner`; giữ 3 bucket rỗng-chức-năng này chỉ tổ tốn nhánh code/test.
+
+**Decision (owner 2026-07-10):**
+
+1. **`ACCESS_BUCKETS` còn đúng 5:** `owner | branch_manager | cashier | chef | branch_staff`. Xoá `office`, `warehouse_manager`, `production_manager` khỏi type, `MODULE_ACL`, mọi SQL twin (`private.staff_role_from_position_code`, `public.auth_role_to_position`, `public.position_id_from_access_bucket`, `public.admin_update_profile`).
+2. **Xoá tài khoản, KHÔNG auto-remap.** Mọi `auth.users`/`profiles` đang gắn bucket retired bị hard-delete (cascade); FK non-cascade (GRN/PO/stock/payments/...) reassign về owner trước khi xoá để không vỡ ràng buộc — không giữ lại tài khoản dưới bucket khác. Hệ quả chấp nhận: lịch sử `attendance_records`/`leave_requests`/payroll của các tài khoản này cascade-xoá theo `employees`.
+3. **HR position code giữ, chỉ soft-retire:** `office, accountant, marketing, technician, design_construction, warehouse_manager, central_supply_manager, production_manager, central_kitchen_manager, head_chef` → `positions.is_active = false`, không hard-delete (giữ lịch sử chấm công/lương cũ resolvable). `role_templates` của các code này bị xoá.
+4. **`branch_kind` enum GIỮ nguyên** (`central_supply`, `central_kitchen` vẫn tồn tại trên enum cho dữ liệu lịch sử) — chỉ 2 role bucket từng soft-route vào đó bị retire, không phải khái niệm site.
+5. **Central-site soft-routing xoá sạch khỏi app layer:** `centralSiteBranchKindForRole`, `resolveCentralSiteHomeBranchId`, `homeBranchId` trên `BranchHubContext`/`resolvePostLoginRedirect` — proxy + scope engine chỉ còn so khớp `claims.branch_id === routeBranchId` (owner vẫn cross-branch không đổi).
+6. **Office ACL của `branch_manager` giữ nguyên như trước** — quyết định này không đụng tới quyền branch_manager đã có trên inventory/hr/menu/orders.
+
+**Consequences:** D055 §1 hết hiệu lực (sửa tại chỗ). D073 §1 "owner sắp xếp lại role production_manager" sửa thành xoá tài khoản. Canonical: `packages/shared/src/auth/types.ts` (`ACCESS_BUCKETS`), bảng generated trong `docs/spec/role-route-matrix.md`.

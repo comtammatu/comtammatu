@@ -42,7 +42,7 @@ export type StockIngredientDetailMovement = {
   transferId: number | null;
   issueId: number | null;
   orderId: number | null;
-  productionOrderId: number | null;
+  productionRunId: number | null;
   locationName: string | null;
   locationCode: string | null;
 };
@@ -148,8 +148,8 @@ export function stockMovementReferenceLabel(
   if (movement.issueId != null) {
     return stockCopy.movement.issueRef(movement.issueId);
   }
-  if (movement.productionOrderId != null) {
-    return stockCopy.movement.productionRef(movement.productionOrderId);
+  if (movement.productionRunId != null) {
+    return stockCopy.movement.productionRef(movement.productionRunId);
   }
   if (movement.orderId != null) {
     return stockCopy.movement.orderRef(movement.orderId);

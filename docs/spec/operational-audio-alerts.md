@@ -1,7 +1,7 @@
 # Operational Audio Alerts
 
-> Status: design contract | Updated: 2026-07-09 | Scope: device-local beep + voice alerts on open POS/KDS surfaces\
-> Decision: `docs/plan/adr/0008-operational-audio-alerts.md`
+> Status: design contract | Updated: 2026-07-10 | Scope: device-local beep + voice alerts on open POS/KDS surfaces\
+> Decision: `docs/plan/adr/0008-operational-audio-alerts.md` (voice engine amended to browser TTS, D074)
 
 ## UI Scope Declaration
 
@@ -26,10 +26,11 @@ Do not collapse channels. A spoken kitchen alert is not an audit trail and not a
 ## Authority
 
 1. Architecture decision: `docs/plan/adr/0008-operational-audio-alerts.md`
-2. Current beep runtime: `apps/web/lib/audio-signal.ts`
-3. KDS alert taxonomy: `apps/web/app/(protected)/br/[branchId]/kds/_lib/sound-alerts.ts`
-4. Device prefs helper: `apps/web/lib/device-prefs.ts` (+ `scripts/check-client-storage.mjs` allowlist)
-5. Channel boundary: `docs/spec/toast-notification-system.md`, `docs/agent/rules/notifications.md`
+2. Alert entrypoint + mode resolution: `apps/web/lib/operational-audio.ts`
+3. Beep runtime: `apps/web/lib/audio-signal.ts`
+4. KDS alert taxonomy: `apps/web/app/(protected)/br/[branchId]/kds/_lib/sound-alerts.ts`
+5. Device prefs helper: `apps/web/lib/device-prefs.ts` (+ `scripts/check-client-storage.mjs` allowlist)
+6. Channel boundary: `docs/spec/toast-notification-system.md`, `docs/agent/rules/notifications.md`
 
 ## Core Model
 
@@ -38,14 +39,14 @@ Board/realtime event on open POS or KDS
   -> classify stable alert kind
   -> read device audio mode (off | beep | voice | beep+voice)
   -> if mode includes beep: play mapped SignalTone (debounce)
-  -> if mode includes voice: enqueue short pre-recorded utterance (single-flight + coalesce)
+  -> if mode includes voice: speak the short template via speechSynthesis (single-flight + coalesce)
   -> UI toast/board update remains independent
 ```
 
 ### Non-goals
 
-- No live `speechSynthesis` as primary engine
-- No cloud/realtime TTS in MVP
+- No cloud/realtime TTS
+- No pre-recorded clip pack in MVP (a brand voice pack is a later phase)
 - No reading full menu item lists in MVP
 - No server-synced audio prefs
 - No `public.notifications` insert for operational audio
@@ -66,9 +67,8 @@ Stable `kind` strings. Beep mapping reuses existing `SignalTone` values where th
 Classification MUST stay aligned with `getKdsNewTicketSignalTone` / toast titles in `sound-alerts.ts`. If taxonomy drifts, fix both sides in one change.
 
 `{location}` is optional. Use “ bàn {table}” only when a real table number is
-available; for takeaway, delivery, or missing/ambiguous table metadata, use the
-base clip without a location (or beep-only if the base clip is missing). Never
-invent a table or order label.
+available; for takeaway, delivery, or missing/ambiguous table metadata, speak the
+base phrase without a location. Never invent a table or order label.
 
 ### POS (phase 3 — contract reserved)
 
@@ -109,7 +109,7 @@ Compatibility with legacy boolean prefs:
 
 When writing the new mode key, implementations MAY leave or clear the legacy key, but reads MUST prefer `*:audio-mode:*` when present.
 
-UI chrome may keep a simple toggle for MVP (map checked → `beep` or last non-off mode; unchecked → `off`) and expand to an explicit mode control later. Enabling audio still requires a user gesture so `AudioContext` / media can start (preview beep/voice on enable is allowed and recommended).
+KDS chrome exposes the mode through one cycling button: `off → beep → beep+voice → off`. `voice`-only is a valid stored mode (reads resolve it, playback honors it) but the chrome does not offer it; a dedicated mode control may expose it later. Enabling audio still requires a user gesture so `AudioContext` / `speechSynthesis` can start — the cycle button previews the newly selected mode, which doubles as that gesture.
 
 ## Playback Rules
 
@@ -118,37 +118,23 @@ UI chrome may keep a simple toggle for MVP (map checked → `beep` or last non-o
 3. **Voice single-flight.** At most one voice utterance plays at a time per page runtime.
 4. **Coalesce.** If multiple KDS alert groups become ready in one sync tick, play one beep for the highest-priority kind (existing `pickHigherPriorityKdsSignalTone` behavior) and at most one voice line for that tick. Under sustained burst, prefer “N phiếu mới” summary clips over reading every table.
 5. **Length budget.** Target ≤ ~1.5s per utterance in MVP. Reject copy that needs a sentence.
-6. **Failure fallback.** Missing asset, decode error, or autoplay block → skip voice; beep still follows mode. Never throw into UI.
+6. **Failure fallback.** No `vi-*` voice on the device, speech error, or autoplay block → skip voice; beep still follows mode. Never throw into UI.
 7. **No overlap wars.** Starting a higher-priority voice MAY cut the current voice; lower-priority waiting items may be dropped when coalesced.
 
-## Clip Pack Contract
+## Voice Engine Contract
 
-- Engine: pre-recorded static assets served with the web app (e.g. `apps/web/public/audio/alerts/…` or an equivalent bundled path).
-- Format: short MP3 or WAV; keep files small for kitchen tablets.
-- Pack layout (illustrative):
-
-```text
-audio/alerts/
-  kds-new.mp3
-  kds-append.mp3
-  kds-add-on.mp3
-  ban.mp3                 # optional “bàn” glue clip
-  digits/0.mp3 … 9.mp3    # or a documented alternate slot strategy
-  pos-self-order.mp3      # phase 3
-  pos-print-failed.mp3
-  pos-out-of-stock.mp3
-```
-
-- Table numbers: concatenate approved digit/glue clips, or use a finite set of prebuilt phrases for the branch’s real table range. Either strategy is allowed; the chosen strategy MUST be deterministic and unit-tested.
-- Brand packs may replace file bytes later; `kind` and templates stay stable.
-- Live `speechSynthesis` is reserved only as an unshipped experiment behind an explicit future decision — not a fallback in production MVP.
+- Engine: `window.speechSynthesis` with `SpeechSynthesisUtterance`. No audio assets ship with the app.
+- Locale: `lang = "vi-VN"`. When the device exposes a loaded voice list, bind the first `vi-*` voice; when that list is loaded and holds no `vi-*` voice, skip voice for the event. An empty list means voices have not loaded yet — speak and let the engine choose.
+- Table numbers are string interpolation on the template, not concatenated assets. The utterance builder MUST be a pure, unit-tested function.
+- Rate is tuned for kitchen noise, not naturalness; keep utterances inside the length budget above.
+- A recorded brand voice pack may replace this engine later; `kind` strings and templates stay stable.
 
 ## Surface Rules
 
 ### KDS
 
 - Live board remains the source of truth; audio only calls attention.
-- Sound/mode control stays in KDS chrome (existing chuông control evolves to mode-aware labeling).
+- Sound/mode control stays in KDS chrome: the existing chuông button cycles the mode and carries a mode-aware `aria-label`.
 - Toast titles for new-ticket groups stay aligned with voice kind (`getKdsNewTicketToastTitle`).
 
 ### POS
@@ -166,16 +152,12 @@ audio/alerts/
 ```ts
 type OperationalAudioMode = "off" | "beep" | "voice" | "beep+voice";
 
-type OperationalAlertKind =
-  | "kds.new"
-  | "kds.append"
-  | "kds.add_on"
-  | "pos.self_order"
-  | "pos.print_failed"
-  | "pos.out_of_stock";
+// POS kinds join this union when phase 3 lands.
+type OperationalAlertKind = "kds.new" | "kds.append" | "kds.add_on";
 
 type PlayOperationalAlertInput = {
   kind: OperationalAlertKind;
+  mode: OperationalAudioMode; // the surface owns the pref state
   slots?: { tableLabel?: string };
   force?: boolean; // preview / ignore debounce
 };
@@ -196,14 +178,14 @@ Exact module path is an implementation detail; keep it under `apps/web/lib/` nex
 
 ### Phase 1 (KDS MVP)
 
-- [ ] With mode `beep`, behavior matches today’s KDS tones and debounce.
-- [ ] With mode `beep+voice`, each of the three KDS kinds speaks the fixed template (or beep-only if table slot unavailable).
-- [ ] With mode `voice`, no beep; voice still single-flight.
-- [ ] With mode `off`, silence.
-- [ ] Burst of tickets in one tick does not stack overlapping full utterances.
-- [ ] Legacy `kds:sound=1` still enables beep after upgrade before the new key is written.
-- [ ] Unit tests cover kind classification, priority, coalesce, and mode resolution.
-- [ ] No inserts into `public.notifications` from the audio path.
+- [x] With mode `beep`, behavior matches today’s KDS tones and debounce.
+- [x] With mode `beep+voice`, each of the three KDS kinds speaks the fixed template (base phrase when the table slot is unavailable).
+- [x] With mode `voice`, no beep; voice still single-flight.
+- [x] With mode `off`, silence.
+- [x] Burst of tickets in one tick does not stack overlapping full utterances.
+- [x] Legacy `kds:sound=1` still enables beep after upgrade before the new key is written.
+- [x] Unit tests cover kind classification, priority, coalesce, and mode resolution.
+- [x] No inserts into `public.notifications` from the audio path.
 
 ### Phase 3 (POS)
 
@@ -212,8 +194,8 @@ Exact module path is an implementation detail; keep it under `apps/web/lib/` nex
 
 ## Verification
 
-- Targeted: extend `apps/web/tests/kds-sound-alerts.test.ts` (and add mode/queue tests beside it).
-- Manual kitchen smoke: enable audio on a real tablet, verify autoplay gesture, rush-hour coalesce, and off switch.
+- Targeted: `apps/web/tests/operational-audio.test.ts` (mode resolution, cycle, utterance builder, kind map) + `apps/web/tests/kds-sound-alerts.test.ts` (classification, priority, coalesce).
+- Manual kitchen smoke: enable audio on a real tablet, verify the autoplay gesture, that a `vi-VN` voice exists, rush-hour coalesce, and the off switch.
 - Full gate before marking implementation complete: `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` (plus relevant tests).
 
 ## Review Tier

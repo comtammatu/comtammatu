@@ -39,7 +39,6 @@ import {
   FieldLegend,
   FieldSet,
 } from "@comtammatu/ui/components/field";
-import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { AppEmptyState } from "@/components/surface";
 import type {
@@ -73,54 +72,59 @@ export function MenuPanel({
     (sum, category) => sum + category.menu_items.length,
     0,
   );
+  const activeCategory = availableCategories.find(
+    (category) => String(category.id) === activeCategoryValue,
+  );
   const visibleItems =
     activeCategoryValue === ALL_MENU_VALUE
       ? availableCategories.flatMap((category) => category.menu_items)
-      : (availableCategories.find(
-          (category) => String(category.id) === activeCategoryValue,
-        )?.menu_items ?? []);
+      : (activeCategory?.menu_items ?? []);
   const isAllMenuActive = activeCategoryValue === ALL_MENU_VALUE;
+  const featuredMainDishes = availableCategories
+    .filter((category) => category.type === "main_dish")
+    .flatMap((category) => category.menu_items)
+    .slice(0, 3);
+  const featuredMainDishIds = new Set(
+    featuredMainDishes.map((item) => item.id),
+  );
 
-  const tabPillClassName =
-    "group/tab min-h-11 !flex-none gap-1.5 bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground";
-  const tabBadgeClassName =
-    "hidden shrink-0 text-xs group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
-  const unifiedTabs = (
-    <Tabs
-      value={activeCategoryValue}
-      onValueChange={onActiveCategoryChange}
-      className="no-scrollbar min-w-0 flex-1 overflow-x-auto overflow-y-hidden"
+  const categoryPills = (
+    <div
+      aria-label={SELF_ORDER_VI.categoriesAria}
+      className="no-scrollbar flex min-w-0 flex-1 gap-1.5 overflow-x-auto"
     >
-      <TabsList
-        aria-label={SELF_ORDER_VI.categoriesAria}
-        className="!h-auto w-max min-w-full !justify-start gap-1.5 !bg-transparent !p-0"
+      <Button
+        type="button"
+        size="touch"
+        variant={isAllMenuActive ? "default" : "outline"}
+        className="shrink-0 rounded-full px-3"
+        onClick={() => onActiveCategoryChange(ALL_MENU_VALUE)}
       >
-        <TabsTrigger value={ALL_MENU_VALUE} className={tabPillClassName}>
-          {SELF_ORDER_VI.allCategories}
-          <Badge variant="outline" className={tabBadgeClassName}>
-            {allMenuItemCount}
-          </Badge>
-        </TabsTrigger>
-        {availableCategories.map((category) => (
-          <TabsTrigger
+        {SELF_ORDER_VI.allCategories}
+        <Badge variant="outline">{allMenuItemCount}</Badge>
+      </Button>
+      {availableCategories.map((category) => {
+        const value = String(category.id);
+        return (
+          <Button
             key={category.id}
-            value={String(category.id)}
-            className={tabPillClassName}
+            type="button"
+            size="touch"
+            variant={activeCategoryValue === value ? "default" : "outline"}
+            className="shrink-0 rounded-full px-3"
+            onClick={() => onActiveCategoryChange(value)}
           >
             {category.name}
-            <Badge variant="outline" className={tabBadgeClassName}>
-              {category.menu_items.length}
-            </Badge>
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+          </Button>
+        );
+      })}
+    </div>
   );
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <div className="border-b border-border bg-background px-3 py-2">
-        <div className="flex items-center">{unifiedTabs}</div>
+        <div className="flex items-center">{categoryPills}</div>
       </div>
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         <div className="flex flex-col gap-4 px-2 pb-44 pt-2 sm:pb-32">
@@ -137,31 +141,62 @@ export function MenuPanel({
               compact
             />
           ) : isAllMenuActive ? (
-            availableCategories.map((category) => (
-              <section
-                key={category.id}
-                className="flex min-w-0 flex-col gap-3"
-              >
-                <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-2 backdrop-blur">
-                  <h2 className="font-heading truncate text-base font-semibold">
-                    {category.name}
-                  </h2>
-                  <Badge variant="outline" className="shrink-0 text-sm">
-                    {category.menu_items.length}
-                  </Badge>
-                </div>
-                <MenuItemGrid
-                  items={category.menu_items}
-                  onAdd={onAdd}
-                  disabled={disabled}
-                />
-              </section>
-            ))
+            <>
+              {featuredMainDishes.length > 0 ? (
+                <section className="flex min-w-0 flex-col gap-3">
+                  <div className="flex min-w-0 items-center justify-between gap-3 px-1">
+                    <h2 className="font-heading truncate text-base font-semibold">
+                      {SELF_ORDER_VI.featuredMainDishes}
+                    </h2>
+                    <Badge variant="outline" className="shrink-0 text-sm">
+                      {featuredMainDishes.length}
+                    </Badge>
+                  </div>
+                  <MenuItemGrid
+                    items={featuredMainDishes}
+                    onAdd={onAdd}
+                    disabled={disabled}
+                    featured
+                  />
+                </section>
+              ) : null}
+              {availableCategories.map((category) => {
+                const items =
+                  category.type === "main_dish"
+                    ? category.menu_items.filter(
+                        (item) => !featuredMainDishIds.has(item.id),
+                      )
+                    : category.menu_items;
+                if (items.length === 0) return null;
+                return (
+                  <section
+                    key={category.id}
+                    className="flex min-w-0 flex-col gap-3"
+                  >
+                    <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-2 backdrop-blur">
+                      <h2 className="font-heading truncate text-base font-semibold">
+                        {category.name}
+                      </h2>
+                      <Badge variant="outline" className="shrink-0 text-sm">
+                        {items.length}
+                      </Badge>
+                    </div>
+                    <MenuItemGrid
+                      items={items}
+                      onAdd={onAdd}
+                      disabled={disabled}
+                      compact={category.type !== "main_dish"}
+                    />
+                  </section>
+                );
+              })}
+            </>
           ) : (
             <MenuItemGrid
               items={visibleItems}
               onAdd={onAdd}
               disabled={disabled}
+              compact={activeCategory?.type !== "main_dish"}
             />
           )}
         </div>
@@ -174,19 +209,25 @@ export function MenuItemGrid({
   items,
   onAdd,
   disabled = false,
+  compact = false,
+  featured = false,
 }: {
   items: SelfOrderMenuItem[];
   onAdd: (item: SelfOrderCartItem) => void;
   disabled?: boolean;
+  compact?: boolean;
+  featured?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {items.map((item) => (
+    <div className={compact ? "flex flex-col gap-2" : "grid grid-cols-2 gap-3"}>
+      {items.map((item, index) => (
         <MenuItemCard
           key={item.id}
           item={item}
           onAdd={onAdd}
           disabled={disabled}
+          compact={compact}
+          lead={featured && index === 0}
         />
       ))}
     </div>
@@ -197,10 +238,14 @@ function MenuItemCard({
   item,
   onAdd,
   disabled,
+  compact,
+  lead,
 }: {
   item: SelfOrderMenuItem;
   onAdd: (item: SelfOrderCartItem) => void;
   disabled: boolean;
+  compact: boolean;
+  lead: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -210,11 +255,20 @@ function MenuItemCard({
 
   return (
     <>
-      <MenuPhotoButton
-        item={item}
-        disabled={disabled}
-        onClick={() => setOpen(true)}
-      />
+      {compact ? (
+        <MenuCompactButton
+          item={item}
+          disabled={disabled}
+          onClick={() => setOpen(true)}
+        />
+      ) : (
+        <MenuPhotoButton
+          item={item}
+          disabled={disabled}
+          lead={lead}
+          onClick={() => setOpen(true)}
+        />
+      )}
       <SelfOrderItemSheet
         item={item}
         open={open && !disabled}
@@ -686,7 +740,7 @@ function SelfOrderItemSheet({
   );
 }
 
-function MenuPhotoButton({
+function MenuCompactButton({
   item,
   disabled,
   onClick,
@@ -699,9 +753,62 @@ function MenuPhotoButton({
     <Button
       type="button"
       variant="outline"
+      size="touch"
       disabled={disabled}
       aria-label={`${SELF_ORDER_VI.customizeItem}: ${item.name}, ${formatVND(Number(item.base_price))}`}
-      className="group relative aspect-[4/5] h-auto min-w-0 w-full overflow-hidden p-0 text-left"
+      className="h-auto w-full justify-start gap-3 p-2 text-left"
+      onClick={onClick}
+    >
+      <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted/50">
+        {item.image_url ? (
+          <Image
+            src={item.image_url}
+            alt=""
+            fill
+            sizes="56px"
+            className="object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <span className="flex size-full items-center justify-center">
+            <IconUtensils className="size-5 text-muted-foreground" />
+          </span>
+        )}
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="line-clamp-2 font-semibold">{item.name}</span>
+        {item.description ? (
+          <span className="line-clamp-1 text-xs font-normal text-muted-foreground">
+            {item.description}
+          </span>
+        ) : null}
+      </span>
+      <Badge variant="secondary" className="shrink-0 tabular-nums">
+        {formatVND(Number(item.base_price))}
+      </Badge>
+    </Button>
+  );
+}
+
+function MenuPhotoButton({
+  item,
+  disabled,
+  lead,
+  onClick,
+}: {
+  item: SelfOrderMenuItem;
+  disabled: boolean;
+  lead: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      disabled={disabled}
+      aria-label={`${SELF_ORDER_VI.customizeItem}: ${item.name}, ${formatVND(Number(item.base_price))}`}
+      className={`group relative h-auto min-w-0 w-full overflow-hidden p-0 text-left ${lead ? "col-span-2 aspect-[16/9]" : "aspect-[4/5]"}`}
       onClick={onClick}
     >
       <span className="absolute inset-0 block">
@@ -710,9 +817,13 @@ function MenuPhotoButton({
             src={item.image_url}
             alt=""
             fill
-            sizes="(min-width: 1280px) 20vw, (min-width: 640px) 50vw, 50vw"
+            sizes={
+              lead
+                ? "(min-width: 1280px) 42rem, (min-width: 640px) 50vw, 100vw"
+                : "(min-width: 1280px) 20vw, (min-width: 640px) 50vw, 50vw"
+            }
             className="object-cover"
-            loading="lazy"
+            loading={lead ? "eager" : "lazy"}
             decoding="async"
           />
         ) : (

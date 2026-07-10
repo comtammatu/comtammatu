@@ -26,7 +26,6 @@ test("POS payment confirmation runs from the Đã thanh toán button without an 
   assert.match(confirmPaidBlock, /confirmCashPaymentWithInvoice\(/);
   assert.match(confirmPaidBlock, /confirmVietQrPaymentWithInvoice\(/);
   assert.doesNotMatch(confirmPaidBlock, /await confirm\(/);
-  assert.doesNotMatch(billReceiptSource, /confirm-dialog/);
   assert.doesNotMatch(posMessagesSource, /confirmIssue/);
 });
 

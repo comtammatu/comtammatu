@@ -2,24 +2,22 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import {
   publicSelfOrderSnapshotSchema,
-  selfOrderBatchActionResponseSchema,
-  selfOrderDeviceActionResponseSchema,
   selfOrderPaymentActionResponseSchema,
+  selfOrderSubmitActionResponseSchema,
 } from "../lib/self-order/contracts";
 
 const publicSnapshot = {
   ok: true as const,
-  capabilityVersion: 2 as const,
-  access: "public" as const,
-  deviceAccess: "missing" as const,
-  seatingAccess: "available" as const,
+  state: "unopened" as const,
   branch: { name: "Chi nhánh thử nghiệm" },
-  table: { number: 4 },
-  session: null,
+  table: { id: 4, number: 4 },
+  openOrderCount: 0,
   order: null,
-  batches: [],
+  rounds: [],
+  request: null,
   paymentRequest: null,
   menu: [
     {
@@ -46,21 +44,108 @@ const publicSnapshot = {
   ],
 };
 
-test("public snapshot accepts the real public menu shape", () => {
+test("public snapshot accepts every derived guest state", () => {
+  for (const state of [
+    "unopened",
+    "awaiting_confirmation",
+    "rejected",
+    "open",
+    "payment_pending",
+    "multiple_open_orders",
+  ] as const) {
+    assert.equal(
+      publicSelfOrderSnapshotSchema.safeParse({
+        ...publicSnapshot,
+        state,
+      }).success,
+      true,
+      state,
+    );
+  }
+});
+
+test("public snapshot accepts the stored request and current order shapes", () => {
   assert.equal(
-    publicSelfOrderSnapshotSchema.safeParse(publicSnapshot).success,
+    publicSelfOrderSnapshotSchema.safeParse({
+      ...publicSnapshot,
+      state: "awaiting_confirmation",
+      request: {
+        id: 8,
+        clientOpId: "0b8c51aa-1e3a-4c4d-a407-1e37128959ac",
+        status: "pending",
+        items: [
+          {
+          key: "stored-cart-key",
+            menu_item_id: 2,
+            item_name: "Cơm tấm sườn",
+            quantity: 1,
+            unit_price: 65_000,
+            modifiers: [],
+            sides: [],
+          },
+        ],
+        customerNote: null,
+        orderId: null,
+        createdAt: "2026-07-10T05:00:00.000Z",
+        decidedAt: null,
+      },
+    }).success,
+    true,
+  );
+
+  assert.equal(
+    publicSelfOrderSnapshotSchema.safeParse({
+      ...publicSnapshot,
+      state: "open",
+      openOrderCount: 1,
+      order: {
+        id: 12,
+        orderNumber: "MT-12",
+        status: "preparing",
+        paymentStatus: "unpaid",
+        paymentMethod: null,
+        totalAmount: 65_000,
+        itemCount: 1,
+        items: [
+          {
+            id: 20,
+            menuItemId: 2,
+            itemName: "Cơm tấm sườn",
+            variantId: null,
+            variantName: null,
+            quantity: 1,
+            unitPrice: 65_000,
+            lineTotal: 65_000,
+            modifiers: [],
+            sides: [],
+            note: null,
+          },
+        ],
+      },
+    }).success,
     true,
   );
 });
 
-test("public snapshot rejects unknown top-level and nested private fields", () => {
-  assert.equal(
-    publicSelfOrderSnapshotSchema.safeParse({
-      ...publicSnapshot,
-      invoice_payload: { buyerTaxCode: "0123456789" },
-    }).success,
-    false,
-  );
+test("public snapshot rejects retired capability and private buyer fields", () => {
+  for (const field of [
+    "capabilityVersion",
+    "access",
+    "deviceAccess",
+    "session",
+    "batches",
+    "pendingBatch",
+  ]) {
+    assert.equal(
+      publicSelfOrderSnapshotSchema.safeParse({
+        ...publicSnapshot,
+        [field]: field === "batches" ? [] : null,
+      }).success,
+      false,
+      field,
+    );
+  }
+
   assert.equal(
     publicSelfOrderSnapshotSchema.safeParse({
       ...publicSnapshot,
@@ -78,24 +163,11 @@ test("public snapshot rejects unknown top-level and nested private fields", () =
 
 test("public action contracts reject accidental internal or buyer data", () => {
   assert.equal(
-    selfOrderBatchActionResponseSchema.safeParse({
+    selfOrderSubmitActionResponseSchema.safeParse({
       ok: true,
-      status: "pending_approval",
-      orderId: null,
+      requestId: 8,
+      status: "pending",
       total_amount: 65_000,
-    }).success,
-    false,
-  );
-  assert.equal(
-    selfOrderDeviceActionResponseSchema.safeParse({
-      ok: true,
-      access: "join_pending",
-      deviceRequest: {
-        deviceId: 7,
-        kind: "join",
-        status: "join_pending",
-      },
-      pairing_code_hash: "private",
     }).success,
     false,
   );
@@ -111,17 +183,39 @@ test("public action contracts reject accidental internal or buyer data", () => {
   );
 });
 
-test("server projects batch RPC output through an explicit public allowlist", () => {
+test("S2 copy distinguishes CTA, unavailable causes, awaiting, and rejection", () => {
+  assert.equal(SELF_ORDER_VI.submitFirstBatch, "Gửi món");
+  assert.equal(SELF_ORDER_VI.submitAddMore, "Gửi thêm món");
+  assert.match(SELF_ORDER_VI.unavailableInvalidTokenDescription, /không hợp lệ/);
+  assert.match(SELF_ORDER_VI.unavailableDisabledDescription, /không nhận gọi món/);
+  assert.match(SELF_ORDER_VI.unavailablePosClosedDescription, /chưa mở/);
+  assert.match(SELF_ORDER_VI.awaitingCalloutTitle, /chờ/i);
+  assert.match(SELF_ORDER_VI.rejectedCalloutTitle, /từ chối/i);
+  assert.equal(SELF_ORDER_VI.resubmitRejected, "Gửi lại");
+});
+
+test("server classifies the transitional unavailable code before public display", () => {
   const server = readFileSync(
-    join(process.cwd(), "lib/self-order/server.ts"),
+    new URL("../lib/self-order/server.ts", import.meta.url),
     "utf8",
   );
-  const projection = server.slice(
-    server.indexOf("function parseBatchActionPayload"),
-    server.indexOf("function withCapabilityFlags"),
-  );
 
-  assert.match(projection, /batchId: record\.batchId \?\? record\.batch_id/);
-  assert.match(projection, /orderId: record\.orderId \?\? record\.order_id/);
-  assert.doesNotMatch(projection, /\.\.\.record|total_amount|invoice_payload/);
+  assert.match(server, /snapshot\.code !== "invalid_or_disabled_token"/);
+  assert.match(server, /table \? "self_order_disabled" : "invalid_token"/);
+  assert.match(server, /await normalizeUnavailableSnapshot\(token, parsed\.data\)/);
+});
+
+test("contracts contain no retired state vocabulary", () => {
+  const contracts = readFileSync(
+    join(process.cwd(), "lib/self-order/contracts.ts"),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    contracts,
+    /capabilityVersion|deviceAccess|seatingAccess|pendingBatch|realtimeTopic/,
+  );
+  assert.doesNotMatch(
+    contracts,
+    /SelfOrderGuestBatch|SelfOrderDevice|SelfOrderAccess/,
+  );
 });

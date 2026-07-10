@@ -1,4 +1,5 @@
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
+import { BrandMascot } from "@/components/brand";
 import {
   Item,
   ItemContent,
@@ -19,12 +20,13 @@ export default function SelfOrderNotFound() {
       contentClassName="min-h-dvh justify-center"
     >
       <Item variant="outline" className="bg-card">
-        <ItemContent className="items-center text-center">
+          <ItemContent className="items-center gap-3 text-center">
+            <BrandMascot decorative size="sm" />
           <ItemTitle className="text-lg">
             {SELF_ORDER_VI.unavailableTitle}
           </ItemTitle>
           <ItemDescription>
-            {SELF_ORDER_VI.unavailableDescription}
+            {SELF_ORDER_VI.unavailableInvalidTokenDescription}
           </ItemDescription>
         </ItemContent>
       </Item>

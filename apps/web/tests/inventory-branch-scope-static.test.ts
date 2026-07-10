@@ -153,12 +153,12 @@ test("shared inventory PageContents and extracted loaders route scope-read throu
   assert.match(wasteApprovalsLoaderSource, /resolveInventoryListScope/);
 });
 
-test("adapter -> office sees every active branch kind and can select all", async () => {
+test("adapter -> owner sees every active branch kind and can select all", async () => {
   const { supabase, filters } = fakeSupabase(BRANCHES, null);
 
   const scope = await resolveInventoryBranchScope(
     supabase,
-    claims("office", null),
+    claims("owner", null),
     null,
   );
 
@@ -289,7 +289,7 @@ test("list scope -> office ?branchId= never triggers outOfScope, only clamps the
 test("list scope -> malformed query branchId parses to null and falls back to default", async () => {
   const scope = await resolveInventoryListScope(
     fakeSupabase(BRANCHES, null).supabase,
-    claims("office", null),
+    claims("owner", null),
     { queryBranchId: "not-a-number" },
   );
 
@@ -297,86 +297,14 @@ test("list scope -> malformed query branchId parses to null and falls back to de
   assert.equal(scope.outOfScope, false);
 });
 
-/* ─── central-site operators (D055 §1): claims.branch_id is null, home is
-   resolved by branch_kind — the same path the operator Branch Hub takes ─── */
-
-// Supports both the fetchActiveBranches list query and the
-// resolveCentralSiteHomeBranchId single-home lookup so the scope reader can
-// bind a null-branch central operator to their own site. Each caller uses a
-// unique tenant so the resolver's per-tenant home cache cannot bleed across
-// tests.
-function centralSiteSupabase(
-  branches: InventoryBranchOption[],
-  homeBranchId: number,
-) {
-  return {
-    from(table: string) {
-      assert.equal(table, "branches");
-      return {
-        select(columns: string) {
-          if (columns === "id") {
-            const homeQuery = {
-              eq() {
-                return homeQuery;
-              },
-              order() {
-                return homeQuery;
-              },
-              limit() {
-                return homeQuery;
-              },
-              async maybeSingle() {
-                return { data: { id: homeBranchId }, error: null };
-              },
-            };
-            return homeQuery;
-          }
-          assert.equal(columns, "id, name, branch_kind");
-          const listQuery = {
-            eq() {
-              return listQuery;
-            },
-            async order() {
-              return { data: branches, error: null };
-            },
-          };
-          return listQuery;
-        },
-      };
-    },
-  } as never;
-}
-
-test("list scope -> central-site warehouse_manager (branch_id null) reaches its own central_supply site, not outOfScope", async () => {
-  const centralBranches: InventoryBranchOption[] = [
-    { id: 1, name: "Branch 1", branch_kind: "branch" },
-    { id: 3, name: "Kho Tổng", branch_kind: "central_supply" },
-  ];
+test("list scope -> branch-scoped role with null branch_id (unassigned) yields empty scope", async () => {
   const scope = await resolveInventoryListScope(
-    centralSiteSupabase(centralBranches, 3),
-    { tenant_id: 55501, branch_id: null, user_role: "warehouse_manager" },
-    { routeBranchId: 3 },
-  );
-
-  assert.deepEqual(
-    scope.allowedBranches.map((branch) => branch.id),
-    [3],
-  );
-  assert.equal(scope.selectedBranchId, 3);
-  assert.equal(scope.outOfScope, false);
-});
-
-test("list scope -> central-site operator still out of scope for a foreign branch", async () => {
-  const centralBranches: InventoryBranchOption[] = [
-    { id: 1, name: "Branch 1", branch_kind: "branch" },
-    { id: 3, name: "Kho Tổng", branch_kind: "central_supply" },
-  ];
-  const scope = await resolveInventoryListScope(
-    centralSiteSupabase(centralBranches, 3),
-    { tenant_id: 55502, branch_id: null, user_role: "warehouse_manager" },
+    fakeSupabase(BRANCHES, null).supabase,
+    claims("branch_manager", null),
     { routeBranchId: 1 },
   );
 
-  assert.equal(scope.selectedBranchId, 3);
+  assert.deepEqual(scope.allowedBranches, []);
+  assert.equal(scope.selectedBranchId, null);
   assert.equal(scope.outOfScope, true);
 });

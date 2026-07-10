@@ -1,18 +1,12 @@
 import type { StaffRole } from "./types";
 
 /** CRUD danh mục nguyên liệu + allowlist chi nhánh */
-export const INVENTORY_CATALOG_ROLES: readonly StaffRole[] = [
-  "owner",
-  "warehouse_manager",
-  "production_manager",
-];
+export const INVENTORY_CATALOG_ROLES: readonly StaffRole[] = ["owner"];
 
 /** Tồn kho, luân chuyển, điều chỉnh tồn theo chi nhánh */
 export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
-  "warehouse_manager",
-  "production_manager",
 ];
 
 /**
@@ -24,32 +18,26 @@ export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
 export const PROCUREMENT_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
-  "warehouse_manager",
-  "production_manager",
 ];
 
 /**
  * Procurement roles whose write scope is a single pinned branch. Their claims
- * carry a non-null `branch_id` (or resolve to one central home), so the
- * caller compares `effectiveBranchId === targetBranchId` for strict own-branch
- * writes. Shared by GRN actions (one copy — no MIRROR drift). Roles NOT
- * listed here (e.g. owner) are tenant-wide and bypass the equality check.
+ * carry a non-null `branch_id`, so the caller compares
+ * `effectiveBranchId === targetBranchId` for strict own-branch writes. Shared
+ * by GRN actions (one copy — no MIRROR drift). Roles NOT listed here (e.g.
+ * owner) are tenant-wide and bypass the equality check.
  */
 export function isBranchScopedProcurementRole(role: string): boolean {
-  return (
-    role === "branch_manager" ||
-    role === "warehouse_manager" ||
-    role === "production_manager"
-  );
+  return role === "branch_manager";
 }
 
 /**
  * Pure own-branch decision for a procurement write (D068 cross-branch guard).
  * `effectiveBranchId` is the actor's own operable branch — their non-null claim
- * for a pinned role, or the resolved central home for a tenant-null central
- * role. A branch-scoped role may write only that branch; a non-scoped role
- * (owner) is tenant-wide. The real guard (`canAccessProcurementBranch`) calls
- * this so the decision body itself — not a reconstruction — is unit-tested.
+ * for a pinned role. A branch-scoped role may write only that branch; a
+ * non-scoped role (owner) is tenant-wide. The real guard
+ * (`canAccessProcurementBranch`) calls this so the decision body itself — not a
+ * reconstruction — is unit-tested.
  */
 export function isProcurementBranchInScope(
   role: string,
@@ -64,6 +52,4 @@ export function isProcurementBranchInScope(
 export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
-  "warehouse_manager",
-  "production_manager",
 ];

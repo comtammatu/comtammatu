@@ -5,7 +5,6 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
   MODULE_ACL,
   PERMISSION_KEYS,
-  centralSiteBranchKindForRole,
   requiredBranchKindForPositionCode,
   staffRoleFromPositionCode,
   type StaffRole,
@@ -180,8 +179,7 @@ export async function createStaff(
   if (role === "unassigned" || role === "owner") {
     return { success: false, error: "Chức vụ không hợp lệ" };
   }
-  const effectiveBranchId =
-    centralSiteBranchKindForRole(role) === null ? branch_id : undefined;
+  const effectiveBranchId = branch_id;
 
   const ctx = await getAuthContextWithPermissions(
     MANAGER_ROLES,
@@ -272,8 +270,7 @@ export async function updateStaff(
   if (role === "unassigned" || role === "owner") {
     return { success: false, error: "Chức vụ không hợp lệ" };
   }
-  const effectiveBranchId =
-    centralSiteBranchKindForRole(role) === null ? branch_id : undefined;
+  const effectiveBranchId = branch_id;
 
   const ctx = await getAuthContextWithPermissions(
     MANAGER_ROLES,

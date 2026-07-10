@@ -23,6 +23,8 @@ interface OperatorStockLink {
 }
 
 const STOCK_PRIMARY_SUFFIXES = [
+  "/stock/grn",
+  "/stock/production",
   "/stock/receive",
   "/stock/transfer",
   "/stock/stocktake",
@@ -31,13 +33,9 @@ const STOCK_PRIMARY_SUFFIXES = [
   "/stock/waste-approvals",
   "/stock/waste",
   "/stock/consumption",
-  "/stock/production",
 ] as const;
 
-const STOCK_LOOKUP_SUFFIXES = [
-  "/stock/on-hand",
-  "/stock/grn",
-] as const;
+const STOCK_LOOKUP_SUFFIXES = ["/stock/on-hand"] as const;
 
 const STOCK_CATALOG_SUFFIXES = ["/stock/catalog"] as const;
 
@@ -57,20 +55,13 @@ function toOperatorStockLink(
   };
 }
 
-function matchesAnySuffix(
-  link: OperatorStockLink,
-  suffixes: readonly string[],
-): boolean {
-  return suffixes.some((suffix) => link.href.endsWith(suffix));
-}
-
 function pickStockLinks(
   links: OperatorStockLink[],
   suffixes: readonly string[],
   used: Set<string>,
 ): OperatorStockLink[] {
-  const picked = links.filter(
-    (link) => !used.has(link.key) && matchesAnySuffix(link, suffixes),
+  const picked = suffixes.flatMap((suffix) =>
+    links.filter((link) => !used.has(link.key) && link.href.endsWith(suffix)),
   );
   for (const link of picked) used.add(link.key);
   return picked;

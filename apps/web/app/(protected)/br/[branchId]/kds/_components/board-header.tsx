@@ -12,12 +12,14 @@ import { ThemeMenuItem } from "@/components/theme-toggle";
 import {
   History as IconHistory,
   Maximize2 as IconMaximize,
+  Megaphone as IconVoiceOn,
   Minimize2 as IconMinimize,
   MoreVertical as IconMoreVertical,
   Volume2 as IconVolumeOn,
   VolumeX as IconVolumeOff,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import type { OperationalAudioMode } from "@lib/operational-audio";
 import { EmployeePortalBackControl } from "../../employee-portal-back-control";
 import { ViewModeToggle } from "./view-mode-toggle";
 import type { KdsViewMode } from "../_hooks/use-kds-view-mode";
@@ -26,7 +28,7 @@ interface KdsBoardTopBarProps {
   branchId: number;
   pendingCount: number;
   mode: KdsViewMode;
-  soundEnabled: boolean;
+  audioMode: OperationalAudioMode;
   isFullscreen: boolean;
   onModeChange: (next: KdsViewMode) => void;
   onCompletionHistoryOpen: () => void;
@@ -41,11 +43,24 @@ const KDS_HEADER_COPY = {
   moreMenu: "Thao tác KDS",
 } as const;
 
+const KDS_AUDIO_MODE_LABEL: Record<OperationalAudioMode, string> = {
+  off: "Chuông KDS: tắt",
+  beep: "Chuông KDS: chuông",
+  voice: "Chuông KDS: đọc",
+  "beep+voice": "Chuông KDS: chuông + đọc",
+};
+
+function KdsAudioModeIcon({ mode }: { mode: OperationalAudioMode }) {
+  if (mode === "off") return <IconVolumeOff aria-hidden />;
+  if (mode === "beep") return <IconVolumeOn aria-hidden />;
+  return <IconVoiceOn aria-hidden />;
+}
+
 export function KdsBoardTopBar({
   branchId,
   pendingCount,
   mode,
-  soundEnabled,
+  audioMode,
   isFullscreen,
   onModeChange,
   onCompletionHistoryOpen,
@@ -92,17 +107,13 @@ export function KdsBoardTopBar({
         </Button>
         <Button
           type="button"
-          variant={soundEnabled ? "secondary" : "ghost"}
+          variant={audioMode === "off" ? "ghost" : "secondary"}
           size="icon-lg"
-          aria-label={soundEnabled ? "Tắt chuông KDS" : "Bật chuông KDS"}
-          aria-pressed={soundEnabled}
+          aria-label={KDS_AUDIO_MODE_LABEL[audioMode]}
+          aria-pressed={audioMode !== "off"}
           onClick={onSoundToggle}
         >
-          {soundEnabled ? (
-            <IconVolumeOn aria-hidden />
-          ) : (
-            <IconVolumeOff aria-hidden />
-          )}
+          <KdsAudioModeIcon mode={audioMode} />
         </Button>
         <Button
           type="button"

@@ -127,6 +127,8 @@ const FIXTURES = [
   ["allow: mcp execute_sql SELECT with write-keyword literal vs prod", 0, mcp("execute_sql", { project_id: PROD, query: "select id from orders where notes = 'do not delete this row'" })],
   ["block: mcp execute_sql write with quoted value vs prod", 2, mcp("execute_sql", { project_id: PROD, query: "update orders set notes = 'keep me' where id = 1" })],
   ["block: mcp execute_sql DO-block write vs prod", 2, mcp("execute_sql", { project_id: PROD, query: "do $$ begin update orders set x = 1; end $$" })],
+  ["block: mcp execute_sql DO-block PERFORM rpc vs prod", 2, mcp("execute_sql", { project_id: PROD, query: "do $$ begin perform public.commit_stock_transfer(1); end $$" })],
+  ["block: mcp execute_sql bare PERFORM rpc vs prod", 2, mcp("execute_sql", { project_id: PROD, query: "perform public.commit_stock_transfer(1)" })],
   ["block: mcp connector dotted execute_sql write vs prod", 2, mcpConnector("execute_sql", { project_id: PROD, query: "update orders set note = null" })],
   ["block: mcp connector dotted apply_migration empty ref fails closed", 2, mcpConnector("apply_migration", {})],
   ["allow: mcp connector dotted execute_sql SELECT vs prod", 0, mcpConnector("execute_sql", { project_id: PROD, query: "select 1" })],

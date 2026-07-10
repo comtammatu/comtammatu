@@ -39,17 +39,14 @@ test("login action passes device context into post-login redirect", () => {
   );
 });
 
-test("post-login redirect call sites resolve the central-site home branch (D055 §1)", () => {
+test("post-login redirect call sites no longer resolve a central-site home branch", () => {
   for (const path of [
     "apps/web/app/(public)/(auth)/login/actions.ts",
     "apps/web/proxy.ts",
   ]) {
     const source = read(path);
-    assert.match(
-      source,
-      /homeBranchId: await resolveCentralSiteHomeBranchId\(supabase, claims\)/,
-      path,
-    );
+    assert.doesNotMatch(source, /resolveCentralSiteHomeBranchId/, path);
+    assert.doesNotMatch(source, /homeBranchId/, path);
   }
 });
 

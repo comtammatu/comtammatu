@@ -289,7 +289,7 @@ export async function loadStockOnHandPageData({
     });
 
   const role = claims.user_role;
-  const canViewTotal = role === "owner" || role === "warehouse_manager";
+  const canViewTotal = role === "owner";
   const canViewBranch = canViewTotal || role === "branch_manager";
   const branchValue =
     includeValuation && canViewBranch

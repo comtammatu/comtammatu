@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
   Phone as IconPhone,
   Plus as IconPlus,
@@ -33,6 +34,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { createSupplier } from "@/(protected)/inventory/procurement-actions";
 import {
+  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -144,7 +146,22 @@ export function BranchGrnSourcePickerClient({
       description={INVENTORY_VI.chooseSourceDescription}
       hideHeaderOnMobile
     >
-      <BranchOperatorPanel
+      <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-28">
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button asChild variant="ghost" size="icon-touch">
+            <Link href={`/br/${branchId}/stock/grn`} aria-label={ACTIONS_VI.back}>
+              <IconArrowLeft />
+            </Link>
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{INVENTORY_VI.newGrn}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {INVENTORY_VI.chooseSourceDescription}
+            </p>
+          </div>
+        </BranchOperatorControlBar>
+
+        <BranchOperatorPanel
         title={INVENTORY_VI.receiveBySupplierTitle}
         description={INVENTORY_VI.receiveBySupplierDescription}
         icon={IconTruck}
@@ -248,16 +265,17 @@ export function BranchGrnSourcePickerClient({
             )}
           </>
         )}
-      </BranchOperatorPanel>
+        </BranchOperatorPanel>
 
-      <AppDetailFooter
-        sticky
-        leading={
-          <Button asChild variant="outline" size="touch">
-            <Link href={`/br/${branchId}/stock/grn`}>{ACTIONS_VI.back}</Link>
-          </Button>
-        }
-      />
+        <AppDetailFooter
+          sticky
+          leading={
+            <Button asChild variant="outline" size="touch">
+              <Link href={`/br/${branchId}/stock/grn`}>{ACTIONS_VI.back}</Link>
+            </Button>
+          }
+        />
+      </div>
     </BranchOperatorPage>
   );
 }

@@ -102,12 +102,9 @@ async function currentUserHasAnyPermission(
 }
 
 /**
- * `production_manager` claims stay tenant-level (D055 §1: `branch_id` null)
- * so this role's own tenant-wide inventory scope is not pinned to one
- * branch. `routeBranchId` (the embedded operator route's URL segment) is
- * the only branch id available for that role — it must win over
- * `claims.branch_id`, or this gate always returns false for the exact role
- * it exists to check.
+ * `branch_manager` claims are always pinned to a branch, but embedded
+ * operator routes pass their own `routeBranchId` (URL segment) which must
+ * win over a stale `claims.branch_id` when the two diverge.
  */
 export async function hasCurrentProductionBranchAccess(
   supabase: InventorySupabase,

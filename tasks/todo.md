@@ -36,6 +36,86 @@ directly — `pnpm lint | tail` swallows it. Runtime QA of every guest slice at
 `390x844`. S1 and S6 carry migrations: the file lands in the commit, the owner
 applies it to production.
 
+### S1 T3 contract
+
+Skill plan: repo rules = engineering + database + workflow; external skills =
+supabase + supabase-postgres-best-practices; runtime tools = CodeGraph + Supabase
+CLI + local static/SQL tests; skipped = browser/UI and production writes until
+S4 and the owner-approved cutover.
+
+- **PM:** Scope is contract correction plus the additive S1 migration only.
+  Acceptance is one stored request model, deterministic 0/1/2+ open-order
+  behavior, sessionless payment writes, pending-data backfill, and no drops or
+  production apply.
+- **BA:** Zero open orders creates `pending`; exactly one appends unless payment
+  is live; two or more create `pending` and hide bill/payment. Replays return the
+  original outcome, rejected carts require the matching `client_op_id`, and the
+  current pending batch is backfilled without disappearing.
+- **Senior Dev:** Reuse `self_order_canonicalize_cart`, `create_order`,
+  `append_order_items`, payment snapshot helpers, and the existing order actor.
+  Serialize self-order mutations with the table advisory lock, keep payment
+  integrity on `order_id`, and leave old session objects in place for S6.
+- **QA/QC:** Static SQL guards cover indexes, grants, `search_path`, branch
+  ordering, payment decoupling, and backfill. The SQL acceptance case covers
+  zero/one/two-open-order submit plus replay. Concurrency and generated DB types
+  stay explicitly unverified until the migration is applied to a non-production
+  schema or owner-approved cutover.
+
+Agreements: the POS order is the only seating truth; multi-bill must fail safe;
+payment cannot retain a required session foreign key. Resolved conflict: S1 is
+schema-additive but snapshot-contract-breaking, so its production apply is held
+for the S2-S5 cutover window rather than applied ahead of the runtime.
+
+Attestation: covered the planned 0/1/2+ submit branches, replay, staff
+accept/reject, pending backfill, multi-bill snapshot privacy, and sessionless
+payment create/cancel in the migration plus both test harnesses. BA rules map to
+`20260710113746_self_order_request_workflow.sql`; deterministic guards map to
+`self-order-request-workflow-static.test.ts` and
+`self_order_request_workflow_test.sql`. Production apply and generated DB types
+are now verified under the cutover contract below. Still out of scope here:
+concurrency proof, the remaining S4-S7 runtime/UI work, and live browser QA.
+
+### Production cutover T3 contract
+
+Skill plan: repo rules = engineering + database + workflow; external skills =
+supabase + supabase-postgres-best-practices; runtime tools = CodeGraph +
+org-scoped Supabase MCP + generated types; skipped = browser until the S4 guest
+surface exists.
+
+- **PM:** Apply only the surviving prerequisite chain and S1 to production,
+  regenerate types from that schema, then continue S2. Acceptance is a verified
+  migration ledger, verified request/payment objects, no production data loss,
+  and an explicit distinction between DB apply and runtime deploy.
+- **BA:** Preserve payment and HĐĐT behavior while moving request identity from
+  session/batch to request/order. Skip the superseded seating-capability model;
+  retain the cash invoice binding and fail closed on dirty active payment or
+  pending-request duplicates.
+- **Senior Dev:** Production is missing the payment-integrity substrate used by
+  S1. Apply `self_order_payment_intent_integrity`,
+  `self_order_cash_invoice_binding`, and `self_order_rpc_only_table_grants` in
+  timestamp order before `self_order_request_workflow`; do not apply the
+  session/device capability migrations that S6 removes.
+- **QA/QC:** Verify ref, ledger, dirty-data preconditions, columns, indexes,
+  grants, RLS, function signatures, and advisors. Run `db:types` only after the
+  production schema is verified; then run focused and full repo gates while
+  classifying unrelated dirty-tree failures separately.
+
+Attestation: the apply plan matches the D075 net-effect contract: the kept
+payment/HĐĐT/RPC-only substrate is applied, the retired device capability is
+not introduced, and no destructive S6 cleanup is included.
+
+Production verification addendum: `db:types` exposed that the skipped device
+capability migration had also been the only creator of
+`self_order_rate_buckets`. Preserve only the D075-surviving `batch | payment`
+and `token | ip` rate-limit contract in a small forward migration; do not apply
+or recreate device/session capability state.
+
+Production status: all six surviving cutover migrations are present in the
+production ledger; `self_order_requests` and the net-effect rate bucket are
+live with RLS/RPC-only grants, and `packages/database/src/types/database.types.ts`
+was regenerated from production. This is a database apply, not a frontend
+runtime deploy.
+
 - [ ] **Q0 — `/q/*` navigation HTML is never cached.** Independent of D075 and
       still open. The production build already orders the `/q/` NetworkOnly
       matcher before generic page caching, and the static test is green. Live
@@ -43,7 +123,7 @@ applies it to production.
       can render from a service-worker fallback; the generic public page cache
       stays intact for non-sensitive routes.
 
-- [ ] **S1 — additive migration: `self_order_requests` + the six RPCs.**
+- [x] **S1 — additive migration: `self_order_requests` + the six RPCs.**
       Create the table, its two unique indexes, RLS (staff select only), and
       RPC-only grants exactly as specified in the contract's Data contract
       section. Rewrite `self_order_get_snapshot(token)` to derive guest state
@@ -55,12 +135,69 @@ applies it to production.
       under the request's advisory lock and sets `order_id` + `decided_by` +
       `decided_at`. Every `SECURITY DEFINER` function keeps an explicit
       permission check, an empty `search_path`, and least-privilege grants.
-      Nothing is dropped in this slice. Coverage: real-RPC tests for the
-      one-open-order append path, the zero-order pending path, the two-open-order
-      pending fallback, `client_op_id` replay, and two concurrent first submits
-      racing the one-pending-per-table index.
+      Make `self_order_payment_requests.session_id` nullable for the bridge,
+      bind new payment requests directly to the only open `order_id`, enforce
+      one live intent per order, and rewrite create/expire/cancel/order-close
+      paths so new requests are sessionless. Backfill current
+      `self_order_batches.status='pending_approval'` rows before enforcing the
+      one-pending-per-table index. Nothing is dropped in this slice. Coverage, in the two harnesses that run
+      without a database: a static SQL guard under `apps/web/tests/` asserting the
+      one-pending-per-table partial unique index, the `client_op_id` unique index,
+      the empty `search_path`, the `REVOKE INSERT, UPDATE, DELETE`, and the branch
+      order inside `self_order_submit` (exactly one open order appends; zero or
+      two-or-more insert `pending`); plus a `supabase/tests/*.sql` case for the
+      same branches. Two concurrent first submits racing the partial index stay
+      **runtime-unverified** until the owner applies the migration — say so, do
+      not claim it passes. `corepack pnpm db:types` cannot run in this slice
+      either; regenerate after the owner applies, before S2 consumes the new
+      types.
 
-- [ ] **S2 — contracts and copy.** Rewrite `apps/web/lib/self-order/contracts.ts`
+### S2 T2 self-review
+
+Skill plan: repo rules = engineering + workflow + UI; external skills = none;
+runtime tools = CodeGraph + generated DB types + focused contract tests; skipped
+= browser because S2 changes no rendered composition and S4 owns runtime UI.
+
+UI Advisor Gate
+
+- Surface: `/q/[token]`; route family: PUBLIC-WORKFLOW; plane: public; change:
+  contract + copy only.
+- Context: table guest; actor: guest; job: understand table availability, send
+  the first request, then add to an open bill without device/session concepts.
+- Journey: unavailable or menu -> cart decision -> `Gửi món` / `Gửi thêm món`
+  -> awaiting, accepted, or rejected; recovery: retry or call staff.
+- Information order: table/menu first, request state second, bill/payment only
+  when unambiguous; exclude device, capability, session, and batch vocabulary.
+- Pattern: PUBLIC-WORKFLOW; data display: derived snapshot contract. States:
+  unavailable, unopened, awaiting, rejected, open, payment pending, ambiguous.
+- Components: no component change in S2; copy anticipates `NoteCallout` and
+  `Alert` compositions already locked by the guest spec.
+- Responsive/accessibility: unchanged in S2; S4 verifies `390x844` touch flow.
+
+- **PM:** Scope is the public TypeScript/Zod boundary and canonical Vietnamese
+  copy only. Acceptance is one derived snapshot state model and no retained
+  device/session/capability vocabulary in `contracts.ts`.
+- **BA:** First submit says `Gửi món`; an open order says `Gửi thêm món`.
+  Awaiting disables duplicate submit, rejected restores the matching cart, and
+  G0 has distinct copy for invalid QR, disabled table, and closed POS shift.
+- **Senior Dev:** Match the applied S1 JSON exactly, keep cart/menu/payment
+  schemas that survive, and retain client intent helpers only where retry
+  identity still depends on them. Do not add a compatibility union for the
+  retired contract.
+- **QA/QC:** Add schema fixtures for every derived state and reject legacy
+  capability/session fields. Recheck intent-key stability without the UI-only
+  cart `key`; full runtime compilation resumes as S3/S4 migrate the callers.
+
+Attestation: the public schema now accepts the six derived states and rejects
+retired capability/session fields; copy covers the CTA split, awaiting,
+rejection, invalid QR, disabled Self-Order, and closed POS shift. The server
+classifies the transitional database code before display, intent identity
+ignores the UI-only cart key, and the focused Self-Order suite is green 24/24.
+Generated production types, web typecheck, web ESLint, and production build are
+green. Full repo lint/test remain red only on the separate in-progress
+design-system token guard and two stock footer call sites.
+
+- [x] **S2 — contracts and copy.** Rewrite `apps/web/lib/self-order/contracts.ts`
       to the derived state model: one `status` enum, no session/batch/device/access
       unions, no capability flags. Update `packages/shared/src/messages/self-order.ts`
       (`SELF_ORDER_VI`) for the `Gửi món` / `Gửi thêm món` CTA split, the awaiting
@@ -68,7 +205,7 @@ applies it to production.
       causes. Delete `apps/web/lib/self-order/client-intent.ts` helpers that only
       served batch idempotency if the new `client_op_id` path supersedes them.
 
-- [ ] **S3 — public API routes.** `GET /api/self-order/[token]` returns the new
+- [x] **S3 — public API routes.** `GET /api/self-order/[token]` returns the new
       snapshot with no device cookie. Replace `batches/route.ts` with
       `submit/route.ts`. Keep `payment/route.ts`. Delete `join/route.ts`,
       `pairing-code/route.ts`, `cancel-pending-payment-and-add/route.ts`, and
@@ -77,7 +214,26 @@ applies it to production.
       one-shot 428 retry. Responses stay `private, no-store`. Rate limits
       survive on `token` and `ip` scopes.
 
-- [ ] **S4 — guest UI.** Menu becomes the only page: header is `[table label]` +
+### S4 T2 self-review
+
+Skill plan: repo rules = engineering + UI + workflow; external skill =
+frontend-testing-debugging; runtime tools = CodeGraph + in-app Browser; skipped
+= design exploration because `docs/spec/self-order-guest-ui.md` already locks
+the composition.
+
+- **PM:** Finish only the four visible contract gaps: sticky categories,
+  compact non-main rows, the pending round inside the bill, and hidden bill
+  access for multi-bill ambiguity.
+- **BA:** Main dishes keep photo cards; side dishes, drinks, and desserts use
+  compact rows. Pending requests show submitted lines without a payable total.
+  Multi-bill guests cannot read or pay a bill.
+- **Senior Dev:** Reuse the existing item sheet, `Button`, `Item`, `Drawer`, and
+  `OrderSummary`; no new state store, query, or menu abstraction.
+- **QA/QC:** Re-run the focused static suite and verify the real public flow at
+  `390x844`: page identity, first viewport, console, item sheet, cart, and bill
+  drawer.
+
+- [x] **S4 — guest UI.** Menu becomes the only page: header is `[table label]` +
       a `Hoá đơn` button with a `Badge` opening a `Drawer` that never auto-opens.
       Delete `self-order/status-pill.tsx`, `self-order/device-access-panel.tsx`,
       and `self-order/session-state-panel.tsx`; the awaiting and rejected states
@@ -91,7 +247,102 @@ applies it to production.
       otherwise, refetch on focus and bfcache restore. G0 renders a static
       `BrandMascot animated={false}`.
 
-- [ ] **S5 — POS.** Add one badge tone to `pos-table-gate.tsx` for a table with a
+### Featured main dishes T2 self-review
+
+Skill plan: repo rules = engineering + UI + workflow; external skills =
+frontend-design; runtime tools = CodeGraph + browser smoke; skipped = new menu
+metadata because the existing `main_dish` type and menu order select the three
+items.
+
+UI Advisor Gate
+
+- Surface: `/q/[token]`; route family: PUBLIC-WORKFLOW; plane: public; change:
+  visual menu hierarchy.
+- Context: table guest; actor: guest; job: recognize the three core dishes,
+  customize one, and add it to the cart.
+- Journey: menu -> featured main dish or category -> item sheet -> cart -> send;
+  recovery: return to the menu or choose another category.
+- Information order: three main dishes first, category rail second, remaining
+  menu third; exclude bill, payment, branch, and staff data.
+- Pattern: PUBLIC-WORKFLOW; exemplar: `apps/web/app/q/[token]/self-order-client.tsx`;
+  data display: photo-card menu plus compact non-main rows.
+- States: available menu, empty menu, awaiting, rejected, and payment-locked.
+- Components: existing `Button`, `Badge`, `ScrollArea`, `MenuItemCard`, and item
+  sheet; fallback: none.
+- Responsive/accessibility: same mobile IA at `390x844`; touch targets and
+  accessible item names stay unchanged.
+- Verification: focused Self-Order tests, typecheck/lint/build, and browser
+  smoke of the public menu at `390x844`.
+
+- **PM:** Scope is only the menu's first visual decision. Acceptance is three
+  main dishes before the full menu with no change to cart, request, or payment.
+- **BA:** The first three items in the current `main_dish` order are promoted;
+  every item remains selectable through the same customizer and appears once in
+  the all-menu view.
+- **Senior Dev:** Reuse the current item grid/card and item sheet; add no
+  `is_featured` field, server query, or client state.
+- **QA/QC:** Verify the featured section at phone width, category switching,
+  an item sheet, cart add, empty menu, and payment-locked state.
+
+Attestation: the diff matches this T2 contract. The featured section reuses the
+existing photo-card and item-sheet path, derives only from the snapshot's
+`main_dish` order, and excludes the promoted IDs from the all-menu remainder.
+The focused static suite, targeted web typecheck/lint, and production build are
+green. Browser QA at `390x844` remains unverified because the available local
+server is wired to production Supabase credentials.
+
+- [x] **Featured main dishes.** The all-menu view leads with the first three
+      `main_dish` items from the existing menu order; the lead card spans the
+      row and the remaining two retain large photo cards. No item is duplicated,
+      and category-specific views retain their complete category.
+
+### S5 T3 contract
+
+Skill plan: repo rules = engineering + database + UI + workflow +
+notifications; external skill = frontend-testing-debugging; runtime tools =
+CodeGraph + focused tests + in-app Browser; skipped = new notification or audio
+infrastructure because ADR 0008 requires a device-local signal only.
+
+- **PM:** POS exposes one table-level pending-request badge, one small decision
+  sheet, and cancellation of the exact Self-Order payment request from the
+  existing bill sheet. No device/session queue survives this slice.
+- **BA:** A pending request opens before the normal table action. Zero or one
+  open bill delegates create/append selection to the canonical RPC; two or more
+  open bills require staff to pick an existing destination or a new bill.
+  Reject is confirmed without collecting a reason. Cancellation affects only
+  the live payment request attached to the displayed bill.
+- **Senior Dev:** Read pending rows through the staff RLS path; mutate only via
+  `self_order_accept_request`, `self_order_reject_request`, and
+  `self_order_cancel_payment_request`. Lift the minimal pending state into the
+  POS client, poll it, reuse `playAppSignal("pos")`, and delete device,
+  capability, pairing, batch, and queue abstractions from the runtime surface.
+- **QA/QC:** Static guards prove the old RPC/device vocabulary is gone and the
+  new badge, destination guard, audio signal, and bill cancellation are wired.
+  Run focused tests, web typecheck, and targeted lint. Runtime POS QA remains a
+  separate gate if the concurrent shared-auth refactor still prevents the app
+  from compiling.
+
+Agreements: canonical orders remain POS-owned; multi-bill routing must be an
+explicit staff choice; audio is local and creates no notification or Telegram
+side effect. Resolved conflict: polling is retained as the smallest reliable
+request signal because this cutover deliberately removes the old realtime
+session/device capability path.
+
+Attestation: S5 is written, review-clean, and read-only runtime-verified. The POS now
+reads only pending request/payment rows, mutates through the three canonical
+RPCs, opens the request from the table tile, requires a destination for 2+ open
+bills, signals new requests through the existing POS audio preference, and
+cancels the exact guest payment request from the bill. Targeted lint, web
+typecheck, the 25-test focused Self-Order suite, and the production build are
+green. Local runtime shows `QR ⏳` on tables 20 and 21, opens the submitted
+lines/provisional total sheet, and has no console errors. The guest menu and
+item sheets are verified for `Sườn Cốt Lết`, `Sườn Cây`, and
+`Sườn Một Gang`; live approve/reject was deliberately not triggered. Full repo
+lint remains independently blocked by the concurrent
+`docs/spec/design-system.md` removal of the documented `chrome-safe-bottom`
+token.
+
+- [x] **S5 — POS.** Add one badge tone to `pos-table-gate.tsx` for a table with a
       `pending` request. Replace `_components/self-order-approval-sheet.tsx` with
       a small approval sheet: submitted lines, customer note, provisional total,
       `Duyệt` / `Từ chối`, plus a destination picker when the table carries two or
@@ -102,6 +353,7 @@ applies it to production.
 
 - [ ] **S6 — destructive migration and test re-anchor.** Drop
       `self_order_sessions`, `self_order_batches`, `self_order_session_devices`,
+      `self_order_payment_requests.session_id` and its legacy foreign key/index,
       `tables.self_order_capability_version`, `tables.realtime_topic_token`, every
       `self_order_*_v2` function, the `session_changed` broadcast trigger and its
       realtime policies, and the `origin` / `join` values of
@@ -156,21 +408,18 @@ table QR. It never did. Do not grow one inside this rebuild.
         with a Branch-native list and typed detail; no Office presenter reuse.
   - [x] Count assignment/review now owns the correct manager destinations and
         no longer opens the signed-in manager's personal count surface.
-  - [ ] Reconcile stocktake role documentation with current permission seeds:
-        the local template grants `production_manager` stocktake
-        create/complete while `docs/ref/inventory.md` names only branch and
-        warehouse managers. Confirm the business policy before changing ACL or
-        navigation membership.
+  - [x] Reconcile stocktake role documentation with current permission seeds:
+        moot — `production_manager`/`warehouse_manager` buckets and their
+        `role_templates` rows are retired (D076); stocktake create/complete
+        is `owner`/`branch_manager` only now.
   - [x] Run runtime QA across phone `390x844`, tablet portrait `768x1024`,
         tablet landscape `1024x768`, and Office desktop `1440x900`, in both
         Branch/Office shells with local Supabase E2E auth. The theme contrast
         contract remains covered by the design-system guard suite.
 
-
 ## Branch Stock Cutover (D073 — supersedes the D067 round-2 scope)
 
-> `docs/plan/decisions.md` D073 (2026-07-10): the Central Kitchen site (branch
-> 16) is being decommissioned — stock transfers to Phước Hải (branch 3), then
+> `docs/plan/decisions.md` D073 (2026-07-10): the Central Kitchen site (branch 16) is being decommissioned — stock transfers to Phước Hải (branch 3), then
 > `is_active = false`. Every stock upgrade prepared for the kitchen round now
 > targets the SHARED `/br/[branchId]/(operator)/stock/*` surface for kind
 > `branch`. D067 §1 still governs the layering: share the server action and
@@ -238,7 +487,7 @@ table QR. It never did. Do not grow one inside this rebuild.
       cost silently until month-end review.
   - `apps/web/lib/inventory/use-grn-create-controller.ts:162` resolves `unitCost`
     as `existing?.unitCost ?? referenceCost?.value ?? Number(ingredient.unit_cost
-    ?? 0)`. Reduce it to `existing?.unitCost ?? ""`.
+?? 0)`. Reduce it to `existing?.unitCost ?? ""`.
   - Keep the prior price as reference text, and show the deviation percentage
     once a price is typed; `grn-line-editor.tsx:95` already computes it. Add no
     one-tap "use last price" control.
@@ -257,7 +506,7 @@ table QR. It never did. Do not grow one inside this rebuild.
     Planned drives the consumption prefill; actual output drives only unit cost.
     `confirm_production_run` already computes it that way: `v_raw_need_measure`
     scales from `v_planned_output_base`, and `v_out_unit_cost = v_cost_total /
-    v_out_base`. Do not rescale consumption by actual output.
+v_out_base`. Do not rescale consumption by actual output.
   - Process loss raises the finished-good unit cost and generates no waste line.
   - Consumption lines prefill at recipe rate behind a single "Đúng định mức"
     control. `Sườn Cốt Lết` carries 20 recipe lines, so a nominal batch must cost
@@ -330,10 +579,11 @@ table QR. It never did. Do not grow one inside this rebuild.
 - [ ] **S10 — delete the central forks (D073 §1/§5); ops steps done 2026-07-10.**
       Steps 1–2 are EXECUTED and verified on PROD (owner-delegated in-session):
       transfer `CK-CLOSE-20260710` moved all 29 stock rows 16 → 3 through the
-      standard draft→ship→transit→confirm→receive RPC chain (29 `transfer_out`
-      + 29 `transfer_in` movements, WAC preserved, site 16 now 0 rows / 0
+      standard draft→ship→transit→confirm→receive RPC chain (29 `transfer_out` + 29 `transfer_in` movements, WAC preserved, site 16 now 0 rows / 0
       value, Phước Hải 97→109 rows), and `branches.is_active = false` for 16.
-      `production_manager` staff reassignment stays with the owner. Remaining:
+      `production_manager` staff accounts are deleted, not reassigned (D076 —
+      no auto-remap; see migration
+      `20260710201500_retire_central_and_office_buckets.sql`). Remaining:
       (3) delete the central forks; also retire the matu-platform import
       toolchain (`import:*` scripts in root `package.json`,
       `scripts/inventory-matu-platform-*.mjs`) — its referent sites are gone.
@@ -405,67 +655,82 @@ table QR. It never did. Do not grow one inside this rebuild.
 
 ### Defects found while scoping the cutover — separate slices, not D073
 
+Skill plan (2026-07-10 implement): repo rules = engineering + workflow + database;
+external = none; runtime = migration files only (no PROD apply without owner
+delegation). T2 for guard; T3 condensed for money/schema slices below.
+
+PM: close sellerName as non-bug; ship guard + four migrations + app rewires;
+acceptance = fixtures green, typecheck clean on touched files, migrations
+idempotent and ordered after self-order stamps.
+BA: seller = Viettel; notif links /br; WAC only on stock_levels; correction
+uses production_runs; lot/expiry never populated → drop.
+Dev: guard WRITE_SQL + fixtures; 4 SQL files 193000–193300; correction +
+stock-on-hand + types + cleanup scripts.
+QA: guard-sync 29 fixtures; stock-on-hand-detail-model tests; no tsc errors in
+touched files; PROD apply is owner-gated (migration-before-deploy for
+destructive lot/expiry + production_orders drops).
+
 - [x] **The operator hub counts the wrong table.** Fixed: the hub queue counts
       `production_runs` in `draft`/`in_progress`, matching the production page's
       work-queue definition. `production_orders` holds zero rows tenant-wide and
       has no writer anywhere in the app.
 
-- [ ] **Every HĐĐT issues with an empty seller name.** `sellerName: ""` at
-      `apps/web/lib/hddt-per-order.ts:205` and
-      `apps/web/lib/hddt-daily-summary.ts:142` — the e-invoice provider payload
-      carries no legal seller name on either issuing path. The legal name and
-      MST already live in the codebase (`COMPANY_TAX_CODE` constants); wire
-      them through. Money/legal path → T3 when implemented. (Promoted from the
-      2026-06-28 audit; last surviving open finding of that audit.)
+- [x] **Every HĐĐT issues with an empty seller name.** Closed 2026-07-10:
+      not a bug. Viettel fills seller from the registered MST
+      (`COMPANY_TAX_CODE` / `createInvoice/{supplierTaxCode}`); the app does
+      not send `sellerInfo`. Call-site `sellerName: ""` is unused by the
+      provider. Matches D031 + owner confirm. Buyer path is separate
+      (`BUYER_NOT_GET_INVOICE_NAME` when khách không lấy HĐ).
 
-- [ ] **`guard-prod-db.mjs` misses write SQL wrapped in `DO $$…$$` blocks.**
-      Verified live 2026-07-10: a DO block performing the site-16 stock
-      transfer passed the guard while a bare `UPDATE` was correctly blocked.
-      Extend the write-statement detection into DO bodies (and any
-      `CALL`/PL wrapper) and add a replay fixture to
-      `scripts/check-guard-sync.mjs` so the gap stays closed.
+- [x] **`guard-prod-db.mjs` misses write SQL wrapped in `DO $$…$$` blocks.**
+      Fixed 2026-07-10: root gap was `DO $$ … PERFORM rpc() $$` (and bare
+      `PERFORM`), not `UPDATE` inside DO (already blocked). Added `do|perform`
+      to `WRITE_SQL` plus replay fixtures in `scripts/check-guard-sync.mjs`.
+      Residual: bare `SELECT mutating_fn()` still text-match opaque.
 
-- [ ] **Three PROD RPCs deep-link notifications to the retired `/employee/*`
-      routes.** `reject_leave_request`, `approve_inventory_count_slip`, and
-      `request_inventory_count_recount` on PROD still emit notification links
-      like `/employee/count`; the route family no longer exists, so tapping
-      those notifications 404s. The repo's baseline already carries the correct
-      `/br/{branchId}/...` links — PROD was never re-applied. One migration
-      recreating the three functions from the repo baseline; owner-delegated
-      apply.
+- [x] **Three PROD RPCs deep-link notifications to the retired `/employee/*`
+      routes.** Migration ready (not applied — needs owner-delegated apply):
+      `supabase/migrations/20260710193000_fix_notification_employee_deep_links.sql`
+      recreates `reject_leave_request`, `approve_inventory_count_slip`,
+      `request_inventory_count_recount` from baseline `/br/...` links and
+      backfills historical `/employee/*` notification rows (incl. checkout).
 
-- [ ] **Retire the dead `production_orders` entity.** `document-correction-actions.ts`
-      still loads correction sources from `production_orders`/`production_order_items`,
-      so a correction request for a production document always resolves "not found"
-      even though completed `production_runs` exist. The RPC family
-      (`create/confirm/cancel_production_order`,
-      `ensure_production_order_central_kitchen`) has zero callers. Decide with the
-      owner: repoint the correction source to `production_runs` (the output check
-      becomes `run.finished_good_id`), then drop the table and RPCs in one migration.
+- [x] **Retire the dead `production_orders` entity.** Correction source
+      repointed to `production_runs` in `document-correction-actions.ts`;
+      stock-on-hand detail reads `production_run_id`. Migration ready (not
+      applied): `20260710193200_retire_production_orders.sql` drops RPCs,
+      `stock_movements.production_order_id`, and both tables.
 
-- [ ] **`confirm_production_run` overwrites a tenant-wide cost column.** The RPC ends
-      with `UPDATE ingredients SET unit_cost = v_out_unit_cost WHERE id =
-      v_run.finished_good_id`. `ingredients.unit_cost` is scoped by neither branch nor
-      location, so the last batch's cost overwrites it while `stock_levels.avg_unit_cost`
-      holds the real weighted average — and that column is then the fallback in
-      `COALESCE(sl.avg_unit_cost, ing.unit_cost, 0)`. Money path; related to the
-      food-cost deviation recorded in ADR 0011. Confirm the intended semantics with the
-      owner before changing anything.
+- [x] **`confirm_production_run` overwrites a tenant-wide cost column.**
+      Migration ready (not applied):
+      `20260710193100_confirm_production_run_stop_unit_cost_overwrite.sql`
+      removes the `UPDATE ingredients SET unit_cost` on the live 3-arg
+      overload AND drops the stale 2-arg overload
+      `confirm_production_run(bigint, numeric)` that still overwrote
+      `ingredients.unit_cost` (Codex review 2026-07-10). WAC stays on
+      `stock_levels.avg_unit_cost` only.
 
-- [ ] **Retire the dead lot/expiry columns — owner-confirmed (D073 §5), full plumbing scope, not a drive-by.**
-      `grn_items.batch_number`, `grn_items.expiry_date`, and
-      `ingredients.shelf_life_days` hold zero non-null values and no UI reads or
-      writes them, but they remain wired through live RPC plumbing: the waste
-      write-off RPC (`20260709131500_fix_waste_writeoff_rpc_unit_drop.sql`), the
-      expiry alert scanner (baseline `scan_inventory_alerts` family — can never fire
-      on all-null data), the GRN receiving-site recreate
-      (`20260709125638_grn_recreate_receiving_site.sql`), plus
-      `upsert_ingredient_catalog` (dropping `p_shelf_life_days` changes the
-      signature — DROP FUNCTION the old overload before CREATE) and
-      `bulk_import_ingredients`. One migration rewriting those RPCs and dropping the
-      three columns; then `ingredient-actions.ts` (the `null as never` dies),
-      `apps/web/scripts/inventory-csv-reseed.ts`, and `db:types` after apply. The apply must
-      land before any deploy of the code side (migration-before-deploy lesson).
+- [x] **Retire the dead lot/expiry columns — owner-confirmed (D073 §5).**
+      Migration ready (not applied):
+      `20260710193300_retire_lot_expiry_columns.sql` rewrites write-off / GRN
+      recreate / upsert / bulk_import / scan_inventory_alerts (also fixes
+      stale `ing.unit` in low-stock alerts), rebuilds
+      `mv_inventory_stock_current`, drops the three columns. App +
+      `database.types.ts` updated.
+
+### Apply sequencing (Codex review 2026-07-10 — do not half-apply)
+
+PROD deploy `ca865e69` still reads `production_orders` /
+`production_order_id` / `p_shelf_life_days`. Applying `193200`/`193300`
+before the cutover code is live breaks that deploy.
+
+1. Deploy the cutover app code first (no more those reads).
+2. Re-run precheck (retired tables/columns still 0 non-null).
+3. Apply in order: `193000` → `193100` → `193200` → `193300`.
+   Keep the chain atomic — do not apply `193000` alone and leave the rest.
+
+`193000`/`193100` are safer alone, but owner/Codex chose full-chain apply
+after code deploy to avoid a half-applied ledger.
 
 ### Owner decisions still open
 

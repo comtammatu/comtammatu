@@ -9,7 +9,7 @@
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  *   E2E_CASHIER_EMAIL / E2E_CASHIER_PASSWORD   — used for auth.setup.ts
- *   E2E_INVENTORY_MANAGER_EMAIL (optional)     — warehouse_manager at a branch
+ *   E2E_INVENTORY_MANAGER_EMAIL (optional)     — branch_manager at a branch
  *   E2E_INVENTORY_MANAGER_PASSWORD (optional)  — defaults to E2E_CASHIER_PASSWORD
  */
 
@@ -714,7 +714,7 @@ export async function resolveUserByEmail(
 }
 
 /**
- * Resolves the inventory manager user (warehouse_manager scoped to a branch).
+ * Resolves the inventory manager user (branch_manager scoped to a branch).
  * Falls back to the cashier user (with elevated service-role writes) for
  * test environments that have only one test account seeded.
  */
@@ -726,23 +726,23 @@ export async function resolveInventoryManagerUser(
     return resolveUserByEmail(supabase, managerEmail);
   }
 
-  // Fallback: discover any warehouse_manager in the tenant.
+  // Fallback: discover any branch_manager in the tenant.
   const { data: positions, error: posErr } = await supabase
     .from("positions")
     .select("id")
-    .eq("code", "warehouse_manager");
+    .eq("code", "branch_manager");
 
   if (posErr) {
     throw new Error(
-      `Failed to resolve warehouse_manager positions: ${posErr.message}`,
+      `Failed to resolve branch_manager positions: ${posErr.message}`,
     );
   }
 
   const positionIds = (positions ?? []).map((position) => position.id);
   if (positionIds.length === 0) {
     throw new Error(
-      "No warehouse_manager position found. " +
-        "Set E2E_INVENTORY_MANAGER_EMAIL in .env.test.local or seed a warehouse_manager account.",
+      "No branch_manager position found. " +
+        "Set E2E_INVENTORY_MANAGER_EMAIL in .env.test.local or seed a branch_manager account.",
     );
   }
 
@@ -755,8 +755,8 @@ export async function resolveInventoryManagerUser(
 
   if (error || !profile) {
     throw new Error(
-      "No warehouse_manager profile found. " +
-        "Set E2E_INVENTORY_MANAGER_EMAIL in .env.test.local or seed a warehouse_manager account.",
+      "No branch_manager profile found. " +
+        "Set E2E_INVENTORY_MANAGER_EMAIL in .env.test.local or seed a branch_manager account.",
     );
   }
 
@@ -770,6 +770,6 @@ export async function resolveInventoryManagerUser(
     email: authUser?.email ?? "",
     tenantId: profile.tenant_id,
     branchId: profile.branch_id,
-    role: "warehouse_manager",
+    role: "branch_manager",
   };
 }

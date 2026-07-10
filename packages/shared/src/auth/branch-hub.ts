@@ -6,13 +6,6 @@ export type StationKind = "pos" | "kds" | "runner";
 export interface BranchHubContext {
   standaloneStation: StationKind | null;
   isDesktop: boolean;
-  /**
-   * Resolved home site for roles whose claims carry no branch (D055 §1
-   * soft-routing: central-site operators keep `branch_id` null in the JWT).
-   * Callers resolve it via `resolveCentralSiteHomeBranchId`; the resolver
-   * only consumes it when `claims.branch_id` is null.
-   */
-  homeBranchId?: number | null;
 }
 
 function isAdminRole(role: JwtClaims["user_role"]): boolean {
@@ -21,10 +14,7 @@ function isAdminRole(role: JwtClaims["user_role"]): boolean {
 
 /** Determine the default redirect path for a role after login */
 export function getDefaultRedirect(claims: JwtClaims): string {
-  if (
-    isAdminRole(claims.user_role) ||
-    (claims.user_role === "office" && claims.branch_id == null)
-  ) {
+  if (isAdminRole(claims.user_role)) {
     return "/finance";
   }
 
@@ -32,7 +22,7 @@ export function getDefaultRedirect(claims: JwtClaims): string {
     return claims.branch_id != null ? `/br/${claims.branch_id}` : "/";
   }
 
-  return "/finance";
+  return "/access-denied?reason=role-unassigned";
 }
 
 export function resolveBranchHubDestination(
@@ -51,13 +41,8 @@ export function resolveBranchHubDestination(
     return getDefaultRedirect(claims);
   }
 
-  if (claims.user_role === "office" && claims.branch_id == null) {
-    return getDefaultRedirect(claims);
-  }
-
-  const hubBranchId = claims.branch_id ?? ctx.homeBranchId ?? null;
-  if (hubBranchId != null && canAccess(claims.user_role, "operator_home")) {
-    return `/br/${hubBranchId}`;
+  if (claims.branch_id != null && canAccess(claims.user_role, "operator_home")) {
+    return `/br/${claims.branch_id}`;
   }
 
   if (isAdminRole(claims.user_role)) {

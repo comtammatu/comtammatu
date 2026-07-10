@@ -3,7 +3,6 @@ import { updateSession } from "@comtammatu/database/supabase/middleware";
 import {
   buildAccessDeniedPath,
   canAccess,
-  centralSiteBranchKindForRole,
   extractClaimsFromAccessToken,
   isAdminRoutePath,
   isPublicAppPath,
@@ -14,10 +13,7 @@ import {
   type JwtClaims,
   type ModuleKey,
 } from "@comtammatu/shared/auth";
-import {
-  resolveBranchHubContextFromHeaders,
-  resolveCentralSiteHomeBranchId,
-} from "@/_lib/branch-hub-device";
+import { resolveBranchHubContextFromHeaders } from "@/_lib/branch-hub-device";
 import { getClientIp } from "@lib/network/client-ip";
 
 // Module-level flag — emit one warning per warm Edge instance when the POS
@@ -104,16 +100,14 @@ function redirectToAccessDenied(
   return redirectWithCookies(url, sessionResponse);
 }
 
-async function redirectToDefaultLanding(
+function redirectToDefaultLanding(
   request: NextRequest,
   sessionResponse: NextResponse,
-  supabase: ProxySupabase,
   claims: JwtClaims,
-): Promise<NextResponse> {
-  const branchHubContext = {
-    ...resolveBranchHubContextFromHeaders(request.headers),
-    homeBranchId: await resolveCentralSiteHomeBranchId(supabase, claims),
-  };
+): NextResponse {
+  const branchHubContext = resolveBranchHubContextFromHeaders(
+    request.headers,
+  );
   const url = new URL(
     resolvePostLoginRedirect(claims, null, branchHubContext),
     request.nextUrl.origin,
@@ -164,10 +158,9 @@ export async function proxy(request: NextRequest) {
     if (!session) return response; // unauthenticated → show login
     // Authenticated → bounce to role's post-login destination.
     if (claims) {
-      const branchHubContext = {
-        ...resolveBranchHubContextFromHeaders(request.headers),
-        homeBranchId: await resolveCentralSiteHomeBranchId(supabase, claims),
-      };
+      const branchHubContext = resolveBranchHubContextFromHeaders(
+        request.headers,
+      );
       const url = new URL(
         resolvePostLoginRedirect(claims, null, branchHubContext),
         request.nextUrl.origin,
@@ -206,7 +199,7 @@ export async function proxy(request: NextRequest) {
   if (moduleKey) {
     if (!canAccess(claims.user_role, moduleKey)) {
       if (isAdminRoutePath(pathname)) {
-        return redirectToDefaultLanding(request, response, supabase, claims);
+        return redirectToDefaultLanding(request, response, claims);
       }
 
       return redirectToAccessDenied(
@@ -234,38 +227,13 @@ export async function proxy(request: NextRequest) {
     if (pathMatch) {
       const routeBranchId = Number(pathMatch[1]);
       const allowCrossBranch = claims.user_role === "owner";
-      // Central-site soft-routing (D055 §1): warehouse/production managers
-      // keep tenant-level claims (branch_id null); instead of a claims match
-      // they may enter /br/{id} ONLY when the target branch is active and its
-      // branch_kind matches the role's central domain.
-      const centralSiteKind =
-        claims.branch_id === null
-          ? centralSiteBranchKindForRole(claims.user_role)
-          : null;
 
-      if (
-        !allowCrossBranch &&
-        (claims.branch_id === null || claims.branch_id !== routeBranchId)
-      ) {
-        if (centralSiteKind === null) {
-          return redirectToAccessDenied(
-            request,
-            response,
-            "branch-scope-mismatch",
-          );
-        }
-        const branchSurface = await getBranchSurface(
-          supabase,
-          claims.tenant_id,
-          routeBranchId,
+      if (!allowCrossBranch && claims.branch_id !== routeBranchId) {
+        return redirectToAccessDenied(
+          request,
+          response,
+          "branch-scope-mismatch",
         );
-        if (!branchSurfaceAllows(branchSurface, centralSiteKind)) {
-          return redirectToAccessDenied(
-            request,
-            response,
-            "branch-scope-mismatch",
-          );
-        }
       }
 
       const isStationRoute =
@@ -274,15 +242,14 @@ export async function proxy(request: NextRequest) {
         isStationRoute || pathname.startsWith(`/br/${routeBranchId}/stock`);
 
       if (needsBranchSurface) {
-        // Stations (POS/KDS/runner) stay branch-kind "branch" — central sites
-        // have no POS. Owner enters any ACTIVE site's non-station surfaces
-        // (D059 §3 context picker); central-site roles get their matching
-        // kind ONLY for the non-station /br/{id}/stock surfaces.
+        // Stations (POS/KDS/runner) stay branch-kind "branch". Owner enters
+        // any ACTIVE site's non-station surfaces (D059 §3 context picker);
+        // every other role is already pinned to its own branch above.
         const requiredBranchKind = isStationRoute
           ? "branch"
           : allowCrossBranch
             ? null
-            : (centralSiteKind ?? "branch");
+            : "branch";
         const branchSurface = await getBranchSurface(
           supabase,
           claims.tenant_id,
@@ -363,7 +330,7 @@ export async function proxy(request: NextRequest) {
   } else if (isAdminRoutePath(pathname)) {
     // Admin route with no module mapping — redirect to default landing
     // to avoid serving admin pages without ACL enforcement.
-    return redirectToDefaultLanding(request, response, supabase, claims);
+    return redirectToDefaultLanding(request, response, claims);
   }
 
   return response;

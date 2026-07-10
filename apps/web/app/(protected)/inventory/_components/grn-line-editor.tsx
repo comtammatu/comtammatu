@@ -1,5 +1,6 @@
 "use client";
 
+
 import type { ComponentProps, ReactNode } from "react";
 import { TriangleAlert as IconAlertTriangle } from "lucide-react";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
@@ -32,7 +33,6 @@ import {
   type PurchaseUnitOption,
 } from "@/(protected)/inventory/_lib/purchase-units";
 import { getReferenceCostForUnit } from "@/(protected)/inventory/_lib/reference-cost";
-import { unitCostFromLineTotal } from "@/(protected)/inventory/_lib/grn-draft";
 import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
 import { messages } from "@lib/messages";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
@@ -90,9 +90,9 @@ export function GrnLineEditFields({
     edit.entryUnitId,
     edit.unit,
   );
-  const unitCost = unitCostFromLineTotal(edit.quantity, edit.lineTotal);
+  const unitCost = edit.unitCost;
   const variance =
-    edit.lineTotal > 0 && referenceCost && referenceCost.value > 0
+    unitCost != null && unitCost > 0 && referenceCost && referenceCost.value > 0
       ? (unitCost - referenceCost.value) / referenceCost.value
       : null;
   const showVarianceWarning =
@@ -128,16 +128,22 @@ export function GrnLineEditFields({
           />
         </LineValueField>
         <LineValueField
-          controlId="grn-line-total"
-          label={FORM_VI.amount}
-          detail={GRN_CREATE_COPY.unitPriceUnit(edit.unit, unitCost)}
+          controlId="grn-line-unit-cost"
+          label={GRN_CREATE_COPY.unitCostTitle}
+          detail={GRN_CREATE_COPY.unitPriceUnit(edit.unit, unitCost ?? 0)}
         >
           <MoneyVndInput
-            id="grn-line-total"
-            value={String(edit.lineTotal)}
-            onValueChange={(value) =>
-              onPatch({ lineTotal: Number(value) || 0 })
-            }
+            id="grn-line-unit-cost"
+            value={unitCost == null ? "" : String(unitCost)}
+            onValueChange={(value) => {
+              const nextValue = Number(value);
+              onPatch({
+                unitCost:
+                  value === "" || !Number.isFinite(nextValue)
+                    ? null
+                    : nextValue,
+              });
+            }}
             onFocus={(event) => event.currentTarget.select()}
             className={
               controlSize === "field"
@@ -154,11 +160,17 @@ export function GrnLineEditFields({
             {GRN_CREATE_COPY.unitCostTitle}
           </span>
           <span className="text-base font-semibold">
-            {GRN_CREATE_COPY.moneyVnd(unitCost)}
-            <span className="text-xs font-normal text-muted-foreground">
-              {" "}
-              / {edit.unit}
-            </span>
+            {unitCost == null ? (
+              <span className="text-warning">{GRN_CREATE_COPY.priceRequired}</span>
+            ) : (
+              <>
+                {GRN_CREATE_COPY.moneyVnd(unitCost)}
+                <span className="text-xs font-normal text-muted-foreground">
+                  {" "}
+                  / {edit.unit}
+                </span>
+              </>
+            )}
           </span>
         </div>
         {referenceCost ? (
@@ -216,7 +228,11 @@ export function GrnLineEditSheet({
   controlSize = "touch",
 }: GrnLineEditSheetProps) {
   const open = edit != null;
-  const valid = edit != null && edit.quantity > 0 && edit.lineTotal >= 0;
+  const valid =
+    edit != null &&
+    edit.quantity > 0 &&
+    edit.unitCost != null &&
+    edit.unitCost > 0;
 
   return (
     <Sheet

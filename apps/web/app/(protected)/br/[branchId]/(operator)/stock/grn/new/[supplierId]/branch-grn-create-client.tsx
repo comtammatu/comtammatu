@@ -33,13 +33,14 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { GrnLineEditSheet } from "@/components/inventory/grn-line-editor";
+import { BranchGrnCreateLineSheet } from "@/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet";
 import {
   AppDetailFooter,
   AppEmptyState,
   DescriptionList,
 } from "@/components/surface";
 import {
+  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -74,6 +75,22 @@ export function BranchGrnCreateClient({
       hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-28">
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button asChild variant="ghost" size="icon-touch">
+            <Link href={sourceBasePath} aria-label={GRN_CREATE_COPY.changeSupplier}>
+              <IconArrowLeft />
+            </Link>
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">
+              {GRN_CREATE_COPY.newReceiptEyebrow}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {controller.supplier.name}
+            </p>
+          </div>
+        </BranchOperatorControlBar>
+
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start">
           <div className="flex min-w-0 flex-col gap-3">
             <BranchOperatorPanel
@@ -97,11 +114,11 @@ export function BranchGrnCreateClient({
                   },
                 ]}
               />
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <Label htmlFor="branch-grn-receiving-location">
-                  {GRN_CREATE_COPY.receivingLocation}
-                </Label>
-                {controller.showLocationPicker ? (
+              {controller.showWarehouseEditor ? (
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <Label htmlFor="branch-grn-receiving-location">
+                    {GRN_CREATE_COPY.receivingLocation}
+                  </Label>
                   <Select
                     value={
                       controller.locationId != null
@@ -133,20 +150,13 @@ export function BranchGrnCreateClient({
                       ))}
                     </SelectContent>
                   </Select>
-                ) : (
-                  <p
-                    id="branch-grn-receiving-location"
-                    className="min-h-12 border-b py-3 text-sm font-semibold"
-                  >
-                    {controller.selectedLocationName}
-                  </p>
-                )}
-                {controller.receivingSiteSaving ? (
-                  <p className="text-xs text-muted-foreground">
-                    {GRN_CREATE_COPY.receivingLocationSaving}
-                  </p>
-                ) : null}
-              </div>
+                  {controller.receivingSiteSaving ? (
+                    <p className="text-xs text-muted-foreground">
+                      {GRN_CREATE_COPY.receivingLocationSaving}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </BranchOperatorPanel>
 
             {controller.lineCount > 0 ? (
@@ -280,7 +290,7 @@ export function BranchGrnCreateClient({
           </BranchOperatorPanel>
         ) : null}
 
-        <GrnLineEditSheet
+        <BranchGrnCreateLineSheet
           edit={controller.edit}
           onClose={controller.closeEdit}
           onSave={controller.saveLine}

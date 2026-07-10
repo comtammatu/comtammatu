@@ -255,7 +255,7 @@ test("ingredients list does not render raw base-unit reference cost", () => {
 
 test("GRN create reference cost follows the selected entry unit", () => {
   const source = readRepo(
-    "apps/web/app/components/inventory/grn-line-editor.tsx",
+    "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
   );
 
   assert.match(
@@ -266,6 +266,23 @@ test("GRN create reference cost follows the selected entry unit", () => {
     source,
     /const referenceCost = edit\.ingredient\.unit_cost/,
   );
+});
+
+test("GRN supplier lines require an entered current unit price", () => {
+  const controller = readRepo(
+    "apps/web/lib/inventory/use-grn-create-controller.ts",
+  );
+  const editor = readRepo(
+    "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
+  );
+
+  assert.match(controller, /const unitCost = existing\?\.unitCost \?\? null/);
+  assert.doesNotMatch(
+    controller,
+    /referenceCost\?\.value\s*\?\?|ingredient\.unit_cost/,
+  );
+  assert.match(editor, /edit\.unitCost != null/);
+  assert.match(editor, /edit\.unitCost > 0/);
 });
 
 test("GRN line defaults scale ingredient cost by receiving unit", () => {

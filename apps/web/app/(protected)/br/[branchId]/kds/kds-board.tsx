@@ -2,8 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
-import { playAppSignal } from "@lib/audio-signal";
 import { readDevicePref, writeDevicePref } from "@lib/device-prefs";
+import {
+  cycleAudioMode,
+  getKdsAudioModeKey,
+  getKdsSoundPrefKey,
+  KDS_TONE_TO_ALERT_KIND,
+  playOperationalAlert,
+  resolveAudioMode,
+  type OperationalAudioMode,
+} from "@lib/operational-audio";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { TickProvider } from "./_hooks/use-board-tick";
 import { useKdsRealtime } from "./_hooks/use-kds-realtime";
@@ -28,7 +36,7 @@ import {
   getKdsNewTicketAlertGroupKey,
   getKdsNewTicketToastTitle,
   pickHigherPriorityKdsSignalTone,
-  type KdsNewTicketSignalTone,
+  type KdsNewTicketAlertGroup,
 } from "./_lib/sound-alerts";
 import { isKdsActiveTicketStatus } from "./_lib/order-status";
 import { KdsBoardTopBar } from "./_components/board-header";
@@ -163,11 +171,16 @@ export function KdsBoard({
   const { mode, setMode } = useKdsViewMode();
   // Default OFF; device preference loads after mount (hydration-safe).
   // Without persistence the new-ticket bell resets to muted every reload.
-  const [soundEnabled, setSoundEnabled] = useState(false);
-  const soundPrefKey = `kds:sound:${String(branchId)}`;
+  const [audioMode, setAudioMode] = useState<OperationalAudioMode>("off");
+  const audioModeKey = getKdsAudioModeKey(branchId);
   useEffect(() => {
-    if (readDevicePref(soundPrefKey) === "1") setSoundEnabled(true);
-  }, [soundPrefKey]);
+    setAudioMode(
+      resolveAudioMode(
+        readDevicePref(audioModeKey),
+        readDevicePref(getKdsSoundPrefKey(branchId)),
+      ),
+    );
+  }, [audioModeKey, branchId]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [completionHistoryOpen, setCompletionHistoryOpen] = useState(false);
   const boardRootRef = useRef<HTMLDivElement | null>(null);
@@ -207,15 +220,14 @@ export function KdsBoard({
   }, [fallbackStationIds, filters]);
 
   const toggleSound = useCallback(() => {
-    setSoundEnabled((current) => {
-      const next = !current;
-      if (next) {
-        playAppSignal("kds", true);
-      }
-      writeDevicePref(soundPrefKey, next ? "1" : "0");
+    setAudioMode((current) => {
+      const next = cycleAudioMode(current);
+      // Preview doubles as the user gesture that unblocks audio + speech.
+      playOperationalAlert({ kind: "kds.new", mode: next, force: true });
+      writeDevicePref(audioModeKey, next);
       return next;
     });
-  }, [soundPrefKey]);
+  }, [audioModeKey]);
 
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -289,7 +301,7 @@ export function KdsBoard({
       pendingAlertTicketIds.add(ticket.id);
     }
 
-    let nextSignalTone: KdsNewTicketSignalTone | null = null;
+    let nextAlertGroup: KdsNewTicketAlertGroup | null = null;
     const readyAlertGroups = collectReadyKdsNewTicketAlertGroups({
       tickets,
       pendingTicketIds: pendingAlertTicketIds,
@@ -299,10 +311,13 @@ export function KdsBoard({
 
     for (const alertGroup of readyAlertGroups) {
       if (alertedAlertGroupKeys.has(alertGroup.groupKey)) continue;
-      nextSignalTone = pickHigherPriorityKdsSignalTone(
-        nextSignalTone,
+      const winningTone = pickHigherPriorityKdsSignalTone(
+        nextAlertGroup?.tone ?? null,
         alertGroup.tone,
       );
+      if (nextAlertGroup === null || winningTone !== nextAlertGroup.tone) {
+        nextAlertGroup = alertGroup;
+      }
       const title = getKdsNewTicketToastTitle(alertGroup.tone);
       toast.info(title, {
         description: getTicketAlertDescription(
@@ -317,8 +332,16 @@ export function KdsBoard({
       }
     }
 
-    if (soundEnabled && nextSignalTone !== null) {
-      playAppSignal(nextSignalTone);
+    if (nextAlertGroup !== null) {
+      const tableNumber =
+        orders.get(nextAlertGroup.ticket.order_id)?.tables?.number ?? null;
+      playOperationalAlert({
+        kind: KDS_TONE_TO_ALERT_KIND[nextAlertGroup.tone],
+        mode: audioMode,
+        slots: {
+          tableLabel: tableNumber === null ? undefined : String(tableNumber),
+        },
+      });
     }
 
     for (const ticketId of pendingAlertTicketIds) {
@@ -343,7 +366,7 @@ export function KdsBoard({
     }
 
     knownTicketIdsRef.current = nextTicketIds;
-  }, [kitchenBatches, orderItemById, orders, soundEnabled, tickets]);
+  }, [audioMode, kitchenBatches, orderItemById, orders, tickets]);
 
   const missingOrderItemIds = useMemo(
     () => [
@@ -492,7 +515,7 @@ export function KdsBoard({
             branchId={branchId}
             pendingCount={pendingCount}
             mode={mode}
-            soundEnabled={soundEnabled}
+            audioMode={audioMode}
             isFullscreen={isFullscreen}
             onModeChange={setMode}
             onCompletionHistoryOpen={() => setCompletionHistoryOpen(true)}

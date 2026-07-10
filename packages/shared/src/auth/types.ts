@@ -1,16 +1,18 @@
 /**
  * Access buckets — ordered by privilege level (highest to lowest).
  * These are compatibility auth buckets, not mutable HR position labels.
+ *
+ * D076: `office`, `warehouse_manager`, and `production_manager` are retired.
+ * Office plane workspaces stay owner (+ branch_manager where MODULE_ACL already
+ * admits them). Central-site soft-routing is gone; `BranchKind` enum values
+ * remain for historical inventory rows only.
  */
 export const ACCESS_BUCKETS = [
   "owner",
   "branch_manager",
-  "warehouse_manager",
-  "production_manager",
   "cashier",
   "chef",
   "branch_staff",
-  "office",
 ] as const;
 
 export type AccessBucket = (typeof ACCESS_BUCKETS)[number];
@@ -29,19 +31,13 @@ export const BRANCH_ROLES: readonly StaffRole[] = [
 ] as const;
 
 /** Roles that do not require branch scope */
-export const TENANT_LEVEL_ROLES: readonly StaffRole[] = [
-  "owner",
-  "office",
-] as const;
+export const TENANT_LEVEL_ROLES: readonly StaffRole[] = ["owner"] as const;
 
 /** Roles that managers can create/edit from the current staff screen */
 export const MANAGEABLE_STAFF_ROLES: readonly StaffRole[] = [
   "branch_manager",
-  "warehouse_manager",
-  "production_manager",
   "cashier",
   "chef",
-  "office",
 ] as const;
 
 /** Operational roles that must belong to a branch. */
@@ -86,35 +82,23 @@ export function canManageTenantStrategySettings(role: StaffRole): boolean {
 export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   owner: "Chủ sở hữu",
   branch_manager: "Quản lý chi nhánh",
-  warehouse_manager: "Quản lý Kho Tổng",
-  production_manager: "Quản lý Bếp Trung Tâm",
   cashier: "Thu ngân",
   chef: "Bếp",
   branch_staff: "Nhân sự chi nhánh",
-  office: "Văn phòng",
 };
 
 /**
  * Canonical HR position code → StaffRole bucket. TS mirror of the SQL
  * `private.staff_role_from_position_code()` — change both in the same PR
  * (the SQL twin is the latest position-mapper migration). Unknown codes return
- * "unassigned" (fail-safe).
+ * "unassigned" (fail-safe). Retired office/central codes are intentionally
+ * absent so they resolve to unassigned.
  */
 const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
   owner: "owner",
   branch_manager: "branch_manager",
-  office: "office",
-  accountant: "office",
-  marketing: "office",
-  technician: "office",
-  design_construction: "office",
   cleaner: "branch_staff",
   guard: "branch_staff",
-  warehouse_manager: "warehouse_manager",
-  central_supply_manager: "warehouse_manager",
-  production_manager: "production_manager",
-  central_kitchen_manager: "production_manager",
-  head_chef: "production_manager",
   kitchen_counter: "chef",
   kitchen_helper: "chef",
   grill_counter: "chef",
@@ -129,11 +113,6 @@ export type BranchKind = "branch" | "central_supply" | "central_kitchen";
 const POSITION_CODE_TO_REQUIRED_BRANCH_KIND: Record<string, BranchKind | null> =
   {
     owner: null,
-    office: null,
-    accountant: null,
-    marketing: null,
-    technician: null,
-    design_construction: null,
     branch_manager: "branch",
     cashier: "branch",
     cashier_server: "branch",
@@ -143,31 +122,8 @@ const POSITION_CODE_TO_REQUIRED_BRANCH_KIND: Record<string, BranchKind | null> =
     grill_counter: "branch",
     cleaner: "branch",
     guard: "branch",
-    warehouse_manager: null,
-    central_supply_manager: null,
-    production_manager: null,
-    central_kitchen_manager: null,
-    head_chef: null,
     waiter: "branch",
   };
-
-/**
- * Central-site operator roles (D055 §1, soft-routing): their JWT claims stay
- * tenant-level (`branch_id` null); the proxy and Branch Hub route them to
- * their central site by matching `branches.branch_kind` instead of pinning
- * a branch into the JWT (pinning would lock their tenant-wide inventory
- * scope).
- */
-const CENTRAL_SITE_ROLE_BRANCH_KINDS: Partial<Record<StaffRole, BranchKind>> = {
-  warehouse_manager: "central_supply",
-  production_manager: "central_kitchen",
-};
-
-export function centralSiteBranchKindForRole(
-  role: StaffRole,
-): BranchKind | null {
-  return CENTRAL_SITE_ROLE_BRANCH_KINDS[role] ?? null;
-}
 
 export function staffRoleFromPositionCode(
   code: string | null | undefined,

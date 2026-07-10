@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown as IconChevronDown,
@@ -24,8 +24,8 @@ import {
   Item,
   ItemActions,
   ItemContent,
-  ItemDescription,
   ItemGroup,
+  ItemSeparator,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
@@ -36,13 +36,9 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { AppEmptyState } from "@/components/surface";
-import { StatusBadge } from "@/components/status-badge";
 import { formatQty } from "@/(protected)/inventory/_lib/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
-import {
-  CATEGORY_TONE_CLASS,
-  ITEM_KIND_LABELS,
-} from "@/(protected)/inventory/_lib/constants";
+import { ITEM_KIND_LABELS } from "@/(protected)/inventory/_lib/constants";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -54,9 +50,6 @@ import {
   getStockOnHandCategories,
   hasStockOnHandFilters,
   isPristineStockOnHand,
-  isStockReorderRisk,
-  stockLocationLabel,
-  visibleStockLocationRows,
   type StockFilter,
   type StockIngredient,
   type StockLocationFilter,
@@ -64,8 +57,6 @@ import {
 import { messages } from "@lib/messages";
 
 const stockCopy = messages.inventory.stock;
-const inventoryCommon = messages.inventory.common;
-
 const stockFilterOptions: { value: StockFilter; label: string }[] = [
   { value: "all", label: stockCopy.filters.allStatuses },
   { value: "in_stock", label: stockCopy.filters.inStock },
@@ -82,25 +73,8 @@ const locationFilterOptions: {
   { value: "kitchen", label: stockCopy.filters.locationKitchen },
 ];
 
-function StockRiskBadges({ item }: { item: StockIngredient }) {
-  const showStatus = item.status === "low" || item.status === "out";
-  const showReorder = !showStatus && isStockReorderRisk(item);
-  if (!showStatus && !showReorder) return null;
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {showStatus ? (
-        <StatusBadge domain="inventory" value={item.status} size="sm" />
-      ) : null}
-      {showReorder ? (
-        <Badge variant="warning">{stockCopy.filters.reorder}</Badge>
-      ) : null}
-    </div>
-  );
-}
-
 function StockQuantity({ item }: { item: StockIngredient }) {
-  const { big, base } = formatStockUnits(item.qty, item.units, formatQty);
+  const { base } = formatStockUnits(item.qty, item.units, formatQty);
   const atRisk = item.status === "low" || item.status === "out";
 
   return (
@@ -111,27 +85,10 @@ function StockQuantity({ item }: { item: StockIngredient }) {
           atRisk ? "text-destructive" : "text-foreground",
         )}
       >
-        {big ?? base}
+        {base}
       </p>
-      {big !== null ? (
-        <p className="font-mono text-xs leading-4 text-muted-foreground tabular-nums">
-          {base}
-        </p>
-      ) : null}
     </div>
   );
-}
-
-function StockLocationSummary({ item }: { item: StockIngredient }) {
-  const rows = visibleStockLocationRows(item.locationBreakdown);
-  if (rows.length === 0) return stockCopy.table.locationEmpty;
-
-  return rows
-    .map((row) => {
-      const { big, base } = formatStockUnits(row.qty, item.units, formatQty);
-      return `${stockLocationLabel(row)} ${big ?? base}`;
-    })
-    .join(" · ");
 }
 
 function StockTouchRow({
@@ -144,49 +101,27 @@ function StockTouchRow({
   return (
     <Item
       asChild
-      variant="outline"
-      className="grid min-h-20 touch-manipulation grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(8rem,0.65fr)_minmax(12rem,1fr)]"
+      size="sm"
+      className="min-h-11 touch-manipulation gap-2 px-0 py-1"
     >
       <Link
         href={`/br/${branchId}/stock/on-hand/${item.id}`}
         aria-label={stockCopy.actions.viewDetailAria(item.name)}
+        role="listitem"
       >
-        <ItemContent className="min-w-0 gap-1.5">
-          <ItemTitle size="heading" className="line-clamp-none w-full">
+        <ItemContent className="min-w-0">
+          <ItemTitle size="heading" className="w-full">
             {item.name}
-          </ItemTitle>
-          <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-1.5">
-            {item.category ? (
-              <Badge
-                className={
-                  CATEGORY_TONE_CLASS[item.category] ??
-                  "bg-muted text-muted-foreground"
-                }
-              >
-                {item.category}
-              </Badge>
-            ) : null}
-            <Badge variant="secondary">
+            <span className="shrink-0 font-sans text-2xs font-medium text-muted-foreground">
               {ITEM_KIND_LABELS[item.itemKind] ?? item.itemKind}
-            </Badge>
-            <span className="font-mono">
-              {item.sku || inventoryCommon.noValue}
             </span>
-          </ItemDescription>
-          <StockRiskBadges item={item} />
+          </ItemTitle>
         </ItemContent>
 
         <ItemActions className="min-w-0 justify-end">
           <StockQuantity item={item} />
           <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
         </ItemActions>
-
-        <ItemDescription className="col-span-2 line-clamp-none border-t pt-2 lg:col-span-1 lg:border-t-0 lg:pt-0">
-          <span className="font-medium text-foreground">
-            {stockCopy.table.location}:
-          </span>{" "}
-          <StockLocationSummary item={item} />
-        </ItemDescription>
       </Link>
     </Item>
   );
@@ -480,12 +415,13 @@ export function BranchStockOnHandClient({
               </AppEmptyState>
             ) : (
               <ItemGroup className="gap-2">
-                {filtered.map((item) => (
-                  <StockTouchRow
-                    key={item.id}
-                    branchId={branchId}
-                    item={item}
-                  />
+                {filtered.map((item, index) => (
+                  <Fragment key={item.id}>
+                    <StockTouchRow branchId={branchId} item={item} />
+                    {index < filtered.length - 1 ? (
+                      <ItemSeparator className="my-0" />
+                    ) : null}
+                  </Fragment>
                 ))}
               </ItemGroup>
             )}

@@ -53,8 +53,6 @@ export function getTransferActionConfig({
   userBranchId: number | null;
 }): TransferActionConfig | null {
   const isIntraBranch = transfer.fromBranchId === transfer.toBranchId;
-  const isBranchScopedOps =
-    userRole === "warehouse_manager" || userRole === "production_manager";
 
   if (transfer.status === "draft") {
     return {
@@ -62,21 +60,14 @@ export function getTransferActionConfig({
       enabled:
         userRole === "branch_manager"
           ? isIntraBranch && userBranchId === transfer.fromBranchId
-          : isBranchScopedOps
-            ? userBranchId === transfer.fromBranchId
-            : true,
+          : true,
     };
   }
 
   if (transfer.status === "confirmed_ship") {
     return {
       kind: "mark_in_transit",
-      enabled:
-        userRole === "branch_manager"
-          ? false
-          : isBranchScopedOps
-            ? userBranchId === transfer.fromBranchId
-            : true,
+      enabled: userRole === "branch_manager" ? false : true,
     };
   }
 
@@ -86,9 +77,7 @@ export function getTransferActionConfig({
       enabled:
         userRole === "branch_manager"
           ? userBranchId === transfer.toBranchId
-          : isBranchScopedOps
-            ? userBranchId === transfer.toBranchId
-            : true,
+          : true,
     };
   }
 

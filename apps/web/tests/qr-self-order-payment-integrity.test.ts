@@ -165,9 +165,13 @@ test("guest cancellation is fail-closed and staff cancellation is explicit", () 
   const staffQueue = readWeb(
     "app/(protected)/br/[branchId]/pos/_components/self-order-approval-sheet.tsx",
   );
+  const staffBill = readWeb(
+    "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
+  );
   assert.doesNotMatch(guest, /cancel-pending-payment-and-add/);
   assert.match(staffActions, /self_order_cancel_payment_request/);
-  assert.match(staffQueue, /staffCancelPaymentTitle/);
+  assert.match(staffBill, /staffCancelPaymentTitle/);
+  assert.match(staffBill, /variant: "destructive"/);
   assert.match(staffQueue, /staffRejectTitle/);
   assert.match(staffQueue, /variant: "destructive"/);
 });

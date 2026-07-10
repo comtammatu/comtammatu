@@ -34,7 +34,7 @@ export function resolveRoleHomeLink(
   role: StaffRole,
   branchId?: number | null,
 ): ResolvedHomeLink {
-  if (role === "owner" || (role === "office" && branchId == null)) {
+  if (role === "owner") {
     return {
       label: MODULE_ACL.finance.label,
       href: MODULE_ACL.finance.path,

@@ -1565,7 +1565,7 @@ const textChecks = [
       "`packages/ui/src/components/theme-provider.tsx` is the only runtime theme",
       "`max-h-dvh-95` and `max-h-dvh-80`",
       "`pos-safe-bottom` is limited to POS PWA floating bottom bars.",
-      "`chrome-safe-pb` / `chrome-safe-bottom`",
+      "`chrome-safe-pb` / `chrome-safe-top`",
     ],
   },
   {

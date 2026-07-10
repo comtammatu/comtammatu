@@ -11,6 +11,7 @@ export const GRN_CREATE_COPY = {
   discardDraft: "Hủy nháp",
   addItemToContinue: "Thêm mặt hàng để tiếp tục",
   unitCostTitle: "Đơn giá nhập",
+  priceRequired: "Nhập giá",
   editItem: "Sửa mặt hàng",
   addItem: "Thêm mặt hàng",
   editLineAria: "Sửa dòng",
@@ -33,7 +34,7 @@ export const GRN_CREATE_COPY = {
     `${formatQty(quantity)} ${unit} · ${formatVND(lineTotalFromUnitCost(quantity, unitCost))} · Đơn giá ${formatVND(unitCost)} / ${unit} ·`,
   unitLabel: (unit: string) => `Đơn vị nhập: ${unit}`,
   unitPriceUnit: (unit: string, unitCost: number) =>
-    `Đơn giá ${formatVND(unitCost)} / ${unit}`,
+    unitCost > 0 ? `Đơn giá ${formatVND(unitCost)} / ${unit}` : `Đơn giá / ${unit}`,
   baseConversionPreview: (
     quantity: string,
     entryUnit: string,

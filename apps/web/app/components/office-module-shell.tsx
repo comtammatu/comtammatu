@@ -31,6 +31,7 @@ export function OfficeModuleShell({
   return (
     <AppShell
       user={user}
+      role={role}
       tier1={resolveOfficePrimaryTabs(role, branchId)}
       tier2={tier2}
     >

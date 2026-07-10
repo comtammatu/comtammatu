@@ -119,24 +119,6 @@ test("inventory sidebar compresses count management into one visible entry", () 
   }
 });
 
-test("inventory sidebar sends count-approval-only users to count slips", () => {
-  const visible = hrefs(
-    resolveInventoryNav({
-      userRole: "office",
-      showProcurement: false,
-      showProduction: false,
-      showCatalogManagement: false,
-      showSettings: false,
-      showWasteApprovals: false,
-      showCountAssignments: false,
-      showCountSlips: true,
-    }),
-  );
-
-  assert.equal(visible.has("/inventory/count-assignments"), false);
-  assert.equal(visible.has("/inventory/count-slips"), true);
-});
-
 test("inventory nav click targets preserve branch URL scope", () => {
   const groups = resolveInventoryNav({
     userRole: "owner",

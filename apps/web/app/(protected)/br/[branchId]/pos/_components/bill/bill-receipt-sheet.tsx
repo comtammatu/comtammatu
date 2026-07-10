@@ -20,6 +20,7 @@ import {
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   InputGroup,
@@ -52,6 +53,7 @@ import {
   fetchPendingRemotePaymentForBill,
   type VietQrConfig,
 } from "../../payment-actions";
+import { cancelSelfOrderPaymentRequest } from "../../self-order-actions";
 import { printProvisionalBill, printReceipt } from "../../print-actions";
 import { useIsOnline } from "../pwa/online-status-provider";
 import { BillReceiptSummary } from "./bill-receipt-summary";
@@ -70,7 +72,7 @@ import {
 } from "./invoice-form-section";
 import { PaymentQrCode } from "./payment-qr-code";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, SELF_ORDER_VI } from "@comtammatu/shared/messages";
 interface BillReceiptProps {
   branchId: number;
   orderId: number | null;
@@ -104,6 +106,8 @@ interface BillReceiptProps {
    * không có hiệu lực vì full seed đã render bill ngay.
    */
   initialHeaderSeed?: SessionOrder | null;
+  /** Active guest payment request tied to this exact order, if any. */
+  selfOrderPaymentRequestId?: number | null;
   onOrderUpdated?: () => void | Promise<void>;
   onClose: () => void;
 }
@@ -438,6 +442,7 @@ export function BillReceipt({
   canConfirmCash,
   initialPaymentMethods,
   initialHeaderSeed,
+  selfOrderPaymentRequestId = null,
   onOrderUpdated,
   onClose,
 }: BillReceiptProps) {
@@ -972,15 +977,42 @@ export function BillReceipt({
     totalAmount,
   ]);
 
-  const handleCancelPendingPayment = useCallback(() => {
+  const handleCancelPendingPayment = useCallback(async () => {
     const paymentId = pendingExtras?.payment_id;
-    if (!paymentId) return;
+    if (!paymentId && !selfOrderPaymentRequestId) return;
+
+    if (selfOrderPaymentRequestId) {
+      const confirmed = await confirm({
+        title: SELF_ORDER_VI.staffCancelPaymentTitle,
+        description: SELF_ORDER_VI.staffCancelPaymentDescription,
+        confirmText: SELF_ORDER_VI.staffCancelPayment,
+        cancelText: "Đóng",
+        variant: "destructive",
+      });
+      if (!confirmed) return;
+    }
 
     startActionTransition(async () => {
-      const result = await cancelPendingPayment(branchId, paymentId);
-      if (!result.success) {
-        toast.error(result.error ?? "Không thể hủy phiên thanh toán");
-        return;
+      if (selfOrderPaymentRequestId) {
+        const result = await cancelSelfOrderPaymentRequest({
+          requestId: selfOrderPaymentRequestId,
+          reason: "staff_cancelled_from_bill",
+        });
+        if (!result.success) {
+          toast.error(result.error ?? "Không thể hủy yêu cầu thanh toán");
+          return;
+        }
+        if (result.data?.paymentCompleted) {
+          toast.warning(SELF_ORDER_VI.paymentCompletedBlocked);
+          await onOrderUpdated?.();
+          return;
+        }
+      } else if (paymentId) {
+        const result = await cancelPendingPayment(branchId, paymentId);
+        if (!result.success) {
+          toast.error(result.error ?? "Không thể hủy phiên thanh toán");
+          return;
+        }
       }
 
       setPendingExtras(null);
@@ -995,7 +1027,14 @@ export function BillReceipt({
       toast.success(messages.pos.payment.pendingCancelled);
       await onOrderUpdated?.();
     });
-  }, [branchId, methods, onOrderUpdated, orderId, pendingExtras?.payment_id]);
+  }, [
+    branchId,
+    methods,
+    onOrderUpdated,
+    orderId,
+    pendingExtras?.payment_id,
+    selfOrderPaymentRequestId,
+  ]);
 
   const handlePrintProvisional = useCallback(() => {
     if (orderId === null) return;
@@ -1141,6 +1180,28 @@ export function BillReceipt({
               contentClassName="gap-3"
             >
               <>
+                {selfOrderPaymentRequestId ? (
+                  <Alert>
+                    <IconAlertTriangle />
+                    <AlertTitle>
+                      {SELF_ORDER_VI.staffPaymentWaitingTitle}
+                    </AlertTitle>
+                    <AlertDescription>
+                      {SELF_ORDER_VI.staffPaymentWaitingDescription}
+                    </AlertDescription>
+                    <div className="col-start-2 mt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleCancelPendingPayment()}
+                        disabled={actionPending || methodPending}
+                      >
+                        {SELF_ORDER_VI.staffCancelPayment}
+                      </Button>
+                    </div>
+                  </Alert>
+                ) : null}
                 <div className="grid grid-cols-2 gap-2">
                   {methods.map((method) => {
                     const meta = METHOD_META[method] ?? {
@@ -1314,12 +1375,13 @@ export function BillReceipt({
                           pendingExtras={pendingExtras}
                           isCreating={methodPending}
                         />
-                        {pendingExtras?.payment_id ? (
+                        {pendingExtras?.payment_id &&
+                        !selfOrderPaymentRequestId ? (
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={handleCancelPendingPayment}
+                            onClick={() => void handleCancelPendingPayment()}
                             disabled={actionPending || methodPending}
                             title={messages.pos.payment.cancelPendingTitle}
                           >

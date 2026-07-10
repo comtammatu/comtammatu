@@ -30,7 +30,7 @@ test("Office Inventory entry surfaces use the shared field contract", () => {
     "app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
   );
   const grnLineEditor = readWorkspaceFile(
-    "app/components/inventory/grn-line-editor.tsx",
+    "app/(protected)/inventory/_components/grn-line-editor.tsx",
   );
   const productionRecipe = readWorkspaceFile(
     "app/(protected)/inventory/production-recipe-panel.tsx",

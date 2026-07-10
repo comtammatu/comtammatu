@@ -22,16 +22,20 @@ import { readFileSync } from "node:fs";
 //
 // Known residual gaps (text matching cannot close them; the real fix is
 // keeping prod credentials out of the local agent env): SDK writes via
-// node/python one-liners, mutating functions invoked through SELECT, raw-IP
-// connection strings, keywords split by shell string concatenation.
+// node/python one-liners, bare `SELECT mutating_fn()` outside a DO/PERFORM
+// wrapper (PERFORM and DO are blocked below), raw-IP connection strings,
+// keywords split by shell string concatenation.
 
 const PROTECTED_REFS = {
   iexwsuaqqenyjiskawoj: "PRODUCTION (comtammatu)",
   dyksphedgzqsqjqgxzog: "matu-platform production (separate codebase)",
 };
 
+// `do` / `perform` close the live bypass where a DO $$ … PERFORM rpc() $$
+// block mutated prod while a bare UPDATE was correctly blocked. `call` was
+// already covered. Bare SELECT of a mutating function remains a residual gap.
 const WRITE_SQL =
-  /\b(insert|update|delete|truncate|alter|drop|create|grant|revoke|vacuum|reindex|copy|merge|call|refresh\s+materialized)\b/i;
+  /\b(insert|update|delete|truncate|alter|drop|create|grant|revoke|vacuum|reindex|copy|merge|call|do|perform|refresh\s+materialized)\b/i;
 
 // WRITE_SQL runs after string literals and comments are stripped, so a write
 // keyword inside a quoted value (e.g. `select ... where note = 'do not delete'`)

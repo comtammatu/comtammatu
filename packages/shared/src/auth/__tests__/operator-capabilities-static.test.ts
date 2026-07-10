@@ -86,10 +86,6 @@ test("resolveOperatorTiles -> domain groups render Bán hàng, Nhân sự, Kho h
   assert.equal(groups.find((group) => group.id === "stock")?.title, "Kho hàng");
 });
 
-test("resolveOperatorTiles -> office has no operator plane tiles", () => {
-  assert.deepEqual(resolveOperatorTiles("office", 1), []);
-});
-
 test("resolveOperatorTiles -> branch staff sees shift tools only", () => {
   const groups = resolveOperatorTiles("branch_staff", 7);
   const moduleKeys = groups.flatMap((group) =>
@@ -101,29 +97,6 @@ test("resolveOperatorTiles -> branch staff sees shift tools only", () => {
   assert.equal(moduleKeys.includes("kds"), false);
   assert.equal(moduleKeys.includes("orders"), false);
   assert.equal(moduleKeys.includes("finance"), false);
-});
-
-test("resolveOperatorTiles -> central-site roles get stock tools without POS/KDS", () => {
-  for (const role of ["warehouse_manager", "production_manager"] as const) {
-    const groups = resolveOperatorTiles(role, 15);
-    const stock = groups.find((group) => group.id === "stock");
-    const moduleKeys = groups.flatMap((group) =>
-      group.tiles.map((tile) => tile.moduleKey),
-    );
-
-    assert.ok(stock, `${role} must get a stock group`);
-    assert.ok(
-      (stock?.tiles.length ?? 0) > 0,
-      `${role} stock group must be non-empty`,
-    );
-    assert.ok(
-      stock?.tiles.some((tile) => tile.href === "/br/15/stock"),
-      role,
-    );
-    assert.equal(moduleKeys.includes("pos"), false, role);
-    assert.equal(moduleKeys.includes("kds"), false, role);
-    assert.equal(moduleKeys.includes("runner"), false, role);
-  }
 });
 
 test("resolveOperatorTiles -> drops empty groups", () => {
@@ -172,7 +145,7 @@ test("resolveOperatorTiles -> operator hub does not duplicate office workspace l
 });
 
 test("resolveOperatorTiles -> production tile is native under stock at branch, not office_bridge (D068)", () => {
-  for (const role of ["owner", "production_manager"] as const) {
+  for (const role of ["owner", "branch_manager"] as const) {
     const groups = resolveOperatorTiles(role, 3, "branch");
     const groupIds = groups.map((group) => String(group.id));
     const stock = groups.find((group) => group.id === "stock");

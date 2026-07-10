@@ -107,6 +107,7 @@ export function InventoryShell({
   return (
     <AppShell
       user={user}
+      role={userRole}
       tier1={tier1}
       tier2={tier2}
       shellHeader={{

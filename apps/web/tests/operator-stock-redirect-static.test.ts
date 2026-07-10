@@ -24,7 +24,7 @@ test("operator stock sticky action bars route through AppDetailFooter", () => {
     ...sourceFiles("apps/web/app/(protected)/br/[branchId]/(operator)/stock"),
   ];
   const rawStickyCallSites = stockFiles.filter((path) =>
-    read(path).includes("sticky chrome-safe-bottom"),
+    read(path).includes("sticky bottom-0"),
   );
   const nestedFooterCallSites = stockFiles.filter((path) =>
     /<AppDetailFooter\s+sticky\s+trailing=\{footer\}/.test(read(path)),
@@ -33,7 +33,8 @@ test("operator stock sticky action bars route through AppDetailFooter", () => {
 
   assert.deepEqual(rawStickyCallSites, []);
   assert.deepEqual(nestedFooterCallSites, []);
-  assert.match(appSurface, /sticky chrome-safe-bottom/);
+  assert.match(appSurface, /sticky bottom-0/);
+  assert.match(appSurface, /chrome-safe-pb/);
   assert.match(appSurface, /shadow-lg/);
   assert.match(appSurface, /data-slot=button/);
 });
@@ -200,6 +201,14 @@ test("operator stock landing is a branch-native hub, not the office stock page w
   assert.match(source, /STOCK_PRIMARY_SUFFIXES/);
   assert.match(source, /STOCK_LOOKUP_SUFFIXES/);
   assert.match(source, /STOCK_CATALOG_SUFFIXES/);
+  assert.match(
+    source,
+    /const STOCK_PRIMARY_SUFFIXES = \[\s*"\/stock\/grn",\s*"\/stock\/production"/,
+  );
+  assert.match(
+    source,
+    /const STOCK_LOOKUP_SUFFIXES = \["\/stock\/on-hand"\]/,
+  );
   assert.match(source, /operatorStockPrimaryTitle/);
   assert.match(source, /operatorStockLookupTitle/);
   assert.match(source, /operatorStockCatalogTitle/);
@@ -245,9 +254,10 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(branchClientSource, /BranchOperatorPage/);
   assert.match(branchClientSource, /BranchOperatorPanel/);
   assert.match(branchClientSource, /ItemGroup/);
+  assert.match(branchClientSource, /ItemSeparator/);
   assert.match(branchClientSource, /StockTouchRow/);
   assert.match(branchClientSource, /filterStockOnHandIngredients/);
-  assert.match(branchClientSource, /ITEM_KIND_LABELS/);
+  assert.match(branchClientSource, /min-h-11/);
   assert.match(branchClientSource, /size="touch"/);
   assert.doesNotMatch(
     branchClientSource,
@@ -629,7 +639,8 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   assert.doesNotMatch(issuesClient, /router\.push\(`\/inventory\/consumption/);
   assert.match(issueDetailClient, /listBasePath = "\/inventory\/consumption"/);
   assert.match(issueDetailClient, /href=\{listBasePath\}/);
-  assert.match(appSurface, /sticky chrome-safe-bottom/);
+  assert.match(appSurface, /sticky bottom-0/);
+  assert.match(appSurface, /chrome-safe-pb/);
   assert.match(appSurface, /border-t border-border/);
   assert.match(appSurface, /shadow-lg/);
   assert.match(appSurface, /data-slot=button/);
@@ -748,7 +759,10 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
     "apps/web/lib/inventory/use-grn-create-controller.ts",
   );
   const grnLineEditor = read(
-    "apps/web/app/components/inventory/grn-line-editor.tsx",
+    "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
+  );
+  const branchGrnLineSheet = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
   );
 
   assert.match(grnNewRoute, /params: Promise<\{ branchId: string \}>/);
@@ -764,6 +778,7 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
     /GrnNewPageContent|DocumentFormFrame|DataTable|embedded/,
   );
   assert.match(branchGrnSourceClient, /BranchOperatorPage/);
+  assert.match(branchGrnSourceClient, /BranchOperatorControlBar/);
   assert.match(branchGrnSourceClient, /BranchOperatorPanel/);
   assert.match(branchGrnSourceClient, /AppDetailFooter/);
   assert.match(
@@ -813,9 +828,10 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
     /GrnCreatePageContent|DocumentFormFrame|embedded/,
   );
   assert.match(branchGrnCreateClient, /BranchOperatorPage/);
+  assert.match(branchGrnCreateClient, /BranchOperatorControlBar/);
   assert.match(branchGrnCreateClient, /BranchOperatorPanel/);
   assert.match(branchGrnCreateClient, /AppDetailFooter/);
-  assert.match(branchGrnCreateClient, /GrnLineEditSheet/);
+  assert.match(branchGrnCreateClient, /BranchGrnCreateLineSheet/);
   assert.match(branchGrnCreateClient, /useGrnCreateController/);
   assert.match(branchGrnCreateClient, /size="touch"/);
   assert.match(
@@ -868,6 +884,22 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
   assert.match(grnLineEditor, /<SheetContent[\s\S]*side="bottom"/);
   assert.match(grnLineEditor, /<SelectTrigger[\s\S]{0,80}size=\{controlSize\}/);
   assert.match(grnLineEditor, /controlSize = "touch"/);
+  assert.equal(
+    exists("apps/web/app/components/inventory/grn-line-editor.tsx"),
+    false,
+  );
+  assert.equal(
+    exists(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/branch-grn-review-line-sheet.tsx",
+    ),
+    false,
+  );
+  assert.match(branchGrnLineSheet, /NumberPadSheet/);
+  assert.match(branchGrnLineSheet, /BranchGrnCreateLineSheet/);
+  assert.match(branchGrnLineSheet, /BranchGrnReviewLineSheet/);
+  assert.match(branchGrnLineSheet, /BranchGrnAddLineSheet/);
+  assert.doesNotMatch(branchGrnLineSheet, /QuantityInput|MoneyVndInput/);
+  assert.doesNotMatch(branchGrnLineSheet, /setUnitCost\(referenceCost/);
   assert.doesNotMatch(branchGrnCreateClient, /controlSize="field"/);
 });
 
@@ -1204,7 +1236,7 @@ test("operator transfer routes keep list, create, detail, and form actions branc
   assert.match(branchTransferCreateClient, /BranchOperatorPanel/);
   assert.match(
     branchTransferCreateClient,
-    /md:grid-cols-\[minmax\(0,0\.85fr\)_minmax\(0,1\.15fr\)\]/,
+    /lg:grid-cols-\[minmax\(0,0\.85fr\)_minmax\(0,1\.15fr\)\]/,
   );
   assert.match(branchTransferCreateClient, /size="touch"/);
   assert.match(branchTransferCreateClient, /size="touch-lg"/);
@@ -1260,7 +1292,7 @@ test("operator transfer routes keep list, create, detail, and form actions branc
   );
   assert.match(
     branchTransferDetailClient,
-    /md:grid-cols-\[minmax\(0,1\.35fr\)_minmax\(17rem,0\.65fr\)\]/,
+    /lg:grid-cols-\[minmax\(0,1\.35fr\)_minmax\(17rem,0\.65fr\)\]/,
   );
   assert.match(branchTransferDetailClient, /<AppDetailFooter sticky/);
   assert.doesNotMatch(branchTransferDetailClient, /DataTable|embedded/);

@@ -17,7 +17,6 @@ export {
   TENANT_STRATEGY_SETTINGS_ROLES,
   canManageBranchFloorSettings,
   canManageTenantStrategySettings,
-  centralSiteBranchKindForRole,
   ROLE_LABEL_VI,
   requiredBranchKindForPositionCode,
   staffRoleFromPositionCode,

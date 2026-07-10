@@ -146,8 +146,8 @@ export function BranchTransferDetailClient({
         <StatusBadge domain="inventory" value={transfer.status} size="sm" />
       </BranchOperatorControlBar>
 
-      <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] md:items-start">
-        <div className="flex min-w-0 flex-col gap-3 md:col-start-2 md:row-start-1">
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-3 lg:col-start-2 lg:row-start-1">
           <BranchOperatorPanel
             title={copy.internalTransferTitle}
             icon={IconClipboardList}
@@ -181,7 +181,7 @@ export function BranchTransferDetailClient({
           description={transfer.code}
           icon={IconPackageCheck}
           size="sm"
-          className="min-w-0 md:col-start-1 md:row-start-1"
+          className="min-w-0 lg:col-start-1 lg:row-start-1"
         >
           {transfer.items.length === 0 ? (
             <AppEmptyState

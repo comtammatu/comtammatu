@@ -5,7 +5,6 @@ import { z } from "zod";
 import {
   PERMISSION_KEYS,
   STAFF_ROLES,
-  centralSiteBranchKindForRole,
   requiredBranchKindForPositionCode,
   staffRoleFromPositionCode,
   type StaffRole,
@@ -297,8 +296,7 @@ export const createEmployeeAccount = withAction(
     if (!(STAFF_ROLES as readonly string[]).includes(role)) {
       return { success: false, error: "Vai trò không hợp lệ." };
     }
-    const effectiveBranchId =
-      centralSiteBranchKindForRole(role) === null ? data.branchId : undefined;
+    const effectiveBranchId = data.branchId;
 
     const requiredBranchKind = requiredBranchKindForPositionCode(
       data.positionCode,
@@ -582,11 +580,10 @@ export const updateEmployee = withAction(
       const currentPositionCode = employee.profiles?.positions?.code ?? null;
       const finalPositionCode = data.positionCode !== undefined ? data.positionCode : currentPositionCode;
 
-      const role = finalPositionCode ? staffRoleFromPositionCode(finalPositionCode) : "unassigned";
-      const isCentralSite = role !== "unassigned" && centralSiteBranchKindForRole(role) !== null;
-      const targetBranchId = isCentralSite
-        ? undefined
-        : (data.branchId !== undefined ? (data.branchId ?? undefined) : (employee.profiles?.branch_id ?? undefined));
+      const targetBranchId =
+        data.branchId !== undefined
+          ? (data.branchId ?? undefined)
+          : (employee.profiles?.branch_id ?? undefined);
 
       const { error: profileError } = await supabase.rpc("admin_update_profile", {
         p_target_id: employee.profile_id,

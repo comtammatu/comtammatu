@@ -21,7 +21,7 @@ import {
  *
  * Covers:
  *   Scenario 1 — GRN at branch: draft → confirm → stock_levels updated, WAC computed
- *   Scenario 7 — RBAC: warehouse_manager scoped to one branch tries another branch → rejected
+ *   Scenario 7 — RBAC: branch_manager scoped to one branch tries another branch → rejected
  *                       with "Bạn chỉ được tạo phiếu nhập cho kho của mình."
  *
  * The DB trigger `enforce_po_grn_branch_is_procurement` (trg_grn_procurement_branch)
@@ -31,7 +31,7 @@ import {
  * Pre-conditions (.env.test.local):
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *   E2E_CASHIER_EMAIL, E2E_CASHIER_PASSWORD
- *   E2E_INVENTORY_MANAGER_EMAIL  (optional — warehouse_manager at a branch)
+ *   E2E_INVENTORY_MANAGER_EMAIL  (optional — branch_manager at a branch)
  *   E2E_INVENTORY_MANAGER_PASSWORD (optional)
  *   E2E_BASE_URL (default http://localhost:3000)
  */
@@ -124,7 +124,7 @@ test.describe("GRN at branch — happy path", () => {
       if (await isAccessDenied(page)) {
         test.skip(
           true,
-          "E2E auth user cannot access Inventory GRN UI. Use owner, warehouse_manager, or production_manager for UI happy-path coverage.",
+          "E2E auth user cannot access Inventory GRN UI. Use owner or branch_manager for UI happy-path coverage.",
         );
         return;
       }
@@ -327,23 +327,23 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
   });
 });
 
-// ─── Scenario 7: RBAC — scoped warehouse_manager attempts another branch ─────
+// ─── Scenario 7: RBAC — scoped branch_manager attempts another branch ───────
 
-test.describe("RBAC — warehouse_manager cannot create GRN for another branch", () => {
+test.describe("RBAC — branch_manager cannot create GRN for another branch", () => {
   test("returns 'Bạn chỉ được tạo phiếu nhập cho kho của mình.' when requesting a different branch", async ({
     page,
   }) => {
     const supabase = createServiceClient();
     const fx = await buildGrnFixtures();
 
-    // Resolve the warehouse_manager user (must be scoped to receiveBranchId via branch_id in profile)
+    // Resolve the branch_manager user (must be scoped to receiveBranchId via branch_id in profile)
     let manager;
     try {
       manager = await resolveInventoryManagerUser(supabase);
     } catch {
       test.skip(
         true,
-        "No warehouse_manager profile found. Seed E2E_INVENTORY_MANAGER_EMAIL " +
+        "No branch_manager profile found. Seed E2E_INVENTORY_MANAGER_EMAIL " +
           "scoped to the E2E receive branch in .env.test.local to run Scenario 7.",
       );
       return;
@@ -353,7 +353,7 @@ test.describe("RBAC — warehouse_manager cannot create GRN for another branch",
     if (manager.branchId !== fx.receiveBranchId) {
       test.skip(
         true,
-        `warehouse_manager branch_id (${manager.branchId}) does not match receiveBranchId (${fx.receiveBranchId}). ` +
+        `branch_manager branch_id (${manager.branchId}) does not match receiveBranchId (${fx.receiveBranchId}). ` +
           "Update E2E_INVENTORY_MANAGER_EMAIL to a user scoped to the E2E receive branch.",
       );
       return;
@@ -376,7 +376,7 @@ test.describe("RBAC — warehouse_manager cannot create GRN for another branch",
       // In that case the action uses claims.branch_id automatically, so cross-branch
       // access is impossible via the UI — the test is satisfied.
       console.log(
-        "[e2e] Branch selector not visible for scoped warehouse_manager. " +
+        "[e2e] Branch selector not visible for scoped branch_manager. " +
           "Server action branch isolation is enforced implicitly.",
       );
       return;

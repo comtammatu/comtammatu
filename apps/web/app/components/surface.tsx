@@ -948,7 +948,7 @@ export function AppDetailFooter({
           ? "sm:flex-col sm:items-stretch"
           : "sm:flex-row sm:items-center sm:justify-between",
         sticky
-          ? "sticky chrome-safe-bottom z-10 gap-2 bg-background/95 p-2 shadow-lg backdrop-blur [&_[data-slot=button]]:w-full sm:[&_[data-slot=button]]:w-auto"
+          ? "sticky bottom-0 z-10 gap-2 bg-background p-2 shadow-lg chrome-safe-pb [&_[data-slot=button]]:w-full sm:[&_[data-slot=button]]:w-auto"
           : "gap-3 py-6",
         className,
       )}

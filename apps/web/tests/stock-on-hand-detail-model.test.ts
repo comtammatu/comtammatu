@@ -21,7 +21,7 @@ function makeMovement(
     transferId: null,
     issueId: null,
     orderId: null,
-    productionOrderId: null,
+    productionRunId: null,
     locationName: "Warehouse",
     locationCode: "WH",
     ...patch,

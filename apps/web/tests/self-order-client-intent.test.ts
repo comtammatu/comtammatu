@@ -26,7 +26,7 @@ test("one logical batch payload reuses one client operation id", () => {
   });
   const sameKey = buildBatchIntentKey({
     customerNote: "Ít cơm",
-    items: [{ ...item }],
+    items: [{ ...item, key: "regenerated-ui-key" }],
   });
   assert.equal(key, sameKey);
 
@@ -89,31 +89,29 @@ test("self-order client sends a stable intent without guest payment cancellation
     new URL("../lib/self-order/server.ts", import.meta.url),
     "utf8",
   );
-  const batchRoute = readFileSync(
-    new URL("../app/api/self-order/[token]/batches/route.ts", import.meta.url),
+  const submitRoute = readFileSync(
+    new URL("../app/api/self-order/[token]/submit/route.ts", import.meta.url),
     "utf8",
   );
 
   assert.match(client, /resolveClientIntent\(/);
-  assert.match(client, /"batches",\s*intent,\s*submittedItems/);
+  assert.match(client, /\/submit/);
   assert.doesNotMatch(client, /cancel-pending-payment-and-add/);
-  assert.doesNotMatch(client, /confirm\(\{/);
   assert.match(client, /clientOpId: intent\.clientOpId/);
   assert.doesNotMatch(client, /clientOpId: newClientOpId\(\)/);
   assert.match(server, /self_order_idempotency_conflict/);
   assert.match(server, /code: "idempotency_conflict"/);
   assert.match(server, /self_order_retry/);
   assert.match(server, /code: "retry_required"/);
-  assert.match(server, /mapSelfOrderDataFailure/);
   assert.match(
-    batchRoute,
-    /const snapshot =[\s\S]*getSelfOrderSnapshotV2\([\s\S]*getSelfOrderSnapshot\(token\)/,
+    submitRoute,
+    /getSelfOrderSnapshot\(token, parsed\.data\.clientOpId\)/,
   );
-  assert.match(batchRoute, /clientOpId: parsed\.data\.clientOpId/);
-  assert.match(batchRoute, /snapshot: authoritativeSnapshot/);
+  assert.match(submitRoute, /clientOpId: parsed\.data\.clientOpId/);
+  assert.match(submitRoute, /snapshot: snapshot\.data/);
   assert.match(
     client,
-    /acknowledgedClientOpId !== intent\.clientOpId[\s\S]*setSnapshot\(nextSnapshot as PublicSelfOrderSnapshot\)[\s\S]*clearClientIntent/,
+    /acknowledgedClientOpId !== intent\.clientOpId[\s\S]*setSnapshot\(parsedSnapshot\.data\)[\s\S]*clearClientIntent/,
   );
 });
 
@@ -135,29 +133,19 @@ test("active cash and VietQR intents recover from snapshot and lock guest writes
     "utf8",
   );
 
-  assert.match(client, /normalizePaymentRequest\(\s*snapshot\.paymentRequest/);
-  assert.match(client, /paymentRequest\?\.status === "cash_call"/);
-  assert.match(client, /paymentRequest\?\.status === "vietqr_pending"/);
-  assert.match(client, /function readPaymentAmount[\s\S]*candidate >= 0/);
-  assert.match(client, /activePaymentRequest !== null/);
-  assert.match(client, /disabled=\{activePaymentRequest !== null\}/);
-  assert.match(
-    client,
-    /const refreshPaymentState = useCallback\([\s\S]*if \(refreshed\) \{[\s\S]*localPaymentSnapshotRef\.current = null;[\s\S]*setLocalPaymentRequest\(null\)/,
-  );
-  assert.match(
-    client,
-    /localPaymentSnapshotRef\.current === snapshot \? localPaymentRequest : null/,
-  );
+  assert.match(client, /normalizePaymentRequest\(\s*available\.paymentRequest/);
+  assert.match(client, /snapshotPaymentRequest \?\? localPaymentRequest/);
+  assert.match(client, /if \(!order \|\| activePaymentRequest\) return/);
   assert.match(menu, /disabled=\{disabled\}/);
   assert.match(payment, /activePaymentRequest\.qrData/);
   assert.match(payment, /activeOrder\.status === "ready"/);
   assert.match(payment, /activeOrder\.status === "served"/);
   assert.match(payment, /SELF_ORDER_VI\.paymentCancelStaffRequired/);
-  assert.match(hooks, /refreshGenerationRef/);
-  assert.match(hooks, /refreshAbortRef\.current\?\.abort\(\)/);
-  assert.match(hooks, /generation !== refreshGenerationRef\.current/);
+  assert.match(hooks, /generationRef/);
+  assert.match(hooks, /abortRef\.current\?\.abort\(\)/);
+  assert.match(hooks, /generation !== generationRef\.current/);
   assert.match(hooks, /signal: controller\.signal/);
-  assert.match(hooks, /status !== "SUBSCRIBED"/);
+  assert.match(hooks, /fast \? 3_000 : 15_000/);
+  assert.doesNotMatch(hooks, /createClient|\.channel\(/);
   assert.match(hooks, /visibilitychange/);
 });

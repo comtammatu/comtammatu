@@ -52,24 +52,17 @@ test("VietQR response contract rejects an incomplete committed snapshot", () => 
   assert.equal(parsed.success, false);
 });
 
-test("payment server prefers RPC QR snapshots and keeps fallback DB-only", () => {
+test("payment server returns only the validated RPC payment snapshot", () => {
   const server = readWeb("lib/self-order/server.ts");
-  const exactBranch = server.indexOf(
-    "payload.qrData !== undefined && payload.qrData !== null",
-  );
-  const fallbackRead = server.indexOf("readVietQrConfigForToken(input.token)");
-
-  assert.ok(exactBranch >= 0);
-  assert.ok(fallbackRead > exactBranch);
   assert.match(
     server,
-    /selfOrderVietQrResponseSchema\.safeParse\(payload\)[\s\S]*data: exactSnapshot\.data/,
+    /selfOrderVietQrResponseSchema\.safeParse\(publicPayload\)[\s\S]*data: parsed\.data/,
   );
   assert.doesNotMatch(
     server,
-    /data: \{ \.\.\.payload, \.\.\.exactSnapshot\.data \}/,
+    /readVietQrConfigForToken|from\("branch_payment_settings"\)/,
   );
-  assert.match(server, /expiresAt: null/);
+  assert.match(server, /expiresAt: payload\.expiresAt \?\? payload\.expires_at/);
 });
 
 test("payment server maps R0C domain errors without returning database text", () => {

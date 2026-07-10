@@ -8,6 +8,11 @@ import {
   useState,
   useTransition,
 } from "react";
+import { BellRing as IconBell } from "lucide-react";
+import { formatCount } from "@comtammatu/shared/format";
+import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Drawer,
@@ -39,6 +44,11 @@ import {
   type OrderTarget,
 } from "./_components/pos-order-target-row";
 import { SelfOrderApprovalSheet } from "./_components/self-order-approval-sheet";
+import {
+  fetchSelfOrderPosState,
+  type SelfOrderPosState,
+} from "./self-order-actions";
+import { playAppSignal } from "@lib/audio-signal";
 
 // Lazy-load these modals OFF the cash path, code-splitting their JS out of
 // the initial POS bundle. Trims first-paint JS without affecting payment
@@ -124,6 +134,7 @@ import {
   usePosTables,
   usePosCartStore,
   usePosSession,
+  usePosSound,
 } from "./_providers/pos-desktop-provider";
 import {
   useCartActions,
@@ -163,6 +174,7 @@ export function PosDesktopInner({
   const { branchId, session } = usePosSession();
   const orders = usePosOrders();
   const tables = usePosTables();
+  const { soundEnabled } = usePosSound();
   const {
     refreshOrders,
     refreshOrdersDeduped,
@@ -316,6 +328,18 @@ export function PosDesktopInner({
   const [appendDraftItems, setAppendDraftItems] = useState<CartItem[]>([]);
   const [appendSubmitting, setAppendSubmitting] = useState(false);
   const [hotkeyOpen, setHotkeyOpen] = useState(false);
+  const [selfOrderPosState, setSelfOrderPosState] = useState<SelfOrderPosState>(
+    {
+      requests: [],
+      paymentRequests: [],
+    },
+  );
+  const [selectedSelfOrderRequestId, setSelectedSelfOrderRequestId] = useState<
+    number | null
+  >(null);
+  const [selfOrderApprovalOpen, setSelfOrderApprovalOpen] = useState(false);
+  const knownSelfOrderRequestIdsRef = useRef<Set<number> | null>(null);
+  const selfOrderLoadGenerationRef = useRef(0);
   // Multi-order-per-table: when the user taps an occupied table, show a
   // picker listing active orders + a "Tạo đơn mới" button. The picker is the
   // only path to start a 2nd order on the same physical table.
@@ -355,6 +379,50 @@ export function PosDesktopInner({
     refreshOrdersDeduped();
     bumpDetailRefresh();
   }, [refreshOrdersDeduped, bumpDetailRefresh]);
+
+  const refreshSelfOrderPosState = useCallback(async () => {
+    const generation = selfOrderLoadGenerationRef.current + 1;
+    selfOrderLoadGenerationRef.current = generation;
+    const result = await fetchSelfOrderPosState(branchId).catch(() => null);
+    if (generation !== selfOrderLoadGenerationRef.current || !result?.success) {
+      return;
+    }
+
+    const nextState = result.data ?? { requests: [], paymentRequests: [] };
+    const nextIds = new Set(nextState.requests.map((request) => request.id));
+    const knownIds = knownSelfOrderRequestIdsRef.current;
+    if (
+      soundEnabled &&
+      knownIds !== null &&
+      nextState.requests.some((request) => !knownIds.has(request.id))
+    ) {
+      playAppSignal("pos");
+    }
+    knownSelfOrderRequestIdsRef.current = nextIds;
+    setSelfOrderPosState(nextState);
+  }, [branchId, soundEnabled]);
+
+  useEffect(() => {
+    void refreshSelfOrderPosState();
+    const timer = window.setInterval(() => {
+      void refreshSelfOrderPosState();
+    }, 5_000);
+    function refreshWhenVisible() {
+      if (document.visibilityState === "visible") {
+        void refreshSelfOrderPosState();
+      }
+    }
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      selfOrderLoadGenerationRef.current += 1;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [refreshSelfOrderPosState]);
+
+  const refreshSelfOrderWorkflow = useCallback(async () => {
+    await Promise.all([refreshSelfOrderPosState(), refreshOperational()]);
+  }, [refreshOperational, refreshSelfOrderPosState]);
 
   // Clear selected table if it becomes unavailable while in dine-in mode.
   // Skip the clear when the user explicitly opted into an occupied table
@@ -468,6 +536,41 @@ export function PosDesktopInner({
     () => deriveTableOrderVisualStates(orders, ACTIVE_POS_STATUSES),
     [orders],
   );
+  const pendingSelfOrderRequestByTable = useMemo(
+    () =>
+      new Map(
+        selfOrderPosState.requests.map((request) => [request.tableId, request]),
+      ),
+    [selfOrderPosState.requests],
+  );
+  const pendingSelfOrderTableIds = useMemo(
+    () => new Set(pendingSelfOrderRequestByTable.keys()),
+    [pendingSelfOrderRequestByTable],
+  );
+  const selfOrderTableNumberById = useMemo(
+    () => new Map(tables.map((table) => [table.id, table.number])),
+    [tables],
+  );
+  const selfOrderPaymentRequestByOrder = useMemo(
+    () =>
+      new Map(
+        selfOrderPosState.paymentRequests.map((request) => [
+          request.orderId,
+          request.id,
+        ]),
+      ),
+    [selfOrderPosState.paymentRequests],
+  );
+  useEffect(() => {
+    if (
+      selectedSelfOrderRequestId !== null &&
+      !selfOrderPosState.requests.some(
+        (request) => request.id === selectedSelfOrderRequestId,
+      )
+    ) {
+      setSelectedSelfOrderRequestId(null);
+    }
+  }, [selectedSelfOrderRequestId, selfOrderPosState.requests]);
 
   // Live derivation for the multi-order table picker. Re-runs whenever
   // `orders` or `tables` updates (realtime, post-mutation, refetch) so the
@@ -655,6 +758,15 @@ export function PosDesktopInner({
 
   const handleTableSelect = useCallback(
     (table: BranchTable) => {
+      const pendingSelfOrderRequest = pendingSelfOrderRequestByTable.get(
+        table.id,
+      );
+      if (pendingSelfOrderRequest) {
+        setSelectedSelfOrderRequestId(pendingSelfOrderRequest.id);
+        setSelfOrderApprovalOpen(true);
+        return;
+      }
+
       if (table.status === "available") {
         setActiveTable(selectedTableId === table.id ? null : table.id);
         return;
@@ -714,6 +826,7 @@ export function PosDesktopInner({
       branchId,
       focusOrderWorkflow,
       orders,
+      pendingSelfOrderRequestByTable,
       refreshOperational,
       selectedTableId,
       setActiveTable,
@@ -1553,6 +1666,7 @@ export function PosDesktopInner({
                 onTableSelect={handleTableSelect}
                 orderCountByTable={orderCountByTable}
                 tableOrderVisualStateByTable={tableOrderVisualStateByTable}
+                pendingSelfOrderTableIds={pendingSelfOrderTableIds}
                 headerAction={serviceModeSelector}
                 className="min-h-0 flex-1"
               />
@@ -1573,6 +1687,26 @@ export function PosDesktopInner({
           {sidebars}
         </div>
       )}
+
+      <Button
+        type="button"
+        variant="outline"
+        size="touch"
+        className="fixed right-3 bottom-20 z-40 lg:bottom-4"
+        disabled={selfOrderPosState.requests.length === 0}
+        onClick={() => {
+          setSelectedSelfOrderRequestId(null);
+          setSelfOrderApprovalOpen(true);
+        }}
+      >
+        <IconBell data-icon="inline-start" />
+        <span>{SELF_ORDER_VI.staffApprove}</span>
+        {selfOrderPosState.requests.length > 0 ? (
+          <Badge variant="warning">
+            {formatCount(selfOrderPosState.requests.length)}
+          </Badge>
+        ) : null}
+      </Button>
 
       <PosMobileActionBar
         isTouchLayout={isTouchLayout}
@@ -1603,11 +1737,16 @@ export function PosDesktopInner({
         onCancelAppend={cancelAppendWorkflow}
       />
       <SelfOrderApprovalSheet
-        branchId={branchId}
-        posSessionId={session.id}
+        open={selfOrderApprovalOpen}
+        requests={selfOrderPosState.requests}
+        focusedRequestId={selectedSelfOrderRequestId}
+        tableNumberById={selfOrderTableNumberById}
         orders={orders}
-        onUpdated={refreshOperational}
-        onOpenPayment={handlePayOrderFromPicker}
+        onOpenChange={(open) => {
+          setSelfOrderApprovalOpen(open);
+          if (!open) setSelectedSelfOrderRequestId(null);
+        }}
+        onUpdated={refreshSelfOrderWorkflow}
       />
       {mobileSidebarDrawer}
 
@@ -1726,7 +1865,12 @@ export function PosDesktopInner({
         initialPaymentMethods={initialPaymentMethods}
         initialVietQrConfig={initialVietQrConfig}
         initialHeaderSeed={billHeaderSeed}
-        onOrderUpdated={() => void refreshOperational()}
+        selfOrderPaymentRequestId={
+          billOrderId === null
+            ? null
+            : (selfOrderPaymentRequestByOrder.get(billOrderId) ?? null)
+        }
+        onOrderUpdated={() => void refreshSelfOrderWorkflow()}
         onClose={closeBill}
       />
 

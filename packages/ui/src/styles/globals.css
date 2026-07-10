@@ -535,14 +535,10 @@
  * when the PWA runs standalone on Android — viewport-fit:cover lets the
  * system gesture/3-button nav bar overlap fixed-bottom UI. `max(...)`
  * preserves the original chrome padding on non-gesture devices.
- * `chrome-safe-pb` replaces `pb-2`-style chrome padding on `fixed bottom-0`
- * shells; `chrome-safe-bottom` replaces `bottom-4`-style offsets on sticky
- * floating buttons. Prefixed `chrome-` to avoid retired helper names. */
+ * `chrome-safe-pb` replaces `pb-2`-style chrome padding on fixed or sticky
+ * `bottom-0` shells. Prefixed `chrome-` to avoid retired helper names. */
 @utility chrome-safe-pb {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
-}
-@utility chrome-safe-bottom {
-  bottom: max(1rem, env(safe-area-inset-bottom));
 }
 @utility chrome-safe-top {
   top: max(0.5rem, env(safe-area-inset-top));

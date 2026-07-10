@@ -52,8 +52,6 @@ export function resolveOperatorTiles(
   branchId: number,
   branchKind: BranchKind = "branch",
 ): ResolvedOperatorTileGroup[] {
-  if (role === "office") return [];
-
   const visibleTiles = resolveVisibleTiles(role, branchId, branchKind);
   const allowedGroups = DOMAIN_TILE_GROUP_ORDER;
 

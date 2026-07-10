@@ -43,6 +43,7 @@ export function FinanceShell({
   return (
     <AppShell
       user={user}
+      role={role}
       tier1={resolveOfficePrimaryTabs(role, homeBranchId)}
       tier2={resolveFinanceNav({
         showInvoices,

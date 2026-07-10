@@ -14,7 +14,7 @@ export function jsonError(
 ) {
   const response = NextResponse.json({ ok: false, code, message }, { status });
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
-  response.headers.set("Vary", "Cookie");
+  response.headers.set("Vary", "Origin");
   return response;
 }
 

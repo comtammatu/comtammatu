@@ -99,7 +99,7 @@ export function BranchTransferCreateClient({
       <div
         className={
           controller.selectedBranch
-            ? "grid min-w-0 gap-3 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] md:items-start"
+            ? "grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start"
             : "grid min-w-0 gap-3"
         }
       >
@@ -464,7 +464,7 @@ export function BranchTransferCreateClient({
         <BranchOperatorPanel
           size="sm"
           title={FORM_VI.notes}
-          contentClassName="grid gap-3 md:grid-cols-2"
+          contentClassName="grid gap-3 lg:grid-cols-2"
         >
           <div className="flex min-w-0 flex-col gap-1.5">
             <Label htmlFor="branch-transfer-vehicle">{copy.vehicleInfo}</Label>

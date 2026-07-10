@@ -27,9 +27,6 @@ test("HR route ACL keeps staff and payroll owner-only", () => {
   for (const role of [
     "cashier",
     "chef",
-    "warehouse_manager",
-    "production_manager",
-    "office",
   ] as const satisfies readonly StaffRole[]) {
     assert.equal(canAccess(role, "hr"), false);
     assert.equal(canAccess(role, "staff"), false);

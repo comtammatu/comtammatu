@@ -159,6 +159,13 @@ test("forward SECURITY DEFINER migrations include an auth boundary or browser-ro
   for (const migration of readForwardMigrations()) {
     for (const match of migration.source.matchAll(definerFunctionPattern)) {
       const functionName = match[1]!;
+      const headerEnd = match[0].search(/\bAS\s+\$[A-Za-z0-9_]*\$/i);
+      if (
+        headerEnd < 0 ||
+        !/\bSECURITY\s+DEFINER\b/i.test(match[0].slice(0, headerEnd))
+      ) {
+        continue;
+      }
       const body = match[3]!;
       const hasAuthBoundary = authzPrimitivePattern.test(body);
       const grantsBrowserRole = browserGrantPattern(functionName).test(

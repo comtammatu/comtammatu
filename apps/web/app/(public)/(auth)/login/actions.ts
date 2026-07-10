@@ -9,10 +9,7 @@ import {
   resolvePostLoginRedirect,
 } from "@comtammatu/shared/auth";
 import { loginRateLimit } from "@comtammatu/security";
-import {
-  resolveBranchHubContextFromHeaders,
-  resolveCentralSiteHomeBranchId,
-} from "@/_lib/branch-hub-device";
+import { resolveBranchHubContextFromHeaders } from "@/_lib/branch-hub-device";
 
 const loginSchema = z.object({
   email: z.email({ error: "Email không hợp lệ" }),
@@ -134,9 +131,6 @@ export async function login(
     return { error: GENERIC_LOGIN_ERROR };
   }
 
-  const branchHubContext = {
-    ...resolveBranchHubContextFromHeaders(await headers()),
-    homeBranchId: await resolveCentralSiteHomeBranchId(supabase, claims),
-  };
+  const branchHubContext = resolveBranchHubContextFromHeaders(await headers());
   redirect(resolvePostLoginRedirect(claims, null, branchHubContext));
 }

@@ -29,7 +29,7 @@ import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import {
   GrnLineEditFields,
   GrnLineEditSheet,
-} from "@/components/inventory/grn-line-editor";
+} from "@/(protected)/inventory/_components/grn-line-editor";
 import { FormField } from "@/components/form/form-field";
 import {
   AppBackLink,
@@ -502,7 +502,11 @@ function LineEditPanel({
   onPatch,
   onUnitChange,
 }: LineEditPanelProps) {
-  const valid = edit != null && edit.quantity > 0 && edit.lineTotal >= 0;
+  const valid =
+    edit != null &&
+    edit.quantity > 0 &&
+    edit.unitCost != null &&
+    edit.unitCost > 0;
 
   if (!edit) {
     return (

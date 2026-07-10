@@ -1854,9 +1854,7 @@ export type Database = {
           baseline_sample_n: number | null
           baseline_source: string | null
           baseline_variance_pct: number | null
-          batch_number: string | null
           entry_unit_id: number | null
-          expiry_date: string | null
           grn_id: number
           id: number
           ingredient_id: number
@@ -1883,9 +1881,7 @@ export type Database = {
           baseline_sample_n?: number | null
           baseline_source?: string | null
           baseline_variance_pct?: number | null
-          batch_number?: string | null
           entry_unit_id?: number | null
-          expiry_date?: string | null
           grn_id: number
           id?: never
           ingredient_id: number
@@ -1912,9 +1908,7 @@ export type Database = {
           baseline_sample_n?: number | null
           baseline_source?: string | null
           baseline_variance_pct?: number | null
-          batch_number?: string | null
           entry_unit_id?: number | null
-          expiry_date?: string | null
           grn_id?: number
           id?: never
           ingredient_id?: number
@@ -2201,7 +2195,6 @@ export type Database = {
           name: string
           reorder_point: number | null
           review_override: boolean | null
-          shelf_life_days: number | null
           sku: string | null
           storage_type: string
           tenant_id: number
@@ -2220,7 +2213,6 @@ export type Database = {
           name: string
           reorder_point?: number | null
           review_override?: boolean | null
-          shelf_life_days?: number | null
           sku?: string | null
           storage_type?: string
           tenant_id: number
@@ -2239,7 +2231,6 @@ export type Database = {
           name?: string
           reorder_point?: number | null
           review_override?: boolean | null
-          shelf_life_days?: number | null
           sku?: string | null
           storage_type?: string
           tenant_id?: number
@@ -5050,139 +5041,6 @@ export type Database = {
           },
         ]
       }
-      production_order_items: {
-        Row: {
-          actual_quantity: number | null
-          created_at: string
-          entry_unit_id: number | null
-          finished_good_id: number
-          id: number
-          production_order_id: number
-          quantity: number
-          tenant_id: number
-          unit_cost_at_production: number | null
-        }
-        Insert: {
-          actual_quantity?: number | null
-          created_at?: string
-          entry_unit_id?: number | null
-          finished_good_id: number
-          id?: never
-          production_order_id: number
-          quantity: number
-          tenant_id: number
-          unit_cost_at_production?: number | null
-        }
-        Update: {
-          actual_quantity?: number | null
-          created_at?: string
-          entry_unit_id?: number | null
-          finished_good_id?: number
-          id?: never
-          production_order_id?: number
-          quantity?: number
-          tenant_id?: number
-          unit_cost_at_production?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "production_order_items_entry_unit_id_fkey"
-            columns: ["entry_unit_id"]
-            isOneToOne: false
-            referencedRelation: "units"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_order_items_finished_good_id_fkey"
-            columns: ["finished_good_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_order_items_production_order_id_fkey"
-            columns: ["production_order_id"]
-            isOneToOne: false
-            referencedRelation: "production_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_order_items_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      production_orders: {
-        Row: {
-          branch_id: number
-          completed_at: string | null
-          created_at: string
-          created_by: string | null
-          id: number
-          notes: string | null
-          production_number: string
-          status: string
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          branch_id: number
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          notes?: string | null
-          production_number: string
-          status?: string
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          branch_id?: number
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          notes?: string | null
-          production_number?: string
-          status?: string
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "production_orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "production_orders_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       production_recipes: {
         Row: {
           created_at: string
@@ -5907,9 +5765,6 @@ export type Database = {
           order_id: number | null
           rejected_at: string | null
           rejected_by: string | null
-          request_fingerprint: string
-          request_fingerprint_version: string
-          session_device_id: number | null
           session_id: number
           status: string
           table_id: number
@@ -5929,9 +5784,6 @@ export type Database = {
           order_id?: number | null
           rejected_at?: string | null
           rejected_by?: string | null
-          request_fingerprint: string
-          request_fingerprint_version: string
-          session_device_id?: number | null
           session_id: number
           status?: string
           table_id: number
@@ -5951,9 +5803,6 @@ export type Database = {
           order_id?: number | null
           rejected_at?: string | null
           rejected_by?: string | null
-          request_fingerprint?: string
-          request_fingerprint_version?: string
-          session_device_id?: number | null
           session_id?: number
           status?: string
           table_id?: number
@@ -5994,13 +5843,6 @@ export type Database = {
             columns: ["rejected_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "self_order_batches_session_device_id_fkey"
-            columns: ["session_device_id"]
-            isOneToOne: false
-            referencedRelation: "self_order_session_devices"
             referencedColumns: ["id"]
           },
           {
@@ -6046,8 +5888,7 @@ export type Database = {
           qr_payload_snapshot: string | null
           request_fingerprint: string
           request_fingerprint_version: string
-          session_device_id: number | null
-          session_id: number
+          session_id: number | null
           status: string
           table_id: number
           tenant_id: number
@@ -6073,8 +5914,7 @@ export type Database = {
           qr_payload_snapshot?: string | null
           request_fingerprint: string
           request_fingerprint_version: string
-          session_device_id?: number | null
-          session_id: number
+          session_id?: number | null
           status: string
           table_id: number
           tenant_id: number
@@ -6100,8 +5940,7 @@ export type Database = {
           qr_payload_snapshot?: string | null
           request_fingerprint?: string
           request_fingerprint_version?: string
-          session_device_id?: number | null
-          session_id?: number
+          session_id?: number | null
           status?: string
           table_id?: number
           tenant_id?: number
@@ -6135,13 +5974,6 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "payments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "self_order_payment_requests_session_device_id_fkey"
-            columns: ["session_device_id"]
-            isOneToOne: false
-            referencedRelation: "self_order_session_devices"
             referencedColumns: ["id"]
           },
           {
@@ -6200,147 +6032,87 @@ export type Database = {
         }
         Relationships: []
       }
-      self_order_session_devices: {
+      self_order_requests: {
         Row: {
-          approved_at: string | null
-          approved_by: string | null
           branch_id: number
+          cart_payload: Json
+          client_op_id: string
           created_at: string
-          device_token_hash: string
-          expired_at: string | null
-          expires_at: string
+          customer_note: string | null
+          decided_at: string | null
+          decided_by: string | null
           id: number
-          kind: string
-          last_seen_at: string | null
-          pairing_attempts: number
-          pairing_code_expires_at: string | null
-          pairing_code_hash: string | null
-          pairing_code_salt: string | null
-          rejected_at: string | null
-          rejected_by: string | null
-          request_batch_id: number | null
-          revoked_at: string | null
-          revoked_by: string | null
-          revoked_reason: string | null
-          session_id: number
+          order_id: number | null
           status: string
           table_id: number
           tenant_id: number
-          updated_at: string
         }
         Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
           branch_id: number
+          cart_payload: Json
+          client_op_id: string
           created_at?: string
-          device_token_hash: string
-          expired_at?: string | null
-          expires_at: string
+          customer_note?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
           id?: never
-          kind: string
-          last_seen_at?: string | null
-          pairing_attempts?: number
-          pairing_code_expires_at?: string | null
-          pairing_code_hash?: string | null
-          pairing_code_salt?: string | null
-          rejected_at?: string | null
-          rejected_by?: string | null
-          request_batch_id?: number | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          revoked_reason?: string | null
-          session_id: number
-          status: string
+          order_id?: number | null
+          status?: string
           table_id: number
           tenant_id: number
-          updated_at?: string
         }
         Update: {
-          approved_at?: string | null
-          approved_by?: string | null
           branch_id?: number
+          cart_payload?: Json
+          client_op_id?: string
           created_at?: string
-          device_token_hash?: string
-          expired_at?: string | null
-          expires_at?: string
+          customer_note?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
           id?: never
-          kind?: string
-          last_seen_at?: string | null
-          pairing_attempts?: number
-          pairing_code_expires_at?: string | null
-          pairing_code_hash?: string | null
-          pairing_code_salt?: string | null
-          rejected_at?: string | null
-          rejected_by?: string | null
-          request_batch_id?: number | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          revoked_reason?: string | null
-          session_id?: number
+          order_id?: number | null
           status?: string
           table_id?: number
           tenant_id?: number
-          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "self_order_session_devices_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "self_order_session_devices_branch_id_fkey"
+            foreignKeyName: "self_order_requests_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "self_order_session_devices_branch_id_fkey"
+            foreignKeyName: "self_order_requests_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "v_print_agent_fleet"
             referencedColumns: ["branch_id"]
           },
           {
-            foreignKeyName: "self_order_session_devices_rejected_by_fkey"
-            columns: ["rejected_by"]
+            foreignKeyName: "self_order_requests_decided_by_fkey"
+            columns: ["decided_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "self_order_session_devices_request_batch_id_fkey"
-            columns: ["request_batch_id"]
+            foreignKeyName: "self_order_requests_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: "self_order_batches"
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "self_order_session_devices_revoked_by_fkey"
-            columns: ["revoked_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "self_order_session_devices_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "self_order_sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "self_order_session_devices_table_id_fkey"
+            foreignKeyName: "self_order_requests_table_id_fkey"
             columns: ["table_id"]
             isOneToOne: false
             referencedRelation: "tables"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "self_order_session_devices_tenant_id_fkey"
+            foreignKeyName: "self_order_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -6358,7 +6130,6 @@ export type Database = {
           created_at: string
           id: number
           order_id: number | null
-          realtime_topic_token: string
           status: string
           table_id: number
           tenant_id: number
@@ -6375,7 +6146,6 @@ export type Database = {
           created_at?: string
           id?: never
           order_id?: number | null
-          realtime_topic_token: string
           status?: string
           table_id: number
           tenant_id: number
@@ -6392,7 +6162,6 @@ export type Database = {
           created_at?: string
           id?: never
           order_id?: number | null
-          realtime_topic_token?: string
           status?: string
           table_id?: number
           tenant_id?: number
@@ -7041,7 +6810,6 @@ export type Database = {
           location_id: number
           movement_subtype: string | null
           order_id: number | null
-          production_order_id: number | null
           production_run_id: number | null
           quantity_change: number
           reason: string | null
@@ -7063,7 +6831,6 @@ export type Database = {
           location_id: number
           movement_subtype?: string | null
           order_id?: number | null
-          production_order_id?: number | null
           production_run_id?: number | null
           quantity_change: number
           reason?: string | null
@@ -7085,7 +6852,6 @@ export type Database = {
           location_id?: number
           movement_subtype?: string | null
           order_id?: number | null
-          production_order_id?: number | null
           production_run_id?: number | null
           quantity_change?: number
           reason?: string | null
@@ -7156,13 +6922,6 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_production_order_id_fkey"
-            columns: ["production_order_id"]
-            isOneToOne: false
-            referencedRelation: "production_orders"
             referencedColumns: ["id"]
           },
           {
@@ -8504,7 +8263,6 @@ export type Database = {
           created_at: string
           id: number
           number: number
-          self_order_capability_version: number
           self_order_enabled: boolean
           self_order_token: string | null
           self_order_token_rotated_at: string | null
@@ -8519,7 +8277,6 @@ export type Database = {
           created_at?: string
           id?: never
           number: number
-          self_order_capability_version?: number
           self_order_enabled?: boolean
           self_order_token?: string | null
           self_order_token_rotated_at?: string | null
@@ -8534,7 +8291,6 @@ export type Database = {
           created_at?: string
           id?: never
           number?: number
-          self_order_capability_version?: number
           self_order_enabled?: boolean
           self_order_token?: string | null
           self_order_token_rotated_at?: string | null
@@ -9218,7 +8974,6 @@ export type Database = {
           max_stock_level: number | null
           min_stock_level: number | null
           reorder_point: number | null
-          shelf_life_days: number | null
           stock_value: number | null
           tenant_id: number | null
           updated_at: string | null
@@ -9621,7 +9376,6 @@ export type Database = {
         Args: { p_branch_id: number; p_payment_id: number; p_tenant_id: number }
         Returns: undefined
       }
-      cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
       cancel_production_run: { Args: { p_run_id: number }; Returns: Json }
       check_cron_jobs_health: { Args: never; Returns: undefined }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
@@ -9746,20 +9500,14 @@ export type Database = {
         }
         Returns: Json
       }
-      confirm_production_order: { Args: { p_order_id: number }; Returns: Json }
-      confirm_production_run:
-        | {
-            Args: { p_actual_quantity?: number; p_run_id: number }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_actual_ingredients?: Json
-              p_actual_quantity?: number
-              p_run_id: number
-            }
-            Returns: Json
-          }
+      confirm_production_run: {
+        Args: {
+          p_actual_ingredients?: Json
+          p_actual_quantity?: number
+          p_run_id: number
+        }
+        Returns: Json
+      }
       confirm_sepay_payment: {
         Args: {
           p_account_number: string
@@ -9846,15 +9594,6 @@ export type Database = {
           p_provider_ref?: string
           p_status?: string
           p_tenant_id: number
-        }
-        Returns: Json
-      }
-      create_production_order: {
-        Args: {
-          p_branch_id: number
-          p_items?: Json
-          p_notes?: string
-          p_production_number: string
         }
         Returns: Json
       }
@@ -10278,6 +10017,18 @@ export type Database = {
           subtotal: number
           tax_amount: number
           total_amount: number
+        }[]
+      }
+      get_orders_paid_summary: {
+        Args: {
+          p_branch_id?: number
+          p_date_from?: string
+          p_date_to?: string
+          p_status?: string
+        }
+        Returns: {
+          paid_count: number
+          paid_revenue: number
         }[]
       }
       get_orders_summary: {
@@ -10948,10 +10699,6 @@ export type Database = {
         Args: { p_branch_id: number; p_new_code: string }
         Returns: undefined
       }
-      rotate_table_self_order_qr: {
-        Args: { p_table_id: number }
-        Returns: Json
-      }
       route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
       save_item_modifiers: {
         Args: { p_item_id: number; p_modifiers: Json }
@@ -10985,6 +10732,10 @@ export type Database = {
           low_stock_count: number
         }[]
       }
+      self_order_accept_request: {
+        Args: { p_request_id: number; p_target_order_id?: number }
+        Returns: Json
+      }
       self_order_active_payment_lock: {
         Args: { p_order_id: number }
         Returns: number
@@ -11006,24 +10757,6 @@ export type Database = {
           p_target_order_id?: number
         }
         Returns: Json
-      }
-      self_order_approve_batch_v2: {
-        Args: {
-          p_batch_id: number
-          p_idempotency_key?: string
-          p_pairing_code: string
-          p_pos_session_id?: number
-          p_target_order_id?: number
-        }
-        Returns: Json
-      }
-      self_order_approve_device_join_v2: {
-        Args: { p_device_id: number; p_pairing_code: string }
-        Returns: Json
-      }
-      self_order_batch_request_fingerprint: {
-        Args: { p_customer_note: string; p_items: Json }
-        Returns: string
       }
       self_order_branch_has_open_pos_session: {
         Args: { p_branch_id: number; p_tenant_id: number }
@@ -11048,10 +10781,8 @@ export type Database = {
       }
       self_order_consume_rate_limits: {
         Args: {
-          p_device_hash: string
           p_ip_hash: string
           p_purpose: string
-          p_session_id: number
           p_table_id: number
           p_tenant_id: number
           p_token: string
@@ -11067,51 +10798,21 @@ export type Database = {
         }
         Returns: Json
       }
-      self_order_create_payment_request_v2: {
-        Args: {
-          p_client_op_id: string
-          p_device_hash: string
-          p_invoice_payload?: Json
-          p_ip_hash: string
-          p_method: string
-          p_token: string
-        }
-        Returns: Json
-      }
-      self_order_create_pending_device: {
-        Args: { p_device_hash: string; p_kind: string; p_session_id: number }
-        Returns: Json
-      }
       self_order_expire_payment_request: {
         Args: { p_request_id: number }
         Returns: boolean
       }
-      self_order_get_public_context_v2: {
-        Args: { p_token: string }
-        Returns: Json
-      }
-      self_order_get_snapshot: { Args: { p_token: string }; Returns: Json }
-      self_order_get_snapshot_v2: {
-        Args: { p_device_hash: string; p_token: string }
-        Returns: Json
-      }
+      self_order_get_snapshot:
+        | { Args: { p_token: string }; Returns: Json }
+        | { Args: { p_client_op_id: string; p_token: string }; Returns: Json }
       self_order_list_staff_queue: {
         Args: { p_branch_id: number }
         Returns: Json
       }
-      self_order_list_staff_queue_v2: {
-        Args: { p_branch_id: number }
-        Returns: Json
-      }
       self_order_menu_payload: { Args: { p_tenant_id: number }; Returns: Json }
-      self_order_new_pairing_code: { Args: never; Returns: string }
       self_order_normalize_invoice_payload: {
         Args: { p_payload: Json }
         Returns: Json
-      }
-      self_order_pairing_code_hash: {
-        Args: { p_code: string; p_salt: string }
-        Returns: string
       }
       self_order_payment_request_fingerprint: {
         Args: { p_invoice_payload: Json; p_method: string }
@@ -11121,37 +10822,16 @@ export type Database = {
         Args: { p_request_id: number }
         Returns: Json
       }
-      self_order_random_token: { Args: { p_bytes: number }; Returns: string }
       self_order_reconcile_expired_payment_requests: {
         Args: { p_branch_id: number; p_tenant_id: number }
         Returns: number
-      }
-      self_order_refresh_pairing_code: {
-        Args: { p_device_id: number }
-        Returns: Json
-      }
-      self_order_refresh_pairing_code_v2: {
-        Args: { p_device_hash: string; p_ip_hash: string; p_token: string }
-        Returns: Json
       }
       self_order_reject_batch: {
         Args: { p_batch_id: number; p_reason?: string }
         Returns: Json
       }
-      self_order_reject_batch_v2: {
-        Args: { p_batch_id: number; p_reason?: string }
-        Returns: Json
-      }
-      self_order_reject_device_join_v2: {
-        Args: { p_device_id: number; p_reason?: string }
-        Returns: Json
-      }
-      self_order_request_device_join_v2: {
-        Args: { p_device_hash: string; p_ip_hash: string; p_token: string }
-        Returns: Json
-      }
-      self_order_revoke_session_device_v2: {
-        Args: { p_device_id: number; p_reason?: string }
+      self_order_reject_request: {
+        Args: { p_request_id: number }
         Returns: Json
       }
       self_order_scope_hash: { Args: { p_value: string }; Returns: string }
@@ -11159,21 +10839,19 @@ export type Database = {
         Args: { p_actor: string; p_tenant_id: number }
         Returns: undefined
       }
-      self_order_submit_batch: {
+      self_order_submit: {
         Args: {
           p_client_op_id: string
-          p_customer_note?: string
+          p_customer_note: string
           p_items: Json
           p_token: string
         }
         Returns: Json
       }
-      self_order_submit_batch_v2: {
+      self_order_submit_batch: {
         Args: {
           p_client_op_id: string
           p_customer_note?: string
-          p_device_hash: string
-          p_ip_hash: string
           p_items: Json
           p_token: string
         }
@@ -11234,10 +10912,6 @@ export type Database = {
       }
       set_pos_order_priority: {
         Args: { p_is_priority: boolean; p_note?: string; p_order_id: number }
-        Returns: Json
-      }
-      set_table_self_order_capability_version: {
-        Args: { p_table_id: number; p_version: number }
         Returns: Json
       }
       split_order: {
@@ -11423,7 +11097,6 @@ export type Database = {
           p_min_stock_level: number
           p_name: string
           p_reorder_point: number
-          p_shelf_life_days: number
           p_sku: string
           p_storage_type: string
           p_unit_cost: number

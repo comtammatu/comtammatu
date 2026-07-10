@@ -54,53 +54,6 @@ test("resolveBranchHubDestination -> pinned operator lands on branch home", () =
   );
 });
 
-test("resolveBranchHubDestination -> central-site roles land on their resolved home site", () => {
-  for (const role of ["warehouse_manager", "production_manager"] as const) {
-    assert.equal(
-      resolveBranchHubDestination(claims(role, null), {
-        standaloneStation: null,
-        isDesktop: false,
-        homeBranchId: 9,
-      }),
-      "/br/9",
-      role,
-    );
-  }
-});
-
-test("resolveBranchHubDestination -> central-site roles without a home site fail closed", () => {
-  for (const role of ["warehouse_manager", "production_manager"] as const) {
-    assert.equal(
-      resolveBranchHubDestination(claims(role, null), {
-        standaloneStation: null,
-        isDesktop: false,
-      }),
-      "/access-denied?reason=branch-scope-mismatch",
-      role,
-    );
-    assert.equal(
-      resolveBranchHubDestination(claims(role, null), {
-        standaloneStation: null,
-        isDesktop: false,
-        homeBranchId: null,
-      }),
-      "/access-denied?reason=branch-scope-mismatch",
-      role,
-    );
-  }
-});
-
-test("resolveBranchHubDestination -> homeBranchId never overrides pinned claims", () => {
-  assert.equal(
-    resolveBranchHubDestination(claims("cashier", 2), {
-      standaloneStation: null,
-      isDesktop: false,
-      homeBranchId: 9,
-    }),
-    "/br/2",
-  );
-});
-
 test("resolveBranchHubDestination -> owner phone without branch lands on picker", () => {
   assert.equal(
     resolveBranchHubDestination(claims("owner", null), {
@@ -111,21 +64,12 @@ test("resolveBranchHubDestination -> owner phone without branch lands on picker"
   );
 });
 
-test("resolveBranchHubDestination -> office phone lands on finance", () => {
+test("resolveBranchHubDestination -> branch_staff phone without branch fails closed", () => {
   assert.equal(
-    resolveBranchHubDestination(claims("office", null), {
+    resolveBranchHubDestination(claims("branch_staff", null), {
       standaloneStation: null,
       isDesktop: false,
     }),
-    "/finance",
-  );
-  // Office has no operator hub; a stray home site must not move it.
-  assert.equal(
-    resolveBranchHubDestination(claims("office", null), {
-      standaloneStation: null,
-      isDesktop: false,
-      homeBranchId: 9,
-    }),
-    "/finance",
+    "/access-denied?reason=branch-scope-mismatch",
   );
 });

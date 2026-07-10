@@ -164,7 +164,6 @@ function rpcCatalogArgs(
     p_min_stock_level: data.min_stock_level,
     p_max_stock_level: (data.max_stock_level ?? null) as never,
     p_reorder_point: (data.reorder_point ?? null) as never,
-    p_shelf_life_days: null as never,
     p_units: buildRpcUnits(data.units) as never,
   };
 }

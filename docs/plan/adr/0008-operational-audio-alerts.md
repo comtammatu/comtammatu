@@ -1,7 +1,7 @@
 # ADR 0008 — Operational Audio Alerts (Beep + Voice)
 
-**Status:** Accepted (2026-07-09)
-**Decision drivers:** Kitchen/POS need eyes-free attention during service; current Web Audio beeps are reliable but content-blind; live browser TTS is unstable for Vietnamese on tablet fleets.
+**Status:** Accepted (2026-07-09) · Amended (2026-07-10, D074 — voice engine is browser TTS)
+**Decision drivers:** Kitchen/POS need eyes-free attention during service; current Web Audio beeps are reliable but content-blind; a recorded clip pack ships no voice until someone records it.
 
 ## Context
 
@@ -27,7 +27,7 @@ Constraints that matter in-store:
 
 2. **Device-local operational audio only.** Audio alerts fire on the open POS/KDS surface that already owns the event. They MUST NOT write `public.notifications`, MUST NOT use Telegram/outbox, and MUST NOT sync prefs to the server. Prefs stay in `device-prefs` (allowed exception in `scripts/check-client-storage.mjs`).
 
-3. **Pre-recorded clips are the voice engine.** Ship short Vietnamese MP3/WAV assets (template phrases + table-number slots). Do **not** use live `speechSynthesis` or cloud TTS as the primary path. Missing/failed clip decode falls back to beep-only for that event.
+3. **Browser TTS is the voice engine** (amended 2026-07-10). Speak the template through `window.speechSynthesis` with `lang = "vi-VN"`. No audio assets, no bundle cost, and the table-number slot is plain string interpolation. When the device exposes a loaded voice list without any `vi-*` voice, skip voice for that event; beep still follows the mode. Cloud/realtime TTS stays rejected.
 
 4. **MVP surface = KDS.** First ship the three existing KDS alert kinds with short fixed copy (event type + table label). Do not read full item lists in MVP. POS critical alerts (self-order approval, print failure, out-of-stock) are a later phase under the same contract.
 
@@ -38,7 +38,7 @@ Constraints that matter in-store:
    - coalesces bursts (e.g. many new tickets → one summary or highest-priority kind)
    - preserves the existing per-tone debounce spirit from `playAppSignal`
 
-6. **Copy is template-fixed.** No free-form LLM speech. Brand voice packs (recorded Má Tư voice) may replace the default clip set later without changing `kind`s.
+6. **Copy is template-fixed.** No free-form LLM speech. A recorded brand voice pack ("Má Tư voice") may replace the TTS engine later without changing `kind`s.
 
 ## Alternatives Rejected
 
@@ -46,9 +46,9 @@ Constraints that matter in-store:
 
 - Rejected: longer latency, worse pile-up under rush, harder to hear than a short ping when speech overlaps.
 
-**B. Live `window.speechSynthesis` as primary engine**
+**B. Pre-recorded clip pack as primary engine**
 
-- Rejected: Vietnamese voice quality/availability is device-dependent; hard to QA across kitchen tablets.
+- Rejected (2026-07-10): the pack needs recording, asset discipline, and digit concatenation before a single line can play. Voice quality is device-dependent under TTS, but a device with no Vietnamese voice degrades to today's beep, which is the current shipped behavior anyway.
 
 **C. Cloud / realtime TTS**
 
@@ -63,12 +63,13 @@ Constraints that matter in-store:
 **Positive**
 
 - Beep reliability is preserved; voice is additive and kill-switchable per device.
-- Stable `kind` catalog lets UI, tests, and clip packs evolve independently.
+- Stable `kind` catalog lets UI, tests, and a future voice pack evolve independently.
 - Clear boundary from toast / durable notification / Telegram channels.
+- Zero audio assets: voice ships the day the code lands.
 
 **Negative / trade-offs**
 
-- Clip pack + table-number concatenation needs asset discipline and a small queue implementation.
+- Vietnamese voice quality, rate, and latency vary by OS/browser; a device without a `vi-*` voice gets beep only.
 - Legacy boolean prefs (`kds:sound`, `pos:sound`) need a compatibility map into the new mode enum.
 - Voice-on-by-default is intentionally deferred until kitchen smoke feedback.
 
@@ -76,14 +77,14 @@ Constraints that matter in-store:
 
 | Phase | Scope |
 | --- | --- |
-| 1 | Catalog + mode prefs + queue; KDS 3 kinds; pre-recorded clips; wire beside current `playAppSignal` |
+| 1 | Catalog + mode prefs; KDS 3 kinds; `speechSynthesis` voice; wire beside current `playAppSignal` |
 | 2 | In-store tune (length, coalesce, volume); keep default `beep` unless owner flips |
 | 3 | POS critical kinds only |
-| 4 | Optional brand voice pack |
+| 4 | Optional recorded brand voice pack |
 
 Normative runtime contract: `docs/spec/operational-audio-alerts.md`.
 
 ## Open Items
 
-- Exact table-number slot strategy (digit concatenation vs per-table clips) is an implementation choice inside the spec’s clip rules.
+- Whether a recorded brand voice pack replaces TTS stays open until kitchen smoke feedback on real tablets.
 - Whether Runner ever gets audio remains out of scope until a separate decision.
