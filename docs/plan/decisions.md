@@ -398,6 +398,8 @@ Trigger inert khi flag OFF. Đảo phải sửa bản ghi này trước.
 
 **Decision (owner, net — ruột trang theo D067). Số hiệu § giữ nguyên vì docs/migration cite trực tiếp:**
 
+**(sửa bởi D073):** mô hình site trung tâm ngừng vận hành — site 16 tắt sau khi chuyển tồn; các khoản central-only (§3 bộ tile central, §4 home site trung tâm, §7a bucket production_manager) hết hiệu lực. Cơ chế `kinds` trong nav-config, picker theo site active, khóa POS/KDS kind `branch`, và nhãn transfer theo POV vẫn sống.
+
 1. **Picker `/br`:** hiện đủ mọi site active theo thứ tự Chi nhánh → Bếp Trung Tâm → Kho Tổng, card cuối Văn Phòng (owner-only); tên = `branches.name`, icon theo kind; site inactive tự biến mất.
 2. **Owner operate được mọi kind active** (proxy non-station cho owner `requiredBranchKind = null`, chỉ còn điều kiện site active). **POS/KDS/Runner giữ khóa kind `branch` cho MỌI role, kể cả owner.** Soft-routing D055 không đổi.
 3. **Tile whitelist theo kind — field `kinds` trong `nav-config.ts`** (mở rộng D058 §7): `central_supply` 9 tile (gồm Danh mục theo D067); `central_kitchen` 8 tile, Sản xuất đứng đầu, không Trả NCC; loại noise khỏi site trung tâm (Tiêu hao, Xuất kho, Hạn dùng, Báo cáo, Phân công đếm, nhóm Bán hàng); tile transfer đổi nhãn theo POV (chi nhánh "Yêu cầu hàng", site trung tâm "Chuyển hàng"); chi nhánh giữ nguyên bộ tile.
@@ -413,7 +415,7 @@ Trigger inert khi flag OFF. Đảo phải sửa bản ghi này trước.
 **Decision (owner):**
 
 1. **Fork presentation thành component mobile-native** cho các route `(operator)/stock/*` — không "nâng cấp embedded tại chỗ". Server action + data loader GIỮ chung (một nguồn); chỉ tách lớp hiển thị (mobile-native operator ↔ dense-table office oversight D061). KHÔNG shell mới / chrome family mới (D019/D045/D058/D063 giữ nguyên); vẫn plane Operator, vẫn `/br/[branchId]/(operator)/*`.
-2. **Phạm vi: Kho Tổng (`central_supply`) TRỌN VẸN trước; Bếp TT đợt sau cùng khuôn** (perms Bếp khác — production_manager không có `inventory:write`/`units_master`/`supplier_manage`; bộ danh mục chốt ở đợt Bếp).
+2. **Phạm vi (sửa bởi D073): Kho Tổng (`central_supply`) đã xong; KHÔNG còn đợt Bếp riêng** — site 16 ngừng vận hành, mọi nâng cấp stock tiếp theo áp cho kind `branch`.
 3. **Home Kho "Hôm nay":** CTA chính "Nhận hàng" + lưới tile curated; feed "Cần xử lý" = Phiếu nhập dở · Đơn chờ nhận (PO) · Duyệt kiểm kê · Duyệt hao hụt — KHÔNG Tồn thấp, KHÔNG Sắp hết hạn (D060 §3).
 4. **GRN:** NCC-first, PO không bắt buộc (DB/RPC đã đúng: `po_id` NULLABLE), banner "không cần PO", nhập từng dòng cho ngón tay + chụp ảnh phiếu; **tạo NCC nhanh inline** qua `createSupplier` sẵn có (name unique/tenant) — KHÔNG đụng schema (`goods_received_notes.supplier_id` NOT NULL giữ).
 5. **Tile "Danh mục"** cho `central_supply` (bộ tile 8→9): Nhóm NL · Nguyên liệu · Đơn vị · Ngưỡng tồn · NCC, tái dùng action sẵn có (không action/perm mới); xóa nguyên liệu = soft-archive (`toggleIngredientActive`); categories/units/suppliers xóa thật.
@@ -423,7 +425,7 @@ Canonical presentation rule: `docs/modules/ui.md` § Branch Operator Hub. Đảo
 
 ## D068: Kho CN tự nhận NCC (GRN) + sản xuất tại chi nhánh — branch_manager, own-branch (2026-07-05)
 
-**Decision (owner):** (1) Kho CN (`branch`) tự nhận hàng NCC trực tiếp — không bắt buộc qua Kho Tổng; luồng điều chuyển (Yêu cầu hàng → Nhận) GIỮ, đây là ADD; (2) chi nhánh chạy được lệnh sản xuất; (3) actor = `branch_manager`, quyền TẠO + XÁC NHẬN (post tồn / trừ NL), chỉ own-branch (enforce app-layer + RLS `has_permission(branch_id,…)`); (4) `branch_manager` được tạo NCC nhanh — grant `procurement:supplier_manage` (danh mục NCC tenant dùng chung); (5) **PO vẫn ĐÓNG với chi nhánh** — `PROCUREMENT_PO_ROLES` giữ PO cho owner/warehouse/production (giữ D066 §3 / D058 §7, tile "Đơn đặt hàng" central-only). Grant per-branch, không tenant-wide. Mở rộng D000. Canonical đầy đủ (grant list, RLS, helper): `docs/ref/inventory-rbac-matrix.md`. Đảo mục 1–5 phải sửa bản ghi này trước.
+**Decision (owner):** (1) Kho CN (`branch`) tự nhận hàng NCC trực tiếp — không bắt buộc qua Kho Tổng; luồng điều chuyển (Yêu cầu hàng → Nhận) GIỮ, đây là ADD; (2) chi nhánh chạy được lệnh sản xuất; (3) actor = `branch_manager`, quyền TẠO + XÁC NHẬN (post tồn / trừ NL), chỉ own-branch (enforce app-layer + RLS `has_permission(branch_id,…)`); (4) `branch_manager` được tạo NCC nhanh — grant `procurement:supplier_manage` (danh mục NCC tenant dùng chung); (5) **(đảo bởi D073) PO MỞ cho chi nhánh** — tile "Đơn đặt hàng" + "Trả hàng NCC" + "Danh mục" mở kind `branch`; grant bổ sung cho `branch_manager` chốt ở đợt triển khai D073. Grant per-branch, không tenant-wide. Mở rộng D000. Canonical đầy đủ (grant list, RLS, helper): `docs/ref/inventory-rbac-matrix.md`. Đảo mục 1–5 phải sửa bản ghi này trước.
 
 ## D069: Be Vietnam Pro heading + Shift-aware night mode (2026-07-07)
 
@@ -440,3 +442,17 @@ Canonical presentation rule: `docs/modules/ui.md` § Branch Operator Hub. Đảo
 ## D072: Hợp thức hóa brand expression đang sống + mở compact-empty symbol (2026-07-10)
 
 **Decision (owner, phương án a — hợp thức hóa thay vì gỡ):** (1) Pattern caro placements = danh sách ĐÓNG: Runner footer strip, login full-surface wash, Management sidebar header wash; full-surface wash chỉ hợp lệ dạng trang trí `aria-hidden`/`pointer-events-none`, opacity ≤10 — gate `brand-pattern-placement` allowlist đích danh. (2) Mascot động = full-screen waiting/idle only (Runner idle board, `PageSpinner fullScreen`, login brand panel), không bao giờ trên control tương tác hay chrome trong trang — gate `mascot-animation-placement`. (3) Compact-empty mở cho `BrandSymbol`: `symbol` hợp lệ trên `AppEmptyState compact` khi empty là trạng thái chính của trang/section (queue trống, catalog trống); inline/row-level giữ text-only. (4) Xóa `transition-transform duration-200` chết trên card lockup login. Canonical: `docs/spec/design-system.md` § brand-patterns + § utilities + §G.
+
+## D073: Ngừng site Bếp Trung Tâm — một kind vận hành duy nhất `branch`, stock cutover dồn về Branch Hub (2026-07-10)
+
+**Context:** Kho Tổng (site 15) đã đổi kind về `branch` và tắt trước đó; Bếp TT (site 16) là site trung tâm cuối cùng (1 location, 29 dòng tồn, 3 lệnh nấu 2026-07-10). D068 đã cho chi nhánh tự nhận NCC + chạy lệnh sản xuất.
+
+**Decision (owner 2026-07-10):**
+
+1. **Site 16 tắt hẳn:** chuyển toàn bộ tồn về Phước Hải (site 3) qua luồng transfer sẵn có (`central_kitchen → branch` hợp lệ theo transfer matrix D000) rồi `is_active = false`. Nhân sự bucket `production_manager` do owner sắp xếp lại role. DB enum `branch_kind` GIỮ nguyên (lịch sử data); chỉ vận hành và UI hết fork.
+2. **Một kind vận hành duy nhất `branch`.** Mọi nâng cấp stock đã chuẩn bị cho đợt Bếp (mockup GRN 3 bước · Ghi mẻ một màn · Tồn 44px, đã owner-duyệt) áp cho `/br/[branchId]/(operator)/stock/*` kind `branch`. Plan sống ở `tasks/todo.md` § Branch Stock Cutover.
+3. **Công thức = Office-only:** operator dùng công thức để prefill định mức khi ghi mẻ, không sửa; tile `production/recipes` rời operator, quản trị công thức về `/inventory` (owner/quản lý).
+4. **Mở trọn procurement cho chi nhánh (đảo D068 §5):** tile "Đơn đặt hàng", "Trả hàng NCC", "Danh mục" mở kind `branch`, tái dùng surface native đã build ở đợt Kho Tổng; grant quyền thiếu cho `branch_manager` (PO create/approve + catalog write) chốt danh sách key ở đợt triển khai, apply theo quy trình owner-delegate.
+5. **Sau khi site 16 tắt, gỡ fork central khỏi operator UI** — `CENTRAL_HOME_TILE_SUFFIXES`, CTA home central, các nhánh `isCentralKitchen`/`isCentralSupply` trong loader hub, entries `kinds` central trong nav-config, archetype exceptions #19–#23, mục central trong `docs/ref/screen-context-map.md` §2.5 — xóa sạch, không tombstone.
+
+**Consequences:** D066 §3/§4/§7a hết hiệu lực; D067 §2 hết "đợt Bếp"; D068 §5 đảo (PO mở cho branch). D000 transfer matrix giữ (cần cho lịch sử + đợt chuyển tồn). Đảo mục 1–5 phải sửa bản ghi này trước.

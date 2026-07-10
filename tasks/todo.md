@@ -834,24 +834,27 @@ desktop 1440×900:
         tablet landscape `1024x768`, and Office desktop `1440x900` once local
         Supabase/Docker auth is available.
 
-## Central Kitchen Hub Cutover (D067 round 2)
+## Branch Stock Cutover (D073 — supersedes the D067 round-2 scope)
 
-> `docs/plan/decisions.md` D067 §2 deferred Central Kitchen (`central_kitchen`,
-> production branch 16 "Bếp Trung Tâm") to a follow-on round after Kho Tổng.
-> That commitment had no tracked item until now. D067 §1 governs every slice
-> below: share the server action and data loader; fork only presentation.
+> `docs/plan/decisions.md` D073 (2026-07-10): the Central Kitchen site (branch
+> 16) is being decommissioned — stock transfers to Phước Hải (branch 3), then
+> `is_active = false`. Every stock upgrade prepared for the kitchen round now
+> targets the SHARED `/br/[branchId]/(operator)/stock/*` surface for kind
+> `branch`. D067 §1 still governs the layering: share the server action and
+> data loader; fork only presentation.
 >
-> Owner-approved mockup (3 screens; the build must match it):
-> `https://claude.ai/code/artifact/778026d5-8d60-4dfe-acc7-296efe75a30c`
+> Owner-approved mockup (3 screens; the build must match it, re-anchored to a
+> branch): `https://claude.ai/code/artifact/778026d5-8d60-4dfe-acc7-296efe75a30c`
+> One mockup deviation is expected: Phước Hải has TWO active locations
+> (`Kho CN`/`Bếp CN`), so the GRN receiving-location card RENDERS there — the
+> rule stays conditional (hide only when `branchLocations.length <= 1`).
 >
 > Production facts verified 2026-07-10, SELECT-only; re-verify before acting.
-> `inventory_locations` for branch 16 holds exactly one row (`main_warehouse`,
-> `is_default_receive = true`). `role_templates.production_manager` holds
-> `procurement:read`, `procurement:grn_create`, and `procurement:grn_confirm`,
-> and does not hold `inventory:write`, `procurement:po_create`,
-> `procurement:supplier_manage`, `procurement:price_list_read`,
-> `inventory:count_approve`, or `inventory:waste_approve`. That role has two
-> duplicate rows in `role_templates`; investigate separately.
+> Active sites: Phước Hải (3, `branch`, 2 locations, 97 stock rows) and Bếp TT
+> (16, `central_kitchen`, 1 location, 29 stock rows — pending transfer-out).
+> Kho Tổng (15) was already re-kinded to `branch` and deactivated.
+> `role_templates.production_manager` has two duplicate rows; investigate
+> separately.
 
 - [ ] **S0 — clear the nine red wave tests so the gate means something again.**
       Pre-existing failures landed with the 2026-07-10 wave (bisect-confirmed at
@@ -949,7 +952,7 @@ desktop 1440×900:
   - Do not merge the operator sheet into the shared component. That is the opposite
     direction and the owner rejected it.
 
-- [ ] **S6 — chrome parity across the Central Kitchen document flows.**
+- [ ] **S6 — chrome parity across the branch stock document flows.**
   - `stock/receive/[id]/transfer-receive-client.tsx:124` and `:167` hand-roll a
     back-button header twice instead of using `BranchOperatorControlBar`, and the
     route renders no `BranchOperatorPage`, so it shows no title at any width.
@@ -969,17 +972,19 @@ desktop 1440×900:
       planes. This is a move, not a fork: the sharing was correct and the location
       was not. Tighten the S1 allowlist to `*-actions.ts` afterwards.
 
-- [ ] **S8 — the Office embeds still reachable from the Central Kitchen hub.**
-      Five files: `stock/purchase-orders/{page,[id],new}` and
-      `stock/consumption/{page,[id]}`. Both families already carry owner-confirmed
-      items under "Owner-Confirmed UI Follow-ups"; extend those instead of opening a
-      parallel plan. Keep the "Đơn đặt hàng" tile: branch 16 holds six purchase
-      orders (four `received`, one `partially_received`, one `cancelled`) and
-      `production_manager` holds `procurement:read`, so the kitchen reads purchase
-      order status even though it cannot create one. `stock/count-slips` and
-      `stock/count-assignments` fall outside Central Kitchen scope, because
-      `production_manager` lacks `inventory:count_approve`, so
-      `fetchBranchQueueCounts` returns null and no queue row renders.
+- [ ] **S8 — open full procurement to kind `branch` (D073 §4) and retire the
+      recipes tile from the operator (D073 §3).** Extend `kinds` in
+      `nav-config.ts` so "Đơn đặt hàng", "Trả hàng NCC", and "Danh mục" render
+      for `branch`, reusing the native operator surfaces already built in the
+      Kho Tổng round (`stock/purchase-orders` native work rides the existing T3
+      item under "Owner-Confirmed UI Follow-ups"; `stock/supplier-returns` and
+      `stock/catalog` natives already exist). Grant the missing
+      `branch_manager` keys (PO create/approve, catalog write set) through the
+      permission seeds — owner-delegated apply, the one non-frontend touch in
+      this plan. Remove the `production/recipes` tile from the operator; recipe
+      administration stays in Office `/inventory`. Add "Đơn chờ nhận" to the
+      branch hub queue once PO opens (the `openPurchaseOrders` count currently
+      gates on `isCentralSupply`).
 
 - [ ] **S9 — densify the on-hand list.**
       `stock/on-hand/branch-stock-on-hand-client.tsx:148` renders `min-h-20` (80px)
@@ -990,7 +995,22 @@ desktop 1440×900:
       one workflow two visual sources of truth. Per-ingredient actions belong in the
       row's detail sheet.
 
-### Defects found while scoping Central Kitchen — separate slices, not D067
+- [ ] **S10 — decommission site 16 and delete the central forks (D073 §1/§5).**
+      Ordered: (1) owner transfers the 29 remaining stock rows 16 → 3 through the
+      existing transfer flow (`central_kitchen → branch` is legal in the D000
+      matrix) and reassigns the `production_manager` staff; (2) owner flips
+      `branches.is_active = false` for 16; (3) only then delete the central forks
+      from the operator UI — `CENTRAL_HOME_TILE_SUFFIXES` and the central home
+      CTA in `(operator)/page.tsx` + `operator-home-contract.ts`, the
+      `isCentralKitchen`/`isCentralSupply` branches in
+      `(operator)/dashboard/data.ts`, the `central_supply`/`central_kitchen`
+      `kinds` entries in `nav-config.ts`, archetype exceptions #19–#23 in
+      `docs/spec/page-archetypes.md`, and the central rows of
+      `docs/ref/screen-context-map.md` §2.5. Clean deletes, no tombstones. The
+      DB enum keeps all three kinds for history. Code deletion must not land
+      before step 2, or an active site loses its UI.
+
+### Defects found while scoping the cutover — separate slices, not D073
 
 - [x] **The operator hub counts the wrong table.** Fixed: the hub queue counts
       `production_runs` in `draft`/`in_progress`, matching the production page's
@@ -1032,18 +1052,18 @@ desktop 1440×900:
 
 ### Owner decisions still open
 
-- [ ] Should open purchase orders ("Đơn chờ nhận") appear in the Central Kitchen hub
-      queue? `fetchBranchQueueCounts` gates `openPurchaseOrders` on `isCentralSupply`
-      (`dashboard/data.ts:262`), so the kitchen never sees it despite holding
-      `procurement:read` and one `partially_received` purchase order. D067 §3 defined
-      that feed for Kho Tổng only.
+- [ ] Timing for the site-16 stock transfer and deactivation (S10 steps 1–2 are
+      owner-executed operations on real goods; code deletion waits on them).
+- [ ] The exact `branch_manager` grant list for S8 (PO create/approve + catalog
+      write set) before the owner-delegated seed apply.
 
 ### Sequencing and gates
 
 - Owner decree 2026-07-10: a single local agent works directly on `main`; no PRs.
   The 2026-07-10 working-tree wave is landed; each slice below is one commit.
-- One route family per slice commit. T2 front-end; zero migrations across S0
-  through S9.
+- One route family per slice commit. T2 front-end. Zero schema migrations across
+  S0–S7 and S9; S8 carries a permission-seed grant (owner-delegated apply) and
+  S10 carries owner-executed stock/ops steps before any code deletion.
 - Run the full gate fresh before each slice commit. A green result served from
   the turbo cache is not evidence.
 - Runtime QA per slice at `390x844`, `768x1024`, and `1024x768` (D067 §7).
