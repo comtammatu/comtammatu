@@ -1771,7 +1771,7 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/inventory/_components/stocktake-mode-selector.tsx": 1,
       "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 3,
       "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx": 1,
       "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx": 1,
       "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx": 1,
