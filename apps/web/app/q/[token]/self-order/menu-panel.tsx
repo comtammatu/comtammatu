@@ -2,21 +2,28 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Utensils as IconUtensils } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { AppEmptyState } from "@/components/surface";
+import { BrandSymbol } from "@/components/brand";
 import type {
   SelfOrderCartItem,
   SelfOrderMenuCategory,
   SelfOrderMenuItem,
 } from "@lib/self-order/contracts";
 import {
+  availabilityReasonLabel,
+  isAvailabilityBlocked,
+  menuItemAvailability,
+  remainingLabel,
+} from "@lib/self-order/availability";
+import {
   ALL_MENU_VALUE,
   isSelfOrderComCategory,
+  selfOrderItemImageBadges,
   splitMenuItemDisplayName,
 } from "./menu-display";
 import { SelfOrderItemSheet } from "./item-sheet";
@@ -25,6 +32,7 @@ export {
   ALL_MENU_VALUE,
   defaultSelfOrderCategoryValue,
   isSelfOrderComCategory,
+  selfOrderItemImageBadges,
   splitMenuItemDisplayName,
 } from "./menu-display";
 
@@ -34,6 +42,7 @@ export interface MenuPanelProps {
   onActiveCategoryChange: (value: string) => void;
   onAdd: (item: SelfOrderCartItem) => void;
   disabled?: boolean;
+  cartDemandByMenuItemId?: ReadonlyMap<number, number>;
 }
 
 export function MenuPanel({
@@ -42,6 +51,7 @@ export function MenuPanel({
   onActiveCategoryChange,
   onAdd,
   disabled = false,
+  cartDemandByMenuItemId,
 }: MenuPanelProps) {
   const availableCategories = categories.filter(
     (category) => category.menu_items.length > 0,
@@ -140,10 +150,10 @@ export function MenuPanel({
                   ) : null}
                   <MenuItemGrid
                     items={items}
-                    categoryName={category.name}
                     onAdd={onAdd}
                     disabled={disabled}
                     compact={!isSelfOrderComCategory(category)}
+                    cartDemandByMenuItemId={cartDemandByMenuItemId}
                   />
                 </section>
               );
@@ -157,16 +167,16 @@ export function MenuPanel({
 
 export function MenuItemGrid({
   items,
-  categoryName,
   onAdd,
   disabled = false,
   compact = false,
+  cartDemandByMenuItemId,
 }: {
   items: SelfOrderMenuItem[];
-  categoryName: string;
   onAdd: (item: SelfOrderCartItem) => void;
   disabled?: boolean;
   compact?: boolean;
+  cartDemandByMenuItemId?: ReadonlyMap<number, number>;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -174,10 +184,10 @@ export function MenuItemGrid({
         <MenuItemCard
           key={item.id}
           item={item}
-          categoryName={categoryName}
           onAdd={onAdd}
           disabled={disabled}
           compact={compact}
+          cartDemand={cartDemandByMenuItemId?.get(item.id) ?? 0}
         />
       ))}
     </div>
@@ -186,37 +196,44 @@ export function MenuItemGrid({
 
 function MenuItemCard({
   item,
-  categoryName,
   onAdd,
   disabled,
   compact,
+  cartDemand,
 }: {
   item: SelfOrderMenuItem;
-  categoryName: string;
   onAdd: (item: SelfOrderCartItem) => void;
   disabled: boolean;
   compact: boolean;
+  cartDemand: number;
 }) {
   const [open, setOpen] = useState(false);
+  const availability = menuItemAvailability(item);
+  const soldOut = isAvailabilityBlocked(availability, cartDemand);
+  const blocked = disabled || soldOut;
 
   useEffect(() => {
-    if (disabled) setOpen(false);
-  }, [disabled]);
+    if (blocked) setOpen(false);
+  }, [blocked]);
 
   return (
     <>
       <MenuRowButton
         item={item}
-        categoryName={categoryName}
-        disabled={disabled}
+        disabled={blocked}
         compact={compact}
-        onClick={() => setOpen(true)}
+        cartDemand={cartDemand}
+        onClick={() => {
+          if (soldOut) return;
+          setOpen(true);
+        }}
       />
       <SelfOrderItemSheet
         item={item}
-        open={open && !disabled}
-        disabled={disabled}
-        onOpenChange={(nextOpen) => setOpen(disabled ? false : nextOpen)}
+        open={open && !blocked}
+        disabled={blocked}
+        cartDemand={cartDemand}
+        onOpenChange={(nextOpen) => setOpen(blocked ? false : nextOpen)}
         onCommit={onAdd}
       />
     </>
@@ -225,19 +242,26 @@ function MenuItemCard({
 
 function MenuRowButton({
   item,
-  categoryName,
   disabled,
   compact,
+  cartDemand,
   onClick,
 }: {
   item: SelfOrderMenuItem;
-  categoryName: string;
   disabled: boolean;
   compact: boolean;
+  cartDemand: number;
   onClick: () => void;
 }) {
   const { title, tag } = splitMenuItemDisplayName(item.name);
   const priceLabel = formatVND(Number(item.base_price));
+  const availability = menuItemAvailability(item);
+  const reason = availabilityReasonLabel(availability, cartDemand);
+  const remaining = remainingLabel(availability, cartDemand);
+  const imageBadges = [...selfOrderItemImageBadges(item.name)];
+  if (tag && !imageBadges.includes(tag)) {
+    imageBadges.push(tag);
+  }
 
   return (
     <Button
@@ -245,8 +269,9 @@ function MenuRowButton({
       variant="outline"
       size="touch"
       disabled={disabled}
+      aria-disabled={disabled}
       aria-label={`${SELF_ORDER_VI.customizeItem}: ${item.name}, ${priceLabel}`}
-      className="group h-auto w-full items-stretch justify-start gap-4 p-3 text-left whitespace-normal transition-[transform,background-color,border-color] duration-150 active:scale-[0.97]"
+      className="group h-auto w-full items-stretch justify-start gap-4 p-3 text-left whitespace-normal transition-[transform,background-color,border-color] duration-150 active:scale-[0.97] disabled:opacity-60"
       onClick={onClick}
     >
       <span
@@ -264,28 +289,38 @@ function MenuRowButton({
           />
         ) : (
           <span className="flex size-full items-center justify-center">
-            <IconUtensils
-              className={
-                compact
-                  ? "size-6 text-muted-foreground"
-                  : "size-8 text-muted-foreground"
-              }
+            <BrandSymbol
+              variant="riceBowl"
+              size={compact ? "md" : "lg"}
+              decorative
+              className="opacity-50"
             />
           </span>
         )}
-        {tag ? (
+        {imageBadges.length > 0 ? (
+          <span className="absolute top-1.5 left-1.5 z-10 flex max-w-[calc(100%-0.75rem)] flex-col items-start gap-1">
+            {imageBadges.map((badge) => (
+              <Badge
+                key={badge}
+                variant="default"
+                className="max-w-full truncate px-2 text-xs"
+              >
+                {badge}
+              </Badge>
+            ))}
+          </span>
+        ) : null}
+        {reason ? (
           <Badge
-            variant="default"
-            className="absolute top-1.5 left-1.5 z-10 truncate px-2 text-xs"
+            variant="destructive"
+            className="absolute top-1.5 right-1.5 z-10 px-2 text-xs"
           >
-            {tag}
+            {reason}
           </Badge>
         ) : null}
       </span>
       <span className="flex min-w-0 flex-1 flex-col items-start justify-center gap-1.5 py-0.5">
-        <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          {categoryName}
-        </span>
+        {remaining ? <Badge variant="secondary">{remaining}</Badge> : null}
         <span
           className={`line-clamp-2 font-heading font-semibold tracking-tight ${compact ? "text-lg leading-snug" : "text-2xl leading-tight"}`}
         >

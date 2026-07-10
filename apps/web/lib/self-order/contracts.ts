@@ -292,6 +292,12 @@ const publicSelfOrderMenuItemSchema = z
     base_price: z.number().finite().min(0),
     image_url: z.string().nullable(),
     sort_order: z.number().int(),
+    /** Same source as POS daily-limit / stock gate; false when unlimited. */
+    is_disabled: z.boolean().optional().default(false),
+    /** Null = unlimited. Mirrors POS `available_to_sell`. */
+    available_to_sell: z.number().int().nullable().optional().default(null),
+    /** Null when the block (if any) came from the stock leg, not a manual cap. */
+    manual_limit_quantity: z.number().int().nullable().optional().default(null),
     menu_item_variants: z.array(publicSelfOrderMenuVariantSchema),
     menu_item_modifiers: z.array(publicSelfOrderMenuModifierSchema),
     menu_item_available_sides: z.array(publicSelfOrderMenuSideSchema),

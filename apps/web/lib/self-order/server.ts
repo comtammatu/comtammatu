@@ -9,6 +9,11 @@ import {
   selfOrderSubmitActionResponseSchema,
   selfOrderVietQrResponseSchema,
 } from "./contracts";
+import {
+  findCartSoldOutMessage,
+  isAvailabilityBlocked,
+  type SelfOrderAvailability,
+} from "./availability";
 
 type RpcResult<T> = {
   data: T | null;
@@ -219,6 +224,50 @@ function mapSelfOrderError(
       message: SELF_ORDER_VI.paymentCompletedBlocked,
     };
   }
+  if (message.includes("daily_limit_item_disabled")) {
+    const itemName = readConflictItemName(error) ?? "Món";
+    return {
+      ok: false,
+      status: 409,
+      code: "item_disabled",
+      message: SELF_ORDER_VI.itemDisabledBlocked(itemName),
+    };
+  }
+  if (message.includes("daily_limit_exceeded")) {
+    const detail = readDailyLimitConflictDetail(error);
+    const itemName = detail?.itemName ?? "Món";
+    if (
+      detail &&
+      detail.remaining > 0 &&
+      detail.requested > detail.remaining
+    ) {
+      return {
+        ok: false,
+        status: 409,
+        code: "quota_exceeded",
+        message: SELF_ORDER_VI.itemQuotaExceeded(
+          itemName,
+          detail.remaining,
+          detail.requested,
+        ),
+      };
+    }
+    return {
+      ok: false,
+      status: 409,
+      code: "sold_out",
+      message: SELF_ORDER_VI.itemSoldOutBlocked(itemName),
+    };
+  }
+  if (message.includes("insufficient_stock_ingredient")) {
+    const itemName = readConflictItemName(error) ?? "Món";
+    return {
+      ok: false,
+      status: 409,
+      code: "out_of_stock",
+      message: SELF_ORDER_VI.itemOutOfStockBlocked(itemName),
+    };
+  }
 
   return {
     ok: false,
@@ -229,6 +278,194 @@ function mapSelfOrderError(
         ? SELF_ORDER_VI.paymentFailed
         : SELF_ORDER_VI.submitFailed,
   };
+}
+
+function parseJsonDetail(details: unknown): Record<string, unknown> | null {
+  if (typeof details === "object" && details !== null) {
+    return details as Record<string, unknown>;
+  }
+  if (typeof details !== "string" || details.length === 0) return null;
+  try {
+    const parsed = JSON.parse(details) as unknown;
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function readConflictItemName(error: unknown): string | null {
+  if (typeof error !== "object" || error === null) return null;
+  const details = parseJsonDetail(
+    "details" in error ? (error as { details?: unknown }).details : null,
+  );
+  if (!details) return null;
+  for (const key of ["item_name", "itemName", "menu_item_name"] as const) {
+    const value = details[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  const menuItemId = Number(details.menu_item_id ?? details.item_id);
+  if (Number.isInteger(menuItemId) && menuItemId > 0) {
+    return `Món #${String(menuItemId)}`;
+  }
+  return null;
+}
+
+function readDailyLimitConflictDetail(error: unknown): {
+  itemName: string;
+  remaining: number;
+  requested: number;
+} | null {
+  if (typeof error !== "object" || error === null) return null;
+  const details = parseJsonDetail(
+    "details" in error ? (error as { details?: unknown }).details : null,
+  );
+  if (!details) return null;
+
+  const limit = Number(details.limit_quantity);
+  const sold = Number(details.sold_today);
+  const held = Number(details.held_quantity ?? 0);
+  const requested = Number(details.requested_quantity);
+  if (
+    !Number.isFinite(limit) ||
+    !Number.isFinite(sold) ||
+    !Number.isFinite(requested)
+  ) {
+    return null;
+  }
+
+  const itemName = readConflictItemName(error) ?? "Món";
+  return {
+    itemName,
+    remaining: Math.max(0, limit - sold - (Number.isFinite(held) ? held : 0)),
+    requested,
+  };
+}
+
+type AvailabilityRow = {
+  menu_item_id: number;
+  is_disabled: boolean;
+  available_to_sell: number | null;
+  manual_limit_quantity: number | null;
+};
+
+function ictTodayDate(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+async function loadBranchAvailabilityMap(
+  token: string,
+): Promise<Map<number, SelfOrderAvailability> | null> {
+  const client = service();
+  const { data: table, error: tableError } = await client
+    .from("tables")
+    .select("id, tenant_id, branch_id")
+    .eq("self_order_token", token)
+    .maybeSingle();
+  const tenantId = Number(table?.tenant_id);
+  const branchId = Number(table?.branch_id);
+  if (
+    tableError ||
+    !Number.isInteger(tenantId) ||
+    !Number.isInteger(branchId)
+  ) {
+    return null;
+  }
+
+  const { data: gateEnabled, error: gateError } = await client.rpc<boolean>(
+    "is_feature_enabled",
+    {
+      p_branch_id: branchId,
+      p_flag_key: "pos_stock_outcome_posting",
+    },
+  );
+  if (gateError) {
+    console.error("[self-order] stock gate lookup failed", gateError);
+  }
+
+  const { data: rows, error } = await client.rpc<AvailabilityRow[]>(
+    "branch_menu_limit_availability",
+    {
+      p_tenant_id: tenantId,
+      p_branch_id: branchId,
+      p_limit_date: ictTodayDate(),
+      p_stock_gate_enabled: gateEnabled === true,
+      p_exclude_hold_tokens: null,
+    },
+  );
+  if (error) {
+    console.error("[self-order] availability lookup failed", error);
+    return null;
+  }
+
+  const map = new Map<number, SelfOrderAvailability>();
+  for (const row of rows ?? []) {
+    const menuItemId = Number(row.menu_item_id);
+    if (!Number.isInteger(menuItemId) || menuItemId <= 0) continue;
+    map.set(menuItemId, {
+      is_disabled: row.is_disabled === true,
+      available_to_sell:
+        typeof row.available_to_sell === "number" &&
+        Number.isFinite(row.available_to_sell)
+          ? row.available_to_sell
+          : null,
+      manual_limit_quantity:
+        typeof row.manual_limit_quantity === "number" &&
+        Number.isFinite(row.manual_limit_quantity)
+          ? row.manual_limit_quantity
+          : null,
+    });
+  }
+  return map;
+}
+
+function enrichMenuWithAvailability(
+  snapshot: Extract<PublicSelfOrderSnapshot, { ok: true }>,
+  availabilityByItemId: Map<number, SelfOrderAvailability>,
+): Extract<PublicSelfOrderSnapshot, { ok: true }> {
+  return {
+    ...snapshot,
+    menu: snapshot.menu.map((category) => ({
+      ...category,
+      menu_items: category.menu_items.map((item) => {
+        const availability = availabilityByItemId.get(item.id) ?? {
+          is_disabled: false,
+          available_to_sell: null,
+          manual_limit_quantity: null,
+        };
+        return {
+          ...item,
+          is_disabled: availability.is_disabled,
+          available_to_sell: availability.available_to_sell,
+          manual_limit_quantity: availability.manual_limit_quantity,
+          menu_item_available_sides: item.menu_item_available_sides.filter(
+            (side) =>
+              !isAvailabilityBlocked(
+                availabilityByItemId.get(side.side_item.id),
+              ),
+          ),
+        };
+      }),
+    })),
+  };
+}
+
+async function withMenuAvailability(
+  token: string,
+  snapshot: PublicSelfOrderSnapshot,
+): Promise<PublicSelfOrderSnapshot> {
+  if (!snapshot.ok) return snapshot;
+  const availability = await loadBranchAvailabilityMap(token);
+  if (!availability) return snapshot;
+  return enrichMenuWithAvailability(snapshot, availability);
 }
 
 function publicPayloadFailure(
@@ -352,9 +589,10 @@ export async function getSelfOrderSnapshot(
   if (!parsed.success) {
     return publicPayloadFailure("snapshot", parsed.error.issues);
   }
+  const normalized = await normalizeUnavailableSnapshot(token, parsed.data);
   return {
     ok: true,
-    data: await normalizeUnavailableSnapshot(token, parsed.data),
+    data: await withMenuAvailability(token, normalized),
   };
 }
 
@@ -371,6 +609,19 @@ export async function submitSelfOrderRequest(input: {
     ipHash: input.ipHash,
   });
   if (!rateLimit.ok) return rateLimit;
+
+  const availability = await loadBranchAvailabilityMap(input.token);
+  if (availability) {
+    const soldOutMessage = findCartSoldOutMessage(input.items, availability);
+    if (soldOutMessage) {
+      return {
+        ok: false,
+        status: 409,
+        code: "sold_out",
+        message: soldOutMessage,
+      };
+    }
+  }
 
   const { data, error } = await service().rpc<Record<string, unknown>>(
     "self_order_submit",

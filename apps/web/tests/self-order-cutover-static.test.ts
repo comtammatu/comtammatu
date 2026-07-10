@@ -47,8 +47,10 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   assert.match(client, /<ThemeToggle/);
   assert.match(client, /size="icon-touch"/);
   assert.doesNotMatch(client, /billAvailable/);
-  assert.match(client, /fixed right-3 z-30/);
-  assert.match(client, /bottom-20/);
+  assert.match(client, /variant="default"/);
+  assert.match(client, /SELF_ORDER_VI\.billTab/);
+  assert.doesNotMatch(client, /fixed right-3 z-30/);
+  assert.doesNotMatch(client, /bottom-20/);
   assert.match(client, /billView/);
   assert.match(client, /onOpenPayment=\{\(\) => setBillView\("payment"\)\}/);
   assert.match(client, /!ambiguous && order \? \(/);
@@ -84,8 +86,19 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   assert.match(menu, /active:scale-\[0\.97\]/);
   assert.match(menu, /group-active:scale-105/);
   assert.match(menu, /className="object-cover transition-transform duration-150 group-active:scale-105"/);
-  assert.match(menu, /text-xs font-medium tracking-wide text-muted-foreground uppercase/);
+  assert.doesNotMatch(
+    menu,
+    /text-xs font-medium tracking-wide text-muted-foreground uppercase/,
+  );
+  assert.match(menu, /BrandSymbol/);
+  assert.match(menu, /variant="riceBowl"/);
+  assert.doesNotMatch(menu, /Utensils|lucide-react/);
+  assert.match(client, /Clock as IconClock/);
+  assert.doesNotMatch(client, /⏳/);
+  assert.match(menu, /selfOrderItemImageBadges/);
+  assert.match(menu, /Hết suất|reasonSoldOut|availabilityReasonLabel/);
   assert.match(menu, /absolute top-1\.5 left-1\.5/);
+  assert.match(menu, /absolute top-1\.5 right-1\.5/);
   assert.match(menu, /h-32 w-32/);
   assert.match(menu, /h-16 w-16/);
   assert.match(menu, /text-2xl leading-tight/);
@@ -95,6 +108,9 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   assert.match(menuDisplay, /isSelfOrderComCategory/);
   assert.match(menuDisplay, /normalizeCategoryName\(category\.name\) === "cơm"/);
   assert.match(menuDisplay, /!== "khác"/);
+  assert.match(menuDisplay, /Truyền thống/);
+  assert.match(menuDisplay, /Nên thử/);
+  assert.match(menuDisplay, /Chờ 20 phút/);
   assert.match(client, /defaultSelfOrderCategoryValue\(initialSnapshot\.menu\)/);
   assert.doesNotMatch(client, /useState\("all"\)/);
   assert.match(bill, /paymentView/);
@@ -102,6 +118,11 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   assert.match(bill, /onBackToBill/);
   assert.match(hooks, /fast \? 3_000 : 15_000/);
   assert.doesNotMatch(hooks, /realtimeTopic|\.channel\(/);
+  const payment = read("app/q/[token]/self-order/payment-panel.tsx");
+  assert.match(payment, /ReceiptText as IconReceipt/);
+  assert.match(payment, /Banknote as IconCash/);
+  assert.match(payment, /QrCode as IconQrcode/);
+  assert.doesNotMatch(payment, /CreditCard/);
   assert.match(
     cart,
     /fixed inset-x-0 bottom-0[\s\S]*?onClick=\{\(\) => setOpen\(true\)\}/,
@@ -116,6 +137,32 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
     cart,
     /workflow-safe-pb flex shrink-0[\s\S]*onClick=\{props\.onSubmit\}/,
   );
+});
+
+test("self-order menu availability reuses the POS stock gate", () => {
+  const server = read("lib/self-order/server.ts");
+  const availability = read("lib/self-order/availability.ts");
+  const contracts = read("lib/self-order/contracts.ts");
+  const guestUi = readFileSync(
+    join(root, "../../docs/spec/self-order-guest-ui.md"),
+    "utf8",
+  );
+
+  assert.match(server, /branch_menu_limit_availability/);
+  assert.match(server, /pos_stock_outcome_posting/);
+  assert.match(server, /withMenuAvailability/);
+  assert.match(server, /findCartSoldOutMessage/);
+  assert.match(server, /itemQuotaExceeded|itemSoldOutBlocked|itemDisabledBlocked/);
+  assert.doesNotMatch(server, /soldOutBlocked/);
+  assert.match(availability, /remainingAfterDemand/);
+  assert.match(availability, /isAvailabilityBlocked/);
+  assert.match(availability, /findCartSoldOutMessage/);
+  assert.match(contracts, /available_to_sell/);
+  assert.match(contracts, /manual_limit_quantity/);
+  assert.match(guestUi, /branch_menu_limit_availability/);
+  assert.match(guestUi, /primary \(terracotta\)/);
+  assert.match(guestUi, /no per-item category eyebrow/);
+  assert.doesNotMatch(guestUi, /fixed lower-right/);
 });
 
 test("item sheet supports add and cart-edit commit paths", () => {

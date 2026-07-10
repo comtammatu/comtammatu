@@ -230,6 +230,20 @@ export const SELF_ORDER_VI = {
   billEmptyTitle: "Chưa có hoá đơn",
   billEmptyDescription:
     "Gửi món từ thực đơn để xem lượt gọi ở đây. Thanh toán mở sau khi nhân viên duyệt.",
+  reasonSoldOut: "Hết suất",
+  remainingOnCard: (quantity: number) => `Còn ${quantity} phần`,
+  itemDisabledBlocked: (itemName: string) =>
+    `${itemName} đang tắt hôm nay — bỏ khỏi giỏ hoặc đổi món.`,
+  itemSoldOutBlocked: (itemName: string) =>
+    `${itemName} đã hết suất — giảm số lượng hoặc đổi món.`,
+  itemQuotaExceeded: (
+    itemName: string,
+    remaining: number,
+    requested: number,
+  ) =>
+    `${itemName} chỉ còn ${String(remaining)} suất, giỏ đang cần ${String(requested)} — giảm số lượng hoặc đổi món.`,
+  itemOutOfStockBlocked: (itemName: string) =>
+    `${itemName} hết nguyên liệu — đổi món khác.`,
 } as const;
 
 export type SelfOrderKey = keyof typeof SELF_ORDER_VI;

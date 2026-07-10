@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ReceiptText as IconReceipt } from "lucide-react";
+import { Clock as IconClock, ReceiptText as IconReceipt } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -28,6 +28,7 @@ import {
   resolveClientIntent,
   type SelfOrderClientIntent,
 } from "@lib/self-order/client-intent";
+import { buildCartDemandByMenuItemId } from "@lib/self-order/availability";
 import { CartSheet } from "./self-order/cart-sheet";
 import { BillDrawer } from "./self-order/bill-drawer";
 import { useSnapshotSync } from "./self-order/hooks";
@@ -294,6 +295,11 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
     [buyerAddress, buyerEmail, buyerName, buyerNotGetInvoice, buyerTaxCode],
   );
 
+  const cartDemandByMenuItemId = useMemo(
+    () => buildCartDemandByMenuItemId(cartItems),
+    [cartItems],
+  );
+
   if (!snapshot.ok) return <UnavailableState snapshot={snapshot} />;
 
   const available = snapshot;
@@ -508,11 +514,38 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
                 {SELF_ORDER_VI.tableLabel(available.table.number)}
               </h1>
             </div>
-            <ThemeToggle
-              variant="outline"
-              size="icon-touch"
-              className="shrink-0"
-            />
+            <div className="flex shrink-0 items-center gap-2">
+              <ThemeToggle
+                variant="outline"
+                size="icon-touch"
+                className="shrink-0"
+              />
+              <Button
+                type="button"
+                variant="default"
+                size="touch"
+                className="shrink-0"
+                onClick={() => {
+                  setBillView("bill");
+                  setBillOpen(true);
+                }}
+              >
+                <IconReceipt data-icon="inline-start" />
+                {SELF_ORDER_VI.billTab}
+              <Badge variant={awaiting ? "warning" : "secondary"}>
+                {awaiting ? (
+                  <>
+                    <IconClock className="size-3.5" aria-hidden />
+                    <span className="sr-only">
+                      {SELF_ORDER_VI.statusPendingApproval}
+                    </span>
+                  </>
+                ) : (
+                  itemCount
+                )}
+              </Badge>
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -522,6 +555,7 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
           onActiveCategoryChange={setActiveCategoryValue}
           onAdd={addCartItem}
           disabled={paymentPending}
+          cartDemandByMenuItemId={cartDemandByMenuItemId}
         />
 
         <CartSheet
@@ -543,26 +577,6 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
           onReplace={replaceCartItem}
           onSubmit={submitCart}
         />
-
-        <div
-          className={`workflow-safe-pb fixed right-3 z-30 ${cartItems.length > 0 ? "bottom-20" : "bottom-0"}`}
-        >
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            onClick={() => {
-              setBillView("bill");
-              setBillOpen(true);
-            }}
-          >
-            <IconReceipt data-icon="inline-start" />
-            {SELF_ORDER_VI.billTab}
-            <Badge variant={awaiting ? "warning" : "secondary"}>
-              {awaiting ? "⏳" : itemCount}
-            </Badge>
-          </Button>
-        </div>
       </div>
 
       <BillDrawer

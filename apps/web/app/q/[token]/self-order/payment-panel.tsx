@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import {
   Banknote as IconCash,
-  CreditCard as IconPayment,
   QrCode as IconQrcode,
   ReceiptText as IconReceipt,
 } from "lucide-react";
@@ -287,7 +286,7 @@ export function PaymentPanel({
       <AppSection
         title={SELF_ORDER_VI.paymentTitle}
         description={SELF_ORDER_VI.paymentDescription}
-        icon={<IconPayment />}
+        icon={<IconReceipt />}
         badge={{
           children: formatVND(
             activePaymentRequest?.amount ?? activeOrder.totalAmount,

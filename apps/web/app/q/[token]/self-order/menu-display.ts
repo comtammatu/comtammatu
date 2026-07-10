@@ -8,6 +8,14 @@ function normalizeCategoryName(value: string) {
   return value.trim().toLocaleLowerCase("vi");
 }
 
+function normalizeItemName(value: string) {
+  return value
+    .normalize("NFC")
+    .trim()
+    .toLocaleLowerCase("vi")
+    .replace(/\s+/g, " ");
+}
+
 /** Only the named Cơm category is visually prominent — never Khác or other main_dish. */
 export function isSelfOrderComCategory(
   category: Pick<SelfOrderMenuCategory, "name">,
@@ -43,4 +51,23 @@ export function splitMenuItemDisplayName(name: string): {
   const title = name.slice(0, match.index).trim();
   if (!tag || !title) return { title: name, tag: null };
   return { title, tag };
+}
+
+/**
+ * Curated image badges for hero dishes. Matched on the display title after
+ * stripping a trailing parenthetical note.
+ */
+export function selfOrderItemImageBadges(name: string): string[] {
+  const { title } = splitMenuItemDisplayName(name);
+  const normalized = normalizeItemName(title);
+
+  if (normalized.includes("cốt lết") || normalized.includes("cot let")) {
+    return ["Truyền thống"];
+  }
+
+  if (normalized.includes("một gang") || normalized.includes("mot gang")) {
+    return ["Nên thử", "Chờ 20 phút"];
+  }
+
+  return [];
 }

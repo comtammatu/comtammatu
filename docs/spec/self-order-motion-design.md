@@ -78,7 +78,7 @@ Existing DS affordances this surface underuses: `PageSkeleton` (`apps/web/app/co
 - `apps/web/app/q/[token]/loading.tsx` — route loading frame using `PageSkeleton`.
 - `apps/web/app/q/[token]/self-order/hooks.ts` — `isRefreshing`, `refreshError`, `clearRefreshError`.
 - `apps/web/app/q/[token]/self-order-client.tsx` — refresh-error toast,
-  lower-right bill launcher after the first request, dialog guest states,
+  header primary bill launcher next to ThemeToggle, dialog guest states,
   submit-error wiring, `updateQuantity` cleanup.
 - `apps/web/app/q/[token]/self-order/cart-sheet.tsx` — submit spinner, submit-error placement, decrease-button floor.
 - `apps/web/app/q/[token]/self-order/payment-panel.tsx` — payment button spinner.

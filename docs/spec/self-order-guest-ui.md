@@ -79,23 +79,28 @@ Static `BrandMascot` (`animated={false}`) + title + description. Covers three ca
 ### G1: Menu — the only page
 
 Header is one compact block: `Cơm Tấm Má Tư` above the table label (H1), with
-the shared `ThemeToggle` (Sáng/Tối) on the right. It contains no branch name or
-workflow notification.
+the shared `ThemeToggle` (Sáng/Tối) and a primary `Hoá đơn` button on the right.
+It contains no branch name or workflow notification.
 
-`Hoá đơn` is always a fixed lower-right button + `Badge` (approved item count,
-or `⏳` while a request is pending). It opens a `Drawer` and **never
-auto-opens**. An unopened or multi-bill table shows the safe empty bill state;
-payment remains unavailable.
+`Hoá đơn` sits in the header next to `ThemeToggle` as a primary (terracotta)
+`Button` + `Badge` (approved item count, or a `Clock` icon while a request is
+pending). It opens a `Drawer` and **never auto-opens**. An unopened or
+multi-bill table shows the safe empty bill state; payment remains unavailable.
 
 Body: category pills (sticky under the header, one scrollable row). The
 default selected pill is the named `Cơm` category when present; otherwise the
 first non-empty category that is not `Khác`. Category pills list named
 categories first; `Tất cả` is last. Items
-render as horizontal rows — image on the left, category eyebrow + dish title +
-price on the right. A trailing parenthetical note in the item name (for example
-`Cốt Lết (WOW)`) is stripped from the title and shown as a short `Badge` on the
-top-left of the image; cart, customizer, and kitchen payloads keep the raw
-`menu_items.name`.
+render as horizontal rows — image on the left, dish title + price on the
+right (no per-item category eyebrow). Sold-out / disabled items reuse the same
+POS availability source (`branch_menu_limit_availability`) and render as
+non-selectable with a destructive `Hết suất` badge on the image; finite
+remaining quota shows `Còn N phần`. Curated image badges: `Sườn Cốt Lết` →
+`Truyền thống`; `Sườn Một Gang` → `Nên thử` + `Chờ 20 phút`. A trailing
+parenthetical note in the item name (for example `Cốt Lết (WOW)`) is stripped
+from the title and shown as a short `Badge` on the top-left of the image when
+no curated badge already covers it; cart, customizer, and kitchen payloads keep
+the raw `menu_items.name`.
 
 Visual prominence is keyed by **category name**, not `menu_categories.type`:
 
@@ -142,8 +147,8 @@ Editing a line replaces that cart entry in place (same `key`).
 Emit one Sonner `toast.warning` (title + description) when the state first
 becomes awaiting — do not mount a dialog or banner on the menu. Guest `/q/*`
 uses the dark high-contrast toaster preset (larger title/description; not the
-near-white light warning fill). Cart CTA hard-disabled. The bill button shows
-`⏳`; the drawer shows the pending round with no total.
+near-white light warning fill). Cart CTA hard-disabled. The bill button shows a `Clock` icon; the drawer shows
+the pending round with no total.
 
 ### G5 · Rejected
 
@@ -282,7 +287,7 @@ Public snapshot, submit, and payment endpoints keep bounded per-token and per-ne
 | `BrandMascot`                                | Static only (G0 unavailable). Never animated, never on the ordering surface |
 | `BrandLockup` / `BrandMark` / `BrandLogoBox` | **Forbidden**                                                               |
 | `brand-pattern-caro`                         | **Forbidden**                                                               |
-| `BrandSymbol` via `AppEmptyState.symbol`     | Allowed for an empty menu only                                              |
+| `BrandSymbol` (`riceBowl`)                   | Empty menu (`AppEmptyState.symbol`) and missing item-photo placeholders     |
 
 ## Non-goals
 

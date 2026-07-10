@@ -4,6 +4,7 @@ import {
   ALL_MENU_VALUE,
   defaultSelfOrderCategoryValue,
   isSelfOrderComCategory,
+  selfOrderItemImageBadges,
   splitMenuItemDisplayName,
 } from "../app/q/[token]/self-order/menu-display";
 import type { SelfOrderMenuCategory } from "../lib/self-order/contracts";
@@ -84,4 +85,18 @@ test("splitMenuItemDisplayName lifts trailing parenthetical tags", () => {
     title: "(WOW)",
     tag: null,
   });
+});
+
+test("selfOrderItemImageBadges curates Sườn Cốt Lết and Sườn Một Gang", () => {
+  assert.deepEqual(selfOrderItemImageBadges("Sườn Cốt Lết"), [
+    "Truyền thống",
+  ]);
+  assert.deepEqual(selfOrderItemImageBadges("Cốt Lết (WOW)"), [
+    "Truyền thống",
+  ]);
+  assert.deepEqual(selfOrderItemImageBadges("Sườn Một Gang"), [
+    "Nên thử",
+    "Chờ 20 phút",
+  ]);
+  assert.deepEqual(selfOrderItemImageBadges("Cơm sườn"), []);
 });

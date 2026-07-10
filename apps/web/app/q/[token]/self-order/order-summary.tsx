@@ -1,5 +1,6 @@
 "use client";
 
+import { Clock as IconClock } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -156,7 +157,10 @@ export function OrderSummary({
         <AppSection
           title={SELF_ORDER_VI.awaitingCalloutTitle}
           description={SELF_ORDER_VI.awaitingCalloutDescription}
-          badge={{ children: "⏳", variant: "warning" }}
+          badge={{
+            children: <IconClock className="size-3.5" aria-hidden />,
+            variant: "warning",
+          }}
           size="sm"
         >
           <PendingRequestLines items={pendingItems} />

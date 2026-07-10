@@ -41,6 +41,7 @@ import type {
   SelfOrderMenuCategory,
   SelfOrderMenuItem,
 } from "@lib/self-order/contracts";
+import { buildCartDemandByMenuItemId } from "@lib/self-order/availability";
 import { SelfOrderItemSheet } from "./item-sheet";
 import { splitMenuItemDisplayName } from "./menu-display";
 
@@ -220,6 +221,10 @@ export function CartSheet(props: CartSheetProps) {
         : null,
     [categories, editingCartItem],
   );
+  const cartDemandByMenuItemId = useMemo(
+    () => buildCartDemandByMenuItemId(items),
+    [items],
+  );
 
   const submitDisabled =
     !props.canSubmit || props.isSubmitting || ctaDisabled;
@@ -373,6 +378,10 @@ export function CartSheet(props: CartSheetProps) {
           item={editingMenuItem}
           open={editingKey != null}
           disabled={editingDisabled}
+          cartDemand={
+            cartDemandByMenuItemId.get(editingCartItem.menu_item_id) ??
+            editingCartItem.quantity
+          }
           initialDraft={editingCartItem}
           onOpenChange={(nextOpen) => {
             if (!nextOpen) setEditingKey(null);

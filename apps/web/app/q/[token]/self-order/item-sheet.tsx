@@ -5,7 +5,6 @@ import Image from "next/image";
 import {
   Minus as IconMinus,
   Plus as IconPlus,
-  Utensils as IconUtensils,
   X as IconX,
 } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
@@ -39,17 +38,27 @@ import {
   FieldSet,
 } from "@comtammatu/ui/components/field";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { BrandSymbol } from "@/components/brand";
 import type {
   SelfOrderCartItem,
   SelfOrderMenuItem,
   SelfOrderMenuVariant,
 } from "@lib/self-order/contracts";
-import { splitMenuItemDisplayName } from "./menu-display";
+import {
+  menuItemAvailability,
+  remainingAfterDemand,
+} from "@lib/self-order/availability";
+import {
+  selfOrderItemImageBadges,
+  splitMenuItemDisplayName,
+} from "./menu-display";
 
 export interface SelfOrderItemSheetProps {
   item: SelfOrderMenuItem;
   open: boolean;
   disabled?: boolean;
+  /** Cart demand already counted for this menu item (exclude the line being edited). */
+  cartDemand?: number;
   /** When set, hydrate the sheet from an existing cart line and keep its key. */
   initialDraft?: SelfOrderCartItem | null;
   onOpenChange: (open: boolean) => void;
@@ -116,6 +125,7 @@ export function SelfOrderItemSheet({
   item,
   open,
   disabled = false,
+  cartDemand = 0,
   initialDraft = null,
   onOpenChange,
   onCommit,
@@ -132,6 +142,13 @@ export function SelfOrderItemSheet({
   const [quantity, setQuantity] = useState(1);
   const wasOpenRef = useRef(false);
   const draftIdentityRef = useRef<string | null>(null);
+  const availability = menuItemAvailability(item);
+  const maxQuantity =
+    remainingAfterDemand(
+      availability,
+      Math.max(0, cartDemand - (initialDraft?.quantity ?? 0)),
+    ) ?? 99;
+  const effectiveMaxQuantity = Math.max(1, Math.min(99, maxQuantity));
 
   useEffect(() => {
     const opening = open && !wasOpenRef.current;
@@ -147,7 +164,7 @@ export function SelfOrderItemSheet({
       setSelectedModifierIds(hydrated.modifierIds);
       setSelectedSideQuantities(hydrated.sideQuantities);
       setNote(hydrated.note);
-      setQuantity(hydrated.quantity);
+      setQuantity(Math.min(hydrated.quantity, effectiveMaxQuantity));
       return;
     }
 
@@ -186,7 +203,9 @@ export function SelfOrderItemSheet({
       );
       return next.size === current.size ? current : next;
     });
+    setQuantity((current) => Math.min(current, effectiveMaxQuantity));
   }, [
+    effectiveMaxQuantity,
     initialDraft,
     item,
     item.id,
@@ -224,6 +243,10 @@ export function SelfOrderItemSheet({
     ? SELF_ORDER_VI.updateCartItem
     : SELF_ORDER_VI.addToCart;
   const { title, tag } = splitMenuItemDisplayName(item.name);
+  const imageBadges = [...selfOrderItemImageBadges(item.name)];
+  if (tag && !imageBadges.includes(tag)) {
+    imageBadges.push(tag);
+  }
 
   function toggleModifier(id: number) {
     setSelectedModifierIds((current) => {
@@ -268,7 +291,9 @@ export function SelfOrderItemSheet({
   }
 
   function updateQuantity(delta: number) {
-    setQuantity((current) => Math.min(99, Math.max(1, current + delta)));
+    setQuantity((current) =>
+      Math.min(effectiveMaxQuantity, Math.max(1, current + delta)),
+    );
   }
 
   function commitCustomizedItem() {
@@ -327,16 +352,26 @@ export function SelfOrderItemSheet({
               />
             ) : (
               <span className="flex size-full items-center justify-center">
-                <IconUtensils className="size-12 text-muted-foreground" />
+                <BrandSymbol
+                  variant="riceBowl"
+                  size="xl"
+                  decorative
+                  className="opacity-50"
+                />
               </span>
             )}
-            {tag ? (
-              <Badge
-                variant="default"
-                className="absolute top-3 left-3 z-10 truncate px-2 text-xs"
-              >
-                {tag}
-              </Badge>
+            {imageBadges.length > 0 ? (
+              <span className="absolute top-3 left-3 z-10 flex max-w-[calc(100%-4rem)] flex-col items-start gap-1">
+                {imageBadges.map((badge) => (
+                  <Badge
+                    key={badge}
+                    variant="default"
+                    className="max-w-full truncate px-2 text-xs"
+                  >
+                    {badge}
+                  </Badge>
+                ))}
+              </span>
             ) : null}
             <SheetClose asChild>
               <Button
@@ -568,6 +603,7 @@ export function SelfOrderItemSheet({
                 type="button"
                 variant="outline"
                 size="icon-touch"
+                disabled={quantity >= effectiveMaxQuantity}
                 aria-label={SELF_ORDER_VI.increaseQuantityAria}
                 onClick={() => updateQuantity(1)}
               >
