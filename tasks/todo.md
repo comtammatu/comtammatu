@@ -972,19 +972,14 @@ desktop 1440×900:
       planes. This is a move, not a fork: the sharing was correct and the location
       was not. Tighten the S1 allowlist to `*-actions.ts` afterwards.
 
-- [ ] **S8 — open full procurement to kind `branch` (D073 §4) and retire the
-      recipes tile from the operator (D073 §3).** Extend `kinds` in
-      `nav-config.ts` so "Đơn đặt hàng", "Trả hàng NCC", and "Danh mục" render
-      for `branch`, reusing the native operator surfaces already built in the
-      Kho Tổng round (`stock/purchase-orders` native work rides the existing T3
-      item under "Owner-Confirmed UI Follow-ups"; `stock/supplier-returns` and
-      `stock/catalog` natives already exist). Grant the missing
-      `branch_manager` keys (PO create/approve, catalog write set) through the
-      permission seeds — owner-delegated apply, the one non-frontend touch in
-      this plan. Remove the `production/recipes` tile from the operator; recipe
-      administration stays in Office `/inventory`. Add "Đơn chờ nhận" to the
-      branch hub queue once PO opens (the `openPurchaseOrders` count currently
-      gates on `isCentralSupply`).
+- [ ] **S8 — open the catalog to kind `branch` and retire the recipes tile
+      (D073 §3/§4).** Extend the "Danh mục" tile `kinds` in `nav-config.ts` to
+      `branch`, reusing the native `stock/catalog/**` surfaces built in the Kho
+      Tổng round. No permission grants are required: categories/units/
+      ingredients actions carry no `PERMISSION_KEYS` gate (RLS/module only) and
+      suppliers use `procurement:supplier_manage`, which `branch_manager` holds
+      since D068 §4. Remove the `production/recipes` tile from the operator;
+      recipe administration stays in Office `/inventory`.
 
 - [ ] **S9 — densify the on-hand list.**
       `stock/on-hand/branch-stock-on-hand-client.tsx:148` renders `min-h-20` (80px)
@@ -1009,6 +1004,50 @@ desktop 1440×900:
       `docs/ref/screen-context-map.md` §2.5. Clean deletes, no tombstones. The
       DB enum keeps all three kinds for history. Code deletion must not land
       before step 2, or an active site loses its UI.
+
+- [ ] **S11 — one-step Kho ↔ Bếp move, both directions (D073 §5). AFTER S10:
+      the site-16 stock transfer needs the cross-branch flow one last time.**
+      The carrier already exists: `commit_intra_branch_transfer`
+      (`20260708103000_inventory_unit_closure.sql`, used by
+      `quickInternalTransfer`) posts `transfer_out`+`transfer_in` and lands on
+      `received` in one shot — but only warehouse → kitchen. One migration
+      generalizes it to both directions. Operator UI: one "Điều chuyển" tile →
+      direction toggle + ingredient picker + `NumberPadSheet`, committing
+      through the quick RPC; the draft → confirm intra path retires from the
+      operator. Known live hazard the sweep confirmed on PROD: the wave's
+      create-model already offers kitchen → warehouse, but
+      `20260710010833_allow_kitchen_return_transfers.sql` is unapplied AND
+      `stock_transfer_confirm_ship` (baseline) still hard-rejects that
+      direction (`intra_branch_location_invalid`) — do not deploy the wave
+      before either this slice's migration or 010833 + a confirm_ship fix
+      lands. Then retire the cross-branch lifecycle from the operator: tiles
+      "Yêu cầu hàng" / "Nhận hàng" / "Chuyển hàng", the `stock/receive/**`
+      queue, and the `inboundTransfers` hub-queue row; Office
+      `/inventory/transfers` stays read-only for history.
+
+- [ ] **S12 — retire supplier returns end-to-end (D073 §4).** Delete the
+      operator routes (`stock/supplier-returns/**`, 3 pages + 3 clients), the
+      Office routes (`/inventory/supplier-returns/**`, 3 pages + 4 clients),
+      the shared loaders/model (`branch-supplier-return-data.ts`,
+      `supplier-return-model.ts`), the actions file
+      (`supplier-return-actions.ts`), the nav tile and Office nav item, and the
+      copy catalog. Keep the DB tables, RPCs, and the
+      `has_active_supplier_return` GRN integrity gates — history stays, and the
+      gate is inert without new returns. Rejected GRN goods route through Báo
+      hao hụt instead. Seven test files assert on this feature
+      (`supplier-return-model.test.ts` dies; the six others need their
+      supplier-return expectations removed).
+
+- [ ] **S13 — retire purchase orders from daily use (D073 §4).** Delete the
+      operator wrappers (`stock/purchase-orders/**`, 3 files) and the PO nav
+      tile; remove the Office PO nav entry and routes from daily navigation;
+      remove the PO door from the GRN source picker
+      (`fetchOpenPurchaseOrdersForReceiving` / `openPurchaseOrders` in
+      `apps/web/lib/inventory/grn-source-data.ts`) and the
+      `openPurchaseOrders` hub-queue count. DB tables, RPCs, and the 15
+      historical POs stay. This supersedes the old "Convert the Branch
+      purchase-order family as one T3 native touch slice" item under
+      "Owner-Confirmed UI Follow-ups" — remove that item in the same commit.
 
 ### Defects found while scoping the cutover — separate slices, not D073
 
@@ -1035,7 +1074,7 @@ desktop 1440×900:
       food-cost deviation recorded in ADR 0011. Confirm the intended semantics with the
       owner before changing anything.
 
-- [ ] **Retire the dead lot/expiry columns — full plumbing scope, not a drive-by.**
+- [ ] **Retire the dead lot/expiry columns — owner-confirmed (D073 §5), full plumbing scope, not a drive-by.**
       `grn_items.batch_number`, `grn_items.expiry_date`, and
       `ingredients.shelf_life_days` hold zero non-null values and no UI reads or
       writes them, but they remain wired through live RPC plumbing: the waste
@@ -1053,17 +1092,21 @@ desktop 1440×900:
 ### Owner decisions still open
 
 - [ ] Timing for the site-16 stock transfer and deactivation (S10 steps 1–2 are
-      owner-executed operations on real goods; code deletion waits on them).
-- [ ] The exact `branch_manager` grant list for S8 (PO create/approve + catalog
-      write set) before the owner-delegated seed apply.
+      owner-executed operations on real goods; code deletion and S11 wait on
+      them).
 
 ### Sequencing and gates
 
 - Owner decree 2026-07-10: a single local agent works directly on `main`; no PRs.
   The 2026-07-10 working-tree wave is landed; each slice below is one commit.
 - One route family per slice commit. T2 front-end. Zero schema migrations across
-  S0–S7 and S9; S8 carries a permission-seed grant (owner-delegated apply) and
-  S10 carries owner-executed stock/ops steps before any code deletion.
+  S0–S9, S12, and S13. S10 carries owner-executed stock/ops steps before any
+  code deletion; S11 carries the intra-transfer RPC migration (owner-delegated
+  apply, and it must land before any deploy of the wave's transfer create
+  model); the lot/expiry retirement below carries its own migration.
+- Hard order: S10 (site-16 transfer-out uses the cross-branch flow one last
+  time) → S11 (one-step move + cross-branch retirement) → S12/S13 (feature
+  retirements, any order).
 - Run the full gate fresh before each slice commit. A green result served from
   the turbo cache is not evidence.
 - Runtime QA per slice at `390x844`, `768x1024`, and `1024x768` (D067 §7).
