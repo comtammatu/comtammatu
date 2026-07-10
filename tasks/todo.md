@@ -142,31 +142,24 @@
 - [ ] **Route shell/header refactor.** Collapse route-local shell/header
       bypasses into approved chrome primitives after the primitive/guard cleanup
       is green.
-- [ ] **Branch Hub touch-plane cutover — remaining scope.** The core stock
-      routes (hub, transfer, receive, on-hand, GRN list/new/detail, stocktake,
-      issues, supplier returns, reports, waste entry, waste approvals) own
-      native Branch presentation; shipped history lives in git. Supplier
-      returns and the cross-branch transfer surfaces retire later via
-      S11/S12. Still open:
-  - [ ] Resolve the consumption Branch contract before rebuilding its two
-        wrappers: distinguish POS sale-consumption ledger visibility from manual
-        consumption issue review, then choose whether the Branch route is a
-        read-only signal list, an issue detail, or both. Do not copy the Office
-        `IssuesClient` into Branch without that decision.
-  - [ ] Correct the count-assignment “Open count screen” CTA: it currently
-        opens the signed-in manager's own `/stock/count` assignment surface,
-        not the selected employee's work. Keep employee count discovery under
-        `/br/[branchId]/shift`; replace the manager CTA with the relevant
-        assignment/review destination after confirming the intended job.
+- [x] **Branch Hub touch-plane cutover.** Core Branch stock and leave-review
+      workflows own touch-native presenters; Office keeps separate responsive
+      management presenters. Supplier returns retired through S12; PO retired
+      through S13. Cross-branch transfer retirement remains independently
+      sequenced in S11.
+  - [x] Consumption now separates posted ledger sources from manual documents,
+        with a Branch-native list and typed detail; no Office presenter reuse.
+  - [x] Count assignment/review now owns the correct manager destinations and
+        no longer opens the signed-in manager's personal count surface.
   - [ ] Reconcile stocktake role documentation with current permission seeds:
         the local template grants `production_manager` stocktake
         create/complete while `docs/ref/inventory.md` names only branch and
         warehouse managers. Confirm the business policy before changing ACL or
         navigation membership.
-  - [ ] Run runtime QA across phone `390x844`, tablet portrait `768x1024`,
+  - [x] Run runtime QA across phone `390x844`, tablet portrait `768x1024`,
         tablet landscape `1024x768`, and Office desktop `1440x900`, in both
-        `light` and `night` themes (covers the design-system contrast wave
-        smoke), once local Supabase/Docker auth is available.
+        Branch/Office shells with local Supabase E2E auth. The theme contrast
+        contract remains covered by the design-system guard suite.
 
 
 ## Branch Stock Cutover (D073 — supersedes the D067 round-2 scope)
@@ -343,12 +336,13 @@
       from the operator UI — `CENTRAL_HOME_TILE_SUFFIXES` and the central home
       CTA in `(operator)/page.tsx` + `operator-home-contract.ts`, the
       `isCentralKitchen`/`isCentralSupply` branches in
-      `(operator)/dashboard/data.ts`, the `central_supply`/`central_kitchen`
-      `kinds` entries in `nav-config.ts`, archetype exceptions #19–#23 in
-      `docs/spec/page-archetypes.md`, and the central rows of
-      `docs/ref/screen-context-map.md` §2.5. Clean deletes, no tombstones. The
-      DB enum keeps all three kinds for history. Code deletion must not land
-      before step 2, or an active site loses its UI.
+      `(operator)/dashboard/data.ts`, and the `central_supply`/
+      `central_kitchen` `kinds` entries in `nav-config.ts`. The docs half of
+      this step landed 2026-07-10 (`4b478eb84`): archetype exceptions and the
+      screen-context central rows are already gone, and the GENERATED
+      role-route-matrix block regenerates itself once the code forks delete.
+      Clean deletes, no tombstones. The DB enum keeps all three kinds for
+      history.
 
 - [ ] **S11 — one-step Kho ↔ Bếp move, both directions (D073 §5). UNBLOCKED:
       the site-16 transfer-out ran 2026-07-10; cross-branch flow is no longer
@@ -374,7 +368,7 @@
       `scripts/page-archetypes.mjs` (the route-manifest gate in
       `scripts/check-ui-contract.mjs` rejects dead entries).
 
-- [ ] **S12 — retire supplier returns end-to-end (D073 §4).** Delete the
+- [x] **S12 — retire supplier returns end-to-end (D073 §4).** Delete the
       operator routes (`stock/supplier-returns/**`, 3 pages + 3 clients), the
       Office routes (`/inventory/supplier-returns/**`, 3 pages + 4 clients),
       the shared loaders/model (`branch-supplier-return-data.ts`,
@@ -389,7 +383,7 @@
       rows in `scripts/page-archetypes.mjs` and the supplier-return arrays in
       `scripts/check-ui-contract.mjs`.
 
-- [ ] **S13 — retire purchase orders from daily use (D073 §4).** Delete the
+- [x] **S13 — retire purchase orders from daily use (D073 §4).** Delete the
       operator wrappers (`stock/purchase-orders/**`, 3 files) and the PO nav
       tile; remove the Office PO nav entry and routes from daily navigation;
       remove the PO door from the GRN source picker
