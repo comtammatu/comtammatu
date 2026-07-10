@@ -4,9 +4,9 @@
 >
 > Boundary hiện tại:
 >
-> - `Kho Tổng` và `Bếp Trung Tâm` là stock-bearing central sites trên bảng `branches`.
+> - `Bếp Trung Tâm` là central site stock-bearing duy nhất trên bảng `branches`.
 > - `Kho chi nhánh` là stock-bearing location của chi nhánh.
-> - `Bếp chi nhánh` là endpoint tiêu hao, không phải location giữ tồn trong flow mới.
+> - `Bếp chi nhánh` (`branch` + `kitchen`) cũng là stock-bearing location; tiêu hao ghi nhận tại đây.
 
 ---
 
@@ -15,24 +15,21 @@
 ```mermaid
 flowchart LR
     SUP["Nhà cung cấp"]
-    CS["Kho Tổng"]
     CK["Bếp Trung Tâm"]
     BW["Kho chi nhánh"]
     CONS["Tiêu hao chi nhánh"]
     POS["POS / Bán hàng"]
     CTRL["Kiểm soát: stocktake / alerts / reports"]
 
-    SUP -->|"PO -> GRN"| CS
     SUP -->|"PO -> GRN"| CK
+    SUP -->|"PO -> GRN"| BW
 
-    CS -->|"Transfer thật"| BW
-    CK -->|"Production Order"| CK
+    CK -->|"Production Run"| CK
     CK -->|"Transfer thật"| BW
 
     BW -->|"Approved consumption"| CONS
     CONS -->|"Food cost thực tế"| POS
 
-    CS --- CTRL
     CK --- CTRL
     BW --- CTRL
     CONS --- CTRL

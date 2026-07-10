@@ -100,9 +100,10 @@ Các route phải mở đúng theo ACL và nav:
   - `location_id` ưu tiên Bếp CN nếu chi nhánh đã cấu hình kitchen, fallback Kho CN/default issue warehouse nếu chưa có Bếp CN.
 - Kiểm `/inventory/consumption` và detail đọc được trace.
 
-### 4.4 Production tại Bếp Trung Tâm
+### 4.4 Production
 
 - `production_manager` ở `central_kitchen` thấy nav/page.
+- `branch_manager` tại chính chi nhánh mình thấy nav/page và tạo được run (D068).
 - Tạo `production_run` và đi theo run detail flow (`draft -> in_progress -> confirm`).
 - Fail đúng khi thiếu BOM hoặc thiếu nguyên liệu.
 - Confirm thành công khi đủ điều kiện.

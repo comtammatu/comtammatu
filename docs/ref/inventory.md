@@ -222,7 +222,7 @@ line không có KDS chỉ được trừ sau khi đã dispatch qua phiếu bếp
 
 ### 5.2 Schema tham chiếu — `goods_received_notes` / `grn_items`
 
-**`branch_id` trên GRN là inventory site nhận hàng.** Với `branch` thì GRN ghi vào Kho CN. Với `central_supply` thì GRN ghi vào Kho Tổng. Với `central_kitchen` thì GRN ghi vào Bếp Trung Tâm. Không tạo GRN trực tiếp vào Bếp CN chi nhánh.
+**`branch_id` trên GRN là inventory site nhận hàng.** Với `branch`, GRN nhận vào location stock-bearing của chi nhánh — form tạo GRN ưu tiên Bếp CN (`kitchen`) nếu chi nhánh đã cấu hình, fallback Kho CN. Với `central_supply` thì GRN ghi vào Kho Tổng. Với `central_kitchen` thì GRN ghi vào Bếp Trung Tâm.
 
 ---
 

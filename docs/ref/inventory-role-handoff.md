@@ -1,7 +1,7 @@
 # Inventory Role Handoff — 1 Trang
 
 > Dùng cho training nhanh đội vận hành  
-> Mô hình vận hành: `Kho Tổng`, `Bếp Trung Tâm`, `chi nhánh`, `Kho CN`, `Bếp CN`, `tiêu hao`
+> Mô hình vận hành: `Bếp Trung Tâm`, `chi nhánh`, `Kho CN`, `Bếp CN`, `tiêu hao`
 
 ---
 
@@ -17,9 +17,9 @@ Tài liệu này là bản training 1 trang.
 
 ## 1. Luồng chuẩn
 
-1. Kho Tổng/Bếp Trung Tâm/chi nhánh nhập hàng từ nhà cung cấp bằng `PO` và `GRN`.
-2. Kho Tổng hoặc Bếp Trung Tâm chuyển hàng còn tồn về Kho CN bằng `stock_transfer`.
-3. Bếp Trung Tâm tạo `production_order` để sản xuất thành phẩm.
+1. Bếp Trung Tâm/chi nhánh nhập hàng từ nhà cung cấp bằng `PO` và `GRN`.
+2. Bếp Trung Tâm chuyển hàng còn tồn về Kho CN bằng `stock_transfer`.
+3. Bếp Trung Tâm hoặc chi nhánh tạo `production_run` để sản xuất thành phẩm.
 4. Chi nhánh nhận hàng vào Kho CN, cấp Bếp CN bằng `stock_transfer` cùng chi nhánh, rồi bán hàng.
 5. Quản lý chi nhánh duyệt/apply tiêu hao trong ngày khi hàng thật sự được xuất dùng.
 6. Cuối ngày các site/location kiểm kê và xử lý chênh lệch nếu có.
@@ -33,7 +33,7 @@ Trong hệ thống hiện tại, vai trò này thường map vào `warehouse_man
 - Tạo `PO` cho nhà cung cấp.
 - Tạo và xác nhận `GRN` khi hàng tới tại site nhận.
 - Kiểm đúng số lượng, đơn giá, batch, hạn dùng.
-- Tạo transfer thật từ Kho Tổng/Bếp Trung Tâm/chi nhánh sang Kho CN.
+- Tạo transfer thật từ Bếp Trung Tâm/chi nhánh sang Kho CN.
 
 ### Không được làm
 
@@ -49,24 +49,25 @@ Trong hệ thống hiện tại, vai trò này thường map vào `warehouse_man
 
 ## 3. Bếp trưởng / Quản lý chi nhánh
 
-Trong hệ thống hiện tại, flow này do `production_manager` thao tác.
+Trong hệ thống hiện tại, flow này do `production_manager` tại Bếp Trung Tâm
+hoặc `branch_manager` tại chính chi nhánh mình thao tác.
 
 ### Việc phải làm
 
-- Xác nhận nguyên liệu vào Bếp Trung Tâm.
-- Tạo `production_order` đúng thành phẩm và đúng số lượng.
+- Xác nhận nguyên liệu tại site sản xuất (Bếp Trung Tâm hoặc chi nhánh).
+- Tạo `production_run` đúng thành phẩm và đúng số lượng.
 - Chỉ confirm sản xuất khi BOM đầy đủ và nguyên liệu đủ.
-- Tạo transfer thành phẩm về Kho CN.
+- Với sản xuất tại Bếp Trung Tâm: tạo transfer thành phẩm về Kho CN.
 
 ### Không được làm
 
 - Không xác nhận lệnh sản xuất khi thiếu nguyên liệu hoặc thiếu BOM.
 - Không xuất thành phẩm đi chi nhánh trước khi lệnh sản xuất hoàn tất.
-- Không tạo production order tại chi nhánh thường.
+- Không tạo lệnh sản xuất cho chi nhánh khác ngoài chi nhánh của mình.
 
 ### Checklist cuối ngày
 
-- Tất cả `production_order` đã ở `completed` hoặc `cancelled`.
+- Tất cả `production_run` đã ở `completed` hoặc `cancelled`.
 - Không còn transfer đi chi nhánh treo bất thường.
 - Thành phẩm còn tồn phải có lý do rõ ràng.
 
@@ -77,6 +78,7 @@ Trong hệ thống hiện tại, vai trò này map vào `branch_manager`.
 ### Việc phải làm
 
 - Xác nhận nhận hàng từ transfer inbound.
+- Nhập hàng NCC cho chính chi nhánh mình khi cần (`PO` -> `GRN`).
 - Theo dõi tồn tại Kho CN và Bếp CN.
 - Duyệt/apply báo cáo tiêu hao trong ngày.
 - Đảm bảo order/POS được chốt đúng luồng.
@@ -84,7 +86,7 @@ Trong hệ thống hiện tại, vai trò này map vào `branch_manager`.
 
 ### Không được làm
 
-- Không tự nhập nguyên liệu từ NCC trong flow Inventory của quản lý chi nhánh.
+- Không tạo `PO`/`GRN` NCC cho site khác; chỉ nhập cho chính chi nhánh mình.
 - Không chỉnh tay tồn kho để “khớp số”.
 - Không bỏ qua chênh lệch kiểm kê lặp lại nhiều ngày.
 
@@ -117,7 +119,7 @@ Trong hệ thống hiện tại, phần AP/reporting có thể đi qua `owner` h
 | Sự cố                  | Hành động đúng                                                                                                                                                                                     |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | NCC giao thiếu         | Ghi đúng thực nhận trên `GRN`                                                                                                                                                                      |
-| Bếp thiếu nguyên liệu  | Tạo transfer cùng chi nhánh Kho CN -> Bếp CN; chỉ ghi tiêu hao (`consumption`) khi nguyên liệu đã thật sự xuất dùng; nếu Kho CN hết thì kéo transfer thật từ Kho Tổng/Bếp Trung Tâm/chi nhánh khác |
+| Bếp thiếu nguyên liệu  | Tạo transfer cùng chi nhánh Kho CN -> Bếp CN; chỉ ghi tiêu hao (`consumption`) khi nguyên liệu đã thật sự xuất dùng; nếu Kho CN hết thì kéo transfer thật từ Bếp Trung Tâm/chi nhánh khác |
 | Chi nhánh cần hàng gấp | Có thể nhận trực tiếp từ chi nhánh khác tùy loại hàng và vận hành thực tế                                                                                                                          |
 | Thiếu BOM              | Dừng confirm sản xuất, cập nhật BOM trước                                                                                                                                                          |
 | Chi nhánh nhận thiếu   | Xác nhận theo thực nhận và ghi chú chênh lệch                                                                                                                                                      |

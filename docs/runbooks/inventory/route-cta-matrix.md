@@ -14,7 +14,7 @@ Updated: `2026-07-06`
 - `/inventory/consumption` là tiêu hao thực tế của chi nhánh, tức bước làm giảm tồn.
 - Hướng transfer hợp lệ: `central_supply -> branch`, `central_kitchen -> branch`, `branch -> central_supply`, `branch -> central_kitchen`, `central_supply -> central_kitchen`, `central_kitchen -> central_supply`, `branch -> branch`, và cùng chi nhánh `Kho CN -> Bếp CN`.
 - `Kho CN -> Bếp CN` tạo transfer cùng chi nhánh; nếu URL cũ `?create=cap-bep` còn được gọi thì phải rẽ sang form tạo transfer.
-- `/inventory/production` là happy path của `central_kitchen`.
+- `/inventory/production` chạy tại `central_kitchen` và tại chính chi nhánh của `branch_manager` (D068).
 
 ## 1. Dashboard và shell
 

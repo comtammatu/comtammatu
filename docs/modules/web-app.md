@@ -115,23 +115,21 @@ apps/web/app/
 │   ├── supplier-invoices/  # Supplier invoice matching; AP payment is Finance handoff
 │   ├── supplier-returns/   # QC at receiving + post-receipt returns (list + new + [id])
 │   ├── purchase-orders/    # PO list + new + [id] detail
-│   ├── receiving/          # tenant procurement hub (PO/GRN/invoice), not generic receiving
+│   ├── operations/         # Stock operations hub (GRN + transfers + issues tabs)
 │   ├── grn/                # Goods received notes list + [id] detail, GRN confirm wired
 │   ├── transfers/          # Internal transfers list + [id] detail
-│   ├── production/         # Central kitchen production surface (production_manager operator; owner deep-link oversight)
+│   ├── production/         # Production surface (production_manager at central kitchen; branch_manager own-branch runs per D068; owner deep-link oversight)
 │   ├── stocktake/          # Stocktake list + count + [id] detail; new + conflicts + escalate child routes
 │   ├── consumption/        # Consumption list + [id] detail for approved branch food cost
 │   ├── issues/             # Compatibility stock issue list + [id] detail for consumption/writeoff/other
-│   ├── expiry/             # Expiry tracking
 │   ├── waste/              # Waste flow — auto, new, approvals
 │   ├── reports/            # Inventory reporting with live data
 │   └── settings/           # Inventory-specific settings
 │       ├── layout.tsx      # Settings nav
-│       ├── page.tsx        # Redirect to expiry settings
-│       ├── ingredients/    # Compatibility redirect → /inventory/ingredients
-│       ├── recipes/        # Compatibility redirect → /inventory/recipes
-│       ├── suppliers/      # Compatibility redirect → /inventory/suppliers
-│       ├── expiry/         # Expiry alert thresholds
+│       ├── page.tsx        # Permission-based redirect → categories / units / qc
+│       ├── categories/     # Ingredient categories
+│       ├── units/          # Unit master data
+│       ├── thresholds/     # Stock alert thresholds
 │       └── qc/             # QC config (rejection codes, photo policy)
 │
 └── api/
@@ -186,8 +184,8 @@ Inventory không còn dùng sidebar kiểu liệt kê chứng từ phẳng. `inv
 
 Các nguyên tắc đang được code phản ánh:
 
-- `Receiving` là hub procurement của tenant, không phải hub nhận hàng chung cho chi nhánh
-- `Production` chỉ là happy path cho `central_kitchen`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày
+- `/inventory/operations` là hub giao dịch kho theo tab: GRN, điều chuyển nội bộ, phiếu xuất
+- `Production` chạy tại `central_kitchen` (`production_manager`) và tại chính chi nhánh (`branch_manager`, D068); `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày
 - `Consumption` là actual branch food cost; `/inventory/transfers?create=cap-bep` là compat redirect sang form transfer để cấp Bếp CN
 - `Ingredients / Suppliers / Định mức món bán` chỉ còn một cửa vào chính trong `Danh mục`
 
@@ -251,4 +249,4 @@ Browser request
 - **Inventory là surface độc lập:** `/inventory` là domain vận hành Inventory canonical.
 - **Employee portal đã live:** các page profile, clock, attendance, schedule, leave request, và payslip là surface nhân viên hiện hành. HR workspace mặc định mở nhân viên/ca/ngày công/nghỉ phép; `/hr/payroll/*` vẫn là direct-support cho owner để đối soát/chốt lương.
 - **Finance mặc định là tài chính vận hành HKD:** doanh thu, giá trị tồn kho, food cost/lãi gộp, chi phí vận hành, tổng kết tiền mặt, và hỗ trợ HĐĐT đã live. Các route kế toán doanh nghiệp và đóng/mở lại kỳ không nằm trong app surface hiện tại.
-- **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ policy/config như expiry; catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`, còn route settings cũ giữ redirect tương thích.
+- **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ config danh mục nguyên liệu, đơn vị, ngưỡng cảnh báo, và QC; `page.tsx` redirect theo permission về categories/units/qc. Catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`.

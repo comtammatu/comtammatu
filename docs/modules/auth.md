@@ -51,7 +51,7 @@ explicitly derives a bucket from it.
 | `supabase/migrations/00000000000000_baseline.sql`     | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
 | `supabase/migrations/00000000000000_baseline.sql`     | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
 | `apps/web/app/(protected)/hr/staff/[id]/permissions/` | HR UI for grant/revoke + audit (page + client + actions)                                       | Permission admin UI       |
-| `apps/web/app/_lib/permissions.ts`                    | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
+| `apps/web/app/_lib/permissions.ts`                    | Server helper `currentUserHasPermission()`                                                    | App-side permission reads |
 
 Discovery invariant: `MODULE_ACL.hr_payroll` still gates `/hr/payroll/*` for
 owner, but is not part of `DOMAIN_WORKSPACE_ITEMS` or default app
@@ -191,17 +191,19 @@ back to the role's default destination instead of preserving the retired URL.
 
 **Inventory sub-route ACL:** `inventory` allows `owner`, `branch_manager`,
 `warehouse_manager`, `production_manager` for stock on hand, real transfers,
-consumption, stocktake, expiry, reports, and branch operations.
+consumption, stocktake, reports, and branch operations.
 `inventory_procurement` also allows those buckets so branch stock receiving and
 central-site procurement/production paths can share the workspace, but
 PO/GRN/supplier/recipe actions remain narrowed by permission keys and RPC/RLS
-checks. `production` does not use its own module; Server Actions and DB/RPC/RLS
-hard-deny `branch_manager` for central production even with a manual
-production/menu grant. The production operator is `production_manager` at the
-Central Kitchen (Bếp Trung Tâm); `owner` has inspection/emergency access but is
-not led through the UX as a daily operator. `branch_manager` should therefore
-only see the branch-ops rhythm: receive inbound transfers, cấp Bếp CN bằng
-same-branch transfer, approve consumption, stocktake, adjustment/write-off.
+checks. `production` does not use its own module; the surface and order guards
+admit `production_manager` at the Central Kitchen (Bếp Trung Tâm) and
+`branch_manager` producing at their own branch (D068). `owner` has
+inspection/emergency access but is not led through the UX as a daily operator.
+`branch_manager` also receives directly from suppliers for their own branch
+(own-branch PO/GRN, D068), so the branch-ops rhythm is: own-branch supplier
+receipt, receive inbound transfers, cấp Bếp CN bằng same-branch transfer,
+own-branch production runs, approve consumption, stocktake,
+adjustment/write-off.
 
 **Important UX boundary:** nav can be narrower than the module-level ACL to reduce operational noise. For example `branch_manager` can still reach `/inventory/transfers` to receive goods, but the UI should not promote the create-inter-site-transfer action as a default task for this role.
 
