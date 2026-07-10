@@ -1,6 +1,6 @@
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { formatInventoryLocationLabelVi } from "@comtammatu/shared/labels";
 import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
-import { formatBranchSiteLabel } from "@/(protected)/inventory/_lib/branch-site-labels";
 import {
   clampIssueEntryQuantity,
   formatIssueMaxEntryQuantity,
@@ -10,7 +10,6 @@ import {
   getIssueUnitOptions,
   type IssueUnitOption,
 } from "@/(protected)/inventory/_lib/issue-units";
-import { messages } from "@lib/messages";
 
 export interface BranchForTransfer {
   id: number;
@@ -89,19 +88,28 @@ export function isTransferSourceKind(kind: string | null | undefined): boolean {
 }
 
 export function formatTransferSiteLabel(branch: BranchForTransfer): string {
-  if ((branch.branch_kind ?? "branch") === "branch") return branch.name;
-  return formatBranchSiteLabel(branch);
+  return branch.name;
+}
+
+export function formatTransferLocationLabel(
+  branch: BranchForTransfer,
+  kind: TransferTargetKind,
+): string {
+  return formatInventoryLocationLabelVi({
+    branchName: branch.name,
+    siteKind: branch.branch_kind,
+    locationKind: kind,
+  });
 }
 
 export function formatTransferOption(
   branch: BranchForTransfer,
   homeBranchId: number | null,
 ): string {
-  const label = formatTransferSiteLabel(branch);
   if (homeBranchId != null && branch.id === homeBranchId) {
-    return `${label}${messages.inventory.transfer.defaultWarehouseSuffix}`;
+    return formatTransferLocationLabel(branch, "warehouse");
   }
-  return label;
+  return formatTransferSiteLabel(branch);
 }
 
 export function transferTargetValue(
@@ -125,11 +133,7 @@ export function parseTransferTargetValue(value: string): {
 export function formatTransferTargetOption(
   option: TransferTargetOption,
 ): string {
-  const suffix =
-    option.kind === "kitchen"
-      ? messages.inventory.transfer.defaultKitchenSuffix
-      : messages.inventory.transfer.defaultWarehouseSuffix;
-  return `${formatTransferSiteLabel(option.branch)}${suffix}`;
+  return formatTransferLocationLabel(option.branch, option.kind);
 }
 
 export function resolveTransferCreatePolicy({
@@ -169,7 +173,20 @@ export function resolveTransferCreatePolicy({
               ]
             : [];
         }
-        if ((branch.branch_kind ?? "branch") !== "branch") return [];
+        const branchKind = branch.branch_kind ?? "branch";
+        if (
+          currentBranchKind === "branch" &&
+          branchKind === "central_kitchen"
+        ) {
+          return [
+            {
+              value: transferTargetValue(branch.id, "warehouse"),
+              branch,
+              kind: "warehouse" as const,
+            },
+          ];
+        }
+        if (branchKind !== "branch") return [];
         return [
           {
             value: transferTargetValue(branch.id, "warehouse"),

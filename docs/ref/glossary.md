@@ -410,7 +410,7 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `registered_owner`   | chủ hộ kinh doanh  | Người đại diện đăng ký HKD / người ký hồ sơ pháp lý.                      | representative pháp nhân                             |
 | `branch`             | chi nhánh          | Site vận hành cấp L1: bán hàng, nhập kho, sản xuất, điều chuyển, kiểm kê. | cửa hàng nếu đang nói entity DB                      |
 | `branch_warehouse`   | kho chi nhánh      | Location nhận/giữ tồn tại chi nhánh.                                      | kho con                                              |
-| `branch_kitchen`     | bếp chi nhánh      | Location stock-bearing của chi nhánh sau khi Kho CN cấp bếp.              | bếp cửa hàng nếu đang nói topology chuẩn             |
+| `branch_kitchen`     | bếp chi nhánh      | Location stock-bearing của chi nhánh sau khi kho chi nhánh cấp bếp.       | bếp cửa hàng nếu đang nói topology chuẩn             |
 | `site`               | site vận hành      | Specs/technical docs khi cần gom branch/location.                         | dùng thay cho `branch` trong UI                      |
 
 ### Bề mặt sản phẩm
@@ -473,7 +473,7 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `three_way_matching`    | đối soát 3 chứng từ                 | Đối chiếu `PO`, `GRN`, `supplier_invoice`.                              | matching chung                        |
 | `weighted_average_cost` | giá vốn bình quân gia quyền (`WAC`) | Costing chuẩn hiện tại.                                                 | FIFO nếu hệ thống không dùng          |
 
-`Kho CN -> Bếp CN` trong contract hiện tại là `stock_transfer` cùng chi nhánh.
+`Kho chi nhánh -> Bếp chi nhánh` trong contract hiện tại là `stock_transfer` cùng chi nhánh.
 Tổng tồn chi nhánh không giảm ở bước này; tồn chỉ giảm khi có `stock_issue` /
 `consumption` / write-off được ghi nhận sau đó.
 
@@ -559,8 +559,8 @@ viết tắt tiếng Việt chính thức. UI chỉ được dùng một biến 
 | `tenant`             | Hồ sơ HKD     | HKD    | —       |
 | `household_business` | Hộ kinh doanh | HKD    | `HKD`   |
 | `branch`             | Chi nhánh     | CN     | —       |
-| `branch_warehouse`   | Kho chi nhánh | Kho CN | —       |
-| `branch_kitchen`     | Bếp chi nhánh | Bếp CN | —       |
+| `branch_warehouse`   | Kho chi nhánh | Kho | —          |
+| `branch_kitchen`     | Bếp chi nhánh | Bếp | —          |
 
 ### Finance/F&B metrics
 
@@ -758,8 +758,8 @@ viết tắt tiếng Việt chính thức. UI chỉ được dùng một biến 
 - `stock_issue` là xuất nội bộ khi runtime có chứng từ issue và không còn tồn ở
   location nhận.
 - `consumption` là tiêu hao/giá vốn/hao hụt làm giảm tồn vì sử dụng hoặc bán.
-- `Kho CN -> Bếp CN` là transfer cùng chi nhánh; dữ liệu nhập từ nguồn khác
-  phải giữ nguyên tắc hàng còn tồn ở Bếp CN cho đến khi có phiếu xuất/tiêu hao.
+- `Kho chi nhánh -> Bếp chi nhánh` là transfer cùng chi nhánh; dữ liệu nhập từ nguồn khác
+  phải giữ nguyên tắc hàng còn tồn ở Bếp chi nhánh cho đến khi có phiếu xuất/tiêu hao.
 
 ### `order` vs `purchase_order`
 

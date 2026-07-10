@@ -179,8 +179,8 @@ test.skip("transfer UI and action surface can create branch kitchen transfers", 
     /toLocationKind =\s*target\.kind === "kitchen" \? "branch_kitchen" : "default_receive"/,
   );
   assert.match(transferForm, /formatTransferTargetOption/);
-  assert.match(transferForm, /defaultWarehouseSuffix/);
-  assert.match(transferForm, /defaultKitchenSuffix/);
+  assert.match(transferForm, /formatTransferLocationLabel/);
+  assert.doesNotMatch(transferForm, /default(?:Warehouse|Kitchen)Suffix/);
   assert.match(transferForm, /function addAllAvailableStockLines/);
   assert.match(
     transferForm,

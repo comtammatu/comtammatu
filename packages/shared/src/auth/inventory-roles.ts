@@ -17,7 +17,7 @@ export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
 
 /**
  * Coarse route/action gate for GRN + shared procurement reads + suppliers.
- * `branch_manager` is admitted (D068) so a Kho CN can receive directly from a
+ * `branch_manager` is admitted (D068) so a branch can receive directly from a
  * supplier; the fine differentiation is the per-action permission key + grant
  * (branch_manager holds GRN/supplier/production keys, never PO/recipe/invoice).
  */

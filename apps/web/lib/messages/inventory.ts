@@ -1102,8 +1102,6 @@ export const inventory = {
     chooseSourceLocation: "Chọn vị trí kho gửi",
     destinationLocationRequired: "Vị trí nhận *",
     chooseDestinationLocation: "Chọn vị trí kho nhận",
-    defaultWarehouseSuffix: " - Kho",
-    defaultKitchenSuffix: " - Bếp",
     kitchenConfigReviewTitle: "Cấu hình bếp cần rà soát",
     ingredientsQtyRequired: "Nguyên liệu & số lượng *",
     chooseIngredient: "Chọn nguyên liệu…",

@@ -85,10 +85,10 @@ test("branch manager creates inbound requests only from self or central sites", 
     [10, 20, 30],
   );
   assert.deepEqual(policy.outboundDestinationOptions, []);
-  assert.equal(formatTransferOption(branches[0]!, 10), "Chi nhanh A - Kho");
+  assert.equal(formatTransferOption(branches[0]!, 10), "Chi nhanh A · Kho");
 });
 
-test("branch warehouse outbound destinations include its kitchen and active branches", () => {
+test("branch warehouse outbound destinations include Central Kitchen and active branches", () => {
   const policy = resolveTransferCreatePolicy({
     branches,
     userBranchId: 10,
@@ -99,7 +99,7 @@ test("branch warehouse outbound destinations include its kitchen and active bran
   assert.equal(policy.canCreateInboundRequest, false);
   assert.deepEqual(
     policy.outboundDestinationOptions.map((option) => option.value),
-    ["10:kitchen", "40:warehouse", "40:kitchen"],
+    ["10:kitchen", "30:warehouse", "40:warehouse", "40:kitchen"],
   );
 });
 

@@ -6,6 +6,7 @@ import {
   type JwtClaims,
   type PermissionKey,
 } from "@comtammatu/shared/auth";
+import { normalizeInventoryLocationNameVi } from "@comtammatu/shared/labels";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 import { fetchIngredients, fetchUnitOptions } from "./ingredient-actions";
@@ -272,7 +273,7 @@ export async function loadProductionSurfaceData({
       const branch = branchById.get(location.branch_id);
       return {
         id: location.id,
-        name: location.name,
+        name: normalizeInventoryLocationNameVi(location.name),
         branchId: location.branch_id,
         branchName: branch?.name ?? "Chi nhánh",
         branchKind: branch?.branch_kind ?? null,

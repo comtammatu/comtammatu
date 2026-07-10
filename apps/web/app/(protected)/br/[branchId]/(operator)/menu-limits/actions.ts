@@ -151,7 +151,7 @@ export async function setBranchMenuDailyLimit(
     if (msg.includes("exceeds stock capacity")) {
       return {
         success: false,
-        error: "Giới hạn bán không được vượt Tồn Bếp CN.",
+        error: "Giới hạn bán không được vượt Tồn Bếp chi nhánh.",
       };
     }
     if (msg.includes("nonnegative")) {
@@ -163,7 +163,7 @@ export async function setBranchMenuDailyLimit(
     if (msg.includes("stock capacity required")) {
       return {
         success: false,
-        error: "Chưa tính được Tồn Bếp CN để đặt Giới hạn bán.",
+        error: "Chưa tính được Tồn Bếp chi nhánh để đặt Giới hạn bán.",
       };
     }
     return {
@@ -277,7 +277,10 @@ export async function replenishMenuItemKitchenStock(
   if (error) {
     const msg = String(error.message ?? "").toLowerCase();
     if (msg.includes("forbidden") || msg.includes("scope mismatch")) {
-      return { success: false, error: "Không có quyền bổ sung Bếp CN." };
+      return {
+        success: false,
+        error: "Không có quyền bổ sung Bếp chi nhánh.",
+      };
     }
     if (msg.includes("extra_portions_range")) {
       return { success: false, error: "Chỉ bổ sung 1 hoặc 2 suất mỗi lần." };
@@ -300,7 +303,7 @@ export async function replenishMenuItemKitchenStock(
     ) {
       return {
         success: false,
-        error: "Chi nhánh chưa cấu hình Bếp CN.",
+        error: "Chi nhánh chưa cấu hình Bếp chi nhánh.",
       };
     }
     if (
@@ -312,7 +315,7 @@ export async function replenishMenuItemKitchenStock(
     ) {
       return {
         success: false,
-        error: "Chưa đủ định mức nguyên liệu để bổ sung Bếp CN.",
+        error: "Chưa đủ định mức nguyên liệu để bổ sung Bếp chi nhánh.",
       };
     }
 
@@ -322,7 +325,7 @@ export async function replenishMenuItemKitchenStock(
     );
     return {
       success: false,
-      error: "Không thể bổ sung Bếp CN. Vui lòng thử lại.",
+      error: "Không thể bổ sung Bếp chi nhánh. Vui lòng thử lại.",
     };
   }
 

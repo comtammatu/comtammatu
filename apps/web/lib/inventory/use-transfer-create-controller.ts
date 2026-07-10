@@ -16,8 +16,8 @@ import {
   clampTransferLineForSource,
   createAllAvailableTransferLines,
   createTransferDraftLine,
+  formatTransferLocationLabel,
   formatTransferOption,
-  formatTransferSiteLabel,
   formatTransferTargetOption,
   getTransferLineMaxEntryQuantity,
   parseTransferTargetValue,
@@ -67,7 +67,7 @@ export function useTransferCreateController({
     [ingredients],
   );
   const myBranchName = policy.currentBranch
-    ? `${formatTransferSiteLabel(policy.currentBranch)}${messages.inventory.transfer.defaultWarehouseSuffix}`
+    ? formatTransferLocationLabel(policy.currentBranch, "warehouse")
     : null;
   const sourceContextLabel = useMemo(() => {
     if (policy.isBranchManager) {
@@ -101,11 +101,12 @@ export function useTransferCreateController({
       : null;
   }, [branches, inboundFromBranchId, policy.requestDestinationBranchId]);
   const inboundDestinationName = policy.currentBranch
-    ? `${formatTransferSiteLabel(policy.currentBranch)}${
+    ? formatTransferLocationLabel(
+        policy.currentBranch,
         Number(inboundFromBranchId) === policy.requestDestinationBranchId
-          ? messages.inventory.transfer.defaultKitchenSuffix
-          : messages.inventory.transfer.defaultWarehouseSuffix
-      }`
+          ? "kitchen"
+          : "warehouse",
+      )
     : null;
 
   const selectedBranch = policy.isBranchManager
