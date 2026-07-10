@@ -30,7 +30,7 @@ import {
   GrnLineEditFields,
   GrnLineEditSheet,
 } from "@/components/inventory/grn-line-editor";
-import { FormField } from "@/components/form";
+import { FormField } from "@/components/form/form-field";
 import {
   AppBackLink,
   AppDetailFooter,

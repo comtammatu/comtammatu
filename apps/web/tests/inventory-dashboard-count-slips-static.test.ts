@@ -59,7 +59,7 @@ test("inventory dashboard surfaces pending count slips for Branch Manager review
   assert.match(messagesSrc, /approveCountSlipsAction: "Duyệt phiếu đếm tồn"/);
   assert.match(
     messagesSrc,
-    /countSlipsPendingTask: \(count: number\) =>[\s\S]*`\$\{count\} phiếu đếm tồn chờ duyệt`/,
+    /countSlipsPendingTask: \(count: number\) =>[\s\S]*`\$\{formatCount\(count\)\} phiếu đếm tồn chờ duyệt`/,
   );
 });
 

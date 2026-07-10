@@ -583,18 +583,18 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
     }
   }
 
-  const wasteCreateClient = read(
-    "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx",
+  const branchWasteCreateClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/branch-waste-create-client.tsx",
   );
   assert.match(
-    wasteCreateClient,
-    /cancelHref/,
-    "branch-mounted waste form needs an explicit cancel fallback",
+    branchWasteCreateClient,
+    /href=\{stockBasePath\}/,
+    "branch waste form needs an explicit cancel target back to the stock hub",
   );
   assert.doesNotMatch(
-    wasteCreateClient,
+    branchWasteCreateClient,
     /router\.back\(\)/,
-    "branch-mounted waste form must not depend on browser history to stay in the branch shell",
+    "branch waste form must not depend on browser history to stay in the branch shell",
   );
 });
 

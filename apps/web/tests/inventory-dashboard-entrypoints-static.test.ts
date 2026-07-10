@@ -16,7 +16,7 @@ test("inventory dashboard keeps the four owner entrypoint groups visible", () =>
     "href: paths.suppliers",
     "href: paths.countAssignments",
     "href: paths.countSlips",
-    "paths.operationTab(\"purchase-orders\")",
+    "paths.operationTab(\"grn\")",
     "paths.operationTab(\"transfers\")",
     "if (props.showProduction)",
     "href: paths.production",
@@ -24,10 +24,14 @@ test("inventory dashboard keeps the four owner entrypoint groups visible", () =>
     "primary: true",
     "const secondaryActions = flow.actions.filter",
     "{secondaryActions.map((action) => (",
-    "<Link href={withBranch(action.href)}>{action.label}</Link>",
   ]) {
     assert.match(source, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+
+  assert.match(
+    source,
+    /<Link href=\{withBranch\(action\.href\)\}>\s*\{action\.label\}\s*<\/Link>/,
+  );
 
   assert.match(messageSource, /mainFlowsTitle: "Điểm vào vận hành chính"/);
   assert.match(messageSource, /controlFlowTitle: "1\. Kiểm soát tồn"/);

@@ -87,13 +87,10 @@ test("shared inventory PageContents and extracted loaders route scope-read throu
     /routeBranchId\s*\?\?\s*\(await resolveRequestedBranchId/;
 
   const pageContentFiles = [
-    "purchase-orders/page.tsx",
-    "purchase-orders/new/page.tsx",
     "transfers/page.tsx",
     "stocktake/page.tsx",
     "stocktake/new/page.tsx",
     "issues/page.tsx",
-    "waste/approvals/page.tsx",
   ];
 
   for (const relPath of pageContentFiles) {
@@ -147,6 +144,13 @@ test("shared inventory PageContents and extracted loaders route scope-read throu
   );
   assert.doesNotMatch(transferDetailLoaderSource, legacyDualityPattern);
   assert.match(transferDetailLoaderSource, /resolveInventoryListScope/);
+
+  const wasteApprovalsLoaderSource = readFileSync(
+    new URL("../lib/inventory/waste-approvals-data.ts", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(wasteApprovalsLoaderSource, legacyDualityPattern);
+  assert.match(wasteApprovalsLoaderSource, /resolveInventoryListScope/);
 });
 
 test("adapter -> office sees every active branch kind and can select all", async () => {

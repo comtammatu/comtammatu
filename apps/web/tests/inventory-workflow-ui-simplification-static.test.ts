@@ -6,20 +6,6 @@ const read = (path: string) => readFileSync(path, "utf8");
 const between = (source: string, start: string, end: string) =>
   source.slice(source.indexOf(start), source.indexOf(end));
 
-test("PO-created GRNs open detail instead of forcing review mode", () => {
-  const poDetail = read(
-    "app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
-  );
-  const grnFromPo = read(
-    "app/(protected)/inventory/grn/new/grn-from-po-list.tsx",
-  );
-  const grnList = read("app/(protected)/inventory/grn/grn-list-client.tsx");
-
-  assert.doesNotMatch(poDetail, /\?review=1/);
-  assert.doesNotMatch(grnFromPo, /\?review=1/);
-  assert.doesNotMatch(grnList, /draft\.grnId\}\?review=1/);
-});
-
 test("stocktake list exposes one create entrypoint", () => {
   const source = read(
     "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
@@ -43,13 +29,19 @@ test("operator consumption and issue routes keep separate business roles", () =>
   );
   const operations = read("app/(protected)/inventory/operations/page.tsx");
   const dictionary = read("app/(protected)/inventory/_lib/dictionary.ts");
+  const branchIssueData = read("lib/inventory/branch-stock-issue-data.ts");
 
-  assert.match(operatorConsumption, /scope="consumption"/);
-  assert.match(operatorIssues, /scope="internal"/);
+  assert.match(operatorConsumption, /loadBranchConsumptionListData\(/);
+  assert.match(operatorIssues, /loadBranchStockIssueListData\(/);
   assert.match(
     operatorConsumptionDetail,
-    /listBasePath=\{`\/br\/\$\{branchId\}\/stock\/consumption`\}/,
+    /loadBranchStockIssueDetailData\(\s*issueId,\s*branchId,\s*"consumption",\s*\)/,
   );
+  assert.match(
+    operatorConsumptionDetail,
+    /listBasePath=\{`\$\{stockBasePath\}\/consumption`\}/,
+  );
+  assert.match(branchIssueData, /isBranchInternalIssueType/);
   assert.match(operations, /label: "Tiêu hao vận hành"/);
   assert.match(operations, /label: "Sự cố kho"/);
   assert.match(
@@ -107,7 +99,7 @@ test("consumption list separates POS ledger rows from manual slips", () => {
 
   assert.match(
     messages,
-    /recordedConsumptionTitle: "Tiêu hao POS đã ghi nhận"/,
+    /recordedConsumptionTitle: "Tiêu hao đã ghi nhận"/,
   );
   assert.match(
     messages,
@@ -137,16 +129,13 @@ test("production create redirects to the created run detail", () => {
 });
 
 test("operations tabs use the same sectioned list chrome", () => {
-  const po = read(
-    "app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
-  );
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
   const transfers = read(
     "app/(protected)/inventory/transfers/transfers-list-client.tsx",
   );
 
-  for (const source of [po, grn, issues, transfers]) {
+  for (const source of [grn, issues, transfers]) {
     assert.match(
       source,
       /<AppSection[\s\S]{0,120}className="overflow-hidden"[\s\S]{0,120}contentFlush/,
@@ -156,14 +145,13 @@ test("operations tabs use the same sectioned list chrome", () => {
     assert.match(source, /<AppToolbar[\s\S]{0,1200}filters=\{/);
   }
 
-  for (const source of [po, grn, issues, transfers]) {
+  for (const source of [grn, issues, transfers]) {
     assert.doesNotMatch(
       source,
       /<div className="flex flex-wrap items-center justify-end gap-2">/,
     );
   }
 
-  assert.match(po, /actions=\{embedded \? createPoAction : null\}/);
   assert.match(grn, /actions=\{withinOfficeTabs \? desktopActions : null\}/);
   assert.match(grn, /const listTable = grnsLoadFailed \? \(/);
   assert.match(grn, /title=\{messages\.inventory\.grn\.loadFailed\}/);
@@ -178,21 +166,17 @@ test("operations tabs use the same sectioned list chrome", () => {
 });
 
 test("operations embedded lists keep office density instead of touch sizing", () => {
-  const po = read(
-    "app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
-  );
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
   const transfers = read(
     "app/(protected)/inventory/transfers/transfers-list-client.tsx",
   );
 
-  assert.match(po, /purchaseOrdersBasePath\.startsWith\("\/br\/"\)/);
   assert.doesNotMatch(grn, /basePath\.startsWith\("\/br\/"\)/);
   assert.match(issues, /listBasePath\.startsWith\("\/br\/"\)/);
   assert.match(transfers, /basePath\.startsWith\("\/br\/"\)/);
 
-  for (const source of [po, grn, issues, transfers]) {
+  for (const source of [grn, issues, transfers]) {
     assert.doesNotMatch(source, /embedded \? "touch"/);
     assert.doesNotMatch(source, /embedded \|\| isOperator/);
   }
@@ -210,9 +194,6 @@ test("table empty rows render inline content instead of a dashed sub-card", () =
 });
 
 test("operations table columns do not override table typography role", () => {
-  const po = read(
-    "app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
-  );
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
   const transfers = read(
@@ -220,7 +201,6 @@ test("operations table columns do not override table typography role", () => {
   );
 
   for (const block of [
-    between(po, "const columns", "const createPoAction"),
     between(grn, "const grnColumns", "const filtered"),
     between(issues, "const issueColumns", "const renderIssueCard"),
     between(transfers, "const columns", "const transferDrawer"),

@@ -16,9 +16,11 @@ test("waste form exposes photo upload for DB-enforced photo gates", () => {
   const meter = read(
     "apps/web/app/(protected)/inventory/_components/anti-split-rolling-meter.tsx",
   );
+  const tierModel = read("apps/web/lib/inventory/waste-tier-model.ts");
 
-  assert.match(client, /qtyRatio >= 0\.5/);
-  assert.match(client, /projectedRollingSum >= TIER_1_VALUE/);
+  assert.match(tierModel, /quantityRatio >= 0\.5/);
+  assert.match(tierModel, /projectedRollingSum >= TIER_1_VALUE/);
+  assert.match(client, /previewWasteTier\(/);
   assert.match(client, /revealPhotoUploadForCurrentLines\(\)/);
   assert.match(client, /includes\("bằng chứng"\).*includes\("ảnh"\)/s);
   assert.match(meter, /onStatusChangeRef/);
