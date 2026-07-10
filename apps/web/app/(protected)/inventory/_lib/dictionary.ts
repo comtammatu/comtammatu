@@ -142,8 +142,8 @@ const VI_DICTIONARY: InventoryDictionary = {
     },
     fromWarehouse: { short: "Kho gửi", long: "Kho gửi" },
     toWarehouse: { short: "Kho nhận", long: "Kho nhận" },
-    branchWarehouse: { short: "Kho CN", long: "Kho chi nhánh" },
-    branchKitchen: { short: "Bếp CN", long: "Bếp chi nhánh" },
+    branchWarehouse: { short: "Kho", long: "Kho chi nhánh" },
+    branchKitchen: { short: "Bếp", long: "Bếp chi nhánh" },
     productionStorage: { short: "Kho SX", long: "Kho sản xuất" },
   },
 };

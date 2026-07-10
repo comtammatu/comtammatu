@@ -101,25 +101,26 @@ test("transfer create uses compact branch-location labels", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/branch-transfer-create-client.tsx",
   );
   const modelSource = read("apps/web/lib/inventory/transfer-create-model.ts");
-  const messageSource = read("apps/web/lib/messages/inventory.ts");
 
   assert.match(modelSource, /export function formatTransferSiteLabel/);
   assert.match(modelSource, /return branch\.name/);
   assert.match(
     modelSource,
-    /formatTransferSiteLabel\(option\.branch\)\}\$\{suffix\}/,
+    /export function formatTransferLocationLabel/,
+  );
+  assert.match(
+    modelSource,
+    /formatTransferLocationLabel\(option\.branch, option\.kind\)/,
   );
   assert.match(
     source,
     /formatTransferOption\(\s*branch,\s*controller\.requestDestinationBranchId/,
   );
-  assert.match(modelSource, /const label = formatTransferSiteLabel\(branch\)/);
-  assert.match(messageSource, /defaultWarehouseSuffix: " - Kho"/);
-  assert.match(messageSource, /defaultKitchenSuffix: " - Bếp"/);
-  assert.doesNotMatch(
-    messageSource,
-    /default(?:Warehouse|Kitchen)Suffix: " · .*CN"/,
+  assert.match(
+    modelSource,
+    /formatTransferLocationLabel\(branch, "warehouse"\)/,
   );
+  assert.doesNotMatch(modelSource, /default(?:Warehouse|Kitchen)Suffix/);
 });
 
 test("transfer receive keeps the phone first viewport on line receiving", () => {

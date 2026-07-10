@@ -1,4 +1,8 @@
-export type { ModuleLabelKey, SiteKind } from "./vi";
+export type {
+  InventoryLocationLabelLength,
+  ModuleLabelKey,
+  SiteKind,
+} from "./vi";
 export { LEGAL_FIXED_VI } from "./legal-fixed";
 export type { LegalFixedString } from "./legal-fixed";
 export {
@@ -15,6 +19,9 @@ export {
   getModuleLabelVi,
   getInventorySiteKindLabelVi,
   getInventorySiteLabelVi,
+  getInventoryLocationKindLabelVi,
+  formatInventoryLocationLabelVi,
+  normalizeInventoryLocationNameVi,
   getSiteKindLabelVi,
   resolveSiteKind,
   // Inventory redesign vocab (S10-S15 UI wiring)

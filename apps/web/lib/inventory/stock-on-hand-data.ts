@@ -2,6 +2,7 @@ import "server-only";
 
 import { notFound, redirect } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { normalizeInventoryLocationNameVi } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
@@ -199,7 +200,10 @@ export async function loadStockOnHandPageData({
     const locations = locationMap.get(row.ingredient_id) ?? [];
     locations.push({
       locationId: row.location_id,
-      name: location?.name ?? location?.code ?? `#${row.location_id}`,
+      name:
+        normalizeInventoryLocationNameVi(location?.name) ||
+        location?.code ||
+        `#${row.location_id}`,
       code: location?.code ?? "",
       locationKind: location?.location_kind ?? "unknown",
       qty: row.current_quantity,

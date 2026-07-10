@@ -13,7 +13,7 @@ const PRODUCTION_BRANCH_SCOPED_ROLES = [
 
 /**
  * Branch kinds that may run production (D068): the central kitchen plus any
- * branch (`branch_manager` produces at its own Kho CN). Single source for the
+ * branch (`branch_manager` produces at its own branch warehouse). Single source for the
  * production branch-kind gate used by both the surface loader
  * (`hasCurrentProductionBranchAccess`) and the order guard
  * (`requireProductionBranch`) — no drift between the two.

@@ -447,7 +447,10 @@ export async function createStockTransfer(
   const wantsBranchKitchenTarget =
     isIntraBranch || parsed.data.toLocationKind === "branch_kitchen";
   if (wantsBranchKitchenTarget && toKind !== "branch") {
-    return { success: false, error: "Bếp CN chỉ áp dụng cho chi nhánh." };
+    return {
+      success: false,
+      error: "Bếp chi nhánh chỉ áp dụng cho chi nhánh.",
+    };
   }
   if (!isAllowedInterSiteDirection(fromKind, toKind)) {
     return {
@@ -540,7 +543,7 @@ export async function createStockTransfer(
     return {
       success: false,
       error: wantsBranchKitchenTarget
-        ? "Chưa cấu hình Bếp CN để nhận hàng."
+        ? "Chưa cấu hình Bếp chi nhánh để nhận hàng."
         : "Chưa cấu hình vị trí kho gửi hoặc kho nhận mặc định.",
     };
   }
@@ -914,7 +917,7 @@ export async function quickInternalTransfer(
   if (!fromLocationId || !toLocationId) {
     return {
       success: false,
-      error: "Chưa cấu hình kho xuất mặc định hoặc Bếp CN.",
+      error: "Chưa cấu hình kho xuất mặc định hoặc Bếp chi nhánh.",
     };
   }
 

@@ -1,4 +1,4 @@
-import { getInventorySiteLabelVi } from "@comtammatu/shared/labels";
+import { getSiteKindLabelVi } from "@comtammatu/shared/labels";
 
 type BranchSiteLike = {
   name: string;
@@ -6,7 +6,7 @@ type BranchSiteLike = {
 };
 
 function getBranchSiteLabel(branch: BranchSiteLike): string {
-  return getInventorySiteLabelVi(branch);
+  return getSiteKindLabelVi(branch.branch_kind ?? "branch");
 }
 
 export function getBranchSiteDisplayName(branch: BranchSiteLike): string {

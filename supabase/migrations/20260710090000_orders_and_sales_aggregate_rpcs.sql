@@ -151,6 +151,6 @@ GRANT EXECUTE ON FUNCTION public.get_orders_summary(text, bigint, timestamptz, t
 GRANT EXECUTE ON FUNCTION public.get_menu_item_sales_agg(bigint, timestamptz, timestamptz, text[]) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_theoretical_consumption(bigint, timestamptz, timestamptz, text[]) TO authenticated, service_role;
 
--- Superseded by get_orders_summary, which folds the two PostgREST count-exact
--- scans and this SECURITY INVOKER aggregate into one permission-checked pass.
-DROP FUNCTION IF EXISTS public.get_orders_paid_summary(text, bigint, date, date);
+-- get_orders_paid_summary is superseded by get_orders_summary but is NOT dropped
+-- here: the currently-deployed app still calls it. Dropping it lives in
+-- 20260710093000, to be applied only after this app version reaches production.
