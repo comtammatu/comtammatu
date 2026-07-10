@@ -329,15 +329,17 @@
       one workflow two visual sources of truth. Per-ingredient actions belong in the
       row's detail sheet.
 
-- [ ] **S10 — decommission site 16 and delete the central forks (D073 §1/§5).**
-      Also retire the matu-platform import toolchain with the central sites:
-      the `import:*` script suite in root `package.json` and
-      `scripts/inventory-matu-platform-*.mjs` provision/require both central
-      sites and lose their referent when site 16 closes.
-      Ordered: (1) owner transfers the 29 remaining stock rows 16 → 3 through the
-      existing transfer flow (`central_kitchen → branch` is legal in the D000
-      matrix) and reassigns the `production_manager` staff; (2) owner flips
-      `branches.is_active = false` for 16; (3) only then delete the central forks
+- [ ] **S10 — delete the central forks (D073 §1/§5); ops steps done 2026-07-10.**
+      Steps 1–2 are EXECUTED and verified on PROD (owner-delegated in-session):
+      transfer `CK-CLOSE-20260710` moved all 29 stock rows 16 → 3 through the
+      standard draft→ship→transit→confirm→receive RPC chain (29 `transfer_out`
+      + 29 `transfer_in` movements, WAC preserved, site 16 now 0 rows / 0
+      value, Phước Hải 97→109 rows), and `branches.is_active = false` for 16.
+      `production_manager` staff reassignment stays with the owner. Remaining:
+      (3) delete the central forks; also retire the matu-platform import
+      toolchain (`import:*` scripts in root `package.json`,
+      `scripts/inventory-matu-platform-*.mjs`) — its referent sites are gone.
+      Step 3 detail: delete the central forks
       from the operator UI — `CENTRAL_HOME_TILE_SUFFIXES` and the central home
       CTA in `(operator)/page.tsx` + `operator-home-contract.ts`, the
       `isCentralKitchen`/`isCentralSupply` branches in
@@ -348,8 +350,9 @@
       DB enum keeps all three kinds for history. Code deletion must not land
       before step 2, or an active site loses its UI.
 
-- [ ] **S11 — one-step Kho ↔ Bếp move, both directions (D073 §5). AFTER S10:
-      the site-16 stock transfer needs the cross-branch flow one last time.**
+- [ ] **S11 — one-step Kho ↔ Bếp move, both directions (D073 §5). UNBLOCKED:
+      the site-16 transfer-out ran 2026-07-10; cross-branch flow is no longer
+      needed by any active pair of sites.**
       The carrier already exists: `commit_intra_branch_transfer`
       (`20260708103000_inventory_unit_closure.sql`, used by
       `quickInternalTransfer`) posts `transfer_out`+`transfer_in` and lands on
@@ -415,6 +418,13 @@
       MST already live in the codebase (`COMPANY_TAX_CODE` constants); wire
       them through. Money/legal path → T3 when implemented. (Promoted from the
       2026-06-28 audit; last surviving open finding of that audit.)
+
+- [ ] **`guard-prod-db.mjs` misses write SQL wrapped in `DO $$…$$` blocks.**
+      Verified live 2026-07-10: a DO block performing the site-16 stock
+      transfer passed the guard while a bare `UPDATE` was correctly blocked.
+      Extend the write-statement detection into DO bodies (and any
+      `CALL`/PL wrapper) and add a replay fixture to
+      `scripts/check-guard-sync.mjs` so the gap stays closed.
 
 - [ ] **Three PROD RPCs deep-link notifications to the retired `/employee/*`
       routes.** `reject_leave_request`, `approve_inventory_count_slip`, and
