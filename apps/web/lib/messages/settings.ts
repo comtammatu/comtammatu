@@ -501,9 +501,9 @@ export const settings = {
     queueOpenPosTitle: "Đơn chờ nhận",
     queueOpenPosMeta: (count: number) =>
       `${formatCount(count)} đơn đặt hàng chờ giao`,
-    queueDraftProductionTitle: "Lệnh nháp cần chốt",
+    queueDraftProductionTitle: "Lệnh sản xuất cần chốt",
     queueDraftProductionMeta: (count: number) =>
-      `${formatCount(count)} lệnh sản xuất nháp`,
+      `${formatCount(count)} lệnh chưa hoàn tất`,
     queueInboundTransfersTitle: "Chờ nhận nguyên liệu",
     queueInboundTransfersMeta: (count: number) =>
       `${formatCount(count)} chuyến hàng đang đến`,

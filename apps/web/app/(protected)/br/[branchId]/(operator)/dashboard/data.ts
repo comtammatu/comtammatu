@@ -340,11 +340,11 @@ export async function fetchBranchQueueCounts(
         : Promise.resolve(null),
       productionPermission.data === true
         ? supabase
-            .from("production_orders")
+            .from("production_runs")
             .select("id", { count: "exact", head: true })
             .eq("tenant_id", claims.tenant_id)
             .eq("branch_id", branchId)
-            .eq("status", "draft")
+            .in("status", ["draft", "in_progress"])
         : Promise.resolve(null),
       transferPermission.data === true
         ? supabase
