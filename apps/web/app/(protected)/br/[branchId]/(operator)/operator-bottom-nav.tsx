@@ -1,156 +1,65 @@
 "use client";
 
-import {
-  ChefHat,
-  ClipboardCheck,
-  Clock,
-  Home,
-  Package,
-  Send,
-  Truck,
-  Users,
-} from "lucide-react";
+import { Clock, Home, Package, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import type { BranchKind } from "@comtammatu/shared/auth";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { isNavItemActive, type ShellNavItem } from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
 
 const branchCopy = messages.settings.branch;
 
-function centralNavItems(
-  branchId: number,
-  branchKind: BranchKind,
-  showEmployeeLinks: boolean,
-): ShellNavItem[] {
-  const base = `/br/${branchId}`;
-  const home = {
-    href: base,
-    label:
-      branchKind === "central_kitchen"
-        ? branchCopy.centralKitchenNavHome
-        : APP_COPY_VI.operatorHome,
-    icon: Home,
-    exact: true,
-  };
-  const stock = {
-    href: `${base}/stock`,
-    label: branchCopy.centralNavStock,
-    icon: Package,
-    exact: true,
-    matchPrefixes: [`${base}/stock/on-hand`],
-  };
-  const stocktake = {
-    href: `${base}/stock/stocktake`,
-    label: branchCopy.centralNavStocktake,
-    icon: ClipboardCheck,
-    exact: false,
-    matchPrefixes: [`${base}/stock/count-slips`, `${base}/stock/count`],
-  };
-  if (branchKind === "central_supply") {
-    return [
-      home,
-      {
-        href: `${base}/stock/grn`,
-        label: branchCopy.centralNavReceive,
-        icon: Truck,
-        exact: false,
-      },
-      stock,
-      stocktake,
-    ];
-  }
-  return [
-    home,
-    {
-      href: `${base}/stock/grn`,
-      label: branchCopy.centralKitchenNavReceive,
-      icon: Truck,
-      exact: false,
-    },
-    {
-      href: `${base}/stock/production`,
-      label: branchCopy.centralNavProduction,
-      icon: ChefHat,
-      exact: false,
-      matchPrefixes: [`${base}/stock/production/recipes`],
-    },
-    {
-      href: `${base}/stock/transfer`,
-      label: branchCopy.centralKitchenNavDispatch,
-      icon: Send,
-      exact: false,
-    },
-    ...(showEmployeeLinks
-      ? [
-          {
-            href: `${base}/shift`,
-            label: branchCopy.centralNavWorkforce,
-            icon: Users,
-            exact: false,
-          },
-        ]
-      : []),
-  ];
-}
-
 export function OperatorBottomNav({
   branchId,
   showEmployeeLinks,
   showBranchManagement,
-  branchKind = "branch",
 }: {
   branchId: number;
   showEmployeeLinks: boolean;
   showBranchManagement: boolean;
-  branchKind?: BranchKind;
 }) {
   const pathname = usePathname();
 
-  const items: ShellNavItem[] =
-    branchKind !== "branch"
-      ? centralNavItems(branchId, branchKind, showEmployeeLinks)
-      : [
+  const items: ShellNavItem[] = [
+    {
+      href: `/br/${branchId}`,
+      label: APP_COPY_VI.operatorHome,
+      icon: Home,
+      exact: true,
+    },
+    ...(showEmployeeLinks
+      ? [
           {
-            href: `/br/${branchId}`,
-            label: APP_COPY_VI.operatorHome,
-            icon: Home,
-            exact: true,
+            href: `/br/${branchId}/shift`,
+            label: APP_COPY_VI.operatorShift,
+            icon: Clock,
+            exact: false,
+            matchPrefixes: [
+              `/br/${branchId}/shift/clock`,
+              `/br/${branchId}/shift/checkout-approvals`,
+            ],
           },
-          ...(showEmployeeLinks
-            ? [
-                {
-                  href: `/br/${branchId}/shift`,
-                  label: APP_COPY_VI.operatorShift,
-                  icon: Clock,
-                  exact: false,
-                  matchPrefixes: [
-                    `/br/${branchId}/shift/clock`,
-                    `/br/${branchId}/shift/checkout-approvals`,
-                  ],
-                },
-              ]
-            : []),
-          ...(showBranchManagement
-            ? [
-                {
-                  href: `/br/${branchId}/team`,
-                  label: "Đội",
-                  icon: Users,
-                  exact: false,
-                  matchPrefixes: [`/br/${branchId}/team`],
-                },
-                {
-                  href: `/br/${branchId}/stock`,
-                  label: branchCopy.centralNavStock,
-                  icon: Package,
-                  exact: false,
-                  matchPrefixes: [`/br/${branchId}/stock`],
-                },
-              ]
-            : []),
-        ];
+        ]
+      : []),
+    ...(showBranchManagement
+      ? [
+          {
+            href: `/br/${branchId}/team`,
+            label: "Đội",
+            icon: Users,
+            exact: false,
+            matchPrefixes: [`/br/${branchId}/team`],
+          },
+          {
+            href: `/br/${branchId}/stock`,
+            label: branchCopy.centralNavStock,
+            icon: Package,
+            exact: false,
+            matchPrefixes: [`/br/${branchId}/stock`],
+          },
+        ]
+      : []),
+  ];
 
   return (
     <AppBottomNav

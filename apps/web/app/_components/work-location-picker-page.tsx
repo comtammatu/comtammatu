@@ -2,16 +2,13 @@ import { notFound } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import {
   Building2 as IconBuilding2,
-  ChefHat as IconChefHat,
   Wallet as IconWallet,
-  Warehouse as IconWarehouse,
 } from "lucide-react";
 import { canAccess, MODULE_ACL } from "@comtammatu/shared/auth";
 import {
   APP_COPY_VI,
   getSiteKindLabelVi,
   resolveSiteKind,
-  type SiteKind,
 } from "@comtammatu/shared/labels";
 import { createServiceClient } from "@comtammatu/database";
 import {
@@ -47,18 +44,6 @@ const getCachedOperatorBranches = unstable_cache(
   },
 );
 
-const SITE_KIND_ORDER: Record<SiteKind, number> = {
-  branch: 0,
-  central_kitchen: 1,
-  central_supply: 2,
-};
-
-function siteIcon(kind: SiteKind) {
-  if (kind === "central_kitchen") return <IconChefHat />;
-  if (kind === "central_supply") return <IconWarehouse />;
-  return <IconBuilding2 />;
-}
-
 export async function WorkLocationPickerPage() {
   const { claims } = await loadAuthState();
 
@@ -71,11 +56,7 @@ export async function WorkLocationPickerPage() {
 
   const { allowedBranches } = selectOperatorBranchScope(claims, data, null);
   const showOfficeCard = canAccess(claims.user_role, "finance");
-  const orderedSites = [...allowedBranches].sort(
-    (a, b) =>
-      SITE_KIND_ORDER[resolveSiteKind(a)] - SITE_KIND_ORDER[resolveSiteKind(b)] ||
-      a.id - b.id,
-  );
+  const orderedSites = [...allowedBranches].sort((a, b) => a.id - b.id);
 
   return (
     <AppPage density="compact" width="default">
@@ -88,7 +69,7 @@ export async function WorkLocationPickerPage() {
               href={`/br/${site.id}`}
               title={site.name}
               description={getSiteKindLabelVi(resolveSiteKind(site))}
-              icon={siteIcon(resolveSiteKind(site))}
+              icon={<IconBuilding2 />}
               ctaLabel="Chọn"
             />
           ))}

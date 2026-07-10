@@ -133,40 +133,6 @@ test("resolveOperatorTiles -> drops empty groups", () => {
   );
 });
 
-test("resolveOperatorTiles -> central site kinds hide sales and omit retired PO", () => {
-  for (const branchKind of ["central_supply", "central_kitchen"] as const) {
-    for (const role of ["warehouse_manager", "production_manager"] as const) {
-      const groups = resolveOperatorTiles(role, 15, branchKind);
-      const groupIds = groups.map((group) => group.id);
-      const stock = groups.find((group) => group.id === "stock");
-
-      assert.equal(
-        groupIds.includes("sales_kitchen"),
-        false,
-        `${role}/${branchKind}`,
-      );
-      assert.equal(
-        stock?.tiles.some((tile) => tile.href.includes("purchase-orders")),
-        false,
-        `${role}/${branchKind}`,
-      );
-    }
-
-    const ownerGroups = resolveOperatorTiles("owner", 15, branchKind);
-    const ownerStock = ownerGroups.find((group) => group.id === "stock");
-    assert.equal(
-      ownerGroups.map((group) => group.id).includes("sales_kitchen"),
-      false,
-      `owner/${branchKind}`,
-    );
-    assert.equal(
-      ownerStock?.tiles.some((tile) => tile.href.includes("purchase-orders")),
-      false,
-      `owner/${branchKind}`,
-    );
-  }
-});
-
 test("resolveOperatorTiles -> default branchKind keeps sales and omits retired PO", () => {
   const groups = resolveOperatorTiles("owner", 3, "branch");
   const groupIds = groups.map((group) => group.id);
@@ -179,25 +145,18 @@ test("resolveOperatorTiles -> default branchKind keeps sales and omits retired P
   );
 });
 
-test("resolveOperatorTiles -> retired supplier returns stay out of every branch kind", () => {
-  for (const branchKind of [
-    "branch",
-    "central_supply",
-    "central_kitchen",
-  ] as const) {
-    const tiles = resolveOperatorTiles("owner", 3, branchKind).flatMap(
-      (group) => group.tiles,
-    );
+test("resolveOperatorTiles -> retired supplier returns stay out of the branch tiles", () => {
+  const tiles = resolveOperatorTiles("owner", 3, "branch").flatMap(
+    (group) => group.tiles,
+  );
 
-    assert.equal(
-      tiles.some(
-        (tile) =>
-          tile.href.includes("supplier-returns") || tile.label === "Trả hàng NCC",
-      ),
-      false,
-      branchKind,
-    );
-  }
+  assert.equal(
+    tiles.some(
+      (tile) =>
+        tile.href.includes("supplier-returns") || tile.label === "Trả hàng NCC",
+    ),
+    false,
+  );
 });
 
 test("resolveOperatorTiles -> operator hub does not duplicate office workspace links", () => {
@@ -212,117 +171,51 @@ test("resolveOperatorTiles -> operator hub does not duplicate office workspace l
   assert.equal(hrefs.includes("/inventory/production"), false);
 });
 
-test("resolveOperatorTiles -> production tile is native under stock at central_kitchen, not office_bridge", () => {
-  const groups = resolveOperatorTiles(
-    "production_manager",
-    15,
-    "central_kitchen",
-  );
-  const groupIds = groups.map((group) => String(group.id));
-  const stock = groups.find((group) => group.id === "stock");
-
-  assert.equal(groupIds.includes("office_bridge"), false);
-
-  const productionTile = stock?.tiles.find(
-    (tile) => tile.href === "/br/15/stock/production",
-  );
-  assert.ok(
-    productionTile,
-    "production_manager must see native production tile",
-  );
-  assert.equal(productionTile?.label, "Sản xuất");
-
-  const recipeTile = stock?.tiles.find(
-    (tile) => tile.href === "/br/15/stock/production/recipes",
-  );
-  assert.ok(recipeTile, "production_manager must see native recipe tile");
-  assert.equal(recipeTile?.label, "Công thức");
-});
-
-test("resolveOperatorTiles -> production tile renders at central_kitchen and branch, never at central_supply (D068)", () => {
-  // D068: branch runs production, so the "Sản xuất" tile is now curated for
-  // `branch` too. It must still never appear at `central_supply` (Kho Tổng).
-  for (const branchKind of ["central_kitchen", "branch"] as const) {
-    for (const role of ["owner", "production_manager"] as const) {
-      const groups = resolveOperatorTiles(role, 15, branchKind);
-      const hrefs = groups.flatMap((group) =>
-        group.tiles.map((tile) => tile.href),
-      );
-      assert.equal(
-        hrefs.includes("/br/15/stock/production"),
-        true,
-        `${role}/${branchKind} must see production tile`,
-      );
-    }
-  }
-
+test("resolveOperatorTiles -> production tile is native under stock at branch, not office_bridge (D068)", () => {
   for (const role of ["owner", "production_manager"] as const) {
-    const groups = resolveOperatorTiles(role, 15, "central_supply");
-    const hrefs = groups.flatMap((group) =>
-      group.tiles.map((tile) => tile.href),
+    const groups = resolveOperatorTiles(role, 3, "branch");
+    const groupIds = groups.map((group) => String(group.id));
+    const stock = groups.find((group) => group.id === "stock");
+
+    assert.equal(groupIds.includes("office_bridge"), false, role);
+
+    const productionTile = stock?.tiles.find(
+      (tile) => tile.href === "/br/3/stock/production",
     );
-    assert.equal(
-      hrefs.includes("/br/15/stock/production"),
-      false,
-      `${role}/central_supply must not see production tile`,
-    );
+    assert.ok(productionTile, `${role} must see native production tile`);
+    assert.equal(productionTile?.label, "Sản xuất");
   }
 });
 
-test("resolveOperatorTiles -> central-site stock groups are curated whitelists (D066)", () => {
-  const supplyStock = resolveOperatorTiles("owner", 15, "central_supply").find(
+test("resolveOperatorTiles -> branch stock group renders the branch tile set", () => {
+  const branchStock = resolveOperatorTiles("owner", 3, "branch").find(
     (group) => group.id === "stock",
   );
   assert.deepEqual(
-    supplyStock?.tiles.map((tile) => tile.label),
+    branchStock?.tiles.map((tile) => tile.label),
     [
+      "Sản xuất",
       "Tồn kho",
       "Nhận hàng",
-      "Chuyển hàng",
+      "Yêu cầu hàng",
       "Kiểm kê",
+      "Phân công đếm tồn",
       "Báo hao hụt",
       "Tiêu hao",
       "Phiếu nhập",
       "Danh mục",
     ],
   );
-
-  const kitchenStock = resolveOperatorTiles(
-    "owner",
-    15,
-    "central_kitchen",
-  ).find((group) => group.id === "stock");
-  assert.deepEqual(
-    kitchenStock?.tiles.map((tile) => tile.label),
-    [
-      "Sản xuất",
-      "Công thức",
-      "Tồn kho",
-      "Nhận hàng",
-      "Chuyển hàng",
-      "Kiểm kê",
-      "Báo hao hụt",
-      "Tiêu hao",
-      "Phiếu nhập",
-    ],
-  );
 });
 
 test("resolveOperatorTiles -> office_bridge group is retired", () => {
-  for (const branchKind of ["central_supply", "central_kitchen"] as const) {
-    const groupIds = resolveOperatorTiles("owner", 15, branchKind).map(
-      (group) => String(group.id),
-    );
-    assert.equal(groupIds.includes("office_bridge"), false, branchKind);
-  }
-
   const branchGroupIds = resolveOperatorTiles("owner", 3, "branch").map(
     (group) => String(group.id),
   );
   assert.equal(branchGroupIds.includes("office_bridge"), false);
 });
 
-test("resolveOperatorTiles -> transfer tile reads as dispatch at central sites, request at branches", () => {
+test("resolveOperatorTiles -> transfer tile reads as request at branches", () => {
   const branchStock = resolveOperatorTiles("branch_manager", 3, "branch").find(
     (group) => group.id === "stock",
   );
@@ -331,18 +224,6 @@ test("resolveOperatorTiles -> transfer tile reads as dispatch at central sites, 
       .filter((tile) => tile.href === "/br/3/stock/transfer")
       .map((tile) => tile.label),
     ["Yêu cầu hàng"],
-  );
-
-  const supplyStock = resolveOperatorTiles(
-    "warehouse_manager",
-    15,
-    "central_supply",
-  ).find((group) => group.id === "stock");
-  assert.deepEqual(
-    supplyStock?.tiles
-      .filter((tile) => tile.href === "/br/15/stock/transfer")
-      .map((tile) => tile.label),
-    ["Chuyển hàng"],
   );
 });
 

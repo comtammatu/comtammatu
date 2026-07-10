@@ -77,12 +77,6 @@ function locationKindLabel(location: InventoryLocationOption) {
   if (location.branchKind === "branch" && location.kind === "warehouse") {
     return tTerm("branchWarehouse", "button");
   }
-  if (
-    location.branchKind === "central_kitchen" &&
-    location.kind === "production_storage"
-  ) {
-    return tTerm("productionStorage", "button");
-  }
   return location.name;
 }
 
@@ -102,11 +96,6 @@ function pickSourceLocation(
   );
   return (
     candidates.find((location) => location.isDefaultConsumption) ??
-    candidates.find(
-      (location) =>
-        location.branchKind === "central_kitchen" &&
-        location.kind === "warehouse",
-    ) ??
     candidates.find((location) => location.isDefaultReceive) ??
     candidates[0]
   );
@@ -120,13 +109,7 @@ function pickTargetLocation(
     (location) => location.branchId === branchId,
   );
   return (
-    candidates.find(
-      (location) =>
-        location.branchKind === "central_kitchen" &&
-        location.kind === "production_storage",
-    ) ??
-    candidates.find((location) => location.isDefaultReceive) ??
-    candidates[0]
+    candidates.find((location) => location.isDefaultReceive) ?? candidates[0]
   );
 }
 

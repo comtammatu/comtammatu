@@ -1,9 +1,5 @@
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import {
-  PERMISSION_KEYS,
-  type BranchKind,
-  type JwtClaims,
-} from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type JwtClaims } from "@comtammatu/shared/auth";
 import { getRegisteredMethods } from "@comtammatu/shared/providers";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import type { loadAuthState } from "@/_lib/auth";
@@ -220,11 +216,8 @@ export async function fetchBranchQueueCounts(
   supabase: ServerClient,
   claims: JwtClaims,
   branchId: number,
-  branchKind: BranchKind = "branch",
 ): Promise<BranchQueueCounts> {
   const service = createServiceClient();
-  const isCentralSupply = branchKind === "central_supply";
-  const isCentralKitchen = branchKind === "central_kitchen";
 
   const [
     checkoutPermission,
@@ -251,24 +244,18 @@ export async function fetchBranchQueueCounts(
       p_branch_id: branchId,
       p_key: PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
     }),
-    isCentralSupply
-      ? supabase.rpc("has_permission", {
-          p_branch_id: branchId,
-          p_key: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
-        })
-      : Promise.resolve({ data: false }),
-    isCentralKitchen
-      ? supabase.rpc("has_permission", {
-          p_branch_id: branchId,
-          p_key: PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
-        })
-      : Promise.resolve({ data: false }),
-    isCentralKitchen
-      ? supabase.rpc("has_permission", {
-          p_branch_id: branchId,
-          p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
-        })
-      : Promise.resolve({ data: false }),
+    supabase.rpc("has_permission", {
+      p_branch_id: branchId,
+      p_key: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+    }),
+    supabase.rpc("has_permission", {
+      p_branch_id: branchId,
+      p_key: PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
+    }),
+    supabase.rpc("has_permission", {
+      p_branch_id: branchId,
+      p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
+    }),
   ]);
   const [
     checkoutRes,

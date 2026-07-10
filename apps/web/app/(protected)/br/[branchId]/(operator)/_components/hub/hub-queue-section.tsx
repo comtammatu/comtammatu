@@ -8,7 +8,6 @@ import {
   Truck,
 } from "lucide-react";
 import Link from "next/link";
-import { type BranchKind } from "@comtammatu/shared/auth";
 import { formatCount } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -39,7 +38,6 @@ interface QueueRow {
 function buildQueueRows(
   basePath: string,
   counts: Awaited<ReturnType<typeof fetchBranchQueueCounts>>,
-  includeWorkforce: boolean,
 ): QueueRow[] {
   const rows: QueueRow[] = [];
   if (counts.draftGrns != null) {
@@ -72,7 +70,7 @@ function buildQueueRows(
       count: counts.inboundTransfers,
     });
   }
-  if (includeWorkforce && counts.pendingCheckouts != null) {
+  if (counts.pendingCheckouts != null) {
     rows.push({
       key: "checkout-approvals",
       href: `${basePath}/shift/checkout-approvals`,
@@ -82,7 +80,7 @@ function buildQueueRows(
       count: counts.pendingCheckouts,
     });
   }
-  if (includeWorkforce && counts.pendingLeaveRequests != null) {
+  if (counts.pendingLeaveRequests != null) {
     rows.push({
       key: "leave-approvals",
       href: `${basePath}/shift/leave-approvals`,
@@ -166,38 +164,22 @@ function CompactQueueSection({ rows }: { rows: QueueRow[] }) {
   );
 }
 
-export async function HubQueueSection({
-  branchId,
-  branchKind,
-}: {
-  branchId: number;
-  branchKind: BranchKind;
-}) {
+export async function HubQueueSection({ branchId }: { branchId: number }) {
   const { supabase, claims } = await loadAuthState();
   const isFloorRole =
     claims.user_role === "cashier" || claims.user_role === "chef";
 
   if (isFloorRole) return null;
 
-  const queueCounts = await fetchBranchQueueCounts(
-    supabase,
-    claims,
-    branchId,
-    branchKind,
-  );
+  const queueCounts = await fetchBranchQueueCounts(supabase, claims, branchId);
 
   if (!queueCounts) return null;
 
   const basePath = `/br/${branchId}`;
-  const queueRows = buildQueueRows(
-    basePath,
-    queueCounts,
-    branchKind !== "central_kitchen",
-  );
+  const queueRows = buildQueueRows(basePath, queueCounts);
   const queuePendingTotal = queueRows.reduce((sum, row) => sum + row.count, 0);
-  const isCentral = branchKind !== "branch";
 
-  if (queueRows.length === 0 && !isCentral) return null;
+  if (queueRows.length === 0) return null;
 
   return (
     <BranchOperatorPanel

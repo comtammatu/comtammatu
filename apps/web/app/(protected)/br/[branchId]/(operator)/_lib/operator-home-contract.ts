@@ -1,24 +1,4 @@
-import type {
-  BranchKind,
-  ResolvedOperatorTileGroup,
-} from "@comtammatu/shared/auth";
-
-export const CENTRAL_HOME_TILE_SUFFIXES: Partial<
-  Record<BranchKind, readonly string[]>
-> = {
-  central_supply: [
-    "/stock",
-    "/stock/stocktake",
-    "/stock/transfer",
-    "/stock/catalog",
-  ],
-  central_kitchen: [
-    "/stock/grn",
-    "/stock/production",
-    "/stock/production/recipes",
-    "/stock/transfer",
-  ],
-} as const satisfies Partial<Record<BranchKind, readonly string[]>>;
+import type { ResolvedOperatorTileGroup } from "@comtammatu/shared/auth";
 
 export const BRANCH_MANAGER_HOME_TILE_SUFFIXES = [
   "/pos",
@@ -53,41 +33,28 @@ export function getBranchHomeTileLimit(
 
 export function getOperatorHomeTileHrefs(
   groups: ResolvedOperatorTileGroup[],
-  branchKind: BranchKind,
   role?: string,
 ): Set<string> {
-  if (branchKind === "branch") {
-    if (role === "branch_manager" || role === "owner") {
-      const result = new Set<string>();
-      for (const group of groups) {
-        for (const tile of group.tiles) {
-          if (
-            BRANCH_MANAGER_HOME_TILE_SUFFIXES.some((suffix) =>
-              tile.href.endsWith(suffix),
-            )
-          ) {
-            result.add(tile.href);
-          }
+  if (role === "branch_manager" || role === "owner") {
+    const result = new Set<string>();
+    for (const group of groups) {
+      for (const tile of group.tiles) {
+        if (
+          BRANCH_MANAGER_HOME_TILE_SUFFIXES.some((suffix) =>
+            tile.href.endsWith(suffix),
+          )
+        ) {
+          result.add(tile.href);
         }
       }
-      return result;
     }
-
-    const group = getBranchPrimaryHomeGroup(groups);
-    return new Set(
-      group?.tiles
-        .slice(0, getBranchHomeTileLimit(group.id))
-        .map((tile) => tile.href) ?? [],
-    );
+    return result;
   }
 
-  const suffixes = CENTRAL_HOME_TILE_SUFFIXES[branchKind];
-  if (!suffixes) return new Set();
-
-  const stockTiles = groups.find((group) => group.id === "stock")?.tiles ?? [];
+  const group = getBranchPrimaryHomeGroup(groups);
   return new Set(
-    stockTiles
-      .filter((tile) => suffixes.some((suffix) => tile.href.endsWith(suffix)))
-      .map((tile) => tile.href),
+    group?.tiles
+      .slice(0, getBranchHomeTileLimit(group.id))
+      .map((tile) => tile.href) ?? [],
   );
 }

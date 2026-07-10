@@ -498,37 +498,13 @@ export const settings = {
     queueDraftGrnsTitle: "Phiếu nhập dở",
     queueDraftGrnsMeta: (count: number) =>
       `${formatCount(count)} phiếu nhập chưa xong`,
-    queueOpenPosTitle: "Đơn chờ nhận",
-    queueOpenPosMeta: (count: number) =>
-      `${formatCount(count)} đơn đặt hàng chờ giao`,
     queueDraftProductionTitle: "Lệnh sản xuất cần chốt",
     queueDraftProductionMeta: (count: number) =>
       `${formatCount(count)} lệnh chưa hoàn tất`,
     queueInboundTransfersTitle: "Chờ nhận nguyên liệu",
     queueInboundTransfersMeta: (count: number) =>
       `${formatCount(count)} chuyến hàng đang đến`,
-    centralSupplyTilesTitle: "Kho Tổng - Inventory",
-    centralSupplyTilesDescription:
-      "Chỉ xử lý tồn kho, nhập - chuyển - kiểm; không có POS, KDS hoặc Runner.",
-    centralKitchenHomeTitle: "Bếp Trung Tâm",
-    centralKitchenTilesTitle: "Vận hành Bếp",
-    centralKitchenTilesDescription:
-      "Nhập nguyên liệu, sản xuất, quản lý công thức và xuất thành phẩm đến chi nhánh.",
-    centralKitchenReceiveJob: "Nhập kho",
-    centralKitchenProductionJob: "Sản xuất",
-    centralKitchenRecipesJob: "Công thức",
-    centralKitchenDispatchJob: "Xuất thành phẩm",
-    centralReceiveCta: "Nhận hàng",
-    centralProductionCta: "Tạo lệnh sản xuất",
-    centralKitchenNavHome: "Bếp",
-    centralKitchenNavReceive: "Nhập",
-    centralKitchenNavDispatch: "Xuất",
-    centralNavWorkforce: "Nhân sự",
-    centralNavReceive: "Nhận",
     centralNavStock: "Tồn",
-    centralNavStocktake: "Kiểm",
-    centralNavProduction: "Sản xuất",
-    centralClockLink: "Chấm công",
     queueEmpty: "Không có việc cần xử lý",
     settingsBack: "Thiết lập",
     posBack: "Về POS",

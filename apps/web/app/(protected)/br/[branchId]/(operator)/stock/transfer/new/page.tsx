@@ -18,24 +18,12 @@ export default async function OperatorNewTransferPage({ params }: PageProps) {
 
   const basePath = `/br/${branchId}/stock/transfer`;
   const data = await loadTransferCreatePageData({ routeBranchId: branchId });
-  const currentBranch = data.branches.find(
-    (branch) => branch.id === data.userBranchId,
-  );
-  const isKitchenDispatch = currentBranch?.branch_kind === "central_kitchen";
   const operatorFlow = messages.inventory.operatorFlow;
 
   return (
     <BranchOperatorPage
-      title={
-        isKitchenDispatch
-          ? operatorFlow.kitchenDispatchTitle
-          : operatorFlow.transferCreateTitle
-      }
-      description={
-        isKitchenDispatch
-          ? operatorFlow.kitchenDispatchDescription
-          : operatorFlow.transferCreateDescription
-      }
+      title={operatorFlow.transferCreateTitle}
+      description={operatorFlow.transferCreateDescription}
       action={
         <Button variant="outline" size="touch" asChild>
           <Link href={basePath}>

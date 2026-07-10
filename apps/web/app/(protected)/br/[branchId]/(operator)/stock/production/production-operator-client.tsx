@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import {
-  BookOpen as IconBookOpen,
   ChefHat as IconChefHat,
   ChevronRight as IconChevronRight,
   Plus as IconPlus,
@@ -31,9 +30,7 @@ import type { ProductionRunRow } from "@/(protected)/inventory/production-run-ac
 interface ProductionOperatorClientProps {
   branchId: number;
   canCreateProduction: boolean;
-  canManageRecipes: boolean;
   finishedGoodsCount: number;
-  rawIngredientsCount: number;
   recipesCount: number;
   runs: ProductionRunRow[];
 }
@@ -41,9 +38,7 @@ interface ProductionOperatorClientProps {
 export function ProductionOperatorClient({
   branchId,
   canCreateProduction,
-  canManageRecipes,
   finishedGoodsCount,
-  rawIngredientsCount,
   recipesCount,
   runs,
 }: ProductionOperatorClientProps) {
@@ -117,61 +112,27 @@ export function ProductionOperatorClient({
           )}
         </BranchOperatorPanel>
 
-        <div className="grid min-w-0 gap-3 lg:grid-cols-2">
-          <BranchOperatorPanel
-            title="Công thức"
-            description="Xem và cập nhật định mức nguyên liệu của thành phẩm."
-            icon={IconBookOpen}
-            size="sm"
-          >
-            <Item
-              asChild
-              variant="outline"
-              className="min-h-20 touch-manipulation"
-            >
-              <Link href={`${basePath}/recipes`}>
-                <ItemContent className="min-w-0">
-                  <ItemTitle className="line-clamp-none text-sm font-semibold">
-                    {recipesCount} thành phẩm đã có công thức
-                  </ItemTitle>
-                  <ItemDescription className="line-clamp-none">
-                    {canManageRecipes
-                      ? "Chạm để xem hoặc chỉnh định mức."
-                      : "Chạm để xem định mức hiện có."}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemActions className="shrink-0">
-                  <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                    {rawIngredientsCount} nguyên liệu
-                  </span>
-                  <IconChevronRight className="size-4 text-muted-foreground" />
-                </ItemActions>
-              </Link>
-            </Item>
-          </BranchOperatorPanel>
-
-          <BranchOperatorPanel
-            title="Đã hoàn tất"
-            description="Các mẻ sản xuất gần đây."
-            icon={IconChefHat}
-            size="sm"
-            contentClassName="gap-2"
-          >
-            {completed.length === 0 ? (
-              <AppEmptyState
-                compact
-                align="start"
-                mode="no-data"
-                title="Chưa có lệnh hoàn tất"
-              />
-            ) : (
-              <ProductionRunList
-                runs={completed.slice(0, 8)}
-                basePath={basePath}
-              />
-            )}
-          </BranchOperatorPanel>
-        </div>
+        <BranchOperatorPanel
+          title="Đã hoàn tất"
+          description="Các mẻ sản xuất gần đây."
+          icon={IconChefHat}
+          size="sm"
+          contentClassName="gap-2"
+        >
+          {completed.length === 0 ? (
+            <AppEmptyState
+              compact
+              align="start"
+              mode="no-data"
+              title="Chưa có lệnh hoàn tất"
+            />
+          ) : (
+            <ProductionRunList
+              runs={completed.slice(0, 8)}
+              basePath={basePath}
+            />
+          )}
+        </BranchOperatorPanel>
       </div>
     </BranchOperatorPage>
   );

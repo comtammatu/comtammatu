@@ -126,36 +126,15 @@ function groupTransfers({
 }
 
 function canCreateTransfer({
-  userRole,
   branchKind,
   branchId,
   branches,
 }: {
-  userRole: Parameters<typeof classifyTransfer>[4];
   branchKind: string | null;
   branchId: number;
   branches: BranchForTransfer[];
 }) {
-  const isBranchManager = userRole === "branch_manager";
-  if (isBranchManager) {
-    return (
-      branchKind === "branch" &&
-      branches.some(
-        (branch) =>
-          branch.is_active &&
-          (branch.branch_kind === "central_supply" ||
-            branch.branch_kind === "central_kitchen"),
-      )
-    );
-  }
-
-  return (
-    branchId > 0 &&
-    (branchKind === "branch" ||
-      branchKind === "central_supply" ||
-      branchKind === "central_kitchen") &&
-    branches.length >= 2
-  );
+  return branchId > 0 && branchKind === "branch" && branches.length >= 2;
 }
 
 function TransferCard({
@@ -284,7 +263,6 @@ export default async function OperatorStockTransferPage({
     userRole: claims.user_role,
   });
   const createEnabled = canCreateTransfer({
-    userRole: claims.user_role,
     branchKind,
     branchId,
     branches,

@@ -8,12 +8,7 @@ import {
   LayoutDashboard as IconLayoutDashboard,
   User as IconUser,
 } from "lucide-react";
-import {
-  canAccess,
-  MODULE_ACL,
-  ROLE_LABEL_VI,
-  type BranchKind,
-} from "@comtammatu/shared/auth";
+import { canAccess, MODULE_ACL, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage } from "@/components/surface";
@@ -67,7 +62,6 @@ export default async function OperatorLayout({
   const unreadResult = await unreadPromise;
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
   const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
-  const branchKind = context.branch.branch_kind as BranchKind;
 
   return (
     <PwaRuntimeProvider>
@@ -156,7 +150,6 @@ export default async function OperatorLayout({
           branchId={context.branchId}
           showEmployeeLinks={canUseEmployeePortal}
           showBranchManagement={canManageBranch}
-          branchKind={branchKind}
         />
       </div>
     </PwaRuntimeProvider>

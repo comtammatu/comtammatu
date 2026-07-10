@@ -92,12 +92,6 @@ export const PAGE_ARCHETYPES = {
     "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx":
     "HUB",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/page.tsx":
-    "LIST",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/new/page.tsx":
-    "DOC-WORKFLOW",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/[finishedGoodId]/page.tsx":
-    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/page.tsx":

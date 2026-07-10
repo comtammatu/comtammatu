@@ -1191,8 +1191,8 @@ test("operator transfer routes keep list, create, detail, and form actions branc
   );
   assert.match(transferNewRoute, /<BranchOperatorPage/);
   assert.match(transferNewRoute, /<BranchTransferCreateClient/);
-  assert.match(transferNewRoute, /operatorFlow\.kitchenDispatchTitle/);
-  assert.match(transferNewRoute, /operatorFlow\.kitchenDispatchDescription/);
+  assert.match(transferNewRoute, /operatorFlow\.transferCreateTitle/);
+  assert.match(transferNewRoute, /operatorFlow\.transferCreateDescription/);
   assert.doesNotMatch(
     transferNewRoute,
     /NewTransferPageContent|DocumentFormFrame|CreateTransferForm|embedded/,
@@ -1411,20 +1411,11 @@ test("operator production renders branch-native inside the production operator s
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx",
   );
-  const recipeRoute = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/page.tsx",
-  );
   const newRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx",
   );
   const detailRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx",
-  );
-  const recipeNewRoute = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/new/page.tsx",
-  );
-  const recipeDetailRoute = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/[finishedGoodId]/page.tsx",
   );
   const officePage = read(
     "apps/web/app/(protected)/inventory/production/page.tsx",
@@ -1440,12 +1431,6 @@ test("operator production renders branch-native inside the production operator s
   );
   const detailClientSource = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/branch-production-detail-client.tsx",
-  );
-  const recipeListClientSource = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/branch-production-recipes-client.tsx",
-  );
-  const recipeEditorClientSource = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/branch-production-recipe-editor-client.tsx",
   );
   const navConfig = read("packages/shared/src/auth/nav-config.ts");
   const operatorCapabilities = read(
@@ -1468,8 +1453,6 @@ test("operator production renders branch-native inside the production operator s
   assert.match(officePage, /routeBranchId\?: number/);
   assert.match(officePage, /embedded\?: boolean/);
   assert.match(officePage, /embedded=\{embedded\}/);
-  assert.match(recipeRoute, /<BranchProductionRecipesClient/);
-  assert.doesNotMatch(recipeRoute, /ProductionRecipePanel|embedded/);
   assert.match(
     newRoute,
     /<BranchProductionNewClient[\s\S]*basePath=\{`\/br\/\$\{branchId\}\/stock\/production`\}/,
@@ -1481,12 +1464,6 @@ test("operator production renders branch-native inside the production operator s
   assert.match(
     detailRoute,
     /run\.branch_id !== branchId && run\.target_branch_id !== branchId/,
-  );
-  assert.match(recipeNewRoute, /<BranchProductionRecipeEditorClient/);
-  assert.match(recipeDetailRoute, /<BranchProductionRecipeEditorClient/);
-  assert.match(
-    recipeDetailRoute,
-    /params: Promise<\{ branchId: string; finishedGoodId: string \}>/,
   );
 
   // hasCurrentProductionBranchAccess must prefer routeBranchId over
@@ -1540,23 +1517,11 @@ test("operator production renders branch-native inside the production operator s
     /\bProductionDetailClient\b|DataTable|DocumentFormFrame|embedded/,
   );
 
-  assert.match(recipeListClientSource, /<BranchOperatorPage/);
-  assert.match(recipeListClientSource, /<ItemGroup/);
-  assert.match(recipeEditorClientSource, /<BranchOperatorPage/);
-  assert.match(recipeEditorClientSource, /<SheetContent[\s\S]*side="bottom"/);
-  assert.match(recipeEditorClientSource, /sm:max-w-lg/);
-  assert.match(recipeEditorClientSource, /lg:grid-cols-/);
-  assert.match(recipeEditorClientSource, /beforeunload/);
-  assert.doesNotMatch(
-    `${recipeListClientSource}\n${recipeEditorClientSource}`,
-    /ProductionRecipePanel|FormDialog|DataTable|DocumentFormFrame|embedded/,
-  );
-
   // Native production tile is gated to production-capable branch kinds.
   // Curation is declarative: nav-config `kinds` + the operator-capabilities kind filter.
   assert.match(
     navConfig,
-    /hrefTemplate: "\/br\/\{branchId\}\/stock\/production",\s*label: "Sản xuất",\s*kinds: \["central_kitchen", "branch"\]/,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/production",\s*label: "Sản xuất",\s*kinds: \["branch"\]/,
   );
   assert.match(
     operatorCapabilities,
@@ -1567,7 +1532,6 @@ test("operator production renders branch-native inside the production operator s
     /const workQueue = \[\.\.\.inProgress, \.\.\.drafts\]/,
   );
   assert.match(operatorClientSource, /title="Việc cần làm"/);
-  assert.match(operatorClientSource, /title="Công thức"/);
 
   // The office_bridge "Sản xuất" tile is retired now that the native
   // surface has landed (D059 §2 shrink-to-zero).

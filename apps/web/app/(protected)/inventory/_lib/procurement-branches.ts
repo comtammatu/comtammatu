@@ -16,7 +16,7 @@ export async function fetchProcurementBranches(
     .select("id, name, branch_kind")
     .eq("tenant_id", tenantId)
     .eq("is_active", true)
-    .in("branch_kind", ["branch", "central_supply", "central_kitchen"])
+    .eq("branch_kind", "branch")
     .order("name");
 
   if (error) return [];

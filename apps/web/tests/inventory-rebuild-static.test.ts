@@ -432,7 +432,7 @@ test.skip("finance gross profit uses actual approved consumption, not mv_food_co
   );
 });
 
-test.skip("procurement and production route central sites through the new model", () => {
+test.skip("procurement scopes to branch sites and production uses the shared branch-kind gate", () => {
   const procurementBranches = readWeb(
     "app/(protected)/inventory/_lib/procurement-branches.ts",
   );
@@ -444,10 +444,7 @@ test.skip("procurement and production route central sites through the new model"
   );
   const labels = readRepo("packages/shared/src/labels/vi.ts");
 
-  assert.match(
-    procurementBranches,
-    /\.in\("branch_kind", \["branch", "central_supply", "central_kitchen"\]\)/,
-  );
+  assert.match(procurementBranches, /\.eq\("branch_kind", "branch"\)/);
   // D068: production runs at central_kitchen OR branch — the branch-kind gate
   // moved to the shared `isProductionBranchKind` predicate (central_kitchen +
   // branch), replacing the central-kitchen-only equality checks.
@@ -476,70 +473,3 @@ test.skip("legacy kitchen backfill stays dry-run and read-only", () => {
   assert.match(output, /self-test ok/);
 });
 
-test.skip("matu-platform import classifier keeps branch kitchen as stock-bearing transfer", () => {
-  const script = readRepo("scripts/inventory-matu-platform-dry-run.mjs");
-  assert.match(script, /mode: "dry-run"/);
-  assert.match(script, /branch_kitchen_transfer/);
-  assert.match(script, /branchKitchenTransferCostByBranch/);
-  assert.match(script, /real_transfer/);
-  assert.doesNotMatch(script, /\b(insert|update|delete|upsert)\s*\(/i);
-  assert.doesNotMatch(script, /method:\s*["'](?:POST|PATCH|DELETE|PUT)["']/);
-
-  const output = execFileSync(
-    process.execPath,
-    ["../../scripts/inventory-matu-platform-dry-run.mjs", "--self-test"],
-    { cwd: process.cwd(), encoding: "utf8" },
-  );
-  assert.match(output, /self-test ok/);
-});
-
-test.skip("matu-platform master-data import requires explicit apply and maps source material contract", () => {
-  const script = readRepo("scripts/inventory-matu-platform-master-data.mjs");
-  assert.match(script, /--apply/);
-  assert.match(
-    script,
-    /assertProjectUrl\(args\.sourceUrl, SOURCE_REF, "Source"\)/,
-  );
-  assert.match(
-    script,
-    /assertProjectUrl\(args\.targetUrl, TARGET_REF, "Target"\)/,
-  );
-  assert.match(script, /semi_finished.+finished_good/s);
-  assert.match(script, /storageTypeForCategory/);
-
-  const output = execFileSync(
-    process.execPath,
-    ["../../scripts/inventory-matu-platform-master-data.mjs", "--self-test"],
-    { cwd: process.cwd(), encoding: "utf8" },
-  );
-  assert.match(output, /self-test ok/);
-});
-
-test.skip("matu-platform operational import writes only a guarded SQL transaction", () => {
-  const script = readRepo(
-    "scripts/inventory-matu-platform-operational-import.mjs",
-  );
-  assert.match(script, /--write-sql/);
-  assert.match(script, /allow-manual-review-skip/);
-  assert.match(script, /branch_kitchen_transfer/);
-  assert.match(script, /branchKitchenStock/);
-  assert.match(script, /sale_consumption/);
-  assert.match(script, /balance_adjustment/);
-  assert.match(script, /manual_review_disallowed_direction/);
-  assert.match(script, /BEGIN;/);
-  assert.match(script, /target_operational_inventory_not_empty/);
-  assert.match(script, /DISABLE TRIGGER trg_stock_movement_update_levels/);
-  assert.match(script, /ENABLE TRIGGER trg_stock_movement_update_levels/);
-  assert.match(script, /import_rebuilt_stock_levels_negative/);
-  assert.doesNotMatch(script, /method:\s*["'](?:POST|PATCH|DELETE|PUT)["']/);
-
-  const output = execFileSync(
-    process.execPath,
-    [
-      "../../scripts/inventory-matu-platform-operational-import.mjs",
-      "--self-test",
-    ],
-    { cwd: process.cwd(), encoding: "utf8" },
-  );
-  assert.match(output, /self-test ok/);
-});

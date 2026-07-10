@@ -67,28 +67,6 @@ test("operator inventory work routes expose touch progress steps", () => {
     /const workQueue = \[\.\.\.inProgress, \.\.\.drafts\]/,
   );
 
-  const recipeRoute = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/page.tsx",
-  );
-  const recipeListClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/branch-production-recipes-client.tsx",
-  );
-  const recipeEditorClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/branch-production-recipe-editor-client.tsx",
-  );
-
-  assert.match(recipeRoute, /<BranchProductionRecipesClient/);
-  assert.match(recipeListClient, /BranchOperatorStatusStrip/);
-  assert.match(recipeListClient, /<ItemGroup/);
-  assert.match(recipeEditorClient, /<SheetContent/);
-  assert.match(recipeEditorClient, /side="bottom"/);
-  assert.match(recipeEditorClient, /sm:max-w-lg/);
-  assert.match(recipeEditorClient, /sm:!right-0 sm:!left-auto/);
-  assert.match(recipeEditorClient, /className="h-11"/);
-  assert.doesNotMatch(
-    `${recipeRoute}\n${recipeListClient}\n${recipeEditorClient}`,
-    /ProductionRecipePanel|FormDialog|DataTable|embedded/,
-  );
 });
 
 test("transfer create gates embedded sections by touch workflow state", () => {

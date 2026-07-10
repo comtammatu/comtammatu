@@ -20,15 +20,7 @@ export default async function OperatorProductionPage({ params }: PageProps) {
     <ProductionOperatorClient
       branchId={branchId}
       canCreateProduction={data.canCreateProduction}
-      canManageRecipes={data.canManageRecipes}
       finishedGoodsCount={data.finishedGoods.length}
-      rawIngredientsCount={
-        data.ingredients.filter(
-          (ingredient) =>
-            ingredient.item_kind === "raw_material" ||
-            ingredient.item_kind === "finished_good",
-        ).length
-      }
       recipesCount={
         new Set(data.recipes.map((recipe) => recipe.finished_good_id)).size
       }
