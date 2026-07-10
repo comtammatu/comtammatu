@@ -798,14 +798,14 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
 
 #### Canonical operator-home skeleton (no KPI)
 
-The three operator hubs — Branch, Central Supply, Central Kitchen — share ONE
-ordered home recipe (owner-approved):
+The Branch operator hub — the only operator hub kind — uses ONE ordered home
+recipe (owner-approved):
 
 1. **Primary CTA** — the single next safe action for this hub.
 2. **Live queue panel** — the hub's active work, live.
 3. **Curated job tiles** — the hub's next jobs, as tiles.
 
-The hubs differ only in which slots and data populate the recipe, never in the
+The recipe varies only in which slots and data populate it, never in the
 structure. Numbers appear as **badges on tiles / sections ONLY** — there are NO
 KPI / stat cards on operator surfaces (reaffirms the operator no-KPI rule: an
 operator home is job-first, not a dashboard). A hub that opens with a stat-card

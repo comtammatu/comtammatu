@@ -41,7 +41,7 @@
 | `owner`             | Chủ sở hữu        | `owner`              | Tenant-wide bypass (owner bypass trong `has_permission()`) + tenant-wide operations + procurement |
 | `branch_manager`    | Quản lý chi nhánh | `branch_manager`     | Branch của mình                                                                                   |
 | `warehouse_manager` | Quản lý Kho Tổng  | `warehouse_manager`  | Không còn site `central_supply` active; procurement duty theo grant, chờ owner sắp xếp lại role (D073 §1) |
-| `head_chef`         | Bếp trưởng        | `production_manager` | Bếp Trung Tâm (`central_kitchen`)                                                                 |
+| `head_chef`         | Bếp trưởng        | `production_manager` | Không có site `central_kitchen` active; production duty theo grant, chờ owner sắp xếp lại role (D073 §1) |
 
 > Position code dùng English `lower_snake_case` theo bộ canonical hiện hành. Tên hiển thị tiếng Việt đi qua `label_vi`.
 >
@@ -125,7 +125,7 @@ Edit template không tự propagate toàn cục. Khi sửa template, quyền c�
 
 Ghi chú D066 §7a (2026-07-04): position `production_manager` và
 `central_kitchen_manager` có template riêng mirror đúng bộ key của
-`head_chef`; grant cho role trung tâm (claims tenant-level, `branch_id`
+`head_chef`; grant cho role không gắn branch (claims tenant-level, `branch_id`
 NULL) được ghi thành row tenant-wide trong `staff_permissions` — cả
 `apply_template_to_user` lẫn `sync_missing_permissions_from_template` đã xử
 lý trường hợp này.
@@ -166,7 +166,7 @@ lý trường hợp này.
 - `branch_manager` không tạo transfer outbound ra site khác; họ nhận inbound về đúng branch, tạo transfer cùng chi nhánh `Kho CN -> Bếp CN`, và duyệt/apply tiêu hao.
 - `branch_manager` giữ `inventory:transfer_receive` chỉ để nhận inbound về đúng branch của mình.
 - Multi-branch oversight phải đi qua explicit branch grants hoặc tenant-level permission rõ ràng; không có scope trung gian.
-- `head_chef` / `production_manager` sở hữu vòng sản xuất Bếp Trung Tâm: nhận hàng, sản xuất, rồi create/ship transfer thật về Kho CN, và quản trị production recipes.
+- `head_chef` / `production_manager` giữ bộ key sản xuất theo template nhưng không có site trực riêng đang active; sản xuất hằng ngày chạy tại chi nhánh theo D068.
 - **D068 (2026-07-05):** `branch_manager` được nhận NCC trực tiếp (GRN) và chạy sản xuất **tại chi nhánh của mình** (own-branch) — grant `procurement:grn_create/grn_confirm/read/supplier_manage` + `inventory:production_create/production_confirm`, per-branch (không tenant-wide). Enforce own-branch cả app-layer (`isBranchScopedProcurementRole` / `isProductionBranchScopedRole`) lẫn RLS (`has_permission(branch_id, …)`). PO vẫn ĐÓNG với chi nhánh (`procurement:po_create` = ❌; PO actions gate `PROCUREMENT_PO_ROLES`). Chi tiết: `docs/plan/decisions.md` D068.
 
 ---

@@ -113,8 +113,7 @@ apps/web/app/
 │   ├── stock/              # Live stock levels by site (search + status filter)
 │   ├── suppliers/          # Supplier directory (canonical catalog entry)
 │   ├── supplier-invoices/  # Supplier invoice matching; AP payment is Finance handoff
-│   ├── supplier-returns/   # QC at receiving + post-receipt returns (list + new + [id])
-│   ├── purchase-orders/    # PO list + new + [id] detail
+│   ├── purchase-orders/    # Compatibility redirect shims to supplier-first GRN
 │   ├── operations/         # Stock operations hub (GRN + transfers + issues tabs)
 │   ├── grn/                # Goods received notes list + [id] detail, GRN confirm wired
 │   ├── transfers/          # Internal transfers list + [id] detail
@@ -185,7 +184,8 @@ Inventory không còn dùng sidebar kiểu liệt kê chứng từ phẳng. `inv
 Các nguyên tắc đang được code phản ánh:
 
 - `/inventory/operations` là hub giao dịch kho theo tab: GRN, điều chuyển nội bộ, phiếu xuất
-- `Production` chạy tại `central_kitchen` (`production_manager`) và tại chính chi nhánh (`branch_manager`, D068); `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày
+- Purchase orders và supplier returns không còn surface hằng ngày; GRN bắt đầu từ NCC, còn DB/RPC/history cũ vẫn được giữ theo D073
+- `Production` chạy tại chính chi nhánh (`branch_manager`, D068); guard vẫn admit `production_manager` theo grant; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày
 - `Consumption` là actual branch food cost; `/inventory/transfers?create=cap-bep` là compat redirect sang form transfer để cấp Bếp CN
 - `Ingredients / Suppliers / Định mức món bán` chỉ còn một cửa vào chính trong `Danh mục`
 
@@ -193,7 +193,7 @@ Các nguyên tắc đang được code phản ánh:
 
 Các detail pages của Inventory không còn chỉ là read-only shells:
 
-- `purchase-orders/[id]`: `draft` có thể gửi / hủy PO; `sent|partially_received` có thể tạo GRN từ PO
+- `purchase-orders/**`: chỉ còn compatibility redirect sang GRN supplier-first; không có PO mutation hoặc presenter
 - `grn/[id]`: có action chốt nhập kho (`confirmGrn`)
 - `transfers/[id]`: đã wire đủ state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`
 - `supplier-invoices`: có tạo hóa đơn NCC và tính lại đối soát; ghi nhận thanh toán là Finance/AP handoff, không phải action Inventory

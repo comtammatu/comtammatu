@@ -63,8 +63,8 @@ payroll is direct-support only, for reconciling/finalizing pay when needed.
 ```
 owner                          ← governance + tenant-wide oversight, vận hành + catalog NL, procurement
 ├── branch_manager             ← single branch command + operations
-├── warehouse_manager          ← Kho Tổng procurement + stock workflow
-├── production_manager         ← Bếp Trung Tâm production workflow
+├── warehouse_manager          ← procurement + stock workflow, grant-scoped
+├── production_manager         ← production workflow, grant-scoped
 ├── cashier                    ← POS (/br/[branchId]/pos)
 ├── chef                       ← KDS (/br/[branchId]/kds)
 └── office                     ← back-office staff, `/finance` entry, explicit action grants
@@ -193,11 +193,11 @@ back to the role's default destination instead of preserving the retired URL.
 `warehouse_manager`, `production_manager` for stock on hand, real transfers,
 consumption, stocktake, reports, and branch operations.
 `inventory_procurement` also allows those buckets so branch stock receiving and
-central-site procurement/production paths can share the workspace, but
+procurement/production paths can share the workspace, but
 PO/GRN/supplier/recipe actions remain narrowed by permission keys and RPC/RLS
 checks. `production` does not use its own module; the surface and order guards
-admit `production_manager` at the Central Kitchen (Bếp Trung Tâm) and
-`branch_manager` producing at their own branch (D068). `owner` has
+admit `branch_manager` producing at their own branch (D068), and still admit
+`production_manager` although no active site maps to that role. `owner` has
 inspection/emergency access but is not led through the UX as a daily operator.
 `branch_manager` also receives directly from suppliers for their own branch
 (own-branch PO/GRN, D068), so the branch-ops rhythm is: own-branch supplier

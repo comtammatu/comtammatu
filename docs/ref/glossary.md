@@ -466,10 +466,10 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `average_unit_cost`     | giá vốn bình quân                   | `stock_levels.avg_unit_cost`, tính theo đơn vị tồn chuẩn. UI ngắn được dùng `Giá vốn BQ`. | đơn giá nhập                          |
 | `movement_unit_cost`    | đơn giá ghi sổ                      | `stock_movements.unit_cost`, snapshot đơn giá dùng cho một movement; không gọi là WAC trên lịch sử movement. | giá vốn BQ hiện tại                   |
 | `raw_material`          | nguyên liệu                         | Item đầu vào.                                                           | vật tư nếu không phải ngữ cảnh rộng   |
-| `finished_good`         | thành phẩm                          | Hàng sản xuất tại Bếp Trung Tâm hoặc giữ tồn để cấp về chi nhánh.       | món bán nếu đang nói menu             |
+| `finished_good`         | thành phẩm                          | Hàng sản xuất tại chi nhánh hoặc giữ tồn sẵn tại chi nhánh.             | món bán nếu đang nói menu             |
 | `recipe`                | định mức (món bán)                  | Định mức nguyên liệu tiêu hao cho một món bán.                          | công thức (production)                                |
 | `production_recipe`     | công thức (sản xuất)                | Định mức nguyên liệu (BOM) để sản xuất ra thành phẩm.                   | định mức (POS)                                        |
-| `production_order`      | lệnh sản xuất                       | Lệnh sản xuất tại Bếp Trung Tâm hoặc tại chi nhánh; entity runtime là `production_runs`. | work order                            |
+| `production_order`      | lệnh sản xuất                       | Lệnh sản xuất tại chi nhánh; entity runtime là `production_runs`.       | work order                            |
 | `three_way_matching`    | đối soát 3 chứng từ                 | Đối chiếu `PO`, `GRN`, `supplier_invoice`.                              | matching chung                        |
 | `weighted_average_cost` | giá vốn bình quân gia quyền (`WAC`) | Costing chuẩn hiện tại.                                                 | FIFO nếu hệ thống không dùng          |
 

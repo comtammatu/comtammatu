@@ -1,7 +1,7 @@
 # Inventory Role Handoff — 1 Trang
 
 > Dùng cho training nhanh đội vận hành  
-> Mô hình vận hành: `Bếp Trung Tâm`, `chi nhánh`, `Kho CN`, `Bếp CN`, `tiêu hao`
+> Mô hình vận hành: `chi nhánh`, `Kho CN`, `Bếp CN`, `tiêu hao`
 
 ---
 
@@ -17,12 +17,11 @@ Tài liệu này là bản training 1 trang.
 
 ## 1. Luồng chuẩn
 
-1. Bếp Trung Tâm/chi nhánh nhập hàng từ nhà cung cấp bằng `PO` và `GRN`.
-2. Bếp Trung Tâm chuyển hàng còn tồn về Kho CN bằng `stock_transfer`.
-3. Bếp Trung Tâm hoặc chi nhánh tạo `production_run` để sản xuất thành phẩm.
-4. Chi nhánh nhận hàng vào Kho CN, cấp Bếp CN bằng `stock_transfer` cùng chi nhánh, rồi bán hàng.
-5. Quản lý chi nhánh duyệt/apply tiêu hao trong ngày khi hàng thật sự được xuất dùng.
-6. Cuối ngày các site/location kiểm kê và xử lý chênh lệch nếu có.
+1. Chi nhánh nhập hàng từ nhà cung cấp bằng `PO` và `GRN`.
+2. Chi nhánh tạo `production_run` để sản xuất thành phẩm.
+3. Chi nhánh nhận hàng vào Kho CN, cấp Bếp CN bằng `stock_transfer` cùng chi nhánh, rồi bán hàng.
+4. Quản lý chi nhánh duyệt/apply tiêu hao trong ngày khi hàng thật sự được xuất dùng.
+5. Cuối ngày các site/location kiểm kê và xử lý chênh lệch nếu có.
 
 ## 2. Thủ kho chi nhánh
 
@@ -33,11 +32,11 @@ Trong hệ thống hiện tại, vai trò này thường map vào `warehouse_man
 - Tạo `PO` cho nhà cung cấp.
 - Tạo và xác nhận `GRN` khi hàng tới tại site nhận.
 - Kiểm đúng số lượng, đơn giá, batch, hạn dùng.
-- Tạo transfer thật từ Bếp Trung Tâm/chi nhánh sang Kho CN.
+- Tạo transfer thật `chi nhánh -> chi nhánh` khi cần điều phối hàng.
 
 ### Không được làm
 
-- GRN chỉ được tạo tại site stock-bearing (`branch`, `central_supply`, `central_kitchen`).
+- GRN chỉ được tạo tại site stock-bearing (`branch`).
 - Không sửa tay tồn kho nếu lệch số.
 - Không ép mọi flow phải qua chi nhánh khác nếu hàng được nhập thẳng vào Kho CN.
 
@@ -49,15 +48,14 @@ Trong hệ thống hiện tại, vai trò này thường map vào `warehouse_man
 
 ## 3. Bếp trưởng / Quản lý chi nhánh
 
-Trong hệ thống hiện tại, flow này do `production_manager` tại Bếp Trung Tâm
-hoặc `branch_manager` tại chính chi nhánh mình thao tác.
+Trong hệ thống hiện tại, flow này do `branch_manager` tại chính chi nhánh mình
+thao tác (D068); guard vẫn admit `production_manager` theo grant.
 
 ### Việc phải làm
 
-- Xác nhận nguyên liệu tại site sản xuất (Bếp Trung Tâm hoặc chi nhánh).
+- Xác nhận nguyên liệu tại chi nhánh sản xuất.
 - Tạo `production_run` đúng thành phẩm và đúng số lượng.
 - Chỉ confirm sản xuất khi BOM đầy đủ và nguyên liệu đủ.
-- Với sản xuất tại Bếp Trung Tâm: tạo transfer thành phẩm về Kho CN.
 
 ### Không được làm
 
@@ -119,7 +117,7 @@ Trong hệ thống hiện tại, phần AP/reporting có thể đi qua `owner` h
 | Sự cố                  | Hành động đúng                                                                                                                                                                                     |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | NCC giao thiếu         | Ghi đúng thực nhận trên `GRN`                                                                                                                                                                      |
-| Bếp thiếu nguyên liệu  | Tạo transfer cùng chi nhánh Kho CN -> Bếp CN; chỉ ghi tiêu hao (`consumption`) khi nguyên liệu đã thật sự xuất dùng; nếu Kho CN hết thì kéo transfer thật từ Bếp Trung Tâm/chi nhánh khác |
+| Bếp thiếu nguyên liệu  | Tạo transfer cùng chi nhánh Kho CN -> Bếp CN; chỉ ghi tiêu hao (`consumption`) khi nguyên liệu đã thật sự xuất dùng; nếu Kho CN hết thì kéo transfer thật từ chi nhánh khác |
 | Chi nhánh cần hàng gấp | Có thể nhận trực tiếp từ chi nhánh khác tùy loại hàng và vận hành thực tế                                                                                                                          |
 | Thiếu BOM              | Dừng confirm sản xuất, cập nhật BOM trước                                                                                                                                                          |
 | Chi nhánh nhận thiếu   | Xác nhận theo thực nhận và ghi chú chênh lệch                                                                                                                                                      |

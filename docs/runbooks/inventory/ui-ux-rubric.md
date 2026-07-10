@@ -22,14 +22,14 @@ Live route map (mọi route nằm dưới `apps/web/app/(protected)/inventory/*`
 
 - Tổng quan / điều hướng: `/inventory`, `/inventory/dashboard`, `/inventory/stock`, `/inventory/reports`, `/inventory/settings` (+ `qc`, `thresholds`).
 - Danh mục: `/inventory/ingredients`, `/inventory/recipes`.
-- Nhập hàng (procurement intake): `/inventory/operations`, `/inventory/suppliers`, `/inventory/purchase-orders` (+ `new`, `[id]`), `/inventory/grn` (+ `new`, `[id]`), `/inventory/supplier-invoices`, `/inventory/supplier-returns` (+ `new`, `[id]`), `/inventory/drafts`.
+- Nhập hàng (procurement intake): `/inventory/operations`, `/inventory/suppliers`, `/inventory/grn` (+ `new`, `[id]`), `/inventory/supplier-invoices`, `/inventory/drafts`. PO và supplier returns không còn daily UI theo D073.
 - Điều chuyển: `/inventory/transfers` (+ `[id]`, `[id]/receive`) — chỉ phiếu hàng vẫn còn tồn tại site nhận.
 - Tiêu hao: `/inventory/consumption` (+ `[id]`) — ghi nhận nguyên liệu chi nhánh đã dùng trong ngày sau khi quản lý duyệt/apply.
 - Sản xuất: `/inventory/production`.
 - Kiểm kê: `/inventory/stocktake` (+ `new`, `[id]`, `[id]/count`).
 - Hao hụt / sự cố: `/inventory/waste` (+ `new`, `approvals`), `/inventory/issues` (+ `[id]`).
 
-Các trang detail (`grn/[id]`, `purchase-orders/[id]`, `transfers/[id]`, …) 404 khi id sai là guard hợp lệ, KHÔNG tính là fail.
+Các trang detail (`grn/[id]`, `transfers/[id]`, …) 404 khi id sai là guard hợp lệ, KHÔNG tính là fail.
 
 Boundary:
 
@@ -102,10 +102,10 @@ Evidence cần chụp:
 
 Pass signals:
 
-- Hub nhập hàng (`/inventory/operations`) rõ là nơi nhập hàng của chi nhánh (PO/GRN/HĐ NCC theo chi nhánh đang chọn).
+- Hub nhập hàng (`/inventory/operations`) rõ là nơi xử lý GRN/HĐ NCC theo chi nhánh đang chọn; GRN supplier-first và không còn cửa PO.
 - `Tiêu hao` được hiểu là actual food cost/consumption của chi nhánh, không phải transfer.
 - Điều chuyển thật (5 bước: nháp → xuất kho → vận chuyển → kiểm nhận → đã nhận) tách bạch rõ với tiêu hao.
-- `Production` lộ đúng vai trò và site: `production_manager` tại Bếp Trung Tâm, `branch_manager` own-branch tại chi nhánh (D068).
+- `Production` lộ đúng vai trò và site: `branch_manager` own-branch tại chi nhánh (D068).
 - `Danh mục` không trùng entry với `Settings`.
 
 Fail patterns:

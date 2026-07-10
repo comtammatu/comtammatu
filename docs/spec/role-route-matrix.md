@@ -78,8 +78,8 @@ does not fully encode and stays hand-authored.
 | ---------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
 | `owner`                | Tenant governance, branch network, permission grants, finance/reports, emergency oversight in domains     | Daily floor operator by default    |
 | `branch_manager`       | One branch: POS/KDS/floor settings, branch day flow, branch inventory tasks, branch staff approvals       | Partial Admin user                 |
-| `warehouse_manager`    | Kho Tổng receiving, stock, transfers, procurement tasks according to grants                                | Tenant admin                       |
-| `production_manager`   | Bếp Trung Tâm production and related stock movement according to grants                                    | Tenant admin                       |
+| `warehouse_manager`    | Receiving, stock, transfers, procurement tasks according to grants                                         | Tenant admin                       |
+| `production_manager`   | Production and related stock movement according to grants; no active site maps to this role                | Tenant admin                       |
 | `cashier`              | POS orders, payments, receipts according to grants                                                         | Branch settings owner              |
 | `chef`                 | KDS ready/recall and kitchen status according to grants                                                    | Inventory production manager       |
 | `office`               | Back-office tasks explicitly granted, read access to `/finance` (D058 §3)                                  | Tenant admin by label alone        |
@@ -186,7 +186,7 @@ Device-aware split and central-site soft-routing per D050/D055.
 | ---- | ------------------------- | ------------------------ | ----- |
 | Chủ sở hữu (`owner`) | /finance (Office plane) | /br (Operator plane branch picker, >1 branch) or /br/{branchId} directly | Device-aware split (D050 §5): desktop/office context -> Office; phone -> Operator. Owner may also open any active branch POS/KDS/Runner to cover a shift. |
 | Quản lý chi nhánh (`branch_manager`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, non-office, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
-| Quản lý Kho Tổng (`warehouse_manager`) | Blocked at the branch-scoped operator home with branch-scope-mismatch | Blocked the same way | D055 soft-routing: JWT branch_id stays null; Branch Hub resolves homeBranchId by matching branches.branch_kind="central_supply". No active branch carries that kind, so resolution fails and the branch-scoped operator home blocks with branch-scope-mismatch. |
+| Quản lý Kho Tổng (`warehouse_manager`) | /br/{central-site-id} (home branch resolved server-side to the active central_supply site) | /br/{central-site-id} (same central site) | D055 soft-routing: JWT branch_id stays null; Branch Hub resolves homeBranchId by matching branches.branch_kind="central_supply". If unresolved, branch-scoped operator home blocks with branch-scope-mismatch. |
 | Quản lý Bếp Trung Tâm (`production_manager`) | /br/{central-site-id} (home branch resolved server-side to the active central_kitchen site) | /br/{central-site-id} (same central site) | D055 soft-routing: JWT branch_id stays null; Branch Hub resolves homeBranchId by matching branches.branch_kind="central_kitchen". If unresolved, branch-scoped operator home blocks with branch-scope-mismatch. |
 | Thu ngân (`cashier`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, non-office, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
 | Bếp (`chef`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, non-office, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
@@ -251,9 +251,10 @@ per-device by the Branch Hub (`scope.ts`/`branch-hub.ts`) — see the generated
 "Post-Login Home By Role" table above for the exact current destination.
 Owner lands in Tenant Command on desktop and the Operator plane on phone
 (D050 §5); branch-pinned roles (`branch_manager`, `cashier`, `chef`) land
-directly in their branch's Operator hub (`/br/{branchId}`); central-site
-roles (`warehouse_manager`, `production_manager`) land in their central site
-via soft-routing (D055); `office` stays on `/finance`. Branch Command stays
+directly in their branch's Operator hub (`/br/{branchId}`);
+`warehouse_manager` / `production_manager` resolve a home via D055
+soft-routing — with no active central site, the branch-scoped operator home
+blocks with branch-scope-mismatch; `office` stays on `/finance`. Branch Command stays
 available as a branch-scoped management
 surface from the Operator hub or direct links, not as a new top-level hub.
 

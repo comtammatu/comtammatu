@@ -1,8 +1,8 @@
-# SOP Inventory — Bếp Trung Tâm / Kho Chi Nhánh / Tiêu hao
+# SOP Inventory — Kho Chi Nhánh / Bếp Chi Nhánh / Tiêu hao
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
 > Phạm vi: luồng vận hành Inventory hiện tại cho nguyên liệu, thành phẩm, điều chuyển tồn thật, và tiêu hao chi nhánh.
-> Mô hình: `branches` là site table, với `branch_kind = branch | central_supply | central_kitchen`.
+> Mô hình: `branches` là site table; site active có `branch_kind = 'branch'` (`central_supply`, `central_kitchen` là giá trị enum lịch sử, không có site active).
 
 ---
 
@@ -17,17 +17,16 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 
 ## 1. Mục tiêu
 
-- Bếp Trung Tâm giữ đồ tươi/sản xuất trong ngày như thịt, đồ chua, thành phẩm sơ chế.
 - Chi nhánh giữ tồn vận hành tại Kho CN và Bếp CN.
+- Chi nhánh tự sản xuất thành phẩm trong ngày bằng `production_runs` (D068).
 - Chuyển Kho CN -> Bếp CN là luân chuyển nội bộ cùng chi nhánh; xuất/tiêu hao sau đó mới giảm tồn chi nhánh.
 - Mọi bước đều có chứng từ rõ: PO/GRN, stock transfer thật, production order, consumption report, stocktake/adjustment.
 
 ## 2. Site và location
 
-| Site          | `branch_kind`     | Stock-bearing location                   | Vai trò                                                       |
-| ------------- | ----------------- | ---------------------------------------- | ------------------------------------------------------------- |
-| Chi nhánh     | `branch`          | `warehouse` = Kho CN; `kitchen` = Bếp CN | Nhận hàng, giữ tồn chi nhánh, kiểm kê, cấp bếp, xuất tiêu hao |
-| Bếp Trung Tâm | `central_kitchen` | `warehouse` hoặc `production_storage`    | Nhập đồ tươi, sản xuất trong ngày, cấp chi nhánh              |
+| Site      | `branch_kind` | Stock-bearing location                   | Vai trò                                                                  |
+| --------- | ------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
+| Chi nhánh | `branch`      | `warehouse` = Kho CN; `kitchen` = Bếp CN | Nhận hàng, giữ tồn chi nhánh, sản xuất, kiểm kê, cấp bếp, xuất tiêu hao |
 
 `location_kind = 'kitchen'` tại `branch` là stock-bearing Bếp CN và được cộng vào tồn vận hành của chi nhánh.
 
@@ -35,12 +34,10 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 
 | Bước                                | Chứng từ / thao tác hệ thống    | Kết quả kho                                                     |
 | ----------------------------------- | ------------------------------- | --------------------------------------------------------------- |
-| NCC giao Bếp Trung Tâm              | `PO`, `GRN`                     | Tăng tồn Bếp Trung Tâm                                          |
 | NCC giao chi nhánh                  | `PO`, `GRN`                     | Tăng tồn Kho CN hoặc Bếp CN theo nơi nhập đã chọn               |
-| Bếp Trung Tâm cấp chi nhánh         | `stock_transfer`                | Bếp Trung Tâm giảm, Kho CN tăng                                 |
 | Chi nhánh chuyển chi nhánh          | `stock_transfer`                | Chi nhánh gửi giảm, chi nhánh nhận tăng                         |
 | Kho CN cấp Bếp CN                   | `stock_transfer` cùng chi nhánh | Kho CN giảm, Bếp CN tăng; tổng tồn chi nhánh không giảm         |
-| Bếp Trung Tâm sản xuất              | `production_runs`               | Nguyên liệu giảm, thành phẩm tăng                               |
+| Chi nhánh sản xuất                  | `production_runs`               | Nguyên liệu giảm, thành phẩm tăng                               |
 | Chi nhánh dùng nguyên liệu bán hàng | consumption report duyệt/apply  | Kho CN giảm bằng `stock_movements.consumption/sale_consumption` |
 | Kiểm kê                             | `stocktake` / `adjustment`      | Điều chỉnh về tồn thực tế                                       |
 
@@ -50,7 +47,7 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 
 ### 4.1 Nhập NCC
 
-1. Tạo `PO` gắn với site nhận hàng: chi nhánh hoặc Bếp Trung Tâm.
+1. Tạo `PO` gắn với chi nhánh nhận hàng.
 2. Khi hàng tới, tạo `GRN` tại stock-bearing location của site đó.
 3. Kiểm số lượng, đơn giá, nhiệt độ nếu cần.
 4. Xác nhận `GRN` để cộng tồn và cập nhật WAC.
@@ -60,7 +57,7 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 
 Hướng hợp lệ:
 
-- Bếp Trung Tâm -> Kho CN.
+- Cùng chi nhánh: Kho CN -> Bếp CN.
 - Kho CN -> Kho CN của chi nhánh khác.
 
 Luồng dùng state machine 5 bước: `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`.
@@ -71,9 +68,9 @@ Luồng dùng state machine 5 bước: `draft -> confirmed_ship -> in_transit ->
 - Không dùng transfer để ghi tiêu hao chi nhánh.
 - Nếu nhận thiếu, nhập số thực nhận và ghi lý do.
 
-### 4.3 Sản xuất tại Bếp Trung Tâm / Bếp Chi Nhánh
+### 4.3 Sản xuất tại chi nhánh
 
-1. Bếp Trung Tâm hoặc chi nhánh tạo `production_order`.
+1. Chi nhánh tạo `production_order`.
 2. Chọn thành phẩm `finished_good` và số lượng cần sản xuất.
 3. Hệ thống kiểm tra BOM (`production_recipes`) và tồn nguyên liệu.
 4. Xác nhận lệnh sản xuất.
@@ -84,7 +81,7 @@ Luồng dùng state machine 5 bước: `draft -> confirmed_ship -> in_transit ->
 
 Điểm kiểm soát:
 
-- New production order tạo cho `central_kitchen` hoặc `branch` có Bếp CN stock-bearing.
+- New production order tạo cho chi nhánh (`branch`) có Bếp CN stock-bearing.
 - Nếu thiếu nguyên liệu hoặc thiếu BOM, không xác nhận lệnh.
 
 ### 4.4 Tiêu hao chi nhánh
@@ -129,15 +126,9 @@ Luồng dùng state machine 5 bước: `draft -> confirmed_ship -> in_transit ->
 
 ## 6. Checklist cuối ngày
 
-### Bếp Trung Tâm
-
-- GRN đồ tươi trong ngày đã confirm.
+- GRN trong ngày đã confirm.
 - Lệnh sản xuất (`production_runs`) trong ngày đã `completed` hoặc `cancelled`.
-- Transfer thành phẩm/nguyên liệu về chi nhánh không treo quá SLA.
-
-### Chi nhánh
-
-- Đã nhận đủ transfer trong ngày.
+- Đã nhận đủ transfer trong ngày; không có phiếu treo quá SLA.
 - Báo cáo tiêu hao đã được quản lý duyệt/apply.
 - POS đã chốt order đầy đủ.
 - Stocktake trọng yếu đã hoàn tất nếu có biến động mạnh.

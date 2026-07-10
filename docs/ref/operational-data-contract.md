@@ -148,7 +148,7 @@ trạng thái tồn thật. Analytics phụ trợ không được che mất côn
 
 | `contract_key`                       | Nhãn UI                   | Nghĩa chuẩn                                                          | Source/rule                                                                                           |
 | ------------------------------------ | ------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `inventory.stock_value.current`      | Giá trị tồn kho           | Snapshot tiền đang nằm trong tồn kho vận hành.                       | `stock_levels` ở stock-bearing locations: Kho CN, Bếp CN, Bếp Trung Tâm.                    |
+| `inventory.stock_value.current`      | Giá trị tồn kho           | Snapshot tiền đang nằm trong tồn kho vận hành.                       | `stock_levels` ở stock-bearing locations: Kho CN, Bếp CN.                                   |
 | `inventory.stock_quantity.current`   | Tồn hiện tại              | Số lượng hiện có theo đơn vị tồn chuẩn tại stock-bearing locations. | `stock_levels.current_quantity`; `branch/kitchen` là tồn chi nhánh, không bị loại khỏi tổng vận hành. |
 | `inventory.alert.low_stock`          | Sắp hết hàng              | Nguyên liệu dưới reorder/min threshold.                              | Stock level so với điểm đặt hàng.                                                                     |
 | `inventory.alert.negative_stock`     | Âm kho                    | Tồn nhỏ hơn 0, cần xử lý dữ liệu.                                    | Stock level hiện tại.                                                                                 |

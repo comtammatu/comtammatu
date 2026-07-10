@@ -4,7 +4,7 @@
 >
 > Boundary hiện tại:
 >
-> - `Bếp Trung Tâm` là central site stock-bearing duy nhất trên bảng `branches`.
+> - `branch` là site kind duy nhất đang active trên bảng `branches`.
 > - `Kho chi nhánh` là stock-bearing location của chi nhánh.
 > - `Bếp chi nhánh` (`branch` + `kitchen`) cũng là stock-bearing location; tiêu hao ghi nhận tại đây.
 
@@ -15,23 +15,22 @@
 ```mermaid
 flowchart LR
     SUP["Nhà cung cấp"]
-    CK["Bếp Trung Tâm"]
     BW["Kho chi nhánh"]
+    BK["Bếp chi nhánh"]
     CONS["Tiêu hao chi nhánh"]
     POS["POS / Bán hàng"]
     CTRL["Kiểm soát: stocktake / alerts / reports"]
 
-    SUP -->|"PO -> GRN"| CK
     SUP -->|"PO -> GRN"| BW
 
-    CK -->|"Production Run"| CK
-    CK -->|"Transfer thật"| BW
+    BW -->|"Transfer cùng chi nhánh"| BK
+    BK -->|"Production Run"| BK
 
-    BW -->|"Approved consumption"| CONS
+    BK -->|"Approved consumption"| CONS
     CONS -->|"Food cost thực tế"| POS
 
-    CK --- CTRL
     BW --- CTRL
+    BK --- CTRL
     CONS --- CTRL
 ```
 
@@ -41,27 +40,19 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    subgraph central["Trung tâm"]
-        H1["Tạo PO"]
-        H2["Nhận hàng + GRN"]
-        H3["Cập nhật WAC + tồn trung tâm"]
-        H4{"Đi hàng theo hướng nào?"}
-        H5["Production tại Bếp Trung Tâm"]
-        H6["Transfer trung tâm -> Kho chi nhánh"]
-    end
-
     subgraph BR["Chi nhánh"]
-        B1["Kho chi nhánh nhận hàng"]
-        B2["Bán hàng"]
-        B3["Submit consumption report"]
-        B4["Approve/apply consumption"]
-        B5["Stocktake / adjustment / write-off"]
+        B1["Tạo PO"]
+        B2["Nhận hàng + GRN"]
+        B3["Cập nhật WAC + tồn chi nhánh"]
+        B4["Cấp Bếp CN bằng transfer cùng chi nhánh"]
+        B5["Production run tại chi nhánh khi cần"]
+        B6["Bán hàng"]
+        B7["Submit consumption report"]
+        B8["Approve/apply consumption"]
+        B9["Stocktake / adjustment / write-off"]
     end
 
-    H1 --> H2 --> H3 --> H4
-    H4 -->|"Sản xuất"| H5 --> H6 --> B1
-    H4 -->|"Cấp thẳng chi nhánh"| H6 --> B1
-    B1 --> B2 --> B3 --> B4 --> B5
+    B1 --> B2 --> B3 --> B4 --> B5 --> B6 --> B7 --> B8 --> B9
 ```
 
 ---
@@ -142,7 +133,7 @@ flowchart LR
 ## 5. Cách Dùng
 
 - Dùng sơ đồ `Executive Overview` khi cần giải thích flow business cho stakeholder.
-- Dùng sơ đồ `Ops SOP Swimlane` khi training vận hành tenant, chi nhánh, và chi nhánh.
+- Dùng sơ đồ `Ops SOP Swimlane` khi training vận hành tenant và chi nhánh.
 - Dùng sơ đồ `System/Data Architecture` khi review tác động code, migrations, hoặc reporting.
 - Dùng sơ đồ `Branch Boundary` để nhắc rằng `Kho chi nhánh` và `Bếp chi nhánh` hiện chưa tách thành node dữ liệu riêng.
 

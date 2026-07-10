@@ -84,14 +84,13 @@ export default async function XPage({ searchParams }: { searchParams?: ... }) {
   the client component's props, and renders the client.
 - The thin `default export` forwards `searchParams` and nothing else — no
   extra logic lives in the default export.
-- `routeBranchId` / `basePath` / `embedded` are optional props that exist so a
-  Branch runtime chrome page can re-mount the same canonical `PageContent`
-  instead of forking a second implementation. This is what makes the
-  EMBED-WRAPPER archetype possible (§ 3) and is already live convention across
-  inventory and staff-runtime screens — this file promotes it to law.
-- Exemplars: `apps/web/app/(protected)/inventory/purchase-orders/page.tsx`
-  (`PurchaseOrdersPageContent`), `apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx`
-  (`PODetailPageContent`), `apps/web/app/(protected)/inventory/transfers/new/page.tsx`,
+- `routeBranchId` / `basePath` / `embedded` are optional only where a Branch
+  route deliberately re-mounts a shared staff-runtime `PageContent`. They do
+  not authorize a Branch management workflow to reuse an Office presenter;
+  those routes share loaders/models/actions and own a touch-native composition.
+- Exemplars: `apps/web/app/(protected)/inventory/grn/page.tsx`,
+  `apps/web/app/(protected)/inventory/grn/[id]/page.tsx`,
+  `apps/web/app/(protected)/inventory/transfers/new/page.tsx`,
   `apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx`
   (`ClockPageContent` from `apps/web/lib/staff-runtime/clock/page.tsx`).
 
@@ -144,8 +143,8 @@ rather than staying a near-empty category.
 
 ### LIST
 
-**Exemplar:** `apps/web/app/(protected)/inventory/purchase-orders/page.tsx` +
-`purchase-orders-client.tsx`.
+**Exemplar:** `apps/web/app/(protected)/inventory/grn/page.tsx` +
+`grn-list-client.tsx`.
 
 - Skeleton: `AppPage width="xwide"` → `AppPageHeader` (eyebrow = module name,
   `actions` = primary create CTA) → `AppToolbar` (search + status-count filter
@@ -167,7 +166,7 @@ rather than staying a near-empty category.
 
 ### EMBED-WRAPPER
 
-**Exemplar:** `apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/page.tsx`.
+**Exemplar:** `apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx`.
 
 This is the repo's second-largest archetype (32 of the 135 pages) and its
 hard rules are stricter than the other archetypes because its only job is
@@ -219,8 +218,7 @@ component — the same branch benefits both planes, and the office plane
   `InventoryPageContent`) — the operator layout's own `AppPage
 density="compact"` already owns width/padding. Return a bare flex
   container (`<div className="flex w-full flex-col gap-3">{content}</div>`)
-  per the `purchase-orders-client.tsx` exemplar (§ EMBED-WRAPPER exemplar's
-  wrapped `PageContent`).
+  in the shared `PageContent`'s explicit `embedded` return path.
 - **R3 — Touch-sized primary actions on the operator plane.** Primary action
   buttons (create/receive/submit CTAs a thumb must hit reliably) use
   `size="touch"` when `embedded`, not the office-density `size="sm"` /
@@ -251,8 +249,8 @@ density="compact"` already owns width/padding. Return a bare flex
 
 ### DETAIL
 
-**Exemplar:** `apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx` +
-`po-detail-client.tsx`.
+**Exemplar:** `apps/web/app/(protected)/inventory/grn/[id]/page.tsx` +
+`grn-detail-client.tsx`.
 
 - `PageContent` takes a numeric/string id, calls `notFound()` on a miss or a
   branch-scope mismatch, and fetches `fetchEntityAuditLogs(entity, id)` for
@@ -435,110 +433,102 @@ allowlist, not a precedent for stretching another archetype's definition:
 8. `apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx` — a LIST
    living inside the printers SETTINGS-PANEL family with an added `KpiRow`
    summary. Classified **LIST**.
-9. `apps/web/app/(protected)/inventory/count-slips/page.tsx` — manager review
-   queue for submitted count slips. A per-slip approve / request-recount card
-   with a nested line-variance `ItemGroup` and an inline review-note field; the
-   decision surface is the card body, not a row. A `DataTable` cannot carry the
-   nested lines + per-card actions, so the card/`ItemGroup` layout is correct.
-   Classified **LIST** (queue variant); exempt from the LIST `DataTable` /
-   `width="xwide"` gate.
-10. `apps/web/app/(protected)/inventory/count-assignments/page.tsx` —
-    per-employee ingredient-assignment editor (checkbox selection grouped by
-    employee inside `AppSection`s), not a browsable collection of records. It
-    edits a mapping, not a row list, so it has no tabular shape. Classified
-    **LIST** (assignment variant); exempt from the LIST `DataTable` /
-    `width="xwide"` gate.
-11. `apps/web/app/(protected)/inventory/waste/approvals/page.tsx` — 4-eye waste
+9. `apps/web/app/(protected)/inventory/waste/approvals/page.tsx` — 4-eye waste
     approval queue. A per-issue approve / reject card with a nested waste-line
     `ItemGroup`, tier badges, photo links, and an inline review-note field; the
     decision surface is the card, not a row. Classified **LIST** (queue
     variant); exempt from the LIST `DataTable` / `width="xwide"` gate.
-12. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx`
+10. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx`
     — Branch-runtime transfer queue. It uses `BranchOperatorPage`,
     `BranchOperatorPanel`, and full-row `Item` links because the supported
     phone/tablet runtime must keep one touch information architecture in both
     orientations. Classified **LIST** (Branch touch variant); the Office
     transfer route remains the canonical desktop `DataTable` LIST.
-13. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx`
+11. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx`
     — Branch-runtime on-hand lookup. It shares the stock loader and pure filter
     model with Office but owns a full-row touch list that never changes into a
     desktop table at tablet landscape widths. Classified **LIST** (Branch touch
     variant); the Office stock route retains its responsive management LIST.
-14. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx`
+12. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx`
     — Branch-runtime GRN queue. It shares the GRN list loader and pure filter
     model with Office but orders the operator's drafts before the touch queue,
     keeps delete as an explicit confirmed action, and never changes into the
     Office table at tablet landscape widths. Classified **LIST** (Branch touch
     variant); Office retains the management `DataTable` LIST.
-15. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx`
+13. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx`
     — Branch-runtime GRN source selection. It shares the source loader and
-    pure supplier model with Office, but presents suppliers and open POs as
-    full-row touch actions and canonicalizes supplier selection into the
-    Branch route. Classified **LIST** (Branch touch source variant); the
+    pure supplier model with Office, but presents suppliers as full-row touch
+    actions and canonicalizes supplier selection into the Branch route.
+    Purchase orders are retired from daily use; GRN is supplier-first.
+    Classified **LIST** (Branch touch source variant); the
     document-line form remains a separate workflow stage.
-16. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx`
+14. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx`
     — Branch-runtime GRN receipt entry. It shares the create loader, draft
     controller, line-editor primitive, and mutation authority with Office, but
     owns a fixed-branch touch workflow with progressive line editing and a
     sticky action footer. Classified **DOC-WORKFLOW** (Branch touch variant);
     it never imports the Office page/client, `DocumentFormFrame`, desktop edit
     panel, or cross-branch picker.
-17. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx`
+15. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx`
     — Branch-runtime GRN review and receipt. It shares the detail loader,
     model, action hooks, and mutations with Office, but owns draft line review
     through touch sheets and renders confirmed documents as a read-only receipt.
     Audit history, post-confirm correction, stock correction, invoice linkage,
     and the Office `GRNDetailClient` remain outside the Branch route. Classified
     **DETAIL** (Branch touch variant).
-18. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/page.tsx`
+16. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/page.tsx`
     — Branch-runtime ingredient lookup. It shares the scoped detail loader and
     pure stock movement/status model with Office, but loads no valuation and
     owns a touch detail composition for current stock, locations, recent
     movements, thresholds, and route-scoped actions. The Office management
     detail retains WAC/value, dense desktop controls, and its own presentation.
     Classified **DETAIL** (Branch touch variant).
-19. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx`
-    — Central Kitchen production work queue. It uses the Branch operator shell,
-    status strip, full-row run links, one create action, and a route-local recipe
-    entry. It never switches to an Office table/card mosaic at tablet widths.
-    Classified **HUB** (Kitchen Workbench variant).
-20. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx`
+17. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx`
+    — Branch production work queue. It uses the Branch operator shell,
+    status strip, full-row run links, and one create action. It never switches
+    to an Office table/card mosaic at tablet widths.
+    Classified **HUB** (Branch touch variant).
+18. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx`
     and `/stock/production/[id]/page.tsx` — Branch-native production create and
     detail workflows. They share loaders, unit models, recipe-context reads, and
     Server Actions with Office while owning their `BranchOperator*` presentation,
     touch ingredient rows, tablet-landscape two-panel layout, and sticky actions.
-    Central Kitchen production output remains at the route's own inventory
-    location; dispatch to a Branch is owned exclusively by `/stock/transfer/new`.
+    Production output remains at the branch's own inventory location.
     Classified **DOC-WORKFLOW** and **DETAIL** respectively; neither imports the
     Office `ProductionNewClient`, `ProductionDetailClient`, or `DataTable`.
-21. `/stock/production/recipes`, `/stock/production/recipes/new`, and
-    `/stock/production/recipes/[finishedGoodId]` — Branch-native recipe list and
-    route-addressable editors. Phone editing uses a bottom sheet; tablet editing
-    moves the same sheet content into a right panel. The Office
-    `ProductionRecipePanel`, wide `FormDialog`, and recipe `DataTable` remain
-    outside the Branch plane. Classified **LIST** plus **DOC-WORKFLOW** editors.
-22. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx`
+19. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx`
     — Branch-runtime waste entry. It preserves the scoped location, tier,
     evidence, rolling-meter, and submit authority but owns a compact touch
     document workflow: line summaries in `ItemGroup`, one line editor at a time
     in a bottom sheet, and a sticky action footer. Office retains its desktop
     `WasteCreateClient`; neither plane imports the other's presenter. Classified
     **DOC-WORKFLOW** (Branch touch variant).
-23. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx`
-    — Branch-native transfer document. For a Central Kitchen route it becomes
-    `Xuất thành phẩm`: the source prefers `production_storage` and falls back to
-    the site's existing `warehouse` until a physical finished-goods location is
-    provisioned; only `finished_good` items are selectable, and destinations are
-    active Branch kitchens. It retains touch rows, a tablet two-panel
-    composition, and sticky actions without importing an Office transfer form. Classified
-    **DOC-WORKFLOW** (Kitchen dispatch variant).
-24. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx`
+20. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx`
+    — Branch-native transfer document. It retains touch rows, a tablet
+    two-panel composition, and sticky actions without importing an Office
+    transfer form. Classified **DOC-WORKFLOW** (Branch touch variant).
+21. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx`
     — Branch-runtime waste approval queue. It locks review to the route branch,
     presents one touch row per pending issue, and opens evidence, lines, review
     note, and approve/reject actions in a bottom sheet. Self-created rows remain
     readable but cannot mutate; the existing approval action remains the
     authority. Office retains its desktop `WasteApprovalsClient`; neither plane
     imports the other's presenter. Classified **LIST** (Branch review variant).
+22. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx`
+    and `/stock/consumption/[id]` — Branch-native recorded-consumption list and
+    typed detail. The list separates posted ledger consumption from manual
+    documents, keeps source/status language explicit, and uses full-row touch
+    navigation. Neither route imports the Office list/detail presenter.
+    Classified **LIST** and **DETAIL** respectively.
+23. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx`
+    and `/stock/count-slips` — Branch-native manager assignment and review
+    queues. Rows remain touch actions at phone and tablet widths; slip review
+    and approve/request-recount actions live in a bottom sheet with a sticky
+    decision footer. Classified **LIST** (assignment/review variants).
+24. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx`
+    — fixed-branch leave review queue with status tabs, full-row touch items,
+    and approve/reject in a bottom sheet. Office retains its desktop HR table.
+    Classified **LIST** (Branch review variant).
 
 ## 5. Agent Lookup Flow
 
