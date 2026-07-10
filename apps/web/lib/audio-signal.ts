@@ -5,7 +5,9 @@ export type SignalTone =
   | "kds-new"
   | "kds-append"
   | "kds-add-on"
-  | "pos";
+  | "pos"
+  | "pos-self-order"
+  | "pos-payment-call";
 type AudioContextConstructor = new () => AudioContext;
 type AudioWindow = Window &
   typeof globalThis & {
@@ -55,11 +57,28 @@ export const APP_SIGNAL_PATTERNS: Record<SignalTone, SignalPattern> = {
     pulseDurationSeconds: 0.28,
     oscillatorType: "square",
   },
+  // POS order/sync/print: mid rising pair — baseline cashier ping.
   pos: {
     frequencies: [660, 880, 1046],
     pulses: 2,
     pulseGapSeconds: 0.18,
     pulseDurationSeconds: 0.42,
+    oscillatorType: "square",
+  },
+  // QR self-order pending approval: brighter triple chirp, not the POS pair.
+  "pos-self-order": {
+    frequencies: [784, 988, 1175],
+    pulses: 3,
+    pulseGapSeconds: 0.09,
+    pulseDurationSeconds: 0.2,
+    oscillatorType: "square",
+  },
+  // Guest payment call (cash / VietQR): insistent alternating ding.
+  "pos-payment-call": {
+    frequencies: [1046, 784, 1046],
+    pulses: 4,
+    pulseGapSeconds: 0.07,
+    pulseDurationSeconds: 0.16,
     oscillatorType: "square",
   },
 };

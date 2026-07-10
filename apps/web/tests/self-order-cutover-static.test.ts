@@ -106,7 +106,9 @@ test("S5 routes pending QR requests through the table and bill surfaces", () => 
   assert.match(tables, /variant="warning"/);
 
   assert.match(desktop, /fetchSelfOrderPosState/);
-  assert.match(desktop, /playAppSignal\("pos"\)/);
+  assert.match(desktop, /playAppSignal\("pos-self-order"\)/);
+  assert.match(desktop, /playAppSignal\("pos-payment-call"\)/);
+  assert.match(desktop, /knownSelfOrderPaymentRequestIdsRef/);
   assert.match(desktop, /5_000/);
   assert.match(desktop, /pendingSelfOrderRequestByTable\.get/);
   assert.match(desktop, /fixed right-3 bottom-20 z-40 lg:bottom-4/);

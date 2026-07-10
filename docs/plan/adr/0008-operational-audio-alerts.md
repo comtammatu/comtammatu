@@ -9,7 +9,7 @@ POS and KDS already ship device-local sound alerts:
 
 - Runtime beep engine: `apps/web/lib/audio-signal.ts` (`playAppSignal`, `SignalTone`)
 - KDS taxonomy: `kds-new` / `kds-append` / `kds-add-on` in `apps/web/app/(protected)/br/[branchId]/kds/_lib/sound-alerts.ts`
-- POS uses a single `pos` tone for self-order, stock, and print-failure attention
+- POS baseline tone `pos` for order sync / stock / print-failure; QR guest events use dedicated `pos-self-order` and `pos-payment-call`
 - Prefs are device-local via `apps/web/lib/device-prefs.ts` (`kds:sound:{branchId}`, `pos:sound:{branchId}`)
 
 Owner direction: add spoken Vietnamese alerts (“Má Tư voice”) instead of relying only on beeps. The open product question was whether TTS should **replace** beeps.

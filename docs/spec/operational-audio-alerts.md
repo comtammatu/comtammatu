@@ -70,15 +70,16 @@ Classification MUST stay aligned with `getKdsNewTicketSignalTone` / toast titles
 available; for takeaway, delivery, or missing/ambiguous table metadata, speak the
 base phrase without a location. Never invent a table or order label.
 
-### POS (phase 3 — contract reserved)
+### POS (phase 3 — contract reserved; beep tones live)
 
 | kind | When | Beep tone | Voice template (VI) | Notes |
 | --- | --- | --- | --- | --- |
-| `pos.self_order` | New self-order needs approval | `pos` | “Khách tự gọi” | Critical attention |
+| `pos.self_order` | New QR self-order needs approval | `pos-self-order` | “Khách tự gọi” | Distinct from POS order ping |
+| `pos.payment_call` | Guest cash call / VietQR payment request | `pos-payment-call` | “Gọi thanh toán” | Distinct from POS order ping |
 | `pos.print_failed` | Print job failed | `pos` | “In lỗi” | Critical attention |
 | `pos.out_of_stock` | KDS marked item unavailable | `pos` | “Hết món” | Keep short; detail stays on UI |
 
-Do not add voice for every POS ping. Routine cart/sync noise stays beep-only or silent per mode.
+Do not add voice for every POS ping. Routine cart/sync noise stays beep-only or silent per mode. QR self-order and payment-call MUST use their dedicated tones so cashiers do not confuse them with ordinary POS order/sync beeps (`pos`).
 
 ## Audio Modes
 

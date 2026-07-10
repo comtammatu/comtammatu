@@ -339,6 +339,7 @@ export function PosDesktopInner({
   >(null);
   const [selfOrderApprovalOpen, setSelfOrderApprovalOpen] = useState(false);
   const knownSelfOrderRequestIdsRef = useRef<Set<number> | null>(null);
+  const knownSelfOrderPaymentRequestIdsRef = useRef<Set<number> | null>(null);
   const selfOrderLoadGenerationRef = useRef(0);
   // Multi-order-per-table: when the user taps an occupied table, show a
   // picker listing active orders + a "Tạo đơn mới" button. The picker is the
@@ -389,16 +390,34 @@ export function PosDesktopInner({
     }
 
     const nextState = result.data ?? { requests: [], paymentRequests: [] };
-    const nextIds = new Set(nextState.requests.map((request) => request.id));
-    const knownIds = knownSelfOrderRequestIdsRef.current;
+    const nextRequestIds = new Set(
+      nextState.requests.map((request) => request.id),
+    );
+    const nextPaymentIds = new Set(
+      nextState.paymentRequests.map((request) => request.id),
+    );
+    const knownRequestIds = knownSelfOrderRequestIdsRef.current;
+    const knownPaymentIds = knownSelfOrderPaymentRequestIdsRef.current;
+    // Distinct tones from the POS order ping so cashiers do not confuse
+    // QR guest events with ordinary POS sync alerts.
     if (
       soundEnabled &&
-      knownIds !== null &&
-      nextState.requests.some((request) => !knownIds.has(request.id))
+      knownRequestIds !== null &&
+      nextState.requests.some((request) => !knownRequestIds.has(request.id))
     ) {
-      playAppSignal("pos");
+      playAppSignal("pos-self-order");
     }
-    knownSelfOrderRequestIdsRef.current = nextIds;
+    if (
+      soundEnabled &&
+      knownPaymentIds !== null &&
+      nextState.paymentRequests.some(
+        (request) => !knownPaymentIds.has(request.id),
+      )
+    ) {
+      playAppSignal("pos-payment-call");
+    }
+    knownSelfOrderRequestIdsRef.current = nextRequestIds;
+    knownSelfOrderPaymentRequestIdsRef.current = nextPaymentIds;
     setSelfOrderPosState(nextState);
   }, [branchId, soundEnabled]);
 

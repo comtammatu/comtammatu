@@ -147,7 +147,14 @@ The bill sheet for a table in `Đang thanh toán` exposes **Huỷ yêu cầu**. 
 
 ### P4 · Audio
 
-A new request plays `playAppSignal` on the open POS surface. Device-local only. It writes no `public.notifications` row and sends no Telegram, per ADR 0008.
+On the open POS surface (device-local, ADR 0008):
+
+| Event | Tone | Notes |
+| --- | --- | --- |
+| New pending `self_order_requests` row | `pos-self-order` | Distinct from ordinary POS order/sync beep |
+| New active `self_order_payment_requests` (`cash_call` / `vietqr_pending`) | `pos-payment-call` | Distinct from QR-order and POS beeps |
+
+Both honor the POS sound preference. First poll after mount seeds known ids without beeping. Neither writes `public.notifications` nor sends Telegram.
 
 ## Data contract
 

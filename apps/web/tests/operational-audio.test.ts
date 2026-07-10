@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { APP_SIGNAL_PATTERNS } from "../lib/audio-signal";
 import {
   audioModeHasBeep,
   audioModeHasVoice,
@@ -64,4 +65,19 @@ test("KDS tones map onto the alert kind namespace", () => {
 test("device pref keys are branch scoped", () => {
   assert.equal(getKdsAudioModeKey(3), "kds:audio-mode:3");
   assert.equal(getKdsSoundPrefKey(3), "kds:sound:3");
+});
+
+test("POS QR guest tones stay distinct from the POS order ping", () => {
+  assert.notDeepEqual(
+    APP_SIGNAL_PATTERNS.pos,
+    APP_SIGNAL_PATTERNS["pos-self-order"],
+  );
+  assert.notDeepEqual(
+    APP_SIGNAL_PATTERNS.pos,
+    APP_SIGNAL_PATTERNS["pos-payment-call"],
+  );
+  assert.notDeepEqual(
+    APP_SIGNAL_PATTERNS["pos-self-order"],
+    APP_SIGNAL_PATTERNS["pos-payment-call"],
+  );
 });
