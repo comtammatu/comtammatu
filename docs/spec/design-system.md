@@ -117,7 +117,8 @@ Theme runtime:
   1-year max-age). Scope, branch, workflow, and auth state must never use
   browser storage; theme is the only browser-stored UI preference.
 - The single theme toggle is the `ThemeToggle` primitive (`apps/web/app/components/theme-toggle.tsx`)
-  mounted in `AppHeader`, the operations PWA toolbar, and the employee header.
+  mounted in `AppHeader`, the operations PWA toolbar, the employee header, and
+  the public self-order guest header (`/q/[token]`).
   Do not add a second theme context, a route-local toggle, or a localStorage
   theme key.
 

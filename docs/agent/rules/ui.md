@@ -93,7 +93,7 @@ there, do not restate them here:
 
 - Two theme modes only: `light` (default) and `night` (warm-dark "gạo cháy"). `night` maps to the `.dark` CSS selector.
 - `night` activates automatically 18:00–06:00 local time, or on user override via the `matu-theme` cookie (`light` | `night`). The auto-by-hour fallback must not depend on `prefers-color-scheme` or `matchMedia`.
-- The single theme toggle is `ThemeToggle` in `AppHeader`, the operations PWA toolbar, and the employee header. NEVER add a second theme context, a route-local toggle, or a localStorage theme key. Scope/branch/auth state stays out of browser storage per the Core Constraints.
+- The single theme toggle is `ThemeToggle` in `AppHeader`, the operations PWA toolbar, the employee header, and the public self-order guest header (`/q/[token]`). NEVER add a second theme context, a route-local toggle, or a localStorage theme key. Scope/branch/auth state stays out of browser storage per the Core Constraints.
 
 ## Operational UI Philosophy
 

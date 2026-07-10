@@ -765,8 +765,9 @@ runtime hai chế độ, không lặp lại hoặc override token value.
   (SameSite=Lax, 1 năm) — theme là UI preference duy nhất được phép lưu ở
   browser storage.
 - `ThemeToggle` (`apps/web/app/components/theme-toggle.tsx`) là toggle duy
-  nhất, mount ở `AppHeader`, operations PWA toolbar, và employee header. Không
-  thêm theme context thứ hai, toggle route-local, hoặc key localStorage mới.
+  nhất, mount ở `AppHeader`, operations PWA toolbar, employee header, và header
+  guest self-order (`/q/[token]`). Không thêm theme context thứ hai, toggle
+  route-local, hoặc key localStorage mới.
 - Runner customer display ép về light token qua `.theme-light-only`
   (`apps/web/app/(protected)/br/[branchId]/runner/layout.tsx`); đây là escape
   hatch cấp token, không tắt `dark:` variant hay chart THEMES map bên trong —

@@ -1,54 +1,32 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import {
-  Minus as IconMinus,
-  Plus as IconPlus,
-  Utensils as IconUtensils,
-  X as IconX,
-} from "lucide-react";
+import { Utensils as IconUtensils } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemGroup,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@comtammatu/ui/components/radio-group";
-import { Separator } from "@comtammatu/ui/components/separator";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
-import {
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from "@comtammatu/ui/components/field";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { AppEmptyState } from "@/components/surface";
 import type {
   SelfOrderCartItem,
   SelfOrderMenuCategory,
   SelfOrderMenuItem,
-  SelfOrderMenuVariant,
 } from "@lib/self-order/contracts";
+import {
+  ALL_MENU_VALUE,
+  isSelfOrderComCategory,
+  splitMenuItemDisplayName,
+} from "./menu-display";
+import { SelfOrderItemSheet } from "./item-sheet";
 
-const ALL_MENU_VALUE = "all";
+export {
+  ALL_MENU_VALUE,
+  defaultSelfOrderCategoryValue,
+  isSelfOrderComCategory,
+  splitMenuItemDisplayName,
+} from "./menu-display";
 
 export interface MenuPanelProps {
   categories: SelfOrderMenuCategory[];
@@ -75,17 +53,17 @@ export function MenuPanel({
   const activeCategory = availableCategories.find(
     (category) => String(category.id) === activeCategoryValue,
   );
-  const visibleItems =
-    activeCategoryValue === ALL_MENU_VALUE
-      ? availableCategories.flatMap((category) => category.menu_items)
-      : (activeCategory?.menu_items ?? []);
   const isAllMenuActive = activeCategoryValue === ALL_MENU_VALUE;
-  const featuredMainDishes = availableCategories
-    .filter((category) => category.type === "main_dish")
-    .flatMap((category) => category.menu_items)
-    .slice(0, 3);
-  const featuredMainDishIds = new Set(
-    featuredMainDishes.map((item) => item.id),
+  const visibleCategoryRows = isAllMenuActive
+    ? availableCategories.map((category) => ({
+        category,
+        items: category.menu_items,
+      }))
+    : activeCategory
+      ? [{ category: activeCategory, items: activeCategory.menu_items }]
+      : [];
+  const hasVisibleItems = visibleCategoryRows.some(
+    (row) => row.items.length > 0,
   );
 
   const categoryPills = (
@@ -93,16 +71,6 @@ export function MenuPanel({
       aria-label={SELF_ORDER_VI.categoriesAria}
       className="no-scrollbar flex min-w-0 flex-1 gap-1.5 overflow-x-auto"
     >
-      <Button
-        type="button"
-        size="touch"
-        variant={isAllMenuActive ? "default" : "outline"}
-        className="shrink-0 rounded-full px-3"
-        onClick={() => onActiveCategoryChange(ALL_MENU_VALUE)}
-      >
-        {SELF_ORDER_VI.allCategories}
-        <Badge variant="outline">{allMenuItemCount}</Badge>
-      </Button>
       {availableCategories.map((category) => {
         const value = String(category.id);
         return (
@@ -118,6 +86,16 @@ export function MenuPanel({
           </Button>
         );
       })}
+      <Button
+        type="button"
+        size="touch"
+        variant={isAllMenuActive ? "default" : "outline"}
+        className="shrink-0 rounded-full px-3"
+        onClick={() => onActiveCategoryChange(ALL_MENU_VALUE)}
+      >
+        {SELF_ORDER_VI.allCategories}
+        <Badge variant="outline">{allMenuItemCount}</Badge>
+      </Button>
     </div>
   );
 
@@ -128,51 +106,29 @@ export function MenuPanel({
       </div>
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         <div className="flex flex-col gap-4 px-2 pb-44 pt-2 sm:pb-32">
-          {availableCategories.length === 0 ? (
+          <div className="flex flex-col gap-1.5 px-1">
+            <h2 className="font-heading text-2xl font-semibold tracking-tight">
+              {SELF_ORDER_VI.menuPromptTitle}
+            </h2>
+            <p className="text-base text-muted-foreground">
+              {SELF_ORDER_VI.menuPromptDescription}
+            </p>
+          </div>
+          {availableCategories.length === 0 || !hasVisibleItems ? (
             <AppEmptyState
               title={SELF_ORDER_VI.menuEmpty}
               symbol="riceBowl"
               compact
             />
-          ) : visibleItems.length === 0 ? (
-            <AppEmptyState
-              title={SELF_ORDER_VI.menuEmpty}
-              symbol="riceBowl"
-              compact
-            />
-          ) : isAllMenuActive ? (
-            <>
-              {featuredMainDishes.length > 0 ? (
-                <section className="flex min-w-0 flex-col gap-3">
-                  <div className="flex min-w-0 items-center justify-between gap-3 px-1">
-                    <h2 className="font-heading truncate text-base font-semibold">
-                      {SELF_ORDER_VI.featuredMainDishes}
-                    </h2>
-                    <Badge variant="outline" className="shrink-0 text-sm">
-                      {featuredMainDishes.length}
-                    </Badge>
-                  </div>
-                  <MenuItemGrid
-                    items={featuredMainDishes}
-                    onAdd={onAdd}
-                    disabled={disabled}
-                    featured
-                  />
-                </section>
-              ) : null}
-              {availableCategories.map((category) => {
-                const items =
-                  category.type === "main_dish"
-                    ? category.menu_items.filter(
-                        (item) => !featuredMainDishIds.has(item.id),
-                      )
-                    : category.menu_items;
-                if (items.length === 0) return null;
-                return (
-                  <section
-                    key={category.id}
-                    className="flex min-w-0 flex-col gap-3"
-                  >
+          ) : (
+            visibleCategoryRows.map(({ category, items }) => {
+              if (items.length === 0) return null;
+              return (
+                <section
+                  key={category.id}
+                  className="flex min-w-0 flex-col gap-3"
+                >
+                  {isAllMenuActive ? (
                     <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-2 backdrop-blur">
                       <h2 className="font-heading truncate text-base font-semibold">
                         {category.name}
@@ -181,23 +137,17 @@ export function MenuPanel({
                         {items.length}
                       </Badge>
                     </div>
-                    <MenuItemGrid
-                      items={items}
-                      onAdd={onAdd}
-                      disabled={disabled}
-                      compact={category.type !== "main_dish"}
-                    />
-                  </section>
-                );
-              })}
-            </>
-          ) : (
-            <MenuItemGrid
-              items={visibleItems}
-              onAdd={onAdd}
-              disabled={disabled}
-              compact={activeCategory?.type !== "main_dish"}
-            />
+                  ) : null}
+                  <MenuItemGrid
+                    items={items}
+                    categoryName={category.name}
+                    onAdd={onAdd}
+                    disabled={disabled}
+                    compact={!isSelfOrderComCategory(category)}
+                  />
+                </section>
+              );
+            })
           )}
         </div>
       </ScrollArea>
@@ -207,27 +157,27 @@ export function MenuPanel({
 
 export function MenuItemGrid({
   items,
+  categoryName,
   onAdd,
   disabled = false,
   compact = false,
-  featured = false,
 }: {
   items: SelfOrderMenuItem[];
+  categoryName: string;
   onAdd: (item: SelfOrderCartItem) => void;
   disabled?: boolean;
   compact?: boolean;
-  featured?: boolean;
 }) {
   return (
-    <div className={compact ? "flex flex-col gap-2" : "grid grid-cols-2 gap-3"}>
-      {items.map((item, index) => (
+    <div className="flex flex-col gap-3">
+      {items.map((item) => (
         <MenuItemCard
           key={item.id}
           item={item}
+          categoryName={categoryName}
           onAdd={onAdd}
           disabled={disabled}
           compact={compact}
-          lead={featured && index === 0}
         />
       ))}
     </div>
@@ -236,16 +186,16 @@ export function MenuItemGrid({
 
 function MenuItemCard({
   item,
+  categoryName,
   onAdd,
   disabled,
   compact,
-  lead,
 }: {
   item: SelfOrderMenuItem;
+  categoryName: string;
   onAdd: (item: SelfOrderCartItem) => void;
   disabled: boolean;
   compact: boolean;
-  lead: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -255,589 +205,97 @@ function MenuItemCard({
 
   return (
     <>
-      {compact ? (
-        <MenuCompactButton
-          item={item}
-          disabled={disabled}
-          onClick={() => setOpen(true)}
-        />
-      ) : (
-        <MenuPhotoButton
-          item={item}
-          disabled={disabled}
-          lead={lead}
-          onClick={() => setOpen(true)}
-        />
-      )}
+      <MenuRowButton
+        item={item}
+        categoryName={categoryName}
+        disabled={disabled}
+        compact={compact}
+        onClick={() => setOpen(true)}
+      />
       <SelfOrderItemSheet
         item={item}
         open={open && !disabled}
         disabled={disabled}
         onOpenChange={(nextOpen) => setOpen(disabled ? false : nextOpen)}
-        onAdd={onAdd}
+        onCommit={onAdd}
       />
     </>
   );
 }
 
-function SelfOrderItemSheet({
+function MenuRowButton({
   item,
-  open,
+  categoryName,
   disabled,
-  onOpenChange,
-  onAdd,
-}: {
-  item: SelfOrderMenuItem;
-  open: boolean;
-  disabled: boolean;
-  onOpenChange: (open: boolean) => void;
-  onAdd: (item: SelfOrderCartItem) => void;
-}) {
-  const [selectedVariant, setSelectedVariant] =
-    useState<SelfOrderMenuVariant | null>(null);
-  const [selectedModifierIds, setSelectedModifierIds] = useState<Set<number>>(
-    new Set(),
-  );
-  const [selectedSideQuantities, setSelectedSideQuantities] = useState<
-    Map<number, number>
-  >(new Map());
-  const [note, setNote] = useState("");
-  const [quantity, setQuantity] = useState(1);
-  const wasOpenRef = useRef(false);
-  const draftItemIdRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const opening = open && !wasOpenRef.current;
-    const itemChanged = open && draftItemIdRef.current !== item.id;
-    wasOpenRef.current = open;
-    if (!open) return;
-    if (opening || itemChanged) {
-      draftItemIdRef.current = item.id;
-      setSelectedVariant(item.menu_item_variants[0] ?? null);
-      setSelectedModifierIds(new Set());
-      setSelectedSideQuantities(
-        new Map(
-          item.menu_item_available_sides
-            .filter((side) => side.is_default)
-            .map((side) => [side.side_item.id, 1] as const),
-        ),
-      );
-      setNote("");
-      setQuantity(1);
-      return;
-    }
-
-    setSelectedVariant((current) => {
-      const next = current
-        ? (item.menu_item_variants.find(
-            (variant) => variant.id === current.id,
-          ) ??
-          item.menu_item_variants[0] ??
-          null)
-        : (item.menu_item_variants[0] ?? null);
-      if (
-        current?.id === next?.id &&
-        current?.name === next?.name &&
-        current?.price_adjustment === next?.price_adjustment
-      ) {
-        return current;
-      }
-      return next;
-    });
-    const availableModifierIds = new Set(
-      item.menu_item_modifiers.map((modifier) => modifier.id),
-    );
-    setSelectedModifierIds((current) => {
-      const next = new Set(
-        [...current].filter((id) => availableModifierIds.has(id)),
-      );
-      return next.size === current.size ? current : next;
-    });
-    const availableSideIds = new Set(
-      item.menu_item_available_sides.map((side) => side.side_item.id),
-    );
-    setSelectedSideQuantities((current) => {
-      const next = new Map(
-        [...current].filter(([id]) => availableSideIds.has(id)),
-      );
-      return next.size === current.size ? current : next;
-    });
-  }, [
-    item.id,
-    item.menu_item_available_sides,
-    item.menu_item_modifiers,
-    item.menu_item_variants,
-    open,
-  ]);
-
-  const unitPrice =
-    Number(item.base_price) + Number(selectedVariant?.price_adjustment ?? 0);
-  const modifierTotal = useMemo(
-    () =>
-      item.menu_item_modifiers
-        .filter((modifier) => selectedModifierIds.has(modifier.id))
-        .reduce((sum, modifier) => sum + Number(modifier.price), 0),
-    [item.menu_item_modifiers, selectedModifierIds],
-  );
-  const sideTotal = useMemo(
-    () =>
-      item.menu_item_available_sides
-        .filter((side) => selectedSideQuantities.has(side.side_item.id))
-        .reduce(
-          (sum, side) =>
-            sum +
-            Number(side.side_item.base_price) *
-              (selectedSideQuantities.get(side.side_item.id) ?? 1),
-          0,
-        ),
-    [item.menu_item_available_sides, selectedSideQuantities],
-  );
-  const total = (unitPrice + modifierTotal + sideTotal) * quantity;
-
-  function toggleModifier(id: number) {
-    setSelectedModifierIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }
-
-  function toggleSide(id: number) {
-    setSelectedSideQuantities((current) => {
-      const next = new Map(current);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.set(id, 1);
-      }
-      return next;
-    });
-  }
-
-  function updateSideQuantity(id: number, delta: number) {
-    setSelectedSideQuantities((current) => {
-      const existing = current.get(id);
-      if (existing == null) {
-        if (delta <= 0) return current;
-        return new Map(current).set(id, 1);
-      }
-      const nextQuantity = Math.min(20, Math.max(0, existing + delta));
-      const next = new Map(current);
-      if (nextQuantity === 0) {
-        next.delete(id);
-      } else {
-        next.set(id, nextQuantity);
-      }
-      return next;
-    });
-  }
-
-  function updateQuantity(delta: number) {
-    setQuantity((current) => Math.min(99, Math.max(1, current + delta)));
-  }
-
-  function addCustomizedItem() {
-    if (disabled) return;
-    const modifiers = item.menu_item_modifiers
-      .filter((modifier) => selectedModifierIds.has(modifier.id))
-      .map((modifier) => ({
-        modifier_id: modifier.id,
-        name: modifier.name,
-        price: Number(modifier.price),
-      }));
-    const sides = item.menu_item_available_sides
-      .filter((side) => selectedSideQuantities.has(side.side_item.id))
-      .map((side) => ({
-        side_item_id: side.side_item.id,
-        name: side.side_item.name,
-        price: Number(side.side_item.base_price),
-        quantity: selectedSideQuantities.get(side.side_item.id) ?? 1,
-        is_default: side.is_default,
-      }));
-    const trimmedNote = note.trim();
-    onAdd({
-      key: `${item.id}:${selectedVariant?.id ?? "base"}:${crypto.randomUUID()}`,
-      menu_item_id: item.id,
-      item_name: item.name,
-      variant_id: selectedVariant?.id,
-      variant_name: selectedVariant?.name,
-      quantity,
-      unit_price: unitPrice,
-      modifiers,
-      sides,
-      note: trimmedNote === "" ? undefined : trimmedNote,
-    });
-    onOpenChange(false);
-  }
-
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        showCloseButton={false}
-        className="h-dvh max-h-dvh p-0"
-      >
-        <div className="flex h-full flex-col">
-          <SheetHeader>
-            <div className="flex items-center justify-between gap-3">
-              <SheetTitle className="min-w-0 flex-1 truncate text-left">
-                {item.name}
-              </SheetTitle>
-              <SheetClose asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-touch"
-                  className="shrink-0 text-muted-foreground"
-                  aria-label={SELF_ORDER_VI.closeCustomizerAria}
-                >
-                  <IconX />
-                </Button>
-              </SheetClose>
-            </div>
-            <SheetDescription className="text-left">
-              {item.description ?? SELF_ORDER_VI.customizeDescription}
-            </SheetDescription>
-          </SheetHeader>
-
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="flex flex-col gap-4 px-4 pb-4">
-              {item.menu_item_variants.length > 0 ? (
-                <FieldSet className="gap-2">
-                  <FieldLegend>{SELF_ORDER_VI.variantLabel}</FieldLegend>
-                  <RadioGroup
-                    value={selectedVariant ? String(selectedVariant.id) : ""}
-                    onValueChange={(value) => {
-                      const nextVariant =
-                        item.menu_item_variants.find(
-                          (variant) => String(variant.id) === value,
-                        ) ?? null;
-                      setSelectedVariant(nextVariant);
-                    }}
-                    className="gap-2"
-                  >
-                    {item.menu_item_variants.map((variant) => (
-                      <Item
-                        key={variant.id}
-                        asChild
-                        variant="outline"
-                        className="cursor-pointer hover:bg-accent"
-                      >
-                        <FieldLabel
-                          htmlFor={`self-order-variant-${item.id}-${variant.id}`}
-                          className="w-full items-center gap-3 font-normal"
-                        >
-                          <RadioGroupItem
-                            id={`self-order-variant-${item.id}-${variant.id}`}
-                            value={String(variant.id)}
-                            size="touch"
-                          />
-                          <ItemContent>
-                            <ItemTitle className="text-base">
-                              {variant.name}
-                            </ItemTitle>
-                          </ItemContent>
-                          <ItemActions className="shrink-0 text-base text-muted-foreground">
-                            {formatVND(
-                              Number(item.base_price) +
-                                Number(variant.price_adjustment),
-                            )}
-                          </ItemActions>
-                        </FieldLabel>
-                      </Item>
-                    ))}
-                  </RadioGroup>
-                </FieldSet>
-              ) : null}
-
-              {item.menu_item_modifiers.length > 0 ? (
-                <FieldSet className="gap-2">
-                  <FieldLegend>{SELF_ORDER_VI.modifierLabel}</FieldLegend>
-                  <ItemGroup className="gap-2">
-                    {item.menu_item_modifiers.map((modifier) => (
-                      <Item
-                        key={modifier.id}
-                        asChild
-                        variant="outline"
-                        className="cursor-pointer hover:bg-accent"
-                      >
-                        <FieldLabel
-                          htmlFor={`self-order-modifier-${item.id}-${modifier.id}`}
-                          className="w-full items-center gap-3 font-normal"
-                        >
-                          <Checkbox
-                            id={`self-order-modifier-${item.id}-${modifier.id}`}
-                            size="touch"
-                            checked={selectedModifierIds.has(modifier.id)}
-                            onCheckedChange={() => toggleModifier(modifier.id)}
-                          />
-                          <ItemContent>
-                            <ItemTitle className="text-base">
-                              {modifier.name}
-                            </ItemTitle>
-                          </ItemContent>
-                          <ItemActions className="shrink-0 text-base text-muted-foreground">
-                            +{formatVND(Number(modifier.price))}
-                          </ItemActions>
-                        </FieldLabel>
-                      </Item>
-                    ))}
-                  </ItemGroup>
-                </FieldSet>
-              ) : null}
-
-              {item.menu_item_available_sides.length > 0 ? (
-                <FieldSet className="gap-2">
-                  <FieldLegend>{SELF_ORDER_VI.sidesLabel}</FieldLegend>
-                  <ItemGroup className="gap-2">
-                    {item.menu_item_available_sides.map((side) => {
-                      const sideQuantity =
-                        selectedSideQuantities.get(side.side_item.id) ?? 0;
-                      const selected = sideQuantity > 0;
-                      return (
-                        <Item
-                          key={side.id}
-                          variant="outline"
-                          className="flex-nowrap items-start gap-3"
-                        >
-                          <Checkbox
-                            id={`self-order-side-${item.id}-${side.id}`}
-                            className="mt-1.5"
-                            size="touch"
-                            checked={selected}
-                            onCheckedChange={() =>
-                              toggleSide(side.side_item.id)
-                            }
-                          />
-                          <ItemContent>
-                            <FieldLabel
-                              htmlFor={`self-order-side-${item.id}-${side.id}`}
-                              className="cursor-pointer text-base leading-snug font-normal"
-                            >
-                              {side.side_item.name}
-                            </FieldLabel>
-                            <ItemTitle className="text-sm font-normal text-muted-foreground">
-                              +{formatVND(Number(side.side_item.base_price))}
-                            </ItemTitle>
-                          </ItemContent>
-                          <ItemActions className="shrink-0 gap-1 self-center">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="touch"
-                              className="min-w-12 px-0"
-                              disabled={!selected}
-                              aria-label={SELF_ORDER_VI.decreaseSideAria(
-                                side.side_item.name,
-                              )}
-                              onClick={() =>
-                                updateSideQuantity(side.side_item.id, -1)
-                              }
-                            >
-                              <IconMinus />
-                            </Button>
-                            <span className="w-7 text-center text-base font-semibold tabular-nums">
-                              {sideQuantity}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="touch"
-                              className="min-w-12 px-0"
-                              aria-label={SELF_ORDER_VI.increaseSideAria(
-                                side.side_item.name,
-                              )}
-                              onClick={() =>
-                                updateSideQuantity(side.side_item.id, 1)
-                              }
-                            >
-                              <IconPlus />
-                            </Button>
-                          </ItemActions>
-                        </Item>
-                      );
-                    })}
-                  </ItemGroup>
-                </FieldSet>
-              ) : null}
-
-              <FieldSet className="gap-2">
-                <FieldLabel
-                  htmlFor={`self-order-item-note-${item.id}`}
-                  className="text-base font-semibold"
-                >
-                  {SELF_ORDER_VI.itemNoteLabel}
-                </FieldLabel>
-                <Textarea
-                  id={`self-order-item-note-${item.id}`}
-                  name={`itemNote-${item.id}`}
-                  autoComplete="off"
-                  value={note}
-                  maxLength={300}
-                  rows={2}
-                  placeholder={SELF_ORDER_VI.itemNotePlaceholder}
-                  onChange={(event) => setNote(event.target.value)}
-                />
-              </FieldSet>
-            </div>
-          </ScrollArea>
-
-          <Separator />
-          <div className="workflow-safe-pb flex shrink-0 flex-col items-stretch gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-            <div className="min-w-0 sm:flex-1">
-              <p className="text-sm text-muted-foreground">
-                {SELF_ORDER_VI.subtotal}
-              </p>
-              <p className="text-xl font-bold tabular-nums text-primary">
-                {formatVND(total)}
-              </p>
-            </div>
-            <div className="flex w-full items-center gap-2 sm:w-auto">
-              <div className="flex shrink-0 items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="min-w-12 px-0"
-                  disabled={quantity <= 1}
-                  aria-label={SELF_ORDER_VI.decreaseQuantityAria}
-                  onClick={() => updateQuantity(-1)}
-                >
-                  <IconMinus />
-                </Button>
-                <span className="w-7 text-center text-base font-bold tabular-nums">
-                  {quantity}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="min-w-12 px-0"
-                  aria-label={SELF_ORDER_VI.increaseQuantityAria}
-                  onClick={() => updateQuantity(1)}
-                >
-                  <IconPlus />
-                </Button>
-              </div>
-              <Button
-                type="button"
-                size="touch"
-                className="min-w-0 flex-1 sm:min-w-20 sm:flex-none"
-                disabled={disabled}
-                onClick={addCustomizedItem}
-              >
-                {SELF_ORDER_VI.addToCart}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function MenuCompactButton({
-  item,
-  disabled,
+  compact,
   onClick,
 }: {
   item: SelfOrderMenuItem;
+  categoryName: string;
   disabled: boolean;
+  compact: boolean;
   onClick: () => void;
 }) {
+  const { title, tag } = splitMenuItemDisplayName(item.name);
+  const priceLabel = formatVND(Number(item.base_price));
+
   return (
     <Button
       type="button"
       variant="outline"
       size="touch"
       disabled={disabled}
-      aria-label={`${SELF_ORDER_VI.customizeItem}: ${item.name}, ${formatVND(Number(item.base_price))}`}
-      className="h-auto w-full justify-start gap-3 p-2 text-left"
+      aria-label={`${SELF_ORDER_VI.customizeItem}: ${item.name}, ${priceLabel}`}
+      className="group h-auto w-full items-stretch justify-start gap-4 p-3 text-left whitespace-normal transition-[transform,background-color,border-color] duration-150 active:scale-[0.97]"
       onClick={onClick}
     >
-      <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted/50">
+      <span
+        className={`relative shrink-0 overflow-hidden rounded-md bg-muted/50 ${compact ? "h-16 w-16" : "h-32 w-32"}`}
+      >
         {item.image_url ? (
           <Image
             src={item.image_url}
             alt=""
             fill
-            sizes="56px"
-            className="object-cover"
+            sizes={compact ? "64px" : "128px"}
+            className="object-cover transition-transform duration-150 group-active:scale-105"
             loading="lazy"
             decoding="async"
           />
         ) : (
           <span className="flex size-full items-center justify-center">
-            <IconUtensils className="size-5 text-muted-foreground" />
+            <IconUtensils
+              className={
+                compact
+                  ? "size-6 text-muted-foreground"
+                  : "size-8 text-muted-foreground"
+              }
+            />
           </span>
         )}
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="line-clamp-2 font-semibold">{item.name}</span>
-        {item.description ? (
-          <span className="line-clamp-1 text-xs font-normal text-muted-foreground">
-            {item.description}
-          </span>
+        {tag ? (
+          <Badge
+            variant="default"
+            className="absolute top-1.5 left-1.5 z-10 truncate px-2 text-xs"
+          >
+            {tag}
+          </Badge>
         ) : null}
       </span>
-      <Badge variant="secondary" className="shrink-0 tabular-nums">
-        {formatVND(Number(item.base_price))}
-      </Badge>
-    </Button>
-  );
-}
-
-function MenuPhotoButton({
-  item,
-  disabled,
-  lead,
-  onClick,
-}: {
-  item: SelfOrderMenuItem;
-  disabled: boolean;
-  lead: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      disabled={disabled}
-      aria-label={`${SELF_ORDER_VI.customizeItem}: ${item.name}, ${formatVND(Number(item.base_price))}`}
-      className={`group relative h-auto min-w-0 w-full overflow-hidden p-0 text-left ${lead ? "col-span-2 aspect-[16/9]" : "aspect-[4/5]"}`}
-      onClick={onClick}
-    >
-      <span className="absolute inset-0 block">
-        {item.image_url ? (
-          <Image
-            src={item.image_url}
-            alt=""
-            fill
-            sizes={
-              lead
-                ? "(min-width: 1280px) 42rem, (min-width: 640px) 50vw, 100vw"
-                : "(min-width: 1280px) 20vw, (min-width: 640px) 50vw, 50vw"
-            }
-            className="object-cover"
-            loading={lead ? "eager" : "lazy"}
-            decoding="async"
-          />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center bg-muted/50">
-            <IconUtensils className="size-6 text-muted-foreground" />
-          </span>
-        )}
-      </span>
-      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
-      <Badge className="absolute right-2 top-2 z-10 h-auto rounded-md px-2 py-1 text-sm font-bold tabular-nums">
-        {formatVND(Number(item.base_price))}
-      </Badge>
-      <span className="pos-text-overlay absolute inset-x-3 bottom-3 z-10 line-clamp-2 text-base font-bold leading-snug text-white">
-        {item.name}
+      <span className="flex min-w-0 flex-1 flex-col items-start justify-center gap-1.5 py-0.5">
+        <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          {categoryName}
+        </span>
+        <span
+          className={`line-clamp-2 font-heading font-semibold tracking-tight ${compact ? "text-lg leading-snug" : "text-2xl leading-tight"}`}
+        >
+          {title}
+        </span>
+        <span
+          className={`font-mono font-semibold tabular-nums text-primary ${compact ? "text-lg" : "text-xl"}`}
+        >
+          {priceLabel}
+        </span>
       </span>
     </Button>
   );

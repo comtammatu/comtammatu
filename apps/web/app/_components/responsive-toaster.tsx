@@ -6,13 +6,12 @@ import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { selectToasterPreset } from "./responsive-toaster-presets";
 
 /**
- * Toaster với config riêng cho thiết bị vận hành. Mobile toàn app và POS/KDS
- * mọi viewport dùng preset gọn (`top-center`, close button, 1-toast stack,
- * không expand); desktop ngoài POS/KDS giữ preset desktop (`top-right`,
- * expand khi hover, 5 toast cùng lúc).
+ * Toaster theo route/device. Guest `/q/*` dùng preset tối + chữ lớn; mobile
+ * toàn app và POS/KDS mọi viewport dùng preset gọn (`top-center`, close
+ * button, 1-toast stack); desktop ngoài các route đó giữ preset desktop
+ * (`top-right`, expand khi hover).
  *
- * Preset selection thuần (không phụ thuộc render) sống ở
- * `responsive-toaster-presets.ts` — unit test theo hành vi ở đó.
+ * Preset selection thuần sống ở `responsive-toaster-presets.ts`.
  */
 export function ResponsiveToaster() {
   const pathname = usePathname();

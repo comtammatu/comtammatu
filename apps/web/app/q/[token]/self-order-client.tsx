@@ -1,12 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
-import {
-  ReceiptText as IconReceipt,
-  RefreshCw as IconRefresh,
-} from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ReceiptText as IconReceipt } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
-import { Alert, AlertDescription, AlertTitle } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -15,10 +11,10 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { NoteCallout } from "@comtammatu/ui/components/note-callout";
-import { Spinner } from "@comtammatu/ui/components/spinner";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { AppPage } from "@/components/surface";
 import { BrandMascot } from "@/components/brand";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   publicSelfOrderSnapshotSchema,
   type PublicSelfOrderAvailableSnapshot,
@@ -35,7 +31,7 @@ import {
 import { CartSheet } from "./self-order/cart-sheet";
 import { BillDrawer } from "./self-order/bill-drawer";
 import { useSnapshotSync } from "./self-order/hooks";
-import { MenuPanel } from "./self-order/menu-panel";
+import { MenuPanel, defaultSelfOrderCategoryValue } from "./self-order/menu-panel";
 import {
   PaymentPanel,
   type GuestPaymentRequestState,
@@ -202,8 +198,11 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
     useState<InvoiceFieldErrors>({});
   const [invoiceErrorFocusRequest, setInvoiceErrorFocusRequest] =
     useState<InvoiceErrorFocusRequest | null>(null);
-  const [activeCategoryValue, setActiveCategoryValue] = useState("all");
+  const [activeCategoryValue, setActiveCategoryValue] = useState(() =>
+    defaultSelfOrderCategoryValue(initialSnapshot.menu),
+  );
   const [billOpen, setBillOpen] = useState(false);
+  const [billView, setBillView] = useState<"bill" | "payment">("bill");
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<
     "cash_call" | "vietqr" | null
   >(null);
@@ -212,6 +211,8 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
   const batchIntentRef = useRef<SelfOrderClientIntent | null>(null);
   const paymentIntentRef = useRef<SelfOrderClientIntent | null>(null);
   const invoiceFocusAttemptRef = useRef(0);
+  const guestToastKeyRef = useRef<string | null>(null);
+  const refreshErrorRef = useRef<string | null>(null);
 
   const {
     snapshot,
@@ -227,6 +228,60 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
     batchIntentRef.current = null;
     paymentIntentRef.current = null;
   });
+
+  useEffect(() => {
+    if (!refreshError) {
+      refreshErrorRef.current = null;
+      return;
+    }
+    if (refreshErrorRef.current === refreshError) return;
+    refreshErrorRef.current = refreshError;
+    toast.error(refreshError);
+  }, [refreshError]);
+
+  useEffect(() => {
+    if (!snapshot.ok) return;
+    const notice =
+      snapshot.state === "awaiting_confirmation"
+        ? "awaiting"
+        : snapshot.state === "rejected"
+          ? "rejected"
+          : null;
+    if (!notice) return;
+
+    const key = `${notice}:${snapshot.request?.id ?? "none"}`;
+    if (guestToastKeyRef.current === key) return;
+    guestToastKeyRef.current = key;
+
+    if (notice === "rejected") {
+      const rejectedRequest = snapshot.request;
+      toast.warning(SELF_ORDER_VI.rejectedCalloutTitle, {
+        description: SELF_ORDER_VI.rejectedCalloutDescription,
+        duration: 10_000,
+        action: rejectedRequest
+          ? {
+              label: SELF_ORDER_VI.resubmitRejected,
+              onClick: () => {
+                setCartItems(
+                  rejectedRequest.items.map((item) => ({
+                    ...item,
+                    key: item.key ?? crypto.randomUUID(),
+                  })),
+                );
+                setCustomerNote(rejectedRequest.customerNote ?? "");
+                setSubmitError(null);
+              },
+            }
+          : undefined,
+      });
+      return;
+    }
+
+    toast.warning(SELF_ORDER_VI.awaitingCalloutTitle, {
+      description: SELF_ORDER_VI.awaitingCalloutDescription,
+      duration: 6_000,
+    });
+  }, [snapshot]);
 
   const invoicePayload = useMemo(
     () => ({
@@ -281,17 +336,20 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
         )
         .filter((item) => item.quantity > 0),
     );
+    setSubmitError(null);
   }
 
-  function restoreRejectedCart() {
-    if (available.state !== "rejected" || !available.request) return;
-    setCartItems(
-      available.request.items.map((item) => ({
-        ...item,
-        key: item.key ?? crypto.randomUUID(),
-      })),
+  function replaceCartItem(item: SelfOrderCartItem) {
+    setCartItems((current) =>
+      current.map((existing) =>
+        existing.key === item.key ? item : existing,
+      ),
     );
-    setCustomerNote(available.request.customerNote ?? "");
+    setSubmitError(null);
+  }
+
+  function removeCartItem(key: string) {
+    setCartItems((current) => current.filter((item) => item.key !== key));
     setSubmitError(null);
   }
 
@@ -342,6 +400,9 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
         batchIntentRef.current,
         intent.clientOpId,
       );
+      if (parsedSnapshot.data.ok && parsedSnapshot.data.state === "open") {
+        toast.success(SELF_ORDER_VI.addedOk);
+      }
     });
   }
 
@@ -420,6 +481,7 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
         paymentIntentRef.current,
         intent.clientOpId,
       );
+      setBillView("payment");
       setBillOpen(true);
       void refreshSnapshot();
     });
@@ -436,69 +498,23 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
       contentClassName="min-h-dvh p-0"
     >
       <div className="flex min-h-dvh flex-col">
-        <header className="workflow-safe-pt sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
-          <h1 className="font-heading text-xl font-semibold">
-            {SELF_ORDER_VI.tableLabel(available.table.number)}
-          </h1>
-          <div className="flex items-center gap-2">
-            {isRefreshing ? <Spinner className="size-4" /> : null}
-            {!ambiguous ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                onClick={() => setBillOpen(true)}
-              >
-                <IconReceipt data-icon="inline-start" />
-                {SELF_ORDER_VI.viewBill}
-                <Badge variant={awaiting ? "warning" : "secondary"}>
-                  {awaiting ? "⏳" : itemCount}
-                </Badge>
-              </Button>
-            ) : null}
+        <header className="workflow-safe-pt sticky top-0 z-30 border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-primary">
+                {SELF_ORDER_VI.branchFallback}
+              </p>
+              <h1 className="font-heading text-xl font-semibold">
+                {SELF_ORDER_VI.tableLabel(available.table.number)}
+              </h1>
+            </div>
+            <ThemeToggle
+              variant="outline"
+              size="icon-touch"
+              className="shrink-0"
+            />
           </div>
         </header>
-
-        <div className="flex flex-col gap-2 px-3 pt-2" aria-live="polite">
-          {refreshError ? (
-            <NoteCallout tone="muted">
-              <span>{refreshError}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => void refreshSnapshot()}
-              >
-                <IconRefresh data-icon="inline-start" />
-                {SELF_ORDER_VI.retryRefresh}
-              </Button>
-            </NoteCallout>
-          ) : null}
-          {awaiting ? (
-            <NoteCallout
-              tone="warning"
-              label={SELF_ORDER_VI.awaitingCalloutTitle}
-            >
-              {SELF_ORDER_VI.awaitingCalloutDescription}
-            </NoteCallout>
-          ) : null}
-          {available.state === "rejected" && available.request ? (
-            <Alert variant="destructive">
-              <AlertTitle>{SELF_ORDER_VI.rejectedCalloutTitle}</AlertTitle>
-              <AlertDescription>
-                {SELF_ORDER_VI.rejectedCalloutDescription}
-              </AlertDescription>
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                onClick={restoreRejectedCart}
-              >
-                {SELF_ORDER_VI.resubmitRejected}
-              </Button>
-            </Alert>
-          ) : null}
-        </div>
 
         <MenuPanel
           categories={available.menu}
@@ -509,6 +525,7 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
         />
 
         <CartSheet
+          categories={available.menu}
           items={cartItems}
           total={cartTotal}
           quantity={cartQuantity}
@@ -522,24 +539,48 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
           customerNote={customerNote}
           onCustomerNoteChange={setCustomerNote}
           onQuantityChange={changeQuantity}
-          onRemove={(key) =>
-            setCartItems((current) =>
-              current.filter((item) => item.key !== key),
-            )
-          }
+          onRemove={removeCartItem}
+          onReplace={replaceCartItem}
           onSubmit={submitCart}
         />
+
+        <div
+          className={`workflow-safe-pb fixed right-3 z-30 ${cartItems.length > 0 ? "bottom-20" : "bottom-0"}`}
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            onClick={() => {
+              setBillView("bill");
+              setBillOpen(true);
+            }}
+          >
+            <IconReceipt data-icon="inline-start" />
+            {SELF_ORDER_VI.billTab}
+            <Badge variant={awaiting ? "warning" : "secondary"}>
+              {awaiting ? "⏳" : itemCount}
+            </Badge>
+          </Button>
+        </div>
       </div>
 
       <BillDrawer
         open={billOpen}
-        onOpenChange={setBillOpen}
+        onOpenChange={(nextOpen) => {
+          setBillOpen(nextOpen);
+          if (!nextOpen) setBillView("bill");
+        }}
+        view={billView}
+        onOpenPayment={() => setBillView("payment")}
+        onBackToBill={() => setBillView("bill")}
+        canPay={!ambiguous && order !== null}
         tableNumber={available.table.number}
         order={order}
         rounds={available.rounds}
         pendingItems={awaiting ? available.request?.items : undefined}
       >
-        {!ambiguous ? (
+        {!ambiguous && order ? (
           <PaymentPanel
             disabled={awaiting || paymentPending}
             activeOrder={order}

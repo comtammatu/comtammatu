@@ -16,9 +16,20 @@ export type ToasterPreset = ToasterProps;
 /** POS/KDS branch routes (any viewport) get the compact operational toaster. */
 const OPERATIONAL_TOAST_ROUTE_PATTERN = /^\/br\/[^/]+\/(?:pos|kds)(?:\/|$)/;
 
+/** Public QR self-order guest routes — high-contrast dark toast, larger type. */
+const GUEST_TOAST_ROUTE_PATTERN = /^\/q(?:\/|$)/;
+
 const TOAST_CLASS_NAMES = {
   toast: "cn-toast",
   closeButton: "cn-toast-close",
+};
+
+const GUEST_TOAST_CLASS_NAMES = {
+  toast: "cn-toast cn-toast-guest",
+  title: "cn-toast-guest-title",
+  description: "cn-toast-guest-description",
+  closeButton: "cn-toast-close",
+  actionButton: "cn-toast-guest-action",
 };
 
 const COMPACT_TOAST_OFFSET = {
@@ -67,13 +78,37 @@ export const DESKTOP_TOAST_PRESET = {
   expand: true,
 } satisfies ToasterPreset;
 
+/**
+ * Guest self-order preset — `/q/*` on any viewport:
+ * - `theme: "dark"` so richColors warning/error use dark surfaces + bright
+ *   text (light Sonner warning is ~97% yellow-white and disappears on the
+ *   cream guest menu).
+ * - Larger title/description via `.cn-toast-guest*` (Sonner default is 13px).
+ * - Compact stack + close button like the operational preset.
+ */
+export const GUEST_TOAST_PRESET = {
+  ...COMPACT_TOAST_PRESET,
+  theme: "dark",
+  duration: 5_000,
+  containerAriaLabel: "Thông báo khách",
+  toastOptions: {
+    closeButtonAriaLabel: "Đóng thông báo",
+    classNames: GUEST_TOAST_CLASS_NAMES,
+  },
+} satisfies ToasterPreset;
+
 export function isOperationalToastRoute(pathname: string | null): boolean {
   return pathname !== null && OPERATIONAL_TOAST_ROUTE_PATTERN.test(pathname);
 }
 
+export function isGuestToastRoute(pathname: string | null): boolean {
+  return pathname !== null && GUEST_TOAST_ROUTE_PATTERN.test(pathname);
+}
+
 /**
- * Pure preset selection: mobile (whole app) or a POS/KDS route (any viewport)
- * → the compact operational toaster; everything else → the desktop preset.
+ * Pure preset selection: guest `/q/*` → high-contrast guest toaster; mobile
+ * (whole app) or a POS/KDS route (any viewport) → the compact operational
+ * toaster; everything else → the desktop preset.
  * Exported for unit testing without rendering the client component.
  */
 export function selectToasterPreset({
@@ -83,6 +118,7 @@ export function selectToasterPreset({
   isMobile: boolean;
   pathname: string | null;
 }): ToasterPreset {
+  if (isGuestToastRoute(pathname)) return GUEST_TOAST_PRESET;
   return isMobile || isOperationalToastRoute(pathname)
     ? COMPACT_TOAST_PRESET
     : DESKTOP_TOAST_PRESET;

@@ -16,7 +16,7 @@ The self-order surface ships its flows correctly but has weak loading and feedba
 - The floating submit-error alert (`self-order-client.tsx:384`, `fixed bottom-24 z-40`) can overlap the fixed cart bar (`cart-sheet.tsx:244`, `fixed bottom-0 z-30`).
 - Cart `updateQuantity` (`self-order-client.tsx:132-142`) already floors quantity at 1, but the cart-line decrease button (`cart-sheet.tsx:119-127`) stays enabled at 1 and becomes a no-op. Removal should stay explicit through the trash button.
 
-Existing DS affordances this surface underuses: `PageSkeleton` (`apps/web/app/components/page-skeleton.tsx`) for route `loading.tsx`, `Spinner` (`@comtammatu/ui/components/spinner`) for pending buttons, `NoteCallout tone="warning"` for compact warning feedback, and `Alert` for destructive/action errors. The Motion Contract already covers `Spinner`, `Skeleton`, Radix/Sheet enter-exit, and `transition-colors`; this pass does not widen it.
+Existing DS affordances this surface underuses: `PageSkeleton` (`apps/web/app/components/page-skeleton.tsx`) for route `loading.tsx`, `Spinner` (`@comtammatu/ui/components/spinner`) for pending buttons, `Dialog` for workflow-changing guest states, and Sonner toast for non-blocking feedback. The Motion Contract already covers `Spinner`, `Skeleton`, Radix/Sheet enter-exit, and `transition-colors`; this pass does not widen it.
 
 **Out of scope** (verified, not broken): the pending-payment confirm flow already uses the DS `confirm()` primitive (`@comtammatu/ui/components/confirm-dialog`, an `AlertDialog`), invoked at `self-order-client.tsx:188`. Sheet slide-in / Radix data-state enter-exit is handled by `tw-animate-css` and is sufficient. Category pill already has `transition-colors`. Sticky-category-header scroll hard-cut, image fade-in, cart badge bump, live-dot pulse, and order-summary expand animation are intentionally skipped until browser QA proves they solve a real usability problem.
 
@@ -24,7 +24,7 @@ Existing DS affordances this surface underuses: `PageSkeleton` (`apps/web/app/co
 
 **Primitive-first, no new motion layer:**
 
-- Adopt the existing `PageSkeleton`, `Spinner`, `NoteCallout`, and `Alert` primitives/adapters.
+- Adopt the existing `PageSkeleton`, `Spinner`, `Dialog`, and Sonner toast primitives/adapters.
 - Do not add `@keyframes`, `--animate-*` tokens, local animation helpers, or a primitive component.
 - Promote a pattern only when at least two surfaces reuse the same shape — not the case here.
 - No `framer-motion` / `motion` dependency.
@@ -40,11 +40,12 @@ Existing DS affordances this surface underuses: `PageSkeleton` (`apps/web/app/co
 
 - `useSnapshotSync` gains `isRefreshing: boolean`, `refreshError: string | null`, and `clearRefreshError`.
 - `refreshSnapshot` sets `isRefreshing` with `try/finally`; on success it updates `snapshot` and clears `refreshError`; on failed response or thrown fetch it keeps the old snapshot and sets `refreshError`.
-- No persistent header refresh button. Refresh recovery stays inside the warning `NoteCallout`; its retry button is disabled while `isRefreshing`.
+- No header refresh feedback. A failed refresh emits one deduplicated toast and
+  the adaptive polling loop continues to recover on the next attempt.
 
 **1.3 Submit / payment pending** — `cart-sheet.tsx`, `payment-panel.tsx`:
 
-- Submit CTA (`CartSheet.SubmitCta` at `cart-sheet.tsx:173`, plus the FAB bar CTA at `cart-sheet.tsx:265`): when `isSubmitting`, render `<Spinner className="size-4" />` beside the label; keep the label text.
+- Submit CTA (`CartSheet.SubmitCta`): when `isSubmitting`, render `<Spinner className="size-4" />` beside the label; keep the label text. The fixed cart action only opens the sheet and never submits.
 - Payment buttons (`payment-panel.tsx:129-145`): when `isPending`, render `<Spinner className="size-4" />` beside each label; keep `disabled`.
 - `Spinner` is always accompanied by its text label.
 
@@ -54,15 +55,15 @@ Existing DS affordances this surface underuses: `PageSkeleton` (`apps/web/app/co
 
 - Remove the `fixed bottom-24 z-40` floating alert (`self-order-client.tsx:384-391`).
 - Pass `submitError` into `CartSheet`.
-- Render the `Alert variant="destructive"` near the cart CTA: inside the open sheet footer and above the fixed FAB CTA when the sheet is closed. This keeps the error in the active checkout flow without overlapping the fixed cart bar.
+- Render the `Alert variant="destructive"` inside the open sheet footer. This keeps the error in the active checkout flow without turning the menu into a second submit surface.
 - Clear `submitError` on the next submit attempt or when cart content changes through add/remove/quantity change.
 
-**2.2 Refresh-error banner** — `self-order-client.tsx` + `hooks.ts`.
+**2.2 Refresh-error toast** — `self-order-client.tsx` + `hooks.ts`.
 
-- When `refreshError !== null`, render a compact warning below the header using `NoteCallout tone="warning"` with copy from `SELF_ORDER_VI`:
-  - message: `Không cập nhật được, đang dùng dữ liệu cũ`
-  - action: `Thử lại`
-- The retry button calls `refreshSnapshot()`. Do not call `clearRefreshError` after retry; a failed retry must leave the warning visible. `clearRefreshError` is only for success or explicit dismissal if a dismiss control is added later.
+- When `refreshError !== null`, emit one Sonner error toast with
+  `Không cập nhật được, đang dùng dữ liệu cũ`. Do not add a persistent header
+  banner; a successful poll clears the dedupe key and a later failure may toast
+  again.
 
 ## Section 3 — Cart decrement floor
 
@@ -76,7 +77,9 @@ Existing DS affordances this surface underuses: `PageSkeleton` (`apps/web/app/co
 
 - `apps/web/app/q/[token]/loading.tsx` — route loading frame using `PageSkeleton`.
 - `apps/web/app/q/[token]/self-order/hooks.ts` — `isRefreshing`, `refreshError`, `clearRefreshError`.
-- `apps/web/app/q/[token]/self-order-client.tsx` — refresh-error banner/retry, always-visible menu/bill tabs, submit-error wiring, `updateQuantity` cleanup.
+- `apps/web/app/q/[token]/self-order-client.tsx` — refresh-error toast,
+  lower-right bill launcher after the first request, dialog guest states,
+  submit-error wiring, `updateQuantity` cleanup.
 - `apps/web/app/q/[token]/self-order/cart-sheet.tsx` — submit spinner, submit-error placement, decrease-button floor.
 - `apps/web/app/q/[token]/self-order/payment-panel.tsx` — payment button spinner.
 - `packages/shared/src/messages/self-order.ts` — refresh-error message/action copy.

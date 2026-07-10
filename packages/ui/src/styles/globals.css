@@ -274,6 +274,41 @@
   box-shadow: var(--effect-toast);
 }
 
+/* Guest `/q/*` toaster: Sonner defaults to 13px on a near-white warning fill;
+ * bump type and keep description readable on the dark richColors surface. */
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest {
+  font-size: 1rem;
+  gap: 0.625rem;
+  padding-block: 0.875rem;
+  padding-inline: 1rem;
+  padding-inline-end: 2.75rem;
+}
+
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
+  .cn-toast-guest-title,
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest [data-title] {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
+  .cn-toast-guest-description,
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
+  [data-description] {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  font-weight: 400;
+  color: inherit;
+  opacity: 0.92;
+}
+
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
+  .cn-toast-guest-action {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
 [data-sonner-toast][data-styled="true"] .cn-toast-close {
   top: 0.5rem;
   right: 0.5rem;

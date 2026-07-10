@@ -33,19 +33,35 @@ test("S3 exposes snapshot, submit, and payment without device capability", () =>
   }
 });
 
-test("S4 is one menu page with derived callouts and adaptive polling", () => {
+test("S4 is one menu page with dialog/toast feedback and adaptive polling", () => {
   const client = read("app/q/[token]/self-order-client.tsx");
   const bill = read("app/q/[token]/self-order/bill-drawer.tsx");
+  const cart = read("app/q/[token]/self-order/cart-sheet.tsx");
   const menu = read("app/q/[token]/self-order/menu-panel.tsx");
   const hooks = read("app/q/[token]/self-order/hooks.ts");
 
   assert.match(client, /SELF_ORDER_VI\.tableLabel/);
-  assert.match(client, /SELF_ORDER_VI\.viewBill/);
+  assert.match(client, /SELF_ORDER_VI\.branchFallback/);
+  assert.match(client, /SELF_ORDER_VI\.billTab/);
+  assert.match(client, /from "@\/components\/theme-toggle"/);
+  assert.match(client, /<ThemeToggle/);
+  assert.match(client, /size="icon-touch"/);
+  assert.doesNotMatch(client, /billAvailable/);
+  assert.match(client, /fixed right-3 z-30/);
+  assert.match(client, /bottom-20/);
+  assert.match(client, /billView/);
+  assert.match(client, /onOpenPayment=\{\(\) => setBillView\("payment"\)\}/);
+  assert.match(client, /!ambiguous && order \? \(/);
+  assert.match(client, /toast\.error\(refreshError\)/);
+  assert.match(client, /toast\.warning\(SELF_ORDER_VI\.awaitingCalloutTitle/);
+  assert.match(client, /toast\.warning\(SELF_ORDER_VI\.rejectedCalloutTitle/);
+  assert.match(client, /guestToastKeyRef/);
+  assert.doesNotMatch(client, /<AppDialog|guestNotice|setGuestNotice/);
   assert.match(client, /awaitingCalloutTitle/);
   assert.match(client, /rejectedCalloutTitle/);
   assert.match(client, /SELF_ORDER_VI\.submitAddMore/);
   assert.match(client, /<BillDrawer/);
-  assert.match(client, /!ambiguous \? \(/);
+  assert.doesNotMatch(client, /<NoteCallout|<Alert/);
   assert.doesNotMatch(
     client,
     /StatusPill|SessionStatePanel|DeviceAccessPanel|<Tabs/,
@@ -54,14 +70,77 @@ test("S4 is one menu page with derived callouts and adaptive polling", () => {
   assert.match(bill, /pendingItems/);
   assert.match(bill, /<OrderSummary/);
   assert.doesNotMatch(menu, /<Tabs|TabsTrigger|TabsList/);
-  assert.match(menu, /category\.type !== "main_dish"/);
-  assert.match(menu, /<MenuCompactButton/);
-  assert.match(menu, /featuredMainDishes/);
-  assert.match(menu, /category\.type === "main_dish"/);
-  assert.match(menu, /\.slice\(0, 3\)/);
-  assert.match(menu, /featuredMainDishIds/);
+  assert.match(menu, /isSelfOrderComCategory\(category\)/);
+  assert.match(menu, /compact=\{!isSelfOrderComCategory\(category\)\}/);
+  assert.match(menu, /<MenuRowButton/);
+  assert.match(menu, /defaultSelfOrderCategoryValue/);
+  assert.match(menu, /splitMenuItemDisplayName/);
+  assert.match(menu, /from "\.\/menu-display"/);
+  assert.match(menu, /menuPromptTitle/);
+  assert.doesNotMatch(menu, /bg-gradient-to-t from-black/);
+  assert.doesNotMatch(menu, /featuredMainDishes|MenuPhotoButton|grid-cols-2/);
+  assert.doesNotMatch(menu, /category\.type !== "main_dish"/);
+  assert.match(menu, /items-stretch justify-start gap-4 p-3/);
+  assert.match(menu, /active:scale-\[0\.97\]/);
+  assert.match(menu, /group-active:scale-105/);
+  assert.match(menu, /className="object-cover transition-transform duration-150 group-active:scale-105"/);
+  assert.match(menu, /text-xs font-medium tracking-wide text-muted-foreground uppercase/);
+  assert.match(menu, /absolute top-1\.5 left-1\.5/);
+  assert.match(menu, /h-32 w-32/);
+  assert.match(menu, /h-16 w-16/);
+  assert.match(menu, /text-2xl leading-tight/);
+  assert.match(menu, /text-lg leading-snug/);
+  assert.match(menu, /font-heading text-2xl font-semibold tracking-tight/);
+  const menuDisplay = read("app/q/[token]/self-order/menu-display.ts");
+  assert.match(menuDisplay, /isSelfOrderComCategory/);
+  assert.match(menuDisplay, /normalizeCategoryName\(category\.name\) === "cơm"/);
+  assert.match(menuDisplay, /!== "khác"/);
+  assert.match(client, /defaultSelfOrderCategoryValue\(initialSnapshot\.menu\)/);
+  assert.doesNotMatch(client, /useState\("all"\)/);
+  assert.match(bill, /paymentView/);
+  assert.match(bill, /onOpenPayment/);
+  assert.match(bill, /onBackToBill/);
   assert.match(hooks, /fast \? 3_000 : 15_000/);
   assert.doesNotMatch(hooks, /realtimeTopic|\.channel\(/);
+  assert.match(
+    cart,
+    /fixed inset-x-0 bottom-0[\s\S]*?onClick=\{\(\) => setOpen\(true\)\}/,
+  );
+  assert.match(cart, /max-h-dvh-95/);
+  assert.match(cart, /SELF_ORDER_VI\.editCartItem/);
+  assert.match(cart, /onReplace/);
+  assert.match(cart, /SelfOrderItemSheet/);
+  assert.match(cart, /initialDraft=\{editingCartItem\}/);
+  assert.match(cart, /ItemSeparator/);
+  assert.match(
+    cart,
+    /workflow-safe-pb flex shrink-0[\s\S]*onClick=\{props\.onSubmit\}/,
+  );
+});
+
+test("item sheet supports add and cart-edit commit paths", () => {
+  const itemSheet = read("app/q/[token]/self-order/item-sheet.tsx");
+  assert.match(itemSheet, /initialDraft/);
+  assert.match(itemSheet, /SELF_ORDER_VI\.updateCartItem/);
+  assert.match(itemSheet, /onCommit/);
+  assert.match(itemSheet, /hydrateFromDraft/);
+  assert.match(itemSheet, /data-\[side=bottom\]:h-dvh/);
+  assert.match(itemSheet, /aspect-video/);
+  assert.match(
+    itemSheet,
+    /max-h-56[\s\S]*sm:max-h-64 md:max-h-48 lg:max-h-56/,
+  );
+  assert.match(itemSheet, /max-w-2xl/);
+  assert.match(itemSheet, /object-cover object-center/);
+  assert.match(itemSheet, /SheetDescription className="sr-only"/);
+  assert.doesNotMatch(
+    itemSheet,
+    /item\.description \?\? SELF_ORDER_VI\.customizeDescription/,
+  );
+  assert.match(
+    itemSheet,
+    /flex shrink-0 items-center gap-2 p-3[\s\S]*commitCustomizedItem/,
+  );
 });
 
 test("S5 routes pending QR requests through the table and bill surfaces", () => {

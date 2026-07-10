@@ -47,13 +47,15 @@ export const SELF_ORDER_VI = {
   closedDescription:
     "Cảm ơn quý khách. Nếu cần hỗ trợ thêm, vui lòng gọi nhân viên.",
   menuTitle: "Thực đơn",
+  menuPromptTitle: "Hôm nay ăn gì?",
+  menuPromptDescription: "Chọn món rồi xem lại giỏ trước khi gửi.",
   billTab: "Hoá đơn",
   viewBill: "Xem hoá đơn",
   allCategories: "Tất cả",
-  featuredMainDishes: "Món chính",
   categoriesAria: "Danh mục món",
   menuEmpty: "Thực đơn hiện chưa có món để gọi.",
   cartTitle: "Món đang chọn",
+  viewCart: "Giỏ hàng",
   cartEmpty: "Chạm món trong thực đơn để thêm vào giỏ.",
   cartReviewDescription:
     "Kiểm tra số lượng, tuỳ chọn và ghi chú trước khi gửi.",
@@ -61,8 +63,11 @@ export const SELF_ORDER_VI = {
   subtotal: "Tạm tính",
   total: "Tổng hiện tại",
   addToCart: "Thêm",
+  editCartItem: "Sửa",
+  updateCartItem: "Cập nhật",
   customizeItem: "Tuỳ chỉnh món",
   closeCustomizerAria: "Đóng tuỳ chỉnh món",
+  closeCartAria: "Đóng giỏ hàng",
   customizeDescription:
     "Chọn tuỳ biến, ghi chú và số lượng trước khi thêm vào giỏ.",
   variantLabel: "Loại",
@@ -200,6 +205,7 @@ export const SELF_ORDER_VI = {
   awaitingCalloutTitle: "Đang chờ nhân viên xác nhận",
   awaitingCalloutDescription:
     "Yêu cầu mở bàn đã được gửi. Bạn vẫn có thể xem thực đơn trong lúc chờ.",
+  acknowledge: "Đã hiểu",
   ctaAwaitingDevice: "Đang chờ xác nhận thiết bị",
   ctaAwaitingDeviceHint:
     "Giỏ món chưa được gửi. Sau khi nhân viên xác nhận thiết bị, hãy bấm Gửi món.",

@@ -15,7 +15,7 @@
 
 ## Product thesis
 
-The guest surface is a **touch-first ordering tool**, not a brand splash. First viewport = table name + menu. The bill is a destination, not a peer of the menu.
+The guest surface is a **touch-first ordering tool**, not a brand splash. First viewport = Má Tư, table name, and menu. The bill is a destination, not a peer of the menu.
 
 Self-order owns no lifecycle of its own. A seating **is** an open POS order on a table. Staff gate the moment a table opens; after that, guests reach the kitchen unmediated.
 
@@ -31,7 +31,7 @@ Guest-visible state is **derived**, never stored. There is exactly one stored en
 | the last request is `rejected`                    | `Bị từ chối`              | resubmit immediately (same cart)                                                 |
 | an open order exists, no live payment intent      | `Bàn đang mở`             | **Gửi thêm món** (straight to KDS), view bill                                    |
 | an open order exists, a live payment intent       | `Đang thanh toán`         | view bill, wait; add-more locked                                                 |
-| two or more open orders exist, no pending request | `Cần nhân viên chọn bill` | browse, build cart, **Gửi món** for staff approval; bill and payment stay hidden |
+| two or more open orders exist, no pending request | `Cần nhân viên chọn bill` | browse, build cart, **Gửi món** for staff approval; bill opens without order details and payment stays hidden |
 | `orders.payment_status = 'paid'`                  | `Đã thanh toán`           | see the receipt for this browser session only                                    |
 
 An **open order** = `orders.table_id = <table>` AND `payment_status <> 'paid'` AND `status NOT IN ('completed','cancelled')`.
@@ -45,8 +45,8 @@ A paid order leaves the snapshot immediately. The next guest scanning the same p
 3. **Gửi món** → one `self_order_requests` row, `status='pending'`.
 4. Staff sees the badge on the POS table tile → **Duyệt** → `create_order(table_id, items)` → `route_order_to_kds` fires → the kitchen has it.
 5. Guest adds more → `append_order_items` directly. **No approval.** KDS receives it.
-6. Guest opens the bill drawer → `orders.items + totalAmount` (the payable truth after staff edits, voids, merges).
-7. Guest requests payment (`cash_call` | `vietqr`) + optional HĐĐT buyer fields.
+6. Guest opens the bill drawer → `orders.items + totalAmount` (the payable truth after staff edits, voids, merges) and presses **Thanh toán**.
+7. The drawer switches to payment (`cash_call` | `vietqr`) + optional HĐĐT buyer fields; Back returns to the bill.
 8. Payment settles → existing triggers complete the order and release the table.
 
 ### Table already has an open order
@@ -78,54 +78,101 @@ Static `BrandMascot` (`animated={false}`) + title + description. Covers three ca
 
 ### G1: Menu — the only page
 
-Header is one row:
+Header is one compact block: `Cơm Tấm Má Tư` above the table label (H1), with
+the shared `ThemeToggle` (Sáng/Tối) on the right. It contains no branch name or
+workflow notification.
 
-- Left: table label (H1).
-- Right: `Hoá đơn` button + `Badge` (approved item count, or `⏳` while a request is pending). Opens a `Drawer`. **It never auto-opens.**
+`Hoá đơn` is always a fixed lower-right button + `Badge` (approved item count,
+or `⏳` while a request is pending). It opens a `Drawer` and **never
+auto-opens**. An unopened or multi-bill table shows the safe empty bill state;
+payment remains unavailable.
 
-Body: category pills (sticky under the header, one scrollable row), then a
-dedicated first section for the first three `main_dish` items in the current
-menu order. The first card spans the row; the next two complete the lead grid.
-They appear once only on the all-menu view. Remaining items then group by
-`menu_categories.type`:
+Body: category pills (sticky under the header, one scrollable row). The
+default selected pill is the named `Cơm` category when present; otherwise the
+first non-empty category that is not `Khác`. Category pills list named
+categories first; `Tất cả` is last. Items
+render as horizontal rows — image on the left, category eyebrow + dish title +
+price on the right. A trailing parenthetical note in the item name (for example
+`Cốt Lết (WOW)`) is stripped from the title and shown as a short `Badge` on the
+top-left of the image; cart, customizer, and kitchen payloads keep the raw
+`menu_items.name`.
 
-- `main_dish` → large photo cards.
-- `side_dish | drink | dessert` → compact rows.
+Visual prominence is keyed by **category name**, not `menu_categories.type`:
 
-Footer: sticky cart bar, rendered only when the cart holds items.
+- named `Cơm` only → large thumb (`h-32`) row with `text-2xl` title and
+  `text-xl` price; press uses `active:scale-[0.97]` plus a short image scale.
+- every other category (including `Khác`, even if typed `main_dish`) → compact
+  thumb (`h-16`) row with `text-lg` title/price.
+- Motion stays inside the design-system contract: CSS
+  `transition-[transform,…] duration-150` and press scale only — no Three.js,
+  framer-motion, or custom keyframes.
+
+Footer: one sticky cart button, rendered only when the cart holds items. It
+opens the cart sheet; it never submits directly from the menu.
 
 There are **no Tabs**. There is **no `StatusPill`**. There is no branch name in the header — the guest is sitting in the branch.
 
 ### G2 · Item sheet
 
-Variant · modifiers · sides · quantity · note → add to cart.
+Full-viewport bottom sheet (`max-w-2xl` on tablet/desktop). Dish image uses
+`aspect-video` with viewport caps (`max-h-56` phone → `md:max-h-48` tablet →
+`lg:max-h-56` desktop) so width scales without dominating large screens; close
+sits on the image. Title only under the image (no customize hint). Then
+variant · modifiers · sides · note. Footer is one row: total · quantity ·
+add/update.
 
 ### G3 · Cart sheet
 
-Line quantity, remove, shared customer note. CTA label follows table state:
+Bottom sheet (max ~90% viewport) for review. Lines are a quiet list with
+separators — name + optional tag, option summary, line total, then one action
+row: **Sửa** (reopens the item customizer with the cart draft), quantity
+stepper, and remove. Shared customer note sits under the lines. Footer owns
+subtotal + send CTA only.
+
+CTA label follows table state:
 
 - table not open → **Gửi món**, hint under the button: staff will confirm.
 - table open → **Gửi thêm món**, no hint: it reaches the kitchen at once.
 
+The cart-sheet CTA is the only guest confirmation control for either send path.
+Editing a line replaces that cart entry in place (same `key`).
+
 ### G4 · Awaiting confirmation
 
-`NoteCallout tone="warning"` above the item list. Cart CTA hard-disabled. The bill button shows `⏳`; the drawer shows the pending round with no total.
+Emit one Sonner `toast.warning` (title + description) when the state first
+becomes awaiting — do not mount a dialog or banner on the menu. Guest `/q/*`
+uses the dark high-contrast toaster preset (larger title/description; not the
+near-white light warning fill). Cart CTA hard-disabled. The bill button shows
+`⏳`; the drawer shows the pending round with no total.
 
 ### G5 · Rejected
 
-`Alert variant="destructive"` + **Gửi lại**, which reloads the rejected cart verbatim. No `revoked` state. No token rotation. No reprinting the table QR.
+Emit one Sonner `toast.warning` with a **Gửi lại** action that reloads the
+rejected cart verbatim. Same guest toaster preset as G4. No dialog. No
+`revoked` state. No token rotation. No reprinting the table QR.
 
 ### G6 · Bill drawer
 
-Primary content is `orders.items` + `orders.totalAmount`. Below it, the round history reads from the existing `kitchen_send_batches` — self-order stores no round table of its own.
+Primary content is `orders.items` + `orders.totalAmount`. Below it, the round
+history reads from the existing `kitchen_send_batches` — self-order stores no
+round table of its own. It contains one **Thanh toán** CTA only when the order
+is unambiguous and open.
 
 ### G7: Payment (inside the drawer)
 
-`cash_call` | VietQR + HĐĐT buyer fields. Exactly one live intent across both methods; a live intent locks add-more, item customization, and buyer fields. VietQR reload renders the stored amount, payment code, QR bytes, bank snapshot, and expiry — it never rebuilds an active QR from current settings. Guests cannot cancel an intent; staff own cancellation after verifying money is not already in flight.
+After **Thanh toán**, the drawer replaces the bill with `cash_call` | VietQR +
+HĐĐT buyer fields; its back control returns to G6. Exactly one live intent
+across both methods; a live intent locks add-more, item customization, and
+buyer fields. VietQR reload renders the stored amount, payment code, QR bytes,
+bank snapshot, and expiry — it never rebuilds an active QR from current
+settings. Guests cannot cancel an intent; staff own cancellation after verifying
+money is not already in flight.
 
 ### G8 · Paid
 
-`NoteCallout tone="muted"` + the receipt, for the current browser session only. A reload returns to G1 with a clean menu, because a paid order is absent from the snapshot by contract.
+The receipt remains in the drawer for the current browser session only. A reload
+returns to G1 with a clean menu, because a paid order is absent from the snapshot
+by contract.
 
 ## Staff screens
 
