@@ -444,7 +444,7 @@ export function PayrollDetailClient({
             entries.length > 0 ? (
               <Item variant="outline">
                 <ItemContent>
-                  <ItemTitle className="line-clamp-none text-sm font-semibold">
+                  <ItemTitle size="heading" className="line-clamp-none">
                     {copy.table.total(entries.length)}
                   </ItemTitle>
                   <ItemDescription className="line-clamp-none text-sm leading-6">
@@ -463,7 +463,7 @@ export function PayrollDetailClient({
           mobileCardRender={(entry) => (
             <Item variant="outline">
               <ItemContent>
-                <ItemTitle className="line-clamp-none text-sm font-semibold">
+                <ItemTitle size="heading" className="line-clamp-none">
                   {entry.employees?.profiles?.full_name ?? "—"}
                 </ItemTitle>
                 <ItemDescription className="line-clamp-none text-sm leading-6">

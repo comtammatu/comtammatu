@@ -273,7 +273,7 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
     return (
       <Item variant="outline" className={isPending ? "opacity-60" : ""}>
         <ItemContent>
-          <ItemTitle className="line-clamp-none text-sm font-semibold">
+          <ItemTitle size="heading" className="line-clamp-none">
             {getEmployeeName(request)}
           </ItemTitle>
           <ItemDescription className="line-clamp-none text-sm leading-6">

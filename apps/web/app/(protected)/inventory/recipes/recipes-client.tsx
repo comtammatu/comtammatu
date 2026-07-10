@@ -235,6 +235,7 @@ export function RecipesClient({
           mode="no-data"
           title={INVENTORY_VI.recipesEmptyTitle}
           description={INVENTORY_VI.recipesEmptyDescription}
+          symbol="riceGrain"
         />
       ) : (
         <>

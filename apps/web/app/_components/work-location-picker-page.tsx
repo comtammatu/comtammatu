@@ -104,7 +104,7 @@ export async function WorkLocationPickerPage() {
           ) : null}
         </LinkCardGrid>
       ) : (
-        <AppEmptyState title={MODULE_ACL.branch_picker.label} />
+        <AppEmptyState title={MODULE_ACL.branch_picker.label} symbol="roof" />
       )}
     </AppPage>
   );

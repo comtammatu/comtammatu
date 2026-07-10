@@ -2,9 +2,11 @@ export type MatuThemeMode = "light" | "night";
 
 export const MATU_THEME_COOKIE_NAME = "matu-theme";
 
+// Exact sRGB of the `--background` token per theme (packages/ui/src/styles/globals.css).
+// design-token-contrast-static.test.ts asserts the equality.
 export const BROWSER_CHROME_THEME_COLORS: Record<MatuThemeMode, string> = {
   light: "#fff6ee",
-  night: "#1f1812",
+  night: "#120a06",
 };
 
 export const GLOBAL_ERROR_PALETTE: Record<

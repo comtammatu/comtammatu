@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -37,12 +37,17 @@ import { useCart } from "../_hooks/use-cart";
 import { useActiveTable } from "../_hooks/use-active-table";
 import { useSwipeReveal } from "@lib/hooks/use-swipe-reveal";
 import { PosLineItemCompact } from "./pos-line-item-compact";
+import {
+  deriveJustAddedCartKeys,
+  getCartLineEnterClass,
+} from "../_lib/cart-line-enter";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
 const DELETE_REVEAL_WIDTH = 80;
 const SWIPE_ACTIVATION_PX = 8;
 const SWIPE_REVEAL_THRESHOLD_PX = 40;
+const CART_LINE_ENTER_MS = 300;
 
 export type SubmitOrderOptions = {
   priority?: boolean;
@@ -74,6 +79,11 @@ function CartPaneComponent({
   const [removingKeys, setRemovingKeys] = useState<Set<string>>(
     () => new Set(),
   );
+  const [justAddedKeys, setJustAddedKeys] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const knownKeysRef = useRef<ReadonlySet<string> | null>(null);
+  const enterTimeoutsRef = useRef<Map<string, number>>(new Map());
   const swipe = useSwipeReveal({
     revealWidth: DELETE_REVEAL_WIDTH,
     activationPx: SWIPE_ACTIVATION_PX,
@@ -94,6 +104,50 @@ function CartPaneComponent({
   const shouldShowOrderTypeSelector =
     cart.items.length === 0 && selectedTableNumber == null;
   const hasRemovingItems = removingKeys.size > 0;
+
+  // One-shot enter for newly added cart lines. A merged quantity++ reuses the
+  // line's key (no enter — the line's quantity pulse already covers it); only a
+  // brand-new key flashes once, then clears.
+  useEffect(() => {
+    const currentKeys = cart.items.map((item) => item.key);
+    const { nextKnownKeys, addedKeys } = deriveJustAddedCartKeys(
+      knownKeysRef.current,
+      currentKeys,
+    );
+    knownKeysRef.current = nextKnownKeys;
+    if (addedKeys.length === 0) return;
+
+    setJustAddedKeys((prev) => {
+      const next = new Set(prev);
+      for (const key of addedKeys) next.add(key);
+      return next;
+    });
+
+    for (const key of addedKeys) {
+      const existing = enterTimeoutsRef.current.get(key);
+      if (existing !== undefined) window.clearTimeout(existing);
+      const timeoutId = window.setTimeout(() => {
+        enterTimeoutsRef.current.delete(key);
+        setJustAddedKeys((prev) => {
+          if (!prev.has(key)) return prev;
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }, CART_LINE_ENTER_MS);
+      enterTimeoutsRef.current.set(key, timeoutId);
+    }
+  }, [cart.items]);
+
+  useEffect(
+    () => () => {
+      for (const timeoutId of enterTimeoutsRef.current.values()) {
+        window.clearTimeout(timeoutId);
+      }
+      enterTimeoutsRef.current.clear();
+    },
+    [],
+  );
 
   useKeyboardShortcut([
     {
@@ -359,7 +413,13 @@ function CartPaneComponent({
                   : "pr-14";
 
                 return (
-                  <div key={item.key} className="relative overflow-hidden">
+                  <div
+                    key={item.key}
+                    className={cn(
+                      "relative overflow-hidden",
+                      justAddedKeys.has(item.key) && getCartLineEnterClass(),
+                    )}
+                  >
                     <Button
                       variant="destructive"
                       className={cn(

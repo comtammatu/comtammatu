@@ -738,6 +738,29 @@ Contract chi tiet: `docs/spec/toast-notification-system.md`.
 - Copy phải an toàn, tiếng Việt, và không bao giờ expose raw Supabase/Postgres `error.message`.
 - Notification producer mới phải có `kind`, `severity`, `target_roles`, optional `target_branch_id`, `action_url`, và `dedup_key` khi event có thể lặp lại.
 
+## Theme Runtime
+
+Contract đầy đủ (token value, giới hạn `.theme-light-only`): `docs/spec/design-system.md`
+§ Token Contract → Theme runtime. Mục này chỉ tóm tắt cách agent thao tác với
+runtime hai chế độ, không lặp lại hoặc override token value.
+
+- Hai chế độ `light` (mặc định, ca ngày) và `night` (ấm-tối "gạo cháy", ca
+  tối/đêm); `night` map vào class `.dark`. Không có cookie thì fallback theo
+  giờ địa phương — `night` cho khung 18:00–06:00, còn lại `light` — không phụ
+  thuộc `prefers-color-scheme`/`matchMedia`.
+- `packages/ui/src/components/theme-script.tsx` set class trước hydrate đọc
+  cookie `matu-theme`; `packages/ui/src/components/theme-provider.tsx` là
+  runtime state provider duy nhất, `setTheme` ghi lại cookie đó
+  (SameSite=Lax, 1 năm) — theme là UI preference duy nhất được phép lưu ở
+  browser storage.
+- `ThemeToggle` (`apps/web/app/components/theme-toggle.tsx`) là toggle duy
+  nhất, mount ở `AppHeader`, operations PWA toolbar, và employee header. Không
+  thêm theme context thứ hai, toggle route-local, hoặc key localStorage mới.
+- Runner customer display ép về light token qua `.theme-light-only`
+  (`apps/web/app/(protected)/br/[branchId]/runner/layout.tsx`); đây là escape
+  hatch cấp token, không tắt `dark:` variant hay chart THEMES map bên trong —
+  xem giới hạn đầy đủ trong design-system.md trước khi dùng lại pattern này.
+
 ## Form Helpers
 
 App-local form helpers sống tại `apps/web/app/components/form/`. Dùng cho mọi dialog/form mới:

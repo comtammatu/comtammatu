@@ -239,6 +239,7 @@ export function PrintJobsClient({
       columns={columns}
       data={jobs}
       getRowKey={(job) => job.id}
+      pageSize={50}
       filters={filters}
       filterValues={{
         branch: filterBranch != null ? String(filterBranch) : "all",

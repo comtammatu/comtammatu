@@ -72,7 +72,7 @@ function BranchSupplierRow({
       <Item asChild variant="outline" className="min-h-20 touch-manipulation">
         <Link href={href}>
           <ItemContent className="min-w-0 gap-1">
-            <ItemTitle className="line-clamp-none text-sm font-semibold">
+            <ItemTitle size="heading" className="line-clamp-none">
               {supplier.name}
             </ItemTitle>
             <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -230,7 +230,7 @@ export function BranchGrnSourcePickerClient({
                       onClick={handleCreateSupplier}
                     >
                       <ItemContent className="min-w-0">
-                        <ItemTitle className="line-clamp-none text-sm font-semibold text-primary">
+                        <ItemTitle size="heading" className="line-clamp-none text-primary">
                           {isCreatingSupplier
                             ? INVENTORY_VI.grnCreateSupplierPending
                             : INVENTORY_VI.grnCreateSupplierInline(
@@ -333,7 +333,7 @@ export function BranchGrnSourcePickerClient({
                         onClick={() => handleCreateFromPo(purchaseOrder.id)}
                       >
                         <ItemContent className="min-w-0 gap-1">
-                          <ItemTitle className="line-clamp-none font-mono text-sm font-semibold">
+                          <ItemTitle size="heading" className="line-clamp-none font-mono">
                             {purchaseOrder.po_number}
                             {purchaseOrder.status === "partially_received" ? (
                               <Badge

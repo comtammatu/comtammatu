@@ -274,6 +274,7 @@ export function RefundsClient({
           columns={columns}
           data={refunds}
           getRowKey={(refund) => refund.id}
+          pageSize={50}
           emptyTitle="Không có yêu cầu hoàn tiền nào"
           emptyDescription="Dữ liệu trống cho bộ lọc hiện tại."
           emptyIcon={<IconRotate />}

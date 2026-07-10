@@ -100,7 +100,7 @@ export function StocktakeModeSelector({
               "flex cursor-pointer flex-col gap-1.5 rounded-md border p-3 text-sm transition",
               checked
                 ? "border-primary bg-primary/10"
-                : "border-muted hover:border-primary/50",
+                : "border-muted hover:border-primary/20",
               disabled && "cursor-not-allowed opacity-60",
             )}
           >
@@ -119,7 +119,7 @@ export function StocktakeModeSelector({
                 {meta.defaultBlind ? (
                   <Badge
                     variant="outline"
-                    className="border-warning/20 bg-warning/15 text-warning-foreground"
+                    className="border-warning/20 bg-warning/15 text-warning"
                   >
                     Blind
                   </Badge>

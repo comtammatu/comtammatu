@@ -64,6 +64,7 @@ export function TablesClient({
       <AppEmptyState
         title={commonCopy.noBranches}
         description={commonCopy.createBranchFirst}
+        symbol="roof"
       />
     );
   }

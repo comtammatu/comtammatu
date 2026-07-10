@@ -26,7 +26,7 @@ export function AbcClassChip({
 
   const tone = {
     A: "bg-destructive/15 text-destructive border-destructive/20",
-    B: "bg-warning/15 text-warning-foreground border-warning/20",
+    B: "bg-warning/15 text-warning border-warning/20",
     C: "bg-muted text-muted-foreground border-border",
   }[class_];
 

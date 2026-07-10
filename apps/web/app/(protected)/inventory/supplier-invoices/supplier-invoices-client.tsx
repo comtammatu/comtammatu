@@ -22,6 +22,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { Stat } from "@comtammatu/ui/components/stat";
 import {
   DataTable,
   type DataTableColumn,
@@ -53,6 +55,7 @@ import {
   AppPageHeader,
   AppSection,
   AppToolbar,
+  DescriptionList,
 } from "@/components/surface";
 import {
   createSupplierInvoice,
@@ -364,7 +367,7 @@ function SupplierInvoiceCreateFields({
           required
         />
       </div>
-      <div className="rounded-md border border-border/60 bg-muted/20 p-3 text-sm">
+      <NoteCallout tone="muted">
         <div className="flex items-center justify-between gap-3">
           <span className="text-muted-foreground">{copy.vat}</span>
           <span className="font-mono tabular-nums">
@@ -377,7 +380,7 @@ function SupplierInvoiceCreateFields({
             {messages.inventory.common.currencyCompact(formatVND(totalAmount))}
           </span>
         </div>
-      </div>
+      </NoteCallout>
       <TextareaField
         control={form.control}
         name="matchingNotes"
@@ -1142,6 +1145,7 @@ export function SupplierInvoicesClient({
               columns={invoiceGroupColumns}
               data={invoiceGroups}
               getRowKey={(group) => group.id}
+              pageSize={50}
               emptyTitle={
                 showEmptyResults
                   ? copy.emptyMatchedTitle
@@ -1221,89 +1225,73 @@ export function SupplierInvoicesClient({
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-md border bg-muted/30 p-3">
-                  <Badge variant="secondary">{copy.totalInvoice}</Badge>
-                  <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
-                    {messages.inventory.common.currencyCompact(
-                      formatVND(selectedInvoice.amount),
-                    )}
-                  </p>
-                </div>
-                <div className="rounded-md border bg-muted/30 p-3">
-                  <Badge variant="secondary">{copy.outstandingPayable}</Badge>
-                  <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
-                    {messages.inventory.common.currencyCompact(
-                      formatVND(selectedOutstandingAmount),
-                    )}
-                  </p>
-                </div>
-                <div className="rounded-md border bg-muted/30 p-3">
-                  <Badge variant="secondary">{copy.paidAmount}</Badge>
-                  <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
-                    {messages.inventory.common.currencyCompact(
-                      formatVND(selectedInvoice.paidAmount),
-                    )}
-                  </p>
-                </div>
-                <div className="rounded-md border bg-muted/30 p-3">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      isInvoiceOverdue(selectedInvoice) &&
-                        "border-destructive/20 text-destructive",
-                    )}
-                  >
-                    {copy.aging}
-                  </Badge>
-                  <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
-                    {selectedAgingLabel}
-                  </p>
-                </div>
+                <Stat
+                  label={copy.totalInvoice}
+                  value={messages.inventory.common.currencyCompact(
+                    formatVND(selectedInvoice.amount),
+                  )}
+                />
+                <Stat
+                  label={copy.outstandingPayable}
+                  value={messages.inventory.common.currencyCompact(
+                    formatVND(selectedOutstandingAmount),
+                  )}
+                />
+                <Stat
+                  label={copy.paidAmount}
+                  value={messages.inventory.common.currencyCompact(
+                    formatVND(selectedInvoice.paidAmount),
+                  )}
+                />
+                <Stat
+                  label={copy.aging}
+                  value={
+                    <span
+                      className={cn(
+                        isInvoiceOverdue(selectedInvoice) && "text-destructive",
+                      )}
+                    >
+                      {selectedAgingLabel}
+                    </span>
+                  }
+                />
               </div>
 
-              <dl className="grid gap-2 sm:grid-cols-2">
-                <div className="flex items-center justify-between gap-3 px-3 py-2">
-                  <dt className="text-sm text-muted-foreground">
-                    {copy.invoiceDate}
-                  </dt>
-                  <dd className="text-sm font-medium">
-                    {formatDate(selectedInvoice.invoiceDate)}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3 px-3 py-2">
-                  <dt className="text-sm text-muted-foreground">
-                    {copy.dueDate}
-                  </dt>
-                  <dd
-                    className={cn(
-                      "text-sm font-medium",
-                      isInvoiceOverdue(selectedInvoice) && "text-destructive",
-                    )}
-                  >
-                    {formatDate(selectedInvoice.dueDate)}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
-                  <dt className="text-sm text-muted-foreground">
-                    {copy.payableFormulaLabel}
-                  </dt>
-                  <dd className="text-right text-sm font-medium">
-                    {copy.payableFormula(
+              <DescriptionList
+                className="grid gap-3 sm:grid-cols-2"
+                descriptionClassName="font-medium"
+                items={[
+                  {
+                    term: copy.invoiceDate,
+                    description: formatDate(selectedInvoice.invoiceDate),
+                  },
+                  {
+                    term: copy.dueDate,
+                    description: (
+                      <span
+                        className={cn(
+                          isInvoiceOverdue(selectedInvoice) &&
+                            "text-destructive",
+                        )}
+                      >
+                        {formatDate(selectedInvoice.dueDate)}
+                      </span>
+                    ),
+                  },
+                  {
+                    term: copy.payableFormulaLabel,
+                    description: copy.payableFormula(
                       messages.inventory.common.currencyCompact(
                         formatVND(selectedInvoice.amount),
                       ),
                       messages.inventory.common.currencyCompact(
                         formatVND(selectedInvoice.paidAmount),
                       ),
-                    )}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
-                  <dt className="text-sm text-muted-foreground">
-                    {copy.lastPayment}
-                  </dt>
-                  <dd className="text-right text-sm font-medium">
-                    {selectedLastPayment
+                    ),
+                  },
+                  {
+                    term: copy.lastPayment,
+                    description: selectedLastPayment
                       ? copy.lastPaymentSummary(
                           formatDate(selectedLastPayment.paymentDate),
                           getPaymentMethodLabel(
@@ -1314,55 +1302,48 @@ export function SupplierInvoicesClient({
                             formatVND(selectedLastPayment.amount),
                           ),
                         )
-                      : copy.noPaymentHistory}
-                  </dd>
-                </div>
-                {selectedLastPayment?.referenceNote ? (
-                  <div className="flex items-center justify-between gap-3 px-3 py-2">
-                    <dt className="text-sm text-muted-foreground">
-                      {copy.paymentReference}
-                    </dt>
-                    <dd className="text-right text-sm font-medium">
-                      {selectedLastPayment.referenceNote}
-                    </dd>
-                  </div>
-                ) : null}
-                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
-                  <dt className="text-sm text-muted-foreground">
-                    {copy.linkedGrn}
-                  </dt>
-                  <dd className="text-sm font-medium">
-                    {selectedInvoice.grnCode &&
-                    selectedInvoice.grnId != null ? (
-                      <Link
-                        href={`${grnBasePath}/${selectedInvoice.grnId}`}
-                        className="text-primary hover:underline"
-                      >
-                        {selectedInvoice.grnCode}
-                      </Link>
-                    ) : (
-                      copy.notLinked
-                    )}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
-                  <dt className="text-sm text-muted-foreground">
-                    {copy.linkedPo}
-                  </dt>
-                  <dd className="text-sm font-medium">
-                    {selectedInvoice.poCode && selectedInvoice.poId != null ? (
-                      <Link
-                        href={`/inventory/purchase-orders/${selectedInvoice.poId}`}
-                        className="text-primary hover:underline"
-                      >
-                        {selectedInvoice.poCode}
-                      </Link>
-                    ) : (
-                      copy.notLinked
-                    )}
-                  </dd>
-                </div>
-              </dl>
+                      : copy.noPaymentHistory,
+                  },
+                  ...(selectedLastPayment?.referenceNote
+                    ? [
+                        {
+                          term: copy.paymentReference,
+                          description: selectedLastPayment.referenceNote,
+                        },
+                      ]
+                    : []),
+                  {
+                    term: copy.linkedGrn,
+                    description:
+                      selectedInvoice.grnCode &&
+                      selectedInvoice.grnId != null ? (
+                        <Link
+                          href={`${grnBasePath}/${selectedInvoice.grnId}`}
+                          className="text-primary hover:underline"
+                        >
+                          {selectedInvoice.grnCode}
+                        </Link>
+                      ) : (
+                        copy.notLinked
+                      ),
+                  },
+                  {
+                    term: copy.linkedPo,
+                    description:
+                      selectedInvoice.poCode &&
+                      selectedInvoice.poId != null ? (
+                        <Link
+                          href={`/inventory/purchase-orders/${selectedInvoice.poId}`}
+                          className="text-primary hover:underline"
+                        >
+                          {selectedInvoice.poCode}
+                        </Link>
+                      ) : (
+                        copy.notLinked
+                      ),
+                  },
+                ]}
+              />
 
               {selectedMissingMatchingEvidence ? (
                 <Alert className="border-warning/20 bg-warning/10 text-warning">

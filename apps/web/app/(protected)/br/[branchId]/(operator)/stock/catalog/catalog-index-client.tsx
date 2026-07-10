@@ -100,7 +100,7 @@ export function CatalogIndexClient({
                 <row.icon aria-hidden="true" />
               </ItemMedia>
               <ItemContent className="min-w-0">
-                <ItemTitle className="text-sm font-semibold">
+                <ItemTitle size="heading">
                   {row.title}
                 </ItemTitle>
               </ItemContent>

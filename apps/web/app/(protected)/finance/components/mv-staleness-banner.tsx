@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { messages } from "@lib/messages";
@@ -72,34 +73,33 @@ export function MvStalenessBanner({
   }
 
   return (
-    <div
-      className={cn(
-        "flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-xs",
-        tone === "warning"
-          ? "border-warning/30 bg-warning/5 text-warning-foreground"
-          : "border-border bg-muted/40 text-muted-foreground",
-        className,
-      )}
+    <NoteCallout
+      tone={tone === "warning" ? "warning" : "muted"}
+      className={cn("py-1.5 text-xs", className)}
       role="status"
       aria-live="polite"
     >
-      <span>{messageWhen}</span>
-      {canRefresh ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isPending}
-          className="h-7 gap-1.5 px-2 text-xs"
-        >
-          {isPending ? (
-            <Spinner className="size-3.5" aria-hidden />
-          ) : (
-            <RefreshCw className="size-3.5" aria-hidden />
-          )}
-          {isPending ? stalenessCopy.refreshing : stalenessCopy.refresh}
-        </Button>
-      ) : null}
-    </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className={tone === "warning" ? undefined : "text-muted-foreground"}>
+          {messageWhen}
+        </span>
+        {canRefresh ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isPending}
+            className="h-7 gap-1.5 px-2 text-xs"
+          >
+            {isPending ? (
+              <Spinner className="size-3.5" aria-hidden />
+            ) : (
+              <RefreshCw className="size-3.5" aria-hidden />
+            )}
+            {isPending ? stalenessCopy.refreshing : stalenessCopy.refresh}
+          </Button>
+        ) : null}
+      </div>
+    </NoteCallout>
   );
 }

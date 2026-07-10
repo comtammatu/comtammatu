@@ -362,6 +362,7 @@ function PosMenuGridComponent({
         <InputGroupAddon align="inline-end">
           <InputGroupButton
             size="icon-xs"
+            className="relative after:absolute after:-inset-2.5"
             aria-label={messages.pos.menu.clearSearchAria}
             onClick={clearQuery}
           >

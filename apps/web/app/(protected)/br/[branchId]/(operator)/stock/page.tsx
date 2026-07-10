@@ -154,6 +154,7 @@ export default async function OperatorStockPage({
         <AppEmptyState
           compact
           title={messages.inventory.dashboard.noUrgentTasks}
+          symbol="riceGrain"
         />
       )}
     </BranchOperatorPage>

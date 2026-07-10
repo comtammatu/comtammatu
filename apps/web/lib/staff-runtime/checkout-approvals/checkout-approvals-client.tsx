@@ -165,7 +165,7 @@ function ApprovalRow({
               <IconClipboardCheck />
             </ItemMedia>
             <ItemContent className="min-w-0">
-              <ItemTitle className="text-sm font-semibold flex items-center flex-wrap gap-2">
+              <ItemTitle size="heading" className="flex items-center flex-wrap gap-2">
                 {item.employeeName}
                 {item.employeeCode ? (
                   <span className="font-mono text-xs text-muted-foreground">

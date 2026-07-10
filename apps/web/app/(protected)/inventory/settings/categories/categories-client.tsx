@@ -170,7 +170,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
         mobileCardRender={(row) => (
           <Item variant="outline">
             <ItemContent className="min-w-0">
-              <ItemTitle className="text-sm font-semibold">
+              <ItemTitle size="heading">
                 {row.name}
               </ItemTitle>
               <ItemDescription className="text-sm leading-6">

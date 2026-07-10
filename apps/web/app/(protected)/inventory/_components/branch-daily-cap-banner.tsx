@@ -50,7 +50,7 @@ export function BranchDailyCapBanner({
       variant={tone}
       className={cn(
         !willExceed &&
-          "border-warning/20 bg-warning/10 text-warning-foreground",
+          "border-warning/20 bg-warning/10 text-warning",
         className,
       )}
       data-slot="branch-daily-cap-banner"

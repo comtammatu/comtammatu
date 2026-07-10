@@ -170,7 +170,7 @@ export function PrintersClient(props: {
                   >
                     <ItemContent className="min-w-0">
                       <ItemHeader className="justify-start gap-2">
-                        <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+                        <ItemTitle size="heading" className="line-clamp-none w-full">
                           {ROLE_LABEL[role]}
                         </ItemTitle>
                         {printer?.is_active ? (
@@ -444,7 +444,7 @@ function PrinterForm({
                       branches.find((branch) => branch.id === form.branch_id)?.name ??
                       `#${form.branch_id}`
                     }
-                    className="bg-muted/40"
+                    className="bg-muted/50"
                   />
                 ) : (
                   <Select
@@ -473,7 +473,7 @@ function PrinterForm({
                 <Input
                   readOnly
                   value={ROLE_LABEL[form.role]}
-                  className="bg-muted/40"
+                  className="bg-muted/50"
                 />
               ) : (
                 <Select

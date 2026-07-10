@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus as IconPlus, ChevronsUpDown as IconSelector } from "lucide-react";
+import { Plus as IconPlus, ChevronDown as IconSelector } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
+import { fieldTriggerChrome } from "@comtammatu/ui/lib/field-trigger";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
@@ -112,13 +113,18 @@ export function MultiSelectCombobox({
           role="combobox"
           aria-expanded={open}
           disabled={disabled || selectableCount === 0}
-          className={cn("justify-between font-normal", triggerClassName)}
+          className={cn(
+            "justify-between font-normal",
+            fieldTriggerChrome,
+            "hover:bg-input/20 aria-expanded:bg-input/30",
+            triggerClassName,
+          )}
         >
           <span className="inline-flex items-center gap-2 truncate">
             <IconPlus className="size-4 shrink-0" />
             {triggerLabel}
           </span>
-          <IconSelector className="ml-2 size-4 shrink-0 opacity-50" />
+          <IconSelector className="ml-2 size-3.5 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent

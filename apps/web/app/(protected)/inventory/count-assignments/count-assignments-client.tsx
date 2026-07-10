@@ -571,6 +571,7 @@ export function CountAssignmentsClient({
           mode="no-data"
           title={INVENTORY_VI.countAssignNoWarehouseTitle}
           description={INVENTORY_VI.countAssignNoWarehouseDescription}
+          symbol="riceGrain"
         />
       )}
 
@@ -579,6 +580,7 @@ export function CountAssignmentsClient({
           mode="no-data"
           title={INVENTORY_VI.countAssignNoEmployeesTitle}
           description={INVENTORY_VI.countAssignNoEmployeesDescription}
+          symbol="riceGrain"
         />
       )}
 

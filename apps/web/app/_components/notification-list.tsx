@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
+import { Item } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import {
@@ -109,9 +110,10 @@ function NotificationListSkeletonFallback() {
   return (
     <>
       {Array.from({ length: 4 }).map((_, index) => (
-        <div
+        <Item
           key={index}
-          className="flex items-start gap-3 rounded-md border bg-card p-3"
+          variant="outline"
+          className="items-start gap-3 bg-card p-3"
         >
           <Skeleton className="size-8 shrink-0 rounded-md" />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -119,7 +121,7 @@ function NotificationListSkeletonFallback() {
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-3 w-1/3" />
           </div>
-        </div>
+        </Item>
       ))}
     </>
   );

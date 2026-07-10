@@ -6,12 +6,14 @@ export type InventorySemanticColor =
   | "info"
   | "muted";
 
+// Semantic tones bind to status tokens, not chart-N: the chart ramp is
+// categorical and reorders its hues between light and night themes.
 const INVENTORY_COLOR_VALUE: Record<InventorySemanticColor, string> = {
-  primary: "var(--chart-1)",
-  success: "var(--chart-2)",
-  warning: "var(--chart-3)",
-  danger: "var(--chart-4)",
-  info: "var(--chart-5)",
+  primary: "var(--primary)",
+  success: "var(--success)",
+  warning: "var(--warning)",
+  danger: "var(--destructive)",
+  info: "var(--info)",
   muted: "var(--muted-foreground)",
 };
 

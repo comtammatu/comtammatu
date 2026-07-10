@@ -403,6 +403,7 @@ export function OrdersClient({
             columns={ORDER_COLUMNS}
             data={displayOrders}
             getRowKey={(order) => order.id}
+            pageSize={50}
             onRowClick={setSelectedOrder}
             emptyTitle="Không có đơn hàng nào"
             emptyDescription={

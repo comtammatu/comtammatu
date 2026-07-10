@@ -158,9 +158,23 @@ export function DataTable<T>({
   const [openContextRowKey, setOpenContextRowKey] = React.useState<
     string | number | null
   >(null);
+  const [internalPage, setInternalPage] = React.useState(1);
   const colSpan = columns.length;
   const total = totalCount ?? data.length;
   const showPagination = pageSize != null && total > pageSize;
+  // `totalCount` signals server-side paging: `data` is already one page, so the
+  // adapter must not slice it. Without it, the adapter owns page state and
+  // slicing; the page derives clamped so a shrinking filter result never
+  // strands the view on an empty page.
+  const totalPages =
+    pageSize != null ? Math.max(1, Math.ceil(total / pageSize)) : 1;
+  const activePage = Math.min(currentPage ?? internalPage, totalPages);
+  const handlePageChange = onPageChange ?? setInternalPage;
+  const sliced = pageSize != null && totalCount == null;
+  const pageOffset = sliced ? (activePage - 1) * (pageSize ?? 0) : 0;
+  const pagedData = sliced
+    ? data.slice(pageOffset, pageOffset + (pageSize ?? 0))
+    : data;
   const hasToolbar =
     searchable === true ||
     (filters != null && filters.length > 0) ||
@@ -231,17 +245,19 @@ export function DataTable<T>({
             icon={emptyIcon}
           />
         ) : (
-          data.map((row, index) => (
-            <div key={getRowKey(row)}>{mobileCardRender(row, index)}</div>
+          pagedData.map((row, index) => (
+            <div key={getRowKey(row)}>
+              {mobileCardRender(row, index + pageOffset)}
+            </div>
           ))
         )}
         {data.length > 0 ? mobileFooter : null}
         {showPagination && (
           <DataTablePagination
             pageSize={pageSize}
-            currentPage={currentPage ?? 1}
+            currentPage={activePage}
             totalItems={total}
-            onPageChange={onPageChange ?? (() => {})}
+            onPageChange={handlePageChange}
           />
         )}
       </div>
@@ -271,7 +287,8 @@ export function DataTable<T>({
               mode={emptyMode}
             />
           ) : (
-            data.map((row, index) => {
+            pagedData.map((row, sliceIndex) => {
+              const index = sliceIndex + pageOffset;
               const rowKey = getRowKey(row);
               const rowContextMenu = renderRowContextMenu?.(row, index);
               const hasContextMenu = rowContextMenu != null;
@@ -353,9 +370,9 @@ export function DataTable<T>({
       {showPagination && (
         <DataTablePagination
           pageSize={pageSize}
-          currentPage={currentPage ?? 1}
+          currentPage={activePage}
           totalItems={total}
-          onPageChange={onPageChange ?? (() => {})}
+          onPageChange={handlePageChange}
         />
       )}
     </div>

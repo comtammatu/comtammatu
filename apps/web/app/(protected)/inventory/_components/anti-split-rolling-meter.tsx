@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { formatVND } from "@comtammatu/shared/format";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
@@ -101,8 +102,8 @@ export function AntiSplitRollingMeter({
     : "text-muted-foreground bg-muted/30 border-muted";
 
   return (
-    <div
-      className={cn("rounded-md border px-2 py-1 text-xs", tone, className)}
+    <Frame
+      className={cn("px-2 py-1 text-xs", tone, className)}
       data-slot="anti-split-meter"
       data-will-trigger={willTriggerPhoto}
     >
@@ -129,6 +130,6 @@ export function AntiSplitRollingMeter({
           {INVENTORY_VI.rollingSlipCount(status.lineCount)}
         </span>
       ) : null}
-    </div>
+    </Frame>
   );
 }

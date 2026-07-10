@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Input } from "@comtammatu/ui/components/input";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Trash as IconTrash, Upload as IconUpload } from "lucide-react";
@@ -110,7 +111,7 @@ export function PhotoUploadInput({
   return (
     <div className="flex flex-col gap-2">
       {value ? (
-        <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-2">
+        <Frame className="flex items-center gap-3 bg-muted/30 p-2">
           {isImage ? (
             <Image
               src={value}
@@ -145,7 +146,7 @@ export function PhotoUploadInput({
               <IconTrash className="size-4" />
             </Button>
           ) : null}
-        </div>
+        </Frame>
       ) : (
         <div className="flex flex-col gap-2">
           <input

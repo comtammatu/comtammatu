@@ -328,7 +328,7 @@ function CountSlipCard({
               <Item
                 key={line.id}
                 variant="muted"
-                className="rounded-md border bg-muted/20 p-3 text-sm flex flex-col items-stretch"
+                className="p-3 text-sm flex flex-col items-stretch"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">

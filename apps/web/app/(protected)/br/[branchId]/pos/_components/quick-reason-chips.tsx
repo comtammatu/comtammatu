@@ -54,10 +54,10 @@ export function QuickReasonChips({
           <Button
             key={preset}
             type="button"
-            size="sm"
+            size="touch"
             variant={isActive ? "default" : "outline"}
             aria-pressed={isActive}
-            className="h-8 rounded-full px-3 text-xs font-normal"
+            className="rounded-full px-3 text-xs font-normal"
             onClick={() => toggle(preset)}
           >
             {preset}

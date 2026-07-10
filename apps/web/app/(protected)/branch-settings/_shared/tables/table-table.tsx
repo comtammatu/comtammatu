@@ -357,7 +357,7 @@ export function DiningTableSettingsList({
             className={isRowPending(table.id) ? "opacity-60" : ""}
           >
             <ItemContent className="min-w-0">
-              <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+              <ItemTitle size="heading" className="line-clamp-none w-full">
                 {tableMessages.tableLabel(table.number)}
               </ItemTitle>
               <ItemDescription className="line-clamp-none text-sm leading-6">

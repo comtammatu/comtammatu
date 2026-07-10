@@ -76,6 +76,10 @@ const CLASSIFIED_FILES = new Map([
     "apps/web/tests/inventory-entry-unit-atomic-rpcs.test.ts",
     "Test vocabulary for the GRN amend and legacy GRN movements; references live migration file name and assert strings, not dead code.",
   ],
+  [
+    "apps/web/tests/inventory-location-labels.test.ts",
+    "'legacy' names the live alias inputs the location-label formatter still normalizes (Kho CN / Bep CN spellings), not retired code.",
+  ],
 ]);
 
 function walkFiles(rootDir) {

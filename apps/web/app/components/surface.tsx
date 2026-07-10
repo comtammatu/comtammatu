@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  ArrowLeft as IconArrowLeft,
   ArrowRight as IconArrowRight,
   ChevronDown as IconChevronDown,
 } from "lucide-react";
@@ -231,6 +232,44 @@ export function AppPageHeader({
       </div>
       {tabs ? <div>{tabs}</div> : null}
     </header>
+  );
+}
+
+export type AppBackLinkProps = {
+  href: string;
+  children?: ReactNode;
+  className?: string;
+  "aria-label"?: string;
+};
+
+/**
+ * Back-navigation affordance for the AppPageHeader breadcrumb slot (or an
+ * equivalent in-page back link on chrome-less surfaces). Centralizes the
+ * className that route files were duplicating by hand.
+ */
+export function AppBackLink({
+  href,
+  children,
+  className,
+  ...props
+}: AppBackLinkProps) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline",
+        className,
+      )}
+      {...props}
+    >
+      <IconArrowLeft className="size-4" />
+      {children != null ? (
+        <>
+          {" "}
+          {children}
+        </>
+      ) : null}
+    </Link>
   );
 }
 

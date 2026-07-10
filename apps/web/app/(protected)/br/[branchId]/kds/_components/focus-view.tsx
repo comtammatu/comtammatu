@@ -27,6 +27,10 @@ import {
   getKdsRowEffectClass,
   useKdsRowEffectsValue,
 } from "../_hooks/use-kds-row-effects";
+import {
+  getKdsNewTicketSignalClass,
+  useKdsNewTicketSignalIds,
+} from "../_hooks/use-kds-new-ticket-signal";
 import { getKdsOrderLabelOverride } from "../_lib/order-columns";
 import {
   KDS_ITEM_NAME_CLASS,
@@ -243,6 +247,8 @@ function FocusOrderPanel({
     return map;
   }, [order.tickets]);
   const rowEffects = useKdsRowEffectsValue();
+  const newTicketSignalIds = useKdsNewTicketSignalIds();
+  const isNewTicket = order.tickets.some((t) => newTicketSignalIds.has(t.id));
 
   const overallStatus = useMemo(() => {
     return getKdsOrderDisplayStatus({ tickets: order.tickets });
@@ -291,6 +297,7 @@ function FocusOrderPanel({
             className={cn(
               "gap-1 overflow-hidden border-l-4 py-0",
               getCardLeftAccent(overallStatus, elapsedMinutes),
+              isNewTicket && getKdsNewTicketSignalClass(),
             )}
           >
             {/* Hero header — tinted by elapsed-time tier (warning ≥5ph,
@@ -327,7 +334,7 @@ function FocusOrderPanel({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon-touch"
                       onClick={onPrev}
                       aria-label={KDS_FOCUS_COPY.previousOrder}
                     >
@@ -339,7 +346,7 @@ function FocusOrderPanel({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon-touch"
                       onClick={onNext}
                       aria-label={KDS_FOCUS_COPY.nextOrder}
                     >

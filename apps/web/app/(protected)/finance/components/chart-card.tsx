@@ -6,7 +6,7 @@ import {
   type ChartConfig,
 } from "@comtammatu/ui/components/chart";
 import { cn } from "@comtammatu/ui/lib/utils";
-import { AppSection } from "@/components/surface";
+import { AppEmptyState, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 
 // Section shell + ChartContainer wrapper. The actual <LineChart>/<BarChart>
@@ -59,9 +59,7 @@ export function ChartCard({
       className={className}
     >
       {empty ? (
-        <div className="flex h-48 items-center justify-center rounded-md border border-dashed border-border text-sm text-muted-foreground">
-          {emptyLabel}
-        </div>
+        <AppEmptyState compact title={emptyLabel} className="h-48" />
       ) : (
         <ChartContainer config={config} className={cn("w-full", chartClassName)}>
           {children}

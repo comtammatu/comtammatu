@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Image as IconImage, ListChecks as IconListChecks } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Item,
   ItemActions,
@@ -215,7 +216,7 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
           </SelectContent>
         </Select>
 
-        <div className="flex gap-1 rounded-md border p-1">
+        <Frame className="flex gap-1 bg-transparent p-1">
           <Button
             variant={view === "summary" ? "default" : "ghost"}
             size="sm"
@@ -236,7 +237,7 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
           >
             {attendanceCopy.clockView}
           </Button>
-        </div>
+        </Frame>
 
         {isPending && <Spinner />}
       </div>
@@ -320,7 +321,7 @@ function ApprovedLeavePanel({ leaves }: { leaves: ApprovedLeaveRow[] }) {
           return (
             <Item variant="outline">
               <ItemContent>
-                <ItemTitle className="line-clamp-none text-sm font-semibold">
+                <ItemTitle size="heading" className="line-clamp-none">
                   {leave.employees?.profiles?.full_name ??
                     leaveCopy.fallbackEmployee}
                 </ItemTitle>
@@ -378,7 +379,7 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
         <span
           className={
             row.open > 0
-              ? "font-medium text-warning-foreground"
+              ? "font-medium text-warning"
               : "text-muted-foreground"
           }
         >
@@ -396,7 +397,7 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
       mobileCardRender={(row) => (
         <Item variant="outline">
           <ItemContent>
-            <ItemTitle className="line-clamp-none text-sm font-semibold">
+            <ItemTitle size="heading" className="line-clamp-none">
               {row.full_name}
             </ItemTitle>
             <ItemDescription className="line-clamp-none text-sm leading-6">
@@ -670,7 +671,7 @@ function DetailView({
         mobileCardRender={(record) => (
           <Item variant="outline">
             <ItemContent>
-              <ItemTitle className="line-clamp-none text-sm font-semibold">
+              <ItemTitle size="heading" className="line-clamp-none">
                 {record.employees?.profiles?.full_name ?? "—"}
               </ItemTitle>
               <ItemDescription className="line-clamp-none text-sm leading-6">

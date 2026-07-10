@@ -3,9 +3,10 @@
 import { forwardRef, useMemo, useState, type ComponentProps } from "react";
 import {
   Check as IconCheck,
-  ChevronsUpDown as IconSelector,
+  ChevronDown as IconSelector,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { fieldTriggerChrome } from "@comtammatu/ui/lib/field-trigger";
 import { matchesSearch } from "@lib/search";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -94,6 +95,8 @@ export const Combobox = forwardRef<HTMLButtonElement, ComboboxProps>(
             disabled={disabled}
             className={cn(
               "w-full justify-between font-normal",
+              fieldTriggerChrome,
+              "hover:bg-input/20 aria-expanded:bg-input/30",
               !selected && "text-muted-foreground",
               triggerClassName ?? className,
             )}
@@ -101,7 +104,7 @@ export const Combobox = forwardRef<HTMLButtonElement, ComboboxProps>(
             <span className="truncate">
               {selected ? selected.label : placeholder}
             </span>
-            <IconSelector className="ml-2 size-4 shrink-0 opacity-50" />
+            <IconSelector className="ml-2 size-3.5 shrink-0 text-muted-foreground" />
           </Button>
         </PopoverTrigger>
         <PopoverContent

@@ -191,9 +191,8 @@ export function FilterBar({
   if (compact && params.range !== "custom") {
     return (
       <AppToolbar
-        variant="inline"
         className={cn(
-          "flex-col items-stretch gap-2 rounded-md border bg-card p-2 sm:flex-row sm:items-center",
+          "flex-col items-stretch gap-2 sm:flex-row sm:items-center",
           className,
         )}
       >

@@ -43,6 +43,10 @@ export function NumberField<TFieldValues extends FieldValues>({
   const { field, fieldState } = useController({ control, name });
   const fieldId = id ?? `field-${String(name)}`;
   const hasError = !!fieldState.error;
+  const descriptionId = description ? `${fieldId}-description` : undefined;
+  const errorId = hasError ? `${fieldId}-error` : undefined;
+  const describedBy =
+    [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
   const value =
     typeof field.value === "string"
       ? field.value
@@ -69,10 +73,15 @@ export function NumberField<TFieldValues extends FieldValues>({
         disabled={disabled}
         autoFocus={autoFocus}
         aria-invalid={hasError}
+        aria-describedby={describedBy}
         className={cn("h-10", className)}
       />
-      {description ? <FieldDescription>{description}</FieldDescription> : null}
-      {fieldState.error ? <FieldError errors={[fieldState.error]} /> : null}
+      {description ? (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      ) : null}
+      {fieldState.error ? (
+        <FieldError id={errorId} errors={[fieldState.error]} />
+      ) : null}
     </Field>
   );
 }

@@ -113,7 +113,7 @@
   --popover: oklch(0.195 0.016 48);
   --popover-foreground: oklch(0.94 0.018 75);
   --primary: oklch(0.605 0.155 36);
-  --primary-foreground: oklch(0.965 0.02 75);
+  --primary-foreground: oklch(0.155 0.016 50);
   --secondary: oklch(0.265 0.018 48);
   --secondary-foreground: oklch(0.94 0.018 75);
   --muted: oklch(0.245 0.018 48);
@@ -132,7 +132,7 @@
   --sidebar: oklch(0.195 0.016 48);
   --sidebar-foreground: oklch(0.94 0.018 75);
   --sidebar-primary: oklch(0.605 0.155 36);
-  --sidebar-primary-foreground: oklch(0.965 0.02 75);
+  --sidebar-primary-foreground: oklch(0.155 0.016 50);
   --sidebar-accent: oklch(0.305 0.028 55);
   --sidebar-accent-foreground: oklch(0.94 0.018 75);
   --sidebar-border: oklch(0.94 0.02 75 / 16%);
@@ -181,10 +181,14 @@
 
 :root,
 .theme-light-only {
-  --success: oklch(0.609 0.086 137);
-  --success-foreground: oklch(0.218 0.036 251.3);
-  --warning: oklch(0.77 0.164 73.2);
-  --warning-foreground: oklch(0.218 0.036 251.3);
+  /* Status hues are dark enough to serve as ink on cream (WCAG AA 4.5:1 as
+     text, including over their own /10 and /15 tints). `*-foreground` means
+     "text on the solid fill" — never text on a tint. The brand gold stays on
+     --ring / --chart-2. */
+  --success: oklch(0.48 0.09 137);
+  --success-foreground: oklch(0.978 0.014 64.3);
+  --warning: oklch(0.5 0.13 73.2);
+  --warning-foreground: oklch(0.978 0.014 64.3);
   --info: oklch(0.218 0.036 251.3);
   --info-foreground: oklch(0.978 0.014 64.3);
   --destructive-foreground: oklch(0.978 0.014 64.3);
@@ -204,7 +208,7 @@
   --warning-foreground: oklch(0.155 0.016 50);
   --info: oklch(0.72 0.09 250);
   --info-foreground: oklch(0.155 0.016 50);
-  --destructive-foreground: oklch(0.965 0.02 75);
+  --destructive-foreground: oklch(0.155 0.016 50);
   --tier-elite: oklch(0.78 0.14 305);
   --tier-elite-foreground: oklch(0.155 0.016 50);
   --tier-note: oklch(0.78 0.13 50);

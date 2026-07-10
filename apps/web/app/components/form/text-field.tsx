@@ -39,6 +39,10 @@ export function TextField<TFieldValues extends FieldValues>({
   const { field, fieldState } = useController({ control, name });
   const fieldId = id ?? `field-${String(name)}`;
   const hasError = !!fieldState.error;
+  const descriptionId = description ? `${fieldId}-description` : undefined;
+  const errorId = hasError ? `${fieldId}-error` : undefined;
+  const describedBy =
+    [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
     <Field data-invalid={hasError}>
@@ -49,6 +53,7 @@ export function TextField<TFieldValues extends FieldValues>({
       <Input
         id={fieldId}
         aria-invalid={hasError}
+        aria-describedby={describedBy}
         className={cn("h-10", className)}
         {...inputProps}
         name={field.name}
@@ -57,8 +62,12 @@ export function TextField<TFieldValues extends FieldValues>({
         onBlur={field.onBlur}
         ref={field.ref}
       />
-      {description ? <FieldDescription>{description}</FieldDescription> : null}
-      {fieldState.error ? <FieldError errors={[fieldState.error]} /> : null}
+      {description ? (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      ) : null}
+      {fieldState.error ? (
+        <FieldError id={errorId} errors={[fieldState.error]} />
+      ) : null}
     </Field>
   );
 }

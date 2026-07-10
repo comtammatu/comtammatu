@@ -201,7 +201,7 @@ export function SplitOrderSheet({
                     <Button
                       type="button"
                       variant="outline"
-                      size="icon-sm"
+                      size="icon-touch"
                       aria-label="Bớt 1 phần"
                       disabled={isCancelled || isPending || picked <= 0}
                       onClick={() => setPickQty(item.id, max, picked - 1)}
@@ -217,7 +217,7 @@ export function SplitOrderSheet({
                     <Button
                       type="button"
                       variant="outline"
-                      size="icon-sm"
+                      size="icon-touch"
                       aria-label="Thêm 1 phần"
                       disabled={isCancelled || isPending || picked >= max}
                       onClick={() => setPickQty(item.id, max, picked + 1)}

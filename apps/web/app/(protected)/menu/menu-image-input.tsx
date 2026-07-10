@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Trash as IconTrash, Upload as IconUpload } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 
@@ -117,7 +118,7 @@ export function MenuImageInput({
         }}
       />
       {value ? (
-        <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-3">
+        <Frame className="flex items-center gap-3 bg-muted/30 p-3">
           <Image
             src={value}
             alt={MENU_VI.imageAlt}
@@ -148,7 +149,7 @@ export function MenuImageInput({
               {ACTIONS_VI.delete}
             </Button>
           </div>
-        </div>
+        </Frame>
       ) : (
         <Button
           type="button"

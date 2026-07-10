@@ -116,6 +116,7 @@ export function PermissionAuditTable({
       columns={columns}
       data={rows}
       getRowKey={(row) => row.id}
+      pageSize={50}
       emptyTitle={copy.empty}
       mobileCardRender={(row) => (
         <Item variant="outline">

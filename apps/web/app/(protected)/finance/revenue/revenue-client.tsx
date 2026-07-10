@@ -12,6 +12,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   formatCount,
   formatPercent,
@@ -779,12 +780,12 @@ export function RevenueClient({
           }}
           desktopFooterRows={periodFooterRows}
           mobileFooter={
-            <div className="flex items-center justify-between rounded-md border bg-muted/30 p-3 text-sm">
+            <Frame className="flex items-center justify-between bg-muted/30 p-3 text-sm">
               <span className="font-medium">{revCopy.periodTable.total}</span>
               <span className="font-mono font-semibold tabular-nums">
                 {formatVND(netRevenuePreVat)}
               </span>
-            </div>
+            </Frame>
           }
         />
       </AppSection>

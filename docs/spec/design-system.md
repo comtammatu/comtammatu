@@ -134,6 +134,10 @@ Approved project utilities:
 - `chrome-safe-pb` / `chrome-safe-bottom` / `chrome-safe-top` are limited to
   fixed or sticky app shell chrome affected by mobile safe areas. Side
   `SheetContent` owns its top/bottom safe-area inset padding by default.
+- `chrome-tap` disables the mobile tap-highlight/callout flash on app chrome
+  (nav, tiles, headers, buttons) so the installed operator PWA doesn't read as
+  a website; do not apply it to data content that must stay selectable
+  (tables, detail text, copyable IDs).
 - `no-scrollbar` hides scrollbars on horizontally scrolling chrome rails
   (sidebar, command list, bottom-nav, filter rails) without disabling scroll.
 - `mascot-cotlet` + `animate-cotlet-idle` / `animate-cotlet-waiting` /
