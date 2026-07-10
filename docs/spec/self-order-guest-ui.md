@@ -1,140 +1,213 @@
-# Self-Order Guest UI — Brand + IA Contract
+# Self-Order — Surface + Workflow Contract
 
-**Surface:** `apps/web/app/q/[token]` (public QR customer self-order).
-**Primary user job:** Scan table QR → browse menu → customize → submit batch → wait for staff approval → pay (cash call / VietQR) on a phone.
-**Route family:** Standalone public customer surface (no auth, no operator chrome).
-**Change type:** Phone-first IA refresh. Compact chrome. No mascot. No decorative brand lockup on the ordering surface.
-**Primitives used:** `AppPage`, `AppSection`, `AppEmptyState`, `PageSkeleton`, `Button`, `Badge`, `Tabs`, `Sheet`, `Alert`, `NoteCallout`, `Spinner`, `Item`.
+**Guest surface:** `apps/web/app/q/[token]` (public QR self-order, no auth).
+**Staff surface:** POS table map (`/br/[branchId]/pos`) — no new route.
+**Primary user job:** Scan table QR → browse menu → submit cart → (first round only) staff opens the table → add more rounds straight to the kitchen → pay on the phone.
+**Change type:** Full workflow rebuild. The parallel `self_order_sessions` lifecycle is deleted; the POS order is the single source of truth.
 
 ## Authority
 
 - Design system: `docs/spec/design-system.md`
-- Motion / loading polish: `docs/spec/self-order-motion-design.md` (still in force)
+- Motion / loading polish: `docs/spec/self-order-motion-design.md`
+- Audio alerts: `docs/plan/adr/0008-operational-audio-alerts.md`
+- Owner decision: `docs/plan/decisions.md` § D075
 - Copy: `packages/shared/src/messages/self-order.ts` (`SELF_ORDER_VI`)
 
 ## Product thesis
 
-Guest surface is a **touch-first ordering tool**, not a brand splash. First viewport = table + status + menu. Decorative chrome (mascot, pattern wash, logo lockup in header/bill) is forbidden on this route — it steals vertical space from the menu and cart CTA.
+The guest surface is a **touch-first ordering tool**, not a brand splash. First viewport = table name + menu. The bill is a destination, not a peer of the menu.
 
-## IA map (state → primary chrome)
+Self-order owns no lifecycle of its own. A seating **is** an open POS order on a table. Staff gate the moment a table opens; after that, guests reach the kitchen unmediated.
 
-| Session / payment state        | Primary composition                                 | Menu                             | Bill                           | Cart bar                              |
-| ------------------------------ | --------------------------------------------------- | -------------------------------- | ------------------------------ | ------------------------------------- |
-| No session / fresh             | Compact header + menu                               | Primary                          | Empty bill copy                | Hidden until cart has items           |
-| Cart drafting                  | Header + menu + sticky cart                         | Primary                          | Available                      | Sticky bottom CTA                     |
-| `pending_approval`             | Compact warning callout + menu                      | Primary under banner             | Available                      | Sticky; CTA hard-disabled             |
-| `active`                       | Header + menu; bill for pay                         | Primary for add-more             | Order summary + payment        | Sticky for add-more                   |
-| Payment pending                | Bill destination                                    | Visible but add/customize locked | Primary; exact intent recovery | Sticky; submit hard-disabled          |
-| Unbound second device          | Menu + approval-required state                      | Draft allowed                    | Active bill hidden             | Submit creates staff approval request |
-| `revoked`                      | Compact destructive alert + rejected rounds on Bill | Optional                         | Primary (history)              | CTA disabled until staff rotates QR   |
-| Token unavailable / POS closed | Plain unavailable card                              | N/A                              | N/A                            | N/A                                   |
+## State model
 
-`closed` sessions are **not** returned by the stable table QR snapshot (prevents next seating from seeing the previous paid bill). The printed table QR is lookup context only. An active seating bill, add-more, and payment require a seating-bound continuation capability.
+Guest-visible state is **derived**, never stored. There is exactly one stored enum:
+`self_order_requests.status ∈ {pending, accepted, rejected}`.
 
-### Navigation rule (Menu ↔ Bill)
+| Derived from | Guest state | Guest may |
+| --- | --- | --- |
+| no pending request, no open order on table | `Chưa mở bàn` | browse, build cart, **Gửi món** (first round) |
+| a `pending` request exists | `Chờ xác nhận` | browse; cart CTA hard-disabled |
+| the last request is `rejected` | `Bị từ chối` | resubmit immediately (same cart) |
+| an open order exists, no live payment intent | `Bàn đang mở` | **Gửi thêm món** (straight to KDS), view bill |
+| an open order exists, a live payment intent | `Đang thanh toán` | view bill, wait; add-more locked |
+| `orders.payment_status = 'paid'` | `Đã thanh toán` | see the receipt for this browser session only |
 
-- Keep **Thực đơn** / **Hoá đơn** via `Tabs` (one phone IA).
-- Menu is default landing.
-- Bill tab shows a count badge when an approved order exists.
-- After first batch approval (`pending_approval` → `active` with order), auto-switch once to Bill.
-- When a cash/VietQR intent becomes active or is recovered after reload, switch to Bill and keep the same intent visible.
-- Approved devices keep the Bill tab visible. Public/pending devices keep the
-  tab position stable but disabled until staff approval because no bill data is
-  present by contract.
+An **open order** = `orders.table_id = <table>` AND `payment_status <> 'paid'` AND `status NOT IN ('completed','cancelled')`.
 
-## Composition rules
+A paid order leaves the snapshot immediately. The next guest scanning the same printed QR sees a clean menu. `trg_order_release_table` (existing) returns the table to `available`.
 
-### 1. Compact header
+## Flow, end to end
 
-- Sticky: plain `bg-background` + border. No gradient, no `brand-pattern-caro`, no `BrandLockup` / `BrandMark` / `BrandMascot`.
-- Left: branch name + `StatusPill`; H1 = table label.
-- Below/Right: Menu | Bill `TabsList` (`h-11`). At narrow phone widths, table
-  context/status stacks above a full-width tab list; horizontal composition is
-  allowed only when both fit without truncation or overlap.
+1. Guest scans the printed table QR → `/q/{token}`.
+2. Browse menu, customize, add to cart.
+3. **Gửi món** → one `self_order_requests` row, `status='pending'`.
+4. Staff sees the badge on the POS table tile → **Duyệt** → `create_order(table_id, items)` → `route_order_to_kds` fires → the kitchen has it.
+5. Guest adds more → `append_order_items` directly. **No approval.** KDS receives it.
+6. Guest opens the bill drawer → `orders.items + totalAmount` (the payable truth after staff edits, voids, merges).
+7. Guest requests payment (`cash_call` | `vietqr`) + optional HĐĐT buyer fields.
+8. Payment settles → existing triggers complete the order and release the table.
 
-### 2. Menu as hero job
+### Table already has an open order
 
-- Category pills + 2-column photo cards.
-- Empty menu: `AppEmptyState` with `symbol="riceBowl"` only (static symbol, not mascot).
+If the table already carries an open order — whether a staff member created it at the POS or a previous guest round did — a guest submit **appends to that order**. No approval. One table, one bill.
 
-### 3. Session state panel
+If the table carries **two or more** open orders (POS permits multi-bill), the submit falls back to `pending`. Staff pick the destination bill when approving. The system never guesses which bill owes the money.
 
-- Compact inline callout/alert only — no centered hero, no mascot.
-- `pending_approval`: `NoteCallout tone="warning"` with title + short hint.
-- `revoked`: `Alert variant="destructive"`.
-- Paid/closed: one-line `NoteCallout tone="muted"` + optional touch `View Bill` button.
-- No raw `Card`.
+## Guest screens
 
-### 4. Cart
+### G0 · Unavailable
 
-- Sticky bottom bar: cart open (touch) + subtotal (tap opens sheet) + primary `touch-lg` CTA.
-- Keep bar short (`py-2`); put long disabled hints in the cart sheet CTA, not under the FAB.
-- Submit errors in-flow above the bar / in sheet footer.
+Static `BrandMascot` (`animated={false}`) + title + description. Covers three causes, differing only in the description: invalid token · `self_order_enabled = false` · POS session closed. No lockup, no motion, no pattern wash.
 
-### 5. Bill / payment
+### G1: Menu — the only page
 
-- Bill primary content is canonical `order.items + order.totalAmount`; this is the payable truth after staff edits, voids, merges, and add-more.
-- Round history from snapshot `batches` is secondary audit context:
-  `Lượt N` + status badge (`Đang chờ duyệt` | `Đã duyệt` | `Đã huỷ`) + submitted lines.
-- Rejected rounds stay visible (struck-through / muted) but never control the payable total.
-- Payment / HĐĐT only when session is `active`, order exists, and `paymentStatus !== "paid"`.
-- Payment state/action renders before optional HĐĐT buyer details. Buyer inputs
-  are hidden after intent creation, use touch-height controls, per-field errors,
-  `aria-invalid`, and focus the first invalid field.
-- Guest VietQR creation is available only for canonical order status `ready` or `served`; cashier POS keeps the existing pay-before-ready contract.
-- Exactly one active intent exists across `cash_call` and VietQR. Both lock add-more, item customization, buyer fields, and new payment creation.
-- VietQR reload renders the stored amount, payment code, QR bytes, bank snapshot, and expiry; it never rebuilds an active QR from current settings.
-- Guests cannot cancel or switch an active payment intent. The POS queue owns cancellation after staff verifies that money is not already in flight.
-- Auto-open Bill when a new batch appears or session enters `pending_approval`.
-- Orphan `pending_approval` (no pending batch) is healed to `revoked` in DB on snapshot/submit — not payload-only.
+Header is one row:
 
-### 6. Seating capability boundary
+- Left: table label (H1).
+- Right: `Hoá đơn` button + `Badge` (approved item count, or `⏳` while a request is pending). Opens a `Drawer`. **It never auto-opens.**
 
-- The server bootstraps an opaque HttpOnly device secret before the first mutable action; the database stores only its hash.
-- The cookie is host-only, `SameSite=Lax`, scoped to `/api/self-order`, expires
-  after 12 hours, and never enters URL/JSON/logs. Public responses are
-  `private, no-store` and vary by cookie.
-- The first submitted browser creates an `origin_pending` capability. Staff
-  reads the short pairing code from the guest's screen; approval atomically
-  creates/binds the canonical order, accepts the batch, and promotes the device.
-- An unbound browser never receives the active order, bill, payment request, invoice payload, or seating realtime topic.
-- On an active seating, an unbound browser may browse/draft, but its submit creates a normal staff approval request. Approval atomically appends the batch and binds that browser capability; rejection binds nothing.
-- A second device may also request join-only access without submitting food;
-  its pairing-code approval grants bill access but performs no cart mutation.
-- Reloading a pending device may rotate its own pairing code through the
-  bounded recovery endpoint; plaintext pairing codes are never stored.
-- A missing/expired capability is recoverable through staff approval. It never falls back to token-only active bill access.
-- Public snapshot, submit, and payment endpoints use bounded per-token/device/network rate limits and return one shared fail-closed recovery state.
+Body: category pills (sticky under the header, one scrollable row), then items grouped by `menu_categories.type`:
 
-### 7. Unavailable / loading
+- `main_dish` → large photo cards.
+- `side_dish | drink | dessert` → compact rows.
 
-- Loading: `PageSkeleton` narrow/compact/mobile.
-- Unavailable: plain centered `Item` with title/description. No brand assets.
+Footer: sticky cart bar, rendered only when the cart holds items.
+
+There are **no Tabs**. There is **no `StatusPill`**. There is no branch name in the header — the guest is sitting in the branch.
+
+### G2 · Item sheet
+
+Variant · modifiers · sides · quantity · note → add to cart.
+
+### G3 · Cart sheet
+
+Line quantity, remove, shared customer note. CTA label follows table state:
+
+- table not open → **Gửi món**, hint under the button: staff will confirm.
+- table open → **Gửi thêm món**, no hint: it reaches the kitchen at once.
+
+### G4 · Awaiting confirmation
+
+`NoteCallout tone="warning"` above the item list. Cart CTA hard-disabled. The bill button shows `⏳`; the drawer shows the pending round with no total.
+
+### G5 · Rejected
+
+`Alert variant="destructive"` + **Gửi lại**, which reloads the rejected cart verbatim. No `revoked` state. No token rotation. No reprinting the table QR.
+
+### G6 · Bill drawer
+
+Primary content is `orders.items` + `orders.totalAmount`. Below it, the round history reads from the existing `kitchen_send_batches` — self-order stores no round table of its own.
+
+### G7: Payment (inside the drawer)
+
+`cash_call` | VietQR + HĐĐT buyer fields. Exactly one live intent across both methods; a live intent locks add-more, item customization, and buyer fields. VietQR reload renders the stored amount, payment code, QR bytes, bank snapshot, and expiry — it never rebuilds an active QR from current settings. Guests cannot cancel an intent; staff own cancellation after verifying money is not already in flight.
+
+### G8 · Paid
+
+`NoteCallout tone="muted"` + the receipt, for the current browser session only. A reload returns to G1 with a clean menu, because a paid order is absent from the snapshot by contract.
+
+## Staff screens
+
+### P1 · Table tile badge
+
+`pos-table-gate.tsx` gains exactly one tone/badge: a table with a `pending` request renders `QR ⏳`. A badge, not a stat card.
+
+### P2 · Approval sheet
+
+Tapping a badged tile opens a sheet: table label, submission time, submitted lines with variants/modifiers/notes, customer note, provisional total.
+
+- **Duyệt** → `create_order`, or `append_order_items` when the staff picks an existing bill.
+- **Từ chối** → destructive, separated from the primary action, confirmed. No reason field.
+- Two or more open bills → the sheet asks for the destination first: `[Bill #…]` `[Bill #…]` `[Tạo bill mới]`.
+
+### P3: Payment intent cancellation
+
+The bill sheet for a table in `Đang thanh toán` exposes **Huỷ yêu cầu**. This is the only path that frees a guest stuck behind an expired VietQR or a stale `cash_call`.
+
+### P4 · Audio
+
+A new request plays `playAppSignal` on the open POS surface. Device-local only. It writes no `public.notifications` row and sends no Telegram, per ADR 0008.
+
+## Data contract
+
+One new table:
+
+```sql
+create table public.self_order_requests (
+  id bigint generated always as identity primary key,
+  tenant_id bigint not null,
+  branch_id bigint not null,
+  table_id bigint not null references public.tables(id),
+  cart_payload jsonb not null,
+  customer_note text,
+  client_op_id uuid not null,
+  status text not null default 'pending'
+    check (status in ('pending','accepted','rejected')),
+  order_id bigint references public.orders(id),
+  decided_by uuid,
+  decided_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create unique index self_order_requests_one_pending_per_table
+  on public.self_order_requests (table_id) where status = 'pending';
+create unique index self_order_requests_client_op_id_uidx
+  on public.self_order_requests (tenant_id, client_op_id);
+```
+
+RLS follows the existing self-order convention: staff-select only, writes exclusively through `SECURITY DEFINER` RPCs, no direct table grants.
+
+Kept: `self_order_payment_requests`, `self_order_rate_buckets`, `tables.self_order_token`, `tables.self_order_enabled`. The `origin` and `join` values of `self_order_rate_buckets.purpose` die with device binding; `batch` and `payment` remain.
+
+Deleted: `self_order_sessions`, `self_order_batches`, `self_order_session_devices`, `tables.self_order_capability_version`, `tables.realtime_topic_token`, every `self_order_*_v2` RPC, the `device_token` cookie and its 428 retry, `status-pill.tsx`, `device-access-panel.tsx`, `session-state-panel.tsx`, `SelfOrderApprovalSheet`.
+
+Six RPCs survive:
+
+| RPC | Caller | Effect |
+| --- | --- | --- |
+| `self_order_get_snapshot(token)` | guest | table + menu + open order + pending request + live intent |
+| `self_order_submit(token, cart, note, op_id)` | guest | exactly one open order → `append_order_items`; otherwise insert `pending` |
+| `self_order_create_payment_request(...)` | guest | unchanged |
+| `self_order_accept_request(req_id, target_order_id?)` | staff | `create_order` or `append_order_items` |
+| `self_order_reject_request(req_id)` | staff | `status = 'rejected'` |
+| `self_order_cancel_payment_request(...)` | staff | unchanged |
+
+## Freshness
+
+Adaptive polling, no realtime. 3s while `Chờ xác nhận` or `Đang thanh toán`; 15s otherwise; refetch on tab focus and bfcache restore. The Supabase broadcast topic, its trigger, and its realtime policies are deleted.
+
+## Trust boundary
+
+Device binding is removed by owner decision. Anyone holding a photograph of a table's QR can read that table's bill and append items while the table is open. Staff approval gates *opening* a table, not *appending* to an open one. The dining room is the trust boundary; a wrong dish arriving at a table is visible to staff.
+
+Public snapshot, submit, and payment endpoints keep bounded per-token and per-network rate limits (`self_order_rate_buckets`) and return one shared fail-closed recovery state. Responses stay `private, no-store`.
 
 ## Brand placement
 
-| Asset                                        | On `/q/[token]`             |
-| -------------------------------------------- | --------------------------- |
-| `BrandMascot`                                | **Forbidden**               |
-| `BrandLockup` / `BrandMark` / `BrandLogoBox` | **Forbidden**               |
-| `brand-pattern-caro`                         | **Forbidden**               |
-| `BrandSymbol` via `AppEmptyState.symbol`     | Allowed for empty menu only |
+| Asset | On `/q/[token]` |
+| --- | --- |
+| `BrandMascot` | Static only (G0 unavailable). Never animated, never on the ordering surface |
+| `BrandLockup` / `BrandMark` / `BrandLogoBox` | **Forbidden** |
+| `brand-pattern-caro` | **Forbidden** |
+| `BrandSymbol` via `AppEmptyState.symbol` | Allowed for an empty menu only |
 
 ## Non-goals
 
 - No desktop IA fork.
 - No change to `finalize_paid_order`, paid-order table release, KDS ticket/item status, or cashier POS pay-before-ready semantics.
-- No new palette, typography, radius, elevation, or decorative token. The
-  generic `workflow-safe-pb` utility is approved only for public workflow fixed
-  action bars and bottom-sheet footers.
-- No marketing hero / mascot / decorative logo chrome on the ordering surface.
+- No `is_featured` column on `menu_items`; prominence derives from `menu_categories.type`.
+- No admin surface for toggling `self_order_enabled` or printing table QRs. None exists today; that gap is out of scope here.
+- No new palette, typography, radius, elevation, or decorative token. `workflow-safe-pb` remains approved for public workflow fixed action bars and bottom-sheet footers.
 
 ## Runtime files
 
+- `apps/web/app/q/[token]/page.tsx`
 - `apps/web/app/q/[token]/self-order-client.tsx`
-- `apps/web/app/q/[token]/self-order/session-state-panel.tsx`
 - `apps/web/app/q/[token]/self-order/menu-panel.tsx`
 - `apps/web/app/q/[token]/self-order/cart-sheet.tsx`
+- `apps/web/app/q/[token]/self-order/bill-drawer.tsx`
 - `apps/web/app/q/[token]/self-order/payment-panel.tsx`
-- `apps/web/app/q/[token]/page.tsx`
+- `apps/web/app/(protected)/br/[branchId]/pos/pos-table-gate.tsx`
+- `apps/web/app/(protected)/br/[branchId]/pos/self-order-actions.ts`
 - `packages/shared/src/messages/self-order.ts`

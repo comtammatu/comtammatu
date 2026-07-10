@@ -23,100 +23,105 @@
 - Active work must be one of the gates below or a fresh owner-confirmed blocker.
   Everything else belongs in code, canonical docs, tests, runbooks, or nowhere.
 
-## Active QR Self-Order Goal
+## Self-Order Rebuild (D075)
 
-- [ ] **Q0 — lock the operating contract and remove cached-seating leakage.**
-  - Current status: written and static-green for the `/q/*` NetworkOnly service
-    worker rule; the production build contains the `/q/` navigation matcher
-    before generic page caching. Live offline-browser proof remains unverified.
-  - Skill plan: repo rules = engineering + skills + workflow + database + UI;
-    external skills = Supabase + Next.js best practices; runtime tools =
-    CodeGraph + Supabase SELECT-only verification + local tests/browser;
-    skipped = production writes because owner delegation is required in the
-    apply session.
-  - PM: pilot safety starts with session/order/payment integrity; visual polish
-    follows only after behavioral gates are green. Preserve the intentional
-    `PAYMENT-AUTO-COMPLETES-ORDER` and pay-before-ready POS contract.
-  - BA: a seating session binds once to one canonical order; terminal states
-    never reopen; retries are payload-aware; one active payment intent exists
-    across cash/VietQR; the stable printed QR is not a perpetual active-bill
-    capability.
-  - Dev: use backward-compatible DB-first slices, then app cutovers. Public
-    Route Handlers stay server-only service-role boundaries; every
-    `SECURITY DEFINER` function keeps explicit auth/permission checks, empty
-    `search_path`, and least-privilege grants.
-  - QA: add real RPC and two-client concurrency coverage, lost-response/reload
-    browser flows, managed Preview evidence, and a production-build service
-    worker privacy test. Static source tests alone are insufficient.
-  - Policy locks: POS payment still completes the order and releases the table
-    without mutating KDS tickets. QR payment eligibility, guest confirmation,
-    and next-seating privacy are the change surface; `finalize_paid_order` is
-    out of scope.
-  - Acceptance: `/q/*` navigation HTML is never cached; no prior seating bill
-    can render from a service-worker fallback; the existing generic public page
-    cache remains intact for non-sensitive routes.
-- [ ] **Q1 — exactly-once ordering and immutable session/order binding.**
-  - Current status: DB/app implementation written; focused static tests and web
-    typecheck are green; the transfer guard now terminates stale seating access
-    without silently resolving outstanding staff payment work. Real RPC
-    compilation and two-client concurrency remain runtime-unverified; not
-    applied to production.
-  - DB-first: monotonic session/batch transitions, immutable non-null
-    `session.order_id` and token snapshots, payload-aware operation conflicts,
-    deterministic concurrent first-submit/approval behavior, and guarded QR
-    rotation.
-  - App cutover: reuse one intent ID across ambiguous retries, preserve the
-    draft safely, reject same-ID/different-payload, and ignore stale snapshot
-    responses.
-- [ ] **Q2 — seating capability and bounded public access.**
-  - Current status: additive versioned migration, device boundary, pairing flow,
-    staff controls, rate limits, public allowlists, and guest denial states are
-    written and static-green. The v1 submit path and the capability-version
-    setter now share a lock and recheck the live version before mutation. Every
-    table still defaults to version `1`; no table flip or production apply has
-    occurred.
-  - Treat the printed QR as table lookup context; require a seating-bound
-    continuation capability for active bill reads/writes, define the
-    second-device approval path, and add per-token/IP/session limits.
-- [ ] **Q3 — one recoverable payment intent.**
-  - Current status: one-intent recovery, staff cancellation, exact VietQR
-    snapshot, stale-intent expiry before cash/HĐĐT binding, and ambiguity-safe
-    late SePay recovery are written and static-green. Any manual-review webhook
-    now excludes its whole payment from automatic Finance recovery. Database
-    runtime and provider/browser proof remain unverified; not applied to
-    production.
-  - One active cash/VietQR intent, server-owned expiry/cancel/complete states,
-    reloadable VietQR details, stale cash-call cleanup, safe method switching,
-    and explicit QR payment eligibility while preserving POS auto-completion.
-- [ ] **Q4 — payable truth and operator ownership.**
-  - Current status: canonical bill-first guest UI, explicit staff target/payment
-    actions, scoped rejection, device revocation, and queue recovery data are
-    written and static-green; staff runtime smoke remains unverified.
-  - Canonical order lines/total first, round history second; branch availability
-    and precise recovery errors; safe target-order selection; notes propagated
-    to fulfillment; queue age/realtime/fallback and scoped rejection.
-- [ ] **Q5 — PUBLIC-WORKFLOW layout and UX.**
-  - Current status: responsive header, 44–48px controls, safe-area spacing,
-    recoverable pairing/payment states, bounded sheets, inline invoice errors,
-    focus behavior, terminal fail-closed rendering, and seating-scoped privacy
-    resets are written and focused-static-green. A submitted pending batch now
-    locks cart mutations, and BFCache restore scrubs cached bill/PII before it
-    can paint and requires a fresh snapshot. Real-device/browser visual proof
-    remains unverified.
-  - Preserve top Menu/Bill tabs and the sticky cart contract; fix dead states,
-    44–48px targets, focus/safe-area behavior, bounded desktop sheets,
-    same-phone payment details, and recoverable draft/reload behavior.
-- [ ] **Q6 — evidence-led visual polish and rollout.**
-  - Current status: rollout/canary/rollback runbook written; 164 focused
-    QR/payment/HĐĐT tests, full typecheck, production build, package ESLint, UI
-    contract, and SQL parser checks are green. Full-repo lint stops only on the
-    separately-owned Inventory baseline marker; full-repo test has nine failures
-    only in separately-owned Inventory/operator-stock static guards. Functional
-    motion, managed Preview runtime, real PostgreSQL compile/concurrency proof,
-    and owner-approved production canary remain pending.
-  - Functional motion only after browser evidence; full repo gates, Preview
-    Branch concurrency/E2E, one-table owner-approved production canary, and
-    rollback by disabling the pilot QR rather than deleting live rows.
+Contract: `docs/spec/self-order-guest-ui.md`. Owner decision: `docs/plan/decisions.md`
+§ D075. The POS order is the only seating lifecycle; `self_order_sessions`,
+`self_order_batches`, and `self_order_session_devices` are deleted.
+
+Sequencing: S1 → S2 → S3 → S4 → S5 → S6 → S7. Each slice is one commit with the
+full gate run fresh (`corepack pnpm typecheck && corepack pnpm lint && corepack
+pnpm test`); a turbo-cached green is not evidence. Capture the exit code
+directly — `pnpm lint | tail` swallows it. Runtime QA of every guest slice at
+`390x844`. S1 and S6 carry migrations: the file lands in the commit, the owner
+applies it to production.
+
+- [ ] **Q0 — `/q/*` navigation HTML is never cached.** Independent of D075 and
+      still open. The production build already orders the `/q/` NetworkOnly
+      matcher before generic page caching, and the static test is green. Live
+      offline-browser proof remains unverified. Acceptance: no prior seating bill
+      can render from a service-worker fallback; the generic public page cache
+      stays intact for non-sensitive routes.
+
+- [ ] **S1 — additive migration: `self_order_requests` + the six RPCs.**
+      Create the table, its two unique indexes, RLS (staff select only), and
+      RPC-only grants exactly as specified in the contract's Data contract
+      section. Rewrite `self_order_get_snapshot(token)` to derive guest state
+      from the open order; add `self_order_submit`, `self_order_accept_request`,
+      `self_order_reject_request`. `self_order_submit` appends through
+      `append_order_items` when the table carries exactly one open order, and
+      inserts a `pending` row otherwise (zero open orders, or two or more).
+      `self_order_accept_request` calls `create_order` or `append_order_items`
+      under the request's advisory lock and sets `order_id` + `decided_by` +
+      `decided_at`. Every `SECURITY DEFINER` function keeps an explicit
+      permission check, an empty `search_path`, and least-privilege grants.
+      Nothing is dropped in this slice. Coverage: real-RPC tests for the
+      one-open-order append path, the zero-order pending path, the two-open-order
+      pending fallback, `client_op_id` replay, and two concurrent first submits
+      racing the one-pending-per-table index.
+
+- [ ] **S2 — contracts and copy.** Rewrite `apps/web/lib/self-order/contracts.ts`
+      to the derived state model: one `status` enum, no session/batch/device/access
+      unions, no capability flags. Update `packages/shared/src/messages/self-order.ts`
+      (`SELF_ORDER_VI`) for the `Gửi món` / `Gửi thêm món` CTA split, the awaiting
+      and rejected callouts, and the G0 descriptions for the three unavailable
+      causes. Delete `apps/web/lib/self-order/client-intent.ts` helpers that only
+      served batch idempotency if the new `client_op_id` path supersedes them.
+
+- [ ] **S3 — public API routes.** `GET /api/self-order/[token]` returns the new
+      snapshot with no device cookie. Replace `batches/route.ts` with
+      `submit/route.ts`. Keep `payment/route.ts`. Delete `join/route.ts`,
+      `pairing-code/route.ts`, `cancel-pending-payment-and-add/route.ts`, and
+      `apps/web/lib/self-order/device-capability.ts`. Remove the `device_token`
+      cookie, the 428 `device_cookie_required` branch, and the client's
+      one-shot 428 retry. Responses stay `private, no-store`. Rate limits
+      survive on `token` and `ip` scopes.
+
+- [ ] **S4 — guest UI.** Menu becomes the only page: header is `[table label]` +
+      a `Hoá đơn` button with a `Badge` opening a `Drawer` that never auto-opens.
+      Delete `self-order/status-pill.tsx`, `self-order/device-access-panel.tsx`,
+      and `self-order/session-state-panel.tsx`; the awaiting and rejected states
+      render as inline `NoteCallout` / `Alert` above the item list. Create
+      `self-order/bill-drawer.tsx` holding the canonical order lines, the round
+      history read from `kitchen_send_batches`, and `payment-panel.tsx`. Group
+      the menu by `menu_categories.type`: `main_dish` as large photo cards, the
+      rest as compact rows. Cart CTA reads `Gửi món` when the table is closed and
+      `Gửi thêm món` when it is open. Replace realtime with adaptive polling in
+      `self-order/hooks.ts`: 3s while awaiting confirmation or paying, 15s
+      otherwise, refetch on focus and bfcache restore. G0 renders a static
+      `BrandMascot animated={false}`.
+
+- [ ] **S5 — POS.** Add one badge tone to `pos-table-gate.tsx` for a table with a
+      `pending` request. Replace `_components/self-order-approval-sheet.tsx` with
+      a small approval sheet: submitted lines, customer note, provisional total,
+      `Duyệt` / `Từ chối`, plus a destination picker when the table carries two or
+      more open bills. Move `cancelSelfOrderPaymentRequest` into the table's bill
+      sheet. Rewrite `pos/self-order-actions.ts` down to accept, reject, and
+      cancel-payment. Fire `playAppSignal` on a new request: device-local, no
+      `public.notifications` row, no Telegram (ADR 0008).
+
+- [ ] **S6 — destructive migration and test re-anchor.** Drop
+      `self_order_sessions`, `self_order_batches`, `self_order_session_devices`,
+      `tables.self_order_capability_version`, `tables.realtime_topic_token`, every
+      `self_order_*_v2` function, the `session_changed` broadcast trigger and its
+      realtime policies, and the `origin` / `join` values of
+      `self_order_rate_buckets.purpose`. Delete the ten obsolete test files under
+      `apps/web/tests/` covering seating capability, device capability, session
+      integrity, and v2 phases; re-anchor the payment, cash-invoice-binding, and
+      public-contract tests to the new snapshot shape.
+
+- [ ] **S7 — documentation truth sweep.** `docs/spec/self-order-motion-design.md`
+      still references the Menu/Bill tabs and the old cart contract; rewrite it
+      against the drawer IA. Delete
+      `docs/runbooks/pos-kds/qr-self-order-capability-rollout.md` and its entry in
+      `docs/runbooks/README.md` — it rolls out a capability that no longer exists.
+      Re-check `docs/plan/adr/0011-database-auth-realtime-hardening.md` for
+      findings that named the deleted tables.
+
+### Known gap, out of scope
+
+No admin surface exists for toggling `tables.self_order_enabled` or printing a
+table QR. It never did. Do not grow one inside this rebuild.
 
 ## Active Greenfield Gates
 

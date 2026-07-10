@@ -459,3 +459,35 @@ Canonical presentation rule: `docs/modules/ui.md` § Branch Operator Hub. Đảo
 6. **Sau khi site 16 tắt, gỡ fork central khỏi operator UI** — `CENTRAL_HOME_TILE_SUFFIXES`, CTA home central, các nhánh `isCentralKitchen`/`isCentralSupply` trong loader hub, entries `kinds` central trong nav-config, archetype exceptions #19–#23, mục central trong `docs/ref/screen-context-map.md` §2.5 — xóa sạch, không tombstone.
 
 **Consequences:** D066 §3/§4/§7a hết hiệu lực; D067 §2 hết "đợt Bếp"; D068 §5 net cuối = PO nghỉ hẳn (không mở cho branch). D000 transfer matrix giữ (cần cho lịch sử + đợt chuyển tồn). Đảo mục 1–6 phải sửa bản ghi này trước.
+
+## D074: Voice alert KDS chạy bằng TTS trình duyệt, không clip thu sẵn (2026-07-10)
+
+**Context:** ADR 0008 (2026-07-09) chốt clip MP3/WAV thu sẵn làm voice engine và cấm `speechSynthesis`. Tới 2026-07-10 chưa ai thu clip nào, `apps/web/public/audio/` trống, nên KDS vẫn chỉ có beep — lớp voice chưa từng ship.
+
+**Decision (owner 2026-07-10):**
+
+1. **Voice engine = `window.speechSynthesis`** (`lang = "vi-VN"`). Không asset, không dependency; slot số bàn là nội suy chuỗi. Máy có danh sách voice đã nạp mà không có voice `vi-*` → bỏ voice, beep vẫn chạy theo mode. Cloud/realtime TTS vẫn nghỉ.
+2. **Scope đợt này = KDS Phase 1** (3 kind `kds.new` / `kds.append` / `kds.add_on`). POS Phase 3 giữ nguyên trạng thái đặt chỗ.
+3. **Chrome KDS = một nút xoay vòng** `off → beep → beep+voice → off`. Mode `voice`-only vẫn hợp lệ khi đọc pref, chỉ là chrome chưa mở. Preview khi đổi mode chính là user gesture mở khoá audio + speech.
+4. **Clip thu sẵn (giọng Má Tư) tụt xuống Phase 4** — thay engine mà không đổi `kind`/template.
+
+**Consequences:** ADR 0008 §3 và §"Alternatives Rejected" B đảo chiều (clip pack thành phương án bị loại cho MVP); non-goals của `docs/spec/operational-audio-alerts.md` đổi theo. Canonical: `docs/plan/adr/0008-operational-audio-alerts.md` + `docs/spec/operational-audio-alerts.md`; runtime `apps/web/lib/operational-audio.ts`.
+
+## D075: Rebuild Self-Order — order POS là sự thật duy nhất, xoá lớp session song song (2026-07-10)
+
+**Context:** Self-Order QR (`/q/[token]`) dựng một vòng đời riêng (`self_order_sessions` × `self_order_batches` × `self_order_session_devices` × `self_order_payment_requests` × access flags = 4×5×6×5×4 trạng thái) song song với vòng đời order/bàn của POS. Hệ quả owner chỉ ra 2026-07-10: (a) staff phải duyệt TỪNG lượt món; (b) ràng buộc thiết bị + mã ghép quá phiền cho bàn nhiều người; (c) bàn kẹt phiên `active` khi khách bỏ đi hoặc thu tiền qua đường khác; (d) POS và self-order không chung khái niệm "bàn đang có khách"; (e) `revoked` chỉ hồi được bằng cách xoay token = in lại QR dán bàn, bất khả thi.
+
+**Decision (owner 2026-07-10):**
+
+1. **Order của POS là sự thật duy nhất.** Một seating = một `orders` mở trên bàn (`payment_status <> 'paid'` và `status not in (completed, cancelled)`). Xoá `self_order_sessions`, `self_order_batches`, `self_order_session_devices`, `tables.self_order_capability_version`, `tables.realtime_topic_token`, toàn bộ RPC `self_order_*_v2`. Còn đúng 1 bảng mới `self_order_requests` với 1 enum 3 giá trị `pending | accepted | rejected`, unique partial index 1 hàng đợi/bàn.
+2. **Gate 1 lần mỗi seating, không phải mỗi lượt.** Bàn chưa có order mở → lượt đầu vào hàng đợi `pending`, staff duyệt → `create_order` → `route_order_to_kds` chạy sẵn. Bàn đã có order mở (POS tạo hay QR tạo đều được) → khách gửi món là `append_order_items` thẳng xuống bếp, không ai duyệt. Bàn có ≥2 bill mở → rơi về `pending`, staff chọn bill đích lúc duyệt; hệ thống KHÔNG đoán bill.
+3. **Bỏ sạch ràng buộc thiết bị.** Xoá cookie `device_token`, mã ghép, xin join, thu hồi thiết bị, nhánh 428-retry ở client. Đánh đổi được owner chấp nhận có ý thức: ai có ảnh chụp QR bàn đều đọc được bill và thêm món khi bàn đang mở. Duyệt lượt đầu chặn người lạ MỞ bàn, không chặn người lạ THÊM món vào bàn đang mở. Phòng ăn là biên tin cậy; món lạ ra bàn thì nhân viên thấy. Rate limit (`self_order_rate_buckets`) giữ nguyên.
+4. **Luồng thanh toán giữ nguyên** (owner không đánh dấu sai): đúng 1 intent sống, khách không tự huỷ, staff huỷ. Nút huỷ dời từ `SelfOrderApprovalSheet` (bị xoá) vào sheet bill của bàn ở table map — nếu không dời, khách kẹt vĩnh viễn sau VietQR hết hạn.
+5. **IA khách: menu là trang duy nhất.** Bỏ `Tabs`, bỏ `StatusPill`, bỏ tên chi nhánh khỏi header. `Hoá đơn` thành nút + `Badge` ở góc phải header, mở `Drawer`, **không tự bật** (quy tắc auto-switch-to-Bill của spec cũ chết theo Tabs). Trạng thái workflow chỉ nói ở `NoteCallout`/`Alert`, một chỗ duy nhất.
+6. **Mascot mở cho G0.** `BrandMascot animated={false}` hợp lệ trên màn "bàn không khả dụng" — đảo dòng `BrandMascot = Forbidden` của spec cũ. Không asset mới, không keyframe mới (mascot chỉ có 1 ảnh `cotlet.png`, mood là CSS).
+7. **Nổi bật món chính bằng `menu_categories.type`** (`main_dish` → thẻ lớn có ảnh; `side_dish | drink | dessert` → hàng gọn). Không thêm cột `is_featured` trên `menu_items`.
+8. **Bỏ realtime, dùng polling thích ứng:** 3s khi `Chờ xác nhận` / `Đang thanh toán`, 15s lúc khác, refetch khi tab focus + bfcache. Xoá topic token, trigger broadcast, policy realtime.
+9. **Chuông báo request mới = `playAppSignal` device-local** trên máy POS đang mở. Không ghi `public.notifications`, không Telegram — đúng ADR 0008 (self-order approval đã được đặt chỗ là POS phase).
+10. **Sau khi trả tiền, order biến khỏi snapshot.** Màn "Đã thanh toán" chỉ sống trong phiên trình duyệt hiện tại; reload → menu sạch. Khách bàn sau không bao giờ thấy bill cũ.
+
+**Consequences:** Bàn kẹt và `revoked ⇒ in lại QR` biến mất vì không còn session để kẹt và không còn `revoked`; `trg_order_release_table` có sẵn lo phần trả bàn. `self_order_batches` chết vì lịch sử lượt đã nằm sẵn ở `kitchen_send_batches`. Còn 6 RPC. Chưa có màn admin bật/tắt `self_order_enabled` hay in QR bàn — lỗ hổng đã biết, ngoài scope đợt này. Canonical: `docs/spec/self-order-guest-ui.md`. `docs/spec/self-order-motion-design.md` phải rà lại vì nó tham chiếu Tabs + cart cũ.
