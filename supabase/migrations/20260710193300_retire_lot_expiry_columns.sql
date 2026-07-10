@@ -765,7 +765,28 @@ BEGIN
     END IF;
   END IF;
 
-  DELETE FROM public.ingredient_units WHERE ingredient_id = v_id AND tenant_id = v_tenant;
+  IF EXISTS (
+    SELECT 1
+    FROM public.production_recipes pr
+    WHERE pr.tenant_id = v_tenant
+      AND pr.ingredient_id = v_id
+      AND pr.entry_unit_id IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(p_units) e
+        WHERE (e->>'unit_id')::bigint = pr.entry_unit_id
+      )
+  ) THEN
+    RAISE EXCEPTION 'ingredient_unit_in_use_by_production_recipe' USING ERRCODE = '23503';
+  END IF;
+
+  UPDATE public.ingredient_units
+  SET is_base = false
+  WHERE tenant_id = v_tenant
+    AND ingredient_id = v_id
+    AND is_base
+    AND unit_id IS DISTINCT FROM v_base_unit_id;
+
   INSERT INTO public.ingredient_units (
     tenant_id, ingredient_id, unit_id, to_base_factor, is_base,
     anchor_unit_id, anchor_factor, sort_order
@@ -776,7 +797,24 @@ BEGIN
          nullif(e->>'anchor_unit_id', '')::bigint,
          nullif(e->>'anchor_factor', '')::numeric,
          coalesce((e->>'sort_order')::int, 0)
-  FROM jsonb_array_elements(p_units) e;
+  FROM jsonb_array_elements(p_units) e
+  ON CONFLICT ON CONSTRAINT ingredient_units_ing_unit_key
+  DO UPDATE SET
+    to_base_factor = EXCLUDED.to_base_factor,
+    is_base = EXCLUDED.is_base,
+    anchor_unit_id = EXCLUDED.anchor_unit_id,
+    anchor_factor = EXCLUDED.anchor_factor,
+    sort_order = EXCLUDED.sort_order,
+    is_active = true;
+
+  DELETE FROM public.ingredient_units iu
+  WHERE iu.tenant_id = v_tenant
+    AND iu.ingredient_id = v_id
+    AND NOT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(p_units) e
+      WHERE (e->>'unit_id')::bigint = iu.unit_id
+    );
 
   RETURN v_id;
 END $$;
@@ -925,10 +963,24 @@ BEGIN
   FROM upserted
   LEFT JOIN existing ON existing.name = upserted.name;
 
-  DELETE FROM public.ingredient_units ingredient_units
-  USING pg_temp.bulk_import_ingredient_upserted upserted
-  WHERE ingredient_units.tenant_id = v_tenant
-    AND ingredient_units.ingredient_id = upserted.id;
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_ingredient_upserted upserted
+    JOIN pg_temp.bulk_import_ingredient_rows rows
+      ON rows.name = upserted.name
+    JOIN public.units import_units
+      ON import_units.tenant_id = v_tenant
+     AND import_units.code = rows.unit
+     AND import_units.is_active
+    JOIN public.ingredient_units existing_base
+      ON existing_base.tenant_id = v_tenant
+     AND existing_base.ingredient_id = upserted.id
+     AND existing_base.is_base
+    WHERE upserted.existed
+      AND existing_base.unit_id IS DISTINCT FROM import_units.id
+  ) THEN
+    RAISE EXCEPTION 'bulk_import_base_unit_change_forbidden' USING ERRCODE = '23514';
+  END IF;
 
   INSERT INTO public.ingredient_units (
     tenant_id, ingredient_id, unit_id, to_base_factor, is_base, sort_order
@@ -946,7 +998,13 @@ BEGIN
   JOIN public.units base_units
     ON base_units.tenant_id = v_tenant
    AND base_units.code = rows.unit
-   AND base_units.is_active;
+   AND base_units.is_active
+  ON CONFLICT ON CONSTRAINT ingredient_units_ing_unit_key
+  DO UPDATE SET
+    to_base_factor = 1,
+    is_base = true,
+    sort_order = EXCLUDED.sort_order,
+    is_active = true;
 
   SELECT
     count(*) FILTER (WHERE NOT existed),

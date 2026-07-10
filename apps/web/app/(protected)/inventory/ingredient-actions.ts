@@ -117,6 +117,21 @@ function mapCatalogRpcError(
   if (message?.includes("inventory_unit_ladder_locked_by_stock_movements")) {
     return "Nguyên liệu đã có lịch sử tồn kho; không thể đổi đơn vị tồn chuẩn hoặc quy đổi về tồn chuẩn. Hãy tạo nguyên liệu mới hoặc xử lý điều chỉnh tồn kho.";
   }
+  if (
+    message?.includes("ingredient_unit_in_use_by_production_recipe") ||
+    message?.includes("production_recipes_ingredient_entry_unit_fkey")
+  ) {
+    return "Đơn vị đang dùng trong công thức sản xuất; không thể xóa. Giữ đơn vị trong thang quy đổi hoặc sửa công thức trước.";
+  }
+  if (message?.includes("unit not found") || message?.includes("unit_not_found")) {
+    return "Đơn vị tồn chuẩn không hợp lệ";
+  }
+  if (
+    message?.includes("category not found") ||
+    message?.includes("category_not_found")
+  ) {
+    return "Nhóm nguyên liệu không hợp lệ";
+  }
 
   switch (code) {
     case PG_ERR.INSUFFICIENT_PRIVILEGE:
@@ -124,7 +139,7 @@ function mapCatalogRpcError(
     case PG_ERR.CHECK_VIOLATION:
       return "Dữ liệu đơn vị không hợp lệ";
     case PG_ERR.FK_VIOLATION:
-      return "Đơn vị tồn chuẩn không hợp lệ";
+      return "Đơn vị hoặc nhóm nguyên liệu không hợp lệ";
     case PG_ERR.UNIQUE_VIOLATION:
       return "Tên/đơn vị bị trùng";
     default:
@@ -725,6 +740,15 @@ function mapBulkIngredientImportError(
   }
   if (message?.includes("category_not_found")) {
     return "Có nhóm nguyên liệu không còn hợp lệ.";
+  }
+  if (message?.includes("bulk_import_base_unit_change_forbidden")) {
+    return "Không thể đổi đơn vị tồn chuẩn qua import; giữ đơn vị hiện tại hoặc tạo nguyên liệu mới.";
+  }
+  if (
+    message?.includes("ingredient_unit_in_use_by_production_recipe") ||
+    message?.includes("production_recipes_ingredient_entry_unit_fkey")
+  ) {
+    return "Đơn vị đang dùng trong công thức sản xuất; không thể xóa qua import.";
   }
   if (code === PG_ERR.UNIQUE_VIOLATION) {
     return "Tên hoặc SKU nguyên liệu bị trùng.";
