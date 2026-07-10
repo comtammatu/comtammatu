@@ -412,6 +412,8 @@ Trigger inert khi flag OFF. Đảo phải sửa bản ghi này trước.
 
 ## D067: Hub Kho Tổng — ruột trang native mobile (đè D066 phần render-embedded), Kho trước Bếp sau (2026-07-04)
 
+**(sửa bởi D073):** Kho Tổng đã ngừng vận hành — §3–§6 mô tả surface đã ship nay không còn site nào dùng; riêng "Đơn chờ nhận (PO)" trong feed §3 hết hiệu lực vì PO nghỉ hẳn (D073 §4). §1 (fork presentation, loader chung) vẫn là khuôn cho mọi slice stock.
+
 **Decision (owner):**
 
 1. **Fork presentation thành component mobile-native** cho các route `(operator)/stock/*` — không "nâng cấp embedded tại chỗ". Server action + data loader GIỮ chung (một nguồn); chỉ tách lớp hiển thị (mobile-native operator ↔ dense-table office oversight D061). KHÔNG shell mới / chrome family mới (D019/D045/D058/D063 giữ nguyên); vẫn plane Operator, vẫn `/br/[branchId]/(operator)/*`.
@@ -425,7 +427,7 @@ Canonical presentation rule: `docs/modules/ui.md` § Branch Operator Hub. Đảo
 
 ## D068: Kho CN tự nhận NCC (GRN) + sản xuất tại chi nhánh — branch_manager, own-branch (2026-07-05)
 
-**Decision (owner):** (1) Kho CN (`branch`) tự nhận hàng NCC trực tiếp — không bắt buộc qua Kho Tổng; luồng điều chuyển (Yêu cầu hàng → Nhận) GIỮ, đây là ADD; (2) chi nhánh chạy được lệnh sản xuất; (3) actor = `branch_manager`, quyền TẠO + XÁC NHẬN (post tồn / trừ NL), chỉ own-branch (enforce app-layer + RLS `has_permission(branch_id,…)`); (4) `branch_manager` được tạo NCC nhanh — grant `procurement:supplier_manage` (danh mục NCC tenant dùng chung); (5) **(đảo bởi D073) PO MỞ cho chi nhánh** — tile "Đơn đặt hàng" + "Trả hàng NCC" + "Danh mục" mở kind `branch`; grant bổ sung cho `branch_manager` chốt ở đợt triển khai D073. Grant per-branch, không tenant-wide. Mở rộng D000. Canonical đầy đủ (grant list, RLS, helper): `docs/ref/inventory-rbac-matrix.md`. Đảo mục 1–5 phải sửa bản ghi này trước.
+**Decision (owner):** (1) Kho CN (`branch`) tự nhận hàng NCC trực tiếp — không bắt buộc qua Kho Tổng; luồng điều chuyển (Yêu cầu hàng → Nhận) GIỮ, đây là ADD; (2) chi nhánh chạy được lệnh sản xuất; (3) actor = `branch_manager`, quyền TẠO + XÁC NHẬN (post tồn / trừ NL), chỉ own-branch (enforce app-layer + RLS `has_permission(branch_id,…)`); (4) `branch_manager` được tạo NCC nhanh — grant `procurement:supplier_manage` (danh mục NCC tenant dùng chung); (5) **(net cuối theo D073 §4) PO và Trả hàng NCC NGHỈ HẲN cả hai plane** — không mở cho chi nhánh; chỉ "Danh mục" mở kind `branch` (không cần grant mới). Hàng lỗi xử qua Báo hao hụt. Grant per-branch, không tenant-wide. Mở rộng D000. Canonical đầy đủ (grant list, RLS, helper): `docs/ref/inventory-rbac-matrix.md`. Đảo mục 1–5 phải sửa bản ghi này trước.
 
 ## D069: Be Vietnam Pro heading + Shift-aware night mode (2026-07-07)
 

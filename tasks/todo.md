@@ -145,7 +145,9 @@
 - [ ] **Branch Hub touch-plane cutover — remaining scope.** The core stock
       routes (hub, transfer, receive, on-hand, GRN list/new/detail, stocktake,
       issues, supplier returns, reports, waste entry, waste approvals) own
-      native Branch presentation; shipped history lives in git. Still open:
+      native Branch presentation; shipped history lives in git. Supplier
+      returns and the cross-branch transfer surfaces retire later via
+      S11/S12. Still open:
   - [ ] Resolve the consumption Branch contract before rebuilding its two
         wrappers: distinguish POS sale-consumption ledger visibility from manual
         consumption issue review, then choose whether the Branch route is a
@@ -311,8 +313,12 @@
       Tổng round. No permission grants are required: categories/units/
       ingredients actions carry no `PERMISSION_KEYS` gate (RLS/module only) and
       suppliers use `procurement:supplier_manage`, which `branch_manager` holds
-      since D068 §4. Remove the `production/recipes` tile from the operator;
-      recipe administration stays in Office `/inventory`.
+      since D068 §4. Remove the operator recipe surface entirely — the tile AND the
+      `stock/production/recipes/**` route family (list, editor, new — the
+      clients still expose create/edit/delete today); recipe administration
+      stays in Office `/inventory` (D073 §3). Guard entries for the removed
+      routes: `scripts/page-archetypes.mjs` + the route-manifest arrays in
+      `scripts/check-ui-contract.mjs`.
 
 - [ ] **S9 — densify the on-hand list.**
       `stock/on-hand/branch-stock-on-hand-client.tsx:148` renders `min-h-20` (80px)
@@ -324,6 +330,10 @@
       row's detail sheet.
 
 - [ ] **S10 — decommission site 16 and delete the central forks (D073 §1/§5).**
+      Also retire the matu-platform import toolchain with the central sites:
+      the `import:*` script suite in root `package.json` and
+      `scripts/inventory-matu-platform-*.mjs` provision/require both central
+      sites and lose their referent when site 16 closes.
       Ordered: (1) owner transfers the 29 remaining stock rows 16 → 3 through the
       existing transfer flow (`central_kitchen → branch` is legal in the D000
       matrix) and reassigns the `production_manager` staff; (2) owner flips
@@ -356,7 +366,10 @@
       lands. Then retire the cross-branch lifecycle from the operator: tiles
       "Yêu cầu hàng" / "Nhận hàng" / "Chuyển hàng", the `stock/receive/**`
       queue, and the `inboundTransfers` hub-queue row; Office
-      `/inventory/transfers` stays read-only for history.
+      `/inventory/transfers` stays read-only for history. Guard entries to
+      retire with the routes: `stock/receive/**` rows in
+      `scripts/page-archetypes.mjs` (the route-manifest gate in
+      `scripts/check-ui-contract.mjs` rejects dead entries).
 
 - [ ] **S12 — retire supplier returns end-to-end (D073 §4).** Delete the
       operator routes (`stock/supplier-returns/**`, 3 pages + 3 clients), the
@@ -369,7 +382,9 @@
       gate is inert without new returns. Rejected GRN goods route through Báo
       hao hụt instead. Seven test files assert on this feature
       (`supplier-return-model.test.ts` dies; the six others need their
-      supplier-return expectations removed).
+      supplier-return expectations removed). Guard entries: supplier-return
+      rows in `scripts/page-archetypes.mjs` and the supplier-return arrays in
+      `scripts/check-ui-contract.mjs`.
 
 - [ ] **S13 — retire purchase orders from daily use (D073 §4).** Delete the
       operator wrappers (`stock/purchase-orders/**`, 3 files) and the PO nav
@@ -377,10 +392,14 @@
       remove the PO door from the GRN source picker
       (`fetchOpenPurchaseOrdersForReceiving` / `openPurchaseOrders` in
       `apps/web/lib/inventory/grn-source-data.ts`) and the
-      `openPurchaseOrders` hub-queue count. DB tables, RPCs, and the 15
-      historical POs stay. The old "Convert the Branch purchase-order family"
-      follow-up item is already removed (2026-07-10 consolidation); this slice
-      is its replacement.
+      `openPurchaseOrders` hub-queue count. Delete the Office PO routes and the PO server actions
+      (`purchase-order-actions.ts` mutators) with the navigation — D073 §4
+      retires both planes, not nav alone. Guard entries: PO rows in
+      `scripts/page-archetypes.mjs` and the PO arrays in
+      `scripts/check-ui-contract.mjs`. DB tables, RPCs, and the 15 historical
+      POs stay. The old "Convert the Branch purchase-order family" follow-up
+      item is already removed (2026-07-10 consolidation); this slice is its
+      replacement.
 
 ### Defects found while scoping the cutover — separate slices, not D073
 
@@ -436,7 +455,7 @@
       signature — DROP FUNCTION the old overload before CREATE) and
       `bulk_import_ingredients`. One migration rewriting those RPCs and dropping the
       three columns; then `ingredient-actions.ts` (the `null as never` dies),
-      `scripts/inventory-csv-reseed.ts`, and `db:types` after apply. The apply must
+      `apps/web/scripts/inventory-csv-reseed.ts`, and `db:types` after apply. The apply must
       land before any deploy of the code side (migration-before-deploy lesson).
 
 ### Owner decisions still open
@@ -454,9 +473,9 @@
   code deletion; S11 carries the intra-transfer RPC migration (owner-delegated
   apply, and it must land before any deploy of the wave's transfer create
   model); the lot/expiry retirement below carries its own migration.
-- Hard order: S10 (site-16 transfer-out uses the cross-branch flow one last
-  time) → S11 (one-step move + cross-branch retirement) → S12/S13 (feature
-  retirements, any order).
+- Order: S11 waits on S10 (the site-16 transfer-out uses the cross-branch
+  flow one last time). S12 and S13 are independent of S10/S11 and may run any
+  time (D073 §4 has no ops dependency).
 - Run the full gate fresh before each slice commit. A green result served from
   the turbo cache is not evidence.
 - Runtime QA per slice at `390x844`, `768x1024`, and `1024x768` (D067 §7).
