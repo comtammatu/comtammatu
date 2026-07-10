@@ -90,7 +90,6 @@ test("shared inventory PageContents and extracted loaders route scope-read throu
     "purchase-orders/page.tsx",
     "purchase-orders/new/page.tsx",
     "transfers/page.tsx",
-    "stock/[ingredientId]/page.tsx",
     "stocktake/page.tsx",
     "stocktake/new/page.tsx",
     "issues/page.tsx",
@@ -120,6 +119,13 @@ test("shared inventory PageContents and extracted loaders route scope-read throu
   );
   assert.doesNotMatch(stockLoaderSource, legacyDualityPattern);
   assert.match(stockLoaderSource, /resolveInventoryListScope/);
+
+  const stockDetailLoaderSource = readFileSync(
+    new URL("../lib/inventory/stock-on-hand-detail-data.ts", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(stockDetailLoaderSource, legacyDualityPattern);
+  assert.match(stockDetailLoaderSource, /resolveInventoryListScope/);
 
   const grnListLoaderSource = readFileSync(
     new URL("../lib/inventory/grn-list-data.ts", import.meta.url),

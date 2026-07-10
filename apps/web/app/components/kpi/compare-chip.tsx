@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { formatPercent } from "@comtammatu/shared/format";
 import { cn } from "@comtammatu/ui/lib/utils";
 
 // Compare delta semantic — green = improvement, red = regression,
@@ -89,7 +90,7 @@ export function buildCompareDelta(
   const diff = current - previous;
   const pct = (diff / Math.abs(previous)) * 100;
   const sign = diff > 0 ? "+" : "";
-  const label = `${sign}${pct.toFixed(1)}%`;
+  const label = `${sign}${formatPercent(pct)}`;
   if (diff === 0) return { label: "0%", tone: "neutral" };
   const isImprovement = kind === "higher_better" ? diff > 0 : diff < 0;
   return { label, tone: isImprovement ? "good" : "bad" };

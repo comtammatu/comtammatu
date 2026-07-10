@@ -68,6 +68,7 @@ import { getReferenceCostForUnit } from "../../_lib/reference-cost";
 import type { IngredientRow } from "../../page";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { formatPercent } from "@comtammatu/shared/format";
 
 const poCopy = messages.inventory.po;
 const poDetailCopy = poCopy.detail;
@@ -113,7 +114,7 @@ function VarianceBadge({ variance }: { variance: number }) {
   return (
     <Badge variant={variant}>
       {variance > 0 ? "+" : ""}
-      {variance}%
+      {formatPercent(variance, 2)}
     </Badge>
   );
 }

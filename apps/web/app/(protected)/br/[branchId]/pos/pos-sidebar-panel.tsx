@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { formatCount } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { AppendDraftPane } from "./_components/append-draft-pane";
@@ -49,7 +50,7 @@ function PosSidebarTabsComponent({
             </span>
             {cartQuantity > 0 && (
               <Badge variant="secondary" className="shrink-0 text-sm">
-                {cartQuantity}
+                {formatCount(cartQuantity)}
               </Badge>
             )}
           </TabsTrigger>

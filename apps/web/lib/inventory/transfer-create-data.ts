@@ -6,12 +6,12 @@ import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchBranchesForTransfer } from "@/(protected)/inventory/transfer-actions";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
-import { resolveDefaultInventoryLocation } from "@/(protected)/inventory/_lib/inventory-location-compat";
 import type { IngredientRow } from "@/(protected)/inventory/page";
 import {
   getTransferSourceBranchIds,
   type BranchForTransfer,
   type TransferIngredientOption,
+  type TransferSourceLocation,
 } from "./transfer-create-model";
 
 interface LoadTransferCreatePageDataOptions {
@@ -22,7 +22,8 @@ interface LoadTransferCreatePageDataOptions {
 export interface TransferCreatePageData {
   branches: BranchForTransfer[];
   ingredients: TransferIngredientOption[];
-  sourceStockByBranch: Record<number, Record<number, number>>;
+  sourceLocationsByBranch: Record<number, TransferSourceLocation[]>;
+  sourceStockByLocation: Record<number, Record<number, number>>;
   userBranchId: number | null;
   userRole: StaffRole;
   loadFailed: boolean;
@@ -35,6 +36,7 @@ function toTransferIngredientOption(
     id: ingredient.id,
     name: ingredient.name,
     is_active: ingredient.is_active,
+    itemKind: ingredient.item_kind ?? null,
     units: ingredient.units,
   };
 }
@@ -69,48 +71,75 @@ export async function loadTransferCreatePageData({
     userBranchId,
     userRole: claims.user_role,
   });
-  const sourceLocations = await Promise.all(
-    sourceBranchIds.map(async (branchId) => ({
-      branchId,
-      locationId: await resolveDefaultInventoryLocation(
-        supabase,
-        claims.tenant_id,
-        branchId,
-        "issue",
-      ),
-    })),
-  );
-  const locationByBranch = new Map(
-    sourceLocations
-      .filter(
-        (item): item is { branchId: number; locationId: number } =>
-          item.locationId != null,
-      )
-      .map((item) => [item.branchId, item.locationId] as const),
-  );
-  const sourceStockByBranch: Record<number, Record<number, number>> = {};
+  const sourceLocationsByBranch: Record<number, TransferSourceLocation[]> = {};
+  const sourceStockByLocation: Record<number, Record<number, number>> = {};
 
-  if (locationByBranch.size > 0) {
+  if (sourceBranchIds.length > 0) {
+    const { data: sourceLocations, error: sourceLocationsError } =
+      await supabase
+        .from("inventory_locations")
+        .select("id, branch_id, location_kind, is_default_issue")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("is_active", true)
+        .in("branch_id", sourceBranchIds)
+        .in("location_kind", ["warehouse", "kitchen", "production_storage"])
+        .order("is_default_issue", { ascending: false })
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true });
+    if (sourceLocationsError) loadFailed = true;
+
+    for (const location of sourceLocations ?? []) {
+      if (
+        location.location_kind !== "warehouse" &&
+        location.location_kind !== "kitchen" &&
+        location.location_kind !== "production_storage"
+      ) {
+        continue;
+      }
+      const branchLocations = sourceLocationsByBranch[location.branch_id] ?? [];
+      branchLocations.push({
+        id: location.id,
+        branchId: location.branch_id,
+        kind: location.location_kind,
+        isDefaultIssue: location.is_default_issue,
+      });
+      sourceLocationsByBranch[location.branch_id] = branchLocations;
+    }
+
+    const sourceLocationIds = Object.values(sourceLocationsByBranch)
+      .flat()
+      .map((location) => location.id);
+    if (sourceLocationIds.length === 0) {
+      return {
+        branches,
+        ingredients,
+        sourceLocationsByBranch,
+        sourceStockByLocation,
+        userBranchId,
+        userRole: claims.user_role,
+        loadFailed,
+      };
+    }
+
     const { data: sourceStockLevels, error: sourceStockError } = await supabase
       .from("stock_levels")
-      .select("branch_id, location_id, ingredient_id, current_quantity")
+      .select("location_id, ingredient_id, current_quantity")
       .eq("tenant_id", claims.tenant_id)
-      .in("branch_id", [...locationByBranch.keys()])
-      .in("location_id", [...locationByBranch.values()]);
+      .in("location_id", sourceLocationIds);
     if (sourceStockError) loadFailed = true;
 
     for (const row of sourceStockLevels ?? []) {
-      if (row.location_id !== locationByBranch.get(row.branch_id)) continue;
-      const branchStock = sourceStockByBranch[row.branch_id] ?? {};
-      branchStock[row.ingredient_id] = Number(row.current_quantity ?? 0);
-      sourceStockByBranch[row.branch_id] = branchStock;
+      const locationStock = sourceStockByLocation[row.location_id] ?? {};
+      locationStock[row.ingredient_id] = Number(row.current_quantity ?? 0);
+      sourceStockByLocation[row.location_id] = locationStock;
     }
   }
 
   return {
     branches,
     ingredients,
-    sourceStockByBranch,
+    sourceLocationsByBranch,
+    sourceStockByLocation,
     userBranchId,
     userRole: claims.user_role,
     loadFailed,

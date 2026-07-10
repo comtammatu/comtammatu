@@ -3,25 +3,45 @@
  * (print_template_money, _hhmm, _datetime, _duration, _diff_sign).
  */
 
+import { formatCount, formatVND } from "@comtammatu/shared/format";
+import {
+  formatVNDateTime,
+  formatVNDurationMinutes,
+  formatVNTime,
+} from "@comtammatu/shared/time";
 import type { PrintDocumentBlock } from "./print-document";
 
+const ISO_DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const ISO_TIME_ZONE_PATTERN = /(?:Z|[+-]\d{2}:?\d{2})$/i;
+
+function normalizeVNPrintTimestamp(value: string): string {
+  return ISO_TIME_ZONE_PATTERN.test(value) ? value : `${value}+07:00`;
+}
+
+function toPrintDate(value: string): Date {
+  return new Date(
+    ISO_DATETIME_PATTERN.test(value) ? normalizeVNPrintTimestamp(value) : value,
+  );
+}
+
 export const fmtInt = (n: number | null | undefined): string =>
-  String(Math.round(typeof n === "number" && Number.isFinite(n) ? n : 0));
+  formatCount(n ?? 0);
 
 export const fmtMoney = (n: number | null | undefined): string =>
-  new Intl.NumberFormat("vi-VN").format(
-    Math.round(typeof n === "number" && Number.isFinite(n) ? n : 0),
-  ) + "đ";
+  formatVND(n ?? 0);
 
 export const hhmm = (iso: string | null | undefined): string => {
   if (!iso) return "";
-  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(iso) ? iso.slice(11, 16) : iso;
+  return ISO_DATETIME_PATTERN.test(iso)
+    ? formatVNTime(normalizeVNPrintTimestamp(iso), iso)
+    : iso;
 };
 
 export const datetime = (iso: string | null | undefined): string => {
   if (!iso) return "";
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(iso)) return iso;
-  return `${iso.slice(11, 16)} ${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+  return ISO_DATETIME_PATTERN.test(iso)
+    ? formatVNDateTime(normalizeVNPrintTimestamp(iso), iso)
+    : iso;
 };
 
 export const duration = (
@@ -29,14 +49,9 @@ export const duration = (
   closedIso: string | null | undefined,
 ): string => {
   if (!openedIso || !closedIso) return "";
-  const ms = new Date(closedIso).getTime() - new Date(openedIso).getTime();
+  const ms = toPrintDate(closedIso).getTime() - toPrintDate(openedIso).getTime();
   if (!Number.isFinite(ms) || ms <= 0) return "";
-  const totalMin = Math.round(ms / 60000);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  if (h > 0 && m > 0) return `${h} giờ ${m} phút`;
-  if (h > 0) return `${h} giờ`;
-  return `${m} phút`;
+  return formatVNDurationMinutes(Math.round(ms / 60_000), "");
 };
 
 export const diffSign = (n: number): string =>

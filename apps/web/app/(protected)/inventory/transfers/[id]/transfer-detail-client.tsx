@@ -437,20 +437,20 @@ export function TransferDetailClient({
                   description: String(transfer.items.length).padStart(2, "0"),
                 },
                 {
-                  term: tTerm("fromWarehouse"),
+                  term: copy.sourceBranchLabel,
                   description: (
                     <>
                       <IconMapPin className="size-3 text-primary" />
-                      {transfer.fromBranch}
+                      {transfer.fromLocation}
                     </>
                   ),
                 },
                 {
-                  term: tTerm("toWarehouse"),
+                  term: copy.targetBranchLabel,
                   description: (
                     <>
                       <IconMapPin className="size-3 text-info" />
-                      {transfer.toBranch}
+                      {transfer.toLocation}
                     </>
                   ),
                 },
@@ -550,20 +550,20 @@ export function TransferDetailClient({
               description: String(transfer.items.length).padStart(2, "0"),
             },
             {
-              term: tTerm("fromWarehouse"),
+              term: copy.sourceBranchLabel,
               description: (
                 <span className="inline-flex items-center gap-1">
                   <IconMapPin className="size-3 text-primary" />
-                  {transfer.fromBranch}
+                  {transfer.fromLocation}
                 </span>
               ),
             },
             {
-              term: tTerm("toWarehouse"),
+              term: copy.targetBranchLabel,
               description: (
                 <span className="inline-flex items-center gap-1">
                   <IconMapPin className="size-3 text-info" />
-                  {transfer.toBranch}
+                  {transfer.toLocation}
                 </span>
               ),
             },

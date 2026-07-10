@@ -9,7 +9,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatDecimal, formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -48,6 +48,8 @@ import {
 } from "./actions";
 import {
   formatISODateParts,
+  formatVNBusinessDate,
+  formatVNClockTime,
   formatVNTime,
   getVNDateString,
   getVNMonthEndDateString,
@@ -123,9 +125,7 @@ const BRANCH_SCHEDULE_PRIMITIVES: SchedulePlanePrimitives = {
 };
 
 function formatDate(dateStr: string): string {
-  const parts = parseISODateParts(dateStr);
-  if (!parts) return dateStr;
-  return `${String(parts.day).padStart(2, "0")}/${String(parts.month).padStart(2, "0")}/${parts.year}`;
+  return formatVNBusinessDate(dateStr);
 }
 
 function formatMonthTitle(monthStartStr: string): string {
@@ -140,13 +140,11 @@ function formatTime(iso: string | null | undefined): string {
 
 function formatShiftWindow(start: string | null, end: string | null): string {
   if (!start) return "—";
-  return `${start.slice(0, 5)} - ${end ? end.slice(0, 5) : "—"}`;
+  return `${formatVNClockTime(start)} - ${formatVNClockTime(end)}`;
 }
 
 function formatDayCount(count: number): string {
-  return Number.isInteger(count)
-    ? String(count)
-    : count.toFixed(1).replace(".", ",");
+  return formatDecimal(count, 1);
 }
 
 function getMonthStartForOffset(monthStartStr: string, delta: number): string {

@@ -255,7 +255,7 @@ test("ingredients list does not render raw base-unit reference cost", () => {
 
 test("GRN create reference cost follows the selected entry unit", () => {
   const source = readRepo(
-    "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+    "apps/web/app/components/inventory/grn-line-editor.tsx",
   );
 
   assert.match(
@@ -297,7 +297,7 @@ test("quickCreateIngredient refuses units outside the catalog instead of creatin
 
 test("GRN create-from-supplier saveLine threads the picked entryUnitId to upsertGrnLine", () => {
   const source = readRepo(
-    "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+    "apps/web/lib/inventory/use-grn-create-controller.ts",
   );
   const callStart = source.indexOf("const lineRes = await upsertGrnLine({");
   assert.ok(callStart >= 0, "upsertGrnLine call not found");

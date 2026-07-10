@@ -36,6 +36,7 @@ import {
   getVNDateString,
   getVNMonthSequenceBack,
   getVNMonthString,
+  formatVNBusinessDate,
   formatVNTime,
   parseClockTimeToMinutes,
   getVNMinutesOfDay,
@@ -591,7 +592,7 @@ function DetailView({
       key: "date",
       header: FORM_VI.date,
       className: "font-mono text-sm",
-      render: (record) => record.date,
+      render: (record) => formatVNBusinessDate(record.date),
     },
     {
       key: "employee",
@@ -673,7 +674,8 @@ function DetailView({
                 {record.employees?.profiles?.full_name ?? "—"}
               </ItemTitle>
               <ItemDescription className="line-clamp-none text-sm leading-6">
-                {record.date} · {record.shifts?.name ?? "—"}
+                {formatVNBusinessDate(record.date)} ·{" "}
+                {record.shifts?.name ?? "—"}
               </ItemDescription>
               <div className="mt-2 flex flex-wrap gap-2">
                 {recordStateBadge(record)}
@@ -713,7 +715,7 @@ function DetailView({
             src={photoPreview.url}
             alt={attendanceCopy.photoAlt(
               photoPreview.employeeName,
-              photoPreview.date,
+              formatVNBusinessDate(photoPreview.date),
             )}
             width={960}
             height={720}
@@ -731,7 +733,7 @@ function DetailView({
         title="Checklist ca làm"
         description={
           checklistRecord
-            ? `${checklistRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${checklistRecord.date}`
+            ? `${checklistRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${formatVNBusinessDate(checklistRecord.date)}`
             : ""
         }
         contentClassName="sm:max-w-2xl"
@@ -745,7 +747,7 @@ function DetailView({
           if (!open) setClosingRecord(null);
         }}
         title="Đóng ca làm việc"
-        description={`Ca làm việc của ${closingRecord?.employees?.profiles?.full_name ?? "nhân viên"} ngày ${closingRecord?.date ?? ""} đang mở.`}
+        description={`Ca làm việc của ${closingRecord?.employees?.profiles?.full_name ?? "nhân viên"} ngày ${formatVNBusinessDate(closingRecord?.date, "")} đang mở.`}
       >
         <form onSubmit={handleForceClose} className="flex flex-col gap-4">
           <NoteCallout tone="muted">

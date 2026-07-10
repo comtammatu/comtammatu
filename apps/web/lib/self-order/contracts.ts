@@ -84,11 +84,305 @@ export const selfOrderPaymentRequestSchema = z.object({
   invoice: invoiceBuyerSchema.optional(),
 });
 
+export const selfOrderPaymentRequestStatusSchema = z.enum([
+  "cash_call",
+  "vietqr_pending",
+  "completed",
+  "cancelled",
+  "expired",
+]);
+
+export const selfOrderVietQrResponseSchema = z
+  .object({
+    ok: z.literal(true).optional(),
+    id: z.number().int().positive().optional(),
+    clientOpId: z.uuid().optional(),
+    status: selfOrderPaymentRequestStatusSchema,
+    method: z.literal("vietqr"),
+    amount: z.number().finite().positive(),
+    paymentId: z.number().int().positive().nullable().optional(),
+    paymentCode: z.string().min(1),
+    qrData: z.string().min(1),
+    bankCode: z.string().min(1),
+    accountNo: z.string().min(1),
+    accountName: z.string(),
+    createdAt: z.string().datetime({ offset: true }).optional(),
+    expiresAt: z.string().datetime({ offset: true }).nullable(),
+    idempotent: z.boolean().optional(),
+    recovered: z.boolean().optional(),
+    access: z
+      .enum(["public", "origin_pending", "join_pending", "approved"])
+      .optional(),
+  })
+  .strict();
+
+export const selfOrderDeviceRequestResponseSchema = z
+  .object({
+    deviceId: z.number().int().positive(),
+    kind: z.enum(["origin", "join"]),
+    status: z.enum([
+      "origin_pending",
+      "join_pending",
+      "approved",
+      "rejected",
+      "revoked",
+      "expired",
+    ]),
+    pairingCode: z.string().min(4).max(12).optional(),
+    pairingExpiresAt: z
+      .string()
+      .datetime({ offset: true })
+      .nullable()
+      .optional(),
+    expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
+  })
+  .strict();
+
+export const selfOrderBatchActionResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    status: z.string().min(1),
+    batchId: z.number().int().positive().optional(),
+    orderId: z.number().int().positive().nullable().optional(),
+    idempotent: z.boolean().optional(),
+    recovered: z.boolean().optional(),
+    access: z
+      .enum(["public", "origin_pending", "join_pending", "approved", "expired"])
+      .optional(),
+    deviceRequest: selfOrderDeviceRequestResponseSchema.optional(),
+    pairingRefreshRequired: z.boolean().optional(),
+  })
+  .strict();
+
+export const selfOrderDeviceActionResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    access: z.enum(["origin_pending", "join_pending", "approved"]),
+    idempotent: z.boolean().optional(),
+    deviceRequest: selfOrderDeviceRequestResponseSchema,
+  })
+  .strict();
+
+export const selfOrderPaymentActionResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    id: z.number().int().positive().optional(),
+    clientOpId: z.uuid().optional(),
+    status: selfOrderPaymentRequestStatusSchema,
+    method: z.enum(["cash_call", "vietqr"]),
+    amount: z.number().finite().min(0),
+    paymentId: z.number().int().positive().nullable().optional(),
+    paymentCode: z.string().min(1).nullable().optional(),
+    qrData: z.string().min(1).nullable().optional(),
+    bankCode: z.string().min(1).nullable().optional(),
+    accountNo: z.string().min(1).nullable().optional(),
+    accountName: z.string().nullable().optional(),
+    createdAt: z.string().datetime({ offset: true }).optional(),
+    expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
+    idempotent: z.boolean().optional(),
+    recovered: z.boolean().optional(),
+    access: z
+      .enum(["public", "origin_pending", "join_pending", "approved"])
+      .optional(),
+  })
+  .strict();
+
+const publicSelfOrderOrderLineSchema = z
+  .object({
+    menuItemId: z.number().int().positive(),
+    itemName: z.string().min(1).max(200),
+    variantId: z.number().int().positive().nullable(),
+    variantName: z.string().max(200).nullable(),
+    quantity: z.number().int().positive(),
+    unitPrice: z.number().finite().min(0),
+    lineTotal: z.number().finite().min(0),
+    modifiers: z.array(selfOrderModifierSchema).max(20),
+    sides: z.array(selfOrderSideSchema).max(20),
+    note: z.string().max(300).nullable(),
+  })
+  .strict();
+
+const publicSelfOrderBatchItemSchema = z
+  .object({
+    menuItemId: z.number().int().positive(),
+    itemName: z.string().min(1).max(200),
+    variantId: z.number().int().positive().nullable(),
+    variantName: z.string().max(200).nullable(),
+    quantity: z.number().int().positive(),
+    unitPrice: z.number().finite().min(0),
+    modifiers: z.array(selfOrderModifierSchema).max(20),
+    sides: z.array(selfOrderSideSchema).max(20),
+    note: z.string().max(300).nullable(),
+  })
+  .strict();
+
+const publicSelfOrderBatchSchema = z
+  .object({
+    id: z.number().int().positive(),
+    roundIndex: z.number().int().positive(),
+    status: z.enum(["pending_approval", "approved", "rejected"]),
+    items: z.array(publicSelfOrderBatchItemSchema).max(50),
+    customerNote: z.string().max(500).nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    decidedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .strict();
+
+const publicSelfOrderPendingBatchSchema = publicSelfOrderBatchSchema.extend({
+  roundIndex: z.number().int().positive().optional(),
+  decidedAt: z.string().datetime({ offset: true }).nullable().optional(),
+});
+
+const publicSelfOrderMenuVariantSchema = z
+  .object({
+    id: z.number().int().positive(),
+    name: z.string().min(1).max(200),
+    price_adjustment: z.number().finite(),
+    sort_order: z.number().int(),
+  })
+  .strict();
+
+const publicSelfOrderMenuModifierSchema = z
+  .object({
+    id: z.number().int().positive(),
+    name: z.string().min(1).max(120),
+    price: z.number().finite().min(0),
+    sort_order: z.number().int(),
+  })
+  .strict();
+
+const publicSelfOrderMenuSideSchema = z
+  .object({
+    id: z.number().int().positive(),
+    is_default: z.boolean(),
+    side_item: z
+      .object({
+        id: z.number().int().positive(),
+        name: z.string().min(1).max(200),
+        base_price: z.number().finite().min(0),
+      })
+      .strict(),
+  })
+  .strict();
+
+const publicSelfOrderMenuItemSchema = z
+  .object({
+    id: z.number().int().positive(),
+    name: z.string().min(1).max(200),
+    description: z.string().nullable(),
+    base_price: z.number().finite().min(0),
+    image_url: z.string().nullable(),
+    sort_order: z.number().int(),
+    menu_item_variants: z.array(publicSelfOrderMenuVariantSchema),
+    menu_item_modifiers: z.array(publicSelfOrderMenuModifierSchema),
+    menu_item_available_sides: z.array(publicSelfOrderMenuSideSchema),
+  })
+  .strict();
+
+const publicSelfOrderMenuCategorySchema = z
+  .object({
+    id: z.number().int().positive(),
+    name: z.string().min(1).max(200),
+    type: z.string().min(1).max(100),
+    sort_order: z.number().int(),
+    menu_items: z.array(publicSelfOrderMenuItemSchema),
+  })
+  .strict();
+
+const publicSelfOrderPaymentRequestSchema = z
+  .object({
+    id: z.number().int().positive().optional(),
+    clientOpId: z.uuid().optional(),
+    status: selfOrderPaymentRequestStatusSchema,
+    method: z.enum(["cash_call", "vietqr"]),
+    amount: z.number().finite().min(0),
+    paymentId: z.number().int().positive().nullable().optional(),
+    paymentCode: z.string().min(1).nullable().optional(),
+    qrData: z.string().min(1).nullable().optional(),
+    bankCode: z.string().min(1).nullable().optional(),
+    accountNo: z.string().min(1).nullable().optional(),
+    accountName: z.string().nullable().optional(),
+    createdAt: z.string().datetime({ offset: true }),
+    expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
+  })
+  .strict();
+
+export const publicSelfOrderSnapshotSchema = z
+  .object({
+    ok: z.literal(true),
+    code: z.string().optional(),
+    capabilityVersion: z.union([z.literal(1), z.literal(2)]).optional(),
+    access: z
+      .enum(["public", "origin_pending", "join_pending", "approved"])
+      .optional(),
+    deviceAccess: z
+      .enum([
+        "missing",
+        "origin_pending",
+        "join_pending",
+        "approved",
+        "rejected",
+        "revoked",
+        "expired",
+      ])
+      .optional(),
+    deviceRecovery: z.literal("expired").optional(),
+    seatingAccess: z
+      .enum(["available", "join_required", "approved"])
+      .optional(),
+    canViewBill: z.boolean().optional(),
+    canSubmitBatch: z.boolean().optional(),
+    canRequestPayment: z.boolean().optional(),
+    deviceRequest: selfOrderDeviceRequestResponseSchema.nullable().optional(),
+    pendingBatch: publicSelfOrderPendingBatchSchema.nullable().optional(),
+    branch: z
+      .object({ name: z.string().min(1).max(200) })
+      .strict()
+      .optional(),
+    table: z
+      .object({ number: z.number().int().positive() })
+      .strict()
+      .optional(),
+    session: z
+      .object({
+        status: z.enum(["pending_approval", "active", "closed", "revoked"]),
+        createdAt: z.string().datetime({ offset: true }),
+        approvedAt: z.string().datetime({ offset: true }).nullable(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
+    order: z
+      .object({
+        orderNumber: z.string().min(1),
+        status: z.string().min(1),
+        paymentStatus: z.string().nullable(),
+        paymentMethod: z.string().nullable(),
+        totalAmount: z.number().finite().min(0),
+        itemCount: z.number().int().min(0),
+        items: z.array(publicSelfOrderOrderLineSchema),
+      })
+      .strict()
+      .nullable()
+      .optional(),
+    batches: z.array(publicSelfOrderBatchSchema).optional(),
+    paymentRequest: publicSelfOrderPaymentRequestSchema.nullable().optional(),
+    menu: z.array(publicSelfOrderMenuCategorySchema).optional(),
+    realtimeTopic: z.string().min(24).max(200).optional(),
+  })
+  .strict();
+
 export type SelfOrderCartItem = z.infer<typeof selfOrderCartItemSchema>;
 export type SelfOrderCartModifier = z.infer<typeof selfOrderModifierSchema>;
 export type SelfOrderCartSide = z.infer<typeof selfOrderSideSchema>;
 export type SelfOrderPaymentRequest = z.infer<
   typeof selfOrderPaymentRequestSchema
+>;
+export type SelfOrderPaymentRequestStatus = z.infer<
+  typeof selfOrderPaymentRequestStatusSchema
+>;
+export type SelfOrderVietQrResponse = z.infer<
+  typeof selfOrderVietQrResponseSchema
 >;
 
 export interface SelfOrderMenuVariant {
@@ -171,41 +465,34 @@ export interface SelfOrderGuestBatch {
   decidedAt: string | null;
 }
 
-export interface PublicSelfOrderSnapshot {
-  ok: boolean;
-  code?: string;
-  branch?: { name: string };
-  table?: { number: number };
-  session?: {
-    status: "pending_approval" | "active" | "closed" | "revoked";
-    createdAt: string;
-    approvedAt: string | null;
-  } | null;
-  order?: {
-    orderNumber: string;
-    status: string;
-    paymentStatus: string | null;
-    paymentMethod: string | null;
-    totalAmount: number;
-    itemCount: number;
-    items: SelfOrderOrderLine[];
-  } | null;
-  batches?: SelfOrderGuestBatch[];
-  paymentRequest?: {
-    status: string;
-    method: string;
-    amount: number;
-    createdAt: string;
-  } | null;
-  menu?: SelfOrderMenuCategory[];
-  realtimeTopic?: string;
+export interface SelfOrderPaymentRequestSnapshot {
+  id?: number;
+  clientOpId?: string;
+  status: SelfOrderPaymentRequestStatus;
+  method: "cash_call" | "vietqr";
+  amount: number;
+  paymentId?: number | null;
+  paymentCode?: string | null;
+  qrData?: string | null;
+  bankCode?: string | null;
+  accountNo?: string | null;
+  accountName?: string | null;
+  createdAt: string;
+  expiresAt?: string | null;
 }
 
-export interface SelfOrderVietQrResponse {
-  qrData: string;
-  amount: number;
-  paymentCode: string;
-  bankCode: string;
-  accountNo: string;
-  accountName: string;
-}
+export type SelfOrderSeatingAccess = "available" | "join_required" | "approved";
+
+export type SelfOrderCapabilityAccess =
+  | "public"
+  | "origin_pending"
+  | "join_pending"
+  | "approved";
+
+export type SelfOrderDeviceRequestSnapshot = z.infer<
+  typeof selfOrderDeviceRequestResponseSchema
+>;
+
+export type PublicSelfOrderSnapshot = z.infer<
+  typeof publicSelfOrderSnapshotSchema
+>;

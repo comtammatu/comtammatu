@@ -16,6 +16,10 @@ import {
   clampTransferLineForSource,
   createAllAvailableTransferLines,
   createTransferDraftLine,
+  getDefaultTransferSourceLocation,
+  getTransferSelectableIngredients,
+  getTransferSourceLocationOptions,
+  getTransferOutboundDestinationOptions,
   formatTransferLocationLabel,
   formatTransferOption,
   formatTransferTargetOption,
@@ -26,12 +30,14 @@ import {
   type BranchForTransfer,
   type TransferDraftLine,
   type TransferIngredientOption,
+  type TransferSourceLocation,
 } from "./transfer-create-model";
 
 interface UseTransferCreateControllerOptions {
   branches: BranchForTransfer[];
   ingredients: TransferIngredientOption[];
-  sourceStockByBranch: Record<number, Record<number, number>>;
+  sourceLocationsByBranch: Record<number, TransferSourceLocation[]>;
+  sourceStockByLocation: Record<number, Record<number, number>>;
   userBranchId: number | null;
   userRole: Parameters<typeof resolveTransferCreatePolicy>[0]["userRole"];
   loadFailed: boolean;
@@ -42,7 +48,8 @@ interface UseTransferCreateControllerOptions {
 export function useTransferCreateController({
   branches,
   ingredients,
-  sourceStockByBranch,
+  sourceLocationsByBranch,
+  sourceStockByLocation,
   userBranchId,
   userRole,
   loadFailed,
@@ -56,27 +63,71 @@ export function useTransferCreateController({
   );
   const [outboundToBranchId, setOutboundToBranchId] = useState("");
   const [inboundFromBranchId, setInboundFromBranchId] = useState("");
+  const [outboundSourceLocationId, setOutboundSourceLocationId] = useState("");
   const [draftLines, setDraftLines] = useState<TransferDraftLine[]>([]);
   const [pickerIngredientId, setPickerIngredientId] = useState("");
   const [isPending, startTransition] = useTransition();
   const selectedSourceBranchId = policy.isBranchManager
     ? Number(inboundFromBranchId) || null
     : policy.outboundSourceBranchId;
+  const selectedSourceBranch =
+    selectedSourceBranchId == null
+      ? null
+      : (branches.find((branch) => branch.id === selectedSourceBranchId) ??
+        null);
+  const sourceLocationOptions =
+    selectedSourceBranchId == null
+      ? []
+      : getTransferSourceLocationOptions({
+          locations: sourceLocationsByBranch[selectedSourceBranchId] ?? [],
+          sourceBranchKind: selectedSourceBranch?.branch_kind ?? null,
+        });
+  const selectedSourceLocation =
+    sourceLocationOptions.find(
+      (location) => String(location.id) === outboundSourceLocationId,
+    ) ?? getDefaultTransferSourceLocation(sourceLocationOptions);
+  const selectedSourceLocationId = selectedSourceLocation?.id ?? null;
+  const selectedSourceLocationValue = selectedSourceLocation
+    ? String(selectedSourceLocation.id)
+    : "";
+  const outboundDestinationOptions = useMemo(
+    () =>
+      getTransferOutboundDestinationOptions({
+        branches,
+        sourceBranchId: policy.outboundSourceBranchId,
+        sourceBranchKind: policy.currentBranchKind,
+        sourceLocationKind: selectedSourceLocation?.kind ?? "warehouse",
+      }),
+    [
+      branches,
+      policy.currentBranchKind,
+      policy.outboundSourceBranchId,
+      selectedSourceLocation?.kind,
+    ],
+  );
   const activeIngredients = useMemo(
-    () => ingredients.filter((ingredient) => ingredient.is_active),
-    [ingredients],
+    () =>
+      getTransferSelectableIngredients({
+        ingredients,
+        sourceBranchKind: selectedSourceBranch?.branch_kind ?? null,
+      }),
+    [ingredients, selectedSourceBranch?.branch_kind],
   );
   const myBranchName = policy.currentBranch
-    ? formatTransferLocationLabel(policy.currentBranch, "warehouse")
+    ? formatTransferLocationLabel(
+        policy.currentBranch,
+        selectedSourceLocation?.kind ?? "warehouse",
+      )
     : null;
   const sourceContextLabel = useMemo(() => {
     if (policy.isBranchManager) {
       const source = branches.find(
         (branch) => String(branch.id) === inboundFromBranchId,
       );
-      return source
-        ? formatTransferOption(source, policy.requestDestinationBranchId)
-        : null;
+      if (!source) return null;
+      return selectedSourceLocation
+        ? formatTransferLocationLabel(source, selectedSourceLocation.kind)
+        : formatTransferOption(source, policy.requestDestinationBranchId);
     }
     return myBranchName;
   }, [
@@ -85,21 +136,28 @@ export function useTransferCreateController({
     myBranchName,
     policy.isBranchManager,
     policy.requestDestinationBranchId,
+    selectedSourceLocation,
   ]);
   const outboundDestinationName = useMemo(() => {
-    const option = policy.outboundDestinationOptions.find(
+    const option = outboundDestinationOptions.find(
       (item) => item.value === outboundToBranchId,
     );
     return option ? formatTransferTargetOption(option) : null;
-  }, [outboundToBranchId, policy.outboundDestinationOptions]);
+  }, [outboundDestinationOptions, outboundToBranchId]);
   const inboundSourceName = useMemo(() => {
     const branch = branches.find(
       (item) => String(item.id) === inboundFromBranchId,
     );
-    return branch
-      ? formatTransferOption(branch, policy.requestDestinationBranchId)
-      : null;
-  }, [branches, inboundFromBranchId, policy.requestDestinationBranchId]);
+    if (!branch) return null;
+    return selectedSourceLocation
+      ? formatTransferLocationLabel(branch, selectedSourceLocation.kind)
+      : formatTransferOption(branch, policy.requestDestinationBranchId);
+  }, [
+    branches,
+    inboundFromBranchId,
+    policy.requestDestinationBranchId,
+    selectedSourceLocation,
+  ]);
   const inboundDestinationName = policy.currentBranch
     ? formatTransferLocationLabel(
         policy.currentBranch,
@@ -112,11 +170,19 @@ export function useTransferCreateController({
   const selectedBranch = policy.isBranchManager
     ? Boolean(inboundFromBranchId)
     : Boolean(outboundToBranchId);
-  const flowSteps = messages.inventory.operatorFlow.transferCreateSteps;
+  const isKitchenDispatch =
+    !policy.isBranchManager && policy.currentBranchKind === "central_kitchen";
+  const flowSteps = isKitchenDispatch
+    ? messages.inventory.operatorFlow.kitchenDispatchSteps
+    : messages.inventory.operatorFlow.transferCreateSteps;
   const flowStep = draftLines.length > 0 ? 3 : selectedBranch ? 2 : 1;
   const flowStepMeta = flowSteps[flowStep - 1] ?? {
-    label: messages.inventory.operatorFlow.transferCreateTitle,
-    hint: messages.inventory.operatorFlow.transferCreateDescription,
+    label: isKitchenDispatch
+      ? messages.inventory.operatorFlow.kitchenDispatchTitle
+      : messages.inventory.operatorFlow.transferCreateTitle,
+    hint: isKitchenDispatch
+      ? messages.inventory.operatorFlow.kitchenDispatchDescription
+      : messages.inventory.operatorFlow.transferCreateDescription,
   };
   const flowProgressValue = Math.round((flowStep / flowSteps.length) * 100);
   const listHref = branchScopeInPath
@@ -126,6 +192,7 @@ export function useTransferCreateController({
   function resetForm() {
     setOutboundToBranchId("");
     setInboundFromBranchId("");
+    setOutboundSourceLocationId("");
     setDraftLines([]);
     setPickerIngredientId("");
   }
@@ -142,8 +209,8 @@ export function useTransferCreateController({
     return getTransferLineMaxEntryQuantity({
       line,
       ingredients,
-      sourceStockByBranch,
-      sourceBranchId: selectedSourceBranchId,
+      sourceStockByLocation,
+      sourceLocationId: selectedSourceLocationId,
     });
   }
 
@@ -153,14 +220,49 @@ export function useTransferCreateController({
 
   function handleInboundSourceChange(value: string) {
     const nextSourceBranchId = Number(value) || null;
+    const nextSourceLocation = getDefaultTransferSourceLocation(
+      nextSourceBranchId == null
+        ? []
+        : (sourceLocationsByBranch[nextSourceBranchId] ?? []),
+    );
     setInboundFromBranchId(value);
+    setOutboundSourceLocationId("");
     setDraftLines((current) =>
       current.map((line) =>
         clampTransferLineForSource({
           line,
           ingredients,
-          sourceStockByBranch,
-          sourceBranchId: nextSourceBranchId,
+          sourceStockByLocation,
+          sourceLocationId: nextSourceLocation?.id ?? null,
+        }),
+      ),
+    );
+  }
+
+  function handleOutboundSourceLocationChange(value: string) {
+    const nextSourceLocation = sourceLocationOptions.find(
+      (location) => String(location.id) === value,
+    );
+    if (!nextSourceLocation) return;
+    const nextDestinationOptions = getTransferOutboundDestinationOptions({
+      branches,
+      sourceBranchId: policy.outboundSourceBranchId,
+      sourceBranchKind: policy.currentBranchKind,
+      sourceLocationKind: nextSourceLocation.kind,
+    });
+    setOutboundSourceLocationId(value);
+    setOutboundToBranchId((current) =>
+      nextDestinationOptions.some((option) => option.value === current)
+        ? current
+        : "",
+    );
+    setDraftLines((current) =>
+      current.map((line) =>
+        clampTransferLineForSource({
+          line,
+          ingredients,
+          sourceStockByLocation,
+          sourceLocationId: nextSourceLocation.id,
         }),
       ),
     );
@@ -188,13 +290,13 @@ export function useTransferCreateController({
   }
 
   function addAllAvailableStockLines() {
-    if (selectedSourceBranchId == null) {
+    if (selectedSourceLocationId == null) {
       toast.error(messages.inventory.transfer.chooseSourceError);
       return;
     }
     const nextLines = createAllAvailableTransferLines({
       ingredients: activeIngredients,
-      sourceStock: sourceStockByBranch[selectedSourceBranchId] ?? {},
+      sourceStock: sourceStockByLocation[selectedSourceLocationId] ?? {},
     });
     if (nextLines.length === 0) {
       toast.error(messages.inventory.transfer.noStockToTransfer);
@@ -276,6 +378,8 @@ export function useTransferCreateController({
         toast.error(messages.inventory.transfer.chooseSourceError);
         return;
       }
+      toLocationKind =
+        fromBranchId === toBranchId ? "branch_kitchen" : "default_receive";
     } else {
       const target = parseTransferTargetValue(outboundToBranchId);
       if (!target) {
@@ -286,13 +390,16 @@ export function useTransferCreateController({
       toLocationKind =
         target.kind === "kitchen" ? "branch_kitchen" : "default_receive";
     }
-    if (!fromBranchId || !toBranchId) return;
+    if (!fromBranchId || !toBranchId || selectedSourceLocationId == null) {
+      toast.error(messages.inventory.transfer.chooseSourceError);
+      return;
+    }
 
     const linesResult = buildTransferLinesPayload({
       lines: draftLines,
       ingredients,
-      sourceStockByBranch,
-      sourceBranchId: selectedSourceBranchId,
+      sourceStockByLocation,
+      sourceLocationId: selectedSourceLocationId,
     });
     if (!linesResult.success) {
       toast.error(
@@ -309,6 +416,7 @@ export function useTransferCreateController({
       const result = await createStockTransfer({
         fromBranchId,
         toBranchId,
+        fromLocationId: selectedSourceLocationId,
         notes,
         vehicleInfo,
         toLocationKind,
@@ -336,6 +444,7 @@ export function useTransferCreateController({
     loadFailed ||
     (!policy.canCreateOutbound && !policy.canCreateInboundRequest) ||
     (policy.isBranchManager ? !inboundFromBranchId : !outboundToBranchId) ||
+    selectedSourceLocationId == null ||
     draftLines.length === 0;
 
   return {
@@ -353,19 +462,25 @@ export function useTransferCreateController({
     getLineMaxQuantityValue,
     getLineUnitOptions,
     handleInboundSourceChange,
+    handleOutboundSourceLocationChange,
     inboundFromBranchId,
     inboundDestinationName,
     inboundSourceName,
+    isKitchenDispatch,
     isPending,
     listHref,
     loadFailed,
     myBranchName,
     outboundDestinationName,
+    outboundDestinationOptions,
+    outboundSourceLocationId: selectedSourceLocationValue,
+    outboundSourceLocationOptions: sourceLocationOptions,
     outboundToBranchId,
     pickerIngredientId,
     removeLine,
     selectedBranch,
     selectedSourceBranchId,
+    selectedSourceLocationId,
     setOutboundToBranchId,
     setPickerIngredientId,
     sourceContextLabel,

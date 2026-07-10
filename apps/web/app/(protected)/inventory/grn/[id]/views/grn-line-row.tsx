@@ -19,14 +19,15 @@ import {
 } from "lucide-react";
 import { PhotoUploadInput } from "../../../_components/photo-upload-input";
 import { FormattedNumberInput } from "@/components/form";
+import { formatPercent } from "@comtammatu/shared/format";
 import { formatVND } from "../../../_lib/format";
 import {
-  deriveVariance,
-  grnCopy,
-  inventoryCommon,
-  type EditableLine,
-  type GRNDetail,
-} from "./grn-detail-types";
+  deriveGrnVariance as deriveVariance,
+  GRN_DETAIL_COPY as grnCopy,
+  INVENTORY_COMMON_COPY as inventoryCommon,
+  type EditableGrnLine as EditableLine,
+  type GrnDetail as GRNDetail,
+} from "@lib/inventory/grn-detail-model";
 
 export function LineRow({
   tenantId,
@@ -54,7 +55,7 @@ export function LineRow({
   const variance = deriveVariance(line.cost, line.poUnitPrice);
   const variancesLabel =
     variance != null
-      ? `${variance > 0 ? "+" : ""}${variance}%`
+      ? `${variance > 0 ? "+" : ""}${formatPercent(variance, 2)}`
       : inventoryCommon.noValue;
   const varianceTone =
     variance == null
@@ -89,7 +90,12 @@ export function LineRow({
           </div>
           <div className="flex items-center gap-2">
             {showAmendAffordance ? (
-              <Button type="button" variant="outline" size="sm" onClick={onAmend}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onAmend}
+              >
                 {grnCopy.amend.action}
               </Button>
             ) : null}
@@ -141,183 +147,172 @@ export function LineRow({
   // Draft mode — editable
   return (
     <Item variant="outline" className="flex-col items-stretch gap-3 p-4">
-        <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="font-bold">{line.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {grnCopy.line.orderedPoPrice(
-                line.poQuantity ?? inventoryCommon.noValue,
-                line.unit,
-              )}{" "}
-              {line.poUnitPrice != null
-                ? inventoryCommon.currency(formatVND(line.poUnitPrice))
-                : inventoryCommon.noValue}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className={`text-sm ${varianceTone}`}>
-              {grnCopy.line.priceVariance}: {variancesLabel}
-            </span>
-            {line.dirty ? (
-              <Badge variant="outline" className="text-xs">
-                {grnCopy.line.unsaved}
-              </Badge>
-            ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={onDelete}
-              className="text-muted-foreground hover:text-destructive"
-              aria-label={grnCopy.line.deleteLineAria}
-            >
-              <IconTrash className="size-4" />
-            </Button>
-          </div>
+      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="font-bold">{line.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {grnCopy.line.orderedPoPrice(
+              line.poQuantity ?? inventoryCommon.noValue,
+              line.unit,
+            )}{" "}
+            {line.poUnitPrice != null
+              ? inventoryCommon.currency(formatVND(line.poUnitPrice))
+              : inventoryCommon.noValue}
+          </p>
         </div>
+        <div className="flex items-center gap-2">
+          <span className={`text-sm ${varianceTone}`}>
+            {grnCopy.line.priceVariance}: {variancesLabel}
+          </span>
+          {line.dirty ? (
+            <Badge variant="outline" className="text-xs">
+              {grnCopy.line.unsaved}
+            </Badge>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onDelete}
+            className="text-muted-foreground hover:text-destructive"
+            aria-label={grnCopy.line.deleteLineAria}
+          >
+            <IconTrash className="size-4" />
+          </Button>
+        </div>
+      </div>
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <Field
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <Field id={`actual-${idx}`} label={grnCopy.line.actualLabel(line.unit)}>
+          <FormattedNumberInput
             id={`actual-${idx}`}
-            label={grnCopy.line.actualLabel(line.unit)}
-          >
-            <FormattedNumberInput
-              id={`actual-${idx}`}
-              maxFractionDigits={3}
-              value={String(line.actual)}
-              onValueChange={(value) =>
-                onChange({ actual: Number(value || 0) })
-              }
+            maxFractionDigits={3}
+            value={String(line.actual)}
+            onValueChange={(value) => onChange({ actual: Number(value || 0) })}
+          />
+        </Field>
+        <Field
+          id={`rejected-${idx}`}
+          label={grnCopy.line.rejectedLabel(line.unit)}
+        >
+          <FormattedNumberInput
+            id={`rejected-${idx}`}
+            maxFractionDigits={3}
+            value={String(line.rejected)}
+            onValueChange={(value) =>
+              onChange({
+                rejected: Number(value || 0),
+                qualityStatus:
+                  Number(value || 0) > 0 && line.actual === 0
+                    ? "rejected"
+                    : Number(value || 0) > 0
+                      ? "partial"
+                      : "accepted",
+              })
+            }
+          />
+        </Field>
+        <Field id={`cost-${idx}`} label={grnCopy.line.unitCostCurrency}>
+          <FormattedNumberInput
+            id={`cost-${idx}`}
+            maxFractionDigits={0}
+            value={String(line.cost)}
+            onValueChange={(value) => onChange({ cost: Number(value || 0) })}
+          />
+        </Field>
+      </div>
+
+      {line.rejected > 0 || line.qualityStatus === "rejected" ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field id={`reason-${idx}`} label={grnCopy.line.rejectReasonRequired}>
+            <Textarea
+              id={`reason-${idx}`}
+              rows={2}
+              value={line.rejectionReason}
+              placeholder={grnCopy.line.rejectReasonPlaceholder}
+              onChange={(e) => onChange({ rejectionReason: e.target.value })}
             />
           </Field>
           <Field
-            id={`rejected-${idx}`}
-            label={grnCopy.line.rejectedLabel(line.unit)}
+            id={`reject-photo-${idx}`}
+            label={grnCopy.line.proofPhotoLabel(qc.rejectRequiresPhoto)}
           >
-            <FormattedNumberInput
-              id={`rejected-${idx}`}
-              maxFractionDigits={3}
-              value={String(line.rejected)}
-              onValueChange={(value) =>
-                onChange({
-                  rejected: Number(value || 0),
-                  qualityStatus:
-                    Number(value || 0) > 0 && line.actual === 0
-                      ? "rejected"
-                      : Number(value || 0) > 0
-                        ? "partial"
-                        : "accepted",
-                })
-              }
-            />
-          </Field>
-          <Field id={`cost-${idx}`} label={grnCopy.line.unitCostCurrency}>
-            <FormattedNumberInput
-              id={`cost-${idx}`}
-              maxFractionDigits={0}
-              value={String(line.cost)}
-              onValueChange={(value) => onChange({ cost: Number(value || 0) })}
+            <PhotoUploadInput
+              tenantId={tenantId}
+              folder={`grn/${grnId}/rejected/${line.lineId}`}
+              value={line.rejectedPhotoUrl || null}
+              onChange={(url) => onChange({ rejectedPhotoUrl: url ?? "" })}
             />
           </Field>
         </div>
+      ) : null}
 
-        {line.rejected > 0 || line.qualityStatus === "rejected" ? (
-          <div className="grid gap-3 md:grid-cols-2">
+      {variance != null && Math.abs(variance) > qc.priceVarianceWarnPct ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field
+            id={`override-${idx}`}
+            label={grnCopy.line.priceOverrideRequired}
+          >
+            <Textarea
+              id={`override-${idx}`}
+              rows={2}
+              value={line.priceOverrideNote}
+              placeholder={
+                Math.abs(variance) > qc.priceVarianceReviewPct
+                  ? grnCopy.line.reviewVariancePlaceholder(
+                      formatPercent(variance, 2),
+                      formatPercent(qc.priceVarianceReviewPct),
+                    )
+                  : grnCopy.line.warnVariancePlaceholder(
+                      formatPercent(variance, 2),
+                      formatPercent(qc.priceVarianceWarnPct),
+                    )
+              }
+              onChange={(e) => onChange({ priceOverrideNote: e.target.value })}
+            />
+          </Field>
+          {Math.abs(variance) > qc.priceVarianceReviewPct ? (
             <Field
-              id={`reason-${idx}`}
-              label={grnCopy.line.rejectReasonRequired}
-            >
-              <Textarea
-                id={`reason-${idx}`}
-                rows={2}
-                value={line.rejectionReason}
-                placeholder={grnCopy.line.rejectReasonPlaceholder}
-                onChange={(e) => onChange({ rejectionReason: e.target.value })}
-              />
-            </Field>
-            <Field
-              id={`reject-photo-${idx}`}
-              label={grnCopy.line.proofPhotoLabel(qc.rejectRequiresPhoto)}
+              id={`override-photo-${idx}`}
+              label={grnCopy.line.supplierInvoicePhoto}
             >
               <PhotoUploadInput
                 tenantId={tenantId}
-                folder={`grn/${grnId}/rejected/${line.lineId}`}
-                value={line.rejectedPhotoUrl || null}
-                onChange={(url) => onChange({ rejectedPhotoUrl: url ?? "" })}
-              />
-            </Field>
-          </div>
-        ) : null}
-
-        {variance != null && Math.abs(variance) > qc.priceVarianceWarnPct ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            <Field
-              id={`override-${idx}`}
-              label={grnCopy.line.priceOverrideRequired}
-            >
-              <Textarea
-                id={`override-${idx}`}
-                rows={2}
-                value={line.priceOverrideNote}
-                placeholder={
-                  Math.abs(variance) > qc.priceVarianceReviewPct
-                    ? grnCopy.line.reviewVariancePlaceholder(
-                        variance,
-                        qc.priceVarianceReviewPct,
-                      )
-                    : grnCopy.line.warnVariancePlaceholder(
-                        variance,
-                        qc.priceVarianceWarnPct,
-                      )
-                }
-                onChange={(e) =>
-                  onChange({ priceOverrideNote: e.target.value })
+                folder={`grn/${grnId}/price-override/${line.lineId}`}
+                value={line.priceOverridePhotoUrl || null}
+                onChange={(url) =>
+                  onChange({ priceOverridePhotoUrl: url ?? "" })
                 }
               />
             </Field>
-            {Math.abs(variance) > qc.priceVarianceReviewPct ? (
-              <Field
-                id={`override-photo-${idx}`}
-                label={grnCopy.line.supplierInvoicePhoto}
-              >
-                <PhotoUploadInput
-                  tenantId={tenantId}
-                  folder={`grn/${grnId}/price-override/${line.lineId}`}
-                  value={line.priceOverridePhotoUrl || null}
-                  onChange={(url) =>
-                    onChange({ priceOverridePhotoUrl: url ?? "" })
-                  }
-                />
-              </Field>
-            ) : null}
-          </div>
-        ) : null}
+          ) : null}
+        </div>
+      ) : null}
 
-        {shortDeliveryRequired ? (
-          <Field id={`short-${idx}`} label={grnCopy.line.shortageAction}>
-            <Select
-              value={line.shortDeliveryAction ?? ""}
-              onValueChange={(v) =>
-                onChange({
-                  shortDeliveryAction: v as EditableLine["shortDeliveryAction"],
-                })
-              }
-            >
-              <SelectTrigger id={`short-${idx}`}>
-                <SelectValue placeholder={grnCopy.line.shortagePlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="accept_and_close">
-                  {grnCopy.line.acceptAndClose}
-                </SelectItem>
-                <SelectItem value="wait_backorder">
-                  {grnCopy.line.waitBackorder}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-        ) : null}
-
+      {shortDeliveryRequired ? (
+        <Field id={`short-${idx}`} label={grnCopy.line.shortageAction}>
+          <Select
+            value={line.shortDeliveryAction ?? ""}
+            onValueChange={(v) =>
+              onChange({
+                shortDeliveryAction: v as EditableLine["shortDeliveryAction"],
+              })
+            }
+          >
+            <SelectTrigger id={`short-${idx}`}>
+              <SelectValue placeholder={grnCopy.line.shortagePlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="accept_and_close">
+                {grnCopy.line.acceptAndClose}
+              </SelectItem>
+              <SelectItem value="wait_backorder">
+                {grnCopy.line.waitBackorder}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      ) : null}
     </Item>
   );
 }

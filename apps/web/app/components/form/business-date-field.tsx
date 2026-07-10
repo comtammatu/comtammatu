@@ -5,7 +5,7 @@ import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { useController } from "react-hook-form";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
-import { Calendar } from "@comtammatu/ui/components/calendar";
+import { Calendar, vi } from "@comtammatu/ui/components/calendar";
 import {
   Field,
   FieldDescription,
@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@comtammatu/ui/components/popover";
+import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { CalendarDays as IconCalendarEvent } from "lucide-react";
 
 const BUSINESS_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -24,20 +25,6 @@ const BRANCH_TIMEZONE_LABEL = "Múi giờ chi nhánh";
 
 function padDatePart(value: number) {
   return String(value).padStart(2, "0");
-}
-
-function formatBusinessDate(value?: string | null) {
-  if (!value) {
-    return "";
-  }
-
-  const match = BUSINESS_DATE_PATTERN.exec(value);
-  if (!match) {
-    return value;
-  }
-
-  const [, year, month, day] = match;
-  return `${day}/${month}/${year}`;
 }
 
 function dateToBusinessDate(date: Date) {
@@ -124,12 +111,13 @@ export function BusinessDateField<TFieldValues extends FieldValues>({
             )}
           >
             <IconCalendarEvent data-icon="inline-start" />
-            {rawValue ? formatBusinessDate(rawValue) : placeholder}
+            {rawValue ? formatVNBusinessDate(rawValue) : placeholder}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-auto p-0">
           <Calendar
             mode="single"
+            locale={vi}
             selected={selectedDate}
             onSelect={(date) => {
               field.onChange(date ? dateToBusinessDate(date) : "");

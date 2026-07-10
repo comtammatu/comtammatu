@@ -1,15 +1,9 @@
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
-import { selfOrderBatchRequestSchema } from "@lib/self-order/contracts";
-import { cancelPendingPaymentAndAdd } from "@lib/self-order/server";
-import {
-  jsonError,
-  parseJsonBody,
-  parseSelfOrderToken,
-} from "../_responses";
+import { jsonError, parseSelfOrderToken } from "../_responses";
 
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token: rawToken } = await params;
@@ -18,21 +12,9 @@ export async function POST(
     return jsonError(404, "not_found", SELF_ORDER_VI.unavailableDescription);
   }
 
-  const body = await parseJsonBody(request);
-  const parsed = selfOrderBatchRequestSchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError(422, "invalid_body", SELF_ORDER_VI.submitFailed);
-  }
-
-  const result = await cancelPendingPaymentAndAdd({
-    token,
-    clientOpId: parsed.data.clientOpId,
-    items: parsed.data.items,
-    customerNote: parsed.data.customerNote,
-  });
-  if (!result.ok) {
-    return jsonError(result.status, result.code, result.message);
-  }
-
-  return NextResponse.json({ ok: true, ...result.data });
+  return jsonError(
+    409,
+    "payment_cancel_staff_required",
+    SELF_ORDER_VI.paymentCancelStaffRequired,
+  );
 }

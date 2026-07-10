@@ -8,7 +8,7 @@ import {
   CircleCheck as IconCircleCheck,
   CircleX as IconCircleX,
 } from "lucide-react";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -216,12 +216,12 @@ export function RefundsClient({
       <div className="grid gap-3 md:grid-cols-3">
         <KpiCard
           label="Chờ duyệt"
-          value={pendingCount}
+          value={formatCount(pendingCount)}
           hint="Các yêu cầu cần quyết định ngay."
         />
         <KpiCard
           label={STATES_VI.approved}
-          value={approvedCount}
+          value={formatCount(approvedCount)}
           hint="Yêu cầu đã được xử lý trong danh sách hiện tại."
         />
         <KpiCard
@@ -232,31 +232,34 @@ export function RefundsClient({
       </div>
 
       <AppToolbar className="justify-between">
-          <div className="flex flex-col gap-1.5">
-            <SectionLabel>
-              Điều phối hoàn tiền
-            </SectionLabel>
-            <p className="text-sm text-muted-foreground">
-              {refunds.length} yêu cầu hoàn tiền trong danh sách hiện tại.
-            </p>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge variant="warning">{pendingCount} chờ duyệt</Badge>
-              <Badge variant="success">{approvedCount} đã duyệt</Badge>
-            </div>
+        <div className="flex flex-col gap-1.5">
+          <SectionLabel>Điều phối hoàn tiền</SectionLabel>
+          <p className="text-sm text-muted-foreground">
+            {formatCount(refunds.length)} yêu cầu hoàn tiền trong danh sách hiện
+            tại.
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant="warning">
+              {formatCount(pendingCount)} chờ duyệt
+            </Badge>
+            <Badge variant="success">
+              {formatCount(approvedCount)} đã duyệt
+            </Badge>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refreshRefunds}
-            disabled={isPending}
-          >
-            {isPending ? (
-              <Spinner className="mr-1.5 size-3.5" />
-            ) : (
-              <IconRotate className="mr-1.5 size-3.5" />
-            )}
-            Làm mới
-          </Button>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={refreshRefunds}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <Spinner className="mr-1.5 size-3.5" />
+          ) : (
+            <IconRotate className="mr-1.5 size-3.5" />
+          )}
+          Làm mới
+        </Button>
       </AppToolbar>
 
       {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
@@ -267,79 +270,79 @@ export function RefundsClient({
         contentFlush
         contentScroll
       >
-          <DataTable
-            columns={columns}
-            data={refunds}
-            getRowKey={(refund) => refund.id}
-            emptyTitle="Không có yêu cầu hoàn tiền nào"
-            emptyDescription="Dữ liệu trống cho bộ lọc hiện tại."
-            emptyIcon={<IconRotate />}
-            mobileCardRender={(refund) => (
-              <Item variant="outline">
-                <ItemHeader>
-                  <ItemContent>
-                    <ItemTitle className="font-mono">
-                      {refund.order_number}
-                    </ItemTitle>
-                    <ItemDescription>{refund.branch_name}</ItemDescription>
-                  </ItemContent>
-                  <StatusBadge domain="refund" value={refund.status} />
-                </ItemHeader>
-                <ItemFooter>
-                  <span className="text-xs text-muted-foreground">Số tiền</span>
-                  <span className="font-mono text-sm font-semibold tabular-nums">
-                    {formatVND(refund.amount)}
-                  </span>
-                </ItemFooter>
-                <ItemFooter>
+        <DataTable
+          columns={columns}
+          data={refunds}
+          getRowKey={(refund) => refund.id}
+          emptyTitle="Không có yêu cầu hoàn tiền nào"
+          emptyDescription="Dữ liệu trống cho bộ lọc hiện tại."
+          emptyIcon={<IconRotate />}
+          mobileCardRender={(refund) => (
+            <Item variant="outline">
+              <ItemHeader>
+                <ItemContent>
+                  <ItemTitle className="font-mono">
+                    {refund.order_number}
+                  </ItemTitle>
+                  <ItemDescription>{refund.branch_name}</ItemDescription>
+                </ItemContent>
+                <StatusBadge domain="refund" value={refund.status} />
+              </ItemHeader>
+              <ItemFooter>
+                <span className="text-xs text-muted-foreground">Số tiền</span>
+                <span className="font-mono text-sm font-semibold tabular-nums">
+                  {formatVND(refund.amount)}
+                </span>
+              </ItemFooter>
+              <ItemFooter>
+                <span className="text-xs text-muted-foreground">
+                  {FORM_VI.reason}: {refund.reason}
+                </span>
+              </ItemFooter>
+              <ItemFooter>
+                <span className="text-xs text-muted-foreground">
+                  {formatVNDateTime(refund.created_at)}
+                </span>
+                {canApprove && refund.status === "pending" ? (
+                  <ItemActions className="flex-wrap justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-success/20 text-success hover:bg-success/10 hover:text-success"
+                      disabled={isPending && actioningId === refund.id}
+                      onClick={() => handleApprove(refund.id, true)}
+                    >
+                      {isPending && actioningId === refund.id ? (
+                        <Spinner className="size-3.5" />
+                      ) : (
+                        <IconCircleCheck className="size-3.5" />
+                      )}
+                      <span className="ml-1">Duyệt</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      disabled={isPending && actioningId === refund.id}
+                      onClick={() => handleApprove(refund.id, false)}
+                    >
+                      {isPending && actioningId === refund.id ? (
+                        <Spinner className="size-3.5" />
+                      ) : (
+                        <IconCircleX className="size-3.5" />
+                      )}
+                      <span className="ml-1">Từ chối</span>
+                    </Button>
+                  </ItemActions>
+                ) : (
                   <span className="text-xs text-muted-foreground">
-                    {FORM_VI.reason}: {refund.reason}
+                    {refund.approved_by_name ?? "—"}
                   </span>
-                </ItemFooter>
-                <ItemFooter>
-                  <span className="text-xs text-muted-foreground">
-                    {formatVNDateTime(refund.created_at)}
-                  </span>
-                  {canApprove && refund.status === "pending" ? (
-                    <ItemActions className="flex-wrap justify-end">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-success/20 text-success hover:bg-success/10 hover:text-success"
-                        disabled={isPending && actioningId === refund.id}
-                        onClick={() => handleApprove(refund.id, true)}
-                      >
-                        {isPending && actioningId === refund.id ? (
-                          <Spinner className="size-3.5" />
-                        ) : (
-                          <IconCircleCheck className="size-3.5" />
-                        )}
-                        <span className="ml-1">Duyệt</span>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        disabled={isPending && actioningId === refund.id}
-                        onClick={() => handleApprove(refund.id, false)}
-                      >
-                        {isPending && actioningId === refund.id ? (
-                          <Spinner className="size-3.5" />
-                        ) : (
-                          <IconCircleX className="size-3.5" />
-                        )}
-                        <span className="ml-1">Từ chối</span>
-                      </Button>
-                    </ItemActions>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      {refund.approved_by_name ?? "—"}
-                    </span>
-                  )}
-                </ItemFooter>
-              </Item>
-            )}
-          />
+                )}
+              </ItemFooter>
+            </Item>
+          )}
+        />
       </AppSection>
     </>
   );

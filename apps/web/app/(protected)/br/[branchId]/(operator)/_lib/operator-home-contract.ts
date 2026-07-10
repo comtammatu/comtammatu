@@ -13,10 +13,10 @@ export const CENTRAL_HOME_TILE_SUFFIXES: Partial<
     "/stock/catalog",
   ],
   central_kitchen: [
-    "/stock",
     "/stock/grn",
+    "/stock/production",
+    "/stock/production/recipes",
     "/stock/transfer",
-    "/stock/stocktake",
   ],
 } as const satisfies Partial<Record<BranchKind, readonly string[]>>;
 

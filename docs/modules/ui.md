@@ -194,6 +194,13 @@ Branch stock workflow áp dụng cùng ranh giới này:
 - On-hand Branch là lookup surface, không lặp cụm mutation của Hub trên đầu
   danh sách. Nhận/điều chuyển/kiểm kê/hủy hỏng vẫn mở từ stock Hub; action theo
   nguyên liệu nằm trong thẻ kho chi tiết theo permission hiện có.
+- `/br/[branchId]/stock/on-hand/[ingredientId]` là Branch-native touch `DETAIL`:
+  dùng shared `loadStockIngredientDetailData` và pure movement/status model,
+  nhưng tải `includeValuation: false` cho Branch. Thứ tự là tồn hiện tại/trạng
+  thái, cân bằng theo vị trí, chuyển động gần đây, ngưỡng và action theo quyền;
+  nhận NCC phải mở `/stock/grn/new`, không được trỏ vào `/stock/receive` là
+  hàng chuyển nội bộ. Không đưa WAC, giá trị tồn, audit/correction, Office
+  `AppPageHeader`, `DataTable`, hoặc Office detail presenter vào route này.
 - `/br/[branchId]/stock/grn` là Branch-native touch `LIST`: dùng shared
   `loadGrnListPageData` + pure filter model, hiển thị nháp của người đang thao
   tác trước hàng đợi GRN, và giữ bỏ nháp là action có xác nhận. Danh sách Branch
@@ -205,16 +212,100 @@ Branch stock workflow áp dụng cùng ranh giới này:
   tạo NCC khi được cấp quyền, và mở PO chờ nhận bằng full-row touch action.
   Supplier entry canonical tại `/br/[branchId]/stock/grn/new/[supplierId]`; màn
   source không render `DocumentFormFrame`, `DataTable`, hoặc Office picker.
+- `/br/[branchId]/stock/grn/new/[supplierId]` là Branch-native touch
+  `DOC-WORKFLOW`: dùng shared `loadGrnCreatePageData`,
+  `useGrnCreateController`, và `GrnLineEditSheet`, nhưng route tự sở hữu bố cục
+  `BranchOperatorPage`/`BranchOperatorPanel`, list dòng chạm để sửa, và
+  `AppDetailFooter` sticky. Context NCC/kho nhận đứng trước danh sách dòng và
+  tìm nguyên liệu; branch bị khóa bởi URL, tablet landscape chỉ mở grid panel
+  chứ không đổi thành bảng hay desktop side editor. Route không import Office
+  page/client, `DocumentFormFrame`, `DataTable`, `AppPageHeader`, hoặc
+  `AppSection` trực tiếp.
+- `/br/[branchId]/stock/grn/[id]` là Branch-native touch `DETAIL`: nháp dùng
+  shared detail loader/model/action hooks nhưng tự sở hữu danh sách kiểm nhận
+  chạm, bottom sheet sửa/thêm dòng, và `AppDetailFooter` sticky để lưu/chốt;
+  phiếu không còn nháp là biên nhận chỉ đọc. Route không import Office
+  `GRNDetailClient`, `embedded`, audit history, post-confirm correction, stock
+  correction, hoặc liên kết hóa đơn NCC. Các tác vụ quản trị đó vẫn thuộc Office
+  `/inventory/grn/[id]`.
+- `/br/[branchId]/stock/stocktake` là Branch-native touch `LIST`: session
+  stocktake của quản lý khác với `/stock/count` là count slip được giao cho
+  nhân viên. Route dùng shared `loadBranchStocktakeListData`/model, full-row
+  `ItemGroup` ở phone/tablet, và không dùng `DataTable`, long-press drawer,
+  Office toolbar, branch picker, audit, hay report CTA.
+- `/br/[branchId]/stock/stocktake/new` là Branch-native `DOC-WORKFLOW`: URL
+  khóa branch, chỉ chọn mode và location, sau đó mở phiên qua action hiện có và
+  chuyển vào count. Route dùng `BranchOperatorPage`/`BranchOperatorPanel` và
+  `AppDetailFooter` sticky; không import `DocumentFormFrame` hoặc Office start
+  presenter.
+- `/br/[branchId]/stock/stocktake/[id]/count` là Branch-native touch
+  `DOC-WORKFLOW`: number pad là entry point, cho phép chọn đơn vị ghi nhận ngay
+  trên nguyên liệu active, giữ autosave draft/zone lock/round submit hiện có,
+  và không đổi tablet thành `DataTable`. Payload blind không mang số tồn hệ
+  thống; dữ liệu system/count/variance chỉ xuất hiện sau khi hoàn tất.
+- `/br/[branchId]/stock/stocktake/[id]` là Branch-native touch `DETAIL`: active
+  review chỉ nhận blind counts, count/recount status, continue, cancel, và
+  complete theo permission; completed result dùng `ItemGroup` system/count/
+  variance. Không đưa audit history, Office detail client, report CTA, WAC, hay
+  giá trị tồn vào route này.
+- `/br/[branchId]/stock/issues` là Branch-native touch `LIST` chỉ cho `writeoff`
+  và `other`: branch bị khóa bởi URL, danh sách chỉ giữ mã phiếu, loại, ngày và
+  trạng thái; tạo nháp mở trong bottom `Sheet`, không có branch picker,
+  `DataTable`, export, audit hoặc tổng giá trị Office.
+- `/br/[branchId]/stock/issues/[id]` là Branch-native touch `DETAIL`: nháp cho
+  thêm/sửa/xóa từng dòng bằng bottom `Sheet` với đơn vị nhập, số lượng không vượt
+  tồn và lý do bắt buộc; xác nhận/hủy dùng `AppDetailFooter` sticky và authority
+  Server Action/RPC hiện có. Phiếu đã xác nhận/hủy chỉ đọc. Không đưa WAC, tổng
+  giá trị, audit history, `DocumentStockCorrectionDialog`, Office detail client,
+  hay branch/source picker vào Branch.
+- `/br/[branchId]/stock/waste` là Branch-native touch `DOC-WORKFLOW`: URL khóa
+  chi nhánh, màn chính giữ location/cap và `ItemGroup` của các dòng đã chọn;
+  điện thoại sửa một dòng trong bottom `Sheet`, tablet chỉ mở rộng thành hai
+  panel cùng IA. Tier, ảnh bằng chứng, rolling meter, số lượng không vượt tồn
+  và Server Action/RPC hiện có phải giữ nguyên. Không import
+  `WasteNewPageContent`, `WasteCreateClient`, `DocumentFormFrame`, `DataTable`,
+  hoặc chrome Office.
+- `/br/[branchId]/stock/waste-approvals` là Branch-native touch `LIST`: queue
+  khóa theo URL branch, mỗi row chạm mở bottom `Sheet` chứa line, reason, tier,
+  evidence và review note. Duyệt/từ chối chỉ gọi `approveWaste`, giữ nguyên
+  four-eye rule và xác nhận mutation; phiếu tự tạo chỉ đọc. Không import
+  `WasteApprovalsPageContent`, `WasteApprovalsClient`, `DocumentFormFrame`,
+  `DataTable`, hoặc chrome Office.
+- `/br/[branchId]/stock/supplier-returns` là Branch-native touch `LIST`: dùng
+  shared Branch loader/model để chỉ hiển thị mã phiếu, NCC, GRN gốc, ngày và
+  trạng thái của đúng chi nhánh URL. Tạo mới chỉ mở cho quyền tạo phiếu; không
+  đưa branch picker, `DataTable`, tổng giá trị, export, audit, hoặc chrome Office
+  vào list điện thoại/tablet.
+- `/br/[branchId]/stock/supplier-returns/new` là Branch-native
+  `DOC-WORKFLOW`: chỉ chọn GRN có dòng bị từ chối, cách xử lý, lý do và ghi chú,
+  rồi gọi RPC/Server Action hiện có để tự sao chép các dòng trả. URL khóa branch;
+  không dùng `DocumentFormFrame`, source picker Office, hay giá trị tiền.
+- `/br/[branchId]/stock/supplier-returns/[id]` là Branch-native touch `DETAIL`:
+  ưu tiên dòng hàng, NCC/GRN gốc, lý do, cách xử lý và trạng thái; gửi NCC,
+  ghi có/hoàn tiền/hủy vẫn gọi state machine hiện có qua `AppDetailFooter` và
+  xác nhận an toàn. Terminal record chỉ đọc. Audit, tổng giá trị, accounting
+  credit-note detail và Office detail presenter thuộc `/inventory/supplier-returns`.
+- `/br/[branchId]/stock/reports` là Branch-native touch `REPORT`: cố định đúng
+  chi nhánh URL và tháng hiện tại, ưu tiên chênh lệch tiêu hao warning/critical
+  rồi biến động của từng nguyên liệu có drill-in vào tồn thực. Mỗi số lượng luôn
+  đi cùng đơn vị của nguyên liệu; không cộng chéo kg/lít/cái. Không dùng
+  `ReportsPageContent`, `ReportsClient`, `DataTable`, biểu đồ, KPI tổng, công
+  nợ NCC, giá vốn, export, audit hay branch/date picker. Office
+  `/inventory/reports` giữ dashboard quản trị riêng, không còn `embedded` mode.
 - Office `/inventory/stock` dùng cùng loader/model nhưng giữ management
   `StockClient`: compact cards khi viewport hẹp và dense `DataTable` trên
   desktop. Office client không có `embedded` mode hoặc Branch route branching.
 - Office `/inventory/operations?tab=grn` dùng cùng GRN loader/model nhưng giữ
   `GrnListClient` management presentation: branch, tổng giá trị và desktop
   `DataTable` vẫn thuộc Office; client này không nhận diện `/br/` để đổi layout.
+- Office `/inventory/grn/new/[supplierId]` giữ `DocumentFormFrame` và desktop
+  line editor trong `GrnCreateClient`; Office và Branch chỉ chia sẻ loader,
+  typed controller, line-editor primitive, và server action, không chia sẻ
+  presentation mode hoặc route branching.
 - detail điều chuyển trong Branch chỉ giữ thao tác giao/nhận và số lượng từng
   dòng; audit history và correction sau khi chốt thuộc Office management.
 - tạo điều chuyển tại `/br/[branchId]/stock/transfer/new` là Branch-native
-  `DOC-WORKFLOW`: phone mở dần kho → mặt hàng → ghi chú, tablet tăng thành hai
+  `DOC-WORKFLOW`: phone mở dần nơi đi/nơi nhận → mặt hàng → ghi chú, tablet tăng thành hai
   cột, control tối thiểu 44px và CTA nằm trong `AppDetailFooter` sticky. Route
   Office `/inventory/transfers/new` giữ `DocumentFormFrame`; hai plane chỉ dùng
   chung loader, model, controller và `createStockTransfer`.
@@ -575,15 +666,17 @@ Layer adapter app-level duy nhất cho pattern lặp lại.
 
 ### Form wrapper layer — `apps/web/app/components/form/` (barrel `form/index.ts`)
 
-| Export (file)                                                                             | Vai trò                                                                                                     | Rule khóa (DS)                                                                               |
-| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `TextField`, `TextareaField`                                                              | Input text có label, cao `h-10`                                                                             | § Rhythm D — `h-10` CHỈ cho phép trên form/\* control                                        |
-| `NumberField`, `FormattedNumberInput`                                                     | Nhập số có format VN                                                                                        | § Rhythm D + § Inventory (input tiền/số lượng/thuế/ngày PHẢI qua form wrapper)               |
-| `MoneyVndField`, `MoneyVndInput`, `QuantityField`, `QuantityInput` (domain-number-inputs) | Input tiền/số lượng theo domain                                                                             | Như trên + § Numeric cells (`formatVND` SSoT)                                                |
-| `NumberPadSheet`                                                                          | Sheet nhập số bằng bàn phím chạm (`text-3xl tabular-nums`)                                                  | § Rhythm B numeric-input-echo                                                                |
-| `BusinessDateField`                                                                       | Date picker theo business-date VN                                                                           | § Rhythm D field-trigger qua `Button size="field"`; `date-format-ssot`                       |
-| `SelectField`, `Combobox`, `ComboboxField`, `MultiSelectCombobox`                         | Select/searchable-select field trigger                                                                      | § Rhythm D field-trigger qua `size="field"` — không hand-patch raw trigger lên `h-10`        |
-| `AppDialog`, `FormDialog`, `FileImportDialog`, `valuesToFormData` (form-dialog)           | Khung dialog app: detail/task dùng `AppDialog`, CRUD dùng `FormDialog`, import file dùng `FileImportDialog` | § High-level primitive governance — raw `dialog` import route qua AppDialog/FormDialog/Sheet |
+| Export (file)                                                                             | Vai trò                                                                                                     | Rule khóa (DS)                                                                                                                            |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `TextField`, `TextareaField`                                                              | Input text có label, cao `h-10`                                                                             | § Rhythm D — `h-10` CHỈ cho phép trên form/\* control                                                                                     |
+| `NumberField`, `FormattedNumberInput`                                                     | Nhập số có format VN                                                                                        | § Rhythm D + § Inventory (input tiền/số lượng/thuế/ngày PHẢI qua form wrapper)                                                            |
+| `MoneyVndField`, `MoneyVndInput`, `QuantityField`, `QuantityInput` (domain-number-inputs) | Input tiền/số lượng theo domain                                                                             | Như trên + § Numeric cells (`formatVND` SSoT)                                                                                             |
+| `NumberPadSheet`                                                                          | Sheet nhập số bằng bàn phím chạm (`text-3xl tabular-nums`)                                                  | § Rhythm B numeric-input-echo                                                                                                             |
+| `BusinessDateField`                                                                       | Date picker theo business-date VN                                                                           | § Rhythm D field-trigger qua `Button size="field"`; `date-format-ssot`                                                                    |
+| `FormField`                                                                               | Anatomy có label/help/error cho control controlled không dùng RHF                                           | Bắt buộc khi ghép `Select`/`Combobox`/`Textarea` controlled trực tiếp trong data-entry form; control con giữ `id` và ARIA state tương ứng |
+| `SelectField`, `ComboboxField`, `MultiSelectCombobox`                                     | Select/searchable-select field trigger có RHF + error inline                                                | § Rhythm D field-trigger qua `size="field"` — không hand-patch raw trigger lên `h-10`                                                     |
+| `Combobox`                                                                                | Searchable trigger controlled độc lập; phải nằm trong `FormField` khi là data-entry                         | Không dùng `Label` đứng cạnh mà không có `id`/field contract                                                                              |
+| `AppDialog`, `FormDialog`, `FileImportDialog`, `valuesToFormData` (form-dialog)           | Khung dialog app: detail/task dùng `AppDialog`, CRUD dùng `FormDialog`, import file dùng `FileImportDialog` | § High-level primitive governance — raw `dialog` import route qua AppDialog/FormDialog/Sheet                                              |
 
 ### Chrome, navigation, brand, confirmation
 
@@ -655,6 +748,9 @@ App-local form helpers sống tại `apps/web/app/components/form/`. Dùng cho m
 - `QuantityInput` / `QuantityField` — inventory quantity, default 3 decimal places, grouped display
 - `BusinessDateField` — RHF date picker, displays `dd/mm/yyyy`, stores `yyyy-mm-dd`, optional branch timezone note
 - `SelectField` — Select voi `options={[{value, label}]}`
+- `ComboboxField` — searchable Select + RHF, label/help/error/required state chung; description/error được liên kết tới trigger
+- `FormField` — label/help/error chung cho `Select`, `Combobox`, hoặc `Textarea` controlled ngoài RHF; đây là anatomy/layout wrapper, control con vẫn phải nhận `id`, `disabled`, và ARIA state phù hợp
+- `Combobox` — control searchable độc lập; trong data-entry phải đặt trong `FormField` với `id` ổn định
 - `TextareaField` — Textarea + RHF
 - `AppDialog` — generic app Dialog shell for short non-form detail/task overlays
 - `FormDialog` — generic Dialog + `useForm` + `zodResolver` + `useTransition`

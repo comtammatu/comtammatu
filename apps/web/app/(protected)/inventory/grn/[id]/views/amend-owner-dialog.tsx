@@ -16,7 +16,10 @@ import { AppDialog, FormattedNumberInput } from "@/components/form";
 import { amendGrnLine } from "../../../grn-actions";
 import { formatVND } from "../../../_lib/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { grnCopy, type EditableLine } from "./grn-detail-types";
+import {
+  GRN_DETAIL_COPY as grnCopy,
+  type EditableGrnLine as EditableLine,
+} from "@lib/inventory/grn-detail-model";
 
 const AMEND_OWNER_FORM_ID = "amend-owner-form";
 

@@ -256,10 +256,7 @@ test.skip("transaction write callers do not send unit text/code", () => {
       "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
       "upsertGrnLine",
     ],
-    [
-      "apps/web/app/(protected)/inventory/grn/[id]/_hooks/use-grn-line-actions.ts",
-      "upsertGrnLine",
-    ],
+    ["apps/web/lib/inventory/use-grn-detail-actions.ts", "upsertGrnLine"],
     [
       "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
       "upsertGrnLine",

@@ -5,7 +5,7 @@ import {
   Progress,
   type ProgressTone,
 } from "@comtammatu/ui/components/progress";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
 interface ShiftCapMeterProps {
@@ -80,7 +80,9 @@ export function ShiftCapMeter({
         </div>
         <div className="tabular-nums">
           {formatVND(projected)} / {formatVND(shiftCap)}
-          <span className="ml-1 text-muted-foreground">{pctDisplay}%</span>
+          <span className="ml-1 text-muted-foreground">
+            {formatPercent(pctDisplay, 0)}
+          </span>
         </div>
       </div>
       <Progress value={pctDisplay} tone={tone} className="h-1.5 rounded-full" />

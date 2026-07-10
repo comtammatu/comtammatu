@@ -1,4 +1,8 @@
-import { formatCount, formatVND } from "@comtammatu/shared/format";
+import {
+  formatCount,
+  formatPercent,
+  formatVND,
+} from "@comtammatu/shared/format";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchInventoryValueByBranch } from "@/(protected)/inventory/inventory-value-actions";
@@ -149,11 +153,6 @@ export interface FinanceCockpitData {
 function toNumber(value: number | string | null | undefined): number {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatPercent(value: number): string {
-  if (!Number.isFinite(value)) return "0%";
-  return `${value.toFixed(1)}%`;
 }
 
 function buildKpis({

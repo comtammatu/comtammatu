@@ -119,7 +119,7 @@ export function BranchOperatorPanel({
       title={title}
       description={description}
       headerHint={headerHint}
-      icon={Icon ? <Icon /> : undefined}
+      icon={Icon ? <Icon aria-hidden="true" /> : undefined}
       iconClassName={toneIconClassName[tone]}
       badge={
         badge

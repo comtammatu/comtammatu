@@ -24,6 +24,11 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@comtammatu/ui/components/alert";
 import { Combobox } from "@/components/form/combobox";
 import {
   AppDetailFooter,
@@ -38,6 +43,11 @@ import {
 } from "../../production-run-actions";
 import { tTerm } from "../../_lib/dictionary";
 import { messages } from "@lib/messages";
+import { getIngredientUnitOptions } from "../../_lib/unit-options";
+import {
+  productionQuantityFromBase,
+  productionQuantityToBase,
+} from "../../_lib/production-unit-conversion";
 import type {
   BranchOption,
   FinishedGoodOption,
@@ -165,58 +175,95 @@ export function ProductionNewClient({
     ingredients: ProductionRecipeIngredient[];
     maxProductionQuantity: number | null;
   } | null>(null);
+  const [recipeContextError, setRecipeContextError] = useState<string | null>(
+    null,
+  );
   const [isLoadingContext, setIsLoadingContext] = useState(false);
   const [ingredientUsages, setIngredientUsages] = useState<
     Record<number, string>
   >({});
 
   const selectedFg = finishedGoods.find((fg) => fg.id === finishedGoodId);
-  const unitOptions = selectedFg
-    ? [
-        { id: 0, name: selectedFg.unit },
-        ...(selectedFg.units || []).map((u) => ({
-          id: u.unit_id,
-          name: u.unit_name || "",
-        })),
-      ]
-    : [];
+  const unitOptions = getIngredientUnitOptions(selectedFg, {
+    includeToBaseFactor: true,
+  });
+  const selectedOutputUnit =
+    entryUnitId == null
+      ? unitOptions.find((unit) => unit.isBase)
+      : unitOptions.find((unit) => unit.unitId === entryUnitId);
+  const selectedOutputUnitName = selectedOutputUnit?.label ?? selectedFg?.unit;
+  const selectedOutputToBaseFactor = selectedOutputUnit?.toBaseFactor;
   const canUseRecipeControls =
     branchId != null && sourceLocationId != null && finishedGoodId != null;
   const plannedQtyParsed = Number.parseFloat(plannedQuantity);
   const hasValidPlannedQty =
     !Number.isNaN(plannedQtyParsed) && plannedQtyParsed > 0;
+  const plannedOutputBaseQuantity = hasValidPlannedQty
+    ? productionQuantityToBase(plannedQtyParsed, selectedOutputToBaseFactor)
+    : null;
+  const maxProductionInSelectedUnit = productionQuantityFromBase(
+    recipeContext?.maxProductionQuantity ?? Number.NaN,
+    selectedOutputToBaseFactor,
+  );
+  const hasRecipeContext =
+    recipeContext != null && recipeContext.ingredients.length > 0;
+  const canCreateProductionRun =
+    branchId != null &&
+    sourceLocationId != null &&
+    targetBranchId != null &&
+    targetLocationId != null &&
+    finishedGoodId != null &&
+    hasValidPlannedQty &&
+    plannedOutputBaseQuantity != null &&
+    hasRecipeContext &&
+    !isLoadingContext &&
+    recipeContextError == null;
   const controlSize = embedded ? "touch" : "default";
 
   useEffect(() => {
     if (branchId && sourceLocationId && finishedGoodId) {
+      let active = true;
       setIsLoadingContext(true);
+      setRecipeContext(null);
+      setRecipeContextError(null);
       fetchProductionRecipeContext(finishedGoodId, branchId, sourceLocationId)
         .then((res) => {
+          if (!active) return;
           if (res.success && res.data) {
             setRecipeContext(res.data);
           } else {
             setRecipeContext(null);
+            setRecipeContextError(
+              res.error ?? "Không thể kiểm tra định mức và tồn kho.",
+            );
           }
         })
+        .catch(() => {
+          if (!active) return;
+          setRecipeContext(null);
+          setRecipeContextError("Không thể kiểm tra định mức và tồn kho.");
+        })
         .finally(() => {
-          setIsLoadingContext(false);
+          if (active) setIsLoadingContext(false);
         });
+
+      return () => {
+        active = false;
+      };
     } else {
       setRecipeContext(null);
+      setRecipeContextError(null);
+      setIsLoadingContext(false);
     }
   }, [branchId, sourceLocationId, finishedGoodId]);
 
   useEffect(() => {
     if (recipeContext?.ingredients) {
-      const parsedQty = Number.parseFloat(plannedQuantity);
       const usages: Record<number, string> = {};
       for (const ing of recipeContext.ingredients) {
-        if (
-          !Number.isNaN(parsedQty) &&
-          parsedQty > 0 &&
-          ing.default_usage_per_fg > 0
-        ) {
-          const defaultQty = parsedQty * ing.default_usage_per_fg;
+        if (plannedOutputBaseQuantity != null && ing.default_usage_per_fg > 0) {
+          const defaultQty =
+            plannedOutputBaseQuantity * ing.default_usage_per_fg;
           usages[ing.ingredient_id] = formatDecimalInputValue(defaultQty, 3);
         } else {
           usages[ing.ingredient_id] = "";
@@ -224,12 +271,12 @@ export function ProductionNewClient({
       }
       setIngredientUsages(usages);
     }
-  }, [recipeContext, plannedQuantity]);
+  }, [recipeContext, plannedOutputBaseQuantity]);
 
   const handleSetMaxQuantity = () => {
-    if (recipeContext?.maxProductionQuantity != null) {
+    if (maxProductionInSelectedUnit != null) {
       setPlannedQuantity(
-        formatDecimalInputValue(recipeContext.maxProductionQuantity, 3),
+        formatDecimalInputValue(maxProductionInSelectedUnit, 3),
       );
     } else {
       toast.error(
@@ -283,6 +330,11 @@ export function ProductionNewClient({
       return;
     }
 
+    if (!canCreateProductionRun) {
+      toast.error("Cần kiểm tra định mức và tồn kho trước khi tạo lệnh.");
+      return;
+    }
+
     const ingredientsOverride: {
       ingredient_id: number;
       actual_quantity: number;
@@ -330,13 +382,16 @@ export function ProductionNewClient({
   };
 
   const renderNeededQuantity = (ingredient: ProductionRecipeIngredient) => {
-    if (!hasValidPlannedQty || ingredient.default_usage_per_fg <= 0) {
+    if (
+      plannedOutputBaseQuantity == null ||
+      ingredient.default_usage_per_fg <= 0
+    ) {
       return "Nhập sản lượng để xem";
     }
 
-    return `${formatQty(plannedQtyParsed * ingredient.default_usage_per_fg)} ${
-      ingredient.unit_name
-    }`;
+    return `${formatQty(
+      plannedOutputBaseQuantity * ingredient.default_usage_per_fg,
+    )} ${ingredient.unit_name}`;
   };
 
   const renderIngredientInput = (ingredient: ProductionRecipeIngredient) => (
@@ -452,7 +507,7 @@ export function ProductionNewClient({
               variant="outline"
               size={embedded ? "touch" : "sm"}
               onClick={handleSetMaxQuantity}
-              disabled={isLoadingContext || recipeContext == null}
+              disabled={isLoadingContext || maxProductionInSelectedUnit == null}
             >
               Tối đa theo tồn
             </Button>
@@ -493,32 +548,39 @@ export function ProductionNewClient({
               />
               {unitOptions.length > 0 && (
                 <Select
-                  value={entryUnitId?.toString() || "0"}
-                  onValueChange={(val) =>
+                  value={selectedOutputUnit?.unitId.toString()}
+                  onValueChange={(val) => {
+                    const nextUnitId = Number.parseInt(val, 10);
                     setEntryUnitId(
-                      val === "0" ? undefined : Number.parseInt(val, 10),
-                    )
-                  }
+                      nextUnitId ===
+                        unitOptions.find((unit) => unit.isBase)?.unitId
+                        ? undefined
+                        : nextUnitId,
+                    );
+                  }}
                 >
                   <SelectTrigger className="w-full sm:w-36" size={controlSize}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {unitOptions.map((unit) => (
-                      <SelectItem key={unit.id} value={unit.id.toString()}>
-                        {unit.name}
+                      <SelectItem
+                        key={unit.unitId}
+                        value={unit.unitId.toString()}
+                      >
+                        {unit.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
             </div>
-            {recipeContext?.maxProductionQuantity != null ? (
+            {maxProductionInSelectedUnit != null ? (
               <p className="text-xs text-muted-foreground">
                 Tối đa theo tồn hiện tại:{" "}
                 <span className="font-medium text-foreground">
-                  {formatQty(recipeContext.maxProductionQuantity)}
-                  {selectedFg?.unit ? ` ${selectedFg.unit}` : ""}
+                  {formatQty(maxProductionInSelectedUnit)}
+                  {selectedOutputUnitName ? ` ${selectedOutputUnitName}` : ""}
                 </span>
               </p>
             ) : null}
@@ -532,6 +594,13 @@ export function ProductionNewClient({
             {messages.inventory.operatorFlow.productionRecipeLoading}
           </p>
         </AppSection>
+      ) : null}
+
+      {!isLoadingContext && recipeContextError ? (
+        <Alert variant="destructive">
+          <AlertTitle>Chưa thể kiểm tra định mức nguyên liệu</AlertTitle>
+          <AlertDescription>{recipeContextError}</AlertDescription>
+        </Alert>
       ) : null}
 
       {!isLoadingContext && recipeContext?.ingredients.length ? (
@@ -603,7 +672,7 @@ export function ProductionNewClient({
     <Button
       type="button"
       onClick={handleSave}
-      disabled={isPending}
+      disabled={isPending || !canCreateProductionRun}
       size={embedded ? "touch-lg" : "default"}
     >
       {isPending ? "Đang lưu..." : "Tạo lệnh"}

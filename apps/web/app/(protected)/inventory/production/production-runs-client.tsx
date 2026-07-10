@@ -8,6 +8,7 @@ import {
   ListChecks as IconListChecks,
   Plus as IconPlus,
 } from "lucide-react";
+import { formatCount } from "@comtammatu/shared/format";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { INVENTORY_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
@@ -137,7 +138,7 @@ export function ProductionRunsClient({
       title={INVENTORY_VI.productionOrdersTab}
       description={INVENTORY_VI.productionOrdersCardDescription}
       badge={{
-        children: `${filteredItems.length} / ${items.length} ${INVENTORY_VI.productionOrdersMetricLabel}`,
+        children: `${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`,
         variant: "secondary",
       }}
       action={
@@ -238,7 +239,9 @@ function ProductionRunCard({
             </p>
             <StatusBadge domain="inventory" value={row.status} size="sm" />
           </div>
-          <p className="truncate text-sm font-medium">{row.finished_good_name}</p>
+          <p className="truncate text-sm font-medium">
+            {row.finished_good_name}
+          </p>
           <p className="text-xs text-muted-foreground">
             {formatVNDate(row.created_at)} · {row.planned_quantity} {unit}
           </p>

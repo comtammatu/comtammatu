@@ -1,20 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
+import { formatCount } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
 import { KDS_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Alert,
-  AlertDescription,
-} from "@comtammatu/ui/components/alert";
-import {
-  Item,
-  ItemContent,
-  ItemGroup,
-} from "@comtammatu/ui/components/item";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { Item, ItemContent, ItemGroup } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
@@ -139,9 +133,7 @@ export function KdsCompletionHistorySheet({
         </SheetHeader>
 
         <div className="flex items-center justify-between gap-2 border-y px-4 py-3">
-          <SectionLabel>
-            {KDS_COMPLETION_HISTORY_COPY.sourceTitle}
-          </SectionLabel>
+          <SectionLabel>{KDS_COMPLETION_HISTORY_COPY.sourceTitle}</SectionLabel>
           <Button
             type="button"
             variant="outline"
@@ -179,12 +171,12 @@ export function KdsCompletionHistorySheet({
               </Alert>
             )}
 
-            {!isPending && !error && history !== null && history.length === 0 && (
-              <AppEmptyState
-                compact
-                title={KDS_VI.completionHistoryEmpty}
-              />
-            )}
+            {!isPending &&
+              !error &&
+              history !== null &&
+              history.length === 0 && (
+                <AppEmptyState compact title={KDS_VI.completionHistoryEmpty} />
+              )}
 
             {history && history.length > 0 && (
               <ItemGroup>
@@ -221,7 +213,7 @@ export function KdsCompletionHistorySheet({
                             {formatVNDateTime(entry.completedAt)}
                           </time>
                           <Badge variant="outline">
-                            {entry.itemCount}{" "}
+                            {formatCount(entry.itemCount)}{" "}
                             {KDS_COMPLETION_HISTORY_COPY.itemUnit}
                           </Badge>
                           <Badge variant="outline">

@@ -3,6 +3,7 @@
 import { PhotoUploadInput } from "./photo-upload-input";
 
 interface WastePhotoUploadProps {
+  id?: string;
   tenantId: number;
   /** stock_issue_items.id when available; otherwise temp id before persist. */
   issueId: number | string;
@@ -25,6 +26,7 @@ interface WastePhotoUploadProps {
  * the camera-capture flag and rely on server rejection.
  */
 export function WastePhotoUpload({
+  id,
   tenantId,
   issueId,
   value,
@@ -34,6 +36,7 @@ export function WastePhotoUpload({
 }: WastePhotoUploadProps) {
   return (
     <PhotoUploadInput
+      id={id}
       tenantId={tenantId}
       folder={`waste/${issueId}`}
       value={value}

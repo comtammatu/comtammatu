@@ -8,7 +8,7 @@ export const PAGE_ARCHETYPES = {
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/admin/settings/(tenant)/payments/page.tsx":
     "SETTINGS-PANEL",
-  "apps/web/app/(protected)/admin/settings/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/admin/settings/page.tsx": "HUB",
   "apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx": "LIST",
   "apps/web/app/(protected)/admin/settings/printers/page.tsx": "HUB",
   "apps/web/app/(protected)/admin/settings/printers/templates/page.tsx":
@@ -71,17 +71,17 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx":
-    "EMBED-WRAPPER",
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/[id]/page.tsx":
-    "EMBED-WRAPPER",
+    "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/page.tsx":
-    "EMBED-WRAPPER",
+    "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx": "HUB",
@@ -89,11 +89,15 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx":
-    "SETTINGS-PANEL",
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx":
     "HUB",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/page.tsx":
-    "SETTINGS-PANEL",
+    "LIST",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/new/page.tsx":
+    "DOC-WORKFLOW",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/[finishedGoodId]/page.tsx":
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/[id]/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/new/page.tsx":
@@ -105,21 +109,21 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/page.tsx":
     "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/reports/page.tsx":
-    "EMBED-WRAPPER",
+    "REPORT",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/[id]/count/page.tsx":
-    "EMBED-WRAPPER",
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/[id]/page.tsx":
-    "EMBED-WRAPPER",
+    "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/new/page.tsx":
-    "EMBED-WRAPPER",
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/[id]/page.tsx":
-    "EMBED-WRAPPER",
+    "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/new/page.tsx":
-    "EMBED-WRAPPER",
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx":
@@ -127,9 +131,9 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx":
-    "EMBED-WRAPPER",
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/page.tsx": "LIST",
   "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/pos/page.tsx": "BOARD",

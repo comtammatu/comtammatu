@@ -1,9 +1,7 @@
 import { notFound } from "next/navigation";
-import {
-  isGrnLookupParam,
-  loadGrnDetail,
-} from "@/(protected)/inventory/grn/[id]/page";
-import { GRNDetailClient } from "@/(protected)/inventory/grn/[id]/grn-detail-client";
+import { loadGrnDetail } from "@lib/inventory/grn-detail-data";
+import { isGrnLookupParam } from "@lib/inventory/grn-detail-model";
+import { BranchGrnReceiptClient } from "./branch-grn-receipt-client";
 import { GrnReviewOperatorClient } from "./grn-review-operator-client";
 
 export default async function OperatorStockGrnDetailPage({
@@ -20,31 +18,20 @@ export default async function OperatorStockGrnDetailPage({
   if (!data) notFound();
 
   const grnListBasePath = `/br/${branchId}/stock/grn`;
-  const purchaseOrdersBasePath = `/br/${branchId}/stock/purchase-orders`;
-
   if (data.grn.status === "draft") {
     return (
       <GrnReviewOperatorClient
         grn={data.grn}
         ingredients={data.ingredients}
+        canEditDraft={data.canEditDraft}
+        canConfirm={data.canConfirm}
         grnListBasePath={grnListBasePath}
-        purchaseOrdersBasePath={purchaseOrdersBasePath}
+        purchaseOrdersBasePath={`/br/${branchId}/stock/purchase-orders`}
       />
     );
   }
 
   return (
-    <GRNDetailClient
-      grn={data.grn}
-      ingredients={data.ingredients}
-      canAdjustStock={data.canAdjustStock}
-      canAmendConfirmed={data.canAmendConfirmed}
-      recreateLocationOptions={data.recreateLocationOptions}
-      auditLogs={data.auditLogs}
-      grnListBasePath={grnListBasePath}
-      grnMobileBackPath={grnListBasePath}
-      purchaseOrdersBasePath={purchaseOrdersBasePath}
-      embedded
-    />
+    <BranchGrnReceiptClient grn={data.grn} grnListBasePath={grnListBasePath} />
   );
 }

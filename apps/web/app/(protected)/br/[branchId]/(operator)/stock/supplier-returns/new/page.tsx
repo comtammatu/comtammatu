@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { SupplierReturnNewPageContent } from "@/(protected)/inventory/supplier-returns/new/page";
+import { BranchSupplierReturnCreateClient } from "./branch-supplier-return-create-client";
+import { loadBranchSupplierReturnCreateData } from "@lib/inventory/branch-supplier-return-data";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
@@ -12,11 +13,7 @@ export default async function OperatorSupplierReturnNewPage({
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  return (
-    <SupplierReturnNewPageContent
-      routeBranchId={branchId}
-      basePath={`/br/${branchId}/stock/supplier-returns`}
-      embedded
-    />
-  );
+  const data = await loadBranchSupplierReturnCreateData(branchId);
+
+  return <BranchSupplierReturnCreateClient {...data} />;
 }

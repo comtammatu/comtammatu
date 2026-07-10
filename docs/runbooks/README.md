@@ -18,6 +18,7 @@ Checklist vận hành và readiness gates.
 - [hddt-viettel-operations.md](hddt-viettel-operations.md): smoke/reconcile/archive cho Viettel S-invoice
 - [pos-kds/print-agent-rollout.md](pos-kds/print-agent-rollout.md): rollout checklist cho print-agent daemon ESC/POS tại chi nhánh
 - [pos-kds/realtime-load-testing.md](pos-kds/realtime-load-testing.md): load test realtime POS/KDS
+- [pos-kds/qr-self-order-capability-rollout.md](pos-kds/qr-self-order-capability-rollout.md): DB-first rollout, multi-device smoke, canary và rollback cho Self-Order qua QR bàn
 
 ## Supabase / Schema / Migration
 

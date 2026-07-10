@@ -211,7 +211,10 @@ test("POS and KDS toolbars render a return-to-entry link; runner never does", ()
     pwaToolbarSource,
     /if \(!showInstallRow\) \{\s*return null;\s*\}/,
   );
-  assert.doesNotMatch(pwaToolbarSource, /if \(entryLink == null\) return null;/);
+  assert.doesNotMatch(
+    pwaToolbarSource,
+    /if \(entryLink == null\) return null;/,
+  );
 });
 
 test("station layouts mount the branch-scoped PWA toolbars", () => {
@@ -241,10 +244,7 @@ test("operator layout mounts its manifest link and install toolbar", () => {
     "utf8",
   );
 
-  assert.match(
-    layoutSource,
-    /manifest: "\/manifest\.webmanifest"/,
-  );
+  assert.match(layoutSource, /manifest: "\/manifest\.webmanifest"/);
   assert.match(layoutSource, /<OperatorPwaToolbar \/>/);
 });
 
@@ -277,6 +277,29 @@ test("SW offline fallback (PWA-2) only precaches/serves the operator shell, neve
   assert.match(
     swSource,
     /request\.mode === "navigate" && isAuthedPath\(url\.pathname\),\s*\n\s*handler: new NetworkOnly\(\),/,
+  );
+});
+
+test("self-order navigations never cache seating-specific SSR HTML", () => {
+  const swSource = readFileSync(
+    new URL("../app/sw.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    swSource,
+    /request\.mode === "navigate" && url\.pathname\.startsWith\("\/q\/"\),\s*\n\s*handler: new NetworkOnly\(\),/,
+  );
+
+  const selfOrderGuard = swSource.indexOf('url.pathname.startsWith("/q/")');
+  const publicPageCache = swSource.indexOf(
+    'handler: new NetworkFirst({\n      cacheName: "pages"',
+  );
+  assert.ok(selfOrderGuard >= 0, "expected a self-order navigation guard");
+  assert.ok(publicPageCache >= 0, "expected the generic public page cache");
+  assert.ok(
+    selfOrderGuard < publicPageCache,
+    "self-order NetworkOnly must precede the generic navigation cache",
   );
 });
 
@@ -326,8 +349,14 @@ test("self-order QR preview keeps staff inside the PWA scope", () => {
     "utf8",
   );
 
-  assert.match(tableSettingsSource, /buildSelfOrderUrl\(table\.token, origin\)/);
-  assert.match(tableSettingsSource, /const previewHref = table \? `\/q\/\$\{table\.token\}` : "";/);
+  assert.match(
+    tableSettingsSource,
+    /buildSelfOrderUrl\(table\.token, origin\)/,
+  );
+  assert.match(
+    tableSettingsSource,
+    /const previewHref = table \? `\/q\/\$\{table\.token\}` : "";/,
+  );
   assert.match(tableSettingsSource, /<a href=\{previewHref\}>/);
   assert.doesNotMatch(tableSettingsSource, /target="_blank"/);
 });

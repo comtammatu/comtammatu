@@ -1,3 +1,5 @@
+import { formatCount } from "@comtammatu/shared/format";
+
 export const pos = {
   order: {
     created: "Tạo đơn {code} thành công",
@@ -37,7 +39,8 @@ export const pos = {
     allStations: "Tất cả",
     allStationsAria: "Tất cả trạm",
     stationAria: (name: string) => `Trạm ${name}`,
-    unassignedTitle: (count: number) => `${count} món vào trạm mặc định`,
+    unassignedTitle: (count: number) =>
+      `${formatCount(count)} món vào trạm mặc định`,
     viewUnassigned: "Xem món",
     openStationConfig: "Gán trạm",
     orderNote: "Ghi chú đơn",
@@ -263,17 +266,17 @@ export const pos = {
     reserved: "Đã đặt",
     tableAria: (tableNumber: string | number, status: string) =>
       `Bàn ${String(tableNumber)} ${status}`,
-    multiBill: (count: number) => `${count} đơn`,
+    multiBill: (count: number) => `${formatCount(count)} đơn`,
     noZone: "Không có khu vực",
     empty: "Chưa có bàn",
     loadFailed: "Không thể tải danh sách bàn. Vui lòng thử lại.",
-    tableCount: (count: number) => `${count} bàn`,
-    availableCount: (count: number) => `${count} trống`,
+    tableCount: (count: number) => `${formatCount(count)} bàn`,
+    availableCount: (count: number) => `${formatCount(count)} trống`,
   },
   takeawayGate: {
     title: "Mang về",
     empty: "Chưa có đơn mang về đang mở",
-    activeCount: (count: number) => `${count} đơn đang mở`,
+    activeCount: (count: number) => `${formatCount(count)} đơn đang mở`,
     createNew: "Tạo đơn mang về",
     createTileLabel: "Tạo mới",
     newOrder: "Đơn mới",
@@ -304,7 +307,7 @@ export const pos = {
   orderHistory: {
     sessionOrders: "Đơn trong ca",
     dineInSessionOrders: "Đơn tại bàn",
-    activeCountAria: (count: number) => `${count} đơn trong ca`,
+    activeCountAria: (count: number) => `${formatCount(count)} đơn trong ca`,
     refreshOrdersAria: "Tải lại danh sách đơn trong ca",
     closeListAria: "Đóng danh sách đơn",
     dineIn: (tableNumber: number | string) => `Bàn ${tableNumber}`,
@@ -315,9 +318,9 @@ export const pos = {
     handleOrder: "Mở đơn",
     payment: "Thanh toán",
     sections: {
-      ready: (count: number) => `Sẵn sàng (${count})`,
-      pay: (count: number) => `Chờ thanh toán (${count})`,
-      cooking: (count: number) => `Đang nấu (${count})`,
+      ready: (count: number) => `Sẵn sàng (${formatCount(count)})`,
+      pay: (count: number) => `Chờ thanh toán (${formatCount(count)})`,
+      cooking: (count: number) => `Đang nấu (${formatCount(count)})`,
     },
   },
   orderDetail: {

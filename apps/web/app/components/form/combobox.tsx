@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ComponentProps } from "react";
+import { forwardRef, useMemo, useState, type ComponentProps } from "react";
 import {
   Check as IconCheck,
   ChevronsUpDown as IconSelector,
@@ -35,102 +35,122 @@ export interface ComboboxProps {
   triggerClassName?: string;
   size?: ComponentProps<typeof Button>["size"];
   id?: string;
+  onBlur?: ComponentProps<typeof Button>["onBlur"];
   "aria-label"?: string;
   "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
+  "aria-errormessage"?: string;
+  "aria-required"?: boolean;
 }
 
 /** Standalone controlled Combobox (no RHF). Shared UI primitive. */
-export function Combobox({
-  value,
-  onValueChange,
-  options,
-  placeholder = "Chọn...",
-  searchPlaceholder = "Tìm...",
-  emptyMessage = "Không tìm thấy.",
-  disabled,
-  className,
-  triggerClassName,
-  size = "field",
-  id,
-  "aria-label": ariaLabel,
-  "aria-invalid": ariaInvalid,
-}: ComboboxProps) {
-  const [open, setOpen] = useState(false);
+export const Combobox = forwardRef<HTMLButtonElement, ComboboxProps>(
+  function Combobox(
+    {
+      value,
+      onValueChange,
+      options,
+      placeholder = "Chọn...",
+      searchPlaceholder = "Tìm...",
+      emptyMessage = "Không tìm thấy.",
+      disabled,
+      className,
+      triggerClassName,
+      size = "field",
+      id,
+      onBlur,
+      "aria-label": ariaLabel,
+      "aria-invalid": ariaInvalid,
+      "aria-describedby": ariaDescribedBy,
+      "aria-errormessage": ariaErrorMessage,
+      "aria-required": ariaRequired,
+    },
+    ref,
+  ) {
+    const [open, setOpen] = useState(false);
 
-  const selected = useMemo(
-    () => options.find((opt) => opt.value === value),
-    [options, value],
-  );
+    const selected = useMemo(
+      () => options.find((opt) => opt.value === value),
+      [options, value],
+    );
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          id={id}
-          type="button"
-          variant="outline"
-          size={size}
-          role="combobox"
-          aria-expanded={open}
-          aria-invalid={ariaInvalid}
-          aria-label={ariaLabel}
-          disabled={disabled}
-          className={cn(
-            "w-full justify-between font-normal",
-            !selected && "text-muted-foreground",
-            triggerClassName ?? className,
-          )}
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            ref={ref}
+            id={id}
+            type="button"
+            variant="outline"
+            size={size}
+            role="combobox"
+            aria-expanded={open}
+            aria-invalid={ariaInvalid}
+            aria-label={ariaLabel}
+            aria-describedby={ariaDescribedBy}
+            aria-errormessage={ariaErrorMessage}
+            aria-required={ariaRequired}
+            onBlur={onBlur}
+            disabled={disabled}
+            className={cn(
+              "w-full justify-between font-normal",
+              !selected && "text-muted-foreground",
+              triggerClassName ?? className,
+            )}
+          >
+            <span className="truncate">
+              {selected ? selected.label : placeholder}
+            </span>
+            <IconSelector className="ml-2 size-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-(--radix-popover-trigger-width) p-0"
+          align="start"
         >
-          <span className="truncate">
-            {selected ? selected.label : placeholder}
-          </span>
-          <IconSelector className="ml-2 size-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-(--radix-popover-trigger-width) p-0"
-        align="start"
-      >
-        <Command
-          filter={(v, search, keywords) => {
-            return matchesSearch([v, ...(keywords ?? [])], search) ? 1 : 0;
-          }}
-        >
-          <CommandInput placeholder={searchPlaceholder} />
-          <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <CommandGroup>
-              {options.map((opt) => (
-                <CommandItem
-                  key={opt.value}
-                  value={opt.label}
-                  keywords={opt.keywords}
-                  disabled={opt.disabled}
-                  onSelect={() => {
-                    onValueChange(opt.value);
-                    setOpen(false);
-                  }}
-                >
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate">{opt.label}</span>
-                    {opt.hint ? (
-                      <span className="truncate text-xs text-muted-foreground">
-                        {opt.hint}
-                      </span>
-                    ) : null}
-                  </div>
-                  <IconCheck
-                    className={cn(
-                      "ml-2 size-4 shrink-0",
-                      value === opt.value ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
+          <Command
+            filter={(v, search, keywords) => {
+              return matchesSearch([v, ...(keywords ?? [])], search) ? 1 : 0;
+            }}
+          >
+            <CommandInput placeholder={searchPlaceholder} />
+            <CommandList>
+              <CommandEmpty>{emptyMessage}</CommandEmpty>
+              <CommandGroup>
+                {options.map((opt) => (
+                  <CommandItem
+                    key={opt.value}
+                    value={opt.label}
+                    keywords={opt.keywords}
+                    disabled={opt.disabled}
+                    onSelect={() => {
+                      onValueChange(opt.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate">{opt.label}</span>
+                      {opt.hint ? (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {opt.hint}
+                        </span>
+                      ) : null}
+                    </div>
+                    <IconCheck
+                      className={cn(
+                        "ml-2 size-4 shrink-0",
+                        value === opt.value ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    );
+  },
+);
+
+Combobox.displayName = "Combobox";

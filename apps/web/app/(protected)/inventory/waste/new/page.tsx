@@ -9,55 +9,35 @@ import {
 import { parseBranchIdParam } from "@/(protected)/inventory/_lib/inventory-scope";
 import { getWasteCapStatus } from "@/(protected)/inventory/waste-actions";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
-import {
-  WasteCreateClient,
-  type WasteFormContext,
-} from "./waste-create-client";
+import type { WasteFormContext } from "@lib/inventory/waste-create-model";
+import { WasteCreateClient } from "./waste-create-client";
 
 export const dynamic = "force-dynamic";
 
 interface WasteNewPageContentProps {
   searchParams?: Promise<{ branchId?: string }>;
-  routeBranchId?: number;
-  successHref?: string;
-  cancelHref?: string;
-  embedded?: boolean;
 }
 
 function renderWasteUnavailable({
   title,
   description,
-  embedded,
 }: {
   title: string;
   description: string;
-  embedded: boolean;
 }) {
-  const emptyState = (
-    <AppEmptyState mode="no-access" title={title} description={description} />
-  );
-
-  if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{emptyState}</div>;
-  }
-
   return (
     <AppPage width="default">
       <AppPageHeader title={INVENTORY_VI.createWasteTitle} />
-      {emptyState}
+      <AppEmptyState mode="no-access" title={title} description={description} />
     </AppPage>
   );
 }
 
 export async function WasteNewPageContent({
   searchParams,
-  routeBranchId,
-  successHref,
-  cancelHref,
-  embedded = false,
 }: WasteNewPageContentProps) {
   const params = searchParams ? await searchParams : {};
-  const branchId = routeBranchId ?? parseBranchIdParam(params.branchId);
+  const branchId = parseBranchIdParam(params.branchId);
 
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
@@ -71,23 +51,17 @@ export async function WasteNewPageContent({
     return renderWasteUnavailable({
       title: INVENTORY_VI.branchRequiredTitle,
       description: INVENTORY_VI.branchRequiredWasteHint,
-      embedded,
     });
   }
-  const fallbackHref =
-    routeBranchId != null
-      ? `/br/${routeBranchId}/stock`
-      : `/inventory/issues?branchId=${branchId}`;
+  const fallbackHref = `/inventory/issues?branchId=${branchId}`;
 
-  if (routeBranchId == null) {
-    const flagEnabled = await isFeatureEnabledForBranch(
-      supabase,
-      branchId,
-      INVENTORY_FEATURE_FLAGS.S11_WASTE_TIER,
-    );
-    if (!flagEnabled) {
-      redirect(fallbackHref);
-    }
+  const flagEnabled = await isFeatureEnabledForBranch(
+    supabase,
+    branchId,
+    INVENTORY_FEATURE_FLAGS.S11_WASTE_TIER,
+  );
+  if (!flagEnabled) {
+    redirect(fallbackHref);
   }
 
   // Fetch branch detail + locations at this branch + active ingredients
@@ -182,14 +156,7 @@ export async function WasteNewPageContent({
           },
   };
 
-  return (
-    <WasteCreateClient
-      context={context}
-      successHref={successHref}
-      cancelHref={cancelHref ?? fallbackHref}
-      embedded={embedded}
-    />
-  );
+  return <WasteCreateClient context={context} />;
 }
 
 export default async function WasteNewPage({

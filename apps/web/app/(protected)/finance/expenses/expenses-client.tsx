@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Plus as IconPlus, Trash2 as IconTrash } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
+import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -210,7 +211,7 @@ export function ExpensesClient({
       key: "date",
       header: copy.table.date,
       className: "w-28 font-mono tabular-nums",
-      render: (row) => row.expense_date,
+      render: (row) => formatVNBusinessDate(row.expense_date),
     },
     {
       key: "category",
@@ -300,7 +301,7 @@ export function ExpensesClient({
         <KpiCard
           label={copy.totalLabel}
           value={formatVND(totalAmount)}
-          hint={`${copy.totalHint(String(rows.length))} · ${resolvedStart} → ${resolvedEnd}`}
+          hint={`${copy.totalHint(String(rows.length))} · ${formatVNBusinessDate(resolvedStart)} → ${formatVNBusinessDate(resolvedEnd)}`}
           tone="primary"
         />
         {groupSummary.map((g) => (
@@ -333,7 +334,8 @@ export function ExpensesClient({
                       ] ?? row.category}
                     </ItemTitle>
                     <ItemDescription>
-                      {row.expense_date} · {branchLabel(row.branch_id)}
+                      {formatVNBusinessDate(row.expense_date)} ·{" "}
+                      {branchLabel(row.branch_id)}
                     </ItemDescription>
                   </ItemContent>
                   {canManageExpenses ? (

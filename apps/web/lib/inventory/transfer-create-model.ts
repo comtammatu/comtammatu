@@ -22,6 +22,7 @@ export interface TransferIngredientOption {
   id: number;
   name: string;
   is_active: boolean;
+  itemKind: string | null;
   units?: IngredientUnitRow[];
 }
 
@@ -35,6 +36,14 @@ export interface TransferDraftLine {
 }
 
 export type TransferTargetKind = "warehouse" | "kitchen";
+export type TransferSourceKind = TransferTargetKind | "production_storage";
+
+export interface TransferSourceLocation {
+  id: number;
+  branchId: number;
+  kind: TransferSourceKind;
+  isDefaultIssue: boolean;
+}
 
 export interface TransferTargetOption {
   value: string;
@@ -93,7 +102,7 @@ export function formatTransferSiteLabel(branch: BranchForTransfer): string {
 
 export function formatTransferLocationLabel(
   branch: BranchForTransfer,
-  kind: TransferTargetKind,
+  kind: TransferSourceKind,
 ): string {
   return formatInventoryLocationLabelVi({
     branchName: branch.name,
@@ -136,6 +145,127 @@ export function formatTransferTargetOption(
   return formatTransferLocationLabel(option.branch, option.kind);
 }
 
+export function getDefaultTransferSourceLocation(
+  locations: TransferSourceLocation[],
+): TransferSourceLocation | null {
+  return (
+    locations.find((location) => location.isDefaultIssue) ??
+    locations[0] ??
+    null
+  );
+}
+
+export function getTransferSourceLocationOptions({
+  locations,
+  sourceBranchKind,
+}: {
+  locations: TransferSourceLocation[];
+  sourceBranchKind: string | null;
+}): TransferSourceLocation[] {
+  if (sourceBranchKind === "central_kitchen") {
+    const productionLocations = locations.filter(
+      (location) => location.kind === "production_storage",
+    );
+    return productionLocations.length > 0
+      ? productionLocations
+      : locations.filter((location) => location.kind === "warehouse");
+  }
+  return locations;
+}
+
+export function getTransferSelectableIngredients({
+  ingredients,
+  sourceBranchKind,
+}: {
+  ingredients: TransferIngredientOption[];
+  sourceBranchKind: string | null;
+}): TransferIngredientOption[] {
+  return ingredients.filter(
+    (ingredient) =>
+      ingredient.is_active &&
+      (sourceBranchKind !== "central_kitchen" ||
+        ingredient.itemKind === "finished_good"),
+  );
+}
+
+export function getTransferOutboundDestinationOptions({
+  branches,
+  sourceBranchId,
+  sourceBranchKind,
+  sourceLocationKind,
+}: {
+  branches: BranchForTransfer[];
+  sourceBranchId: number | null;
+  sourceBranchKind: string | null;
+  sourceLocationKind: TransferSourceKind;
+}): TransferTargetOption[] {
+  if (sourceBranchId == null || sourceBranchKind == null) return [];
+
+  return branches.flatMap((branch) => {
+    if (!branch.is_active) return [];
+
+    if (branch.id === sourceBranchId) {
+      if (sourceBranchKind !== "branch") return [];
+      const targetKind =
+        sourceLocationKind === "warehouse" ? "kitchen" : "warehouse";
+      return [
+        {
+          value: transferTargetValue(branch.id, targetKind),
+          branch,
+          kind: targetKind,
+        },
+      ];
+    }
+
+    const branchKind = branch.branch_kind ?? "branch";
+    if (sourceBranchKind === "central_kitchen") {
+      if (branchKind !== "branch") return [];
+      return [
+        {
+          value: transferTargetValue(branch.id, "kitchen"),
+          branch,
+          kind: "kitchen" as const,
+        },
+      ];
+    }
+
+    if (sourceBranchKind === "branch" && sourceLocationKind === "kitchen") {
+      return branchKind === "central_kitchen"
+        ? [
+            {
+              value: transferTargetValue(branch.id, "warehouse"),
+              branch,
+              kind: "warehouse" as const,
+            },
+          ]
+        : [];
+    }
+
+    if (sourceBranchKind === "branch" && branchKind === "central_kitchen") {
+      return [
+        {
+          value: transferTargetValue(branch.id, "warehouse"),
+          branch,
+          kind: "warehouse" as const,
+        },
+      ];
+    }
+    if (branchKind !== "branch") return [];
+    return [
+      {
+        value: transferTargetValue(branch.id, "warehouse"),
+        branch,
+        kind: "warehouse" as const,
+      },
+      {
+        value: transferTargetValue(branch.id, "kitchen"),
+        branch,
+        kind: "kitchen" as const,
+      },
+    ];
+  });
+}
+
 export function resolveTransferCreatePolicy({
   branches,
   userBranchId,
@@ -160,45 +290,11 @@ export function resolveTransferCreatePolicy({
     isBranchManager && currentBranchKind === "branch" ? userBranchId : null;
   const canCreateInboundRequest = requestDestinationBranchId != null;
   const outboundDestinationOptions = canCreateOutbound
-    ? branches.flatMap((branch) => {
-        if (!branch.is_active) return [];
-        if (branch.id === outboundSourceBranchId) {
-          return currentBranchKind === "branch"
-            ? [
-                {
-                  value: transferTargetValue(branch.id, "kitchen"),
-                  branch,
-                  kind: "kitchen" as const,
-                },
-              ]
-            : [];
-        }
-        const branchKind = branch.branch_kind ?? "branch";
-        if (
-          currentBranchKind === "branch" &&
-          branchKind === "central_kitchen"
-        ) {
-          return [
-            {
-              value: transferTargetValue(branch.id, "warehouse"),
-              branch,
-              kind: "warehouse" as const,
-            },
-          ];
-        }
-        if (branchKind !== "branch") return [];
-        return [
-          {
-            value: transferTargetValue(branch.id, "warehouse"),
-            branch,
-            kind: "warehouse" as const,
-          },
-          {
-            value: transferTargetValue(branch.id, "kitchen"),
-            branch,
-            kind: "kitchen" as const,
-          },
-        ];
+    ? getTransferOutboundDestinationOptions({
+        branches,
+        sourceBranchId: outboundSourceBranchId,
+        sourceBranchKind: currentBranchKind,
+        sourceLocationKind: "warehouse",
       })
     : [];
   const inboundSourceOptions = canCreateInboundRequest
@@ -277,17 +373,17 @@ export function getTransferLineIssueUnit(
 export function getTransferLineMaxEntryQuantity({
   line,
   ingredients,
-  sourceStockByBranch,
-  sourceBranchId,
+  sourceStockByLocation,
+  sourceLocationId,
 }: {
   line: TransferDraftLine;
   ingredients: TransferIngredientOption[];
-  sourceStockByBranch: Record<number, Record<number, number>>;
-  sourceBranchId: number | null;
+  sourceStockByLocation: Record<number, Record<number, number>>;
+  sourceLocationId: number | null;
 }): number {
-  if (sourceBranchId == null) return 0;
+  if (sourceLocationId == null) return 0;
   const availableBaseQuantity =
-    sourceStockByBranch[sourceBranchId]?.[line.ingredientId] ?? 0;
+    sourceStockByLocation[sourceLocationId]?.[line.ingredientId] ?? 0;
   return getIssueMaxEntryQuantity(
     availableBaseQuantity,
     getTransferLineIssueUnit(line, ingredients),
@@ -297,13 +393,13 @@ export function getTransferLineMaxEntryQuantity({
 export function clampTransferLineForSource({
   line,
   ingredients,
-  sourceStockByBranch,
-  sourceBranchId,
+  sourceStockByLocation,
+  sourceLocationId,
 }: {
   line: TransferDraftLine;
   ingredients: TransferIngredientOption[];
-  sourceStockByBranch: Record<number, Record<number, number>>;
-  sourceBranchId: number | null;
+  sourceStockByLocation: Record<number, Record<number, number>>;
+  sourceLocationId: number | null;
 }): TransferDraftLine {
   return {
     ...line,
@@ -312,8 +408,8 @@ export function clampTransferLineForSource({
       getTransferLineMaxEntryQuantity({
         line,
         ingredients,
-        sourceStockByBranch,
-        sourceBranchId,
+        sourceStockByLocation,
+        sourceLocationId,
       }),
     ),
   };
@@ -322,13 +418,13 @@ export function clampTransferLineForSource({
 export function buildTransferLinesPayload({
   lines,
   ingredients,
-  sourceStockByBranch,
-  sourceBranchId,
+  sourceStockByLocation,
+  sourceLocationId,
 }: {
   lines: TransferDraftLine[];
   ingredients: TransferIngredientOption[];
-  sourceStockByBranch: Record<number, Record<number, number>>;
-  sourceBranchId: number | null;
+  sourceStockByLocation: Record<number, Record<number, number>>;
+  sourceLocationId: number | null;
 }): TransferLinesPayloadResult {
   if (lines.length === 0) {
     return { success: false, error: "empty_lines" };
@@ -356,8 +452,8 @@ export function buildTransferLinesPayload({
     const maxEntryQuantity = getTransferLineMaxEntryQuantity({
       line,
       ingredients,
-      sourceStockByBranch,
-      sourceBranchId,
+      sourceStockByLocation,
+      sourceLocationId,
     });
     if (
       getIssueBaseQuantity(quantity, issueUnit) >

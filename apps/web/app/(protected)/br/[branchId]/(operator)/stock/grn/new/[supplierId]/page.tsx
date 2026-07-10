@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { GrnCreatePageContent } from "@/(protected)/inventory/grn/new/[supplierId]/page";
+import { BranchGrnCreateClient } from "./branch-grn-create-client";
+import { loadGrnCreatePageData } from "@lib/inventory/grn-create-data";
 
 interface PageProps {
   params: Promise<{ branchId: string; supplierId: string }>;
@@ -22,14 +23,20 @@ export default async function OperatorStockGrnCreatePage({
     notFound();
   }
 
+  const queryParams = await searchParams;
+  const sourceBasePath = `/br/${branchId}/stock/grn/new`;
+  const data = await loadGrnCreatePageData({
+    supplierId,
+    queryBranchId: queryParams.branchId,
+    routeBranchId: branchId,
+    fallbackPath: sourceBasePath,
+  });
+
   return (
-    <GrnCreatePageContent
-      supplierId={supplierId}
-      searchParams={searchParams}
-      routeBranchId={branchId}
-      basePath={`/br/${branchId}/stock/grn/new`}
+    <BranchGrnCreateClient
+      {...data}
+      sourceBasePath={sourceBasePath}
       grnBasePath={`/br/${branchId}/stock/grn`}
-      embedded
     />
   );
 }

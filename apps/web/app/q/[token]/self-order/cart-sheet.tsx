@@ -61,6 +61,7 @@ export interface CartSheetProps {
   total: number;
   quantity: number;
   isSubmitting: boolean;
+  isEditingLocked: boolean;
   canSubmit: boolean;
   ctaLabel: string;
   ctaDisabled: boolean;
@@ -75,15 +76,19 @@ export interface CartSheetProps {
 
 function CartLines({
   items,
+  disabled,
   onQuantityChange,
   onRemove,
-}: Pick<CartSheetProps, "items" | "onQuantityChange" | "onRemove">) {
+}: Pick<CartSheetProps, "items" | "onQuantityChange" | "onRemove"> & {
+  disabled: boolean;
+}) {
   return (
     <ItemGroup data-size="xs">
       {items.map((item) => (
         <CartLine
           key={item.key}
           item={item}
+          disabled={disabled}
           onQuantityChange={onQuantityChange}
           onRemove={onRemove}
         />
@@ -94,17 +99,23 @@ function CartLines({
 
 function CartLine({
   item,
+  disabled,
   onQuantityChange,
   onRemove,
 }: {
   item: SelfOrderCartItem;
+  disabled: boolean;
   onQuantityChange: CartSheetProps["onQuantityChange"];
   onRemove: CartSheetProps["onRemove"];
 }) {
   const optionSummary = cartOptionSummary(item);
 
   return (
-    <Item variant="outline" size="xs" className="justify-between">
+    <Item
+      variant="outline"
+      size="xs"
+      className="flex-col items-stretch justify-between sm:flex-row sm:items-center"
+    >
       <ItemContent>
         <ItemTitle className="text-sm">
           {item.variant_name
@@ -118,14 +129,14 @@ function CartLine({
           </ItemDescription>
         ) : null}
       </ItemContent>
-      <ItemActions className="gap-1">
+      <ItemActions className="w-full justify-end gap-2 sm:w-auto">
         <Button
           type="button"
           variant="outline"
-          size="icon-sm"
-          disabled={item.quantity <= 1}
+          size="icon-touch"
+          disabled={disabled || item.quantity <= 1}
           onClick={() => onQuantityChange(item.key, -1)}
-          aria-label={SELF_ORDER_VI.decreaseQuantityAria}
+          aria-label={`${SELF_ORDER_VI.decreaseQuantityAria}: ${item.item_name}`}
         >
           <IconMinus />
         </Button>
@@ -135,18 +146,20 @@ function CartLine({
         <Button
           type="button"
           variant="outline"
-          size="icon-sm"
+          size="icon-touch"
+          disabled={disabled}
           onClick={() => onQuantityChange(item.key, 1)}
-          aria-label={SELF_ORDER_VI.increaseQuantityAria}
+          aria-label={`${SELF_ORDER_VI.increaseQuantityAria}: ${item.item_name}`}
         >
           <IconPlus />
         </Button>
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="icon-touch"
+          disabled={disabled}
           onClick={() => onRemove(item.key)}
-          aria-label={SELF_ORDER_VI.removeItem}
+          aria-label={`${SELF_ORDER_VI.removeItem}: ${item.item_name}`}
         >
           <IconTrash />
         </Button>
@@ -157,14 +170,20 @@ function CartLine({
 
 function NoteField({
   customerNote,
+  disabled,
   onCustomerNoteChange,
-}: Pick<CartSheetProps, "customerNote" | "onCustomerNoteChange">) {
+}: Pick<CartSheetProps, "customerNote" | "onCustomerNoteChange"> & {
+  disabled: boolean;
+}) {
   return (
     <div className="flex flex-col gap-1">
       <Label htmlFor="self-order-note">{SELF_ORDER_VI.noteLabel}</Label>
       <Textarea
         id="self-order-note"
+        name="customerNote"
+        autoComplete="off"
         value={customerNote}
+        disabled={disabled}
         maxLength={500}
         rows={2}
         placeholder={SELF_ORDER_VI.notePlaceholder}
@@ -224,6 +243,7 @@ export function CartSheet(props: CartSheetProps) {
   } = props;
   const [open, setOpen] = useState(false);
   const empty = items.length === 0;
+  const editingDisabled = props.isSubmitting || props.isEditingLocked;
 
   const subtotalRow = (
     <div className="flex items-center justify-between text-sm font-semibold">
@@ -246,44 +266,46 @@ export function CartSheet(props: CartSheetProps) {
   return (
     <>
       {!empty ? (
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-xl flex-col gap-2 border-t border-border/60 bg-background/95 px-3 py-2 backdrop-blur">
+        <div className="workflow-safe-pb fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-2xl flex-col gap-2 border-t border-border/60 bg-background/95 px-3 py-2 backdrop-blur">
           {props.submitError ? (
             <Alert variant="destructive">
               <AlertDescription>{props.submitError}</AlertDescription>
             </Alert>
           ) : null}
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              className="min-w-12 shrink-0 px-2"
-              onClick={() => setOpen(true)}
-              aria-label={SELF_ORDER_VI.cartTitle}
-            >
-              <IconCart />
-              <Badge variant="secondary">{quantity}</Badge>
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="touch"
-              className="h-auto min-w-0 flex-1 justify-start px-2 py-1 text-left"
-              onClick={() => setOpen(true)}
-            >
-              <span className="flex min-w-0 flex-col items-start">
-                <span className="text-xs text-muted-foreground">
-                  {SELF_ORDER_VI.subtotal}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 items-center gap-2 sm:flex-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                className="min-w-12 shrink-0 px-2"
+                onClick={() => setOpen(true)}
+                aria-label={SELF_ORDER_VI.cartTitle}
+              >
+                <IconCart />
+                <Badge variant="secondary">{quantity}</Badge>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="touch"
+                className="h-auto min-w-0 flex-1 justify-start px-2 py-1 text-left"
+                onClick={() => setOpen(true)}
+              >
+                <span className="flex min-w-0 flex-col items-start">
+                  <span className="text-xs text-muted-foreground">
+                    {SELF_ORDER_VI.subtotal}
+                  </span>
+                  <span className="font-mono text-base font-bold tabular-nums text-primary">
+                    {formatVND(total)}
+                  </span>
                 </span>
-                <span className="font-mono text-base font-bold tabular-nums text-primary">
-                  {formatVND(total)}
-                </span>
-              </span>
-            </Button>
+              </Button>
+            </div>
             <Button
               type="button"
               size="touch-lg"
-              className="min-w-28 shrink-0"
+              className="w-full sm:min-w-28 sm:w-auto"
               disabled={!props.canSubmit || props.isSubmitting || ctaDisabled}
               onClick={props.onSubmit}
             >
@@ -297,7 +319,7 @@ export function CartSheet(props: CartSheetProps) {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
-          className="mx-auto max-h-dvh-95 w-full max-w-xl p-0"
+          className="mx-auto max-h-dvh-95 w-full max-w-2xl p-0"
         >
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
@@ -307,7 +329,11 @@ export function CartSheet(props: CartSheetProps) {
                 <Badge variant="secondary">{quantity}</Badge>
               ) : null}
             </SheetTitle>
-            <SheetDescription>{SELF_ORDER_VI.cartEmpty}</SheetDescription>
+            <SheetDescription>
+              {empty
+                ? SELF_ORDER_VI.cartEmpty
+                : SELF_ORDER_VI.cartReviewDescription}
+            </SheetDescription>
           </SheetHeader>
           <div className="flex max-h-dvh-80 flex-col gap-3 overflow-y-auto p-3">
             {empty ? (
@@ -318,18 +344,20 @@ export function CartSheet(props: CartSheetProps) {
               <>
                 <CartLines
                   items={items}
+                  disabled={editingDisabled}
                   onQuantityChange={props.onQuantityChange}
                   onRemove={props.onRemove}
                 />
                 <NoteField
                   customerNote={customerNote}
+                  disabled={editingDisabled}
                   onCustomerNoteChange={props.onCustomerNoteChange}
                 />
                 {subtotalRow}
               </>
             )}
           </div>
-          <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background p-3">
+          <div className="workflow-safe-pb flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background p-3">
             {props.submitError ? (
               <Alert variant="destructive">
                 <AlertDescription>{props.submitError}</AlertDescription>

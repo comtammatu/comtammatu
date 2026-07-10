@@ -23,9 +23,17 @@ import {
   DrawerDescription,
 } from "@comtammatu/ui/components/drawer";
 import {} from "@/components/data-table/data-table";
-import { formatVND } from "@comtammatu/shared/format";
+import {
+  formatCount,
+  formatPercent,
+  formatVND,
+} from "@comtammatu/shared/format";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
-import { formatVNDateTime, formatVNTime } from "@comtammatu/shared/time";
+import {
+  formatVNDateTime,
+  formatVNDuration,
+  formatVNTime,
+} from "@comtammatu/shared/time";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
@@ -548,7 +556,7 @@ function SessionDetailCard({
         <Metric
           icon={<IconReceipt className="size-4" />}
           label={messages.settings.posSessions.totalBills}
-          value={String(summary.billCount)}
+          value={formatCount(summary.billCount)}
         />
         <Metric
           icon={<IconCash className="size-4" />}
@@ -558,7 +566,7 @@ function SessionDetailCard({
         <Metric
           icon={<IconToolsKitchen2 className="size-4" />}
           label={messages.settings.posSessions.servedItems}
-          value={String(summary.servedItems)}
+          value={formatCount(summary.servedItems)}
         />
         <Metric
           icon={<IconCash className="size-4" />}
@@ -608,11 +616,11 @@ function SessionDetailCard({
         />
         <KV
           label={messages.settings.posSessions.paidOrders}
-          value={String(summary.paidCount)}
+          value={formatCount(summary.paidCount)}
         />
         <KV
           label={messages.settings.posSessions.unpaidOrders}
-          value={String(summary.unpaidCount)}
+          value={formatCount(summary.unpaidCount)}
         />
       </div>
 
@@ -703,12 +711,12 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
         <Metric
           icon={<IconToolsKitchen2 className="size-4" />}
           label={messages.settings.posSessions.totalItems}
-          value={String(totals.total_items)}
+          value={formatCount(totals.total_items)}
         />
         <Metric
           icon={<IconAlertTriangle className="size-4" />}
           label={messages.settings.posSessions.voidItems}
-          value={String(totals.void_item_count)}
+          value={formatCount(totals.void_item_count)}
           tone={totals.void_item_count > 0 ? "warning" : "muted"}
         />
         <Metric
@@ -827,7 +835,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
                 <ItemFooter>
                   <Badge variant="outline">
                     {order.type === "pct"
-                      ? `${order.value ?? 0}%`
+                      ? formatPercent(order.value ?? 0)
                       : order.type === "vnd"
                         ? "VND"
                         : "—"}
@@ -1246,12 +1254,5 @@ function formatTime(value: string): string {
 }
 
 function formatDuration(start: string, end: string | null): string {
-  if (!end) return "—";
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  if (ms < 0) return "—";
-  const minutes = Math.floor(ms / 60_000);
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m} phút`;
-  return `${h}h${m.toString().padStart(2, "0")}`;
+  return formatVNDuration(start, end);
 }

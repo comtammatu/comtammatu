@@ -228,6 +228,14 @@ export const OPERATOR_TILE_ITEMS = [
     kinds: ["central_kitchen", "branch"],
   },
   {
+    moduleKey: "inventory_procurement",
+    icon: "BookOpen",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/production/recipes",
+    label: "Công thức",
+    kinds: ["central_kitchen"],
+  },
+  {
     moduleKey: "inventory",
     icon: "Package",
     group: "stock",

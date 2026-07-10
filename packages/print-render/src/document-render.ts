@@ -28,6 +28,8 @@ import {
 } from "./print-document";
 import type { BillBase, PrintPayload } from "./payloads";
 import { buildFallbackDocument } from "./fallback-document";
+import { formatPercent } from "@comtammatu/shared/format";
+import { datetime, fmtMoney } from "./format";
 import { sideTotalQuantity } from "./quantity";
 import {
   BRAND_LOCKUP_EYEBROW,
@@ -70,23 +72,6 @@ const padRight = (s: string, w: number): string =>
 const padLeft = (s: string, w: number): string =>
   s.length >= w ? s.slice(-w) : " ".repeat(w - s.length) + s;
 
-const fmtVND = (n: number | null | undefined): string =>
-  new Intl.NumberFormat("vi-VN").format(
-    Math.round(typeof n === "number" ? n : 0),
-  );
-const fmtMoney = (n: number | null | undefined): string => fmtVND(n) + "đ";
-
-const splitDateTime = (
-  iso: string | undefined,
-): { date: string; time: string } => {
-  if (!iso) return { date: "", time: "" };
-  const [d, t] = iso.split("T");
-  if (!d) return { date: "", time: "" };
-  const [y, m, day] = d.split("-");
-  const hhmm = (t ?? "").slice(0, 5);
-  return { date: `${day ?? ""}/${m ?? ""}/${y ?? ""}`, time: hhmm };
-};
-
 const wrapText = (s: string, width: number): string[] => {
   if (s.length <= width) return [s];
   const out: string[] = [];
@@ -106,7 +91,7 @@ const wrapText = (s: string, width: number): string[] => {
 
 function renderBillMeta(p: BillBase): RenderOp[] {
   const out: RenderOp[] = [];
-  const created = splitDateTime(p.created_at);
+  const created = datetime(p.created_at);
   const orderKind =
     p.order_type === "dine_in"
       ? p.table_number
@@ -114,7 +99,7 @@ function renderBillMeta(p: BillBase): RenderOp[] {
         : "Tại bàn"
       : "Mang về";
   out.push(ops.line(pair48("Đơn hàng:", p.order_number)));
-  out.push(ops.line(pair48("Ngày:", `${created.time} ${created.date}`.trim())));
+  out.push(ops.line(pair48("Ngày:", created)));
   out.push(ops.line(pair48("Loại:", orderKind)));
   if (p.cashier_name) out.push(ops.line(pair48("Thu ngân:", p.cashier_name)));
   if (p.split_from_order_number)
@@ -315,7 +300,7 @@ function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
     if (alwaysShowAdjustments) {
       discountLabel = "Chiết khấu";
     } else if (p.discount_type === "pct" && p.discount_value != null) {
-      discountLabel = `Giảm giá (${p.discount_value}%)`;
+      discountLabel = `Giảm giá (${formatPercent(p.discount_value, 2)})`;
     }
     const discountValue =
       discountAmount > 0 ? "-" + fmtMoney(discountAmount) : fmtMoney(0);

@@ -4,6 +4,9 @@ import {
   buildTransferLinesPayload,
   clampTransferLineForSource,
   formatTransferOption,
+  getTransferOutboundDestinationOptions,
+  getTransferSelectableIngredients,
+  getTransferSourceLocationOptions,
   getTransferSourceBranchIds,
   parseTransferTargetValue,
   resolveTransferCreatePolicy,
@@ -34,6 +37,7 @@ const ingredient: TransferIngredientOption = {
   id: 100,
   name: "Gao",
   is_active: true,
+  itemKind: "raw_material",
   units: [
     {
       id: 1001,
@@ -103,6 +107,18 @@ test("branch warehouse outbound destinations include Central Kitchen and active 
   );
 });
 
+test("branch kitchen can return stock to its warehouse or Central Kitchen only", () => {
+  assert.deepEqual(
+    getTransferOutboundDestinationOptions({
+      branches,
+      sourceBranchId: 10,
+      sourceBranchKind: "branch",
+      sourceLocationKind: "kitchen",
+    }).map((option) => option.value),
+    ["10:warehouse", "30:warehouse"],
+  );
+});
+
 test("central operators can dispatch only to active branch warehouse or kitchen targets", () => {
   const policy = resolveTransferCreatePolicy({
     branches,
@@ -114,6 +130,65 @@ test("central operators can dispatch only to active branch warehouse or kitchen 
   assert.deepEqual(
     policy.outboundDestinationOptions.map((option) => option.value),
     ["10:warehouse", "10:kitchen", "40:warehouse", "40:kitchen"],
+  );
+});
+
+test("Central Kitchen dispatches finished goods from its preferred output location to branch kitchens only", () => {
+  assert.deepEqual(
+    getTransferSourceLocationOptions({
+      locations: [
+        { id: 301, branchId: 30, kind: "warehouse", isDefaultIssue: true },
+        {
+          id: 302,
+          branchId: 30,
+          kind: "production_storage",
+          isDefaultIssue: false,
+        },
+      ],
+      sourceBranchKind: "central_kitchen",
+    }).map((location) => location.id),
+    [302],
+  );
+  assert.deepEqual(
+    getTransferSourceLocationOptions({
+      locations: [
+        { id: 301, branchId: 30, kind: "warehouse", isDefaultIssue: true },
+      ],
+      sourceBranchKind: "central_kitchen",
+    }).map((location) => location.id),
+    [301],
+  );
+
+  assert.deepEqual(
+    getTransferOutboundDestinationOptions({
+      branches,
+      sourceBranchId: 30,
+      sourceBranchKind: "central_kitchen",
+      sourceLocationKind: "production_storage",
+    }).map((option) => option.value),
+    ["10:kitchen", "40:kitchen"],
+  );
+
+  assert.deepEqual(
+    getTransferSelectableIngredients({
+      ingredients: [
+        ingredient,
+        {
+          id: 101,
+          name: "Suon da nuong",
+          is_active: true,
+          itemKind: "finished_good",
+        },
+        {
+          id: 102,
+          name: "Bi da ngung ban",
+          is_active: false,
+          itemKind: "finished_good",
+        },
+      ],
+      sourceBranchKind: "central_kitchen",
+    }).map((item) => item.id),
+    [101],
   );
 });
 
@@ -146,13 +221,13 @@ test("target parser rejects malformed route values", () => {
   assert.equal(parseTransferTargetValue("branch:kitchen"), null);
 });
 
-test("line payload converts entry units against the selected source stock", () => {
+test("line payload converts entry units against the selected source location stock", () => {
   assert.deepEqual(
     buildTransferLinesPayload({
       lines: [makeLine()],
       ingredients: [ingredient],
-      sourceStockByBranch: { 20: { 100: 10 } },
-      sourceBranchId: 20,
+      sourceStockByLocation: { 200: { 100: 10 } },
+      sourceLocationId: 200,
     }),
     {
       success: true,
@@ -164,8 +239,8 @@ test("line payload converts entry units against the selected source stock", () =
     buildTransferLinesPayload({
       lines: [makeLine({ quantity: "2.1" })],
       ingredients: [ingredient],
-      sourceStockByBranch: { 20: { 100: 10 } },
-      sourceBranchId: 20,
+      sourceStockByLocation: { 200: { 100: 10 } },
+      sourceLocationId: 200,
     }),
     { success: false, error: "exceeds_stock" },
   );
@@ -181,8 +256,8 @@ test("line payload rejects invalid quantities and unit ids", () => {
       buildTransferLinesPayload({
         lines: [line],
         ingredients: [ingredient],
-        sourceStockByBranch: { 20: { 100: 10 } },
-        sourceBranchId: 20,
+        sourceStockByLocation: { 200: { 100: 10 } },
+        sourceLocationId: 200,
       }),
       { success: false, error: "invalid_line" },
     );
@@ -194,8 +269,8 @@ test("line payload rejects an empty transfer", () => {
     buildTransferLinesPayload({
       lines: [],
       ingredients: [ingredient],
-      sourceStockByBranch: { 20: { 100: 10 } },
-      sourceBranchId: 20,
+      sourceStockByLocation: { 200: { 100: 10 } },
+      sourceLocationId: 200,
     }),
     { success: false, error: "empty_lines" },
   );
@@ -206,8 +281,8 @@ test("changing source or entry unit clamps the draft to available stock", () => 
     clampTransferLineForSource({
       line: makeLine({ quantity: "3" }),
       ingredients: [ingredient],
-      sourceStockByBranch: { 20: { 100: 10 } },
-      sourceBranchId: 20,
+      sourceStockByLocation: { 200: { 100: 10 } },
+      sourceLocationId: 200,
     }).quantity,
     "2",
   );
@@ -215,8 +290,8 @@ test("changing source or entry unit clamps the draft to available stock", () => 
     clampTransferLineForSource({
       line: makeLine({ quantity: "11", unit: "kg", entryUnitId: "1" }),
       ingredients: [ingredient],
-      sourceStockByBranch: { 20: { 100: 10 } },
-      sourceBranchId: 20,
+      sourceStockByLocation: { 200: { 100: 10 } },
+      sourceLocationId: 200,
     }).quantity,
     "10",
   );

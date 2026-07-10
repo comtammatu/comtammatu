@@ -16,7 +16,7 @@ export const NUMPAD_KEYS = [
   "1",
   "2",
   "3",
-  ".",
+  ",",
   "0",
   "del",
 ] as const;
@@ -31,10 +31,10 @@ export function appendNumpadKey(
   if (key === "del") {
     return current.slice(0, -1);
   }
-  if (key === ".") {
+  if (key === ",") {
     if (!allowDecimal) return current;
-    if (current.includes(".")) return current;
-    return current.length === 0 ? "0." : `${current}.`;
+    if (current.includes(",")) return current;
+    return current.length === 0 ? "0," : `${current},`;
   }
   if (current === "0") {
     return key;
@@ -66,7 +66,7 @@ export function NumberPadGrid({
             "bg-muted text-2xl font-semibold tabular-nums",
             "transition-transform active:scale-95 active:bg-muted-foreground/20",
             key === "del" && "text-destructive",
-            key === "." && !allowDecimal && "pointer-events-none opacity-30",
+            key === "," && !allowDecimal && "pointer-events-none opacity-30",
           )}
           aria-label={key === "del" ? ACTIONS_VI.delete : key}
         >

@@ -13,7 +13,7 @@ const migration = readRepo(
   "supabase/migrations/20260708131412_grn_confirm_autocreate_po.sql",
 );
 const grnLineActions = readRepo(
-  "apps/web/app/(protected)/inventory/grn/[id]/_hooks/use-grn-line-actions.ts",
+  "apps/web/lib/inventory/use-grn-detail-actions.ts",
 );
 
 test("confirm_goods_receipt_note creates a PO only for PO-less GRNs with accepted stock", () => {
@@ -75,7 +75,7 @@ test("desktop GRN confirm navigation follows the PO returned by the RPC", () => 
   assert.match(grnLineActions, /const confirmedPoId =/);
   assert.match(
     grnLineActions,
-    /\(res\.data as \{ po_id\?: number \| null \}\)\.po_id/,
+    /\(result\.data as \{ po_id\?: number \| null \}\)\.po_id/,
   );
   assert.match(
     grnLineActions,

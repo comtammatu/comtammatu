@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { POS_VI } from "@comtammatu/shared/messages";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import {
   Printer as IconPrinter,
   PrinterX as IconPrinterOff,
@@ -120,49 +121,55 @@ export function PrinterStatusIndicator({
 
   // A failed job outranks the heartbeat tone: agent online + dead printer
   // looked healthy before — the count is the actual paper-out-of-tray truth.
-  const badge = failedCount > 0 ? (
-    <Badge
-      variant="outline"
-      className="gap-1 border-destructive/40 text-destructive"
-      title={FAILED_BADGE_COPY.title(failedCount)}
-    >
-      <IconPrinterOff className="size-3.5" />
-      <span className="hidden sm:inline">
-        {FAILED_BADGE_COPY.long(failedCount)}
-      </span>
-      <span className="sm:hidden">{FAILED_BADGE_COPY.short(failedCount)}</span>
-    </Badge>
-  ) : !status.hasAgent ? (
-    <Badge
-      variant="outline"
-      className="gap-1 text-muted-foreground"
-      title={POS_VI.printerNoneTitle}
-    >
-      <IconPrinter className="size-3.5" />
-      <span className="hidden sm:inline">{POS_VI.printerUnregisteredLong}</span>
-      <span className="sm:hidden">{POS_VI.printerNoneShort}</span>
-    </Badge>
-  ) : status.isOnline ? (
-    <Badge
-      variant="outline"
-      className="gap-1 border-success/40 text-success"
-      title={`Agent ${status.agentId ?? ""} — online`}
-    >
-      <IconPrinter className="size-3.5" />
-      <span className="hidden sm:inline">{POS_VI.printerOnlineLong}</span>
-      <span className="sm:hidden">{POS_VI.printerOnlineShort}</span>
-    </Badge>
-  ) : (
-    <Badge
-      variant="outline"
-      className="gap-1 border-destructive/40 text-destructive"
-      title={`Agent ${status.agentId ?? ""} offline lần cuối ${status.lastSeenAt ?? ""}`}
-    >
-      <IconPrinterOff className="size-3.5" />
-      <span className="hidden sm:inline">{POS_VI.printerOfflineLong}</span>
-      <span className="sm:hidden">{POS_VI.printerOfflineShort}</span>
-    </Badge>
-  );
+  const offlineTitle = `Agent ${status.agentId ?? ""} offline lần cuối ${formatVNDateTime(status.lastSeenAt)}`;
+  const badge =
+    failedCount > 0 ? (
+      <Badge
+        variant="outline"
+        className="gap-1 border-destructive/40 text-destructive"
+        title={FAILED_BADGE_COPY.title(failedCount)}
+      >
+        <IconPrinterOff className="size-3.5" />
+        <span className="hidden sm:inline">
+          {FAILED_BADGE_COPY.long(failedCount)}
+        </span>
+        <span className="sm:hidden">
+          {FAILED_BADGE_COPY.short(failedCount)}
+        </span>
+      </Badge>
+    ) : !status.hasAgent ? (
+      <Badge
+        variant="outline"
+        className="gap-1 text-muted-foreground"
+        title={POS_VI.printerNoneTitle}
+      >
+        <IconPrinter className="size-3.5" />
+        <span className="hidden sm:inline">
+          {POS_VI.printerUnregisteredLong}
+        </span>
+        <span className="sm:hidden">{POS_VI.printerNoneShort}</span>
+      </Badge>
+    ) : status.isOnline ? (
+      <Badge
+        variant="outline"
+        className="gap-1 border-success/40 text-success"
+        title={`Agent ${status.agentId ?? ""} — online`}
+      >
+        <IconPrinter className="size-3.5" />
+        <span className="hidden sm:inline">{POS_VI.printerOnlineLong}</span>
+        <span className="sm:hidden">{POS_VI.printerOnlineShort}</span>
+      </Badge>
+    ) : (
+      <Badge
+        variant="outline"
+        className="gap-1 border-destructive/40 text-destructive"
+        title={offlineTitle}
+      >
+        <IconPrinterOff className="size-3.5" />
+        <span className="hidden sm:inline">{POS_VI.printerOfflineLong}</span>
+        <span className="sm:hidden">{POS_VI.printerOfflineShort}</span>
+      </Badge>
+    );
 
   if (settingsHref) {
     return (

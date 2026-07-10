@@ -1,14 +1,9 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
-import { StatusBadge } from "@/components/status-badge";
 import {
   fetchProductionRecipeContext,
   fetchProductionRunById,
 } from "@/(protected)/inventory/production-run-actions";
-import { ProductionDetailClient } from "@/(protected)/inventory/production/[id]/production-detail-client";
+import { BranchProductionDetailClient } from "./branch-production-detail-client";
 
 interface PageProps {
   params: Promise<{ branchId: string; id: string }>;
@@ -33,26 +28,26 @@ export default async function OperatorProductionDetailPage({
   if (!res.success || !res.data) notFound();
 
   const run = res.data;
-  if (run.branch_id !== branchId && run.target_branch_id !== branchId) notFound();
+  if (run.branch_id !== branchId && run.target_branch_id !== branchId)
+    notFound();
 
   const recipeRes = await fetchProductionRecipeContext(
     run.finished_good_id,
     run.branch_id,
+    run.source_location_id ?? undefined,
   );
-  const recipeContext = recipeRes.success && recipeRes.data ? recipeRes.data : null;
+  const recipeContext =
+    recipeRes.success && recipeRes.data ? recipeRes.data : null;
+  const recipeContextError = recipeRes.success
+    ? null
+    : (recipeRes.error ?? "Không thể kiểm tra định mức và tồn kho.");
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <Button asChild variant="ghost" size="touch" className="px-2">
-          <Link href={`/br/${branchId}/stock/production`}>
-            <IconArrowLeft data-icon="inline-start" />
-            Quay lại
-          </Link>
-        </Button>
-        <StatusBadge domain="inventory" value={run.status} />
-      </div>
-      <ProductionDetailClient run={run} recipeContext={recipeContext} embedded />
-    </div>
+    <BranchProductionDetailClient
+      run={run}
+      recipeContext={recipeContext}
+      recipeContextError={recipeContextError}
+      basePath={`/br/${branchId}/stock/production`}
+    />
   );
 }

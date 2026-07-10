@@ -1,3 +1,5 @@
+import { formatCount, formatPercent } from "../format/currency";
+
 // Inventory-domain Vietnamese copy (extracted from inventory module JSX).
 export const INVENTORY_VI = {
   warehouse: "Kho hàng",
@@ -33,7 +35,7 @@ export const INVENTORY_VI = {
     "Lập, xác nhận và điều chỉnh lệnh sản xuất để trừ nguyên liệu và nhập thành phẩm.",
   productionOrdersMetricLabel: "lệnh",
   productionOpenOrders: "Mở lệnh sản xuất",
-  productionDraftBadge: (count: number) => `${count} lệnh nháp`,
+  productionDraftBadge: (count: number) => `${formatCount(count)} lệnh nháp`,
   productionRecipesCardDescription:
     "Cấu hình Công thức thành phẩm: nguyên liệu và định lượng cho từng mẻ sản xuất.",
   productionRecipesMetricLabel: "Công thức thành phẩm",
@@ -147,7 +149,7 @@ export const INVENTORY_VI = {
   grnDraftsEmptyDescription:
     "Bắt đầu tạo phiếu nhập để hệ thống lưu lại tiến độ cho bạn.",
   grnDraftUpdatedAt: (date: string) => `Cập nhật lúc ${date}`,
-  grnDraftLineCount: (count: number) => `${count} dòng`,
+  grnDraftLineCount: (count: number) => `${formatCount(count)} dòng`,
   grnDraftContinue: "Tiếp tục",
   createSupplierReturnTitle: "Tạo phiếu trả hàng NCC",
   createSupplierReturnDescription: "Tạo phiếu trả hàng mới cho nhà cung cấp.",
@@ -186,7 +188,7 @@ export const INVENTORY_VI = {
   productionReadyBadge: "Sẵn sàng",
   productionNeedsConfigBadge: "Cần cấu hình",
   productionActiveBranches: (count: number) =>
-    `${count} bếp sản xuất đang hoạt động`,
+    `${formatCount(count)} bếp sản xuất đang hoạt động`,
   productionNoBranchConfigured: "Chưa có Bếp Trung Tâm được cấu hình",
   productionStatDraftLabel: "Lệnh nháp",
   productionStatDraftHint: "Cần chốt để ghi tiêu hao",
@@ -235,18 +237,19 @@ export const INVENTORY_VI = {
   noFinishedGoodInCatalog: "Chưa có thành phẩm trong danh mục.",
   noRawIngredientInCatalog: "Chưa có nguyên liệu đầu vào trong danh mục.",
   productionRecipeLinesLabel: "Dòng công thức",
-  ingredientCountBadge: (count: number) => `${count} nguyên liệu`,
-  ingredientLineCountBadge: (count: number) => `${count} dòng nguyên liệu`,
+  ingredientCountBadge: (count: number) => `${formatCount(count)} nguyên liệu`,
+  ingredientLineCountBadge: (count: number) =>
+    `${formatCount(count)} dòng nguyên liệu`,
   finishedGoodsWithRecipeBadge: (count: number) =>
-    `${count} thành phẩm có công thức`,
+    `${formatCount(count)} thành phẩm có công thức`,
   productionRecipeSaveFailed: "Không thể lưu công thức sản xuất",
   productionRecipeSavedToast: (count: number) =>
-    `Đã lưu ${count} nguyên liệu trong công thức`,
+    `Đã lưu ${formatCount(count)} nguyên liệu trong công thức`,
   productionRecipeDeleteFailed: "Không thể xóa công thức",
   productionRecipeDeleted: "Đã xóa công thức",
   productionRecipeGroupDeleteTitle: "Xóa toàn bộ công thức?",
   productionRecipeGroupDeleteDescription: (count: number, name: string) =>
-    `Thao tác này sẽ xóa toàn bộ ${count} dòng công thức của "${name}".`,
+    `Thao tác này sẽ xóa toàn bộ ${formatCount(count)} dòng công thức của "${name}".`,
   productionRecipeGroupDeleteConfirm: "Xóa toàn bộ công thức",
   productionRecipeGroupDeleteFailed: "Không thể xóa công thức cũ",
   productionRecipeGroupDeleted: "Đã xóa toàn bộ công thức cũ của thành phẩm",
@@ -318,18 +321,20 @@ export const INVENTORY_VI = {
   issueCreateDialogDescription:
     "Chọn điểm vận hành, loại phiếu và ghi chú trước khi tạo phiếu nháp.",
   issueCreateBranchRequired: "Chọn chi nhánh để tạo phiếu.",
-  rowCountRecent: (count: number) => `${count} dòng gần nhất`,
+  rowCountRecent: (count: number) => `${formatCount(count)} dòng gần nhất`,
   rowRatio: (visible: number, total: number) => `${visible}/${total} dòng`,
   rowRatioRecent: (visible: number, total: number) =>
     `${visible}/${total} dòng gần nhất`,
   issueExportEmpty: "Không có dữ liệu để xuất báo cáo.",
-  issueExportSuccess: (count: number) => `Đã xuất ${count} phiếu xuất.`,
+  issueExportSuccess: (count: number) =>
+    `Đã xuất ${formatCount(count)} phiếu xuất.`,
   recordedExportEmpty: "Không có dữ liệu tiêu hao để xuất CSV.",
   recordedAtLabel: "Thời điểm",
   deductLocationLabel: "Kho trừ",
   unitCostLabel: "Đơn giá ghi sổ",
   sourceLabel: "Nguồn",
-  recordedExportSuccess: (count: number) => `Đã xuất ${count} dòng tiêu hao.`,
+  recordedExportSuccess: (count: number) =>
+    `Đã xuất ${formatCount(count)} dòng tiêu hao.`,
   allStatusesOption: "Tất cả trạng thái",
   issueSearchPlaceholder: "Tìm mã phiếu, chi nhánh...",
   recordedSearchPlaceholder: "Tìm nguyên liệu, nguồn...",
@@ -360,7 +365,7 @@ export const INVENTORY_VI = {
   countSlipTitle: "Duyệt phiếu đếm tồn",
   countSlipDescription:
     "Đối chiếu số đếm với tồn hệ thống. Duyệt để ghi điều chỉnh kho, hoặc yêu cầu nhân viên đếm lại.",
-  countSlipPendingBadge: (count: number) => `${count} chờ duyệt`,
+  countSlipPendingBadge: (count: number) => `${formatCount(count)} chờ duyệt`,
   countSlipEmptyTitle: "Không có phiếu đếm chờ duyệt",
   countSlipEmptyDescription:
     "Khi nhân viên gửi phiếu đếm tồn, phiếu sẽ xuất hiện tại đây.",
@@ -372,7 +377,7 @@ export const INVENTORY_VI = {
   lineCountLabel: "Số dòng",
   countSlipApproveFailed: "Không duyệt được phiếu đếm.",
   countSlipApprovedAdjusted: (count: number) =>
-    `Đã duyệt và điều chỉnh ${count} dòng kho.`,
+    `Đã duyệt và điều chỉnh ${formatCount(count)} dòng kho.`,
   countSlipApproved: "Đã duyệt phiếu đếm tồn.",
   recountReasonRequired: "Nhập lý do cần đếm lại.",
   recountRequestFailed: "Không gửi được yêu cầu đếm lại.",
@@ -388,7 +393,7 @@ export const INVENTORY_VI = {
   recountReasonLine: (note: string) => `Lý do đếm lại: ${note}`,
   totalVarianceSummary: (variance: string, unit: string) =>
     `Tổng lệch ${variance} ${unit}`,
-  varianceLineCount: (count: number) => `${count} dòng có lệch`,
+  varianceLineCount: (count: number) => `${formatCount(count)} dòng có lệch`,
   recountReasonLabel: "Lý do cần đếm lại",
   recountReasonPlaceholder:
     "Ví dụ: số sườn lệch nhiều so với tồn, cần đếm lại kho mát",
@@ -411,12 +416,12 @@ export const INVENTORY_VI = {
     "Bấm Thêm phân công mới để giao thành phẩm cần kiểm kê cho nhân viên.",
   countAssignEditAction: "Chỉnh sửa",
   countAssignAssignedBadge: (count: number) =>
-    `Nguyên liệu được giao (${count} thành phẩm)`,
+    `Nguyên liệu được giao (${formatCount(count)} thành phẩm)`,
   countAssignAddDescription:
     "Chọn nhân viên và thành phẩm cần kiểm kê tại kho chi nhánh hiện tại.",
   countAssignSaveFailed: "Không thể lưu phân công.",
   countAssignSaved: (name: string, count: number) =>
-    `Đã lưu phân công cho ${name} (${count} mặt hàng)`,
+    `Đã lưu phân công cho ${name} (${formatCount(count)} mặt hàng)`,
   countAssignRemoved: (name: string) => `Đã xoá phân công cho ${name}`,
   countAssignAllAssigned: "Tất cả nhân viên đang có phân công.",
   selectEmployeePlaceholder: "Chọn nhân viên",
@@ -432,7 +437,7 @@ export const INVENTORY_VI = {
   countAssignRemoveAction: "Xoá",
   countedQtyHeader: "Số đếm",
   searchIngredientPlaceholder: "Tìm nguyên liệu…",
-  enteredCountBadge: (count: number) => `Đã nhập: ${count}`,
+  enteredCountBadge: (count: number) => `Đã nhập: ${formatCount(count)}`,
   blindGridEmptyTitle: "Không có dòng nào khớp bộ lọc.",
   needsRecheckBadge: "Cần kiểm tra",
   recheckFilterOn: "Đang lọc: cần kiểm tra",
@@ -467,19 +472,19 @@ export const INVENTORY_VI = {
   recipeColUnitCost: "Giá vốn/phần",
   recipeColStockCapacity: "Phần bán được",
   recipeCardSummary: (count: number, cost: string) =>
-    `${count} nguyên liệu · ${cost}/phần`,
+    `${formatCount(count)} nguyên liệu · ${cost}/phần`,
   amountDong: (amount: string) =>
     amount.trim().endsWith("đ") ? amount : `${amount} đ`,
   daysAgo: (days: number) => `${days} ngày trước`,
-  lineItemCount: (count: number) => `${count} mặt hàng`,
+  lineItemCount: (count: number) => `${formatCount(count)} mặt hàng`,
   lockExpiresIn: (remaining: string) => `Hết hạn sau ${remaining}`,
   rollingTierOneTrigger: (threshold: string) =>
     `→ trigger tier 1 (ảnh bắt buộc, ≥${threshold})`,
-  rollingSlipCount: (count: number) => `• ${count} phiếu`,
+  rollingSlipCount: (count: number) => `• ${formatCount(count)} phiếu`,
   shiftCapNearWarning: (remaining: string) =>
     `Gần cap — thêm ${remaining} nữa sẽ cần duyệt`,
   branchTodayUsage: (used: string, cap: string, percent: number) =>
-    `Branch hôm nay: ${used} / ${cap} (${percent}%)`,
+    `Branch hôm nay: ${used} / ${cap} (${formatPercent(percent)})`,
   importSelectedFile: (name: string) => `Đã chọn: ${name}`,
   importIngredientsHintPrefix: "Hỗ trợ .xlsx và .csv. Dòng trùng",
   importIngredientsHintField: "tên nguyên liệu",
@@ -495,7 +500,7 @@ export const INVENTORY_VI = {
   dashboardPreparePoHint: "Chuẩn bị PO.",
   dashboardGrnPriceReviewLabel: "GRN cần kiểm tra giá",
   dashboardGrnPriceReviewTask: (count: number) =>
-    `${count} dòng GRN cần kiểm tra giá`,
+    `${formatCount(count)} dòng GRN cần kiểm tra giá`,
   dashboardGrnPriceVarianceHint:
     "Giá nhập lệch lớn so với PO trong 30 ngày qua.",
   // Production surface guards — generalized copy (D068): production runs at the

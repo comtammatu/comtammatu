@@ -1607,6 +1607,7 @@ export function PosDesktopInner({
         posSessionId={session.id}
         orders={orders}
         onUpdated={refreshOperational}
+        onOpenPayment={handlePayOrderFromPicker}
       />
       {mobileSidebarDrawer}
 

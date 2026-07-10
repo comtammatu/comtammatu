@@ -12,11 +12,11 @@ import {
 import { AppSection } from "@/components/surface";
 import { formatVND } from "../../../_lib/format";
 import {
-  deriveVariance,
-  grnCopy,
-  inventoryCommon,
-  type GRNDetailItem,
-} from "./grn-detail-types";
+  deriveGrnVariance as deriveVariance,
+  GRN_DETAIL_COPY as grnCopy,
+  INVENTORY_COMMON_COPY as inventoryCommon,
+  type GrnDetailItem as GRNDetailItem,
+} from "@lib/inventory/grn-detail-model";
 
 const PREVIEW_LIMIT = 10;
 
@@ -149,7 +149,10 @@ export function OverviewLinesPreview({ lines }: { lines: GRNDetailItem[] }) {
         mobileCardRender={(row) => {
           const status = getGrnOverviewStatus(row);
           return (
-            <Item variant="outline" className="flex-col items-stretch gap-2 p-3">
+            <Item
+              variant="outline"
+              className="flex-col items-stretch gap-2 p-3"
+            >
               <div className="flex min-w-0 items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="truncate font-medium">{row.line.name}</div>

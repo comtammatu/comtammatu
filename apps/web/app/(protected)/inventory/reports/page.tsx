@@ -1,5 +1,3 @@
-import { notFound } from "next/navigation";
-import { loadAuthState } from "@/_lib/auth";
 import { fetchFoodCost } from "@/_lib/food-cost-actions";
 import {
   fetchApAging,
@@ -11,10 +9,10 @@ import {
   getVNMonthSequenceBack,
   getVNMonthStartDateString,
 } from "@comtammatu/shared/time";
+import { formatPercent } from "@comtammatu/shared/format";
 import { ReportsClient } from "./reports-client";
 import type { ApAgingItem, VarianceItem } from "./reports-client";
 import type { InventorySemanticColor } from "../_lib/ui";
-import { resolveInventoryBranchScope } from "../_lib/inventory-scope";
 
 type MovementSummaryItem = {
   label: string;
@@ -63,36 +61,18 @@ function calculateTrendDeltaPct(trend: number[]) {
   return Number((((current - previous) / previous) * 100).toFixed(1));
 }
 
-interface ReportsPageContentProps {
-  routeBranchId?: number;
-  embedded?: boolean;
-}
-
-export async function ReportsPageContent({
-  routeBranchId,
-  embedded = false,
-}: ReportsPageContentProps = {}) {
+export async function ReportsPageContent() {
   const startDate = getVNMonthStartDateString();
   const endDate = getVNDateString();
   const trendStartDate = getVNMonthSequenceBack(12).at(-1)?.date ?? startDate;
-  if (routeBranchId != null) {
-    const { supabase, claims } = await loadAuthState();
-    const scope = await resolveInventoryBranchScope(
-      supabase,
-      claims,
-      routeBranchId,
-    );
-    if (scope.selectedBranchId !== routeBranchId) notFound();
-  }
 
   const [apRes, varRes, movementRes, foodCostRes] = await Promise.all([
     fetchApAging(),
-    fetchConsumptionVariance({ startDate, endDate, branchId: routeBranchId }),
-    fetchStockMovementReport({ startDate, endDate, branchId: routeBranchId }),
+    fetchConsumptionVariance({ startDate, endDate }),
+    fetchStockMovementReport({ startDate, endDate }),
     fetchFoodCost({
       startDate: trendStartDate,
       endDate,
-      branchId: routeBranchId,
     }),
   ]);
 
@@ -136,7 +116,7 @@ export async function ReportsPageContent({
     }>;
     consumptionVariance = rows.slice(0, 5).map((r) => ({
       name: r.ingredient_name,
-      actual: `${r.variance_pct > 0 ? "+" : ""}${String(r.variance_pct)}%`,
+      actual: `${r.variance_pct > 0 ? "+" : ""}${formatPercent(r.variance_pct)}`,
       trend: (r.variance_pct >= 0 ? "up" : "down") as "up" | "down",
     }));
   }
@@ -224,8 +204,6 @@ export async function ReportsPageContent({
       foodCostTrend={foodCostTrend}
       foodCostTrendAvailable={foodCostTrendAvailable}
       foodCostTrendDeltaPct={foodCostTrendDeltaPct}
-      supplierInvoicesHref={embedded ? null : "/inventory/supplier-invoices"}
-      embedded={embedded}
     />
   );
 }

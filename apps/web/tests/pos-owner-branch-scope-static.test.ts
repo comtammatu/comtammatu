@@ -60,7 +60,10 @@ test("POS cash payment uses route branch scope instead of rejecting owner null-b
     cashActionBlock,
     /argsToInput: \(branchId: number, orderId: number, cashReceived: number\) => \(\{/,
   );
-  assert.match(cashActionBlock, /if \(!isPosBranchInScope\(claims, branchId\)\)/);
+  assert.match(
+    cashActionBlock,
+    /if \(!isPosBranchInScope\(claims, branchId\)\)/,
+  );
   assert.doesNotMatch(cashActionBlock, /claims\.branch_id\s*===\s*null/);
 
   assert.match(
@@ -69,7 +72,7 @@ test("POS cash payment uses route branch scope instead of rejecting owner null-b
   );
   assert.match(
     actionSource,
-    /confirmCashPayment\(branchId, orderId, cashReceived\)/,
+    /confirmCashPayment\(\s*branchId,\s*orderId,\s*cashReceived,?\s*\)/,
   );
   assert.match(
     billSource,

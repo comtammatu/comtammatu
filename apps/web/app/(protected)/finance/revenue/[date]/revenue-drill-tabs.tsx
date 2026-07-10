@@ -10,7 +10,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Progress } from "@comtammatu/ui/components/progress";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
@@ -33,12 +33,6 @@ const PAYMENT_METHOD_LABEL: Record<string, string> = {
   vietqr: "VietQR",
   momo: "MoMo",
 };
-
-function formatCount(value: number): string {
-  return Math.round(value)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
 
 interface RevenueDrillTabsProps {
   orders: OrderRow[];
@@ -64,7 +58,11 @@ function invoiceBadge(row: OrderRow) {
       ? `${getStatusBadgeMeta("tax-invoice", row.invoice_status).label} · ${row.invoice_number}`
       : undefined;
   return (
-    <StatusBadge domain="tax-invoice" value={row.invoice_status} label={label} />
+    <StatusBadge
+      domain="tax-invoice"
+      value={row.invoice_status}
+      label={label}
+    />
   );
 }
 
@@ -104,7 +102,7 @@ export function RevenueDrillTabs({
       key: "items",
       header: "Món",
       className: "text-right font-mono tabular-nums",
-      render: (row) => row.item_count,
+      render: (row) => formatCount(row.item_count),
     },
     {
       key: "payment",
@@ -206,7 +204,7 @@ export function RevenueDrillTabs({
                     <span className="tabular-nums">
                       {formatVND(hour.total_revenue)}
                       <span className="ml-2 text-xs text-muted-foreground">
-                        {hour.order_count} đơn
+                        {formatCount(hour.order_count)} đơn
                       </span>
                     </span>
                   </div>

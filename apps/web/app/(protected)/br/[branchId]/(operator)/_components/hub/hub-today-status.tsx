@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Camera as IconCamera } from "lucide-react";
+import { formatVNClockTime } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { BranchOperatorControlBar } from "@lib/branch-operator/components/branch-operator-page";
 import {
@@ -37,7 +38,7 @@ export async function HubTodayStatus({
   const title = getWorkTitle(state);
   const currentShiftName = state.attendance?.shiftName ?? null;
   const currentShiftRange = state.attendance?.shiftStartTime
-    ? `${state.attendance.shiftStartTime.slice(0, 5)} - ${state.attendance.shiftEndTime?.slice(0, 5) ?? "—"}`
+    ? `${formatVNClockTime(state.attendance.shiftStartTime)} - ${formatVNClockTime(state.attendance.shiftEndTime)}`
     : "—";
   const todayMeta = currentShiftName
     ? `${formatDateVN(state.today)} · ${currentShiftName} ${currentShiftRange}`

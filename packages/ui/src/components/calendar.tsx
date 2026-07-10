@@ -7,6 +7,7 @@ import {
   type DayButton,
   type Locale,
 } from "react-day-picker";
+import { vi } from "react-day-picker/locale";
 
 import { cn } from "../lib/utils";
 import { Button, buttonVariants } from "./button";
@@ -226,4 +227,4 @@ function CalendarDayButton({
   );
 }
 
-export { Calendar, CalendarDayButton };
+export { Calendar, CalendarDayButton, vi };

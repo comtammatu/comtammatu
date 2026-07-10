@@ -7,7 +7,11 @@ import {
   ItemFooter,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { formatVND } from "@comtammatu/shared/format";
+import {
+  formatCount,
+  formatPercent,
+  formatVND,
+} from "@comtammatu/shared/format";
 import { PRODUCT_VI } from "@comtammatu/shared/messages";
 import { AppSection, KpiRow } from "@/components/surface";
 import {
@@ -37,12 +41,6 @@ const foodCopy = messages.finance.foodCost;
 //   global default here.
 const MARGIN_GREEN = 60;
 const MARGIN_WARN = 40;
-
-function formatCount(value: number): string {
-  return Math.round(value)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
 
 function marginPct(r: FoodCostRow): number | null {
   const rev = Number(r.revenue ?? 0);
@@ -116,7 +114,7 @@ export function FoodCostClient({
         const pct = marginPct(row);
         return (
           <span className={marginToneClass(pct)}>
-            {pct == null ? "—" : `${pct.toFixed(1)}%`}
+            {pct == null ? "—" : formatPercent(pct)}
           </span>
         );
       },
@@ -162,15 +160,18 @@ export function FoodCostClient({
           hint={
             totalRevenue > 0
               ? foodCopy.shareOfRevenueHint(
-                  ((estimatedFoodCost / totalRevenue) * 100).toFixed(1),
+                  formatPercent((estimatedFoodCost / totalRevenue) * 100),
                 )
               : "—"
           }
         />
         <KpiCard
           label={foodCopy.averageMargin}
-          value={avgMarginPct == null ? "—" : `${avgMarginPct.toFixed(1)}%`}
-          hint={foodCopy.marginThresholdHint(MARGIN_GREEN, MARGIN_WARN)}
+          value={avgMarginPct == null ? "—" : formatPercent(avgMarginPct)}
+          hint={foodCopy.marginThresholdHint(
+            formatPercent(MARGIN_GREEN, 0),
+            formatPercent(MARGIN_WARN, 0),
+          )}
           tone={avgMarginTone}
         />
       </KpiRow>
@@ -207,7 +208,7 @@ export function FoodCostClient({
                   <span
                     className={`font-mono text-sm font-semibold tabular-nums ${marginToneClass(pct)}`}
                   >
-                    {pct == null ? "—" : `${pct.toFixed(1)}%`}
+                    {pct == null ? "—" : formatPercent(pct)}
                   </span>
                 </ItemFooter>
               </Item>

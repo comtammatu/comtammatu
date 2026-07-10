@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { parseVietnameseNumericImport } from "@comtammatu/shared/format";
 import { MENU_VI } from "@comtammatu/shared/messages";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString } from "@comtammatu/shared/time";
@@ -696,18 +697,52 @@ export async function exportMenu(
 const importCategoryRowSchema = z.object({
   name: z.string().trim().min(1, { error: "Thiếu tên danh mục" }),
   type: z.enum(CATEGORY_TYPES, { error: "Loại danh mục không hợp lệ" }),
-  sort_order: z.coerce.number().int().min(0).default(0),
+  sort_order: z.number().int().min(0).default(0),
   is_active: z.boolean().default(true),
 });
 
 const importItemRowSchema = z.object({
   name: z.string().trim().min(1, { error: "Thiếu tên món" }),
   category_name: z.string().trim().min(1, { error: "Thiếu danh mục" }),
-  base_price: z.coerce.number().min(0, { error: "Giá không hợp lệ" }),
+  base_price: z.number().min(0, { error: "Giá không hợp lệ" }),
   description: z.string().default(""),
-  sort_order: z.coerce.number().int().min(0).default(0),
+  sort_order: z.number().int().min(0).default(0),
   is_active: z.boolean().default(true),
 });
+
+function parseMenuImportNumber(
+  raw: string | undefined,
+  {
+    defaultValue,
+    allowNegative = false,
+    maxFractionDigits,
+  }: {
+    defaultValue: number;
+    allowNegative?: boolean;
+    maxFractionDigits?: number;
+  },
+): number | null {
+  if (raw == null || raw.trim() === "") return defaultValue;
+
+  const parsed = parseVietnameseNumericImport(raw, {
+    allowNegative,
+    maxFractionDigits,
+  });
+  return parsed.state === "valid" ? parsed.value : null;
+}
+
+function invalidMenuImportNumberIssue(
+  sheet: string,
+  row: number,
+  field: string,
+): ImportIssue {
+  return {
+    sheet,
+    row,
+    field,
+    message: "Số phải theo định dạng vi-VN, ví dụ 1.234,56.",
+  };
+}
 
 function parseBoolean(raw: string | undefined): boolean {
   if (!raw) return true;
@@ -761,15 +796,15 @@ export interface ImportMenuSummary {
 const importVariantRowSchema = z.object({
   item_name: z.string().trim().min(1, { error: "Thiếu tên món" }),
   name: z.string().trim().min(1, { error: "Thiếu tên biến thể" }),
-  price_adjustment: z.coerce.number(),
-  sort_order: z.coerce.number().int().min(0).default(0),
+  price_adjustment: z.number(),
+  sort_order: z.number().int().min(0).default(0),
 });
 
 const importModifierRowSchema = z.object({
   item_name: z.string().trim().min(1, { error: "Thiếu tên món" }),
   name: z.string().trim().min(1, { error: "Thiếu tên topping" }),
-  price: z.coerce.number().min(0, { error: "Giá topping phải ≥ 0" }),
-  sort_order: z.coerce.number().int().min(0).default(0),
+  price: z.number().min(0, { error: "Giá topping phải ≥ 0" }),
+  sort_order: z.number().int().min(0).default(0),
 });
 
 const importSideRowSchema = z.object({
@@ -902,10 +937,20 @@ export async function importMenu(
         });
         return;
       }
+      const sortOrder = parseMenuImportNumber(
+        raw["Thứ tự"] ?? raw["sort_order"],
+        { defaultValue: 0, maxFractionDigits: 0 },
+      );
+      if (sortOrder === null) {
+        issues.push(
+          invalidMenuImportNumberIssue(categorySheet.name, rowNumber, "Thứ tự"),
+        );
+        return;
+      }
       const parsedRow = importCategoryRowSchema.safeParse({
         name: raw["Tên danh mục"] ?? raw["name"],
         type: typeKey,
-        sort_order: raw["Thứ tự"] ?? raw["sort_order"] ?? 0,
+        sort_order: sortOrder,
         is_active: parseBoolean(raw["Hoạt động"] ?? raw["is_active"]),
       });
       if (!parsedRow.success) {
@@ -984,12 +1029,30 @@ export async function importMenu(
 
     itemSheet.rows.forEach((raw, idx) => {
       const rowNumber = idx + 2;
+      const basePrice = parseMenuImportNumber(
+        raw["Giá (VND)"] ?? raw["base_price"],
+        { defaultValue: 0 },
+      );
+      const sortOrder = parseMenuImportNumber(
+        raw["Thứ tự"] ?? raw["sort_order"],
+        { defaultValue: 0, maxFractionDigits: 0 },
+      );
+      if (basePrice === null || sortOrder === null) {
+        issues.push(
+          invalidMenuImportNumberIssue(
+            itemSheet.name,
+            rowNumber,
+            basePrice === null ? "Giá (VND)" : "Thứ tự",
+          ),
+        );
+        return;
+      }
       const parsedRow = importItemRowSchema.safeParse({
         name: raw["Tên món"] ?? raw["name"],
         category_name: raw["Danh mục"] ?? raw["category_name"],
-        base_price: raw["Giá (VND)"] ?? raw["base_price"] ?? 0,
+        base_price: basePrice,
         description: raw["Mô tả"] ?? raw["description"] ?? "",
-        sort_order: raw["Thứ tự"] ?? raw["sort_order"] ?? 0,
+        sort_order: sortOrder,
         is_active: parseBoolean(raw["Hoạt động"] ?? raw["is_active"]),
       });
       if (!parsedRow.success) {
@@ -1095,12 +1158,29 @@ export async function importMenu(
 
     variantSheet.rows.forEach((raw, idx) => {
       const rowNumber = idx + 2;
+      const priceAdjustment = parseMenuImportNumber(
+        raw["Chênh lệch giá (VND)"] ?? raw["price_adjustment"],
+        { defaultValue: 0, allowNegative: true },
+      );
+      const sortOrder = parseMenuImportNumber(
+        raw["Thứ tự"] ?? raw["sort_order"],
+        { defaultValue: 0, maxFractionDigits: 0 },
+      );
+      if (priceAdjustment === null || sortOrder === null) {
+        issues.push(
+          invalidMenuImportNumberIssue(
+            variantSheet.name,
+            rowNumber,
+            priceAdjustment === null ? "Chênh lệch giá (VND)" : "Thứ tự",
+          ),
+        );
+        return;
+      }
       const parsedRow = importVariantRowSchema.safeParse({
         item_name: raw["Tên món"] ?? raw["item_name"],
         name: raw["Tên biến thể"] ?? raw["name"],
-        price_adjustment:
-          raw["Chênh lệch giá (VND)"] ?? raw["price_adjustment"] ?? 0,
-        sort_order: raw["Thứ tự"] ?? raw["sort_order"] ?? 0,
+        price_adjustment: priceAdjustment,
+        sort_order: sortOrder,
       });
       if (!parsedRow.success) {
         issues.push({
@@ -1183,11 +1263,28 @@ export async function importMenu(
 
     modifierSheet.rows.forEach((raw, idx) => {
       const rowNumber = idx + 2;
+      const price = parseMenuImportNumber(raw["Giá (VND)"] ?? raw["price"], {
+        defaultValue: 0,
+      });
+      const sortOrder = parseMenuImportNumber(
+        raw["Thứ tự"] ?? raw["sort_order"],
+        { defaultValue: 0, maxFractionDigits: 0 },
+      );
+      if (price === null || sortOrder === null) {
+        issues.push(
+          invalidMenuImportNumberIssue(
+            modifierSheet.name,
+            rowNumber,
+            price === null ? "Giá (VND)" : "Thứ tự",
+          ),
+        );
+        return;
+      }
       const parsedRow = importModifierRowSchema.safeParse({
         item_name: raw["Tên món"] ?? raw["item_name"],
         name: raw["Tên topping"] ?? raw["name"],
-        price: raw["Giá (VND)"] ?? raw["price"] ?? 0,
-        sort_order: raw["Thứ tự"] ?? raw["sort_order"] ?? 0,
+        price,
+        sort_order: sortOrder,
       });
       if (!parsedRow.success) {
         issues.push({

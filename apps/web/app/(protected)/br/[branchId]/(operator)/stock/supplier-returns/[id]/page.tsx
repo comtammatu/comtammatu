@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { SupplierReturnDetailPageContent } from "@/(protected)/inventory/supplier-returns/[id]/page";
+import { BranchSupplierReturnDetailClient } from "./branch-supplier-return-detail-client";
+import { loadBranchSupplierReturnDetailData } from "@lib/inventory/branch-supplier-return-data";
 
 interface PageProps {
   params: Promise<{ branchId: string; id: string }>;
@@ -20,11 +21,7 @@ export default async function OperatorSupplierReturnDetailPage({
     notFound();
   }
 
-  return (
-    <SupplierReturnDetailPageContent
-      returnId={returnId}
-      routeBranchId={branchId}
-      embedded
-    />
-  );
+  const data = await loadBranchSupplierReturnDetailData(returnId, branchId);
+
+  return <BranchSupplierReturnDetailClient branchId={branchId} data={data} />;
 }

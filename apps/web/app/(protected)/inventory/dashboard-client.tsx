@@ -17,6 +17,7 @@ import {
   Truck as IconTruck,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { formatPercent } from "@comtammatu/shared/format";
 import { formatVNTime, formatVNDate } from "@comtammatu/shared/time";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
@@ -308,9 +309,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         ? messages.inventory.dashboard.priceReviewLinesStatus(
             props.priceReviewCount,
           )
-        : messages.inventory.dashboard.inboundNeedReceiveStatus(
-            inbound.length,
-          ),
+        : messages.inventory.dashboard.inboundNeedReceiveStatus(inbound.length),
       tone:
         (props.showProcurement && props.pendingPO > 0) || inbound.length > 0
           ? "info"
@@ -337,31 +336,29 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     });
   }
 
-  cards.push(
-    {
-      key: "catalog",
-      title: messages.inventory.dashboard.catalogFlowTitle,
-      description: messages.inventory.dashboard.catalogDescription,
-      href: paths.ingredients,
-      icon: IconSettings,
-      metric: messages.inventory.dashboard.catalogMetricValue,
-      metricLabel: messages.inventory.dashboard.catalogMetricLabel,
-      statusLabel: messages.inventory.dashboard.catalogStatusLabel,
-      tone: "default",
-      actions: [
-        {
-          label: tNav("ingredients", "navigation"),
-          href: paths.ingredients,
-          primary: true,
-        },
-        {
-          label: messages.inventory.dashboard.unitsAction,
-          href: paths.units,
-        },
-        { label: tNav("suppliers", "navigation"), href: paths.suppliers },
-      ],
-    },
-  );
+  cards.push({
+    key: "catalog",
+    title: messages.inventory.dashboard.catalogFlowTitle,
+    description: messages.inventory.dashboard.catalogDescription,
+    href: paths.ingredients,
+    icon: IconSettings,
+    metric: messages.inventory.dashboard.catalogMetricValue,
+    metricLabel: messages.inventory.dashboard.catalogMetricLabel,
+    statusLabel: messages.inventory.dashboard.catalogStatusLabel,
+    tone: "default",
+    actions: [
+      {
+        label: tNav("ingredients", "navigation"),
+        href: paths.ingredients,
+        primary: true,
+      },
+      {
+        label: messages.inventory.dashboard.unitsAction,
+        href: paths.units,
+      },
+      { label: tNav("suppliers", "navigation"), href: paths.suppliers },
+    ],
+  });
 
   return cards;
 }
@@ -509,9 +506,8 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     if (pendingCountSlips > 0)
       items.push({
         key: "count-slips",
-        title: messages.inventory.dashboard.countSlipsPendingTask(
-          pendingCountSlips,
-        ),
+        title:
+          messages.inventory.dashboard.countSlipsPendingTask(pendingCountSlips),
         description: messages.inventory.dashboard.countSlipsReviewHint,
         href: paths.countSlips,
         icon: <IconClipboardCheck className="size-4" />,
@@ -597,7 +593,9 @@ export function DashboardClient(props: DashboardProps) {
     appendBranchId(href, props.selectedBranchId);
   const tasks = buildTasks(props);
   const isOversight =
-    isInventoryOversightRole(props.userRole) && !showProcurement && !showProduction;
+    isInventoryOversightRole(props.userRole) &&
+    !showProcurement &&
+    !showProduction;
 
   const openTransfers = transfers.filter((t) => isTransferOpen(t.status));
   const inboundTransferCount = openTransfers.filter(
@@ -697,35 +695,35 @@ export function DashboardClient(props: DashboardProps) {
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/80 font-mono">
                 <IconClock className="size-3" />
                 {messages.inventory.dashboard.dataAsOfLabel}:{" "}
-                {formatVNTime(dataAsOf)} ({formatVNDate(dataAsOf).slice(0, 5)})
+                {formatVNTime(dataAsOf)} ({formatVNDate(dataAsOf)})
               </span>
             ) : null}
           </div>
         }
         meta={
-	          <span className="inline-flex items-center gap-2">
-	            <span className="text-muted-foreground">{stockValueLabel}</span>
-	            <span
-	              className="font-mono text-base font-semibold tabular-nums text-foreground"
-	              title={stockValueHint ?? undefined}
-	            >
-	              {stockValueText}
-	            </span>
-	          </span>
-	        }
-	      />
+          <span className="inline-flex items-center gap-2">
+            <span className="text-muted-foreground">{stockValueLabel}</span>
+            <span
+              className="font-mono text-base font-semibold tabular-nums text-foreground"
+              title={stockValueHint ?? undefined}
+            >
+              {stockValueText}
+            </span>
+          </span>
+        }
+      />
 
-	      {dashboardWarnings.length > 0 ? (
-	        <NoteCallout
-	          tone="warning"
-	          icon={<IconAlertTriangle className="size-4" />}
-	          label={messages.inventory.dashboard.dataDegradedTitle}
-	        >
-	          {messages.inventory.dashboard.dataDegradedDescription(
-	            degradedItems.join(", "),
-	          )}
-	        </NoteCallout>
-	      ) : null}
+      {dashboardWarnings.length > 0 ? (
+        <NoteCallout
+          tone="warning"
+          icon={<IconAlertTriangle className="size-4" />}
+          label={messages.inventory.dashboard.dataDegradedTitle}
+        >
+          {messages.inventory.dashboard.dataDegradedDescription(
+            degradedItems.join(", "),
+          )}
+        </NoteCallout>
+      ) : null}
 
       {!hasOpenInventoryWork ? (
         <AppSection contentClassName="items-center gap-3 py-6 text-center">
@@ -747,7 +745,9 @@ export function DashboardClient(props: DashboardProps) {
         <div className="grid gap-4 lg:grid-cols-2">
           <AppSection
             title={messages.inventory.dashboard.shiftTasksTitle}
-            description={messages.inventory.dashboard.pendingTasks(tasks.length)}
+            description={messages.inventory.dashboard.pendingTasks(
+              tasks.length,
+            )}
             size="sm"
             badge={{
               variant: "secondary",
@@ -885,7 +885,9 @@ export function DashboardClient(props: DashboardProps) {
                         size="sm"
                         asChild
                       >
-                        <Link href={withBranch(action.href)}>{action.label}</Link>
+                        <Link href={withBranch(action.href)}>
+                          {action.label}
+                        </Link>
                       </Button>
                     ))}
                   </div>
@@ -1010,7 +1012,7 @@ export function DashboardClient(props: DashboardProps) {
                     badge={tStatus(s.status, "badge")}
                     badgeVariant="success"
                     metric={{
-                      value: `${s.progress}%`,
+                      value: formatPercent(s.progress),
                       label: messages.inventory.dashboard.progressMetricLabel,
                     }}
                     ctaLabel={messages.inventory.dashboard.openSessionCta}

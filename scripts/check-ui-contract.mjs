@@ -446,8 +446,6 @@ function branchPageOrDirectClientUsesOperatorWorkflowFrame(file) {
 
   const absoluteFile = path.join(REPO_ROOT, file);
   const pageContent = fs.readFileSync(absoluteFile, "utf8");
-  if (!pageContent.includes("BranchOperatorPage")) return false;
-
   const sources = [pageContent];
   const importPattern = /from\s+["'](\.{1,2}\/[^"']+)["']/g;
   for (const match of pageContent.matchAll(importPattern)) {
@@ -458,6 +456,7 @@ function branchPageOrDirectClientUsesOperatorWorkflowFrame(file) {
 
   const combined = sources.join("\n");
   return (
+    combined.includes("BranchOperatorPage") &&
     combined.includes("BranchOperatorPanel") &&
     combined.includes("AppDetailFooter") &&
     !combined.includes("DocumentFormFrame")
@@ -682,6 +681,18 @@ const formatterGuardBaselines = [
     allowlist: {},
   },
   {
+    id: "percent-format-ssot",
+    description:
+      "User-visible percentage points use formatPercent from @comtammatu/shared/format; page-local decimal-dot percent rendering must not spread.",
+    roots: [
+      ...uiRuntimeRoots([".ts", ".tsx"]),
+      { dir: "apps/web/lib/inventory", extensions: [".ts", ".tsx"] },
+    ],
+    pattern:
+      /\b(?:function|const)\s+formatPercent\b|\.toFixed\(\s*\d+\s*\)\s*\}\s*%/g,
+    allowlist: {},
+  },
+  {
     id: "date-format-ssot",
     description:
       "VN date/time rendering goes through @comtammatu/shared/time (formatVNDate/formatVNDateTime/getVNDateString/..., which pin Asia/Ho_Chi_Minh); ad-hoc Intl.DateTimeFormat / toLocaleDateString / toLocaleTimeString in app code must not spread.",
@@ -693,6 +704,39 @@ const formatterGuardBaselines = [
 ];
 
 const checks = [
+  {
+    id: "print-format-ssot",
+    description:
+      "Print rendering uses shared vi-VN money and time helpers; local Intl/toLocale formatting must not be reintroduced.",
+    roots: [
+      {
+        dir: "packages/print-render/src",
+        extensions: [".ts", ".tsx"],
+      },
+    ],
+    pattern:
+      /\b(?:new\s+)?Intl\.(?:NumberFormat|DateTimeFormat)\b|\.toLocale(?:String|DateString|TimeString)\(/g,
+    allowlist: {},
+  },
+  {
+    id: "raw-percent-output-ssot",
+    description:
+      "Dynamic percentage text is rendered through formatPercent; only CSS geometry and SQL wildcard templates may interpolate a raw percent sign.",
+    roots: [
+      { dir: "apps/web/app", extensions: [".ts", ".tsx"] },
+      { dir: "apps/web/lib", extensions: [".ts", ".tsx"] },
+      { dir: "packages/print-render/src", extensions: [".ts", ".tsx"] },
+      { dir: "packages/shared/src/messages", extensions: [".ts"] },
+    ],
+    pattern: /\$\{[^}]+\}%|(?<!\$)\{[^{}]+\}\s*%/g,
+    allowlist: {
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/team/team-workspace-tabs.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/order-reads.ts": 1,
+      "apps/web/app/(protected)/inventory/_lib/chart-primitives.tsx": 1,
+      "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 1,
+    },
+  },
   {
     id: "non-current-visual-layer",
     description:
@@ -1680,7 +1724,7 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/inventory/_components/zone-lock-indicator.tsx": 1,
       "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 3,
       "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx": 1,
       "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 1,
       "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 2,
@@ -2425,16 +2469,11 @@ for (const filePath of walkUiRuntimeFiles([".tsx"])) {
 // EMBED-WRAPPER target — widen the file list only with a contract reason.
 const OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES = [
   "apps/web/app/(protected)/orders/orders-page-body.tsx",
-  "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
-  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
-  "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
   "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
   "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx",
   "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
   "apps/web/app/(protected)/branch-settings/_shared/printers/printers-client.tsx",
-  "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
-  "apps/web/app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
 ];
 const OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE = {};
 const OPERATOR_EMBEDDED_BUTTON_SIZE_TOKEN =
@@ -2472,20 +2511,11 @@ for (const relPath of OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES) {
 const OPERATOR_EMBEDDED_PAGE_HEADER_FILES = [
   "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
   "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
-  "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
-  "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
   "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
   "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
-  "apps/web/app/(protected)/inventory/reports/reports-client.tsx",
-  "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx",
-  "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
-  "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
-  "apps/web/app/(protected)/inventory/supplier-returns/[id]/page.tsx",
-  "apps/web/app/(protected)/inventory/supplier-returns/supplier-returns-client.tsx",
   "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx",
   "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx",
   "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx",
-  "apps/web/app/(protected)/inventory/waste/new/page.tsx",
 ];
 const OPERATOR_EMBEDDED_HEADER_BRANCH_GUARD =
   /(?:!\s*embedded\s*\?|\bembedded\s*\?)/;

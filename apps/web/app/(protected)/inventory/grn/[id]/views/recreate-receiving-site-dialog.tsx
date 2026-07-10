@@ -13,9 +13,9 @@ import {
   updateDraftGrnReceivingSite,
 } from "../../../grn-actions";
 import {
-  grnCopy,
+  GRN_DETAIL_COPY as grnCopy,
   type RecreateReceivingLocationOption,
-} from "./grn-detail-types";
+} from "@lib/inventory/grn-detail-model";
 
 const draftReceivingSiteSchema = z.object({
   targetLocationId: z.string().min(1, {

@@ -25,11 +25,7 @@ import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form/combobox";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
-import {
-  WasteReasonDropdown,
-  isAlwaysTier2Reason,
-  isRiskyReason,
-} from "@/(protected)/inventory/_components/waste-reason-dropdown";
+import { WasteReasonDropdown } from "@/(protected)/inventory/_components/waste-reason-dropdown";
 import { WasteTierBadge } from "@/(protected)/inventory/_components/waste-tier-badge";
 import { WastePhotoUpload } from "@/(protected)/inventory/_components/waste-photo-upload";
 import { ShiftCapMeter } from "@/(protected)/inventory/_components/shift-cap-meter";
@@ -46,51 +42,19 @@ import {
 import { formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 import {
+  newWasteLine,
+  previewWasteTier,
+  type WasteFormContext,
+  type WasteLineState,
+  type WasteRollingStatus,
+} from "@lib/inventory/waste-create-model";
+import {
   AppDetailFooter,
   AppPageHeader,
   AppSection,
   DocumentFormFrame,
 } from "@/components/surface";
-
-/* ─── Context shape from server component ─── */
-
 import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
-export interface WasteFormContext {
-  tenantId: number;
-  branch: { id: number; name: string; kind: string };
-  locations: Array<{ id: number; name: string; kind: string }>;
-  ingredients: Array<{
-    id: number;
-    name: string;
-    unit: string;
-    unitCost: number | null;
-    issueUnits: Array<{
-      unitId: number;
-      code: string;
-      label: string;
-      isBase: boolean;
-      toBaseFactor: number;
-    }>;
-    stockLevels: Array<{
-      locationId: number;
-      quantity: number;
-      unitCost: number | null;
-    }>;
-  }>;
-  capStatus: {
-    shiftKey: string;
-    shiftSum: number;
-    shiftCap: number;
-    branchToday: number;
-    branchCap: number;
-  };
-}
-
-/* ─── Client-side tier preview (mirrors DB trigger logic) ─── */
-
-const TIER_1_VALUE = 150_000;
-const TIER_2_VALUE = 500_000;
-const SHIFT_CAP = 1_500_000;
 
 const toastSelectLocation = "Chọn location";
 const toastSelectIngredientForEachLine = "Chọn nguyên liệu cho mỗi dòng";
@@ -103,97 +67,28 @@ const toastQtyExceedsStock = "Số lượng vượt tồn hiện tại.";
 const toastCreateFailed = "Không tạo được phiếu hủy";
 const toastPhotoRequired = (ingredientName: string, tier: number) =>
   `Dòng "${ingredientName}" cần ảnh (tier ${tier})`;
-const toastCreateSuccess = (issueNumber: string, itemsCreated: number, requiresApproval: boolean) =>
+const toastCreateSuccess = (
+  issueNumber: string,
+  itemsCreated: number,
+  requiresApproval: boolean,
+) =>
   `Đã tạo phiếu ${issueNumber} (${itemsCreated} dòng)${requiresApproval ? " • Chờ QLV duyệt" : ""}`;
 const labelNoWac = "Chưa có WAG";
 const labelLocationStock = (qty: string, unit: string) =>
   `Tồn vị trí: ${qty} ${unit}`;
 
-function previewTier(line: {
-  value: number;
-  baseQuantity: number;
-  availableQuantity: number;
-  reasonCode: string;
-  projectedShiftSum: number;
-  projectedBranchSum: number;
-  branchCap: number;
-  rollingSum: number | null;
-  pendingIngredientValue: number;
-}): { tier: 0 | 1 | 2; photoRequired: boolean; approvalRequired: boolean } {
-  const qtyRatio =
-    line.availableQuantity > 0 ? line.baseQuantity / line.availableQuantity : 0;
-  const projectedRollingSum =
-    line.rollingSum === null
-      ? null
-      : line.rollingSum + line.pendingIngredientValue;
-  const photoRequired =
-    line.value >= TIER_1_VALUE ||
-    qtyRatio >= 0.5 ||
-    (projectedRollingSum !== null && projectedRollingSum >= TIER_1_VALUE) ||
-    isRiskyReason(line.reasonCode);
-  const approvalRequired =
-    line.value >= TIER_2_VALUE ||
-    isAlwaysTier2Reason(line.reasonCode) ||
-    line.projectedShiftSum >= SHIFT_CAP ||
-    line.projectedBranchSum > line.branchCap;
-  const tier: 0 | 1 | 2 = approvalRequired ? 2 : photoRequired ? 1 : 0;
-  return { tier, photoRequired, approvalRequired };
-}
-
-/* ─── Form state ─── */
-
-type LineState = {
-  uid: string;
-  ingredientId: number | null;
-  unit: string;
-  entryUnitId: string;
-  unitCost: string; // input string
-  quantity: string; // input string
-  reasonCode: string;
-  note: string;
-  photoUrls: string[];
-};
-
-type RollingStatus = {
-  rollingSum: number;
-  lineCount: number;
-  tierOneThreshold: number;
-};
-
-function newLine(uid: string): LineState {
-  return {
-    uid,
-    ingredientId: null,
-    unit: "kg",
-    entryUnitId: "",
-    unitCost: "",
-    quantity: "",
-    reasonCode: "",
-    note: "",
-    photoUrls: [],
-  };
-}
-
-export function WasteCreateClient({
-  context,
-  successHref,
-  cancelHref,
-  embedded = false,
-}: {
-  context: WasteFormContext;
-  successHref?: string;
-  cancelHref?: string;
-  embedded?: boolean;
-}) {
+export function WasteCreateClient({ context }: { context: WasteFormContext }) {
   const router = useRouter();
   const nextLineId = useRef(1);
   const [locationId, setLocationId] = useState<number | null>(
     context.locations[0]?.id ?? null,
   );
   const [formNotes, setFormNotes] = useState("");
-  const [lines, setLines] = useState<LineState[]>(() => [newLine("line-0")]);
+  const [lines, setLines] = useState<WasteLineState[]>(() => [
+    newWasteLine("line-0"),
+  ]);
   const [rollingByLine, setRollingByLine] = useState<
-    Record<string, RollingStatus | undefined>
+    Record<string, WasteRollingStatus | undefined>
   >({});
   const [forcePhotoLineUids, setForcePhotoLineUids] = useState<Set<string>>(
     () => new Set(),
@@ -229,14 +124,14 @@ export function WasteCreateClient({
   const projectedShiftSum = context.capStatus.shiftSum + totalValue;
   const projectedBranchSum = context.capStatus.branchToday + totalValue;
 
-  function updateLine(uid: string, patch: Partial<LineState>) {
+  function updateLine(uid: string, patch: Partial<WasteLineState>) {
     setLines((prev) =>
       prev.map((l) => (l.uid === uid ? { ...l, ...patch } : l)),
     );
   }
 
   const handleRollingStatusChange = useCallback(
-    (uid: string, status: RollingStatus | null) => {
+    (uid: string, status: WasteRollingStatus | null) => {
       setRollingByLine((prev) => {
         if (status === null) {
           if (!prev[uid]) return prev;
@@ -251,7 +146,7 @@ export function WasteCreateClient({
   );
 
   function getLineBaseQuantity(
-    line: LineState,
+    line: WasteLineState,
     ingredient: WasteFormContext["ingredients"][number] | null | undefined,
   ) {
     const issueUnit = ingredient?.issueUnits.find(
@@ -261,7 +156,7 @@ export function WasteCreateClient({
   }
 
   function getLineValue(
-    line: LineState,
+    line: WasteLineState,
     ingredient: WasteFormContext["ingredients"][number] | null | undefined,
   ) {
     return getLineBaseQuantity(line, ingredient) * (Number(line.unitCost) || 0);
@@ -339,7 +234,7 @@ export function WasteCreateClient({
   function addLine() {
     const uid = `line-${nextLineId.current}`;
     nextLineId.current += 1;
-    setLines((prev) => [...prev, newLine(uid)]);
+    setLines((prev) => [...prev, newWasteLine(uid)]);
   }
 
   function handleIngredientChange(uid: string, value: string) {
@@ -373,7 +268,7 @@ export function WasteCreateClient({
     );
   }
 
-    function handleSubmit() {
+  function handleSubmit() {
     if (locationId === null) {
       toast.error(toastSelectLocation);
       return;
@@ -419,7 +314,7 @@ export function WasteCreateClient({
       }
       // Preview tier — if photo required but none attached, block
       const value = baseQty * cost;
-      const pv = previewTier({
+      const pv = previewWasteTier({
         value,
         baseQuantity: baseQty,
         availableQuantity,
@@ -472,10 +367,7 @@ export function WasteCreateClient({
             res.data?.requiresApproval ?? false,
           ),
         );
-        const fallbackSuccessHref = embedded
-          ? `/br/${context.branch.id}/stock`
-          : `/inventory/issues/${res.data?.issueId}`;
-        router.push(successHref ?? fallbackSuccessHref);
+        router.push(`/inventory/issues/${res.data?.issueId}`);
       } catch (error) {
         console.error("inventory.waste.create_failed", error);
         toast.error(toastCreateFailed);
@@ -501,40 +393,17 @@ export function WasteCreateClient({
 
   const content = (
     <>
-      {embedded ? (
-        <Item
-          variant="outline"
-          className="flex flex-col items-stretch gap-2 bg-card p-2 shadow-none"
-        >
-          <BranchDailyCapBanner
-            branchToday={context.capStatus.branchToday}
-            branchCap={context.capStatus.branchCap}
-            pendingDelta={totalValue}
-            className="p-2 py-1.5"
-          />
-          <ShiftCapMeter
-            shiftSum={context.capStatus.shiftSum}
-            shiftCap={context.capStatus.shiftCap}
-            pendingDelta={totalValue}
-            shiftLabel={context.capStatus.shiftKey}
-            className="p-2 gap-1"
-          />
-        </Item>
-      ) : (
-        <>
-          <BranchDailyCapBanner
-            branchToday={context.capStatus.branchToday}
-            branchCap={context.capStatus.branchCap}
-            pendingDelta={totalValue}
-          />
-          <ShiftCapMeter
-            shiftSum={context.capStatus.shiftSum}
-            shiftCap={context.capStatus.shiftCap}
-            pendingDelta={totalValue}
-            shiftLabel={context.capStatus.shiftKey}
-          />
-        </>
-      )}
+      <BranchDailyCapBanner
+        branchToday={context.capStatus.branchToday}
+        branchCap={context.capStatus.branchCap}
+        pendingDelta={totalValue}
+      />
+      <ShiftCapMeter
+        shiftSum={context.capStatus.shiftSum}
+        shiftCap={context.capStatus.shiftCap}
+        pendingDelta={totalValue}
+        shiftLabel={context.capStatus.shiftKey}
+      />
 
       <AppSection
         title={messages.inventory.waste.generalInfoTitle}
@@ -547,11 +416,7 @@ export function WasteCreateClient({
             onValueChange={handleLocationChange}
             disabled={isSubmitting}
           >
-            <SelectTrigger
-              id="waste-loc"
-              size={embedded ? "touch" : "default"}
-              className="w-full"
-            >
+            <SelectTrigger id="waste-loc" size="default" className="w-full">
               <SelectValue
                 placeholder={messages.inventory.waste.chooseLocation}
               />
@@ -603,7 +468,7 @@ export function WasteCreateClient({
           const maxQuantityValue =
             formatIssueMaxEntryQuantity(maxEntryQuantity);
           const lineIssueUnits = selectedIngredient?.issueUnits ?? [];
-          const preview = previewTier({
+          const preview = previewWasteTier({
             value,
             baseQuantity: baseQty,
             availableQuantity,
@@ -640,7 +505,7 @@ export function WasteCreateClient({
                     />
                     {lines.length > 1 ? (
                       <Button
-                        size={embedded ? "icon-touch" : "icon"}
+                        size="icon"
                         variant="ghost"
                         type="button"
                         onClick={() => removeLine(line.uid)}
@@ -666,7 +531,7 @@ export function WasteCreateClient({
                     }
                     onValueChange={(v) => handleIngredientChange(line.uid, v)}
                     placeholder={messages.inventory.waste.chooseIngredient}
-                    size={embedded ? "touch" : "sm"}
+                    size="sm"
                     className="w-full"
                   />
                 </div>
@@ -697,7 +562,7 @@ export function WasteCreateClient({
                     >
                       <SelectTrigger
                         id={`unit-${line.uid}`}
-                        size={embedded ? "touch" : "sm"}
+                        size="sm"
                         className="w-full"
                       >
                         <SelectValue
@@ -734,7 +599,7 @@ export function WasteCreateClient({
                     <Label htmlFor={`qty-${line.uid}`}>
                       {FORM_VI.quantity}
                     </Label>
-                    <InputGroup className={embedded ? "h-12" : undefined}>
+                    <InputGroup>
                       <FormattedNumberInput
                         id={`qty-${line.uid}`}
                         maxFractionDigits={3}
@@ -776,10 +641,7 @@ export function WasteCreateClient({
                     </Label>
                     <div
                       id={`cost-${line.uid}`}
-                      className={cn(
-                        "flex h-10 items-center bg-muted/30 px-3 font-mono text-sm tabular-nums",
-                        embedded && "h-12",
-                      )}
+                      className="flex h-10 items-center bg-muted/30 px-3 font-mono text-sm tabular-nums"
                     >
                       {cost > 0 ? formatVND(cost) : labelNoWac}
                     </div>
@@ -804,7 +666,7 @@ export function WasteCreateClient({
                     value={line.reasonCode as never}
                     onChange={(v) => updateLine(line.uid, { reasonCode: v })}
                     disabled={isSubmitting}
-                    size={embedded ? "touch" : "sm"}
+                    size="sm"
                     className="w-full"
                   />
                 </div>
@@ -854,7 +716,7 @@ export function WasteCreateClient({
         <Button
           type="button"
           variant="outline"
-          size={embedded ? "touch" : "default"}
+          size="default"
           onClick={addLine}
           disabled={isSubmitting}
           className="w-full sm:w-auto"
@@ -872,41 +734,25 @@ export function WasteCreateClient({
       </div>
 
       <AppDetailFooter
-        sticky={embedded}
-        className={embedded ? undefined : "border-0 py-0"}
+        className="border-0 py-0"
         leading={
           <Button
             variant="outline"
-            size={embedded ? "touch" : "default"}
-            onClick={() =>
-              router.push(
-                cancelHref ??
-                  (embedded
-                    ? `/br/${context.branch.id}/stock`
-                    : "/inventory/issues"),
-              )
-            }
+            size="default"
+            onClick={() => router.push("/inventory/issues")}
             disabled={isSubmitting}
           >
             {ACTIONS_VI.cancel}
           </Button>
         }
         trailing={
-          <Button
-            size={embedded ? "touch-lg" : "default"}
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
+          <Button size="default" onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? <Spinner /> : messages.inventory.waste.createSlip}
           </Button>
         }
       />
     </>
   );
-
-  if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
-  }
 
   return (
     <DocumentFormFrame header={header} width="wide" density="compact">

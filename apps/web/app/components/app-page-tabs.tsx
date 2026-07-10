@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { formatCount } from "@comtammatu/shared/format";
 import { TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { UrlTabs } from "@/_components/url-tabs";
@@ -42,7 +43,7 @@ export function AppPageTabs({
             <span>{item.label}</span>
             {typeof item.count === "number" ? (
               <Badge variant="secondary" className="ml-1.5 font-mono">
-                {item.count}
+                {formatCount(item.count)}
               </Badge>
             ) : null}
             {item.badge}

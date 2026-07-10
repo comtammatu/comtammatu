@@ -49,7 +49,10 @@ export function AppHeaderBrand({
       ) : null}
     </>
   );
-  const className = "flex min-w-0 items-center gap-2";
+  const className = cn(
+    "flex items-center gap-2",
+    showText ? "min-w-0" : "min-h-11 min-w-11 shrink-0 justify-center",
+  );
 
   return href ? (
     <Link

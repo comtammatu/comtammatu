@@ -10,6 +10,7 @@ import { cn } from "../lib/utils";
 const THEMES = { light: "", dark: ".dark" } as const;
 
 const INITIAL_DIMENSION = { width: 320, height: 200 } as const;
+const VI_NUMBER_FORMATTER = new Intl.NumberFormat("vi-VN");
 type TooltipNameType = number | string;
 
 export type ChartConfig = Record<
@@ -255,7 +256,7 @@ function ChartTooltipContent({
                       {item.value != null && (
                         <span className="font-mono font-medium text-foreground tabular-nums">
                           {typeof item.value === "number"
-                            ? item.value.toLocaleString()
+                            ? VI_NUMBER_FORMATTER.format(item.value)
                             : String(item.value)}
                         </span>
                       )}

@@ -11,6 +11,8 @@ import {
   resolveRoleHomeLink,
   type StaffRole,
 } from "@comtammatu/shared/auth";
+import { formatCount } from "@comtammatu/shared/format";
+import { formatVNClockTime } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
@@ -224,9 +226,9 @@ export async function StaffCheckoutApprovalsPageContent({
     const branchName = normalizeBranch(record.branches);
     const shiftRange =
       shift.startTime || shift.endTime
-        ? `${shift.startTime?.slice(0, 5) ?? "—"} - ${
-            shift.endTime?.slice(0, 5) ?? "—"
-          }`
+        ? `${formatVNClockTime(shift.startTime)} - ${formatVNClockTime(
+            shift.endTime,
+          )}`
         : null;
 
     const checklistRows = (record.attendance_checklist_items ?? []) as Array<{
@@ -289,7 +291,7 @@ export async function StaffCheckoutApprovalsPageContent({
         description="Duyệt xong thì giờ ra được ghi theo lúc nhân viên gửi yêu cầu."
         tone={items.length > 0 ? "warning" : "success"}
         badge={{
-          children: `${items.length} chờ duyệt`,
+          children: `${formatCount(items.length)} chờ duyệt`,
           variant: items.length > 0 ? "warning" : "success",
         }}
       >

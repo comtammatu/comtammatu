@@ -6,6 +6,7 @@ import {
   Clock,
   Home,
   Package,
+  Send,
   Truck,
   Users,
 } from "lucide-react";
@@ -21,11 +22,15 @@ const branchCopy = messages.settings.branch;
 function centralNavItems(
   branchId: number,
   branchKind: BranchKind,
+  showEmployeeLinks: boolean,
 ): ShellNavItem[] {
   const base = `/br/${branchId}`;
   const home = {
     href: base,
-    label: APP_COPY_VI.operatorHome,
+    label:
+      branchKind === "central_kitchen"
+        ? branchCopy.centralKitchenNavHome
+        : APP_COPY_VI.operatorHome,
     icon: Home,
     exact: true,
   };
@@ -60,19 +65,35 @@ function centralNavItems(
   return [
     home,
     {
+      href: `${base}/stock/grn`,
+      label: branchCopy.centralKitchenNavReceive,
+      icon: Truck,
+      exact: false,
+      matchPrefixes: [`${base}/stock/purchase-orders`],
+    },
+    {
       href: `${base}/stock/production`,
       label: branchCopy.centralNavProduction,
       icon: ChefHat,
       exact: false,
+      matchPrefixes: [`${base}/stock/production/recipes`],
     },
-    stock,
     {
-      href: `${base}/stock/receive`,
-      label: branchCopy.centralNavReceive,
-      icon: Truck,
+      href: `${base}/stock/transfer`,
+      label: branchCopy.centralKitchenNavDispatch,
+      icon: Send,
       exact: false,
-      matchPrefixes: [`${base}/stock/grn`],
     },
+    ...(showEmployeeLinks
+      ? [
+          {
+            href: `${base}/shift`,
+            label: branchCopy.centralNavWorkforce,
+            icon: Users,
+            exact: false,
+          },
+        ]
+      : []),
   ];
 }
 
@@ -91,7 +112,7 @@ export function OperatorBottomNav({
 
   const items: ShellNavItem[] =
     branchKind !== "branch"
-      ? centralNavItems(branchId, branchKind)
+      ? centralNavItems(branchId, branchKind, showEmployeeLinks)
       : [
           {
             href: `/br/${branchId}`,

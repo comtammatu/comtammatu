@@ -45,9 +45,8 @@ const paymentSettingsSchema = z.object({
     .max(40)
     .regex(/^[A-Za-z0-9 ]+$/, {
       error: "Tiền tố chỉ chứa chữ, số và khoảng trắng.",
-    }),
+  }),
   [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX]: paymentContentTokenSchema,
-  [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN]: paymentContentTokenSchema,
   [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN]:
     paymentContentTokenSchema,
   [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN]:
@@ -87,9 +86,6 @@ export async function updatePaymentSettings(
     [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX]: contentToken(
       SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX,
     ),
-    [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN]: contentToken(
-      SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN,
-    ),
     [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN]: contentToken(
       SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN,
     ),
@@ -107,14 +103,13 @@ export async function updatePaymentSettings(
   }
 
   const contentTokens = [
-    parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN],
     parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN],
     parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN],
   ];
   if (new Set(contentTokens).size !== contentTokens.length) {
     return {
       success: false,
-      error: "Các mã DON, CHI, NOP phải khác nhau để SePay không nhận nhầm.",
+      error: "Hai mã CHI và NOP phải khác nhau để SePay không nhận nhầm.",
     };
   }
 

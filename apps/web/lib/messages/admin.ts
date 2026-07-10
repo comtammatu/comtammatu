@@ -1,3 +1,5 @@
+import { formatCount } from "@comtammatu/shared/format";
+
 export const admin = {
   nav: {
     ariaLabel: "Điều hướng quản trị",
@@ -43,7 +45,7 @@ export const admin = {
     title: "Nhật ký quyền hạn",
     description:
       "Mọi thao tác gán/thu hồi quyền và áp dụng mẫu quyền. Ghi nhật ký không thay đổi được.",
-    recentItems: (count: number) => `${count} mục gần nhất`,
+    recentItems: (count: number) => `${formatCount(count)} mục gần nhất`,
     empty: "Không có thay đổi nào.",
     time: "Thời gian",
     action: "Hành động",
@@ -79,7 +81,8 @@ export const admin = {
     fieldDefaultBranch: "Chi nhánh mặc định",
     fieldRole: "Role",
     fieldStatus: "Trạng thái",
-    historyTitle: (count: number) => `Lịch sử thay đổi (${count} mục gần nhất)`,
+    historyTitle: (count: number) =>
+      `Lịch sử thay đổi (${formatCount(count)} mục gần nhất)`,
     branchFallback: (branchId: number) => `branch #${branchId}`,
   },
 } as const;

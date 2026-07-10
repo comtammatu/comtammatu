@@ -24,6 +24,8 @@ export default async function SelfOrderPage({
   if (!snapshot.ok) {
     return (
       <AppPage
+        as="main"
+        id="main-content"
         width="narrow"
         density="compact"
         mobile

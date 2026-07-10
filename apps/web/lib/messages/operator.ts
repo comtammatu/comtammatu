@@ -1,3 +1,5 @@
+import { formatCount } from "@comtammatu/shared/format";
+
 export const operator = {
   header: {
     notificationsAria: "Thông báo",
@@ -161,7 +163,7 @@ export const operator = {
     loadLeaveFailed: "Không thể tải nghỉ phép.",
     loadCountSlipsFailed: "Không thể tải phiếu kiểm kê hôm nay.",
     filterAriaLabel: "Lọc lượt ca hôm nay",
-    shiftGroupCount: (count: number) => `${count} lượt`,
+    shiftGroupCount: (count: number) => `${formatCount(count)} lượt`,
     filters: {
       all: "Tất cả ca",
       working: "Đang làm",

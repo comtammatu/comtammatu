@@ -18,6 +18,7 @@ import {
 const DEFAULT_BUCKET = "inventory-attachments";
 
 type Props = {
+  id?: string;
   tenantId: number;
   /** Folder under tenant prefix, e.g. "grn/123" or "supplier-return-line/456". */
   folder: string;
@@ -45,6 +46,7 @@ function extFromName(name: string): string {
 }
 
 export function PhotoUploadInput({
+  id,
   tenantId,
   folder,
   value,
@@ -147,6 +149,7 @@ export function PhotoUploadInput({
       ) : (
         <div className="flex flex-col gap-2">
           <input
+            id={id}
             ref={inputRef}
             type="file"
             accept={
@@ -180,7 +183,9 @@ export function PhotoUploadInput({
                 onClick={() => setPasteMode((v) => !v)}
                 disabled={disabled}
               >
-                {pasteMode ? INVENTORY_VI.pasteUrlClose : INVENTORY_VI.pasteUrlOpen}
+                {pasteMode
+                  ? INVENTORY_VI.pasteUrlClose
+                  : INVENTORY_VI.pasteUrlOpen}
               </Button>
             ) : null}
           </div>

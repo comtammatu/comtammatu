@@ -18,7 +18,8 @@ import { POS_ERROR_CODES } from "../_utils/error-codes";
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Mappings for `supabase.rpc("confirm_cash_payment", ...)` failures.
+ * Mappings for `confirm_cash_payment_with_invoice_binding`, which delegates
+ * the commercial close to `confirm_cash_payment` after self-order guards.
  * Order: under-payment / sane-bound checks first (most common operator
  * errors), then permission/tenant defence-in-depth (server-side gates
  * should never raise these in practice but UI must still show stable
@@ -27,6 +28,12 @@ import { POS_ERROR_CODES } from "../_utils/error-codes";
  */
 export const confirmCashPaymentRpcMappings: readonly RpcErrorMapping[] = [
   // Cash-specific sentinels first.
+  {
+    match: includesAny("self_order_payment_cancel_staff_required"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Đơn đang chờ chuyển khoản từ QR tự gọi món. Hãy kiểm tra tiền về và hủy yêu cầu tại hàng chờ trước khi thu tiền mặt.",
+  },
   {
     match: includesAny("must be >=", "must be >", "cash_received"),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,

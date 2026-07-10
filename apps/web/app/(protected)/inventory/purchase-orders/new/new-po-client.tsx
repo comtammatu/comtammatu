@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { formatPercent } from "@comtammatu/shared/format";
 import {
   ArrowLeft as IconArrowLeft,
   Lightbulb as IconBulb,
@@ -23,7 +24,6 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { Label } from "@comtammatu/ui/components/label";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Select,
@@ -44,7 +44,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
-import { Combobox } from "@/components/form/combobox";
+import { Combobox, FormField } from "@/components/form";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { formatQty, formatVND } from "../../_lib/format";
 import {
@@ -503,12 +503,13 @@ function SupplierSection({
               <SheetTitle>{messages.inventory.po.headerInfoTitle}</SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-3 overflow-y-auto px-3 py-3 sm:px-4">
-              <div className="flex flex-col gap-1.5">
-                <Label>
-                  {messages.inventory.po.supplierRequired}{" "}
-                  <span className="text-destructive">*</span>
-                </Label>
+              <FormField
+                controlId="po-supplier"
+                label={messages.inventory.po.supplierRequired}
+                required
+              >
                 <Combobox
+                  id="po-supplier"
                   value={supplierId}
                   onValueChange={onSupplierChange}
                   options={suppliers.map((s) => ({
@@ -520,9 +521,8 @@ function SupplierSection({
                     messages.inventory.po.supplierSearchPlaceholder
                   }
                 />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="notes">{FORM_VI.notes}</Label>
+              </FormField>
+              <FormField controlId="notes" label={FORM_VI.notes}>
                 <Textarea
                   id="notes"
                   value={notes}
@@ -531,7 +531,7 @@ function SupplierSection({
                   placeholder={messages.inventory.po.notesPlaceholder}
                   className="min-h-24"
                 />
-              </div>
+              </FormField>
             </div>
             <SheetFooter>
               <Button type="button" size="touch-lg" asChild>
@@ -934,18 +934,18 @@ function LineItemsSection({
             const dev = lineDeviations.get(line.ingredientId);
             return (
               <Item key={line.ingredientId} variant="outline" size="sm">
-	                <ItemContent className="min-w-0">
-	                  <ItemTitle className="w-full">
-	                    <span className="truncate">{line.ingredientName}</span>
-	                  </ItemTitle>
-	                  <ItemDescription>
-	                    {formatQty(line.quantity)} {line.unit}
-	                    {line.unitPriceEst != null
-	                      ? messages.inventory.po.totalAmountSuffix(
-	                          formatDongForSuffix(line.unitPriceEst),
-	                        )
-	                      : ""}
-	                  </ItemDescription>
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="w-full">
+                    <span className="truncate">{line.ingredientName}</span>
+                  </ItemTitle>
+                  <ItemDescription>
+                    {formatQty(line.quantity)} {line.unit}
+                    {line.unitPriceEst != null
+                      ? messages.inventory.po.totalAmountSuffix(
+                          formatDongForSuffix(line.unitPriceEst),
+                        )
+                      : ""}
+                  </ItemDescription>
                   {dev && Math.abs(dev.deviation_pct) > 5 ? (
                     <InlineDeviationHint deviation={dev} unit={line.unit} />
                   ) : null}
@@ -1087,11 +1087,13 @@ function AddLineSheet({
             </SheetHeader>
 
             <div className="flex flex-col gap-3 p-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-                  {PRODUCT_VI.rawIngredient}
-                </Label>
+              <FormField
+                controlId="po-line-ingredient"
+                label={PRODUCT_VI.rawIngredient}
+                required
+              >
                 <Combobox
+                  id="po-line-ingredient"
                   value={draft.ingredientId}
                   onValueChange={onIngredientChange}
                   options={ingredients.map((i) => ({
@@ -1108,22 +1110,21 @@ function AddLineSheet({
                     messages.inventory.po.ingredientSearchPlaceholder
                   }
                 />
-              </div>
+              </FormField>
 
               <UnitField
                 options={unitOptions}
                 entryUnitId={draft.entryUnitId}
-                unit={draft.unit}
                 onUnitChange={onUnitChange}
               />
 
               <div className="grid grid-cols-2 gap-3">
-	                <NumpadValueButton
-	                  label={FORM_VI.quantity}
-	                  display={formatQty(draft.quantity)}
-	                  detail={draft.unit}
-	                  onClick={() => onOpenNumpad("qty")}
-	                />
+                <NumpadValueButton
+                  label={FORM_VI.quantity}
+                  display={formatQty(draft.quantity)}
+                  detail={draft.unit}
+                  onClick={() => onOpenNumpad("qty")}
+                />
                 <NumpadValueButton
                   label={messages.inventory.po.unitPrice}
                   display={
@@ -1211,40 +1212,39 @@ function NumpadValueButton({
 function UnitField({
   options,
   entryUnitId,
-  unit,
   onUnitChange,
 }: {
   options: PurchaseUnitOption[];
   entryUnitId: number | null;
-  unit: string;
   onUnitChange: (unitId: string) => void;
 }) {
-  if (options.length === 0) {
-    return (
-      <Select disabled value="">
-        <SelectTrigger size="touch" className="w-full" aria-label={unit}>
-          <SelectValue placeholder={messages.inventory.po.selectUnit} />
-        </SelectTrigger>
-        <SelectContent />
-      </Select>
-    );
-  }
   return (
-    <Select
-      value={entryUnitId != null ? String(entryUnitId) : ""}
-      onValueChange={onUnitChange}
-    >
-      <SelectTrigger size="touch" className="w-full" aria-label={unit}>
-        <SelectValue placeholder={messages.inventory.po.selectUnit} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((o) => (
-          <SelectItem key={o.unitId} value={String(o.unitId)}>
-            {o.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <FormField controlId="po-line-unit" label={FORM_VI.unit}>
+      {options.length === 0 ? (
+        <Select disabled value="">
+          <SelectTrigger id="po-line-unit" size="field" className="w-full">
+            <SelectValue placeholder={messages.inventory.po.selectUnit} />
+          </SelectTrigger>
+          <SelectContent />
+        </Select>
+      ) : (
+        <Select
+          value={entryUnitId != null ? String(entryUnitId) : ""}
+          onValueChange={onUnitChange}
+        >
+          <SelectTrigger id="po-line-unit" size="field" className="w-full">
+            <SelectValue placeholder={messages.inventory.po.selectUnit} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((o) => (
+              <SelectItem key={o.unitId} value={String(o.unitId)}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </FormField>
   );
 }
 
@@ -1267,12 +1267,12 @@ function InlineDeviationHint({
     >
       <Icon className="size-3" />
       <span>
-	        {messages.inventory.po.deviationHint(
-	          deviation.sample_count,
-	          formatDongForSuffix(deviation.avg_price),
-	          unit,
-	          sign,
-	          deviation.deviation_pct,
+        {messages.inventory.po.deviationHint(
+          deviation.sample_count,
+          formatDongForSuffix(deviation.avg_price),
+          unit,
+          sign,
+          formatPercent(deviation.deviation_pct),
         )}
       </span>
     </span>

@@ -68,8 +68,13 @@ test("inventory unit option helpers delegate to one shared implementation", () =
 
 test("stocktake wizard commits or rejects the active buffer before row navigation", () => {
   assert.match(stocktakeWizardSource, /const commitActiveBuffer = useCallback/);
-  assert.match(stocktakeWizardSource, /raw\.endsWith\("\."\)/);
-  assert.match(stocktakeWizardSource, /onCountChange\(activeLine\.ingredientId, qty\)/);
+  assert.match(stocktakeWizardSource, /parseVietnameseNumericInput/);
+  assert.match(stocktakeWizardSource, /parsed\.state !== "valid"/);
+  assert.match(
+    stocktakeWizardSource,
+    /onCountChange\(activeLine\.ingredientId, parsed\.value\)/,
+  );
+  assert.doesNotMatch(stocktakeWizardSource, /Number\(raw\)/);
   assert.match(stocktakeWizardSource, /const moveActiveIndex = useCallback/);
   assert.match(
     stocktakeWizardSource,

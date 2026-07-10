@@ -12,7 +12,10 @@ export function jsonError(
   code: string,
   message: string = SELF_ORDER_VI.submitFailed,
 ) {
-  return NextResponse.json({ ok: false, code, message }, { status });
+  const response = NextResponse.json({ ok: false, code, message }, { status });
+  response.headers.set("Cache-Control", "private, no-store, max-age=0");
+  response.headers.set("Vary", "Cookie");
+  return response;
 }
 
 export async function parseJsonBody(request: Request) {

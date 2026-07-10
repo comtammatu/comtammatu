@@ -445,7 +445,7 @@ export async function createStockTransfer(
     return { success: false, error: "Điểm vận hành không hợp lệ." };
   }
   const wantsBranchKitchenTarget =
-    isIntraBranch || parsed.data.toLocationKind === "branch_kitchen";
+    parsed.data.toLocationKind === "branch_kitchen";
   if (wantsBranchKitchenTarget && toKind !== "branch") {
     return {
       success: false,

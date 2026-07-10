@@ -8,6 +8,8 @@ export interface TransferDetail {
   toBranchId: number;
   fromBranch: string;
   toBranch: string;
+  fromLocation: string;
+  toLocation: string;
   createdBy: string;
   date: string;
   note: string | null;

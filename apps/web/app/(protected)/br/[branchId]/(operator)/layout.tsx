@@ -89,12 +89,15 @@ export default async function OperatorLayout({
                   asChild
                   variant="outline"
                   size="touch"
+                  className="min-w-11"
                   aria-label={MODULE_ACL.branch_picker.label}
                   title={MODULE_ACL.branch_picker.label}
                 >
                   <Link href={MODULE_ACL.branch_picker.path}>
                     <IconBuilding2 data-icon="inline-start" />
-                    <span>{MODULE_ACL.branch_picker.label}</span>
+                    <span className="hidden sm:inline">
+                      {MODULE_ACL.branch_picker.label}
+                    </span>
                   </Link>
                 </Button>
               ) : null}

@@ -9,23 +9,12 @@ import {
 } from "@comtammatu/ui/components/select";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { WASTE_REASON_LABELS_VI } from "@comtammatu/shared/labels";
+import {
+  isAlwaysTier2WasteReason,
+  isRiskyWasteReason,
+} from "@lib/inventory/waste-tier-model";
 
 type WasteReason = keyof typeof WASTE_REASON_LABELS_VI;
-
-/** Reason codes that always force tier 2 (regardless of value). */
-const ALWAYS_TIER_2: ReadonlyArray<WasteReason> = [
-  "found_missing",
-  "theft_suspected",
-];
-
-/** Reason codes that trigger tier 1 photo even at low value. */
-const RISKY_REASONS: ReadonlyArray<WasteReason> = [
-  "dropped",
-  "quality_fail",
-  "contaminated",
-  "found_missing",
-  "theft_suspected",
-];
 
 interface WasteReasonDropdownProps {
   value: WasteReason | "";
@@ -75,8 +64,8 @@ export function WasteReasonDropdown({
       </SelectTrigger>
       <SelectContent>
         {options.map((key) => {
-          const isAlwaysT2 = ALWAYS_TIER_2.includes(key);
-          const isRisky = RISKY_REASONS.includes(key);
+          const isAlwaysT2 = isAlwaysTier2WasteReason(key);
+          const isRisky = isRiskyWasteReason(key);
           return (
             <SelectItem key={key} value={key}>
               {WASTE_REASON_LABELS_VI[key]}
@@ -91,10 +80,10 @@ export function WasteReasonDropdown({
 
 /** Runtime helper for clients to preview whether a reason forces tier 2. */
 export function isAlwaysTier2Reason(code: string): boolean {
-  return (ALWAYS_TIER_2 as ReadonlyArray<string>).includes(code);
+  return isAlwaysTier2WasteReason(code);
 }
 
 /** Runtime helper — reason triggers tier 1 photo regardless of value. */
 export function isRiskyReason(code: string): boolean {
-  return (RISKY_REASONS as ReadonlyArray<string>).includes(code);
+  return isRiskyWasteReason(code);
 }

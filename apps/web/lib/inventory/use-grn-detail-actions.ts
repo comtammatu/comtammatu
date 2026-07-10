@@ -1,0 +1,243 @@
+"use client";
+
+import type { Dispatch, SetStateAction, TransitionStartFunction } from "react";
+import { useRouter } from "next/navigation";
+import { formatPercent } from "@comtammatu/shared/format";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { notify } from "@comtammatu/ui/lib/notify";
+import { m, messages } from "@lib/messages";
+import {
+  deleteGrnLine,
+  upsertGrnLine,
+} from "@/(protected)/inventory/grn-actions";
+import { confirmGrn } from "@/(protected)/inventory/procurement-actions";
+import {
+  deriveGrnVariance,
+  GRN_DETAIL_COPY,
+  type EditableGrnLine,
+  type GrnDetail,
+} from "./grn-detail-model";
+
+interface UseGrnDetailActionsArgs {
+  grn: GrnDetail;
+  lines: EditableGrnLine[];
+  dirtyLines: EditableGrnLine[];
+  setLines: Dispatch<SetStateAction<EditableGrnLine[]>>;
+  startSave: TransitionStartFunction;
+  startConfirm: TransitionStartFunction;
+  grnListBasePath?: string;
+  grnMobileBackPath?: string;
+  purchaseOrdersBasePath?: string;
+  isMobile: boolean;
+}
+
+interface UseGrnDetailActionsReturn {
+  handleSave: () => Promise<void>;
+  handleDeleteLine: (line: EditableGrnLine) => Promise<boolean>;
+  upsertLocalLine: (line: EditableGrnLine) => void;
+  handleConfirmGrn: () => Promise<void>;
+}
+
+export function useGrnDetailActions({
+  grn,
+  lines,
+  dirtyLines,
+  setLines,
+  startSave,
+  startConfirm,
+  grnListBasePath = "/inventory/grn",
+  grnMobileBackPath = "/inventory/grn/new",
+  purchaseOrdersBasePath = "/inventory/purchase-orders",
+  isMobile,
+}: UseGrnDetailActionsArgs): UseGrnDetailActionsReturn {
+  const router = useRouter();
+  const qc = grn.qcSettings;
+
+  async function handleSave() {
+    if (dirtyLines.length === 0) {
+      notify.info(messages.inventory.grn.saveEmpty);
+      return;
+    }
+
+    startSave(async () => {
+      let okCount = 0;
+      const savedLineIds = new Set<number>();
+      for (const line of dirtyLines) {
+        const result = await upsertGrnLine({
+          grnId: grn.id,
+          ingredientId: line.ingredientId,
+          receivedQuantity: line.actual,
+          entryUnitId: line.entryUnitId,
+          unitCost: line.cost,
+          qualityStatus: line.qualityStatus,
+          rejectedQuantity: line.rejected,
+          rejectionReason: line.rejectionReason || null,
+          rejectedPhotoUrl: line.rejectedPhotoUrl || null,
+          priceOverrideNote: line.priceOverrideNote || null,
+          priceOverridePhotoUrl: line.priceOverridePhotoUrl || null,
+          shortDeliveryAction: line.shortDeliveryAction,
+        });
+        if (!result.success) {
+          notify.error(
+            m(messages.inventory.grn.saveLinesFailed, {
+              name: line.name,
+              reason: result.error ?? GRN_DETAIL_COPY.saveLineFailed,
+            }),
+          );
+          continue;
+        }
+        okCount += 1;
+        savedLineIds.add(line.lineId);
+      }
+      if (okCount > 0) {
+        notify.success(
+          m(messages.inventory.grn.saveLinesOk, {
+            ok: okCount,
+            total: dirtyLines.length,
+          }),
+        );
+        setLines((previous) =>
+          previous.map((line) =>
+            savedLineIds.has(line.lineId) ? { ...line, dirty: false } : line,
+          ),
+        );
+        router.refresh();
+      }
+    });
+  }
+
+  async function handleDeleteLine(line: EditableGrnLine): Promise<boolean> {
+    const shouldDelete = await confirm({
+      title: GRN_DETAIL_COPY.deleteLineTitle,
+      description: line.name,
+      variant: "destructive",
+      confirmText: GRN_DETAIL_COPY.deleteLineAction,
+    });
+    if (!shouldDelete) return false;
+
+    startSave(async () => {
+      const result = await deleteGrnLine({
+        grnId: grn.id,
+        lineId: line.lineId,
+      });
+      if (!result.success) {
+        notify.error(result.error ?? GRN_DETAIL_COPY.deleteLineFailed);
+        return;
+      }
+      setLines((previous) =>
+        previous.filter((item) => item.lineId !== line.lineId),
+      );
+      notify.success(GRN_DETAIL_COPY.deleteLineOk);
+      router.refresh();
+    });
+    return true;
+  }
+
+  function upsertLocalLine(line: EditableGrnLine) {
+    setLines((previous) => {
+      const existingIndex = previous.findIndex(
+        (item) => item.ingredientId === line.ingredientId,
+      );
+      if (existingIndex < 0) return [...previous, line];
+      return previous.map((item, index) =>
+        index === existingIndex ? line : item,
+      );
+    });
+  }
+
+  function validateBeforeConfirm(): string | null {
+    for (const line of lines) {
+      if (line.rejected > line.actual) {
+        return GRN_DETAIL_COPY.validation.rejectedExceedsDelivered(line.name);
+      }
+      if (line.rejected > 0 && !line.rejectionReason.trim()) {
+        return GRN_DETAIL_COPY.validation.rejectReasonRequired(line.name);
+      }
+      if (
+        qc.rejectRequiresPhoto &&
+        line.rejected > 0 &&
+        !line.rejectedPhotoUrl.trim()
+      ) {
+        return GRN_DETAIL_COPY.validation.rejectPhotoRequired(line.name);
+      }
+      if (
+        line.poQuantity != null &&
+        line.poQuantity > 0 &&
+        line.actual < line.poQuantity * (1 - qc.qtyShortTolerancePct / 100) &&
+        !line.shortDeliveryAction
+      ) {
+        return GRN_DETAIL_COPY.validation.shortageActionRequired(
+          line.name,
+          formatPercent(qc.qtyShortTolerancePct),
+        );
+      }
+      const variance = deriveGrnVariance(line.cost, line.poUnitPrice);
+      if (
+        variance != null &&
+        Math.abs(variance) > qc.priceVarianceWarnPct &&
+        !line.priceOverrideNote.trim()
+      ) {
+        return GRN_DETAIL_COPY.validation.priceReasonRequired(
+          line.name,
+          formatPercent(variance, 2),
+        );
+      }
+    }
+    return null;
+  }
+
+  async function handleConfirmGrn() {
+    if (dirtyLines.length > 0) {
+      notify.error(messages.inventory.grn.confirmBlockedByDirty);
+      return;
+    }
+    const validationError = validateBeforeConfirm();
+    if (validationError) {
+      notify.error(validationError);
+      return;
+    }
+    const shouldConfirm = await confirm({
+      title: messages.inventory.grn.confirmGrnTitle,
+      description: messages.inventory.grn.confirmGrnDesc,
+      variant: "destructive",
+      confirmText: GRN_DETAIL_COPY.confirmGrnAction,
+    });
+    if (!shouldConfirm) return;
+
+    startConfirm(async () => {
+      const result = await confirmGrn(grn.id);
+      if (!result.success) {
+        notify.error(result.error ?? messages.inventory.grn.confirmFailed);
+        return;
+      }
+      const reviewCount =
+        (result.data &&
+        typeof result.data === "object" &&
+        !Array.isArray(result.data)
+          ? (result.data as { review_count?: number }).review_count
+          : 0) ?? 0;
+      const confirmedPoId =
+        (result.data &&
+        typeof result.data === "object" &&
+        !Array.isArray(result.data)
+          ? (result.data as { po_id?: number | null }).po_id
+          : null) ?? null;
+      notify.success(
+        reviewCount > 0
+          ? m(messages.inventory.grn.confirmedWithReview, {
+              count: reviewCount,
+            })
+          : messages.inventory.grn.confirmed,
+      );
+      if (isMobile) {
+        router.push(grnMobileBackPath);
+      } else if (confirmedPoId) {
+        router.push(`${purchaseOrdersBasePath}/${confirmedPoId}`);
+      } else {
+        router.push(grnListBasePath);
+      }
+    });
+  }
+
+  return { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn };
+}

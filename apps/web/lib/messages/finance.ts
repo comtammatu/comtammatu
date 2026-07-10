@@ -1,3 +1,5 @@
+import { formatCount } from "@comtammatu/shared/format";
+
 export const finance = {
   actionErrors: {
     loadPaymentFailed: "Không thể tải thanh toán.",
@@ -19,10 +21,11 @@ export const finance = {
     reissueSuccess: "Đã phát hành lại HĐĐT",
     reissueFailed: "Không thể phát hành lại HĐĐT",
     reissueNoOrder: "Hóa đơn không gắn đơn hàng — không thể phát hành lại",
-    reissueAll: (count: number) => `Phát hành lại tất cả nháp (${count})`,
+    reissueAll: (count: number) =>
+      `Phát hành lại tất cả nháp (${formatCount(count)})`,
     reissueAllTitle: "Phát hành lại tất cả HĐĐT nháp",
     reissueAllDescription: (count: number) =>
-      `Phát hành lại ${count} hóa đơn đang ở trạng thái nháp (bị nhà cung cấp từ chối). Mỗi đơn gửi lại lên Viettel. Tiếp tục?`,
+      `Phát hành lại ${formatCount(count)} hóa đơn đang ở trạng thái nháp (bị nhà cung cấp từ chối). Mỗi đơn gửi lại lên Viettel. Tiếp tục?`,
     reissueAllConfirm: "Phát hành lại tất cả",
     reissueAllCancel: "Không",
     reissueAllResult: (issued: number, failed: number, remaining: number) =>
@@ -517,7 +520,7 @@ export const finance = {
       `${supplier} · ${invoice}`,
     matchExpensePlaceholder: "Gán chi phí",
     matchExpenseTitle: "Gán chi phí cho giao dịch",
-    matchedExpenseCount: (count: number) => `Đã gán ${count} chi phí`,
+    matchedExpenseCount: (count: string) => `Đã gán ${count} chi phí`,
     bankTransactionAmount: "Sao kê",
     selectedExpenseAmount: "Chi phí chọn",
     expenseMatchDelta: "Lệch",
@@ -554,7 +557,8 @@ export const finance = {
     refreshData: "Làm mới dữ liệu",
     branch: "Chi nhánh",
     branchPlaceholder: "Chọn chi nhánh",
-    allBranchesCount: (count: number) => `Tất cả (${count} chi nhánh)`,
+    allBranchesCount: (count: number) =>
+      `Tất cả (${formatCount(count)} chi nhánh)`,
     granularity: "Mức tổng hợp",
     day: "Ngày",
     week: "Tuần",
@@ -567,7 +571,8 @@ export const finance = {
     averagePerGuest: "Trung bình / khách",
     revenuePerGuest: "Doanh thu ròng / lượt khách",
     voidRate: "Tỉ lệ hoàn / hủy",
-    voidHint: (amount: string, count: number) => `${amount} · ${count} đơn`,
+    voidHint: (amount: string, count: number) =>
+      `${amount} · ${formatCount(count)} đơn`,
     discountRate: "Tỉ lệ giảm giá",
     comparePeriod: (start: string, end: string) =>
       `So với kỳ trước · ${start} → ${end}`,
@@ -603,10 +608,10 @@ export const finance = {
       "Tổng hợp `cash_difference` của các ca POS đã đóng trong khoảng. Lệch âm cùng 1 thu ngân lặp lại nhiều ca = tín hiệu cần kiểm tra.",
     closedSessions: "Số ca đã đóng",
     netVariance: "Lệch ròng",
-    shortVariance: (count: number) => `Lệch thiếu (${count})`,
-    overVariance: (count: number) => `Lệch thừa (${count})`,
+    shortVariance: (count: number) => `Lệch thiếu (${formatCount(count)})`,
+    overVariance: (count: number) => `Lệch thừa (${formatCount(count)})`,
     topVarianceCashiers: "Top thu ngân lệch nhiều",
-    sessionCount: (count: number) => `${count} ca`,
+    sessionCount: (count: number) => `${formatCount(count)} ca`,
     noVariance: "Không có ca nào lệch trong khoảng — tốt.",
   },
   dashboard: {
@@ -642,7 +647,7 @@ export const finance = {
       "Các khu vực vận hành dùng để kiểm tra tiền đã thu, hóa đơn và đối soát.",
     tabs: {
       revenue: "Doanh thu ròng",
-      invoices: (count: number) => `Hóa đơn điện tử (${count})`,
+      invoices: (count: number) => `Hóa đơn điện tử (${formatCount(count)})`,
     },
     workQueue: {
       title: "Việc cần kiểm tra",
@@ -752,11 +757,11 @@ export const finance = {
       aovOrderHint: "Doanh thu ròng / đơn",
       discountRate: "Tỷ lệ giảm giá",
       voidRate: "Tỷ lệ hủy",
-      voidHint: (amount: string, count: number) => `${amount} · ${count} đơn`,
+      voidHint: (amount: string, count: string) => `${amount} · ${count} đơn`,
       totalCollected: "Tổng tiền đã thu",
       totalCollectedHint: (vat: string) => `Gồm thuế tạm tính ${vat}`,
       invoices: "Hóa đơn điện tử",
-      invoicesAttention: (count: number) => `${count} chờ xử lý`,
+      invoicesAttention: (count: number) => `${formatCount(count)} chờ xử lý`,
       invoicesClear: "Đã xử lý hết",
     },
     compare: {
@@ -862,10 +867,10 @@ export const finance = {
     description: "Ca POS đã đóng, lệch vượt ngưỡng và chưa có hướng xử lý.",
     closedSessions: "Ca lệch",
     netVariance: "Lệch ròng",
-    short: (count: number) => `Thiếu ${count} ca`,
-    over: (count: number) => `Thừa ${count} ca`,
+    short: (count: number) => `Thiếu ${formatCount(count)} ca`,
+    over: (count: number) => `Thừa ${formatCount(count)} ca`,
     topVariance: "Top thu ngân còn lệch",
-    sessionCount: (count: number) => `${count} ca`,
+    sessionCount: (count: number) => `${formatCount(count)} ca`,
     noVariance: "Không còn ca lệch quỹ cần xử lý trong kỳ.",
   },
   invoicesPage: {
@@ -924,8 +929,8 @@ export const finance = {
     loadSalesFailed: "Không thể tải dữ liệu giá vốn món.",
     loadRecipeFailed: "Không thể tải định mức giá vốn món.",
     loadWacFailed: "Không thể tải WAC giá vốn món.",
-    shareOfRevenueHint: (pct: string) => `${pct}% / DT`,
-    marginThresholdHint: (green: number, warn: number) =>
-      `Ngưỡng: ≥${green}% xanh · ≥${warn}% vàng`,
+    shareOfRevenueHint: (pct: string) => `${pct} / DT`,
+    marginThresholdHint: (green: string, warn: string) =>
+      `Ngưỡng: ≥${green} xanh · ≥${warn} vàng`,
   },
 } as const;

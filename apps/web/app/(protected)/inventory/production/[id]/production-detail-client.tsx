@@ -36,6 +36,10 @@ import type { ProductionShortageRow } from "../../production-types";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { formatDecimalInputValue } from "@comtammatu/shared/format";
 import { formatQty } from "../../_lib/format";
+import {
+  productionQuantityFromBase,
+  productionQuantityToBase,
+} from "../../_lib/production-unit-conversion";
 
 interface ProductionDetailClientProps {
   run: ProductionRunRow;
@@ -43,12 +47,14 @@ interface ProductionDetailClientProps {
     ingredients: ProductionRecipeIngredient[];
     maxProductionQuantity: number | null;
   } | null;
+  recipeContextError: string | null;
   embedded?: boolean;
 }
 
 export function ProductionDetailClient({
   run,
   recipeContext,
+  recipeContextError,
   embedded = false,
 }: ProductionDetailClientProps) {
   const router = useRouter();
@@ -56,11 +62,20 @@ export function ProductionDetailClient({
   const [actualQuantity, setActualQuantity] = useState<string>(
     run.actual_quantity?.toString() || "",
   );
+  const maxProductionQuantity = productionQuantityFromBase(
+    recipeContext?.maxProductionQuantity ?? Number.NaN,
+    run.entry_unit_to_base_factor,
+  );
   const maxProductionRaw =
-    recipeContext?.maxProductionQuantity != null
-      ? formatDecimalInputValue(recipeContext.maxProductionQuantity, 3)
+    maxProductionQuantity != null
+      ? formatDecimalInputValue(maxProductionQuantity, 3)
       : null;
+  const plannedOutputBaseQuantity = productionQuantityToBase(
+    run.planned_quantity,
+    run.entry_unit_to_base_factor,
+  );
   const [shortages, setShortages] = useState<ProductionShortageRow[]>([]);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const [ingredientUsages, setIngredientUsages] = useState<
     Record<number, string>
@@ -84,8 +99,11 @@ export function ProductionDetailClient({
             .toString();
         } else {
           const defaultQty =
-            (run.planned_quantity * ing.recipe_quantity) / ing.yield_factor;
-          usages[ing.ingredient_id] = formatDecimalInputValue(defaultQty, 3);
+            plannedOutputBaseQuantity == null
+              ? null
+              : plannedOutputBaseQuantity * ing.default_usage_per_fg;
+          usages[ing.ingredient_id] =
+            defaultQty == null ? "" : formatDecimalInputValue(defaultQty, 3);
         }
       }
     }
@@ -98,18 +116,23 @@ export function ProductionDetailClient({
 
   const handleStart = () => {
     startTransition(async () => {
+      setActionError(null);
       const res = await startProductionRun(run.id);
       if (res.success) {
+        setShortages([]);
         toast.success("Đã bắt đầu lệnh sản xuất");
         router.refresh();
       } else {
-        toast.error(res.error || "Có lỗi xảy ra");
+        const message = res.error || "Có lỗi xảy ra";
+        setActionError(message);
+        toast.error(message);
       }
     });
   };
 
   const handleConfirm = () => {
     startTransition(async () => {
+      setActionError(null);
       const parsedActual = actualQuantity.trim()
         ? Number.parseFloat(actualQuantity)
         : undefined;
@@ -143,16 +166,21 @@ export function ProductionDetailClient({
 
       if (res.success) {
         setShortages([]);
+        setActionError(null);
         toast.success("Đã xác nhận lệnh sản xuất");
         router.refresh();
       } else {
-        toast.error(res.error || "Có lỗi xảy ra");
         const nextShortages = Array.isArray(res.data)
           ? (res.data as ProductionShortageRow[])
           : [];
         setShortages(nextShortages);
         if (nextShortages.length > 0) {
+          setActionError(null);
           toast.error("Thiếu nguyên liệu trong kho để sản xuất.");
+        } else {
+          const message = res.error || "Có lỗi xảy ra";
+          setActionError(message);
+          toast.error(message);
         }
       }
     });
@@ -162,18 +190,27 @@ export function ProductionDetailClient({
     if (!confirm("Bạn có chắc chắn muốn hủy lệnh này?")) return;
 
     startTransition(async () => {
+      setActionError(null);
       const res = await cancelProductionRun(run.id);
       if (res.success) {
+        setShortages([]);
         toast.success("Đã hủy lệnh sản xuất");
         router.refresh();
       } else {
-        toast.error(res.error || "Có lỗi xảy ra");
+        const message = res.error || "Có lỗi xảy ra";
+        setActionError(message);
+        toast.error(message);
       }
     });
   };
 
   const unit = run.entry_unit_name || "";
   const canEdit = run.status === "draft" || run.status === "in_progress";
+  const canConfirm =
+    canEdit &&
+    recipeContext != null &&
+    recipeContextError == null &&
+    run.entry_unit_to_base_factor != null;
   const actionSize = embedded ? "touch" : "default";
   const ingredients = recipeContext?.ingredients ?? [];
   const branchSummary: ReactNode =
@@ -312,7 +349,7 @@ export function ProductionDetailClient({
               <div className="text-sm text-muted-foreground">
                 Tối đa có thể sản xuất:{" "}
                 <span className="font-medium text-foreground">
-                  {formatQty(recipeContext?.maxProductionQuantity ?? 0)} {unit}
+                  {formatQty(maxProductionQuantity ?? 0)} {unit}
                 </span>
               </div>
             )}
@@ -346,6 +383,23 @@ export function ProductionDetailClient({
             )}
           />
         </AppSection>
+      ) : null}
+
+      {canEdit && !canConfirm ? (
+        <Alert variant="destructive">
+          <AlertTitle>Chưa thể hoàn thành lệnh sản xuất</AlertTitle>
+          <AlertDescription>
+            {recipeContextError ??
+              "Không thể kiểm tra đơn vị thành phẩm hoặc định mức nguyên liệu."}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {actionError ? (
+        <Alert variant="destructive">
+          <AlertTitle>Thao tác không thành công</AlertTitle>
+          <AlertDescription>{actionError}</AlertDescription>
+        </Alert>
       ) : null}
 
       {shortages.length > 0 ? (
@@ -410,7 +464,7 @@ export function ProductionDetailClient({
                 <Button
                   type="button"
                   onClick={handleStart}
-                  disabled={isPending}
+                  disabled={isPending || !canConfirm}
                   size={actionSize}
                 >
                   Bắt đầu sản xuất
@@ -419,7 +473,7 @@ export function ProductionDetailClient({
               <Button
                 type="button"
                 onClick={handleConfirm}
-                disabled={isPending}
+                disabled={isPending || !canConfirm}
                 variant={run.status === "draft" ? "secondary" : "default"}
                 size={actionSize}
               >

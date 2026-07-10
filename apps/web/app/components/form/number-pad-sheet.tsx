@@ -2,6 +2,10 @@
 
 import * as React from "react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import {
+  formatNumericInputDraft,
+  parseVietnameseNumericInput,
+} from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Sheet,
@@ -25,6 +29,7 @@ type NumberPadSheetProps = {
   onConfirm: (value: number) => void;
   confirmLabel?: string;
   allowDecimal?: boolean;
+  maxFractionDigits?: number;
 };
 
 export function NumberPadSheet({
@@ -36,12 +41,13 @@ export function NumberPadSheet({
   onConfirm,
   confirmLabel = ACTIONS_VI.confirm,
   allowDecimal = true,
+  maxFractionDigits = 3,
 }: NumberPadSheetProps) {
   const initial = React.useMemo(
     () =>
       initialValue == null || Number.isNaN(initialValue)
         ? ""
-        : String(initialValue),
+        : formatNumericInputDraft(String(initialValue)),
     [initialValue],
   );
   const [buffer, setBuffer] = React.useState(initial);
@@ -50,16 +56,18 @@ export function NumberPadSheet({
     if (open) setBuffer(initial);
   }, [open, initial]);
 
-  const parsed = buffer.length === 0 ? null : Number(buffer);
-  const valid = parsed != null && Number.isFinite(parsed) && parsed >= 0;
+  const parsed = parseVietnameseNumericInput(buffer, {
+    maxFractionDigits: allowDecimal ? maxFractionDigits : 0,
+  });
+  const valid = parsed.state === "valid" && parsed.value >= 0;
 
   function handleTap(key: NumpadKey) {
     setBuffer((current) => appendNumpadKey(current, key, allowDecimal));
   }
 
   function handleConfirm() {
-    if (!valid || parsed == null) return;
-    onConfirm(parsed);
+    if (parsed.state !== "valid" || parsed.value < 0) return;
+    onConfirm(parsed.value);
     onOpenChange(false);
   }
 

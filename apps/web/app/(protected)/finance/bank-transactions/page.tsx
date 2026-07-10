@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import {
@@ -87,18 +87,18 @@ export default async function BankTransactionsPage({
       <KpiRow density="compact">
         <KpiCard
           label={copy.reconciliation.matched}
-          value={String(summary.matchedCount)}
+          value={formatCount(summary.matchedCount)}
           hint={copy.reconciliation.matchedHint}
           tone={needsReviewCount === 0 ? "success" : "neutral"}
           density="compact"
         />
         <KpiCard
           label={copy.reconciliation.needsReview}
-          value={String(needsReviewCount)}
+          value={formatCount(needsReviewCount)}
           hint={copy.reconciliation.needsReviewHint(
             formatVND(needsReviewAmount),
-            String(summary.needsReviewCount),
-            String(paymentWebhookSummary.openMissingBankWebhookCount),
+            formatCount(summary.needsReviewCount),
+            formatCount(paymentWebhookSummary.openMissingBankWebhookCount),
           )}
           tone={needsReviewCount > 0 ? "warning" : "success"}
           density="compact"
@@ -107,7 +107,7 @@ export default async function BankTransactionsPage({
           label={copy.reconciliation.unmatchedMoneyIn}
           value={formatVND(summary.unmatchedMoneyInAmount)}
           hint={copy.reconciliation.unmatchedMoneyInHint(
-            String(summary.unmatchedMoneyInCount),
+            formatCount(summary.unmatchedMoneyInCount),
           )}
           tone={summary.unmatchedMoneyInCount > 0 ? "warning" : "neutral"}
           density="compact"
@@ -116,9 +116,9 @@ export default async function BankTransactionsPage({
           label={copy.reconciliation.missingBankWebhook}
           value={formatVND(paymentWebhookSummary.missingBankWebhookAmount)}
           hint={copy.reconciliation.missingBankWebhookHint(
-            String(paymentWebhookSummary.missingBankWebhookCount),
-            String(paymentWebhookSummary.checkedPaymentCount),
-            String(paymentWebhookSummary.openMissingBankWebhookCount),
+            formatCount(paymentWebhookSummary.missingBankWebhookCount),
+            formatCount(paymentWebhookSummary.checkedPaymentCount),
+            formatCount(paymentWebhookSummary.openMissingBankWebhookCount),
           )}
           tone={
             paymentWebhookSummary.missingBankWebhookCount > 0
@@ -131,7 +131,7 @@ export default async function BankTransactionsPage({
           label={copy.reconciliation.unmatchedMoneyOut}
           value={formatVND(summary.unmatchedMoneyOutAmount)}
           hint={copy.reconciliation.unmatchedMoneyOutHint(
-            String(summary.unmatchedMoneyOutCount),
+            formatCount(summary.unmatchedMoneyOutCount),
           )}
           tone={summary.unmatchedMoneyOutCount > 0 ? "warning" : "neutral"}
           density="compact"

@@ -3,18 +3,14 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: baseline inline Vietnamese copy in order merge sibling dialog */
 
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
 import {
   Alert,
   AlertAction,
   AlertDescription,
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Item,
-  ItemContent,
-  ItemGroup,
-} from "@comtammatu/ui/components/item";
+import { Item, ItemContent, ItemGroup } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   RadioGroup,
@@ -216,7 +212,7 @@ export function MergeOrdersSheet({
                               #{s.order_number}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {s.item_count} món
+                              {formatCount(s.item_count)} món
                               {s.has_discount && s.discount_type === "vnd"
                                 ? " · có giảm VNĐ (sẽ cộng dồn)"
                                 : ""}

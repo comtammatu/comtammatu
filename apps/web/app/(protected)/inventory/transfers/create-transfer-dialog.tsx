@@ -15,7 +15,6 @@ import {
   InputGroupButton,
 } from "@comtammatu/ui/components/input-group";
 import { Item, ItemActions, ItemContent } from "@comtammatu/ui/components/item";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
   SelectContent,
@@ -25,6 +24,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { FormField } from "@/components/form";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import {
   AppEmptyState,
@@ -33,6 +33,7 @@ import {
 } from "@/components/surface";
 import type { TransferCreatePageData } from "@lib/inventory/transfer-create-data";
 import {
+  formatTransferLocationLabel,
   formatTransferOption,
   formatTransferTargetOption,
   getTransferWarehouseUnit,
@@ -53,6 +54,7 @@ export function CreateTransferForm({
     basePath,
   });
   const copy = messages.inventory.transfer;
+  const sourceBranch = controller.currentBranch;
 
   return (
     <form onSubmit={controller.submit} className="flex min-w-0 flex-col gap-4">
@@ -83,15 +85,21 @@ export function CreateTransferForm({
                 },
               ]}
             />
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="office-transfer-source">
-                {copy.sendingWarehouseRequired}
-              </Label>
+            <FormField
+              controlId="office-transfer-source"
+              label={copy.sendingWarehouseRequired}
+              required
+            >
               <Select
                 value={controller.inboundFromBranchId}
                 onValueChange={controller.handleInboundSourceChange}
               >
-                <SelectTrigger id="office-transfer-source" className="w-full">
+                <SelectTrigger
+                  id="office-transfer-source"
+                  size="field"
+                  className="w-full"
+                  aria-required
+                >
                   <SelectValue placeholder={copy.chooseSendingWarehouse} />
                 </SelectTrigger>
                 <SelectContent>
@@ -107,7 +115,7 @@ export function CreateTransferForm({
                   </SelectGroup>
                 </SelectContent>
               </Select>
-            </div>
+            </FormField>
           </div>
         ) : controller.canCreateOutbound ? (
           <div className="flex flex-col gap-3">
@@ -128,15 +136,60 @@ export function CreateTransferForm({
                 },
               ]}
             />
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="office-transfer-target">
-                {copy.receivingWarehouseRequired}
-              </Label>
+            {controller.outboundSourceLocationOptions.length > 1 &&
+            sourceBranch ? (
+              <FormField
+                controlId="office-transfer-source-location"
+                label={copy.sourceLocationRequired}
+                required
+              >
+                <Select
+                  value={controller.outboundSourceLocationId}
+                  onValueChange={controller.handleOutboundSourceLocationChange}
+                >
+                  <SelectTrigger
+                    id="office-transfer-source-location"
+                    size="field"
+                    className="w-full"
+                    aria-required
+                  >
+                    <SelectValue placeholder={copy.chooseSourceLocation} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {controller.outboundSourceLocationOptions.map(
+                        (location) => (
+                          <SelectItem
+                            key={location.id}
+                            value={String(location.id)}
+                          >
+                            {formatTransferLocationLabel(
+                              sourceBranch,
+                              location.kind,
+                            )}
+                          </SelectItem>
+                        ),
+                      )}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </FormField>
+            ) : null}
+            <FormField
+              controlId="office-transfer-target"
+              label={copy.receivingWarehouseRequired}
+              required
+            >
               <Select
                 value={controller.outboundToBranchId}
                 onValueChange={controller.setOutboundToBranchId}
               >
-                <SelectTrigger id="office-transfer-target" className="w-full">
+                <SelectTrigger
+                  id="office-transfer-target"
+                  size="field"
+                  className="w-full"
+                  aria-required
+                >
                   <SelectValue placeholder={copy.chooseReceivingWarehouse} />
                 </SelectTrigger>
                 <SelectContent>
@@ -149,7 +202,7 @@ export function CreateTransferForm({
                   </SelectGroup>
                 </SelectContent>
               </Select>
-            </div>
+            </FormField>
           </div>
         ) : (
           <AppEmptyState
@@ -164,14 +217,16 @@ export function CreateTransferForm({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="flex min-w-0 flex-1 items-end gap-2">
             <div className="min-w-0 flex-1">
-              <Label htmlFor="office-transfer-ingredient" className="sr-only">
-                {copy.createNative.ingredientLabel}
-              </Label>
               <Select
                 value={controller.pickerIngredientId}
                 onValueChange={controller.setPickerIngredientId}
               >
-                <SelectTrigger id="office-transfer-ingredient" className="h-9">
+                <SelectTrigger
+                  id="office-transfer-ingredient"
+                  size="sm"
+                  className="w-full"
+                  aria-label={copy.createNative.ingredientLabel}
+                >
                   <SelectValue placeholder={copy.chooseIngredient} />
                 </SelectTrigger>
                 <SelectContent>
@@ -210,7 +265,7 @@ export function CreateTransferForm({
             size="sm"
             className="w-full shrink-0 sm:w-auto"
             onClick={controller.addAllAvailableStockLines}
-            disabled={controller.selectedSourceBranchId == null}
+            disabled={controller.selectedSourceLocationId == null}
           >
             <IconPackageCheck data-icon="inline-start" />
             {copy.transferAllStock}
@@ -318,12 +373,14 @@ export function CreateTransferForm({
       </AppSection>
 
       <AppSection title={FORM_VI.notes}>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="office-transfer-vehicle">{copy.vehicleInfo}</Label>
-          <Input id="office-transfer-vehicle" name="vehicleInfo" />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="office-transfer-notes">{FORM_VI.notes}</Label>
+        <FormField controlId="office-transfer-vehicle" label={copy.vehicleInfo}>
+          <Input
+            id="office-transfer-vehicle"
+            name="vehicleInfo"
+            className="h-10"
+          />
+        </FormField>
+        <FormField controlId="office-transfer-notes" label={FORM_VI.notes}>
           <Textarea
             id="office-transfer-notes"
             name="notes"
@@ -331,7 +388,7 @@ export function CreateTransferForm({
             placeholder={copy.notesPlaceholder}
             className="min-h-24"
           />
-        </div>
+        </FormField>
       </AppSection>
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

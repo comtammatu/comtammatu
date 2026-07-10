@@ -4,6 +4,14 @@ import {
   addVNDateDays,
   diffVNDateDays,
   formatVNBusinessDate,
+  formatVNClockRange,
+  formatVNClockTime,
+  formatVNDate,
+  formatVNDateTime,
+  formatVNDateTimeWithSeconds,
+  formatVNDuration,
+  formatVNDurationMinutes,
+  formatVNTime,
   getVNDateString,
   getVNDateStringDaysAgo,
   getVNDayUtcRange,
@@ -28,7 +36,24 @@ test("parseClockTimeToMinutes parses HH:MM[:SS] and rejects junk", () => {
   assert.equal(parseClockTimeToMinutes("18:30:00"), 1110);
   assert.equal(parseClockTimeToMinutes("00:00"), 0);
   assert.equal(parseClockTimeToMinutes("24:00"), null);
+  assert.equal(parseClockTimeToMinutes("08:00junk"), null);
   assert.equal(parseClockTimeToMinutes("bad"), null);
+});
+
+test("VN display helpers pin timestamps and clock ranges to the contract", () => {
+  const timestamp = "2026-05-22T01:30:45Z";
+  assert.equal(formatVNDate(timestamp), "22/05/2026");
+  assert.equal(formatVNTime(timestamp), "08:30");
+  assert.equal(formatVNDateTime(timestamp), "08:30 22/05/2026");
+  assert.equal(formatVNDateTimeWithSeconds(timestamp), "08:30:45 22/05/2026");
+  assert.equal(formatVNClockTime("8:05:33"), "08:05");
+  assert.equal(formatVNClockRange("08:00", "17:30:00"), "08:00–17:30");
+  assert.equal(formatVNClockTime("08:60"), "—");
+  assert.equal(formatVNDurationMinutes(65), "1 giờ 05 phút");
+  assert.equal(
+    formatVNDuration("2026-05-22T01:00:00Z", "2026-05-22T02:05:00Z"),
+    "1 giờ 05 phút",
+  );
 });
 
 test("isWithinShiftWindow handles a same-day shift with grace", () => {

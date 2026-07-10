@@ -6,6 +6,7 @@ import {
   PERMISSION_KEYS,
   SUPPLIER_RETURN_ROLES,
 } from "@comtammatu/shared/auth";
+import { formatPercent } from "@comtammatu/shared/format";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
@@ -208,9 +209,12 @@ function formatPayload(topic: string, payload: OutboxPayload): unknown {
 
 function formatTopicText(topic: string, payload: OutboxPayload): string {
   if (topic === "grn.requires_review") {
-    const variance = payload.price_variance_pct;
+    const variance = Number(payload.price_variance_pct);
+    const varianceLabel = Number.isFinite(variance)
+      ? formatPercent(variance, 2)
+      : "?";
     return [
-      `🚨 GRN cần kiểm tra giá lệch ${variance ?? "?"}%`,
+      `🚨 GRN cần kiểm tra giá lệch ${varianceLabel}`,
       `Phiếu: ${payload.grn_number ?? "?"} (${payload.branch_name ?? "?"})`,
       `NCC: ${payload.supplier_name ?? "?"}`,
       `Nguyên liệu: ${payload.ingredient_name ?? "?"}`,

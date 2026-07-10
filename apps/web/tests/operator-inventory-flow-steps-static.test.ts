@@ -30,10 +30,6 @@ test("operator inventory work routes expose touch progress steps", () => {
       /operatorFlow\.stocktakeListTitle/,
     ],
     [
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/production-operator-client.tsx",
-      /operatorFlow\.productionTitle/,
-    ],
-    [
       "apps/web/app/(protected)/inventory/production-recipe-panel.tsx",
       /operatorFlow\.productionRecipeTitle/,
     ],
@@ -60,21 +56,39 @@ test("operator inventory work routes expose touch progress steps", () => {
   assert.match(branchGrnList, /BranchOperatorPanel/);
   assert.match(branchGrnList, /ItemGroup/);
 
+  const branchProduction = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/production-operator-client.tsx",
+  );
+  assert.doesNotMatch(branchProduction, /OperatorFlowSteps/);
+  assert.match(branchProduction, /BranchOperatorStatusStrip/);
+  assert.match(branchProduction, /title="Việc cần làm"/);
+  assert.match(
+    branchProduction,
+    /const workQueue = \[\.\.\.inProgress, \.\.\.drafts\]/,
+  );
+
   const recipeRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/page.tsx",
   );
-  const recipePanel = read(
-    "apps/web/app/(protected)/inventory/production-recipe-panel.tsx",
+  const recipeListClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/branch-production-recipes-client.tsx",
   );
-  const messageSource = read("apps/web/lib/messages/inventory.ts");
+  const recipeEditorClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/recipes/branch-production-recipe-editor-client.tsx",
+  );
 
-  assert.match(recipeRoute, /<ProductionRecipePanel[\s\S]*embedded/);
-  assert.match(recipePanel, /const recipeStep =/);
-  assert.match(recipePanel, /groupedRecipes\.length === 0/);
-  assert.match(recipePanel, /embedded\?: boolean/);
-  assert.match(recipePanel, /actionSize=\{embedded \? "touch" : "default"\}/);
-  assert.match(recipePanel, /size=\{embedded \? "icon-touch" : "sm"\}/);
-  assert.match(messageSource, /productionRecipeSteps/);
+  assert.match(recipeRoute, /<BranchProductionRecipesClient/);
+  assert.match(recipeListClient, /BranchOperatorStatusStrip/);
+  assert.match(recipeListClient, /<ItemGroup/);
+  assert.match(recipeEditorClient, /<SheetContent/);
+  assert.match(recipeEditorClient, /side="bottom"/);
+  assert.match(recipeEditorClient, /sm:max-w-lg/);
+  assert.match(recipeEditorClient, /sm:!right-0 sm:!left-auto/);
+  assert.match(recipeEditorClient, /className="h-11"/);
+  assert.doesNotMatch(
+    `${recipeRoute}\n${recipeListClient}\n${recipeEditorClient}`,
+    /ProductionRecipePanel|FormDialog|DataTable|embedded/,
+  );
 });
 
 test("transfer create gates embedded sections by touch workflow state", () => {
@@ -83,6 +97,9 @@ test("transfer create gates embedded sections by touch workflow state", () => {
   );
   const dataSource = read("apps/web/lib/inventory/transfer-create-data.ts");
   const modelSource = read("apps/web/lib/inventory/transfer-create-model.ts");
+  const controllerSource = read(
+    "apps/web/lib/inventory/use-transfer-create-controller.ts",
+  );
 
   assert.doesNotMatch(source, /<OperatorFlowSteps/);
   assert.match(source, /@comtammatu\/ui\/components\/progress/);
@@ -92,7 +109,14 @@ test("transfer create gates embedded sections by touch workflow state", () => {
   assert.match(modelSource, /export interface TransferIngredientOption/);
   assert.match(dataSource, /function toTransferIngredientOption/);
   assert.match(dataSource, /id: ingredient\.id/);
+  assert.match(dataSource, /itemKind: ingredient\.item_kind \?\? null/);
   assert.match(dataSource, /units: ingredient\.units/);
+  assert.match(dataSource, /"production_storage"/);
+  assert.match(modelSource, /getTransferSourceLocationOptions/);
+  assert.match(modelSource, /location\.kind === "production_storage"/);
+  assert.match(modelSource, /getTransferSelectableIngredients/);
+  assert.match(modelSource, /ingredient\.itemKind === "finished_good"/);
+  assert.match(controllerSource, /selectedSourceBranch\?\.branch_kind/);
   assert.doesNotMatch(source, /IngredientRow/);
 });
 
@@ -104,10 +128,7 @@ test("transfer create uses compact branch-location labels", () => {
 
   assert.match(modelSource, /export function formatTransferSiteLabel/);
   assert.match(modelSource, /return branch\.name/);
-  assert.match(
-    modelSource,
-    /export function formatTransferLocationLabel/,
-  );
+  assert.match(modelSource, /export function formatTransferLocationLabel/);
   assert.match(
     modelSource,
     /formatTransferLocationLabel\(option\.branch, option\.kind\)/,

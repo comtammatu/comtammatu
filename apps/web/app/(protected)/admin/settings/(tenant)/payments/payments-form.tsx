@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { SettingsFormSection } from "@/components/settings-form-section";
 import { Button } from "@comtammatu/ui/components/button";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -60,7 +61,6 @@ const paymentsSchema = z.object({
       error: "Tiền tố chỉ chứa chữ, số và khoảng trắng.",
     }),
   content_prefix: paymentContentTokenSchema,
-  content_order_token: paymentContentTokenSchema,
   content_expense_token: paymentContentTokenSchema,
   content_cash_deposit_token: paymentContentTokenSchema,
 });
@@ -108,8 +108,6 @@ export function PaymentsForm({
         settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_CODE_PREFIX] ?? "",
       content_prefix:
         settings[SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX] ?? "MATU",
-      content_order_token:
-        settings[SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN] ?? "DON",
       content_expense_token:
         settings[SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN] ?? "CHI",
       content_cash_deposit_token:
@@ -125,9 +123,6 @@ export function PaymentsForm({
     : null;
   const normalizedContentPrefix = normalizePaymentContentToken(
     form.watch("content_prefix"),
-  );
-  const normalizedOrderToken = normalizePaymentContentToken(
-    form.watch("content_order_token"),
   );
   const normalizedExpenseToken = normalizePaymentContentToken(
     form.watch("content_expense_token"),
@@ -167,10 +162,6 @@ export function PaymentsForm({
         values.vietqr_code_prefix,
       );
       fd.set(SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX, values.content_prefix);
-      fd.set(
-        SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_ORDER_TOKEN,
-        values.content_order_token,
-      );
       fd.set(
         SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN,
         values.content_expense_token,
@@ -440,8 +431,13 @@ export function PaymentsForm({
               <p className="text-sm text-muted-foreground">
                 {messages.settings.payments.contentHelp}
               </p>
+              <NoteCallout
+                label={messages.settings.payments.contentCategoryRuleLabel}
+              >
+                {messages.settings.payments.contentCategoryRule}
+              </NoteCallout>
 
-              <div className="grid gap-3 sm:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <div className="flex flex-col gap-1">
                   <Label htmlFor="content-prefix" className="text-xs">
                     {messages.settings.payments.contentPrefix}
@@ -455,22 +451,6 @@ export function PaymentsForm({
                   {form.formState.errors.content_prefix && (
                     <p className="text-xs text-destructive">
                       {form.formState.errors.content_prefix.message}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="content-order-token" className="text-xs">
-                    {messages.settings.payments.contentOrderToken}
-                  </Label>
-                  <Input
-                    id="content-order-token"
-                    autoCapitalize="characters"
-                    placeholder="DON"
-                    {...form.register("content_order_token")}
-                  />
-                  {form.formState.errors.content_order_token && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.content_order_token.message}
                     </p>
                   )}
                 </div>
@@ -511,20 +491,7 @@ export function PaymentsForm({
                 </div>
               </div>
 
-              <dl className="grid gap-3 text-xs sm:grid-cols-3">
-                <div className="flex flex-col gap-1">
-                  <dt className="font-medium text-muted-foreground">
-                    {messages.settings.payments.contentOrderPreview}
-                  </dt>
-                  <dd>
-                    <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-                      {contentPreview(
-                        normalizedOrderToken,
-                        SAMPLE_PAYMENT_SUFFIX,
-                      )}
-                    </code>
-                  </dd>
-                </div>
+              <dl className="grid gap-3 text-xs sm:grid-cols-2">
                 <div className="flex flex-col gap-1">
                   <dt className="font-medium text-muted-foreground">
                     {messages.settings.payments.contentExpensePreview}
@@ -534,6 +501,9 @@ export function PaymentsForm({
                       {contentPreview(normalizedExpenseToken, "123")}
                     </code>
                   </dd>
+                  <p className="text-2xs text-muted-foreground">
+                    {messages.settings.payments.contentExpenseHelp}
+                  </p>
                 </div>
                 <div className="flex flex-col gap-1">
                   <dt className="font-medium text-muted-foreground">
@@ -544,13 +514,11 @@ export function PaymentsForm({
                       {contentPreview(normalizedCashDepositToken)}
                     </code>
                   </dd>
+                  <p className="text-2xs text-muted-foreground">
+                    {messages.settings.payments.contentCashDepositHelp}
+                  </p>
                 </div>
               </dl>
-
-              <div className="flex flex-col gap-1 text-2xs text-muted-foreground">
-                <p>{messages.settings.payments.contentExpenseHelp}</p>
-                <p>{messages.settings.payments.contentCashDepositHelp}</p>
-              </div>
             </div>
           </SettingsFormSection>
         </TabsContent>

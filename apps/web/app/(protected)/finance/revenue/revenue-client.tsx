@@ -12,7 +12,11 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { formatCount, formatVND } from "@comtammatu/shared/format";
+import {
+  formatCount,
+  formatPercent,
+  formatVND,
+} from "@comtammatu/shared/format";
 import {
   AppEmptyState,
   AppPage,
@@ -640,7 +644,7 @@ export function RevenueClient({
       <div className="grid gap-3 sm:grid-cols-2">
         <KpiCard
           label={revCopy.kpi.discountRate}
-          value={`${discountPct.toFixed(1)}%`}
+          value={formatPercent(discountPct)}
           hint={kpis ? formatVND(kpis.discount_amount) : "—"}
           tone={
             discountPct >= 15
@@ -653,12 +657,12 @@ export function RevenueClient({
         />
         <KpiCard
           label={revCopy.kpi.voidRate}
-          value={`${voidedPct.toFixed(1)}%`}
+          value={formatPercent(voidedPct)}
           hint={
             kpis
               ? revCopy.kpi.voidHint(
                   formatVND(kpis.voided_amount),
-                  kpis.voided_count,
+                  formatCount(kpis.voided_count),
                 )
               : "—"
           }

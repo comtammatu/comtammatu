@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Field,
@@ -97,7 +97,7 @@ export function DiscountSheet({
   // Parse + clamp the typed value so the preview always reflects what the
   // server will accept. Empty / NaN / negative => 0.
   const numericValue = useMemo(() => {
-    const trimmed = valueText.trim().replace(",", ".");
+    const trimmed = valueText.trim();
     if (trimmed === "") return 0;
     const n = Number(trimmed);
     if (!Number.isFinite(n) || n < 0) return 0;
@@ -221,7 +221,7 @@ export function DiscountSheet({
               <span>
                 {POS_VI.discountReduceLabel}
                 {type === "pct" && numericValue > 0
-                  ? ` (${numericValue}%)`
+                  ? ` (${formatPercent(numericValue)})`
                   : ""}
               </span>
               <span className="tabular-nums">

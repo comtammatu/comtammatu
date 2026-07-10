@@ -18,6 +18,7 @@ import {
 import { AppSection, DescriptionList } from "@/components/surface";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
+import { formatQuantity } from "@comtammatu/shared/format";
 import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 
 import { formatVND as formatVndNumber, formatDateTime } from "../../_lib/format";
@@ -96,7 +97,7 @@ export function SupplierReturnDetailClient({
       className: "text-right",
       render: (line) => (
         <span className="font-mono">
-          {Number(line.quantity)}{" "}
+          {formatQuantity(line.quantity)}{" "}
           <span className="text-xs text-muted-foreground">
             {line.ingredients?.unit ?? line.unit}
           </span>
@@ -257,7 +258,7 @@ function SupplierReturnLineItem({ line }: { line: DetailLine }) {
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          {Number(line.quantity)} {line.ingredients?.unit ?? line.unit} ·{" "}
+          {formatQuantity(line.quantity)} {line.ingredients?.unit ?? line.unit} ·{" "}
           {FORM_VI.unitPrice} {formatReturnValue(line.unit_cost)}
         </ItemDescription>
       </ItemContent>

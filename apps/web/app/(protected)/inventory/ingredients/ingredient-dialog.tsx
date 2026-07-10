@@ -11,10 +11,7 @@ import {
   type UseFormReturn,
   type UseFormSetValue,
 } from "react-hook-form";
-import {
-  Plus as IconPlus,
-  Trash as IconTrash,
-} from "lucide-react";
+import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import { z } from "zod";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
@@ -42,7 +39,7 @@ import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "../_lib/constants";
 import { parseOptionalNumber } from "../_lib/format";
 import {
   DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION,
-  formatConversionFactor,
+  formatConversionFactorDisplay,
   type UnitConversionInputDirection,
 } from "../_lib/unit-conversion-input";
 import {
@@ -427,10 +424,10 @@ function UnitRowCells({
       return {
         ok: true as const,
         unit: selectedUnit.name,
-        factor: formatConversionFactor(factor),
+        factor: formatConversionFactorDisplay(factor),
         base: baseUnit.name,
         text: copy.units.previewValue(
-          formatConversionFactor(factor),
+          formatConversionFactorDisplay(factor),
           baseUnit.name,
         ),
       };

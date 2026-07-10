@@ -5,9 +5,20 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  formatNumericInputDraft,
+  parseVietnameseNumericInput,
+} from "@comtammatu/shared/format";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppDetailFooter } from "@/components/surface";
 import { Item } from "@comtammatu/ui/components/item";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import {
   NumberPadGrid,
   appendNumpadKey,
@@ -29,8 +40,20 @@ interface StocktakeCountWizardProps {
   /** Label of the unit each count is recorded in — shown so display == submit. */
   unitLabelByIngredient: Record<number, string>;
   unitPreviewByIngredient: Record<number, string>;
+  unitOptionsByIngredient?: Record<number, StocktakeCountUnit[]>;
+  unitByIngredient?: Record<number, number>;
+  onUnitChange?: (ingredientId: number, unitId: number) => void;
+  showFooter?: boolean;
   /** Slot for the compact draft-saver badge and zone-lock indicator. */
   chrome?: React.ReactNode;
+}
+
+interface StocktakeCountUnit {
+  unitId: number;
+  code: string;
+  label: string;
+  isBase: boolean;
+  toBaseFactor: number;
 }
 
 function isCounted(entry: DraftCounts[string] | undefined): boolean {
@@ -47,6 +70,10 @@ export function StocktakeCountWizard({
   currentRound,
   unitLabelByIngredient,
   unitPreviewByIngredient,
+  unitOptionsByIngredient,
+  unitByIngredient,
+  onUnitChange,
+  showFooter = true,
   chrome,
 }: StocktakeCountWizardProps) {
   const copy = messages.inventory.stocktake.countNative;
@@ -59,7 +86,11 @@ export function StocktakeCountWizard({
     const initial: Record<number, string> = {};
     for (const line of lines) {
       const entry = counts[String(line.ingredientId)];
-      if (isCounted(entry)) initial[line.ingredientId] = String(entry?.qty);
+      if (isCounted(entry)) {
+        initial[line.ingredientId] = formatNumericInputDraft(
+          String(entry?.qty),
+        );
+      }
     }
     return initial;
   });
@@ -97,11 +128,10 @@ export function StocktakeCountWizard({
         onCountChange(id, null);
         return;
       }
-      // A trailing "." (e.g. "0.") is an incomplete decimal — don't commit it, or a
-      // half-typed count would land as qty=0. Commit once the number is complete.
-      if (nextBuffer.endsWith(".")) return;
-      const parsed = Number(nextBuffer);
-      if (Number.isFinite(parsed)) onCountChange(id, parsed);
+      const parsed = parseVietnameseNumericInput(nextBuffer, {
+        maxFractionDigits: 3,
+      });
+      if (parsed.state === "valid") onCountChange(id, parsed.value);
     },
     [editable, activeLine, values, onCountChange],
   );
@@ -121,12 +151,12 @@ export function StocktakeCountWizard({
       onCountChange(activeLine.ingredientId, null);
       return true;
     }
-    const qty = Number(raw);
-    if (raw.endsWith(".") || !Number.isFinite(qty) || qty < 0) {
+    const parsed = parseVietnameseNumericInput(raw, { maxFractionDigits: 3 });
+    if (parsed.state !== "valid" || parsed.value < 0) {
       toast.error(copy.countInvalidQty);
       return false;
     }
-    onCountChange(activeLine.ingredientId, qty);
+    onCountChange(activeLine.ingredientId, parsed.value);
     return true;
   }, [activeLine, values, onCountChange, copy.countInvalidQty]);
 
@@ -160,7 +190,7 @@ export function StocktakeCountWizard({
       if (key >= "0" && key <= "9") {
         handleKey(key as NumpadKey);
       } else if (key === "." || key === ",") {
-        handleKey(".");
+        handleKey(",");
       } else if (key === "Backspace") {
         handleKey("del");
       } else if (key === "Enter") {
@@ -183,6 +213,17 @@ export function StocktakeCountWizard({
 
   const activeBuffer =
     activeLine != null ? (values[activeLine.ingredientId] ?? "") : "";
+  const activeUnitOptions =
+    activeLine == null
+      ? []
+      : (unitOptionsByIngredient?.[activeLine.ingredientId] ?? []);
+  const activeUnitId =
+    activeLine == null
+      ? null
+      : (unitByIngredient?.[activeLine.ingredientId] ??
+        activeUnitOptions.find((option) => option.isBase)?.unitId ??
+        activeUnitOptions[0]?.unitId ??
+        null);
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -223,6 +264,35 @@ export function StocktakeCountWizard({
             {unitPreviewByIngredient[activeLine.ingredientId]}
           </div>
         ) : null}
+        {activeLine != null &&
+        onUnitChange &&
+        activeUnitOptions.length > 1 &&
+        activeUnitId !== null ? (
+          <div className="w-full pt-1 text-left">
+            <Select
+              value={String(activeUnitId)}
+              onValueChange={(value) =>
+                onUnitChange(activeLine.ingredientId, Number(value))
+              }
+              disabled={!editable}
+            >
+              <SelectTrigger
+                aria-label="Counting unit"
+                size="touch"
+                className="w-full"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {activeUnitOptions.map((option) => (
+                  <SelectItem key={option.unitId} value={String(option.unitId)}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
         {upNext.length > 0 ? (
           <div className="text-xs text-muted-foreground">
             {copy.countUpNext(upNext)}
@@ -244,23 +314,25 @@ export function StocktakeCountWizard({
         {copy.countSaveNext}
       </Button>
 
-      <AppDetailFooter
-        sticky
-        trailing={
-          <Button
-            type="button"
-            size="touch"
-            variant="outline"
-            onClick={onSubmit}
-            disabled={!editable || submitting || done === 0}
-          >
-            {submitting ? <Spinner className="size-4" /> : null}
-            {remaining > 0
-              ? copy.countSubmitRemaining(remaining)
-              : copy.countSubmitAll}
-          </Button>
-        }
-      />
+      {showFooter ? (
+        <AppDetailFooter
+          sticky
+          trailing={
+            <Button
+              type="button"
+              size="touch"
+              variant="outline"
+              onClick={onSubmit}
+              disabled={!editable || submitting || done === 0}
+            >
+              {submitting ? <Spinner className="size-4" /> : null}
+              {remaining > 0
+                ? copy.countSubmitRemaining(remaining)
+                : copy.countSubmitAll}
+            </Button>
+          }
+        />
+      ) : null}
     </div>
   );
 }

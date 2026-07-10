@@ -6,7 +6,7 @@ import type { PublicSelfOrderSnapshot } from "@lib/self-order/contracts";
 
 interface StatusPillProps {
   session: PublicSelfOrderSnapshot["session"];
-  paymentRequest: PublicSelfOrderSnapshot["paymentRequest"];
+  paymentRequest: { status?: string } | null | undefined;
   order: PublicSelfOrderSnapshot["order"];
 }
 
@@ -36,16 +36,16 @@ function resolvePillConfig({
     return null;
   }
 
+  const paid = order && order.paymentStatus === "paid";
+  if (paid) {
+    return { label: SELF_ORDER_VI.statusClosed, variant: "secondary" };
+  }
+
   if (paymentRequest?.status === "vietqr_pending") {
     return { label: SELF_ORDER_VI.statusAwaitingVietQr, variant: "info" };
   }
   if (paymentRequest?.status === "cash_call") {
     return { label: SELF_ORDER_VI.statusAwaitingCash, variant: "warning" };
-  }
-
-  const paid = order && order.paymentStatus === "paid";
-  if (paid) {
-    return { label: SELF_ORDER_VI.statusClosed, variant: "secondary" };
   }
 
   return { label: SELF_ORDER_VI.statusActive, variant: "success" };

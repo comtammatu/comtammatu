@@ -1,3 +1,5 @@
+import { formatDecimal } from "@comtammatu/shared/format";
+
 export type UnitConversionInputDirection = "unit_to_anchor" | "anchor_to_unit";
 
 export const DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION: UnitConversionInputDirection =
@@ -15,6 +17,10 @@ export function formatConversionFactor(value: number): string {
   return Number(
     snapNearInteger(value).toFixed(DISPLAY_FRACTION_DIGITS),
   ).toString();
+}
+
+export function formatConversionFactorDisplay(value: number): string {
+  return formatDecimal(snapNearInteger(value), DISPLAY_FRACTION_DIGITS);
 }
 
 export function preferredConversionInputDirection(

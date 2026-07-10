@@ -1,6 +1,6 @@
 "use client";
 
-import { formatVND } from "@comtammatu/shared/format";
+import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
@@ -245,7 +245,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
                 ? POS_VI.orderDiscountLabel
                 : messages.pos.receipt.discount}
               {order.discount_type === "pct" && order.discount_value != null
-                ? ` (${order.discount_value}%)`
+                ? ` (${formatPercent(order.discount_value)})`
                 : ""}
             </span>
             <span className="font-mono tabular-nums">

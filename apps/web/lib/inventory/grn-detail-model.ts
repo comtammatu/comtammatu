@@ -1,9 +1,10 @@
+import type { IngredientRow } from "@/(protected)/inventory/_lib/types";
 import { messages } from "@lib/messages";
 
-export const grnCopy = messages.inventory.grn;
-export const inventoryCommon = messages.inventory.common;
+export const GRN_DETAIL_COPY = messages.inventory.grn;
+export const INVENTORY_COMMON_COPY = messages.inventory.common;
 
-export type GRNDetailItem = {
+export type GrnDetailItem = {
   lineId: number;
   ingredientId: number;
   name: string;
@@ -11,9 +12,7 @@ export type GRNDetailItem = {
   poQuantity: number | null;
   poUnitPrice: number | null;
   required: number;
-  // "Số đã giao" (gross delivered by the supplier). Stock impact = actual − rejected.
   actual: number;
-  // Net good quantity into stock = actual − rejected (derived in page.tsx)
   accepted: number;
   rejected: number;
   rejectionReason: string;
@@ -31,7 +30,7 @@ export type GRNDetailItem = {
   status: string;
 };
 
-export type GRNDetail = {
+export type GrnDetail = {
   id: number;
   tenantId: number;
   code: string;
@@ -47,7 +46,7 @@ export type GRNDetail = {
   total: number;
   tax: number;
   status: string;
-  items: GRNDetailItem[];
+  items: GrnDetailItem[];
   qcSettings: {
     qtyShortTolerancePct: number;
     priceVarianceWarnPct: number;
@@ -66,12 +65,63 @@ export type RecreateReceivingLocationOption = {
   isDefaultReceive: boolean;
 };
 
-export type EditableLine = GRNDetailItem & { dirty: boolean };
+export type EditableGrnLine = GrnDetailItem & { dirty: boolean };
 
-export function deriveVariance(
+export function deriveGrnVariance(
   unitCost: number,
   poUnitPrice: number | null,
 ): number | null {
   if (poUnitPrice == null || poUnitPrice === 0) return null;
   return Number((((unitCost - poUnitPrice) / poUnitPrice) * 100).toFixed(2));
+}
+
+export function isGrnLookupParam(value: string): boolean {
+  if (/^\d+$/.test(value)) {
+    const numericId = Number(value);
+    return Number.isSafeInteger(numericId) && numericId > 0;
+  }
+  return /^GRN-[A-Za-z0-9_-]{1,60}$/.test(value);
+}
+
+export function createEditableGrnLine({
+  lineId,
+  ingredient,
+  quantity,
+  entryUnitId,
+  unit,
+  unitCost,
+}: {
+  lineId: number;
+  ingredient: IngredientRow;
+  quantity: number;
+  entryUnitId: number | null;
+  unit: string;
+  unitCost: number;
+}): EditableGrnLine {
+  return {
+    lineId,
+    ingredientId: ingredient.id,
+    name: ingredient.name,
+    sku: ingredient.sku ?? "",
+    poQuantity: null,
+    poUnitPrice: null,
+    required: quantity,
+    actual: quantity,
+    accepted: quantity,
+    rejected: 0,
+    rejectionReason: "",
+    rejectedPhotoUrl: "",
+    priceOverrideNote: "",
+    priceOverridePhotoUrl: "",
+    priceVariancePct: null,
+    requiresReview: false,
+    shortDeliveryAction: null,
+    unit,
+    entryUnitId,
+    cost: unitCost,
+    temp: null,
+    qualityStatus: "accepted",
+    status: "pass",
+    dirty: false,
+  };
 }

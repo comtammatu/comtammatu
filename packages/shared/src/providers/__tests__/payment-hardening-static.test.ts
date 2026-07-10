@@ -289,6 +289,44 @@ test("POS VietQR renders transfer QR with the order payment code", () => {
   assert.match(bill, /const result = await createPayment\(/);
 });
 
+test("Payment settings use POS QR as the only order receipt path", () => {
+  const form = readRepoFile(
+    "apps/web/app/(protected)/admin/settings/(tenant)/payments/payments-form.tsx",
+  );
+  const settingsAction = readRepoFile(
+    "apps/web/app/(protected)/admin/settings/(tenant)/payments/actions.ts",
+  );
+  const webhook = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
+  const messages = readRepoFile("apps/web/lib/messages/settings.ts");
+
+  assert.doesNotMatch(form, /content_order_token/);
+  assert.doesNotMatch(settingsAction, /PAYMENT_CONTENT_ORDER_TOKEN/);
+  assert.doesNotMatch(messages, /MATU\/DON/);
+  assert.match(messages, /Nội dung QR POS \/ MB Soundbox/);
+  assert.match(messages, /Lệnh SePay vận hành \(tùy chọn\)/);
+  assert.match(messages, /Thu đơn POS dùng trực tiếp nội dung QR POS/);
+  assert.match(webhook, /PAYMENT_CONTENT_ORDER_TOKEN/);
+  assert.match(webhook, /token === settings\.orderToken/);
+});
+
+test("SePay expense commands match an existing expense instead of classifying its category", () => {
+  const form = readRepoFile(
+    "apps/web/app/(protected)/admin/settings/(tenant)/payments/payments-form.tsx",
+  );
+  const webhook = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
+  const messages = readRepoFile("apps/web/lib/messages/settings.ts");
+
+  assert.match(form, /<NoteCallout/);
+  assert.match(
+    webhook,
+    /function parseExpenseCommandId\(value: string \| null\)/,
+  );
+  assert.match(webhook, /p_expense_ids:\s*\[expenseId\]/);
+  assert.match(messages, /Danh mục chi nằm ở phiếu chi/);
+  assert.match(messages, /không suy ra danh mục từ nội dung chuyển khoản/);
+  assert.match(messages, /LUONG hoặc DIEN thay cho mã phiếu chi/);
+});
+
 test("Printed provisional bills do not include payment QR", () => {
   const action = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/print-actions.ts",

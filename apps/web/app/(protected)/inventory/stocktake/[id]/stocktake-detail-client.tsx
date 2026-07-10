@@ -11,6 +11,7 @@ import {
   CircleX as IconCircleX,
 } from "lucide-react";
 import { formatVNDateTime } from "@comtammatu/shared/time";
+import { formatPercent } from "@comtammatu/shared/format";
 import { STOCKTAKE_SESSION_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -272,7 +273,9 @@ export function StocktakeDetailClient({
             term: stocktakeDetailCopy.metrics.progress,
             description: (
               <div className="flex items-center justify-end gap-2">
-                <span className="tabular-nums">{progressPct}%</span>
+                <span className="tabular-nums">
+                  {formatPercent(progressPct, 0)}
+                </span>
                 <Progress value={progressPct} className="h-1.5 w-16" />
               </div>
             ),

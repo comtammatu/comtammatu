@@ -1,3 +1,4 @@
+import { formatCount, formatDecimal } from "@comtammatu/shared/format";
 import { LEAVE_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
 
 export const hr = {
@@ -48,7 +49,7 @@ export const hr = {
     shiftsLoadFailed: "Không thể tải ca làm việc",
     shiftsLoading: "Đang tải...",
     shiftsSummary: (count: number) =>
-      `${count} ca làm việc · dùng chung mọi chi nhánh`,
+      `${formatCount(count)} ca làm việc · dùng chung mọi chi nhánh`,
     shiftsEmptyTitle: "Chưa có ca làm việc nào",
     positionTasks: {
       title: "Việc trong ca",
@@ -74,7 +75,7 @@ export const hr = {
         "Nhân viên vẫn có thể thêm dòng ngoài danh sách khi báo cáo ca.",
       addIngredients: "Chọn nguyên liệu",
       addIngredientsConfirm: (count: number) =>
-        count > 0 ? `Thêm ${count} nguyên liệu` : "Thêm nguyên liệu",
+        count > 0 ? `Thêm ${formatCount(count)} nguyên liệu` : "Thêm nguyên liệu",
       ingredientSearch: "Tìm nguyên liệu...",
       removeIngredient: "Bỏ nguyên liệu",
       empty: "Chưa có việc nào cho vị trí này.",
@@ -111,7 +112,7 @@ export const hr = {
     payrollDescription:
       "Mở bảng lương để đối soát ngày công, lương gộp và thực lĩnh trước khi chốt.",
     openPayroll: "Mở đối soát lương",
-    employeeCount: (count: number) => `${count} nhân viên`,
+    employeeCount: (count: number) => `${formatCount(count)} nhân viên`,
     readinessSummary: (params: {
       active: number;
       payrollReady: number;
@@ -123,7 +124,7 @@ export const hr = {
     addEmployee: "Thêm nhân viên",
     readiness: {
       activePeople: "Đang làm",
-      totalPeople: (count: number) => `Tổng ${count} hồ sơ`,
+      totalPeople: (count: number) => `Tổng ${formatCount(count)} hồ sơ`,
       payrollReady: "Sẵn sàng tính lương",
       payrollReadyHint: "Có lương tháng để vào kỳ lương",
       insured: "Có mức đóng BH",
@@ -148,8 +149,8 @@ export const hr = {
     fallbackEmployee: "Nhân viên",
     summary: (pending: number, total: number) =>
       `${pending} chờ duyệt · tổng ${total}`,
-    pendingTab: (count: number) => `Chờ duyệt (${count})`,
-    historyTab: (count: number) => `Lịch sử (${count})`,
+    pendingTab: (count: number) => `Chờ duyệt (${formatCount(count)})`,
+    historyTab: (count: number) => `Lịch sử (${formatCount(count)})`,
     emptyBranchTitle: "Chưa có chi nhánh",
     emptyBranchDescription:
       "Cần có chi nhánh hợp lệ trước khi duyệt nghỉ phép.",
@@ -171,7 +172,7 @@ export const hr = {
       status: "Trạng thái",
     },
     annualBalance: (remaining: number, entitlement: number, year: number) =>
-      `Còn ${remaining}/${entitlement} ngày (${year})`,
+      `Còn ${formatDecimal(remaining, 1)}/${formatDecimal(entitlement, 1)} ngày (${year})`,
     approveAria: "Duyệt nghỉ",
     rejectAria: "Từ chối nghỉ",
     rejectDialogTitle: "Từ chối yêu cầu nghỉ?",
@@ -226,7 +227,7 @@ export const hr = {
       title: "Đối soát lương",
       description:
         "Theo dõi kỳ lương đã tính khi cần đối soát hoặc chốt dữ liệu.",
-      count: (count: number) => `${count} kỳ lương`,
+      count: (count: number) => `${formatCount(count)} kỳ lương`,
       summaryOpen: "Đang xử lý",
       summaryOpenHint: "Nháp hoặc đã tính, còn chỉnh được",
       summaryApproved: "Đã duyệt",
@@ -305,7 +306,7 @@ export const hr = {
         pit: "Thuế TNCN",
         net: "Thực lĩnh",
         empty: 'Chưa có dữ liệu. Nhấn "Tính lương" để bắt đầu.',
-        total: (count: number) => `Tổng (${count} NV)`,
+        total: (count: number) => `Tổng (${formatCount(count)} NV)`,
       },
       csv: {
         export: "Xuất CSV",

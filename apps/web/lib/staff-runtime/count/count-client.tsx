@@ -16,8 +16,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Send as IconSend, Warehouse as IconWarehouse } from "lucide-react";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { parseVietnameseNumericInput } from "@comtammatu/shared/format";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
-import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
   ItemContent,
@@ -45,6 +45,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { formatQty } from "@/(protected)/inventory/_lib/format";
+import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import { AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
@@ -147,10 +148,8 @@ interface DraftLine {
 }
 
 function parseDraftQuantity(value: string): number | null {
-  const raw = value.trim().replace(",", ".");
-  if (raw.length === 0) return null;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  const parsed = parseVietnameseNumericInput(value, { maxFractionDigits: 3 });
+  return parsed.state === "valid" && parsed.value >= 0 ? parsed.value : null;
 }
 
 function formatCountQuantity(value: number): string {
@@ -309,12 +308,14 @@ export function CountSlipClient({
 
     const lines = activeGroup.assignments.map((assignment) => {
       const entry = draft[assignment.ingredientId];
-      const raw = (entry?.quantity ?? "").trim().replace(",", ".");
+      const parsed = parseVietnameseNumericInput(entry?.quantity ?? "", {
+        maxFractionDigits: 3,
+      });
       return {
         ingredientId: assignment.ingredientId,
-        countedQuantity: Number(raw),
+        countedQuantity: parsed.state === "valid" ? parsed.value : Number.NaN,
         entryUnitId: entry?.entryUnitId ?? null,
-        rawEmpty: raw.length === 0,
+        rawEmpty: parsed.state === "empty",
         note: entry?.note.trim() || undefined,
       };
     });
@@ -412,15 +413,16 @@ export function CountSlipClient({
                 >
                   <div className="flex min-w-0 flex-col gap-1.5">
                     <Label htmlFor={inputId}>Số đếm được</Label>
-                    <Input
+                    <FormattedNumberInput
                       id={inputId}
                       inputMode="decimal"
                       autoComplete="off"
                       value={entry?.quantity ?? ""}
                       disabled={locked || isPending}
-                      onChange={(event) =>
+                      maxFractionDigits={3}
+                      onValueChange={(quantity) =>
                         updateLine(assignment.ingredientId, {
-                          quantity: event.target.value,
+                          quantity,
                         })
                       }
                       placeholder={quantityPlaceholder}

@@ -2,7 +2,12 @@
 
 import * as React from "react";
 import { Input } from "@comtammatu/ui/components/input";
-import { formatDecimal } from "@comtammatu/shared/format";
+import {
+  formatDecimal,
+  formatNumericInputDraft,
+  parseVietnameseNumericInput,
+  type NumericInputParseResult,
+} from "@comtammatu/shared/format";
 
 type FormattedNumberInputProps = Omit<
   React.ComponentProps<typeof Input>,
@@ -19,72 +24,12 @@ type FormattedNumberInputProps = Omit<
   maxFractionDigits?: number;
 };
 
-function looksLikeGroupedInteger(value: string) {
-  return /^\d{1,3}(\.\d{3})+$/.test(value);
-}
-
-export function sanitizeNumericInput(
-  input: string,
-  {
-    allowNegative = false,
-    maxFractionDigits = 2,
-  }: {
-    allowNegative?: boolean;
-    maxFractionDigits?: number;
-  },
-) {
-  const compact = input.replace(/\s+/g, "");
-  const negative = allowNegative && compact.includes("-");
-  const cleaned = compact.replace(/[^\d.,]/g, "");
-
-  if (cleaned.length === 0) {
-    return negative ? "-" : "";
-  }
-
-  if (maxFractionDigits <= 0) {
-    const integerOnly = cleaned.replace(/[.,]/g, "").replace(/^0+(?=\d)/, "");
-    const normalized = integerOnly || "0";
-    return `${negative ? "-" : ""}${normalized}`;
-  }
-
-  const lastComma = cleaned.lastIndexOf(",");
-  const hasExplicitDecimalComma = lastComma >= 0;
-  const dotMatches = cleaned.match(/\./g);
-  const dotCount = dotMatches ? dotMatches.length : 0;
-  const dotIndex = cleaned.lastIndexOf(".");
-  const digitsAfterDot =
-    dotIndex >= 0 ? cleaned.slice(dotIndex + 1).replace(/[^\d]/g, "") : "";
-  const dotCanBeDecimal =
-    !hasExplicitDecimalComma &&
-    dotCount === 1 &&
-    digitsAfterDot.length <= maxFractionDigits &&
-    !looksLikeGroupedInteger(cleaned);
-  const separatorIndex = hasExplicitDecimalComma
-    ? lastComma
-    : dotCanBeDecimal
-      ? dotIndex
-      : -1;
-  const hasTrailingSeparator =
-    separatorIndex >= 0 && separatorIndex === cleaned.length - 1;
-
-  if (separatorIndex < 0) {
-    const integerOnly = cleaned.replace(/[.,]/g, "").replace(/^0+(?=\d)/, "");
-    const normalized = integerOnly || "0";
-    return `${negative ? "-" : ""}${normalized}`;
-  }
-
-  const digitsAfterSeparator = cleaned
-    .slice(separatorIndex + 1)
-    .replace(/[^\d]/g, "");
-
-  const integerPart = cleaned
-    .slice(0, separatorIndex)
-    .replace(/[.,]/g, "")
-    .replace(/^0+(?=\d)/, "");
-  const fractionPart = digitsAfterSeparator.slice(0, maxFractionDigits);
-  const normalizedInteger = integerPart || "0";
-
-  return `${negative ? "-" : ""}${normalizedInteger}${hasTrailingSeparator || fractionPart.length > 0 ? `.${fractionPart}` : ""}`;
+export function normalizeTypedDecimalPointAlias(value: string) {
+  if (value.includes(",")) return value;
+  const index = value.lastIndexOf(".");
+  return index < 0
+    ? value
+    : `${value.slice(0, index)},${value.slice(index + 1)}`;
 }
 
 function formatDisplayValue(raw: string, maxFractionDigits: number) {
@@ -108,8 +53,8 @@ export function resolveFormattedNumberInputDisplay(
     maxFractionDigits: number;
   },
 ) {
-  if (isFocused && maxFractionDigits > 0) {
-    return focusedValue ?? rawValue;
+  if (isFocused) {
+    return formatNumericInputDraft(focusedValue ?? rawValue);
   }
   return formatDisplayValue(rawValue, maxFractionDigits);
 }
@@ -128,12 +73,15 @@ export const FormattedNumberInput = React.forwardRef<
     inputMode,
     onBlur,
     onFocus,
+    "aria-invalid": ariaInvalid,
     ...props
   },
   ref,
 ) {
   const [isFocused, setIsFocused] = React.useState(false);
-  const [focusedValue, setFocusedValue] = React.useState<string | null>(null);
+  const [draft, setDraft] = React.useState<NumericInputParseResult | null>(
+    null,
+  );
   const isControlled = value != null;
   const [innerValue, setInnerValue] = React.useState(defaultValue ?? "");
 
@@ -144,6 +92,11 @@ export const FormattedNumberInput = React.forwardRef<
   }, [isControlled, value]);
 
   const rawValue = isControlled ? (value ?? "") : innerValue;
+  const draftInvalid =
+    draft?.state === "invalid" || draft?.state === "incomplete";
+  const displayValue = isFocused
+    ? (draft?.display ?? formatNumericInputDraft(rawValue))
+    : formatDisplayValue(rawValue, maxFractionDigits);
 
   return (
     <Input
@@ -153,35 +106,46 @@ export const FormattedNumberInput = React.forwardRef<
       autoComplete="off"
       spellCheck={false}
       inputMode={inputMode ?? (maxFractionDigits > 0 ? "decimal" : "numeric")}
-      value={resolveFormattedNumberInputDisplay(rawValue, {
-        focusedValue,
-        isFocused,
-        maxFractionDigits,
-      })}
+      value={displayValue}
+      aria-invalid={draftInvalid ? true : ariaInvalid}
       onChange={(event) => {
-        const nextValue = sanitizeNumericInput(event.target.value, {
+        const nativeEvent = event.nativeEvent as InputEvent;
+        const inputValue =
+          maxFractionDigits > 0 &&
+          nativeEvent.inputType === "insertText" &&
+          nativeEvent.data === "."
+            ? normalizeTypedDecimalPointAlias(event.target.value)
+            : event.target.value;
+        const nextDraft = parseVietnameseNumericInput(inputValue, {
           allowNegative,
           maxFractionDigits,
         });
-        if (!isControlled) {
-          setInnerValue(nextValue);
+        setDraft(nextDraft);
+
+        if (nextDraft.state === "valid" || nextDraft.state === "empty") {
+          if (!isControlled) {
+            setInnerValue(nextDraft.canonical);
+          }
+          onValueChange?.(nextDraft.canonical);
         }
-        if (maxFractionDigits > 0) {
-          setFocusedValue(nextValue);
-        }
-        onValueChange?.(nextValue);
       }}
       onFocus={(event) => {
         setIsFocused(true);
-        if (maxFractionDigits > 0) {
-          setFocusedValue(rawValue);
-        }
+        setDraft(
+          parseVietnameseNumericInput(formatNumericInputDraft(rawValue), {
+            allowNegative,
+            maxFractionDigits,
+          }),
+        );
         onFocus?.(event);
       }}
       onBlur={(event) => {
         setIsFocused(false);
-        const blurValue = focusedValue ?? rawValue;
-        setFocusedValue(null);
+        const blurValue =
+          draft?.state === "valid" || draft?.state === "empty"
+            ? draft.canonical
+            : rawValue;
+        setDraft(null);
         onValueBlur?.(blurValue, event);
         onBlur?.(event);
       }}

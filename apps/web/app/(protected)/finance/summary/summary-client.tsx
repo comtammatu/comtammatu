@@ -30,6 +30,7 @@ import {
   formatVNDateTime,
   getYesterdayVNDateString,
 } from "@/_lib/format-datetime";
+import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import {
   listSummaryRunQueue,
@@ -86,7 +87,7 @@ export function SummaryClient({ initialBranches, initialQueue }: Props) {
       key: "date",
       header: "Ngày",
       className: "font-mono text-sm",
-      render: (row) => row.summary_date,
+      render: (row) => formatVNBusinessDate(row.summary_date),
     },
     {
       key: "branch",
@@ -255,7 +256,8 @@ export function SummaryClient({ initialBranches, initialQueue }: Props) {
                     `CN #${row.branch_id}`}
                 </ItemTitle>
                 <ItemDescription>
-                  {row.summary_date} · {TRIGGER_LABEL[row.trigger_source]}
+                  {formatVNBusinessDate(row.summary_date)} ·{" "}
+                  {TRIGGER_LABEL[row.trigger_source]}
                 </ItemDescription>
               </ItemContent>
               <ItemFooter>

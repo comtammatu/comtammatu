@@ -138,9 +138,9 @@ export function BranchTransferDetailClient({
             {transfer.code}
           </p>
           <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-            <span className="truncate">{transfer.fromBranch}</span>
+            <span className="truncate">{transfer.fromLocation}</span>
             <IconArrowRight className="size-3 shrink-0" />
-            <span className="truncate">{transfer.toBranch}</span>
+            <span className="truncate">{transfer.toLocation}</span>
           </p>
         </div>
         <StatusBadge domain="inventory" value={transfer.status} size="sm" />
@@ -155,8 +155,8 @@ export function BranchTransferDetailClient({
           >
             <BranchOperatorDetailList
               rows={[
-                { label: copy.sourceBranchLabel, value: transfer.fromBranch },
-                { label: copy.targetBranchLabel, value: transfer.toBranch },
+                { label: copy.sourceBranchLabel, value: transfer.fromLocation },
+                { label: copy.targetBranchLabel, value: transfer.toLocation },
                 { label: copy.latestTimeLabel, value: transfer.date },
                 {
                   label: copy.totalItems,

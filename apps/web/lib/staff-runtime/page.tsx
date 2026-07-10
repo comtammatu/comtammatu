@@ -11,6 +11,8 @@ import {
   UserCircle as IconUserCircle,
 } from "lucide-react";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { formatPercent } from "@comtammatu/shared/format";
+import { formatVNClockTime } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -521,7 +523,7 @@ export async function StaffWorkdayPageContent({
   const title = getWorkTitle(state, copy);
   const currentShiftName = state.attendance?.shiftName ?? null;
   const currentShiftRange = state.attendance?.shiftStartTime
-    ? `${state.attendance.shiftStartTime.slice(0, 5)} - ${state.attendance.shiftEndTime?.slice(0, 5) ?? "—"}`
+    ? `${formatVNClockTime(state.attendance.shiftStartTime)} - ${formatVNClockTime(state.attendance.shiftEndTime)}`
     : "—";
 
   const progressValue = state.managerAttendanceOnly
@@ -695,7 +697,7 @@ export async function StaffWorkdayPageContent({
             </p>
           </div>
           <Badge variant={progressBadgeVariant} className="shrink-0">
-            {progressValue}%
+            {formatPercent(progressValue, 0)}
           </Badge>
         </div>
         {workflowLayout === "stepper" ? null : <div>{primaryAction}</div>}

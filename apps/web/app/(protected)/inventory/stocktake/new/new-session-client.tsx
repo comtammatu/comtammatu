@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
   SelectContent,
@@ -19,6 +18,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { FormField } from "@/components/form";
 import {
   AppDetailFooter,
   AppPageHeader,
@@ -158,8 +158,16 @@ export function NewStocktakeSessionClient({
           <StocktakeModeSelector value={mode} onChange={setMode} />
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label>{BRANCH_VI.long}</Label>
+            <FormField
+              controlId="stocktake-branch"
+              label={BRANCH_VI.long}
+              description={
+                branchId
+                  ? undefined
+                  : messages.inventory.stocktake.selectBranchFirst
+              }
+              required
+            >
               <Select
                 value={branchId ? String(branchId) : ""}
                 onValueChange={(v) => {
@@ -168,8 +176,10 @@ export function NewStocktakeSessionClient({
                 }}
               >
                 <SelectTrigger
-                  size={embedded ? "touch" : "default"}
+                  id="stocktake-branch"
+                  size={embedded ? "touch" : "field"}
                   className="w-full"
+                  aria-required
                 >
                   <SelectValue placeholder={BRANCH_VI.select} />
                 </SelectTrigger>
@@ -181,10 +191,13 @@ export function NewStocktakeSessionClient({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FormField>
 
-            <div className="flex flex-col gap-1.5">
-              <Label>{messages.inventory.stocktake.locationOptional}</Label>
+            <FormField
+              controlId="stocktake-location"
+              label={messages.inventory.stocktake.locationOptional}
+              disabled={!branchId || branchLocations.length === 0}
+            >
               <Select
                 value={locationId ? String(locationId) : "__all__"}
                 onValueChange={(v) =>
@@ -193,7 +206,8 @@ export function NewStocktakeSessionClient({
                 disabled={!branchId || branchLocations.length === 0}
               >
                 <SelectTrigger
-                  size={embedded ? "touch" : "default"}
+                  id="stocktake-location"
+                  size={embedded ? "touch" : "field"}
                   className="w-full"
                 >
                   <SelectValue
@@ -212,7 +226,7 @@ export function NewStocktakeSessionClient({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FormField>
           </div>
 
           <Item variant="outline" size="sm">

@@ -85,12 +85,12 @@ test("POS validates HĐĐT buyer payload before committing payment", () => {
   );
   assert.ok(
     cashBlock.indexOf("parseInvoicePayload(invoice)") <
-      cashBlock.indexOf("confirmCashPayment(branchId, orderId, cashReceived)"),
+      cashBlock.indexOf("const paymentResult = await confirmCashPayment("),
     "cash HĐĐT buyer validation must happen before payment commit",
   );
   assert.ok(
     vietQrBlock.indexOf("parseInvoicePayload(invoice)") <
-      vietQrBlock.indexOf("confirmVietQrPayment(branchId, orderId, amount)"),
+      vietQrBlock.indexOf("const paymentResult = await confirmVietQrPayment("),
     "VietQR HĐĐT buyer validation must happen before payment commit",
   );
 });
@@ -210,6 +210,21 @@ test("finance can recover paid SePay orders that missed HĐĐT", () => {
   );
   assert.match(
     actionSrc,
+    /\.or\("error_code\.is\.null,error_code\.neq\.invoice_binding_manual_review"\)/,
+    "recovery must preserve NULL errors while excluding ambiguous buyer bindings",
+  );
+  assert.match(
+    actionSrc,
+    /\.eq\("error_code", "invoice_binding_manual_review"\)[\s\S]*\.in\("payment_id", candidatePaymentIds\)/,
+    "recovery must find any manual-review event sharing a candidate payment",
+  );
+  assert.match(
+    actionSrc,
+    /candidatePaymentIds\.filter\([\s\S]*!manualReviewPaymentIds\.has\(paymentId\)/,
+    "a second event must not make a manual-review payment eligible again",
+  );
+  assert.match(
+    actionSrc,
     /\.from\("payments"\)[\s\S]*\.eq\("method", "vietqr"\)[\s\S]*\.eq\("status", "completed"\)/,
     "recovery must bind processed webhooks to completed VietQR payments",
   );
@@ -228,10 +243,9 @@ test("draft HĐĐT reissue preserves stored buyer contact fields", () => {
   const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
   const createSrc = read("apps/web/lib/hddt-per-order.ts");
 
-  assert.ok(
-    actionSrc.includes(
-      '.select("id, order_id, buyer_name, buyer_tax_code, buyer_address, buyer_email")',
-    ),
+  assert.match(
+    actionSrc,
+    /\.select\(\s*"id, order_id, buyer_name, buyer_tax_code, buyer_address, buyer_email",?\s*\)/,
     "draft reissue must load buyer address/email with the other buyer fields",
   );
   assert.ok(
@@ -319,7 +333,9 @@ test("POS item-level discount migration and actions exist", () => {
   );
   assert.ok(
     migration.includes("ADD COLUMN IF NOT EXISTS discount_amount") &&
-      migration.includes("CREATE OR REPLACE FUNCTION public.apply_order_item_discount"),
+      migration.includes(
+        "CREATE OR REPLACE FUNCTION public.apply_order_item_discount",
+      ),
     "order_items must persist and mutate item-level discount metadata",
   );
   assert.ok(

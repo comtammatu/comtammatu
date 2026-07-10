@@ -34,6 +34,32 @@ import {
 
 const branchCopy = messages.settings.branch;
 
+const CENTRAL_KITCHEN_HOME_LABELS = [
+  {
+    suffix: "/stock/grn",
+    label: branchCopy.centralKitchenReceiveJob,
+  },
+  {
+    suffix: "/stock/production",
+    label: branchCopy.centralKitchenProductionJob,
+  },
+  {
+    suffix: "/stock/production/recipes",
+    label: branchCopy.centralKitchenRecipesJob,
+  },
+  {
+    suffix: "/stock/transfer",
+    label: branchCopy.centralKitchenDispatchJob,
+  },
+] as const;
+
+function getCentralKitchenHomeLabel(href: string, fallback: string): string {
+  return (
+    CENTRAL_KITCHEN_HOME_LABELS.find(({ suffix }) => href.endsWith(suffix))
+      ?.label ?? fallback
+  );
+}
+
 // Approved home tile curation per central kind. Suffixes are matched against tile hrefs.
 export default async function OperatorHomePage({
   params,
@@ -50,27 +76,28 @@ export default async function OperatorHomePage({
   if (!context) notFound();
 
   const branchKind = context.branch.branch_kind as BranchKind;
+  const isCentralKitchen = branchKind === "central_kitchen";
   const rawGroups = resolveOperatorTiles(
     claims.user_role,
     context.branchId,
     branchKind,
   );
   const basePath = `/br/${context.branchId}`;
-  const showTodayCard = claims.user_role !== "owner";
+  const showTodayCard = claims.user_role !== "owner" && !isCentralKitchen;
 
   // Pre-clock-in gate for cashier/chef roles
   const isFloorRole =
     claims.user_role === "cashier" || claims.user_role === "chef";
 
-  // Data fetch for locking tiles is fast so we can await it here.
-  const workState = await getTodayWorkState();
-  const beforeClockIn = workState.status === "not_started";
+  const workState = isCentralKitchen ? null : await getTodayWorkState();
+  const beforeClockIn = workState?.status === "not_started";
 
   // Pre-clock-in: tiles stay VISIBLE but disabled (owner decision, cutover
   // spec "Open implementation notes") — the greyed tile plus the banner is
   // the clock-in prompt.
   const lockedGroupIds = new Set(["sales_kitchen", "stock"]);
-  const tilesLockedBeforeClockIn = isFloorRole && beforeClockIn;
+  const tilesLockedBeforeClockIn =
+    !isCentralKitchen && isFloorRole && beforeClockIn;
 
   const isCentral = branchKind !== "branch";
   const isCentralSupply = branchKind === "central_supply";
@@ -159,15 +186,14 @@ export default async function OperatorHomePage({
   ) : null;
 
   const clockGateSection =
-    isFloorRole && beforeClockIn ? (
+    !isCentralKitchen && isFloorRole && beforeClockIn ? (
       <NoteCallout tone="warning">
         Bạn cần <strong>chấm công vào ca</strong> để mở khóa các chức năng Bán
         hàng, Bếp và Kho chi nhánh.
       </NoteCallout>
     ) : null;
 
-  const isCentralKitchen = branchKind === "central_kitchen";
-  const secondaryLinksSection = isCentral ? (
+  const secondaryLinksSection = isCentralSupply ? (
     <BranchOperatorActionBar align="start" className="sm:justify-center">
       <Button
         asChild
@@ -179,21 +205,18 @@ export default async function OperatorHomePage({
           {branchCopy.centralClockLink}
         </Link>
       </Button>
-      {isCentralKitchen ? (
-        <Button
-          asChild
-          variant="outline"
-          size="touch"
-          className="w-full sm:w-fit"
-        >
-          <Link href={`${basePath}/stock/production/recipes`}>Công thức</Link>
-        </Button>
-      ) : null}
     </BranchOperatorActionBar>
   ) : null;
 
   return (
-    <BranchOperatorPage title={APP_COPY_VI.operatorHome} hideHeaderOnMobile>
+    <BranchOperatorPage
+      title={
+        isCentralKitchen
+          ? branchCopy.centralKitchenHomeTitle
+          : APP_COPY_VI.operatorHome
+      }
+      hideHeaderOnMobile
+    >
       {showTodayCard ? (
         <Suspense fallback={<HubTodayStatusPending />}>
           <HubTodayStatus branchId={context.branchId} />
@@ -223,7 +246,9 @@ export default async function OperatorHomePage({
               key: `${group.id}-${tile.moduleKey}-${tile.href}`,
               href: tile.href,
               icon: resolveOperatorTileIcon(tile.icon),
-              title: tile.label,
+              title: isCentralKitchen
+                ? getCentralKitchenHomeLabel(tile.href, tile.label)
+                : tile.label,
               disabled:
                 tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
             })),

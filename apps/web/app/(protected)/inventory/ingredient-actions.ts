@@ -4,6 +4,7 @@ import { cache } from "react";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@comtammatu/database";
+import { parseVietnameseNumericImport } from "@comtammatu/shared/format";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { VALIDATION_VI } from "@comtammatu/shared/messages";
 import { getVNDateString } from "@comtammatu/shared/time";
@@ -639,12 +640,21 @@ function parseBool(raw: string | undefined): boolean {
   return true;
 }
 
-function parseOptionalNumber(raw: string | undefined): number | undefined {
-  if (raw == null) return undefined;
-  const s = raw.toString().trim().replace(/[,\s]/g, "");
-  if (s === "") return undefined;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : undefined;
+function parseOptionalNumber(
+  raw: string | undefined,
+  maxFractionDigits: number,
+): { value: number | undefined; error?: string } {
+  if (raw == null || raw.trim() === "") return { value: undefined };
+
+  const parsed = parseVietnameseNumericImport(raw, { maxFractionDigits });
+  if (parsed.state !== "valid") {
+    return {
+      value: undefined,
+      error: "Số phải theo định dạng vi-VN, ví dụ 1.234,56.",
+    };
+  }
+
+  return { value: parsed.value };
 }
 
 export interface ImportIngredientIssue {
@@ -766,25 +776,44 @@ export async function importIngredients(
 
     const unitCost = parseOptionalNumber(
       raw["Giá nhập (VND)"] ?? raw["unit_cost"],
+      0,
+    );
+    const minStock = parseOptionalNumber(
+      raw["Tồn tối thiểu"] ?? raw["min_stock_level"],
+      3,
     );
     const maxStock = parseOptionalNumber(
       raw["Tồn tối đa"] ?? raw["max_stock_level"],
+      3,
     );
     const reorder = parseOptionalNumber(
       raw["Điểm đặt hàng"] ?? raw["reorder_point"],
+      3,
     );
+    const invalidNumber = [
+      { field: "Giá nhập (VND)", result: unitCost },
+      { field: "Tồn tối thiểu", result: minStock },
+      { field: "Tồn tối đa", result: maxStock },
+      { field: "Điểm đặt hàng", result: reorder },
+    ].find(({ result }) => result.error != null);
+    if (invalidNumber) {
+      issues.push({
+        row: rowNumber,
+        field: invalidNumber.field,
+        message: invalidNumber.result.error ?? "Số không hợp lệ.",
+      });
+      return;
+    }
     const parsedRow = importIngredientRowSchema.safeParse({
       name: raw["Tên nguyên liệu"] ?? raw["name"],
       sku: (raw["SKU"] ?? raw["sku"] ?? "").trim() || undefined,
       unit: raw["Đơn vị"] ?? raw["unit"],
       category: (raw["Danh mục"] ?? raw["category"] ?? "").trim() || undefined,
       item_kind: kindKey,
-      unit_cost: unitCost,
-      min_stock_level:
-        parseOptionalNumber(raw["Tồn tối thiểu"] ?? raw["min_stock_level"]) ??
-        0,
-      max_stock_level: maxStock,
-      reorder_point: reorder,
+      unit_cost: unitCost.value,
+      min_stock_level: minStock.value ?? 0,
+      max_stock_level: maxStock.value,
+      reorder_point: reorder.value,
       storage_type: storageKey,
       is_active: parseBool(raw["Hoạt động"] ?? raw["is_active"]),
     });

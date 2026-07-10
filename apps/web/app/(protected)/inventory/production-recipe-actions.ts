@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { parseVietnameseNumericImport } from "@comtammatu/shared/format";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { getAuthContextWithAnyPermission } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
@@ -497,29 +498,15 @@ function normalizeLookupKey(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function parseCsvNumber(raw: string): number | null {
-  const value = raw.trim();
-  if (!value) return null;
-
-  const compact = value.replace(/\s/g, "");
-  const parts = compact.split(",");
-  const decimalComma =
-    parts.length === 2 &&
-    parts[1] != null &&
-    parts[1].length > 0 &&
-    parts[1].length !== 3 &&
-    !compact.includes(".");
-  const normalized = decimalComma
-    ? `${parts[0]}.${parts[1]}`
-    : compact.replace(/,/g, "");
-  const n = Number(normalized);
-  return Number.isFinite(n) ? n : null;
+function parseCsvNumber(raw: string, maxFractionDigits = 3): number | null {
+  const parsed = parseVietnameseNumericImport(raw, { maxFractionDigits });
+  return parsed.state === "valid" ? parsed.value : null;
 }
 
 function parseOptionalId(raw: string): number | null | undefined {
   if (!raw.trim()) return undefined;
-  const n = parseCsvNumber(raw);
-  if (n == null || !Number.isInteger(n) || n <= 0) return null;
+  const n = parseCsvNumber(raw, 0);
+  if (n == null || !Number.isSafeInteger(n) || n <= 0) return null;
   return n;
 }
 

@@ -1,0 +1,315 @@
+import "server-only";
+
+import { notFound, redirect } from "next/navigation";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
+import { currentUserHasPermission } from "@/_lib/permissions";
+import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
+import { fetchStockBearingLocationIds } from "@/(protected)/inventory/_lib/stock-bearing-locations";
+import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
+import {
+  computeStockIngredientDetailStatus,
+  stockStorageTemperature,
+  type StockIngredientDetailData,
+  type StockIngredientDetailLocation,
+  type StockIngredientDetailMovement,
+} from "./stock-on-hand-detail-model";
+
+type UnitRef = { code: string };
+
+type IngredientUnitJoin = {
+  unit_id: number;
+  to_base_factor: number | null;
+  is_base: boolean;
+  is_active: boolean;
+  units: UnitRef | UnitRef[] | null;
+};
+
+type IngredientRow = {
+  id: number;
+  name: string;
+  sku: string | null;
+  category: string | null;
+  unit_cost?: number | null;
+  min_stock_level: number | null;
+  max_stock_level: number | null;
+  reorder_point: number | null;
+  storage_type: string | null;
+  ingredient_units: IngredientUnitJoin[] | null;
+};
+
+type LocationRef = {
+  name: string;
+  code: string;
+  location_kind: string;
+};
+
+type StockLevelRow = {
+  location_id: number;
+  current_quantity: number;
+  avg_unit_cost?: number | null;
+  last_counted_at: string | null;
+  inventory_locations: LocationRef | LocationRef[] | null;
+};
+
+type MovementRow = {
+  id: number;
+  type: string;
+  movement_subtype: string | null;
+  quantity_change: number;
+  unit_cost?: number | null;
+  reason: string | null;
+  created_at: string;
+  grn_id: number | null;
+  transfer_id: number | null;
+  issue_id: number | null;
+  order_id: number | null;
+  production_order_id: number | null;
+  inventory_locations: LocationRef | LocationRef[] | null;
+};
+
+interface LoadStockIngredientDetailDataOptions {
+  ingredientId: number;
+  includeValuation?: boolean;
+  movementLimit?: number;
+  queryBranchId?: string | string[];
+  routeBranchId?: number;
+}
+
+function relatedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function ingredientSelect(includeValuation: boolean): string {
+  return [
+    "id",
+    "name",
+    "sku",
+    "category",
+    includeValuation ? "unit_cost" : null,
+    "min_stock_level",
+    "max_stock_level",
+    "reorder_point",
+    "storage_type",
+    "ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, is_active, units!ingredient_units_unit_tenant_fkey(code))",
+  ]
+    .filter((field): field is string => Boolean(field))
+    .join(", ");
+}
+
+function stockLevelSelect(includeValuation: boolean): string {
+  return [
+    "location_id",
+    "current_quantity",
+    includeValuation ? "avg_unit_cost" : null,
+    "last_counted_at",
+    "inventory_locations ( name, code, location_kind )",
+  ]
+    .filter((field): field is string => Boolean(field))
+    .join(", ");
+}
+
+function movementSelect(includeValuation: boolean): string {
+  return [
+    "id",
+    "type",
+    "movement_subtype",
+    "quantity_change",
+    includeValuation ? "unit_cost" : null,
+    "reason",
+    "created_at",
+    "grn_id",
+    "transfer_id",
+    "issue_id",
+    "order_id",
+    "production_order_id",
+    "inventory_locations ( name, code, location_kind )",
+  ]
+    .filter((field): field is string => Boolean(field))
+    .join(", ");
+}
+
+export async function loadStockIngredientDetailData({
+  ingredientId,
+  includeValuation = true,
+  movementLimit = 30,
+  queryBranchId,
+  routeBranchId,
+}: LoadStockIngredientDetailDataOptions): Promise<StockIngredientDetailData> {
+  if (!Number.isInteger(ingredientId) || ingredientId <= 0) notFound();
+
+  const { supabase, claims } = await loadAuthState();
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId,
+  });
+  if (scope.outOfScope) notFound();
+
+  const branchId = scope.selectedBranchId;
+  if (!branchId) redirect("/inventory");
+
+  const [
+    stockBearingLocationIds,
+    ingredientResult,
+    canReceiveGrn,
+    canCreateTransfer,
+    canCreateStocktake,
+    canCreateIssue,
+    canWriteoff,
+  ] = await Promise.all([
+    fetchStockBearingLocationIds({
+      supabase,
+      tenantId: claims.tenant_id,
+      branchId,
+    }),
+    supabase
+      .from("ingredients")
+      .select(ingredientSelect(includeValuation))
+      .eq("tenant_id", claims.tenant_id)
+      .eq("id", ingredientId)
+      .maybeSingle(),
+    currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
+    currentUserHasPermission(
+      branchId,
+      PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
+    ),
+    currentUserHasPermission(
+      branchId,
+      PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
+    ),
+    currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITE),
+    currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITEOFF),
+  ]);
+
+  if (ingredientResult.error || !ingredientResult.data) notFound();
+  const ingredientRow = ingredientResult.data as unknown as IngredientRow;
+  const movementCount = Math.min(Math.max(Math.trunc(movementLimit), 1), 30);
+
+  const [stockResult, movementResult] = await Promise.all([
+    stockBearingLocationIds.length > 0
+      ? supabase
+          .from("stock_levels")
+          .select(stockLevelSelect(includeValuation))
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchId)
+          .eq("ingredient_id", ingredientId)
+          .in("location_id", stockBearingLocationIds)
+          .order("location_id")
+      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from("stock_movements")
+      .select(movementSelect(includeValuation))
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("ingredient_id", ingredientId)
+      .order("created_at", { ascending: false })
+      .limit(movementCount),
+  ]);
+
+  const units: IngredientUnitRow[] = (ingredientRow.ingredient_units ?? []).map(
+    (unit) => ({
+      id: 0,
+      unit_id: unit.unit_id,
+      unit_code: relatedOne(unit.units)?.code ?? "",
+      to_base_factor: Number(unit.to_base_factor ?? 1),
+      is_base: unit.is_base,
+      is_active: unit.is_active,
+      sort_order: 0,
+    }),
+  );
+  const baseUnit = ingredientRow.ingredient_units?.find((unit) => unit.is_base);
+  const unit = relatedOne(baseUnit?.units)?.code ?? "";
+  const stockRows = (stockResult.data ?? []) as unknown as StockLevelRow[];
+  const movementRows = (movementResult.data ?? []) as unknown as MovementRow[];
+  const locations: StockIngredientDetailLocation[] = stockRows.map((row) => {
+    const location = relatedOne(row.inventory_locations);
+    return {
+      locationId: row.location_id,
+      name: location?.name ?? `#${row.location_id}`,
+      code: location?.code ?? "",
+      locationKind: location?.location_kind ?? "unknown",
+      qty: Number(row.current_quantity ?? 0),
+      avgUnitCost: includeValuation ? (row.avg_unit_cost ?? null) : null,
+      lastCountedAt: row.last_counted_at,
+    };
+  });
+  const movements: StockIngredientDetailMovement[] = movementRows.map((row) => {
+    const location = relatedOne(row.inventory_locations);
+    return {
+      id: row.id,
+      type: row.type,
+      movementSubtype: row.movement_subtype,
+      quantityChange: Number(row.quantity_change ?? 0),
+      unitCost: includeValuation ? (row.unit_cost ?? null) : null,
+      reason: row.reason,
+      createdAt: row.created_at,
+      grnId: row.grn_id,
+      transferId: row.transfer_id,
+      issueId: row.issue_id,
+      orderId: row.order_id,
+      productionOrderId: row.production_order_id,
+      locationName: location?.name ?? null,
+      locationCode: location?.code ?? null,
+    };
+  });
+  const totalQty = locations.reduce((sum, location) => sum + location.qty, 0);
+  const latestCountedAt = locations.reduce<string | null>(
+    (latest, location) => {
+      if (!location.lastCountedAt) return latest;
+      if (!latest) return location.lastCountedAt;
+      return location.lastCountedAt > latest ? location.lastCountedAt : latest;
+    },
+    null,
+  );
+  const referenceUnitCost = includeValuation
+    ? Number(ingredientRow.unit_cost ?? 0)
+    : 0;
+  const totalValue = includeValuation
+    ? locations.reduce(
+        (sum, location) =>
+          sum + location.qty * (location.avgUnitCost ?? referenceUnitCost),
+        0,
+      )
+    : null;
+  const valuation =
+    totalValue == null
+      ? null
+      : {
+          totalValue,
+          wac: totalQty > 0 ? totalValue / totalQty : referenceUnitCost,
+        };
+  const min = Number(ingredientRow.min_stock_level ?? 0);
+  const max = Number(ingredientRow.max_stock_level ?? 0);
+  const reorder = Number(ingredientRow.reorder_point ?? 0);
+
+  return {
+    branchId,
+    ingredient: {
+      id: ingredientRow.id,
+      name: ingredientRow.name,
+      sku: ingredientRow.sku ?? "",
+      category: ingredientRow.category ?? "",
+      unit,
+      units,
+      min,
+      max,
+      reorder,
+      storageType: ingredientRow.storage_type,
+    },
+    locations,
+    movements,
+    totalQty,
+    latestCountedAt,
+    status: computeStockIngredientDetailStatus(totalQty, min, reorder, max),
+    storageTemperature: stockStorageTemperature(ingredientRow.storage_type),
+    valuation,
+    permissions: {
+      canReceiveGrn,
+      canCreateTransfer,
+      canCreateStocktake,
+      canCreateIssue,
+      canWriteoff,
+    },
+  };
+}

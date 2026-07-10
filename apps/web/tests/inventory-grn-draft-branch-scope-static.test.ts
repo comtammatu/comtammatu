@@ -12,9 +12,7 @@ function readRepo(path: string): string {
 const grnActions = readRepo(
   "apps/web/app/(protected)/inventory/grn-actions.ts",
 );
-const grnCreatePage = readRepo(
-  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx",
-);
+const grnCreateData = readRepo("apps/web/lib/inventory/grn-create-data.ts");
 const grnListClient = readRepo(
   "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
 );
@@ -35,8 +33,8 @@ const grnNewPage = readRepo(
 const grnSupplierPicker = readRepo(
   "apps/web/app/(protected)/inventory/grn/new/supplier-picker.tsx",
 );
-const grnCreateClient = readRepo(
-  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+const grnCreateController = readRepo(
+  "apps/web/lib/inventory/use-grn-create-controller.ts",
 );
 const purchaseOrderActions = readRepo(
   "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
@@ -54,7 +52,7 @@ test("GRN supplier drafts are looked up in the selected receiving branch", () =>
     /branchId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)\.optional\(\)/,
   );
   assert.match(
-    grnCreatePage,
+    grnCreateData,
     /loadActiveGrnDraft\(\{\s*supplierId,\s*branchId: defaultBranchId \?\? undefined,\s*\}\)/,
   );
 
@@ -174,10 +172,10 @@ test("GRN supplier receiving can stay on the same new-receipt page", () => {
   );
   assert.doesNotMatch(grnSupplierPicker, /\$\{basePath\}\/\$\{supplier\.id\}/);
 
-  assert.match(grnCreateClient, /confirmGrn/);
-  assert.match(grnCreateClient, /GRN_CREATE_COPY\.confirmNow/);
-  assert.doesNotMatch(grnCreateClient, /NumberPadSheet/);
-  assert.doesNotMatch(grnCreateClient, /onOpenNumpad/);
+  assert.match(grnCreateController, /confirmGrn/);
+  assert.match(grnCreateController, /GRN_CREATE_COPY\.confirmNow/);
+  assert.doesNotMatch(grnCreateController, /NumberPadSheet/);
+  assert.doesNotMatch(grnCreateController, /onOpenNumpad/);
 });
 
 test("GRN list creation and drafts follow the resolved branch grant", () => {

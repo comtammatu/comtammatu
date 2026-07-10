@@ -57,6 +57,8 @@ export async function loadTransferDetailPageData({
       status: string;
       from_branch_id: number;
       to_branch_id: number;
+      from_location_id: number;
+      to_location_id: number;
       from_branch_name: string | null;
       to_branch_name: string | null;
       created_by: string;
@@ -79,6 +81,18 @@ export async function loadTransferDetailPageData({
       } | null;
     }>;
   };
+
+  const { data: locations } = await supabase
+    .from("inventory_locations")
+    .select("id, name")
+    .eq("tenant_id", claims.tenant_id)
+    .in("id", [
+      detail.transfer.from_location_id,
+      detail.transfer.to_location_id,
+    ]);
+  const locationNameById = new Map(
+    (locations ?? []).map((location) => [location.id, location.name] as const),
+  );
 
   const items: TransferDetail["items"] = (detail.lines ?? []).map((line) => {
     const ingredient = line.ingredients;
@@ -114,6 +128,14 @@ export async function loadTransferDetailPageData({
       detail.transfer.from_branch_name ??
       `Chi nhánh #${detail.transfer.from_branch_id}`,
     toBranch:
+      detail.transfer.to_branch_name ??
+      `Chi nhánh #${detail.transfer.to_branch_id}`,
+    fromLocation:
+      locationNameById.get(detail.transfer.from_location_id) ??
+      detail.transfer.from_branch_name ??
+      `Chi nhánh #${detail.transfer.from_branch_id}`,
+    toLocation:
+      locationNameById.get(detail.transfer.to_location_id) ??
       detail.transfer.to_branch_name ??
       `Chi nhánh #${detail.transfer.to_branch_id}`,
     createdBy: "—",

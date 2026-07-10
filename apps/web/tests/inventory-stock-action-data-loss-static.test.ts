@@ -32,15 +32,13 @@ test("quick stock issue keeps the dialog open when the line save fails", () => {
 });
 
 test("adding a saved GRN line does not refresh away client line state", () => {
-  const source = read(
-    "apps/web/app/(protected)/inventory/grn/[id]/_hooks/use-grn-line-actions.ts",
-  );
+  const source = read("apps/web/lib/inventory/use-grn-detail-actions.ts");
   const upsertLocalLineBlock = sliceBetween(
     source,
     "function upsertLocalLine",
     "\n\n  function validateBeforeConfirm",
   );
 
-  assert.match(upsertLocalLineBlock, /setLines\(\(prev\) =>/);
+  assert.match(upsertLocalLineBlock, /setLines\(\(previous\) =>/);
   assert.doesNotMatch(upsertLocalLineBlock, /router\.refresh\(\)/);
 });

@@ -18,6 +18,8 @@ export { BusinessDateField } from "./business-date-field";
 export { SelectField } from "./select-field";
 export { TextareaField } from "./textarea-field";
 export { Combobox } from "./combobox";
+export { ComboboxField } from "./combobox-field";
+export { FormField } from "./form-field";
 export { MultiSelectCombobox } from "./multi-select-combobox";
 export {
   AppDialog,

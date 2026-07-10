@@ -15,6 +15,8 @@ function makeTransfer(patch: Partial<TransferDetail> = {}): TransferDetail {
     toBranchId: 20,
     fromBranch: "Kho A",
     toBranch: "Kho B",
+    fromLocation: "Kho A",
+    toLocation: "Kho B",
     createdBy: "—",
     date: "10/07/2026",
     note: null,

@@ -31,6 +31,7 @@ const STOCK_PRIMARY_SUFFIXES = [
   "/stock/waste-approvals",
   "/stock/waste",
   "/stock/production",
+  "/stock/production/recipes",
 ] as const;
 
 const STOCK_LOOKUP_SUFFIXES = [

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { ProductionNewClient } from "@/(protected)/inventory/production/new/production-new-client";
 import { loadProductionSurfaceData } from "@/(protected)/inventory/production-data";
+import { BranchProductionNewClient } from "./branch-production-new-client";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
@@ -11,13 +11,8 @@ export default async function OperatorProductionNewPage({ params }: PageProps) {
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  const {
-    productionBranches,
-    targetBranches,
-    locations,
-    finishedGoods,
-    recipes,
-  } = await loadProductionSurfaceData({ routeBranchId: branchId });
+  const { productionBranches, locations, finishedGoods, recipes } =
+    await loadProductionSurfaceData({ routeBranchId: branchId });
   const recipeFinishedGoodIds = new Set(
     recipes.map((recipe) => recipe.finished_good_id),
   );
@@ -26,14 +21,12 @@ export default async function OperatorProductionNewPage({ params }: PageProps) {
   );
 
   return (
-    <ProductionNewClient
+    <BranchProductionNewClient
+      branchId={branchId}
       branches={productionBranches.filter((branch) => branch.id === branchId)}
-      targetBranches={targetBranches}
       locations={locations}
       finishedGoods={finishedGoodsWithRecipes}
-      initialBranchId={branchId}
       basePath={`/br/${branchId}/stock/production`}
-      embedded
     />
   );
 }

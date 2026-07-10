@@ -195,7 +195,7 @@ export function ItemCustomizer({
   // Parse + clamp the typed discount value so the preview matches what the
   // server will store (mirrors compute_discount_amount).
   const discountValue = useMemo(() => {
-    const trimmed = discountValueText.trim().replace(",", ".");
+    const trimmed = discountValueText.trim();
     if (trimmed === "") return 0;
     const n = Number(trimmed);
     if (!Number.isFinite(n) || n < 0) return 0;

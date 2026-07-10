@@ -12,6 +12,7 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react";
+import { formatCount } from "@comtammatu/shared/format";
 import {
   Avatar,
   AvatarFallback,
@@ -395,7 +396,7 @@ export function MembersClient({
                   onClick={() => setStatusFilter(chip.value)}
                 >
                   <Badge variant={active ? "default" : chip.variant}>
-                    {chip.count}
+                    {formatCount(chip.count)}
                   </Badge>
                   <span className="whitespace-nowrap">{chip.label}</span>
                 </Button>

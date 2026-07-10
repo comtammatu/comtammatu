@@ -10,6 +10,7 @@ import {
   buildInvoiceLineItemsFromOrderItems,
   type OrderItemForInvoiceLines,
 } from "@comtammatu/shared/hddt";
+import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { z } from "zod";
 
@@ -151,9 +152,7 @@ export async function issueTaxInvoiceForPaidOrder({
 
   if (summaryInvoice) {
     const d = summaryInvoice.summary_date;
-    const dateLabel = d
-      ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`
-      : "trước đó";
+    const dateLabel = d ? formatVNBusinessDate(d) : "trước đó";
     return {
       success: false,
       error: `Đơn này đã nằm trong hóa đơn tổng hợp ngày ${dateLabel}. Vui lòng giữ biên nhận hoặc yêu cầu hóa đơn điều chỉnh qua kế toán.`,

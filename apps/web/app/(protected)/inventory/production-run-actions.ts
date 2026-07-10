@@ -20,6 +20,11 @@ const PRODUCTION_ORDER_PERMISSIONS = [
   PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
 ] as const;
 
+const PRODUCTION_RECIPE_UNIT_MAPPING_ERROR =
+  "Đơn vị nguyên liệu trong công thức chưa hợp lệ. Hãy cập nhật công thức trước khi tạo hoặc xác nhận lệnh.";
+const PRODUCTION_RUN_UNIT_MAPPING_REVIEW_ERROR =
+  "Lệnh này được tạo trước khi đơn vị nguyên liệu được sửa. Hãy đối chiếu nguyên liệu thực tế rồi hủy và tạo lại lệnh trước khi xác nhận.";
+
 const createProductionRunSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   sourceLocationId: z.coerce.number().int().positive().optional(),
@@ -82,6 +87,8 @@ export interface ProductionRunRow {
   actual_quantity: number | null;
   entry_unit_id: number | null;
   entry_unit_name: string | null;
+  entry_unit_to_base_factor: number | null;
+  source_location_id: number | null;
   status: string;
   notes: string | null;
   completed_at: string | null;
@@ -107,7 +114,10 @@ type ProductionRunBranchJoin = {
 } | null;
 
 type ProductionRunIngredientUnitJoin = {
+  unit_id: number;
+  to_base_factor: number | string;
   is_base: boolean;
+  is_active: boolean;
   units: { name: string | null } | null;
 };
 
@@ -125,6 +135,7 @@ type ProductionRunQueryRow = {
   planned_quantity: number | string;
   actual_quantity: number | string | null;
   entry_unit_id: number | null;
+  source_location_id: number | null;
   status: string;
   notes: string | null;
   completed_at: string | null;
@@ -137,6 +148,47 @@ type ProductionRunQueryRow = {
   ingredients: ProductionRunIngredientJoin;
   units: { id: number; name: string | null } | null;
 };
+
+function productionRunOutputUnit(
+  run: ProductionRunQueryRow,
+): ProductionRunIngredientUnitJoin | null {
+  const units = run.ingredients?.ingredient_units ?? [];
+  const unit =
+    run.entry_unit_id == null
+      ? units.find((candidate) => candidate.is_base && candidate.is_active)
+      : units.find(
+          (candidate) =>
+            candidate.unit_id === run.entry_unit_id && candidate.is_active,
+        );
+
+  return unit ?? null;
+}
+
+function productionRunOutputUnitFactor(
+  run: ProductionRunQueryRow,
+): number | null {
+  const factor = Number(productionRunOutputUnit(run)?.to_base_factor);
+  return Number.isFinite(factor) && factor > 0 ? factor : null;
+}
+
+function hasProductionRecipeUnitMappingError(
+  message: string | null | undefined,
+) {
+  if (!message) return false;
+  return (
+    message.includes("production_recipe_unit_mapping_missing") ||
+    message.includes("is not valid for ingredient") ||
+    message.includes("entry_unit_not_found")
+  );
+}
+
+function hasProductionRunUnitMappingReviewError(
+  message: string | null | undefined,
+) {
+  return (
+    message?.includes("production_run_unit_mapping_review_required") ?? false
+  );
+}
 
 function productionIngredientOverrides(
   value: Json | null,
@@ -196,6 +248,7 @@ export async function fetchProductionRuns(): Promise<
       completed_at,
       created_at,
       started_at,
+      source_location_id,
       target_branch_id,
       ingredients_override,
       branches!production_runs_branch_id_fkey ( id, name, branch_kind ),
@@ -204,7 +257,10 @@ export async function fetchProductionRuns(): Promise<
         id,
         name,
         ingredient_units!ingredient_units_ingredient_tenant_fkey (
+          unit_id,
+          to_base_factor,
           is_base,
+          is_active,
           units!ingredient_units_unit_tenant_fkey ( name )
         )
       ),
@@ -249,6 +305,8 @@ export async function fetchProductionRuns(): Promise<
       row.units?.name ??
       row.ingredients?.ingredient_units?.find((u) => u.is_base)?.units?.name ??
       null,
+    entry_unit_to_base_factor: productionRunOutputUnitFactor(row),
+    source_location_id: row.source_location_id,
     status: row.status,
     notes: row.notes,
     completed_at: row.completed_at,
@@ -291,6 +349,7 @@ export async function fetchProductionRunById(
       completed_at,
       created_at,
       started_at,
+      source_location_id,
       target_branch_id,
       ingredients_override,
       branches!production_runs_branch_id_fkey ( id, name, branch_kind ),
@@ -299,7 +358,10 @@ export async function fetchProductionRunById(
         id,
         name,
         ingredient_units!ingredient_units_ingredient_tenant_fkey (
+          unit_id,
+          to_base_factor,
           is_base,
+          is_active,
           units!ingredient_units_unit_tenant_fkey ( name )
         )
       ),
@@ -333,6 +395,8 @@ export async function fetchProductionRunById(
       run.units?.name ??
       run.ingredients?.ingredient_units?.find((u) => u.is_base)?.units?.name ??
       null,
+    entry_unit_to_base_factor: productionRunOutputUnitFactor(run),
+    source_location_id: run.source_location_id,
     status: run.status,
     notes: run.notes,
     completed_at: run.completed_at,
@@ -397,6 +461,9 @@ export const createProductionRun = withAction<
 
     if (error) {
       console.error("createProductionRun error:", error);
+      if (hasProductionRecipeUnitMappingError(error.message)) {
+        return { success: false, error: PRODUCTION_RECIPE_UNIT_MAPPING_ERROR };
+      }
       if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE)
         return { success: false, error: "Không có quyền thực hiện" };
       if (error.message.includes("production_source_location_missing")) {
@@ -451,6 +518,17 @@ export const confirmProductionRun = withAction(
     if (error) {
       console.error("confirmProductionRun error:", error);
       const message = error.message || "";
+
+      if (hasProductionRecipeUnitMappingError(message)) {
+        return { success: false, error: PRODUCTION_RECIPE_UNIT_MAPPING_ERROR };
+      }
+
+      if (hasProductionRunUnitMappingReviewError(message)) {
+        return {
+          success: false,
+          error: PRODUCTION_RUN_UNIT_MAPPING_REVIEW_ERROR,
+        };
+      }
 
       if (message.includes("production_run_not_found")) {
         return { success: false, error: "Không tìm thấy lệnh" };
@@ -622,7 +700,12 @@ export async function fetchProductionRecipeContext(
 
   if (error) {
     console.error("fetchProductionRecipeContext error:", error);
-    return { success: false, error: "Lỗi lấy thông tin công thức" };
+    return {
+      success: false,
+      error: hasProductionRecipeUnitMappingError(error.message)
+        ? PRODUCTION_RECIPE_UNIT_MAPPING_ERROR
+        : "Lỗi lấy thông tin công thức",
+    };
   }
 
   const ingredients = (data ?? []).map((ingredient) => {

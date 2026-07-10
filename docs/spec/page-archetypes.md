@@ -134,7 +134,7 @@ rather than staying a near-empty category.
 | 5   | DOC-WORKFLOW    | Create/edit a line-array business document                                |
 | 6   | REDIRECT-SHIM   | No-JSX route alias to the canonical home                                  |
 | 7   | HUB             | Link-card menu into a group of capabilities                               |
-| 8   | REPORT          | Filtered analytics: KPIs + chart + breakdown table                        |
+| 8   | REPORT          | Office analytics or a fixed-scope Branch operational signal               |
 | 9   | DASHBOARD       | Home-surface KPI summary with drill-downs                                 |
 | 10  | GATE/AUTH       | Pre-context or terminal decision screen                                   |
 | 11  | BOARD           | Realtime operational queue (full-screen Operations chrome)                |
@@ -326,9 +326,16 @@ badge}`).
 
 **Exemplar:** `apps/web/app/(protected)/finance/revenue/page.tsx`.
 
-- Skeleton: `AppPage` → `AppPageHeader` → `AppToolbar` (period/branch filters)
+- Office skeleton: `AppPage` → `AppPageHeader` → `AppToolbar` (period/branch filters)
   → `KpiRow` summary → chart (`chart-1`..`chart-5` tokens only) → `DataTable`
   breakdown → export action.
+- Branch operator variant: `BranchOperatorPage` → mobile
+  `BranchOperatorControlBar` → `BranchOperatorPanel` + full-row `ItemGroup`
+  drill-ins. It is a fixed branch/current-period operational signal, not a
+  compact Office dashboard: no branch or date picker, KPI aggregation, chart,
+  `DataTable`, export, financial values, or audit history. Every quantity stays
+  paired with the unit of its ingredient; quantities from different ingredients
+  must never be aggregated.
 - Drill-down (where the report has one): a dated child route, e.g.
   `finance/revenue/[date]/page.tsx`.
 - Status/money/date: per § 1.
@@ -405,7 +412,7 @@ delta, hint, icon, href}` — `href` drill-down is mandatory per the owner
 
 ## 4. Named Exceptions
 
-These 14 pages do not fit a single archetype cleanly. They are an explicit
+These 24 pages do not fit a single archetype cleanly. They are an explicit
 allowlist, not a precedent for stretching another archetype's definition:
 
 1. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx` — staff
@@ -469,6 +476,69 @@ allowlist, not a precedent for stretching another archetype's definition:
     full-row touch actions and canonicalizes supplier selection into the
     Branch route. Classified **LIST** (Branch touch source variant); the
     document-line form remains a separate workflow stage.
+16. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx`
+    — Branch-runtime GRN receipt entry. It shares the create loader, draft
+    controller, line-editor primitive, and mutation authority with Office, but
+    owns a fixed-branch touch workflow with progressive line editing and a
+    sticky action footer. Classified **DOC-WORKFLOW** (Branch touch variant);
+    it never imports the Office page/client, `DocumentFormFrame`, desktop edit
+    panel, or cross-branch picker.
+17. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx`
+    — Branch-runtime GRN review and receipt. It shares the detail loader,
+    model, action hooks, and mutations with Office, but owns draft line review
+    through touch sheets and renders confirmed documents as a read-only receipt.
+    Audit history, post-confirm correction, stock correction, invoice linkage,
+    and the Office `GRNDetailClient` remain outside the Branch route. Classified
+    **DETAIL** (Branch touch variant).
+18. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/page.tsx`
+    — Branch-runtime ingredient lookup. It shares the scoped detail loader and
+    pure stock movement/status model with Office, but loads no valuation and
+    owns a touch detail composition for current stock, locations, recent
+    movements, thresholds, and route-scoped actions. The Office management
+    detail retains WAC/value, dense desktop controls, and its own presentation.
+    Classified **DETAIL** (Branch touch variant).
+19. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx`
+    — Central Kitchen production work queue. It uses the Branch operator shell,
+    status strip, full-row run links, one create action, and a route-local recipe
+    entry. It never switches to an Office table/card mosaic at tablet widths.
+    Classified **HUB** (Kitchen Workbench variant).
+20. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx`
+    and `/stock/production/[id]/page.tsx` — Branch-native production create and
+    detail workflows. They share loaders, unit models, recipe-context reads, and
+    Server Actions with Office while owning their `BranchOperator*` presentation,
+    touch ingredient rows, tablet-landscape two-panel layout, and sticky actions.
+    Central Kitchen production output remains at the route's own inventory
+    location; dispatch to a Branch is owned exclusively by `/stock/transfer/new`.
+    Classified **DOC-WORKFLOW** and **DETAIL** respectively; neither imports the
+    Office `ProductionNewClient`, `ProductionDetailClient`, or `DataTable`.
+21. `/stock/production/recipes`, `/stock/production/recipes/new`, and
+    `/stock/production/recipes/[finishedGoodId]` — Branch-native recipe list and
+    route-addressable editors. Phone editing uses a bottom sheet; tablet editing
+    moves the same sheet content into a right panel. The Office
+    `ProductionRecipePanel`, wide `FormDialog`, and recipe `DataTable` remain
+    outside the Branch plane. Classified **LIST** plus **DOC-WORKFLOW** editors.
+22. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx`
+    — Branch-runtime waste entry. It preserves the scoped location, tier,
+    evidence, rolling-meter, and submit authority but owns a compact touch
+    document workflow: line summaries in `ItemGroup`, one line editor at a time
+    in a bottom sheet, and a sticky action footer. Office retains its desktop
+    `WasteCreateClient`; neither plane imports the other's presenter. Classified
+    **DOC-WORKFLOW** (Branch touch variant).
+23. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx`
+    — Branch-native transfer document. For a Central Kitchen route it becomes
+    `Xuất thành phẩm`: the source prefers `production_storage` and falls back to
+    the site's existing `warehouse` until a physical finished-goods location is
+    provisioned; only `finished_good` items are selectable, and destinations are
+    active Branch kitchens. It retains touch rows, a tablet two-panel
+    composition, and sticky actions without importing an Office transfer form. Classified
+    **DOC-WORKFLOW** (Kitchen dispatch variant).
+24. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx`
+    — Branch-runtime waste approval queue. It locks review to the route branch,
+    presents one touch row per pending issue, and opens evidence, lines, review
+    note, and approve/reject actions in a bottom sheet. Self-created rows remain
+    readable but cannot mutate; the existing approval action remains the
+    authority. Office retains its desktop `WasteApprovalsClient`; neither plane
+    imports the other's presenter. Classified **LIST** (Branch review variant).
 
 ## 5. Agent Lookup Flow
 

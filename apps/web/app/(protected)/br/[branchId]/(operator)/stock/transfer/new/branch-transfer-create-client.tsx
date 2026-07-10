@@ -30,6 +30,7 @@ import { AppDetailFooter, DescriptionList } from "@/components/surface";
 import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import type { TransferCreatePageData } from "@lib/inventory/transfer-create-data";
 import {
+  formatTransferLocationLabel,
   formatTransferOption,
   formatTransferTargetOption,
   getTransferWarehouseUnit,
@@ -52,6 +53,13 @@ export function BranchTransferCreateClient({
   });
   const copy = messages.inventory.transfer;
   const operatorFlow = messages.inventory.operatorFlow;
+  const sourceBranch = controller.currentBranch;
+  const pageTitle = controller.isKitchenDispatch
+    ? operatorFlow.kitchenDispatchTitle
+    : operatorFlow.transferCreateTitle;
+  const nativeCopy = controller.isKitchenDispatch
+    ? copy.kitchenDispatchNative
+    : copy.createNative;
 
   return (
     <form
@@ -70,9 +78,7 @@ export function BranchTransferCreateClient({
         contentClassName="gap-2"
       >
         <div className="flex items-center justify-between gap-3 text-xs font-medium">
-          <span className="text-muted-foreground">
-            {operatorFlow.transferCreateTitle}
-          </span>
+          <span className="text-muted-foreground">{pageTitle}</span>
           <span className="text-primary">{operatorFlow.current}</span>
         </div>
         <Progress className="h-2" value={controller.flowProgressValue} />
@@ -176,6 +182,46 @@ export function BranchTransferCreateClient({
                   },
                 ]}
               />
+              {controller.outboundSourceLocationOptions.length > 1 &&
+              sourceBranch ? (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="branch-transfer-source-location">
+                    {copy.sourceLocationRequired}
+                  </Label>
+                  <Select
+                    value={controller.outboundSourceLocationId}
+                    onValueChange={
+                      controller.handleOutboundSourceLocationChange
+                    }
+                  >
+                    <SelectTrigger
+                      id="branch-transfer-source-location"
+                      size="touch"
+                      className="w-full"
+                    >
+                      <SelectValue placeholder={copy.chooseSourceLocation} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {controller.outboundSourceLocationOptions.map(
+                          (location) => (
+                            <SelectItem
+                              key={location.id}
+                              value={String(location.id)}
+                              className="min-h-11 py-2.5"
+                            >
+                              {formatTransferLocationLabel(
+                                sourceBranch,
+                                location.kind,
+                              )}
+                            </SelectItem>
+                          ),
+                        )}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="branch-transfer-target">
                   {copy.receivingWarehouseRequired}
@@ -231,7 +277,7 @@ export function BranchTransferCreateClient({
             <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
               <div className="flex min-w-0 flex-col gap-1.5">
                 <Label htmlFor="branch-transfer-ingredient">
-                  {copy.createNative.ingredientLabel}
+                  {nativeCopy.ingredientLabel}
                 </Label>
                 <Select
                   value={controller.pickerIngredientId}
@@ -242,7 +288,7 @@ export function BranchTransferCreateClient({
                     size="touch"
                     className="w-full"
                   >
-                    <SelectValue placeholder={copy.chooseIngredient} />
+                    <SelectValue placeholder={nativeCopy.chooseItem} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -272,7 +318,7 @@ export function BranchTransferCreateClient({
                 disabled={!controller.pickerIngredientId}
               >
                 <IconPlus data-icon="inline-start" />
-                {copy.createNative.addLine}
+                {nativeCopy.addLine}
               </Button>
             </div>
             <Button
@@ -281,19 +327,17 @@ export function BranchTransferCreateClient({
               size="touch"
               className="w-full"
               onClick={controller.addAllAvailableStockLines}
-              disabled={controller.selectedSourceBranchId == null}
+              disabled={controller.selectedSourceLocationId == null}
             >
               <IconPackageCheck data-icon="inline-start" />
-              {copy.transferAllStock}
+              {nativeCopy.transferAllStock}
             </Button>
 
             {controller.draftLines.length === 0 ? (
               <div className="py-4 text-center">
-                <p className="text-sm font-medium">
-                  {copy.emptyIngredientsTitle}
-                </p>
+                <p className="text-sm font-medium">{nativeCopy.emptyTitle}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {copy.emptyIngredientsDescription}
+                  {nativeCopy.emptyDescription}
                 </p>
               </div>
             ) : (
@@ -456,7 +500,7 @@ export function BranchTransferCreateClient({
             size="touch-lg"
             disabled={controller.submitDisabled}
           >
-            {controller.isPending ? copy.creating : copy.createNative.submit}
+            {controller.isPending ? copy.creating : nativeCopy.submit}
           </Button>
         }
       />

@@ -22,8 +22,8 @@ import type {
 
 interface OrderSummaryProps {
   batches?: SelfOrderGuestBatch[] | null;
-  /** Fallback when snapshot has no batches (older RPC). */
   items?: SelfOrderOrderLine[];
+  totalAmount?: number | null;
 }
 
 function optionSummary(item: {
@@ -103,7 +103,7 @@ function BatchRound({ batch }: { batch: SelfOrderGuestBatch }) {
                 ) : null}
               </ItemContent>
               <ItemDescription
-                className={`shrink-0 tabular-nums ${muted ? "line-through" : ""}`}
+                className={`shrink-0 font-mono tabular-nums ${muted ? "line-through" : ""}`}
               >
                 {formatVND(lineTotal)}
               </ItemDescription>
@@ -142,7 +142,7 @@ function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
                 </ItemDescription>
               ) : null}
             </ItemContent>
-            <ItemDescription className="shrink-0 tabular-nums">
+            <ItemDescription className="shrink-0 font-mono tabular-nums">
               {formatVND(item.lineTotal)}
             </ItemDescription>
           </Item>
@@ -152,26 +152,13 @@ function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
   );
 }
 
-export function OrderSummary({ batches, items = [] }: OrderSummaryProps) {
+export function OrderSummary({
+  batches,
+  items = [],
+  totalAmount,
+}: OrderSummaryProps) {
   const rounds = batches ?? [];
-  if (rounds.length > 0) {
-    return (
-      <AppSection
-        title={SELF_ORDER_VI.roundsTitle}
-        badge={{ children: rounds.length, variant: "outline" }}
-        size="sm"
-        contentClassName="gap-3"
-      >
-        <>
-          {rounds.map((batch) => (
-            <BatchRound key={batch.id} batch={batch} />
-          ))}
-        </>
-      </AppSection>
-    );
-  }
-
-  if (items.length === 0) {
+  if (items.length === 0 && rounds.length === 0) {
     return (
       <AppEmptyState
         title={SELF_ORDER_VI.billEmptyTitle}
@@ -183,13 +170,44 @@ export function OrderSummary({ batches, items = [] }: OrderSummaryProps) {
   }
 
   return (
-    <AppSection
-      title={SELF_ORDER_VI.orderedItemsTitle}
-      badge={{ children: items.length, variant: "outline" }}
-      size="sm"
-      contentClassName="gap-2"
-    >
-      <FlatOrderLines items={items} />
-    </AppSection>
+    <div className="flex flex-col gap-3">
+      {items.length > 0 ? (
+        <AppSection
+          title={SELF_ORDER_VI.orderedItemsTitle}
+          description={SELF_ORDER_VI.orderedItemsDescription}
+          badge={{ children: items.length, variant: "outline" }}
+          size="sm"
+          contentClassName="gap-2"
+        >
+          <>
+            <FlatOrderLines items={items} />
+            {totalAmount != null ? (
+              <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm font-bold">
+                <span>{SELF_ORDER_VI.total}</span>
+                <span className="font-mono tabular-nums">
+                  {formatVND(totalAmount)}
+                </span>
+              </div>
+            ) : null}
+          </>
+        </AppSection>
+      ) : null}
+
+      {rounds.length > 0 ? (
+        <AppSection
+          title={SELF_ORDER_VI.roundsTitle}
+          description={SELF_ORDER_VI.roundsDescription}
+          badge={{ children: rounds.length, variant: "outline" }}
+          size="sm"
+          contentClassName="gap-3"
+        >
+          <>
+            {rounds.map((batch) => (
+              <BatchRound key={batch.id} batch={batch} />
+            ))}
+          </>
+        </AppSection>
+      ) : null}
+    </div>
   );
 }

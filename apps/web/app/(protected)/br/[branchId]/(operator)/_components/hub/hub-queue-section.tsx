@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { type BranchKind } from "@comtammatu/shared/auth";
+import { formatCount } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Item,
@@ -39,6 +40,7 @@ interface QueueRow {
 function buildQueueRows(
   basePath: string,
   counts: Awaited<ReturnType<typeof fetchBranchQueueCounts>>,
+  includeWorkforce: boolean,
 ): QueueRow[] {
   const rows: QueueRow[] = [];
   if (counts.draftGrns != null) {
@@ -81,7 +83,7 @@ function buildQueueRows(
       count: counts.inboundTransfers,
     });
   }
-  if (counts.pendingCheckouts != null) {
+  if (includeWorkforce && counts.pendingCheckouts != null) {
     rows.push({
       key: "checkout-approvals",
       href: `${basePath}/shift/checkout-approvals`,
@@ -91,7 +93,7 @@ function buildQueueRows(
       count: counts.pendingCheckouts,
     });
   }
-  if (counts.pendingLeaveRequests != null) {
+  if (includeWorkforce && counts.pendingLeaveRequests != null) {
     rows.push({
       key: "leave-approvals",
       href: `${basePath}/shift/leave-approvals`,
@@ -146,7 +148,7 @@ function QueueRowItem({ row }: { row: QueueRow }) {
           </ItemTitle>
         </ItemContent>
         <ItemActions className="shrink-0 text-muted-foreground">
-          <Badge variant={badgeVariant}>{row.count}</Badge>
+          <Badge variant={badgeVariant}>{formatCount(row.count)}</Badge>
           <ChevronRight />
         </ItemActions>
       </Link>
@@ -180,7 +182,7 @@ export async function HubQueueSection({
   const { supabase, claims } = await loadAuthState();
   const isFloorRole =
     claims.user_role === "cashier" || claims.user_role === "chef";
-    
+
   if (isFloorRole) return null;
 
   const queueCounts = await fetchBranchQueueCounts(
@@ -189,11 +191,15 @@ export async function HubQueueSection({
     branchId,
     branchKind,
   );
-  
+
   if (!queueCounts) return null;
 
   const basePath = `/br/${branchId}`;
-  const queueRows = buildQueueRows(basePath, queueCounts);
+  const queueRows = buildQueueRows(
+    basePath,
+    queueCounts,
+    branchKind !== "central_kitchen",
+  );
   const queuePendingTotal = queueRows.reduce((sum, row) => sum + row.count, 0);
   const isCentral = branchKind !== "branch";
 

@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Briefcase,
   CalendarCheck,
   ChartBar,
@@ -25,6 +26,7 @@ import {
 } from "lucide-react";
 
 const ICONS = {
+  BookOpen,
   Briefcase,
   CalendarCheck,
   ChartBar,

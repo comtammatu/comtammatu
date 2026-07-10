@@ -46,6 +46,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { cn } from "@comtammatu/ui";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import { formatVNClockTime } from "@comtammatu/shared/time";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { setCountAssignments } from "./actions";
 import { useSwipeReveal, type SwipeReveal } from "@lib/hooks/use-swipe-reveal";
@@ -110,10 +111,6 @@ function buildBranchCountHref(
   if (branchId === null) return null;
   const href = `/br/${branchId}/stock/count`;
   return locationId === null ? href : `${href}?location=${locationId}`;
-}
-
-function formatShiftTime(value: string) {
-  return value.slice(0, 5);
 }
 
 function buildShiftScopeHref({
@@ -558,8 +555,8 @@ export function CountAssignmentsClient({
                   </SelectItem>
                   {shiftOptions.map((shift) => (
                     <SelectItem key={shift.id} value={String(shift.id)}>
-                      {shift.name} · {formatShiftTime(shift.startTime)}-
-                      {formatShiftTime(shift.endTime)}
+                      {shift.name} · {formatVNClockTime(shift.startTime)}-
+                      {formatVNClockTime(shift.endTime)}
                     </SelectItem>
                   ))}
                 </SelectContent>

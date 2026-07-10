@@ -1,3 +1,11 @@
+export {
+  formatNumericInputDraft,
+  parseVietnameseNumericImport,
+  parseVietnameseNumericInput,
+  type NumericInputOptions,
+  type NumericInputParseResult,
+} from "./numeric-input";
+
 /**
  * Format a number as Vietnamese Dong (VND).
  *
@@ -41,6 +49,14 @@ export function formatDecimal(
 
 export function formatQuantity(value: number): string {
   return formatDecimal(value, 3);
+}
+
+export function formatPercent(
+  value: number,
+  maximumFractionDigits = 1,
+): string {
+  if (!Number.isFinite(value)) return "0%";
+  return `${formatDecimal(value, maximumFractionDigits)}%`;
 }
 
 /**

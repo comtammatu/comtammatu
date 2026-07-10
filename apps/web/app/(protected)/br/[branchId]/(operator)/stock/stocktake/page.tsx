@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { StocktakePageContent } from "@/(protected)/inventory/stocktake/page";
+import { BranchStocktakeListClient } from "./branch-stocktake-list-client";
+import { loadBranchStocktakeListData } from "@lib/inventory/branch-stocktake-data";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
@@ -10,11 +11,6 @@ export default async function OperatorStocktakePage({ params }: PageProps) {
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  return (
-    <StocktakePageContent
-      routeBranchId={branchId}
-      routeBase={`/br/${branchId}/stock/stocktake`}
-      embedded
-    />
-  );
+  const data = await loadBranchStocktakeListData(branchId);
+  return <BranchStocktakeListClient {...data} />;
 }

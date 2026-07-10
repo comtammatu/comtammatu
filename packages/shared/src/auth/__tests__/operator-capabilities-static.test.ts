@@ -212,6 +212,12 @@ test("resolveOperatorTiles -> production tile is native under stock at central_k
     "production_manager must see native production tile",
   );
   assert.equal(productionTile?.label, "Sản xuất");
+
+  const recipeTile = stock?.tiles.find(
+    (tile) => tile.href === "/br/15/stock/production/recipes",
+  );
+  assert.ok(recipeTile, "production_manager must see native recipe tile");
+  assert.equal(recipeTile?.label, "Công thức");
 });
 
 test("resolveOperatorTiles -> production tile renders at central_kitchen and branch, never at central_supply (D068)", () => {
@@ -272,6 +278,7 @@ test("resolveOperatorTiles -> central-site stock groups are curated whitelists (
     kitchenStock?.tiles.map((tile) => tile.label),
     [
       "Sản xuất",
+      "Công thức",
       "Tồn kho",
       "Nhận hàng",
       "Chuyển hàng",

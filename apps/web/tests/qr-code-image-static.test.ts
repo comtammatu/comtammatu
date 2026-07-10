@@ -16,7 +16,9 @@ test("public QR surfaces use the shared web QR renderer", () => {
   const posQr = readWeb(
     "app/(protected)/br/[branchId]/pos/_components/bill/payment-qr-code.tsx",
   );
-  const selfOrderPayment = readWeb("app/q/[token]/self-order/payment-panel.tsx");
+  const selfOrderPayment = readWeb(
+    "app/q/[token]/self-order/payment-panel.tsx",
+  );
 
   assert.match(sharedQr, /import QRCode from "qrcode"/);
   assert.match(sharedQr, /QRCode\.toDataURL/);
@@ -25,7 +27,17 @@ test("public QR surfaces use the shared web QR renderer", () => {
     selfOrderPayment,
     /import \{ QrCodeImage \} from "@\/components\/qr-code-image"/,
   );
-  assert.match(selfOrderPayment, /<QrCodeImage[\s\S]*value=\{vietQr\.qrData\}/);
+  assert.match(
+    selfOrderPayment,
+    /<QrCodeImage[\s\S]*value=\{activePaymentRequest\.qrData \?\? ""\}/,
+  );
+  assert.match(sharedQr, /generationFailed[\s\S]*retryLabel/);
+  assert.match(
+    sharedQr,
+    /if \(canTryDirectImage\) \{[\s\S]*return;[\s\S]*QRCode\.toDataURL/,
+  );
+  assert.match(sharedQr, /if \(directImageFailed \|\| generationFailed\)/);
+  assert.match(sharedQr, /width=\{320\}[\s\S]*height=\{320\}/);
   assert.doesNotMatch(selfOrderPayment, /import QRCode from "qrcode"/);
 });
 
@@ -59,7 +71,10 @@ test("self-order requires an open POS session before customer writes", () => {
   assert.match(migration, /ps\.status = 'open'/);
   assert.match(migration, /'pos_session_closed'/);
   assert.match(migration, /self_order_pos_session_closed/);
-  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.self_order_approve_batch/);
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.self_order_approve_batch/,
+  );
   assert.match(migration, /v_pos_session_id bigint/);
   assert.match(migration, /ps\.id = p_pos_session_id/);
   assert.match(migration, /v_order\.pos_session_id <> v_pos_session_id/);

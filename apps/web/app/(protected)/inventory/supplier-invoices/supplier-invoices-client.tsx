@@ -68,6 +68,7 @@ import {
 } from "./supplier-invoice-row";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 
+import { formatPercent } from "@comtammatu/shared/format";
 import { formatVND } from "../_lib/format";
 import { messages } from "@lib/messages";
 
@@ -1376,7 +1377,9 @@ export function SupplierInvoicesClient({
                 <Alert variant="destructive">
                   <IconAlertTriangle />
                   <AlertTitle>
-                    {copy.varianceTitle(selectedInvoice.variance)}
+                    {copy.varianceTitle(
+                      formatPercent(selectedInvoice.variance, 3),
+                    )}
                   </AlertTitle>
                   <AlertDescription>
                     {copy.varianceDescription}

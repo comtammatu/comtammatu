@@ -30,18 +30,20 @@ const grnAmendValueMigration = readRepo(
 const grnRecreateMigration = readRepo(
   "supabase/migrations/20260709125638_grn_recreate_receiving_site.sql",
 );
-const grnActions = readRepo("apps/web/app/(protected)/inventory/grn-actions.ts");
-const grnDetailPage = readRepo(
-  "apps/web/app/(protected)/inventory/grn/[id]/page.tsx",
+const grnActions = readRepo(
+  "apps/web/app/(protected)/inventory/grn-actions.ts",
 );
+const grnDetailData = readRepo("apps/web/lib/inventory/grn-detail-data.ts");
 const grnDetailClient = readRepo(
   "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
 );
 const grnRecreateDialog = readRepo(
   "apps/web/app/(protected)/inventory/grn/[id]/views/recreate-receiving-site-dialog.tsx",
 );
-const grnCreatePage = readRepo(
-  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx",
+const grnCreateData = readRepo("apps/web/lib/inventory/grn-create-data.ts");
+const grnCreateModel = readRepo("apps/web/lib/inventory/grn-create-model.ts");
+const grnCreateController = readRepo(
+  "apps/web/lib/inventory/use-grn-create-controller.ts",
 );
 const grnCreateClient = readRepo(
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
@@ -215,8 +217,14 @@ test("GRN receiving-site recreate reverses source stock and creates a replacemen
     grnRecreateMigration,
     /'inventory\.grn\.recreated_receiving_site'/,
   );
-  assert.doesNotMatch(grnRecreateMigration, /DELETE FROM public\.goods_received_notes/);
-  assert.doesNotMatch(grnRecreateMigration, /INSERT INTO public\.stock_transfers/);
+  assert.doesNotMatch(
+    grnRecreateMigration,
+    /DELETE FROM public\.goods_received_notes/,
+  );
+  assert.doesNotMatch(
+    grnRecreateMigration,
+    /INSERT INTO public\.stock_transfers/,
+  );
 });
 
 test("GRN receiving-site recreate blocks real PO links but remakes auto PO links", () => {
@@ -246,17 +254,20 @@ test("GRN receiving-site recreate is exposed through action and detail UI only",
   assert.match(grnActions, /insufficient_source_stock/);
   assert.match(grnActions, /revalidatePath\("\/inventory\/grn"\)/);
 
-  assert.match(grnDetailPage, /fetchProcurementBranches/);
-  assert.match(grnDetailPage, /\.from\("inventory_locations"\)/);
-  assert.match(grnDetailPage, /PERMISSION_KEYS\.PROCUREMENT_GRN_CONFIRM/);
-  assert.match(grnDetailPage, /recreateLocationOptions/);
-  assert.match(grnDetailPage, /location_id: number \| null/);
-  assert.match(grnDetailPage, /locationId: d\.grn\.location_id \?\? null/);
+  assert.match(grnDetailData, /fetchProcurementBranches/);
+  assert.match(grnDetailData, /\.from\("inventory_locations"\)/);
+  assert.match(grnDetailData, /PERMISSION_KEYS\.PROCUREMENT_GRN_CONFIRM/);
+  assert.match(grnDetailData, /recreateLocationOptions/);
+  assert.match(grnDetailData, /location_id: number \| null/);
+  assert.match(grnDetailData, /locationId: data\.grn\.location_id \?\? null/);
   assert.match(
-    grnDetailPage,
-    /\.filter\(\(location\) => location\.id !== d\.grn\.location_id\)/,
+    grnDetailData,
+    /status !== "confirmed" \|\| location\.id !== currentLocationId/,
   );
-  assert.doesNotMatch(grnDetailPage, /targetBranch\.id === d\.grn\.branch_id/);
+  assert.doesNotMatch(
+    grnDetailData,
+    /targetBranch\.id === data\.grn\.branch_id/,
+  );
 
   assert.match(grnDetailClient, /RecreateReceivingSiteDialog/);
   assert.match(grnDetailClient, /showAmendAffordance/);
@@ -264,7 +275,10 @@ test("GRN receiving-site recreate is exposed through action and detail UI only",
   assert.match(grnRecreateDialog, /location\.id !== currentLocationId/);
   assert.doesNotMatch(grnRecreateDialog, /currentBranchId/);
   assert.doesNotMatch(grnRecreateDialog, /branchId !== currentBranchId/);
-  assert.match(grnRecreateDialog, /router\.push\(`\$\{grnListBasePath\}\/\$\{data\.newId\}`\)/);
+  assert.match(
+    grnRecreateDialog,
+    /router\.push\(`\$\{grnListBasePath\}\/\$\{data\.newId\}`\)/,
+  );
 });
 
 test("GRN create flow sends an explicit receiving location", () => {
@@ -277,40 +291,50 @@ test("GRN create flow sends an explicit receiving location", () => {
   assert.match(grnActions, /location_id: targetLocationId/);
   assert.match(grnActions, /location_id, po_id/);
   assert.match(grnActions, /updateDraftGrnReceivingSite = withAction/);
-  assert.match(grnActions, /targetLocationId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/);
+  assert.match(
+    grnActions,
+    /targetLocationId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/,
+  );
   assert.match(grnActions, /location_id: data\.targetLocationId/);
   assert.match(grnActions, /Nơi nhập mới không hợp lệ/);
 
-  assert.match(grnCreatePage, /\.from\("inventory_locations"\)/);
-  assert.match(grnCreatePage, /isStockBearingLocationKind/);
-  assert.match(grnCreatePage, /locationOptions=\{locationOptions\}/);
-  assert.match(grnCreatePage, /initialLocationId=\{initialLocationId\}/);
+  assert.match(grnCreateData, /\.from\("inventory_locations"\)/);
+  assert.match(grnCreateData, /isStockBearingLocationKind/);
+  assert.match(grnCreateData, /locationOptions,/);
+  assert.match(grnCreateData, /initialLocationId,/);
 
-  assert.match(grnCreateClient, /locationOptions: ProcurementLocationOption\[\]/);
-  assert.match(grnCreateClient, /pickReceivingLocation\(/);
-  assert.match(grnCreateClient, /locationId,/);
+  assert.match(grnCreateController, /pickGrnReceivingLocation\(/);
+  assert.match(grnCreateController, /locationId,/);
+  assert.match(grnCreateModel, /location\.kind === "kitchen"/);
   assert.match(grnCreateClient, /GRN_CREATE_COPY\.receivingLocation/);
-  assert.match(grnCreateClient, /location\.kind === "kitchen"/);
-  assert.match(grnCreateClient, /updateDraftGrnReceivingSite/);
+  assert.match(grnCreateController, /updateDraftGrnReceivingSite/);
   assert.match(
-    grnCreateClient,
+    grnCreateController,
     /const showWarehouseEditor = showBranchPicker \|\| showLocationPicker/,
   );
   assert.match(
-    grnCreateClient,
+    grnCreateController,
     /serverGrnId === null[\s\S]*setBranchId\(nextBranchId\)[\s\S]*updateDraftGrnReceivingSite/,
   );
-  assert.match(grnCreateClient, /targetLocationId: nextLocationId/);
-  assert.match(grnCreateClient, /\{showWarehouseEditor \? \([\s\S]*\{warehouseField\}/);
+  assert.match(grnCreateController, /targetLocationId: nextLocationId/);
+  assert.match(
+    grnCreateClient,
+    /\{controller\.showWarehouseEditor \? \([\s\S]*\{warehouseField\}/,
+  );
   assert.doesNotMatch(grnCreateClient, /branchLocked/);
 });
 
 test("production defaults branch output into Bep CN before default receive", () => {
-  const targetStart = productionNewClient.indexOf("function pickTargetLocation");
+  const targetStart = productionNewClient.indexOf(
+    "function pickTargetLocation",
+  );
   assert.ok(targetStart >= 0, "pickTargetLocation not found");
   const targetBody = productionNewClient.slice(
     targetStart,
-    productionNewClient.indexOf("export function ProductionNewClient", targetStart),
+    productionNewClient.indexOf(
+      "export function ProductionNewClient",
+      targetStart,
+    ),
   );
 
   assert.match(targetBody, /location\.branchKind === "branch"/);

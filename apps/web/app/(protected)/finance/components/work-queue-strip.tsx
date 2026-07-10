@@ -1,5 +1,9 @@
 import { cn } from "@comtammatu/ui/lib/utils";
-import { formatCount, formatVND } from "@comtammatu/shared/format";
+import {
+  formatCount,
+  formatPercent,
+  formatVND,
+} from "@comtammatu/shared/format";
 import { AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import type {
@@ -45,9 +49,9 @@ function formatMoney(value: number | null | undefined): string {
   return formatVND(value);
 }
 
-function formatPercent(value: number | null | undefined): string {
+function formatNullablePercent(value: number | null | undefined): string {
   if (value == null) return messages.finance.common.noValue;
-  return `${value.toFixed(1)}%`;
+  return formatPercent(value);
 }
 
 interface MetricProps {
@@ -105,9 +109,7 @@ export function WorkQueueStrip({
           value={formatNullableCount(summary?.invoice_attention_count)}
           hint={copy.workQueue.invoicesAttentionHint}
           tone={
-              (summary?.invoice_attention_count ?? 0) > 0
-                ? "warning"
-            : "neutral"
+            (summary?.invoice_attention_count ?? 0) > 0 ? "warning" : "neutral"
           }
         />
       )}
@@ -133,9 +135,9 @@ export function WorkQueueStrip({
           value={formatNullableCount(health.foodCostExceptionCount)}
           hint={
             health.topFoodCostExceptionName
-              ? `${health.topFoodCostExceptionName} · ${formatPercent(health.topFoodCostExceptionPct)}`
+              ? `${health.topFoodCostExceptionName} · ${formatNullablePercent(health.topFoodCostExceptionPct)}`
               : copy.workQueue.thresholdHint(
-                  formatPercent(FOOD_COST_EXCEPTION_THRESHOLD),
+                  formatNullablePercent(FOOD_COST_EXCEPTION_THRESHOLD),
                 )
           }
           tone={health.foodCostExceptionCount > 0 ? "warning" : "neutral"}

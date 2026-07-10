@@ -98,6 +98,8 @@ export function AppShellPaddingBoundary({ children }: { children: ReactNode }) {
 
 export type AppPageProps = {
   children: ReactNode;
+  as?: "div" | "main";
+  id?: string;
   className?: string;
   contentClassName?: string;
   scroll?: boolean;
@@ -109,6 +111,8 @@ export type AppPageProps = {
 
 export function AppPage({
   children,
+  as = "div",
+  id,
   className,
   contentClassName,
   scroll = false,
@@ -117,13 +121,15 @@ export function AppPage({
   density = "comfortable",
   mobile = false,
 }: AppPageProps) {
+  const Root = as;
   const isCompact = density === "compact";
   const nesting = useContext(SurfaceNestingContext);
   const applyPadding = padded && !nesting.padded;
   const applyMaxWidth = !nesting.constrained;
   return (
     <SurfaceNestingContext.Provider value={SURFACE_NESTING_PAGE}>
-      <div
+      <Root
+        id={id}
         className={cn(
           "min-h-0 flex-1",
           scroll ? "no-scrollbar overflow-auto" : "overflow-visible",
@@ -146,7 +152,7 @@ export function AppPage({
         >
           {children}
         </div>
-      </div>
+      </Root>
     </SurfaceNestingContext.Provider>
   );
 }

@@ -149,7 +149,7 @@ const USE_IS_MOBILE_RE = /\buseIsMobile\s*\(/g;
 const STATUS_MAP_RE =
   /\bconst\s+(?![A-Z0-9_]*STATUS[A-Z0-9_]*(?:RANK|PRIORITY)[A-Z0-9_]*\b)[A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:[^=]*?)?\s*=\s*\{/g;
 const PAGE_LOCAL_FORMATTER_RE =
-  /\b(?:new\s+Intl\.(?:NumberFormat|DateTimeFormat)|Intl\.(?:NumberFormat|DateTimeFormat)|\.toLocaleString\(|\.toLocaleDateString\(|\.toLocaleTimeString\()|\b(?:function|const)\s+formatVND\b/g;
+  /\b(?:new\s+Intl\.(?:NumberFormat|DateTimeFormat)|Intl\.(?:NumberFormat|DateTimeFormat)|\.toLocaleString\(|\.toLocaleDateString\(|\.toLocaleTimeString\()|\b(?:function|const)\s+format(?:VND|Percent)\b|\.toFixed\(\s*\d+\s*\)\s*\}\s*%/g;
 
 function isUiSourceFile(file) {
   return file.endsWith(".tsx");
@@ -275,6 +275,7 @@ const SIGNAL_GUARD_COVERAGE = {
       "finance-page-local-formatter",
       "app-page-local-number-formatter",
       "vnd-format-ssot",
+      "percent-format-ssot",
       "date-format-ssot",
     ],
   },

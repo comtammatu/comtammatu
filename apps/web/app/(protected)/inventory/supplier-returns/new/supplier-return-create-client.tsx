@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { TriangleAlert as IconAlertTriangle } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -18,7 +17,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { messages } from "@lib/messages";
-import { Combobox } from "@/components/form/combobox";
+import { Combobox, FormField } from "@/components/form";
 import {
   createSupplierReturnFromGrn,
   type ReturnableGrnRow,
@@ -105,37 +104,44 @@ export function SupplierReturnCreateClient({
   }
 
   const canSubmitGrn = grnId !== "" && !submitting;
-
   return (
     <div className="flex w-full flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {CREATE.grnPickerLabel}
-        </Label>
+      <FormField
+        controlId="supplier-return-grn"
+        label={CREATE.grnPickerLabel}
+        description={grnId === "" ? CREATE.submitDisabledGrn : undefined}
+        required
+      >
         <Combobox
+          id="supplier-return-grn"
           options={grnOptions}
           value={grnId}
-          onValueChange={setGrnId}
+          onValueChange={(value) => {
+            setGrnId(value);
+            setSubmitError(null);
+          }}
           placeholder={CREATE.grnPickerPlaceholder}
           searchPlaceholder={CREATE.grnPickerSearch}
           emptyMessage={CREATE.grnPickerEmpty}
-          size="touch"
-          className="w-full"
+          aria-required
         />
         <NoteCallout tone="muted">{CREATE.grnAutoLinesHint}</NoteCallout>
-      </div>
+      </FormField>
 
-      {/* Resolution + reason */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {CREATE.resolutionLabel}
-          </Label>
+        <FormField
+          controlId="supplier-return-resolution"
+          label={CREATE.resolutionLabel}
+        >
           <Select
             value={resolution}
             onValueChange={(v) => setResolution(v as Resolution)}
           >
-            <SelectTrigger size="touch" className="w-full">
+            <SelectTrigger
+              id="supplier-return-resolution"
+              size="field"
+              className="w-full"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -146,13 +152,17 @@ export function SupplierReturnCreateClient({
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {CREATE.reasonLabel}
-          </Label>
+        </FormField>
+        <FormField
+          controlId="supplier-return-reason"
+          label={CREATE.reasonLabel}
+        >
           <Select value={reason} onValueChange={(v) => setReason(v as Reason)}>
-            <SelectTrigger size="touch" className="w-full">
+            <SelectTrigger
+              id="supplier-return-reason"
+              size="field"
+              className="w-full"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -163,26 +173,19 @@ export function SupplierReturnCreateClient({
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
       </div>
 
-      {/* Notes */}
-      <div className="flex flex-col gap-1.5">
-        <Label
-          htmlFor="return-notes"
-          className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-        >
-          {CREATE.notesLabel}
-        </Label>
+      <FormField controlId="supplier-return-notes" label={CREATE.notesLabel}>
         <Textarea
-          id="return-notes"
+          id="supplier-return-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
           maxLength={500}
           placeholder={CREATE.notesPlaceholder}
         />
-      </div>
+      </FormField>
 
       {submitError ? (
         <Alert variant="destructive">

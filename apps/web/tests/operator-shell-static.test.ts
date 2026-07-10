@@ -73,6 +73,7 @@ test("operator header keeps profile and notifications in chrome", () => {
   assert.doesNotMatch(layout, /Hub \$\{hubLabel\}/);
   assert.match(appHeader, /homeHref\?: string/);
   assert.match(appHeader, /<Link[\s\S]*href=\{href\}/);
+  assert.match(appHeader, /"min-h-11 min-w-11 shrink-0 justify-center"/);
   assert.match(layout, /IconLayoutDashboard/);
   assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/dashboard`\}/);
   assert.match(layout, /aria-label=\{APP_COPY_VI\.branchCommand\}/);
@@ -90,6 +91,8 @@ test("operator header keeps profile and notifications in chrome", () => {
   assert.match(layout, /encodeURIComponent\(`\/br\/\$\{context\.branchId\}`\)/);
   assert.match(layout, /href=\{notificationsHref\}/);
   assert.match(layout, /size="icon-touch"/);
+  assert.match(layout, /className="min-w-11"/);
+  assert.match(layout, /className="hidden sm:inline"/);
   assert.doesNotMatch(layout, /IconBell data-icon="inline-start"/);
   assert.doesNotMatch(layout, /<Badge/);
   assert.doesNotMatch(layout, /shift\/profile/);
@@ -119,7 +122,10 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
 
   assert.match(home, /resolveOperatorTiles/);
   assert.match(home, /BranchOperatorPage/);
-  assert.match(home, /showTodayCard =\s*claims\.user_role !== "owner"/);
+  assert.match(
+    home,
+    /showTodayCard =\s*claims\.user_role !== "owner" && !isCentralKitchen/,
+  );
   const todaySource = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-today-status.tsx",
   );
@@ -147,6 +153,41 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.doesNotMatch(home, /EmployeeStatusStrip/);
   assert.doesNotMatch(home, /operatorShortcutsStatus/);
   assert.doesNotMatch(home, /OPERATION_HANDOFFS/);
+});
+
+test("central kitchen home separates kitchen work from workforce work", () => {
+  const home = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+  );
+  const homeContract = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_lib/operator-home-contract.ts",
+  );
+  const queue = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-queue-section.tsx",
+  );
+  const bottomNav = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
+  );
+
+  assert.match(
+    homeContract,
+    /central_kitchen:\s*\[\s*"\/stock\/grn",\s*"\/stock\/production",\s*"\/stock\/production\/recipes",\s*"\/stock\/transfer",\s*\]/,
+  );
+  assert.match(home, /const secondaryLinksSection = isCentralSupply \?/);
+  assert.match(home, /getCentralKitchenHomeLabel/);
+  assert.match(home, /\? branchCopy\.centralKitchenHomeTitle/);
+  assert.match(
+    home,
+    /const workState = isCentralKitchen \? null : await getTodayWorkState\(\)/,
+  );
+  assert.match(home, /!isCentralKitchen && isFloorRole && beforeClockIn/);
+  assert.match(queue, /branchKind !== "central_kitchen"/);
+  assert.match(bottomNav, /\? branchCopy\.centralKitchenNavHome/);
+  assert.match(bottomNav, /label: branchCopy\.centralKitchenNavReceive/);
+  assert.match(bottomNav, /label: branchCopy\.centralNavProduction/);
+  assert.match(bottomNav, /label: branchCopy\.centralKitchenNavDispatch/);
+  assert.match(bottomNav, /label: branchCopy\.centralNavWorkforce/);
+  assert.match(bottomNav, /href: `\$\{base\}\/shift`/);
 });
 
 test("operator shift route renders the Branch workday plane", () => {

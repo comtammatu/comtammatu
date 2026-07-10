@@ -19,6 +19,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "@comtammatu/shared/format";
 import { FINANCE_VI, POS_VI } from "@comtammatu/shared/messages";
+import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { createTaxInvoice, resolveOrderForManualInvoice } from "./actions";
 import type { ManualInvoiceOrderPreview } from "./_lib/finance-types";
 import { messages } from "@lib/messages";
@@ -28,11 +29,8 @@ const MI = messages.finance.invoiceList.manualIssue;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** YYYY-MM-DD → DD/MM/YYYY (summary_date is a plain date, not a timestamp). */
 function formatSummaryDate(date: string): string {
-  return date.length >= 10
-    ? `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)}`
-    : date;
+  return formatVNBusinessDate(date, date);
 }
 
 interface ManualIssueInvoiceDialogProps {

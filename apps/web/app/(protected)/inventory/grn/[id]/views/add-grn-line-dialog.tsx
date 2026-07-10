@@ -21,9 +21,13 @@ import {
   getPurchaseUnitOptions,
 } from "../../../_lib/purchase-units";
 import { getReferenceCostForUnit } from "../../../_lib/reference-cost";
-import type { IngredientRow } from "../../../page";
+import type { IngredientRow } from "../../../_lib/types";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { grnCopy, type EditableLine, type GRNDetail } from "./grn-detail-types";
+import {
+  GRN_DETAIL_COPY as grnCopy,
+  type EditableGrnLine as EditableLine,
+  type GrnDetail as GRNDetail,
+} from "@lib/inventory/grn-detail-model";
 
 const ADD_GRN_LINE_FORM_ID = "add-grn-line-form";
 

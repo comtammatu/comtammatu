@@ -33,16 +33,28 @@ export const settings = {
   },
   pages: {
     branchesTitle: "Điểm vận hành",
-    branchCount: (count: number) => `${count} điểm vận hành`,
-    generalTitle: "Cài đặt chung",
+    branchCount: (count: number) => `${formatCount(count)} điểm vận hành`,
+    settingsEyebrow: "Cài đặt",
+    settingsHomeEyebrow: "Quản trị hệ thống",
+    settingsHomeTitle: "Cài đặt",
+    settingsHomeDescription:
+      "Chọn đúng nhóm thiết lập cho hộ kinh doanh, thu tiền POS hoặc thiết bị in.",
+    settingsHomeLink: "Tất cả cài đặt",
+    tenantSettingsTitle: "Hộ kinh doanh và thu tiền",
+    tenantSettingsDescription:
+      "Thiết lập dùng xuyên suốt POS, HĐĐT và đối soát giao dịch.",
+    printSettingsTitle: "Thiết bị và in ấn",
+    printSettingsDescription:
+      "Quản lý máy in, mẫu phiếu và hàng đợi in theo từng điểm vận hành.",
+    generalTitle: "Hộ kinh doanh",
     generalDescription:
       "Định danh hộ kinh doanh (pháp danh, mã số thuế, địa chỉ, người đại diện) — in trên hóa đơn và chứng từ.",
     kdsTitle: "Trạm bếp (KDS)",
     kdsDescription: "Quản lý trạm hiển thị bếp và gán danh mục món ăn",
-    paymentsTitle: "Thanh toán",
+    paymentsTitle: "Thanh toán POS",
     paymentsDescription:
       "Cấu hình Chuyển khoản, SePay xác nhận tự động và MoMo cho POS.",
-    printersTitle: "Máy in",
+    printersTitle: "In ấn vận hành",
     printersDescription:
       "Cấu hình máy in theo từng chi nhánh: loại phiếu và danh mục món in trên từng máy.",
     printTemplatesTitle: "Mẫu phiếu in",
@@ -155,8 +167,8 @@ export const settings = {
     rotateQrDescription:
       "Mã QR cũ sẽ không mở được trang gọi món nữa. Chỉ đổi khi cần thay mã đã in hoặc đã lộ.",
     rotateQrConfirm: "Đổi mã",
-    zonesTab: (count: number) => `Khu vực (${count})`,
-    tablesTab: (count: number) => `Bàn (${count})`,
+    zonesTab: (count: number) => `Khu vực (${formatCount(count)})`,
+    tablesTab: (count: number) => `Bàn (${formatCount(count)})`,
     addZone: "Thêm khu vực",
     addTable: "Thêm bàn",
     noZonesTitle: "Chưa có khu vực nào",
@@ -221,14 +233,14 @@ export const settings = {
     trustCurrentDescription:
       "Ghi nhận IP công cộng của thiết bị bạn đang dùng. Phải đứng trên wifi cửa hàng khi bấm.",
     trustCurrentButton: "Tin cậy IP hiện tại",
-    activeTitle: (count: number) => `Đang hoạt động (${count})`,
+    activeTitle: (count: number) => `Đang hoạt động (${formatCount(count)})`,
     emptyTrusted: "Chưa có IP tin cậy",
     manual: "thủ công",
     expired: "quá hạn",
     activeMeta: (age: string, agentId: string | null) =>
       `Hoạt động ${age}${agentId ? ` • ${agentId}` : ""}`,
     revoke: "Thu hồi",
-    revokedTitle: (count: number) => `Đã thu hồi (${count})`,
+    revokedTitle: (count: number) => `Đã thu hồi (${formatCount(count)})`,
     revokedMeta: (age: string) => `Thu hồi ${age}`,
     unknown: "không rõ",
   },
@@ -261,17 +273,17 @@ export const settings = {
     bankCode: "Mã ngân hàng",
     accountNo: "Số tài khoản",
     accountName: "Chủ tài khoản",
-    codePrefix: "Phần cố định trong nội dung giao dịch",
+    codePrefix: "Nội dung QR POS / MB Soundbox",
     codePrefixIntro:
-      "Không hardcode: đổi ô này rồi lưu, POS sẽ dùng giá trị mới cho QR/bill tiếp theo.",
+      "POS ghép phần này với mã đối soát cho từng đơn rồi đưa vào QR và bill thanh toán.",
     codePrefixHelp:
       "Hệ thống tự thêm một khoảng trắng và 12 ký tự đối soát cho từng đơn. Chỉ chữ, số và khoảng trắng.",
     codeModelAdminLabel: "Admin lưu",
     codeModelSuffixLabel: "Hệ thống tự thêm",
-    codeModelFinalLabel: "POS/QR gửi",
+    codeModelFinalLabel: "Nội dung QR POS",
     codePreviewEmpty: "Nhập nội dung cố định để xem ví dụ.",
     codePreviewHelp:
-      "SePay chỉ tự khớp khi nội dung ngân hàng còn đủ chuỗi này.",
+      "Đây là nội dung khách chuyển khoản cho POS. SePay tự xác nhận bằng mã này; HĐĐT chỉ phát hành sau khi payment POS hoàn tất.",
     bankHelp:
       "Mã NH: TCB, VCB, BIDV, MB, ACB, TPB, VPB, STB... (Napas BIN cũng chấp nhận, vd 970407 = Techcombank).",
     sepayLabel: "SePay tự động xác nhận",
@@ -282,20 +294,21 @@ export const settings = {
     envStatus: "Trạng thái env:",
     envConfigured: "✓ Đã cấu hình",
     envMissing: "Chưa đủ biến môi trường",
-    contentSectionTitle: "Map nội dung chuyển khoản",
-    contentPrefix: "Tiền tố nhận diện",
-    contentOrderToken: "Mã đơn",
-    contentExpenseToken: "Mã chi",
+    contentSectionTitle: "Lệnh SePay vận hành (tùy chọn)",
+    contentPrefix: "Tiền tố chung",
+    contentExpenseToken: "Mã khớp phiếu chi",
     contentCashDepositToken: "Mã nộp tiền mặt",
     contentHelp:
-      "SePay chỉ tự xử lý khi nội dung có đúng tiền tố và mã đã lưu tại đây.",
-    contentOrderPreview: "Đơn",
-    contentExpensePreview: "Chi",
-    contentCashDepositPreview: "Nộp tiền",
+      "Hai mã này chỉ dùng cho giao dịch vận hành. Thu đơn POS dùng trực tiếp nội dung QR POS, không cần lệnh SePay riêng.",
+    contentCategoryRuleLabel: "Danh mục chi nằm ở phiếu chi",
+    contentCategoryRule:
+      "Tạo phiếu chi Chuyển khoản tại Tài chính → Chi phí, chọn danh mục như Lương hoặc Điện/Nước, rồi dùng mã phiếu chi trong lệnh. SePay không suy ra danh mục từ nội dung chuyển khoản.",
+    contentExpensePreview: "1. Khớp phiếu chi",
+    contentCashDepositPreview: "2. Nộp tiền mặt",
     contentExpenseHelp:
-      "MATU CHI cần mã chi đã có sẵn; thiếu hoặc sai mã thì đưa về đối soát.",
+      "Dùng cho tiền ra: 123 là mã phiếu chi đã có danh mục. Không dùng tên danh mục như LUONG hoặc DIEN thay cho mã phiếu chi.",
     contentCashDepositHelp:
-      "MATU NOP ghi nhận nộp tiền mặt vào ngân hàng, không tính là chi vận hành.",
+      "Dùng khi nộp tiền mặt vào ngân hàng. Hệ thống ghi nhận khoản nộp tiền, không tính là chi vận hành.",
     saveSettings: "Lưu cài đặt",
   },
   pos: {
@@ -446,7 +459,7 @@ export const settings = {
       "Chưa có máy in active; được phép bán thủ công nếu quản lý chấp nhận fallback.",
     readinessPrinterNoAgent: "Chưa ghi nhận agent in cho chi nhánh.",
     readinessPrinterFailed: (count: number) =>
-      `${String(count)} lệnh in lỗi trong 24 giờ qua.`,
+      `${formatCount(count)} lệnh in lỗi trong 24 giờ qua.`,
     readinessPrinterOnlineBadge: "Online",
     readinessPrinterOfflineBadge: "Offline",
     readinessPrinterNoConfigBadge: "Fallback",
@@ -467,7 +480,7 @@ export const settings = {
     readinessStaffCta: "Mở nhân sự",
     readinessCheckoutTitle: "Duyệt kết ca",
     readinessCheckoutPending: (count: number) =>
-      `${String(count)} yêu cầu đang chờ duyệt.`,
+      `${formatCount(count)} yêu cầu đang chờ duyệt.`,
     readinessCheckoutEmpty: "Không có yêu cầu chờ duyệt.",
     readinessCheckoutCta: "Mở duyệt kết ca",
     queueTitle: "Cần xử lý",
@@ -497,11 +510,20 @@ export const settings = {
     centralSupplyTilesTitle: "Kho Tổng - Inventory",
     centralSupplyTilesDescription:
       "Chỉ xử lý tồn kho, nhập - chuyển - kiểm; không có POS, KDS hoặc Runner.",
-    centralKitchenTilesTitle: "Bếp TT - Inventory",
+    centralKitchenHomeTitle: "Bếp Trung Tâm",
+    centralKitchenTilesTitle: "Vận hành Bếp",
     centralKitchenTilesDescription:
-      "Chỉ xử lý sản xuất và tồn kho trung tâm; không có POS, KDS hoặc Runner.",
+      "Nhập nguyên liệu, sản xuất, quản lý công thức và xuất thành phẩm đến chi nhánh.",
+    centralKitchenReceiveJob: "Nhập kho",
+    centralKitchenProductionJob: "Sản xuất",
+    centralKitchenRecipesJob: "Công thức",
+    centralKitchenDispatchJob: "Xuất thành phẩm",
     centralReceiveCta: "Nhận hàng",
     centralProductionCta: "Tạo lệnh sản xuất",
+    centralKitchenNavHome: "Bếp",
+    centralKitchenNavReceive: "Nhập",
+    centralKitchenNavDispatch: "Xuất",
+    centralNavWorkforce: "Nhân sự",
     centralNavReceive: "Nhận",
     centralNavStock: "Tồn",
     centralNavStocktake: "Kiểm",
@@ -536,7 +558,7 @@ export const settings = {
     menuLimitsTitle: "Giới hạn bán",
     menuLimitsGuideTitle: "Quy tắc mở bán hôm nay",
     menuLimitsGuideDescription:
-      "Ưu tiên món hết suất, đang tắt và món bị giới hạn bởi Tồn Bếp CN.",
+      "Ưu tiên món hết suất, đang tắt và món bị giới hạn bởi Tồn Bếp chi nhánh.",
     menuLimitsIntroBefore:
       "Điều chỉnh số phần sẵn bán theo tồn kho và định mức của chi nhánh. Bật",
     menuLimitsDisabledAction: "Tắt món",
@@ -579,7 +601,8 @@ export const settings = {
     varianceResolvedShort: "Đã xử lý",
     open: "Đang mở",
     closed: "Đã chốt",
-    billsInSession: (count: number) => `Bill trong ca (${count})`,
+    billsInSession: (count: number) =>
+      `Bill trong ca (${formatCount(count)})`,
     billsDescription:
       "Bấm vào dòng để xem chi tiết bill (món, giảm giá, phí dịch vụ, thanh toán).",
     bill: "Bill",
@@ -604,7 +627,7 @@ export const settings = {
     varianceResolutionLabel: "Hướng xử lý",
     varianceResolutionPlaceholder:
       "VD: Thu ngân đã bù đủ tiền thiếu, quản lý đã nhận.",
-    varianceResolutionCount: (count: number) => `${count}/500`,
+    varianceResolutionCount: (count: number) => `${formatCount(count)}/500`,
     resolveVariance: "Ghi nhận đã xử lý",
     resolving: "Đang lưu",
     resolveSuccess: "Đã ghi nhận xử lý lệch quỹ",
@@ -624,9 +647,10 @@ export const settings = {
     paidOrders: "Đơn đã thanh toán",
     unpaidOrders: "Đơn chưa thanh toán",
     paymentBreakdown: "Chi tiết phương thức thanh toán",
-    methodCount: (method: string, count: number) => `${method} · ${count} đơn`,
+    methodCount: (method: string, count: number) =>
+      `${method} · ${formatCount(count)} đơn`,
     cancelledOrders: (count: number) =>
-      `${count} đơn đã hủy (không tính vào doanh thu).`,
+      `${formatCount(count)} đơn đã hủy (không tính vào doanh thu).`,
     sessionNote: "Ghi chú ca",
     mainItem: "Món chính",
     sideCombo: "Side/Combo",
@@ -640,7 +664,8 @@ export const settings = {
     totalItems: "Tổng món bán",
     voidItems: "Món bị huỷ",
     peakHour: "Giờ cao điểm",
-    peakHourValue: (range: string, count: number) => `${range} · ${count} đơn`,
+    peakHourValue: (range: string, count: number) =>
+      `${range} · ${formatCount(count)} đơn`,
     topItems: "Top món bán chạy",
     itemName: "Tên",
     itemType: "Loại",
@@ -652,9 +677,9 @@ export const settings = {
     categoryLine: (quantity: number, revenue: string) =>
       `${quantity} món · ${revenue}`,
     billValueDistribution: "Phân bố giá trị bill",
-    billCount: (count: number) => `${count} bill`,
+    billCount: (count: number) => `${formatCount(count)} bill`,
     discountSection: (count: number, total: string) =>
-      `Giảm giá (${count} bill · ${total})`,
+      `Giảm giá (${formatCount(count)} bill · ${total})`,
     discount: "Giảm",
     note: "Ghi chú",
     orderSheetEyebrow: "Chi tiết bill",

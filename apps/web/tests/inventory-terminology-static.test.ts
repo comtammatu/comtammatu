@@ -36,7 +36,7 @@ test("ingredient unit dialog always previews canonical conversion to base stock 
 
 test("GRN entry labels purchase price and conversion without calling it cost basis", () => {
   const source = readWorkspaceFile(
-    "app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+    "lib/inventory/grn-create-copy.ts",
   );
 
   assert.match(source, /unitCostTitle: "Đơn giá nhập"/);
@@ -59,4 +59,30 @@ test("stock value surfaces use avg cost then reference cost fallback", () => {
   assert.match(modelSource, /row\.avgUnitCost \?\? ingredient\.referenceCost/);
   assert.match(detailSource, /movementUnitCost/);
   assert.doesNotMatch(detailSource, /stockCopy\.table\.wac:\{" "\}/);
+});
+
+test("operator-facing inventory copy does not reintroduce branch abbreviations", () => {
+  const sourcePaths = [
+    "app/(protected)/inventory/_lib/dictionary.ts",
+    "app/(protected)/inventory/transfer-actions.ts",
+    "app/(protected)/br/[branchId]/(operator)/menu-limits/actions.ts",
+    "lib/messages/pos.ts",
+    "lib/messages/settings.ts",
+  ];
+
+  for (const path of sourcePaths) {
+    assert.doesNotMatch(readWorkspaceFile(path), /Kho CN|Bếp CN/);
+  }
+
+  const dictionary = readWorkspaceFile(
+    "app/(protected)/inventory/_lib/dictionary.ts",
+  );
+  assert.match(dictionary, /branchWarehouse: \{ short: "Kho", long: "Kho chi nhánh" \}/);
+  assert.match(dictionary, /branchKitchen: \{ short: "Bếp", long: "Bếp chi nhánh" \}/);
+
+  const migration = readWorkspaceFile(
+    "../../supabase/migrations/20260710101500_normalize_inventory_location_display_names.sql",
+  );
+  assert.match(migration, /SET name = 'Kho chi nhánh'/);
+  assert.match(migration, /SET name = 'Bếp chi nhánh'/);
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCount } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -78,7 +79,7 @@ export function KdsBoardTopBar({
           variant={pendingCount > 0 ? "warning" : "outline"}
           className="rounded-full px-2 py-1 font-mono text-sm tabular-nums"
         >
-          {pendingCount > 0 ? `${pendingCount} chờ` : "0 chờ"}
+          {`${formatCount(pendingCount)} chờ`}
         </Badge>
         <Button
           type="button"
@@ -107,9 +108,7 @@ export function KdsBoardTopBar({
           type="button"
           variant={isFullscreen ? "secondary" : "ghost"}
           size="icon-lg"
-          aria-label={
-            isFullscreen ? "Thoát toàn màn hình" : "Mở toàn màn hình"
-          }
+          aria-label={isFullscreen ? "Thoát toàn màn hình" : "Mở toàn màn hình"}
           aria-pressed={isFullscreen}
           onClick={onFullscreenToggle}
         >

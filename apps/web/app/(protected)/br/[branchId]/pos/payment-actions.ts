@@ -55,6 +55,16 @@ type PosSupabase = NonNullable<
   Awaited<ReturnType<typeof getAuthContextWithPermission>>
 >["supabase"];
 
+type RpcCaller = {
+  rpc: <T>(
+    name: string,
+    args: Record<string, unknown>,
+  ) => Promise<{
+    data: T | null;
+    error: { code?: string | null; message?: string | null } | null;
+  }>;
+};
+
 type OrderPaymentCodeResult = {
   order_id?: number;
   payment_code?: string;
@@ -1004,6 +1014,8 @@ export interface CashPaymentResult {
    * as a toast and offers "in lại". */
   print_job_id: number | null;
   print_warning?: string | null;
+  /** Present only when the cash payment atomically consumed a self-order call. */
+  self_order_request_id?: number | null;
 }
 
 /**
@@ -1053,10 +1065,14 @@ export const confirmCashPayment = withActionPositional(
       };
     }
 
-    const { data, error } = await supabase.rpc("confirm_cash_payment", {
-      p_order_id: orderId,
-      p_cash_received: cashReceived,
-    });
+    const rpc = supabase as unknown as RpcCaller;
+    const { data, error } = await rpc.rpc<CashPaymentResult>(
+      "confirm_cash_payment_with_invoice_binding",
+      {
+        p_order_id: orderId,
+        p_cash_received: cashReceived,
+      },
+    );
 
     if (error) {
       console.error(
@@ -1078,6 +1094,7 @@ export const confirmCashPayment = withActionPositional(
       cash_change: number;
       print_job_id: number | null;
       print_warning?: string | null;
+      self_order_request_id?: number | null;
       error_code?: string | null;
       detail?: string | null;
     } | null;
@@ -1139,9 +1156,15 @@ const invoiceBuyerPayloadSchema = z
 type InvoiceBuyerPayload = z.infer<typeof invoiceBuyerPayloadSchema>;
 type InvoicePayload = InvoiceBuyerPayload | null | undefined;
 
-function normalizeInvoicePayload(
-  invoice: InvoicePayload,
-): InvoiceBuyerPayload {
+type StoredCashCallInvoiceRow = {
+  id: number;
+  invoice_payload: Json;
+};
+
+const SELF_ORDER_INVOICE_BINDING_ERROR =
+  "Không thể xác minh thông tin HĐĐT của yêu cầu gọi thanh toán. Vui lòng tải lại và thử lại.";
+
+function normalizeInvoicePayload(invoice: InvoicePayload): InvoiceBuyerPayload {
   return (
     invoice ?? {
       buyerName: BUYER_NOT_GET_INVOICE_NAME,
@@ -1165,6 +1188,79 @@ function parseInvoicePayload(
   return { success: true, data: parsed.data };
 }
 
+function parseStoredCashCallInvoicePayload(
+  row: StoredCashCallInvoiceRow,
+): ActionResult<InvoiceBuyerPayload> {
+  const parsed = invoiceBuyerPayloadSchema.safeParse(row.invoice_payload);
+  if (!parsed.success) {
+    console.error("[confirmCashPaymentWithInvoice] invalid stored payload", {
+      requestId: row.id,
+      issues: parsed.error.issues.map((issue) => ({
+        code: issue.code,
+        path: issue.path.join("."),
+      })),
+    });
+    return { success: false, error: SELF_ORDER_INVOICE_BINDING_ERROR };
+  }
+  return { success: true, data: parsed.data };
+}
+
+async function resolveBoundCashCallInvoicePayload(
+  branchId: number,
+  orderId: number,
+  paymentId: number,
+  requestId: number,
+): Promise<ActionResult<InvoiceBuyerPayload>> {
+  const parsedBranch = branchIdSchema.safeParse(branchId);
+  const parsedOrder = orderIdSchema.safeParse(orderId);
+  const parsedPayment = orderIdSchema.safeParse(paymentId);
+  const parsedRequest = orderIdSchema.safeParse(requestId);
+  if (
+    !parsedBranch.success ||
+    !parsedOrder.success ||
+    !parsedPayment.success ||
+    !parsedRequest.success
+  ) {
+    return { success: false, error: "Dữ liệu thanh toán không hợp lệ" };
+  }
+
+  const ctx = await posConfirmPaymentAuth({ branchId: parsedBranch.data });
+  if (!ctx) return { success: false, error: "Không có quyền thanh toán" };
+  if (!isPosBranchInScope(ctx.claims, parsedBranch.data)) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { data: row, error } = await ctx.supabase
+    .from("self_order_payment_requests")
+    .select("id, invoice_payload")
+    .eq("id", parsedRequest.data)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .eq("branch_id", parsedBranch.data)
+    .eq("order_id", parsedOrder.data)
+    .eq("payment_id", parsedPayment.data)
+    .eq("method", "cash_call")
+    .eq("status", "completed")
+    .maybeSingle();
+  if (error) {
+    console.error(
+      "[confirmCashPaymentWithInvoice] bound request lookup failed",
+      error.code,
+    );
+    return { success: false, error: SELF_ORDER_INVOICE_BINDING_ERROR };
+  }
+  if (!row) {
+    console.error("[confirmCashPaymentWithInvoice] bound request missing", {
+      tenantId: ctx.claims.tenant_id,
+      branchId,
+      orderId,
+      paymentId,
+      requestId,
+    });
+    return { success: false, error: SELF_ORDER_INVOICE_BINDING_ERROR };
+  }
+  return parseStoredCashCallInvoicePayload(row);
+}
+
 /**
  * Orchestrator: confirm cash payment, then always attempt HĐĐT issuance.
  *
@@ -1181,12 +1277,16 @@ export async function confirmCashPaymentWithInvoice(
   cashReceived: number,
   invoice: InvoicePayload,
 ): Promise<ActionResult<CashPaymentWithInvoiceResult>> {
-  const invoicePayload = parseInvoicePayload(invoice);
-  if (!invoicePayload.success || !invoicePayload.data) {
-    return invoicePayload as ActionResult<CashPaymentWithInvoiceResult>;
+  const posInvoicePayload = parseInvoicePayload(invoice);
+  if (!posInvoicePayload.success || !posInvoicePayload.data) {
+    return posInvoicePayload as ActionResult<CashPaymentWithInvoiceResult>;
   }
 
-  const paymentResult = await confirmCashPayment(branchId, orderId, cashReceived);
+  const paymentResult = await confirmCashPayment(
+    branchId,
+    orderId,
+    cashReceived,
+  );
   if (!paymentResult.success || !paymentResult.data) {
     return paymentResult as ActionResult<CashPaymentWithInvoiceResult>;
   }
@@ -1203,6 +1303,29 @@ export async function confirmCashPaymentWithInvoice(
       return {
         success: true,
         data: { ...paymentResult.data, invoice: replayInvoice },
+      };
+    }
+  }
+
+  let invoicePayload = posInvoicePayload;
+  const selfOrderRequestId = paymentResult.data.self_order_request_id;
+  if (typeof selfOrderRequestId === "number" && selfOrderRequestId > 0) {
+    invoicePayload = await resolveBoundCashCallInvoicePayload(
+      branchId,
+      orderId,
+      paymentResult.data.payment_id,
+      selfOrderRequestId,
+    );
+    if (!invoicePayload.success || !invoicePayload.data) {
+      return {
+        success: true,
+        data: {
+          ...paymentResult.data,
+          invoice: {
+            status: "failed",
+            error: invoicePayload.error ?? SELF_ORDER_INVOICE_BINDING_ERROR,
+          },
+        },
       };
     }
   }

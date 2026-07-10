@@ -13,7 +13,7 @@ import {
   EmployeePanel,
 } from "../components/staff-runtime-page";
 import type { PayslipEntry } from "./page";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatDecimal, formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
@@ -119,7 +119,7 @@ export function PayslipClient({
                   label: copy.workingDays,
                   value: (
                     <span className="font-mono tabular-nums">
-                      {Number(entry.working_days)}
+                      {formatDecimal(Number(entry.working_days), 1)}
                     </span>
                   ),
                 },
@@ -127,7 +127,7 @@ export function PayslipClient({
                   label: copy.paidLeaveDays,
                   value: (
                     <span className="font-mono tabular-nums">
-                      {Number(entry.paid_leave_days)}
+                      {formatDecimal(Number(entry.paid_leave_days), 1)}
                     </span>
                   ),
                 },
@@ -135,7 +135,7 @@ export function PayslipClient({
                   label: copy.unpaidLeaveDays,
                   value: (
                     <span className="font-mono tabular-nums">
-                      {Number(entry.unpaid_leave_days)}
+                      {formatDecimal(Number(entry.unpaid_leave_days), 1)}
                     </span>
                   ),
                   muted: true,
@@ -144,7 +144,8 @@ export function PayslipClient({
                   label: copy.payableDays,
                   value: (
                     <span className="font-mono tabular-nums">
-                      {`${Number(entry.payable_days)}/${Number(entry.standard_days)}`}
+                      {formatDecimal(Number(entry.payable_days), 1)}/
+                      {formatDecimal(Number(entry.standard_days), 1)}
                     </span>
                   ),
                 },

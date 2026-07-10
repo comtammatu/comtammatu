@@ -1,3 +1,5 @@
+import { formatCount, formatDecimal } from "@comtammatu/shared/format";
+
 export const employee = {
   header: {
     title: "Ca của tôi",
@@ -272,7 +274,7 @@ export const employee = {
     photoAlt: (employeeName: string, date: string) =>
       `Ảnh chấm công của ${employeeName} ngày ${date}`,
     leaveTitle: "Nghỉ phép đã duyệt trong tháng",
-    leaveCount: (count: number) => `${count} lượt`,
+    leaveCount: (count: number) => `${formatCount(count)} lượt`,
     leaveRange: "Khoảng nghỉ",
     leaveType: "Loại",
   },
@@ -451,7 +453,7 @@ export const employee = {
     periodFallback: "Kỳ lương",
     periodLabel: (month: number, year: number) => `Tháng ${month}/${year}`,
     workingDaysSummary: (payable: number, standard: number) =>
-      `Ngày tính lương ${payable}/${standard}`,
+      `Ngày tính lương ${formatDecimal(payable, 1)}/${formatDecimal(standard, 1)}`,
   },
   permissions: {
     title: "Quyền truy cập",

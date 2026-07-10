@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { formatCount } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -96,7 +97,9 @@ function PosMobileActionBarComponent({
           >
             <IconPlus data-icon="inline-start" />
             <span>{messages.pos.mobileActionBar.appendItems}</span>
-            <span className="tabular-nums">{appendDraftQuantity}</span>
+            <span className="tabular-nums">
+              {formatCount(appendDraftQuantity)}
+            </span>
           </Button>
           <Button
             type="button"
@@ -137,7 +140,9 @@ function PosMobileActionBarComponent({
           <IconPlus data-icon="inline-start" />
           <span>{messages.pos.mobileActionBar.appendItems}</span>
           {appendDraftQuantity > 0 && (
-            <span className="tabular-nums">{appendDraftQuantity}</span>
+            <span className="tabular-nums">
+              {formatCount(appendDraftQuantity)}
+            </span>
           )}
         </Button>
       </div>
@@ -160,7 +165,7 @@ function PosMobileActionBarComponent({
           <IconReceipt data-icon="inline-start" />
           <span>{messages.pos.mobileActionBar.sessionOrders}</span>
           {ordersCount > 0 && (
-            <span className="tabular-nums">{ordersCount}</span>
+            <span className="tabular-nums">{formatCount(ordersCount)}</span>
           )}
         </Button>
       </div>
@@ -181,7 +186,7 @@ function PosMobileActionBarComponent({
           >
             <IconShoppingCart data-icon="inline-start" />
             <span>{messages.pos.mobileActionBar.newCart}</span>
-            <span className="tabular-nums">{cartQuantity}</span>
+            <span className="tabular-nums">{formatCount(cartQuantity)}</span>
           </Button>
           <Button
             type="button"

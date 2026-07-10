@@ -4,32 +4,51 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ArrowLeft as IconArrowLeft,
+  ChevronRight as IconChevronRight,
   CircleCheck as IconCircleCheck,
+  ClipboardCheck as IconClipboardCheck,
   Plus as IconPlus,
   Save as IconDeviceFloppy,
+  TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
-import { ItemGroup } from "@comtammatu/ui/components/item";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { INVENTORY_VI } from "@comtammatu/shared/messages";
-import { messages } from "@lib/messages";
-import { AppDetailFooter } from "@/components/surface";
-import { getStatusBadgeMeta } from "@/components/status-badge";
-import { formatVND } from "@/(protected)/inventory/_lib/format";
+import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import { OperatorFlowSteps } from "@/(protected)/inventory/_components/operator-flow-steps";
-import type { IngredientRow } from "@/(protected)/inventory/page";
-import { useGrnLines } from "@/(protected)/inventory/grn/[id]/_hooks/use-grn-lines";
-import { useGrnLineActions } from "@/(protected)/inventory/grn/[id]/_hooks/use-grn-line-actions";
-import { grnCopy } from "@/(protected)/inventory/grn/[id]/views/grn-detail-types";
-import { AddGrnLineDialog } from "@/(protected)/inventory/grn/[id]/views/add-grn-line-dialog";
-import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { LineRow } from "@/(protected)/inventory/grn/[id]/views/grn-line-row";
-import type { GRNDetail } from "@/(protected)/inventory/grn/[id]/views/grn-detail-types";
+import type { IngredientRow } from "@/(protected)/inventory/_lib/types";
+import {
+  BranchOperatorControlBar,
+  BranchOperatorDetailList,
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
+import {
+  GRN_DETAIL_COPY as grnCopy,
+  type GrnDetail,
+} from "@lib/inventory/grn-detail-model";
+import { useGrnDetailActions } from "@lib/inventory/use-grn-detail-actions";
+import { useGrnDetailLines } from "@lib/inventory/use-grn-detail-lines";
+import { messages } from "@lib/messages";
+import {
+  BranchGrnAddLineSheet,
+  BranchGrnReviewLineSheet,
+} from "./branch-grn-review-line-sheet";
 
 interface GrnReviewOperatorClientProps {
-  grn: GRNDetail;
+  grn: GrnDetail;
   ingredients: IngredientRow[];
+  canEditDraft: boolean;
+  canConfirm: boolean;
   grnListBasePath: string;
   purchaseOrdersBasePath: string;
 }
@@ -37,23 +56,23 @@ interface GrnReviewOperatorClientProps {
 export function GrnReviewOperatorClient({
   grn,
   ingredients,
+  canEditDraft,
+  canConfirm,
   grnListBasePath,
   purchaseOrdersBasePath,
 }: GrnReviewOperatorClientProps) {
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-
+  const [addLineOpen, setAddLineOpen] = useState(false);
+  const [editingLineId, setEditingLineId] = useState<number | null>(null);
   const statusBadge = getStatusBadgeMeta("inventory", grn.status);
-  const qc = grn.qcSettings;
-  const { lines, setLines, patch, stats, dirtyLines } = useGrnLines(
+  const { lines, setLines, patch, stats, dirtyLines } = useGrnDetailLines(
     grn.items,
-    qc.priceVarianceReviewPct,
+    grn.qcSettings.priceVarianceReviewPct,
   );
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =
-    useGrnLineActions({
+    useGrnDetailActions({
       grn,
-      qc,
       isMobile: true,
       lines,
       dirtyLines,
@@ -64,117 +83,227 @@ export function GrnReviewOperatorClient({
       grnMobileBackPath: grnListBasePath,
       purchaseOrdersBasePath,
     });
+  const editingLine =
+    lines.find((line) => line.lineId === editingLineId) ?? null;
   const operatorFlow = messages.inventory.operatorFlow;
   const reviewStep = dirtyLines.length > 0 ? 2 : 3;
 
+  function patchEditingLine(patchValue: Parameters<typeof patch>[1]) {
+    const index = lines.findIndex((line) => line.lineId === editingLineId);
+    if (index >= 0) patch(index, patchValue);
+  }
+
   return (
-    <div className="flex w-full flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <Link
-          href={grnListBasePath}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-          aria-label={grnCopy.back}
-        >
-          <IconArrowLeft className="size-4" />
-        </Link>
-        <span className="min-w-0 flex-1 truncate font-mono text-sm font-semibold">
-          {grn.code}
-        </span>
-        <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
-      </div>
+    <BranchOperatorPage
+      title={grn.code}
+      description={`${grn.supplier} · ${grn.date}`}
+      hideHeaderOnMobile
+      badge={{ children: statusBadge.label, variant: statusBadge.variant }}
+    >
+      <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-28">
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button asChild variant="ghost" size="icon-touch">
+            <Link href={grnListBasePath} aria-label={grnCopy.back}>
+              <IconArrowLeft />
+            </Link>
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-mono text-sm font-semibold tabular-nums">
+              {grn.code}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {grn.supplier} · {grn.date}
+            </p>
+          </div>
+          <StatusBadge domain="inventory" value={grn.status} size="sm" />
+        </BranchOperatorControlBar>
 
-      <p className="text-sm text-muted-foreground">
-        {grn.supplier} • {grn.date}
-      </p>
+        <OperatorFlowSteps
+          title={grnCopy.inspectionItemsTitle}
+          description={grnCopy.draftSavedReviewHint}
+          steps={operatorFlow.grnSteps}
+          currentStep={reviewStep}
+        />
 
-      <OperatorFlowSteps
-        title={grnCopy.inspectionItemsTitle}
-        description={grnCopy.draftSavedReviewHint}
-        steps={operatorFlow.grnSteps}
-        currentStep={reviewStep}
-      />
+        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
+          <BranchOperatorPanel
+            title={grnCopy.inspectionItemsTitle}
+            description={grnCopy.draftToleranceHint(
+              formatPercent(grn.qcSettings.qtyShortTolerancePct),
+              formatPercent(grn.qcSettings.priceVarianceWarnPct),
+              formatPercent(grn.qcSettings.priceVarianceReviewPct),
+            )}
+            icon={IconClipboardCheck}
+            size="sm"
+            className="min-w-0 lg:col-start-1 lg:row-start-1"
+            contentClassName="gap-2"
+            action={
+              canEditDraft ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  onClick={() => setAddLineOpen(true)}
+                >
+                  <IconPlus data-icon="inline-start" />
+                  {grnCopy.addLine}
+                </Button>
+              ) : null
+            }
+          >
+            {lines.length === 0 ? (
+              <AppEmptyState
+                compact
+                mode="no-data"
+                icon={<IconClipboardCheck />}
+                title={grnCopy.addDialog.title}
+                description={grnCopy.draftSavedReviewHint}
+              />
+            ) : (
+              <ItemGroup className="gap-2" role="list">
+                {lines.map((line) => (
+                  <div key={line.lineId} role="listitem">
+                    <Item
+                      asChild
+                      variant="outline"
+                      className="min-h-20 touch-manipulation"
+                    >
+                      <button
+                        type="button"
+                        className="w-full text-left"
+                        onClick={() => setEditingLineId(line.lineId)}
+                        disabled={!canEditDraft}
+                      >
+                        <ItemContent className="min-w-0 gap-1">
+                          <ItemTitle className="line-clamp-none text-sm font-semibold">
+                            {line.name}
+                          </ItemTitle>
+                          <ItemDescription className="line-clamp-none text-xs">
+                            {grnCopy.line.orderedDeliveredAccepted(
+                              line.required,
+                              line.actual,
+                              line.actual - line.rejected,
+                              line.rejected,
+                              line.unit,
+                            )}
+                          </ItemDescription>
+                          {line.dirty ? (
+                            <span className="text-xs font-medium text-warning">
+                              {grnCopy.line.unsaved}
+                            </span>
+                          ) : null}
+                        </ItemContent>
+                        <ItemActions className="shrink-0">
+                          {line.rejected > 0 ||
+                          line.qualityStatus === "rejected" ? (
+                            <IconAlertTriangle className="size-5 text-warning" />
+                          ) : (
+                            <IconCircleCheck className="size-5 text-success" />
+                          )}
+                          {canEditDraft ? (
+                            <IconChevronRight className="size-4 text-muted-foreground" />
+                          ) : null}
+                        </ItemActions>
+                      </button>
+                    </Item>
+                  </div>
+                ))}
+              </ItemGroup>
+            )}
+          </BranchOperatorPanel>
 
-      <div className="flex items-center justify-between gap-2 px-1">
-        <SectionLabel density="dense">
-          {INVENTORY_VI.grnReviewLinesHint}
-        </SectionLabel>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setAddDialogOpen(true)}
-        >
-          <IconPlus className="size-4" />
-          {grnCopy.addLine}
-        </Button>
-      </div>
+          <BranchOperatorPanel
+            title={grn.supplier}
+            icon={IconClipboardCheck}
+            size="sm"
+            className="min-w-0 lg:col-start-2 lg:row-start-1"
+          >
+            <BranchOperatorDetailList
+              rows={[
+                { label: grnCopy.supplier, value: grn.supplier },
+                { label: grnCopy.receivingWarehouse, value: grn.branchName },
+                {
+                  label: grnCopy.linkedPo,
+                  value: grn.poCode || "—",
+                  muted: !grn.poCode,
+                },
+                {
+                  label: grnCopy.inspectionItemsTitle,
+                  value: grnCopy.lineCount(lines.length),
+                },
+              ]}
+              columns={1}
+            />
+          </BranchOperatorPanel>
+        </div>
 
-      <ItemGroup className="gap-2">
-        {lines.map((line, idx) => (
-          <LineRow
-            key={line.lineId}
-            tenantId={grn.tenantId}
-            grnId={grn.id}
-            line={line}
-            idx={idx}
-            isDraft
-            qc={qc}
-            showAmendAffordance={false}
-            onChange={(p) => patch(idx, p)}
-            onDelete={() => void handleDeleteLine(line)}
-            onAmend={() => {}}
-          />
-        ))}
-      </ItemGroup>
+        <BranchGrnReviewLineSheet
+          grn={grn}
+          line={canEditDraft ? editingLine : null}
+          isPending={isSaving}
+          onClose={() => setEditingLineId(null)}
+          onPatch={patchEditingLine}
+          onDelete={handleDeleteLine}
+        />
+        <BranchGrnAddLineSheet
+          grn={grn}
+          ingredients={ingredients}
+          open={canEditDraft && addLineOpen}
+          isPending={isSaving}
+          onOpenChange={setAddLineOpen}
+          onSaved={upsertLocalLine}
+          startTransition={startSave}
+        />
 
-      <AppDetailFooter
-        sticky
-        mobileReverse={false}
-        stacked
-        trailing={
-          <>
-            {dirtyLines.length > 0 ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <Spinner className="size-4" />
-                ) : (
-                  <IconDeviceFloppy className="size-5" />
-                )}
-                {grnCopy.saveChanges(dirtyLines.length)}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              size="touch-lg"
-              disabled={isConfirming || dirtyLines.length > 0}
-              onClick={handleConfirmGrn}
-            >
-              {isConfirming ? (
-                <Spinner className="size-5" />
-              ) : (
-                <IconCircleCheck className="size-5" />
-              )}
-              {grnCopy.confirmGrnAction} · {formatVND(stats.total)}
+        <AppDetailFooter
+          sticky
+          leading={
+            <Button variant="outline" size="touch" asChild>
+              <Link href={grnListBasePath}>
+                <IconArrowLeft data-icon="inline-start" />
+                {grnCopy.back}
+              </Link>
             </Button>
-          </>
-        }
-      />
-
-      <AddGrnLineDialog
-        grn={grn}
-        ingredients={ingredients}
-        isOpen={addDialogOpen}
-        isPending={isSaving}
-        onOpenChange={setAddDialogOpen}
-        onSaved={upsertLocalLine}
-        startTransition={startSave}
-      />
-    </div>
+          }
+          trailing={
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-80">
+              {canEditDraft && dirtyLines.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  onClick={() => void handleSave()}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <Spinner className="size-4" />
+                  ) : (
+                    <IconDeviceFloppy />
+                  )}
+                  {grnCopy.saveChanges(dirtyLines.length)}
+                </Button>
+              ) : null}
+              {canConfirm ? (
+                <Button
+                  type="button"
+                  size="touch-lg"
+                  disabled={
+                    isConfirming || dirtyLines.length > 0 || lines.length === 0
+                  }
+                  onClick={() => void handleConfirmGrn()}
+                >
+                  {isConfirming ? (
+                    <Spinner className="size-5" />
+                  ) : (
+                    <IconCircleCheck />
+                  )}
+                  {grnCopy.confirmGrnAction} · {formatVND(stats.total)}
+                </Button>
+              ) : null}
+            </div>
+          }
+        />
+      </div>
+    </BranchOperatorPage>
   );
 }

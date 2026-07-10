@@ -10,7 +10,11 @@ import {
   getInventoryValueVisibility,
   PERMISSION_KEYS,
 } from "@comtammatu/shared/auth";
-import { formatCount, formatVND } from "@comtammatu/shared/format";
+import {
+  formatCount,
+  formatPercent,
+  formatVND,
+} from "@comtammatu/shared/format";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -53,11 +57,6 @@ const financeCopy = messages.finance;
 const powerLiteCopy = financeCopy.powerLite;
 const HKD_RANGES: readonly FinanceRange[] = ["today", "yesterday", "7d", "mtd"];
 const FINANCE_INVOICE_QUEUE_HREF = "/finance/invoices";
-
-function formatPercent(value: number): string {
-  if (!Number.isFinite(value)) return "0%";
-  return `${value.toFixed(1)}%`;
-}
 
 function HddtComplianceBand({
   summary,

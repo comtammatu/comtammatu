@@ -1,6 +1,6 @@
 "use client";
 
-import { formatVND } from "@comtammatu/shared/format";
+import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { FORM_VI, POS_VI } from "@comtammatu/shared/messages";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { cn } from "@comtammatu/ui";
@@ -96,7 +96,7 @@ export function OrderTotalsSummary({
             <span>
               {visibleItemDiscount > 0 ? POS_VI.orderDiscountLabel : POS_VI.discountTitle}
               {discountType === "pct" && discountValue != null
-                ? ` (${discountValue}%)`
+                ? ` (${formatPercent(discountValue)})`
                 : ""}
             </span>
             <span className="font-mono tabular-nums">

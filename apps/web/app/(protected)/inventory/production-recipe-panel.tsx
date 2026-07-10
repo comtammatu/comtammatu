@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Controller, useFieldArray, type UseFormReturn } from "react-hook-form";
+import { useFieldArray, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import {
   ArrowLeft as IconArrowLeft,
@@ -12,10 +12,10 @@ import {
   Plus as IconPlus,
   Trash as IconTrash,
 } from "lucide-react";
+import { formatQuantity } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import {
   Item,
   ItemActions,
@@ -32,7 +32,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { Combobox, FormDialog } from "@/components/form";
+import { ComboboxField, FormDialog } from "@/components/form";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import {
   RecipeLinesEditor,
@@ -220,8 +220,6 @@ function RecipeDialogFields({
     name: "lines",
   });
 
-
-
   function handleFinishedGoodCreated(good: FinishedGoodOption) {
     onFinishedGoodCreated(good);
     form.setValue("finished_good_id", String(good.id));
@@ -268,31 +266,15 @@ function RecipeDialogFields({
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Controller
+          <ComboboxField
             control={form.control}
             name="finished_good_id"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={!!fieldState.error}>
-                <FieldLabel htmlFor="recipe-finished-good">
-                  {INVENTORY_VI.productionRecipeFinishedGoodLabel}
-                </FieldLabel>
-                <Combobox
-                  id="recipe-finished-good"
-                  value={field.value ?? ""}
-                  options={availableFinishedGoodOptions}
-                  placeholder={INVENTORY_VI.selectFinishedGood}
-                  searchPlaceholder={INVENTORY_VI.searchFinishedGood}
-                  disabled={false}
-                  aria-invalid={!!fieldState.error}
-                  onValueChange={(nextValue) => {
-                    field.onChange(nextValue);
-                  }}
-                />
-                {fieldState.error ? (
-                  <FieldError errors={[fieldState.error]} />
-                ) : null}
-              </Field>
-            )}
+            id="recipe-finished-good"
+            label={INVENTORY_VI.productionRecipeFinishedGoodLabel}
+            options={availableFinishedGoodOptions}
+            placeholder={INVENTORY_VI.selectFinishedGood}
+            searchPlaceholder={INVENTORY_VI.searchFinishedGood}
+            required
           />
           {!finishedGoodLocked && canManageCatalog ? (
             <Button
@@ -461,8 +443,6 @@ export function ProductionRecipePanel({
     );
   }, [recipes]);
 
-
-
   const recipeLinesEditorIngredients = useMemo(
     () =>
       rawIngredientsOptions.map((item) => ({
@@ -532,7 +512,9 @@ export function ProductionRecipePanel({
   async function submitRecipe(values: RecipeFormValues): Promise<ActionResult> {
     const result = await upsertProductionRecipeLines({
       finishedGoodId: Number(values.finished_good_id),
-      oldFinishedGoodId: pendingFinishedGoodId ? Number(pendingFinishedGoodId) : undefined,
+      oldFinishedGoodId: pendingFinishedGoodId
+        ? Number(pendingFinishedGoodId)
+        : undefined,
       lines: values.lines.map((line) => ({
         ingredientId: Number(line.ingredient_id),
         quantity: Number(line.quantity),
@@ -603,7 +585,9 @@ export function ProductionRecipePanel({
       render: (recipe) => (
         <div>
           <div className="font-medium">{recipe.ingredient_name}</div>
-          <div className="text-xs text-muted-foreground">{recipe.unitLabel}</div>
+          <div className="text-xs text-muted-foreground">
+            {recipe.unitLabel}
+          </div>
         </div>
       ),
     },
@@ -612,14 +596,14 @@ export function ProductionRecipePanel({
       header: FORM_VI.quantity,
       render: (recipe) => (
         <span>
-          {recipe.quantity} {recipe.unitLabel}
+          {formatQuantity(recipe.quantity)} {recipe.unitLabel}
         </span>
       ),
     },
     {
       key: "yield",
       header: "Yield",
-      render: (recipe) => recipe.yield_factor,
+      render: (recipe) => formatQuantity(recipe.yield_factor),
     },
     {
       key: "note",
@@ -789,7 +773,10 @@ export function ProductionRecipePanel({
                       aria-label={INVENTORY_VI.productionRecipeUpdate}
                       title={INVENTORY_VI.productionRecipeUpdate}
                     >
-                      <IconPencil className={embedded ? "size-4" : undefined} data-icon={embedded ? undefined : "inline-start"} />
+                      <IconPencil
+                        className={embedded ? "size-4" : undefined}
+                        data-icon={embedded ? undefined : "inline-start"}
+                      />
                       {!embedded && INVENTORY_VI.productionRecipeUpdate}
                     </Button>
                     <Button
@@ -797,11 +784,17 @@ export function ProductionRecipePanel({
                       variant="destructive"
                       size={embedded ? "icon-touch" : "sm"}
                       onClick={() => handleRecipeGroupDelete(group)}
-                      aria-label={INVENTORY_VI.productionRecipeGroupDeleteConfirm}
+                      aria-label={
+                        INVENTORY_VI.productionRecipeGroupDeleteConfirm
+                      }
                       title={INVENTORY_VI.productionRecipeGroupDeleteConfirm}
                     >
-                      <IconTrash className={embedded ? "size-4" : undefined} data-icon={embedded ? undefined : "inline-start"} />
-                      {!embedded && INVENTORY_VI.productionRecipeGroupDeleteConfirm}
+                      <IconTrash
+                        className={embedded ? "size-4" : undefined}
+                        data-icon={embedded ? undefined : "inline-start"}
+                      />
+                      {!embedded &&
+                        INVENTORY_VI.productionRecipeGroupDeleteConfirm}
                     </Button>
                   </div>
                 ) : null
@@ -863,13 +856,19 @@ function RecipeLineItemCard({
       <Item variant="outline" size="sm">
         <ItemContent className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-medium">{recipe.ingredient_name}</span>
-            <Badge variant={badgeVariantFromTone("neutral")} className="shrink-0 font-mono text-xs">
-              {recipe.quantity} {recipe.unitLabel}
+            <span className="truncate text-sm font-medium">
+              {recipe.ingredient_name}
+            </span>
+            <Badge
+              variant={badgeVariantFromTone("neutral")}
+              className="shrink-0 font-mono text-xs"
+            >
+              {formatQuantity(recipe.quantity)} {recipe.unitLabel}
             </Badge>
           </div>
           <ItemDescription className="truncate text-xs">
-            Yield {recipe.yield_factor} {recipe.note ? `· ${recipe.note}` : ""}
+            Yield {formatQuantity(recipe.yield_factor)}{" "}
+            {recipe.note ? `· ${recipe.note}` : ""}
           </ItemDescription>
         </ItemContent>
         {canManageRecipes ? (
@@ -904,12 +903,13 @@ function RecipeLineItemCard({
       <ItemHeader>
         <ItemTitle>{recipe.ingredient_name}</ItemTitle>
         <Badge variant={badgeVariantFromTone("neutral")}>
-          {recipe.quantity} {recipe.unitLabel}
+          {formatQuantity(recipe.quantity)} {recipe.unitLabel}
         </Badge>
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          Yield {recipe.yield_factor} · {recipe.note ?? INVENTORY_VI.noNote}
+          Yield {formatQuantity(recipe.yield_factor)} ·{" "}
+          {recipe.note ?? INVENTORY_VI.noNote}
         </ItemDescription>
       </ItemContent>
       {canManageRecipes ? (

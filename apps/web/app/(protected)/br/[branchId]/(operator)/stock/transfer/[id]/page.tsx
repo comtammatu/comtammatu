@@ -42,8 +42,8 @@ export default async function OperatorTransferDetailPage({
     <BranchOperatorPage
       title={data.transfer.code}
       description={copy.routeMeta(
-        data.transfer.fromBranch,
-        data.transfer.toBranch,
+        data.transfer.fromLocation,
+        data.transfer.toLocation,
         data.transfer.date,
       )}
       hideHeaderOnMobile

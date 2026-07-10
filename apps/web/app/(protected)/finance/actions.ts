@@ -25,10 +25,7 @@ const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
   "branch_manager",
   "cashier",
 ];
-const REPORT_ROLES: readonly StaffRole[] = [
-  "owner",
-  "branch_manager",
-];
+const REPORT_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
 
 /* ─── HĐĐT: Create Invoice ─── */
 
@@ -39,9 +36,7 @@ const REPORT_ROLES: readonly StaffRole[] = [
  * can report the real invoice state without re-issuing. data is null when no
  * active invoice row exists.
  */
-export async function resolveExistingInvoiceForOrder(
-  orderId: number,
-): Promise<
+export async function resolveExistingInvoiceForOrder(orderId: number): Promise<
   ActionResult<{
     id: number;
     invoice_number: string | null;
@@ -144,7 +139,9 @@ export async function reissueAllDraftInvoices(): Promise<ActionResult> {
 
   const { data: drafts, error } = await supabase
     .from("tax_invoices")
-    .select("id, order_id, buyer_name, buyer_tax_code, buyer_address, buyer_email")
+    .select(
+      "id, order_id, buyer_name, buyer_tax_code, buyer_address, buyer_email",
+    )
     .eq("tenant_id", claims.tenant_id)
     .eq("status", "draft")
     .is("invoice_number", null)
@@ -153,7 +150,10 @@ export async function reissueAllDraftInvoices(): Promise<ActionResult> {
     .limit(REISSUE_ALL_CAP);
 
   if (error) {
-    console.error("[finance/actions:reissueAllDraftInvoices] Fetch drafts error:", error);
+    console.error(
+      "[finance/actions:reissueAllDraftInvoices] Fetch drafts error:",
+      error,
+    );
     return { success: false, errorCode: "load_failed" };
   }
 
@@ -210,21 +210,57 @@ export async function issueMissingSepayInvoices(): Promise<
     .eq("tenant_id", claims.tenant_id)
     .eq("provider", "sepay")
     .eq("processing_status", "processed")
+    .or("error_code.is.null,error_code.neq.invoice_binding_manual_review")
     .not("payment_id", "is", null)
     .order("created_at", { ascending: true })
     .limit(SEPAY_MISSING_SCAN_CAP);
 
   if (webhookErr) {
-    console.error("[finance/actions:issueMissingSepayInvoices] Fetch webhook_events error:", webhookErr);
+    console.error(
+      "[finance/actions:issueMissingSepayInvoices] Fetch webhook_events error:",
+      webhookErr,
+    );
     return { success: false, errorCode: "load_failed" };
   }
 
-  const paymentIds = Array.from(
+  const candidatePaymentIds = Array.from(
     new Set(
       (webhookRows ?? [])
         .map((row) => row.payment_id)
         .filter((id): id is number => typeof id === "number"),
     ),
+  );
+  if (candidatePaymentIds.length === 0) {
+    return {
+      success: true,
+      data: { issued: 0, failed: 0, skipped: 0, remainingInScan: 0 },
+    };
+  }
+
+  const { data: manualReviewRows, error: manualReviewErr } = await supabase
+    .from("webhook_events")
+    .select("payment_id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("provider", "sepay")
+    .eq("processing_status", "processed")
+    .eq("error_code", "invoice_binding_manual_review")
+    .in("payment_id", candidatePaymentIds);
+
+  if (manualReviewErr) {
+    console.error(
+      "[finance/actions:issueMissingSepayInvoices] Fetch manual review events error:",
+      manualReviewErr,
+    );
+    return { success: false, errorCode: "load_failed" };
+  }
+
+  const manualReviewPaymentIds = new Set(
+    (manualReviewRows ?? [])
+      .map((row) => row.payment_id)
+      .filter((id): id is number => typeof id === "number"),
+  );
+  const paymentIds = candidatePaymentIds.filter(
+    (paymentId) => !manualReviewPaymentIds.has(paymentId),
   );
   if (paymentIds.length === 0) {
     return {
@@ -242,7 +278,10 @@ export async function issueMissingSepayInvoices(): Promise<
     .in("id", paymentIds);
 
   if (paymentErr) {
-    console.error("[finance/actions:issueMissingSepayInvoices] Fetch payments error:", paymentErr);
+    console.error(
+      "[finance/actions:issueMissingSepayInvoices] Fetch payments error:",
+      paymentErr,
+    );
     return { success: false, errorCode: "load_failed" };
   }
 
@@ -274,10 +313,12 @@ export async function issueMissingSepayInvoices(): Promise<
       .filter((id): id is number => typeof id === "number"),
   );
   const summaryOrderIds = new Set(
-    ((summaryLinks ?? []) as Array<{
-      order_id: number | null;
-      tax_invoices: { status: string } | null;
-    }>)
+    (
+      (summaryLinks ?? []) as Array<{
+        order_id: number | null;
+        tax_invoices: { status: string } | null;
+      }>
+    )
       .filter(
         (link) =>
           link.order_id != null &&
@@ -303,7 +344,8 @@ export async function issueMissingSepayInvoices(): Promise<
       tenantId: claims.tenant_id,
       input: { orderId, buyerNotGetInvoice: true },
       actorId: user.id,
-      canAccessBranch: (branchId) => canAccessBranch(supabase, claims, branchId),
+      canAccessBranch: (branchId) =>
+        canAccessBranch(supabase, claims, branchId),
       logPrefix: "finance/actions:issueMissingSepayInvoices",
     });
     if (result.success) {
@@ -332,7 +374,11 @@ export async function issueMissingSepayInvoices(): Promise<
 /* ─── HĐĐT: Manual issue for a past paid order ─── */
 
 const manualInvoiceLookupSchema = z.object({
-  orderNumber: z.string().trim().min(1, "Nhập mã đơn").max(64, "Mã đơn quá dài"),
+  orderNumber: z
+    .string()
+    .trim()
+    .min(1, "Nhập mã đơn")
+    .max(64, "Mã đơn quá dài"),
   branchId: z.coerce.number().int().positive(),
 });
 
@@ -384,7 +430,10 @@ export async function resolveOrderForManualInvoice(
     .maybeSingle();
 
   if (orderErr) {
-    console.error("[finance/actions:resolveOrderForManualInvoice] Fetch order error:", orderErr);
+    console.error(
+      "[finance/actions:resolveOrderForManualInvoice] Fetch order error:",
+      orderErr,
+    );
     return { success: false, error: "Không thể tra đơn." };
   }
   if (!order) {
@@ -509,7 +558,10 @@ export async function cancelTaxInvoice(
 
   if (fetchErr || !invoice) {
     if (fetchErr) {
-      console.error("[finance/actions:cancelTaxInvoice] Fetch invoice error:", fetchErr);
+      console.error(
+        "[finance/actions:cancelTaxInvoice] Fetch invoice error:",
+        fetchErr,
+      );
     }
     return { success: false, error: "Hóa đơn không tồn tại." };
   }
@@ -533,7 +585,10 @@ export async function cancelTaxInvoice(
   });
 
   if (rpcErr) {
-    console.error("[finance/actions:cancelTaxInvoice] Transition invoice state error:", rpcErr);
+    console.error(
+      "[finance/actions:cancelTaxInvoice] Transition invoice state error:",
+      rpcErr,
+    );
     if (rpcErr.code === "22023") {
       return {
         success: false,
@@ -679,7 +734,10 @@ export async function fetchTaxInvoicesPage(
     .limit(pageSize + 1);
 
   if (error) {
-    console.error("[finance/actions:fetchTaxInvoicesPage] Fetch tax invoices error:", error);
+    console.error(
+      "[finance/actions:fetchTaxInvoicesPage] Fetch tax invoices error:",
+      error,
+    );
     return { success: false, error: financeActionErrors.loadTaxInvoicesFailed };
   }
 
@@ -790,8 +848,14 @@ export async function fetchRevenueRollup(
   });
 
   if (error) {
-    console.error("[finance/actions:fetchRevenueRollup] RPC get_revenue_rollup error:", error);
-    return { success: false, error: financeActionErrors.loadRevenueRollupFailed };
+    console.error(
+      "[finance/actions:fetchRevenueRollup] RPC get_revenue_rollup error:",
+      error,
+    );
+    return {
+      success: false,
+      error: financeActionErrors.loadRevenueRollupFailed,
+    };
   }
 
   return { success: true, data: data ?? [] };
@@ -834,7 +898,10 @@ export async function fetchRevenueKpis(
   });
 
   if (error) {
-    console.error("[finance/actions:fetchRevenueKpis] RPC get_revenue_kpis error:", error);
+    console.error(
+      "[finance/actions:fetchRevenueKpis] RPC get_revenue_kpis error:",
+      error,
+    );
     return { success: false, error: financeActionErrors.loadRevenueKpisFailed };
   }
 
@@ -887,8 +954,14 @@ export async function fetchFinanceDashboardSummary(
   );
 
   if (error) {
-    console.error("[finance/actions:fetchFinanceDashboardSummary] RPC get_finance_dashboard_summary error:", error);
-    return { success: false, error: financeActionErrors.loadDashboardSummaryFailed };
+    console.error(
+      "[finance/actions:fetchFinanceDashboardSummary] RPC get_finance_dashboard_summary error:",
+      error,
+    );
+    return {
+      success: false,
+      error: financeActionErrors.loadDashboardSummaryFailed,
+    };
   }
 
   return { success: true, data: data?.[0] ?? null };
@@ -922,7 +995,10 @@ export async function fetchOrdersForDay(
   });
 
   if (error) {
-    console.error("[finance/actions:fetchOrdersForDay] RPC get_orders_for_day error:", error);
+    console.error(
+      "[finance/actions:fetchOrdersForDay] RPC get_orders_for_day error:",
+      error,
+    );
     return { success: false, error: financeActionErrors.loadOrdersFailed };
   }
 
@@ -966,8 +1042,14 @@ export async function fetchCashVarianceSummary(
   });
 
   if (error) {
-    console.error("[finance/actions:fetchCashVarianceSummary] RPC get_cash_variance_summary error:", error);
-    return { success: false, error: financeActionErrors.loadCashVarianceFailed };
+    console.error(
+      "[finance/actions:fetchCashVarianceSummary] RPC get_cash_variance_summary error:",
+      error,
+    );
+    return {
+      success: false,
+      error: financeActionErrors.loadCashVarianceFailed,
+    };
   }
 
   return { success: true, data: data?.[0] ?? null };
@@ -1011,7 +1093,10 @@ export async function fetchRevenueByHour(
   });
 
   if (error) {
-    console.error("[finance/actions:fetchRevenueByHour] RPC get_revenue_by_hour error:", error);
+    console.error(
+      "[finance/actions:fetchRevenueByHour] RPC get_revenue_by_hour error:",
+      error,
+    );
     return {
       success: false,
       error: financeActionErrors.loadRevenueByHourFailed,
@@ -1056,8 +1141,14 @@ export async function fetchRevenueByCashier(
   });
 
   if (error) {
-    console.error("[finance/actions:fetchRevenueByCashier] RPC get_revenue_by_cashier error:", error);
-    return { success: false, error: financeActionErrors.loadRevenueByCashierFailed };
+    console.error(
+      "[finance/actions:fetchRevenueByCashier] RPC get_revenue_by_cashier error:",
+      error,
+    );
+    return {
+      success: false,
+      error: financeActionErrors.loadRevenueByCashierFailed,
+    };
   }
 
   return { success: true, data: data ?? [] };
@@ -1086,7 +1177,10 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
       .eq("is_active", true)
       .order("name");
     if (error) {
-      console.error("[finance/actions:fetchAccessibleBranches] Fetch branches error (owner):", error);
+      console.error(
+        "[finance/actions:fetchAccessibleBranches] Fetch branches error (owner):",
+        error,
+      );
       return { success: false, error: financeActionErrors.loadBranchesFailed };
     }
     return { success: true, data: data ?? [] };
@@ -1103,7 +1197,10 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
       .maybeSingle();
     if (error || !data) {
       if (error) {
-        console.error("[finance/actions:fetchAccessibleBranches] Fetch branch error (branch_user):", error);
+        console.error(
+          "[finance/actions:fetchAccessibleBranches] Fetch branch error (branch_user):",
+          error,
+        );
       }
       return { success: true, data: [] };
     }
@@ -1157,7 +1254,10 @@ export async function fetchTopItems(
   });
 
   if (error) {
-    console.error("[finance/actions:fetchTopItems] RPC get_top_items error:", error);
+    console.error(
+      "[finance/actions:fetchTopItems] RPC get_top_items error:",
+      error,
+    );
     return { success: false, error: financeActionErrors.loadTopItemsFailed };
   }
 
@@ -1178,7 +1278,10 @@ export async function refreshMaterializedViews(): Promise<ActionResult> {
   const { error: rpcErr } = await supabase.rpc("refresh_finance_views");
 
   if (rpcErr) {
-    console.error("[finance/actions:refreshMaterializedViews] RPC refresh_finance_views error:", rpcErr);
+    console.error(
+      "[finance/actions:refreshMaterializedViews] RPC refresh_finance_views error:",
+      rpcErr,
+    );
     return { success: false, error: "Không thể làm mới dữ liệu báo cáo." };
   }
 

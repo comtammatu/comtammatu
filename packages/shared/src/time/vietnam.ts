@@ -277,6 +277,72 @@ export function formatVNTime(
   });
 }
 
+export function formatVNClockTime(
+  value: string | null | undefined,
+  dash = "—",
+): string {
+  if (!value) return dash;
+  const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+  if (!match) return dash;
+
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const second = match[3] == null ? 0 : Number(match[3]);
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    !Number.isInteger(second) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59 ||
+    second < 0 ||
+    second > 59
+  ) {
+    return dash;
+  }
+
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+export function formatVNClockRange(
+  start: string | null | undefined,
+  end: string | null | undefined,
+  dash = "—",
+): string {
+  const formattedStart = formatVNClockTime(start, "");
+  const formattedEnd = formatVNClockTime(end, "");
+  if (!formattedStart || !formattedEnd) return dash;
+  return `${formattedStart}–${formattedEnd}`;
+}
+
+export function formatVNDurationMinutes(
+  totalMinutes: number,
+  dash = "—",
+): string {
+  if (!Number.isFinite(totalMinutes) || totalMinutes < 0) return dash;
+  const minutes = Math.floor(totalMinutes);
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (hours === 0) return `${remainder} phút`;
+  if (remainder === 0) return `${hours} giờ`;
+  return `${hours} giờ ${String(remainder).padStart(2, "0")} phút`;
+}
+
+export function formatVNDuration(
+  start: string | number | Date | null | undefined,
+  end: string | number | Date | null | undefined,
+  dash = "—",
+): string {
+  const startDate = toDate(start);
+  const endDate = toDate(end);
+  if (!startDate || !endDate) return dash;
+  return formatVNDurationMinutes(
+    (endDate.getTime() - startDate.getTime()) / 60_000,
+    dash,
+  );
+}
+
 /** Wall-clock minutes since VN midnight (0–1439) for the given instant. */
 export function getVNMinutesOfDay(
   value: string | number | Date = new Date(),
@@ -298,17 +364,21 @@ export function getVNMinutesOfDay(
 
 /** Parse a "HH:MM" / "HH:MM:SS" clock string to minutes since midnight. */
 export function parseClockTimeToMinutes(value: string): number | null {
-  const match = /^(\d{1,2}):(\d{2})/.exec(value);
+  const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(value);
   if (!match) return null;
   const hour = Number(match[1]);
   const minute = Number(match[2]);
+  const second = match[3] == null ? 0 : Number(match[3]);
   if (
     !Number.isInteger(hour) ||
     !Number.isInteger(minute) ||
+    !Number.isInteger(second) ||
     hour < 0 ||
     hour > 23 ||
     minute < 0 ||
-    minute > 59
+    minute > 59 ||
+    second < 0 ||
+    second > 59
   ) {
     return null;
   }

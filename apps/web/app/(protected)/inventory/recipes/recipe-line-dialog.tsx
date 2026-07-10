@@ -1,19 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { Controller } from "react-hook-form";
 import { z } from "zod";
-import { cn } from "@comtammatu/ui";
-import { Label } from "@comtammatu/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormDialog } from "@/components/form";
+import { FormDialog, SelectField } from "@/components/form";
 import { RecipeLinesEditor } from "../_components/recipe-lines-editor";
 import type { IngredientUnitRow } from "../_lib/types";
 import { upsertRecipeLines } from "../procurement-actions";
@@ -58,7 +48,9 @@ const recipeLineRowSchema = z.object({
 });
 
 const recipeSchema = z.object({
-  menu_item_id: z.string().min(1, { error: INVENTORY_VI.selectMenuItemRequired }),
+  menu_item_id: z
+    .string()
+    .min(1, { error: INVENTORY_VI.selectMenuItemRequired }),
   lines: z
     .array(recipeLineRowSchema)
     .min(1, { error: INVENTORY_VI.recipeMinIngredients })
@@ -155,7 +147,9 @@ export function RecipeLineDialog({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={isEdit ? INVENTORY_VI.editRecipeTitle : INVENTORY_VI.createRecipeTitle}
+      title={
+        isEdit ? INVENTORY_VI.editRecipeTitle : INVENTORY_VI.createRecipeTitle
+      }
       description={INVENTORY_VI.recipeDescription}
       schema={recipeSchema}
       defaultValues={initialValues}
@@ -169,7 +163,9 @@ export function RecipeLineDialog({
         );
         onSaved();
       }}
-      submitLabel={isEdit ? INVENTORY_VI.updateRecipeBtn : INVENTORY_VI.saveRecipeBtn}
+      submitLabel={
+        isEdit ? INVENTORY_VI.updateRecipeBtn : INVENTORY_VI.saveRecipeBtn
+      }
       cancelLabel={ACTIONS_VI.cancel}
       contentClassName="sm:max-w-3xl"
     >
@@ -180,75 +176,48 @@ export function RecipeLineDialog({
 
         return (
           <>
-          <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium">{INVENTORY_VI.recipeMenuItemLabel}</Label>
-            <Controller
+            <SelectField
               control={form.control}
               name="menu_item_id"
-              render={({ field }) => (
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  disabled={false}
-                >
-                  <SelectTrigger
-                    className={cn(
-                      "h-10",
-                      errors.menu_item_id && "border-destructive",
-                    )}
-                    aria-invalid={!!errors.menu_item_id}
-                    onBlur={field.onBlur}
-                    ref={field.ref}
-                  >
-                    <SelectValue placeholder={INVENTORY_VI.selectMenuItemPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableMenuItems.length === 0 ? (
-                      <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                        {INVENTORY_VI.allMenuItemsHaveRecipe}
-                      </div>
-                    ) : (
-                      availableMenuItems.map((mi) => (
-                        <SelectItem key={mi.id} value={String(mi.id)}>
-                          {mi.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+              id="recipe-menu-item"
+              label={INVENTORY_VI.recipeMenuItemLabel}
+              options={availableMenuItems.map((item) => ({
+                value: String(item.id),
+                label: item.name,
+              }))}
+              placeholder={INVENTORY_VI.selectMenuItemPlaceholder}
+              description={
+                availableMenuItems.length === 0
+                  ? INVENTORY_VI.allMenuItemsHaveRecipe
+                  : undefined
+              }
+              required
+            />
+
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-medium">
+                {INVENTORY_VI.ingredientListLabel}
+              </h3>
+
+              <RecipeLinesEditor
+                control={form.control}
+                setValue={form.setValue}
+                getValues={form.getValues}
+                errors={errors}
+                ingredients={ingredients}
+                bulkAdd
+                unitEditable
+              />
+
+              {linesRootError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {linesRootError}
+                </p>
               )}
-            />
-            {errors.menu_item_id && (
-              <p className="text-xs text-destructive" role="alert">
-                {errors.menu_item_id.message}
+              <p className="text-xs text-muted-foreground">
+                {INVENTORY_VI.yieldHint}
               </p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium">
-              {INVENTORY_VI.ingredientListLabel}
-            </Label>
-
-            <RecipeLinesEditor
-              control={form.control}
-              setValue={form.setValue}
-              getValues={form.getValues}
-              errors={errors}
-              ingredients={ingredients}
-              bulkAdd
-              unitEditable
-            />
-
-            {linesRootError && (
-              <p className="text-sm text-destructive" role="alert">
-                {linesRootError}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              {INVENTORY_VI.yieldHint}
-            </p>
-          </div>
+            </div>
           </>
         );
       }}

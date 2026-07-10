@@ -7,6 +7,7 @@ import {
   ArrowLeftRight as IconArrowLeftRight,
   Package as IconPackage,
 } from "lucide-react";
+import { formatPercent } from "@comtammatu/shared/format";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -42,8 +43,6 @@ export type ReportsProps = {
   foodCostTrend: number[];
   foodCostTrendAvailable: boolean;
   foodCostTrendDeltaPct: number | null;
-  supplierInvoicesHref?: string | null;
-  embedded?: boolean;
 };
 
 export function ReportsClient({
@@ -53,17 +52,19 @@ export function ReportsClient({
   foodCostTrend,
   foodCostTrendAvailable,
   foodCostTrendDeltaPct,
-  supplierInvoicesHref = "/inventory/supplier-invoices",
-  embedded = false,
 }: ReportsProps) {
   const maxAP = Math.max(...apAging.map((a) => a.amount), 1);
   const trendLabel =
     foodCostTrendDeltaPct == null
       ? messages.inventory.reports.trendNotEnough
       : foodCostTrendDeltaPct > 0
-        ? messages.inventory.reports.trendUp(foodCostTrendDeltaPct)
+        ? messages.inventory.reports.trendUp(
+            formatPercent(foodCostTrendDeltaPct),
+          )
         : foodCostTrendDeltaPct < 0
-          ? messages.inventory.reports.trendDown(foodCostTrendDeltaPct)
+          ? messages.inventory.reports.trendDown(
+              formatPercent(Math.abs(foodCostTrendDeltaPct)),
+            )
           : messages.inventory.reports.trendStable;
   const reportCatalog = messages.inventory.reports.catalog.map(
     (report, index) => ({
@@ -73,23 +74,17 @@ export function ReportsClient({
       ]!,
     }),
   );
-  const showSupplierPayables = supplierInvoicesHref != null;
   const content = (
     <>
-      {!embedded ? (
-        <AppPageHeader
-          eyebrow={messages.inventory.shell.moduleName}
-          title={messages.inventory.reports.pageTitle}
-        />
-      ) : null}
+      <AppPageHeader
+        eyebrow={messages.inventory.shell.moduleName}
+        title={messages.inventory.reports.pageTitle}
+      />
 
       {/* Dashboard Grid — 12 col asymmetric */}
       <div className="grid grid-cols-12 gap-4">
         <AppSection
-          className={cn(
-            "col-span-12 flex flex-col",
-            showSupplierPayables ? "lg:col-span-8" : "lg:col-span-12",
-          )}
+          className="col-span-12 flex flex-col lg:col-span-8"
           title={messages.inventory.reports.movementTitle}
           icon={<IconChartBar />}
           contentClassName="flex flex-1 flex-col gap-4"
@@ -133,83 +128,81 @@ export function ReportsClient({
           </div>
         </AppSection>
 
-        {showSupplierPayables ? (
-          <AppSection
-            className="col-span-12 lg:col-span-4"
-            title={messages.inventory.reports.supplierPayables}
-          >
-            <div className="flex flex-col gap-3">
-              {apAging.map((item, idx) => {
-                const isOverdue = idx === apAging.length - 1;
-                const barColor =
-                  idx === 0
-                    ? resolveInventoryColorValue("success")
-                    : idx === 1
-                      ? resolveInventoryColorValue("primary")
-                      : idx === 2
-                        ? resolveInventoryColorValue("warning")
-                        : resolveInventoryColorValue("danger");
-                return (
-                  <div
-                    key={item.range}
-                    className={cn(
-                      "rounded-md p-3",
-                      isOverdue
-                        ? "border border-destructive/20 bg-destructive/10"
-                        : "bg-muted/50",
-                    )}
-                  >
-                    <div className="mb-1 flex justify-between text-xs">
-                      <span
-                        className={cn(
-                          isOverdue
-                            ? "text-destructive"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {item.range}
-                      </span>
-                      <span
-                        className={cn(
-                          "font-bold",
-                          isOverdue ? "text-destructive" : "text-foreground",
-                        )}
-                      >
-                        {messages.inventory.reports.amountVnd(
-                          formatVND(item.amount),
-                        )}
-                      </span>
-                    </div>
-                    <div
+        <AppSection
+          className="col-span-12 lg:col-span-4"
+          title={messages.inventory.reports.supplierPayables}
+        >
+          <div className="flex flex-col gap-3">
+            {apAging.map((item, idx) => {
+              const isOverdue = idx === apAging.length - 1;
+              const barColor =
+                idx === 0
+                  ? resolveInventoryColorValue("success")
+                  : idx === 1
+                    ? resolveInventoryColorValue("primary")
+                    : idx === 2
+                      ? resolveInventoryColorValue("warning")
+                      : resolveInventoryColorValue("danger");
+              return (
+                <div
+                  key={item.range}
+                  className={cn(
+                    "rounded-md p-3",
+                    isOverdue
+                      ? "border border-destructive/20 bg-destructive/10"
+                      : "bg-muted/50",
+                  )}
+                >
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span
                       className={cn(
-                        "h-2 w-full overflow-hidden rounded-full",
-                        isOverdue ? "bg-destructive/20" : "bg-muted",
+                        isOverdue
+                          ? "text-destructive"
+                          : "text-muted-foreground",
                       )}
                     >
-                      <div
-                        className="h-full rounded-full transition-[width,background-color]"
-                        style={{
-                          width: `${(item.amount / maxAP) * 100}%`,
-                          backgroundColor: barColor,
-                        }}
-                      />
-                    </div>
+                      {item.range}
+                    </span>
+                    <span
+                      className={cn(
+                        "font-bold",
+                        isOverdue ? "text-destructive" : "text-foreground",
+                      )}
+                    >
+                      {messages.inventory.reports.amountVnd(
+                        formatVND(item.amount),
+                      )}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-            <Button
-              asChild
-              type="button"
-              variant="outline"
-              className="w-full text-muted-foreground"
-            >
-              <Link href={supplierInvoicesHref}>
-                {messages.inventory.reports.openSupplierDebt}
-              </Link>
-            </Button>
-          </AppSection>
-        ) : null}
+                  <div
+                    className={cn(
+                      "h-2 w-full overflow-hidden rounded-full",
+                      isOverdue ? "bg-destructive/20" : "bg-muted",
+                    )}
+                  >
+                    <div
+                      className="h-full rounded-full transition-[width,background-color]"
+                      style={{
+                        width: `${(item.amount / maxAP) * 100}%`,
+                        backgroundColor: barColor,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <Button
+            asChild
+            type="button"
+            variant="outline"
+            className="w-full text-muted-foreground"
+          >
+            <Link href="/inventory/supplier-invoices">
+              {messages.inventory.reports.openSupplierDebt}
+            </Link>
+          </Button>
+        </AppSection>
 
         <AppSection
           className="col-span-12 md:col-span-6"
@@ -307,10 +300,6 @@ export function ReportsClient({
       </div>
     </>
   );
-
-  if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
-  }
 
   return (
     <AppPage width="xwide" density="compact" scroll>

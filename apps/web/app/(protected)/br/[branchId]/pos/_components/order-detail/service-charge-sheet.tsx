@@ -57,7 +57,7 @@ export function ServiceChargeSheet({
   const hasExistingCharge = currentAmount > 0;
 
   const numericAmount = useMemo(() => {
-    const normalized = amountText.trim().replace(",", ".");
+    const normalized = amountText.trim();
     if (normalized === "") return 0;
     const value = Number(normalized);
     if (!Number.isFinite(value) || value < 0) return 0;

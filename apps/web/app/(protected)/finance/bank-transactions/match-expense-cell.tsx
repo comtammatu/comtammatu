@@ -13,7 +13,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@comtammatu/ui/components/popover";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
+import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import type { SepaySupplierPaymentMatch } from "../_lib/sepay-bank-transaction-model";
 import type { ExpenseMatchOption } from "../expense-actions";
@@ -32,7 +33,7 @@ interface MatchExpenseCellProps {
 }
 
 function formatDate(value: string): string {
-  return value.split("-").reverse().join("/");
+  return formatVNBusinessDate(value);
 }
 
 function expenseDetail(expense: ExpenseMatchOption): string {
@@ -121,7 +122,7 @@ export function MatchExpenseCell({
 
   const triggerLabel =
     selectedIds.length > 0
-      ? `${copy.matchedExpenseCount(selectedIds.length)}${
+      ? `${copy.matchedExpenseCount(formatCount(selectedIds.length))}${
           selectedExpenses.length > 0 ? ` · -${formatVND(selectedTotal)}` : ""
         }`
       : copy.matchExpensePlaceholder;
@@ -159,10 +160,10 @@ export function MatchExpenseCell({
           size="sm"
           className="h-8 w-full max-w-64 justify-between gap-2 text-xs"
         >
-            <span className="truncate">{triggerLabel}</span>
-            <IconChevronDown className="size-3.5 shrink-0" aria-hidden />
-          </Button>
-        </PopoverTrigger>
+          <span className="truncate">{triggerLabel}</span>
+          <IconChevronDown className="size-3.5 shrink-0" aria-hidden />
+        </Button>
+      </PopoverTrigger>
       <PopoverContent align="end" className="w-96">
         <div className="flex items-center justify-between gap-2">
           <span className="font-medium">{copy.matchExpenseTitle}</span>
@@ -170,7 +171,7 @@ export function MatchExpenseCell({
             {selectedExpenses.length > 0
               ? `-${formatVND(selectedTotal)}`
               : selectedIds.length > 0
-                ? `${selectedIds.length} chi`
+                ? `${formatCount(selectedIds.length)} chi`
                 : "—"}
           </span>
         </div>

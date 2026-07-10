@@ -48,7 +48,10 @@ test("snapshot returns approved item customizations for self-order bill", () => 
     migration,
     /CREATE OR REPLACE FUNCTION public\.self_order_get_snapshot\(p_token text\)/,
   );
-  assert.match(migration, /'modifiers', COALESCE\(oi\.modifiers, '\[\]'::jsonb\)/);
+  assert.match(
+    migration,
+    /'modifiers', COALESCE\(oi\.modifiers, '\[\]'::jsonb\)/,
+  );
   assert.match(migration, /'sides', COALESCE\(oi\.sides, '\[\]'::jsonb\)/);
   assert.match(migration, /'note', oi\.note/);
   assert.match(migration, /oi\.tenant_id = v_session\.tenant_id/);
@@ -89,7 +92,7 @@ test("rejecting a pending self-order batch revokes the session and blocks resubm
   assert.match(migration, /self_order_session_revoked/);
 });
 
-test("snapshot contract type includes order.items line type", () => {
+test("snapshot contract validates order items before exposing them", () => {
   const contracts = readWeb("lib/self-order/contracts.ts");
 
   assert.match(contracts, /export interface SelfOrderOrderLine \{/);
@@ -104,7 +107,9 @@ test("snapshot contract type includes order.items line type", () => {
   assert.match(contracts, /modifiers: SelfOrderCartModifier\[\];/);
   assert.match(contracts, /sides: SelfOrderCartSide\[\];/);
   assert.match(contracts, /note: string \| null;/);
-  assert.match(contracts, /items: SelfOrderOrderLine\[\];/);
+  assert.match(contracts, /const publicSelfOrderOrderLineSchema = z/);
+  assert.match(contracts, /items: z\.array\(publicSelfOrderOrderLineSchema\)/);
+  assert.match(contracts, /export type PublicSelfOrderSnapshot = z\.infer</);
 });
 
 test("SELF_ORDER_VI has v2 phase1 status and CTA keys", () => {
@@ -169,6 +174,10 @@ test("status-pill renders mapped SELF_ORDER_VI labels by session state", () => {
   assert.match(pill, /variant: "success"/);
   assert.match(pill, /variant: "info"/);
   assert.match(pill, /variant: "destructive"/);
+  assert.ok(
+    pill.indexOf('order.paymentStatus === "paid"') <
+      pill.indexOf('paymentRequest?.status === "vietqr_pending"'),
+  );
 });
 
 test("order-summary lists guest batches as rounds with cancelled state", () => {
@@ -185,8 +194,17 @@ test("order-summary lists guest batches as rounds with cancelled state", () => {
   assert.match(summary, /SELF_ORDER_VI\.roundStatusRejected/);
   assert.match(summary, /line-through/);
   assert.match(summary, /BatchRound/);
+  assert.match(summary, /SELF_ORDER_VI\.orderedItemsDescription/);
+  assert.match(summary, /totalAmount/);
+  assert.ok(
+    summary.indexOf("SELF_ORDER_VI.orderedItemsTitle") <
+      summary.indexOf("SELF_ORDER_VI.roundsTitle"),
+  );
   assert.match(contracts, /export interface SelfOrderGuestBatch/);
-  assert.match(contracts, /batches\?: SelfOrderGuestBatch\[\]/);
+  assert.match(
+    contracts,
+    /batches: z\.array\(publicSelfOrderBatchSchema\)\.optional\(\)/,
+  );
   assert.match(migration, /'batches', COALESCE\(v_batches_payload/);
   assert.match(migration, /round_index/);
   assert.match(migration, /guest_status/);
@@ -199,16 +217,18 @@ test("order-summary lists guest batches as rounds with cancelled state", () => {
     migration,
     /s\.status IN \('pending_approval', 'active', 'revoked'\)/,
   );
-  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.self_order_submit_batch/);
   assert.match(
     migration,
-    /RAISE EXCEPTION 'self_order_session_revoked'/,
+    /CREATE OR REPLACE FUNCTION public\.self_order_submit_batch/,
   );
+  assert.match(migration, /RAISE EXCEPTION 'self_order_session_revoked'/);
   assert.match(migration, /\(elem->>'menu_item_id'\) ~ '\^\[0-9\]\+\$'/);
 });
 
 test("staff approval queue renders item customizations before approving", () => {
-  const actions = readWeb("app/(protected)/br/[branchId]/pos/self-order-actions.ts");
+  const actions = readWeb(
+    "app/(protected)/br/[branchId]/pos/self-order-actions.ts",
+  );
   const sheet = readWeb(
     "app/(protected)/br/[branchId]/pos/_components/self-order-approval-sheet.tsx",
   );
@@ -234,17 +254,25 @@ test("cart-sheet has mobile sticky bottom bar, bottom Sheet, and ctaDisabled wir
   assert.match(cart, /@comtammatu\/ui\/components\/sheet/);
   // Mobile-only sticky bar, constrained when viewed on desktop.
   assert.match(cart, /fixed inset-x-0 bottom-0/);
-  assert.match(cart, /max-w-xl/);
+  assert.match(cart, /max-w-2xl/);
+  assert.match(cart, /workflow-safe-pb/);
   assert.match(cart, /side="bottom"/);
   assert.match(cart, /max-h-dvh-95/);
   assert.match(cart, /max-h-dvh-80/);
   assert.match(cart, /size="touch-lg"/);
+  assert.match(cart, /flex flex-col gap-2 sm:flex-row/);
+  assert.match(cart, /className="w-full sm:min-w-28 sm:w-auto"/);
   assert.match(cart, /SELF_ORDER_VI\.cartTitle/);
   assert.match(cart, /SELF_ORDER_VI\.subtotal/);
   assert.match(cart, /Spinner/);
   assert.match(cart, /AlertDescription/);
   assert.match(cart, /submitError/);
-  assert.match(cart, /disabled=\{item\.quantity <= 1\}/);
+  assert.match(cart, /disabled=\{disabled \|\| item\.quantity <= 1\}/);
+  assert.match(
+    cart,
+    /editingDisabled = props\.isSubmitting \|\| props\.isEditingLocked/,
+  );
+  assert.match(cart, /disabled=\{editingDisabled\}/);
   assert.match(cart, /SELF_ORDER_VI\.decreaseQuantityAria/);
   assert.match(cart, /SELF_ORDER_VI\.increaseQuantityAria/);
   assert.match(cart, /formatVND/);
@@ -279,7 +307,7 @@ test("menu-panel opens a POS-aligned mobile Sheet for variant, modifier, side, n
   assert.match(menu, /SelfOrderItemSheet/);
   assert.match(menu, /@comtammatu\/ui\/components\/sheet/);
   assert.match(menu, /SheetClose/);
-  assert.match(menu, /size="icon-sm"/);
+  assert.match(menu, /size="icon-touch"/);
   assert.match(menu, /side="bottom"/);
   assert.match(menu, /h-dvh max-h-dvh p-0/);
   assert.match(menu, /Separator/);
@@ -296,9 +324,14 @@ test("menu-panel opens a POS-aligned mobile Sheet for variant, modifier, side, n
   assert.match(menu, /SELF_ORDER_VI\.itemNoteLabel/);
   assert.match(menu, /SELF_ORDER_VI\.decreaseQuantityAria/);
   assert.match(menu, /SELF_ORDER_VI\.increaseQuantityAria/);
+  assert.match(menu, /flex-col items-stretch[\s\S]*sm:flex-row/);
+  assert.match(menu, /min-w-0 flex-1 sm:min-w-20 sm:flex-none/);
   assert.match(menu, /onAdd\(\{/);
   assert.match(menu, /quantity,/);
   assert.match(menu, /note: trimmedNote === "" \? undefined : trimmedNote/);
+  assert.match(menu, /const wasOpenRef = useRef\(false\)/);
+  assert.match(menu, /const opening = open && !wasOpenRef\.current/);
+  assert.match(menu, /setSelectedVariant\(\(current\) =>/);
   assert.doesNotMatch(menu, /@comtammatu\/ui\/components\/label/);
   assert.doesNotMatch(
     menu,
@@ -307,20 +340,20 @@ test("menu-panel opens a POS-aligned mobile Sheet for variant, modifier, side, n
   assert.match(orchestrator, /function addItem\(cartItem: SelfOrderCartItem\)/);
 });
 
-test("self-order is mobile-only with no desktop sidebar branch", () => {
+test("self-order remains one responsive workflow with no desktop sidebar branch", () => {
   const orchestrator = readWeb("app/q/[token]/self-order-client.tsx");
   const menu = readWeb("app/q/[token]/self-order/menu-panel.tsx");
   const cart = readWeb("app/q/[token]/self-order/cart-sheet.tsx");
   const payment = readWeb("app/q/[token]/self-order/payment-panel.tsx");
 
   assert.match(orchestrator, /width="narrow"/);
-  assert.doesNotMatch(orchestrator, /<aside|sm:|md:|lg:|xl:|2xl:/);
-  assert.doesNotMatch(menu, /hidden md:flex|sm:|md:|lg:|xl:|2xl:/);
-  assert.doesNotMatch(cart, /sm:|md:|lg:|xl:|2xl:|fixed right-3 bottom-24/);
-  assert.doesNotMatch(payment, /sm:|md:|lg:|xl:|2xl:/);
+  assert.doesNotMatch(orchestrator, /<aside/);
+  assert.doesNotMatch(menu, /hidden md:flex|<aside/);
+  assert.doesNotMatch(cart, /<aside|fixed right-3 bottom-24/);
+  assert.doesNotMatch(payment, /hidden md:flex|<aside/);
 });
 
-test("orchestrator locks CTA while first batch is pending approval and keeps cancel-then-add reachable", () => {
+test("orchestrator locks CTA for approval/payment states and keeps cancellation staff-owned", () => {
   const orchestrator = readWeb("app/q/[token]/self-order-client.tsx");
 
   assert.match(
@@ -345,10 +378,13 @@ test("orchestrator locks CTA while first batch is pending approval and keeps can
   );
   assert.match(
     orchestrator,
-    /import \{ PaymentPanel, type VietQrState \} from "\.\/self-order\/payment-panel"/,
+    /PaymentPanel,[\s\S]*type GuestPaymentRequestState,[\s\S]*from "\.\/self-order\/payment-panel"/,
   );
   assert.match(orchestrator, /SessionStatePanel/);
-  assert.doesNotMatch(orchestrator, /BrandLogoBox|BrandMark|BrandLockup|BrandMascot/);
+  assert.doesNotMatch(
+    orchestrator,
+    /BrandLogoBox|BrandMark|BrandLockup|BrandMascot/,
+  );
   assert.doesNotMatch(orchestrator, /brand-pattern-caro/);
   assert.match(orchestrator, /TabsContent/);
   assert.match(orchestrator, /SELF_ORDER_VI\.billTab/);
@@ -356,20 +392,21 @@ test("orchestrator locks CTA while first batch is pending approval and keeps can
   assert.match(orchestrator, /value=\{activeMainTab\}/);
   assert.match(orchestrator, /flex min-h-dvh w-full flex-col gap-1/);
   assert.match(orchestrator, /min-w-0 flex-1/);
-  assert.match(orchestrator, /flex items-center justify-between gap-2/);
+  assert.match(orchestrator, /flex flex-col gap-2 sm:flex-row/);
   assert.match(orchestrator, /flex min-w-0 items-center gap-1\.5/);
-  assert.match(orchestrator, /TabsList className="h-11 w-44 shrink-0"/);
+  assert.match(
+    orchestrator,
+    /TabsList className="h-11 w-full shrink-0 sm:w-44"/,
+  );
+  assert.match(orchestrator, /<AppPage\s+as="main"\s+id="main-content"/);
   assert.match(
     orchestrator,
     /previous === "pending_approval" &&\s*sessionStatus === "active"/,
   );
+  assert.match(orchestrator, /activeOrder\.paymentStatus !== "paid"/);
   assert.match(
     orchestrator,
-    /activeOrder\.paymentStatus !== "paid"/,
-  );
-  assert.match(
-    orchestrator,
-    /if \(!isSessionActive \|\| !activeOrder \|\| isPaymentPending\) return/,
+    /!isSessionActive \|\|[\s\S]*!activeOrder \|\|[\s\S]*isPaymentPending \|\|[\s\S]*activePaymentRequest/,
   );
   assert.doesNotMatch(orchestrator, /hasBillTab/);
   assert.doesNotMatch(orchestrator, /IconRefresh|RefreshCw as IconRefresh/);
@@ -387,7 +424,7 @@ test("orchestrator locks CTA while first batch is pending approval and keeps can
 
   assert.match(
     orchestrator,
-    /ctaHardDisabled = isClosed \|\| isPendingApproval \|\| isSessionRevoked/,
+    /ctaHardDisabled =[\s\S]*isClosed \|\|[\s\S]*isPendingApproval \|\|[\s\S]*isSessionRevoked \|\|[\s\S]*activePaymentRequest !== null/,
   );
   assert.match(orchestrator, /isSessionRevoked = sessionStatus === "revoked"/);
   assert.match(orchestrator, /SELF_ORDER_VI\.ctaRejected/);
@@ -398,19 +435,25 @@ test("orchestrator locks CTA while first batch is pending approval and keeps can
   );
   assert.match(orchestrator, /activeOrder\?\.paymentStatus === "paid"/);
   assert.match(orchestrator, /pending_payment_exists/);
-  assert.match(orchestrator, /cancel-pending-payment-and-add/);
+  assert.match(orchestrator, /SELF_ORDER_VI\.paymentCancelStaffRequired/);
+  assert.doesNotMatch(orchestrator, /cancel-pending-payment-and-add/);
   assert.match(orchestrator, /ctaDisabled=\{ctaHardDisabled\}/);
   assert.doesNotMatch(orchestrator, /isSearchActive|onSearchActiveChange/);
   assert.doesNotMatch(
     orchestrator,
     /cartItems\.length === 0 \|\| isPending \|\| paymentLocked/,
   );
-  assert.doesNotMatch(orchestrator, /\.filter\(\(item\) => item\.quantity > 0\)/);
+  assert.doesNotMatch(
+    orchestrator,
+    /\.filter\(\(item\) => item\.quantity > 0\)/,
+  );
 });
 
 test("self-order guest UI keeps compact session panels without mascot chrome", () => {
   const orchestrator = readWeb("app/q/[token]/self-order-client.tsx");
-  const sessionPanel = readWeb("app/q/[token]/self-order/session-state-panel.tsx");
+  const sessionPanel = readWeb(
+    "app/q/[token]/self-order/session-state-panel.tsx",
+  );
   const page = readWeb("app/q/[token]/page.tsx");
   const payment = readWeb("app/q/[token]/self-order/payment-panel.tsx");
   const menu = readWeb("app/q/[token]/self-order/menu-panel.tsx");
@@ -431,14 +474,21 @@ test("self-order guest UI keeps compact session panels without mascot chrome", (
 
   assert.match(messages, /closedTitle:/);
   assert.match(messages, /viewBill:/);
-  assert.match(orchestrator, /TabsList className="h-11 w-44 shrink-0"/);
-  assert.doesNotMatch(orchestrator, /BrandMascot|brand-pattern-caro|from-secondary\/30/);
+  assert.match(
+    orchestrator,
+    /TabsList className="h-11 w-full shrink-0 sm:w-44"/,
+  );
+  assert.doesNotMatch(
+    orchestrator,
+    /BrandMascot|brand-pattern-caro|from-secondary\/30/,
+  );
 });
 
 test("self-order loading and feedback reuse existing design-system primitives", () => {
   const loading = readWeb("app/q/[token]/loading.tsx");
   const hooks = readWeb("app/q/[token]/self-order/hooks.ts");
   const payment = readWeb("app/q/[token]/self-order/payment-panel.tsx");
+  const orchestrator = readWeb("app/q/[token]/self-order-client.tsx");
 
   assert.match(loading, /import \{ PageSkeleton \}/);
   assert.match(
@@ -452,7 +502,10 @@ test("self-order loading and feedback reuse existing design-system primitives", 
   assert.match(hooks, /clearRefreshError/);
   assert.match(hooks, /catch \{/);
   assert.match(hooks, /setRefreshError\(SELF_ORDER_VI\.refreshFailed\)/);
-  assert.doesNotMatch(hooks, /error\.message/);
+  assert.match(hooks, /const \[terminalError, setTerminalError\]/);
+  assert.match(hooks, /result\.error\.code === "not_found"/);
+  assert.match(hooks, /result\.error\.code === "pos_session_closed"/);
+  assert.doesNotMatch(hooks, /catch \(error\)/);
 
   assert.match(payment, /Spinner/);
   assert.match(payment, /<AppSection/);
@@ -462,10 +515,17 @@ test("self-order loading and feedback reuse existing design-system primitives", 
   assert.match(payment, /SELF_ORDER_VI\.paymentDescription/);
   assert.match(payment, /SELF_ORDER_VI\.buyerDescription/);
   assert.match(payment, /id="self-order-buyer-not-get-invoice"/);
-  assert.match(payment, /disabled=\{disabled\}/);
+  assert.match(payment, /disabled=\{disabled \|\| isPending\}/);
+  assert.match(payment, /target\?\.focus\(\)/);
   assert.match(payment, /name="buyerTaxCode"/);
   assert.match(payment, /autoComplete="off"/);
   assert.match(payment, /inputMode="numeric"/);
+  assert.match(payment, /maxLength=\{14\}/);
+  assert.match(orchestrator, /function normalizeTaxCodeInput/);
+  assert.match(
+    orchestrator,
+    /digits\.slice\(0, 10\)[\s\S]*digits\.slice\(10\)/,
+  );
   assert.match(payment, /IconCash data-icon="inline-start"/);
   assert.match(payment, /IconQrcode data-icon="inline-start"/);
   assert.doesNotMatch(payment, /BrandLockup|BrandMascot/);

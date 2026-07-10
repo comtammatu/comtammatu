@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   Minus as IconMinus,
@@ -56,6 +56,7 @@ export interface MenuPanelProps {
   activeCategoryValue: string;
   onActiveCategoryChange: (value: string) => void;
   onAdd: (item: SelfOrderCartItem) => void;
+  disabled?: boolean;
 }
 
 export function MenuPanel({
@@ -63,6 +64,7 @@ export function MenuPanel({
   activeCategoryValue,
   onActiveCategoryChange,
   onAdd,
+  disabled = false,
 }: MenuPanelProps) {
   const availableCategories = categories.filter(
     (category) => category.menu_items.length > 0,
@@ -80,7 +82,7 @@ export function MenuPanel({
   const isAllMenuActive = activeCategoryValue === ALL_MENU_VALUE;
 
   const tabPillClassName =
-    "group/tab !flex-none gap-1.5 bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground";
+    "group/tab min-h-11 !flex-none gap-1.5 bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground";
   const tabBadgeClassName =
     "hidden shrink-0 text-xs group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
   const unifiedTabs = (
@@ -121,7 +123,7 @@ export function MenuPanel({
         <div className="flex items-center">{unifiedTabs}</div>
       </div>
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-        <div className="flex flex-col gap-4 px-2 pb-32 pt-2">
+        <div className="flex flex-col gap-4 px-2 pb-44 pt-2 sm:pb-32">
           {availableCategories.length === 0 ? (
             <AppEmptyState
               title={SELF_ORDER_VI.menuEmpty}
@@ -148,11 +150,19 @@ export function MenuPanel({
                     {category.menu_items.length}
                   </Badge>
                 </div>
-                <MenuItemGrid items={category.menu_items} onAdd={onAdd} />
+                <MenuItemGrid
+                  items={category.menu_items}
+                  onAdd={onAdd}
+                  disabled={disabled}
+                />
               </section>
             ))
           ) : (
-            <MenuItemGrid items={visibleItems} onAdd={onAdd} />
+            <MenuItemGrid
+              items={visibleItems}
+              onAdd={onAdd}
+              disabled={disabled}
+            />
           )}
         </div>
       </ScrollArea>
@@ -163,14 +173,21 @@ export function MenuPanel({
 export function MenuItemGrid({
   items,
   onAdd,
+  disabled = false,
 }: {
   items: SelfOrderMenuItem[];
   onAdd: (item: SelfOrderCartItem) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {items.map((item) => (
-        <MenuItemCard key={item.id} item={item} onAdd={onAdd} />
+        <MenuItemCard
+          key={item.id}
+          item={item}
+          onAdd={onAdd}
+          disabled={disabled}
+        />
       ))}
     </div>
   );
@@ -179,19 +196,30 @@ export function MenuItemGrid({
 function MenuItemCard({
   item,
   onAdd,
+  disabled,
 }: {
   item: SelfOrderMenuItem;
   onAdd: (item: SelfOrderCartItem) => void;
+  disabled: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
   return (
     <>
-      <MenuPhotoButton item={item} onClick={() => setOpen(true)} />
+      <MenuPhotoButton
+        item={item}
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+      />
       <SelfOrderItemSheet
         item={item}
-        open={open}
-        onOpenChange={setOpen}
+        open={open && !disabled}
+        disabled={disabled}
+        onOpenChange={(nextOpen) => setOpen(disabled ? false : nextOpen)}
         onAdd={onAdd}
       />
     </>
@@ -201,11 +229,13 @@ function MenuItemCard({
 function SelfOrderItemSheet({
   item,
   open,
+  disabled,
   onOpenChange,
   onAdd,
 }: {
   item: SelfOrderMenuItem;
   open: boolean;
+  disabled: boolean;
   onOpenChange: (open: boolean) => void;
   onAdd: (item: SelfOrderCartItem) => void;
 }) {
@@ -219,21 +249,72 @@ function SelfOrderItemSheet({
   >(new Map());
   const [note, setNote] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const wasOpenRef = useRef(false);
+  const draftItemIdRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const opening = open && !wasOpenRef.current;
+    const itemChanged = open && draftItemIdRef.current !== item.id;
+    wasOpenRef.current = open;
     if (!open) return;
-    setSelectedVariant(item.menu_item_variants[0] ?? null);
-    setSelectedModifierIds(new Set());
-    setSelectedSideQuantities(
-      new Map(
-        item.menu_item_available_sides
-          .filter((side) => side.is_default)
-          .map((side) => [side.side_item.id, 1] as const),
-      ),
+    if (opening || itemChanged) {
+      draftItemIdRef.current = item.id;
+      setSelectedVariant(item.menu_item_variants[0] ?? null);
+      setSelectedModifierIds(new Set());
+      setSelectedSideQuantities(
+        new Map(
+          item.menu_item_available_sides
+            .filter((side) => side.is_default)
+            .map((side) => [side.side_item.id, 1] as const),
+        ),
+      );
+      setNote("");
+      setQuantity(1);
+      return;
+    }
+
+    setSelectedVariant((current) => {
+      const next = current
+        ? (item.menu_item_variants.find(
+            (variant) => variant.id === current.id,
+          ) ??
+          item.menu_item_variants[0] ??
+          null)
+        : (item.menu_item_variants[0] ?? null);
+      if (
+        current?.id === next?.id &&
+        current?.name === next?.name &&
+        current?.price_adjustment === next?.price_adjustment
+      ) {
+        return current;
+      }
+      return next;
+    });
+    const availableModifierIds = new Set(
+      item.menu_item_modifiers.map((modifier) => modifier.id),
     );
-    setNote("");
-    setQuantity(1);
-  }, [item, open]);
+    setSelectedModifierIds((current) => {
+      const next = new Set(
+        [...current].filter((id) => availableModifierIds.has(id)),
+      );
+      return next.size === current.size ? current : next;
+    });
+    const availableSideIds = new Set(
+      item.menu_item_available_sides.map((side) => side.side_item.id),
+    );
+    setSelectedSideQuantities((current) => {
+      const next = new Map(
+        [...current].filter(([id]) => availableSideIds.has(id)),
+      );
+      return next.size === current.size ? current : next;
+    });
+  }, [
+    item.id,
+    item.menu_item_available_sides,
+    item.menu_item_modifiers,
+    item.menu_item_variants,
+    open,
+  ]);
 
   const unitPrice =
     Number(item.base_price) + Number(selectedVariant?.price_adjustment ?? 0);
@@ -306,6 +387,7 @@ function SelfOrderItemSheet({
   }
 
   function addCustomizedItem() {
+    if (disabled) return;
     const modifiers = item.menu_item_modifiers
       .filter((modifier) => selectedModifierIds.has(modifier.id))
       .map((modifier) => ({
@@ -355,7 +437,7 @@ function SelfOrderItemSheet({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-sm"
+                  size="icon-touch"
                   className="shrink-0 text-muted-foreground"
                   aria-label={SELF_ORDER_VI.closeCustomizerAria}
                 >
@@ -538,6 +620,8 @@ function SelfOrderItemSheet({
                 </FieldLabel>
                 <Textarea
                   id={`self-order-item-note-${item.id}`}
+                  name={`itemNote-${item.id}`}
+                  autoComplete="off"
                   value={note}
                   maxLength={300}
                   rows={2}
@@ -549,8 +633,8 @@ function SelfOrderItemSheet({
           </ScrollArea>
 
           <Separator />
-          <div className="flex shrink-0 items-center justify-between gap-2 p-4">
-            <div className="min-w-0">
+          <div className="workflow-safe-pb flex shrink-0 flex-col items-stretch gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+            <div className="min-w-0 sm:flex-1">
               <p className="text-sm text-muted-foreground">
                 {SELF_ORDER_VI.subtotal}
               </p>
@@ -558,40 +642,43 @@ function SelfOrderItemSheet({
                 {formatVND(total)}
               </p>
             </div>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex w-full items-center gap-2 sm:w-auto">
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="min-w-12 px-0"
+                  disabled={quantity <= 1}
+                  aria-label={SELF_ORDER_VI.decreaseQuantityAria}
+                  onClick={() => updateQuantity(-1)}
+                >
+                  <IconMinus />
+                </Button>
+                <span className="w-7 text-center text-base font-bold tabular-nums">
+                  {quantity}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="min-w-12 px-0"
+                  aria-label={SELF_ORDER_VI.increaseQuantityAria}
+                  onClick={() => updateQuantity(1)}
+                >
+                  <IconPlus />
+                </Button>
+              </div>
               <Button
                 type="button"
-                variant="outline"
                 size="touch"
-                className="min-w-12 px-0"
-                disabled={quantity <= 1}
-                aria-label={SELF_ORDER_VI.decreaseQuantityAria}
-                onClick={() => updateQuantity(-1)}
+                className="min-w-0 flex-1 sm:min-w-20 sm:flex-none"
+                disabled={disabled}
+                onClick={addCustomizedItem}
               >
-                <IconMinus />
-              </Button>
-              <span className="w-7 text-center text-base font-bold tabular-nums">
-                {quantity}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                className="min-w-12 px-0"
-                aria-label={SELF_ORDER_VI.increaseQuantityAria}
-                onClick={() => updateQuantity(1)}
-              >
-                <IconPlus />
+                {SELF_ORDER_VI.addToCart}
               </Button>
             </div>
-            <Button
-              type="button"
-              size="touch"
-              className="min-w-20"
-              onClick={addCustomizedItem}
-            >
-              {SELF_ORDER_VI.addToCart}
-            </Button>
           </div>
         </div>
       </SheetContent>
@@ -601,15 +688,18 @@ function SelfOrderItemSheet({
 
 function MenuPhotoButton({
   item,
+  disabled,
   onClick,
 }: {
   item: SelfOrderMenuItem;
+  disabled: boolean;
   onClick: () => void;
 }) {
   return (
     <Button
       type="button"
       variant="outline"
+      disabled={disabled}
       aria-label={`${SELF_ORDER_VI.customizeItem}: ${item.name}, ${formatVND(Number(item.base_price))}`}
       className="group relative aspect-[4/5] h-auto min-w-0 w-full overflow-hidden p-0 text-left"
       onClick={onClick}

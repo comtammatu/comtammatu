@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation";
-import { StocktakeDetailPageContent } from "@/(protected)/inventory/stocktake/[id]/page";
+import { notFound, redirect } from "next/navigation";
+import { BranchStocktakeDetailClient } from "./branch-stocktake-detail-client";
+import { loadBranchStocktakeDetailData } from "@lib/inventory/branch-stocktake-data";
 
 interface PageProps {
   params: Promise<{ branchId: string; id: string }>;
@@ -22,14 +23,20 @@ export default async function OperatorStocktakeDetailPage({
     notFound();
   }
 
+  const data = await loadBranchStocktakeDetailData(stocktakeId, branchId);
+  const query = await searchParams;
+  const countUnavailable =
+    query.error === "stocktake_redesigned_not_enabled";
+  const isReviewView = query.view === "detail" || countUnavailable;
+  if (data.session.status === "in_progress" && !isReviewView) {
+    redirect(`/br/${branchId}/stock/stocktake/${stocktakeId}/count`);
+  }
+
   return (
-    <StocktakeDetailPageContent
-      stocktakeId={stocktakeId}
-      searchParams={searchParams}
-      routeBranchId={branchId}
-      routeBase={`/br/${branchId}/stock/stocktake`}
-      reportsBasePath={`/br/${branchId}/stock/reports`}
-      embedded
+    <BranchStocktakeDetailClient
+      data={data}
+      stockBasePath={`/br/${branchId}/stock`}
+      countUnavailable={countUnavailable}
     />
   );
 }
