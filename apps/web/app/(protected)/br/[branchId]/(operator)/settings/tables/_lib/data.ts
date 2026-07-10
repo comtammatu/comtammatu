@@ -27,15 +27,3 @@ export function shapeTableRows(rows: readonly TableQueryRow[]): TableRow[] {
     zone_name: row.branch_zones?.name ?? null,
   }));
 }
-
-export function resolveDisplayName(input: {
-  fullName: unknown;
-  email: string | null | undefined;
-  fallback: string;
-}): string {
-  if (typeof input.fullName === "string" && input.fullName.length > 0) {
-    return input.fullName;
-  }
-  if (input.email) return input.email;
-  return input.fallback;
-}

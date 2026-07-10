@@ -29,24 +29,3 @@ export function getDefaultProductionUnit(
 ): ProductionUnitOption | null {
   return getDefaultIngredientUnit(getProductionUnitOptions(ingredient));
 }
-
-/**
- * Selectable units for an ingredient regardless of role (any active unit), base
- * unit first. Used for production-order finished-good output, where the output
- * is expressed in the finished good's own unit.
- */
-export function getAnyUnitOptions(
-  ingredient: HasUnits | undefined,
-): ProductionUnitOption[] {
-  return getIngredientUnitOptions(ingredient);
-}
-
-/**
- * Default unit for an ingredient: the base unit when present, else the first
- * active unit, else null.
- */
-export function getDefaultAnyUnit(
-  ingredient: HasUnits | undefined,
-): ProductionUnitOption | null {
-  return getDefaultIngredientUnit(getAnyUnitOptions(ingredient));
-}

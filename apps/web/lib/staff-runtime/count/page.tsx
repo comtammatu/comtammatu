@@ -451,8 +451,6 @@ export async function StaffCountPanelContent(
   return content;
 }
 
-export const EmployeeCountPanelContent = StaffCountPanelContent;
-
 export async function StaffCountPageContent({
   hideHeaderOnMobile,
   ...props

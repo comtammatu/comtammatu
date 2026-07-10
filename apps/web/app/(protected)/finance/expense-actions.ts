@@ -307,11 +307,6 @@ export async function fetchActualFoodCostSummary(params: {
   return { success: true, data: { total, orderCount: orderIds.size } };
 }
 
-const matchSepayExpenseSchema = z.object({
-  eventId: z.coerce.number().int().positive(),
-  expenseId: z.coerce.number().int().positive(),
-});
-
 const matchSepayExpensesSchema = z.object({
   eventId: z.coerce.number().int().positive(),
   expenseIds: z.array(z.coerce.number().int().positive()).max(20),
@@ -329,20 +324,6 @@ function mapMatchExpenseError(code?: string): string {
 
 function isExpenseMatchSchemaMissing(code?: string): boolean {
   return code === "PGRST202" || code === "PGRST205" || code === "42P01";
-}
-
-export async function matchSepayTransactionWithExpense(
-  input: z.infer<typeof matchSepayExpenseSchema>,
-): Promise<ActionResult> {
-  const parsed = matchSepayExpenseSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: "Dữ liệu không hợp lệ" };
-  }
-
-  return matchSepayTransactionWithExpenses({
-    eventId: parsed.data.eventId,
-    expenseIds: [parsed.data.expenseId],
-  });
 }
 
 export async function matchSepayTransactionWithExpenses(
@@ -502,16 +483,5 @@ export async function fetchExpenseMatchOptions(): Promise<
       created_at: r.created_at,
       matchedEventIds: matchedByExpense.get(r.id) ?? [],
     })),
-  };
-}
-
-export async function fetchUnmatchedExpenses(): Promise<
-  ActionResult<ExpenseRow[]>
-> {
-  const res = await fetchExpenseMatchOptions();
-  if (!res.success) return res;
-  return {
-    success: true,
-    data: (res.data ?? []).filter((row) => row.matchedEventIds.length === 0),
   };
 }

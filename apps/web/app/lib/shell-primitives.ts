@@ -34,18 +34,6 @@ export function isNavItemActive(
   return item.matchPrefixes?.some((p) => pathname.startsWith(p)) ?? false;
 }
 
-export function findActiveNavItem(
-  groups: ShellNavGroup[],
-  pathname: string,
-): ShellNavItem | undefined {
-  for (const group of groups) {
-    for (const item of group.items) {
-      if (isNavItemActive(item, pathname)) return item;
-    }
-  }
-  return undefined;
-}
-
 // Longest-href-first so a deep entry wins over a coarser ancestor when both
 // match the active pathname.
 export function findActivePrimaryNavItem(
@@ -55,42 +43,6 @@ export function findActivePrimaryNavItem(
   return [...tier1]
     .sort((a, b) => b.href.length - a.href.length)
     .find((item) => isNavItemActive(item, pathname));
-}
-
-const PATH_SEGMENT_LABELS_VI: Record<string, string> = {
-  admin: "Quản trị",
-  audit: "Nhật ký quyền hạn",
-  branches: "Điểm vận hành",
-  dashboard: "Tổng quan vận hành",
-  expenses: "Chi vận hành",
-  finance: "Tài chính",
-  "food-cost": "Giá vốn món",
-  general: "Cài đặt chung",
-  "inventory-value": "Giá trị tồn kho",
-  invoices: "Hóa đơn điện tử",
-  jobs: "Lệnh in",
-  kds: "Trạm bếp",
-  payments: "Thanh toán",
-  payroll: "Đối soát lương",
-  pos: "POS",
-  "pos-sessions": "Đối soát ca POS",
-  printers: "Máy in",
-  qr: "Mã QR",
-  reports: "Báo cáo",
-  revenue: "Doanh thu",
-  settings: "Cài đặt",
-  staff: "Nhân viên",
-  "stock-movement": "Biến động tồn kho",
-  summary: "HĐ khách không lấy hóa đơn",
-  tables: "Bàn",
-};
-
-export function formatPathSegment(segment: string): string {
-  const normalizedSegment = decodeURIComponent(segment).toLowerCase();
-  const label = PATH_SEGMENT_LABELS_VI[normalizedSegment];
-  if (label) return label;
-
-  return segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function getInitials(name: string): string {

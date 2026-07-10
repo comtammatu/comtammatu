@@ -224,7 +224,7 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
     /targetLabel=\{appendDraft\.target\.targetLabel\}/,
   );
   assert.match(sidebarPanelSource, /hideTakeawayOrders=\{hideTakeawayOrders\}/);
-  assert.match(sidebarPanelSource, /pendingNewTitle/);
+  assert.match(posDesktopSource, /pendingNewTitle/);
   assert.match(posDesktopSource, /<PosTakeawayGate/);
   assert.match(posDesktopSource, /onCreateNew=\{handleCreateTakeawayOrder\}/);
 

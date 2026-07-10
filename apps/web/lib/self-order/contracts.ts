@@ -381,10 +381,6 @@ export type SelfOrderPaymentRequest = z.infer<
 export type SelfOrderPaymentRequestStatus = z.infer<
   typeof selfOrderPaymentRequestStatusSchema
 >;
-export type SelfOrderVietQrResponse = z.infer<
-  typeof selfOrderVietQrResponseSchema
->;
-
 export interface SelfOrderMenuVariant {
   id: number;
   name: string;
@@ -464,34 +460,6 @@ export interface SelfOrderGuestBatch {
   createdAt: string;
   decidedAt: string | null;
 }
-
-export interface SelfOrderPaymentRequestSnapshot {
-  id?: number;
-  clientOpId?: string;
-  status: SelfOrderPaymentRequestStatus;
-  method: "cash_call" | "vietqr";
-  amount: number;
-  paymentId?: number | null;
-  paymentCode?: string | null;
-  qrData?: string | null;
-  bankCode?: string | null;
-  accountNo?: string | null;
-  accountName?: string | null;
-  createdAt: string;
-  expiresAt?: string | null;
-}
-
-export type SelfOrderSeatingAccess = "available" | "join_required" | "approved";
-
-export type SelfOrderCapabilityAccess =
-  | "public"
-  | "origin_pending"
-  | "join_pending"
-  | "approved";
-
-export type SelfOrderDeviceRequestSnapshot = z.infer<
-  typeof selfOrderDeviceRequestResponseSchema
->;
 
 export type PublicSelfOrderSnapshot = z.infer<
   typeof publicSelfOrderSnapshotSchema
