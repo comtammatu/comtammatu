@@ -114,12 +114,12 @@ There are **no Tabs**. There is **no `StatusPill`**. There is no branch name in 
 
 ### G2 · Item sheet
 
-Full-viewport bottom sheet (`max-w-2xl` on tablet/desktop). Dish image uses
-`aspect-video` with viewport caps (`max-h-56` phone → `md:max-h-48` tablet →
-`lg:max-h-56` desktop) so width scales without dominating large screens; close
-sits on the image. Title only under the image (no customize hint). Then
-variant · modifiers · sides · note. Footer is one row: total · quantity ·
-add/update.
+Full-viewport bottom sheet (`max-w-2xl` on tablet/desktop). Dish image is a
+tall phone hero (`h-80`); from `sm` up it uses `aspect-video` with caps
+(`sm:max-h-64` → `md:max-h-48` → `lg:max-h-56`) so width scales without
+dominating large screens. Close sits on the image. Title only under the image
+(no customize hint). Then variant · modifiers · sides · note. Footer is one
+row: total · quantity · add/update.
 
 ### G3 · Cart sheet
 

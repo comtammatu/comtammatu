@@ -125,10 +125,10 @@ test("item sheet supports add and cart-edit commit paths", () => {
   assert.match(itemSheet, /onCommit/);
   assert.match(itemSheet, /hydrateFromDraft/);
   assert.match(itemSheet, /data-\[side=bottom\]:h-dvh/);
-  assert.match(itemSheet, /aspect-video/);
+  assert.match(itemSheet, /h-80 w-full/);
   assert.match(
     itemSheet,
-    /max-h-56[\s\S]*sm:max-h-64 md:max-h-48 lg:max-h-56/,
+    /sm:aspect-video sm:h-auto sm:max-h-64 md:max-h-48 lg:max-h-56/,
   );
   assert.match(itemSheet, /max-w-2xl/);
   assert.match(itemSheet, /object-cover object-center/);

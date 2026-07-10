@@ -315,7 +315,7 @@ export function SelfOrderItemSheet({
         className="mx-auto h-dvh max-h-dvh w-full max-w-2xl p-0 data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh"
       >
         <div className="flex h-full flex-col">
-          <div className="relative aspect-video w-full max-h-56 shrink-0 overflow-hidden bg-muted/50 sm:max-h-64 md:max-h-48 lg:max-h-56">
+          <div className="relative h-80 w-full shrink-0 overflow-hidden bg-muted/50 sm:aspect-video sm:h-auto sm:max-h-64 md:max-h-48 lg:max-h-56">
             {item.image_url ? (
               <Image
                 src={item.image_url}
