@@ -1,7 +1,7 @@
 # Kho Hàng — Inventory Management
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư — quản lý kho nguyên liệu và thành phẩm F&B
-> Phạm vi: **nhập NCC tại chi nhánh/Kho Tổng/Bếp Trung Tâm + sản xuất tại Bếp Trung Tâm + luân chuyển tồn thật + tiêu hao chi nhánh + GRN + stocktake + báo cáo vận hành**. `supplier_invoice`, 3-way matching, payment status, và AP aging là Finance handoff; không phải gate đóng ngày Inventory.
+> Phạm vi: **nhập NCC tại chi nhánh/Bếp Trung Tâm + sản xuất tại Bếp Trung Tâm và chi nhánh + luân chuyển tồn thật + tiêu hao chi nhánh + GRN + stocktake + báo cáo vận hành**. `supplier_invoice`, 3-way matching, payment status, và AP aging là Finance handoff; không phải gate đóng ngày Inventory.
 
 ---
 
@@ -20,13 +20,13 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ PO, GRN, tồn kho, production, và recipe                                                                                                                                         | Không mở item master ERP nhiều lớp                     |
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo giá vốn BQ khi có dữ liệu, fallback giá nhập tham chiếu khi cần hiển thị                                                                                | Không chuyển sang FIFO engine                          |
 | Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*`                                                                                             | Không mở lot-first ledger / batch accounting           |
-| Mô hình site                    | `branches.branch_kind IN ('branch', 'central_supply', 'central_kitchen')`; `branch` giữ Kho CN, `central_supply` là Kho Tổng, `central_kitchen` là Bếp Trung Tâm                                                | V1 không tạo bảng `inventory_sites`                    |
+| Mô hình site                    | `branches.branch_kind IN ('branch', 'central_supply', 'central_kitchen')`; `branch` giữ Kho CN, `central_kitchen` là Bếp Trung Tâm; `central_supply` chỉ còn là giá trị enum lịch sử — không có site active     | V1 không tạo bảng `inventory_sites`                    |
 | PO / GRN / NCC                  | Bảng PO/GRN/NCC + RPC `confirm_goods_receipt_note`; QC và price variance là control trong luồng nhập                                                                                                            | Không mở PR workflow nhiều bước                        |
 | Luân chuyển nội bộ              | `stock_transfers` dùng khi nơi nhận vẫn giữ tồn: trung tâm -> Kho CN, Kho CN/Bếp CN -> trung tâm để return/rebalance, Kho Tổng <-> Bếp Trung Tâm, chi nhánh -> chi nhánh, hoặc Kho CN <-> Bếp CN cùng chi nhánh | Không dùng `stock_transfer` cho tiêu hao/xuất hủy thật |
 | HĐ NCC + 3-way matching         | `supplier_invoices` + matching logic là Finance handoff                                                                                                                                                         | Không mở payment proposal engine trong Inventory       |
 | `recipes` + xuất kho theo order | `recipes` + RPC tiêu hao theo order                                                                                                                                                                             | Không mở multi-level BOM                               |
-| Thành phẩm + production hub     | `item_kind`, `production_recipes`, `production_orders`, route production cho `central_kitchen`                                                                                                                  | Không mở labor / overhead / WIP accounting đầy đủ      |
-| Hao hụt / trả hàng / sự cố      | Waste (`/inventory/waste` + approvals), supplier return (`/inventory/supplier-returns`), issue log (`/inventory/issues`); nhập hàng đi qua `/inventory/receiving`                                               | Không mở claim/insurance workflow                      |
+| Thành phẩm + production hub     | `item_kind`, `production_recipes`, `production_runs`, route production cho `central_kitchen` và `branch`                                                                                                        | Không mở labor / overhead / WIP accounting đầy đủ      |
+| Hao hụt / trả hàng / sự cố      | Waste (`/inventory/waste` + approvals), supplier return (`/inventory/supplier-returns`), issue log (`/inventory/issues`); nhập hàng đi qua `/inventory/operations?tab=grn` + `/inventory/grn`                   | Không mở claim/insurance workflow                      |
 
 ## Scope Boundary
 
@@ -47,19 +47,17 @@ Những thứ dưới đây không thuộc Inventory current contract dù có xu
 **Nguyên tắc vận hành:**
 
 - **Chi nhánh (`branch_kind = 'branch'`):** giữ tồn vận hành tại **Kho CN** (`location_kind = 'warehouse'`) và **Bếp CN** (`location_kind = 'kitchen'`). `Kho CN <-> Bếp CN` là luân chuyển nội bộ cùng chi nhánh, không làm giảm tổng tồn chi nhánh; chỉ phiếu xuất/tiêu hao/hủy hỏng mới làm giảm tồn.
-- **Kho Tổng (`branch_kind = 'central_supply'`):** site giữ tồn phụ gia, nguyên liệu khô, vật tư và hàng cấp cho chi nhánh hoặc cấp sang Bếp Trung Tâm. Kho Tổng có thể nhập NCC qua PO/GRN và transfer thật về Kho CN hoặc Bếp Trung Tâm.
-- **Bếp Trung Tâm (`branch_kind = 'central_kitchen'`):** site giữ tồn riêng cho đồ tươi/sản xuất trong ngày như thịt, đồ chua, thành phẩm sơ chế, và có thể nhận phụ gia/gia vị từ Kho Tổng. Bếp Trung Tâm có thể nhập NCC qua PO/GRN, nhận/trả hàng với Kho Tổng, tạo `production_order`, và transfer thật về Kho CN.
+- **Bếp Trung Tâm (`branch_kind = 'central_kitchen'`):** site giữ tồn riêng cho đồ tươi/sản xuất trong ngày như thịt, đồ chua, thành phẩm sơ chế. Bếp Trung Tâm có thể nhập NCC qua PO/GRN, tạo `production_run`, và transfer thật về Kho CN.
+- **`central_supply`:** giá trị enum lịch sử trong `branch_kind`; hiện không có site active thuộc kind này.
 - **Phiếu luân chuyển tồn thật:** dùng state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`. Hướng hợp lệ: `central_supply -> branch`, `central_kitchen -> branch`, `branch -> central_supply`, `branch -> central_kitchen`, `central_supply -> central_kitchen`, `central_kitchen -> central_supply`, `branch -> branch`, và same-branch `Kho CN <-> Bếp CN`.
 - **Tiêu hao chi nhánh:** nguyên liệu đã dùng để tạo doanh thu được ghi bằng `stock_movements.type = 'consumption'`, `movement_subtype = 'sale_consumption'`; đây mới là bước giảm tồn chi nhánh.
 
 ```
-NCC → [PO/GRN] → Kho Tổng (`central_supply`) ── [stock_transfer] → Kho CN (`branch/warehouse`)
-                         ⇅
-                  [stock_transfer]
-                         ⇅
+NCC → [PO/GRN] → Kho CN (`branch/warehouse`)
+
 NCC → [PO/GRN] → Bếp Trung Tâm (`central_kitchen`) ── [stock_transfer] → Kho CN
                          │
-                         ├─ [production_order]
+                         ├─ [production_run]
                          ▼
                   Tồn sản xuất / thành phẩm
 
@@ -147,28 +145,27 @@ CREATE TABLE recipes (
 );
 ```
 
-### 3b. Công thức sản xuất & lệnh sản xuất (Bếp Trung Tâm)
+### 3b. Công thức sản xuất & mẻ sản xuất (`production_runs`)
 
-Phần mở rộng cho chi nhánh dùng bộ bảng riêng:
+Sản xuất dùng bộ bảng riêng:
 
 - `production_recipes`: BOM cho **thành phẩm** (`finished_good_id`) và các **nguyên liệu đầu vào** (`ingredient_id`), có `entry_unit_id` và `yield_factor`.
-- `production_orders`: lệnh sản xuất tại site có `branch_kind = central_kitchen`.
-- `production_order_items`: danh sách thành phẩm và số lượng thực hiện cho từng lệnh.
+- `production_runs`: mẻ sản xuất tại site có `branch_kind IN ('central_kitchen', 'branch')`; state machine `draft -> in_progress -> completed` (hoặc `cancelled`).
 
-Workflow sản xuất chuẩn:
+Workflow sản xuất chuẩn (RPC family gọi từ `apps/web/app/(protected)/inventory/production-run-actions.ts`):
 
-1. Bếp Trung Tâm nhận nguyên liệu tươi qua PO/GRN hoặc transfer thật nếu có.
-2. Bếp Trung Tâm tạo `production_order` ở trạng thái `draft`.
-3. `confirm_production_order()` kiểm tra:
-   - site phải là `central_kitchen`,
+1. Site sản xuất (Bếp Trung Tâm hoặc chi nhánh) nhận nguyên liệu qua PO/GRN hoặc transfer thật nếu có.
+2. Tạo mẻ bằng `create_production_run_with_locations` (trạng thái `draft`); `start_production_run` chuyển sang `in_progress`.
+3. `confirm_production_run` kiểm tra:
+   - caller là production operator (`is_inventory_production_operator()`) và có `inventory:production_confirm` trên đúng `branch_id`,
    - item đầu ra phải có `item_kind = finished_good`,
    - có đủ `production_recipes`,
-   - tồn kho nguyên liệu đủ để trừ sau khi quy đổi BOM từ `entry_unit_id` về base unit.
+   - tồn kho nguyên liệu đủ để trừ sau khi quy đổi BOM từ `entry_unit_id` về base unit; cho phép chốt actual quantity/actual ingredients lệch so với plan.
 4. RPC ghi atomically:
    - `production_consumption` cho nguyên liệu đầu vào,
    - `production_output` cho thành phẩm đầu ra,
    - cập nhật `stock_levels`,
-   - chốt `production_orders.status = completed`.
+   - chốt `production_runs.status = completed`.
 
 ### 3c. Yield Factor — hao hụt sơ chế
 
@@ -386,10 +383,10 @@ Business-action matrix chi tiết cho Inventory xem ở [inventory-rbac-matrix.m
 
 Tóm tắt quyền hiện tại:
 
-- `owner`: full access Inventory tenant-wide — procurement, Kho CN, Kho Tổng, Bếp Trung Tâm, production, và giám sát; cũng xem qua `reports` / `finance`.
-- `warehouse_manager`: role chính cho procurement, Kho Tổng/Kho CN, và outbound transfer.
+- `owner`: full access Inventory tenant-wide — procurement, Kho CN, Bếp Trung Tâm, production, và giám sát; cũng xem qua `reports` / `finance`.
+- `warehouse_manager`: role procurement và outbound transfer theo grant; không còn site `central_supply` active để trực.
 - `production_manager`: role chính cho Bếp Trung Tâm và production.
-- `branch_manager`: vận hành tồn Kho CN, nhận transfer, stocktake, và duyệt tiêu hao trong ngày; không vào procurement.
+- `branch_manager`: vận hành tồn Kho CN, nhận transfer, stocktake, và duyệt tiêu hao trong ngày; theo D068 có own-branch GRN (tạo/xác nhận), production (tạo/xác nhận), `procurement:read`, và tạo nhanh NCC (`procurement:supplier_manage`).
 - `office`, `cashier`, `chef`: không có Inventory route theo ACL hiện tại.
 
 Chi tiết enforcement: RLS + `packages/shared/src/auth/module-acl.ts`.

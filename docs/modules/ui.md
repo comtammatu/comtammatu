@@ -800,7 +800,7 @@ Schema: luôn dùng Zod 4 với `{ error: "..." }` (không dùng `{ message }`).
 
 Inventory IA phải bám 3 luồng chính:
 
-1. `Kiểm soát tồn` — Tồn kho, Kiểm kê, Hạn dùng, Hao hụt/điều chỉnh, Báo cáo.
+1. `Kiểm soát tồn` — Tồn kho, Kiểm kê, Hao hụt/điều chỉnh, Báo cáo.
 2. `Nhập/Nhận/Đối soát` — Đơn đặt hàng, Phiếu nhập/GRN, supplier invoice/price variance, receiving exception.
 3. `Điều phối/Sản xuất` — Điều chuyển, Lệnh sản xuất, BOM/recipe issue, yield.
 

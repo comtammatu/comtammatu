@@ -16,10 +16,10 @@ Updated: `2026-06-19`
 ## 1. Procurement Loop
 
 - `persona`: `warehouse_manager` (hoặc `production_manager`) chạy procurement
-- `site_kind`: `branch`, `central_supply`, hoặc `central_kitchen`
+- `site_kind`: `branch` hoặc `central_kitchen`
 - `device`: `desktop`
 - `starting route`: `/inventory`
-- `goal`: đi trọn vòng `Dashboard -> Receiving -> PO -> GRN -> Supplier Invoice`
+- `goal`: đi trọn vòng `Dashboard -> Operations -> PO -> GRN -> Supplier Invoice`
 - `preconditions`:
   - có ít nhất 1 supplier active;
   - có ingredient master đủ để lập PO;
@@ -27,14 +27,14 @@ Updated: `2026-06-19`
   - dữ liệu test không làm nhiễu bởi PO/GRN nháp cũ.
 - `steps`:
   1. Từ dashboard, xác nhận quick action và task queue dẫn về đúng procurement surfaces.
-  2. Vào `/inventory/receiving`, kiểm step cards và CTA `Tạo PO nhanh`, `Mở GRN`.
+  2. Vào `/inventory/operations`, kiểm tab `Đặt hàng NCC` và `Phiếu nhập kho` dẫn đúng vào PO/GRN.
   3. Tạo PO mới hoặc mở PO draft sẵn có.
   4. Gửi PO, kiểm trạng thái và feedback.
   5. Từ PO, sang bước tạo GRN.
-  6. Trên GRN detail, kiểm actual/required/QC/lot/expiry rồi chốt nhập.
+  6. Trên GRN detail, kiểm actual/required/QC rồi chốt nhập.
   7. Vào `supplier-invoices`, tạo hóa đơn và chạy `tính lại đối soát`.
 - `expected next step`:
-  - dashboard/receiving phải làm rõ được bước kế tiếp sau từng màn;
+  - dashboard/operations phải làm rõ được bước kế tiếp sau từng màn;
   - sau PO draft là `Gửi PO`;
   - sau PO sent là `Sang bước tạo GRN`;
   - sau GRN confirm là `Supplier Invoice`.
@@ -145,12 +145,11 @@ Updated: `2026-06-19`
   5. Vào `/inventory/stock`, kiểm Kho CN và Bếp CN đều nằm trong tổng tồn chi nhánh; `sale_consumption` chỉ giảm tồn khi đã ghi phiếu tiêu hao/xuất.
   6. Đối chiếu doanh thu POS/KDS completed với actual consumption đã duyệt.
   7. Cuối ca vào `/inventory/stocktake`, hoàn tất một phiên kiểm kê.
-  8. Kiểm `/inventory/expiry` cho lô cần xử lý.
 - `expected next step`:
   - sau `received`, UI phải gợi đủ rõ sang `Tiêu hao` nếu chi nhánh cần chốt nguyên liệu đã dùng;
   - sau duyệt tiêu hao, user hiểu tồn tại location nguồn giảm và giá vốn thực tế tăng;
   - sau stocktake, user hiểu variance/kết quả chốt; conflict/recount S13b không nằm trong daily UI.
-- `handoff`: báo chênh lệch lớn hoặc expiry risk cho OPS/owner
+- `handoff`: báo chênh lệch lớn cho OPS/owner
 - `success`:
   - đây là journey branch quan trọng nhất và không được cần “người biết hệ thống trước” mới dùng được;
   - các action chính luôn thấy được trên tablet;
@@ -169,7 +168,7 @@ Updated: `2026-06-19`
 - `starting route`: `/inventory`
 - `goal`: đảm bảo các action dùng nhiều nhất vẫn thao tác được khi cầm máy
 - `preconditions`:
-  - branch có dữ liệu transfer, issue, stocktake, expiry, waste, supplier-return tối thiểu.
+  - branch có dữ liệu transfer, issue, stocktake, waste, supplier-return tối thiểu.
 - `steps`:
   1. Kiểm dashboard quick actions và task cards trên mobile.
   2. Kiểm `/inventory/transfers`, `/inventory/consumption`, `/inventory/stocktake` ở mobile layout.
@@ -192,15 +191,15 @@ Updated: `2026-06-19`
 ## 7. Cross-Branch Operator Review Path
 
 - `persona`: `owner`
-- `site_kind`: cross-site (`branch`, `central_supply`, `central_kitchen`)
+- `site_kind`: cross-site (`branch`, `central_kitchen`)
 - `device`: `desktop`
 - `starting route`: `/inventory`
 - `goal`: đọc inventory ops surfaces nhiều chi nhánh mà không bị dẫn vào procurement hay production sai scope
 - `preconditions`:
   - role thuộc ACL `inventory` (owner, branch_manager, warehouse_manager, production_manager) và thấy được nhiều chi nhánh qua branch scope.
 - `steps`:
-  1. Kiểm nav lộ đúng surface theo quyền (`Receiving`, `PO`, `GRN`, `Supplier Invoice` chỉ khi có `inventory_procurement`; `Production` chỉ khi thuộc production roles và site là Bếp Trung Tâm).
-  2. Mở dashboard, stock, transfers, stocktake, expiry, reports.
+  1. Kiểm nav lộ đúng surface theo quyền (`PO`, `GRN`, `Supplier Invoice` chỉ khi có `inventory_procurement`; `Production` chỉ khi thuộc production roles — `production_manager` tại Bếp Trung Tâm hoặc `branch_manager` own-branch theo D068).
+  2. Mở dashboard, stock, transfers, stocktake, reports.
   3. Kiểm data không null im lặng.
   4. Kiểm reports/alerts đọc được khi review nhiều chi nhánh.
 - `expected next step`: user thấy rõ đây là review nhiều chi nhánh, không phải operator daily flow của một chi nhánh

@@ -42,7 +42,7 @@ Active tracker: [`tasks/todo.md`](tasks/todo.md).
 
 ```
 apps/
-  web/              # Next.js 16 app (POS, KDS, admin, inventory, finance, hr, employee)
+  web/              # Next.js 16 app (POS, KDS, admin, inventory, finance, hr, branch operator hub)
   print-agent/      # ESC-POS LAN printer daemon (packaged via pkg)
 packages/
   database/         # Supabase clients (server / client / service / middleware) + types
@@ -57,7 +57,6 @@ docs/
   spec/             # Architecture, database schema, design system
   ref/              # Business domain, inventory SOP, e-invoice, PIT, glossary
   runbooks/         # Pre-release QA, operator journeys, smoke gates
-  user-guides/      # POS flow guides
   worklog/          # Policy only; no historical worklog archive
 tasks/              # regressions.md, lessons.md, todo.md
 scripts/            # SQL seeds, lint helpers
@@ -75,7 +74,7 @@ scripts/            # SQL seeds, lint helpers
 | `/hr/*`                     | HR/payroll        | Payroll periods, payslips                               |
 | `/orders`                   | Manager+          | Cross-branch order browser                              |
 | `/notifications`            | All staff         | Notification center                                     |
-| `/employee/*`               | All staff         | Self-service: clock, schedule, payslip                  |
+| `/br/[branchId]/*`          | All staff         | Operator hub (Hôm nay · Ca · Lịch · Tôi) + `stock/*`    |
 | `/br/[branchId]/pos`        | Cashier / service | Point of Sale (PWA installable)                         |
 | `/br/[branchId]/kds`        | Chef              | Kitchen Display                                         |
 | `/br/[branchId]/settings/*` | Branch manager+   | Per-branch POS, tables, printers                        |

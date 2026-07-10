@@ -20,12 +20,12 @@ Updated: `2026-07-06`
 
 | Route        | Section              | CTA                     | Visible for role/site                                               | Expected behavior                                               | Severity |
 | ------------ | -------------------- | ----------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------- | -------- |
-| `/inventory` | Flow card nhập/nhận  | `Đơn đặt hàng`, `GRN`   | procurement roles tại `branch`, `central_supply`, `central_kitchen` | Mở PO/GRN cho site nhận hàng                                    | `P0`     |
+| `/inventory` | Flow card nhập/nhận  | `Đơn đặt hàng`, `GRN`   | procurement roles tại `branch`, `central_kitchen`                   | Mở PO/GRN cho site nhận hàng                                    | `P0`     |
 | `/inventory` | Flow card branch     | `Phiếu đến`             | `branch_manager`                                                    | Mở transfer inbound cần nhận                                    | `P0`     |
 | `/inventory` | Flow card điều phối  | `Nhận/điều chuyển hàng` | inventory roles                                                     | Mở `/inventory/transfers`                                       | `P0`     |
 | `/inventory` | Flow card branch     | `Tiêu hao`              | branch site                                                         | Mở `/inventory/consumption`                                     | `P0`     |
-| `/inventory` | Flow card production | `Lệnh sản xuất`         | `production_manager` tại `central_kitchen`, owner deep-link         | Mở `/inventory/production`                                      | `P0`     |
-| `/inventory` | Shell nav            | site label              | mọi role                                                            | Hiển thị đúng `Kho chi nhánh`, `Kho Tổng`, hoặc `Bếp Trung Tâm` | `P1`     |
+| `/inventory` | Flow card production | `Lệnh sản xuất`         | `production_manager` tại `central_kitchen`, `branch_manager` own-branch (D068), owner deep-link | Mở `/inventory/production`                                      | `P0`     |
+| `/inventory` | Shell nav            | site label              | mọi role                                                            | Hiển thị đúng `Kho chi nhánh` hoặc `Bếp Trung Tâm`              | `P1`     |
 
 ## 2. Stock
 
@@ -39,7 +39,7 @@ Updated: `2026-07-06`
 
 | Route                             | Section | CTA                 | Expected behavior                                                      | Severity |
 | --------------------------------- | ------- | ------------------- | ---------------------------------------------------------------------- | -------- |
-| `/inventory/purchase-orders`      | Header  | `Tạo PO`            | Cho chọn site nhận thuộc `branch`, `central_supply`, `central_kitchen` | `P0`     |
+| `/inventory/purchase-orders`      | Header  | `Tạo PO`            | Cho chọn site nhận thuộc `branch`, `central_kitchen`                   | `P0`     |
 | `/inventory/purchase-orders/[id]` | Footer  | `Sang bước tạo GRN` | Tạo GRN từ PO, giữ đúng site nhận                                      | `P0`     |
 | `/inventory/grn/[id]`             | Footer  | `Chốt nhập kho`     | Tăng tồn stock-bearing location của site nhận, cập nhật WAC            | `P0`     |
 | `/inventory/supplier-invoices`    | Detail  | `Tính lại đối soát` | Recompute matching; thanh toán NCC vẫn là Finance handoff              | `P1`     |
@@ -66,17 +66,16 @@ Updated: `2026-07-06`
 
 | Route                   | Section             | CTA                 | Expected behavior                                   | Severity |
 | ----------------------- | ------------------- | ------------------- | --------------------------------------------------- | -------- |
-| `/inventory/production` | Header/form trigger | `Tạo lệnh sản xuất` | Chỉ tạo order cho `central_kitchen`                 | `P0`     |
+| `/inventory/production` | Header/form trigger | `Tạo lệnh sản xuất` | Tạo `production_run` cho `central_kitchen` hoặc own-branch `branch` (D068) | `P0`     |
 | `/inventory/production` | Readiness           | dependency message  | Chỉ rõ thiếu finished good/BOM/nguyên liệu          | `P0`     |
 | `/inventory/production` | Order list          | `Xác nhận`          | Ghi `production_consumption` và `production_output` | `P0`     |
 
-## 7. Stocktake, waste, expiry, reports
+## 7. Stocktake, waste, reports
 
 | Route                                    | Section               | Expected behavior                                                                                                 | Severity |
 | ---------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------- | -------- |
 | `/inventory/stocktake`                   | create/count/complete | Tạo phiên, lưu số đếm, complete ghi `count_adjustment`                                                            | `P0`     |
 | `/inventory/waste` / `/inventory/issues` | writeoff/adjustment   | Không dùng làm đường tiêu hao bán hàng thường ngày                                                                | `P1`     |
-| `/inventory/expiry`                      | lot/date/site context | Hiển thị đủ lô/ngày/site để xử lý đúng hàng                                                                       | `P1`     |
 | `/inventory/reports`                     | stock/food-cost cards | Tồn chi nhánh gồm Kho CN và Bếp CN; food cost actual lấy approved consumption, theoretical recipe chỉ để variance | `P0`     |
 
 ## 8. Hygiene

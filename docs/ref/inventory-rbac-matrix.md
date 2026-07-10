@@ -40,7 +40,7 @@
 | ------------------- | ----------------- | -------------------- | ------------------------------------------------------------------------------------------------- |
 | `owner`             | Chủ sở hữu        | `owner`              | Tenant-wide bypass (owner bypass trong `has_permission()`) + tenant-wide operations + procurement |
 | `branch_manager`    | Quản lý chi nhánh | `branch_manager`     | Branch của mình                                                                                   |
-| `warehouse_manager` | Quản lý Kho Tổng  | `warehouse_manager`  | Kho Tổng (`central_supply`)                                                                       |
+| `warehouse_manager` | Quản lý Kho Tổng  | `warehouse_manager`  | Không còn site `central_supply` active; procurement duty theo grant, chờ owner sắp xếp lại role (D073 §1) |
 | `head_chef`         | Bếp trưởng        | `production_manager` | Bếp Trung Tâm (`central_kitchen`)                                                                 |
 
 > Position code dùng English `lower_snake_case` theo bộ canonical hiện hành. Tên hiển thị tiếng Việt đi qua `label_vi`.
@@ -189,14 +189,15 @@ lý trường hợp này.
 Inventory RPC chính hiện đã permission-gated:
 
 - `upsert_recipe_lines` → `menu:write`
-- `create_production_order` → `inventory:production_create`
-- `cancel_production_order` / `confirm_production_order` → `inventory:production_confirm`
+- `create_production_run_with_locations` → role production operator + `inventory:production_create` trên đúng `branch_id`
+- `confirm_production_run` → role production operator + `inventory:production_confirm` trên đúng `branch_id`
+- `start_production_run` / `cancel_production_run` → state-machine RPC trong cùng family (`draft -> in_progress`, hủy khi chưa `completed`)
 - `upsert_production_recipe_lines` → role production operator + `inventory:production_create`/`inventory:production_confirm` hoặc `menu:write` fallback
 - `create_stock_transfer_draft` → `inventory:transfer_create`
 - `stock_transfer_mark_in_transit` → `inventory:transfer_ship`
 - `stock_transfer_confirm_receive` / `stock_transfer_receive` → `inventory:transfer_receive`
 
-Production DB contract dùng helper `is_inventory_production_operator()` cho RPC và RLS của `production_recipes`, `production_orders`, `production_order_items`. Post-D068 helper gồm `owner`, `production_manager`, `branch_manager` (migration `20260706150000`), và RLS `production_orders_write`/`production_order_items_write` nhận cả `branch_kind IN ('central_kitchen','branch')` — nhưng branch-membership vẫn khóa bằng `has_permission(branch_id, …)` nên `branch_manager` chỉ sản xuất được ở chi nhánh của mình. `production_recipes` (BOM) không còn khóa chính qua `menu:write`; policy/action nhận quyền sản xuất để tránh lẫn “Định mức món bán” (`recipes`) với “Công thức sản xuất” (`production_recipes`).
+Production DB contract dùng helper `is_inventory_production_operator()` cho RPC và RLS của `production_recipes` và `production_runs`. Post-D068 helper gồm `owner`, `production_manager`, `branch_manager` (migration `20260706150000`); branch-membership khóa bằng `has_permission(branch_id, …)` nên `branch_manager` chỉ sản xuất được ở chi nhánh của mình. Bộ RPC `create_production_order`/`confirm_production_order`/`cancel_production_order` và bảng `production_orders`/`production_order_items` không còn app caller — chờ slice retirement trong `tasks/todo.md`. `production_recipes` (BOM) không còn khóa chính qua `menu:write`; policy/action nhận quyền sản xuất để tránh lẫn “Định mức món bán” (`recipes`) với “Công thức sản xuất” (`production_recipes`).
 
 Một số RPC vẫn dùng `auth_role()` như guard phụ:
 

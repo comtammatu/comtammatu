@@ -1,4 +1,4 @@
-# SOP Inventory — Kho Tổng / Bếp Trung Tâm / Kho Chi Nhánh / Tiêu hao
+# SOP Inventory — Bếp Trung Tâm / Kho Chi Nhánh / Tiêu hao
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
 > Phạm vi: luồng vận hành Inventory hiện tại cho nguyên liệu, thành phẩm, điều chuyển tồn thật, và tiêu hao chi nhánh.
@@ -17,7 +17,6 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 
 ## 1. Mục tiêu
 
-- Kho Tổng giữ phụ gia, nguyên liệu khô, vật tư và hàng cấp chi nhánh.
 - Bếp Trung Tâm giữ đồ tươi/sản xuất trong ngày như thịt, đồ chua, thành phẩm sơ chế.
 - Chi nhánh giữ tồn vận hành tại Kho CN và Bếp CN.
 - Chuyển Kho CN -> Bếp CN là luân chuyển nội bộ cùng chi nhánh; xuất/tiêu hao sau đó mới giảm tồn chi nhánh.
@@ -28,7 +27,6 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 | Site          | `branch_kind`     | Stock-bearing location                   | Vai trò                                                       |
 | ------------- | ----------------- | ---------------------------------------- | ------------------------------------------------------------- |
 | Chi nhánh     | `branch`          | `warehouse` = Kho CN; `kitchen` = Bếp CN | Nhận hàng, giữ tồn chi nhánh, kiểm kê, cấp bếp, xuất tiêu hao |
-| Kho Tổng      | `central_supply`  | `warehouse` = Kho Tổng                   | Nhập/kho phụ gia, nguyên liệu khô, vật tư cấp chi nhánh       |
 | Bếp Trung Tâm | `central_kitchen` | `warehouse` hoặc `production_storage`    | Nhập đồ tươi, sản xuất trong ngày, cấp chi nhánh              |
 
 `location_kind = 'kitchen'` tại `branch` là stock-bearing Bếp CN và được cộng vào tồn vận hành của chi nhánh.
@@ -37,14 +35,12 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 
 | Bước                                | Chứng từ / thao tác hệ thống    | Kết quả kho                                                     |
 | ----------------------------------- | ------------------------------- | --------------------------------------------------------------- |
-| NCC giao Kho Tổng                   | `PO`, `GRN`                     | Tăng tồn Kho Tổng                                               |
 | NCC giao Bếp Trung Tâm              | `PO`, `GRN`                     | Tăng tồn Bếp Trung Tâm                                          |
 | NCC giao chi nhánh                  | `PO`, `GRN`                     | Tăng tồn Kho CN hoặc Bếp CN theo nơi nhập đã chọn               |
-| Kho Tổng cấp chi nhánh              | `stock_transfer`                | Kho Tổng giảm, Kho CN tăng                                      |
 | Bếp Trung Tâm cấp chi nhánh         | `stock_transfer`                | Bếp Trung Tâm giảm, Kho CN tăng                                 |
 | Chi nhánh chuyển chi nhánh          | `stock_transfer`                | Chi nhánh gửi giảm, chi nhánh nhận tăng                         |
 | Kho CN cấp Bếp CN                   | `stock_transfer` cùng chi nhánh | Kho CN giảm, Bếp CN tăng; tổng tồn chi nhánh không giảm         |
-| Bếp Trung Tâm sản xuất              | `production_order`              | Nguyên liệu giảm, thành phẩm tăng                               |
+| Bếp Trung Tâm sản xuất              | `production_runs`               | Nguyên liệu giảm, thành phẩm tăng                               |
 | Chi nhánh dùng nguyên liệu bán hàng | consumption report duyệt/apply  | Kho CN giảm bằng `stock_movements.consumption/sale_consumption` |
 | Kiểm kê                             | `stocktake` / `adjustment`      | Điều chỉnh về tồn thực tế                                       |
 
@@ -54,9 +50,9 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 
 ### 4.1 Nhập NCC
 
-1. Tạo `PO` gắn với site nhận hàng: chi nhánh, Kho Tổng, hoặc Bếp Trung Tâm.
+1. Tạo `PO` gắn với site nhận hàng: chi nhánh hoặc Bếp Trung Tâm.
 2. Khi hàng tới, tạo `GRN` tại stock-bearing location của site đó.
-3. Kiểm số lượng, đơn giá, lô/HSD, nhiệt độ nếu cần.
+3. Kiểm số lượng, đơn giá, nhiệt độ nếu cần.
 4. Xác nhận `GRN` để cộng tồn và cập nhật WAC.
 5. Nếu Finance cần đối soát, nhập `supplier_invoice` để 3-way matching với `PO` và `GRN`; đây là Finance handoff, không chặn đóng ngày Inventory.
 
@@ -64,7 +60,6 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, đọc thêm:
 
 Hướng hợp lệ:
 
-- Kho Tổng -> Kho CN.
 - Bếp Trung Tâm -> Kho CN.
 - Kho CN -> Kho CN của chi nhánh khác.
 
@@ -134,16 +129,10 @@ Luồng dùng state machine 5 bước: `draft -> confirmed_ship -> in_transit ->
 
 ## 6. Checklist cuối ngày
 
-### Kho Tổng
-
-- GRN trong ngày đã confirm.
-- Transfer cấp chi nhánh không treo quá SLA.
-- Tồn thấp/cận date đã được xử lý.
-
 ### Bếp Trung Tâm
 
 - GRN đồ tươi trong ngày đã confirm.
-- Production order trong ngày đã `completed` hoặc `cancelled`.
+- Lệnh sản xuất (`production_runs`) trong ngày đã `completed` hoặc `cancelled`.
 - Transfer thành phẩm/nguyên liệu về chi nhánh không treo quá SLA.
 
 ### Chi nhánh

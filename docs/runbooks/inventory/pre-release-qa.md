@@ -44,7 +44,6 @@ Các route phải mở đúng theo ACL và nav:
 - `/inventory/consumption`
 - `/inventory/issues`
 - `/inventory/stocktake`
-- `/inventory/expiry`
 - `/inventory/waste`
 - `/inventory/reports`
 - procurement: `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/supplier-invoices`, `/inventory/suppliers`
@@ -56,7 +55,7 @@ Các route phải mở đúng theo ACL và nav:
 | --------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `warehouse_manager`         | Vào Inventory + procurement + transfer theo scope; không bị dẫn vào production nếu không ở Bếp Trung Tâm |
 | `production_manager`        | Vào Inventory + production tại Bếp Trung Tâm                                                             |
-| `branch_manager`            | Vào stock, transfers inbound, consumption, stocktake, expiry, reports; không vào procurement/production  |
+| `branch_manager`            | Vào stock, transfers inbound, consumption, stocktake, reports; own-branch GRN (tạo/xác nhận) + production (tạo/xác nhận) + tạo nhanh NCC theo D068 |
 | `owner`                     | Xem oversight tenant-wide; không bị UX dẫn như operator hằng ngày                                        |
 | `office`, `cashier`, `chef` | Không vào Inventory route nếu ACL hiện tại chưa cho                                                      |
 
@@ -64,14 +63,14 @@ Các route phải mở đúng theo ACL và nav:
 
 - nav không lộ link sai role/site
 - branch manager không tạo transfer outbound ra site khác; được tạo transfer cùng chi nhánh `Kho CN -> Bếp CN`
-- production không hiện như daily action của chi nhánh thường
-- site label phân biệt `Kho chi nhánh`, `Kho Tổng`, `Bếp Trung Tâm`
+- production tại chi nhánh chỉ hiện cho đúng vai (`branch_manager` own-branch theo D068), không lộ cho role khác
+- site label phân biệt `Kho chi nhánh`, `Bếp Trung Tâm`
 
 ## 4. Flow smoke
 
 ### 4.1 Procurement
 
-- Tạo/mở `PO` cho `branch`, `central_supply`, hoặc `central_kitchen`.
+- Tạo/mở `PO` cho `branch` hoặc `central_kitchen`.
 - Tạo `GRN` từ PO.
 - Confirm `GRN`.
 - Kiểm tồn stock-bearing location tăng đúng.
@@ -80,12 +79,8 @@ Các route phải mở đúng theo ACL và nav:
 ### 4.2 Transfer thật
 
 - Tạo transfer theo hướng hợp lệ:
-  - `central_supply -> branch`
   - `central_kitchen -> branch`
-  - `branch -> central_supply`
   - `branch -> central_kitchen`
-  - `central_supply -> central_kitchen`
-  - `central_kitchen -> central_supply`
   - `branch -> branch`
   - cùng chi nhánh `Kho CN -> Bếp CN`
 - Với transfer khác site: confirm ship, mark in transit, confirm receive, receive.
@@ -108,7 +103,7 @@ Các route phải mở đúng theo ACL và nav:
 ### 4.4 Production tại Bếp Trung Tâm
 
 - `production_manager` ở `central_kitchen` thấy nav/page.
-- Tạo `production_order`.
+- Tạo `production_run` và đi theo run detail flow (`draft -> in_progress -> confirm`).
 - Fail đúng khi thiếu BOM hoặc thiếu nguyên liệu.
 - Confirm thành công khi đủ điều kiện.
 - Kiểm `production_consumption` + `production_output`.
@@ -126,7 +121,7 @@ Các route phải mở đúng theo ACL và nav:
 Sau import production, kiểm nhanh:
 
 - `/inventory/stock`: tồn có ở stock-bearing warehouse và Bếp CN/kitchen của chi nhánh.
-- `/inventory/transfers`: có đủ transfer thật theo hướng central -> branch, branch -> central, Kho Tổng <-> Bếp Trung Tâm, branch -> branch, và Kho CN -> Bếp CN.
+- `/inventory/transfers`: có đủ transfer thật theo hướng central -> branch, branch -> central, branch -> branch, và Kho CN -> Bếp CN.
 - `/inventory/consumption`: thấy tiêu hao chi nhánh từ import với `sale_consumption`.
 - Finance food cost/gross profit đọc actual consumption, không đọc recipe-only `mv_food_cost`.
 - 4 dòng legacy source từ `BEP-DD` / `BEP-TT` không import history; tồn cuối đã nằm trong `balance_adjustment`.
