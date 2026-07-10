@@ -389,6 +389,14 @@
       work-queue definition. `production_orders` holds zero rows tenant-wide and
       has no writer anywhere in the app.
 
+- [ ] **Every HĐĐT issues with an empty seller name.** `sellerName: ""` at
+      `apps/web/lib/hddt-per-order.ts:205` and
+      `apps/web/lib/hddt-daily-summary.ts:142` — the e-invoice provider payload
+      carries no legal seller name on either issuing path. The legal name and
+      MST already live in the codebase (`COMPANY_TAX_CODE` constants); wire
+      them through. Money/legal path → T3 when implemented. (Promoted from the
+      2026-06-28 audit; last surviving open finding of that audit.)
+
 - [ ] **Three PROD RPCs deep-link notifications to the retired `/employee/*`
       routes.** `reject_leave_request`, `approve_inventory_count_slip`, and
       `request_inventory_count_recount` on PROD still emit notification links
