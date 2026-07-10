@@ -475,8 +475,6 @@ export async function StaffCountPageContent({
   );
 }
 
-export const EmployeeCountPageContent = StaffCountPageContent;
-
 async function resolveBranchName(
   supabase: SupabaseClient,
   tenantId: number,
@@ -489,10 +487,4 @@ async function resolveBranchName(
     .eq("id", branchId)
     .maybeSingle();
   return data?.name ?? null;
-}
-
-export default function EmployeeCountPage(props: {
-  searchParams: Promise<{ location?: string }>;
-}) {
-  return <EmployeeCountPageContent searchParams={props.searchParams} />;
 }

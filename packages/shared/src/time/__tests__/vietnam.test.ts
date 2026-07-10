@@ -4,11 +4,9 @@ import {
   addVNDateDays,
   diffVNDateDays,
   formatVNBusinessDate,
-  formatVNClockRange,
   formatVNClockTime,
   formatVNDate,
   formatVNDateTime,
-  formatVNDateTimeWithSeconds,
   formatVNDuration,
   formatVNDurationMinutes,
   formatVNTime,
@@ -17,7 +15,6 @@ import {
   getVNDayUtcRange,
   getVNMonthEndDateString,
   getVNMonthSequenceBack,
-  getVNWeekStartDateString,
   getYesterdayVNDateString,
   getVNMinutesOfDay,
   parseClockTimeToMinutes,
@@ -45,9 +42,7 @@ test("VN display helpers pin timestamps and clock ranges to the contract", () =>
   assert.equal(formatVNDate(timestamp), "22/05/2026");
   assert.equal(formatVNTime(timestamp), "08:30");
   assert.equal(formatVNDateTime(timestamp), "08:30 22/05/2026");
-  assert.equal(formatVNDateTimeWithSeconds(timestamp), "08:30:45 22/05/2026");
   assert.equal(formatVNClockTime("8:05:33"), "08:05");
-  assert.equal(formatVNClockRange("08:00", "17:30:00"), "08:00–17:30");
   assert.equal(formatVNClockTime("08:60"), "—");
   assert.equal(formatVNDurationMinutes(65), "1 giờ 05 phút");
   assert.equal(
@@ -110,7 +105,6 @@ test("VN month and week helpers handle boundaries", () => {
     { year: 2025, month: 12, date: "2025-12-01" },
     { year: 2025, month: 11, date: "2025-11-01" },
   ]);
-  assert.equal(getVNWeekStartDateString("2026-05-17T18:00:00Z"), "2026-05-18");
 });
 
 test("VN date-only helpers avoid runtime timezone", () => {

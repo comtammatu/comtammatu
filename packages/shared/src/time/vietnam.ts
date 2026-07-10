@@ -158,15 +158,6 @@ export function getVNMonthSequenceBack(
   });
 }
 
-export function getVNWeekStartDateString(
-  value: string | number | Date = new Date(),
-): string {
-  const today = getVNDateParts(value);
-  const day = vnNoonUtc(today).getUTCDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  return addVNDateDays(formatISODateParts(today), diff);
-}
-
 export function getVNDayUtcRange(dateStr: string): {
   startIso: string;
   endIso: string;
@@ -215,23 +206,6 @@ export function formatVNDateTime(
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
-}
-
-export function formatVNDateTimeWithSeconds(
-  value: string | number | Date | null | undefined,
-  dash = "—",
-): string {
-  const date = toDate(value);
-  if (!date) return dash;
-  return date.toLocaleString(VN_LOCALE, {
-    timeZone: VN_TIME_ZONE,
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
   });
 }
 
@@ -303,17 +277,6 @@ export function formatVNClockTime(
   }
 
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-}
-
-export function formatVNClockRange(
-  start: string | null | undefined,
-  end: string | null | undefined,
-  dash = "—",
-): string {
-  const formattedStart = formatVNClockTime(start, "");
-  const formattedEnd = formatVNClockTime(end, "");
-  if (!formattedStart || !formattedEnd) return dash;
-  return `${formattedStart}–${formattedEnd}`;
 }
 
 export function formatVNDurationMinutes(

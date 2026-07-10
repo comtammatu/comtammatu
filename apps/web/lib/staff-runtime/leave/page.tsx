@@ -109,10 +109,6 @@ export async function EmployeeLeavePageContent({
   );
 }
 
-export default function EmployeeLeavePage() {
-  return <EmployeeLeavePageContent />;
-}
-
 export type LeaveRequestStatus =
   | "pending"
   | "approved"

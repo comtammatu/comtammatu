@@ -72,8 +72,3 @@ export async function StaffSchedulePageContent({
   );
 }
 
-export const SchedulePageContent = StaffSchedulePageContent;
-
-export default function SchedulePage() {
-  return <StaffSchedulePageContent />;
-}

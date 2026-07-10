@@ -8,10 +8,7 @@ import {
   formatQuantity,
   parseVietnameseNumericInput,
 } from "@comtammatu/shared/format";
-import {
-  normalizeTypedDecimalPointAlias,
-  resolveFormattedNumberInputDisplay,
-} from "../app/components/form/formatted-number-input";
+import { normalizeTypedDecimalPointAlias } from "../app/components/form/formatted-number-input";
 import { appendNumpadKey } from "../app/components/form/number-pad-grid";
 
 test("decimal input keeps a Vietnamese trailing separator while typing", () => {
@@ -62,25 +59,6 @@ test("decimal input keeps a comma visible while accepting either keyboard separa
       display: "8,8",
       value: 8.8,
     },
-  );
-});
-
-test("focused decimal input keeps the draft when parent normalizes to a number", () => {
-  assert.equal(
-    resolveFormattedNumberInputDisplay("8", {
-      focusedValue: "8.",
-      isFocused: true,
-      maxFractionDigits: 3,
-    }),
-    "8,",
-  );
-  assert.equal(
-    resolveFormattedNumberInputDisplay("8", {
-      focusedValue: "8.",
-      isFocused: false,
-      maxFractionDigits: 3,
-    }),
-    "8",
   );
 });
 
@@ -184,14 +162,6 @@ test("number display hides meaningless decimal tails everywhere", () => {
   assert.equal(formatQuantity(300.125), "300,125");
   assert.equal(formatDecimalInputValue(300.0001, 3), "300");
   assert.equal(formatDecimalInputValue(300.125, 3), "300.125");
-  assert.equal(
-    resolveFormattedNumberInputDisplay("300.000", {
-      focusedValue: null,
-      isFocused: false,
-      maxFractionDigits: 3,
-    }),
-    "300",
-  );
 });
 
 test("integer fields accept Vietnamese grouping and reject fractional values", () => {

@@ -304,8 +304,3 @@ export async function StaffCheckoutApprovalsPageContent({
   );
 }
 
-export const CheckoutApprovalsPageContent = StaffCheckoutApprovalsPageContent;
-
-export default async function CheckoutApprovalsPage() {
-  return <StaffCheckoutApprovalsPageContent />;
-}

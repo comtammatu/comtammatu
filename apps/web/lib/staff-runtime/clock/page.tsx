@@ -82,8 +82,3 @@ export async function StaffClockPageContent({
   );
 }
 
-export const ClockPageContent = StaffClockPageContent;
-
-export default function ClockPage() {
-  return <StaffClockPageContent />;
-}

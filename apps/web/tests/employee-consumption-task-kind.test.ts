@@ -18,7 +18,6 @@ const attendanceShiftIntegrityMigration = readRepo(
   "supabase/migrations/20260709094314_attendance_shift_integrity.sql",
 );
 const todayWorkStateSource = readWeb("lib/staff-runtime/_lib/today-work-state.ts");
-const employeeTasksPageSource = readWeb("lib/staff-runtime/tasks/page.tsx");
 const checkoutActionSource = readWeb("lib/staff-runtime/clock/actions.ts");
 const checkoutApprovalsPageSource = readWeb(
   "lib/staff-runtime/checkout-approvals/page.tsx",
@@ -53,16 +52,6 @@ test("consumption task kind remains stable but no longer drives Employee tasks",
     todayWorkStateSource,
     /select\([\s\S]*task_kind/,
     "Today work state should select task_kind from attendance checklist rows",
-  );
-  assert.doesNotMatch(
-    employeeTasksPageSource,
-    /item\.taskKind === "consumption_report"|fetchConsumptionReportForAttendance|fetchConsumptionIngredients/,
-    "Employee tasks should not load or branch into the consumption report workflow",
-  );
-  assert.doesNotMatch(
-    employeeTasksPageSource,
-    /item\.title === "Tiêu hao bếp trong ngày"/,
-    "Employee tasks must not use the display title as a workflow key",
   );
 });
 

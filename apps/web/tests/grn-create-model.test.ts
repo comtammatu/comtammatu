@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  formatGrnLocationLabel,
   getGrnLocationKindLabel,
   isSameGrnReferenceCost,
   pickGrnReceivingLocation,
@@ -51,7 +50,6 @@ test("GRN create model keeps a branch receipt on its kitchen and honors draft lo
 test("GRN create model exposes contextual receiving labels and stable cost comparison", () => {
   assert.equal(getGrnLocationKindLabel(locations[0]!), "Kho");
   assert.equal(getGrnLocationKindLabel(locations[1]!), "Bếp");
-  assert.equal(formatGrnLocationLabel(locations[1]!), "Phước Hải · Bếp");
   assert.equal(isSameGrnReferenceCost(10000, { value: 10000.005 }), true);
   assert.equal(isSameGrnReferenceCost(10000, { value: 10000.02 }), false);
   assert.equal(isSameGrnReferenceCost(10000, null), false);

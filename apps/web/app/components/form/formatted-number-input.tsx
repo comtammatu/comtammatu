@@ -41,24 +41,6 @@ function formatDisplayValue(raw: string, maxFractionDigits: number) {
   return Number.isFinite(value) ? formatDecimal(value, maxFractionDigits) : raw;
 }
 
-export function resolveFormattedNumberInputDisplay(
-  rawValue: string,
-  {
-    focusedValue,
-    isFocused,
-    maxFractionDigits,
-  }: {
-    focusedValue: string | null;
-    isFocused: boolean;
-    maxFractionDigits: number;
-  },
-) {
-  if (isFocused) {
-    return formatNumericInputDraft(focusedValue ?? rawValue);
-  }
-  return formatDisplayValue(rawValue, maxFractionDigits);
-}
-
 export const FormattedNumberInput = React.forwardRef<
   HTMLInputElement,
   FormattedNumberInputProps

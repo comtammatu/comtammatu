@@ -1071,21 +1071,3 @@ export async function StaffWorkdayPageContent({
   );
 }
 
-export async function EmployeeHomePageContent(
-  props: Omit<
-    StaffWorkdayPageContentProps,
-    "plane" | "copy" | "tasksCopy"
-  > = {},
-) {
-  return StaffWorkdayPageContent({
-    ...props,
-    plane: "employee",
-    copy: employeeWorkdayCopy,
-    tasksCopy: employeeWorkdayTasksCopy,
-  });
-}
-
-export default async function EmployeePage() {
-  const authState = await loadAuthState();
-  return <EmployeeHomePageContent authState={authState} />;
-}

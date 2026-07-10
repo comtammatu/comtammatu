@@ -432,38 +432,6 @@ export async function submitSelfOrderBatch(input: {
   return { ok: true, data: parsed.data };
 }
 
-export async function cancelPendingPaymentAndAdd(input: {
-  token: string;
-  clientOpId: string;
-  items: SelfOrderCartItem[];
-  customerNote?: string;
-}): Promise<SelfOrderActionResult<Record<string, unknown>>> {
-  const { data, error } = await service().rpc<Record<string, unknown>>(
-    "self_order_cancel_pending_payment_and_add",
-    {
-      p_token: input.token,
-      p_client_op_id: input.clientOpId,
-      p_items: input.items,
-      p_customer_note: input.customerNote ?? null,
-    },
-  );
-  if (error) {
-    console.error("[self-order] cancel pending payment and add failed", error);
-    const mapped = mapSelfOrderError(error);
-    return { ok: false, ...mapped };
-  }
-  const failure = mapSelfOrderDataFailure(data);
-  if (failure) return { ok: false, ...failure };
-  const parsed = parseBatchActionPayload(data);
-  if (!parsed.success) {
-    return invalidPublicRpcPayload(
-      "cancel_pending_payment_and_add",
-      parsed.error.issues,
-    );
-  }
-  return { ok: true, data: parsed.data };
-}
-
 export async function createSelfOrderPaymentRequest(input: {
   token: string;
   clientOpId: string;

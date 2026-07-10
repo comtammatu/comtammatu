@@ -225,9 +225,6 @@ test("HRM consumption history stays available but no longer gates Employee check
   const taskKindMigration = read(
     "supabase/migrations/_archive/20260619042223_employee_consumption_task_kind.sql",
   );
-  const actionsSrc = read(
-    "apps/web/lib/staff-runtime/consumption-actions.ts",
-  );
   const clockActionsSrc = read(
     "apps/web/lib/staff-runtime/clock/actions.ts",
   );
@@ -311,18 +308,6 @@ test("HRM consumption history stays available but no longer gates Employee check
     "employee submit RPC must not apply Inventory",
   );
 
-  assert.ok(
-    actionsSrc.includes("employee_submit_consumption_report") &&
-      actionsSrc.includes("branch_manager_approve_consumption_report") &&
-      actionsSrc.includes("branch_manager_request_consumption_adjustment") &&
-      actionsSrc.includes("p_no_consumption") &&
-      actionsSrc.includes("default_item_id") &&
-      actionsSrc.includes("defaultSortOrder") &&
-      actionsSrc.includes("mapReviewError") &&
-      actionsSrc.includes("insufficient_stock") &&
-      actionsSrc.includes("wac_not_ready"),
-    "server actions must route report submit/review through safe RPC wrappers",
-  );
   assert.ok(
     !clockActionsSrc.includes("attendance_consumption_reports") &&
       !clockActionsSrc.includes('eq("task_kind", "consumption_report")') &&

@@ -11,7 +11,6 @@ const todayWorkStateSource = readWeb("lib/staff-runtime/_lib/today-work-state.ts
 const employeeTasksClientSource = readWeb(
   "lib/staff-runtime/tasks/tasks-client.tsx",
 );
-const employeeTasksPageSource = readWeb("lib/staff-runtime/tasks/page.tsx");
 const employeeCountPageSource = readWeb("lib/staff-runtime/count/page.tsx");
 const employeeCountActionsSource = readWeb("lib/staff-runtime/count/actions.ts");
 const employeeCountClientSource = readWeb("lib/staff-runtime/count/count-client.tsx");
@@ -29,14 +28,9 @@ test("today work state preserves inventory count and groups start/end phases", (
     "normalizeTaskKind must preserve inventory_count",
   );
   assert.match(
-    todayWorkStateSource,
-    /export function groupChecklistByPhase/,
-    "today work state should expose the phase grouping helper",
-  );
-  assert.match(
-    todayWorkStateSource,
-    /start_of_shift: items\.filter[\s\S]*end_of_shift: items\.filter/,
-    "groupChecklistByPhase must return start and end buckets",
+    employeeTasksClientSource,
+    /CHECKLIST_PHASES = \["start_of_shift", "end_of_shift"\][\s\S]*phaseItems = visibleItems\.filter\(\(item\) => item\.phase === phase\)/,
+    "Employee task checklist should group items into start/end phases",
   );
   assert.doesNotMatch(
     todayWorkStateSource,
@@ -180,26 +174,6 @@ test("employee task UI renders inventory count as a count link, not a checkbox",
     employeeTasksClientSource,
     /\{isCountTask && !item\.done \? \(\s*<Button[\s\S]*?<Link href=\{countHref\}>[\s\S]*?\) : null\}/,
     "Count task should render the count link CTA only while it still needs action",
-  );
-  assert.match(
-    employeeTasksPageSource,
-    /EmployeeCountPanelContent/,
-    "Employee tasks should reuse the blind count panel in the same screen",
-  );
-  assert.match(
-    employeeTasksPageSource,
-    /id=\{countPanelId\}/,
-    "Employee tasks should expose an anchor for the inline count panel",
-  );
-  assert.match(
-    employeeTasksPageSource,
-    /countHref=\{hasCountTask \? `#\$\{countPanelId\}` : countHref\}/,
-    "The count CTA should jump to the inline panel when the count task is present",
-  );
-  assert.match(
-    employeeTasksPageSource,
-    /hideCountTask=\{hasCountTask\}/,
-    "Inline count panel should replace the duplicate count task card",
   );
   assert.match(
     employeeCountPageSource,

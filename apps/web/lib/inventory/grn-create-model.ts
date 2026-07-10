@@ -1,9 +1,6 @@
 import type { GrnDraftLine } from "@/(protected)/inventory/_lib/grn-draft";
 import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
-import {
-  formatInventoryLocationLabelVi,
-  getInventoryLocationKindLabelVi,
-} from "@comtammatu/shared/labels";
+import { getInventoryLocationKindLabelVi } from "@comtammatu/shared/labels";
 
 export type GrnCreateIngredient = {
   id: number;
@@ -62,18 +59,6 @@ export function getGrnLocationKindLabel(
   location: GrnCreateProcurementLocationOption,
 ): string {
   return getInventoryLocationKindLabelVi({
-    siteKind: location.branchKind,
-    locationKind: location.kind,
-    fallbackName: location.name,
-    length: "short",
-  });
-}
-
-export function formatGrnLocationLabel(
-  location: GrnCreateProcurementLocationOption,
-): string {
-  return formatInventoryLocationLabelVi({
-    branchName: location.branchName,
     siteKind: location.branchKind,
     locationKind: location.kind,
     fallbackName: location.name,

@@ -23,10 +23,6 @@ const employeeClockPageSource = readFileSync(
   join(process.cwd(), "lib/staff-runtime/clock/page.tsx"),
   "utf8",
 );
-const employeeTasksPageSource = readFileSync(
-  join(process.cwd(), "lib/staff-runtime/tasks/page.tsx"),
-  "utf8",
-);
 
 test("Employee home keeps Branch Manager tools out of the hot path", () => {
   assert.doesNotMatch(
@@ -94,11 +90,6 @@ test("Branch Manager self-attendance is only clock in and clock out", () => {
     employeeClockPageSource,
     /managerHr: "\/hr"[\s\S]*state\.managerAttendanceOnly \? routes\.managerHr : routes\.tasks/,
     "Branch Manager clock page should link back to HR management by default instead of tasks",
-  );
-  assert.match(
-    employeeTasksPageSource,
-    /state\.managerAttendanceOnly[\s\S]*managerTaskCopy\.noTaskTitle/,
-    "Branch Manager tasks route should not render the personal checklist",
   );
 });
 

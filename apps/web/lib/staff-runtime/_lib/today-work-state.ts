@@ -147,13 +147,6 @@ function assignmentCellKey(row: {
   return `${row.location_id}:${row.ingredient_id}`;
 }
 
-export function groupChecklistByPhase(items: readonly TodayChecklistItem[]) {
-  return {
-    start_of_shift: items.filter((item) => item.phase === "start_of_shift"),
-    end_of_shift: items.filter((item) => item.phase === "end_of_shift"),
-  } satisfies Record<TodayChecklistPhase, TodayChecklistItem[]>;
-}
-
 export async function getTodayWorkState(): Promise<TodayWorkState> {
   const today = getTodayVN();
   const ctx = await getEmployeeContext();

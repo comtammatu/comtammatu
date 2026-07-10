@@ -353,8 +353,3 @@ export async function StaffProfilePageContent({
   );
 }
 
-export const ProfilePageContent = StaffProfilePageContent;
-
-export default function ProfilePage() {
-  return <StaffProfilePageContent />;
-}

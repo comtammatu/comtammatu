@@ -81,13 +81,6 @@ export async function StaffPayslipPageContent(props: {
   );
 }
 
-export const PayslipPageContent = StaffPayslipPageContent;
-
-export default function PayslipPage(props: {
-  searchParams: Promise<{ year?: string }>;
-}) {
-  return <StaffPayslipPageContent searchParams={props.searchParams} />;
-}
 
 function isValidYear(s: string | undefined): boolean {
   if (typeof s !== "string") return false;
