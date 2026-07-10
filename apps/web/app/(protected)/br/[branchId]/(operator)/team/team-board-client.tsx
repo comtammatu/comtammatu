@@ -1,16 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ClipboardCheck as IconClipboardCheck,
   Clock as IconClock,
   Users as IconUsers,
 } from "lucide-react";
-import { formatVNTime } from "@comtammatu/shared/time";
+import {
+  formatVNTime,
+  getVNMinutesOfDay,
+  parseClockTimeToMinutes,
+} from "@comtammatu/shared/time";
 
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { toast } from "@comtammatu/ui/components/sonner";
 
 import {
   Drawer,
@@ -24,6 +30,7 @@ import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { useLongPress } from "@lib/hooks/use-long-press";
+import { forceCloseStaleAttendance } from "@/(protected)/hr/actions";
 import type {
   TeamBoardChecklistPhase,
   TeamBoardCountStatus,
@@ -93,6 +100,21 @@ function attendanceState(
     return "checkout_pending";
   }
   return "working";
+}
+
+function isPastShiftEnd(shift: TeamBoardShiftAttendance | null) {
+  if (!shift?.checkIn || shift.checkOut || shift.checkoutRequestedAt) {
+    return false;
+  }
+
+  const start = parseClockTimeToMinutes(shift.shiftStartTime ?? "");
+  const end = parseClockTimeToMinutes(shift.shiftEndTime ?? "");
+  if (start === null || end === null) return false;
+
+  const effectiveEnd = end > start ? end : end + 1440;
+  const now = getVNMinutesOfDay();
+  const effectiveNow = effectiveEnd > 1440 && now < start ? now + 1440 : now;
+  return effectiveNow >= effectiveEnd;
 }
 
 function AttendanceBadge({
@@ -176,6 +198,7 @@ function CountBadge({ status }: { status: TeamBoardCountStatus }) {
 function rowNeedsAction(row: TeamBoardDisplayRow) {
   if (row.onApprovedLeave) return false;
   return (
+    isPastShiftEnd(row.shift) ||
     attendanceState(row.shift) === "checkout_pending" ||
     row.countStatus === "submitted" ||
     row.countStatus === "not_submitted"
@@ -389,16 +412,19 @@ function TeamBoardMobileGroups({
 
 export function TeamBoardClient({
   rows,
+  branchId,
   countSlipsHref,
   checkoutApprovalsHref,
 }: {
   rows: TeamBoardRow[];
+  branchId: number;
   countSlipsHref: string;
   checkoutApprovalsHref: string;
 }) {
   const displayRows = buildDisplayRows(rows);
   const [filter, setFilter] = useState<TeamBoardFilter>("all");
   const [drawerRow, setDrawerRow] = useState<TeamBoardDisplayRow | null>(null);
+  const [isForceClosing, startForceCloseTransition] = useTransition();
   const router = useRouter();
   const filteredRows = displayRows.filter((row) =>
     matchesTeamBoardFilter(row, filter),
@@ -426,6 +452,39 @@ export function TeamBoardClient({
       return countSlipsHref;
     }
     return undefined;
+  }
+
+  async function forceClose(row: TeamBoardDisplayRow) {
+    const shift = row.shift;
+    if (!shift || !isPastShiftEnd(shift)) return;
+
+    const confirmed = await confirm({
+      title: copy.forceCloseTitle,
+      description: copy.forceCloseDescription,
+      details: [
+        { label: copy.columnEmployee, value: row.fullName },
+        { label: copy.columnShift, value: shift.shiftName ?? copy.shiftNone },
+        { label: copy.forceCloseWorkday, value: copy.forceCloseNoWorkday },
+      ],
+      confirmText: copy.drawerActionForceClose,
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+
+    startForceCloseTransition(async () => {
+      const result = await forceCloseStaleAttendance({
+        attendanceId: shift.attendanceId,
+        branchId,
+      });
+      if (!result.success) {
+        toast.error(result.error ?? copy.forceCloseFailed);
+        return;
+      }
+
+      toast.success(copy.forceCloseSuccess(row.fullName));
+      setDrawerRow(null);
+      router.refresh();
+    });
   }
 
   return (
@@ -521,6 +580,20 @@ export function TeamBoardClient({
                   )}
 
                   {(() => {
+                    if (isPastShiftEnd(drawerRow.shift)) {
+                      return (
+                        <Button
+                          variant="destructive"
+                          size="touch"
+                          className="w-full"
+                          disabled={isForceClosing}
+                          onClick={() => void forceClose(drawerRow)}
+                        >
+                          {copy.drawerActionForceClose}
+                        </Button>
+                      );
+                    }
+
                     const href = rowHref(drawerRow);
                     if (!href) return null;
                     return (

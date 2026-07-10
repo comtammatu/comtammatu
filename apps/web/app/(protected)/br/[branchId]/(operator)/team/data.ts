@@ -33,6 +33,8 @@ export interface TeamBoardShiftAttendance {
   attendanceId: number;
   shiftId: number | null;
   shiftName: string | null;
+  shiftStartTime: string | null;
+  shiftEndTime: string | null;
   checkIn: string | null;
   checkOut: string | null;
   checkoutRequestedAt: string | null;
@@ -121,7 +123,7 @@ export const fetchTeamBoard = withAction(
             `
             id, employee_id, shift_id, check_in, check_out,
             checkout_requested_at, checkout_approved_at,
-            shifts ( name ),
+            shifts ( name, start_time, end_time ),
             employees (
               employee_code, default_checklist_template_id,
               profiles (
@@ -270,6 +272,8 @@ export const fetchTeamBoard = withAction(
         attendanceId: record.id,
         shiftId: record.shift_id,
         shiftName: stringField(record.shifts, "name"),
+        shiftStartTime: stringField(record.shifts, "start_time"),
+        shiftEndTime: stringField(record.shifts, "end_time"),
         checkIn: record.check_in,
         checkOut: record.check_out,
         checkoutRequestedAt: record.checkout_requested_at,

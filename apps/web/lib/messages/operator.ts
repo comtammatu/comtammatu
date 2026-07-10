@@ -203,7 +203,16 @@ export const operator = {
     emptyDescription:
       "Danh sách sẽ hiện khi nhân viên chấm công, có phiếu kiểm kê hôm nay hoặc có nghỉ phép được duyệt hôm nay.",
     drawerActionCheckout: "Mở duyệt kết ca",
+    drawerActionForceClose: "Đóng ca treo",
     drawerActionCountSubmitted: "Duyệt phiếu kiểm kê",
     drawerActionCountMissing: "Theo dõi kiểm kê",
+    forceCloseTitle: "Đóng ca treo?",
+    forceCloseDescription:
+      "Ca sẽ được đóng tại giờ vào và không tính công. Không thể hoàn tác.",
+    forceCloseWorkday: "Ngày công",
+    forceCloseNoWorkday: "0 giờ công",
+    forceCloseSuccess: (employeeName: string) =>
+      `Đã đóng ca treo cho ${employeeName}.`,
+    forceCloseFailed: "Không thể đóng ca treo.",
   },
 } as const;

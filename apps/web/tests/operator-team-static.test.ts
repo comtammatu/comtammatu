@@ -161,6 +161,7 @@ test("operator team board reads branch runtime rows after branch access is check
   assert.match(teamDataSource, /readClient\s*\.from\("employees"\)/);
   assert.match(teamDataSource, /readClient\s*\.from\("attendance_records"\)/);
   assert.match(teamDataSource, /attendance_records"[\s\S]*employees \(/);
+  assert.match(teamDataSource, /shifts \( name, start_time, end_time \)/);
   assert.match(
     teamDataSource,
     /const employee = embeddedRecord\(record\.employees\)/,
@@ -179,6 +180,20 @@ test("operator team board reads branch runtime rows after branch access is check
     teamDataSource,
     /supabase\s*\.from\("attendance_records"\)/,
   );
+});
+
+test("operator team can force-close a shift only after its scheduled end", () => {
+  assert.match(teamBoardSource, /function isPastShiftEnd/);
+  assert.match(teamBoardSource, /parseClockTimeToMinutes\(shift\.shiftStartTime/);
+  assert.match(teamBoardSource, /parseClockTimeToMinutes\(shift\.shiftEndTime/);
+  assert.match(teamBoardSource, /effectiveEnd > 1440 && now < start/);
+  assert.match(teamBoardSource, /isPastShiftEnd\(row\.shift\)/);
+  assert.match(
+    teamBoardSource,
+    /forceCloseStaleAttendance\(\{\s*attendanceId: shift\.attendanceId,\s*branchId,\s*\}\)/,
+  );
+  assert.match(operatorMessagesSource, /drawerActionForceClose/);
+  assert.match(operatorMessagesSource, /forceCloseNoWorkday/);
 });
 
 test("operator team board drawer keeps long shift details inside the drawer", () => {

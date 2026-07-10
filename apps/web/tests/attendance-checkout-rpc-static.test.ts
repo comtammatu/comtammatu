@@ -12,6 +12,9 @@ const integrityMigration = read(
 const patchMigration = read(
   "supabase/migrations/20260709104015_fix_attendance_checkout_notification_conflict.sql",
 );
+const forceCloseAfterShiftEndMigration = read(
+  "supabase/migrations/20260710141738_allow_force_close_after_shift_end.sql",
+);
 
 test("attendance checkout notification upsert has a matching unique arbiter", () => {
   assert.match(
@@ -61,5 +64,28 @@ test("attendance checkout RPC exposure stays scoped to intended callers", () => 
     patchMigration,
     /GRANT ALL ON FUNCTION public\.admin_force_close_attendance/i,
     "force-close RPC should not use broad GRANT ALL",
+  );
+});
+
+test("force-close waits for the scheduled shift end", () => {
+  assert.match(
+    forceCloseAfterShiftEndMigration,
+    /SECURITY DEFINER[\s\S]*auth\.uid\(\)[\s\S]*public\.has_permission\(p_branch_id, 'hr:approve_checkout'\)/,
+  );
+  assert.match(
+    forceCloseAfterShiftEndMigration,
+    /v_shift_end_at := v_record_date \+ v_shift_end[\s\S]*v_shift_end <= v_shift_start[\s\S]*INTERVAL '1 day'/,
+  );
+  assert.match(
+    forceCloseAfterShiftEndMigration,
+    /IF v_now_local < v_shift_end_at THEN[\s\S]*stale_attendance_request_not_found/,
+  );
+  assert.match(
+    forceCloseAfterShiftEndMigration,
+    /REVOKE ALL ON FUNCTION public\.admin_force_close_attendance[\s\S]*GRANT EXECUTE ON FUNCTION public\.admin_force_close_attendance/,
+  );
+  assert.doesNotMatch(
+    forceCloseAfterShiftEndMigration,
+    /GRANT ALL ON FUNCTION public\.admin_force_close_attendance/i,
   );
 });

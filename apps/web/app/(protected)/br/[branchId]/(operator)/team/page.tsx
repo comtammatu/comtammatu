@@ -133,6 +133,7 @@ export default async function TeamBoardPage({
         result.success ? (
           <TeamBoardClient
             rows={rows}
+            branchId={context.branchId}
             countSlipsHref={`${basePath}/stock/count-slips`}
             checkoutApprovalsHref={`${basePath}/shift/checkout-approvals`}
           />

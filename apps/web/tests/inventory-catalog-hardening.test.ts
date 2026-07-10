@@ -12,6 +12,9 @@ function readRepo(path: string): string {
 const hardeningSql = readRepo(
   "supabase/migrations/_archive/20260629144952_ingredient_catalog_tenant_scope_hardening.sql",
 );
+const ingredientActionSource = readRepo(
+  "apps/web/app/(protected)/inventory/ingredient-actions.ts",
+);
 const recipeActionSource = readRepo(
   "apps/web/app/(protected)/inventory/recipe-actions.ts",
 );
@@ -62,6 +65,17 @@ test("ingredient catalog callable RPC privileges are explicit", () => {
   assert.match(
     hardeningSql,
     /GRANT EXECUTE ON FUNCTION public\.inv_to_base\(bigint, bigint, numeric\) TO authenticated;/,
+  );
+});
+
+test("ingredient catalog updates preserve shelf life required by the RPC", () => {
+  assert.match(
+    ingredientActionSource,
+    /p_shelf_life_days:\s*shelfLifeDays as never/,
+  );
+  assert.match(
+    ingredientActionSource,
+    /\.select\("shelf_life_days"\)[\s\S]*\.eq\("tenant_id", claims\.tenant_id\)[\s\S]*rpcCatalogArgs\([\s\S]*existing\.shelf_life_days/,
   );
 });
 

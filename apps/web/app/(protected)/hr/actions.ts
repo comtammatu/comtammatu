@@ -1035,7 +1035,7 @@ const forceCloseStaleAttendanceSchema = z.object({
 
 function mapForceCloseAttendanceError(message: string | undefined): string {
   if (message?.includes("stale_attendance_request_not_found")) {
-    return "Chỉ có thể đóng ca treo từ ngày trước.";
+    return "Ca chưa quá giờ kết thúc hoặc đã kết ca.";
   }
   if (
     message?.includes("forbidden_checkout_approval") ||
@@ -1095,6 +1095,7 @@ export const forceCloseStaleAttendance = withAction(
     });
 
     revalidatePath("/hr");
+    revalidatePath(`/br/${data.branchId}/team`);
     return { success: true, data: checkOutTime };
   },
 );
