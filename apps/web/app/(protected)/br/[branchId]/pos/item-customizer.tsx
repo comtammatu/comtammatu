@@ -11,8 +11,6 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { Separator } from "@comtammatu/ui/components/separator";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { FieldLabel } from "@comtammatu/ui/components/field";
 import {
@@ -24,6 +22,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetDescription,
@@ -331,11 +330,11 @@ export function ItemCustomizer({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="h-dvh max-h-dvh p-0"
+        className="h-dvh max-h-dvh overflow-hidden p-0 data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh"
       >
         {item && (
-          <div className="flex h-full flex-col">
-            <SheetHeader>
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
+            <SheetHeader className="shrink-0">
               <div className="flex items-center justify-between gap-3">
                 <SheetTitle className="min-w-0 flex-1 truncate text-left">
                   {item.name}
@@ -372,8 +371,7 @@ export function ItemCustomizer({
               </SheetDescription>
             </SheetHeader>
 
-            <ScrollArea className="flex-1">
-              <div className="flex flex-col gap-4 px-4 pb-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4">
                 {item.menu_item_variants.length > 0 && (
                   <div>
                     <h3 className="font-heading mb-2 text-base font-semibold">
@@ -646,11 +644,9 @@ export function ItemCustomizer({
                     )}
                   </div>
                 )}
-              </div>
-            </ScrollArea>
+            </div>
 
-            <Separator />
-            <div className="flex items-center justify-between gap-3 p-4">
+            <SheetFooter className="shrink-0 flex-row items-center justify-between gap-3 pos-safe-bottom sm:flex-row">
               <div>
                 <p className="text-sm text-muted-foreground">
                   {FORM_VI.subtotal}
@@ -720,7 +716,7 @@ export function ItemCustomizer({
                         : messages.pos.customizer.addToCart}
                 </Button>
               </div>
-            </div>
+            </SheetFooter>
           </div>
         )}
       </SheetContent>

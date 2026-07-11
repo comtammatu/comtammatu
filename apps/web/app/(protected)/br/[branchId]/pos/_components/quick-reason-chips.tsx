@@ -46,7 +46,10 @@ export function QuickReasonChips({
     <div
       role="group"
       aria-label={ariaLabel ?? "Gợi ý nhanh"}
-      className={cn("flex flex-wrap gap-1.5", className)}
+      className={cn(
+        "no-scrollbar flex flex-nowrap gap-1.5 overflow-x-auto overscroll-x-contain touch-pan-x",
+        className,
+      )}
     >
       {presets.map((preset) => {
         const isActive = tokenSet.has(preset.toLowerCase());
@@ -57,7 +60,7 @@ export function QuickReasonChips({
             size="touch"
             variant={isActive ? "default" : "outline"}
             aria-pressed={isActive}
-            className="rounded-full px-3 text-xs font-normal"
+            className="shrink-0 rounded-full px-3 text-xs font-normal"
             onClick={() => toggle(preset)}
           >
             {preset}

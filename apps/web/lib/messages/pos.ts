@@ -406,7 +406,7 @@ export const pos = {
     notePlaceholder: "Ghi chú thêm...",
     decreaseQuantityAria: "Giảm số lượng",
     increaseQuantityAria: "Tăng số lượng",
-    addToOrder: "Thêm vào đơn",
+    addToOrder: "Thêm",
     update: "Cập nhật",
     updateSent: "Cập nhật món đã gửi",
     addToCart: "Thêm vào giỏ",

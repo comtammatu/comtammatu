@@ -135,6 +135,9 @@ Approved project utilities:
 - `chrome-safe-pb` / `chrome-safe-top` are limited to
   fixed or sticky app shell chrome affected by mobile safe areas. Side
   `SheetContent` owns its top/bottom safe-area inset padding by default.
+  Do NOT put `chrome-safe-top` on the Sheet absolute close control — its
+  `max(0.5rem, …)` floor drops the X below `SheetTitle` on zero-inset
+  viewports; Sheet close uses `top-[env(safe-area-inset-top,0px)]` instead.
 - `chrome-tap` disables the mobile tap-highlight/callout flash on app chrome
   (nav, tiles, headers, buttons) so the installed operator PWA doesn't read as
   a website; do not apply it to data content that must stay selectable
