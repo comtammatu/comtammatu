@@ -12,6 +12,7 @@ import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
@@ -221,9 +222,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
         {/* ─── Payment info ─── */}
         {order.payment && (
           <Frame className="p-3 flex flex-col gap-2">
-            <SectionLabel>
-              {ORDERS_VI.payment}
-            </SectionLabel>
+            <SectionLabel>{ORDERS_VI.payment}</SectionLabel>
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <Badge variant="outline">
@@ -240,9 +239,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
 
         {!order.payment && order.payment_method && (
           <Frame className="p-3 flex flex-col gap-2">
-            <SectionLabel>
-              {ORDERS_VI.payment}
-            </SectionLabel>
+            <SectionLabel>{ORDERS_VI.payment}</SectionLabel>
             <div className="flex items-center gap-2 text-sm">
               <Badge variant="outline">
                 {getPaymentMethodLabelVi(order.payment_method)}
@@ -559,6 +556,9 @@ export function OrderDetailSheet({
           <SheetTitle className="font-mono text-base">
             #{order.order_number}
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Chi tiết đơn hàng và lịch sử thao tác.
+          </SheetDescription>
         </SheetHeader>
         <OrderDetailContent order={order} />
       </SheetContent>

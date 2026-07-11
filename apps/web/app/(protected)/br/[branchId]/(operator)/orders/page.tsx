@@ -28,6 +28,7 @@ export default async function OperatorOrdersPage({ params }: PageProps) {
         <OperatorOrdersClient
           orders={result.data.orders}
           totalCount={result.data.summary.totalCount}
+          inProgressCount={result.data.summary.inProgressCount}
         />
       ) : (
         <AppEmptyState

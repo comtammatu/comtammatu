@@ -108,6 +108,7 @@ async function loadVisibleBranchIds({
 
 interface CheckoutApprovalsPageContentProps {
   routeBranchId?: number;
+  focusAttendanceId?: number;
   hideHeaderOnMobile?: boolean;
   plane?: CheckoutApprovalsPlane;
 }
@@ -116,6 +117,7 @@ type CheckoutApprovalsPlane = "employee" | "branch";
 
 export async function StaffCheckoutApprovalsPageContent({
   routeBranchId,
+  focusAttendanceId,
   hideHeaderOnMobile,
   plane = "employee",
 }: CheckoutApprovalsPageContentProps = {}) {
@@ -272,35 +274,45 @@ export async function StaffCheckoutApprovalsPageContent({
       description={copy.checkoutApprovalsDescriptionAll}
       hideHeaderOnMobile={hideHeaderOnMobile}
       action={
-        <Button
-          asChild
-          variant="outline"
-          size="touch"
-          className="w-full sm:w-fit"
-        >
-          <Link href={homeLink.href}>
-            <IconHome data-icon="inline-start" />
-            {homeLink.label}
-          </Link>
-        </Button>
+        plane === "employee" ? (
+          <Button
+            asChild
+            variant="outline"
+            size="touch"
+            className="w-full sm:w-fit"
+          >
+            <Link href={homeLink.href}>
+              <IconHome data-icon="inline-start" />
+              {homeLink.label}
+            </Link>
+          </Button>
+        ) : undefined
       }
     >
-      <Panel
-        icon={IconClipboardCheck}
-        title="Yêu cầu đang chờ"
-        description="Duyệt xong thì giờ ra được ghi theo lúc nhân viên gửi yêu cầu."
-        tone={items.length > 0 ? "warning" : "success"}
-        badge={{
-          children: `${formatCount(items.length)} chờ duyệt`,
-          variant: items.length > 0 ? "warning" : "success",
-        }}
-      >
+      {plane === "branch" ? (
         <CheckoutApprovalsClient
           items={items}
           canApprove={canApprove === true}
+          focusAttendanceId={focusAttendanceId}
         />
-      </Panel>
+      ) : (
+        <Panel
+          icon={IconClipboardCheck}
+          title="Yêu cầu đang chờ"
+          description="Duyệt xong thì giờ ra được ghi theo lúc nhân viên gửi yêu cầu."
+          tone={items.length > 0 ? "warning" : "success"}
+          badge={{
+            children: `${formatCount(items.length)} chờ duyệt`,
+            variant: items.length > 0 ? "warning" : "success",
+          }}
+        >
+          <CheckoutApprovalsClient
+            items={items}
+            canApprove={canApprove === true}
+            focusAttendanceId={focusAttendanceId}
+          />
+        </Panel>
+      )}
     </PageShell>
   );
 }
-

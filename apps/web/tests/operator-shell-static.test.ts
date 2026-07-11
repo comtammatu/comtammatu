@@ -262,9 +262,9 @@ test("operator hub owns branch workflow entry tiles", () => {
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer\?queue=receive"/,
   );
-  assert.match(
+  assert.doesNotMatch(
     operatorTiles,
-    /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer",\s*label: "Điều chuyển"/,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/,
   );
   assert.match(
     operatorTiles,

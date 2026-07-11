@@ -111,6 +111,9 @@ test("branch orders route owns operator UI instead of wrapping Office orders", (
   const ordersClient = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/orders/operator-orders-client.tsx",
   );
+  const orderDetailSheet = read(
+    "apps/web/app/(protected)/orders/order-detail-sheet.tsx",
+  );
 
   assert.match(ordersPage, /BranchOperatorPage/);
   assert.match(ordersPage, /OperatorOrdersClient/);
@@ -120,8 +123,14 @@ test("branch orders route owns operator UI instead of wrapping Office orders", (
   assert.doesNotMatch(ordersPage, /BranchOpsRefresh/);
   assert.doesNotMatch(ordersPage, /fetchRefunds/);
   assert.match(ordersClient, /ItemGroup/);
+  assert.match(ordersClient, /TabsList/);
+  assert.match(ordersClient, /operatorActiveTab/);
+  assert.match(ordersClient, /order\.status !== "completed"/);
+  assert.match(ordersClient, /order\.status !== "cancelled"/);
   assert.match(ordersClient, /OrderDetailSheet/);
   assert.doesNotMatch(ordersClient, /OrdersPageBody|DataTable|AppPageHeader/);
+  assert.match(orderDetailSheet, /SheetDescription/);
+  assert.match(orderDetailSheet, /<SheetDescription className="sr-only">/);
 });
 
 test("native branch hub pages use the Branch operator interface contract", () => {

@@ -37,7 +37,10 @@ import { Label } from "@comtammatu/ui/components/label";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { AppEmptyState } from "@/components/surface";
 import { EmployeeDetailList } from "../components/staff-runtime-page";
-import { approveCheckoutRequest, rejectCheckoutRequest } from "../clock/actions";
+import {
+  approveCheckoutRequest,
+  rejectCheckoutRequest,
+} from "../clock/actions";
 import { useSwipeReveal, type SwipeReveal } from "@lib/hooks/use-swipe-reveal";
 import { useLongPress } from "@lib/hooks/use-long-press";
 
@@ -62,6 +65,7 @@ export interface CheckoutApprovalItem {
 interface CheckoutApprovalsClientProps {
   items: CheckoutApprovalItem[];
   canApprove: boolean;
+  focusAttendanceId?: number;
 }
 
 function ApprovalRow({
@@ -144,7 +148,11 @@ function ApprovalRow({
             onApprove();
           }}
         >
-          {approving ? <Spinner className="size-5" /> : <IconCheck className="size-5" />}
+          {approving ? (
+            <Spinner className="size-5" />
+          ) : (
+            <IconCheck className="size-5" />
+          )}
           <span className="text-2xs font-medium uppercase">Duyệt</span>
         </Button>
       </div>
@@ -152,7 +160,7 @@ function ApprovalRow({
       <div
         className={cn(
           "bg-background transition-transform duration-300 ease-out cursor-pointer h-full border-r",
-          isRevealed ? "-translate-x-35" : "translate-x-0"
+          isRevealed ? "-translate-x-35" : "translate-x-0",
         )}
         {...handlers}
       >
@@ -165,7 +173,10 @@ function ApprovalRow({
               <IconClipboardCheck />
             </ItemMedia>
             <ItemContent className="min-w-0">
-              <ItemTitle size="heading" className="flex items-center flex-wrap gap-2">
+              <ItemTitle
+                size="heading"
+                className="flex items-center flex-wrap gap-2"
+              >
                 {item.employeeName}
                 {item.employeeCode ? (
                   <span className="font-mono text-xs text-muted-foreground">
@@ -185,11 +196,15 @@ function ApprovalRow({
                   rows={[
                     {
                       label: "Vào ca",
-                      value: <span className="font-mono">{item.checkInLabel}</span>,
+                      value: (
+                        <span className="font-mono">{item.checkInLabel}</span>
+                      ),
                     },
                     {
                       label: "Yêu cầu ra",
-                      value: <span className="font-mono">{item.requestedLabel}</span>,
+                      value: (
+                        <span className="font-mono">{item.requestedLabel}</span>
+                      ),
                     },
                   ]}
                 />
@@ -220,6 +235,7 @@ function ApprovalRow({
 export function CheckoutApprovalsClient({
   items,
   canApprove,
+  focusAttendanceId,
 }: CheckoutApprovalsClientProps) {
   const [localItems, setLocalItems] = useState(items);
   const [pendingId, setPendingId] = useState<number | null>(null);
@@ -229,10 +245,15 @@ export function CheckoutApprovalsClient({
     setLocalItems(items);
   }, [items]);
 
-  const [rejectTarget, setRejectTarget] = useState<CheckoutApprovalItem | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<CheckoutApprovalItem | null>(
+    null,
+  );
   const [rejectReason, setRejectReason] = useState("");
 
-  const [detailsTarget, setDetailsTarget] = useState<CheckoutApprovalItem | null>(null);
+  const [detailsTarget, setDetailsTarget] =
+    useState<CheckoutApprovalItem | null>(
+      () => items.find((item) => item.id === focusAttendanceId) ?? null,
+    );
 
   const swipe = useSwipeReveal({ revealWidth: 140 });
 
@@ -363,7 +384,8 @@ export function CheckoutApprovalsClient({
           </DrawerHeader>
           <ScrollArea className="px-4" style={{ maxHeight: "60vh" }}>
             <div className="pb-4">
-              {detailsTarget?.checklist && detailsTarget.checklist.length > 0 ? (
+              {detailsTarget?.checklist &&
+              detailsTarget.checklist.length > 0 ? (
                 <div className="flex flex-col gap-3">
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                     Checklist công việc
@@ -379,7 +401,11 @@ export function CheckoutApprovalsClient({
                         ) : (
                           <div className="size-4 rounded-full border border-muted-foreground shrink-0 mt-0.5 bg-background" />
                         )}
-                        <span className={c.isDone ? "line-through text-muted-foreground" : ""}>
+                        <span
+                          className={
+                            c.isDone ? "line-through text-muted-foreground" : ""
+                          }
+                        >
                           {c.title}
                         </span>
                         {c.isRequired ? (

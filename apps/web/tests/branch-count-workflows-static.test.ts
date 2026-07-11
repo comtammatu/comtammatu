@@ -54,16 +54,28 @@ test("Branch count slip review owns a touch queue and Branch revalidation", () =
 
   assert.match(route, /loadBranchCountSlipData/);
   assert.match(route, /BranchCountSlipsClient/);
+  assert.match(route, /searchParams/);
+  assert.match(route, /loadBranchCountSlipData\(branchId, employeeId\)/);
+  assert.match(route, /focusFirstPending=\{employeeId !== undefined\}/);
   assert.doesNotMatch(route, /CountSlipsPageContent|embedded/);
   assert.match(data, /import "server-only"/);
   assert.match(data, /PERMISSION_KEYS\.INVENTORY_COUNT_APPROVE/);
   assert.match(data, /\.eq\("branch_id", routeBranchId\)/);
+  assert.match(
+    data,
+    /slipsQuery = slipsQuery\.eq\("employee_id", focusEmployeeId\)/,
+  );
   assert.match(client, /<button type="button" onClick=\{\(\) => setSelectedId/);
+  assert.match(client, /focusFirstPending[\s\S]*row\.status === "submitted"/);
   assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
   assert.match(client, /approveCountSlip/);
   assert.match(client, /requestCountRecount/);
   assert.match(client, /md:grid-cols-2/);
-  assert.doesNotMatch(client, /DataTable|DocumentFormFrame|embedded/);
+  assert.doesNotMatch(
+    client,
+    /DataTable|DocumentFormFrame|BranchOperatorPanel|embedded/,
+  );
+  assert.doesNotMatch(client, /stock\/count-assignments/);
   assert.match(
     actions,
     /revalidatePath\(`\/br\/\$\{slip\.branch_id\}\/stock\/count-slips`\)/,

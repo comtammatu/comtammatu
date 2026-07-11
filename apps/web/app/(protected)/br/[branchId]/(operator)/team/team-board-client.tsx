@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ClipboardCheck as IconClipboardCheck,
+  ChevronRight as IconChevronRight,
   Clock as IconClock,
   Users as IconUsers,
 } from "lucide-react";
@@ -29,7 +29,6 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
-import { useLongPress } from "@lib/hooks/use-long-press";
 import { forceCloseStaleAttendance } from "@/(protected)/hr/actions";
 import type {
   TeamBoardChecklistPhase,
@@ -264,13 +263,6 @@ function groupRowsByShift(rows: TeamBoardDisplayRow[]): TeamBoardShiftGroup[] {
   });
 }
 
-function actionLabel(row: TeamBoardDisplayRow): string {
-  const state = attendanceState(row.shift);
-  if (state === "checkout_pending") return copy.drawerActionCheckout;
-  if (row.countStatus === "submitted") return copy.drawerActionCountSubmitted;
-  return copy.drawerActionCountMissing;
-}
-
 function TeamBoardFilters({
   rows,
   value,
@@ -322,57 +314,51 @@ function TeamBoardFilters({
 function MobileTeamCard({
   row,
   onOpenDrawer,
-  href,
   showShiftName = true,
   className,
 }: {
   row: TeamBoardDisplayRow;
   onOpenDrawer: (row: TeamBoardDisplayRow) => void;
-  href: string | undefined;
   showShiftName?: boolean;
   className?: string;
 }) {
-  const router = useRouter();
   const positionLabel = row.positionLabel ?? copy.positionUnknown;
   const shiftLabel = row.shift?.shiftName ?? copy.shiftNone;
   const subtitle = showShiftName
     ? `${positionLabel} · ${shiftLabel}`
     : positionLabel;
-  const longPress = useLongPress({
-    onLongPress: () => onOpenDrawer(row),
-    onClick: () => {
-      if (href) router.push(href);
-      else onOpenDrawer(row);
-    },
-  });
 
   return (
     <InteractiveCard
+      asChild
       minHeight="tap"
       padding="compact"
-      className={`h-auto touch-pan-y select-none cursor-pointer ${className ?? ""}`}
-      {...longPress}
+      className={`h-auto touch-manipulation select-none text-left ${className ?? ""}`}
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-2 pointer-events-none">
-        <div className="flex min-w-0 items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{row.fullName}</p>
-            <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+      <button type="button" onClick={() => onOpenDrawer(row)}>
+        <div className="flex min-w-0 flex-1 flex-col gap-2 pointer-events-none">
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{row.fullName}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {subtitle}
+              </p>
+            </div>
+            <AttendanceBadge shift={row.shift} />
           </div>
-          <AttendanceBadge shift={row.shift} />
+          <div className="flex flex-wrap gap-1.5">
+            <CountBadge status={row.countStatus} />
+            {row.onApprovedLeave ? (
+              <StatusBadge
+                domain="leave-request"
+                value="approved"
+                label={copy.leaveApproved}
+              />
+            ) : null}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          <CountBadge status={row.countStatus} />
-          {row.onApprovedLeave ? (
-            <StatusBadge
-              domain="leave-request"
-              value="approved"
-              label={copy.leaveApproved}
-            />
-          ) : null}
-        </div>
-      </div>
-      <IconClipboardCheck className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
+        <IconChevronRight className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
+      </button>
     </InteractiveCard>
   );
 }
@@ -380,11 +366,9 @@ function MobileTeamCard({
 function TeamBoardMobileGroups({
   groups,
   onOpenDrawer,
-  rowHref,
 }: {
   groups: TeamBoardShiftGroup[];
   onOpenDrawer: (row: TeamBoardDisplayRow) => void;
-  rowHref: (row: TeamBoardDisplayRow) => string | undefined;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -407,7 +391,6 @@ function TeamBoardMobileGroups({
               <MobileTeamCard
                 key={row.key}
                 row={row}
-                href={rowHref(row)}
                 onOpenDrawer={onOpenDrawer}
                 showShiftName={false}
               />
@@ -450,19 +433,6 @@ export function TeamBoardClient({
         icon={<IconUsers />}
       />
     );
-  }
-
-  function rowHref(row: TeamBoardDisplayRow): string | undefined {
-    const state = attendanceState(row.shift);
-    if (state === "checkout_pending") return checkoutApprovalsHref;
-    if (row.onApprovedLeave) return undefined;
-    if (
-      row.countStatus === "submitted" ||
-      row.countStatus === "not_submitted"
-    ) {
-      return countSlipsHref;
-    }
-    return undefined;
   }
 
   async function forceClose(row: TeamBoardDisplayRow) {
@@ -524,7 +494,6 @@ export function TeamBoardClient({
         ) : (
           <TeamBoardMobileGroups
             groups={filteredGroups}
-            rowHref={rowHref}
             onOpenDrawer={setDrawerRow}
           />
         )}
@@ -590,34 +559,52 @@ export function TeamBoardClient({
                     </div>
                   )}
 
-                  {(() => {
-                    if (isPastShiftEnd(drawerRow.shift)) {
-                      return (
-                        <Button
-                          variant="destructive"
-                          size="touch"
-                          className="w-full"
-                          disabled={isForceClosing}
-                          onClick={() => void forceClose(drawerRow)}
-                        >
-                          {copy.drawerActionForceClose}
-                        </Button>
-                      );
-                    }
-
-                    const href = rowHref(drawerRow);
-                    if (!href) return null;
-                    return (
+                  <div className="grid gap-2">
+                    {isPastShiftEnd(drawerRow.shift) ? (
+                      <Button
+                        variant="destructive"
+                        size="touch"
+                        className="w-full"
+                        disabled={isForceClosing}
+                        onClick={() => void forceClose(drawerRow)}
+                      >
+                        {copy.drawerActionForceClose}
+                      </Button>
+                    ) : null}
+                    {attendanceState(drawerRow.shift) === "checkout_pending" ? (
                       <Button
                         variant="default"
                         size="touch"
                         className="w-full"
-                        onClick={() => router.push(href)}
+                        onClick={() =>
+                          router.push(
+                            `${checkoutApprovalsHref}?attendanceId=${drawerRow.shift?.attendanceId}`,
+                          )
+                        }
                       >
-                        {actionLabel(drawerRow)}
+                        {copy.drawerActionCheckout}
                       </Button>
-                    );
-                  })()}
+                    ) : null}
+                    {drawerRow.countStatus === "submitted" ? (
+                      <Button
+                        variant={
+                          attendanceState(drawerRow.shift) ===
+                          "checkout_pending"
+                            ? "outline"
+                            : "default"
+                        }
+                        size="touch"
+                        className="w-full"
+                        onClick={() =>
+                          router.push(
+                            `${countSlipsHref}?employeeId=${drawerRow.employeeId}`,
+                          )
+                        }
+                      >
+                        {copy.drawerActionCountSubmitted}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </>

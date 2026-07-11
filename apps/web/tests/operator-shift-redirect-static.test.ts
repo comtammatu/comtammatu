@@ -122,6 +122,9 @@ test("operator checkout approvals render the branch approvals plane", () => {
   const employeeSource = read(
     "apps/web/lib/staff-runtime/checkout-approvals/page.tsx",
   );
+  const clientSource = read(
+    "apps/web/lib/staff-runtime/checkout-approvals/checkout-approvals-client.tsx",
+  );
 
   assert.ok(
     source.includes(
@@ -136,6 +139,15 @@ test("operator checkout approvals render the branch approvals plane", () => {
   assert.match(employeeSource, /routeBranchId\?: number/);
   assert.match(employeeSource, /plane === "branch" \? BranchOperatorPage/);
   assert.match(employeeSource, /plane === "branch" \? BranchOperatorPanel/);
+  assert.match(source, /searchParams/);
+  assert.match(source, /focusAttendanceId=/);
+  assert.match(employeeSource, /focusAttendanceId=\{focusAttendanceId\}/);
+  assert.match(employeeSource, /plane === "employee" \? \(/);
+  assert.match(employeeSource, /plane === "branch" \? \(/);
+  assert.match(
+    clientSource,
+    /items\.find\(\(item\) => item\.id === focusAttendanceId\)/,
+  );
 });
 
 test("operator stock count renders the branch count plane", () => {

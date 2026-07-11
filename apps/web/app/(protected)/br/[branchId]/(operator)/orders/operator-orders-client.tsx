@@ -15,6 +15,7 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { OrderDetailSheet } from "@/(protected)/orders/order-detail-sheet";
@@ -24,11 +25,18 @@ import { ORDERS_COPY } from "@/(protected)/orders/orders-copy";
 export function OperatorOrdersClient({
   orders,
   totalCount,
+  inProgressCount,
 }: {
   orders: OrderRow[];
   totalCount: number;
+  inProgressCount: number;
 }) {
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
+  const [view, setView] = useState<"active" | "recent">("active");
+  const activeOrders = orders.filter(
+    (order) => order.status !== "completed" && order.status !== "cancelled",
+  );
+  const visibleOrders = view === "active" ? activeOrders : orders;
 
   if (orders.length === 0) {
     return (
@@ -43,55 +51,85 @@ export function OperatorOrdersClient({
 
   return (
     <>
-      <ItemGroup className="gap-2">
-        {orders.map((order) => (
-          <Item
-            key={order.id}
-            asChild
-            variant="outline"
-            size="sm"
-            className="chrome-tap min-h-14 bg-card text-left"
-          >
-            <button type="button" onClick={() => setSelectedOrder(order)}>
-              <ItemHeader>
-                <ItemContent className="min-w-0">
-                  <ItemTitle className="font-mono">
-                    {order.order_number}
-                  </ItemTitle>
-                  <ItemDescription>
-                    {STAFF_VI.long}: {order.created_by_name}
-                  </ItemDescription>
-                </ItemContent>
-                <StatusBadge domain="order" value={order.status} />
-              </ItemHeader>
-              <ItemFooter>
-                <span className="text-xs text-muted-foreground">
-                  {BRANCH_VI.long}: {order.branch_name}
-                </span>
-                <span className="font-mono text-sm font-semibold tabular-nums">
-                  {formatVND(order.total_amount)}
-                </span>
-              </ItemFooter>
-              <ItemFooter>
-                <span className="text-xs text-muted-foreground">
-                  {formatVNDateTime(order.created_at)}
-                </span>
-                {order.payment_method ? (
-                  <Badge variant="outline" className="text-xs">
-                    {getPaymentMethodLabelVi(order.payment_method)}
-                  </Badge>
-                ) : (
+      <Tabs
+        value={view}
+        onValueChange={(value) => setView(value as typeof view)}
+      >
+        <TabsList
+          className="grid min-h-12 w-full grid-cols-2"
+          aria-label={ORDERS_COPY.operatorTabsAriaLabel}
+        >
+          <TabsTrigger value="active" className="min-h-11">
+            {ORDERS_COPY.operatorActiveTab(inProgressCount)}
+          </TabsTrigger>
+          <TabsTrigger value="recent" className="min-h-11">
+            {ORDERS_COPY.operatorRecentTab}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {visibleOrders.length === 0 ? (
+        <AppEmptyState
+          title={ORDERS_COPY.operatorActiveEmptyTitle}
+          description={ORDERS_COPY.operatorActiveEmptyDescription}
+          compact
+          symbol="riceBowl"
+        />
+      ) : (
+        <ItemGroup className="gap-2">
+          {visibleOrders.map((order) => (
+            <Item
+              key={order.id}
+              asChild
+              variant="outline"
+              size="sm"
+              className="chrome-tap min-h-14 bg-card text-left"
+            >
+              <button type="button" onClick={() => setSelectedOrder(order)}>
+                <ItemHeader>
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className="font-mono">
+                      {order.order_number}
+                    </ItemTitle>
+                    <ItemDescription>
+                      {STAFF_VI.long}: {order.created_by_name}
+                    </ItemDescription>
+                  </ItemContent>
+                  <StatusBadge domain="order" value={order.status} />
+                </ItemHeader>
+                <ItemFooter>
                   <span className="text-xs text-muted-foreground">
-                    {ORDERS_COPY.noPayment}
+                    {BRANCH_VI.long}: {order.branch_name}
                   </span>
-                )}
-              </ItemFooter>
-            </button>
-          </Item>
-        ))}
-      </ItemGroup>
+                  <span className="font-mono text-sm font-semibold tabular-nums">
+                    {formatVND(order.total_amount)}
+                  </span>
+                </ItemFooter>
+                <ItemFooter>
+                  <span className="text-xs text-muted-foreground">
+                    {formatVNDateTime(order.created_at)}
+                  </span>
+                  {order.payment_method ? (
+                    <Badge variant="outline" className="text-xs">
+                      {getPaymentMethodLabelVi(order.payment_method)}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {ORDERS_COPY.noPayment}
+                    </span>
+                  )}
+                </ItemFooter>
+              </button>
+            </Item>
+          ))}
+        </ItemGroup>
+      )}
       <p className="text-sm text-muted-foreground">
-        {ORDERS_COPY.operatorCountNote(orders.length, totalCount)}
+        {view === "active"
+          ? ORDERS_COPY.operatorActiveCountNote(
+              activeOrders.length,
+              inProgressCount,
+            )
+          : ORDERS_COPY.operatorCountNote(orders.length, totalCount)}
       </p>
       <OrderDetailSheet
         order={selectedOrder}

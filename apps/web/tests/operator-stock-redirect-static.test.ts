@@ -179,7 +179,7 @@ test("operator count-slip approvals render inside the branch operator shell", ()
     "apps/web/lib/inventory/branch-count-slip-data.ts",
   );
 
-  assert.match(source, /loadBranchCountSlipData\(branchId\)/);
+  assert.match(source, /loadBranchCountSlipData\(branchId, employeeId\)/);
   assert.match(source, /<BranchCountSlipsClient/);
   assert.doesNotMatch(source, /CountSlipsPageContent|embedded|DataTable/);
   assert.doesNotMatch(source, /redirect\(`\/inventory\/count-slips/);

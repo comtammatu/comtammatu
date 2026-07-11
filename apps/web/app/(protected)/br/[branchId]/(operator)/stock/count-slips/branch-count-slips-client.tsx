@@ -1,13 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check as IconCheck,
   ChevronRight as IconChevronRight,
   ClipboardCheck as IconClipboardCheck,
-  ClipboardList as IconClipboardList,
   RotateCcw as IconRecount,
 } from "lucide-react";
 import {
@@ -44,7 +42,6 @@ import { StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorDetailList,
   BranchOperatorPage,
-  BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   approveCountSlip,
@@ -79,20 +76,24 @@ function changedLineCount(row: CountSlipRow): number {
 }
 
 export function BranchCountSlipsClient({
-  branchId,
   branchName,
   initialRows,
   loadFailed,
+  focusFirstPending,
 }: {
-  branchId: number;
   branchName: string;
   initialRows: CountSlipRow[];
   loadFailed: boolean;
+  focusFirstPending: boolean;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState(initialRows);
   const [view, setView] = useState<QueueView>("pending");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(() =>
+    focusFirstPending
+      ? (initialRows.find((row) => row.status === "submitted")?.id ?? null)
+      : null,
+  );
   const [recounting, setRecounting] = useState(false);
   const [recountNote, setRecountNote] = useState("");
   const [pendingAction, setPendingAction] = useState<
@@ -191,13 +192,6 @@ export function BranchCountSlipsClient({
       description={branchName}
       hideHeaderOnMobile
     >
-      <Button asChild variant="outline" size="touch" className="w-full">
-        <Link href={`/br/${branchId}/stock/count-assignments`}>
-          <IconClipboardList className="size-4" />
-          {INVENTORY_VI.countAssignTitle}
-        </Link>
-      </Button>
-
       <Tabs value={view} onValueChange={(value) => setView(value as QueueView)}>
         <TabsList className="grid min-h-12 w-full grid-cols-2">
           <TabsTrigger value="pending" className="min-h-11">
@@ -209,16 +203,12 @@ export function BranchCountSlipsClient({
         </TabsList>
       </Tabs>
 
-      <BranchOperatorPanel
-        title={
+      <section
+        aria-label={
           view === "pending"
             ? INVENTORY_VI.countSlipTitle
             : INVENTORY_VI.countSlipHistoryTitle
         }
-        description={INVENTORY_VI.countSlipDescription}
-        icon={view === "pending" ? IconClipboardCheck : IconClipboardList}
-        badge={{ children: visibleRows.length }}
-        size="sm"
       >
         {loadFailed ? (
           <AppEmptyState
@@ -274,7 +264,7 @@ export function BranchCountSlipsClient({
             ))}
           </ItemGroup>
         )}
-      </BranchOperatorPanel>
+      </section>
 
       <Sheet
         open={selected != null}

@@ -214,6 +214,24 @@ test("operator team board drawer keeps long shift details inside the drawer", ()
   assert.match(teamBoardSource, /className="break-words"/);
 });
 
+test("operator team shift rows open one detail drawer before focused actions", () => {
+  assert.match(
+    teamBoardSource,
+    /<InteractiveCard[\s\S]*asChild[\s\S]*<button type="button" onClick=\{\(\) => onOpenDrawer\(row\)\}>/,
+  );
+  assert.doesNotMatch(teamBoardSource, /useLongPress|rowHref/);
+  assert.match(
+    teamBoardSource,
+    /checkoutApprovalsHref\}\?attendanceId=\$\{drawerRow\.shift\?\.attendanceId\}/,
+  );
+  assert.match(
+    teamBoardSource,
+    /countSlipsHref\}\?employeeId=\$\{drawerRow\.employeeId\}/,
+  );
+  assert.match(teamBoardSource, /drawerActionCheckout/);
+  assert.match(teamBoardSource, /drawerActionCountSubmitted/);
+});
+
 test("operator team members use a roster grid with real profile fields", () => {
   assert.match(teamMembersSource, /interface TeamMemberRow/);
   assert.match(teamMembersSource, /positionLabel/);
