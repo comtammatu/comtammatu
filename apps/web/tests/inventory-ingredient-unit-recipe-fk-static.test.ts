@@ -142,9 +142,14 @@ test("lot/expiry retirement rebuilds materialized views in dependency order", ()
   assert.ok(dropValueRanking < dropStockCurrent);
   assert.ok(dropStockCurrent < createStockCurrent);
   assert.ok(createStockCurrent < createValueRanking);
+  assert.equal(
+    [...lotExpiryMigration.matchAll(/CREATE MATERIALIZED VIEW public\.mv_inventory_value_ranking AS/g)]
+      .length,
+    1,
+  );
   assert.match(
     lotExpiryMigration,
-    /CREATE UNIQUE INDEX uq_mv_inv_value_ranking ON public\.mv_inventory_value_ranking/,
+    /CREATE UNIQUE INDEX uq_mv_inv_value_ranking\s+ON public\.mv_inventory_value_ranking/,
   );
   assert.match(
     lotExpiryMigration,
