@@ -1093,6 +1093,7 @@ DROP INDEX IF EXISTS public.idx_grn_items_expiry;
 
 -- mv_inventory_stock_current selects ingredients.shelf_life_days; rebuild it
 -- without that column before the column drop below.
+DROP MATERIALIZED VIEW IF EXISTS public.mv_inventory_value_ranking;
 DROP MATERIALIZED VIEW IF EXISTS public.mv_inventory_stock_current;
 
 CREATE MATERIALIZED VIEW public.mv_inventory_stock_current AS
@@ -1127,7 +1128,24 @@ CREATE INDEX idx_mv_inv_stock_alerts ON public.mv_inventory_stock_current USING 
 
 GRANT ALL ON TABLE public.mv_inventory_stock_current TO service_role;
 
+CREATE MATERIALIZED VIEW public.mv_inventory_value_ranking AS
+SELECT
+  tenant_id,
+  branch_id,
+  ingredient_id,
+  SUM(stock_value) AS total_value
+FROM public.mv_inventory_stock_current
+GROUP BY tenant_id, branch_id, ingredient_id
+WITH NO DATA;
+
+CREATE UNIQUE INDEX uq_mv_inv_value_ranking
+  ON public.mv_inventory_value_ranking (tenant_id, branch_id, ingredient_id);
+
+REVOKE ALL ON public.mv_inventory_value_ranking FROM authenticated, anon;
+GRANT ALL ON TABLE public.mv_inventory_value_ranking TO service_role;
+
 REFRESH MATERIALIZED VIEW public.mv_inventory_stock_current;
+REFRESH MATERIALIZED VIEW public.mv_inventory_value_ranking;
 
 -- 7. Drop the retired columns.
 ALTER TABLE public.grn_items
