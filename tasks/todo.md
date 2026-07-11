@@ -93,10 +93,10 @@ from Server Action/RLS authorization.
       the branch switcher when `canSwitchBranch` is false.
 - [x] **B4 — automated verification.** Focused auth/Hub tests and the full repo
       typecheck, lint, build, and test gates are green.
-- [ ] **B5 — authenticated visual smoke.** Rerun the Playwright desktop/mobile
-      Branch Hub smoke after restoring the owner/cashier credentials and the
-      manager test Supabase connection; the current auth setup fails before the
-      scenarios execute.
+- [x] **B5 — authenticated visual smoke.** Cashier, Manager, and Owner auth plus
+      the Branch Hub phone, tablet, and desktop route smoke are green against
+      local Supabase. Manager setup now resolves an active `branch` and the
+      `branch_manager` position instead of pinning a retired central site.
 
 ## Branch Stock Hub Viewport
 

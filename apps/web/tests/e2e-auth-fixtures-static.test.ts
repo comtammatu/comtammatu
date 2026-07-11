@@ -11,9 +11,11 @@ test("E2E manager fixture matches the seeded manager account", () => {
   const bringup = read("../../scripts/supabase-e2e-bringup.mjs");
   const authSetup = read("e2e/auth.setup.ts");
   const email = "manager.datdo@comtammatu.vn";
-  const userId = "a0000003-0000-4000-8000-000000000003";
 
-  assert.match(seed, new RegExp(`${userId}[^\\n]*${email}`));
+  assert.match(seed, new RegExp(email));
   assert.match(bringup, new RegExp(`E2E_INVENTORY_MANAGER_EMAIL=${email}`));
-  assert.match(authSetup, new RegExp(`\\.eq\\("id", "${userId}"\\)`));
+  assert.match(authSetup, /resolveUserByEmail\(supabase, email\)/);
+  assert.match(authSetup, /\.eq\("branch_kind", "branch"\)/);
+  assert.match(authSetup, /\.eq\("code", "branch_manager"\)/);
+  assert.match(authSetup, /\.eq\("id", manager\.userId\)/);
 });

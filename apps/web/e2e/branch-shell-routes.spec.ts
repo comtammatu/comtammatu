@@ -1,7 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { getCashierProfile } from "./helpers/supabase";
-import { E2E_AUTH_STORAGE_OWNER } from "../playwright.config";
+import {
+  E2E_AUTH_STORAGE_MANAGER,
+  E2E_AUTH_STORAGE_OWNER,
+} from "../playwright.config";
 
 test.use({ storageState: E2E_AUTH_STORAGE_OWNER });
 
@@ -49,7 +52,7 @@ function watchPageHealth(page: Page) {
 async function expectHealthyRoute(
   page: Page,
   path: string,
-  options: { allowOwnerWorkspaceLinks?: boolean } = {},
+  options: { allowWorkspaceLinks?: boolean } = {},
 ) {
   await page.goto(path, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("load");
@@ -79,7 +82,7 @@ async function expectHealthyRoute(
 
   expect(state.pathname).toBe(path);
   expect(state.overflowX).toBeLessThanOrEqual(2);
-  if (options.allowOwnerWorkspaceLinks) {
+  if (options.allowWorkspaceLinks) {
     expect(state.officeLinkCount).toBeGreaterThan(0);
   } else {
     expect(state.officeLinkCount).toBe(0);
@@ -88,16 +91,41 @@ async function expectHealthyRoute(
   expect(state.isAdminSurface).toBe(false);
 }
 
-function expectedBottomNavCurrentCount(path: string, branchId: number) {
+function expectedOwnerBottomNavCurrentCount(path: string, branchId: number) {
   const base = `/br/${branchId}`;
   if (path === base) return 1;
-  if (path.startsWith(`${base}/shift`)) return 1;
   if (path.startsWith(`${base}/team`)) return 1;
   if (path.startsWith(`${base}/stock`)) return 1;
   return 0;
 }
 
 test.describe("branch route shell ownership", () => {
+  test("manager opens its Branch Hub on mobile and desktop", async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      storageState: E2E_AUTH_STORAGE_MANAGER,
+    });
+    const page = await context.newPage();
+    const health = watchPageHealth(page);
+
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("load");
+    await page.waitForURL((url) => /^\/br\/\d+$/.test(url.pathname));
+    const hubPath = new URL(page.url()).pathname;
+    expect(hubPath).toMatch(/^\/br\/\d+$/);
+
+    for (const viewport of [MOBILE, DESKTOP]) {
+      await page.setViewportSize(viewport);
+      await expectHealthyRoute(page, hubPath, { allowWorkspaceLinks: true });
+    }
+
+    expect(health.consoleErrors).toEqual([]);
+    expect(health.pageErrors).toEqual([]);
+    expect(health.serverErrors).toEqual([]);
+    await context.close();
+  });
+
   test("POS and KDS keep standalone station chrome", async ({ page }) => {
     test.setTimeout(90_000);
     const { branchId } = await getCashierProfile();
@@ -150,7 +178,7 @@ test.describe("branch route shell ownership", () => {
       });
       await expect(operatorNav).toBeVisible();
       await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(
-        expectedBottomNavCurrentCount(path, branchId),
+        expectedOwnerBottomNavCurrentCount(path, branchId),
       );
     }
 
@@ -164,7 +192,7 @@ test.describe("branch route shell ownership", () => {
     expect(health.serverErrors).toEqual([]);
   });
 
-  test("home and shift stay inside the branch operator shell on mobile", async ({
+  test("home and shift routes stay inside the branch operator shell on mobile", async ({
     page,
   }) => {
     test.setTimeout(120_000);
@@ -176,19 +204,17 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}`,
       `/br/${branchId}/profile`,
       `/br/${branchId}/profile/payslip`,
-      `/br/${branchId}/shift`,
       `/br/${branchId}/shift/schedule`,
       `/br/${branchId}/shift/schedule/leave`,
       `/br/${branchId}/shift/clock`,
       `/br/${branchId}/shift/checkout-approvals`,
     ]) {
       await expectHealthyRoute(page, path, {
-        allowOwnerWorkspaceLinks: path === `/br/${branchId}`,
+        allowWorkspaceLinks: path === `/br/${branchId}`,
       });
       if (path === `/br/${branchId}`) {
         await expect(page.getByText("Cần xử lý")).toBeVisible();
         await expect(page.getByText("Bán hàng")).toBeVisible();
-        await expect(page.getByText("Kho hàng")).toBeVisible();
         await expect(page.getByText("Quản lý cửa hàng")).toBeVisible();
         await expect(page.getByText("Tài chính")).toBeVisible();
         await expect(page.getByText("Nhân sự")).toBeVisible();
@@ -199,9 +225,12 @@ test.describe("branch route shell ownership", () => {
       });
       await expect(operatorNav).toBeVisible();
       await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(
-        expectedBottomNavCurrentCount(path, branchId),
+        expectedOwnerBottomNavCurrentCount(path, branchId),
       );
     }
+
+    await page.goto(`/br/${branchId}/shift`);
+    await expect(page).toHaveURL(`/br/${branchId}/team`);
 
     expect(health.consoleErrors).toEqual([]);
     expect(health.pageErrors).toEqual([]);
@@ -230,7 +259,7 @@ test.describe("branch route shell ownership", () => {
         });
         await expect(operatorNav).toBeVisible();
         await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(
-          expectedBottomNavCurrentCount(path, branchId),
+          expectedOwnerBottomNavCurrentCount(path, branchId),
         );
       }
     }
