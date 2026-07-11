@@ -569,3 +569,25 @@ hẳn Bếp CN: kho hàng chỉ còn một kho.
 **Consequences:** D073 §5 và D000 phần Kho+Bếp sửa tại chỗ. S11 trong
 `tasks/todo.md` đảo thành retire (không mở rộng Kho↔Bếp). Canonical:
 `docs/ref/inventory.md`, migration single-warehouse, app defaults warehouse-only.
+
+## D079: Mở TTS cho bốn cảnh báo POS quan trọng, không đọc mọi ping (2026-07-11)
+
+**Context:** KDS đã chạy TTS theo D074, trong khi POS vẫn chỉ đọc pref boolean
+`pos:sound:{branchId}` và gọi beep trực tiếp. POS đã có bốn event cần thu ngân
+chú ý ngay: khách tự gọi, gọi thanh toán, in lỗi và bếp báo hết món.
+
+**Decision (owner):**
+
+1. POS dùng cùng `OperationalAudioMode` và `playOperationalAlert` với KDS;
+   mode lưu ở `pos:audio-mode:{branchId}`, đọc tương thích pref boolean cũ.
+2. Chỉ bốn kind `pos.self_order`, `pos.payment_received`, `pos.print_failed`,
+   `pos.out_of_stock` được nói. Thanh toán chỉ đọc sau khi order chuyển sang
+   `paid` và có số bàn thật, theo đúng mẫu “Bàn {số} đã thanh toán”; yêu cầu
+   thanh toán chỉ phát chuông. Các ping thường khác vẫn beep-only khi mode có
+   beep; không voice-spam quầy thu ngân.
+3. Chrome POS giữ một control sẵn có và xoay `off → beep → beep+voice → off`;
+   preview là user gesture mở khóa Web Audio + `speechSynthesis`.
+4. Không thêm dependency, asset, DB, notification hay server-synced pref.
+
+**Consequences:** D074 §2 chỉ còn mô tả scope lúc ship KDS Phase 1; POS Phase 3
+được hoàn tất theo cùng ADR 0008 và runtime `apps/web/lib/operational-audio.ts`.

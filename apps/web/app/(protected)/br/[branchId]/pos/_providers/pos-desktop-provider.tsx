@@ -28,8 +28,15 @@ import {
 } from "./daily-limit-store";
 import type { MenuItemDailyLimit } from "../pos-menu-types";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
-import { playAppSignal } from "@lib/audio-signal";
 import { readDevicePref, writeDevicePref } from "@lib/device-prefs";
+import {
+  cycleAudioMode,
+  getPosAudioModeKey,
+  getPosSoundPrefKey,
+  playOperationalAlert,
+  resolveAudioMode,
+  type OperationalAudioMode,
+} from "@lib/operational-audio";
 import type { OrderType } from "../types";
 
 export type DailyLimitsMap = ReadonlyMap<number, MenuItemDailyLimit>;
@@ -63,7 +70,7 @@ export function usePosSession(): SessionContextValue {
 /* ─── Device-local POS sound setting ─── */
 
 type PosSoundContextValue = {
-  soundEnabled: boolean;
+  audioMode: OperationalAudioMode;
   toggleSound: () => void;
 };
 
@@ -114,7 +121,9 @@ type OperationalDispatch = {
    * tokens via `useDailyLimitHolds`. A getter (not a value) avoids
    * re-rendering the provider on every token rotation.
    */
-  registerDailyLimitHoldTokenGetter: (getTokens: () => readonly string[]) => void;
+  registerDailyLimitHoldTokenGetter: (
+    getTokens: () => readonly string[],
+  ) => void;
 };
 
 const OrdersContext = createContext<SessionOrder[] | null>(null);
@@ -243,11 +252,16 @@ export function PosDesktopProvider({
   // Default OFF; the device preference loads after mount to avoid a
   // hydration mismatch. Without persistence the alert channel silently
   // resets to muted on every reload/PWA relaunch.
-  const [soundEnabled, setSoundEnabled] = useState(false);
-  const soundPrefKey = `pos:sound:${String(branchId)}`;
+  const [audioMode, setAudioMode] = useState<OperationalAudioMode>("off");
+  const audioModeKey = getPosAudioModeKey(branchId);
   useEffect(() => {
-    if (readDevicePref(soundPrefKey) === "1") setSoundEnabled(true);
-  }, [soundPrefKey]);
+    setAudioMode(
+      resolveAudioMode(
+        readDevicePref(audioModeKey),
+        readDevicePref(getPosSoundPrefKey(branchId)),
+      ),
+    );
+  }, [audioModeKey, branchId]);
   const bumpArchivedToken = useCallback(() => {
     setArchivedToken((t) => t + 1);
   }, []);
@@ -271,16 +285,20 @@ export function PosDesktopProvider({
     [branchId, session],
   );
   const toggleSound = useCallback(() => {
-    setSoundEnabled((current) => {
-      const next = !current;
-      if (next) playAppSignal("pos", true);
-      writeDevicePref(soundPrefKey, next ? "1" : "0");
+    setAudioMode((current) => {
+      const next = cycleAudioMode(current);
+      playOperationalAlert({
+        kind: "pos.self_order",
+        mode: next,
+        force: true,
+      });
+      writeDevicePref(audioModeKey, next);
       return next;
     });
-  }, [soundPrefKey]);
+  }, [audioModeKey]);
   const soundValue = useMemo<PosSoundContextValue>(
-    () => ({ soundEnabled, toggleSound }),
-    [soundEnabled, toggleSound],
+    () => ({ audioMode, toggleSound }),
+    [audioMode, toggleSound],
   );
 
   // Cart store — stable across renders
@@ -396,11 +414,11 @@ export function PosDesktopProvider({
     refreshOrders: refreshOrdersDeduped,
     refreshAll: refreshAllDeduped,
     onArchivedInvalidate: bumpArchivedToken,
-    soundEnabled,
+    audioMode,
     skipFirstSubscribedRefresh: initialOrdersSeeded,
   });
 
-  usePrintJobAlerts({ branchId, soundEnabled });
+  usePrintJobAlerts({ branchId, audioMode });
 
   // RSC always seeds the limits map (even if empty) — initial SUBSCRIBED
   // skips its catchup; reconnect SUBSCRIBED refetches via dedupe to fill

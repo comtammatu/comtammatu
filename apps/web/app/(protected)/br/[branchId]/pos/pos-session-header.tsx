@@ -20,6 +20,7 @@ import {
   ArrowLeft as IconArrowLeft,
   LogIn as IconDoorEnter,
   MoreVertical as IconMoreVertical,
+  Megaphone as IconVoiceOn,
   PowerOff as IconPowerOff,
   Volume2 as IconVolume2,
   VolumeX as IconVolumeX,
@@ -105,7 +106,7 @@ function PosMoreMenu({
   canCloseShift: boolean;
   onShowCloseSession: () => void;
 }) {
-  const { soundEnabled, toggleSound } = usePosSound();
+  const { audioMode, toggleSound } = usePosSound();
 
   return (
     <DropdownMenu>
@@ -129,8 +130,20 @@ function PosMoreMenu({
         </DropdownMenuItem>
 
         <DropdownMenuItem onClick={toggleSound}>
-          {soundEnabled ? <IconVolume2 /> : <IconVolumeX />}
-          {soundEnabled ? "Tắt âm báo POS" : "Bật âm báo POS"}
+          {audioMode === "off" ? (
+            <IconVolumeX />
+          ) : audioMode === "beep" ? (
+            <IconVolume2 />
+          ) : (
+            <IconVoiceOn />
+          )}
+          {audioMode === "off"
+            ? "Âm báo POS: tắt"
+            : audioMode === "beep"
+              ? "Âm báo POS: chuông"
+              : audioMode === "voice"
+                ? "Âm báo POS: đọc"
+                : "Âm báo POS: chuông + đọc"}
         </DropdownMenuItem>
 
         <ThemeMenuItem />

@@ -1,11 +1,11 @@
 # Operational Audio Alerts
 
-> Status: design contract | Updated: 2026-07-10 | Scope: device-local beep + voice alerts on open POS/KDS surfaces\
+> Status: implemented contract | Updated: 2026-07-11 | Scope: device-local beep + voice alerts on open POS/KDS surfaces\
 > Decision: `docs/plan/adr/0008-operational-audio-alerts.md` (voice engine amended to browser TTS, D074)
 
 ## UI Scope Declaration
 
-- Surface: `/br/[branchId]/kds` (MVP), later selected `/br/[branchId]/pos` critical events.
+- Surface: `/br/[branchId]/kds` and selected `/br/[branchId]/pos` critical events.
 - Primary user job: notice a kitchen/cashier attention event without staring at the board, then act on the live queue/UI.
 - Change type: behavior contract for operational audio. Runtime code must follow this before adding new spoken alerts.
 - Primitives: existing POS/KDS chrome toggles; no new floating “bell” chrome; no durable notification rows for these events.
@@ -14,12 +14,12 @@
 
 Operational audio is a **fourth feedback channel**, separate from toast, durable in-app notifications, and Telegram/outbox:
 
-| Channel | Durability | Audience | Owner doc |
-| --- | --- | --- | --- |
-| Toast | Ephemeral UI | Current operator action | `docs/spec/toast-notification-system.md` |
-| Durable notification | Persisted row | Role/branch feed | `docs/agent/rules/notifications.md` |
-| Foreground popup | OS popup while PWA open | Same as durable feed | toast + notifications docs |
-| **Operational audio** | Ephemeral device sound | Open POS/KDS device | **this spec** |
+| Channel               | Durability              | Audience                | Owner doc                                |
+| --------------------- | ----------------------- | ----------------------- | ---------------------------------------- |
+| Toast                 | Ephemeral UI            | Current operator action | `docs/spec/toast-notification-system.md` |
+| Durable notification  | Persisted row           | Role/branch feed        | `docs/agent/rules/notifications.md`      |
+| Foreground popup      | OS popup while PWA open | Same as durable feed    | toast + notifications docs               |
+| **Operational audio** | Ephemeral device sound  | Open POS/KDS device     | **this spec**                            |
 
 Do not collapse channels. A spoken kitchen alert is not an audit trail and not a Telegram message.
 
@@ -58,11 +58,11 @@ Stable `kind` strings. Beep mapping reuses existing `SignalTone` values where th
 
 ### KDS (MVP — ship first)
 
-| kind | When | Beep tone | Voice template (VI) | Priority |
-| --- | --- | --- | --- | --- |
-| `kds.new` | New kitchen send (non-append, non-add-on) | `kds-new` | “Phiếu mới{location}” | 0 |
-| `kds.append` | Append batch | `kds-append` | “Gọi thêm{location}” | 1 |
-| `kds.add_on` | Add-on item category | `kds-add-on` | “Món thêm{location}” | 2 |
+| kind         | When                                      | Beep tone    | Voice template (VI)   | Priority |
+| ------------ | ----------------------------------------- | ------------ | --------------------- | -------- |
+| `kds.new`    | New kitchen send (non-append, non-add-on) | `kds-new`    | “Phiếu mới{location}” | 0        |
+| `kds.append` | Append batch                              | `kds-append` | “Gọi thêm{location}”  | 1        |
+| `kds.add_on` | Add-on item category                      | `kds-add-on` | “Món thêm{location}”  | 2        |
 
 Classification MUST stay aligned with `getKdsNewTicketSignalTone` / toast titles in `sound-alerts.ts`. If taxonomy drifts, fix both sides in one change.
 
@@ -70,25 +70,25 @@ Classification MUST stay aligned with `getKdsNewTicketSignalTone` / toast titles
 available; for takeaway, delivery, or missing/ambiguous table metadata, speak the
 base phrase without a location. Never invent a table or order label.
 
-### POS (phase 3 — contract reserved; beep tones live)
+### POS (phase 3 — shipped)
 
-| kind | When | Beep tone | Voice template (VI) | Notes |
-| --- | --- | --- | --- | --- |
-| `pos.self_order` | New QR self-order needs approval | `pos-self-order` | “Khách tự gọi” | Distinct from POS order ping |
-| `pos.payment_call` | Guest cash call / VietQR payment request | `pos-payment-call` | “Gọi thanh toán” | Distinct from POS order ping |
-| `pos.print_failed` | Print job failed | `pos` | “In lỗi” | Critical attention |
-| `pos.out_of_stock` | KDS marked item unavailable | `pos` | “Hết món” | Keep short; detail stays on UI |
+| kind                   | When                             | Beep tone        | Voice template (VI)         | Notes                          |
+| ---------------------- | -------------------------------- | ---------------- | --------------------------- | ------------------------------ |
+| `pos.self_order`       | New QR self-order needs approval | `pos-self-order` | “Khách tự gọi”              | Distinct from POS order ping   |
+| `pos.payment_received` | Table order changes to `paid`    | `pos`            | “Bàn {table} đã thanh toán” | Only with a real table number  |
+| `pos.print_failed`     | Print job failed                 | `pos`            | “In lỗi”                    | Critical attention             |
+| `pos.out_of_stock`     | KDS marked item unavailable      | `pos`            | “Hết món”                   | Keep short; detail stays on UI |
 
-Do not add voice for every POS ping. Routine cart/sync noise stays beep-only or silent per mode. QR self-order and payment-call MUST use their dedicated tones so cashiers do not confuse them with ordinary POS order/sync beeps (`pos`).
+Do not add voice for every POS ping. Routine cart/sync noise stays beep-only or silent per mode. QR self-order and payment-call beeps MUST use their dedicated tones so cashiers do not confuse them with ordinary POS order/sync beeps (`pos`). The payment-call beep does not speak; only confirmed table payment does.
 
 ## Audio Modes
 
-| Mode | Beep | Voice | Default? |
-| --- | --- | --- | --- |
-| `off` | no | no | **yes for missing / unset prefs** |
-| `beep` | yes | no | **yes when audio is enabled** |
-| `voice` | no | yes | no |
-| `beep+voice` | yes | yes | no — opt-in after kitchen validation |
+| Mode         | Beep | Voice | Default?                             |
+| ------------ | ---- | ----- | ------------------------------------ |
+| `off`        | no   | no    | **yes for missing / unset prefs**    |
+| `beep`       | yes  | no    | **yes when audio is enabled**        |
+| `voice`      | no   | yes   | no                                   |
+| `beep+voice` | yes  | yes   | no — opt-in after kitchen validation |
 
 Operational audio is never auto-enabled for a device. Missing new-mode and
 legacy prefs resolve to `off`; when an operator enables audio for the first time,
@@ -103,10 +103,10 @@ Device-local only:
 
 Compatibility with legacy boolean prefs:
 
-| Legacy key | Legacy value | Resolved mode |
-| --- | --- | --- |
-| `kds:sound:{branchId}` / `pos:sound:{branchId}` | `"1"` | `beep` |
-| same | missing / other | `off` |
+| Legacy key                                      | Legacy value    | Resolved mode |
+| ----------------------------------------------- | --------------- | ------------- |
+| `kds:sound:{branchId}` / `pos:sound:{branchId}` | `"1"`           | `beep`        |
+| same                                            | missing / other | `off`         |
 
 When writing the new mode key, implementations MAY leave or clear the legacy key, but reads MUST prefer `*:audio-mode:*` when present.
 
@@ -140,8 +140,9 @@ KDS chrome exposes the mode through one cycling button: `off → beep → beep+v
 
 ### POS
 
-- Phase 3 only for voice.
+- Voice is limited to the four POS kinds in the catalog.
 - Do not voice-spam payment/cart churn.
+- A payment request remains beep-only. Confirmed payment speaks only when the current order carries a real table number, using exactly “Bàn {table} đã thanh toán”.
 - Print-failure and self-order approval may combine beep + short voice when mode allows.
 
 ### Other surfaces
@@ -153,8 +154,14 @@ KDS chrome exposes the mode through one cycling button: `off → beep → beep+v
 ```ts
 type OperationalAudioMode = "off" | "beep" | "voice" | "beep+voice";
 
-// POS kinds join this union when phase 3 lands.
-type OperationalAlertKind = "kds.new" | "kds.append" | "kds.add_on";
+type OperationalAlertKind =
+  | "kds.new"
+  | "kds.append"
+  | "kds.add_on"
+  | "pos.self_order"
+  | "pos.payment_received"
+  | "pos.print_failed"
+  | "pos.out_of_stock";
 
 type PlayOperationalAlertInput = {
   kind: OperationalAlertKind;
@@ -190,8 +197,9 @@ Exact module path is an implementation detail; keep it under `apps/web/lib/` nex
 
 ### Phase 3 (POS)
 
-- [ ] Only the reserved POS kinds speak.
-- [ ] Existing POS beep call sites keep working under mode `beep`.
+- [x] Only the reserved POS kinds speak.
+- [x] Existing POS routine beep call sites keep working under mode `beep`.
+- [x] Legacy `pos:sound=1` resolves to `beep` before the new mode key is written.
 
 ## Verification
 

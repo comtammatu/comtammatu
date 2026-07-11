@@ -3,6 +3,11 @@
 import { useEffect, useRef } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { playAppSignal } from "@lib/audio-signal";
+import {
+  audioModeHasBeep,
+  playOperationalAlert,
+  type OperationalAudioMode,
+} from "@lib/operational-audio";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { BranchTable } from "../page";
 import type { SessionOrder } from "../order-history";
@@ -46,8 +51,8 @@ export interface UseOrderSyncArgs {
    * the active-side state mutation.
    */
   onArchivedInvalidate?: () => void;
-  /** Whether audible POS alerts are enabled on this device/session. */
-  soundEnabled?: boolean;
+  /** Device-local POS audio mode. Routine transitions remain beep-only. */
+  audioMode?: OperationalAudioMode;
   /**
    * When true, the FIRST `SUBSCRIBED` callback (initial mount subscription)
    * does not fire a catch-up refresh — orders are already seeded by the
@@ -92,7 +97,7 @@ function getNotificationMetaString(
 
 function notifyOutOfStock(
   notification: Record<string, unknown>,
-  soundEnabled: boolean,
+  audioMode: OperationalAudioMode,
 ): void {
   const title = getStringField(notification, "title") ?? "Bếp báo hết món";
   const itemName =
@@ -101,7 +106,7 @@ function notifyOutOfStock(
     "Cần kiểm tra đơn POS";
   const actionUrl = getStringField(notification, "action_url");
 
-  if (soundEnabled) playAppSignal("pos");
+  playOperationalAlert({ kind: "pos.out_of_stock", mode: audioMode });
   toast.warning(title, {
     description: itemName,
     action: actionUrl
@@ -118,7 +123,7 @@ function notifyOutOfStock(
 function notifyOrderTransition(
   currentOrder: SessionOrder | undefined,
   next: Record<string, unknown>,
-  soundEnabled: boolean,
+  audioMode: OperationalAudioMode,
 ): void {
   if (!currentOrder) return;
 
@@ -126,9 +131,19 @@ function notifyOrderTransition(
     getStringField(next, "order_number") ?? currentOrder.order_number;
   const nextStatus = getStringField(next, "status");
   const nextPaymentStatus = getStringField(next, "payment_status");
+  const beepEnabled = audioModeHasBeep(audioMode);
 
   if (nextPaymentStatus === "paid" && currentOrder.payment_status !== "paid") {
-    if (soundEnabled) playAppSignal("pos");
+    const tableNumber = currentOrder.tables?.number;
+    if (typeof tableNumber === "number") {
+      playOperationalAlert({
+        kind: "pos.payment_received",
+        mode: audioMode,
+        slots: { tableLabel: String(tableNumber) },
+      });
+    } else if (beepEnabled) {
+      playAppSignal("pos");
+    }
     toast.success(`Đã thanh toán #${orderNumber}`, {
       description: getOrderContextDescription(currentOrder),
     });
@@ -136,7 +151,7 @@ function notifyOrderTransition(
   }
 
   if (nextStatus === "ready" && currentOrder.status !== "ready") {
-    if (soundEnabled) playAppSignal("pos");
+    if (beepEnabled) playAppSignal("pos");
     toast.success(`Bếp hoàn thành #${orderNumber}`, {
       description: "Sẵn sàng gọi khách hoặc thanh toán",
     });
@@ -158,7 +173,7 @@ function notifyOrderTransition(
   }
 
   if (nextStatus === "cancelled" && currentOrder.status !== "cancelled") {
-    if (soundEnabled) playAppSignal("pos");
+    if (beepEnabled) playAppSignal("pos");
     toast.warning(`Đơn #${orderNumber} đã hủy`, {
       description: getOrderContextDescription(currentOrder),
     });
@@ -401,7 +416,7 @@ export function useOrderSync({
   refreshOrders,
   refreshAll,
   onArchivedInvalidate,
-  soundEnabled = false,
+  audioMode = "off",
   skipFirstSubscribedRefresh = false,
 }: UseOrderSyncArgs): void {
   const refreshOrdersRef = useRef(refreshOrders);
@@ -411,7 +426,7 @@ export function useOrderSync({
   const getTablesRef = useRef(getTables);
   const getOrdersRef = useRef(getOrders);
   const onArchivedInvalidateRef = useRef(onArchivedInvalidate);
-  const soundEnabledRef = useRef(soundEnabled);
+  const audioModeRef = useRef(audioMode);
   const lastSyncRef = useRef<number>(Date.now());
   const initialSubscribeSeenRef = useRef(false);
 
@@ -423,7 +438,7 @@ export function useOrderSync({
     getTablesRef.current = getTables;
     getOrdersRef.current = getOrders;
     onArchivedInvalidateRef.current = onArchivedInvalidate;
-    soundEnabledRef.current = soundEnabled;
+    audioModeRef.current = audioMode;
   }, [
     refreshOrders,
     refreshAll,
@@ -432,7 +447,7 @@ export function useOrderSync({
     getTables,
     getOrders,
     onArchivedInvalidate,
-    soundEnabled,
+    audioMode,
   ]);
 
   useRealtimeChannel(
@@ -503,7 +518,7 @@ export function useOrderSync({
               notifyOrderTransition(
                 currentOrder,
                 updated,
-                soundEnabledRef.current,
+                audioModeRef.current,
               );
 
               if (isTerminal) {
@@ -549,7 +564,9 @@ export function useOrderSync({
               }
               setOrdersRef.current((prev) => {
                 if (prev.some((o) => o.id === optimistic.id)) return prev;
-                if (soundEnabledRef.current) playAppSignal("pos");
+                if (audioModeHasBeep(audioModeRef.current)) {
+                  playAppSignal("pos");
+                }
                 return [optimistic, ...prev];
               });
               // Deduped refresh as fallback: covers fields fetchSessionOrders
@@ -598,7 +615,7 @@ export function useOrderSync({
             if (!notification || notification.kind !== "pos.kds_out_of_stock") {
               return;
             }
-            notifyOutOfStock(notification, soundEnabledRef.current);
+            notifyOutOfStock(notification, audioModeRef.current);
           },
         )
         .subscribe((status) => {

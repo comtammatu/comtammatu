@@ -1,6 +1,6 @@
 # ADR 0008 — Operational Audio Alerts (Beep + Voice)
 
-**Status:** Accepted (2026-07-09) · Amended (2026-07-10, D074 — voice engine is browser TTS)
+**Status:** Accepted (2026-07-09) · Amended (2026-07-10, D074 — voice engine is browser TTS; 2026-07-11, D079 — POS critical alerts)
 **Decision drivers:** Kitchen/POS need eyes-free attention during service; current Web Audio beeps are reliable but content-blind; a recorded clip pack ships no voice until someone records it.
 
 ## Context
@@ -29,7 +29,7 @@ Constraints that matter in-store:
 
 3. **Browser TTS is the voice engine** (amended 2026-07-10). Speak the template through `window.speechSynthesis` with `lang = "vi-VN"`. No audio assets, no bundle cost, and the table-number slot is plain string interpolation. When the device exposes a loaded voice list without any `vi-*` voice, skip voice for that event; beep still follows the mode. Cloud/realtime TTS stays rejected.
 
-4. **MVP surface = KDS.** First ship the three existing KDS alert kinds with short fixed copy (event type + table label). Do not read full item lists in MVP. POS critical alerts (self-order approval, print failure, out-of-stock) are a later phase under the same contract.
+4. **KDS first, POS critical events second.** KDS ships the three existing alert kinds with short fixed copy (event type + table label). POS speaks only self-order approval, confirmed table payment, print failure, and out-of-stock. A guest payment request remains beep-only; confirmed payment copy is exactly “Bàn {table} đã thanh toán”. Do not read amounts, full item lists, or routine POS state transitions.
 
 5. **Single playback API.** New call sites go through one operational-alert entrypoint (e.g. `playOperationalAlert`) that:
    - classifies a stable `kind`
@@ -75,12 +75,12 @@ Constraints that matter in-store:
 
 ## Implementation Phases (non-normative schedule)
 
-| Phase | Scope |
-| --- | --- |
-| 1 | Catalog + mode prefs; KDS 3 kinds; `speechSynthesis` voice; wire beside current `playAppSignal` |
-| 2 | In-store tune (length, coalesce, volume); keep default `beep` unless owner flips |
-| 3 | POS critical kinds only |
-| 4 | Optional recorded brand voice pack |
+| Phase | Scope                                                                                           |
+| ----- | ----------------------------------------------------------------------------------------------- |
+| 1     | Catalog + mode prefs; KDS 3 kinds; `speechSynthesis` voice; wire beside current `playAppSignal` |
+| 2     | In-store tune (length, coalesce, volume); keep default `beep` unless owner flips                |
+| 3     | POS critical kinds only — shipped under D079                                                    |
+| 4     | Optional recorded brand voice pack                                                              |
 
 Normative runtime contract: `docs/spec/operational-audio-alerts.md`.
 

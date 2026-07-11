@@ -49,6 +49,7 @@ import {
   type SelfOrderPosState,
 } from "./self-order-actions";
 import { playAppSignal } from "@lib/audio-signal";
+import { audioModeHasBeep, playOperationalAlert } from "@lib/operational-audio";
 
 // Lazy-load these modals OFF the cash path, code-splitting their JS out of
 // the initial POS bundle. Trims first-paint JS without affecting payment
@@ -174,7 +175,7 @@ export function PosDesktopInner({
   const { branchId, session } = usePosSession();
   const orders = usePosOrders();
   const tables = usePosTables();
-  const { soundEnabled } = usePosSound();
+  const { audioMode } = usePosSound();
   const {
     refreshOrders,
     refreshOrdersDeduped,
@@ -401,25 +402,23 @@ export function PosDesktopInner({
     // Distinct tones from the POS order ping so cashiers do not confuse
     // QR guest events with ordinary POS sync alerts.
     if (
-      soundEnabled &&
       knownRequestIds !== null &&
       nextState.requests.some((request) => !knownRequestIds.has(request.id))
     ) {
-      playAppSignal("pos-self-order");
+      playOperationalAlert({ kind: "pos.self_order", mode: audioMode });
     }
     if (
-      soundEnabled &&
       knownPaymentIds !== null &&
       nextState.paymentRequests.some(
         (request) => !knownPaymentIds.has(request.id),
       )
     ) {
-      playAppSignal("pos-payment-call");
+      if (audioModeHasBeep(audioMode)) playAppSignal("pos-payment-call");
     }
     knownSelfOrderRequestIdsRef.current = nextRequestIds;
     knownSelfOrderPaymentRequestIdsRef.current = nextPaymentIds;
     setSelfOrderPosState(nextState);
-  }, [branchId, soundEnabled]);
+  }, [audioMode, branchId]);
 
   useEffect(() => {
     void refreshSelfOrderPosState();

@@ -4,7 +4,14 @@ import { playAppSignal, type SignalTone } from "./audio-signal";
 
 export type OperationalAudioMode = "off" | "beep" | "voice" | "beep+voice";
 
-export type OperationalAlertKind = "kds.new" | "kds.append" | "kds.add_on";
+export type OperationalAlertKind =
+  | "kds.new"
+  | "kds.append"
+  | "kds.add_on"
+  | "pos.self_order"
+  | "pos.payment_received"
+  | "pos.print_failed"
+  | "pos.out_of_stock";
 
 export interface PlayOperationalAlertInput {
   kind: OperationalAlertKind;
@@ -31,12 +38,20 @@ const ALERT_TONES: Record<OperationalAlertKind, SignalTone> = {
   "kds.new": "kds-new",
   "kds.append": "kds-append",
   "kds.add_on": "kds-add-on",
+  "pos.self_order": "pos-self-order",
+  "pos.payment_received": "pos",
+  "pos.print_failed": "pos",
+  "pos.out_of_stock": "pos",
 };
 
 const ALERT_PHRASES: Record<OperationalAlertKind, string> = {
   "kds.new": "Phiếu mới",
   "kds.append": "Gọi thêm",
   "kds.add_on": "Món thêm",
+  "pos.self_order": "Khách tự gọi",
+  "pos.payment_received": "Đã thanh toán",
+  "pos.print_failed": "In lỗi",
+  "pos.out_of_stock": "Hết món",
 };
 
 export const KDS_TONE_TO_ALERT_KIND: Record<
@@ -54,6 +69,14 @@ export function getKdsAudioModeKey(branchId: number): string {
 
 export function getKdsSoundPrefKey(branchId: number): string {
   return `kds:sound:${String(branchId)}`;
+}
+
+export function getPosAudioModeKey(branchId: number): string {
+  return `pos:audio-mode:${String(branchId)}`;
+}
+
+export function getPosSoundPrefKey(branchId: number): string {
+  return `pos:sound:${String(branchId)}`;
 }
 
 export function resolveAudioMode(
@@ -86,6 +109,9 @@ export function buildAlertUtterance(
 ): string {
   const phrase = ALERT_PHRASES[kind];
   const table = tableLabel?.trim();
+  if (kind === "pos.payment_received" && table) {
+    return `Bàn ${table} đã thanh toán`;
+  }
   return table ? `${phrase} bàn ${table}` : phrase;
 }
 

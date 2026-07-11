@@ -4,7 +4,10 @@ import { useCallback, useEffect, useRef } from "react";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
-import { playAppSignal } from "@lib/audio-signal";
+import {
+  playOperationalAlert,
+  type OperationalAudioMode,
+} from "@lib/operational-audio";
 import { retryPrintJob } from "../print-actions";
 
 const PRINT_JOB_TYPE_LABELS: Record<string, string> = {
@@ -31,8 +34,7 @@ function getJobTypeLabel(jobType: unknown): string {
 
 interface UsePrintJobAlertsArgs {
   branchId: number;
-  /** Mirrors the POS sound toggle — a failed print beeps like a kitchen event. */
-  soundEnabled?: boolean;
+  audioMode?: OperationalAudioMode;
 }
 
 /**
@@ -43,13 +45,13 @@ interface UsePrintJobAlertsArgs {
  */
 export function usePrintJobAlerts({
   branchId,
-  soundEnabled = false,
+  audioMode = "off",
 }: UsePrintJobAlertsArgs): void {
   const alertedJobIdsRef = useRef<Set<number>>(new Set());
-  const soundEnabledRef = useRef(soundEnabled);
+  const audioModeRef = useRef(audioMode);
   useEffect(() => {
-    soundEnabledRef.current = soundEnabled;
-  }, [soundEnabled]);
+    audioModeRef.current = audioMode;
+  }, [audioMode]);
 
   const handleRetry = useCallback(async (jobId: number) => {
     const result = await retryPrintJob(jobId);
@@ -64,7 +66,10 @@ export function usePrintJobAlerts({
     (job: { id: number; job_type?: unknown }) => {
       if (alertedJobIdsRef.current.has(job.id)) return;
       alertedJobIdsRef.current.add(job.id);
-      if (soundEnabledRef.current) playAppSignal("pos");
+      playOperationalAlert({
+        kind: "pos.print_failed",
+        mode: audioModeRef.current,
+      });
       toast.error(`In thất bại — ${getJobTypeLabel(job.job_type)}`, {
         description: "Kiểm tra giấy/máy in rồi bấm In lại.",
         duration: 10_000,

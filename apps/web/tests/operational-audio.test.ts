@@ -8,6 +8,8 @@ import {
   cycleAudioMode,
   getKdsAudioModeKey,
   getKdsSoundPrefKey,
+  getPosAudioModeKey,
+  getPosSoundPrefKey,
   KDS_TONE_TO_ALERT_KIND,
   resolveAudioMode,
 } from "../lib/operational-audio";
@@ -52,6 +54,13 @@ test("buildAlertUtterance appends the table slot only when present", () => {
   assert.equal(buildAlertUtterance("kds.append", "12"), "Gọi thêm bàn 12");
   assert.equal(buildAlertUtterance("kds.add_on"), "Món thêm");
   assert.equal(buildAlertUtterance("kds.new", "  "), "Phiếu mới");
+  assert.equal(buildAlertUtterance("pos.self_order"), "Khách tự gọi");
+  assert.equal(
+    buildAlertUtterance("pos.payment_received", "21"),
+    "Bàn 21 đã thanh toán",
+  );
+  assert.equal(buildAlertUtterance("pos.print_failed"), "In lỗi");
+  assert.equal(buildAlertUtterance("pos.out_of_stock"), "Hết món");
 });
 
 test("KDS tones map onto the alert kind namespace", () => {
@@ -65,6 +74,8 @@ test("KDS tones map onto the alert kind namespace", () => {
 test("device pref keys are branch scoped", () => {
   assert.equal(getKdsAudioModeKey(3), "kds:audio-mode:3");
   assert.equal(getKdsSoundPrefKey(3), "kds:sound:3");
+  assert.equal(getPosAudioModeKey(3), "pos:audio-mode:3");
+  assert.equal(getPosSoundPrefKey(3), "pos:sound:3");
 });
 
 test("POS QR guest tones stay distinct from the POS order ping", () => {
