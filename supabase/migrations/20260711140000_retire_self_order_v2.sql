@@ -38,6 +38,7 @@ BEGIN
   IF to_regclass('public.tables') IS NOT NULL THEN
     EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_fill_realtime_topic_token ON public.tables';
     EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_guard_capability_version ON public.tables';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_guard_capability_version_change ON public.tables';
   END IF;
 
   IF to_regclass('public.self_order_payment_requests') IS NOT NULL THEN

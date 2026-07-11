@@ -109,6 +109,11 @@ test("Self-Order V2 retirement fails closed and preserves the request model", ()
     migration.indexOf("DROP COLUMN IF EXISTS session_device_id") <
       migration.indexOf("DROP TABLE IF EXISTS public.self_order_session_devices"),
   );
+  assert.ok(
+    migration.indexOf(
+      "DROP TRIGGER IF EXISTS trg_self_order_guard_capability_version_change ON public.tables",
+    ) < migration.indexOf("DROP COLUMN IF EXISTS self_order_capability_version"),
+  );
   assert.doesNotMatch(
     migration,
     /DROP FUNCTION IF EXISTS public\.self_order_enforce_open_pos_session\(\)/,
