@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown as IconChevronDown,
@@ -24,8 +24,8 @@ import {
   Item,
   ItemActions,
   ItemContent,
+  ItemDescription,
   ItemGroup,
-  ItemSeparator,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
@@ -50,6 +50,7 @@ import {
   getStockOnHandCategories,
   hasStockOnHandFilters,
   isPristineStockOnHand,
+  isStockReorderRisk,
   type StockFilter,
   type StockIngredient,
   type StockLocationFilter,
@@ -70,11 +71,12 @@ const locationFilterOptions: {
 }[] = [
   { value: "all", label: stockCopy.filters.allLocations },
   { value: "warehouse", label: stockCopy.filters.locationWarehouse },
+  { value: "kitchen", label: stockCopy.filters.locationKitchen },
 ];
 
 function StockQuantity({ item }: { item: StockIngredient }) {
   const { base } = formatStockUnits(item.qty, item.units, formatQty);
-  const atRisk = item.status === "low" || item.status === "out";
+  const atRisk = isStockReorderRisk(item);
 
   return (
     <div className="min-w-0 text-right">
@@ -90,6 +92,22 @@ function StockQuantity({ item }: { item: StockIngredient }) {
   );
 }
 
+function StockRiskBadge({ item }: { item: StockIngredient }) {
+  if (item.status === "out") {
+    return <Badge variant="destructive">{stockCopy.filters.out}</Badge>;
+  }
+
+  if (item.status === "low") {
+    return <Badge variant="warning">{stockCopy.filters.low}</Badge>;
+  }
+
+  if (isStockReorderRisk(item)) {
+    return <Badge variant="warning">{stockCopy.filters.reorder}</Badge>;
+  }
+
+  return null;
+}
+
 function StockTouchRow({
   branchId,
   item,
@@ -100,8 +118,9 @@ function StockTouchRow({
   return (
     <Item
       asChild
+      variant="outline"
       size="sm"
-      className="min-h-11 touch-manipulation gap-2 px-0 py-1"
+      className="min-h-16 touch-manipulation gap-3 px-3 py-2.5"
     >
       <Link
         href={`/br/${branchId}/stock/on-hand/${item.id}`}
@@ -109,12 +128,17 @@ function StockTouchRow({
         role="listitem"
       >
         <ItemContent className="min-w-0">
-          <ItemTitle size="heading" className="w-full">
-            {item.name}
-            <span className="shrink-0 font-sans text-2xs font-medium text-muted-foreground">
-              {ITEM_KIND_LABELS[item.itemKind] ?? item.itemKind}
-            </span>
-          </ItemTitle>
+          <div className="flex min-w-0 items-center gap-2">
+            <ItemTitle size="heading" className="min-w-0 flex-1">
+              {item.name}
+            </ItemTitle>
+            <StockRiskBadge item={item} />
+          </div>
+          <ItemDescription>
+            {[ITEM_KIND_LABELS[item.itemKind] ?? item.itemKind, item.sku]
+              .filter(Boolean)
+              .join(" · ")}
+          </ItemDescription>
         </ItemContent>
 
         <ItemActions className="min-w-0 justify-end">
@@ -152,6 +176,16 @@ export function BranchStockOnHandClient({
     () => getStockOnHandCategories(ingredients),
     [ingredients],
   );
+  const hasMultipleStockLocations = useMemo(() => {
+    const locationKinds = new Set(
+      ingredients.flatMap(
+        (ingredient) =>
+          ingredient.locationBreakdown?.map((row) => row.locationKind) ?? [],
+      ),
+    );
+
+    return locationKinds.size > 1;
+  }, [ingredients]);
   const filters = { category, location, query, status };
   const filtered = useMemo(
     () => filterStockOnHandIngredients(ingredients, filters),
@@ -165,7 +199,13 @@ export function BranchStockOnHandClient({
   ].filter(Boolean).length;
   const isFirstLoadEmpty = !filtersActive && isPristineStockOnHand(ingredients);
   const locationScopeLabel =
-    location === "warehouse" ? stockCopy.filters.locationWarehouse : null;
+    location === "warehouse"
+      ? stockCopy.filters.locationWarehouse
+      : location === "kitchen"
+        ? stockCopy.filters.locationKitchen
+        : null;
+  const showReceiveAction =
+    canCreateGrn && !coreDataLoadFailed && underThresholdCount === 0;
 
   function resetFilters() {
     setQuery("");
@@ -181,17 +221,36 @@ export function BranchStockOnHandClient({
       description={stockCopy.operatorDescription}
       hideHeaderOnMobile
     >
+      {!coreDataLoadFailed && underThresholdCount > 0 ? (
+        <BranchOperatorPanel
+          title={stockCopy.attention.title}
+          description={stockCopy.attention.description(underThresholdCount)}
+          tone="warning"
+          badge={{
+            children: underThresholdCount,
+            variant: "warning",
+          }}
+          action={
+            canCreateGrn ? (
+              <Button asChild size="touch">
+                <Link href={`/br/${branchId}/stock/grn/new`}>
+                  <IconTruck />
+                  {stockCopy.actions.receiveGrn}
+                </Link>
+              </Button>
+            ) : undefined
+          }
+          size="sm"
+        >
+          <p className="text-sm leading-6 text-muted-foreground">
+            {stockCopy.attention.listHint}
+          </p>
+        </BranchOperatorPanel>
+      ) : null}
+
       <BranchOperatorPanel
         title={stockCopy.table.currentStock}
         size="sm"
-        tone={underThresholdCount > 0 ? "warning" : "default"}
-        headerHint={
-          underThresholdCount > 0 ? (
-            <Badge variant="warning">
-              {stockCopy.metrics.underThreshold}: {underThresholdCount}
-            </Badge>
-          ) : undefined
-        }
         badge={{
           children: stockCopy.filters.resultSummary(
             filtered.length,
@@ -199,6 +258,16 @@ export function BranchStockOnHandClient({
           ),
           variant: "secondary",
         }}
+        action={
+          showReceiveAction ? (
+            <Button asChild size="touch">
+              <Link href={`/br/${branchId}/stock/grn/new`}>
+                <IconTruck />
+                {stockCopy.actions.receiveGrn}
+              </Link>
+            </Button>
+          ) : undefined
+        }
         contentClassName="gap-3"
       >
         {coreDataLoadFailed ? (
@@ -230,49 +299,55 @@ export function BranchStockOnHandClient({
           </AppEmptyState>
         ) : (
           <>
-            <div className="grid min-w-0 gap-2 md:grid-cols-3 lg:grid-cols-[minmax(0,1fr)_repeat(3,minmax(8rem,11rem))]">
-              <InputGroup className="min-h-12 min-w-0 md:col-span-3 lg:col-span-1">
-                <InputGroupAddon>
-                  <IconSearch />
-                </InputGroupAddon>
-                <InputGroupInput
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={stockCopy.filters.searchPlaceholder}
-                  inputMode="search"
-                />
-              </InputGroup>
+            <div className="flex min-w-0 flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+                <InputGroup className="min-h-12 min-w-0 flex-1">
+                  <InputGroupAddon>
+                    <IconSearch />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder={stockCopy.filters.searchPlaceholder}
+                    inputMode="search"
+                  />
+                </InputGroup>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                className="w-full justify-between md:hidden"
-                aria-controls="branch-stock-on-hand-filters"
-                aria-expanded={filtersOpen}
-                onClick={() => setFiltersOpen((open) => !open)}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <IconFilter />
-                  {ACTIONS_VI.filter}
-                  {facetCount > 0 ? (
-                    <Badge variant="secondary">{facetCount}</Badge>
-                  ) : null}
-                </span>
-                <IconChevronDown
-                  className={cn(
-                    "transition-transform duration-150",
-                    filtersOpen && "rotate-180",
-                  )}
-                />
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="w-full justify-between sm:w-auto sm:min-w-36"
+                  aria-controls="branch-stock-on-hand-filters"
+                  aria-expanded={filtersOpen}
+                  onClick={() => setFiltersOpen((open) => !open)}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <IconFilter />
+                    {ACTIONS_VI.filter}
+                    {facetCount > 0 ? (
+                      <Badge variant="secondary">{facetCount}</Badge>
+                    ) : null}
+                  </span>
+                  <IconChevronDown
+                    className={cn(
+                      "transition-transform duration-150",
+                      filtersOpen && "rotate-180",
+                    )}
+                  />
+                </Button>
+              </div>
 
-              <div
+              <Item
                 id="branch-stock-on-hand-filters"
+                variant="muted"
+                size="sm"
                 className={cn(
-                  "col-span-full gap-2",
+                  "w-full gap-2",
                   filtersOpen ? "grid" : "hidden",
-                  "md:grid md:grid-cols-3 lg:contents",
+                  hasMultipleStockLocations
+                    ? "sm:grid-cols-3"
+                    : "sm:grid-cols-2",
                 )}
               >
                 <Select
@@ -297,29 +372,31 @@ export function BranchStockOnHandClient({
                   </SelectContent>
                 </Select>
 
-                <Select
-                  value={location}
-                  onValueChange={(value) =>
-                    setLocation(value as StockLocationFilter)
-                  }
-                >
-                  <SelectTrigger size="touch" className="w-full">
-                    <SelectValue
-                      placeholder={stockCopy.filters.locationPlaceholder}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locationFilterOptions.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className="min-h-11 py-2.5"
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {hasMultipleStockLocations ? (
+                  <Select
+                    value={location}
+                    onValueChange={(value) =>
+                      setLocation(value as StockLocationFilter)
+                    }
+                  >
+                    <SelectTrigger size="touch" className="w-full">
+                      <SelectValue
+                        placeholder={stockCopy.filters.locationPlaceholder}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locationFilterOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          className="min-h-11 py-2.5"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
 
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger size="touch" className="w-full">
@@ -353,7 +430,7 @@ export function BranchStockOnHandClient({
                     ) : null}
                   </SelectContent>
                 </Select>
-              </div>
+              </Item>
             </div>
 
             {filtersActive ? (
@@ -410,13 +487,12 @@ export function BranchStockOnHandClient({
               </AppEmptyState>
             ) : (
               <ItemGroup className="gap-2">
-                {filtered.map((item, index) => (
-                  <Fragment key={item.id}>
-                    <StockTouchRow branchId={branchId} item={item} />
-                    {index < filtered.length - 1 ? (
-                      <ItemSeparator className="my-0" />
-                    ) : null}
-                  </Fragment>
+                {filtered.map((item) => (
+                  <StockTouchRow
+                    key={item.id}
+                    branchId={branchId}
+                    item={item}
+                  />
                 ))}
               </ItemGroup>
             )}

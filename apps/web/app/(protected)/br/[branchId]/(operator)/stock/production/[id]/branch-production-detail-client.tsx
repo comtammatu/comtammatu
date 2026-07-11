@@ -26,8 +26,15 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { QuantityInput } from "@/components/form/domain-number-inputs";
+import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import { AppDetailFooter } from "@/components/surface";
 import {
@@ -61,6 +68,10 @@ interface BranchProductionDetailClientProps {
   basePath: string;
 }
 
+type NumberPadTarget =
+  | { kind: "actual" }
+  | { kind: "ingredient"; ingredientId: number; name: string; unit: string };
+
 export function BranchProductionDetailClient({
   run,
   recipeContext,
@@ -74,6 +85,8 @@ export function BranchProductionDetailClient({
   );
   const [shortages, setShortages] = useState<ProductionShortageRow[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [numberPadTarget, setNumberPadTarget] =
+    useState<NumberPadTarget | null>(null);
   const plannedOutputBaseQuantity = productionQuantityToBase(
     run.planned_quantity,
     run.entry_unit_to_base_factor,
@@ -82,10 +95,6 @@ export function BranchProductionDetailClient({
     recipeContext?.maxProductionQuantity ?? Number.NaN,
     run.entry_unit_to_base_factor,
   );
-  const maxProductionRaw =
-    maxProductionQuantity == null
-      ? undefined
-      : formatDecimalInputValue(maxProductionQuantity, 3);
   const [ingredientUsages, setIngredientUsages] = useState<
     Record<number, string>
   >(() => {
@@ -171,12 +180,12 @@ export function BranchProductionDetailClient({
         const nextShortages = Array.isArray(result.data)
           ? (result.data as ProductionShortageRow[])
           : [];
-        setShortages(nextShortages);
-        const message =
-          nextShortages.length > 0
-            ? "Kho không đủ nguyên liệu để hoàn thành lệnh."
-            : (result.error ?? "Không thể hoàn thành lệnh sản xuất.");
-        setActionError(nextShortages.length > 0 ? null : message);
+        if (nextShortages.length > 0) {
+          setShortages(nextShortages);
+          return;
+        }
+        const message = result.error ?? "Không thể hoàn thành lệnh sản xuất.";
+        setActionError(message);
         toast.error(message);
         return;
       }
@@ -313,26 +322,32 @@ export function BranchProductionDetailClient({
                             Thực dùng
                           </Label>
                           <div className="flex min-w-0 items-center gap-2">
-                            <QuantityInput
+                            <Button
                               id={`branch-production-actual-${ingredient.ingredient_id}`}
-                              min="0"
-                              maxFractionDigits={3}
-                              max={formatDecimalInputValue(
-                                ingredient.max_ingredient_qty,
-                                3,
-                              )}
-                              value={
-                                ingredientUsages[ingredient.ingredient_id] ?? ""
-                              }
-                              onValueChange={(value) =>
-                                setIngredientUsages((previous) => ({
-                                  ...previous,
-                                  [ingredient.ingredient_id]: value,
-                                }))
-                              }
+                              type="button"
+                              variant="outline"
+                              size="touch"
+                              className="min-w-0 flex-1 justify-between font-mono tabular-nums"
                               disabled={isPending}
-                              className="min-w-0 text-right"
-                            />
+                              onClick={() =>
+                                setNumberPadTarget({
+                                  kind: "ingredient",
+                                  ingredientId: ingredient.ingredient_id,
+                                  name: ingredient.ingredient_name,
+                                  unit: ingredient.unit_name,
+                                })
+                              }
+                            >
+                              {ingredientUsages[ingredient.ingredient_id]
+                                ? formatQty(
+                                    Number.parseFloat(
+                                      ingredientUsages[
+                                        ingredient.ingredient_id
+                                      ] ?? "",
+                                    ),
+                                  )
+                                : "Nhập số lượng…"}
+                            </Button>
                             <span className="w-10 shrink-0 text-xs text-muted-foreground">
                               {ingredient.unit_name}
                             </span>
@@ -343,27 +358,6 @@ export function BranchProductionDetailClient({
                   ))}
                 </ItemGroup>
               </BranchOperatorPanel>
-            ) : null}
-
-            {shortages.length > 0 ? (
-              <Alert variant="destructive">
-                <AlertTitle>Thiếu nguyên liệu</AlertTitle>
-                <AlertDescription>
-                  <ItemGroup className="mt-2 gap-2">
-                    {shortages.map((shortage) => (
-                      <Item key={shortage.ingredient_id} variant="outline">
-                        <ItemContent>
-                          <ItemTitle>{shortage.ingredient_name}</ItemTitle>
-                          <ItemDescription>
-                            Cần {formatQty(shortage.needed)} {shortage.unit},
-                            còn {formatQty(shortage.on_hand)} {shortage.unit}
-                          </ItemDescription>
-                        </ItemContent>
-                      </Item>
-                    ))}
-                  </ItemGroup>
-                </AlertDescription>
-              </Alert>
             ) : null}
 
             {actionError ? (
@@ -414,16 +408,19 @@ export function BranchProductionDetailClient({
                     Số lượng thực tế
                   </Label>
                   <div className="flex min-w-0 items-center gap-2">
-                    <QuantityInput
+                    <Button
                       id="branch-production-actual-quantity"
-                      min="0"
-                      maxFractionDigits={3}
-                      max={maxProductionRaw}
-                      value={actualQuantity}
-                      onValueChange={setActualQuantity}
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      className="min-w-0 flex-1 justify-between font-mono tabular-nums"
                       disabled={isPending}
-                      className="min-w-0"
-                    />
+                      onClick={() => setNumberPadTarget({ kind: "actual" })}
+                    >
+                      {actualQuantity
+                        ? formatQty(Number.parseFloat(actualQuantity))
+                        : "Nhập số lượng…"}
+                    </Button>
                     <span className="shrink-0 text-sm text-muted-foreground">
                       {unit}
                     </span>
@@ -472,6 +469,87 @@ export function BranchProductionDetailClient({
             trailing={primaryAction}
           />
         ) : null}
+
+        <NumberPadSheet
+          open={numberPadTarget != null}
+          onOpenChange={(open) => {
+            if (!open) setNumberPadTarget(null);
+          }}
+          title={
+            numberPadTarget?.kind === "actual"
+              ? "Sản lượng thực tế"
+              : `Thực dùng: ${numberPadTarget?.name ?? ""}`
+          }
+          suffix={
+            numberPadTarget?.kind === "ingredient" ? numberPadTarget.unit : unit
+          }
+          initialValue={
+            numberPadTarget?.kind === "actual"
+              ? Number.parseFloat(actualQuantity)
+              : numberPadTarget?.kind === "ingredient"
+                ? Number.parseFloat(
+                    ingredientUsages[numberPadTarget.ingredientId] ?? "",
+                  )
+                : null
+          }
+          confirmLabel="Xong"
+          maxFractionDigits={3}
+          onConfirm={(value) => {
+            if (numberPadTarget?.kind === "actual") {
+              setActualQuantity(formatDecimalInputValue(value, 3));
+              return;
+            }
+            if (numberPadTarget?.kind === "ingredient") {
+              setIngredientUsages((previous) => ({
+                ...previous,
+                [numberPadTarget.ingredientId]: formatDecimalInputValue(
+                  value,
+                  3,
+                ),
+              }));
+            }
+          }}
+        />
+
+        <Sheet
+          open={shortages.length > 0}
+          onOpenChange={(open) => {
+            if (!open) setShortages([]);
+          }}
+        >
+          <SheetContent side="bottom" className="max-h-dvh-95">
+            <SheetHeader>
+              <SheetTitle>Thiếu nguyên liệu</SheetTitle>
+              <p className="text-sm text-muted-foreground">
+                Sửa thực chi rồi hoàn thành lại lệnh.
+              </p>
+            </SheetHeader>
+            <ItemGroup className="mt-4 gap-2">
+              {shortages.map((shortage) => (
+                <Item key={shortage.ingredient_id} variant="outline">
+                  <ItemContent>
+                    <ItemTitle>{shortage.ingredient_name}</ItemTitle>
+                    <ItemDescription>
+                      Cần {formatQty(shortage.needed)} {shortage.unit}, còn{" "}
+                      {formatQty(shortage.on_hand)} {shortage.unit}, thiếu{" "}
+                      {formatQty(shortage.missing)} {shortage.unit}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+              ))}
+            </ItemGroup>
+            <SheetFooter>
+              <Button
+                type="button"
+                size="touch-lg"
+                className="w-full"
+                onClick={() => setShortages([])}
+              >
+                Sửa Thực chi
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
       </div>
     </BranchOperatorPage>
   );

@@ -77,6 +77,8 @@ export function buildVietQrBankAppUrl(input: {
     return null;
   }
 
+  if (appId.toLowerCase() === "momo") return "momo://app";
+
   if (appId.toLowerCase() === "mb") {
     const qrData = input.qrData?.trim();
     if (!qrData?.startsWith("000201")) return null;

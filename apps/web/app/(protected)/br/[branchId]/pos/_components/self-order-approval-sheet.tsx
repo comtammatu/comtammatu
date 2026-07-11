@@ -252,7 +252,7 @@ export function SelfOrderApprovalSheet({
                                       : ""}
                                   </ItemTitle>
                                   {optionSummary ? (
-                                    <ItemDescription>
+                                    <ItemDescription className="max-h-16 overflow-y-auto break-words pr-1">
                                       {optionSummary}
                                     </ItemDescription>
                                   ) : null}
@@ -270,7 +270,9 @@ export function SelfOrderApprovalSheet({
                             tone="muted"
                             label={SELF_ORDER_VI.staffCustomerNote}
                           >
-                            {request.customerNote}
+                            <div className="max-h-24 overflow-y-auto break-words pr-1">
+                              {request.customerNote}
+                            </div>
                           </NoteCallout>
                         ) : null}
 

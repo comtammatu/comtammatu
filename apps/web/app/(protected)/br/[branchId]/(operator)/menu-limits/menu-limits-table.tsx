@@ -22,7 +22,6 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { Progress } from "@comtammatu/ui/components/progress";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -53,6 +52,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import { normalizeSearch } from "@lib/search";
 import { useSwipeReveal, type SwipeReveal } from "@lib/hooks/use-swipe-reveal";
 import { useLongPress } from "@lib/hooks/use-long-press";
+import { useRealtimeRefresh } from "@/_hooks/use-realtime-refresh";
 import {
   type MenuLimitRow,
   clearBranchMenuDailyLimit,
@@ -64,25 +64,6 @@ import { messages } from "@lib/messages";
 interface Props {
   branchId: number;
   rows: MenuLimitRow[];
-}
-
-function getSoldProgress(row: MenuLimitRow): {
-  sold: number;
-  remaining: number;
-  value: number;
-} | null {
-  if (row.available_to_sell == null) return null;
-
-  const sold = Math.max(0, row.sold_today);
-  const total = sold + row.available_to_sell;
-  const value =
-    total <= 0
-      ? sold > 0
-        ? 100
-        : 0
-      : Math.min(100, Math.round((sold / total) * 100));
-
-  return { sold, remaining: row.available_to_sell, value };
 }
 
 function getItemBadge(row: MenuLimitRow): {
@@ -171,8 +152,6 @@ function MenuLimitRowItem({
     onContextMenu: longPress.onContextMenu,
   };
 
-  const progress = getSoldProgress(row);
-
   return (
     <div className="relative overflow-hidden w-full bg-background border-b last:border-b-0">
       <div className="absolute inset-y-0 right-0 flex">
@@ -227,21 +206,29 @@ function MenuLimitRowItem({
                   </span>
                 </span>
               )}
+              {row.available_to_sell != null && (
+                <span className="font-medium text-foreground">
+                  {messages.pos.menu.availableToSellCount(
+                    row.available_to_sell,
+                  )}
+                </span>
+              )}
+              {row.pending_unfinalized_demand > 0 && (
+                <span>
+                  {messages.pos.menu.pendingDemandCount(
+                    row.pending_unfinalized_demand,
+                  )}
+                </span>
+              )}
+              {row.active_hold_demand > 0 && (
+                <span>
+                  {messages.pos.menu.activeHoldDemandCount(
+                    row.active_hold_demand,
+                  )}
+                </span>
+              )}
             </ItemDescription>
           </ItemContent>
-          {progress && (
-            <div className="w-full shrink-0 lg:w-56">
-              <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
-                <span className="font-mono tabular-nums text-destructive">
-                  {messages.pos.menu.soldCount(progress.sold)}
-                </span>
-                <span className="font-mono tabular-nums text-muted-foreground">
-                  {messages.pos.menu.remainingCount(progress.remaining)}
-                </span>
-              </div>
-              <Progress value={progress.value} tone="destructive" />
-            </div>
-          )}
         </Item>
       </div>
     </div>
@@ -252,6 +239,64 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  useRealtimeRefresh({
+    deps: [branchId],
+    setupChannel: (supabase, scheduleRefresh) => {
+      const filter = `branch_id=eq.${String(branchId)}`;
+      let initialSubscribe = true;
+      return supabase
+        .channel(`menu-limits:${String(branchId)}:availability`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "branch_menu_item_daily_limits",
+            filter,
+          },
+          scheduleRefresh,
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "branch_menu_item_daily_holds",
+            filter,
+          },
+          scheduleRefresh,
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "orders",
+            filter,
+          },
+          scheduleRefresh,
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "stock_levels",
+            filter,
+          },
+          scheduleRefresh,
+        )
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          if (initialSubscribe) {
+            initialSubscribe = false;
+            return;
+          }
+          scheduleRefresh();
+        });
+    },
+  });
 
   const swipe = useSwipeReveal({ revealWidth: 80 });
 
@@ -555,10 +600,34 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                         {drawerRow.stock_capacity}
                       </Badge>
                     ) : null}
+                    {drawerRow.available_to_sell != null ? (
+                      <Badge variant="outline" className="font-mono">
+                        {messages.pos.menu.availableToSellCount(
+                          drawerRow.available_to_sell,
+                        )}
+                      </Badge>
+                    ) : null}
+                    {drawerRow.pending_unfinalized_demand > 0 ? (
+                      <Badge variant="outline" className="font-mono">
+                        {messages.pos.menu.pendingDemandCount(
+                          drawerRow.pending_unfinalized_demand,
+                        )}
+                      </Badge>
+                    ) : null}
+                    {drawerRow.active_hold_demand > 0 ? (
+                      <Badge variant="outline" className="font-mono">
+                        {messages.pos.menu.activeHoldDemandCount(
+                          drawerRow.active_hold_demand,
+                        )}
+                      </Badge>
+                    ) : null}
                   </div>
                 </DrawerDescription>
               </DrawerHeader>
               <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pb-2">
+                <p className="text-xs text-muted-foreground">
+                  {messages.pos.menu.availabilityRuleHint}
+                </p>
                 <FieldGroup className="gap-4">
                   <Item
                     asChild

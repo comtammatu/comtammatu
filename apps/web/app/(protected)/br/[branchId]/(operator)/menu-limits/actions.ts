@@ -76,7 +76,7 @@ export async function fetchBranchMenuDailyLimits(
 const setLimitSchema = z.object({
   branchId: branchIdSchema,
   menuItemId: menuItemIdSchema,
-  // null/undefined lets the backend default the sale limit to stock capacity.
+  // null/undefined removes the manual cap; stock availability remains separate.
   limitQuantity: z
     .union([
       z.coerce
@@ -133,8 +133,7 @@ export async function setBranchMenuDailyLimit(
     {
       p_branch_id: parsed.data.branchId,
       p_menu_item_id: parsed.data.menuItemId,
-      // null = default to stock capacity; typegen still types the INT param
-      // non-null because there is no SQL default, so assert here.
+      // The generated RPC type does not express the nullable SQL parameter.
       p_limit_quantity: limitQty as number,
       p_is_disabled: parsed.data.isDisabled,
     },
@@ -148,22 +147,10 @@ export async function setBranchMenuDailyLimit(
     if (msg.includes("not found")) {
       return { success: false, error: "Không tìm thấy món hoặc chi nhánh." };
     }
-    if (msg.includes("exceeds stock capacity")) {
-      return {
-        success: false,
-        error: "Giới hạn bán không được vượt Tồn Bếp chi nhánh.",
-      };
-    }
     if (msg.includes("nonnegative")) {
       return {
         success: false,
         error: "Giới hạn bán phải là số nguyên từ 0 đến 9999.",
-      };
-    }
-    if (msg.includes("stock capacity required")) {
-      return {
-        success: false,
-        error: "Chưa tính được Tồn Bếp chi nhánh để đặt Giới hạn bán.",
       };
     }
     return {
@@ -279,7 +266,7 @@ export async function replenishMenuItemKitchenStock(
     if (msg.includes("forbidden") || msg.includes("scope mismatch")) {
       return {
         success: false,
-        error: "Không có quyền bổ sung Bếp chi nhánh.",
+        error: "Không có quyền bổ sung tồn kho chi nhánh.",
       };
     }
     if (msg.includes("extra_portions_range")) {
@@ -298,12 +285,14 @@ export async function replenishMenuItemKitchenStock(
       return { success: false, error: "Không tìm thấy món hoặc chi nhánh." };
     }
     if (
+      msg.includes("branch_warehouse_required") ||
+      msg.includes("default_warehouse_location_required") ||
       msg.includes("branch_kitchen_required") ||
       msg.includes("default_kitchen_location_required")
     ) {
       return {
         success: false,
-        error: "Chi nhánh chưa cấu hình Bếp chi nhánh.",
+        error: "Chi nhánh chưa cấu hình Kho chi nhánh.",
       };
     }
     if (
@@ -315,7 +304,7 @@ export async function replenishMenuItemKitchenStock(
     ) {
       return {
         success: false,
-        error: "Chưa đủ định mức nguyên liệu để bổ sung Bếp chi nhánh.",
+        error: "Chưa đủ định mức nguyên liệu để bổ sung tồn kho chi nhánh.",
       };
     }
 
@@ -325,7 +314,7 @@ export async function replenishMenuItemKitchenStock(
     );
     return {
       success: false,
-      error: "Không thể bổ sung Bếp chi nhánh. Vui lòng thử lại.",
+      error: "Không thể bổ sung tồn kho chi nhánh. Vui lòng thử lại.",
     };
   }
 

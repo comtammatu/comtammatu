@@ -35,6 +35,38 @@ const ingredientPoolAvailabilityMigration = readFileSync(
   "utf8",
 );
 
+const menuLimitsTable = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
+  ),
+  "utf8",
+);
+
+const menuLimitsActions = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/(operator)/menu-limits/actions.ts",
+  ),
+  "utf8",
+);
+
+const warehouseStockGateMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260711120000_enable_pos_sale_stock_deduction_at_branch_warehouse.sql",
+  ),
+  "utf8",
+);
+
+const singleWarehouseMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260710220000_single_warehouse_retire_branch_kitchen.sql",
+  ),
+  "utf8",
+);
+
 test("remaining is unbounded when available_to_sell is null", () => {
   assert.equal(remainingDailyQuotaAfterDemand(limit({}), 3), null);
 });
@@ -200,5 +232,31 @@ test("stock availability reserves shared recipe ingredients across menu items", 
   assert.doesNotMatch(
     ingredientPoolAvailabilityMigration,
     /ELSE r\.manual_limit_quantity - r\.sold_today - r\.active_hold_demand/,
+  );
+});
+
+test("menu-limit screen refreshes when availability inputs change", () => {
+  assert.match(menuLimitsTable, /useRealtimeRefresh/);
+  assert.match(menuLimitsTable, /branch_menu_item_daily_limits/);
+  assert.match(menuLimitsTable, /branch_menu_item_daily_holds/);
+  assert.match(menuLimitsTable, /table: "orders"/);
+  assert.match(menuLimitsTable, /table: "stock_levels"/);
+});
+
+test("menu-limit operations expose availability inputs while the database keeps the hard stock gate", () => {
+  assert.match(menuLimitsTable, /availableToSellCount/);
+  assert.match(menuLimitsTable, /pendingDemandCount/);
+  assert.match(menuLimitsTable, /activeHoldDemandCount/);
+  assert.match(menuLimitsTable, /availabilityRuleHint/);
+  assert.doesNotMatch(menuLimitsTable, /getSoldProgress/);
+  assert.doesNotMatch(menuLimitsActions, /default to stock capacity/);
+  assert.doesNotMatch(menuLimitsActions, /Tồn Bếp chi nhánh/);
+  assert.match(
+    singleWarehouseMigration,
+    /'public\.enforce_branch_stock_availability\(\)'/,
+  );
+  assert.match(
+    warehouseStockGateMigration,
+    /pos_stock_outcome_posting/,
   );
 });

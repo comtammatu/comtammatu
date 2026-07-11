@@ -44,6 +44,10 @@ const createProductionRunSchema = z.object({
     .optional(),
 });
 
+const recordProductionRunSchema = createProductionRunSchema.extend({
+  actualQuantity: z.coerce.number().positive(),
+});
+
 const productionShortageListSchema = z.array(
   z.object({
     ingredient_id: z.coerce.number().int().positive(),
@@ -574,6 +578,77 @@ export const confirmProductionRun = withAction(
   },
 );
 
+export const recordProductionRun = withAction<
+  typeof recordProductionRunSchema,
+  ProductionShortageRow[] | null
+>(
+  {
+    schema: recordProductionRunSchema,
+    roles: INVENTORY_OPS_ROLES,
+  },
+  async (parsed, { supabase, claims }) => {
+    const access = await requireProductionAccess(supabase, claims);
+    if (!access.ok) return { success: false, error: access.error };
+
+    const { error } = await (supabase.rpc as unknown as RecordProductionRunRpc)(
+      "record_production_run",
+      {
+        p_branch_id: parsed.branchId,
+        p_finished_good_id: parsed.finishedGoodId,
+        p_planned_quantity: parsed.plannedQuantity,
+        p_entry_unit_id: parsed.entryUnitId ?? null,
+        p_actual_quantity: parsed.actualQuantity,
+        p_notes: parsed.notes ?? null,
+        p_target_branch_id: parsed.targetBranchId ?? parsed.branchId,
+        p_actual_ingredients: (parsed.ingredientsOverride ?? null) as Json,
+        p_source_location_id: parsed.sourceLocationId ?? null,
+        p_target_location_id: parsed.targetLocationId ?? null,
+      },
+    );
+
+    if (error) {
+      console.error("recordProductionRun error:", error);
+      const message = error.message || "";
+
+      if (hasProductionRecipeUnitMappingError(message)) {
+        return { success: false, error: PRODUCTION_RECIPE_UNIT_MAPPING_ERROR };
+      }
+      if (hasProductionRunUnitMappingReviewError(message)) {
+        return {
+          success: false,
+          error: PRODUCTION_RUN_UNIT_MAPPING_REVIEW_ERROR,
+        };
+      }
+      if (message.includes("insufficient_stock_for_production")) {
+        return {
+          success: false,
+          error: "Kho không đủ nguyên liệu",
+          data: parseShortagesDetail(error.details),
+        };
+      }
+      if (message.includes("production_recipe_missing")) {
+        return { success: false, error: "Thiếu công thức sản xuất" };
+      }
+      if (message.includes("production_source_location_missing")) {
+        return { success: false, error: "Chưa cấu hình nơi xuất nguyên liệu." };
+      }
+      if (message.includes("production_target_location_missing")) {
+        return { success: false, error: "Chưa cấu hình nơi nhập thành phẩm." };
+      }
+      if (
+        error.code === PG_ERR.INSUFFICIENT_PRIVILEGE ||
+        message.includes("forbidden") ||
+        message.includes("branch_scope_violation")
+      ) {
+        return { success: false, error: "Không có quyền thực hiện" };
+      }
+      return { success: false, error: "Lỗi ghi nhận mẻ sản xuất" };
+    }
+
+    return { success: true, data: null };
+  },
+);
+
 export const cancelProductionRun = withAction(
   {
     schema: z.number().int().positive(),
@@ -662,6 +737,25 @@ type CreateProductionRunWithLocationsRpc = (
     p_notes: string | null;
     p_target_branch_id: number;
     p_ingredients_override: Json | null;
+    p_source_location_id: number | null;
+    p_target_location_id: number | null;
+  },
+) => Promise<{
+  data: Json | null;
+  error: { message: string; code?: string; details?: string | null } | null;
+}>;
+
+type RecordProductionRunRpc = (
+  fn: "record_production_run",
+  args: {
+    p_branch_id: number;
+    p_finished_good_id: number;
+    p_planned_quantity: number;
+    p_entry_unit_id: number | null;
+    p_actual_quantity: number;
+    p_notes: string | null;
+    p_target_branch_id: number;
+    p_actual_ingredients: Json | null;
     p_source_location_id: number | null;
     p_target_location_id: number | null;
   },

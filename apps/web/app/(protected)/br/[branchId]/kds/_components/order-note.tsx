@@ -37,8 +37,8 @@ export function OrderNote({
         </SectionLabel>
         <div
           className={cn(
-            "min-w-0 break-words font-semibold leading-snug",
-            compact ? "text-sm" : "text-base",
+            "min-w-0 overflow-y-auto break-words pr-1 font-semibold leading-snug",
+            compact ? "max-h-20 text-sm" : "max-h-32 text-base",
           )}
         >
           {trimmedNote}

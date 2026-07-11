@@ -122,8 +122,10 @@ function BankAppLauncher({
       })
       .then((payload) => {
         const parsedApps = parseVietQrBankApps(payload);
-        if (!parsedApps.length) throw new Error("bank_app_catalog_invalid");
-        setApps(parsedApps);
+        setApps([
+          { id: "momo", name: "MoMo", logoUrl: null },
+          ...parsedApps.filter((app) => app.id !== "momo"),
+        ]);
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError")

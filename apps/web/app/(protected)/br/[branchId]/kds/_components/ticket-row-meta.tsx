@@ -60,7 +60,7 @@ export function TicketRowMeta({
         {hasNote && (
           <span className="inline-flex min-h-6 min-w-0 max-w-full items-center gap-1.5 rounded-md bg-warning/15 px-2 py-1 text-warning">
             <IconNote aria-hidden className="size-3 shrink-0 text-warning" />
-            <span className="min-w-0 break-words text-sm font-semibold leading-tight">
+            <span className="max-h-16 min-w-0 overflow-y-auto break-words pr-1 text-sm font-semibold leading-tight">
               {note}
             </span>
           </span>
@@ -102,7 +102,7 @@ export function TicketRowMeta({
             aria-hidden
             className="mt-0.5 size-4 shrink-0 text-warning"
           />
-          <span className="min-w-0 break-words text-sm font-semibold">
+          <span className="max-h-20 min-w-0 overflow-y-auto break-words pr-1 text-sm font-semibold">
             {note}
           </span>
         </div>

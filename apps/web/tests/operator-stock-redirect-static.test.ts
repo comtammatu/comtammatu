@@ -26,8 +26,9 @@ test("operator stock sticky action bars route through AppDetailFooter", () => {
   const rawStickyCallSites = stockFiles.filter((path) =>
     read(path).includes("sticky bottom-0"),
   );
-  const redundantBottomNavPadding = stockFiles.filter((path) =>
-    path.includes("/(operator)/stock/") && read(path).includes("pb-28"),
+  const redundantBottomNavPadding = stockFiles.filter(
+    (path) =>
+      path.includes("/(operator)/stock/") && read(path).includes("pb-28"),
   );
   const nestedFooterCallSites = stockFiles.filter((path) =>
     /<AppDetailFooter\s+sticky\s+trailing=\{footer\}/.test(read(path)),
@@ -266,13 +267,20 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(branchClientSource, /BranchOperatorPage/);
   assert.match(branchClientSource, /BranchOperatorPanel/);
   assert.match(branchClientSource, /ItemGroup/);
-  assert.match(branchClientSource, /ItemSeparator/);
   assert.match(branchClientSource, /StockTouchRow/);
+  assert.match(branchClientSource, /StockRiskBadge/);
   assert.match(branchClientSource, /filterStockOnHandIngredients/);
-  assert.match(branchClientSource, /min-h-11/);
+  assert.match(branchClientSource, /isStockReorderRisk/);
+  assert.match(branchClientSource, /variant="outline"/);
+  assert.match(branchClientSource, /min-h-16/);
   assert.match(branchClientSource, /size="touch"/);
-  assert.match(branchClientSource, /action=\{\s*canCreateGrn/);
-  assert.match(branchClientSource, /href=\{`\/br\/\$\{branchId\}\/stock\/grn\/new`\}/);
+  assert.match(branchClientSource, /const showReceiveAction =/);
+  assert.match(branchClientSource, /stockCopy\.attention\.title/);
+  assert.doesNotMatch(branchClientSource, /md:grid md:grid-cols-3/);
+  assert.match(
+    branchClientSource,
+    /href=\{`\/br\/\$\{branchId\}\/stock\/grn\/new`\}/,
+  );
   assert.doesNotMatch(
     branchClientSource,
     /DataTable|AppPage|StockPageContent|StockClient|embedded|overflow-x-auto|QuickStockIssueDialog|QuickInternalTransferDialog|AdjustStockDialog/,
@@ -1543,7 +1551,7 @@ test("operator production renders branch-native inside the production operator s
 
   assert.match(newClientSource, /<BranchOperatorPage/);
   assert.match(newClientSource, /<BranchOperatorPanel/);
-  assert.match(newClientSource, /<BranchOperatorStatusStrip/);
+  assert.doesNotMatch(newClientSource, /<BranchOperatorStatusStrip/);
   assert.match(newClientSource, /<ItemGroup/);
   assert.match(newClientSource, /<AppDetailFooter[\s\S]*sticky/);
   assert.match(newClientSource, /lg:grid-cols-/);

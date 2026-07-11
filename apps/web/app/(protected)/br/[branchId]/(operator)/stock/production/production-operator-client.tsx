@@ -30,16 +30,12 @@ import type { ProductionRunRow } from "@/(protected)/inventory/production-run-ac
 interface ProductionOperatorClientProps {
   branchId: number;
   canCreateProduction: boolean;
-  finishedGoodsCount: number;
-  recipesCount: number;
   runs: ProductionRunRow[];
 }
 
 export function ProductionOperatorClient({
   branchId,
   canCreateProduction,
-  finishedGoodsCount,
-  recipesCount,
   runs,
 }: ProductionOperatorClientProps) {
   const basePath = `/br/${branchId}/stock/production`;
@@ -67,11 +63,6 @@ export function ProductionOperatorClient({
               value: drafts.length,
               mono: true,
             },
-            {
-              label: "Công thức",
-              value: `${recipesCount}/${finishedGoodsCount}`,
-              mono: true,
-            },
           ]}
         />
 
@@ -81,7 +72,7 @@ export function ProductionOperatorClient({
           icon={IconChefHat}
           size="sm"
           action={
-            canCreateProduction ? (
+            canCreateProduction && workQueue.length > 0 ? (
               <Button asChild size="touch">
                 <Link href={`${basePath}/new`}>
                   <IconPlus data-icon="inline-start" />
@@ -112,27 +103,20 @@ export function ProductionOperatorClient({
           )}
         </BranchOperatorPanel>
 
-        <BranchOperatorPanel
-          title="Đã hoàn tất"
-          description="Các mẻ sản xuất gần đây."
-          icon={IconChefHat}
-          size="sm"
-          contentClassName="gap-2"
-        >
-          {completed.length === 0 ? (
-            <AppEmptyState
-              compact
-              align="start"
-              mode="no-data"
-              title="Chưa có lệnh hoàn tất"
-            />
-          ) : (
+        {completed.length > 0 ? (
+          <BranchOperatorPanel
+            title="Đã hoàn tất"
+            description="Các mẻ sản xuất gần đây."
+            icon={IconChefHat}
+            size="sm"
+            contentClassName="gap-2"
+          >
             <ProductionRunList
               runs={completed.slice(0, 8)}
               basePath={basePath}
             />
-          )}
-        </BranchOperatorPanel>
+          </BranchOperatorPanel>
+        ) : null}
       </div>
     </BranchOperatorPage>
   );

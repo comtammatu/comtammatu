@@ -276,7 +276,7 @@ density="compact"` already owns width/padding. Return a bare flex
   controlled so the responsive breakpoint switch can remount safely.
   Document totals render through `desktopFooter` (TableFooter rows) +
   `mobileFooter` (block under the card list).
-- Sticky CTA: `sticky chrome-safe-bottom` + `shadow-lg` per the Elevation
+- Sticky CTA: `sticky bottom-0 chrome-safe-pb` + `shadow-lg` per the Elevation
   contract's Sticky CTA rung.
 - Branch touch variant: route pages under `/br/[branchId]` use
   `BranchOperatorPage`; their direct client owner composes

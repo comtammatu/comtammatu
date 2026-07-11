@@ -23,14 +23,14 @@ interface OperatorStockLink {
 }
 
 const STOCK_PRIMARY_SUFFIXES = [
+  "/stock/on-hand",
   "/stock/grn",
-  "/stock/stocktake",
-  "/stock/waste",
+  "/stock/production",
 ] as const;
 
 const STOCK_SECONDARY_SUFFIXES = [
-  "/stock/on-hand",
-  "/stock/production",
+  "/stock/stocktake",
+  "/stock/waste",
   "/stock/count-assignments",
   "/stock/consumption",
   "/stock/catalog",

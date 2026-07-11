@@ -115,6 +115,18 @@ test("MB Bank link receives the exact VietQR payload", () => {
   assert.equal(url.searchParams.get("qrContent"), qrData);
 });
 
+test("MoMo opens only as a QR scanner without merchant payment data", () => {
+  const href = buildVietQrBankAppUrl({
+    appId: "momo",
+    accountNo: "0123456789",
+    bankCode: "MB",
+    amount: 167_000,
+    paymentCode: "MATU ABC123",
+  });
+
+  assert.equal(href, "momo://app");
+});
+
 test("autofill bank app links keep the exact VietQR payment facts", () => {
   for (const appId of ["acb", "bidv", "icb", "ocb"]) {
     const href = buildVietQrBankAppUrl({

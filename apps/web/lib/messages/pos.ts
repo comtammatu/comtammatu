@@ -191,25 +191,32 @@ export const pos = {
     soldLabel: "Còn lại",
     totalLimitLabel: "Giới hạn bán",
     manualLimitLabel: "Giới hạn bán",
-    stockCapacityLabel: "Tồn kho chi nhánh",
+    stockCapacityLabel: "Tồn quy đổi",
     stockCapacityEmpty: "—",
     itemCount: (quantity: number) => `${quantity} món`,
     limitedCount: (quantity: number) => `${quantity} có giới hạn`,
-    stockCapacityCount: (quantity: number) =>
-      `${quantity} có tồn kho chi nhánh`,
+    stockCapacityCount: (quantity: number) => `${quantity} có tồn quy đổi`,
     attentionCount: (quantity: number) => `${quantity} cần xử lý`,
     exhaustedCount: (quantity: number) => `${quantity} hết suất`,
     disabledCount: (quantity: number) => `${quantity} đang tắt`,
     soldCount: (quantity: number) => `${quantity} đã bán`,
     remainingCount: (quantity: number) => `${quantity} còn lại`,
+    availableToSellCount: (quantity: number) => `${quantity} được bán thêm`,
+    pendingDemandCount: (quantity: number) =>
+      `${quantity} suất quy đổi đang ở đơn`,
+    activeHoldDemandCount: (quantity: number) =>
+      `${quantity} suất quy đổi đang giữ`,
+    availabilityRuleHint:
+      "Số được bán thêm do hệ thống quyết định theo trần thủ công, tồn quy đổi, đơn đang xử lý và giữ chỗ. Không cộng hoặc trừ các số này bằng tay.",
     soldProgressAria: (sold: number, limit: number) =>
       `Đã bán ${sold} trên ${limit} phần giới hạn`,
     limitInputAria: (name: string) => `Giới hạn bán ${name}`,
     totalLimitInputAria: (name: string) => `Giới hạn bán ${name}`,
     manualLimitInputAria: (name: string) => `Giới hạn bán ${name}`,
     manualLimitPlaceholder: "Nhập số",
-    manualLimitOptionalLabel: "Giới hạn số lượng",
-    manualLimitOptionalHint: "Để trống nếu không giới hạn tay.",
+    manualLimitOptionalLabel: "Trần bán thủ công",
+    manualLimitOptionalHint:
+      "Để trống để không đặt trần thủ công; tồn kho vẫn là rào chặn riêng.",
     manualLimitExample: "VD: 50",
     manualLimitRequired: "Giới hạn bán là bắt buộc.",
     manualLimitRange: "Giới hạn bán phải là số nguyên từ 0 đến 9999.",

@@ -240,7 +240,7 @@ export function PosLineItemCompact({
           {note ? (
             <p
               className={cn(
-                "min-w-0 break-words text-sm italic leading-snug",
+                "max-h-20 min-w-0 overflow-y-auto break-words pr-1 text-sm italic leading-snug",
                 noteClassName,
               )}
             >

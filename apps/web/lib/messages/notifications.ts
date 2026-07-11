@@ -18,6 +18,7 @@ export const notifications = {
   kindLabel: {
     "pos.order_new": "Đơn mới",
     "pos.kds_out_of_stock": "Bếp báo hết món",
+    "pos.payment_stock_failed": "Thanh toán chưa trừ kho",
     "pos.shift_variance": "Lệch quỹ ca POS",
     "attendance.checkout_requested": "Yêu cầu kết ca",
     "hr.leave_requested": "Yêu cầu nghỉ phép",

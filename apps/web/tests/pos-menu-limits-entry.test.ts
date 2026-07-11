@@ -108,12 +108,14 @@ test("branch menu-limit drawer uses Ma Tu DS field and operator panel primitives
   assert.match(managerTableSource, /size="touch"/);
 });
 
-test("branch menu-limit list keeps tablet widths on touch-first rows", () => {
+test("branch menu-limit list keeps touch-first rows with server availability facts", () => {
   assert.match(managerTableSource, /lg:flex-row/);
   assert.match(managerTableSource, /lg:items-center/);
-  assert.match(managerTableSource, /lg:w-56/);
   assert.match(managerTableSource, /lg:w-80/);
   assert.match(managerTableSource, /lg:justify-start/);
+  assert.match(managerTableSource, /availableToSellCount/);
+  assert.match(managerTableSource, /pendingDemandCount/);
+  assert.match(managerTableSource, /activeHoldDemandCount/);
 
   assert.doesNotMatch(managerTableSource, /sm:flex-row/);
   assert.doesNotMatch(managerTableSource, /sm:items-center/);

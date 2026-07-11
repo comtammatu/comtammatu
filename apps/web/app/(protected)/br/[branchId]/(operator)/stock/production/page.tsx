@@ -20,10 +20,6 @@ export default async function OperatorProductionPage({ params }: PageProps) {
     <ProductionOperatorClient
       branchId={branchId}
       canCreateProduction={data.canCreateProduction}
-      finishedGoodsCount={data.finishedGoods.length}
-      recipesCount={
-        new Set(data.recipes.map((recipe) => recipe.finished_good_id)).size
-      }
       runs={scopedRuns}
     />
   );

@@ -10728,6 +10728,21 @@ export type Database = {
         Args: { p_event_id: number; p_payment_code: string }
         Returns: Json
       }
+      record_production_run: {
+        Args: {
+          p_actual_ingredients?: Json
+          p_actual_quantity: number
+          p_branch_id: number
+          p_entry_unit_id: number
+          p_finished_good_id: number
+          p_notes?: string
+          p_planned_quantity: number
+          p_source_location_id?: number
+          p_target_branch_id?: number
+          p_target_location_id?: number
+        }
+        Returns: Json
+      }
       record_sepay_cash_deposit_as_system: {
         Args: { p_event_id: number }
         Returns: Json

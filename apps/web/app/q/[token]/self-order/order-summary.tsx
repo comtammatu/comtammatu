@@ -107,7 +107,7 @@ const BILL_COLUMNS: DataTableColumn<BillRow>[] = [
         {row.option ? "+ " : ""}
         {row.label}
         {!row.option && row.note ? (
-          <p className="text-xs font-normal text-muted-foreground">
+          <p className="max-h-20 overflow-y-auto break-words pr-1 text-xs font-normal text-muted-foreground">
             {SELF_ORDER_VI.itemNoteLabel}: {row.note}
           </p>
         ) : null}

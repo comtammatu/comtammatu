@@ -534,9 +534,9 @@ export const settings = {
     menuLimitsTitle: "Giới hạn bán",
     menuLimitsGuideTitle: "Quy tắc mở bán hôm nay",
     menuLimitsGuideDescription:
-      "Ưu tiên món hết suất, đang tắt và món bị giới hạn bởi Tồn kho chi nhánh.",
+      "Số được bán thêm do server quyết định từ trần thủ công, tồn quy đổi, đơn đang xử lý và giữ chỗ.",
     menuLimitsIntroBefore:
-      "Điều chỉnh số phần sẵn bán theo tồn kho và định mức của chi nhánh. Bật",
+      "Đặt trần bán thủ công hoặc tắt món. Số được bán thêm vẫn do tồn kho và đơn đang xử lý quyết định. Bật",
     menuLimitsDisabledAction: "Tắt món",
     menuLimitsIntroAfter: "để ẩn món khỏi POS bất kể số lượng.",
     menuLimitsResetNote:

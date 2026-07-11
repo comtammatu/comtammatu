@@ -67,6 +67,27 @@ test("operator inventory work routes expose touch progress steps", () => {
     /const workQueue = \[\.\.\.inProgress, \.\.\.drafts\]/,
   );
 
+  const branchProductionNew = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/branch-production-new-client.tsx",
+  );
+  assert.match(
+    branchProductionNew,
+    /const hasSourceLocationChoice = sourceLocations\.length > 1/,
+  );
+  assert.match(
+    branchProductionNew,
+    /const hasTargetLocationChoice = targetLocations\.length > 1/,
+  );
+  assert.match(branchProductionNew, /\{hasLocationChoices \? \(/);
+  assert.doesNotMatch(branchProductionNew, /BranchOperatorStatusStrip/);
+  assert.match(branchProductionNew, /NumberPadSheet/);
+  assert.doesNotMatch(branchProductionNew, /QuantityInput/);
+  assert.match(branchProductionNew, /const canRecordProductionRun/);
+  assert.match(branchProductionNew, /await recordProductionRun/);
+  assert.doesNotMatch(branchProductionNew, /await createProductionRun/);
+  assert.doesNotMatch(branchProductionNew, /await confirmProductionRun/);
+  assert.doesNotMatch(branchProductionNew, /createdRunId/);
+
 });
 
 test("transfer create gates embedded sections by touch workflow state", () => {

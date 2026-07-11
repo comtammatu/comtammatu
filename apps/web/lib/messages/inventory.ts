@@ -708,6 +708,13 @@ export const inventory = {
       viewDetailAria: (name: string) => `Xem chi tiết ${name}`,
       actionsDropdown: "Thao tác kho",
     },
+    attention: {
+      title: "Cần bổ sung",
+      description: (count: number) =>
+        `${formatCount(count)} nguyên liệu đã chạm ngưỡng tồn kho.`,
+      listHint:
+        "Các mặt hàng cần xử lý được xếp đầu danh sách để kiểm tra trước.",
+    },
     metrics: {
       selectedWarehouse: "Kho chọn",
       wholeSystem: "Toàn hệ thống",
