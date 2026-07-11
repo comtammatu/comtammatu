@@ -149,6 +149,7 @@ test("SePay evidence invokes the POS settlement service only after an exact matc
     migration,
     /v_confirmation_status IS DISTINCT FROM 'completed'/,
   );
+  assert.doesNotMatch(migration, /FOR v_event IN/);
   assert.doesNotMatch(route, /confirm_sepay_payment/);
   assert.doesNotMatch(route, /issueTaxInvoiceForPaidOrder/);
 });

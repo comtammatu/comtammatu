@@ -346,31 +346,3 @@ BEGIN
   );
 END;
 $$;
-
-DO $$
-DECLARE
-  v_event record;
-BEGIN
-  FOR v_event IN
-    SELECT
-      we.id,
-      (regexp_match(
-        upper(concat_ws(' ', we.payload ->> 'content', we.payload ->> 'description', we.payload ->> 'code')),
-        '\\mMATU DON [A-Z0-9]{12}\\M'
-      ))[1] AS payment_code
-    FROM public.webhook_events we
-    WHERE we.provider = 'sepay'
-      AND we.signature_valid
-      AND we.error_code = 'order_not_found'
-      AND lower(COALESCE(we.payload ->> 'transferType', '')) = 'in'
-      AND btrim(COALESCE(we.payload ->> 'transferAmount', '')) ~ '^-?[0-9]+(\\.[0-9]+)?$'
-  LOOP
-    IF v_event.payment_code IS NOT NULL THEN
-      PERFORM public.reconcile_sepay_order_evidence(
-        v_event.id,
-        v_event.payment_code
-      );
-    END IF;
-  END LOOP;
-END;
-$$;
