@@ -50,6 +50,7 @@ BEGIN
 
   IF to_regclass('public.orders') IS NOT NULL THEN
     EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_close_session_from_order ON public.orders';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_close_session_on_order_transfer ON public.orders';
   END IF;
 END;
 $$;

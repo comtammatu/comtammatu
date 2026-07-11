@@ -47,6 +47,10 @@ test("Self-Order V2 retirement fails closed and preserves the request model", ()
     migration,
     /DROP TRIGGER IF EXISTS trg_self_order_close_session_from_order ON public\.orders/,
   );
+  assert.match(
+    migration,
+    /DROP TRIGGER IF EXISTS trg_self_order_close_session_on_order_transfer ON public\.orders/,
+  );
   assert.ok(
     migration.indexOf("DROP TABLE IF EXISTS public.self_order_batches") <
       migration.indexOf(
