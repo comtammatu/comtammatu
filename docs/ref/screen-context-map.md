@@ -94,15 +94,15 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Archetype:** `DASHBOARD`.
 - **Đối tượng sử dụng chính:** Quản lý chi nhánh (`branch_manager`), Chủ cửa hàng (`owner`).
 - **Mục tiêu Nghiệp vụ (Why?):**
-  - Cung cấp cái nhìn toàn diện về tình trạng vận hành thực tế của một chi nhánh trong ngày hôm nay: doanh thu tức thời, công suất bếp, trạng thái két tiền và nhân sự làm việc.
+  - Cho biết chi nhánh đang có ngoại lệ vận hành hoặc việc quản lý nào phải xử lý ngay trong ngày, không biến Branch runtime thành dashboard tài chính thu nhỏ.
 - **Mục tiêu Người dùng (Goal):** Biết ngay chi nhánh có đang vận hành ổn định không, có sự cố nào cần xử lý khẩn cấp không (lệch tiền két, thiếu nguyên liệu, chưa mở ca POS).
 - **Luồng thao tác (Workflow):**
-  1. **Đọc chỉ số nhanh:** Xem doanh thu, số đơn hàng, số lượng bàn đang hoạt động hôm nay.
-  2. **Giám sát thiết bị/vận hành:** Kiểm tra trạng thái máy in hóa đơn (online/offline), phiên POS hiện tại có bị mở trễ không.
-  3. **Xử lý công việc:** Nhìn danh sách "Việc cần xử lý hôm nay" (ví dụ: Có 2 yêu cầu duyệt nghỉ phép, 1 phiếu nhập kho GRN đang chờ xác nhận). Bấm vào để xử lý trực tiếp.
+  1. **Đọc việc cần xử lý:** Xem ngoại lệ hoặc readiness chưa đạt theo mức ưu tiên.
+  2. **Giám sát vận hành:** Mở đúng workflow sở hữu trạng thái máy in, phiên POS, nhân sự hoặc kho.
+  3. **Kết ngày:** Đi tới công việc chốt ca, duyệt lệch hoặc kiểm tra còn tồn đọng.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Hàng chỉ số KPI chính (`KpiRow` của `KpiCard`) gồm Doanh thu tạm tính, Số đơn, Số bàn trống. Hộp cảnh báo thiết bị; Lối tắt đến các tác vụ vận hành (menu limits, team, stocktake).
-  - **KHÔNG hiển thị:** Báo cáo tài chính chi tiết của cả chuỗi (L0), công nợ nhà cung cấp tổng, hoặc cấu hình phân quyền hệ thống.
+  - **Nên hiển thị:** Lanes công việc có đích xử lý rõ ràng: vận hành đang mở, readiness, việc kết ngày và drill-down quản lý.
+  - **KHÔNG hiển thị:** `KpiRow`, `KpiCard`, biểu đồ, doanh thu tổng hợp, dashboard-card mosaic, báo cáo tài chính chi tiết của cả chuỗi (L0), công nợ nhà cung cấp tổng, hoặc cấu hình phân quyền hệ thống.
 - **Quy chuẩn UX/UI:**
   - Ưu tiên hiển thị danh sách công việc cần làm (`task queue first`) lên đầu để định hướng hành động cho Quản lý chi nhánh ngay khi mở trang.
 

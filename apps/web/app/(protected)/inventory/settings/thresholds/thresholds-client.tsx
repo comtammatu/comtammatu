@@ -96,7 +96,13 @@ function rowError(row: EditableRow): string | null {
   return null;
 }
 
-export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
+export function ThresholdsClient({
+  rows,
+  mobileBreakpoint,
+}: {
+  rows: ThresholdRow[];
+  mobileBreakpoint?: number;
+}) {
   const [editable, setEditable] = useState<EditableRow[]>(() =>
     rows.map((r) => ({
       ...r,
@@ -323,6 +329,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
         getRowKey={(row) => row.id}
         emptyTitle={emptyTitleLabel}
         emptyMode="no-data"
+        mobileBreakpoint={mobileBreakpoint}
         rowClassName={(row) =>
           rowIsDirty(row)
             ? rowError(row)
@@ -421,7 +428,10 @@ function ThresholdItem({
       <ItemContent className="basis-full">
         <div className="grid grid-cols-3 gap-3">
           <div className="flex flex-col gap-1">
-            <Label htmlFor={`min-stock-${row.id}`} className="text-xs font-medium font-normal">
+            <Label
+              htmlFor={`min-stock-${row.id}`}
+              className="text-xs font-medium font-normal"
+            >
               {copy.cols.min}
             </Label>
             <QuantityInput
@@ -435,7 +445,10 @@ function ThresholdItem({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor={`reorder-point-${row.id}`} className="text-xs font-medium font-normal">
+            <Label
+              htmlFor={`reorder-point-${row.id}`}
+              className="text-xs font-medium font-normal"
+            >
               {copy.cols.reorder}
             </Label>
             <QuantityInput
@@ -449,7 +462,10 @@ function ThresholdItem({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor={`max-stock-${row.id}`} className="text-xs font-medium font-normal">
+            <Label
+              htmlFor={`max-stock-${row.id}`}
+              className="text-xs font-medium font-normal"
+            >
               {copy.cols.max}
             </Label>
             <QuantityInput

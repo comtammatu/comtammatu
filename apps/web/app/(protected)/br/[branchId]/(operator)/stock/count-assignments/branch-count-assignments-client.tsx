@@ -354,7 +354,6 @@ export function BranchCountAssignmentsClient({
     <BranchOperatorPage
       title={INVENTORY_VI.countAssignTitle}
       description={data.branchName}
-      hideHeaderOnMobile
     >
       {panel}
     </BranchOperatorPage>

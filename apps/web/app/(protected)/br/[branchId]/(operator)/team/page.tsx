@@ -119,11 +119,7 @@ export default async function TeamBoardPage({
   );
 
   return (
-    <BranchOperatorPage
-      title={copy.title}
-      description={copy.description}
-      hideHeaderOnMobile
-    >
+    <BranchOperatorPage title={copy.title} description={copy.description}>
       {content}
     </BranchOperatorPage>
   );

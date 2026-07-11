@@ -39,7 +39,11 @@ function watchPageHealth(page: Page) {
     if (KNOWN_CONSOLE_NOISE.some((pattern) => pattern.test(text))) return;
     consoleErrors.push(text);
   });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("pageerror", (error) => {
+    pageErrors.push(
+      `${new URL(page.url()).pathname}: ${error.stack ?? error.message}`,
+    );
+  });
   page.on("response", (response) => {
     if (response.status() >= 500) {
       serverErrors.push({ status: response.status(), url: response.url() });
@@ -96,6 +100,7 @@ function expectedOwnerBottomNavCurrentCount(path: string, branchId: number) {
   if (path === base) return 1;
   if (path.startsWith(`${base}/team`)) return 1;
   if (path.startsWith(`${base}/stock`)) return 1;
+  if (path.startsWith(`${base}/profile`)) return 1;
   return 0;
 }
 
@@ -214,7 +219,7 @@ test.describe("branch route shell ownership", () => {
       });
       if (path === `/br/${branchId}`) {
         await expect(page.getByText("Cần xử lý")).toBeVisible();
-        await expect(page.getByText("Bán hàng")).toBeVisible();
+        await expect(page.getByText("Trạm vận hành")).toBeVisible();
         await expect(page.getByText("Quản lý cửa hàng")).toBeVisible();
         await expect(page.getByText("Tài chính")).toBeVisible();
         await expect(page.getByText("Nhân sự")).toBeVisible();
@@ -282,7 +287,9 @@ test.describe("branch route shell ownership", () => {
       await page.goto(path, { waitUntil: "domcontentloaded" });
       await page.waitForLoadState("load");
       await page.waitForTimeout(800);
-      await expect(page.locator("table").first()).toBeVisible();
+      await expect(
+        page.locator("table").first().or(page.getByText("Chưa có kho chi nhánh")),
+      ).toBeVisible();
       const overflowX = await page.evaluate(
         () =>
           Math.max(

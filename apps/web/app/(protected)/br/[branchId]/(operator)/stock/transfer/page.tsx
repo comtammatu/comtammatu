@@ -280,7 +280,6 @@ export default async function OperatorStockTransferPage({
           ? copy.list.receiveEmptyHint
           : messages.inventory.operatorFlow.transferListDescription
       }
-      hideHeaderOnMobile
     >
       {transferResult.success ? (
         <>

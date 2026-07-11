@@ -6,8 +6,8 @@ import {
 } from "@/(protected)/inventory/settings/thresholds/thresholds-client";
 import { messages } from "@lib/messages";
 import { AppEmptyState, AppSection } from "@/components/surface";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
-import { CatalogBackControl } from "../catalog-back-header";
 
 const copy = messages.catalog.thresholds;
 
@@ -47,18 +47,18 @@ export default async function OperatorCatalogThresholdsPage({
     }));
 
   return (
-    <div className="flex flex-col gap-3">
-      <CatalogBackControl
-        title={copy.title}
-        backHref={`/br/${branchId}/stock/catalog`}
-      />
+    <BranchOperatorPage
+      title={copy.title}
+      backHref={`/br/${branchId}/stock/catalog`}
+      backLabel={messages.catalog.index.title}
+    >
       {rows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (
         <AppSection contentFlush>
-          <ThresholdsClient rows={rows} />
+          <ThresholdsClient rows={rows} mobileBreakpoint={1280} />
         </AppSection>
       )}
-    </div>
+    </BranchOperatorPage>
   );
 }

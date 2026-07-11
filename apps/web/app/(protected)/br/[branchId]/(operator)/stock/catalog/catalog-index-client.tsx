@@ -18,7 +18,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { messages } from "@lib/messages";
-import { CatalogBackControl } from "./catalog-back-header";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 
 const copy = messages.catalog.index;
 
@@ -78,11 +78,11 @@ export function CatalogIndexClient({
   ];
 
   return (
-    <div className="flex flex-col gap-3">
-      <CatalogBackControl
-        title={copy.title}
-        backHref={basePath.replace(/\/catalog$/, "")}
-      />
+    <BranchOperatorPage
+      title={copy.title}
+      backHref={basePath.replace(/\/catalog$/, "")}
+      backLabel={messages.settings.branch.centralNavStock}
+    >
       <ItemGroup className="gap-2">
         {rows.map((row) => (
           <Item
@@ -100,9 +100,7 @@ export function CatalogIndexClient({
                 <row.icon aria-hidden="true" />
               </ItemMedia>
               <ItemContent className="min-w-0">
-                <ItemTitle size="heading">
-                  {row.title}
-                </ItemTitle>
+                <ItemTitle size="heading">{row.title}</ItemTitle>
               </ItemContent>
               <ItemActions className="shrink-0 text-muted-foreground">
                 <span className="font-mono text-sm tabular-nums">
@@ -114,6 +112,6 @@ export function CatalogIndexClient({
           </Item>
         ))}
       </ItemGroup>
-    </div>
+    </BranchOperatorPage>
   );
 }

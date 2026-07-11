@@ -369,8 +369,7 @@ export const settings = {
   },
   branch: {
     commandTitle: "Điều hành chi nhánh",
-    commandDescription: (branchName: string) =>
-      `${branchName} · Nhịp vận hành hôm nay`,
+    commandDescription: "Nhịp vận hành hôm nay",
     financeCta: "Xem tài chính",
     openAction: "Mở",
     commandOverviewTitle: "Luồng chính",
@@ -511,8 +510,7 @@ export const settings = {
     employeeBack: "Về Cổng",
     branchSettingsBack: "Cài đặt chi nhánh",
     hubTitle: "Thiết lập vận hành chi nhánh",
-    hubDescription: (branchName: string) =>
-      `${branchName} · Bàn, POS, bếp và in`,
+    hubDescription: "Bàn, POS, bếp và in",
     hubEmptyTitle: "Không có mục thiết lập khả dụng",
     hubEmptyDescription:
       "Tài khoản của bạn chưa được cấp quyền cho các mục thiết lập của chi nhánh này. Liên hệ chủ/quản lý nếu cần truy cập.",

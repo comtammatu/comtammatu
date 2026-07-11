@@ -127,7 +127,6 @@ export async function StaffProfilePageContent({
         title={copy.title}
         description={copy.description}
         badge={{ children: positionLabel, variant: "outline" }}
-        hideHeaderOnMobile
       >
         <BranchOperatorPanel tone="info">
           <div className="grid gap-4">
@@ -352,4 +351,3 @@ export async function StaffProfilePageContent({
     </EmployeePage>
   );
 }
-

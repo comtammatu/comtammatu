@@ -101,7 +101,6 @@ export default async function OperatorStockPage({
     <BranchOperatorPage
       title={stockGroup?.title ?? messages.inventory.shell.moduleName}
       description={messages.inventory.dashboard.mainFlowsOperatorDescription}
-      hideHeaderOnMobile
     >
       {hasLinks ? (
         <>

@@ -221,7 +221,6 @@ export function BranchStocktakeCountClient({
     <BranchOperatorPage
       title={`${stocktakeCopy.startCounting} #${data.sessionId}`}
       description={`Round R${data.currentRound}`}
-      hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar>

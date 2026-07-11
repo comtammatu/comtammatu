@@ -187,11 +187,7 @@ export function BranchStockReportsClient({
       : "default";
 
   return (
-    <BranchOperatorPage
-      title={reportCopy.pageTitle}
-      description={branchName}
-      hideHeaderOnMobile
-    >
+    <BranchOperatorPage title={reportCopy.pageTitle} description={branchName}>
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
           <Button asChild variant="ghost" size="icon-touch">

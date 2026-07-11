@@ -14,6 +14,7 @@ import {
   Item,
   ItemActions,
   ItemContent,
+  ItemDescription,
   ItemGroup,
   ItemMedia,
   ItemTitle,
@@ -131,6 +132,9 @@ function QueueRowItem({ row }: { row: QueueRow }) {
           <ItemTitle size="heading" className="line-clamp-none w-full">
             {row.title}
           </ItemTitle>
+          <ItemDescription className="line-clamp-none">
+            {row.meta}
+          </ItemDescription>
         </ItemContent>
         <ItemActions className="shrink-0 text-muted-foreground">
           <Badge variant="warning">{formatCount(row.count)}</Badge>

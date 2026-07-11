@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Home, Package, Users } from "lucide-react";
+import { Clock, Home, Package, User, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { AppBottomNav } from "@/components/app-bottom-nav";
@@ -59,6 +59,13 @@ export function OperatorBottomNav({
           },
         ]
       : []),
+    {
+      href: `/br/${branchId}/profile`,
+      label: messages.operator.nav.profileShort,
+      icon: User,
+      exact: false,
+      matchPrefixes: [`/br/${branchId}/profile`],
+    },
   ];
 
   return (

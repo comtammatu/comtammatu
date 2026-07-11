@@ -216,11 +216,7 @@ export function BranchLeaveApprovalsClient({
 
   if (!canApprove) {
     return (
-      <BranchOperatorPage
-        title={copy.approvalsTitle}
-        description={branchName}
-        hideHeaderOnMobile
-      >
+      <BranchOperatorPage title={copy.approvalsTitle} description={branchName}>
         <AppEmptyState
           icon={<IconShieldAlert />}
           title={copy.approvalsNoAccessTitle}
@@ -231,11 +227,7 @@ export function BranchLeaveApprovalsClient({
   }
 
   return (
-    <BranchOperatorPage
-      title={copy.approvalsTitle}
-      description={branchName}
-      hideHeaderOnMobile
-    >
+    <BranchOperatorPage title={copy.approvalsTitle} description={branchName}>
       <Tabs value={view} onValueChange={(value) => setView(value as QueueView)}>
         <TabsList className="grid min-h-12 w-full grid-cols-2">
           <TabsTrigger value="pending" className="min-h-11">

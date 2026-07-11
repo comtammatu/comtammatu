@@ -404,7 +404,6 @@ export function BranchProductionNewClient({
     <BranchOperatorPage
       title="Ghi nhận mẻ sản xuất"
       description="Ghi lại định làm, thực ra và thực chi trong một lần."
-      hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
@@ -465,8 +464,7 @@ export function BranchProductionNewClient({
                       size="touch"
                       onClick={handleSetMaxQuantity}
                       disabled={
-                        isLoadingContext ||
-                        maxProductionInSelectedUnit == null
+                        isLoadingContext || maxProductionInSelectedUnit == null
                       }
                     >
                       Tối đa theo tồn

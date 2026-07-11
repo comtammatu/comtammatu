@@ -39,7 +39,7 @@ import type {
   IngredientRow,
   UnitOption,
 } from "@/(protected)/inventory/_lib/types";
-import { CatalogBackControl } from "../catalog-back-header";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 
 const copy = messages.catalog.ingredients;
 
@@ -65,7 +65,8 @@ export function CatalogIngredientsClient({
     let result = rows;
     if (!showArchived) result = result.filter((row) => row.is_active);
     const q = search.trim();
-    if (q) result = result.filter((row) => matchesSearch([row.name, row.sku], q));
+    if (q)
+      result = result.filter((row) => matchesSearch([row.name, row.sku], q));
     return result;
   }, [rows, showArchived, search]);
 
@@ -119,9 +120,11 @@ export function CatalogIngredientsClient({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <CatalogBackControl title={copy.title} backHref={backHref} />
-
+    <BranchOperatorPage
+      title={copy.title}
+      backHref={backHref}
+      backLabel={messages.catalog.index.title}
+    >
       <InputGroup className="h-11">
         <InputGroupAddon>
           <IconSearch />
@@ -222,6 +225,6 @@ export function CatalogIngredientsClient({
         categoryOptions={categoryOptions}
         onSaved={reload}
       />
-    </div>
+    </BranchOperatorPage>
   );
 }

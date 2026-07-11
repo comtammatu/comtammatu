@@ -30,7 +30,7 @@ import {
   updateUnit,
   type UnitRow,
 } from "@/(protected)/inventory/settings/units/units-actions";
-import { CatalogBackControl } from "../catalog-back-header";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 
 const copy = messages.catalog.units;
 const formCopy = messages.inventoryMaster.units;
@@ -124,9 +124,11 @@ export function CatalogUnitsClient({
     : NEW_UNIT_DEFAULTS;
 
   return (
-    <div className="flex flex-col gap-3">
-      <CatalogBackControl title={copy.title} backHref={backHref} />
-
+    <BranchOperatorPage
+      title={copy.title}
+      backHref={backHref}
+      backLabel={messages.catalog.index.title}
+    >
       {packagingRows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (
@@ -231,6 +233,6 @@ export function CatalogUnitsClient({
           </>
         )}
       </FormDialog>
-    </div>
+    </BranchOperatorPage>
   );
 }

@@ -6,7 +6,6 @@ import {
   Bell as IconBell,
   Building2 as IconBuilding2,
   LayoutDashboard as IconLayoutDashboard,
-  User as IconUser,
 } from "lucide-react";
 import { canAccess, MODULE_ACL, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
@@ -63,6 +62,7 @@ export default async function OperatorLayout({
   const unreadResult = await unreadPromise;
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
   const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
+  const compactBranchName = context.branch.name.replace(/^Chi nhánh\s+/, "");
 
   return (
     <PwaRuntimeProvider>
@@ -72,11 +72,17 @@ export default async function OperatorLayout({
       />
       <div className="flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
         <AppHeader
-          title={context.branch.name}
+          title={
+            <>
+              <span className="sm:hidden">{compactBranchName}</span>
+              <span className="hidden sm:inline">{context.branch.name}</span>
+            </>
+          }
           subtitle={ROLE_LABEL_VI[claims.user_role]}
-          showBrandText={false}
+          subtitleHiddenOnMobile
           homeHref={`/br/${context.branchId}`}
           homeAriaLabel={APP_COPY_VI.operatorHome}
+          wide
           actions={
             <>
               {canUseBranchPicker && context.canSwitchBranch ? (
@@ -109,16 +115,6 @@ export default async function OperatorLayout({
                   </Link>
                 </Button>
               ) : null}
-              <Button
-                asChild
-                variant="outline"
-                size="icon-touch"
-                aria-label={messages.operator.nav.profileShort}
-              >
-                <Link href={`/br/${context.branchId}/profile`}>
-                  <IconUser />
-                </Link>
-              </Button>
               <Button
                 asChild
                 variant="outline"

@@ -46,7 +46,6 @@ export default async function OperatorTransferDetailPage({
         data.transfer.toLocation,
         data.transfer.date,
       )}
-      hideHeaderOnMobile
       badge={{
         children: statusBadge.label,
         variant: statusBadge.variant,

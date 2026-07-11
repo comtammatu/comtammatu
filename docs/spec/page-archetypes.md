@@ -343,12 +343,13 @@ badge}`).
 
 **Exemplar:** `apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx`.
 
-- Skeleton: `BranchOperatorPage` → `KpiRow` of `KpiCard` (`{label, value,
-delta, hint, icon, href}` — `href` drill-down is mandatory per the owner
-  Q-spec) → `BranchOperatorPanel size="sm"` secondary panels.
-- Every metric value binds to a key in
-  `docs/ref/operational-data-contract.md`; do not add a metric card without a
-  contract key.
+- Skeleton: `BranchOperatorPage` → unresolved command/readiness lanes →
+  `BranchOperatorPanel size="sm"` for live operations, end-of-day work, and
+  explicit drill-down actions.
+- This Branch command surface is task-first, not an executive dashboard. It
+  MUST NOT render `KpiRow`, `KpiCard`, charts, financial aggregation, or a
+  dashboard-card mosaic. Quantitative signals belong inside the actionable row
+  they qualify and link directly to the owning workflow.
 - Status/money/date: per § 1.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 
@@ -434,10 +435,10 @@ allowlist, not a precedent for stretching another archetype's definition:
    living inside the printers SETTINGS-PANEL family with an added `KpiRow`
    summary. Classified **LIST**.
 9. `apps/web/app/(protected)/inventory/waste/approvals/page.tsx` — 4-eye waste
-    approval queue. A per-issue approve / reject card with a nested waste-line
-    `ItemGroup`, tier badges, photo links, and an inline review-note field; the
-    decision surface is the card, not a row. Classified **LIST** (queue
-    variant); exempt from the LIST `DataTable` / `width="xwide"` gate.
+   approval queue. A per-issue approve / reject card with a nested waste-line
+   `ItemGroup`, tier badges, photo links, and an inline review-note field; the
+   decision surface is the card, not a row. Classified **LIST** (queue
+   variant); exempt from the LIST `DataTable` / `width="xwide"` gate.
 10. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx`
     — Branch-runtime transfer queue. It uses `BranchOperatorPage`,
     `BranchOperatorPanel`, and full-row `Item` links because the supported

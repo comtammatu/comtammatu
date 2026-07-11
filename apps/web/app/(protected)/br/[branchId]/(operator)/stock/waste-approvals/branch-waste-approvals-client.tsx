@@ -203,11 +203,7 @@ export function BranchWasteApprovalsClient({
 
   if (!canApproveWaste) {
     return (
-      <BranchOperatorPage
-        title={copy.title}
-        description={branchName}
-        hideHeaderOnMobile
-      >
+      <BranchOperatorPage title={copy.title} description={branchName}>
         <AppEmptyState
           compact
           mode="no-access"
@@ -221,11 +217,7 @@ export function BranchWasteApprovalsClient({
 
   if (loadFailed) {
     return (
-      <BranchOperatorPage
-        title={copy.title}
-        description={branchName}
-        hideHeaderOnMobile
-      >
+      <BranchOperatorPage title={copy.title} description={branchName}>
         <AppEmptyState
           compact
           mode="no-data"
@@ -242,11 +234,7 @@ export function BranchWasteApprovalsClient({
   }
 
   return (
-    <BranchOperatorPage
-      title={copy.title}
-      description={branchName}
-      hideHeaderOnMobile
-    >
+    <BranchOperatorPage title={copy.title} description={branchName}>
       <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-4">
         <BranchOperatorControlBar className="sm:hidden">
           <Button asChild variant="ghost" size="icon-touch">

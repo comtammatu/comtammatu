@@ -296,11 +296,7 @@ export function BranchWasteCreateClient({
 
   if (!canCreateWaste) {
     return (
-      <BranchOperatorPage
-        title={wasteCopy.title}
-        description={branchName}
-        hideHeaderOnMobile
-      >
+      <BranchOperatorPage title={wasteCopy.title} description={branchName}>
         <AppEmptyState
           compact
           mode="no-access"
@@ -314,11 +310,7 @@ export function BranchWasteCreateClient({
 
   if (loadFailed || !context) {
     return (
-      <BranchOperatorPage
-        title={wasteCopy.title}
-        description={branchName}
-        hideHeaderOnMobile
-      >
+      <BranchOperatorPage title={wasteCopy.title} description={branchName}>
         <AppEmptyState
           compact
           mode="no-data"
@@ -337,11 +329,7 @@ export function BranchWasteCreateClient({
   if (context.locations.length === 0 || context.ingredients.length === 0) {
     const noLocation = context.locations.length === 0;
     return (
-      <BranchOperatorPage
-        title={wasteCopy.title}
-        description={branchName}
-        hideHeaderOnMobile
-      >
+      <BranchOperatorPage title={wasteCopy.title} description={branchName}>
         <AppEmptyState
           compact
           mode="no-data"
@@ -704,11 +692,7 @@ export function BranchWasteCreateClient({
       forcePhotoLineUids.has(editor.line.uid));
 
   return (
-    <BranchOperatorPage
-      title={wasteCopy.title}
-      description={branchName}
-      hideHeaderOnMobile
-    >
+    <BranchOperatorPage title={wasteCopy.title} description={branchName}>
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
           <Button asChild variant="ghost" size="icon-touch">

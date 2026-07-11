@@ -20,7 +20,7 @@ import {
   SupplierDialog,
   type SupplierRow,
 } from "@/(protected)/inventory/suppliers/supplier-dialog";
-import { CatalogBackControl } from "../catalog-back-header";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   CatalogList,
   CATALOG_DELETE_ICON,
@@ -86,9 +86,11 @@ export function CatalogSuppliersClient({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <CatalogBackControl title={copy.title} backHref={backHref} />
-
+    <BranchOperatorPage
+      title={copy.title}
+      backHref={backHref}
+      backLabel={messages.catalog.index.title}
+    >
       <InputGroup className="h-11">
         <InputGroupAddon>
           <IconSearch />
@@ -132,6 +134,6 @@ export function CatalogSuppliersClient({
         supplier={editingSupplier}
         onSaved={reload}
       />
-    </div>
+    </BranchOperatorPage>
   );
 }

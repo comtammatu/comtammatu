@@ -48,7 +48,6 @@ export function ProductionOperatorClient({
     <BranchOperatorPage
       title="Sản xuất"
       description="Tạo lệnh, theo dõi ca và hoàn tất thành phẩm."
-      hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorStatusStrip

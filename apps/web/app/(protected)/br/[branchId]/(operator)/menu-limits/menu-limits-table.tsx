@@ -2,12 +2,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Ban,
-  CheckCircle,
+  ChevronRight,
   CookingPot,
   Save as IconSave,
   Search as IconSearch,
@@ -32,6 +30,7 @@ import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Item,
+  ItemActions,
   ItemContent,
   ItemDescription,
   ItemGroup,
@@ -55,8 +54,6 @@ import {
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { formatVND } from "@comtammatu/shared/format";
 import { normalizeSearch } from "@lib/search";
-import { useSwipeReveal, type SwipeReveal } from "@lib/hooks/use-swipe-reveal";
-import { useLongPress } from "@lib/hooks/use-long-press";
 import { useRealtimeRefresh } from "@/_hooks/use-realtime-refresh";
 import {
   type MenuLimitRow,
@@ -120,127 +117,62 @@ function compareMenuLimitRows(a: MenuLimitRow, b: MenuLimitRow): number {
 function MenuLimitRowItem({
   row,
   onOpenDrawer,
-  onToggleStatus,
   isPending,
-  swipe,
 }: {
   row: MenuLimitRow;
   onOpenDrawer: () => void;
-  onToggleStatus: (isDisabled: boolean) => void;
   isPending: boolean;
-  swipe: SwipeReveal;
 }) {
-  const rowId = String(row.menu_item_id);
-  const isRevealed = swipe.isRevealed(rowId);
-  const swipeBindings = swipe.bindings(rowId);
-
-  const longPress = useLongPress({
-    onLongPress: onOpenDrawer,
-    onClick: () => {
-      if (swipe.consumeSuppression(rowId)) {
-        swipe.clearReveal();
-        return;
-      }
-      if (isRevealed) {
-        swipe.clearReveal();
-        return;
-      }
-      onOpenDrawer();
-    },
-  });
-
-  const handlers = {
-    onPointerDown: (e: ReactPointerEvent<HTMLElement>) => {
-      swipeBindings.onPointerDown(e);
-      longPress.onPointerDown(e);
-    },
-    onPointerMove: (e: ReactPointerEvent<HTMLElement>) => {
-      swipeBindings.onPointerMove(e);
-      longPress.onPointerMove(e);
-    },
-    onPointerUp: (e: ReactPointerEvent<HTMLElement>) => {
-      swipeBindings.onPointerUp(e);
-      longPress.onPointerUp();
-    },
-    onPointerCancel: (e: ReactPointerEvent<HTMLElement>) => {
-      swipeBindings.onPointerCancel(e);
-      longPress.onPointerCancel();
-    },
-    onContextMenu: longPress.onContextMenu,
-  };
-
   return (
-    <div className="relative overflow-hidden w-full bg-background border-b last:border-b-0">
-      <div className="absolute inset-y-0 right-0 flex">
-        <Button
-          variant={row.is_disabled ? "default" : "destructive"}
-          className="h-full rounded-none w-20"
-          disabled={isPending}
-          onClick={() => {
-            swipe.clearReveal();
-            onToggleStatus(!row.is_disabled);
-          }}
-        >
-          {row.is_disabled ? (
-            <CheckCircle className="h-5 w-5" />
-          ) : (
-            <Ban className="h-5 w-5" />
-          )}
-        </Button>
-      </div>
-      <div
-        className="relative bg-background z-10 touch-pan-y"
-        style={{
-          transform: isRevealed ? `translate3d(-80px, 0, 0)` : undefined,
-          transition: swipeBindings ? undefined : "transform 0.2s ease-out",
-        }}
-        {...handlers}
-      >
-        <Item
-          variant="outline"
-          size="sm"
-          className="flex-col flex-nowrap items-start rounded-none border-none px-3 py-2 pointer-events-none select-none lg:flex-row lg:items-center lg:px-4 lg:py-3"
-        >
-          <ItemContent className="min-w-0 w-full gap-1 lg:w-auto">
-            <ItemTitle className="line-clamp-2 w-full max-w-full flex-wrap text-sm">
-              <span className="min-w-0 break-words">{row.item_name}</span>
-              {renderItemBadge(row)}
-            </ItemTitle>
-            <ItemDescription className="flex flex-wrap items-center gap-2">
-              <span className="font-mono tabular-nums text-foreground">
-                {formatVND(row.base_price)}
-              </span>
-            </ItemDescription>
-          </ItemContent>
-          <ItemContent className="grid w-full shrink-0 grid-cols-3 gap-2 border-t pt-2 text-xs lg:w-80 lg:flex-none lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
-            <span className="flex min-w-0 flex-col gap-1">
-              <span className="text-muted-foreground">
-                {messages.pos.menu.availableToSellLabel}
-              </span>
-              <strong className="truncate font-mono tabular-nums text-foreground">
-                {getAvailableToSellValue(row)}
-              </strong>
+    <Item
+      asChild
+      variant="outline"
+      size="sm"
+      className="chrome-tap relative flex-col flex-nowrap items-start rounded-none border-x-0 border-t-0 px-3 py-2 text-left select-none last:border-b-0 active:bg-muted/50 lg:flex-row lg:items-center lg:px-4 lg:py-3"
+    >
+      <button type="button" onClick={onOpenDrawer} disabled={isPending}>
+        <ItemContent className="min-w-0 w-full gap-1 lg:w-auto">
+          <ItemTitle className="line-clamp-2 w-full max-w-full flex-wrap text-sm">
+            <span className="min-w-0 break-words">{row.item_name}</span>
+            {renderItemBadge(row)}
+          </ItemTitle>
+          <ItemDescription className="flex flex-wrap items-center gap-2">
+            <span className="font-mono tabular-nums text-foreground">
+              {formatVND(row.base_price)}
             </span>
-            <span className="flex min-w-0 flex-col gap-1">
-              <span className="text-muted-foreground">
-                {messages.pos.menu.manualLimitShortLabel}
-              </span>
-              <strong className="truncate font-mono tabular-nums text-foreground">
-                {getManualLimitValue(row)}
-              </strong>
+          </ItemDescription>
+        </ItemContent>
+        <ItemContent className="grid w-full shrink-0 grid-cols-3 gap-2 border-t pt-2 text-xs lg:w-80 lg:flex-none lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+          <span className="flex min-w-0 flex-col gap-1">
+            <span className="text-muted-foreground">
+              {messages.pos.menu.availableToSellLabel}
             </span>
-            <span className="flex min-w-0 flex-col gap-1">
-              <span className="text-muted-foreground">
-                {messages.pos.menu.stockCapacityLabel}
-              </span>
-              <strong className="truncate font-mono tabular-nums text-foreground">
-                {getStockCapacityValue(row)}
-              </strong>
+            <strong className="truncate font-mono tabular-nums text-foreground">
+              {getAvailableToSellValue(row)}
+            </strong>
+          </span>
+          <span className="flex min-w-0 flex-col gap-1">
+            <span className="text-muted-foreground">
+              {messages.pos.menu.manualLimitShortLabel}
             </span>
-          </ItemContent>
-        </Item>
-      </div>
-    </div>
+            <strong className="truncate font-mono tabular-nums text-foreground">
+              {getManualLimitValue(row)}
+            </strong>
+          </span>
+          <span className="flex min-w-0 flex-col gap-1">
+            <span className="text-muted-foreground">
+              {messages.pos.menu.stockCapacityLabel}
+            </span>
+            <strong className="truncate font-mono tabular-nums text-foreground">
+              {getStockCapacityValue(row)}
+            </strong>
+          </span>
+        </ItemContent>
+        <ItemActions className="absolute top-3 right-3 text-muted-foreground lg:static">
+          <ChevronRight aria-hidden="true" className="size-4" />
+        </ItemActions>
+      </button>
+    </Item>
   );
 }
 
@@ -306,8 +238,6 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
         });
     },
   });
-
-  const swipe = useSwipeReveal({ revealWidth: 80 });
 
   const [drawerRow, setDrawerRow] = useState<MenuLimitRow | null>(null);
   const [draftQty, setDraftQty] = useState<string>("");
@@ -416,24 +346,6 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
 
       toast.success(messages.pos.menu.limitUpdated(drawerRow.item_name));
       setDrawerRow(null);
-      router.refresh();
-    });
-  }
-
-  function handleToggleStatus(row: MenuLimitRow, isDisabled: boolean) {
-    startTransition(async () => {
-      const result = await setBranchMenuDailyLimit({
-        branchId,
-        menuItemId: row.menu_item_id,
-        limitQuantity: row.manual_limit_quantity,
-        isDisabled,
-      });
-
-      if (!result.success) {
-        toast.error(result.error ?? messages.pos.menu.saveLimitFailed);
-        return;
-      }
-      toast.success(messages.pos.menu.limitUpdated(row.item_name));
       router.refresh();
     });
   }
@@ -576,11 +488,7 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                   key={row.menu_item_id}
                   row={row}
                   onOpenDrawer={() => openDrawer(row)}
-                  onToggleStatus={(disabled) =>
-                    handleToggleStatus(row, disabled)
-                  }
                   isPending={isPending}
-                  swipe={swipe}
                 />
               ))}
             </ItemGroup>

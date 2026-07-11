@@ -78,7 +78,6 @@ export function BranchStocktakeListClient({
     <BranchOperatorPage
       title={stocktakeCopy.title}
       description={branchName}
-      hideHeaderOnMobile
       action={
         canManage ? (
           <Button asChild size="touch">
@@ -98,8 +97,12 @@ export function BranchStocktakeListClient({
             </Link>
           </Button>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{stocktakeCopy.title}</p>
-            <p className="truncate text-xs text-muted-foreground">{branchName}</p>
+            <p className="truncate text-sm font-semibold">
+              {stocktakeCopy.title}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {branchName}
+            </p>
           </div>
           {canManage ? (
             <Button asChild size="touch" className="shrink-0">

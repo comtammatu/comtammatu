@@ -474,7 +474,6 @@ export function BranchStockIssueDetailClient({
     <BranchOperatorPage
       title={issue.code}
       description={formatVNDateTime(issue.issuedAt)}
-      hideHeaderOnMobile
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">

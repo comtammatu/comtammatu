@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ComponentProps, ElementType, ReactNode } from "react";
 import { ChevronRight as IconChevronRight } from "lucide-react";
-import { AppPageHeader, AppSection } from "@/components/surface";
+import { AppBackLink, AppPageHeader, AppSection } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Frame } from "@comtammatu/ui/components/frame";
@@ -53,7 +53,8 @@ const toneSectionVariant = {
 export interface BranchOperatorPageProps {
   title: string;
   description?: string;
-  hideHeaderOnMobile?: boolean;
+  backHref?: string;
+  backLabel?: string;
   badge?: {
     children: ReactNode;
     variant?: BadgeProps["variant"];
@@ -65,22 +66,30 @@ export interface BranchOperatorPageProps {
 export function BranchOperatorPage({
   title,
   description,
-  hideHeaderOnMobile = false,
+  backHref,
+  backLabel,
   badge,
   action,
   children,
 }: BranchOperatorPageProps) {
   return (
-    <>
+    <div
+      data-slot="branch-operator-page"
+      className="flex min-w-0 flex-col gap-3"
+    >
       <AppPageHeader
         title={title}
         description={description}
         badge={badge}
         actions={action}
-        className={hideHeaderOnMobile ? "sr-only sm:not-sr-only" : undefined}
+        breadcrumb={
+          backHref ? (
+            <AppBackLink href={backHref}>{backLabel}</AppBackLink>
+          ) : undefined
+        }
       />
       {children}
-    </>
+    </div>
   );
 }
 
@@ -403,7 +412,7 @@ export function BranchOperatorStatusStrip({
           key={item.label}
           variant="outline"
           size="xs"
-          className="min-w-0 bg-background transition-[background-color,border-color,box-shadow] duration-150"
+          className="min-w-0 bg-background"
         >
           <ItemContent className="min-w-0 gap-1">
             <ItemDescription className="truncate text-2xs font-medium leading-4">
@@ -473,6 +482,7 @@ interface BranchOperatorActionListProps {
   columns?: 1 | 2;
   mobileColumns?: 1 | 2;
   wideColumns?: boolean;
+  presentation?: "panel" | "plain" | "stations";
   className?: string;
 }
 
@@ -481,17 +491,23 @@ function BranchOperatorActionList({
   columns = 1,
   mobileColumns = 1,
   wideColumns = false,
+  presentation = "panel",
   className,
 }: BranchOperatorActionListProps) {
   return (
     <ItemGroup
       className={cn(
         "gap-2",
-        columns === 2 &&
+        presentation === "stations" && "grid grid-cols-1 sm:grid-cols-3",
+        presentation !== "stations" &&
+          columns === 2 &&
           (mobileColumns === 2
             ? "grid grid-cols-2"
             : "grid grid-cols-1 lg:grid-cols-2"),
-        columns === 2 && wideColumns && "xl:grid-cols-3 2xl:grid-cols-4",
+        presentation !== "stations" &&
+          columns === 2 &&
+          wideColumns &&
+          "xl:grid-cols-3 2xl:grid-cols-4",
         className,
       )}
     >
@@ -507,6 +523,7 @@ interface BranchOperatorActionItemProps {
   description?: string;
   size?: "default" | "sm";
   disabled?: boolean;
+  presentation?: "panel" | "plain" | "stations";
 }
 
 function BranchOperatorActionItem({
@@ -516,6 +533,7 @@ function BranchOperatorActionItem({
   description,
   size,
   disabled,
+  presentation = "panel",
 }: BranchOperatorActionItemProps) {
   if (disabled) {
     return (
@@ -524,14 +542,22 @@ function BranchOperatorActionItem({
         size={size}
         aria-disabled="true"
         className={cn(
-          "min-h-14 items-start bg-card opacity-50 lg:items-center",
-          size === "sm" && "min-h-12",
+          "items-start bg-card opacity-50",
+          presentation === "stations"
+            ? "min-h-16 items-center sm:min-h-24 sm:items-start"
+            : "min-h-14 lg:items-center",
+          presentation !== "stations" && size === "sm" && "min-h-12",
         )}
       >
         {Icon ? (
           <ItemMedia
             variant="icon"
-            className="rounded-md bg-muted p-2 text-muted-foreground"
+            className={cn(
+              "rounded-md p-2",
+              presentation === "stations"
+                ? "bg-primary/10 text-primary"
+                : "bg-muted text-muted-foreground",
+            )}
           >
             <Icon />
           </ItemMedia>
@@ -541,7 +567,12 @@ function BranchOperatorActionItem({
             {title}
           </ItemTitle>
           {description ? (
-            <ItemDescription className="line-clamp-none text-sm leading-6">
+            <ItemDescription
+              className={cn(
+                "line-clamp-none",
+                presentation !== "stations" && "text-sm leading-6",
+              )}
+            >
               {description}
             </ItemDescription>
           ) : null}
@@ -556,15 +587,21 @@ function BranchOperatorActionItem({
       variant="outline"
       size={size}
       className={cn(
-        "group/branch-operator-action chrome-tap min-h-14 items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-sm active:scale-[0.97] lg:items-center",
-        size === "sm" && "min-h-12",
+        "group/branch-operator-action chrome-tap items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-sm active:scale-[0.97]",
+        presentation === "stations"
+          ? "min-h-16 items-center sm:min-h-24 sm:items-start"
+          : "min-h-14 lg:items-center",
+        presentation !== "stations" && size === "sm" && "min-h-12",
       )}
     >
       <Link href={href}>
         {Icon ? (
           <ItemMedia
             variant="icon"
-            className="rounded-md bg-muted p-2 text-primary transition-colors duration-150 group-hover/branch-operator-action:bg-primary/10 group-active/branch-operator-action:bg-primary/10"
+            className={cn(
+              "rounded-md p-2 text-primary transition-colors duration-150 group-hover/branch-operator-action:bg-primary/10 group-active/branch-operator-action:bg-primary/10",
+              presentation === "stations" ? "bg-primary/10" : "bg-muted",
+            )}
           >
             <Icon />
           </ItemMedia>
@@ -574,7 +611,12 @@ function BranchOperatorActionItem({
             {title}
           </ItemTitle>
           {description ? (
-            <ItemDescription className="line-clamp-none text-sm leading-6">
+            <ItemDescription
+              className={cn(
+                "line-clamp-none",
+                presentation !== "stations" && "text-sm leading-6",
+              )}
+            >
               {description}
             </ItemDescription>
           ) : null}
@@ -603,6 +645,7 @@ export interface BranchOperatorActionSectionProps {
   wideColumns?: boolean;
   size?: "default" | "sm";
   tone?: BranchOperatorTone;
+  presentation?: "panel" | "plain" | "stations";
   className?: string;
 }
 
@@ -615,35 +658,60 @@ export function BranchOperatorActionSection({
   wideColumns = false,
   size = "sm",
   tone = "default",
+  presentation = "panel",
   className,
 }: BranchOperatorActionSectionProps) {
   if (links.length === 0) return null;
 
-  return (
-    <BranchOperatorPanel
-      title={title}
-      description={description}
-      size={size}
-      tone={tone}
-      className={className}
+  const content = (
+    <BranchOperatorActionList
+      columns={columns}
+      mobileColumns={mobileColumns}
+      wideColumns={wideColumns}
+      presentation={presentation}
     >
-      <BranchOperatorActionList
-        columns={columns}
-        mobileColumns={mobileColumns}
-        wideColumns={wideColumns}
+      {links.map((link) => (
+        <BranchOperatorActionItem
+          key={link.key}
+          href={link.href}
+          icon={link.icon}
+          title={link.title}
+          description={link.description}
+          size={size}
+          disabled={link.disabled}
+          presentation={presentation}
+        />
+      ))}
+    </BranchOperatorActionList>
+  );
+
+  if (presentation === "panel") {
+    return (
+      <BranchOperatorPanel
+        title={title}
+        description={description}
+        size={size}
+        tone={tone}
+        className={className}
       >
-        {links.map((link) => (
-          <BranchOperatorActionItem
-            key={link.key}
-            href={link.href}
-            icon={link.icon}
-            title={link.title}
-            description={link.description}
-            size={size}
-            disabled={link.disabled}
-          />
-        ))}
-      </BranchOperatorActionList>
-    </BranchOperatorPanel>
+        {content}
+      </BranchOperatorPanel>
+    );
+  }
+
+  return (
+    <section className={cn("flex flex-col gap-2", className)}>
+      {title || description ? (
+        <div className="flex flex-col gap-1">
+          {title ? (
+            <h2 className="font-heading text-base font-semibold">{title}</h2>
+          ) : null}
+          {description ? (
+            <p className="text-xs text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
+      ) : null}
+      {content}
+    </section>
   );
 }

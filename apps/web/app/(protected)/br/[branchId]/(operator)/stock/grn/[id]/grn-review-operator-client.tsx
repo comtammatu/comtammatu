@@ -94,7 +94,6 @@ export function GrnReviewOperatorClient({
     <BranchOperatorPage
       title={grn.code}
       description={`${grn.supplier} · ${grn.date}`}
-      hideHeaderOnMobile
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">

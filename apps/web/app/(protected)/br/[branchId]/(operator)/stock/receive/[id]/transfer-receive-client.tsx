@@ -127,7 +127,6 @@ export function TransferReceiveClient({
       <BranchOperatorPage
         title={transfer.code}
         description={receiveCopy.receiveFrom(transfer.fromBranch)}
-        hideHeaderOnMobile
       >
         <div className="flex min-w-0 touch-manipulation flex-col gap-3">
           <BranchOperatorControlBar className="sm:hidden">
@@ -177,11 +176,15 @@ export function TransferReceiveClient({
     <BranchOperatorPage
       title={transfer.code}
       description={receiveCopy.receiveFrom(transfer.fromBranch)}
-      hideHeaderOnMobile
     >
       <div className="flex w-full touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch" className="shrink-0">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon-touch"
+            className="shrink-0"
+          >
             <Link href={backHref} aria-label={ACTIONS_VI.back}>
               <IconArrowLeft />
             </Link>
@@ -196,164 +199,167 @@ export function TransferReceiveClient({
           </div>
         </BranchOperatorControlBar>
 
-      <div className="rounded-md bg-muted/50 p-2.5">
-        <div className="flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary transition-[width]"
-              style={{ width: `${Math.round(progress * 100)}%` }}
-            />
+        <div className="rounded-md bg-muted/50 p-2.5">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-[width]"
+                style={{ width: `${Math.round(progress * 100)}%` }}
+              />
+            </div>
+            <span className="text-xs font-medium text-muted-foreground tabular-nums">
+              {receiveCopy.receiveProgress(confirmed.size, total)}
+            </span>
           </div>
-          <span className="text-xs font-medium text-muted-foreground tabular-nums">
-            {receiveCopy.receiveProgress(confirmed.size, total)}
-          </span>
+
+          {nextItem ? (
+            <InteractiveCard
+              asChild
+              padding="compact"
+              minHeight="tap"
+              className="mt-2"
+            >
+              <button
+                type="button"
+                className="w-full flex-col items-start justify-center text-left"
+                onClick={() => setSheetId(nextItem.ingredientId)}
+              >
+                <SectionLabel>{receiveCopy.receiveNextLine}</SectionLabel>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                    {nextItem.name}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {receiveCopy.receiveSent(
+                      String(nextItem.qty),
+                      nextItem.unit,
+                    )}
+                  </span>
+                </span>
+              </button>
+            </InteractiveCard>
+          ) : null}
         </div>
 
-        {nextItem ? (
-          <InteractiveCard
-            asChild
-            padding="compact"
-            minHeight="tap"
-            className="mt-2"
-          >
-            <button
-              type="button"
-              className="w-full flex-col items-start justify-center text-left"
-              onClick={() => setSheetId(nextItem.ingredientId)}
-            >
-              <SectionLabel>{receiveCopy.receiveNextLine}</SectionLabel>
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                  {nextItem.name}
-                </span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {receiveCopy.receiveSent(String(nextItem.qty), nextItem.unit)}
-                </span>
-              </span>
-            </button>
-          </InteractiveCard>
-        ) : null}
-      </div>
-
-      <ItemGroup className="gap-2">
-        {items.map((item) => {
-          const isConfirmed = confirmed.has(item.ingredientId);
-          const isNext = nextItem?.ingredientId === item.ingredientId;
-          const value = values[item.ingredientId] ?? item.qty;
-          const isShortage = isConfirmed && value < item.qty;
-          return (
-            <div key={item.ingredientId} className="flex flex-col gap-2">
-              <InteractiveCard asChild padding="compact" minHeight="tap">
-                <button
-                  type="button"
-                  onClick={() => setSheetId(item.ingredientId)}
-                  className="flex w-full items-center gap-3 text-left"
-                >
-                  {isConfirmed ? (
-                    <IconCheckCircle className="size-5 shrink-0 text-primary" />
-                  ) : (
-                    <IconCircle className="size-5 shrink-0 text-muted-foreground" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">
-                      {item.name}
-                    </div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {receiveCopy.receiveSent(String(item.qty), item.unit)}
-                    </div>
-                  </div>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-md px-3 py-1 font-mono text-sm font-semibold tabular-nums",
-                      isConfirmed
-                        ? "bg-primary/10 text-primary"
-                        : isNext
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground",
-                    )}
+        <ItemGroup className="gap-2">
+          {items.map((item) => {
+            const isConfirmed = confirmed.has(item.ingredientId);
+            const isNext = nextItem?.ingredientId === item.ingredientId;
+            const value = values[item.ingredientId] ?? item.qty;
+            const isShortage = isConfirmed && value < item.qty;
+            return (
+              <div key={item.ingredientId} className="flex flex-col gap-2">
+                <InteractiveCard asChild padding="compact" minHeight="tap">
+                  <button
+                    type="button"
+                    onClick={() => setSheetId(item.ingredientId)}
+                    className="flex w-full items-center gap-3 text-left"
                   >
-                    {isConfirmed ? value : receiveCopy.receiveTapToEnter}
-                  </span>
-                </button>
-              </InteractiveCard>
-              {isShortage ? (
-                <Item
-                  asChild
-                  variant="outline"
-                  className="flex-col items-stretch gap-1.5"
-                >
-                  <label data-vaul-no-drag>
-                    <span className="text-xs font-medium text-destructive">
-                      {copy.shortageNoteTitle}
+                    {isConfirmed ? (
+                      <IconCheckCircle className="size-5 shrink-0 text-primary" />
+                    ) : (
+                      <IconCircle className="size-5 shrink-0 text-muted-foreground" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">
+                        {item.name}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {receiveCopy.receiveSent(String(item.qty), item.unit)}
+                      </div>
+                    </div>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-md px-3 py-1 font-mono text-sm font-semibold tabular-nums",
+                        isConfirmed
+                          ? "bg-primary/10 text-primary"
+                          : isNext
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground",
+                      )}
+                    >
+                      {isConfirmed ? value : receiveCopy.receiveTapToEnter}
                     </span>
-                    <Textarea
-                      value={notes[item.ingredientId] ?? ""}
-                      onChange={(event) =>
-                        setNotes((current) => ({
-                          ...current,
-                          [item.ingredientId]: event.target.value,
-                        }))
-                      }
-                      placeholder={copy.shortageNotePlaceholder}
-                      className="min-h-20"
-                      maxLength={300}
-                      disabled={isPending}
-                    />
-                  </label>
-                </Item>
-              ) : null}
-            </div>
-          );
-        })}
-      </ItemGroup>
+                  </button>
+                </InteractiveCard>
+                {isShortage ? (
+                  <Item
+                    asChild
+                    variant="outline"
+                    className="flex-col items-stretch gap-1.5"
+                  >
+                    <label data-vaul-no-drag>
+                      <span className="text-xs font-medium text-destructive">
+                        {copy.shortageNoteTitle}
+                      </span>
+                      <Textarea
+                        value={notes[item.ingredientId] ?? ""}
+                        onChange={(event) =>
+                          setNotes((current) => ({
+                            ...current,
+                            [item.ingredientId]: event.target.value,
+                          }))
+                        }
+                        placeholder={copy.shortageNotePlaceholder}
+                        className="min-h-20"
+                        maxLength={300}
+                        disabled={isPending}
+                      />
+                    </label>
+                  </Item>
+                ) : null}
+              </div>
+            );
+          })}
+        </ItemGroup>
 
-      <AppDetailFooter
-        sticky
-        leading={
-          <Button variant="outline" size="touch" asChild>
-            <Link href={backHref}>
-              <IconArrowLeft data-icon="inline-start" />
-              {ACTIONS_VI.back}
-            </Link>
-          </Button>
-        }
-        trailing={
-          <Button
-            type="button"
-            size="touch-lg"
-            variant={remaining > 0 ? "outline" : "default"}
-            disabled={isPending}
-            onClick={handleConfirm}
-          >
-            {isPending ? <Spinner className="size-5" /> : null}
-            {remaining > 0
-              ? receiveCopy.receiveConfirmRemaining(remaining)
-              : receiveCopy.receiveConfirmAll}
-          </Button>
-        }
-      />
+        <AppDetailFooter
+          sticky
+          leading={
+            <Button variant="outline" size="touch" asChild>
+              <Link href={backHref}>
+                <IconArrowLeft data-icon="inline-start" />
+                {ACTIONS_VI.back}
+              </Link>
+            </Button>
+          }
+          trailing={
+            <Button
+              type="button"
+              size="touch-lg"
+              variant={remaining > 0 ? "outline" : "default"}
+              disabled={isPending}
+              onClick={handleConfirm}
+            >
+              {isPending ? <Spinner className="size-5" /> : null}
+              {remaining > 0
+                ? receiveCopy.receiveConfirmRemaining(remaining)
+                : receiveCopy.receiveConfirmAll}
+            </Button>
+          }
+        />
 
-      <NumberPadSheet
-        open={sheetItem != null}
-        onOpenChange={(next) => {
-          if (!next) setSheetId(null);
-        }}
-        title={
-          sheetItem
-            ? `${sheetItem.name} · ${receiveCopy.receiveSent(String(sheetItem.qty), sheetItem.unit)}`
-            : ""
-        }
-        suffix={sheetItem?.unit}
-        initialValue={
-          sheetItem
-            ? confirmed.has(sheetItem.ingredientId)
-              ? (values[sheetItem.ingredientId] ?? sheetItem.qty)
+        <NumberPadSheet
+          open={sheetItem != null}
+          onOpenChange={(next) => {
+            if (!next) setSheetId(null);
+          }}
+          title={
+            sheetItem
+              ? `${sheetItem.name} · ${receiveCopy.receiveSent(String(sheetItem.qty), sheetItem.unit)}`
+              : ""
+          }
+          suffix={sheetItem?.unit}
+          initialValue={
+            sheetItem
+              ? confirmed.has(sheetItem.ingredientId)
+                ? (values[sheetItem.ingredientId] ?? sheetItem.qty)
+                : null
               : null
-            : null
-        }
-        onConfirm={handleSheetConfirm}
-        allowDecimal
-      />
+          }
+          onConfirm={handleSheetConfirm}
+          allowDecimal
+        />
       </div>
     </BranchOperatorPage>
   );

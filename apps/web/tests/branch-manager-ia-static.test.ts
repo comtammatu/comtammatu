@@ -131,6 +131,7 @@ test("Branch bottom nav only contains persistent daily job families", () => {
     "`/br/${branchId}/shift`",
     "`/br/${branchId}/team`",
     "`/br/${branchId}/stock`",
+    "`/br/${branchId}/profile`",
   ]) {
     assert.ok(bottomNav.includes(expected), `expected bottom nav ${expected}`);
   }
@@ -146,7 +147,6 @@ test("Branch bottom nav only contains persistent daily job families", () => {
     "/settings",
     "/menu-limits",
     "/pos-sessions",
-    "/profile",
     "/notifications",
     "/more",
   ]) {
@@ -157,7 +157,8 @@ test("Branch bottom nav only contains persistent daily job families", () => {
     );
   }
 
-  assert.doesNotMatch(bottomNav, /\bEllipsis\b|\bUser\b/);
+  assert.doesNotMatch(bottomNav, /\bEllipsis\b/);
+  assert.match(bottomNav, /\bUser\b/);
 });
 
 test("POS, KDS, and Runner stay standalone station apps", () => {
@@ -426,7 +427,7 @@ test("Branch settings hub exposes setup controls only", () => {
   assert.doesNotMatch(settingsHub, /className="md:p-6"/);
   assert.match(
     settingsMessages,
-    /hubDescription: \(branchName: string\) =>\s*`\$\{branchName\} · Bàn, POS, bếp và in`/,
+    /hubDescription: "Bàn, POS, bếp và in"/,
     "Settings hub description should state the concrete setup scope",
   );
   assert.match(
@@ -480,8 +481,14 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
   assert.match(tableTable, /DataTable/);
   assert.match(dataTable, /mobileBreakpoint\?: number/);
   assert.match(dataTable, /useIsMobile\(mobileBreakpoint\)/);
-  assert.match(terminalsClient, /mobileBreakpoint=\{1024\}/);
-  assert.match(stationsClient, /mobileBreakpoint=\{1024\}/);
+  assert.match(
+    terminalsClient,
+    /mobileBreakpoint=\{embedded \? 1280 : 1024\}/,
+  );
+  assert.match(
+    stationsClient,
+    /mobileBreakpoint=\{embedded \? 1280 : 1024\}/,
+  );
   assert.match(tableTable, /mobileBreakpoint=\{1024\}/);
   assert.doesNotMatch(
     posSessionsClient,

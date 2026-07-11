@@ -267,7 +267,6 @@ export function BranchGrnListClient({
     <BranchOperatorPage
       title={messages.inventory.operatorFlow.grnListTitle}
       description={messages.inventory.operatorFlow.grnListDescription}
-      hideHeaderOnMobile
     >
       {canCreate ? (
         <Button asChild size="touch" className="w-full">

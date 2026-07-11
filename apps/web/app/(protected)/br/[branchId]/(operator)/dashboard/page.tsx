@@ -93,7 +93,7 @@ export default async function BranchCommandPage({
   return (
     <BranchOperatorPage
       title={copy.commandTitle}
-      description={copy.commandDescription(branch.name)}
+      description={copy.commandDescription}
     >
       {tileGroups.liveOperations.length > 0 ? (
         <BranchOperatorPanel

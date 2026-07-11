@@ -243,7 +243,6 @@ export function BranchProductionDetailClient({
     <BranchOperatorPage
       title={run.production_number}
       description={run.finished_good_name}
-      hideHeaderOnMobile
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">

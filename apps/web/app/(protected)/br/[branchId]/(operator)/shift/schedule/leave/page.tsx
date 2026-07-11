@@ -15,7 +15,6 @@ export default async function OperatorShiftScheduleLeavePage({
       returnHref={`/br/${branchId}/shift/schedule`}
       routeBranchId={branchId}
       profileHref={`/br/${branchId}/profile`}
-      hideHeaderOnMobile
       plane="branch"
     />
   );

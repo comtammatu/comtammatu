@@ -26,7 +26,6 @@ export default async function OperatorCheckoutApprovalsPage({
           ? attendanceId
           : undefined
       }
-      hideHeaderOnMobile
       plane="branch"
     />
   );

@@ -192,7 +192,7 @@ export function TerminalsClient({
         data={filteredTerminals}
         getRowKey={(terminal) => terminal.id}
         emptyTitle={messages.settings.pos.emptyForBranch}
-        mobileBreakpoint={1024}
+        mobileBreakpoint={embedded ? 1280 : 1024}
         mobileCardRender={(terminal) => (
           <Item variant="outline">
             <ItemContent className="min-w-0">

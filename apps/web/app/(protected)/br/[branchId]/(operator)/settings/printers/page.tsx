@@ -1,9 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import {
-  BranchOperatorPage,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
@@ -99,15 +96,13 @@ export default async function BranchPrintersPage({
         branchRes.data.name,
       )}
     >
-      <BranchOperatorPanel>
-        <PrintersClient
-          branches={[branchRes.data]}
-          printers={printers as Printer[]}
-          agents={(agentRes.data ?? []) as Agent[]}
-          categories={(categoriesRes.data ?? []) as Category[]}
-          embedded
-        />
-      </BranchOperatorPanel>
+      <PrintersClient
+        branches={[branchRes.data]}
+        printers={printers as Printer[]}
+        agents={(agentRes.data ?? []) as Agent[]}
+        categories={(categoriesRes.data ?? []) as Category[]}
+        embedded
+      />
     </BranchOperatorPage>
   );
 }

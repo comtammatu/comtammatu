@@ -136,7 +136,6 @@ export function BranchStockIngredientDetail({
       description={[ingredient.sku, ingredient.category, ingredient.unit]
         .filter(Boolean)
         .join(" · ")}
-      hideHeaderOnMobile
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">

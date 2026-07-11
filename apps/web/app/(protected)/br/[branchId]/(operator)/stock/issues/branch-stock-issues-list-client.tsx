@@ -255,7 +255,6 @@ export function BranchStockIssuesListClient({
     <BranchOperatorPage
       title={INVENTORY_VI.issueSlipsTitle}
       description={branchName}
-      hideHeaderOnMobile
       action={
         createTypes.length > 0 ? (
           <Button

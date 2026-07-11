@@ -190,7 +190,6 @@ export function BranchCountSlipsClient({
     <BranchOperatorPage
       title={INVENTORY_VI.countSlipTitle}
       description={branchName}
-      hideHeaderOnMobile
     >
       <Tabs value={view} onValueChange={(value) => setView(value as QueueView)}>
         <TabsList className="grid min-h-12 w-full grid-cols-2">

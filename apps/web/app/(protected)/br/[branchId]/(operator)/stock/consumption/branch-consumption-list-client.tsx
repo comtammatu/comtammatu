@@ -169,7 +169,6 @@ export function BranchConsumptionListClient({
     <BranchOperatorPage
       title={issuesCopy.surface.consumption.eyebrow}
       description={branchName}
-      hideHeaderOnMobile
     >
       <Tabs
         value={view}

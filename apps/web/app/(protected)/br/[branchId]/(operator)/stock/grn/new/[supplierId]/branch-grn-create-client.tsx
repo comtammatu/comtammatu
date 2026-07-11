@@ -72,12 +72,14 @@ export function BranchGrnCreateClient({
     <BranchOperatorPage
       title={GRN_CREATE_COPY.newReceiptEyebrow}
       description={GRN_CREATE_COPY.newReceiptDescription}
-      hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
           <Button asChild variant="ghost" size="icon-touch">
-            <Link href={sourceBasePath} aria-label={GRN_CREATE_COPY.changeSupplier}>
+            <Link
+              href={sourceBasePath}
+              aria-label={GRN_CREATE_COPY.changeSupplier}
+            >
               <IconArrowLeft />
             </Link>
           </Button>

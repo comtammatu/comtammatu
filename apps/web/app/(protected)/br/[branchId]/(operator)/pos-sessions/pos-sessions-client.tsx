@@ -222,30 +222,35 @@ export function PosSessionsClient({
                   {orders.map((order) => (
                     <Item
                       key={order.id}
+                      asChild
                       variant="outline"
-                      className="cursor-pointer"
-                      onClick={() => setSelectedOrderId(order.id)}
+                      className="chrome-tap text-left active:bg-muted/50"
                     >
-                      <ItemHeader>
-                        <ItemContent>
-                          <ItemTitle>{order.order_number}</ItemTitle>
-                          <ItemDescription>
-                            {formatTime(order.created_at)} ·{" "}
-                            {order.order_type === "dine_in"
-                              ? messages.settings.posSessions.tableContext(
-                                  order.tables?.number ?? "-",
-                                )
-                              : messages.settings.posSessions.takeaway}
-                          </ItemDescription>
-                        </ItemContent>
-                        <IconChevronRight className="size-4 text-muted-foreground" />
-                      </ItemHeader>
-                      <ItemFooter>
-                        <StatusBadge domain="order" value={order.status} />
-                        <span className="font-mono text-sm font-semibold tabular-nums">
-                          {formatVND(order.total_amount)}
-                        </span>
-                      </ItemFooter>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrderId(order.id)}
+                      >
+                        <ItemHeader>
+                          <ItemContent>
+                            <ItemTitle>{order.order_number}</ItemTitle>
+                            <ItemDescription>
+                              {formatTime(order.created_at)} ·{" "}
+                              {order.order_type === "dine_in"
+                                ? messages.settings.posSessions.tableContext(
+                                    order.tables?.number ?? "-",
+                                  )
+                                : messages.settings.posSessions.takeaway}
+                            </ItemDescription>
+                          </ItemContent>
+                          <IconChevronRight className="size-4 text-muted-foreground" />
+                        </ItemHeader>
+                        <ItemFooter>
+                          <StatusBadge domain="order" value={order.status} />
+                          <span className="font-mono text-sm font-semibold tabular-nums">
+                            {formatVND(order.total_amount)}
+                          </span>
+                        </ItemFooter>
+                      </button>
                     </Item>
                   ))}
                 </ItemGroup>

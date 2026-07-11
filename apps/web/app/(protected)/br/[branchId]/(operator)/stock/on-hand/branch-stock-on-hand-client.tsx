@@ -219,7 +219,6 @@ export function BranchStockOnHandClient({
     <BranchOperatorPage
       title={stockCopy.title}
       description={stockCopy.operatorDescription}
-      hideHeaderOnMobile
     >
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
         <BranchOperatorPanel

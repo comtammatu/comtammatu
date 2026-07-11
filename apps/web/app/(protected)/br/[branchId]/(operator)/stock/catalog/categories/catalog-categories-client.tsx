@@ -15,7 +15,7 @@ import {
   updateCategory,
   type CategoryRow,
 } from "@/(protected)/inventory/settings/categories/categories-actions";
-import { CatalogBackControl } from "../catalog-back-header";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   CatalogList,
   CATALOG_DELETE_ICON,
@@ -98,9 +98,11 @@ export function CatalogCategoriesClient({
     : NEW_CATEGORY_DEFAULTS;
 
   return (
-    <div className="flex flex-col gap-3">
-      <CatalogBackControl title={copy.title} backHref={backHref} />
-
+    <BranchOperatorPage
+      title={copy.title}
+      backHref={backHref}
+      backLabel={messages.catalog.index.title}
+    >
       <CatalogList
         rows={rows}
         getRowKey={(row) => row.id}
@@ -170,6 +172,6 @@ export function CatalogCategoriesClient({
           </>
         )}
       </FormDialog>
-    </div>
+    </BranchOperatorPage>
   );
 }
