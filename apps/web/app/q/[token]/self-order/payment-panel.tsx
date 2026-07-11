@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Banknote as IconCash,
   Landmark as IconBank,
@@ -17,6 +17,11 @@ import { Label } from "@comtammatu/ui/components/label";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@comtammatu/ui/components/avatar";
+import {
   Drawer,
   DrawerContent,
   DrawerDescription,
@@ -27,7 +32,12 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppSection } from "@/components/surface";
 import { QrCodeImage } from "@/components/qr-code-image";
-import { buildVietQrBankAppUrl } from "@lib/self-order/bank-app-link";
+import {
+  buildVietQrBankAppUrl,
+  parseVietQrBankApps,
+  VIETQR_BANK_APP_CATALOG_URL,
+  type VietQrBankApp,
+} from "@lib/self-order/bank-app-link";
 import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
 
 export interface GuestPaymentRequestState {
@@ -79,28 +89,55 @@ export interface PaymentPanelProps {
   onRefreshPayment: () => void;
 }
 
-const AUTOFILL_BANK_APPS = [
-  { id: "acb", name: "ACB ONE" },
-  { id: "bidv", name: "BIDV SmartBanking" },
-  { id: "icb", name: "VietinBank iPay" },
-  { id: "ocb", name: "OCB OMNI" },
-] as const;
-
-function BankAppAutofillLauncher({
+function BankAppLauncher({
   accountNo,
   bankCode,
   accountName,
   amount,
   paymentCode,
+  qrData,
 }: {
   accountNo: string;
   bankCode: string;
   accountName?: string | null;
   amount: number;
   paymentCode: string;
+  qrData: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const [apps, setApps] = useState<VietQrBankApp[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!open || apps !== null) return;
+    const controller = new AbortController();
+    setLoadFailed(false);
+
+    void fetch(VIETQR_BANK_APP_CATALOG_URL, {
+      cache: "force-cache",
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("bank_app_catalog_unavailable");
+        return response.json() as Promise<unknown>;
+      })
+      .then((payload) => {
+        const parsedApps = parseVietQrBankApps(payload);
+        if (!parsedApps.length) throw new Error("bank_app_catalog_invalid");
+        setApps(parsedApps);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
+        setLoadFailed(true);
+      });
+
+    return () => controller.abort();
+  }, [apps, loadAttempt, open]);
+
   return (
-    <Drawer>
+    <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
         <Button type="button" size="touch" className="w-full">
           <IconBank data-icon="inline-start" />
@@ -114,29 +151,64 @@ function BankAppAutofillLauncher({
             {SELF_ORDER_VI.chooseBankAppDescription}
           </DrawerDescription>
         </DrawerHeader>
-        <div className="mx-4 mb-4 grid gap-2">
-          {AUTOFILL_BANK_APPS.map((app) => {
-            const href = buildVietQrBankAppUrl({
-              appId: app.id,
-              accountNo,
-              bankCode,
-              amount,
-              paymentCode,
-              accountName,
-            });
-            if (!href) return null;
-            return (
+        <div className="mx-4 mb-4 min-h-0 flex-1 overflow-y-auto">
+          {apps ? (
+            <ul className="grid gap-2">
+              {apps.map((app) => {
+                const href = buildVietQrBankAppUrl({
+                  appId: app.id,
+                  accountNo,
+                  bankCode,
+                  amount,
+                  paymentCode,
+                  accountName,
+                  qrData,
+                });
+                if (!href) return null;
+                return (
+                  <li key={app.id}>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="touch"
+                      className="w-full justify-start"
+                    >
+                      <a href={href}>
+                        <Avatar aria-hidden="true">
+                          {app.logoUrl ? (
+                            <AvatarImage src={app.logoUrl} alt="" />
+                          ) : null}
+                          <AvatarFallback>
+                            {app.name.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {app.name}
+                      </a>
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : loadFailed ? (
+            <div className="my-6 flex flex-col items-center gap-3 text-center">
+              <p className="text-sm text-muted-foreground">
+                {SELF_ORDER_VI.bankAppsLoadFailed}
+              </p>
               <Button
-                key={app.id}
-                asChild
+                type="button"
                 variant="outline"
                 size="touch"
-                className="w-full justify-start"
+                onClick={() => setLoadAttempt((attempt) => attempt + 1)}
               >
-                <a href={href}>{app.name}</a>
+                {SELF_ORDER_VI.retryRefresh}
               </Button>
-            );
-          })}
+            </div>
+          ) : (
+            <div className="my-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Spinner className="size-4" />
+              {SELF_ORDER_VI.bankAppsLoading}
+            </div>
+          )}
         </div>
       </DrawerContent>
     </Drawer>
@@ -417,12 +489,13 @@ export function PaymentPanel({
                   {activePaymentRequest.accountNo &&
                   activePaymentRequest.bankCode &&
                   activePaymentRequest.paymentCode ? (
-                    <BankAppAutofillLauncher
+                    <BankAppLauncher
                       accountNo={activePaymentRequest.accountNo}
                       bankCode={activePaymentRequest.bankCode}
                       accountName={activePaymentRequest.accountName}
                       amount={activePaymentRequest.amount}
                       paymentCode={activePaymentRequest.paymentCode}
+                      qrData={activePaymentRequest.qrData ?? ""}
                     />
                   ) : null}
                 </div>

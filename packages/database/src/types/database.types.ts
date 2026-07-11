@@ -8959,6 +8959,7 @@ export type Database = {
           expense_id: number | null
           http_status: number | null
           id: number
+          order_id: number | null
           payload: Json
           payment_id: number | null
           processed_at: string | null
@@ -8974,6 +8975,7 @@ export type Database = {
           expense_id?: number | null
           http_status?: number | null
           id?: never
+          order_id?: number | null
           payload: Json
           payment_id?: number | null
           processed_at?: string | null
@@ -8989,6 +8991,7 @@ export type Database = {
           expense_id?: number | null
           http_status?: number | null
           id?: never
+          order_id?: number | null
           payload?: Json
           payment_id?: number | null
           processed_at?: string | null
@@ -9004,6 +9007,13 @@ export type Database = {
             columns: ["expense_id"]
             isOneToOne: false
             referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
@@ -10712,6 +10722,10 @@ export type Database = {
       recall_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       recompute_supplier_invoice_matching: {
         Args: { p_invoice_id: number }
+        Returns: Json
+      }
+      reconcile_sepay_order_evidence: {
+        Args: { p_event_id: number; p_payment_code: string }
         Returns: Json
       }
       record_sepay_cash_deposit_as_system: {

@@ -1128,7 +1128,24 @@ CREATE INDEX idx_mv_inv_stock_alerts ON public.mv_inventory_stock_current USING 
 
 GRANT ALL ON TABLE public.mv_inventory_stock_current TO service_role;
 
+CREATE MATERIALIZED VIEW public.mv_inventory_value_ranking AS
+SELECT
+  tenant_id,
+  branch_id,
+  ingredient_id,
+  SUM(stock_value) AS total_value
+FROM public.mv_inventory_stock_current
+GROUP BY tenant_id, branch_id, ingredient_id
+WITH NO DATA;
+
+CREATE UNIQUE INDEX uq_mv_inv_value_ranking
+  ON public.mv_inventory_value_ranking (tenant_id, branch_id, ingredient_id);
+
+REVOKE ALL ON public.mv_inventory_value_ranking FROM authenticated, anon;
+GRANT ALL ON TABLE public.mv_inventory_value_ranking TO service_role;
+
 REFRESH MATERIALIZED VIEW public.mv_inventory_stock_current;
+REFRESH MATERIALIZED VIEW public.mv_inventory_value_ranking;
 
 CREATE MATERIALIZED VIEW public.mv_inventory_value_ranking AS
  SELECT tenant_id,
