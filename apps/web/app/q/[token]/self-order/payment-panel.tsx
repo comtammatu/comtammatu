@@ -80,6 +80,7 @@ export interface PaymentPanelProps {
 }
 
 const AUTOFILL_BANK_APPS = [
+  { id: "mb", name: "MB Bank" },
   { id: "acb", name: "ACB ONE" },
   { id: "bidv", name: "BIDV SmartBanking" },
   { id: "icb", name: "VietinBank iPay" },
@@ -92,12 +93,14 @@ function BankAppAutofillLauncher({
   accountName,
   amount,
   paymentCode,
+  qrData,
 }: {
   accountNo: string;
   bankCode: string;
   accountName?: string | null;
   amount: number;
   paymentCode: string;
+  qrData: string;
 }) {
   return (
     <Drawer>
@@ -123,6 +126,7 @@ function BankAppAutofillLauncher({
               amount,
               paymentCode,
               accountName,
+              qrData,
             });
             if (!href) return null;
             return (
@@ -423,6 +427,7 @@ export function PaymentPanel({
                       accountName={activePaymentRequest.accountName}
                       amount={activePaymentRequest.amount}
                       paymentCode={activePaymentRequest.paymentCode}
+                      qrData={activePaymentRequest.qrData ?? ""}
                     />
                   ) : null}
                 </div>

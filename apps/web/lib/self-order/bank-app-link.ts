@@ -7,6 +7,7 @@ export function buildVietQrBankAppUrl(input: {
   amount: number;
   paymentCode: string;
   accountName?: string | null;
+  qrData?: string | null;
 }): string | null {
   const appId = input.appId.trim();
   const accountNo = input.accountNo.trim();
@@ -21,6 +22,16 @@ export function buildVietQrBankAppUrl(input: {
     !paymentCode
   ) {
     return null;
+  }
+
+  if (appId.toLowerCase() === "mb") {
+    const qrData = input.qrData?.trim();
+    if (!qrData?.startsWith("000201")) return null;
+
+    const url = new URL("mbbank://applink");
+    url.searchParams.set("targetPage", "QRPay");
+    url.searchParams.set("qrContent", qrData);
+    return url.toString();
   }
 
   const url = new URL("https://dl.vietqr.io/pay");

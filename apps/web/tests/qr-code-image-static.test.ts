@@ -49,8 +49,31 @@ test("public QR surfaces use the shared web QR renderer", () => {
   assert.match(selfOrderPayment, /shareLabel=\{SELF_ORDER_VI\.shareVietQr\}/);
   assert.match(selfOrderPayment, /SELF_ORDER_VI\.saveVietQrHint/);
   assert.match(selfOrderPayment, /BankAppAutofillLauncher/);
-  assert.match(selfOrderPayment, /"acb"[\s\S]*"bidv"[\s\S]*"icb"[\s\S]*"ocb"/);
+  assert.match(
+    selfOrderPayment,
+    /"mb"[\s\S]*"acb"[\s\S]*"bidv"[\s\S]*"icb"[\s\S]*"ocb"/,
+  );
   assert.doesNotMatch(selfOrderPayment, /import QRCode from "qrcode"/);
+});
+
+test("MB Bank link receives the exact VietQR payload", () => {
+  const qrData =
+    "00020101021238530010A0000007270123000697042201091234567890208QRIBFTTA530370454061670005802VN6304ABCD";
+  const href = buildVietQrBankAppUrl({
+    appId: "mb",
+    accountNo: "0123456789",
+    bankCode: "MB",
+    amount: 167_000,
+    paymentCode: "MATU ABC123",
+    qrData,
+  });
+
+  assert.ok(href);
+  const url = new URL(href);
+  assert.equal(url.protocol, "mbbank:");
+  assert.equal(url.host, "applink");
+  assert.equal(url.searchParams.get("targetPage"), "QRPay");
+  assert.equal(url.searchParams.get("qrContent"), qrData);
 });
 
 test("supported bank app link keeps the exact VietQR payment facts", () => {
