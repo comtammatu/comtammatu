@@ -104,6 +104,9 @@ test("public snapshot accepts the stored request and current order shapes", () =
         status: "preparing",
         paymentStatus: "unpaid",
         paymentMethod: null,
+        subtotal: 65_000,
+        serviceCharge: 0,
+        discountAmount: 0,
         totalAmount: 65_000,
         itemCount: 1,
         items: [

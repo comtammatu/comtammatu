@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { Star as IconStar, ThumbsUp as IconThumbsUp } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -111,19 +112,19 @@ export function MenuPanel({
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
-      <div className="border-b border-border bg-background px-3 py-2">
+      <div className="shrink-0 border-b border-border bg-background px-3 py-2">
         <div className="flex items-center">{categoryPills}</div>
+      </div>
+      <div className="flex shrink-0 flex-col gap-1.5 px-3 py-4">
+        <h2 className="font-heading text-2xl font-semibold tracking-tight">
+          {SELF_ORDER_VI.menuPromptTitle}
+        </h2>
+        <p className="text-base text-muted-foreground">
+          {SELF_ORDER_VI.menuPromptDescription}
+        </p>
       </div>
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         <div className="flex flex-col gap-4 px-2 pb-44 pt-2 sm:pb-32">
-          <div className="flex flex-col gap-1.5 px-1">
-            <h2 className="font-heading text-2xl font-semibold tracking-tight">
-              {SELF_ORDER_VI.menuPromptTitle}
-            </h2>
-            <p className="text-base text-muted-foreground">
-              {SELF_ORDER_VI.menuPromptDescription}
-            </p>
-          </div>
           {availableCategories.length === 0 || !hasVisibleItems ? (
             <AppEmptyState
               title={SELF_ORDER_VI.menuEmpty}
@@ -258,7 +259,13 @@ function MenuRowButton({
   const availability = menuItemAvailability(item);
   const reason = availabilityReasonLabel(availability, cartDemand);
   const remaining = remainingLabel(availability, cartDemand);
-  const imageBadges = [...selfOrderItemImageBadges(item.name)];
+  const curatedBadges = selfOrderItemImageBadges(item.name);
+  const imageIcon = curatedBadges.includes("Truyền thống") ? (
+    <IconStar />
+  ) : curatedBadges.includes("Chờ 20 phút") ? (
+    <IconThumbsUp />
+  ) : null;
+  const imageBadges = [...curatedBadges];
   if (tag && !imageBadges.includes(tag)) {
     imageBadges.push(tag);
   }
@@ -271,7 +278,7 @@ function MenuRowButton({
       disabled={disabled}
       aria-disabled={disabled}
       aria-label={`${SELF_ORDER_VI.customizeItem}: ${item.name}, ${priceLabel}`}
-      className="group h-auto w-full items-stretch justify-start gap-4 p-3 text-left whitespace-normal transition-[transform,background-color,border-color] duration-150 active:scale-[0.97] disabled:opacity-60"
+      className="group h-auto w-full items-stretch justify-start gap-4 p-3 text-left whitespace-normal transition-[transform,background-color,border-color] duration-150 active:scale-95 disabled:opacity-60"
       onClick={onClick}
     >
       <span
@@ -297,30 +304,27 @@ function MenuRowButton({
             />
           </span>
         )}
-        {imageBadges.length > 0 ? (
-          <span className="absolute top-1.5 left-1.5 z-10 flex max-w-[calc(100%-0.75rem)] flex-col items-start gap-1">
-            {imageBadges.map((badge) => (
-              <Badge
-                key={badge}
-                variant="default"
-                className="max-w-full truncate px-2 text-xs"
-              >
-                {badge}
-              </Badge>
-            ))}
-          </span>
-        ) : null}
-        {reason ? (
+        {imageIcon ? (
           <Badge
-            variant="destructive"
-            className="absolute top-1.5 right-1.5 z-10 px-2 text-xs"
+            aria-hidden
+            className="absolute left-2 top-2 z-10 size-8 justify-center p-0"
           >
-            {reason}
+            {imageIcon}
           </Badge>
         ) : null}
       </span>
       <span className="flex min-w-0 flex-1 flex-col items-start justify-center gap-1.5 py-0.5">
-        {remaining ? <Badge variant="secondary">{remaining}</Badge> : null}
+        {remaining || reason || imageBadges.length > 0 ? (
+          <span className="flex flex-wrap items-center gap-1.5">
+            {remaining ? <Badge variant="secondary">{remaining}</Badge> : null}
+            {imageBadges.map((badge) => (
+              <Badge key={badge} variant="default">
+                {badge}
+              </Badge>
+            ))}
+            {reason ? <Badge variant="destructive">{reason}</Badge> : null}
+          </span>
+        ) : null}
         <span
           className={`line-clamp-2 font-heading font-semibold tracking-tight ${compact ? "text-lg leading-snug" : "text-2xl leading-tight"}`}
         >

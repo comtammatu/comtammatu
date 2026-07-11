@@ -95,7 +95,7 @@ interface DataTableProps<T> {
   emptyIcon?: ReactNode;
   emptyMode?: "no-data" | "no-results";
   totalCount?: number;
-  mobileCardRender: (row: T, index: number) => ReactNode;
+  mobileCardRender?: (row: T, index: number) => ReactNode;
   actions?: ReactNode;
   pageSize?: number;
   currentPage?: number;
@@ -154,7 +154,7 @@ export function DataTable<T>({
   desktopFooterRows,
   mobileFooter,
 }: DataTableProps<T>) {
-  const isMobile = useIsMobile(mobileBreakpoint);
+  const isMobile = useIsMobile(mobileBreakpoint) && mobileCardRender != null;
   const [openContextRowKey, setOpenContextRowKey] = React.useState<
     string | number | null
   >(null);
@@ -232,7 +232,7 @@ export function DataTable<T>({
     />
   ) : null;
 
-  if (isMobile) {
+  if (isMobile && mobileCardRender) {
     return (
       <div className={cn("flex flex-col gap-3", className)}>
         {toolbar}

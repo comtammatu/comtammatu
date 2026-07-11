@@ -66,7 +66,7 @@ export function selfOrderItemImageBadges(name: string): string[] {
   }
 
   if (normalized.includes("một gang") || normalized.includes("mot gang")) {
-    return ["Nên thử", "Chờ 20 phút"];
+    return ["Chờ 20 phút"];
   }
 
   return [];

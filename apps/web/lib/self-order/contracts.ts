@@ -119,6 +119,13 @@ export const selfOrderPaymentRequestStatusSchema = z.enum([
   "expired",
 ]);
 
+export const selfOrderPaymentRequestStatusResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    status: selfOrderPaymentRequestStatusSchema.nullable(),
+  })
+  .strict();
+
 const publicSelfOrderPaymentRequestSchema = z
   .object({
     id: z.number().int().positive().optional(),
@@ -206,6 +213,9 @@ const publicSelfOrderOrderSchema = z
     status: z.string().min(1),
     paymentStatus: z.string().nullable(),
     paymentMethod: z.string().nullable(),
+    subtotal: z.number().finite().min(0),
+    serviceCharge: z.number().finite().min(0),
+    discountAmount: z.number().finite().min(0),
     totalAmount: z.number().finite().min(0),
     itemCount: z.number().int().min(0),
     items: z.array(publicSelfOrderOrderLineSchema),
@@ -375,9 +385,7 @@ export type SelfOrderMenuItem = z.infer<typeof publicSelfOrderMenuItemSchema>;
 export type SelfOrderMenuCategory = z.infer<
   typeof publicSelfOrderMenuCategorySchema
 >;
-export type SelfOrderOrderLine = z.infer<
-  typeof publicSelfOrderOrderLineSchema
->;
+export type SelfOrderOrderLine = z.infer<typeof publicSelfOrderOrderLineSchema>;
 export type SelfOrderRequest = z.infer<typeof publicSelfOrderRequestSchema>;
 export type SelfOrderRoundItem = z.infer<typeof publicSelfOrderRoundItemSchema>;
 export type SelfOrderRound = z.infer<typeof publicSelfOrderRoundSchema>;

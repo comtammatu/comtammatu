@@ -1,16 +1,19 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
-import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
+import { ArrowLeft as IconArrowLeft, X as IconX } from "lucide-react";
+import { formatVND } from "@comtammatu/shared/format";
+import { ACTIONS_VI, SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@comtammatu/ui/components/drawer";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
 import { OrderSummary } from "./order-summary";
 
@@ -21,9 +24,9 @@ interface BillDrawerProps {
   onOpenPayment: () => void;
   onBackToBill: () => void;
   canPay: boolean;
-  tableNumber: number;
+  tableNumber?: number;
   order: PublicSelfOrderAvailableSnapshot["order"];
-  rounds: PublicSelfOrderAvailableSnapshot["rounds"];
+  rounds?: PublicSelfOrderAvailableSnapshot["rounds"];
   pendingItems?: NonNullable<
     PublicSelfOrderAvailableSnapshot["request"]
   >["items"];
@@ -37,57 +40,110 @@ export function BillDrawer({
   onOpenPayment,
   onBackToBill,
   canPay,
-  tableNumber,
   order,
-  rounds,
   pendingItems,
   children,
 }: BillDrawerProps) {
   const paymentView = view === "payment" && order !== null;
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-dvh-95">
-        <DrawerHeader>
-          {paymentView ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="touch"
-              className="-ml-3 self-start px-3"
-              onClick={onBackToBill}
-            >
-              <IconArrowLeft data-icon="inline-start" />
-              {SELF_ORDER_VI.billTab}
-            </Button>
-          ) : null}
-          <DrawerTitle>
-            {paymentView ? SELF_ORDER_VI.paymentTitle : SELF_ORDER_VI.billTab}
-          </DrawerTitle>
-          <DrawerDescription>
-            {SELF_ORDER_VI.tableLabel(tableNumber)}
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="workflow-safe-pb flex flex-col gap-3 overflow-y-auto px-3">
-          {paymentView ? (
-            children
-          ) : (
-            <>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        showCloseButton={false}
+        className="mx-auto flex h-dvh max-h-dvh w-full max-w-2xl flex-col overflow-hidden p-0 data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh"
+      >
+        <SheetHeader className="shrink-0">
+          <div className="flex items-center gap-2">
+            {paymentView ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-touch"
+                className="-ml-2 shrink-0"
+                onClick={onBackToBill}
+              >
+                <IconArrowLeft />
+                <span className="sr-only">{SELF_ORDER_VI.billTab}</span>
+              </Button>
+            ) : null}
+            <SheetTitle className="flex-1">
+              {paymentView ? SELF_ORDER_VI.paymentTitle : SELF_ORDER_VI.billTab}
+            </SheetTitle>
+            <SheetClose asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-touch"
+                className="-mr-2 shrink-0"
+              >
+                <IconX />
+                <span className="sr-only">{ACTIONS_VI.close}</span>
+              </Button>
+            </SheetClose>
+          </div>
+        </SheetHeader>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="px-3 py-4 sm:px-4">
+            {paymentView ? (
+              children
+            ) : (
               <OrderSummary
                 pendingItems={pendingItems}
                 items={order?.items ?? []}
-                rounds={rounds}
-                totalAmount={order?.totalAmount}
               />
-              {canPay ? (
-                <Button type="button" size="touch" onClick={onOpenPayment}>
-                  {SELF_ORDER_VI.paymentTitle}
-                </Button>
-              ) : null}
-            </>
-          )}
-        </div>
-      </DrawerContent>
-    </Drawer>
+            )}
+          </div>
+        </ScrollArea>
+        {!paymentView && order?.totalAmount != null ? (
+          <SheetFooter className="workflow-safe-pb shrink-0">
+            <div className="flex flex-col gap-1.5 text-sm">
+              <p className="font-semibold">{SELF_ORDER_VI.total}</p>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">
+                  {SELF_ORDER_VI.subtotal}
+                </span>
+                <span className="font-mono tabular-nums">
+                  {formatVND(order.subtotal)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">
+                  {SELF_ORDER_VI.serviceCharge}
+                </span>
+                <span className="font-mono tabular-nums">
+                  {formatVND(order.serviceCharge)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">
+                  {SELF_ORDER_VI.discount}
+                </span>
+                <span className="font-mono tabular-nums">
+                  {order.discountAmount > 0 ? "-" : ""}
+                  {formatVND(order.discountAmount)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-3 border-t pt-2 font-semibold">
+                <span>{SELF_ORDER_VI.totalAmount}</span>
+                <span className="font-mono tabular-nums text-primary">
+                  {formatVND(order.totalAmount)}
+                </span>
+              </div>
+            </div>
+            {canPay ? (
+            <Button
+              type="button"
+              size="touch"
+              className="w-full"
+              onClick={onOpenPayment}
+            >
+              {SELF_ORDER_VI.paymentTitle}
+            </Button>
+            ) : null}
+          </SheetFooter>
+        ) : null}
+      </SheetContent>
+    </Sheet>
   );
 }

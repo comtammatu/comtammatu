@@ -95,7 +95,6 @@ test("selfOrderItemImageBadges curates Sườn Cốt Lết and Sườn Một Gan
     "Truyền thống",
   ]);
   assert.deepEqual(selfOrderItemImageBadges("Sườn Một Gang"), [
-    "Nên thử",
     "Chờ 20 phút",
   ]);
   assert.deepEqual(selfOrderItemImageBadges("Cơm sườn"), []);

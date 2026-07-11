@@ -46,6 +46,9 @@ export const SELF_ORDER_VI = {
   closedTitle: "Đã thanh toán",
   closedDescription:
     "Cảm ơn quý khách. Nếu cần hỗ trợ thêm, vui lòng gọi nhân viên.",
+  paymentCompletedTitle: "Đã thanh toán thành công",
+  paymentCompletedDescription: "Cảm ơn quý khách đã ghé ăn Cơm Tấm Má Tư",
+  paymentCompletedClose: "Đóng",
   menuTitle: "Thực đơn",
   menuPromptTitle: "Hôm nay ăn gì?",
   menuPromptDescription: "Chọn món rồi xem lại giỏ trước khi gửi.",
@@ -62,6 +65,9 @@ export const SELF_ORDER_VI = {
   quantity: "Số lượng",
   subtotal: "Tạm tính",
   total: "Tổng hiện tại",
+  serviceCharge: "Phí dịch vụ",
+  discount: "Chiết khấu",
+  totalAmount: "Tổng tiền",
   addToCart: "Thêm",
   editCartItem: "Sửa",
   updateCartItem: "Cập nhật",
@@ -126,8 +132,12 @@ export const SELF_ORDER_VI = {
   vietQrCreate: "Tạo mã QR thanh toán",
   cashCallOk: "Đã gọi nhân viên thu tiền mặt.",
   vietQrPendingTitle: "Mã QR thanh toán",
-  vietQrPendingDescription:
-    "Vui lòng chuyển đúng số tiền. Khách không tự xác nhận đã thanh toán.",
+  openBankApp: "Thanh toán bằng ứng dụng ngân hàng",
+  chooseBankAppTitle: "Chọn ứng dụng ngân hàng",
+  chooseBankAppDescription:
+    "Chọn ngân hàng bạn đang sử dụng để mở màn hình chuyển khoản.",
+  bankAppsLoading: "Đang tải danh sách ngân hàng...",
+  bankAppsLoadFailed: "Không tải được danh sách ngân hàng.",
   paymentFailed: "Không tạo được yêu cầu thanh toán. Vui lòng gọi nhân viên.",
   paymentDescription: "Chọn cách thanh toán sau khi nhân viên đã duyệt món.",
   buyerTitle: "Thông tin HĐĐT",
@@ -216,31 +226,20 @@ export const SELF_ORDER_VI = {
   rejectedCalloutDescription:
     "Món chưa được thêm vào đơn của bàn. Kiểm tra lại giỏ hoặc gọi nhân viên, rồi gửi lại.",
   resubmitRejected: "Gửi lại",
-  orderedItemsTitle: "Món đã gọi",
-  orderedItemsDescription:
-    "Đây là các món và tổng tiền đang được dùng để thanh toán.",
-  orderedItemsShowMore: "Xem thêm",
-  roundsTitle: "Lượt gọi món",
-  roundsDescription:
-    "Lịch sử các lượt đã gửi; tổng thanh toán theo mục Món đã gọi.",
-  roundLabel: (roundIndex: number) => `Lượt ${roundIndex}`,
-  roundStatusPending: "Đang chờ duyệt",
-  roundStatusApproved: "Đã duyệt",
-  roundStatusRejected: "Đã huỷ",
+  billItemColumn: "Món",
+  billQuantityColumn: "SL",
+  billUnitPriceColumn: "Đơn giá",
+  billLineTotalColumn: "Thành tiền",
   billEmptyTitle: "Chưa có hoá đơn",
   billEmptyDescription:
-    "Gửi món từ thực đơn để xem lượt gọi ở đây. Thanh toán mở sau khi nhân viên duyệt.",
+    "Gửi món từ thực đơn để xem hoá đơn ở đây. Thanh toán mở sau khi nhân viên duyệt.",
   reasonSoldOut: "Hết suất",
   remainingOnCard: (quantity: number) => `Còn ${quantity} phần`,
   itemDisabledBlocked: (itemName: string) =>
     `${itemName} đang tắt hôm nay — bỏ khỏi giỏ hoặc đổi món.`,
   itemSoldOutBlocked: (itemName: string) =>
     `${itemName} đã hết suất — giảm số lượng hoặc đổi món.`,
-  itemQuotaExceeded: (
-    itemName: string,
-    remaining: number,
-    requested: number,
-  ) =>
+  itemQuotaExceeded: (itemName: string, remaining: number, requested: number) =>
     `${itemName} chỉ còn ${String(remaining)} suất, giỏ đang cần ${String(requested)} — giảm số lượng hoặc đổi món.`,
   itemOutOfStockBlocked: (itemName: string) =>
     `${itemName} hết nguyên liệu — đổi món khác.`,

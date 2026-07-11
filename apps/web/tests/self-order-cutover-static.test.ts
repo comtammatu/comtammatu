@@ -68,9 +68,34 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
     client,
     /StatusPill|SessionStatePanel|DeviceAccessPanel|<Tabs/,
   );
-  assert.match(bill, /<Drawer/);
+  assert.match(bill, /<Sheet/);
+  assert.match(
+    bill,
+    /data-\[side=bottom\]:h-dvh data-\[side=bottom\]:max-h-dvh/,
+  );
+  assert.match(bill, /<ScrollArea className="min-h-0 flex-1">/);
+  assert.doesNotMatch(bill, /SELF_ORDER_VI\.tableLabel/);
+  assert.doesNotMatch(bill, /visibleRounds|RoundItem/);
   assert.match(bill, /pendingItems/);
   assert.match(bill, /<OrderSummary/);
+  const summary = read("app/q/[token]/self-order/order-summary.tsx");
+  assert.doesNotMatch(
+    summary,
+    /SelfOrderRound|RoundItem|roundsTitle|roundsDescription|roundLabel/,
+  );
+  assert.match(summary, /SELF_ORDER_VI\.billItemColumn/);
+  assert.match(summary, /SELF_ORDER_VI\.billQuantityColumn/);
+  assert.match(summary, /SELF_ORDER_VI\.billUnitPriceColumn/);
+  assert.match(summary, /SELF_ORDER_VI\.billLineTotalColumn/);
+  assert.match(summary, /<DataTable/);
+  assert.doesNotMatch(summary, /grid-cols-\[minmax\(0,1fr\)_auto_auto_auto\]/);
+  assert.match(summary, /items\.flatMap\(buildBillRows\)/);
+  assert.match(summary, /formatVND\(row\.unitPrice\)/);
+  assert.match(summary, /formatVND\(row\.lineTotal\)/);
+  assert.match(bill, /SELF_ORDER_VI\.subtotal/);
+  assert.match(bill, /SELF_ORDER_VI\.serviceCharge/);
+  assert.match(bill, /SELF_ORDER_VI\.discount/);
+  assert.match(bill, /SELF_ORDER_VI\.totalAmount/);
   assert.doesNotMatch(menu, /<Tabs|TabsTrigger|TabsList/);
   assert.match(menu, /isSelfOrderComCategory\(category\)/);
   assert.match(menu, /compact=\{!isSelfOrderComCategory\(category\)\}/);
@@ -83,7 +108,7 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   assert.doesNotMatch(menu, /featuredMainDishes|MenuPhotoButton|grid-cols-2/);
   assert.doesNotMatch(menu, /category\.type !== "main_dish"/);
   assert.match(menu, /items-stretch justify-start gap-4 p-3/);
-  assert.match(menu, /active:scale-\[0\.97\]/);
+  assert.match(menu, /active:scale-95/);
   assert.match(menu, /group-active:scale-105/);
   assert.match(menu, /className="object-cover transition-transform duration-150 group-active:scale-105"/);
   assert.doesNotMatch(
@@ -92,24 +117,31 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   );
   assert.match(menu, /BrandSymbol/);
   assert.match(menu, /variant="riceBowl"/);
-  assert.doesNotMatch(menu, /Utensils|lucide-react/);
+  assert.doesNotMatch(menu, /Utensils/);
   assert.match(client, /Clock as IconClock/);
   assert.doesNotMatch(client, /⏳/);
   assert.match(menu, /selfOrderItemImageBadges/);
+  assert.match(menu, /Star as IconStar/);
+  assert.match(menu, /ThumbsUp as IconThumbsUp/);
+  assert.match(menu, /absolute left-2 top-2/);
+  assert.doesNotMatch(menu, /Nên thử/);
   assert.match(menu, /Hết suất|reasonSoldOut|availabilityReasonLabel/);
-  assert.match(menu, /absolute top-1\.5 left-1\.5/);
-  assert.match(menu, /absolute top-1\.5 right-1\.5/);
+  assert.match(menu, /flex flex-wrap items-center gap-1\.5/);
+  assert.doesNotMatch(menu, /absolute top-1\.5 (?:left|right)-1\.5/);
   assert.match(menu, /h-32 w-32/);
   assert.match(menu, /h-16 w-16/);
   assert.match(menu, /text-2xl leading-tight/);
   assert.match(menu, /text-lg leading-snug/);
   assert.match(menu, /font-heading text-2xl font-semibold tracking-tight/);
+  assert.ok(
+    menu.indexOf("SELF_ORDER_VI.menuPromptTitle") < menu.indexOf("<ScrollArea"),
+  );
   const menuDisplay = read("app/q/[token]/self-order/menu-display.ts");
   assert.match(menuDisplay, /isSelfOrderComCategory/);
   assert.match(menuDisplay, /normalizeCategoryName\(category\.name\) === "cơm"/);
   assert.match(menuDisplay, /!== "khác"/);
   assert.match(menuDisplay, /Truyền thống/);
-  assert.match(menuDisplay, /Nên thử/);
+  assert.doesNotMatch(menuDisplay, /Nên thử/);
   assert.match(menuDisplay, /Chờ 20 phút/);
   assert.match(client, /defaultSelfOrderCategoryValue\(initialSnapshot\.menu\)/);
   assert.doesNotMatch(client, /useState\("all"\)/);
@@ -127,7 +159,11 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
     cart,
     /fixed inset-x-0 bottom-0[\s\S]*?onClick=\{\(\) => setOpen\(true\)\}/,
   );
-  assert.match(cart, /max-h-dvh-95/);
+  assert.match(
+    cart,
+    /data-\[side=bottom\]:h-dvh data-\[side=bottom\]:max-h-dvh/,
+  );
+  assert.match(cart, /<ScrollArea className="min-h-0 flex-1">/);
   assert.match(cart, /SELF_ORDER_VI\.editCartItem/);
   assert.match(cart, /onReplace/);
   assert.match(cart, /SelfOrderItemSheet/);
@@ -172,10 +208,10 @@ test("item sheet supports add and cart-edit commit paths", () => {
   assert.match(itemSheet, /onCommit/);
   assert.match(itemSheet, /hydrateFromDraft/);
   assert.match(itemSheet, /data-\[side=bottom\]:h-dvh/);
-  assert.match(itemSheet, /h-80 w-full/);
+  assert.match(itemSheet, /h-52 w-full/);
   assert.match(
     itemSheet,
-    /sm:aspect-video sm:h-auto sm:max-h-64 md:max-h-48 lg:max-h-56/,
+    /sm:aspect-video sm:h-auto sm:max-h-52 md:max-h-48 lg:max-h-48/,
   );
   assert.match(itemSheet, /max-w-2xl/);
   assert.match(itemSheet, /object-cover object-center/);

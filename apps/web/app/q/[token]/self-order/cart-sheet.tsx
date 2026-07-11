@@ -259,7 +259,7 @@ export function CartSheet(props: CartSheetProps) {
         <SheetContent
           side="bottom"
           showCloseButton={false}
-          className="mx-auto flex max-h-dvh-95 w-full max-w-2xl flex-col p-0"
+          className="mx-auto flex h-dvh max-h-dvh w-full max-w-2xl flex-col overflow-hidden p-0 data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh"
         >
           <SheetHeader className="pr-3 sm:pr-4">
             <div className="flex items-start justify-between gap-3">

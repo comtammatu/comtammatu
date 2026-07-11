@@ -3,7 +3,6 @@
 import { Clock as IconClock } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
-import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Item,
   ItemContent,
@@ -12,19 +11,72 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { AppEmptyState, AppSection } from "@/components/surface";
+import { AppEmptyState } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import type {
   SelfOrderCartItem,
   SelfOrderOrderLine,
-  SelfOrderRound,
-  SelfOrderRoundItem,
 } from "@lib/self-order/contracts";
 
 interface OrderSummaryProps {
   pendingItems?: Array<Omit<SelfOrderCartItem, "key"> & { key?: string }>;
-  rounds?: SelfOrderRound[] | null;
   items?: SelfOrderOrderLine[];
-  totalAmount?: number | null;
+}
+
+interface BillRow {
+  key: string;
+  label: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  option: boolean;
+  note: string | null;
+}
+
+export function buildBillRows(item: SelfOrderOrderLine): BillRow[] {
+  const optionRows: BillRow[] = [
+    ...item.modifiers.map((modifier) => ({
+      key: `item-${String(item.id)}-modifier-${String(modifier.modifier_id)}`,
+      label: modifier.name,
+      quantity: item.quantity,
+      unitPrice: modifier.price,
+      lineTotal: modifier.price * item.quantity,
+      option: true,
+      note: null,
+    })),
+    ...item.sides.map((side) => {
+      const quantity = side.quantity * item.quantity;
+      return {
+        key: `item-${String(item.id)}-side-${String(side.side_item_id)}`,
+        label: side.name,
+        quantity,
+        unitPrice: side.price,
+        lineTotal: side.price * quantity,
+        option: true,
+        note: null,
+      };
+    }),
+  ];
+  const optionTotal = optionRows.reduce((sum, row) => sum + row.lineTotal, 0);
+  const lineTotal = Math.max(0, item.lineTotal - optionTotal);
+
+  return [
+    {
+      key: `item-${String(item.id)}`,
+      label: item.variantName
+        ? `${item.itemName} ${item.variantName}`
+        : item.itemName,
+      quantity: item.quantity,
+      unitPrice: lineTotal / item.quantity,
+      lineTotal,
+      option: false,
+      note: item.note,
+    },
+    ...optionRows,
+  ];
 }
 
 function optionSummary(item: {
@@ -43,56 +95,60 @@ function optionSummary(item: {
     .join(" · ");
 }
 
-function RoundItem({ item }: { item: SelfOrderRoundItem }) {
-  const summary = optionSummary(item);
-  return (
-    <Item size="xs">
-      <ItemContent className="min-w-0">
-        <ItemTitle className="break-words text-sm font-normal">
-          {item.variantName
-            ? `${item.itemName} ${item.variantName}`
-            : item.itemName}
-          <span className="ml-1 text-muted-foreground">x{item.quantity}</span>
-        </ItemTitle>
-        {summary ? (
-          <ItemDescription className="break-words text-xs">
-            {summary}
-          </ItemDescription>
+const BILL_COLUMNS: DataTableColumn<BillRow>[] = [
+  {
+    key: "item",
+    header: SELF_ORDER_VI.billItemColumn,
+    className: "min-w-0 text-xs",
+    render: (row) => (
+      <div
+        className={`min-w-0 break-words leading-snug ${row.option ? "pl-3 text-muted-foreground" : "font-medium"}`}
+      >
+        {row.option ? "+ " : ""}
+        {row.label}
+        {!row.option && row.note ? (
+          <p className="text-xs font-normal text-muted-foreground">
+            {SELF_ORDER_VI.itemNoteLabel}: {row.note}
+          </p>
         ) : null}
-      </ItemContent>
-    </Item>
-  );
-}
+      </div>
+    ),
+  },
+  {
+    key: "quantity",
+    header: SELF_ORDER_VI.billQuantityColumn,
+    className: "w-8 text-right text-xs font-mono tabular-nums",
+    render: (row) => row.quantity,
+  },
+  {
+    key: "unit-price",
+    header: SELF_ORDER_VI.billUnitPriceColumn,
+    className: "whitespace-nowrap text-right text-xs font-mono tabular-nums",
+    render: (row) => formatVND(row.unitPrice),
+  },
+  {
+    key: "line-total",
+    header: SELF_ORDER_VI.billLineTotalColumn,
+    className: "whitespace-nowrap text-right text-xs font-mono tabular-nums",
+    render: (row) => (
+      <span className={row.option ? "text-muted-foreground" : "font-semibold text-primary"}>
+        {formatVND(row.lineTotal)}
+      </span>
+    ),
+  },
+];
 
 function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
+  const rows = items.flatMap(buildBillRows);
+
   return (
-    <ItemGroup data-size="xs">
-      {items.map((item) => {
-        const summary = optionSummary(item);
-        return (
-          <Item key={item.id} size="xs">
-            <ItemContent className="min-w-0">
-              <ItemTitle className="break-words text-sm font-normal">
-                {item.variantName
-                  ? `${item.itemName} ${item.variantName}`
-                  : item.itemName}
-                <span className="ml-1 text-muted-foreground">
-                  x{item.quantity}
-                </span>
-              </ItemTitle>
-              {summary ? (
-                <ItemDescription className="break-words text-xs">
-                  {summary}
-                </ItemDescription>
-              ) : null}
-            </ItemContent>
-            <ItemDescription className="shrink-0 font-mono tabular-nums">
-              {formatVND(item.lineTotal)}
-            </ItemDescription>
-          </Item>
-        );
-      })}
-    </ItemGroup>
+    <DataTable
+      columns={BILL_COLUMNS}
+      data={rows}
+      getRowKey={(row) => row.key}
+      emptyTitle={SELF_ORDER_VI.billEmptyTitle}
+      className="text-xs"
+    />
   );
 }
 
@@ -131,16 +187,9 @@ function PendingRequestLines({
 
 export function OrderSummary({
   pendingItems = [],
-  rounds,
   items = [],
-  totalAmount,
 }: OrderSummaryProps) {
-  const visibleRounds = rounds ?? [];
-  if (
-    pendingItems.length === 0 &&
-    items.length === 0 &&
-    visibleRounds.length === 0
-  ) {
+  if (pendingItems.length === 0 && items.length === 0) {
     return (
       <AppEmptyState
         title={SELF_ORDER_VI.billEmptyTitle}
@@ -152,74 +201,19 @@ export function OrderSummary({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       {pendingItems.length > 0 ? (
-        <AppSection
-          title={SELF_ORDER_VI.awaitingCalloutTitle}
-          description={SELF_ORDER_VI.awaitingCalloutDescription}
-          badge={{
-            children: <IconClock className="size-3.5" aria-hidden />,
-            variant: "warning",
-          }}
-          size="sm"
-        >
+        <div className="flex flex-col gap-2">
+          <SectionLabel density="dense">
+            <IconClock className="size-3.5" aria-hidden />
+            {SELF_ORDER_VI.awaitingCalloutTitle}
+          </SectionLabel>
           <PendingRequestLines items={pendingItems} />
-        </AppSection>
+        </div>
       ) : null}
 
       {items.length > 0 ? (
-        <AppSection
-          title={SELF_ORDER_VI.orderedItemsTitle}
-          description={SELF_ORDER_VI.orderedItemsDescription}
-          badge={{ children: items.length, variant: "outline" }}
-          size="sm"
-          contentClassName="gap-2"
-        >
-          <>
-            <FlatOrderLines items={items} />
-            {totalAmount != null ? (
-              <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm font-bold">
-                <span>{SELF_ORDER_VI.total}</span>
-                <span className="font-mono tabular-nums">
-                  {formatVND(totalAmount)}
-                </span>
-              </div>
-            ) : null}
-          </>
-        </AppSection>
-      ) : null}
-
-      {visibleRounds.length > 0 ? (
-        <AppSection
-          title={SELF_ORDER_VI.roundsTitle}
-          description={SELF_ORDER_VI.roundsDescription}
-          badge={{ children: visibleRounds.length, variant: "outline" }}
-          size="sm"
-          contentClassName="gap-3"
-        >
-          <>
-            {visibleRounds.map((round) => (
-              <Item
-                key={round.id}
-                variant="outline"
-                size="sm"
-                className="flex-col items-stretch gap-2"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <SectionLabel density="dense">
-                    {SELF_ORDER_VI.roundLabel(round.sendSeq)}
-                  </SectionLabel>
-                  <Badge variant="outline">{round.ticketNumber}</Badge>
-                </div>
-                <ItemGroup data-size="xs">
-                  {round.items.map((item) => (
-                    <RoundItem key={item.id} item={item} />
-                  ))}
-                </ItemGroup>
-              </Item>
-            ))}
-          </>
-        </AppSection>
+        <FlatOrderLines items={items} />
       ) : null}
     </div>
   );
