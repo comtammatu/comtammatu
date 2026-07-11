@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { createServiceClient } from "@comtammatu/database";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";

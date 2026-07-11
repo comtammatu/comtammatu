@@ -7,7 +7,7 @@ import {
   getSiteKindLabelVi,
   resolveSiteKind,
 } from "@comtammatu/shared/labels";
-import { createServiceClient } from "@comtammatu/database";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
   AppEmptyState,
   AppLinkCard,

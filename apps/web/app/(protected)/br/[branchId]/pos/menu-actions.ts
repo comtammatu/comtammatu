@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { unstable_cache, revalidateTag } from "next/cache";
-import { createServiceClient } from "@comtammatu/database";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";

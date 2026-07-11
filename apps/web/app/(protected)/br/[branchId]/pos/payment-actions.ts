@@ -4,7 +4,7 @@ import { z } from "zod";
 import { unstable_cache } from "next/cache";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { Json } from "@comtammatu/database";
-import { createServiceClient } from "@comtammatu/database";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   BUYER_NOT_GET_INVOICE_NAME,
