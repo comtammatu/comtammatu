@@ -150,8 +150,17 @@ REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FR
 REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM anon, authenticated;
 
 ALTER TABLE public.self_order_payment_requests DROP COLUMN IF EXISTS session_id;
-DROP TABLE IF EXISTS public.self_order_session_devices;
+
+ALTER TABLE IF EXISTS public.self_order_payment_requests
+  DROP CONSTRAINT IF EXISTS self_order_payment_requests_session_device_id_fkey,
+  DROP COLUMN IF EXISTS session_device_id;
+ALTER TABLE IF EXISTS public.self_order_batches
+  DROP CONSTRAINT IF EXISTS self_order_batches_session_device_id_fkey;
+ALTER TABLE IF EXISTS public.self_order_session_devices
+  DROP CONSTRAINT IF EXISTS self_order_session_devices_request_batch_id_fkey;
+
 DROP TABLE IF EXISTS public.self_order_batches;
+DROP TABLE IF EXISTS public.self_order_session_devices;
 DROP TABLE IF EXISTS public.self_order_sessions;
 ALTER TABLE public.tables DROP COLUMN IF EXISTS self_order_capability_version;
 ALTER TABLE public.tables DROP COLUMN IF EXISTS realtime_topic_token;

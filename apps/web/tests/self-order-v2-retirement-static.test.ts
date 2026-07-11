@@ -95,6 +95,20 @@ test("Self-Order V2 retirement fails closed and preserves the request model", ()
         "ALTER TABLE public.self_order_payment_requests DROP COLUMN IF EXISTS session_id",
       ),
   );
+  for (const foreignKey of [
+    "self_order_payment_requests_session_device_id_fkey",
+    "self_order_batches_session_device_id_fkey",
+    "self_order_session_devices_request_batch_id_fkey",
+  ]) {
+    assert.ok(
+      migration.indexOf(`DROP CONSTRAINT IF EXISTS ${foreignKey}`) <
+        migration.indexOf("DROP TABLE IF EXISTS public.self_order_session_devices"),
+    );
+  }
+  assert.ok(
+    migration.indexOf("DROP COLUMN IF EXISTS session_device_id") <
+      migration.indexOf("DROP TABLE IF EXISTS public.self_order_session_devices"),
+  );
   assert.doesNotMatch(
     migration,
     /DROP FUNCTION IF EXISTS public\.self_order_enforce_open_pos_session\(\)/,
