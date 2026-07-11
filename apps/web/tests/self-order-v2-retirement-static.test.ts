@@ -33,14 +33,6 @@ test("Self-Order V2 retirement fails closed and preserves the request model", ()
   );
   assert.match(
     migration,
-    /ALTER TABLE public\.self_order_payment_requests DROP COLUMN IF EXISTS session_device_id/,
-  );
-  assert.match(
-    migration,
-    /ALTER TABLE public\.self_order_session_devices[\s\S]*?DROP CONSTRAINT IF EXISTS self_order_session_devices_request_batch_id_fkey/,
-  );
-  assert.match(
-    migration,
     /DROP FUNCTION IF EXISTS public\.self_order_broadcast_session_changed\(\)/,
   );
   assert.match(
@@ -53,25 +45,11 @@ test("Self-Order V2 retirement fails closed and preserves the request model", ()
   );
   assert.match(
     migration,
-    /DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_request_invariants ON public\.self_order_payment_requests/,
-  );
-  assert.match(
-    migration,
     /DROP TRIGGER IF EXISTS trg_self_order_close_session_from_order ON public\.orders/,
   );
   assert.match(
     migration,
     /DROP TRIGGER IF EXISTS trg_self_order_close_session_on_order_transfer ON public\.orders/,
-  );
-  assert.match(
-    migration,
-    /DROP TRIGGER IF EXISTS trg_self_order_guard_capability_version_change ON public\.tables/,
-  );
-  assert.ok(
-    migration.indexOf("DROP TABLE IF EXISTS public.self_order_batches") <
-      migration.indexOf(
-        "DROP TABLE IF EXISTS public.self_order_session_devices",
-      ),
   );
   assert.ok(
     migration.indexOf("DROP TABLE IF EXISTS public.self_order_batches") <
@@ -102,17 +80,43 @@ test("Self-Order V2 retirement fails closed and preserves the request model", ()
     )?.[0] ?? "";
   assert.notEqual(paymentInvariant, "");
   assert.doesNotMatch(paymentInvariant, /session_id/);
+  const paymentInvariantTrigger =
+    migration.slice(
+      migration.indexOf(
+        "CREATE TRIGGER trg_self_order_enforce_payment_request_invariants",
+      ),
+      migration.indexOf(
+        "REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants()",
+      ),
+    ) ?? "";
+  assert.notEqual(paymentInvariantTrigger, "");
+  assert.doesNotMatch(paymentInvariantTrigger, /session_id/);
   assert.ok(
     migration.indexOf(
-      "DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_request_invariants",
+      "DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_request_invariants ON public.self_order_payment_requests",
     ) <
       migration.indexOf(
         "ALTER TABLE public.self_order_payment_requests DROP COLUMN IF EXISTS session_id",
       ),
   );
-  assert.match(
-    migration,
-    /CREATE TRIGGER trg_self_order_enforce_payment_request_invariants[\s\S]*?BEFORE UPDATE OF[\s\S]*?ON public\.self_order_payment_requests/,
+  for (const foreignKey of [
+    "self_order_payment_requests_session_device_id_fkey",
+    "self_order_batches_session_device_id_fkey",
+    "self_order_session_devices_request_batch_id_fkey",
+  ]) {
+    assert.ok(
+      migration.indexOf(`DROP CONSTRAINT IF EXISTS ${foreignKey}`) <
+        migration.indexOf("DROP TABLE IF EXISTS public.self_order_session_devices"),
+    );
+  }
+  assert.ok(
+    migration.indexOf("DROP COLUMN IF EXISTS session_device_id") <
+      migration.indexOf("DROP TABLE IF EXISTS public.self_order_session_devices"),
+  );
+  assert.ok(
+    migration.indexOf(
+      "DROP TRIGGER IF EXISTS trg_self_order_guard_capability_version_change ON public.tables",
+    ) < migration.indexOf("DROP COLUMN IF EXISTS self_order_capability_version"),
   );
   assert.doesNotMatch(
     migration,

@@ -36,14 +36,16 @@ $$;
 DO $$
 BEGIN
   IF to_regclass('public.tables') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_fill_realtime_topic_token ON public.tables';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_guard_capability_version ON public.tables';
     EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_guard_capability_version_change ON public.tables';
   END IF;
 
   IF to_regclass('public.self_order_payment_requests') IS NOT NULL THEN
     EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_payment_requests_broadcast ON public.self_order_payment_requests';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_request_invariants ON public.self_order_payment_requests';
     EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_device_binding_insert ON public.self_order_payment_requests';
     EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_device_binding_update ON public.self_order_payment_requests';
-    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_request_invariants ON public.self_order_payment_requests';
   END IF;
 
   IF to_regclass('public.orders') IS NOT NULL THEN
@@ -58,6 +60,7 @@ DROP POLICY IF EXISTS self_order_public_broadcast_select ON realtime.messages;
 CREATE OR REPLACE FUNCTION public.self_order_enforce_payment_request_invariants()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path TO ''
 AS $$
 BEGIN
@@ -120,14 +123,6 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM anon, authenticated;
-
-ALTER TABLE public.self_order_payment_requests DROP COLUMN IF EXISTS session_id;
-ALTER TABLE public.self_order_payment_requests DROP COLUMN IF EXISTS session_device_id;
-ALTER TABLE public.self_order_session_devices
-  DROP CONSTRAINT IF EXISTS self_order_session_devices_request_batch_id_fkey;
-
 CREATE TRIGGER trg_self_order_enforce_payment_request_invariants
   BEFORE UPDATE OF
     tenant_id,
@@ -152,6 +147,19 @@ CREATE TRIGGER trg_self_order_enforce_payment_request_invariants
     cancel_reason
   ON public.self_order_payment_requests
   FOR EACH ROW EXECUTE FUNCTION public.self_order_enforce_payment_request_invariants();
+
+REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM anon, authenticated;
+
+ALTER TABLE public.self_order_payment_requests DROP COLUMN IF EXISTS session_id;
+
+ALTER TABLE IF EXISTS public.self_order_payment_requests
+  DROP CONSTRAINT IF EXISTS self_order_payment_requests_session_device_id_fkey,
+  DROP COLUMN IF EXISTS session_device_id;
+ALTER TABLE IF EXISTS public.self_order_batches
+  DROP CONSTRAINT IF EXISTS self_order_batches_session_device_id_fkey;
+ALTER TABLE IF EXISTS public.self_order_session_devices
+  DROP CONSTRAINT IF EXISTS self_order_session_devices_request_batch_id_fkey;
 
 DROP TABLE IF EXISTS public.self_order_batches;
 DROP TABLE IF EXISTS public.self_order_session_devices;
