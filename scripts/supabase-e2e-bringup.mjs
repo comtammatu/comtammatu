@@ -127,7 +127,7 @@ E2E_CASHIER_EMAIL=cashier.datdo@comtammatu.vn
 E2E_CASHIER_PASSWORD=Test1234!
 E2E_CHEF_EMAIL=chef.datdo@comtammatu.vn
 E2E_CHEF_PASSWORD=Test1234!
-E2E_INVENTORY_MANAGER_EMAIL=warehouse@comtammatu.vn
+E2E_INVENTORY_MANAGER_EMAIL=manager.datdo@comtammatu.vn
 E2E_INVENTORY_MANAGER_PASSWORD=Test1234!
 `;
   writeFileSync(resolve(REPO, "apps/web/.env.test.local"), testEnv);
