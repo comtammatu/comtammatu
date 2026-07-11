@@ -124,6 +124,38 @@ test("lot/expiry retirement migration keeps recipe-safe unit sync", () => {
   assert.match(bulkBody, /bulk_import_base_unit_change_forbidden/);
 });
 
+test("lot/expiry retirement rebuilds materialized views in dependency order", () => {
+  const dropValueRanking = lotExpiryMigration.indexOf(
+    "DROP MATERIALIZED VIEW IF EXISTS public.mv_inventory_value_ranking;",
+  );
+  const dropStockCurrent = lotExpiryMigration.indexOf(
+    "DROP MATERIALIZED VIEW IF EXISTS public.mv_inventory_stock_current;",
+  );
+  const createStockCurrent = lotExpiryMigration.indexOf(
+    "CREATE MATERIALIZED VIEW public.mv_inventory_stock_current AS",
+  );
+  const createValueRanking = lotExpiryMigration.indexOf(
+    "CREATE MATERIALIZED VIEW public.mv_inventory_value_ranking AS",
+  );
+
+  assert.ok(dropValueRanking >= 0);
+  assert.ok(dropValueRanking < dropStockCurrent);
+  assert.ok(dropStockCurrent < createStockCurrent);
+  assert.ok(createStockCurrent < createValueRanking);
+  assert.match(
+    lotExpiryMigration,
+    /CREATE UNIQUE INDEX uq_mv_inv_value_ranking ON public\.mv_inventory_value_ranking/,
+  );
+  assert.match(
+    lotExpiryMigration,
+    /GRANT ALL ON TABLE public\.mv_inventory_value_ranking TO service_role/,
+  );
+  assert.match(
+    lotExpiryMigration,
+    /REFRESH MATERIALIZED VIEW public\.mv_inventory_value_ranking/,
+  );
+});
+
 test("catalog error map distinguishes recipe-in-use from unit/category FK", () => {
   assert.match(
     ingredientActions,
