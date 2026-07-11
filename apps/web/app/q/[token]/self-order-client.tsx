@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { Clock as IconClock, ReceiptText as IconReceipt } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -51,6 +58,7 @@ interface SelfOrderClientProps {
 
 const TAX_CODE_PATTERN = /^\d{10}(-\d{3})?$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PAYMENT_COMPLETED_DISPLAY_MS = 10_000;
 
 function normalizeTaxCodeInput(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 13);
@@ -298,6 +306,23 @@ export function SelfOrderClient({
     }
   }, [observedPaymentStatusClientOpId]);
 
+  const resetPaymentCompleted = useCallback(() => {
+    setPaymentCompleted(false);
+    setLocalPaymentRequest(null);
+    ignoredPaymentStatusClientOpIdRef.current = paymentStatusClientOpId;
+    setPaymentStatusClientOpId(null);
+    void refreshSnapshot();
+  }, [paymentStatusClientOpId, refreshSnapshot]);
+
+  useEffect(() => {
+    if (!paymentCompleted) return;
+    const timer = window.setTimeout(
+      resetPaymentCompleted,
+      PAYMENT_COMPLETED_DISPLAY_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [paymentCompleted, resetPaymentCompleted]);
+
   useEffect(() => {
     if (!paymentStatusClientOpId || paymentCompleted) return;
     const currentPaymentClientOpId = paymentStatusClientOpId;
@@ -441,13 +466,7 @@ export function SelfOrderClient({
       <PaymentCompletedState
         onClose={() => {
           window.close();
-          window.setTimeout(() => {
-            setPaymentCompleted(false);
-            setLocalPaymentRequest(null);
-            ignoredPaymentStatusClientOpIdRef.current = paymentStatusClientOpId;
-            setPaymentStatusClientOpId(null);
-            void refreshSnapshot();
-          }, 250);
+          window.setTimeout(resetPaymentCompleted, 250);
         }}
       />
     );

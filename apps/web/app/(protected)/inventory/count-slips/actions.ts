@@ -60,6 +60,7 @@ export async function approveCountSlip(
   const raw = (data ?? {}) as Record<string, unknown>;
   revalidatePath("/inventory/count-slips");
   revalidatePath(`/br/${slip.branch_id}/stock/count-slips`);
+  revalidatePath(`/br/${slip.branch_id}/team`);
 
   return {
     success: true,
@@ -117,6 +118,7 @@ export async function requestCountRecount(
 
   revalidatePath("/inventory/count-slips");
   revalidatePath(`/br/${slip.branch_id}/stock/count-slips`);
+  revalidatePath(`/br/${slip.branch_id}/team`);
   return { success: true };
 }
 

@@ -39,9 +39,8 @@ import {
   getVNMonthString,
   formatVNBusinessDate,
   formatVNTime,
-  parseClockTimeToMinutes,
-  getVNMinutesOfDay,
 } from "@comtammatu/shared/time";
+import { isShiftEndedForBusinessDate } from "@lib/staff-runtime/_lib/default-shift";
 import { messages } from "@lib/messages";
 import {
   fetchAttendance,
@@ -378,9 +377,7 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
       render: (row) => (
         <span
           className={
-            row.open > 0
-              ? "font-medium text-warning"
-              : "text-muted-foreground"
+            row.open > 0 ? "font-medium text-warning" : "text-muted-foreground"
           }
         >
           {row.open}
@@ -497,17 +494,16 @@ function DetailView({
 
   function isStaleOpenRecord(record: AttendanceRecord): boolean {
     if (!record.check_in || record.check_out) return false;
-    if (record.date < todayStr) return true;
-    if (record.date !== todayStr) return false;
-
-    const start = parseClockTimeToMinutes(record.shifts?.start_time || "");
-    const end = parseClockTimeToMinutes(record.shifts?.end_time || "");
-    if (start === null || end === null || end <= start) return false;
-    return getVNMinutesOfDay() >= end;
+    if (!record.shifts) return record.date < todayStr;
+    return isShiftEndedForBusinessDate(record.date, {
+      id: 0,
+      start_time: record.shifts.start_time,
+      end_time: record.shifts.end_time,
+    });
   }
 
   function canForceCloseRecord(record: AttendanceRecord): boolean {
-    return !!record.check_in && !record.check_out && record.date < todayStr;
+    return isStaleOpenRecord(record);
   }
 
   function recordStateBadge(record: AttendanceRecord) {

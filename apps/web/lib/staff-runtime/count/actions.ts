@@ -72,6 +72,7 @@ export const submitCountSlip = withAction(
     }
 
     revalidatePath(`/br/${data.branchId}/stock/count`);
+    revalidatePath(`/br/${data.branchId}/team`);
     return { success: true, data: { slipId } };
   },
 );

@@ -126,8 +126,8 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
   );
   assert.match(
     attendanceTableSource,
-    /function canForceCloseRecord[\s\S]*record\.date < todayStr/,
-    "Force-close UI should only expose the stale-close path for prior-day open attendance",
+    /function canForceCloseRecord[\s\S]*isStaleOpenRecord\(record\)/,
+    "Force-close UI should mirror the scheduled shift-end predicate",
   );
   assert.match(
     hrActionsSource,

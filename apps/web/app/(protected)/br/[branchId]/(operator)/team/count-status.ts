@@ -18,6 +18,7 @@ export interface TeamCountSlipRow {
   location_id: number;
   status: string | null;
   shift_id: number | null;
+  count_date?: string;
 }
 
 interface ResolveCountStatusOptions {
@@ -68,7 +69,8 @@ export function getEffectiveCountAssignments(
   const shiftSpecificCells = new Set<string>();
   if (shiftId !== null) {
     for (const row of assignments) {
-      if (row.shift_id === shiftId) shiftSpecificCells.add(assignmentCellKey(row));
+      if (row.shift_id === shiftId)
+        shiftSpecificCells.add(assignmentCellKey(row));
     }
   }
 

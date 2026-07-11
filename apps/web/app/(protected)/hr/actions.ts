@@ -498,9 +498,15 @@ function mapRpcError(msg: string): string {
     return "Bạn chỉ có thể gán vai trò thu ngân/bếp";
   if (msg.includes("cannot reassign to other branch"))
     return "Không có quyền chuyển nhân viên sang chi nhánh khác";
-  if (msg.includes("operational roles require branch_id") || msg.includes("branch_required_for_operational_position"))
+  if (
+    msg.includes("operational roles require branch_id") ||
+    msg.includes("branch_required_for_operational_position")
+  )
     return "Chức vụ vận hành phải thuộc một địa điểm";
-  if (msg.includes("branch_id does not belong") || msg.includes("branch_not_found_in_tenant"))
+  if (
+    msg.includes("branch_id does not belong") ||
+    msg.includes("branch_not_found_in_tenant")
+  )
     return "Chi nhánh không hợp lệ";
   if (msg.includes("position_site_kind_mismatch"))
     return "Chức vụ này không thuộc loại địa điểm đã chọn.";
@@ -548,7 +554,8 @@ export const updateEmployee = withAction(
     }
 
     const employeeBranchId = employee.profiles?.branch_id ?? null;
-    const finalBranchId = data.branchId !== undefined ? data.branchId : employeeBranchId;
+    const finalBranchId =
+      data.branchId !== undefined ? data.branchId : employeeBranchId;
 
     if (data.defaultChecklistTemplateId != null) {
       const templateBranchId = await loadChecklistTemplateBranch(
@@ -578,21 +585,36 @@ export const updateEmployee = withAction(
 
     if (isProfileModified) {
       const currentPositionCode = employee.profiles?.positions?.code ?? null;
-      const finalPositionCode = data.positionCode !== undefined ? data.positionCode : currentPositionCode;
+      const finalPositionCode =
+        data.positionCode !== undefined
+          ? data.positionCode
+          : currentPositionCode;
 
       const targetBranchId =
         data.branchId !== undefined
           ? (data.branchId ?? undefined)
           : (employee.profiles?.branch_id ?? undefined);
 
-      const { error: profileError } = await supabase.rpc("admin_update_profile", {
-        p_target_id: employee.profile_id,
-        p_full_name: data.fullName !== undefined ? data.fullName : (employee.profiles?.full_name ?? undefined),
-        p_phone: data.phone !== undefined ? (data.phone || undefined) : (employee.profiles?.phone ?? undefined),
-        p_role: finalPositionCode ?? undefined,
-        p_branch_id: targetBranchId,
-        p_is_active: data.isActive !== undefined ? data.isActive : (employee.is_active ?? undefined),
-      });
+      const { error: profileError } = await supabase.rpc(
+        "admin_update_profile",
+        {
+          p_target_id: employee.profile_id,
+          p_full_name:
+            data.fullName !== undefined
+              ? data.fullName
+              : (employee.profiles?.full_name ?? undefined),
+          p_phone:
+            data.phone !== undefined
+              ? data.phone || undefined
+              : (employee.profiles?.phone ?? undefined),
+          p_role: finalPositionCode ?? undefined,
+          p_branch_id: targetBranchId,
+          p_is_active:
+            data.isActive !== undefined
+              ? data.isActive
+              : (employee.is_active ?? undefined),
+        },
+      );
 
       if (profileError) {
         console.error(
@@ -1050,7 +1072,7 @@ export const forceCloseStaleAttendance = withAction(
   {
     roles: HR_EMPLOYEE_VIEW_ROLES,
     schema: forceCloseStaleAttendanceSchema,
-    permission: PERMISSION_KEYS.STAFF_MANAGE,
+    permission: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
@@ -1059,7 +1081,10 @@ export const forceCloseStaleAttendance = withAction(
       claims.user_role === "branch_manager" &&
       claims.branch_id !== data.branchId
     ) {
-      return { success: false, error: "Không có quyền đóng ca tại chi nhánh này" };
+      return {
+        success: false,
+        error: "Không có quyền đóng ca tại chi nhánh này",
+      };
     }
 
     const note =
@@ -1085,7 +1110,10 @@ export const forceCloseStaleAttendance = withAction(
           { code: error.code },
         );
       }
-      return { success: false, error: mapForceCloseAttendanceError(error?.message) };
+      return {
+        success: false,
+        error: mapForceCloseAttendanceError(error?.message),
+      };
     }
 
     logAudit(supabase, {
@@ -1151,7 +1179,10 @@ export const fetchAttendanceSummary = withAction(
         "[hr/actions:fetchAttendanceSummary] Fetch attendance summary error:",
         error,
       );
-      return { success: false, error: hrActionCopy.fetchAttendanceSummaryFailed };
+      return {
+        success: false,
+        error: hrActionCopy.fetchAttendanceSummaryFailed,
+      };
     }
 
     // Per-shift attendance (D027): each closed shift contributes 0.5 workday;

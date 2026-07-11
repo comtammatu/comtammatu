@@ -7,13 +7,19 @@ function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-const todayWorkStateSource = readWeb("lib/staff-runtime/_lib/today-work-state.ts");
+const todayWorkStateSource = readWeb(
+  "lib/staff-runtime/_lib/today-work-state.ts",
+);
 const employeeTasksClientSource = readWeb(
   "lib/staff-runtime/tasks/tasks-client.tsx",
 );
 const employeeCountPageSource = readWeb("lib/staff-runtime/count/page.tsx");
-const employeeCountActionsSource = readWeb("lib/staff-runtime/count/actions.ts");
-const employeeCountClientSource = readWeb("lib/staff-runtime/count/count-client.tsx");
+const employeeCountActionsSource = readWeb(
+  "lib/staff-runtime/count/actions.ts",
+);
+const employeeCountClientSource = readWeb(
+  "lib/staff-runtime/count/count-client.tsx",
+);
 const employeeMessagesSource = readWeb("lib/messages/employee.ts");
 
 test("today work state preserves inventory count and groups start/end phases", () => {
@@ -47,8 +53,8 @@ test("inventory count task status comes from today's submitted or approved slips
   );
   assert.match(
     todayWorkStateSource,
-    /\.from\("inventory_count_slips"\)[\s\S]*\.select\("location_id, status"\)[\s\S]*\.eq\("count_date", today\)[\s\S]*\.in\("location_id", countLocationIds\)/,
-    "today work state should load today's count slips for assigned locations",
+    /\.from\("inventory_count_slips"\)[\s\S]*\.select\("location_id, status"\)[\s\S]*\.eq\("count_date", calendarDate\)[\s\S]*\.in\("location_id", countLocationIds\)/,
+    "today work state should load the calendar-date count slips written by the count RPC",
   );
   assert.match(
     todayWorkStateSource,
@@ -75,7 +81,7 @@ test("employee inventory count is scoped to the current shift", () => {
   );
   assert.match(
     todayWorkStateSource,
-    /shiftSpecificCells[\s\S]*assignmentCellKey[\s\S]*row\.shift_id !== null \|\| !shiftSpecificCells\.has\(assignmentCellKey\(row\)\)/,
+    /shiftSpecificCells[\s\S]*assignmentCellKey[\s\S]*row\.shift_id !== null \|\|[\s\S]*!shiftSpecificCells\.has\(assignmentCellKey\(row\)\)/,
     "today work state should let a current-shift assignment override the every-shift assignment for the same cell",
   );
   assert.match(

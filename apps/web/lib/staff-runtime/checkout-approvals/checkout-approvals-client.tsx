@@ -430,7 +430,10 @@ export function CheckoutApprovalsClient({
               className="flex-1 border-destructive text-destructive hover:bg-destructive/10"
               disabled={!canApprove || isPending}
               onClick={() => {
-                if (detailsTarget) setRejectTarget(detailsTarget);
+                if (detailsTarget) {
+                  setRejectTarget(detailsTarget);
+                  setDetailsTarget(null);
+                }
               }}
             >
               <IconX className="size-4 mr-1.5" />

@@ -7,11 +7,7 @@ import {
   Clock as IconClock,
   Users as IconUsers,
 } from "lucide-react";
-import {
-  formatVNTime,
-  getVNMinutesOfDay,
-  parseClockTimeToMinutes,
-} from "@comtammatu/shared/time";
+import { formatVNTime } from "@comtammatu/shared/time";
 
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -30,6 +26,7 @@ import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { forceCloseStaleAttendance } from "@/(protected)/hr/actions";
+import { isShiftEndedForBusinessDate } from "@lib/staff-runtime/_lib/default-shift";
 import type {
   TeamBoardChecklistPhase,
   TeamBoardCountStatus,
@@ -41,6 +38,10 @@ const copy = messages.operator.teamBoard;
 
 type AttendanceState = "not_started" | "working" | "checkout_pending" | "done";
 type TeamBoardFilter = "all" | "working" | "needs_action" | "count_missing";
+type TeamBoardCapabilities = {
+  canApproveCheckout: boolean;
+  canApproveCount: boolean;
+};
 
 export interface TeamBoardDisplayRow {
   key: string;
@@ -106,14 +107,12 @@ function isPastShiftEnd(shift: TeamBoardShiftAttendance | null) {
     return false;
   }
 
-  const start = parseClockTimeToMinutes(shift.shiftStartTime ?? "");
-  const end = parseClockTimeToMinutes(shift.shiftEndTime ?? "");
-  if (start === null || end === null) return false;
-
-  const effectiveEnd = end > start ? end : end + 1440;
-  const now = getVNMinutesOfDay();
-  const effectiveNow = effectiveEnd > 1440 && now < start ? now + 1440 : now;
-  return effectiveNow >= effectiveEnd;
+  if (!shift.shiftStartTime || !shift.shiftEndTime) return false;
+  return isShiftEndedForBusinessDate(shift.businessDate, {
+    id: shift.shiftId ?? 0,
+    start_time: shift.shiftStartTime,
+    end_time: shift.shiftEndTime,
+  });
 }
 
 function AttendanceBadge({
@@ -194,34 +193,48 @@ function CountBadge({ status }: { status: TeamBoardCountStatus }) {
   return <Badge variant="warning">{copy.countNotSubmitted}</Badge>;
 }
 
-function rowNeedsAction(row: TeamBoardDisplayRow) {
+function rowNeedsAction(
+  row: TeamBoardDisplayRow,
+  capabilities: TeamBoardCapabilities,
+) {
   if (row.onApprovedLeave) return false;
   return (
-    isPastShiftEnd(row.shift) ||
-    attendanceState(row.shift) === "checkout_pending" ||
-    row.countStatus === "submitted" ||
-    row.countStatus === "not_submitted"
+    (capabilities.canApproveCheckout &&
+      (isPastShiftEnd(row.shift) ||
+        attendanceState(row.shift) === "checkout_pending")) ||
+    (capabilities.canApproveCount && row.countStatus === "submitted")
   );
 }
 
 function matchesTeamBoardFilter(
   row: TeamBoardDisplayRow,
   filter: TeamBoardFilter,
+  capabilities: TeamBoardCapabilities,
 ) {
   const state = attendanceState(row.shift);
   if (filter === "all") return true;
   if (filter === "working") return state === "working";
-  if (filter === "needs_action") return rowNeedsAction(row);
+  if (filter === "needs_action") return rowNeedsAction(row, capabilities);
   return row.countStatus === "not_submitted";
 }
 
-function filterCount(rows: TeamBoardDisplayRow[], filter: TeamBoardFilter) {
-  return rows.filter((row) => matchesTeamBoardFilter(row, filter)).length;
+function filterCount(
+  rows: TeamBoardDisplayRow[],
+  filter: TeamBoardFilter,
+  capabilities: TeamBoardCapabilities,
+) {
+  return rows.filter((row) => matchesTeamBoardFilter(row, filter, capabilities))
+    .length;
 }
 
-function initialTeamBoardFilter(rows: TeamBoardDisplayRow[]): TeamBoardFilter {
-  if (filterCount(rows, "needs_action") > 0) return "needs_action";
-  if (filterCount(rows, "working") > 0) return "working";
+function initialTeamBoardFilter(
+  rows: TeamBoardDisplayRow[],
+  capabilities: TeamBoardCapabilities,
+): TeamBoardFilter {
+  if (filterCount(rows, "needs_action", capabilities) > 0) {
+    return "needs_action";
+  }
+  if (filterCount(rows, "working", capabilities) > 0) return "working";
   return "all";
 }
 
@@ -267,10 +280,12 @@ function TeamBoardFilters({
   rows,
   value,
   onChange,
+  capabilities,
 }: {
   rows: TeamBoardDisplayRow[];
   value: TeamBoardFilter;
   onChange: (value: TeamBoardFilter) => void;
+  capabilities: TeamBoardCapabilities;
 }) {
   const filterOptions: { value: TeamBoardFilter; label: string }[] = [
     { value: "all", label: copy.filters.all },
@@ -279,12 +294,14 @@ function TeamBoardFilters({
     { value: "count_missing", label: copy.filters.countMissing },
   ];
   const filters = filterOptions.filter(
-    (filter) => filter.value === "all" || filterCount(rows, filter.value) > 0,
+    (filter) =>
+      filter.value === "all" ||
+      filterCount(rows, filter.value, capabilities) > 0,
   );
 
   return (
     <div
-      className="flex gap-1.5 overflow-x-auto pb-1"
+      className="no-scrollbar flex touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1"
       role="group"
       aria-label={copy.filterAriaLabel}
     >
@@ -302,7 +319,7 @@ function TeamBoardFilters({
           >
             <span className="whitespace-nowrap">{filter.label}</span>
             <Badge variant={active ? "default" : "outline"}>
-              {filterCount(rows, filter.value)}
+              {filterCount(rows, filter.value, capabilities)}
             </Badge>
           </Button>
         );
@@ -386,7 +403,7 @@ function TeamBoardMobileGroups({
               {copy.shiftGroupCount(group.rows.length)}
             </span>
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="grid gap-1.5 md:grid-cols-2">
             {group.rows.map((row) => (
               <MobileTeamCard
                 key={row.key}
@@ -407,21 +424,26 @@ export function TeamBoardClient({
   branchId,
   countSlipsHref,
   checkoutApprovalsHref,
+  canApproveCheckout,
+  canApproveCount,
 }: {
   rows: TeamBoardRow[];
   branchId: number;
   countSlipsHref: string;
   checkoutApprovalsHref: string;
+  canApproveCheckout: boolean;
+  canApproveCount: boolean;
 }) {
   const displayRows = buildDisplayRows(rows);
+  const capabilities = { canApproveCheckout, canApproveCount };
   const [filter, setFilter] = useState<TeamBoardFilter>(() =>
-    initialTeamBoardFilter(displayRows),
+    initialTeamBoardFilter(displayRows, capabilities),
   );
   const [drawerRow, setDrawerRow] = useState<TeamBoardDisplayRow | null>(null);
   const [isForceClosing, startForceCloseTransition] = useTransition();
   const router = useRouter();
   const filteredRows = displayRows.filter((row) =>
-    matchesTeamBoardFilter(row, filter),
+    matchesTeamBoardFilter(row, filter, capabilities),
   );
   const filteredGroups = groupRowsByShift(filteredRows);
 
@@ -478,6 +500,7 @@ export function TeamBoardClient({
           rows={displayRows}
           value={filter}
           onChange={setFilter}
+          capabilities={capabilities}
         />
 
         {filteredGroups.length === 0 ? (
@@ -503,7 +526,7 @@ export function TeamBoardClient({
         open={!!drawerRow}
         onOpenChange={(open) => !open && setDrawerRow(null)}
       >
-        <DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden">
+        <DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden sm:mx-auto sm:max-w-2xl">
           {drawerRow && (
             <>
               <DrawerHeader className="shrink-0 text-left">
@@ -516,7 +539,7 @@ export function TeamBoardClient({
                 </DrawerDescription>
               </DrawerHeader>
               <div
-                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4"
+                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4"
                 data-vaul-no-drag=""
               >
                 <div className="flex flex-col gap-3">
@@ -559,8 +582,8 @@ export function TeamBoardClient({
                     </div>
                   )}
 
-                  <div className="grid gap-2">
-                    {isPastShiftEnd(drawerRow.shift) ? (
+                  <div className="workflow-safe-pb grid gap-2">
+                    {canApproveCheckout && isPastShiftEnd(drawerRow.shift) ? (
                       <Button
                         variant="destructive"
                         size="touch"
@@ -571,7 +594,8 @@ export function TeamBoardClient({
                         {copy.drawerActionForceClose}
                       </Button>
                     ) : null}
-                    {attendanceState(drawerRow.shift) === "checkout_pending" ? (
+                    {canApproveCheckout &&
+                    attendanceState(drawerRow.shift) === "checkout_pending" ? (
                       <Button
                         variant="default"
                         size="touch"
@@ -585,7 +609,8 @@ export function TeamBoardClient({
                         {copy.drawerActionCheckout}
                       </Button>
                     ) : null}
-                    {drawerRow.countStatus === "submitted" ? (
+                    {canApproveCount &&
+                    drawerRow.countStatus === "submitted" ? (
                       <Button
                         variant={
                           attendanceState(drawerRow.shift) ===

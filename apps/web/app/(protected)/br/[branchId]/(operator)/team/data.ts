@@ -1,9 +1,14 @@
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import type { StaffRole } from "@comtammatu/shared/auth";
-import { getVNDateString } from "@comtammatu/shared/time";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  addVNDateDays,
+  getVNDateString,
+  getVNMinutesOfDay,
+} from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
+import { resolveShiftBusinessDate } from "@lib/staff-runtime/_lib/default-shift";
 import {
   resolveCountStatusForShift,
   resolveCountStatusFromAnySlip,
@@ -31,6 +36,7 @@ export interface TeamBoardChecklistPhaseProgress {
 
 export interface TeamBoardShiftAttendance {
   attendanceId: number;
+  businessDate: string;
   shiftId: number | null;
   shiftName: string | null;
   shiftStartTime: string | null;
@@ -88,7 +94,13 @@ function emptyChecklistProgress(): Record<
 }
 
 export const fetchTeamBoard = withAction(
-  { roles: TEAM_BOARD_ROLES, schema: fetchTeamBoardSchema },
+  {
+    roles: TEAM_BOARD_ROLES,
+    schema: fetchTeamBoardSchema,
+    permission: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
   async (data, { claims }) => {
     if (
       claims.user_role === "branch_manager" &&
@@ -98,30 +110,37 @@ export const fetchTeamBoard = withAction(
     }
 
     const today = data.date ?? getVNDateString();
+    const currentBoard = data.date == null;
+    const previousDate = addVNDateDays(today, -1);
+    const nowMinutes = getVNMinutesOfDay();
     // Branch access is checked above; board reads bypass self-scoped HR RLS.
     const readClient = createServiceClient();
 
-    const [employeesResult, attendanceResult, countAssignmentsResult, leaveResult] =
-      await Promise.all([
-        readClient
-          .from("employees")
-          .select(
-            `
+    const [
+      employeesResult,
+      attendanceResult,
+      countAssignmentsResult,
+      leaveResult,
+    ] = await Promise.all([
+      readClient
+        .from("employees")
+        .select(
+          `
             id, employee_code, is_active, default_checklist_template_id,
             profiles!inner (
               full_name, branch_id,
               positions ( label_vi, default_checklist_template_id )
             )
           `,
-          )
-          .eq("tenant_id", claims.tenant_id)
-          .eq("profiles.branch_id", data.branchId)
-          .eq("is_active", true),
-        readClient
-          .from("attendance_records")
-          .select(
-            `
-            id, employee_id, shift_id, check_in, check_out,
+        )
+        .eq("tenant_id", claims.tenant_id)
+        .eq("profiles.branch_id", data.branchId)
+        .eq("is_active", true),
+      readClient
+        .from("attendance_records")
+        .select(
+          `
+            id, date, employee_id, shift_id, check_in, check_out,
             checkout_requested_at, checkout_approved_at,
             shifts ( name, start_time, end_time ),
             employees (
@@ -133,50 +152,63 @@ export const fetchTeamBoard = withAction(
             ),
             attendance_checklist_items ( phase, is_required, is_done )
           `,
-          )
-          .eq("tenant_id", claims.tenant_id)
-          .eq("branch_id", data.branchId)
-          .eq("date", today)
-          .order("check_in", { ascending: true }),
-        readClient
-          .from("inventory_count_assignments")
-          .select("employee_id, location_id, ingredient_id, shift_id")
-          .eq("tenant_id", claims.tenant_id)
-          .eq("branch_id", data.branchId)
-          .eq("is_active", true),
-        readClient
-          .from("leave_requests")
-          .select("employee_id")
-          .eq("tenant_id", claims.tenant_id)
-          .eq("branch_id", data.branchId)
-          .eq("status", "approved")
-          .lte("start_date", today)
-          .gte("end_date", today),
-      ]);
+        )
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", data.branchId)
+        .gte("date", currentBoard ? previousDate : today)
+        .lte("date", today)
+        .order("check_in", { ascending: true }),
+      readClient
+        .from("inventory_count_assignments")
+        .select("employee_id, location_id, ingredient_id, shift_id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", data.branchId)
+        .eq("is_active", true),
+      readClient
+        .from("leave_requests")
+        .select("employee_id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", data.branchId)
+        .eq("status", "approved")
+        .lte("start_date", today)
+        .gte("end_date", today),
+    ]);
 
     if (employeesResult.error) {
-      console.error("[team/data:fetchTeamBoard] Fetch employees error:", employeesResult.error);
+      console.error(
+        "[team/data:fetchTeamBoard] Fetch employees error:",
+        employeesResult.error,
+      );
       return {
         success: false,
         error: messages.operator.teamBoard.loadEmployeesFailed,
       };
     }
     if (attendanceResult.error) {
-      console.error("[team/data:fetchTeamBoard] Fetch attendance error:", attendanceResult.error);
+      console.error(
+        "[team/data:fetchTeamBoard] Fetch attendance error:",
+        attendanceResult.error,
+      );
       return {
         success: false,
         error: messages.operator.teamBoard.loadAttendanceFailed,
       };
     }
     if (countAssignmentsResult.error) {
-      console.error("[team/data:fetchTeamBoard] Fetch count assignments error:", countAssignmentsResult.error);
+      console.error(
+        "[team/data:fetchTeamBoard] Fetch count assignments error:",
+        countAssignmentsResult.error,
+      );
       return {
         success: false,
         error: messages.operator.teamBoard.loadCountAssignmentsFailed,
       };
     }
     if (leaveResult.error) {
-      console.error("[team/data:fetchTeamBoard] Fetch leave requests error:", leaveResult.error);
+      console.error(
+        "[team/data:fetchTeamBoard] Fetch leave requests error:",
+        leaveResult.error,
+      );
       return {
         success: false,
         error: messages.operator.teamBoard.loadLeaveFailed,
@@ -184,7 +216,32 @@ export const fetchTeamBoard = withAction(
     }
 
     const employeeRows = employeesResult.data ?? [];
-    const attendanceRows = attendanceResult.data ?? [];
+    const attendanceRows = (attendanceResult.data ?? []).filter((record) => {
+      if (!currentBoard) return record.date === today;
+      const shift = embeddedRecord(record.shifts);
+      const startTime = shift?.start_time;
+      const endTime = shift?.end_time;
+      if (
+        typeof startTime !== "string" ||
+        typeof endTime !== "string" ||
+        record.shift_id == null
+      ) {
+        return record.date === today;
+      }
+      const expectedBusinessDate = resolveShiftBusinessDate(
+        {
+          id: record.shift_id,
+          start_time: startTime,
+          end_time: endTime,
+        },
+        nowMinutes,
+        today,
+      );
+      return (
+        record.date === expectedBusinessDate ||
+        (record.date === previousDate && record.check_out == null)
+      );
+    });
     const countAssignmentRows = countAssignmentsResult.data ?? [];
     const leaveRows = leaveResult.data ?? [];
 
@@ -200,7 +257,8 @@ export const fetchTeamBoard = withAction(
         employeeId: row.id,
         employeeCode: row.employee_code ?? null,
         fullName: stringField(row.profiles, "full_name") ?? "Nhân viên",
-        positionLabel: typeof position?.label_vi === "string" ? position.label_vi : null,
+        positionLabel:
+          typeof position?.label_vi === "string" ? position.label_vi : null,
         effectiveChecklistTemplateId:
           row.default_checklist_template_id ?? positionTemplateId,
       });
@@ -212,13 +270,17 @@ export const fetchTeamBoard = withAction(
 
     const { data: slipRows, error: slipError } = await readClient
       .from("inventory_count_slips")
-      .select("employee_id, location_id, status, shift_id")
+      .select("employee_id, location_id, status, shift_id, count_date")
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", data.branchId)
-      .eq("count_date", today);
+      .gte("count_date", currentBoard ? previousDate : today)
+      .lte("count_date", today);
 
     if (slipError) {
-      console.error("[team/data:fetchTeamBoard] Fetch count slips error:", slipError);
+      console.error(
+        "[team/data:fetchTeamBoard] Fetch count slips error:",
+        slipError,
+      );
       return {
         success: false,
         error: messages.operator.teamBoard.loadCountSlipsFailed,
@@ -227,7 +289,8 @@ export const fetchTeamBoard = withAction(
 
     for (const row of (slipRows ?? []) as TeamCountSlipRow[]) {
       countSlipRows.push(row);
-      employeeIdsWithCountSlips.add(row.employee_id);
+      if (row.count_date === today)
+        employeeIdsWithCountSlips.add(row.employee_id);
     }
 
     const leaveEmployeeIds = new Set(leaveRows.map((row) => row.employee_id));
@@ -270,6 +333,7 @@ export const fetchTeamBoard = withAction(
 
       const entry: TeamBoardShiftAttendance = {
         attendanceId: record.id,
+        businessDate: record.date,
         shiftId: record.shift_id,
         shiftName: stringField(record.shifts, "name"),
         shiftStartTime: stringField(record.shifts, "start_time"),
@@ -282,7 +346,7 @@ export const fetchTeamBoard = withAction(
         checklist,
         countStatus: resolveCountStatusForShift(
           assignmentRows,
-          countSlipRows,
+          countSlipRows.filter((slip) => slip.count_date === today),
           record.employee_id,
           record.shift_id,
         ) as TeamBoardCountStatus,
@@ -312,7 +376,7 @@ export const fetchTeamBoard = withAction(
           countStatus: leaveEmployeeIds.has(employeeId)
             ? "not_assigned"
             : (resolveCountStatusFromAnySlip(
-                countSlipRows,
+                countSlipRows.filter((slip) => slip.count_date === today),
                 employeeId,
               ) as TeamBoardCountStatus),
           onApprovedLeave: leaveEmployeeIds.has(employeeId),

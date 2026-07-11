@@ -1,9 +1,8 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator hub uses vietnamese */
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
-  CalendarDays,
   CheckCircle2,
   ClipboardList,
   Clock3,
@@ -30,14 +29,9 @@ import {
 import { Input } from "@comtammatu/ui/components/input";
 import { Item, ItemContent } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { Spinner } from "@comtammatu/ui/components/spinner";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppEmptyState } from "@/components/surface";
-import {
-  formatVNBusinessDate as formatDateVN,
-  formatVNTime as formatTimeVN,
-} from "@comtammatu/shared/time";
-import { fetchEmployeeSummary, type EmployeeMonthlySummary } from "./actions";
+import { formatVNTime as formatTimeVN } from "@comtammatu/shared/time";
 
 export type TeamMemberTodayStatus =
   | "working"
@@ -54,14 +48,10 @@ export type TeamMemberCountStatus =
 
 export interface TeamMemberRow {
   id: string;
-  employeeId: number | null;
-  profileId: string;
   name: string;
   code: string | null;
   phone: string | null;
   avatarUrl: string | null;
-  birthDate: string | null;
-  startDate: string | null;
   positionLabel: string | null;
   todayStatus: TeamMemberTodayStatus;
   todayShiftName: string | null;
@@ -107,10 +97,6 @@ function countStatusMeta(status: TeamMemberCountStatus): {
     case "approved":
       return { label: "Kiểm kê đã duyệt", variant: "success" };
   }
-}
-
-function formatOptionalDate(value: string | null): string {
-  return value ? formatDateVN(value) : "Chưa cập nhật";
 }
 
 function formatOptionalTime(value: string | null): string {
@@ -262,44 +248,6 @@ export function MembersClient({
   const [activeMember, setActiveMember] = useState<TeamMemberRow | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<TeamMemberFilter>("all");
-  const [summaryData, setSummaryData] = useState<EmployeeMonthlySummary | null>(
-    null,
-  );
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!activeMember) {
-      setSummaryData(null);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setSummaryData(null);
-    if (activeMember.employeeId == null) {
-      setIsLoading(false);
-      return;
-    }
-
-    fetchEmployeeSummary(activeMember.employeeId)
-      .then((res) => {
-        if (cancelled) return;
-        setSummaryData(res.success && res.data ? res.data : null);
-      })
-      .catch(() => {
-        if (!cancelled) setSummaryData(null);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeMember]);
-
   const stats = useMemo(
     () => ({
       total: employees.length,
@@ -409,7 +357,7 @@ export function MembersClient({
         </div>
 
         {filteredMembers.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {filteredMembers.map((member) => (
               <MemberCard
                 key={member.id}
@@ -438,7 +386,7 @@ export function MembersClient({
         open={activeMember !== null}
         onOpenChange={(open) => !open && setActiveMember(null)}
       >
-        <DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden">
+        <DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden sm:mx-auto sm:max-w-2xl">
           {activeMember ? (
             <>
               <DrawerHeader className="shrink-0 text-left">
@@ -450,11 +398,11 @@ export function MembersClient({
 
               <ScrollArea className="min-h-0 flex-1 px-4">
                 <div
-                  className="flex flex-col gap-4 pb-4 pr-2"
+                  className="workflow-safe-pb flex flex-col gap-4 pr-2"
                   data-vaul-no-drag
                 >
                   <MemberDetailBlock title="Hồ sơ">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid gap-2 sm:grid-cols-2">
                       <InfoTile
                         icon={<UserRound />}
                         label="Tên"
@@ -486,21 +434,11 @@ export function MembersClient({
                           )
                         }
                       />
-                      <InfoTile
-                        icon={<CalendarDays />}
-                        label="Vào làm"
-                        value={formatOptionalDate(activeMember.startDate)}
-                      />
-                      <InfoTile
-                        icon={<CalendarDays />}
-                        label="Ngày sinh"
-                        value={formatOptionalDate(activeMember.birthDate)}
-                      />
                     </div>
                   </MemberDetailBlock>
 
                   <MemberDetailBlock title="Hôm nay">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid gap-2 sm:grid-cols-2">
                       <InfoTile
                         icon={<CheckCircle2 />}
                         label="Trạng thái"
@@ -530,30 +468,6 @@ export function MembersClient({
                         value={activeCountStatus?.label ?? "Không giao"}
                       />
                     </div>
-                  </MemberDetailBlock>
-
-                  <MemberDetailBlock
-                    title="Tháng này"
-                    action={isLoading ? <Spinner className="size-4" /> : null}
-                  >
-                    {isLoading ? (
-                      <p className="text-sm text-muted-foreground">
-                        Đang tải hồ sơ tháng...
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        <InfoTile
-                          icon={<CheckCircle2 />}
-                          label="Ngày công"
-                          value={`${summaryData?.attendanceCount ?? 0} ngày`}
-                        />
-                        <InfoTile
-                          icon={<CalendarDays />}
-                          label="Nghỉ phép"
-                          value={`${summaryData?.leaves.length ?? 0} yêu cầu`}
-                        />
-                      </div>
-                    )}
                   </MemberDetailBlock>
                 </div>
               </ScrollArea>

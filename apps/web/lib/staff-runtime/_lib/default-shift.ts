@@ -1,4 +1,6 @@
 import {
+  addVNDateDays,
+  getVNDateString,
   getVNMinutesOfDay,
   isWithinShiftWindow,
   parseClockTimeToMinutes,
@@ -16,12 +18,90 @@ interface ParsedShiftWindow {
   endMin: number;
 }
 
+export interface ShiftAttendanceRecord {
+  date: string;
+  shift_id: number;
+  check_out: string | null;
+}
+
+export function resolveShiftBusinessDate(
+  shift: BranchShiftWindow,
+  nowMinutes: number = getVNMinutesOfDay(),
+  calendarDate: string = getVNDateString(),
+): string {
+  const start = parseClockTimeToMinutes(shift.start_time);
+  const end = parseClockTimeToMinutes(shift.end_time);
+  if (start === null || end === null || end > start) return calendarDate;
+  if (nowMinutes <= end) return addVNDateDays(calendarDate, -1);
+  if (nowMinutes >= start) return calendarDate;
+
+  // Between an overnight shift's end and next start, use the nearest shift
+  // instance. This mirrors default-shift selection and keeps a just-ended
+  // 18:00–02:00 attendance on its start date after 02:00.
+  return nowMinutes - end <= start - nowMinutes
+    ? addVNDateDays(calendarDate, -1)
+    : calendarDate;
+}
+
+export function resolveCurrentShiftContext(
+  shifts: readonly BranchShiftWindow[],
+  attendanceRecords: readonly ShiftAttendanceRecord[],
+  nowMinutes: number = getVNMinutesOfDay(),
+  calendarDate: string = getVNDateString(),
+): { shiftId: number; businessDate: string } | null {
+  const initialShiftId = resolveDefaultShiftId(shifts, nowMinutes);
+  const initialShift = shifts.find((shift) => shift.id === initialShiftId);
+  if (!initialShift) return null;
+
+  const completedShiftIds = new Set(
+    attendanceRecords
+      .filter((record) => {
+        if (!record.check_out) return false;
+        const recordShift = shifts.find(
+          (shift) => shift.id === record.shift_id,
+        );
+        return (
+          recordShift !== undefined &&
+          record.date ===
+            resolveShiftBusinessDate(recordShift, nowMinutes, calendarDate)
+        );
+      })
+      .map((record) => record.shift_id),
+  );
+  const shiftId = resolveDefaultShiftId(shifts, nowMinutes, completedShiftIds);
+  const shift = shifts.find((item) => item.id === shiftId);
+  return shift
+    ? {
+        shiftId: shift.id,
+        businessDate: resolveShiftBusinessDate(shift, nowMinutes, calendarDate),
+      }
+    : null;
+}
+
+export function isShiftEndedForBusinessDate(
+  businessDate: string,
+  shift: BranchShiftWindow,
+  nowMinutes: number = getVNMinutesOfDay(),
+  calendarDate: string = getVNDateString(),
+): boolean {
+  const start = parseClockTimeToMinutes(shift.start_time);
+  const end = parseClockTimeToMinutes(shift.end_time);
+  if (start === null || end === null) return businessDate < calendarDate;
+
+  const endDate = end <= start ? addVNDateDays(businessDate, 1) : businessDate;
+  if (calendarDate !== endDate) return calendarDate > endDate;
+  return nowMinutes >= end;
+}
+
 /**
  * Khoảng cách (phút) từ `nowMin` tới khung giờ ca. Ca qua đêm được duỗi qua
  * nửa đêm như `isWithinShiftWindow`; thử thêm `nowMin + 1440` để rạng sáng
  * vẫn so được với ca bắt đầu tối hôm trước. Trả về 0 khi đang trong ca.
  */
-function distanceToShiftWindow(nowMin: number, shift: ParsedShiftWindow): number {
+function distanceToShiftWindow(
+  nowMin: number,
+  shift: ParsedShiftWindow,
+): number {
   const effectiveEnd =
     shift.endMin > shift.startMin ? shift.endMin : shift.endMin + 1440;
   let best = Number.POSITIVE_INFINITY;

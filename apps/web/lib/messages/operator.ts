@@ -122,8 +122,7 @@ export const operator = {
       members: {
         label: "Nhân sự",
         title: "Danh sách nhân viên",
-        description:
-          "Thông tin liên hệ, ngày vào làm, ngày công và nghỉ phép của nhân viên chi nhánh.",
+        description: "Thông tin liên hệ và trạng thái vận hành hôm nay.",
       },
       assignments: {
         label: "Phân công",

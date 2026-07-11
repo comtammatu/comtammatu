@@ -15,6 +15,9 @@ const patchMigration = read(
 const forceCloseAfterShiftEndMigration = read(
   "supabase/migrations/20260710141738_allow_force_close_after_shift_end.sql",
 );
+const overnightBusinessDateMigration = read(
+  "supabase/migrations/20260711143450_fix_overnight_attendance_business_date.sql",
+);
 
 test("attendance checkout notification upsert has a matching unique arbiter", () => {
   assert.match(
@@ -45,11 +48,11 @@ test("attendance checkout RPC exposure stays scoped to intended callers", () => 
     "browser-callable force-close RPC must carry its own auth and permission boundary",
   );
   assert.match(
-    patchMigration,
+    overnightBusinessDateMigration,
     /REVOKE ALL ON FUNCTION public\.employee_request_clock_out\(bigint, bigint, bigint\) FROM PUBLIC, anon, authenticated;/,
   );
   assert.match(
-    patchMigration,
+    overnightBusinessDateMigration,
     /GRANT EXECUTE ON FUNCTION public\.employee_request_clock_out\(bigint, bigint, bigint\) TO service_role;/,
   );
   assert.match(
@@ -64,6 +67,25 @@ test("attendance checkout RPC exposure stays scoped to intended callers", () => 
     patchMigration,
     /GRANT ALL ON FUNCTION public\.admin_force_close_attendance/i,
     "force-close RPC should not use broad GRANT ALL",
+  );
+});
+
+test("employee checkout accepts the current or previous business date", () => {
+  assert.match(
+    overnightBusinessDateMigration,
+    /v_now_local timestamp := now\(\) AT TIME ZONE 'Asia\/Ho_Chi_Minh'/,
+  );
+  assert.match(
+    overnightBusinessDateMigration,
+    /ar\.date BETWEEN v_calendar_date - 1 AND v_calendar_date/,
+  );
+  assert.match(
+    overnightBusinessDateMigration,
+    /FOR UPDATE OF ar[\s\S]*date = v_record\.date/,
+  );
+  assert.doesNotMatch(
+    overnightBusinessDateMigration,
+    /GRANT EXECUTE ON FUNCTION public\.employee_request_clock_out[^;]*authenticated/,
   );
 });
 

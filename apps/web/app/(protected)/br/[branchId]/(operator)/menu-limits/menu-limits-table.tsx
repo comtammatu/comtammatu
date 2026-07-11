@@ -12,7 +12,12 @@ import {
   Save as IconSave,
   Search as IconSearch,
 } from "lucide-react";
-import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppSection,
+  AppToolbar,
+  DescriptionList,
+} from "@/components/surface";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { Button } from "@comtammatu/ui/components/button";
@@ -84,6 +89,18 @@ function getItemBadge(row: MenuLimitRow): {
 function renderItemBadge(row: MenuLimitRow) {
   const badge = getItemBadge(row);
   return badge ? <Badge variant={badge.variant}>{badge.label}</Badge> : null;
+}
+
+function getAvailableToSellValue(row: MenuLimitRow): number | string {
+  return row.available_to_sell ?? messages.pos.menu.unlimited;
+}
+
+function getManualLimitValue(row: MenuLimitRow): number | string {
+  return row.manual_limit_quantity ?? messages.pos.menu.manualLimitNotSet;
+}
+
+function getStockCapacityValue(row: MenuLimitRow): number | string {
+  return row.stock_capacity ?? messages.pos.menu.noStockConfig;
 }
 
 function getMenuLimitQueuePriority(row: MenuLimitRow): number {
@@ -184,50 +201,42 @@ function MenuLimitRowItem({
           size="sm"
           className="flex-col flex-nowrap items-start rounded-none border-none px-3 py-2 pointer-events-none select-none lg:flex-row lg:items-center lg:px-4 lg:py-3"
         >
-          <ItemContent className="min-w-0 w-full gap-1 sm:w-auto">
+          <ItemContent className="min-w-0 w-full gap-1 lg:w-auto">
             <ItemTitle className="line-clamp-2 w-full max-w-full flex-wrap text-sm">
               <span className="min-w-0 break-words">{row.item_name}</span>
               {renderItemBadge(row)}
-              {row.manual_limit_quantity != null && (
-                <Badge variant="outline" className="font-mono">
-                  Giới hạn: {row.manual_limit_quantity}
-                </Badge>
-              )}
             </ItemTitle>
             <ItemDescription className="flex flex-wrap items-center gap-2">
               <span className="font-mono tabular-nums text-foreground">
                 {formatVND(row.base_price)}
               </span>
-              {row.stock_capacity != null && (
-                <span>
-                  {messages.pos.menu.stockCapacityLabel}:{" "}
-                  <span className="font-mono tabular-nums text-foreground">
-                    {row.stock_capacity}
-                  </span>
-                </span>
-              )}
-              {row.available_to_sell != null && (
-                <span className="font-medium text-foreground">
-                  {messages.pos.menu.availableToSellCount(
-                    row.available_to_sell,
-                  )}
-                </span>
-              )}
-              {row.pending_unfinalized_demand > 0 && (
-                <span>
-                  {messages.pos.menu.pendingDemandCount(
-                    row.pending_unfinalized_demand,
-                  )}
-                </span>
-              )}
-              {row.active_hold_demand > 0 && (
-                <span>
-                  {messages.pos.menu.activeHoldDemandCount(
-                    row.active_hold_demand,
-                  )}
-                </span>
-              )}
             </ItemDescription>
+          </ItemContent>
+          <ItemContent className="grid w-full shrink-0 grid-cols-3 gap-2 border-t pt-2 text-xs lg:w-80 lg:flex-none lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+            <span className="flex min-w-0 flex-col gap-1">
+              <span className="text-muted-foreground">
+                {messages.pos.menu.availableToSellLabel}
+              </span>
+              <strong className="truncate font-mono tabular-nums text-foreground">
+                {getAvailableToSellValue(row)}
+              </strong>
+            </span>
+            <span className="flex min-w-0 flex-col gap-1">
+              <span className="text-muted-foreground">
+                {messages.pos.menu.manualLimitShortLabel}
+              </span>
+              <strong className="truncate font-mono tabular-nums text-foreground">
+                {getManualLimitValue(row)}
+              </strong>
+            </span>
+            <span className="flex min-w-0 flex-col gap-1">
+              <span className="text-muted-foreground">
+                {messages.pos.menu.stockCapacityLabel}
+              </span>
+              <strong className="truncate font-mono tabular-nums text-foreground">
+                {getStockCapacityValue(row)}
+              </strong>
+            </span>
           </ItemContent>
         </Item>
       </div>
@@ -594,40 +603,49 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                     <Badge variant="outline" className="font-mono">
                       {formatVND(drawerRow.base_price)}
                     </Badge>
-                    {drawerRow.stock_capacity != null ? (
-                      <Badge variant="outline" className="font-mono">
-                        {messages.pos.menu.stockCapacityLabel}:{" "}
-                        {drawerRow.stock_capacity}
-                      </Badge>
-                    ) : null}
-                    {drawerRow.available_to_sell != null ? (
-                      <Badge variant="outline" className="font-mono">
-                        {messages.pos.menu.availableToSellCount(
-                          drawerRow.available_to_sell,
-                        )}
-                      </Badge>
-                    ) : null}
-                    {drawerRow.pending_unfinalized_demand > 0 ? (
-                      <Badge variant="outline" className="font-mono">
-                        {messages.pos.menu.pendingDemandCount(
-                          drawerRow.pending_unfinalized_demand,
-                        )}
-                      </Badge>
-                    ) : null}
-                    {drawerRow.active_hold_demand > 0 ? (
-                      <Badge variant="outline" className="font-mono">
-                        {messages.pos.menu.activeHoldDemandCount(
-                          drawerRow.active_hold_demand,
-                        )}
-                      </Badge>
-                    ) : null}
                   </div>
                 </DrawerDescription>
               </DrawerHeader>
               <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pb-2">
-                <p className="text-xs text-muted-foreground">
-                  {messages.pos.menu.availabilityRuleHint}
-                </p>
+                <Item variant="muted" size="sm" className="items-center">
+                  <ItemContent>
+                    <ItemTitle>
+                      {messages.pos.menu.availableToSellLabel}
+                    </ItemTitle>
+                    <ItemDescription>
+                      {messages.pos.menu.availabilityRuleHint}
+                    </ItemDescription>
+                  </ItemContent>
+                  <strong className="shrink-0 font-mono tabular-nums text-foreground">
+                    {getAvailableToSellValue(drawerRow)}
+                  </strong>
+                </Item>
+                <DescriptionList
+                  className="grid grid-cols-2 gap-x-4 gap-y-3"
+                  items={[
+                    {
+                      term: messages.pos.menu.manualLimitShortLabel,
+                      description: getManualLimitValue(drawerRow),
+                    },
+                    {
+                      term: messages.pos.menu.stockCapacityLabel,
+                      description: getStockCapacityValue(drawerRow),
+                    },
+                    {
+                      term: messages.pos.menu.soldTodayLabel,
+                      description: drawerRow.sold_today,
+                    },
+                    {
+                      term: messages.pos.menu.pendingDemandLabel,
+                      description: drawerRow.pending_unfinalized_demand,
+                    },
+                    {
+                      term: messages.pos.menu.activeHoldDemandLabel,
+                      description: drawerRow.active_hold_demand,
+                    },
+                  ]}
+                  descriptionClassName="font-mono tabular-nums"
+                />
                 <FieldGroup className="gap-4">
                   <Item
                     asChild

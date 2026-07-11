@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  isShiftEndedForBusinessDate,
+  resolveCurrentShiftContext,
   resolveDefaultShiftId,
+  resolveShiftBusinessDate,
   type BranchShiftWindow,
 } from "../lib/staff-runtime/_lib/default-shift";
 
@@ -41,7 +44,10 @@ test("khoảng trống giữa hai ca → chọn ca gần khung giờ nhất", ()
 });
 
 test("ca đã kết trong ngày không chặn ca tiếp theo", () => {
-  assert.equal(resolveDefaultShiftId(DAT_DO, minutes("13:30"), new Set([1])), 2);
+  assert.equal(
+    resolveDefaultShiftId(DAT_DO, minutes("13:30"), new Set([1])),
+    2,
+  );
   assert.equal(
     resolveDefaultShiftId(PHUOC_HAI, minutes("13:00"), new Set([3])),
     4,
@@ -71,6 +77,66 @@ test("ca qua đêm → rạng sáng vẫn khớp ca bắt đầu tối hôm trư
   ];
   assert.equal(resolveDefaultShiftId(overnight, minutes("01:00")), 9);
   assert.equal(resolveDefaultShiftId(overnight, minutes("07:00")), 10);
+  assert.equal(
+    resolveShiftBusinessDate(overnight[0]!, minutes("01:00"), "2026-07-11"),
+    "2026-07-10",
+  );
+  assert.equal(
+    resolveShiftBusinessDate(overnight[0]!, minutes("02:01"), "2026-07-11"),
+    "2026-07-10",
+  );
+  assert.equal(
+    resolveShiftBusinessDate(overnight[0]!, minutes("17:00"), "2026-07-11"),
+    "2026-07-11",
+  );
+  assert.deepEqual(
+    resolveCurrentShiftContext(
+      overnight,
+      [
+        {
+          date: "2026-07-10",
+          shift_id: 9,
+          check_out: null,
+        },
+      ],
+      minutes("01:00"),
+      "2026-07-11",
+    ),
+    { shiftId: 9, businessDate: "2026-07-10" },
+  );
+  assert.deepEqual(
+    resolveCurrentShiftContext(
+      overnight,
+      [
+        {
+          date: "2026-07-10",
+          shift_id: 9,
+          check_out: null,
+        },
+      ],
+      minutes("02:01"),
+      "2026-07-11",
+    ),
+    { shiftId: 9, businessDate: "2026-07-10" },
+  );
+  assert.equal(
+    isShiftEndedForBusinessDate(
+      "2026-07-10",
+      overnight[0]!,
+      minutes("01:00"),
+      "2026-07-11",
+    ),
+    false,
+  );
+  assert.equal(
+    isShiftEndedForBusinessDate(
+      "2026-07-10",
+      overnight[0]!,
+      minutes("02:01"),
+      "2026-07-11",
+    ),
+    true,
+  );
 });
 
 test("chi nhánh chưa khai báo ca hoặc giờ ca hỏng → null", () => {

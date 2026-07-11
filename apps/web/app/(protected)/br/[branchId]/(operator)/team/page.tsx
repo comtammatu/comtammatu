@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import { canAccess } from "@comtammatu/shared/auth";
+import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { AppEmptyState } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
-import { loadAuthState } from "@/_lib/auth";
+import { loadAuthState, probePermission } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../_lib/parse-branch-id";
@@ -53,7 +53,32 @@ export default async function TeamBoardPage({
     );
   }
 
-  const result = await fetchTeamBoard({ branchId: context.branchId });
+  const [canViewTeam, canAssignCount, canApproveCheckout, canApproveCount] =
+    await Promise.all([
+      probePermission(
+        { supabase, claims },
+        PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
+        context.branchId,
+      ),
+      probePermission(
+        { supabase, claims },
+        PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
+        context.branchId,
+      ),
+      probePermission(
+        { supabase, claims },
+        PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+        context.branchId,
+      ),
+      probePermission(
+        { supabase, claims },
+        PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
+        context.branchId,
+      ),
+    ]);
+  const result = canViewTeam
+    ? await fetchTeamBoard({ branchId: context.branchId })
+    : { success: false as const, error: "Không có quyền" };
   const rows: TeamBoardRow[] = result.success ? (result.data?.rows ?? []) : [];
   const basePath = `/br/${context.branchId}`;
 
@@ -61,19 +86,35 @@ export default async function TeamBoardPage({
     <TeamWorkspaceTabs
       initialValue={activeTab}
       board={
-        result.success ? (
+        !canViewTeam ? (
+          <AppEmptyState mode="no-access" />
+        ) : result.success ? (
           <TeamBoardClient
             rows={rows}
             branchId={context.branchId}
             countSlipsHref={`${basePath}/stock/count-slips`}
             checkoutApprovalsHref={`${basePath}/shift/checkout-approvals`}
+            canApproveCheckout={canApproveCheckout}
+            canApproveCount={canApproveCount}
           />
         ) : (
           <AppEmptyState mode="error" description={result.error} />
         )
       }
-      members={<TeamMembersContent branchId={context.branchId} />}
-      assignments={<TeamAssignmentsContent branchId={context.branchId} />}
+      members={
+        canViewTeam ? (
+          <TeamMembersContent branchId={context.branchId} />
+        ) : (
+          <AppEmptyState mode="no-access" />
+        )
+      }
+      assignments={
+        canAssignCount ? (
+          <TeamAssignmentsContent branchId={context.branchId} />
+        ) : (
+          <AppEmptyState mode="no-access" />
+        )
+      }
     />
   );
 

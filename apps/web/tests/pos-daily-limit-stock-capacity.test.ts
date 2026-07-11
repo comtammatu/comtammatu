@@ -243,11 +243,17 @@ test("menu-limit screen refreshes when availability inputs change", () => {
   assert.match(menuLimitsTable, /table: "stock_levels"/);
 });
 
-test("menu-limit operations expose availability inputs while the database keeps the hard stock gate", () => {
-  assert.match(menuLimitsTable, /availableToSellCount/);
-  assert.match(menuLimitsTable, /pendingDemandCount/);
-  assert.match(menuLimitsTable, /activeHoldDemandCount/);
+test("menu-limit operations keep scan facts compact and show availability inputs once in the drawer", () => {
+  assert.match(menuLimitsTable, /availableToSellLabel/);
+  assert.match(menuLimitsTable, /manualLimitShortLabel/);
+  assert.match(menuLimitsTable, /stockCapacityLabel/);
+  assert.match(menuLimitsTable, /DescriptionList/);
+  assert.match(menuLimitsTable, /soldTodayLabel/);
+  assert.match(menuLimitsTable, /pendingDemandLabel/);
+  assert.match(menuLimitsTable, /activeHoldDemandLabel/);
   assert.match(menuLimitsTable, /availabilityRuleHint/);
+  assert.doesNotMatch(menuLimitsTable, /pendingDemandCount/);
+  assert.doesNotMatch(menuLimitsTable, /activeHoldDemandCount/);
   assert.doesNotMatch(menuLimitsTable, /getSoldProgress/);
   assert.doesNotMatch(menuLimitsActions, /default to stock capacity/);
   assert.doesNotMatch(menuLimitsActions, /Tồn Bếp chi nhánh/);

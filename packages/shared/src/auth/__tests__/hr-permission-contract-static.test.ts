@@ -76,8 +76,11 @@ test("HR Server Action gates match the route contract", () => {
     /getAuthContextWithPermissions\(\s*MANAGER_ROLES,\s*POSITION_ASSIGN_PERMISSIONS,\s*effectiveBranchId \?\? null,\s*\)/,
   );
   assert.equal(
-    (staffActions.match(/const assignmentError = validateStaffAssignment\(/g) ??
-      []).length,
+    (
+      staffActions.match(
+        /const assignmentError = validateStaffAssignment\(/g,
+      ) ?? []
+    ).length,
     2,
   );
   assert.match(
@@ -99,7 +102,10 @@ test("HR Server Action gates match the route contract", () => {
     3,
   );
 
-  assert.match(hrActions, /const HR_ROLES: readonly StaffRole\[\] = \["owner"\]/);
+  assert.match(
+    hrActions,
+    /const HR_ROLES: readonly StaffRole\[\] = \["owner"\]/,
+  );
   assert.match(
     hrActions,
     /createEmployeeAccount = withAction\(\s*\{\s*roles: HR_ROLES,\s*schema: createEmployeeAccountSchema,\s*permission: PERMISSION_KEYS\.HR_MANAGE_EMPLOYEE,\s*\}/,
@@ -119,7 +125,7 @@ test("HR Server Action gates match the route contract", () => {
   assert.match(hrPage, /const canManagePositionTasks = canManageEmployees;/);
   assert.match(
     hrActions,
-    /forceCloseStaleAttendance = withAction\(\s*\{\s*roles: HR_EMPLOYEE_VIEW_ROLES,\s*schema: forceCloseStaleAttendanceSchema,\s*permission: PERMISSION_KEYS\.STAFF_MANAGE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
+    /forceCloseStaleAttendance = withAction\(\s*\{\s*roles: HR_EMPLOYEE_VIEW_ROLES,\s*schema: forceCloseStaleAttendanceSchema,\s*permission: PERMISSION_KEYS\.HR_APPROVE_CHECKOUT,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
   );
   assert.match(
     hrActions,
@@ -134,10 +140,7 @@ test("HR Server Action gates match the route contract", () => {
     /fetchAttendanceSummary = withAction\(\s*\{\s*roles: SHIFT_ROLES,\s*schema: fetchAttendanceSummarySchema,\s*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
   );
 
-  assert.match(
-    leaveActions,
-    /permissionBranchId: \(data\) => data\.branchId/,
-  );
+  assert.match(leaveActions, /permissionBranchId: \(data\) => data\.branchId/);
   assert.match(leaveActions, /requireBranchScope: true/);
   assert.match(
     leaveActions,
@@ -185,8 +188,14 @@ test("HR client surface keeps owner setup separate from branch oversight", () =>
   const hrPage = read("apps/web/app/(protected)/hr/page.tsx");
   const hrClient = read("apps/web/app/(protected)/hr/hr-client.tsx");
 
-  assert.match(hrPage, /const canManageEmployees = claims\.user_role === "owner"/);
-  assert.match(hrPage, /const canViewEmployees = canManageEmployees \|\| isBranchManager/);
+  assert.match(
+    hrPage,
+    /const canManageEmployees = claims\.user_role === "owner"/,
+  );
+  assert.match(
+    hrPage,
+    /const canViewEmployees = canManageEmployees \|\| isBranchManager/,
+  );
   assert.match(hrPage, /canManageEmployees=\{canManageEmployees\}/);
   assert.match(
     hrClient,
@@ -204,14 +213,8 @@ test("HR client surface keeps owner setup separate from branch oversight", () =>
     hrClient,
     /const activeEmployees = canManageEmployees\s*\?\s*employees\.filter\(\(employee\) => employee\.is_active\)\s*:\s*\[\];/,
   );
-  assert.match(
-    hrClient,
-    /canManage=\{canManageEmployees\}/,
-  );
-  assert.match(
-    hrClient,
-    /\{canManageEmployees \? \(\s*<EmployeeFormDialog/,
-  );
+  assert.match(hrClient, /canManage=\{canManageEmployees\}/);
+  assert.match(hrClient, /\{canManageEmployees \? \(\s*<EmployeeFormDialog/);
 });
 
 test("HR employee payroll and contract controls stay owner-only", () => {
@@ -223,16 +226,28 @@ test("HR employee payroll and contract controls stay owner-only", () => {
   assert.match(employeeTable, /\.\.\.\(canManage\s*\?\s*\[/);
   assert.match(employeeTable, /key: "payroll"/);
   assert.match(employeeTable, /render: renderPayrollProfile/);
-  assert.match(employeeTable, /\{canManage \? renderPayrollProfile\(employee\) : null\}/);
+  assert.match(
+    employeeTable,
+    /\{canManage \? renderPayrollProfile\(employee\) : null\}/,
+  );
   assert.match(employeeTable, /\{canManage \? renderEdit\(employee\) : null\}/);
   assert.match(
     employeeTable,
     /\{canManage \? \(\s*<EmployeeFormDialog[\s\S]*?mode="edit"/,
   );
   assert.match(employeeFormDialog, /base_salary: baseSalaryField/);
-  assert.match(employeeFormDialog, /contract_number: z\.string\(\)\.trim\(\)\.optional\(\)/);
-  assert.match(employeeFormDialog, /contract_signed_date: z\.string\(\)\.optional\(\)/);
-  assert.match(employeeFormDialog, /contract_end_date: z\.string\(\)\.optional\(\)/);
+  assert.match(
+    employeeFormDialog,
+    /contract_number: z\.string\(\)\.trim\(\)\.optional\(\)/,
+  );
+  assert.match(
+    employeeFormDialog,
+    /contract_signed_date: z\.string\(\)\.optional\(\)/,
+  );
+  assert.match(
+    employeeFormDialog,
+    /contract_end_date: z\.string\(\)\.optional\(\)/,
+  );
 });
 
 test("HR branch-manager employee payload stays branch-safe", () => {
@@ -331,7 +346,10 @@ test("HR personnel admin RLS keeps HR grants off base-table policies", () => {
   );
 
   assert.doesNotMatch(personnelRls, /CREATE OR REPLACE FUNCTION public\./);
-  assert.match(personnelRls, /DROP FUNCTION IF EXISTS public\.auth_is_current_owner\(\)/);
+  assert.match(
+    personnelRls,
+    /DROP FUNCTION IF EXISTS public\.auth_is_current_owner\(\)/,
+  );
   for (const policy of [
     "employees_select",
     "employees_write",
@@ -357,7 +375,10 @@ test("HR personnel admin RLS keeps HR grants off base-table policies", () => {
   for (const block of policyBlocks) {
     assert.doesNotMatch(block, /hr:(view|manage)_employee/);
   }
-  assert.doesNotMatch(personnelRls, /DROP POLICY IF EXISTS employees_select_self/);
+  assert.doesNotMatch(
+    personnelRls,
+    /DROP POLICY IF EXISTS employees_select_self/,
+  );
 });
 
 test("auth docs define the HR permission contract layers", () => {

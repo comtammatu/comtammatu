@@ -117,8 +117,27 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /hiddenBelowXl && "hidden xl:grid"/);
   assert.match(
     runnerPageSource,
-    /moreOrders: \(count: number\) => `Còn \$\{String\(count\)\} đơn đang chờ`/,
+    /const RUNNER_OVERFLOW_TILE_LIMIT = 4;/,
   );
+  assert.match(
+    runnerPageSource,
+    /const RUNNER_OVERFLOW_PREVIEW_LIMIT = RUNNER_OVERFLOW_TILE_LIMIT - 1;/,
+  );
+  assert.match(
+    runnerPageSource,
+    /moreOrders: \(count: number\) => `Còn \$\{String\(count\)\} đơn`/,
+  );
+  assert.match(runnerPageSource, /function RunnerOverflowRail/);
+  assert.match(runnerPageSource, /data-runner-overflow-rail/);
+  assert.match(
+    runnerPageSource,
+    /activeRows\.slice\(0, RUNNER_OVERFLOW_PREVIEW_LIMIT\)/,
+  );
+  assert.match(
+    runnerPageSource,
+    /activeRows\.length - previewRows\.length/,
+  );
+  assert.match(runnerPageSource, /grid-flow-col auto-cols-fr gap-2/);
   assert.match(runnerPageSource, /className="flex h-dvh min-h-0 w-full/);
   assert.match(runnerPageSource, /className="flex h-full min-h-0 w-full/);
   assert.match(

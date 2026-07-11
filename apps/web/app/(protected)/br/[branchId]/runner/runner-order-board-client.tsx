@@ -11,6 +11,8 @@ import { RunnerWaitTime } from "./runner-wait-time";
 const RUNNER_EXIT_MS = 320;
 const RUNNER_ROW_LIMIT_BASE = 4;
 const RUNNER_ROW_LIMIT_XL = 6;
+const RUNNER_OVERFLOW_TILE_LIMIT = 4;
+const RUNNER_OVERFLOW_PREVIEW_LIMIT = RUNNER_OVERFLOW_TILE_LIMIT - 1;
 const RUNNER_COLUMN_SPAN = {
   order: 4,
   quantity: 3,
@@ -23,7 +25,8 @@ const RUNNER_BOARD_COPY = {
   idleDoneTitle: "Đã phục vụ hết món đang chờ.",
   idleBrandLine: "Món mới sẽ hiện ngay khi bếp gọi phục vụ.",
   itemUnit: "món",
-  moreOrders: (count: number) => `Còn ${String(count)} đơn đang chờ`,
+  moreOrders: (count: number) => `Còn ${String(count)} đơn`,
+  overflowLabel: "Đơn tiếp theo",
   tableHeaders: {
     order: "Đơn",
     quantity: "Số món",
@@ -84,8 +87,8 @@ export function RunnerOrderBoardClient({
   }
 
   const visibleRows = displayRows.slice(0, RUNNER_ROW_LIMIT_XL);
-  const overflowBase = displayRows.length - RUNNER_ROW_LIMIT_BASE;
-  const overflowXl = displayRows.length - RUNNER_ROW_LIMIT_XL;
+  const overflowBaseRows = displayRows.slice(RUNNER_ROW_LIMIT_BASE);
+  const overflowXlRows = displayRows.slice(RUNNER_ROW_LIMIT_XL);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
@@ -117,23 +120,60 @@ export function RunnerOrderBoardClient({
           />
         ))}
       </ItemGroup>
-      {overflowBase > 0 ? (
-        <p
-          className={cn(
-            "shrink-0 border-t border-border bg-muted/70 px-4 py-2 text-center font-heading text-runner-footer font-semibold text-muted-foreground",
-            overflowXl <= 0 && "xl:hidden",
-          )}
-        >
-          <span className="xl:hidden">
-            {RUNNER_BOARD_COPY.moreOrders(overflowBase)}
-          </span>
-          {overflowXl > 0 ? (
-            <span className="hidden xl:inline">
-              {RUNNER_BOARD_COPY.moreOrders(overflowXl)}
+      <RunnerOverflowRail rows={overflowBaseRows} className="xl:hidden" />
+      <RunnerOverflowRail rows={overflowXlRows} className="hidden xl:block" />
+    </div>
+  );
+}
+
+function RunnerOverflowRail({
+  rows,
+  className,
+}: {
+  rows: DisplayRunnerBoardRow[];
+  className?: string;
+}) {
+  const activeRows = rows.filter((row) => row.exiting !== true);
+  const previewRows = activeRows.slice(0, RUNNER_OVERFLOW_PREVIEW_LIMIT);
+  const remainingCount = activeRows.length - previewRows.length;
+
+  if (activeRows.length === 0) return null;
+
+  return (
+    <div
+      className={cn("shrink-0 border-t border-border bg-muted/70 p-2", className)}
+      data-runner-overflow-rail
+    >
+      <div
+        aria-label={RUNNER_BOARD_COPY.overflowLabel}
+        className="grid grid-flow-col auto-cols-fr gap-2"
+        role="list"
+      >
+        {previewRows.map((row) => (
+          <Item
+            key={row.key}
+            className="min-w-0 border-border bg-background p-2"
+            role="listitem"
+          >
+            <span className="truncate font-heading text-runner-footer font-semibold text-foreground">
+              {row.orderLabel}
             </span>
-          ) : null}
-        </p>
-      ) : null}
+            <span className="font-mono text-runner-footer text-muted-foreground tabular-nums">
+              {formatCount(row.itemQuantity)} {RUNNER_BOARD_COPY.itemUnit}
+            </span>
+          </Item>
+        ))}
+        {remainingCount > 0 ? (
+          <Item
+            className="items-center justify-center border-border bg-background p-2 text-center"
+            role="listitem"
+          >
+            <span className="font-heading text-runner-footer font-semibold text-foreground">
+              {RUNNER_BOARD_COPY.moreOrders(remainingCount)}
+            </span>
+          </Item>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -191,6 +191,7 @@ export const pos = {
     soldLabel: "Còn lại",
     totalLimitLabel: "Giới hạn bán",
     manualLimitLabel: "Giới hạn bán",
+    availableToSellLabel: "Sẵn bán",
     stockCapacityLabel: "Tồn quy đổi",
     stockCapacityEmpty: "—",
     itemCount: (quantity: number) => `${quantity} món`,
@@ -202,6 +203,11 @@ export const pos = {
     soldCount: (quantity: number) => `${quantity} đã bán`,
     remainingCount: (quantity: number) => `${quantity} còn lại`,
     availableToSellCount: (quantity: number) => `${quantity} được bán thêm`,
+    manualLimitShortLabel: "Trần bán",
+    manualLimitNotSet: "Chưa đặt",
+    soldTodayLabel: "Đã bán",
+    pendingDemandLabel: "Đơn đang xử lý",
+    activeHoldDemandLabel: "Đang giữ chỗ",
     pendingDemandCount: (quantity: number) =>
       `${quantity} suất quy đổi đang ở đơn`,
     activeHoldDemandCount: (quantity: number) =>

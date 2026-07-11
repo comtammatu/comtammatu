@@ -27,15 +27,23 @@ const teamMembersSource = readWeb(
 const teamMembersContentSource = readWeb(
   "app/(protected)/br/[branchId]/(operator)/team/members/members-content.tsx",
 );
-const teamMembersActionsSource = readWeb(
-  "app/(protected)/br/[branchId]/(operator)/team/members/actions.ts",
-);
 const countAssignmentsSource = readWeb(
   "app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
 );
 const staffRuntimeSource = readWeb("lib/staff-runtime/page.tsx");
 const shiftPageSource = readWeb(
   "app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
+);
+const clockActionsSource = readWeb("lib/staff-runtime/clock/actions.ts");
+const staffCountActionsSource = readWeb("lib/staff-runtime/count/actions.ts");
+const leaveActionsSource = readWeb(
+  "app/(protected)/hr/leave-request-actions.ts",
+);
+const countAssignmentActionsSource = readWeb(
+  "app/(protected)/inventory/count-assignments/actions.ts",
+);
+const countSlipActionsSource = readWeb(
+  "app/(protected)/inventory/count-slips/actions.ts",
 );
 
 test("operator team tabs use shared Tabs and preserve client-side switching", () => {
@@ -73,15 +81,15 @@ test("operator team board exposes a real status filter", () => {
   assert.match(teamBoardSource, /function initialTeamBoardFilter/);
   assert.match(
     teamBoardSource,
-    /filterCount\(rows, "needs_action"\) > 0[\s\S]*filterCount\(rows, "working"\) > 0/,
+    /filterCount\(rows, "needs_action", capabilities\) > 0[\s\S]*filterCount\(rows, "working", capabilities\) > 0/,
   );
   assert.match(
     teamBoardSource,
-    /filter\.value === "all" \|\| filterCount\(rows, filter\.value\) > 0/,
+    /filter\.value === "all" \|\|[\s\S]*filterCount\(rows, filter\.value, capabilities\) > 0/,
   );
   assert.match(
     teamBoardSource,
-    /className="flex gap-1\.5 overflow-x-auto pb-1"/,
+    /className="no-scrollbar flex touch-pan-x gap-1\.5 overflow-x-auto overscroll-x-contain pb-1"/,
   );
   assert.match(teamBoardSource, /size="touch"/);
   assert.match(teamBoardSource, /className="shrink-0 gap-2 px-3"/);
@@ -97,6 +105,7 @@ test("operator team board exposes a real status filter", () => {
   assert.match(teamBoardSource, /function TeamBoardMobileGroups/);
   assert.match(teamBoardSource, /<TeamBoardMobileGroups/);
   assert.match(teamBoardSource, /showShiftName=\{false\}/);
+  assert.match(teamBoardSource, /grid gap-1\.5 md:grid-cols-2/);
   assert.match(
     teamBoardSource,
     /mode=\{filter === "all" \? "no-data" : "no-results"\}/,
@@ -158,6 +167,12 @@ test("operator team opens the workspace tabs without a duplicate entry hub", () 
 });
 
 test("operator team board reads branch runtime rows after branch access is checked", () => {
+  assert.match(teamDataSource, /permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE/);
+  assert.match(
+    teamDataSource,
+    /permissionBranchId: \(data\) => data\.branchId/,
+  );
+  assert.match(teamDataSource, /requireBranchScope: true/);
   assert.match(teamDataSource, /createServiceClient/);
   assert.match(teamDataSource, /const readClient = createServiceClient\(\)/);
   assert.match(teamDataSource, /readClient\s*\.from\("employees"\)/);
@@ -184,15 +199,24 @@ test("operator team board reads branch runtime rows after branch access is check
   );
 });
 
+test("recurring count assignments alone do not create Team presence", () => {
+  const signalSet = teamDataSource.match(
+    /const signalEmployeeIds = new Set<number>\(\[([\s\S]*?)\]\);/,
+  )?.[1];
+  assert.ok(
+    signalSet,
+    "Team board must keep an explicit operational signal set",
+  );
+  assert.doesNotMatch(signalSet, /assignmentRows/);
+});
+
 test("operator team can force-close a shift only after its scheduled end", () => {
   assert.match(teamBoardSource, /function isPastShiftEnd/);
   assert.match(
     teamBoardSource,
-    /parseClockTimeToMinutes\(shift\.shiftStartTime/,
+    /isShiftEndedForBusinessDate\(shift\.businessDate/,
   );
-  assert.match(teamBoardSource, /parseClockTimeToMinutes\(shift\.shiftEndTime/);
-  assert.match(teamBoardSource, /effectiveEnd > 1440 && now < start/);
-  assert.match(teamBoardSource, /isPastShiftEnd\(row\.shift\)/);
+  assert.match(teamBoardSource, /canApproveCheckout && isPastShiftEnd/);
   assert.match(
     teamBoardSource,
     /forceCloseStaleAttendance\(\{\s*attendanceId: shift\.attendanceId,\s*branchId,\s*\}\)/,
@@ -204,11 +228,11 @@ test("operator team can force-close a shift only after its scheduled end", () =>
 test("operator team board drawer keeps long shift details inside the drawer", () => {
   assert.match(
     teamBoardSource,
-    /<DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden">/,
+    /<DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden sm:mx-auto sm:max-w-2xl">/,
   );
   assert.match(
     teamBoardSource,
-    /className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4"/,
+    /className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4"/,
   );
   assert.match(teamBoardSource, /data-vaul-no-drag=""/);
   assert.match(teamBoardSource, /className="break-words"/);
@@ -238,15 +262,11 @@ test("operator team members use a roster grid with real profile fields", () => {
   assert.match(teamMembersSource, /todayStatus/);
   assert.match(
     teamMembersSource,
-    /fetchEmployeeSummary\(activeMember\.employeeId\)/,
-  );
-  assert.match(
-    teamMembersSource,
-    /grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5/,
+    /grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5/,
   );
   assert.match(teamMembersSource, /size="touch"/);
   assert.doesNotMatch(teamMembersSource, /h-7 cursor-pointer/);
-  assert.doesNotMatch(teamMembersSource, /sm:grid-cols-3/);
+  assert.match(teamMembersSource, /grid gap-2 sm:grid-cols-2/);
   assert.match(
     teamMembersSource,
     /min-h-24 flex-col justify-center text-center/,
@@ -267,11 +287,19 @@ test("operator team members use a roster grid with real profile fields", () => {
   assert.doesNotMatch(teamMembersSource, /leaves\.map/);
   assert.doesNotMatch(teamMembersSource, /\bemail\b/i);
   assert.match(teamMembersContentSource, /avatar_url/);
-  assert.match(teamMembersContentSource, /birth_date/);
+  assert.doesNotMatch(teamMembersContentSource, /birth_date/);
+  assert.doesNotMatch(
+    teamMembersContentSource,
+    /\.select\("id, profile_id, employee_code, start_date/,
+  );
   assert.match(teamMembersContentSource, /positions\(label_vi\)/);
   assert.match(
     teamMembersContentSource,
     /const readClient = createServiceClient\(\)/,
+  );
+  assert.match(
+    teamMembersContentSource,
+    /getAuthContextWithPermission\([\s\S]*PERMISSION_KEYS\.HR_VIEW_EMPLOYEE[\s\S]*branchId/,
   );
   assert.match(teamMembersContentSource, /readClient\s*\.from\("profiles"\)/);
   assert.match(teamMembersContentSource, /readClient\s*\.from\("employees"\)/);
@@ -287,15 +315,38 @@ test("operator team members use a roster grid with real profile fields", () => {
     teamMembersContentSource,
     /supabase\s*\.from\("employees"\)/,
   );
+  assert.doesNotMatch(teamMembersSource, /fetchEmployeeSummary|Tháng này/);
+  assert.doesNotMatch(teamMembersSource, /birthDate|startDate|profileId/);
+});
+
+test("operator team isolates assignment and focused actions by permission", () => {
+  assert.match(teamPageSource, /PERMISSION_KEYS\.INVENTORY_COUNT_ASSIGN/);
   assert.match(
-    teamMembersActionsSource,
-    /user_role !== "owner" && user_role !== "branch_manager"/,
+    teamPageSource,
+    /canAssignCount \? \([\s\S]*<TeamAssignmentsContent[\s\S]*<AppEmptyState mode="no-access"/,
   );
-  assert.match(teamMembersActionsSource, /branch_id !== employeeBranchId/);
+  assert.match(teamPageSource, /canApproveCheckout=\{canApproveCheckout\}/);
+  assert.match(teamPageSource, /canApproveCount=\{canApproveCount\}/);
   assert.match(
-    teamMembersActionsSource,
-    /\.eq\("branch_id", employeeBranchId\)/,
+    teamBoardSource,
+    /capabilities\.canApproveCount && row\.countStatus === "submitted"/,
   );
+  assert.doesNotMatch(
+    teamBoardSource,
+    /row\.countStatus === "not_submitted"\s*\)/,
+  );
+});
+
+test("team state is revalidated after its source workflows mutate", () => {
+  for (const source of [
+    clockActionsSource,
+    staffCountActionsSource,
+    leaveActionsSource,
+    countAssignmentActionsSource,
+    countSlipActionsSource,
+  ]) {
+    assert.match(source, /revalidatePath\(`\/br\/\$\{[^}]+\}\/team`\)/);
+  }
 });
 
 test("embedded count assignments does not add an extra team tab wrapper", () => {

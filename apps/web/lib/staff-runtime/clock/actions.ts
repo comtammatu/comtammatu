@@ -6,9 +6,13 @@ import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getVNDateString } from "@comtammatu/shared/time";
+import {
+  addVNDateDays,
+  getVNDateString,
+  getVNMinutesOfDay,
+} from "@comtammatu/shared/time";
 import { getAuthContext, probePermission } from "@/_lib/auth";
-import { resolveDefaultShiftId } from "../_lib/default-shift";
+import { resolveCurrentShiftContext } from "../_lib/default-shift";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 
 const CHECKOUT_APPROVAL_ROLES: readonly StaffRole[] = [
@@ -49,8 +53,8 @@ const attendanceActionSchema = z.object({
 });
 const managerClockOutSchema = attendanceActionSchema.strict();
 
-function getTodayVN(): string {
-  return getVNDateString();
+function getTodayVN(value: Date = new Date()): string {
+  return getVNDateString(value);
 }
 
 type StaffRuntimeContext = NonNullable<
@@ -58,35 +62,38 @@ type StaffRuntimeContext = NonNullable<
 >;
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
-async function resolveCurrentShiftIdForEmployee(
+async function resolveCurrentShiftForEmployee(
   service: ServiceClient,
   ctx: StaffRuntimeContext,
-  today: string,
-): Promise<number | null> {
+  calendarDate: string,
+  nowMinutes: number,
+): Promise<{ shiftId: number; businessDate: string } | null> {
   if (ctx.branchId == null) return null;
+  const previousDate = addVNDateDays(calendarDate, -1);
 
-  const [{ data: branchShifts }, { data: todayRecords }] = await Promise.all([
-    service
-      .from("shifts")
-      .select("id, start_time, end_time")
-      .eq("tenant_id", ctx.claims.tenant_id)
-      .or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`)
-      .eq("is_active", true),
-    service
-      .from("attendance_records")
-      .select("shift_id, check_out")
-      .eq("employee_id", ctx.employeeId)
-      .eq("tenant_id", ctx.claims.tenant_id)
-      .eq("date", today),
-  ]);
+  const [{ data: branchShifts }, { data: attendanceRecords }] =
+    await Promise.all([
+      service
+        .from("shifts")
+        .select("id, start_time, end_time")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`)
+        .eq("is_active", true),
+      service
+        .from("attendance_records")
+        .select("date, shift_id, check_out")
+        .eq("employee_id", ctx.employeeId)
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .gte("date", previousDate)
+        .lte("date", calendarDate),
+    ]);
 
-  const completedShiftIds = new Set(
-    (todayRecords ?? [])
-      .filter((item) => item.check_out)
-      .map((item) => item.shift_id),
+  return resolveCurrentShiftContext(
+    branchShifts ?? [],
+    attendanceRecords ?? [],
+    nowMinutes,
+    calendarDate,
   );
-
-  return resolveDefaultShiftId(branchShifts ?? [], undefined, completedShiftIds);
 }
 
 function revalidateEmployeeWorkPaths(branchId?: number | null) {
@@ -96,6 +103,7 @@ function revalidateEmployeeWorkPaths(branchId?: number | null) {
   revalidatePath(`/br/${branchId}/shift`);
   revalidatePath(`/br/${branchId}/shift/clock`);
   revalidatePath(`/br/${branchId}/shift/checkout-approvals`);
+  revalidatePath(`/br/${branchId}/team`);
 }
 
 function isSupportedPhotoMime(
@@ -223,26 +231,34 @@ export async function clockInWithPhoto(
     };
   }
 
-  const today = getTodayVN();
+  const now = new Date();
+  const calendarDate = getTodayVN(now);
+  const nowMinutes = getVNMinutesOfDay(now);
   const service = createServiceClient();
 
   // Attendance is keyed per shift; completed shifts today should not block the
   // next shift's clock-in.
-  const shiftId = await resolveCurrentShiftIdForEmployee(service, ctx, today);
+  const shiftContext = await resolveCurrentShiftForEmployee(
+    service,
+    ctx,
+    calendarDate,
+    nowMinutes,
+  );
 
-  if (shiftId == null) {
+  if (!shiftContext) {
     return {
       success: false,
       error: "Chi nhánh chưa khai ca làm. Liên hệ quản lý.",
     };
   }
+  const { shiftId, businessDate } = shiftContext;
 
   const { data: existing } = await service
     .from("attendance_records")
     .select("id, check_in, check_out, checkout_requested_at")
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
-    .eq("date", today)
+    .eq("date", businessDate)
     .eq("shift_id", shiftId)
     .maybeSingle();
 
@@ -281,7 +297,7 @@ export async function clockInWithPhoto(
   }
 
   const ext = PHOTO_MIME_TO_EXT[photo.type];
-  const photoPath = `${ctx.claims.tenant_id}/${today}/${ctx.employeeId}/${randomUUID()}.${ext}`;
+  const photoPath = `${ctx.claims.tenant_id}/${calendarDate}/${ctx.employeeId}/${randomUUID()}.${ext}`;
   const bytes = Buffer.from(await photo.arrayBuffer());
 
   const { error: uploadError } = await service.storage
@@ -306,8 +322,8 @@ export async function clockInWithPhoto(
         branch_id: ctx.branchId,
         employee_id: ctx.employeeId,
         shift_id: shiftId,
-        date: today,
-        check_in: new Date().toISOString(),
+        date: businessDate,
+        check_in: now.toISOString(),
         status: "present",
         method: "pwa",
         code_verified: false,
@@ -328,7 +344,7 @@ export async function clockInWithPhoto(
           .select("id, check_in, check_out, checkout_requested_at")
           .eq("employee_id", ctx.employeeId)
           .eq("tenant_id", ctx.claims.tenant_id)
-          .eq("date", today)
+          .eq("date", businessDate)
           .eq("shift_id", shiftId)
           .maybeSingle();
 
@@ -361,7 +377,7 @@ export async function clockInWithPhoto(
       p_employee_id: ctx.employeeId,
       p_branch_id: ctx.branchId,
       p_shift_id: shiftId,
-      p_business_date: today,
+      p_business_date: businessDate,
       p_photo_path: photoPath,
     },
   );
@@ -375,7 +391,7 @@ export async function clockInWithPhoto(
         .select("id, check_in, check_out, checkout_requested_at")
         .eq("employee_id", ctx.employeeId)
         .eq("tenant_id", ctx.claims.tenant_id)
-        .eq("date", today)
+        .eq("date", businessDate)
         .eq("shift_id", shiftId)
         .maybeSingle();
 
@@ -390,7 +406,7 @@ export async function clockInWithPhoto(
     };
   }
 
-  const checkInTime = new Date().toISOString();
+  const checkInTime = now.toISOString();
   revalidateEmployeeWorkPaths(ctx.branchId);
   return {
     success: true,
@@ -491,13 +507,15 @@ export async function requestCheckoutApproval(
   }
 
   const service = createServiceClient();
-  const today = getTodayVN();
-  const currentShiftId = await resolveCurrentShiftIdForEmployee(
+  const now = new Date();
+  const calendarDate = getTodayVN(now);
+  const currentShift = await resolveCurrentShiftForEmployee(
     service,
     ctx,
-    today,
+    calendarDate,
+    getVNMinutesOfDay(now),
   );
-  if (currentShiftId == null) {
+  if (!currentShift) {
     return {
       success: false,
       error: "Chi nhánh chưa khai ca làm. Liên hệ quản lý.",
@@ -511,8 +529,8 @@ export async function requestCheckoutApproval(
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
     .eq("branch_id", ctx.branchId)
-    .eq("date", today)
-    .eq("shift_id", currentShiftId)
+    .eq("date", currentShift.businessDate)
+    .eq("shift_id", currentShift.shiftId)
     .is("check_out", null)
     .maybeSingle();
 
@@ -573,7 +591,6 @@ export async function cancelCheckoutRequest(
     .eq("id", parsed.data.attendanceId)
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
-    .eq("date", getTodayVN())
     .is("check_out", null)
     .is("checkout_approved_at", null)
     .not("checkout_requested_at", "is", null)
@@ -622,8 +639,23 @@ export async function clockOutManagerShift(
     };
   }
 
-  const checkOutTime = new Date().toISOString();
-  const { data: result, error } = await createServiceClient()
+  const now = new Date();
+  const service = createServiceClient();
+  const currentShift = await resolveCurrentShiftForEmployee(
+    service,
+    ctx,
+    getTodayVN(now),
+    getVNMinutesOfDay(now),
+  );
+  if (!currentShift) {
+    return {
+      success: false,
+      error: "Chi nhánh chưa khai ca làm. Liên hệ quản lý.",
+    };
+  }
+
+  const checkOutTime = now.toISOString();
+  const { data: result, error } = await service
     .from("attendance_records")
     .update({
       check_out: checkOutTime,
@@ -640,7 +672,8 @@ export async function clockOutManagerShift(
     .eq("tenant_id", ctx.claims.tenant_id)
     .eq("branch_id", ctx.branchId)
     .eq("id", parsed.data.attendanceId)
-    .eq("date", getTodayVN())
+    .eq("date", currentShift.businessDate)
+    .eq("shift_id", currentShift.shiftId)
     .is("check_out", null)
     .select("id, check_out")
     .maybeSingle();

@@ -159,6 +159,11 @@ test("only the current payment request can unlock the Self-Order completion scre
   assert.match(client, /<PaymentCompletedState/);
   assert.match(client, /mood="waving"/);
   assert.match(client, /paymentCompletedClose/);
+  assert.match(client, /const PAYMENT_COMPLETED_DISPLAY_MS = 10_000/);
+  assert.match(
+    client,
+    /if \(!paymentCompleted\) return;[\s\S]*window\.setTimeout\(\s*resetPaymentCompleted,\s*PAYMENT_COMPLETED_DISPLAY_MS/,
+  );
 
   assert.equal(
     selfOrderPaymentRequestStatusResponseSchema.safeParse({

@@ -109,6 +109,7 @@ const requestIdSchema = z.object({
 function revalidateLeavePaths(branchId: number) {
   revalidatePath("/hr");
   revalidatePath(`/br/${branchId}/shift/leave-approvals`);
+  revalidatePath(`/br/${branchId}/team`);
 }
 
 export const approveLeaveRequest = withAction(

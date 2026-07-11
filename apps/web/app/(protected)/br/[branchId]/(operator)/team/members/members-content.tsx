@@ -1,8 +1,13 @@
 import { AppEmptyState } from "@/components/surface";
-import { loadAuthState } from "@/_lib/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { canAccess } from "@comtammatu/shared/auth";
-import { getVNDateString } from "@comtammatu/shared/time";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import {
+  addVNDateDays,
+  getVNDateString,
+  getVNMinutesOfDay,
+} from "@comtammatu/shared/time";
+import { resolveShiftBusinessDate } from "@lib/staff-runtime/_lib/default-shift";
 import {
   MembersClient,
   type TeamMemberCountStatus,
@@ -17,6 +22,7 @@ import {
 } from "../count-status";
 
 type TodayAttendance = {
+  businessDate: string;
   shiftId: number | null;
   shiftName: string | null;
   checkIn: string | null;
@@ -49,12 +55,17 @@ function resolveTodayStatus(
 }
 
 export async function TeamMembersContent({ branchId }: { branchId: number }) {
-  const { claims } = await loadAuthState();
+  const ctx = await getAuthContextWithPermission(
+    MODULE_ACL.branch_team.allowedRoles,
+    PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
+    branchId,
+  );
+  if (!ctx) return <AppEmptyState mode="no-access" />;
+  const { claims } = ctx;
   const today = getVNDateString();
-  if (
-    !canAccess(claims.user_role, "branch_team") ||
-    (claims.user_role === "branch_manager" && claims.branch_id !== branchId)
-  ) {
+  const previousDate = addVNDateDays(today, -1);
+  const nowMinutes = getVNMinutesOfDay();
+  if (claims.user_role === "branch_manager" && claims.branch_id !== branchId) {
     return <AppEmptyState mode="no-access" />;
   }
 
@@ -62,16 +73,17 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
 
   const profilesResult = await readClient
     .from("profiles")
-    .select(`
+    .select(
+      `
       id,
       full_name,
       phone,
       avatar_url,
-      birth_date,
       branch_id,
       is_active,
       positions(label_vi)
-    `)
+    `,
+    )
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", branchId)
     .or("is_active.is.null,is_active.eq.true")
@@ -91,8 +103,9 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
     );
   }
 
-  const profileIdsForEmployeeLookup =
-    (profilesResult.data ?? []).map((profile) => profile.id);
+  const profileIdsForEmployeeLookup = (profilesResult.data ?? []).map(
+    (profile) => profile.id,
+  );
   const lookupProfileIds =
     profileIdsForEmployeeLookup.length > 0
       ? profileIdsForEmployeeLookup
@@ -107,35 +120,40 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
   ] = await Promise.all([
     readClient
       .from("employees")
-      .select("id, profile_id, employee_code, start_date, is_active")
+      .select("id, profile_id, employee_code, is_active")
       .eq("tenant_id", claims.tenant_id)
       .in("profile_id", lookupProfileIds)
       .order("id"),
     readClient
       .from("attendance_records")
-      .select(`
+      .select(
+        `
         employee_id,
+        date,
         shift_id,
         check_in,
         check_out,
-        shifts(name)
-      `)
+        shifts(name, start_time, end_time)
+      `,
+      )
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", branchId)
-      .eq("date", today)
+      .gte("date", previousDate)
+      .lte("date", today)
       .order("check_in", { ascending: false }),
-      readClient
-        .from("inventory_count_assignments")
-        .select("employee_id, location_id, ingredient_id, shift_id")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("branch_id", branchId)
-        .eq("is_active", true),
-      readClient
-        .from("inventory_count_slips")
-        .select("employee_id, location_id, status, shift_id")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("branch_id", branchId)
-        .eq("count_date", today),
+    readClient
+      .from("inventory_count_assignments")
+      .select("employee_id, location_id, ingredient_id, shift_id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("is_active", true),
+    readClient
+      .from("inventory_count_slips")
+      .select("employee_id, location_id, status, shift_id, count_date")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .gte("count_date", previousDate)
+      .lte("count_date", today),
     readClient
       .from("leave_requests")
       .select("employee_id")
@@ -172,9 +190,30 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
 
   const attendanceByEmployee = new Map<number, TodayAttendance>();
   for (const record of attendanceResult.data ?? []) {
-    if (attendanceByEmployee.has(record.employee_id)) continue;
     const shift = embeddedRecord(record.shifts);
+    const startTime = shift?.start_time;
+    const endTime = shift?.end_time;
+    if (
+      typeof startTime !== "string" ||
+      typeof endTime !== "string" ||
+      record.shift_id == null ||
+      (record.date !==
+        resolveShiftBusinessDate(
+          {
+            id: record.shift_id,
+            start_time: startTime,
+            end_time: endTime,
+          },
+          nowMinutes,
+          today,
+        ) &&
+        !(record.date === previousDate && record.check_out == null))
+    ) {
+      continue;
+    }
+    if (attendanceByEmployee.has(record.employee_id)) continue;
     attendanceByEmployee.set(record.employee_id, {
+      businessDate: record.date,
       shiftId: record.shift_id,
       shiftName: stringField(shift, "name"),
       checkIn: record.check_in,
@@ -182,8 +221,8 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
     });
   }
 
-  const countAssignmentRows =
-    (countAssignmentsResult.data ?? []) as TeamCountAssignmentRow[];
+  const countAssignmentRows = (countAssignmentsResult.data ??
+    []) as TeamCountAssignmentRow[];
   const countSlipRows = (countSlipsResult.data ?? []) as TeamCountSlipRow[];
 
   const leaveEmployeeIds = new Set(
@@ -206,21 +245,17 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
       const employeeId = employee?.id ?? null;
       const attendance =
         employeeId != null
-          ? attendanceByEmployee.get(employeeId) ?? null
+          ? (attendanceByEmployee.get(employeeId) ?? null)
           : null;
       const onApprovedLeave =
         employeeId != null ? leaveEmployeeIds.has(employeeId) : false;
 
       return {
         id: profile.id,
-        employeeId,
-        profileId: profile.id,
         name: profile.full_name || "Chưa cập nhật tên",
         code: employee?.employee_code ?? null,
         phone: profile.phone,
         avatarUrl: profile.avatar_url,
-        birthDate: profile.birth_date,
-        startDate: employee?.start_date ?? null,
         positionLabel: stringField(position, "label_vi"),
         todayStatus: resolveTodayStatus(attendance, onApprovedLeave),
         todayShiftName: attendance?.shiftName ?? null,
@@ -233,13 +268,13 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
             : attendance
               ? (resolveCountStatusForShift(
                   countAssignmentRows,
-                  countSlipRows,
+                  countSlipRows.filter((slip) => slip.count_date === today),
                   employeeId,
                   attendance.shiftId,
                   { includeNeedsChanges: true },
                 ) as TeamMemberCountStatus)
               : (resolveCountStatusFromAnySlip(
-                  countSlipRows,
+                  countSlipRows.filter((slip) => slip.count_date === today),
                   employeeId,
                   true,
                 ) as TeamMemberCountStatus),

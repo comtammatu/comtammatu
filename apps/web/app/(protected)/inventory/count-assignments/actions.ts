@@ -58,6 +58,7 @@ export const setCountAssignments = withAction(
     }
     revalidatePath("/inventory/count-assignments");
     revalidatePath(`/br/${data.branchId}/stock/count-assignments`);
+    revalidatePath(`/br/${data.branchId}/team`);
     return { success: true };
   },
 );

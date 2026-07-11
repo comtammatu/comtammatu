@@ -128,12 +128,12 @@ test("Staff checkout request stays single tap while manager direct checkout conf
 test("checkout request and reject stay on the current branch shift contract", () => {
   assert.match(
     employeeClockActionSource,
-    /async function resolveCurrentShiftIdForEmployee[\s\S]*resolveDefaultShiftId/,
+    /async function resolveCurrentShiftForEmployee[\s\S]*resolveCurrentShiftContext/,
     "Checkout should reuse the same current-shift resolver as clock-in",
   );
   assert.match(
     employeeClockActionSource,
-    /export async function requestCheckoutApproval[\s\S]*\.eq\("branch_id", ctx\.branchId\)[\s\S]*\.eq\("date", today\)[\s\S]*\.eq\("shift_id", currentShiftId\)/,
+    /export async function requestCheckoutApproval[\s\S]*\.eq\("branch_id", ctx\.branchId\)[\s\S]*\.eq\("date", currentShift\.businessDate\)[\s\S]*\.eq\("shift_id", currentShift\.shiftId\)/,
     "Checkout request must not close stale or other-branch attendance rows",
   );
   assert.match(

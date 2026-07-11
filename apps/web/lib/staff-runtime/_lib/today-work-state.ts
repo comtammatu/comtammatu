@@ -1,8 +1,15 @@
 import { getEmployeeContext } from "./staff-runtime-context";
-import { resolveDefaultShiftId } from "./default-shift";
-import { getTodayVN } from "./vn-business-date";
+import {
+  resolveCurrentShiftContext,
+  resolveShiftBusinessDate,
+} from "./default-shift";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import {
+  addVNDateDays,
+  getVNDateString,
+  getVNMinutesOfDay,
+} from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 
 export type TodayWorkStatus =
@@ -148,13 +155,16 @@ function assignmentCellKey(row: {
 }
 
 export async function getTodayWorkState(): Promise<TodayWorkState> {
-  const today = getTodayVN();
+  const now = new Date();
+  const calendarDate = getVNDateString(now);
+  const previousDate = addVNDateDays(calendarDate, -1);
+  const nowMinutes = getVNMinutesOfDay(now);
   const ctx = await getEmployeeContext();
 
   if (!ctx) {
     return {
       status: "missing_profile",
-      today,
+      today: calendarDate,
       branchId: null,
       branchName: null,
       userRole: null,
@@ -188,7 +198,7 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     .or(`branch_id.is.null,branch_id.eq.${ctx.branchId ?? -1}`)
     .eq("is_active", true)
     .order("start_time");
-  const { data: todayRecords } = await supabase
+  const { data: candidateRecords } = await supabase
     .from("attendance_records")
     .select(
       `
@@ -210,34 +220,48 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     )
     .eq("employee_id", employeeId)
     .eq("tenant_id", claims.tenant_id)
-    .eq("date", today)
+    .gte("date", previousDate)
+    .lte("date", calendarDate)
     .order("check_in", { ascending: true });
 
-  const records = todayRecords ?? [];
-  const completedShiftIds = new Set(
-    records
-      .filter((item) => item.check_out)
-      .map((item) => item.shift_id),
-  );
-  const currentShiftId = resolveDefaultShiftId(
+  const shiftContext = resolveCurrentShiftContext(
     activeShifts ?? [],
-    undefined,
-    completedShiftIds,
+    candidateRecords ?? [],
+    nowMinutes,
+    calendarDate,
   );
+  const currentShiftId = shiftContext?.shiftId ?? null;
+  const businessDate = shiftContext?.businessDate ?? calendarDate;
+  const records = (candidateRecords ?? []).filter((item) => {
+    const shift = (activeShifts ?? []).find(
+      (candidate) => candidate.id === item.shift_id,
+    );
+    return (
+      shift != null &&
+      item.date === resolveShiftBusinessDate(shift, nowMinutes, calendarDate)
+    );
+  });
   const record =
-    records.find((item) => item.shift_id === currentShiftId) ??
-    records.find((item) => !item.check_out) ??
-    null;
+    records.find(
+      (item) => item.shift_id === currentShiftId && item.date === businessDate,
+    ) ?? null;
 
-  const todayShifts: TodayShiftEntry[] = (activeShifts ?? []).map((s) => {
-    const rec = records.find((item) => item.shift_id === s.id);
+  const todayShifts: TodayShiftEntry[] = (activeShifts ?? []).map((shift) => {
+    const shiftBusinessDate = resolveShiftBusinessDate(
+      shift,
+      nowMinutes,
+      calendarDate,
+    );
+    const rec = records.find(
+      (item) => item.shift_id === shift.id && item.date === shiftBusinessDate,
+    );
     return {
-      shiftId: s.id,
-      shiftName: s.name,
+      shiftId: shift.id,
+      shiftName: shift.name,
       checkIn: rec?.check_in ?? null,
       checkOut: rec?.check_out ?? null,
       checkoutRequestedAt: rec?.checkout_requested_at ?? null,
-      isCurrent: s.id === currentShiftId,
+      isCurrent: shift.id === currentShiftId,
     };
   });
 
@@ -274,23 +298,25 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
         .order("sort_order")
     : { data: null };
 
-  let checklistItems: TodayChecklistItem[] = (checklistRows ?? []).map((item) => {
-    const taskKind = normalizeTaskKind(
-      (item as { task_kind?: unknown }).task_kind,
-    );
-    return {
-      id: item.id,
-      templateItemId: item.template_item_id ?? null,
-      title: item.title,
-      taskKind,
-      phase: normalizeChecklistPhase(item.phase),
-      doneDefinition: item.done_definition,
-      isRequired: item.is_required,
-      sortOrder: item.sort_order,
-      done: item.is_done,
-      completedAt: item.completed_at,
-    };
-  });
+  let checklistItems: TodayChecklistItem[] = (checklistRows ?? []).map(
+    (item) => {
+      const taskKind = normalizeTaskKind(
+        (item as { task_kind?: unknown }).task_kind,
+      );
+      return {
+        id: item.id,
+        templateItemId: item.template_item_id ?? null,
+        title: item.title,
+        taskKind,
+        phase: normalizeChecklistPhase(item.phase),
+        doneDefinition: item.done_definition,
+        isRequired: item.is_required,
+        sortOrder: item.sort_order,
+        done: item.is_done,
+        completedAt: item.completed_at,
+      };
+    },
+  );
 
   const countBranchId = attendance?.branchId ?? ctx.branchId;
   if (attendance && countBranchId !== null) {
@@ -305,7 +331,9 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     countAssignmentsQuery =
       currentShiftId === null
         ? countAssignmentsQuery.is("shift_id", null)
-        : countAssignmentsQuery.or(`shift_id.is.null,shift_id.eq.${currentShiftId}`);
+        : countAssignmentsQuery.or(
+            `shift_id.is.null,shift_id.eq.${currentShiftId}`,
+          );
     const { data: countAssignments } = await countAssignmentsQuery;
     const shiftSpecificCells = new Set<string>();
     if (currentShiftId !== null) {
@@ -322,7 +350,8 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     }
     const effectiveCountAssignments = (countAssignments ?? []).filter(
       (row) =>
-        row.shift_id !== null || !shiftSpecificCells.has(assignmentCellKey(row)),
+        row.shift_id !== null ||
+        !shiftSpecificCells.has(assignmentCellKey(row)),
     );
     const countLocationIds = [
       ...new Set(effectiveCountAssignments.map((row) => row.location_id)),
@@ -335,7 +364,7 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
         .eq("tenant_id", claims.tenant_id)
         .eq("employee_id", employeeId)
         .eq("branch_id", countBranchId)
-        .eq("count_date", today)
+        .eq("count_date", calendarDate)
         .in("location_id", countLocationIds);
       countSlipsQuery =
         currentShiftId === null
@@ -420,20 +449,18 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     .select("id, date, shift_id")
     .eq("employee_id", employeeId)
     .eq("tenant_id", claims.tenant_id)
-    .lte("date", today)
+    .lte("date", calendarDate)
     .is("check_out", null)
     .not("check_in", "is", null)
     .order("date", { ascending: false });
-  const staleRow = (openRows ?? []).find(
-    (item) => item.date < today || item.shift_id !== currentShiftId,
-  );
+  const staleRow = (openRows ?? []).find((item) => item.id !== attendance?.id);
   const staleOpenShift = staleRow
     ? { id: staleRow.id, date: staleRow.date }
     : null;
 
   return {
     status,
-    today,
+    today: businessDate,
     branchId: attendance?.branchId ?? ctx.branchId,
     branchName: attendance?.branchName ?? ctx.branchName,
     userRole: claims.user_role,

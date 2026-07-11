@@ -50,6 +50,38 @@ test("Má Tư DS brand asset set includes mascot metadata and symbols", () => {
   assert.match(brandSource, /export function BrandMascot/);
 });
 
+test("shared Drawer stays bottom-anchored across mobile viewport changes", () => {
+  const drawerSource = read("packages/ui/src/components/drawer.tsx");
+  const posSource = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
+  );
+  const archivedOrdersSource = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx",
+  );
+  const checkoutApprovalsSource = read(
+    "apps/web/lib/staff-runtime/checkout-approvals/checkout-approvals-client.tsx",
+  );
+
+  assert.match(drawerSource, /direction = "bottom"/);
+  assert.match(drawerSource, /fixed = true/);
+  assert.match(drawerSource, /data-\[vaul-drawer-direction=bottom\]:!bottom-0/);
+  assert.match(
+    drawerSource,
+    /data-\[vaul-drawer-direction=bottom\]:before:bottom-0/,
+  );
+  assert.match(drawerSource, /overscroll-contain/);
+  assert.match(drawerSource, /motion-reduce:animate-none/);
+  assert.doesNotMatch(posSource, /data-\[vaul-drawer-direction=bottom\]:top-0/);
+  assert.doesNotMatch(
+    archivedOrdersSource,
+    /data-\[vaul-drawer-direction=bottom\]:top-0/,
+  );
+  assert.match(
+    checkoutApprovalsSource,
+    /setRejectTarget\(detailsTarget\);\s*setDetailsTarget\(null\);/,
+  );
+});
+
 test("pagination items keep stable ellipsis windows", () => {
   assert.deepEqual(getPaginationItems(1, 4), [1, 2, 3, 4]);
   assert.deepEqual(getPaginationItems(5, 10), [

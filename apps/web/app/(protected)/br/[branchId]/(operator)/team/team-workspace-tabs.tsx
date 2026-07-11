@@ -104,7 +104,7 @@ export function TeamWorkspaceTabs({
           className="pointer-events-none absolute inset-y-1 left-1 right-1 grid grid-cols-3"
         >
           <span
-            className="rounded-md bg-background transition-transform duration-150"
+            className="rounded-md bg-background transition-transform duration-150 motion-reduce:transition-none"
             style={{ transform: `translateX(${activeIndex * 100}%)` }}
           />
         </span>
@@ -129,7 +129,7 @@ export function TeamWorkspaceTabs({
         key={value}
         value={value}
         className={cn(
-          "mt-0 flex min-w-0 flex-col gap-3 data-open:duration-150",
+          "mt-0 flex min-w-0 flex-col gap-3 data-open:duration-150 motion-reduce:transform-none motion-reduce:animate-none",
           direction === "forward"
             ? "data-open:slide-in-from-right-2"
             : "data-open:slide-in-from-left-2",
