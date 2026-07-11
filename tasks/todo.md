@@ -332,6 +332,44 @@ Contract: `docs/spec/self-order-guest-ui.md`. Owner decision: `docs/plan/decisio
 § D075. The POS order is the only seating lifecycle; `self_order_sessions`,
 `self_order_batches`, and `self_order_session_devices` are deleted.
 
+### Same-device VietQR handoff T3 contract
+
+Skill plan: repo rules = engineering + skills + database + UI + workflow;
+external skills = Ponytail + Next.js best practices + Supabase; runtime tools =
+CodeGraph + production SELECT-only check + VietQR official docs + focused tests;
+skipped = DB writes and private bank deeplinks because the payment facts are
+already correct and undocumented private bank schemes are not a stable contract.
+
+- **PM:** Replace the misleading bare app jump with a same-phone flow that hands
+  off the exact QR image. Done means the guest can share it into an installed
+  bank app, use a documented autofill deeplink, or save it as fallback.
+- **BA:** The stored QR payload, amount, payment code, bank snapshot, and expiry
+  remain unchanged. Saving the image never marks payment complete; SePay remains
+  the payment source of truth.
+- **Senior Dev:** Reuse `QrCodeImage`'s existing rendered data URL and native
+  file share/download actions. Native file share hands the exact generated QR
+  image to installed apps; documented VietQR URLs remain only for the four bank
+  apps whose parameter autofill support is published.
+- **QA/QC:** Keep QR render/retry behavior, assert exact PNG share, download,
+  documented autofill parameters, and cancellation/error fallback; then run the
+  focused Self-Order tests and full gates.
+
+Agreements: this is a client-only recovery-path correction, not a payment-state
+or schema change. Resolved conflict: after owner clarification, documented
+autofill deeplinks stay available for ACB, BIDV, VietinBank, and OCB; native PNG
+share follows Zalo's QR-scan handoff for MB and other share targets; saving the
+QR remains the universal fallback. Unified acceptance: supported deeplinks
+receive account, amount, content, and account name; every guest can hand off or
+save the exact active QR.
+
+Attestation: native share and download use the exact `QrCodeImage` source; the
+four documented deeplinks carry account, bank, amount, payment content, and
+account name. Payment state, SePay confirmation, and bank snapshots are
+untouched. The BA rules map to `qr-code-image.tsx`, `bank-app-link.ts`,
+`payment-panel.tsx`, and `self-order.ts`; 75 focused tests plus typecheck, lint,
+and build are green. A physical-phone handoff into MB remains unverified because
+the local environment has no active-payment fixture or installed bank app.
+
 Sequencing: S1 → S2 → S3 → S4 → S5 → S6 → S7. Each slice is one commit with the
 full gate run fresh (`corepack pnpm typecheck && corepack pnpm lint && corepack
 pnpm test`); a turbo-cached green is not evidence. Capture the exit code

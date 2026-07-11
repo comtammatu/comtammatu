@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   Banknote as IconCash,
   Landmark as IconBank,
@@ -17,11 +17,6 @@ import { Label } from "@comtammatu/ui/components/label";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@comtammatu/ui/components/avatar";
-import {
   Drawer,
   DrawerContent,
   DrawerDescription,
@@ -32,12 +27,7 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppSection } from "@/components/surface";
 import { QrCodeImage } from "@/components/qr-code-image";
-import {
-  buildVietQrBankAppUrl,
-  parseVietQrBankApps,
-  VIETQR_BANK_APP_CATALOG_URL,
-  type VietQrBankApp,
-} from "@lib/self-order/bank-app-link";
+import { buildVietQrBankAppUrl } from "@lib/self-order/bank-app-link";
 import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
 
 export interface GuestPaymentRequestState {
@@ -89,7 +79,14 @@ export interface PaymentPanelProps {
   onRefreshPayment: () => void;
 }
 
-function BankAppLauncher({
+const AUTOFILL_BANK_APPS = [
+  { id: "acb", name: "ACB ONE" },
+  { id: "bidv", name: "BIDV SmartBanking" },
+  { id: "icb", name: "VietinBank iPay" },
+  { id: "ocb", name: "OCB OMNI" },
+] as const;
+
+function BankAppAutofillLauncher({
   accountNo,
   bankCode,
   accountName,
@@ -102,42 +99,10 @@ function BankAppLauncher({
   amount: number;
   paymentCode: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const [apps, setApps] = useState<VietQrBankApp[] | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [loadAttempt, setLoadAttempt] = useState(0);
-
-  useEffect(() => {
-    if (!open || apps !== null) return;
-    const controller = new AbortController();
-    setLoadFailed(false);
-
-    void fetch(VIETQR_BANK_APP_CATALOG_URL, {
-      cache: "force-cache",
-      signal: controller.signal,
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error("bank_app_catalog_unavailable");
-        return response.json() as Promise<unknown>;
-      })
-      .then((payload) => {
-        const parsedApps = parseVietQrBankApps(payload);
-        if (!parsedApps.length) throw new Error("bank_app_catalog_invalid");
-        setApps(parsedApps);
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError")
-          return;
-        setLoadFailed(true);
-      });
-
-    return () => controller.abort();
-  }, [apps, loadAttempt, open]);
-
   return (
-    <Drawer open={open} onOpenChange={setOpen}>
+    <Drawer>
       <DrawerTrigger asChild>
-        <Button type="button" size="touch" className="w-full md:hidden">
+        <Button type="button" size="touch" className="w-full">
           <IconBank data-icon="inline-start" />
           {SELF_ORDER_VI.openBankApp}
         </Button>
@@ -149,63 +114,29 @@ function BankAppLauncher({
             {SELF_ORDER_VI.chooseBankAppDescription}
           </DrawerDescription>
         </DrawerHeader>
-        <div className="mx-4 mb-4 min-h-0 flex-1 overflow-y-auto">
-          {apps ? (
-            <ul className="grid gap-2">
-              {apps.map((app) => {
-                const href = buildVietQrBankAppUrl({
-                  appId: app.id,
-                  accountNo,
-                  bankCode,
-                  amount,
-                  paymentCode,
-                  accountName,
-                });
-                if (!href) return null;
-                return (
-                  <li key={app.id}>
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="touch"
-                      className="w-full justify-start"
-                    >
-                      <a href={href}>
-                        <Avatar aria-hidden="true">
-                          {app.logoUrl ? (
-                            <AvatarImage src={app.logoUrl} alt="" />
-                          ) : null}
-                          <AvatarFallback>
-                            {app.name.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        {app.name}
-                      </a>
-                    </Button>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : loadFailed ? (
-            <div className="my-6 flex flex-col items-center gap-3 text-center">
-              <p className="text-sm text-muted-foreground">
-                {SELF_ORDER_VI.bankAppsLoadFailed}
-              </p>
+        <div className="mx-4 mb-4 grid gap-2">
+          {AUTOFILL_BANK_APPS.map((app) => {
+            const href = buildVietQrBankAppUrl({
+              appId: app.id,
+              accountNo,
+              bankCode,
+              amount,
+              paymentCode,
+              accountName,
+            });
+            if (!href) return null;
+            return (
               <Button
-                type="button"
+                key={app.id}
+                asChild
                 variant="outline"
                 size="touch"
-                onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+                className="w-full justify-start"
               >
-                {SELF_ORDER_VI.retryRefresh}
+                <a href={href}>{app.name}</a>
               </Button>
-            </div>
-          ) : (
-            <div className="my-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Spinner className="size-4" />
-              {SELF_ORDER_VI.bankAppsLoading}
-            </div>
-          )}
+            );
+          })}
         </div>
       </DrawerContent>
     </Drawer>
@@ -456,7 +387,14 @@ export function PaymentPanel({
                     className="size-64 max-w-full"
                     errorMessage={SELF_ORDER_VI.qrRenderFailed}
                     retryLabel={SELF_ORDER_VI.retryQr}
+                    shareLabel={SELF_ORDER_VI.shareVietQr}
+                    shareFailedMessage={SELF_ORDER_VI.shareVietQrFailed}
+                    downloadLabel={SELF_ORDER_VI.saveVietQr}
+                    downloadName="ma-qr-thanh-toan-ma-tu.png"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    {SELF_ORDER_VI.saveVietQrHint}
+                  </p>
                   <div className="flex flex-col gap-1 text-sm">
                     <p className="font-mono font-bold tabular-nums">
                       {formatVND(activePaymentRequest.amount)}
@@ -479,7 +417,7 @@ export function PaymentPanel({
                   {activePaymentRequest.accountNo &&
                   activePaymentRequest.bankCode &&
                   activePaymentRequest.paymentCode ? (
-                    <BankAppLauncher
+                    <BankAppAutofillLauncher
                       accountNo={activePaymentRequest.accountNo}
                       bankCode={activePaymentRequest.bankCode}
                       accountName={activePaymentRequest.accountName}

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { formatVND } from "@comtammatu/shared/format";
 import {
   addOrderItemToTestOrder,
   bumpTicketToReady,
@@ -47,10 +48,13 @@ test.describe("Cash payment -> POS close", () => {
       await expect(billButton).toBeVisible({ timeout: 30_000 });
       await billButton.click();
 
-      // Bill sheet opens with cash pre-selected for cashiers; fill + confirm.
+      // Bill sheet opens with cash pre-selected; choose the exact-total tender.
       await page
-        .getByTestId("bill-cash-received")
-        .fill(String(Math.round(testOrder.totalAmount)));
+        .getByRole("button", {
+          name: formatVND(Math.round(testOrder.totalAmount)),
+          exact: true,
+        })
+        .click();
       await page.getByTestId("bill-confirm-cash").click();
 
       await expect
@@ -138,10 +142,13 @@ test.describe("Cash payment -> POS close", () => {
 
       // Order now has 2 items × unitPrice (recomputed by helper).
       const total = testOrder.totalAmount * 2;
-      // Bill sheet opens with cash pre-selected for cashiers; fill + confirm.
+      // Bill sheet opens with cash pre-selected; choose the exact-total tender.
       await page
-        .getByTestId("bill-cash-received")
-        .fill(String(Math.round(total)));
+        .getByRole("button", {
+          name: formatVND(Math.round(total)),
+          exact: true,
+        })
+        .click();
       await page.getByTestId("bill-confirm-cash").click();
 
       await expect
