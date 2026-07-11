@@ -44,7 +44,7 @@ setup("authenticate as test manager", async ({ page }) => {
   const { error: profileErr } = await supabase
     .from("profiles")
     .update({ branch_id: 3 })
-    .eq("id", "a000000a-0000-4000-8000-00000000000a");
+    .eq("id", "a0000003-0000-4000-8000-000000000003");
   if (profileErr) {
     throw new Error(`Failed to seed manager profile branch_id: ${profileErr.message}`);
   }

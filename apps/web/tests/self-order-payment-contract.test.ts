@@ -113,6 +113,7 @@ test("Self-Order permits payment while KDS is still preparing", () => {
     paymentTimingMigration,
     /self_order_payment_ready_guard_not_removed/,
   );
+  assert.match(paymentTimingMigration, /chr\(10\)/);
   assert.match(paymentTimingMigration, /EXECUTE v_definition/);
   assert.doesNotMatch(paymentPanel, /canCreateVietQr/);
   assert.doesNotMatch(paymentPanel, /paymentNotReady/);
