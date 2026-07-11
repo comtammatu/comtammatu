@@ -61,6 +61,9 @@ Complete all items before opening the branch for the day.
   > giữa các chi nhánh. Token được tạo/xoay/thu hồi bằng
   > `pnpm --filter @comtammatu/print-agent presence:provision -- ...`; không
   > thao tác trực tiếp trên Supabase Dashboard.
+  > Chạy service bằng Windows account riêng, giới hạn NTFS ACL của `.env` cho
+  > account đó + Administrators, không backup/sync file secret ra cloud drive,
+  > và rotate service-role key ngay nếu máy hoặc file có dấu hiệu lộ.
 - [ ] Run `apps\print-agent\scripts\install-service.ps1` as Administrator
 - [ ] `Get-Service ComTamMaTu-PrintAgent` → `Running`
 - [ ] `C:\ProgramData\ComTamMaTu\print-agent\logs\agent.out.log` shows
@@ -173,20 +176,10 @@ Should not happen because of `UNIQUE(idempotency_key)`. If it does:
 ### 4.3 When printers come back
 
 The agent's **pending drain** (every 60s) will flush the backlog automatically.
-If the backlog is more than ~30 tickets and would swamp the kitchen, a manager
-can bulk-cancel stale jobs:
-
-```sql
--- run via Supabase SQL editor, branch-scoped
-UPDATE public.print_jobs
-   SET status = 'cancelled', last_error = 'bulk cancel after outage'
- WHERE branch_id = <id>
-   AND status = 'pending'
-   AND created_at < now() - INTERVAL '15 minutes';
-```
-
-Open `/admin/settings/printers/jobs` and confirm the pending count drops to the
-expected live backlog only.
+If the backlog would swamp the kitchen, keep manual ticket mode and escalate.
+Do not bulk-update `print_jobs` from SQL Editor. Bulk cancellation requires a
+branch-scoped, audited product/RPC action or a separately approved owner incident
+repair with preview count and post-check.
 
 ### 4.4 Post-incident
 

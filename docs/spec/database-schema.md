@@ -3,26 +3,16 @@
 This file is the current orientation point for database schema work. It is not
 a hand-maintained per-column schema dump.
 
-## Current Snapshot
-
-Generated from the current checkout on 2026-07-02 with:
+For a disposable checkout snapshot, run:
 
 ```bash
 node scripts/project-snapshot.mjs
 ```
 
-| Area                                        | Count |
-| ------------------------------------------- | ----: |
-| Public tables in generated types            |   117 |
-| Public views in generated types             |     8 |
-| Public RPC/SQL functions in generated types |   271 |
-| Public enums in generated types             |     0 |
-| Active SQL migration files                  |     2 |
+Do not persist the generated counts in docs. Use the source ladder below instead
+of maintaining schema dumps.
 
-The early-2026 hand-written table-by-table reference has been removed. Use the
-source ladder below instead of resurrecting stale schema dumps.
-
-## Migration layout (baseline-first, re-baselined — 2026-07-02)
+## Migration layout (baseline-first)
 
 The pre-baseline incremental chain could not replay from an empty DB (ordering bug at
 `20260508055046`), so it was consolidated:
@@ -30,20 +20,18 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
 - `supabase/migrations/00000000000000_baseline.sql` — canonical public+private
   schema install; validated to replay on an empty DB.
 - `supabase/migrations/<timestamp>_*.sql` after it — forward migrations on the baseline.
-- `supabase/migration-archive/` — the 543 historical and squashed forward
-  migrations (retained, NOT applied).
+- `supabase/migration-archive/` — historical and squashed forward migrations
+  retained for archaeology, not replayed by the active chain.
 - `supabase/migrations/20260627140000_fold_managed_surfaces.sql` — extensions /
   storage buckets + RLS policies / realtime publication / cron jobs (excluded from
   the baseline schema dump, folded back in here). It is a forward migration in the
   chain, so it is applied automatically after the baseline — not a separate manual
   step (the storage-policy section needs `storage.objects` owner, which the migration
   role has).
-- `supabase/migrations/20260702094500_branch_stock_operator_actions.sql` —
-  branch-stock operator RPC and permission backfill not yet represented by prod.
-- Production keeps its applied migration history; the baseline is the fresh/dev
-  install path. There is still no dev/test Supabase project, so future
-  verification uses prod SELECT-only evidence plus local baseline replay unless
-  the owner provisions a dev ref. Fresh-env install notes live in
+- Production keeps its applied migration history; the baseline is the fresh-env
+  install path. There is no persistent dev/test Supabase project, so non-prod
+  verification uses an on-demand Preview Branch or local baseline replay.
+  Production evidence stays within `database.md` read rights. Fresh-env notes live in
   `supabase/migrations/README.md`.
 
 ## Source Ladder
@@ -52,8 +40,8 @@ When database facts disagree, trust the higher source:
 
 | Tier | Source                                          | Use For                                                               |
 | ---- | ----------------------------------------------- | --------------------------------------------------------------------- |
-| 1    | `packages/database/src/types/database.types.ts` | Shape currently usable by app code after `pnpm db:types`              |
-| 2    | Applied dev/prod Supabase state                 | RLS, defaults, constraints, extensions, and real runtime behavior     |
+| 1    | `packages/database/src/types/database.types.ts` | Shape currently usable by app code after `corepack pnpm db:types`     |
+| 2    | Applied Preview/production Supabase state       | RLS, defaults, constraints, extensions, and real runtime behavior     |
 | 3    | `supabase/migrations/*.sql`                     | Authored schema changes; file existence does not prove applied status |
 | 4    | `docs/modules/database.md` and module docs      | Domain grouping, rationale, and implementation guidance               |
 
@@ -82,10 +70,11 @@ Use these labels exactly when describing schema state:
 - **planned** — no SQL file exists yet.
 - **drafted** — SQL file exists in `supabase/migrations/`, but apply status is
   not proven.
-- **applied to dev** — migration was pushed to the dev/test Supabase project.
-- **types generated** — `pnpm db:types` regenerated generated types from the
+- **preview-applied** — migration was applied to an on-demand Preview Branch.
+- **types generated** — `corepack pnpm db:types` regenerated types from the
   schema used by app code.
 - **UI wired** — Server Actions, pages, or route handlers call the new shape.
-- **prod-applied** — owner manually applied the migration to production.
+- **prod-applied** — migration was applied to production under the explicit
+  rights in `docs/agent/rules/database.md`.
 
 Never infer `prod-applied` from a migration filename.

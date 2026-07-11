@@ -1,174 +1,72 @@
 # Agent Workflow And Verification
 
-Use this file for task workflow, review depth, skip conditions, verification, and completion gates.
+Use this file for review depth, debate artifacts, verification, and completion.
 
 ## Review Depth — Tier By Risk
 
-Pick review depth by the task's blast radius, not by file count. Higher tiers ADD steps; they do not replace lower ones.
+| Tier                 | Triggers                                                                                                                                                                                                     | Required review                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **T3 — Full debate** | Auth/RLS, money, multi-row correctness, every schema migration, production authorization/backfill, `SECURITY DEFINER`, critical constraints, guard/review-governance changes, or silent corruption/leak risk | Write all four lenses before implementation and synthesize agreements, conflicts, scope, implementation, and tests. Independent reviewers are optional evidence. |
+| **T2 — Self-review** | New feature, non-trivial fix, public-boundary refactor, route-resolution change, multi-surface UI change, notification contract, or ordinary `docs/agent/rules/*` policy changes                             | Write a condensed four-lens review before coding.                                                                                                                |
+| **T1 — Skip**        | Editorial/typo-only change under three lines, or lockfile-only dependency refresh with no API or policy effect                                                                                               | Verify the diff and state the skip reason.                                                                                                                       |
 
-| Tier                           | Triggers                                                                                                                                                                                                                 | Required review                                                                                                                                                                           |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **T3 — Full debate**           | Auth/RLS, money (payments/refunds/invoices/journal), multi-row writes, new RPC with `SECURITY DEFINER`, schema migration touching constraints, production data backfill, anything that can silently corrupt or leak data | **All 4 perspectives below, written out** before implementation. Spawn 4 parallel subagents (one per role) via the Agent tool, OR write a debate transcript in the PR/task note yourself. |
-| **T2 — Self-review checklist** | New feature, non-trivial bug fix, refactor that changes a public boundary, UI surface change beyond a single component, route-resolution change                                                                          | **All 4 perspectives below, condensed**. Write 2–4 lines per role in the task notes or PR body before coding. Subagents optional.                                                         |
-| **T1 — Skip**                  | Typo fixes under 3 changed lines, doc-only changes, dependency version bumps with no API change                                                                                                                          | Verify the diff and state why the debate was skipped in the commit/PR body.                                                                                                               |
+T1 never applies when a change alters policy, authority, behavior, production
+rights, security, or source-of-truth routing. When uncertain, choose higher.
 
-When in doubt between tiers, pick the higher one.
+`scripts/check-review-tier.mjs` computes a PR-wide floor from the merge-base to
+HEAD. CI runs it with `REVIEW_TIER_STRICT=1`; missing or under-floor T2/T3
+declarations fail. It scans the PR commit range plus `REVIEW_TIER`; the highest
+bare `T1`/`T2`/`T3` token wins. Local dirty-tree output can include unrelated
+work and must not be presented as task attribution.
 
-A deterministic floor backs this up: `scripts/check-review-tier.mjs` (`corepack pnpm lint:review-tier`) independently classifies the diff by blast radius — migration paths, a `SECURITY DEFINER` token, auth/RLS files, money paths — and flags a declared tier below that floor. CI runs it fail-closed (`REVIEW_TIER_STRICT=1`); locally it is advisory unless the flag is set. It matches the declared tier as a bare `T1`/`T2`/`T3` token in any commit body between the merge-base and HEAD (plus a `REVIEW_TIER` env variable as an additional source — the highest tier found anywhere wins), so keep the tier token in the `Verification:` note that `engineering.md` requires. It never replaces judgment: it only catches under-classification (a money/RLS/migration diff self-assigned too low), the dominant tiering failure.
+## Skill Plan
 
-## Skill Plan Gate
+T3 tasks must state the short skill plan from `skills.md` before coding. T2
+should state it when routing is not obvious. T1 states only the skip reason.
 
-T3 tasks MUST state a short skill plan before coding — it feeds the
-four-perspective debate. T2 tasks SHOULD; T1 may skip with the skip reason
-stated. The template, routing, and where the plan lives are owned by
-`docs/agent/rules/skills.md` → Skill Plan Gate.
+## Four Lenses
 
-## The Four Perspectives
+| Lens           | Questions                                                                        |
+| -------------- | -------------------------------------------------------------------------------- |
+| **PM**         | Should this exist? What is the smallest accepted outcome?                        |
+| **BA**         | What rules, states, boundaries, and edge cases must hold?                        |
+| **Senior Dev** | Where is the root boundary? What is the smallest coherent diff and blast radius? |
+| **QA/QC**      | What proves it works, what regresses, and what recovery path remains?            |
 
-These are the four questions every change must answer. T3 spawns one agent per role; T2 answers them inline.
+Lenses may become Security, Data, or Ops when that better matches the T3 risk,
+but keep four perspectives and one synthesis. Agent-to-agent text is English;
+owner-facing synthesis is Vietnamese.
 
-| Role           | Owns                                                         | Lead questions                                                                       |
-| -------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| **PM**         | Scope, priority, acceptance criteria                         | Should we build this? What is the MVP? What does "done" mean?                        |
-| **BA**         | Requirements, business rules, edge cases, data flow          | What are the rules? What can go wrong? What state transitions exist?                 |
-| **Senior Dev** | Architecture, implementation plan, tech debt, affected files | How should we build this? Does it fit the existing system? What is the blast radius? |
-| **QA/QC**      | Test strategy, regression risk, quality gates                | How do we know it works? What could break? Which existing flows must still pass?     |
+When using reviewers, give each a bounded question, relevant files, applicable
+rules, and requested evidence. A second runtime is optional evidence, never
+authority. Handoff and arbitration live in `orchestration.md`.
 
-The four lenses default to PM / BA / Senior Dev / QA, but their *identities* may flex to the blast radius that triggered T3: a migration/RLS change wants a Security and a Data lens, a deploy/ops change an Ops lens, a money change a Data and a Product lens. Keep the count and the fan-in synthesis; pick the lenses that match why T3 fired.
+## Cross-Boundary Coherence
 
-### Cross-Boundary Coherence (QA/QC)
+For every boundary touched, compare both sides:
 
-The QA lens compares *both sides of a boundary the diff touches*, not each side in isolation — an existence check passes while the contract silently diverges. The recurring contract-mismatch classes in this repo:
+- Server Action/route result ↔ caller/hook type.
+- DB column/RPC field ↔ mapping ↔ generated type.
+- Route file ↔ every link, redirect, and navigation target.
+- Status transition contract ↔ every mutation site.
 
-| Boundary                                   | What drifts                                                                                       | Read both sides                                                  |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| Server Action / route return shape ↔ caller hook | A generic cast or `any` compiles clean while the runtime shape diverges                     | The action's returned object ↔ the consumer's expected type     |
-| DB column ↔ API field ↔ TS type            | snake_case → camelCase → type drift (same class as the `packages/print-render` SQL↔TS↔EMV mirror) | Migration/column ↔ select/RPC mapping ↔ generated type          |
-| Route file path ↔ navigation               | `href`/`router.push`/`redirect` to a path that stripped `(group)` segments                       | Page file path ↔ every link/redirect target                     |
-| Status-transition map ↔ mutation sites     | A new status that no `.update({ status })` call site emits or accepts                             | The allowed-transition map ↔ every status write                 |
-
-Scope this to the boundaries the diff actually touches, and to the classes the deterministic `scripts/check-*.mjs` guards do not yet cover. When a class recurs, promote it to a guard per the learning loop below.
-
-## Running A T3 Full Debate
-
-Write subagent prompts and the debate transcript in English; deliver the owner-facing synthesis in Vietnamese (see `AGENTS.md` → Communication Protocol).
-
-Use the Agent tool (or Codex CLI / Claude SDK subagents) to spawn the four roles **in parallel** with the task description plus this context:
-
-- Current task description
-- Relevant files from the codebase
-- `AGENTS.md` constraints
-- Skill plan from `docs/agent/rules/skills.md`
-- `tasks/regressions.md` rules (relevant rows only — full file is large)
-- Any related docs from `docs/`
-
-Each agent returns a focused report:
-
-- **PM:** scope decision, acceptance criteria, priority
-- **BA:** business rules, edge cases, data-flow analysis, requirement gaps
-- **Senior Dev:** architecture fit, implementation approach, risk assessment, affected files
-- **QA/QC:** test plan, regression risks, quality gates, verification steps
-
-After all four return, synthesize:
-
-1. List agreements.
-2. List conflicts and resolve each explicitly.
-3. Produce a unified task contract (scope + business rules + implementation plan + test plan).
-
-For T3 changes, attach the synthesized contract to the PR description or task
-note. Do not create a dated `docs/worklog/` file unless the note is deleted,
-parked as an ADR, or promoted before closeout.
-
-## Running A T2 Self-Review
-
-Before coding, write a short block in the task notes / PR body — the skill-plan
-line (template owned by `docs/agent/rules/skills.md` → Skill Plan Gate) above the
-four perspectives:
-
-```
-Skill plan: <per skills.md → Skill Plan Gate>
-PM:   scope = …, acceptance = …, priority = …
-BA:   rules = …, edge cases = …, data flow = …
-Dev:  approach = …, files = …, risk = …
-QA:   tests = …, regressions to recheck = …
-```
-
-This is for the next reader (future you, the owner, a reviewer) — make it stand on its own.
-
-## Operating Tech Specs
-
-Use this template for T2/T3 implementation slices when a change needs a concrete
-contract before coding. Keep it in the PR body or active task note. Do not create
-a `docs/tech-specs/` tree: a tech spec is transient until each durable fact is
-promoted into its owning source-of-truth doc, parked as an ADR, or deleted.
-
-```md
-# Tech Spec: <slice name>
-
-## Decision
-Build:
-Review tier:
-Owner outcome:
-
-## Operating Slice
-Workflow:
-Mission check:
-Event chain: source event -> state/posting -> exception -> correction/reversal -> confidence -> owner action
-
-## Current Truth
-Code:
-DB/RPC:
-Docs:
-
-## Product Contract
-Roles:
-Routes:
-States:
-Out of scope:
-
-## Data Contract
-Source of truth:
-Writes:
-RLS/ACL:
-Confidence:
-Correction/reversal:
-
-## UI/Workflow Contract
-Primary action:
-States:
-Mobile/touch:
-Design system:
-
-## Failure And Recovery
-Failure paths:
-Recovery:
-Unsafe states blocked:
-
-## Verification
-Commands:
-Runtime smoke:
-Evidence:
-
-## Promotion Map
-Docs to update:
-ADR needed:
-Runbook needed:
-```
+Scope this to the changed boundary. When the same deterministic failure recurs,
+add or extend one guard instead of adding more prose.
 
 ## Verification
 
-Before marking implementation work complete:
+Before marking implementation complete:
 
-1. **Hard gate.** `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` MUST pass. For release-grade slices, prefer `corepack pnpm verify` (adds deps audit, baseline hygiene, and tests). This and green CI (step 6) are the only machine-enforced gates here.
-2. **CodeGraph freshness.** Re-index per `AGENTS.md` → CodeGraph after the final source/SQL/generated-type changes and before closeout (for database changes, after `corepack pnpm db:types`). N/A for doc-only changes.
-3. **Cross-boundary coherence.** When the change spans more than one module/shell or crosses an API ↔ hook ↔ nav boundary (e.g. the finance/hr/inventory/menu/orders shells), cross-compare response shape ↔ consumer type and route ↔ link at each pair's completion rather than batching the whole slice — generic casts and `any` compile clean. N/A for T1 or single-component changes.
-4. **Self-attestation (advisory, not CI-gated).** Contract-vs-diff is irreducibly semantic; a reviewer subagent judging "are the business rules implemented?" is itself a non-deterministic call, not a gate. The four-perspective debate is a thinking tool — its only enforcement is that the artifact below is present for owner review:
-   - T3: paste a 3-line attestation into the PR/task contract — test-plan items covered vs out-of-scope-with-reason; each BA rule mapped to the implementing file/line; known out-of-scope gaps.
-   - T2: a 1-line attestation that the diff matches the self-review block.
-   - T1: state why the debate was skipped in the commit body.
-5. **Tier floor.** Run `corepack pnpm lint:review-tier`; semantics owned by Review Depth above.
-6. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every PR and on push to `main` — a push to a working branch alone triggers nothing. Landed work is complete only with green CI.
-7. Learning-loop hygiene (T2/T3) — one pass before closing, so the loop stays bounded:
-   - A recurring failure surfaced → add a `tasks/regressions.md` rule. If its detection is a deterministic code pattern, add a guard row to `scripts/check-regression-guards.mjs` instead of relying on prose — an enforced rule costs zero context.
-   - A transient task note has landed → promote any durable rule to its canonical doc (`docs/agent/rules/`, a module/ref doc), park any owner-kept future option as an ADR with a revisit trigger, and delete the staging note; git history is the archive.
-   - State the learning (or "none") in the commit/PR body.
+1. Run `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build`.
+   For release-grade or broad slices, run `corepack pnpm verify`.
+2. Run targeted tests for the changed behavior and inspect the task-scoped diff.
+3. Re-index CodeGraph after source, SQL, or generated-type changes.
+4. Run `corepack pnpm lint:review-tier` and record the declared tier with the
+   actual verification in the commit/PR/task summary.
+5. For T3, attest which acceptance/test items passed, which are intentionally
+   out of scope, and where each material rule is implemented.
+6. CI must be green before calling landed work complete. Keep `written`,
+   `review-clean`, `merged`, `applied to production`, and `deployed` distinct.
+7. Promote only durable outcomes: recurring deterministic failure → guard/test;
+   incident lesson → targeted regression; stable contract → owning doc; transient
+   debate/plan → PR or task history.

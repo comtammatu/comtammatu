@@ -36,7 +36,7 @@ const SCAN_ROOTS = [
   "docs/modules/auth.md",
   "docs/modules/database.md",
   "docs/ref/glossary.md",
-  "docs/ref/inventory-rbac-matrix.md",
+  "docs/ref/inventory.md",
   "tasks/todo.md",
 ] as const;
 
@@ -128,7 +128,7 @@ test("auth docs and comments do not use release-version labels for the contract"
     "docs/modules/auth.md",
     "docs/modules/database.md",
     "docs/ref/glossary.md",
-    "docs/ref/inventory-rbac-matrix.md",
+    "docs/ref/inventory.md",
     "tasks/todo.md",
   ];
   const forbiddenPhrases = [

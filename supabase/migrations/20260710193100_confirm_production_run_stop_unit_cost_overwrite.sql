@@ -1,6 +1,6 @@
 -- Stop confirm_production_run from overwriting tenant-wide ingredients.unit_cost.
 -- WAC lives on stock_levels.avg_unit_cost (branch+location); the catalog column
--- must not be last-batch-wins. Related: ADR 0011 food-cost deviation.
+-- must not be last-batch-wins.
 --
 -- Also DROP the stale 2-arg overload (bigint, numeric). It still overwrote
 -- ingredients.unit_cost and still referenced retired ingredient unit columns.

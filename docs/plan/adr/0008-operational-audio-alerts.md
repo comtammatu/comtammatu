@@ -19,7 +19,7 @@ Constraints that matter in-store:
 - Kitchen noise and concurrent tickets favor short, predictable audio
 - Browser autoplay still requires an explicit enable gesture (unchanged)
 - `speechSynthesis` Vietnamese quality and latency vary by OS/browser/tablet
-- Durable `notifications` / Telegram / foreground popup are a different channel (`docs/spec/toast-notification-system.md`, `docs/agent/rules/notifications.md`)
+- Durable `notifications`, external delivery, and foreground popup are a different channel (`docs/spec/toast-notification-system.md`)
 
 ## Decision
 

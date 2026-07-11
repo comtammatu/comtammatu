@@ -7,18 +7,14 @@
 
 ## Trạng thái
 
-- **Operating track:** production đang vận hành in-place trên repo `comtammatu`;
-  Greenfield preparation is the active cleanup track. Current work lives only in
-  `tasks/todo.md`; durable architecture choices live in active ADRs or the
-  owning spec/ref/rule doc.
+- **Operating track:** production đang vận hành in-place trên repo `comtammatu`.
+  Current work lives in `tasks/todo.md`; durable architecture choices live in
+  active ADRs or the owning spec/ref/rule doc.
 - **Current surface:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS,
   Print, Payments (Cash + VietQR + Momo), Finance Basic, HR/payroll basics, and
-  HĐĐT via Viettel S-invoice are the production surface to re-derive for
-  Greenfield.
-- **Current priority:** keep the production baseline factual, classify current
-  dirty WIP, verify the Greenfield target, and rebuild only the minimal product
-  spine. Historical backlog is not a work queue.
-- **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
+  HĐĐT via Viettel S-invoice are the current production surface.
+- **Tech stack:** Next.js, React, TypeScript, Tailwind, Zod, Supabase, and
+  Turborepo. Package manifests own exact versions.
 
 ## Chỉ mục phân hệ
 
@@ -69,19 +65,6 @@ source-of-truth inputs.
 | Auth And Routing    | `proxy.ts`, route resolution, ACL, branch scope, auth tests                           |
 | Tests               | Playwright route coverage and shared unit tests                                       |
 | Core                | Repository metadata, E2E helpers, cross-cutting supporting files                      |
-
-Generated checkout snapshot from 2026-07-02 (`node scripts/project-snapshot.mjs`):
-
-| Area                                                  |             Count |
-| ----------------------------------------------------- | ----------------: |
-| `apps/web/app/**/page.tsx` routes (committed)         |               133 |
-| API routes / route handlers                           |           10 / 13 |
-| Generated DB tables / views / functions / enums       | 117 / 8 / 271 / 0 |
-| Active SQL migrations (baseline-first; +543 archived) |                 3 |
-| Test/spec files (`apps/web/e2e` + shared unit tests)  |                42 |
-| Playwright specs / shared unit tests                  |           11 / 31 |
-
-> Migrations are **baseline-first** since 2026-05-30 and were re-baselined on 2026-07-02: `supabase/migrations/00000000000000_baseline.sql` (canonical public+private schema install) plus the managed-surfaces fold migration and the branch-stock operator action migration not yet represented by prod, with the 543-file historical/squashed chain under `supabase/migration-archive/`. See `docs/spec/database-schema.md`.
 
 The repo is not a flat "apps/packages" map. The operational shape is:
 
@@ -141,8 +124,8 @@ Use this matrix when adding or moving files. It is the practical replacement for
 | New protected route                          | `apps/web/app/(protected)/...`                                      | `proxy.ts`, `route-resolution.ts`, `module-acl.ts`, module doc                     | Duplicating ACL in layouts/pages                       |
 | New Server Action                            | Adjacent `actions.ts` under route family                            | Zod schema, `withAction`/auth helper, RLS/RPC contract                             | Returning raw Supabase error messages                  |
 | New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                                                 | Importing app-only code into shared package            |
-| New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `pnpm db:types` after apply                                           | Multi-query partial writes in Server Actions           |
-| New Supabase client usage                    | `packages/database/src/supabase/*` or server-only barrel            | Import boundary table below                                                        | `@comtammatu/database` barrel in `"use client"`        |
+| New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `corepack pnpm db:types` after apply                                  | Multi-query partial writes in Server Actions           |
+| New Supabase client usage                    | Explicit `packages/database` subpath for the runtime                | Import boundary in `docs/agent/rules/engineering.md`                               | Root runtime barrel imports                            |
 | New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, Má Tư DS primitives, `scripts/check-ui-contract.mjs` | Page-local one-off primitive clones                    |
 | New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | `docs/spec/design-system.md`, Má Tư DS primitives, surface components              | New visual language outside design system              |
 | New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes                                | Hardcoded receipt/format changes per branch            |
@@ -226,23 +209,5 @@ Opening `/` after authentication follows the same shared default resolver.
 | `packages/shared/src/auth/module-acl.ts`        | proxy.ts, admin shell, all layouts | Adding/removing modules affects routing, nav, and ACL |
 | `packages/shared/src/auth/types.ts`             | Every auth-aware file              | Changing roles or JWT shape breaks auth chain         |
 | `packages/shared/src/auth/scope.ts`             | proxy.ts, layouts, server actions  | Changing claim extraction breaks session              |
-| `packages/database/src/types/database.types.ts` | All server code                    | Auto-generated — regenerate with `pnpm db:types`      |
+| `packages/database/src/types/database.types.ts` | All server code                    | Auto-generated — regenerate with `corepack pnpm db:types` |
 | `apps/web/proxy.ts`                             | Next.js middleware entry           | Single point of auth enforcement                      |
-
-## Critical Unknowns
-
-| #   | Unknown                                                                                                                                                                     | Verification Step                                                                               | Impact                                              |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| 1   | Owner has tenant-wide access without an intermediate scope table.                                                                                                           | ADR 0005 defines the owner identity source; any dual-source flip must be a new owner-gated task | May need migration later                            |
-| 2   | Test coverage exists but is still concentrated around static/unit coverage; the full POS→payment→KDS/print→HĐĐT smoke and live provider behavior still need a safe runtime. | Expand route smoke + end-to-end runbooks before scale                                           | Refactor regressions possible on uncovered surfaces |
-
-## Priority Recommendations
-
-1. **Production operating surface:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo), and HĐĐT run on the `tenant -> chi nhánh` model. Finance/HR/Notifications/Reporting work is governed by the live blockers in `tasks/todo.md`.
-2. **Watch hub files:** Any change to `module-acl.ts` or `types.ts` requires proxy + layout + nav verification.
-3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
-
-Inventory route ownership note:
-
-- `/inventory` is the canonical Inventory surface.
-- Route new Inventory features only under `/inventory/*` or approved branch-scoped wrappers.

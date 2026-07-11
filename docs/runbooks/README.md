@@ -8,9 +8,6 @@ Checklist vận hành và readiness gates.
 ## Inventory
 
 - [inventory/pre-release-qa.md](inventory/pre-release-qa.md): smoke + readiness checklist cho Inventory
-- [inventory/ui-ux-rubric.md](inventory/ui-ux-rubric.md): rubric chấm UI/UX theo operator và thiết bị thật
-- [inventory/operator-journeys.md](inventory/operator-journeys.md): kịch bản đóng vai nhân viên vận hành mỗi ngày
-- [inventory/route-cta-matrix.md](inventory/route-cta-matrix.md): ma trận route, section, CTA, role, device, severity
 
 ## POS / KDS
 
@@ -21,7 +18,6 @@ Checklist vận hành và readiness gates.
 
 ## Supabase / Schema / Migration
 
-- [db-data-cleanup-production.md](db-data-cleanup-production.md): owner-run production data cleanup checklist for audited batches
 - [../spec/database-schema.md](../spec/database-schema.md): source ladder, migration status vocabulary, and baseline-first layout
 - [../../supabase/migrations/README.md](../../supabase/migrations/README.md): fresh-env install order for the public baseline and managed surfaces
 

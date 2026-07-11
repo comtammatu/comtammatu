@@ -45,9 +45,9 @@ chứng runtime trên dev/test/staging được duyệt.
 | ----------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Bán đúng          | POS tạo đúng đơn, đúng bàn/kênh bán, đúng món, đúng giá, đúng giảm giá/phụ thu                       | Đơn tạo thành công nhưng sai line item, sai tổng tiền, hoặc sai bàn  |
 | Bếp nhận đúng     | KDS nhận đúng phiếu bếp, đúng thứ tự, đúng món bếp cần làm                                           | KDS thiếu món, nhận trùng phiếu, hoặc ưu tiên thay thế đơn đang làm  |
-| Thu tiền đúng     | Payment chuyển đúng trạng thái, đúng amount, không complete khi RPC/stock fail                       | Gateway thành công nhưng order/payment lệch trạng thái hoặc orphan   |
+| Thu tiền đúng     | Payment chuyển đúng trạng thái, đúng amount; payment RPC fail không được complete                    | Gateway thành công nhưng order/payment lệch trạng thái hoặc orphan   |
 | In/hóa đơn đúng   | Print job claim/printed đúng, receipt không mất trường pháp lý, HĐĐT issued hoặc support workflow rõ | Receipt/HĐĐT thiếu dữ liệu, job failed không có đường retry          |
-| Kho trừ đúng      | Stock movement/consumption phát sinh đúng item/site/quantity, không fail-soft                        | Payment completed nhưng stock không trừ hoặc trừ sai site            |
+| Kho trừ đúng      | Kết quả khớp flag: post đúng, flag-off không post, shortage không partial-post                        | Movement sai/trùng/partial hoặc mismatch không có warning/reconcile  |
 | Quản lý nhìn đúng | Finance Basic / reports phản ánh doanh thu, tồn kho, chi vận hành, lợi nhuận gộp sau smoke           | Owner dashboard không đổi, số lệch so với order/payment/stock đã tạo |
 
 ## Happy Path
@@ -73,17 +73,23 @@ Ghi lại mọi ID phát sinh: `branch_id`, `terminal_id`, `order_id`, `payment_
 
 5. Thanh toán bằng một phương thức được duyệt cho smoke.
    - Cash: expected RPC `confirm_cash_payment` hoàn tất order/payment.
-   - VietQR: expected QR hiển thị mã chuyển khoản cố định của đơn từ `orders.payment_code` bắt đầu bằng `DH`; SePay webhook hoặc cashier confirm qua `confirm_vietqr_payment` hoàn tất order/payment.
+   - VietQR: expected QR mang đúng `orders.payment_code` theo configured prefix;
+     SePay webhook hoặc cashier confirm qua `confirm_vietqr_payment` hoàn tất
+     order/payment.
    - MoMo: expected chỉ dùng native QR khi provider trả `qrCodeUrl`; webhook hoàn tất qua `complete_payment_and_consume_stock`.
 
 6. Kiểm order/payment sau thanh toán.
    - Expected: order `completed`, payment `completed`, table được release nếu dine-in.
    - Expected: không có payment/order mismatch.
 
-7. Kiểm kho: KHÔNG áp dụng — thanh toán POS không trừ kho theo D016 (`docs/plan/decisions.md`); smoke chain = `POS → payment → KDS/print → HĐĐT`. Nếu D016 đảo, re-enable bước này với expectations:
-   - Stock movement/consumption được ghi đúng nguyên liệu/site/quantity.
-   - Tồn sau bán giảm đúng theo recipe hoặc consumption contract hiện hành.
-   - Nếu stock fail, order/payment không bị complete fail-soft.
+7. Kiểm kho theo cấu hình branch.
+   - Nếu `pos_stock_outcome_posting` bật và đủ tồn: hoàn tất kitchen outcome;
+     xác minh movement `pos_sale` / `sale_consumption` được post đúng branch,
+     nguyên liệu, đơn vị và số lượng; retry không tạo movement trùng.
+   - Nếu flag tắt: ghi rõ branch + flag evidence và xác minh không có movement
+     sale-consumption phát sinh ngoài ý muốn.
+   - Với shortage race hiếm khi posting: payment vẫn completed, không có movement
+     partial, có warning/support evidence và reconciliation qua stocktake.
 
 8. Kiểm in.
    - Expected: receipt print job được claim và chuyển `printed`.
@@ -96,19 +102,27 @@ Ghi lại mọi ID phát sinh: `branch_id`, `terminal_id`, `order_id`, `payment_
 
 10. Kiểm quản lý nhìn đúng.
     - Expected: Finance Basic/reports phản ánh doanh thu vừa phát sinh.
-    - Expected: inventory value/stock view phản ánh tiêu hao.
+    - Expected: inventory view phản ánh outcome đã chứng minh ở bước 7 (movement
+      đúng, flag-off không movement, hoặc shortage đang có reconciliation).
     - Expected: support queues không còn mismatch chưa xử lý.
 
 ## Failure Path Bắt Buộc
 
 Chạy ít nhất một failure path sau trong cùng environment:
 
-### Payment RPC hoặc stock fail
+### Payment RPC fail
 
-- Tạo đơn test với điều kiện khiến payment completion không được phép hoàn tất.
+- Tạo đơn test với điều kiện khiến payment RPC không được phép hoàn tất.
 - Expected: user thấy thông báo an toàn, không lộ raw database error.
-- Expected: order/payment không chuyển `completed` nếu stock/RPC fail.
+- Expected: order/payment không chuyển `completed` khi payment RPC fail.
 - Expected: có log/audit/support signal đủ để xử lý.
+
+### Stock posting shortage
+
+- Chỉ test trên non-prod với flag bật và một race/fixture shortage có kiểm soát.
+- Expected: payment/order vẫn completed theo D065.
+- Expected: không có movement một phần; warning đủ để điều tra.
+- Expected: stocktake/reconciliation xác nhận và sửa chênh lệch.
 
 ### Printer offline
 
@@ -125,7 +139,7 @@ Chạy ít nhất một failure path sau trong cùng environment:
 
 ## Evidence Cần Ghi
 
-Tạo một worklog hoặc PR note với format:
+Tạo PR/task evidence với format:
 
 ```md
 ## Operations Smoke Evidence
@@ -154,9 +168,10 @@ Gate chỉ green khi:
 - Happy path chạy đủ từ POS đến quản lý nhìn số.
 - Ít nhất một failure path đã được chứng minh không làm sai dữ liệu.
 - Không có raw Supabase/Postgres error trả ra UI.
-- Không có order/payment/stock/HĐĐT mismatch chưa giải thích.
+- Không có order/payment/stock/HĐĐT mismatch chưa giải thích hoặc chưa có
+  reconciliation owner.
 - Print failure có đường retry hoặc fallback vận hành rõ.
-- `pnpm typecheck && pnpm lint && pnpm build` pass trên checkout dùng để deploy/test.
+- `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` pass trên checkout dùng để deploy/test.
 
 ## Yellow Criteria
 
@@ -173,7 +188,8 @@ Yellow không được dùng nếu payment, stock, hoặc order status có thể
 Không vận hành/không scale nếu có một trong các lỗi:
 
 - Payment thành công nhưng order không đúng trạng thái.
-- Order completed nhưng stock không trừ hoặc trừ sai site.
+- Movement sai site, trùng, partial-post, hoặc thiếu không thuộc flag-off/shortage
+  path đã có warning + reconciliation.
 - KDS thiếu phiếu bếp cho món cần bếp.
 - Receipt/HĐĐT mất thông tin pháp lý bắt buộc.
 - Quản lý nhìn số sai mà không có reconciliation path.

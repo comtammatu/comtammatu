@@ -1,22 +1,8 @@
 # Engineering Rules
 
-Use this file for repo-wide engineering constraints, commands, architecture, imports, routing, and runtime boundaries.
-
-## Commands
-
-<!-- MIRROR:commands:begin — synced copy; edit BOTH AGENTS.md and docs/agent/rules/engineering.md. -->
-
-```bash
-corepack pnpm dev          # Start dev server (Turbopack)
-corepack pnpm build        # Production build
-corepack pnpm typecheck    # Type checking across all packages
-corepack pnpm lint         # Repo guard checks (copy, ui-contract, client-storage, rules-mirror, guard-sync, seed-permissions, regression-guards, baseline hygiene, review-tier, doc-staleness, i18n:no-grow, route-matrix) + ESLint
-corepack pnpm test         # Test suites (turbo test)
-corepack pnpm verify       # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
-corepack pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema
-```
-
-<!-- MIRROR:commands:end -->
+Use this file for repo-wide engineering constraints, import/runtime boundaries,
+routing pointers, and Git conventions. Commands and the architecture summary
+live in `AGENTS.md`.
 
 ## Core Constraints
 
@@ -27,9 +13,9 @@ corepack pnpm db:types     # Regenerate Supabase types after migration is applie
 - MUST validate all Server Action inputs with Zod schemas.
 - MUST run `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` before marking implementation tasks complete.
 - NEVER return raw Supabase/Postgres `error.message` to clients.
-- NEVER import `@comtammatu/database` barrel in `"use client"` components.
+- NEVER runtime-import the `@comtammatu/database` barrel in `"use client"` components; type-only imports are allowed.
 - NEVER store scope in `localStorage` or React Context. Scope belongs in URL params only.
-- Multi-item atomic writes MUST use a Postgres RPC function.
+- Writes whose correctness spans multiple rows MUST use a Postgres RPC function.
 - Agents MAY apply migrations directly only after verifying the target ref against the Environment Registry in `docs/agent/rules/database.md`; production apply additionally requires explicit owner delegation in the current session.
 - After SQL migration is applied to the schema used for generated types, run `corepack pnpm db:types`.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
@@ -42,29 +28,16 @@ corepack pnpm db:types     # Regenerate Supabase types after migration is applie
 
 <!-- MIRROR:constraints:end -->
 
-## Architecture
-
-<!-- MIRROR:architecture:begin — synced copy; edit BOTH AGENTS.md and docs/agent/rules/engineering.md. -->
-
-```text
-Browser → proxy.ts (auth + ACL) → App Router → Supabase (PostgREST + Auth)
-Printing → apps/print-agent (Node daemon, polls print_jobs) → ESC/POS LAN printers
-```
-
-Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.9 | Node >= 24
-
-<!-- MIRROR:architecture:end -->
-
 ## Import Boundaries
 
-- Server Actions / RSC: `@comtammatu/database` full barrel.
-- Proxy / Edge: `@comtammatu/database/supabase/middleware`.
-- Client `"use client"` components: `@comtammatu/database/supabase/client` only. NEVER use the full barrel.
-- A `"use client"` component importing the `@comtammatu/database` barrel fails the build.
-
-## Package tsconfig
-
-- TypeScript 6 packages using `process.env` need `"types": ["node"]` in tsconfig.
+- Server Actions / RSC: `@comtammatu/database/supabase/server`.
+- Privileged server-only code that intentionally bypasses RLS:
+  `@comtammatu/database/supabase/service`; follow `database.md` authorization rules.
+- Proxy: `@comtammatu/database/supabase/middleware`.
+- Client `"use client"` components: runtime imports use
+  `@comtammatu/database/supabase/client` only.
+- Database types: type-only imports from `@comtammatu/database` or
+  `@comtammatu/database/types`.
 
 ## URL Structure
 
@@ -72,15 +45,8 @@ Canonical route families and ownership: `docs/spec/role-route-matrix.md`.
 
 ## Proxy
 
-Next.js 16 proxy file: `apps/web/proxy.ts`
-
-Required export:
-
-```ts
-export async function proxy(request: NextRequest) {
-  // auth + ACL
-}
-```
+Next.js proxy entrypoint: `apps/web/proxy.ts`. Auth, route/surface, branch-scope,
+and network-gate contracts are owned by the source and auth docs.
 
 ## JWT Claims
 
@@ -92,11 +58,13 @@ Auth And ACL.
 - Commits MUST be authored as `comtammatu@gmail.com`. The identity is set repo-locally (`git config user.email comtammatu@gmail.com`, `git config user.name "Luong The Binh"`); never override the author per commit.
 - NEVER add AI attribution to commits or PRs: no `Co-Authored-By:` trailers, no "Generated with" bylines.
 - Subject line: English, imperative, conventional prefix when one fits (`fix(scope): …`, `feat: …`, `chore: …`).
-- Commit body MUST carry a `Verification:` line listing the gates actually run, plus the review-tier note required by `docs/agent/rules/workflow.md` (T1 skip reason, or T2/T3 pointer).
+- Agent-authored, non-merge implementation commits MUST carry a `Verification:`
+  line listing the gates actually run, plus the review-tier note required by
+  `docs/agent/rules/workflow.md` (T1 skip reason, or T2/T3 pointer).
 - Do not commit or push unless the owner asked for it in the current task.
-- Multiple agents may work in this working tree concurrently. Never leave a
-  partially staged index across steps: stage and commit in one atomic step,
-  stage only files your task changed, and re-check `git log -1` immediately
-  before committing.
-
-Use `rg` or `rg --files` for normal text and file searches when available.
+- In a dirty or shared working tree, snapshot `git status`, declare the files
+  owned by the task, preserve unrelated changes, and re-read a file before
+  patching if another writer may overlap. Do not run repo-wide formatters.
+- Parallel writers use isolated worktrees. Before staging, inspect the
+  task-scoped diff; never leave a partially staged index. Stage only owned files,
+  commit immediately, and re-check `git log -1` before committing.

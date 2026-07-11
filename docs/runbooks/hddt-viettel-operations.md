@@ -47,7 +47,12 @@ với tổng HĐĐT sau discount.
 
 ## Daily Summary
 
-Trigger thủ công khi cần kiểm tra:
+Ưu tiên action đã xác thực trong Finance. Chỉ gọi cron endpoint thủ công khi đã
+ghi rõ target host/ref, branch/date/run, side effect dự kiến và cách kiểm tra
+idempotency. Production issuance cần owner delegation rõ trong session hiện tại;
+không dùng lệnh smoke non-prod để thử trên production.
+
+Trigger có kiểm soát:
 
 ```bash
 curl -X POST https://<target-host>/api/cron/hddt-daily-summary \
@@ -66,7 +71,8 @@ LIMIT 10;
 
 ## Archive PDF/XML
 
-Trigger thủ công:
+Archive production cũng cần target host/ref và owner delegation rõ; xác nhận run
+scope trước khi POST.
 
 ```bash
 curl -X POST https://<target-host>/api/cron/hddt-archive \

@@ -1,6 +1,6 @@
 # Toast And Notification System
 
-> Status: design contract | Updated: 2026-07-09 | Scope: app-wide transient toast, durable in-app notifications, installed-PWA push, external notification outbox, and boundary vs operational audio
+> Status: design and producer contract | Updated: 2026-07-11 | Scope: app-wide transient toast, durable in-app notifications, foreground PWA popup, external notification outbox, and boundary vs operational audio
 
 ## UI Scope Declaration
 
@@ -16,7 +16,11 @@ The system has these feedback channels with different durability:
 
 - Toast: short-lived client feedback for the action currently happening on screen. Use `toast` from `@comtammatu/ui/components/sonner`.
 - In-app notification: durable, role/branch-scoped work item stored in `public.notifications`, read state in `public.notification_reads`, and surfaced through `/notifications`, Cổng nhân viên, or an approved bell/entry point.
-- Foreground popup: device-level OS notification fired by the open PWA via the `Notification` API for new unread durable notifications the user can see, shown through the service worker and linked back to `/notifications` or the notification action URL. Fires only while the app is open — there is no closed-app delivery.
+- Foreground popup: device-level OS notification fired by the open PWA via the
+  `Notification` API for every new unread durable notification the user can see,
+  across `info`, `warning`, and `critical`. It links back to `/notifications` or
+  the action URL and fires only while the app is open; there is no closed-app
+  delivery.
 - External outbox: delivery attempt queue in `public.notification_outbox` for configured webhook-style workers.
 - Operational audio (POS/KDS): device-local beep and optional pre-recorded voice on the open board/terminal. Not durable, not role-feed, not Telegram. Contract: `docs/spec/operational-audio-alerts.md`.
 
@@ -28,7 +32,7 @@ Use these sources in order:
 
 1. Runtime UI contract: `docs/spec/design-system.md`
 2. Toast primitive: `packages/ui/src/components/sonner.tsx`
-3. Durable feed actions: `apps/web/app/_actions/notifications.ts`
+3. Durable feed actions: `apps/web/app/(protected)/notifications/actions.ts`
 4. Durable feed UI: `apps/web/app/_components/notification-*`
 5. Foreground popup runtime: `apps/web/app/_hooks/use-foreground-notifications.ts`, `apps/web/app/_components/notification-popup-control.tsx`, and `apps/web/app/sw.ts` (notificationclick)
 6. Database contract: `supabase/migrations/00000000000000_baseline.sql` (bảng notifications; migration gốc nằm trong `supabase/migration-archive/`) and forward notification migrations
@@ -132,7 +136,22 @@ Toast and notification severities must mean the same thing:
 
 Do not store durable success notifications for routine local actions. They pollute the feed and make real work harder to see.
 
-## Kind Taxonomy
+## Producer And Kind Contract
+
+Every new or modified producer sets trusted `tenant_id`, appropriate
+`target_branch_id`, `target_roles`, stable `kind`, `severity`, and Vietnamese
+`title`. It adds entity/action metadata only when the target route is safe and
+authorized. Repeated, scheduled, retryable, or state-scanning producers require
+a deterministic `dedup_key`; one-off domain events may use their unique event id
+or omit the key when duplicate rows represent distinct legitimate events.
+
+Producer creation happens after the domain state is durable. When correctness
+requires the notification and domain write to commit together, both belong in
+the same RPC transaction. Money, tax, and labor notifications are alert-only;
+they never auto-act. Any LLM formatting layer receives selected structured data,
+has no database/RPC credentials, and may generate prose only.
+
+### Kind Taxonomy
 
 Use stable namespaced `kind` values:
 
@@ -140,30 +159,11 @@ Use stable namespaced `kind` values:
 <domain>.<event>
 ```
 
-Allowed domain prefixes:
-
-- `pos`
-- `kds`
-- `inventory`
-- `procurement`
-- `stocktake`
-- `finance`
-- `hr`
-- `settings`
-- `system`
-- `workflow`
-
-Examples:
-
-- `pos.payment_failed_repeated`
-- `inventory.stock_low`
-- `inventory.expiry_soon`
-- `procurement.grn_requires_review`
-- `stocktake.conflict_created`
-- `stocktake.escalation_required`
-- `finance.period_close_blocked`
-- `hr.contract_expiring`
-- `system.integration_failed`
+Existing runtime values are grandfathered. New values use the full domain name
+when practical and must not create a synonym for an existing event. Runtime
+labels live in `apps/web/lib/messages/notifications.ts`; icon handling lives in
+`apps/web/app/_components/notification-item.tsx`. Every new or modified kind
+must have a user-facing label and intentional icon/fallback behavior.
 
 Do not encode branch, role, severity, or status into `kind`; those belong in dedicated fields or `meta`.
 
@@ -254,7 +254,6 @@ Recommended patterns:
 | Event              | Dedup key                                                 |
 | ------------------ | --------------------------------------------------------- |
 | Stock low          | `inventory.stock_low:{branch_id}:{ingredient_id}`         |
-| Expiry soon        | `inventory.expiry_soon:{branch_id}:{lot_id}:{date}`       |
 | GRN price variance | `procurement.grn_price_variance:{grn_id}:{ingredient_id}` |
 | Stocktake conflict | `stocktake.conflict:{session_id}:{line_id}`               |
 | Integration failed | `system.integration_failed:{integration}:{date}`          |
@@ -334,7 +333,7 @@ Domain event / RPC / server action
 
 Current runtime pieces:
 
-- `apps/web/app/_actions/notifications.ts`: list, unread count, mark one read, mark all read.
+- `apps/web/app/(protected)/notifications/actions.ts`: list, unread count, mark one read, mark all read.
 - `apps/web/app/_hooks/use-notifications.ts`: realtime subscription and refetch.
 - `apps/web/app/_components/notification-list.tsx`: feed composition.
 - `apps/web/app/_components/notification-item.tsx`: item row and action URL navigation.
@@ -373,7 +372,7 @@ UI rules:
 
 ### Inventory
 
-- Durable notifications are expected for stock low, expiry, GRN variance, stocktake conflicts, period-close issues, supplier returns, and approval queues.
+- Durable notifications are expected for stock low, GRN variance, stocktake conflicts, period-close issues, supplier returns, and approval queues.
 - Toasts confirm the local action only; durable rows carry cross-role obligations.
 
 ### Employee
@@ -477,7 +476,6 @@ Rules:
 Default dedup windows:
 
 - Stock low: one active notification per branch + ingredient until replenished.
-- Expiry soon: one per lot per date window.
 - Price drift: one per supplier + ingredient per week unless threshold tier changes.
 - Integration failure: one per integration per day, with retry count in `meta`.
 - SLA breach: one per entity + SLA.

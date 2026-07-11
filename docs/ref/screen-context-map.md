@@ -124,7 +124,8 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 ### 2.5. Phân hệ Kho hàng (Inventory Workspace) — `/inventory` & `/br/[branchId]/stock`
 
 - **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `HUB`; `/inventory/stock`, `/br/[branchId]/stock/on-hand`, `/inventory/operations?tab=grn`, `/br/[branchId]/stock/grn`, bước chọn NCC `/br/[branchId]/stock/grn/new`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. Detail consumption và issue Branch thuộc `DETAIL`; form dòng GRN và phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
-- **Đối tượng sử dụng chính:** Quản lý kho (`warehouse_manager`), Quản lý bếp (`production_manager`), Quản lý chi nhánh (`branch_manager`), Chủ cửa hàng (`owner`).
+- **Đối tượng sử dụng chính:** Quản lý chi nhánh (`branch_manager`) và Chủ cửa
+  hàng (`owner`), với action tiếp tục bị permission + branch scope giới hạn.
 - **Mục tiêu Nghiệp vụ (Why?):**
   - Kiểm soát chính xác số lượng nguyên liệu tồn kho thực tế, tính toán giá vốn hàng bán (WAC), giảm thiểu hao hụt/thất thoát nguyên liệu và tối ưu hóa chi phí mua hàng.
 - **Mục tiêu Người dùng (Goal):** Nhập kho nhanh, kiểm kho không sai lệch, điều chuyển hàng giữa các chi nhánh mượt mà.
@@ -190,7 +191,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 ### 2.7. Đối soát hóa đơn NCC (Supplier Invoice Match) — `/inventory/supplier-invoices`
 
 - **Archetype:** `LIST`.
-- **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`), Kế toán/Văn phòng (`office`).
+- **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`).
 - **Mục tiêu Nghiệp vụ (Why?):**
   - Đối soát phiếu thực nhập (GRN) với hóa đơn NCC gửi đến. Đảm bảo HKD chỉ thanh toán đúng lượng thực nhận và đơn giá trên chứng từ mua hàng, tránh thất thoát tài chính.
 - **Mục tiêu Người dùng (Goal):** Phát hiện nhanh các dòng hóa đơn bị lệch giá hoặc lệch lượng để yêu cầu NCC điều chỉnh trước khi bấm duyệt thanh toán.
@@ -232,7 +233,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 ### 2.9. Báo cáo Doanh thu & Chi phí — `/finance`
 
 - **Archetype:** `DASHBOARD`.
-- **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`) (độc quyền xem báo cáo tài chính tổng hợp), Văn phòng (`office`) (chỉ xem theo phân quyền).
+- **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`).
 - **Mục tiêu Nghiệp vụ (Why?):**
   - Cung cấp bức tranh tài chính chính xác về dòng tiền vào/ra, chi phí nguyên liệu, chi phí nhân sự và lợi nhuận gộp thực tế của HKD theo ngày/tháng để đưa ra quyết định kinh doanh.
 - **Mục tiêu Người dùng (Goal):** Biết hôm nay lời hay lỗ bao nhiêu, tiền mặt thực tế đã khớp với tài khoản ngân hàng chưa, và xuất file cho kế toán thuế.

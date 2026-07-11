@@ -36,7 +36,7 @@ reference framing.
 | L0 Tenant     | Chain identity, branch network, roles, permissions, executive reports, tenant settings | `/admin/*`, tenant-wide workspace views                                  | `owner`                                       |
 | L1 Branch     | Store floor, POS/KDS setup, branch staff day flow, menu limits, local operations       | `/br/[branchId]/*`, branch-scoped workspace views                        | `branch_manager`, with owner oversight        |
 | Domain        | Procurement, inventory, orders, HR, finance, menu/catalog workflows                    | `/inventory/*`, `/orders/*`, `/hr/*`, `/finance/*`, `/menu/*`            | Role-specific operators                       |
-| Staff Runtime | Profile, attendance, leave request, payslip, notifications                             | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`, `/notifications/*` | Branch-pinned and central-site operator roles |
+| Staff Runtime | Profile, attendance, leave request, payslip, notifications                             | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`, `/notifications/*` | Branch-pinned roles                            |
 
 ## Canonical Surfaces
 
@@ -46,11 +46,11 @@ reference framing.
 | Branch Command      | `/br/[branchId]/dashboard`                                                                        | L1                | `branch_manager`, owner oversight                            | Deep branch management surface for one branch: today status, POS/KDS health, staff day flow, pending local tasks, and links to branch setup.                                                                                                                                                                           |
 | Branch Setup        | `/br/[branchId]/settings/*`                                                                       | L1                | `branch_manager`, owner oversight                            | Configure tables, POS terminals, KDS stations, printers, POS sessions, and branch-local operating settings.                                                                                                                                                                                                            |
 | Branch Operations   | `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]/menu-limits`, `/br/[branchId]/runner` | L1                | Store operators and branch manager, owner cover-ca           | Run service. Never require the operator to understand Admin. Branch Hub is the promoted home for every active role; Owner workspaces remain permission-gated shortcuts.                                                                                                                                                |
-| Inventory Workspace | `/inventory/*`                                                                                    | L0/L1/domain site | owner, branch_manager, warehouse_manager, production_manager | Stock, procurement, transfer, stocktake, production, and reports by site/role. Procurement also covers AP đối soát hóa đơn NCC (`/inventory/supplier-invoices`); waste approvals (`/inventory/waste/approvals`) and QC policy (`/inventory/settings/qc`) gate on their own grants.                                     |
+| Inventory Workspace | `/inventory/*`                                                                                    | L0/L1/domain site | owner, branch_manager | Stock, GRN, stocktake, production, consumption, waste and reports by branch. Actions remain permission- and branch-scoped. |
 | Orders Workspace    | `/orders/*`                                                                                       | L0/L1             | owner, branch_manager, cashier                               | Cross-branch or branch-filtered order management depending on role and scope.                                                                                                                                                                                                                                          |
 | HR Workspace        | `/hr/*`                                                                                           | L0/L1             | owner, branch_manager                                        | HR control workspace: owner manages staff records, staff account handoff, employment profile, global shift setup, position-to-workday setup, payroll, and labor-contract fields. Branch manager only gets branch-safe attendance/leave oversight. Branch daily clock/work execution stays in `/br/[branchId]/shift/*`. |
-| Finance Workspace   | `/finance/*`                                                                                      | L0                | owner, office                                                | HKD operating finance, revenue, expenses, cash summary, inventory value handoff, food-cost signal, and tax-support exports. Includes the HĐĐT register (`/finance/invoices`) and the B2C daily-summary trigger (`/finance/summary`); actions remain permission-gated.                                                  |
-| Ca của tôi / Hồ sơ  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                              | L1/self           | branch-pinned and central-site operator roles                | Personal day-flow and profile surfaces: clock, workday tasks, schedule, leave request, payslip. Not an HR admin substitute.                                                                                                                                                                                            |
+| Finance Workspace   | `/finance/*`                                                                                      | L0                | owner                 | HKD operating finance, revenue, expenses, cash summary, inventory value handoff, food-cost signal, and tax-support exports. Includes the HĐĐT register (`/finance/invoices`) and the B2C daily-summary trigger (`/finance/summary`); actions remain permission-gated. |
+| Ca của tôi / Hồ sơ  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                              | L1/self           | branch-pinned roles   | Personal day-flow and profile surfaces: clock, workday tasks, schedule, leave request, payslip. Not an HR admin substitute. |
 
 ## HR Workspace Semantics
 
@@ -78,11 +78,9 @@ does not fully encode and stays hand-authored.
 | -------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------- |
 | `owner`              | Tenant governance, branch network, permission grants, finance/reports, emergency oversight in domains | Daily floor operator by default |
 | `branch_manager`     | One branch: POS/KDS/floor settings, branch day flow, branch inventory tasks, branch staff approvals   | Partial Admin user              |
-| `warehouse_manager`  | Receiving, stock, transfers, procurement tasks according to grants                                    | Tenant admin                    |
-| `production_manager` | Production and related stock movement according to grants; no active site maps to this role           | Tenant admin                    |
 | `cashier`            | POS orders, payments, receipts according to grants                                                    | Branch settings owner           |
 | `chef`               | KDS ready/recall and kitchen status according to grants                                               | Inventory production manager    |
-| `office`             | Back-office tasks explicitly granted, read access to `/finance` (D058 §3)                             | Tenant admin by label alone     |
+| `branch_staff`       | Shift/profile day runtime according to branch assignment                                              | POS/KDS or tenant admin by label |
 
 ## Permission Boundary
 
@@ -251,35 +249,6 @@ otherwise out-of-scope `/br/[branchId]` fails closed instead of substituting a
 different branch. Branch Command remains a branch-scoped management surface
 from the Operator hub, not a new top-level hub.
 
-## Runtime Status
-
-Implemented in the first route/auth slice:
-
-- `branch_dashboard` module and route family exist.
-- Branch Manager post-login/fallback target is `/br/{branchId}`.
-- Branch Manager no longer passes the tenant `settings` module gate.
-- App discovery exposes domain workspaces, Branch Command, branch settings, and
-  branch menu limits for Branch Manager according to ACL.
-
-Implemented in the second (dashboard) slice:
-
-- `/br/[branchId]/dashboard` surfaces the branch day state: revenue/orders,
-  table occupancy, kitchen load, POS-session/printer/checkout-approval
-  readiness, plus the command tiles.
-
-Implemented in the IA remediation slice (D031 Track E):
-
-- The retired `/employee` App Router surface was replaced by branch runtime
-  routes under `/br/[branchId]/*`; shared Employee components remain as
-  implementation helpers, not route ownership.
-- The KDS unassigned-stations banner deep-links to the live branch KDS setup
-  (`/br/[branchId]/settings/kds`).
-- Non-owner fallbacks on `/admin/settings/{general,branches,payments}` redirect
-  to `/access-denied` instead of another tenant Admin path.
-- Unsupported stocktake/waste routes (`/inventory/stocktake/conflicts`,
-  `/inventory/stocktake/[id]/escalate`, `/inventory/waste/auto`) must stay
-  outside the active route surface until a scoped decision opens them.
-
 ## Change Checklist
 
 Any PR that changes role/surface behavior must update these together:
@@ -292,12 +261,7 @@ Any PR that changes role/surface behavior must update these together:
 - `packages/shared/src/auth/scope.ts`
 - `packages/shared/src/auth/branch-hub.ts`
 - Auth/navigation tests in `packages/shared/src/auth/__tests__/`
-- `docs/modules/auth.md`
-- `docs/modules/web-app.md`
-- This spec's hand-authored preamble (Product Frame, Principles, Scope
-  Layers, Canonical Surfaces, Role Boundaries "can manage" column,
-  Navigation Contract, Runtime Status) when the change is a rule/boundary
-  decision, not a mechanical fact.
+- This spec's hand-authored product boundaries only when the rule itself changes.
 
 The `## Module ACL`, `## Route Family Contracts`, `## Post-Login Home By
 Role`, and `## Permission Boundary` sections below are **GENERATED, not

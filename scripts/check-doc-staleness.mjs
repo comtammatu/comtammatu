@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 // Dated docs/plan snapshots and docs/worklog notes are not a durable knowledge
 // store. Promote the current contract into the right source-of-truth doc, or
@@ -27,13 +27,30 @@ try {
   process.exit(0);
 }
 
-if (files.length === 0) {
-  console.log("doc-staleness: no non-durable plan/worklog snapshots.");
-  process.exit(0);
+const violations = files.map((path) => ({
+  path,
+  reason: "non-durable plan/worklog snapshot",
+}));
+
+const PERSISTED_SNAPSHOT_MARKERS = [
+  ["docs/CODEBASE_MAP.md", "Generated checkout snapshot"],
+  ["docs/spec/database-schema.md", "## Current Snapshot"],
+];
+
+for (const [path, marker] of PERSISTED_SNAPSHOT_MARKERS) {
+  if (existsSync(path) && readFileSync(path, "utf8").includes(marker)) {
+    violations.push({ path, reason: `persisted generated marker: ${marker}` });
+  }
 }
 
-console.error(
-  `✗ doc-staleness: ${files.length} non-durable plan/worklog snapshot(s) remain. Promote current facts to canonical docs or delete the file:`,
-);
-for (const p of files) console.error(`    ${p}`);
-process.exit(1);
+if (violations.length === 0) {
+  console.log("doc-staleness: no non-durable or persisted generated snapshots.");
+} else {
+  console.error(
+    `✗ doc-staleness: ${violations.length} stale documentation artifact(s) remain:`,
+  );
+  for (const violation of violations) {
+    console.error(`    ${violation.path}: ${violation.reason}`);
+  }
+  process.exitCode = 1;
+}

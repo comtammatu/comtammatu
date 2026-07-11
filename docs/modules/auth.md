@@ -37,7 +37,7 @@ explicitly derives a bucket from it.
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------- |
 | `packages/shared/src/auth/types.ts`                   | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                |
 | `packages/shared/src/auth/module-acl.ts`              | Module → allowed access buckets mapping, `canAccess()`                                         | Route-level ACL           |
-| `packages/shared/src/auth/permissions.ts`             | `PERMISSION_KEYS`, `PERMISSION_KEY_COUNT = 92`, `hasPermission()`, `hasAny/All` pure fns       | Permission catalog mirror |
+| `packages/shared/src/auth/permissions.ts`             | `PERMISSION_KEYS`, derived permission count, `hasPermission()`, `hasAny/All` pure fns           | Permission catalog mirror |
 | `packages/shared/src/auth/scope.ts`                   | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
 | `packages/shared/src/auth/route-resolution.ts`        | Public route helpers + URL → `ModuleKey` mapping                                               | Proxy route mapping       |
 | `packages/shared/src/auth/route-map.ts`               | Route family contract: surface, entry point, chrome, back behavior, breadcrumb root            | Navigation contract       |
@@ -63,14 +63,15 @@ payroll is direct-support only, for reconciling/finalizing pay when needed.
 ```
 owner                          ← governance + tenant-wide oversight, vận hành + catalog NL, procurement
 ├── branch_manager             ← single branch command + operations
-├── warehouse_manager          ← procurement + stock workflow, grant-scoped
-├── production_manager         ← production workflow, grant-scoped
 ├── cashier                    ← POS (/br/[branchId]/pos)
 ├── chef                       ← KDS (/br/[branchId]/kds)
-└── office                     ← back-office staff, `/finance` entry, explicit action grants
+└── branch_staff               ← branch runtime without POS/KDS specialty
 ```
 
-Compatibility access buckets (`owner`, `cashier`, …) still exist as `STAFF_ROLES` / `AccessBucket` TS constants and are emitted in JWT `user_role` for backward compatibility. They are derived from `positions.code` through the mapper in shared auth and SQL. HR display names live in `positions.label_vi` / `positions.label_en` and must not gate authz.
+These compatibility access buckets are emitted in JWT `user_role`. They are
+derived from `positions.code` through the mapper in shared auth and SQL. HR
+display names live in `positions.label_vi` / `positions.label_en` and must not
+gate authz. Unknown or retired position codes fail closed to `unassigned`.
 
 ## RLS Gate Choice — Live PBAC vs JWT Bucket
 
@@ -155,78 +156,18 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
 
 ## ACL Matrix
 
-Defined in `packages/shared/src/auth/module-acl.ts`. The generated, current
-table lives in `docs/spec/role-route-matrix.md` → `Module ACL (generated)`. Do
-not maintain a second full matrix here.
+`packages/shared/src/auth/module-acl.ts` owns route-level module access;
+`docs/spec/role-route-matrix.md` is its generated human-readable view. Inventory
+action roles live in `packages/shared/src/auth/inventory-roles.ts`, while permission
+keys and RLS/RPC checks own mutation authority. Do not maintain another role matrix
+or workflow summary here.
 
-Current non-obvious route facts:
+Route ACL is only a fast gate. Row-level authorization uses
+`has_permission(branch_id, key)`, and branch scope remains URL/JWT-derived.
 
-- `inventory_procurement` includes `branch_manager`, `warehouse_manager`, and
-  `production_manager`; inner procurement/production actions remain
-  PBAC/RLS-gated.
-- `finance` includes `office` for the route surface; finance actions still
-  require finance permission keys.
-- `staff`, `hr_payroll`, `branches`, `branch_picker`, and tenant `settings` are
-  owner route buckets.
-- Staff day-runtime routes (`/br/[branchId]/shift/*` and
-  `/br/[branchId]/profile/*`) use `operator_home`; manager approval routes use
-  `employee_checkout_approvals` / `employee_leave_approvals`.
-- The exact public Runner board path bypasses staff auth; `MODULE_ACL.runner`
-  still describes protected runner-family metadata and future child routes.
-
-Route-level ACL reads `user_role` from the JWT, derived from `positions.code`.
-Row-level authz still goes through `has_permission(branch_id, key)` — route ACL
-is only a fast gate.
-
-The main inventory mutating RPCs are permission-gated; the remaining
-`auth_role()` usages are route/side/scope guards or legacy helpers. See
-`docs/ref/inventory-rbac-matrix.md` §6.
-
-**Staff runtime boundary:** daily staff execution lives under
-`/br/[branchId]/shift/*` and `/br/[branchId]/profile/*`. The old `/employee/*`
-compatibility redirect is removed; post-login `returnTo=/employee...` falls
-back to the role's default destination instead of preserving the retired URL.
-
-**Owner:** beyond the admin / monitoring modules, can also enter `orders` and `inventory` to directly inspect tenant-level operations. However, the owner is not treated as a daily operator in inventory docs/UI; the Inventory surfaces are currently optimized for `branch_manager`, `warehouse_manager`, `production_manager`.
-
-**Inventory sub-route ACL:** `inventory` allows `owner`, `branch_manager`,
-`warehouse_manager`, `production_manager` for stock on hand, real transfers,
-consumption, stocktake, reports, and branch operations.
-`inventory_procurement` also allows those buckets so branch stock receiving and
-procurement/production paths can share the workspace, but
-PO/GRN/supplier/recipe actions remain narrowed by permission keys and RPC/RLS
-checks. `production` does not use its own module; the surface and order guards
-admit `branch_manager` producing at their own branch (D068), and still admit
-`production_manager` although no active site maps to that role. `owner` has
-inspection/emergency access but is not led through the UX as a daily operator.
-`branch_manager` also receives directly from suppliers for their own branch
-(own-branch PO/GRN, D068), so the branch-ops rhythm is: own-branch supplier
-receipt, receive inbound transfers, cấp Bếp CN bằng same-branch transfer,
-own-branch production runs, approve consumption, stocktake,
-adjustment/write-off.
-
-**Important UX boundary:** nav can be narrower than the module-level ACL to reduce operational noise. For example `branch_manager` can still reach `/inventory/transfers` to receive goods, but the UI should not promote the create-inter-site-transfer action as a default task for this role.
-
-**Route-map boundary:** `MODULE_ACL` answers "can the role enter the module";
-`route-map.ts` answers "which surface this URL belongs to and which chrome/back
-behavior it uses". Do not use route-map to grant permission. Do not use local
-shell/nav to bypass `MODULE_ACL`. A route leaving the workspace must use
-`resolveRoleHomeLink(role, branchId?)` instead of hardcoding `/finance`,
-because non-admin roles get sent by the proxy to a different default.
-The Inventory route contract uses a list of active prefixes; an unknown Inventory
-URL must not be kept in the post-login `returnTo`.
-
-**Settings surface boundary:** Tenant setup belongs under `/admin/settings/*`
-and is for owner. Branch setup belongs under
-`/br/[branchId]/settings/*` and may include branch_manager for their own branch.
-The runtime `settings` module excludes branch_manager; branch-scoped setup must
-use `branch_dashboard` / `branch_settings` route families.
-
-- `/admin/settings/branches` — owner only (page-level redirect)
-- `/admin/settings/general` — owner only (page-level redirect)
-- `/br/[branchId]/settings/tables`, `/br/[branchId]/settings/kds`, `/br/[branchId]/settings/pos`, `/br/[branchId]/settings/printers` — branch setup roles with branch-scope enforcement
-- `/br/[branchId]/pos-sessions` — branch end-day POS reconciliation for owner and branch_manager
-
+Settings boundary: tenant setup under `/admin/settings/*` is owner-only; branch
+setup under `/br/[branchId]/settings/*` uses branch-scoped route families and
+permission enforcement.
 ## Proxy Routing Logic — Single Gate
 
 `apps/web/proxy.ts` is the **only** file that runs staff auth / ACL / branch-scope redirects. Layouts and pages for protected surfaces trust the proxy; they call `loadAuthState()` (`apps/web/app/_lib/auth.ts`) to read claims but never re-check them. If anything below is missing on a protected surface, the proxy has a gap — not the layout.

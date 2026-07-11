@@ -1,41 +1,62 @@
-# Orchestration Routing
+# Orchestration And Cross-Runtime Review
 
-Use this file only when a task may need subagents, multiple runtimes, or explicit
-context-budget control. Default to one agent working inline.
+Use this file only for subagents, multiple runtimes, arbitration, parallel
+writers, or a real context-budget problem. Default to one agent inline.
 
-## Routing
+## Smallest Lane
 
-| Work shape | Lane |
-| --- | --- |
-| One command, one fact, one small edit, or reading files you will edit | Inline |
-| Broad read-only orientation over files you will not edit | CodeGraph first; otherwise one read-only helper |
-| One isolated implementation slice | One executor/helper only if it reduces context load |
-| Independent fan-out audit or review | Temporary helpers with clear inputs and terse outputs |
-| T3 second-runtime review or arbitration | `team.md` |
+| Work shape                                                           | Lane                                                 |
+| -------------------------------------------------------------------- | ---------------------------------------------------- |
+| One fact, command, small edit, or reading files the author will edit | Inline                                               |
+| Broad read-only orientation                                          | CodeGraph first; otherwise one read-only helper      |
+| Independent audit or T3 risk challenge                               | Temporary read-only reviewers with bounded questions |
+| Isolated implementation slice                                        | One executor only when it reduces context load       |
+| Parallel implementation                                              | Separate worktrees and explicit file ownership       |
 
-Pick the smallest lane that holds. Do not spawn agents for deterministic shell,
-git, build, lint, codegen, file moves, or confirmed deletions.
+Do not delegate deterministic shell, git, build, lint, codegen, file moves, or
+confirmed deletions. Ask reviewers for conclusions and evidence, not file dumps.
 
-## Context Budget
+## Runtime Safety
 
-- Prefer CodeGraph over grep/read loops for source orientation when available.
-- Ask helpers for conclusions and evidence paths, not raw file dumps.
-- Keep agent-to-agent prompts in English per `AGENTS.md`.
-- Durable state belongs in the task tracker, PR body, or canonical docs, not in
-  private runtime memory.
+- The current agent owns synthesis and remains accountable for repo rules.
+- Review/challenge/consult lanes run in read-only, plan, ask, or sandbox mode.
+  Never enable force, yolo, skip-permissions, or accept-edits for reviewers.
+- Review prompts forbid DB/browser mutations and secret or personal-data output.
+- A runtime without a registered production guard adapter stays read-only around
+  production tools; see `references.md`.
+- Parallel writers declare owned files, use isolated worktrees, and stop on
+  overlap. Never let two agents mutate the same shared working tree.
 
-## Anti-Repeat
+## Handoff
 
-Before risky or familiar work, check `tasks/regressions.md` and
-`tasks/lessons.md`. After the work, promote only durable lessons:
+Use English for agent-to-agent context:
 
-- recurring failure prevention -> `tasks/regressions.md` or a guard/test/hook
-- durable explanation -> the owning rule/module/ref/spec doc
-- transient notes -> delete or leave in PR/task history only
+```text
+Mode: review | challenge | consult | execute
+Task:
+Diff/files:
+Risk surface:
+Rules loaded:
+Question/pass criteria:
+Evidence needed:
+```
 
-## Anti-Patterns
+## Arbitration
 
-- Parallel agents mutating the same files without worktree isolation.
-- A model call around deterministic work.
-- Standing machinery with no current named need.
-- A second reviewer with no concrete risk question.
+When reviewers disagree:
+
+1. Reproduce each claim with file/line, command output, screenshot, row, or a
+   failing check.
+2. Revisit only the contested point through the relevant `workflow.md` lens.
+3. If evidence cannot settle a material T3 choice, ask the owner with both
+   positions stated plainly.
+4. Record the decision in the PR/task summary; promote only durable rules.
+
+## Context And Learning
+
+- Keep prompts small and load only relevant regression/lesson rows.
+- Durable explanation belongs in its owning rule/module/ref/spec; recurring
+  deterministic failures belong in a guard/test; transient notes stay in PR/task
+  history.
+- No standing team, recurring mission table, parallel task board, private memory
+  authority, or second reviewer without a concrete risk question.

@@ -1,7 +1,7 @@
 # Kho Hàng — Inventory Management
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư — quản lý kho nguyên liệu và thành phẩm F&B
-> Phạm vi: **nhập NCC tại chi nhánh + sản xuất tại chi nhánh + luân chuyển tồn thật + tiêu hao chi nhánh + GRN + stocktake + báo cáo vận hành**. `supplier_invoice`, 3-way matching, payment status, và AP aging là Finance handoff; không phải gate đóng ngày Inventory.
+> Phạm vi: **nhập NCC tại chi nhánh + sản xuất tại chi nhánh + tiêu hao + GRN + stocktake + báo cáo vận hành**. `supplier_invoice`, payment status và AP aging là Finance handoff; không phải gate đóng ngày Inventory.
 
 ---
 
@@ -17,16 +17,16 @@ kho không map được vào contract hiện có, cập nhật contract trước
 
 | Nội dung                        | Current contract                                                                                                                                                                                                | Boundary                                               |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ PO, GRN, tồn kho, production, và recipe                                                                                                                                         | Không mở item master ERP nhiều lớp                     |
+| Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ GRN, tồn kho, production và recipe                                                                                                                                                | Không mở item master ERP nhiều lớp                     |
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo giá vốn BQ khi có dữ liệu, fallback giá nhập tham chiếu khi cần hiển thị                                                                                | Không chuyển sang FIFO engine                          |
 | Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*`                                                                                             | Không mở lot-first ledger / batch accounting           |
 | Mô hình site                    | `branches.branch_kind` enum giữ lịch sử; site active là chi nhánh (`branch`) với **một** location stock-bearing `warehouse` (Kho chi nhánh). `location_kind='kitchen'` (Bếp CN) và site `central_*` đã nghỉ vận hành (D078). | V1 không tạo bảng `inventory_sites`                    |
-| PO / GRN / NCC                  | Bảng PO/GRN/NCC + RPC `confirm_goods_receipt_note`; QC và price variance là control trong luồng nhập                                                                                                            | Không mở PR workflow nhiều bước                        |
+| GRN / NCC                       | Nhập supplier-first qua GRN + RPC `confirm_goods_receipt_note`; PO chỉ còn dữ liệu lịch sử                                                                                                                        | Không mở PR/PO workflow nhiều bước                     |
 | Luân chuyển nội bộ              | Operator không mở Kho↔Bếp hay cross-branch mới (D078). `stock_transfers` lịch sử giữ trong DB/Office read-only.                                                                                                   | Không dùng `stock_transfer` cho tiêu hao/xuất hủy thật |
-| HĐ NCC + 3-way matching         | `supplier_invoices` + matching logic là Finance handoff                                                                                                                                                         | Không mở payment proposal engine trong Inventory       |
+| HĐ NCC                          | `supplier_invoices` và đối soát với hàng thực nhận là Finance handoff                                                                                                                                            | Không mở payment proposal engine trong Inventory       |
 | `recipes` + xuất kho theo order | `recipes` + RPC tiêu hao theo order                                                                                                                                                                             | Không mở multi-level BOM                               |
 | Thành phẩm + production hub     | `item_kind`, `production_recipes`, `production_runs`, route production tại chi nhánh (`branch`, D068)                                                                                                           | Không mở labor / overhead / WIP accounting đầy đủ      |
-| Hao hụt / trả hàng / sự cố      | Waste (`/inventory/waste` + approvals), supplier return (`/inventory/supplier-returns`), issue log (`/inventory/issues`); nhập hàng đi qua `/inventory/operations?tab=grn` + `/inventory/grn`                   | Không mở claim/insurance workflow                      |
+| Hao hụt / sự cố                 | Waste/write-off + approvals và issue log; supplier return không còn daily surface                                                                                                                                | Không mở claim/insurance workflow                      |
 
 ## Scope Boundary
 
@@ -59,19 +59,12 @@ Chi nhánh ── [production_run] → trừ nguyên liệu, cộng thành phẩ
 Kho CN → [phiếu xuất/tiêu hao] → `stock_movements.consumption`
 ```
 
-### 1b. Luân chuyển nội bộ (cùng state machine)
+### 1b. Luân chuyển lịch sử
 
-| Bước                           | Trạng thái (DB)     | Việc làm                                                                                                                     |
-| ------------------------------ | ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Tạo phiếu                      | `draft`             | Lịch sử luân chuyển giữ nguồn và đích theo chi nhánh; vận hành mới không tạo phiếu từ operator |
-| Xác nhận xuất tại kho gửi      | `confirmed_ship`    | Trừ tồn tại `from_branch_id` (`transfer_out`), snapshot WAC vào dòng phiếu                                                   |
-| Đang vận chuyển                | `in_transit`        | Theo dõi (biển số / ghi chú — tùy pha UI)                                                                                    |
-| Bắt đầu kiểm nhận tại kho nhận | `confirmed_receive` | Kho nhận mở kiểm đếm (`receive_started_at`); chưa cộng tồn                                                                   |
-| Xác nhận nhập tại kho nhận     | `received`          | Cộng tồn tại `to_branch_id` (`transfer_in`), ghi nhận SL thực nhận (lệch → điều chỉnh / lý do)                               |
 
-Trạng thái `cancelled` khi hủy phiếu (theo quyền); không ghi nhận tồn nếu chưa từng `confirmed_ship` (hoặc hoàn tác theo policy nội bộ — ưu tiên tránh xóa bản ghi, dùng workflow hủy).
-
-Kho↔Bếp chỉ là lịch sử audit. Phiếu xuất/tiêu hao tại Kho CN mới ghi `consumption/sale_consumption`.
+`stock_transfers` và movement `transfer_*` được giữ để đọc lịch sử. Operator
+không tạo same-branch Kho↔Bếp hoặc cross-branch transfer mới; phiếu
+consumption/sale-consumption tại Kho CN mới là luồng giảm tồn hiện hành.
 
 ### Các loại phiếu kho
 
@@ -99,10 +92,11 @@ Ghi chú: `mv_food_cost` là dữ liệu recipe/theoretical để đối chiếu
 
 - `units`: registry đơn vị dùng chung theo tenant, gồm đơn vị chuẩn và đơn vị đóng gói.
 - `ingredient_units`: danh mục đơn vị cho từng nguyên liệu, có đúng một dòng `is_base = true`; UI gọi dòng này là **Đơn vị tồn chuẩn**.
-- `entry_unit_id`: đơn vị người dùng nhập trên chứng từ; UI gọi là **Đơn vị nhập** trong PO/GRN/transfer/issue/waste và **Đơn vị đếm** trong kiểm kê; khóa tới `units.id`.
+- `entry_unit_id`: đơn vị người dùng nhập trên chứng từ; UI gọi là **Đơn vị nhập**
+  trong GRN/issue/waste và **Đơn vị đếm** trong kiểm kê; khóa tới `units.id`.
 - `to_base_factor`: **Quy đổi về tồn chuẩn**, luôn hiểu là `1 đơn vị nhập/đếm = N đơn vị tồn chuẩn`; UI hiển thị canonical như `1 thùng = 24 chai`.
 
-> **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`, và giá vốn BQ luôn lưu theo **đơn vị tồn chuẩn**. Mọi chứng từ PO, GRN, transfer, issue, waste, stocktake, recipe và production có thể nhập theo `entry_unit_id`; RPC/action phải quy đổi qua `ingredient_units`, không tin unit text từ client.
+> **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`, và giá vốn BQ luôn lưu theo **đơn vị tồn chuẩn**. Chứng từ GRN, issue, waste, stocktake, recipe và production có thể nhập theo `entry_unit_id`; RPC/action phải quy đổi qua `ingredient_units`, không tin unit text từ client.
 
 ### 2.2 Database — bảng `ingredients`
 
@@ -207,11 +201,12 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
 
 ### 5.1 Quy trình
 
-1. Thiết lập **NCC**, điều khoản thanh toán.
-2. Tạo **PO** gắn **branch_id** = chi nhánh nhận hàng (`branch`).
-3. NCC giao hàng → kiểm đếm, QC.
-4. Lập **GRN** (số thực nhận theo **đơn vị nhập**, đơn giá nhập theo **đơn vị nhập**) → **xác nhận GRN** (RPC) → quy đổi về đơn vị tồn chuẩn, cập nhật tồn stock-bearing location + **giá vốn BQ**.
-5. Nếu Finance cần đối soát ngay: nhập **supplier_invoice** → **3-way matching** với PO & GRN (§7). Bước này là Finance P1/handoff, không chặn luồng tồn kho.
+1. Thiết lập **NCC** và điều khoản thanh toán.
+2. NCC giao hàng → kiểm đếm, QC.
+3. Lập **GRN supplier-first** với số thực nhận + đơn giá theo **đơn vị nhập**.
+4. **Xác nhận GRN** (RPC) → quy đổi về đơn vị tồn chuẩn, cập nhật tồn Kho CN
+   và giá vốn BQ atomically.
+5. Nếu Finance cần đối soát, nhập **supplier_invoice** và so với GRN thực nhận.
 
 **Nguyên tắc:** Giá nhập theo **GRN** (thực nhận), không theo số đặt PO. `grn_items.unit_cost` là **Đơn giá nhập** (`₫ / đơn vị nhập`), không phải giá vốn BQ. GRN chỉ được tạo tại site stock-bearing (`branch`).
 
@@ -223,7 +218,8 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
 
 ## 6. Phương pháp tính giá xuất kho
 
-- **v1 (đang hướng tới):** **Giá bình quân gia quyền (WAC)** trên từng `stock_levels`, cập nhật khi **xác nhận GRN** tại chi nhánh.
+- **Current:** **Giá bình quân gia quyền (WAC)** trên từng `stock_levels`, cập
+  nhật khi xác nhận GRN tại chi nhánh.
 - **FIFO / FEFO theo lô:** hướng mở rộng sau (cần bảng lô/batch); phần mở đầu §6 cũ nhắc FIFO như **nguyên tắc thực phẩm**, không mâu thuẫn nếu ghi rõ **hệ thống v1 dùng WAC**.
 
 Công thức WAC sau mỗi dòng nhập (đơn giản hóa):
@@ -239,9 +235,9 @@ Hệ thống hiện tại không xây full `price governance engine`, nhưng c�
 
 Điểm kiểm soát:
 
-- **PO variance:** so giá PO với giá tham chiếu gần nhất hoặc giá NCC đang dùng.
-- **Invoice variance:** so giá HĐ NCC với PO / GRN trong lúc 3-way matching.
-- **WAC update:** chỉ cập nhật theo GRN đã confirm, không theo PO.
+- **GRN variance:** so giá nhận với giá tham chiếu gần nhất hoặc giá NCC đang dùng.
+- **Invoice variance:** so giá HĐ NCC với GRN trong Finance handoff.
+- **WAC update:** chỉ cập nhật theo GRN đã confirm.
 
 Ngưỡng gợi ý hiện hành:
 
@@ -259,21 +255,19 @@ Trong current operation:
 
 ---
 
-## 7. 3-Way Matching (PO ↔ GRN ↔ Supplier Invoice) — Finance P1
+## 7. Supplier Invoice Handoff — Finance
 
 Áp dụng cho **hàng mua về chi nhánh** (đầu vào VAT). Điều kiện thanh toán / kê khai: tham chiếu [einvoice-tax.md](einvoice-tax.md) §4.
 
-Đây là Finance handoff. Inventory vẫn đóng ngày được nếu PO/GRN/WAC/stock ledger đã đúng nhưng supplier invoice/payment/AP chưa nằm trong daily operator path.
+Đây là Finance handoff. Inventory vẫn đóng ngày được nếu GRN/WAC/stock ledger
+đã đúng nhưng supplier invoice/payment/AP chưa hoàn tất.
 
-| Bước     | Kiểm tra         | Dung sai gợi ý       |
+| Bước     | Kiểm tra         | Boundary             |
 | -------- | ---------------- | -------------------- |
-| PO ↔ GRN | SL nhận / SL đặt | ±5%                  |
 | GRN ↔ HĐ | SL HĐ / SL GRN   | HĐ không > thực nhận |
-| PO ↔ HĐ  | Đơn giá HĐ / PO  | ±2%                  |
+| GRN ↔ HĐ | Đơn giá          | Lệch cần review rõ   |
 
 `matching_status`: `pending` | `matched` | `discrepancy` | `approved` (ngoại lệ có duyệt).
-
-**Phiếu luân chuyển nội bộ** không thuộc 3-way matching với NCC (trừ khi sau này có hóa đơn nội bộ — ngoài phạm vi v1).
 
 ### 7.1 AP Boundary — accounts payable tối thiểu
 
@@ -326,7 +320,8 @@ Ngoài phạm vi v1:
 
 ### 8.4 ACL
 
-- `branch_manager`, `warehouse_manager`: tạo + đếm + hoàn tất kiểm kê cho chi nhánh trong phạm vi của mình (`inventory:stocktake_create` / `inventory:stocktake_complete`).
+- `branch_manager`: tạo + đếm + hoàn tất kiểm kê cho chi nhánh trong phạm vi của
+  mình khi có permission tương ứng.
 - `owner`: tạo kiểm kê cho bất kỳ chi nhánh nào, xem toàn bộ lịch sử.
 
 ---
@@ -352,8 +347,6 @@ Theo D060, Inventory v1 không vận hành sổ lô, FIFO/FEFO, cảnh báo hạ
 - Stock control dùng WAC + tồn theo location; cảnh báo ưu tiên hiện tại là tồn thấp/reorder và phiếu đang mở.
 - Khi cần quản lý hạn dùng thật, phải thiết kế lại thành lot ledger hoàn chỉnh, không bật cảnh báo naive từ `grn_items.expiry_date`.
 
-> **Lưu ý:** Không block xuất kho hàng hết hạn (yêu cầu batch tracking — ngoài scope Phase 0). Chỉ cảnh báo + hỗ trợ xóa sổ thủ công.
-
 ### 9.3 GRN — Nhiệt độ nhận hàng
 
 Cột `grn_items.receiving_temperature` (`NUMERIC(5,1)`, nullable) — chỉ hiển thị cho nguyên liệu lạnh/đông. UI ẩn cột nhiệt độ nếu không có dòng nào có giá trị.
@@ -367,22 +360,20 @@ Cột `grn_items.receiving_temperature` (`NUMERIC(5,1)`, nullable) — chỉ hi�
 - **AP aging:** nhóm `supplier_invoices` chưa `paid` theo bucket `current / 1-30 / 31-60 / 61-90 / >90 ngày` khi Finance handoff mở; không phải gate đóng ngày Inventory.
 - **Consumption variance:** so sánh tiêu hao lý thuyết từ recipe (`mv_food_cost`) với actual approved consumption (`stock_movements.consumption/sale_consumption`) để tìm site lệch lớn.
 
-> **Multi-chi nhánh consumption proxy:** `fetchPoSuggestions` scope tồn kho theo Kho CN của một chi nhánh được chọn, nhưng consumption vẫn lấy tenant-wide từ `stock_movements` (type=`consumption`) toàn bộ chi nhánh. Đây là proxy gần đúng cho tới khi có mapping `branch → primary_warehouse_id` (chưa build, defer). Với hai chi nhánh song song, `avg_daily_consumption` nên coi như upper-bound hint cho mỗi chi nhánh, không phải nhu cầu chính xác theo kho.
-
 ---
 
 ## 11. Quyền truy cập (ACL) — hướng dẫn
 
-Doc source of truth cho module/route access vẫn là `packages/shared/src/auth/module-acl.ts`.
-Business-action matrix chi tiết cho Inventory xem ở [inventory-rbac-matrix.md](inventory-rbac-matrix.md).
+Module/route access sống ở `packages/shared/src/auth/module-acl.ts`; coarse action
+roles sống ở `packages/shared/src/auth/inventory-roles.ts`. Permission keys,
+branch scope và RLS/RPC là authority cho mutation.
 
 Tóm tắt quyền hiện tại:
 
-- `owner`: full access Inventory tenant-wide — procurement, Kho CN, production, và giám sát; cũng xem qua `reports` / `finance`.
-- `warehouse_manager`: role procurement và outbound transfer theo grant; không gắn site trực riêng (D073 §1).
-- `production_manager`: role production theo grant; sản xuất hằng ngày chạy tại chi nhánh (D068).
-- `branch_manager`: vận hành tồn Kho CN, nhận transfer, stocktake, và duyệt tiêu hao trong ngày; theo D068 có own-branch GRN (tạo/xác nhận), production (tạo/xác nhận), `procurement:read`, và tạo nhanh NCC (`procurement:supplier_manage`).
-- `office`, `cashier`, `chef`: không có Inventory route theo ACL hiện tại.
+- `owner`: route access tenant-wide; mutation vẫn qua permission/RLS/RPC.
+- `branch_manager`: route access và own-branch workflow theo permission + branch
+  scope.
+- `cashier`, `chef`, `branch_staff`: không có Inventory route theo ACL hiện tại.
 
 Chi tiết enforcement: RLS + `packages/shared/src/auth/module-acl.ts`.
 
@@ -392,5 +383,3 @@ Chi tiết enforcement: RLS + `packages/shared/src/auth/module-acl.ts`.
 
 - [einvoice-tax.md](einvoice-tax.md) — VAT đầu vào, HĐ NCC
 - [inventory-sop.md](inventory-sop.md) — SOP vận hành cho topology `tenant / chi nhánh / Kho CN / tiêu hao`
-- [inventory-role-handoff.md](inventory-role-handoff.md) — bản handoff 1 trang cho training vận hành
-- [inventory-rbac-matrix.md](inventory-rbac-matrix.md) — ma trận quyền Inventory theo boundary hiện tại

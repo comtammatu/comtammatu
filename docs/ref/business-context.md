@@ -99,16 +99,15 @@ Chi tiết áp dụng: thuế/hóa đơn ở `einvoice-tax.md`; lương/TNCN/BHX
 ### Luồng mua hàng
 
 ```
-PO (intent) → GRN (actual received) → Supplier Invoice / chứng từ NCC
+NCC → GRN (actual received) → Supplier Invoice / chứng từ NCC
                                         ↓
                                    3-way matching → cost/tax evidence
 ```
 
-- **PO** = Purchase Order (đặt hàng)
 - **GRN** = Goods Received Note (phiếu nhập kho — hàng thực nhận)
 - **Supplier Invoice** = hóa đơn/chứng từ đầu vào để đối soát chi phí, giá vốn,
   và hồ sơ thuế
-- Giá vốn thực tế lấy từ GRN, KHÔNG lấy từ PO
+- Giá vốn thực tế lấy từ GRN đã xác nhận
 
 ### Luồng bán hàng
 
@@ -116,11 +115,10 @@ PO (intent) → GRN (actual received) → Supplier Invoice / chứng từ NCC
 Cashier (POS/service) → KDS (realtime) → Chef bumps → Cashier pays → completed
 ```
 
-### Vai trò nhân sự (7 access bucket active)
+### Access bucket hiện hành
 
 ```
-owner, branch_manager, warehouse_manager, production_manager,
-cashier, chef, office
+owner, branch_manager, cashier, chef, branch_staff
 ```
 
 Nguồn chuẩn: `ACCESS_BUCKETS` trong `packages/shared/src/auth/types.ts`.

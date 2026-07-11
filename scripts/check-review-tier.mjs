@@ -1,9 +1,9 @@
 import { execSync } from "node:child_process";
 
 // Deterministic review-tier FLOOR guard for docs/agent/rules/workflow.md. It
-// classifies the diff vs the base branch by blast radius and flags a declared
-// tier below that floor, catching under-classification of money/RLS/migration
-// diffs. Advisory (warn-only); REVIEW_TIER_STRICT=1 promotes it to fail-closed.
+// classifies the PR diff vs the base branch by blast radius and flags a missing
+// or under-floor declaration, including governance policy changes. Advisory
+// locally; REVIEW_TIER_STRICT=1 promotes it to fail-closed.
 // Never blocks when the base ref is unreachable.
 
 const STRICT = process.env.REVIEW_TIER_STRICT === "1";
@@ -44,7 +44,33 @@ const DOC_OR_LOCK = (p) =>
   p.endsWith(".md") ||
   /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)$/.test(p);
 
-if (changed.every(DOC_OR_LOCK))
+const T3_GOVERNANCE = new Set([
+  "AGENTS.md",
+  "docs/agent/rules/engineering.md",
+  "docs/agent/rules/database.md",
+  "docs/agent/rules/workflow.md",
+  "scripts/guard-prod-db.mjs",
+  "scripts/check-guard-sync.mjs",
+  "scripts/check-review-tier.mjs",
+  "scripts/check-rules-mirror.mjs",
+  ".github/workflows/ci.yml",
+  ".claude/settings.json",
+  ".codex/hooks.json",
+  ".codex/config.toml",
+]);
+const T2_GOVERNANCE = (p) =>
+  p.startsWith("docs/agent/rules/") ||
+  p === "docs/spec/toast-notification-system.md";
+const governanceT3 = changed.filter((p) => T3_GOVERNANCE.has(p));
+const governanceT2 = changed.filter(
+  (p) => T2_GOVERNANCE(p) && !T3_GOVERNANCE.has(p),
+);
+
+if (
+  changed.every(DOC_OR_LOCK) &&
+  governanceT2.length === 0 &&
+  governanceT3.length === 0
+)
   softPass("doc/lockfile-only diff — T1 eligible, no tier floor.");
 
 const MONEY = /(^|\/)(finance|payments?|invoice|hddt|payroll|refund|journal)/i;
@@ -56,7 +82,12 @@ const AUTH_RLS = [
   /(^|\/)(rls|policy|policies)/i,
 ];
 
-const hits = { migration: [], money: [], "auth/RLS": [] };
+const hits = {
+  migration: [],
+  money: [],
+  "auth/RLS": [],
+  "T3 governance": governanceT3,
+};
 for (const p of changed) {
   if (p.startsWith("supabase/migrations/")) hits.migration.push(p);
   if (MONEY.test(p)) hits.money.push(p);
@@ -89,12 +120,23 @@ const reasonParts = [];
 for (const [cat, paths] of Object.entries(hits)) {
   if (paths.length === 0) continue;
   const ex = paths.slice(0, 3).join(", ");
-  reasonParts.push(`${cat} ×${paths.length} (${ex}${paths.length > 3 ? ", …" : ""})`);
+  reasonParts.push(
+    `${cat} ×${paths.length} (${ex}${paths.length > 3 ? ", …" : ""})`,
+  );
 }
 if (securityDefiner) reasonParts.push("added SECURITY DEFINER");
 
+if (governanceT2.length > 0) {
+  const ex = governanceT2.slice(0, 3).join(", ");
+  reasonParts.push(
+    `T2 governance ×${governanceT2.length} (${ex}${governanceT2.length > 3 ? ", …" : ""})`,
+  );
+}
+
 const reasonStr = reasonParts.join("; ");
-const floor = reasonParts.length > 0 ? 3 : 2;
+const hasT3Signal =
+  Object.values(hits).some((paths) => paths.length > 0) || securityDefiner;
+const floor = hasT3Signal ? 3 : 2;
 const name = (n) => `T${n}`;
 
 let declared = null;
@@ -112,8 +154,8 @@ try {
 }
 
 if (declared === null) {
-  const msg = `floor ${name(floor)} (${reasonStr || "behavior change"}), but no T1/T2/T3 note found in the last commit body.`;
-  if (floor >= 3 && STRICT) {
+  const msg = `floor ${name(floor)} (${reasonStr || "behavior change"}), but no T1/T2/T3 note found in the PR commit range.`;
+  if (STRICT) {
     console.error(`Review-tier guard FAILED: ${msg}`);
     process.exit(1);
   }
@@ -130,4 +172,6 @@ if (declared < floor) {
   process.exit(0);
 }
 
-console.log(`Review-tier guard: declared ${name(declared)} >= floor ${name(floor)}. OK.`);
+console.log(
+  `Review-tier guard: declared ${name(declared)} >= floor ${name(floor)}. OK.`,
+);

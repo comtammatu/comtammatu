@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-// Some rule files intentionally duplicate blocks from other rule files
-// because some agents auto-load only their entrypoint file. This check
-// blocks silent drift between the copies: each mirrored block is delimited
+// Safety-critical constraints are intentionally duplicated because some agents
+// receive only one rule surface. This check blocks silent drift between the
+// copies: each mirrored block is delimited
 // by HTML comment anchors `<!-- MIRROR:<name>:begin ... -->` /
 // `<!-- MIRROR:<name>:end -->` and must be byte-identical (modulo
 // surrounding whitespace) across every file in its pair.
@@ -15,7 +15,7 @@ const MIRROR_PAIRS = [
   {
     fileA: "AGENTS.md",
     fileB: "docs/agent/rules/engineering.md",
-    blocks: ["commands", "constraints", "architecture"],
+    blocks: ["constraints"],
   },
 ];
 

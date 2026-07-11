@@ -290,7 +290,7 @@ Nếu ngày nghỉ trùng Thứ 7 hoặc CN → được nghỉ bù ngày làm v
 | Hành động            | Roles được phép                            |
 | -------------------- | ------------------------------------------ |
 | Xem hồ sơ nhân viên  | `branch_manager` (chi nhánh mình), `owner` |
-| Tạo / sửa hợp đồng   | `owner` (và HR với role `office`)          |
+| Tạo / sửa hợp đồng   | `owner`                                    |
 | Xem tất cả chi nhánh | `owner`                                    |
 | Terminate nhân viên  | `owner`                                    |
 

@@ -647,9 +647,13 @@ allowlist, so audit coverage and lint enforcement stay in lockstep.
 - Keep procurement and inventory terms aligned with `docs/ref/glossary.md`.
 - Dense tables are expected, but row actions and destructive actions must stay visually separated.
 - Route IA must stay anchored to three operator flows:
-  1. Kiem soat ton: stock on hand, stocktake, waste/adjustment, reporting.
-  2. Nhap/Nhan/Doi soat: purchase order, GRN, supplier invoice/price variance, receiving exceptions.
-  3. Dieu phoi/San xuat: transfer, production order, BOM/recipe issue and yield.
+  1. Nhập hàng: supplier-first GRN, receiving/QC, Finance/AP handoff.
+  2. Kiểm soát tồn: one-warehouse stock on hand, stocktake,
+     waste/adjustment and reporting.
+  3. Sản xuất/tiêu hao: current branch production run, sale-consumption and
+     write-off workflows.
+- Do not reintroduce purchase order, supplier return, lot/expiry, production
+  order, or same-branch warehouse-to-kitchen transfer into daily UI.
 - Sidebar group labels must be compact enough for the fixed sidebar. Use detail page headings and breadcrumbs for full workflow wording.
 - Complex Inventory forms use RHF + Zod + app form helpers when they have line arrays, more than four fields, inline pre-submit validation, or pending submit UX. Plain `<form action>` is only for auth, sign out, or single-reason confirmations.
 - Use Sonner for success/action-level feedback, inline field errors for validation, and `/access-denied?reason=` only for permission, auth, or scope failures.
@@ -693,7 +697,7 @@ by `docs/spec/role-route-matrix.md`; navigation data is single-sourced in
 it locks the UI assembly contract on top of them, and the gates that keep all
 three in sync. The gates land incrementally in Stage 0; until a rule's gate
 ships it stays prose-only and held by review. Live vs prose-only status is
-tracked under Enforcement Status below.
+tracked by the machine-owned enforcement scripts below.
 
 ### A. Chrome Archetypes (approved families)
 
@@ -871,284 +875,21 @@ id, and an undeclared new page fails CI pointing at the spec. Public customer
 transactions use the `PUBLIC-WORKFLOW` recipe; offline/pre-context screens use
 `GATE/AUTH`.
 
-### Enforcement Status
+### Enforcement
 
-This section is contract today; the behavioral gates land in Stage 0 (`D019`).
-Each structural rule is tracked here as gated or prose-only so the distance
-between documented and enforced stays visible — closing that gap is the point,
-because an unenforced structural rule is exactly how this layer drifted.
-`scripts/audit-ui-components.mjs` owns the audit-to-guard map, and
-`lint:ui-contract` validates it: every reported UI drift signal must point at an
-existing guard, a baseline ratchet, or an explicit advisory reason before it can
-become a new audit column.
-Guard-family signals must declare the exact guard group they summarize.
-Named `blocking-exception` entries are approved implementation/composition
-exceptions with a reason and an exact guard-matched `exceptionAllowlist`, not a
-baseline that can grow.
-`rawPrimitiveImportBaseline` is one such closed exception family: its current
-hits are registered adapter implementations only. `pageLocalFormatter` is
-`blocking-zero`; route-local money, number, date, and time formatters have no
-remaining allowance.
-`scripts/ui-contract-guard-reporting.mjs` owns the reverse inventory: every
-guard id detected in `scripts/check-ui-contract.mjs` must be audit-visible or
-belong to one reasoned lint-only group. Ratchet-maintenance ids are classified
-separately from runtime guards. `lint:ui-contract` fails when a guard is
-unclassified, stale, multiply owned, or both audit-visible and lint-only, and
-`audit:ui-components` exposes the counts under `Guard Reporting Closure`.
-`scripts/ui-component-registry.mjs` owns component-selection completeness.
-Every primitive file declares `need`, `use`, `fallback`, `forbidden`,
-`exemplar`, and one access class (`direct`, `adapter-only`, `workflow-only`, or
-`internal`). Approved app adapters and every Branch Operator / Employee adapter
-export are registered there as well. A new primitive file or domain-adapter
-export without a decision route fails `lint:ui-contract`; the audit exposes the
-inventory under `Component Selection Coverage`.
-`scripts/ui-contract-scope.mjs` owns the app/runtime source roots shared by the
-audit and matching guards, so Branch Operator and Employee runtime code cannot
-fall outside enforcement through a root-list mismatch.
-Every baseline ratchet also has a policy in
-`scripts/ui-contract-guard-reporting.mjs`. `audit:ui-components` reports its
-live `actual`, `allowed`, `delta`, `debt`, and `permanent exception` totals under
-`Baseline Ratchet Truth`. Green lint means `actual <= allowed`; it does not turn
-legacy debt into an approved exception. A permanent exception must name the
-contract-owned adapter or archetype implementation explicitly.
+Runtime guard ownership lives in `scripts/check-ui-contract.mjs`,
+`scripts/ui-contract-guard-reporting.mjs`, `scripts/ui-component-registry.mjs`,
+and `scripts/ui-contract-scope.mjs`. Run `corepack pnpm audit:ui-components`
+for current counts and findings. This contract does not preserve dated audit
+results, guard inventories, exception history, or open-debt snapshots; use the
+scripts, current source, task tracker, and git history.
 
-Stage 0 gate status (each flips to **live** as its ratchet lands in
-`scripts/check-ui-contract.mjs`):
+#### Ratchet allowlist semantics
 
-- `shell-registry` (§ B) — **live**: the `*-shell.tsx` file set, `<SidebarProvider>`,
-  and page-owned `<main>` are frozen to baseline; additions fail CI.
-- `operator-office-shell-boundary` (§ B) — **live**: Branch runtime,
-  Operations, and employee-lib code cannot import or render Management/Office
-  shell modules; additions fail CI.
-- `operator-office-route-boundary` (§ B) — **live**: Branch operator routes
-  cannot link or redirect into Office roots (`/admin`, `/finance`,
-  `/inventory`, `/menu`, `/orders`, `/branches`, `/hr`). Keep operator work
-  inside `/br/[branchId]` or a shared non-office surface.
-- `operator-embedded-page-header-boundary` (§ F / page-archetypes.md R1) —
-  **live**: embedded canonical content mounted under Branch runtime cannot leak
-  a shared `AppPageHeader` into the operator plane; Office headers must be
-  gated on `!embedded` or split so `AppPageTabs`/content render without page
-  header chrome.
-- `operator-embedded-button-density` (§ F / page-archetypes.md R3) — **live**:
-  embedded operator primary actions cannot keep Office-density `Button`
-  `size="sm"` / `size="xs"` debt above baseline. Branch through `embedded` and
-  use `size="touch"` for thumb-hit actions.
-- route-manifest (§ C) — **live**: every `(protected)/**/page.tsx` resolves to
-  exactly one MODULE_ACL family (redirect shims allowlisted), and every
-  family-root has a landing page; a new unclassified route fails CI.
-  Orphan-route reachability (a live page with zero inbound link) is a separate
-  cleanup pass — the link graph is not yet machine-traced.
-- navigation single-source / `nav-acl` (§ D) — **partial/live**: inline
-  `ShellNavGroup[]` literals are frozen (baseline only shrinks as shells collapse
-  to the shared resolver), and the MODULE_ACL → page chain keeps nav from
-  pointing at a dead route. Full projection of every shell's nav from
-  `nav-config.ts` is the remaining W5 shell-collapse work.
-- page-padding (§ E) — **live**: a ratchet freezes the current ad-hoc
-  page-container offenders (page.tsx cloning `max-w-* + p-*`) and fails new ones,
-  and `AppPage` is nesting-aware via `AppShellPaddingBoundary` so Management
-  pages stop double-padding without un-padding pages that rely on `AppShell`
-  main.
-- `page-archetype` (§ F / D058 W5) — **live**: a `PAGE_ARCHETYPES` map in
-  `scripts/page-archetypes.mjs` asserts every app route `page.tsx` is
-  declared with a valid archetype id from `docs/spec/page-archetypes.md`; an
-  undeclared or stale page fails CI. Mapping-presence only — recipe-internal
-  compliance (which primitives a page actually uses) stays review-owned, not
-  regex-enforced.
-- `route-boundary-coverage` (§ F) — **live**: every route page must resolve an
-  inherited `loading.tsx` and `error.tsx`; the existing
-  `route-boundary-adapters` gate then requires those concrete boundaries to use
-  `PageSkeleton` / `PageSpinner` and `ErrorPanel`.
-- `status-label-ssot` regex un-blinding (W1 ratchet) — **live**: the ratchet
-  now also catches `STATUS`-first names (`STATUS_LABELS`, `STATUS_CONFIG`, …)
-  and multi-line type annotations (`const X_STATUS: Record<…> = {`)
-  that the old regex missed; current page-local maps are baselined for the W1
-  status-registry burn-down.
-- `button-height-on-button` (§ D / Height Scale) — **live, widened**: the
-  raw-height token now spans `h-10`–`h-44` and `min-h-12`–`min-h-24` on
-  `<Button>`/`<TouchButton>`. The POS table-gate tile moved to a `tile` Button
-  size; a few bespoke single-use tap tiles (≥`h-20`: append-draft, cart row,
-  order-item ghost, bill payment tiles) are baselined as the accepted floor.
-- `primitive-transition-all` (§ Motion Contract) — **live**: shared UI
-  primitives must name the transitioned properties; `transition-all` is blocked
-  in `packages/ui/src/components`.
-- `app-transition-all` (§ Motion Contract) — **live**: app UI motion must name
-  the transitioned properties; `transition-all` and `motion-safe:transition-all`
-  are blocked in app source.
-- `native-interactive-element` (§ Component Authority / § D) — **live**: raw
-  `<button>` / app-local `<a>` actions are blocked in `apps/web/app` and
-  `apps/web/lib/staff-runtime`. Use
-  `Button` / `Link` via Má Tư DS primitives; allowed raw anchors are limited to
-  hash/tel/mailto/external links or direct children of an approved primitive `asChild`.
-  `global-error.tsx` remains the root-CSS fallback exception.
-- `icon-button-accessible-name` (§ Component Authority / Accessibility) —
-  **live**: icon-only `Button` controls must expose `aria-label`,
-  `aria-labelledby`, or `sr-only` text. `Button asChild` is allowed when the
-  child carries the accessible name.
-- `root-viewport-allows-zoom` (§ Layout Patterns / Accessibility) — **live**:
-  runtime app surfaces must not disable user zoom through viewport settings.
-- `focus-ring-contrast` (§ Accessibility / Token Contract) — **live**: focus
-  affordances use `ring-foreground`; `ring-ring` / `ring-ring/*` is blocked
-  because the gold ring is too low-contrast on cream surfaces.
-- `radius-scale` / `gap-scale` / `primitive-radius-scale` (§ Token Contract) —
-  **live**: app surfaces stay on the locked radius and gap scale, and primitives
-  cannot add new oversized radii (`rounded-xl` through `rounded-4xl`).
-- `app-loading-spinner-ssot` (§ Loading/Error/Not-found) — **live**: app
-  surfaces use `Spinner`, `PageSpinner`, `PageSkeleton`, or approved loading
-  adapters. Raw `Loader2`/`LoaderCircle` icons and app-authored `animate-spin`
-  classes are primitive-owned drift.
-- `primitive-runtime-arbitrary-px-rem-sizing` (§ Token Contract / Component
-  Authority) — **live**: primitives and app adapters cannot add raw px/rem
-  arbitrary sizing (`text-[Npx]`, `w-[Npx]`, `h-[Npx]`, `min-*`, `max-*`).
-  Use the locked Tailwind/theme token scale instead.
-- `primitive-arbitrary-shadow` / `primitive-shadow-overrun` (§ Elevation /
-  Shadow) — **live**: primitives and app adapters cannot add raw `shadow-[...]`
-  values, and primitives cannot add raw `shadow-xl` / `shadow-2xl`. Use the
-  named `shadow-effect-*` overlay/card tokens already in the contract.
-- `card-content-named-layout-props` /
-  `app-section-content-named-layout-props` (§ Spacing Rhythm / Component
-  Authority) — **live**: app routes cannot add local `p-0` /
-  `overflow-x-auto` overrides on `CardContent className` or
-  `AppSection contentClassName`; use `CardContent flush` / `scroll` and
-  `AppSection contentFlush` / `contentScroll`.
-- `scrollarea-no-max-height-only` (§ Layout Patterns) — **live**:
-  `ScrollArea` cannot be used with only `max-h-*`; use a definite height/flex
-  constraint, plain flow layout, or let `DataTable` own scrolling.
-- `route-boundary-adapters` (§ Loading/Error/Not-found) — **live**:
-  `loading.tsx` files render `PageSkeleton` / `PageSpinner`; `error.tsx` files
-  delegate to `ErrorPanel`.
-- `raw-empty-import-route-code` (§ Empty / Error states) — **live**: route code
-  cannot import raw `@comtammatu/ui/components/empty`; use `AppEmptyState` or
-  `TableEmptyStateRow`. Raw Empty primitives stay reserved for approved
-  wrappers such as `surface.tsx`.
-- `raw-table-element` (§ Component Authority) — **live**: app source cannot
-  render raw `<table>` elements; list/table surfaces route through `DataTable`,
-  `TableEmptyStateRow`, or an approved adapter around the shared `Table`
-  primitive.
-- `surface-clone-ssot` (§ Component Authority) — **live**: route-local
-  components named like `*Table`, `*Dialog`, `*Header`, `*Toolbar`,
-  `*EmptyState`, `*Skeleton`, or metric/status adapters must route through an
-  existing Má Tư DS adapter or use a workflow-specific name. Adapter
-  implementations and the POS `PosPageSkeleton` exception are the only frozen
-  baseline.
-- `status-chip-wrapper-baseline` (§ Status vocabulary) — **live**:
-  page-local `*StatusBadge` wrappers and `*_BADGE_VARIANT` maps are frozen to
-  baseline; new business-state chips must route through `StatusBadge` /
-  `getStatusBadgeMeta` or register the domain in `status-badge.tsx`.
-- `pos-kds-touch-reveal-baseline` (§ Surface Contracts → POS/KDS) — **live**:
-  POS/KDS hover-only reveal affordances are frozen to baseline; new touch
-  content must be visible, expandable by tap, or rendered in a multiline block
-  instead of relying on native `title=` or Tooltip.
-- `hand-rolled-page-heading-baseline` (§ Rhythm B / Page H1) — **live**:
-  app page H1 lockups are frozen to baseline; new page headings must render
-  through `AppPageHeader` unless the surface is an approved standalone/operator
-  exception.
-- `hover-shadow-rung` (§ Elevation / Shadow) — **live**: `hover:shadow-md` /
-  `lg` / `xl` / `2xl` in app code fails CI. Hover elevation caps at the
-  `shadow-sm` Hover rung; resting surfaces separate with `--border`.
-- `app-effect-shadow-rung` (§ Elevation / Shadow) — **live**: app surfaces
-  cannot use primitive float shadows (`shadow-effect-popover`, `dialog`,
-  `drawer`, `tooltip`, `toast`). Those tokens are owned by overlay primitives;
-  route cards/sections use border, tone, or `shadow-effect-card-hover`.
-- `resting-shadow-rung` (§ Elevation / Shadow) — **live**: resting
-  `shadow-sm` / `md` / `lg` / `xl` / `2xl` in app code is fixed baseline debt
-  and must not spread. Selected/active state uses ring, border, and background,
-  not new resting elevation. The total debt is also capped by
-  `resting-shadow-baseline`.
-- `raw-padding-baseline` (§ Spacing Rhythm / Page Padding) — **live**:
-  large local `p-*` / `px-*` / `py-*` / side-padding debt is frozen per file.
-  New page spacing must route through `AppPage`, `AppSection`, `FieldGroup`, or
-  a named adapter prop instead of ad-hoc padding.
-- `gap-atypical-baseline` (§ Spacing Rhythm) — **live**: atypical `gap-0`,
-  `gap-0.5`, and `gap-2.5` values are frozen per file. New stacks use the
-  documented gap scale or a named density prop.
-- `inline-chrome-baseline` (§ Component Authority) — **live**: raw rounded +
-  bordered card/inset clones are frozen per file. New chrome routes through
-  `AppSection`, `Card`, `Item`, `NoteCallout`, `Alert`, or an approved adapter.
-- `custom-shadow-baseline` (§ Elevation / Shadow) — **live**: custom shadow
-  values (`shadow-[...]`, `boxShadow`, `box-shadow`, route-local `--shadow-*`)
-  are frozen per file. New elevation uses the documented shadow rungs or
-  primitive-owned overlay tokens.
-- `motion-color-duration` (§ Motion Contract) — **live**: a `transition-colors`
-  className paired with `duration-300` fails CI. Color/border feedback is locked
-  to `duration-150`; `duration-300` is the overlay enter/exit token.
-
-#### Ratchet allowlist semantics — real-debt floor, not a zero backlog (gate-precision audit, 2026-06-15)
-
-A multi-agent audit (verified against code) classified every ratchet/count
-allowlist. **Most allowlists conflate two things the regex cannot tell apart:
-genuine SSoT debt and permanent false-positives** (legit patterns the regex
-happens to match). Treat an allowlist as a _floor of accepted false-positives_,
-not a backlog to drive to zero — chasing zero on a `reframe` gate is impossible
-by design. Reconcile a stale allowlist (allowlist > actual) for free; never
-lower an entry below its actual count; only the named real-debt is migratable,
-and only when its files are outside an active redesign zone.
-
-Real-debt = hits still migratable to the SSoT (everything else is a permanent
-false-positive):
-
-- `app-arbitrary-sizing`, `shell-registry-bespoke-main`, `page-padding`, and
-  every empty-allowlist gate — **healthy**: allowlist == actual, entries are
-  irreducible (calc/chart px; chrome-family `<main>` roots). Do not migrate.
-- `icon-size` — **reframe**: 0 migratable; the entries are media thumbnails
-  (real `<Image>`), not icons.
-- `button-height-on-button` — **Button-scoped (D030)**: flags raw heights only
-  on `<Button>`/`<TouchButton>` via a brace/string-aware tag scanner (covers
-  `cn()` + multi-line). 0 allowlisted; form-control trigger buttons use
-  `size="field"`. The ~37 non-button heights (Input/Select/Skeleton/container)
-  the old "any raw height" gate flagged are out of scope — they were never debt.
-- `vnd-format-ssot` — **reframe**: remaining allowlist is inventory/domain-number
-  debt. Formatter drift is reported as `pageLocalFormatter` and bound to
-  `formatterGuardBaselines`: finance-local formatters, app-local number
-  formatters, VND formatter drift, and date/time formatter drift.
-- `status-label-ssot` — **reframe**: ~3 real label maps, all HR-owned
-  (D026/D027); ~20 are status value-arrays / variant-only / already-shared.
-- `card-content-classname-baseline` — **reframe (count 81, D030)**: the named
-  `flush`/`scroll` variants absorb ~0 of the remaining hits; 14 KpiCard-debt
-  `p-N` stat cards migrated to `KpiCard` (92→81); the rest are orthogonal child
-  layout (panels, grids, spacing) the gate can't single-source.
-- `card-title-classname-baseline` — **mixed (count 13, D030)**: `CardTitle` now
-  has a `size` variant (`sm`=text-sm, `lg`=text-2xl, `default`=text-base); the 8
-  pure heading-scale hits migrated to it (21→13). The remaining 13 are
-  layout-only (`flex`/`truncate`, can't migrate), or active-zone (finance D028).
-  The eyebrow small-caps subset migrated to `SectionLabel` (D070).
-- `use-is-mobile-budget` — **mixed (D030)**: 3 of the 5 flagged list-forks
-  migrated to the DataTable adapter (`supplier-invoices` faithful; `issues` +
-  `receiving` with an owner-approved small mobile spacing/frame delta); 2 can't
-  migrate (`stock` master-detail, `inventory-value` custom SummaryBox layout).
-  The other ~32 hits are legit composition switches.
-- `stat-card-ssot` — **resolved (D030)**: the finance metric card pattern now
-  uses the shared `KpiCard`; local stat-card wrappers are not a second metric
-  card contract. Allowlist back to 2 (the `KpiCard` SSoT itself + HR-owned
-  payroll `SummaryCard`).
-
-Tracker bridge: only open an active task for the named real-debt above when it
-is tied to current route-family work in `tasks/todo.md`. Current active links:
-HR D026/D027/payroll owns the remaining HR status-label maps and payroll
-`SummaryCard`; finance active-zone work waits for its owning finance task;
-`SectionLabel` ships in `@comtammatu/ui/components/section-label` (D070); panel/field/section eyebrow labels render through it instead of inline class strings.
-Do not create cleanup PRs that chase `reframe` allowlists or permanent
-false-positives toward zero.
-
-**Systemic false-negative — the `cn()` blind spot (partially closed
-2026-06-15).** Every className-anchored gate used `className=\{?['"]…`, which
-requires a literal quote, so it missed `className={cn("…")}`, size/variant maps,
-and multi-line className. **Closed:** `icon-size`, `heading-scale`,
-`radius-scale`, `app-arbitrary-sizing` now also match `className={cn("…")}`
-(broadened anchor `\{?(?:cn\()?['"]`; 0 current hits, purely preventive);
-`stat-card-ssot` now matches prefix-named defs (`\w*SummaryCard` →
-`FinanceSummaryCard`, allowlisted as finance active-zone); `button-height` is
-**replaced** by `button-height-on-button`, which uses the brace/string-aware
-`extractJsxOpeningTags` scanner to read each `<Button>` opening tag in full —
-so `cn()` and multi-line className are covered structurally, not by widening a
-regex. **Left open by intent:**
-`card-content`/`card-title` multi-line misses are the SSoT components themselves
-(`surface.tsx`/`kpi-card.tsx`) and should be exempt, not counted. Const-map size
-tokens (`brand.tsx`) and multi-arg `cn()` (token in a later arg) remain
-uncaught — preventive-only, low value.
-`native-interactive-element` and `icon-button-accessible-name` use the same
-brace/string-aware JSX scanner plus tag spans to avoid the old `asChild`
-false-positive/false-negative edge. `app-loading-spinner-ssot` is the matching
-loading-state SSoT guard for raw spinner drift.
+An allowlist is a measured false-positive floor, not a backlog target. Never
+lower a guard below the current actual count or chase every allowed match to
+zero. Dynamic counts and debt/permanent classification belong to
+`scripts/ui-contract-guard-reporting.mjs` and `corepack pnpm audit:ui-components`.
 
 ## Loading / Error / Not-found Frame
 

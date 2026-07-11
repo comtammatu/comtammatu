@@ -22,9 +22,8 @@ import { readFileSync } from "node:fs";
 //
 // Known residual gaps (text matching cannot close them; the real fix is
 // keeping prod credentials out of the local agent env): SDK writes via
-// node/python one-liners, bare `SELECT mutating_fn()` outside a DO/PERFORM
-// wrapper (PERFORM and DO are blocked below), raw-IP connection strings,
-// keywords split by shell string concatenation.
+// node/python one-liners, raw-IP connection strings, and keywords split by
+// shell string concatenation.
 
 const PROTECTED_REFS = {
   iexwsuaqqenyjiskawoj: "PRODUCTION (comtammatu)",
@@ -36,6 +35,54 @@ const PROTECTED_REFS = {
 // already covered. Bare SELECT of a mutating function remains a residual gap.
 const WRITE_SQL =
   /\b(insert|update|delete|truncate|alter|drop|create|grant|revoke|vacuum|reindex|copy|merge|call|do|perform|refresh\s+materialized)\b/i;
+
+// Production execute_sql is for table/view/catalog reads only. Allow a small
+// set of built-in read helpers; block every other function call because a
+// SELECT can invoke a VOLATILE function and mutate state.
+const SAFE_READ_FUNCTIONS = new Set([
+  "array_agg",
+  "avg",
+  "coalesce",
+  "count",
+  "greatest",
+  "json_agg",
+  "jsonb_agg",
+  "jsonb_build_array",
+  "jsonb_build_object",
+  "least",
+  "max",
+  "min",
+  "nullif",
+  "pg_get_functiondef",
+  "pg_get_viewdef",
+  "sum",
+  "to_regclass",
+  "to_regprocedure",
+]);
+const SQL_PAREN_KEYWORDS = new Set([
+  "as",
+  "exists",
+  "filter",
+  "in",
+  "over",
+  "select",
+  "values",
+]);
+
+function unsafeSqlFunction(sql) {
+  for (const match of stripSqlNoise(sql).matchAll(
+    /\b(?:(?:"([^"]+)"|([a-z_][\w$]*))\s*\.\s*)?(?:"([^"]+)"|([a-z_][\w$]*))\s*\(/gi,
+  )) {
+    const schema = (match[1] ?? match[2])?.toLowerCase();
+    const name = (match[3] ?? match[4])?.toLowerCase();
+    const quotedName = match[3] !== undefined;
+    if (!name || SQL_PAREN_KEYWORDS.has(name)) continue;
+    if (schema && schema !== "pg_catalog") return `${schema}.${name}`;
+    if (quotedName && schema !== "pg_catalog") return name;
+    if (!SAFE_READ_FUNCTIONS.has(name)) return name;
+  }
+  return null;
+}
 
 // WRITE_SQL runs after string literals and comments are stripped, so a write
 // keyword inside a quoted value (e.g. `select ... where note = 'do not delete'`)
@@ -66,11 +113,11 @@ function block(reason) {
   console.error(
     [
       `[guard-prod-db] BLOCKED: ${reason}`,
-      "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is PRODUCTION — SELECT-only;",
+      "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is PRODUCTION — guarded table/view/catalog reads only;",
       "dyksphedgzqsqjqgxzog belongs to a different codebase. No dev/test Supabase target exists;",
       "migrations ship as file → PR → owner applies. If the owner explicitly delegated a prod write",
-      "in this session, the owner runs it or temporarily disables this hook in the runtime's",
-      "hook wiring (.claude/settings.json or .codex/hooks.json).",
+      "in this session, the owner applies it outside the guarded runtime or provides a scoped",
+      "approval path. Never disable this hook or its runtime wiring.",
     ].join("\n"),
   );
   process.exit(2);
@@ -95,7 +142,9 @@ if (toolName === "Bash") {
   // .temp/project-ref, which point at production — block regardless of
   // whether a ref is visible in the command.
   if (MUTATING_CLI.test(cmd)) {
-    block("state-mutating supabase CLI subcommand (linked project is production)");
+    block(
+      "state-mutating supabase CLI subcommand (linked project is production)",
+    );
   }
 
   const refHit = Object.keys(PROTECTED_REFS).find((ref) => cmd.includes(ref));
@@ -114,10 +163,21 @@ if (toolName === "Bash") {
     if (/\bpg_restore\b/.test(cmd)) {
       block(`pg_restore against ${targetLabel} (restore is always a write)`);
     }
-    if (/\bpsql\b/.test(cmd) && (WRITE_SQL.test(stripSqlNoise(cmd)) || /\s(-f|--file)\b/.test(cmd))) {
+    if (
+      /\bpsql\b/.test(cmd) &&
+      (WRITE_SQL.test(stripSqlNoise(cmd)) || /\s(-f|--file)\b/.test(cmd))
+    ) {
       block(
         `psql against ${targetLabel} with write SQL or a script file (cannot verify read-only)`,
       );
+    }
+    if (/\bpsql\b/.test(cmd)) {
+      const unsafeFunction = unsafeSqlFunction(cmd);
+      if (unsafeFunction) {
+        block(
+          `psql calling non-whitelisted function ${unsafeFunction}() against ${targetLabel}`,
+        );
+      }
     }
     if (HTTP_CLIENT.test(cmd) && HTTP_WRITE.test(cmd)) {
       block(
@@ -147,7 +207,13 @@ if (mcpMatch) {
     if (WRITE_SQL.test(stripSqlNoise(query))) {
       block(`execute_sql with write SQL against ${label}`);
     }
-    process.exit(0); // read-only SQL on a protected ref is allowed (SELECT-only policy)
+    const unsafeFunction = unsafeSqlFunction(query);
+    if (unsafeFunction) {
+      block(
+        `execute_sql calling non-whitelisted function ${unsafeFunction}() against ${label}`,
+      );
+    }
+    process.exit(0); // guarded table/view/catalog reads on a protected ref are allowed
   }
   block(`${action} against ${label}`);
 }

@@ -10,7 +10,7 @@ No Supabase writes. This exercises the same coalescer/batcher used by POS and
 KDS client code.
 
 ```bash
-pnpm realtime:load -- --mode synthetic --surface mixed --clients 50 --events-per-client 100
+corepack pnpm realtime:load -- --mode synthetic --surface mixed --clients 50 --events-per-client 100
 ```
 
 Read `collapse`: higher is better. Example: `triggers=5000 runs=2` means a burst
@@ -22,20 +22,15 @@ Requires `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and either
 `--branch-id` or `E2E_CASHIER_EMAIL` in the loaded env files.
 
 ```bash
-pnpm realtime:load -- --mode listen --surface mixed --branch-id 1 --clients 50 --duration-ms 30000
+corepack pnpm realtime:load -- --mode listen --surface mixed --branch-id 1 --clients 50 --duration-ms 30000
 ```
 
 This opens virtual Realtime subscribers and counts events by table. It does not
 write unless `--mutations` and `--allow-writes` are both provided.
 
-## Controlled Dev/Test Writes
+## Write Mode
 
-Only use against dev/test Supabase. The script creates E2E fixture orders and
-KDS tickets, waits for Realtime delivery, then removes the fixtures.
-
-```bash
-REALTIME_LOAD_TARGET=dev pnpm realtime:load -- --mode listen --surface mixed --clients 50 --mutations 20 --allow-writes
-```
-
-Do not run write mode against production. The harness refuses `--allow-writes`
-unless `REALTIME_LOAD_TARGET` is one of `dev`, `test`, `local`, or `staging`.
+Write mode is not an approved operator workflow. `REALTIME_LOAD_TARGET` is only
+a caller-supplied label; it does not prove that the loaded Supabase URL/ref is
+non-production. Use synthetic or listener mode until the harness validates the
+actual target ref against the Environment Registry and has mismatch tests.

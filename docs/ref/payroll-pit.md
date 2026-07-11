@@ -389,7 +389,7 @@ TP.HCM): **5,310,000 VND/tháng** (Vùng II 4,730,000; Vùng III 4,140,000).
 | ---------------------------- | --------------------------------------------------- |
 | Xem bảng lương của mình      | Tất cả nhân viên (employee portal)                  |
 | Xem bảng lương chi nhánh     | `branch_manager`                                    |
-| Tạo / tính bảng lương        | `owner` (và `office` với quyền HR)                  |
+| Tạo / tính bảng lương        | `owner`                                              |
 | Duyệt bảng lương             | `owner`                                             |
 | Xuất dữ liệu quyết toán thuế | `owner`                                             |
 

@@ -542,40 +542,11 @@ Before building or changing any `(protected)/**/page.tsx`:
 4. Run `codegraph explore "<adapter name>"` (or MCP `codegraph_explore`) for
    live usage of the adapters the recipe names (`DataTable`,
    `DocumentFormFrame`, `KpiCard`, …), or `pnpm audit:ui-components` for a
-   route-family adoption/high-risk report — see `docs/modules/ui.md` § Shared
-   Component Registry for the full component → role → locking-rule table and
-   its usage-query instructions. Never answer "where is X used" by
-   grep-guessing or by cloning a component you found once.
+   route-family adoption/high-risk report. Query
+   `scripts/ui-component-registry.mjs` for current ownership and usage; never
+   answer "where is X used" from a hand-maintained list.
 5. Build the new page from the exemplar's `PageContent` skeleton: swap the
    domain fetch/map, keep the shell shape.
 6. Add the new page to the `PAGE_ARCHETYPES` map in
    `scripts/page-archetypes.mjs` with the correct archetype id. An
    undeclared page fails CI with a message pointing back at this file.
-
-## 6. Census (verified against code, 2026-07-03)
-
-135 `page.tsx` files under `apps/web/app` (131 protected + 3 public + 1 root).
-The brief that seeded this file's first draft counted 134 pages — `main` had
-moved by one page since; the count below is a fresh recount, not a copy of
-that number.
-
-| Archetype      | Count   |
-| -------------- | ------- |
-| EMBED-WRAPPER  | 32      |
-| LIST           | 32      |
-| SETTINGS-PANEL | 15      |
-| DETAIL         | 13      |
-| REDIRECT-SHIM  | 10      |
-| DOC-WORKFLOW   | 10      |
-| REPORT         | 7       |
-| HUB            | 5       |
-| DASHBOARD      | 4       |
-| GATE/AUTH      | 4       |
-| BOARD          | 3       |
-| **Total**      | **135** |
-
-This table is a point-in-time count, not a gate — the gate (§ 4 above,
-mechanics in `scripts/check-ui-contract.mjs`) is the `PAGE_ARCHETYPES` mapping
-itself. Do not hand-edit this table when adding a page; it goes stale the
-moment a page is added and nobody re-derives it. Re-derive it from the gate's
-map (`grep -c` per archetype id) if a future audit needs a fresh count.

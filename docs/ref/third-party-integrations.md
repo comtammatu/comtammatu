@@ -1,6 +1,5 @@
 # Third-Party Integrations — Hệ Sinh Thái Bên Ngoài
 
-> Cập nhật: 2026-05-23
 > Mục đích: Vendor selection + integration guide cho toàn bộ hệ thống
 > Nguyên tắc: "Hệ thống chỉ chuẩn bị data — filing/payment thực tế qua vendor"
 
@@ -25,25 +24,24 @@
 
 **Lựa chọn**: ✅ **Tích hợp Payment**
 
-| Thuộc tính    | Giá trị                                                            |
-| ------------- | ------------------------------------------------------------------ |
-| Loại          | NAPAS standard, bank-to-bank direct                                |
-| API           | REST — `api.vietqr.vn`                                             |
-| Sandbox       | ✅ Có (`api.vietqr.vn` test env)                                   |
-| SDK           | Node.js SDK chính thức                                             |
-| Phí/giao dịch | ~1,600 VND (Plus) hoặc % (Pro) — cần confirm với ngân hàng đối tác |
-| Settlement    | Realtime                                                           |
-| Webhook       | SePay webhook nếu bật; fallback là cashier xác nhận thủ công       |
-| Onboarding    | Đăng ký qua ngân hàng hoặc QR service provider                     |
+| Thuộc tính | Giá trị                                                      |
+| ---------- | ------------------------------------------------------------ |
+| Loại       | EMVCo/NAPAS bank-transfer payload                            |
+| Generation | Sinh payload cục bộ trong provider; không gọi VietQR image API |
+| Settlement | SePay evidence webhook hoặc cashier xác nhận theo quyền      |
+| Cấu hình   | Tài khoản nhận tiền sống trong Admin settings                |
 
-**Cách hoạt động**: Mỗi đơn có sẵn một mã chuyển khoản cố định trong `orders.payment_code` (ví dụ `DHA1A1A1A1A1A1`) → Phiếu tạm tính và hóa đơn dùng mã này để tạo QR, kể cả khi cashier chưa chọn tab VietQR → Khách quét QR bằng app ngân hàng bất kỳ và giữ nguyên nội dung → Tiền về tài khoản merchant → SePay đẩy webhook vào hệ thống, hoặc cashier xác nhận thủ công khi webhook chưa bật.
+**Cách hoạt động**: Mỗi đơn có mã chuyển khoản cố định trong
+`orders.payment_code`: `<configured prefix> + space + 12 ký tự chữ/số`. Phiếu
+tạm tính và POS dùng mã này để tạo QR. Khách giữ nguyên nội dung chuyển khoản;
+SePay đẩy evidence webhook, hoặc cashier xác nhận theo quyền khi cần.
 
 **Lưu ý tích hợp**:
 
 ```
 - VietQR gốc không có push webhook — Sepay webhook là lớp nhận biến động tài khoản ngân hàng
-- Cần merchant ID từ ngân hàng đối tác (Vietcombank / VPBank / MB phổ biến nhất)
-- Dynamic QR mỗi giao dịch khác nhau (có amount + nội dung) — KHÔNG dùng Static QR cho POS
+- QR của đơn mang amount + nội dung từ `orders.payment_code`; không dùng ảnh QR
+  tĩnh làm settlement path cho POS
 ```
 
 **SePay webhook settlement**:
@@ -52,7 +50,8 @@
 - Endpoint: /api/webhooks/sepay
 - Sepay auth: HMAC-SHA256, raw body, header X-SePay-Signature + X-SePay-Timestamp
 - Idempotency: lưu webhook_events(provider='sepay', request_id=payload.id) trước khi chốt payment
-- Match payment: ưu tiên payload.code; fallback đọc nội dung chuyển khoản có mã dạng "DHA1A1A1A1A1A1", khớp với orders.payment_code
+- Match payment: scan `content`, `description` và `code`, rồi chọn candidate hợp
+  lệ dài nhất; mã `DH...` chỉ được giữ để đọc legacy evidence
 - Validate: transferType='in', số tiền khớp đơn, tài khoản nhận khớp cấu hình VietQR trong Admin
 ```
 
@@ -62,16 +61,13 @@
 
 **Lựa chọn**: ✅ **Tích hợp Payment**
 
-| Thuộc tính       | Giá trị                                    |
-| ---------------- | ------------------------------------------ |
-| Thị phần         | ~69% người dùng VN, 80%+ F&B chấp nhận     |
-| API              | REST — `developers.momo.vn/v3`             |
-| Sandbox          | ✅ Có — Postman collection đầy đủ          |
-| Phí merchant     | **MIỄN PHÍ** (MoMo không thu phí merchant) |
-| Settlement       | Realtime                                   |
-| Webhook          | ✅ POST JSON IPN khi giao dịch hoàn tất    |
-| Webhook security | HMAC signature                             |
-| Fallback         | Nếu timeout → gọi GET order status API     |
+| Thuộc tính       | Giá trị                                             |
+| ---------------- | --------------------------------------------------- |
+| API              | MoMo v2 gateway endpoints theo provider hiện hành  |
+| Settlement       | Provider/IPN-driven                                 |
+| Webhook          | POST JSON IPN khi giao dịch hoàn tất                |
+| Webhook security | HMAC signature                                      |
+| Giá/phí          | Theo hợp đồng merchant hiện hành, không hardcode doc |
 
 **Webhook payload mẫu**:
 
@@ -215,22 +211,7 @@ Hệ thống → Export báo cáo thuế GTGT theo tháng (tổng đầu ra / đ
 
 ---
 
-## 4. Chi phí ước tính hàng tháng
-
-Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
-
-| Service                | Volume     | Đơn giá    | Chi phí/tháng                           |
-| ---------------------- | ---------- | ---------- | --------------------------------------- |
-| Viettel S-invoice      | 15,000 HĐ  | Theo HĐ    | Theo hợp đồng Viettel                   |
-| VietQR (qua ngân hàng) | 15,000 txn | ~1,600 VND | **24,000,000 VND**                      |
-| MoMo                   | Variable   | **0%**     | **0 VND**                               |
-| **Tổng**               |            |            | **Phụ thuộc hợp đồng Viettel + VietQR** |
-
-> ⚠️ Phí VietQR là lớn nhất — cần negotiate với ngân hàng đối tác để có gói merchant tốt hơn. Nhiều ngân hàng có gói 0 VND/giao dịch cho SME khi đạt volume.
-
----
-
-## 5. Thứ tự tích hợp theo Module
+## 4. Thứ tự tích hợp theo Module
 
 | Module                   | Tích hợp                                         |
 | ------------------------ | ------------------------------------------------ |

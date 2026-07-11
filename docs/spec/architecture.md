@@ -48,26 +48,28 @@ Tenant (L0, single row: Hộ kinh doanh Cơm Tấm Má Tư)
 
 ```
 Login → signInWithPassword() → custom_access_token_hook (SECURITY DEFINER)
-  → JWT minted with { tenant_id, branch_id, user_role, position }
+  → JWT minted with the claim shape owned by packages/shared/src/auth/types.ts
   → proxy.ts reads claims (from access_token, not user.app_metadata) → route to post-login target
 
-Every DB query/mutation → RLS → has_permission(branch_id, key) on staff_permissions
+Database access → RLS, authorized RPC, or trusted service-role boundary
 ```
 
-**Auth layer:** `user_role` is derived from `positions.code` and kept for backward compatibility (route-level `canAccess`). Row-level authz runs against the `staff_permissions` grant table via the `has_permission()` SQL helper (owner bypass, temporal validity window, tenant-wide via NULL branch). See `docs/modules/auth.md` for the full model.
+**Auth layer:** `user_role` is derived from `positions.code` and kept for
+backward compatibility (route-level `canAccess`). Permission-sensitive browser
+writes use live grants through RLS/RPC; trusted service code derives scope from
+server context. See `docs/modules/auth.md` and `docs/agent/rules/database.md`.
 
 ### Role → Post-Login/Fallback Target
 
 Defined in `getDefaultRedirect(claims)` (`packages/shared/src/auth/scope.ts`).
 
-| Role                  | Route              |
-| --------------------- | ------------------ |
-| `owner`               | `/finance` on office/desktop context; `/br` branch picker on operator context |
-| `office`              | `/finance` |
-| Branch-pinned staff   | `/br/{branchId}` |
-| Central-site staff    | `/br/{centralSiteId}` when soft-routing resolves a home site |
+| Role                | Route                                             |
+| ------------------- | ------------------------------------------------- |
+| `owner`             | `/`, rồi resolver mở branch khi chỉ có một branch |
+| Branch-pinned staff | `/br/{branchId}`                                  |
 
-Root `/` delegates to this same resolver. It does not render a separate hub.
+Root `/` delegates to this same resolver; multiple active branches produce the
+picker, while exactly one active branch opens its Branch Hub.
 
 POS/KDS are not anyone's post-login fallback target — operators reach
 `/br/[branchId]/pos` or `/br/[branchId]/kds` via Branch Hub or a direct link.
@@ -137,8 +139,9 @@ Change ownership:
 
 | Context              | Import from                                | Reason                        |
 | -------------------- | ------------------------------------------ | ----------------------------- |
-| Server Actions / RSC | `@comtammatu/database`                     | Full barrel OK — server-only  |
-| proxy.ts / Edge      | `@comtammatu/database/supabase/middleware` | No Node.js deps               |
+| Server Actions / RSC | `@comtammatu/database/supabase/server`     | Request-scoped user client    |
+| Privileged server    | `@comtammatu/database/supabase/service`    | Intentional RLS bypass        |
+| proxy.ts             | `@comtammatu/database/supabase/middleware` | Session refresh boundary      |
 | "use client"         | `@comtammatu/database/supabase/client`     | No server deps (next/headers) |
 
 ## Routing (path-based, single domain)
@@ -150,7 +153,7 @@ Top-level surfaces (see `module-acl.ts` for canonical role lists):
 | Surface            | Route                        | Allowed roles (summary)                                      |
 | ------------------ | ---------------------------- | ------------------------------------------------------------ |
 | Admin              | `/admin/*`                   | owner                                                        |
-| Inventory          | `/inventory/*`               | owner, branch_manager, warehouse_manager, production_manager |
+| Inventory          | `/inventory/*`               | owner, branch_manager                                        |
 | Finance            | `/finance/*`                 | owner                                                        |
 | HR                 | `/hr/*`                      | owner, branch_manager                                        |
 | Orders             | `/orders`                    | owner, branch_manager, cashier                               |
@@ -160,7 +163,7 @@ Top-level surfaces (see `module-acl.ts` for canonical role lists):
 | Branch dashboard   | `/br/[branchId]/dashboard`   | owner, branch_manager                                        |
 | Branch settings    | `/br/[branchId]/settings/*`  | owner, branch_manager                                        |
 | Branch menu limits | `/br/[branchId]/menu-limits` | owner, branch_manager                              |
-| Staff day runtime  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*` | branch-pinned and central-site operator roles       |
+| Staff day runtime  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*` | branch-pinned roles                                 |
 | Access denied      | `/access-denied`             | public (rendered with reason copy from `blocked-state.ts`)   |
 | Payment return     | `/payment/momo/return`       | public (Momo redirect target)                                |
 

@@ -105,7 +105,6 @@ Base config (`tsconfig.base.json`):
 
 - `target: ES2022`, `module: ESNext`, `moduleResolution: bundler`
 - `strict: true`, `noUncheckedIndexedAccess: true`
-- TypeScript 6.0 — packages using `process.env` need `"types": ["node"]` in their tsconfig
 
 ## Key Commands
 

@@ -5,8 +5,7 @@
 ## Trạng thái hiện tại
 
 - Active delivery track: production đang vận hành in-place trên repo
-  `comtammatu`; current repo work is Greenfield preparation plus explicitly
-  owner-confirmed production fixes.
+  `comtammatu`; current work phải bám runtime truth của chính repo này.
 - Active tracker: [tasks/todo.md](../tasks/todo.md)
 - Superseded docs are not retained in this repo. Current contracts must live in `tasks/todo.md`, `docs/plan/adr/`, module docs, specs, runbooks, or canonical references.
 
@@ -31,19 +30,9 @@
 ## Inventory nhanh
 
 - Canonical reference: [ref/inventory.md](ref/inventory.md)
-- Sơ đồ tổng quan: [spec/inventory-overview-diagrams.md](spec/inventory-overview-diagrams.md)
 - SOP: [ref/inventory-sop.md](ref/inventory-sop.md)
-- Training 1 trang: [ref/inventory-role-handoff.md](ref/inventory-role-handoff.md)
-- RBAC matrix: [ref/inventory-rbac-matrix.md](ref/inventory-rbac-matrix.md)
 - QA gate: [runbooks/inventory/pre-release-qa.md](runbooks/inventory/pre-release-qa.md)
 - Runtime route/UI contract: [modules/web-app.md](modules/web-app.md)
-
-### Trạng thái Inventory hiện tại
-
-- Procurement UI đã chốt là `tenant procurement hub`: `Receiving -> PO -> GRN -> supplier invoice`
-- Branch flow hiện đi theo `Nhận transfer -> Duyệt tiêu hao -> Stocktake/alerts`, không dùng `Receiving` như generic inbound hub
-- Dashboard `/inventory` đã chuyển sang `task queue first`
-- `Ingredients / Suppliers / Recipes` đã canonical về `Danh mục`; các route cũ trong `Settings` chỉ còn giữ redirect tương thích
 
 ## Quy ước
 

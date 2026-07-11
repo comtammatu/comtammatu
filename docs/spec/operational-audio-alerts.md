@@ -17,7 +17,7 @@ Operational audio is a **fourth feedback channel**, separate from toast, durable
 | Channel               | Durability              | Audience                | Owner doc                                |
 | --------------------- | ----------------------- | ----------------------- | ---------------------------------------- |
 | Toast                 | Ephemeral UI            | Current operator action | `docs/spec/toast-notification-system.md` |
-| Durable notification  | Persisted row           | Role/branch feed        | `docs/agent/rules/notifications.md`      |
+| Durable notification  | Persisted row           | Role/branch feed        | `docs/spec/toast-notification-system.md` |
 | Foreground popup      | OS popup while PWA open | Same as durable feed    | toast + notifications docs               |
 | **Operational audio** | Ephemeral device sound  | Open POS/KDS device     | **this spec**                            |
 
@@ -30,7 +30,7 @@ Do not collapse channels. A spoken kitchen alert is not an audit trail and not a
 3. Beep runtime: `apps/web/lib/audio-signal.ts`
 4. KDS alert taxonomy: `apps/web/app/(protected)/br/[branchId]/kds/_lib/sound-alerts.ts`
 5. Device prefs helper: `apps/web/lib/device-prefs.ts` (+ `scripts/check-client-storage.mjs` allowlist)
-6. Channel boundary: `docs/spec/toast-notification-system.md`, `docs/agent/rules/notifications.md`
+6. Channel boundary: `docs/spec/toast-notification-system.md`
 
 ## Core Model
 

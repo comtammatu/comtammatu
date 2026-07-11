@@ -85,8 +85,10 @@ payment, dùng `Tiền đã thu`; nếu câu hỏi là hóa đơn, dùng `HĐĐT
 
 ## Contract Finance Basic
 
-Finance Basic chỉ có bốn metric chính. Các số liệu khác là supporting workflow,
-không được đẩy lên thành Finance landing mặc định nếu không có quyết định mới.
+Finance landing có bốn metric chính: tiền đã thu, doanh thu ròng, giá trị tồn kho
+và chi vận hành. Giá vốn ghi nhận, giá vốn lý thuyết và lãi gộp là metric hỗ
+trợ/derived trong contract; không tự nâng thành card landing mặc định nếu không
+có quyết định mới.
 
 | `contract_key`                              | Nhãn UI           | Câu hỏi owner                                                          | Source/rule                                                                                                                            | Confidence                                                                                            |
 | ------------------------------------------- | ----------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
@@ -163,7 +165,7 @@ chỉ phân loại thành `stock_movements.consumption/sale_consumption` nếu �
 nguyên liệu đã thực sự xuất dùng trong ngày để tạo doanh thu.
 
 `supplier_invoice`, AP aging, và thanh toán NCC là Finance handoff. Inventory
-không được gọi các số đó là gate đóng ngày kho nếu PO/GRN/WAC/stock ledger đã
+không được gọi các số đó là gate đóng ngày kho nếu GRN/WAC/stock ledger đã
 đúng.
 
 ## Tổng quan Admin

@@ -350,367 +350,17 @@ bottom-nav, hoặc inline `ShellNavGroup[]`; dùng `AppShell`, `OfficeModuleShel
 
 ## Component Governance
 
-`Card`, `Table`, `Dialog`, và `AlertDialog` là primitive composition cấp cao.
-Code app mới không được mặc định import trực tiếp các primitive này từ
-`@comtammatu/ui/components/*`; phải chọn adapter sở hữu workflow trước:
+`docs/spec/design-system.md` owns the visual contract. Machine-owned enforcement
+and discovery live in:
 
-- layout/card section → `AppSection`, `AppLinkCard`, `KpiCard` cho metric,
-  `InteractiveCard`, `OperationalBoardCard`, hoặc wrapper route-scoped
-- table/list responsive → `DataTable` hoặc `TableEmptyStateRow`; document line-sheet cần adapter ghi rõ
-- short non-form detail/task dialog → `AppDialog`; CRUD form dialog → `FormDialog`;
-  form dài hoặc nhiều line dùng Page/Sheet theo Overlay Decision
-- destructive confirm đơn giản → shared `confirm()`; confirm có input/reason dùng flow đã duyệt
+- `scripts/check-ui-contract.mjs` and `scripts/ui-contract-guard-reporting.mjs`
+  for guard policy and failures.
+- `scripts/ui-component-registry.mjs` for shared-component ownership and usage.
+- `scripts/ui-contract-scope.mjs` for route/surface scope.
 
-`pnpm lint:ui-contract` khóa baseline import trực tiếp theo từng file bằng các
-gate `raw-card-import-file-baseline`, `raw-table-import-file-baseline`,
-`raw-dialog-import-file-baseline`, và `raw-alert-dialog-import-file-baseline`.
-`pnpm audit:ui-components` nối các import này vào signal
-`rawPrimitiveImportBaseline`; signal này phải khớp guard group
-`frozenPrimitiveImportBaselines` trong `lint:ui-contract`.
-Baseline chỉ được giảm. Nếu một file mới cần import trực tiếp primitive cấp cao,
-phải update `docs/spec/design-system.md` hoặc module doc liên quan trước, không
-thêm allowlist cục bộ để né guard.
-Focus ring drift bị chặn bởi `focus-ring-contrast`: không dùng `ring-ring` /
-`ring-ring/*` cho focus affordance; dùng `ring-foreground` để giữ contrast.
-Radius và gap token drift bị chặn bởi `radius-scale`, `gap-scale`, và
-`primitive-radius-scale`: app surface chỉ dùng radius/gap trong scale đã khóa;
-primitive không thêm `rounded-xl` / `rounded-2xl` / `rounded-3xl` / `rounded-4xl`.
-Radius tier debt bị chặn bởi `radius-tier-baseline`: icon-box và inset nhỏ dùng
-`rounded-md`, card/container dùng `rounded-lg`, pill thật mới dùng `rounded-full`.
-Tint opacity drift bị chặn bởi `tint-opacity`: status token chỉ dùng `/10`,
-`/15`, `/20`; muted fill chỉ dùng `/30` hoặc `/50`; không tự pha `/5`, `/25`,
-`/60`, `/95`, hoặc opacity khác.
-Primitive motion drift bị chặn bởi `primitive-transition-all`: shared UI
-primitive không dùng `transition-all`; ghi rõ property transition ở primitive.
-Primitive/app sizing drift bị chặn bởi
-`primitive-runtime-arbitrary-px-rem-sizing` và `app-arbitrary-sizing`: primitive,
-app surface, và app adapter không thêm `text-[Npx]`, `w-[Npx]`, `h-[Npx]`, hoặc
-raw arbitrary sizing; dùng token Tailwind/theme đã có.
-Primitive shadow drift bị chặn bởi `primitive-arbitrary-shadow` và
-`primitive-shadow-overrun`: không thêm `shadow-[...]` hoặc raw `shadow-xl` /
-`shadow-2xl` trong primitive; dùng shadow token đã khóa theo overlay/card rung.
-Card/AppSection layout override drift bị chặn bởi
-`card-content-named-layout-props` và `app-section-content-named-layout-props`:
-không thêm `p-0` hoặc `overflow-x-auto` trong `CardContent className` /
-`AppSection contentClassName`; dùng `flush` / `scroll` hoặc `contentFlush` /
-`contentScroll`.
-Legacy Card className debt bị chặn bởi `card-content-classname-baseline` và
-`card-title-classname-baseline`: không tăng override mới; dùng named props
-(`flush`, `scroll`, `size`) hoặc adapter owning workflow.
-ScrollArea collapse drift bị chặn bởi `scrollarea-no-max-height-only`: không
-dùng `<ScrollArea>` chỉ với `max-h-*`; dùng height/flex constraint rõ ràng hoặc
-để `DataTable` / layout thường tự sở hữu scroll.
-Responsive hook drift bị chặn bởi `use-is-mobile-budget`: `useIsMobile` chỉ cho
-composition-level switch như drawer/sheet, page width, hoặc wizard density;
-list/table responsive dùng `DataTable.mobileCardRender` thay vì fork route-local,
-trừ Branch-native touch `LIST` đã được khai báo trong
-`docs/spec/page-archetypes.md` và dùng shared loader/model riêng presentation.
-Motion drift trong app source bị chặn bởi `app-transition-all`: không thêm
-`transition-all` hoặc `motion-safe:transition-all`; ghi rõ property transition.
-Viewport accessibility drift bị chặn bởi `root-viewport-allows-zoom`: runtime
-app không được set `maximumScale: 1`, `userScalable: false`, hoặc
-`user-scalable=no`.
-Route boundary drift bị chặn bởi `route-boundary-adapters`: `loading.tsx` dùng
-`PageSkeleton` / `PageSpinner`, `error.tsx` dùng `ErrorPanel`.
-Empty-state drift bị chặn bởi `raw-empty-import-route-code`: route code không
-import raw `@comtammatu/ui/components/empty`; dùng `AppEmptyState` hoặc
-`TableEmptyStateRow`.
-Page-padding drift bị chặn bởi `page-padding`: page root không tự clone
-`AppPage` bằng `max-w-* + p-*`; outer spacing đi qua `AppPage` density.
-Action height drift bị chặn bởi `button-height-on-button`: action dùng
-`Button`/`TouchButton` size (`touch`, `touch-lg`, `icon-touch`, `tile`) thay vì
-raw `h-*` / `min-h-*` trên `<Button>`, `<button>`, hoặc `<Link>`.
-Money formatter drift bị chặn bởi `vnd-format-ssot`: tiền VND hiển thị qua
-`formatVND` từ `@comtammatu/shared/format`, không tự tạo page-local formatter
-hoặc raw `toLocaleString("vi-VN")` cho money.
-Number formatter drift bị chặn bởi `app-page-local-number-formatter`: app UI
-dùng shared helpers như `formatVND` / `formatCount`, không tự tạo
-`Intl.NumberFormat` hoặc raw `.toLocaleString()`.
-Date/time formatter drift bị chặn bởi `date-format-ssot`: ngày giờ dùng
-`@comtammatu/shared/time`, không tự tạo `Intl.DateTimeFormat` hoặc
-`.toLocaleDateString()` / `.toLocaleTimeString()`.
-`pnpm audit:ui-components` nối các formatter này vào signal
-`pageLocalFormatter`; signal phải khớp guard group `formatterGuardBaselines`
-trong `lint:ui-contract`.
-Heading scale drift bị chặn bởi `heading-scale`: app surface không tự dựng
-`text-4xl`, `text-5xl`, hoặc `font-black`; page H1 đi qua `AppPageHeader`, section
-heading đi qua `CardTitle` / `AppSection`, và số lớn chỉ dùng role numeric echo
-đã khóa trong design-system spec.
-Icon size drift bị chặn bởi `icon-size`: glyph dùng role scale trong spec
-(`size-3`→`size-6`, media qua `EmptyMedia` / thumbnail); không tự thêm
-`size-7`, `size-9`, `size-11`, `size-14`, hoặc `size-16` trong app surface.
-Uppercase label drift bị chặn bởi `uppercase-label-scale`: section/panel/field
-eyebrow dùng `SectionLabel`, không inline `text-sm uppercase` /
-`text-base uppercase`.
-Hover elevation drift bị chặn bởi `hover-shadow-rung`: không thêm
-`hover:shadow-md` / `lg` / `xl` / `2xl` trong app code; hover rung tối đa là
-`shadow-sm` hoặc dùng border/tone theo adapter.
-Primitive float shadow drift bị chặn bởi `app-effect-shadow-rung`: app surface
-không dùng `shadow-effect-popover` / `dialog` / `drawer` / `tooltip` / `toast`;
-các shadow này thuộc primitive overlay, không thuộc route card/section.
-Resting shadow drift bị chặn bởi `resting-shadow-rung`: không thêm
-`shadow-sm` / `md` / `lg` / `xl` / `2xl` tĩnh trong app code; trạng thái
-selected/active dùng ring, border, và background thay vì elevation mới.
-`resting-shadow-baseline` giữ tổng nợ không tăng, còn `custom-shadow-baseline`
-chặn `shadow-[...]`, `boxShadow`, `box-shadow`, và route-local `--shadow-*`.
-Motion duration drift bị chặn bởi `motion-color-duration`: `transition-colors`
-không đi với `duration-300`; color/border feedback dùng `duration-150`, còn
-`duration-300` chỉ dành cho overlay enter/exit.
-Raw HTML `<table>` trong app source bị chặn bởi `raw-table-element`; dùng
-adapter hoặc shared primitive đã duyệt thay vì dựng table semantics tại route.
-Status chip wrapper route-local bị chặn bởi `status-chip-wrapper-baseline`:
-không thêm `*StatusBadge` component hoặc `*_BADGE_VARIANT` map mới; đăng ký
-domain vào `status-badge.tsx` hoặc dùng `getStatusBadgeMeta`.
-POS/KDS touch reveal bị chặn bởi `pos-kds-touch-reveal-baseline`: không thêm
-native lowercase HTML `title=` hoặc `<Tooltip>` để lộ nội dung bị ẩn; dùng copy
-hiển thị, `NoteCallout`, Sheet/Drawer tap-to-expand, hoặc layout nhiều dòng.
-Vertical rhythm drift bị chặn bởi `space-y-baseline`: không thêm `space-y-*`
-cho section/page/dialog/client-root stack; dùng `flex flex-col gap-*` qua
-`AppPage`, `AppSection`, `FieldGroup`, hoặc adapter sở hữu layout.
-Geometry/chrome budget drift bị chặn bởi `raw-padding-baseline`,
-`gap-atypical-baseline`, và `inline-chrome-baseline`: không thêm padding lớn,
-gap lẻ, hoặc rounded+border card clone route-local; dùng `AppPage`,
-`AppSection`, `Item`, `NoteCallout`, `Alert`, hoặc named adapter props.
-Page heading drift bị chặn bởi `hand-rolled-page-heading-baseline`: không thêm
-`<h1 className="font-heading ...">` route-local; dùng `AppPageHeader` cho
-title/description/badge/action/tabs.
-Operator route boundary bị chặn bởi `operator-office-route-boundary`: route
-operator không link/redirect vào Office roots; giữ flow trong `/br/[branchId]`
-hoặc shared non-office surface.
-Operator embedded drift bị chặn bởi `operator-embedded-page-header-boundary` và
-`operator-embedded-button-density`: embedded branch không render nested
-`AppPageHeader`, và primary action dùng `size={embedded ? "touch" : "sm"}`
-hoặc biến tương đương.
-
-## Component Audit
-
-Khi cần đào sâu UI/component debt theo từng route family, chạy:
-
-```bash
-pnpm audit:ui-components
-pnpm audit:ui-components -- --family inventory
-pnpm audit:ui-components -- --family hr --all
-```
-
-Audit này đọc code hiện tại trong scope khóa tại
-`scripts/ui-contract-scope.mjs` (`apps/web/app`, Branch Operator adapter, và
-Employee runtime) rồi in ra:
-
-- route-family summary: số file/page, direct import `Card`/`Table`/`Dialog`/`AlertDialog`, adapter adoption gồm route transition frame, `STATUS` map, `useIsMobile`
-- page archetype coverage: mọi `apps/web/app/**/page.tsx` phải có đúng một entry
-  trong `PAGE_ARCHETYPES`; `missing` và `stale` luôn bằng `0`
-- shared adapter adoption: file/hit cho `AppPage`, `DataTable`, `AppDialog`, `FormDialog`, `KpiCard`, `StatusBadge`, `PageSkeleton`, `ErrorPanel`, v.v.
-- component selection coverage: toàn bộ primitive file được phân loại
-  `direct`, `adapter-only`, `workflow-only`, hoặc `internal`; app/domain
-  adapter exports cũng được kiểm tra tồn tại
-- highest-risk files: file nào còn nhiều primitive composition trực tiếp hoặc signal drift
-- UI/a11y/coverage signals: `transition-all`, native interactive element,
-  icon/action aria-label risk, action height drift, surface clone risk,
-  loading spinner risk, page-local formatter, route-local state copy risk đã
-  có guard khi baseline sạch, và action/data copy risk cho `.ts` action/read
-  files.
-
-The audit has an `audit-to-guard map` in `scripts/audit-ui-components.mjs`.
-Every `SIGNALS` entry must be classified as `blocking-zero`,
-`blocking-baseline`, `blocking-mixed`, `blocking-exception`, or explicit
-`advisory`, and every blocking signal must point at an existing
-`lint:ui-contract` guard. `blocking-exception` requires a reason and means
-"named implementation/composition exception", not debt that agents can copy.
-It must also declare an `exceptionAllowlist` that matches the owning
-`lint:ui-contract` guard allowlist exactly; adding a file to that list is a
-contract change, not an audit-only tweak.
-Signals that represent a guard family, such as `rawPrimitiveImportBaseline` and
-`pageLocalFormatter`, must declare a `guardGroup` so the audit map and
-`lint:ui-contract` cannot drift.
-`rawPrimitiveImportBaseline` is `blocking-exception`: every remaining direct
-high-level primitive import belongs to an exact registered adapter
-implementation allowlist, and route code has no allowance. `pageLocalFormatter`
-is `blocking-zero`: money, number, date, and time formatting drift has no
-remaining baseline.
-The audit prints this as `Signal Guard Coverage`; `lint:ui-contract` and the
-static test block adding a new report column without either a guard or a
-documented advisory/exception reason.
-
-The reverse direction is owned by
-`scripts/ui-contract-guard-reporting.mjs`. Every guard id detected in
-`scripts/check-ui-contract.mjs` must be either referenced by an audit signal or
-assigned to one explicit lint-only group with a reason. Baseline maintenance
-ids are classified separately from runtime guards. The audit prints the result
-as `Guard Reporting Closure`; `unclassified` must remain zero, so a new guard
-cannot silently land outside the report inventory.
-
-`Baseline Ratchet Truth` tách riêng `actual`, `allowed`, `delta`, `debt`, và
-`permanent exception` cho toàn bộ baseline guard. `delta = actual - allowed`
-phải bằng `0` sau khi hạ ratchet. Một hit chỉ được tính là permanent exception
-khi policy trong `scripts/ui-contract-guard-reporting.mjs` chỉ rõ adapter hoặc
-archetype nào sở hữu nó; mọi hit còn lại vẫn là debt dù lint đang xanh.
-
-App presentation state-copy is blocked by `app-presentation-state-copy` across
-the shared UI runtime scope: loading, empty, and error copy must come from
-shared messages/adapters instead of route-local literals. Server action/data `.ts`
-copy is reported as `actionDataStateCopy` and blocked by the zero-baseline
-`app-action-data-state-copy` guard. Formatter drift is reported as
-`pageLocalFormatter` and bound to `formatterGuardBaselines`: finance-local
-formatters (`finance-page-local-formatter`), app-local number formatters
-(`app-page-local-number-formatter`), VND formatter drift (`vnd-format-ssot`),
-and date/time formatter drift (`date-format-ssot`).
-Raw app loading spinner drift is blocked by `app-loading-spinner-ssot`: app
-surfaces must use `Spinner`, `PageSpinner`, `PageSkeleton`, or approved loading
-adapters instead of direct `Loader2`/`LoaderCircle` plus `animate-spin`.
-Action height drift is reported by `audit:ui-components` and blocked by
-`button-height-on-button`: action surfaces must use `Button`/`TouchButton` size
-variants such as `touch`, `touch-lg`, `icon-touch`, or `tile` instead of
-route-local `h-*` / `min-h-*` class patches.
-Surface clone risk is reported by `audit:ui-components` and blocked by
-`surface-clone-ssot`: it flags route-local component definitions
-named like `*Table`, `*Dialog`, `*Header`, `*Toolbar`, `*EmptyState`,
-`*Skeleton`, or metric/status adapters so agents must either collapse the code
-into an existing Má Tư DS adapter or use a workflow-specific name. Adapter-backed
-`*Section`, `*Toolbar`, `*Table`, and `*Dialog` wrappers are not counted when they already
-route through `AppSection`, `BranchOperatorPanel`, `SettingsFormSection`,
-`AppToolbar`, `PwaToolbar`, `DataTable`, `AppDialog`, `FormDialog`, or
-`FileImportDialog`; dynamic import aliases such as
-`const AdjustStockDialog = dynamic(...)` are also not counted as local dialog
-clones.
-
-`page-archetype` quét toàn bộ `apps/web/app/**/page.tsx`, không chỉ protected
-routes. `route-boundary-coverage` buộc mỗi page resolve được `loading.tsx` và
-`error.tsx` gần nhất; boundary thực tế tiếp tục bị
-`route-boundary-adapters` khóa về `PageSkeleton`/`PageSpinner` và `ErrorPanel`.
-
-Đây là công cụ định hướng review, không phải UI authority. Khi kết quả audit
-mâu thuẫn với `docs/spec/design-system.md`, contract thắng; sửa runtime hoặc
-guard để quay về contract.
-
-## Má Tư Component Decision Matrix
-
-Chọn component theo nhu cầu trước, không chọn theo primitive nhìn giống. Nếu
-không khớp hàng nào, dừng ở route-scoped adapter và cập nhật contract trước khi
-thêm primitive/wrapper mới.
-
-| Need                          | Use                                                                        | Fallback                                                                 | Forbidden                                                         | Exemplar                             |
-| ----------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------- | ------------------------------------ |
-| List / searchable table       | `DataTable`                                                                | `TableEmptyStateRow` trong table đã có sẵn                               | raw `Table`, double mobile/desktop JSX tree                       | inventory GRN, HR list               |
-| Detail / record review        | `AppPage` + `AppPageHeader` + `AppSection` + `DescriptionList`             | route-scoped detail adapter delegate về surface components               | page-local card grid tự style                                     | inventory GRN detail                 |
-| Document workflow / line form | `DocumentFormFrame`                                                        | `AppPage` + sticky `AppDetailFooter` nếu không phải document             | hand-rolled document shell, fixed footer tự do                    | GRN create, production run           |
-| Form field                    | `Field` / `FieldGroup` + shared form controls                              | route field wrapper delegate về `Field`                                  | raw label/input spacing, missing `name` / label                   | shared form components               |
-| Form dialog / CRUD            | `FormDialog`                                                               | Sheet/Page cho flow dài hoặc nhiều line                                  | raw `Dialog` + `useForm` + `zodResolver`                          | HR employee dialog                   |
-| Detail / task dialog          | `AppDialog`                                                                | Sheet/Page nếu nội dung dài hoặc task nhiều bước                         | raw `DialogHeader` / `DialogContent` trong route                  | menu item detail, HR photo/checklist |
-| Metric / stat                 | `KpiRow` + `KpiCard`                                                       | route metric adapter delegate về `KpiCard`                               | local `StatCard` / `SummaryCard` definitions                      | finance/HR KPI rows                  |
-| Status                        | `StatusBadge` + shared label maps                                          | domain-specific variant map inside `status-badge.tsx`                    | page-local `STATUS_LABELS` / color maps                           | attendance, payroll, inventory       |
-| Overlay / confirm             | shared `confirm()` for simple confirm; `FormDialog` for form               | approved contextual dialog for POS/KDS task flow                         | native `window.confirm/alert`                                     | delete/void/reason flows             |
-| Empty / error                 | `AppEmptyState`                                                            | `TableEmptyStateRow` inside table                                        | raw Empty primitive in route code, local empty copy block         | DataTable empty state                |
-| Loading                       | `Spinner`, `Skeleton`, or adapter skeleton                                 | `AppEmptyState mode="loading"` only when the page contract needs it      | `Loader2` + `animate-spin`, route-local loading panel drift       | data table / branch hub skeleton     |
-| Operator embedded             | Branch operator adapters, `embedded` branch without nested `AppPageHeader` | shared canonical content with explicit `basePath` and touch-size actions | Office shell/header inside `/br/[branchId]`                       | operator stock / orders embeds       |
-| Touch action                  | `Button size="touch"` / `touch-lg`                                         | `size={embedded ? "touch" : "sm"}` when sharing Office + Branch          | raw `h-*` action sizing, icon-only action without accessible name | branch runtime primary actions       |
-
-## Shared Component Registry
-
-Bảng tra cứu "component → vai trò → rule khóa" cho toàn bộ adapter layer đã
-duyệt (D058 W5). Mọi rule cột cuối trỏ về section của
-`docs/spec/design-system.md` (viết tắt DS); đây là bảng mô tả, không phải
-authority — khi runtime lệch bảng, sửa runtime hoặc cập nhật DS trước.
-
-`scripts/ui-component-registry.mjs` là inventory máy đọc được cho coverage:
-mỗi file trong `packages/ui/src/components/` phải có `need`, `use`, `fallback`,
-`forbidden`, `exemplar` và một access class. Registry cũng khóa các app adapter
-được audit và toàn bộ export của Branch Operator / Employee adapter families.
-Primitive file hoặc domain-adapter export mới chưa được phân loại làm
-`lint:ui-contract` fail. Các bảng dưới đây là index ưu tiên cho con người, không
-lặp lại toàn bộ inventory 1:1.
-
-Trước khi build/sửa trang, đọc `docs/spec/page-archetypes.md` để biết page
-đang sửa thuộc archetype nào và recipe khóa những component nào; bảng này trả
-lời "component X đang khóa vai trò gì, rule ở đâu". Muốn biết "component X
-đang dùng ở đâu trong repo", chạy `codegraph_explore` / `codegraph_callers`
-hoặc `pnpm audit:ui-components` (xem § Component Audit ở trên) — không
-grep-mò và không copy một file đã thấy làm mẫu.
-
-### Shared Primitives (`packages/ui/src/components/`)
-
-Các primitive có quyết định không hiển nhiên được nhấn mạnh tại đây. Danh sách
-đủ và route dùng/fallback/forbidden nằm trong machine registry nói trên.
-
-| Primitive (File)                   | Vai trò                                       | Rule khóa (DS)        | Khi nào dùng                                                             | Ngoại lệ                                                  |
-| ---------------------------------- | --------------------------------------------- | --------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------- |
-| `ContextMenu` (`context-menu.tsx`) | Menu ngữ cảnh mở bằng chuột phải (long press) | § Component Authority | Cung cấp action nâng cao trên hàng dữ liệu (grid/table) không làm rối UI | Không dùng thay `DropdownMenu` (click trái) hoặc `Select` |
-
-### Page/surface adapters — `apps/web/app/components/surface.tsx`
-
-Layer adapter app-level duy nhất cho pattern lặp lại.
-
-| Export                    | Vai trò                                                                              | Rule khóa (DS)                                                        | Khi nào dùng                                            | Ngoại lệ                                         |
-| ------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------ |
-| `AppPage`                 | Content container: width/scroll/density, padding nesting-aware                       | § Rhythm A (page padding từ AppPage) + § Structural E                 | Wrapper ngoài cùng của trang nội dung                   | Không bọc các màn fullscreen (KDS/Runner/Login)  |
-| `AppShellPaddingBoundary` | Đánh dấu `AppShell main` sở hữu padding để `AppPage` lồng bên trong bỏ padding riêng | § Structural E (padding áp dụng đúng 1 lần)                           | Dùng ở cấp Shell để AppPage con không bị X2 padding     |                                                  |
-| `AppPageHeader`           | Page H1 lockup: eyebrow/title/badge/description/actions/breadcrumb/tabs/meta         | § Rhythm B (Page H1 PHẢI từ AppPageHeader)                            | Mọi header của AppPage                                  |                                                  |
-| `AppSection`              | Card-backed section frame                                                            | § Card Roles + § Component Authority                                  | Bọc 1 khối nội dung (vd: form block, chi tiết)          |                                                  |
-| `AppToolbar`              | Filter/action toolbar (search/filters/bulk/actions/reset)                            | § Layout Patterns (một toolbar/workflow)                              | Dải công cụ (tìm kiếm/lọc) phía trên danh sách          |                                                  |
-| `AppEmptyState`           | Empty/no-results/no-access/error panel                                               | § Empty/Confirm lock                                                  | Thay thế nội dung chính khi không có dữ liệu / bị lỗi   | Trong bảng (Table) thì dùng `TableEmptyStateRow` |
-| `AppLinkCard`             | Navigation/action card                                                               | § Card Roles + § Component Authority                                  | Card chứa link chuyển trang hoặc thao tác               |                                                  |
-| `LinkCardGrid`            | Grid responsive (1/2/3 cột) bọc `AppLinkCard`                                        | § Component Authority                                                 | Danh sách các LinkCard                                  |                                                  |
-| `KpiRow`                  | Grid responsive (1/2/3 cột) bọc `KpiCard`                                            | § Component Authority + § Metric Card Role                            | Thể hiện một dãy các chỉ số KPI                         |                                                  |
-| `DescriptionList`         | `<dl>` term/description cho trang chi tiết                                           | § Component Authority                                                 | Hiển thị các cặp nhãn-giá trị (vd: thông tin KH)        |                                                  |
-| `DocumentFormFrame`       | Khung trang document/line-form (header + body cuộn + footer), compose AppPage        | § Component Authority — page-section adapter, không phải chrome shell | Các trang tạo chứng từ có nhiều line (GRN, transfer, Kiểm kê) |                                                  |
-| `AppDetailFooter`         | Hàng footer leading/trailing ở trang chi tiết                                        | § Component Authority                                                 | Action bar dưới cùng trang chi tiết (thường sticky)     |                                                  |
-| `OperationalTile`         | Tile chọn được (Button-based) với tone + selected ring                               | § Card Roles; § Rhythm D `tile` size                                  | Nút bấm to như viên gạch (chọn khu vực, chọn bàn)       |                                                  |
-| `OperationalBoardCard`    | Card board POS/KDS/runner, ring tone `current`                                       | § Card Roles + § Elevation Hover rung                                 | Card hiển thị món/đơn trên KDS hoặc POS                 |                                                  |
-
-### Data display / status / metric
-
-| Component                                                                                         | Vai trò                                                                                                                                                                      | Rule khóa (DS)                                                                                                 | Khi nào dùng                                     | Ngoại lệ                                            |
-| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------- |
-| `data-table/data-table.tsx` → `DataTable`, `DataTableColumn`, `DataTableFooterCell/Row`           | List/table responsive DUY NHẤT: desktop Table + `mobileCardRender`, empty state + pagination chung, `desktopFooter`/`mobileFooter`, `(row,index)` cho inline-edit line sheet | § List Surface contract — twin tree `md:hidden`/`md:block` bị khóa bởi `responsive-double-render` (baseline 0) | Mọi danh sách dữ liệu có cột (Office, Inventory) |                                                     |
-| `data-table/interactive-card.tsx` → `InteractiveCard`                                             | Card row có thể click (hover elevation)                                                                                                                                      | § Card Roles + § Elevation Hover rung                                                                          | Dòng trong data-table ở chế độ mobileCard        |                                                     |
-| `kpi/kpi-card.tsx` → `KpiCard`                                                                    | Metric/stat card DUY NHẤT: label 2xs uppercase, value `text-2xl font-bold tabular-nums`, CompareChip delta, sparkline, drill-down href                                       | § Metric Card Role — `STATUS_*`/StatCard/SummaryCard cục bộ bị `stat-card-ssot` ratchet                        | Thể hiện 1 con số KPI quan trọng                 | Không dùng bọc list hay nội dung không phải số liệu |
-| `status-badge.tsx` → `StatusBadge`, `getStatusBadgeMeta`, `getStatusDotClassName`, `StatusDomain` | Nguồn duy nhất label+variant badge business-state, khóa theo DB CHECK vocabulary qua `packages/shared/src/labels/vi.ts`                                                      | § Status vocabulary — `STATUS_*` map cục bộ mới bị cấm (`status-label-ssot`)                                   | Hiển thị trạng thái (Đã xác nhận, Hoàn thành...) |                                                     |
-| `table-empty-state-row.tsx` → `TableEmptyStateRow`                                                | Empty state BÊN TRONG Table                                                                                                                                                  | § Empty/Confirm lock                                                                                           | Khi DataTable không có dòng nào                  |                                                     |
-| `audit-history-list.tsx` → `AuditHistoryList`                                                     | Lịch sử audit entity (tab "Lịch sử") lọc theo `audit_logs` entity                                                                                                            | § Inventory surface contract (audit inline ở trang chi tiết)                                                   | Hiển thị log thay đổi của 1 đối tượng            |                                                     |
-
-### Route transition frames
-
-| Component                                           | Vai trò                                                               | Rule khóa (DS)                                                                                           |
-| --------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `page-skeleton.tsx` → `PageSkeleton`, `PageSpinner` | Khung `loading.tsx`; board realtime chỉ dùng PageSpinner              | § Loading/Error/Not-found — không hand-roll skeleton mới; POS giữ `PosPageSkeleton` là ngoại lệ duy nhất |
-| `error-panel.tsx` → `ErrorPanel`                    | Khung `error.tsx`: AppEmptyState mode="error" + reset() + digest mono | § Loading/Error/Not-found                                                                                |
-| `not-found-panel.tsx` → `NotFoundPanel`             | Khung `not-found.tsx`                                                 | § Loading/Error/Not-found                                                                                |
-
-### Form wrapper layer — `apps/web/app/components/form/` (barrel `form/index.ts`)
-
-| Export (file)                                                                             | Vai trò                                                                                                     | Rule khóa (DS)                                                                                                                            |
-| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `TextField`, `TextareaField`                                                              | Input text có label, cao `h-10`                                                                             | § Rhythm D — `h-10` CHỈ cho phép trên form/\* control                                                                                     |
-| `NumberField`, `FormattedNumberInput`                                                     | Nhập số có format VN                                                                                        | § Rhythm D + § Inventory (input tiền/số lượng/thuế/ngày PHẢI qua form wrapper)                                                            |
-| `MoneyVndField`, `MoneyVndInput`, `QuantityField`, `QuantityInput` (domain-number-inputs) | Input tiền/số lượng theo domain                                                                             | Như trên + § Numeric cells (`formatVND` SSoT)                                                                                             |
-| `NumberPadSheet`                                                                          | Sheet nhập số bằng bàn phím chạm (`text-3xl tabular-nums`)                                                  | § Rhythm B numeric-input-echo                                                                                                             |
-| `BusinessDateField`                                                                       | Date picker theo business-date VN                                                                           | § Rhythm D field-trigger qua `Button size="field"`; `date-format-ssot`                                                                    |
-| `FormField`                                                                               | Anatomy có label/help/error cho control controlled không dùng RHF                                           | Bắt buộc khi ghép `Select`/`Combobox`/`Textarea` controlled trực tiếp trong data-entry form; control con giữ `id` và ARIA state tương ứng |
-| `SelectField`, `ComboboxField`, `MultiSelectCombobox`                                     | Select/searchable-select field trigger có RHF + error inline                                                | § Rhythm D field-trigger qua `size="field"` — không hand-patch raw trigger lên `h-10`                                                     |
-| `Combobox`                                                                                | Searchable trigger controlled độc lập; phải nằm trong `FormField` khi là data-entry                         | Không dùng `Label` đứng cạnh mà không có `id`/field contract                                                                              |
-| `AppDialog`, `FormDialog`, `FileImportDialog`, `valuesToFormData` (form-dialog)           | Khung dialog app: detail/task dùng `AppDialog`, CRUD dùng `FormDialog`, import file dùng `FileImportDialog` | § High-level primitive governance — raw `dialog` import route qua AppDialog/FormDialog/Sheet                                              |
-
-### Chrome, navigation, brand, confirmation
-
-| Component                                                                                                                                | Vai trò                                                                                  | Rule khóa (DS)                                                                                                  |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `app-shell.tsx` → `AppShell` (+`AppShellHeaderConfig`)                                                                                   | Management chrome DUY NHẤT: một SidebarProvider, một sidebar (tier1 + tier2), một header | § Structural A/B — shell registry đóng băng baseline                                                            |
-| `office-module-shell.tsx` → `OfficeModuleShell`, `OfficeModuleId`                                                                        | Wrapper Management chung cho admin/hr/menu/orders (không giữ client state riêng)         | § Structural B shell allowlist                                                                                  |
-| `app-bottom-nav.tsx` → `AppBottomNav`, `AppBottomNavItem`, `BOTTOM_NAV_ITEM_CLASS`                                                       | Bottom-nav mobile chuẩn cho mọi chrome family                                            | § Structural B — bottom-nav PHẢI là primitive export, không tự impl lại                                         |
-| `app-page-tabs.tsx` → `AppPageTabs` (+re-export `TabsContent`)                                                                           | Tab strip cấp page cho slot `AppPageHeader.tabs`                                         | § Rhythm — segmented view = Tabs                                                                                |
-| `brand.tsx` → `BrandMark`, `BrandLogoBox`, `BrandLockup`, `BrandSymbol`, `BrandMascot`, `BRAND_*`                                        | Đường duy nhất tới logo/symbol/mascot asset                                              | § Typography rules — không reference `/brand/*` trực tiếp từ route component                                    |
-| `workspace-bottom-nav.tsx` → `WorkspaceBottomNav`                                                                                        | Chiếu bottom-nav mobile của Management từ cùng tier model                                | § Structural A/D (nav single-source, `isNavItemActive`)                                                         |
-| `row-actions-menu.tsx` → `RowActionsMenu`, `RowActionItem`                                                                               | Menu overflow action trên table row                                                      | § Inventory (row actions tách biệt hành động destructive)                                                       |
-| `settings-form-section.tsx` → `SettingsFormSection`                                                                                      | Wrapper AppSection cho settings form                                                     | Ví dụ delegation pattern                                                                                        |
-| `packages/ui/src/components/confirm-dialog.tsx` → `confirm()`, `ConfirmDialogProvider`, `ConfirmOptions` (+ `reason-confirm-dialog.tsx`) | Xác nhận destructive yes/no đơn giản, provider mount ở root layout                       | § Empty/Confirm — cấm `window.confirm/alert` (`no-native-dialog`); AlertDialog hand-roll chỉ cho flow cần input |
-
-Domain layer đã duyệt nhưng chưa vào registry trước bản này:
-`apps/web/lib/staff-runtime/components/staff-runtime-page.tsx` export 12 `Employee*`
-adapter (Page/Panel/Frame/ControlBar/ActionBar/ActionGrid/InlineState/
-BadgeList/StatusStrip/DetailList/ActionSection/MissingProfileEmpty). Branch
-Hub/root import `BranchOperator*` từ
-`apps/web/lib/branch-operator/components/branch-operator-page.tsx` để giữ biên
-giới Branch plane riêng (xem § Branch Operator Hub ở trên). Từ bản này layer
-adapter là một phần của registry, không phải wrapper ẩn.
+Run `corepack pnpm audit:ui-components` for a current report. Do not persist
+counts, dated audit output, per-component usage lists, or provenance in this
+document; the scripts and current source own those facts.
 
 ## Keyboard Shortcuts
 
@@ -741,37 +391,13 @@ Khi thêm shortcut mới, update bảng này + cấu hình `aria-keyshortcuts` t
 
 ## Toast And Notifications
 
-Contract chi tiet: `docs/spec/toast-notification-system.md`.
-
-- Toast là feedback ngắn hạn cho action hiện tại, đi qua `toast` từ `@comtammatu/ui/components/sonner`.
-- Notification là feed bền vững cho handoff, approval, escalation, SLA, hoặc việc cần role/branch khác xử lý.
-- Không dùng toast thay audit/work queue. Không tạo notification cho success cục bộ của form nếu không cần người khác xử lý.
-- Copy phải an toàn, tiếng Việt, và không bao giờ expose raw Supabase/Postgres `error.message`.
-- Notification producer mới phải có `kind`, `severity`, `target_roles`, optional `target_branch_id`, `action_url`, và `dedup_key` khi event có thể lặp lại.
+Contract duy nhất: `docs/spec/toast-notification-system.md`. Tài liệu này chỉ
+chọn component UI; không định nghĩa lại producer, dedup, routing hoặc severity.
 
 ## Theme Runtime
 
-Contract đầy đủ (token value, giới hạn `.theme-light-only`): `docs/spec/design-system.md`
-§ Token Contract → Theme runtime. Mục này chỉ tóm tắt cách agent thao tác với
-runtime hai chế độ, không lặp lại hoặc override token value.
-
-- Hai chế độ `light` (mặc định, ca ngày) và `night` (ấm-tối "gạo cháy", ca
-  tối/đêm); `night` map vào class `.dark`. Không có cookie thì fallback theo
-  giờ địa phương — `night` cho khung 18:00–06:00, còn lại `light` — không phụ
-  thuộc `prefers-color-scheme`/`matchMedia`.
-- `packages/ui/src/components/theme-script.tsx` set class trước hydrate đọc
-  cookie `matu-theme`; `packages/ui/src/components/theme-provider.tsx` là
-  runtime state provider duy nhất, `setTheme` ghi lại cookie đó
-  (SameSite=Lax, 1 năm) — theme là UI preference duy nhất được phép lưu ở
-  browser storage.
-- `ThemeToggle` (`apps/web/app/components/theme-toggle.tsx`) là toggle duy
-  nhất, mount ở `AppHeader`, operations PWA toolbar, employee header, và header
-  guest self-order (`/q/[token]`). Không thêm theme context thứ hai, toggle
-  route-local, hoặc key localStorage mới.
-- Runner customer display ép về light token qua `.theme-light-only`
-  (`apps/web/app/(protected)/br/[branchId]/runner/layout.tsx`); đây là escape
-  hatch cấp token, không tắt `dark:` variant hay chart THEMES map bên trong —
-  xem giới hạn đầy đủ trong design-system.md trước khi dùng lại pattern này.
+Contract đầy đủ và runtime owner sống ở `docs/spec/design-system.md` § Token
+Contract. Không thêm theme context, toggle hoặc browser-storage key thứ hai.
 
 ## Form Helpers
 
@@ -810,11 +436,17 @@ Schema: luôn dùng Zod 4 với `{ error: "..." }` (không dùng `{ message }`).
 
 ### Inventory Flow Decision
 
-Inventory IA phải bám 3 luồng chính:
+Inventory IA bám ba luồng hiện hành:
 
-1. `Kiểm soát tồn` — Tồn kho, Kiểm kê, Hao hụt/điều chỉnh, Báo cáo.
-2. `Nhập/Nhận/Đối soát` — Đơn đặt hàng, Phiếu nhập/GRN, supplier invoice/price variance, receiving exception.
-3. `Điều phối/Sản xuất` — Điều chuyển, Lệnh sản xuất, BOM/recipe issue, yield.
+1. `Nhập hàng` — NCC trực tiếp → GRN → stock movement; hóa đơn NCC handoff sang
+   Finance/AP.
+2. `Kiểm soát tồn` — một Kho CN mỗi branch, kiểm kê, hao hụt/điều chỉnh và báo
+   cáo.
+3. `Sản xuất/tiêu hao` — workflow/RPC đang có tại branch, sale-consumption và
+   write-off có nguồn rõ.
+
+Không tái đưa PO, supplier return, lot/expiry, production order hoặc same-branch
+Kho↔Bếp transfer vào daily IA.
 
 Sidebar labels phải ngắn và scan được trong sidebar cố định. Tên đầy đủ của luồng đặt trong page title, breadcrumb, tab, hoặc empty state thay vì ép vào group label dài.
 

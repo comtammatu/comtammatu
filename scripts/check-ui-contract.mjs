@@ -784,7 +784,8 @@ const checks = [
       { dir: "apps/web/app", extensions: [".tsx"] },
       { dir: "apps/web/lib", extensions: [".tsx"] },
     ],
-    pattern: /\banimate-cotlet-\w+|\bmascot-cotlet\b|<BrandMascot\b[^>]*\banimated\b/g,
+    pattern:
+      /\banimate-cotlet-\w+|\bmascot-cotlet\b|<BrandMascot\b[^>]*\banimated\b/g,
     allowlist: {
       "apps/web/app/components/brand.tsx": 7,
       "apps/web/app/components/page-skeleton.tsx": 1,
@@ -1532,12 +1533,10 @@ const textChecks = [
     id: "design-system-one-source-agent-rule",
     file: "docs/agent/rules/ui.md",
     includes: [
-      "There is exactly one UI design-system source of truth:",
-      "`docs/spec/design-system.md`",
-      "That source defines the Com Tam Ma Tu Custom Theme.",
-      "Everything else is evidence, implementation, or enforcement for that contract",
-      "NEVER treat external UI scaffold output as authority to override the Custom Theme",
-      "REMOVE stale UI rules; keep only live hard rails, workflows, contracts, or guards.",
+      "exact visual contracts stay in the UI SSOTs",
+      "`docs/spec/design-system.md` — tokens, typography, primitives, theme.",
+      "Do not restate exact class strings",
+      "design reviewer; its output is advisory",
     ],
   },
   {
@@ -1640,7 +1639,7 @@ const textChecks = [
   {
     id: "matu-ds-agent-rule",
     file: "docs/agent/rules/ui.md",
-    includes: ["USE Má Tư DS primitives from `@comtammatu/ui`"],
+    includes: ["Use Má Tư DS primitives and approved surface adapters"],
   },
   {
     id: "matu-ds-module-doc",

@@ -148,9 +148,9 @@ Không dùng một từ `hóa đơn` cho cả HĐĐT bán ra và hóa đơn NCC.
 `cooking_loss`, `consumption`, `stock_transfer`, `stock_issue`...) nằm ở
 `glossary.md`.
 
-Với runtime hiện tại, `Kho CN -> Bếp CN` là stock transfer cùng chi nhánh. Bếp
-CN vẫn là tồn của chi nhánh; chỉ `stock_issue` / `consumption` / write-off sau
-đó mới làm giảm tồn.
+Runtime hiện chỉ có một Kho CN stock-bearing cho mỗi branch. Kho↔Bếp đã nghỉ;
+
+`consumption`, sale-consumption và write-off hợp lệ mới làm giảm tồn vận hành.
 
 ## Tài chính vận hành
 

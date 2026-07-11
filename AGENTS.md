@@ -30,14 +30,13 @@ repo root), keep the graph fresh instead of trusting a previous session:
 
 Before implementation, read the applicable rule files:
 
-- Always read `docs/agent/rules/engineering.md` for repo commands, architecture, import boundaries, and core constraints.
+- Always read `docs/agent/rules/engineering.md` for core constraints, import/runtime boundaries, and Git conventions. Commands and architecture live here.
 - Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. Its **Authority Order** and **Required Routing Matrix** give layer-first and task-signal routing into the rules, skills, and verification a task needs.
 - Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
-- Read `docs/agent/rules/workflow.md` for behavior changes, review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates. T1 doc-only or typo-only work may skip after stating the skip reason.
-- Read `docs/agent/rules/team.md` only for T3 second-runtime review or arbitration.
+- Read `docs/agent/rules/workflow.md` for behavior changes, review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates. Only editorial changes that do not alter policy, authority, behavior, or source-of-truth routing are T1-eligible.
 - Read `docs/agent/rules/orchestration.md` only when routing work across subagents, multi-agent Workflow, parallel runtimes, or a real context-budget problem. Inline single-agent tasks may skip it.
-- Read `docs/agent/rules/notifications.md` before adding any notification, alert, anomaly detector, or scheduled report (the producer / dedup / routing contract).
+- Read `docs/spec/toast-notification-system.md` before adding any notification, alert, anomaly detector, or scheduled report.
 - Read `docs/agent/rules/references.md` when onboarding or choosing the source-of-truth docs for a task.
 
 Instruction memory and learning memory stay separate:
@@ -78,9 +77,9 @@ it elsewhere — point here.
 - MUST validate all Server Action inputs with Zod schemas.
 - MUST run `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` before marking implementation tasks complete.
 - NEVER return raw Supabase/Postgres `error.message` to clients.
-- NEVER import `@comtammatu/database` barrel in `"use client"` components.
+- NEVER runtime-import the `@comtammatu/database` barrel in `"use client"` components; type-only imports are allowed.
 - NEVER store scope in `localStorage` or React Context. Scope belongs in URL params only.
-- Multi-item atomic writes MUST use a Postgres RPC function.
+- Writes whose correctness spans multiple rows MUST use a Postgres RPC function.
 - Agents MAY apply migrations directly only after verifying the target ref against the Environment Registry in `docs/agent/rules/database.md`; production apply additionally requires explicit owner delegation in the current session.
 - After SQL migration is applied to the schema used for generated types, run `corepack pnpm db:types`.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
@@ -97,24 +96,19 @@ it elsewhere — point here.
 
 - UI design-system SSOT is `docs/spec/design-system.md`; it defines the Com Tam Ma Tu Custom Theme.
 - NEVER invent or redesign UI outside that contract, and never exceed the UI authority the task grants.
-- All UI guardrails, typography rules, and the operational-UI philosophy live in `docs/agent/rules/ui.md` — read it before any UI change.
+- Agent UI workflow and operational guardrails live in `docs/agent/rules/ui.md`; exact visual contracts live in `docs/spec/design-system.md`.
 
 ## Architecture
 
-<!-- MIRROR:architecture:begin — synced copy; edit BOTH AGENTS.md and docs/agent/rules/engineering.md. -->
-
 ```text
-Browser → proxy.ts (auth + ACL) → App Router → Supabase (PostgREST + Auth)
-Printing → apps/print-agent (Node daemon, polls print_jobs) → ESC/POS LAN printers
+Browser → proxy.ts (session + route/surface/network gates) → App Router → Supabase
+Printing → apps/print-agent (Realtime + recovery polling) → ESC/POS LAN printers
 ```
 
-Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.9 | Node >= 24
-
-<!-- MIRROR:architecture:end -->
+Package manifests and the lockfile own framework versions; root `package.json`
+owns the Node.js runtime requirement.
 
 ## Commands
-
-<!-- MIRROR:commands:begin — synced copy; edit BOTH AGENTS.md and docs/agent/rules/engineering.md. -->
 
 ```bash
 corepack pnpm dev          # Start dev server (Turbopack)
@@ -126,11 +120,9 @@ corepack pnpm verify       # Full gate: deps audit + baseline hygiene + typechec
 corepack pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema
 ```
 
-<!-- MIRROR:commands:end -->
-
 ## Workflow Summary
 
 Review depth (T1/T2/T3), tier triggers, and the four perspectives (PM / BA /
 Senior Dev / QA) are owned by `docs/agent/rules/workflow.md` → Review Depth —
-Tier By Risk. Use `docs/agent/rules/team.md` only for T3 second-runtime review
-or arbitration.
+Tier By Risk. Cross-runtime review and arbitration are owned by
+`docs/agent/rules/orchestration.md`.
