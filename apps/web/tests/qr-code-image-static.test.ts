@@ -43,14 +43,10 @@ test("public QR surfaces use the shared web QR renderer", () => {
   assert.match(sharedQr, /if \(directImageFailed \|\| generationFailed\)/);
   assert.match(sharedQr, /width=\{320\}[\s\S]*height=\{320\}/);
   assert.match(sharedQr, /download=\{downloadName\}/);
-  assert.match(sharedQr, /navigator\.canShare\?\.\(\{ files: \[file\] \}\)/);
-  assert.match(
-    sharedQr,
-    /navigator[\s\S]*\.share\(\{ files: \[shareFile\], title: alt \}\)/,
-  );
+  assert.match(sharedQr, /grid-cols-2/);
   assert.match(selfOrderPayment, /downloadLabel=\{SELF_ORDER_VI\.saveVietQr\}/);
-  assert.match(selfOrderPayment, /shareLabel=\{SELF_ORDER_VI\.shareVietQr\}/);
-  assert.match(selfOrderPayment, /SELF_ORDER_VI\.saveVietQrHint/);
+  assert.match(selfOrderPayment, /<BankAppLauncher/);
+  assert.doesNotMatch(selfOrderPayment, /onRefreshPayment/);
   assert.match(selfOrderPayment, /BankAppLauncher/);
   assert.match(
     selfOrderPayment,
@@ -119,23 +115,25 @@ test("MB Bank link receives the exact VietQR payload", () => {
   assert.equal(url.searchParams.get("qrContent"), qrData);
 });
 
-test("supported bank app link keeps the exact VietQR payment facts", () => {
-  const href = buildVietQrBankAppUrl({
-    appId: "bidv",
-    accountNo: "0123456789",
-    bankCode: "MB",
-    amount: 167_000,
-    paymentCode: "MATU ABC123",
-    accountName: "HO KINH DOANH COM TAM MA TU",
-  });
+test("autofill bank app links keep the exact VietQR payment facts", () => {
+  for (const appId of ["acb", "bidv", "icb", "ocb"]) {
+    const href = buildVietQrBankAppUrl({
+      appId,
+      accountNo: "0123456789",
+      bankCode: "MB",
+      amount: 167_000,
+      paymentCode: "MATU ABC123",
+      accountName: "HO KINH DOANH COM TAM MA TU",
+    });
 
-  assert.ok(href);
-  const url = new URL(href);
-  assert.equal(url.searchParams.get("app"), "bidv");
-  assert.equal(url.searchParams.get("ba"), "0123456789@mb");
-  assert.equal(url.searchParams.get("am"), "167000");
-  assert.equal(url.searchParams.get("tn"), "MATU ABC123");
-  assert.equal(url.searchParams.get("bn"), "HO KINH DOANH COM TAM MA TU");
+    assert.ok(href);
+    const url = new URL(href);
+    assert.equal(url.searchParams.get("app"), appId);
+    assert.equal(url.searchParams.get("ba"), "0123456789@mb");
+    assert.equal(url.searchParams.get("am"), "167000");
+    assert.equal(url.searchParams.get("tn"), "MATU ABC123");
+    assert.equal(url.searchParams.get("bn"), "HO KINH DOANH COM TAM MA TU");
+  }
 });
 
 test("self-order snapshot migration does not read unassigned records", () => {

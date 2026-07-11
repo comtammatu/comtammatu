@@ -132,18 +132,13 @@ export const SELF_ORDER_VI = {
   vietQrCreate: "Tạo mã QR thanh toán",
   cashCallOk: "Đã gọi nhân viên thu tiền mặt.",
   vietQrPendingTitle: "Mã QR thanh toán",
-  openBankApp: "Thanh toán bằng ứng dụng ngân hàng",
+  openBankApp: "Mở ngân hàng",
   chooseBankAppTitle: "Chọn ứng dụng ngân hàng",
   chooseBankAppDescription:
     "App hỗ trợ sẽ nhận sẵn thông tin VietQR. Nếu chưa hỗ trợ, hãy lưu mã rồi quét từ thư viện ảnh.",
   bankAppsLoading: "Đang tải danh sách ngân hàng...",
   bankAppsLoadFailed: "Không tải được danh sách ngân hàng.",
-  shareVietQr: "Quét QR bằng app ngân hàng",
-  shareVietQrFailed:
-    "Thiết bị chưa gửi được ảnh QR. Hãy lưu mã rồi quét từ thư viện ảnh.",
-  saveVietQr: "Lưu mã QR",
-  saveVietQrHint:
-    "Chọn app ngân hàng trong bảng chia sẻ. Nếu app không xuất hiện, lưu mã rồi quét từ thư viện ảnh.",
+  saveVietQr: "Lưu QR",
   paymentFailed: "Không tạo được yêu cầu thanh toán. Vui lòng gọi nhân viên.",
   paymentDescription: "Chọn cách thanh toán sau khi nhân viên đã duyệt món.",
   buyerTitle: "Thông tin HĐĐT",

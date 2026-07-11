@@ -238,6 +238,11 @@ export function SelfOrderClient({
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [localPaymentRequest, setLocalPaymentRequest] =
     useState<GuestPaymentRequestState | null>(null);
+  const [paymentStatusClientOpId, setPaymentStatusClientOpId] = useState(
+    () =>
+      normalizePaymentRequest(initialSnapshot.paymentRequest)?.clientOpId ??
+      null,
+  );
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [buyerNotGetInvoice, setBuyerNotGetInvoice] = useState(true);
   const [buyerName, setBuyerName] = useState("");
@@ -263,22 +268,35 @@ export function SelfOrderClient({
   const invoiceFocusAttemptRef = useRef(0);
   const guestToastKeyRef = useRef<string | null>(null);
   const refreshErrorRef = useRef<string | null>(null);
+  const ignoredPaymentStatusClientOpIdRef = useRef<string | null>(null);
 
-  const { snapshot, setSnapshot, refreshSnapshot, isRefreshing, refreshError } =
+  const { snapshot, setSnapshot, refreshSnapshot, refreshError } =
     useSnapshotSync(token, initialSnapshot, clientOpId, () => {
       setCartItems([]);
       setCustomerNote("");
       setClientOpId(null);
       setLocalPaymentRequest(null);
+      ignoredPaymentStatusClientOpIdRef.current = paymentStatusClientOpId;
+      setPaymentStatusClientOpId(null);
       batchIntentRef.current = null;
       paymentIntentRef.current = null;
     });
 
-  const paymentStatusClientOpId = snapshot.ok
+  const currentPaymentStatusClientOpId = snapshot.ok
     ? (normalizePaymentRequest(snapshot.paymentRequest)?.clientOpId ??
       localPaymentRequest?.clientOpId ??
       null)
     : (localPaymentRequest?.clientOpId ?? null);
+  const observedPaymentStatusClientOpId =
+    currentPaymentStatusClientOpId === ignoredPaymentStatusClientOpIdRef.current
+      ? null
+      : currentPaymentStatusClientOpId;
+
+  useEffect(() => {
+    if (observedPaymentStatusClientOpId) {
+      setPaymentStatusClientOpId(observedPaymentStatusClientOpId);
+    }
+  }, [observedPaymentStatusClientOpId]);
 
   useEffect(() => {
     if (!paymentStatusClientOpId || paymentCompleted) return;
@@ -305,6 +323,8 @@ export function SelfOrderClient({
         }
         if (payload?.status === "cancelled" || payload?.status === "expired") {
           setLocalPaymentRequest(null);
+          ignoredPaymentStatusClientOpIdRef.current = currentPaymentClientOpId;
+          setPaymentStatusClientOpId(null);
         }
       } catch {
         return;
@@ -424,6 +444,8 @@ export function SelfOrderClient({
           window.setTimeout(() => {
             setPaymentCompleted(false);
             setLocalPaymentRequest(null);
+            ignoredPaymentStatusClientOpIdRef.current = paymentStatusClientOpId;
+            setPaymentStatusClientOpId(null);
             void refreshSnapshot();
           }, 250);
         }}
@@ -708,7 +730,6 @@ export function SelfOrderClient({
             buyerEmail={buyerEmail}
             isPending={isPaymentPending}
             pendingMethod={pendingPaymentMethod}
-            isRefreshing={isRefreshing}
             error={paymentError}
             fieldErrors={invoiceFieldErrors}
             errorFocusRequest={invoiceErrorFocusRequest}
@@ -720,7 +741,6 @@ export function SelfOrderClient({
             onBuyerAddressChange={setBuyerAddress}
             onBuyerEmailChange={setBuyerEmail}
             onRequestPayment={requestPayment}
-            onRefreshPayment={() => void refreshSnapshot()}
           />
         ) : null}
       </BillDrawer>

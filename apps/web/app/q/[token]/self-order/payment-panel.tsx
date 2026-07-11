@@ -76,7 +76,6 @@ export interface PaymentPanelProps {
   buyerEmail: string;
   isPending: boolean;
   pendingMethod: "cash_call" | "vietqr" | null;
-  isRefreshing: boolean;
   error: string | null;
   fieldErrors: InvoiceFieldErrors;
   errorFocusRequest: InvoiceErrorFocusRequest | null;
@@ -86,7 +85,6 @@ export interface PaymentPanelProps {
   onBuyerAddressChange: (value: string) => void;
   onBuyerEmailChange: (value: string) => void;
   onRequestPayment: (method: "cash_call" | "vietqr") => void;
-  onRefreshPayment: () => void;
 }
 
 function BankAppLauncher({
@@ -226,7 +224,6 @@ export function PaymentPanel({
   buyerEmail,
   isPending,
   pendingMethod,
-  isRefreshing,
   error,
   fieldErrors,
   errorFocusRequest,
@@ -236,7 +233,6 @@ export function PaymentPanel({
   onBuyerAddressChange,
   onBuyerEmailChange,
   onRequestPayment,
-  onRefreshPayment,
 }: PaymentPanelProps) {
   const buyerNameRef = useRef<HTMLInputElement>(null);
   const buyerTaxCodeRef = useRef<HTMLInputElement>(null);
@@ -459,14 +455,22 @@ export function PaymentPanel({
                     className="size-64 max-w-full"
                     errorMessage={SELF_ORDER_VI.qrRenderFailed}
                     retryLabel={SELF_ORDER_VI.retryQr}
-                    shareLabel={SELF_ORDER_VI.shareVietQr}
-                    shareFailedMessage={SELF_ORDER_VI.shareVietQrFailed}
                     downloadLabel={SELF_ORDER_VI.saveVietQr}
                     downloadName="ma-qr-thanh-toan-ma-tu.png"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {SELF_ORDER_VI.saveVietQrHint}
-                  </p>
+                  >
+                    {activePaymentRequest.accountNo &&
+                    activePaymentRequest.bankCode &&
+                    activePaymentRequest.paymentCode ? (
+                      <BankAppLauncher
+                        accountNo={activePaymentRequest.accountNo}
+                        bankCode={activePaymentRequest.bankCode}
+                        accountName={activePaymentRequest.accountName}
+                        amount={activePaymentRequest.amount}
+                        paymentCode={activePaymentRequest.paymentCode}
+                        qrData={activePaymentRequest.qrData ?? ""}
+                      />
+                    ) : null}
+                  </QrCodeImage>
                   <div className="flex flex-col gap-1 text-sm">
                     <p className="font-mono font-bold tabular-nums">
                       {formatVND(activePaymentRequest.amount)}
@@ -486,31 +490,8 @@ export function PaymentPanel({
                       </p>
                     ) : null}
                   </div>
-                  {activePaymentRequest.accountNo &&
-                  activePaymentRequest.bankCode &&
-                  activePaymentRequest.paymentCode ? (
-                    <BankAppLauncher
-                      accountNo={activePaymentRequest.accountNo}
-                      bankCode={activePaymentRequest.bankCode}
-                      accountName={activePaymentRequest.accountName}
-                      amount={activePaymentRequest.amount}
-                      paymentCode={activePaymentRequest.paymentCode}
-                      qrData={activePaymentRequest.qrData ?? ""}
-                    />
-                  ) : null}
                 </div>
               ) : null}
-
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                disabled={isRefreshing}
-                onClick={onRefreshPayment}
-              >
-                {isRefreshing ? <Spinner className="size-4" /> : null}
-                {SELF_ORDER_VI.retryRefresh}
-              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2">

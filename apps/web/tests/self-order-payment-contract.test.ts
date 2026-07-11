@@ -143,6 +143,18 @@ test("only the current payment request can unlock the Self-Order completion scre
   assert.match(paymentStatusRoute, /selfOrderClientOpIdSchema\.safeParse/);
   assert.match(paymentStatusRoute, /applySelfOrderPrivateHeaders/);
   assert.match(client, /payment-status\?\$\{query\.toString\(\)\}/);
+  assert.match(
+    client,
+    /setPaymentStatusClientOpId\(observedPaymentStatusClientOpId\)/,
+  );
+  assert.match(
+    client,
+    /currentPaymentStatusClientOpId ===[\s\S]*ignoredPaymentStatusClientOpIdRef\.current[\s\S]*\? null/,
+  );
+  assert.doesNotMatch(
+    client,
+    /const paymentStatusClientOpId = snapshot\.ok/,
+  );
   assert.match(client, /payload\?\.status === "completed"/);
   assert.match(client, /<PaymentCompletedState/);
   assert.match(client, /mood="waving"/);

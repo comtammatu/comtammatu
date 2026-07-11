@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
@@ -13,8 +13,7 @@ interface QrCodeImageProps {
   className?: string;
   errorMessage?: string;
   retryLabel?: string;
-  shareLabel?: string;
-  shareFailedMessage?: string;
+  children?: ReactNode;
   downloadLabel?: string;
   downloadName?: string;
 }
@@ -25,8 +24,7 @@ export function QrCodeImage({
   className,
   errorMessage = "Không thể hiển thị mã QR.",
   retryLabel = "Thử lại",
-  shareLabel,
-  shareFailedMessage = "Không thể gửi mã QR tới ứng dụng khác.",
+  children,
   downloadLabel,
   downloadName,
 }: QrCodeImageProps) {
@@ -34,8 +32,6 @@ export function QrCodeImage({
   const [generatedDataUrl, setGeneratedDataUrl] = useState<string | null>(null);
   const [generationFailed, setGenerationFailed] = useState(false);
   const [generationAttempt, setGenerationAttempt] = useState(0);
-  const [shareFile, setShareFile] = useState<File | null>(null);
-  const [shareFailed, setShareFailed] = useState(false);
 
   const canTryDirectImage = useMemo(
     () => /^data:image\//i.test(value),
@@ -81,29 +77,6 @@ export function QrCodeImage({
       ? generatedDataUrl
       : null;
 
-  useEffect(() => {
-    setShareFile(null);
-    setShareFailed(false);
-    if (!imageSource || !shareLabel || !downloadName) return;
-
-    let cancelled = false;
-    void fetch(imageSource)
-      .then((response) => response.blob())
-      .then((blob) => {
-        const file = new File([blob], downloadName, { type: blob.type });
-        if (!cancelled && navigator.canShare?.({ files: [file] })) {
-          setShareFile(file);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setShareFailed(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [downloadName, imageSource, shareLabel]);
-
   if (imageSource) {
     return (
       <>
@@ -122,39 +95,24 @@ export function QrCodeImage({
             else setGenerationFailed(true);
           }}
         />
-        {shareLabel && shareFile ? (
-          <Button
-            type="button"
-            size="touch"
-            onClick={() => {
-              void navigator
-                .share({ files: [shareFile], title: alt })
-                .catch((error: unknown) => {
-                  if (
-                    !(
-                      error instanceof DOMException &&
-                      error.name === "AbortError"
-                    )
-                  ) {
-                    setShareFailed(true);
-                  }
-                });
-            }}
+        {children || (downloadLabel && downloadName) ? (
+          <div
+            className={cn(
+              "grid w-full gap-2",
+              children && downloadLabel && downloadName
+                ? "grid-cols-2"
+                : "grid-cols-1",
+            )}
           >
-            {shareLabel}
-          </Button>
-        ) : null}
-        {downloadLabel && downloadName ? (
-          <Button asChild type="button" variant="outline" size="touch">
-            <a href={imageSource} download={downloadName}>
-              {downloadLabel}
-            </a>
-          </Button>
-        ) : null}
-        {shareFailed ? (
-          <p role="alert" className="text-xs text-destructive">
-            {shareFailedMessage}
-          </p>
+            {children}
+            {downloadLabel && downloadName ? (
+              <Button asChild type="button" variant="outline" size="touch">
+                <a href={imageSource} download={downloadName}>
+                  {downloadLabel}
+                </a>
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </>
     );
