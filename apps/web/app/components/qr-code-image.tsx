@@ -13,6 +13,10 @@ interface QrCodeImageProps {
   className?: string;
   errorMessage?: string;
   retryLabel?: string;
+  shareLabel?: string;
+  shareFailedMessage?: string;
+  downloadLabel?: string;
+  downloadName?: string;
 }
 
 export function QrCodeImage({
@@ -21,11 +25,17 @@ export function QrCodeImage({
   className,
   errorMessage = "Không thể hiển thị mã QR.",
   retryLabel = "Thử lại",
+  shareLabel,
+  shareFailedMessage = "Không thể gửi mã QR tới ứng dụng khác.",
+  downloadLabel,
+  downloadName,
 }: QrCodeImageProps) {
   const [directImageFailed, setDirectImageFailed] = useState(false);
   const [generatedDataUrl, setGeneratedDataUrl] = useState<string | null>(null);
   const [generationFailed, setGenerationFailed] = useState(false);
   const [generationAttempt, setGenerationAttempt] = useState(0);
+  const [shareFile, setShareFile] = useState<File | null>(null);
+  const [shareFailed, setShareFailed] = useState(false);
 
   const canTryDirectImage = useMemo(
     () => /^data:image\//i.test(value),
@@ -65,36 +75,88 @@ export function QrCodeImage({
     };
   }, [canTryDirectImage, generationAttempt, value]);
 
-  if (useDirectImage) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={value}
-        alt={alt}
-        width={320}
-        height={320}
-        className={cn(
-          "mx-auto max-h-72 w-full max-w-72 object-contain",
-          className,
-        )}
-        onError={() => setDirectImageFailed(true)}
-      />
-    );
-  }
+  const imageSource = useDirectImage
+    ? value
+    : generatedDataUrl && !generationFailed
+      ? generatedDataUrl
+      : null;
 
-  if (generatedDataUrl && !generationFailed) {
+  useEffect(() => {
+    setShareFile(null);
+    setShareFailed(false);
+    if (!imageSource || !shareLabel || !downloadName) return;
+
+    let cancelled = false;
+    void fetch(imageSource)
+      .then((response) => response.blob())
+      .then((blob) => {
+        const file = new File([blob], downloadName, { type: blob.type });
+        if (!cancelled && navigator.canShare?.({ files: [file] })) {
+          setShareFile(file);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setShareFailed(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [downloadName, imageSource, shareLabel]);
+
+  if (imageSource) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={generatedDataUrl}
-        alt={alt}
-        width={320}
-        height={320}
-        className={cn(
-          "mx-auto max-h-72 w-full max-w-72 object-contain",
-          className,
-        )}
-      />
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageSource}
+          alt={alt}
+          width={320}
+          height={320}
+          className={cn(
+            "mx-auto max-h-72 w-full max-w-72 object-contain",
+            className,
+          )}
+          onError={() => {
+            if (useDirectImage) setDirectImageFailed(true);
+            else setGenerationFailed(true);
+          }}
+        />
+        {shareLabel && shareFile ? (
+          <Button
+            type="button"
+            size="touch"
+            onClick={() => {
+              void navigator
+                .share({ files: [shareFile], title: alt })
+                .catch((error: unknown) => {
+                  if (
+                    !(
+                      error instanceof DOMException &&
+                      error.name === "AbortError"
+                    )
+                  ) {
+                    setShareFailed(true);
+                  }
+                });
+            }}
+          >
+            {shareLabel}
+          </Button>
+        ) : null}
+        {downloadLabel && downloadName ? (
+          <Button asChild type="button" variant="outline" size="touch">
+            <a href={imageSource} download={downloadName}>
+              {downloadLabel}
+            </a>
+          </Button>
+        ) : null}
+        {shareFailed ? (
+          <p role="alert" className="text-xs text-destructive">
+            {shareFailedMessage}
+          </p>
+        ) : null}
+      </>
     );
   }
 
