@@ -76,6 +76,25 @@ test("Self-Order V2 retirement fails closed and preserves the request model", ()
     )?.[0] ?? "";
   assert.notEqual(paymentInvariant, "");
   assert.doesNotMatch(paymentInvariant, /session_id/);
+  const paymentInvariantTrigger =
+    migration.slice(
+      migration.indexOf(
+        "CREATE TRIGGER trg_self_order_enforce_payment_request_invariants",
+      ),
+      migration.indexOf(
+        "REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants()",
+      ),
+    ) ?? "";
+  assert.notEqual(paymentInvariantTrigger, "");
+  assert.doesNotMatch(paymentInvariantTrigger, /session_id/);
+  assert.ok(
+    migration.indexOf(
+      "DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_request_invariants ON public.self_order_payment_requests",
+    ) <
+      migration.indexOf(
+        "ALTER TABLE public.self_order_payment_requests DROP COLUMN IF EXISTS session_id",
+      ),
+  );
   assert.doesNotMatch(
     migration,
     /DROP FUNCTION IF EXISTS public\.self_order_enforce_open_pos_session\(\)/,

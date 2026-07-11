@@ -42,6 +42,7 @@ BEGIN
 
   IF to_regclass('public.self_order_payment_requests') IS NOT NULL THEN
     EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_payment_requests_broadcast ON public.self_order_payment_requests';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_request_invariants ON public.self_order_payment_requests';
     EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_device_binding_insert ON public.self_order_payment_requests';
     EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_device_binding_update ON public.self_order_payment_requests';
   END IF;
@@ -119,6 +120,31 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+CREATE TRIGGER trg_self_order_enforce_payment_request_invariants
+  BEFORE UPDATE OF
+    tenant_id,
+    branch_id,
+    table_id,
+    order_id,
+    payment_id,
+    client_op_id,
+    method,
+    status,
+    amount_snapshot,
+    invoice_payload,
+    request_fingerprint,
+    request_fingerprint_version,
+    payment_code_snapshot,
+    qr_payload_snapshot,
+    vietqr_config_snapshot,
+    expires_at,
+    completed_at,
+    cancelled_at,
+    expired_at,
+    cancel_reason
+  ON public.self_order_payment_requests
+  FOR EACH ROW EXECUTE FUNCTION public.self_order_enforce_payment_request_invariants();
 
 REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM anon, authenticated;
