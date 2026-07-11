@@ -285,7 +285,7 @@ export const savePositionTasks = withAction(
       ingredientIds: task.ingredientIds,
     }));
 
-    const { error: rpcError } = await service.rpc(
+    const { error: rpcError } = await ctx.supabase.rpc(
       "upsert_position_shift_tasks",
       {
         p_position_id: data.positionId,

@@ -22,6 +22,9 @@ const countAssignmentShiftMigrationSource = readWeb(
 const countAssignmentKitchenMigrationSource = readWeb(
   "../../supabase/migrations/20260708191713_count_slips_branch_kitchen.sql",
 );
+const countAssignmentWarehouseRepairMigrationSource = readWeb(
+  "../../supabase/migrations/20260711125604_repair_count_assignment_warehouse_rpcs.sql",
+);
 
 test("count assignment checklist uses one labeled hit target", () => {
   assert.match(
@@ -257,6 +260,39 @@ test("count assignment RPCs normalize branch count slips to kitchen", () => {
     countAssignmentKitchenMigrationSource,
     /UPDATE public\.inventory_count_slips s[\s\S]*s\.status IN \('submitted', 'needs_changes'\)[\s\S]*SET system_quantity = COALESCE/,
     "open branch count slips should move to Bếp CN and resnapshot system quantity there",
+  );
+});
+
+test("count assignment RPC repair targets both writers and fails closed", () => {
+  for (const signature of [
+    "public.set_inventory_count_assignments(bigint,bigint,bigint,bigint[],bigint)",
+    "public.submit_inventory_count_slip(bigint,bigint,jsonb,bigint)",
+  ]) {
+    assert.ok(
+      countAssignmentWarehouseRepairMigrationSource.includes(signature),
+      `warehouse repair must target ${signature}`,
+    );
+  }
+
+  assert.match(
+    countAssignmentWarehouseRepairMigrationSource,
+    /unexpected_count_rpc_definition/,
+    "warehouse repair must stop when a source RPC has drifted",
+  );
+  assert.match(
+    countAssignmentWarehouseRepairMigrationSource,
+    /location_kind <> ''warehouse''/,
+    "branch count writers should normalize to Kho CN",
+  );
+  assert.match(
+    countAssignmentWarehouseRepairMigrationSource,
+    /location_kind = ''warehouse''/,
+    "branch count writers should select the branch warehouse",
+  );
+  assert.match(
+    countAssignmentWarehouseRepairMigrationSource,
+    /branch_warehouse_location_missing/,
+    "warehouse-missing errors should describe the active model",
   );
 });
 

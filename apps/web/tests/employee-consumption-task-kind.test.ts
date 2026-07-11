@@ -75,6 +75,16 @@ test("HR per-position editor exposes the consumption task kind", () => {
   );
   assert.match(
     positionTasksActionsSource,
+    /await ctx\.supabase\.rpc\(\s*"upsert_position_shift_tasks"/,
+    "HR position-task save must preserve the authenticated owner's JWT for the permission-checking RPC",
+  );
+  assert.doesNotMatch(
+    positionTasksActionsSource,
+    /await service\.rpc\(\s*"upsert_position_shift_tasks"/,
+    "HR position-task save must not call its permission-checking RPC as service role",
+  );
+  assert.match(
+    positionTasksActionsSource,
     /ingredientIds: task\.ingredientIds/,
     "HR position-task save should pass consumption ingredients into the RPC payload",
   );
