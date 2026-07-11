@@ -6,7 +6,7 @@ import { test } from "node:test";
 const gateSplitMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260705090000_menu_availability_gate_split.sql",
+    "../../supabase/migration-archive/20260705090000_menu_availability_gate_split.sql",
   ),
   "utf8",
 );
@@ -14,7 +14,7 @@ const gateSplitMigration = readFileSync(
 const path2LockdownMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260705091000_path2_lockdown_posting_idempotency.sql",
+    "../../supabase/migration-archive/20260705091000_path2_lockdown_posting_idempotency.sql",
   ),
   "utf8",
 );
@@ -22,7 +22,7 @@ const path2LockdownMigration = readFileSync(
 const refundQuotaMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260705092000_refund_quota_first_ready_boundary.sql",
+    "../../supabase/migration-archive/20260705092000_refund_quota_first_ready_boundary.sql",
   ),
   "utf8",
 );

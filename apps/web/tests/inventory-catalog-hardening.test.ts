@@ -10,7 +10,7 @@ function readRepo(path: string): string {
 }
 
 const hardeningSql = readRepo(
-  "supabase/migrations/_archive/20260629144952_ingredient_catalog_tenant_scope_hardening.sql",
+  "supabase/migration-archive/20260629144952_ingredient_catalog_tenant_scope_hardening.sql",
 );
 const ingredientActionSource = readRepo(
   "apps/web/app/(protected)/inventory/ingredient-actions.ts",

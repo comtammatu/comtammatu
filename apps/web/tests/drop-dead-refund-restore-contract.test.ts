@@ -6,7 +6,7 @@ import { test } from "node:test";
 const migration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260706100000_drop_dead_refund_restore.sql",
+    "../../supabase/migration-archive/20260706100000_drop_dead_refund_restore.sql",
   ),
   "utf8",
 );

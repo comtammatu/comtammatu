@@ -2,7 +2,28 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { selfOrderVietQrResponseSchema } from "../lib/self-order/contracts";
+import {
+  selfOrderPaymentRequestStatusResponseSchema,
+  selfOrderVietQrResponseSchema,
+} from "../lib/self-order/contracts";
+
+const paymentTimingMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../..",
+    "supabase/migrations/20260711033150_allow_self_order_payment_before_kds_ready.sql",
+  ),
+  "utf8",
+);
+
+const paymentStatusMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../..",
+    "supabase/migrations/20260711034552_self_order_payment_status.sql",
+  ),
+  "utf8",
+);
 
 function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
@@ -62,7 +83,10 @@ test("payment server returns only the validated RPC payment snapshot", () => {
     server,
     /readVietQrConfigForToken|from\("branch_payment_settings"\)/,
   );
-  assert.match(server, /expiresAt: payload\.expiresAt \?\? payload\.expires_at/);
+  assert.match(
+    server,
+    /expiresAt: payload\.expiresAt \?\? payload\.expires_at/,
+  );
 });
 
 test("payment server maps R0C domain errors without returning database text", () => {
@@ -71,7 +95,6 @@ test("payment server maps R0C domain errors without returning database text", ()
   for (const errorCode of [
     "self_order_active_payment_intent",
     "self_order_payment_cancel_staff_required",
-    "self_order_payment_not_ready",
     "self_order_vietqr_config_missing",
     "self_order_vietqr_config_invalid",
     "self_order_payment_request_expired",
@@ -81,4 +104,61 @@ test("payment server maps R0C domain errors without returning database text", ()
   }
 
   assert.doesNotMatch(server, /message:\s*error\.message/);
+});
+
+test("Self-Order permits payment while KDS is still preparing", () => {
+  const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
+
+  assert.match(
+    paymentTimingMigration,
+    /self_order_payment_ready_guard_not_removed/,
+  );
+  assert.match(paymentTimingMigration, /EXECUTE v_definition/);
+  assert.doesNotMatch(paymentPanel, /canCreateVietQr/);
+  assert.doesNotMatch(paymentPanel, /paymentNotReady/);
+});
+
+test("only the current payment request can unlock the Self-Order completion screen", () => {
+  const paymentStatusRoute = readWeb(
+    "app/api/self-order/[token]/payment-status/route.ts",
+  );
+  const client = readWeb("app/q/[token]/self-order-client.tsx");
+
+  assert.match(
+    paymentStatusMigration,
+    /self_order_get_payment_request_status\(\s*p_token text,\s*p_client_op_id uuid/s,
+  );
+  assert.match(paymentStatusMigration, /pr\.table_id = v_table\.table_id/);
+  assert.match(paymentStatusMigration, /pr\.client_op_id = p_client_op_id/);
+  assert.match(
+    paymentStatusMigration,
+    /auth\.role\(\) IS DISTINCT FROM 'service_role'/,
+  );
+  assert.match(
+    paymentStatusMigration,
+    /REVOKE ALL ON FUNCTION public\.self_order_get_payment_request_status/,
+  );
+  assert.match(paymentStatusMigration, /TO service_role/);
+  assert.match(paymentStatusRoute, /selfOrderClientOpIdSchema\.safeParse/);
+  assert.match(paymentStatusRoute, /applySelfOrderPrivateHeaders/);
+  assert.match(client, /payment-status\?\$\{query\.toString\(\)\}/);
+  assert.match(client, /payload\?\.status === "completed"/);
+  assert.match(client, /<PaymentCompletedState/);
+  assert.match(client, /mood="waving"/);
+  assert.match(client, /paymentCompletedClose/);
+
+  assert.equal(
+    selfOrderPaymentRequestStatusResponseSchema.safeParse({
+      ok: true,
+      status: "completed",
+    }).success,
+    true,
+  );
+  assert.equal(
+    selfOrderPaymentRequestStatusResponseSchema.safeParse({
+      ok: true,
+      status: "paid",
+    }).success,
+    false,
+  );
 });

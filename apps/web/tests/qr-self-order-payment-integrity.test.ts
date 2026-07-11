@@ -96,7 +96,7 @@ test("payment creation validates and snapshots VietQR before any payment write",
   assert.ok(sessionLock > advisory && sessionForUpdate > sessionLock);
   assert.ok(emvBuild > sessionForUpdate && paymentInsert > emvBuild);
   assert.match(createPayment, /FOR UPDATE NOWAIT/);
-  assert.match(createPayment, /self_order_payment_not_ready/);
+  assert.match(createPayment, /self_order_order_not_payable/);
   assert.match(createPayment, /self_order_vietqr_config_missing/);
   assert.match(createPayment, /self_order_vietqr_config_invalid/);
   assert.match(createPayment, /request_fingerprint_version/);
@@ -205,52 +205,31 @@ test("snapshot recovery returns the stored QR without invoice PII", () => {
   assert.doesNotMatch(publicPayload, /invoice_payload/);
 
   const sepayWebhook = readWeb("app/api/webhooks/sepay/route.ts");
-  assert.doesNotMatch(sepayWebhook, /if \(!input\.paymentId\) return \{\};/);
-  assert.match(
-    sepayWebhook,
-    /input\.paymentId !== null[\s\S]*\.eq\("payment_id", input\.paymentId\)/,
-  );
-  assert.match(
-    sepayWebhook,
-    /\.eq\("order_id", input\.orderId\)[\s\S]*\.eq\("method", "vietqr"\)[\s\S]*\.eq\("payment_code_snapshot", input\.paymentCode\)[\s\S]*\.eq\("amount_snapshot", input\.transferAmount\)/,
-  );
-  assert.match(
-    sepayWebhook,
-    /\.order\("created_at", \{ ascending: false \}\)[\s\S]*\.order\("id", \{ ascending: false \}\)/,
-  );
+  assert.match(sepayWebhook, /"reconcile_sepay_order_evidence"/);
+  assert.doesNotMatch(sepayWebhook, /issueTaxInvoiceForPaidOrder/);
 });
 
-test("late SePay invoice binding compares every causal candidate and fails closed on ambiguity", () => {
-  const sepayWebhook = readWeb("app/api/webhooks/sepay/route.ts");
-  const resolver = sepayWebhook.slice(
-    sepayWebhook.indexOf("async function resolveSelfOrderInvoiceInput"),
-    sepayWebhook.indexOf("async function claimWebhookEvent"),
-  );
-  const completion = sepayWebhook.slice(
-    sepayWebhook.indexOf(
-      'if (status === "completed" || status === "already_completed")',
+test("Self-Order SePay evidence auto-confirms through the POS settlement service", () => {
+  const evidenceMigration = readFileSync(
+    join(
+      process.cwd(),
+      "../..",
+      "supabase/migrations/20260711024758_sepay_webhook_order_evidence.sql",
     ),
-    sepayWebhook.indexOf('if (status === "stock_failed")'),
+    "utf8",
   );
 
-  assert.match(resolver, /const candidates = new Map/);
+  assert.match(evidenceMigration, /SELECT public\.confirm_sepay_payment\(/);
   assert.match(
-    resolver,
-    /\.eq\("method", "vietqr"\)[\s\S]*\.eq\("payment_code_snapshot", input\.paymentCode\)[\s\S]*\.eq\("amount_snapshot", input\.transferAmount\)/,
+    evidenceMigration,
+    /v_confirmation_status IS DISTINCT FROM 'completed'/,
   );
-  assert.match(resolver, /for \(const candidate of data \?\? \[\]\)/);
-  assert.match(resolver, /payloads\.size !== 1/);
-  assert.match(resolver, /reason: "ambiguous_invoice_payload"/);
-  assert.match(resolver, /reason: "invalid_invoice_payload"/);
-  assert.match(resolver, /reason: "lookup_failed"/);
+  assert.match(evidenceMigration, /payment_id = v_payment_id/);
   assert.match(
-    completion,
-    /invoiceResolution\.status === "manual_review"[\s\S]*invoice_binding_manual_review/,
+    evidenceMigration,
+    /CREATE OR REPLACE FUNCTION public\.confirm_vietqr_payment/,
   );
-  assert.match(
-    completion,
-    /else \{[\s\S]*issueTaxInvoiceForPaidOrder\([\s\S]*invoiceResolution\.input/,
-  );
+  assert.doesNotMatch(evidenceMigration, /issueTaxInvoiceForPaidOrder/);
 });
 
 test("all internal SECURITY DEFINER helpers close default execute grants", () => {

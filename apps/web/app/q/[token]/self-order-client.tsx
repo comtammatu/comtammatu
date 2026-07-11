@@ -9,6 +9,7 @@ import {
   Item,
   ItemContent,
   ItemDescription,
+  ItemFooter,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -32,7 +33,10 @@ import { buildCartDemandByMenuItemId } from "@lib/self-order/availability";
 import { CartSheet } from "./self-order/cart-sheet";
 import { BillDrawer } from "./self-order/bill-drawer";
 import { useSnapshotSync } from "./self-order/hooks";
-import { MenuPanel, defaultSelfOrderCategoryValue } from "./self-order/menu-panel";
+import {
+  MenuPanel,
+  defaultSelfOrderCategoryValue,
+} from "./self-order/menu-panel";
 import {
   PaymentPanel,
   type GuestPaymentRequestState,
@@ -144,7 +148,9 @@ function normalizePaymentRequest(
   };
 }
 
-function unavailableDescription(snapshot: Extract<PublicSelfOrderSnapshot, { ok: false }>) {
+function unavailableDescription(
+  snapshot: Extract<PublicSelfOrderSnapshot, { ok: false }>,
+) {
   if (snapshot.code === "self_order_disabled") {
     return SELF_ORDER_VI.unavailableDisabledDescription;
   }
@@ -182,7 +188,49 @@ function UnavailableState({
   );
 }
 
-export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps) {
+function PaymentCompletedState({ onClose }: { onClose: () => void }) {
+  return (
+    <AppPage
+      as="main"
+      id="main-content"
+      width="narrow"
+      density="compact"
+      mobile
+      className="min-h-dvh bg-background"
+      contentClassName="min-h-dvh justify-center px-5 py-8"
+    >
+      <Item variant="outline" className="w-full bg-card">
+        <ItemContent className="items-center gap-4 text-center">
+          <BrandMascot decorative size="lg" mood="waving" />
+          <ItemTitle
+            size="heading"
+            className="w-full justify-center text-xl sm:text-2xl"
+          >
+            {SELF_ORDER_VI.paymentCompletedTitle}
+          </ItemTitle>
+          <ItemDescription className="w-full text-center text-sm leading-6">
+            {SELF_ORDER_VI.paymentCompletedDescription}
+          </ItemDescription>
+          <ItemFooter className="mt-3 w-full">
+            <Button
+              type="button"
+              size="touch"
+              className="w-full"
+              onClick={onClose}
+            >
+              {SELF_ORDER_VI.paymentCompletedClose}
+            </Button>
+          </ItemFooter>
+        </ItemContent>
+      </Item>
+    </AppPage>
+  );
+}
+
+export function SelfOrderClient({
+  token,
+  initialSnapshot,
+}: SelfOrderClientProps) {
   const [cartItems, setCartItems] = useState<SelfOrderCartItem[]>([]);
   const [customerNote, setCustomerNote] = useState("");
   const [clientOpId, setClientOpId] = useState<string | null>(null);
@@ -190,6 +238,7 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [localPaymentRequest, setLocalPaymentRequest] =
     useState<GuestPaymentRequestState | null>(null);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [buyerNotGetInvoice, setBuyerNotGetInvoice] = useState(true);
   const [buyerName, setBuyerName] = useState("");
   const [buyerTaxCode, setBuyerTaxCode] = useState("");
@@ -215,20 +264,60 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
   const guestToastKeyRef = useRef<string | null>(null);
   const refreshErrorRef = useRef<string | null>(null);
 
-  const {
-    snapshot,
-    setSnapshot,
-    refreshSnapshot,
-    isRefreshing,
-    refreshError,
-  } = useSnapshotSync(token, initialSnapshot, clientOpId, () => {
-    setCartItems([]);
-    setCustomerNote("");
-    setClientOpId(null);
-    setLocalPaymentRequest(null);
-    batchIntentRef.current = null;
-    paymentIntentRef.current = null;
-  });
+  const { snapshot, setSnapshot, refreshSnapshot, isRefreshing, refreshError } =
+    useSnapshotSync(token, initialSnapshot, clientOpId, () => {
+      setCartItems([]);
+      setCustomerNote("");
+      setClientOpId(null);
+      setLocalPaymentRequest(null);
+      batchIntentRef.current = null;
+      paymentIntentRef.current = null;
+    });
+
+  const paymentStatusClientOpId = snapshot.ok
+    ? (normalizePaymentRequest(snapshot.paymentRequest)?.clientOpId ??
+      localPaymentRequest?.clientOpId ??
+      null)
+    : (localPaymentRequest?.clientOpId ?? null);
+
+  useEffect(() => {
+    if (!paymentStatusClientOpId || paymentCompleted) return;
+    const currentPaymentClientOpId = paymentStatusClientOpId;
+
+    const controller = new AbortController();
+    async function refreshPaymentStatus() {
+      try {
+        const query = new URLSearchParams({
+          clientOpId: currentPaymentClientOpId,
+        });
+        const response = await fetch(
+          `/api/self-order/${encodeURIComponent(token)}/payment-status?${query.toString()}`,
+          { cache: "no-store", signal: controller.signal },
+        );
+        const payload = (await response.json().catch(() => null)) as {
+          status?: unknown;
+        } | null;
+        if (!response.ok || controller.signal.aborted) return;
+
+        if (payload?.status === "completed") {
+          setPaymentCompleted(true);
+          return;
+        }
+        if (payload?.status === "cancelled" || payload?.status === "expired") {
+          setLocalPaymentRequest(null);
+        }
+      } catch {
+        return;
+      }
+    }
+
+    void refreshPaymentStatus();
+    const timer = window.setInterval(() => void refreshPaymentStatus(), 3_000);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+    };
+  }, [paymentCompleted, paymentStatusClientOpId, token]);
 
   useEffect(() => {
     if (!refreshError) {
@@ -327,6 +416,21 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
         ? SELF_ORDER_VI.firstSubmitHint
         : null;
 
+  if (paymentCompleted) {
+    return (
+      <PaymentCompletedState
+        onClose={() => {
+          window.close();
+          window.setTimeout(() => {
+            setPaymentCompleted(false);
+            setLocalPaymentRequest(null);
+            void refreshSnapshot();
+          }, 250);
+        }}
+      />
+    );
+  }
+
   function addCartItem(item: SelfOrderCartItem) {
     setCartItems((current) => [...current, item]);
     setSubmitError(null);
@@ -347,9 +451,7 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
 
   function replaceCartItem(item: SelfOrderCartItem) {
     setCartItems((current) =>
-      current.map((existing) =>
-        existing.key === item.key ? item : existing,
-      ),
+      current.map((existing) => (existing.key === item.key ? item : existing)),
     );
     setSubmitError(null);
   }
@@ -422,7 +524,8 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
       errors.buyerTaxCode = SELF_ORDER_VI.buyerTaxInvalid;
     }
     if (buyerTaxCode.trim()) {
-      if (!buyerName.trim()) errors.buyerName = SELF_ORDER_VI.buyerBusinessMissing;
+      if (!buyerName.trim())
+        errors.buyerName = SELF_ORDER_VI.buyerBusinessMissing;
       if (!buyerAddress.trim()) {
         errors.buyerAddress = SELF_ORDER_VI.buyerBusinessMissing;
       }
@@ -458,6 +561,7 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
     );
     paymentIntentRef.current = intent;
     setPaymentError(null);
+    setPaymentCompleted(false);
     setPendingPaymentMethod(method);
     startPayment(async () => {
       const response = await postSelfOrderJson(
@@ -500,11 +604,11 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
       width="narrow"
       density="compact"
       mobile
-      className="min-h-dvh bg-background"
-      contentClassName="min-h-dvh p-0"
+      className="h-dvh min-h-dvh bg-background"
+      contentClassName="h-dvh min-h-dvh p-0"
     >
-      <div className="flex min-h-dvh flex-col">
-        <header className="workflow-safe-pt sticky top-0 z-30 border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
+      <div className="flex h-full min-h-0 flex-col">
+        <header className="workflow-safe-pt sticky top-0 z-30 shrink-0 border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-primary">
@@ -532,18 +636,18 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
               >
                 <IconReceipt data-icon="inline-start" />
                 {SELF_ORDER_VI.billTab}
-              <Badge variant={awaiting ? "warning" : "secondary"}>
-                {awaiting ? (
-                  <>
-                    <IconClock className="size-3.5" aria-hidden />
-                    <span className="sr-only">
-                      {SELF_ORDER_VI.statusPendingApproval}
-                    </span>
-                  </>
-                ) : (
-                  itemCount
-                )}
-              </Badge>
+                <Badge variant={awaiting ? "warning" : "secondary"}>
+                  {awaiting ? (
+                    <>
+                      <IconClock className="size-3.5" aria-hidden />
+                      <span className="sr-only">
+                        {SELF_ORDER_VI.statusPendingApproval}
+                      </span>
+                    </>
+                  ) : (
+                    itemCount
+                  )}
+                </Badge>
               </Button>
             </div>
           </div>
@@ -589,9 +693,7 @@ export function SelfOrderClient({ token, initialSnapshot }: SelfOrderClientProps
         onOpenPayment={() => setBillView("payment")}
         onBackToBill={() => setBillView("bill")}
         canPay={!ambiguous && order !== null}
-        tableNumber={available.table.number}
         order={order}
-        rounds={available.rounds}
         pendingItems={awaiting ? available.request?.items : undefined}
       >
         {!ambiguous && order ? (

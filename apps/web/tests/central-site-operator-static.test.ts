@@ -7,7 +7,7 @@ import { test } from "node:test";
 // tenant-level claims resolving to a "home" branch by branch_kind) is
 // retired. These tests assert the soft-routing contract is GONE from the
 // active auth surface — `branch_kind` itself stays on the enum for
-// historical inventory rows (see supabase/migrations/_archive/... for the
+// historical inventory rows (see supabase/migration-archive/... for the
 // retired mapping), but no role resolves through it anymore.
 
 const repoRoot = resolve(process.cwd(), "../..");

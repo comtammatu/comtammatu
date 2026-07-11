@@ -14,7 +14,7 @@ const migration = readFileSync(
 const archiveMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260705160000_single_switch_hard_stock_gate.sql",
+    "../../supabase/migration-archive/20260705160000_single_switch_hard_stock_gate.sql",
   ),
   "utf8",
 );

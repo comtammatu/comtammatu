@@ -11,7 +11,7 @@ const read = (path: string) => {
     return readFileSync(
       resolve(
         repoRoot,
-        path.replace("supabase/migrations/", "supabase/migrations/_archive/"),
+        path.replace("supabase/migrations/", "supabase/migration-archive/"),
       ),
       "utf8",
     );
@@ -21,7 +21,7 @@ const read = (path: string) => {
 
 test("edit pending quantity migration enqueues kitchen-visible print deltas", () => {
   const src = read(
-    "supabase/migrations/_archive/20260601790000_edit_pending_quantity_print.sql",
+    "supabase/migration-archive/20260601790000_edit_pending_quantity_print.sql",
   );
 
   assert.match(

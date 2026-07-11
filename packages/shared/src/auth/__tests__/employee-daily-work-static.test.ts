@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("Employee Daily Work migration hardens attendance and adds checklist RPCs", () => {
   const migration = read(
-    "supabase/migrations/_archive/20260609093000_employee_daily_work.sql",
+    "supabase/migration-archive/20260609093000_employee_daily_work.sql",
   );
 
   for (const expected of [
@@ -106,7 +106,7 @@ test("Employee clock client and actions no longer use GPS for clock-in/out", () 
 
 test("Employee checklist templates are managed as HR templates, not roles", () => {
   const migration = read(
-    "supabase/migrations/_archive/20260610170000_hr_checklist_template_library.sql",
+    "supabase/migration-archive/20260610170000_hr_checklist_template_library.sql",
   );
   const actionSrc = read("apps/web/lib/staff-runtime/clock/actions.ts");
   const positionTasksActionSrc = read(
@@ -175,7 +175,7 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
 
 test("HRM consumption checklist is optional for each canonical template", () => {
   const migration = read(
-    "supabase/migrations/_archive/20260618060957_hrm_checkout_consumption_checklist.sql",
+    "supabase/migration-archive/20260618060957_hrm_checkout_consumption_checklist.sql",
   );
 
   for (const expected of [
@@ -220,10 +220,10 @@ test("HRM consumption checklist is optional for each canonical template", () => 
 
 test("HRM consumption history stays available but no longer gates Employee checkout", () => {
   const migration = read(
-    "supabase/migrations/_archive/20260618070000_hrm_consumption_report_approval.sql",
+    "supabase/migration-archive/20260618070000_hrm_consumption_report_approval.sql",
   );
   const taskKindMigration = read(
-    "supabase/migrations/_archive/20260619042223_employee_consumption_task_kind.sql",
+    "supabase/migration-archive/20260619042223_employee_consumption_task_kind.sql",
   );
   const clockActionsSrc = read(
     "apps/web/lib/staff-runtime/clock/actions.ts",
@@ -354,10 +354,10 @@ test("HRM consumption history stays available but no longer gates Employee check
 
 test("Employee checkout approval keeps checkout pending until Branch Manager approves", () => {
   const migration = read(
-    "supabase/migrations/_archive/20260609100000_employee_checkout_approval.sql",
+    "supabase/migration-archive/20260609100000_employee_checkout_approval.sql",
   );
   const grantMigration = read(
-    "supabase/migrations/_archive/20260609132012_grant_private_schema_usage_to_service_role.sql",
+    "supabase/migration-archive/20260609132012_grant_private_schema_usage_to_service_role.sql",
   );
   const actionSrc = read("apps/web/lib/staff-runtime/clock/actions.ts");
   const workStateSrc = read(
@@ -365,7 +365,7 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
   );
   const baselineSrc = read("supabase/migrations/00000000000000_baseline.sql");
   const countGateMigrationSrc = read(
-    "supabase/migrations/_archive/20260629183853_require_inventory_count_checkout_gate.sql",
+    "supabase/migration-archive/20260629183853_require_inventory_count_checkout_gate.sql",
   );
   const branchStaffMigrationSrc = read(
     "supabase/migrations/20260708115755_branch_staff_guard_mapper.sql",

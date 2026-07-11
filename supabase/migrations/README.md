@@ -17,7 +17,7 @@ squashed baseline exists.
   functions, RLS policies, indexes, grants, materialized views, the auth hook
   (`custom_access_token_hook` + its grant), and the `private` schema helpers.
   Apply first on a fresh env. Self-contained — no separate bootstrap file.
-- `_archive/` — historical incremental migrations retained for history: the
+- `../migration-archive/` — historical incremental migrations retained for history: the
   pre-baseline chain plus the forward chain squashed into the current baseline.
   NOT the install path; NOT applied by a fresh `supabase db reset`.
 
@@ -47,7 +47,7 @@ single source of truth for managed surfaces.
 
 - **Production (`iexwsuaqqenyjiskawoj`) keeps its applied migration history.** It
   is NOT reset to the baseline; the baseline is for fresh/dev envs only.
-- **Production still needs the 2026-05-30 fixes applied** (under `_archive/`,
+- **Production still needs the 2026-05-30 fixes applied** (under `../migration-archive/`,
   also in git history) — owner-gated:
   - `20260602008000_payroll_entries_self_read_paid_only.sql`
   - `20260602009000_attendance_writes_revoke_direct_insert.sql`
@@ -62,5 +62,5 @@ Full procedure: `docs/runbooks/db/re-baseline.md`. In short — owner dumps
 - strip `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin …` (Supabase-managed
   defaults the migration role cannot set),
 - prepend `SET check_function_bodies = false;` with `private` before `public`,
-- `git mv` the squashed forward chain into `_archive/`,
+- `git mv` the squashed forward chain into `supabase/migration-archive/`,
 - prove `pnpm db:baseline:local-check` exits 0 and `pnpm db:types` shows no diff.

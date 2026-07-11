@@ -6,7 +6,7 @@ import { test } from "node:test";
 const ingredientGateRemovalMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260705140000_ingredient_gate_removal.sql",
+    "../../supabase/migration-archive/20260705140000_ingredient_gate_removal.sql",
   ),
   "utf8",
 );
@@ -14,7 +14,7 @@ const ingredientGateRemovalMigration = readFileSync(
 const slimFieldsMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260705141000_menu_availability_slim_fields.sql",
+    "../../supabase/migration-archive/20260705141000_menu_availability_slim_fields.sql",
   ),
   "utf8",
 );

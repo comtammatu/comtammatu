@@ -591,3 +591,34 @@ chú ý ngay: khách tự gọi, gọi thanh toán, in lỗi và bếp báo hế
 
 **Consequences:** D074 §2 chỉ còn mô tả scope lúc ship KDS Phase 1; POS Phase 3
 được hoàn tất theo cùng ADR 0008 và runtime `apps/web/lib/operational-audio.ts`.
+
+## D080: KDS voice có khoảng nghỉ 15 giây, không xếp hàng đọc bù (2026-07-11)
+
+**Context:** KDS đã gom alert trong cùng một sync tick, nhưng realtime có thể
+đến thành nhiều nhịp liên tiếp. Nếu mỗi nhịp đều đọc số bàn, bếp bị cắt câu và
+rối trong giờ cao điểm.
+
+**Decision (owner):**
+
+1. Beep vẫn phát ngay theo tone và debounce hiện có; queue/toast không đổi.
+2. TTS KDS phát tối đa một câu mỗi 15 giây. Event trong khoảng nghỉ không xếp
+   hàng đọc bù; nhân viên nhìn queue để xử lý đầy đủ.
+3. Preview do người dùng bấm đổi mode được miễn khoảng nghỉ và không làm chậm
+   alert thật kế tiếp.
+4. Chưa thêm câu tổng hợp hoặc scheduler. Chỉ mở khi thử tại bếp chứng minh
+   cooldown làm mất tín hiệu quan trọng.
+
+**Consequences:** Voice là lớp định hướng thưa, beep là tín hiệu chú ý tức thời,
+còn KDS board vẫn là nguồn sự thật vận hành.
+
+## D081: Chuông kết thúc trước khi TTS bắt đầu (2026-07-11)
+
+**Context:** Ở mode `beep+voice`, Web Audio và `speechSynthesis` cùng bắt đầu nên
+chuông gần mức tối đa che phần đầu câu đọc, khiến voice nghe nhỏ trên POS/KDS.
+
+**Decision (owner):** Phát hết chuông, nghỉ 120 ms rồi mới đọc; đặt TTS ở
+`volume = 1`. Một alert mới thay thế câu đang chờ để không tạo hàng đọc cũ.
+Mode `voice`-only vẫn đọc ngay.
+
+**Consequences:** Câu đọc rõ hơn mà không tăng gain giả hoặc đọc lặp. Âm lượng
+thực tế tối đa vẫn phụ thuộc media volume và loa của thiết bị.

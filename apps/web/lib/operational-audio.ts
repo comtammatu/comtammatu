@@ -1,8 +1,15 @@
 "use client";
 
-import { playAppSignal, type SignalTone } from "./audio-signal";
+import {
+  getAppSignalDurationMs,
+  playAppSignal,
+  type SignalTone,
+} from "./audio-signal";
 
 export type OperationalAudioMode = "off" | "beep" | "voice" | "beep+voice";
+
+export const KDS_VOICE_COOLDOWN_MS = 15_000;
+const VOICE_AFTER_BEEP_GAP_MS = 120;
 
 export type OperationalAlertKind =
   | "kds.new"
@@ -33,6 +40,9 @@ const AUDIO_MODE_CYCLE: readonly OperationalAudioMode[] = [
   "beep",
   "beep+voice",
 ];
+
+let lastKdsVoiceAt = 0;
+let pendingVoiceTimer: number | null = null;
 
 const ALERT_TONES: Record<OperationalAlertKind, SignalTone> = {
   "kds.new": "kds-new",
@@ -103,6 +113,13 @@ export function audioModeHasVoice(mode: OperationalAudioMode): boolean {
   return mode === "voice" || mode === "beep+voice";
 }
 
+export function shouldSpeakKdsVoice(
+  nowMs: number,
+  lastSpokenAtMs: number,
+): boolean {
+  return nowMs - lastSpokenAtMs >= KDS_VOICE_COOLDOWN_MS;
+}
+
 export function buildAlertUtterance(
   kind: OperationalAlertKind,
   tableLabel?: string | undefined,
@@ -128,14 +145,35 @@ function speak(text: string): void {
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "vi-VN";
   utterance.rate = 1.1;
+  utterance.volume = 1;
   if (vietnamese) utterance.voice = vietnamese;
   // Single-flight: a newer alert cuts the line still speaking.
   synth.cancel();
   synth.speak(utterance);
 }
 
+function cancelPendingSpeech(): void {
+  if (pendingVoiceTimer !== null) {
+    window.clearTimeout(pendingVoiceTimer);
+    pendingVoiceTimer = null;
+  }
+}
+
+function scheduleSpeech(text: string, delayMs: number): void {
+  cancelPendingSpeech();
+  if (delayMs === 0) {
+    speak(text);
+    return;
+  }
+  pendingVoiceTimer = window.setTimeout(() => {
+    pendingVoiceTimer = null;
+    speak(text);
+  }, delayMs);
+}
+
 export function playOperationalAlert(input: PlayOperationalAlertInput): void {
   const { kind, mode, slots, force = false } = input;
+  cancelPendingSpeech();
   if (mode === "off") return;
 
   if (audioModeHasBeep(mode)) {
@@ -143,8 +181,19 @@ export function playOperationalAlert(input: PlayOperationalAlertInput): void {
   }
 
   if (!audioModeHasVoice(mode)) return;
+  if (kind.startsWith("kds.") && !force) {
+    const now = Date.now();
+    if (!shouldSpeakKdsVoice(now, lastKdsVoiceAt)) return;
+    lastKdsVoiceAt = now;
+  }
   try {
-    speak(buildAlertUtterance(kind, slots?.tableLabel));
+    const voiceDelayMs = audioModeHasBeep(mode)
+      ? getAppSignalDurationMs(ALERT_TONES[kind]) + VOICE_AFTER_BEEP_GAP_MS
+      : 0;
+    scheduleSpeech(
+      buildAlertUtterance(kind, slots?.tableLabel),
+      voiceDelayMs,
+    );
   } catch {
     // Speech unavailable or blocked by the browser; the beep already fired.
   }

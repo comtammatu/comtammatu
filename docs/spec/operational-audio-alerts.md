@@ -117,10 +117,11 @@ KDS chrome exposes the mode through one cycling button: `off → beep → beep+v
 1. **Single entrypoint.** Feature code calls one helper (name illustrative): `playOperationalAlert({ kind, slots?, force? })`. Direct `playAppSignal` remains valid for beep-only internals and tests, but new product call sites should use the entrypoint.
 2. **Beep debounce.** Keep the existing ~2.5s per-tone debounce unless a call passes `force` (e.g. toggle preview).
 3. **Voice single-flight.** At most one voice utterance plays at a time per page runtime.
-4. **Coalesce.** If multiple KDS alert groups become ready in one sync tick, play one beep for the highest-priority kind (existing `pickHigherPriorityKdsSignalTone` behavior) and at most one voice line for that tick. Under sustained burst, prefer “N phiếu mới” summary clips over reading every table.
+4. **Coalesce.** If multiple KDS alert groups become ready in one sync tick, play one beep for the highest-priority kind (existing `pickHigherPriorityKdsSignalTone` behavior) and at most one voice line for that tick. Across ticks, KDS voice has a 15-second quiet window; alerts inside it keep their beep/toast/queue update but do not speak or queue a delayed line. A user-triggered mode preview bypasses the window and does not postpone the next live alert.
 5. **Length budget.** Target ≤ ~1.5s per utterance in MVP. Reject copy that needs a sentence.
 6. **Failure fallback.** No `vi-*` voice on the device, speech error, or autoplay block → skip voice; beep still follows mode. Never throw into UI.
 7. **No overlap wars.** Starting a higher-priority voice MAY cut the current voice; lower-priority waiting items may be dropped when coalesced.
+8. **Sequential channels.** In `beep+voice`, finish the mapped beep, wait 120 ms, then speak. Never start the beep and TTS together. A newer alert replaces a voice still waiting to start.
 
 ## Voice Engine Contract
 
@@ -128,6 +129,7 @@ KDS chrome exposes the mode through one cycling button: `off → beep → beep+v
 - Locale: `lang = "vi-VN"`. When the device exposes a loaded voice list, bind the first `vi-*` voice; when that list is loaded and holds no `vi-*` voice, skip voice for the event. An empty list means voices have not loaded yet — speak and let the engine choose.
 - Table numbers are string interpolation on the template, not concatenated assets. The utterance builder MUST be a pure, unit-tested function.
 - Rate is tuned for kitchen noise, not naturalness; keep utterances inside the length budget above.
+- Volume is explicitly `1`, the browser TTS maximum. Device media volume and speaker output remain outside the web runtime.
 - A recorded brand voice pack may replace this engine later; `kind` strings and templates stay stable.
 
 ## Surface Rules
@@ -191,6 +193,8 @@ Exact module path is an implementation detail; keep it under `apps/web/lib/` nex
 - [x] With mode `voice`, no beep; voice still single-flight.
 - [x] With mode `off`, silence.
 - [x] Burst of tickets in one tick does not stack overlapping full utterances.
+- [x] Sustained KDS bursts speak at most once per 15 seconds and never queue delayed narration.
+- [x] In `beep+voice`, the beep finishes before TTS starts at browser-maximum volume.
 - [x] Legacy `kds:sound=1` still enables beep after upgrade before the new key is written.
 - [x] Unit tests cover kind classification, priority, coalesce, and mode resolution.
 - [x] No inserts into `public.notifications` from the audio path.

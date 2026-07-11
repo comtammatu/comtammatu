@@ -13,6 +13,7 @@ export interface SepayWebhookRow {
   created_at: string;
   processing_status: string;
   error_code: string | null;
+  order_id: number | null;
   payment_id: number | null;
   expense_id: number | null;
   payload: unknown;
@@ -34,6 +35,7 @@ export interface SepayBankTransaction {
   createdAt: string;
   processingStatus: string;
   errorCode: string | null;
+  orderId: number | null;
   paymentId: number | null;
   expenseId: number | null;
   expenseIds: number[];
@@ -173,6 +175,7 @@ export function classifySepayReconciliationState(
     SepayBankTransaction,
     | "errorCode"
     | "expenseIds"
+    | "orderId"
     | "paymentId"
     | "processingStatus"
     | "supplierPaymentMatches"
@@ -271,6 +274,7 @@ export function mapSepayWebhookRow(
     createdAt: row.created_at,
     processingStatus: row.processing_status,
     errorCode: row.error_code,
+    orderId: row.order_id,
     paymentId: row.payment_id,
     expenseId: row.expense_id,
     expenseIds: row.expense_id != null ? [row.expense_id] : [],

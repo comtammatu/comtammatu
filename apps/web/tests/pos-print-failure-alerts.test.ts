@@ -66,7 +66,7 @@ test("POS hears the fate of print jobs after enqueue", () => {
   assert.match(alertsHookSource, /FAILED_STATUSES = new Set\(\["failed", "expired"\]\)/);
   assert.match(alertsHookSource, /label: "In lại"/);
   assert.match(alertsHookSource, /retryPrintJob/);
-  assert.match(providerSource, /usePrintJobAlerts\(\{ branchId, soundEnabled \}\)/);
+  assert.match(providerSource, /usePrintJobAlerts\(\{ branchId, audioMode \}\)/);
 });
 
 test("printer badge surfaces the failed-job count above heartbeat tone", () => {

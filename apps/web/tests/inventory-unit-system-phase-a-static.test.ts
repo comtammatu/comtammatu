@@ -7,7 +7,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const readRepo = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const migration = readRepo(
-  "supabase/migrations/_archive/20260703160000_inventory_unit_system_phase_a.sql",
+  "supabase/migration-archive/20260703160000_inventory_unit_system_phase_a.sql",
 );
 const baseline = readRepo("supabase/migrations/00000000000000_baseline.sql");
 

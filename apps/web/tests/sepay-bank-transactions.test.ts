@@ -48,6 +48,7 @@ function row(
   paymentId: number | null = null,
   processingStatus = "processed",
   errorCode: string | null = null,
+  orderId: number | null = null,
 ): SepayWebhookRow {
   return {
     id,
@@ -55,6 +56,7 @@ function row(
     created_at: createdAt,
     processing_status: processingStatus,
     error_code: errorCode,
+    order_id: orderId,
     payment_id: paymentId,
     expense_id: expenseId,
     payload,
@@ -285,6 +287,23 @@ test("SePay reconciliation state follows actual source link", () => {
   assert.equal(
     classifySepayReconciliationState(
       tx(row(3, { transferType: "in", transferAmount: 200000 })),
+    ),
+    "needs_review",
+  );
+  assert.equal(
+    classifySepayReconciliationState(
+      tx(
+        row(
+          30,
+          { transferType: "in", transferAmount: 200000 },
+          undefined,
+          null,
+          null,
+          "processed",
+          null,
+          930,
+        ),
+      ),
     ),
     "needs_review",
   );

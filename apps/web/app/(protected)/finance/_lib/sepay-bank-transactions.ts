@@ -57,7 +57,7 @@ interface SupplierPaymentRow {
 }
 
 const SEPAY_WEBHOOK_SELECT =
-  "id, request_id, created_at, processing_status, error_code, payment_id, expense_id, payload" as const;
+  "id, request_id, created_at, processing_status, error_code, order_id, payment_id, expense_id, payload" as const;
 
 // ponytail: scan existing webhook ledger; add a bank_transactions table if this pilot account outgrows 5000 retained SePay rows.
 const SEPAY_BALANCE_SCAN_LIMIT = 5000;
@@ -101,7 +101,7 @@ async function fetchSepayWebhookRows(
     return [];
   }
 
-  return (data ?? []) as SepayWebhookRow[];
+  return (data ?? []) as unknown as SepayWebhookRow[];
 }
 
 async function fetchSepayExpenseMatches(
@@ -250,7 +250,7 @@ async function fetchIncomingWebhookPaymentIds(
   }
 
   return new Set(
-    ((data ?? []) as SepayWebhookRow[])
+    ((data ?? []) as unknown as SepayWebhookRow[])
       .map(mapSepayWebhookRow)
       .filter((tx): tx is SepayBankTransaction => tx !== null)
       .filter(

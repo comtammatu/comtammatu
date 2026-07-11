@@ -66,7 +66,7 @@ test("bank fund pulls SePay in and out with the right sign", () => {
 test("cash opening writes cash, bank, and date through one RPC", () => {
   const action = read("apps/web/app/(protected)/finance/cash-actions.ts");
   const migration = read(
-    "supabase/migrations/_archive/20260629165000_finance_cash_opening_rpc.sql",
+    "supabase/migration-archive/20260629165000_finance_cash_opening_rpc.sql",
   );
   const databaseTypes = read("packages/database/src/types/database.types.ts");
 

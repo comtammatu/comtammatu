@@ -9,6 +9,37 @@
 > checkout with `git status` and re-check production state for any migration or
 > runtime claim.
 
+## POS Item Customizer Mobile Scroll (2026-07-11)
+
+Skill plan: repo rules = engineering + skills + workflow + ui; external skills =
+none; runtime tools = CodeGraph + static Node test; skipped = browser (no live
+POS session in this turn) and design-review (layout bug, not design question).
+
+UI Advisor Gate
+
+- Surface: `/br/[branchId]/pos`; route family: POS station; plane: station; change: behavior
+- Context: POS order-taking → customize item before add/edit; actor: cashier/service; job: reach all options + CTA on phone
+- Journey: tap menu item → customizer sheet → pick options/note → confirm; recovery: close sheet
+- Information order: 1) item name 2) variants/modifiers/sides/note/discount 3) qty + total CTA; exclude: redesign
+- Pattern: existing bottom Sheet customizer (not a new page archetype)
+- States: long option lists on short viewports
+- Components: Sheet + ScrollArea (Má Tư DS)
+- Responsive: mobile phone; touch; risk = body scroll lock + non-scrolling sheet
+- Verification: static layout contract test; owner phone smoke after deploy
+
+T2
+
+- PM: fix unblock cashier on phone when customizing long items; done = can scroll to CTA
+- BA: no business-rule change; only layout scroll contract
+- Dev: override bottom sheet `h-auto`, constrain flex column, `ScrollArea min-h-0 flex-1`
+- QA: static test `pos-item-customizer-mobile-scroll.test.ts`; regression `POS-CUSTOMIZER-MOBILE-SCROLL`
+
+Follow-up (same surface): `QuickReasonChips` note/discount presets use one-row
+horizontal `overflow-x-auto` + `no-scrollbar` (design-system chrome-rail pattern)
+instead of `flex-wrap`, to reclaim vertical space in the customizer. Action bar
+uses `SheetFooter` outside a plain `overflow-y-auto` body so qty/confirm stay
+pinned to the viewport.
+
 ## Operating Frame
 
 - Production baseline remains the current `comtammatu` app and production
@@ -218,6 +249,82 @@ Attestation: the diff matches the T2 contract; `Đội` now opens the direct
 three-tab workspace, prioritizes real signals, and preserves every roster and
 assignment row. No data loader, mutation, or authorization boundary changed. No
 new regression rule was needed.
+
+## Branch Team Shift Drill-Down
+
+### T2 contract
+
+Skill plan: repo rules = engineering + skills + workflow + UI; external skills
+= none; runtime tools = CodeGraph, local browser, focused tests, and repo gates.
+Skipped = new approval actions, duplicate detail components, and data-model
+changes.
+
+- **PM/BA:** A shift row first opens the selected employee/shift detail. From
+  there, each real pending job has its own command; the manager never searches
+  the same person again in a generic approval list.
+- **Senior Dev:** Remove hidden long-press/direct-navigation behavior. Reuse the
+  existing checkout and count-review screens with validated query focus; keep
+  their existing actions, confirmations, permissions, and audit behavior.
+- **QA/QC:** Lock one-tap detail, separate checkout/count CTAs, exact attendance
+  focus, employee-scoped count loading, and the absence of the duplicate count
+  assignment shortcut.
+
+UI Advisor Gate: surface = `/br/[branchId]/team?tab=board` plus focused checkout
+and count-review targets; family = `branch-team`; plane = Branch; change = flow.
+Actor/job = manager selects one shift, understands its state, then completes one
+pending review. Information order = employee/shift, statuses, time/checklist,
+contextual commands. Pattern = touch LIST -> detail drawer -> focused review
+drawer/sheet; no new primitive. Verification = phone runtime smoke, focused
+tests, and full repo gates.
+
+- [x] **D1 — predictable row action.** A tap opens the shift drawer; keyboard
+      activation is native through a real button. Long press and direct jumps
+      are removed.
+- [x] **D2 — contextual commands.** Checkout and submitted count reviews render
+      as independent drawer commands; an unsubmitted count remains a follow-up
+      signal rather than a false review action.
+- [x] **D3 — focused targets.** Checkout opens the exact attendance request;
+      count review loads only the selected employee and opens the newest pending
+      slip. The duplicate count-assignment shortcut is removed.
+- [x] **D4 — verification.** Runtime smoke, focused tests, repo gates, and final
+      diff review are green.
+
+Attestation: the Team shift drill-down is written and runtime-verified at the
+phone viewport. Focused tests (45/45), web typecheck, web lint, and production
+build are green. Full repo verification is green after the Self-Order UI
+baseline check and the retired Stock Hub transfer-tile expectation were
+reconciled.
+
+## Branch Orders Focused Queue
+
+### T2 contract
+
+UI Advisor Gate: surface = `/br/[branchId]/orders`; route family =
+`operator-orders`; plane = Branch; change = flow. Context = POS order follow-up;
+actor = branch manager; job = see actionable orders before recent history.
+Journey = Branch -> Orders -> select active/recent order -> detail sheet;
+recovery = switch back to recent history. Information order = active orders,
+recent orders, then order detail. Pattern = Branch touch LIST with one Tabs
+facet; components = `Tabs`, `ItemGroup`, `OrderDetailSheet`; states = active
+empty, recent list, loader error. Responsive = one touch IA on phone/tablet.
+
+- **PM/BA:** Prioritize non-terminal orders without removing recent lookup.
+- **Senior Dev:** Reuse the existing 50-row loader and detail sheet; no POS
+  mutation, new query, or second history surface.
+- **QA/QC:** Lock terminal-status filtering, one active/recent tab axis, and
+  the detail sheet accessibility description.
+
+- [x] **O1 - active queue first.** The default tab shows only non-terminal
+      orders and carries the aggregate in-progress count.
+- [x] **O2 - history remains available.** The existing latest-order list stays
+      behind `Gần đây`; no additional history query or POS mutation is added.
+- [x] **O3 - detail accessibility.** `OrderDetailSheet` has a screen-reader
+      description and opens the selected order from either list.
+
+Attestation: Chrome runtime smoke on `/br/3/orders` confirmed the active-first
+tab, recent-history tab, and item detail sheet after hot reload. The focused
+static test, web typecheck, UI contract check, and full repo verification are
+green.
 
 ## Self-Order Rebuild (D075)
 
@@ -747,6 +854,15 @@ token.
       cancel-payment. Fire `playAppSignal` on a new request: device-local, no
       `public.notifications` row, no Telegram (ADR 0008).
 
+### S6 T3 contract
+
+Skill plan: repo rules = engineering + skills + database + workflow; external skill = Supabase; runtime tools = CodeGraph + production SELECT-only precheck + Preview Branch; skipped = production apply until owner delegation.
+
+- **PM:** Remove only the retired V2 persistence and realtime capability. The current QR request, staff decision, and payment flows remain available.
+- **BA:** Existing V2 rows are a stop condition, not disposable cleanup data. The request/payment model is the sole retained Self-Order state after cutover.
+- **Senior Dev:** Use one forward migration: preflight V2 tables, remove their dependent session column/objects without `CASCADE`, and preserve the canonical request/payment RPCs and rate-limit purposes.
+- **QA/QC:** Verify on a Preview Branch that no V2 relation/function/trigger/column remains, canonical RPCs still exist, and generated types plus focused tests match the reduced schema.
+
 - [ ] **S6 — destructive migration and test re-anchor.** Drop
       `self_order_sessions`, `self_order_batches`, `self_order_session_devices`,
       `self_order_payment_requests.session_id` and its legacy foreign key/index,
@@ -758,13 +874,22 @@ token.
       integrity, and v2 phases; re-anchor the payment, cash-invoice-binding, and
       public-contract tests to the new snapshot shape.
 
-- [ ] **S7 — documentation truth sweep.** `docs/spec/self-order-motion-design.md`
-      still references the Menu/Bill tabs and the old cart contract; rewrite it
-      against the drawer IA. Delete
-      `docs/runbooks/pos-kds/qr-self-order-capability-rollout.md` and its entry in
-      `docs/runbooks/README.md` — it rolls out a capability that no longer exists.
-      Re-check `docs/plan/adr/0011-database-auth-realtime-hardening.md` for
-      findings that named the deleted tables.
+- [x] **S7 — documentation truth sweep.** The motion contract now follows the
+      drawer IA; the obsolete capability rollout and index entry are removed;
+      ADR 0011 no longer records the retired Self-Order realtime topic.
+
+### Preview migration-chain repair (T2)
+
+Skill plan: repo rules = engineering + skills + database + workflow; external = Supabase; runtime = CodeGraph + migration-list precheck + Preview Branch; skipped = production apply and schema mutation.
+
+PM: scope = make the canonical baseline-plus-forward migration set the only Preview input; acceptance = Preview can replay it; priority = unblock S6 verification.
+BA: rules = historical SQL remains available to developers but never executes in a fresh environment; edge case = path references must follow the archive move; data flow = no production table, RPC, or RLS changes.
+Dev: approach = move the historical tree outside `supabase/migrations`, update exact path references, and add one static guard; risk = documentation/test path drift.
+QA: tests = migration discovery excludes the archive, baseline replay, focused static test, and Preview provisioning; regressions to recheck = migration list has no archived versions.
+
+Attestation: the source layout matches this T2 contract. Focused static tests,
+typecheck, lint, and build pass; baseline replay is blocked by unavailable Docker,
+and Preview provisioning requires the unpushed migration layout to reach GitHub.
 
 ### Known gap, out of scope
 
@@ -887,6 +1012,33 @@ Attestation:
 - Out of scope: a synthetic paid POS order in production. The post-apply
   function/location/flag smoke and `db:types` completed; observe the next
   eligible real POS outcome for the sale movement evidence.
+
+### P0 inventory runtime repair T3 contract
+
+Skill plan: repo rules = engineering + skills + database + notifications + workflow;
+external skill = Supabase; runtime tools = CodeGraph, SELECT-only production SQL,
+focused static tests; skipped = production apply and data correction because both
+require owner-controlled production action.
+
+- **PM:** Restore the broken inventory readers and prevent a recipe from losing
+  its required unit mapping. Done means low-stock alerts, movement reports,
+  and blind stocktake reads no longer depend on retired `ingredients.unit`.
+- **BA:** Inventory quantities are canonical base units. A public menu recipe
+  requires its `(ingredient_id, entry_unit_id)` mapping to remain active;
+  changing that mapping must be rejected before it creates a silent POS
+  sale-consumption gap. Existing invalid catalog rows are remediation work,
+  not values to be guessed or backfilled by the migration.
+- **Senior Dev:** Add one forward migration that rewrites the three reader
+  functions against `inventory_entry_unit_code`, preserves the existing
+  `inventory.stock_low` producer/dedup contract, and adds a narrow trigger
+  on `ingredient_units` to reject invalidating units used by recipes.
+- **QA/QC:** Static tests lock the unit resolver, retained notification dedup,
+  and recipe-unit guard. A preview branch or owner-applied production smoke
+  must run before the migration is called runtime-verified.
+
+Agreement: use base-unit codes for aggregate reports and blind counts; do not
+build a new alert system or auto-repair stock. The Owner fixes the flagged menu
+catalog and stock levels, then verifies the next real POS order.
 
 ## Branch Stock Cutover (D073 — supersedes the D067 round-2 scope)
 
@@ -1182,8 +1334,7 @@ destructive lot/expiry + production_orders drops).
 - [x] **Catalog save blocked by `production_recipes` FK (misleading
       "Đơn vị tồn chuẩn không hợp lệ").** Forward migration ready (not
       applied): `20260710193250_upsert_ingredient_units_preserve_recipe_fk.sql`
-      (sorts before `193300`) replaces live 12-arg `upsert_ingredient_catalog`
-      + `bulk_import_ingredients` with identity-preserving unit sync +
+      (sorts before `193300`) replaces live 12-arg `upsert_ingredient_catalog` + `bulk_import_ingredients` with identity-preserving unit sync +
       explicit REVOKE/GRANT; app error map distinguishes recipe-in-use /
       unit / category. Apply this hotfix alone on PROD (12-arg still live);
       do NOT apply `193300` until app/types drop `p_shelf_life_days`.

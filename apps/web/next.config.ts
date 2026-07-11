@@ -21,16 +21,17 @@ if (process.env.NODE_ENV !== "production") {
   }
   // Fallback to default ports if no env URL or parsing failed
   if (!localSupabase) {
-    localSupabase = " http://127.0.0.1:54321 ws://127.0.0.1:54321 http://127.0.0.1:55521 ws://127.0.0.1:55521 http://127.0.0.1:55421 ws://127.0.0.1:55421";
+    localSupabase =
+      " http://127.0.0.1:54321 ws://127.0.0.1:54321 http://127.0.0.1:55521 ws://127.0.0.1:55521 http://127.0.0.1:55421 ws://127.0.0.1:55421";
   }
 }
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: https://*.supabase.co${localSupabase}`,
+  `img-src 'self' data: blob: https://*.supabase.co https://play-lh.googleusercontent.com${localSupabase}`,
   "font-src 'self' data:",
-  `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.upstash.io${localSupabase}`,
+  `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.upstash.io https://api.vietqr.io${localSupabase}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

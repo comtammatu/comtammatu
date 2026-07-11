@@ -29,7 +29,7 @@ app; deploying before the additive migration breaks it the other way. Hence:
 2. Apply `20260710091000` (`is_active` guard) and `20260710092000` (GRN write RLS). Neither is coupled to
    an app version.
 3. Run `corepack pnpm db:types`, then deploy `main`. Nothing calls `get_orders_paid_summary` any more.
-4. Apply `20260710093000`, which drops it. `_rollback/20260710093000_*_down.sql` recreates the function if
+4. Apply `20260710093000`, which drops it. `supabase/migration-rollback/20260710093000_*_down.sql` recreates the function if
    the deploy has to be rolled back.
 
 DDL was validated on a throwaway preview branch, which also caught a real defect: policy bodies using bare
@@ -196,7 +196,6 @@ table once per 200-order chunk, sequentially.)
 - Demotion leaves stale JWT claims for ≤ token TTL and never reconciles `staff_permissions`.
 - `branch_manager` holds `hr:view_employee` **tenant-wide** while every other key is branch-scoped ⇒
   cross-branch profile/leave reads. Confirm intent.
-- Self-order realtime topic is `private=false` (capability-URL model; thin tickle payload only).
 - `rls_enabled_no_policy` trio (`archive_run_log`, `order_daily_counters`, `reconcile_run_log`) is
   deny-by-design: only `service_role` holds grants. Not a lockout.
 - Anon surface is clean: the only policies naming `anon` are 3 deny-all (`false`) policies.

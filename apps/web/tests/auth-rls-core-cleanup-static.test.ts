@@ -5,20 +5,20 @@ import test from "node:test";
 
 const repoRoot = resolve(import.meta.dirname, "..", "..", "..");
 const kdsMigration = readFileSync(
-  resolve(repoRoot, "supabase/migrations/_archive/20260629190446_kds_inline_branch_scope.sql"),
+  resolve(repoRoot, "supabase/migration-archive/20260629190446_kds_inline_branch_scope.sql"),
   "utf8",
 );
 const scopeMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/_archive/20260629190445_auth_rls_permission_scope_cleanup.sql",
+    "supabase/migration-archive/20260629190445_auth_rls_permission_scope_cleanup.sql",
   ),
   "utf8",
 );
 const canonicalTemplateMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/_archive/20260630031456_canonicalize_branch_manager_template.sql",
+    "supabase/migration-archive/20260630031456_canonicalize_branch_manager_template.sql",
   ),
   "utf8",
 );

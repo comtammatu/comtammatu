@@ -138,9 +138,7 @@ test("active cash and VietQR intents recover from snapshot and lock guest writes
   assert.match(client, /if \(!order \|\| activePaymentRequest\) return/);
   assert.match(menu, /disabled=\{disabled\}/);
   assert.match(payment, /activePaymentRequest\.qrData/);
-  assert.match(payment, /activeOrder\.status === "ready"/);
-  assert.match(payment, /activeOrder\.status === "served"/);
-  assert.match(payment, /SELF_ORDER_VI\.paymentCancelStaffRequired/);
+  assert.doesNotMatch(payment, /<NoteCallout|vietQrPendingDescription/);
   assert.match(hooks, /generationRef/);
   assert.match(hooks, /abortRef\.current\?\.abort\(\)/);
   assert.match(hooks, /generation !== generationRef\.current/);

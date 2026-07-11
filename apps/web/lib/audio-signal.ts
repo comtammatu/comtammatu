@@ -90,6 +90,10 @@ function getSignalDurationMs(pattern: SignalPattern): number {
   return totalSeconds * 1_000;
 }
 
+export function getAppSignalDurationMs(tone: SignalTone): number {
+  return Math.round(getSignalDurationMs(APP_SIGNAL_PATTERNS[tone]));
+}
+
 function schedulePulse(
   context: AudioContext,
   destination: AudioNode,

@@ -1,6 +1,6 @@
 /**
  * SQL parity contract for public.resolve_gtgt_rate
- * (supabase/migrations/_archive/20260616130000_derive_sales_tax_rate.sql).
+ * (supabase/migration-archive/20260616130000_derive_sales_tax_rate.sql).
  *
  * The SQL fn mirrors the TS resolver's GTGT tier logic for the INTERNAL
  * order_items.vat_rate snapshot. There is no live DB in unit tests; this file

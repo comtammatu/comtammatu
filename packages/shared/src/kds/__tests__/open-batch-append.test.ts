@@ -11,7 +11,7 @@ const read = (path: string) => {
     return readFileSync(
       resolve(
         repoRoot,
-        path.replace("supabase/migrations/", "supabase/migrations/_archive/"),
+        path.replace("supabase/migrations/", "supabase/migration-archive/"),
       ),
       "utf8",
     );
@@ -21,7 +21,7 @@ const read = (path: string) => {
 
 test("append routing reuses an open kitchen batch before minting a new PB", () => {
   const src = read(
-    "supabase/migrations/_archive/20260601900000_reuse_open_kitchen_batch_for_append.sql",
+    "supabase/migration-archive/20260601900000_reuse_open_kitchen_batch_for_append.sql",
   );
 
   assert.match(
@@ -43,7 +43,7 @@ test("append routing reuses an open kitchen batch before minting a new PB", () =
 
 test("kitchen print idempotency allows later append notices on a reused PB", () => {
   const src = read(
-    "supabase/migrations/_archive/20260601900000_reuse_open_kitchen_batch_for_append.sql",
+    "supabase/migration-archive/20260601900000_reuse_open_kitchen_batch_for_append.sql",
   );
 
   assert.match(

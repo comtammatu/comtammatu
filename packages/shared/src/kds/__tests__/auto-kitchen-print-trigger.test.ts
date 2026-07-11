@@ -11,7 +11,7 @@ const read = (path: string) => {
     return readFileSync(
       resolve(
         repoRoot,
-        path.replace("supabase/migrations/", "supabase/migrations/_archive/"),
+        path.replace("supabase/migrations/", "supabase/migration-archive/"),
       ),
       "utf8",
     );
@@ -20,13 +20,13 @@ const read = (path: string) => {
 };
 
 const migrationPath =
-  "supabase/migrations/_archive/20260602000000_kds_print_on_completion.sql";
+  "supabase/migration-archive/20260602000000_kds_print_on_completion.sql";
 const cleanupMigrationPath =
-  "supabase/migrations/_archive/20260602001000_drop_kds_auto_print_trigger_function.sql";
+  "supabase/migration-archive/20260602001000_drop_kds_auto_print_trigger_function.sql";
 const nonKdsDispatchMigrationPath =
-  "supabase/migrations/_archive/20260602002000_non_kds_dispatch_print_on_pos_send.sql";
+  "supabase/migration-archive/20260602002000_non_kds_dispatch_print_on_pos_send.sql";
 const routePolicyMigrationPath =
-  "supabase/migrations/_archive/20260701065350_pos_kitchen_print_route_policy.sql";
+  "supabase/migration-archive/20260701065350_pos_kitchen_print_route_policy.sql";
 
 test("KDS ticket creation no longer auto-enqueues kitchen print jobs", () => {
   const src = `${read(migrationPath)}\n${read(cleanupMigrationPath)}`;

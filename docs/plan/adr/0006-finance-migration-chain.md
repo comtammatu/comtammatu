@@ -45,7 +45,7 @@ Operating finance explicitly stays in scope:
 ## Fresh Environment And Production
 
 A fresh environment is correct when it runs baseline + forward migrations in
-timestamp order. The historical chain under `supabase/migrations/_archive/` is
+timestamp order. The historical chain under `supabase/migration-archive/` is
 not the active install path.
 
 D020 is verified on prod (`iexwsuaqqenyjiskawoj`, applied 2026-06-14 via

@@ -79,6 +79,7 @@ function unitKey(ingredientId: number, unitId: number): string {
 
 export async function loadBranchCountSlipData(
   routeBranchId: number,
+  focusEmployeeId?: number,
 ): Promise<BranchCountSlipData> {
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
@@ -95,7 +96,7 @@ export async function loadBranchCountSlipData(
     scope.allowedBranches.find((branch) => branch.id === routeBranchId)?.name ??
     `CN #${routeBranchId}`;
 
-  const slipsResult = await supabase
+  let slipsQuery = supabase
     .from("inventory_count_slips")
     .select(
       `
@@ -130,8 +131,13 @@ export async function loadBranchCountSlipData(
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", routeBranchId)
-    .in("status", REVIEW_STATES)
-    .order("submitted_at", { ascending: false });
+    .in("status", REVIEW_STATES);
+  if (focusEmployeeId !== undefined) {
+    slipsQuery = slipsQuery.eq("employee_id", focusEmployeeId);
+  }
+  const slipsResult = await slipsQuery.order("submitted_at", {
+    ascending: false,
+  });
   const slipRows = slipsResult.data ?? [];
   const employeeIds = [
     ...new Set(

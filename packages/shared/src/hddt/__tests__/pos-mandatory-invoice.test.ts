@@ -159,22 +159,16 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
   );
 });
 
-test("SePay webhook attempts HĐĐT after successful webhook payment", () => {
+test("SePay webhook uses the POS settlement service without direct HĐĐT issuance", () => {
   const src = read("apps/web/app/api/webhooks/sepay/route.ts");
+  const migration = read(
+    "supabase/migrations/20260711024758_sepay_webhook_order_evidence.sql",
+  );
 
-  assert.ok(
-    src.includes("issueTaxInvoiceForPaidOrder"),
-    "SePay paid webhook must attempt per-order HĐĐT issuance",
-  );
-  assert.match(
-    src,
-    /status === "completed" \|\| status === "already_completed"/,
-    "HĐĐT attempt must run for both fresh and idempotent paid webhook outcomes",
-  );
-  assert.ok(
-    src.includes("error_code: invoiceErrorCode"),
-    "webhook event should record invoice attempt failure without failing payment",
-  );
+  assert.doesNotMatch(src, /issueTaxInvoiceForPaidOrder/);
+  assert.doesNotMatch(src, /confirm_sepay_payment/);
+  assert.match(src, /"reconcile_sepay_order_evidence"/);
+  assert.match(migration, /public\.confirm_sepay_payment\(/);
 });
 
 test("MoMo webhook attempts HĐĐT after successful webhook payment", () => {
@@ -320,7 +314,7 @@ test("per-order HKD HĐĐT never carries VAT", () => {
 
 test("POS item-level discount migration and actions exist", () => {
   const migration = read(
-    "supabase/migrations/_archive/20260609094000_pos_item_level_discount.sql",
+    "supabase/migration-archive/20260609094000_pos_item_level_discount.sql",
   );
   const actions = read(
     "apps/web/app/(protected)/br/[branchId]/pos/discount-actions.ts",

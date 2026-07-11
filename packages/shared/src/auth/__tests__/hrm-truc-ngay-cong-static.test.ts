@@ -15,7 +15,7 @@ const repoRoot = resolve(import.meta.dirname, "../../../../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const MIGRATION_PATH =
-  "supabase/migrations/_archive/20260610234500_hrm_leave_grants_drop_shift_requests.sql";
+  "supabase/migration-archive/20260610234500_hrm_leave_grants_drop_shift_requests.sql";
 
 test("Migration backfills leave grants and notifies approvers", () => {
   const migration = read(MIGRATION_PATH);
@@ -160,7 +160,7 @@ test("Checkout approval gate uses hr:approve_checkout (renamed in Phase 2)", () 
 // ─── Phase 2: shift assignments dropped + HR permission keys consolidated ──
 
 const P2_MIGRATION_PATH =
-  "supabase/migrations/_archive/20260611103000_hrm_p2_drop_shift_assignments_lean_hr_keys.sql";
+  "supabase/migration-archive/20260611103000_hrm_p2_drop_shift_assignments_lean_hr_keys.sql";
 
 test("P2 migration drops shift_assignments and the bulk scheduling RPCs", () => {
   const migration = read(P2_MIGRATION_PATH);

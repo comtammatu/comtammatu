@@ -19,10 +19,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui/lib/utils";
-import {
-  Item,
-  ItemContent,
-} from "@comtammatu/ui/components/item";
+import { Item, ItemContent } from "@comtammatu/ui/components/item";
 import {
   DataTable,
   type DataTableColumn,
@@ -153,8 +150,8 @@ function PaymentAmountCell({
 }) {
   return (
     <div className="flex items-center justify-end gap-1.5 whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-success">
-      <IconMoneyIn className="size-3.5" aria-hidden />
-      +{formatVND(payment.amount)}
+      <IconMoneyIn className="size-3.5" aria-hidden />+
+      {formatVND(payment.amount)}
     </div>
   );
 }
@@ -255,7 +252,10 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span>{compactDateTime(row.payment.paidAt)}</span>
-          <span>{copy.missingWebhookTable.order}: {formatOrderId(row.payment.orderId)}</span>
+          <span>
+            {copy.missingWebhookTable.order}:{" "}
+            {formatOrderId(row.payment.orderId)}
+          </span>
           <span className="font-mono">
             {formatProviderRef(row.payment.providerRef)}
           </span>
@@ -273,7 +273,9 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
         </span>
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span>{compactDateTime(row.tx.transactionDate ?? row.tx.createdAt)}</span>
+        <span>
+          {compactDateTime(row.tx.transactionDate ?? row.tx.createdAt)}
+        </span>
         <span className="font-mono">{referenceCode(row.tx)}</span>
         <span>
           {copy.account}: {row.tx.accountNumber ?? "—"}
@@ -348,7 +350,10 @@ function LinkPaymentCell({
   };
 
   return (
-    <form className="flex items-center justify-end gap-2" onSubmit={handleSubmit}>
+    <form
+      className="flex items-center justify-end gap-2"
+      onSubmit={handleSubmit}
+    >
       <Input
         inputMode="numeric"
         pattern="[0-9]*"
@@ -456,7 +461,9 @@ function rowMatchesFilter(
 
   const state = classifySepayReconciliationState(row.tx);
 
-  if (filter === "needs_review") return state !== "matched";
+  if (filter === "needs_review") {
+    return state !== "matched";
+  }
   if (filter === "matched") return state === "matched";
   if (filter === "webhook_error") return state === "webhook_error";
   if (filter === "money_in_review") {
@@ -475,8 +482,7 @@ export function BankTransactionsTable({
   expenseOptions,
   canLinkPayments,
 }: BankTransactionsTableProps) {
-  const [filter, setFilter] =
-    React.useState<BankReconciliationFilter>("all");
+  const [filter, setFilter] = React.useState<BankReconciliationFilter>("all");
   const rows = React.useMemo<BankReconciliationRow[]>(
     () => [
       ...transactions.map((tx) => ({ kind: "bank" as const, tx })),

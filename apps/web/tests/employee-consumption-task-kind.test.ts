@@ -12,7 +12,7 @@ function readRepo(path: string): string {
 }
 
 const taskKindMigration = readRepo(
-  "supabase/migrations/_archive/20260619042223_employee_consumption_task_kind.sql",
+  "supabase/migration-archive/20260619042223_employee_consumption_task_kind.sql",
 );
 const attendanceShiftIntegrityMigration = readRepo(
   "supabase/migrations/20260709094314_attendance_shift_integrity.sql",

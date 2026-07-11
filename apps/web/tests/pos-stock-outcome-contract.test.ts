@@ -6,28 +6,28 @@ import { test } from "node:test";
 const migration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260630082000_pos_kds_inventory_truth_g3_outcomes.sql",
+    "../../supabase/migration-archive/20260630082000_pos_kds_inventory_truth_g3_outcomes.sql",
   ),
   "utf8",
 );
 const sideDishConsumptionMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260630142401_pos_stock_outcome_side_dish_consumption.sql",
+    "../../supabase/migration-archive/20260630142401_pos_stock_outcome_side_dish_consumption.sql",
   ),
   "utf8",
 );
 const sideDishBackfillMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260630144333_pos_stock_outcome_side_dish_backfill.sql",
+    "../../supabase/migration-archive/20260630144333_pos_stock_outcome_side_dish_backfill.sql",
   ),
   "utf8",
 );
 const routePolicyMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260701065350_pos_kitchen_print_route_policy.sql",
+    "../../supabase/migration-archive/20260701065350_pos_kitchen_print_route_policy.sql",
   ),
   "utf8",
 );

@@ -10,7 +10,7 @@ function readRepoFile(path: string): string {
   if (path.startsWith("supabase/migrations/")) {
     return readFileSync(
       new URL(
-        path.replace("supabase/migrations/", "supabase/migrations/_archive/"),
+        path.replace("supabase/migrations/", "supabase/migration-archive/"),
         repoRoot,
       ),
       "utf8",
@@ -40,7 +40,7 @@ test("SePay webhook verifies raw-body HMAC and returns SePay success JSON", () =
   assert.match(source, /NextResponse\.json\(\{ success: true \}\)/);
 });
 
-test("SePay webhook claims idempotency before payment settlement RPC", () => {
+test("SePay webhook claims idempotency before order-evidence reconciliation", () => {
   const source = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
 
   assert.match(source, /function buildPaymentCodeRe/);
@@ -89,14 +89,11 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
     /\.eq\("key", SYSTEM_SETTING_KEYS\.PAYMENT_VIETQR_ACCOUNT_NO\)/,
   );
   assert.match(source, /\.eq\("value", normalizedAccount\)/);
-  assert.match(source, /function resolveOrderScope/);
-  assert.match(source, /\.from\("orders"\)/);
-  assert.match(source, /\.eq\("tenant_id", tenantId\)/);
-  assert.match(source, /\.ilike\("payment_code", paymentCode\)/);
-  assert.match(source, /\.neq\("status", "cancelled"\)/);
-  assert.match(source, /p_tenant_id: accountScope\.tenantId/);
-  assert.match(source, /p_order_id: orderScope\.orderId/);
-  assert.match(source, /p_provider_ref: paymentCode/);
+  assert.match(source, /"reconcile_sepay_order_evidence"/);
+  assert.match(source, /p_event_id: webhookEventId/);
+  assert.match(source, /p_payment_code: paymentCode/);
+  assert.doesNotMatch(source, /"confirm_sepay_payment"/);
+  assert.doesNotMatch(source, /issueTaxInvoiceForPaidOrder/);
   assert.doesNotMatch(source, /type SepayRpcClient/);
   assert.doesNotMatch(source, /as unknown as SepayRpcClient/);
   assert.doesNotMatch(source, /p_order_number/);
@@ -106,10 +103,10 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   const claimIndex = source.indexOf(
     "const webhookClaim = await claimWebhookEvent",
   );
-  const rpcIndex = source.indexOf('"confirm_sepay_payment"');
+  const rpcIndex = source.indexOf('"reconcile_sepay_order_evidence"');
   assert.ok(claimIndex > 0, "claim call should exist");
-  assert.ok(rpcIndex > 0, "confirm_sepay_payment RPC call should exist");
-  assert.ok(claimIndex < rpcIndex, "claim must happen before settlement RPC");
+  assert.ok(rpcIndex > 0, "evidence RPC call should exist");
+  assert.ok(claimIndex < rpcIndex, "claim must happen before evidence RPC");
 });
 
 test("SePay webhook prefers full transfer content code over truncated code field", () => {
@@ -132,39 +129,39 @@ test("SePay webhook prefers full transfer content code over truncated code field
   );
 });
 
-test("SePay can correct a cash-confirmed QR payment to VietQR", () => {
+test("SePay evidence invokes the POS settlement service only after an exact match", () => {
   const route = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
   const migration = readRepoFile(
-    "supabase/migrations/_archive/20260625215140_sepay_cash_vietqr_correction.sql",
-  );
-  const orderCodeMigration = readRepoFile(
-    "supabase/migrations/_archive/20260625221432_order_payment_code_fixed.sql",
+    "supabase/migrations/20260711024758_sepay_webhook_order_evidence.sql",
   );
 
-  assert.match(route, /\.ilike\("payment_code", paymentCode\)/);
-  assert.match(migration, /provider_ref\s+=\s+v_provider_ref/);
-  assert.doesNotMatch(migration, /provider_ref\s+=\s+NULL/);
-  assert.match(migration, /WHERE p\.method IN \('cash', 'vietqr'\)/);
-  assert.match(migration, /corrected_from_cash/);
-  assert.match(migration, /payment_method = 'vietqr'/);
-  assert.match(migration, /cash_received = NULL/);
-  assert.match(migration, /cash_change = NULL/);
-  assert.match(migration, /v_payment_ref/);
-  assert.match(orderCodeMigration, /corrected_from_cash/);
-  assert.match(orderCodeMigration, /payment_method = 'vietqr'/);
-  assert.match(orderCodeMigration, /cash_received = NULL/);
-  assert.match(orderCodeMigration, /cash_change = NULL/);
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS order_id/);
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.reconcile_sepay_order_evidence/,
+  );
+  assert.match(
+    migration,
+    /lower\(COALESCE\(payment_code, ''\)\) = lower\(v_payment_code\)/,
+  );
+  assert.match(migration, /public\.confirm_sepay_payment\(/);
+  assert.match(
+    migration,
+    /v_confirmation_status IS DISTINCT FROM 'completed'/,
+  );
+  assert.doesNotMatch(route, /confirm_sepay_payment/);
+  assert.doesNotMatch(route, /issueTaxInvoiceForPaidOrder/);
 });
 
 test("Each order owns one immutable MB speaker payment code", () => {
   const migration = readRepoFile(
-    "supabase/migrations/_archive/20260629160000_mb_speaker_payment_code.sql",
+    "supabase/migration-archive/20260629160000_mb_speaker_payment_code.sql",
   );
   const grantMigration = readRepoFile(
-    "supabase/migrations/_archive/20260629161000_restrict_order_payment_code_generator.sql",
+    "supabase/migration-archive/20260629161000_restrict_order_payment_code_generator.sql",
   );
   const sequenceGrantMigration = readRepoFile(
-    "supabase/migrations/_archive/20260629162000_restrict_order_payment_code_sequence.sql",
+    "supabase/migration-archive/20260629162000_restrict_order_payment_code_sequence.sql",
   );
 
   assert.match(
@@ -206,7 +203,7 @@ test("Each order owns one immutable MB speaker payment code", () => {
 
 test("SePay migration extends webhook provider check and keeps RPC service-only", () => {
   const source = readRepoFile(
-    "supabase/migrations/_archive/20260625171721_sepay_webhook_payment.sql",
+    "supabase/migration-archive/20260625171721_sepay_webhook_payment.sql",
   );
 
   assert.match(source, /webhook_events_provider_check/);
@@ -258,7 +255,7 @@ test("SePay migration extends webhook provider check and keeps RPC service-only"
 
 test("Webhook event audit table is not selectable by anon", () => {
   const source = readRepoFile(
-    "supabase/migrations/_archive/20260626021425_revoke_webhook_events_anon_select.sql",
+    "supabase/migration-archive/20260626021425_revoke_webhook_events_anon_select.sql",
   );
 
   assert.match(
@@ -389,10 +386,10 @@ test("SePay webhook retries receipt enqueue on already-completed settlements", (
 
 test("Order money mutations are locked after VietQR code exposure", () => {
   const migration = readRepoFile(
-    "supabase/migrations/_archive/20260626072000_lock_order_amount_after_payment_code_exposed.sql",
+    "supabase/migration-archive/20260626072000_lock_order_amount_after_payment_code_exposed.sql",
   );
   const cancelFixMigration = readRepoFile(
-    "supabase/migrations/_archive/20260630134012_allow_cancel_after_pending_payment_cancel.sql",
+    "supabase/migration-archive/20260630134012_allow_cancel_after_pending_payment_cancel.sql",
   );
   const messages = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/_lib/messages.ts",
@@ -441,7 +438,7 @@ test("Order money mutations are locked after VietQR code exposure", () => {
   );
 
   const revokeMigration = readRepoFile(
-    "supabase/migrations/_archive/20260626073500_revoke_payment_code_lock_function_exec.sql",
+    "supabase/migration-archive/20260626073500_revoke_payment_code_lock_function_exec.sql",
   );
   assert.match(revokeMigration, /FROM anon;/);
   assert.match(revokeMigration, /FROM authenticated;/);
@@ -498,7 +495,7 @@ test("POS VietQR uses locally generated EMVCo payloads, not VietQR image URLs", 
     "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
   );
   const migration = readRepoFile(
-    "supabase/migrations/_archive/20260626043000_refresh_vietqr_bank_bins.sql",
+    "supabase/migration-archive/20260626043000_refresh_vietqr_bank_bins.sql",
   );
 
   assert.match(provider, /const qrData = buildVietQrEmvco\(/);
@@ -577,7 +574,7 @@ test("MoMo webhook accepts completed unconditionally per no-stock-deduction poli
 
 test("payment completion migration recomputes amount and does not complete on stock failure", () => {
   const source = readRepoFile(
-    "supabase/migrations/_archive/20260601780000_payment_completion_failhard_recompute.sql",
+    "supabase/migration-archive/20260601780000_payment_completion_failhard_recompute.sql",
   );
 
   assert.match(source, /amount_mismatch_recomputed/);
@@ -588,7 +585,7 @@ test("payment completion migration recomputes amount and does not complete on st
 
 test("VietQR confirm uses fail-hard payment completion instead of caller-side stock deduction", () => {
   const migration = readRepoFile(
-    "supabase/migrations/_archive/20260601930000_harden_confirm_vietqr_payment.sql",
+    "supabase/migration-archive/20260601930000_harden_confirm_vietqr_payment.sql",
   );
   const action = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",

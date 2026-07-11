@@ -150,7 +150,7 @@ GRANT EXECUTE ON FUNCTION public.post_pos_sale_refund_restore(bigint, uuid) TO s
 
 -- ============================================================
 -- 4. Hook into refund_paid_order: re-declared verbatim from
---    _archive/20260706100000 with ONE added line — after the KDS-tickets
+--    migration-archive/20260706100000 with ONE added line — after the KDS-tickets
 --    cancel and before the audit, PERFORM the restore. Signature, guards,
 --    invoice handling, money leg, and return shape are unchanged.
 -- ============================================================
@@ -361,7 +361,7 @@ GRANT EXECUTE ON FUNCTION public.refund_paid_order(bigint, text) TO authenticate
 
 -- ============================================================
 -- 5. Hook into reverse_payment_and_post: re-declared verbatim from
---    _archive/20260706100000 with the hardcoded `v_stock_count := 0` replaced
+--    migration-archive/20260706100000 with the hardcoded `v_stock_count := 0` replaced
 --    by the restore result (captured into v_stock_count so the audit + return
 --    payload report it truthfully). Signature, guards, and return shape are
 --    unchanged.

@@ -75,7 +75,7 @@ now-squashed forward chain.
    prod schema state is now represented by the baseline:
 
    ```bash
-   git mv supabase/migrations/<each-forward>.sql supabase/migrations/_archive/
+   git mv supabase/migrations/<each-forward>.sql supabase/migration-archive/
    ```
 
    Keep only migrations newer than the re-baseline cutoff, migrations not yet

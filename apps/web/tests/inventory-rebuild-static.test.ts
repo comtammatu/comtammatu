@@ -11,10 +11,10 @@ const readWeb = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
 
 const migration = readRepo(
-  "supabase/migrations/_archive/20260619121446_inventory_rebuild_consumption_central_sites.sql",
+  "supabase/migration-archive/20260619121446_inventory_rebuild_consumption_central_sites.sql",
 );
 const centralTransferMigration = readRepo(
-  "supabase/migrations/_archive/20260622041251_allow_central_supply_central_kitchen_transfers.sql",
+  "supabase/migration-archive/20260622041251_allow_central_supply_central_kitchen_transfers.sql",
 );
 const branchKitchenTransferMigration = readRepo(
   "supabase/migrations/20260706084210_branch_kitchen_stock_transfer.sql",

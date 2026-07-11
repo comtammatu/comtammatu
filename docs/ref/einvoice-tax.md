@@ -809,9 +809,9 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-viettel-op
 
 Toàn bộ schema + RPC HĐĐT đã gộp vào `supabase/migrations/00000000000000_baseline.sql`
 (baseline-first consolidation). Các file timestamped gốc nằm ở
-`supabase/migrations/_archive/`; bảng dưới mô tả từng feature theo file gốc đó.
+`supabase/migration-archive/`; bảng dưới mô tả từng feature theo file gốc đó.
 
-| File gốc (`_archive/`)              | Mô tả                                                                                                                                                        |
+| File gốc (`supabase/migration-archive/`) | Mô tả                                                                                                                                                        |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `tax_invoice_state_machine.sql`     | RPC `transition_tax_invoice_state` + matrix + `tax_invoice_events` + `signing_started_at` + `uq_tax_invoices_active_per_order`                               |
 | `pos_hddt_not_required_d4.sql`      | Thêm state `not_required` (D4 — đã retire)                                                                                                                   |

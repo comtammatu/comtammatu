@@ -10,7 +10,7 @@ function readRepoFile(path: string): string {
   if (path.startsWith("supabase/migrations/")) {
     return readFileSync(
       new URL(
-        path.replace("supabase/migrations/", "supabase/migrations/_archive/"),
+        path.replace("supabase/migrations/", "supabase/migration-archive/"),
         repoRoot,
       ),
       "utf8",
@@ -21,7 +21,7 @@ function readRepoFile(path: string): string {
 
 test("classic stocktake completion RPC is gated by stocktake_complete permission", () => {
   const source = readRepoFile(
-    "supabase/migrations/_archive/20260524010000_stocktake_complete_permission_gate.sql",
+    "supabase/migration-archive/20260524010000_stocktake_complete_permission_gate.sql",
   );
 
   assert.match(source, /CREATE OR REPLACE FUNCTION public\.complete_stocktake/);
@@ -34,7 +34,7 @@ test("classic stocktake completion RPC is gated by stocktake_complete permission
 
 test("stocktake heartbeat lock RPC rechecks ttl and branch permission", () => {
   const source = readRepoFile(
-    "supabase/migrations/_archive/20260625165845_harden_stocktake_heartbeat_lock.sql",
+    "supabase/migration-archive/20260625165845_harden_stocktake_heartbeat_lock.sql",
   );
 
   assert.match(

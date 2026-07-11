@@ -30,7 +30,7 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
 - `supabase/migrations/00000000000000_baseline.sql` — canonical public+private
   schema install; validated to replay on an empty DB.
 - `supabase/migrations/<timestamp>_*.sql` after it — forward migrations on the baseline.
-- `supabase/migrations/_archive/` — the 543 historical and squashed forward
+- `supabase/migration-archive/` — the 543 historical and squashed forward
   migrations (retained, NOT applied).
 - `supabase/migrations/20260627140000_fold_managed_surfaces.sql` — extensions /
   storage buckets + RLS policies / realtime publication / cron jobs (excluded from

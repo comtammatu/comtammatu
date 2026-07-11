@@ -7,7 +7,7 @@ import { resolve } from "node:path";
 // SECURITY DEFINER function must either carry an in-function auth boundary or
 // revoke the browser roles for it in the same migration. This prevents a new
 // definer from shipping callable by anon/authenticated without an authz gate.
-// Baseline + _archive + _rollback are intentionally out of scope (historical).
+// Baseline + migration archive + rollback are intentionally out of scope (historical).
 const repoRoot = resolve(import.meta.dirname, "..", "..", "..");
 const migrationsDir = resolve(repoRoot, "supabase/migrations");
 

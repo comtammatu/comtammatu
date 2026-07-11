@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { APP_SIGNAL_PATTERNS } from "../lib/audio-signal";
+import {
+  APP_SIGNAL_PATTERNS,
+  getAppSignalDurationMs,
+} from "../lib/audio-signal";
 import {
   audioModeHasBeep,
   audioModeHasVoice,
@@ -10,8 +13,10 @@ import {
   getKdsSoundPrefKey,
   getPosAudioModeKey,
   getPosSoundPrefKey,
+  KDS_VOICE_COOLDOWN_MS,
   KDS_TONE_TO_ALERT_KIND,
   resolveAudioMode,
+  shouldSpeakKdsVoice,
 } from "../lib/operational-audio";
 
 test("resolveAudioMode prefers the stored mode key", () => {
@@ -47,6 +52,11 @@ test("audio mode channels", () => {
     (["off", "beep", "voice", "beep+voice"] as const).map(audioModeHasVoice),
     [false, false, true, true],
   );
+});
+
+test("KDS voice enforces a quiet window between spoken alerts", () => {
+  assert.equal(shouldSpeakKdsVoice(KDS_VOICE_COOLDOWN_MS - 1, 0), false);
+  assert.equal(shouldSpeakKdsVoice(KDS_VOICE_COOLDOWN_MS, 0), true);
 });
 
 test("buildAlertUtterance appends the table slot only when present", () => {
@@ -91,4 +101,10 @@ test("POS QR guest tones stay distinct from the POS order ping", () => {
     APP_SIGNAL_PATTERNS["pos-self-order"],
     APP_SIGNAL_PATTERNS["pos-payment-call"],
   );
+});
+
+test("signal duration includes every pulse and the gaps between them", () => {
+  assert.equal(getAppSignalDurationMs("kds-new"), 1_020);
+  assert.equal(getAppSignalDurationMs("kds-append"), 860);
+  assert.equal(getAppSignalDurationMs("pos-payment-call"), 850);
 });

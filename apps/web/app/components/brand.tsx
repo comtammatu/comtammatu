@@ -233,6 +233,7 @@ export function BrandMascot({
   mood = "idle",
   alt,
   decorative = true,
+  loading = "eager",
   className,
   ...imageProps
 }: SharedBrandImageProps & {
@@ -260,6 +261,7 @@ export function BrandMascot({
       src={asset.src}
       width={asset.width}
       height={asset.height}
+      loading={loading}
       alt={decorative ? "" : (alt ?? "Cốt Lết")}
       aria-hidden={decorative ? true : imageProps["aria-hidden"]}
       className={cn("object-contain", mascotSizeClass[size], className)}

@@ -6,7 +6,7 @@ import { test } from "node:test";
 const migration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260629164000_menu_limits_stock_capacity_admin_list.sql",
+    "../../supabase/migration-archive/20260629164000_menu_limits_stock_capacity_admin_list.sql",
   ),
   "utf8",
 );
@@ -14,7 +14,7 @@ const migration = readFileSync(
 const stockCapacityMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260629100001_menu_stock_capacity_daily_limit.sql",
+    "../../supabase/migration-archive/20260629100001_menu_stock_capacity_daily_limit.sql",
   ),
   "utf8",
 );
@@ -22,7 +22,7 @@ const stockCapacityMigration = readFileSync(
 const stockCapacityMultiUnitMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260630083000_menu_stock_capacity_multiunit.sql",
+    "../../supabase/migration-archive/20260630083000_menu_stock_capacity_multiunit.sql",
   ),
   "utf8",
 );
@@ -61,7 +61,7 @@ const settingsMessagesSource = readFileSync(
 const stockOutcomeAvailabilityMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
+    "../../supabase/migration-archive/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
   ),
   "utf8",
 );
@@ -69,7 +69,7 @@ const stockOutcomeAvailabilityMigration = readFileSync(
 const liveStockCapacityMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260701181757_menu_limits_live_stock_capacity.sql",
+    "../../supabase/migration-archive/20260701181757_menu_limits_live_stock_capacity.sql",
   ),
   "utf8",
 );
@@ -77,7 +77,7 @@ const liveStockCapacityMigration = readFileSync(
 const unlimitedWhenDeductionOffMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/_archive/20260703150000_menu_limit_availability_unlimited_when_deduction_off.sql",
+    "../../supabase/migration-archive/20260703150000_menu_limit_availability_unlimited_when_deduction_off.sql",
   ),
   "utf8",
 );
@@ -137,7 +137,7 @@ test.skip("Menu-Limits manager saves raw manual limit; empty input clears withou
     readFileSync(
       join(
         process.cwd(),
-        "../../supabase/migrations/_archive/20260630062650_pos_kds_inventory_truth_g1_access.sql",
+        "../../supabase/migration-archive/20260630062650_pos_kds_inventory_truth_g1_access.sql",
       ),
       "utf8",
     ),

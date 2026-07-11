@@ -44,7 +44,7 @@ test("RSC initial load (fetchMenuForPos) omits p_exclude_hold_tokens — no live
 test("provider exposes a hold-token getter registration read fresh on every refetch", () => {
   assert.match(
     providerSource,
-    /registerDailyLimitHoldTokenGetter: \(getTokens: \(\) => readonly string\[\]\) => void;/,
+    /registerDailyLimitHoldTokenGetter:\s*\(\s*getTokens: \(\) => readonly string\[\],\s*\) => void;/,
   );
   assert.match(
     providerSource,

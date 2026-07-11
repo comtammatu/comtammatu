@@ -4,10 +4,6 @@ import { z } from "zod";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
-import {
-  issueTaxInvoiceForPaidOrder,
-  type CreateInvoiceInput,
-} from "@lib/hddt-per-order";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
@@ -180,12 +176,17 @@ const sepayPayloadSchema = z
   })
   .passthrough();
 
-const sepayRpcResultSchema = z
+const sepayOrderEvidenceRpcResultSchema = z
   .object({
-    status: z.string().optional(),
-    order_id: z.number().nullable().optional(),
-    payment_id: z.number().nullable().optional(),
-    detail: z.string().nullable().optional(),
+    status: z.enum([
+      "matched",
+      "order_not_found",
+      "ambiguous_payment_code",
+      "amount_mismatch",
+      "payment_confirmation_failed",
+      "invalid_payment_code",
+      "invalid_amount",
+    ]),
   })
   .passthrough();
 
@@ -197,24 +198,6 @@ const cashDepositRpcResultSchema = z
 
 type SepayPayload = z.infer<typeof sepayPayloadSchema>;
 type ServiceClient = ReturnType<typeof createServiceClient>;
-type InvoiceBuyerInput = Omit<CreateInvoiceInput, "orderId">;
-type SelfOrderInvoiceCandidate = {
-  id: number;
-  payment_id: number | null;
-  method: string;
-  invoice_payload: unknown;
-  payment_code_snapshot: string | null;
-  amount_snapshot: number;
-};
-type SelfOrderInvoiceResolution =
-  | { status: "resolved"; input: InvoiceBuyerInput }
-  | {
-      status: "manual_review";
-      reason:
-        | "lookup_failed"
-        | "invalid_invoice_payload"
-        | "ambiguous_invoice_payload";
-    };
 type WebhookEventClaim =
   | { status: "claimed"; id: number }
   | { status: "already_final" }
@@ -225,21 +208,6 @@ type UntypedQueryResponse<T> = {
   error: { code?: string | null; message?: string | null } | null;
 };
 
-type UntypedQueryBuilder<T> = PromiseLike<UntypedQueryResponse<T[]>> & {
-  select(columns: string): UntypedQueryBuilder<T>;
-  eq(column: string, value: unknown): UntypedQueryBuilder<T>;
-  order(
-    column: string,
-    options?: Record<string, unknown>,
-  ): UntypedQueryBuilder<T>;
-  limit(count: number): UntypedQueryBuilder<T>;
-  maybeSingle(): Promise<UntypedQueryResponse<T>>;
-};
-
-type UntypedQueryClient = {
-  from<T>(table: string): UntypedQueryBuilder<T>;
-};
-
 type UntypedRpcClient = {
   rpc<T>(
     name: string,
@@ -247,36 +215,8 @@ type UntypedRpcClient = {
   ): Promise<UntypedQueryResponse<T>>;
 };
 
-const invoiceBuyerInputSchema = z.object({
-  buyerName: z.string().trim().max(200).optional(),
-  buyerTaxCode: z
-    .string()
-    .trim()
-    .regex(/^\d{10}(-\d{3})?$/)
-    .optional(),
-  buyerAddress: z.string().trim().max(500).optional(),
-  buyerEmail: z.email().optional(),
-  buyerNotGetInvoice: z.boolean().optional(),
-});
-
 function payloadToJson(payload: SepayPayload): Json {
   return JSON.parse(JSON.stringify(payload)) as Json;
-}
-
-function parseStoredInvoicePayload(value: unknown): InvoiceBuyerInput | null {
-  const parsed = invoiceBuyerInputSchema.safeParse(value);
-  if (!parsed.success) return null;
-  return parsed.data;
-}
-
-function invoiceBuyerInputKey(input: InvoiceBuyerInput): string {
-  return JSON.stringify({
-    buyerName: input.buyerName ?? null,
-    buyerTaxCode: input.buyerTaxCode ?? null,
-    buyerAddress: input.buyerAddress ?? null,
-    buyerEmail: input.buyerEmail ?? null,
-    buyerNotGetInvoice: input.buyerNotGetInvoice ?? null,
-  });
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -454,33 +394,6 @@ async function resolveBankContentSettings(
   };
 }
 
-async function resolveOrderScope(
-  supabase: ServiceClient,
-  tenantId: number,
-  paymentCode: string,
-): Promise<
-  | { status: "found"; orderId: number }
-  | { status: "not_found" | "ambiguous" | "error" }
-> {
-  const { data, error } = await supabase
-    .from("orders")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .ilike("payment_code", paymentCode)
-    .neq("status", "cancelled")
-    .limit(2);
-
-  if (error) {
-    console.error("[sepay-webhook] order lookup failed", error.code);
-    return { status: "error" };
-  }
-  if (!data || data.length === 0) return { status: "not_found" };
-  if (data.length > 1) return { status: "ambiguous" };
-  const row = data[0];
-  if (!row) return { status: "not_found" };
-  return { status: "found", orderId: row.id };
-}
-
 async function markWebhookEvent(
   supabase: ServiceClient,
   eventId: number,
@@ -510,98 +423,6 @@ async function markWebhookEvent(
       error.code,
     );
   }
-}
-
-async function resolveSelfOrderInvoiceInput(
-  supabase: ServiceClient,
-  input: {
-    tenantId: number;
-    orderId: number;
-    paymentId: number | null;
-    paymentCode: string;
-    transferAmount: number;
-  },
-): Promise<SelfOrderInvoiceResolution> {
-  const untyped = supabase as unknown as UntypedQueryClient;
-  const candidates = new Map<number, SelfOrderInvoiceCandidate>();
-
-  if (input.paymentId !== null) {
-    const { data, error } = await untyped
-      .from<SelfOrderInvoiceCandidate>("self_order_payment_requests")
-      .select(
-        "id, payment_id, method, invoice_payload, payment_code_snapshot, amount_snapshot",
-      )
-      .eq("tenant_id", input.tenantId)
-      .eq("order_id", input.orderId)
-      .eq("payment_id", input.paymentId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.warn("[sepay-webhook] exact self-order invoice lookup failed", {
-        code: error.code ?? "unknown",
-        orderId: input.orderId,
-        paymentId: input.paymentId,
-      });
-      return { status: "manual_review", reason: "lookup_failed" };
-    }
-    if (data) {
-      candidates.set(data.id, data);
-    }
-  }
-
-  // A late transfer can complete a replacement payment after its original request
-  // expired. All same-code, same-amount intents must agree on the buyer binding.
-  const { data, error } = await untyped
-    .from<SelfOrderInvoiceCandidate>("self_order_payment_requests")
-    .select(
-      "id, payment_id, method, invoice_payload, payment_code_snapshot, amount_snapshot",
-    )
-    .eq("tenant_id", input.tenantId)
-    .eq("order_id", input.orderId)
-    .eq("method", "vietqr")
-    .eq("payment_code_snapshot", input.paymentCode)
-    .eq("amount_snapshot", input.transferAmount)
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false });
-
-  if (error) {
-    console.warn("[sepay-webhook] self-order invoice payload lookup failed", {
-      code: error.code ?? "unknown",
-      orderId: input.orderId,
-      paymentId: input.paymentId,
-      paymentCode: input.paymentCode,
-      transferAmount: input.transferAmount,
-    });
-    return { status: "manual_review", reason: "lookup_failed" };
-  }
-
-  for (const candidate of data ?? []) {
-    candidates.set(candidate.id, candidate);
-  }
-
-  if (candidates.size === 0) {
-    return { status: "resolved", input: {} };
-  }
-
-  const payloads = new Map<string, InvoiceBuyerInput>();
-  for (const candidate of candidates.values()) {
-    const parsed = parseStoredInvoicePayload(candidate.invoice_payload);
-    if (!parsed) {
-      return { status: "manual_review", reason: "invalid_invoice_payload" };
-    }
-    payloads.set(invoiceBuyerInputKey(parsed), parsed);
-  }
-
-  if (payloads.size !== 1) {
-    return { status: "manual_review", reason: "ambiguous_invoice_payload" };
-  }
-
-  const invoiceInput = payloads.values().next().value;
-  return invoiceInput
-    ? { status: "resolved", input: invoiceInput }
-    : { status: "manual_review", reason: "invalid_invoice_payload" };
 }
 
 async function claimWebhookEvent(
@@ -821,10 +642,9 @@ export async function POST(request: Request) {
   );
   const commandPaymentCode =
     bankCommand?.kind === "order" && bankCommand.value
-      ? (extractPaymentCodeFromText(bankCommand.value, codeRe) ??
-        bankCommand.value)
+      ? extractPaymentCodeFromText(bankCommand.value, codeRe)
       : null;
-  const paymentCode = commandPaymentCode ?? extractPaymentCode(payload, codeRe);
+  const paymentCode = extractPaymentCode(payload, codeRe) ?? commandPaymentCode;
   if (!paymentCode) {
     console.warn("[sepay-webhook] missing payment code", { id: payload.id });
     await markWebhookEvent(supabase, webhookEventId, {
@@ -835,53 +655,15 @@ export async function POST(request: Request) {
     return sepayAcceptedResponse();
   }
 
-  const orderScope = await resolveOrderScope(
-    supabase,
-    accountScope.tenantId,
-    paymentCode,
-  );
-  if (orderScope.status !== "found") {
-    console.warn("[sepay-webhook] order scope not found", {
-      id: payload.id,
-      paymentCode,
-      tenantId: accountScope.tenantId,
-      status: orderScope.status,
-    });
-    if (orderScope.status === "error") {
-      await markWebhookEvent(supabase, webhookEventId, {
-        processing_status: "failed",
-        http_status: 500,
-        error_code: "order_lookup_failed",
-      });
-      return NextResponse.json({ success: false }, { status: 500 });
-    }
-    await markWebhookEvent(supabase, webhookEventId, {
-      processing_status: "failed",
-      http_status: 200,
-      error_code:
-        orderScope.status === "ambiguous"
-          ? "ambiguous_payment_code"
-          : "order_not_found",
-    });
-    return sepayAcceptedResponse();
-  }
-
-  const { data: rawRpcData, error: rpcError } = await supabase.rpc(
-    "confirm_sepay_payment",
-    {
-      p_tenant_id: accountScope.tenantId,
-      p_order_id: orderScope.orderId,
-      p_provider_ref: paymentCode,
-      p_transfer_amount: payload.transferAmount,
-      p_account_number: payload.accountNumber,
-      p_bank_reference: payload.referenceCode || String(payload.id),
-      p_provider_data: payloadJson,
-    },
+  const untyped = supabase as unknown as UntypedRpcClient;
+  const { data: rawRpcData, error: rpcError } = await untyped.rpc(
+    "reconcile_sepay_order_evidence",
+    { p_event_id: webhookEventId, p_payment_code: paymentCode },
   );
 
   if (rpcError) {
     console.error(
-      "[sepay-webhook] confirm_sepay_payment failed",
+      "[sepay-webhook] order evidence reconciliation failed",
       rpcError.code,
     );
     await markWebhookEvent(supabase, webhookEventId, {
@@ -892,73 +674,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false }, { status: 500 });
   }
 
-  const parsedRpcData = sepayRpcResultSchema.safeParse(rawRpcData);
-  const rpcData = parsedRpcData.success ? parsedRpcData.data : null;
-  const status = rpcData?.status ?? "unknown";
-  const paymentId = rpcData?.payment_id ?? null;
-  if (status === "completed" || status === "already_completed") {
-    const invoiceResolution = await resolveSelfOrderInvoiceInput(supabase, {
-      tenantId: accountScope.tenantId,
-      orderId: orderScope.orderId,
-      paymentId,
-      paymentCode,
-      transferAmount: payload.transferAmount,
-    });
-    let invoiceErrorCode: string | null;
-
-    if (invoiceResolution.status === "manual_review") {
-      invoiceErrorCode = "invoice_binding_manual_review";
-      console.error("[sepay-webhook] HĐĐT buyer binding needs review", {
-        orderId: orderScope.orderId,
-        paymentId,
-        reason: invoiceResolution.reason,
-      });
-    } else {
-      const invoiceResult = await issueTaxInvoiceForPaidOrder({
-        supabase,
-        tenantId: accountScope.tenantId,
-        input: { orderId: orderScope.orderId, ...invoiceResolution.input },
-        actorId: null,
-        logPrefix: "sepay-webhook",
-      });
-      invoiceErrorCode =
-        !invoiceResult.success &&
-        invoiceResult.errorCode !== "invoice_exists" &&
-        invoiceResult.errorCode !== "summary_invoice_exists"
-          ? "invoice_attempt_failed"
-          : null;
-      if (invoiceErrorCode) {
-        console.error("[sepay-webhook] HĐĐT attempt failed", {
-          orderId: orderScope.orderId,
-          code: invoiceResult.errorCode ?? "unknown",
-        });
-      }
-    }
-
+  if (!sepayOrderEvidenceRpcResultSchema.safeParse(rawRpcData).success) {
     await markWebhookEvent(supabase, webhookEventId, {
-      payment_id: paymentId,
-      processing_status: "processed",
-      http_status: 200,
-      error_code: invoiceErrorCode,
-    });
-    return sepayAcceptedResponse();
-  }
-
-  if (status === "stock_failed") {
-    await markWebhookEvent(supabase, webhookEventId, {
-      payment_id: paymentId,
       processing_status: "failed",
       http_status: 500,
-      error_code: "stock_consumption_failed",
+      error_code: "rpc_result_invalid",
     });
     return NextResponse.json({ success: false }, { status: 500 });
   }
 
-  await markWebhookEvent(supabase, webhookEventId, {
-    payment_id: paymentId,
-    processing_status: "failed",
-    http_status: 200,
-    error_code: status,
-  });
   return sepayAcceptedResponse();
 }

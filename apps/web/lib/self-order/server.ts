@@ -6,6 +6,7 @@ import type { PublicSelfOrderSnapshot, SelfOrderCartItem } from "./contracts";
 import {
   publicSelfOrderSnapshotSchema,
   selfOrderPaymentActionResponseSchema,
+  selfOrderPaymentRequestStatusResponseSchema,
   selfOrderSubmitActionResponseSchema,
   selfOrderVietQrResponseSchema,
 } from "./contracts";
@@ -53,6 +54,12 @@ export type SelfOrderActionResult<T = unknown> =
 
 type SelfOrderErrorContext = "default" | "payment";
 type RateLimitPurpose = "batch" | "payment";
+type SelfOrderPaymentRequestStatus =
+  | "cash_call"
+  | "vietqr_pending"
+  | "completed"
+  | "cancelled"
+  | "expired";
 
 function service(): UntypedServiceClient {
   return createServiceClient() as unknown as UntypedServiceClient;
@@ -111,14 +118,6 @@ function mapSelfOrderError(
       status: 409,
       code: "payment_cancel_staff_required",
       message: SELF_ORDER_VI.paymentCancelStaffRequired,
-    };
-  }
-  if (message.includes("self_order_payment_not_ready")) {
-    return {
-      ok: false,
-      status: 409,
-      code: "payment_not_ready",
-      message: SELF_ORDER_VI.paymentNotReady,
     };
   }
   if (
@@ -196,7 +195,9 @@ function mapSelfOrderError(
   }
   if (
     message.includes("self_order_pos_session_closed") ||
-    message.includes("POS session does not belong to this branch or is not open")
+    message.includes(
+      "POS session does not belong to this branch or is not open",
+    )
   ) {
     return {
       ok: false,
@@ -236,11 +237,7 @@ function mapSelfOrderError(
   if (message.includes("daily_limit_exceeded")) {
     const detail = readDailyLimitConflictDetail(error);
     const itemName = detail?.itemName ?? "Món";
-    if (
-      detail &&
-      detail.remaining > 0 &&
-      detail.requested > detail.remaining
-    ) {
+    if (detail && detail.remaining > 0 && detail.requested > detail.remaining) {
       return {
         ok: false,
         status: 409,
@@ -529,7 +526,10 @@ async function normalizeUnavailableSnapshot(
     .eq("self_order_token", token)
     .maybeSingle();
   if (error) {
-    console.error("[self-order] unavailable token classification failed", error);
+    console.error(
+      "[self-order] unavailable token classification failed",
+      error,
+    );
   }
   return {
     ok: false,
@@ -594,6 +594,46 @@ export async function getSelfOrderSnapshot(
     ok: true,
     data: await withMenuAvailability(token, normalized),
   };
+}
+
+export async function getSelfOrderPaymentRequestStatus(
+  token: string,
+  clientOpId: string,
+): Promise<
+  SelfOrderActionResult<{
+    ok: true;
+    status: SelfOrderPaymentRequestStatus | null;
+  }>
+> {
+  const { data, error } = await service().rpc<unknown>(
+    "self_order_get_payment_request_status",
+    {
+      p_token: token,
+      p_client_op_id: clientOpId,
+    },
+  );
+  if (error) {
+    console.error("[self-order] payment request status failed", error);
+    return {
+      ok: false,
+      status: 500,
+      code: "payment_status_failed",
+      message: SELF_ORDER_VI.loadFailed,
+    };
+  }
+
+  const payload = (data ?? {}) as Record<string, unknown>;
+  const failure = dataFailure(payload, "payment");
+  if (failure) return failure;
+  const parsed = selfOrderPaymentRequestStatusResponseSchema.safeParse(payload);
+  if (!parsed.success) {
+    return publicPayloadFailure(
+      "payment_status",
+      parsed.error.issues,
+      "payment",
+    );
+  }
+  return { ok: true, data: parsed.data };
 }
 
 export async function submitSelfOrderRequest(input: {
