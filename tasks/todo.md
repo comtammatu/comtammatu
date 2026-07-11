@@ -863,6 +863,13 @@ Skill plan: repo rules = engineering + skills + database + workflow; external sk
 - **Senior Dev:** Use one forward migration: preflight V2 tables, remove their dependent session column/objects without `CASCADE`, and preserve the canonical request/payment RPCs and rate-limit purposes.
 - **QA/QC:** Verify on a Preview Branch that no V2 relation/function/trigger/column remains, canonical RPCs still exist, and generated types plus focused tests match the reduced schema.
 
+Live-catalog correction: drop the legacy V1 batch/session RPCs and private
+snapshot/queue helpers as well as `_v2` functions. Remove the payment broadcast
+trigger before its function, drop V2 tables before their remaining helper
+functions, and replace the payment invariant trigger function without
+`session_id` before dropping that column. Keep the open-POS-session payment
+trigger and its helper.
+
 - [ ] **S6 — destructive migration and test re-anchor.** Drop
       `self_order_sessions`, `self_order_batches`, `self_order_session_devices`,
       `self_order_payment_requests.session_id` and its legacy foreign key/index,
