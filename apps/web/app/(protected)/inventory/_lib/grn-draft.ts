@@ -5,7 +5,7 @@ export type GrnDraftLine = {
   // Purchase-role unit the qty was entered in. NULL = free-text/base unit.
   entryUnitId?: number | null;
   quantity: number;
-  unitCost: number;
+  unitCost: number | null;
   note?: string;
 };
 
@@ -44,7 +44,7 @@ export function unitCostFromLineTotal(
 export function draftTotal(draft: GrnDraft | null): number {
   if (!draft) return 0;
   return draft.lines.reduce(
-    (sum, line) => sum + line.quantity * line.unitCost,
+    (sum, line) => sum + line.quantity * (line.unitCost ?? 0),
     0,
   );
 }

@@ -12,7 +12,10 @@ export type GrnCreateIngredient = {
   units?: IngredientUnitRow[];
 };
 
-export type GrnCreateServerDraftLine = GrnDraftLine & { lineId: number };
+export type GrnCreateServerDraftLine = Omit<GrnDraftLine, "unitCost"> & {
+  lineId: number;
+  unitCost: number;
+};
 
 export type GrnCreateProcurementBranchOption = {
   id: number;
@@ -38,6 +41,7 @@ export type GrnCreatePageData = {
   initialLocationId: number | null;
   canSwitchBranch: boolean;
   ingredients: GrnCreateIngredient[];
+  recentLines: GrnDraftLine[];
   existingDraft: {
     id: number;
     lines: GrnCreateServerDraftLine[];

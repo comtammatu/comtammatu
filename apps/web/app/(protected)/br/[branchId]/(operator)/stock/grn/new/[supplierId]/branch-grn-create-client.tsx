@@ -74,7 +74,7 @@ export function BranchGrnCreateClient({
       description={GRN_CREATE_COPY.newReceiptDescription}
       hideHeaderOnMobile
     >
-      <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-28">
+      <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
           <Button asChild variant="ghost" size="icon-touch">
             <Link href={sourceBasePath} aria-label={GRN_CREATE_COPY.changeSupplier}>
@@ -184,16 +184,27 @@ export function BranchGrnCreateClient({
                               {line.ingredientName}
                             </ItemTitle>
                             <ItemDescription className="line-clamp-none text-xs">
-                              {GRN_CREATE_COPY.lineUnitCost(
-                                line.quantity,
-                                line.unit,
-                                line.unitCost,
-                              )}{" "}
-                              <span className="font-semibold text-foreground">
-                                {GRN_CREATE_COPY.moneyVnd(
-                                  line.quantity * line.unitCost,
-                                )}
-                              </span>
+                              {line.unitCost != null && line.unitCost > 0 ? (
+                                <>
+                                  {GRN_CREATE_COPY.lineUnitCost(
+                                    line.quantity,
+                                    line.unit,
+                                    line.unitCost,
+                                  )}{" "}
+                                  <span className="font-semibold text-foreground">
+                                    {GRN_CREATE_COPY.moneyVnd(
+                                      line.quantity * line.unitCost,
+                                    )}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="font-medium text-warning">
+                                  {GRN_CREATE_COPY.linePriceRequired(
+                                    line.quantity,
+                                    line.unit,
+                                  )}
+                                </span>
+                              )}
                             </ItemDescription>
                           </ItemContent>
                           <ItemActions className="shrink-0">

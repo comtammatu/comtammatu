@@ -269,7 +269,7 @@ export function BranchStockIssuesListClient({
         ) : undefined
       }
     >
-      <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-28">
+      <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
           <Button asChild variant="ghost" size="icon-touch">
             <Link href={stockBasePath} aria-label="Quay lại kho">

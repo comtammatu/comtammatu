@@ -244,7 +244,7 @@ export function BranchStocktakeDetailClient({
       hideHeaderOnMobile
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
     >
-      <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-28">
+      <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
           <Button asChild variant="ghost" size="icon-touch">
             <Link href={stocktakeBasePath} aria-label="Quay lại kiểm kê">

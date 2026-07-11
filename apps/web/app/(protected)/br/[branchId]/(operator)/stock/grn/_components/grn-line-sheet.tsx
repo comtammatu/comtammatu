@@ -235,10 +235,15 @@ export function BranchGrnCreateLineSheet({
                     ) : null}
                     {referenceCost ? (
                       <p className="text-xs text-muted-foreground">
-                        {GRN_CREATE_COPY.lastCost(
+                        {GRN_CREATE_COPY.lastCostReference(
                           referenceCost.value,
                           referenceCost.unit || edit.unit,
                         )}
+                      </p>
+                    ) : null}
+                    {variance != null ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {GRN_CREATE_COPY.varianceReference(variance)}
                       </p>
                     ) : null}
                     {baseConversionPreview ? (
@@ -858,7 +863,10 @@ export function BranchGrnAddLineSheet({
               </div>
               {referenceCost ? (
                 <p className="text-xs text-muted-foreground">
-                  {GRN_CREATE_COPY.lastCost(referenceCost.value, referenceCost.unit || unit)}
+                  {GRN_CREATE_COPY.lastCostReference(
+                    referenceCost.value,
+                    referenceCost.unit || unit,
+                  )}
                 </p>
               ) : null}
             </FieldGroup>

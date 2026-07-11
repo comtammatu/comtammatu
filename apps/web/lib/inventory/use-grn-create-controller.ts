@@ -41,6 +41,7 @@ export function useGrnCreateController({
   initialLocationId,
   canSwitchBranch,
   ingredients,
+  recentLines,
   existingDraft,
   canConfirm,
   basePath,
@@ -60,7 +61,7 @@ export function useGrnCreateController({
     supplierId: supplier.id,
     supplierName: supplier.name,
     branchId: initialDraftBranchId,
-    lines: existingDraft?.lines ?? [],
+    lines: existingDraft?.lines ?? recentLines,
     updatedAt: new Date().toISOString(),
   }));
   const [serverGrnId, setServerGrnId] = useState<number | null>(
@@ -277,6 +278,10 @@ export function useGrnCreateController({
       setSubmitError(GRN_CREATE_COPY.toastNoLines);
       return;
     }
+    if (draft.lines.some((line) => line.unitCost == null || line.unitCost <= 0)) {
+      setSubmitError(GRN_CREATE_COPY.toastMissingPrices);
+      return;
+    }
     if (!branchId) {
       setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
       return;
@@ -302,6 +307,10 @@ export function useGrnCreateController({
   async function confirmNow() {
     if (draft.lines.length === 0) {
       setSubmitError(GRN_CREATE_COPY.toastNoLines);
+      return;
+    }
+    if (draft.lines.some((line) => line.unitCost == null || line.unitCost <= 0)) {
+      setSubmitError(GRN_CREATE_COPY.toastMissingPrices);
       return;
     }
     if (!branchId) {
@@ -340,7 +349,14 @@ export function useGrnCreateController({
 
   const total = draftTotal(draft);
   const lineCount = draft.lines.length;
-  const canSubmit = lineCount > 0 && !submitting && !receivingSiteSaving;
+  const hasMissingPrice = draft.lines.some(
+    (line) => line.unitCost == null || line.unitCost <= 0,
+  );
+  const canSubmit =
+    lineCount > 0 &&
+    !hasMissingPrice &&
+    !submitting &&
+    !receivingSiteSaving;
   const branchLocations = locationOptions.filter(
     (location) => location.branchId === branchId,
   );

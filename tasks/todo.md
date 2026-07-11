@@ -1106,51 +1106,26 @@ catalog and stock levels, then verifies the next real POS order.
 > `branchLocations.length <= 1`) — after D078 apply, Phước Hải has one active
 > warehouse so the card stays hidden.
 
-- [ ] **S0 — clear the nine red wave tests so the gate means something again.**
-      Pre-existing failures landed with the 2026-07-10 wave (bisect-confirmed at
-      `5b5e8d037`); every later slice's "full gate fresh" requirement is void
-      while they stay red. Clusters: waste form (explicit cancel fallback +
-      photo-upload gate) in `branch-waste-create-client`; Office inventory
-      dashboard (pending count slips for Branch Manager + four owner entrypoint
-      groups); operator stock statics (PO/GRN/issue/report actions in the branch
-      shell, GRN source presentation, consumption-vs-issue role split); form
-      barrel import; `resolveInventoryListScope` routing (D058 W3b). Fix code to
-      contract where the contract is right; fix the test only where the wave
-      legitimately changed the contract, and say which in the commit message.
+- [x] **S0 — full test gate restored.** Current full suite is green with 1006
+      passing, 33 skipped, and 0 failing tests; the earlier nine-failure wave is
+      no longer present in the current tree.
 
-- [ ] **S1 — extend the operator/Office import boundary guard before converting
+- [x] **S1 — extend the operator/Office import boundary guard before converting
       anything.** Widen `operator-office-shell-boundary` in
       `scripts/check-ui-contract.mjs` so `(operator)/**` may not import
       `@/(protected)/inventory/**` except `*-actions.ts`; allowlist `_lib/**`
       until S7 lands. Freeze current offenders as the baseline and burn one line
-      down per slice. Six presentation imports crossed the plane boundary under
-      human review alone; a seventh will too.
+      down per slice. The current 22 non-action, non-`_lib` imports are frozen;
+      a mutation check proves the next presenter import fails the UI contract.
 
-- [ ] **S2 — fix the app-shell scroll defects.** App-wide, own PR, not
-      Central-Kitchen-only. Two independent causes, both cheap.
-  - `apps/web/app/components/surface.tsx` gives `AppDetailFooter sticky` the
-    class `chrome-safe-bottom` (`bottom: max(1rem, env(safe-area-inset-bottom))`)
-    on a full-width bar, so the bar pins 16px above the scrollport and content
-    scrolls through the gap, while `bg-background/95` leaks another 5%.
-    `packages/ui/src/styles/globals.css` documents that utility as the offset for
-    floating buttons. Use `sticky bottom-0 ... bg-background chrome-safe-pb` and
-    drop `backdrop-blur`, which is wasted paint on an opaque bar. Twelve operator
-    stock screens pass `<AppDetailFooter sticky>`.
-  - `apps/web/app/layout.tsx` sets `body` to `min-h-screen` (`100vh`) while the
-    operator shell is `h-dvh overflow-hidden`, so a mobile browser scrolls the
-    document by the toolbar height on top of the inner scroller. Use `min-h-dvh`.
-  - `apps/web/tests/operator-stock-redirect-static.test.ts` asserts the literal
-    `sticky chrome-safe-bottom` in three places and currently locks the defect
-    in. Update it in the same change.
-  - Do not replace `#main-content` with the Radix `ScrollArea` primitive. The
-    shell already owns exactly one native scroller with `overscroll-contain`;
-    `ScrollArea` would trade native touch momentum for a JS scroller.
-  - Verify empirically, not analytically: `AppPage` applies `p-3`, so confirm on
-    a running dev server that `bottom-0` seats flush against the scrollport edge
-    rather than 12px above it. Scroll to the end of all twelve screens at
-    `390x844`, `768x1024`, and `1024x768` before claiming green.
+- [x] **S2 — app-shell scroll defects fixed.** The shared footer uses
+      `sticky bottom-0`, the root body uses `min-h-dvh`, and the 16 stale
+      operator-stock `pb-28` wrappers are removed now that bottom nav is static.
+      Static coverage locks the shared footer and padding removal. Runtime
+      scroll geometry is flush (`0–0.42px` gap, no body overflow) at `390x844`,
+      `768x1024`, `1024x768`, and `1280x900`.
 
-- [ ] **S3 — GRN never prefills a purchase price.** Owner rule: the market price
+- [x] **S3 — GRN never prefills a purchase price.** Owner rule: the market price
       changes every trip, and a carried-over price poisons the weighted average
       cost silently until month-end review.
   - `apps/web/lib/inventory/use-grn-create-controller.ts:162` resolves `unitCost`
@@ -1166,6 +1141,10 @@ catalog and stock levels, then verifies the next real POS order.
     from the most recent GRN for that `(supplier_id, branch_id)`. Do not read
     `supplier_price_list`: `production_manager` lacks
     `procurement:price_list_read`.
+  - Implemented in the shared Branch loader/controller: the latest confirmed
+    GRN contributes only ingredient, quantity, and entry unit; every carried
+    line remains price-empty, and review/confirm stay disabled until all prices
+    are entered.
 
 - [ ] **S4 — record a production run on one screen.** Owner rule: cooking happens
       first and the app records it afterwards, so the draft-then-confirm split

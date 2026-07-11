@@ -272,6 +272,10 @@ test("GRN supplier lines require an entered current unit price", () => {
   const controller = readRepo(
     "apps/web/lib/inventory/use-grn-create-controller.ts",
   );
+  const data = readRepo("apps/web/lib/inventory/grn-create-data.ts");
+  const client = readRepo(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/branch-grn-create-client.tsx",
+  );
   const editor = readRepo(
     "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
   );
@@ -283,6 +287,31 @@ test("GRN supplier lines require an entered current unit price", () => {
   );
   assert.match(editor, /edit\.unitCost != null/);
   assert.match(editor, /edit\.unitCost > 0/);
+  assert.match(editor, /GRN_CREATE_COPY\.varianceReference\(variance\)/);
+  assert.match(editor, /GRN_CREATE_COPY\.lastCostReference/);
+  assert.match(
+    readRepo(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
+    ),
+    /GRN_CREATE_COPY\.varianceReference\(variance\)/,
+  );
+  assert.match(controller, /lines: existingDraft\?\.lines \?\? recentLines/);
+  assert.match(controller, /const hasMissingPrice = draft\.lines\.some/);
+  assert.match(controller, /!hasMissingPrice/);
+  assert.match(client, /GRN_CREATE_COPY\.linePriceRequired/);
+  assert.match(data, /\.from\("goods_received_notes"\)/);
+  assert.match(data, /\.eq\("supplier_id", supplierId\)/);
+  assert.match(data, /\.eq\("branch_id", defaultBranchId\)/);
+  assert.match(data, /\.eq\("status", "confirmed"\)/);
+  assert.match(
+    data,
+    /\.select\("ingredient_id, received_quantity, entry_unit_id"\)/,
+  );
+  assert.doesNotMatch(data, /supplier_price_list/);
+  assert.doesNotMatch(
+    data,
+    /\.select\("ingredient_id, received_quantity, entry_unit_id, unit_cost"\)/,
+  );
 });
 
 test("GRN line defaults scale ingredient cost by receiving unit", () => {

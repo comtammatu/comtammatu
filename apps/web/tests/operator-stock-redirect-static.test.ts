@@ -26,12 +26,16 @@ test("operator stock sticky action bars route through AppDetailFooter", () => {
   const rawStickyCallSites = stockFiles.filter((path) =>
     read(path).includes("sticky bottom-0"),
   );
+  const redundantBottomNavPadding = stockFiles.filter((path) =>
+    path.includes("/(operator)/stock/") && read(path).includes("pb-28"),
+  );
   const nestedFooterCallSites = stockFiles.filter((path) =>
     /<AppDetailFooter\s+sticky\s+trailing=\{footer\}/.test(read(path)),
   );
   const appSurface = read("apps/web/app/components/surface.tsx");
 
   assert.deepEqual(rawStickyCallSites, []);
+  assert.deepEqual(redundantBottomNavPadding, []);
   assert.deepEqual(nestedFooterCallSites, []);
   assert.match(appSurface, /sticky bottom-0/);
   assert.match(appSurface, /chrome-safe-pb/);
@@ -206,11 +210,11 @@ test("operator stock landing is a branch-native hub, not the office stock page w
   assert.match(source, /STOCK_SECONDARY_SUFFIXES/);
   assert.match(
     source,
-    /const STOCK_PRIMARY_SUFFIXES = \[\s*"\/stock\/grn",\s*"\/stock\/stocktake",\s*"\/stock\/waste"/,
+    /const STOCK_PRIMARY_SUFFIXES = \[\s*"\/stock\/on-hand",\s*"\/stock\/grn",\s*"\/stock\/production"/,
   );
   assert.match(
     source,
-    /const STOCK_SECONDARY_SUFFIXES = \[\s*"\/stock\/on-hand",\s*"\/stock\/production"/,
+    /const STOCK_SECONDARY_SUFFIXES = \[\s*"\/stock\/stocktake",\s*"\/stock\/waste"/,
   );
   assert.match(source, /operatorStockPrimaryTitle/);
   assert.match(source, /operatorStockSecondaryTitle/);
@@ -267,6 +271,8 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(branchClientSource, /filterStockOnHandIngredients/);
   assert.match(branchClientSource, /min-h-11/);
   assert.match(branchClientSource, /size="touch"/);
+  assert.match(branchClientSource, /action=\{\s*canCreateGrn/);
+  assert.match(branchClientSource, /href=\{`\/br\/\$\{branchId\}\/stock\/grn\/new`\}/);
   assert.doesNotMatch(
     branchClientSource,
     /DataTable|AppPage|StockPageContent|StockClient|embedded|overflow-x-auto|QuickStockIssueDialog|QuickInternalTransferDialog|AdjustStockDialog/,

@@ -175,10 +175,15 @@ export function GrnLineEditFields({
         </div>
         {referenceCost ? (
           <p className="mt-1 text-xs text-muted-foreground">
-            {GRN_CREATE_COPY.lastCost(
+            {GRN_CREATE_COPY.lastCostReference(
               referenceCost.value,
               referenceCost.unit || edit.unit,
             )}
+          </p>
+        ) : null}
+        {variance != null ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {GRN_CREATE_COPY.varianceReference(variance)}
           </p>
         ) : null}
         {baseConversionPreview ? (

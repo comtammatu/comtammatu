@@ -179,6 +179,50 @@ export async function loadGrnCreatePageData({
     },
   );
 
+  let recentLines: GrnCreatePageData["recentLines"] = [];
+  if (defaultBranchId != null) {
+    const recentGrnRes = await supabase
+      .from("goods_received_notes")
+      .select("id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("supplier_id", supplierId)
+      .eq("branch_id", defaultBranchId)
+      .eq("status", "confirmed")
+      .order("received_date", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (recentGrnRes.data?.id) {
+      const recentItemsRes = await supabase
+        .from("grn_items")
+        .select("ingredient_id, received_quantity, entry_unit_id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("grn_id", recentGrnRes.data.id)
+        .gt("received_quantity", 0)
+        .order("id", { ascending: true });
+      recentLines = (recentItemsRes.data ?? []).flatMap((line) => {
+        const ingredient = ingredients.find(
+          (item) => item.id === line.ingredient_id,
+        );
+        if (!ingredient) return [];
+        return [
+          {
+            ingredientId: ingredient.id,
+            ingredientName: ingredient.name,
+            unit: getIngredientUnitDisplayName(
+              ingredient.units,
+              line.entry_unit_id,
+              ingredient.unit,
+            ),
+            entryUnitId: line.entry_unit_id,
+            quantity: Number(line.received_quantity),
+            unitCost: null,
+          },
+        ];
+      });
+    }
+  }
+
   let existingDraft: {
     id: number;
     lines: GrnCreateServerDraftLine[];
@@ -242,6 +286,7 @@ export async function loadGrnCreatePageData({
     initialLocationId,
     canSwitchBranch: routeBranchId == null,
     ingredients,
+    recentLines,
     existingDraft,
     canConfirm,
   };

@@ -353,7 +353,7 @@ export function BranchProductionNewClient({
       description="Chọn thành phẩm, sản lượng, nơi nhận và kiểm tra nguyên liệu."
       hideHeaderOnMobile
     >
-      <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-28">
+      <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
           <Button asChild variant="ghost" size="icon-touch">
             <Link href={basePath} aria-label="Quay lại Sản xuất">

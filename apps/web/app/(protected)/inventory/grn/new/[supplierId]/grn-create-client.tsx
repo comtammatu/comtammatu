@@ -247,14 +247,27 @@ export function GrnCreateClient({
                     {line.ingredientName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {GRN_CREATE_COPY.lineUnitCost(
-                      line.quantity,
-                      line.unit,
-                      line.unitCost,
-                    )}{" "}
-                    <span className="font-medium text-foreground">
-                      {GRN_CREATE_COPY.moneyVnd(line.quantity * line.unitCost)}
-                    </span>
+                    {line.unitCost != null && line.unitCost > 0 ? (
+                      <>
+                        {GRN_CREATE_COPY.lineUnitCost(
+                          line.quantity,
+                          line.unit,
+                          line.unitCost,
+                        )}{" "}
+                        <span className="font-medium text-foreground">
+                          {GRN_CREATE_COPY.moneyVnd(
+                            line.quantity * line.unitCost,
+                          )}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="font-medium text-warning">
+                        {GRN_CREATE_COPY.linePriceRequired(
+                          line.quantity,
+                          line.unit,
+                        )}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">

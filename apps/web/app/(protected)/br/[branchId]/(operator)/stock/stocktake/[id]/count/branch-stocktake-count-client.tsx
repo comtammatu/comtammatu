@@ -223,7 +223,7 @@ export function BranchStocktakeCountClient({
       description={`Round R${data.currentRound}`}
       hideHeaderOnMobile
     >
-      <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-28">
+      <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar>
           <Button asChild variant="ghost" size="icon-touch">
             <Link

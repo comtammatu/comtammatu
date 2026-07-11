@@ -274,6 +274,13 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
   ]) {
     assert.match(source, new RegExp(`id: "${id}"`));
   }
+  assert.ok(
+    source.includes(
+      String.raw`from\s+["']@\/\(protected\)\/inventory\/`,
+    ),
+  );
+  assert.ok(source.includes(String.raw`(?!_lib\/)`));
+  assert.ok(source.includes(String.raw`actions(?:\.ts)?`));
   assert.doesNotMatch(source, /app-action-data-state-copy-baseline/);
 
   for (const marker of [

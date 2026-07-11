@@ -32,6 +32,8 @@ export const GRN_CREATE_COPY = {
     `Xem lại trước khi chốt · ${formatCount(lineCount)} mặt hàng · ${formatVND(total)}`,
   lineUnitCost: (quantity: number, unit: string, unitCost: number) =>
     `${formatQty(quantity)} ${unit} · ${formatVND(lineTotalFromUnitCost(quantity, unitCost))} · Đơn giá ${formatVND(unitCost)} / ${unit} ·`,
+  linePriceRequired: (quantity: number, unit: string) =>
+    `${formatQty(quantity)} ${unit} · Nhập đơn giá`,
   unitLabel: (unit: string) => `Đơn vị nhập: ${unit}`,
   unitPriceUnit: (unit: string, unitCost: number) =>
     unitCost > 0 ? `Đơn giá ${formatVND(unitCost)} / ${unit}` : `Đơn giá / ${unit}`,
@@ -45,6 +47,10 @@ export const GRN_CREATE_COPY = {
   conversionMissing: "Chưa cấu hình quy đổi",
   moneyVnd: (value: number) => formatVND(value),
   lastCost: (value: number, unit: string) => `${formatVND(value)}/${unit}`,
+  lastCostReference: (value: number, unit: string) =>
+    `Giá lần trước: ${formatVND(value)}/${unit}`,
+  varianceReference: (variance: number) =>
+    `Chênh ${formatPercent(variance * 100, 0)} so với lần trước.`,
   varianceWarning: (variance: number) =>
     `Giá chênh ${formatPercent(variance * 100, 0)} so với lần trước — kiểm tra lại trước khi lưu.`,
   branchUnselected: "Chưa chọn kho nhận",
@@ -60,5 +66,6 @@ export const GRN_CREATE_COPY = {
   toastDiscardDraftDesc: "Các dòng đã nhập sẽ mất.",
   toastDiscardDraftFailed: "Không thể hủy phiếu nháp.",
   toastNoLines: "Phiếu chưa có dòng nào.",
+  toastMissingPrices: "Nhập đơn giá cho tất cả mặt hàng trước khi tiếp tục.",
   flowErrorTitle: "Không thể tiếp tục phiếu nhập",
 };
