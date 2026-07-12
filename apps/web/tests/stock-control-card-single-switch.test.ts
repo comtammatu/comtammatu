@@ -12,7 +12,8 @@ const ACTIONS =
   "apps/web/app/(protected)/branch-settings/_shared/pos/actions.ts";
 const PAGE =
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx";
-const FEATURE_FLAGS = "apps/web/app/(protected)/inventory/_lib/feature-flags.ts";
+const FEATURE_FLAGS =
+  "apps/web/app/(protected)/inventory/_lib/feature-flags.ts";
 
 test("StockControlCard renders exactly one Switch, wired to the single posting flag", () => {
   const source = read(STOCK_CONTROL_CARD);
@@ -45,6 +46,11 @@ test("settings/pos page: gate-flag fetch removed", () => {
   assert.doesNotMatch(source, /POS_STOCK_AVAILABILITY_GATE/);
   assert.doesNotMatch(source, /stockAvailabilityGateEnabled/);
   assert.doesNotMatch(source, /initialGateEnabled/);
+  assert.match(
+    source,
+    /claims\.user_role === "owner"[\s\S]*<StockControlCard/,
+    "manager settings must not render the owner-only stock policy",
+  );
 });
 
 test("feature-flags registry: gate flag key removed", () => {

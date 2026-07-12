@@ -32,7 +32,7 @@ export default async function OperatorTransferDetailPage({
   });
   const copy = messages.inventory.transfer;
   const statusBadge = getStatusBadgeMeta("inventory", data.transfer.status);
-  const listHref = `/br/${branchId}/stock/transfer`;
+  const listHref = `/br/${branchId}/stock/receive`;
 
   return (
     <BranchOperatorPage
@@ -47,7 +47,7 @@ export default async function OperatorTransferDetailPage({
         variant: statusBadge.variant,
       }}
       backHref={listHref}
-      backLabel="Điều chuyển"
+      backLabel={copy.receiveNative.receiveBackToList}
     >
       <BranchTransferDetailClient
         branchId={branchId}

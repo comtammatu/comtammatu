@@ -172,7 +172,6 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}/stock/issues`,
       `/br/${branchId}/stock/reports`,
       `/br/${branchId}/stock/transfer`,
-      `/br/${branchId}/stock/transfer/new`,
       `/br/${branchId}/stock/count`,
       `/br/${branchId}/stock/count-slips`,
       `/br/${branchId}/stock/waste`,
@@ -188,9 +187,7 @@ test.describe("branch route shell ownership", () => {
     }
 
     await page.goto(`/br/${branchId}/stock/receive`);
-    await expect(page).toHaveURL(
-      `/br/${branchId}/stock/transfer?queue=receive`,
-    );
+    await expect(page).toHaveURL(`/br/${branchId}/stock/receive`);
 
     expect(health.consoleErrors).toEqual([]);
     expect(health.pageErrors).toEqual([]);
@@ -288,7 +285,10 @@ test.describe("branch route shell ownership", () => {
       await page.waitForLoadState("load");
       await page.waitForTimeout(800);
       await expect(
-        page.locator("table").first().or(page.getByText("Chưa có kho chi nhánh")),
+        page
+          .locator("table")
+          .first()
+          .or(page.getByText("Chưa có kho chi nhánh")),
       ).toBeVisible();
       const overflowX = await page.evaluate(
         () =>

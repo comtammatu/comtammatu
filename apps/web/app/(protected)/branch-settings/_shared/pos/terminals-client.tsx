@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { AppEmptyState, AppToolbar } from "@/components/surface";
 import {
   Select,
@@ -20,11 +19,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Label } from "@comtammatu/ui/components/label";
-import {
-  ExternalLink as IconExternalLink,
-  Pencil as IconPencil,
-  Plus as IconPlus,
-} from "lucide-react";
+import { Pencil as IconPencil, Plus as IconPlus } from "lucide-react";
 import { TerminalFormDialog } from "./terminal-form-dialog";
 import { messages } from "@lib/messages";
 import {
@@ -157,33 +152,18 @@ export function TerminalsClient({
           ) : undefined
         }
         actions={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            {selectedBranchId !== null && (
-              <Button
-                variant="outline"
-                size="touch"
-                asChild
-                className="w-full sm:w-auto"
-              >
-                <Link href={`/br/${selectedBranchId}/pos`}>
-                  <IconExternalLink data-icon="inline-start" />
-                  {messages.settings.pos.openPosUi}
-                </Link>
-              </Button>
-            )}
-            <Button
-              size="touch"
-              className="w-full sm:w-auto"
-              onClick={() => {
-                setEditTerminal(null);
-                setDialogOpen(true);
-              }}
-              disabled={selectedBranchId === null}
-            >
-              <IconPlus data-icon="inline-start" />
-              {messages.settings.pos.addTerminal}
-            </Button>
-          </div>
+          <Button
+            size="touch"
+            className="w-full sm:w-auto"
+            onClick={() => {
+              setEditTerminal(null);
+              setDialogOpen(true);
+            }}
+            disabled={selectedBranchId === null}
+          >
+            <IconPlus data-icon="inline-start" />
+            {messages.settings.pos.addTerminal}
+          </Button>
         }
       />
 

@@ -101,6 +101,7 @@ export const resolvePosSessionVariance = withActionPositional(
     }
 
     revalidatePath(`/br/${String(branchId)}/pos-sessions`);
+    revalidatePath(`/br/${String(branchId)}/pos-sessions/${String(sessionId)}`);
 
     return { success: true };
   },

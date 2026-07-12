@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   CircleAlert as IconCircleAlert,
@@ -26,11 +26,9 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
-  BranchOperatorDetailList,
   BranchOperatorInlineState,
   BranchOperatorPage,
   BranchOperatorPanel,
-  BranchOperatorStatusStrip,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   canCompleteBranchStocktake,
@@ -66,6 +64,7 @@ export function BranchStocktakeDetailClient({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [showAllLines, setShowAllLines] = useState(false);
   const stocktakeBasePath = `${stockBasePath}/stocktake`;
   const { session, lines } = data;
   const statusBadge = getStatusBadgeMeta("inventory", session.status);
@@ -77,9 +76,6 @@ export function BranchStocktakeDetailClient({
     countedItems,
   });
   const recountItems = lines.filter((line) => line.needsRecount).length;
-  const varianceItems = lines.filter(
-    (line) => line.variance !== null && line.variance !== 0,
-  ).length;
   const canComplete =
     data.canComplete &&
     session.status === "in_progress" &&
@@ -90,6 +86,24 @@ export function BranchStocktakeDetailClient({
       : progress.counted < progress.total
         ? `Còn ${progress.total - progress.counted} dòng chưa đếm.`
         : null;
+  const priorityLines = lines.filter((line) =>
+    session.status === "completed"
+      ? (line.variance ?? 0) !== 0 || Boolean(line.varianceReason)
+      : line.countedQuantity === null || line.needsRecount,
+  );
+  const visibleLines = showAllLines ? lines : priorityLines;
+  const lineDisclosure =
+    lines.length > priorityLines.length ? (
+      <Button
+        type="button"
+        variant="ghost"
+        size="touch"
+        className="w-full"
+        onClick={() => setShowAllLines((current) => !current)}
+      >
+        {showAllLines ? "Chỉ xem cần xử lý" : `Xem tất cả (${lines.length})`}
+      </Button>
+    ) : null;
 
   async function handleComplete() {
     const approved = await confirm({
@@ -142,56 +156,69 @@ export function BranchStocktakeDetailClient({
         description={stocktakeCopy.detail.cancelledDescription}
       />
     ) : session.status === "completed" ? (
-      <ItemGroup className="gap-2" role="list">
-        {lines.map((line) => {
-          const tone = getBranchStocktakeVarianceTone(line);
-          const variance = line.variance ?? 0;
-          return (
-            <div key={line.id} role="listitem">
-              <Item
-                variant="outline"
-                className={cn(
-                  "min-h-16 flex-col items-stretch gap-2 touch-manipulation",
-                  toneClassName[tone],
-                )}
-              >
-                <div className="flex min-w-0 items-start justify-between gap-3">
-                  <ItemContent className="min-w-0 gap-1">
-                    <ItemTitle className="line-clamp-none text-sm font-semibold">
-                      {line.ingredientName}
-                    </ItemTitle>
-                    <ItemDescription className="line-clamp-none text-xs">
-                      Hệ thống {formatQty(line.systemQuantity ?? 0)} {line.unit}{" "}
-                      · thực đếm {formatQty(line.countedQuantity ?? 0)}{" "}
-                      {line.unit}
-                    </ItemDescription>
-                  </ItemContent>
-                  <Badge
-                    variant={
-                      tone === "destructive"
-                        ? "destructive"
-                        : tone === "warning"
-                          ? "warning"
-                          : tone === "success"
-                            ? "success"
-                            : "secondary"
-                    }
-                    className="shrink-0 font-mono tabular-nums"
+      <>
+        {visibleLines.length === 0 ? (
+          <AppEmptyState
+            compact
+            mode="no-data"
+            icon={<IconCircleCheck />}
+            title="Không có chênh lệch"
+            description="Mở toàn bộ dòng khi cần xem lại bằng chứng kiểm kê."
+          />
+        ) : (
+          <ItemGroup className="gap-2" role="list">
+            {visibleLines.map((line) => {
+              const tone = getBranchStocktakeVarianceTone(line);
+              const variance = line.variance ?? 0;
+              return (
+                <div key={line.id} role="listitem">
+                  <Item
+                    variant="outline"
+                    className={cn(
+                      "min-h-16 flex-col items-stretch gap-2 touch-manipulation",
+                      toneClassName[tone],
+                    )}
                   >
-                    {variance > 0 ? "+" : ""}
-                    {formatQty(variance)}
-                  </Badge>
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <ItemContent className="min-w-0 gap-1">
+                        <ItemTitle className="line-clamp-none text-sm font-semibold">
+                          {line.ingredientName}
+                        </ItemTitle>
+                        <ItemDescription className="line-clamp-none text-xs">
+                          Hệ thống {formatQty(line.systemQuantity ?? 0)}{" "}
+                          {line.unit} · thực đếm{" "}
+                          {formatQty(line.countedQuantity ?? 0)} {line.unit}
+                        </ItemDescription>
+                      </ItemContent>
+                      <Badge
+                        variant={
+                          tone === "destructive"
+                            ? "destructive"
+                            : tone === "warning"
+                              ? "warning"
+                              : tone === "success"
+                                ? "success"
+                                : "secondary"
+                        }
+                        className="shrink-0 font-mono tabular-nums"
+                      >
+                        {variance > 0 ? "+" : ""}
+                        {formatQty(variance)}
+                      </Badge>
+                    </div>
+                    {line.varianceReason ? (
+                      <ItemDescription className="line-clamp-none text-xs">
+                        {line.varianceReason}
+                      </ItemDescription>
+                    ) : null}
+                  </Item>
                 </div>
-                {line.varianceReason ? (
-                  <ItemDescription className="line-clamp-none text-xs">
-                    {line.varianceReason}
-                  </ItemDescription>
-                ) : null}
-              </Item>
-            </div>
-          );
-        })}
-      </ItemGroup>
+              );
+            })}
+          </ItemGroup>
+        )}
+        {lineDisclosure}
+      </>
     ) : (
       <>
         {countUnavailable ? (
@@ -210,31 +237,42 @@ export function BranchStocktakeDetailClient({
             description={blockedReason}
           />
         ) : null}
-        <ItemGroup className="gap-2" role="list">
-          {lines.map((line) => (
-            <div key={line.id} role="listitem">
-              <Item variant="outline" className="min-h-16 touch-manipulation">
-                <ItemContent className="min-w-0 gap-1">
-                  <ItemTitle className="line-clamp-none text-sm font-semibold">
-                    {line.ingredientName}
-                  </ItemTitle>
-                  <ItemDescription className="line-clamp-none text-xs">
-                    {line.countedQuantity === null
-                      ? "Chưa đếm"
-                      : `Đã đếm ${formatQty(line.countedQuantity)} ${line.unit}`}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemActions className="self-center">
-                  {line.needsRecount ? (
-                    <Badge variant="warning">Đếm lại</Badge>
-                  ) : line.countedQuantity !== null ? (
-                    <Badge variant="success">Đã ghi nhận</Badge>
-                  ) : null}
-                </ItemActions>
-              </Item>
-            </div>
-          ))}
-        </ItemGroup>
+        {visibleLines.length === 0 ? (
+          <AppEmptyState
+            compact
+            mode="no-data"
+            icon={<IconCircleCheck />}
+            title="Không còn dòng cần xử lý"
+            description="Có thể hoàn tất phiên hoặc mở toàn bộ dòng để kiểm tra lại."
+          />
+        ) : (
+          <ItemGroup className="gap-2" role="list">
+            {visibleLines.map((line) => (
+              <div key={line.id} role="listitem">
+                <Item variant="outline" className="min-h-16 touch-manipulation">
+                  <ItemContent className="min-w-0 gap-1">
+                    <ItemTitle className="line-clamp-none text-sm font-semibold">
+                      {line.ingredientName}
+                    </ItemTitle>
+                    <ItemDescription className="line-clamp-none text-xs">
+                      {line.countedQuantity === null
+                        ? "Chưa đếm"
+                        : `Đã đếm ${formatQty(line.countedQuantity)} ${line.unit}`}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions className="self-center">
+                    {line.needsRecount ? (
+                      <Badge variant="warning">Đếm lại</Badge>
+                    ) : line.countedQuantity !== null ? (
+                      <Badge variant="success">Đã ghi nhận</Badge>
+                    ) : null}
+                  </ItemActions>
+                </Item>
+              </div>
+            ))}
+          </ItemGroup>
+        )}
+        {lineDisclosure}
       </>
     );
 
@@ -247,94 +285,32 @@ export function BranchStocktakeDetailClient({
       backLabel="Kiểm kê"
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
-          <div className="flex min-w-0 flex-col gap-3">
-            <BranchOperatorPanel
-              title={
-                session.status === "completed"
-                  ? "Kết quả kiểm kê"
-                  : "Tiến độ kiểm kê"
-              }
-              icon={IconClipboardCheck}
-              size="sm"
-              contentClassName="gap-3"
-              action={
-                session.status === "in_progress" &&
-                data.canCancel &&
-                !countUnavailable ? (
-                  <Button asChild size="touch">
-                    <Link href={`${stocktakeBasePath}/${session.id}/count`}>
-                      Tiếp tục đếm
-                    </Link>
-                  </Button>
-                ) : null
-              }
-            >
-              {reviewContent}
-            </BranchOperatorPanel>
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-3">
-            <BranchOperatorPanel title="Tổng quan" size="sm">
-              <BranchOperatorStatusStrip
-                items={[
-                  {
-                    label: "Trạng thái",
-                    value: statusBadge.label,
-                  },
-                  {
-                    label: "Đã đếm",
-                    value: `${progress.counted}/${progress.total}`,
-                    mono: true,
-                  },
-                  ...(session.status === "completed"
-                    ? [
-                        {
-                          label: "Có chênh lệch",
-                          value: String(varianceItems),
-                          mono: true,
-                          muted: varianceItems === 0,
-                        },
-                      ]
-                    : []),
-                ]}
-              />
-              <BranchOperatorDetailList
-                columns={1}
-                className="mt-3"
-                rows={[
-                  {
-                    label: "Bắt đầu",
-                    value: formatVNDateTime(
-                      session.startedAt ?? session.createdAt,
-                    ),
-                  },
-                  ...(session.completedAt
-                    ? [
-                        {
-                          label: "Hoàn tất",
-                          value: formatVNDateTime(session.completedAt),
-                        },
-                      ]
-                    : []),
-                  {
-                    label: "Người tạo",
-                    value: session.createdBy,
-                  },
-                  {
-                    label: "Kiểm kê mù",
-                    value: session.blindMode ? "Có" : "Không",
-                  },
-                ]}
-              />
-              {session.notes ? (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  {session.notes}
-                </p>
-              ) : null}
-            </BranchOperatorPanel>
-          </div>
-        </div>
+        <BranchOperatorPanel
+          title={
+            session.status === "completed"
+              ? "Kết quả kiểm kê"
+              : `Tiến độ ${progress.counted}/${progress.total}`
+          }
+          icon={IconClipboardCheck}
+          size="sm"
+          contentClassName="gap-3"
+          action={
+            session.status === "in_progress" &&
+            data.canCancel &&
+            !countUnavailable ? (
+              <Button asChild size="touch">
+                <Link href={`${stocktakeBasePath}/${session.id}/count`}>
+                  Tiếp tục đếm
+                </Link>
+              </Button>
+            ) : null
+          }
+        >
+          {session.notes ? (
+            <p className="text-sm text-muted-foreground">{session.notes}</p>
+          ) : null}
+          {reviewContent}
+        </BranchOperatorPanel>
 
         {session.status === "in_progress" &&
         (data.canCancel || data.canComplete) ? (

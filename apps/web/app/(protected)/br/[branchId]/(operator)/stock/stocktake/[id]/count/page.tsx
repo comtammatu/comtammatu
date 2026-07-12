@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { BranchStocktakeCountClient } from "./branch-stocktake-count-client";
 import { loadBranchStocktakeCountData } from "@lib/inventory/branch-stocktake-data";
 
@@ -22,10 +22,5 @@ export default async function OperatorStocktakeCountPage({
   }
 
   const data = await loadBranchStocktakeCountData(stocktakeId, branchId);
-  if (!data.featureEnabled) {
-    redirect(
-      `/br/${branchId}/stock/stocktake/${stocktakeId}?error=stocktake_redesigned_not_enabled`,
-    );
-  }
   return <BranchStocktakeCountClient data={data} />;
 }

@@ -27,7 +27,9 @@ export const PAGE_ARCHETYPES = {
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx": "HUB",
   "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/page.tsx":
-    "REPORT",
+    "LIST",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/[sessionId]/page.tsx":
+    "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/printers/page.tsx":
@@ -48,18 +50,6 @@ export const PAGE_ARCHETYPES = {
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/page.tsx":
     "EMBED-WRAPPER",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/page.tsx":
-    "HUB",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/categories/page.tsx":
-    "LIST",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/ingredients/page.tsx":
-    "LIST",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/suppliers/page.tsx":
-    "LIST",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/thresholds/page.tsx":
-    "SETTINGS-PANEL",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/units/page.tsx":
-    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/[id]/page.tsx":
@@ -97,7 +87,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/page.tsx":
-    "REDIRECT-SHIM",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/reports/page.tsx":
     "REPORT",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/[id]/count/page.tsx":
@@ -111,9 +101,9 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx":
-    "DOC-WORKFLOW",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx":
-    "LIST",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx":

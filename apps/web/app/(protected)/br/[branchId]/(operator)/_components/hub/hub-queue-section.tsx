@@ -18,7 +18,10 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
+import {
+  BranchOperatorInlineState,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchBranchQueueCounts } from "../../dashboard/data";
@@ -161,7 +164,15 @@ export async function HubQueueSection({ branchId }: { branchId: number }) {
   );
   const queuePendingTotal = queueRows.reduce((sum, row) => sum + row.count, 0);
 
-  if (queueRows.length === 0) return null;
+  if (queueRows.length === 0) {
+    return (
+      <BranchOperatorInlineState
+        icon={CheckCircle}
+        title={branchCopy.queueEmpty}
+        tone="success"
+      />
+    );
+  }
 
   return (
     <BranchOperatorPanel

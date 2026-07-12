@@ -59,7 +59,7 @@ export const inventory = {
       { label: "Thêm thành phẩm", hint: "chạm nhập số lượng" },
       { label: "Tạo phiếu xuất", hint: "chuyển sang xử lý giao" },
     ],
-    stocktakeListTitle: "Kiểm kê đối chiếu",
+    stocktakeListTitle: "Kiểm tồn",
     stocktakeListDescription: "Mở phiên, đếm trên mobile, rồi chốt lệch tồn.",
     stocktakeSteps: [
       { label: "Mở phiên", hint: "chọn phạm vi" },
@@ -67,15 +67,15 @@ export const inventory = {
       { label: "Lưu số đếm", hint: "lưu round" },
       { label: "Chốt lệch tồn", hint: "khóa tồn" },
     ],
-    productionRecipeTitle: "Cấu hình công thức",
+    productionRecipeTitle: "Công thức sản xuất",
     productionRecipeLoadFailed: "Không thể tải công thức sản xuất",
-    productionRecipeLoading: "Đang tải định mức nguyên liệu...",
+    productionRecipeLoading: "Đang tải công thức sản xuất...",
     productionRecipeDescription:
       "Chuẩn bị thành phẩm, nguyên liệu, rồi lưu công thức trước khi tạo lệnh.",
     productionRecipeSteps: [
       { label: "Có thành phẩm", hint: "món Bếp TT sẽ làm" },
       { label: "Có nguyên liệu", hint: "đầu vào để trừ kho" },
-      { label: "Lưu công thức", hint: "định lượng từng dòng" },
+      { label: "Lưu công thức sản xuất", hint: "định lượng từng dòng" },
       { label: "Quay lại lệnh", hint: "sẵn sàng sản xuất" },
     ],
   },

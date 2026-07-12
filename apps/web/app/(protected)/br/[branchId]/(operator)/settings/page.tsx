@@ -5,8 +5,6 @@ import {
   Monitor as IconDeviceDesktop,
   Printer as IconPrinter,
 } from "lucide-react";
-import { canAccess } from "@comtammatu/shared/auth";
-import { AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorActionSection,
   BranchOperatorPage,
@@ -33,47 +31,36 @@ export default async function BranchSettingsHubPage({
     .select("id, name, branch_kind, is_active")
     .eq("id", branchId)
     .eq("tenant_id", claims.tenant_id)
+    .eq("branch_kind", "branch")
     .maybeSingle();
 
   if (!branch || !branch.is_active) notFound();
 
   const copy = messages.settings.branch;
-  const role = claims.user_role;
-
   const tiles = buildHubTiles(branchId, copy, {
     tables: IconArmchair,
     pos: IconDeviceDesktop,
     printers: IconPrinter,
     kds: IconChefHat,
   });
-  const visibleTiles = tiles.filter((tile) => canAccess(role, tile.moduleKey));
-  const hasContent = visibleTiles.length > 0;
-
   return (
     <BranchOperatorPage
       title={copy.hubTitle}
       description={copy.hubDescription}
       backHref={`/br/${branchId}`}
+      backLabel={copy.employeeBack}
     >
-      {hasContent ? (
-        <BranchOperatorActionSection
-          title={copy.setupEssentialsTitle}
-          description={copy.setupLaneDescription}
-          links={visibleTiles.map((tile) => ({
-            key: `${tile.moduleKey}-${tile.href}`,
-            href: tile.href,
-            icon: tile.icon,
-            title: tile.title,
-            description: tile.description,
-          }))}
-        />
-      ) : (
-        <AppEmptyState
-          mode="no-access"
-          title={copy.hubEmptyTitle}
-          description={copy.hubEmptyDescription}
-        />
-      )}
+      <BranchOperatorActionSection
+        presentation="plain"
+        columns={1}
+        links={tiles.map((tile) => ({
+          key: tile.href,
+          href: tile.href,
+          icon: tile.icon,
+          title: tile.title,
+          description: tile.description,
+        }))}
+      />
     </BranchOperatorPage>
   );
 }

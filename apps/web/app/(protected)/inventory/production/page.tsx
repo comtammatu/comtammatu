@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
-import { fetchProductionRuns, type ProductionRunRow } from "../production-run-actions";
+import {
+  fetchProductionRuns,
+  type ProductionRunRow,
+} from "../production-run-actions";
 import { ProductionRunsClient } from "./production-runs-client";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
@@ -11,7 +14,7 @@ import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 
 interface ProductionPageProps {
-  searchParams?: Promise<{ branchId?: string | string[], tab?: string }>;
+  searchParams?: Promise<{ branchId?: string | string[]; tab?: string }>;
   routeBranchId?: number;
   embedded?: boolean;
 }
@@ -27,7 +30,7 @@ export async function ProductionPageContent({
     routeBranchId,
     queryBranchId: params.branchId,
   });
-  
+
   if (scope.outOfScope) notFound();
 
   const activeTab = params.tab === "recipes" ? "recipes" : "runs";
@@ -36,7 +39,9 @@ export async function ProductionPageContent({
     fetchProductionRuns(),
     loadProductionSurfaceData({ routeBranchId }),
   ]);
-  const rows: ProductionRunRow[] = res.success ? (res.data as ProductionRunRow[]) : [];
+  const rows: ProductionRunRow[] = res.success
+    ? (res.data as ProductionRunRow[])
+    : [];
 
   const runsContent = (
     <ProductionRunsClient
@@ -79,7 +84,11 @@ export async function ProductionPageContent({
       <AppPageHeader
         eyebrow={INVENTORY_VI.warehouse}
         title={INVENTORY_VI.productionTitle}
-        description={INVENTORY_VI.productionOrdersCardDescription}
+        description={
+          activeTab === "recipes"
+            ? INVENTORY_VI.productionRecipesCardDescription
+            : INVENTORY_VI.productionOrdersCardDescription
+        }
       />
       <AppPageTabs items={tabsList} defaultValue={activeTab}>
         <TabsContent value="runs" className="mt-0">
@@ -96,7 +105,7 @@ export async function ProductionPageContent({
 export default async function ProductionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[], tab?: string }>;
+  searchParams: Promise<{ branchId?: string | string[]; tab?: string }>;
 }) {
   return <ProductionPageContent searchParams={searchParams} />;
 }

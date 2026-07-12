@@ -22,6 +22,9 @@ test("branch production records planned and actual output on one screen", () => 
   assert.match(newClient, /Thực ra/);
   assert.match(newClient, /Đúng định mức/);
   assert.match(newClient, /router\.push\(basePath\)/);
+  assert.match(newClient, /showConsumptionEditor/);
+  assert.match(newClient, /Chỉnh thực chi/);
+  assert.doesNotMatch(newClient, /BranchOperatorPanel/);
   assert.doesNotMatch(newClient, /createProductionRun/);
   assert.doesNotMatch(newClient, /confirmProductionRun/);
   assert.doesNotMatch(newClient, /QuantityInput/);
@@ -32,8 +35,14 @@ test("atomic production RPC creates a run only when confirmation succeeds", () =
   assert.match(atomicMigration, /create_production_run_with_locations/);
   assert.match(atomicMigration, /confirm_production_run/);
   assert.match(atomicMigration, /invalid_actual_quantity/);
-  assert.match(atomicMigration, /REVOKE ALL ON FUNCTION public\.record_production_run/);
-  assert.match(atomicMigration, /GRANT EXECUTE ON FUNCTION public\.record_production_run/);
+  assert.match(
+    atomicMigration,
+    /REVOKE ALL ON FUNCTION public\.record_production_run/,
+  );
+  assert.match(
+    atomicMigration,
+    /GRANT EXECUTE ON FUNCTION public\.record_production_run/,
+  );
 });
 
 test("branch production uses NumberPad and a recovery Sheet for shortages", () => {
@@ -49,5 +58,15 @@ test("branch production uses NumberPad and a recovery Sheet for shortages", () =
   assert.match(
     detailClient,
     /if \(nextShortages\.length > 0\) \{\s*setShortages\(nextShortages\);\s*return;/,
+  );
+  assert.match(detailClient, /flex-1 overflow-y-auto/);
+  assert.match(
+    newClient,
+    /setShortages\(\[\]\);\s*setShowConsumptionEditor\(true\);/,
+  );
+  assert.match(detailClient, /run\.status === "in_progress"/);
+  assert.doesNotMatch(
+    detailClient,
+    /BranchOperatorDetailList|BranchOperatorStatusStrip|title="Thông tin lệnh"/,
   );
 });

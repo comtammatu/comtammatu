@@ -180,10 +180,12 @@ const sepayOrderEvidenceRpcResultSchema = z
   .object({
     status: z.enum([
       "matched",
+      "missing_payment_code",
       "order_not_found",
       "ambiguous_payment_code",
       "amount_mismatch",
       "payment_confirmation_failed",
+      "overpayment_needs_review",
       "invalid_payment_code",
       "invalid_amount",
     ]),
@@ -645,20 +647,11 @@ export async function POST(request: Request) {
       ? extractPaymentCodeFromText(bankCommand.value, codeRe)
       : null;
   const paymentCode = extractPaymentCode(payload, codeRe) ?? commandPaymentCode;
-  if (!paymentCode) {
-    console.warn("[sepay-webhook] missing payment code", { id: payload.id });
-    await markWebhookEvent(supabase, webhookEventId, {
-      processing_status: "failed",
-      http_status: 200,
-      error_code: "missing_payment_code",
-    });
-    return sepayAcceptedResponse();
-  }
 
   const untyped = supabase as unknown as UntypedRpcClient;
   const { data: rawRpcData, error: rpcError } = await untyped.rpc(
     "reconcile_sepay_order_evidence",
-    { p_event_id: webhookEventId, p_payment_code: paymentCode },
+    { p_event_id: webhookEventId, p_payment_code: paymentCode ?? "" },
   );
 
   if (rpcError) {

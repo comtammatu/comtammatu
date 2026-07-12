@@ -18,6 +18,12 @@ test("Branch waste is a native touch document workflow with an isolated Office f
   const photoUpload = read(
     "apps/web/app/(protected)/inventory/_components/photo-upload-input.tsx",
   );
+  const wastePhotoUpload = read(
+    "apps/web/app/(protected)/inventory/_components/waste-photo-upload.tsx",
+  );
+  const storageMigration = read(
+    "supabase/migrations/20260712130942_fix_branch_stocktake_and_waste_upload_auth.sql",
+  );
   const officePage = read(
     "apps/web/app/(protected)/inventory/waste/new/page.tsx",
   );
@@ -57,6 +63,7 @@ test("Branch waste is a native touch document workflow with an isolated Office f
   assert.match(client, /requestRemoveEditorLine/);
   assert.match(client, /overscroll-contain/);
   assert.match(client, /id="branch-waste-photo"/);
+  assert.match(client, /branchId=\{branchId\}/);
   assert.doesNotMatch(
     client,
     /\bWasteCreateClient\b|DocumentFormFrame|DataTable|embedded/,
@@ -66,7 +73,16 @@ test("Branch waste is a native touch document workflow with an isolated Office f
   assert.match(model, /WASTE_ALWAYS_TIER_2_REASONS/);
   assert.match(photoUpload, /id\?: string/);
   assert.match(photoUpload, /<input[\s\S]*id=\{id\}/);
+  assert.match(photoUpload, /INVENTORY_VI\.uploadFailed/);
+  assert.doesNotMatch(photoUpload, /toast\.error\(upErr\.message\)/);
+  assert.match(wastePhotoUpload, /folder=\{`waste\/\$\{branchId\}\/\$\{issueId\}`\}/);
+  assert.match(
+    storageMigration,
+    /has_permission\([\s\S]*\(storage\.foldername\(name\)\)\[3\][\s\S]*'inventory:writeoff'/,
+  );
+  assert.match(storageMigration, /'image\/heif'/);
   assert.match(officePage, /export async function WasteNewPageContent/);
+  assert.doesNotMatch(officePage, /S11_WASTE_TIER|inv_s11_waste_tier/);
   assert.match(officeClient, /<DocumentFormFrame/);
   assert.doesNotMatch(
     officePage,

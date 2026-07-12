@@ -1,46 +1,35 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
-const readWeb = (path: string): string =>
-  readFileSync(join(process.cwd(), path), "utf8");
+const existsWeb = (path: string): boolean =>
+  existsSync(join(process.cwd(), path));
 
-const catalogIndexSource = readWeb(
-  "app/(protected)/br/[branchId]/(operator)/stock/catalog/catalog-index-client.tsx",
-);
-const catalogListSource = readWeb(
-  "app/(protected)/br/[branchId]/(operator)/stock/catalog/catalog-list.tsx",
-);
-
-test("operator stock catalog index uses stable touch rows", () => {
-  assert.match(catalogIndexSource, /className="chrome-tap min-h-12/);
-  assert.match(catalogIndexSource, /<row\.icon aria-hidden="true" \/>/);
-  assert.match(
-    catalogIndexSource,
-    /<ChevronRight aria-hidden="true" className="size-4" \/>/,
-  );
-  assert.doesNotMatch(catalogIndexSource, /transition-transform/);
-  assert.doesNotMatch(catalogIndexSource, /active:scale-\[0\.97\]/);
+test("Branch stock does not duplicate tenant-wide catalog ownership", () => {
+  for (const path of [
+    "app/(protected)/br/[branchId]/(operator)/stock/catalog/page.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/catalog/catalog-index-client.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/catalog/catalog-list.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/catalog/categories/page.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/catalog/ingredients/page.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/catalog/units/page.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/catalog/thresholds/page.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/catalog/suppliers/page.tsx",
+  ]) {
+    assert.equal(existsWeb(path), false, path);
+  }
+  assert.equal(existsWeb("lib/messages/catalog.ts"), false);
 });
 
-test("operator stock catalog lists stay touch-first on narrow and tablet widths", () => {
-  assert.match(
-    catalogListSource,
-    /<Item\s+key=\{getRowKey\(row\)\}\s+variant="outline"\s+size="sm"\s+className="min-h-12"\s*>/,
-  );
-  assert.match(catalogListSource, /size="icon-touch"/);
-  assert.match(catalogListSource, /aria-label=\{action\.ariaLabel\(row\)\}/);
-  assert.match(
-    catalogListSource,
-    /className="line-clamp-2 min-w-0 break-words text-sm font-medium"/,
-  );
-  assert.match(
-    catalogListSource,
-    /className="line-clamp-2 break-words text-xs"/,
-  );
-  assert.match(catalogListSource, /<IconPlus aria-hidden="true"/);
-  assert.match(catalogListSource, /<IconPencil aria-hidden="true"/);
-  assert.match(catalogListSource, /<IconTrash aria-hidden="true"/);
-  assert.doesNotMatch(catalogListSource, /className="truncate text-/);
+test("tenant-wide inventory catalog stays on canonical Office routes", () => {
+  for (const path of [
+    "app/(protected)/inventory/ingredients/page.tsx",
+    "app/(protected)/inventory/settings/categories/page.tsx",
+    "app/(protected)/inventory/settings/units/page.tsx",
+    "app/(protected)/inventory/settings/thresholds/page.tsx",
+    "app/(protected)/inventory/suppliers/page.tsx",
+  ]) {
+    assert.equal(existsWeb(path), true, path);
+  }
 });

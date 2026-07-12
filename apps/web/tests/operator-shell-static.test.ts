@@ -133,9 +133,11 @@ test("operator install hint stays on Home and dismissal persists", () => {
     /if \(isOnline && !isOperatorHome\) return null/,
   );
   assert.equal(
-    (sharedToolbar.match(
-      /size="icon-touch"\s+className="shrink-0 text-muted-foreground"\s+onClick=\{handleDismiss\}\s+aria-label=\{copy\.dismissLabel\}/g,
-    ) ?? []).length,
+    (
+      sharedToolbar.match(
+        /size="icon-touch"\s+className="shrink-0 text-muted-foreground"\s+onClick=\{handleDismiss\}\s+aria-label=\{copy\.dismissLabel\}/g,
+      ) ?? []
+    ).length,
     2,
   );
   assert.match(containedLayout, /onClick=\{handleDismiss\}/);
@@ -162,7 +164,7 @@ test("operator home label is today, not an old branch title", () => {
   assert.doesNotMatch(labels, /Branch Runtime|Branch Ops/);
 });
 
-test("operator pages keep visible mobile identity and one shared back contract", () => {
+test("operator pages keep one shared back contract and Branch catalog stays retired", () => {
   const adapter = read(
     "apps/web/lib/branch-operator/components/branch-operator-page.tsx",
   );
@@ -172,21 +174,20 @@ test("operator pages keep visible mobile identity and one shared back contract",
   const stock = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
   );
-  const catalog = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/catalog-index-client.tsx",
-  );
 
-  assert.doesNotMatch(adapter, /hideHeaderOnMobile|sr-only sm:not-sr-only/);
+  assert.match(adapter, /hideHeaderOnMobile\?: boolean/);
+  assert.match(adapter, /sr-only sm:not-sr-only/);
   assert.match(adapter, /data-slot="branch-operator-page"/);
   assert.match(adapter, /backHref\?: string/);
-  assert.match(adapter, /<AppBackLink href=\{backHref\} onClick=\{backOnClick\}>/);
+  assert.match(
+    adapter,
+    /<AppBackLink href=\{backHref\} onClick=\{backOnClick\}>/,
+  );
   assert.doesNotMatch(home, /hideHeaderOnMobile/);
   assert.doesNotMatch(stock, /hideHeaderOnMobile/);
-  assert.match(catalog, /<BranchOperatorPage/);
-  assert.doesNotMatch(catalog, /CatalogBackControl/);
   assert.equal(
     exists(
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/catalog-back-header.tsx",
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/page.tsx",
     ),
     false,
   );
@@ -208,7 +209,7 @@ test("operator touch rows use explicit semantic activation", () => {
   );
 });
 
-test("operator home renders MODULE_ACL-backed capability tiles", () => {
+test("operator home keeps MODULE_ACL-backed capabilities in one tools menu", () => {
   const home = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
@@ -228,14 +229,14 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.doesNotMatch(todaySource, /EmployeeHomePageContent/);
   assert.doesNotMatch(todaySource, /messages\.employee\.home/);
   assert.match(home, /groups\.map/);
-  assert.match(home, /BranchOperatorActionSection/);
-  assert.match(home, /presentation="stations"/);
-  assert.match(home, /presentation="plain"/);
-  assert.match(home, /stationDescriptions/);
+  assert.match(home, /DropdownMenu/);
+  assert.match(home, /const toolGroups =/);
+  assert.doesNotMatch(home, /BranchOperatorActionSection/);
+  assert.doesNotMatch(home, /presentation="stations"|stationDescriptions/);
   assert.match(home, /resolveOperatorTileIcon/);
   assert.match(home, /getBranchPrimaryHomeGroup/);
   assert.doesNotMatch(home, /BranchOperatorControlBar|LayoutDashboard/);
-  assert.doesNotMatch(homeContract, /"\/team"|"\/stock(?:\/|")/);
+  assert.doesNotMatch(homeContract, /"\/team"/);
   for (const suffix of ["/pos", "/kds", "/runner", "/menu-limits"]) {
     assert.ok(homeContract.includes(`"${suffix}"`), suffix);
   }
@@ -243,7 +244,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
     home,
     /key: `\$\{group\.id\}-\$\{tile\.moduleKey\}-\$\{tile\.href\}`/,
   );
-  assert.match(home, /mobileColumns=\{2\}/);
+  assert.match(home, /homeCopy\.toolsMenu/);
   assert.match(home, /<HubQueueSection/);
   assert.doesNotMatch(home, /branch-dashboard/);
   assert.doesNotMatch(home, /showOverview/);
@@ -286,10 +287,15 @@ test("operator shift route renders the Branch workday plane", () => {
   assert.match(leave, /plane="branch"/);
   assert.match(leaveSurface, /BranchOperatorPage/);
   assert.match(leaveSurface, /plane === "branch"/);
-  assert.match(leaveClient, /BranchOperatorPanel/);
-  assert.match(leaveClient, /BranchOperatorActionBar/);
-  assert.match(leaveClient, /BranchOperatorStatusStrip/);
-  assert.match(leaveClient, /plane === "branch"/);
+  assert.doesNotMatch(
+    leaveClient,
+    /EmployeePanel|BranchOperatorPanel|StatusStrip|ActionBar/,
+  );
+  assert.match(leaveClient, /size="icon-touch"/);
+  assert.doesNotMatch(
+    leaveClient,
+    /request\.reason \? ` · \$\{request\.reason\}`/,
+  );
   assert.match(operatorCopy, /shift: \{/);
   assert.match(operatorCopy, /shiftTasks: \{/);
 });
@@ -303,7 +309,10 @@ test("operator shift count route renders the Branch count plane", () => {
   );
   const countSurface = read("apps/web/lib/staff-runtime/count/page.tsx");
 
-  assert.match(stockCountAlias, /redirect\(`\/br\/\$\{branchId\}\/shift\/count/);
+  assert.match(
+    stockCountAlias,
+    /redirect\(`\/br\/\$\{branchId\}\/shift\/count/,
+  );
   assert.match(shiftCount, /StaffCountPageContent/);
   assert.match(shiftCount, /plane="branch"/);
   assert.doesNotMatch(shiftCount, /EmployeeCountPageContent/);
@@ -366,9 +375,13 @@ test("operator hub owns branch workflow entry tiles", () => {
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/count"/,
   );
   assert.doesNotMatch(operatorTiles, /branch_pos_sessions/);
-  assert.match(
+  assert.doesNotMatch(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/waste"/,
+  );
+  assert.match(
+    operatorTiles,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/count-assignments"/,
   );
   assert.doesNotMatch(operatorTiles, /hrefTemplate: "\/inventory\/stocktake"/);
   assert.doesNotMatch(operatorTiles, /hrefTemplate: "\/inventory\/transfers"/);
@@ -441,7 +454,9 @@ test("branch management roots use Branch operator shell adapters", () => {
   }
 
   assert.match(
-    read("apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx"),
+    read(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
+    ),
     /redirect\(`\/br\/\$\{branchId\}`\)/,
   );
 });
@@ -479,9 +494,13 @@ test("branch dashboard is a compatibility alias for the single command home", ()
   const home = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
+  const settings = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
+  );
 
   assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
-  assert.match(home, /<HubReadinessSection/);
+  assert.doesNotMatch(home, /HubReadinessSection/);
+  assert.doesNotMatch(settings, /HubReadinessSection/);
   assert.doesNotMatch(dashboard, /KpiRow|KpiCard|tileGroups/);
 });
 
@@ -496,9 +515,13 @@ test("branch settings hub stays a setup-only Branch operator surface", () => {
 
   assert.match(settingsHub, /<BranchOperatorPage/);
   assert.match(settingsHub, /BranchOperatorActionSection/);
-  assert.match(settingsHub, /visibleTiles\.map/);
-  assert.match(settingsHub, /canAccess\(role, tile\.moduleKey\)/);
-  assert.doesNotMatch(settingsHub, /columns=\{1\}/);
+  assert.match(settingsHub, /presentation="plain"/);
+  assert.match(settingsHub, /columns=\{1\}/);
+  assert.match(settingsHub, /tiles\.map/);
+  assert.doesNotMatch(
+    settingsHub,
+    /HubReadinessSection|visibleTiles|canAccess\(|AppEmptyState/,
+  );
   assert.doesNotMatch(
     settingsHub,
     /AppLinkCard|LinkCardGrid|KpiRow|KpiCard|BranchManagementShell|AppPageHeader/,
@@ -513,14 +536,11 @@ test("branch settings hub stays a setup-only Branch operator surface", () => {
   assert.ok(posIndex > tableIndex, "POS setup follows tables");
   assert.ok(kdsIndex > posIndex, "KDS setup follows POS");
   assert.ok(printersIndex > kdsIndex, "printers setup follows KDS");
-  assert.doesNotMatch(
-    hubTiles,
-    /branch_dashboard|branch_pos_sessions|moduleKey: "hr"|\/hr/,
-  );
+  assert.doesNotMatch(hubTiles, /moduleKey|branch_dashboard|\/hr/);
 
   assert.match(settingsMessages, /hubTitle: "Thiết lập vận hành chi nhánh"/);
   assert.match(settingsMessages, /hubDescription: "Bàn, POS, bếp và in"/);
-  assert.match(settingsMessages, /posSetupTitle: "Máy POS & tồn kho"/);
+  assert.match(settingsMessages, /posSetupTitle: "Máy POS"/);
   assert.doesNotMatch(
     settingsMessages,
     /attendanceChecklistDescription:\s*"Checklist template và phân công công việc/,
@@ -543,14 +563,21 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
       /@lib\/branch-operator\/components\/branch-operator-page/,
     );
     assert.match(source, /<BranchOperatorPage/);
-    if (!path.endsWith("/printers/page.tsx")) {
-      assert.match(source, /<BranchOperatorPanel/);
-    } else {
-      assert.match(source, /<PrintersClient[\s\S]*embedded/);
+    if (path.endsWith("/printers/page.tsx")) {
+      assert.match(source, /<PrintersClient[\s\S]*branch=\{branchRes\.data\}/);
+      assert.match(source, /readinessPrinterOnlineBadge/);
+      assert.doesNotMatch(source, /<BranchOperatorPanel/);
+    }
+    if (path.endsWith("/tables/page.tsx") || path.endsWith("/kds/page.tsx")) {
       assert.doesNotMatch(source, /<BranchOperatorPanel/);
     }
     assert.match(source, /canManageBranchFloorSettings\(claims\.user_role\)/);
     assert.match(source, /redirect\(`\/br\/\$\{branchId\}\/settings`\)/);
+    assert.match(source, /\.eq\("branch_kind", "branch"\)/);
+    assert.match(
+      source,
+      /backLabel=\{messages\.settings\.branch\.settingsBack\}/,
+    );
     assert.doesNotMatch(
       source,
       /<AppPage\b|AppPageHeader|BranchManagementShell|OfficeModuleShell|ManagementShell|KpiCard/,
@@ -574,7 +601,7 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
     read(
       "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx",
     ),
-    /<StockControlCard[\s\S]*embedded/,
+    /claims\.user_role === "owner"[\s\S]*<StockControlCard[\s\S]*embedded/,
   );
   assert.match(
     read(
@@ -598,7 +625,7 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
     read(
       "apps/web/app/(protected)/br/[branchId]/(operator)/settings/tables/page.tsx",
     ),
-    /messages\.settings\.branch\.tablesDescription/,
+    /messages\.settings\.tables\.tableListDescription[\s\S]*messages\.settings\.tables\.zonesDescription/,
   );
   assert.match(
     read(
@@ -617,6 +644,9 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
     "apps/web/app/(protected)/branch-settings/_shared/printers/printers-client.tsx",
   );
   assert.match(printersClient, /<Item[\s\S]*variant="outline"/);
+  assert.match(printersClient, /<SheetContent/);
+  assert.match(printersClient, /"connection" \| "routing"/);
+  assert.doesNotMatch(printersClient, /AppSection|AppDialog/);
   assert.doesNotMatch(printersClient, /bg-card p-3/);
 
   const kdsStationForm = read(
@@ -631,16 +661,17 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
   );
   assert.match(posSessionsClient, /BranchOperatorFrame/);
   assert.doesNotMatch(posSessionsClient, /rounded-md border/);
-  assert.match(posSessionsClient, /grid gap-3 lg:grid-cols-2 xl:grid-cols-4/);
-  assert.match(posSessionsClient, /grid gap-3 lg:grid-cols-3/);
-  assert.match(posSessionsClient, /grid gap-2 lg:grid-cols-2/);
+  assert.match(posSessionsClient, /PosSessionsListClient/);
+  assert.match(posSessionsClient, /PosSessionDetailClient/);
+  assert.match(posSessionsClient, /grid grid-cols-2 gap-2/);
+  assert.doesNotMatch(posSessionsClient, /SessionReportCard|onCloseShift/);
   assert.doesNotMatch(
     posSessionsClient,
     /grid gap-[23] (?:text-sm )?sm:grid-cols-[23]/,
   );
 });
 
-test("operator home renders the unified Cần xử lý queue before domain tile rows (V2, D059)", () => {
+test("operator home keeps the active queue in the body and capability links in the tools menu", () => {
   const home = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
@@ -655,10 +686,9 @@ test("operator home renders the unified Cần xử lý queue before domain tile 
   assert.doesNotMatch(queueSource, /variant=\{badgeVariant\}/);
   assert.match(queueSource, /branchCopy\.queueTitle/);
 
-  assert.ok(
-    home.indexOf("<HubQueueSection") < home.indexOf("groups.map"),
-    "Hub queue should render before domain tile rows",
-  );
+  assert.match(home, /action=\{[\s\S]*<DropdownMenu>/);
+  assert.match(home, /<HubQueueSection/);
+  assert.doesNotMatch(home, /BranchOperatorActionSection/);
 });
 
 test("operator today shift and profile screens use responsive branch layout", () => {
@@ -772,7 +802,9 @@ test("operator today shift and profile screens use responsive branch layout", ()
   assert.match(profileActions, /import\("\.\/profile-avatar-upload"\)/);
   assert.match(profileActions, /ssr: false/);
   assert.match(profile, /buttonSize="touch"/);
-  assert.match(profile, /buttonVariant="default"/);
+  assert.match(profile, /hideHeaderOnMobile/);
+  assert.match(profile, /h-16 min-h-16 w-16 min-w-16 sm:h-20 sm:w-20/);
+  assert.doesNotMatch(profile, /BranchOperatorPanel/);
   assert.match(profile, /buttonSize="sm"/);
   assert.match(profile, /buttonVariant="outline"/);
   assert.match(profile, /buttonVariant="ghost"/);
@@ -850,13 +882,11 @@ test("employee profile self-service update uses the scoped profile RPC", () => {
   assert.match(migration, /p_birth_date date DEFAULT NULL::date/);
 });
 
-test("manager smart card counts pending waste approvals with checkouts", () => {
+test("manager personal shift does not reload Team approval queues", () => {
   const home = read("apps/web/lib/staff-runtime/page.tsx");
 
-  assert.match(home, /\.eq\("issue_type", "writeoff"\)/);
-  assert.match(home, /\.eq\("approval_status", "pending"\)/);
-  assert.match(home, /INVENTORY_WASTE_APPROVE/);
-  assert.match(home, /pendingCheckouts \+ pendingWaste/);
+  assert.doesNotMatch(home, /pendingCheckouts|pendingWaste|pendingCountSlips/);
+  assert.doesNotMatch(home, /INVENTORY_WASTE_APPROVE|HR_APPROVE_CHECKOUT/);
 });
 
 test("manager shift dashboard keeps the self attendance card", () => {
@@ -864,6 +894,7 @@ test("manager shift dashboard keeps the self attendance card", () => {
 
   assert.match(
     home,
-    /mode === "manager-dashboard"[\s\S]*\{todayCard\}[\s\S]*\{managerActionPanel\}/,
+    /mode === "manager-dashboard"[\s\S]*\{todayCard\}[\s\S]*\{staleOpenShiftSection\}/,
   );
+  assert.doesNotMatch(home, /managerActionPanel|Quản lý đội chi nhánh/);
 });

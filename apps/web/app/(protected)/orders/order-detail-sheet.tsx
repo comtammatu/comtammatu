@@ -8,6 +8,7 @@ import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Sheet,
@@ -87,6 +88,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
   const [items, setItems] = useState<OrderItem[] | null>(null);
   const [itemsError, setItemsError] = useState<string | null>(null);
   const [itemsPending, startItemsTransition] = useTransition();
+  const [auditVisible, setAuditVisible] = useState(false);
 
   const orderId = order.id;
 
@@ -128,6 +130,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
     setAuditError(null);
     setItems(null);
     setItemsError(null);
+    setAuditVisible(false);
     loadAudit(orderId);
     loadItems(orderId);
   }, [orderId, loadAudit, loadItems]);
@@ -488,49 +491,62 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
         </Frame>
 
         {/* ─── Audit timeline ─── */}
-        <div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {ORDERS_VI.auditHistoryTitle}
-          </p>
-          {auditPending && (
-            <p className="text-sm text-muted-foreground">{STATES_VI.loading}</p>
-          )}
-          {auditError && (
-            <p className="text-sm text-destructive">{auditError}</p>
-          )}
-          {!auditPending && !auditError && audit && audit.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              {ORDERS_VI.noAuditHistory}
-            </p>
-          )}
-          {!auditPending && !auditError && audit && audit.length > 0 && (
-            <ol className="flex flex-col gap-2">
-              {audit.map((entry) => (
-                <li key={entry.id}>
-                  <Frame className="p-3 text-sm">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="font-medium">{entry.label}</span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {formatVNDateTime(entry.at)}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Bởi{" "}
-                      <span className="font-medium text-foreground">
-                        {entry.by_name}
-                      </span>
-                    </p>
-                    {entry.reason && (
-                      <p className="mt-1 text-sm">
-                        <span className="text-muted-foreground">Lý do: </span>
-                        {entry.reason}
-                      </p>
-                    )}
-                  </Frame>
-                </li>
-              ))}
-            </ol>
-          )}
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            onClick={() => setAuditVisible((current) => !current)}
+          >
+            {auditVisible ? "Ẩn lịch sử" : ORDERS_VI.auditHistoryTitle}
+          </Button>
+          {auditVisible ? (
+            <>
+              {auditPending ? (
+                <p className="text-sm text-muted-foreground">
+                  {STATES_VI.loading}
+                </p>
+              ) : null}
+              {auditError ? (
+                <p className="text-sm text-destructive">{auditError}</p>
+              ) : null}
+              {!auditPending && !auditError && audit?.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {ORDERS_VI.noAuditHistory}
+                </p>
+              ) : null}
+              {!auditPending && !auditError && audit && audit.length > 0 ? (
+                <ol className="flex flex-col gap-2">
+                  {audit.map((entry) => (
+                    <li key={entry.id}>
+                      <Frame className="p-3 text-sm">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <span className="font-medium">{entry.label}</span>
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {formatVNDateTime(entry.at)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Bởi{" "}
+                          <span className="font-medium text-foreground">
+                            {entry.by_name}
+                          </span>
+                        </p>
+                        {entry.reason ? (
+                          <p className="mt-1 text-sm">
+                            <span className="text-muted-foreground">
+                              Lý do:{" "}
+                            </span>
+                            {entry.reason}
+                          </p>
+                        ) : null}
+                      </Frame>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+            </>
+          ) : null}
         </div>
       </div>
     </>

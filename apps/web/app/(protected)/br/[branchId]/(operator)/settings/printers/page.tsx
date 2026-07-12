@@ -5,7 +5,6 @@ import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
   PrintersClient,
-  type Agent,
   type Category,
   type Printer,
 } from "@/(protected)/branch-settings/_shared/printers/printers-client";
@@ -41,6 +40,7 @@ export default async function BranchPrintersPage({
       .select("id, name")
       .eq("id", branchId)
       .eq("tenant_id", claims.tenant_id)
+      .eq("branch_kind", "branch")
       .eq("is_active", true)
       .maybeSingle(),
     supabase
@@ -95,14 +95,19 @@ export default async function BranchPrintersPage({
       description={messages.settings.branch.printersDescription(
         branchRes.data.name,
       )}
+      badge={{
+        children: (agentRes.data ?? [])[0]?.is_online
+          ? messages.settings.branch.readinessPrinterOnlineBadge
+          : messages.settings.branch.readinessPrinterOfflineBadge,
+        variant: (agentRes.data ?? [])[0]?.is_online ? "success" : "outline",
+      }}
       backHref={`/br/${branchId}/settings`}
+      backLabel={messages.settings.branch.settingsBack}
     >
       <PrintersClient
-        branches={[branchRes.data]}
+        branch={branchRes.data}
         printers={printers as Printer[]}
-        agents={(agentRes.data ?? []) as Agent[]}
         categories={(categoriesRes.data ?? []) as Category[]}
-        embedded
       />
     </BranchOperatorPage>
   );

@@ -61,7 +61,7 @@ import {
   compareTransferQueue,
   type TransferListRow,
   type TransferTab,
-} from "./transfer-list-model";
+} from "@lib/inventory/transfer-list-model";
 
 import { ACTIONS_VI, FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 export type { BranchForTransfer };

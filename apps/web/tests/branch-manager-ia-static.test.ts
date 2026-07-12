@@ -290,55 +290,14 @@ test("Branch operator routes do not import management shell chrome", () => {
   }
 });
 
-test("Branch Hub readiness keeps live status and scoped CTAs", () => {
-  const readiness = read(
+test("Branch Hub does not restore the retired readiness presentation", () => {
+  for (const path of [
     "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-readiness-section.tsx",
-  );
-  const readinessConfig = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
-  );
-  const readinessList = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_components/command-sections.tsx",
-  );
-
-  assert.match(readiness, /fetchBranchDayStatus\(supabase, claims, branchId\)/);
-  assert.match(readiness, /const items = buildReadinessItems\(day, copy, \{/);
-  assert.match(readiness, /<BranchReadinessList items=\{items\} \/>/);
-  assert.match(
-    readiness,
-    /floorHref:[\s\S]*day\.tablesTotal <= 0[\s\S]*tablesHref[\s\S]*day\.setupActiveTerminals <= 0[\s\S]*posSettingsHref/,
-  );
-
-  for (const contract of [
-    ["menuHref", "menu-limits", "readinessMenuCta"],
-    ["printersHref", "printers", "readinessPrinterCta"],
-    [
-      "checkoutApprovalsHref",
-      "shift/checkout-approvals",
-      "readinessCheckoutCta",
-    ],
-  ] as const) {
-    assert.match(
-      readiness,
-      new RegExp(`${contract[0]}:[\\s\\S]*${contract[1]}`),
-      `${contract[0]} must stay on its Branch route`,
-    );
-    assert.match(
-      readinessConfig,
-      new RegExp(`href: hrefs\\.${contract[0]}`),
-      `${contract[0]} must reach its readiness row`,
-    );
-    assert.match(
-      readinessConfig,
-      new RegExp(
-        `ctaLabel: hrefs\\.${contract[0]}[\\s\\S]*copy\\.${contract[2]}`,
-      ),
-      `${contract[0]} must keep its readiness CTA`,
-    );
+  ]) {
+    assert.equal(existsSync(resolve(repoRoot, path)), false, path);
   }
-
-  assert.match(readinessList, /href=\{item\.href\}/);
-  assert.match(readinessList, /ctaLabel=\{item\.ctaLabel\}/);
 });
 
 test("Branch settings hub exposes setup controls only", () => {
@@ -356,11 +315,11 @@ test("Branch settings hub exposes setup controls only", () => {
   assert.match(settingsHub, /<BranchOperatorActionSection/);
   assert.doesNotMatch(settingsHub, /<AppLinkCard/);
   assert.doesNotMatch(settingsHub, /<LinkCardGrid/);
-  // Per-tile ACL gating keeps each tile to surfaces the role can open.
-  assert.match(
+  assert.match(settingsHub, /presentation="plain"/);
+  assert.match(settingsHub, /columns=\{1\}/);
+  assert.doesNotMatch(
     settingsHub,
-    /canAccess\(role, tile\.moduleKey\)/,
-    "settings hub tiles must be module-ACL gated per tile",
+    /HubReadinessSection|canAccess\(|visibleTiles/,
   );
   // Setup route hrefs now live in the extracted tile config.
   assert.match(hubTiles, /settings\/tables/);
@@ -380,8 +339,8 @@ test("Branch settings hub exposes setup controls only", () => {
   );
   assert.match(
     settingsMessages,
-    /posSetupTitle: "Máy POS & tồn kho"/,
-    "Settings POS tile must name the stock-control policy it contains",
+    /posSetupTitle: "Máy POS"/,
+    "Settings POS tile must describe terminal setup without exposing owner policy",
   );
   assert.doesNotMatch(
     settingsMessages,
@@ -429,14 +388,8 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
   assert.match(tableTable, /DataTable/);
   assert.match(dataTable, /mobileBreakpoint\?: number/);
   assert.match(dataTable, /useIsMobile\(mobileBreakpoint\)/);
-  assert.match(
-    terminalsClient,
-    /mobileBreakpoint=\{embedded \? 1280 : 1024\}/,
-  );
-  assert.match(
-    stationsClient,
-    /mobileBreakpoint=\{embedded \? 1280 : 1024\}/,
-  );
+  assert.match(terminalsClient, /mobileBreakpoint=\{embedded \? 1280 : 1024\}/);
+  assert.match(stationsClient, /mobileBreakpoint=\{embedded \? 1280 : 1024\}/);
   assert.match(tableTable, /mobileBreakpoint=\{1024\}/);
   assert.doesNotMatch(
     posSessionsClient,
@@ -446,20 +399,21 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
   assert.match(posSessionsClient, /<Drawer/);
   assert.match(posSessionsClient, /<BranchOperatorFrame/);
   assert.match(posSessionsClient, /min-w-0/);
-  assert.match(tablesClient, /w-full sm:w-60/);
-  assert.match(tablesClient, /<TabsList className="h-11 w-full"/);
+  assert.match(tablesClient, /<AppPageTabs/);
+  assert.match(tablesClient, /paramKey="view"/);
+  assert.doesNotMatch(tablesClient, /branch-select|selectedBranchId/);
   assert.match(terminalsClient, /size="icon-touch"/);
   assert.match(stationsClient, /size="icon-touch"/);
   assert.match(stockControlCard, /<Switch[\s\S]*?size="touch"/);
   assert.match(sheet, /size="icon-touch"/);
   assert.match(terminalsClient, /const canSwitchBranch = branches\.length > 1/);
   assert.match(stationsClient, /const canSwitchBranch = branches\.length > 1/);
-  assert.match(tablesClient, /const canSwitchBranch = branches\.length > 1/);
-  assert.match(printersClient, /const canSwitchBranch = branches\.length > 1/);
+  assert.doesNotMatch(printersClient, /canSwitchBranch|branches:/);
   assert.match(terminalsClient, /filters=\{\s*canSwitchBranch \?/);
   assert.match(stationsClient, /filters=\{\s*canSwitchBranch \?/);
-  assert.match(tablesClient, /\{canSwitchBranch \? \(\s*<AppToolbar/);
-  assert.match(printersClient, /\{canSwitchBranch \? \(\s*<div/);
+  assert.match(printersClient, /"connection" \| "routing"/);
+  assert.match(printersClient, /<SheetContent/);
+  assert.doesNotMatch(printersClient, /AppSection|AppDialog/);
   assert.doesNotMatch(setupClients, /SelectTrigger className="w-60"/);
   assert.doesNotMatch(setupClients, /size="icon"/);
   assert.doesNotMatch(setupClients, /className="ml-auto"/);
@@ -470,12 +424,7 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
     /space-y-/,
     "setup clients should use flex/grid gap rhythm instead of margin-based stacks",
   );
-  assert.match(
-    printersClient,
-    /basis-full justify-start pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0/,
-    "printer row actions should occupy their own mobile row and align right on desktop",
-  );
-  assert.match(printersClient, /className="w-full sm:w-auto"/);
+  assert.match(printersClient, /size="touch"/);
 });
 
 test("Branch settings pages do not import admin route-local settings clients", () => {
@@ -540,11 +489,6 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
 
   const branchWasteCreateClient = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/branch-waste-create-client.tsx",
-  );
-  assert.match(
-    branchWasteCreateClient,
-    /href=\{backHref\}/,
-    "branch waste form needs an explicit safe cancel target",
   );
   assert.doesNotMatch(
     branchWasteCreateClient,

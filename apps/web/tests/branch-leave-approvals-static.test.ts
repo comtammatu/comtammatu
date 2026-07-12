@@ -17,6 +17,7 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
 
   assert.match(route, /loadBranchLeaveApprovalData/);
   assert.match(route, /BranchLeaveApprovalsClient/);
+  assert.match(route, /query\.view === "history" \? "history" : "pending"/);
   assert.doesNotMatch(route, /LeaveApprovalsPageContent|EmployeePage|embedded/);
 
   assert.match(data, /import "server-only"/);
@@ -27,10 +28,20 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
   assert.match(client, /BranchOperatorPage/);
   assert.match(client, /<button[\s\S]*type="button"[\s\S]*setSelectedId/);
   assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
+  assert.match(client, /<SheetDescription className="sr-only">/);
   assert.match(client, /useBranchOpsEvents\(\{[\s\S]*branchId/);
-  assert.match(client, /md:grid-cols-2/);
+  assert.match(
+    client,
+    /href=\{`\/br\/\$\{branchId\}\/shift\/leave-approvals\?view=pending`\}/,
+  );
+  assert.match(
+    client,
+    /href=\{`\/br\/\$\{branchId\}\/shift\/leave-approvals\?view=history`\}/,
+  );
+  assert.match(client, /<ItemGroup>[\s\S]*size="sm"/);
   assert.match(client, /size="touch(?:-lg)?"/);
-  assert.match(client, /sticky bottom-0/);
+  assert.match(client, /<SheetFooter className="[^"]*sticky bottom-0/);
+  assert.doesNotMatch(client, /BranchOperatorPanel|md:grid-cols-2|setView/);
   assert.doesNotMatch(
     client,
     /DataTable|LeaveRequestsTable|EmployeePage|SelectTrigger/,
@@ -38,13 +49,9 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
 });
 
 test("leave data is neutral while Office keeps its desktop presenter", () => {
-  const action = read(
-    "apps/web/app/(protected)/hr/leave-request-actions.ts",
-  );
+  const action = read("apps/web/app/(protected)/hr/leave-request-actions.ts");
   const service = read("apps/web/lib/hr/leave-request-data.ts");
-  const office = read(
-    "apps/web/app/(protected)/hr/leave-requests-table.tsx",
-  );
+  const office = read("apps/web/app/(protected)/hr/leave-requests-table.tsx");
 
   assert.match(action, /fetchLeaveRequestRows/);
   assert.match(

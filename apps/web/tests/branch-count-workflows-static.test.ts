@@ -77,6 +77,9 @@ test("Branch count slip review owns a touch queue and Branch revalidation", () =
   assert.match(client, /<button type="button" onClick=\{\(\) => setSelectedId/);
   assert.match(client, /focusFirstPending[\s\S]*row\.status === "submitted"/);
   assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
+  assert.match(client, /<SheetDescription className="sr-only">/);
+  assert.match(client, /selectedChangedLines/);
+  assert.match(client, /showAllLines/);
   assert.match(client, /approveCountSlip/);
   assert.match(client, /requestCountRecount/);
   assert.match(client, /md:grid-cols-2/);
@@ -85,6 +88,7 @@ test("Branch count slip review owns a touch queue and Branch revalidation", () =
     /DataTable|DocumentFormFrame|BranchOperatorPanel|embedded/,
   );
   assert.doesNotMatch(client, /stock\/count-assignments/);
+  assert.doesNotMatch(client, /label: INVENTORY_VI\.varianceShort/);
   assert.match(
     actions,
     /revalidatePath\(`\/br\/\$\{slip\.branch_id\}\/stock\/count-slips`\)/,

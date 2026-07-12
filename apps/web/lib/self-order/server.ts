@@ -7,6 +7,7 @@ import {
   publicSelfOrderSnapshotSchema,
   selfOrderPaymentActionResponseSchema,
   selfOrderPaymentRequestStatusResponseSchema,
+  selfOrderMomoResponseSchema,
   selfOrderSubmitActionResponseSchema,
   selfOrderVietQrResponseSchema,
 } from "./contracts";
@@ -57,6 +58,7 @@ type RateLimitPurpose = "batch" | "payment";
 type SelfOrderPaymentRequestStatus =
   | "cash_call"
   | "vietqr_pending"
+  | "momo_pending"
   | "completed"
   | "cancelled"
   | "expired";
@@ -697,7 +699,7 @@ export async function createSelfOrderPaymentRequest(input: {
   token: string;
   ipHash: string | null;
   clientOpId: string;
-  method: "cash_call" | "vietqr";
+  method: "cash_call" | "vietqr" | "momo";
   invoice?: Record<string, unknown>;
 }): Promise<SelfOrderActionResult<Record<string, unknown>>> {
   const rateLimit = await consumeSelfOrderRateLimit({
@@ -744,10 +746,16 @@ export async function createSelfOrderPaymentRequest(input: {
   const parsed =
     input.method === "vietqr"
       ? selfOrderVietQrResponseSchema.safeParse(publicPayload)
-      : selfOrderPaymentActionResponseSchema.safeParse(publicPayload);
+      : input.method === "momo"
+        ? selfOrderMomoResponseSchema.safeParse(publicPayload)
+        : selfOrderPaymentActionResponseSchema.safeParse(publicPayload);
   if (!parsed.success) {
     return publicPayloadFailure(
-      input.method === "vietqr" ? "vietqr_payment" : "cash_payment",
+      input.method === "vietqr"
+        ? "vietqr_payment"
+        : input.method === "momo"
+          ? "momo_payment"
+          : "cash_payment",
       parsed.error.issues,
       "payment",
     );

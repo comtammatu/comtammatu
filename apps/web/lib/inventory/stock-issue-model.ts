@@ -37,7 +37,6 @@ export type BranchStockIssueIngredient = {
 
 export type BranchStockIssuePermissions = {
   canCreateOther: boolean;
-  canCreateWriteoff: boolean;
 };
 
 export type BranchStockIssueDetail = {
@@ -69,10 +68,7 @@ export function toBranchStockIssueStatus(
 export function getBranchStockIssueCreateTypes(
   permissions: BranchStockIssuePermissions,
 ): BranchInternalIssueType[] {
-  return [
-    ...(permissions.canCreateWriteoff ? (["writeoff"] as const) : []),
-    ...(permissions.canCreateOther ? (["other"] as const) : []),
-  ];
+  return permissions.canCreateOther ? ["other"] : [];
 }
 
 export function filterBranchStockIssues(
@@ -104,6 +100,7 @@ export function canConfirmBranchStockIssue({
 }: Pick<BranchStockIssueDetail, "issue" | "lines" | "canManage">) {
   return (
     canManage &&
+    issue.type !== "writeoff" &&
     issue.status === "draft" &&
     lines.length > 0 &&
     lines.every((line) => (line.reason ?? "").trim().length > 0)

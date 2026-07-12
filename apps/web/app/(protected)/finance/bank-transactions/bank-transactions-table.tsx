@@ -29,6 +29,7 @@ import {
   SEPAY_BANK_WEBHOOK_REVIEW_VALUES,
   classifySepayReconciliationState,
   classifySepayUnmatchedMoneyIn,
+  isSepayOverpayment,
   isOpenSepayBankWebhookReview,
   type SepayBankWebhookReviewStatus,
   type SepayBankTransaction,
@@ -51,6 +52,7 @@ const BANK_RECONCILIATION_FILTER_VALUES = [
   "money_in_review",
   "money_out_review",
   "missing_webhook",
+  "overpayment",
   "matched",
   "webhook_error",
 ] as const;
@@ -161,6 +163,7 @@ function reasonLabel(reason: SepayUnmatchedMoneyInReason): string {
 }
 
 function reasonDetail(tx: SepayBankTransaction): string {
+  if (isSepayOverpayment(tx)) return copy.overpayment.detail;
   if (tx.errorCode) return tx.errorCode;
   if (tx.processingStatus === "failed") return tx.processingStatus;
   return optionalReferenceCode(tx);
@@ -277,6 +280,11 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
           {compactDateTime(row.tx.transactionDate ?? row.tx.createdAt)}
         </span>
         <span className="font-mono">{referenceCode(row.tx)}</span>
+        {isSepayOverpayment(row.tx) ? (
+          <span>
+            {copy.overpayment.order}: {formatOrderId(row.tx.orderId)}
+          </span>
+        ) : null}
         <span>
           {copy.account}: {row.tx.accountNumber ?? "—"}
         </span>
@@ -430,6 +438,14 @@ function ReconciliationActionCell({
 }) {
   const state = classifySepayReconciliationState(tx);
 
+  if (isSepayOverpayment(tx)) {
+    return (
+      <span className="text-muted-foreground">
+        {copy.overpayment.linkUnavailable}
+      </span>
+    );
+  }
+
   if (state === "webhook_error") {
     return (
       <span className="text-muted-foreground">
@@ -464,6 +480,7 @@ function rowMatchesFilter(
   if (filter === "needs_review") {
     return state !== "matched";
   }
+  if (filter === "overpayment") return isSepayOverpayment(row.tx);
   if (filter === "matched") return state === "matched";
   if (filter === "webhook_error") return state === "webhook_error";
   if (filter === "money_in_review") {
@@ -504,6 +521,7 @@ export function BankTransactionsTable({
     ["money_in_review", copy.filters.moneyInReview],
     ["money_out_review", copy.filters.moneyOutReview],
     ["missing_webhook", copy.filters.missingWebhook],
+    ["overpayment", copy.filters.overpayment],
     ["matched", copy.filters.matched],
     ["webhook_error", copy.filters.webhookError],
   ] as const;

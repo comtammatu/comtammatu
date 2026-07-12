@@ -1,15 +1,23 @@
-import { Fragment, Suspense } from "react";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { Menu as IconMenu } from "lucide-react";
 import {
   MODULE_ACL,
   resolveOperatorTiles,
   type BranchKind,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { Button } from "@comtammatu/ui/components/button";
 import {
-  BranchOperatorActionSection,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@comtammatu/ui/components/dropdown-menu";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { getTodayWorkState } from "@lib/staff-runtime/_lib/today-work-state";
 import { messages } from "@lib/messages";
 import { loadAuthState } from "@/_lib/auth";
@@ -23,7 +31,6 @@ import {
 import { resolveOperatorTileIcon } from "./operator-tile-icons";
 
 import { HubQueueSection } from "./_components/hub/hub-queue-section";
-import { HubReadinessSection } from "./_components/hub/hub-readiness-section";
 import { HubTodayStatus } from "./_components/hub/hub-today-status";
 import {
   HubTodayStatusPending,
@@ -31,11 +38,6 @@ import {
 } from "./_components/hub/hub-skeletons";
 
 const homeCopy = messages.operator.home;
-const stationDescriptions: Record<string, string> = {
-  pos: homeCopy.posDescription,
-  kds: homeCopy.kdsDescription,
-  runner: homeCopy.runnerDescription,
-};
 
 export default async function OperatorHomePage({
   params,
@@ -113,41 +115,85 @@ export default async function OperatorHomePage({
           icon: resolveOperatorTileIcon("Settings"),
           title: MODULE_ACL.branch_settings.label,
         },
+        {
+          key: "branch-pos-sessions",
+          href: `/br/${context.branchId}/pos-sessions`,
+          icon: resolveOperatorTileIcon("Clock"),
+          title: MODULE_ACL.branch_pos_sessions.label,
+        },
       ]
     : [];
 
-  const ownerWorkspaceLinks =
-    claims.user_role === "owner"
-      ? [
-          {
-            key: "owner-finance",
-            href: MODULE_ACL.finance.path,
-            icon: resolveOperatorTileIcon("ChartBar"),
-            title: MODULE_ACL.finance.label,
-          },
-          {
-            key: "owner-hr",
-            href: MODULE_ACL.hr.path,
-            icon: resolveOperatorTileIcon("Users"),
-            title: MODULE_ACL.hr.label,
-          },
-          {
-            key: "owner-payroll",
-            href: MODULE_ACL.hr_payroll.path,
-            icon: resolveOperatorTileIcon("Briefcase"),
-            title: MODULE_ACL.hr_payroll.label,
-          },
-          {
-            key: "owner-settings",
-            href: MODULE_ACL.settings.path,
-            icon: resolveOperatorTileIcon("Settings"),
-            title: MODULE_ACL.settings.label,
-          },
-        ]
-      : [];
+  const toolGroups = [
+    ...groups.map((group) => ({
+      key: group.id,
+      title: group.title,
+      links: group.tiles.map((tile) => ({
+        key: `${group.id}-${tile.moduleKey}-${tile.href}`,
+        href: tile.href,
+        icon: resolveOperatorTileIcon(tile.icon),
+        title: tile.label,
+        disabled: tilesLockedBeforeClockIn && group.id === "sales_kitchen",
+      })),
+    })),
+    {
+      key: "branch-management",
+      title: APP_COPY_VI.operatorOpsActions,
+      links: branchManagementLinks.map((link) => ({
+        ...link,
+        disabled: false,
+      })),
+    },
+  ].filter((group) => group.links.length > 0);
 
   return (
-    <BranchOperatorPage title={APP_COPY_VI.operatorHome}>
+    <BranchOperatorPage
+      title={APP_COPY_VI.operatorHome}
+      action={
+        toolGroups.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" size="touch">
+                <IconMenu />
+                <span className="hidden sm:inline">{homeCopy.toolsMenu}</span>
+                <span className="sr-only sm:hidden">{homeCopy.toolsMenu}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              {toolGroups.map((group, groupIndex) => (
+                <div key={group.key}>
+                  {groupIndex > 0 ? <DropdownMenuSeparator /> : null}
+                  <DropdownMenuLabel>{group.title}</DropdownMenuLabel>
+                  {group.links.map((item) =>
+                    item.disabled ? (
+                      <DropdownMenuItem
+                        key={item.key}
+                        disabled
+                        className="min-h-11"
+                      >
+                        <item.icon />
+                        {item.title}
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        key={item.key}
+                        asChild
+                        className="min-h-11"
+                      >
+                        <Link href={item.href}>
+                          <item.icon />
+                          {item.title}
+                        </Link>
+                      </DropdownMenuItem>
+                    ),
+                  )}
+                </div>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : undefined
+      }
+    >
       {claims.user_role !== "owner" ? (
         <Suspense fallback={<HubTodayStatusPending />}>
           <HubTodayStatus branchId={context.branchId} />
@@ -157,75 +203,6 @@ export default async function OperatorHomePage({
       <Suspense fallback={<HubQueuePending />}>
         <HubQueueSection branchId={context.branchId} />
       </Suspense>
-
-      {isBranchManagerOrOwner ? (
-        <Suspense fallback={<HubQueuePending />}>
-          <HubReadinessSection branchId={context.branchId} />
-        </Suspense>
-      ) : null}
-
-      {groups.map((group) => {
-        const stationTiles = group.tiles.filter(
-          (tile) => stationDescriptions[tile.moduleKey] != null,
-        );
-        const supportingTiles = group.tiles.filter(
-          (tile) => stationDescriptions[tile.moduleKey] == null,
-        );
-        const toLink = (tile: (typeof group.tiles)[number]) => ({
-          key: `${group.id}-${tile.moduleKey}-${tile.href}`,
-          href: tile.href,
-          icon: resolveOperatorTileIcon(tile.icon),
-          title: tile.label,
-          description: stationDescriptions[tile.moduleKey],
-          disabled: tilesLockedBeforeClockIn && group.id === "sales_kitchen",
-        });
-
-        return (
-          <Fragment key={group.id}>
-            <BranchOperatorActionSection
-              title={homeCopy.stationsTitle}
-              description={homeCopy.stationsDescription}
-              links={stationTiles.map(toLink)}
-              presentation="stations"
-            />
-            <BranchOperatorActionSection
-              title={
-                group.id === "sales_kitchen"
-                  ? homeCopy.shiftControlTitle
-                  : group.title
-              }
-              description={
-                group.id === "sales_kitchen"
-                  ? homeCopy.shiftControlDescription
-                  : undefined
-              }
-              links={supportingTiles.map(toLink)}
-              columns={2}
-              mobileColumns={2}
-              wideColumns
-              presentation="plain"
-            />
-          </Fragment>
-        );
-      })}
-
-      <BranchOperatorActionSection
-        title={APP_COPY_VI.operatorOpsActions}
-        links={branchManagementLinks}
-        columns={2}
-        mobileColumns={2}
-        wideColumns
-        presentation="plain"
-      />
-
-      <BranchOperatorActionSection
-        title={APP_COPY_VI.storeManagement}
-        links={ownerWorkspaceLinks}
-        columns={2}
-        mobileColumns={2}
-        wideColumns
-        presentation="plain"
-      />
     </BranchOperatorPage>
   );
 }

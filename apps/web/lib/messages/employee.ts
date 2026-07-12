@@ -280,10 +280,6 @@ export const employee = {
   },
   schedule: {
     currentMonth: "Tháng này",
-    summaryWorkdays: "Ngày Công",
-    summaryMonthlyLeaveDays: "Phép tháng",
-    summaryEstimatedDays: "Tạm tính",
-    summaryAnnualLeaveDays: "Phép năm",
     days: [
       "Chủ Nhật",
       "Thứ Hai",
@@ -403,11 +399,7 @@ export const employee = {
   leave: {
     title: "Nghỉ phép",
     description: "Gửi yêu cầu nghỉ và theo dõi trạng thái duyệt.",
-    newRequestTitle: "Yêu cầu mới",
-    newRequestDescription: "Chọn ngày nghỉ để quản lý chi nhánh duyệt.",
     newRequestButton: "Xin nghỉ",
-    myRequestsTitle: "Yêu cầu của tôi",
-    myRequestsDescription: "Các yêu cầu nghỉ gần đây.",
     emptyTitle: "Chưa có yêu cầu nghỉ",
     emptyDescription: 'Bấm "Xin nghỉ" khi cần báo trước ngày nghỉ.',
     unavailableTitle: "Chưa thể xin nghỉ",
@@ -419,7 +411,6 @@ export const employee = {
     leaveType: "Loại nghỉ",
     reason: "Lý do",
     reasonPlaceholder: "Ví dụ: việc gia đình, khám bệnh",
-    selectedRange: "Khoảng nghỉ",
     submit: "Gửi yêu cầu",
     submittedToast: "Đã gửi yêu cầu nghỉ — chờ duyệt",
     cancelledToast: "Đã huỷ yêu cầu nghỉ",

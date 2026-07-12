@@ -589,7 +589,11 @@ export function ProductionNewClient({
       </AppSection>
 
       {isLoadingContext ? (
-        <AppSection title="Định mức nguyên liệu" size="sm" tone="info">
+        <AppSection
+          title="Nguyên liệu theo Công thức sản xuất"
+          size="sm"
+          tone="info"
+        >
           <p className="text-sm text-muted-foreground">
             {messages.inventory.operatorFlow.productionRecipeLoading}
           </p>
@@ -605,7 +609,7 @@ export function ProductionNewClient({
 
       {!isLoadingContext && recipeContext?.ingredients.length ? (
         <AppSection
-          title="Định mức nguyên liệu"
+          title="Nguyên liệu theo Công thức sản xuất"
           description="Hệ thống đề xuất lượng cần dùng theo sản lượng dự kiến. Bếp có thể chỉnh lượng thực tế trước khi tạo lệnh."
           contentFlush
         >
@@ -636,7 +640,7 @@ export function ProductionNewClient({
       ) : null}
 
       {!isLoadingContext && recipeContext?.ingredients.length === 0 ? (
-        <AppSection title="Định mức nguyên liệu">
+        <AppSection title="Nguyên liệu theo Công thức sản xuất">
           <AppEmptyState
             compact
             align="start"

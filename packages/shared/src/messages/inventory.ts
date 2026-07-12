@@ -26,8 +26,8 @@ export const INVENTORY_VI = {
   createOrderShort: "Tạo lệnh",
   productionNoteePlaceholder:
     "Ghi chú lô sản xuất, ca làm việc, yêu cầu đóng gói...",
-  productionTitle: "Sản xuất Bếp Trung Tâm",
-  productionDescription: "Lệnh sản xuất và Công thức thành phẩm",
+  productionTitle: "Sản xuất",
+  productionDescription: "Lệnh sản xuất và Công thức sản xuất",
   productionOrdersTab: "Lệnh sản xuất",
   productionRecipesTab: "Công thức sản xuất",
   productionBackToHub: "Về trạm sản xuất",
@@ -37,8 +37,8 @@ export const INVENTORY_VI = {
   productionOpenOrders: "Mở lệnh sản xuất",
   productionDraftBadge: (count: number) => `${formatCount(count)} lệnh nháp`,
   productionRecipesCardDescription:
-    "Cấu hình Công thức thành phẩm: nguyên liệu và định lượng cho từng mẻ sản xuất.",
-  productionRecipesMetricLabel: "Công thức thành phẩm",
+    "Nguyên liệu đầu vào và định lượng để tạo một mẻ thành phẩm.",
+  productionRecipesMetricLabel: "Công thức sản xuất",
   productionOpenRecipes: "Mở công thức",
   productionCatalogCardTitle: "Danh mục nguyên liệu",
   productionCatalogCardDescription:
@@ -97,6 +97,7 @@ export const INVENTORY_VI = {
   onlyImageOrPdf: "Chỉ chấp nhận ảnh hoặc PDF.",
   onlyImage: "Chỉ chấp nhận ảnh.",
   fileTooLarge: "File vượt quá 10 MB.",
+  uploadFailed: "Không tải được tệp. Hãy thử lại.",
   noAuditHistory: "Chưa có lịch sử thao tác",
   systemActor: "Hệ thống",
   selectFile: "Vui lòng chọn file",
@@ -229,7 +230,7 @@ export const INVENTORY_VI = {
   productionRecipeFinishedGoodLabel: "Thành phẩm *",
   noFinishedGoodInCatalog: "Chưa có thành phẩm trong danh mục.",
   noRawIngredientInCatalog: "Chưa có nguyên liệu đầu vào trong danh mục.",
-  productionRecipeLinesLabel: "Dòng công thức",
+  productionRecipeLinesLabel: "Nguyên liệu của Công thức sản xuất",
   ingredientCountBadge: (count: number) => `${formatCount(count)} nguyên liệu`,
   ingredientLineCountBadge: (count: number) =>
     `${formatCount(count)} dòng nguyên liệu`,
@@ -238,27 +239,28 @@ export const INVENTORY_VI = {
   productionRecipeSaveFailed: "Không thể lưu công thức sản xuất",
   productionRecipeSavedToast: (count: number) =>
     `Đã lưu ${formatCount(count)} nguyên liệu trong công thức`,
-  productionRecipeDeleteFailed: "Không thể xóa công thức",
-  productionRecipeDeleted: "Đã xóa công thức",
-  productionRecipeGroupDeleteTitle: "Xóa toàn bộ công thức?",
+  productionRecipeDeleteFailed: "Không thể xóa Công thức sản xuất",
+  productionRecipeDeleted: "Đã xóa dòng khỏi Công thức sản xuất",
+  productionRecipeGroupDeleteTitle: "Xóa toàn bộ Công thức sản xuất?",
   productionRecipeGroupDeleteDescription: (count: number, name: string) =>
     `Thao tác này sẽ xóa toàn bộ ${formatCount(count)} dòng công thức của "${name}".`,
-  productionRecipeGroupDeleteConfirm: "Xóa toàn bộ công thức",
-  productionRecipeGroupDeleteFailed: "Không thể xóa công thức cũ",
-  productionRecipeGroupDeleted: "Đã xóa toàn bộ công thức cũ của thành phẩm",
-  productionRecipeUpdateAria: (name: string) => `Cập nhật công thức ${name}`,
-  productionRecipeUpdate: "Cập nhật công thức",
+  productionRecipeGroupDeleteConfirm: "Xóa Công thức sản xuất",
+  productionRecipeGroupDeleteFailed: "Không thể xóa Công thức sản xuất cũ",
+  productionRecipeGroupDeleted: "Đã xóa Công thức sản xuất cũ của thành phẩm",
+  productionRecipeUpdateAria: (name: string) =>
+    `Cập nhật Công thức sản xuất ${name}`,
+  productionRecipeUpdate: "Cập nhật Công thức sản xuất",
   productionRecipeDeleteLineAria: (name: string) =>
-    `Xóa dòng công thức ${name}`,
-  productionRecipeDeleteLine: "Xóa dòng công thức",
-  productionRecipeCreate: "Nhập công thức",
+    `Xóa ${name} khỏi Công thức sản xuất`,
+  productionRecipeDeleteLine: "Xóa khỏi Công thức sản xuất",
+  productionRecipeCreate: "Tạo Công thức sản xuất",
   productionRecipeCreateTitle: "Nhập công thức sản xuất",
-  productionRecipeSave: "Lưu công thức",
-  productionRecipeEmptyTitle: "Chưa có công thức nào",
+  productionRecipeSave: "Lưu Công thức sản xuất",
+  productionRecipeEmptyTitle: "Chưa có Công thức sản xuất",
   productionRecipeEmptyDescription:
     "Hãy thêm ít nhất một dòng nguyên liệu để bắt đầu cấu hình công thức cho thành phẩm.",
   noNote: "Không ghi chú",
-  productionRecipeImportExport: "Import / Export công thức",
+  productionRecipeImportExport: "Import / Export Công thức sản xuất",
   productionRecipeImportSuccess: (recipes: number, lines: number) =>
     `Đã import ${recipes} công thức / ${lines} dòng`,
   productionRecipeImportSummary: (recipes: number, lines: number) =>
@@ -458,12 +460,12 @@ export const INVENTORY_VI = {
   adjustReasonPlaceholder: "VD: Sai số nhập liệu sau khi đối chiếu chứng từ",
   adjustIngredientLine: (name: string) => `Nguyên liệu: ${name}`,
   adjustStockSuccess: (name: string) => `Đã điều chỉnh tồn kho ${name}`,
-  recipesPageTitle: "Định mức món bán",
+  recipesPageTitle: "Định mức bán",
   recipeCreateAction: "Tạo định mức",
   recipeEditAction: "Sửa định mức",
-  recipesEmptyTitle: "Chưa có định mức món bán nào",
+  recipesEmptyTitle: "Chưa có định mức bán nào",
   recipesEmptyDescription:
-    'Định mức món bán là lượng nguyên liệu tiêu hao khi bán 1 phần menu item. Nhấn "Tạo định mức" để bắt đầu.',
+    'Định mức bán là lượng nguyên liệu tự trừ khi bán 1 phần món. Đây không phải Công thức sản xuất. Nhấn "Tạo định mức" để bắt đầu.',
   recipesEmptyFiltered: "Không tìm thấy định mức phù hợp",
   recipeSearchPlaceholder: "Tìm theo tên món hoặc nhóm",
   recipeColMenuItem: "Món bán",
@@ -501,8 +503,7 @@ export const INVENTORY_VI = {
   dashboardGrnPriceReviewLabel: "GRN cần kiểm tra giá",
   dashboardGrnPriceReviewTask: (count: number) =>
     `${formatCount(count)} dòng GRN cần kiểm tra giá`,
-  dashboardGrnPriceVarianceHint:
-    "Giá nhập cần rà soát trong 30 ngày qua.",
+  dashboardGrnPriceVarianceHint: "Giá nhập cần rà soát trong 30 ngày qua.",
   // Production surface guards — generalized copy (D068): production runs at the
   // central kitchen or at a branch, not central-kitchen-only.
   productionSiteRequired:

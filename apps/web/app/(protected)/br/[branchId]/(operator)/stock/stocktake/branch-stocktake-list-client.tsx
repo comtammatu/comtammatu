@@ -34,10 +34,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
-import {
-  BranchOperatorPage,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { matchesSearch } from "@lib/search";
 import {
   getBranchStocktakeProgress,
@@ -52,11 +49,13 @@ export function BranchStocktakeListClient({
   branchName,
   canManage,
   sessions,
+  backHref,
 }: {
   branchId: number;
   branchName: string;
   canManage: boolean;
   sessions: BranchStocktakeSession[];
+  backHref: string;
 }) {
   const stockBasePath = `/br/${branchId}/stock`;
   const stocktakeBasePath = `${stockBasePath}/stocktake`;
@@ -75,13 +74,14 @@ export function BranchStocktakeListClient({
   return (
     <BranchOperatorPage
       title={stocktakeCopy.title}
-      description={branchName}
-      backHref={stockBasePath}
+      backHref={backHref}
       backLabel="Tồn"
       action={
         canManage ? (
           <Button asChild size="touch">
-            <Link href={`${stocktakeBasePath}/new`}>
+            <Link
+              href={`${stocktakeBasePath}/new?returnTo=${encodeURIComponent(backHref)}`}
+            >
               <IconClipboardCheck data-icon="inline-start" />
               {stocktakeCopy.openSession}
             </Link>
@@ -89,108 +89,103 @@ export function BranchStocktakeListClient({
         ) : undefined
       }
     >
-      <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorPanel
-          title="Phiên kiểm kê"
-          description="Mở hoặc tiếp tục một phiên kiểm kê của chi nhánh này."
-          icon={IconClipboardCheck}
-          size="sm"
-          contentClassName="gap-3"
-        >
-          <div className="grid min-w-0 gap-2 lg:grid-cols-[minmax(0,1fr)_12rem]">
-            <InputGroup className="min-w-0">
-              <InputGroupAddon>
-                <IconSearch />
-              </InputGroupAddon>
-              <InputGroupInput
-                aria-label={stocktakeCopy.searchPlaceholder}
-                autoComplete="off"
-                inputMode="search"
-                name="stocktake-search"
-                placeholder={stocktakeCopy.searchPlaceholder}
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </InputGroup>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger
-                aria-label={stocktakeCopy.statusPlaceholder}
-                size="touch"
-                className="w-full"
-              >
-                <SelectValue placeholder={stocktakeCopy.statusPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{stocktakeCopy.allStatuses}</SelectItem>
-                <SelectItem value="in_progress">Đang thực hiện</SelectItem>
-                <SelectItem value="completed">Đã hoàn tất</SelectItem>
-                <SelectItem value="cancelled">Đã hủy</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {sessions.length > 0 ? (
-            <Badge variant="outline" className="w-fit rounded-full">
-              {filteredSessions.length}/{sessions.length}
-            </Badge>
-          ) : null}
-
-          {filteredSessions.length === 0 ? (
-            <AppEmptyState
-              compact
-              mode={hasFilter ? "no-results" : "no-data"}
-              icon={<IconClipboardCheck />}
-              title={
-                hasFilter
-                  ? stocktakeCopy.noSessionsMatched
-                  : stocktakeCopy.noSessions
-              }
-              description={hasFilter ? undefined : stocktakeCopy.noSessionsHint}
+      <div
+        className="flex min-w-0 touch-manipulation flex-col gap-3"
+        aria-label={branchName}
+      >
+        <div className="grid min-w-0 gap-2 lg:grid-cols-[minmax(0,1fr)_12rem]">
+          <InputGroup className="min-w-0">
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              aria-label={stocktakeCopy.searchPlaceholder}
+              autoComplete="off"
+              inputMode="search"
+              name="stocktake-search"
+              placeholder={stocktakeCopy.searchPlaceholder}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
             />
-          ) : (
-            <ItemGroup className="gap-2" role="list">
-              {filteredSessions.map((session) => {
-                const progress = getBranchStocktakeProgress(session);
-                return (
-                  <div key={session.id} role="listitem">
-                    <Item
-                      asChild
-                      variant="outline"
-                      className="min-h-16 touch-manipulation"
-                    >
-                      <Link href={`${stocktakeBasePath}/${session.id}`}>
-                        <ItemContent className="min-w-0 gap-1">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <ItemTitle className="truncate font-mono text-sm font-semibold">
-                              KK-{session.id}
-                            </ItemTitle>
-                            <StatusBadge
-                              domain="inventory"
-                              value={session.status}
-                              size="sm"
-                            />
-                          </div>
-                          <ItemDescription className="line-clamp-none text-xs">
-                            {session.status === "in_progress"
-                              ? `${progress.counted}/${progress.total} dòng đã đếm · ${formatPercent(progress.percent)}`
-                              : formatVNDate(
-                                  session.completedAt ??
-                                    session.startedAt ??
-                                    session.createdAt,
-                                )}
-                          </ItemDescription>
-                        </ItemContent>
-                        <ItemActions className="self-center text-muted-foreground">
-                          <IconArrowRight />
-                        </ItemActions>
-                      </Link>
-                    </Item>
-                  </div>
-                );
-              })}
-            </ItemGroup>
-          )}
-        </BranchOperatorPanel>
+          </InputGroup>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger
+              aria-label={stocktakeCopy.statusPlaceholder}
+              size="touch"
+              className="w-full"
+            >
+              <SelectValue placeholder={stocktakeCopy.statusPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{stocktakeCopy.allStatuses}</SelectItem>
+              <SelectItem value="in_progress">Đang thực hiện</SelectItem>
+              <SelectItem value="completed">Đã hoàn tất</SelectItem>
+              <SelectItem value="cancelled">Đã hủy</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {sessions.length > 0 ? (
+          <Badge variant="outline" className="w-fit rounded-full">
+            {filteredSessions.length}/{sessions.length}
+          </Badge>
+        ) : null}
+
+        {filteredSessions.length === 0 ? (
+          <AppEmptyState
+            compact
+            mode={hasFilter ? "no-results" : "no-data"}
+            icon={<IconClipboardCheck />}
+            title={
+              hasFilter
+                ? stocktakeCopy.noSessionsMatched
+                : stocktakeCopy.noSessions
+            }
+            description={hasFilter ? undefined : stocktakeCopy.noSessionsHint}
+          />
+        ) : (
+          <ItemGroup className="gap-2" role="list">
+            {filteredSessions.map((session) => {
+              const progress = getBranchStocktakeProgress(session);
+              return (
+                <div key={session.id} role="listitem">
+                  <Item
+                    asChild
+                    variant="outline"
+                    className="min-h-16 touch-manipulation"
+                  >
+                    <Link href={`${stocktakeBasePath}/${session.id}`}>
+                      <ItemContent className="min-w-0 gap-1">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <ItemTitle className="truncate font-mono text-sm font-semibold">
+                            KK-{session.id}
+                          </ItemTitle>
+                          <StatusBadge
+                            domain="inventory"
+                            value={session.status}
+                            size="sm"
+                          />
+                        </div>
+                        <ItemDescription className="line-clamp-none text-xs">
+                          {session.status === "in_progress"
+                            ? `${progress.counted}/${progress.total} dòng đã đếm · ${formatPercent(progress.percent)}`
+                            : formatVNDate(
+                                session.completedAt ??
+                                  session.startedAt ??
+                                  session.createdAt,
+                              )}
+                        </ItemDescription>
+                      </ItemContent>
+                      <ItemActions className="self-center text-muted-foreground">
+                        <IconArrowRight />
+                      </ItemActions>
+                    </Link>
+                  </Item>
+                </div>
+              );
+            })}
+          </ItemGroup>
+        )}
       </div>
     </BranchOperatorPage>
   );

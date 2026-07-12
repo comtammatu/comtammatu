@@ -12,7 +12,7 @@ import {
   Trash as IconTrash,
   X as IconX,
 } from "lucide-react";
-import { ACTIONS_VI, FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -51,11 +51,9 @@ import { Combobox, FormattedNumberInput } from "@/components/form";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
-  BranchOperatorDetailList,
   BranchOperatorInlineState,
   BranchOperatorPage,
   BranchOperatorPanel,
-  BranchOperatorStatusStrip,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   canConfirmBranchStockIssue,
@@ -470,154 +468,120 @@ export function BranchStockIssueDetailClient({
   return (
     <BranchOperatorPage
       title={issue.code}
-      description={formatVNDateTime(issue.issuedAt)}
+      description={`${issueTypeLabel(issue.type)} · ${formatVNDateTime(issue.issuedAt)}`}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
       backHref={issuesBasePath}
       backLabel={ACTIONS_VI.back}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] md:items-start">
-          <BranchOperatorPanel
-            title={issuesCopy.linesTab}
-            description={
-              isDraft
-                ? issuesCopy.draftAutoSaveHint
-                : issuesCopy.finalizedReadOnlyHint
-            }
-            icon={IconFileText}
-            size="sm"
-            contentClassName="gap-3"
-            action={
-              canEdit ? (
-                <Button type="button" size="touch" onClick={openNewLine}>
-                  <IconCirclePlus data-icon="inline-start" />
-                  {issuesCopy.addLinePrefixed("nguyên liệu")}
-                </Button>
-              ) : undefined
-            }
-          >
-            {isDraft && lines.length > 0 && missingReasonCount > 0 ? (
-              <BranchOperatorInlineState
-                icon={IconFileText}
-                tone="warning"
-                title="Cần bổ sung lý do"
-                description={`Còn ${missingReasonCount} dòng chưa có lý do xuất kho.`}
-              />
-            ) : null}
+        <BranchOperatorPanel
+          title={issuesCopy.linesTab}
+          description={
+            isDraft
+              ? issuesCopy.draftAutoSaveHint
+              : issuesCopy.finalizedReadOnlyHint
+          }
+          icon={IconFileText}
+          size="sm"
+          contentClassName="gap-3"
+          action={
+            canEdit ? (
+              <Button type="button" size="touch" onClick={openNewLine}>
+                <IconCirclePlus data-icon="inline-start" />
+                {issuesCopy.addLinePrefixed("nguyên liệu")}
+              </Button>
+            ) : undefined
+          }
+        >
+          {issue.notes ? (
+            <p className="text-sm text-muted-foreground">{issue.notes}</p>
+          ) : null}
 
-            {lines.length === 0 ? (
-              <AppEmptyState
-                compact
-                mode="no-data"
-                icon={<IconFileText />}
-                title={
-                  isDraft
-                    ? issuesCopy.emptyLinesDraftTitle
-                    : issuesCopy.emptyLinesTitle(issueTypeLabel(issue.type))
-                }
-                description={
-                  isDraft
-                    ? issuesCopy.emptyLinesDraftDescription(
-                        surface.confirmAction.toLowerCase(),
-                      )
-                    : issuesCopy.emptyLinesFinalizedDescription
-                }
-              />
-            ) : (
-              <ItemGroup className="gap-2" role="list">
-                {lines.map((line) => (
-                  <div key={line.id} role="listitem">
-                    <Item
-                      variant="outline"
-                      className="min-h-20 flex-col items-stretch gap-2 touch-manipulation"
-                    >
-                      <div className="flex min-w-0 items-start justify-between gap-3">
-                        <ItemContent className="min-w-0 gap-1">
-                          <ItemTitle className="line-clamp-none text-sm font-semibold">
-                            {line.ingredientName}
-                          </ItemTitle>
-                          <ItemDescription className="line-clamp-none text-xs">
-                            {line.reason?.trim() ||
-                              issuesCopy.lineReasonRequired}
-                          </ItemDescription>
-                        </ItemContent>
-                        <ItemActions className="shrink-0">
-                          <Badge
-                            variant="outline"
-                            className="font-mono tabular-nums"
-                          >
-                            {formatQty(line.quantity)} {line.unit}
-                          </Badge>
-                          {canEdit ? (
-                            <>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon-touch"
-                                title={ACTIONS_VI.edit}
-                                aria-label={`${ACTIONS_VI.edit} ${line.ingredientName}`}
-                                disabled={isPending}
-                                onClick={() => openEditLine(line)}
-                              >
-                                <IconPencil />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon-touch"
-                                title={issuesCopy.deleteLineAction}
-                                aria-label={`${issuesCopy.deleteLineAction} ${line.ingredientName}`}
-                                disabled={isPending}
-                                onClick={() => void handleDeleteLine(line)}
-                              >
-                                <IconTrash />
-                              </Button>
-                            </>
-                          ) : null}
-                        </ItemActions>
-                      </div>
-                    </Item>
-                  </div>
-                ))}
-              </ItemGroup>
-            )}
-          </BranchOperatorPanel>
+          {isDraft && lines.length > 0 && missingReasonCount > 0 ? (
+            <BranchOperatorInlineState
+              icon={IconFileText}
+              tone="warning"
+              title="Cần bổ sung lý do"
+              description={`Còn ${missingReasonCount} dòng chưa có lý do xuất kho.`}
+            />
+          ) : null}
 
-          <BranchOperatorPanel title={issuesCopy.overviewTab} size="sm">
-            <BranchOperatorStatusStrip
-              items={[
-                { label: FORM_VI.status, value: statusBadge.label },
-                {
-                  label: issuesCopy.businessKindLabel,
-                  value: issueTypeLabel(issue.type),
-                },
-                {
-                  label: issuesCopy.totalLines,
-                  value: String(lines.length),
-                  mono: true,
-                },
-              ]}
+          {lines.length === 0 ? (
+            <AppEmptyState
+              compact
+              mode="no-data"
+              icon={<IconFileText />}
+              title={
+                isDraft
+                  ? issuesCopy.emptyLinesDraftTitle
+                  : issuesCopy.emptyLinesTitle(issueTypeLabel(issue.type))
+              }
+              description={
+                isDraft
+                  ? issuesCopy.emptyLinesDraftDescription(
+                      surface.confirmAction.toLowerCase(),
+                    )
+                  : issuesCopy.emptyLinesFinalizedDescription
+              }
             />
-            <BranchOperatorDetailList
-              columns={1}
-              className="mt-3"
-              rows={[
-                {
-                  label: INVENTORY_VI.createdDate,
-                  value: formatVNDateTime(issue.issuedAt),
-                },
-                ...(issue.notes
-                  ? [
-                      {
-                        label: FORM_VI.notes,
-                        value: issue.notes,
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-          </BranchOperatorPanel>
-        </div>
+          ) : (
+            <ItemGroup className="gap-2" role="list">
+              {lines.map((line) => (
+                <div key={line.id} role="listitem">
+                  <Item
+                    variant="outline"
+                    className="min-h-20 flex-col items-stretch gap-2 touch-manipulation"
+                  >
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <ItemContent className="min-w-0 gap-1">
+                        <ItemTitle className="line-clamp-none text-sm font-semibold">
+                          {line.ingredientName}
+                        </ItemTitle>
+                        <ItemDescription className="line-clamp-none text-xs">
+                          {line.reason?.trim() || issuesCopy.lineReasonRequired}
+                        </ItemDescription>
+                      </ItemContent>
+                      <ItemActions className="shrink-0">
+                        <Badge
+                          variant="outline"
+                          className="font-mono tabular-nums"
+                        >
+                          {formatQty(line.quantity)} {line.unit}
+                        </Badge>
+                        {canEdit ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-touch"
+                              title={ACTIONS_VI.edit}
+                              aria-label={`${ACTIONS_VI.edit} ${line.ingredientName}`}
+                              disabled={isPending}
+                              onClick={() => openEditLine(line)}
+                            >
+                              <IconPencil />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon-touch"
+                              title={issuesCopy.deleteLineAction}
+                              aria-label={`${issuesCopy.deleteLineAction} ${line.ingredientName}`}
+                              disabled={isPending}
+                              onClick={() => void handleDeleteLine(line)}
+                            >
+                              <IconTrash />
+                            </Button>
+                          </>
+                        ) : null}
+                      </ItemActions>
+                    </div>
+                  </Item>
+                </div>
+              ))}
+            </ItemGroup>
+          )}
+        </BranchOperatorPanel>
 
         {canEdit ? (
           <AppDetailFooter

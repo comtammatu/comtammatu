@@ -1,7 +1,6 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -728,95 +727,52 @@ export function BranchWasteCreateClient({
       description={branchName}
       backHref={backHref}
       backOnClick={handleLeaveClick}
+      action={
+        <Button
+          type="button"
+          variant="outline"
+          size="touch"
+          onClick={openNewLine}
+          disabled={isSubmitting || editor !== null}
+        >
+          <IconCirclePlus data-icon="inline-start" />
+          {wasteCopy.addLine}
+        </Button>
+      }
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] lg:items-start">
-          <div className="flex min-w-0 flex-col gap-3">
-            <BranchOperatorPanel
-              title="Thông tin phiếu"
-              description={branchName}
-              icon={IconPackageMinus}
-              size="sm"
-              contentClassName="gap-3"
+        <FormField
+          controlId="branch-waste-location"
+          label={wasteCopy.location}
+          required
+        >
+          <Select
+            value={locationId === null ? "" : String(locationId)}
+            onValueChange={handleLocationChange}
+            disabled={isSubmitting || editor !== null}
+          >
+            <SelectTrigger
+              id="branch-waste-location"
+              size="touch"
+              className="w-full"
             >
-              <FormField
-                controlId="branch-waste-location"
-                label={wasteCopy.location}
-                required
-              >
-                <Select
-                  value={locationId === null ? "" : String(locationId)}
-                  onValueChange={handleLocationChange}
-                  disabled={isSubmitting || editor !== null}
-                >
-                  <SelectTrigger
-                    id="branch-waste-location"
-                    size="touch"
-                    className="w-full"
-                  >
-                    <SelectValue placeholder={wasteCopy.chooseLocation} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {context.locations.map((location) => (
-                      <SelectItem key={location.id} value={String(location.id)}>
-                        {location.name} ({location.kind})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
-              <FormField
-                controlId="branch-waste-notes"
-                label={wasteCopy.generalNotes}
-              >
-                <Textarea
-                  id="branch-waste-notes"
-                  name="branch-waste-notes"
-                  autoComplete="off"
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  disabled={isSubmitting || editor !== null}
-                  rows={2}
-                />
-              </FormField>
-            </BranchOperatorPanel>
+              <SelectValue placeholder={wasteCopy.chooseLocation} />
+            </SelectTrigger>
+            <SelectContent>
+              {context.locations.map((location) => (
+                <SelectItem key={location.id} value={String(location.id)}>
+                  {location.name} ({location.kind})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
 
-            <BranchOperatorPanel
-              title="Kiểm soát hao hụt"
-              size="sm"
-              contentClassName="gap-2"
-            >
-              <BranchDailyCapBanner
-                branchToday={context.capStatus.branchToday}
-                branchCap={context.capStatus.branchCap}
-                pendingDelta={totalValue}
-              />
-              <ShiftCapMeter
-                shiftSum={context.capStatus.shiftSum}
-                shiftCap={context.capStatus.shiftCap}
-                pendingDelta={totalValue}
-                shiftLabel={context.capStatus.shiftKey}
-              />
-            </BranchOperatorPanel>
-          </div>
-
+        <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.75fr)] md:items-start">
           <BranchOperatorPanel
             title="Dòng hao hụt"
-            description="Chọn nguyên liệu và hoàn tất từng dòng trước khi tạo phiếu."
             size="sm"
             contentClassName="gap-3"
-            action={
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                onClick={openNewLine}
-                disabled={isSubmitting || editor !== null}
-              >
-                <IconCirclePlus data-icon="inline-start" />
-                {wasteCopy.addLine}
-              </Button>
-            }
           >
             {lines.length === 0 ? (
               <AppEmptyState
@@ -888,24 +844,45 @@ export function BranchWasteCreateClient({
               {wasteCopy.total(formatVND(totalValue))}
             </p>
           </BranchOperatorPanel>
+
+          <div className="flex min-w-0 flex-col gap-3">
+            <BranchOperatorPanel
+              title="Kiểm soát hao hụt"
+              size="sm"
+              contentClassName="gap-2"
+            >
+              <BranchDailyCapBanner
+                branchToday={context.capStatus.branchToday}
+                branchCap={context.capStatus.branchCap}
+                pendingDelta={totalValue}
+              />
+              <ShiftCapMeter
+                shiftSum={context.capStatus.shiftSum}
+                shiftCap={context.capStatus.shiftCap}
+                pendingDelta={totalValue}
+                shiftLabel={context.capStatus.shiftKey}
+              />
+            </BranchOperatorPanel>
+
+            <FormField
+              controlId="branch-waste-notes"
+              label={wasteCopy.generalNotes}
+            >
+              <Textarea
+                id="branch-waste-notes"
+                name="branch-waste-notes"
+                autoComplete="off"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                disabled={isSubmitting || editor !== null}
+                rows={2}
+              />
+            </FormField>
+          </div>
         </div>
 
         <AppDetailFooter
           sticky
-          leading={
-            <Button asChild variant="outline" size="touch">
-              <Link
-                href={backHref}
-                aria-disabled={isSubmitting || undefined}
-                className={
-                  isSubmitting ? "pointer-events-none opacity-50" : undefined
-                }
-                onClick={handleLeaveClick}
-              >
-                {ACTIONS_VI.cancel}
-              </Link>
-            </Button>
-          }
           trailing={
             <Button
               type="button"
@@ -1135,6 +1112,7 @@ export function BranchWasteCreateClient({
                             <WastePhotoUpload
                               id="branch-waste-photo"
                               tenantId={context.tenantId}
+                              branchId={branchId}
                               issueId={`branch-draft-${editor.line.uid}`}
                               value={editor.line.photoUrls[0] ?? null}
                               onChange={(url) =>

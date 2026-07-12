@@ -23,7 +23,6 @@ import { StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
-  BranchOperatorStatusStrip,
 } from "@lib/branch-operator/components/branch-operator-page";
 import type { ProductionRunRow } from "@/(protected)/inventory/production-run-actions";
 
@@ -47,65 +46,31 @@ export function ProductionOperatorClient({
   return (
     <BranchOperatorPage
       title="Sản xuất"
-      description="Tạo lệnh, theo dõi ca và hoàn tất thành phẩm."
+      description="Lệnh đang làm và lệnh cần bắt đầu."
+      action={
+        canCreateProduction ? (
+          <Button asChild size="touch">
+            <Link href={`${basePath}/new`}>
+              <IconPlus data-icon="inline-start" />
+              Tạo lệnh
+            </Link>
+          </Button>
+        ) : undefined
+      }
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorStatusStrip
-          items={[
-            {
-              label: "Đang sản xuất",
-              value: inProgress.length,
-              mono: true,
-            },
-            {
-              label: "Chờ bắt đầu",
-              value: drafts.length,
-              mono: true,
-            },
-          ]}
-        />
-
-        <BranchOperatorPanel
-          title="Việc cần làm"
-          description="Ưu tiên lệnh đang sản xuất, sau đó đến lệnh nháp."
-          icon={IconChefHat}
-          size="sm"
-          action={
-            canCreateProduction && workQueue.length > 0 ? (
-              <Button asChild size="touch">
-                <Link href={`${basePath}/new`}>
-                  <IconPlus data-icon="inline-start" />
-                  Tạo lệnh
-                </Link>
-              </Button>
-            ) : undefined
-          }
-          contentClassName="gap-2"
-        >
-          {workQueue.length === 0 ? (
-            <AppEmptyState
-              compact
-              align="start"
-              mode="no-data"
-              title="Không có lệnh đang chờ"
-              description="Tạo lệnh mới khi Bếp bắt đầu một mẻ sản xuất."
-              icon={<IconChefHat />}
-            >
-              {canCreateProduction ? (
-                <Button asChild size="touch-lg">
-                  <Link href={`${basePath}/new`}>Tạo lệnh sản xuất</Link>
-                </Button>
-              ) : null}
-            </AppEmptyState>
-          ) : (
-            <ProductionRunList runs={workQueue} basePath={basePath} />
-          )}
-        </BranchOperatorPanel>
-
-        {completed.length > 0 ? (
+        {workQueue.length > 0 ? (
           <BranchOperatorPanel
-            title="Đã hoàn tất"
-            description="Các mẻ sản xuất gần đây."
+            title="Việc cần làm"
+            icon={IconChefHat}
+            size="sm"
+            contentClassName="gap-2"
+          >
+            <ProductionRunList runs={workQueue} basePath={basePath} />
+          </BranchOperatorPanel>
+        ) : completed.length > 0 ? (
+          <BranchOperatorPanel
+            title="Mẻ gần đây"
             icon={IconChefHat}
             size="sm"
             contentClassName="gap-2"
@@ -115,7 +80,16 @@ export function ProductionOperatorClient({
               basePath={basePath}
             />
           </BranchOperatorPanel>
-        ) : null}
+        ) : (
+          <AppEmptyState
+            compact
+            align="start"
+            mode="no-data"
+            title="Chưa có lệnh sản xuất"
+            description="Tạo lệnh khi bắt đầu một mẻ mới."
+            icon={<IconChefHat />}
+          />
+        )}
       </div>
     </BranchOperatorPage>
   );

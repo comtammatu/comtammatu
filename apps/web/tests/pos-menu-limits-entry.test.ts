@@ -98,9 +98,8 @@ test("branch menu-limit management remains on the manager day-control surface", 
   assert.match(managerPageSource, /MenuLimitsClient/);
 });
 
-test("branch menu-limit drawer uses Ma Tu DS field and operator panel primitives", () => {
-  assert.match(managerPageSource, /BranchOperatorPanel/);
-  assert.match(managerPageSource, /icon=\{ListChecks\}/);
+test("branch menu-limit drawer uses Ma Tu DS fields without a guide panel", () => {
+  assert.doesNotMatch(managerPageSource, /BranchOperatorPanel|ListChecks/);
   assert.match(managerTableSource, /DrawerDescription/);
   assert.match(managerTableSource, /FieldGroup/);
   assert.match(managerTableSource, /FieldLabel/);
@@ -108,23 +107,22 @@ test("branch menu-limit drawer uses Ma Tu DS field and operator panel primitives
   assert.match(managerTableSource, /size="touch"/);
 });
 
-test("branch menu-limit list keeps touch-first scan facts and moves detailed demand into the drawer", () => {
+test("branch menu-limit list and drawer keep one job visible at a time", () => {
   assert.match(managerTableSource, /lg:flex-row/);
   assert.match(managerTableSource, /lg:items-center/);
-  assert.match(managerTableSource, /lg:w-80/);
-  assert.match(managerTableSource, /lg:flex-none/);
-  assert.match(managerTableSource, /lg:justify-start/);
-  assert.match(managerTableSource, /grid-cols-3/);
   assert.match(managerTableSource, /availableToSellLabel/);
-  assert.match(managerTableSource, /manualLimitShortLabel/);
-  assert.match(managerTableSource, /DescriptionList/);
-  assert.match(managerTableSource, /pendingDemandLabel/);
-  assert.match(managerTableSource, /activeHoldDemandLabel/);
+  assert.match(managerTableSource, /drawerMode/);
+  assert.match(managerTableSource, /"limit" \| "replenish"/);
+  assert.doesNotMatch(managerTableSource, /DescriptionList|AppToolbar|AppSection/);
+  assert.doesNotMatch(managerTableSource, /base_price/);
+  assert.doesNotMatch(managerTableSource, /pendingDemandLabel/);
+  assert.doesNotMatch(managerTableSource, /activeHoldDemandLabel/);
   assert.doesNotMatch(managerTableSource, /pendingDemandCount/);
   assert.doesNotMatch(managerTableSource, /activeHoldDemandCount/);
-
-  assert.doesNotMatch(managerTableSource, /sm:flex-row/);
-  assert.doesNotMatch(managerTableSource, /sm:items-center/);
+  assert.doesNotMatch(
+    managerTableSource,
+    /grid-cols-3|limitedCount|stockCapacityCount/,
+  );
   assert.doesNotMatch(managerTableSource, /sm:w-56/);
   assert.doesNotMatch(managerTableSource, /sm:w-80/);
   assert.doesNotMatch(managerTableSource, /md:justify-start/);

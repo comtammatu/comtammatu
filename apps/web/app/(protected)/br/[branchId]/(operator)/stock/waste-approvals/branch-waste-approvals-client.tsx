@@ -1,17 +1,9 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import Link from "next/link";
-import {
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-  type MouseEvent,
-} from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   Check as IconCheck,
   ChevronRight as IconChevronRight,
   PackageCheck as IconPackageCheck,
@@ -49,10 +41,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { FormField } from "@/components/form/form-field";
 import { AppEmptyState } from "@/components/surface";
-import {
-  BranchOperatorPage,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import type { PendingWasteRow } from "@lib/inventory/waste-approval-model";
 import { WasteTierBadge } from "@/(protected)/inventory/_components/waste-tier-badge";
@@ -152,27 +141,6 @@ export function BranchWasteApprovalsClient({
       document.removeEventListener("click", handleBottomNavigation, true);
   }, [hasUnsavedNotes, isSubmitting, router]);
 
-  async function requestLeave() {
-    if (isSubmitting) return;
-    if (hasUnsavedNotes) {
-      const confirmed = await confirm({
-        title: "Bỏ ghi chú duyệt?",
-        description: "Ghi chú xử lý chưa gửi sẽ bị mất.",
-        confirmText: "Bỏ ghi chú",
-        cancelText: "Tiếp tục duyệt",
-        variant: "destructive",
-      });
-      if (!confirmed) return;
-    }
-    router.push(stockBasePath);
-  }
-
-  function handleLeaveClick(event: MouseEvent<HTMLAnchorElement>) {
-    if (!isSubmitting && !hasUnsavedNotes) return;
-    event.preventDefault();
-    if (!isSubmitting) void requestLeave();
-  }
-
   async function requestDecision(
     row: PendingWasteRow,
     decision: "approved" | "rejected",
@@ -265,93 +233,73 @@ export function BranchWasteApprovalsClient({
   }
 
   return (
-    <BranchOperatorPage title={copy.title} description={branchName}>
+    <BranchOperatorPage
+      title={copy.title}
+      backHref={stockBasePath}
+      backLabel="Tồn"
+      badge={{ children: copy.count(rows.length), variant: "secondary" }}
+    >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-4">
-        <div className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link
-              href={stockBasePath}
-              aria-label="Quay lại kho"
-              aria-disabled={isSubmitting || undefined}
-              className={
-                isSubmitting ? "pointer-events-none opacity-50" : undefined
-              }
-              onClick={handleLeaveClick}
-            >
-              <IconArrowLeft aria-hidden="true" />
-            </Link>
-          </Button>
-        </div>
-
-        <BranchOperatorPanel
-          title="Phiếu chờ duyệt"
-          description={copy.principle}
-          icon={IconPackageCheck}
-          size="sm"
-          contentClassName="gap-3"
-          action={<Badge variant="secondary">{copy.count(rows.length)}</Badge>}
-        >
-          {rows.length === 0 ? (
-            <AppEmptyState
-              compact
-              mode="no-data"
-              icon={<IconPackageCheck aria-hidden="true" />}
-              title={copy.empty}
-              description="Không còn phiếu hao hụt cần xử lý tại chi nhánh này."
-            />
-          ) : (
-            <ItemGroup className="gap-2" role="list">
-              {rows.map((row) => {
-                const highestTier = getHighestTier(row);
-                return (
-                  <div key={row.issueId} role="listitem">
-                    <Item
-                      asChild
-                      variant="outline"
-                      className="min-h-20 touch-manipulation"
+        <p className="text-sm text-muted-foreground">{copy.principle}</p>
+        {rows.length === 0 ? (
+          <AppEmptyState
+            compact
+            mode="no-data"
+            icon={<IconPackageCheck aria-hidden="true" />}
+            title={copy.empty}
+            description="Không còn phiếu hao hụt cần xử lý tại chi nhánh này."
+          />
+        ) : (
+          <ItemGroup className="gap-2" role="list">
+            {rows.map((row) => {
+              const highestTier = getHighestTier(row);
+              return (
+                <div key={row.issueId} role="listitem">
+                  <Item
+                    asChild
+                    variant="outline"
+                    className="min-h-20 touch-manipulation"
+                  >
+                    <button
+                      type="button"
+                      className="w-full text-left"
+                      onClick={() => setSelectedIssueId(row.issueId)}
+                      disabled={isSubmitting}
                     >
-                      <button
-                        type="button"
-                        className="w-full text-left"
-                        onClick={() => setSelectedIssueId(row.issueId)}
-                        disabled={isSubmitting}
-                      >
-                        <ItemContent className="min-w-0 gap-1">
-                          <ItemTitle className="line-clamp-none break-words text-sm font-semibold">
-                            {row.issueNumber}
-                          </ItemTitle>
-                          <ItemDescription className="line-clamp-none break-words text-xs">
-                            {row.createdByName} ·{" "}
-                            {formatVNDateTime(row.issuedAt)}
-                          </ItemDescription>
-                          <ItemDescription className="line-clamp-none text-xs">
-                            {row.shiftKey || "Chưa có ca"} ·{" "}
-                            {copy.lineCount(row.items.length)}
-                          </ItemDescription>
-                          {row.isSelfCreated ? (
-                            <Badge variant="outline" className="w-fit text-xs">
-                              {copy.selfCreatedBadge}
-                            </Badge>
-                          ) : null}
-                        </ItemContent>
-                        <ItemActions className="shrink-0">
-                          <div className="text-right font-mono text-sm font-semibold tabular-nums">
-                            {formatVND(row.totalValue)}
-                          </div>
-                          <WasteTierBadge tier={highestTier} compact />
-                          <IconChevronRight
-                            aria-hidden="true"
-                            className="size-4 text-muted-foreground"
-                          />
-                        </ItemActions>
-                      </button>
-                    </Item>
-                  </div>
-                );
-              })}
-            </ItemGroup>
-          )}
-        </BranchOperatorPanel>
+                      <ItemContent className="min-w-0 gap-1">
+                        <ItemTitle className="line-clamp-none break-words text-sm font-semibold">
+                          {row.issueNumber}
+                        </ItemTitle>
+                        <ItemDescription className="line-clamp-none break-words text-xs">
+                          {row.createdByName} · {formatVNDateTime(row.issuedAt)}
+                        </ItemDescription>
+                        <ItemDescription className="line-clamp-none text-xs">
+                          {row.shiftKey || "Chưa có ca"} ·{" "}
+                          {copy.lineCount(row.items.length)}
+                        </ItemDescription>
+                        {row.isSelfCreated ? (
+                          <Badge variant="outline" className="w-fit text-xs">
+                            {copy.selfCreatedBadge}
+                          </Badge>
+                        ) : null}
+                      </ItemContent>
+                      <ItemActions className="shrink-0">
+                        <div className="text-right font-mono text-sm font-semibold tabular-nums">
+                          {formatVND(row.totalValue)}
+                        </div>
+                        <WasteTierBadge tier={highestTier} compact />
+                        <IconChevronRight
+                          aria-hidden="true"
+                          className="size-4 text-muted-foreground"
+                        />
+                      </ItemActions>
+                    </button>
+                  </Item>
+                </div>
+              );
+            })}
+          </ItemGroup>
+        )}
 
         <Sheet
           open={selectedRow !== null}

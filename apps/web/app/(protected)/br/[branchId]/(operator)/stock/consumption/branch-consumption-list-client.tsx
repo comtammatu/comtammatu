@@ -19,6 +19,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupButton,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import {
@@ -53,7 +54,6 @@ import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorDetailList,
   BranchOperatorPage,
-  BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import { createStockIssueDraft } from "@/(protected)/inventory/issue-actions";
 import {
@@ -171,6 +171,18 @@ export function BranchConsumptionListClient({
     <BranchOperatorPage
       title={issuesCopy.surface.consumption.eyebrow}
       description={branchName}
+      action={
+        canManage && view === "manual" ? (
+          <Button
+            type="button"
+            size="touch"
+            onClick={() => setCreateOpen(true)}
+          >
+            <IconPlus data-icon="inline-start" />
+            {INVENTORY_VI.manualConsumptionCreateAction}
+          </Button>
+        ) : undefined
+      }
     >
       <Tabs
         value={view}
@@ -192,38 +204,7 @@ export function BranchConsumptionListClient({
         </TabsList>
       </Tabs>
 
-      {canManage ? (
-        <Button
-          type="button"
-          size="touch"
-          className="w-full"
-          onClick={() => setCreateOpen(true)}
-        >
-          <IconPlus className="size-4" />
-          {INVENTORY_VI.manualConsumptionCreateAction}
-        </Button>
-      ) : null}
-
-      <BranchOperatorPanel
-        title={
-          view === "recorded"
-            ? INVENTORY_VI.recordedConsumptionTitle
-            : INVENTORY_VI.manualConsumptionSlipsTitle
-        }
-        description={
-          view === "recorded"
-            ? INVENTORY_VI.recordedEmptyDescription
-            : INVENTORY_VI.manualConsumptionCreateDescription
-        }
-        icon={view === "recorded" ? IconHistory : IconClipboard}
-        badge={{
-          children:
-            view === "recorded"
-              ? `${filteredRecorded.length}/${recorded.length}`
-              : `${filteredManual.length}/${manualIssues.length}`,
-        }}
-        contentClassName="gap-3"
-      >
+      <div className="flex min-w-0 flex-col gap-3">
         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_11rem]">
           <InputGroup className="min-h-12 w-full">
             <InputGroupAddon>
@@ -241,6 +222,19 @@ export function BranchConsumptionListClient({
               placeholder={searchLabel}
               inputMode="search"
             />
+            {filtersActive ? (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  type="button"
+                  size="icon-xs"
+                  onClick={resetFilters}
+                  aria-label={ACTIONS_VI.reset}
+                  title={ACTIONS_VI.reset}
+                >
+                  <IconReset />
+                </InputGroupButton>
+              </InputGroupAddon>
+            ) : null}
           </InputGroup>
           {view === "manual" ? (
             <Select
@@ -266,21 +260,6 @@ export function BranchConsumptionListClient({
             </Select>
           ) : null}
         </div>
-
-        {filtersActive ? (
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-touch"
-              onClick={resetFilters}
-              aria-label={ACTIONS_VI.reset}
-              title={ACTIONS_VI.reset}
-            >
-              <IconReset className="size-4" />
-            </Button>
-          </div>
-        ) : null}
 
         {view === "recorded" ? (
           recordedLoadFailed ? (
@@ -396,7 +375,7 @@ export function BranchConsumptionListClient({
             ))}
           </ItemGroup>
         )}
-      </BranchOperatorPanel>
+      </div>
 
       <Sheet open={createOpen} onOpenChange={setCreateOpen}>
         <SheetContent

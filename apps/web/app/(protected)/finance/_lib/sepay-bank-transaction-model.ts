@@ -56,6 +56,7 @@ export interface SepayBankMovement {
 }
 
 export type SepayUnmatchedMoneyInReason =
+  | "overpayment"
   | "webhook_error"
   | "missing_reference"
   | "unmatched_reference";
@@ -149,9 +150,16 @@ export function readSepayBankWebhookReview(
 export function classifySepayUnmatchedMoneyIn(
   transaction: Pick<
     SepayBankTransaction,
-    "code" | "content" | "errorCode" | "processingStatus" | "referenceCode"
+    | "code"
+    | "content"
+    | "errorCode"
+    | "processingStatus"
+    | "referenceCode"
+    | "transferType"
   >,
 ): SepayUnmatchedMoneyInReason {
+  if (isSepayOverpayment(transaction)) return "overpayment";
+
   if (
     transaction.processingStatus === "failed" ||
     transaction.errorCode != null
@@ -182,6 +190,8 @@ export function classifySepayReconciliationState(
     | "transferType"
   >,
 ): SepayReconciliationState {
+  if (isSepayOverpayment(transaction)) return "needs_review";
+
   if (
     transaction.processingStatus === "failed" ||
     transaction.errorCode != null
@@ -199,6 +209,15 @@ export function classifySepayReconciliationState(
   }
 
   return "needs_review";
+}
+
+export function isSepayOverpayment(
+  transaction: Pick<SepayBankTransaction, "errorCode" | "transferType">,
+): boolean {
+  return (
+    transaction.transferType === "in" &&
+    transaction.errorCode === "overpayment_needs_review"
+  );
 }
 
 function readString(
@@ -389,6 +408,14 @@ export function buildSepayReconciliationSummary(
   return transactions.reduce<SepayReconciliationSummary>(
     (summary, tx) => {
       const state = classifySepayReconciliationState(tx);
+      if (isSepayOverpayment(tx)) {
+        summary.needsReviewCount += 1;
+        summary.needsReviewAmount += tx.amount;
+        summary.unmatchedMoneyInCount += 1;
+        summary.unmatchedMoneyInAmount += tx.amount;
+        return summary;
+      }
+
       if (state === "webhook_error") {
         summary.failedCount += 1;
         summary.needsReviewCount += 1;

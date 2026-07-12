@@ -182,6 +182,22 @@ export function BranchCountAssignmentsClient({
 
   const content = (
     <div className="flex min-w-0 flex-col gap-3">
+      {embeddedInTeam ? (
+        <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-b pb-3">
+          <p className="text-sm text-muted-foreground">
+            {INVENTORY_VI.countAssignAssignedSummary(
+              assignedEmployeeCount,
+              data.employees.length,
+            )}
+          </p>
+          <Button asChild variant="outline" size="touch">
+            <Link href={`/br/${data.branchId}/stock/count-slips`}>
+              <IconFileText className="size-4" />
+              {INVENTORY_VI.countSlipTitle}
+            </Link>
+          </Button>
+        </div>
+      ) : null}
       <div className="grid gap-2 sm:grid-cols-2">
         {data.locationOptions.length > 0 ? (
           <div className="flex min-w-0 flex-col gap-1.5">
@@ -352,7 +368,7 @@ export function BranchCountAssignmentsClient({
   );
 
   const page = embeddedInTeam ? (
-    panel
+    content
   ) : (
     <BranchOperatorPage
       title={INVENTORY_VI.countAssignTitle}

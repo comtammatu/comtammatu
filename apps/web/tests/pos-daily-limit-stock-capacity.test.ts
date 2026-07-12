@@ -243,15 +243,16 @@ test("menu-limit screen refreshes when availability inputs change", () => {
   assert.match(menuLimitsTable, /table: "stock_levels"/);
 });
 
-test("menu-limit operations keep scan facts compact and show availability inputs once in the drawer", () => {
+test("menu-limit operations keep scan facts compact and defer replenishment", () => {
   assert.match(menuLimitsTable, /availableToSellLabel/);
-  assert.match(menuLimitsTable, /manualLimitShortLabel/);
-  assert.match(menuLimitsTable, /stockCapacityLabel/);
-  assert.match(menuLimitsTable, /DescriptionList/);
-  assert.match(menuLimitsTable, /soldTodayLabel/);
-  assert.match(menuLimitsTable, /pendingDemandLabel/);
-  assert.match(menuLimitsTable, /activeHoldDemandLabel/);
   assert.match(menuLimitsTable, /availabilityRuleHint/);
+  assert.match(menuLimitsTable, /drawerMode/);
+  assert.doesNotMatch(menuLimitsTable, /DescriptionList|AppToolbar|AppSection/);
+  assert.doesNotMatch(menuLimitsTable, /manualLimitShortLabel/);
+  assert.doesNotMatch(menuLimitsTable, /stockCapacityLabel/);
+  assert.doesNotMatch(menuLimitsTable, /soldTodayLabel/);
+  assert.doesNotMatch(menuLimitsTable, /pendingDemandLabel/);
+  assert.doesNotMatch(menuLimitsTable, /activeHoldDemandLabel/);
   assert.doesNotMatch(menuLimitsTable, /pendingDemandCount/);
   assert.doesNotMatch(menuLimitsTable, /activeHoldDemandCount/);
   assert.doesNotMatch(menuLimitsTable, /getSoldProgress/);

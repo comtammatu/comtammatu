@@ -279,11 +279,12 @@ density="compact"` already owns width/padding. Return a bare flex
 - Sticky CTA: `sticky bottom-0 chrome-safe-pb` + `shadow-lg` per the Elevation
   contract's Sticky CTA rung.
 - Branch touch variant: route pages under `/br/[branchId]` use
-  `BranchOperatorPage`; their direct client owner composes
-  `BranchOperatorPanel` sections and a sticky `AppDetailFooter`. The Branch
-  variant uses progressive disclosure on phone, may expand to a two-column
-  touch layout on tablet, keeps controls at least 44px high, and does not
-  import `DocumentFormFrame`, `DataTable`, or an Office form presentation.
+  `BranchOperatorPage`; their direct client owner uses workflow-native
+  progressive disclosure and shows only the current decision or input stage.
+  `BranchOperatorPanel` is optional, not a framing requirement. A sticky
+  `AppDetailFooter` is used only when the active stage needs a persistent
+  commit action. The Branch variant keeps controls at least 44px high and does
+  not import `DocumentFormFrame`, `DataTable`, or an Office form presentation.
 - Status/money/date: per § 1.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 - **Guard note:** the DOC-WORKFLOW gate accepts the Office
@@ -312,12 +313,14 @@ density="compact"` already owns width/padding. Return a bare flex
   → `LinkCardGrid` of `AppLinkCard` (`{title, description, href, icon, tone,
 badge}`).
 - No data tables. No KPI values beyond a small count badge on a link card.
-- Operator variant: `apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx`
-  (`buildHubTiles`) uses the Branch plane recipe:
-  `BranchOperatorPage` → `BranchOperatorActionSection` from
-  `@lib/branch-operator/components/branch-operator-page`. It does not render
-  `AppPageHeader`, `AppSection`, `AppLinkCard`, or an Office `*PageContent`
-  wrapper at the Branch hub/root level.
+- Operator settings variant: `apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx`
+  (`buildHubTiles`) uses `BranchOperatorPage` →
+  `BranchOperatorActionSection`. The canonical operator home
+  `/br/[branchId]` is different: it keeps live status and non-empty queue rows
+  in the body, while all secondary capability links live in one header
+  `DropdownMenu`; unresolved readiness belongs to the settings variant. Neither variant renders `AppPageHeader`,
+  `AppSection`, `AppLinkCard`, or an Office `*PageContent` wrapper at the Branch
+  hub/root level.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 
 ### REPORT
@@ -411,7 +414,7 @@ badge}`).
 
 ## 4. Named Exceptions
 
-These 24 pages do not fit a single archetype cleanly. They are an explicit
+These 25 pages do not fit a single archetype cleanly. They are an explicit
 allowlist, not a precedent for stretching another archetype's definition:
 
 1. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx` — staff
@@ -439,12 +442,12 @@ allowlist, not a precedent for stretching another archetype's definition:
    `ItemGroup`, tier badges, photo links, and an inline review-note field; the
    decision surface is the card, not a row. Classified **LIST** (queue
    variant); exempt from the LIST `DataTable` / `width="xwide"` gate.
-10. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx`
-    — Branch-runtime transfer queue. It uses `BranchOperatorPage`,
-    `BranchOperatorPanel`, and full-row `Item` links because the supported
-    phone/tablet runtime must keep one touch information architecture in both
-    orientations. Classified **LIST** (Branch touch variant); the Office
-    transfer route remains the canonical desktop `DataTable` LIST.
+10. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/page.tsx`
+    — Branch-runtime compatibility queue for inbound transfers already in
+    flight. It uses one `BranchOperatorPage` and full-row `Item` links without
+    nested panels. `/stock/transfer` redirects here; transfer creation and
+    history remain outside Branch daily IA. Classified **LIST** (Branch touch
+    variant).
 11. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx`
     — Branch-runtime on-hand lookup. It shares the stock loader and pure filter
     model with Office but owns a full-row touch list that never changes into a
@@ -486,14 +489,14 @@ allowlist, not a precedent for stretching another archetype's definition:
     Classified **DETAIL** (Branch touch variant).
 17. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx`
     — Branch production work queue. It uses the Branch operator shell,
-    status strip, full-row run links, and one create action. It never switches
-    to an Office table/card mosaic at tablet widths.
+    full-row active run links, recent completed runs, and one create action. It
+    never switches to an Office table/card mosaic at tablet widths.
     Classified **HUB** (Branch touch variant).
 18. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx`
     and `/stock/production/[id]/page.tsx` — Branch-native production create and
     detail workflows. They share loaders, unit models, recipe-context reads, and
     Server Actions with Office while owning their `BranchOperator*` presentation,
-    touch ingredient rows, tablet-landscape two-panel layout, and sticky actions.
+    touch ingredient rows, progressive consumption editing, and sticky actions.
     Production output remains at the branch's own inventory location.
     Classified **DOC-WORKFLOW** and **DETAIL** respectively; neither imports the
     Office `ProductionNewClient`, `ProductionDetailClient`, or `DataTable`.
@@ -505,9 +508,8 @@ allowlist, not a precedent for stretching another archetype's definition:
     `WasteCreateClient`; neither plane imports the other's presenter. Classified
     **DOC-WORKFLOW** (Branch touch variant).
 20. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx`
-    — Branch-native transfer document. It retains touch rows, a tablet
-    two-panel composition, and sticky actions without importing an Office
-    transfer form. Classified **DOC-WORKFLOW** (Branch touch variant).
+    — compatibility redirect to Branch `Tồn`; operators do not create new
+    transfers under the one-warehouse-per-branch contract.
 21. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx`
     — Branch-runtime waste approval queue. It locks review to the route branch,
     presents one touch row per pending issue, and opens evidence, lines, review
@@ -530,6 +532,13 @@ allowlist, not a precedent for stretching another archetype's definition:
     — fixed-branch leave review queue with status tabs, full-row touch items,
     and approve/reject in a bottom sheet. Office retains its desktop HR table.
     Classified **LIST** (Branch review variant).
+25. `apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/page.tsx`
+    and `/pos-sessions/[sessionId]` — Branch-native POS session list and
+    settlement detail. The list remains a full-row touch surface on phone and
+    tablet; the detail prioritizes session state, immutable cash comparison,
+    variance resolution, and bill evidence. POS closing and analytics reports
+    remain outside this management detail. Classified **LIST** and **DETAIL**
+    respectively.
 
 ## 5. Agent Lookup Flow
 

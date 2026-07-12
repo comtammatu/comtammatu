@@ -9,14 +9,31 @@ import { OperatorOrdersClient } from "./operator-orders-client";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
+  searchParams: Promise<{ view?: string; page?: string }>;
 }
 
-export default async function OperatorOrdersPage({ params }: PageProps) {
-  const { branchId: rawBranchId } = await params;
+const PAGE_SIZE = 20;
+
+export default async function OperatorOrdersPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const [{ branchId: rawBranchId }, query] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
+  const view = query.view === "recent" ? "recent" : "active";
+  const parsedPage = Number(query.page);
+  const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
-  const result = await fetchOrders({ branchId });
+  const result = await fetchOrders({
+    branchId,
+    activeOnly: view === "active",
+    page,
+    pageSize: PAGE_SIZE,
+  });
 
   return (
     <BranchOperatorPage
@@ -26,8 +43,14 @@ export default async function OperatorOrdersPage({ params }: PageProps) {
       {result.success && result.data ? (
         <OperatorOrdersClient
           orders={result.data.orders}
-          totalCount={result.data.summary.totalCount}
           inProgressCount={result.data.summary.inProgressCount}
+          page={page}
+          pageSize={PAGE_SIZE}
+          totalCount={
+            view === "active"
+              ? result.data.summary.inProgressCount
+              : result.data.summary.totalCount
+          }
         />
       ) : (
         <AppEmptyState

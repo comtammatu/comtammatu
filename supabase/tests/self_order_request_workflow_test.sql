@@ -21,6 +21,7 @@ DECLARE
   v_one_token text := 's1_one_' || replace(gen_random_uuid()::text, '-', '');
   v_two_token text := 's1_two_' || replace(gen_random_uuid()::text, '-', '');
   v_zero_op uuid := gen_random_uuid();
+  v_zero_add_op uuid := gen_random_uuid();
   v_one_op uuid := gen_random_uuid();
   v_two_op uuid := gen_random_uuid();
   v_payment_op uuid := gen_random_uuid();
@@ -32,6 +33,7 @@ DECLARE
   v_two_order_a bigint;
   v_two_order_b bigint;
   v_cart jsonb;
+  v_add_cart jsonb;
   v_result jsonb;
   v_count integer;
 BEGIN
@@ -39,10 +41,6 @@ BEGIN
   INTO v_tenant, v_branch
   FROM public.branches b
   WHERE b.is_active = true
-    AND EXISTS (
-      SELECT 1 FROM public.menu_items mi
-      WHERE mi.tenant_id = b.tenant_id AND mi.is_active = true
-    )
     AND EXISTS (
       SELECT 1 FROM public.profiles p
       WHERE p.tenant_id = b.tenant_id
@@ -62,6 +60,10 @@ BEGIN
     p.id
   LIMIT 1;
 
+  IF v_tenant IS NULL OR v_branch IS NULL OR v_profile IS NULL THEN
+    RAISE EXCEPTION 'Seed tenant, branch, or profile missing for self-order S1 acceptance';
+  END IF;
+
   SELECT mi.id, mi.category_id
   INTO v_menu_item, v_category
   FROM public.menu_items mi
@@ -70,8 +72,28 @@ BEGIN
   ORDER BY mi.id
   LIMIT 1;
 
-  IF v_tenant IS NULL OR v_branch IS NULL OR v_profile IS NULL OR v_menu_item IS NULL THEN
-    RAISE EXCEPTION 'Seed data missing for self-order S1 acceptance';
+  IF v_menu_item IS NULL THEN
+    INSERT INTO public.menu_categories (tenant_id, name, type, sort_order)
+    VALUES (
+      v_tenant,
+      '__s1_category_' || gen_random_uuid()::text,
+      'main_dish',
+      999
+    )
+    RETURNING id INTO v_category;
+
+    INSERT INTO public.menu_items (
+      tenant_id, category_id, name, base_price, sort_order, is_active
+    )
+    VALUES (
+      v_tenant,
+      v_category,
+      '__s1_menu_item_' || gen_random_uuid()::text,
+      10000,
+      999,
+      true
+    )
+    RETURNING id INTO v_menu_item;
   END IF;
 
   SELECT s.id
@@ -295,6 +317,48 @@ BEGIN
     RAISE EXCEPTION 'ZERO ORDER FAILED: %', v_result;
   END IF;
   v_zero_request := (v_result ->> 'requestId')::bigint;
+
+  v_add_cart := jsonb_build_array(jsonb_build_object(
+    'menu_item_id', v_menu_item,
+    'quantity', 2,
+    'modifiers', '[]'::jsonb,
+    'sides', '[]'::jsonb
+  ));
+  v_result := public.self_order_submit(
+    v_zero_token,
+    v_add_cart,
+    'them mon',
+    v_zero_add_op
+  );
+  IF v_result ->> 'status' <> 'pending'
+     OR (v_result ->> 'requestId')::bigint <> v_zero_request THEN
+    RAISE EXCEPTION 'PENDING ADD-MORE MUST MERGE: %', v_result;
+  END IF;
+  SELECT COALESCE(sum((item.value ->> 'quantity')::integer), 0)
+  INTO v_count
+  FROM public.self_order_requests r
+  CROSS JOIN LATERAL jsonb_array_elements(r.cart_payload) AS item(value)
+  WHERE r.id = v_zero_request;
+  IF v_count <> 3 THEN
+    RAISE EXCEPTION 'PENDING ADD-MORE ITEMS MISSING: %', v_count;
+  END IF;
+  v_result := public.self_order_submit(
+    v_zero_token,
+    v_add_cart,
+    'them mon',
+    v_zero_add_op
+  );
+  IF COALESCE((v_result ->> 'idempotent')::boolean, false) IS NOT true THEN
+    RAISE EXCEPTION 'PENDING ADD-MORE REPLAY FAILED: %', v_result;
+  END IF;
+  SELECT COALESCE(sum((item.value ->> 'quantity')::integer), 0)
+  INTO v_count
+  FROM public.self_order_requests r
+  CROSS JOIN LATERAL jsonb_array_elements(r.cart_payload) AS item(value)
+  WHERE r.id = v_zero_request;
+  IF v_count <> 3 THEN
+    RAISE EXCEPTION 'PENDING ADD-MORE REPLAY DUPLICATED ITEMS: %', v_count;
+  END IF;
 
   PERFORM set_config('request.jwt.claim.sub', v_profile::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);

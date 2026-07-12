@@ -237,7 +237,7 @@ Rules:
 - Use semantic Tailwind token classes (`bg-background`, `text-muted-foreground`, `border-border`, `bg-success`, etc.).
 - Use `BrandMark` / `BrandLockup` for web runtime logo rendering; do not reference `/brand/logo-*` directly from route components.
 - Use `BrandSymbol` for Concept 01 symbol assets and `BrandMascot` for the Cốt Lết mascot; do not reference `/brand/symbols/*` or `/brand/mascot/cotlet*` directly from route components.
-- Purpose-specific mascot assets may be used as decorative public images in customer-facing empty or splash states; they must not replace core workflow content.
+- Purpose-specific mascot assets may be used as decorative public images in customer-facing empty or splash states; they must not replace core workflow content. The static `BrandMascot` in the Self-Order pending-request overlay is the sole workflow exception: it signals that the obscured lines are not yet approved and is neither animated nor interactive.
 - `BrandSymbol` is approved as decorative, static `EmptyMedia` content for any `AppEmptyState` (any surface, ERP included) via the adapter's `symbol` prop; it is not a mascot and carries no motion.
 - The three brand patterns (`ke-caro`, `hat-gao`, `vong-to`) ship as tileable SVG under `/brand/patterns` with the `brand-pattern-caro` / `brand-pattern-hat-gao` / `brand-pattern-vong-to` and `brand-strip` utilities in `globals.css`. Use them only as decorative footer strips, packaging trim, or section separators — never as a background behind body text. Sanctioned placements: the login brand panel footer and the Runner display footer.
 - Do not hardcode raw palette classes for status meaning (`amber`, `emerald`, `zinc`, etc.) when a semantic token exists.
@@ -422,7 +422,7 @@ The system is **border-first**: resting surfaces are separated by `--border`, no
 | Sheet / Drawer | `shadow-effect-drawer`             | `sheet` content and `drawer` (vaul `before:`) panel.                                                                                                                                         |
 | Tooltip        | `shadow-effect-tooltip`            | `tooltip` content.                                                                                                                                                                           |
 | Toast          | `--effect-toast` (on `.cn-toast`)  | Sonner toasts — `box-shadow: var(--effect-toast)` is applied directly on `.cn-toast` in `globals.css`; there is no separate utility class.                                                   |
-| Sticky CTA     | `shadow-lg`                        | CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky bottom-0 chrome-safe-pb` footers).                                                              |
+| Sticky CTA     | `shadow-lg`                        | CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky bottom-0 chrome-safe-pb` footers).                                                         |
 | Ceiling        | `shadow-xl` / `shadow-2xl`         | **Only** fixed surfaces floating over scrolling content: POS mobile action bar (`shadow-2xl`), KDS focus card / chart tooltip (`shadow-xl`). Nowhere else.                                   |
 | Overlay scrim  | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop = `bg-effect-scrim`; Drawer backdrop = `drawer-scrim` (scrim + `--effect-drawer-blur`).                                                                                |
 
@@ -670,6 +670,11 @@ allowlist, so audit coverage and lint enforcement stay in lockstep.
 - Keep the surface narrow and task-led.
 - Do not turn `/br/[branchId]/shift/*` or `/br/[branchId]/profile/*` into a
   second admin shell.
+- Branch Team tabs are URL-owned permissions boundaries. Render only the active,
+  authorized workspace; do not preload hidden or unauthorized tab bodies.
+- Staff rosters are status-bearing rows. Profile and payslip history use
+  list-to-detail disclosure instead of avatar grids or fully expanded period
+  panels.
 - Use the same typography, tokens, and state vocabulary as admin/POS/KDS.
 
 ## Layout Patterns
@@ -806,19 +811,22 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
 
 #### Canonical operator-home skeleton (no KPI)
 
-The Branch operator hub — the only operator hub kind — uses ONE ordered home
-recipe (owner-approved):
+The Branch operator hub — the only operator hub kind — uses one ordered home
+recipe:
 
-1. **Primary CTA** — the single next safe action for this hub.
-2. **Live queue panel** — the hub's active work, live.
-3. **Curated job tiles** — the hub's next jobs, as tiles.
+1. **Current work state** — the employee's current shift state and only the
+   next safe action when one exists.
+2. **Live queue rows** — only work with a count greater than zero.
+3. **Tools menu** — POS/KDS/Runner, orders, settings and management workspaces
+   live in one permission-scoped header menu, never as stacked body sections.
 
 The recipe varies only in which slots and data populate it, never in the
-structure. Numbers appear as **badges on tiles / sections ONLY** — there are NO
-KPI / stat cards on operator surfaces (reaffirms the operator no-KPI rule: an
-operator home is job-first, not a dashboard). A hub that opens with a stat-card
-mosaic instead of `[primary CTA] → [live queue panel] → [curated job tiles]` is
-drift.
+structure. Numbers appear as badges on their actionable rows. There are no KPI
+cards, stat mosaics, capability tile directories, duplicated ready states or
+secondary action sections in the operator home body. Unresolved readiness lives
+with Branch settings, not `Nay`. Drift is any home that pushes current work
+below navigation cards or repeats the same state in queue, readiness and
+shortcut sections.
 
 ### D. Navigation Single-Source
 

@@ -132,57 +132,52 @@ test("MoMo opens only as a QR scanner without merchant payment data", () => {
   assert.equal(href, "momo://?refId=ScanQRCode");
 });
 
-test("native MoMo configuration stays removed while Self-Order keeps the scanner launcher", () => {
-  const configSources = [
-    readRepo(".env.example"),
-    readRepo("turbo.json"),
-    readRepo("packages/shared/src/settings/index.ts"),
-    readWeb("app/(protected)/admin/settings/(tenant)/payments/actions.ts"),
-    readWeb(
-      "app/(protected)/admin/settings/(tenant)/payments/payments-form.tsx",
-    ),
-  ].join("\n");
+test("MoMo Self-Order uses signed checkout, IPN, and a return route", () => {
+  const env = readRepo(".env.example");
   const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
   const bankAppLink = readWeb("lib/self-order/bank-app-link.ts");
-  const cleanupMigration = readRepo(
-    "supabase/migrations/20260712021050_canonicalize_payment_methods.sql",
-  );
-  const rpcCleanupMigration = readRepo(
-    "supabase/migrations/20260712032325_canonicalize_payment_method_rpc_residue.sql",
+  const momo = readWeb("lib/payments/momo.ts");
+  const webhook = readWeb("app/api/webhooks/momo/route.ts");
+  const returnRoute = readWeb("app/(public)/payment/momo/return/route.ts");
+  const migration = readRepo(
+    "supabase/migrations/20260712201500_add_momo_self_order_checkout.sql",
   );
 
-  assert.doesNotMatch(
-    configSources,
-    /MOMO_|PAYMENT_ENABLE_MOMO|payment_enable_momo/,
-  );
+  assert.match(env, /MOMO_PARTNER_CODE=/);
+  assert.match(env, /MOMO_ACCESS_KEY=/);
+  assert.match(env, /MOMO_SECRET_KEY=/);
   assert.equal(
     existsSync(join(process.cwd(), "app/api/webhooks/momo/route.ts")),
-    false,
+    true,
   );
   assert.equal(
     existsSync(
-      join(process.cwd(), "app/(public)/payment/momo/return/page.tsx"),
+      join(process.cwd(), "app/(public)/payment/momo/return/route.ts"),
     ),
-    false,
+    true,
   );
-  assert.match(paymentPanel, /\{ id: "momo", name: "MoMo"/);
+  assert.match(momo, /MOMO_REQUEST_TYPE = "captureWallet"/);
+  assert.match(momo, /createHmac\("sha256"/);
+  assert.match(momo, /timingSafeEqual/);
+  assert.match(webhook, /verifyMomoResult/);
+  assert.match(webhook, /decodeMomoCallbackContext/);
+  assert.match(webhook, /from\("webhook_events"\)[\s\S]*\.insert/);
+  assert.match(webhook, /confirm_momo_payment/);
+  assert.match(returnRoute, /verifyMomoResult/);
+  assert.match(returnRoute, /\/q\/\$\{encodeURIComponent\(context\.token\)\}/);
+  assert.match(migration, /'momo_pending'/);
+  assert.match(migration, /confirm_momo_payment/);
+  assert.match(migration, /fail_momo_payment/);
+  assert.match(migration, /CHECK \(method IN \('cash', 'vietqr', 'momo'\)\)/);
+  assert.match(paymentPanel, /SELF_ORDER_VI\.momoPay/);
+  assert.match(paymentPanel, /SELF_ORDER_VI\.momoPendingTitle/);
+  assert.match(paymentPanel, /id: "momo"[\s\S]*name: "MoMo"/);
+  assert.match(
+    paymentPanel,
+    /play-lh\.googleusercontent\.com\/cQzoiahn_EveryMo/,
+  );
   assert.match(paymentPanel, /\{ id: "msb", name: "MSB"/);
   assert.match(bankAppLink, /return "momo:\/\/\?refId=ScanQRCode"/);
-  assert.match(
-    cleanupMigration,
-    /DELETE FROM public\.system_settings\s+WHERE key = 'payment_enable_momo'/,
-  );
-  assert.match(cleanupMigration, /CHECK \(method IN \('cash', 'vietqr'\)\)/);
-  assert.doesNotMatch(cleanupMigration, /momo_revenue/i);
-  assert.match(
-    rpcCleanupMigration,
-    /IF p_method NOT IN \('cash', 'vietqr'\) THEN/,
-  );
-  assert.match(
-    rpcCleanupMigration,
-    /FILTER \(WHERE sp\.method = 'vietqr'\)/,
-  );
-  assert.doesNotMatch(rpcCleanupMigration, /momo/i);
 });
 
 test("autofill bank app links keep the exact VietQR payment facts", () => {

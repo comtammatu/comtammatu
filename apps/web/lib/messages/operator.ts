@@ -20,6 +20,7 @@ export const operator = {
     clockIn: "Chấm công vào",
   },
   home: {
+    toolsMenu: "Công cụ",
     stationsTitle: "Trạm vận hành",
     stationsDescription: "Mở đúng màn cho công việc đang làm.",
     posDescription: "Nhận món và thanh toán",

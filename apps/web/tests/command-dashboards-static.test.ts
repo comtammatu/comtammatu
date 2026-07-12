@@ -176,21 +176,20 @@ test("print job monitor keeps the owner recovery filter", () => {
   );
 });
 
-test("branch day status service-client reads carry explicit tenant+branch filters", () => {
+test("branch action queue service-client reads carry explicit tenant+branch filters", () => {
   const data = read(BRANCH_DATA);
 
-  assert.match(data, /supabase\.rpc\("list_branch_menu_daily_limits"/);
-  assert.match(data, /menuLimitAvailableItems/);
-  assert.match(data, /available_to_sell/);
-  assert.doesNotMatch(data, /setupActiveMenuItems/);
-  assert.doesNotMatch(data, /\.from\("menu_items"\)/);
+  assert.match(data, /fetchBranchQueueCounts/);
+  assert.match(data, /PERMISSION_KEYS\.HR_APPROVE_CHECKOUT/);
+  assert.match(data, /PERMISSION_KEYS\.HR_APPROVE_LEAVE_REQUEST/);
   assert.match(
     data,
-    /service\s*\.from\("pos_sessions"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
+    /service\s*\.from\("leave_requests"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
   );
   assert.match(
     data,
     /service\s*\.from\("attendance_records"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
   );
-  assert.match(data, /fail-soft/i);
+  assert.match(data, /checkoutPermission\.data === true/);
+  assert.match(data, /leavePermission\.data === true/);
 });

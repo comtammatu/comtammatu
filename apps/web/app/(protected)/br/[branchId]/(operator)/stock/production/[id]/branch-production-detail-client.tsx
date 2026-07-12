@@ -3,12 +3,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Boxes as IconBoxes,
-  ChefHat as IconChefHat,
-} from "lucide-react";
+import { Boxes as IconBoxes } from "lucide-react";
 import { formatDecimalInputValue } from "@comtammatu/shared/format";
-import { formatVNDate } from "@comtammatu/shared/time";
 import {
   Alert,
   AlertDescription,
@@ -36,10 +32,8 @@ import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { AppDetailFooter } from "@/components/surface";
 import {
-  BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
-  BranchOperatorStatusStrip,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   cancelProductionRun,
@@ -239,199 +233,136 @@ export function BranchProductionDetailClient({
   return (
     <BranchOperatorPage
       title={run.production_number}
-      description={run.finished_good_name}
+      description={`${run.finished_good_name} · ${run.branch_name} → ${run.target_branch_name} · ${formatQty(run.planned_quantity)} ${unit}`}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
       backHref={basePath}
       backLabel="Sản xuất"
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorStatusStrip
-          items={[
-            {
-              label: "Dự kiến",
-              value: `${formatQty(run.planned_quantity)} ${unit}`,
-              mono: true,
-            },
-            {
-              label: "Thực tế",
-              value:
-                run.actual_quantity == null
-                  ? "Chưa có"
-                  : `${formatQty(run.actual_quantity)} ${unit}`,
-              muted: run.actual_quantity == null,
-              mono: run.actual_quantity != null,
-            },
-            {
-              label: "Ngày tạo",
-              value: formatVNDate(run.created_at),
-            },
-          ]}
-        />
+        {run.notes ? (
+          <p className="text-sm text-muted-foreground">{run.notes}</p>
+        ) : null}
 
-        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(17rem,0.8fr)] lg:items-start">
-          <div className="flex min-w-0 flex-col gap-3 lg:col-start-1 lg:row-start-1">
-            {canEdit && ingredients.length > 0 ? (
-              <BranchOperatorPanel
-                title="Nguyên liệu thực dùng"
-                description="Điều chỉnh trước khi hoàn thành lệnh."
-                icon={IconBoxes}
-                size="sm"
-                contentClassName="gap-2"
+        {run.status === "in_progress" ? (
+          <div className="grid gap-2">
+            <Label htmlFor="branch-production-actual-quantity">
+              Sản lượng thực tế
+            </Label>
+            <div className="flex min-w-0 items-center gap-2">
+              <Button
+                id="branch-production-actual-quantity"
+                type="button"
+                variant="outline"
+                size="touch"
+                className="min-w-0 flex-1 justify-between font-mono tabular-nums"
+                disabled={isPending}
+                onClick={() => setNumberPadTarget({ kind: "actual" })}
               >
-                <ItemGroup className="gap-2" role="list">
-                  {ingredients.map((ingredient) => (
-                    <div key={ingredient.ingredient_id} role="listitem">
-                      <Item
-                        variant="outline"
-                        className="min-h-24 flex-col items-stretch gap-3 touch-manipulation sm:flex-row sm:items-center"
+                {actualQuantity
+                  ? formatQty(Number.parseFloat(actualQuantity))
+                  : "Nhập số lượng…"}
+              </Button>
+              <span className="shrink-0 text-sm text-muted-foreground">
+                {unit}
+              </span>
+            </div>
+            {maxProductionQuantity != null ? (
+              <p className="text-sm text-muted-foreground">
+                Tối đa theo tồn: {formatQty(maxProductionQuantity)} {unit}
+              </p>
+            ) : null}
+          </div>
+        ) : run.status === "completed" ? (
+          <p className="font-mono text-lg font-semibold tabular-nums">
+            Thực tế: {formatQty(run.actual_quantity ?? 0)} {unit}
+          </p>
+        ) : null}
+
+        {canEdit && ingredients.length > 0 ? (
+          <BranchOperatorPanel
+            title="Nguyên liệu thực dùng"
+            icon={IconBoxes}
+            size="sm"
+            contentClassName="gap-2"
+          >
+            <ItemGroup className="gap-2" role="list">
+              {ingredients.map((ingredient) => (
+                <div key={ingredient.ingredient_id} role="listitem">
+                  <Item
+                    variant="outline"
+                    className="min-h-24 flex-col items-stretch gap-3 touch-manipulation sm:flex-row sm:items-center"
+                  >
+                    <ItemContent className="min-w-0">
+                      <ItemTitle className="line-clamp-none text-sm font-semibold">
+                        {ingredient.ingredient_name}
+                      </ItemTitle>
+                      <ItemDescription className="line-clamp-none">
+                        Có thể dùng tối đa{" "}
+                        {formatQty(ingredient.max_ingredient_qty)}{" "}
+                        {ingredient.unit_name}
+                      </ItemDescription>
+                    </ItemContent>
+                    <div className="grid min-w-0 gap-1 sm:w-48 sm:shrink-0">
+                      <Label
+                        htmlFor={`branch-production-actual-${ingredient.ingredient_id}`}
+                        className="text-xs"
                       >
-                        <ItemContent className="min-w-0">
-                          <ItemTitle className="line-clamp-none text-sm font-semibold">
-                            {ingredient.ingredient_name}
-                          </ItemTitle>
-                          <ItemDescription className="line-clamp-none">
-                            Có thể dùng tối đa{" "}
-                            {formatQty(ingredient.max_ingredient_qty)}{" "}
-                            {ingredient.unit_name}
-                          </ItemDescription>
-                        </ItemContent>
-                        <div className="grid min-w-0 gap-1 sm:w-48 sm:shrink-0">
-                          <Label
-                            htmlFor={`branch-production-actual-${ingredient.ingredient_id}`}
-                            className="text-xs"
-                          >
-                            Thực dùng
-                          </Label>
-                          <div className="flex min-w-0 items-center gap-2">
-                            <Button
-                              id={`branch-production-actual-${ingredient.ingredient_id}`}
-                              type="button"
-                              variant="outline"
-                              size="touch"
-                              className="min-w-0 flex-1 justify-between font-mono tabular-nums"
-                              disabled={isPending}
-                              onClick={() =>
-                                setNumberPadTarget({
-                                  kind: "ingredient",
-                                  ingredientId: ingredient.ingredient_id,
-                                  name: ingredient.ingredient_name,
-                                  unit: ingredient.unit_name,
-                                })
-                              }
-                            >
-                              {ingredientUsages[ingredient.ingredient_id]
-                                ? formatQty(
-                                    Number.parseFloat(
-                                      ingredientUsages[
-                                        ingredient.ingredient_id
-                                      ] ?? "",
-                                    ),
-                                  )
-                                : "Nhập số lượng…"}
-                            </Button>
-                            <span className="w-10 shrink-0 text-xs text-muted-foreground">
-                              {ingredient.unit_name}
-                            </span>
-                          </div>
-                        </div>
-                      </Item>
+                        Thực dùng
+                      </Label>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Button
+                          id={`branch-production-actual-${ingredient.ingredient_id}`}
+                          type="button"
+                          variant="outline"
+                          size="touch"
+                          className="min-w-0 flex-1 justify-between font-mono tabular-nums"
+                          disabled={isPending}
+                          onClick={() =>
+                            setNumberPadTarget({
+                              kind: "ingredient",
+                              ingredientId: ingredient.ingredient_id,
+                              name: ingredient.ingredient_name,
+                              unit: ingredient.unit_name,
+                            })
+                          }
+                        >
+                          {ingredientUsages[ingredient.ingredient_id]
+                            ? formatQty(
+                                Number.parseFloat(
+                                  ingredientUsages[ingredient.ingredient_id] ??
+                                    "",
+                                ),
+                              )
+                            : "Nhập số lượng…"}
+                        </Button>
+                        <span className="w-10 shrink-0 text-xs text-muted-foreground">
+                          {ingredient.unit_name}
+                        </span>
+                      </div>
                     </div>
-                  ))}
-                </ItemGroup>
-              </BranchOperatorPanel>
-            ) : null}
-
-            {actionError ? (
-              <Alert variant="destructive">
-                <AlertTitle>Thao tác không thành công</AlertTitle>
-                <AlertDescription>{actionError}</AlertDescription>
-              </Alert>
-            ) : null}
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-3 lg:col-start-2 lg:row-start-1">
-            <BranchOperatorPanel
-              title="Thông tin lệnh"
-              icon={IconChefHat}
-              size="sm"
-            >
-              <BranchOperatorDetailList
-                columns={1}
-                rows={[
-                  { label: "Thành phẩm", value: run.finished_good_name },
-                  {
-                    label: "Nơi sản xuất",
-                    value: run.branch_name,
-                  },
-                  {
-                    label: "Nơi nhận",
-                    value: run.target_branch_name,
-                  },
-                  {
-                    label: "Số lượng dự kiến",
-                    value: `${formatQty(run.planned_quantity)} ${unit}`,
-                  },
-                  ...(run.notes
-                    ? [{ label: "Ghi chú", value: run.notes }]
-                    : []),
-                ]}
-              />
-            </BranchOperatorPanel>
-
-            {canEdit ? (
-              <BranchOperatorPanel
-                title="Sản lượng hoàn tất"
-                description="Nhập số lượng thực tế trước khi hoàn thành."
-                size="sm"
-              >
-                <div className="grid gap-2">
-                  <Label htmlFor="branch-production-actual-quantity">
-                    Số lượng thực tế
-                  </Label>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Button
-                      id="branch-production-actual-quantity"
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      className="min-w-0 flex-1 justify-between font-mono tabular-nums"
-                      disabled={isPending}
-                      onClick={() => setNumberPadTarget({ kind: "actual" })}
-                    >
-                      {actualQuantity
-                        ? formatQty(Number.parseFloat(actualQuantity))
-                        : "Nhập số lượng…"}
-                    </Button>
-                    <span className="shrink-0 text-sm text-muted-foreground">
-                      {unit}
-                    </span>
-                  </div>
-                  {maxProductionQuantity != null ? (
-                    <p className="text-sm text-muted-foreground">
-                      Tối đa theo tồn: {formatQty(maxProductionQuantity)} {unit}
-                    </p>
-                  ) : null}
+                  </Item>
                 </div>
-              </BranchOperatorPanel>
-            ) : run.status === "completed" ? (
-              <BranchOperatorPanel title="Kết quả" tone="success" size="sm">
-                <p className="font-mono text-lg font-semibold tabular-nums">
-                  {formatQty(run.actual_quantity ?? 0)} {unit}
-                </p>
-              </BranchOperatorPanel>
-            ) : null}
+              ))}
+            </ItemGroup>
+          </BranchOperatorPanel>
+        ) : null}
 
-            {canEdit && !canConfirm ? (
-              <Alert variant="destructive">
-                <AlertTitle>Chưa thể hoàn thành lệnh</AlertTitle>
-                <AlertDescription>
-                  {recipeContextError ??
-                    "Không thể kiểm tra đơn vị thành phẩm hoặc định mức nguyên liệu."}
-                </AlertDescription>
-              </Alert>
-            ) : null}
-          </div>
-        </div>
+        {actionError ? (
+          <Alert variant="destructive">
+            <AlertTitle>Thao tác không thành công</AlertTitle>
+            <AlertDescription>{actionError}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {canEdit && !canConfirm ? (
+          <Alert variant="destructive">
+            <AlertTitle>Chưa thể hoàn thành lệnh</AlertTitle>
+            <AlertDescription>
+              {recipeContextError ??
+                "Không thể kiểm tra đơn vị thành phẩm hoặc định mức nguyên liệu."}
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
         {canEdit ? (
           <AppDetailFooter
@@ -498,27 +429,32 @@ export function BranchProductionDetailClient({
             if (!open) setShortages([]);
           }}
         >
-          <SheetContent side="bottom" className="max-h-dvh-95">
+          <SheetContent
+            side="bottom"
+            className="data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh flex flex-col overflow-hidden"
+          >
             <SheetHeader>
               <SheetTitle>Thiếu nguyên liệu</SheetTitle>
               <p className="text-sm text-muted-foreground">
                 Sửa thực chi rồi hoàn thành lại lệnh.
               </p>
             </SheetHeader>
-            <ItemGroup className="mt-4 gap-2">
-              {shortages.map((shortage) => (
-                <Item key={shortage.ingredient_id} variant="outline">
-                  <ItemContent>
-                    <ItemTitle>{shortage.ingredient_name}</ItemTitle>
-                    <ItemDescription>
-                      Cần {formatQty(shortage.needed)} {shortage.unit}, còn{" "}
-                      {formatQty(shortage.on_hand)} {shortage.unit}, thiếu{" "}
-                      {formatQty(shortage.missing)} {shortage.unit}
-                    </ItemDescription>
-                  </ItemContent>
-                </Item>
-              ))}
-            </ItemGroup>
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
+              <ItemGroup className="gap-2">
+                {shortages.map((shortage) => (
+                  <Item key={shortage.ingredient_id} variant="outline">
+                    <ItemContent>
+                      <ItemTitle>{shortage.ingredient_name}</ItemTitle>
+                      <ItemDescription>
+                        Cần {formatQty(shortage.needed)} {shortage.unit}, còn{" "}
+                        {formatQty(shortage.on_hand)} {shortage.unit}, thiếu{" "}
+                        {formatQty(shortage.missing)} {shortage.unit}
+                      </ItemDescription>
+                    </ItemContent>
+                  </Item>
+                ))}
+              </ItemGroup>
+            </div>
             <SheetFooter>
               <Button
                 type="button"

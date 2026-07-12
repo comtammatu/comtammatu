@@ -14,17 +14,11 @@ export const ORDERS_COPY = {
   tabRefunds: "Hoàn tiền",
   loadFailed: ORDERS_VI.loadOrdersFailed,
   noPayment: "—",
-  operatorCountNote: (shown: number, total: number) =>
-    total > shown
-      ? `Hiển thị ${String(shown)} / ${String(total)} đơn mới nhất`
-      : `${String(total)} đơn mới nhất`,
   operatorTabsAriaLabel: "Phạm vi đơn hàng",
   operatorActiveTab: (count: number) => `Đang xử lý (${String(count)})`,
   operatorRecentTab: "Gần đây",
-  operatorActiveCountNote: (shown: number, total: number) =>
-    total > shown
-      ? `Hiển thị ${String(shown)} / ${String(total)} đơn đang xử lý`
-      : `${String(total)} đơn đang xử lý`,
+  operatorPreviousPage: "Trang trước",
+  operatorNextPage: "Trang sau",
   operatorActiveEmptyTitle: "Không có đơn đang xử lý",
   operatorActiveEmptyDescription:
     "Các đơn hoàn thành và đã hủy nằm trong Lịch sử gần đây.",

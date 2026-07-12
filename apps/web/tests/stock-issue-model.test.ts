@@ -15,7 +15,7 @@ function makeIssue(patch: Partial<BranchStockIssue> = {}): BranchStockIssue {
   return {
     id: 1,
     code: "PXK-001",
-    type: "writeoff",
+    type: "other",
     status: "draft",
     issuedAt: "2026-07-10T03:00:00.000Z",
     notes: null,
@@ -43,21 +43,12 @@ test("Branch issue model only creates the permitted internal issue types", () =>
   assert.deepEqual(
     getBranchStockIssueCreateTypes({
       canCreateOther: true,
-      canCreateWriteoff: true,
     }),
-    ["writeoff", "other"],
+    ["other"],
   );
   assert.deepEqual(
     getBranchStockIssueCreateTypes({
       canCreateOther: false,
-      canCreateWriteoff: true,
-    }),
-    ["writeoff"],
-  );
-  assert.deepEqual(
-    getBranchStockIssueCreateTypes({
-      canCreateOther: false,
-      canCreateWriteoff: false,
     }),
     [],
   );
@@ -94,6 +85,14 @@ test("Branch issue filters retain fixed-branch draft and final records", () => {
 
 test("Branch issue confirmation requires authority, a draft, and reasons", () => {
   const issue = makeIssue();
+  assert.equal(
+    canConfirmBranchStockIssue({
+      issue: makeIssue({ type: "writeoff" }),
+      lines: [makeLine()],
+      canManage: true,
+    }),
+    false,
+  );
   assert.equal(
     canConfirmBranchStockIssue({ issue, lines: [makeLine()], canManage: true }),
     true,

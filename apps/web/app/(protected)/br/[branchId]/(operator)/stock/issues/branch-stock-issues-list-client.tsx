@@ -45,17 +45,13 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
-import {
-  BranchOperatorPage,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   filterBranchStockIssues,
   getBranchStockIssueCreateTypes,
   type BranchStockIssue,
   type BranchStockIssuePermissions,
   type BranchStockIssueStatusFilter,
-  type BranchInternalIssueType,
   type BranchStockIssueType,
 } from "@lib/inventory/stock-issue-model";
 import { messages } from "@lib/messages";
@@ -107,9 +103,6 @@ function BranchStockIssueCreateSheet({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const createTypes = getBranchStockIssueCreateTypes(permissions);
-  const [issueType, setIssueType] = useState<BranchInternalIssueType>(
-    permissions.canCreateWriteoff ? "writeoff" : "other",
-  );
   const [notes, setNotes] = useState("");
 
   function handleOpenChange(nextOpen: boolean) {
@@ -118,12 +111,12 @@ function BranchStockIssueCreateSheet({
   }
 
   function handleCreate() {
-    if (!createTypes.includes(issueType)) return;
+    if (!createTypes.includes("other")) return;
 
     startTransition(async () => {
       const result = await createStockIssueDraft({
         branchId,
-        issueType,
+        issueType: "other",
         notes: notes.trim() || undefined,
       });
       if (!result.success || !result.data) {
@@ -158,34 +151,6 @@ function BranchStockIssueCreateSheet({
 
         <div className="p-4">
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="branch-stock-issue-type">
-                {INVENTORY_VI.issueTypeLabel}
-              </FieldLabel>
-              <Select
-                value={issueType}
-                disabled={createTypes.length === 1}
-                onValueChange={(value) =>
-                  setIssueType(value as BranchInternalIssueType)
-                }
-              >
-                <SelectTrigger
-                  id="branch-stock-issue-type"
-                  size="touch"
-                  className="w-full"
-                >
-                  <SelectValue placeholder={INVENTORY_VI.issueTypeLabel} />
-                </SelectTrigger>
-                <SelectContent>
-                  {createTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {issueTypeLabel(type)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
             <Field>
               <FieldLabel htmlFor="branch-stock-issue-notes">
                 {FORM_VI.notes}
@@ -263,7 +228,6 @@ export function BranchStockIssuesListClient({
   return (
     <BranchOperatorPage
       title={INVENTORY_VI.issueSlipsTitle}
-      description={branchName}
       backHref={stockBasePath}
       backLabel="Tồn"
       action={
@@ -280,115 +244,107 @@ export function BranchStockIssuesListClient({
       }
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorPanel
-          title={INVENTORY_VI.issueSlipsTitle}
-          description={INVENTORY_VI.issueEmptyDescription}
-          icon={IconFileText}
-          size="sm"
-          contentClassName="gap-3"
-        >
-          <div className="grid min-w-0 gap-2 lg:grid-cols-[minmax(0,1fr)_12rem]">
-            <InputGroup className="min-w-0">
-              <InputGroupAddon>
-                <IconSearch />
-              </InputGroupAddon>
-              <InputGroupInput
-                aria-label={INVENTORY_VI.issueSearchPlaceholder}
-                autoComplete="off"
-                inputMode="search"
-                name="branch-stock-issue-search"
-                placeholder={INVENTORY_VI.issueSearchPlaceholder}
-                value={search}
-                onChange={(event) =>
-                  replaceParams({ q: event.target.value || null })
-                }
-              />
-            </InputGroup>
-            <Select
-              value={status}
-              onValueChange={(value) =>
-                replaceParams({ status: value === "all" ? null : value })
-              }
-            >
-              <SelectTrigger
-                aria-label={INVENTORY_VI.allStatusesOption}
-                size="touch"
-                className="w-full"
-              >
-                <SelectValue placeholder={INVENTORY_VI.allStatusesOption} />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {issues.length > 0 ? (
-            <Badge variant="outline" className="w-fit rounded-full">
-              {filteredIssues.length}/{issues.length}
-            </Badge>
-          ) : null}
-
-          {filteredIssues.length === 0 ? (
-            <AppEmptyState
-              compact
-              mode={hasFilter ? "no-results" : "no-data"}
-              icon={<IconFileText />}
-              title={
-                hasFilter
-                  ? INVENTORY_VI.issueEmptyFiltered
-                  : INVENTORY_VI.issueEmptyNoData
-              }
-              description={
-                hasFilter ? undefined : INVENTORY_VI.issueEmptyDescription
+        <div className="grid min-w-0 gap-2 lg:grid-cols-[minmax(0,1fr)_12rem]">
+          <InputGroup className="min-w-0">
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              aria-label={INVENTORY_VI.issueSearchPlaceholder}
+              autoComplete="off"
+              inputMode="search"
+              name="branch-stock-issue-search"
+              placeholder={INVENTORY_VI.issueSearchPlaceholder}
+              value={search}
+              onChange={(event) =>
+                replaceParams({ q: event.target.value || null })
               }
             />
-          ) : (
-            <ItemGroup className="gap-2" role="list">
-              {filteredIssues.map((issue) => (
-                <div key={issue.id} role="listitem">
-                  <Item
-                    asChild
-                    variant="outline"
-                    className={
-                      issue.status === "cancelled"
-                        ? "min-h-16 touch-manipulation opacity-60"
-                        : "min-h-16 touch-manipulation"
-                    }
-                  >
-                    <Link
-                      href={`${issuesBasePath}/${issue.id}?returnTo=${encodeURIComponent(currentListHref)}`}
-                    >
-                      <ItemContent className="min-w-0 gap-1">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <ItemTitle className="truncate font-mono text-sm font-semibold">
-                            {issue.code}
-                          </ItemTitle>
-                          <StatusBadge
-                            domain="inventory"
-                            value={issue.status}
-                            size="sm"
-                          />
-                        </div>
-                        <ItemDescription className="line-clamp-none flex flex-wrap gap-x-2 gap-y-1 text-xs">
-                          <span>{issueTypeLabel(issue.type)}</span>
-                          <span>{formatVNDateTime(issue.issuedAt)}</span>
-                        </ItemDescription>
-                      </ItemContent>
-                      <ItemActions className="self-center text-muted-foreground">
-                        <IconChevronRight />
-                      </ItemActions>
-                    </Link>
-                  </Item>
-                </div>
+          </InputGroup>
+          <Select
+            value={status}
+            onValueChange={(value) =>
+              replaceParams({ status: value === "all" ? null : value })
+            }
+          >
+            <SelectTrigger
+              aria-label={INVENTORY_VI.allStatusesOption}
+              size="touch"
+              className="w-full"
+            >
+              <SelectValue placeholder={INVENTORY_VI.allStatusesOption} />
+            </SelectTrigger>
+            <SelectContent>
+              {statusOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
               ))}
-            </ItemGroup>
-          )}
-        </BranchOperatorPanel>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {issues.length > 0 ? (
+          <Badge variant="outline" className="w-fit rounded-full">
+            {filteredIssues.length}/{issues.length}
+          </Badge>
+        ) : null}
+
+        {filteredIssues.length === 0 ? (
+          <AppEmptyState
+            compact
+            mode={hasFilter ? "no-results" : "no-data"}
+            icon={<IconFileText />}
+            title={
+              hasFilter
+                ? INVENTORY_VI.issueEmptyFiltered
+                : INVENTORY_VI.issueEmptyNoData
+            }
+            description={
+              hasFilter ? undefined : INVENTORY_VI.issueEmptyDescription
+            }
+          />
+        ) : (
+          <ItemGroup className="gap-2" role="list">
+            {filteredIssues.map((issue) => (
+              <div key={issue.id} role="listitem">
+                <Item
+                  asChild
+                  variant="outline"
+                  className={
+                    issue.status === "cancelled"
+                      ? "min-h-16 touch-manipulation opacity-60"
+                      : "min-h-16 touch-manipulation"
+                  }
+                >
+                  <Link
+                    href={`${issuesBasePath}/${issue.id}?returnTo=${encodeURIComponent(currentListHref)}`}
+                  >
+                    <ItemContent className="min-w-0 gap-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <ItemTitle className="truncate font-mono text-sm font-semibold">
+                          {issue.code}
+                        </ItemTitle>
+                        <StatusBadge
+                          domain="inventory"
+                          value={issue.status}
+                          size="sm"
+                        />
+                      </div>
+                      <ItemDescription className="line-clamp-none flex flex-wrap gap-x-2 gap-y-1 text-xs">
+                        <span>{issueTypeLabel(issue.type)}</span>
+                        <span>{formatVNDateTime(issue.issuedAt)}</span>
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemActions className="self-center text-muted-foreground">
+                      <IconChevronRight />
+                    </ItemActions>
+                  </Link>
+                </Item>
+              </div>
+            ))}
+          </ItemGroup>
+        )}
       </div>
 
       <BranchStockIssueCreateSheet

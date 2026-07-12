@@ -32,7 +32,7 @@ export function buildBatchIntentKey(input: {
 }
 
 export function buildPaymentIntentKey(input: {
-  method: "cash_call" | "vietqr";
+  method: "cash_call" | "vietqr" | "momo";
   invoice: Record<string, unknown>;
   orderNumber: string;
   totalAmount: number;

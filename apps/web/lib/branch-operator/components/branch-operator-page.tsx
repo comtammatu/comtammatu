@@ -53,6 +53,7 @@ const toneSectionVariant = {
 export interface BranchOperatorPageProps {
   title: string;
   description?: string;
+  hideHeaderOnMobile?: boolean;
   backHref?: string;
   backLabel?: string;
   backOnClick?: ComponentProps<typeof AppBackLink>["onClick"];
@@ -67,6 +68,7 @@ export interface BranchOperatorPageProps {
 export function BranchOperatorPage({
   title,
   description,
+  hideHeaderOnMobile = false,
   backHref,
   backLabel,
   backOnClick,
@@ -82,6 +84,7 @@ export function BranchOperatorPage({
       <AppPageHeader
         title={title}
         description={description}
+        className={hideHeaderOnMobile ? "sr-only sm:not-sr-only" : undefined}
         badge={badge}
         actions={action}
         breadcrumb={

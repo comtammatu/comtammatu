@@ -1,3 +1,39 @@
+CREATE OR REPLACE FUNCTION private.staff_role_from_position_code(p_code text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+  SELECT CASE p_code
+    WHEN 'owner'              THEN 'owner'
+    WHEN 'super_manager'      THEN 'super_manager'
+    WHEN 'executive_assistant' THEN 'super_manager'
+    WHEN 'tro_ly_giam_doc'    THEN 'super_manager'
+    WHEN 'branch_manager'     THEN 'branch_manager'
+    WHEN 'quan_ly_CN'         THEN 'branch_manager'
+    WHEN 'warehouse_head'     THEN 'warehouse_manager'
+    WHEN 'kho_truong'         THEN 'warehouse_manager'
+    WHEN 'warehouse_keeper'   THEN 'warehouse_manager'
+    WHEN 'thu_kho'            THEN 'warehouse_manager'
+    WHEN 'warehouse_manager'  THEN 'warehouse_manager'
+    WHEN 'head_chef'          THEN 'production_manager'
+    WHEN 'bep_truong'         THEN 'production_manager'
+    WHEN 'production_manager' THEN 'production_manager'
+    WHEN 'chef'               THEN 'chef'
+    WHEN 'kitchen_helper'     THEN 'chef'
+    WHEN 'phu_bep'            THEN 'chef'
+    WHEN 'cashier'            THEN 'cashier'
+    WHEN 'waiter'             THEN 'waiter'
+    WHEN 'chief_accountant'   THEN 'office'
+    WHEN 'ke_toan_truong'     THEN 'office'
+    WHEN 'accountant'         THEN 'office'
+    WHEN 'ke_toan'            THEN 'office'
+    WHEN 'office'             THEN 'office'
+    ELSE NULL
+  END
+$$;
+
 -- =====================================================================
 -- Employee checkout approval
 -- - Employee checkout now sends a pending approval request instead of setting

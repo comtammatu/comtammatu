@@ -41,6 +41,11 @@ export const SELF_ORDER_VI = {
   pendingApprovalTitle: "Đã gửi món",
   pendingApprovalDescription:
     "Nhân viên đã nhận lượt gọi món của bàn. Vui lòng đợi một chút để gọi thêm.",
+  pendingDialogTitle: "Đã gửi đơn cho Thu Ngân",
+  pendingDialogDescription: "Vui lòng chờ quán ít phút để chuẩn bị nhé",
+  callMore: "Gọi thêm",
+  pendingBillOverlayTitle: "Chờ duyệt",
+  pendingBillOverlayDescription: "Món sẽ vào hoá đơn sau khi Thu Ngân duyệt.",
   activeSessionTitle: "Đang gọi món",
   addMoreTitle: "Gọi thêm món",
   closedTitle: "Đã thanh toán",
@@ -130,6 +135,10 @@ export const SELF_ORDER_VI = {
   paymentTitle: "Thanh toán",
   cashCall: "Gọi nhân viên thu tiền mặt",
   vietQrCreate: "Tạo mã QR thanh toán",
+  momoPay: "Thanh toán bằng MoMo",
+  momoPendingTitle: "Đang chờ MoMo xác nhận",
+  momoPendingDescription:
+    "Sau khi hoàn tất trong MoMo, bạn sẽ được quay lại đây tự động.",
   cashCallOk: "Đã gọi nhân viên thu tiền mặt.",
   vietQrPendingTitle: "Mã QR thanh toán",
   openBankApp: "Mở ứng dụng",

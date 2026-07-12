@@ -4,7 +4,6 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   CheckCircle2 as IconCheckCircle,
   Circle as IconCircle,
 } from "lucide-react";
@@ -15,7 +14,6 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
@@ -124,15 +122,10 @@ export function TransferReceiveClient({
       <BranchOperatorPage
         title={transfer.code}
         description={receiveCopy.receiveFrom(transfer.fromBranch)}
+        backHref={backHref}
+        backLabel={receiveCopy.receiveBackToList}
       >
         <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-          <div className="sm:hidden">
-            <Button asChild variant="ghost" size="icon-touch">
-              <Link href={backHref} aria-label={ACTIONS_VI.back}>
-                <IconArrowLeft />
-              </Link>
-            </Button>
-          </div>
           <AppEmptyState
             compact
             mode="no-data"
@@ -165,21 +158,10 @@ export function TransferReceiveClient({
     <BranchOperatorPage
       title={transfer.code}
       description={receiveCopy.receiveFrom(transfer.fromBranch)}
+      backHref={backHref}
+      backLabel={receiveCopy.receiveBackToList}
     >
       <div className="flex w-full touch-manipulation flex-col gap-3">
-        <div className="sm:hidden">
-          <Button
-            asChild
-            variant="ghost"
-            size="icon-touch"
-            className="shrink-0"
-          >
-            <Link href={backHref} aria-label={ACTIONS_VI.back}>
-              <IconArrowLeft />
-            </Link>
-          </Button>
-        </div>
-
         <div className="rounded-md bg-muted/50 p-2.5">
           <div className="flex items-center gap-2">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
@@ -296,14 +278,6 @@ export function TransferReceiveClient({
 
         <AppDetailFooter
           sticky
-          leading={
-            <Button variant="outline" size="touch" asChild>
-              <Link href={backHref}>
-                <IconArrowLeft data-icon="inline-start" />
-                {ACTIONS_VI.back}
-              </Link>
-            </Button>
-          }
           trailing={
             <Button
               type="button"

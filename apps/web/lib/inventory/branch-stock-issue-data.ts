@@ -114,14 +114,13 @@ function toBranchStockIssueIngredient(
 }
 
 async function loadIssuePermissions(branchId: number) {
-  const [canCreateOther, canCreateWriteoff] = await Promise.all([
-    currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITE),
-    currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITEOFF),
-  ]);
+  const canCreateOther = await currentUserHasPermission(
+    branchId,
+    PERMISSION_KEYS.INVENTORY_WRITE,
+  );
 
   return {
     canCreateOther,
-    canCreateWriteoff,
   } satisfies BranchStockIssuePermissions;
 }
 
@@ -212,10 +211,7 @@ export async function loadBranchStockIssueDetailData(
 
   const issue = toBranchStockIssue(detail.issue);
   if (!issue) notFound();
-  const canManage =
-    issue.type === "writeoff"
-      ? permissions.canCreateWriteoff
-      : permissions.canCreateOther;
+  const canManage = issue.type !== "writeoff" && permissions.canCreateOther;
 
   return {
     issue,

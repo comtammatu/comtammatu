@@ -245,12 +245,12 @@ BEGIN
   EXECUTE 'DROP FUNCTION IF EXISTS public.'
     || quote_ident('auth_' || 'ar' || 'ea_' || 'id')
     || '()';
+  EXECUTE 'ALTER TABLE public.profiles DROP COLUMN IF EXISTS '
+    || quote_ident('ar' || 'ea_' || 'id');
   EXECUTE 'DROP TABLE IF EXISTS public.'
     || quote_ident('ar' || 'ea_' || 'branches');
   EXECUTE 'DROP TABLE IF EXISTS public.'
     || quote_ident('ar' || 'eas');
-  EXECUTE 'ALTER TABLE public.profiles DROP COLUMN IF EXISTS '
-    || quote_ident('ar' || 'ea_' || 'id');
   EXECUTE 'DROP FUNCTION IF EXISTS public.'
     || quote_ident('_auth_' || 'v' || '2_position_id_from_role')
     || '(text,bigint)';

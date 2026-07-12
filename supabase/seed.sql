@@ -209,7 +209,8 @@ BEGIN
     IF r.user_id = 'a0000002-0000-4000-8000-000000000002'::uuid
        AND EXISTS (SELECT 1 FROM auth.users u WHERE u.id = r.user_id) THEN
       UPDATE auth.users
-      SET encrypted_password = v_crypt,
+      SET email = r.email,
+          encrypted_password = v_crypt,
           email_confirmed_at = COALESCE(email_confirmed_at, now()),
           raw_app_meta_data = (
             jsonb_build_object(

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { AppEmptyState } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
@@ -36,11 +37,6 @@ export default async function TeamBoardPage({
   const { branchId: rawBranchId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const requestedTab = resolvedSearchParams.tab;
-  const activeTab: TeamWorkspaceTabValue = validTabs.has(
-    requestedTab as TeamWorkspaceTabValue,
-  )
-    ? (requestedTab as TeamWorkspaceTabValue)
-    : "board";
 
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
@@ -80,55 +76,71 @@ export default async function TeamBoardPage({
         context.branchId,
       ),
     ]);
-  const result = canViewTeam
-    ? await fetchTeamBoard({ branchId: context.branchId })
-    : { success: false as const, error: "Không có quyền" };
-  const rows: TeamBoardRow[] = result.success ? (result.data?.rows ?? []) : [];
   const basePath = `/br/${context.branchId}`;
+  const teamPath = `${basePath}/team`;
+  const availableTabs: TeamWorkspaceTabValue[] = [
+    ...(canViewTeam ? (["board", "members"] as const) : []),
+    ...(canAssignCount ? (["assignments"] as const) : []),
+  ];
+  const requestedTabValue = validTabs.has(requestedTab as TeamWorkspaceTabValue)
+    ? (requestedTab as TeamWorkspaceTabValue)
+    : null;
+  const activeTab =
+    requestedTabValue && availableTabs.includes(requestedTabValue)
+      ? requestedTabValue
+      : availableTabs[0];
 
-  const content = (
-    <TeamWorkspaceTabs
-      initialValue={activeTab}
-      board={
-        !canViewTeam ? (
-          <AppEmptyState mode="no-access" />
-        ) : result.success ? (
-          <TeamBoardClient
-            rows={rows}
-            branchId={context.branchId}
-            countSlipsHref={`${basePath}/stock/count-slips`}
-            checkoutApprovalsHref={`${basePath}/shift/checkout-approvals`}
-            canApproveCheckout={canApproveCheckout}
-            canApproveCount={canApproveCount}
-          />
-        ) : (
-          <AppEmptyState mode="error" description={result.error} />
-        )
-      }
-      members={
-        canViewTeam ? (
-          <TeamMembersContent branchId={context.branchId} />
-        ) : (
-          <AppEmptyState mode="no-access" />
-        )
-      }
-      assignments={
-        canAssignCount ? (
-          <TeamAssignmentsContent
-            branchId={context.branchId}
-            locationParam={resolvedSearchParams.locationId}
-            shiftParam={resolvedSearchParams.shiftId}
-          />
-        ) : (
-          <AppEmptyState mode="no-access" />
-        )
-      }
-    />
-  );
+  if (!activeTab) {
+    return (
+      <BranchOperatorPage title={copy.title}>
+        <AppEmptyState mode="no-access" />
+      </BranchOperatorPage>
+    );
+  }
+
+  let activeContent: ReactNode;
+  if (activeTab === "board") {
+    const result = await fetchTeamBoard({ branchId: context.branchId });
+    const rows: TeamBoardRow[] = result.success
+      ? (result.data?.rows ?? [])
+      : [];
+    activeContent = result.success ? (
+      <TeamBoardClient
+        rows={rows}
+        branchId={context.branchId}
+        countSlipsHref={`${basePath}/stock/count-slips`}
+        checkoutApprovalsHref={`${basePath}/shift/checkout-approvals`}
+        canApproveCheckout={canApproveCheckout}
+        canApproveCount={canApproveCount}
+      />
+    ) : (
+      <AppEmptyState mode="error" description={result.error} />
+    );
+  } else if (activeTab === "members") {
+    activeContent = <TeamMembersContent branchId={context.branchId} />;
+  } else {
+    activeContent = (
+      <TeamAssignmentsContent
+        branchId={context.branchId}
+        locationParam={resolvedSearchParams.locationId}
+        shiftParam={resolvedSearchParams.shiftId}
+      />
+    );
+  }
 
   return (
-    <BranchOperatorPage title={copy.title} description={copy.description}>
-      {content}
+    <BranchOperatorPage
+      title={copy.title}
+      description={copy.description}
+      hideHeaderOnMobile
+    >
+      <TeamWorkspaceTabs
+        activeValue={activeTab}
+        availableValues={availableTabs}
+        basePath={teamPath}
+      >
+        {activeContent}
+      </TeamWorkspaceTabs>
     </BranchOperatorPage>
   );
 }

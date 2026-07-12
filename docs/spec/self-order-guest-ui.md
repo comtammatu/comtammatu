@@ -27,7 +27,7 @@ Guest-visible state is **derived**, never stored. There is exactly one stored en
 | Derived from                                      | Guest state               | Guest may                                                                        |
 | ------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------- |
 | no pending request, no open order on table        | `Chưa mở bàn`             | browse, build cart, **Gửi món** (first round)                                    |
-| a `pending` request exists                        | `Chờ xác nhận`            | browse; cart CTA hard-disabled                                                   |
+| a `pending` request exists                        | `Chờ xác nhận`            | browse, build cart, **Gửi thêm món** into the same pending request               |
 | the last request is `rejected`                    | `Bị từ chối`              | resubmit immediately (same cart)                                                 |
 | an open order exists, no live payment intent      | `Bàn đang mở`             | **Gửi thêm món** (straight to KDS), view bill                                    |
 | an open order exists, a live payment intent       | `Đang thanh toán`         | view bill, wait; add-more locked                                                 |
@@ -43,11 +43,12 @@ A paid order leaves the snapshot immediately. The next guest scanning the same p
 1. Guest scans the printed table QR → `/q/{token}`.
 2. Browse menu, customize, add to cart.
 3. **Gửi món** → one `self_order_requests` row, `status='pending'`.
-4. Staff sees the badge on the POS table tile → **Duyệt** → `create_order(table_id, items)` → `route_order_to_kds` fires → the kitchen has it.
-5. Guest adds more → `append_order_items` directly. **No approval.** KDS receives it.
-6. Guest opens the bill drawer → `orders.items + totalAmount` (the payable truth after staff edits, voids, merges) and presses **Thanh toán**.
-7. The drawer switches to payment (`cash_call` | `vietqr`) + optional HĐĐT buyer fields; Back returns to the bill.
-8. Payment settles → existing triggers complete the order and release the table.
+4. Before staff decides, each **Gửi thêm món** operation merges into that same pending request; replaying an operation returns its original outcome without duplicating items.
+5. Staff sees the badge on the POS table tile → **Duyệt** → `create_order(table_id, items)` → `route_order_to_kds` fires → the kitchen has it.
+6. Guest adds more after approval → `append_order_items` directly. **No approval.** KDS receives it.
+7. Guest opens the bill drawer → `orders.items + totalAmount` (the payable truth after staff edits, voids, merges) and presses **Thanh toán**.
+8. The drawer switches to payment (`cash_call` | `vietqr`) + optional HĐĐT buyer fields; Back returns to the bill.
+9. Payment settles → existing triggers complete the order and release the table.
 
 ### Table already has an open order
 
@@ -63,8 +64,11 @@ intent for that table.
 
 `clientOpId` is tenant-scoped. A replay returns the original request outcome;
 reusing the same ID with a different canonical cart or customer note is rejected.
-Direct appends also persist an `accepted` request row after
-`append_order_items`, so replay remains stable even if the table state changes.
+Pending add-more operations are retained in an RPC-only operation ledger before
+their cart is merged, so retries remain stable even after the staff-facing
+request payload changes. Direct appends also persist an `accepted` request row
+after `append_order_items`, so replay remains stable even if the table state
+changes.
 
 A rejected cart is returned only when the browser supplies that request's
 `clientOpId`. A reload without the in-memory ID returns a clean menu; the next
@@ -144,11 +148,14 @@ Editing a line replaces that cart entry in place (same `key`).
 
 ### G4 · Awaiting confirmation
 
-Emit one Sonner `toast.warning` (title + description) when the state first
-becomes awaiting — do not mount a dialog or banner on the menu. Guest `/q/*`
-uses the dark high-contrast toaster preset (larger title/description; not the
-near-white light warning fill). Cart CTA hard-disabled. The bill button shows a `Clock` icon; the drawer shows
-the pending round with no total.
+After the first successful pending submit in this browser session, open one
+`AppDialog` with title **Đã gửi đơn cho Thu Ngân**, description **Vui lòng chờ
+quán ít phút để chuẩn bị nhé**, and actions **Gọi thêm** / **Đóng**. Both actions
+return to the menu; the dialog does not remount from polling, reload, or a
+later add-more submit. The cart CTA stays enabled as **Gửi thêm món** and its
+next submit merges into the same pending request. The bill button shows a
+`Clock` icon; the drawer keeps the pending round visible behind a blurred
+state overlay with a static `BrandMascot`, and shows no payable total.
 
 ### G5 · Rejected
 
@@ -284,7 +291,7 @@ Public snapshot, submit, and payment endpoints keep bounded per-token and per-ne
 
 | Asset                                        | On `/q/[token]`                                                             |
 | -------------------------------------------- | --------------------------------------------------------------------------- |
-| `BrandMascot`                                | Static only (G0 unavailable). Never animated, never on the ordering surface |
+| `BrandMascot`                                | Static only in G0 unavailable and the G4 pending overlay. Never animated or interactive |
 | `BrandLockup` / `BrandMark` / `BrandLogoBox` | **Forbidden**                                                               |
 | `brand-pattern-caro`                         | **Forbidden**                                                               |
 | `BrandSymbol` (`riceBowl`)                   | Empty menu (`AppEmptyState.symbol`) and missing item-photo placeholders     |

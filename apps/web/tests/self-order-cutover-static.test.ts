@@ -55,11 +55,14 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   assert.match(client, /onOpenPayment=\{\(\) => setBillView\("payment"\)\}/);
   assert.match(client, /!ambiguous && order \? \(/);
   assert.match(client, /toast\.error\(refreshError\)/);
-  assert.match(client, /toast\.warning\(SELF_ORDER_VI\.awaitingCalloutTitle/);
   assert.match(client, /toast\.warning\(SELF_ORDER_VI\.rejectedCalloutTitle/);
   assert.match(client, /guestToastKeyRef/);
-  assert.doesNotMatch(client, /<AppDialog|guestNotice|setGuestNotice/);
-  assert.match(client, /awaitingCalloutTitle/);
+  assert.match(client, /<AppDialog/);
+  assert.match(client, /SELF_ORDER_VI\.pendingDialogTitle/);
+  assert.match(client, /SELF_ORDER_VI\.pendingDialogDescription/);
+  assert.match(client, /SELF_ORDER_VI\.callMore/);
+  assert.match(client, /setAwaitingDialogOpen\(true\)/);
+  assert.doesNotMatch(client, /toast\.warning\(SELF_ORDER_VI\.awaitingCalloutTitle/);
   assert.match(client, /rejectedCalloutTitle/);
   assert.match(client, /SELF_ORDER_VI\.submitAddMore/);
   assert.match(client, /<BillDrawer/);
@@ -90,6 +93,9 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   assert.match(summary, /<DataTable/);
   assert.doesNotMatch(summary, /grid-cols-\[minmax\(0,1fr\)_auto_auto_auto\]/);
   assert.match(summary, /items\.flatMap\(buildBillRows\)/);
+  assert.match(summary, /BrandMascot/);
+  assert.match(summary, /pendingBillOverlayTitle/);
+  assert.match(summary, /blur-\[2px\]/);
   assert.match(summary, /formatVND\(row\.unitPrice\)/);
   assert.match(summary, /formatVND\(row\.lineTotal\)/);
   assert.match(bill, /SELF_ORDER_VI\.subtotal/);

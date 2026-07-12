@@ -23,21 +23,32 @@ export async function StaffPayslipPageContent(props: {
   const { year: yearParam } = await props.searchParams;
   const currentYear = Number(getTodayVN().slice(0, 4));
   const year = isValidYear(yearParam) ? Number(yearParam) : currentYear;
-  const PageShell = props.plane === "branch" ? BranchOperatorPage : EmployeePage;
-
   if (!ctx) {
-    return (
-      <PageShell
+    const empty = (
+      <EmployeeMissingProfileEmpty
+        title={copy.missingProfileTitle}
+        description={copy.missingProfileDescription}
+        profileHref={props.profileHref}
+      />
+    );
+    return props.plane === "branch" ? (
+      <BranchOperatorPage
+        title={copy.title}
+        description={copy.description}
+        hideHeaderOnMobile={props.hideHeaderOnMobile}
+        backHref={props.profileHref}
+        backLabel={messages.employee.profile.title}
+      >
+        {empty}
+      </BranchOperatorPage>
+    ) : (
+      <EmployeePage
         title={copy.title}
         description={copy.description}
         hideHeaderOnMobile={props.hideHeaderOnMobile}
       >
-        <EmployeeMissingProfileEmpty
-          title={copy.missingProfileTitle}
-          description={copy.missingProfileDescription}
-          profileHref={props.profileHref}
-        />
-      </PageShell>
+        {empty}
+      </EmployeePage>
     );
   }
 
@@ -62,12 +73,8 @@ export async function StaffPayslipPageContent(props: {
     .order("created_at", { ascending: false })
     .limit(12);
 
-  return (
-    <PageShell
-      title={copy.title}
-      description={copy.description}
-      hideHeaderOnMobile={props.hideHeaderOnMobile}
-    >
+  const content = (
+    <>
       <YearPicker
         selectedYear={year}
         currentYear={currentYear}
@@ -77,10 +84,29 @@ export async function StaffPayslipPageContent(props: {
         entries={(entries ?? []) as unknown as PayslipEntry[]}
         plane={props.plane}
       />
-    </PageShell>
+    </>
+  );
+
+  return props.plane === "branch" ? (
+    <BranchOperatorPage
+      title={copy.title}
+      description={copy.description}
+      hideHeaderOnMobile={props.hideHeaderOnMobile}
+      backHref={props.profileHref}
+      backLabel={messages.employee.profile.title}
+    >
+      {content}
+    </BranchOperatorPage>
+  ) : (
+    <EmployeePage
+      title={copy.title}
+      description={copy.description}
+      hideHeaderOnMobile={props.hideHeaderOnMobile}
+    >
+      {content}
+    </EmployeePage>
   );
 }
-
 
 function isValidYear(s: string | undefined): boolean {
   if (typeof s !== "string") return false;

@@ -10,12 +10,7 @@ import {
   Save as IconSave,
   Search as IconSearch,
 } from "lucide-react";
-import {
-  AppEmptyState,
-  AppSection,
-  AppToolbar,
-  DescriptionList,
-} from "@/components/surface";
+import { AppEmptyState } from "@/components/surface";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { Button } from "@comtammatu/ui/components/button";
@@ -52,7 +47,6 @@ import {
   FieldLabel,
 } from "@comtammatu/ui/components/field";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { formatVND } from "@comtammatu/shared/format";
 import { normalizeSearch } from "@lib/search";
 import { useRealtimeRefresh } from "@/_hooks/use-realtime-refresh";
 import {
@@ -92,14 +86,6 @@ function getAvailableToSellValue(row: MenuLimitRow): number | string {
   return row.available_to_sell ?? messages.pos.menu.unlimited;
 }
 
-function getManualLimitValue(row: MenuLimitRow): number | string {
-  return row.manual_limit_quantity ?? messages.pos.menu.manualLimitNotSet;
-}
-
-function getStockCapacityValue(row: MenuLimitRow): number | string {
-  return row.stock_capacity ?? messages.pos.menu.noStockConfig;
-}
-
 function getMenuLimitQueuePriority(row: MenuLimitRow): number {
   if (row.is_disabled) return 0;
   if (row.available_to_sell !== null && row.available_to_sell <= 0) return 1;
@@ -137,36 +123,11 @@ function MenuLimitRowItem({
             {renderItemBadge(row)}
           </ItemTitle>
           <ItemDescription className="flex flex-wrap items-center gap-2">
-            <span className="font-mono tabular-nums text-foreground">
-              {formatVND(row.base_price)}
+            <span className="font-medium text-foreground">
+              {messages.pos.menu.availableToSellLabel}:{" "}
+              {getAvailableToSellValue(row)}
             </span>
           </ItemDescription>
-        </ItemContent>
-        <ItemContent className="grid w-full shrink-0 grid-cols-3 gap-2 border-t pt-2 text-xs lg:w-80 lg:flex-none lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
-          <span className="flex min-w-0 flex-col gap-1">
-            <span className="text-muted-foreground">
-              {messages.pos.menu.availableToSellLabel}
-            </span>
-            <strong className="truncate font-mono tabular-nums text-foreground">
-              {getAvailableToSellValue(row)}
-            </strong>
-          </span>
-          <span className="flex min-w-0 flex-col gap-1">
-            <span className="text-muted-foreground">
-              {messages.pos.menu.manualLimitShortLabel}
-            </span>
-            <strong className="truncate font-mono tabular-nums text-foreground">
-              {getManualLimitValue(row)}
-            </strong>
-          </span>
-          <span className="flex min-w-0 flex-col gap-1">
-            <span className="text-muted-foreground">
-              {messages.pos.menu.stockCapacityLabel}
-            </span>
-            <strong className="truncate font-mono tabular-nums text-foreground">
-              {getStockCapacityValue(row)}
-            </strong>
-          </span>
         </ItemContent>
         <ItemActions className="absolute top-3 right-3 text-muted-foreground lg:static">
           <ChevronRight aria-hidden="true" className="size-4" />
@@ -243,6 +204,7 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
   const [draftQty, setDraftQty] = useState<string>("");
   const [draftDisabled, setDraftDisabled] = useState<boolean>(false);
   const [replenishReason, setReplenishReason] = useState("");
+  const [drawerMode, setDrawerMode] = useState<"limit" | "replenish">("limit");
 
   const grouped = useMemo(() => {
     const needle = normalizeSearch(query).trim();
@@ -290,23 +252,15 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
     return groups;
   }, [query, rows]);
 
-  const summary = useMemo(
-    () => ({
-      total: rows.length,
-      limited: rows.filter((row) => row.manual_limit_quantity !== null).length,
-      stockLimited: rows.filter((row) => row.stock_capacity !== null).length,
-      disabled: rows.filter((row) => row.is_disabled).length,
-      exhausted: rows.filter((row) => {
-        return (
-          !row.is_disabled &&
-          row.available_to_sell !== null &&
-          row.available_to_sell <= 0
-        );
-      }).length,
-    }),
+  const actionCount = useMemo(
+    () =>
+      rows.filter(
+        (row) =>
+          row.is_disabled ||
+          (row.available_to_sell !== null && row.available_to_sell <= 0),
+      ).length,
     [rows],
   );
-  const actionCount = summary.exhausted + summary.disabled;
 
   function openDrawer(row: MenuLimitRow) {
     setDrawerRow(row);
@@ -317,6 +271,7 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
     );
     setDraftDisabled(row.is_disabled);
     setReplenishReason("");
+    setDrawerMode("limit");
   }
 
   function handleSaveLimit() {
@@ -418,49 +373,24 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
 
   return (
     <>
-      <AppToolbar
-        search={
-          <InputGroup className="w-full lg:w-80">
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
-            <InputGroupInput
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={messages.pos.menu.searchPlaceholder}
-              aria-label={messages.pos.menu.searchAria}
-            />
-          </InputGroup>
-        }
-        filters={
-          <div className="flex flex-wrap gap-1.5">
-            {actionCount > 0 ? (
-              <Badge variant="warning">
-                {messages.pos.menu.attentionCount(actionCount)}
-              </Badge>
-            ) : null}
-            <Badge variant="outline">
-              {messages.pos.menu.itemCount(summary.total)}
-            </Badge>
-            <Badge variant="success">
-              {messages.pos.menu.limitedCount(summary.limited)}
-            </Badge>
-            <Badge variant="outline">
-              {messages.pos.menu.stockCapacityCount(summary.stockLimited)}
-            </Badge>
-            {summary.exhausted > 0 ? (
-              <Badge variant="warning">
-                {messages.pos.menu.exhaustedCount(summary.exhausted)}
-              </Badge>
-            ) : null}
-            {summary.disabled > 0 ? (
-              <Badge variant="destructive">
-                {messages.pos.menu.disabledCount(summary.disabled)}
-              </Badge>
-            ) : null}
-          </div>
-        }
-      />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <InputGroup className="w-full sm:flex-1">
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={messages.pos.menu.searchPlaceholder}
+            aria-label={messages.pos.menu.searchAria}
+          />
+        </InputGroup>
+        {actionCount > 0 ? (
+          <Badge variant="warning" className="self-start sm:self-auto">
+            {messages.pos.menu.attentionCount(actionCount)}
+          </Badge>
+        ) : null}
+      </div>
 
       {grouped.length === 0 ? (
         <AppEmptyState
@@ -472,16 +402,12 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
 
       <div className="flex flex-col gap-3">
         {grouped.map((group) => (
-          <AppSection
+          <section
             key={group.categoryId}
-            title={group.categoryName}
-            size="sm"
-            badge={{
-              children: messages.pos.menu.itemCount(group.items.length),
-              variant: "outline",
-            }}
-            contentFlush
+            className="flex flex-col gap-1"
+            aria-label={group.categoryName}
           >
+            <SectionLabel density="dense">{group.categoryName}</SectionLabel>
             <ItemGroup className="gap-1">
               {group.items.map((row) => (
                 <MenuLimitRowItem
@@ -492,190 +418,190 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                 />
               ))}
             </ItemGroup>
-          </AppSection>
+          </section>
         ))}
       </div>
 
       <Drawer
         open={!!drawerRow}
-        onOpenChange={(open) => !open && setDrawerRow(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDrawerRow(null);
+            setDrawerMode("limit");
+            setReplenishReason("");
+          }
+        }}
       >
         <DrawerContent className="overflow-hidden">
           {drawerRow && (
             <>
               <DrawerHeader>
-                <DrawerTitle>{drawerRow.item_name}</DrawerTitle>
-                <DrawerDescription asChild>
-                  <div className="flex flex-wrap justify-center gap-1.5 lg:justify-start">
-                    {renderItemBadge(drawerRow)}
-                    <Badge variant="outline" className="font-mono">
-                      {formatVND(drawerRow.base_price)}
-                    </Badge>
-                  </div>
+                <DrawerTitle>
+                  {drawerMode === "limit"
+                    ? drawerRow.item_name
+                    : messages.pos.menu.replenishKitchenTitle}
+                </DrawerTitle>
+                <DrawerDescription>
+                  {drawerMode === "limit"
+                    ? messages.pos.menu.availabilityRuleHint
+                    : `${drawerRow.item_name} · ${messages.pos.menu.replenishKitchenHint}`}
                 </DrawerDescription>
               </DrawerHeader>
               <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pb-2">
-                <Item variant="muted" size="sm" className="items-center">
-                  <ItemContent>
-                    <ItemTitle>
-                      {messages.pos.menu.availableToSellLabel}
-                    </ItemTitle>
-                    <ItemDescription>
-                      {messages.pos.menu.availabilityRuleHint}
-                    </ItemDescription>
-                  </ItemContent>
-                  <strong className="shrink-0 font-mono tabular-nums text-foreground">
-                    {getAvailableToSellValue(drawerRow)}
-                  </strong>
-                </Item>
-                <DescriptionList
-                  className="grid grid-cols-2 gap-x-4 gap-y-3"
-                  items={[
-                    {
-                      term: messages.pos.menu.manualLimitShortLabel,
-                      description: getManualLimitValue(drawerRow),
-                    },
-                    {
-                      term: messages.pos.menu.stockCapacityLabel,
-                      description: getStockCapacityValue(drawerRow),
-                    },
-                    {
-                      term: messages.pos.menu.soldTodayLabel,
-                      description: drawerRow.sold_today,
-                    },
-                    {
-                      term: messages.pos.menu.pendingDemandLabel,
-                      description: drawerRow.pending_unfinalized_demand,
-                    },
-                    {
-                      term: messages.pos.menu.activeHoldDemandLabel,
-                      description: drawerRow.active_hold_demand,
-                    },
-                  ]}
-                  descriptionClassName="font-mono tabular-nums"
-                />
-                <FieldGroup className="gap-4">
-                  <Item
-                    asChild
-                    variant="muted"
-                    className="items-center justify-between"
-                  >
-                    <Field orientation="horizontal">
-                      <FieldContent>
-                        <FieldLabel htmlFor="menu-limit-disabled">
-                          {messages.pos.menu.servingStatusLabel}
+                {drawerMode === "limit" ? (
+                  <>
+                    <Item variant="muted" size="sm" className="items-center">
+                      <ItemContent>
+                        <ItemTitle>
+                          {messages.pos.menu.availableToSellLabel}
+                        </ItemTitle>
+                      </ItemContent>
+                      <strong className="shrink-0 font-mono tabular-nums text-foreground">
+                        {getAvailableToSellValue(drawerRow)}
+                      </strong>
+                    </Item>
+                    <FieldGroup className="gap-4">
+                      <Item
+                        asChild
+                        variant="muted"
+                        className="items-center justify-between"
+                      >
+                        <Field orientation="horizontal">
+                          <FieldContent>
+                            <FieldLabel htmlFor="menu-limit-disabled">
+                              {messages.pos.menu.servingStatusLabel}
+                            </FieldLabel>
+                            <FieldDescription>
+                              {messages.pos.menu.servingStatusHint}
+                            </FieldDescription>
+                          </FieldContent>
+                          <Switch
+                            id="menu-limit-disabled"
+                            size="touch"
+                            checked={draftDisabled}
+                            onCheckedChange={setDraftDisabled}
+                          />
+                        </Field>
+                      </Item>
+
+                      <Field>
+                        <FieldLabel htmlFor="menu-limit-quantity">
+                          {messages.pos.menu.manualLimitOptionalLabel}
                         </FieldLabel>
+                        <QuantityInput
+                          id="menu-limit-quantity"
+                          maxFractionDigits={0}
+                          max={9999}
+                          placeholder={messages.pos.menu.manualLimitExample}
+                          value={draftQty}
+                          onValueChange={setDraftQty}
+                          aria-label={messages.pos.menu.manualLimitInputAria(
+                            drawerRow.item_name,
+                          )}
+                        />
                         <FieldDescription>
-                          {messages.pos.menu.servingStatusHint}
+                          {messages.pos.menu.manualLimitOptionalHint}
                         </FieldDescription>
-                      </FieldContent>
-                      <Switch
-                        id="menu-limit-disabled"
-                        size="touch"
-                        checked={draftDisabled}
-                        onCheckedChange={setDraftDisabled}
+                      </Field>
+                    </FieldGroup>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      disabled={isPending}
+                      onClick={() => setDrawerMode("replenish")}
+                    >
+                      <CookingPot />
+                      {messages.pos.menu.replenishKitchenTitle}
+                    </Button>
+                  </>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <Field>
+                      <FieldLabel htmlFor="menu-limit-replenish-reason">
+                        {messages.pos.menu.replenishKitchenReasonLabel}
+                      </FieldLabel>
+                      <Textarea
+                        id="menu-limit-replenish-reason"
+                        data-vaul-no-drag
+                        value={replenishReason}
+                        onChange={(event) =>
+                          setReplenishReason(event.target.value)
+                        }
+                        placeholder={
+                          messages.pos.menu.replenishKitchenPlaceholder
+                        }
+                        disabled={isPending}
+                        className="min-h-20 resize-none text-base"
                       />
+                      <FieldDescription>
+                        {messages.pos.menu.replenishKitchenReasonHint}
+                      </FieldDescription>
                     </Field>
-                  </Item>
-
-                  <Field>
-                    <FieldLabel htmlFor="menu-limit-quantity">
-                      {messages.pos.menu.manualLimitOptionalLabel}
-                    </FieldLabel>
-                    <QuantityInput
-                      id="menu-limit-quantity"
-                      maxFractionDigits={0}
-                      max={9999}
-                      placeholder={messages.pos.menu.manualLimitExample}
-                      value={draftQty}
-                      onValueChange={setDraftQty}
-                      aria-label={messages.pos.menu.manualLimitInputAria(
-                        drawerRow.item_name,
-                      )}
-                    />
-                    <FieldDescription>
-                      {messages.pos.menu.manualLimitOptionalHint}
-                    </FieldDescription>
-                  </Field>
-                </FieldGroup>
-
-                <div className="flex flex-col gap-3 border-t pt-3">
-                  <SectionLabel>
-                    {messages.pos.menu.replenishKitchenTitle}
-                  </SectionLabel>
-                  <p className="text-xs text-muted-foreground">
-                    {messages.pos.menu.replenishKitchenHint}
-                  </p>
-                  <Field>
-                    <FieldLabel htmlFor="menu-limit-replenish-reason">
-                      {messages.pos.menu.replenishKitchenReasonLabel}
-                    </FieldLabel>
-                    <Textarea
-                      id="menu-limit-replenish-reason"
-                      data-vaul-no-drag
-                      value={replenishReason}
-                      onChange={(event) =>
-                        setReplenishReason(event.target.value)
-                      }
-                      placeholder={
-                        messages.pos.menu.replenishKitchenPlaceholder
-                      }
-                      disabled={isPending}
-                      className="min-h-20 resize-none text-base"
-                    />
-                    <FieldDescription>
-                      {messages.pos.menu.replenishKitchenReasonHint}
-                    </FieldDescription>
-                  </Field>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      disabled={isPending}
-                      onClick={() => handleReplenishKitchen(1)}
-                    >
-                      <CookingPot />
-                      +1 suất
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      disabled={isPending}
-                      onClick={() => handleReplenishKitchen(2)}
-                    >
-                      <CookingPot />
-                      +2 suất
-                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="touch"
+                        disabled={isPending}
+                        onClick={() => handleReplenishKitchen(1)}
+                      >
+                        <CookingPot />
+                        +1 suất
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="touch"
+                        disabled={isPending}
+                        onClick={() => handleReplenishKitchen(2)}
+                      >
+                        <CookingPot />
+                        +2 suất
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               <DrawerFooter className="flex-row gap-2">
-                {drawerRow.manual_limit_quantity != null && (
+                {drawerMode === "replenish" ? (
                   <Button
                     variant="outline"
                     size="touch"
                     className="flex-1"
-                    onClick={handleClearLimit}
+                    onClick={() => setDrawerMode("limit")}
                     disabled={isPending}
                   >
-                    {messages.pos.menu.clearLimit}
+                    Quay lại
                   </Button>
+                ) : (
+                  <>
+                    {drawerRow.manual_limit_quantity != null && (
+                      <Button
+                        variant="outline"
+                        size="touch"
+                        className="flex-1"
+                        onClick={handleClearLimit}
+                        disabled={isPending}
+                      >
+                        {messages.pos.menu.clearLimit}
+                      </Button>
+                    )}
+                    <Button
+                      size="touch"
+                      className="flex-1"
+                      onClick={handleSaveLimit}
+                      disabled={isPending}
+                    >
+                      {isPending ? (
+                        <Spinner className="mr-2" />
+                      ) : (
+                        <IconSave className="mr-2 size-4" />
+                      )}
+                      {messages.pos.menu.saveChanges}
+                    </Button>
+                  </>
                 )}
-                <Button
-                  size="touch"
-                  className="flex-1"
-                  onClick={handleSaveLimit}
-                  disabled={isPending}
-                >
-                  {isPending ? (
-                    <Spinner className="mr-2" />
-                  ) : (
-                    <IconSave className="mr-2 size-4" />
-                  )}
-                  {messages.pos.menu.saveChanges}
-                </Button>
               </DrawerFooter>
             </>
           )}

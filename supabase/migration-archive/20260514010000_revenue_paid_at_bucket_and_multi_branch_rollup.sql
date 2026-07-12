@@ -65,6 +65,8 @@ COMMENT ON TABLE public.mv_refresh_log IS
 -- ─── 2. Drop wrappers that depend on mv_daily_revenue ───────────────────
 DROP FUNCTION IF EXISTS public.get_daily_revenue(BIGINT, DATE, DATE);
 DROP FUNCTION IF EXISTS public.get_revenue_rollup(BIGINT, DATE, DATE, TEXT);
+DROP FUNCTION IF EXISTS public.get_revenue_kpis(BIGINT, DATE, DATE);
+DROP FUNCTION IF EXISTS public.get_orders_for_day(BIGINT, DATE);
 
 
 -- ─── 3. Drop + recreate mv_daily_revenue v3 ─────────────────────────────

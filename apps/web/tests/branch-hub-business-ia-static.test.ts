@@ -37,6 +37,36 @@ test("Tồn opens actual on-hand data instead of a feature directory", () => {
   assert.doesNotMatch(bottomNav, /isNavItemActive/);
   assert.match(stockClient, /useSearchParams\(\)/);
   assert.match(stockClient, /window\.history\.replaceState/);
+  assert.match(
+    stockClient,
+    /const \[filtersOpen, setFiltersOpen\] = useState\(false\)/,
+  );
+  assert.match(stockClient, /DropdownMenu/);
+  assert.doesNotMatch(
+    stockClient,
+    /BranchOperatorPanel|BranchOperatorActionSection|operatorDescription|isPristineStockOnHand/,
+  );
+  assert.equal(
+    (stockClient.match(/ACTIONS_VI\.clearFilters/g) ?? []).length,
+    1,
+  );
+});
+
+test("Branch manager tools expose the canonical warehouse workflows", () => {
+  const homeContract = read(`${operatorRoot}/_lib/operator-home-contract.ts`);
+
+  for (const suffix of [
+    "/stock",
+    "/stock/grn",
+    "/stock/production",
+    "/stock/stocktake",
+    "/stock/count-assignments",
+    "/stock/consumption",
+  ]) {
+    assert.match(homeContract, new RegExp(`"${suffix}"`), suffix);
+  }
+
+  assert.doesNotMatch(homeContract, /\/stock\/(waste|reports|transfer|issues)/);
 });
 
 test("Nay is the only Branch command home", () => {
@@ -46,7 +76,8 @@ test("Nay is the only Branch command home", () => {
 
   assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
   assert.doesNotMatch(layout, /\/dashboard|IconLayoutDashboard/);
-  assert.match(home, /<HubReadinessSection/);
+  assert.match(home, /DropdownMenu/);
+  assert.doesNotMatch(home, /BranchOperatorActionSection|HubReadinessSection/);
 });
 
 test("personal count and manager assignments have one canonical job route", () => {
@@ -62,18 +93,9 @@ test("personal count and manager assignments have one canonical job route", () =
 
   assert.match(shift, /count: `\/br\/\$\{branchId\}\/shift\/count`/);
   assert.match(countAlias, /redirect\(`\/br\/\$\{branchId\}\/shift\/count/);
-  assert.match(
-    countAlias,
-    /\?location=\$\{encodeURIComponent\(location\)\}/,
-  );
-  assert.match(
-    countPage,
-    /baseHref=\{`\/br\/\$\{branchId\}\/shift\/count`\}/,
-  );
-  assert.match(
-    itemDetail,
-    /href: `\/br\/\$\{data\.branchId\}\/shift\/count`/,
-  );
+  assert.match(countAlias, /\?location=\$\{encodeURIComponent\(location\)\}/);
+  assert.match(countPage, /baseHref=\{`\/br\/\$\{branchId\}\/shift\/count`\}/);
+  assert.match(itemDetail, /href: `\/br\/\$\{data\.branchId\}\/shift\/count`/);
   assert.match(
     assignmentAlias,
     /new URLSearchParams\(\{ tab: "assignments" \}\)/,
@@ -152,7 +174,9 @@ test("Branch list context lives in URLs and survives detail navigation", () => {
 
 test("bottom navigation cannot silently discard waste drafts", () => {
   const bottomNav = read("apps/web/app/components/app-bottom-nav.tsx");
-  const waste = read(`${operatorRoot}/stock/waste/branch-waste-create-client.tsx`);
+  const waste = read(
+    `${operatorRoot}/stock/waste/branch-waste-create-client.tsx`,
+  );
   const approvals = read(
     `${operatorRoot}/stock/waste-approvals/branch-waste-approvals-client.tsx`,
   );

@@ -18,12 +18,14 @@ export async function EmployeeLeavePageContent({
   routeBranchId,
   hideHeaderOnMobile,
   profileHref,
+  initialDate,
   plane = "employee",
 }: {
   returnHref?: string;
   routeBranchId?: number;
   hideHeaderOnMobile?: boolean;
   profileHref?: string;
+  initialDate?: string;
   plane?: LeavePlane;
 } = {}) {
   const ctx = await getEmployeeContext();
@@ -103,7 +105,7 @@ export async function EmployeeLeavePageContent({
         branchId={branchId}
         branchName={branchName}
         initialRequests={initialRequests}
-        plane={plane}
+        initialDate={initialDate}
       />
     </Page>
   );

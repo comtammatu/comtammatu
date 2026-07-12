@@ -17,6 +17,7 @@ export const GRN_CREATE_COPY = {
   editLineAria: "Sửa dòng",
   deleteLineAria: "Xóa dòng",
   searchPlaceholder: "Tìm theo tên hoặc mã SKU",
+  searchHint: "Nhập tên hoặc mã nguyên liệu để thêm vào phiếu.",
   emptyTitle: "Không thấy nguyên liệu",
   emptyDescription: "Thử từ khóa khác hoặc kiểm tra lại danh mục.",
   panelEmptyTitle: "Chưa chọn mặt hàng",
@@ -36,7 +37,9 @@ export const GRN_CREATE_COPY = {
     `${formatQty(quantity)} ${unit} · Nhập đơn giá`,
   unitLabel: (unit: string) => `Đơn vị nhập: ${unit}`,
   unitPriceUnit: (unit: string, unitCost: number) =>
-    unitCost > 0 ? `Đơn giá ${formatVND(unitCost)} / ${unit}` : `Đơn giá / ${unit}`,
+    unitCost > 0
+      ? `Đơn giá ${formatVND(unitCost)} / ${unit}`
+      : `Đơn giá / ${unit}`,
   baseConversionPreview: (
     quantity: string,
     entryUnit: string,

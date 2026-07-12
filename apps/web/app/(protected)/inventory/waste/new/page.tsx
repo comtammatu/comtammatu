@@ -2,10 +2,6 @@ import { redirect } from "next/navigation";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
-import {
-  INVENTORY_FEATURE_FLAGS,
-  isFeatureEnabledForBranch,
-} from "@/(protected)/inventory/_lib/feature-flags";
 import { parseBranchIdParam } from "@/(protected)/inventory/_lib/inventory-scope";
 import { getWasteCapStatus } from "@/(protected)/inventory/waste-actions";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
@@ -54,15 +50,6 @@ export async function WasteNewPageContent({
     });
   }
   const fallbackHref = `/inventory/issues?branchId=${branchId}`;
-
-  const flagEnabled = await isFeatureEnabledForBranch(
-    supabase,
-    branchId,
-    INVENTORY_FEATURE_FLAGS.S11_WASTE_TIER,
-  );
-  if (!flagEnabled) {
-    redirect(fallbackHref);
-  }
 
   // Fetch branch detail + locations at this branch + active ingredients
   const [branchRes, locationsRes, ingredientsRes, capRes] = await Promise.all([

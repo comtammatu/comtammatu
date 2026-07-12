@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  ChevronDown as IconChevronDown,
   ChevronRight as IconChevronRight,
   ClipboardCheck as IconClipboardCheck,
+  Ellipsis as IconDots,
   ListFilter as IconFilter,
   RotateCcw as IconReset,
   Search as IconSearch,
@@ -17,6 +17,12 @@ import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@comtammatu/ui/components/dropdown-menu";
 import {
   InputGroup,
   InputGroupAddon,
@@ -41,18 +47,13 @@ import { AppEmptyState } from "@/components/surface";
 import { formatQty } from "@/(protected)/inventory/_lib/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
 import { ITEM_KIND_LABELS } from "@/(protected)/inventory/_lib/constants";
-import {
-  BranchOperatorActionSection,
-  BranchOperatorPage,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   STOCK_ALL_CATEGORY_VALUE,
   STOCK_NO_CATEGORY_VALUE,
   filterStockOnHandIngredients,
   getStockOnHandCategories,
   hasStockOnHandFilters,
-  isPristineStockOnHand,
   isStockReorderRisk,
   type StockFilter,
   type StockIngredient,
@@ -195,11 +196,7 @@ export function BranchStockOnHandClient({
   const category = searchParams.get("category") ?? STOCK_ALL_CATEGORY_VALUE;
   const status = parseStockFilter(searchParams.get("status"));
   const location = parseLocationFilter(searchParams.get("location"));
-  const [filtersOpen, setFiltersOpen] = useState(
-    category !== STOCK_ALL_CATEGORY_VALUE ||
-      status !== "all" ||
-      location !== "all",
-  );
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const { categories, hasUncategorized } = useMemo(
     () => getStockOnHandCategories(ingredients),
@@ -226,41 +223,17 @@ export function BranchStockOnHandClient({
     status !== "all",
     location !== "all",
   ].filter(Boolean).length;
-  const isFirstLoadEmpty = !filtersActive && isPristineStockOnHand(ingredients);
   const locationScopeLabel =
     location === "warehouse"
       ? stockCopy.filters.locationWarehouse
       : location === "kitchen"
         ? stockCopy.filters.locationKitchen
         : null;
-  const showReceiveAction =
-    canCreateGrn && !coreDataLoadFailed && underThresholdCount === 0;
   const currentStockHref = searchParams.size
     ? `${pathname}?${searchParams.toString()}`
     : pathname;
   const returnToQuery = encodeURIComponent(currentStockHref);
-  const contextualActions = [
-    ...(canCreateStocktake
-      ? [
-          {
-            key: "stocktake",
-            href: `/br/${branchId}/stock/stocktake/new?returnTo=${returnToQuery}`,
-            icon: IconClipboardCheck,
-            title: stockCopy.actions.stocktake,
-          },
-        ]
-      : []),
-    ...(canWriteoff
-      ? [
-          {
-            key: "waste",
-            href: `/br/${branchId}/stock/waste?returnTo=${returnToQuery}`,
-            icon: IconTrash,
-            title: stockCopy.actions.waste,
-          },
-        ]
-      : []),
-  ];
+  const hasActions = canCreateGrn || canCreateStocktake || canWriteoff;
 
   function replaceFilterParams(
     changes: Partial<Record<StockFilterParam, string | null>>,
@@ -293,332 +266,299 @@ export function BranchStockOnHandClient({
   return (
     <BranchOperatorPage
       title={stockCopy.title}
-      description={stockCopy.operatorDescription}
+      badge={
+        underThresholdCount > 0
+          ? {
+              children: `${underThresholdCount} · ${stockCopy.attention.title}`,
+              variant: "warning",
+            }
+          : undefined
+      }
     >
-      {!coreDataLoadFailed && underThresholdCount > 0 ? (
-        <BranchOperatorPanel
-          title={stockCopy.attention.title}
-          description={stockCopy.attention.description(underThresholdCount)}
-          tone="warning"
-          badge={{
-            children: underThresholdCount,
-            variant: "warning",
-          }}
-          action={
-            canCreateGrn ? (
-              <Button asChild size="touch">
-                <Link
-                  href={`/br/${branchId}/stock/grn/new?returnTo=${returnToQuery}`}
-                >
-                  <IconTruck />
-                  {stockCopy.actions.receiveGrn}
-                </Link>
-              </Button>
-            ) : undefined
-          }
-          size="sm"
+      {coreDataLoadFailed ? (
+        <AppEmptyState
+          compact
+          mode="error"
+          title={stockCopy.loadFailed}
+          description={stockCopy.loadFailedDescription}
         >
-          <p className="text-sm leading-6 text-muted-foreground">
-            {stockCopy.attention.listHint}
-          </p>
-        </BranchOperatorPanel>
-      ) : null}
-
-      <BranchOperatorPanel
-        title={stockCopy.table.currentStock}
-        size="sm"
-        badge={{
-          children: stockCopy.filters.resultSummary(
-            filtered.length,
-            ingredients.length,
-          ),
-          variant: "secondary",
-        }}
-        action={
-          showReceiveAction ? (
+          <Button type="button" size="touch" onClick={() => router.refresh()}>
+            {ACTIONS_VI.retry}
+          </Button>
+        </AppEmptyState>
+      ) : ingredients.length === 0 ? (
+        <AppEmptyState
+          compact
+          mode="no-data"
+          title={stockCopy.empty.noData}
+          description={stockCopy.empty.noDataDescription}
+        >
+          {canCreateGrn ? (
             <Button asChild size="touch">
               <Link
-                href={`/br/${branchId}/stock/grn/new?returnTo=${returnToQuery}`}
+                href={`/br/${branchId}/stock/grn?returnTo=${returnToQuery}`}
               >
                 <IconTruck />
                 {stockCopy.actions.receiveGrn}
               </Link>
             </Button>
-          ) : undefined
-        }
-        contentClassName="gap-3"
-      >
-        {coreDataLoadFailed ? (
-          <AppEmptyState
-            compact
-            mode="error"
-            title={stockCopy.loadFailed}
-            description={stockCopy.loadFailedDescription}
-          >
-            <Button type="button" size="touch" onClick={() => router.refresh()}>
-              {ACTIONS_VI.retry}
+          ) : null}
+        </AppEmptyState>
+      ) : (
+        <>
+          <div className="flex min-w-0 items-center gap-2">
+            <InputGroup className="min-h-12 min-w-0 flex-1">
+              <InputGroupAddon>
+                <IconSearch />
+              </InputGroupAddon>
+              <InputGroupInput
+                value={query}
+                onChange={(event) =>
+                  replaceFilterParams({ q: event.target.value || null })
+                }
+                placeholder={stockCopy.filters.searchPlaceholder}
+                aria-label={stockCopy.filters.searchPlaceholder}
+                inputMode="search"
+              />
+            </InputGroup>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="relative size-12 shrink-0"
+              aria-label={ACTIONS_VI.filter}
+              aria-controls="branch-stock-on-hand-filters"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              <IconFilter />
+              {facetCount > 0 ? (
+                <Badge
+                  variant="secondary"
+                  className="absolute -right-1 -top-1 min-w-5 justify-center px-1"
+                >
+                  {facetCount}
+                </Badge>
+              ) : null}
+              <span className="sr-only">{ACTIONS_VI.filter}</span>
             </Button>
-          </AppEmptyState>
-        ) : isFirstLoadEmpty ? (
-          <AppEmptyState
-            compact
-            title={stockCopy.empty.firstLoadTitle}
-            description={stockCopy.empty.firstLoadHint}
-            symbol="riceGrain"
-          >
-            {canCreateGrn && underThresholdCount === 0 ? (
-              <Button asChild size="touch">
-                <Link
-                  href={`/br/${branchId}/stock/grn/new?returnTo=${returnToQuery}`}
-                >
-                  <IconTruck />
-                  {stockCopy.actions.receiveGrn}
-                </Link>
-              </Button>
-            ) : null}
-          </AppEmptyState>
-        ) : (
-          <>
-            <div className="flex min-w-0 flex-col gap-2">
-              <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
-                <InputGroup className="min-h-12 min-w-0 flex-1">
-                  <InputGroupAddon>
-                    <IconSearch />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    value={query}
-                    onChange={(event) =>
-                      replaceFilterParams({ q: event.target.value || null })
-                    }
-                    placeholder={stockCopy.filters.searchPlaceholder}
-                    aria-label={stockCopy.filters.searchPlaceholder}
-                    inputMode="search"
-                  />
-                </InputGroup>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="w-full justify-between sm:w-auto sm:min-w-36"
-                  aria-controls="branch-stock-on-hand-filters"
-                  aria-expanded={filtersOpen}
-                  onClick={() => setFiltersOpen((open) => !open)}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <IconFilter />
-                    {ACTIONS_VI.filter}
-                    {facetCount > 0 ? (
-                      <Badge variant="secondary">{facetCount}</Badge>
-                    ) : null}
-                  </span>
-                  <IconChevronDown
-                    className={cn(
-                      "transition-transform duration-150",
-                      filtersOpen && "rotate-180",
-                    )}
-                  />
-                </Button>
-              </div>
-
-              <Item
-                id="branch-stock-on-hand-filters"
-                variant="muted"
-                size="sm"
-                className={cn(
-                  "w-full gap-2",
-                  filtersOpen ? "grid" : "hidden",
-                  hasMultipleStockLocations
-                    ? "sm:grid-cols-3"
-                    : "sm:grid-cols-2",
-                )}
-              >
-                <Select
-                  value={status}
-                  onValueChange={(value) =>
-                    replaceFilterParams({
-                      status: value === "all" ? null : value,
-                    })
-                  }
-                >
-                  <SelectTrigger
-                    size="touch"
-                    className="w-full"
-                    aria-label={stockCopy.filters.statusPlaceholder}
+            {hasActions ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-12 shrink-0"
                   >
-                    <SelectValue
-                      placeholder={stockCopy.filters.statusPlaceholder}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stockFilterOptions.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className="min-h-11 py-2.5"
+                    <IconDots />
+                    <span className="sr-only">
+                      {stockCopy.actions.actionsDropdown}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  {canCreateGrn ? (
+                    <DropdownMenuItem asChild className="min-h-11">
+                      <Link
+                        href={`/br/${branchId}/stock/grn?returnTo=${returnToQuery}`}
                       >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                        <IconTruck />
+                        {stockCopy.actions.receiveGrn}
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canCreateStocktake ? (
+                    <DropdownMenuItem asChild className="min-h-11">
+                      <Link
+                        href={`/br/${branchId}/stock/stocktake?returnTo=${returnToQuery}`}
+                      >
+                        <IconClipboardCheck />
+                        {stockCopy.actions.stocktake}
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canWriteoff ? (
+                    <DropdownMenuItem asChild className="min-h-11">
+                      <Link
+                        href={`/br/${branchId}/stock/waste?returnTo=${returnToQuery}`}
+                      >
+                        <IconTrash />
+                        {stockCopy.actions.waste}
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
 
-                {hasMultipleStockLocations ? (
-                  <Select
-                    value={location}
-                    onValueChange={(value) =>
-                      replaceFilterParams({
-                        location: value === "all" ? null : value,
-                      })
-                    }
+          <div
+            id="branch-stock-on-hand-filters"
+            className={cn(
+              "gap-2 rounded-lg bg-muted/50 p-2",
+              filtersOpen ? "grid" : "hidden",
+              hasMultipleStockLocations ? "sm:grid-cols-3" : "sm:grid-cols-2",
+            )}
+          >
+            <Select
+              value={status}
+              onValueChange={(value) =>
+                replaceFilterParams({
+                  status: value === "all" ? null : value,
+                })
+              }
+            >
+              <SelectTrigger
+                size="touch"
+                className="w-full"
+                aria-label={stockCopy.filters.statusPlaceholder}
+              >
+                <SelectValue
+                  placeholder={stockCopy.filters.statusPlaceholder}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {stockFilterOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="min-h-11 py-2.5"
                   >
-                    <SelectTrigger
-                      size="touch"
-                      className="w-full"
-                      aria-label={stockCopy.filters.locationPlaceholder}
-                    >
-                      <SelectValue
-                        placeholder={stockCopy.filters.locationPlaceholder}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationFilterOptions.map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={option.value}
-                          className="min-h-11 py-2.5"
-                        >
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : null}
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-                <Select
-                  value={category}
-                  onValueChange={(value) =>
-                    replaceFilterParams({
-                      category:
-                        value === STOCK_ALL_CATEGORY_VALUE ? null : value,
-                    })
-                  }
+            {hasMultipleStockLocations ? (
+              <Select
+                value={location}
+                onValueChange={(value) =>
+                  replaceFilterParams({
+                    location: value === "all" ? null : value,
+                  })
+                }
+              >
+                <SelectTrigger
+                  size="touch"
+                  className="w-full"
+                  aria-label={stockCopy.filters.locationPlaceholder}
                 >
-                  <SelectTrigger
-                    size="touch"
-                    className="w-full"
-                    aria-label={stockCopy.filters.categoryPlaceholder}
-                  >
-                    <SelectValue
-                      placeholder={stockCopy.filters.categoryPlaceholder}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
+                  <SelectValue
+                    placeholder={stockCopy.filters.locationPlaceholder}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {locationFilterOptions.map((option) => (
                     <SelectItem
-                      value={STOCK_ALL_CATEGORY_VALUE}
+                      key={option.value}
+                      value={option.value}
                       className="min-h-11 py-2.5"
                     >
-                      {stockCopy.filters.allCategories}
+                      {option.label}
                     </SelectItem>
-                    {categories.map((item) => (
-                      <SelectItem
-                        key={item}
-                        value={item}
-                        className="min-h-11 py-2.5"
-                      >
-                        {item}
-                      </SelectItem>
-                    ))}
-                    {hasUncategorized ? (
-                      <SelectItem
-                        value={STOCK_NO_CATEGORY_VALUE}
-                        className="min-h-11 py-2.5"
-                      >
-                        {stockCopy.filters.noCategory}
-                      </SelectItem>
-                    ) : null}
-                  </SelectContent>
-                </Select>
-              </Item>
-            </div>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
 
-            {filtersActive ? (
-              <div
-                className={cn(
-                  "flex flex-wrap items-center gap-2",
-                  locationScopeLabel ? "justify-between" : "justify-end",
-                )}
+            <Select
+              value={category}
+              onValueChange={(value) =>
+                replaceFilterParams({
+                  category: value === STOCK_ALL_CATEGORY_VALUE ? null : value,
+                })
+              }
+            >
+              <SelectTrigger
+                size="touch"
+                className="w-full"
+                aria-label={stockCopy.filters.categoryPlaceholder}
               >
+                <SelectValue
+                  placeholder={stockCopy.filters.categoryPlaceholder}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  value={STOCK_ALL_CATEGORY_VALUE}
+                  className="min-h-11 py-2.5"
+                >
+                  {stockCopy.filters.allCategories}
+                </SelectItem>
+                {categories.map((item) => (
+                  <SelectItem
+                    key={item}
+                    value={item}
+                    className="min-h-11 py-2.5"
+                  >
+                    {item}
+                  </SelectItem>
+                ))}
+                {hasUncategorized ? (
+                  <SelectItem
+                    value={STOCK_NO_CATEGORY_VALUE}
+                    className="min-h-11 py-2.5"
+                  >
+                    {stockCopy.filters.noCategory}
+                  </SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {filtersActive ? (
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {stockCopy.filters.resultSummary(
+                    filtered.length,
+                    ingredients.length,
+                  )}
+                </span>
                 {locationScopeLabel ? (
                   <Badge variant="outline">
                     {stockCopy.filters.locationScope(locationScopeLabel)}
                   </Badge>
                 ) : null}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="touch"
-                  onClick={resetFilters}
-                >
-                  <IconReset />
-                  {ACTIONS_VI.clearFilters}
-                </Button>
               </div>
-            ) : null}
-
-            {filtered.length === 0 ? (
-              <AppEmptyState
-                compact
-                mode={filtersActive ? "no-results" : "no-data"}
-                title={
-                  filtersActive
-                    ? stockCopy.empty.search
-                    : stockCopy.empty.noData
-                }
-                description={
-                  filtersActive
-                    ? stockCopy.empty.searchDescription
-                    : stockCopy.empty.noDataDescription
-                }
-                symbol="riceGrain"
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="shrink-0"
+                onClick={resetFilters}
               >
-                {filtersActive ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="touch"
-                    onClick={resetFilters}
-                  >
-                    <IconReset />
-                    {ACTIONS_VI.clearFilters}
-                  </Button>
-                ) : null}
-              </AppEmptyState>
-            ) : (
-              <ItemGroup className="gap-2">
-                {filtered.map((item) => (
-                  <StockTouchRow
-                    key={item.id}
-                    branchId={branchId}
-                    item={item}
-                    returnTo={currentStockHref}
-                  />
-                ))}
-              </ItemGroup>
-            )}
-          </>
-        )}
-      </BranchOperatorPanel>
+                <IconReset />
+                {ACTIONS_VI.clearFilters}
+              </Button>
+            </div>
+          ) : null}
 
-      {contextualActions.length > 0 ? (
-        <BranchOperatorActionSection
-          title={stockCopy.filters.operatorTasksTitle}
-          links={contextualActions}
-          columns={2}
-          mobileColumns={2}
-          presentation="plain"
-        />
-      ) : null}
+          {filtered.length === 0 ? (
+            <AppEmptyState
+              compact
+              mode="no-results"
+              title={stockCopy.empty.search}
+              description={stockCopy.empty.searchDescription}
+            />
+          ) : (
+            <ItemGroup className="gap-2">
+              {filtered.map((item) => (
+                <StockTouchRow
+                  key={item.id}
+                  branchId={branchId}
+                  item={item}
+                  returnTo={currentStockHref}
+                />
+              ))}
+            </ItemGroup>
+          )}
+        </>
+      )}
     </BranchOperatorPage>
   );
 }

@@ -43,13 +43,11 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { discardGrnDraft } from "@/(protected)/inventory/grn-actions";
-import {
-  BranchOperatorPage,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   filterGrnListRows,
   grnDetailHref,
@@ -141,7 +139,6 @@ function BranchGrnDraftItem({
           </ItemTitle>
           <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-mono">{draft.grnNumber}</span>
-            {draft.poCode ? <span>PO {draft.poCode}</span> : null}
             <span>
               {INVENTORY_VI.grnDraftUpdatedAt(
                 formatVNDateTime(draft.updatedAt),
@@ -202,9 +199,6 @@ function BranchGrnListItem({
             <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
               <span>{grn.supplierName}</span>
               <span className="font-mono tabular-nums">{grn.date}</span>
-              {grn.poId != null && grn.poCode !== "—" ? (
-                <span className="font-mono">PO {grn.poCode}</span>
-              ) : null}
             </ItemDescription>
           </ItemContent>
           <ItemActions className="shrink-0">
@@ -219,6 +213,7 @@ function BranchGrnListItem({
 
 interface BranchGrnListClientProps {
   branchId: number;
+  backHref: string;
   canCreate: boolean;
   drafts: BranchGrnDraftRow[];
   draftsLoadFailed: boolean;
@@ -228,6 +223,7 @@ interface BranchGrnListClientProps {
 
 export function BranchGrnListClient({
   branchId,
+  backHref,
   canCreate,
   drafts,
   draftsLoadFailed,
@@ -244,6 +240,9 @@ export function BranchGrnListClient({
     ? (statusParam as GrnListStatusFilter)
     : "all";
   const currentListParams = new URLSearchParams();
+  if (backHref !== `/br/${branchId}/stock`) {
+    currentListParams.set("returnTo", backHref);
+  }
   if (query) currentListParams.set("q", query);
   if (status !== "all") currentListParams.set("status", status);
   const currentListQuery = currentListParams.toString();
@@ -286,31 +285,32 @@ export function BranchGrnListClient({
   return (
     <BranchOperatorPage
       title={messages.inventory.operatorFlow.grnListTitle}
-      description={messages.inventory.operatorFlow.grnListDescription}
+      backHref={backHref}
+      backLabel="Tồn"
+      action={
+        canCreate ? (
+          <Button asChild size="touch">
+            <Link
+              href={`/br/${branchId}/stock/grn/new?returnTo=${encodeURIComponent(currentListHref)}`}
+            >
+              <IconPlus className="size-4" />
+              {INVENTORY_VI.receivingEyebrow}
+            </Link>
+          </Button>
+        ) : undefined
+      }
     >
-      {canCreate ? (
-        <Button asChild size="touch" className="w-full">
-          <Link
-            href={`/br/${branchId}/stock/grn/new?returnTo=${encodeURIComponent(currentListHref)}`}
-          >
-            <IconPlus className="size-4" />
-            {INVENTORY_VI.receivingEyebrow}
-          </Link>
-        </Button>
-      ) : null}
-
       {showDraftPanel ? (
-        <BranchOperatorPanel
-          title={INVENTORY_VI.draft}
-          icon={IconFileText}
-          tone="warning"
-          badge={
-            draftsLoadFailed
-              ? undefined
-              : { children: drafts.length, variant: "warning" }
-          }
-          contentClassName="gap-3"
+        <section
+          className="flex min-w-0 flex-col gap-2"
+          aria-label={INVENTORY_VI.draft}
         >
+          <div className="flex items-center justify-between gap-2">
+            <SectionLabel density="dense">{INVENTORY_VI.draft}</SectionLabel>
+            {!draftsLoadFailed ? (
+              <Badge variant="warning">{drafts.length}</Badge>
+            ) : null}
+          </div>
           {draftsLoadFailed ? (
             <AppEmptyState
               compact
@@ -340,21 +340,12 @@ export function BranchGrnListClient({
               ))}
             </ItemGroup>
           )}
-        </BranchOperatorPanel>
+        </section>
       ) : null}
 
-      <BranchOperatorPanel
-        title={INVENTORY_VI.grnListTab}
-        icon={IconReceipt}
-        badge={
-          grnsLoadFailed
-            ? undefined
-            : {
-                children: `${filtered.length}/${grns.length}`,
-                variant: "secondary",
-              }
-        }
-        contentClassName="gap-3"
+      <section
+        className="flex min-w-0 flex-col gap-3"
+        aria-label={INVENTORY_VI.grnListTab}
       >
         {grnsLoadFailed ? (
           <AppEmptyState
@@ -447,7 +438,7 @@ export function BranchGrnListClient({
             )}
           </>
         )}
-      </BranchOperatorPanel>
+      </section>
     </BranchOperatorPage>
   );
 }

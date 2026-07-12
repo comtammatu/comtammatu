@@ -21,18 +21,18 @@ const VI_DICTIONARY: InventoryDictionary = {
   // ------------------------------------------------------------------
   navigation: {
     home: { long: "Tổng quan" },
-    stock: { long: "Tồn kho" },
-    grn: { short: "Phiếu nhập", long: "Phiếu nhập kho" },
+    stock: { long: "Quản lý tồn kho" },
+    grn: { long: "Nhập hàng" },
     supplierInvoices: { long: "Hóa đơn NCC" },
     transfers: { short: "Điều chuyển", long: "Điều chuyển nội bộ" },
-    stocktake: { long: "Kiểm kê đối chiếu" },
+    stocktake: { long: "Kiểm tồn" },
     issues: { short: "Sự cố kho", long: "Sự cố kho" },
-    consumption: { long: "Tiêu hao vận hành" },
+    consumption: { long: "Tiêu hao" },
     reports: { long: "Báo cáo" },
-    production: { long: "Sản xuất Bếp Trung Tâm" },
+    production: { long: "Sản xuất" },
     ingredients: { long: "Nguyên liệu" },
     suppliers: { long: "Nhà cung cấp" },
-    recipes: { short: "Định mức", long: "Định mức món bán" },
+    recipes: { long: "Định mức bán" },
     settings: { long: "Cài đặt" },
   },
 
@@ -40,25 +40,25 @@ const VI_DICTIONARY: InventoryDictionary = {
   // Page headings by route path
   // ------------------------------------------------------------------
   routes: {
-    "/inventory": { long: "Tổng quan" },
-    "/inventory/stock": { long: "Tồn kho" },
-    "/inventory/grn": { short: "Phiếu nhập", long: "Phiếu nhập kho" },
+    "/inventory": { long: "Quản lý tồn kho" },
+    "/inventory/stock": { long: "Quản lý tồn kho" },
+    "/inventory/grn": { long: "Nhập hàng" },
     "/inventory/supplier-invoices": { long: "Hóa đơn NCC" },
     "/inventory/settings/qc": {
       short: "Cài đặt QC",
       long: "Cài đặt QC nhập kho",
     },
     "/inventory/issues": { short: "Sự cố kho", long: "Sự cố kho" },
-    "/inventory/consumption": { long: "Tiêu hao vận hành" },
+    "/inventory/consumption": { long: "Tiêu hao" },
     "/inventory/transfers": {
       short: "Điều chuyển",
       long: "Điều chuyển nội bộ",
     },
-    "/inventory/stocktake": { long: "Kiểm kê đối chiếu" },
-    "/inventory/production": { long: "Sản xuất Bếp Trung Tâm" },
+    "/inventory/stocktake": { long: "Kiểm tồn" },
+    "/inventory/production": { long: "Sản xuất" },
     "/inventory/reports": { long: "Báo cáo" },
     "/inventory/ingredients": { long: "Nguyên liệu" },
-    "/inventory/recipes": { short: "Định mức", long: "Định mức món bán" },
+    "/inventory/recipes": { long: "Định mức bán" },
     "/inventory/suppliers": { long: "Nhà cung cấp" },
     "/inventory/settings": { long: "Cài đặt" },
     "/inventory/settings/units": {

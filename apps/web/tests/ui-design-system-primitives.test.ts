@@ -76,10 +76,9 @@ test("shared Drawer stays bottom-anchored across mobile viewport changes", () =>
     archivedOrdersSource,
     /data-\[vaul-drawer-direction=bottom\]:top-0/,
   );
-  assert.match(
-    checkoutApprovalsSource,
-    /setRejectTarget\(detailsTarget\);\s*setDetailsTarget\(null\);/,
-  );
+  assert.doesNotMatch(checkoutApprovalsSource, /<Drawer/);
+  assert.equal((checkoutApprovalsSource.match(/<Sheet\s/g) ?? []).length, 1);
+  assert.match(checkoutApprovalsSource, /setRejecting\(true\)/);
 });
 
 test("pagination items keep stable ellipsis windows", () => {

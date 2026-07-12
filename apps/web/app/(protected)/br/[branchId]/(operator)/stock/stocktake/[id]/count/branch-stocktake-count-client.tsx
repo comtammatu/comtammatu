@@ -9,10 +9,7 @@ import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter } from "@/components/surface";
-import {
-  BranchOperatorPanel,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   type BranchStocktakeCountData,
   type BranchStocktakeCountUnit,
@@ -210,6 +207,7 @@ export function BranchStocktakeCountClient({
           zoneId={`session-${data.sessionId}`}
           onStateChange={setLockState}
           onLost={() => toast.error(stocktakeCopy.zoneLockLost)}
+          className="data-[kind=held]:sr-only"
         />
       ) : null}
     </div>
@@ -246,14 +244,6 @@ export function BranchStocktakeCountClient({
           unitPreviewByIngredient={unitPreviewByIngredient}
           chrome={safetyChrome}
         />
-
-        <BranchOperatorPanel title="Phiên đếm" size="sm">
-          <p className="text-sm text-muted-foreground">
-            {data.blindMode
-              ? "Không hiển thị tồn hệ thống trước khi chốt."
-              : "Số đếm được lưu theo vòng hiện tại."}
-          </p>
-        </BranchOperatorPanel>
 
         <AppDetailFooter
           sticky

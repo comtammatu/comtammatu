@@ -12,6 +12,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { AppEmptyState } from "@/components/surface";
+import { BrandMascot } from "@/components/brand";
 import {
   DataTable,
   type DataTableColumn,
@@ -203,13 +204,27 @@ export function OrderSummary({
   return (
     <div className="flex flex-col gap-4">
       {pendingItems.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <SectionLabel density="dense">
-            <IconClock className="size-3.5" aria-hidden />
-            {SELF_ORDER_VI.awaitingCalloutTitle}
-          </SectionLabel>
-          <PendingRequestLines items={pendingItems} />
-        </div>
+        <Item variant="outline" className="relative overflow-hidden">
+          <div className="pointer-events-none flex flex-col gap-2 p-2 opacity-50 blur-[2px] select-none">
+            <SectionLabel density="dense">
+              <IconClock className="size-3.5" aria-hidden />
+              {SELF_ORDER_VI.awaitingCalloutTitle}
+            </SectionLabel>
+            <PendingRequestLines items={pendingItems} />
+          </div>
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/75 px-4 text-center backdrop-blur-sm"
+            role="status"
+          >
+            <BrandMascot decorative size="sm" />
+            <p className="text-sm font-medium">
+              {SELF_ORDER_VI.pendingBillOverlayTitle}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {SELF_ORDER_VI.pendingBillOverlayDescription}
+            </p>
+          </div>
+        </Item>
       ) : null}
 
       {items.length > 0 ? (

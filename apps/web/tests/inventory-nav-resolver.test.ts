@@ -8,7 +8,9 @@ import {
 } from "../app/(protected)/inventory/_lib/inventory-nav";
 
 function hrefs(groups: ReturnType<typeof resolveInventoryNav>): Set<string> {
-  return new Set(groups.flatMap((group) => group.items.map((item) => item.href)));
+  return new Set(
+    groups.flatMap((group) => group.items.map((item) => item.href)),
+  );
 }
 
 const shellSource = readFileSync(
@@ -41,7 +43,7 @@ const workspaceBottomNavSource = readFileSync(
   "utf8",
 );
 
-test("owner inventory nav keeps primary flow entry routes visible", () => {
+test("owner inventory nav exposes only the five canonical warehouse workflows", () => {
   const visible = hrefs(
     resolveInventoryNav({
       userRole: "owner",
@@ -56,20 +58,30 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
   );
 
   for (const href of [
-    "/inventory/operations",
-    "/inventory/supplier-invoices",
+    "/inventory/stock",
+    "/inventory/grn",
     "/inventory/production",
-    "/inventory/settings",
-    "/inventory/suppliers",
-    "/inventory/ingredients",
+    "/inventory/stocktake",
+    "/inventory/count-assignments",
+    "/inventory/consumption",
     "/inventory/recipes",
   ]) {
-    assert.equal(visible.has(href), true, `owner inventory nav must include ${href}`);
+    assert.equal(
+      visible.has(href),
+      true,
+      `owner inventory nav must include ${href}`,
+    );
   }
 
   for (const href of [
+    "/inventory",
+    "/inventory/operations",
+    "/inventory/reports",
     "/inventory/transfers",
-    "/inventory/supplier-returns",
+    "/inventory/supplier-invoices",
+    "/inventory/settings",
+    "/inventory/suppliers",
+    "/inventory/ingredients",
   ]) {
     assert.equal(
       visible.has(href),
@@ -93,7 +105,7 @@ test("inventory sidebar compresses count management into one visible entry", () 
   const visible = hrefs(groups);
   const countItem = groups
     .flatMap((group) => group.items)
-    .find((item) => item.label === "Đếm tồn");
+    .find((item) => item.label === "Phân công đếm tồn");
 
   assert.equal(
     visible.has("/inventory/count-assignments"),
@@ -110,7 +122,8 @@ test("inventory sidebar compresses count management into one visible entry", () 
     "/inventory/count-slips",
   ]);
 
-  for (const href of ["/inventory/consumption", "/inventory/waste/approvals"]) {
+  assert.equal(visible.has("/inventory/consumption"), true);
+  for (const href of ["/inventory/waste", "/inventory/waste/approvals"]) {
     assert.equal(
       visible.has(href),
       false,
@@ -138,7 +151,10 @@ test("inventory nav click targets preserve branch URL scope", () => {
   assert.equal(stockItem?.href, "/inventory/stock");
   assert.equal(stockItem?.linkHref, "/inventory/stock?branchId=3");
   assert.match(appShellSource, /href=\{subItem\.linkHref \?\? subItem\.href\}/);
-  assert.match(workspaceBottomNavSource, /href: item\.linkHref \?\? item\.href/);
+  assert.match(
+    workspaceBottomNavSource,
+    /href: item\.linkHref \?\? item\.href/,
+  );
   assert.equal(withInventoryBranchNavScope(groups, null), groups);
 });
 
@@ -163,7 +179,7 @@ test("owner inventory nav excludes /inventory/drafts (folded into GRN list draft
   );
 });
 
-test("office inventory nav keeps transfer routes under Giao dịch kho", () => {
+test("office inventory nav keeps transfer routes under Quản lý tồn kho", () => {
   const groups = resolveInventoryNav({
     userRole: "owner",
     showProcurement: true,
@@ -175,14 +191,11 @@ test("office inventory nav keeps transfer routes under Giao dịch kho", () => {
     showCountSlips: true,
   });
   const visible = hrefs(groups);
-  const operationsItem = groups
+  const stockItem = groups
     .flatMap((group) => group.items)
-    .find((item) => item.href === "/inventory/operations");
+    .find((item) => item.href === "/inventory/stock");
 
-  for (const href of [
-    "/inventory/stock",
-    "/inventory/stocktake",
-  ]) {
+  for (const href of ["/inventory/stock", "/inventory/stocktake"]) {
     assert.equal(
       visible.has(href),
       true,
@@ -192,8 +205,8 @@ test("office inventory nav keeps transfer routes under Giao dịch kho", () => {
 
   assert.equal(visible.has("/inventory/transfers"), false);
   assert.ok(
-    operationsItem?.matchPrefixes?.includes("/inventory/transfers"),
-    "Giao dịch kho must own the transfer route active state",
+    stockItem?.matchPrefixes?.includes("/inventory/transfers"),
+    "Quản lý tồn kho must own the supporting transfer route active state",
   );
 });
 
@@ -212,21 +225,21 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
   assert.deepEqual(
     groups.map((group) => group.title),
     [
-      "0 · Nay",
-      "1 · Kiểm soát tồn",
-      "2 · Nhập/Nhận/Đối soát",
+      "1 · Tồn kho",
+      "2 · Nhập hàng",
       "3 · Sản xuất",
-      "4 · Danh mục & thiết lập",
+      "4 · Kiểm tồn",
+      "5 · Tiêu hao",
     ],
   );
   assert.deepEqual(
     groups.map((group) => group.items[0]?.href),
     [
-      "/inventory",
       "/inventory/stock",
-      "/inventory/operations",
+      "/inventory/grn",
       "/inventory/production",
-      "/inventory/settings",
+      "/inventory/stocktake",
+      "/inventory/consumption",
     ],
   );
 });
@@ -250,9 +263,9 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
     showCountSlips: true,
   });
   const visible = hrefs(groups);
-  const settingsItem = groups
+  const stockItem = groups
     .flatMap((group) => group.items)
-    .find((item) => item.href === "/inventory/settings");
+    .find((item) => item.href === "/inventory/stock");
 
   for (const href of [
     "/inventory/settings/categories",
@@ -267,13 +280,16 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
     );
   }
 
-  assert.deepEqual(settingsItem?.matchPrefixes, ["/inventory/settings/"]);
+  assert.ok(stockItem?.matchPrefixes?.includes("/inventory/settings"));
 
   assert.match(
     settingsLayoutSource,
     /<AppPage width="xwide" density="compact">/,
   );
-  assert.match(settingsLayoutSource, /<SettingsSectionNav items=\{sectionItems\}/);
+  assert.match(
+    settingsLayoutSource,
+    /<SettingsSectionNav items=\{sectionItems\}/,
+  );
   assert.doesNotMatch(settingsLayoutSource, /from "lucide-react"/);
   assert.doesNotMatch(settingsLayoutSource, /icon: Icon[A-Z]/);
   assert.doesNotMatch(settingsLayoutSource, /settings\/expiry|icon: "expiry"/);

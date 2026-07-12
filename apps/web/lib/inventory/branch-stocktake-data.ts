@@ -5,10 +5,6 @@ import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { loadAuthState } from "@/_lib/auth";
 import {
-  INVENTORY_FEATURE_FLAGS,
-  isFeatureEnabledForBranch,
-} from "@/(protected)/inventory/_lib/feature-flags";
-import {
   resolveInventoryBranchScope,
   resolveInventoryListScope,
 } from "@/(protected)/inventory/_lib/inventory-scope";
@@ -150,12 +146,7 @@ export async function loadBranchStocktakeStartData(routeBranchId: number) {
   });
   if (scope.outOfScope || scope.selectedBranchId !== routeBranchId) notFound();
 
-  const [flagEnabled, canManage, locationsResult] = await Promise.all([
-    isFeatureEnabledForBranch(
-      supabase,
-      routeBranchId,
-      INVENTORY_FEATURE_FLAGS.INVENTORY_STOCKTAKE_REDESIGNED,
-    ),
+  const [canManage, locationsResult] = await Promise.all([
     currentUserHasPermission(
       routeBranchId,
       PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
@@ -181,7 +172,6 @@ export async function loadBranchStocktakeStartData(routeBranchId: number) {
     branchId: routeBranchId,
     branchName: branch ? getBranchSiteDisplayName(branch) : `CN #${routeBranchId}`,
     canManage,
-    featureEnabled: flagEnabled,
     locations,
   };
 }
@@ -286,11 +276,6 @@ export async function loadBranchStocktakeCountData(
     .maybeSingle();
   if (!sessionRow || sessionRow.branch_id !== routeBranchId) notFound();
 
-  const featureEnabled = await isFeatureEnabledForBranch(
-    supabase,
-    routeBranchId,
-    INVENTORY_FEATURE_FLAGS.INVENTORY_STOCKTAKE_REDESIGNED,
-  );
   const linesResult = await getStocktakeLinesBlind(stocktakeId);
   if (!linesResult.success || !linesResult.data) notFound();
 
@@ -334,6 +319,5 @@ export async function loadBranchStocktakeCountData(
     currentRound: Math.min(4, currentRound) as 1 | 2 | 3 | 4,
     lines,
     unitOptionsByIngredient,
-    featureEnabled,
   };
 }

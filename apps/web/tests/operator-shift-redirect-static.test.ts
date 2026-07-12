@@ -51,8 +51,22 @@ test("operator shift schedule renders the branch schedule plane", () => {
   );
   assert.match(schedulePageSource, /plane === "branch" \? BranchOperatorPage/);
   assert.match(schedulePageSource, /ScheduleClient[\s\S]*plane=\{plane\}/);
+  assert.doesNotMatch(schedulePageSource, /base_salary|monthlySalary/);
   assert.match(scheduleClientSource, /BRANCH_SCHEDULE_PRIMITIVES/);
   assert.match(scheduleClientSource, /plane === "branch"/);
+  assert.doesNotMatch(
+    scheduleClientSource,
+    /StatusStrip|formatVND|estimatedPay|countCompletedShiftWorkdays|monthlySalary/,
+  );
+  assert.match(scheduleClientSource, /size="touch"[\s\S]*"aspect-square w-full/);
+  assert.match(
+    scheduleClientSource,
+    /className="border-l border-t p-0[\s\S]*sm:p-1"/,
+  );
+  assert.match(
+    scheduleClientSource,
+    /href=\{`\$\{leaveHref\}\?date=\$\{encodeURIComponent\(dateStr\)\}`\}/,
+  );
 });
 
 test("operator shift leave renders inside the schedule route family", () => {
@@ -73,8 +87,26 @@ test("operator shift leave renders inside the schedule route family", () => {
   );
   assert.ok(source.includes("returnHref={`/br/${branchId}/shift/schedule`}"));
   assert.ok(source.includes("routeBranchId={branchId}"), path);
+  assert.match(source, /searchParams/);
+  assert.match(source, /initialDate=\{initialDate\}/);
   assert.doesNotMatch(source, /hideHeaderOnMobile/, path);
   assert.doesNotMatch(source, /redirect\("\/employee\/leave"\)/);
+
+  const leavePageSource = read("apps/web/lib/staff-runtime/leave/page.tsx");
+  const leaveClientSource = read(
+    "apps/web/lib/staff-runtime/leave/leave-client.tsx",
+  );
+  assert.match(leavePageSource, /initialDate=\{initialDate\}/);
+  assert.match(leaveClientSource, /leaveRequestDefaults\(initialDate\)/);
+  assert.match(leaveClientSource, /size="icon-touch"/);
+  assert.doesNotMatch(
+    leaveClientSource,
+    /EmployeePanel|BranchOperatorPanel|StatusStrip|ActionBar/,
+  );
+  assert.doesNotMatch(
+    leaveClientSource,
+    /request\.reason \? ` · \$\{request\.reason\}`/,
+  );
 });
 
 test("operator payslip renders inside the profile route family", () => {
@@ -104,10 +136,18 @@ test("operator payslip renders inside the profile route family", () => {
   const yearPickerSource = read(
     "apps/web/lib/staff-runtime/payslip/year-picker.tsx",
   );
-  assert.match(payslipPageSource, /plane === "branch" \? BranchOperatorPage/);
+  assert.match(payslipPageSource, /props\.plane === "branch" \? \(/);
+  assert.match(payslipPageSource, /backHref=\{props\.profileHref\}/);
+  assert.match(payslipPageSource, /\.eq\("payroll_periods\.status", "paid"\)/);
+  assert.match(
+    payslipPageSource,
+    /\.eq\("payroll_periods\.period_year", year\)/,
+  );
   assert.match(payslipPageSource, /PayslipClient[\s\S]*plane=\{props\.plane\}/);
   assert.match(payslipClientSource, /plane === "branch"/);
-  assert.match(payslipClientSource, /BranchOperatorPanel/);
+  assert.match(payslipClientSource, /ItemGroup/);
+  assert.match(payslipClientSource, /SheetContent/);
+  assert.doesNotMatch(payslipClientSource, /BranchOperatorPanel/);
   assert.match(payslipClientSource, /BranchOperatorDetailList/);
   assert.match(yearPickerSource, /BranchOperatorControlBar/);
 });
@@ -148,6 +188,24 @@ test("operator checkout approvals render the branch approvals plane", () => {
     clientSource,
     /items\.find\(\(item\) => item\.id === focusAttendanceId\)/,
   );
+  assert.match(clientSource, /useOperatorUrlState\(\)/);
+  assert.match(clientSource, /<Item variant="outline" className="p-0">/);
+  assert.match(
+    clientSource,
+    /<Button[\s\S]*?type="button"[\s\S]*?size="touch"/,
+  );
+  assert.match(clientSource, /<SheetContent\s+side="bottom"/);
+  assert.equal((clientSource.match(/<Sheet\s/g) ?? []).length, 1);
+  assert.match(
+    clientSource,
+    /replaceParams\(\{ attendanceId: String\(item\.id\) \}\)/,
+  );
+  assert.match(clientSource, /replaceParams\(\{ attendanceId: null \}\)/);
+  assert.match(clientSource, /setRejecting\(true\)/);
+  assert.doesNotMatch(
+    clientSource,
+    /useSwipeReveal|useLongPress|onPointerDown|<Drawer/,
+  );
 });
 
 test("operator shift count owns the branch count plane", () => {
@@ -155,6 +213,7 @@ test("operator shift count owns the branch count plane", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/count/page.tsx";
   const aliasPath =
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx";
+  const routeMap = read("packages/shared/src/auth/route-map.ts");
 
   assert.equal(exists(path), true, path);
 
@@ -174,6 +233,11 @@ test("operator shift count owns the branch count plane", () => {
   const aliasSource = read(aliasPath);
   assert.match(aliasSource, /\/br\/\$\{branchId\}\/shift\/count\$\{suffix\}/);
   assert.match(aliasSource, /encodeURIComponent\(location\)/);
+  assert.match(
+    routeMap,
+    /id: "operator-shift-count"[\s\S]*entryPath: "\/br\/\[branchId\]\/shift\/count"/,
+  );
+  assert.doesNotMatch(routeMap, /id: "operator-stock-count"/);
 });
 
 test("employee count client keeps location changes on the current route", () => {
@@ -256,11 +320,12 @@ test("operator profile renders inside the branch operator shell", () => {
   assert.ok(source.includes("const branchId = Number(rawBranchId);"), path);
   assert.ok(source.includes("notFound()"), path);
   assert.ok(
-    source.includes('return <StaffProfilePageContent plane="branch" />;'),
+    source.includes(
+      'return <StaffProfilePageContent plane="branch" branchId={branchId} />;',
+    ),
     path,
   );
   assert.doesNotMatch(source, /PERSONAL_LINKS/);
-  assert.doesNotMatch(source, /profile\/payslip/);
   assert.doesNotMatch(source, /shift\/leave/);
   assert.doesNotMatch(source, /shift\/payslip/);
   assert.doesNotMatch(source, /export \{ default \}/);
@@ -270,9 +335,13 @@ test("operator profile renders inside the branch operator shell", () => {
   assert.match(profileSource, /StaffProfilePageContent/);
   assert.match(profileSource, /plane === "branch"/);
   assert.match(profileSource, /BranchOperatorPage/);
-  assert.match(profileSource, /BranchOperatorPanel/);
+  assert.doesNotMatch(profileSource, /BranchOperatorPanel/);
   assert.match(profileSource, /BranchOperatorActionBar/);
   assert.match(profileSource, /BranchOperatorDetailList/);
+  assert.match(
+    profileSource,
+    /href=\{`\/br\/\$\{branchId\}\/profile\/payslip`\}/,
+  );
   assert.doesNotMatch(profileSource, /text-4xl/);
 });
 
@@ -342,7 +411,7 @@ test("employee daily cockpit does not own profile or leave self-service", () => 
   assert.doesNotMatch(source, /href: routes\.(payslip|leave)/);
 });
 
-test("operator home uses the Branch operator action layout", () => {
+test("operator home keeps secondary capabilities out of the scroll body", () => {
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
@@ -352,13 +421,10 @@ test("operator home uses the Branch operator action layout", () => {
     "operator home uses Branch operator page shell",
   );
   assert.ok(
-    source.includes("BranchOperatorActionSection"),
-    "operator home uses domain tile rows via Branch action rows",
+    source.includes("DropdownMenu"),
+    "operator home exposes one compact capability menu",
   );
-  // Hub hierarchy W2: the unified "Cần xử lý" queue collapses to compact
-  // single-line rows (Item/ItemMedia/ItemActions), not full AppLinkCard
-  // tiles — domain tile rows below it still render through
-  // BranchOperatorActionSection.
+  assert.doesNotMatch(source, /BranchOperatorActionSection/);
   const queueSource = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-queue-section.tsx",
   );

@@ -44,7 +44,7 @@ export interface GuestPaymentRequestState {
   id?: number | null;
   clientOpId?: string | null;
   status: string;
-  method: "cash_call" | "vietqr";
+  method: "cash_call" | "vietqr" | "momo";
   amount: number;
   paymentId?: number | null;
   paymentCode?: string | null;
@@ -75,7 +75,7 @@ export interface PaymentPanelProps {
   buyerAddress: string;
   buyerEmail: string;
   isPending: boolean;
-  pendingMethod: "cash_call" | "vietqr" | null;
+  pendingMethod: "cash_call" | "vietqr" | "momo" | null;
   error: string | null;
   fieldErrors: InvoiceFieldErrors;
   errorFocusRequest: InvoiceErrorFocusRequest | null;
@@ -84,7 +84,7 @@ export interface PaymentPanelProps {
   onBuyerTaxCodeChange: (value: string) => void;
   onBuyerAddressChange: (value: string) => void;
   onBuyerEmailChange: (value: string) => void;
-  onRequestPayment: (method: "cash_call" | "vietqr") => void;
+  onRequestPayment: (method: "cash_call" | "vietqr" | "momo") => void;
 }
 
 function BankAppLauncher({
@@ -123,11 +123,14 @@ function BankAppLauncher({
       .then((payload) => {
         const parsedApps = parseVietQrBankApps(payload);
         setApps([
-          { id: "momo", name: "MoMo", logoUrl: null },
+          {
+            id: "momo",
+            name: "MoMo",
+            logoUrl:
+              "https://play-lh.googleusercontent.com/cQzoiahn_EveryMo_uF6tm3AEV7HzNPesJEOegmpflSeorbI4LfKOq5fK1sX3cnpwH98cjxK5C1PAQMB7UzsAg",
+          },
           { id: "msb", name: "MSB", logoUrl: null },
-          ...parsedApps.filter(
-            (app) => app.id !== "momo" && app.id !== "msb",
-          ),
+          ...parsedApps.filter((app) => app.id !== "momo" && app.id !== "msb"),
         ]);
       })
       .catch((error: unknown) => {
@@ -274,6 +277,7 @@ export function PaymentPanel({
   }
 
   const isVietQrPending = activePaymentRequest?.status === "vietqr_pending";
+  const isMomoPending = activePaymentRequest?.status === "momo_pending";
   const hasRecoverableVietQr =
     isVietQrPending &&
     Boolean(activePaymentRequest.qrData) &&
@@ -497,6 +501,23 @@ export function PaymentPanel({
                   </div>
                 </div>
               ) : null}
+              {isMomoPending ? (
+                <div className="flex flex-col items-center gap-2 rounded-md bg-muted/30 p-4 text-center">
+                  <Avatar aria-hidden="true" className="size-10">
+                    <AvatarImage
+                      src="https://play-lh.googleusercontent.com/cQzoiahn_EveryMo_uF6tm3AEV7HzNPesJEOegmpflSeorbI4LfKOq5fK1sX3cnpwH98cjxK5C1PAQMB7UzsAg"
+                      alt=""
+                    />
+                    <AvatarFallback>Mo</AvatarFallback>
+                  </Avatar>
+                  <h3 className="font-heading text-sm font-semibold">
+                    {SELF_ORDER_VI.momoPendingTitle}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {SELF_ORDER_VI.momoPendingDescription}
+                  </p>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2">
@@ -526,6 +547,26 @@ export function PaymentPanel({
                   <IconQrcode data-icon="inline-start" />
                 )}
                 {SELF_ORDER_VI.vietQrCreate}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                disabled={disabled || isPending}
+                onClick={() => onRequestPayment("momo")}
+              >
+                {pendingMethod === "momo" ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <Avatar aria-hidden="true" className="size-5">
+                    <AvatarImage
+                      src="https://play-lh.googleusercontent.com/cQzoiahn_EveryMo_uF6tm3AEV7HzNPesJEOegmpflSeorbI4LfKOq5fK1sX3cnpwH98cjxK5C1PAQMB7UzsAg"
+                      alt=""
+                    />
+                    <AvatarFallback>Mo</AvatarFallback>
+                  </Avatar>
+                )}
+                {SELF_ORDER_VI.momoPay}
               </Button>
             </div>
           )}

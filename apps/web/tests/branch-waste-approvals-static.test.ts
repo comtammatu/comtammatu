@@ -35,7 +35,8 @@ test("Branch waste approvals preserve touch review and Office isolation", () => 
   assert.match(model, /export type PendingWasteRow/);
 
   assert.match(client, /BranchOperatorPage/);
-  assert.match(client, /BranchOperatorPanel/);
+  assert.doesNotMatch(client, /BranchOperatorPanel/);
+  assert.match(client, /backHref=\{stockBasePath\}/);
   assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
   assert.match(client, /overscroll-contain/);
   assert.match(client, /beforeunload/);

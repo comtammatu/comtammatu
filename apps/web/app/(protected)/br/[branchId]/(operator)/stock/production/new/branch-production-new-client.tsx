@@ -3,11 +3,6 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Boxes as IconBoxes,
-  ChefHat as IconChefHat,
-  MapPin as IconMapPin,
-} from "lucide-react";
 import { formatDecimalInputValue } from "@comtammatu/shared/format";
 import {
   Alert,
@@ -45,7 +40,6 @@ import { AppDetailFooter } from "@/components/surface";
 import {
   BranchOperatorInlineState,
   BranchOperatorPage,
-  BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   fetchProductionRecipeContext,
@@ -207,6 +201,7 @@ export function BranchProductionNewClient({
   const [numberPadTarget, setNumberPadTarget] =
     useState<NumberPadTarget | null>(null);
   const [shortages, setShortages] = useState<ProductionShortageRow[]>([]);
+  const [showConsumptionEditor, setShowConsumptionEditor] = useState(false);
 
   const selectedFinishedGood = finishedGoods.find(
     (finishedGood) => finishedGood.id === finishedGoodId,
@@ -389,31 +384,16 @@ export function BranchProductionNewClient({
     });
   }
 
-  const readinessLabel = !finishedGoodId
-    ? "Chọn thành phẩm"
-    : !hasValidPlannedQuantity || !hasValidActualQuantity
-      ? "Nhập sản lượng"
-      : !hasRecipeContext
-        ? "Đang kiểm tra định mức"
-        : "Sẵn sàng tạo lệnh";
-
   return (
     <BranchOperatorPage
       title="Ghi nhận mẻ sản xuất"
-      description="Ghi lại định làm, thực ra và thực chi trong một lần."
-      badge={{ children: readinessLabel, variant: "secondary" }}
       backHref={basePath}
       backLabel="Sản xuất"
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start">
           <div className="flex min-w-0 flex-col gap-3">
-            <BranchOperatorPanel
-              title="Thành phẩm và sản lượng"
-              icon={IconChefHat}
-              size="sm"
-              contentClassName="gap-3"
-            >
+            <div className="flex min-w-0 flex-col gap-3">
               <div className="grid gap-2">
                 <Label htmlFor="branch-production-finished-good">
                   Thành phẩm
@@ -537,14 +517,11 @@ export function BranchProductionNewClient({
                   </p>
                 ) : null}
               </div>
-            </BranchOperatorPanel>
+            </div>
 
             {hasLocationChoices ? (
-              <BranchOperatorPanel
-                title="Kho"
-                icon={IconMapPin}
-                size="sm"
-                contentClassName={
+              <div
+                className={
                   hasSourceLocationChoice && hasTargetLocationChoice
                     ? "grid gap-3 sm:grid-cols-2"
                     : "grid gap-3"
@@ -608,11 +585,11 @@ export function BranchProductionNewClient({
                     </Select>
                   </div>
                 ) : null}
-              </BranchOperatorPanel>
+              </div>
             ) : null}
 
-            <BranchOperatorPanel title="Ghi chú" size="sm">
-              <Label htmlFor="branch-production-notes" className="sr-only">
+            <div className="grid gap-2">
+              <Label htmlFor="branch-production-notes">
                 Ghi chú ca sản xuất
               </Label>
               <Textarea
@@ -620,19 +597,12 @@ export function BranchProductionNewClient({
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 placeholder="Ghi chú cho ca sản xuất…"
-                rows={3}
+                rows={2}
               />
-            </BranchOperatorPanel>
+            </div>
           </div>
 
-          <BranchOperatorPanel
-            title="Định mức nguyên liệu"
-            description="Điền theo định mức rồi chỉ sửa khi thực chi khác."
-            icon={IconBoxes}
-            size="sm"
-            className="min-w-0"
-            contentClassName="gap-2"
-          >
+          <div className="flex min-w-0 flex-col gap-2">
             {isLoadingContext ? (
               <BranchOperatorInlineState
                 tone="info"
@@ -651,76 +621,99 @@ export function BranchProductionNewClient({
               />
             ) : recipeContext?.ingredients.length ? (
               <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="self-start"
-                  disabled={isPending || plannedOutputBaseQuantity == null}
-                  onClick={handleApplyRecipeDefaults}
-                >
-                  Đúng định mức
-                </Button>
-                <ItemGroup className="gap-2" role="list">
-                  {recipeContext.ingredients.map((ingredient) => (
-                    <div key={ingredient.ingredient_id} role="listitem">
-                      <Item
-                        variant="outline"
-                        className="min-h-24 flex-col items-stretch gap-3 touch-manipulation sm:flex-row sm:items-center"
-                      >
-                        <ItemContent className="min-w-0">
-                          <ItemTitle className="line-clamp-none text-sm font-semibold">
-                            {ingredient.ingredient_name}
-                          </ItemTitle>
-                          <ItemDescription className="line-clamp-none">
-                            Cần {neededQuantity(ingredient)} · Có thể dùng tối
-                            đa {formatQty(ingredient.max_ingredient_qty)}{" "}
-                            {ingredient.unit_name}
-                          </ItemDescription>
-                        </ItemContent>
-                        <div className="grid min-w-0 gap-1 sm:w-48 sm:shrink-0">
-                          <Label
-                            htmlFor={`branch-production-ingredient-${ingredient.ingredient_id}`}
-                            className="text-xs"
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    {recipeContext.ingredients.length} nguyên liệu
+                    {maxProductionInSelectedUnit != null
+                      ? ` · Tối đa ${formatQty(maxProductionInSelectedUnit)} ${selectedOutputUnitName}`
+                      : ""}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    onClick={() =>
+                      setShowConsumptionEditor((current) => !current)
+                    }
+                  >
+                    {showConsumptionEditor ? "Thu gọn" : "Chỉnh thực chi"}
+                  </Button>
+                </div>
+                {showConsumptionEditor ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="touch"
+                      className="self-start"
+                      disabled={isPending || plannedOutputBaseQuantity == null}
+                      onClick={handleApplyRecipeDefaults}
+                    >
+                      Đúng định mức
+                    </Button>
+                    <ItemGroup className="gap-2" role="list">
+                      {recipeContext.ingredients.map((ingredient) => (
+                        <div key={ingredient.ingredient_id} role="listitem">
+                          <Item
+                            variant="outline"
+                            className="min-h-24 flex-col items-stretch gap-3 touch-manipulation sm:flex-row sm:items-center"
                           >
-                            Thực dùng
-                          </Label>
-                          <div className="flex min-w-0 items-center gap-2">
-                            <Button
-                              id={`branch-production-ingredient-${ingredient.ingredient_id}`}
-                              type="button"
-                              variant="outline"
-                              size="touch"
-                              className="min-w-0 flex-1 justify-between font-mono tabular-nums"
-                              disabled={isPending}
-                              onClick={() =>
-                                setNumberPadTarget({
-                                  kind: "ingredient",
-                                  ingredientId: ingredient.ingredient_id,
-                                  name: ingredient.ingredient_name,
-                                  unit: ingredient.unit_name,
-                                })
-                              }
-                            >
-                              {ingredientUsages[ingredient.ingredient_id]
-                                ? formatQty(
-                                    Number.parseFloat(
-                                      ingredientUsages[
-                                        ingredient.ingredient_id
-                                      ] ?? "",
-                                    ),
-                                  )
-                                : "Nhập số lượng…"}
-                            </Button>
-                            <span className="w-10 shrink-0 text-xs text-muted-foreground">
-                              {ingredient.unit_name}
-                            </span>
-                          </div>
+                            <ItemContent className="min-w-0">
+                              <ItemTitle className="line-clamp-none text-sm font-semibold">
+                                {ingredient.ingredient_name}
+                              </ItemTitle>
+                              <ItemDescription className="line-clamp-none">
+                                Cần {neededQuantity(ingredient)} · Có thể dùng
+                                tối đa{" "}
+                                {formatQty(ingredient.max_ingredient_qty)}{" "}
+                                {ingredient.unit_name}
+                              </ItemDescription>
+                            </ItemContent>
+                            <div className="grid min-w-0 gap-1 sm:w-48 sm:shrink-0">
+                              <Label
+                                htmlFor={`branch-production-ingredient-${ingredient.ingredient_id}`}
+                                className="text-xs"
+                              >
+                                Thực dùng
+                              </Label>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <Button
+                                  id={`branch-production-ingredient-${ingredient.ingredient_id}`}
+                                  type="button"
+                                  variant="outline"
+                                  size="touch"
+                                  className="min-w-0 flex-1 justify-between font-mono tabular-nums"
+                                  disabled={isPending}
+                                  onClick={() =>
+                                    setNumberPadTarget({
+                                      kind: "ingredient",
+                                      ingredientId: ingredient.ingredient_id,
+                                      name: ingredient.ingredient_name,
+                                      unit: ingredient.unit_name,
+                                    })
+                                  }
+                                >
+                                  {ingredientUsages[ingredient.ingredient_id]
+                                    ? formatQty(
+                                        Number.parseFloat(
+                                          ingredientUsages[
+                                            ingredient.ingredient_id
+                                          ] ?? "",
+                                        ),
+                                      )
+                                    : "Nhập số lượng…"}
+                                </Button>
+                                <span className="w-10 shrink-0 text-xs text-muted-foreground">
+                                  {ingredient.unit_name}
+                                </span>
+                              </div>
+                            </div>
+                          </Item>
                         </div>
-                      </Item>
-                    </div>
-                  ))}
-                </ItemGroup>
+                      ))}
+                    </ItemGroup>
+                  </>
+                ) : null}
               </>
             ) : (
               <BranchOperatorInlineState
@@ -729,22 +722,11 @@ export function BranchProductionNewClient({
                 description="Chưa thể tạo lệnh sản xuất cho thành phẩm này."
               />
             )}
-          </BranchOperatorPanel>
+          </div>
         </div>
 
         <AppDetailFooter
           sticky
-          leading={
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              disabled={isPending}
-              onClick={() => router.push(basePath)}
-            >
-              Hủy
-            </Button>
-          }
           trailing={
             <Button
               type="button"
@@ -845,7 +827,10 @@ export function BranchProductionNewClient({
                 type="button"
                 size="touch-lg"
                 className="w-full"
-                onClick={() => setShortages([])}
+                onClick={() => {
+                  setShortages([]);
+                  setShowConsumptionEditor(true);
+                }}
               >
                 Sửa Thực chi
               </Button>

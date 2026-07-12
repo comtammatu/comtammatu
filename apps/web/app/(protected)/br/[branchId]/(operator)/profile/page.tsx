@@ -10,5 +10,5 @@ export default async function OperatorProfilePage({
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  return <StaffProfilePageContent plane="branch" />;
+  return <StaffProfilePageContent plane="branch" branchId={branchId} />;
 }

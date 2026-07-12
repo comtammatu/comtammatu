@@ -67,9 +67,9 @@ export const settings = {
       "Mẫu phiếu, giám sát job in, và cấu hình máy in theo từng chi nhánh.",
     printBranchConfigTitle: "Cấu hình theo chi nhánh",
     tablesTitle: "Sơ đồ bàn",
-    posTitle: "Máy POS & tồn kho",
     posSessionsTitle: "Đối soát ca POS",
-    posSessionsDescription: "Lịch sử ca, bill, doanh thu và chênh lệch quỹ.",
+    posSessionsDescription:
+      "Theo dõi ca đang mở; tra lịch sử khi cần đối soát.",
   },
   printTemplates: {
     layoutTitle: "Bố cục phiếu",
@@ -169,6 +169,10 @@ export const settings = {
     rotateQrConfirm: "Đổi mã",
     zonesTab: (count: number) => `Khu vực (${formatCount(count)})`,
     tablesTab: (count: number) => `Bàn (${formatCount(count)})`,
+    zonesDescription: (branchName: string) =>
+      `Tạo khu vực phục vụ cho ${branchName}.`,
+    tableListDescription: (branchName: string) =>
+      `Quản lý bàn phục vụ tại ${branchName}.`,
     addZone: "Thêm khu vực",
     addTable: "Thêm bàn",
     noZonesTitle: "Chưa có khu vực nào",
@@ -328,7 +332,7 @@ export const settings = {
     stockControlTitle: "Kiểm soát bán theo tồn kho",
     stockOutcomePostingLabel: "Trừ tồn khi bán",
     stockOutcomePostingHelp:
-      "Bật: mỗi đơn bán trừ kho theo định mức và món bị khóa khi hết tồn — nhập kho là mở lại. Món chưa có định mức không bị ảnh hưởng. Tắt: bán tự do, không đụng kho.",
+      "Bật để đơn bán trừ tồn theo định mức và khóa món hết hàng. Món chưa có định mức vẫn bán bình thường.",
     stockOutcomePostingOwnerOnly: "Chỉ Chủ quán bật/tắt được.",
     stockOutcomePostingSaved: "Đã cập nhật cấu hình trừ kho",
     stockOutcomePostingFailed: "Không thể lưu cấu hình. Vui lòng thử lại.",
@@ -517,11 +521,8 @@ export const settings = {
     tablesSetupTitle: "Bàn & khu vực",
     tablesSetupDescription:
       "Khu vực ăn uống, danh sách bàn và trạng thái vận hành tại chi nhánh.",
-    tablesDescription: (branchName: string) =>
-      `Sơ đồ khu vực và bàn của ${branchName}: thêm khu vực, quản lý bàn và trạng thái phục vụ.`,
-    posSetupTitle: "Máy POS & tồn kho",
-    posSetupDescription:
-      "Máy POS đăng ký tại chi nhánh và chính sách trừ tồn khi bán.",
+    posSetupTitle: "Máy POS",
+    posSetupDescription: "Máy POS đăng ký và đang hoạt động tại chi nhánh.",
     printersSetupTitle: "Máy in",
     printersSetupDescription:
       "Hóa đơn, bếp và trạng thái agent in đang dùng cho chi nhánh.",
@@ -564,10 +565,18 @@ export const settings = {
     emptyTitle: "Chưa có ca POS nào.",
     emptyDescription:
       "Khi nhân viên mở ca từ màn hình POS, lịch sử ca sẽ xuất hiện tại đây.",
+    currentWork: "Cần xử lý",
+    noCurrentWork: "Không có ca cần xử lý",
+    noCurrentWorkDescription:
+      "Không có ca đang mở hoặc chênh lệch quỹ chưa xử lý.",
     sessionHistory: "Lịch sử ca",
     sessionHistoryDescription: (openCount: number, varianceCount: number) =>
       `${formatCount(openCount)} ca đang mở · ${formatCount(varianceCount)} ca lệch quỹ chưa xử lý`,
     sessionCount: (count: number) => `${formatCount(count)} ca`,
+    historyPage: (page: number) => `Trang ${formatCount(page)}`,
+    historyPagination: "Phân trang lịch sử ca POS",
+    previousPage: "Trang trước",
+    nextPage: "Trang sau",
     sessionVarianceLine: (difference: string) => `Lệch quỹ ${difference}`,
     settlementTitle: "Đối soát quỹ",
     varianceShort: "Lệch",

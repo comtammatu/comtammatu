@@ -1,13 +1,8 @@
 import {
-  ChartBar as IconChartBar,
   ClipboardCheck as IconClipboardCheck,
   ClipboardList as IconClipboardList,
-  FileCheck as IconFileCheck,
   FileText as IconFileText,
-  LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
-  Settings as IconSettings,
-  Users as IconUsers,
   Utensils as IconToolsKitchen,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
@@ -40,11 +35,9 @@ export function withInventoryBranchNavScope(
 // because it reads the inventory dictionary. The shell projects it instead of
 // holding a ShellNavGroup[] literal.
 export function resolveInventoryNav({
-  userRole,
   showProcurement,
   showProduction,
   showCatalogManagement,
-  showSettings,
   showCountAssignments,
   showCountSlips,
 }: {
@@ -64,28 +57,63 @@ export function resolveInventoryNav({
       : null;
   const groups: ShellNavGroup[] = [
     {
-      title: "0 · Nay",
+      title: "1 · Tồn kho",
       items: [
         {
-          href: "/inventory",
-          label: "Nay",
-          icon: IconLayoutDashboard,
-          exact: true,
+          href: "/inventory/stock",
+          label: tNav("stock", "navigation"),
+          icon: IconPackage,
+          matchPrefixes: [
+            "/inventory/reports",
+            "/inventory/transfers",
+            "/inventory/ingredients",
+            "/inventory/settings",
+            "/inventory/suppliers",
+          ],
         },
       ],
     },
   ];
 
+  if (showProcurement) {
+    groups.push({
+      title: "2 · Nhập hàng",
+      items: [
+        {
+          href: "/inventory/grn",
+          label: tNav("grn", "navigation"),
+          icon: IconFileText,
+          matchPrefixes: [
+            "/inventory/grn/",
+            "/inventory/operations",
+            "/inventory/supplier-invoices",
+          ],
+        },
+      ],
+    });
+  }
+
+  if (showProduction) {
+    groups.push({
+      title: "3 · Sản xuất",
+      items: [
+        {
+          href: "/inventory/production",
+          label: tNav("production", "navigation"),
+          icon: IconToolsKitchen,
+          matchPrefixes: [
+            "/inventory/production/new",
+            "/inventory/production/",
+          ],
+          exact: true,
+        },
+      ],
+    });
+  }
+
   groups.push({
-    title: "1 · Kiểm soát tồn",
+    title: "4 · Kiểm tồn",
     items: [
-      // Cross-branch oversight entries (D061), additive to the branch
-      // operator plane at /br/[id]/stock/* — office=oversight, branch=floor.
-      {
-        href: "/inventory/stock",
-        label: tNav("stock", "navigation"),
-        icon: IconPackage,
-      },
       {
         href: "/inventory/stocktake",
         label: tNav("stocktake", "navigation"),
@@ -95,7 +123,7 @@ export function resolveInventoryNav({
         ? [
             {
               href: countHref,
-              label: "Đếm tồn",
+              label: "Phân công đếm tồn",
               icon: IconClipboardList,
               matchPrefixes: [
                 "/inventory/count-assignments",
@@ -104,98 +132,29 @@ export function resolveInventoryNav({
             },
           ]
         : []),
-      {
-        href: "/inventory/reports",
-        label: tNav("reports", "navigation"),
-        icon: IconChartBar,
-      },
     ],
   });
 
   groups.push({
-    title: "2 · Nhập/Nhận/Đối soát",
+    title: "5 · Tiêu hao",
     items: [
       {
-        href: "/inventory/operations",
-        label: "Giao dịch kho",
+        href: "/inventory/consumption",
+        label: tNav("consumption", "navigation"),
         icon: IconFileText,
-        matchPrefixes: [
-          "/inventory/operations",
-          "/inventory/grn",
-          "/inventory/consumption",
-          "/inventory/issues",
-          "/inventory/transfers",
-        ],
+        matchPrefixes: ["/inventory/issues", "/inventory/waste"],
       },
-      ...(showProcurement
+      ...(showProduction || showProcurement || showCatalogManagement
         ? [
             {
-              href: "/inventory/supplier-invoices",
-              label: tNav("supplierInvoices", "navigation"),
-              icon: IconFileCheck,
+              href: "/inventory/recipes",
+              label: tNav("recipes", "navigation"),
+              icon: IconToolsKitchen,
             },
           ]
         : []),
     ],
   });
-
-  if (showProduction) {
-    groups.push({
-      title: "3 · Sản xuất",
-      items: [
-        {
-          href: "/inventory/production",
-          label: "Sản xuất",
-          icon: IconToolsKitchen,
-          matchPrefixes: ["/inventory/production/new", "/inventory/production/"],
-          exact: true,
-        },
-      ],
-    });
-  }
-
-  const isBranchManager = userRole === "branch_manager";
-  const catalogItems: ShellNavGroup["items"] = [];
-
-  if (!isBranchManager) {
-    if (showSettings) {
-      catalogItems.push({
-        href: "/inventory/settings",
-        label: tNav("settings", "navigation"),
-        icon: IconSettings,
-        matchPrefixes: ["/inventory/settings/"],
-      });
-    }
-    if (showProcurement) {
-      catalogItems.push({
-        href: "/inventory/suppliers",
-        label: tNav("suppliers", "navigation"),
-        icon: IconUsers,
-      });
-    }
-    if (showCatalogManagement) {
-      catalogItems.push({
-        href: "/inventory/ingredients",
-        label: tNav("ingredients", "navigation"),
-        icon: IconFileText,
-      });
-    }
-  }
-
-  if (showProduction || showProcurement || showCatalogManagement) {
-    catalogItems.push({
-      href: "/inventory/recipes",
-      label: tNav("recipes", "navigation"),
-      icon: IconToolsKitchen,
-    });
-  }
-
-  if (catalogItems.length > 0) {
-    groups.push({
-      title: "4 · Danh mục & thiết lập",
-      items: catalogItems,
-    });
-  }
 
   return groups.map((group) => ({
     ...group,

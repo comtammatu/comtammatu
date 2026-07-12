@@ -9,6 +9,7 @@ import {
   buildSepayReconciliationSummary,
   classifySepayReconciliationState,
   classifySepayUnmatchedMoneyIn,
+  isSepayOverpayment,
   isSepayTransactionInDateRange,
   mapSepayWebhookRow,
   readSepayBankWebhookReview,
@@ -323,6 +324,62 @@ test("SePay reconciliation state follows actual source link", () => {
     ),
     "webhook_error",
   );
+});
+
+test("SePay second distinct transfer stays in review without becoming webhook error", () => {
+  const overpayment = tx(
+    row(
+      31,
+      { transferType: "in", transferAmount: 50000 },
+      "2026-07-01T01:00:00.000Z",
+      null,
+      null,
+      "processed",
+      "overpayment_needs_review",
+      931,
+    ),
+  );
+
+  assert.equal(isSepayOverpayment(overpayment), true);
+  assert.equal(classifySepayReconciliationState(overpayment), "needs_review");
+  assert.equal(classifySepayUnmatchedMoneyIn(overpayment), "overpayment");
+
+  const summary = buildSepayReconciliationSummary([overpayment]);
+  assert.equal(summary.needsReviewCount, 1);
+  assert.equal(summary.needsReviewAmount, 50000);
+  assert.equal(summary.failedCount, 0);
+  assert.equal(summary.unmatchedMoneyInCount, 1);
+  assert.equal(summary.unmatchedMoneyInAmount, 50000);
+});
+
+test("SePay duplicate-transfer guard quarantines the second event before payment completion", () => {
+  const migration = read(
+    "supabase/migrations/20260712161526_quarantine_duplicate_sepay_transfers.sql",
+  );
+  const route = read("apps/web/app/api/webhooks/sepay/route.ts");
+  const table = read(
+    "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
+  );
+
+  assert.match(
+    migration,
+    /prior_event\.request_id IS DISTINCT FROM v_event\.request_id/,
+  );
+  assert.match(migration, /prior_event\.payment_id = v_payment\.id/);
+  assert.match(migration, /error_code = 'overpayment_needs_review'/);
+  assert.match(migration, /payment_id = NULL/);
+  assert.match(migration, /'status', 'overpayment_needs_review'/);
+  assert.match(migration, /position\([\s\S]*payment_code[\s\S]*IN v_event_memo/);
+  assert.match(migration, /btrim\(payment_code\) <> ''/);
+  assert.match(migration, /\[A-Za-z0-9\]\{15,49\}/);
+  assert.match(migration, /IF v_order_count = 0 THEN[\s\S]*regexp_replace\(/);
+  assert.match(migration, /ORDER BY id[\s\S]*FOR UPDATE/);
+  assert.match(migration, /prior_event\.processing_status <> 'failed'/);
+  assert.match(migration, /\^-\?\[0-9\]\+\(\[\.\]\[0-9\]\+\)\?\$/);
+  assert.match(route, /"overpayment_needs_review"/);
+  assert.match(route, /p_payment_code: paymentCode \?\? ""/);
+  assert.match(table, /isSepayOverpayment\(tx\)/);
+  assert.match(table, /copy\.overpayment\.linkUnavailable/);
 });
 
 test("SePay outgoing transactions can match supplier AP payments by reference", () => {

@@ -20,6 +20,22 @@ export function normalizeSessionRows(
   }));
 }
 
+export function isPosSessionVarianceBreached(session: PosSessionRow): boolean {
+  if (session.cash_difference == null) return false;
+  const threshold = Math.max(
+    50_000,
+    Math.round((session.expected_cash ?? 0) * 0.005 * 100) / 100,
+  );
+  return Math.abs(session.cash_difference) > threshold;
+}
+
+export function isPosSessionWorkItem(session: PosSessionRow): boolean {
+  return (
+    session.status === "open" ||
+    (isPosSessionVarianceBreached(session) && !session.variance_approval_note)
+  );
+}
+
 export function normalizeOrderRows(
   rows: readonly unknown[] | null,
 ): PosSessionOrder[] {
@@ -39,21 +55,4 @@ export function normalizeOrderRows(
       sides: Array.isArray(item.sides) ? item.sides : [],
     })),
   }));
-}
-
-export function resolveSelectedSessionId(
-  requested: string | undefined,
-  sessions: readonly PosSessionRow[],
-): number | null {
-  if (sessions.length === 0) return null;
-
-  const parsed = requested != null ? Number(requested) : NaN;
-  if (
-    Number.isInteger(parsed) &&
-    sessions.some((session) => session.id === parsed)
-  ) {
-    return parsed;
-  }
-
-  return sessions[0]?.id ?? null;
 }

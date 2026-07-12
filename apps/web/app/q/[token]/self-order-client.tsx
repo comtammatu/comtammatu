@@ -12,6 +12,7 @@ import { Clock as IconClock, ReceiptText as IconReceipt } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { AppDialog } from "@/components/form";
 import {
   Item,
   ItemContent,
@@ -133,7 +134,7 @@ function normalizePaymentRequest(
   const method = readOptionalString(record, "method");
   const amount = Number(record.amount);
   if (
-    (method !== "cash_call" && method !== "vietqr") ||
+    (method !== "cash_call" && method !== "vietqr" && method !== "momo") ||
     !Number.isFinite(amount) ||
     amount < 0
   ) {
@@ -266,8 +267,9 @@ export function SelfOrderClient({
   );
   const [billOpen, setBillOpen] = useState(false);
   const [billView, setBillView] = useState<"bill" | "payment">("bill");
+  const [awaitingDialogOpen, setAwaitingDialogOpen] = useState(false);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<
-    "cash_call" | "vietqr" | null
+    "cash_call" | "vietqr" | "momo" | null
   >(null);
   const [isSubmitting, startSubmit] = useTransition();
   const [isPaymentPending, startPayment] = useTransition();
@@ -375,46 +377,31 @@ export function SelfOrderClient({
   }, [refreshError]);
 
   useEffect(() => {
-    if (!snapshot.ok) return;
-    const notice =
-      snapshot.state === "awaiting_confirmation"
-        ? "awaiting"
-        : snapshot.state === "rejected"
-          ? "rejected"
-          : null;
-    if (!notice) return;
+    if (!snapshot.ok || snapshot.state !== "rejected") return;
 
-    const key = `${notice}:${snapshot.request?.id ?? "none"}`;
+    const key = `rejected:${snapshot.request?.id ?? "none"}`;
     if (guestToastKeyRef.current === key) return;
     guestToastKeyRef.current = key;
 
-    if (notice === "rejected") {
-      const rejectedRequest = snapshot.request;
-      toast.warning(SELF_ORDER_VI.rejectedCalloutTitle, {
-        description: SELF_ORDER_VI.rejectedCalloutDescription,
-        duration: 10_000,
-        action: rejectedRequest
-          ? {
-              label: SELF_ORDER_VI.resubmitRejected,
-              onClick: () => {
-                setCartItems(
-                  rejectedRequest.items.map((item) => ({
-                    ...item,
-                    key: item.key ?? crypto.randomUUID(),
-                  })),
-                );
-                setCustomerNote(rejectedRequest.customerNote ?? "");
-                setSubmitError(null);
-              },
-            }
-          : undefined,
-      });
-      return;
-    }
-
-    toast.warning(SELF_ORDER_VI.awaitingCalloutTitle, {
-      description: SELF_ORDER_VI.awaitingCalloutDescription,
-      duration: 6_000,
+    const rejectedRequest = snapshot.request;
+    toast.warning(SELF_ORDER_VI.rejectedCalloutTitle, {
+      description: SELF_ORDER_VI.rejectedCalloutDescription,
+      duration: 10_000,
+      action: rejectedRequest
+        ? {
+            label: SELF_ORDER_VI.resubmitRejected,
+            onClick: () => {
+              setCartItems(
+                rejectedRequest.items.map((item) => ({
+                  ...item,
+                  key: item.key ?? crypto.randomUUID(),
+                })),
+              );
+              setCustomerNote(rejectedRequest.customerNote ?? "");
+              setSubmitError(null);
+            },
+          }
+        : undefined,
     });
   }, [snapshot]);
 
@@ -449,17 +436,16 @@ export function SelfOrderClient({
   const itemCount = order?.itemCount ?? 0;
   const cartQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = cartItems.reduce((sum, item) => sum + lineTotal(item), 0);
-  const ctaLabel = open
-    ? SELF_ORDER_VI.submitAddMore
-    : SELF_ORDER_VI.submitFirstBatch;
-  const ctaDisabled = awaiting || paymentPending;
-  const ctaDisabledHint = awaiting
-    ? SELF_ORDER_VI.awaitingCalloutDescription
-    : paymentPending
-      ? SELF_ORDER_VI.activePaymentIntent
-      : !open
-        ? SELF_ORDER_VI.firstSubmitHint
-        : null;
+  const ctaLabel =
+    open || awaiting
+      ? SELF_ORDER_VI.submitAddMore
+      : SELF_ORDER_VI.submitFirstBatch;
+  const ctaDisabled = paymentPending;
+  const ctaDisabledHint = paymentPending
+    ? SELF_ORDER_VI.activePaymentIntent
+    : !open && !awaiting
+      ? SELF_ORDER_VI.firstSubmitHint
+      : null;
 
   if (paymentCompleted) {
     return (
@@ -504,6 +490,7 @@ export function SelfOrderClient({
 
   function submitCart() {
     if (cartItems.length === 0 || ctaDisabled) return;
+    const isFirstPendingSubmit = !awaiting;
     const intent = resolveClientIntent(
       batchIntentRef.current,
       buildBatchIntentKey({ items: cartItems, customerNote }),
@@ -549,8 +536,15 @@ export function SelfOrderClient({
         batchIntentRef.current,
         intent.clientOpId,
       );
-      if (parsedSnapshot.data.ok && parsedSnapshot.data.state === "open") {
-        toast.success(SELF_ORDER_VI.addedOk);
+      if (parsedSnapshot.data.ok) {
+        if (
+          parsedSnapshot.data.state === "awaiting_confirmation" &&
+          isFirstPendingSubmit
+        ) {
+          setAwaitingDialogOpen(true);
+        } else if (parsedSnapshot.data.state === "open") {
+          toast.success(SELF_ORDER_VI.addedOk);
+        }
       }
     });
   }
@@ -574,7 +568,7 @@ export function SelfOrderClient({
     return errors;
   }
 
-  function requestPayment(method: "cash_call" | "vietqr") {
+  function requestPayment(method: "cash_call" | "vietqr" | "momo") {
     if (!order || activePaymentRequest) return;
     const fieldErrors = validateInvoice();
     setInvoiceFieldErrors(fieldErrors);
@@ -635,6 +629,10 @@ export function SelfOrderClient({
       setBillView("payment");
       setBillOpen(true);
       void refreshSnapshot();
+      const redirectUrl = readOptionalString(result.payload, "redirectUrl");
+      if (method === "momo" && redirectUrl) {
+        window.location.assign(redirectUrl);
+      }
     });
   }
 
@@ -763,6 +761,34 @@ export function SelfOrderClient({
           />
         ) : null}
       </BillDrawer>
+
+      <AppDialog
+        open={awaitingDialogOpen}
+        onOpenChange={setAwaitingDialogOpen}
+        title={SELF_ORDER_VI.pendingDialogTitle}
+        description={SELF_ORDER_VI.pendingDialogDescription}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="default"
+              size="touch"
+              onClick={() => setAwaitingDialogOpen(false)}
+            >
+              {SELF_ORDER_VI.callMore}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              onClick={() => setAwaitingDialogOpen(false)}
+            >
+              {SELF_ORDER_VI.paymentCompletedClose}
+            </Button>
+          </>
+        }
+        footerClassName="flex-col gap-2 sm:flex-row"
+      />
     </AppPage>
   );
 }

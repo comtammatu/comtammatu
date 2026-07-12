@@ -41,19 +41,8 @@ export async function StaffSchedulePageContent({
     );
   }
 
-  const { supabase, claims, employeeId } = ctx;
-
   const monthStart = getVNMonthStartDateString(new Date());
-
-  const [scheduleResult, employeeResult] = await Promise.all([
-    fetchMySchedule(monthStart),
-    supabase
-      .from("employees")
-      .select("base_salary")
-      .eq("id", employeeId)
-      .eq("tenant_id", claims.tenant_id)
-      .maybeSingle(),
-  ]);
+  const scheduleResult = await fetchMySchedule(monthStart);
 
   return (
     <PageShell title={copy.scheduleTitle} hideHeaderOnMobile>
@@ -65,10 +54,8 @@ export async function StaffSchedulePageContent({
         }
         initialMonthStart={monthStart}
         leaveHref={leaveHref}
-        monthlySalary={employeeResult.data?.base_salary ?? 0}
         plane={plane}
       />
     </PageShell>
   );
 }
-

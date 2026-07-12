@@ -144,6 +144,8 @@ GRANT EXECUTE ON FUNCTION public.get_daily_revenue(BIGINT, DATE, DATE) TO authen
 --   - 'month': period_start = ngày 1, period_end = ngày cuối tháng;
 --              label = "Tháng M/YYYY"
 
+DROP FUNCTION IF EXISTS public.get_revenue_rollup(BIGINT, DATE, DATE, TEXT);
+
 CREATE OR REPLACE FUNCTION public.get_revenue_rollup(
   p_branch_id   BIGINT,
   p_start_date  DATE,

@@ -29,6 +29,122 @@
 --      PROFILES-POSITION-ID-MUST-NOT-NULL (H3a sibling).
 -- =============================================================
 
+DO $$
+DECLARE
+  v_auth_user_count BIGINT;
+  v_profile_count BIGINT;
+  v_tenant_id BIGINT;
+  v_owner_position_id BIGINT;
+  v_keeper_id CONSTANT UUID := 'a0000002-0000-4000-8000-000000000002'::UUID;
+BEGIN
+  SELECT COUNT(*) INTO v_auth_user_count FROM auth.users;
+  SELECT COUNT(*) INTO v_profile_count FROM public.profiles;
+
+  IF v_auth_user_count = 0 OR v_profile_count = 0 THEN
+    IF v_auth_user_count <> 0 OR v_profile_count <> 0 THEN
+      RAISE EXCEPTION
+        'H3b replay bootstrap refused asymmetric auth state: auth.users=%, profiles=%',
+        v_auth_user_count,
+        v_profile_count
+        USING ERRCODE = 'P0001';
+    END IF;
+
+    IF (SELECT COUNT(*) FROM public.tenants) <> 1 THEN
+      RAISE EXCEPTION
+        'H3b replay bootstrap requires exactly one seeded tenant'
+        USING ERRCODE = 'P0001';
+    END IF;
+
+    SELECT t.id
+      INTO v_tenant_id
+      FROM public.tenants t
+     WHERE t.slug = 'comtammatu';
+
+    IF v_tenant_id IS NULL THEN
+      RAISE EXCEPTION
+        'H3b replay bootstrap requires the comtammatu tenant'
+        USING ERRCODE = 'P0001';
+    END IF;
+
+    SELECT MIN(po.id), COUNT(*)
+      INTO v_owner_position_id, v_profile_count
+      FROM public.positions po
+     WHERE po.tenant_id = v_tenant_id
+       AND po.code = 'owner'
+       AND po.is_active = TRUE;
+
+    IF v_profile_count <> 1 OR v_owner_position_id IS NULL THEN
+      RAISE EXCEPTION
+        'H3b replay bootstrap requires exactly one active owner position'
+        USING ERRCODE = 'P0001';
+    END IF;
+
+    INSERT INTO auth.users (
+      instance_id,
+      id,
+      aud,
+      role,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      created_at,
+      updated_at,
+      confirmation_token,
+      recovery_token,
+      email_change_token_new,
+      email_change,
+      is_sso_user,
+      is_anonymous
+    )
+    VALUES (
+      '00000000-0000-0000-0000-000000000000'::UUID,
+      v_keeper_id,
+      'authenticated',
+      'authenticated',
+      jsonb_build_object(
+        'tenant_id', v_tenant_id,
+        'role', 'owner',
+        'user_role', 'owner',
+        'full_name', 'Owner (keeper)',
+        'replay_sentinel', TRUE
+      ),
+      jsonb_build_object(
+        'full_name', 'Owner (keeper)',
+        'replay_sentinel', TRUE
+      ),
+      now(),
+      now(),
+      '',
+      '',
+      '',
+      '',
+      FALSE,
+      FALSE
+    );
+
+    IF EXISTS (
+      SELECT 1
+        FROM auth.identities i
+       WHERE i.user_id = v_keeper_id
+    ) OR NOT EXISTS (
+      SELECT 1
+        FROM auth.users u
+        JOIN public.profiles p ON p.id = u.id
+       WHERE u.id = v_keeper_id
+         AND u.email IS NULL
+         AND u.phone IS NULL
+         AND u.encrypted_password IS NULL
+         AND u.email_confirmed_at IS NULL
+         AND p.tenant_id = v_tenant_id
+         AND p.position_id = v_owner_position_id
+         AND p.is_active = TRUE
+    ) THEN
+      RAISE EXCEPTION
+        'H3b replay bootstrap keeper invariant failed'
+        USING ERRCODE = 'P0001';
+    END IF;
+  END IF;
+END$$;
+
 -- ─── 1. ADD COLUMN (initially nullable for backfill) ──────────
 ALTER TABLE public.tenants
   ADD COLUMN IF NOT EXISTS owner_user_id UUID

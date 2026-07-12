@@ -457,8 +457,6 @@ function branchPageOrDirectClientUsesOperatorWorkflowFrame(file) {
   const combined = sources.join("\n");
   return (
     combined.includes("BranchOperatorPage") &&
-    combined.includes("BranchOperatorPanel") &&
-    combined.includes("AppDetailFooter") &&
     !combined.includes("DocumentFormFrame")
   );
 }
@@ -1208,10 +1206,6 @@ const checks = [
     pattern:
       /\b(?:OfficeModuleShell|ManagementShell|AppShell|FinanceShell|InventoryShell|resolveOffice(?:PrimaryTabs|DeepNav))\b|["'][^"']*(?:office-module-shell|management-chrome|app-shell|office-nav|finance-shell|inventory-shell)["']|from\s+["']@\/\(protected\)\/inventory\/(?!_lib\/)(?!(?:[^"']*\/)?[^/"']*actions(?:\.ts)?["'])[^"']+["']/g,
     allowlist: {
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/ingredients/catalog-ingredients-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/suppliers/catalog-suppliers-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/suppliers/page.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/thresholds/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/grn-review-operator-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/branch-production-detail-client.tsx": 1,
@@ -2295,7 +2289,7 @@ for (const file of allPageFiles) {
     !DOC_WORKFLOW_FRAME_BASELINE.has(file)
   ) {
     failures.push(
-      `page-archetype: ${file} is a DOC-WORKFLOW page without an approved frame in the page or its direct client owner. Office uses DocumentFormFrame; Branch touch uses BranchOperatorPage + BranchOperatorPanel + AppDetailFooter (docs/spec/page-archetypes.md § DOC-WORKFLOW).`,
+      `page-archetype: ${file} is a DOC-WORKFLOW page without an approved frame in the page or its direct client owner. Office uses DocumentFormFrame; Branch touch uses BranchOperatorPage with workflow-native progressive disclosure and actions (docs/spec/page-archetypes.md § DOC-WORKFLOW).`,
     );
   }
 }

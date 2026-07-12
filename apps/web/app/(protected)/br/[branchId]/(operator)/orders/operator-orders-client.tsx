@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
-import { BRANCH_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
   ItemContent,
@@ -24,36 +25,47 @@ import { ORDERS_COPY } from "@/(protected)/orders/orders-copy";
 
 export function OperatorOrdersClient({
   orders,
-  totalCount,
   inProgressCount,
+  page,
+  pageSize,
+  totalCount,
 }: {
   orders: OrderRow[];
-  totalCount: number;
   inProgressCount: number;
+  page: number;
+  pageSize: number;
+  totalCount: number;
 }) {
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
-  const [view, setView] = useState<"active" | "recent">("active");
-  const activeOrders = orders.filter(
-    (order) => order.status !== "completed" && order.status !== "cancelled",
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const replaceServerParams = useCallback(
+    (changes: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(changes)) {
+        if (value) params.set(key, value);
+        else params.delete(key);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname, router, searchParams],
   );
-  const visibleOrders = view === "active" ? activeOrders : orders;
-
-  if (orders.length === 0) {
-    return (
-      <AppEmptyState
-        title={ORDERS_COPY.emptyTitle}
-        description={ORDERS_COPY.emptyDescription}
-        compact
-        symbol="riceBowl"
-      />
-    );
-  }
+  const view = searchParams.get("view") === "recent" ? "recent" : "active";
+  const hasPreviousPage = page > 1;
+  const hasNextPage = page * pageSize < totalCount;
 
   return (
     <>
       <Tabs
         value={view}
-        onValueChange={(value) => setView(value as typeof view)}
+        onValueChange={(value) =>
+          replaceServerParams({
+            view: value === "recent" ? "recent" : null,
+            page: null,
+          })
+        }
       >
         <TabsList
           className="grid min-h-12 w-full grid-cols-2"
@@ -67,16 +79,24 @@ export function OperatorOrdersClient({
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      {visibleOrders.length === 0 ? (
+      {orders.length === 0 ? (
         <AppEmptyState
-          title={ORDERS_COPY.operatorActiveEmptyTitle}
-          description={ORDERS_COPY.operatorActiveEmptyDescription}
+          title={
+            view === "active"
+              ? ORDERS_COPY.operatorActiveEmptyTitle
+              : ORDERS_COPY.emptyTitle
+          }
+          description={
+            view === "active"
+              ? ORDERS_COPY.operatorActiveEmptyDescription
+              : ORDERS_COPY.emptyDescription
+          }
           compact
           symbol="riceBowl"
         />
       ) : (
         <ItemGroup className="gap-2">
-          {visibleOrders.map((order) => (
+          {orders.map((order) => (
             <Item
               key={order.id}
               asChild
@@ -91,22 +111,14 @@ export function OperatorOrdersClient({
                       {order.order_number}
                     </ItemTitle>
                     <ItemDescription>
-                      {STAFF_VI.long}: {order.created_by_name}
+                      {formatVNDateTime(order.created_at)}
                     </ItemDescription>
                   </ItemContent>
                   <StatusBadge domain="order" value={order.status} />
                 </ItemHeader>
                 <ItemFooter>
-                  <span className="text-xs text-muted-foreground">
-                    {BRANCH_VI.long}: {order.branch_name}
-                  </span>
                   <span className="font-mono text-sm font-semibold tabular-nums">
                     {formatVND(order.total_amount)}
-                  </span>
-                </ItemFooter>
-                <ItemFooter>
-                  <span className="text-xs text-muted-foreground">
-                    {formatVNDateTime(order.created_at)}
                   </span>
                   {order.payment_method ? (
                     <Badge variant="outline" className="text-xs">
@@ -123,14 +135,32 @@ export function OperatorOrdersClient({
           ))}
         </ItemGroup>
       )}
-      <p className="text-sm text-muted-foreground">
-        {view === "active"
-          ? ORDERS_COPY.operatorActiveCountNote(
-              activeOrders.length,
-              inProgressCount,
-            )
-          : ORDERS_COPY.operatorCountNote(orders.length, totalCount)}
-      </p>
+      {hasPreviousPage || hasNextPage ? (
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            size="touch"
+            variant="outline"
+            disabled={!hasPreviousPage}
+            onClick={() =>
+              replaceServerParams({
+                page: page === 2 ? null : String(page - 1),
+              })
+            }
+          >
+            {ORDERS_COPY.operatorPreviousPage}
+          </Button>
+          <Button
+            type="button"
+            size="touch"
+            variant="outline"
+            disabled={!hasNextPage}
+            onClick={() => replaceServerParams({ page: String(page + 1) })}
+          >
+            {ORDERS_COPY.operatorNextPage}
+          </Button>
+        </div>
+      ) : null}
       <OrderDetailSheet
         order={selectedOrder}
         open={selectedOrder != null}

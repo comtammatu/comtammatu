@@ -1,9 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import {
-  BranchOperatorPage,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { StationsClient } from "@/(protected)/branch-settings/_shared/kds/stations-client";
@@ -34,6 +31,7 @@ export default async function BranchKdsSettingsPage({
       .select("id, name, is_active")
       .eq("id", branchId)
       .eq("tenant_id", claims.tenant_id)
+      .eq("branch_kind", "branch")
       .eq("is_active", true)
       .maybeSingle(),
     supabase
@@ -78,15 +76,15 @@ export default async function BranchKdsSettingsPage({
     <BranchOperatorPage
       title={messages.settings.pages.kdsTitle}
       description={`${branchRes.data.name} · ${messages.settings.branch.kdsSetupDescription}`}
+      backHref={`/br/${branchId}/settings`}
+      backLabel={messages.settings.branch.settingsBack}
     >
-      <BranchOperatorPanel>
-        <StationsClient
-          branches={[branchRes.data]}
-          stations={stations}
-          categories={categories}
-          embedded
-        />
-      </BranchOperatorPanel>
+      <StationsClient
+        branches={[branchRes.data]}
+        stations={stations}
+        categories={categories}
+        embedded
+      />
     </BranchOperatorPage>
   );
 }

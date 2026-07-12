@@ -23,6 +23,9 @@ const fetchOrdersSchema = z.object({
   branchId: z.coerce.number().int().positive().optional(),
   dateFrom: z.string().date().optional(),
   dateTo: z.string().date().optional(),
+  activeOnly: z.boolean().optional(),
+  page: z.coerce.number().int().positive().optional(),
+  pageSize: z.coerce.number().int().min(1).max(50).optional(),
 });
 
 /* ─── Types ─── */
@@ -89,6 +92,9 @@ export type FetchOrdersFilters = {
   branchId?: number;
   dateFrom?: string;
   dateTo?: string;
+  activeOnly?: boolean;
+  page?: number;
+  pageSize?: number;
 };
 
 /**
@@ -165,6 +171,8 @@ export async function fetchOrders(
 
   const { claims } = ctx;
   const supabase = await createClient();
+  const page = parsed.data.page ?? 1;
+  const pageSize = parsed.data.pageSize ?? 50;
 
   // branch_manager: auto-filter to their branch
   const effectiveBranchId =
@@ -195,10 +203,12 @@ export async function fetchOrders(
        payments(method, amount, status)`,
     )
     .order("created_at", { ascending: false })
-    .limit(50);
+    .range((page - 1) * pageSize, page * pageSize - 1);
 
   if (parsed.data.status) {
     query = query.eq("status", parsed.data.status);
+  } else if (parsed.data.activeOnly) {
+    query = query.not("status", "in", "(completed,cancelled)");
   }
 
   if (effectiveBranchId) {

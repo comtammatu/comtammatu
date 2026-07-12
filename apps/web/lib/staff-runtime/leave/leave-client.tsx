@@ -7,7 +7,7 @@ import {
   Plus as IconPlus,
   X as IconX,
 } from "lucide-react";
-import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { LEAVE_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
 import { formatVNBusinessDate, getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
@@ -20,16 +20,6 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  EmployeeActionBar,
-  EmployeePanel,
-  EmployeeStatusStrip,
-} from "../components/staff-runtime-page";
-import {
-  BranchOperatorActionBar,
-  BranchOperatorPanel,
-  BranchOperatorStatusStrip,
-} from "@lib/branch-operator/components/branch-operator-page";
 import { cancelLeaveRequest, submitLeaveRequest } from "./actions";
 import type { LeaveRequestRow } from "./page";
 import { messages } from "@lib/messages";
@@ -46,7 +36,7 @@ interface LeaveRequestClientProps {
   branchId: number;
   branchName: string | null;
   initialRequests: LeaveRequestRow[];
-  plane?: "employee" | "branch";
+  initialDate?: string;
 }
 
 const copy = messages.employee.leave;
@@ -72,11 +62,17 @@ const leaveRequestSchema = z
 
 type LeaveRequestFormValues = z.infer<typeof leaveRequestSchema>;
 
-function leaveRequestDefaults(): LeaveRequestFormValues {
+function leaveRequestDefaults(initialDate?: string): LeaveRequestFormValues {
   const today = getVNDateString();
+  const selectedDate =
+    initialDate &&
+    /^\d{4}-\d{2}-\d{2}$/.test(initialDate) &&
+    initialDate >= today
+      ? initialDate
+      : today;
   return {
-    startDate: today,
-    endDate: today,
+    startDate: selectedDate,
+    endDate: selectedDate,
     leaveType: "annual",
     reason: "",
   };
@@ -113,22 +109,16 @@ export function LeaveRequestClient({
   branchId,
   branchName,
   initialRequests,
-  plane = "employee",
+  initialDate,
 }: LeaveRequestClientProps) {
   const [requests, setRequests] = useState<LeaveRequestRow[]>(initialRequests);
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
-  const defaultValues = useMemo(() => leaveRequestDefaults(), [open]);
-  const todayIso = defaultValues.startDate;
-  const durationDays = countInclusiveDays(
-    defaultValues.startDate,
-    defaultValues.endDate,
+  const defaultValues = useMemo(
+    () => leaveRequestDefaults(initialDate),
+    [initialDate, open],
   );
-  const Panel = plane === "branch" ? BranchOperatorPanel : EmployeePanel;
-  const ActionBar =
-    plane === "branch" ? BranchOperatorActionBar : EmployeeActionBar;
-  const StatusStrip =
-    plane === "branch" ? BranchOperatorStatusStrip : EmployeeStatusStrip;
+  const todayIso = getVNDateString();
 
   async function handleSubmit(values: LeaveRequestFormValues) {
     const reason = values.reason?.trim() ?? "";
@@ -185,100 +175,71 @@ export function LeaveRequestClient({
 
   return (
     <>
-      <Panel
-        icon={IconCalendarX}
-        title={copy.newRequestTitle}
-        description={copy.newRequestDescription}
+      <Button
+        type="button"
+        size="touch"
+        className="w-full sm:w-fit"
+        onClick={() => setOpen(true)}
+        disabled={isPending}
       >
-        <div className="flex flex-col gap-3">
-          <StatusStrip
-            items={[
-              {
-                label: BRANCH_VI.long,
-                value: branchName ?? messages.employee.profile.noBranch,
-                muted: !branchName,
-              },
-              {
-                label: copy.selectedRange,
-                value:
-                  durationDays === null ? "Chưa chọn" : `${durationDays} ngày`,
-                muted: durationDays === null,
-              },
-            ]}
-          />
-          <ActionBar>
-            <Button
-              type="button"
-              size="touch"
-              className="w-full sm:w-fit"
-              onClick={() => setOpen(true)}
-              disabled={isPending}
-            >
-              <IconPlus data-icon="inline-start" />
-              {copy.newRequestButton}
-            </Button>
-          </ActionBar>
-        </div>
-      </Panel>
+        <IconPlus data-icon="inline-start" />
+        {copy.newRequestButton}
+      </Button>
 
-      <Panel
-        title={copy.myRequestsTitle}
-        description={copy.myRequestsDescription}
-      >
-        {requests.length === 0 ? (
-          <AppEmptyState
-            title={copy.emptyTitle}
-            description={copy.emptyDescription}
-            icon={<IconCalendarX />}
-          />
-        ) : (
-          <ItemGroup>
-            {requests.map((request) => {
-              const days = countInclusiveDays(
-                request.start_date,
-                request.end_date,
-              );
-              return (
-                <Item key={request.id} variant="outline">
-                  <ItemContent>
-                    <ItemTitle>
+      {requests.length === 0 ? (
+        <AppEmptyState
+          title={copy.emptyTitle}
+          description={copy.emptyDescription}
+          icon={<IconCalendarX />}
+        />
+      ) : (
+        <ItemGroup>
+          {requests.map((request) => {
+            const days = countInclusiveDays(
+              request.start_date,
+              request.end_date,
+            );
+            return (
+              <Item key={request.id} variant="outline" size="sm">
+                <ItemContent className="min-w-0 gap-1">
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <ItemTitle className="min-w-0">
                       {LEAVE_TYPE_LABELS_VI[request.leave_type]}
-                      <StatusBadge
-                        domain="leave-request"
-                        value={request.status}
-                      />
                     </ItemTitle>
-                    <ItemDescription>
-                      {formatDateRange(request.start_date, request.end_date)}
-                      {days ? ` · ${days} ngày` : null}
-                      {request.reason ? ` · ${request.reason}` : null}
-                    </ItemDescription>
-                    {request.status === "rejected" && request.rejected_reason ? (
-                      <p className="text-destructive text-sm">
-                        {copy.rejectedReason}: {request.rejected_reason}
-                      </p>
-                    ) : null}
-                  </ItemContent>
-                  <ItemActions>
-                    {request.status === "pending" ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={isPending}
-                        onClick={() => handleCancel(request)}
-                        aria-label={copy.cancelRequest}
-                      >
-                        <IconX data-icon="only" />
-                      </Button>
-                    ) : null}
-                  </ItemActions>
-                </Item>
-              );
-            })}
-          </ItemGroup>
-        )}
-      </Panel>
+                    <StatusBadge
+                      domain="leave-request"
+                      value={request.status}
+                    />
+                  </div>
+                  <ItemDescription>
+                    {formatDateRange(request.start_date, request.end_date)}
+                    {days ? ` · ${days} ngày` : null}
+                  </ItemDescription>
+                  {request.status === "rejected" && request.rejected_reason ? (
+                    <p className="text-destructive text-sm">
+                      {copy.rejectedReason}: {request.rejected_reason}
+                    </p>
+                  ) : null}
+                </ItemContent>
+                <ItemActions>
+                  {request.status === "pending" ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-touch"
+                      disabled={isPending}
+                      onClick={() => handleCancel(request)}
+                      aria-label={copy.cancelRequest}
+                    >
+                      <IconX data-icon="only" />
+                    </Button>
+                  ) : null}
+                </ItemActions>
+              </Item>
+            );
+          })}
+        </ItemGroup>
+      )}
 
       <FormDialog
         open={open}

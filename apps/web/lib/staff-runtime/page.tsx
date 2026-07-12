@@ -1,29 +1,19 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: manager shift action panel keeps operational copy inline */
 import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
 import {
   Camera as IconCamera,
   CheckCircle2 as IconDone,
-  ClipboardCheck as IconClipboardCheck,
   Clock as IconClock,
   ListChecks as IconListChecks,
   LogOut as IconLogout,
   UserCircle as IconUserCircle,
 } from "lucide-react";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { formatPercent } from "@comtammatu/shared/format";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Progress } from "@comtammatu/ui/components/progress";
-import {
-  Item,
-  ItemContent,
-  ItemTitle,
-  ItemDescription,
-  ItemActions,
-} from "@comtammatu/ui/components/item";
 import { loadAuthState } from "@/_lib/auth";
 import { BranchOpsRefresh } from "@/_components/branch-ops-refresh";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
@@ -200,13 +190,6 @@ function assignmentCellKey(row: {
   return `${row.location_id}:${row.ingredient_id}`;
 }
 
-// Must mirror CHECKOUT_APPROVER_ROLES in checkout-approvals/page.tsx —
-// the card and its destination route gate on the same set.
-const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
-  "owner",
-  "branch_manager",
-];
-
 export type EmployeeHomeRoutes = {
   clock: string;
   tasks: string;
@@ -373,99 +356,8 @@ export async function StaffWorkdayPageContent({
       ? BRANCH_WORKDAY_PRIMITIVES
       : EMPLOYEE_WORKDAY_PRIMITIVES;
   const { PageShell, Panel, InlineState, ControlBar, StatusStrip } = primitives;
-  const { supabase, claims, session } = authState ?? (await loadAuthState());
+  const { claims, session } = authState ?? (await loadAuthState());
   const state = await getTodayWorkState();
-
-  // Checkout requests BLOCK the requesting employee until a manager
-  // approves — the count surfaces the queue on the screen managers
-  // already open, instead of three taps deep behind Profile.
-  let pendingCheckouts = 0;
-  if (CHECKOUT_APPROVER_ROLES.includes(claims.user_role)) {
-    const service = createServiceClient();
-    let countQuery = service
-      .from("attendance_records")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .contains("checkout_approval_target_roles", [claims.user_role])
-      .is("check_out", null)
-      .not("checkout_requested_at", "is", null);
-    if (claims.user_role === "branch_manager") {
-      countQuery = countQuery.eq("branch_id", claims.branch_id ?? -1);
-    }
-    const permissionPromise =
-      typeof claims.branch_id === "number"
-        ? supabase.rpc("has_permission", {
-            p_branch_id: claims.branch_id,
-            p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-          })
-        : supabase.rpc("has_permission_any", {
-            p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-          });
-    const [permissionResult, countResult] = await Promise.all([
-      permissionPromise,
-      countQuery,
-    ]);
-    if (permissionResult.data === true) {
-      pendingCheckouts = countResult.count ?? 0;
-    }
-  }
-
-  // Pending tier-2 waste writeoffs join the same approval queue — the D050
-  // Phase 1 smart card shows ONE combined "needs approval" counter.
-  let pendingWaste = 0;
-  if (CHECKOUT_APPROVER_ROLES.includes(claims.user_role)) {
-    let wasteQuery = supabase
-      .from("stock_issues")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("issue_type", "writeoff")
-      .eq("approval_status", "pending");
-    if (claims.user_role === "branch_manager") {
-      wasteQuery = wasteQuery.eq("branch_id", claims.branch_id ?? -1);
-    }
-    const wastePermissionPromise =
-      typeof claims.branch_id === "number"
-        ? supabase.rpc("has_permission", {
-            p_branch_id: claims.branch_id,
-            p_key: PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
-          })
-        : supabase.rpc("has_permission_any", {
-            p_key: PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
-          });
-    const [wastePermissionResult, wasteCountResult] = await Promise.all([
-      wastePermissionPromise,
-      wasteQuery,
-    ]);
-    if (wastePermissionResult.data === true) {
-      pendingWaste = wasteCountResult.count ?? 0;
-    }
-  }
-
-  let pendingCountSlips = 0;
-  if (claims.user_role === "branch_manager" || claims.user_role === "owner") {
-    const service = createServiceClient();
-    const branchIdFilter = claims.branch_id ?? -1;
-
-    const countPermissionResult =
-      typeof claims.branch_id === "number"
-        ? await supabase.rpc("has_permission", {
-            p_branch_id: claims.branch_id,
-            p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-          })
-        : await supabase.rpc("has_permission_any", {
-            p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-          });
-
-    if (countPermissionResult.data === true) {
-      const countCountResult = await service
-        .from("inventory_count_slips")
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", claims.tenant_id)
-        .eq("branch_id", branchIdFilter)
-        .eq("status", "submitted");
-      pendingCountSlips = countCountResult.count ?? 0;
-    }
-  }
 
   // Surface the count-slip task only when this employee actually has active
   // assignments — RLS + the inner-join on profile_id keep it to their own rows
@@ -516,9 +408,6 @@ export async function StaffWorkdayPageContent({
         !shiftSpecificCells.has(assignmentCellKey(row)),
     ).length;
   }
-  const activeBranchId = claims.branch_id ?? -1;
-  const teamRoute = routes.team ?? `/br/${activeBranchId}/team`;
-
   const tone = getWorkTone(state.status);
   const title = getWorkTitle(state, copy);
   const currentShiftName = state.attendance?.shiftName ?? null;
@@ -821,51 +710,6 @@ export async function StaffWorkdayPageContent({
       </p>
     </Panel>
   ) : null;
-  const pendingApprovalsTotal = pendingCheckouts + pendingWaste;
-  const checkoutApprovalsSection =
-    pendingApprovalsTotal > 0 ? (
-      <Panel
-        icon={IconClipboardCheck}
-        title={copy.approvalsQueueTitle}
-        description={[
-          pendingCheckouts > 0
-            ? `${pendingCheckouts} ${copy.approvalsCheckoutUnit}`
-            : null,
-          pendingWaste > 0
-            ? `${pendingWaste} ${copy.approvalsWasteUnit}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(" · ")}
-        tone="warning"
-        badge={{ children: String(pendingApprovalsTotal), variant: "warning" }}
-        size="sm"
-      >
-        <div className="flex w-full flex-col gap-2 sm:flex-row">
-          {pendingCheckouts > 0 ? (
-            <Button asChild size="touch" className="w-full sm:w-fit">
-              <Link href={routes.checkoutApprovals}>
-                <IconClipboardCheck data-icon="inline-start" />
-                {copy.checkoutApprovalsTitle}
-              </Link>
-            </Button>
-          ) : null}
-          {pendingWaste > 0 ? (
-            <Button
-              asChild
-              size="touch"
-              variant="outline"
-              className="w-full sm:w-fit"
-            >
-              <Link href={routes.wasteApprovals}>
-                <IconClipboardCheck data-icon="inline-start" />
-                {copy.wasteApprovalsTitle}
-              </Link>
-            </Button>
-          ) : null}
-        </div>
-      </Panel>
-    ) : null;
   const checklistSection = activeWorkStatus ? (
     <Panel
       icon={state.status === "done" ? IconDone : IconListChecks}
@@ -883,30 +727,6 @@ export async function StaffWorkdayPageContent({
     >
       {checklistContent}
     </Panel>
-  ) : null;
-
-  const isBranchManager = claims.user_role === "branch_manager";
-
-  const managerPendingTotal =
-    pendingCheckouts + pendingCountSlips + pendingWaste;
-  const managerActionPanel = isBranchManager ? (
-    <Item asChild variant="outline" size="sm" className="bg-card">
-      <Link href={teamRoute}>
-        <ItemContent>
-          <ItemTitle size="heading">
-            Quản lý đội chi nhánh
-          </ItemTitle>
-          <ItemDescription className="text-xs text-muted-foreground">
-            Mở màn hình đội để duyệt ca, kho, nhân sự và phân công.
-          </ItemDescription>
-        </ItemContent>
-        {managerPendingTotal > 0 ? (
-          <ItemActions>
-            <Badge variant="warning">{managerPendingTotal}</Badge>
-          </ItemActions>
-        ) : null}
-      </Link>
-    </Item>
   ) : null;
 
   const notificationSection = showNotificationControl ? (
@@ -1023,8 +843,6 @@ export async function StaffWorkdayPageContent({
     mode === "manager-dashboard" ? (
       <div className="flex flex-col gap-3">
         {todayCard}
-        {managerActionPanel}
-        {shiftsTodaySection}
         {staleOpenShiftSection}
         {notificationSection}
       </div>
@@ -1033,13 +851,9 @@ export async function StaffWorkdayPageContent({
         <div className="lg:sticky lg:top-3 lg:col-span-2">{todayCard}</div>
         <div className="lg:col-span-3 lg:col-start-3 lg:row-span-4 lg:row-start-1 flex flex-col gap-3">
           {workflowSection}
-          {isBranchManager ? managerActionPanel : null}
         </div>
         {staleOpenShiftSection ? (
           <div className="lg:col-span-2">{staleOpenShiftSection}</div>
-        ) : null}
-        {checkoutApprovalsSection ? (
-          <div className="lg:col-span-2">{checkoutApprovalsSection}</div>
         ) : null}
         {notificationSection ? (
           <div className="lg:col-span-2">{notificationSection}</div>
@@ -1048,11 +862,10 @@ export async function StaffWorkdayPageContent({
     ) : (
       <div className="flex flex-col gap-3">
         {todayCard}
-        {shiftsTodaySection}
-        {staleOpenShiftSection}
-        {checkoutApprovalsSection}
-        {isBranchManager ? managerActionPanel : checklistSection}
+        {checklistSection}
         {countPanel}
+        {staleOpenShiftSection}
+        {shiftsTodaySection}
         {notificationSection}
       </div>
     );
@@ -1070,4 +883,3 @@ export async function StaffWorkdayPageContent({
     </PageShell>
   );
 }
-

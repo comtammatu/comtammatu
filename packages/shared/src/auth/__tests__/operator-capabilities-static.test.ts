@@ -39,7 +39,8 @@ test("resolveOperatorTiles -> branch manager sees branch workflows in operator h
   assert.equal(hrefs.includes("/br/3/stock/transfer?queue=receive"), false);
   assert.equal(hrefs.includes("/br/3/stock/transfer"), false);
   assert.equal(hrefs.includes("/br/3/stock/stocktake"), true);
-  assert.equal(hrefs.includes("/br/3/stock/waste"), true);
+  assert.equal(hrefs.includes("/br/3/stock/consumption"), true);
+  assert.equal(hrefs.includes("/br/3/stock/waste"), false);
   assert.equal(moduleKeys.includes("branch_dashboard"), false);
   assert.equal(moduleKeys.includes("branch_settings"), false);
 });
@@ -160,12 +161,12 @@ test("resolveOperatorTiles -> branch stock group renders the branch tile set", (
   assert.deepEqual(
     branchStock?.tiles.map((tile) => tile.label),
     [
-      "Sản xuất",
-      "Tồn kho",
-      "Kiểm kê",
-      "Hao hụt",
-      "Tiêu hao",
+      "Quản lý tồn kho",
       "Nhập hàng",
+      "Sản xuất",
+      "Kiểm tồn",
+      "Phân công đếm tồn",
+      "Tiêu hao",
     ],
   );
 });

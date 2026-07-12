@@ -46,20 +46,19 @@ const countSlipActionsSource = readWeb(
   "app/(protected)/inventory/count-slips/actions.ts",
 );
 
-test("operator team tabs use shared Tabs and preserve client-side switching", () => {
-  assert.match(teamTabsSource, /TabsList/);
-  assert.match(teamTabsSource, /TabsTrigger/);
-  assert.match(teamTabsSource, /TabsContent/);
-  assert.match(teamTabsSource, /window\.history\.replaceState/);
-  assert.match(teamTabsSource, /sticky top-0 z-20/);
+test("operator team tabs navigate by URL and only load the active workspace", () => {
+  assert.match(teamTabsSource, /import Link from "next\/link"/);
+  assert.match(teamTabsSource, /aria-current=\{active \? "page"/);
+  assert.match(teamTabsSource, /availableValues/);
+  assert.doesNotMatch(teamTabsSource, /useState|window\.history\.replaceState/);
+  assert.doesNotMatch(teamTabsSource, /sticky|top-0|z-20/);
   assert.match(teamTabsSource, /min-h-12/);
-  assert.match(teamTabsSource, /group-data-horizontal\/tabs:!h-12/);
-  assert.match(
-    teamTabsSource,
-    /h-10 min-w-0 items-center justify-center gap-1/,
-  );
-  assert.match(teamTabsSource, /sm:gap-2 sm:px-2 sm:text-sm/);
-  assert.match(teamTabsSource, /whitespace-nowrap leading-none/);
+  assert.match(teamTabsSource, /size="touch"/);
+  assert.match(teamTabsSource, /variant=\{active \? "secondary" : "ghost"\}/);
+  assert.match(teamPageSource, /if \(activeTab === "board"\)/);
+  assert.match(teamPageSource, /else if \(activeTab === "members"\)/);
+  assert.match(teamPageSource, /const teamPath = `\$\{basePath\}\/team`/);
+  assert.match(teamPageSource, /basePath=\{teamPath\}/);
   assert.doesNotMatch(teamPageSource, /AppPageTabs/);
 });
 
@@ -145,13 +144,9 @@ test("operator team opens the workspace tabs without a duplicate entry hub", () 
     /managerEntryAriaLabel|reviewGroupTitle|peopleGroupTitle/,
   );
 
-  assert.match(
+  assert.doesNotMatch(
     staffRuntimeSource,
-    /const managerPendingTotal =\s*pendingCheckouts \+ pendingCountSlips \+ pendingWaste/,
-  );
-  assert.match(
-    staffRuntimeSource,
-    /<Link href=\{teamRoute\}>[\s\S]*Quản lý đội chi nhánh/,
+    /managerPendingTotal|managerActionPanel|Quản lý đội chi nhánh/,
   );
   assert.doesNotMatch(staffRuntimeSource, /title="Duyệt ca & kho"/);
   assert.doesNotMatch(staffRuntimeSource, /title="Nhân sự & Phân công"/);
@@ -256,28 +251,26 @@ test("operator team shift rows open one detail drawer before focused actions", (
   assert.match(teamBoardSource, /drawerActionCountSubmitted/);
 });
 
-test("operator team members use a roster grid with real profile fields", () => {
+test("operator team members use status-bearing rows with real profile fields", () => {
   assert.match(teamMembersSource, /interface TeamMemberRow/);
   assert.match(teamMembersSource, /positionLabel/);
   assert.match(teamMembersSource, /todayStatus/);
   assert.match(
     teamMembersSource,
-    /grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5/,
+    /<ItemGroup className="grid gap-2 lg:grid-cols-2">/,
   );
   assert.match(teamMembersSource, /size="touch"/);
   assert.doesNotMatch(teamMembersSource, /h-7 cursor-pointer/);
   assert.match(teamMembersSource, /grid gap-2 sm:grid-cols-2/);
-  assert.match(
-    teamMembersSource,
-    /min-h-24 flex-col justify-center text-center/,
-  );
+  assert.match(teamMembersSource, /<Badge variant=\{presence\.variant\}>/);
+  assert.match(teamMembersSource, /<Badge variant=\{count\.variant\}>/);
   assert.match(teamMembersSource, /aria-pressed=\{active\}/);
   assert.match(teamMembersSource, /filterChips\.map/);
   assert.match(
     teamMembersSource,
     /\.filter\(\s*\(chip\) => chip\.value === "all" \|\| chip\.count > 0,?\s*\)/,
   );
-  assert.match(teamMembersSource, /grid grid-cols-2 gap-2/);
+  assert.doesNotMatch(teamMembersSource, /min-h-24 flex-col justify-center/);
   assert.match(teamMembersSource, /typeof value === "string"/);
   assert.doesNotMatch(teamMembersSource, /DataTable/);
   assert.doesNotMatch(teamMembersSource, /SelectTrigger/);
@@ -323,8 +316,9 @@ test("operator team isolates assignment and focused actions by permission", () =
   assert.match(teamPageSource, /PERMISSION_KEYS\.INVENTORY_COUNT_ASSIGN/);
   assert.match(
     teamPageSource,
-    /canAssignCount \? \([\s\S]*<TeamAssignmentsContent[\s\S]*<AppEmptyState mode="no-access"/,
+    /canAssignCount \? \(\["assignments"\] as const\)/,
   );
+  assert.match(teamPageSource, /availableTabs\.includes\(requestedTabValue\)/);
   assert.match(teamPageSource, /canApproveCheckout=\{canApproveCheckout\}/);
   assert.match(teamPageSource, /canApproveCount=\{canApproveCount\}/);
   assert.match(
@@ -363,7 +357,11 @@ test("embedded count assignments does not add an extra team tab wrapper", () => 
   );
   assert.match(
     branchCountAssignmentsSource,
-    /const page = embeddedInTeam \? \(\s*panel\s*\) : \(\s*<BranchOperatorPage/,
+    /const page = embeddedInTeam \? \(\s*content\s*\) : \(\s*<BranchOperatorPage/,
+  );
+  assert.match(
+    branchCountAssignmentsSource,
+    /embeddedInTeam \? \([\s\S]*countAssignAssignedSummary/,
   );
   assert.match(branchCountAssignmentsSource, /const orderedEmployees =/);
   assert.match(

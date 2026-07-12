@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { AppSection } from "@/components/surface";
-import { AppDialog } from "@/components/form";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -11,11 +9,20 @@ import {
   Item,
   ItemActions,
   ItemContent,
+  ItemDescription,
   ItemGroup,
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
 import {
   Select,
   SelectContent,
@@ -23,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { deletePrinter, upsertPrinter } from "./actions";
 
@@ -55,14 +62,6 @@ export type Category = {
   name: string;
   type: string;
   sort_order: number;
-};
-
-export type Agent = {
-  branch_id: number | null;
-  agent_id: string | null;
-  version: string | null;
-  last_seen_at: string | null;
-  is_online: boolean | null;
 };
 
 type PrinterRole = "receipt" | "kitchen_1" | "kitchen_2";
@@ -104,6 +103,12 @@ const PRINTER_COPY = {
   paperWidthLabel: "Khổ giấy",
   printTypesLabel: "Loại phiếu in trên máy này",
   categoriesLabel: "Danh mục món in trên máy này",
+  routingCount: (printTypes: number, categories: number) =>
+    `${printTypes} loại phiếu · ${categories} danh mục`,
+  back: "Quay lại",
+  next: "Tiếp tục",
+  saving: "Đang lưu...",
+  save: "Lưu",
 } as const;
 
 const DEFAULT_PRINT_TYPES: Record<PrinterRole, readonly PrintType[]> = {
@@ -123,140 +128,92 @@ function defaultPrintTypesForRole(role: PrinterRole): PrintType[] {
 }
 
 export function PrintersClient(props: {
-  branches: Branch[];
+  branch: Branch;
   printers: Printer[];
-  agents: Agent[];
   categories: Category[];
-  embedded?: boolean;
 }) {
-  const { branches, printers, agents, categories, embedded = false } = props;
+  const { branch, printers, categories } = props;
   const [editing, setEditing] = useState<Printer | null>(null);
   const [adding, setAdding] = useState<{
     branch_id: number;
     role: PrinterRole;
   } | null>(null);
 
-  const agentByBranch = new Map(agents.map((a) => [a.branch_id, a]));
-  const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
+  const byRole = new Map(
+    printers
+      .filter((printer) => printer.branch_id === branch.id)
+      .map((printer) => [printer.role, printer]),
+  );
 
   return (
-    <div className="flex flex-col gap-4">
-      {branches.map((branch) => {
-        const byRole = new Map(
-          printers
-            .filter((p) => p.branch_id === branch.id)
-            .map((p) => [p.role, p]),
-        );
-        const agent = agentByBranch.get(branch.id);
-        return (
-          <AppSection
-            key={branch.id}
-            title={branch.name}
-            badge={{
-              children: `Agent: ${agent?.is_online ? "Online" : "Offline"}`,
-              variant: agent?.is_online ? "default" : "outline",
-            }}
-          >
-            <ItemGroup className="gap-3">
-              {ROLE_ORDER.map((role) => {
-                const printer = byRole.get(role);
-                const printTypes = asPrintTypes(printer?.print_types ?? []);
-                const categoryIds = printer?.category_ids ?? [];
-                return (
-                  <Item
-                    key={role}
-                    variant="outline"
-                    className="items-start gap-3 sm:flex-nowrap sm:items-center"
-                  >
-                    <ItemContent className="min-w-0">
-                      <ItemHeader className="justify-start gap-2">
-                        <ItemTitle size="heading" className="line-clamp-none w-full">
-                          {ROLE_LABEL[role]}
-                        </ItemTitle>
-                        {printer?.is_active ? (
-                          <Badge variant="default">{PRINTER_COPY.active}</Badge>
-                        ) : printer ? (
-                          <Badge variant="outline">
-                            {PRINTER_COPY.inactive}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">
-                            {PRINTER_COPY.unconfigured}
-                          </Badge>
-                        )}
-                      </ItemHeader>
-                      {printer ? (
-                        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                          <p className="break-words leading-6">
-                            {printer.name} · {printer.lan_host}
-                            {printer.lan_port && printer.lan_port !== 9100
-                              ? `:${printer.lan_port}`
-                              : ""}{" "}
-                            · {printer.paper_width_mm}mm · {printer.code_page}
-                          </p>
-                          <div className="flex flex-wrap gap-1">
-                            {printTypes.length > 0 ? (
-                              printTypes.map((type) => (
-                                <Badge key={type} variant="secondary">
-                                  {PRINT_TYPE_LABEL[type]}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span>{PRINTER_COPY.noPrintTypes}</span>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {categoryIds.length > 0 ? (
-                              categoryIds.map((categoryId) => (
-                                <Badge key={categoryId} variant="outline">
-                                  {categoryMap.get(categoryId) ??
-                                    `#${categoryId}`}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span>{PRINTER_COPY.noCategories}</span>
-                            )}
-                          </div>
-                        </div>
-                      ) : null}
-                    </ItemContent>
-                    <ItemActions className="basis-full justify-start pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0">
-                      {printer ? (
-                        <Button
-                          variant="outline"
-                          size={embedded ? "touch" : "sm"}
-                          className="w-full sm:w-auto"
-                          onClick={() => setEditing(printer)}
-                        >
-                          {ACTIONS_VI.edit}
-                        </Button>
-                      ) : (
-                        <Button
-                          size={embedded ? "touch" : "sm"}
-                          className="w-full sm:w-auto"
-                          onClick={() =>
-                            setAdding({ branch_id: branch.id, role })
-                          }
-                        >
-                          {ACTIONS_VI.add}
-                        </Button>
+    <div className="flex flex-col gap-3">
+      <ItemGroup className="gap-2">
+        {ROLE_ORDER.map((role) => {
+          const printer = byRole.get(role);
+          const printTypes = asPrintTypes(printer?.print_types ?? []);
+          const categoryIds = printer?.category_ids ?? [];
+          return (
+            <Item
+              key={role}
+              variant="outline"
+              className="min-h-20 items-center gap-3"
+            >
+              <ItemContent className="min-w-0">
+                <ItemHeader className="justify-start gap-2">
+                  <ItemTitle size="heading" className="line-clamp-none w-full">
+                    {ROLE_LABEL[role]}
+                  </ItemTitle>
+                  {printer?.is_active ? (
+                    <Badge variant="default">{PRINTER_COPY.active}</Badge>
+                  ) : printer ? (
+                    <Badge variant="outline">{PRINTER_COPY.inactive}</Badge>
+                  ) : (
+                    <Badge variant="outline">{PRINTER_COPY.unconfigured}</Badge>
+                  )}
+                </ItemHeader>
+                {printer ? (
+                  <>
+                    <ItemDescription className="line-clamp-1">
+                      {printer.name} · {printer.lan_host ?? "—"}
+                    </ItemDescription>
+                    <ItemDescription className="line-clamp-1">
+                      {PRINTER_COPY.routingCount(
+                        printTypes.length,
+                        categoryIds.length,
                       )}
-                    </ItemActions>
-                  </Item>
-                );
-              })}
-            </ItemGroup>
-          </AppSection>
-        );
-      })}
+                    </ItemDescription>
+                  </>
+                ) : null}
+              </ItemContent>
+              <ItemActions className="basis-full justify-start pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0">
+                {printer ? (
+                  <Button
+                    variant="outline"
+                    size="touch"
+                    onClick={() => setEditing(printer)}
+                  >
+                    {ACTIONS_VI.edit}
+                  </Button>
+                ) : (
+                  <Button
+                    size="touch"
+                    onClick={() => setAdding({ branch_id: branch.id, role })}
+                  >
+                    {ACTIONS_VI.add}
+                  </Button>
+                )}
+              </ItemActions>
+            </Item>
+          );
+        })}
+      </ItemGroup>
 
       {(editing || adding) && (
         <PrinterForm
-          branches={branches}
+          branch={branch}
           initial={editing}
           preset={adding}
           categories={categories}
-          embedded={embedded}
           onClose={() => {
             setEditing(null);
             setAdding(null);
@@ -268,28 +225,27 @@ export function PrintersClient(props: {
 }
 
 function PrinterForm({
-  branches,
+  branch,
   initial,
   preset,
   categories,
-  embedded,
   onClose,
 }: {
-  branches: Branch[];
+  branch: Branch;
   initial: Printer | null;
   preset: { branch_id: number; role: PrinterRole } | null;
   categories: Category[];
-  embedded: boolean;
   onClose: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
+  const [step, setStep] = useState<"connection" | "routing">("connection");
 
   const initialRole = (initial?.role ??
     preset?.role ??
     "receipt") as PrinterRole;
   const [form, setForm] = useState({
-    branch_id: initial?.branch_id ?? preset?.branch_id ?? 0,
+    branch_id: branch.id,
     role: initialRole,
     name: initial?.name ?? "",
     lan_host: initial?.lan_host ?? "",
@@ -303,7 +259,6 @@ function PrinterForm({
         : defaultPrintTypesForRole(initialRole),
     category_ids: initial?.category_ids ?? [],
   });
-  const canSwitchBranch = branches.length > 1;
 
   const setRole = (role: PrinterRole) => {
     setForm({
@@ -334,10 +289,6 @@ function PrinterForm({
 
   const save = () => {
     setErr(null);
-    if (!form.branch_id) {
-      setErr("Vui lòng chọn chi nhánh");
-      return;
-    }
     const printTypes = asPrintTypes(form.print_types);
     startTransition(async () => {
       const res = await upsertPrinter({
@@ -389,217 +340,234 @@ function PrinterForm({
   };
 
   return (
-    <AppDialog
-      open
-      onOpenChange={(open) => !open && onClose()}
-      title={initial ? "Sửa máy in" : "Thêm máy in"}
-      description={
-        initial
-          ? `${ROLE_LABEL[initialRole]} · ${initial.name}`
-          : ROLE_LABEL[form.role]
-      }
-      contentClassName="sm:max-w-md"
-      bodyClassName="max-h-dvh-95 overflow-y-auto"
-      footer={
-        <>
-          {initial ? (
-            <Button
-              variant="outline"
-              size={embedded ? "touch" : "default"}
-              className="w-full sm:w-auto"
-              onClick={remove}
-              disabled={pending}
-            >
-              {ACTIONS_VI.delete}
-            </Button>
-          ) : null}
-          <Button
-            variant="outline"
-            size={embedded ? "touch" : "default"}
-            className="w-full sm:w-auto"
-            onClick={onClose}
-            disabled={pending}
-          >
-            {ACTIONS_VI.cancel}
-          </Button>
-          <Button
-            size={embedded ? "touch" : "default"}
-            className="w-full sm:w-auto"
-            onClick={save}
-            disabled={pending}
-          >
-            {pending ? "Đang lưu..." : "Lưu"}
-          </Button>
-        </>
-      }
-    >
-      <div className="grid gap-4 sm:grid-cols-2">
-            {canSwitchBranch ? (
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent
+        side="bottom"
+        className="flex max-h-dvh-95 flex-col overflow-hidden p-0"
+      >
+        <SheetHeader className="shrink-0 px-4 pt-4">
+          <SheetTitle>{initial ? "Sửa máy in" : "Thêm máy in"}</SheetTitle>
+          <SheetDescription>
+            {step === "connection"
+              ? `${branch.name} · Kết nối máy in`
+              : `${ROLE_LABEL[form.role]} · Phân luồng phiếu`}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
+          {step === "connection" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label>{BRANCH_VI.long}</Label>
+                <Label>{PRINTER_COPY.slotLabel}</Label>
                 {initial ? (
                   <Input
                     readOnly
-                    value={
-                      branches.find((branch) => branch.id === form.branch_id)?.name ??
-                      `#${form.branch_id}`
-                    }
+                    value={ROLE_LABEL[form.role]}
                     className="bg-muted/50"
                   />
                 ) : (
                   <Select
-                    value={form.branch_id ? String(form.branch_id) : undefined}
-                    onValueChange={(value) =>
-                      setForm({ ...form, branch_id: Number(value) })
-                    }
+                    value={form.role}
+                    onValueChange={(value) => setRole(value as PrinterRole)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={BRANCH_VI.select} />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={String(branch.id)}>
-                          {branch.name}
+                      {ROLE_ORDER.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {ROLE_LABEL[role]}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               </div>
-            ) : null}
-            <div className="flex flex-col gap-2">
-              <Label>{PRINTER_COPY.slotLabel}</Label>
-              {initial ? (
+              <div className="flex flex-col gap-2">
+                <Label>{FORM_VI.name}</Label>
                 <Input
-                  readOnly
-                  value={ROLE_LABEL[form.role]}
-                  className="bg-muted/50"
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm({ ...form, name: event.target.value })
+                  }
+                  placeholder={PRINTER_COPY.samplePrinterPlaceholder}
                 />
-              ) : (
+              </div>
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label>LAN host / IP</Label>
+                <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
+                  <Input
+                    value={form.lan_host}
+                    onChange={(event) =>
+                      setForm({ ...form, lan_host: event.target.value })
+                    }
+                    placeholder="192.168.1.50"
+                  />
+                  <Input
+                    type="number"
+                    min={1}
+                    max={65535}
+                    value={form.lan_port}
+                    onChange={(event) =>
+                      setForm({ ...form, lan_port: Number(event.target.value) })
+                    }
+                    aria-label="LAN port"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {PRINTER_COPY.lanPortHelp}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label>{PRINTER_COPY.paperWidthLabel}</Label>
                 <Select
-                  value={form.role}
-                  onValueChange={(value) => setRole(value as PrinterRole)}
+                  value={String(form.paper_width_mm)}
+                  onValueChange={(value) =>
+                    setForm({
+                      ...form,
+                      paper_width_mm: Number(value) as 58 | 80,
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLE_ORDER.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {ROLE_LABEL[role]}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="58">58mm</SelectItem>
+                    <SelectItem value="80">80mm</SelectItem>
                   </SelectContent>
                 </Select>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label>{FORM_VI.name}</Label>
-              <Input
-                value={form.name}
-                onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder={PRINTER_COPY.samplePrinterPlaceholder}
-              />
-            </div>
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <Label>LAN host / IP</Label>
-              <Input
-                value={form.lan_host}
-                onChange={(event) =>
-                  setForm({ ...form, lan_host: event.target.value })
-                }
-                placeholder="192.168.1.50"
-              />
-              <p className="text-xs text-muted-foreground">
-                {PRINTER_COPY.lanPortHelp}
-              </p>
-            </div>
+              </div>
 
-            <div className="flex flex-col gap-2">
-              <Label>{PRINTER_COPY.paperWidthLabel}</Label>
-              <Select
-                value={String(form.paper_width_mm)}
-                onValueChange={(value) =>
-                  setForm({ ...form, paper_width_mm: Number(value) as 58 | 80 })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="58">58mm</SelectItem>
-                  <SelectItem value="80">80mm</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col gap-2">
+                <Label>Code page</Label>
+                <Input
+                  value={form.code_page}
+                  onChange={(event) =>
+                    setForm({ ...form, code_page: event.target.value })
+                  }
+                  placeholder="CP1258"
+                />
+              </div>
+              <Item variant="muted" className="items-center sm:col-span-2">
+                <Checkbox
+                  id="printer-active"
+                  checked={form.is_active}
+                  onCheckedChange={(checked) =>
+                    setForm({ ...form, is_active: checked === true })
+                  }
+                />
+                <Label htmlFor="printer-active" className="cursor-pointer">
+                  {PRINTER_COPY.active}
+                </Label>
+              </Item>
             </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>{PRINTER_COPY.printTypesLabel}</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {PRINT_TYPE_ORDER.map((type) => (
+                    <Item
+                      key={type}
+                      variant="outline"
+                      className="flex cursor-pointer items-center gap-2 p-3"
+                    >
+                      <Checkbox
+                        id={`print-type-${type}`}
+                        checked={form.print_types.includes(type)}
+                        onCheckedChange={(checked) =>
+                          togglePrintType(type, checked === true)
+                        }
+                      />
+                      <Label
+                        htmlFor={`print-type-${type}`}
+                        className="w-full cursor-pointer text-sm font-normal"
+                      >
+                        {PRINT_TYPE_LABEL[type]}
+                      </Label>
+                    </Item>
+                  ))}
+                </div>
+              </div>
 
-            <div className="flex flex-col gap-2">
-              <Label>Code page</Label>
-              <Input
-                value={form.code_page}
-                onChange={(event) =>
-                  setForm({ ...form, code_page: event.target.value })
-                }
-                placeholder="CP1258"
-              />
-            </div>
-          </div>
+              <div className="flex flex-col gap-2">
+                <Label>{PRINTER_COPY.categoriesLabel}</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {categories.map((category) => (
+                    <Item
+                      key={category.id}
+                      variant="outline"
+                      className="flex cursor-pointer items-center gap-2 p-3"
+                    >
+                      <Checkbox
+                        id={`print-category-${category.id}`}
+                        checked={form.category_ids.includes(category.id)}
+                        onCheckedChange={(checked) =>
+                          toggleCategory(category.id, checked === true)
+                        }
+                      />
+                      <Label
+                        htmlFor={`print-category-${category.id}`}
+                        className="w-full cursor-pointer text-sm font-normal"
+                      >
+                        {category.name}
+                      </Label>
+                    </Item>
+                  ))}
+                </div>
+              </div>
 
-          <div className="flex flex-col gap-2">
-            <Label>{PRINTER_COPY.printTypesLabel}</Label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {PRINT_TYPE_ORDER.map((type) => (
-                <Item
-                  key={type}
+              {initial ? (
+                <Button
+                  type="button"
                   variant="outline"
-                  className="flex cursor-pointer items-center gap-2 p-3"
+                  size="touch"
+                  onClick={remove}
+                  disabled={pending}
                 >
-                  <Checkbox
-                    id={`print-type-${type}`}
-                    checked={form.print_types.includes(type)}
-                    onCheckedChange={(checked) =>
-                      togglePrintType(type, checked === true)
-                    }
-                  />
-                  <Label
-                    htmlFor={`print-type-${type}`}
-                    className="w-full cursor-pointer text-sm font-normal"
-                  >
-                    {PRINT_TYPE_LABEL[type]}
-                  </Label>
-                </Item>
-              ))}
+                  {ACTIONS_VI.delete}
+                </Button>
+              ) : null}
             </div>
-          </div>
+          )}
 
-          <div className="flex flex-col gap-2">
-            <Label>{PRINTER_COPY.categoriesLabel}</Label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {categories.map((category) => (
-                <Item
-                  key={category.id}
-                  variant="outline"
-                  className="flex cursor-pointer items-center gap-2 p-3"
-                >
-                  <Checkbox
-                    id={`print-category-${category.id}`}
-                    checked={form.category_ids.includes(category.id)}
-                    onCheckedChange={(checked) =>
-                      toggleCategory(category.id, checked === true)
-                    }
-                  />
-                  <Label
-                    htmlFor={`print-category-${category.id}`}
-                    className="w-full cursor-pointer text-sm font-normal"
-                  >
-                    {category.name}
-                  </Label>
-                </Item>
-              ))}
-            </div>
-          </div>
+          {err ? (
+            <p className="mt-3 text-sm text-destructive" role="alert">
+              {err}
+            </p>
+          ) : null}
+        </div>
 
-      {err ? <p className="text-sm text-destructive">{err}</p> : null}
-    </AppDialog>
+        <SheetFooter className="workflow-safe-pb shrink-0 flex-row border-t bg-background/95 px-4 pt-3 backdrop-blur">
+          {step === "routing" ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="flex-1"
+              onClick={() => setStep("connection")}
+              disabled={pending}
+            >
+              {PRINTER_COPY.back}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            size="touch-lg"
+            className="flex-1"
+            onClick={step === "connection" ? () => setStep("routing") : save}
+            disabled={pending}
+          >
+            {step === "connection"
+              ? PRINTER_COPY.next
+              : pending
+                ? PRINTER_COPY.saving
+                : PRINTER_COPY.save}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

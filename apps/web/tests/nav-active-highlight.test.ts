@@ -57,6 +57,7 @@ test("finance deep-nav landing is wired exact, mirroring inventory", () => {
   const inventoryNav = read(
     "apps/web/app/(protected)/inventory/_lib/inventory-nav.ts",
   );
+  const inventoryLanding = read("apps/web/app/(protected)/inventory/page.tsx");
 
   assert.match(
     financeNav,
@@ -64,10 +65,11 @@ test("finance deep-nav landing is wired exact, mirroring inventory", () => {
     "finance deep-nav landing (/finance) must be exact to avoid sub-route bleed",
   );
   assert.match(
-    inventoryNav,
-    /href: "\/inventory",[\s\S]*?exact: true,/,
-    "inventory landing remains the reference exact pattern",
+    inventoryLanding,
+    /redirect\([\s\S]*?"\/inventory\/stock"/,
+    "inventory landing opens the canonical stock workflow instead of a second dashboard",
   );
+  assert.doesNotMatch(inventoryNav, /href: "\/inventory",/);
 });
 
 test("mobile workspace bottom nav reuses the shell nav model", () => {

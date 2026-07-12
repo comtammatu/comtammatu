@@ -1,9 +1,5 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
-import {
-  INVENTORY_FEATURE_FLAGS,
-  isFeatureEnabledForBranch,
-} from "../../_lib/feature-flags";
 import { resolveInventoryListScope } from "../../_lib/inventory-scope";
 import { getBranchSiteDisplayName } from "../../_lib/branch-site-labels";
 import { NewStocktakeSessionClient } from "./new-session-client";
@@ -26,29 +22,11 @@ export async function NewStocktakeSessionPageContent({
   const sp = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
 
-  // Sidebar-selected branch drives the feature-flag gate and default session
-  // branch. For tenant-wide roles (owner) this is the sidebar picker; for
-  // branch-scoped roles it collapses to claims.branch_id.
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
     queryBranchId: sp.branchId,
   });
   if (scope.outOfScope) notFound();
-
-  // Feature flag gate — S13a new stocktake UI must be enabled per-branch.
-  const gateBranchId = scope.selectedBranchId;
-  if (gateBranchId !== null) {
-    const flagEnabled = await isFeatureEnabledForBranch(
-      supabase,
-      gateBranchId,
-      INVENTORY_FEATURE_FLAGS.INVENTORY_STOCKTAKE_REDESIGNED,
-    );
-    if (!flagEnabled) {
-      redirect(
-        `${routeBase}?branchId=${gateBranchId}&error=stocktake_redesigned_not_enabled`,
-      );
-    }
-  }
 
   const locationsRes = await supabase
     .from("inventory_locations")

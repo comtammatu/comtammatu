@@ -64,7 +64,10 @@ test("operational copy formats fractional quantities and workday balances", () =
   assert.match(inventoryMessageSource, /formatQuantity\(delivered\)/);
   assert.match(employeeMessageSource, /formatDecimal\(payable, 1\)/);
   assert.match(hrMessageSource, /formatDecimal\(remaining, 1\)/);
-  assert.match(payslipSource, /formatDecimal\(Number\(entry\.working_days\), 1\)/);
+  assert.match(
+    payslipSource,
+    /formatDecimal\(Number\(selected\.working_days\), 1\)/,
+  );
 });
 
 test("unit-conversion previews stay Vietnamese while storage remains canonical", () => {

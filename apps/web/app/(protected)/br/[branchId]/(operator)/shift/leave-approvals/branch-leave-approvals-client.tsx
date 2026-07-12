@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -34,6 +35,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -49,7 +51,6 @@ import { employee } from "@lib/messages/employee";
 import {
   BranchOperatorDetailList,
   BranchOperatorPage,
-  BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   getLeaveRequestEmployeeName,
@@ -89,15 +90,17 @@ export function BranchLeaveApprovalsClient({
   canApprove,
   initialRows,
   loadFailed,
+  view,
 }: {
   branchId: number;
   branchName: string;
   canApprove: boolean;
   initialRows: LeaveRequestRow[];
   loadFailed: boolean;
+  view: QueueView;
 }) {
   const [rows, setRows] = useState(initialRows);
-  const [view, setView] = useState<QueueView>("pending");
+  const [hasLoadError, setHasLoadError] = useState(loadFailed);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -115,16 +118,21 @@ export function BranchLeaveApprovalsClient({
   const visibleRows = view === "pending" ? pendingRows : historyRows;
   const selected = rows.find((request) => request.id === selectedId) ?? null;
 
-  useEffect(() => setRows(initialRows), [initialRows]);
+  useEffect(() => {
+    setRows(initialRows);
+    setHasLoadError(loadFailed);
+  }, [initialRows, loadFailed]);
 
   const reload = useCallback(() => {
     if (!canApprove) return;
     startTransition(async () => {
       const result = await fetchLeaveRequests({ branchId });
       if (!result.success) {
+        setHasLoadError(true);
         toast.error(result.error ?? copy.loadFailed);
         return;
       }
+      setHasLoadError(false);
       setRows(result.data ?? []);
     });
   }, [branchId, canApprove]);
@@ -228,101 +236,89 @@ export function BranchLeaveApprovalsClient({
 
   return (
     <BranchOperatorPage title={copy.approvalsTitle} description={branchName}>
-      <Tabs value={view} onValueChange={(value) => setView(value as QueueView)}>
+      <Tabs value={view}>
         <TabsList className="grid min-h-12 w-full grid-cols-2">
-          <TabsTrigger value="pending" className="min-h-11">
-            {copy.pendingTab(pendingRows.length)}
+          <TabsTrigger value="pending" className="min-h-11" asChild>
+            <Link href={`/br/${branchId}/shift/leave-approvals?view=pending`}>
+              {copy.pendingTab(pendingRows.length)}
+            </Link>
           </TabsTrigger>
-          <TabsTrigger value="history" className="min-h-11">
-            {copy.historyTab(historyRows.length)}
+          <TabsTrigger value="history" className="min-h-11" asChild>
+            <Link href={`/br/${branchId}/shift/leave-approvals?view=history`}>
+              {copy.historyTab(historyRows.length)}
+            </Link>
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <BranchOperatorPanel
-        title={view === "pending" ? copy.approvalsTitle : copy.historyTab(0)}
-        description={copy.summary(pendingRows.length, rows.length)}
-        icon={view === "pending" ? IconCalendarCheck : IconCalendarX}
-        badge={{ children: visibleRows.length }}
-        size="sm"
-      >
-        {loadFailed ? (
-          <AppEmptyState
-            compact
-            mode="error"
-            icon={<IconCalendarX />}
-            title={copy.loadFailed}
-          >
-            <Button size="touch" onClick={reload}>
-              {ACTIONS_VI.retry}
-            </Button>
-          </AppEmptyState>
-        ) : visibleRows.length === 0 ? (
-          <AppEmptyState
-            compact
-            mode="no-data"
-            icon={<IconCalendarCheck />}
-            title={
-              view === "pending"
-                ? copy.emptyPendingTitle
-                : copy.emptyHistoryTitle
-            }
-            description={
-              view === "pending"
-                ? copy.emptyPendingDescription
-                : copy.emptyHistoryDescription
-            }
-          />
-        ) : (
-          <ItemGroup className="grid gap-2 md:grid-cols-2">
-            {visibleRows.map((request) => {
-              const days = countInclusiveDays(
-                request.start_date,
-                request.end_date,
-              );
-              return (
-                <Item
-                  key={request.id}
-                  asChild
-                  variant="outline"
-                  className="min-h-20 touch-manipulation"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(request.id)}
-                  >
-                    <ItemContent className="min-w-0 gap-1 text-left">
-                      <ItemTitle size="heading">
-                        {getLeaveRequestEmployeeName(
-                          request,
-                          copy.fallbackEmployee,
-                        )}
-                      </ItemTitle>
-                      <ItemDescription className="line-clamp-none">
-                        {formatDateRange(request.start_date, request.end_date)}{" "}
-                        · {days} {copy.dayUnit}
-                      </ItemDescription>
-                      <ItemDescription className="line-clamp-2 break-words">
-                        {copy.types[request.leave_type]}
-                        {request.reason ? ` · ${request.reason}` : ""}
-                      </ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
-                      <StatusBadge
-                        domain="leave-request"
-                        value={request.status}
-                        label={copy.status[request.status]}
-                        size="sm"
-                      />
-                      <IconChevronRight className="size-4 text-muted-foreground" />
-                    </ItemActions>
-                  </button>
-                </Item>
-              );
-            })}
-          </ItemGroup>
-        )}
-      </BranchOperatorPanel>
+      {hasLoadError ? (
+        <AppEmptyState
+          compact
+          mode="error"
+          icon={<IconCalendarX />}
+          title={copy.loadFailed}
+        >
+          <Button size="touch" onClick={reload}>
+            {ACTIONS_VI.retry}
+          </Button>
+        </AppEmptyState>
+      ) : visibleRows.length === 0 ? (
+        <AppEmptyState
+          compact
+          mode="no-data"
+          icon={<IconCalendarCheck />}
+          title={
+            view === "pending" ? copy.emptyPendingTitle : copy.emptyHistoryTitle
+          }
+          description={
+            view === "pending"
+              ? copy.emptyPendingDescription
+              : copy.emptyHistoryDescription
+          }
+        />
+      ) : (
+        <ItemGroup>
+          {visibleRows.map((request) => {
+            const days = countInclusiveDays(
+              request.start_date,
+              request.end_date,
+            );
+            return (
+              <Item
+                key={request.id}
+                asChild
+                variant="outline"
+                size="sm"
+                className="touch-manipulation"
+              >
+                <button type="button" onClick={() => setSelectedId(request.id)}>
+                  <ItemContent className="min-w-0 gap-1 text-left">
+                    <ItemTitle size="heading">
+                      {getLeaveRequestEmployeeName(
+                        request,
+                        copy.fallbackEmployee,
+                      )}
+                    </ItemTitle>
+                    <ItemDescription className="line-clamp-none">
+                      {formatDateRange(request.start_date, request.end_date)} ·{" "}
+                      {days} {copy.dayUnit} · {copy.types[request.leave_type]}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <StatusBadge
+                      domain="leave-request"
+                      value={request.status}
+                      label={copy.status[request.status]}
+                      size="sm"
+                    />
+                    <IconChevronRight className="size-4 text-muted-foreground" />
+                  </ItemActions>
+                </button>
+              </Item>
+            );
+          })}
+        </ItemGroup>
+      )}
 
       <Sheet
         open={selected != null}
@@ -340,6 +336,11 @@ export function BranchLeaveApprovalsClient({
                 <SheetTitle>
                   {getLeaveRequestEmployeeName(selected, copy.fallbackEmployee)}
                 </SheetTitle>
+                <SheetDescription className="sr-only">
+                  {copy.types[selected.leave_type]} ·{" "}
+                  {formatDateRange(selected.start_date, selected.end_date)} ·{" "}
+                  {copy.status[selected.status]}
+                </SheetDescription>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <span>
                     {formatDateRange(selected.start_date, selected.end_date)}
@@ -418,7 +419,7 @@ export function BranchLeaveApprovalsClient({
                 ) : null}
               </div>
 
-              <SheetFooter className="workflow-safe-pb sticky bottom-0 border-t bg-background/95 backdrop-blur">
+              <SheetFooter className="workflow-safe-pb sticky bottom-0 z-10 border-t bg-background/95 backdrop-blur">
                 {selected.status === "pending" ? (
                   rejecting ? (
                     <>

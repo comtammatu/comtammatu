@@ -440,6 +440,60 @@ Contract: `docs/spec/self-order-guest-ui.md`. Owner decision: `docs/plan/decisio
 § D075. The POS order is the only seating lifecycle; `self_order_sessions`,
 `self_order_batches`, and `self_order_session_devices` are deleted.
 
+### Pending add-more + confirmation dialog T3 contract
+
+Skill plan: repo rules = engineering + database + UI + workflow; external
+skills = none; runtime tools = CodeGraph + focused static/SQL tests; skipped =
+production migration apply and browser smoke because this task has no approved
+Preview Branch and local guest runtime uses production credentials.
+
+UI Advisor Gate
+
+- Surface: `/q/[token]`; route family: PUBLIC-WORKFLOW; plane: public; actor:
+  seated guest; job: send a first round, understand that Thu Ngân is reviewing
+  it, then keep selecting dishes without misreading them as accepted.
+- Journey: first `Gửi món` -> confirmation Dialog -> return to menu -> one or
+  more `Gửi thêm món` submissions while the same request is pending -> staff
+  approves the complete request. Recovery: close the dialog, reopen the bill,
+  or retry the exact client operation without duplicate lines.
+- Information order: dialog confirmation only after the first successful
+  pending submit; menu and cart stay usable; bill keeps submitted lines behind
+  a pending-state overlay and static mascot; payment stays unavailable.
+- Components: existing `AppDialog`, `Button`, `Drawer`, `OrderSummary`, and
+  `BrandMascot`; no new UI primitive or client store. The MoMo launcher reuses
+  its catalog avatar with the official app icon URL.
+- Responsive/accessibility: both dialog actions are touch-sized; the pending
+  overlay is status text over non-interactive blurred content; the underlying
+  bill lines remain in the DOM for continuity but are not actionable.
+
+- **PM:** The first submit confirms handoff to Thu Ngân. It must not trap the
+  guest; subsequent calls remain possible until payment starts, while the bill
+  explicitly distinguishes unapproved lines from a payable order.
+- **BA:** One `pending` request remains the staff decision unit. Every add-more
+  operation merges its canonical cart and note into that request; each
+  `clientOpId` retains its original intent so retries neither duplicate nor
+  overwrite prior items. Staff approval sends the accumulated request once.
+- **Senior Dev:** Keep the table advisory lock and direct-order branch. Add the
+  smallest RPC-only operation ledger needed for idempotency across multiple
+  mutations of one pending request; no payment method, SePay, or staff queue
+  shape changes.
+- **QA/QC:** Lock the dialog-first-only, unlocked awaiting cart, blurred bill
+  overlay, MoMo icon, operation-ledger, and merge order in focused tests. The
+  SQL acceptance harness covers merge plus replay when run against a Preview
+  Branch; no production apply or physical-phone MoMo verification is claimed.
+
+Agreement: the prior awaiting toast and disabled CTA conflict with the owner’s
+new workflow and are replaced. The pending visual remains non-payable, and
+MoMo is still only a QR scanner launcher rather than a native payment method.
+
+Attestation: focused Self-Order static tests are 30/30 green; full repo
+typecheck, lint, and build are green. Full repo test is blocked by two unrelated
+dirty-worktree failures in `operator-capabilities-static.test.ts` (branch-manager
+tile expectations); the web suite was interrupted after that package failed.
+The Preview-Branch SQL harness is written but unrun, and the additive migration
+plus generated database types remain unapplied because production apply was not
+delegated in this session.
+
 ### Same-device VietQR handoff T3 contract
 
 Skill plan: repo rules = engineering + skills + database + UI + workflow;
@@ -1336,13 +1390,10 @@ v_out_base`. Do not rescale consumption by actual output.
       planes. This is a move, not a fork: the sharing was correct and the location
       was not. Tighten the S1 allowlist to `*-actions.ts` afterwards.
 
-- [ ] **S8 — open the catalog to kind `branch` and retire the recipes tile
-      (D073 §3/§4).** Extend the "Danh mục" tile `kinds` in `nav-config.ts` to
-      `branch`, reusing the native `stock/catalog/**` surfaces built in the Kho
-      Tổng round. No permission grants are required: categories/units/
-      ingredients actions carry no `PERMISSION_KEYS` gate (RLS/module only) and
-      suppliers use `procurement:supplier_manage`, which `branch_manager` holds
-      since D068 §4. Remove the operator recipe surface entirely — the tile AND the
+- [ ] **S8 — retire the recipes tile (D073 §3/§4).** Branch stock no longer owns
+      a duplicate master-catalog subtree; categories, units, ingredients,
+      thresholds, and suppliers remain tenant-wide Office Inventory setup. Remove
+      the operator recipe surface entirely — the tile AND the
       `stock/production/recipes/**` route family (list, editor, new — the
       clients still expose create/edit/delete today); recipe administration
       stays in Office `/inventory` (D073 §3). Guard entries for the removed
@@ -1572,3 +1623,55 @@ Rewritten 2026-07-10 after Codex Outside Voice rejected the prior 7-item Phase 1
 `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` **plus**
 browser smoke: KDS multi-ticket / reconnect / filter / reduced-motion; POS cart
 one-shot enter; operator skeleton on bottom-nav.
+
+## MoMo Self-Order checkout (2026-07-12)
+
+Skill plan: repo rules = engineering.md + database.md + ui.md + workflow.md;
+external skills = none; runtime tools = CodeGraph plus MoMo official payment
+documentation; skipped = browser automation until a public HTTPS callback and
+test order are available.
+
+UI Advisor Gate
+
+- Surface: `/q/[token]`; route family: `public-self-order`; plane: public;
+  change: payment behavior and recovery state.
+- Context: guest self-order payment; actor: diner; job: pay the approved order
+  with MoMo and return to the same order safely.
+- Journey: approved order -> choose MoMo -> MoMo `payUrl` -> signed IPN ->
+  return to `/q/[token]` -> completed state; recovery: status polling and a
+  pending-payment view while the provider retries IPN.
+- Information order: 1) payment action/status, 2) amount, 3) invoice details;
+  exclude: provider internals and callback identifiers.
+- Pattern: public workflow/detail; exemplar: existing Self-Order payment panel;
+  data display: payment state.
+- States: creating, external redirect, pending, completed, cancelled, expired,
+  invalid callback/configuration.
+- Components: existing `PaymentPanel`, `AppSection`, `Alert`, and buttons;
+  fallback: none.
+- Responsive/accessibility: touch-first mobile and existing keyboard-safe
+  primitives; risk: avoid trapping a guest after an app switch.
+- Verification: focused unit/static tests plus typecheck, lint, build; browser
+  payment smoke only against a public HTTPS test environment.
+
+T3 review — MoMo Self-Order checkout
+
+- PM: `payUrl` opens the wallet from the guest's browser; the browser return
+  must lead back to the same Self-Order session without treating redirect as
+  payment proof. Acceptance: pending MoMo request is visible, successful IPN
+  transitions the order once, and the guest sees the existing paid state.
+- BA: MoMo is a distinct payment method, not a VietQR bank-app shortcut. The
+  order amount and tenant are snapshotted server-side; `extraData` carries only
+  signed callback binding data; failed/cancelled/expired requests remain
+  recoverable without creating duplicate orders.
+- Senior Dev: create the provider checkout in Node, keep DB writes atomic in
+  service-role RPCs, verify both MoMo request/result HMACs, claim
+  `webhook_events` before completion, and scope every payment lookup by the
+  tenant recovered from signed `extraData`. Reintroduce only the forward MoMo
+  method/schema paths needed by Self-Order; do not broaden POS configuration.
+- QA: reject invalid signatures, partner codes, amounts, payment IDs, and
+  duplicate IPNs; assert redirect never completes a payment itself; verify
+  completed/failed duplicate delivery behavior and mobile return polling.
+- Synthesis: implement `momo_pending` as a first-class Self-Order state,
+  server-to-server IPN completion, and a small return route that only restores
+  the guest journey. Migration is written but not applied without explicit
+  production delegation.

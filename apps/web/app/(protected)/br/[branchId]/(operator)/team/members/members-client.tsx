@@ -27,9 +27,16 @@ import {
   DrawerTitle,
 } from "@comtammatu/ui/components/drawer";
 import { Input } from "@comtammatu/ui/components/input";
-import { Item, ItemContent } from "@comtammatu/ui/components/item";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppEmptyState } from "@/components/surface";
 import { formatVNTime as formatTimeVN } from "@comtammatu/shared/time";
 
@@ -171,29 +178,36 @@ function MemberCard({
   member: TeamMemberRow;
   onOpenDrawer: (member: TeamMemberRow) => void;
 }) {
+  const presence = todayStatusMeta(member.todayStatus);
+  const count = countStatusMeta(member.countStatus);
+
   return (
-    <InteractiveCard
+    <Item
       asChild
-      padding="compact"
-      className="h-full min-h-24 flex-col justify-center text-center"
+      variant="outline"
+      className="min-h-16 touch-manipulation"
     >
       <button
         type="button"
-        className="w-full"
         onClick={() => onOpenDrawer(member)}
         aria-label={`Mở hồ sơ ${member.name}`}
       >
-        <MemberAvatar member={member} size="lg" />
-        <div className="grid min-w-0 gap-1">
-          <p className="truncate text-sm font-semibold leading-5">
-            {member.name}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {member.code ? `(${member.code})` : "Chưa có mã NV"}
-          </p>
-        </div>
+        <ItemMedia>
+          <MemberAvatar member={member} />
+        </ItemMedia>
+        <ItemContent className="min-w-0 gap-1 text-left">
+          <ItemTitle>{member.name}</ItemTitle>
+          <ItemDescription className="line-clamp-1">
+            {member.positionLabel ?? "Chưa có chức danh"}
+            {member.code ? ` · ${member.code}` : ""}
+          </ItemDescription>
+        </ItemContent>
+        <ItemActions className="max-w-48 flex-wrap justify-end gap-1">
+          <Badge variant={presence.variant}>{presence.label}</Badge>
+          {count ? <Badge variant={count.variant}>{count.label}</Badge> : null}
+        </ItemActions>
       </button>
-    </InteractiveCard>
+    </Item>
   );
 }
 
@@ -357,7 +371,7 @@ export function MembersClient({
         </div>
 
         {filteredMembers.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <ItemGroup className="grid gap-2 lg:grid-cols-2">
             {filteredMembers.map((member) => (
               <MemberCard
                 key={member.id}
@@ -365,7 +379,7 @@ export function MembersClient({
                 onOpenDrawer={setActiveMember}
               />
             ))}
-          </div>
+          </ItemGroup>
         ) : (
           <AppEmptyState
             mode={hasActiveFilter ? "no-results" : "no-data"}

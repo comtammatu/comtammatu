@@ -101,7 +101,8 @@ export function RecipesClient({
     );
   }, [recipes, search]);
 
-  const showNoResults = filteredRecipes.length === 0 && search.trim().length > 0;
+  const showNoResults =
+    filteredRecipes.length === 0 && search.trim().length > 0;
 
   function openCreate() {
     setEditingMenuItemId(undefined);
@@ -151,11 +152,15 @@ export function RecipesClient({
       render: (recipe) => (
         <div className="flex flex-col gap-1 text-sm">
           {recipe.items.length === 0 ? (
-            <span className="text-muted-foreground italic">Chưa có định mức</span>
+            <span className="text-muted-foreground italic">
+              Chưa có định mức
+            </span>
           ) : (
             recipe.items.map((item, i) => (
               <div key={i} className="flex justify-between gap-2">
-                <span className="text-muted-foreground">{item.ingredientName}</span>
+                <span className="text-muted-foreground">
+                  {item.ingredientName}
+                </span>
                 <span className="font-mono">
                   {item.qty} {item.unitLabel}
                 </span>
@@ -208,7 +213,10 @@ export function RecipesClient({
   if (loadError) {
     return (
       <AppPage width="xwide" density="compact">
-        <AppPageHeader eyebrow={messages.inventory.shell.moduleName} title={INVENTORY_VI.recipesPageTitle} />
+        <AppPageHeader
+          eyebrow={messages.inventory.shell.moduleName}
+          title={INVENTORY_VI.recipesPageTitle}
+        />
         <AppEmptyState
           mode="error"
           title={messages.inventory.recipes.loadFailedTitle}
@@ -223,6 +231,7 @@ export function RecipesClient({
       <AppPageHeader
         eyebrow={messages.inventory.shell.moduleName}
         title={INVENTORY_VI.recipesPageTitle}
+        description={INVENTORY_VI.recipeDescription}
         actions={
           <Button type="button" onClick={openCreate}>
             <IconPlus data-icon="inline-start" />
@@ -318,11 +327,15 @@ function RecipeCard({
         </ItemDescription>
         <div className="flex flex-col gap-1 rounded-md bg-muted/30 p-2 text-sm mt-2 mb-2">
           {recipe.items.length === 0 ? (
-            <span className="text-muted-foreground italic">Chưa có định mức</span>
+            <span className="text-muted-foreground italic">
+              Chưa có định mức
+            </span>
           ) : (
             recipe.items.map((item, i) => (
               <div key={i} className="flex justify-between gap-2">
-                <span className="text-muted-foreground">{item.ingredientName}</span>
+                <span className="text-muted-foreground">
+                  {item.ingredientName}
+                </span>
                 <span className="font-mono">
                   {item.qty} {item.unitLabel}
                 </span>

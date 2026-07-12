@@ -43,7 +43,9 @@ plugin unless the owner asks.
 ## Safety Boundaries
 
 - Database tools never override `database.md` target rights.
-- Before browser QA, verify the backend/ref. Default to Local or Preview.
+- Before browser QA, verify the backend/ref. Default to an on-demand Supabase
+  Preview Branch; Docker-based Supabase Local is not a project verification
+  target.
   Production browser sessions are read-only navigation unless the owner delegates
   the exact mutating action. Never infer permission to submit or destroy data.
 - Redact secrets, tokens, customer/employee data, and sensitive screenshots.

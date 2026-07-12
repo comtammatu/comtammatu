@@ -27,13 +27,15 @@ test("Branch stock reports use a native per-unit touch presentation", () => {
   assert.doesNotMatch(route, /ReportsPageContent|embedded|DataTable/);
 
   assert.match(client, /BranchOperatorPage/);
-  assert.match(client, /BranchOperatorPanel/);
+  assert.match(client, /useOperatorUrlState/);
+  assert.match(client, /TabsList/);
+  assert.match(client, /view === "variance"/);
   assert.match(client, /ItemGroup/);
   assert.match(client, /formatQuantity/);
   assert.match(client, /\/stock\/on-hand\//);
   assert.doesNotMatch(
     client,
-    /import\s+\{\s*ReportsClient|<ReportsClient\b|ReportsProps|DataTable|AppPage|\bformatVND\b|embedded/,
+    /import\s+\{\s*ReportsClient|<ReportsClient\b|ReportsProps|DataTable|AppPage|BranchOperatorPanel|grid-cols-3|\bformatVND\b|embedded/,
   );
 
   assert.match(data, /import "server-only"/);

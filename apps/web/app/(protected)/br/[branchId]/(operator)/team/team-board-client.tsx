@@ -157,6 +157,25 @@ function AttendanceBadge({
   );
 }
 
+function TeamPresenceBadge({
+  shift,
+  onApprovedLeave,
+}: {
+  shift: TeamBoardShiftAttendance | null;
+  onApprovedLeave: boolean;
+}) {
+  if (onApprovedLeave) {
+    return (
+      <StatusBadge
+        domain="leave-request"
+        value="approved"
+        label={copy.leaveApproved}
+      />
+    );
+  }
+  return <AttendanceBadge shift={shift} />;
+}
+
 function checklistLabel(
   shift: TeamBoardShiftAttendance | null,
   phase: TeamBoardChecklistPhase,
@@ -361,16 +380,14 @@ function MobileTeamCard({
                 {subtitle}
               </p>
             </div>
-            <AttendanceBadge shift={row.shift} />
+            <TeamPresenceBadge
+              shift={row.shift}
+              onApprovedLeave={row.onApprovedLeave}
+            />
           </div>
           <div className="flex flex-wrap gap-1.5">
-            <CountBadge status={row.countStatus} />
-            {row.onApprovedLeave ? (
-              <StatusBadge
-                domain="leave-request"
-                value="approved"
-                label={copy.leaveApproved}
-              />
+            {!row.onApprovedLeave ? (
+              <CountBadge status={row.countStatus} />
             ) : null}
           </div>
         </div>
@@ -450,6 +467,7 @@ export function TeamBoardClient({
   if (displayRows.length === 0) {
     return (
       <AppEmptyState
+        compact
         title={copy.emptyTitle}
         description={copy.emptyDescription}
         icon={<IconUsers />}
@@ -505,6 +523,7 @@ export function TeamBoardClient({
 
         {filteredGroups.length === 0 ? (
           <AppEmptyState
+            compact
             title={filter === "all" ? copy.emptyTitle : copy.filteredEmptyTitle}
             description={
               filter === "all"
@@ -544,14 +563,12 @@ export function TeamBoardClient({
               >
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-wrap gap-2">
-                    <AttendanceBadge shift={drawerRow.shift} />
-                    <CountBadge status={drawerRow.countStatus} />
-                    {drawerRow.onApprovedLeave ? (
-                      <StatusBadge
-                        domain="leave-request"
-                        value="approved"
-                        label={copy.leaveApproved}
-                      />
+                    <TeamPresenceBadge
+                      shift={drawerRow.shift}
+                      onApprovedLeave={drawerRow.onApprovedLeave}
+                    />
+                    {!drawerRow.onApprovedLeave ? (
+                      <CountBadge status={drawerRow.countStatus} />
                     ) : null}
                   </div>
 

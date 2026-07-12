@@ -100,6 +100,9 @@ export function StationsClient({
   }
 
   function CategoryBadges({ station }: { station: StationRow }) {
+    const visibleCategoryIds = station.category_ids.slice(0, 2);
+    const hiddenCategoryCount =
+      station.category_ids.length - visibleCategoryIds.length;
     return (
       <div className="flex flex-wrap gap-1.5">
         {station.category_ids.length === 0 ? (
@@ -107,11 +110,16 @@ export function StationsClient({
             {messages.settings.kds.allFallback}
           </span>
         ) : (
-          station.category_ids.map((catId) => (
-            <Badge key={catId} variant="secondary">
-              {categoryMap.get(catId) ?? `#${String(catId)}`}
-            </Badge>
-          ))
+          <>
+            {visibleCategoryIds.map((catId) => (
+              <Badge key={catId} variant="secondary">
+                {categoryMap.get(catId) ?? `#${String(catId)}`}
+              </Badge>
+            ))}
+            {hiddenCategoryCount > 0 ? (
+              <Badge variant="outline">+{hiddenCategoryCount}</Badge>
+            ) : null}
+          </>
         )}
       </div>
     );

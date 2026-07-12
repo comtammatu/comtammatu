@@ -680,6 +680,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     </Label>
                     <WastePhotoUpload
                       tenantId={context.tenantId}
+                      branchId={context.branch.id}
                       issueId={`draft-${line.uid}`}
                       value={line.photoUrls[0] ?? null}
                       onChange={(url) =>

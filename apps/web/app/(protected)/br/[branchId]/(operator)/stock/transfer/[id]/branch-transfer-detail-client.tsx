@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ClipboardList as IconClipboardList,
-  PackageCheck as IconPackageCheck,
-} from "lucide-react";
+import { PackageCheck as IconPackageCheck } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -19,10 +16,7 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
-import {
-  BranchOperatorDetailList,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   getTransferActionConfig,
   type TransferActionKind,
@@ -121,82 +115,54 @@ export function BranchTransferDetailClient({
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
-        <div className="flex min-w-0 flex-col gap-3 lg:col-start-2 lg:row-start-1">
-          <BranchOperatorPanel
-            title={copy.internalTransferTitle}
-            icon={IconClipboardList}
-            size="sm"
-          >
-            <BranchOperatorDetailList
-              rows={[
-                { label: copy.sourceBranchLabel, value: transfer.fromLocation },
-                { label: copy.targetBranchLabel, value: transfer.toLocation },
-                { label: copy.latestTimeLabel, value: transfer.date },
-                {
-                  label: copy.totalItems,
-                  value: String(transfer.items.length),
-                },
-              ]}
-              columns={1}
-            />
-          </BranchOperatorPanel>
-
-          {transfer.note ? (
-            <BranchOperatorPanel title={copy.transportNote} size="sm">
-              <p className="break-words text-sm text-muted-foreground">
-                {transfer.note}
-              </p>
-            </BranchOperatorPanel>
-          ) : null}
-        </div>
-
-        <BranchOperatorPanel
-          title={copy.itemsTitle}
-          description={transfer.code}
-          icon={IconPackageCheck}
-          size="sm"
-          className="min-w-0 lg:col-start-1 lg:row-start-1"
-        >
-          {transfer.items.length === 0 ? (
-            <AppEmptyState
-              compact
-              mode="no-data"
-              title={copy.emptyTransferItemsTitle}
-              description={copy.emptyTransferItemsDescription}
-            />
-          ) : (
-            <ItemGroup className="gap-2">
-              {transfer.items.map((item) => (
-                <Item
-                  key={item.ingredientId}
-                  variant="outline"
-                  className="min-h-16 flex-col items-stretch gap-3 p-3"
-                >
-                  <ItemContent className="min-w-0">
-                    <ItemTitle className="line-clamp-none break-words">
-                      {item.name}
-                    </ItemTitle>
-                    <ItemDescription className="line-clamp-none">
-                      {copy.sentQty}: {item.qty} {item.unit}
-                    </ItemDescription>
-                  </ItemContent>
-                  {item.received != null ? (
-                    <div className="flex min-h-11 items-center justify-between gap-3 rounded-md bg-muted/50 px-3 text-sm">
-                      <span className="text-muted-foreground">
-                        {copy.receivedQty}
-                      </span>
-                      <span className="font-mono font-semibold tabular-nums">
-                        {item.received} {item.unit}
-                      </span>
-                    </div>
-                  ) : null}
-                </Item>
-              ))}
-            </ItemGroup>
-          )}
-        </BranchOperatorPanel>
-      </div>
+      {transfer.note ? (
+        <p className="break-words rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+          {transfer.note}
+        </p>
+      ) : null}
+      <section
+        className="flex min-w-0 flex-col gap-2"
+        aria-label={copy.itemsTitle}
+      >
+        <SectionLabel density="dense">{copy.itemsTitle}</SectionLabel>
+        {transfer.items.length === 0 ? (
+          <AppEmptyState
+            compact
+            mode="no-data"
+            title={copy.emptyTransferItemsTitle}
+            description={copy.emptyTransferItemsDescription}
+          />
+        ) : (
+          <ItemGroup className="gap-2">
+            {transfer.items.map((item) => (
+              <Item
+                key={item.ingredientId}
+                variant="outline"
+                className="min-h-16 flex-col items-stretch gap-3 p-3"
+              >
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="line-clamp-none break-words">
+                    {item.name}
+                  </ItemTitle>
+                  <ItemDescription className="line-clamp-none">
+                    {copy.sentQty}: {item.qty} {item.unit}
+                  </ItemDescription>
+                </ItemContent>
+                {item.received != null ? (
+                  <div className="flex min-h-11 items-center justify-between gap-3 rounded-md bg-muted/50 px-3 text-sm">
+                    <span className="text-muted-foreground">
+                      {copy.receivedQty}
+                    </span>
+                    <span className="font-mono font-semibold tabular-nums">
+                      {item.received} {item.unit}
+                    </span>
+                  </div>
+                ) : null}
+              </Item>
+            ))}
+          </ItemGroup>
+        )}
+      </section>
 
       {primaryAction ? (
         <AppDetailFooter sticky trailing={primaryAction} />

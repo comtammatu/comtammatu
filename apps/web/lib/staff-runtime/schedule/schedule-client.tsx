@@ -9,7 +9,6 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
-import { formatDecimal, formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -32,13 +31,11 @@ import {
   EmployeeControlBar,
   EmployeeFrame,
   EmployeePanel,
-  EmployeeStatusStrip,
 } from "../components/staff-runtime-page";
 import {
   BranchOperatorControlBar,
   BranchOperatorFrame,
   BranchOperatorPanel,
-  BranchOperatorStatusStrip,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   fetchMySchedule,
@@ -63,7 +60,6 @@ import {
   getStatusDotClassName,
   StatusBadge,
 } from "@/components/status-badge";
-import { countCompletedShiftWorkdays } from "../_lib/workday-math";
 
 const copy = messages.employee.schedule;
 
@@ -77,7 +73,6 @@ interface ScheduleClientProps {
   initialData: ScheduleMonthData;
   initialMonthStart: string;
   leaveHref?: string;
-  monthlySalary?: number;
   plane?: SchedulePlane;
 }
 
@@ -92,19 +87,9 @@ type SchedulePanelComponent = (props: {
 type ScheduleControlBarComponent = (
   props: ComponentProps<"div"> & { children: ReactNode },
 ) => ReactNode;
-type ScheduleStatusStripComponent = (props: {
-  items: Array<{
-    label: string;
-    value: ReactNode;
-    muted?: boolean;
-    mono?: boolean;
-  }>;
-  className?: string;
-}) => ReactNode;
 type SchedulePlanePrimitives = {
   Panel: SchedulePanelComponent;
   ControlBar: ScheduleControlBarComponent;
-  StatusStrip: ScheduleStatusStripComponent;
   Frame: ScheduleFrameComponent;
 };
 
@@ -113,14 +98,12 @@ export type SchedulePlane = "employee" | "branch";
 const EMPLOYEE_SCHEDULE_PRIMITIVES: SchedulePlanePrimitives = {
   Panel: EmployeePanel,
   ControlBar: EmployeeControlBar,
-  StatusStrip: EmployeeStatusStrip,
   Frame: EmployeeFrame,
 };
 
 const BRANCH_SCHEDULE_PRIMITIVES: SchedulePlanePrimitives = {
   Panel: BranchOperatorPanel,
   ControlBar: BranchOperatorControlBar,
-  StatusStrip: BranchOperatorStatusStrip,
   Frame: BranchOperatorFrame,
 };
 
@@ -141,10 +124,6 @@ function formatTime(iso: string | null | undefined): string {
 function formatShiftWindow(start: string | null, end: string | null): string {
   if (!start) return "—";
   return `${formatVNClockTime(start)} - ${formatVNClockTime(end)}`;
-}
-
-function formatDayCount(count: number): string {
-  return formatDecimal(count, 1);
 }
 
 function getMonthStartForOffset(monthStartStr: string, delta: number): string {
@@ -356,7 +335,7 @@ function CalendarCellContent({
     return (
       <div
         aria-hidden="true"
-        className="aspect-square rounded-md bg-muted/30 sm:aspect-video"
+        className="min-h-11 aspect-square bg-muted/30 sm:aspect-video sm:rounded-md"
       />
     );
   }
@@ -378,13 +357,14 @@ function CalendarCellContent({
     <Button
       type="button"
       variant="ghost"
+      size="touch"
       aria-label={ariaParts.join(". ")}
       aria-pressed={selected}
       onClick={() => {
         if (cell.dateStr) onSelectDate(cell.dateStr);
       }}
       className={cn(
-        "aspect-square w-full flex-col items-stretch justify-start gap-1 rounded-md bg-background p-1.5 text-left transition-[background-color,box-shadow,transform] duration-150 sm:aspect-video sm:p-2",
+        "aspect-square w-full flex-col items-stretch justify-start gap-1 rounded-none bg-background p-1 text-left transition-[background-color,box-shadow] duration-150 sm:aspect-video sm:rounded-md sm:p-2",
         cell.isToday && "bg-primary/10 ring-1 ring-primary/20",
         selected && "bg-info/10 shadow-sm ring-2 ring-info/20",
       )}
@@ -477,7 +457,7 @@ function ScheduleMonthCalendarGrid({
               <div
                 key={cell.dateStr ?? `${rowIndex}-${cellIndex}`}
                 role="gridcell"
-                className="border-l border-t p-1.5 align-top whitespace-normal first:border-l-0 sm:p-2"
+                className="border-l border-t p-0 align-top whitespace-normal first:border-l-0 sm:p-1"
               >
                 <CalendarCellContent
                   attendances={
@@ -576,7 +556,7 @@ function SelectedDayDetail({
             size="touch"
             className="w-full sm:w-fit"
           >
-            <Link href={leaveHref}>
+            <Link href={`${leaveHref}?date=${encodeURIComponent(dateStr)}`}>
               <IconCalendarX data-icon="inline-start" />
               {copy.requestLeaveCta}
             </Link>
@@ -591,10 +571,9 @@ export function ScheduleClient({
   initialData,
   initialMonthStart,
   leaveHref = "/br",
-  monthlySalary = 0,
   plane = "employee",
 }: ScheduleClientProps) {
-  const { ControlBar, Frame, Panel, StatusStrip } =
+  const { ControlBar, Frame, Panel } =
     plane === "branch"
       ? BRANCH_SCHEDULE_PRIMITIVES
       : EMPLOYEE_SCHEDULE_PRIMITIVES;
@@ -647,23 +626,6 @@ export function ScheduleClient({
     ? leaveByDate.get(selectedDate)
     : undefined;
 
-  // Per-shift (D027): each completed shift contributes 0.5 workday.
-  const shiftCountByDate = new Map<string, number>();
-  for (const item of monthData.attendance) {
-    if (!item.check_out) continue;
-    shiftCountByDate.set(item.date, (shiftCountByDate.get(item.date) ?? 0) + 1);
-  }
-  let workdaysCount = 0;
-  for (const count of shiftCountByDate.values()) {
-    workdaysCount += countCompletedShiftWorkdays(count);
-  }
-  const leaveDaysCount = monthData.monthlyAnnualLeaveDays;
-  const hasMonthlySalary = monthlySalary > 0;
-  const estimatedPay = hasMonthlySalary
-    ? (workdaysCount * monthlySalary) / 27
-    : null;
-  const annualLeaveBalance = monthData.annualLeaveBalance;
-
   return (
     <>
       <Panel contentClassName="gap-3">
@@ -706,37 +668,6 @@ export function ScheduleClient({
             <IconChevronRight />
           </Button>
         </ControlBar>
-
-        <StatusStrip
-          className="grid-cols-2"
-          items={[
-            {
-              label: copy.summaryWorkdays,
-              value: formatDayCount(workdaysCount),
-              mono: true,
-            },
-            {
-              label: copy.summaryMonthlyLeaveDays,
-              value: formatDayCount(leaveDaysCount),
-              muted: leaveDaysCount === 0,
-              mono: true,
-            },
-            {
-              label: copy.summaryEstimatedDays,
-              value: estimatedPay == null ? "—" : formatVND(estimatedPay),
-              muted: !hasMonthlySalary,
-              mono: true,
-            },
-            {
-              label: copy.summaryAnnualLeaveDays,
-              value: annualLeaveBalance
-                ? `${formatDayCount(annualLeaveBalance.remainingDays)}/${formatDayCount(annualLeaveBalance.entitlementDays)}`
-                : "—",
-              muted: !annualLeaveBalance,
-              mono: true,
-            },
-          ]}
-        />
 
         {error ? (
           <div className="flex flex-col gap-2">

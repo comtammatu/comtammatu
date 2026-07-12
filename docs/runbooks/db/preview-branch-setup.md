@@ -25,8 +25,9 @@ production write và cần quyền riêng.
 - Caller có tooling/credential đủ để tạo và xóa branch.
 - Mọi URL/service-role key trong session được đối chiếu với ref đã ghi.
 
-Nếu một precondition chưa chứng minh, dừng write smoke; local baseline replay hoặc
-read-only analysis không thay thế target-ref verification.
+Nếu một precondition chưa chứng minh, dừng write smoke. Không khởi động hoặc tái
+sử dụng Docker-based Supabase Local; local replay và read-only analysis không
+thay thế Preview Branch target-ref verification.
 
 ## Vercel Preview
 

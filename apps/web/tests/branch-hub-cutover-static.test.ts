@@ -19,7 +19,7 @@ test("root route delegates single-branch entry to the work location resolver", (
   assert.match(picker, /redirect\(`\/br\/\$\{soleBranch\.id\}`\)/);
 });
 
-test("Branch Hub promotes branch management and owner workspaces", () => {
+test("Branch Hub keeps branch tools local and owner workspaces out of the hot path", () => {
   const hub = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
@@ -28,10 +28,10 @@ test("Branch Hub promotes branch management and owner workspaces", () => {
   );
 
   assert.match(hub, /MODULE_ACL\.menu\.path/);
-  assert.match(hub, /MODULE_ACL\.finance\.path/);
-  assert.match(hub, /MODULE_ACL\.hr_payroll\.path/);
   assert.match(hub, /APP_COPY_VI\.operatorOpsActions/);
-  assert.match(hub, /APP_COPY_VI\.storeManagement/);
+  assert.doesNotMatch(hub, /MODULE_ACL\.finance\.path/);
+  assert.doesNotMatch(hub, /MODULE_ACL\.hr_payroll\.path/);
+  assert.doesNotMatch(hub, /ownerWorkspaceLinks|owner-workspaces/);
   assert.match(layout, /canUseBranchPicker && context\.canSwitchBranch/);
 });
 
@@ -106,7 +106,8 @@ test("branch orders route owns operator UI instead of wrapping Office orders", (
 
   assert.match(ordersPage, /BranchOperatorPage/);
   assert.match(ordersPage, /OperatorOrdersClient/);
-  assert.match(ordersPage, /fetchOrders\(\{ branchId \}\)/);
+  assert.match(ordersPage, /fetchOrders\(\{[\s\S]*branchId,[\s\S]*activeOnly:/);
+  assert.match(ordersPage, /pageSize: PAGE_SIZE/);
   assert.match(ordersPage, /parseOperatorBranchId/);
   assert.doesNotMatch(ordersPage, /OrdersPageContent/);
   assert.doesNotMatch(ordersPage, /BranchOpsRefresh/);
@@ -114,8 +115,8 @@ test("branch orders route owns operator UI instead of wrapping Office orders", (
   assert.match(ordersClient, /ItemGroup/);
   assert.match(ordersClient, /TabsList/);
   assert.match(ordersClient, /operatorActiveTab/);
-  assert.match(ordersClient, /order\.status !== "completed"/);
-  assert.match(ordersClient, /order\.status !== "cancelled"/);
+  assert.doesNotMatch(ordersClient, /orders\.filter/);
+  assert.match(ordersClient, /router\.replace/);
   assert.match(ordersClient, /OrderDetailSheet/);
   assert.doesNotMatch(ordersClient, /OrdersPageBody|DataTable|AppPageHeader/);
   assert.match(orderDetailSheet, /SheetDescription/);
@@ -171,7 +172,9 @@ test("native branch hub pages use the Branch operator interface contract", () =>
     /BranchStockOnHandClient/,
   );
   assert.match(
-    read("apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx"),
+    read(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
+    ),
     /redirect\(`\/br\/\$\{branchId\}`\)/,
   );
 });

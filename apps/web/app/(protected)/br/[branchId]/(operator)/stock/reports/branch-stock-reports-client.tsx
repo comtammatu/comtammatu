@@ -21,11 +21,10 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { AppEmptyState } from "@/components/surface";
-import {
-  BranchOperatorPage,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import { useOperatorUrlState } from "@lib/branch-operator/use-operator-url-state";
 import type {
   BranchStockMovement,
   BranchStockVariance,
@@ -86,24 +85,6 @@ function BranchVarianceItem({
   );
 }
 
-function getMovementMetrics(movement: BranchStockMovement) {
-  return [
-    { label: reportCopy.branchGrnReceipt, value: movement.grnReceipt },
-    { label: reportCopy.branchTransferIn, value: movement.transferIn },
-    { label: reportCopy.branchTransferOut, value: movement.transferOut },
-    { label: reportCopy.branchConsumption, value: movement.consumption },
-    {
-      label: reportCopy.branchProductionConsumption,
-      value: movement.productionConsumption,
-    },
-    {
-      label: reportCopy.branchProductionOutput,
-      value: movement.productionOutput,
-    },
-    { label: reportCopy.branchAdjustment, value: movement.adjustment },
-  ].filter((metric) => metric.value !== 0);
-}
-
 function BranchMovementItem({
   branchId,
   movement,
@@ -112,44 +93,29 @@ function BranchMovementItem({
   movement: BranchStockMovement;
 }) {
   const stockHref = `/br/${branchId}/stock/on-hand/${movement.ingredientId}`;
-  const metrics = getMovementMetrics(movement);
+  const netChange = movement.closing - movement.opening;
 
   return (
     <div role="listitem">
-      <Item asChild variant="outline" className="min-h-28 touch-manipulation">
+      <Item asChild variant="outline" className="min-h-20 touch-manipulation">
         <Link href={stockHref}>
-          <ItemContent className="min-w-0 gap-2">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <ItemTitle className="truncate text-sm font-semibold">
-                  {movement.ingredientName}
-                </ItemTitle>
-                <ItemDescription className="line-clamp-none mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs">
-                  <span>
-                    {reportCopy.branchOpening}:{" "}
-                    {quantityWithUnit(movement.opening, movement.unit)}
-                  </span>
-                  <span>
-                    {reportCopy.branchClosing}:{" "}
-                    {quantityWithUnit(movement.closing, movement.unit)}
-                  </span>
-                </ItemDescription>
-              </div>
-              <IconChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            </div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs sm:grid-cols-3">
-              {metrics.map((metric) => (
-                <div key={metric.label} className="min-w-0">
-                  <p className="leading-tight text-muted-foreground">
-                    {metric.label}
-                  </p>
-                  <p className="break-words font-mono font-medium leading-tight tabular-nums">
-                    {signedQuantityWithUnit(metric.value, movement.unit)}
-                  </p>
-                </div>
-              ))}
-            </div>
+          <ItemContent className="min-w-0 gap-1">
+            <ItemTitle className="truncate text-sm font-semibold">
+              {movement.ingredientName}
+            </ItemTitle>
+            <ItemDescription className="line-clamp-none flex flex-wrap gap-x-2 gap-y-1 text-xs">
+              <span>
+                {quantityWithUnit(movement.opening, movement.unit)} →{" "}
+                {quantityWithUnit(movement.closing, movement.unit)}
+              </span>
+              <span className="font-mono font-medium tabular-nums text-foreground">
+                {signedQuantityWithUnit(netChange, movement.unit)}
+              </span>
+            </ItemDescription>
           </ItemContent>
+          <ItemActions className="self-center text-muted-foreground">
+            <IconChevronRight />
+          </ItemActions>
         </Link>
       </Item>
     </div>
@@ -176,115 +142,111 @@ export function BranchStockReportsClient({
   movementHighlights: BranchStockMovement[];
 }) {
   const router = useRouter();
+  const { replaceParams, searchParams } = useOperatorUrlState();
+  const view =
+    searchParams.get("view") === "movement" ? "movement" : "variance";
   const stockBasePath = `/br/${branchId}/stock`;
   const periodLabel = `${formatVNDate(periodStart)} - ${formatVNDate(periodEnd)}`;
-  const varianceTone = varianceExceptions.some((row) => row.flag === "critical")
-    ? "destructive"
-    : varianceExceptions.length > 0
-      ? "warning"
-      : "default";
 
   return (
     <BranchOperatorPage
       title={reportCopy.pageTitle}
-      description={branchName}
+      description={`${branchName} · ${periodLabel}`}
       backHref={stockBasePath}
       backLabel="Tồn"
     >
-      <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start">
-          <BranchOperatorPanel
-            title={reportCopy.branchVarianceTitle}
-            description={reportCopy.branchVarianceDescription}
-            headerHint={periodLabel}
-            icon={IconTriangleAlert}
-            tone={varianceTone}
-            size="sm"
-            contentClassName="gap-3"
-          >
-            {varianceLoadFailed ? (
-              <AppEmptyState
-                compact
-                mode="error"
-                icon={<IconTriangleAlert />}
-                title={reportCopy.branchLoadFailed}
-              >
-                <Button
-                  type="button"
-                  size="touch"
-                  onClick={() => router.refresh()}
-                >
-                  <IconRefresh data-icon="inline-start" />
-                  {ACTIONS_VI.retry}
-                </Button>
-              </AppEmptyState>
-            ) : varianceExceptions.length === 0 ? (
-              <AppEmptyState
-                compact
-                mode="no-data"
-                icon={<IconTriangleAlert />}
-                title={reportCopy.branchVarianceEmptyTitle}
-                description={reportCopy.branchVarianceEmptyDescription}
-              />
-            ) : (
-              <ItemGroup className="gap-2" role="list">
-                {varianceExceptions.map((variance) => (
-                  <BranchVarianceItem
-                    key={variance.ingredientId}
-                    branchId={branchId}
-                    variance={variance}
-                  />
-                ))}
-              </ItemGroup>
-            )}
-          </BranchOperatorPanel>
+      <Tabs
+        value={view}
+        onValueChange={(value) =>
+          replaceParams({ view: value === "movement" ? "movement" : null })
+        }
+      >
+        <TabsList className="grid min-h-12 w-full grid-cols-2">
+          <TabsTrigger value="variance" className="min-h-11">
+            {reportCopy.branchVarianceTitle}
+          </TabsTrigger>
+          <TabsTrigger value="movement" className="min-h-11">
+            {reportCopy.branchMovementTitle}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-          <BranchOperatorPanel
-            title={reportCopy.branchMovementTitle}
-            description={reportCopy.branchMovementDescription}
-            headerHint={reportCopy.currentMonthSnapshot}
-            icon={IconChartBar}
-            size="sm"
-            contentClassName="gap-3"
-          >
-            {movementLoadFailed ? (
-              <AppEmptyState
-                compact
-                mode="error"
-                icon={<IconChartBar />}
-                title={reportCopy.branchLoadFailed}
+      <section
+        className="min-w-0 touch-manipulation"
+        aria-label={
+          view === "variance"
+            ? reportCopy.branchVarianceTitle
+            : reportCopy.branchMovementTitle
+        }
+      >
+        {view === "variance" ? (
+          varianceLoadFailed ? (
+            <AppEmptyState
+              compact
+              mode="error"
+              icon={<IconTriangleAlert />}
+              title={reportCopy.branchLoadFailed}
+            >
+              <Button
+                type="button"
+                size="touch"
+                onClick={() => router.refresh()}
               >
-                <Button
-                  type="button"
-                  size="touch"
-                  onClick={() => router.refresh()}
-                >
-                  <IconRefresh data-icon="inline-start" />
-                  {ACTIONS_VI.retry}
-                </Button>
-              </AppEmptyState>
-            ) : movementHighlights.length === 0 ? (
-              <AppEmptyState
-                compact
-                mode="no-data"
-                icon={<IconChartBar />}
-                title={reportCopy.branchMovementEmptyTitle}
-                description={reportCopy.branchMovementEmptyDescription}
+                <IconRefresh data-icon="inline-start" />
+                {ACTIONS_VI.retry}
+              </Button>
+            </AppEmptyState>
+          ) : varianceExceptions.length === 0 ? (
+            <AppEmptyState
+              compact
+              mode="no-data"
+              icon={<IconTriangleAlert />}
+              title={reportCopy.branchVarianceEmptyTitle}
+              description={reportCopy.branchVarianceEmptyDescription}
+            />
+          ) : (
+            <ItemGroup className="gap-2" role="list">
+              {varianceExceptions.map((variance) => (
+                <BranchVarianceItem
+                  key={variance.ingredientId}
+                  branchId={branchId}
+                  variance={variance}
+                />
+              ))}
+            </ItemGroup>
+          )
+        ) : movementLoadFailed ? (
+          <AppEmptyState
+            compact
+            mode="error"
+            icon={<IconChartBar />}
+            title={reportCopy.branchLoadFailed}
+          >
+            <Button type="button" size="touch" onClick={() => router.refresh()}>
+              <IconRefresh data-icon="inline-start" />
+              {ACTIONS_VI.retry}
+            </Button>
+          </AppEmptyState>
+        ) : movementHighlights.length === 0 ? (
+          <AppEmptyState
+            compact
+            mode="no-data"
+            icon={<IconChartBar />}
+            title={reportCopy.branchMovementEmptyTitle}
+            description={reportCopy.branchMovementEmptyDescription}
+          />
+        ) : (
+          <ItemGroup className="gap-2" role="list">
+            {movementHighlights.map((movement) => (
+              <BranchMovementItem
+                key={movement.ingredientId}
+                branchId={branchId}
+                movement={movement}
               />
-            ) : (
-              <ItemGroup className="gap-2" role="list">
-                {movementHighlights.map((movement) => (
-                  <BranchMovementItem
-                    key={movement.ingredientId}
-                    branchId={branchId}
-                    movement={movement}
-                  />
-                ))}
-              </ItemGroup>
-            )}
-          </BranchOperatorPanel>
-        </div>
-      </div>
+            ))}
+          </ItemGroup>
+        )}
+      </section>
     </BranchOperatorPage>
   );
 }

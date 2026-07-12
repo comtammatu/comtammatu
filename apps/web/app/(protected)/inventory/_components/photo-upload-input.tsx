@@ -89,12 +89,16 @@ export function PhotoUploadInput({
           contentType: file.type,
         });
       if (upErr) {
-        toast.error(upErr.message);
+        console.error("inventory.attachment.upload_failed", upErr);
+        toast.error(INVENTORY_VI.uploadFailed);
         return;
       }
       const { data } = supabase.storage.from(bucket).getPublicUrl(path);
       onChange(data.publicUrl);
       toast.success(TOAST_VI.imageUploaded);
+    } catch (error) {
+      console.error("inventory.attachment.upload_failed", error);
+      toast.error(INVENTORY_VI.uploadFailed);
     } finally {
       setUploading(false);
     }

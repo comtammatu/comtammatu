@@ -28,8 +28,6 @@ Rule “first viewport = action/queue” trong `ui.md` áp mạnh cho **POS/KDS*
 | Nhóm màn | Ví dụ route | Pattern hiện tại |
 | --- | --- | --- |
 | Hub | `/stock` | `BranchOperatorPage` + tile grid — document-scroll, ngắn |
-| Catalog hub | `/stock/catalog` | `ItemGroup` drill-down — document-scroll |
-| Catalog list | categories / ingredients / units / … | Embed settings Office + `DataTable` — document-scroll |
 | LIST phiếu | PO, GRN list, transfer, stocktake list, issues, returns | EMBED → `*PageContent` + `AppToolbar` + `DataTable` (mobile card) — **cuộn cả trang**; header bảng **không sticky** |
 | On-hand | `/stock/on-hand` | Embed `stock-client`: compact = `StockMobileGrid`/cards; desktop = `DataTable` — document-scroll |
 | DOC tạo/sửa | GRN new, PO new, transfer new, waste, production new | `DocumentFormFrame` (Office) hoặc bare flex khi `embedded` + `AppDetailFooter sticky` — **body vẫn flow/document-scroll**, không `ScrollArea` |
@@ -71,7 +69,7 @@ Header/filter sticky + body `min-h-0 flex-1` + `ScrollArea` (hoặc table body c
 
 ### Giữ document-scroll
 
-- Hub `/stock`, catalog index, settings drill-down ngắn.
+- Các màn đọc ngắn và settings drill-down có chủ đích.
 - DETAIL đọc (metadata + lịch sử) khi không đang nhập số lượng.
 - Reports / form ít dòng.
 

@@ -433,6 +433,7 @@ export const finance = {
       moneyInReview: "Tiền vào",
       moneyOutReview: "Tiền ra",
       missingWebhook: "Thiếu webhook",
+      overpayment: "Thu trùng",
       matched: "Đã khớp",
       webhookError: "Lỗi webhook",
     },
@@ -453,6 +454,7 @@ export const finance = {
       reason: "Lý do",
       action: "Xử lý",
       reasonLabels: {
+        overpayment: "Thu trùng",
         webhook_error: "Lỗi webhook",
         missing_reference: "Thiếu mã",
         unmatched_reference: "Không khớp đơn",
@@ -468,6 +470,11 @@ export const finance = {
       emptyTitle: "Không còn tiền vào cần kiểm tra",
       emptyDescription:
         "Khi mọi webhook tiền vào đều khớp đơn hoặc payment, danh sách này sẽ trống.",
+    },
+    overpayment: {
+      order: "Đơn",
+      detail: "Đơn đã có một giao dịch SePay hợp lệ.",
+      linkUnavailable: "Không gắn lại",
     },
     missingWebhookListTitle: "Thanh toán VietQR thiếu webhook NH",
     missingWebhookListDescription:

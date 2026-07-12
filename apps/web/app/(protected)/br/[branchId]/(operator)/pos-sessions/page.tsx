@@ -4,27 +4,49 @@ import { BranchOperatorPage } from "@lib/branch-operator/components/branch-opera
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { messages } from "@lib/messages";
-import { PosSessionsClient, type PosSessionOrder } from "./pos-sessions-client";
-import { getPosSessionReport, type PosSessionReport } from "./report-actions";
-import {
-  normalizeOrderRows,
-  normalizeSessionRows,
-  resolveSelectedSessionId,
-} from "./_lib/normalize";
+import { PosSessionsListClient } from "./pos-sessions-client";
+import { isPosSessionWorkItem, normalizeSessionRows } from "./_lib/normalize";
+
+const PAGE_SIZE = 20;
+const SESSION_SELECT = `
+  id,
+  terminal_id,
+  opened_by,
+  closed_by,
+  opened_at,
+  closed_at,
+  opening_cash,
+  closing_cash,
+  expected_cash,
+  cash_difference,
+  status,
+  note,
+  variance_approval_note,
+  variance_approver_user_id,
+  pos_terminals!pos_sessions_terminal_id_fkey (name),
+  opened_by_profile:profiles!pos_sessions_opened_by_fkey (full_name),
+  closed_by_profile:profiles!pos_sessions_closed_by_fkey (full_name)
+`;
 
 export default async function BranchPosSessionsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ branchId: string }>;
-  searchParams: Promise<{ session?: string }>;
+  searchParams: Promise<{ view?: string; page?: string }>;
 }) {
-  const [{ branchId: branchIdStr }, sp] = await Promise.all([
+  const [{ branchId: branchIdStr }, query] = await Promise.all([
     params,
     searchParams,
   ]);
   const branchId = Number(branchIdStr);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
+  const view = query.view === "history" ? "history" : "current";
+  const requestedPage = Number(query.page);
+  const page =
+    view === "history" && Number.isInteger(requestedPage) && requestedPage > 0
+      ? requestedPage
+      : 1;
 
   const { supabase, claims } = await loadAuthState();
 
@@ -36,6 +58,36 @@ export default async function BranchPosSessionsPage({
     notFound();
   }
 
+  const sessionsPromise =
+    view === "history"
+      ? supabase
+          .from("pos_sessions")
+          .select(SESSION_SELECT)
+          .eq("branch_id", branchId)
+          .eq("tenant_id", claims.tenant_id)
+          .neq("status", "open")
+          .order("opened_at", { ascending: false })
+          .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+      : Promise.all([
+          supabase
+            .from("pos_sessions")
+            .select(SESSION_SELECT)
+            .eq("branch_id", branchId)
+            .eq("tenant_id", claims.tenant_id)
+            .eq("status", "open"),
+          supabase
+            .from("pos_sessions")
+            .select(SESSION_SELECT)
+            .eq("branch_id", branchId)
+            .eq("tenant_id", claims.tenant_id)
+            .neq("status", "open")
+            .is("variance_approval_note", null)
+            .or("cash_difference.gt.50000,cash_difference.lt.-50000"),
+        ]).then(([openResult, varianceResult]) => ({
+          data: [...(openResult.data ?? []), ...(varianceResult.data ?? [])],
+          error: openResult.error ?? varianceResult.error,
+        }));
+
   const [{ data: branch, error: branchError }, { data: sessions, error }] =
     await Promise.all([
       supabase
@@ -45,111 +97,32 @@ export default async function BranchPosSessionsPage({
         .eq("tenant_id", claims.tenant_id)
         .eq("is_active", true)
         .maybeSingle(),
-      supabase
-        .from("pos_sessions")
-        .select(
-          `
-          id,
-          terminal_id,
-          opened_by,
-          closed_by,
-          opened_at,
-          closed_at,
-          opening_cash,
-          closing_cash,
-          expected_cash,
-          cash_difference,
-          status,
-          note,
-          variance_approval_note,
-          variance_approver_user_id,
-          pos_terminals!pos_sessions_terminal_id_fkey (
-            name
-          ),
-          opened_by_profile:profiles!pos_sessions_opened_by_fkey (
-            full_name
-          ),
-          closed_by_profile:profiles!pos_sessions_closed_by_fkey (
-            full_name
-          )
-        `,
-        )
-        .eq("branch_id", branchId)
-        .eq("tenant_id", claims.tenant_id)
-        .order("opened_at", { ascending: false })
-        .limit(50),
+      sessionsPromise,
     ]);
 
   if (branchError || !branch) notFound();
   if (error) throw new Error(messages.settings.branch.posSessionsLoadFailed);
 
-  const sessionRows = normalizeSessionRows(sessions);
+  const normalizedSessions = normalizeSessionRows(sessions);
+  const hasNextPage =
+    view === "history" && normalizedSessions.length > PAGE_SIZE;
+  const visibleSessions = (
+    view === "history"
+      ? normalizedSessions.slice(0, PAGE_SIZE)
+      : normalizedSessions.filter(isPosSessionWorkItem)
+  ).sort((a, b) => b.opened_at.localeCompare(a.opened_at));
 
-  const selectedSessionId = resolveSelectedSessionId(sp.session, sessionRows);
-
-  let orders: PosSessionOrder[] = [];
-  let report: PosSessionReport | null = null;
-  if (selectedSessionId != null) {
-    const { data: orderRows, error: orderError } = await supabase
-      .from("orders")
-      .select(
-        `
-        id,
-        order_number,
-        order_type,
-        status,
-        payment_status,
-        payment_method,
-        subtotal,
-        tax_amount,
-        service_charge,
-        discount_amount,
-        total_amount,
-        note,
-        created_at,
-        table_id,
-        tables (
-          number
-        ),
-        order_items (
-          id,
-          item_name,
-          variant_name,
-          quantity,
-          unit_price,
-          subtotal,
-          modifiers,
-          sides,
-          note,
-          status
-        )
-      `,
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("pos_session_id", selectedSessionId)
-      .order("created_at", { ascending: false });
-
-    if (orderError)
-      throw new Error(messages.settings.branch.posSessionBillsLoadFailed);
-    orders = normalizeOrderRows(orderRows);
-
-    const reportResult = await getPosSessionReport(selectedSessionId);
-    if (reportResult.success && reportResult.data) {
-      report = reportResult.data;
-    }
-  }
   return (
     <BranchOperatorPage
       title={messages.settings.pages.posSessionsTitle}
       description={messages.settings.pages.posSessionsDescription}
     >
-      <PosSessionsClient
+      <PosSessionsListClient
         branchId={branchId}
-        sessions={sessionRows}
-        selectedSessionId={selectedSessionId}
-        orders={orders}
-        report={report}
+        sessions={visibleSessions}
+        view={view}
+        page={page}
+        hasNextPage={hasNextPage}
       />
     </BranchOperatorPage>
   );

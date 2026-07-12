@@ -396,6 +396,7 @@ export function getWasteReasonLabelVi(code: string): string {
 export const PAYMENT_METHOD_LABELS_VI = {
   cash: "Tiền mặt",
   vietqr: "VietQR",
+  momo: "MoMo",
   bank_transfer: "Chuyển khoản",
 } as const;
 

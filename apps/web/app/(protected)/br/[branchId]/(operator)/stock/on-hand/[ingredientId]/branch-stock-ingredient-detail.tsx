@@ -1,13 +1,11 @@
 import Link from "next/link";
 import {
-  ArrowLeft as IconArrowLeft,
   ClipboardList as IconClipboardList,
   PackageCheck as IconPackageCheck,
   Receipt as IconReceipt,
   Trash as IconTrash,
   Truck as IconTruck,
 } from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -18,7 +16,7 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import { AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
   BranchOperatorActionSection,
@@ -132,95 +130,94 @@ export function BranchStockIngredientDetail({
       backLabel={detailCopy.backToStock}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
-          <div className="flex min-w-0 flex-col gap-3">
-            <BranchOperatorPanel
-              title={stockCopy.table.currentStock}
-              icon={IconPackageCheck}
-              tone={atRisk ? "warning" : "default"}
-              badge={{
-                children: statusBadge.label,
-                variant: statusBadge.variant,
-              }}
-              action={
-                data.permissions.canReceiveGrn ? (
-                  <Button asChild size="touch">
-                    <Link href={`${stockBasePath}/grn/new`}>
-                      <IconReceipt data-icon="inline-start" />
-                      {stockCopy.actions.receiveGoods}
-                    </Link>
-                  </Button>
-                ) : null
-              }
-              size="sm"
-            >
-              <div className="flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground">
-                    {ingredient.category || inventoryCommon.noValue}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {stockCopy.table.lastCount}:{" "}
-                    {data.latestCountedAt
-                      ? formatDate(data.latestCountedAt)
-                      : inventoryCommon.noValue}
-                  </p>
-                </div>
-                <QuantityValue
-                  qty={data.totalQty}
-                  data={data}
-                  danger={atRisk}
-                />
+        <div className="flex min-w-0 flex-col gap-3">
+          <BranchOperatorPanel
+            title={stockCopy.table.currentStock}
+            icon={IconPackageCheck}
+            tone={atRisk ? "warning" : "default"}
+            action={
+              data.permissions.canReceiveGrn ? (
+                <Button asChild size="touch">
+                  <Link href={`${stockBasePath}/grn/new`}>
+                    <IconReceipt data-icon="inline-start" />
+                    {stockCopy.actions.receiveGoods}
+                  </Link>
+                </Button>
+              ) : null
+            }
+            size="sm"
+          >
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm text-muted-foreground">
+                  {ingredient.category || inventoryCommon.noValue}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {stockCopy.table.lastCount}:{" "}
+                  {data.latestCountedAt
+                    ? formatDate(data.latestCountedAt)
+                    : inventoryCommon.noValue}
+                </p>
               </div>
-            </BranchOperatorPanel>
+              <QuantityValue qty={data.totalQty} data={data} danger={atRisk} />
+            </div>
+          </BranchOperatorPanel>
 
-            <BranchOperatorPanel
-              title={detailCopy.locationTitle}
-              description={detailCopy.locationDescription}
-              icon={IconPackageCheck}
-              size="sm"
-              contentClassName="gap-2"
-            >
-              {data.locations.length === 0 ? (
-                <AppEmptyState
-                  compact
-                  mode="no-data"
-                  icon={<IconPackageCheck />}
-                  title={detailCopy.noLocationStockTitle}
-                  description={detailCopy.noLocationStockDescription}
-                />
-              ) : (
-                <ItemGroup className="gap-2" role="list">
-                  {data.locations.map((location) => (
-                    <div key={location.locationId} role="listitem">
-                      <Item
-                        variant="outline"
-                        className="min-h-16 flex-nowrap touch-manipulation"
-                      >
-                        <ItemContent className="min-w-0 gap-1">
-                          <ItemTitle className="line-clamp-none text-sm font-semibold">
-                            {location.name}
-                          </ItemTitle>
-                          <ItemDescription className="line-clamp-none text-xs">
-                            {location.code || inventoryCommon.noValue}
-                          </ItemDescription>
-                        </ItemContent>
-                        <ItemActions className="shrink-0">
-                          <QuantityValue qty={location.qty} data={data} />
-                        </ItemActions>
-                      </Item>
-                    </div>
-                  ))}
-                </ItemGroup>
-              )}
-            </BranchOperatorPanel>
+          <BranchOperatorPanel
+            title={detailCopy.locationTitle}
+            description={detailCopy.locationDescription}
+            icon={IconPackageCheck}
+            size="sm"
+            contentClassName="gap-2"
+          >
+            {data.locations.length === 0 ? (
+              <AppEmptyState
+                compact
+                mode="no-data"
+                icon={<IconPackageCheck />}
+                title={detailCopy.noLocationStockTitle}
+                description={detailCopy.noLocationStockDescription}
+              />
+            ) : (
+              <ItemGroup className="gap-2" role="list">
+                {data.locations.map((location) => (
+                  <div key={location.locationId} role="listitem">
+                    <Item
+                      variant="outline"
+                      className="min-h-16 flex-nowrap touch-manipulation"
+                    >
+                      <ItemContent className="min-w-0 gap-1">
+                        <ItemTitle className="line-clamp-none text-sm font-semibold">
+                          {location.name}
+                        </ItemTitle>
+                        <ItemDescription className="line-clamp-none text-xs">
+                          {location.code || inventoryCommon.noValue}
+                        </ItemDescription>
+                      </ItemContent>
+                      <ItemActions className="shrink-0">
+                        <QuantityValue qty={location.qty} data={data} />
+                      </ItemActions>
+                    </Item>
+                  </div>
+                ))}
+              </ItemGroup>
+            )}
+          </BranchOperatorPanel>
 
+          <details className="group">
+            <Item asChild variant="outline">
+              <summary className="min-h-12 cursor-pointer list-none justify-between text-sm font-semibold marker:hidden">
+                <span>{detailCopy.movementTitle}</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  {detailCopy.movementHint(data.movements.length)}
+                </span>
+              </summary>
+            </Item>
             <BranchOperatorPanel
-              title={detailCopy.movementTitle}
-              headerHint={detailCopy.movementHint(data.movements.length)}
               icon={IconClipboardList}
               size="sm"
               contentClassName="gap-2"
+              className="mt-2"
             >
               {data.movements.length === 0 ? (
                 <AppEmptyState
@@ -300,10 +297,15 @@ export function BranchStockIngredientDetail({
                 </ItemGroup>
               )}
             </BranchOperatorPanel>
-          </div>
+          </details>
 
-          <div className="flex min-w-0 flex-col gap-3">
-            <BranchOperatorPanel title={detailCopy.thresholdTitle} size="sm">
+          <details className="group">
+            <Item asChild variant="outline">
+              <summary className="min-h-12 cursor-pointer list-none text-sm font-semibold marker:hidden">
+                {detailCopy.thresholdTitle}
+              </summary>
+            </Item>
+            <BranchOperatorPanel size="sm" className="mt-2">
               <BranchOperatorDetailList
                 rows={[
                   {
@@ -332,28 +334,26 @@ export function BranchStockIngredientDetail({
                 columns={1}
               />
             </BranchOperatorPanel>
+          </details>
 
-            <BranchOperatorActionSection
-              title={detailCopy.operationTitle}
-              links={secondaryActions}
-              columns={2}
-              mobileColumns={1}
-              size="sm"
-            />
-          </div>
+          {secondaryActions.length > 0 ? (
+            <details className="group">
+              <Item asChild variant="outline">
+                <summary className="min-h-12 cursor-pointer list-none text-sm font-semibold marker:hidden">
+                  {detailCopy.operationTitle}
+                </summary>
+              </Item>
+              <div className="mt-2">
+                <BranchOperatorActionSection
+                  links={secondaryActions}
+                  columns={2}
+                  mobileColumns={1}
+                  size="sm"
+                />
+              </div>
+            </details>
+          ) : null}
         </div>
-
-        <AppDetailFooter
-          sticky
-          trailing={
-            <Button size="touch-lg" variant="outline" asChild>
-              <Link href={stockBasePath}>
-                <IconArrowLeft data-icon="inline-start" />
-                {ACTIONS_VI.back}
-              </Link>
-            </Button>
-          }
-        />
       </div>
     </BranchOperatorPage>
   );

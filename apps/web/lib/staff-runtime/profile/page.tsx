@@ -1,9 +1,11 @@
 import {
   CalendarDays as IconBirthDate,
+  FileText as IconPayslip,
   LogOut as IconLogout,
   Mail as IconMail,
   Phone as IconPhone,
 } from "lucide-react";
+import Link from "next/link";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   Avatar,
@@ -16,7 +18,6 @@ import {
   BranchOperatorActionBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
-  BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import {
@@ -34,6 +35,7 @@ type ProfilePlane = "employee" | "branch";
 
 type StaffProfilePageContentProps = {
   plane?: ProfilePlane;
+  branchId?: number;
 };
 
 function getInitials(name: string): string {
@@ -55,6 +57,7 @@ function formatBirthDate(value: string | null): string | null {
 
 export async function StaffProfilePageContent({
   plane = "employee",
+  branchId,
 }: StaffProfilePageContentProps = {}) {
   const { session, claims, supabase } = await loadAuthState();
   const ctx = await getEmployeeContext();
@@ -126,97 +129,94 @@ export async function StaffProfilePageContent({
       <BranchOperatorPage
         title={copy.title}
         description={copy.description}
+        hideHeaderOnMobile
         badge={{ children: positionLabel, variant: "outline" }}
       >
-        <BranchOperatorPanel tone="info">
-          <div className="grid gap-4">
-            <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start">
-              <div className="grid justify-items-start gap-2">
-                <div className="relative size-24 shrink-0 overflow-hidden rounded-full sm:size-28">
-                  <Avatar className="size-full min-h-full min-w-full">
-                    {avatarUrl ? (
-                      <AvatarImage src={avatarUrl} alt={displayName} />
-                    ) : null}
-                    <AvatarFallback className="text-3xl font-semibold">
-                      {getInitials(displayName)}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-
-                <ProfileAvatarAction
-                  branchId={effectiveBranchId}
-                  buttonSize="touch"
-                  buttonVariant="outline"
-                  className="w-full sm:w-28"
-                />
-              </div>
-
-              <div className="grid min-w-0 gap-3">
-                <div className="min-w-0">
-                  <p className="break-words text-lg font-semibold leading-6">
-                    {displayName}
-                  </p>
-                  <p className="min-w-0 break-words text-sm text-muted-foreground">
-                    {positionLabel} - {branchName}
-                  </p>
-                  <p className="mt-1 break-words font-mono text-xs text-muted-foreground">
-                    {copy.employeeCode}: {employeeCode}
-                  </p>
-                </div>
-
-                <ProfileEditAction
-                  branchId={effectiveBranchId}
-                  buttonSize="touch"
-                  buttonVariant="default"
-                  className="w-full sm:w-fit"
-                  triggerLabel={copy.editProfileShort}
-                  defaultValues={profileEditDefaults}
-                />
-              </div>
-            </div>
-
-            <BranchOperatorDetailList
-              columns={3}
-              rows={[
-                {
-                  label: copy.phone,
-                  value: phone ? (
-                    <a
-                      aria-label={`${copy.phone}: ${phone}`}
-                      className="inline-flex min-h-11 items-center text-primary hover:underline"
-                      href={`tel:${phone.replace(/\s+/g, "")}`}
-                    >
-                      {phone}
-                    </a>
-                  ) : (
-                    copy.noPhone
-                  ),
-                  muted: !phone,
-                },
-                {
-                  label: copy.birthDate,
-                  value: birthDateDisplay ?? copy.noBirthDate,
-                  muted: !birthDateDisplay,
-                },
-                {
-                  label: copy.email,
-                  value: email ? (
-                    <a
-                      aria-label={`${copy.email}: ${email}`}
-                      className="inline-flex min-h-11 items-center text-primary hover:underline"
-                      href={`mailto:${email}`}
-                    >
-                      {email}
-                    </a>
-                  ) : (
-                    copy.noEmail
-                  ),
-                  muted: !email,
-                },
-              ]}
-            />
+        <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b pb-3">
+          <Avatar className="h-16 min-h-16 w-16 min-w-16 sm:h-20 sm:w-20">
+            {avatarUrl ? (
+              <AvatarImage src={avatarUrl} alt={displayName} />
+            ) : null}
+            <AvatarFallback className="text-xl font-semibold">
+              {getInitials(displayName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold sm:text-lg">
+              {displayName}
+            </p>
+            <p className="truncate text-sm text-muted-foreground">
+              {positionLabel} · {branchName}
+            </p>
+            <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
+              {copy.employeeCode}: {employeeCode}
+            </p>
           </div>
-        </BranchOperatorPanel>
+          <ProfileEditAction
+            branchId={effectiveBranchId}
+            buttonSize="touch"
+            buttonVariant="outline"
+            triggerLabel={copy.editProfileShort}
+            defaultValues={profileEditDefaults}
+          />
+        </div>
+
+        <BranchOperatorActionBar align="start">
+          <ProfileAvatarAction
+            branchId={effectiveBranchId}
+            buttonSize="touch"
+            buttonVariant="outline"
+          />
+          {branchId ? (
+            <Button asChild variant="outline" size="touch">
+              <Link href={`/br/${branchId}/profile/payslip`}>
+                <IconPayslip data-icon="inline-start" />
+                {messages.employee.payslip.title}
+              </Link>
+            </Button>
+          ) : null}
+        </BranchOperatorActionBar>
+
+        <BranchOperatorDetailList
+          columns={3}
+          rows={[
+            {
+              label: copy.phone,
+              value: phone ? (
+                <a
+                  aria-label={`${copy.phone}: ${phone}`}
+                  className="inline-flex min-h-11 items-center text-primary hover:underline"
+                  href={`tel:${phone.replace(/\s+/g, "")}`}
+                >
+                  {phone}
+                </a>
+              ) : (
+                copy.noPhone
+              ),
+              muted: !phone,
+            },
+            {
+              label: copy.birthDate,
+              value: birthDateDisplay ?? copy.noBirthDate,
+              muted: !birthDateDisplay,
+            },
+            {
+              label: copy.email,
+              value: email ? (
+                <a
+                  aria-label={`${copy.email}: ${email}`}
+                  className="inline-flex min-h-11 items-center text-primary hover:underline"
+                  href={`mailto:${email}`}
+                >
+                  {email}
+                </a>
+              ) : (
+                copy.noEmail
+              ),
+              muted: !email,
+            },
+          ]}
+        />
 
         <BranchOperatorActionBar align="end">
           {signOutAction}

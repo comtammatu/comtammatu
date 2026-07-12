@@ -8,7 +8,6 @@ import {
   Phone as IconPhone,
   Plus as IconPlus,
   Search as IconSearch,
-  Truck as IconTruck,
   Users as IconUsers,
 } from "lucide-react";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
@@ -27,12 +26,9 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import { AppEmptyState } from "@/components/surface";
 import { createSupplier } from "@/(protected)/inventory/procurement-actions";
-import {
-  BranchOperatorPage,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import type { GrnSourcePageData } from "@lib/inventory/grn-source-data";
 import {
   filterGrnSourceSuppliers,
@@ -143,128 +139,108 @@ export function BranchGrnSourcePickerClient({
       backLabel={ACTIONS_VI.back}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorPanel
-          title={INVENTORY_VI.receiveBySupplierTitle}
-          description={INVENTORY_VI.receiveBySupplierDescription}
-          icon={IconTruck}
-          contentClassName="gap-3"
-        >
-          <InputGroup className="h-12">
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={INVENTORY_VI.supplierSearchPlaceholder}
-              aria-label={INVENTORY_VI.supplierSearchPlaceholder}
-              className="text-base"
-              inputMode="search"
-            />
-          </InputGroup>
+        <InputGroup className="h-12">
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={INVENTORY_VI.supplierSearchPlaceholder}
+            aria-label={INVENTORY_VI.supplierSearchPlaceholder}
+            className="text-base"
+            inputMode="search"
+          />
+        </InputGroup>
 
-          {supplierError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {supplierError}
-            </p>
-          ) : null}
+        {supplierError ? (
+          <p role="alert" className="text-sm text-destructive">
+            {supplierError}
+          </p>
+        ) : null}
 
-          {suppliersLoadFailed ? (
-            <AppEmptyState
-              compact
-              mode="error"
-              icon={<IconUsers />}
-              title={INVENTORY_VI.grnSupplierLoadFailed}
-            >
-              <Button
-                type="button"
-                size="touch"
-                onClick={() => router.refresh()}
-              >
-                {ACTIONS_VI.retry}
-              </Button>
-            </AppEmptyState>
-          ) : (
-            <>
-              {normalizedQuery && !hasExactSupplier && canCreateSupplier ? (
-                <ItemGroup className="gap-2">
-                  <div role="listitem">
-                    <Item
-                      asChild
-                      variant="outline"
-                      className="min-h-16 border-primary/20 bg-primary/10 touch-manipulation"
-                    >
-                      <button
-                        type="button"
-                        className="w-full text-left"
-                        disabled={isCreatingSupplier}
-                        onClick={handleCreateSupplier}
-                      >
-                        <ItemContent className="min-w-0">
-                          <ItemTitle
-                            size="heading"
-                            className="line-clamp-none text-primary"
-                          >
-                            {isCreatingSupplier
-                              ? INVENTORY_VI.grnCreateSupplierPending
-                              : INVENTORY_VI.grnCreateSupplierInline(
-                                  normalizedQuery,
-                                )}
-                          </ItemTitle>
-                        </ItemContent>
-                        <ItemActions className="shrink-0 text-primary">
-                          {isCreatingSupplier ? (
-                            <Spinner className="size-4" />
-                          ) : (
-                            <IconPlus className="size-4" />
-                          )}
-                        </ItemActions>
-                      </button>
-                    </Item>
-                  </div>
-                </ItemGroup>
-              ) : null}
-
-              {filteredSuppliers.length === 0 ? (
-                <AppEmptyState
-                  compact
-                  mode={normalizedQuery ? "no-results" : "no-data"}
-                  icon={normalizedQuery ? <IconSearch /> : <IconUsers />}
-                  title={
-                    normalizedQuery
-                      ? INVENTORY_VI.supplierNotFound
-                      : INVENTORY_VI.noSupplierTitle
-                  }
-                  description={
-                    normalizedQuery
-                      ? undefined
-                      : INVENTORY_VI.noSupplierDescription
-                  }
-                />
-              ) : (
-                <ItemGroup className="gap-2">
-                  {filteredSuppliers.map((supplier) => (
-                    <BranchSupplierRow
-                      key={supplier.id}
-                      href={supplierHref(supplier.id)}
-                      supplier={supplier}
-                    />
-                  ))}
-                </ItemGroup>
-              )}
-            </>
-          )}
-        </BranchOperatorPanel>
-
-        <AppDetailFooter
-          sticky
-          leading={
-            <Button asChild variant="outline" size="touch">
-              <Link href={returnTo}>{ACTIONS_VI.back}</Link>
+        {suppliersLoadFailed ? (
+          <AppEmptyState
+            compact
+            mode="error"
+            icon={<IconUsers />}
+            title={INVENTORY_VI.grnSupplierLoadFailed}
+          >
+            <Button type="button" size="touch" onClick={() => router.refresh()}>
+              {ACTIONS_VI.retry}
             </Button>
-          }
-        />
+          </AppEmptyState>
+        ) : (
+          <>
+            {normalizedQuery && !hasExactSupplier && canCreateSupplier ? (
+              <ItemGroup className="gap-2">
+                <div role="listitem">
+                  <Item
+                    asChild
+                    variant="outline"
+                    className="min-h-16 border-primary/20 bg-primary/10 touch-manipulation"
+                  >
+                    <button
+                      type="button"
+                      className="w-full text-left"
+                      disabled={isCreatingSupplier}
+                      onClick={handleCreateSupplier}
+                    >
+                      <ItemContent className="min-w-0">
+                        <ItemTitle
+                          size="heading"
+                          className="line-clamp-none text-primary"
+                        >
+                          {isCreatingSupplier
+                            ? INVENTORY_VI.grnCreateSupplierPending
+                            : INVENTORY_VI.grnCreateSupplierInline(
+                                normalizedQuery,
+                              )}
+                        </ItemTitle>
+                      </ItemContent>
+                      <ItemActions className="shrink-0 text-primary">
+                        {isCreatingSupplier ? (
+                          <Spinner className="size-4" />
+                        ) : (
+                          <IconPlus className="size-4" />
+                        )}
+                      </ItemActions>
+                    </button>
+                  </Item>
+                </div>
+              </ItemGroup>
+            ) : null}
+
+            {filteredSuppliers.length === 0 ? (
+              <AppEmptyState
+                compact
+                mode={normalizedQuery ? "no-results" : "no-data"}
+                icon={normalizedQuery ? <IconSearch /> : <IconUsers />}
+                title={
+                  normalizedQuery
+                    ? INVENTORY_VI.supplierNotFound
+                    : INVENTORY_VI.noSupplierTitle
+                }
+                description={
+                  normalizedQuery
+                    ? undefined
+                    : INVENTORY_VI.noSupplierDescription
+                }
+              />
+            ) : (
+              <ItemGroup className="gap-2">
+                {filteredSuppliers.map((supplier) => (
+                  <BranchSupplierRow
+                    key={supplier.id}
+                    href={supplierHref(supplier.id)}
+                    supplier={supplier}
+                  />
+                ))}
+              </ItemGroup>
+            )}
+          </>
+        )}
       </div>
     </BranchOperatorPage>
   );

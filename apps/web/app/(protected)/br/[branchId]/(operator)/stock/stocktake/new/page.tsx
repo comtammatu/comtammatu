@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getSafeInternalReturnTo } from "@comtammatu/shared/auth";
 import { BranchStocktakeNewClient } from "./branch-stocktake-new-client";
 import { loadBranchStocktakeStartData } from "@lib/inventory/branch-stocktake-data";
@@ -20,11 +20,6 @@ export default async function OperatorNewStocktakePage({
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
   const data = await loadBranchStocktakeStartData(branchId);
-  if (!data.featureEnabled) {
-    redirect(
-      `/br/${branchId}/stock/stocktake?error=stocktake_redesigned_not_enabled`,
-    );
-  }
   const stockBasePath = `/br/${branchId}/stock`;
   const rawReturnTo = Array.isArray(query.returnTo)
     ? query.returnTo[0]

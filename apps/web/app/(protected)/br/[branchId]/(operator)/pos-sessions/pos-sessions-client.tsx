@@ -5,10 +5,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Banknote as IconCash,
   Clock as IconClock,
-  Receipt as IconReceipt,
-  CookingPot as IconToolsKitchen2,
   AlertTriangle as IconAlertTriangle,
   CircleCheck as IconCircleCheck,
   ChevronRight as IconChevronRight,
@@ -22,12 +19,7 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from "@comtammatu/ui/components/drawer";
-import {} from "@/components/data-table/data-table";
-import {
-  formatCount,
-  formatPercent,
-  formatVND,
-} from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import {
   formatVNDateTime,
@@ -41,7 +33,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Button } from "@comtammatu/ui/components/button";
 import { Label } from "@comtammatu/ui/components/label";
-import { Progress } from "@comtammatu/ui/components/progress";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
@@ -55,10 +46,10 @@ import {
 } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
-import {} from "@comtammatu/ui/components/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import type { CartModifier, CartSide } from "../../pos/types";
-import type { PosSessionReport } from "./report-actions";
 import { resolvePosSessionVariance } from "./actions";
+import { isPosSessionVarianceBreached } from "./_lib/normalize";
 import { messages } from "@lib/messages";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -124,12 +115,18 @@ export interface PosSessionOrder {
   order_items: PosSessionOrderItem[];
 }
 
-interface PosSessionsClientProps {
+interface PosSessionsListClientProps {
   branchId: number;
   sessions: PosSessionRow[];
-  selectedSessionId: number | null;
+  view: "current" | "history";
+  page: number;
+  hasNextPage: boolean;
+}
+
+interface PosSessionDetailClientProps {
+  branchId: number;
+  session: PosSessionRow;
   orders: PosSessionOrder[];
-  report: PosSessionReport | null;
 }
 
 function paymentMethodLabel(method: string | null): string {
@@ -143,134 +140,109 @@ function computeVarianceThreshold(expectedCash: number | null): number {
   return Math.max(50_000, Math.round(expectedCash * 0.005 * 100) / 100);
 }
 
-function isVarianceBreached(session: PosSessionRow): boolean {
-  if (session.cash_difference == null) return false;
-  const threshold = computeVarianceThreshold(session.expected_cash);
-  return Math.abs(session.cash_difference) > threshold;
-}
-
 function isVarianceResolved(session: PosSessionRow): boolean {
   return Boolean(session.variance_approval_note);
 }
 
-export function PosSessionsClient({
+export function PosSessionsListClient({
   branchId,
   sessions,
-  selectedSessionId,
-  orders,
-  report,
-}: PosSessionsClientProps) {
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
-  const selectedSession =
-    sessions.find((session) => session.id === selectedSessionId) ?? null;
-  const selectedOrder =
-    orders.find((order) => order.id === selectedOrderId) ?? null;
+  view,
+  page,
+  hasNextPage,
+}: PosSessionsListClientProps) {
   const openSessionCount = sessions.filter(
     (session) => session.status === "open",
   ).length;
   const unresolvedVarianceCount = sessions.filter(
     (session) =>
-      isVarianceBreached(session) &&
+      isPosSessionVarianceBreached(session) &&
       session.status !== "open" &&
       !isVarianceResolved(session),
   ).length;
 
+  return (
+    <SessionHistoryPanel
+      branchId={branchId}
+      sessions={sessions}
+      openSessionCount={openSessionCount}
+      unresolvedVarianceCount={unresolvedVarianceCount}
+      view={view}
+      page={page}
+      hasNextPage={hasNextPage}
+    />
+  );
+}
+
+export function PosSessionDetailClient({
+  branchId,
+  session,
+  orders,
+}: PosSessionDetailClientProps) {
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const selectedOrder =
+    orders.find((order) => order.id === selectedOrderId) ?? null;
   const summary = useMemo(() => buildSummary(orders), [orders]);
 
-  if (sessions.length === 0) {
-    return (
-      <AppEmptyState
-        title={messages.settings.posSessions.emptyTitle}
-        description={messages.settings.posSessions.emptyDescription}
-        symbol="roof"
-      />
-    );
-  }
-
   return (
-    <div className="grid gap-3 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(20rem,24rem)_minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
-      <div className="order-2 min-w-0 xl:order-1">
-        <SessionHistoryPanel
-          branchId={branchId}
-          sessions={sessions}
-          selectedSessionId={selectedSessionId}
-          openSessionCount={openSessionCount}
-          unresolvedVarianceCount={unresolvedVarianceCount}
-        />
-      </div>
+    <>
+      <SessionDetailCard
+        branchId={branchId}
+        session={session}
+        summary={summary}
+      />
 
-      <div className="order-1 flex min-w-0 flex-col gap-3 xl:order-2">
-        {selectedSession ? (
-          <>
-            <SessionDetailCard
-              branchId={branchId}
-              session={selectedSession}
-              summary={summary}
-              onCloseShift={() => {}}
-            />
-
-            <AppSection
-              title={messages.settings.posSessions.billsInSession(
-                orders.length,
-              )}
-              description={messages.settings.posSessions.billsDescription}
-              contentFlush
-              contentScroll
-            >
-              {orders.length > 0 ? (
-                <ItemGroup>
-                  {orders.map((order) => (
-                    <Item
-                      key={order.id}
-                      asChild
-                      variant="outline"
-                      className="chrome-tap text-left active:bg-muted/50"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setSelectedOrderId(order.id)}
-                      >
-                        <ItemHeader>
-                          <ItemContent>
-                            <ItemTitle>{order.order_number}</ItemTitle>
-                            <ItemDescription>
-                              {formatTime(order.created_at)} ·{" "}
-                              {order.order_type === "dine_in"
-                                ? messages.settings.posSessions.tableContext(
-                                    order.tables?.number ?? "-",
-                                  )
-                                : messages.settings.posSessions.takeaway}
-                            </ItemDescription>
-                          </ItemContent>
-                          <IconChevronRight className="size-4 text-muted-foreground" />
-                        </ItemHeader>
-                        <ItemFooter>
-                          <StatusBadge domain="order" value={order.status} />
-                          <span className="font-mono text-sm font-semibold tabular-nums">
-                            {formatVND(order.total_amount)}
-                          </span>
-                        </ItemFooter>
-                      </button>
-                    </Item>
-                  ))}
-                </ItemGroup>
-              ) : (
-                <AppEmptyState
-                  title={messages.settings.posSessions.noBills}
-                  compact
-                  symbol="riceBowl"
-                />
-              )}
-            </AppSection>
-          </>
-        ) : null}
-      </div>
-
-      <div className="order-3 min-w-0 xl:col-start-2 2xl:col-start-3 2xl:row-start-1">
-        {report ? <SessionReportCard report={report} /> : null}
-      </div>
-
-      {selectedSession ? <div /> : null}
+      <AppSection
+        title={messages.settings.posSessions.billsInSession(orders.length)}
+        description={messages.settings.posSessions.billsDescription}
+        contentFlush
+        contentScroll
+      >
+        {orders.length > 0 ? (
+          <ItemGroup>
+            {orders.map((order) => (
+              <Item
+                key={order.id}
+                asChild
+                variant="outline"
+                className="chrome-tap text-left active:bg-muted/50"
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderId(order.id)}
+                >
+                  <ItemHeader>
+                    <ItemContent>
+                      <ItemTitle>{order.order_number}</ItemTitle>
+                      <ItemDescription>
+                        {formatTime(order.created_at)} ·{" "}
+                        {order.order_type === "dine_in"
+                          ? messages.settings.posSessions.tableContext(
+                              order.tables?.number ?? "-",
+                            )
+                          : messages.settings.posSessions.takeaway}
+                      </ItemDescription>
+                    </ItemContent>
+                    <IconChevronRight className="size-4 text-muted-foreground" />
+                  </ItemHeader>
+                  <ItemFooter>
+                    <StatusBadge domain="order" value={order.status} />
+                    <span className="font-mono text-sm font-semibold tabular-nums">
+                      {formatVND(order.total_amount)}
+                    </span>
+                  </ItemFooter>
+                </button>
+              </Item>
+            ))}
+          </ItemGroup>
+        ) : (
+          <AppEmptyState
+            title={messages.settings.posSessions.noBills}
+            compact
+            symbol="riceBowl"
+          />
+        )}
+      </AppSection>
 
       <OrderDetailDrawer
         order={selectedOrder}
@@ -279,109 +251,182 @@ export function PosSessionsClient({
           if (!next) setSelectedOrderId(null);
         }}
       />
-    </div>
+    </>
   );
 }
 
 function SessionHistoryPanel({
   branchId,
   sessions,
-  selectedSessionId,
   openSessionCount,
   unresolvedVarianceCount,
+  view,
+  page,
+  hasNextPage,
 }: {
   branchId: number;
   sessions: PosSessionRow[];
-  selectedSessionId: number | null;
   openSessionCount: number;
   unresolvedVarianceCount: number;
+  view: "current" | "history";
+  page: number;
+  hasNextPage: boolean;
 }) {
+  const baseHref = `/br/${branchId}/pos-sessions`;
+
   return (
-    <AppSection
-      title={messages.settings.posSessions.sessionHistory}
-      description={messages.settings.posSessions.sessionHistoryDescription(
-        openSessionCount,
-        unresolvedVarianceCount,
-      )}
-      badge={{
-        children: messages.settings.posSessions.sessionCount(sessions.length),
-        variant: "secondary",
-      }}
-      className="h-fit"
-      contentClassName="gap-2"
-    >
-      {sessions.map((session) => {
-        const selected = session.id === selectedSessionId;
-        const breached = isVarianceBreached(session);
-        const resolved = breached && isVarianceResolved(session);
-        return (
-          <Button
-            asChild
-            key={session.id}
-            variant={selected ? "secondary" : "ghost"}
-            size="touch-lg"
-            className="w-full justify-start text-left"
-          >
-            <Link
-              href={`/br/${branchId}/pos-sessions?session=${session.id}`}
-              aria-current={selected ? "page" : undefined}
-              className="flex min-w-0 flex-1 flex-wrap items-center gap-3"
-            >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                <IconClock className="size-5" />
-              </span>
-              <span className="min-w-0 flex-1 basis-40">
-                <span className="block truncate text-sm font-semibold">
-                  {resolveSessionLabel(session)}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {formatDateTime(session.opened_at)}
-                </span>
-                {session.cash_difference != null ? (
-                  <span
-                    className={cn(
-                      "mt-1 block text-xs font-medium tabular-nums",
-                      breached && !resolved
-                        ? "text-destructive"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {messages.settings.posSessions.sessionVarianceLine(
-                      formatVND(session.cash_difference),
-                    )}
-                  </span>
-                ) : null}
-              </span>
-              <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
-                {breached ? (
-                  <Badge variant={resolved ? "outline" : "destructive"}>
-                    {resolved
-                      ? messages.settings.posSessions.varianceResolvedShort
-                      : messages.settings.posSessions.varianceShort}
-                  </Badge>
-                ) : null}
-                <Badge
-                  variant={session.status === "open" ? "warning" : "outline"}
-                >
-                  {session.status === "open"
-                    ? messages.settings.posSessions.open
-                    : messages.settings.posSessions.closed}
-                </Badge>
-              </span>
+    <div className="flex flex-col gap-3">
+      <Tabs value={view}>
+        <TabsList className="grid min-h-12 w-full grid-cols-2">
+          <TabsTrigger value="current" asChild>
+            <Link href={baseHref}>
+              {messages.settings.posSessions.currentWork}
             </Link>
-          </Button>
-        );
-      })}
-    </AppSection>
+          </TabsTrigger>
+          <TabsTrigger value="history" asChild>
+            <Link href={`${baseHref}?view=history`}>
+              {messages.settings.posSessions.sessionHistory}
+            </Link>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {sessions.length > 0 ? (
+        <AppSection
+          title={
+            view === "current"
+              ? messages.settings.posSessions.currentWork
+              : messages.settings.posSessions.sessionHistory
+          }
+          description={
+            view === "current"
+              ? messages.settings.posSessions.sessionHistoryDescription(
+                  openSessionCount,
+                  unresolvedVarianceCount,
+                )
+              : messages.settings.posSessions.historyPage(page)
+          }
+          badge={{
+            children: messages.settings.posSessions.sessionCount(
+              sessions.length,
+            ),
+            variant: "secondary",
+          }}
+          className="h-fit"
+          contentClassName="gap-2"
+        >
+          <ItemGroup>
+            {sessions.map((session) => {
+              const breached = isPosSessionVarianceBreached(session);
+              const resolved = breached && isVarianceResolved(session);
+              return (
+                <Button
+                  asChild
+                  key={session.id}
+                  variant="ghost"
+                  size="touch-lg"
+                  className="w-full justify-start text-left"
+                >
+                  <Link
+                    href={`/br/${branchId}/pos-sessions/${session.id}`}
+                    className="flex min-w-0 flex-1 flex-wrap items-center gap-3"
+                  >
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                      <IconClock className="size-5" />
+                    </span>
+                    <span className="min-w-0 flex-1 basis-40">
+                      <span className="block truncate text-sm font-semibold">
+                        {resolveSessionLabel(session)}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {formatDateTime(session.opened_at)}
+                      </span>
+                      {session.cash_difference != null ? (
+                        <span
+                          className={cn(
+                            "mt-1 block text-xs font-medium tabular-nums",
+                            breached && !resolved
+                              ? "text-destructive"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {messages.settings.posSessions.sessionVarianceLine(
+                            formatVND(session.cash_difference),
+                          )}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                      {breached ? (
+                        <Badge variant={resolved ? "outline" : "destructive"}>
+                          {resolved
+                            ? messages.settings.posSessions
+                                .varianceResolvedShort
+                            : messages.settings.posSessions.varianceShort}
+                        </Badge>
+                      ) : null}
+                      <Badge
+                        variant={
+                          session.status === "open" ? "warning" : "outline"
+                        }
+                      >
+                        {session.status === "open"
+                          ? messages.settings.posSessions.open
+                          : messages.settings.posSessions.closed}
+                      </Badge>
+                    </span>
+                  </Link>
+                </Button>
+              );
+            })}
+          </ItemGroup>
+        </AppSection>
+      ) : (
+        <AppEmptyState
+          title={
+            view === "current"
+              ? messages.settings.posSessions.noCurrentWork
+              : messages.settings.posSessions.emptyTitle
+          }
+          description={
+            view === "current"
+              ? messages.settings.posSessions.noCurrentWorkDescription
+              : messages.settings.posSessions.emptyDescription
+          }
+          symbol="roof"
+        />
+      )}
+
+      {view === "history" && (page > 1 || hasNextPage) ? (
+        <nav
+          aria-label={messages.settings.posSessions.historyPagination}
+          className="flex items-center justify-between gap-2"
+        >
+          {page > 1 ? (
+            <Button asChild variant="outline" size="touch">
+              <Link href={`${baseHref}?view=history&page=${String(page - 1)}`}>
+                {messages.settings.posSessions.previousPage}
+              </Link>
+            </Button>
+          ) : (
+            <span />
+          )}
+          {hasNextPage ? (
+            <Button asChild variant="outline" size="touch">
+              <Link href={`${baseHref}?view=history&page=${String(page + 1)}`}>
+                {messages.settings.posSessions.nextPage}
+              </Link>
+            </Button>
+          ) : null}
+        </nav>
+      ) : null}
+    </div>
   );
 }
 
 interface SessionSummary {
   billCount: number;
   revenue: number;
-  servedItems: number;
-  cashRevenue: number;
-  noncashRevenue: number;
   paidCount: number;
   unpaidCount: number;
   cancelledCount: number;
@@ -392,15 +437,13 @@ function SessionDetailCard({
   branchId,
   session,
   summary,
-  onCloseShift,
 }: {
   branchId: number;
   session: PosSessionRow;
   summary: SessionSummary;
-  onCloseShift: () => void;
 }) {
   const router = useRouter();
-  const breached = isVarianceBreached(session);
+  const breached = isPosSessionVarianceBreached(session);
   const resolved = breached && isVarianceResolved(session);
   const threshold = computeVarianceThreshold(session.expected_cash);
   const isOpen = session.status === "open";
@@ -439,12 +482,9 @@ function SessionDetailCard({
 
   return (
     <AppSection
-      title={messages.settings.posSessions.settlementTitle}
+      title={resolveSessionLabel(session)}
       description={
         <div className="flex flex-col gap-1">
-          <p className="font-medium text-foreground">
-            {resolveSessionLabel(session)}
-          </p>
           <p>
             {messages.settings.posSessions.openedBy(
               session.opened_by_profile?.full_name ?? "—",
@@ -468,15 +508,8 @@ function SessionDetailCard({
           : messages.settings.posSessions.closed,
         variant: isOpen ? "warning" : "outline",
       }}
-      action={
-        isOpen ? (
-          <Button size="touch" onClick={onCloseShift}>
-            {messages.settings.posSessions.closeShift}
-          </Button>
-        ) : null
-      }
     >
-      {breached ? (
+      {!isOpen && breached ? (
         <Alert
           variant={resolved ? "default" : "destructive"}
           className={
@@ -559,77 +592,60 @@ function SessionDetailCard({
         </div>
       ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
-        <Metric
-          icon={<IconReceipt className="size-4" />}
-          label={messages.settings.posSessions.totalBills}
-          value={formatCount(summary.billCount)}
-        />
-        <Metric
-          icon={<IconCash className="size-4" />}
-          label={messages.settings.posSessions.paidRevenue}
-          value={formatVND(summary.revenue)}
-        />
-        <Metric
-          icon={<IconToolsKitchen2 className="size-4" />}
-          label={messages.settings.posSessions.servedItems}
-          value={formatCount(summary.servedItems)}
-        />
-        <Metric
-          icon={<IconCash className="size-4" />}
-          label={messages.settings.posSessions.cashVariance}
-          value={
-            session.cash_difference == null
-              ? messages.settings.posSessions.notClosed
-              : formatVND(session.cash_difference)
-          }
-          tone={
-            session.cash_difference == null
-              ? "muted"
-              : session.cash_difference === 0
-                ? "success"
-                : breached
-                  ? "destructive"
-                  : "warning"
-          }
-        />
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-3">
-        <CashLine
-          label={messages.settings.posSessions.openingCash}
-          value={session.opening_cash}
-        />
-        <CashLine
-          label={messages.settings.posSessions.expectedCash}
-          value={session.expected_cash}
-        />
-        <CashLine
-          label={messages.settings.posSessions.countedCash}
-          value={session.closing_cash}
-        />
-      </div>
+      {isOpen ? (
+        <ItemGroup className="grid grid-cols-2 gap-2">
+          <KV
+            label={messages.settings.posSessions.totalBills}
+            value={formatCount(summary.billCount)}
+          />
+          <KV
+            label={messages.settings.posSessions.paidRevenue}
+            value={formatVND(summary.revenue)}
+          />
+          <KV
+            label={messages.settings.posSessions.paidOrders}
+            value={formatCount(summary.paidCount)}
+          />
+          <KV
+            label={messages.settings.posSessions.unpaidOrders}
+            value={formatCount(summary.unpaidCount)}
+          />
+        </ItemGroup>
+      ) : (
+        <ItemGroup className="grid grid-cols-2 gap-2">
+          <CashLine
+            label={messages.settings.posSessions.openingCash}
+            value={session.opening_cash}
+          />
+          <CashLine
+            label={messages.settings.posSessions.expectedCash}
+            value={session.expected_cash}
+          />
+          <CashLine
+            label={messages.settings.posSessions.countedCash}
+            value={session.closing_cash}
+          />
+          <CashLine
+            label={messages.settings.posSessions.cashVariance}
+            value={session.cash_difference}
+          />
+        </ItemGroup>
+      )}
 
       <Separator />
 
-      <div className="grid gap-3 text-sm lg:grid-cols-2 xl:grid-cols-4">
-        <KV
-          label={messages.settings.posSessions.cashCollected}
-          value={formatVND(summary.cashRevenue)}
-        />
-        <KV
-          label={messages.settings.posSessions.bankTransfer}
-          value={formatVND(summary.noncashRevenue)}
-        />
-        <KV
-          label={messages.settings.posSessions.paidOrders}
-          value={formatCount(summary.paidCount)}
-        />
-        <KV
-          label={messages.settings.posSessions.unpaidOrders}
-          value={formatCount(summary.unpaidCount)}
-        />
-      </div>
+      {!isOpen ? (
+        <ItemGroup className="grid grid-cols-2 gap-2">
+          <KV
+            label={messages.settings.posSessions.paidOrders}
+            value={formatCount(summary.paidCount)}
+          />
+          <KV
+            label={messages.settings.posSessions.unpaidOrders}
+            value={formatCount(summary.unpaidCount)}
+          />
+        </ItemGroup>
+      ) : null}
 
       {summary.paymentBreakdown.length > 0 ? (
         <Item variant="muted" className="block">
@@ -650,7 +666,7 @@ function SessionDetailCard({
                     row.count,
                   )}
                 </span>
-                <span className="font-medium tabular-nums">
+                <span className="font-mono font-medium tabular-nums">
                   {formatVND(row.amount)}
                 </span>
               </div>
@@ -671,190 +687,6 @@ function SessionDetailCard({
         <NoteCallout label={messages.settings.posSessions.sessionNote}>
           {session.note}
         </NoteCallout>
-      ) : null}
-    </AppSection>
-  );
-}
-
-const ITEM_SOURCE_LABEL: Record<"main" | "side" | "modifier", string> = {
-  main: messages.settings.posSessions.mainItem,
-  side: messages.settings.posSessions.sideCombo,
-  modifier: messages.settings.posSessions.modifier,
-};
-
-function formatHourRange(hour: number): string {
-  const start = `${hour.toString().padStart(2, "0")}:00`;
-  const end = `${((hour + 1) % 24).toString().padStart(2, "0")}:00`;
-  return `${start}–${end}`;
-}
-
-function SessionReportCard({ report }: { report: PosSessionReport }) {
-  const {
-    totals,
-    top_items,
-    category_breakdown,
-    aov_bins,
-    peak_hour,
-    discounts,
-  } = report;
-  const maxBinCount = Math.max(1, ...aov_bins.map((b) => b.count));
-  const maxCategoryRevenue = Math.max(
-    1,
-    ...category_breakdown.map((c) => c.revenue),
-  );
-
-  return (
-    <AppSection
-      title={messages.settings.posSessions.reportTitle}
-      description={messages.settings.posSessions.reportDescription}
-      contentClassName="gap-4"
-    >
-      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
-        <Metric
-          icon={<IconReceipt className="size-4" />}
-          label={messages.settings.posSessions.aov}
-          value={formatVND(totals.aov)}
-        />
-        <Metric
-          icon={<IconToolsKitchen2 className="size-4" />}
-          label={messages.settings.posSessions.totalItems}
-          value={formatCount(totals.total_items)}
-        />
-        <Metric
-          icon={<IconAlertTriangle className="size-4" />}
-          label={messages.settings.posSessions.voidItems}
-          value={formatCount(totals.void_item_count)}
-          tone={totals.void_item_count > 0 ? "warning" : "muted"}
-        />
-        <Metric
-          icon={<IconClock className="size-4" />}
-          label={messages.settings.posSessions.peakHour}
-          value={
-            peak_hour
-              ? messages.settings.posSessions.peakHourValue(
-                  formatHourRange(peak_hour.hour),
-                  peak_hour.order_count,
-                )
-              : "—"
-          }
-        />
-      </div>
-
-      {top_items.length > 0 ? (
-        <div>
-          <SectionLabel>{messages.settings.posSessions.topItems}</SectionLabel>
-          <ItemGroup>
-            {top_items.map((item) => (
-              <Item key={`${item.source}-${item.name}`} variant="outline">
-                <ItemContent>
-                  <ItemTitle>{item.name}</ItemTitle>
-                  <ItemDescription>
-                    {ITEM_SOURCE_LABEL[item.source]} · {item.qty}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemFooter>
-                  <Badge variant="outline">
-                    {ITEM_SOURCE_LABEL[item.source]}
-                  </Badge>
-                  <span className="font-mono text-sm font-semibold tabular-nums">
-                    {formatVND(item.revenue)}
-                  </span>
-                </ItemFooter>
-              </Item>
-            ))}
-          </ItemGroup>
-        </div>
-      ) : (
-        <NoteCallout label={messages.settings.posSessions.topItemsEmptyTitle}>
-          {messages.settings.posSessions.topItemsEmptyDescription}
-        </NoteCallout>
-      )}
-
-      {category_breakdown.length > 0 ? (
-        <div>
-          <SectionLabel>
-            {messages.settings.posSessions.revenueByCategory}
-          </SectionLabel>
-          <div className="flex flex-col gap-2">
-            {category_breakdown.map((cat) => (
-              <div
-                key={`${cat.category_id}-${cat.category_name}`}
-                className="flex flex-col gap-1"
-              >
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{cat.category_name}</span>
-                  <span className="tabular-nums text-muted-foreground">
-                    {messages.settings.posSessions.categoryLine(
-                      cat.qty,
-                      formatVND(cat.revenue),
-                    )}
-                  </span>
-                </div>
-                <Progress
-                  value={(cat.revenue / maxCategoryRevenue) * 100}
-                  className="h-2"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {aov_bins.length > 0 ? (
-        <div>
-          <SectionLabel>
-            {messages.settings.posSessions.billValueDistribution}
-          </SectionLabel>
-          <div className="flex flex-col gap-2">
-            {aov_bins.map((bin) => (
-              <div key={bin.label} className="flex flex-col gap-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span>{bin.label}</span>
-                  <span className="tabular-nums text-muted-foreground">
-                    {messages.settings.posSessions.billCount(bin.count)}
-                  </span>
-                </div>
-                <Progress
-                  value={(bin.count / maxBinCount) * 100}
-                  className="h-2"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {discounts.count > 0 ? (
-        <div>
-          <SectionLabel>
-            {messages.settings.posSessions.discountSection(
-              discounts.count,
-              formatVND(discounts.total),
-            )}
-          </SectionLabel>
-          <ItemGroup>
-            {discounts.top_orders.map((order) => (
-              <Item key={order.order_id} variant="outline">
-                <ItemContent>
-                  <ItemTitle>{order.order_number}</ItemTitle>
-                  <ItemDescription>{order.note ?? "—"}</ItemDescription>
-                </ItemContent>
-                <ItemFooter>
-                  <Badge variant="outline">
-                    {order.type === "pct"
-                      ? formatPercent(order.value ?? 0)
-                      : order.type === "vnd"
-                        ? "VND"
-                        : "—"}
-                  </Badge>
-                  <span className="font-mono text-sm font-semibold tabular-nums text-destructive">
-                    -{formatVND(order.amount)}
-                  </span>
-                </ItemFooter>
-              </Item>
-            ))}
-          </ItemGroup>
-        </div>
       ) : null}
     </AppSection>
   );
@@ -1128,46 +960,12 @@ function OrderDetailDrawer({
   );
 }
 
-function Metric({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  tone?: "muted" | "success" | "warning" | "destructive";
-}) {
-  return (
-    <Item variant="muted" className="items-start">
-      <ItemContent>
-        <ItemTitle className="flex items-center gap-2 text-xs text-muted-foreground">
-          {icon}
-          {label}
-        </ItemTitle>
-        <div
-          className={cn(
-            "mt-2 text-lg font-semibold tabular-nums",
-            tone === "success" && "text-success",
-            tone === "warning" && "text-warning",
-            tone === "destructive" && "text-destructive",
-            tone === "muted" && "text-muted-foreground",
-          )}
-        >
-          {value}
-        </div>
-      </ItemContent>
-    </Item>
-  );
-}
-
 function CashLine({ label, value }: { label: string; value: number | null }) {
   return (
     <Item variant="outline" size="xs" className="items-start">
       <ItemContent>
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="mt-1 font-medium tabular-nums">
+        <div className="mt-1 font-mono font-medium tabular-nums">
           {value == null
             ? messages.settings.posSessions.noValue
             : formatVND(value)}
@@ -1181,7 +979,7 @@ function KV({ label, value }: { label: string; value: string }) {
   return (
     <Item variant="outline" size="xs" className="justify-between">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium tabular-nums">{value}</span>
+      <span className="font-mono font-medium tabular-nums">{value}</span>
     </Item>
   );
 }
@@ -1220,16 +1018,12 @@ function buildSummary(orders: PosSessionOrder[]): SessionSummary {
   const activeOrders = orders.filter((order) => order.status !== "cancelled");
   const paid = activeOrders.filter((o) => o.payment_status === "paid");
   const breakdownMap = new Map<string, { count: number; amount: number }>();
-  let cashRevenue = 0;
-  let noncashRevenue = 0;
   for (const order of paid) {
     const method = order.payment_method ?? "unknown";
     const entry = breakdownMap.get(method) ?? { count: 0, amount: 0 };
     entry.count += 1;
     entry.amount += order.total_amount;
     breakdownMap.set(method, entry);
-    if (method === "cash") cashRevenue += order.total_amount;
-    else noncashRevenue += order.total_amount;
   }
   const paymentBreakdown = Array.from(breakdownMap.entries())
     .map(([method, v]) => ({ method, count: v.count, amount: v.amount }))
@@ -1238,18 +1032,11 @@ function buildSummary(orders: PosSessionOrder[]): SessionSummary {
   return {
     billCount: activeOrders.length,
     revenue: paid.reduce((sum, o) => sum + o.total_amount, 0),
-    servedItems: activeOrders.reduce((sum, o) => sum + countItems(o), 0),
-    cashRevenue,
-    noncashRevenue,
     paidCount: paid.length,
     unpaidCount: activeOrders.length - paid.length,
     cancelledCount: orders.length - activeOrders.length,
     paymentBreakdown,
   };
-}
-
-function countItems(order: PosSessionOrder): number {
-  return order.order_items.reduce((sum, item) => sum + item.quantity, 0);
 }
 
 function formatDateTime(value: string | null): string {

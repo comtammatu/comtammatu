@@ -190,9 +190,9 @@ Branch stock workflow áp dụng cùng ranh giới này:
 - `/br/[branchId]/stock` là màn `Tồn` canonical: mở thẳng dữ liệu tồn thực và
   các action ngữ cảnh theo quyền, không là feature hub và không wrapper Office
   `StockPageContent`. `/stock/on-hand` chỉ là redirect tương thích.
-- list workflow native như `/br/[branchId]/stock/transfer` dùng archetype `LIST`
-  với `BranchOperatorPage`/`BranchOperatorPanel`, action rows full-width trên
-  mobile, và route-scoped href `/br/[branchId]/stock/*`.
+- queue tương thích `/br/[branchId]/stock/receive` dùng archetype `LIST` với một
+  `BranchOperatorPage` và action rows full-width; `/stock/transfer` chỉ redirect
+  về queue nhận, không mở tạo/gửi/lịch sử trong Branch.
 - `/br/[branchId]/stock` là Branch-native touch `LIST`: dùng shared
   `loadStockOnHandPageData` + pure filter model nhưng giữ `ItemGroup`/full-row
   touch presentation ở phone, tablet portrait và tablet landscape. Route này
@@ -320,11 +320,9 @@ Branch stock workflow áp dụng cùng ranh giới này:
   presentation mode hoặc route branching.
 - detail điều chuyển trong Branch chỉ giữ thao tác giao/nhận và số lượng từng
   dòng; audit history và correction sau khi chốt thuộc Office management.
-- tạo điều chuyển tại `/br/[branchId]/stock/transfer/new` là Branch-native
-  `DOC-WORKFLOW`: phone mở dần nơi đi/nơi nhận → mặt hàng → ghi chú, tablet tăng thành hai
-  cột, control tối thiểu 44px và CTA nằm trong `AppDetailFooter` sticky. Route
-  Office `/inventory/transfers/new` giữ `DocumentFormFrame`; hai plane chỉ dùng
-  chung loader, model, controller và `createStockTransfer`.
+- `/br/[branchId]/stock/transfer/new` là redirect tương thích về `Tồn`. Tạo mới
+  và lịch sử điều chuyển thuộc Office; Branch chỉ giữ nhận phiếu đang dở để hoàn
+  tất dữ liệu cũ.
 - EMBED-WRAPPER chỉ là transition cho deep workflow chưa tách presentation; khi
   route đã có native Branch presentation thì cập nhật `scripts/page-archetypes.mjs`
   khỏi `EMBED-WRAPPER` để guard không cho lùi lại.

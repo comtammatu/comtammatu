@@ -31,7 +31,10 @@ test("operator hub queue only renders positive pending work", () => {
     hubQueueSource,
     /buildQueueRows\(basePath, queueCounts\)\.filter\(\s*\(row\) => row\.count > 0/,
   );
-  assert.match(hubQueueSource, /if \(queueRows\.length === 0\) return null/);
+  assert.match(
+    hubQueueSource,
+    /if \(queueRows\.length === 0\)[\s\S]*BranchOperatorInlineState[\s\S]*branchCopy\.queueEmpty/,
+  );
   assert.match(hubQueueSource, /\{rows\.map\(\(row\) => \(/);
   assert.match(hubQueueSource, /<Badge variant="warning">/);
 });

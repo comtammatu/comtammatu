@@ -29,6 +29,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -99,6 +100,7 @@ export function BranchCountSlipsClient({
   );
   const [recounting, setRecounting] = useState(false);
   const [recountNote, setRecountNote] = useState("");
+  const [showAllLines, setShowAllLines] = useState(false);
   const [pendingAction, setPendingAction] = useState<
     "approve" | "recount" | null
   >(null);
@@ -113,6 +115,16 @@ export function BranchCountSlipsClient({
   );
   const visibleRows = view === "pending" ? pendingRows : historyRows;
   const selected = rows.find((row) => row.id === selectedId) ?? null;
+  const selectedChangedLines = selected
+    ? selected.lines.filter(
+        (line) => line.variance != null && line.variance !== 0,
+      )
+    : [];
+  const visibleSelectedLines = selected
+    ? showAllLines || selectedChangedLines.length === 0
+      ? selected.lines
+      : selectedChangedLines
+    : [];
 
   useEffect(() => setRows(initialRows), [initialRows]);
 
@@ -120,6 +132,7 @@ export function BranchCountSlipsClient({
     setSelectedId(null);
     setRecounting(false);
     setRecountNote("");
+    setShowAllLines(false);
     setPendingAction(null);
   }
 
@@ -287,6 +300,9 @@ export function BranchCountSlipsClient({
             <>
               <SheetHeader className="shrink-0">
                 <SheetTitle>{selected.employeeName}</SheetTitle>
+                <SheetDescription className="sr-only">
+                  {INVENTORY_VI.countSlipTitle}
+                </SheetDescription>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <span>{selected.locationName}</span>
                   {selected.shiftName ? (
@@ -308,29 +324,34 @@ export function BranchCountSlipsClient({
                       value: formatVNDate(selected.countDate),
                     },
                     {
-                      label: INVENTORY_VI.lineCountLabel,
-                      value: selected.lines.length,
-                    },
-                    {
                       label: INVENTORY_VI.submittedAtLabel,
                       value: selected.submittedAt
                         ? formatVNDateTime(selected.submittedAt)
                         : "—",
                     },
-                    {
-                      label: INVENTORY_VI.varianceShort,
-                      value: INVENTORY_VI.varianceLineCount(
-                        changedLineCount(selected),
-                      ),
-                    },
                   ]}
                 />
 
                 <ItemGroup className="gap-2">
-                  {selected.lines.map((line) => (
+                  {visibleSelectedLines.map((line) => (
                     <CountSlipLineItem key={line.id} line={line} />
                   ))}
                 </ItemGroup>
+                {selectedChangedLines.length > 0 &&
+                selectedChangedLines.length < selected.lines.length ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="touch"
+                    onClick={() => setShowAllLines((current) => !current)}
+                  >
+                    {showAllLines
+                      ? INVENTORY_VI.varianceLineCount(
+                          selectedChangedLines.length,
+                        )
+                      : INVENTORY_VI.grnDraftLineCount(selected.lines.length)}
+                  </Button>
+                ) : null}
 
                 {selected.note ? (
                   <p className="break-words text-sm italic text-muted-foreground">

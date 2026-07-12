@@ -48,7 +48,33 @@ test("operator consumption and issue routes keep separate business roles", () =>
     dictionary,
     /issues: \{ short: "Sự cố kho", long: "Sự cố kho" \}/,
   );
-  assert.match(dictionary, /stocktake: \{ long: "Kiểm kê đối chiếu" \}/);
+  assert.match(dictionary, /stocktake: \{ long: "Kiểm tồn" \}/);
+});
+
+test("sale and production recipes use distinct operator names and purposes", () => {
+  const sharedMessages = read(
+    "../../packages/shared/src/messages/inventory.ts",
+  );
+  const productionPage = read("app/(protected)/inventory/production/page.tsx");
+  const saleRecipes = read(
+    "app/(protected)/inventory/recipes/recipes-client.tsx",
+  );
+
+  assert.match(sharedMessages, /recipesPageTitle: "Định mức bán"/);
+  assert.match(sharedMessages, /productionRecipesTab: "Công thức sản xuất"/);
+  assert.match(
+    sharedMessages,
+    /Định mức bán là lượng nguyên liệu tự trừ khi bán 1 phần món/,
+  );
+  assert.match(
+    sharedMessages,
+    /Nguyên liệu đầu vào và định lượng để tạo một mẻ thành phẩm/,
+  );
+  assert.match(saleRecipes, /description=\{INVENTORY_VI\.recipeDescription\}/);
+  assert.match(
+    productionPage,
+    /INVENTORY_VI\.productionRecipesCardDescription/,
+  );
 });
 
 test("office stock quick issue stays on consumption while Branch lookup stays read-only", () => {
@@ -97,10 +123,7 @@ test("consumption list separates POS ledger rows from manual slips", () => {
   assert.match(issues, /title=\{createIssueActionLabel\}/);
   assert.match(issues, /submitLabel=\{createIssueActionLabel\}/);
 
-  assert.match(
-    messages,
-    /recordedConsumptionTitle: "Tiêu hao đã ghi nhận"/,
-  );
+  assert.match(messages, /recordedConsumptionTitle: "Tiêu hao đã ghi nhận"/);
   assert.match(
     messages,
     /manualConsumptionSlipsTitle: "Phiếu tiêu hao thủ công"/,
