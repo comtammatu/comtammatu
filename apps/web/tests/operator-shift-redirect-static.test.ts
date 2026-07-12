@@ -73,7 +73,7 @@ test("operator shift leave renders inside the schedule route family", () => {
   );
   assert.ok(source.includes("returnHref={`/br/${branchId}/shift/schedule`}"));
   assert.ok(source.includes("routeBranchId={branchId}"), path);
-  assert.ok(source.includes("hideHeaderOnMobile"), path);
+  assert.doesNotMatch(source, /hideHeaderOnMobile/, path);
   assert.doesNotMatch(source, /redirect\("\/employee\/leave"\)/);
 });
 
@@ -93,7 +93,7 @@ test("operator payslip renders inside the profile route family", () => {
     ),
     path,
   );
-  assert.ok(source.includes("hideHeaderOnMobile"), path);
+  assert.doesNotMatch(source, /hideHeaderOnMobile/, path);
   assert.ok(source.includes('plane="branch"'), path);
   assert.doesNotMatch(source, /redirect\("\/employee\/payslip"\)/);
 
@@ -133,7 +133,7 @@ test("operator checkout approvals render the branch approvals plane", () => {
     path,
   );
   assert.ok(source.includes("routeBranchId={branchId}"), path);
-  assert.ok(source.includes("hideHeaderOnMobile"), path);
+  assert.doesNotMatch(source, /hideHeaderOnMobile/, path);
   assert.ok(source.includes('plane="branch"'), path);
   assert.doesNotMatch(source, /redirect\("\/employee\/checkout-approvals"\)/);
   assert.match(employeeSource, /routeBranchId\?: number/);
@@ -164,7 +164,7 @@ test("operator stock count renders the branch count plane", () => {
     path,
   );
   assert.ok(source.includes("routeBranchId={branchId}"), path);
-  assert.ok(source.includes("hideHeaderOnMobile"), path);
+  assert.doesNotMatch(source, /hideHeaderOnMobile/, path);
   assert.ok(source.includes('plane="branch"'), path);
   assert.doesNotMatch(source, /redirect\(`\/inventory\/stocktake/);
 });

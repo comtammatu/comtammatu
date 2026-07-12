@@ -154,7 +154,7 @@ test("operator stock count renders employee count inside the branch operator she
 
   assert.match(source, /StaffCountPageContent/);
   assert.match(source, /routeBranchId=\{branchId\}/);
-  assert.match(source, /hideHeaderOnMobile/);
+  assert.doesNotMatch(source, /hideHeaderOnMobile/);
   assert.match(source, /plane="branch"/);
   assert.doesNotMatch(source, /redirect\(`\/inventory\/stocktake/);
   assert.match(
