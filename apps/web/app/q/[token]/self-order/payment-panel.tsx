@@ -124,7 +124,10 @@ function BankAppLauncher({
         const parsedApps = parseVietQrBankApps(payload);
         setApps([
           { id: "momo", name: "MoMo", logoUrl: null },
-          ...parsedApps.filter((app) => app.id !== "momo"),
+          { id: "msb", name: "MSB", logoUrl: null },
+          ...parsedApps.filter(
+            (app) => app.id !== "momo" && app.id !== "msb",
+          ),
         ]);
       })
       .catch((error: unknown) => {

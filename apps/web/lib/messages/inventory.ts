@@ -729,7 +729,7 @@ export const inventory = {
         "Dữ liệu tồn kho sẽ xuất hiện khi có nguyên liệu và giao dịch phát sinh.",
       firstLoadTitle: "Chưa có dữ liệu nhập kho",
       firstLoadHint:
-        "Danh mục đã có nguyên liệu nhưng chưa có phiếu nhập. Bắt đầu từ đơn đặt hàng.",
+        "Danh mục đã có nguyên liệu nhưng chưa có phiếu nhập. Bắt đầu bằng nhận hàng từ nhà cung cấp.",
     },
     table: {
       stock: "Tồn",

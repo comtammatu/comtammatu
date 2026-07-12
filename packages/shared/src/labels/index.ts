@@ -18,7 +18,6 @@ export {
   INVENTORY_STATUS_LABELS_VI,
   getModuleLabelVi,
   getInventorySiteKindLabelVi,
-  getInventorySiteLabelVi,
   getInventoryLocationKindLabelVi,
   formatInventoryLocationLabelVi,
   normalizeInventoryLocationNameVi,

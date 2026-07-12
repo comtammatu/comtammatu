@@ -21,7 +21,7 @@ const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
 
 const correctPaymentMethodSchema = z.object({
   orderId: z.coerce.number().int().positive(),
-  newMethod: z.enum(["cash", "vietqr", "momo"]),
+  newMethod: z.enum(["cash", "vietqr"]),
   reason: z
     .string()
     .trim()

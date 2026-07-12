@@ -47,7 +47,7 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 **Decision:**
 
-1. LOẠI khỏi backlog (không đề xuất lại): Local-First/offline POS, VNPay (VietQR+MoMo đủ), native POS Flutter/Capacitor (PWA chạy ổn — tái khẳng định bởi D062).
+1. LOẠI khỏi backlog (không đề xuất lại): Local-First/offline POS, VNPay (VietQR đủ), native POS Flutter/Capacitor (PWA chạy ổn — tái khẳng định bởi D062).
 2. Role POS: sàn bán hàng dùng access bucket `cashier`; phục vụ là công việc trong ca, không phải role auth riêng.
 3. Mọi tính năng mới qua **phễu "phần mềm hỗ trợ HKD"**: giảm thao tác chủ + nhân viên hiện có; không thêm nghi thức quản trị (phân ca, duyệt nhiều tầng, kế toán doanh nghiệp) HKD không dùng.
 
@@ -307,6 +307,7 @@ Scope: Office-side People/Branch IA thuộc D048; "Việc trong ca" thuộc D052
 **Decision (net sau D073/D076/D077/D078):** Soft-routing central-site roles và
 `/employee` home đã hết hiệu lực. Active access buckets vào Branch Hub theo
 `docs/spec/role-route-matrix.md`; central kinds chỉ còn dữ liệu lịch sử.
+
 ## D056: Operator GRN-receive route + hướng consumption (2026-07-02)
 
 **Decision:**
@@ -325,6 +326,7 @@ bá một cửa cho cùng job; compatibility route phải redirect.
 
 Page archetype sống ở `docs/spec/page-archetypes.md`; component ownership/query
 sống trong machine registry. Mọi surface đổi phải QA phone, tablet và desktop.
+
 ## D059: Branch-complete native workflow (2026-07-03)
 
 **Decision (net):** Mỗi active branch-pinned role phải làm được job được cấp
@@ -332,6 +334,7 @@ quyền trong Branch runtime mà không đi qua Office bridge. Branch Hub là ho
 management workspace chỉ còn shortcut có kiểm quyền cho owner/Branch Manager.
 Branch presenter touch-native có thể chia sẻ loader/model/action với Management,
 nhưng không chia sẻ chrome hoặc desktop-first presenter.
+
 ## D060: Inventory workflow — WAC, không lot/FIFO/requisition (2026-07-03)
 
 **Decision (net sau D073/D078):** Inventory dùng WAC theo stock-bearing
@@ -339,11 +342,13 @@ warehouse của branch. Không mở FIFO/FEFO, lot/expiry ledger, multi-bin WMS,
 requisition/PO workflow hoặc formal multi-level approval. GRN là supplier-first;
 stocktake và ledger/RPC hiện hành là correctness boundary. Canonical:
 `docs/ref/inventory.md`.
+
 ## D061: Management Inventory oversight (2026-07-03)
 
 **Decision (net sau D078):** Management workspace có thể đọc tồn, kiểm kê và
 lịch sử transfer để oversight; Branch runtime sở hữu thao tác tại chỗ. Không dùng
 oversight entry để tái mở same-branch Kho↔Bếp hoặc cross-branch transfer mới.
+
 ## D062: Native-quality PWA là hướng giao (mở rộng D012, KHÔNG rewrite native) (2026-07-03)
 
 **Decision (owner):** Mục tiêu = trải nghiệm native bằng PWA chất lượng native; D012 (loại native-framework) VẪN đứng. Chương trình additive: **PWA-1** Operator Hub cài được như app (manifest riêng `/br/[branchId]`, mirror pattern station, tái dùng `pwa-runtime`/`pwa-toolbar`); **PWA-2** offline shell tối thiểu cho Hub; **PWA-3** native-feel (standalone chrome, safe-area, press feedback — trong Motion Contract § G, không animation library mới); **PWA-4** perf nối vào lane hiện có. Không route/ACL/schema change; không framework/dep PWA thứ hai; push notification tùy chọn. Đảo (mở lại native rewrite, bỏ installable Hub) phải sửa bản ghi này trước.
@@ -354,6 +359,7 @@ oversight entry để tái mở same-branch Kho↔Bếp hoặc cross-branch tran
 không dựng rail thứ hai. Module phẳng không bọc group một-item trùng tên. Width,
 density và master-detail phải theo design system/page archetype, không giữ backlog
 triển khai trong decision log.
+
 ## D064: POS capacity and manual quota (2026-07-04)
 
 **Decision (net sau D065/D078):** Missing recipe hoặc unit conversion không tạo
@@ -361,6 +367,7 @@ stock capacity giả; món đó nằm ngoài stock gate và fail-loud ở màn q
 daily limit là owner/manager input riêng, không seed từ tồn. Refund/void chỉ trả
 quota khi line chưa first-ready. Stock availability/posting dùng một flag D065
 và một Kho CN; kitchen-stock trigger đã nghỉ.
+
 ## D065: "Trừ tồn khi bán" = một công tắc trọn gói — bật là rào cứng, kho không âm (2026-07-04)
 
 **Decision (owner — đảo mô hình 2-flag/advisory của D064 gốc có chủ đích):**
@@ -372,17 +379,13 @@ và một Kho CN; kitchen-stock trigger đã nghỉ.
 
 Trigger inert khi flag OFF. Đảo phải sửa bản ghi này trước.
 
-## D066: Central-site context — superseded (2026-07-04)
-
-**Decision (net sau D073/D076/D077/D078):** Central-site operator context, tiles,
-roles và Office card đã hết hiệu lực. `branch_kind` central values chỉ giữ cho
-lịch sử; POS/KDS/Runner và Branch Hub chỉ operate active `branch` kind.
 ## D067: Branch Inventory native presentation (2026-07-04)
 
 **Decision (net sau D073/D078):** Central-supply hub đã nghỉ. Durable rule còn
 lại: Branch stock routes dùng touch-native presenter và chia sẻ loader/model/action
 với Management khi phù hợp; không nhúng desktop presenter hoặc tạo shell mới.
 GRN bắt đầu từ NCC, không từ PO.
+
 ## D068: Kho CN tự nhận NCC (GRN) + sản xuất tại chi nhánh — branch_manager, own-branch (2026-07-05)
 
 **Decision (owner):** (1) Kho CN (`branch`) tự nhận hàng NCC trực tiếp — không bắt buộc qua Kho Tổng; (2) chi nhánh chạy được workflow sản xuất hiện hành; (3) actor = `branch_manager`, quyền tạo/xác nhận chỉ own-branch qua permission + RLS; (4) `branch_manager` được tạo NCC nhanh qua `procurement:supplier_manage`; (5) **(net cuối theo D073 §4) PO và Trả hàng NCC nghỉ cả hai plane**. Hàng lỗi xử qua Báo hao hụt. Canonical: `docs/ref/inventory.md`; runtime authority: `module-acl.ts`, `inventory-roles.ts`, permission keys và RLS/RPC.
@@ -416,7 +419,7 @@ GRN bắt đầu từ NCC, không từ PO.
 5. **Mô hình tồn kho tối giản — (sửa bởi D078) 1 chi nhánh · 1 location (Kho):** bỏ lô/HSD (cột + plumbing RPC, slice riêng trong tracker). Kho↔Bếp và `commit_intra_branch_transfer` nghỉ hẳn; vòng Yêu cầu → Gửi → Nhận / transfer cross-branch operator cũng nghỉ sau khi chuyển tồn site 16 → 3 xong.
 6. **Sau khi site 16 tắt, gỡ fork central khỏi operator UI** — `CENTRAL_HOME_TILE_SUFFIXES`, CTA home central, các nhánh `isCentralKitchen`/`isCentralSupply` trong loader hub, entries `kinds` central trong nav-config, archetype exceptions #19–#23, mục central trong `docs/ref/screen-context-map.md` §2.5 — xóa sạch, không tombstone.
 
-**Consequences:** D066 §3/§4/§7a hết hiệu lực; D067 §2 hết "đợt Bếp"; D068 §5 net cuối = PO nghỉ hẳn (không mở cho branch). D000 transfer matrix giữ cho lịch sử. §5 net cuối = D078. Đảo mục 1–6 phải sửa bản ghi này trước.
+**Consequences:** D067 §2 hết "đợt Bếp"; D068 §5 net cuối = PO nghỉ hẳn (không mở cho branch). D000 transfer matrix giữ cho lịch sử. §5 net cuối = D078. Đảo mục 1–6 phải sửa bản ghi này trước.
 
 ## D074: Voice alert KDS chạy bằng TTS trình duyệt, không clip thu sẵn (2026-07-10)
 

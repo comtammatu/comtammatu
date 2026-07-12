@@ -27,6 +27,12 @@ test("Branch waste is a native touch document workflow with an isolated Office f
 
   assert.match(route, /loadBranchWasteCreateData\(branchId\)/);
   assert.match(route, /<BranchWasteCreateClient/);
+  assert.match(route, /getSafeInternalReturnTo\(rawReturnTo\)/);
+  assert.match(
+    route,
+    /safeReturnTo === stockBasePath \|\|\s*safeReturnTo\?\.startsWith\(`\$\{stockBasePath\}\?`\)/,
+  );
+  assert.match(route, /<BranchWasteCreateClient \{\.\.\.data\} backHref=\{backHref\}/);
   assert.doesNotMatch(route, /WasteNewPageContent|embedded/);
 
   assert.match(data, /import "server-only"/);
@@ -36,7 +42,7 @@ test("Branch waste is a native touch document workflow with an isolated Office f
   assert.doesNotMatch(data, /WasteNewPageContent|WasteCreateClient/);
 
   assert.match(client, /BranchOperatorPage/);
-  assert.match(client, /BranchOperatorControlBar/);
+  assert.match(client, /router\.push\(backHref\)/);
   assert.match(client, /BranchOperatorPanel/);
   assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
   assert.match(client, /<AppDetailFooter[\s\S]*sticky/);
@@ -44,6 +50,10 @@ test("Branch waste is a native touch document workflow with an isolated Office f
   assert.match(client, /AntiSplitRollingMeter/);
   assert.match(client, /WastePhotoUpload/);
   assert.match(client, /beforeunload/);
+  assert.match(
+    client,
+    /async function requestLeave\([\s\S]*?if \(hasDraftChanges\)[\s\S]*?const confirmed = await confirm\([\s\S]*?if \(!confirmed\) return;[\s\S]*?router\.push\(targetHref\)/,
+  );
   assert.match(client, /requestRemoveEditorLine/);
   assert.match(client, /overscroll-contain/);
   assert.match(client, /id="branch-waste-photo"/);

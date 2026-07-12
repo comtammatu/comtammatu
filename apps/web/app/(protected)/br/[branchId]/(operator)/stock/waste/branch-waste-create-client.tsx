@@ -13,7 +13,6 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
   CirclePlus as IconCirclePlus,
   PackageMinus as IconPackageMinus,
@@ -59,7 +58,6 @@ import { Combobox } from "@/components/form/combobox";
 import { FormField } from "@/components/form/form-field";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -100,18 +98,19 @@ function cloneWasteLine(line: WasteLineState): WasteLineState {
 export function BranchWasteCreateClient({
   branchId,
   branchName,
+  backHref,
   canCreateWaste,
   loadFailed,
   context,
 }: {
   branchId: number;
   branchName: string;
+  backHref: string;
   canCreateWaste: boolean;
   loadFailed: boolean;
   context: WasteFormContext | null;
 }) {
   const router = useRouter();
-  const stockBasePath = `/br/${branchId}/stock`;
   const nextLineId = useRef(1);
   const [locationId, setLocationId] = useState<number | null>(
     context?.locations[0]?.id ?? null,
@@ -294,6 +293,38 @@ export function BranchWasteCreateClient({
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasDraftChanges]);
 
+  useEffect(() => {
+    if (!hasDraftChanges) return;
+
+    const handleBottomNavigation = (event: globalThis.MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest<HTMLAnchorElement>(
+        "header a[href], nav[data-app-bottom-nav] a[href]",
+      );
+      const href = link?.getAttribute("href");
+      if (!href) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      if (isSubmitting) return;
+      void (async () => {
+        const confirmed = await confirm({
+          title: "Bỏ phiếu hao hụt?",
+          description: "Các dòng và ghi chú chưa tạo sẽ bị mất.",
+          confirmText: "Bỏ phiếu",
+          cancelText: "Tiếp tục lập phiếu",
+          variant: "destructive",
+        });
+        if (confirmed) router.push(href);
+      })();
+    };
+
+    document.addEventListener("click", handleBottomNavigation, true);
+    return () =>
+      document.removeEventListener("click", handleBottomNavigation, true);
+  }, [hasDraftChanges, isSubmitting, router]);
+
   if (!canCreateWaste) {
     return (
       <BranchOperatorPage title={wasteCopy.title} description={branchName}>
@@ -368,7 +399,7 @@ export function BranchWasteCreateClient({
     setRollingStatus(null);
   }
 
-  async function requestLeave() {
+  async function requestLeave(targetHref = backHref) {
     if (isSubmitting) return;
     if (hasDraftChanges) {
       const confirmed = await confirm({
@@ -380,7 +411,7 @@ export function BranchWasteCreateClient({
       });
       if (!confirmed) return;
     }
-    router.push(stockBasePath);
+    router.push(targetHref);
   }
 
   function handleLeaveClick(event: MouseEvent<HTMLAnchorElement>) {
@@ -678,7 +709,7 @@ export function BranchWasteCreateClient({
         toast.success(
           `Đã tạo phiếu ${result.data?.issueNumber ?? ""} (${result.data?.itemsCreated ?? 0} dòng)${result.data?.requiresApproval ? " · Chờ quản lý duyệt" : ""}`,
         );
-        router.push(stockBasePath);
+        router.push(backHref);
       } catch (error) {
         console.error("branch.waste.create_failed", error);
         toast.error("Không tạo được phiếu hao hụt.");
@@ -692,30 +723,13 @@ export function BranchWasteCreateClient({
       forcePhotoLineUids.has(editor.line.uid));
 
   return (
-    <BranchOperatorPage title={wasteCopy.title} description={branchName}>
+    <BranchOperatorPage
+      title={wasteCopy.title}
+      description={branchName}
+      backHref={backHref}
+      backOnClick={handleLeaveClick}
+    >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link
-              href={stockBasePath}
-              aria-label="Quay lại kho"
-              aria-disabled={isSubmitting || undefined}
-              className={
-                isSubmitting ? "pointer-events-none opacity-50" : undefined
-              }
-              onClick={handleLeaveClick}
-            >
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{wasteCopy.title}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
-
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] lg:items-start">
           <div className="flex min-w-0 flex-col gap-3">
             <BranchOperatorPanel
@@ -881,7 +895,7 @@ export function BranchWasteCreateClient({
           leading={
             <Button asChild variant="outline" size="touch">
               <Link
-                href={stockBasePath}
+                href={backHref}
                 aria-disabled={isSubmitting || undefined}
                 className={
                   isSubmitting ? "pointer-events-none opacity-50" : undefined

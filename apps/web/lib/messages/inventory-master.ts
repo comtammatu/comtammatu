@@ -24,7 +24,7 @@ export const UNITS_VI = {
   },
   cols: {
     code: "Mã",
-    name: "Tên",
+    name: "Tên hiển thị",
     status: "Trạng thái",
   },
   status: {
@@ -41,7 +41,9 @@ export const UNITS_VI = {
     addTitle: "Thêm đơn vị",
     editTitle: "Sửa đơn vị",
     code: "Mã đơn vị",
-    codePlaceholder: "Ví dụ: kg, gói, thùng",
+    codePlaceholder: "Ví dụ: bottle, case, portion",
+    name: "Tên hiển thị",
+    namePlaceholder: "Ví dụ: chai, thùng, phần",
     isActive: "Đang dùng",
     save: "Lưu",
     cancel: "Huỷ",

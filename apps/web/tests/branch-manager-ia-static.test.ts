@@ -290,107 +290,55 @@ test("Branch operator routes do not import management shell chrome", () => {
   }
 });
 
-test("Branch command dashboard is a branch-native command surface", () => {
-  const dashboard = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
+test("Branch Hub readiness keeps live status and scoped CTAs", () => {
+  const readiness = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-readiness-section.tsx",
   );
-  const commandConfig = read(
+  const readinessConfig = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
   );
-  const commandSections = read(
+  const readinessList = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_components/command-sections.tsx",
   );
-  const actionItem = read(
-    "apps/web/app/(protected)/br/[branchId]/_components/branch-action-item.tsx",
+
+  assert.match(readiness, /fetchBranchDayStatus\(supabase, claims, branchId\)/);
+  assert.match(readiness, /const items = buildReadinessItems\(day, copy, \{/);
+  assert.match(readiness, /<BranchReadinessList items=\{items\} \/>/);
+  assert.match(
+    readiness,
+    /floorHref:[\s\S]*day\.tablesTotal <= 0[\s\S]*tablesHref[\s\S]*day\.setupActiveTerminals <= 0[\s\S]*posSettingsHref/,
   );
-  const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
-  assert.match(dashboard, /<BranchOperatorPage/);
-  assert.match(dashboard, /branch\.branch_kind !== "branch"/);
-  assert.doesNotMatch(dashboard, /<AppPage|<AppLinkCard|<LinkCardGrid|<KpiRow/);
-
-  for (const expected of [
-    "liveOperationsTitle",
-    "readinessTitle",
-    "endDayTitle",
-    "drilldownTitle",
-  ]) {
-    assert.ok(dashboard.includes(expected), `expected ${expected}`);
+  for (const contract of [
+    ["menuHref", "menu-limits", "readinessMenuCta"],
+    ["printersHref", "printers", "readinessPrinterCta"],
+    [
+      "checkoutApprovalsHref",
+      "shift/checkout-approvals",
+      "readinessCheckoutCta",
+    ],
+  ] as const) {
+    assert.match(
+      readiness,
+      new RegExp(`${contract[0]}:[\\s\\S]*${contract[1]}`),
+      `${contract[0]} must stay on its Branch route`,
+    );
+    assert.match(
+      readinessConfig,
+      new RegExp(`href: hrefs\\.${contract[0]}`),
+      `${contract[0]} must reach its readiness row`,
+    );
+    assert.match(
+      readinessConfig,
+      new RegExp(
+        `ctaLabel: hrefs\\.${contract[0]}[\\s\\S]*copy\\.${contract[2]}`,
+      ),
+      `${contract[0]} must keep its readiness CTA`,
+    );
   }
 
-  for (const expected of [
-    "/br/${branchId}/pos",
-    "/br/${branchId}/kds",
-    "/br/${branchId}/runner",
-    "/br/${branchId}/menu-limits",
-    "/br/${branchId}/orders",
-    "/br/${branchId}/pos-sessions",
-    "/br/${branchId}/stock",
-  ]) {
-    assert.ok(commandConfig.includes(expected), `expected ${expected}`);
-  }
-
-  assert.match(
-    commandSections,
-    /<BranchActionItem/,
-    "Branch Command lanes should render mobile-first action rows",
-  );
-  assert.match(
-    commandSections,
-    /<ItemGroup className="gap-2"/,
-    "Branch Command lanes should group action rows consistently",
-  );
-  assert.doesNotMatch(
-    commandSections,
-    /<AppLinkCard|<LinkCardGrid/,
-    "Branch Command lanes must not reintroduce card-grid navigation",
-  );
-  assert.match(
-    dashboard,
-    /<BranchReadinessList/,
-    "Branch Command page should mount the readiness lane",
-  );
-  assert.match(
-    dashboard,
-    /const floorHref =[\s\S]*day\.tablesTotal <= 0[\s\S]*day\.setupActiveTerminals <= 0/,
-    "Bàn & máy POS readiness CTA must route to the missing setup part",
-  );
-  assert.match(
-    dashboard,
-    /<BranchCommandTileGrid/,
-    "Branch Command page should mount the nav-lane tile grids",
-  );
-  assert.match(
-    actionItem,
-    /line-clamp-none/,
-    "Branch Command must not clamp critical readiness/action descriptions",
-  );
-  assert.match(actionItem, /size="touch"/);
-  assert.match(actionItem, /className="w-full sm:w-auto"/);
-  assert.match(
-    settingsMessages,
-    /commandPosSessionsTitle: "Đối soát ca POS"/,
-    "Branch Command reconciliation tile should not duplicate the readiness Ca POS label",
-  );
-  assert.doesNotMatch(
-    settingsMessages,
-    /setupLaneTitle|commandBranchSetup/,
-    "Branch Command must not keep a Settings doorway lane; Settings is already the setup hub",
-  );
-  assert.doesNotMatch(
-    commandConfig,
-    /href:\s*`\/br\/\$\{branchId\}\/settings`/,
-  );
-  assert.doesNotMatch(commandConfig, /IconSettings/);
-  assert.match(
-    settingsMessages,
-    /readinessMenuTitle: "Giới hạn bán"/,
-    "Branch Command readiness row links to menu-limits, not the menu catalog",
-  );
-  assert.match(settingsMessages, /drilldownTitle: "Kho chi nhánh"/);
-  assert.match(settingsMessages, /readinessMenuCta: "Mở giới hạn bán"/);
-  assert.doesNotMatch(settingsMessages, /Thực đơn bán|Mở thực đơn/);
-  assert.doesNotMatch(settingsMessages, /Chưa có món active/);
+  assert.match(readinessList, /href=\{item\.href\}/);
+  assert.match(readinessList, /ctaLabel=\{item\.ctaLabel\}/);
 });
 
 test("Branch settings hub exposes setup controls only", () => {
@@ -595,8 +543,8 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
   );
   assert.match(
     branchWasteCreateClient,
-    /href=\{stockBasePath\}/,
-    "branch waste form needs an explicit cancel target back to the stock hub",
+    /href=\{backHref\}/,
+    "branch waste form needs an explicit safe cancel target",
   );
   assert.doesNotMatch(
     branchWasteCreateClient,

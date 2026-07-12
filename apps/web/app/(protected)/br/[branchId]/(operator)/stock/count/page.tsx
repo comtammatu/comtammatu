@@ -1,25 +1,24 @@
-import { notFound } from "next/navigation";
-import { StaffCountPageContent } from "@lib/staff-runtime/count/page";
+import { notFound, redirect } from "next/navigation";
 
-interface PageProps {
-  params: Promise<{ branchId: string }>;
-  searchParams: Promise<{ location?: string }>;
-}
-
-export default async function OperatorStockCountPage({
+export default async function OperatorStockCountAlias({
   params,
   searchParams,
-}: PageProps) {
-  const { branchId: rawBranchId } = await params;
+}: {
+  params: Promise<{ branchId: string }>;
+  searchParams: Promise<{ location?: string | string[] }>;
+}) {
+  const [{ branchId: rawBranchId }, query] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  return (
-    <StaffCountPageContent
-      searchParams={searchParams}
-      routeBranchId={branchId}
-      profileHref={`/br/${branchId}/profile`}
-      plane="branch"
-    />
-  );
+  const location = Array.isArray(query.location)
+    ? query.location[0]
+    : query.location;
+  const suffix = location
+    ? `?location=${encodeURIComponent(location)}`
+    : "";
+  redirect(`/br/${branchId}/shift/count${suffix}`);
 }

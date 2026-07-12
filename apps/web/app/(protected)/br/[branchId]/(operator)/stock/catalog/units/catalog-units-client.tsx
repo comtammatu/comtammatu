@@ -37,6 +37,7 @@ const formCopy = messages.inventoryMaster.units;
 
 const unitFormSchema = z.object({
   code: z.string().trim().min(1),
+  name: z.string().trim().min(1),
   is_active: z.boolean(),
 });
 
@@ -44,6 +45,7 @@ type UnitFormValues = z.infer<typeof unitFormSchema>;
 
 const NEW_UNIT_DEFAULTS: UnitFormValues = {
   code: "",
+  name: "",
   is_active: true,
 };
 
@@ -88,6 +90,7 @@ export function CatalogUnitsClient({
       const res = await updateUnit({
         id: row.id,
         code: row.code,
+        name: row.name,
         is_active: false,
       });
       if (!res.success) {
@@ -120,7 +123,7 @@ export function CatalogUnitsClient({
   }
 
   const defaultValues: UnitFormValues = editRow
-    ? { code: editRow.code, is_active: editRow.is_active }
+    ? { code: editRow.code, name: editRow.name, is_active: editRow.is_active }
     : NEW_UNIT_DEFAULTS;
 
   return (
@@ -136,9 +139,12 @@ export function CatalogUnitsClient({
           {packagingRows.map((row) => (
             <Item key={row.id} variant="outline" size="sm">
               <ItemContent className="min-w-0">
-                <ItemTitle className="truncate font-mono text-sm font-medium">
-                  {row.code}
+                <ItemTitle className="truncate text-sm font-medium">
+                  {row.name}
                 </ItemTitle>
+                <p className="truncate font-mono text-xs text-muted-foreground">
+                  {row.code}
+                </p>
                 {row.inUse ? (
                   <div>
                     <Badge variant="outline">{copy.inUse}</Badge>
@@ -216,6 +222,13 @@ export function CatalogUnitsClient({
               name="code"
               label={formCopy.form.code}
               placeholder={formCopy.form.codePlaceholder}
+              required
+            />
+            <TextField
+              control={form.control}
+              name="name"
+              label={formCopy.form.name}
+              placeholder={formCopy.form.namePlaceholder}
               required
             />
             <Field orientation="horizontal">

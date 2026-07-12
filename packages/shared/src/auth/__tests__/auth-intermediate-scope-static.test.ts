@@ -157,7 +157,7 @@ test("proxy branch-surface cache fails closed for inactive or missing branches",
   assert.match(proxy, /\.select\("branch_kind, is_active"\)/);
   // branchSurfaceAllows is a positive predicate: a null cache entry or a
   // non-active branch always denies; the kind match is skipped only for a
-  // null required kind (owner cross-branch on non-station surfaces, D066).
+  // null required kind (owner cross-branch on non-station surfaces).
   assert.match(proxy, /branchSurface !== null &&/);
   assert.match(
     proxy,

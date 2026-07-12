@@ -53,7 +53,7 @@ export const settings = {
     kdsDescription: "Quản lý trạm hiển thị bếp và gán danh mục món ăn",
     paymentsTitle: "Thanh toán POS",
     paymentsDescription:
-      "Cấu hình Chuyển khoản, SePay xác nhận tự động và MoMo cho POS.",
+      "Cấu hình Chuyển khoản và SePay xác nhận tự động cho POS.",
     printersTitle: "In ấn vận hành",
     printersDescription:
       "Cấu hình máy in theo từng chi nhánh: loại phiếu và danh mục món in trên từng máy.",
@@ -290,7 +290,6 @@ export const settings = {
     sepayDescription:
       "Dùng cho Chuyển khoản; SePay chỉ xác nhận tiền vào, không phải phương thức thanh toán riêng.",
     sepayEndpoint: "Webhook: /api/webhooks/sepay",
-    momoNeeds: "Cần",
     envStatus: "Trạng thái env:",
     envConfigured: "✓ Đã cấu hình",
     envMissing: "Chưa đủ biến môi trường",

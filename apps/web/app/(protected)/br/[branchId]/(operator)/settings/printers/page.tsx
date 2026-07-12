@@ -95,6 +95,7 @@ export default async function BranchPrintersPage({
       description={messages.settings.branch.printersDescription(
         branchRes.data.name,
       )}
+      backHref={`/br/${branchId}/settings`}
     >
       <PrintersClient
         branches={[branchRes.data]}

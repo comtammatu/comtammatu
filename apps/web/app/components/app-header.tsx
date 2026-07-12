@@ -51,6 +51,7 @@ export function AppHeaderBrand({
   );
   const className = cn(
     "flex items-center gap-2",
+    href && "min-h-11",
     showText ? "min-w-0" : "min-h-11 min-w-11 shrink-0 justify-center",
   );
 

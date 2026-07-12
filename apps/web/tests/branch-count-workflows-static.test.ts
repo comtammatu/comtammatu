@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("Branch count assignment owns a keyboard and touch native presenter", () => {
+test("Branch Team owns count assignment with a keyboard and touch native presenter", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx",
   );
@@ -21,9 +21,11 @@ test("Branch count assignment owns a keyboard and touch native presenter", () =>
     "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
   );
 
-  assert.match(route, /loadBranchCountAssignmentData/);
-  assert.match(route, /BranchCountAssignmentsClient/);
-  assert.doesNotMatch(route, /CountAssignmentsPageContent|embedded/);
+  assert.match(route, /new URLSearchParams\(\{ tab: "assignments" \}\)/);
+  assert.doesNotMatch(
+    route,
+    /loadBranchCountAssignmentData|BranchCountAssignmentsClient/,
+  );
   assert.match(data, /import "server-only"/);
   assert.match(data, /PERMISSION_KEYS\.INVENTORY_COUNT_ASSIGN/);
   assert.match(data, /scope\.selectedBranchId !== routeBranchId/);
@@ -36,6 +38,13 @@ test("Branch count assignment owns a keyboard and touch native presenter", () =>
     /DataTable|Drawer|buildBranchCountHref|openCountScreen/,
   );
   assert.match(team, /BranchCountAssignmentsClient/);
+  assert.match(team, /loadBranchCountAssignmentData/);
+  assert.match(team, /locationParam/);
+  assert.match(team, /shiftParam/);
+  assert.match(
+    client,
+    /embeddedInTeam[\s\S]*?`\/br\/\$\{data\.branchId\}\/team`/,
+  );
   assert.doesNotMatch(team, /CountAssignmentsPageContent/);
   assert.doesNotMatch(officeClient, /buildBranchCountHref|openCountScreen/);
 });

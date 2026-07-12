@@ -55,7 +55,7 @@ test("Employee profile stays focused on self-service actions", () => {
   );
   assert.doesNotMatch(
     employeeProfileSource,
-    /resolveQuickLaunchGroups|workspaceLinks|workspaceLauncherTitle|MANAGER_LINKS|ManagerToolsSheet|EmployeeHomePageContent|EmployeeActionSection/,
+    /workspaceLinks|workspaceLauncherTitle|MANAGER_LINKS|ManagerToolsSheet|EmployeeHomePageContent|EmployeeActionSection/,
     "Profile must not become a workspace launcher or manager-tools surface",
   );
 });

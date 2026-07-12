@@ -28,14 +28,14 @@ Role/scope/route boundary canonical sống ở
 owner; Branch Manager dùng L1 Branch Command dưới
 `/br/[branchId]/*`.
 
-| Surface           | Route family                                                                                                 | Entry point                                            | Navigation / back contract                                                                                                                                                    | Breadcrumb / scope contract                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Root entry        | `/`                                                                                                          | Single-branch resolver                                 | `getDefaultRedirect(claims)`: branch-pinned staff → `/br/{branchId}`; Owner → `/`, rồi tự mở khi có đúng một active `branch` kind. Central kinds không phải operator scope.   | Nhiều operating branch mới hiện picker; route scope sai fail closed.                                   |
-| Public / auth     | `/login`, `/access-denied`, `/payment/momo/return`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login`, external return URL, hoặc Runner display URL | Không dùng app shell. Không giữ app back link.                                                                                                                                | Không đọc tenant/branch scope từ UI state. Runner display tự validate branch trong page.               |
-| Admin foundation  | Tenant `/admin/settings/*`                                                                                   | `/admin/settings`                                      | `OfficeModuleShell` dùng cùng Office sidebar; Settings sub-pages là deep-nav của shell, không có SettingsNav riêng.                                                           | Breadcrumb root là `Thiết lập hệ thống`; OfficeModuleShell build breadcrumb từ active nav + path tail. |
-| Domain workspaces | `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/notifications/*`                            | `MODULE_ACL[module].path`                              | Workspace shell dùng sidebar/domain nav; link rời workspace phải đi qua `resolveRoleHomeLink(role)`. `/hr/payroll/*` là direct-support, không đưa vào discovery/nav mặc định. | Breadcrumb root là nhóm `Công việc`; filter/tab state giữ trong URL, không lưu local state.            |
-| Branch operations | `/br/[branchId]/*`, gồm hub, dashboard, shift, profile, stock, pos, kds, runner, settings                    | `/br/[branchId]`                                       | Branch runtime chrome hoặc operational chrome. POS/KDS ưu tiên hành động trong ca, không quay về Admin. Staff discovery vẫn có thể link sang Runner display public.           | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.                 |
-| Staff day runtime | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                         | `/br/[branchId]/shift`                                 | Dùng Branch runtime bottom nav và shared Employee components; không có App Router surface `/employee`.                                                                        | Breadcrumb nhẹ theo task runtime; không trộn HR admin/payroll thành hot path nhân viên.                |
+| Surface           | Route family                                                                                       | Entry point                                          | Navigation / back contract                                                                                                                                                    | Breadcrumb / scope contract                                                                                         |
+| ----------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Root entry        | `/`                                                                                                | Single-branch resolver                               | `getDefaultRedirect(claims)`: branch-pinned staff → `/br/{branchId}`; Owner → `/`, rồi tự mở khi có đúng một active `branch` kind. Central kinds không phải operator scope.   | Nhiều operating branch mới hiện picker; route scope sai fail closed.                                                |
+| Public / auth     | `/login`, `/access-denied`, `/q/[token]`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login`, Self-Order QR URL, hoặc Runner display URL | Không dùng app shell. Không giữ app back link.                                                                                                                                | Không đọc tenant/branch scope từ UI state. Self-Order validate token; Runner display tự validate branch trong page. |
+| Admin foundation  | Tenant `/admin/settings/*`                                                                         | `/admin/settings`                                    | `OfficeModuleShell` dùng cùng Office sidebar; Settings sub-pages là deep-nav của shell, không có SettingsNav riêng.                                                           | Breadcrumb root là `Thiết lập hệ thống`; OfficeModuleShell build breadcrumb từ active nav + path tail.              |
+| Domain workspaces | `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/notifications/*`                  | `MODULE_ACL[module].path`                            | Workspace shell dùng sidebar/domain nav; link rời workspace phải đi qua `resolveRoleHomeLink(role)`. `/hr/payroll/*` là direct-support, không đưa vào discovery/nav mặc định. | Breadcrumb root là nhóm `Công việc`; filter/tab state giữ trong URL, không lưu local state.                         |
+| Branch operations | `/br/[branchId]/*`, gồm hub, dashboard, shift, profile, stock, pos, kds, runner, settings          | `/br/[branchId]`                                     | Branch runtime chrome hoặc operational chrome. POS/KDS ưu tiên hành động trong ca, không quay về Admin. Staff discovery vẫn có thể link sang Runner display public.           | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.                              |
+| Staff day runtime | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                               | `/br/[branchId]/shift`                               | Dùng Branch runtime bottom nav và shared Employee components; không có App Router surface `/employee`.                                                                        | Breadcrumb nhẹ theo task runtime; không trộn HR admin/payroll thành hot path nhân viên.                             |
 
 Quy tắc history: thay đổi route đưa người dùng giữa các trang phải dùng
 `Link` / `router.push` thường để nút Back của trình duyệt quay lại route trước.
@@ -118,11 +118,11 @@ Browser request
 
 ## Quy tắc import
 
-| File Type                     | Can Import                                                                     |
-| ----------------------------- | ------------------------------------------------------------------------------ |
-| `page.tsx` (RSC)              | `@comtammatu/database/supabase/server`, `@comtammatu/shared`, `@comtammatu/ui` |
-| `layout.tsx` (RSC)            | Same as page.tsx                                                               |
-| `"use client"` components     | `@comtammatu/database/supabase/client`, `@comtammatu/shared`, `@comtammatu/ui` |
+| File Type                     | Can Import                                                                             |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| `page.tsx` (RSC)              | `@comtammatu/database/supabase/server`, `@comtammatu/shared`, `@comtammatu/ui`         |
+| `layout.tsx` (RSC)            | Same as page.tsx                                                                       |
+| `"use client"` components     | `@comtammatu/database/supabase/client`, `@comtammatu/shared`, `@comtammatu/ui`         |
 | `actions.ts` (Server Actions) | Explicit server/service database subpath, `@comtammatu/shared`, `@comtammatu/security` |
 
 ## Thêm một trang quản trị mới
@@ -136,12 +136,12 @@ Browser request
 
 ## Các lỗi thường gặp
 
-| Failure                               | Signal                                   | Recovery                                                                                |
-| ------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------- |
-| "use client" barrel import            | Turbopack build crash                    | Use `/supabase/client` import path                                                      |
-| Missing module in route-resolution    | 404 or no ACL check                      | Add URL pattern → ModuleKey mapping                                                     |
-| Missing nav entry                     | Page exists but unreachable from sidebar | Add to `ADMIN_NAV_GROUPS`, unless the route is an intentional direct-only support route |
-| Layout re-checks auth/ACL              | Double redirect or divergent gate         | Remove the duplicate check; proxy owns protected-route auth                             |
+| Failure                            | Signal                                   | Recovery                                                                                |
+| ---------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------- |
+| "use client" barrel import         | Turbopack build crash                    | Use `/supabase/client` import path                                                      |
+| Missing module in route-resolution | 404 or no ACL check                      | Add URL pattern → ModuleKey mapping                                                     |
+| Missing nav entry                  | Page exists but unreachable from sidebar | Add to `ADMIN_NAV_GROUPS`, unless the route is an intentional direct-only support route |
+| Layout re-checks auth/ACL          | Double redirect or divergent gate        | Remove the duplicate check; proxy owns protected-route auth                             |
 
 ## Lý do thiết kế
 

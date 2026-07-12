@@ -90,7 +90,6 @@ const PAYMENT_LABEL: Record<FinancePayment, string> = {
   all: filterCopy.paymentAll,
   cash: filterCopy.paymentCash,
   vietqr: filterCopy.paymentVietqr,
-  momo: filterCopy.paymentMomo,
 };
 
 const GRANULARITY_LABEL: Record<FinanceGranularity, string> = {

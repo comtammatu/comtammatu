@@ -77,13 +77,3 @@ export function WasteReasonDropdown({
     </Select>
   );
 }
-
-/** Runtime helper for clients to preview whether a reason forces tier 2. */
-export function isAlwaysTier2Reason(code: string): boolean {
-  return isAlwaysTier2WasteReason(code);
-}
-
-/** Runtime helper — reason triggers tier 1 photo regardless of value. */
-export function isRiskyReason(code: string): boolean {
-  return isRiskyWasteReason(code);
-}

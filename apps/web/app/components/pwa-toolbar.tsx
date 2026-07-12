@@ -271,8 +271,8 @@ export function PwaToolbar({
             <Button
               type="button"
               variant="ghost"
-              size="touch"
-              className="shrink-0 px-3 text-muted-foreground"
+              size="icon-touch"
+              className="shrink-0 text-muted-foreground"
               onClick={handleDismiss}
               aria-label={copy.dismissLabel}
             >
@@ -348,8 +348,8 @@ export function PwaToolbar({
               <Button
                 type="button"
                 variant="ghost"
-                size="touch"
-                className="shrink-0 px-3 text-muted-foreground"
+                size="icon-touch"
+                className="shrink-0 text-muted-foreground"
                 onClick={handleDismiss}
                 aria-label={copy.dismissLabel}
               >

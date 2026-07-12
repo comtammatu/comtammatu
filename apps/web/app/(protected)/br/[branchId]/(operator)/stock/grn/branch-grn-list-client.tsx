@@ -60,6 +60,7 @@ import {
 } from "@lib/inventory/grn-list-model";
 import { grnSourceSupplierHref } from "@lib/inventory/grn-source-model";
 import { messages } from "@lib/messages";
+import { useOperatorUrlState } from "@lib/branch-operator/use-operator-url-state";
 
 type BranchGrnRow = Pick<
   GrnRow,
@@ -102,17 +103,20 @@ function BranchGrnDraftItem({
   draft,
   disabled,
   onDiscard,
+  returnTo,
 }: {
   branchId: number;
   draft: BranchGrnDraftRow;
   disabled: boolean;
   onDiscard: (draft: BranchGrnDraftRow) => void;
+  returnTo: string;
 }) {
   const basePath = `/br/${branchId}/stock/grn`;
-  const href =
+  const destination =
     draft.poId != null
       ? `${basePath}/${draft.grnId}`
       : grnSourceSupplierHref(`${basePath}/new`, draft.supplierId);
+  const href = `${destination}?returnTo=${encodeURIComponent(returnTo)}`;
 
   return (
     <Item
@@ -171,9 +175,11 @@ function BranchGrnDraftItem({
 function BranchGrnListItem({
   branchId,
   grn,
+  returnTo,
 }: {
   branchId: number;
   grn: BranchGrnRow;
+  returnTo: string;
 }) {
   return (
     <div role="listitem">
@@ -186,7 +192,9 @@ function BranchGrnListItem({
             : "min-h-20 touch-manipulation"
         }
       >
-        <Link href={grnDetailHref(`/br/${branchId}/stock/grn`, grn.id)}>
+        <Link
+          href={`${grnDetailHref(`/br/${branchId}/stock/grn`, grn.id)}?returnTo=${encodeURIComponent(returnTo)}`}
+        >
           <ItemContent className="min-w-0 gap-1">
             <ItemTitle size="heading" className="line-clamp-none font-mono">
               {grn.code}
@@ -227,8 +235,21 @@ export function BranchGrnListClient({
   grnsLoadFailed,
 }: BranchGrnListClientProps) {
   const router = useRouter();
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<GrnListStatusFilter>("all");
+  const { replaceParams, searchParams } = useOperatorUrlState();
+  const query = searchParams.get("q") ?? "";
+  const statusParam = searchParams.get("status");
+  const status = statusFilterOptions.some(
+    (option) => option.value === statusParam,
+  )
+    ? (statusParam as GrnListStatusFilter)
+    : "all";
+  const currentListParams = new URLSearchParams();
+  if (query) currentListParams.set("q", query);
+  if (status !== "all") currentListParams.set("status", status);
+  const currentListQuery = currentListParams.toString();
+  const currentListHref = `/br/${branchId}/stock/grn${
+    currentListQuery ? `?${currentListQuery}` : ""
+  }`;
   const [pendingDraftId, setPendingDraftId] = useState<number | null>(null);
   const filters = { query, status };
   const filtered = useMemo(
@@ -239,8 +260,7 @@ export function BranchGrnListClient({
   const showDraftPanel = draftsLoadFailed || drafts.length > 0;
 
   function resetFilters() {
-    setQuery("");
-    setStatus("all");
+    replaceParams({ q: null, status: null });
   }
 
   async function handleDiscard(draft: BranchGrnDraftRow) {
@@ -270,7 +290,9 @@ export function BranchGrnListClient({
     >
       {canCreate ? (
         <Button asChild size="touch" className="w-full">
-          <Link href={`/br/${branchId}/stock/grn/new`}>
+          <Link
+            href={`/br/${branchId}/stock/grn/new?returnTo=${encodeURIComponent(currentListHref)}`}
+          >
             <IconPlus className="size-4" />
             {INVENTORY_VI.receivingEyebrow}
           </Link>
@@ -313,6 +335,7 @@ export function BranchGrnListClient({
                   draft={draft}
                   disabled={pendingDraftId != null}
                   onDiscard={handleDiscard}
+                  returnTo={currentListHref}
                 />
               ))}
             </ItemGroup>
@@ -353,18 +376,25 @@ export function BranchGrnListClient({
                 </InputGroupAddon>
                 <InputGroupInput
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={(event) =>
+                    replaceParams({ q: event.target.value || null })
+                  }
                   placeholder={INVENTORY_VI.grnSearchPlaceholder}
+                  aria-label={INVENTORY_VI.grnSearchPlaceholder}
                   inputMode="search"
                 />
               </InputGroup>
               <Select
                 value={status}
                 onValueChange={(value) =>
-                  setStatus(value as GrnListStatusFilter)
+                  replaceParams({ status: value === "all" ? null : value })
                 }
               >
-                <SelectTrigger size="touch" className="w-full">
+                <SelectTrigger
+                  size="touch"
+                  className="w-full"
+                  aria-label={FORM_VI.status}
+                >
                   <SelectValue placeholder={FORM_VI.status} />
                 </SelectTrigger>
                 <SelectContent>
@@ -410,6 +440,7 @@ export function BranchGrnListClient({
                     key={grn.id}
                     branchId={branchId}
                     grn={grn}
+                    returnTo={currentListHref}
                   />
                 ))}
               </ItemGroup>

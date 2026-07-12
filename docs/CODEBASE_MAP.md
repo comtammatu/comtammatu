@@ -11,7 +11,7 @@
   Current work lives in `tasks/todo.md`; durable architecture choices live in
   active ADRs or the owning spec/ref/rule doc.
 - **Current surface:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS,
-  Print, Payments (Cash + VietQR + Momo), Finance Basic, HR/payroll basics, and
+  Print, Payments (Cash + VietQR), Finance Basic, HR/payroll basics, and
   HĐĐT via Viettel S-invoice are the current production surface.
 - **Tech stack:** Next.js, React, TypeScript, Tailwind, Zod, Supabase, and
   Turborepo. Package manifests own exact versions.
@@ -204,10 +204,10 @@ Opening `/` after authentication follows the same shared default resolver.
 
 Đây là các file có nhiều chỗ phụ thuộc nhất. Mọi thay đổi ở đây sẽ tác động rộng trong hệ thống.
 
-| File                                            | Importers                          | Impact                                                |
-| ----------------------------------------------- | ---------------------------------- | ----------------------------------------------------- |
-| `packages/shared/src/auth/module-acl.ts`        | proxy.ts, admin shell, all layouts | Adding/removing modules affects routing, nav, and ACL |
-| `packages/shared/src/auth/types.ts`             | Every auth-aware file              | Changing roles or JWT shape breaks auth chain         |
-| `packages/shared/src/auth/scope.ts`             | proxy.ts, layouts, server actions  | Changing claim extraction breaks session              |
+| File                                            | Importers                          | Impact                                                    |
+| ----------------------------------------------- | ---------------------------------- | --------------------------------------------------------- |
+| `packages/shared/src/auth/module-acl.ts`        | proxy.ts, admin shell, all layouts | Adding/removing modules affects routing, nav, and ACL     |
+| `packages/shared/src/auth/types.ts`             | Every auth-aware file              | Changing roles or JWT shape breaks auth chain             |
+| `packages/shared/src/auth/scope.ts`             | proxy.ts, layouts, server actions  | Changing claim extraction breaks session                  |
 | `packages/database/src/types/database.types.ts` | All server code                    | Auto-generated — regenerate with `corepack pnpm db:types` |
-| `apps/web/proxy.ts`                             | Next.js middleware entry           | Single point of auth enforcement                      |
+| `apps/web/proxy.ts`                             | Next.js middleware entry           | Single point of auth enforcement                          |

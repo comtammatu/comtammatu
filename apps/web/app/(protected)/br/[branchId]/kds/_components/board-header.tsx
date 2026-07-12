@@ -72,10 +72,7 @@ export function KdsBoardTopBar({
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2 px-2 py-2 xl:flex-nowrap xl:px-3">
       <div className="flex shrink-0 items-center gap-1.5">
-        <EmployeePortalBackControl
-          branchId={branchId}
-          className="h-11 min-h-11 px-3 text-sm"
-        />
+        <EmployeePortalBackControl branchId={branchId} />
         <span className="font-heading text-base font-semibold text-foreground">
           KDS
         </span>
@@ -99,7 +96,7 @@ export function KdsBoardTopBar({
         <Button
           type="button"
           variant="ghost"
-          size="icon-lg"
+          size="icon-touch"
           aria-label={KDS_HEADER_COPY.completionHistory}
           onClick={onCompletionHistoryOpen}
         >
@@ -108,7 +105,7 @@ export function KdsBoardTopBar({
         <Button
           type="button"
           variant={audioMode === "off" ? "ghost" : "secondary"}
-          size="icon-lg"
+          size="icon-touch"
           aria-label={KDS_AUDIO_MODE_LABEL[audioMode]}
           aria-pressed={audioMode !== "off"}
           onClick={onSoundToggle}
@@ -118,7 +115,7 @@ export function KdsBoardTopBar({
         <Button
           type="button"
           variant={isFullscreen ? "secondary" : "ghost"}
-          size="icon-lg"
+          size="icon-touch"
           aria-label={isFullscreen ? "Thoát toàn màn hình" : "Mở toàn màn hình"}
           aria-pressed={isFullscreen}
           onClick={onFullscreenToggle}
@@ -135,7 +132,7 @@ export function KdsBoardTopBar({
             <Button
               type="button"
               variant="ghost"
-              size="icon-lg"
+              size="icon-touch"
               aria-label={KDS_HEADER_COPY.moreMenu}
             >
               <IconMoreVertical />

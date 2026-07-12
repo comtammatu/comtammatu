@@ -162,12 +162,10 @@ test("resolveOperatorTiles -> branch stock group renders the branch tile set", (
     [
       "Sản xuất",
       "Tồn kho",
-            "Kiểm kê",
-      "Giao đếm",
+      "Kiểm kê",
       "Hao hụt",
       "Tiêu hao",
       "Nhập hàng",
-      "Danh mục",
     ],
   );
 });

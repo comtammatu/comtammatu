@@ -76,7 +76,9 @@ export function BranchCountAssignmentsClient({
   embeddedInTeam?: boolean;
 }) {
   const router = useRouter();
-  const basePath = `/br/${data.branchId}/stock/count-assignments`;
+  const basePath = embeddedInTeam
+    ? `/br/${data.branchId}/team`
+    : `/br/${data.branchId}/stock/count-assignments`;
   const [isPending, startTransition] = useTransition();
   const [selectionByEmployee, setSelectionByEmployee] = useState<
     Record<string, number[]>
@@ -172,6 +174,7 @@ export function BranchCountAssignmentsClient({
 
   function replaceScope(locationId: number | null, shiftId: number | null) {
     const params = new URLSearchParams();
+    if (embeddedInTeam) params.set("tab", "assignments");
     if (locationId != null) params.set("locationId", String(locationId));
     params.set("shiftId", shiftId == null ? ALL_SHIFTS_VALUE : String(shiftId));
     router.replace(`${basePath}?${params.toString()}`);

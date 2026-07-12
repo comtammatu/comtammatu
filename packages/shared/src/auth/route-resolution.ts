@@ -7,7 +7,6 @@ export const PUBLIC_APP_PATHS = [
   "/manifest.webmanifest",
   "/sw.js",
   "/access-denied",
-  "/payment/momo",
   "/q",
   "/api/self-order",
 ] as const;

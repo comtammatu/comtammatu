@@ -895,7 +895,6 @@ export const DOMAIN_ADAPTER_FAMILIES = {
       "EmployeeActionBar",
       "EmployeeActionGrid",
       "EmployeeInlineState",
-      "EmployeeBadgeList",
       "EmployeeStatusStrip",
       "EmployeeDetailList",
       "EmployeeActionSection",

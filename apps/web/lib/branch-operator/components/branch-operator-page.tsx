@@ -55,6 +55,7 @@ export interface BranchOperatorPageProps {
   description?: string;
   backHref?: string;
   backLabel?: string;
+  backOnClick?: ComponentProps<typeof AppBackLink>["onClick"];
   badge?: {
     children: ReactNode;
     variant?: BadgeProps["variant"];
@@ -68,6 +69,7 @@ export function BranchOperatorPage({
   description,
   backHref,
   backLabel,
+  backOnClick,
   badge,
   action,
   children,
@@ -84,7 +86,9 @@ export function BranchOperatorPage({
         actions={action}
         breadcrumb={
           backHref ? (
-            <AppBackLink href={backHref}>{backLabel}</AppBackLink>
+            <AppBackLink href={backHref} onClick={backOnClick}>
+              {backLabel}
+            </AppBackLink>
           ) : undefined
         }
       />
@@ -587,7 +591,7 @@ function BranchOperatorActionItem({
       variant="outline"
       size={size}
       className={cn(
-        "group/branch-operator-action chrome-tap items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-sm active:scale-[0.97]",
+        "group/branch-operator-action chrome-tap items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-effect-card-hover active:scale-[0.97]",
         presentation === "stations"
           ? "min-h-16 items-center sm:min-h-24 sm:items-start"
           : "min-h-14 lg:items-center",

@@ -7,14 +7,12 @@ export const PAYMENT_LABEL: Record<string, string> = {
   cash: "Tiền mặt",
   vietqr: "VietQR",
   bank_transfer: "Chuyển khoản",
-  momo: "MoMo",
 };
 
 export const PAYMENT_LABEL_FULL: Record<string, string> = {
   cash: "Tiền mặt",
   vietqr: "Chuyển khoản (VietQR)",
   bank_transfer: "Chuyển khoản",
-  momo: "MoMo",
   unknown: "Khác",
 };
 

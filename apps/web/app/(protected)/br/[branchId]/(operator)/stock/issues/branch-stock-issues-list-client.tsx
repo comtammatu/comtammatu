@@ -1,11 +1,9 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
   CirclePlus as IconCirclePlus,
   FileText as IconFileText,
@@ -48,7 +46,6 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -62,6 +59,7 @@ import {
   type BranchStockIssueType,
 } from "@lib/inventory/stock-issue-model";
 import { messages } from "@lib/messages";
+import { useOperatorUrlState } from "@lib/branch-operator/use-operator-url-state";
 import { createStockIssueDraft } from "@/(protected)/inventory/issue-actions";
 
 const issuesCopy = messages.inventory.issues;
@@ -96,12 +94,14 @@ function BranchStockIssueCreateSheet({
   branchName,
   open,
   permissions,
+  returnTo,
   onOpenChange,
 }: {
   branchId: number;
   branchName: string;
   open: boolean;
   permissions: BranchStockIssuePermissions;
+  returnTo: string;
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
@@ -139,7 +139,9 @@ function BranchStockIssueCreateSheet({
 
       toast.success(INVENTORY_VI.issueCreated);
       handleOpenChange(false);
-      router.push(`/br/${branchId}/stock/issues/${issueId}`);
+      router.push(
+        `/br/${branchId}/stock/issues/${issueId}?returnTo=${encodeURIComponent(returnTo)}`,
+      );
     });
   }
 
@@ -241,8 +243,15 @@ export function BranchStockIssuesListClient({
 }) {
   const stockBasePath = `/br/${branchId}/stock`;
   const issuesBasePath = `${stockBasePath}/issues`;
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<BranchStockIssueStatusFilter>("all");
+  const { replaceParams, searchParams } = useOperatorUrlState();
+  const search = searchParams.get("q") ?? "";
+  const statusParam = searchParams.get("status");
+  const status = statusOptions.some((option) => option.value === statusParam)
+    ? (statusParam as BranchStockIssueStatusFilter)
+    : "all";
+  const currentListHref = searchParams.size
+    ? `${issuesBasePath}?${searchParams.toString()}`
+    : issuesBasePath;
   const [createOpen, setCreateOpen] = useState(false);
   const createTypes = getBranchStockIssueCreateTypes(permissions);
   const filteredIssues = useMemo(
@@ -255,6 +264,8 @@ export function BranchStockIssuesListClient({
     <BranchOperatorPage
       title={INVENTORY_VI.issueSlipsTitle}
       description={branchName}
+      backHref={stockBasePath}
+      backLabel="Tồn"
       action={
         createTypes.length > 0 ? (
           <Button
@@ -269,32 +280,6 @@ export function BranchStockIssuesListClient({
       }
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={stockBasePath} aria-label="Quay lại kho">
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {INVENTORY_VI.issueSlipsTitle}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-          {createTypes.length > 0 ? (
-            <Button
-              type="button"
-              size="touch"
-              className="shrink-0"
-              onClick={() => setCreateOpen(true)}
-            >
-              {ACTIONS_VI.create}
-            </Button>
-          ) : null}
-        </BranchOperatorControlBar>
-
         <BranchOperatorPanel
           title={INVENTORY_VI.issueSlipsTitle}
           description={INVENTORY_VI.issueEmptyDescription}
@@ -314,13 +299,15 @@ export function BranchStockIssuesListClient({
                 name="branch-stock-issue-search"
                 placeholder={INVENTORY_VI.issueSearchPlaceholder}
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) =>
+                  replaceParams({ q: event.target.value || null })
+                }
               />
             </InputGroup>
             <Select
               value={status}
               onValueChange={(value) =>
-                setStatus(value as BranchStockIssueStatusFilter)
+                replaceParams({ status: value === "all" ? null : value })
               }
             >
               <SelectTrigger
@@ -373,7 +360,9 @@ export function BranchStockIssuesListClient({
                         : "min-h-16 touch-manipulation"
                     }
                   >
-                    <Link href={`${issuesBasePath}/${issue.id}`}>
+                    <Link
+                      href={`${issuesBasePath}/${issue.id}?returnTo=${encodeURIComponent(currentListHref)}`}
+                    >
                       <ItemContent className="min-w-0 gap-1">
                         <div className="flex min-w-0 items-center gap-2">
                           <ItemTitle className="truncate font-mono text-sm font-semibold">
@@ -407,6 +396,7 @@ export function BranchStockIssuesListClient({
         branchName={branchName}
         open={createOpen}
         permissions={permissions}
+        returnTo={currentListHref}
         onOpenChange={setCreateOpen}
       />
     </BranchOperatorPage>

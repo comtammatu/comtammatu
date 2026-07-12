@@ -1,29 +1,26 @@
-import { notFound } from "next/navigation";
-import { loadBranchCountAssignmentData } from "@lib/inventory/branch-count-assignment-data";
-import { BranchCountAssignmentsClient } from "./branch-count-assignments-client";
+import { notFound, redirect } from "next/navigation";
 
-interface PageProps {
+export default async function OperatorCountAssignmentsAlias({
+  params,
+  searchParams,
+}: {
   params: Promise<{ branchId: string }>;
   searchParams: Promise<{
     locationId?: string | string[];
     shiftId?: string | string[];
   }>;
-}
-
-export default async function OperatorCountAssignmentsPage({
-  params,
-  searchParams,
-}: PageProps) {
-  const { branchId: rawBranchId } = await params;
-  const query = await searchParams;
+}) {
+  const [{ branchId: rawBranchId }, query] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  const data = await loadBranchCountAssignmentData({
-    routeBranchId: branchId,
-    locationParam: query.locationId,
-    shiftParam: query.shiftId,
-  });
-
-  return <BranchCountAssignmentsClient data={data} />;
+  const target = new URLSearchParams({ tab: "assignments" });
+  for (const key of ["locationId", "shiftId"] as const) {
+    const value = Array.isArray(query[key]) ? query[key][0] : query[key];
+    if (value) target.set(key, value);
+  }
+  redirect(`/br/${branchId}/team?${target.toString()}`);
 }

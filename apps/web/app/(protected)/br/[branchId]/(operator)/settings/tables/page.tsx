@@ -59,6 +59,7 @@ export default async function BranchTablesSettingsPage({
       description={messages.settings.branch.tablesDescription(
         branchRes.data.name,
       )}
+      backHref={`/br/${branchId}/settings`}
     >
       <BranchOperatorPanel>
         <TablesClient

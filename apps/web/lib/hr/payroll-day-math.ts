@@ -88,40 +88,6 @@ export function buildCompletedWorkdays(
   return workdays;
 }
 
-export function summarizeLeaveDays(
-  leaves: readonly LeaveRange[],
-  periodStart: string,
-  periodEnd: string,
-): Map<number, { paidLeaveDays: number; unpaidLeaveDays: number }> {
-  const byEmployee = new Map<
-    number,
-    { paidLeaveDays: number; unpaidLeaveDays: number }
-  >();
-
-  for (const leave of leaves) {
-    const days = countOverlapDays(
-      leave.startDate,
-      leave.endDate,
-      periodStart,
-      periodEnd,
-    );
-    if (days === 0) continue;
-
-    const current = byEmployee.get(leave.employeeId) ?? {
-      paidLeaveDays: 0,
-      unpaidLeaveDays: 0,
-    };
-    if (leave.leaveType === "annual") {
-      current.paidLeaveDays += days;
-    } else {
-      current.unpaidLeaveDays += days;
-    }
-    byEmployee.set(leave.employeeId, current);
-  }
-
-  return byEmployee;
-}
-
 export function suggestAnnualLeaveEntitlement(
   startDate: string | null | undefined,
   year: number,

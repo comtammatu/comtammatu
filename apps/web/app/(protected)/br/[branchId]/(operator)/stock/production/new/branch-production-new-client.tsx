@@ -1,11 +1,9 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   Boxes as IconBoxes,
   ChefHat as IconChefHat,
   MapPin as IconMapPin,
@@ -45,7 +43,6 @@ import { Combobox } from "@/components/form/combobox";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { AppDetailFooter } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorInlineState,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -404,24 +401,11 @@ export function BranchProductionNewClient({
     <BranchOperatorPage
       title="Ghi nhận mẻ sản xuất"
       description="Ghi lại định làm, thực ra và thực chi trong một lần."
+      badge={{ children: readinessLabel, variant: "secondary" }}
+      backHref={basePath}
+      backLabel="Sản xuất"
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={basePath} aria-label="Quay lại Sản xuất">
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              Ghi nhận mẻ sản xuất
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {readinessLabel}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
-
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start">
           <div className="flex min-w-0 flex-col gap-3">
             <BranchOperatorPanel
@@ -742,12 +726,7 @@ export function BranchProductionNewClient({
               <BranchOperatorInlineState
                 tone="warning"
                 title="Thành phẩm chưa có công thức"
-                description="Cập nhật Công thức trước để kho trừ nguyên liệu đúng."
-                actions={
-                  <Button asChild size="touch" variant="outline">
-                    <Link href={`${basePath}/recipes`}>Mở Công thức</Link>
-                  </Button>
-                }
+                description="Chưa thể tạo lệnh sản xuất cho thành phẩm này."
               />
             )}
           </BranchOperatorPanel>

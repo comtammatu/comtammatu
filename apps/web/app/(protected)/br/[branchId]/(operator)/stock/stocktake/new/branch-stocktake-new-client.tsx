@@ -1,13 +1,9 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft as IconArrowLeft,
-  ClipboardCheck as IconClipboardCheck,
-} from "lucide-react";
+import { ClipboardCheck as IconClipboardCheck } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Label } from "@comtammatu/ui/components/label";
@@ -27,7 +23,6 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -46,11 +41,13 @@ const stocktakeCopy = messages.inventory.stocktake;
 export function BranchStocktakeNewClient({
   branchId,
   branchName,
+  backHref,
   canManage,
   locations,
 }: {
   branchId: number;
   branchName: string;
+  backHref: string;
   canManage: boolean;
   locations: BranchStocktakeLocation[];
 }) {
@@ -108,24 +105,10 @@ export function BranchStocktakeNewClient({
     <BranchOperatorPage
       title={stocktakeCopy.startTitle}
       description={stocktakeCopy.startDescription}
+      backHref={backHref}
+      backLabel="Kiểm kê"
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={stocktakeBasePath} aria-label="Quay lại kiểm kê">
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {stocktakeCopy.startTitle}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
-
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
           <BranchOperatorPanel
             title="Thiết lập phiên kiểm kê"

@@ -5,6 +5,9 @@ import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const notificationMigration = read(
+  "supabase/migrations/20260712010647_canonicalize_po_notification_action_url.sql",
+);
 
 test("purchase orders have no Branch or Office daily-use surface", () => {
   const operations = read(
@@ -92,4 +95,23 @@ test("historical PO references render as text and never reopen a retired route",
   for (const source of [grnList, grnDetail, supplierInvoices, dashboard]) {
     assert.doesNotMatch(source, /\/inventory\/purchase-orders|stock\/purchase-orders/);
   }
+});
+
+test("PO notifications use the canonical GRN route", () => {
+  const functionBody =
+    notificationMigration.match(
+      /(?:CREATE|CREATE OR REPLACE) FUNCTION public\.trg_notify_po_sent\(\)[\s\S]*?\n\$\$;/,
+    )?.[0] ?? "";
+  assert.notEqual(functionBody, "");
+  assert.match(functionBody, /'\/inventory\/grn'/);
+  assert.doesNotMatch(functionBody, /\/inventory\/purchase-orders/);
+  assert.match(functionBody, /SET search_path TO ''/);
+  assert.match(
+    notificationMigration,
+    /REVOKE ALL ON FUNCTION public\.trg_notify_po_sent\(\)[\s\S]*FROM PUBLIC, anon, authenticated/,
+  );
+  assert.match(
+    notificationMigration,
+    /UPDATE public\.notifications[\s\S]*kind = 'workflow\.po_sent'[\s\S]*action_url LIKE '\/inventory\/purchase-orders\/%'/,
+  );
 });

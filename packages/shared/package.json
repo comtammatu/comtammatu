@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
     "./auth": "./src/auth/index.ts",
     "./format": "./src/format/currency.ts",
     "./settings": "./src/settings/index.ts",

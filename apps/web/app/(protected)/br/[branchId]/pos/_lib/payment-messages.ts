@@ -20,13 +20,21 @@ import { POS_ERROR_CODES } from "../_utils/error-codes";
 /**
  * Mappings for `confirm_cash_payment_with_invoice_binding`, which delegates
  * the commercial close to `confirm_cash_payment` after self-order guards.
- * Order: under-payment / sane-bound checks first (most common operator
- * errors), then permission/tenant defence-in-depth (server-side gates
+ * Order: missing-RPC/schema drift before cash sentinels (PostgREST includes
+ * `p_cash_received` in that infrastructure error), then under-payment /
+ * sane-bound checks, then permission/tenant defence-in-depth (server-side gates
  * should never raise these in practice but UI must still show stable
  * copy), then the shared payment vocabulary, then a printer-config edge
  * case.
  */
 export const confirmCashPaymentRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: (msg, code) =>
+      code === "PGRST202" || msg.includes("could not find the function"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Chức năng thanh toán chưa sẵn sàng. Vui lòng liên hệ quản lý.",
+  },
   // Cash-specific sentinels first.
   {
     match: includesAny("self_order_payment_cancel_staff_required"),

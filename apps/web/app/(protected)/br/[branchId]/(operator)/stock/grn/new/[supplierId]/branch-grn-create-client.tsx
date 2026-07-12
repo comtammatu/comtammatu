@@ -40,7 +40,6 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -54,45 +53,33 @@ import { messages } from "@lib/messages";
 
 interface BranchGrnCreateClientProps extends GrnCreatePageData {
   sourceBasePath: string;
+  backHref: string;
   grnBasePath: string;
+  returnTo: string;
 }
 
 export function BranchGrnCreateClient({
   sourceBasePath,
+  backHref,
   grnBasePath,
+  returnTo,
   ...data
 }: BranchGrnCreateClientProps) {
   const controller = useGrnCreateController({
     ...data,
     basePath: sourceBasePath,
     grnBasePath,
+    returnTo,
   });
 
   return (
     <BranchOperatorPage
       title={GRN_CREATE_COPY.newReceiptEyebrow}
       description={GRN_CREATE_COPY.newReceiptDescription}
+      backHref={backHref}
+      backLabel={GRN_CREATE_COPY.changeSupplier}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link
-              href={sourceBasePath}
-              aria-label={GRN_CREATE_COPY.changeSupplier}
-            >
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {GRN_CREATE_COPY.newReceiptEyebrow}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {controller.supplier.name}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
-
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start">
           <div className="flex min-w-0 flex-col gap-3">
             <BranchOperatorPanel

@@ -27,7 +27,11 @@ export default async function TeamBoardPage({
   searchParams,
 }: {
   params: Promise<{ branchId: string }>;
-  searchParams?: Promise<{ tab?: string }>;
+  searchParams?: Promise<{
+    tab?: string;
+    locationId?: string | string[];
+    shiftId?: string | string[];
+  }>;
 }) {
   const { branchId: rawBranchId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : {};
@@ -110,7 +114,11 @@ export default async function TeamBoardPage({
       }
       assignments={
         canAssignCount ? (
-          <TeamAssignmentsContent branchId={context.branchId} />
+          <TeamAssignmentsContent
+            branchId={context.branchId}
+            locationParam={resolvedSearchParams.locationId}
+            shiftParam={resolvedSearchParams.shiftId}
+          />
         ) : (
           <AppEmptyState mode="no-access" />
         )

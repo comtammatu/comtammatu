@@ -86,10 +86,10 @@ test("operator header shows branch context and keeps high-signal actions", () =>
   assert.doesNotMatch(layout, /Hub \$\{hubLabel\}/);
   assert.match(appHeader, /homeHref\?: string/);
   assert.match(appHeader, /<Link[\s\S]*href=\{href\}/);
+  assert.match(appHeader, /href && "min-h-11"/);
   assert.match(appHeader, /"min-h-11 min-w-11 shrink-0 justify-center"/);
-  assert.match(layout, /IconLayoutDashboard/);
-  assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/dashboard`\}/);
-  assert.match(layout, /aria-label=\{APP_COPY_VI\.branchCommand\}/);
+  assert.doesNotMatch(layout, /IconLayoutDashboard/);
+  assert.doesNotMatch(layout, /\/dashboard|APP_COPY_VI\.branchCommand/);
   assert.doesNotMatch(layout, /IconUser/);
   assert.doesNotMatch(
     layout,
@@ -113,7 +113,7 @@ test("operator header shows branch context and keeps high-signal actions", () =>
   assert.doesNotMatch(layout, /shift\/profile/);
 });
 
-test("operator install hint dismissal persists across navigation", () => {
+test("operator install hint stays on Home and dismissal persists", () => {
   const operatorToolbar = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/operator-pwa-toolbar.tsx",
   );
@@ -125,6 +125,18 @@ test("operator install hint dismissal persists across navigation", () => {
   assert.match(
     operatorToolbar,
     /dismissStorageKey="matu-operator-install-dismissed"/,
+  );
+  assert.match(operatorToolbar, /const isOnline = useIsOnline\(\)/);
+  assert.match(operatorToolbar, /const isOperatorHome = \/\^\\\/br/);
+  assert.match(
+    operatorToolbar,
+    /if \(isOnline && !isOperatorHome\) return null/,
+  );
+  assert.equal(
+    (sharedToolbar.match(
+      /size="icon-touch"\s+className="shrink-0 text-muted-foreground"\s+onClick=\{handleDismiss\}\s+aria-label=\{copy\.dismissLabel\}/g,
+    ) ?? []).length,
+    2,
   );
   assert.match(containedLayout, /onClick=\{handleDismiss\}/);
   assert.doesNotMatch(
@@ -167,7 +179,7 @@ test("operator pages keep visible mobile identity and one shared back contract",
   assert.doesNotMatch(adapter, /hideHeaderOnMobile|sr-only sm:not-sr-only/);
   assert.match(adapter, /data-slot="branch-operator-page"/);
   assert.match(adapter, /backHref\?: string/);
-  assert.match(adapter, /<AppBackLink href=\{backHref\}>/);
+  assert.match(adapter, /<AppBackLink href=\{backHref\} onClick=\{backOnClick\}>/);
   assert.doesNotMatch(home, /hideHeaderOnMobile/);
   assert.doesNotMatch(stock, /hideHeaderOnMobile/);
   assert.match(catalog, /<BranchOperatorPage/);
@@ -282,15 +294,19 @@ test("operator shift route renders the Branch workday plane", () => {
   assert.match(operatorCopy, /shiftTasks: \{/);
 });
 
-test("operator stock count route renders the Branch count plane", () => {
-  const stockCount = read(
+test("operator shift count route renders the Branch count plane", () => {
+  const stockCountAlias = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx",
+  );
+  const shiftCount = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/count/page.tsx",
   );
   const countSurface = read("apps/web/lib/staff-runtime/count/page.tsx");
 
-  assert.match(stockCount, /StaffCountPageContent/);
-  assert.match(stockCount, /plane="branch"/);
-  assert.doesNotMatch(stockCount, /EmployeeCountPageContent/);
+  assert.match(stockCountAlias, /redirect\(`\/br\/\$\{branchId\}\/shift\/count/);
+  assert.match(shiftCount, /StaffCountPageContent/);
+  assert.match(shiftCount, /plane="branch"/);
+  assert.doesNotMatch(shiftCount, /EmployeeCountPageContent/);
   assert.match(countSurface, /BranchOperatorPage/);
   assert.match(countSurface, /BranchOperatorPanel/);
   assert.match(countSurface, /props\.plane === "branch"/);
@@ -404,7 +420,6 @@ test("branch management roots use Branch operator shell adapters", () => {
   );
 
   for (const path of [
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/team/page.tsx",
@@ -424,6 +439,11 @@ test("branch management roots use Branch operator shell adapters", () => {
     assert.doesNotMatch(source, /BranchManagementShell/);
     assert.doesNotMatch(source, /management-chrome/);
   }
+
+  assert.match(
+    read("apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx"),
+    /redirect\(`\/br\/\$\{branchId\}`\)/,
+  );
 });
 
 test("pre-clock-in gate disables floor tiles instead of hiding them", () => {
@@ -452,34 +472,17 @@ test("operator home keeps KPI overview out of the Hub", () => {
   assert.doesNotMatch(home, /KpiCard|HubOverview|fetchBranchDayStatus/);
 });
 
-test("branch dashboard renders command lanes instead of Office-style KPI summary", () => {
+test("branch dashboard is a compatibility alias for the single command home", () => {
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
-  const commandConfig = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
+  const home = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
 
-  assert.match(dashboard, /tileGroups\.liveOperations/);
-  assert.ok(
-    dashboard.indexOf("tileGroups.liveOperations") <
-      dashboard.indexOf("copy.readinessTitle"),
-    "Live operation lane should render before readiness status",
-  );
-  assert.doesNotMatch(
-    dashboard,
-    /KpiRow|KpiCard|formatVND|dayRevenueLabel|dayPaidOrdersLabel|dayTablesLabel|dayKitchenLabel/,
-  );
-  assert.match(commandConfig, /liveOperations:/);
-  for (const moduleKey of [
-    "pos",
-    "kds",
-    "runner",
-    "branch_menu_limits",
-    "orders",
-  ]) {
-    assert.match(commandConfig, new RegExp(`moduleKey: "${moduleKey}"`));
-  }
+  assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
+  assert.match(home, /<HubReadinessSection/);
+  assert.doesNotMatch(dashboard, /KpiRow|KpiCard|tileGroups/);
 });
 
 test("branch settings hub stays a setup-only Branch operator surface", () => {
@@ -696,9 +699,6 @@ test("operator today shift and profile screens use responsive branch layout", ()
   assert.doesNotMatch(operatorProfile, /permissions/);
   assert.doesNotMatch(operatorProfile, /showWorkspaceLinks/);
   assert.doesNotMatch(profile, /showWorkspaceLinks/);
-  assert.doesNotMatch(profile, /resolveQuickLaunchGroups/);
-  assert.doesNotMatch(profile, /EmployeeActionSection/);
-  assert.doesNotMatch(profile, /EmployeeHomePageContent/);
   assert.doesNotMatch(profile, /attendance_records/);
   assert.doesNotMatch(profile, /bank_account/);
   assert.match(profile, /<EmployeePanel tone="info" size="sm">/);
@@ -756,6 +756,14 @@ test("operator today shift and profile screens use responsive branch layout", ()
   assert.doesNotMatch(profile, /useIsMobile/);
   assert.match(profile, /ProfileEditAction/);
   assert.match(profile, /ProfileAvatarAction/);
+  assert.match(
+    profile,
+    /<ProfileAvatarAction[\s\S]*?buttonSize="touch"[\s\S]*?buttonVariant="outline"/,
+  );
+  assert.match(
+    profile,
+    /className="inline-flex min-h-11 items-center text-primary hover:underline"/,
+  );
   assert.doesNotMatch(profile, /profile-edit-dialog/);
   assert.doesNotMatch(profile, /profile-avatar-upload/);
   assert.match(profileActions, /dynamic<ProfileEditActionProps>/);

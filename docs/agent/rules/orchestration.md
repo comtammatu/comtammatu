@@ -54,7 +54,13 @@ When reviewers disagree:
 
 ## Context And Learning
 
+- Keep one outcome per task. Start a new task after a completed slice when the
+  objective changes instead of carrying stale exploration and logs forward.
 - Keep prompts small and load only relevant regression/lesson rows.
+- Before compaction or handoff, preserve owned files, decisions, verification,
+  blockers, and the next action; omit reproducible logs and copied source text.
+- Disable unrelated MCP/plugin surfaces when the runtime supports task-scoped
+  toggles; re-enable them only for a concrete need.
 - Durable explanation belongs in its owning rule/module/ref/spec; recurring
   deterministic failures belong in a guard/test; transient notes stay in PR/task
   history.

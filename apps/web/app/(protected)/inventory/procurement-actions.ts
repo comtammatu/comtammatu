@@ -14,7 +14,6 @@ export {
 } from "./supplier-actions";
 
 export {
-  fetchRecentActivity,
   fetchGrns,
   fetchGrnIdsForDropdown,
   fetchGrnDetail,
@@ -34,4 +33,3 @@ export {
   upsertRecipeLines,
   fetchMenuItemsForRecipes,
 } from "./recipe-actions";
-export type { RecentActivityItem } from "./grn-actions";

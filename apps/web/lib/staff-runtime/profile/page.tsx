@@ -145,7 +145,7 @@ export async function StaffProfilePageContent({
 
                 <ProfileAvatarAction
                   branchId={effectiveBranchId}
-                  buttonSize="sm"
+                  buttonSize="touch"
                   buttonVariant="outline"
                   className="w-full sm:w-28"
                 />
@@ -183,7 +183,7 @@ export async function StaffProfilePageContent({
                   value: phone ? (
                     <a
                       aria-label={`${copy.phone}: ${phone}`}
-                      className="text-primary hover:underline"
+                      className="inline-flex min-h-11 items-center text-primary hover:underline"
                       href={`tel:${phone.replace(/\s+/g, "")}`}
                     >
                       {phone}
@@ -203,7 +203,7 @@ export async function StaffProfilePageContent({
                   value: email ? (
                     <a
                       aria-label={`${copy.email}: ${email}`}
-                      className="text-primary hover:underline"
+                      className="inline-flex min-h-11 items-center text-primary hover:underline"
                       href={`mailto:${email}`}
                     >
                       {email}

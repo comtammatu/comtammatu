@@ -676,7 +676,7 @@ export async function exportMenu(
     return {
       success: true,
       data: {
-        filename: `menu-mon-an-${stamp}.csv`,
+        filename: `menu-items-${stamp}.csv`,
         base64: stringToBase64(csv),
         format: "csv",
       },

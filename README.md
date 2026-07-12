@@ -11,16 +11,16 @@ Mô hình vận hành production: **Tenant → Chi nhánh**.
 
 ## Modules
 
-| #   | Module               | Scope                                                                                     | Status  |
-| --- | -------------------- | ----------------------------------------------------------------------------------------- | ------- |
-| M0  | Khung quản trị       | Buồng lái điều hành, sidebar, foundation, báo cáo điều hành                               | SHIPPED |
-| M1  | Menu                 | Categories, items, variants, modifiers, sides                                             | SHIPPED |
-| M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                                  | SHIPPED |
-| M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                      | SHIPPED |
-| M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm) + Momo (IPN webhook). All live in production.   | SHIPPED |
-| M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, branch production               | SHIPPED |
+| #   | Module               | Scope                                                                                                | Status  |
+| --- | -------------------- | ---------------------------------------------------------------------------------------------------- | ------- |
+| M0  | Khung quản trị       | Buồng lái điều hành, sidebar, foundation, báo cáo điều hành                                          | SHIPPED |
+| M1  | Menu                 | Categories, items, variants, modifiers, sides                                                        | SHIPPED |
+| M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                                             | SHIPPED |
+| M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                                 | SHIPPED |
+| M4  | Payment              | Cash + VietQR (EMVCo QR, SePay/cashier confirmation)                                                 | SHIPPED |
+| M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, branch production                          | SHIPPED |
 | M6  | Finance              | Finance Basic, HĐĐT HKD, reconciliation, accountant export. Enterprise COA/Journal outside HKD scope | PARTIAL |
-| M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip, payroll calc. BHXH/PIT export/reconcile partial | PARTIAL |
+| M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip, payroll calc. BHXH/PIT export/reconcile partial           | PARTIAL |
 
 Active tracker: [`tasks/todo.md`](tasks/todo.md).
 
@@ -64,20 +64,20 @@ scripts/            # SQL seeds, lint helpers
 
 ## URL Routes
 
-| Path                        | Audience          | Surface                                                 |
-| --------------------------- | ----------------- | ------------------------------------------------------- |
-| `/login`                    | Public            | Authentication                                          |
-| `/admin/*`                  | Manager+          | Dashboard, settings, staff, reports                     |
-| `/menu`                     | Manager+          | Menu CRUD                                               |
-| `/inventory/*`              | Inventory roles   | Canonical inventory hub (PO, GRN, stocktake…)           |
-| `/finance/*`                | Finance roles     | Finance Basic, tiền đã thu, food-cost, chi phí, HĐĐT    |
-| `/hr/*`                     | HR/payroll        | Payroll periods, payslips                               |
-| `/orders`                   | Manager+          | Cross-branch order browser                              |
-| `/notifications`            | All staff         | Notification center                                     |
-| `/br/[branchId]/*`          | All staff         | Operator hub (Hôm nay · Ca · Lịch · Tôi) + `stock/*`    |
-| `/br/[branchId]/pos`        | Cashier / service | Point of Sale (PWA installable)                         |
-| `/br/[branchId]/kds`        | Chef              | Kitchen Display                                         |
-| `/br/[branchId]/settings/*` | Branch manager+   | Per-branch POS, tables, printers                        |
+| Path                        | Audience          | Surface                                              |
+| --------------------------- | ----------------- | ---------------------------------------------------- |
+| `/login`                    | Public            | Authentication                                       |
+| `/admin/*`                  | Manager+          | Dashboard, settings, staff, reports                  |
+| `/menu`                     | Manager+          | Menu CRUD                                            |
+| `/inventory/*`              | Inventory roles   | Canonical inventory hub (PO, GRN, stocktake…)        |
+| `/finance/*`                | Finance roles     | Finance Basic, tiền đã thu, food-cost, chi phí, HĐĐT |
+| `/hr/*`                     | HR/payroll        | Payroll periods, payslips                            |
+| `/orders`                   | Manager+          | Cross-branch order browser                           |
+| `/notifications`            | All staff         | Notification center                                  |
+| `/br/[branchId]/*`          | All staff         | Operator hub (Hôm nay · Ca · Lịch · Tôi) + `stock/*` |
+| `/br/[branchId]/pos`        | Cashier / service | Point of Sale (PWA installable)                      |
+| `/br/[branchId]/kds`        | Chef              | Kitchen Display                                      |
+| `/br/[branchId]/settings/*` | Branch manager+   | Per-branch POS, tables, printers                     |
 
 Auth + ACL được enforce tại [`apps/web/proxy.ts`](apps/web/proxy.ts) qua Auth v2 (Position ⟂ Permission, RLS-first). Route catalog: [`packages/shared/src/auth/module-acl.ts`](packages/shared/src/auth/module-acl.ts).
 
@@ -116,18 +116,18 @@ pnpm --filter @comtammatu/web guides:capture     # Capture POS flow screenshots
 
 ## Documentation
 
-| Doc                                                            | Purpose                                        |
-| -------------------------------------------------------------- | ---------------------------------------------- |
-| [`AGENTS.md`](AGENTS.md)                                       | Canonical agent entrypoint + rule loading      |
-| [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index        |
-| [`tasks/todo.md`](tasks/todo.md)                               | Greenfield preparation gate tracker            |
+| Doc                                                            | Purpose                                       |
+| -------------------------------------------------------------- | --------------------------------------------- |
+| [`AGENTS.md`](AGENTS.md)                                       | Canonical agent entrypoint + rule loading     |
+| [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index       |
+| [`tasks/todo.md`](tasks/todo.md)                               | Greenfield preparation gate tracker           |
 | [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Legacy decision index; no backlog             |
-| [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                            |
-| [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                      |
-| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | UI design-system SSOT / Custom Theme contract  |
-| [`docs/modules/auth.md`](docs/modules/auth.md)                 | Auth v2 — Position ⟂ Permission model          |
-| [`docs/ref/setup.md`](docs/ref/setup.md)                       | Minimal local project setup                    |
-| [`tasks/regressions.md`](tasks/regressions.md)                 | Named regression rules — read before refactor  |
+| [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                           |
+| [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                     |
+| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | UI design-system SSOT / Custom Theme contract |
+| [`docs/modules/auth.md`](docs/modules/auth.md)                 | Auth v2 — Position ⟂ Permission model         |
+| [`docs/ref/setup.md`](docs/ref/setup.md)                       | Minimal local project setup                   |
+| [`tasks/regressions.md`](tasks/regressions.md)                 | Named regression rules — read before refactor |
 
 ## License
 

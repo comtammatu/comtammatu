@@ -202,7 +202,6 @@ export interface BranchQueueCounts {
   pendingWaste: number | null;
   draftGrns: number | null;
   draftProductionOrders: number | null;
-  inboundTransfers: number | null;
 }
 
 /**
@@ -226,7 +225,6 @@ export async function fetchBranchQueueCounts(
     wastePermission,
     grnPermission,
     productionPermission,
-    transferPermission,
   ] = await Promise.all([
     supabase.rpc("has_permission", {
       p_branch_id: branchId,
@@ -252,10 +250,6 @@ export async function fetchBranchQueueCounts(
       p_branch_id: branchId,
       p_key: PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
     }),
-    supabase.rpc("has_permission", {
-      p_branch_id: branchId,
-      p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
-    }),
   ]);
   const [
     checkoutRes,
@@ -264,7 +258,6 @@ export async function fetchBranchQueueCounts(
     wasteRes,
     draftGrnRes,
     draftProductionRes,
-    inboundTransferRes,
   ] = await Promise.all([
       checkoutPermission.data === true
         ? service
@@ -316,14 +309,6 @@ export async function fetchBranchQueueCounts(
             .eq("branch_id", branchId)
             .in("status", ["draft", "in_progress"])
         : Promise.resolve(null),
-      transferPermission.data === true
-        ? supabase
-            .from("stock_transfers")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("to_branch_id", branchId)
-            .in("status", ["confirmed_ship", "in_transit"])
-        : Promise.resolve(null),
     ]);
 
   return {
@@ -334,9 +319,6 @@ export async function fetchBranchQueueCounts(
     draftGrns: draftGrnRes ? (draftGrnRes.count ?? 0) : null,
     draftProductionOrders: draftProductionRes
       ? (draftProductionRes.count ?? 0)
-      : null,
-    inboundTransfers: inboundTransferRes
-      ? (inboundTransferRes.count ?? 0)
       : null,
   };
 }

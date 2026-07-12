@@ -380,7 +380,6 @@ test("resolvePostLoginRedirect → branch_manager can enter HR shifts but not pa
 test("isPublicAppPath PWA manifests and Runner display bypass auth proxy", () => {
   assert.equal(isPublicAppPath("/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/sw.js"), true);
-  assert.equal(isPublicAppPath("/payment/momo/return"), true);
   assert.equal(isPublicAppPath("/q/table-token-123"), true);
   assert.equal(isPublicAppPath("/api/self-order/table-token-123"), true);
   assert.equal(

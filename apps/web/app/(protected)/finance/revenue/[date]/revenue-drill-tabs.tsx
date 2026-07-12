@@ -32,7 +32,6 @@ const ORDER_TYPE_LABEL: Record<string, string> = {
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
   cash: "Tiền mặt",
   vietqr: "VietQR",
-  momo: "MoMo",
 };
 
 interface RevenueDrillTabsProps {

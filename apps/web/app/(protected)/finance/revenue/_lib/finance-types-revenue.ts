@@ -15,7 +15,6 @@ export interface RollupRow {
   discount_amount: number | null;
   cash_revenue: number | null;
   vietqr_revenue: number | null;
-  momo_revenue: number | null;
   dine_in_revenue: number | null;
   takeaway_revenue: number | null;
 }
@@ -30,7 +29,6 @@ export interface KpiBundle {
   order_count: number;
   cash_revenue: number;
   vietqr_revenue: number;
-  momo_revenue: number;
   dine_in_revenue: number;
   takeaway_revenue: number;
   voided_amount: number;

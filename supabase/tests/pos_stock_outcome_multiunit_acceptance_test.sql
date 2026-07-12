@@ -83,71 +83,56 @@ BEGIN
   RETURNING id INTO v_station;
 
   INSERT INTO public.units (tenant_id, code, name)
-  VALUES (v_tenant, '__g5_part_' || gen_random_uuid()::text, 'Phan')
+  VALUES (v_tenant, 'g5_part_' || replace(gen_random_uuid()::text, '-', ''), 'Phan')
   RETURNING id INTO v_part_unit;
 
   INSERT INTO public.units (tenant_id, code, name)
-  VALUES (v_tenant, '__g5_pack_' || gen_random_uuid()::text, 'Bich')
+  VALUES (v_tenant, 'g5_pack_' || replace(gen_random_uuid()::text, '-', ''), 'Bich')
   RETURNING id INTO v_pack_unit;
 
   INSERT INTO public.ingredients (
-    tenant_id, name, sku, unit, purchase_unit, measure_unit,
-    purchase_to_measure_factor, unit_cost, item_kind
+    tenant_id, name, sku, unit_cost, item_kind
   )
   VALUES (
     v_tenant,
     '__g5_suon_cot_let_finished_good_' || gen_random_uuid()::text,
     '__G5-FG-' || floor(random() * 1000000)::text,
-    'Phan',
-    'Phan',
-    'Phan',
-    1,
     10000,
     'finished_good'
   )
   RETURNING id INTO v_ingredient;
 
   INSERT INTO public.ingredients (
-    tenant_id, name, sku, unit, purchase_unit, measure_unit,
-    purchase_to_measure_factor, unit_cost, item_kind
+    tenant_id, name, sku, unit_cost, item_kind
   )
   VALUES (
     v_tenant,
     '__g5_trung_finished_good_' || gen_random_uuid()::text,
     '__G5-EGG-' || floor(random() * 1000000)::text,
-    'Phan',
-    'Phan',
-    'Phan',
-    1,
     3000,
     'finished_good'
   )
   RETURNING id INTO v_side_ingredient;
 
   INSERT INTO public.ingredients (
-    tenant_id, name, sku, unit, purchase_unit, measure_unit,
-    purchase_to_measure_factor, unit_cost, item_kind
+    tenant_id, name, sku, unit_cost, item_kind
   )
   VALUES (
     v_tenant,
     '__g5_drink_stock_item_' || gen_random_uuid()::text,
     '__G5-DRINK-' || floor(random() * 1000000)::text,
-    'Phan',
-    'Phan',
-    'Phan',
-    1,
     12000,
     'finished_good'
   )
   RETURNING id INTO v_drink_ingredient;
 
   INSERT INTO public.ingredient_units
-    (tenant_id, ingredient_id, unit_id, to_base_factor, is_base, allow_issue, allow_production)
+    (tenant_id, ingredient_id, unit_id, to_base_factor, is_base)
   VALUES
-    (v_tenant, v_ingredient, v_part_unit, 1, true, true, true),
-    (v_tenant, v_ingredient, v_pack_unit, 20, false, true, true),
-    (v_tenant, v_side_ingredient, v_part_unit, 1, true, true, true),
-    (v_tenant, v_drink_ingredient, v_part_unit, 1, true, true, true);
+    (v_tenant, v_ingredient, v_part_unit, 1, true),
+    (v_tenant, v_ingredient, v_pack_unit, 20, false),
+    (v_tenant, v_side_ingredient, v_part_unit, 1, true),
+    (v_tenant, v_drink_ingredient, v_part_unit, 1, true);
 
   INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
   VALUES (v_tenant, v_category, '__g5_stock_limit_item_' || gen_random_uuid()::text, 45000, 1)
@@ -170,20 +155,20 @@ BEGIN
   RETURNING id INTO v_empty_menu;
 
   INSERT INTO public.recipes
-    (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, yield_factor)
-  VALUES (v_tenant, v_limit_menu, v_ingredient, 1, 'Bich', v_pack_unit, 1);
+    (tenant_id, menu_item_id, ingredient_id, quantity, entry_unit_id, yield_factor)
+  VALUES (v_tenant, v_limit_menu, v_ingredient, 1, v_pack_unit, 1);
 
   INSERT INTO public.recipes
-    (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, yield_factor)
-  VALUES (v_tenant, v_pool_menu, v_ingredient, 1, 'Bich', v_pack_unit, 1);
+    (tenant_id, menu_item_id, ingredient_id, quantity, entry_unit_id, yield_factor)
+  VALUES (v_tenant, v_pool_menu, v_ingredient, 1, v_pack_unit, 1);
 
   INSERT INTO public.recipes
-    (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, yield_factor)
-  VALUES (v_tenant, v_side_menu, v_side_ingredient, 1, 'Phan', v_part_unit, 1);
+    (tenant_id, menu_item_id, ingredient_id, quantity, entry_unit_id, yield_factor)
+  VALUES (v_tenant, v_side_menu, v_side_ingredient, 1, v_part_unit, 1);
 
   INSERT INTO public.recipes
-    (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, yield_factor)
-  VALUES (v_tenant, v_drink_menu, v_drink_ingredient, 1, 'Phan', v_part_unit, 1);
+    (tenant_id, menu_item_id, ingredient_id, quantity, entry_unit_id, yield_factor)
+  VALUES (v_tenant, v_drink_menu, v_drink_ingredient, 1, v_part_unit, 1);
 
   SELECT il.id INTO v_location
   FROM public.inventory_locations il
@@ -195,7 +180,31 @@ BEGIN
   LIMIT 1;
 
   IF v_location IS NULL THEN
-    RAISE EXCEPTION 'TEST SETUP FAILED: active branch warehouse missing for %', v_branch;
+    INSERT INTO public.inventory_locations (
+      tenant_id,
+      branch_id,
+      code,
+      name,
+      location_kind,
+      is_active,
+      is_default_receive,
+      is_default_issue,
+      is_default_consumption,
+      sort_order
+    )
+    VALUES (
+      v_tenant,
+      v_branch,
+      'g5_warehouse_' || replace(gen_random_uuid()::text, '-', ''),
+      'G5 Warehouse',
+      'warehouse',
+      true,
+      true,
+      true,
+      true,
+      999
+    )
+    RETURNING id INTO v_location;
   END IF;
 
   INSERT INTO public.stock_levels (

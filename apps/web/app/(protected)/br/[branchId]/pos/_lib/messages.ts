@@ -22,20 +22,6 @@ import type { AfterSuccessHook } from "@/_lib/with-action";
 import { POS_ERROR_CODES } from "../_utils/error-codes";
 import type { ReduceItemInput, VoidItemInput } from "./schemas";
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/*  sendToKitchen — partial-send warning vocabulary                           */
-/* ────────────────────────────────────────────────────────────────────────── */
-
-/**
- * Shown when `route_order_to_kds` returns without raising but left one or more
- * order items unrouted (no KDS station, no fallback station, no kitchen-ticket
- * printer for their category). The send is reported as a warning — not a green
- * success — so the counter knows the kitchen did not receive every item and can
- * alert the manager to fix the station/printer routing.
- */
-export const KITCHEN_PARTIAL_SEND_WARNING =
-  "Một số món chưa vào bếp — chưa cấu hình trạm bếp hoặc máy in cho nhóm món này. Báo quản lý kiểm tra.";
-
 type DailyLimitConflictReason =
   | "daily_limit_item_disabled"
   | "daily_limit_exceeded";

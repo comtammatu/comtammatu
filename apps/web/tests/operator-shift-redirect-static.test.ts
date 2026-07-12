@@ -150,8 +150,10 @@ test("operator checkout approvals render the branch approvals plane", () => {
   );
 });
 
-test("operator stock count renders the branch count plane", () => {
+test("operator shift count owns the branch count plane", () => {
   const path =
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/count/page.tsx";
+  const aliasPath =
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx";
 
   assert.equal(exists(path), true, path);
@@ -164,9 +166,14 @@ test("operator stock count renders the branch count plane", () => {
     path,
   );
   assert.ok(source.includes("routeBranchId={branchId}"), path);
+  assert.ok(source.includes("baseHref={`/br/${branchId}/shift/count`}"), path);
   assert.doesNotMatch(source, /hideHeaderOnMobile/, path);
   assert.ok(source.includes('plane="branch"'), path);
   assert.doesNotMatch(source, /redirect\(`\/inventory\/stocktake/);
+
+  const aliasSource = read(aliasPath);
+  assert.match(aliasSource, /\/br\/\$\{branchId\}\/shift\/count\$\{suffix\}/);
+  assert.match(aliasSource, /encodeURIComponent\(location\)/);
 });
 
 test("employee count client keeps location changes on the current route", () => {
@@ -285,7 +292,7 @@ test("operator shift landing renders the shared cockpit with branch-scoped route
       segment,
     );
   }
-  assert.ok(source.includes("count: `/br/${branchId}/stock/count`"));
+  assert.ok(source.includes("count: `/br/${branchId}/shift/count`"));
   assert.ok(source.includes("profile: `/br/${branchId}/profile`"));
   assert.doesNotMatch(source, /shift\/profile/);
   assert.doesNotMatch(source, /shift\/schedule\/leave/);

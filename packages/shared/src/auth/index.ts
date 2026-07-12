@@ -30,8 +30,6 @@ export {
   PERMISSION_KEYS,
   PERMISSION_KEY_COUNT,
   hasPermission,
-  hasAllPermissions,
-  hasAnyPermission,
 } from "./permissions";
 export {
   extractClaimsFromAccessToken,
@@ -75,7 +73,6 @@ export type {
 } from "./operator-capabilities";
 export { resolveOperatorTiles } from "./operator-capabilities";
 export type {
-  QuickLaunchGroup,
   ResolvedNavGroup,
   ResolvedHomeLink,
   ResolvedNavLink,
@@ -83,9 +80,7 @@ export type {
 export {
   resolveAdminNavGroups,
   resolveBranchManagementItems,
-  resolveBranchOperationItems,
   resolveNavLink,
-  resolveQuickLaunchGroups,
   resolveRoleHomeLink,
   resolveWorkspaceItems,
 } from "./nav-resolution";
@@ -105,6 +100,7 @@ export {
   resolveWorkspaceDiscoveryGroup,
 } from "./app-discovery";
 export type {
+  OperatorTab,
   RouteBackBehavior,
   RouteFamilyContract,
   RoutePrimaryNav,
@@ -112,6 +108,7 @@ export type {
 } from "./route-map";
 export {
   ROUTE_FAMILY_CONTRACTS,
+  resolveOperatorTab,
   resolveRouteFamilyContract,
 } from "./route-map";
 export {

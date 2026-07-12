@@ -59,17 +59,6 @@ test("login action passes device context into post-login redirect", () => {
   );
 });
 
-test("post-login redirect call sites no longer resolve a central-site home branch", () => {
-  for (const path of [
-    "apps/web/app/(public)/(auth)/login/actions.ts",
-    "apps/web/proxy.ts",
-  ]) {
-    const source = read(path);
-    assert.doesNotMatch(source, /resolveCentralSiteHomeBranchId/, path);
-    assert.doesNotMatch(source, /homeBranchId/, path);
-  }
-});
-
 test("proxy no longer carries /employee compatibility redirects", () => {
   const proxy = read("apps/web/proxy.ts");
 
@@ -139,9 +128,7 @@ test("native branch hub pages use the Branch operator interface contract", () =>
   );
   const nativePages = [
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/page.tsx",
@@ -178,6 +165,15 @@ test("native branch hub pages use the Branch operator interface contract", () =>
       path,
     );
   }
+
+  assert.match(
+    read("apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx"),
+    /BranchStockOnHandClient/,
+  );
+  assert.match(
+    read("apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx"),
+    /redirect\(`\/br\/\$\{branchId\}`\)/,
+  );
 });
 
 test("employee pages no longer run page-level branch runtime redirects", () => {

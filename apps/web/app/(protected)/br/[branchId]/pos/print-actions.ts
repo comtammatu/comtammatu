@@ -4,7 +4,6 @@ import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
-import { KITCHEN_PARTIAL_SEND_WARNING } from "./_lib/messages";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 
@@ -40,95 +39,6 @@ async function isPrintAgentOffline(
   const lastSeenAt = data?.last_seen_at;
   if (typeof lastSeenAt !== "string") return true;
   return Date.now() - new Date(lastSeenAt).getTime() >= AGENT_OFFLINE_THRESHOLD_MS;
-}
-
-type KitchenEnqueueResult = {
-  order_id: number;
-  send_seq: number | null;
-  jobs: Array<{
-    slot: number;
-    printer_id: number;
-    job_id: number;
-    item_count: number;
-  }>;
-  deferred_to?: "kds_completion";
-};
-
-type RemainingKitchenItem = {
-  kds_tickets: Array<{ id: number }> | null;
-};
-
-export async function sendToKitchen(
-  orderId: number,
-): Promise<ActionResult<KitchenEnqueueResult>> {
-  const parsed = orderIdSchema.safeParse(orderId);
-  if (!parsed.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_SEND_KITCHEN,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền gửi bếp" };
-
-  const { supabase, claims } = ctx;
-
-  const { data: order, error } = await supabase
-    .from("orders")
-    .select("id, kitchen_send_count")
-    .eq("id", parsed.data)
-    .eq("tenant_id", claims.tenant_id)
-    .maybeSingle();
-
-  if (error) {
-    return {
-      success: false,
-      error: "Không thể gửi bếp. Vui lòng thử lại.",
-    };
-  }
-
-  if (!order) {
-    return {
-      success: false,
-      error: "Không tìm thấy đơn hàng.",
-    };
-  }
-
-  const { error: routeError } = await supabase.rpc("route_order_to_kds", {
-    p_order_id: order.id,
-  });
-
-  if (routeError) {
-    return {
-      success: false,
-      error: "Không thể gửi bếp. Vui lòng thử lại.",
-    };
-  }
-
-  // Items must either get a KDS ticket or a printer-only dispatch mark.
-  const { data: remaining } = await supabase
-    .from("order_items")
-    .select("id, kds_tickets(id)")
-    .eq("order_id", order.id)
-    .eq("tenant_id", claims.tenant_id)
-    .neq("status", "cancelled")
-    .is("sent_to_kitchen_at", null);
-
-  const unrouted = ((remaining ?? []) as RemainingKitchenItem[]).filter(
-    (item) => (item.kds_tickets ?? []).length === 0,
-  ).length;
-
-  return {
-    success: true,
-    data: {
-      order_id: order.id,
-      send_seq: order.kitchen_send_count,
-      jobs: [],
-      deferred_to: "kds_completion",
-    },
-    ...(unrouted > 0 ? { meta: { warning: KITCHEN_PARTIAL_SEND_WARNING } } : {}),
-  };
 }
 
 export async function printReceipt(

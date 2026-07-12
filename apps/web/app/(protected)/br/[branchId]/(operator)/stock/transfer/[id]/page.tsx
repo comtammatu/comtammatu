@@ -1,8 +1,4 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { Button } from "@comtammatu/ui/components/button";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { loadTransferDetailPageData } from "@lib/inventory/transfer-detail-data";
@@ -50,14 +46,8 @@ export default async function OperatorTransferDetailPage({
         children: statusBadge.label,
         variant: statusBadge.variant,
       }}
-      action={
-        <Button variant="outline" size="touch" asChild>
-          <Link href={listHref}>
-            <IconArrowLeft data-icon="inline-start" />
-            {ACTIONS_VI.back}
-          </Link>
-        </Button>
-      }
+      backHref={listHref}
+      backLabel="Điều chuyển"
     >
       <BranchTransferDetailClient
         branchId={branchId}

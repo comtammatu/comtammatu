@@ -21,7 +21,6 @@ import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-di
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "@comtammatu/shared/format";
 import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
-import type { PaymentMethod } from "@comtammatu/shared/providers";
 import {
   cancelTaxInvoice,
   createTaxInvoice,
@@ -85,7 +84,9 @@ const CANCEL_REASON_MIN = 20;
 const CANCEL_REASON_MAX = 500;
 const REFUND_REASON_MIN = 5;
 const REFUND_REASON_MAX = 500;
-const METHOD_OPTIONS: PaymentMethod[] = ["cash", "vietqr", "momo"];
+type CorrectablePaymentMethod = "cash" | "vietqr";
+
+const METHOD_OPTIONS: CorrectablePaymentMethod[] = ["cash", "vietqr"];
 const REPLACE_REASON_MIN = 20;
 const REPLACE_REASON_MAX = 255;
 const REPLACE_AGREEMENT_MAX = 225;
@@ -166,9 +167,8 @@ export function InvoiceList({
   const [methodFixTarget, setMethodFixTarget] = useState<InvoiceRow | null>(
     null,
   );
-  const [methodFixMethod, setMethodFixMethod] = useState<PaymentMethod | null>(
-    null,
-  );
+  const [methodFixMethod, setMethodFixMethod] =
+    useState<CorrectablePaymentMethod | null>(null);
   const [methodFixReason, setMethodFixReason] = useState("");
   const [isPending, startTransition] = useTransition();
   const [resyncingId, setResyncingId] = useState<number | null>(null);
@@ -392,7 +392,9 @@ export function InvoiceList({
           buyerTaxCode: inv.buyer_tax_code ?? undefined,
         });
         if (!result.success) {
-          toast.error(result.error ?? messages.finance.invoiceList.reissueFailed);
+          toast.error(
+            result.error ?? messages.finance.invoiceList.reissueFailed,
+          );
           return;
         }
         const issued = result.data as {
@@ -406,8 +408,7 @@ export function InvoiceList({
               ? {
                   ...row,
                   status: issued?.status ?? row.status,
-                  invoice_number:
-                    issued?.invoice_number ?? row.invoice_number,
+                  invoice_number: issued?.invoice_number ?? row.invoice_number,
                 }
               : row,
           ),
@@ -483,7 +484,8 @@ export function InvoiceList({
   async function handleConfirmReissueAll() {
     const ok = await confirm({
       title: messages.finance.invoiceList.reissueAllTitle,
-      description: messages.finance.invoiceList.reissueAllDescription(draftCount),
+      description:
+        messages.finance.invoiceList.reissueAllDescription(draftCount),
       cancelText: messages.finance.invoiceList.reissueAllCancel,
       confirmText: messages.finance.invoiceList.reissueAllConfirm,
     });
@@ -547,7 +549,11 @@ export function InvoiceList({
               title={FINANCE_VI.downloadPdf}
             >
               <IconDownload className="size-4" />
-              {dense ? <span className="sr-only">{FINANCE_VI.downloadPdf}</span> : "PDF"}
+              {dense ? (
+                <span className="sr-only">{FINANCE_VI.downloadPdf}</span>
+              ) : (
+                "PDF"
+              )}
             </Button>
             <Button
               variant="ghost"
@@ -557,7 +563,11 @@ export function InvoiceList({
               title={FINANCE_VI.downloadXml}
             >
               <IconDownload className="size-4" />
-              {dense ? <span className="sr-only">{FINANCE_VI.downloadXml}</span> : "XML"}
+              {dense ? (
+                <span className="sr-only">{FINANCE_VI.downloadXml}</span>
+              ) : (
+                "XML"
+              )}
             </Button>
           </>
         ) : null}
@@ -592,7 +602,11 @@ export function InvoiceList({
             ) : (
               <IconRefreshCw className="size-4" />
             )}
-            {dense ? <span className="sr-only">{FINANCE_VI.resync}</span> : FINANCE_VI.sync}
+            {dense ? (
+              <span className="sr-only">{FINANCE_VI.resync}</span>
+            ) : (
+              FINANCE_VI.sync
+            )}
           </Button>
         ) : null}
         {canManageInvoices && inv.status === "issued" ? (
@@ -823,9 +837,7 @@ export function InvoiceList({
               onClick={handleLoadMore}
               disabled={loadingMore}
             >
-              {loadingMore ? (
-                <Spinner className="size-4" />
-              ) : null}
+              {loadingMore ? <Spinner className="size-4" /> : null}
               {messages.finance.invoiceList.loadMore}
             </Button>
           </div>

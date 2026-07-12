@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { canonicalizeImportedUnitCode } from "../lib/inventory/unit-codes";
 
 type Args = {
   ingredients: string;
@@ -248,7 +249,7 @@ function cleanText(value: string): string {
 }
 
 function unitCode(value: string): string {
-  return cleanText(value).toLocaleLowerCase("vi-VN");
+  return canonicalizeImportedUnitCode(cleanText(value));
 }
 
 function parseNumber(raw: string): number | null {
@@ -819,7 +820,10 @@ function selfTest() {
   assert.deepEqual(parseCsv("a,b\n1,2\n")[0], { a: "1", b: "2" });
   assert.deepEqual(parseCsv('a,b\n"1,1","x""y"\n')[0], { a: "1,1", b: 'x"y' });
   assert.equal(parseNumber("1,234.50"), 1234.5);
-  assert.equal(parseUnits("kg(base)=f1.000 | phần=f0.1", "x", 2)[1]?.code, "phần");
+  assert.equal(
+    parseUnits("kg(base)=f1.000 | phần=f0.1", "x", 2)[1]?.code,
+    "portion",
+  );
   const sampleIngredients = readIngredients([
     {
       id: "1",

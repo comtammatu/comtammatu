@@ -30,16 +30,28 @@ const unitCode = z
   .string()
   .trim()
   .min(1, { error: VALIDATION_VI.required("Mã đơn vị") })
-  .transform((value) => value.toLowerCase());
+  .transform((value) => value.toLowerCase())
+  .pipe(
+    z.string().regex(/^[a-z][a-z0-9_]*$/, {
+      error: "Mã đơn vị chỉ dùng chữ thường không dấu, số và dấu gạch dưới.",
+    }),
+  );
+
+const unitName = z
+  .string()
+  .trim()
+  .min(1, { error: VALIDATION_VI.required("Tên hiển thị") });
 
 const unitCreateSchema = z.object({
   code: unitCode,
+  name: unitName,
   is_active: z.boolean().default(true),
 });
 
 const unitUpdateSchema = z.object({
   id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
   code: unitCode,
+  name: unitName,
   is_active: z.boolean().default(true),
 });
 
@@ -107,7 +119,7 @@ export const createUnit = withAction(
     const { error } = await supabase.from("units").insert({
       tenant_id: claims.tenant_id,
       code: data.code,
-      name: data.code,
+      name: data.name,
       is_active: data.is_active,
     });
 
@@ -134,7 +146,7 @@ export const updateUnit = withAction(
       .from("units")
       .update({
         code: data.code,
-        name: data.code,
+        name: data.name,
         is_active: data.is_active,
       })
       .eq("id", data.id)

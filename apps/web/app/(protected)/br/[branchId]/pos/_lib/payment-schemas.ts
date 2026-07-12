@@ -27,7 +27,7 @@ export const cashConfirmSchema = z.object({
  * Schema for `createPayment(branchId, orderId, method, amount)`.
  *
  * Aggregates all 4 positional args. `method` enum is
- * `["cash", "vietqr", "momo"]`; remote methods create a pending payment row
+ * `["cash", "vietqr"]`; VietQR creates a pending payment row
  * before customer transfer so provider/webhook settlement can match it.
  *
  * Field order matters: branchId is validated first, then the remaining
@@ -43,7 +43,7 @@ export const createPaymentSchema = z.object({
     .int()
     .positive({ error: "Branch ID không hợp lệ" }),
   orderId: z.coerce.number().int().positive(),
-  method: z.enum(["cash", "vietqr", "momo"]),
+  method: z.enum(["cash", "vietqr"]),
   amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
 });
 
@@ -67,7 +67,7 @@ export const branchOnlyReadSchema = z.object({
 /**
  * Schema for `fetchPendingRemotePaymentForBill(branchId, orderId)`. Reads
  * the latest non-failed payment row for an order so the bill sheet can
- * decide whether to resume an in-flight MoMo QR session or start fresh.
+ * decide whether to resume an in-flight VietQR session or start fresh.
  *
  * `orderId` carries the explicit "Order ID không hợp lệ" error message;
  * field order is branchId first so the first-issue message stays identical

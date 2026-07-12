@@ -20,7 +20,6 @@ interface OperationsPageProps {
     branchId?: string | string[];
     startDate?: string | string[];
     endDate?: string | string[];
-    create?: string | string[];
   }>;
 }
 

@@ -20,10 +20,7 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { transferReceive } from "@/(protected)/inventory/transfer-actions";
-import {
-  BranchOperatorControlBar,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   isTransferReceiveReady,
   type TransferDetail,
@@ -129,21 +126,13 @@ export function TransferReceiveClient({
         description={receiveCopy.receiveFrom(transfer.fromBranch)}
       >
         <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-          <BranchOperatorControlBar className="sm:hidden">
+          <div className="sm:hidden">
             <Button asChild variant="ghost" size="icon-touch">
               <Link href={backHref} aria-label={ACTIONS_VI.back}>
                 <IconArrowLeft />
               </Link>
             </Button>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-mono text-sm font-semibold tabular-nums">
-                {transfer.code}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {receiveCopy.receiveFrom(transfer.fromBranch)}
-              </p>
-            </div>
-          </BranchOperatorControlBar>
+          </div>
           <AppEmptyState
             compact
             mode="no-data"
@@ -178,7 +167,7 @@ export function TransferReceiveClient({
       description={receiveCopy.receiveFrom(transfer.fromBranch)}
     >
       <div className="flex w-full touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
+        <div className="sm:hidden">
           <Button
             asChild
             variant="ghost"
@@ -189,15 +178,7 @@ export function TransferReceiveClient({
               <IconArrowLeft />
             </Link>
           </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold tabular-nums">
-              {transfer.code}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {receiveCopy.receiveFrom(transfer.fromBranch)}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
+        </div>
 
         <div className="rounded-md bg-muted/50 p-2.5">
           <div className="flex items-center gap-2">

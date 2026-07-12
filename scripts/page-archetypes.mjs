@@ -38,6 +38,8 @@ export const PAGE_ARCHETYPES = {
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx":
     "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/count/page.tsx":
+    "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx":
@@ -63,11 +65,11 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx":
-    "LIST",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx":
-    "EMBED-WRAPPER",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx":
@@ -83,8 +85,8 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx":
-    "LIST",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx": "HUB",
+    "REDIRECT-SHIM",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx": "LIST",
 
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx":
     "DETAIL",
@@ -192,7 +194,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/orders/page.tsx": "LIST",
   "apps/web/app/(public)/(auth)/login/page.tsx": "GATE/AUTH",
   "apps/web/app/(public)/access-denied/page.tsx": "GATE/AUTH",
-  "apps/web/app/(public)/payment/momo/return/page.tsx": "GATE/AUTH",
   "apps/web/app/offline/page.tsx": "GATE/AUTH",
   "apps/web/app/page.tsx": "GATE/AUTH",
   "apps/web/app/q/[token]/page.tsx": "PUBLIC-WORKFLOW",

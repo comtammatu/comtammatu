@@ -77,13 +77,18 @@ export function buildVietQrBankAppUrl(input: {
     return null;
   }
 
-  if (appId.toLowerCase() === "momo") return "momo://app";
+  const normalizedAppId = appId.toLowerCase();
+  if (normalizedAppId === "momo") return "momo://?refId=ScanQRCode";
 
-  if (appId.toLowerCase() === "mb") {
+  if (normalizedAppId === "mb" || normalizedAppId === "msb") {
     const qrData = input.qrData?.trim();
     if (!qrData?.startsWith("000201")) return null;
 
-    const url = new URL("mbbank://applink");
+    const url = new URL(
+      normalizedAppId === "mb"
+        ? "mbbank://applink"
+        : "msbmbank://applink",
+    );
     url.searchParams.set("targetPage", "QRPay");
     url.searchParams.set("qrContent", qrData);
     return url.toString();

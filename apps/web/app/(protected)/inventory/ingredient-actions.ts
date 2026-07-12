@@ -15,6 +15,7 @@ import {
 import { getAuthContext, getAuthContextWithAnyPermission } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
+import { canonicalizeImportedUnitCode } from "@lib/inventory/unit-codes";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
   STORAGE_TYPE_BY_LABEL,
@@ -632,7 +633,7 @@ export async function exportIngredients(
     return {
       success: true,
       data: {
-        filename: `nguyen-lieu-${stamp}.csv`,
+        filename: `ingredients-${stamp}.csv`,
         base64: stringToBase64(csv),
         format: "csv",
       },
@@ -643,7 +644,7 @@ export async function exportIngredients(
   return {
     success: true,
     data: {
-      filename: `nguyen-lieu-${stamp}.xlsx`,
+      filename: `ingredients-${stamp}.xlsx`,
       base64: bufferToBase64(buf),
       format: "xlsx",
     },
@@ -855,7 +856,7 @@ export async function importIngredients(
     const parsedRow = importIngredientRowSchema.safeParse({
       name: raw["Tên nguyên liệu"] ?? raw["name"],
       sku: (raw["SKU"] ?? raw["sku"] ?? "").trim() || undefined,
-      unit: raw["Đơn vị"] ?? raw["unit"],
+      unit: canonicalizeImportedUnitCode(raw["Đơn vị"] ?? raw["unit"] ?? ""),
       category: (raw["Danh mục"] ?? raw["category"] ?? "").trim() || undefined,
       item_kind: kindKey,
       unit_cost: unitCost.value,
@@ -951,7 +952,7 @@ export async function downloadIngredientTemplate(): Promise<ActionResult> {
       is_active: true,
       units: [
         {
-          unit_code: "chai",
+          unit_code: "bottle",
           to_base_factor: 1,
           is_base: true,
         },
@@ -963,7 +964,7 @@ export async function downloadIngredientTemplate(): Promise<ActionResult> {
   return {
     success: true,
     data: {
-      filename: "nguyen-lieu-template.xlsx",
+      filename: "ingredients-template.xlsx",
       base64: bufferToBase64(buf),
       format: "xlsx" as const,
     },

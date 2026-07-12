@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   CircleAlert as IconCircleAlert,
   CircleCheck as IconCircleCheck,
   CircleX as IconCircleX,
@@ -25,9 +24,8 @@ import {
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
-import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorInlineState,
   BranchOperatorPage,
@@ -245,25 +243,10 @@ export function BranchStocktakeDetailClient({
       title={`KK-${session.id}`}
       description={formatVNDateTime(session.startedAt ?? session.createdAt)}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
+      backHref={stocktakeBasePath}
+      backLabel="Kiểm kê"
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={stocktakeBasePath} aria-label="Quay lại kiểm kê">
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold">
-              KK-{session.id}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {formatVNDateTime(session.startedAt ?? session.createdAt)}
-            </p>
-          </div>
-          <StatusBadge domain="inventory" value={session.status} size="sm" />
-        </BranchOperatorControlBar>
-
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
           <div className="flex min-w-0 flex-col gap-3">
             <BranchOperatorPanel

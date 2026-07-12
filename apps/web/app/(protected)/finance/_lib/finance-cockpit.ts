@@ -33,7 +33,6 @@ interface KpiBundle {
   total_tax: number;
   cash_revenue: number;
   vietqr_revenue: number;
-  momo_revenue: number;
 }
 
 interface RollupRow {
@@ -94,7 +93,6 @@ interface FinanceCockpitKpis {
   costCoverageRatio: number;
   cashRevenue: number;
   vietqrRevenue: number;
-  momoRevenue: number;
 }
 
 interface FinanceTrendPoint {
@@ -199,7 +197,6 @@ function buildKpis({
     costCoverageRatio,
     cashRevenue: toNumber(kpis?.cash_revenue),
     vietqrRevenue: toNumber(kpis?.vietqr_revenue),
-    momoRevenue: toNumber(kpis?.momo_revenue),
   };
 }
 

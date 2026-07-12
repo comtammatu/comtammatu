@@ -114,15 +114,11 @@ async function buildFixtures(): Promise<InventoryFixtures> {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-test.describe("Branch kitchen transfer redirect", () => {
-  test("legacy cap-bep URL opens the transfer create surface", async ({
-    page,
-  }) => {
+test.describe("Transfer create surface", () => {
+  test("canonical URL opens the transfer create surface", async ({ page }) => {
     const fx = await buildFixtures();
 
-    await page.goto(
-      `/inventory/transfers?branchId=${fx.branchId}&create=cap-bep`,
-    );
+    await page.goto(`/inventory/transfers/new?branchId=${fx.branchId}`);
     await page.waitForLoadState("networkidle");
     if (await isAccessDenied(page)) {
       test.skip(true, "E2E auth user cannot access Inventory.");

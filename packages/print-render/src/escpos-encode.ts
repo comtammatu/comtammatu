@@ -106,5 +106,3 @@ export async function renderPayloadToEscpos(
 ): Promise<Uint8Array> {
   return renderDocumentToEscpos(resolveDocument(payload));
 }
-
-export const renderPayloadBitmap = renderPayloadToEscpos;

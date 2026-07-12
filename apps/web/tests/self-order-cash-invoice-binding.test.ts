@@ -8,6 +8,9 @@ const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 const migration = read(
   "../../supabase/migrations/20260710032423_self_order_cash_invoice_binding.sql",
 );
+const cashHardeningMigration = read(
+  "../../supabase/migrations/20260712071541_stabilize_cash_receipt_warning.sql",
+);
 const paymentActions = read(
   "app/(protected)/br/[branchId]/pos/payment-actions.ts",
 );
@@ -37,6 +40,10 @@ function asyncFunctionBlock(source: string, name: string): string {
 const bindingRpc = functionBlock(
   migration,
   "confirm_cash_payment_with_invoice_binding",
+);
+const cashPaymentRpc = functionBlock(
+  cashHardeningMigration,
+  "confirm_cash_payment",
 );
 const resolveBoundPayload = asyncFunctionBlock(
   paymentActions,
@@ -118,6 +125,31 @@ test("binding delegates payment, close, receipt, and finalizer semantics to the 
   assert.doesNotMatch(bindingRpc, /UPDATE public\.orders/);
   assert.doesNotMatch(bindingRpc, /finalize_paid_order/);
   assert.doesNotMatch(bindingRpc, /enqueue_receipt_print/);
+});
+
+test("cash evidence is persisted before receipt enqueue can fail soft", () => {
+  const paymentComplete = cashPaymentRpc.indexOf(
+    "v_complete_res.status NOT IN ('completed', 'already_completed')",
+  );
+  const cashEvidenceWrite = cashPaymentRpc.indexOf(
+    "SET cash_received = p_cash_received",
+  );
+  const receiptEnqueue = cashPaymentRpc.indexOf(
+    "public.enqueue_receipt_print(",
+  );
+
+  assert.ok(cashEvidenceWrite > paymentComplete);
+  assert.ok(receiptEnqueue > cashEvidenceWrite);
+  assert.match(cashPaymentRpc, /v_print_warning := 'receipt_enqueue_failed'/);
+  assert.doesNotMatch(cashPaymentRpc, /v_print_warning := SQLERRM/);
+  assert.doesNotMatch(
+    cashPaymentRpc,
+    /jsonb_build_object\('error', SQLERRM\)/,
+  );
+  assert.match(
+    paymentActions,
+    /print_warning: result\.print_warning[\s\S]*CASH_RECEIPT_PRINT_WARNING[\s\S]*: null/,
+  );
 });
 
 test("successful payment binds the exact request id and replay resolves by exact payment id", () => {

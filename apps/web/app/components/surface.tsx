@@ -240,6 +240,7 @@ export type AppBackLinkProps = {
   children?: ReactNode;
   className?: string;
   "aria-label"?: string;
+  onClick?: ComponentProps<typeof Link>["onClick"];
 };
 
 /**
@@ -263,12 +264,7 @@ export function AppBackLink({
       {...props}
     >
       <IconArrowLeft className="size-4" />
-      {children != null ? (
-        <>
-          {" "}
-          {children}
-        </>
-      ) : null}
+      {children != null ? <> {children}</> : null}
     </Link>
   );
 }

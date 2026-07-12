@@ -53,27 +53,33 @@ Stage B:
 
 ## Units chuẩn
 
-`units.code` giữ nguyên. `units.name` nên hiển thị như sau:
+`units.code` là mã máy ổn định bằng tiếng Anh, viết thường theo `snake_case`.
+`units.name` là nhãn tiếng Việt cho người vận hành:
 
 | code | name |
 | --- | --- |
-| `bao` | `bao` |
-| `chai` | `chai` |
+| `sack` | `bao` |
+| `pouch` | `bịch` |
+| `piece` | `cái` |
+| `jerrycan` | `can` |
+| `stick` | `cây` |
+| `bottle` | `chai` |
 | `g` | `gram` |
-| `goi` | `gói` |
-| `hop` | `hộp` |
-| `hu` | `hũ` |
+| `packet` | `gói` |
+| `box` | `hộp` |
+| `jar` | `hũ` |
 | `kg` | `kg` |
-| `khay` | `khay` |
-| `lit` | `lít` |
-| `loc` | `lốc` |
-| `lon` | `lon` |
-| `ly` | `ly` |
+| `tray` | `khay` |
+| `l` | `lít` |
+| `multipack` | `lốc` |
+| `tin_can` | `lon` |
+| `cup` | `ly` |
 | `ml` | `ml` |
-| `piece` | `phần/cái` |
-| `thung` | `thùng` |
-| `trai` | `trái` |
-| `tui` | `túi` |
+| `portion` | `phần` |
+| `case` | `thùng` |
+| `fruit` | `trái` |
+| `bag` | `túi` |
+| `blister_pack` | `vỉ` |
 
 ## Quyết định dọn dữ liệu test
 

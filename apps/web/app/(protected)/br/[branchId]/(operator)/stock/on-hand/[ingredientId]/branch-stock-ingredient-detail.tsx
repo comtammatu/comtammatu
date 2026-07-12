@@ -19,10 +19,9 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
-import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
   BranchOperatorActionSection,
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -80,29 +79,21 @@ function QuantityValue({
 export function BranchStockIngredientDetail({
   data,
   stockBasePath,
+  backHref,
 }: {
   data: StockIngredientDetailData;
   stockBasePath: string;
+  backHref: string;
 }) {
   const { ingredient } = data;
   const statusBadge = getStatusBadgeMeta("inventory", data.status);
   const atRisk = data.status === "low" || data.status === "out";
   const secondaryActions = [
-    ...(data.permissions.canCreateTransfer
-      ? [
-          {
-            key: "transfer",
-            href: `${stockBasePath}/transfer`,
-            icon: IconTruck,
-            title: stockCopy.actions.transfer,
-          },
-        ]
-      : []),
     ...(data.permissions.canCreateStocktake
       ? [
           {
             key: "stocktake",
-            href: `${stockBasePath}/count`,
+            href: `/br/${data.branchId}/shift/count`,
             icon: IconClipboardList,
             title: stockCopy.actions.stocktake,
           },
@@ -137,23 +128,10 @@ export function BranchStockIngredientDetail({
         .filter(Boolean)
         .join(" · ")}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
+      backHref={backHref}
+      backLabel={detailCopy.backToStock}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={stockBasePath} aria-label={detailCopy.backToStock}>
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{ingredient.name}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {[ingredient.sku, ingredient.unit].filter(Boolean).join(" · ")}
-            </p>
-          </div>
-          <StatusBadge domain="inventory" value={data.status} size="sm" />
-        </BranchOperatorControlBar>
-
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
           <div className="flex min-w-0 flex-col gap-3">
             <BranchOperatorPanel

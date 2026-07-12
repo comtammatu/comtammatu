@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Bell as IconBell,
   Building2 as IconBuilding2,
-  LayoutDashboard as IconLayoutDashboard,
 } from "lucide-react";
 import { canAccess, MODULE_ACL, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
@@ -99,19 +98,6 @@ export default async function OperatorLayout({
                     <span className="hidden sm:inline">
                       {MODULE_ACL.branch_picker.label}
                     </span>
-                  </Link>
-                </Button>
-              ) : null}
-              {canManageBranch ? (
-                <Button
-                  asChild
-                  variant="outline"
-                  size="icon-touch"
-                  aria-label={APP_COPY_VI.branchCommand}
-                  title={APP_COPY_VI.branchCommand}
-                >
-                  <Link href={`/br/${context.branchId}/dashboard`}>
-                    <IconLayoutDashboard />
                   </Link>
                 </Button>
               ) : null}

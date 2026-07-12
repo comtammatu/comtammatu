@@ -39,12 +39,12 @@ export type KitchenPayload = {
   printed_at: string;
 };
 
-/** Pre-built QR content (backend decides VietQR vs MoMo per tenant setting). */
+/** Pre-built VietQR content. */
 export type PaymentQR = {
-  type: "vietqr" | "momo";
-  /** Raw QR payload string, ready to scan (EMV for VietQR, URL/scheme for MoMo). */
+  type: "vietqr";
+  /** Raw QR payload string, ready to scan. */
   content: string;
-  /** Heading on receipt, e.g. "TCB (BIN 970407)" or "MoMo". */
+  /** Heading on receipt, e.g. "TCB (BIN 970407)". */
   header_label: string;
   account_no?: string | null;
   account_name?: string | null;
@@ -95,7 +95,7 @@ export type ProvisionalBillPayload = BillBase & {
 export type ReceiptPayload = BillBase & {
   kind: "receipt";
   /** Unknown values pass through and render as the raw key. */
-  payment_method?: "cash" | "vietqr" | "bank_transfer" | "momo" | string | null;
+  payment_method?: "cash" | "vietqr" | "bank_transfer" | string | null;
   payment_qr?: PaymentQR | null;
   /** Cash only; non-cash methods send total_amount. Rows skipped when omitted. */
   cash_received?: number | null;

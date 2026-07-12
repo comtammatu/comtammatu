@@ -54,11 +54,7 @@ test("inventory unit option helpers delegate to one shared implementation", () =
     assert.doesNotMatch(source, /\.filter\(\(u/);
     assert.doesNotMatch(source, /\.sort\(\(a, b\)/);
   }
-  for (const source of [
-    countUnitsSource,
-    issueUnitsSource,
-    productionUnitsSource,
-  ]) {
+  for (const source of [issueUnitsSource, productionUnitsSource]) {
     assert.match(source, /getDefaultIngredientUnit/);
   }
   assert.match(purchaseUnitsSource, /getLargestIngredientUnit/);

@@ -45,13 +45,12 @@ test("branch stock facets share one model and stay touch-native", () => {
   assert.match(branchStockClientSource, /filterStockOnHandIngredients/);
   assert.match(branchStockClientSource, /getStockOnHandCategories/);
   assert.match(branchStockClientSource, /value=\{category\}/);
-  assert.match(branchStockClientSource, /onValueChange=\{setCategory\}/);
   assert.match(branchStockClientSource, /value=\{status\}/);
   assert.match(branchStockClientSource, /value=\{location\}/);
   assert.match(branchStockClientSource, /hasMultipleStockLocations/);
   assert.match(branchStockClientSource, /filtersOpen \? "grid" : "hidden"/);
   assert.equal(
-    (branchStockClientSource.match(/<SelectTrigger size="touch"/g) ?? [])
+    (branchStockClientSource.match(/<SelectTrigger\s+size="touch"/g) ?? [])
       .length,
     3,
   );

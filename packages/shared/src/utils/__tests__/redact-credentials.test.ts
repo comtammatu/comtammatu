@@ -77,8 +77,8 @@ test("redactCredentials → arrays processed elementwise", () => {
 });
 
 test("redactCredentials → partnerCode NOT redacted (merchant ID, not secret)", () => {
-  const out = redactCredentials({ partnerCode: "MOMO_PARTNER_123" });
-  assert.deepEqual(out, { partnerCode: "MOMO_PARTNER_123" });
+  const out = redactCredentials({ partnerCode: "PARTNER_123" });
+  assert.deepEqual(out, { partnerCode: "PARTNER_123" });
 });
 
 test("redactCredentials → case-insensitive key matching", () => {

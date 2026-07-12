@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronDown as IconChevronDown,
   ChevronRight as IconChevronRight,
+  ClipboardCheck as IconClipboardCheck,
   ListFilter as IconFilter,
   RotateCcw as IconReset,
   Search as IconSearch,
   Truck as IconTruck,
+  Trash2 as IconTrash,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
@@ -40,6 +42,7 @@ import { formatQty } from "@/(protected)/inventory/_lib/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
 import { ITEM_KIND_LABELS } from "@/(protected)/inventory/_lib/constants";
 import {
+  BranchOperatorActionSection,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -73,6 +76,20 @@ const locationFilterOptions: {
   { value: "warehouse", label: stockCopy.filters.locationWarehouse },
   { value: "kitchen", label: stockCopy.filters.locationKitchen },
 ];
+
+type StockFilterParam = "category" | "location" | "q" | "status";
+
+function parseStockFilter(value: string | null): StockFilter {
+  return stockFilterOptions.some((option) => option.value === value)
+    ? (value as StockFilter)
+    : "all";
+}
+
+function parseLocationFilter(value: string | null): StockLocationFilter {
+  return locationFilterOptions.some((option) => option.value === value)
+    ? (value as StockLocationFilter)
+    : "all";
+}
 
 function StockQuantity({ item }: { item: StockIngredient }) {
   const { base } = formatStockUnits(item.qty, item.units, formatQty);
@@ -111,9 +128,11 @@ function StockRiskBadge({ item }: { item: StockIngredient }) {
 function StockTouchRow({
   branchId,
   item,
+  returnTo,
 }: {
   branchId: number;
   item: StockIngredient;
+  returnTo: string;
 }) {
   return (
     <Item
@@ -123,7 +142,7 @@ function StockTouchRow({
       className="min-h-16 touch-manipulation gap-3 px-3 py-2.5"
     >
       <Link
-        href={`/br/${branchId}/stock/on-hand/${item.id}`}
+        href={`/br/${branchId}/stock/on-hand/${item.id}?returnTo=${encodeURIComponent(returnTo)}`}
         aria-label={stockCopy.actions.viewDetailAria(item.name)}
         role="listitem"
       >
@@ -153,6 +172,8 @@ function StockTouchRow({
 interface BranchStockOnHandClientProps {
   branchId: number;
   canCreateGrn: boolean;
+  canCreateStocktake: boolean;
+  canWriteoff: boolean;
   coreDataLoadFailed: boolean;
   ingredients: StockIngredient[];
   underThresholdCount: number;
@@ -161,16 +182,24 @@ interface BranchStockOnHandClientProps {
 export function BranchStockOnHandClient({
   branchId,
   canCreateGrn,
+  canCreateStocktake,
+  canWriteoff,
   coreDataLoadFailed,
   ingredients,
   underThresholdCount,
 }: BranchStockOnHandClientProps) {
   const router = useRouter();
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState(STOCK_ALL_CATEGORY_VALUE);
-  const [status, setStatus] = useState<StockFilter>("all");
-  const [location, setLocation] = useState<StockLocationFilter>("all");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = searchParams.get("q") ?? "";
+  const category = searchParams.get("category") ?? STOCK_ALL_CATEGORY_VALUE;
+  const status = parseStockFilter(searchParams.get("status"));
+  const location = parseLocationFilter(searchParams.get("location"));
+  const [filtersOpen, setFiltersOpen] = useState(
+    category !== STOCK_ALL_CATEGORY_VALUE ||
+      status !== "all" ||
+      location !== "all",
+  );
 
   const { categories, hasUncategorized } = useMemo(
     () => getStockOnHandCategories(ingredients),
@@ -206,12 +235,58 @@ export function BranchStockOnHandClient({
         : null;
   const showReceiveAction =
     canCreateGrn && !coreDataLoadFailed && underThresholdCount === 0;
+  const currentStockHref = searchParams.size
+    ? `${pathname}?${searchParams.toString()}`
+    : pathname;
+  const returnToQuery = encodeURIComponent(currentStockHref);
+  const contextualActions = [
+    ...(canCreateStocktake
+      ? [
+          {
+            key: "stocktake",
+            href: `/br/${branchId}/stock/stocktake/new?returnTo=${returnToQuery}`,
+            icon: IconClipboardCheck,
+            title: stockCopy.actions.stocktake,
+          },
+        ]
+      : []),
+    ...(canWriteoff
+      ? [
+          {
+            key: "waste",
+            href: `/br/${branchId}/stock/waste?returnTo=${returnToQuery}`,
+            icon: IconTrash,
+            title: stockCopy.actions.waste,
+          },
+        ]
+      : []),
+  ];
+
+  function replaceFilterParams(
+    changes: Partial<Record<StockFilterParam, string | null>>,
+  ) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    for (const [key, value] of Object.entries(changes)) {
+      if (!value) params.delete(key);
+      else params.set(key, value);
+    }
+
+    const nextQuery = params.toString();
+    window.history.replaceState(
+      window.history.state,
+      "",
+      nextQuery ? `${pathname}?${nextQuery}` : pathname,
+    );
+  }
 
   function resetFilters() {
-    setQuery("");
-    setCategory(STOCK_ALL_CATEGORY_VALUE);
-    setStatus("all");
-    setLocation("all");
+    replaceFilterParams({
+      category: null,
+      location: null,
+      q: null,
+      status: null,
+    });
     setFiltersOpen(false);
   }
 
@@ -232,7 +307,9 @@ export function BranchStockOnHandClient({
           action={
             canCreateGrn ? (
               <Button asChild size="touch">
-                <Link href={`/br/${branchId}/stock/grn/new`}>
+                <Link
+                  href={`/br/${branchId}/stock/grn/new?returnTo=${returnToQuery}`}
+                >
                   <IconTruck />
                   {stockCopy.actions.receiveGrn}
                 </Link>
@@ -260,7 +337,9 @@ export function BranchStockOnHandClient({
         action={
           showReceiveAction ? (
             <Button asChild size="touch">
-              <Link href={`/br/${branchId}/stock/grn/new`}>
+              <Link
+                href={`/br/${branchId}/stock/grn/new?returnTo=${returnToQuery}`}
+              >
                 <IconTruck />
                 {stockCopy.actions.receiveGrn}
               </Link>
@@ -287,9 +366,11 @@ export function BranchStockOnHandClient({
             description={stockCopy.empty.firstLoadHint}
             symbol="riceGrain"
           >
-            {canCreateGrn ? (
+            {canCreateGrn && underThresholdCount === 0 ? (
               <Button asChild size="touch">
-                <Link href={`/br/${branchId}/stock/grn/new`}>
+                <Link
+                  href={`/br/${branchId}/stock/grn/new?returnTo=${returnToQuery}`}
+                >
                   <IconTruck />
                   {stockCopy.actions.receiveGrn}
                 </Link>
@@ -306,8 +387,11 @@ export function BranchStockOnHandClient({
                   </InputGroupAddon>
                   <InputGroupInput
                     value={query}
-                    onChange={(event) => setQuery(event.target.value)}
+                    onChange={(event) =>
+                      replaceFilterParams({ q: event.target.value || null })
+                    }
                     placeholder={stockCopy.filters.searchPlaceholder}
+                    aria-label={stockCopy.filters.searchPlaceholder}
                     inputMode="search"
                   />
                 </InputGroup>
@@ -351,9 +435,17 @@ export function BranchStockOnHandClient({
               >
                 <Select
                   value={status}
-                  onValueChange={(value) => setStatus(value as StockFilter)}
+                  onValueChange={(value) =>
+                    replaceFilterParams({
+                      status: value === "all" ? null : value,
+                    })
+                  }
                 >
-                  <SelectTrigger size="touch" className="w-full">
+                  <SelectTrigger
+                    size="touch"
+                    className="w-full"
+                    aria-label={stockCopy.filters.statusPlaceholder}
+                  >
                     <SelectValue
                       placeholder={stockCopy.filters.statusPlaceholder}
                     />
@@ -375,10 +467,16 @@ export function BranchStockOnHandClient({
                   <Select
                     value={location}
                     onValueChange={(value) =>
-                      setLocation(value as StockLocationFilter)
+                      replaceFilterParams({
+                        location: value === "all" ? null : value,
+                      })
                     }
                   >
-                    <SelectTrigger size="touch" className="w-full">
+                    <SelectTrigger
+                      size="touch"
+                      className="w-full"
+                      aria-label={stockCopy.filters.locationPlaceholder}
+                    >
                       <SelectValue
                         placeholder={stockCopy.filters.locationPlaceholder}
                       />
@@ -397,8 +495,20 @@ export function BranchStockOnHandClient({
                   </Select>
                 ) : null}
 
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger size="touch" className="w-full">
+                <Select
+                  value={category}
+                  onValueChange={(value) =>
+                    replaceFilterParams({
+                      category:
+                        value === STOCK_ALL_CATEGORY_VALUE ? null : value,
+                    })
+                  }
+                >
+                  <SelectTrigger
+                    size="touch"
+                    className="w-full"
+                    aria-label={stockCopy.filters.categoryPlaceholder}
+                  >
                     <SelectValue
                       placeholder={stockCopy.filters.categoryPlaceholder}
                     />
@@ -491,6 +601,7 @@ export function BranchStockOnHandClient({
                     key={item.id}
                     branchId={branchId}
                     item={item}
+                    returnTo={currentStockHref}
                   />
                 ))}
               </ItemGroup>
@@ -498,6 +609,16 @@ export function BranchStockOnHandClient({
           </>
         )}
       </BranchOperatorPanel>
+
+      {contextualActions.length > 0 ? (
+        <BranchOperatorActionSection
+          title={stockCopy.filters.operatorTasksTitle}
+          links={contextualActions}
+          columns={2}
+          mobileColumns={2}
+          presentation="plain"
+        />
+      ) : null}
     </BranchOperatorPage>
   );
 }

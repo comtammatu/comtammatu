@@ -1,4 +1,3 @@
-import { formatVND } from "@comtammatu/shared/format";
 import { z } from "zod";
 
 /* ─── Order Types ─── */
@@ -106,20 +105,6 @@ type PosLineItemDetailsInput = PosLineItemDisplayInput & {
   is_priority?: boolean | null;
 };
 
-function formatPosLineItemPrice(price: number | null | undefined): string {
-  return typeof price === "number" && price > 0
-    ? ` (+${formatVND(price)})`
-    : "";
-}
-
-function formatPosLineItemSide(side: PosLineItemSideInput): string {
-  const quantity = side.quantity ?? 1;
-  const quantitySuffix = quantity > 1 ? ` x${String(quantity)}/phần` : "";
-  const price = typeof side.price === "number" ? side.price * quantity : null;
-
-  return `${side.name}${quantitySuffix}${formatPosLineItemPrice(price)}`;
-}
-
 export function getPosLineItemDisplayName(
   item: PosLineItemDisplayInput,
 ): string {
@@ -129,30 +114,6 @@ export function getPosLineItemDisplayName(
   if (!variantName || variantName === itemName) return itemName;
 
   return `${itemName} — ${variantName}`;
-}
-
-export function getPosLineItemOptionLines(
-  item: PosLineItemDetailsInput,
-): string[] {
-  const modifierLine =
-    item.modifiers && item.modifiers.length > 0
-      ? `Tuỳ chọn: ${item.modifiers
-          .map(
-            (modifier) =>
-              `${modifier.name}${formatPosLineItemPrice(modifier.price)}`,
-          )
-          .join(", ")}`
-      : null;
-  const sideLine =
-    item.sides && item.sides.length > 0
-      ? `Kèm: ${item.sides.map((side) => formatPosLineItemSide(side)).join(", ")}`
-      : null;
-  const note = item.note?.trim();
-  const noteLine = note ? `Ghi chú: ${note}` : null;
-
-  return [modifierLine, sideLine, noteLine].filter((line): line is string =>
-    Boolean(line),
-  );
 }
 
 const COMPACT_OPTION_SEPARATOR = " \u00b7 ";

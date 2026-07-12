@@ -23,6 +23,7 @@ import {
 import { resolveOperatorTileIcon } from "./operator-tile-icons";
 
 import { HubQueueSection } from "./_components/hub/hub-queue-section";
+import { HubReadinessSection } from "./_components/hub/hub-readiness-section";
 import { HubTodayStatus } from "./_components/hub/hub-today-status";
 import {
   HubTodayStatusPending,
@@ -156,6 +157,12 @@ export default async function OperatorHomePage({
       <Suspense fallback={<HubQueuePending />}>
         <HubQueueSection branchId={context.branchId} />
       </Suspense>
+
+      {isBranchManagerOrOwner ? (
+        <Suspense fallback={<HubQueuePending />}>
+          <HubReadinessSection branchId={context.branchId} />
+        </Suspense>
+      ) : null}
 
       {groups.map((group) => {
         const stationTiles = group.tiles.filter(

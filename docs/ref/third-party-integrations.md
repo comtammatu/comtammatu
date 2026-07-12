@@ -10,7 +10,6 @@
 | Nhóm              | Vendor chọn                    | Fallback      | Module                       |
 | ----------------- | ------------------------------ | ------------- | ---------------------------- |
 | **QR thanh toán** | VietQR (NAPAS) + SePay webhook | —             | Payment                      |
-| **E-wallet #1**   | MoMo                           | —             | Payment                      |
 | **Card payment**  | VNPay                          | —             | Đã loại bỏ (D012 2026-06-10) |
 | **HĐĐT**          | Viettel S-invoice              | —             | Finance                      |
 | **BHXH**          | iBHXH / VNPT-BHXH              | Manual portal | Nhân sự & tiền lương         |
@@ -24,12 +23,12 @@
 
 **Lựa chọn**: ✅ **Tích hợp Payment**
 
-| Thuộc tính | Giá trị                                                      |
-| ---------- | ------------------------------------------------------------ |
-| Loại       | EMVCo/NAPAS bank-transfer payload                            |
+| Thuộc tính | Giá trị                                                        |
+| ---------- | -------------------------------------------------------------- |
+| Loại       | EMVCo/NAPAS bank-transfer payload                              |
 | Generation | Sinh payload cục bộ trong provider; không gọi VietQR image API |
-| Settlement | SePay evidence webhook hoặc cashier xác nhận theo quyền      |
-| Cấu hình   | Tài khoản nhận tiền sống trong Admin settings                |
+| Settlement | SePay evidence webhook hoặc cashier xác nhận theo quyền        |
+| Cấu hình   | Tài khoản nhận tiền sống trong Admin settings                  |
 
 **Cách hoạt động**: Mỗi đơn có mã chuyển khoản cố định trong
 `orders.payment_code`: `<configured prefix> + space + 12 ký tự chữ/số`. Phiếu
@@ -57,45 +56,7 @@ SePay đẩy evidence webhook, hoặc cashier xác nhận theo quyền khi cần
 
 ---
 
-### 1.2 MoMo — E-wallet #1
-
-**Lựa chọn**: ✅ **Tích hợp Payment**
-
-| Thuộc tính       | Giá trị                                             |
-| ---------------- | --------------------------------------------------- |
-| API              | MoMo v2 gateway endpoints theo provider hiện hành  |
-| Settlement       | Provider/IPN-driven                                 |
-| Webhook          | POST JSON IPN khi giao dịch hoàn tất                |
-| Webhook security | HMAC signature                                      |
-| Giá/phí          | Theo hợp đồng merchant hiện hành, không hardcode doc |
-
-**Webhook payload mẫu**:
-
-```json
-{
-  "orderId": "ORDER_ID",
-  "requestId": "REQUEST_ID",
-  "amount": 150000,
-  "resultCode": 0,
-  "message": "Thành công",
-  "transId": "MOMO_TRANS_ID",
-  "payType": "qr"
-}
-```
-
-**Lưu ý tích hợp**:
-
-```
-- Luôn verify signature trước khi xử lý webhook
-- POS QR phải dùng `qrCodeUrl`; không render `payUrl`/`deeplink` thành QR
-- Luồng `autoCapture=true`: `resultCode = 0` hoặc `9000` → có thể chốt thanh toán; mã khác → thất bại / pending theo bảng result code
-- IPN hợp lệ phải phản hồi HTTP 204 không body trong 15 giây
-- Bảo vệ idempotency: ghi `webhook_events(provider, request_id)` trước khi gọi RPC chốt thanh toán
-```
-
----
-
-### 1.3 VNPay — Card & Gateway
+### 1.2 VNPay — Card & Gateway
 
 **Lựa chọn**: ❌ **Đã loại bỏ (D012 2026-06-10)**
 
@@ -215,7 +176,7 @@ Hệ thống → Export báo cáo thuế GTGT theo tháng (tổng đầu ra / đ
 
 | Module                   | Tích hợp                                         |
 | ------------------------ | ------------------------------------------------ |
-| **Payment**              | VietQR + MoMo                                    |
+| **Payment**              | VietQR + SePay                                   |
 | **Finance**              | Viettel S-invoice                                |
 | **Nhân sự & tiền lương** | Xuất data BHXH / thuế TNCN (no API, just export) |
 | **Đã loại bỏ**           | VNPay (D012 2026-06-10)                          |
@@ -225,17 +186,8 @@ Hệ thống → Export báo cáo thuế GTGT theo tháng (tổng đầu ra / đ
 ## 6. Environment Variables cần thiết
 
 ```bash
-# Payment
-NEXT_PUBLIC_APP_URL=https://pos.comtammatu.vn # HTTPS public; MoMo gọi IPN vào URL này
-
 SEPAY_WEBHOOK_SECRET=    # Secret Key khi tạo webhook HMAC-SHA256 trên SePay
 # VietQR bank/account/name thiết lập trong Admin > Thanh toán, không đặt ENV.
-
-MOMO_PARTNER_CODE=       # Mã đối tác do MoMo cấp
-MOMO_ACCESS_KEY=         # Access key do MoMo cấp
-MOMO_SECRET_KEY=         # Secret key dùng ký request + verify IPN
-MOMO_SANDBOX=true        # true=test-payment.momo.vn, false/unset=production
-MOMO_REDIRECT_URL=       # Optional trang khách sau thanh toán; không trỏ về POS
 
 # HĐĐT
 COMPANY_TAX_CODE=

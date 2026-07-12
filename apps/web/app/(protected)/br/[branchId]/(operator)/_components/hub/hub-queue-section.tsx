@@ -5,7 +5,6 @@ import {
   ChevronRight,
   ClipboardCheck,
   FileText,
-  Truck,
 } from "lucide-react";
 import Link from "next/link";
 import { formatCount } from "@comtammatu/shared/format";
@@ -58,16 +57,6 @@ function buildQueueRows(
       title: branchCopy.queueDraftProductionTitle,
       meta: branchCopy.queueDraftProductionMeta(counts.draftProductionOrders),
       count: counts.draftProductionOrders,
-    });
-  }
-  if (counts.inboundTransfers != null) {
-    rows.push({
-      key: "inbound-transfers",
-      href: `${basePath}/stock/receive`,
-      icon: Truck,
-      title: branchCopy.queueInboundTransfersTitle,
-      meta: branchCopy.queueInboundTransfersMeta(counts.inboundTransfers),
-      count: counts.inboundTransfers,
     });
   }
   if (counts.pendingCheckouts != null) {

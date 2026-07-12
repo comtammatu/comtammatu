@@ -9,6 +9,114 @@
 > checkout with `git status` and re-check production state for any migration or
 > runtime claim.
 
+## Má Tư Design System Visual Renovation (2026-07-12)
+
+Skill plan: repo rules = engineering + skills + workflow + UI; external skill =
+design-review (advisory only); runtime tools = CodeGraph + local Supabase +
+authenticated browser smoke. No production write.
+
+UI Advisor Gate
+
+- Surfaces: all Branch, Office, Station, and Public route families; change =
+  visual system + presentation contracts, delivered in bounded waves.
+- Actors/jobs: staff completes daily work; manager/Owner scans, reviews, and
+  decides; guest scans, orders, requests help, and tracks the latest status.
+- Information order: primary action/live queue → decision context → detail.
+- Pattern: keep the 12 current page archetypes; add no primitive or token without
+  repeated evidence and a clear owner layer.
+- Responsive: 390x844, 768x1024, 1024x768, 1440; light/night; touch, keyboard,
+  focus, reduced motion, loading, empty, error, permission, and recovery states.
+
+T3 debate verdict: one visual language, four presentation grammars. Branch is a
+touch-first daily-work plane; Office is a desktop-responsive management plane;
+POS/KDS/Runner are independent station tools sharing handoff vocabulary rather
+than layout; Self-Order is a guest hot path and must not expose Office/POS state
+language. Fix plane, state ownership, and information order before visual polish.
+
+- [x] **W0 — census, runtime baseline, debate, and P0 stabilization.** Classify
+      132/132 pages; inspect representative Branch/Office/Station/Public screens;
+      restore Branch mobile workflow-title contract; use the canonical action
+      hover elevation; remove the stale deleted-file guard exception. UI ratchet
+      is 83/83. Web tests pass with 0 failures; typecheck, lint, build,
+      doc-staleness, and refreshed CodeGraph are required before closeout.
+- [ ] **W1 — Branch hot paths and rhythm.** Verify Home → Ca hôm nay → Đơn hàng
+      → Kho → Hồ sơ end-to-end. Let `AppPage` own page rhythm; reduce install
+      chrome and empty vertical regions; keep workflow identity and bottom-nav
+      touch targets clear; localize Hub-only presentation modes.
+  - [x] **W1.1 — keep install chrome on Home only.** Online detail routes now
+        start directly at the workflow title; the shared offline warning still
+        renders on every route. Verified at 390x844, 768x1024, and 1024x768 with
+        no horizontal overflow. Active Team data remains runtime-blocked locally
+        because the local migration ledger has not applied the `shift_id` schema.
+  - [x] **W1.2 — restore Profile touch targets.** Branch avatar upload and
+        phone/email actions now meet the 44px minimum without changing the compact
+        Employee presentation. Verified at 390x844, 768x1024, and 1024x768 with
+        no horizontal overflow.
+  - [x] **W1.3 — restore the shared header Home target.** Linked `AppHeader`
+        brand lockups now keep the 44px minimum even when branch text is visible.
+        Verified at 390x844, 768x1024, and 1024x768 with no horizontal overflow.
+  - [x] **W1.4 — restore the install-dismiss touch target.** Both shared PWA
+        toolbar layouts now use the existing icon-touch size for the visible
+        dismiss action. Verified at 51x51 on 390x844; the five W1 routes have no
+        horizontal overflow at 390x844, 768x1024, or 1024x768. W1 remains open
+        only for active Team data after the local `shift_id` migration is applied.
+- [x] **W2 — station handoff.** Audit POS order/payment, KDS preparation, and
+      Runner ready/delivery flows. Reduce tint debt by workflow; use motion only
+      for meaningful state change; keep recovery/connectivity visible.
+  - [x] **W2.1 — restore station-header touch targets.** KDS history, audio,
+        fullscreen, view-mode, and overflow controls now use the existing
+        `icon-touch` / `touch` variants; the shared POS/KDS exit control uses
+        `touch` instead of raw fixed heights. Verified with no actionable target
+        below 44px and no horizontal overflow at 390x844 and 1024x768. The full
+        handoff remains open: local POS is correctly blocked by the missing POS
+        device, while KDS and Runner only expose their empty states without an
+        active order fixture.
+  - [x] **W2.2 — verify the live station handoff.** Created and then deactivated
+        local-only POS, menu, and KDS fixtures through the product UI; two real
+        takeaway orders moved from POS to KDS, appeared on the Runner waiting
+        board while `pending/preparing`, and exited when KDS marked them `ready`.
+        The current Runner contract is a read-only waiting display, not a
+        separate `served` mutation surface. The pre-reset `PGRST202` recovery
+        now reports that payment is unavailable instead of falsely blaming an
+        insufficient cash amount; W2.3 supersedes that local-schema blocker.
+        Targeted mapper tests pass 2/2.
+  - [x] **W2.3 — complete cash-payment smoke.** Owner reset the local ledger to
+        `20260710032423`; local Data API tables and the cash-binding RPC are now
+        available. A real takeaway order completed as cash for 25,000 VND, the
+        payment row reached `completed`, the order reached `paid/completed`, and
+        the POS shift closed with 25,000 VND counted. The no-printer recovery is
+        fail-soft, but exposed a real evidence defect: `payments.provider_data`
+        keeps `cash_received=25000` and `cash_change=0` while the matching order
+        columns stay null, so the archived receipt omits both cash lines. The
+        requested reset target also predates `20260710113746`, so current POS
+        Self-Order polling still reports `PGRST205` for `self_order_requests`;
+        this did not block the cash path. All local fixtures were deactivated;
+        production was not written.
+  - [x] **W2.4 — persist cash evidence before receipt routing.** T3 migration
+        `20260712061358` is written, review-clean, and applied to Local. A real
+        no-printer cash payment completed at 25,000 VND with
+        `orders.cash_received=25000`, `cash_change=0`, matching completed payment
+        evidence, and no print job. The archived receipt shows both cash lines.
+        The shift closed at 25,000 VND and all smoke fixtures were deactivated
+        through the UI. No production DDL, deploy, commit, or push was performed.
+- [ ] **W3 — Office Inventory and Finance.** Start with the proven 1440px
+      `/inventory/stock` toolbar overlap. Fix composition at the owner layer,
+      reduce card mosaics, and standardize scan/filter/review/document density at
+      1024x768 and 1440px.
+- [ ] **W4 — Office Admin, HR, Menu, and Orders.** Apply the same Office grammar
+      without copying KPI dashboards or toolbar layouts across jobs.
+- [ ] **W5 — active Self-Order.** Add an explicit guest screen-context contract
+      and a valid local QR/session fixture; verify QR → menu/cart → staff approval
+      → recent request status → payment/recovery without exposing internal state.
+- [ ] **W6 — visual closure.** Select 24 representative scenarios and capture
+      light/night baselines (48 screenshots). Each slice gates static contracts,
+      route health, workflow/state, keyboard/touch, reduced motion, screenshot
+      diff, four-lens review, tests, UI ratchet, typecheck, lint, and build.
+
+Known W0 limits: no active Self-Order fixture; no committed PNG visual baseline;
+root dev startup and local Supabase env ports drift; Office stock toolbar remains
+open for W3. No palette/font/radius/primitive rewrite was authorized in W0.
+
 ## POS Item Customizer Mobile Scroll (2026-07-11)
 
 Skill plan: repo rules = engineering + skills + workflow + ui; external skills =
@@ -369,6 +477,33 @@ untouched. The BA rules map to `qr-code-image.tsx`, `bank-app-link.ts`,
 `payment-panel.tsx`, and `self-order.ts`; 75 focused tests plus typecheck, lint,
 and build are green. A physical-phone handoff into MB remains unverified because
 the local environment has no active-payment fixture or installed bank app.
+
+### Bank app deeplink expansion T3 contract
+
+Skill plan: repo rules = engineering + skills + UI + workflow; external skill =
+Ponytail; runtime tools = CodeGraph + official ZaloPay/VietQR/MoMo references +
+focused tests; skipped = payment-provider integration, schema writes, and bank
+schemes that do not carry payment data.
+
+- **PM:** Add the smallest evidence-backed same-device paths missing from the
+  current VietQR catalog: an MSB payload handoff link and the MoMo QR scanner.
+- **BA:** MSB receives the exact active VietQR payload; MoMo opens its QR scanner
+  and keeps the existing saved-image fallback. Neither path creates a MoMo
+  payment method, mutates payment state, or replaces SePay confirmation.
+- **Senior Dev:** Extend the existing boundary in `bank-app-link.ts`; keep the
+  remote VietQR catalog for every already-supported bank and add only MSB to the
+  launcher fallback list.
+- **QA/QC:** Assert the exact `qrContent` for MB/MSB, the scanner route for MoMo,
+  and preservation of the canonical `cash`/`vietqr` payment-method model.
+
+Agreement: base schemes that merely open a bank app are not treated as payment
+handoffs. MSB and MoMo remain physical-phone verification items because the
+local environment has no installed mobile banking apps.
+
+Attestation: the focused Self-Order regression suite is 9/9 green; full repo
+typecheck, lint, build, and test are green, including 992 fresh web tests.
+CodeGraph was refreshed after the source change. No schema, payment-state, or
+production deployment change is included.
 
 Sequencing: S1 → S2 → S3 → S4 → S5 → S6 → S7. Each slice is one commit with the
 full gate run fresh (`corepack pnpm typecheck && corepack pnpm lint && corepack

@@ -24,7 +24,7 @@ export default async function OperatorShiftPage({
         schedule: `/br/${branchId}/shift/schedule`,
         profile: `/br/${branchId}/profile`,
         checkoutApprovals: `/br/${branchId}/shift/checkout-approvals`,
-        count: `/br/${branchId}/stock/count`,
+        count: `/br/${branchId}/shift/count`,
         wasteApprovals: `/br/${branchId}/stock/waste-approvals`,
         team: `/br/${branchId}/team`,
       }}

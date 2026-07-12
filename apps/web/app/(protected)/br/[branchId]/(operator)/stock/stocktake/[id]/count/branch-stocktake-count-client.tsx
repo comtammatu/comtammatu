@@ -4,14 +4,12 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { formatCount } from "@comtammatu/shared/format";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPanel,
   BranchOperatorPage,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -219,35 +217,19 @@ export function BranchStocktakeCountClient({
 
   return (
     <BranchOperatorPage
-      title={`${stocktakeCopy.startCounting} #${data.sessionId}`}
-      description={`Round R${data.currentRound}`}
+      title={`KK-${data.sessionId}`}
+      description={`${data.blindMode ? "Đếm mù" : "Đếm kiểm kê"} · Round R${data.currentRound}`}
+      backHref={`${stocktakeBasePath}/${data.sessionId}?view=detail`}
+      backLabel="Phiên kiểm kê"
+      action={
+        <Button asChild variant="outline" size="touch">
+          <Link href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}>
+            Xem & chốt
+          </Link>
+        </Button>
+      }
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar>
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link
-              href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}
-              aria-label="Quay lại phiên kiểm kê"
-            >
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold">
-              KK-{data.sessionId}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {data.blindMode ? "Đếm mù" : "Đếm kiểm kê"} · Round R
-              {data.currentRound}
-            </p>
-          </div>
-          <Button asChild variant="outline" size="touch" className="shrink-0">
-            <Link href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}>
-              Xem & chốt
-            </Link>
-          </Button>
-        </BranchOperatorControlBar>
-
         <StocktakeCountWizard
           lines={currentRoundLines}
           counts={counts}

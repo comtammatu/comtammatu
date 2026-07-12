@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { PosPwaProvider } from "./_components/pwa/online-status-provider";
-import { PosPwaToolbar } from "./_components/pwa/pos-pwa-toolbar";
+import { PosPwaToolbar } from "../_components/operational-pwa/toolbar";
 
 export async function generateMetadata({
   params,

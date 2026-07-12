@@ -61,6 +61,7 @@ export default async function BranchPosSettingsPage({
     <BranchOperatorPage
       title={messages.settings.pages.posTitle}
       description={`${branchRes.data.name} · ${messages.settings.branch.posSetupDescription}`}
+      backHref={`/br/${branchId}/settings`}
     >
       <BranchOperatorPanel>
         <TerminalsClient

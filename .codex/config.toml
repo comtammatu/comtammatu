@@ -6,6 +6,9 @@
 # exact owner-delegated operations still require a scoped path that does not
 # disable repo guards. See docs/agent/rules/database.md Environment Registry.
 
+model_context_window = 272000
+model_auto_compact_token_limit = 240000
+
 [mcp_servers.supabase]
 url = "https://mcp.supabase.com/mcp?project_ref=iexwsuaqqenyjiskawoj&read_only=true&features=database,debugging,development,docs"
 
@@ -14,3 +17,4 @@ url = "https://mcp.vercel.com"
 
 [mcp_servers.openrouter]
 url = "https://mcp.openrouter.ai/mcp"
+enabled = false

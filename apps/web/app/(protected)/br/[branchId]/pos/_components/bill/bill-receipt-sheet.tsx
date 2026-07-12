@@ -36,7 +36,6 @@ import {
   Printer as IconPrinter,
   QrCode as IconQrcode,
   Receipt as IconReceipt,
-  Wallet as IconWallet,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
 import { AppSection } from "@/components/surface";
@@ -83,7 +82,7 @@ interface BillReceiptProps {
    */
   initialOrder?: OrderData | null;
   /**
-   * `pos:confirm_payment`: only cashier+ can confirm cash. QR/MoMo stay visible
+   * `pos:confirm_payment`: only cashier+ can confirm cash. VietQR stays visible
    * for POS users because e-wallet settlement is not physical cash handling.
    */
   canConfirmCash: boolean;
@@ -121,15 +120,9 @@ const METHOD_META: Record<
 > = {
   cash: { label: PAYMENT_METHOD_LABELS_VI.cash, icon: IconCash },
   vietqr: { label: PAYMENT_METHOD_LABELS_VI.vietqr, icon: IconQrcode },
-  momo: { label: PAYMENT_METHOD_LABELS_VI.momo, icon: IconWallet },
 };
 
 const REMOTE_PAYMENT_COPY = {
-  momoWalletLabel: "Ví:",
-  momoWalletValue: "MoMo",
-  momoOrderLabel: "Mã đơn MoMo:",
-  momoStatusLabel: "Trạng thái:",
-  momoPendingStatus: "Chờ MoMo xác nhận tự động",
   accountLabel: "STK:",
   descriptionLabel: "Nội dung:",
   creating: "Đang tạo",
@@ -377,38 +370,12 @@ function ReceiptLoadingFixture() {
 }
 
 function RemotePaymentDetails({
-  method,
   pendingExtras,
   isCreating,
 }: {
-  method: PaymentMethod;
   pendingExtras: PendingExtras | null;
   isCreating: boolean;
 }) {
-  if (method === "momo") {
-    return (
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-        <dt className="text-muted-foreground">
-          {REMOTE_PAYMENT_COPY.momoWalletLabel}
-        </dt>
-        <dd className="font-medium">{REMOTE_PAYMENT_COPY.momoWalletValue}</dd>
-        <dt className="text-muted-foreground">
-          {REMOTE_PAYMENT_COPY.momoOrderLabel}
-        </dt>
-        <dd className="break-all font-mono">
-          {pendingExtras?.provider_ref ??
-            (isCreating
-              ? REMOTE_PAYMENT_COPY.creating
-              : REMOTE_PAYMENT_COPY.unavailable)}
-        </dd>
-        <dt className="text-muted-foreground">
-          {REMOTE_PAYMENT_COPY.momoStatusLabel}
-        </dt>
-        <dd>{REMOTE_PAYMENT_COPY.momoPendingStatus}</dd>
-      </dl>
-    );
-  }
-
   return (
     <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
       <dt className="text-muted-foreground">
@@ -505,9 +472,7 @@ export function BillReceipt({
     invoiceValid &&
     (selectedMethod === "cash"
       ? cashReceived >= totalAmount
-      : selectedMethod === "vietqr"
-        ? Boolean(pendingExtras?.payment_id)
-        : false); // MoMo: confirmed via IPN webhook, not cashier action
+      : Boolean(pendingExtras?.payment_id));
 
   // Tooltip explaining why the button is disabled — a dimmed button must
   // tell the cashier what is missing (offline, bad tax code, not enough
@@ -520,11 +485,7 @@ export function BillReceipt({
         ? "Cần điền đủ MST và tên khách trước khi xuất hoá đơn"
         : selectedMethod === "cash"
           ? "Khách chưa thanh toán đủ tổng đơn"
-          : selectedMethod === "momo"
-            ? "MoMo tự xác nhận qua IPN sau khi khách thanh toán"
-            : selectedMethod === "vietqr"
-              ? "Chưa tạo mã chuyển khoản"
-              : null;
+          : "Chưa tạo mã chuyển khoản";
 
   const cashSuggestions = useMemo(
     () => buildCashSuggestions(totalAmount),
@@ -603,7 +564,7 @@ export function BillReceipt({
   //   - orders:id=eq.{orderId} for `payment_status` UPDATE (cross-tablet
   //     confirm sync) and `status='completed'` (auto-close on payment).
   //   - payments:order_id=eq.{orderId} for any payment row change
-  //     (covers MoMo / VietQR webhook callbacks confirming a pending
+  //     (covers VietQR webhook callbacks confirming a pending
   //     e-wallet payment in real time).
   // Refetches the full order on any event — `fetchOrderForBill` is the
   // single source of truth and the response includes `payment_status`,
@@ -769,7 +730,7 @@ export function BillReceipt({
     // Remote orders stay 'unpaid' while the payment row is pending. Guard:
     // skip paid orders and non-remote methods.
     if (order.payment_status === "paid") return;
-    if (order.payment_method !== "momo" && order.payment_method !== "vietqr") {
+    if (order.payment_method !== "vietqr") {
       return;
     }
     if (!methods.includes(order.payment_method)) return;
@@ -1097,9 +1058,7 @@ export function BillReceipt({
   const remoteQrValue =
     selectedMethod === "cash"
       ? undefined
-      : selectedMethod === "momo"
-        ? pendingExtras?.qr_data
-        : (pendingExtras?.qr_data ?? pendingExtras?.redirect_url);
+      : (pendingExtras?.qr_data ?? pendingExtras?.redirect_url);
   const remotePaymentNeedsRetry =
     selectedMethod !== "cash" &&
     !methodPending &&
@@ -1371,7 +1330,6 @@ export function BillReceipt({
                           </Alert>
                         ) : null}
                         <RemotePaymentDetails
-                          method={selectedMethod}
                           pendingExtras={pendingExtras}
                           isCreating={methodPending}
                         />

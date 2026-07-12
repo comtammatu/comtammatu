@@ -41,8 +41,7 @@ export interface OperatorTileConfig extends BranchScopedNavItemConfig {
   group: OperatorTileGroupId;
   /**
    * Site kinds the tile renders for (D058 §7 kind × role). Omitted = every
-   * kind. Central-site tile sets are curated whitelists (D066) — a tile
-   * missing a kind here is intentional, not an oversight.
+   * active kind; a missing kind is intentional.
    */
   kinds?: readonly BranchKind[];
 }
@@ -242,11 +241,11 @@ export const OPERATOR_TILE_ITEMS = [
     label: "Kiểm kê",
   },
   {
-    moduleKey: "employee_checkout_approvals",
+    moduleKey: "branch_team",
     icon: "ClipboardList",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/count-assignments",
-    label: "Giao đếm",
+    group: "approvals",
+    hrefTemplate: "/br/{branchId}/team?tab=assignments",
+    label: "Phân công",
     kinds: ["branch"],
   },
   {
@@ -269,13 +268,5 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/grn",
     label: "Nhập hàng",
-  },
-  {
-    moduleKey: "inventory",
-    icon: "Tags",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/catalog",
-    label: "Danh mục",
-    kinds: ["branch"],
   },
 ] satisfies readonly OperatorTileConfig[];

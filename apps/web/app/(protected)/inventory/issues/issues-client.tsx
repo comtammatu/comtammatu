@@ -355,8 +355,8 @@ export function IssuesClient({
       .replace("T", "-");
 
     const filePrefix = isConsumptionScope
-      ? "phieu-tieu-hao-thu-cong"
-      : "wo-pxk-khac";
+      ? "manual-consumption-slips"
+      : "other-writeoffs";
 
     downloadCsv(toUtf8Base64(csv), `${filePrefix}-${stamp}.csv`);
     toast.success(INVENTORY_VI.issueExportSuccess(filtered.length));
@@ -398,7 +398,7 @@ export function IssuesClient({
       .replaceAll(":", "-")
       .replace("T", "-");
 
-    downloadCsv(toUtf8Base64(csv), `tieu-hao-da-ghi-nhan-${stamp}.csv`);
+    downloadCsv(toUtf8Base64(csv), `recorded-consumption-${stamp}.csv`);
     toast.success(
       INVENTORY_VI.recordedExportSuccess(visibleRecordedConsumptions.length),
     );

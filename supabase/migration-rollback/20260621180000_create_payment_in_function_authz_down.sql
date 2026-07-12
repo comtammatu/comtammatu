@@ -23,7 +23,7 @@ BEGIN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
 
-  IF p_method NOT IN ('cash', 'momo') THEN
+  IF p_method NOT IN ('cash', 'vietqr') THEN
     RAISE EXCEPTION 'invalid payment method: %. VietQR uses confirm_vietqr_payment.',
       p_method USING ERRCODE = '22023';
   END IF;

@@ -162,8 +162,8 @@ không gọi trực tiếp vocabulary Employee ở các route Branch:
 - hub và màn chi tiết dùng `BranchOperatorPage`, `BranchOperatorPanel`,
   `BranchOperatorActionSection`, và các Branch operator adapter tương ứng
   trước khi nghĩ tới wrapper mới.
-- mobile ẩn page header trùng bằng `hideHeaderOnMobile`; app chrome đã giữ tên
-  app, chi nhánh, và bottom nav.
+- mobile giữ page title của workflow vì app chrome chỉ sở hữu ngữ cảnh app và
+  chi nhánh; không dùng `hideHeaderOnMobile` trong Branch plane.
 - hub là nhóm action rows theo việc cần mở trong ngày; không đặt
   `Điều hành chi nhánh` hoặc `Cài đặt chi nhánh` như tile trong Hub.
 - màn quản lý chi nhánh (`/dashboard`, `/settings`) dùng cùng Branch runtime
@@ -187,19 +187,23 @@ không gọi trực tiếp vocabulary Employee ở các route Branch:
 
 Branch stock workflow áp dụng cùng ranh giới này:
 
-- `/br/[branchId]/stock` là hub việc kho trong ca, không wrapper Office
-  `StockPageContent`.
+- `/br/[branchId]/stock` là màn `Tồn` canonical: mở thẳng dữ liệu tồn thực và
+  các action ngữ cảnh theo quyền, không là feature hub và không wrapper Office
+  `StockPageContent`. `/stock/on-hand` chỉ là redirect tương thích.
 - list workflow native như `/br/[branchId]/stock/transfer` dùng archetype `LIST`
   với `BranchOperatorPage`/`BranchOperatorPanel`, action rows full-width trên
   mobile, và route-scoped href `/br/[branchId]/stock/*`.
-- `/br/[branchId]/stock/on-hand` là Branch-native touch `LIST`: dùng shared
+- `/br/[branchId]/stock` là Branch-native touch `LIST`: dùng shared
   `loadStockOnHandPageData` + pure filter model nhưng giữ `ItemGroup`/full-row
   touch presentation ở phone, tablet portrait và tablet landscape. Route này
   không đổi sang `DataTable` tại `1024px`, không hiển thị WAC/giá trị tồn/KPI,
   và mở thẻ kho qua `/br/[branchId]/stock/on-hand/[ingredientId]`.
-- On-hand Branch là lookup surface, không lặp cụm mutation của Hub trên đầu
-  danh sách. Nhận/điều chuyển/kiểm kê/hủy hỏng vẫn mở từ stock Hub; action theo
-  nguyên liệu nằm trong thẻ kho chi tiết theo permission hiện có.
+- Tồn Branch là lookup surface có action ngữ cảnh ngắn theo permission hiện có;
+  không dựng thêm feature directory. Bộ lọc nằm trong URL-state để Back/reload
+  giữ đúng ngữ cảnh; action theo nguyên liệu nằm trong thẻ kho chi tiết.
+- GRN, issue, consumption và count-slip list cũng dùng URL-state cho view,
+  tìm kiếm và filter. Deep link hoặc flow tạo mới nhận `returnTo` nội bộ đã kiểm
+  tra; UI back không được làm rơi ngữ cảnh về route gốc mặc định.
 - `/br/[branchId]/stock/on-hand/[ingredientId]` là Branch-native touch `DETAIL`:
   dùng shared `loadStockIngredientDetailData` và pure movement/status model,
   nhưng tải `includeValuation: false` cho Branch. Thứ tự là tồn hiện tại/trạng
@@ -235,7 +239,7 @@ Branch stock workflow áp dụng cùng ranh giới này:
   correction, hoặc liên kết hóa đơn NCC. Các tác vụ quản trị đó vẫn thuộc Office
   `/inventory/grn/[id]`.
 - `/br/[branchId]/stock/stocktake` là Branch-native touch `LIST`: session
-  stocktake của quản lý khác với `/stock/count` là count slip được giao cho
+  stocktake của quản lý khác với `/shift/count` là count slip được giao cho
   nhân viên. Route dùng shared `loadBranchStocktakeListData`/model, full-row
   `ItemGroup` ở phone/tablet, và không dùng `DataTable`, long-press drawer,
   Office toolbar, branch picker, audit, hay report CTA.
@@ -269,10 +273,11 @@ Branch stock workflow áp dụng cùng ranh giới này:
   trạng thái và thời điểm. `/stock/consumption/[id]` là typed `DETAIL` chỉ nhận
   record tiêu hao; cả hai route dùng Branch presenter và không import Office
   `DataTable`/page content.
-- `/br/[branchId]/stock/count-assignments` và `/stock/count-slips` là hai
-  Branch-native touch `LIST`: assignment nhóm theo nhân viên; review slip mở
-  chênh lệch và approve/request-recount trong bottom `Sheet` với footer sticky.
-  Không có CTA mở nhầm phiếu đếm cá nhân của quản lý, không nhận
+- Assignment nhóm theo nhân viên thuộc tab Đội tại
+  `/br/[branchId]/team?tab=assignments`; `/stock/count-assignments` chỉ redirect
+  tương thích. `/stock/count-slips` là Branch-native touch `LIST`: review slip
+  mở chênh lệch và approve/request-recount trong bottom `Sheet` với footer
+  sticky. Không có CTA mở nhầm phiếu đếm cá nhân của quản lý, không nhận
   `routeBranchId`/`embedded` từ Office clients.
 - Office `/inventory/count-assignments` và `/inventory/count-slips` là hai
   management `LIST` responsive độc lập: desktop dùng `DataTable`, thao tác hiển

@@ -154,31 +154,3 @@ export function hasPermission(
   if (Array.isArray(permissions)) return permissions.includes(key);
   return (permissions as ReadonlySet<string>).has(key);
 }
-
-/**
- * Check that ALL required keys are present.
- */
-export function hasAllPermissions(
-  permissions: ReadonlySet<string> | readonly string[] | null | undefined,
-  keys: readonly (PermissionKey | string)[],
-): boolean {
-  if (!permissions) return false;
-  const set: ReadonlySet<string> = Array.isArray(permissions)
-    ? new Set(permissions)
-    : (permissions as ReadonlySet<string>);
-  return keys.every((k) => set.has(k));
-}
-
-/**
- * Check that at least ONE of the keys is present.
- */
-export function hasAnyPermission(
-  permissions: ReadonlySet<string> | readonly string[] | null | undefined,
-  keys: readonly (PermissionKey | string)[],
-): boolean {
-  if (!permissions) return false;
-  const set: ReadonlySet<string> = Array.isArray(permissions)
-    ? new Set(permissions)
-    : (permissions as ReadonlySet<string>);
-  return keys.some((k) => set.has(k));
-}

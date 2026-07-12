@@ -19,6 +19,8 @@ export type RoutePrimaryNav =
 
 export type RouteBackBehavior = "none" | "role-home" | "in-flow";
 
+export type OperatorTab = "today" | "shift" | "team" | "stock" | "profile";
+
 export interface RouteFamilyContract {
   id: string;
   label: string;
@@ -27,6 +29,7 @@ export interface RouteFamilyContract {
   matchPrefixes: readonly string[];
   moduleKeys: readonly ModuleKey[];
   primaryNav: RoutePrimaryNav;
+  operatorTab?: OperatorTab;
   backBehavior: RouteBackBehavior;
   breadcrumbRoot: string | null;
   requiresBranchId: boolean;
@@ -41,7 +44,6 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: [
       "/login",
       "/access-denied",
-      "/payment/momo",
       "/api/health",
       "/api/webhooks",
       "/manifest.webmanifest",
@@ -172,6 +174,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]"],
     moduleKeys: ["operator_home"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "today",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
@@ -187,6 +190,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]/shift/checkout-approvals"],
     moduleKeys: ["employee_checkout_approvals"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "team",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
@@ -202,6 +206,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]/shift/leave-approvals"],
     moduleKeys: ["employee_leave_approvals"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "team",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
@@ -214,6 +219,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]/shift"],
     moduleKeys: ["operator_home"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "shift",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
@@ -226,6 +232,59 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]/profile"],
     moduleKeys: ["operator_home"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "profile",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
+    id: "operator-stock-waste-approvals",
+    label: MODULE_ACL.inventory.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/stock/waste-approvals",
+    matchPrefixes: ["/br/[branchId]/stock/waste-approvals"],
+    moduleKeys: ["inventory"],
+    primaryNav: "operator-bottom-nav",
+    operatorTab: "stock",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
+    id: "operator-stock-count-assignments",
+    label: MODULE_ACL.inventory.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/stock/count-assignments",
+    matchPrefixes: ["/br/[branchId]/stock/count-assignments"],
+    moduleKeys: ["inventory"],
+    primaryNav: "operator-bottom-nav",
+    operatorTab: "team",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
+    id: "operator-stock-count-slips",
+    label: MODULE_ACL.inventory.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/stock/count-slips",
+    matchPrefixes: ["/br/[branchId]/stock/count-slips"],
+    moduleKeys: ["inventory"],
+    primaryNav: "operator-bottom-nav",
+    operatorTab: "stock",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
+    id: "operator-stock-count",
+    label: MODULE_ACL.operator_home.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/stock/count",
+    matchPrefixes: ["/br/[branchId]/stock/count"],
+    moduleKeys: ["operator_home"],
+    primaryNav: "operator-bottom-nav",
+    operatorTab: "shift",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
@@ -238,6 +297,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]/stock"],
     moduleKeys: ["inventory"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "stock",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
@@ -250,6 +310,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]/orders"],
     moduleKeys: ["orders"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "today",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
@@ -262,6 +323,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]/menu-limits"],
     moduleKeys: ["branch_menu_limits"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "today",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
@@ -274,6 +336,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]/pos-sessions"],
     moduleKeys: ["branch_pos_sessions"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "today",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
@@ -286,6 +349,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]/settings"],
     moduleKeys: ["branch_settings"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "today",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
@@ -298,6 +362,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]/dashboard"],
     moduleKeys: ["branch_dashboard"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "today",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
@@ -310,6 +375,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: ["/br/[branchId]/team"],
     moduleKeys: ["branch_team"],
     primaryNav: "operator-bottom-nav",
+    operatorTab: "team",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
@@ -398,4 +464,11 @@ export function resolveRouteFamilyContract(
       ),
     ) ?? null
   );
+}
+
+export function resolveOperatorTab(pathname: string): OperatorTab | null {
+  const family = resolveRouteFamilyContract(pathname);
+  return family?.primaryNav === "operator-bottom-nav"
+    ? (family.operatorTab ?? null)
+    : null;
 }

@@ -108,7 +108,7 @@ export const INVENTORY_VI = {
   receivingEyebrow: "Nhập hàng",
   chooseSourceTitle: "Chọn nguồn nhập",
   chooseSourceDescription:
-    "Nhập hàng theo nhà cung cấp — không cần PO. Hoặc nhận theo PO đã đặt.",
+    "Chọn nhà cung cấp rồi ghi nhận số lượng hàng thực tế đã nhận.",
   receiveBySupplierTitle: "Nhận theo nhà cung cấp",
   receiveBySupplierDescription: "Chọn NCC rồi nhập hàng — không cần PO.",
   receiveByPoTitle: "Nhận theo PO đã đặt",

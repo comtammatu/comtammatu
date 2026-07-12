@@ -7,62 +7,7 @@ import {
   calculatePayableDays,
   countAnnualLeaveAccruedThroughMonth,
   splitAnnualLeaveByQuota,
-  summarizeLeaveDays,
 } from "../lib/hr/payroll-day-math";
-
-test("payroll payable days include annual leave inside the period", () => {
-  const leaves = summarizeLeaveDays(
-    [
-      {
-        employeeId: 1,
-        startDate: "2026-06-12",
-        endDate: "2026-06-13",
-        leaveType: "annual",
-      },
-    ],
-    "2026-06-01",
-    "2026-06-30",
-  );
-
-  const summary = leaves.get(1);
-  assert.equal(summary?.paidLeaveDays, 2);
-  assert.equal(summary?.unpaidLeaveDays, 0);
-  assert.equal(
-    calculatePayableDays({
-      workingDays: 24,
-      paidLeaveDays: summary?.paidLeaveDays ?? 0,
-      standardDays: 26,
-    }),
-    26,
-  );
-});
-
-test("unpaid leave does not increase payable days", () => {
-  const leaves = summarizeLeaveDays(
-    [
-      {
-        employeeId: 1,
-        startDate: "2026-06-12",
-        endDate: "2026-06-13",
-        leaveType: "unpaid",
-      },
-    ],
-    "2026-06-01",
-    "2026-06-30",
-  );
-
-  const summary = leaves.get(1);
-  assert.equal(summary?.paidLeaveDays, 0);
-  assert.equal(summary?.unpaidLeaveDays, 2);
-  assert.equal(
-    calculatePayableDays({
-      workingDays: 24,
-      paidLeaveDays: summary?.paidLeaveDays ?? 0,
-      standardDays: 26,
-    }),
-    24,
-  );
-});
 
 test("annual leave accrues one day per month from the start month", () => {
   assert.equal(countAnnualLeaveAccruedThroughMonth("2026-03-15", 2026, 5), 3);

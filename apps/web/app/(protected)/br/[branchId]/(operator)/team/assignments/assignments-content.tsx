@@ -5,10 +5,18 @@ import { BranchCountAssignmentsClient } from "../../stock/count-assignments/bran
 
 export async function TeamAssignmentsContent({
   branchId,
+  locationParam,
+  shiftParam,
 }: {
   branchId: number;
+  locationParam?: string | string[];
+  shiftParam?: string | string[];
 }) {
-  const data = await loadBranchCountAssignmentData({ routeBranchId: branchId });
+  const data = await loadBranchCountAssignmentData({
+    routeBranchId: branchId,
+    locationParam,
+    shiftParam,
+  });
 
   return (
     <Suspense

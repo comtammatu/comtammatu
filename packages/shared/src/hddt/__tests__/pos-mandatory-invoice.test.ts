@@ -171,24 +171,6 @@ test("SePay webhook uses the POS settlement service without direct HĐĐT issuan
   assert.match(migration, /public\.confirm_sepay_payment\(/);
 });
 
-test("MoMo webhook attempts HĐĐT after successful webhook payment", () => {
-  const src = read("apps/web/app/api/webhooks/momo/route.ts");
-
-  assert.ok(
-    src.includes("issueTaxInvoiceForPaidOrder"),
-    "MoMo paid webhook must attempt per-order HĐĐT issuance",
-  );
-  assert.match(
-    src,
-    /case "completed":\s*\n\s*case "already_completed": \{/,
-    "HĐĐT attempt must run for both fresh and idempotent MoMo paid outcomes",
-  );
-  assert.ok(
-    src.includes("error_code: invoiceErrorCode"),
-    "MoMo webhook event should record invoice attempt failure without failing payment",
-  );
-});
-
 test("finance can recover paid SePay orders that missed HĐĐT", () => {
   const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
   const listSrc = read("apps/web/app/(protected)/finance/invoice-list.tsx");

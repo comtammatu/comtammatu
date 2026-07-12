@@ -67,10 +67,9 @@ import {
   type BranchStockIssueStatusFilter,
 } from "@lib/inventory/stock-issue-model";
 import { messages } from "@lib/messages";
+import { useOperatorUrlState } from "@lib/branch-operator/use-operator-url-state";
 
 const issuesCopy = messages.inventory.issues;
-
-type ConsumptionView = "recorded" | "manual";
 
 const statusOptions: Array<{
   value: BranchStockIssueStatusFilter;
@@ -117,9 +116,13 @@ export function BranchConsumptionListClient({
 }) {
   const router = useRouter();
   const basePath = `/br/${branchId}/stock/consumption`;
-  const [view, setView] = useState<ConsumptionView>("recorded");
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<BranchStockIssueStatusFilter>("all");
+  const { replaceParams, searchParams } = useOperatorUrlState();
+  const view = searchParams.get("view") === "manual" ? "manual" : "recorded";
+  const query = searchParams.get("q") ?? "";
+  const statusParam = searchParams.get("status");
+  const status = statusOptions.some((option) => option.value === statusParam)
+    ? (statusParam as BranchStockIssueStatusFilter)
+    : "all";
   const [createOpen, setCreateOpen] = useState(false);
   const [notes, setNotes] = useState("");
   const [selectedMovement, setSelectedMovement] =
@@ -141,8 +144,7 @@ export function BranchConsumptionListClient({
       : INVENTORY_VI.issueSearchPlaceholder;
 
   function resetFilters() {
-    setQuery("");
-    setStatus("all");
+    replaceParams({ q: null, status: null });
   }
 
   function createManualSlip() {
@@ -173,9 +175,11 @@ export function BranchConsumptionListClient({
       <Tabs
         value={view}
         onValueChange={(value) => {
-          setView(value as ConsumptionView);
-          setQuery("");
-          setStatus("all");
+          replaceParams({
+            q: null,
+            status: null,
+            view: value === "recorded" ? null : value,
+          });
         }}
       >
         <TabsList className="grid min-h-12 w-full grid-cols-2">
@@ -231,7 +235,9 @@ export function BranchConsumptionListClient({
               type="search"
               autoComplete="off"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) =>
+                replaceParams({ q: event.target.value || null })
+              }
               placeholder={searchLabel}
               inputMode="search"
             />
@@ -240,7 +246,7 @@ export function BranchConsumptionListClient({
             <Select
               value={status}
               onValueChange={(value) =>
-                setStatus(value as BranchStockIssueStatusFilter)
+                replaceParams({ status: value === "all" ? null : value })
               }
             >
               <SelectTrigger

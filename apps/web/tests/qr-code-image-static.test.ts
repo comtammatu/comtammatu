@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
@@ -95,24 +95,29 @@ test("bank app catalog hosts remain allowed by CSP", () => {
   );
 });
 
-test("MB Bank link receives the exact VietQR payload", () => {
+test("MB and MSB links receive the exact VietQR payload", () => {
   const qrData =
     "00020101021238530010A0000007270123000697042201091234567890208QRIBFTTA530370454061670005802VN6304ABCD";
-  const href = buildVietQrBankAppUrl({
-    appId: "mb",
-    accountNo: "0123456789",
-    bankCode: "MB",
-    amount: 167_000,
-    paymentCode: "MATU ABC123",
-    qrData,
-  });
+  for (const [appId, protocol] of [
+    ["mb", "mbbank:"],
+    ["msb", "msbmbank:"],
+  ] as const) {
+    const href = buildVietQrBankAppUrl({
+      appId,
+      accountNo: "0123456789",
+      bankCode: "MB",
+      amount: 167_000,
+      paymentCode: "MATU ABC123",
+      qrData,
+    });
 
-  assert.ok(href);
-  const url = new URL(href);
-  assert.equal(url.protocol, "mbbank:");
-  assert.equal(url.host, "applink");
-  assert.equal(url.searchParams.get("targetPage"), "QRPay");
-  assert.equal(url.searchParams.get("qrContent"), qrData);
+    assert.ok(href);
+    const url = new URL(href);
+    assert.equal(url.protocol, protocol);
+    assert.equal(url.host, "applink");
+    assert.equal(url.searchParams.get("targetPage"), "QRPay");
+    assert.equal(url.searchParams.get("qrContent"), qrData);
+  }
 });
 
 test("MoMo opens only as a QR scanner without merchant payment data", () => {
@@ -124,7 +129,60 @@ test("MoMo opens only as a QR scanner without merchant payment data", () => {
     paymentCode: "MATU ABC123",
   });
 
-  assert.equal(href, "momo://app");
+  assert.equal(href, "momo://?refId=ScanQRCode");
+});
+
+test("native MoMo configuration stays removed while Self-Order keeps the scanner launcher", () => {
+  const configSources = [
+    readRepo(".env.example"),
+    readRepo("turbo.json"),
+    readRepo("packages/shared/src/settings/index.ts"),
+    readWeb("app/(protected)/admin/settings/(tenant)/payments/actions.ts"),
+    readWeb(
+      "app/(protected)/admin/settings/(tenant)/payments/payments-form.tsx",
+    ),
+  ].join("\n");
+  const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
+  const bankAppLink = readWeb("lib/self-order/bank-app-link.ts");
+  const cleanupMigration = readRepo(
+    "supabase/migrations/20260712021050_canonicalize_payment_methods.sql",
+  );
+  const rpcCleanupMigration = readRepo(
+    "supabase/migrations/20260712032325_canonicalize_payment_method_rpc_residue.sql",
+  );
+
+  assert.doesNotMatch(
+    configSources,
+    /MOMO_|PAYMENT_ENABLE_MOMO|payment_enable_momo/,
+  );
+  assert.equal(
+    existsSync(join(process.cwd(), "app/api/webhooks/momo/route.ts")),
+    false,
+  );
+  assert.equal(
+    existsSync(
+      join(process.cwd(), "app/(public)/payment/momo/return/page.tsx"),
+    ),
+    false,
+  );
+  assert.match(paymentPanel, /\{ id: "momo", name: "MoMo"/);
+  assert.match(paymentPanel, /\{ id: "msb", name: "MSB"/);
+  assert.match(bankAppLink, /return "momo:\/\/\?refId=ScanQRCode"/);
+  assert.match(
+    cleanupMigration,
+    /DELETE FROM public\.system_settings\s+WHERE key = 'payment_enable_momo'/,
+  );
+  assert.match(cleanupMigration, /CHECK \(method IN \('cash', 'vietqr'\)\)/);
+  assert.doesNotMatch(cleanupMigration, /momo_revenue/i);
+  assert.match(
+    rpcCleanupMigration,
+    /IF p_method NOT IN \('cash', 'vietqr'\) THEN/,
+  );
+  assert.match(
+    rpcCleanupMigration,
+    /FILTER \(WHERE sp\.method = 'vietqr'\)/,
+  );
+  assert.doesNotMatch(rpcCleanupMigration, /momo/i);
 });
 
 test("autofill bank app links keep the exact VietQR payment facts", () => {

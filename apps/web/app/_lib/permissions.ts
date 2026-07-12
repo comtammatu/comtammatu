@@ -10,13 +10,6 @@ import { cache } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import type { PermissionKey } from "@comtammatu/shared/auth";
 
-export interface UserPermission {
-  permissionKey: string;
-  branchId: number | null;
-  sourceTemplate: number | null;
-  grantedAt: string;
-}
-
 /**
  * Check if current user has a permission for a given branch (or tenant-wide).
  * Server-side; reads the same data as the RLS helper but returns a boolean to callers.

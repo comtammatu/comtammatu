@@ -53,6 +53,7 @@ export default async function BranchSettingsHubPage({
     <BranchOperatorPage
       title={copy.hubTitle}
       description={copy.hubDescription}
+      backHref={`/br/${branchId}`}
     >
       {hasContent ? (
         <BranchOperatorActionSection

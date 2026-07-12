@@ -139,12 +139,12 @@ test("POS actions do not revive broad kitchen paper enqueueing", () => {
   assert.doesNotMatch(
     printActions,
     /enqueue_kitchen_print/,
-    "manual POS send action must not call the old broad kitchen print RPC",
+    "POS print actions must not call the old broad kitchen print RPC",
   );
-  assert.match(
+  assert.doesNotMatch(
     printActions,
-    /deferred_to: "kds_completion"/,
-    "manual POS send action must preserve compatibility while deferring paper",
+    /sendToKitchen|deferred_to/,
+    "the retired manual POS send compatibility action must stay deleted",
   );
 });
 
@@ -180,9 +180,6 @@ test("printer-only categories print at POS dispatch without entering food KDS", 
 
 test("non-KDS items use kitchen printer routing without category-type hardcode", () => {
   const migration = read(routePolicyMigrationPath);
-  const printActions = read(
-    "apps/web/app/(protected)/br/[branchId]/pos/print-actions.ts",
-  );
 
   assert.match(
     migration,
@@ -203,10 +200,5 @@ test("non-KDS items use kitchen printer routing without category-type hardcode",
     migration,
     /category_type = 'drink'|mc\.type\s*(?:=|<>)/,
     "routing must not depend on menu category type",
-  );
-  assert.match(
-    printActions,
-    /\.select\("id, kds_tickets\(id\)"\)[\s\S]*\(item\.kds_tickets \?\? \[\]\)\.length === 0/,
-    "POS partial-send warning must follow routing result instead of category type",
   );
 });

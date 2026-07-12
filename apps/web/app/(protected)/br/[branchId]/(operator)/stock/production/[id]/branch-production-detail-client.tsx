@@ -1,11 +1,9 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   Boxes as IconBoxes,
   ChefHat as IconChefHat,
 } from "lucide-react";
@@ -35,10 +33,9 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
-import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import { AppDetailFooter } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -244,25 +241,10 @@ export function BranchProductionDetailClient({
       title={run.production_number}
       description={run.finished_good_name}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
+      backHref={basePath}
+      backLabel="Sản xuất"
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={basePath} aria-label="Quay lại danh sách sản xuất">
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold tabular-nums">
-              {run.production_number}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {run.finished_good_name}
-            </p>
-          </div>
-          <StatusBadge domain="inventory" value={run.status} size="sm" />
-        </BranchOperatorControlBar>
-
         <BranchOperatorStatusStrip
           items={[
             {

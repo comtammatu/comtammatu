@@ -123,7 +123,7 @@ async function ensureFixtureBaseUnit(
     .from("units")
     .select("id")
     .eq("tenant_id", tenantId)
-    .eq("code", "e2e-unit")
+    .eq("code", "e2e_unit")
     .maybeSingle();
 
   if (existingErr) {
@@ -135,7 +135,7 @@ async function ensureFixtureBaseUnit(
     .from("units")
     .insert({
       tenant_id: tenantId,
-      code: "e2e-unit",
+      code: "e2e_unit",
       name: "E2E unit",
       is_active: true,
     })

@@ -245,10 +245,28 @@ BEGIN
     FROM public.self_order_payment_requests pr
     WHERE pr.id = v_payment_request
       AND pr.order_id = v_one_order
-      AND pr.session_id IS NULL
+      AND pr.payment_id IS NULL
   ) THEN
-    RAISE EXCEPTION 'PAYMENT REQUEST MUST BIND ORDER WITHOUT SESSION';
+    RAISE EXCEPTION 'PAYMENT REQUEST MUST BIND ORDER BEFORE PAYMENT';
   END IF;
+
+  UPDATE public.orders
+  SET payment_status = 'paid'
+  WHERE id = v_one_order;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.self_order_payment_requests pr
+    WHERE pr.id = v_payment_request
+      AND pr.status = 'cash_call'
+      AND pr.payment_id IS NULL
+  ) THEN
+    RAISE EXCEPTION 'PAYMENT REQUEST COMPLETED WITHOUT PAYMENT EVIDENCE';
+  END IF;
+
+  UPDATE public.orders
+  SET payment_status = 'unpaid'
+  WHERE id = v_one_order;
 
   PERFORM set_config('request.jwt.claim.sub', v_profile::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);

@@ -33,19 +33,6 @@ function section(path: string, start: string, end: string): string {
   return source.slice(from, to);
 }
 
-function assertActionCallsDoNotSendUnit(path: string, callName: string): void {
-  const source = read(path);
-  const calls = source.matchAll(
-    new RegExp(`${callName}\\(\\{[\\s\\S]*?\\}\\);`, "g"),
-  );
-  let count = 0;
-  for (const call of calls) {
-    count++;
-    assert.doesNotMatch(call[0], /\bunit\s*:/, `${path} ${callName}`);
-  }
-  assert.ok(count > 0, `${callName} not found in ${path}`);
-}
-
 function latestMigrationDefining(functionName: string): {
   file: string;
   sql: string;
@@ -163,7 +150,7 @@ test("latest menu recipe upsert RPC does not write dropped unit text", () => {
   assert.doesNotMatch(body, /\bunit\s*=\s*EXCLUDED\.unit\b/);
 });
 
-test.skip("inventory entry units are persisted inside atomic RPCs", () => {
+test("inventory entry units are persisted inside atomic RPCs", () => {
   const sql = read(
     "supabase/migration-archive/20260629125621_persist_entry_unit_in_atomic_rpcs.sql",
   );
@@ -191,7 +178,7 @@ test.skip("inventory entry units are persisted inside atomic RPCs", () => {
   }
 });
 
-test.skip("server actions do not patch entry units after RPC success", () => {
+test("server actions do not patch entry units after RPC success", () => {
   for (const path of [
     "apps/web/app/(protected)/inventory/production-run-actions.ts",
     "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
@@ -201,114 +188,6 @@ test.skip("server actions do not patch entry units after RPC success", () => {
     const source = read(path);
     assert.doesNotMatch(source, /\.update\(\{\s*entry_unit_id/s, path);
     assert.doesNotMatch(source, /error:\s*(?:error|rpcError)\.message/, path);
-  }
-});
-
-test.skip("server action payload keys match the RPC contract", () => {
-  const actionPayloads = new Map([
-    [
-      "apps/web/app/(protected)/inventory/production-run-actions.ts",
-      "entryUnitId: item.entryUnitId ?? null",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/transfer-actions.ts",
-      "entryUnitId: line.entryUnitId ?? null",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/recipe-actions.ts",
-      "entry_unit_id: line.entryUnitId ?? null",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
-      "entry_unit_id: line.entryUnitId ?? null",
-    ],
-  ]);
-
-  for (const [path, payloadLine] of actionPayloads) {
-    assert.match(read(path), escaped(payloadLine));
-  }
-});
-
-test.skip("transaction write callers do not send unit text/code", () => {
-  for (const path of [
-    "apps/web/app/(protected)/inventory/grn-actions.ts",
-    "apps/web/app/(protected)/inventory/issue-actions.ts",
-    "apps/web/app/(protected)/inventory/waste-actions.ts",
-    "apps/web/app/(protected)/inventory/production-run-actions.ts",
-    "apps/web/app/(protected)/inventory/transfer-actions.ts",
-    "apps/web/app/(protected)/inventory/recipe-actions.ts",
-    "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
-  ]) {
-    assert.doesNotMatch(
-      read(path),
-      /\bunit:\s*z\.string\(\)\.optional\(\)/,
-      path,
-    );
-  }
-
-  for (const [path, callName] of [
-    [
-      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
-      "upsertGrnLine",
-    ],
-    ["apps/web/lib/inventory/use-grn-detail-actions.ts", "upsertGrnLine"],
-    [
-      "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
-      "upsertGrnLine",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/production-order-form.tsx",
-      "createProductionOrder",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/production-recipe-panel.tsx",
-      "upsertProductionRecipeLines",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx",
-      "upsertRecipeLines",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
-      "upsertStockIssueLine",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
-      "upsertStockIssueLine",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx",
-      "createWasteEntry",
-    ],
-    [
-      "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
-      "createStockTransfer",
-    ],
-  ] as const) {
-    assertActionCallsDoNotSendUnit(path, callName);
-  }
-});
-
-test.skip("direct table writes derive persisted unit text from the entry unit catalog", () => {
-  const helper = read(
-    "apps/web/app/(protected)/inventory/_lib/entry-unit-code.ts",
-  );
-
-  assert.match(helper, /\.eq\("unit_id", entryUnitId\)/);
-  assert.match(helper, /\.eq\("is_base", true\)/);
-  assert.match(helper, /\.eq\("ingredient_id", ingredientId\)/);
-  assert.match(helper, /\.eq\("tenant_id", tenantId\)/);
-  assert.doesNotMatch(helper, /\.eq\("id", entryUnitId\)/);
-  assert.doesNotMatch(helper, /fallbackUnit/);
-
-  for (const path of [
-    "apps/web/app/(protected)/inventory/grn-actions.ts",
-    "apps/web/app/(protected)/inventory/issue-actions.ts",
-  ]) {
-    const source = read(path);
-    assert.match(source, /resolveEntryUnitCode/, path);
-    assert.match(source, /unit:\s*resolvedUnit\.unit/, path);
-    assert.doesNotMatch(source, /fallbackUnit/, path);
   }
 });
 
@@ -389,7 +268,7 @@ test("recipe runtime DTOs expose unitLabel instead of legacy unit", () => {
   );
 });
 
-test.skip("RPC-backed inventory writes let the RPC derive persisted unit text", () => {
+test("RPC-backed inventory writes let the RPC derive persisted unit text", () => {
   for (const path of [
     "apps/web/app/(protected)/inventory/production-run-actions.ts",
     "apps/web/app/(protected)/inventory/waste-actions.ts",
@@ -406,7 +285,7 @@ test.skip("RPC-backed inventory writes let the RPC derive persisted unit text", 
   );
 });
 
-test.skip("inventory RPCs derive persisted unit text from the unit catalog", () => {
+test("inventory RPCs derive persisted unit text from the unit catalog", () => {
   const migration = read(
     "supabase/migration-archive/20260704193015_inventory_unit_rpc_contract.sql",
   );
@@ -438,7 +317,7 @@ test.skip("inventory RPCs derive persisted unit text from the unit catalog", () 
   );
 });
 
-test.skip("expiry writeoff RPC does not accept a unit text argument", () => {
+test("expiry writeoff RPC does not accept a unit text argument", () => {
   const migration = read(
     "supabase/migration-archive/20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql",
   );
@@ -466,7 +345,7 @@ test.skip("expiry writeoff RPC does not accept a unit text argument", () => {
   assert.match(bridge, /RETURN;/);
 });
 
-test.skip("production recipe bulk import stores catalog-derived units", () => {
+test("production recipe bulk import stores catalog-derived units", () => {
   const migration = read(
     "supabase/migration-archive/20260704193015_inventory_unit_rpc_contract.sql",
   );
@@ -490,7 +369,7 @@ test.skip("production recipe bulk import stores catalog-derived units", () => {
   assert.match(action, /entry_unit_id:\s*line\.entryUnitId/);
 });
 
-test.skip("employee count slip prefill preserves the submitted entry unit", () => {
+test("employee count slip prefill preserves the submitted entry unit", () => {
   const sql = read(
     "supabase/migration-archive/20260629144912_employee_count_slip_entry_unit_prefill.sql",
   );
@@ -506,7 +385,7 @@ test.skip("employee count slip prefill preserves the submitted entry unit", () =
   );
 });
 
-test.skip("stock transfer receive converts received entry quantities to base units", () => {
+test("stock transfer receive converts received entry quantities to base units", () => {
   const sql = read(
     "supabase/migrations/20260706071001_stock_transfer_receive_base_quantity.sql",
   );
@@ -541,7 +420,7 @@ test.skip("stock transfer receive converts received entry quantities to base uni
   assert.match(sql, /current_quantity = sl\.current_quantity \+ agg\.delta/);
 });
 
-test.skip("GRN amend and legacy GRN movements use base quantities", () => {
+test("GRN amend and legacy GRN movements use base quantities", () => {
   const sql = read(
     "supabase/migrations/20260706084233_grn_base_quantity_legacy_cleanup.sql",
   );
@@ -609,27 +488,6 @@ test("inventory unit closure keeps transfer RPCs on entry units only", () => {
   assert.doesNotMatch(draftBody, /\bunit\s*,/);
   assert.doesNotMatch(draftBody, /\bunit\s*\)/);
 
-  const intraStart = sql.indexOf(
-    "CREATE OR REPLACE FUNCTION public.commit_intra_branch_transfer",
-  );
-  assert.ok(intraStart >= 0, "commit_intra_branch_transfer override not found");
-  const intraBody = sql.slice(
-    intraStart,
-    sql.indexOf(
-      "COMMENT ON FUNCTION public.commit_intra_branch_transfer",
-      intraStart,
-    ),
-  );
-  assert.doesNotMatch(intraBody, /intra_branch_transfer_not_supported/);
-  assert.match(
-    intraBody,
-    /v_qty_base := public\.inv_to_base\(v_ingredient_id, v_entry_unit_id, v_entry_qty\)::numeric\(15,3\);/,
-  );
-  assert.match(intraBody, /'transfer_out',\s*\n\s*-v_qty_base/);
-  assert.match(intraBody, /'transfer_in',\s*\n\s*v_qty_base/);
-  assert.match(intraBody, /entry_unit_id,\s*\n\s*entry_quantity/);
-  assert.match(intraBody, /v_entry_unit_id,\s*\n\s*v_entry_qty/);
-  assert.match(intraBody, /quantity_received[\s\S]*v_entry_qty/);
 });
 
 test("inventory unit closure backfills old null entry units and resolves production run base unit", () => {

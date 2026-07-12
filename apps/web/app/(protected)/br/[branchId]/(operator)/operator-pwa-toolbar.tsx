@@ -1,10 +1,16 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { PwaToolbar } from "@/components/pwa-toolbar";
+import { useIsOnline } from "@/components/pwa-runtime";
 import { messages } from "@lib/messages";
 
 export function OperatorPwaToolbar() {
   const copy = messages.operator.pwa;
+  const isOnline = useIsOnline();
+  const isOperatorHome = /^\/br\/\d+\/?$/.test(usePathname());
+
+  if (isOnline && !isOperatorHome) return null;
 
   return (
     <PwaToolbar

@@ -15,7 +15,6 @@ import {
 } from "./inventory-master";
 import { notifications } from "./notifications";
 import { operator } from "./operator";
-import { payment } from "./payment";
 import { pos } from "./pos";
 import { settings } from "./settings";
 
@@ -35,7 +34,6 @@ export const messages = {
   },
   notifications,
   operator,
-  payment,
   pos,
   settings,
 } as const;

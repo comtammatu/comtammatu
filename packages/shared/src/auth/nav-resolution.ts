@@ -3,10 +3,9 @@ import { canAccess, type ModuleKey, MODULE_ACL } from "./module-acl";
 import {
   resolveAdminDiscoveryGroups,
   resolveBranchManagementDiscoveryGroup,
-  resolveBranchOperationDiscoveryGroup,
   resolveWorkspaceDiscoveryGroup,
 } from "./app-discovery";
-import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
+import { APP_COPY_VI } from "../labels";
 
 export interface ResolvedNavLink {
   label: string;
@@ -16,11 +15,6 @@ export interface ResolvedNavLink {
 }
 
 export interface ResolvedNavGroup {
-  title: string;
-  items: ResolvedNavLink[];
-}
-
-export interface QuickLaunchGroup {
   title: string;
   items: ResolvedNavLink[];
 }
@@ -93,21 +87,6 @@ export function resolveWorkspaceItems(role: StaffRole): ResolvedNavLink[] {
   );
 }
 
-export function resolveBranchOperationItems(
-  role: StaffRole,
-  branchId?: number | null,
-): ResolvedNavLink[] {
-  const group = resolveBranchOperationDiscoveryGroup(role, branchId);
-
-  if (!group) {
-    return [];
-  }
-
-  return group.items.map((item) =>
-    resolveNavLink(item, item.href ?? undefined),
-  );
-}
-
 export function resolveBranchManagementItems(
   role: StaffRole,
   branchId?: number | null,
@@ -121,25 +100,4 @@ export function resolveBranchManagementItems(
   return group.items.map((item) =>
     resolveNavLink(item, item.href ?? undefined),
   );
-}
-
-export function resolveQuickLaunchGroups(
-  role: StaffRole,
-  branchId?: number | null,
-): QuickLaunchGroup[] {
-  const workspaceItems = resolveWorkspaceItems(role);
-  const branchManagementItems = resolveBranchManagementItems(role, branchId);
-  const branchOperationItems = resolveBranchOperationItems(role, branchId);
-
-  return [
-    { title: NAV_GROUP_LABELS_VI.workspaces, items: workspaceItems },
-    {
-      title: NAV_GROUP_LABELS_VI.branchManagement,
-      items: branchManagementItems,
-    },
-    {
-      title: NAV_GROUP_LABELS_VI.branchOperations,
-      items: branchOperationItems,
-    },
-  ].filter((group) => group.items.length > 0);
 }

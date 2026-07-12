@@ -41,6 +41,7 @@ const copy = messages.inventoryMaster.units;
 
 const unitFormSchema = z.object({
   code: z.string().trim().min(1),
+  name: z.string().trim().min(1),
   is_active: z.boolean(),
 });
 
@@ -48,6 +49,7 @@ type UnitFormValues = z.infer<typeof unitFormSchema>;
 
 const NEW_UNIT_DEFAULTS: UnitFormValues = {
   code: "",
+  name: "",
   is_active: true,
 };
 
@@ -109,6 +111,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
       const res = await updateUnit({
         id: row.id,
         code: row.code,
+        name: row.name,
         is_active: false,
       });
       if (!res.success) {
@@ -143,6 +146,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
   const defaultValues: UnitFormValues = editRow
     ? {
         code: editRow.code,
+        name: editRow.name,
         is_active: editRow.is_active,
       }
     : NEW_UNIT_DEFAULTS;
@@ -196,6 +200,12 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
   }
 
   const columns: DataTableColumn<UnitRow>[] = [
+    {
+      key: "name",
+      header: copy.cols.name,
+      className: "font-medium",
+      render: (row) => row.name,
+    },
     {
       key: "code",
       header: copy.cols.code,
@@ -304,9 +314,10 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
           mobileCardRender={(row) => (
             <Item variant="outline">
               <ItemContent className="min-w-0">
-                <ItemTitle size="heading" className="font-mono">
+                <ItemTitle size="heading">{row.name}</ItemTitle>
+                <ItemDescription className="font-mono text-xs">
                   {row.code}
-                </ItemTitle>
+                </ItemDescription>
                 <ItemDescription className="text-sm leading-6">
                   <StatusBadges row={row} />
                 </ItemDescription>
@@ -339,6 +350,13 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
               name="code"
               label={copy.form.code}
               placeholder={copy.form.codePlaceholder}
+              required
+            />
+            <TextField
+              control={form.control}
+              name="name"
+              label={copy.form.name}
+              placeholder={copy.form.namePlaceholder}
               required
             />
             <Field orientation="horizontal">

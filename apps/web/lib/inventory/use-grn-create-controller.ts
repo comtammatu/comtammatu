@@ -31,6 +31,7 @@ import {
 export type UseGrnCreateControllerOptions = GrnCreatePageData & {
   basePath: string;
   grnBasePath: string;
+  returnTo?: string;
 };
 
 export function useGrnCreateController({
@@ -46,6 +47,7 @@ export function useGrnCreateController({
   canConfirm,
   basePath,
   grnBasePath,
+  returnTo,
 }: UseGrnCreateControllerOptions) {
   const router = useRouter();
   const initialLocation = pickGrnReceivingLocation(
@@ -295,7 +297,9 @@ export function useGrnCreateController({
     try {
       const grnId = await ensureServerDraft();
       if (grnId === null) return;
-      router.push(`${grnBasePath}/${grnId}?review=1`);
+      const params = new URLSearchParams({ review: "1" });
+      if (returnTo) params.set("returnTo", returnTo);
+      router.push(`${grnBasePath}/${grnId}?${params.toString()}`);
       router.refresh();
     } catch {
       setSubmitError("Không thể gửi phiếu. Vui lòng thử lại.");
@@ -338,7 +342,7 @@ export function useGrnCreateController({
         setSubmitError(result.error ?? messages.inventory.grn.confirmFailed);
         return;
       }
-      router.push(grnBasePath);
+      router.push(returnTo ?? grnBasePath);
       router.refresh();
     } catch {
       setSubmitError(messages.inventory.grn.confirmFailed);

@@ -8,7 +8,7 @@ import {
   staffRoleFromPositionCode,
 } from "../types";
 import { resolveModuleFromPath } from "../route-resolution";
-import { resolveRouteFamilyContract } from "../route-map";
+import { resolveOperatorTab, resolveRouteFamilyContract } from "../route-map";
 
 function claims(
   role: JwtClaims["user_role"],
@@ -68,8 +68,11 @@ test("operator route families use operator bottom nav", () => {
     ["/br/7/shift/checkout-approvals", "operator-shift-checkout-approvals"],
     ["/br/7/shift/leave-approvals", "operator-shift-leave-approvals"],
     ["/br/7/stock", "operator-stock"],
-    ["/br/7/stock/count", "operator-stock"],
-    ["/br/7/stock/count-slips", "operator-stock"],
+    ["/br/7/stock/count", "operator-stock-count"],
+    ["/br/7/shift/count", "operator-shift"],
+    ["/br/7/stock/count-assignments", "operator-stock-count-assignments"],
+    ["/br/7/stock/count-slips", "operator-stock-count-slips"],
+    ["/br/7/stock/waste-approvals", "operator-stock-waste-approvals"],
     ["/br/7/stock/receive", "operator-stock"],
     ["/br/7/stock/receive/123", "operator-stock"],
     ["/br/7/stock/transfer", "operator-stock"],
@@ -83,6 +86,34 @@ test("operator route families use operator bottom nav", () => {
     assert.equal(family?.primaryNav, "operator-bottom-nav");
     assert.equal(family?.requiresBranchId, true);
   }
+});
+
+test("operator route families resolve one semantic bottom tab", () => {
+  for (const [path, tab] of [
+    ["/br/7", "today"],
+    ["/br/7/dashboard", "today"],
+    ["/br/7/settings/printers", "today"],
+    ["/br/7/orders", "today"],
+    ["/br/7/menu-limits", "today"],
+    ["/br/7/pos-sessions", "today"],
+    ["/br/7/shift", "shift"],
+    ["/br/7/shift/count", "shift"],
+    ["/br/7/stock/count", "shift"],
+    ["/br/7/stock/count-assignments", "team"],
+    ["/br/7/stock/count-slips", "stock"],
+    ["/br/7/stock/waste-approvals", "stock"],
+    ["/br/7/shift/checkout-approvals", "team"],
+    ["/br/7/shift/leave-approvals", "team"],
+    ["/br/7/team", "team"],
+    ["/br/7/stock", "stock"],
+    ["/br/7/stock/grn/new", "stock"],
+    ["/br/7/profile/payslip", "profile"],
+  ] as const) {
+    assert.equal(resolveOperatorTab(path), tab, path);
+  }
+
+  assert.equal(resolveOperatorTab("/br/7/pos"), null);
+  assert.equal(resolveOperatorTab("/inventory/stock"), null);
 });
 
 test("operator home includes every surviving role", () => {

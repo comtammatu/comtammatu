@@ -50,7 +50,6 @@ import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { FormField } from "@/components/form/form-field";
 import { AppEmptyState } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -120,6 +119,38 @@ export function BranchWasteApprovalsClient({
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedNotes]);
+
+  useEffect(() => {
+    if (!hasUnsavedNotes) return;
+
+    const handleBottomNavigation = (event: globalThis.MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest<HTMLAnchorElement>(
+        "header a[href], nav[data-app-bottom-nav] a[href]",
+      );
+      const href = link?.getAttribute("href");
+      if (!href) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      if (isSubmitting) return;
+      void (async () => {
+        const confirmed = await confirm({
+          title: "Bỏ ghi chú duyệt?",
+          description: "Ghi chú xử lý chưa gửi sẽ bị mất.",
+          confirmText: "Bỏ ghi chú",
+          cancelText: "Tiếp tục duyệt",
+          variant: "destructive",
+        });
+        if (confirmed) router.push(href);
+      })();
+    };
+
+    document.addEventListener("click", handleBottomNavigation, true);
+    return () =>
+      document.removeEventListener("click", handleBottomNavigation, true);
+  }, [hasUnsavedNotes, isSubmitting, router]);
 
   async function requestLeave() {
     if (isSubmitting) return;
@@ -236,7 +267,7 @@ export function BranchWasteApprovalsClient({
   return (
     <BranchOperatorPage title={copy.title} description={branchName}>
       <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-4">
-        <BranchOperatorControlBar className="sm:hidden">
+        <div className="sm:hidden">
           <Button asChild variant="ghost" size="icon-touch">
             <Link
               href={stockBasePath}
@@ -250,13 +281,7 @@ export function BranchWasteApprovalsClient({
               <IconArrowLeft aria-hidden="true" />
             </Link>
           </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{copy.title}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
+        </div>
 
         <BranchOperatorPanel
           title="Phiếu chờ duyệt"

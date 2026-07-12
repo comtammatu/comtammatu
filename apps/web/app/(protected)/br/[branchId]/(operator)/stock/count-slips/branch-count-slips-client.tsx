@@ -43,6 +43,7 @@ import {
   BranchOperatorDetailList,
   BranchOperatorPage,
 } from "@lib/branch-operator/components/branch-operator-page";
+import { useOperatorUrlState } from "@lib/branch-operator/use-operator-url-state";
 import {
   approveCountSlip,
   requestCountRecount,
@@ -87,8 +88,10 @@ export function BranchCountSlipsClient({
   focusFirstPending: boolean;
 }) {
   const router = useRouter();
+  const { replaceParams, searchParams } = useOperatorUrlState();
   const [rows, setRows] = useState(initialRows);
-  const [view, setView] = useState<QueueView>("pending");
+  const view: QueueView =
+    searchParams.get("view") === "history" ? "history" : "pending";
   const [selectedId, setSelectedId] = useState<number | null>(() =>
     focusFirstPending
       ? (initialRows.find((row) => row.status === "submitted")?.id ?? null)
@@ -191,7 +194,12 @@ export function BranchCountSlipsClient({
       title={INVENTORY_VI.countSlipTitle}
       description={branchName}
     >
-      <Tabs value={view} onValueChange={(value) => setView(value as QueueView)}>
+      <Tabs
+        value={view}
+        onValueChange={(value) =>
+          replaceParams({ view: value === "pending" ? null : value })
+        }
+      >
         <TabsList className="grid min-h-12 w-full grid-cols-2">
           <TabsTrigger value="pending" className="min-h-11">
             {INVENTORY_VI.countSlipPendingBadge(pendingRows.length)}

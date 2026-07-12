@@ -9,7 +9,6 @@ import {
 } from "@comtammatu/shared/auth";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
-import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
 /* ─── Schemas ─── */
 
@@ -34,18 +33,6 @@ export interface MovementReportRow {
   production_output: number;
   adjustment: number;
   closing: number;
-}
-
-export interface BranchMovementSummaryRow {
-  branch_id: number;
-  branch_name: string;
-  grn_receipt: number;
-  transfer_in: number;
-  transfer_out: number;
-  consumption: number;
-  production_consumption: number;
-  production_output: number;
-  adjustment: number;
 }
 
 type IngredientUnitCodeJoin = {
@@ -106,113 +93,6 @@ export async function fetchStockMovementReport(
     adjustment: Number(row.adjustment),
     closing: Number(row.closing),
   }));
-
-  return { success: true, data: rows };
-}
-
-/* ─── fetchBranchMovementSummary ─── */
-
-export async function fetchBranchMovementSummary(
-  input: Pick<
-    z.input<typeof stockMovementReportSchema>,
-    "startDate" | "endDate"
-  >,
-): Promise<ActionResult<BranchMovementSummaryRow[]>> {
-  const parsed = z
-    .object({
-      startDate: z.string().min(1),
-      endDate: z.string().min(1),
-    })
-    .safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: "Dữ liệu không hợp lệ" };
-  }
-
-  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-  const { startDate, endDate } = parsed.data;
-  const startRange = getVNDayUtcRange(startDate);
-  const endRange = getVNDayUtcRange(endDate);
-
-  // Get branches
-  const { data: branches, error: brErr } = await supabase
-    .from("branches")
-    .select("id, name, branch_kind")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("is_active", true);
-  if (brErr) return { success: false, error: "Không tải được chi nhánh." };
-
-  const branchMap = new Map(
-    (branches ?? []).map((b) => [b.id, getBranchSiteDisplayName(b)] as const),
-  );
-
-  // Get movements grouped by branch
-  let movQuery = supabase
-    .from("stock_movements")
-    .select("branch_id, type, quantity_change")
-    .eq("tenant_id", claims.tenant_id)
-    .gte("created_at", startRange.startIso)
-    .lt("created_at", endRange.endIso);
-
-  // branch_manager can only see their branch
-  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
-    movQuery = movQuery.eq("branch_id", claims.branch_id);
-  }
-
-  const { data: movements, error: movErr } = await movQuery;
-  if (movErr) return { success: false, error: "Không tải được biến động kho." };
-
-  type MovType =
-    | "grn_receipt"
-    | "transfer_in"
-    | "transfer_out"
-    | "consumption"
-    | "production_consumption"
-    | "production_output"
-    | "adjustment"
-    | "count_adjustment";
-
-  const byBranch = new Map<number, Record<MovType, number>>();
-
-  for (const m of movements ?? []) {
-    let entry = byBranch.get(m.branch_id);
-    if (!entry) {
-      entry = {
-        grn_receipt: 0,
-        transfer_in: 0,
-        transfer_out: 0,
-        consumption: 0,
-        production_consumption: 0,
-        production_output: 0,
-        adjustment: 0,
-        count_adjustment: 0,
-      };
-      byBranch.set(m.branch_id, entry);
-    }
-    const t = m.type as MovType;
-    if (t in entry) {
-      entry[t] += Number(m.quantity_change);
-    }
-  }
-
-  const rows: BranchMovementSummaryRow[] = [];
-  for (const [branchId, sums] of byBranch) {
-    rows.push({
-      branch_id: branchId,
-      branch_name: branchMap.get(branchId) ?? `#${String(branchId)}`,
-      grn_receipt: sums.grn_receipt,
-      transfer_in: sums.transfer_in,
-      transfer_out: sums.transfer_out,
-      consumption: sums.consumption,
-      production_consumption: sums.production_consumption,
-      production_output: sums.production_output,
-      adjustment: sums.adjustment + sums.count_adjustment,
-    });
-  }
-
-  rows.sort((a, b) => a.branch_name.localeCompare(b.branch_name, "vi"));
 
   return { success: true, data: rows };
 }

@@ -17,11 +17,8 @@ export function EmployeePortalBackControl({
   return (
     <Button
       variant="ghost"
-      size="sm"
-      className={cn(
-        "h-9 min-h-9 shrink-0 gap-1.5 px-2 text-sm text-muted-foreground",
-        className,
-      )}
+      size="touch"
+      className={cn("shrink-0 text-muted-foreground", className)}
       asChild
     >
       <Link

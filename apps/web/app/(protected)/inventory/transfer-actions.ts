@@ -636,34 +636,6 @@ export async function transferMarkInTransit(
   return { success: true };
 }
 
-export async function transferConfirmReceive(
-  transferId: number,
-): Promise<ActionResult> {
-  const id = z.coerce.number().int().positive().safeParse(transferId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const authz = await loadTransferForPermission(
-    id.data,
-    PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
-    "to",
-  );
-  if (!authz.success) return { success: false, error: authz.error };
-  const { error } = await authz.supabase.rpc("stock_transfer_confirm_receive", {
-    p_transfer_id: id.data,
-  });
-  if (error) {
-    console.error("inventory.transfer.confirm_receive_failed", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return {
-      success: false,
-      error: "Không thể bắt đầu kiểm nhận (phiếu phải đang vận chuyển).",
-    };
-  }
-  revalidatePath("/inventory/transfers");
-  revalidatePath(`/inventory/transfers/${id.data}`);
-  return { success: true };
-}
-
 export async function transferReceive(
   transferId: number,
   items: Record<string, number | { qty: number; note?: string }> | null,
@@ -778,17 +750,4 @@ export async function fetchBranchesForTransfer(): Promise<ActionResult> {
     };
   }
   return { success: true, data: branches };
-}
-
-export async function quickInternalTransfer(_input: {
-  branchId: number;
-  ingredientId: number;
-  quantity: number;
-  entryUnitId?: number | null;
-  reason?: string;
-}): Promise<ActionResult> {
-  return {
-    success: false,
-    error: "Bếp chi nhánh đã tắt. Chi nhánh chỉ còn một kho duy nhất.",
-  };
 }

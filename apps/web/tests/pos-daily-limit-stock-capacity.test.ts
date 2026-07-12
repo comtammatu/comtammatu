@@ -262,6 +262,10 @@ test("menu-limit operations keep scan facts compact and show availability inputs
     /'public\.enforce_branch_stock_availability\(\)'/,
   );
   assert.match(
+    singleWarehouseMigration,
+    /CREATE OR REPLACE FUNCTION public\.commit_intra_branch_transfer[\s\S]*intra_branch_transfer_retired/,
+  );
+  assert.match(
     warehouseStockGateMigration,
     /pos_stock_outcome_posting/,
   );

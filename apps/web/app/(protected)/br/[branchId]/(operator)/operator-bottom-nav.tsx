@@ -2,12 +2,14 @@
 
 import { Clock, Home, Package, User, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
+import {
+  resolveOperatorTab,
+  type OperatorTab,
+} from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { AppBottomNav } from "@/components/app-bottom-nav";
-import { isNavItemActive, type ShellNavItem } from "@/lib/shell-primitives";
+import type { ShellNavItem } from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
-
-const branchCopy = messages.settings.branch;
 
 export function OperatorBottomNav({
   branchId,
@@ -19,9 +21,11 @@ export function OperatorBottomNav({
   showBranchManagement: boolean;
 }) {
   const pathname = usePathname();
+  const activeTab = resolveOperatorTab(pathname);
 
-  const items: ShellNavItem[] = [
+  const items: (ShellNavItem & { tab: OperatorTab })[] = [
     {
+      tab: "today",
       href: `/br/${branchId}`,
       label: APP_COPY_VI.operatorHome,
       icon: Home,
@@ -30,6 +34,7 @@ export function OperatorBottomNav({
     ...(showEmployeeLinks
       ? [
           {
+            tab: "shift" as const,
             href: `/br/${branchId}/shift`,
             label: APP_COPY_VI.operatorShift,
             icon: Clock,
@@ -44,6 +49,7 @@ export function OperatorBottomNav({
     ...(showBranchManagement
       ? [
           {
+            tab: "team" as const,
             href: `/br/${branchId}/team`,
             label: "Đội",
             icon: Users,
@@ -51,8 +57,9 @@ export function OperatorBottomNav({
             matchPrefixes: [`/br/${branchId}/team`],
           },
           {
+            tab: "stock" as const,
             href: `/br/${branchId}/stock`,
-            label: branchCopy.centralNavStock,
+            label: "Tồn",
             icon: Package,
             exact: false,
             matchPrefixes: [`/br/${branchId}/stock`],
@@ -60,6 +67,7 @@ export function OperatorBottomNav({
         ]
       : []),
     {
+      tab: "profile",
       href: `/br/${branchId}/profile`,
       label: messages.operator.nav.profileShort,
       icon: User,
@@ -77,7 +85,7 @@ export function OperatorBottomNav({
         href: item.href,
         label: item.label,
         icon: item.icon,
-        active: isNavItemActive(item, pathname),
+        active: item.tab === activeTab,
       }))}
     />
   );

@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  ArrowLeft as IconArrowLeft,
   ArrowRight as IconArrowRight,
   ClipboardCheck as IconClipboardCheck,
   Search as IconSearch,
@@ -36,7 +35,6 @@ import {
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -78,6 +76,8 @@ export function BranchStocktakeListClient({
     <BranchOperatorPage
       title={stocktakeCopy.title}
       description={branchName}
+      backHref={stockBasePath}
+      backLabel="Tồn"
       action={
         canManage ? (
           <Button asChild size="touch">
@@ -90,27 +90,6 @@ export function BranchStocktakeListClient({
       }
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={stockBasePath} aria-label="Quay lại kho">
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {stocktakeCopy.title}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-          {canManage ? (
-            <Button asChild size="touch" className="shrink-0">
-              <Link href={`${stocktakeBasePath}/new`}>Mở đợt</Link>
-            </Button>
-          ) : null}
-        </BranchOperatorControlBar>
-
         <BranchOperatorPanel
           title="Phiên kiểm kê"
           description="Mở hoặc tiếp tục một phiên kiểm kê của chi nhánh này."

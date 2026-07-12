@@ -4,13 +4,10 @@ import Link from "next/link";
 import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
-  ArrowRight as IconArrowRight,
   ClipboardList as IconClipboardList,
   PackageCheck as IconPackageCheck,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -22,9 +19,7 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
-import { StatusBadge } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -63,7 +58,6 @@ export function BranchTransferDetailClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const copy = messages.inventory.transfer;
-  const listHref = `/br/${branchId}/stock/transfer`;
   const receiveHref = `/br/${branchId}/stock/receive/${transfer.id}`;
   const actionConfig = useMemo(
     () => getTransferActionConfig({ transfer, userRole, userBranchId }),
@@ -127,25 +121,6 @@ export function BranchTransferDetailClient({
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button asChild variant="ghost" size="icon-touch">
-          <Link href={listHref} aria-label={ACTIONS_VI.back}>
-            <IconArrowLeft />
-          </Link>
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-mono text-sm font-semibold tabular-nums">
-            {transfer.code}
-          </p>
-          <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-            <span className="truncate">{transfer.fromLocation}</span>
-            <IconArrowRight className="size-3 shrink-0" />
-            <span className="truncate">{transfer.toLocation}</span>
-          </p>
-        </div>
-        <StatusBadge domain="inventory" value={transfer.status} size="sm" />
-      </BranchOperatorControlBar>
-
       <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
         <div className="flex min-w-0 flex-col gap-3 lg:col-start-2 lg:row-start-1">
           <BranchOperatorPanel

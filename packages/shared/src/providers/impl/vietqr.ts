@@ -64,7 +64,6 @@ const BANK_BINS: Record<string, string> = {
   MB: "970422",
   MBBANK: "970422",
   MBV: "970414",
-  MOMO: "971025",
   MSB: "970426",
   MSBANK: "970426",
   NAB: "970428",

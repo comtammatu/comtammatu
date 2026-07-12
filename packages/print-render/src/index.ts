@@ -25,7 +25,6 @@ export {
 } from "./document-render";
 export {
   encodeOpsToEscpos,
-  renderPayloadBitmap,
   renderPayloadToEscpos,
 } from "./escpos-encode";
 export {

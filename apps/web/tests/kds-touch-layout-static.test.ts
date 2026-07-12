@@ -27,12 +27,19 @@ const viewModeToggleSource = readFileSync(
   "utf8",
 );
 
+const backControlSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/employee-portal-back-control.tsx",
+  ),
+  "utf8",
+);
+
 test("KDS header keeps tablet widths in the touch layout instead of md desktop toolbar", () => {
   assert.match(boardHeaderSource, /xl:flex-nowrap/);
   assert.match(boardHeaderSource, /xl:order-none/);
   assert.match(boardHeaderSource, /xl:basis-auto/);
   assert.match(boardHeaderSource, /xl:min-w-max/);
-  assert.match(boardHeaderSource, /h-11 min-h-11 px-3 text-sm/);
 
   assert.doesNotMatch(boardHeaderSource, /md:flex-nowrap/);
   assert.doesNotMatch(boardHeaderSource, /md:order-none/);
@@ -45,7 +52,15 @@ test("KDS filter and mode controls use touch-sized targets", () => {
   assert.match(filterBarSource, /inline-flex min-h-11/);
   assert.doesNotMatch(filterBarSource, /size="icon-sm"/);
 
-  assert.match(viewModeToggleSource, /className="h-11"/);
-  assert.match(viewModeToggleSource, /className="min-h-11 px-3"/);
-  assert.doesNotMatch(viewModeToggleSource, /className="h-8"/);
+  assert.equal(
+    (boardHeaderSource.match(/size="icon-touch"/g) ?? []).length,
+    4,
+  );
+  assert.doesNotMatch(boardHeaderSource, /size="icon-lg"/);
+
+  assert.match(viewModeToggleSource, /size="touch"/);
+  assert.doesNotMatch(viewModeToggleSource, /(?:h|min-h)-11/);
+
+  assert.match(backControlSource, /size="touch"/);
+  assert.doesNotMatch(backControlSource, /(?:h|min-h)-9/);
 });

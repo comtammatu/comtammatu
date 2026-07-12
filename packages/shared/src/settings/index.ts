@@ -5,8 +5,6 @@
 export const SYSTEM_SETTING_KEYS = {
   /** "true" | "false" — POS shows VietQR when Admin bank settings exist */
   PAYMENT_ENABLE_VIETQR: "payment_enable_vietqr",
-  /** "true" | "false" — POS shows MoMo when env credentials exist */
-  PAYMENT_ENABLE_MOMO: "payment_enable_momo",
   /** Bank shortcode (e.g. "TCB", "VCB"). */
   PAYMENT_VIETQR_BANK_CODE: "payment_vietqr_bank_code",
   /** Receiving bank account number. */
@@ -44,7 +42,6 @@ export type SystemSettingKey =
 /** Default values for settings (used when no DB row exists) */
 export const SYSTEM_SETTING_DEFAULTS: Record<SystemSettingKey, string> = {
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]: "false",
-  [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]: "false",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE]: "",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO]: "",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME]: "",

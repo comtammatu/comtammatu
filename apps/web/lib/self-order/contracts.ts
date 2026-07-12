@@ -171,15 +171,6 @@ export const selfOrderSubmitActionResponseSchema = z
   })
   .strict();
 
-export const selfOrderRequestActionResponseSchema = z
-  .object({
-    ok: z.literal(true),
-    status: selfOrderRequestStatusSchema,
-    orderId: z.number().int().positive().nullable().optional(),
-    idempotent: z.boolean().optional(),
-  })
-  .strict();
-
 export const selfOrderPaymentActionResponseSchema =
   publicSelfOrderPaymentRequestSchema
     .extend({
@@ -362,33 +353,14 @@ export const publicSelfOrderSnapshotSchema = z.discriminatedUnion("ok", [
 ]);
 
 export type SelfOrderCartItem = z.infer<typeof selfOrderCartItemSchema>;
-export type SelfOrderCartModifier = z.infer<typeof selfOrderModifierSchema>;
-export type SelfOrderCartSide = z.infer<typeof selfOrderSideSchema>;
-export type SelfOrderPaymentRequest = z.infer<
-  typeof selfOrderPaymentRequestSchema
->;
-export type SelfOrderRequestStatus = z.infer<
-  typeof selfOrderRequestStatusSchema
->;
-export type SelfOrderDerivedState = z.infer<typeof selfOrderDerivedStateSchema>;
-export type SelfOrderPaymentRequestStatus = z.infer<
-  typeof selfOrderPaymentRequestStatusSchema
->;
 export type SelfOrderMenuVariant = z.infer<
   typeof publicSelfOrderMenuVariantSchema
 >;
-export type SelfOrderMenuModifier = z.infer<
-  typeof publicSelfOrderMenuModifierSchema
->;
-export type SelfOrderMenuSide = z.infer<typeof publicSelfOrderMenuSideSchema>;
 export type SelfOrderMenuItem = z.infer<typeof publicSelfOrderMenuItemSchema>;
 export type SelfOrderMenuCategory = z.infer<
   typeof publicSelfOrderMenuCategorySchema
 >;
 export type SelfOrderOrderLine = z.infer<typeof publicSelfOrderOrderLineSchema>;
-export type SelfOrderRequest = z.infer<typeof publicSelfOrderRequestSchema>;
-export type SelfOrderRoundItem = z.infer<typeof publicSelfOrderRoundItemSchema>;
-export type SelfOrderRound = z.infer<typeof publicSelfOrderRoundSchema>;
 export type PublicSelfOrderAvailableSnapshot = z.infer<
   typeof publicSelfOrderAvailableSnapshotSchema
 >;

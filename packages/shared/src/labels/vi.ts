@@ -219,10 +219,6 @@ export function getModuleLabelVi(moduleKey: string): string {
   return MODULE_LABELS_VI[moduleKey as ModuleLabelKey] ?? moduleKey;
 }
 
-export function getInventorySiteLabelVi(site: SiteLike): string {
-  return getInventorySiteKindLabelVi(resolveSiteKind(site));
-}
-
 export function normalizeInventoryLocationNameVi(
   name: string | null | undefined,
 ): string {
@@ -400,7 +396,6 @@ export function getWasteReasonLabelVi(code: string): string {
 export const PAYMENT_METHOD_LABELS_VI = {
   cash: "Tiền mặt",
   vietqr: "VietQR",
-  momo: "MoMo",
   bank_transfer: "Chuyển khoản",
 } as const;
 

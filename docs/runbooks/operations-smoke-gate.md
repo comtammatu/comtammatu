@@ -47,7 +47,7 @@ chứng runtime trên dev/test/staging được duyệt.
 | Bếp nhận đúng     | KDS nhận đúng phiếu bếp, đúng thứ tự, đúng món bếp cần làm                                           | KDS thiếu món, nhận trùng phiếu, hoặc ưu tiên thay thế đơn đang làm  |
 | Thu tiền đúng     | Payment chuyển đúng trạng thái, đúng amount; payment RPC fail không được complete                    | Gateway thành công nhưng order/payment lệch trạng thái hoặc orphan   |
 | In/hóa đơn đúng   | Print job claim/printed đúng, receipt không mất trường pháp lý, HĐĐT issued hoặc support workflow rõ | Receipt/HĐĐT thiếu dữ liệu, job failed không có đường retry          |
-| Kho trừ đúng      | Kết quả khớp flag: post đúng, flag-off không post, shortage không partial-post                        | Movement sai/trùng/partial hoặc mismatch không có warning/reconcile  |
+| Kho trừ đúng      | Kết quả khớp flag: post đúng, flag-off không post, shortage không partial-post                       | Movement sai/trùng/partial hoặc mismatch không có warning/reconcile  |
 | Quản lý nhìn đúng | Finance Basic / reports phản ánh doanh thu, tồn kho, chi vận hành, lợi nhuận gộp sau smoke           | Owner dashboard không đổi, số lệch so với order/payment/stock đã tạo |
 
 ## Happy Path
@@ -76,7 +76,6 @@ Ghi lại mọi ID phát sinh: `branch_id`, `terminal_id`, `order_id`, `payment_
    - VietQR: expected QR mang đúng `orders.payment_code` theo configured prefix;
      SePay webhook hoặc cashier confirm qua `confirm_vietqr_payment` hoàn tất
      order/payment.
-   - MoMo: expected chỉ dùng native QR khi provider trả `qrCodeUrl`; webhook hoàn tất qua `complete_payment_and_consume_stock`.
 
 6. Kiểm order/payment sau thanh toán.
    - Expected: order `completed`, payment `completed`, table được release nếu dine-in.

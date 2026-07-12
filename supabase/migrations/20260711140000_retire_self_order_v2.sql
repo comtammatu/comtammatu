@@ -1,20 +1,31 @@
 BEGIN;
 
 DO $$
+DECLARE
+  v_has_rows boolean;
 BEGIN
-  IF to_regclass('public.self_order_sessions') IS NOT NULL
-     AND EXISTS (SELECT 1 FROM public.self_order_sessions) THEN
-    RAISE EXCEPTION 'self_order_v2_sessions_not_empty';
+  IF to_regclass('public.self_order_sessions') IS NOT NULL THEN
+    EXECUTE 'SELECT EXISTS (SELECT 1 FROM public.self_order_sessions)'
+      INTO v_has_rows;
+    IF v_has_rows THEN
+      RAISE EXCEPTION 'self_order_v2_sessions_not_empty';
+    END IF;
   END IF;
 
-  IF to_regclass('public.self_order_batches') IS NOT NULL
-     AND EXISTS (SELECT 1 FROM public.self_order_batches) THEN
-    RAISE EXCEPTION 'self_order_v2_batches_not_empty';
+  IF to_regclass('public.self_order_batches') IS NOT NULL THEN
+    EXECUTE 'SELECT EXISTS (SELECT 1 FROM public.self_order_batches)'
+      INTO v_has_rows;
+    IF v_has_rows THEN
+      RAISE EXCEPTION 'self_order_v2_batches_not_empty';
+    END IF;
   END IF;
 
-  IF to_regclass('public.self_order_session_devices') IS NOT NULL
-     AND EXISTS (SELECT 1 FROM public.self_order_session_devices) THEN
-    RAISE EXCEPTION 'self_order_v2_devices_not_empty';
+  IF to_regclass('public.self_order_session_devices') IS NOT NULL THEN
+    EXECUTE 'SELECT EXISTS (SELECT 1 FROM public.self_order_session_devices)'
+      INTO v_has_rows;
+    IF v_has_rows THEN
+      RAISE EXCEPTION 'self_order_v2_devices_not_empty';
+    END IF;
   END IF;
 
   IF EXISTS (
@@ -23,12 +34,15 @@ BEGIN
     WHERE table_schema = 'public'
       AND table_name = 'self_order_payment_requests'
       AND column_name = 'session_id'
-  ) AND EXISTS (
-    SELECT 1
-    FROM public.self_order_payment_requests
-    WHERE session_id IS NOT NULL
   ) THEN
-    RAISE EXCEPTION 'self_order_v2_payment_sessions_not_empty';
+    EXECUTE 'SELECT EXISTS (
+      SELECT 1
+      FROM public.self_order_payment_requests
+      WHERE session_id IS NOT NULL
+    )' INTO v_has_rows;
+    IF v_has_rows THEN
+      RAISE EXCEPTION 'self_order_v2_payment_sessions_not_empty';
+    END IF;
   END IF;
 END;
 $$;
@@ -109,8 +123,9 @@ BEGIN
     RAISE EXCEPTION 'self_order_invalid_payment_request_transition' USING ERRCODE = '22023';
   END IF;
 
-  IF NEW.status = 'completed' AND NEW.completed_at IS NULL THEN
-    RAISE EXCEPTION 'self_order_completed_request_missing_timestamp' USING ERRCODE = '23514';
+  IF NEW.status = 'completed'
+     AND (NEW.completed_at IS NULL OR NEW.payment_id IS NULL) THEN
+    RAISE EXCEPTION 'self_order_completed_request_missing_payment_evidence' USING ERRCODE = '23514';
   END IF;
   IF NEW.status = 'cancelled' AND NEW.cancelled_at IS NULL THEN
     RAISE EXCEPTION 'self_order_cancelled_request_missing_timestamp' USING ERRCODE = '23514';
@@ -151,6 +166,179 @@ CREATE TRIGGER trg_self_order_enforce_payment_request_invariants
 REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM anon, authenticated;
 
+CREATE OR REPLACE FUNCTION public.self_order_sync_payment_request_from_order()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_reason text;
+  v_payment_id bigint;
+  v_payment_method text;
+  v_paid_at timestamptz;
+BEGIN
+  IF NEW.payment_status = 'paid' THEN
+    SELECT p.id, p.method, p.paid_at
+    INTO v_payment_id, v_payment_method, v_paid_at
+    FROM public.payments p
+    WHERE p.tenant_id = NEW.tenant_id
+      AND p.branch_id = NEW.branch_id
+      AND p.order_id = NEW.id
+      AND p.status = 'completed'
+    ORDER BY p.paid_at DESC NULLS LAST, p.id DESC
+    LIMIT 1;
+
+    IF v_payment_id IS NULL THEN
+      RETURN NULL;
+    END IF;
+
+    UPDATE public.self_order_payment_requests pr
+    SET status = 'completed',
+        payment_id = COALESCE(pr.payment_id, v_payment_id),
+        completed_at = COALESCE(v_paid_at, now())
+    WHERE pr.tenant_id = NEW.tenant_id
+      AND pr.branch_id = NEW.branch_id
+      AND pr.order_id = NEW.id
+      AND pr.status IN ('cash_call', 'vietqr_pending')
+      AND (
+        (pr.method = 'cash_call' AND v_payment_method = 'cash')
+        OR (pr.method = 'vietqr' AND v_payment_method = 'vietqr')
+      );
+
+    UPDATE public.self_order_payment_requests pr
+    SET status = 'cancelled',
+        cancelled_at = now(),
+        cancel_reason = COALESCE(pr.cancel_reason, 'order_paid_by_other_method')
+    WHERE pr.tenant_id = NEW.tenant_id
+      AND pr.branch_id = NEW.branch_id
+      AND pr.order_id = NEW.id
+      AND pr.status IN ('cash_call', 'vietqr_pending')
+      AND NOT (
+        (pr.method = 'cash_call' AND v_payment_method = 'cash')
+        OR (pr.method = 'vietqr' AND v_payment_method = 'vietqr')
+      );
+  ELSIF NEW.status IN ('completed', 'cancelled') THEN
+    v_reason := 'order_' || NEW.status;
+
+    UPDATE public.self_order_payment_requests pr
+    SET status = 'cancelled',
+        cancelled_at = now(),
+        cancel_reason = COALESCE(pr.cancel_reason, v_reason)
+    WHERE pr.tenant_id = NEW.tenant_id
+      AND pr.order_id = NEW.id
+      AND pr.status IN ('cash_call', 'vietqr_pending');
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_self_order_sync_payment_request_from_order
+  ON public.orders;
+CREATE TRIGGER trg_self_order_sync_payment_request_from_order
+  AFTER UPDATE OF status, payment_status ON public.orders
+  FOR EACH ROW
+  WHEN (
+    OLD.status IS DISTINCT FROM NEW.status
+    OR OLD.payment_status IS DISTINCT FROM NEW.payment_status
+  ) EXECUTE FUNCTION public.self_order_sync_payment_request_from_order();
+
+REVOKE ALL ON FUNCTION public.self_order_sync_payment_request_from_order()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.self_order_guard_table_token_rotation()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF NOT pg_try_advisory_xact_lock(
+    hashtext('self-order-table'),
+    hashtext(OLD.id::text)
+  ) THEN
+    RAISE EXCEPTION 'self_order_operation_in_progress' USING ERRCODE = '55P03';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.self_order_guard_table_token_rotation()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+DROP TRIGGER IF EXISTS trg_self_order_guard_table_token_rotation
+  ON public.tables;
+CREATE TRIGGER trg_self_order_guard_table_token_rotation
+  BEFORE UPDATE OF self_order_token, self_order_token_rotated_at ON public.tables
+  FOR EACH ROW EXECUTE FUNCTION public.self_order_guard_table_token_rotation();
+
+CREATE OR REPLACE FUNCTION public.rotate_table_self_order_qr(p_table_id bigint)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant_id bigint := public.auth_tenant_id();
+  v_table record;
+  v_token text;
+  v_rotated_at timestamptz := now();
+BEGIN
+  IF v_uid IS NULL OR v_tenant_id IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(
+    hashtext('self-order-table'),
+    hashtext(p_table_id::text)
+  );
+
+  SELECT t.*
+  INTO v_table
+  FROM public.tables t
+  WHERE t.id = p_table_id
+    AND t.tenant_id = v_tenant_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'self_order_table_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF NOT public.has_permission(v_table.branch_id, 'settings:branch') THEN
+    RAISE EXCEPTION 'permission denied: settings:branch' USING ERRCODE = '42501';
+  END IF;
+
+  v_token := translate(
+    encode(extensions.gen_random_bytes(24), 'base64'),
+    '+/=',
+    '-_'
+  );
+
+  UPDATE public.tables
+  SET self_order_token = v_token,
+      self_order_enabled = true,
+      self_order_token_rotated_at = v_rotated_at
+  WHERE id = v_table.id
+    AND tenant_id = v_table.tenant_id;
+
+  RETURN jsonb_build_object(
+    'token', v_token,
+    'enabled', true,
+    'rotatedAt', v_rotated_at
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.rotate_table_self_order_qr(bigint)
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.rotate_table_self_order_qr(bigint)
+  TO authenticated, service_role;
+
+CREATE UNIQUE INDEX IF NOT EXISTS self_order_payment_requests_client_op_id_uidx
+  ON public.self_order_payment_requests (tenant_id, client_op_id);
+
 ALTER TABLE public.self_order_payment_requests DROP COLUMN IF EXISTS session_id;
 
 ALTER TABLE IF EXISTS public.self_order_payment_requests
@@ -176,6 +364,10 @@ DROP FUNCTION IF EXISTS public.self_order_reject_batch(bigint, text);
 DROP FUNCTION IF EXISTS public.self_order_submit_batch(text, uuid, jsonb, text);
 DROP FUNCTION IF EXISTS public.self_order_broadcast_session_changed();
 DROP FUNCTION IF EXISTS public.self_order_close_session_from_order();
+DROP FUNCTION IF EXISTS public.self_order_batch_request_fingerprint(jsonb, text);
+DROP FUNCTION IF EXISTS public.self_order_fill_batch_request_fingerprint();
+DROP FUNCTION IF EXISTS public.self_order_enforce_session_invariants();
+DROP FUNCTION IF EXISTS public.self_order_enforce_batch_transition();
 
 DROP FUNCTION IF EXISTS public.self_order_get_public_context_v2(text);
 DROP FUNCTION IF EXISTS public.self_order_get_snapshot_v2(text, text);
@@ -190,7 +382,6 @@ DROP FUNCTION IF EXISTS public.self_order_reject_batch_v2(bigint, text);
 DROP FUNCTION IF EXISTS public.self_order_reject_device_join_v2(bigint, text);
 DROP FUNCTION IF EXISTS public.self_order_revoke_session_device_v2(bigint, text);
 DROP FUNCTION IF EXISTS public.self_order_list_staff_queue_v2(bigint);
-DROP FUNCTION IF EXISTS public.self_order_broadcast_session_changed();
 DROP FUNCTION IF EXISTS public.self_order_random_token(integer);
 DROP FUNCTION IF EXISTS public.self_order_fill_realtime_topic_token();
 DROP FUNCTION IF EXISTS public.self_order_pairing_code_hash(text, text);

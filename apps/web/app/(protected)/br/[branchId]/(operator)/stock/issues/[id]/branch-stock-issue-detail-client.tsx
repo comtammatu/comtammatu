@@ -3,10 +3,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import type { TransitionStartFunction } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
   CirclePlus as IconCirclePlus,
   FileText as IconFileText,
@@ -51,9 +49,8 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Combobox, FormattedNumberInput } from "@/components/form";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
-import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorInlineState,
   BranchOperatorPage,
@@ -475,30 +472,10 @@ export function BranchStockIssueDetailClient({
       title={issue.code}
       description={formatVNDateTime(issue.issuedAt)}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
+      backHref={issuesBasePath}
+      backLabel={ACTIONS_VI.back}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            asChild
-            variant="ghost"
-            size="icon-touch"
-            title={ACTIONS_VI.back}
-          >
-            <Link href={issuesBasePath} aria-label={ACTIONS_VI.back}>
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold">
-              {issue.code}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {issueTypeLabel(issue.type)}
-            </p>
-          </div>
-          <StatusBadge domain="inventory" value={issue.status} size="sm" />
-        </BranchOperatorControlBar>
-
         <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] md:items-start">
           <BranchOperatorPanel
             title={issuesCopy.linesTab}

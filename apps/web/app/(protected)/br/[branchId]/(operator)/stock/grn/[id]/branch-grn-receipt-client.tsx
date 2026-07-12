@@ -17,9 +17,8 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
-import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -45,25 +44,10 @@ export function BranchGrnReceiptClient({
       title={grn.code}
       description={`${grn.supplier} · ${grn.date}`}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
+      backHref={grnListBasePath}
+      backLabel={grnCopy.back}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={grnListBasePath} aria-label={grnCopy.back}>
-              <IconArrowLeft />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold tabular-nums">
-              {grn.code}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {grn.supplier} · {grn.date}
-            </p>
-          </div>
-          <StatusBadge domain="inventory" value={grn.status} size="sm" />
-        </BranchOperatorControlBar>
-
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
           <BranchOperatorPanel
             title={grnCopy.inspectionItemsTitle}

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   calcItemSubtotal,
-  getPosLineItemOptionLines,
   getPosLineItemSummary,
   type CartItem,
 } from "../app/(protected)/br/[branchId]/pos/types";
@@ -60,22 +59,4 @@ test("POS side display fix does not change subtotal math", () => {
   const item = buildItem();
 
   assert.equal(calcItemSubtotal(item), (35_000 + 5_000) * 5);
-});
-
-test("POS option lines also describe side quantity per portion", () => {
-  const lines = getPosLineItemOptionLines(
-    buildItem({
-      sides: [
-        {
-          side_item_id: 201,
-          name: "Trứng",
-          price: 5_000,
-          quantity: 2,
-          is_default: false,
-        },
-      ],
-    }),
-  );
-
-  assert.deepEqual(lines, ["Kèm: Trứng x2/phần (+10.000đ)"]);
 });
