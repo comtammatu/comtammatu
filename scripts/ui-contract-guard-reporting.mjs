@@ -160,7 +160,6 @@ export const UI_CONTRACT_BASELINE_POLICIES = {
     permanentReason:
       "These headings belong to standalone public or operator chrome, not Management pages.",
     permanentExceptions: {
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/catalog-back-header.tsx": 1,
       "apps/web/app/(public)/payment/momo/return/page.tsx": 1,
       "apps/web/app/q/[token]/self-order-client.tsx": 1,
     },

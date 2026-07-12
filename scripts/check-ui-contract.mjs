@@ -1871,7 +1871,6 @@ const perFileCountBudgets = [
     pattern:
       /<h1\b[^>]*className=["'][^"']*\bfont-heading\b(?=[^"']*\b(?:text-lg|text-xl|text-2xl|text-3xl|sm:text-2xl|sm:text-3xl)\b)[^"']*["']/g,
     allowlist: {
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/catalog-back-header.tsx": 1,
       "apps/web/app/(public)/payment/momo/return/page.tsx": 1,
       "apps/web/app/q/[token]/self-order-client.tsx": 1,
     },
