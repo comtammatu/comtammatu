@@ -82,7 +82,7 @@ const runtimeControlPlaneTest = readFileSync(
 
 const stockLevelsMigration = readFileSync(
   new URL(
-    "../../../supabase/migrations/20260706193000_stock_levels_branch_ops_refresh.sql",
+    "../../../supabase/migrations/00000000000000_baseline.sql",
     import.meta.url,
   ),
   "utf8",
@@ -111,7 +111,7 @@ const posMenuClient = readFileSync(
 
 const posMenuMigration = readFileSync(
   new URL(
-    "../../../supabase/migrations/20260706084257_realtime_pr6_menu_sync.sql",
+    "../../../supabase/migrations/00000000000000_baseline.sql",
     import.meta.url,
   ),
   "utf8",

@@ -5,48 +5,75 @@ import { resolve } from "node:path";
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const baseline = read("supabase/migrations/00000000000000_baseline.sql");
 
-test("Employee Daily Work migration hardens attendance and adds checklist RPCs", () => {
-  const migration = read(
+function pgDumpBlock(source: string, marker: string): string {
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `missing pg_dump block: ${marker}`);
+  const next = source.indexOf("\n\n--\n-- Name:", start + marker.length);
+  return source.slice(start, next === -1 ? source.length : next);
+}
+
+test("Employee Daily Work baseline hardens attendance and checklist RPCs", () => {
+  const attendancePhotoDataHistory = read(
     "supabase/migration-archive/20260609093000_employee_daily_work.sql",
   );
+  const attendanceRecordsTable = pgDumpBlock(
+    baseline,
+    "-- Name: attendance_records; Type: TABLE;",
+  );
+  const attendanceTableAcl = pgDumpBlock(
+    baseline,
+    "-- Name: TABLE attendance_records; Type: ACL;",
+  );
+  const clockInFunction = pgDumpBlock(
+    baseline,
+    "-- Name: employee_clock_in_with_checklist(bigint, bigint, bigint, bigint, date, text); Type: FUNCTION;",
+  );
+  const clockOutCompatibilityFunction = pgDumpBlock(
+    baseline,
+    "-- Name: employee_clock_out_with_code(bigint, bigint, bigint); Type: FUNCTION;",
+  );
+  const clockInAcl = pgDumpBlock(
+    baseline,
+    "-- Name: FUNCTION employee_clock_in_with_checklist(p_tenant_id bigint, p_employee_id bigint, p_branch_id bigint, p_shift_id bigint, p_business_date date, p_photo_path text); Type: ACL;",
+  );
 
-  for (const expected of [
-    "check_in_photo_path text",
-    "check_out_code_verified boolean NOT NULL DEFAULT false",
-    "'attendance-photos'",
-    "shift_checklist_templates",
-    "shift_checklist_template_items",
-    "attendance_checklist_items",
-    "CREATE OR REPLACE FUNCTION public.employee_clock_in_with_checklist",
-    "CREATE OR REPLACE FUNCTION public.employee_clock_out_with_code",
-    "CREATE OR REPLACE FUNCTION public.upsert_shift_checklist_template",
-    "p_shift_id IS NOT NULL AND p_shift_id <> 0",
-    "RAISE EXCEPTION 'shift_not_found'",
-    "RAISE EXCEPTION 'checklist_incomplete'",
-    "GRANT EXECUTE ON FUNCTION public.employee_clock_in_with_checklist",
-    "TO service_role",
-  ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
-  }
-
+  assert.match(attendanceRecordsTable, /check_in_photo_path text/);
   assert.match(
-    migration,
-    /REVOKE INSERT,\s*UPDATE,\s*DELETE[\s\S]*ON TABLE public\.attendance_records[\s\S]*FROM anon,\s*authenticated;/,
-    "expected direct attendance INSERT/UPDATE/DELETE to be revoked from anon/authenticated",
+    attendanceRecordsTable,
+    /check_out_code_verified boolean DEFAULT false NOT NULL/,
   );
-  assert.ok(
-    migration.includes("DROP POLICY IF EXISTS attendance_self_checkin") &&
-      migration.includes("DROP POLICY IF EXISTS attendance_self_checkout") &&
-      migration.includes("DROP POLICY IF EXISTS attendance_write"),
-    "expected old self-write attendance policies to be dropped",
+  assert.match(
+    attendancePhotoDataHistory,
+    /INSERT INTO storage\.buckets[\s\S]*?'attendance-photos'/,
+    "the archived migration must retain the one-time private Storage bucket seed",
   );
-  assert.ok(
-    !/GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.employee_clock_(in|out)[\s\S]*TO\s+authenticated/i.test(
-      migration,
-    ),
-    "Employee clock RPCs must not be executable directly by authenticated clients",
+  assert.match(clockInFunction, /CREATE FUNCTION public\.employee_clock_in_with_checklist/);
+  assert.match(clockInFunction, /p_shift_id IS NULL OR p_shift_id = 0/);
+  assert.match(clockInFunction, /RAISE EXCEPTION 'shift_not_found'/);
+  assert.match(
+    clockOutCompatibilityFunction,
+    /RETURN public\.employee_request_clock_out/,
+    "the legacy-named clock-out RPC must delegate to the current approval request flow",
   );
+  assert.match(
+    attendanceTableAcl,
+    /GRANT SELECT ON TABLE public\.attendance_records TO authenticated;/,
+    "authenticated clients must remain read-only on attendance rows",
+  );
+  assert.doesNotMatch(
+    attendanceTableAcl,
+    /GRANT (?:INSERT|UPDATE|DELETE|ALL) ON TABLE public\.attendance_records TO (?:anon|authenticated)/,
+  );
+  assert.doesNotMatch(
+    baseline,
+    /CREATE POLICY attendance_(?:self_checkin|self_checkout|write) ON public\.attendance_records/,
+    "the current baseline must not restore direct self-write attendance policies",
+  );
+  assert.match(clockInAcl, /REVOKE ALL[\s\S]*FROM PUBLIC;/);
+  assert.match(clockInAcl, /GRANT ALL[\s\S]*TO service_role;/);
+  assert.doesNotMatch(clockInAcl, / TO (?:anon|authenticated);/);
 });
 
 test("Employee clock client and actions no longer use GPS for clock-in/out", () => {
@@ -104,8 +131,8 @@ test("Employee clock client and actions no longer use GPS for clock-in/out", () 
   }
 });
 
-test("Employee checklist templates are managed as HR templates, not roles", () => {
-  const migration = read(
+test("Employee checklist tasks are managed per position, not system role", () => {
+  const checklistSeedHistory = read(
     "supabase/migration-archive/20260610170000_hr_checklist_template_library.sql",
   );
   const actionSrc = read("apps/web/lib/staff-runtime/clock/actions.ts");
@@ -116,23 +143,38 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
   const branchSettingsPageSrc = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
   );
+  const positionTasksTable = pgDumpBlock(
+    baseline,
+    "-- Name: position_shift_tasks; Type: TABLE;",
+  );
+  const clockInFunction = pgDumpBlock(
+    baseline,
+    "-- Name: employee_clock_in_with_checklist(bigint, bigint, bigint, bigint, date, text); Type: FUNCTION;",
+  );
+  const upsertPositionTasksFunction = pgDumpBlock(
+    baseline,
+    "-- Name: upsert_position_shift_tasks(bigint, jsonb); Type: FUNCTION;",
+  );
 
   for (const expected of [
-    "ALTER COLUMN branch_id DROP NOT NULL",
-    "Legacy compatibility only. Checklist selection no longer uses role_code.",
-    "default_checklist_template_id bigint",
-    "checklist_template_id bigint",
-    "phase text NOT NULL DEFAULT 'trong_ca'",
-    "done_definition text NOT NULL DEFAULT ''",
-    "is_required boolean NOT NULL DEFAULT true",
-    "v_template_id := COALESCE(v_assignment_template_id, v_employee_template_id)",
-    "p_items jsonb",
-    "AND i.is_required = true",
-    "p_checklist_template_id bigint DEFAULT NULL",
-    "v_source.checklist_template_id",
+    "position_id bigint NOT NULL",
+    "kind text DEFAULT 'standard'::text NOT NULL",
+    "applicability text DEFAULT 'every_shift'::text NOT NULL",
+    "is_required boolean DEFAULT true NOT NULL",
+    "done_definition text DEFAULT ''::text NOT NULL",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assert.ok(positionTasksTable.includes(expected), `expected ${expected}`);
   }
+  assert.match(clockInFunction, /SELECT p\.position_id INTO v_position_id/);
+  assert.match(
+    clockInFunction,
+    /FROM public\.position_shift_tasks t[\s\S]*t\.position_id = v_position_id/,
+  );
+  assert.match(
+    upsertPositionTasksFunction,
+    /public\.has_permission_any\('staff:manage'\)/,
+  );
+  assert.match(upsertPositionTasksFunction, /p_tasks jsonb/);
 
   for (const templateName of [
     "Quầy",
@@ -142,15 +184,21 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
     "Tạp vụ",
   ]) {
     assert.ok(
-      migration.includes(`'${templateName}'`),
-      `expected seed template ${templateName}`,
+      checklistSeedHistory.includes(`'${templateName}'`),
+      `expected historical seed template ${templateName}`,
     );
   }
+  assert.match(
+    checklistSeedHistory,
+    /WITH seed_templates\(template_name\) AS \([\s\S]*?INSERT INTO public\.shift_checklist_templates/,
+    "the archived migration must retain the one-time checklist seed DML",
+  );
 
   assert.ok(
     !actionSrc.includes("p_role_code") &&
-      !migration.includes("t.role_code = v_role_code"),
-    "checklist selection must not depend on system role_code",
+      !clockInFunction.includes("role_code") &&
+      !upsertPositionTasksFunction.includes("role_code"),
+    "current checklist selection and writes must not depend on system role_code",
   );
   assert.ok(
     positionTasksActionSrc.includes("savePositionTasks") &&
@@ -173,8 +221,8 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
   );
 });
 
-test("HRM consumption checklist is optional for each canonical template", () => {
-  const migration = read(
+test("Historical HRM consumption checklist seed stays idempotent", () => {
+  const dataHistory = read(
     "supabase/migration-archive/20260618060957_hrm_checkout_consumption_checklist.sql",
   );
 
@@ -190,7 +238,7 @@ test("HRM consumption checklist is optional for each canonical template", () => 
     "'Kiểm kê Inventory'",
     "'Kiểm kê trước khi chấm công ra'",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assert.ok(dataHistory.includes(expected), `expected ${expected}`);
   }
 
   for (const templateName of [
@@ -203,26 +251,23 @@ test("HRM consumption checklist is optional for each canonical template", () => 
     "Bếp trưởng",
   ]) {
     assert.ok(
-      migration.includes(`'${templateName}'`),
+      dataHistory.includes(`'${templateName}'`),
       `expected checkout consumption row for ${templateName}`,
     );
   }
 
   assert.ok(
-    migration.includes("WHERE i.tenant_id = v_tenant") &&
-      migration.includes("AND i.template_id = v_template_id") &&
-      migration.includes(
+    dataHistory.includes("WHERE i.tenant_id = v_tenant") &&
+      dataHistory.includes("AND i.template_id = v_template_id") &&
+      dataHistory.includes(
         "AND i.title IN (\n            v_item.title,\n            'Kiểm kê Inventory',\n            'Kiểm kê trước khi chấm công ra'\n          )",
       ),
-    "migration must be idempotent per tenant/template/title",
+    "historical data mutation must be idempotent per tenant/template/title",
   );
 });
 
 test("HRM consumption history stays available but no longer gates Employee checkout", () => {
-  const migration = read(
-    "supabase/migration-archive/20260618070000_hrm_consumption_report_approval.sql",
-  );
-  const taskKindMigration = read(
+  const taskKindDataHistory = read(
     "supabase/migration-archive/20260619042223_employee_consumption_task_kind.sql",
   );
   const clockActionsSrc = read(
@@ -250,58 +295,103 @@ test("HRM consumption history stays available but no longer gates Employee check
   const positionTasksClientSrc = read(
     "apps/web/app/(protected)/hr/position-tasks-client.tsx",
   );
+  const reportsTable = pgDumpBlock(
+    baseline,
+    "-- Name: attendance_consumption_reports; Type: TABLE;",
+  );
+  const reportLinesTable = pgDumpBlock(
+    baseline,
+    "-- Name: attendance_consumption_report_lines; Type: TABLE;",
+  );
+  const consumptionDefaultsTable = pgDumpBlock(
+    baseline,
+    "-- Name: shift_checklist_consumption_default_items; Type: TABLE;",
+  );
+  const attendanceChecklistTable = pgDumpBlock(
+    baseline,
+    "-- Name: attendance_checklist_items; Type: TABLE;",
+  );
+  const checklistTemplateItemsTable = pgDumpBlock(
+    baseline,
+    "-- Name: shift_checklist_template_items; Type: TABLE;",
+  );
+  const submitFunction = pgDumpBlock(
+    baseline,
+    "-- Name: employee_submit_consumption_report(bigint, bigint, jsonb, text, boolean); Type: FUNCTION;",
+  );
+  const requestAdjustmentFunction = pgDumpBlock(
+    baseline,
+    "-- Name: branch_manager_request_consumption_adjustment(bigint, bigint, text); Type: FUNCTION;",
+  );
+  const approveConsumptionFunction = pgDumpBlock(
+    baseline,
+    "-- Name: branch_manager_approve_consumption_report(bigint, bigint); Type: FUNCTION;",
+  );
+  const upsertTemplateFunction = pgDumpBlock(
+    baseline,
+    "-- Name: upsert_shift_checklist_template(bigint, bigint, bigint, text, jsonb); Type: FUNCTION;",
+  );
+  const submitAcl = pgDumpBlock(
+    baseline,
+    "-- Name: FUNCTION employee_submit_consumption_report(p_tenant_id bigint, p_attendance_id bigint, p_lines jsonb, p_note text, p_no_consumption boolean); Type: ACL;",
+  );
+  const approveAcl = pgDumpBlock(
+    baseline,
+    "-- Name: FUNCTION branch_manager_approve_consumption_report(p_tenant_id bigint, p_report_id bigint); Type: ACL;",
+  );
 
+  assert.match(reportsTable, /no_consumption boolean DEFAULT false NOT NULL/);
+  assert.match(reportLinesTable, /default_item_id bigint/);
+  assert.match(consumptionDefaultsTable, /position_task_id bigint/);
+  assert.match(
+    attendanceChecklistTable,
+    /task_kind text DEFAULT 'standard'::text NOT NULL/,
+  );
+  assert.match(
+    checklistTemplateItemsTable,
+    /task_kind text DEFAULT 'standard'::text NOT NULL/,
+  );
+  assert.match(
+    taskKindDataHistory,
+    /UPDATE public\.attendance_checklist_items\s+SET task_kind = 'consumption_report'\s+WHERE title = 'Tiêu hao bếp trong ngày'/,
+    "the archived migration must retain the one-time display-title backfill",
+  );
+  assert.match(upsertTemplateFunction, /v_task_kind/);
+  assert.match(submitFunction, /p_no_consumption boolean DEFAULT false/);
+  assert.match(submitFunction, /consumption_checklist_not_assigned/);
+  assert.match(submitFunction, /no_consumption = EXCLUDED\.no_consumption/);
+  assert.match(submitFunction, /ci\.task_kind = 'consumption_report'/);
+  assert.match(requestAdjustmentFunction, /SET status = 'needs_changes'/);
+  assert.match(requestAdjustmentFunction, /checkout_requested_at = NULL/);
   for (const expected of [
-    "CREATE TABLE IF NOT EXISTS public.attendance_consumption_reports",
-    "no_consumption boolean NOT NULL DEFAULT false",
-    "CREATE TABLE IF NOT EXISTS public.shift_checklist_consumption_default_items",
-    "CREATE TABLE IF NOT EXISTS public.attendance_consumption_report_lines",
-    "default_item_id bigint",
-    "CREATE OR REPLACE FUNCTION public.employee_submit_consumption_report",
-    "CREATE OR REPLACE FUNCTION public.branch_manager_request_consumption_adjustment",
-    "CREATE OR REPLACE FUNCTION public.branch_manager_approve_consumption_report",
-    "p_no_consumption boolean DEFAULT false",
-    "consumption_checklist_not_assigned",
-    "no_consumption = EXCLUDED.no_consumption",
-    "status = 'needs_changes'",
-    "checkout_requested_at = NULL",
     "INSERT INTO public.stock_issues",
     "INSERT INTO public.stock_issue_items",
     "INSERT INTO public.stock_movements",
-    "i.purchase_unit",
     "'sale_consumption'",
     "'attendance_consumption_report'",
     "'HRM - Tiêu hao bếp trong ngày'",
     "'hrm_consumption'",
-    "GRANT EXECUTE ON FUNCTION public.employee_submit_consumption_report",
-    "GRANT EXECUTE ON FUNCTION public.branch_manager_approve_consumption_report",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assert.ok(
+      approveConsumptionFunction.includes(expected),
+      `expected current consumption approval RPC to include ${expected}`,
+    );
   }
-
-  for (const expected of [
-    "ADD COLUMN IF NOT EXISTS task_kind text NOT NULL DEFAULT 'standard'",
-    "CHECK (task_kind IN ('standard', 'consumption_report'))",
-    "CREATE OR REPLACE FUNCTION public.upsert_shift_checklist_template",
-    "i.task_kind",
-    "ci.task_kind = 'consumption_report'",
-    "AND task_kind = 'consumption_report'",
+  assert.match(submitAcl, /REVOKE ALL[\s\S]*FROM PUBLIC;/);
+  assert.match(submitAcl, /GRANT ALL[\s\S]*TO authenticated;/);
+  assert.match(approveAcl, /REVOKE ALL[\s\S]*FROM PUBLIC;/);
+  assert.match(approveAcl, /GRANT ALL[\s\S]*TO authenticated;/);
+  for (const functionSource of [
+    submitFunction,
+    requestAdjustmentFunction,
+    approveConsumptionFunction,
   ]) {
-    assert.ok(taskKindMigration.includes(expected), `expected ${expected}`);
+    assert.doesNotMatch(
+      functionSource,
+      /(?:ci\.)?title = 'Tiêu hao bếp trong ngày'/,
+      "current consumption RPCs must not use the display title as the workflow key",
+    );
   }
-  assert.ok(
-    !taskKindMigration.includes("ci.title = 'Tiêu hao bếp trong ngày'"),
-    "replacement consumption RPCs must not use the display title as the workflow key",
-  );
-
-  const submitFunction = migration.slice(
-    migration.indexOf(
-      "CREATE OR REPLACE FUNCTION public.employee_submit_consumption_report",
-    ),
-    migration.indexOf(
-      "CREATE OR REPLACE FUNCTION public.branch_manager_request_consumption_adjustment",
-    ),
-  );
   assert.ok(
     !submitFunction.includes("INSERT INTO public.stock_issues") &&
       !submitFunction.includes("INSERT INTO public.stock_movements"),
@@ -353,66 +443,113 @@ test("HRM consumption history stays available but no longer gates Employee check
 });
 
 test("Employee checkout approval keeps checkout pending until Branch Manager approves", () => {
-  const migration = read(
-    "supabase/migration-archive/20260609100000_employee_checkout_approval.sql",
-  );
-  const grantMigration = read(
-    "supabase/migration-archive/20260609132012_grant_private_schema_usage_to_service_role.sql",
-  );
   const actionSrc = read("apps/web/lib/staff-runtime/clock/actions.ts");
   const workStateSrc = read(
     "apps/web/lib/staff-runtime/_lib/today-work-state.ts",
   );
-  const baselineSrc = read("supabase/migrations/00000000000000_baseline.sql");
-  const countGateMigrationSrc = read(
-    "supabase/migration-archive/20260629183853_require_inventory_count_checkout_gate.sql",
-  );
-  const branchStaffMigrationSrc = read(
-    "supabase/migrations/20260708115755_branch_staff_guard_mapper.sql",
-  );
   const approvalsPageSrc = read(
     "apps/web/lib/staff-runtime/checkout-approvals/page.tsx",
   );
+  const attendanceRecordsTable = pgDumpBlock(
+    baseline,
+    "-- Name: attendance_records; Type: TABLE;",
+  );
+  const checkoutApprovedByForeignKey = pgDumpBlock(
+    baseline,
+    "-- Name: attendance_records attendance_records_checkout_approved_by_fkey; Type: FK CONSTRAINT;",
+  );
+  const checkoutRequestBody = pgDumpBlock(
+    baseline,
+    "-- Name: employee_request_clock_out(bigint, bigint, bigint); Type: FUNCTION;",
+  );
+  const checkoutApprovalBody = pgDumpBlock(
+    baseline,
+    "-- Name: branch_manager_approve_employee_clock_out(bigint, bigint, bigint, uuid, text); Type: FUNCTION;",
+  );
+  const checkoutRequestAcl = pgDumpBlock(
+    baseline,
+    "-- Name: FUNCTION employee_request_clock_out(p_tenant_id bigint, p_employee_id bigint, p_attendance_id bigint); Type: ACL;",
+  );
+  const checkoutApprovalAcl = pgDumpBlock(
+    baseline,
+    "-- Name: FUNCTION branch_manager_approve_employee_clock_out(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_approved_by uuid, p_note text); Type: ACL;",
+  );
+  const privateSchemaAcl = pgDumpBlock(
+    baseline,
+    "-- Name: SCHEMA private; Type: ACL;",
+  );
+  const staffRoleHelperAcl = pgDumpBlock(
+    baseline,
+    "-- Name: FUNCTION staff_role_from_position_code(p_code text); Type: ACL; Schema: private;",
+  );
 
   for (const expected of [
-    "checkout_requested_at timestamptz",
+    "checkout_requested_at timestamp with time zone",
     "checkout_requested_by_role text",
-    "checkout_approval_target_roles text[] NOT NULL DEFAULT ARRAY['branch_manager']::text[]",
-    "checkout_approved_at timestamptz",
-    "checkout_approved_by uuid REFERENCES auth.users(id)",
-    "CREATE OR REPLACE FUNCTION public.employee_request_clock_out",
-    "CREATE OR REPLACE FUNCTION public.branch_manager_approve_employee_clock_out",
-    "check_out = v_requested_at",
-    "'attendance.checkout_requested'",
-    "cannot_approve_own_checkout",
-    "branch_manager_can_only_approve_branch_staff",
+    "checkout_approval_target_roles text[] DEFAULT ARRAY['branch_manager'::text] NOT NULL",
+    "checkout_approved_at timestamp with time zone",
+    "checkout_approved_by uuid",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assert.ok(attendanceRecordsTable.includes(expected), `expected ${expected}`);
   }
+  assert.match(
+    checkoutApprovedByForeignKey,
+    /FOREIGN KEY \(checkout_approved_by\) REFERENCES auth\.users\(id\)/,
+  );
+  assert.match(
+    checkoutRequestBody,
+    /CREATE FUNCTION public\.employee_request_clock_out/,
+  );
+  assert.match(
+    checkoutApprovalBody,
+    /CREATE FUNCTION public\.branch_manager_approve_employee_clock_out/,
+  );
+  assert.match(checkoutApprovalBody, /check_out = v_requested_at/);
+  assert.match(checkoutRequestBody, /'attendance\.checkout_requested'/);
+  assert.match(checkoutApprovalBody, /cannot_approve_own_checkout/);
+  assert.match(
+    checkoutApprovalBody,
+    /branch_manager_can_only_approve_branch_staff/,
+  );
   assert.ok(
-    countGateMigrationSrc.includes(
+    checkoutRequestBody.includes(
       "WHEN v_requester_role = 'branch_manager' THEN ARRAY['owner']::text[]",
     ) &&
-      countGateMigrationSrc.includes(
-        "WHEN v_requester_role IN ('cashier', 'chef') THEN ARRAY['branch_manager']::text[]",
+      checkoutRequestBody.includes(
+        "WHEN v_requester_role IN ('cashier', 'chef', 'branch_staff') THEN ARRAY['branch_manager']::text[]",
       ) &&
-      !countGateMigrationSrc.includes(["super", "manager"].join("_")) &&
-      !countGateMigrationSrc.includes(`'${["wait", "er"].join("")}'`),
+      !checkoutRequestBody.includes(["super", "manager"].join("_")) &&
+      !checkoutRequestBody.includes(`'${["wait", "er"].join("")}'`),
     "current checkout approval gate must use canonical access buckets only",
   );
 
   assert.ok(
-    !migration.includes("checkout_requested_code_verified"),
+    !attendanceRecordsTable.includes("checkout_requested_code_verified") &&
+      !checkoutRequestBody.includes("checkout_requested_code_verified"),
     "checkout request must not store or preserve branch code verification",
   );
-  assert.ok(
-    grantMigration.includes("GRANT USAGE ON SCHEMA private TO service_role") &&
-      grantMigration.includes(
-        "GRANT EXECUTE ON FUNCTION private.staff_role_from_position_code(text)",
-      ) &&
-      grantMigration.includes("FROM PUBLIC, anon, authenticated"),
+  assert.match(
+    privateSchemaAcl,
+    /GRANT USAGE ON SCHEMA private TO service_role/,
+  );
+  assert.match(
+    staffRoleHelperAcl,
+    /REVOKE ALL ON FUNCTION private\.staff_role_from_position_code\(p_code text\) FROM PUBLIC;/,
+  );
+  assert.match(
+    staffRoleHelperAcl,
+    /GRANT ALL ON FUNCTION private\.staff_role_from_position_code\(p_code text\) TO service_role;/,
+  );
+  assert.doesNotMatch(
+    staffRoleHelperAcl,
+    / TO (?:anon|authenticated);/,
     "service-role checkout RPCs must be able to enter private schema helpers without exposing them to browser-callable roles",
   );
+  for (const acl of [checkoutRequestAcl, checkoutApprovalAcl]) {
+    assert.match(acl, /REVOKE ALL[\s\S]*FROM PUBLIC;/);
+    assert.match(acl, /GRANT ALL[\s\S]*TO service_role;/);
+    assert.doesNotMatch(acl, / TO (?:anon|authenticated);/);
+  }
 
   assert.ok(
     actionSrc.includes("probePermission") &&
@@ -438,21 +575,18 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
     workStateSrc.includes('"branch_staff"'),
     "branch_staff must require the same staff-runtime attendance/checklist flow as cashier and chef",
   );
-  for (const src of [baselineSrc, countGateMigrationSrc]) {
-    assert.ok(
-      src.includes("AND i.task_kind <> 'inventory_count'") &&
-        src.includes("inventory_count_slips") &&
-        src.includes("s.status IN ('submitted', 'approved')"),
-      "employee_request_clock_out must gate inventory_count from count slips, not the checklist checkbox",
-    );
-  }
+  assert.doesNotMatch(
+    checkoutRequestBody,
+    /checklist_incomplete|attendance_checklist_items|inventory_count_slips/,
+    "checkout requests stay available when shift tasks are incomplete; manager approval owns the final checkout",
+  );
   assert.ok(
-    branchStaffMigrationSrc.includes("WHEN 'guard' THEN 'branch_staff'") &&
-      branchStaffMigrationSrc.includes("WHEN 'cleaner' THEN 'branch_staff'") &&
-      branchStaffMigrationSrc.includes(
+    baseline.includes("WHEN 'guard' THEN 'branch_staff'") &&
+      baseline.includes("WHEN 'cleaner' THEN 'branch_staff'") &&
+      baseline.includes(
         "WHEN v_requester_role IN ('cashier', 'chef', 'branch_staff') THEN ARRAY['branch_manager']::text[]",
       ) &&
-      branchStaffMigrationSrc.includes(
+      baseline.includes(
         "IF v_requester_role NOT IN ('cashier', 'chef', 'branch_staff') THEN",
       ),
     "guard/cleaner must map to branch_staff and remain branch-manager checkout approvals",

@@ -18,10 +18,18 @@ const newPageSource = readFileSync(
   "app/(protected)/inventory/production/new/page.tsx",
   "utf8",
 );
-const recipeUnitMigrationSource = readFileSync(
-  "../../supabase/migrations/20260707182000_patch_production_recipe_unit_and_permissions.sql",
+const prodBaseline = readFileSync(
+  "../../supabase/migrations/00000000000000_baseline.sql",
   "utf8",
 );
+
+function readPgDumpObject(source: string, createPrefix: string): string {
+  const start = source.indexOf(createPrefix);
+  assert.notEqual(start, -1, `missing pg_dump object: ${createPrefix}`);
+  const end = source.indexOf("\n\n--\n-- Name:", start + createPrefix.length);
+  assert.notEqual(end, -1, `unterminated pg_dump object: ${createPrefix}`);
+  return source.slice(start, end);
+}
 
 test("production run creation is backed by production recipes, not menu recipes", () => {
   assert.match(
@@ -63,17 +71,35 @@ test("production recipe permissions are production-scoped instead of menu-only",
   );
 });
 
-test("production recipe migration patches RLS and RPCs off dropped unit writes", () => {
-  assert.match(recipeUnitMigrationSource, /DROP POLICY IF EXISTS production_recipes_select/);
+test("production recipe baseline keeps RLS and RPCs off the dropped unit column", () => {
+  const upsertProductionRecipeRpc = readPgDumpObject(
+    prodBaseline,
+    "CREATE FUNCTION public.upsert_production_recipe_lines(",
+  );
+  const bulkImportProductionRecipesRpc = readPgDumpObject(
+    prodBaseline,
+    "CREATE FUNCTION public.bulk_import_production_recipes(",
+  );
+  const recipeWriteRpcs = `${upsertProductionRecipeRpc}\n${bulkImportProductionRecipesRpc}`;
+
   assert.match(
-    recipeUnitMigrationSource,
+    prodBaseline,
+    /CREATE POLICY production_recipes_select ON public\.production_recipes FOR SELECT TO authenticated/,
+  );
+  assert.match(
+    prodBaseline,
     /public\.has_permission_any\('inventory:production_create'\)/,
   );
   assert.match(
-    recipeUnitMigrationSource,
+    prodBaseline,
     /public\.has_permission_any\('inventory:production_confirm'\)/,
   );
-  assert.doesNotMatch(recipeUnitMigrationSource, /inventory_entry_unit_code/);
-  assert.doesNotMatch(recipeUnitMigrationSource, /quantity,\s*unit,\s*entry_unit_id/);
-  assert.doesNotMatch(recipeUnitMigrationSource, /unit\s*=\s*EXCLUDED\.unit/);
+  assert.match(
+    prodBaseline,
+    /CREATE POLICY production_recipes_write ON public\.production_recipes TO authenticated/,
+  );
+  assert.match(recipeWriteRpcs, /entry_unit_id/);
+  assert.doesNotMatch(recipeWriteRpcs, /inventory_entry_unit_code/);
+  assert.doesNotMatch(recipeWriteRpcs, /quantity,\s*unit,\s*entry_unit_id/);
+  assert.doesNotMatch(recipeWriteRpcs, /unit\s*=\s*EXCLUDED\.unit/);
 });

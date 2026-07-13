@@ -247,16 +247,16 @@ export const pos = {
     limitUpdated: (itemName: string) => `Đã cập nhật: ${itemName}`,
     servingStatusLabel: "Trạng thái phục vụ",
     servingStatusHint: "Khóa món nếu hôm nay không thể phục vụ.",
-    replenishKitchenTitle: "Bổ sung tồn kho",
-    replenishKitchenHint:
+    replenishWarehouseTitle: "Bổ sung tồn kho",
+    replenishWarehouseHint:
       "Chỉ dùng khi kho chi nhánh xác nhận còn phần thực tế.",
-    replenishKitchenReasonLabel: "Lý do bổ sung",
-    replenishKitchenReasonHint:
+    replenishWarehouseReasonLabel: "Lý do bổ sung",
+    replenishWarehouseReasonHint:
       "Lưu vào lịch sử điều chỉnh tồn kho chi nhánh.",
-    replenishKitchenPlaceholder: "VD: Kho còn 2 phần thực tế",
-    replenishKitchenReasonMin: "Nhập lý do bổ sung tối thiểu 5 ký tự.",
-    replenishKitchenFailed: "Không thể bổ sung tồn kho.",
-    replenishKitchenSuccess: (itemName: string, extraPortions: number) =>
+    replenishWarehousePlaceholder: "VD: Kho còn 2 phần thực tế",
+    replenishWarehouseReasonMin: "Nhập lý do bổ sung tối thiểu 5 ký tự.",
+    replenishWarehouseFailed: "Không thể bổ sung tồn kho.",
+    replenishWarehouseSuccess: (itemName: string, extraPortions: number) =>
       `Đã bổ sung tồn kho: ${itemName} +${extraPortions} suất`,
     noStockConfig: "Chưa có định mức",
     reasonDisabled: "Tắt",

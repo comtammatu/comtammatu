@@ -19,19 +19,8 @@ function limit(p: Partial<MenuItemDailyLimit>): MenuItemDailyLimit {
   };
 }
 
-const stockOutcomeAvailabilityMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
-  ),
-  "utf8",
-);
-
-const ingredientPoolAvailabilityMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migrations/20260709143000_pos_menu_availability_ingredient_pool.sql",
-  ),
+const prodBaseline = readFileSync(
+  join(process.cwd(), "../../supabase/migrations/00000000000000_baseline.sql"),
   "utf8",
 );
 
@@ -51,20 +40,37 @@ const menuLimitsActions = readFileSync(
   "utf8",
 );
 
-const warehouseStockGateMigration = readFileSync(
+const historicalSingleWarehouseRetirement = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260711120000_enable_pos_sale_stock_deduction_at_branch_warehouse.sql",
+    "../../supabase/migration-archive/20260710220000_single_warehouse_retire_branch_kitchen.sql",
   ),
   "utf8",
 );
 
-const singleWarehouseMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migrations/20260710220000_single_warehouse_retire_branch_kitchen.sql",
-  ),
-  "utf8",
+function readPgDumpObject(source: string, createPrefix: string): string {
+  const start = source.indexOf(createPrefix);
+  assert.notEqual(start, -1, `missing pg_dump object: ${createPrefix}`);
+  const end = source.indexOf("\n\n--\n-- Name:", start + createPrefix.length);
+  assert.notEqual(end, -1, `unterminated pg_dump object: ${createPrefix}`);
+  return source.slice(start, end);
+}
+
+const branchMenuAvailabilityRpc = readPgDumpObject(
+  prodBaseline,
+  "CREATE FUNCTION public.branch_menu_limit_availability(",
+);
+const posMenuLimitsRpc = readPgDumpObject(
+  prodBaseline,
+  "CREATE FUNCTION public.get_branch_menu_daily_limits_for_pos(",
+);
+const enforceBranchStockAvailabilityRpc = readPgDumpObject(
+  prodBaseline,
+  "CREATE FUNCTION public.enforce_branch_stock_availability(",
+);
+const postSaleConsumptionRpc = readPgDumpObject(
+  prodBaseline,
+  "CREATE FUNCTION public.post_pos_sale_consumption_if_ready(",
 );
 
 test("remaining is unbounded when available_to_sell is null", () => {
@@ -185,52 +191,47 @@ test("limit_ratchet: shrinking live capacity must not double-count sold_today", 
   assert.equal(block, null);
 });
 
-test("stock-outcome availability SQL separates stock outcome and fallback counters", () => {
-  assert.match(stockOutcomeAvailabilityMigration, /pos_stock_outcome_posting/);
+test("stock-outcome availability uses the live gate without double-counting sold demand", () => {
+  assert.match(posMenuLimitsRpc, /pos_stock_outcome_posting/);
+  assert.match(posMenuLimitsRpc, /AS gate_eff/);
+  assert.match(posMenuLimitsRpc, /public\.branch_menu_limit_availability\(/);
+  assert.match(branchMenuAvailabilityRpc, /pending_item AS \(/);
+  assert.match(branchMenuAvailabilityRpc, /holds_item AS \(/);
   assert.match(
-    stockOutcomeAvailabilityMigration,
-    /COALESCE\(bl\.limit_quantity, bl\.stock_capacity\) AS limit_quantity/,
-  );
-  assert.match(stockOutcomeAvailabilityMigration, /pending_unfinalized_demand/);
-  assert.match(stockOutcomeAvailabilityMigration, /active_hold_demand/);
-  assert.match(
-    stockOutcomeAvailabilityMigration,
-    /WHEN p_stock_outcome_enabled THEN\s+r\.stock_capacity_live - r\.pending_unfinalized_demand - r\.active_hold_demand/,
+    branchMenuAvailabilityRpc,
+    /WHEN NOT p_stock_gate_enabled THEN NULL::integer/,
   );
   assert.match(
-    stockOutcomeAvailabilityMigration,
-    /ELSE\s+r\.stock_capacity_live - r\.accepted_today - r\.active_hold_demand/,
+    branchMenuAvailabilityRpc,
+    /r\.manual_limit_quantity - r\.sold_today - r\.item_active_hold_demand/,
   );
 });
 
 test("stock availability reserves shared recipe ingredients across menu items", () => {
+  assert.match(branchMenuAvailabilityRpc, /pending_ingredient AS \(/);
+  assert.match(branchMenuAvailabilityRpc, /holds_ingredient AS \(/);
   assert.match(
-    ingredientPoolAvailabilityMigration,
-    /pending_ingredient AS \(/,
-  );
-  assert.match(ingredientPoolAvailabilityMigration, /holds_ingredient AS \(/);
-  assert.match(
-    ingredientPoolAvailabilityMigration,
+    branchMenuAvailabilityRpc,
     /JOIN recipe_lines rl ON rl\.menu_item_id = pi\.menu_item_id/,
   );
   assert.match(
-    ingredientPoolAvailabilityMigration,
+    branchMenuAvailabilityRpc,
     /JOIN recipe_lines rl ON rl\.menu_item_id = hi\.menu_item_id/,
   );
   assert.match(
-    ingredientPoolAvailabilityMigration,
-    /pi\.ingredient_id = rl\.ingredient_id/,
+    branchMenuAvailabilityRpc,
+    /LEFT JOIN pending_ingredient pi ON pi\.ingredient_id = rl\.ingredient_id/,
   );
   assert.match(
-    ingredientPoolAvailabilityMigration,
-    /hi\.ingredient_id = rl\.ingredient_id/,
+    branchMenuAvailabilityRpc,
+    /LEFT JOIN holds_ingredient hi ON hi\.ingredient_id = rl\.ingredient_id/,
   );
   assert.match(
-    ingredientPoolAvailabilityMigration,
+    branchMenuAvailabilityRpc,
     /ELSE r\.manual_limit_quantity - r\.sold_today - r\.item_active_hold_demand/,
   );
   assert.doesNotMatch(
-    ingredientPoolAvailabilityMigration,
+    branchMenuAvailabilityRpc,
     /ELSE r\.manual_limit_quantity - r\.sold_today - r\.active_hold_demand/,
   );
 });
@@ -259,15 +260,18 @@ test("menu-limit operations keep scan facts compact and defer replenishment", ()
   assert.doesNotMatch(menuLimitsActions, /default to stock capacity/);
   assert.doesNotMatch(menuLimitsActions, /Tồn Bếp chi nhánh/);
   assert.match(
-    singleWarehouseMigration,
+    historicalSingleWarehouseRetirement,
     /'public\.enforce_branch_stock_availability\(\)'/,
   );
+  assert.match(enforceBranchStockAvailabilityRpc, /pos_stock_outcome_posting/);
   assert.match(
-    singleWarehouseMigration,
-    /CREATE OR REPLACE FUNCTION public\.commit_intra_branch_transfer[\s\S]*intra_branch_transfer_retired/,
+    enforceBranchStockAvailabilityRpc,
+    /location_kind = 'warehouse'/,
   );
-  assert.match(
-    warehouseStockGateMigration,
-    /pos_stock_outcome_posting/,
+  assert.doesNotMatch(
+    enforceBranchStockAvailabilityRpc,
+    /location_kind = 'kitchen'/,
   );
+  assert.match(postSaleConsumptionRpc, /location_kind = 'warehouse'/);
+  assert.doesNotMatch(postSaleConsumptionRpc, /location_kind = 'kitchen'/);
 });

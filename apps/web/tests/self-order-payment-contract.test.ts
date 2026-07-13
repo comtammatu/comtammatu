@@ -11,7 +11,7 @@ const paymentTimingMigration = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260711033150_allow_self_order_payment_before_kds_ready.sql",
+    "supabase/migration-archive/20260711033150_allow_self_order_payment_before_kds_ready.sql",
   ),
   "utf8",
 );
@@ -20,7 +20,7 @@ const paymentStatusMigration = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260711034552_self_order_payment_status.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   ),
   "utf8",
 );

@@ -6,8 +6,8 @@
  * rate-independent (total_amount).
  *
  * Used by the finance invoice no-items header-VAT fallback to pick the GTGT
- * rate via resolveSalesTaxProfile. Keep in parity with public.resolve_gtgt_rate
- * (supabase/migrations/20260616130000_derive_sales_tax_rate.sql).
+ * rate via resolveSalesTaxProfile. Keep in parity with
+ * public.resolve_gtgt_rate.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";

@@ -4,7 +4,7 @@ SET check_function_bodies = false;
 -- PostgreSQL database dump
 --
 
--- \restrict Y2WcDr0KbAr7PTFbJBcQfcjASZ09sSPy2jW5XOm3BqeLq4ASigKitPcFeT2oxcf
+-- \restrict vwnvELDB6pNGWQnp26qbP2HZgOs81KueqiDavbSIyMt2lcOpS19n9LdRQehh78d
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.3
@@ -652,7 +652,8 @@ CREATE FUNCTION private.staff_role_from_position_code(p_code text) RETURNS text
     WHEN 'marketing' THEN 'office'
     WHEN 'technician' THEN 'office'
     WHEN 'design_construction' THEN 'office'
-    WHEN 'cleaner' THEN 'office'
+    WHEN 'cleaner' THEN 'branch_staff'
+    WHEN 'guard' THEN 'branch_staff'
     ELSE NULL
   END
 $$;
@@ -662,7 +663,7 @@ $$;
 -- Name: FUNCTION staff_role_from_position_code(p_code text); Type: COMMENT; Schema: private; Owner: -
 --
 
-COMMENT ON FUNCTION private.staff_role_from_position_code(p_code text) IS 'SQL twin of POSITION_CODE_TO_STAFF_ROLE (packages/shared/src/auth/types.ts). English position codes only. Legacy waiter maps to cashier.';
+COMMENT ON FUNCTION private.staff_role_from_position_code(p_code text) IS 'SQL twin of POSITION_CODE_TO_STAFF_ROLE (packages/shared/src/auth/types.ts). English position codes only. Legacy waiter maps to cashier; guard/cleaner map to branch_staff.';
 
 
 --
@@ -705,14 +706,13 @@ GRANT ALL ON FUNCTION private.staff_role_from_position_code(p_code text) TO serv
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict Y2WcDr0KbAr7PTFbJBcQfcjASZ09sSPy2jW5XOm3BqeLq4ASigKitPcFeT2oxcf
-
+-- \unrestrict vwnvELDB6pNGWQnp26qbP2HZgOs81KueqiDavbSIyMt2lcOpS19n9LdRQehh78d
 
 --
 -- PostgreSQL database dump
 --
 
--- \restrict kTOQ8m6uBrO4Uo3gfil0NTZ9Z1KcRGBJO6T8I4jYKTT4fIDp9yE4ZId1bracxW4
+-- \restrict AFMyG6S2T8dnMepEO8qWQaQ7kVhLfNQf8p9RVxu6xncIyOFd1Y0pghQNjWVP4qu
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.3
@@ -955,6 +955,419 @@ END; $$;
 
 
 --
+-- Name: add_menu_item_kitchen_stock_exception(bigint, bigint, integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.add_menu_item_kitchen_stock_exception(p_branch_id bigint, p_menu_item_id bigint, p_extra_portions integer, p_reason text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_tenant_id bigint := public.auth_tenant_id();
+  v_role text := public.auth_role();
+  v_branch bigint := public.auth_branch_id();
+  v_uid uuid := auth.uid();
+  v_location_id bigint;
+  v_branch_kind text;
+  v_reason text := btrim(COALESCE(p_reason, ''));
+  v_line record;
+  v_movement_count integer := 0;
+  v_stock_capacity integer;
+BEGIN
+  IF v_tenant_id IS NULL OR v_uid IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF v_role NOT IN ('owner', 'branch_manager') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_role = 'branch_manager'
+     AND (v_branch IS NULL OR v_branch <> p_branch_id) THEN
+    RAISE EXCEPTION 'branch scope mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_branch_id IS NULL OR p_menu_item_id IS NULL THEN
+    RAISE EXCEPTION 'invalid_replenishment_target' USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT public.has_permission(p_branch_id, 'inventory:write') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_extra_portions IS NULL OR p_extra_portions NOT IN (1, 2) THEN
+    RAISE EXCEPTION 'extra_portions_range' USING ERRCODE = '22023';
+  END IF;
+
+  IF length(v_reason) < 5 THEN
+    RAISE EXCEPTION 'reason_required' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT b.branch_kind, il.id
+  INTO v_branch_kind, v_location_id
+  FROM public.branches b
+  LEFT JOIN LATERAL (
+    SELECT loc.id
+    FROM public.inventory_locations loc
+    WHERE loc.tenant_id = b.tenant_id
+      AND loc.branch_id = b.id
+      AND loc.location_kind = 'kitchen'
+      AND loc.is_active = TRUE
+    ORDER BY loc.is_default_consumption DESC, loc.sort_order NULLS LAST, loc.id
+    LIMIT 1
+  ) il ON TRUE
+  WHERE b.tenant_id = v_tenant_id
+    AND b.id = p_branch_id
+    AND b.is_active = TRUE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_branch_kind IS DISTINCT FROM 'branch' THEN
+    RAISE EXCEPTION 'branch_kitchen_required' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_location_id IS NULL THEN
+    RAISE EXCEPTION 'default_kitchen_location_required' USING ERRCODE = '23502';
+  END IF;
+
+  PERFORM 1
+  FROM public.menu_items mi
+  WHERE mi.tenant_id = v_tenant_id
+    AND mi.id = p_menu_item_id
+    AND mi.is_active = TRUE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'menu_item_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  PERFORM 1
+  FROM public.recipes r
+  WHERE r.tenant_id = v_tenant_id
+    AND r.menu_item_id = p_menu_item_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'menu_recipe_required' USING ERRCODE = '22023';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.recipes r
+    LEFT JOIN public.ingredients ing
+      ON ing.tenant_id = r.tenant_id
+     AND ing.id = r.ingredient_id
+     AND ing.is_active = TRUE
+    WHERE r.tenant_id = v_tenant_id
+      AND r.menu_item_id = p_menu_item_id
+      AND ing.id IS NULL
+  ) THEN
+    RAISE EXCEPTION 'recipe_ingredient_inactive' USING ERRCODE = '23503';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.recipes r
+    WHERE r.tenant_id = v_tenant_id
+      AND r.menu_item_id = p_menu_item_id
+      AND r.entry_unit_id IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.ingredient_units iu
+        WHERE iu.tenant_id = v_tenant_id
+          AND iu.ingredient_id = r.ingredient_id
+          AND iu.unit_id = r.entry_unit_id
+          AND iu.is_active = TRUE
+      )
+  ) THEN
+    RAISE EXCEPTION 'recipe_unit_config_required' USING ERRCODE = '23503';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.recipes r
+    WHERE r.tenant_id = v_tenant_id
+      AND r.menu_item_id = p_menu_item_id
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.ingredient_units iu
+        JOIN public.units u
+          ON u.tenant_id = iu.tenant_id
+         AND u.id = iu.unit_id
+        WHERE iu.tenant_id = v_tenant_id
+          AND iu.ingredient_id = r.ingredient_id
+          AND iu.is_base = TRUE
+          AND iu.is_active = TRUE
+          AND u.is_active = TRUE
+      )
+  ) THEN
+    RAISE EXCEPTION 'entry_unit_not_found' USING ERRCODE = '23503';
+  END IF;
+
+  FOR v_line IN
+    SELECT
+      r.ingredient_id,
+      base_unit.unit_id AS entry_unit_id,
+      ROUND(SUM(public.inv_to_base_for_tenant(
+        v_tenant_id,
+        r.ingredient_id,
+        r.entry_unit_id,
+        p_extra_portions::numeric * r.quantity / r.yield_factor
+      )), 3)::numeric(15,3) AS quantity_change
+    FROM public.recipes r
+    JOIN LATERAL (
+      SELECT iu.unit_id
+      FROM public.ingredient_units iu
+      JOIN public.units u
+        ON u.tenant_id = iu.tenant_id
+       AND u.id = iu.unit_id
+      WHERE iu.tenant_id = v_tenant_id
+        AND iu.ingredient_id = r.ingredient_id
+        AND iu.is_base = TRUE
+        AND iu.is_active = TRUE
+        AND u.is_active = TRUE
+      ORDER BY iu.sort_order, iu.id
+      LIMIT 1
+    ) base_unit ON TRUE
+    WHERE r.tenant_id = v_tenant_id
+      AND r.menu_item_id = p_menu_item_id
+    GROUP BY r.ingredient_id, base_unit.unit_id
+    HAVING ROUND(SUM(public.inv_to_base_for_tenant(
+      v_tenant_id,
+      r.ingredient_id,
+      r.entry_unit_id,
+      p_extra_portions::numeric * r.quantity / r.yield_factor
+    )), 3) > 0
+    ORDER BY r.ingredient_id
+  LOOP
+    INSERT INTO public.stock_movements (
+      tenant_id,
+      branch_id,
+      ingredient_id,
+      type,
+      quantity_change,
+      reason,
+      created_by,
+      location_id,
+      entry_unit_id,
+      entry_quantity
+    ) VALUES (
+      v_tenant_id,
+      p_branch_id,
+      v_line.ingredient_id,
+      'adjustment',
+      v_line.quantity_change,
+      'Menu-Limits kitchen replenishment +' || p_extra_portions::text || ': ' || v_reason,
+      v_uid,
+      v_location_id,
+      v_line.entry_unit_id,
+      v_line.quantity_change
+    );
+
+    v_movement_count := v_movement_count + 1;
+  END LOOP;
+
+  IF v_movement_count = 0 THEN
+    RAISE EXCEPTION 'no_positive_recipe_quantity' USING ERRCODE = '22023';
+  END IF;
+
+  v_stock_capacity := public.compute_menu_item_stock_capacity(
+    v_tenant_id,
+    p_branch_id,
+    p_menu_item_id
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'branch_id', p_branch_id,
+    'menu_item_id', p_menu_item_id,
+    'portions_added', p_extra_portions,
+    'movements_created', v_movement_count,
+    'stock_capacity', v_stock_capacity
+  );
+END;
+$$;
+
+
+--
+-- Name: FUNCTION add_menu_item_kitchen_stock_exception(p_branch_id bigint, p_menu_item_id bigint, p_extra_portions integer, p_reason text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.add_menu_item_kitchen_stock_exception(p_branch_id bigint, p_menu_item_id bigint, p_extra_portions integer, p_reason text) IS 'Menu-Limits controlled +1/+2 kitchen replenishment by menu item recipe. Writes adjustment stock_movements only.';
+
+
+--
+-- Name: adjust_stock_exception(bigint, bigint, numeric, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.adjust_stock_exception(p_branch_id bigint, p_ingredient_id bigint, p_quantity_change numeric, p_reason text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_location_id bigint;
+  v_entry_unit_id bigint;
+  v_movement_id bigint;
+  v_reason text := btrim(COALESCE(p_reason, ''));
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+  IF v_tenant IS NULL THEN
+    RAISE EXCEPTION 'tenant_required' USING ERRCODE = '28000';
+  END IF;
+  IF p_branch_id IS NULL OR p_ingredient_id IS NULL THEN
+    RAISE EXCEPTION 'invalid_adjustment_target' USING ERRCODE = '22023';
+  END IF;
+  IF p_quantity_change IS NULL OR p_quantity_change = 0 THEN
+    RAISE EXCEPTION 'quantity_change_nonzero' USING ERRCODE = '22023';
+  END IF;
+  IF length(v_reason) < 5 THEN
+    RAISE EXCEPTION 'reason_required' USING ERRCODE = '22023';
+  END IF;
+  IF NOT public.has_permission(p_branch_id, 'inventory:write') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT il.id
+  INTO v_location_id
+  FROM public.inventory_locations il
+  JOIN public.branches b
+    ON b.id = il.branch_id
+   AND b.tenant_id = il.tenant_id
+  WHERE il.tenant_id = v_tenant
+    AND il.branch_id = p_branch_id
+    AND il.is_active = TRUE
+    AND (
+      (b.branch_kind = 'branch' AND il.location_kind = 'warehouse')
+      OR (b.branch_kind IS DISTINCT FROM 'branch' AND il.is_default_issue = TRUE)
+    )
+  ORDER BY
+    CASE WHEN b.branch_kind = 'branch' AND il.location_kind = 'warehouse' THEN 0 ELSE 1 END,
+    il.is_default_consumption DESC,
+    il.is_default_issue DESC,
+    il.sort_order NULLS LAST,
+    il.id
+  LIMIT 1;
+
+  IF v_location_id IS NULL THEN
+    RAISE EXCEPTION 'default_issue_location_required' USING ERRCODE = '23502';
+  END IF;
+
+  SELECT iu.unit_id
+  INTO v_entry_unit_id
+  FROM public.ingredients ing
+  JOIN public.ingredient_units iu
+    ON iu.tenant_id = ing.tenant_id
+   AND iu.ingredient_id = ing.id
+  JOIN public.units u
+    ON u.tenant_id = iu.tenant_id
+   AND u.id = iu.unit_id
+  WHERE ing.tenant_id = v_tenant
+    AND ing.id = p_ingredient_id
+    AND ing.is_active = TRUE
+    AND iu.is_base = TRUE
+    AND iu.is_active = TRUE
+    AND u.is_active = TRUE
+  ORDER BY iu.sort_order, iu.id
+  LIMIT 1;
+
+  IF v_entry_unit_id IS NULL THEN
+    RAISE EXCEPTION 'entry_unit_not_found:%', p_ingredient_id USING ERRCODE = '23503';
+  END IF;
+
+  INSERT INTO public.stock_movements (
+    tenant_id, branch_id, ingredient_id, type, quantity_change,
+    reason, created_by, location_id, entry_unit_id, entry_quantity
+  ) VALUES (
+    v_tenant, p_branch_id, p_ingredient_id, 'adjustment', p_quantity_change,
+    v_reason, v_uid, v_location_id, v_entry_unit_id, abs(p_quantity_change)
+  )
+  RETURNING id INTO v_movement_id;
+
+  RETURN jsonb_build_object('success', true, 'movement_id', v_movement_id);
+END;
+$$;
+
+
+--
+-- Name: admin_force_close_attendance(bigint, bigint, bigint, uuid, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.admin_force_close_attendance(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_approved_by uuid, p_note text DEFAULT NULL::text) RETURNS timestamp with time zone
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_check_in timestamptz;
+  v_check_out timestamptz;
+  v_record_date date;
+  v_shift_start time;
+  v_shift_end time;
+  v_shift_end_at timestamp;
+  v_now_local timestamp := now() AT TIME ZONE 'Asia/Ho_Chi_Minh';
+  v_business_date date := v_now_local::date;
+BEGIN
+  IF v_uid IS NULL OR v_uid <> p_approved_by THEN
+    RAISE EXCEPTION 'not_authenticated_or_mismatch' USING ERRCODE = '28000';
+  END IF;
+
+  SELECT ar.check_in, ar.date, s.start_time, s.end_time
+  INTO v_check_in, v_record_date, v_shift_start, v_shift_end
+  FROM public.attendance_records ar
+  LEFT JOIN public.shifts s
+    ON s.id = ar.shift_id
+   AND s.tenant_id = ar.tenant_id
+  WHERE ar.id = p_attendance_id
+    AND ar.tenant_id = p_tenant_id
+    AND ar.branch_id = p_branch_id
+    AND ar.check_in IS NOT NULL
+    AND ar.check_out IS NULL
+  FOR UPDATE OF ar;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'stale_attendance_request_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_shift_start IS NULL OR v_shift_end IS NULL THEN
+    IF v_record_date >= v_business_date THEN
+      RAISE EXCEPTION 'stale_attendance_request_not_found' USING ERRCODE = 'P0002';
+    END IF;
+  ELSE
+    v_shift_end_at := v_record_date + v_shift_end;
+    IF v_shift_end <= v_shift_start THEN
+      v_shift_end_at := v_shift_end_at + INTERVAL '1 day';
+    END IF;
+
+    IF v_now_local < v_shift_end_at THEN
+      RAISE EXCEPTION 'stale_attendance_request_not_found' USING ERRCODE = 'P0002';
+    END IF;
+  END IF;
+
+  IF NOT public.has_permission(p_branch_id, 'hr:approve_checkout') THEN
+    RAISE EXCEPTION 'forbidden_checkout_approval' USING ERRCODE = '42501';
+  END IF;
+
+  UPDATE public.attendance_records
+  SET
+    check_out = v_check_in,
+    check_out_code_verified = false,
+    checkout_approved_at = now(),
+    checkout_approved_by = p_approved_by,
+    checkout_approval_note = COALESCE(NULLIF(btrim(p_note), ''), 'Force closed: Quên kết ca trong ngày (không tính công)'),
+    updated_at = now()
+  WHERE id = p_attendance_id
+    AND tenant_id = p_tenant_id
+    AND branch_id = p_branch_id
+  RETURNING check_out INTO v_check_out;
+
+  RETURN v_check_out;
+END;
+$$;
+
+
+--
 -- Name: admin_update_profile(uuid, text, text, text, bigint, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -984,8 +1397,12 @@ BEGIN
   SELECT p.tenant_id, private.staff_role_from_position_code(po.code), p.branch_id
   INTO v_actor_tenant, v_actor_role_text, v_actor_branch
   FROM public.profiles p
-  JOIN public.positions po ON po.id = p.position_id AND po.tenant_id = p.tenant_id
-  WHERE p.id = v_actor_id AND COALESCE(p.is_active, true) = true;
+  JOIN public.positions po
+    ON po.id = p.position_id
+   AND po.tenant_id = p.tenant_id
+  WHERE p.id = v_actor_id
+    AND COALESCE(p.is_active, true) = true;
+
   IF NOT FOUND OR v_actor_tenant IS NULL OR v_actor_role_text IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
@@ -993,7 +1410,9 @@ BEGIN
   IF NOT public.has_permission_any('staff:manage') THEN
     RAISE EXCEPTION 'forbidden: missing staff:manage' USING ERRCODE = '42501';
   END IF;
-  IF (p_role IS NOT NULL OR p_branch_id IS NOT NULL) AND NOT public.has_permission_any('staff:assign_position') THEN
+
+  IF (p_role IS NOT NULL OR p_branch_id IS NOT NULL)
+     AND NOT public.has_permission_any('staff:assign_position') THEN
     RAISE EXCEPTION 'forbidden: missing staff:assign_position' USING ERRCODE = '42501';
   END IF;
 
@@ -1002,8 +1421,12 @@ BEGIN
          private.staff_role_from_position_code(po.code) AS role_text
   INTO v_target
   FROM public.profiles p
-  JOIN public.positions po ON po.id = p.position_id AND po.tenant_id = p.tenant_id
-  WHERE p.id = p_target_id AND p.tenant_id = v_actor_tenant;
+  JOIN public.positions po
+    ON po.id = p.position_id
+   AND po.tenant_id = p.tenant_id
+  WHERE p.id = p_target_id
+    AND p.tenant_id = v_actor_tenant;
+
   IF NOT FOUND THEN
     RAISE EXCEPTION 'target_profile_not_found_in_tenant' USING ERRCODE = 'P0002';
   END IF;
@@ -1025,8 +1448,19 @@ BEGIN
     LIMIT 1;
 
     IF v_final_position IS NULL THEN
-      v_final_role := CASE WHEN v_requested_code = 'waiter' THEN 'cashier' ELSE v_requested_code END;
-      IF v_final_role NOT IN ('owner','branch_manager','warehouse_manager','production_manager','cashier','chef','office') THEN
+      v_final_role := CASE
+        WHEN v_requested_code = 'waiter' THEN 'cashier'
+        ELSE v_requested_code
+      END;
+      IF v_final_role NOT IN (
+        'owner',
+        'branch_manager',
+        'warehouse_manager',
+        'production_manager',
+        'cashier',
+        'chef',
+        'office'
+      ) THEN
         RAISE EXCEPTION 'invalid_access_bucket: %', v_requested_code USING ERRCODE = '22023';
       END IF;
       v_final_position := public.position_id_from_access_bucket(v_final_role, v_actor_tenant);
@@ -1038,7 +1472,10 @@ BEGIN
   END IF;
 
   IF v_final_position IS NULL OR v_final_role IS NULL OR v_final_position_code IS NULL THEN
-    RAISE EXCEPTION 'admin_update_profile: position_not_resolved for position=% tenant=%', v_requested_code, v_actor_tenant USING ERRCODE = 'P0001';
+    RAISE EXCEPTION 'admin_update_profile: position_not_resolved for position=% tenant=%',
+      v_requested_code,
+      v_actor_tenant
+      USING ERRCODE = 'P0001';
   END IF;
 
   IF v_final_role = 'owner' THEN
@@ -1055,6 +1492,7 @@ BEGIN
     WHEN 'grill_counter' THEN 'branch'
     WHEN 'cleaner' THEN 'branch'
     WHEN 'waiter' THEN 'branch'
+    WHEN 'guard' THEN 'branch'
     ELSE NULL
   END;
 
@@ -1092,7 +1530,8 @@ BEGIN
     IF v_target_role = 'branch_manager' THEN
       RAISE EXCEPTION 'branch_manager_cannot_modify_peer' USING ERRCODE = '42501';
     END IF;
-    IF v_final_role NOT IN ('cashier','chef') THEN
+    IF v_final_role NOT IN ('cashier', 'chef')
+       AND v_final_position_code NOT IN ('guard', 'cleaner', 'waiter') THEN
       RAISE EXCEPTION 'branch_manager_can_only_assign_branch_staff' USING ERRCODE = '42501';
     END IF;
     IF v_final_branch IS DISTINCT FROM v_actor_branch THEN
@@ -1366,21 +1805,30 @@ CREATE FUNCTION public.amend_grn_line(p_grn_id bigint, p_line_id bigint, p_recei
     SET search_path TO 'public'
     AS $$
 DECLARE
+  c_numeric_15_3_max CONSTANT NUMERIC := 999999999999.999;
+  c_numeric_15_2_max CONSTANT NUMERIC := 9999999999999.99;
   v_uid             UUID   := auth.uid();
   v_tenant          BIGINT := public.auth_tenant_id();
   v_grn             RECORD;
   v_line            RECORD;
-  v_old_qty         NUMERIC(15,3);
-  v_old_rej         NUMERIC(15,3);
-  v_old_cost        NUMERIC(15,2);
-  v_old_net         NUMERIC(15,3);
-  v_new_qty         NUMERIC(15,3) := p_received_quantity;
-  v_new_rej         NUMERIC(15,3);
-  v_new_cost        NUMERIC(15,2) := p_unit_cost;
-  v_new_net         NUMERIC(15,3);
-  v_delta_qty       NUMERIC(15,3);
-  v_delta_value     NUMERIC(15,2);
-  v_current_qty     NUMERIC(15,3);
+  v_old_qty         NUMERIC;
+  v_old_rej         NUMERIC;
+  v_old_cost        NUMERIC;
+  v_old_net         NUMERIC;
+  v_old_net_base    NUMERIC;
+  v_new_qty         NUMERIC;
+  v_new_rej         NUMERIC;
+  v_new_cost        NUMERIC;
+  v_new_cost_base   NUMERIC;
+  v_new_net         NUMERIC;
+  v_new_net_base    NUMERIC;
+  v_delta_qty       NUMERIC;
+  v_delta_base      NUMERIC;
+  v_delta_value     NUMERIC;
+  v_new_total_cost  NUMERIC;
+  v_current_qty     NUMERIC;
+  v_current_wac     NUMERIC;
+  v_next_wac        NUMERIC;
   v_active_returns  INT;
   v_paid_invoices   INT;
   v_location_id     BIGINT;
@@ -1397,9 +1845,17 @@ BEGIN
   END IF;
 
   IF p_received_quantity IS NULL OR p_received_quantity < 0
-     OR p_unit_cost IS NULL OR p_unit_cost < 0 THEN
+     OR p_received_quantity > c_numeric_15_3_max
+     OR p_unit_cost IS NULL OR p_unit_cost < 0
+     OR p_unit_cost > c_numeric_15_2_max
+     OR (p_rejected_quantity IS NOT NULL AND (
+       p_rejected_quantity < 0 OR p_rejected_quantity > c_numeric_15_3_max
+     )) THEN
     RAISE EXCEPTION 'invalid_amount' USING ERRCODE = '22023';
   END IF;
+
+  v_new_qty := p_received_quantity;
+  v_new_cost := p_unit_cost;
 
   SELECT g.* INTO v_grn
   FROM public.goods_received_notes g
@@ -1441,6 +1897,20 @@ BEGIN
   END IF;
 
   v_new_net := v_new_qty - v_new_rej;
+  v_old_net_base := public.inv_to_base(v_line.ingredient_id, v_line.entry_unit_id, v_old_net);
+  v_new_net_base := public.inv_to_base(v_line.ingredient_id, v_line.entry_unit_id, v_new_net);
+  v_new_cost_base := CASE
+    WHEN v_new_net_base <> 0 THEN ROUND((v_new_net * v_new_cost) / v_new_net_base, 2)
+    ELSE v_new_cost
+  END;
+  v_new_total_cost := ROUND(v_new_qty * v_new_cost, 2);
+
+  IF v_new_net_base < 0
+     OR abs(v_new_net_base) > c_numeric_15_3_max
+     OR abs(v_new_cost_base) > c_numeric_15_2_max
+     OR abs(v_new_total_cost) > c_numeric_15_2_max THEN
+    RAISE EXCEPTION 'invalid_amount' USING ERRCODE = '22023';
+  END IF;
 
   SELECT COUNT(*) INTO v_active_returns
   FROM public.supplier_return_items sri
@@ -1464,48 +1934,105 @@ BEGIN
   END IF;
 
   v_delta_qty := v_new_net - v_old_net;
+  v_delta_base := v_new_net_base - v_old_net_base;
   v_delta_value := (v_new_net * v_new_cost) - (v_old_net * v_old_cost);
 
-  SELECT current_quantity INTO v_current_qty
+  IF abs(v_delta_base) > c_numeric_15_3_max
+     OR abs(v_delta_qty) > c_numeric_15_3_max
+     OR abs(v_delta_value) > c_numeric_15_2_max THEN
+    RAISE EXCEPTION 'invalid_amount' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_grn.location_id IS NOT NULL THEN
+    SELECT il.id INTO v_location_id
+    FROM public.inventory_locations il
+    WHERE il.id = v_grn.location_id
+      AND il.branch_id = v_grn.branch_id
+      AND il.tenant_id = v_tenant
+      AND il.is_active = TRUE
+    LIMIT 1;
+
+    IF v_location_id IS NULL THEN
+      RAISE EXCEPTION 'grn_receive_location_invalid' USING ERRCODE = '23514';
+    END IF;
+  ELSE
+    SELECT il.id INTO v_location_id
+    FROM public.inventory_locations il
+    WHERE il.branch_id = v_grn.branch_id
+      AND il.tenant_id = v_tenant
+      AND il.is_default_receive = TRUE
+      AND il.is_active = TRUE
+    ORDER BY il.sort_order NULLS LAST, il.id
+    LIMIT 1;
+  END IF;
+
+  IF v_location_id IS NULL THEN
+    RAISE EXCEPTION 'grn_receive_location_missing' USING ERRCODE = '23502';
+  END IF;
+
+  SELECT current_quantity, avg_unit_cost
+  INTO v_current_qty, v_current_wac
   FROM public.stock_levels
   WHERE tenant_id = v_tenant
     AND branch_id = v_grn.branch_id
-    AND ingredient_id = v_line.ingredient_id;
+    AND location_id = v_location_id
+    AND ingredient_id = v_line.ingredient_id
+  FOR UPDATE;
 
   v_current_qty := COALESCE(v_current_qty, 0);
 
-  IF v_current_qty + v_delta_qty < 0 THEN
+  IF v_current_qty + v_delta_base < 0 THEN
     RAISE EXCEPTION 'negative_stock' USING ERRCODE = '23514';
   END IF;
 
-  SELECT il.id INTO v_location_id
-  FROM public.inventory_locations il
-  WHERE il.branch_id = v_grn.branch_id
-    AND il.tenant_id = v_tenant
-    AND il.is_default_receive = TRUE
-    AND il.is_active = TRUE
-  LIMIT 1;
+  IF abs(v_current_qty + v_delta_base) > c_numeric_15_3_max THEN
+    RAISE EXCEPTION 'invalid_amount' USING ERRCODE = '22023';
+  END IF;
 
-  IF v_delta_qty <> 0 THEN
+  IF v_delta_base <> 0 THEN
     INSERT INTO public.stock_movements (
       tenant_id, branch_id, ingredient_id, type, quantity_change,
-      reason, created_by, grn_id, unit_cost, location_id
+      reason, created_by, grn_id, unit_cost, location_id,
+      entry_unit_id, entry_quantity
     ) VALUES (
       v_tenant, v_grn.branch_id, v_line.ingredient_id, 'grn_amend',
-      v_delta_qty,
+      v_delta_base,
       'GRN ' || v_grn.grn_number || ' amend (line ' || p_line_id || '): '
         || v_old_qty || '/' || v_old_rej || ' -> ' || v_new_qty || '/' || v_new_rej
         || ' @ ' || v_old_cost || ' -> ' || v_new_cost
         || ' - ' || trim(p_reason),
-      v_uid, p_grn_id, v_new_cost, v_location_id
+      v_uid, p_grn_id, v_new_cost_base, v_location_id,
+      v_line.entry_unit_id, ABS(v_delta_qty)
     );
+
+  END IF;
+
+  IF (v_delta_base <> 0 OR v_delta_value <> 0)
+     AND v_current_qty + v_delta_base > 0 THEN
+    v_next_wac := ROUND(
+      ((v_current_qty * COALESCE(v_current_wac, 0)) + v_delta_value)
+      / (v_current_qty + v_delta_base),
+      2
+    );
+
+    IF v_next_wac < 0 OR abs(v_next_wac) > c_numeric_15_2_max THEN
+      RAISE EXCEPTION 'invalid_amount' USING ERRCODE = '22023';
+    END IF;
+
+    UPDATE public.stock_levels
+    SET avg_unit_cost = v_next_wac,
+        updated_at = now()
+    WHERE tenant_id = v_tenant
+      AND branch_id = v_grn.branch_id
+      AND location_id = v_location_id
+      AND ingredient_id = v_line.ingredient_id;
   END IF;
 
   UPDATE public.grn_items
   SET received_quantity = v_new_qty,
       rejected_quantity = v_new_rej,
       unit_cost = v_new_cost,
-      total_cost = ROUND(v_new_qty * v_new_cost, 2)
+      total_cost = v_new_total_cost
   WHERE id = p_line_id AND tenant_id = v_tenant;
 
   IF v_grn.po_id IS NOT NULL THEN
@@ -1514,14 +2041,16 @@ BEGIN
     FOR UPDATE;
 
     WITH ordered AS (
-      SELECT poi.ingredient_id, SUM(poi.quantity)::NUMERIC(15,3) AS qty
+      SELECT poi.ingredient_id,
+             SUM(public.inv_to_base(poi.ingredient_id, poi.entry_unit_id, poi.quantity)) AS qty
       FROM public.purchase_order_items poi
       WHERE poi.po_id = v_grn.po_id AND poi.tenant_id = v_tenant
       GROUP BY poi.ingredient_id
     ),
     received AS (
       SELECT gi.ingredient_id,
-             SUM(gi.received_quantity - COALESCE(gi.rejected_quantity, 0))::NUMERIC(15,3) AS qty
+             SUM(public.inv_to_base(gi.ingredient_id, gi.entry_unit_id,
+                   gi.received_quantity - COALESCE(gi.rejected_quantity, 0))) AS qty
       FROM public.grn_items gi
       JOIN public.goods_received_notes g
         ON g.id = gi.grn_id AND g.status = 'confirmed'
@@ -1553,6 +2082,36 @@ BEGIN
     PERFORM public.recompute_supplier_invoice_matching(v_invoice_id);
   END LOOP;
 
+  PERFORM public.log_audit(
+    'inventory.grn.line_amended',
+    'goods_received_note',
+    p_grn_id,
+    jsonb_build_object(
+      'line_id', p_line_id,
+      'received_quantity', v_old_qty,
+      'rejected_quantity', v_old_rej,
+      'unit_cost', v_old_cost,
+      'net_quantity', v_old_net,
+      'net_base_quantity', v_old_net_base,
+      'total_cost', ROUND(v_old_qty * v_old_cost, 2)
+    ),
+    jsonb_build_object(
+      'line_id', p_line_id,
+      'received_quantity', v_new_qty,
+      'rejected_quantity', v_new_rej,
+      'unit_cost', v_new_cost,
+      'net_quantity', v_new_net,
+      'net_base_quantity', v_new_net_base,
+      'total_cost', v_new_total_cost,
+      'delta_quantity', v_delta_qty,
+      'delta_base_quantity', v_delta_base,
+      'delta_value', v_delta_value,
+      'location_id', v_location_id,
+      'po_status', v_po_status,
+      'reason', trim(p_reason)
+    )
+  );
+
   RETURN jsonb_build_object(
     'grn_id',      p_grn_id,
     'line_id',     p_line_id,
@@ -1563,7 +2122,9 @@ BEGIN
     'old_cost',    v_old_cost,
     'new_cost',    v_new_cost,
     'delta_qty',   v_delta_qty,
+    'delta_base',  v_delta_base,
     'delta_value', v_delta_value,
+    'location_id', v_location_id,
     'po_id',       v_grn.po_id,
     'po_status',   v_po_status
   );
@@ -1575,7 +2136,7 @@ $$;
 -- Name: FUNCTION amend_grn_line(p_grn_id bigint, p_line_id bigint, p_received_quantity numeric, p_unit_cost numeric, p_reason text, p_rejected_quantity numeric); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.amend_grn_line(p_grn_id bigint, p_line_id bigint, p_received_quantity numeric, p_unit_cost numeric, p_reason text, p_rejected_quantity numeric) IS 'Owner-only post-confirm GRN line amendment. Delta dùng NET (received - rejected). Compensating stock_movement (grn_amend) -> trigger trg_update_stock_on_movement upsert stock_levels.current_quantity. PO fulfillment dùng SUM(received - rejected). Permission: procurement:grn_amend.';
+COMMENT ON FUNCTION public.amend_grn_line(p_grn_id bigint, p_line_id bigint, p_received_quantity numeric, p_unit_cost numeric, p_reason text, p_rejected_quantity numeric) IS 'Owner-only post-confirm GRN line amendment. Delta posts to the GRN receipt location, revalues current WAC by net value delta, and writes audit history on the GRN header.';
 
 
 --
@@ -2597,7 +3158,7 @@ BEGIN
     'Phiếu đếm tồn của bạn đã được duyệt và điều chỉnh kho.',
     'inventory_count_slip',
     p_slip_id,
-    format('/br/%s/stock/count', v_slip.branch_id),
+    '/employee/count',
     jsonb_build_object(
       'slip_id', p_slip_id, 'employee_id', v_slip.employee_id,
       'branch_id', v_slip.branch_id, 'result', 'approved', 'adjusted_lines', v_adjusted
@@ -2631,9 +3192,6 @@ DECLARE
   v_tenant_id BIGINT := public.auth_tenant_id();
   v_user_id   UUID   := auth.uid();
   v_request   public.leave_requests%ROWTYPE;
-  v_year_row  RECORD;
-  v_entitlement_days NUMERIC;
-  v_used_days NUMERIC;
   v_employee_bucket TEXT;
 BEGIN
   IF v_user_id IS NULL OR v_tenant_id IS NULL THEN
@@ -2672,64 +3230,6 @@ BEGIN
   END IF;
 
   PERFORM pg_advisory_xact_lock(v_request.employee_id);
-
-  IF v_request.leave_type = 'annual' THEN
-    FOR v_year_row IN
-      SELECT
-        EXTRACT(YEAR FROM day)::integer AS leave_year,
-        COUNT(*)::numeric AS requested_days
-      FROM generate_series(v_request.start_date, v_request.end_date, INTERVAL '1 day') AS day
-      GROUP BY 1
-    LOOP
-      INSERT INTO public.annual_leave_entitlements (
-        tenant_id,
-        employee_id,
-        year,
-        entitlement_days
-      )
-      SELECT
-        v_tenant_id,
-        v_request.employee_id,
-        v_year_row.leave_year,
-        CASE
-          WHEN e.start_date IS NULL OR e.start_date < make_date(v_year_row.leave_year, 1, 1) THEN 12
-          WHEN e.start_date > make_date(v_year_row.leave_year, 12, 31) THEN 0
-          ELSE GREATEST(0, 13 - EXTRACT(MONTH FROM e.start_date)::integer)::numeric
-        END
-      FROM public.employees e
-      WHERE e.id = v_request.employee_id
-        AND e.tenant_id = v_tenant_id
-      ON CONFLICT (tenant_id, employee_id, year) DO NOTHING;
-
-      SELECT entitlement_days INTO v_entitlement_days
-      FROM public.annual_leave_entitlements
-      WHERE tenant_id = v_tenant_id
-        AND employee_id = v_request.employee_id
-        AND year = v_year_row.leave_year
-      FOR UPDATE;
-
-      SELECT COALESCE(
-        SUM(
-          LEAST(lr.end_date, make_date(v_year_row.leave_year, 12, 31))
-          - GREATEST(lr.start_date, make_date(v_year_row.leave_year, 1, 1))
-          + 1
-        ),
-        0
-      )::numeric INTO v_used_days
-      FROM public.leave_requests lr
-      WHERE lr.tenant_id = v_tenant_id
-        AND lr.employee_id = v_request.employee_id
-        AND lr.leave_type = 'annual'
-        AND lr.status = 'approved'
-        AND lr.start_date <= make_date(v_year_row.leave_year, 12, 31)
-        AND lr.end_date >= make_date(v_year_row.leave_year, 1, 1);
-
-      IF v_used_days + v_year_row.requested_days > COALESCE(v_entitlement_days, 0) THEN
-        RAISE EXCEPTION 'approve_leave_request: annual leave quota exceeded'
-          USING ERRCODE = 'check_violation';
-      END IF;
-    END LOOP;
-  END IF;
 
   UPDATE public.leave_requests
   SET status = 'approved',
@@ -2806,7 +3306,7 @@ $$;
 -- Name: FUNCTION approve_leave_request(p_request_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.approve_leave_request(p_request_id bigint) IS 'Manager approves a pending leave_request within branch scope. Does not mutate attendance or payroll.';
+COMMENT ON FUNCTION public.approve_leave_request(p_request_id bigint) IS 'Manager approves a pending leave_request within branch scope. Paid/unpaid leave split is calculated by payroll.';
 
 
 --
@@ -3124,6 +3624,8 @@ DECLARE
   v_current_quantity numeric(15,3);
   v_wac numeric(15,2);
   v_line_count integer;
+  v_qty_base numeric(15,3);
+  v_entry_unit_id bigint;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -3189,25 +3691,147 @@ BEGIN
     RAISE EXCEPTION 'consumption_lines_required' USING ERRCODE = '22023';
   END IF;
 
-  SELECT il.id
+  -- Source-location resolution: HRM report lines are authored in the
+  -- ingredient base unit (phase C removed purchase_unit; migration #2 backfills
+  -- entry_unit_id to base for historical rows), so l.quantity is already base
+  -- and the CTE comparison against stock_levels.current_quantity is correct.
+  WITH report_lines AS (
+    SELECT l.ingredient_id, l.quantity
+    FROM public.attendance_consumption_report_lines l
+    WHERE l.tenant_id = p_tenant_id
+      AND l.report_id = p_report_id
+  ),
+  candidate_locations AS (
+    SELECT
+      il.id,
+      il.is_default_consumption,
+      il.is_default_issue,
+      il.sort_order,
+      CASE
+        WHEN b.branch_kind = 'branch' AND il.location_kind = 'kitchen' THEN 0
+        ELSE 1
+      END AS location_priority,
+      CASE il.location_kind WHEN 'warehouse' THEN 0 ELSE 1 END AS warehouse_priority
+    FROM public.inventory_locations il
+    JOIN public.branches b
+      ON b.id = il.branch_id
+     AND b.tenant_id = il.tenant_id
+    WHERE il.tenant_id = p_tenant_id
+      AND il.branch_id = v_report.branch_id
+      AND il.is_active = true
+      AND (
+        (b.branch_kind = 'branch' AND il.location_kind = 'kitchen')
+        OR il.is_default_issue = true
+        OR il.location_kind = 'warehouse'
+      )
+  ),
+  candidate_stock AS (
+    SELECT
+      cl.id,
+      cl.location_priority,
+      cl.is_default_consumption,
+      cl.is_default_issue,
+      cl.warehouse_priority,
+      cl.sort_order,
+      COUNT(sl.ingredient_id) AS matched_lines,
+      BOOL_AND(sl.avg_unit_cost IS NOT NULL) AS wac_ready,
+      BOOL_AND(COALESCE(sl.current_quantity, 0) >= rl.quantity) AS stock_ready
+    FROM candidate_locations cl
+    CROSS JOIN report_lines rl
+    LEFT JOIN public.stock_levels sl
+      ON sl.tenant_id = p_tenant_id
+     AND sl.branch_id = v_report.branch_id
+     AND sl.location_id = cl.id
+     AND sl.ingredient_id = rl.ingredient_id
+    GROUP BY
+      cl.id,
+      cl.location_priority,
+      cl.is_default_consumption,
+      cl.is_default_issue,
+      cl.warehouse_priority,
+      cl.sort_order
+  )
+  SELECT cs.id
   INTO v_source_location_id
-  FROM public.inventory_locations il
-  WHERE il.tenant_id = p_tenant_id
-    AND il.branch_id = v_report.branch_id
-    AND il.is_active = true
-    AND (
-      il.is_default_issue = true
-      OR il.location_kind = 'warehouse'
-    )
+  FROM candidate_stock cs
+  WHERE cs.matched_lines = v_line_count
+    AND cs.wac_ready
+    AND cs.stock_ready
   ORDER BY
-    il.is_default_issue DESC,
-    CASE il.location_kind WHEN 'warehouse' THEN 0 ELSE 1 END,
-    il.sort_order NULLS LAST,
-    il.id
+    cs.location_priority,
+    cs.is_default_consumption DESC,
+    cs.is_default_issue DESC,
+    cs.warehouse_priority,
+    cs.sort_order NULLS LAST,
+    cs.id
   LIMIT 1;
 
   IF v_source_location_id IS NULL THEN
-    RAISE EXCEPTION 'consumption_location_missing' USING ERRCODE = '23502';
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.inventory_locations il
+      JOIN public.branches b
+        ON b.id = il.branch_id
+       AND b.tenant_id = il.tenant_id
+      WHERE il.tenant_id = p_tenant_id
+        AND il.branch_id = v_report.branch_id
+        AND il.is_active = true
+        AND (
+          (b.branch_kind = 'branch' AND il.location_kind = 'kitchen')
+          OR il.is_default_issue = true
+          OR il.location_kind = 'warehouse'
+        )
+    ) THEN
+      RAISE EXCEPTION 'consumption_location_missing' USING ERRCODE = '23502';
+    END IF;
+
+    IF EXISTS (
+      WITH report_lines AS (
+        SELECT l.ingredient_id, l.quantity
+        FROM public.attendance_consumption_report_lines l
+        WHERE l.tenant_id = p_tenant_id
+          AND l.report_id = p_report_id
+      ),
+      candidate_locations AS (
+        SELECT il.id
+        FROM public.inventory_locations il
+        JOIN public.branches b
+          ON b.id = il.branch_id
+         AND b.tenant_id = il.tenant_id
+        WHERE il.tenant_id = p_tenant_id
+          AND il.branch_id = v_report.branch_id
+          AND il.is_active = true
+          AND (
+            (b.branch_kind = 'branch' AND il.location_kind = 'kitchen')
+            OR il.is_default_issue = true
+            OR il.location_kind = 'warehouse'
+          )
+      ),
+      candidate_stock AS (
+        SELECT
+          cl.id,
+          COUNT(sl.ingredient_id) AS matched_lines,
+          BOOL_AND(sl.avg_unit_cost IS NOT NULL) AS wac_ready,
+          BOOL_AND(COALESCE(sl.current_quantity, 0) >= rl.quantity) AS stock_ready
+        FROM candidate_locations cl
+        CROSS JOIN report_lines rl
+        LEFT JOIN public.stock_levels sl
+          ON sl.tenant_id = p_tenant_id
+         AND sl.branch_id = v_report.branch_id
+         AND sl.location_id = cl.id
+         AND sl.ingredient_id = rl.ingredient_id
+        GROUP BY cl.id
+      )
+      SELECT 1
+      FROM candidate_stock cs
+      WHERE cs.matched_lines = v_line_count
+        AND cs.stock_ready
+        AND NOT cs.wac_ready
+    ) THEN
+      RAISE EXCEPTION 'wac_not_ready' USING ERRCODE = '22023';
+    END IF;
+
+    RAISE EXCEPTION 'insufficient_stock' USING ERRCODE = '22023';
   END IF;
 
   v_issue_number := 'THB-' || p_report_id::text;
@@ -3282,7 +3906,25 @@ BEGIN
         USING ERRCODE = '22023';
     END IF;
 
-    IF v_current_quantity < v_line.quantity THEN
+    v_entry_unit_id := COALESCE(v_line.entry_unit_id, (
+      SELECT iu.unit_id
+      FROM public.ingredient_units iu
+      JOIN public.units u ON u.id = iu.unit_id AND u.tenant_id = iu.tenant_id AND u.is_active = TRUE
+      WHERE iu.tenant_id = p_tenant_id
+        AND iu.ingredient_id = v_line.ingredient_id
+        AND iu.is_base = TRUE
+        AND iu.is_active = TRUE
+      ORDER BY iu.sort_order ASC, iu.id ASC
+      LIMIT 1
+    ));
+
+    IF v_entry_unit_id IS NULL THEN
+      RAISE EXCEPTION 'entry_unit_not_found:%', v_line.ingredient_id USING ERRCODE = '23503';
+    END IF;
+
+    v_qty_base := ROUND(public.inv_to_base(v_line.ingredient_id, v_entry_unit_id, v_line.quantity), 3);
+
+    IF COALESCE(v_current_quantity, 0) < v_qty_base THEN
       RAISE EXCEPTION 'insufficient_stock_for_%', v_line.ingredient_id
         USING ERRCODE = '22023';
     END IF;
@@ -3292,7 +3934,7 @@ BEGIN
       issue_id,
       ingredient_id,
       quantity,
-      unit,
+      entry_unit_id,
       unit_cost,
       reason
     )
@@ -3301,7 +3943,7 @@ BEGIN
       v_issue_id,
       v_line.ingredient_id,
       v_line.quantity,
-      v_line.unit,
+      v_entry_unit_id,
       v_wac,
       v_line.note
     );
@@ -3317,7 +3959,9 @@ BEGIN
       reason,
       created_by,
       issue_id,
-      location_id
+      location_id,
+      entry_unit_id,
+      entry_quantity
     )
     VALUES (
       p_tenant_id,
@@ -3325,12 +3969,14 @@ BEGIN
       v_line.ingredient_id,
       'consumption',
       'sale_consumption',
-      -v_line.quantity,
+      -v_qty_base,
       v_wac,
       COALESCE(v_line.note, v_report.note, 'Tiêu hao bếp trong ngày'),
       v_uid,
       v_issue_id,
-      v_source_location_id
+      v_source_location_id,
+      v_entry_unit_id,
+      v_line.quantity
     );
   END LOOP;
 
@@ -3363,7 +4009,7 @@ $$;
 -- Name: FUNCTION branch_manager_approve_consumption_report(p_tenant_id bigint, p_report_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.branch_manager_approve_consumption_report(p_tenant_id bigint, p_report_id bigint) IS 'Checkout approver approves a submitted consumption report and atomically posts Inventory consumption movements.';
+COMMENT ON FUNCTION public.branch_manager_approve_consumption_report(p_tenant_id bigint, p_report_id bigint) IS 'Checkout approver approves a submitted consumption report and atomically posts Inventory consumption movements (entry_unit -> base via inv_to_base) from the first stock location that can cover all report lines.';
 
 
 --
@@ -3445,7 +4091,7 @@ BEGIN
       RAISE EXCEPTION 'checkout_approver_wrong_branch' USING ERRCODE = '42501';
     END IF;
 
-    IF v_requester_role NOT IN ('cashier', 'waiter', 'chef') THEN
+    IF v_requester_role NOT IN ('cashier', 'chef', 'branch_staff') THEN
       RAISE EXCEPTION 'branch_manager_can_only_approve_branch_staff' USING ERRCODE = '42501';
     END IF;
   ELSIF v_approver_role NOT IN ('owner') THEN
@@ -3467,6 +4113,103 @@ BEGIN
   RETURNING check_out INTO v_check_out;
 
   RETURN v_check_out;
+END;
+$$;
+
+
+--
+-- Name: branch_manager_reject_employee_clock_out(bigint, bigint, bigint, uuid, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.branch_manager_reject_employee_clock_out(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_rejected_by uuid, p_note text DEFAULT NULL::text) RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_requester_profile_id uuid;
+  v_requester_role text;
+  v_approver_branch_id bigint;
+  v_approver_role text;
+BEGIN
+  SELECT
+    e.profile_id,
+    COALESCE(ar.checkout_requested_by_role, private.staff_role_from_position_code(po.code), 'office')
+  INTO
+    v_requester_profile_id,
+    v_requester_role
+  FROM public.attendance_records ar
+  JOIN public.employees e
+    ON e.id = ar.employee_id
+   AND e.tenant_id = ar.tenant_id
+  LEFT JOIN public.profiles p
+    ON p.id = e.profile_id
+   AND p.tenant_id = e.tenant_id
+  LEFT JOIN public.positions po
+    ON po.id = p.position_id
+   AND po.tenant_id = p.tenant_id
+  WHERE ar.id = p_attendance_id
+    AND ar.tenant_id = p_tenant_id
+    AND ar.branch_id = p_branch_id
+    AND ar.check_out IS NULL
+    AND ar.checkout_requested_at IS NOT NULL
+  FOR UPDATE OF ar;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'checkout_request_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_requester_profile_id = p_rejected_by THEN
+    RAISE EXCEPTION 'cannot_approve_own_checkout' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT
+    p.branch_id,
+    private.staff_role_from_position_code(po.code)
+  INTO v_approver_branch_id, v_approver_role
+  FROM public.profiles p
+  JOIN public.positions po
+    ON po.id = p.position_id
+   AND po.tenant_id = p.tenant_id
+  WHERE p.id = p_rejected_by
+    AND p.tenant_id = p_tenant_id
+    AND COALESCE(p.is_active, true) = true;
+
+  IF NOT FOUND OR v_approver_role IS NULL THEN
+    RAISE EXCEPTION 'checkout_approver_not_found' USING ERRCODE = '42501';
+  END IF;
+
+  v_requester_role := COALESCE(v_requester_role, 'office');
+
+  IF v_requester_role = 'branch_manager' THEN
+    IF v_approver_role NOT IN ('owner') THEN
+      RAISE EXCEPTION 'checkout_requires_upper_manager' USING ERRCODE = '42501';
+    END IF;
+  ELSIF v_approver_role = 'branch_manager' THEN
+    IF v_approver_branch_id IS DISTINCT FROM p_branch_id THEN
+      RAISE EXCEPTION 'checkout_approver_wrong_branch' USING ERRCODE = '42501';
+    END IF;
+
+    IF v_requester_role NOT IN ('cashier', 'chef', 'branch_staff') THEN
+      RAISE EXCEPTION 'branch_manager_can_only_approve_branch_staff' USING ERRCODE = '42501';
+    END IF;
+  ELSIF v_approver_role NOT IN ('owner') THEN
+    RAISE EXCEPTION 'checkout_approver_not_allowed' USING ERRCODE = '42501';
+  END IF;
+
+  UPDATE public.attendance_records
+  SET
+    checkout_requested_at = NULL,
+    checkout_requested_by_role = NULL,
+    checkout_approval_target_roles = ARRAY[]::text[],
+    checkout_approval_note = NULLIF(btrim(p_note), ''),
+    updated_at = now()
+  WHERE id = p_attendance_id
+    AND tenant_id = p_tenant_id
+    AND branch_id = p_branch_id
+    AND check_out IS NULL
+    AND checkout_requested_at IS NOT NULL;
+
+  RETURN true;
 END;
 $$;
 
@@ -3592,13 +4335,13 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
       AND s.elem ? 'side_item_id'
       AND (s.elem ->> 'side_item_id') ~ '^[0-9]+$'
   ),
-  pending AS (
+  pending_item AS (
     SELECT d.menu_item_id,
            SUM(d.quantity)::integer AS quantity
     FROM order_line_demand d
     GROUP BY d.menu_item_id
   ),
-  holds AS (
+  holds_item AS (
     SELECT h.menu_item_id,
            SUM(h.quantity)::integer AS quantity
     FROM public.branch_menu_item_daily_holds h
@@ -3610,6 +4353,98 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
       AND h.expires_at > now()
       AND (p_exclude_hold_tokens IS NULL OR h.hold_token <> ALL(p_exclude_hold_tokens))
     GROUP BY h.menu_item_id
+  ),
+  recipe_lines AS (
+    SELECT
+      r.menu_item_id,
+      r.ingredient_id,
+      CASE
+        WHEN r.entry_unit_id IS NULL THEN r.quantity / r.yield_factor
+        WHEN iu.id IS NULL THEN NULL::numeric
+        ELSE (r.quantity / r.yield_factor) * iu.to_base_factor
+      END AS per_portion_qty,
+      (r.entry_unit_id IS NOT NULL AND iu.id IS NULL) AS line_missing_config
+    FROM public.recipes r
+    LEFT JOIN public.ingredient_units iu
+      ON iu.tenant_id = p_tenant_id
+     AND iu.ingredient_id = r.ingredient_id
+     AND iu.unit_id = r.entry_unit_id
+     AND iu.is_active = TRUE
+    WHERE r.tenant_id = p_tenant_id
+  ),
+  pending_ingredient AS (
+    SELECT
+      rl.ingredient_id,
+      SUM(pi.quantity * rl.per_portion_qty) AS base_qty
+    FROM pending_item pi
+    JOIN recipe_lines rl ON rl.menu_item_id = pi.menu_item_id
+    WHERE rl.line_missing_config = false
+      AND rl.per_portion_qty IS NOT NULL
+      AND rl.per_portion_qty > 0
+    GROUP BY rl.ingredient_id
+  ),
+  holds_ingredient AS (
+    SELECT
+      rl.ingredient_id,
+      SUM(hi.quantity * rl.per_portion_qty) AS base_qty
+    FROM holds_item hi
+    JOIN recipe_lines rl ON rl.menu_item_id = hi.menu_item_id
+    WHERE rl.line_missing_config = false
+      AND rl.per_portion_qty IS NOT NULL
+      AND rl.per_portion_qty > 0
+    GROUP BY rl.ingredient_id
+  ),
+  stock_pool AS (
+    SELECT
+      mi.id AS menu_item_id,
+      CASE
+        WHEN COUNT(rl.ingredient_id) = 0 THEN NULL::integer
+        WHEN BOOL_OR(
+          rl.line_missing_config
+          OR rl.per_portion_qty IS NULL
+          OR rl.per_portion_qty <= 0
+        ) THEN NULL::integer
+        ELSE FLOOR(MIN((
+          COALESCE(oh.on_hand, 0)
+          - COALESCE(pi.base_qty, 0)
+          - COALESCE(hi.base_qty, 0)
+        ) / NULLIF(rl.per_portion_qty, 0)) + 0.000001)::integer
+      END AS stock_remaining,
+      CASE
+        WHEN COUNT(rl.ingredient_id) = 0 THEN 0
+        WHEN BOOL_OR(
+          rl.line_missing_config
+          OR rl.per_portion_qty IS NULL
+          OR rl.per_portion_qty <= 0
+        ) THEN 0
+        ELSE CEIL(MAX(COALESCE(pi.base_qty, 0) / NULLIF(rl.per_portion_qty, 0)))::integer
+      END AS pending_unfinalized_demand,
+      CASE
+        WHEN COUNT(rl.ingredient_id) = 0 THEN 0
+        WHEN BOOL_OR(
+          rl.line_missing_config
+          OR rl.per_portion_qty IS NULL
+          OR rl.per_portion_qty <= 0
+        ) THEN 0
+        ELSE CEIL(MAX(COALESCE(hi.base_qty, 0) / NULLIF(rl.per_portion_qty, 0)))::integer
+      END AS active_hold_demand
+    FROM public.menu_items mi
+    LEFT JOIN recipe_lines rl ON rl.menu_item_id = mi.id
+    LEFT JOIN LATERAL (
+      SELECT SUM(sl.current_quantity) AS on_hand
+      FROM public.stock_levels sl
+      JOIN public.inventory_locations il ON il.id = sl.location_id
+      WHERE sl.tenant_id = p_tenant_id
+        AND sl.branch_id = p_branch_id
+        AND sl.ingredient_id = rl.ingredient_id
+        AND il.location_kind = 'warehouse'
+        AND il.is_active = TRUE
+    ) oh ON TRUE
+    LEFT JOIN pending_ingredient pi ON pi.ingredient_id = rl.ingredient_id
+    LEFT JOIN holds_ingredient hi ON hi.ingredient_id = rl.ingredient_id
+    WHERE mi.tenant_id = p_tenant_id
+      AND mi.is_active = true
+    GROUP BY mi.id
   ),
   rows AS (
     SELECT
@@ -3626,8 +4461,10 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
       COALESCE(bl.sold_today, 0) AS sold_today,
       sc.stock_capacity,
       bl.limit_quantity AS manual_limit_quantity,
-      COALESCE(p.quantity, 0) AS pending_unfinalized_demand,
-      COALESCE(h.quantity, 0) AS active_hold_demand
+      COALESCE(sp.pending_unfinalized_demand, 0) AS pending_unfinalized_demand,
+      COALESCE(sp.active_hold_demand, 0) AS active_hold_demand,
+      COALESCE(hi.quantity, 0) AS item_active_hold_demand,
+      sp.stock_remaining
     FROM public.menu_items mi
     JOIN public.menu_categories mc ON mc.id = mi.category_id
     LEFT JOIN public.branch_menu_item_daily_limits bl
@@ -3641,8 +4478,8 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
         mi.id
       ) AS stock_capacity
     ) sc ON TRUE
-    LEFT JOIN pending p ON p.menu_item_id = mi.id
-    LEFT JOIN holds h ON h.menu_item_id = mi.id
+    LEFT JOIN stock_pool sp ON sp.menu_item_id = mi.id
+    LEFT JOIN holds_item hi ON hi.menu_item_id = mi.id
     WHERE mi.tenant_id = p_tenant_id
       AND mi.is_active = true
   ),
@@ -3652,11 +4489,11 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
       CASE
         WHEN NOT p_stock_gate_enabled THEN NULL::integer
         WHEN r.stock_capacity IS NULL THEN NULL::integer
-        ELSE r.stock_capacity - r.pending_unfinalized_demand - r.active_hold_demand
-      END AS stock_remaining,
+        ELSE r.stock_remaining
+      END AS stock_remaining_effective,
       CASE
         WHEN r.manual_limit_quantity IS NULL THEN NULL::integer
-        ELSE r.manual_limit_quantity - r.sold_today - r.active_hold_demand
+        ELSE r.manual_limit_quantity - r.sold_today - r.item_active_hold_demand
       END AS manual_remaining
     FROM rows r
   )
@@ -3676,10 +4513,10 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
     c.active_hold_demand,
     CASE
       WHEN c.is_disabled THEN 0
-      WHEN c.stock_remaining IS NULL AND c.manual_remaining IS NULL THEN NULL
-      WHEN c.stock_remaining IS NULL THEN GREATEST(0, c.manual_remaining)
-      WHEN c.manual_remaining IS NULL THEN GREATEST(0, c.stock_remaining)
-      ELSE GREATEST(0, LEAST(c.stock_remaining, c.manual_remaining))
+      WHEN c.stock_remaining_effective IS NULL AND c.manual_remaining IS NULL THEN NULL
+      WHEN c.stock_remaining_effective IS NULL THEN GREATEST(0, c.manual_remaining)
+      WHEN c.manual_remaining IS NULL THEN GREATEST(0, c.stock_remaining_effective)
+      ELSE GREATEST(0, LEAST(c.stock_remaining_effective, c.manual_remaining))
     END AS available_to_sell
   FROM computed c
   ORDER BY c.category_sort_order, c.item_sort_order, c.item_name;
@@ -3690,7 +4527,7 @@ $_$;
 -- Name: FUNCTION branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_gate_enabled boolean, p_exclude_hold_tokens uuid[]); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_gate_enabled boolean, p_exclude_hold_tokens uuid[]) IS 'stock_remaining is NULL (unlimited) both when the gate is off AND when stock_capacity is NULL (no recipe / broken unit config) — D064 §2 fail-open NULL doctrine, never 0. p_exclude_hold_tokens drops the caller''s own active holds from active_hold_demand so a refetch does not double-count a terminal''s own reservation. Slimmed shape: accepted_today (dup of sold_today), stock_capacity_live (dup of stock_capacity), and the COALESCE-blended limit_quantity were dropped — D064 §7/PR-3.';
+COMMENT ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_gate_enabled boolean, p_exclude_hold_tokens uuid[]) IS 'Stock availability reserves shared recipe ingredients from active branch warehouse stock; manual daily caps remain per menu item. Capacity NULL remains unlimited.';
 
 
 --
@@ -3742,6 +4579,55 @@ COMMENT ON FUNCTION public.broadcast_branch_ops() IS 'AFTER trigger: broadcasts 
 
 
 --
+-- Name: broadcast_menu_ops(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.broadcast_menu_ops() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_row jsonb := to_jsonb(COALESCE(NEW, OLD));
+  v_tenant bigint := (v_row ->> 'tenant_id')::bigint;
+  v_payload jsonb;
+  v_branch record;
+BEGIN
+  IF v_tenant IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  v_payload := jsonb_build_object(
+    'domain', 'pos',
+    'table', TG_TABLE_NAME,
+    'op', TG_OP,
+    'id', v_row ->> 'id',
+    'at', now()
+  );
+
+  BEGIN
+    -- Broadcast to all branches belonging to this tenant
+    FOR v_branch IN
+      SELECT id FROM public.branches WHERE tenant_id = v_tenant
+    LOOP
+      PERFORM realtime.send(v_payload, 'ops', 'branch:' || v_branch.id || ':ops', true);
+    END LOOP;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'broadcast_menu_ops best-effort send failed (table=%, op=%): %',
+      TG_TABLE_NAME, TG_OP, SQLERRM;
+  END;
+  RETURN NULL;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION broadcast_menu_ops(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.broadcast_menu_ops() IS 'AFTER trigger: broadcasts a thin {domain,table,op,id,at} signal to branch:{id}:ops for all branches under the same tenant on menu changes.';
+
+
+--
 -- Name: bulk_import_ingredients(jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3770,9 +4656,7 @@ BEGIN
     raw.ordinality::integer AS row_no,
     btrim(raw.value->>'name') AS name,
     nullif(btrim(coalesce(raw.value->>'sku', '')), '') AS sku,
-    btrim(raw.value->>'purchase_unit') AS purchase_unit,
-    btrim(raw.value->>'measure_unit') AS measure_unit,
-    coalesce((raw.value->>'purchase_to_measure_factor')::numeric, 1) AS purchase_to_measure_factor,
+    btrim(raw.value->>'unit') AS unit,
     nullif(btrim(coalesce(raw.value->>'category', '')), '') AS category,
     coalesce(nullif(btrim(coalesce(raw.value->>'item_kind', '')), ''), 'raw_material') AS item_kind,
     (raw.value->>'unit_cost')::numeric AS unit_cost,
@@ -3787,9 +4671,7 @@ BEGIN
     SELECT 1
     FROM pg_temp.bulk_import_ingredient_rows
     WHERE coalesce(name, '') = ''
-       OR coalesce(purchase_unit, '') = ''
-       OR coalesce(measure_unit, '') = ''
-       OR purchase_to_measure_factor <= 0
+       OR coalesce(unit, '') = ''
   ) THEN
     RAISE EXCEPTION 'invalid_import_row' USING ERRCODE = '22023';
   END IF;
@@ -3804,13 +4686,9 @@ BEGIN
   END IF;
 
   INSERT INTO public.units (tenant_id, code, name, is_active)
-  SELECT DISTINCT v_tenant, code, code, true
-  FROM (
-    SELECT purchase_unit AS code FROM pg_temp.bulk_import_ingredient_rows
-    UNION
-    SELECT measure_unit AS code FROM pg_temp.bulk_import_ingredient_rows
-  ) unit_codes
-  WHERE coalesce(code, '') <> ''
+  SELECT DISTINCT v_tenant, unit, unit, true
+  FROM pg_temp.bulk_import_ingredient_rows
+  WHERE coalesce(unit, '') <> ''
   ON CONFLICT ON CONSTRAINT units_code_tenant_key DO NOTHING;
 
   INSERT INTO public.ingredient_categories (tenant_id, name)
@@ -3822,15 +4700,11 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM pg_temp.bulk_import_ingredient_rows rows
-    LEFT JOIN public.units purchase_units
-      ON purchase_units.tenant_id = v_tenant
-     AND purchase_units.code = rows.purchase_unit
-     AND purchase_units.is_active
-    LEFT JOIN public.units measure_units
-      ON measure_units.tenant_id = v_tenant
-     AND measure_units.code = rows.measure_unit
-     AND measure_units.is_active
-    WHERE purchase_units.id IS NULL OR measure_units.id IS NULL
+    LEFT JOIN public.units base_units
+      ON base_units.tenant_id = v_tenant
+     AND base_units.code = rows.unit
+     AND base_units.is_active
+    WHERE base_units.id IS NULL
   ) THEN
     RAISE EXCEPTION 'unit_not_found' USING ERRCODE = '23503';
   END IF;
@@ -3858,8 +4732,7 @@ BEGIN
   ),
   upserted AS (
     INSERT INTO public.ingredients (
-      tenant_id, name, sku, category_id, category, unit,
-      purchase_unit, measure_unit, purchase_to_measure_factor,
+      tenant_id, name, sku, category_id, category,
       unit_cost, item_kind, storage_type,
       min_stock_level, max_stock_level, reorder_point, shelf_life_days
     )
@@ -3869,10 +4742,6 @@ BEGIN
       rows.sku,
       categories.id,
       categories.name,
-      measure_units.code,
-      purchase_units.code,
-      measure_units.code,
-      rows.purchase_to_measure_factor,
       rows.unit_cost,
       rows.item_kind,
       rows.storage_type,
@@ -3881,14 +4750,6 @@ BEGIN
       rows.reorder_point,
       rows.shelf_life_days
     FROM pg_temp.bulk_import_ingredient_rows rows
-    JOIN public.units purchase_units
-      ON purchase_units.tenant_id = v_tenant
-     AND purchase_units.code = rows.purchase_unit
-     AND purchase_units.is_active
-    JOIN public.units measure_units
-      ON measure_units.tenant_id = v_tenant
-     AND measure_units.code = rows.measure_unit
-     AND measure_units.is_active
     LEFT JOIN public.ingredient_categories categories
       ON categories.tenant_id = v_tenant
      AND categories.name = rows.category
@@ -3898,10 +4759,6 @@ BEGIN
       sku = EXCLUDED.sku,
       category_id = EXCLUDED.category_id,
       category = EXCLUDED.category,
-      unit = EXCLUDED.unit,
-      purchase_unit = EXCLUDED.purchase_unit,
-      measure_unit = EXCLUDED.measure_unit,
-      purchase_to_measure_factor = EXCLUDED.purchase_to_measure_factor,
       unit_cost = EXCLUDED.unit_cost,
       item_kind = EXCLUDED.item_kind,
       storage_type = EXCLUDED.storage_type,
@@ -3916,56 +4773,48 @@ BEGIN
   FROM upserted
   LEFT JOIN existing ON existing.name = upserted.name;
 
-  DELETE FROM public.ingredient_units ingredient_units
-  USING pg_temp.bulk_import_ingredient_upserted upserted
-  WHERE ingredient_units.tenant_id = v_tenant
-    AND ingredient_units.ingredient_id = upserted.id;
+  IF EXISTS (
+    SELECT 1
+    FROM pg_temp.bulk_import_ingredient_upserted upserted
+    JOIN pg_temp.bulk_import_ingredient_rows rows
+      ON rows.name = upserted.name
+    JOIN public.units import_units
+      ON import_units.tenant_id = v_tenant
+     AND import_units.code = rows.unit
+     AND import_units.is_active
+    JOIN public.ingredient_units existing_base
+      ON existing_base.tenant_id = v_tenant
+     AND existing_base.ingredient_id = upserted.id
+     AND existing_base.is_base
+    WHERE upserted.existed
+      AND existing_base.unit_id IS DISTINCT FROM import_units.id
+  ) THEN
+    RAISE EXCEPTION 'bulk_import_base_unit_change_forbidden' USING ERRCODE = '23514';
+  END IF;
 
   INSERT INTO public.ingredient_units (
-    tenant_id, ingredient_id, unit_id, to_base_factor, is_base,
-    allow_purchase, allow_issue, allow_production, sort_order
+    tenant_id, ingredient_id, unit_id, to_base_factor, is_base, sort_order
   )
   SELECT
     v_tenant,
     upserted.id,
-    import_units.unit_id,
-    import_units.to_base_factor,
-    import_units.is_base,
-    import_units.allow_purchase,
-    import_units.allow_issue,
-    import_units.allow_production,
-    import_units.sort_order
+    base_units.id,
+    1::numeric,
+    true,
+    0
   FROM pg_temp.bulk_import_ingredient_rows rows
   JOIN pg_temp.bulk_import_ingredient_upserted upserted
     ON upserted.name = rows.name
-  JOIN LATERAL (
-    SELECT
-      purchase_units.id AS unit_id,
-      1::numeric AS to_base_factor,
-      true AS is_base,
-      true AS allow_purchase,
-      true AS allow_issue,
-      false AS allow_production,
-      0 AS sort_order
-    FROM public.units purchase_units
-    WHERE purchase_units.tenant_id = v_tenant
-      AND purchase_units.code = rows.purchase_unit
-      AND purchase_units.is_active
-    UNION ALL
-    SELECT
-      measure_units.id AS unit_id,
-      1 / rows.purchase_to_measure_factor AS to_base_factor,
-      false AS is_base,
-      false AS allow_purchase,
-      false AS allow_issue,
-      true AS allow_production,
-      1 AS sort_order
-    FROM public.units measure_units
-    WHERE measure_units.tenant_id = v_tenant
-      AND measure_units.code = rows.measure_unit
-      AND measure_units.is_active
-      AND rows.measure_unit <> rows.purchase_unit
-  ) import_units ON true;
+  JOIN public.units base_units
+    ON base_units.tenant_id = v_tenant
+   AND base_units.code = rows.unit
+   AND base_units.is_active
+  ON CONFLICT ON CONSTRAINT ingredient_units_ing_unit_key
+  DO UPDATE SET
+    to_base_factor = 1,
+    is_base = true,
+    sort_order = EXCLUDED.sort_order,
+    is_active = true;
 
   SELECT
     count(*) FILTER (WHERE NOT existed),
@@ -4000,7 +4849,11 @@ BEGIN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF NOT public.has_permission_any('menu:write') THEN
+  IF NOT (
+    public.has_permission_any('inventory:production_create')
+    OR public.has_permission_any('inventory:production_confirm')
+    OR public.has_permission_any('menu:write')
+  ) THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
@@ -4022,9 +4875,9 @@ BEGIN
     SELECT 1
     FROM pg_temp.bulk_import_production_groups
     WHERE finished_good_id IS NULL
-       OR lines IS NULL
-       OR jsonb_typeof(lines) <> 'array'
-       OR jsonb_array_length(lines) = 0
+      OR lines IS NULL
+      OR jsonb_typeof(lines) <> 'array'
+      OR jsonb_array_length(lines) = 0
   ) THEN
     RAISE EXCEPTION 'invalid_group_shape' USING ERRCODE = '22023';
   END IF;
@@ -4045,8 +4898,8 @@ BEGIN
     (raw.value->>'ingredient_id')::bigint AS ingredient_id,
     (raw.value->>'quantity')::numeric AS quantity,
     NULLIF(raw.value->>'entry_unit_id', '')::bigint AS entry_unit_id,
-    nullif(btrim(coalesce(raw.value->>'note', '')), '') AS note,
-    coalesce(NULLIF(raw.value->>'yield_factor', '')::numeric, 1) AS yield_factor
+    NULLIF(btrim(COALESCE(raw.value->>'note', '')), '') AS note,
+    COALESCE(NULLIF(raw.value->>'yield_factor', '')::numeric, 1) AS yield_factor
   FROM pg_temp.bulk_import_production_groups groups
   CROSS JOIN LATERAL jsonb_array_elements(groups.lines) WITH ORDINALITY AS raw(value, ordinality);
 
@@ -4054,8 +4907,8 @@ BEGIN
     SELECT 1
     FROM pg_temp.bulk_import_production_lines
     WHERE ingredient_id IS NULL
-       OR quantity <= 0
-       OR yield_factor <= 0
+      OR quantity <= 0
+      OR yield_factor <= 0
   ) THEN
     RAISE EXCEPTION 'invalid_line_shape' USING ERRCODE = '22023';
   END IF;
@@ -4074,9 +4927,9 @@ BEGIN
     FROM pg_temp.bulk_import_production_groups groups
     LEFT JOIN public.ingredients finished_goods
       ON finished_goods.id = groups.finished_good_id
-     AND finished_goods.tenant_id = v_tenant
-     AND finished_goods.item_kind = 'finished_good'
-     AND finished_goods.is_active
+      AND finished_goods.tenant_id = v_tenant
+      AND finished_goods.item_kind = 'finished_good'
+      AND finished_goods.is_active
     WHERE finished_goods.id IS NULL
   ) THEN
     RAISE EXCEPTION 'finished_good_not_found' USING ERRCODE = 'P0002';
@@ -4087,24 +4940,28 @@ BEGIN
     FROM pg_temp.bulk_import_production_lines lines
     LEFT JOIN public.ingredients ingredients
       ON ingredients.id = lines.ingredient_id
-     AND ingredients.tenant_id = v_tenant
-     AND ingredients.item_kind = 'raw_material'
-     AND ingredients.is_active
+      AND ingredients.tenant_id = v_tenant
+      AND ingredients.item_kind IN ('raw_material', 'finished_good')
+      AND ingredients.is_active
     WHERE ingredients.id IS NULL
   ) THEN
     RAISE EXCEPTION 'ingredient_not_found' USING ERRCODE = 'P0002';
   END IF;
 
   INSERT INTO public.production_recipes (
-    tenant_id, finished_good_id, ingredient_id,
-    quantity, unit, entry_unit_id, note, yield_factor
+    tenant_id,
+    finished_good_id,
+    ingredient_id,
+    quantity,
+    entry_unit_id,
+    note,
+    yield_factor
   )
   SELECT
     v_tenant,
     lines.finished_good_id,
     lines.ingredient_id,
     lines.quantity,
-    public.inventory_entry_unit_code(v_tenant, lines.ingredient_id, lines.entry_unit_id),
     lines.entry_unit_id,
     lines.note,
     lines.yield_factor
@@ -4112,7 +4969,6 @@ BEGIN
   ON CONFLICT (finished_good_id, ingredient_id, tenant_id)
   DO UPDATE SET
     quantity = EXCLUDED.quantity,
-    unit = EXCLUDED.unit,
     entry_unit_id = EXCLUDED.entry_unit_id,
     note = EXCLUDED.note,
     yield_factor = EXCLUDED.yield_factor;
@@ -4137,6 +4993,13 @@ BEGIN
   RETURN jsonb_build_object('recipes', v_recipes, 'lines', v_lines);
 END;
 $$;
+
+
+--
+-- Name: FUNCTION bulk_import_production_recipes(p_groups jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.bulk_import_production_recipes(p_groups jsonb) IS 'Bulk replaces production recipe groups using entry_unit_id as the unit source.';
 
 
 --
@@ -4562,6 +5425,52 @@ $$;
 
 
 --
+-- Name: cancel_production_run(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.cancel_production_run(p_run_id bigint) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+    v_uid UUID := auth.uid();
+    v_tenant BIGINT := public.auth_tenant_id();
+    v_run RECORD;
+BEGIN
+    IF v_uid IS NULL THEN
+        RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+    END IF;
+
+    IF NOT public.is_inventory_production_operator() THEN
+        RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+    END IF;
+
+    IF NOT public.has_permission_any('inventory:production_confirm') THEN
+        RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+    END IF;
+
+    SELECT * INTO v_run FROM public.production_runs
+    WHERE id = p_run_id AND tenant_id = v_tenant FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'production_run_not_found' USING ERRCODE = 'P0002'; END IF;
+
+    IF NOT public.has_permission(v_run.branch_id, 'inventory:production_confirm') THEN
+        RAISE EXCEPTION 'branch_scope_violation' USING ERRCODE = '42501';
+    END IF;
+
+    IF v_run.status <> 'draft' AND v_run.status <> 'in_progress' THEN
+        RAISE EXCEPTION 'production_run_not_cancellable' USING ERRCODE = '22023';
+    END IF;
+
+    UPDATE public.production_runs
+    SET status = 'cancelled', updated_at = now()
+    WHERE id = p_run_id AND tenant_id = v_tenant;
+
+    RETURN jsonb_build_object('production_run_id', p_run_id, 'status', 'cancelled');
+END;
+$$;
+
+
+--
 -- Name: check_branch_required(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4598,6 +5507,101 @@ $$;
 --
 
 COMMENT ON FUNCTION public.check_branch_required() IS 'Profiles branch-required guard. SECURITY DEFINER because it uses the private staff-role mapper.';
+
+
+--
+-- Name: check_cron_jobs_health(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.check_cron_jobs_health() RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_job RECORD;
+  v_last_run RECORD;
+  v_max_age INTERVAL;
+  v_is_healthy BOOLEAN;
+  v_dedup_key TEXT;
+  v_msg TEXT;
+BEGIN
+  -- Iterate through pg_cron active schedules
+  FOR v_job IN
+    SELECT jobid, jobname, schedule
+    FROM cron.job
+  LOOP
+    -- Skip checking this monitoring job itself
+    IF v_job.jobname = 'check_cron_jobs_health_job' THEN
+      CONTINUE;
+    END IF;
+
+    -- Determine maximum allowed run age (grace period)
+    IF v_job.schedule LIKE '*/15%' THEN
+      v_max_age := INTERVAL '45 minutes';
+    ELSIF v_job.schedule LIKE '%* * * *' AND v_job.schedule NOT LIKE '*/%' THEN
+      v_max_age := INTERVAL '90 minutes';
+    ELSIF v_job.schedule LIKE '%* * *' THEN
+      v_max_age := INTERVAL '28 hours';
+    ELSE
+      v_max_age := INTERVAL '8 days';
+    END IF;
+
+    -- Get last run details
+    SELECT d.end_time, d.status, d.return_message
+    INTO v_last_run
+    FROM cron.job_run_details d
+    WHERE d.jobid = v_job.jobid
+    ORDER BY d.start_time DESC
+    LIMIT 1;
+
+    v_is_healthy := TRUE;
+    v_msg := NULL;
+
+    IF v_last_run.end_time IS NULL THEN
+      -- Job never ran or got stuck indefinitely
+      v_is_healthy := FALSE;
+      v_msg := format('Tác vụ tự động "%s" chưa từng chạy thành công hoặc bị treo.', v_job.jobname);
+    ELSIF v_last_run.status <> 'succeeded' THEN
+      v_is_healthy := FALSE;
+      v_msg := format('Tác vụ tự động "%s" thất bại với trạng thái: %s. Chi tiết: %s',
+                      v_job.jobname, v_last_run.status, COALESCE(v_last_run.return_message, 'Không có'));
+    ELSIF v_last_run.end_time < (now() - v_max_age) THEN
+      v_is_healthy := FALSE;
+      v_msg := format('Tác vụ tự động "%s" không chạy trong vòng %s qua (lần cuối chạy: %s).',
+                      v_job.jobname, v_max_age::text, v_last_run.end_time::text);
+    END IF;
+
+    IF NOT v_is_healthy THEN
+      -- Dedup key to re-nag every 6h per failing job
+      v_dedup_key := format('cron_health:%s:%s', v_job.jobname, floor(extract(epoch from now()) / 21600)::text);
+
+      INSERT INTO public.notifications (
+        tenant_id,
+        target_branch_id,
+        severity,
+        kind,
+        dedup_key,
+        target_roles,
+        meta
+      ) VALUES (
+        1,
+        NULL,
+        'critical',
+        'system.cron_failed',
+        v_dedup_key,
+        ARRAY['owner', 'admin']::text[],
+        jsonb_build_object(
+          'job_name', v_job.jobname,
+          'schedule', v_job.schedule,
+          'error_message', v_msg,
+          'last_run_at', v_last_run.end_time,
+          'status', v_last_run.status
+        )
+      ) ON CONFLICT (tenant_id, dedup_key) DO NOTHING;
+    END IF;
+  END LOOP;
+END;
+$$;
 
 
 --
@@ -5447,7 +6451,9 @@ CREATE FUNCTION public.commit_intra_branch_transfer(p_branch_id bigint, p_from_l
     SET search_path TO 'public'
     AS $$
 BEGIN
-  RAISE EXCEPTION 'intra_branch_transfer_not_supported' USING ERRCODE = '22023';
+  RAISE EXCEPTION 'intra_branch_transfer_retired'
+    USING ERRCODE = 'P0001',
+          HINT = 'D078: branch kitchen retired; one warehouse per branch.';
 END;
 $$;
 
@@ -5456,7 +6462,7 @@ $$;
 -- Name: FUNCTION commit_intra_branch_transfer(p_branch_id bigint, p_from_location_id bigint, p_to_location_id bigint, p_transfer_number text, p_notes text, p_lines jsonb); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.commit_intra_branch_transfer(p_branch_id bigint, p_from_location_id bigint, p_to_location_id bigint, p_transfer_number text, p_notes text, p_lines jsonb) IS 'Branch kitchen consumption must post through stock_movements consumption, not stock transfer.';
+COMMENT ON FUNCTION public.commit_intra_branch_transfer(p_branch_id bigint, p_from_location_id bigint, p_to_location_id bigint, p_transfer_number text, p_notes text, p_lines jsonb) IS 'Retired by D078. Branch kitchen locations are inactive; one warehouse per branch.';
 
 
 --
@@ -5806,16 +6812,16 @@ CREATE FUNCTION public.complete_stocktake(p_session_id bigint) RETURNS jsonb
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid           UUID := auth.uid();
-  v_tenant        BIGINT := public.auth_tenant_id();
-  v_session       RECORD;
-  v_line          RECORD;
-  v_fresh_qty     NUMERIC(15,3);
-  v_counted_base  NUMERIC(15,3);
-  v_adjustment    NUMERIC(15,3);
-  v_total_lines   INT := 0;
-  v_adjusted      INT := 0;
-  v_total_var_abs NUMERIC(15,3) := 0;
+  v_uid           uuid := auth.uid();
+  v_tenant        bigint := public.auth_tenant_id();
+  v_session       record;
+  v_line          record;
+  v_fresh_qty     numeric(15,3);
+  v_counted_base  numeric(15,3);
+  v_adjustment    numeric(15,3);
+  v_total_lines   int := 0;
+  v_adjusted      int := 0;
+  v_total_var_abs numeric(15,3) := 0;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -5849,6 +6855,15 @@ BEGIN
       AND sl.counted_quantity IS NULL
   ) THEN
     RAISE EXCEPTION 'uncounted_lines_exist' USING ERRCODE = '22023';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.stocktake_lines sl
+    WHERE sl.session_id = p_session_id
+      AND sl.tenant_id = v_tenant
+      AND sl.needs_recount = TRUE
+  ) THEN
+    RAISE EXCEPTION 'recount_lines_exist' USING ERRCODE = '22023';
   END IF;
 
   FOR v_line IN
@@ -6040,7 +7055,7 @@ $$;
 -- Name: FUNCTION compute_menu_item_stock_capacity(p_tenant_id bigint, p_branch_id bigint, p_menu_item_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.compute_menu_item_stock_capacity(p_tenant_id bigint, p_branch_id bigint, p_menu_item_id bigint) IS 'Sellable portions of a menu item from warehouse stock after converting recipe entry_unit_id to the ingredient base unit. NULL means no recipe or missing unit conversion.';
+COMMENT ON FUNCTION public.compute_menu_item_stock_capacity(p_tenant_id bigint, p_branch_id bigint, p_menu_item_id bigint) IS 'Sellable portions of a menu item from active branch warehouse stock after converting recipe entry_unit_id to the ingredient base unit. NULL means no recipe or missing unit conversion.';
 
 
 --
@@ -6307,6 +7322,182 @@ COMMENT ON FUNCTION public.confirm_cash_payment(p_order_id bigint, p_cash_receiv
 
 
 --
+-- Name: confirm_cash_payment_with_invoice_binding(bigint, numeric); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.confirm_cash_payment_with_invoice_binding(p_order_id bigint, p_cash_received numeric) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_order public.orders%ROWTYPE;
+  v_request public.self_order_payment_requests%ROWTYPE;
+  v_bound_request public.self_order_payment_requests%ROWTYPE;
+  v_active_request_count integer := 0;
+  v_request_found boolean := false;
+  v_bound_request_found boolean := false;
+  v_expired_request_id bigint;
+  v_payment_result jsonb;
+  v_payment_id bigint;
+  v_payment_status text;
+BEGIN
+  IF v_uid IS NULL OR v_tenant IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+
+  SELECT o.*
+  INTO v_order
+  FROM public.orders o
+  WHERE o.id = p_order_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'order not found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_order.tenant_id IS DISTINCT FROM v_tenant THEN
+    RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT public.has_permission(v_order.branch_id, 'pos:confirm_payment') THEN
+    RAISE EXCEPTION 'permission denied: pos:confirm_payment' USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT pg_try_advisory_xact_lock(v_order.id) THEN
+    RAISE EXCEPTION 'self_order_retry' USING ERRCODE = '40001';
+  END IF;
+
+  FOR v_expired_request_id IN
+    SELECT pr.id
+    FROM public.self_order_payment_requests pr
+    WHERE pr.tenant_id = v_order.tenant_id
+      AND pr.branch_id = v_order.branch_id
+      AND pr.order_id = v_order.id
+      AND pr.status IN ('cash_call', 'vietqr_pending')
+      AND pr.expires_at <= now()
+    ORDER BY pr.id
+  LOOP
+    PERFORM public.self_order_expire_payment_request(v_expired_request_id);
+  END LOOP;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.self_order_payment_requests pr
+    WHERE pr.tenant_id = v_order.tenant_id
+      AND pr.branch_id = v_order.branch_id
+      AND pr.order_id = v_order.id
+      AND pr.method = 'vietqr'
+      AND pr.status = 'vietqr_pending'
+      AND pr.expires_at > now()
+  ) THEN
+    RAISE EXCEPTION 'self_order_payment_cancel_staff_required' USING ERRCODE = '55P03';
+  END IF;
+
+  SELECT count(*)::integer
+  INTO v_active_request_count
+  FROM public.self_order_payment_requests pr
+  WHERE pr.tenant_id = v_order.tenant_id
+    AND pr.branch_id = v_order.branch_id
+    AND pr.order_id = v_order.id
+    AND pr.method = 'cash_call'
+    AND pr.status = 'cash_call'
+    AND pr.expires_at > now();
+
+  IF v_active_request_count > 1 THEN
+    RAISE EXCEPTION 'self_order_cash_request_ambiguous' USING ERRCODE = '23505';
+  END IF;
+
+  -- The order lock serializes self-order request mutations. Keep the request
+  -- unlocked until confirm_cash_payment acquires its payment lock; its payment
+  -- trigger then locks the request in the canonical order -> payment -> request order.
+  SELECT pr.*
+  INTO v_request
+  FROM public.self_order_payment_requests pr
+  WHERE pr.tenant_id = v_order.tenant_id
+    AND pr.branch_id = v_order.branch_id
+    AND pr.order_id = v_order.id
+    AND pr.method = 'cash_call'
+    AND pr.status = 'cash_call'
+    AND pr.expires_at > now()
+  ORDER BY pr.id DESC
+  LIMIT 1;
+  v_request_found := FOUND;
+
+  IF v_request_found THEN
+    IF abs(v_request.amount_snapshot - v_order.total_amount) > 1 THEN
+      RAISE EXCEPTION 'self_order_cash_amount_mismatch' USING ERRCODE = '22023';
+    END IF;
+
+    PERFORM public.self_order_normalize_invoice_payload(v_request.invoice_payload);
+  END IF;
+
+  v_payment_result := public.confirm_cash_payment(p_order_id, p_cash_received);
+  v_payment_status := NULLIF(v_payment_result ->> 'status', '');
+  v_payment_id := NULLIF(v_payment_result ->> 'payment_id', '')::bigint;
+
+  IF v_payment_status IN ('completed', 'already_completed') THEN
+    IF v_request_found THEN
+      IF v_payment_id IS NULL THEN
+        RAISE EXCEPTION 'self_order_cash_payment_binding_missing' USING ERRCODE = '23503';
+      END IF;
+
+      UPDATE public.self_order_payment_requests pr
+      SET status = 'completed',
+          payment_id = COALESCE(pr.payment_id, v_payment_id),
+          completed_at = COALESCE(pr.completed_at, now())
+      WHERE pr.id = v_request.id
+        AND pr.tenant_id = v_order.tenant_id
+        AND pr.status = 'cash_call'
+        AND pr.expires_at > now();
+
+      SELECT pr.*
+      INTO v_bound_request
+      FROM public.self_order_payment_requests pr
+      WHERE pr.id = v_request.id
+        AND pr.tenant_id = v_order.tenant_id
+        AND pr.branch_id = v_order.branch_id
+        AND pr.order_id = v_order.id
+        AND pr.method = 'cash_call'
+      FOR UPDATE;
+      v_bound_request_found := FOUND;
+
+      IF NOT v_bound_request_found
+         OR v_bound_request.status <> 'completed'
+         OR v_bound_request.payment_id IS DISTINCT FROM v_payment_id
+         OR v_bound_request.completed_at IS NULL
+         OR v_bound_request.expires_at <= v_bound_request.completed_at THEN
+        RAISE EXCEPTION 'self_order_cash_payment_binding_failed' USING ERRCODE = '23514';
+      END IF;
+    ELSIF v_payment_id IS NOT NULL THEN
+      SELECT pr.*
+      INTO v_bound_request
+      FROM public.self_order_payment_requests pr
+      WHERE pr.tenant_id = v_order.tenant_id
+        AND pr.branch_id = v_order.branch_id
+        AND pr.order_id = v_order.id
+        AND pr.payment_id = v_payment_id
+        AND pr.method = 'cash_call'
+        AND pr.status = 'completed'
+        AND pr.completed_at IS NOT NULL
+        AND pr.expires_at > pr.completed_at
+      ORDER BY pr.id DESC
+      LIMIT 1
+      FOR UPDATE;
+      v_bound_request_found := FOUND;
+    END IF;
+  END IF;
+
+  RETURN v_payment_result || jsonb_build_object(
+    'self_order_request_id',
+    CASE WHEN v_bound_request_found THEN v_bound_request.id ELSE NULL END
+  );
+END;
+$$;
+
+
+--
 -- Name: confirm_goods_receipt_note(bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6315,25 +7506,29 @@ CREATE FUNCTION public.confirm_goods_receipt_note(p_grn_id bigint) RETURNS jsonb
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid             UUID   := auth.uid();
-  v_tenant          BIGINT := public.auth_tenant_id();
-  v_grn             RECORD;
-  v_item            RECORD;
-  v_branch          RECORD;
-  v_old_q           NUMERIC(15,3);
-  v_old_wac         NUMERIC(15,2);
-  v_recv            NUMERIC(15,3);
-  v_recv_base       NUMERIC(15,3);
-  v_cost            NUMERIC(15,2);
-  v_money           NUMERIC(15,2);
-  v_cost_base       NUMERIC(15,2);
-  v_new_q           NUMERIC(15,3);
-  v_new_wac         NUMERIC(15,2);
-  v_location_id     BIGINT;
-  v_all_fulfilled   BOOLEAN;
-  v_po_status       TEXT;
-  v_review_pct      NUMERIC(5,2);
-  v_review_count    INT := 0;
+  v_uid             uuid   := auth.uid();
+  v_tenant          bigint := public.auth_tenant_id();
+  v_grn             record;
+  v_item            record;
+  v_branch          record;
+  v_old_q           numeric(15,3);
+  v_old_wac         numeric(15,2);
+  v_recv            numeric(15,3);
+  v_recv_base       numeric(15,3);
+  v_cost            numeric(15,2);
+  v_money           numeric(15,2);
+  v_cost_base       numeric(15,2);
+  v_new_q           numeric(15,3);
+  v_new_wac         numeric(15,2);
+  v_location_id     bigint;
+  v_all_fulfilled   boolean;
+  v_po_status       text;
+  v_review_pct      numeric(5,2);
+  v_review_count    int := 0;
+  v_created_po_id   bigint;
+  v_po_id           bigint;
+  v_po_display      text;
+  v_auto_po_lines   int := 0;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -6366,13 +7561,28 @@ BEGIN
     RAISE EXCEPTION 'grn_branch_must_be_operational' USING ERRCODE = '23514';
   END IF;
 
-  SELECT il.id INTO v_location_id
-  FROM public.inventory_locations il
-  WHERE il.branch_id = v_grn.branch_id
-    AND il.tenant_id = v_tenant
-    AND il.is_default_receive = TRUE
-    AND il.is_active = TRUE
-  LIMIT 1;
+  IF v_grn.location_id IS NOT NULL THEN
+    SELECT il.id INTO v_location_id
+    FROM public.inventory_locations il
+    WHERE il.id = v_grn.location_id
+      AND il.branch_id = v_grn.branch_id
+      AND il.tenant_id = v_tenant
+      AND il.is_active = TRUE
+    LIMIT 1;
+
+    IF v_location_id IS NULL THEN
+      RAISE EXCEPTION 'grn_receive_location_invalid' USING ERRCODE = '23514';
+    END IF;
+  ELSE
+    SELECT il.id INTO v_location_id
+    FROM public.inventory_locations il
+    WHERE il.branch_id = v_grn.branch_id
+      AND il.tenant_id = v_tenant
+      AND il.is_default_receive = TRUE
+      AND il.is_active = TRUE
+    ORDER BY il.sort_order NULLS LAST, il.id
+    LIMIT 1;
+  END IF;
 
   IF v_location_id IS NULL THEN
     RAISE EXCEPTION 'grn_default_receive_location_missing' USING ERRCODE = 'P0002';
@@ -6453,32 +7663,91 @@ BEGIN
     WHERE i.id = v_item.ingredient_id AND i.tenant_id = v_tenant;
   END LOOP;
 
+  IF v_grn.po_id IS NULL AND EXISTS (
+    SELECT 1
+    FROM public.grn_items gi
+    WHERE gi.grn_id = p_grn_id
+      AND gi.tenant_id = v_tenant
+      AND gi.quality_status <> 'rejected'
+      AND gi.received_quantity - COALESCE(gi.rejected_quantity, 0) > 0
+  ) THEN
+    v_po_display := public.next_po_display_id(v_tenant);
+
+    INSERT INTO public.purchase_orders (
+      tenant_id, branch_id, supplier_id, po_number, display_id, status, notes, created_by
+    ) VALUES (
+      v_tenant, v_grn.branch_id, v_grn.supplier_id, v_po_display, v_po_display, 'sent',
+      NULLIF(btrim(v_grn.notes), ''), v_uid
+    ) RETURNING id INTO v_created_po_id;
+
+    INSERT INTO public.purchase_order_items (
+      tenant_id, po_id, ingredient_id, quantity, entry_unit_id, unit_price_est, line_total
+    )
+    SELECT
+      v_tenant,
+      v_created_po_id,
+      gi.ingredient_id,
+      (gi.received_quantity - COALESCE(gi.rejected_quantity, 0))::numeric(15,3),
+      gi.entry_unit_id,
+      gi.unit_cost,
+      ROUND((gi.received_quantity - COALESCE(gi.rejected_quantity, 0)) * gi.unit_cost, 2)
+    FROM public.grn_items gi
+    WHERE gi.grn_id = p_grn_id
+      AND gi.tenant_id = v_tenant
+      AND gi.quality_status <> 'rejected'
+      AND gi.received_quantity - COALESCE(gi.rejected_quantity, 0) > 0;
+
+    GET DIAGNOSTICS v_auto_po_lines = ROW_COUNT;
+
+    UPDATE public.grn_items gi
+    SET po_quantity = gi.received_quantity - COALESCE(gi.rejected_quantity, 0),
+        po_unit_price = gi.unit_cost
+    WHERE gi.grn_id = p_grn_id
+      AND gi.tenant_id = v_tenant
+      AND gi.quality_status <> 'rejected'
+      AND gi.received_quantity - COALESCE(gi.rejected_quantity, 0) > 0;
+
+    PERFORM public.log_audit(
+      'inventory.po.created_from_grn',
+      'purchase_order',
+      v_created_po_id,
+      NULL,
+      jsonb_build_object(
+        'grn_id', p_grn_id,
+        'lines', v_auto_po_lines,
+        'branch_id', v_grn.branch_id
+      )
+    );
+  END IF;
+
+  v_po_id := COALESCE(v_grn.po_id, v_created_po_id);
+
   UPDATE public.goods_received_notes
-  SET status = 'confirmed', updated_at = now()
+  SET status = 'confirmed', po_id = v_po_id, location_id = v_location_id, updated_at = now()
   WHERE id = p_grn_id;
 
-  IF v_grn.po_id IS NOT NULL THEN
+  IF v_po_id IS NOT NULL THEN
     PERFORM 1
     FROM public.purchase_orders
-    WHERE id = v_grn.po_id AND tenant_id = v_tenant
+    WHERE id = v_po_id AND tenant_id = v_tenant
     FOR UPDATE;
 
     WITH ordered AS (
       SELECT poi.ingredient_id,
-             SUM(public.inv_to_base(poi.ingredient_id, poi.entry_unit_id, poi.quantity))::NUMERIC(15,3) AS qty
+             SUM(public.inv_to_base(poi.ingredient_id, poi.entry_unit_id, poi.quantity))::numeric(15,3) AS qty
       FROM public.purchase_order_items poi
-      WHERE poi.po_id = v_grn.po_id
+      WHERE poi.po_id = v_po_id
         AND poi.tenant_id = v_tenant
       GROUP BY poi.ingredient_id
     ),
     received AS (
       SELECT gi.ingredient_id,
              SUM(public.inv_to_base(gi.ingredient_id, gi.entry_unit_id,
-                   gi.received_quantity - COALESCE(gi.rejected_quantity, 0)))::NUMERIC(15,3) AS qty
+                   gi.received_quantity - COALESCE(gi.rejected_quantity, 0)))::numeric(15,3) AS qty
       FROM public.grn_items gi
       JOIN public.goods_received_notes g
         ON g.id = gi.grn_id AND g.status = 'confirmed'
-      WHERE g.po_id = v_grn.po_id
+      WHERE g.po_id = v_po_id
         AND gi.tenant_id = v_tenant
       GROUP BY gi.ingredient_id
     )
@@ -6494,14 +7763,14 @@ BEGIN
           WHEN EXISTS (
             SELECT 1 FROM public.grn_items gi2
             JOIN public.goods_received_notes g2 ON g2.id = gi2.grn_id
-            WHERE g2.po_id = v_grn.po_id
+            WHERE g2.po_id = v_po_id
               AND g2.tenant_id = v_tenant
               AND gi2.short_delivery_action = 'accept_and_close'
           ) THEN 'received'
           ELSE 'partially_received'
         END,
         updated_at = now()
-    WHERE po.id = v_grn.po_id
+    WHERE po.id = v_po_id
       AND po.tenant_id = v_tenant
       AND po.status IN ('sent', 'partially_received')
     RETURNING po.status INTO v_po_status;
@@ -6510,9 +7779,10 @@ BEGIN
   RETURN jsonb_build_object(
     'grn_id', p_grn_id,
     'status', 'confirmed',
-    'po_id', v_grn.po_id,
+    'po_id', v_po_id,
     'po_status', v_po_status,
-    'review_count', v_review_count
+    'review_count', v_review_count,
+    'auto_po_created', v_created_po_id IS NOT NULL
   );
 END;
 $$;
@@ -6522,7 +7792,7 @@ $$;
 -- Name: FUNCTION confirm_goods_receipt_note(p_grn_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.confirm_goods_receipt_note(p_grn_id bigint) IS 'Atomic confirm GRN. Stock += (received_quantity − rejected_quantity). PO fulfillment aggregate dùng net. GL journal posts net × unit_cost. Permission: procurement:grn_confirm.';
+COMMENT ON FUNCTION public.confirm_goods_receipt_note(p_grn_id bigint) IS 'Atomic confirm GRN. Stock += (received_quantity - rejected_quantity) at the selected receipt location. PO-less GRNs create a received PO for 3-way matching. Permission: procurement:grn_confirm.';
 
 
 --
@@ -6603,7 +7873,7 @@ DECLARE
   v_tenant BIGINT := public.auth_tenant_id();
   v_order RECORD; v_item RECORD; v_recipe RECORD;
   v_raw_need_measure NUMERIC(15,3); v_raw_need_purchase NUMERIC(15,3);
-  v_conversion_factor NUMERIC(18,6); v_output_cost NUMERIC(15,2);
+  v_output_cost NUMERIC(15,2);
   v_old_q NUMERIC(15,3); v_old_wac NUMERIC(15,2);
   v_new_q NUMERIC(15,3); v_new_wac NUMERIC(15,2);
   v_need_map JSONB := '{}'::JSONB; v_cost_map JSONB := '{}'::JSONB;
@@ -6611,6 +7881,7 @@ DECLARE
   v_location_id BIGINT;
   v_shortages JSONB := '[]'::JSONB;
   v_out_base NUMERIC(15,3); v_batch_cost NUMERIC(15,2); v_out_unit_cost NUMERIC(15,2);
+  v_raw_entry_unit_id BIGINT;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -6672,7 +7943,6 @@ BEGIN
     v_output_cost := 0; v_has_recipe := FALSE;
     FOR v_recipe IN
       SELECT pr.ingredient_id, pr.quantity, pr.yield_factor, pr.entry_unit_id,
-             ing.purchase_to_measure_factor,
              COALESCE(sl.avg_unit_cost, ing.unit_cost, 0) AS raw_unit_cost
       FROM public.production_recipes pr
       JOIN public.ingredients ing ON ing.id = pr.ingredient_id
@@ -6689,11 +7959,7 @@ BEGIN
         v_raw_need_purchase := ROUND(
           public.inv_to_base(v_recipe.ingredient_id, v_recipe.entry_unit_id, v_raw_need_measure), 3);
       ELSE
-        v_conversion_factor := COALESCE(v_recipe.purchase_to_measure_factor, 1);
-        IF v_conversion_factor <= 0 THEN
-          RAISE EXCEPTION 'production_conversion_factor_invalid:%', v_recipe.ingredient_id USING ERRCODE = '22023';
-        END IF;
-        v_raw_need_purchase := ROUND((v_raw_need_measure / v_conversion_factor)::NUMERIC, 3);
+        v_raw_need_purchase := ROUND(v_raw_need_measure, 3);
       END IF;
       v_key := v_recipe.ingredient_id::text;
       v_need_map := jsonb_set(v_need_map, ARRAY[v_key],
@@ -6718,7 +7984,6 @@ BEGIN
     SELECT
       (need.ingredient_id)::BIGINT AS ingredient_id,
       ing.name AS ingredient_name,
-      COALESCE(ing.purchase_unit, ing.unit) AS unit,
       ROUND((need.need_qty)::NUMERIC, 3) AS needed,
       ROUND(COALESCE(sl.current_quantity, 0)::NUMERIC, 3) AS on_hand,
       ROUND(((need.need_qty)::NUMERIC - COALESCE(sl.current_quantity, 0))::NUMERIC, 3) AS missing
@@ -6750,14 +8015,26 @@ BEGIN
       AND sl.ingredient_id = v_key::BIGINT;
     IF NOT FOUND THEN v_old_q := 0; v_old_wac := 0; END IF;
 
+    SELECT iu.unit_id INTO v_raw_entry_unit_id
+    FROM public.ingredient_units iu
+    JOIN public.units u ON u.id = iu.unit_id AND u.tenant_id = iu.tenant_id AND u.is_active = TRUE
+    WHERE iu.tenant_id = v_tenant AND iu.ingredient_id = v_key::BIGINT AND iu.is_base = TRUE AND iu.is_active = TRUE
+    ORDER BY iu.sort_order ASC, iu.id ASC
+    LIMIT 1;
+    IF v_raw_entry_unit_id IS NULL THEN
+      RAISE EXCEPTION 'entry_unit_not_found:%', v_key::BIGINT USING ERRCODE = '23503';
+    END IF;
+
     INSERT INTO public.stock_movements (
       tenant_id, branch_id, ingredient_id, type, quantity_change,
-      reason, created_by, production_order_id, unit_cost, location_id
+      reason, created_by, production_order_id, unit_cost, location_id,
+      entry_unit_id, entry_quantity
     )
     VALUES (
       v_tenant, v_order.branch_id, v_key::BIGINT, 'production_consumption', -v_need_qty,
       'Production ' || v_order.production_number, v_uid, p_order_id,
-      COALESCE(v_old_wac, 0), v_location_id
+      COALESCE(v_old_wac, 0), v_location_id,
+      v_raw_entry_unit_id, v_need_qty
     );
   END LOOP;
 
@@ -6766,7 +8043,7 @@ BEGIN
     JOIN public.ingredients fg ON fg.id = poi.finished_good_id
     WHERE poi.production_order_id = p_order_id AND poi.tenant_id = v_tenant
   LOOP
-    v_out_base := public.inv_to_base(v_item.finished_good_id, v_item.entry_unit_id, v_item.quantity);
+    v_out_base := public.inv_to_base(v_item.finished_good_id, v_item.entry_unit_id, COALESCE(v_item.actual_quantity, v_item.quantity));
     v_batch_cost := ROUND(COALESCE(v_item.unit_cost_at_production, 0) * v_item.quantity, 2);
     v_out_unit_cost := CASE WHEN v_out_base <> 0 THEN ROUND(v_batch_cost / v_out_base, 2)
                             ELSE COALESCE(v_item.unit_cost_at_production, 0) END;
@@ -6787,7 +8064,7 @@ BEGIN
     VALUES (
       v_tenant, v_order.branch_id, v_item.finished_good_id, 'production_output', v_out_base,
       'Production ' || v_order.production_number, v_uid, p_order_id, v_out_unit_cost, v_location_id,
-      v_item.entry_unit_id, v_item.quantity
+      v_item.entry_unit_id, COALESCE(v_item.actual_quantity, v_item.quantity)
     );
 
     v_new_q := COALESCE(v_old_q, 0) + v_out_base;
@@ -6812,6 +8089,504 @@ BEGIN
   WHERE id = p_order_id AND tenant_id = v_tenant;
 
   RETURN jsonb_build_object('production_order_id', p_order_id, 'status', 'completed');
+END;
+$$;
+
+
+--
+-- Name: confirm_production_run(bigint, numeric); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.confirm_production_run(p_run_id bigint, p_actual_quantity numeric DEFAULT NULL::numeric) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+    v_uid UUID := auth.uid();
+    v_tenant BIGINT := public.auth_tenant_id();
+    v_run RECORD; v_recipe RECORD;
+    v_raw_need_measure NUMERIC(15,3); v_raw_need_purchase NUMERIC(15,3);
+    v_conversion_factor NUMERIC(18,6); v_output_cost NUMERIC(15,2);
+    v_old_q NUMERIC(15,3); v_old_wac NUMERIC(15,2);
+    v_new_q NUMERIC(15,3); v_new_wac NUMERIC(15,2);
+    v_need_map JSONB := '{}'::JSONB; v_cost_map JSONB := '{}'::JSONB;
+    v_key TEXT; v_need_qty NUMERIC(15,3); v_cost_total NUMERIC(15,2); v_has_recipe BOOLEAN;
+    v_location_id BIGINT;
+    v_shortages JSONB := '[]'::JSONB;
+    v_out_base NUMERIC(15,3); v_batch_cost NUMERIC(15,2); v_out_unit_cost NUMERIC(15,2);
+    v_actual_quantity NUMERIC(15,3);
+BEGIN
+    IF v_uid IS NULL THEN RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000'; END IF;
+    IF NOT public.is_inventory_production_operator() THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
+    IF NOT public.has_permission_any('inventory:production_confirm') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
+
+    SELECT pr.*, b.branch_kind INTO v_run
+    FROM public.production_runs pr JOIN public.branches b ON b.id = pr.branch_id
+    WHERE pr.id = p_run_id AND pr.tenant_id = v_tenant FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'production_run_not_found' USING ERRCODE = 'P0002'; END IF;
+    IF v_run.status NOT IN ('draft', 'in_progress') THEN RAISE EXCEPTION 'production_run_not_draft' USING ERRCODE = '22023'; END IF;
+
+    IF NOT public.has_permission(v_run.branch_id, 'inventory:production_confirm') THEN
+        RAISE EXCEPTION 'branch_scope_violation' USING ERRCODE = '42501';
+    END IF;
+
+    SELECT il.id INTO v_location_id
+    FROM public.inventory_locations il
+    WHERE il.branch_id = v_run.branch_id AND il.tenant_id = v_tenant AND il.is_default_receive = TRUE AND il.is_active = TRUE
+    LIMIT 1;
+
+    IF v_location_id IS NULL THEN RAISE EXCEPTION 'production_location_missing:%', v_run.branch_id USING ERRCODE = 'P0002'; END IF;
+
+    v_actual_quantity := COALESCE(p_actual_quantity, v_run.planned_quantity);
+
+    v_output_cost := 0; v_has_recipe := FALSE;
+    FOR v_recipe IN
+        SELECT pr.ingredient_id, pr.quantity, pr.yield_factor, pr.entry_unit_id,
+               ing.purchase_to_measure_factor,
+               COALESCE(sl.avg_unit_cost, ing.unit_cost, 0) AS raw_unit_cost
+        FROM public.production_recipes pr
+        JOIN public.ingredients ing ON ing.id = pr.ingredient_id
+        LEFT JOIN public.stock_levels sl ON sl.tenant_id = v_tenant AND sl.branch_id = v_run.branch_id AND sl.location_id = v_location_id AND sl.ingredient_id = pr.ingredient_id
+        WHERE pr.tenant_id = v_tenant AND pr.finished_good_id = v_run.finished_good_id
+    LOOP
+        v_has_recipe := TRUE;
+        -- Consumption is based on planned_quantity, not actual_quantity, consistent with old behavior
+        v_raw_need_measure := (v_run.planned_quantity * v_recipe.quantity) / COALESCE(v_recipe.yield_factor, 1.0);
+        IF v_recipe.entry_unit_id IS NOT NULL THEN
+            v_raw_need_purchase := ROUND(public.inv_to_base(v_recipe.ingredient_id, v_recipe.entry_unit_id, v_raw_need_measure), 3);
+        ELSE
+            v_conversion_factor := COALESCE(v_recipe.purchase_to_measure_factor, 1);
+            v_raw_need_purchase := ROUND((v_raw_need_measure / v_conversion_factor)::NUMERIC, 3);
+        END IF;
+
+        v_key := v_recipe.ingredient_id::text;
+        v_need_map := jsonb_set(v_need_map, ARRAY[v_key], to_jsonb(COALESCE((v_need_map ->> v_key)::numeric, 0) + v_raw_need_purchase), TRUE);
+        v_output_cost := v_output_cost + (v_raw_need_purchase * COALESCE(v_recipe.raw_unit_cost, 0));
+    END LOOP;
+
+    IF NOT v_has_recipe THEN RAISE EXCEPTION 'production_recipe_missing' USING ERRCODE = 'P0001'; END IF;
+
+    WITH shortages AS (
+        SELECT (need.ingredient_id)::BIGINT AS ingredient_id, ing.name AS ingredient_name,
+               COALESCE(ing.purchase_unit, ing.unit) AS unit,
+               ROUND((need.need_qty)::NUMERIC, 3) AS needed,
+               ROUND(COALESCE(sl.current_quantity, 0)::NUMERIC, 3) AS on_hand
+        FROM jsonb_each_text(v_need_map) AS need(ingredient_id, need_qty)
+        JOIN public.ingredients ing ON ing.id = (need.ingredient_id)::BIGINT
+        LEFT JOIN public.stock_levels sl ON sl.tenant_id = v_tenant AND sl.branch_id = v_run.branch_id AND sl.location_id = v_location_id AND sl.ingredient_id = (need.ingredient_id)::BIGINT
+        WHERE COALESCE(sl.current_quantity, 0) < (need.need_qty)::NUMERIC
+    )
+    SELECT COALESCE(jsonb_agg(to_jsonb(s)), '[]'::JSONB) INTO v_shortages FROM shortages s;
+
+    IF jsonb_array_length(v_shortages) > 0 THEN
+        RAISE EXCEPTION 'insufficient_stock_for_production' USING ERRCODE = 'P0001', DETAIL = v_shortages::TEXT;
+    END IF;
+
+    -- Output Cost Calculation
+    v_cost_total := v_output_cost;
+
+    FOR v_key, v_need_qty IN SELECT key, value::NUMERIC(15,3) FROM jsonb_each_text(v_need_map) LOOP
+        SELECT sl.current_quantity, sl.avg_unit_cost INTO v_old_q, v_old_wac
+        FROM public.stock_levels sl
+        WHERE sl.tenant_id = v_tenant AND sl.branch_id = v_run.branch_id AND sl.location_id = v_location_id AND sl.ingredient_id = v_key::BIGINT;
+        IF NOT FOUND THEN v_old_q := 0; v_old_wac := 0; END IF;
+
+        INSERT INTO public.stock_movements (
+            tenant_id, branch_id, ingredient_id, type, quantity_change,
+            reason, created_by, production_run_id, unit_cost, location_id
+        ) VALUES (
+            v_tenant, v_run.branch_id, v_key::BIGINT, 'production_consumption', -v_need_qty,
+            'Production ' || v_run.production_number, v_uid, p_run_id, COALESCE(v_old_wac, 0), v_location_id
+        );
+    END LOOP;
+
+    -- Output Finished Good
+    v_out_base := public.inv_to_base(v_run.finished_good_id, v_run.entry_unit_id, v_actual_quantity);
+    v_out_unit_cost := CASE WHEN v_out_base <> 0 THEN ROUND(v_cost_total / v_out_base, 2) ELSE 0 END;
+
+    SELECT sl.current_quantity, sl.avg_unit_cost INTO v_old_q, v_old_wac
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant AND sl.branch_id = v_run.branch_id AND sl.location_id = v_location_id AND sl.ingredient_id = v_run.finished_good_id;
+    IF NOT FOUND THEN v_old_q := 0; v_old_wac := 0; END IF;
+
+    INSERT INTO public.stock_movements (
+        tenant_id, branch_id, ingredient_id, type, quantity_change,
+        reason, created_by, production_run_id, unit_cost, location_id,
+        entry_unit_id, entry_quantity
+    ) VALUES (
+        v_tenant, v_run.branch_id, v_run.finished_good_id, 'production_output', v_out_base,
+        'Production ' || v_run.production_number, v_uid, p_run_id, v_out_unit_cost, v_location_id,
+        v_run.entry_unit_id, v_actual_quantity
+    );
+
+    v_new_q := COALESCE(v_old_q, 0) + v_out_base;
+    v_new_wac := CASE WHEN v_new_q > 0 THEN (COALESCE(v_old_q, 0) * COALESCE(v_old_wac, 0) + v_cost_total) / v_new_q ELSE v_out_unit_cost END;
+
+    UPDATE public.stock_levels sl SET avg_unit_cost = v_new_wac, updated_at = now()
+    WHERE sl.tenant_id = v_tenant AND sl.branch_id = v_run.branch_id AND sl.location_id = v_location_id AND sl.ingredient_id = v_run.finished_good_id;
+
+    UPDATE public.ingredients SET unit_cost = v_out_unit_cost, updated_at = now()
+    WHERE id = v_run.finished_good_id AND tenant_id = v_tenant;
+
+    UPDATE public.production_runs SET status = 'completed', actual_quantity = v_actual_quantity, completed_at = now(), updated_at = now()
+    WHERE id = p_run_id AND tenant_id = v_tenant;
+
+    RETURN jsonb_build_object('production_run_id', p_run_id, 'status', 'completed');
+END;
+$$;
+
+
+--
+-- Name: confirm_production_run(bigint, numeric, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.confirm_production_run(p_run_id bigint, p_actual_quantity numeric DEFAULT NULL::numeric, p_actual_ingredients jsonb DEFAULT NULL::jsonb) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_run record;
+  v_recipe record;
+  v_has_recipe boolean := false;
+  v_effective_ingredients jsonb;
+  v_raw_need_measure numeric(15,3);
+  v_raw_need_purchase numeric(15,3);
+  v_actual_usage numeric(15,3);
+  v_need_map jsonb := '{}'::jsonb;
+  v_key text;
+  v_need_qty numeric(15,3);
+  v_old_q numeric(15,3);
+  v_old_wac numeric(15,2);
+  v_new_q numeric(15,3);
+  v_new_wac numeric(15,2);
+  v_output_cost numeric(15,2) := 0;
+  v_cost_total numeric(15,2);
+  v_out_base numeric(15,3);
+  v_out_unit_cost numeric(15,2);
+  v_target_location_id bigint;
+  v_source_location_id bigint;
+  v_shortages jsonb;
+  v_raw_entry_unit_id bigint;
+  v_actual_quantity numeric(15,3);
+  v_planned_output_base numeric(15,3);
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF NOT public.is_inventory_production_operator() THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT public.has_permission_any('inventory:production_confirm') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT pr.*, b.branch_kind INTO v_run
+  FROM public.production_runs pr
+  JOIN public.branches b
+    ON b.id = pr.branch_id
+   AND b.tenant_id = pr.tenant_id
+  WHERE pr.id = p_run_id
+    AND pr.tenant_id = v_tenant
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'production_run_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_run.status NOT IN ('draft', 'in_progress') THEN
+    RAISE EXCEPTION 'production_run_not_draft' USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT public.has_permission(v_run.branch_id, 'inventory:production_confirm') THEN
+    RAISE EXCEPTION 'branch_scope_violation' USING ERRCODE = '42501';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.production_recipes pr
+    LEFT JOIN public.ingredient_units iu
+      ON iu.tenant_id = pr.tenant_id
+     AND iu.ingredient_id = pr.ingredient_id
+     AND iu.unit_id = pr.entry_unit_id
+     AND iu.is_active = TRUE
+    LEFT JOIN public.units u
+      ON u.id = iu.unit_id
+     AND u.tenant_id = iu.tenant_id
+     AND u.is_active = TRUE
+    WHERE pr.tenant_id = v_tenant
+      AND pr.finished_good_id = v_run.finished_good_id
+      AND pr.entry_unit_id IS NOT NULL
+      AND (iu.id IS NULL OR u.id IS NULL)
+  ) THEN
+    RAISE EXCEPTION 'production_recipe_unit_mapping_missing:%',
+      v_run.finished_good_id
+      USING ERRCODE = '23503';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.production_recipes pr
+    JOIN public.ingredient_units iu
+      ON iu.tenant_id = pr.tenant_id
+     AND iu.ingredient_id = pr.ingredient_id
+     AND iu.unit_id = pr.entry_unit_id
+     AND iu.is_active = TRUE
+    WHERE pr.tenant_id = v_tenant
+      AND pr.finished_good_id = v_run.finished_good_id
+      AND iu.created_at > v_run.created_at
+  ) THEN
+    RAISE EXCEPTION 'production_run_unit_mapping_review_required:%',
+      v_run.id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  v_effective_ingredients := COALESCE(p_actual_ingredients, v_run.ingredients_override);
+
+  SELECT il.id INTO v_source_location_id
+  FROM public.inventory_locations il
+  WHERE il.id = v_run.source_location_id
+    AND il.tenant_id = v_tenant
+    AND il.branch_id = v_run.branch_id
+    AND il.is_active = TRUE
+  LIMIT 1;
+  IF v_source_location_id IS NULL THEN
+    RAISE EXCEPTION 'production_source_location_missing:%', v_run.branch_id USING ERRCODE = 'P0002';
+  END IF;
+
+  SELECT il.id INTO v_target_location_id
+  FROM public.inventory_locations il
+  WHERE il.id = v_run.target_location_id
+    AND il.tenant_id = v_tenant
+    AND il.branch_id = v_run.target_branch_id
+    AND il.is_active = TRUE
+  LIMIT 1;
+  IF v_target_location_id IS NULL THEN
+    RAISE EXCEPTION 'production_target_location_missing:%', v_run.target_branch_id USING ERRCODE = 'P0002';
+  END IF;
+
+  v_actual_quantity := ROUND(COALESCE(p_actual_quantity, v_run.planned_quantity), 3);
+
+  IF v_run.entry_unit_id IS NOT NULL THEN
+    v_planned_output_base := ROUND(
+      public.inv_to_base(
+        v_run.finished_good_id,
+        v_run.entry_unit_id,
+        v_run.planned_quantity
+      ),
+      3
+    );
+  ELSE
+    v_planned_output_base := v_run.planned_quantity;
+  END IF;
+
+  FOR v_recipe IN
+    SELECT pr.ingredient_id, pr.quantity, pr.yield_factor, pr.entry_unit_id,
+           COALESCE(sl.avg_unit_cost, ing.unit_cost, 0) AS raw_unit_cost
+    FROM public.production_recipes pr
+    JOIN public.ingredients ing
+      ON ing.id = pr.ingredient_id
+     AND ing.tenant_id = pr.tenant_id
+    LEFT JOIN public.stock_levels sl
+      ON sl.tenant_id = v_tenant
+     AND sl.branch_id = v_run.branch_id
+     AND sl.location_id = v_source_location_id
+     AND sl.ingredient_id = pr.ingredient_id
+    WHERE pr.tenant_id = v_tenant
+      AND pr.finished_good_id = v_run.finished_good_id
+  LOOP
+    v_has_recipe := true;
+    v_raw_need_measure :=
+      (v_planned_output_base * v_recipe.quantity) /
+      COALESCE(v_recipe.yield_factor, 1.0);
+
+    IF v_effective_ingredients IS NOT NULL THEN
+      v_actual_usage := NULL;
+      SELECT (elem->>'actual_quantity')::numeric(15,3) INTO v_actual_usage
+      FROM jsonb_array_elements(v_effective_ingredients) elem
+      WHERE (elem->>'ingredient_id')::bigint = v_recipe.ingredient_id;
+
+      IF v_actual_usage IS NOT NULL THEN
+        v_raw_need_measure := v_actual_usage;
+      END IF;
+    END IF;
+
+    IF v_recipe.entry_unit_id IS NOT NULL THEN
+      v_raw_need_purchase := ROUND(
+        public.inv_to_base(
+          v_recipe.ingredient_id,
+          v_recipe.entry_unit_id,
+          v_raw_need_measure
+        ),
+        3
+      );
+    ELSE
+      v_raw_need_purchase := ROUND(v_raw_need_measure, 3);
+    END IF;
+
+    v_key := v_recipe.ingredient_id::text;
+    v_need_map := jsonb_set(
+      v_need_map,
+      ARRAY[v_key],
+      to_jsonb(COALESCE((v_need_map ->> v_key)::numeric, 0) + v_raw_need_purchase),
+      TRUE
+    );
+    v_output_cost := v_output_cost +
+      (v_raw_need_purchase * COALESCE(v_recipe.raw_unit_cost, 0));
+  END LOOP;
+
+  IF NOT v_has_recipe THEN
+    RAISE EXCEPTION 'production_recipe_missing' USING ERRCODE = 'P0001';
+  END IF;
+
+  WITH shortages AS (
+    SELECT (need.ingredient_id)::bigint AS ingredient_id, ing.name AS ingredient_name,
+           (
+             SELECT u.name
+             FROM public.ingredient_units iu
+             JOIN public.units u ON u.id = iu.unit_id
+             WHERE iu.ingredient_id = ing.id AND iu.is_base = TRUE
+             LIMIT 1
+           ) AS unit,
+           ROUND((need.need_qty)::numeric, 3) AS needed,
+           ROUND(COALESCE(sl.current_quantity, 0)::numeric, 3) AS on_hand
+    FROM jsonb_each_text(v_need_map) AS need(ingredient_id, need_qty)
+    JOIN public.ingredients ing ON ing.id = (need.ingredient_id)::bigint
+    LEFT JOIN public.stock_levels sl
+      ON sl.tenant_id = v_tenant
+     AND sl.branch_id = v_run.branch_id
+     AND sl.location_id = v_source_location_id
+     AND sl.ingredient_id = (need.ingredient_id)::bigint
+    WHERE COALESCE(sl.current_quantity, 0) < (need.need_qty)::numeric
+  )
+  SELECT COALESCE(jsonb_agg(to_jsonb(s)), '[]'::jsonb)
+  INTO v_shortages
+  FROM shortages s;
+
+  IF jsonb_array_length(v_shortages) > 0 THEN
+    RAISE EXCEPTION 'insufficient_stock_for_production'
+      USING ERRCODE = 'P0001', DETAIL = v_shortages::text;
+  END IF;
+
+  v_cost_total := v_output_cost;
+
+  FOR v_key, v_need_qty IN
+    SELECT key, value::numeric(15,3)
+    FROM jsonb_each_text(v_need_map)
+  LOOP
+    SELECT sl.current_quantity, sl.avg_unit_cost INTO v_old_q, v_old_wac
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant
+      AND sl.branch_id = v_run.branch_id
+      AND sl.location_id = v_source_location_id
+      AND sl.ingredient_id = v_key::bigint;
+    IF NOT FOUND THEN
+      v_old_q := 0;
+      v_old_wac := 0;
+    END IF;
+
+    SELECT iu.unit_id INTO v_raw_entry_unit_id
+    FROM public.ingredient_units iu
+    JOIN public.units u
+      ON u.id = iu.unit_id
+     AND u.tenant_id = iu.tenant_id
+     AND u.is_active = TRUE
+    WHERE iu.tenant_id = v_tenant
+      AND iu.ingredient_id = v_key::bigint
+      AND iu.is_base = TRUE
+      AND iu.is_active = TRUE
+    ORDER BY iu.sort_order ASC, iu.id ASC
+    LIMIT 1;
+
+    IF v_raw_entry_unit_id IS NULL THEN
+      RAISE EXCEPTION 'entry_unit_not_found:%', v_key::bigint USING ERRCODE = '23503';
+    END IF;
+
+    INSERT INTO public.stock_movements (
+      tenant_id, branch_id, ingredient_id, type, quantity_change,
+      reason, created_by, production_run_id, unit_cost, location_id,
+      entry_unit_id, entry_quantity
+    ) VALUES (
+      v_tenant, v_run.branch_id, v_key::bigint, 'production_consumption', -v_need_qty,
+      'Production ' || v_run.production_number, v_uid, p_run_id, COALESCE(v_old_wac, 0), v_source_location_id,
+      v_raw_entry_unit_id, v_need_qty
+    );
+  END LOOP;
+
+  IF v_run.entry_unit_id IS NOT NULL THEN
+    v_out_base := public.inv_to_base(
+      v_run.finished_good_id,
+      v_run.entry_unit_id,
+      v_actual_quantity
+    );
+  ELSE
+    v_out_base := v_actual_quantity;
+  END IF;
+
+  v_out_unit_cost := CASE
+    WHEN v_out_base <> 0 THEN ROUND(v_cost_total / v_out_base, 2)
+    ELSE 0
+  END;
+
+  SELECT sl.current_quantity, sl.avg_unit_cost INTO v_old_q, v_old_wac
+  FROM public.stock_levels sl
+  WHERE sl.tenant_id = v_tenant
+    AND sl.branch_id = v_run.target_branch_id
+    AND sl.location_id = v_target_location_id
+    AND sl.ingredient_id = v_run.finished_good_id;
+  IF NOT FOUND THEN
+    v_old_q := 0;
+    v_old_wac := 0;
+  END IF;
+
+  INSERT INTO public.stock_movements (
+    tenant_id, branch_id, ingredient_id, type, quantity_change,
+    reason, created_by, production_run_id, unit_cost, location_id,
+    entry_unit_id, entry_quantity
+  ) VALUES (
+    v_tenant, v_run.target_branch_id, v_run.finished_good_id, 'production_output', v_out_base,
+    'Production ' || v_run.production_number, v_uid, p_run_id, v_out_unit_cost, v_target_location_id,
+    v_run.entry_unit_id, v_actual_quantity
+  );
+
+  v_new_q := COALESCE(v_old_q, 0) + v_out_base;
+  v_new_wac := CASE
+    WHEN v_new_q > 0 THEN
+      (COALESCE(v_old_q, 0) * COALESCE(v_old_wac, 0) + v_cost_total) / v_new_q
+    ELSE v_out_unit_cost
+  END;
+
+  UPDATE public.stock_levels sl
+  SET avg_unit_cost = v_new_wac, updated_at = now()
+  WHERE sl.tenant_id = v_tenant
+    AND sl.branch_id = v_run.target_branch_id
+    AND sl.location_id = v_target_location_id
+    AND sl.ingredient_id = v_run.finished_good_id;
+
+  UPDATE public.ingredients
+  SET unit_cost = v_out_unit_cost, updated_at = now()
+  WHERE id = v_run.finished_good_id
+    AND tenant_id = v_tenant;
+
+  UPDATE public.production_runs
+  SET status = 'completed',
+      actual_quantity = v_actual_quantity,
+      completed_at = now(),
+      updated_at = now(),
+      ingredients_override = v_effective_ingredients
+  WHERE id = p_run_id
+    AND tenant_id = v_tenant;
+
+  RETURN jsonb_build_object(
+    'production_run_id', p_run_id,
+    'status', 'completed',
+    'actual_quantity', v_actual_quantity,
+    'output_quantity_base', v_out_base,
+    'unit_cost', v_out_unit_cost
+  );
 END;
 $$;
 
@@ -7239,6 +9014,7 @@ DECLARE
   v_mv_id   BIGINT;
   v_lines_processed INT := 0;
   v_loc_id  BIGINT;
+  v_qty_base NUMERIC(15,3);
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -7261,7 +9037,6 @@ BEGIN
   END IF;
 
   IF v_ret.source = 'post_receipt' THEN
-    -- Look up default-receive location for the source branch (per-location migration 20260425).
     SELECT id INTO v_loc_id
     FROM public.inventory_locations
     WHERE branch_id = v_ret.branch_id
@@ -7276,10 +9051,27 @@ BEGIN
     END IF;
 
     FOR v_item IN
-      SELECT * FROM public.supplier_return_items
-      WHERE return_id = p_return_id AND tenant_id = v_tenant
-      ORDER BY ingredient_id
+      SELECT sri.*, COALESCE(sri.entry_unit_id, (
+        SELECT iu.unit_id
+        FROM public.ingredient_units iu
+        JOIN public.units u ON u.id = iu.unit_id AND u.tenant_id = iu.tenant_id AND u.is_active = TRUE
+        WHERE iu.tenant_id = v_tenant
+          AND iu.ingredient_id = sri.ingredient_id
+          AND iu.is_base = TRUE
+          AND iu.is_active = TRUE
+        ORDER BY iu.sort_order ASC, iu.id ASC
+        LIMIT 1
+      )) AS resolved_entry_unit_id
+      FROM public.supplier_return_items sri
+      WHERE sri.return_id = p_return_id AND sri.tenant_id = v_tenant
+      ORDER BY sri.ingredient_id
     LOOP
+      IF v_item.resolved_entry_unit_id IS NULL THEN
+        RAISE EXCEPTION 'entry_unit_not_found:%', v_item.ingredient_id USING ERRCODE = '23503';
+      END IF;
+
+      v_qty_base := ROUND(public.inv_to_base(v_item.ingredient_id, v_item.resolved_entry_unit_id, v_item.quantity), 3);
+
       SELECT current_quantity INTO v_old_q
       FROM public.stock_levels
       WHERE tenant_id = v_tenant
@@ -7288,19 +9080,25 @@ BEGIN
         AND location_id = v_loc_id
       FOR UPDATE;
 
-      IF NOT FOUND OR COALESCE(v_old_q, 0) < v_item.quantity THEN
+      IF NOT FOUND OR COALESCE(v_old_q, 0) < v_qty_base THEN
         RAISE EXCEPTION 'insufficient_stock_for_return' USING ERRCODE = '23514',
-          DETAIL = format('ingredient_id=%s, requested=%s, available=%s',
-                          v_item.ingredient_id, v_item.quantity, COALESCE(v_old_q, 0));
+          DETAIL = format('ingredient_id=%s, requested_base=%s, available=%s',
+                          v_item.ingredient_id, v_qty_base, COALESCE(v_old_q, 0));
       END IF;
 
       INSERT INTO public.stock_movements (
         tenant_id, branch_id, ingredient_id, location_id, type, quantity_change,
-        reason, created_by, unit_cost
+        reason, created_by, unit_cost, entry_unit_id, entry_quantity
       ) VALUES (
         v_tenant, v_ret.branch_id, v_item.ingredient_id, v_loc_id, 'supplier_return',
-        -v_item.quantity,
-        'Tra NCC ' || v_ret.return_number, v_uid, v_item.unit_cost
+        -v_qty_base,
+        'Tra NCC ' || v_ret.return_number, v_uid,
+        CASE WHEN v_qty_base <> 0
+             THEN ROUND((v_item.quantity * v_item.unit_cost) / v_qty_base, 2)
+             ELSE v_item.unit_cost
+        END,
+        v_item.resolved_entry_unit_id,
+        v_item.quantity
       ) RETURNING id INTO v_mv_id;
 
       UPDATE public.supplier_return_items
@@ -7341,18 +9139,20 @@ COMMENT ON FUNCTION public.confirm_supplier_return(p_return_id bigint) IS 'Moves
 CREATE FUNCTION public.confirm_vietqr_payment(p_tenant_id bigint, p_branch_id bigint, p_order_id bigint, p_amount numeric, p_created_by uuid) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO ''
-    AS $$
+    AS $_$
 DECLARE
-  v_uid             UUID;
-  v_order           RECORD;
-  v_payment_id      BIGINT;
-  v_existing_id     BIGINT;
-  v_existing_status TEXT;
-  v_idempotent      BOOLEAN := FALSE;
-  v_receipt_res     JSONB;
-  v_print_job_id    BIGINT;
-  v_print_failed    BOOLEAN := FALSE;
-  v_print_error     TEXT;
+  v_uid uuid;
+  v_order record;
+  v_payment_id bigint;
+  v_existing_id bigint;
+  v_existing_status text;
+  v_idempotent boolean := false;
+  v_receipt_res jsonb;
+  v_print_job_id bigint;
+  v_print_failed boolean := false;
+  v_print_error text;
+  v_evidence_id bigint;
+  v_evidence_count integer := 0;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -7362,9 +9162,9 @@ BEGIN
   SELECT id, total_amount, tax_amount, payment_status, branch_id, tenant_id, payment_code
   INTO v_order
   FROM public.orders
-  WHERE id          = p_order_id
-    AND tenant_id   = p_tenant_id
-    AND branch_id   = p_branch_id
+  WHERE id = p_order_id
+    AND tenant_id = p_tenant_id
+    AND branch_id = p_branch_id
   FOR UPDATE;
 
   IF NOT FOUND THEN
@@ -7380,85 +9180,105 @@ BEGIN
   END IF;
 
   IF v_order.payment_status = 'paid' THEN
-    SELECT id INTO v_payment_id
+    SELECT id
+    INTO v_payment_id
     FROM public.payments
-    WHERE order_id  = p_order_id
+    WHERE order_id = p_order_id
       AND tenant_id = p_tenant_id
-      AND status    = 'completed'
-    ORDER BY id DESC LIMIT 1;
-
-    RETURN jsonb_build_object(
-      'payment_id', v_payment_id,
-      'idempotent', TRUE,
-      'print',      jsonb_build_object('failed', FALSE)
-    );
-  END IF;
-
-  IF p_amount <> v_order.total_amount THEN
-    RAISE EXCEPTION 'amount_mismatch: expected % got %',
-      v_order.total_amount, p_amount
-      USING ERRCODE = '22023';
-  END IF;
-
-  SELECT id, status
-  INTO v_existing_id, v_existing_status
-  FROM public.payments
-  WHERE tenant_id = p_tenant_id
-    AND branch_id = p_branch_id
-    AND order_id  = p_order_id
-    AND status   <> 'failed'
-  ORDER BY id DESC
-  LIMIT 1
-  FOR UPDATE;
-
-  IF v_existing_status = 'completed' THEN
-    v_payment_id := v_existing_id;
-    v_idempotent := TRUE;
-
-  ELSIF v_existing_status = 'pending' THEN
-    UPDATE public.payments
-    SET method        = 'vietqr',
-        amount        = p_amount,
-        status        = 'completed',
-        provider_ref  = v_order.payment_code,
-        provider_data = COALESCE(provider_data, '{}'::jsonb)
-                        || jsonb_build_object('description', v_order.payment_code),
-        paid_at       = now(),
-        updated_at    = now()
-    WHERE id = v_existing_id
-    RETURNING id INTO v_payment_id;
-
+      AND status = 'completed'
+    ORDER BY id DESC
+    LIMIT 1;
+    v_idempotent := true;
   ELSE
-    INSERT INTO public.payments (
-      tenant_id, branch_id, order_id,
-      method, amount, status, provider_ref, provider_data, paid_at, created_by
-    ) VALUES (
-      p_tenant_id, p_branch_id, p_order_id,
-      'vietqr', p_amount, 'completed', v_order.payment_code,
-      jsonb_build_object('description', v_order.payment_code),
-      now(), v_uid
-    )
-    RETURNING id INTO v_payment_id;
+    IF p_amount <> v_order.total_amount THEN
+      RAISE EXCEPTION 'amount_mismatch: expected % got %',
+        v_order.total_amount, p_amount
+        USING ERRCODE = '22023';
+    END IF;
+
+    SELECT id, status
+    INTO v_existing_id, v_existing_status
+    FROM public.payments
+    WHERE tenant_id = p_tenant_id
+      AND branch_id = p_branch_id
+      AND order_id = p_order_id
+      AND status <> 'failed'
+    ORDER BY id DESC
+    LIMIT 1
+    FOR UPDATE;
+
+    IF v_existing_status = 'completed' THEN
+      v_payment_id := v_existing_id;
+      v_idempotent := true;
+    ELSIF v_existing_status = 'pending' THEN
+      UPDATE public.payments
+      SET method = 'vietqr',
+          amount = p_amount,
+          status = 'completed',
+          provider_ref = v_order.payment_code,
+          provider_data = COALESCE(provider_data, '{}'::jsonb)
+            || jsonb_build_object('description', v_order.payment_code),
+          paid_at = now(),
+          updated_at = now()
+      WHERE id = v_existing_id
+      RETURNING id INTO v_payment_id;
+    ELSE
+      INSERT INTO public.payments (
+        tenant_id, branch_id, order_id,
+        method, amount, status, provider_ref, provider_data, paid_at, created_by
+      ) VALUES (
+        p_tenant_id, p_branch_id, p_order_id,
+        'vietqr', p_amount, 'completed', v_order.payment_code,
+        jsonb_build_object('description', v_order.payment_code), now(), v_uid
+      )
+      RETURNING id INTO v_payment_id;
+    END IF;
+
+    IF NOT v_idempotent THEN
+      UPDATE public.orders
+      SET payment_status = 'paid',
+          payment_method = 'vietqr',
+          cash_received = NULL,
+          cash_change = NULL,
+          updated_at = now()
+      WHERE id = p_order_id;
+
+      PERFORM public.finalize_paid_order(p_order_id, v_uid);
+    END IF;
   END IF;
 
-  IF NOT v_idempotent THEN
-    UPDATE public.orders
-    SET payment_status = 'paid',
-        payment_method = 'vietqr',
-        cash_received = NULL,
-        cash_change = NULL,
-        updated_at = now()
-    WHERE id = p_order_id;
+  IF v_payment_id IS NOT NULL THEN
+    FOR v_evidence_id IN
+      SELECT id
+      FROM public.webhook_events
+      WHERE tenant_id = p_tenant_id
+        AND provider = 'sepay'
+        AND signature_valid
+        AND order_id = p_order_id
+        AND payment_id IS NULL
+        AND processing_status = 'processed'
+        AND error_code IS NULL
+        AND lower(COALESCE(payload ->> 'transferType', '')) = 'in'
+        AND btrim(COALESCE(payload ->> 'transferAmount', '')) ~ '^-?[0-9]+(\\.[0-9]+)?$'
+        AND abs((payload ->> 'transferAmount')::numeric) = p_amount
+      FOR UPDATE
+    LOOP
+      v_evidence_count := v_evidence_count + 1;
+    END LOOP;
 
-    PERFORM public.finalize_paid_order(p_order_id, v_uid);
+    IF v_evidence_count = 1 THEN
+      UPDATE public.webhook_events
+      SET payment_id = v_payment_id
+      WHERE id = v_evidence_id;
+    END IF;
   END IF;
 
   BEGIN
-    v_receipt_res  := public.enqueue_receipt_print(p_order_id, NULL, NULL);
-    v_print_job_id := (v_receipt_res ->> 'job_id')::BIGINT;
+    v_receipt_res := public.enqueue_receipt_print(p_order_id, NULL, NULL);
+    v_print_job_id := (v_receipt_res ->> 'job_id')::bigint;
   EXCEPTION WHEN OTHERS THEN
-    v_print_failed := TRUE;
-    v_print_error  := SQLERRM;
+    v_print_failed := true;
+    v_print_error := SQLERRM;
     RAISE NOTICE '[confirm_vietqr_payment] receipt print failed for order %: %',
       p_order_id, SQLERRM;
   END;
@@ -7469,11 +9289,11 @@ BEGIN
     'print', jsonb_build_object(
       'job_id', v_print_job_id,
       'failed', v_print_failed,
-      'error',  v_print_error
+      'error', v_print_error
     )
   );
 END;
-$$;
+$_$;
 
 
 --
@@ -7500,6 +9320,7 @@ DECLARE
   v_total       NUMERIC(15,3);
   v_location_id BIGINT;
   v_location_is_default BOOLEAN;
+  v_entry_unit_id BIGINT;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -7586,9 +9407,23 @@ BEGIN
       AND oi.status <> 'cancelled'
     GROUP BY r.ingredient_id
   LOOP
+    SELECT iu.unit_id INTO v_entry_unit_id
+    FROM public.ingredient_units iu
+    JOIN public.units u ON u.id = iu.unit_id AND u.tenant_id = iu.tenant_id AND u.is_active = TRUE
+    WHERE iu.tenant_id = v_tenant
+      AND iu.ingredient_id = v_need.ingredient_id
+      AND iu.is_base = TRUE
+      AND iu.is_active = TRUE
+    ORDER BY iu.sort_order ASC, iu.id ASC
+    LIMIT 1;
+    IF v_entry_unit_id IS NULL THEN
+      RAISE EXCEPTION 'entry_unit_not_found:%', v_need.ingredient_id USING ERRCODE = '23503';
+    END IF;
+
     INSERT INTO public.stock_movements (
       tenant_id, branch_id, ingredient_id, type, quantity_change,
-      reason, created_by, order_id, unit_cost, location_id
+      reason, created_by, order_id, unit_cost, location_id,
+      entry_unit_id, entry_quantity
     )
     SELECT
       v_tenant,
@@ -7600,7 +9435,9 @@ BEGIN
       v_uid,
       p_order_id,
       COALESCE(sl.avg_unit_cost, 0),
-      v_location_id
+      v_location_id,
+      v_entry_unit_id,
+      v_need.need_qty
     FROM public.stock_levels sl
     WHERE sl.tenant_id = v_tenant
       AND sl.branch_id = v_order.branch_id
@@ -7629,6 +9466,7 @@ DECLARE
   v_total      NUMERIC(15,3);
   v_location_id BIGINT;
   v_location_is_default BOOLEAN;
+  v_entry_unit_id BIGINT;
 BEGIN
   IF auth.role() IS DISTINCT FROM 'service_role' THEN
     RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
@@ -7717,9 +9555,23 @@ BEGIN
       AND oi.status <> 'cancelled'
     GROUP BY r.ingredient_id
   LOOP
+    SELECT iu.unit_id INTO v_entry_unit_id
+    FROM public.ingredient_units iu
+    JOIN public.units u ON u.id = iu.unit_id AND u.tenant_id = iu.tenant_id AND u.is_active = TRUE
+    WHERE iu.tenant_id = v_order.tenant_id
+      AND iu.ingredient_id = v_need.ingredient_id
+      AND iu.is_base = TRUE
+      AND iu.is_active = TRUE
+    ORDER BY iu.sort_order ASC, iu.id ASC
+    LIMIT 1;
+    IF v_entry_unit_id IS NULL THEN
+      RAISE EXCEPTION 'entry_unit_not_found:%', v_need.ingredient_id USING ERRCODE = '23503';
+    END IF;
+
     INSERT INTO public.stock_movements (
       tenant_id, branch_id, ingredient_id, type, quantity_change,
-      reason, created_by, order_id, unit_cost, location_id
+      reason, created_by, order_id, unit_cost, location_id,
+      entry_unit_id, entry_quantity
     )
     SELECT
       v_order.tenant_id,
@@ -7731,7 +9583,9 @@ BEGIN
       v_actor,
       p_order_id,
       COALESCE(sl.avg_unit_cost, 0),
-      v_location_id
+      v_location_id,
+      v_entry_unit_id,
+      v_need.need_qty
     FROM public.stock_levels sl
     WHERE sl.tenant_id = v_order.tenant_id
       AND sl.branch_id = v_order.branch_id
@@ -7883,7 +9737,6 @@ DECLARE
   v_seed_cost numeric(15, 2);
   v_source_ref jsonb := jsonb_build_object('kind', 'expiry');
   v_entry_unit_id bigint;
-  v_unit text;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000'; END IF;
   IF NOT public.has_permission(p_branch_id, 'inventory:writeoff') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
@@ -7911,7 +9764,18 @@ BEGIN
       'batch_number', v_grn.batch_number, 'expiry_date', v_grn.expiry_date);
   END IF;
 
-  v_unit := public.inventory_entry_unit_code(v_tenant, p_ingredient_id, v_entry_unit_id);
+  IF v_entry_unit_id IS NULL THEN
+    SELECT iu.unit_id INTO v_entry_unit_id
+      FROM public.ingredient_units iu
+     WHERE iu.tenant_id = v_tenant
+       AND iu.ingredient_id = p_ingredient_id
+       AND iu.is_base = TRUE
+       AND iu.is_active = TRUE
+     LIMIT 1;
+  END IF;
+  IF v_entry_unit_id IS NULL THEN
+    RAISE EXCEPTION 'entry_unit_required' USING ERRCODE = '22023';
+  END IF;
 
   v_shift_key := public.inventory_shift_key(p_branch_id, now());
   v_issue_no := 'WO-' || to_char(now(), 'YYMMDDHH24MISS') || '-' || substr(gen_random_uuid()::text, 1, 4);
@@ -7927,9 +9791,9 @@ BEGIN
    WHERE tenant_id = v_tenant AND branch_id = p_branch_id
      AND location_id = p_location_id AND ingredient_id = p_ingredient_id;
 
-  INSERT INTO public.stock_issue_items (tenant_id, issue_id, ingredient_id, quantity, unit, entry_unit_id, unit_cost,
+  INSERT INTO public.stock_issue_items (tenant_id, issue_id, ingredient_id, quantity, entry_unit_id, unit_cost,
     reason_code, photo_urls, reason)
-  VALUES (v_tenant, v_issue_id, p_ingredient_id, p_quantity, v_unit, v_entry_unit_id,
+  VALUES (v_tenant, v_issue_id, p_ingredient_id, p_quantity, v_entry_unit_id,
     COALESCE(v_seed_cost, 0),
     'expired', COALESCE(p_photo_urls, ARRAY[]::text[]), p_note);
 
@@ -8039,9 +9903,8 @@ BEGIN
        GROUP BY gi.ingredient_id
     )
     SELECT poi.ingredient_id,
-           poi.unit,
            poi.entry_unit_id,
-           poi.quantity::NUMERIC(15,3)                  AS po_quantity,
+           poi.quantity::NUMERIC(15,3)                    AS po_quantity,
            COALESCE(poi.unit_price_est, 0)::NUMERIC(15,2) AS po_unit_price,
            ROUND(
              (public.inv_to_base(poi.ingredient_id, poi.entry_unit_id, poi.quantity)
@@ -8077,7 +9940,7 @@ BEGIN
   INSERT INTO public.grn_items (
     tenant_id, grn_id, ingredient_id,
     po_quantity, po_unit_price,
-    received_quantity, unit, entry_unit_id, unit_cost, total_cost,
+    received_quantity, entry_unit_id, unit_cost, total_cost,
     quality_status
   )
   SELECT v_tenant_id,
@@ -8086,7 +9949,6 @@ BEGIN
          r.po_quantity,
          r.po_unit_price,
          r.remaining,
-         r.unit,
          r.entry_unit_id,
          r.po_unit_price,
          ROUND(r.remaining * r.po_unit_price, 2),
@@ -8646,6 +10508,223 @@ $$;
 
 
 --
+-- Name: create_production_run(bigint, bigint, numeric, bigint, text, bigint, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_production_run(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_notes text DEFAULT NULL::text, p_target_branch_id bigint DEFAULT NULL::bigint, p_ingredients_override jsonb DEFAULT NULL::jsonb) RETURNS jsonb
+    LANGUAGE sql
+    SET search_path TO 'public'
+    AS $$
+  SELECT public.create_production_run_with_locations(
+    p_branch_id,
+    p_finished_good_id,
+    p_planned_quantity,
+    p_entry_unit_id,
+    p_notes,
+    p_target_branch_id,
+    p_ingredients_override,
+    NULL::bigint,
+    NULL::bigint
+  );
+$$;
+
+
+--
+-- Name: create_production_run_with_locations(bigint, bigint, numeric, bigint, text, bigint, jsonb, bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_production_run_with_locations(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_notes text DEFAULT NULL::text, p_target_branch_id bigint DEFAULT NULL::bigint, p_ingredients_override jsonb DEFAULT NULL::jsonb, p_source_location_id bigint DEFAULT NULL::bigint, p_target_location_id bigint DEFAULT NULL::bigint) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_new_id bigint;
+  v_number text;
+  v_target_branch_id bigint;
+  v_entry_unit_id bigint := p_entry_unit_id;
+  v_source_location_id bigint := p_source_location_id;
+  v_target_location_id bigint := p_target_location_id;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF NOT public.is_inventory_production_operator() THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT public.has_permission(p_branch_id, 'inventory:production_create') THEN
+    RAISE EXCEPTION 'branch_scope_violation' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_planned_quantity IS NULL OR p_planned_quantity <= 0 THEN
+    RAISE EXCEPTION 'invalid_planned_quantity' USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.ingredients i
+    WHERE i.id = p_finished_good_id
+      AND i.tenant_id = v_tenant
+      AND i.item_kind = 'finished_good'
+      AND i.is_active = TRUE
+  ) THEN
+    RAISE EXCEPTION 'finished_good_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_entry_unit_id IS NULL THEN
+    SELECT iu.unit_id INTO v_entry_unit_id
+    FROM public.ingredient_units iu
+    JOIN public.units u
+      ON u.id = iu.unit_id
+     AND u.tenant_id = iu.tenant_id
+     AND u.is_active = TRUE
+    WHERE iu.tenant_id = v_tenant
+      AND iu.ingredient_id = p_finished_good_id
+      AND iu.is_base = TRUE
+      AND iu.is_active = TRUE
+    ORDER BY iu.sort_order ASC, iu.id ASC
+    LIMIT 1;
+  ELSE
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.ingredient_units iu
+      JOIN public.units u
+        ON u.id = iu.unit_id
+       AND u.tenant_id = iu.tenant_id
+       AND u.is_active = TRUE
+      WHERE iu.tenant_id = v_tenant
+        AND iu.ingredient_id = p_finished_good_id
+        AND iu.unit_id = v_entry_unit_id
+        AND iu.is_active = TRUE
+    ) THEN
+      RAISE EXCEPTION 'entry_unit_not_found:%', p_finished_good_id USING ERRCODE = '23503';
+    END IF;
+  END IF;
+
+  IF v_entry_unit_id IS NULL THEN
+    RAISE EXCEPTION 'entry_unit_not_found:%', p_finished_good_id USING ERRCODE = '23503';
+  END IF;
+
+  v_target_branch_id := COALESCE(p_target_branch_id, p_branch_id);
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.branches b
+    WHERE b.id = v_target_branch_id
+      AND b.tenant_id = v_tenant
+      AND b.is_active = TRUE
+  ) THEN
+    RAISE EXCEPTION 'target_branch_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_source_location_id IS NULL THEN
+    SELECT il.id INTO v_source_location_id
+    FROM public.branches b
+    JOIN public.inventory_locations il
+      ON il.tenant_id = b.tenant_id
+     AND il.branch_id = b.id
+     AND il.is_active = TRUE
+    WHERE b.tenant_id = v_tenant
+      AND b.id = p_branch_id
+    ORDER BY
+      CASE
+        WHEN b.branch_kind = 'branch' AND il.location_kind = 'kitchen' THEN 0
+        WHEN b.branch_kind = 'central_kitchen' AND il.location_kind = 'production_storage' THEN 0
+        WHEN il.is_default_issue = TRUE THEN 1
+        WHEN il.is_default_receive = TRUE THEN 2
+        ELSE 3
+      END,
+      il.is_default_consumption DESC,
+      il.sort_order NULLS LAST,
+      il.id
+    LIMIT 1;
+  ELSE
+    SELECT il.id INTO v_source_location_id
+    FROM public.inventory_locations il
+    WHERE il.id = v_source_location_id
+      AND il.tenant_id = v_tenant
+      AND il.branch_id = p_branch_id
+      AND il.is_active = TRUE
+    LIMIT 1;
+  END IF;
+
+  IF v_source_location_id IS NULL THEN
+    RAISE EXCEPTION 'production_source_location_missing:%', p_branch_id USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_target_location_id IS NULL THEN
+    SELECT il.id INTO v_target_location_id
+    FROM public.inventory_locations il
+    WHERE il.tenant_id = v_tenant
+      AND il.branch_id = v_target_branch_id
+      AND il.is_active = TRUE
+    ORDER BY
+      il.is_default_receive DESC,
+      il.sort_order NULLS LAST,
+      il.id
+    LIMIT 1;
+  ELSE
+    SELECT il.id INTO v_target_location_id
+    FROM public.inventory_locations il
+    WHERE il.id = v_target_location_id
+      AND il.tenant_id = v_tenant
+      AND il.branch_id = v_target_branch_id
+      AND il.is_active = TRUE
+    LIMIT 1;
+  END IF;
+
+  IF v_target_location_id IS NULL THEN
+    RAISE EXCEPTION 'production_target_location_missing:%', v_target_branch_id USING ERRCODE = 'P0002';
+  END IF;
+
+  v_number := 'LSX' || to_char(now() AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYMMDD') || '-' ||
+    lpad((COALESCE((
+      SELECT count(*) + 1
+      FROM public.production_runs
+      WHERE tenant_id = v_tenant
+        AND (created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date = (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
+    ), 1))::text, 3, '0');
+
+  INSERT INTO public.production_runs (
+    tenant_id,
+    production_number,
+    branch_id,
+    source_location_id,
+    target_branch_id,
+    target_location_id,
+    finished_good_id,
+    planned_quantity,
+    entry_unit_id,
+    notes,
+    created_by,
+    status,
+    ingredients_override
+  ) VALUES (
+    v_tenant,
+    v_number,
+    p_branch_id,
+    v_source_location_id,
+    v_target_branch_id,
+    v_target_location_id,
+    p_finished_good_id,
+    p_planned_quantity,
+    v_entry_unit_id,
+    p_notes,
+    v_uid,
+    'draft',
+    p_ingredients_override
+  )
+  RETURNING id INTO v_new_id;
+
+  RETURN jsonb_build_object('production_run_id', v_new_id, 'production_number', v_number);
+END;
+$$;
+
+
+--
 -- Name: create_purchase_order_with_lines(bigint, bigint, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8690,6 +10769,30 @@ BEGIN
     RAISE EXCEPTION 'invalid_supplier' USING ERRCODE = 'P0002';
   END IF;
 
+  IF EXISTS (
+    SELECT 1
+    FROM jsonb_to_recordset(p_lines) AS x(
+      ingredient_id bigint,
+      quantity numeric,
+      entry_unit_id bigint,
+      unit_price_est numeric
+    )
+    WHERE x.ingredient_id IS NULL
+       OR x.quantity IS NULL
+       OR x.quantity <= 0
+       OR x.entry_unit_id IS NULL
+       OR NOT EXISTS (
+         SELECT 1
+         FROM public.ingredient_units iu
+         WHERE iu.tenant_id = v_tenant_id
+           AND iu.ingredient_id = x.ingredient_id
+           AND iu.unit_id = x.entry_unit_id
+           AND iu.is_active = true
+       )
+  ) THEN
+    RAISE EXCEPTION 'invalid_po_lines' USING ERRCODE = '22023';
+  END IF;
+
   v_display := public.next_po_display_id(v_tenant_id);
 
   INSERT INTO public.purchase_orders (
@@ -8700,14 +10803,13 @@ BEGIN
   ) RETURNING id INTO v_po_id;
 
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, unit, entry_unit_id, unit_price_est, line_total
+    tenant_id, po_id, ingredient_id, quantity, entry_unit_id, unit_price_est, line_total
   )
   SELECT
     v_tenant_id,
     v_po_id,
     x.ingredient_id,
     x.quantity,
-    public.inventory_entry_unit_code(v_tenant_id, x.ingredient_id, x.entry_unit_id),
     x.entry_unit_id,
     x.unit_price_est,
     CASE WHEN x.unit_price_est IS NULL THEN NULL
@@ -8720,7 +10822,6 @@ BEGIN
   )
   ON CONFLICT (po_id, ingredient_id, tenant_id) DO UPDATE SET
     quantity       = EXCLUDED.quantity,
-    unit           = EXCLUDED.unit,
     entry_unit_id  = EXCLUDED.entry_unit_id,
     unit_price_est = EXCLUDED.unit_price_est,
     line_total     = EXCLUDED.line_total;
@@ -8843,16 +10944,20 @@ CREATE FUNCTION public.create_stock_transfer_draft(p_from_branch_id bigint, p_to
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid          UUID := auth.uid();
-  v_tenant       BIGINT := public.auth_tenant_id();
-  v_role         TEXT := public.auth_role();
-  v_branch_claim BIGINT := public.auth_branch_id();
-  v_transfer_id  BIGINT;
-  v_is_intra     BOOLEAN := (p_from_branch_id = p_to_branch_id);
-  v_from_kind    TEXT;
-  v_to_kind      TEXT;
-  v_from_loc     RECORD;
-  v_to_loc       RECORD;
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_role text := public.auth_role();
+  v_branch_claim bigint := public.auth_branch_id();
+  v_transfer_id bigint;
+  v_is_intra boolean := p_from_branch_id = p_to_branch_id;
+  v_from_kind text;
+  v_to_kind text;
+  v_from_loc record;
+  v_to_loc record;
+  v_line jsonb;
+  v_ingredient_id bigint;
+  v_entry_unit_id bigint;
+  v_entry_qty numeric(15,3);
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -8917,18 +11022,8 @@ BEGIN
       RAISE EXCEPTION 'intra_branch_same_location' USING ERRCODE = '22023';
     END IF;
 
-    IF v_from_loc.location_kind <> 'warehouse' THEN
-      RAISE EXCEPTION 'intra_branch_source_must_be_warehouse' USING ERRCODE = '23514';
-    END IF;
-
-    IF v_to_loc.location_kind <> 'kitchen' THEN
-      RAISE EXCEPTION 'intra_branch_target_must_be_kitchen' USING ERRCODE = '23514';
-    END IF;
-
-    IF v_to_loc.is_default_consumption IS DISTINCT FROM TRUE THEN
-      RAISE WARNING 'default_consumption_location_not_marked:branch %, location %',
-        p_to_branch_id,
-        p_to_location_id;
+    IF v_from_loc.location_kind <> 'warehouse' OR v_to_loc.location_kind <> 'kitchen' THEN
+      RAISE EXCEPTION 'intra_branch_location_invalid' USING ERRCODE = '23514';
     END IF;
   ELSE
     IF v_role = 'branch_manager' THEN
@@ -8953,20 +11048,6 @@ BEGIN
   END IF;
 
   IF p_lines IS NULL OR jsonb_typeof(p_lines) <> 'array' THEN
-    RAISE EXCEPTION 'transfer_lines_invalid' USING ERRCODE = '22023';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM jsonb_array_elements(p_lines) AS line(value)
-    LEFT JOIN public.ingredients i
-      ON i.id = (line.value->>'ingredientId')::BIGINT
-     AND i.tenant_id = v_tenant
-    WHERE NOT (line.value ? 'ingredientId')
-       OR NOT (line.value ? 'quantity')
-       OR (line.value->>'quantity')::NUMERIC <= 0
-       OR i.id IS NULL
-  ) THEN
     RAISE EXCEPTION 'transfer_lines_invalid' USING ERRCODE = '22023';
   END IF;
 
@@ -8995,42 +11076,89 @@ BEGIN
   )
   RETURNING id INTO v_transfer_id;
 
-  INSERT INTO public.stock_transfer_items (
-    tenant_id,
-    transfer_id,
-    ingredient_id,
-    quantity,
-    unit,
-    entry_unit_id,
-    unit_cost_at_ship
-  )
-  SELECT
-    v_tenant,
-    v_transfer_id,
-    (line.value->>'ingredientId')::BIGINT,
-    (line.value->>'quantity')::NUMERIC(15,3),
-    public.inventory_entry_unit_code(
+  FOR v_line IN SELECT value FROM jsonb_array_elements(p_lines) AS line(value)
+  LOOP
+    v_ingredient_id := NULLIF(COALESCE(v_line->>'ingredientId', v_line->>'ingredient_id'), '')::bigint;
+    v_entry_qty := NULLIF(v_line->>'quantity', '')::numeric(15,3);
+    v_entry_unit_id := NULLIF(COALESCE(v_line->>'entryUnitId', v_line->>'entry_unit_id'), '')::bigint;
+
+    IF v_ingredient_id IS NULL OR v_entry_qty IS NULL OR v_entry_qty <= 0 THEN
+      RAISE EXCEPTION 'transfer_lines_invalid' USING ERRCODE = '22023';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.ingredients i
+      WHERE i.id = v_ingredient_id
+        AND i.tenant_id = v_tenant
+        AND i.is_active = TRUE
+    ) THEN
+      RAISE EXCEPTION 'transfer_ingredient_invalid:%', v_ingredient_id USING ERRCODE = '23514';
+    END IF;
+
+    IF v_entry_unit_id IS NULL THEN
+      SELECT iu.unit_id INTO v_entry_unit_id
+      FROM public.ingredient_units iu
+      JOIN public.units u
+        ON u.id = iu.unit_id
+       AND u.tenant_id = iu.tenant_id
+       AND u.is_active = TRUE
+      WHERE iu.tenant_id = v_tenant
+        AND iu.ingredient_id = v_ingredient_id
+        AND iu.is_base = TRUE
+        AND iu.is_active = TRUE
+      ORDER BY iu.sort_order ASC, iu.id ASC
+      LIMIT 1;
+    ELSE
+      IF NOT EXISTS (
+        SELECT 1
+        FROM public.ingredient_units iu
+        JOIN public.units u
+          ON u.id = iu.unit_id
+         AND u.tenant_id = iu.tenant_id
+         AND u.is_active = TRUE
+        WHERE iu.tenant_id = v_tenant
+          AND iu.ingredient_id = v_ingredient_id
+          AND iu.unit_id = v_entry_unit_id
+          AND iu.is_active = TRUE
+      ) THEN
+        RAISE EXCEPTION 'entry_unit_not_found:%', v_ingredient_id USING ERRCODE = '23503';
+      END IF;
+    END IF;
+
+    IF v_entry_unit_id IS NULL THEN
+      RAISE EXCEPTION 'entry_unit_not_found:%', v_ingredient_id USING ERRCODE = '23503';
+    END IF;
+
+    INSERT INTO public.stock_transfer_items (
+      tenant_id,
+      transfer_id,
+      ingredient_id,
+      quantity,
+      entry_unit_id,
+      unit_cost_at_ship
+    ) VALUES (
       v_tenant,
-      (line.value->>'ingredientId')::BIGINT,
-      NULLIF(line.value->>'entryUnitId', '')::BIGINT
-    ),
-    NULLIF(line.value->>'entryUnitId', '')::BIGINT,
-    (
-      SELECT sl.avg_unit_cost
-      FROM public.stock_levels sl
-      WHERE sl.tenant_id = v_tenant
-        AND sl.branch_id = p_from_branch_id
-        AND sl.location_id = p_from_location_id
-        AND sl.ingredient_id = (line.value->>'ingredientId')::BIGINT
-      LIMIT 1
+      v_transfer_id,
+      v_ingredient_id,
+      v_entry_qty,
+      v_entry_unit_id,
+      (
+        SELECT sl.avg_unit_cost
+        FROM public.stock_levels sl
+        WHERE sl.tenant_id = v_tenant
+          AND sl.branch_id = p_from_branch_id
+          AND sl.location_id = p_from_location_id
+          AND sl.ingredient_id = v_ingredient_id
+        LIMIT 1
+      )
     )
-  FROM jsonb_array_elements(p_lines) AS line(value)
-  ON CONFLICT (transfer_id, ingredient_id, tenant_id)
-  DO UPDATE SET
-    quantity = EXCLUDED.quantity,
-    unit = EXCLUDED.unit,
-    entry_unit_id = EXCLUDED.entry_unit_id,
-    unit_cost_at_ship = EXCLUDED.unit_cost_at_ship;
+    ON CONFLICT (transfer_id, ingredient_id, tenant_id)
+    DO UPDATE SET
+      quantity = EXCLUDED.quantity,
+      entry_unit_id = EXCLUDED.entry_unit_id,
+      unit_cost_at_ship = EXCLUDED.unit_cost_at_ship;
+  END LOOP;
 
   RETURN jsonb_build_object('id', v_transfer_id, 'status', 'draft');
 END;
@@ -9048,7 +11176,9 @@ CREATE FUNCTION public.create_stocktake_session(p_branch_id bigint, p_location_i
 DECLARE
   v_uid UUID := auth.uid();
   v_tenant BIGINT := public.auth_tenant_id();
-  v_session_id BIGINT; v_loc_id BIGINT;
+  v_session_id BIGINT;
+  v_loc_id BIGINT;
+  v_branch_kind TEXT;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000'; END IF;
   IF v_tenant IS NULL THEN RAISE EXCEPTION 'tenant_not_found' USING ERRCODE = '22023'; END IF;
@@ -9056,26 +11186,104 @@ BEGIN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
+  SELECT branch_kind INTO v_branch_kind
+  FROM public.branches
+  WHERE id = p_branch_id AND tenant_id = v_tenant;
+  IF NOT FOUND THEN RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002'; END IF;
+
   IF p_location_id IS NOT NULL THEN
-    SELECT il.id INTO v_loc_id FROM public.inventory_locations il
-    WHERE il.id = p_location_id AND il.branch_id = p_branch_id AND il.tenant_id = v_tenant AND il.is_active = TRUE;
+    SELECT il.id INTO v_loc_id
+    FROM public.inventory_locations il
+    WHERE il.id = p_location_id
+      AND il.branch_id = p_branch_id
+      AND il.tenant_id = v_tenant
+      AND il.is_active = TRUE;
     IF NOT FOUND THEN RAISE EXCEPTION 'location_not_found_or_inactive' USING ERRCODE = 'P0002'; END IF;
   ELSE
-    SELECT il.id INTO v_loc_id FROM public.inventory_locations il
-    WHERE il.branch_id = p_branch_id AND il.tenant_id = v_tenant
-      AND il.is_default_receive = TRUE AND il.is_active = TRUE LIMIT 1;
+    IF v_branch_kind = 'branch' THEN
+      SELECT il.id INTO v_loc_id
+      FROM public.inventory_locations il
+      WHERE il.branch_id = p_branch_id
+        AND il.tenant_id = v_tenant
+        AND il.location_kind = 'warehouse'
+        AND il.is_active = TRUE
+      ORDER BY il.is_default_consumption DESC, il.sort_order NULLS LAST, il.id
+      LIMIT 1;
+    ELSE
+      SELECT il.id INTO v_loc_id
+      FROM public.inventory_locations il
+      WHERE il.branch_id = p_branch_id
+        AND il.tenant_id = v_tenant
+        AND il.is_default_receive = TRUE
+        AND il.is_active = TRUE
+      ORDER BY il.sort_order NULLS LAST, il.id
+      LIMIT 1;
+    END IF;
+  END IF;
+
+  IF v_loc_id IS NULL THEN
+    RAISE EXCEPTION 'location_not_found_or_inactive' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant
+      AND sl.branch_id = p_branch_id
+      AND sl.location_id = v_loc_id
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.ingredient_units iu
+        JOIN public.units u
+          ON u.id = iu.unit_id
+         AND u.tenant_id = iu.tenant_id
+         AND u.is_active = TRUE
+        WHERE iu.tenant_id = v_tenant
+          AND iu.ingredient_id = sl.ingredient_id
+          AND iu.is_base = TRUE
+          AND iu.is_active = TRUE
+      )
+  ) THEN
+    RAISE EXCEPTION 'stocktake_entry_unit_missing' USING ERRCODE = '23503';
   END IF;
 
   INSERT INTO public.stocktake_sessions (tenant_id, branch_id, location_id, created_by)
-  VALUES (v_tenant, p_branch_id, v_loc_id, v_uid) RETURNING id INTO v_session_id;
+  VALUES (v_tenant, p_branch_id, v_loc_id, v_uid)
+  RETURNING id INTO v_session_id;
 
-  INSERT INTO public.stocktake_lines (tenant_id, session_id, ingredient_id, system_quantity)
-  SELECT v_tenant, v_session_id, sl.ingredient_id, sl.current_quantity
-  FROM public.stock_levels sl WHERE sl.tenant_id = v_tenant AND sl.branch_id = p_branch_id;
+  INSERT INTO public.stocktake_lines (
+    tenant_id, session_id, ingredient_id, system_quantity, entry_unit_id
+  )
+  SELECT v_tenant, v_session_id, sl.ingredient_id, sl.current_quantity, bu.unit_id
+  FROM public.stock_levels sl
+  JOIN LATERAL (
+    SELECT iu.unit_id
+    FROM public.ingredient_units iu
+    JOIN public.units u
+      ON u.id = iu.unit_id
+     AND u.tenant_id = iu.tenant_id
+     AND u.is_active = TRUE
+    WHERE iu.tenant_id = v_tenant
+      AND iu.ingredient_id = sl.ingredient_id
+      AND iu.is_base = TRUE
+      AND iu.is_active = TRUE
+    ORDER BY iu.sort_order ASC, iu.id ASC
+    LIMIT 1
+  ) bu ON TRUE
+  WHERE sl.tenant_id = v_tenant
+    AND sl.branch_id = p_branch_id
+    AND sl.location_id = v_loc_id;
 
   RETURN jsonb_build_object('id', v_session_id);
 END;
 $$;
+
+
+--
+-- Name: FUNCTION create_stocktake_session(p_branch_id bigint, p_location_id bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_stocktake_session(p_branch_id bigint, p_location_id bigint) IS 'Create a stocktake session for a branch. If p_location_id is NULL, defaults to kitchen for branch sites, and default receive warehouse for others. Prevents duplicate stocktake lines by filtering by location_id.';
 
 
 --
@@ -9087,38 +11295,105 @@ CREATE FUNCTION public.create_supplier_payment(p_tenant_id bigint, p_supplier_in
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid UUID := auth.uid(); v_invoice RECORD; v_branch_id BIGINT;
-  v_payment_id BIGINT; v_new_paid NUMERIC(15,2); v_new_status TEXT;
+  v_uid UUID := auth.uid();
+  v_invoice RECORD;
+  v_branch_id BIGINT;
+  v_payment_id BIGINT;
+  v_new_paid NUMERIC(15,2);
+  v_new_status TEXT;
 BEGIN
-  IF v_uid IS NULL THEN RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000'; END IF;
-  IF NOT public.has_permission_any('finance:ap_pay') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
-  IF p_tenant_id <> public.auth_tenant_id() THEN RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501'; END IF;
-  IF p_payment_method NOT IN ('cash','bank_transfer') THEN RAISE EXCEPTION 'invalid_payment_method' USING ERRCODE = '22023'; END IF;
-
-  SELECT si.* INTO v_invoice FROM public.supplier_invoices si
-   WHERE si.id = p_supplier_invoice_id AND si.tenant_id = p_tenant_id FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'invoice_not_found' USING ERRCODE = 'P0002'; END IF;
-  IF v_invoice.payment_status = 'paid' THEN RAISE EXCEPTION 'invoice_already_paid' USING ERRCODE = 'P0001'; END IF;
-
-  v_new_paid := COALESCE(v_invoice.paid_amount, 0) + p_amount;
-  IF v_new_paid > v_invoice.total_amount THEN RAISE EXCEPTION 'payment_exceeds_invoice_total' USING ERRCODE = '22023'; END IF;
-  v_new_status := CASE WHEN v_new_paid >= v_invoice.total_amount THEN 'paid' ELSE 'partial' END;
-
-  SELECT branch_id INTO v_branch_id FROM public.goods_received_notes WHERE id = v_invoice.grn_id;
-  IF v_branch_id IS NULL THEN
-    SELECT branch_id INTO v_branch_id FROM public.purchase_orders WHERE id = v_invoice.po_id;
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
 
-  INSERT INTO public.supplier_payments (tenant_id, supplier_invoice_id, payment_method, amount, payment_date, reference_note, created_by)
-  VALUES (p_tenant_id, p_supplier_invoice_id, p_payment_method, p_amount, now(), p_reference_note, v_uid)
+  IF NOT public.has_permission_any('finance:ap_pay') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_tenant_id <> public.auth_tenant_id() THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_amount <= 0 THEN
+    RAISE EXCEPTION 'invalid_payment_amount' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_payment_method NOT IN ('cash','bank_transfer') THEN
+    RAISE EXCEPTION 'invalid_payment_method' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT si.* INTO v_invoice
+  FROM public.supplier_invoices si
+  WHERE si.id = p_supplier_invoice_id
+    AND si.tenant_id = p_tenant_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'invoice_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_invoice.payment_status = 'paid' THEN
+    RAISE EXCEPTION 'invoice_already_paid' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF v_invoice.grn_id IS NULL THEN
+    RAISE EXCEPTION 'invoice_missing_grn_for_payment' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_invoice.matching_status <> 'matched' THEN
+    RAISE EXCEPTION 'invoice_not_matched_for_payment' USING ERRCODE = '22023';
+  END IF;
+
+  v_new_paid := COALESCE(v_invoice.paid_amount, 0) + p_amount;
+  IF v_new_paid > v_invoice.total_amount THEN
+    RAISE EXCEPTION 'payment_exceeds_invoice_total' USING ERRCODE = '22023';
+  END IF;
+
+  v_new_status := CASE
+    WHEN v_new_paid >= v_invoice.total_amount THEN 'paid'
+    ELSE 'partial'
+  END;
+
+  SELECT branch_id INTO v_branch_id
+  FROM public.goods_received_notes
+  WHERE id = v_invoice.grn_id;
+
+  IF v_branch_id IS NULL THEN
+    SELECT branch_id INTO v_branch_id
+    FROM public.purchase_orders
+    WHERE id = v_invoice.po_id;
+  END IF;
+
+  INSERT INTO public.supplier_payments (
+    tenant_id,
+    supplier_invoice_id,
+    payment_method,
+    amount,
+    payment_date,
+    reference_note,
+    created_by
+  ) VALUES (
+    p_tenant_id,
+    p_supplier_invoice_id,
+    p_payment_method,
+    p_amount,
+    now(),
+    p_reference_note,
+    v_uid
+  )
   RETURNING id INTO v_payment_id;
 
   UPDATE public.supplier_invoices
-     SET payment_status = v_new_status, paid_amount = v_new_paid,
-         paid_at = CASE WHEN v_new_status = 'paid' THEN now() ELSE paid_at END, updated_at = now()
-   WHERE id = p_supplier_invoice_id;
+  SET payment_status = v_new_status,
+      paid_amount = v_new_paid,
+      paid_at = CASE WHEN v_new_status = 'paid' THEN now() ELSE paid_at END,
+      updated_at = now()
+  WHERE id = p_supplier_invoice_id;
 
-  RETURN jsonb_build_object('payment_id', v_payment_id, 'payment_status', v_new_status);
+  RETURN jsonb_build_object(
+    'payment_id', v_payment_id,
+    'payment_status', v_new_status
+  );
 END;
 $$;
 
@@ -9132,12 +11407,12 @@ CREATE FUNCTION public.create_supplier_return_from_grn(p_grn_id bigint, p_resolu
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid     UUID   := auth.uid();
-  v_tenant  BIGINT := public.auth_tenant_id();
-  v_grn     RECORD;
-  v_return_id BIGINT;
-  v_ret_num   TEXT;
-  v_total     NUMERIC(15,2) := 0;
+  v_uid        UUID   := auth.uid();
+  v_tenant     BIGINT := public.auth_tenant_id();
+  v_grn        RECORD;
+  v_return_id  BIGINT;
+  v_ret_num    TEXT;
+  v_total      NUMERIC(15,2) := 0;
   v_lines_inserted INT := 0;
 BEGIN
   IF v_uid IS NULL THEN
@@ -9147,6 +11422,7 @@ BEGIN
   IF p_resolution NOT IN ('replacement','credit_note','cash_refund') THEN
     RAISE EXCEPTION 'invalid_resolution' USING ERRCODE = '22023';
   END IF;
+
   IF p_reason NOT IN ('damaged','wrong_item','expired','quality_fail','short_delivery_credit','other') THEN
     RAISE EXCEPTION 'invalid_reason' USING ERRCODE = '22023';
   END IF;
@@ -9154,12 +11430,23 @@ BEGIN
   SELECT g.* INTO v_grn
   FROM public.goods_received_notes g
   WHERE g.id = p_grn_id AND g.tenant_id = v_tenant;
+
   IF NOT FOUND THEN
     RAISE EXCEPTION 'grn_not_found' USING ERRCODE = 'P0002';
   END IF;
 
   IF NOT public.has_permission(v_grn.branch_id, 'supplier_return:create') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.supplier_returns sr
+    WHERE sr.tenant_id = v_tenant
+      AND sr.grn_id = p_grn_id
+      AND sr.status <> 'cancelled'
+  ) THEN
+    RAISE EXCEPTION 'supplier_return_duplicate_grn' USING ERRCODE = '23505';
   END IF;
 
   IF NOT EXISTS (
@@ -9181,11 +11468,10 @@ BEGIN
     'grn_reject', p_reason, p_resolution, 'draft', p_notes, 0, v_uid
   ) RETURNING id INTO v_return_id;
 
-  -- Copy rejected lines (rejected_quantity if set, else full received_quantity when status='rejected')
   WITH rej AS (
     INSERT INTO public.supplier_return_items (
-      tenant_id, return_id, ingredient_id, quantity, unit, unit_cost, total_cost,
-      grn_item_id, reason_detail, photo_url
+      tenant_id, return_id, ingredient_id, quantity, unit_cost, total_cost,
+      grn_item_id, reason_detail, photo_url, entry_unit_id
     )
     SELECT
       v_tenant,
@@ -9196,7 +11482,6 @@ BEGIN
           THEN gi.received_quantity
         ELSE gi.rejected_quantity
       END,
-      gi.unit,
       gi.unit_cost,
       ROUND(
         CASE
@@ -9207,7 +11492,18 @@ BEGIN
       ),
       gi.id,
       gi.rejection_reason,
-      gi.rejected_photo_url
+      gi.rejected_photo_url,
+      COALESCE(gi.entry_unit_id, (
+        SELECT iu.unit_id
+        FROM public.ingredient_units iu
+        JOIN public.units u ON u.id = iu.unit_id AND u.tenant_id = iu.tenant_id AND u.is_active = TRUE
+        WHERE iu.tenant_id = v_tenant
+          AND iu.ingredient_id = gi.ingredient_id
+          AND iu.is_base = TRUE
+          AND iu.is_active = TRUE
+        ORDER BY iu.sort_order ASC, iu.id ASC
+        LIMIT 1
+      ))
     FROM public.grn_items gi
     WHERE gi.grn_id = p_grn_id
       AND gi.tenant_id = v_tenant
@@ -9247,7 +11543,7 @@ DECLARE
   v_ing_id    BIGINT;
   v_qty       NUMERIC(15,3);
   v_unit_cost NUMERIC(15,2);
-  v_unit      TEXT;
+  v_entry_unit_id BIGINT;
   v_lines_inserted INT := 0;
 BEGIN
   IF v_uid IS NULL THEN
@@ -9292,20 +11588,27 @@ BEGIN
       RAISE EXCEPTION 'invalid_line' USING ERRCODE = '22023';
     END IF;
 
-    SELECT i.unit INTO v_unit
-    FROM public.ingredients i
-    WHERE i.id = v_ing_id AND i.tenant_id = v_tenant;
+    SELECT iu.unit_id INTO v_entry_unit_id
+    FROM public.ingredient_units iu
+    JOIN public.units u ON u.id = iu.unit_id AND u.tenant_id = iu.tenant_id AND u.is_active = TRUE
+    WHERE iu.tenant_id = v_tenant
+      AND iu.ingredient_id = v_ing_id
+      AND iu.is_base = TRUE
+      AND iu.is_active = TRUE
+    ORDER BY iu.sort_order ASC, iu.id ASC
+    LIMIT 1;
     IF NOT FOUND THEN
       RAISE EXCEPTION 'ingredient_not_found' USING ERRCODE = 'P0002';
     END IF;
 
     INSERT INTO public.supplier_return_items (
-      tenant_id, return_id, ingredient_id, quantity, unit, unit_cost, total_cost,
-      reason_detail, photo_url
+      tenant_id, return_id, ingredient_id, quantity, unit_cost, total_cost,
+      reason_detail, photo_url, entry_unit_id
     ) VALUES (
-      v_tenant, v_return_id, v_ing_id, v_qty, v_unit, v_unit_cost,
+      v_tenant, v_return_id, v_ing_id, v_qty, v_unit_cost,
       ROUND(v_qty * v_unit_cost, 2),
-      v_line->>'reason_detail', v_line->>'photo_url'
+      v_line->>'reason_detail', v_line->>'photo_url',
+      v_entry_unit_id
     );
     v_total := v_total + ROUND(v_qty * v_unit_cost, 2);
     v_lines_inserted := v_lines_inserted + 1;
@@ -9334,6 +11637,7 @@ CREATE FUNCTION public.create_waste_entry(p_branch_id bigint, p_location_id bigi
 DECLARE
   v_uid UUID := auth.uid(); v_tenant BIGINT; v_location RECORD; v_shift_key TEXT; v_issue_id BIGINT;
   v_issue_no TEXT; v_item JSONB; v_photos TEXT[]; v_created INT := 0; v_needs_appr BOOLEAN := false;
+  v_entry_unit_id BIGINT;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000'; END IF;
   IF NOT public.has_permission(p_branch_id, 'inventory:writeoff') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
@@ -9354,22 +11658,21 @@ BEGIN
     now(), v_uid, p_location_id, 'not_required', v_shift_key, COALESCE(p_source_type, 'manual'), p_source_ref)
   RETURNING id INTO v_issue_id;
   FOR v_item IN SELECT value FROM jsonb_array_elements(p_items) LOOP
+    v_entry_unit_id := NULLIF(v_item->>'entry_unit_id','')::BIGINT;
+    IF v_entry_unit_id IS NULL THEN
+      RAISE EXCEPTION 'entry_unit_required' USING ERRCODE = '22023';
+    END IF;
     v_photos := CASE WHEN v_item ? 'photo_urls'
                      THEN ARRAY(SELECT jsonb_array_elements_text(v_item->'photo_urls'))
                      ELSE ARRAY[]::TEXT[] END;
-    INSERT INTO public.stock_issue_items (tenant_id, issue_id, ingredient_id, quantity, unit, entry_unit_id, unit_cost,
+    INSERT INTO public.stock_issue_items (tenant_id, issue_id, ingredient_id, quantity, entry_unit_id, unit_cost,
       reason_code, photo_urls, reason)
     VALUES (
       v_tenant,
       v_issue_id,
       (v_item->>'ingredient_id')::BIGINT,
       (v_item->>'quantity')::NUMERIC,
-      public.inventory_entry_unit_code(
-        v_tenant,
-        (v_item->>'ingredient_id')::BIGINT,
-        NULLIF(v_item->>'entry_unit_id','')::BIGINT
-      ),
-      NULLIF(v_item->>'entry_unit_id','')::BIGINT,
+      v_entry_unit_id,
       NULLIF(v_item->>'unit_cost','')::NUMERIC,
       v_item->>'reason_code',
       v_photos,
@@ -9934,63 +12237,34 @@ CREATE FUNCTION public.employee_request_clock_out(p_tenant_id bigint, p_employee
     AS $$
 DECLARE
   v_record public.attendance_records%ROWTYPE;
-  v_remaining integer;
-  v_count_remaining integer;
   v_requested_at timestamptz;
   v_employee_name text;
   v_requester_role text;
   v_target_roles text[];
+  v_now_local timestamp := now() AT TIME ZONE 'Asia/Ho_Chi_Minh';
+  v_calendar_date date := v_now_local::date;
 BEGIN
-  SELECT *
+  SELECT ar.*
   INTO v_record
   FROM public.attendance_records ar
+  JOIN public.employees e
+    ON e.id = ar.employee_id
+   AND e.tenant_id = ar.tenant_id
+  JOIN public.profiles p
+    ON p.id = e.profile_id
+   AND p.tenant_id = e.tenant_id
   WHERE ar.id = p_attendance_id
     AND ar.tenant_id = p_tenant_id
     AND ar.employee_id = p_employee_id
+    AND ar.branch_id = p.branch_id
+    AND ar.date BETWEEN v_calendar_date - 1 AND v_calendar_date
     AND ar.check_out IS NULL
-  FOR UPDATE;
+    AND COALESCE(e.is_active, true) = true
+    AND COALESCE(p.is_active, true) = true
+  FOR UPDATE OF ar;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'open_attendance_not_found' USING ERRCODE = 'P0002';
-  END IF;
-
-  SELECT count(*)::integer
-  INTO v_remaining
-  FROM public.attendance_checklist_items i
-  WHERE i.tenant_id = p_tenant_id
-    AND i.attendance_record_id = p_attendance_id
-    AND i.is_required = true
-    AND i.task_kind <> 'inventory_count'
-    AND i.is_done = false;
-
-  IF v_remaining > 0 THEN
-    RAISE EXCEPTION 'checklist_incomplete' USING ERRCODE = '23514';
-  END IF;
-
-  SELECT count(*)::integer
-  INTO v_count_remaining
-  FROM (
-    SELECT a.location_id
-    FROM public.inventory_count_assignments a
-    WHERE a.tenant_id = p_tenant_id
-      AND a.branch_id = v_record.branch_id
-      AND a.employee_id = p_employee_id
-      AND a.is_active
-    GROUP BY a.location_id
-  ) assigned
-  WHERE NOT EXISTS (
-    SELECT 1
-    FROM public.inventory_count_slips s
-    WHERE s.tenant_id = p_tenant_id
-      AND s.branch_id = v_record.branch_id
-      AND s.employee_id = p_employee_id
-      AND s.location_id = assigned.location_id
-      AND s.count_date = v_record.date
-      AND s.status IN ('submitted', 'approved')
-  );
-
-  IF v_count_remaining > 0 THEN
-    RAISE EXCEPTION 'checklist_incomplete' USING ERRCODE = '23514';
   END IF;
 
   IF v_record.checkout_requested_at IS NOT NULL THEN
@@ -10001,7 +12275,7 @@ BEGIN
 
   SELECT
     p.full_name,
-    COALESCE(private.staff_role_from_position_code(po.code), 'office')
+    COALESCE(private.staff_role_from_position_code(po.code), 'unassigned')
   INTO v_employee_name, v_requester_role
   FROM public.employees e
   LEFT JOIN public.profiles p
@@ -10013,10 +12287,10 @@ BEGIN
   WHERE e.id = p_employee_id
     AND e.tenant_id = p_tenant_id;
 
-  v_requester_role := COALESCE(v_requester_role, 'office');
+  v_requester_role := COALESCE(v_requester_role, 'unassigned');
   v_target_roles := CASE
     WHEN v_requester_role = 'branch_manager' THEN ARRAY['owner']::text[]
-    WHEN v_requester_role IN ('cashier', 'waiter', 'chef') THEN ARRAY['branch_manager']::text[]
+    WHEN v_requester_role IN ('cashier', 'chef', 'branch_staff') THEN ARRAY['branch_manager']::text[]
     ELSE ARRAY['owner']::text[]
   END;
 
@@ -10030,6 +12304,8 @@ BEGIN
   WHERE id = p_attendance_id
     AND tenant_id = p_tenant_id
     AND employee_id = p_employee_id
+    AND branch_id = v_record.branch_id
+    AND date = v_record.date
     AND check_out IS NULL;
 
   INSERT INTO public.notifications (
@@ -10255,9 +12531,9 @@ BEGIN
     ingredient_id,
     default_item_id,
     quantity,
-    unit,
     note,
-    sort_order
+    sort_order,
+    entry_unit_id
   )
   SELECT
     p_tenant_id,
@@ -10265,9 +12541,9 @@ BEGIN
     src.ingredient_id,
     src.default_item_id,
     src.quantity,
-    i.purchase_unit,
     NULLIF(btrim(COALESCE(src.note, '')), ''),
-    src.sort_order
+    src.sort_order,
+    bu.unit_id
   FROM (
     SELECT
       row_number() OVER ()::integer AS sort_order,
@@ -10285,7 +12561,21 @@ BEGIN
   JOIN public.ingredients i
     ON i.id = src.ingredient_id
    AND i.tenant_id = p_tenant_id
-   AND i.is_active = true;
+   AND i.is_active = true
+  JOIN LATERAL (
+    SELECT iu.unit_id
+    FROM public.ingredient_units iu
+    JOIN public.units u
+      ON u.id = iu.unit_id
+     AND u.tenant_id = iu.tenant_id
+     AND u.is_active = TRUE
+    WHERE iu.tenant_id = p_tenant_id
+      AND iu.ingredient_id = src.ingredient_id
+      AND iu.is_base = TRUE
+      AND iu.is_active = TRUE
+    ORDER BY iu.sort_order ASC, iu.id ASC
+    LIMIT 1
+  ) bu ON TRUE;
 
   UPDATE public.attendance_checklist_items
   SET is_done = true,
@@ -10396,6 +12686,25 @@ BEGIN
     FOR UPDATE;
 
     IF NOT FOUND THEN
+      INSERT INTO public.branch_menu_item_daily_limits (
+        tenant_id,
+        branch_id,
+        menu_item_id,
+        limit_date,
+        limit_quantity,
+        is_disabled,
+        sold_today
+      ) VALUES (
+        v_tenant_id,
+        v_branch_id,
+        v_target.item_id,
+        v_order_date,
+        NULL,
+        FALSE,
+        v_target.need_qty
+      )
+      ON CONFLICT (branch_id, menu_item_id, limit_date)
+      DO UPDATE SET sold_today = public.branch_menu_item_daily_limits.sold_today + EXCLUDED.sold_today;
       CONTINUE;
     END IF;
 
@@ -10489,7 +12798,7 @@ BEGIN
 
   -- Same location resolution as post_pos_sale_consumption_if_ready so the
   -- gate measures exactly the pool posting deducts from. NULL (no active
-  -- warehouse location) leaves on_hand at 0 below — consistent with
+  -- kitchen location) leaves on_hand at 0 below — consistent with
   -- capacity/availability display already showing 0 in that case.
   SELECT il.id
   INTO v_location_id
@@ -10498,7 +12807,7 @@ BEGIN
     AND il.tenant_id = v_tenant_id
     AND il.location_kind = 'warehouse'
     AND il.is_active = TRUE
-  ORDER BY il.is_default_issue DESC, il.sort_order NULLS LAST, il.id
+  ORDER BY il.is_default_consumption DESC, il.sort_order NULLS LAST, il.id
   LIMIT 1;
 
   -- Demand of this inserted row only (main + sides), converted to base units.
@@ -10653,7 +12962,7 @@ $_$;
 -- Name: FUNCTION enforce_branch_stock_availability(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.enforce_branch_stock_availability() IS 'AFTER INSERT on order_items: when branch flag pos_stock_outcome_posting is on, hard-block (P0001 insufficient_stock_ingredient:<id>) if this row''s recipe demand would drive branch warehouse stock negative at the SAME issue location post_pos_sale_consumption_if_ready deducts from (is_default_issue DESC, sort_order, id — NULL location leaves on_hand 0); pending = today''s not-yet-completed/cancelled order lines, main + sides, including this row. No-recipe items AND items with a recipe line missing an active unit conversion contribute nothing (D064 §2 fail-open, mirrors compute_menu_item_stock_capacity). Skip-hatch comtammatu.skip_quota_enforcement. Fires after trg_enforce_branch_menu_daily_limit — D065 §2.';
+COMMENT ON FUNCTION public.enforce_branch_stock_availability() IS 'AFTER INSERT on order_items: when branch flag pos_stock_outcome_posting is on, hard-block (P0001 insufficient_stock_ingredient:<id>) if this row''s recipe demand would drive branch kitchen stock negative at the SAME issue location post_pos_sale_consumption_if_ready deducts from (is_default_issue DESC, sort_order, id — NULL location leaves on_hand 0); pending = today''s not-yet-completed/cancelled order lines, main + sides, including this row. No-recipe items AND items with a recipe line missing an active unit conversion contribute nothing (D064 §2 fail-open, mirrors compute_menu_item_stock_capacity). Skip-hatch comtammatu.skip_quota_enforcement. Fires after trg_enforce_branch_menu_daily_limit — D065 §2. Deducts from kitchen location.';
 
 
 --
@@ -10724,6 +13033,75 @@ $$;
 
 
 --
+-- Name: enforce_production_recipe_entry_unit(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enforce_production_recipe_entry_unit() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  IF NEW.entry_unit_id IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1
+       FROM public.ingredient_units iu
+       JOIN public.units u
+         ON u.id = iu.unit_id
+        AND u.tenant_id = iu.tenant_id
+        AND u.is_active = TRUE
+       WHERE iu.tenant_id = NEW.tenant_id
+         AND iu.ingredient_id = NEW.ingredient_id
+         AND iu.unit_id = NEW.entry_unit_id
+         AND iu.is_active = TRUE
+     ) THEN
+    RAISE EXCEPTION 'production_recipe_unit_mapping_missing:%:%',
+      NEW.ingredient_id,
+      NEW.entry_unit_id
+      USING ERRCODE = '23503';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: enforce_production_run_recipe_units(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enforce_production_run_recipe_units() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.production_recipes pr
+    LEFT JOIN public.ingredient_units iu
+      ON iu.tenant_id = pr.tenant_id
+     AND iu.ingredient_id = pr.ingredient_id
+     AND iu.unit_id = pr.entry_unit_id
+     AND iu.is_active = TRUE
+    LEFT JOIN public.units u
+      ON u.id = iu.unit_id
+     AND u.tenant_id = iu.tenant_id
+     AND u.is_active = TRUE
+    WHERE pr.tenant_id = NEW.tenant_id
+      AND pr.finished_good_id = NEW.finished_good_id
+      AND pr.entry_unit_id IS NOT NULL
+      AND (iu.id IS NULL OR u.id IS NULL)
+  ) THEN
+    RAISE EXCEPTION 'production_recipe_unit_mapping_missing:%',
+      NEW.finished_good_id
+      USING ERRCODE = '23503';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: enforce_stock_transfer_direction(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10735,10 +13113,6 @@ DECLARE
   v_from_kind text;
   v_to_kind text;
 BEGIN
-  IF NEW.from_branch_id = NEW.to_branch_id THEN
-    RAISE EXCEPTION 'intra_branch_transfer_not_supported' USING ERRCODE = '23514';
-  END IF;
-
   SELECT b.branch_kind
   INTO v_from_kind
   FROM public.branches b
@@ -10753,6 +13127,14 @@ BEGIN
 
   IF v_from_kind IS NULL OR v_to_kind IS NULL THEN
     RAISE EXCEPTION 'stock_transfers: invalid branch reference' USING ERRCODE = '23514';
+  END IF;
+
+  IF NEW.from_branch_id = NEW.to_branch_id THEN
+    IF v_from_kind = 'branch' THEN
+      RETURN NEW;
+    END IF;
+    RAISE EXCEPTION 'stock_transfers: same-site transfer only allowed inside branch'
+      USING ERRCODE = '23514';
   END IF;
 
   IF v_from_kind = 'branch' AND v_to_kind = 'branch' THEN
@@ -10785,7 +13167,7 @@ $$;
 -- Name: FUNCTION enforce_stock_transfer_direction(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.enforce_stock_transfer_direction() IS 'Allowed transfers: branch-to-branch, branch-to-central, central-to-branch, central_supply-to-central_kitchen, and central_kitchen-to-central_supply. Reject same-site.';
+COMMENT ON FUNCTION public.enforce_stock_transfer_direction() IS 'Allowed transfers: branch same-site kitchen handoff, branch-to-branch, branch-to-central, central-to-branch, central_supply-to-central_kitchen, and central_kitchen-to-central_supply.';
 
 
 --
@@ -12053,9 +14435,9 @@ CREATE FUNCTION public.ensure_branch_inventory_location_defaults(p_tenant_id big
 DECLARE
   v_branch_kind TEXT;
   v_warehouse_id BIGINT;
-  v_kitchen_id BIGINT;
   v_needs_default_receive BOOLEAN;
   v_needs_default_issue BOOLEAN;
+  v_needs_default_consumption BOOLEAN;
 BEGIN
   SELECT branch_kind
   INTO v_branch_kind
@@ -12095,6 +14477,15 @@ BEGIN
       AND il.is_active = TRUE
   );
 
+  v_needs_default_consumption := NOT EXISTS (
+    SELECT 1
+    FROM public.inventory_locations il
+    WHERE il.tenant_id = p_tenant_id
+      AND il.branch_id = p_branch_id
+      AND il.is_default_consumption = TRUE
+      AND il.is_active = TRUE
+  );
+
   IF v_warehouse_id IS NULL THEN
     INSERT INTO public.inventory_locations (
       tenant_id,
@@ -12115,111 +14506,56 @@ BEGIN
       U&'Kho chi nh\00E1nh',
       'warehouse',
       TRUE,
-      v_needs_default_receive,
-      v_needs_default_issue,
-      FALSE,
+      TRUE,
+      TRUE,
+      TRUE,
       0
     )
     ON CONFLICT (code, branch_id, tenant_id) DO UPDATE
     SET name = EXCLUDED.name,
         location_kind = 'warehouse',
         is_active = TRUE,
-        is_default_receive = EXCLUDED.is_default_receive,
-        is_default_issue = EXCLUDED.is_default_issue,
-        is_default_consumption = FALSE,
+        is_default_receive = TRUE,
+        is_default_issue = TRUE,
+        is_default_consumption = TRUE,
         sort_order = EXCLUDED.sort_order,
         updated_at = now()
     RETURNING id INTO v_warehouse_id;
   ELSE
-    IF v_needs_default_receive THEN
-      UPDATE public.inventory_locations
-      SET is_default_receive = TRUE,
-          updated_at = now()
-      WHERE id = v_warehouse_id;
-    END IF;
-
-    IF v_needs_default_issue THEN
-      UPDATE public.inventory_locations
-      SET is_default_issue = TRUE,
-          updated_at = now()
-      WHERE id = v_warehouse_id;
-    END IF;
+    UPDATE public.inventory_locations
+    SET
+      is_default_receive = CASE
+        WHEN v_needs_default_receive OR is_default_receive THEN TRUE
+        ELSE is_default_receive
+      END,
+      is_default_issue = CASE
+        WHEN v_needs_default_issue OR is_default_issue THEN TRUE
+        ELSE is_default_issue
+      END,
+      is_default_consumption = CASE
+        WHEN v_needs_default_consumption OR is_default_consumption THEN TRUE
+        ELSE is_default_consumption
+      END,
+      updated_at = now()
+    WHERE id = v_warehouse_id;
   END IF;
 
-  SELECT il.id
-  INTO v_kitchen_id
-  FROM public.inventory_locations il
-  WHERE il.tenant_id = p_tenant_id
-    AND il.branch_id = p_branch_id
-    AND il.location_kind = 'kitchen'
-    AND il.is_active = TRUE
-    AND il.is_default_consumption = TRUE
-  ORDER BY il.sort_order NULLS LAST, il.id
-  LIMIT 1;
-
-  IF v_kitchen_id IS NOT NULL THEN
-    RETURN;
-  END IF;
-
+  -- Keep any leftover kitchen rows inactive and non-default.
   UPDATE public.inventory_locations
-  SET is_default_consumption = FALSE,
+  SET is_active = FALSE,
+      is_default_receive = FALSE,
+      is_default_issue = FALSE,
+      is_default_consumption = FALSE,
       updated_at = now()
   WHERE tenant_id = p_tenant_id
     AND branch_id = p_branch_id
-    AND is_active = TRUE
-    AND is_default_consumption = TRUE;
-
-  SELECT il.id
-  INTO v_kitchen_id
-  FROM public.inventory_locations il
-  WHERE il.tenant_id = p_tenant_id
-    AND il.branch_id = p_branch_id
-    AND il.location_kind = 'kitchen'
-    AND il.is_active = TRUE
-  ORDER BY il.sort_order NULLS LAST, il.id
-  LIMIT 1;
-
-  IF v_kitchen_id IS NOT NULL THEN
-    UPDATE public.inventory_locations
-    SET is_default_consumption = TRUE,
-        updated_at = now()
-    WHERE id = v_kitchen_id;
-    RETURN;
-  END IF;
-
-  INSERT INTO public.inventory_locations (
-    tenant_id,
-    branch_id,
-    code,
-    name,
-    location_kind,
-    is_active,
-    is_default_receive,
-    is_default_issue,
-    is_default_consumption,
-    sort_order
-  )
-  VALUES (
-    p_tenant_id,
-    p_branch_id,
-    'kitchen',
-    U&'B\1EBFp',
-    'kitchen',
-    TRUE,
-    FALSE,
-    FALSE,
-    TRUE,
-    10
-  )
-  ON CONFLICT (code, branch_id, tenant_id) DO UPDATE
-  SET name = EXCLUDED.name,
-      location_kind = 'kitchen',
-      is_active = TRUE,
-      is_default_receive = FALSE,
-      is_default_issue = FALSE,
-      is_default_consumption = TRUE,
-      sort_order = EXCLUDED.sort_order,
-      updated_at = now();
+    AND location_kind = 'kitchen'
+    AND (
+      is_active = TRUE
+      OR is_default_receive = TRUE
+      OR is_default_issue = TRUE
+      OR is_default_consumption = TRUE
+    );
 END;
 $$;
 
@@ -12884,15 +15220,15 @@ COMMENT ON FUNCTION public.get_cash_variance_summary(p_branch_id bigint, p_start
 -- Name: get_daily_revenue(bigint, date, date); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_daily_revenue(p_branch_id bigint, p_start_date date, p_end_date date) RETURNS TABLE(date date, branch_id bigint, tenant_id bigint, order_count bigint, total_revenue numeric, total_tax numeric, cash_revenue numeric, vietqr_revenue numeric, momo_revenue numeric)
+CREATE FUNCTION public.get_daily_revenue(p_branch_id bigint, p_start_date date, p_end_date date) RETURNS TABLE(date date, branch_id bigint, tenant_id bigint, order_count bigint, total_revenue numeric, total_tax numeric, cash_revenue numeric, vietqr_revenue numeric)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid       UUID;
-  v_tenant    BIGINT;
+  v_uid UUID;
+  v_tenant BIGINT;
   v_start_utc TIMESTAMPTZ;
-  v_end_utc   TIMESTAMPTZ;
+  v_end_utc TIMESTAMPTZ;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -12907,7 +15243,7 @@ BEGIN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
   END IF;
 
-  IF p_branch_id IS NULL OR NOT public.has_permission(p_branch_id, 'finance:view') THEN
+  IF NOT public.has_permission(p_branch_id, 'finance:view') THEN
     RAISE EXCEPTION 'permission denied: finance:view required'
       USING ERRCODE = '42501';
   END IF;
@@ -12916,20 +15252,22 @@ BEGIN
   v_end_utc := ((p_end_date + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh');
 
   RETURN QUERY
+  WITH paid_payments AS MATERIALIZED (
     SELECT
-      (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS date,
-      o.branch_id,
-      o.tenant_id,
-      COUNT(DISTINCT o.id)::BIGINT AS order_count,
-      COALESCE(SUM(o.total_amount), 0) AS total_revenue,
-      COALESCE(SUM(o.tax_amount), 0) AS total_tax,
-      COALESCE(SUM(o.total_amount) FILTER (WHERE p.method = 'cash'), 0) AS cash_revenue,
-      COALESCE(SUM(o.total_amount) FILTER (WHERE p.method = 'vietqr'), 0) AS vietqr_revenue,
-      COALESCE(SUM(o.total_amount) FILTER (WHERE p.method = 'momo'), 0) AS momo_revenue
+      (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS paid_date,
+      p.id AS payment_id,
+      p.order_id,
+      p.branch_id,
+      p.tenant_id,
+      p.method,
+      p.amount AS payment_amount,
+      p.paid_at,
+      o.tax_amount
     FROM public.payments p
     JOIN public.orders o
       ON o.id = p.order_id
      AND o.tenant_id = p.tenant_id
+     AND o.branch_id = p.branch_id
     WHERE p.tenant_id = v_tenant
       AND p.branch_id = p_branch_id
       AND p.status = 'completed'
@@ -12937,8 +15275,54 @@ BEGIN
       AND p.paid_at < v_end_utc
       AND o.status <> 'cancelled'
       AND o.payment_status = 'paid'
-    GROUP BY 1, o.branch_id, o.tenant_id
-    ORDER BY 1;
+  ),
+  payment_daily AS (
+    SELECT
+      pp.paid_date,
+      pp.branch_id,
+      pp.tenant_id,
+      COALESCE(SUM(pp.payment_amount), 0) AS total_revenue,
+      COALESCE(SUM(pp.payment_amount) FILTER (WHERE pp.method = 'cash'), 0) AS cash_revenue,
+      COALESCE(SUM(pp.payment_amount) FILTER (WHERE pp.method = 'vietqr'), 0) AS vietqr_revenue
+    FROM paid_payments pp
+    GROUP BY pp.paid_date, pp.branch_id, pp.tenant_id
+  ),
+  order_daily AS (
+    SELECT
+      oq.paid_date,
+      oq.branch_id,
+      oq.tenant_id,
+      COUNT(*)::BIGINT AS order_count,
+      COALESCE(SUM(oq.tax_amount), 0) AS total_tax
+    FROM (
+      SELECT DISTINCT ON (pp.paid_date, pp.branch_id, pp.tenant_id, pp.order_id)
+        pp.paid_date,
+        pp.branch_id,
+        pp.tenant_id,
+        pp.order_id,
+        pp.tax_amount,
+        pp.paid_at,
+        pp.payment_id
+      FROM paid_payments pp
+      ORDER BY pp.paid_date, pp.branch_id, pp.tenant_id, pp.order_id, pp.paid_at, pp.payment_id
+    ) oq
+    GROUP BY oq.paid_date, oq.branch_id, oq.tenant_id
+  )
+  SELECT
+    pd.paid_date AS date,
+    pd.branch_id,
+    pd.tenant_id,
+    od.order_count,
+    pd.total_revenue,
+    od.total_tax,
+    pd.cash_revenue,
+    pd.vietqr_revenue
+  FROM payment_daily pd
+  JOIN order_daily od
+    ON od.paid_date = pd.paid_date
+   AND od.branch_id = pd.branch_id
+   AND od.tenant_id = pd.tenant_id
+  ORDER BY pd.paid_date;
 END;
 $$;
 
@@ -12947,7 +15331,7 @@ $$;
 -- Name: FUNCTION get_daily_revenue(p_branch_id bigint, p_start_date date, p_end_date date); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.get_daily_revenue(p_branch_id bigint, p_start_date date, p_end_date date) IS 'Live paid-at revenue by day for one branch. Uses completed payments, Asia/Ho_Chi_Minh buckets, and finance:view branch permission.';
+COMMENT ON FUNCTION public.get_daily_revenue(p_branch_id bigint, p_start_date date, p_end_date date) IS 'Live paid-at money collected by day for one branch. total_revenue and method breakdowns use payments.amount; order_count and tax use distinct paid orders.';
 
 
 --
@@ -13209,12 +15593,17 @@ CREATE FUNCTION public.get_inventory_dashboard(p_branch_id bigint) RETURNS jsonb
     AS $$
 DECLARE v_tenant BIGINT := public.auth_tenant_id(); v_can_cost BOOLEAN;
   v_summary JSONB; v_locations JSONB; v_alerts JSONB; v_in_transit JSONB;
+  v_refreshed_at TIMESTAMPTZ;
 BEGIN
   IF v_tenant IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000'; END IF;
-  IF NOT (public.has_permission(p_branch_id, 'inventory:read') OR public.has_permission(NULL, 'reports:view_branch') OR public.has_permission(NULL, 'reports:view_tenant')) THEN
+  IF NOT (public.has_permission(p_branch_id, 'inventory:read') OR public.has_permission(NULL, 'reports:view_branch') OR public.has_permission(NULL, 'reports:view_tenant') ) THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
   v_can_cost := public.has_permission(NULL, 'reports:view_branch') OR public.has_permission(NULL, 'reports:view_tenant');
+
+  SELECT refreshed_at INTO v_refreshed_at
+  FROM public.mv_refresh_log
+  WHERE view_name = 'mv_inventory_stock_current';
 
   SELECT jsonb_build_object(
     'total_skus', COALESCE(COUNT(DISTINCT m.ingredient_id), 0),
@@ -13248,24 +15637,67 @@ BEGIN
       'current_quantity', m.current_quantity, 'reorder_point', m.reorder_point,
       'shortage_ratio', CASE WHEN m.reorder_point > 0 THEN (m.reorder_point - m.current_quantity) / m.reorder_point ELSE 0 END
     ) AS a FROM public.mv_inventory_stock_current m
-    WHERE m.tenant_id=v_tenant AND m.branch_id=p_branch_id AND m.reorder_point IS NOT NULL AND m.current_quantity < m.reorder_point
-    ORDER BY CASE WHEN m.current_quantity < 0 THEN 0 WHEN m.current_quantity = 0 THEN 1 ELSE 2 END,
-             CASE WHEN m.reorder_point > 0 THEN (m.reorder_point - m.current_quantity) / m.reorder_point ELSE 0 END DESC
-    LIMIT 5) t;
+    WHERE m.tenant_id=v_tenant AND m.branch_id=p_branch_id) t
+  WHERE (t.a->>'reorder_point') IS NOT NULL AND (t.a->>'current_quantity')::NUMERIC < (t.a->>'reorder_point')::NUMERIC;
 
-  SELECT COALESCE(jsonb_agg(row ORDER BY (row->>'ingredient_name')), '[]'::JSONB) INTO v_in_transit FROM (
-    SELECT jsonb_build_object('ingredient_id', sti.ingredient_id, 'ingredient_name', ing.name,
-      'total_quantity', SUM(sti.quantity), 'transfer_count', COUNT(DISTINCT st.id)) AS row
-    FROM public.stock_transfers st
-    JOIN public.stock_transfer_items sti ON sti.transfer_id = st.id
-    JOIN public.ingredients ing ON ing.id = sti.ingredient_id
-    WHERE st.tenant_id = v_tenant AND st.status IN ('confirmed_ship','in_transit','confirmed_receive')
-      AND (st.from_branch_id = p_branch_id OR st.to_branch_id = p_branch_id)
-    GROUP BY sti.ingredient_id, ing.name LIMIT 20) t;
+  SELECT COALESCE(jsonb_agg(x ORDER BY x->>'id' DESC), '[]'::JSONB)
+  INTO v_in_transit FROM (
+    SELECT jsonb_build_object(
+      'id', t.id, 'transfer_number', t.transfer_number,
+      'from_branch_name', fb.name, 'to_branch_name', tb.name, 'status', t.status
+    ) AS x FROM public.stock_transfers t
+    JOIN public.branches fb ON fb.id = t.from_branch_id
+    JOIN public.branches tb ON tb.id = t.to_branch_id
+    WHERE t.tenant_id=v_tenant AND (t.from_branch_id=p_branch_id OR t.to_branch_id=p_branch_id)
+      AND t.status IN ('draft', 'confirmed_ship', 'in_transit', 'confirmed_receive')
+  ) t2;
 
-  RETURN jsonb_build_object('branch_id', p_branch_id, 'computed_at', now(), 'can_view_cost', v_can_cost,
-    'summary', v_summary, 'locations', v_locations, 'top_alerts', v_alerts, 'in_transit', v_in_transit);
+  RETURN jsonb_build_object(
+    'branch_id', p_branch_id,
+    'computed_at', COALESCE(v_refreshed_at, now()),
+    'summary', v_summary,
+    'locations', v_locations,
+    'top_alerts', v_alerts,
+    'in_transit', v_in_transit
+  );
 END; $$;
+
+
+--
+-- Name: get_menu_item_sales_agg(bigint, timestamp with time zone, timestamp with time zone, text[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_menu_item_sales_agg(p_branch_id bigint DEFAULT NULL::bigint, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_order_statuses text[] DEFAULT NULL::text[]) RETURNS TABLE(branch_id bigint, menu_item_id bigint, item_name text, quantity_sold numeric, revenue numeric)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  WITH allowed AS (
+    SELECT b.id
+    FROM public.branches b
+    WHERE b.tenant_id = public.auth_tenant_id()
+      AND (
+        public.has_permission(b.id, 'orders:read')
+        OR public.has_permission(b.id, 'kds:use')
+      )
+  )
+  SELECT
+    o.branch_id,
+    oi.menu_item_id,
+    (array_agg(oi.item_name ORDER BY oi.id))[1],
+    sum(oi.quantity)::numeric,
+    sum(oi.subtotal)::numeric
+  FROM public.order_items oi
+  JOIN public.orders o ON o.id = oi.order_id
+  WHERE oi.tenant_id = public.auth_tenant_id()
+    AND o.branch_id IN (SELECT id FROM allowed)
+    AND oi.status <> 'cancelled'
+    AND o.status <> 'cancelled'
+    AND (p_order_statuses IS NULL OR o.status = ANY (p_order_statuses))
+    AND (p_branch_id IS NULL OR o.branch_id = p_branch_id)
+    AND (p_from IS NULL OR o.created_at >= p_from)
+    AND (p_to IS NULL OR o.created_at < p_to)
+  GROUP BY o.branch_id, oi.menu_item_id;
+$$;
 
 
 --
@@ -13388,6 +15820,47 @@ CREATE FUNCTION public.get_orders_paid_summary(p_status text DEFAULT NULL::text,
     AND (p_branch_id IS NULL OR o.branch_id = p_branch_id)
     AND (p_date_from IS NULL OR o.created_at >= (p_date_from::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'))
     AND (p_date_to IS NULL OR o.created_at < ((p_date_to + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'));
+$$;
+
+
+--
+-- Name: get_orders_summary(text, bigint, timestamp with time zone, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_orders_summary(p_status text DEFAULT NULL::text, p_branch_id bigint DEFAULT NULL::bigint, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone) RETURNS TABLE(total_count bigint, in_progress_count bigint, paid_count bigint, paid_revenue numeric)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  WITH allowed AS (
+    SELECT b.id
+    FROM public.branches b
+    WHERE b.tenant_id = public.auth_tenant_id()
+      AND (
+        public.has_permission(b.id, 'orders:read')
+        OR public.has_permission(b.id, 'kds:use')
+      )
+  )
+  SELECT
+    count(*)::bigint,
+    count(*) FILTER (
+      WHERE o.status NOT IN ('completed', 'cancelled')
+    )::bigint,
+    count(*) FILTER (
+      WHERE o.payment_status = 'paid' AND o.status <> 'cancelled'
+    )::bigint,
+    COALESCE(
+      sum(o.total_amount) FILTER (
+        WHERE o.payment_status = 'paid' AND o.status <> 'cancelled'
+      ),
+      0
+    )::numeric(15, 2)
+  FROM public.orders o
+  WHERE o.tenant_id = public.auth_tenant_id()
+    AND o.branch_id IN (SELECT id FROM allowed)
+    AND (p_status IS NULL OR o.status = p_status)
+    AND (p_branch_id IS NULL OR o.branch_id = p_branch_id)
+    AND (p_from IS NULL OR o.created_at >= p_from)
+    AND (p_to IS NULL OR o.created_at < p_to);
 $$;
 
 
@@ -13693,6 +16166,161 @@ COMMENT ON FUNCTION public.get_pos_session_report(p_session_id bigint) IS 'Aggre
 
 
 --
+-- Name: get_production_recipe_context(bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_production_recipe_context(p_finished_good_id bigint, p_branch_id bigint) RETURNS jsonb
+    LANGUAGE sql
+    SET search_path TO 'public'
+    AS $$
+  SELECT public.get_production_recipe_context_for_location(
+    p_finished_good_id,
+    p_branch_id,
+    NULL::bigint
+  );
+$$;
+
+
+--
+-- Name: get_production_recipe_context_for_location(bigint, bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_production_recipe_context_for_location(p_finished_good_id bigint, p_branch_id bigint, p_source_location_id bigint DEFAULT NULL::bigint) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_tenant bigint := public.auth_tenant_id();
+  v_location_id bigint := p_source_location_id;
+  v_res jsonb;
+BEGIN
+  IF NOT public.has_permission_any('inventory:production_create')
+     AND NOT public.has_permission_any('inventory:production_confirm') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.production_recipes pr
+    LEFT JOIN public.ingredient_units iu
+      ON iu.tenant_id = pr.tenant_id
+     AND iu.ingredient_id = pr.ingredient_id
+     AND iu.unit_id = pr.entry_unit_id
+     AND iu.is_active = TRUE
+    LEFT JOIN public.units u
+      ON u.id = iu.unit_id
+     AND u.tenant_id = iu.tenant_id
+     AND u.is_active = TRUE
+    WHERE pr.tenant_id = v_tenant
+      AND pr.finished_good_id = p_finished_good_id
+      AND pr.entry_unit_id IS NOT NULL
+      AND (iu.id IS NULL OR u.id IS NULL)
+  ) THEN
+    RAISE EXCEPTION 'production_recipe_unit_mapping_missing:%',
+      p_finished_good_id
+      USING ERRCODE = '23503';
+  END IF;
+
+  IF v_location_id IS NULL THEN
+    SELECT il.id INTO v_location_id
+    FROM public.branches b
+    JOIN public.inventory_locations il
+      ON il.tenant_id = b.tenant_id
+     AND il.branch_id = b.id
+     AND il.is_active = TRUE
+    WHERE b.tenant_id = v_tenant
+      AND b.id = p_branch_id
+    ORDER BY
+      CASE
+        WHEN b.branch_kind = 'branch' AND il.location_kind = 'kitchen' THEN 0
+        WHEN b.branch_kind = 'central_kitchen' AND il.location_kind = 'production_storage' THEN 0
+        WHEN il.is_default_issue = TRUE THEN 1
+        WHEN il.is_default_receive = TRUE THEN 2
+        ELSE 3
+      END,
+      il.is_default_consumption DESC,
+      il.sort_order NULLS LAST,
+      il.id
+    LIMIT 1;
+  ELSE
+    SELECT il.id INTO v_location_id
+    FROM public.inventory_locations il
+    WHERE il.id = v_location_id
+      AND il.tenant_id = v_tenant
+      AND il.branch_id = p_branch_id
+      AND il.is_active = TRUE
+    LIMIT 1;
+  END IF;
+
+  IF v_location_id IS NULL THEN
+    RAISE EXCEPTION 'production_source_location_missing:%', p_branch_id USING ERRCODE = 'P0002';
+  END IF;
+
+  WITH base AS (
+    SELECT
+      pr.ingredient_id,
+      ing.name AS ingredient_name,
+      COALESCE(entry_u.name, entry_u.code, base_u.name, base_u.code, '') AS unit_name,
+      pr.entry_unit_id,
+      pr.quantity AS recipe_quantity,
+      COALESCE(pr.yield_factor, 1.0) AS yield_factor,
+      COALESCE(sl.current_quantity, 0) AS current_quantity_base,
+      entry_iu.to_base_factor
+    FROM public.production_recipes pr
+    JOIN public.ingredients ing
+      ON ing.id = pr.ingredient_id
+     AND ing.tenant_id = pr.tenant_id
+    LEFT JOIN public.units entry_u
+      ON entry_u.id = pr.entry_unit_id
+     AND entry_u.tenant_id = pr.tenant_id
+     AND entry_u.is_active = TRUE
+    LEFT JOIN public.ingredient_units entry_iu
+      ON entry_iu.tenant_id = pr.tenant_id
+     AND entry_iu.ingredient_id = pr.ingredient_id
+     AND entry_iu.unit_id = pr.entry_unit_id
+     AND entry_iu.is_active = TRUE
+    LEFT JOIN public.ingredient_units base_iu
+      ON base_iu.tenant_id = pr.tenant_id
+     AND base_iu.ingredient_id = pr.ingredient_id
+     AND base_iu.is_base = TRUE
+     AND base_iu.is_active = TRUE
+    LEFT JOIN public.units base_u
+      ON base_u.id = base_iu.unit_id
+     AND base_u.tenant_id = base_iu.tenant_id
+     AND base_u.is_active = TRUE
+    LEFT JOIN public.stock_levels sl
+      ON sl.tenant_id = v_tenant
+     AND sl.branch_id = p_branch_id
+     AND sl.location_id = v_location_id
+     AND sl.ingredient_id = pr.ingredient_id
+    WHERE pr.tenant_id = v_tenant
+      AND pr.finished_good_id = p_finished_good_id
+  ),
+  calculated AS (
+    SELECT
+      *,
+      CASE
+        WHEN entry_unit_id IS NOT NULL
+          THEN ((1.0 * recipe_quantity) / yield_factor) * to_base_factor
+        ELSE ((1.0 * recipe_quantity) / yield_factor)
+      END AS required_base_per_fg,
+      CASE
+        WHEN entry_unit_id IS NOT NULL
+          THEN current_quantity_base / to_base_factor
+        ELSE current_quantity_base
+      END AS max_ingredient_qty
+    FROM base
+  )
+  SELECT COALESCE(jsonb_agg(to_jsonb(calculated)), '[]'::jsonb)
+  INTO v_res
+  FROM calculated;
+
+  RETURN v_res;
+END;
+$$;
+
+
+--
 -- Name: get_revenue_by_cashier(bigint, date, date); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -13935,7 +16563,7 @@ $$;
 -- Name: get_revenue_kpis(bigint, date, date); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date) RETURNS TABLE(net_revenue numeric, subtotal_revenue numeric, discount_amount numeric, total_tax numeric, vat_by_rate jsonb, vat_total numeric, order_count bigint, total_covers bigint, cash_revenue numeric, vietqr_revenue numeric, momo_revenue numeric, dine_in_revenue numeric, takeaway_revenue numeric, voided_amount numeric, voided_count bigint, refreshed_at timestamp with time zone)
+CREATE FUNCTION public.get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date) RETURNS TABLE(net_revenue numeric, subtotal_revenue numeric, discount_amount numeric, total_tax numeric, vat_by_rate jsonb, vat_total numeric, order_count bigint, total_covers bigint, cash_revenue numeric, vietqr_revenue numeric, dine_in_revenue numeric, takeaway_revenue numeric, voided_amount numeric, voided_count bigint, refreshed_at timestamp with time zone)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
@@ -13981,17 +16609,20 @@ BEGIN
   v_end_utc := ((p_end_date + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh');
 
   RETURN QUERY
-  WITH paid_orders AS MATERIALIZED (
+  WITH paid_payments AS MATERIALIZED (
     SELECT
-      o.id,
-      o.branch_id,
-      o.tenant_id,
+      p.id AS payment_id,
+      p.order_id,
+      p.branch_id,
+      p.tenant_id,
+      p.method,
+      p.amount AS payment_amount,
+      p.paid_at,
       o.total_amount,
       o.subtotal,
       o.discount_amount,
       o.tax_amount,
-      o.order_type,
-      p.method
+      o.order_type
     FROM public.payments p
     JOIN public.orders o
       ON o.id = p.order_id
@@ -14011,20 +16642,36 @@ BEGIN
         )
       )
   ),
-  sales AS (
+  order_facts AS MATERIALIZED (
+    SELECT DISTINCT ON (pp.tenant_id, pp.branch_id, pp.order_id)
+      pp.order_id AS id,
+      pp.tenant_id,
+      pp.branch_id,
+      pp.total_amount,
+      pp.subtotal,
+      pp.discount_amount,
+      pp.tax_amount,
+      pp.order_type
+    FROM paid_payments pp
+    ORDER BY pp.tenant_id, pp.branch_id, pp.order_id, pp.paid_at, pp.payment_id
+  ),
+  payment_sales AS (
     SELECT
-      COALESCE(SUM(total_amount), 0) AS net_revenue,
-      COALESCE(SUM(subtotal), 0) AS subtotal_revenue,
-      COALESCE(SUM(discount_amount), 0) AS discount_amount,
-      COALESCE(SUM(tax_amount), 0) AS total_tax,
+      COALESCE(SUM(pp.payment_amount), 0) AS net_revenue,
+      COALESCE(SUM(pp.payment_amount) FILTER (WHERE pp.method = 'cash'), 0) AS cash_revenue,
+      COALESCE(SUM(pp.payment_amount) FILTER (WHERE pp.method = 'vietqr'), 0) AS vietqr_revenue
+    FROM paid_payments pp
+  ),
+  order_sales AS (
+    SELECT
+      COALESCE(SUM(ofs.subtotal), 0) AS subtotal_revenue,
+      COALESCE(SUM(ofs.discount_amount), 0) AS discount_amount,
+      COALESCE(SUM(ofs.tax_amount), 0) AS total_tax,
       COUNT(*)::BIGINT AS order_count,
-      COALESCE(COUNT(id), 0)::BIGINT AS total_covers,
-      COALESCE(SUM(total_amount) FILTER (WHERE method = 'cash'), 0) AS cash_revenue,
-      COALESCE(SUM(total_amount) FILTER (WHERE method = 'vietqr'), 0) AS vietqr_revenue,
-      COALESCE(SUM(total_amount) FILTER (WHERE method = 'momo'), 0) AS momo_revenue,
-      COALESCE(SUM(total_amount) FILTER (WHERE order_type = 'dine_in'), 0) AS dine_in_revenue,
-      COALESCE(SUM(total_amount) FILTER (WHERE order_type = 'takeaway'), 0) AS takeaway_revenue
-    FROM paid_orders
+      COALESCE(COUNT(ofs.id), 0)::BIGINT AS total_covers,
+      COALESCE(SUM(ofs.total_amount) FILTER (WHERE ofs.order_type = 'dine_in'), 0) AS dine_in_revenue,
+      COALESCE(SUM(ofs.total_amount) FILTER (WHERE ofs.order_type = 'takeaway'), 0) AS takeaway_revenue
+    FROM order_facts ofs
   ),
   vat_lines AS (
     SELECT
@@ -14032,18 +16679,18 @@ BEGIN
       SUM((oi.subtotal * scaled.scale) - ((oi.subtotal * scaled.scale) / (1 + oi.vat_rate / 100))) AS vat
     FROM (
       SELECT
-        po.id AS order_id,
-        po.tenant_id,
+        ofx.id AS order_id,
+        ofx.tenant_id,
         CASE
-          WHEN SUM(oi2.subtotal) > 0 THEN po.total_amount / SUM(oi2.subtotal)
+          WHEN SUM(oi2.subtotal) > 0 THEN ofx.total_amount / SUM(oi2.subtotal)
           ELSE 1
         END AS scale
-      FROM paid_orders po
+      FROM order_facts ofx
       JOIN public.order_items oi2
-        ON oi2.tenant_id = po.tenant_id
-       AND oi2.order_id = po.id
+        ON oi2.tenant_id = ofx.tenant_id
+       AND oi2.order_id = ofx.id
        AND oi2.status <> 'cancelled'
-      GROUP BY po.id, po.tenant_id, po.total_amount
+      GROUP BY ofx.id, ofx.tenant_id, ofx.total_amount
     ) scaled
     JOIN public.order_items oi
       ON oi.tenant_id = scaled.tenant_id
@@ -14079,23 +16726,23 @@ BEGIN
       )
   )
   SELECT
-    sales.net_revenue,
-    sales.subtotal_revenue,
-    sales.discount_amount,
-    sales.total_tax,
+    payment_sales.net_revenue,
+    order_sales.subtotal_revenue,
+    order_sales.discount_amount,
+    order_sales.total_tax,
     vat_split.vat_by_rate,
     vat_split.vat_total,
-    sales.order_count,
-    sales.total_covers,
-    sales.cash_revenue,
-    sales.vietqr_revenue,
-    sales.momo_revenue,
-    sales.dine_in_revenue,
-    sales.takeaway_revenue,
+    order_sales.order_count,
+    order_sales.total_covers,
+    payment_sales.cash_revenue,
+    payment_sales.vietqr_revenue,
+    order_sales.dine_in_revenue,
+    order_sales.takeaway_revenue,
     refunds.voided_amount,
     refunds.voided_count,
     now() AS refreshed_at
-  FROM sales
+  FROM payment_sales
+  CROSS JOIN order_sales
   CROSS JOIN vat_split
   CROSS JOIN refunds;
 END;
@@ -14103,10 +16750,17 @@ $$;
 
 
 --
+-- Name: FUNCTION get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date) IS 'Finance KPI single row. net_revenue/cash/vietqr are money collected from payments.amount; subtotal/discount/tax/order_count are distinct paid-order sales facts.';
+
+
+--
 -- Name: get_revenue_rollup(bigint, date, date, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_revenue_rollup(p_branch_id bigint, p_start_date date, p_end_date date, p_granularity text) RETURNS TABLE(period_start date, period_end date, period_label text, branch_id bigint, order_count bigint, total_revenue numeric, total_tax numeric, subtotal_revenue numeric, discount_amount numeric, cash_revenue numeric, vietqr_revenue numeric, momo_revenue numeric, dine_in_revenue numeric, takeaway_revenue numeric, total_covers bigint)
+CREATE FUNCTION public.get_revenue_rollup(p_branch_id bigint, p_start_date date, p_end_date date, p_granularity text) RETURNS TABLE(period_start date, period_end date, period_label text, branch_id bigint, order_count bigint, total_revenue numeric, total_tax numeric, subtotal_revenue numeric, discount_amount numeric, cash_revenue numeric, vietqr_revenue numeric, dine_in_revenue numeric, takeaway_revenue numeric, total_covers bigint)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
@@ -14156,21 +16810,21 @@ BEGIN
   v_end_utc := ((p_end_date + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh');
 
   RETURN QUERY
-  WITH live_daily AS (
+  WITH paid_payments AS MATERIALIZED (
     SELECT
       (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS paid_date,
-      o.branch_id,
-      COUNT(DISTINCT o.id)::BIGINT AS order_count,
-      COALESCE(SUM(o.total_amount), 0) AS total_revenue,
-      COALESCE(SUM(o.tax_amount), 0) AS total_tax,
-      COALESCE(SUM(o.subtotal), 0) AS subtotal_revenue,
-      COALESCE(SUM(o.discount_amount), 0) AS discount_amount,
-      COALESCE(SUM(o.total_amount) FILTER (WHERE p.method = 'cash'), 0) AS cash_revenue,
-      COALESCE(SUM(o.total_amount) FILTER (WHERE p.method = 'vietqr'), 0) AS vietqr_revenue,
-      COALESCE(SUM(o.total_amount) FILTER (WHERE p.method = 'momo'), 0) AS momo_revenue,
-      COALESCE(SUM(o.total_amount) FILTER (WHERE o.order_type = 'dine_in'), 0) AS dine_in_revenue,
-      COALESCE(SUM(o.total_amount) FILTER (WHERE o.order_type = 'takeaway'), 0) AS takeaway_revenue,
-      COALESCE(COUNT(DISTINCT o.id), 0)::BIGINT AS total_covers
+      p.id AS payment_id,
+      p.order_id,
+      p.branch_id,
+      p.tenant_id,
+      p.method,
+      p.amount AS payment_amount,
+      p.paid_at,
+      o.total_amount,
+      o.tax_amount,
+      o.subtotal,
+      o.discount_amount,
+      o.order_type
     FROM public.payments p
     JOIN public.orders o
       ON o.id = p.order_id
@@ -14189,7 +16843,64 @@ BEGIN
           AND (v_has_tenant_scope OR o.branch_id = ANY(v_branch_ids))
         )
       )
-    GROUP BY 1, o.branch_id
+  ),
+  payment_daily AS (
+    SELECT
+      pp.paid_date,
+      pp.branch_id,
+      COALESCE(SUM(pp.payment_amount), 0) AS total_revenue,
+      COALESCE(SUM(pp.payment_amount) FILTER (WHERE pp.method = 'cash'), 0) AS cash_revenue,
+      COALESCE(SUM(pp.payment_amount) FILTER (WHERE pp.method = 'vietqr'), 0) AS vietqr_revenue
+    FROM paid_payments pp
+    GROUP BY pp.paid_date, pp.branch_id
+  ),
+  order_daily AS (
+    SELECT
+      oq.paid_date,
+      oq.branch_id,
+      COUNT(*)::BIGINT AS order_count,
+      COALESCE(SUM(oq.tax_amount), 0) AS total_tax,
+      COALESCE(SUM(oq.subtotal), 0) AS subtotal_revenue,
+      COALESCE(SUM(oq.discount_amount), 0) AS discount_amount,
+      COALESCE(SUM(oq.total_amount) FILTER (WHERE oq.order_type = 'dine_in'), 0) AS dine_in_revenue,
+      COALESCE(SUM(oq.total_amount) FILTER (WHERE oq.order_type = 'takeaway'), 0) AS takeaway_revenue,
+      COALESCE(COUNT(oq.order_id), 0)::BIGINT AS total_covers
+    FROM (
+      SELECT DISTINCT ON (pp.paid_date, pp.branch_id, pp.tenant_id, pp.order_id)
+        pp.paid_date,
+        pp.branch_id,
+        pp.tenant_id,
+        pp.order_id,
+        pp.total_amount,
+        pp.tax_amount,
+        pp.subtotal,
+        pp.discount_amount,
+        pp.order_type,
+        pp.paid_at,
+        pp.payment_id
+      FROM paid_payments pp
+      ORDER BY pp.paid_date, pp.branch_id, pp.tenant_id, pp.order_id, pp.paid_at, pp.payment_id
+    ) oq
+    GROUP BY oq.paid_date, oq.branch_id
+  ),
+  live_daily AS (
+    SELECT
+      pd.paid_date,
+      pd.branch_id,
+      od.order_count,
+      pd.total_revenue,
+      od.total_tax,
+      od.subtotal_revenue,
+      od.discount_amount,
+      pd.cash_revenue,
+      pd.vietqr_revenue,
+      od.dine_in_revenue,
+      od.takeaway_revenue,
+      od.total_covers
+    FROM payment_daily pd
+    JOIN order_daily od
+      ON od.paid_date = pd.paid_date
+     AND od.branch_id = pd.branch_id
   ),
   bucketed AS (
     SELECT
@@ -14225,7 +16936,6 @@ BEGIN
     COALESCE(SUM(b.discount_amount), 0) AS discount_amount,
     COALESCE(SUM(b.cash_revenue), 0) AS cash_revenue,
     COALESCE(SUM(b.vietqr_revenue), 0) AS vietqr_revenue,
-    COALESCE(SUM(b.momo_revenue), 0) AS momo_revenue,
     COALESCE(SUM(b.dine_in_revenue), 0) AS dine_in_revenue,
     COALESCE(SUM(b.takeaway_revenue), 0) AS takeaway_revenue,
     COALESCE(SUM(b.total_covers), 0)::BIGINT AS total_covers
@@ -14240,7 +16950,7 @@ $$;
 -- Name: FUNCTION get_revenue_rollup(p_branch_id bigint, p_start_date date, p_end_date date, p_granularity text); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.get_revenue_rollup(p_branch_id bigint, p_start_date date, p_end_date date, p_granularity text) IS 'Live paid-at revenue rollup. p_branch_id NULL returns period x branch rows for branches where caller has finance:view.';
+COMMENT ON FUNCTION public.get_revenue_rollup(p_branch_id bigint, p_start_date date, p_end_date date, p_granularity text) IS 'Live paid-at Finance rollup. total_revenue and method breakdowns use payments.amount; order/tax/discount fields use distinct paid orders.';
 
 
 --
@@ -14249,12 +16959,12 @@ COMMENT ON FUNCTION public.get_revenue_rollup(p_branch_id bigint, p_start_date d
 
 CREATE FUNCTION public.get_stock_movement_report(p_start_date date, p_end_date date, p_branch_id bigint DEFAULT NULL::bigint) RETURNS TABLE(ingredient_id bigint, ingredient_name text, unit text, opening numeric, grn_receipt numeric, transfer_in numeric, transfer_out numeric, consumption numeric, production_consumption numeric, production_output numeric, adjustment numeric, closing numeric)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
+    SET search_path TO ''
     AS $$
 DECLARE
-  v_tenant BIGINT := public.auth_tenant_id();
-  v_start  TIMESTAMPTZ;
-  v_end    TIMESTAMPTZ;
+  v_tenant bigint := public.auth_tenant_id();
+  v_start timestamptz;
+  v_end timestamptz;
 BEGIN
   IF v_tenant IS NULL THEN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
@@ -14268,21 +16978,16 @@ BEGIN
     ) THEN
       RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
     END IF;
-  ELSE
-    -- Branch containment via has_permission (a branch_manager only holds
-    -- inventory:read for its own branch); mirrors get_inventory_dashboard.
-    IF NOT (
-      public.has_permission(p_branch_id, 'inventory:read')
-      OR public.has_permission(NULL, 'reports:view_branch')
-      OR public.has_permission(NULL, 'reports:view_tenant')
-    ) THEN
-      RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
-    END IF;
+  ELSIF NOT (
+    public.has_permission(p_branch_id, 'inventory:read')
+    OR public.has_permission(NULL, 'reports:view_branch')
+    OR public.has_permission(NULL, 'reports:view_tenant')
+  ) THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  -- VN calendar day -> UTC boundaries, matching getVNDayUtcRange.
-  v_start := (p_start_date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh');
-  v_end := ((p_end_date + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh');
+  v_start := p_start_date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh';
+  v_end := (p_end_date + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh';
 
   RETURN QUERY
   WITH loc AS (
@@ -14315,9 +17020,6 @@ BEGIN
     GROUP BY sm.ingredient_id
   ),
   per AS (
-    -- Every stock_movements.type must land in exactly one report column so
-    -- opening = closing - period_total holds: grn_amend folds into grn_receipt;
-    -- supplier_return + refund_restore fold into adjustment.
     SELECT
       sm.ingredient_id,
       SUM(sm.quantity_change) FILTER (WHERE sm.type IN ('grn_receipt', 'grn_amend')) AS grn_receipt,
@@ -14339,7 +17041,7 @@ BEGIN
     SELECT
       ing.id AS ingredient_id,
       ing.name AS ingredient_name,
-      COALESCE(ing.purchase_unit, ing.unit) AS unit,
+      public.inventory_entry_unit_code(v_tenant, ing.id, NULL) AS unit,
       COALESCE(cur.current_quantity, 0) - COALESCE(aft.after_sum, 0) AS closing,
       COALESCE(per.grn_receipt, 0)
         + COALESCE(per.transfer_in, 0)
@@ -14366,7 +17068,7 @@ BEGIN
     c.ingredient_id,
     c.ingredient_name,
     c.unit,
-    (c.closing - c.period_total) AS opening,
+    c.closing - c.period_total AS opening,
     c.grn_receipt,
     c.transfer_in,
     c.transfer_out,
@@ -14376,7 +17078,7 @@ BEGIN
     c.adjustment,
     c.closing
   FROM computed c
-  WHERE (c.closing - c.period_total) <> 0
+  WHERE c.closing - c.period_total <> 0
      OR c.closing <> 0
      OR c.period_total <> 0
   ORDER BY c.ingredient_name;
@@ -14390,18 +17092,25 @@ $$;
 
 CREATE FUNCTION public.get_stocktake_lines_blind(p_session_id bigint) RETURNS TABLE(line_id bigint, ingredient_id bigint, ingredient_name text, unit text, abc_class character, round_no smallint, counted_quantity numeric, counted_by uuid, counted_at timestamp with time zone, needs_recount boolean, is_final boolean)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
+    SET search_path TO ''
     AS $$
 DECLARE
-  v_tenant BIGINT := public.auth_tenant_id();
-  v_ss     RECORD;
+  v_tenant bigint := public.auth_tenant_id();
+  v_ss record;
 BEGIN
-  IF v_tenant IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000'; END IF;
-  SELECT s.branch_id, s.blind_mode, s.tenant_id INTO v_ss
-  FROM public.stocktake_sessions s WHERE s.id = p_session_id;
+  IF v_tenant IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+
+  SELECT s.branch_id, s.tenant_id
+  INTO v_ss
+  FROM public.stocktake_sessions s
+  WHERE s.id = p_session_id;
+
   IF NOT FOUND OR v_ss.tenant_id <> v_tenant THEN
     RAISE EXCEPTION 'session not found' USING ERRCODE = 'P0002';
   END IF;
+
   IF NOT public.has_permission(v_ss.branch_id, 'inventory:stocktake_create') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -14411,7 +17120,7 @@ BEGIN
     sl.id,
     sl.ingredient_id,
     ing.name,
-    COALESCE(ing.purchase_unit, ing.unit),
+    public.inventory_entry_unit_code(v_tenant, ing.id, NULL),
     sl.abc_class,
     sl.round_no,
     sl.counted_quantity,
@@ -14424,6 +17133,40 @@ BEGIN
   WHERE sl.session_id = p_session_id
   ORDER BY sl.round_no, ing.name;
 END;
+$$;
+
+
+--
+-- Name: get_theoretical_consumption(bigint, timestamp with time zone, timestamp with time zone, text[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_theoretical_consumption(p_branch_id bigint DEFAULT NULL::bigint, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_order_statuses text[] DEFAULT NULL::text[]) RETURNS TABLE(ingredient_id bigint, theoretical_qty numeric)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  WITH allowed AS (
+    SELECT b.id
+    FROM public.branches b
+    WHERE b.tenant_id = public.auth_tenant_id()
+      AND (
+        public.has_permission(b.id, 'orders:read')
+        OR public.has_permission(b.id, 'kds:use')
+      )
+  )
+  SELECT
+    r.ingredient_id,
+    sum(oi.quantity * r.quantity / CASE WHEN COALESCE(r.yield_factor, 1) > 0 THEN r.yield_factor ELSE 1 END)::numeric
+  FROM public.order_items oi
+  JOIN public.orders o ON o.id = oi.order_id
+  JOIN public.recipes r ON r.menu_item_id = oi.menu_item_id AND r.tenant_id = oi.tenant_id
+  WHERE oi.tenant_id = public.auth_tenant_id()
+    AND o.branch_id IN (SELECT id FROM allowed)
+    AND oi.status <> 'cancelled'
+    AND (p_order_statuses IS NULL OR o.status = ANY (p_order_statuses))
+    AND (p_branch_id IS NULL OR o.branch_id = p_branch_id)
+    AND (p_from IS NULL OR o.created_at >= p_from)
+    AND (p_to IS NULL OR o.created_at < p_to)
+  GROUP BY r.ingredient_id;
 $$;
 
 
@@ -14899,33 +17642,70 @@ CREATE FUNCTION public.grn_items_compute_variance() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-DECLARE v_grn RECORD; v_baseline RECORD; v_signed NUMERIC; v_abs_pct NUMERIC; v_tier SMALLINT;
+DECLARE
+  v_grn RECORD;
+  v_baseline RECORD;
+  v_signed NUMERIC;
+  v_abs_pct NUMERIC;
+  v_tier SMALLINT;
 BEGIN
   IF NEW.unit_cost IS NULL OR NEW.unit_cost <= 0 THEN
-    NEW.variance_tier := NULL; NEW.baseline_source := NULL; NEW.baseline_sample_n := NULL;
-    NEW.baseline_variance_pct := NULL; NEW.is_hard_blocked := false; RETURN NEW;
+    NEW.variance_tier := NULL;
+    NEW.baseline_source := NULL;
+    NEW.baseline_sample_n := NULL;
+    NEW.baseline_variance_pct := NULL;
+    NEW.is_hard_blocked := false;
+    RETURN NEW;
   END IF;
-  SELECT tenant_id, supplier_id INTO v_grn FROM public.goods_received_notes WHERE id = NEW.grn_id;
-  IF NOT FOUND THEN RETURN NEW; END IF;
-  SELECT avg_30d, sample_n, baseline_source INTO v_baseline
-    FROM public._compute_grn_price_baseline(v_grn.tenant_id, v_grn.supplier_id, NEW.ingredient_id, NEW.unit);
+
+  SELECT tenant_id, supplier_id
+  INTO v_grn
+  FROM public.goods_received_notes
+  WHERE id = NEW.grn_id;
+
+  IF NOT FOUND THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT avg_30d, sample_n, baseline_source
+  INTO v_baseline
+  FROM public._compute_grn_price_baseline(
+    v_grn.tenant_id,
+    v_grn.supplier_id,
+    NEW.ingredient_id,
+    NEW.unit
+  );
+
   NEW.baseline_source := v_baseline.baseline_source;
   NEW.baseline_sample_n := v_baseline.sample_n;
+
   IF v_baseline.avg_30d IS NULL THEN
-    NEW.variance_tier := NULL; NEW.baseline_variance_pct := NULL; NEW.is_hard_blocked := false; RETURN NEW;
+    NEW.variance_tier := NULL;
+    NEW.baseline_variance_pct := NULL;
+    NEW.is_hard_blocked := false;
+    RETURN NEW;
   END IF;
+
   v_signed := (NEW.unit_cost - v_baseline.avg_30d) / v_baseline.avg_30d;
   v_abs_pct := ABS(v_signed);
-  NEW.baseline_variance_pct := (v_signed * 100)::NUMERIC(7,3);
+  NEW.baseline_variance_pct := ROUND(v_signed * 100, 3);
+
   IF      v_abs_pct < 0.15 THEN v_tier := 0;
   ELSIF   v_abs_pct < 0.30 THEN v_tier := 1;
   ELSIF   v_abs_pct < 1.00 THEN v_tier := 2;
   ELSE                          v_tier := 3;
   END IF;
+
   NEW.variance_tier := v_tier;
-  NEW.is_hard_blocked := (v_tier = 3) AND NOT EXISTS (SELECT 1 FROM public.grn_hardblock_overrides WHERE grn_item_id = NEW.id);
+  NEW.is_hard_blocked := (v_tier = 3) AND NOT EXISTS (
+    SELECT 1
+    FROM public.grn_hardblock_overrides
+    WHERE grn_item_id = NEW.id
+  );
+
   RETURN NEW;
-END; $$;
+END;
+$$;
 
 
 --
@@ -15003,6 +17783,7 @@ BEGIN
     WHEN 'grill_counter' THEN 'branch'
     WHEN 'cleaner' THEN 'branch'
     WHEN 'waiter' THEN 'branch'
+    WHEN 'guard' THEN 'branch'
     ELSE NULL
   END;
 
@@ -15052,16 +17833,13 @@ CREATE FUNCTION public.has_permission(p_branch_id bigint, p_key text) RETURNS bo
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO ''
     AS $$
-  SELECT
-    EXISTS (
-      SELECT 1 FROM public.profiles pr
-      JOIN public.positions po ON po.id = pr.position_id
-      WHERE pr.id = auth.uid() AND po.code = 'owner'
-    )
-    OR
-    EXISTS (
-      SELECT 1 FROM public.staff_permissions sp
+  SELECT public.auth_is_owner(auth.uid())
+    OR EXISTS (
+      SELECT 1
+      FROM public.staff_permissions sp
+      JOIN public.profiles pr ON pr.id = sp.user_id
       WHERE sp.user_id = auth.uid()
+        AND COALESCE(pr.is_active, true) = true
         AND sp.permission_key = p_key
         AND (sp.branch_id = p_branch_id OR sp.branch_id IS NULL)
         AND sp.valid_from <= now()
@@ -15085,16 +17863,13 @@ CREATE FUNCTION public.has_permission_any(p_key text) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO ''
     AS $$
-  SELECT
-    EXISTS (
-      SELECT 1 FROM public.profiles pr
-      JOIN public.positions po ON po.id = pr.position_id
-      WHERE pr.id = auth.uid() AND po.code = 'owner'
-    )
-    OR
-    EXISTS (
-      SELECT 1 FROM public.staff_permissions sp
+  SELECT public.auth_is_owner(auth.uid())
+    OR EXISTS (
+      SELECT 1
+      FROM public.staff_permissions sp
+      JOIN public.profiles pr ON pr.id = sp.user_id
       WHERE sp.user_id = auth.uid()
+        AND COALESCE(pr.is_active, true) = true
         AND sp.permission_key = p_key
         AND sp.valid_from <= now()
         AND (sp.valid_until IS NULL OR sp.valid_until > now())
@@ -15266,14 +18041,16 @@ BEGIN
   -- Case 1: this unit is itself a standard unit. Only valid when the
   -- ingredient's base is a standard unit of the SAME dimension; the ratio
   -- is then a pure system constant (never user-entered).
-  IF v_unit_is_standard THEN
+  -- MODIFICATION: skip this if an anchor unit is explicitly specified,
+  -- allowing standard units to be anchored manually when base is non-standard.
+  IF v_unit_is_standard AND p_anchor_unit_id IS NULL THEN
     IF NOT v_base_is_standard OR v_base_dimension IS DISTINCT FROM v_unit_dimension THEN
       RAISE EXCEPTION 'standard_unit_dimension_mismatch' USING ERRCODE = '23514';
     END IF;
     RETURN v_unit_std_factor / v_base_std_factor;
   END IF;
 
-  -- Case 2: packaging unit. Walk the anchor chain until it reaches either
+  -- Case 2: packaging unit (or manually-anchored standard unit). Walk the anchor chain until it reaches either
   -- the base unit or a standard unit, multiplying anchor_factor at each hop.
   -- Fail-closed on a missing anchor, a cycle, or a cross-dimension anchor
   -- once the chain reaches a standard unit.
@@ -15606,6 +18383,139 @@ CREATE FUNCTION public.is_inventory_production_operator() RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.is_inventory_production_operator() IS 'Shared DB role contract for Inventory production and production BOM access.';
+
+
+--
+-- Name: link_sepay_transaction_to_payment(bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.link_sepay_transaction_to_payment(p_event_id bigint, p_payment_id bigint) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $_$
+DECLARE
+  v_tenant_id bigint := public.auth_tenant_id();
+  v_user_id uuid := auth.uid();
+  v_event public.webhook_events%ROWTYPE;
+  v_payment public.payments%ROWTYPE;
+  v_raw_amount text;
+  v_amount numeric;
+BEGIN
+  IF v_user_id IS NULL
+    OR v_tenant_id IS NULL
+    OR NOT public.has_permission_any('finance:view')
+  THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT *
+  INTO v_event
+  FROM public.webhook_events
+  WHERE id = p_event_id
+    AND tenant_id = v_tenant_id
+    AND provider = 'sepay'
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'webhook_event_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_event.payment_id IS NOT NULL THEN
+    RAISE EXCEPTION 'webhook_event_already_linked' USING ERRCODE = '23505';
+  END IF;
+
+  IF v_event.expense_id IS NOT NULL THEN
+    RAISE EXCEPTION 'webhook_event_matches_expense' USING ERRCODE = '23514';
+  END IF;
+
+  IF NOT v_event.signature_valid THEN
+    RAISE EXCEPTION 'webhook_event_signature_invalid' USING ERRCODE = '23514';
+  END IF;
+
+  IF v_event.processing_status = 'failed' OR v_event.error_code IS NOT NULL THEN
+    RAISE EXCEPTION 'webhook_event_failed' USING ERRCODE = '23514';
+  END IF;
+
+  IF lower(COALESCE(v_event.payload->>'transferType', '')) <> 'in' THEN
+    RAISE EXCEPTION 'webhook_event_not_in' USING ERRCODE = '23514';
+  END IF;
+
+  v_raw_amount := btrim(COALESCE(v_event.payload->>'transferAmount', ''));
+  IF v_raw_amount !~ '^-?[0-9]+(\.[0-9]+)?$' THEN
+    RAISE EXCEPTION 'webhook_event_amount_invalid' USING ERRCODE = '22023';
+  END IF;
+
+  v_amount := abs(v_raw_amount::numeric);
+  IF v_amount <= 0 THEN
+    RAISE EXCEPTION 'webhook_event_amount_invalid' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT *
+  INTO v_payment
+  FROM public.payments
+  WHERE id = p_payment_id
+    AND tenant_id = v_tenant_id
+    AND method = 'vietqr'
+    AND status = 'completed'
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'payment_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF NOT public.has_permission(v_payment.branch_id, 'finance:view') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_payment.amount <> v_amount THEN
+    RAISE EXCEPTION 'payment_amount_mismatch' USING ERRCODE = '23514';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.webhook_events other_event
+    WHERE other_event.tenant_id = v_tenant_id
+      AND other_event.payment_id = p_payment_id
+      AND other_event.id <> p_event_id
+      AND other_event.provider = 'sepay'
+      AND other_event.signature_valid
+      AND lower(COALESCE(other_event.payload->>'transferType', '')) = 'in'
+      AND other_event.processing_status <> 'failed'
+      AND other_event.error_code IS NULL
+  ) THEN
+    RAISE EXCEPTION 'payment_already_has_bank_webhook' USING ERRCODE = '23505';
+  END IF;
+
+  UPDATE public.webhook_events
+  SET payment_id = p_payment_id,
+      processing_status = CASE
+        WHEN processing_status = 'received' THEN 'processed'
+        ELSE processing_status
+      END,
+      processed_at = COALESCE(processed_at, now())
+  WHERE id = p_event_id
+    AND tenant_id = v_tenant_id;
+
+  PERFORM public.log_audit(
+    'link_sepay_transaction_to_payment',
+    'webhook_event',
+    p_event_id,
+    jsonb_build_object('payment_id', NULL),
+    jsonb_build_object(
+      'payment_id', p_payment_id,
+      'order_id', v_payment.order_id,
+      'amount', v_amount
+    )
+  );
+
+  RETURN jsonb_build_object(
+    'event_id', p_event_id,
+    'payment_id', p_payment_id,
+    'order_id', v_payment.order_id,
+    'amount', v_amount
+  );
+END;
+$_$;
 
 
 --
@@ -16181,6 +19091,146 @@ $$;
 --
 
 COMMENT ON FUNCTION public.mark_order_item_served(p_item_id bigint) IS 'POS waiter per-item served action. Sets one order_items row + matching kds_tickets to served. Order-level state machine is untouched; cashier still drives ''served''/''completed'' via update_pos_order_status / payment close. Permission: pos role with branch scope (cashier/waiter/manager).';
+
+
+--
+-- Name: match_sepay_transaction_expenses(bigint, bigint[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.match_sepay_transaction_expenses(p_event_id bigint, p_expense_ids bigint[]) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $_$
+DECLARE
+  v_is_service boolean := auth.role() = 'service_role';
+  v_tenant_id bigint := public.auth_tenant_id();
+  v_user_id uuid := auth.uid();
+  v_event public.webhook_events%ROWTYPE;
+  v_expense_ids bigint[];
+  v_first_expense_id bigint;
+  v_transfer_amount numeric;
+  v_expense_total numeric;
+BEGIN
+  IF NOT v_is_service THEN
+    IF v_user_id IS NULL
+      OR v_tenant_id IS NULL
+      OR NOT public.has_permission_any('finance:expense_create')
+    THEN
+      RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+    END IF;
+  END IF;
+
+  SELECT COALESCE(array_agg(DISTINCT expense_id ORDER BY expense_id), ARRAY[]::bigint[])
+  INTO v_expense_ids
+  FROM unnest(COALESCE(p_expense_ids, ARRAY[]::bigint[])) AS selected(expense_id)
+  WHERE selected.expense_id IS NOT NULL;
+
+  IF v_is_service AND cardinality(v_expense_ids) <> 1 THEN
+    RAISE EXCEPTION 'system_expense_match_requires_single_expense' USING ERRCODE = '23514';
+  END IF;
+
+  SELECT *
+  INTO v_event
+  FROM public.webhook_events
+  WHERE id = p_event_id
+    AND provider = 'sepay'
+    AND (v_is_service OR tenant_id = v_tenant_id)
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'webhook_event_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_is_service THEN
+    v_tenant_id := v_event.tenant_id;
+  END IF;
+
+  IF v_event.payment_id IS NOT NULL THEN
+    RAISE EXCEPTION 'webhook_event_matches_payment' USING ERRCODE = '23514';
+  END IF;
+
+  IF lower(COALESCE(v_event.payload->>'transferType', '')) <> 'out' THEN
+    RAISE EXCEPTION 'webhook_event_not_out' USING ERRCODE = '23514';
+  END IF;
+
+  IF cardinality(v_expense_ids) > 0 THEN
+    IF EXISTS (
+      SELECT 1
+      FROM unnest(v_expense_ids) AS selected(expense_id)
+      LEFT JOIN public.expenses e
+        ON e.id = selected.expense_id
+       AND e.tenant_id = v_tenant_id
+       AND e.payment_method IN ('transfer', 'unpaid')
+      WHERE e.id IS NULL
+    ) THEN
+      RAISE EXCEPTION 'expense_not_found' USING ERRCODE = 'P0002';
+    END IF;
+  END IF;
+
+  IF v_is_service THEN
+    SELECT CASE
+      WHEN COALESCE(v_event.payload->>'transferAmount', '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+        THEN abs((v_event.payload->>'transferAmount')::numeric)
+      ELSE NULL
+    END
+    INTO v_transfer_amount;
+
+    SELECT COALESCE(sum(e.amount), 0)
+    INTO v_expense_total
+    FROM public.expenses e
+    WHERE e.tenant_id = v_tenant_id
+      AND e.id = ANY(v_expense_ids);
+
+    IF v_transfer_amount IS NULL
+      OR v_transfer_amount <= 0
+      OR v_expense_total <> v_transfer_amount
+    THEN
+      RAISE EXCEPTION 'expense_amount_mismatch' USING ERRCODE = '23514';
+    END IF;
+  END IF;
+
+  DELETE FROM public.bank_transaction_expense_matches
+  WHERE tenant_id = v_tenant_id
+    AND webhook_event_id = p_event_id
+    AND NOT (expense_id = ANY(v_expense_ids));
+
+  INSERT INTO public.bank_transaction_expense_matches (
+    tenant_id,
+    webhook_event_id,
+    expense_id,
+    created_by
+  )
+  SELECT
+    v_tenant_id,
+    p_event_id,
+    selected.expense_id,
+    CASE WHEN v_is_service THEN NULL ELSE v_user_id END
+  FROM unnest(v_expense_ids) AS selected(expense_id)
+  ON CONFLICT DO NOTHING;
+
+  IF cardinality(v_expense_ids) > 0 THEN
+    UPDATE public.expenses
+    SET
+      payment_method = 'transfer',
+      paid_at = COALESCE(paid_at, v_event.created_at, now())
+    WHERE tenant_id = v_tenant_id
+      AND id = ANY(v_expense_ids)
+      AND payment_method = 'unpaid';
+  END IF;
+
+  v_first_expense_id := v_expense_ids[1];
+
+  UPDATE public.webhook_events
+  SET expense_id = v_first_expense_id
+  WHERE id = p_event_id
+    AND tenant_id = v_tenant_id;
+
+  RETURN jsonb_build_object(
+    'matched_count', cardinality(v_expense_ids),
+    'expense_ids', to_jsonb(v_expense_ids)
+  );
+END;
+$_$;
 
 
 --
@@ -17352,14 +20402,14 @@ BEGIN
     RETURN jsonb_build_object('order_id', p_order_id, 'consumed', false, 'skipped', true, 'reason', 'no_ready_kds_items');
   END IF;
 
-  SELECT il.id, il.is_default_issue
+  SELECT il.id, il.is_default_consumption
   INTO v_location_id, v_location_is_default
   FROM public.inventory_locations il
   WHERE il.branch_id = v_order.branch_id
     AND il.tenant_id = v_order.tenant_id
     AND il.location_kind = 'warehouse'
     AND il.is_active = TRUE
-  ORDER BY il.is_default_issue DESC, il.sort_order NULLS LAST, il.id
+  ORDER BY il.is_default_consumption DESC, il.sort_order NULLS LAST, il.id
   LIMIT 1;
 
   IF v_location_id IS NULL THEN
@@ -17367,11 +20417,13 @@ BEGIN
   END IF;
 
   IF v_location_is_default IS DISTINCT FROM TRUE THEN
-    RAISE WARNING 'default_issue_location_missing:branch %; using warehouse location %',
+    RAISE WARNING 'default_consumption_location_missing:branch %; using warehouse location %',
       v_order.branch_id,
       v_location_id;
   END IF;
 
+  -- Availability pre-check (hard-fail: cancel-after-ready must not post phantom
+  -- waste when stock is insufficient). Preserved verbatim.
   FOR v_need IN
     WITH consumption_lines AS (
       SELECT oi.menu_item_id::bigint AS menu_item_id,
@@ -17451,6 +20503,7 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- INSERT loop: same CTE as the pre-check, with an added entry_unit_id subquery.
   FOR v_need IN
     WITH consumption_lines AS (
       SELECT oi.menu_item_id::bigint AS menu_item_id,
@@ -17502,7 +20555,21 @@ BEGIN
         r.ingredient_id,
         r.entry_unit_id,
         cl.line_quantity * r.quantity / r.yield_factor
-      )), 3)::numeric(15,3) AS need_qty
+      )), 3)::numeric(15,3) AS need_qty,
+      (
+        SELECT iu.unit_id
+        FROM public.ingredient_units iu
+        JOIN public.units u
+          ON u.id = iu.unit_id
+         AND u.tenant_id = iu.tenant_id
+         AND u.is_active = TRUE
+        WHERE iu.tenant_id = v_order.tenant_id
+          AND iu.ingredient_id = r.ingredient_id
+          AND iu.is_base = TRUE
+          AND iu.is_active = TRUE
+        ORDER BY iu.sort_order ASC, iu.id ASC
+        LIMIT 1
+      ) AS entry_unit_id
     FROM consumption_lines cl
     JOIN public.recipes r
       ON r.menu_item_id = cl.menu_item_id
@@ -17516,6 +20583,10 @@ BEGIN
     )), 3) > 0
     ORDER BY r.ingredient_id
   LOOP
+    IF v_need.entry_unit_id IS NULL THEN
+      RAISE EXCEPTION 'entry_unit_not_found:%', v_need.ingredient_id USING ERRCODE = '23503';
+    END IF;
+
     INSERT INTO public.stock_movements (
       tenant_id,
       branch_id,
@@ -17527,7 +20598,9 @@ BEGIN
       created_by,
       order_id,
       unit_cost,
-      location_id
+      location_id,
+      entry_unit_id,
+      entry_quantity
     )
     SELECT
       v_order.tenant_id,
@@ -17540,7 +20613,9 @@ BEGIN
       v_actor,
       p_order_id,
       COALESCE(sl.avg_unit_cost, 0),
-      v_location_id
+      v_location_id,
+      v_need.entry_unit_id,
+      v_need.need_qty
     FROM public.stock_levels sl
     WHERE sl.tenant_id = v_order.tenant_id
       AND sl.branch_id = v_order.branch_id
@@ -17679,14 +20754,14 @@ BEGIN
     END IF;
   END IF;
 
-  SELECT il.id, il.is_default_issue
+  SELECT il.id, il.is_default_consumption
   INTO v_location_id, v_location_is_default
   FROM public.inventory_locations il
   WHERE il.branch_id = v_order.branch_id
     AND il.tenant_id = v_order.tenant_id
     AND il.location_kind = 'warehouse'
     AND il.is_active = TRUE
-  ORDER BY il.is_default_issue DESC, il.sort_order NULLS LAST, il.id
+  ORDER BY il.is_default_consumption DESC, il.sort_order NULLS LAST, il.id
   LIMIT 1;
 
   IF v_location_id IS NULL THEN
@@ -17694,11 +20769,13 @@ BEGIN
   END IF;
 
   IF v_location_is_default IS DISTINCT FROM TRUE THEN
-    RAISE WARNING 'default_issue_location_missing:branch %; using warehouse location %',
+    RAISE WARNING 'default_consumption_location_missing:branch %; using warehouse location %',
       v_order.branch_id,
       v_location_id;
   END IF;
 
+  -- Availability pre-check (fail-soft: a shortage caught here never fails payment
+  -- completion; drift is caught by stocktake). Preserved verbatim.
   FOR v_need IN
     WITH qualifying_order_items AS (
       SELECT
@@ -17805,6 +20882,7 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- INSERT loop: same CTE as the pre-check, with an added entry_unit_id subquery.
   FOR v_need IN
     WITH qualifying_order_items AS (
       SELECT
@@ -17867,7 +20945,21 @@ BEGIN
         r.ingredient_id,
         r.entry_unit_id,
         cl.line_quantity * r.quantity / r.yield_factor
-      )), 3)::numeric(15,3) AS need_qty
+      )), 3)::numeric(15,3) AS need_qty,
+      (
+        SELECT iu.unit_id
+        FROM public.ingredient_units iu
+        JOIN public.units u
+          ON u.id = iu.unit_id
+         AND u.tenant_id = iu.tenant_id
+         AND u.is_active = TRUE
+        WHERE iu.tenant_id = v_order.tenant_id
+          AND iu.ingredient_id = r.ingredient_id
+          AND iu.is_base = TRUE
+          AND iu.is_active = TRUE
+        ORDER BY iu.sort_order ASC, iu.id ASC
+        LIMIT 1
+      ) AS entry_unit_id
     FROM consumption_lines cl
     JOIN public.recipes r
       ON r.menu_item_id = cl.menu_item_id
@@ -17896,6 +20988,10 @@ BEGIN
     )), 3) > 0
     ORDER BY r.ingredient_id
   LOOP
+    IF v_need.entry_unit_id IS NULL THEN
+      RAISE EXCEPTION 'entry_unit_not_found:%', v_need.ingredient_id USING ERRCODE = '23503';
+    END IF;
+
     INSERT INTO public.stock_movements (
       tenant_id,
       branch_id,
@@ -17907,7 +21003,9 @@ BEGIN
       created_by,
       order_id,
       unit_cost,
-      location_id
+      location_id,
+      entry_unit_id,
+      entry_quantity
     )
     SELECT
       v_order.tenant_id,
@@ -17920,7 +21018,9 @@ BEGIN
       v_actor,
       p_order_id,
       COALESCE(sl.avg_unit_cost, 0),
-      v_location_id
+      v_location_id,
+      v_need.entry_unit_id,
+      v_need.need_qty
     FROM public.stock_levels sl
     WHERE sl.tenant_id = v_order.tenant_id
       AND sl.branch_id = v_order.branch_id
@@ -17957,7 +21057,96 @@ $_$;
 -- Name: FUNCTION post_pos_sale_consumption_if_ready(p_order_id bigint, p_actor_id uuid); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.post_pos_sale_consumption_if_ready(p_order_id bigint, p_actor_id uuid) IS 'Idempotency check matches sale-shaped consumption rows for the order: movement_subtype IS NULL (legacy Path-2 consume_stock_for_order) or sale_consumption. Not any consumption row — cancelled_after_kds_ready waste is also type=consumption and must not suppress the sale posting (D064 §8). A shortage caught here (race past the hard gate) never fails payment completion: RAISE WARNING + return insufficient_stock_at_posting, no partial posting — drift is caught by stocktake (D065 §3). Menu items with a recipe line missing an active unit conversion are excluded from both consumption loops (D064 §2 fail-open) rather than letting inv_to_base_for_tenant raise recipe_unit_conversion_missing on the payment path.';
+COMMENT ON FUNCTION public.post_pos_sale_consumption_if_ready(p_order_id bigint, p_actor_id uuid) IS 'Idempotency check matches sale-shaped consumption rows for the order: movement_subtype IS NULL (legacy Path-2 consume_stock_for_order) or sale_consumption. Not any consumption row — cancelled_after_kds_ready waste is also type=consumption and must not suppress the sale posting (D064 §8). A shortage caught here (race past the hard gate) never fails payment completion: RAISE WARNING + return insufficient_stock_at_posting, no partial posting — drift is caught by stocktake (D065 §3). Menu items with a recipe line missing an active unit conversion are excluded from both consumption loops (D064 §2 fail-open) rather than letting inv_to_base_for_tenant raise recipe_unit_conversion_missing on the payment path. Deducts from branch kitchen location.';
+
+
+--
+-- Name: post_pos_sale_refund_restore(bigint, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.post_pos_sale_refund_restore(p_order_id bigint, p_actor_id uuid DEFAULT NULL::uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_actor  uuid    := COALESCE(p_actor_id, auth.uid());
+  v_order  record;
+  v_count  int     := 0;
+BEGIN
+  PERFORM pg_advisory_xact_lock(p_order_id);
+
+  SELECT o.tenant_id, o.branch_id
+  INTO v_order
+  FROM public.orders o
+  WHERE o.id = p_order_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('order_id', p_order_id, 'restored', false, 'skipped', true, 'reason', 'order_not_found');
+  END IF;
+
+  -- Idempotency short-circuit: already restored.
+  IF EXISTS (
+    SELECT 1
+    FROM public.stock_movements sm
+    WHERE sm.tenant_id = v_order.tenant_id
+      AND sm.order_id = p_order_id
+      AND sm.movement_subtype = 'sale_consumption_restore'
+  ) THEN
+    RETURN jsonb_build_object('order_id', p_order_id, 'restored', true, 'skipped', true, 'reason', 'already_restored');
+  END IF;
+
+  -- Exact inverse of the sale_consumption rows for this order. Each consumption
+  -- row has quantity_change <= 0; the inverse is -orig.quantity_change (>= 0),
+  -- satisfying the sign-vs-type CHECK on type='refund_restore'.
+  INSERT INTO public.stock_movements (
+    tenant_id,
+    branch_id,
+    ingredient_id,
+    type,
+    movement_subtype,
+    quantity_change,
+    reason,
+    created_by,
+    order_id,
+    unit_cost,
+    location_id,
+    entry_unit_id,
+    entry_quantity
+  )
+  SELECT
+    orig.tenant_id,
+    orig.branch_id,
+    orig.ingredient_id,
+    'refund_restore',
+    'sale_consumption_restore',
+    -orig.quantity_change,
+    'Refund restore for order ' || p_order_id::text,
+    v_actor,
+    orig.order_id,
+    orig.unit_cost,
+    orig.location_id,
+    orig.entry_unit_id,
+    orig.entry_quantity
+  FROM public.stock_movements orig
+  WHERE orig.tenant_id = v_order.tenant_id
+    AND orig.order_id = p_order_id
+    AND orig.type = 'consumption'
+    AND orig.movement_subtype = 'sale_consumption'
+  ON CONFLICT (tenant_id, order_id, movement_subtype, ingredient_id, location_id)
+    WHERE order_id IS NOT NULL
+      AND movement_subtype = 'sale_consumption_restore'
+  DO NOTHING;
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+
+  RETURN jsonb_build_object(
+    'order_id', p_order_id,
+    'restored', v_count > 0,
+    'movements_created', v_count
+  );
+END;
+$$;
 
 
 --
@@ -18006,6 +21195,51 @@ BEGIN
      )
   THEN
     RAISE EXCEPTION 'payment_code_locked' USING ERRCODE = '22023';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: prevent_recipe_entry_unit_invalidation(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.prevent_recipe_entry_unit_invalidation() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    IF OLD.unit_id IS NOT DISTINCT FROM NEW.unit_id
+       AND (OLD.is_active IS NOT TRUE OR NEW.is_active IS TRUE) THEN
+      RETURN NEW;
+    END IF;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.recipes r
+    WHERE r.tenant_id = OLD.tenant_id
+      AND r.ingredient_id = OLD.ingredient_id
+      AND r.entry_unit_id = OLD.unit_id
+  ) THEN
+    RAISE EXCEPTION 'ingredient_unit_in_use_by_recipe' USING ERRCODE = '23503';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.production_recipes pr
+    WHERE pr.tenant_id = OLD.tenant_id
+      AND pr.ingredient_id = OLD.ingredient_id
+      AND pr.entry_unit_id = OLD.unit_id
+  ) THEN
+    RAISE EXCEPTION 'ingredient_unit_in_use_by_production_recipe' USING ERRCODE = '23503';
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
   END IF;
 
   RETURN NEW;
@@ -19472,6 +22706,807 @@ $$;
 
 
 --
+-- Name: reconcile_sepay_order_evidence(bigint, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reconcile_sepay_order_evidence(p_event_id bigint, p_payment_code text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $_$
+DECLARE
+  v_event public.webhook_events%ROWTYPE;
+  v_order record;
+  v_payment_code text := btrim(COALESCE(p_payment_code, ''));
+  v_amount numeric;
+  v_order_count integer := 0;
+  v_payment_id bigint := NULL;
+  v_confirmation jsonb;
+  v_confirmation_status text;
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT *
+  INTO v_event
+  FROM public.webhook_events
+  WHERE id = p_event_id
+    AND provider = 'sepay'
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'webhook_event_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF NOT v_event.signature_valid
+    OR lower(COALESCE(v_event.payload ->> 'transferType', '')) <> 'in'
+  THEN
+    RAISE EXCEPTION 'webhook_event_invalid' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_payment_code = '' THEN
+    UPDATE public.webhook_events
+    SET processing_status = 'failed',
+        http_status = 200,
+        error_code = 'invalid_payment_code',
+        processed_at = now()
+    WHERE id = v_event.id;
+    RETURN jsonb_build_object('status', 'invalid_payment_code');
+  END IF;
+
+  IF btrim(COALESCE(v_event.payload ->> 'transferAmount', '')) !~ '^-?[0-9]+(\\.[0-9]+)?$' THEN
+    UPDATE public.webhook_events
+    SET processing_status = 'failed',
+        http_status = 200,
+        error_code = 'invalid_amount',
+        processed_at = now()
+    WHERE id = v_event.id;
+    RETURN jsonb_build_object('status', 'invalid_amount');
+  END IF;
+
+  v_amount := abs((v_event.payload ->> 'transferAmount')::numeric);
+  IF v_amount <= 0 THEN
+    UPDATE public.webhook_events
+    SET processing_status = 'failed',
+        http_status = 200,
+        error_code = 'invalid_amount',
+        processed_at = now()
+    WHERE id = v_event.id;
+    RETURN jsonb_build_object('status', 'invalid_amount');
+  END IF;
+
+  FOR v_order IN
+    SELECT id, total_amount
+    FROM public.orders
+    WHERE tenant_id = v_event.tenant_id
+      AND lower(COALESCE(payment_code, '')) = lower(v_payment_code)
+      AND status <> 'cancelled'
+    FOR UPDATE
+  LOOP
+    v_order_count := v_order_count + 1;
+  END LOOP;
+
+  IF v_order_count = 0 THEN
+    UPDATE public.webhook_events
+    SET processing_status = 'failed',
+        http_status = 200,
+        error_code = 'order_not_found',
+        processed_at = now()
+    WHERE id = v_event.id;
+    RETURN jsonb_build_object('status', 'order_not_found');
+  END IF;
+
+  IF v_order_count > 1 THEN
+    UPDATE public.webhook_events
+    SET processing_status = 'failed',
+        http_status = 200,
+        error_code = 'ambiguous_payment_code',
+        processed_at = now()
+    WHERE id = v_event.id;
+    RETURN jsonb_build_object('status', 'ambiguous_payment_code');
+  END IF;
+
+  IF v_amount <> v_order.total_amount THEN
+    UPDATE public.webhook_events
+    SET processing_status = 'failed',
+        http_status = 200,
+        error_code = 'amount_mismatch',
+        processed_at = now()
+    WHERE id = v_event.id;
+    RETURN jsonb_build_object('status', 'amount_mismatch');
+  END IF;
+
+  SELECT public.confirm_sepay_payment(
+    v_event.tenant_id,
+    v_order.id,
+    v_payment_code,
+    v_amount,
+    COALESCE(v_event.payload ->> 'accountNumber', ''),
+    COALESCE(v_event.payload ->> 'referenceCode', ''),
+    v_event.payload
+  )
+  INTO v_confirmation;
+
+  v_confirmation_status := v_confirmation ->> 'status';
+  IF v_confirmation_status IS DISTINCT FROM 'completed'
+     AND v_confirmation_status IS DISTINCT FROM 'already_completed' THEN
+    UPDATE public.webhook_events
+    SET order_id = v_order.id,
+        processing_status = 'failed',
+        http_status = 200,
+        error_code = COALESCE(
+          NULLIF(v_confirmation_status, ''),
+          'payment_confirmation_failed'
+        ),
+        processed_at = now()
+    WHERE id = v_event.id;
+    RETURN jsonb_build_object(
+      'status', 'payment_confirmation_failed',
+      'order_id', v_order.id
+    );
+  END IF;
+
+  v_payment_id := NULLIF(v_confirmation ->> 'payment_id', '')::bigint;
+  IF v_payment_id IS NULL THEN
+    UPDATE public.webhook_events
+    SET order_id = v_order.id,
+        processing_status = 'failed',
+        http_status = 500,
+        error_code = 'payment_confirmation_missing_payment',
+        processed_at = now()
+    WHERE id = v_event.id;
+    RETURN jsonb_build_object(
+      'status', 'payment_confirmation_failed',
+      'order_id', v_order.id
+    );
+  END IF;
+
+  UPDATE public.webhook_events
+  SET order_id = v_order.id,
+      payment_id = v_payment_id,
+      processing_status = 'processed',
+      http_status = 200,
+      error_code = NULL,
+      processed_at = now()
+  WHERE id = v_event.id;
+
+  RETURN jsonb_build_object(
+    'status', 'matched',
+    'order_id', v_order.id,
+    'payment_id', v_payment_id
+  );
+END;
+$_$;
+
+
+--
+-- Name: record_production_run(bigint, bigint, numeric, bigint, numeric, text, bigint, jsonb, bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.record_production_run(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_actual_quantity numeric, p_notes text DEFAULT NULL::text, p_target_branch_id bigint DEFAULT NULL::bigint, p_actual_ingredients jsonb DEFAULT NULL::jsonb, p_source_location_id bigint DEFAULT NULL::bigint, p_target_location_id bigint DEFAULT NULL::bigint) RETURNS jsonb
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_created jsonb;
+  v_run_id bigint;
+BEGIN
+  IF p_actual_quantity IS NULL OR p_actual_quantity <= 0 THEN
+    RAISE EXCEPTION 'invalid_actual_quantity' USING ERRCODE = '22023';
+  END IF;
+
+  v_created := public.create_production_run_with_locations(
+    p_branch_id,
+    p_finished_good_id,
+    p_planned_quantity,
+    p_entry_unit_id,
+    p_notes,
+    p_target_branch_id,
+    p_actual_ingredients,
+    p_source_location_id,
+    p_target_location_id
+  );
+  v_run_id := (v_created ->> 'production_run_id')::bigint;
+
+  IF v_run_id IS NULL THEN
+    RAISE EXCEPTION 'production_run_create_failed' USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN public.confirm_production_run(
+    v_run_id,
+    p_actual_quantity,
+    p_actual_ingredients
+  );
+END;
+$$;
+
+
+--
+-- Name: record_sepay_cash_deposit_as_system(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.record_sepay_cash_deposit_as_system(p_event_id bigint) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $_$
+DECLARE
+  v_event public.webhook_events%ROWTYPE;
+  v_amount numeric;
+  v_expense_date date;
+  v_expense_id bigint;
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT *
+  INTO v_event
+  FROM public.webhook_events
+  WHERE id = p_event_id
+    AND provider = 'sepay'
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'webhook_event_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_event.payment_id IS NOT NULL THEN
+    RAISE EXCEPTION 'webhook_event_matches_payment' USING ERRCODE = '23514';
+  END IF;
+
+  IF lower(COALESCE(v_event.payload->>'transferType', '')) <> 'in' THEN
+    RAISE EXCEPTION 'webhook_event_not_in' USING ERRCODE = '23514';
+  END IF;
+
+  IF v_event.expense_id IS NOT NULL THEN
+    RETURN jsonb_build_object(
+      'status', 'already_recorded',
+      'expense_id', v_event.expense_id
+    );
+  END IF;
+
+  SELECT CASE
+    WHEN COALESCE(v_event.payload->>'transferAmount', '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+      THEN abs((v_event.payload->>'transferAmount')::numeric)
+    ELSE NULL
+  END
+  INTO v_amount;
+
+  IF v_amount IS NULL OR v_amount <= 0 THEN
+    RAISE EXCEPTION 'cash_deposit_amount_invalid' USING ERRCODE = '23514';
+  END IF;
+
+  SELECT CASE
+    WHEN COALESCE(v_event.payload->>'transactionDate', '') ~ '^\d{4}-\d{2}-\d{2}'
+      THEN substring(v_event.payload->>'transactionDate' FROM 1 FOR 10)::date
+    ELSE (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
+  END
+  INTO v_expense_date;
+
+  INSERT INTO public.expenses (
+    tenant_id,
+    category,
+    amount,
+    payment_method,
+    expense_date,
+    note
+  )
+  VALUES (
+    v_event.tenant_id,
+    'bank_deposit',
+    v_amount,
+    'cash',
+    v_expense_date,
+    COALESCE(NULLIF(v_event.payload->>'content', ''), 'Nộp tiền mặt vào ngân hàng')
+  )
+  RETURNING id
+  INTO v_expense_id;
+
+  UPDATE public.webhook_events
+  SET expense_id = v_expense_id
+  WHERE id = p_event_id
+    AND tenant_id = v_event.tenant_id;
+
+  RETURN jsonb_build_object(
+    'status', 'recorded',
+    'expense_id', v_expense_id
+  );
+END;
+$_$;
+
+
+--
+-- Name: recreate_grn_at_receiving_site(bigint, bigint, bigint, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.recreate_grn_at_receiving_site(p_grn_id bigint, p_target_branch_id bigint, p_target_location_id bigint, p_reason text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  c_numeric_15_3_max CONSTANT numeric := 999999999999.999;
+  c_numeric_15_2_max CONSTANT numeric := 9999999999999.99;
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_old_grn record;
+  v_target_location record;
+  v_old_location_id bigint;
+  v_new_grn_id bigint;
+  v_new_po_id bigint;
+  v_new_grn_number text;
+  v_new_po_display text;
+  v_line record;
+  v_net_qty numeric;
+  v_net_base numeric;
+  v_cost_base numeric;
+  v_old_current_qty numeric;
+  v_target_current_qty numeric;
+  v_target_wac numeric;
+  v_next_wac numeric;
+  v_old_po_auto boolean := false;
+  v_auto_po_lines integer := 0;
+  v_invoice_id bigint;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF p_reason IS NULL OR length(trim(p_reason)) < 10 THEN
+    RAISE EXCEPTION 'reason_required_min_10_chars' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT g.* INTO v_old_grn
+  FROM public.goods_received_notes g
+  WHERE g.id = p_grn_id
+    AND g.tenant_id = v_tenant
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'grn_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_old_grn.status <> 'confirmed' THEN
+    RAISE EXCEPTION 'grn_not_confirmed' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_old_grn.branch_id = p_target_branch_id THEN
+    RAISE EXCEPTION 'same_branch_use_location_amend' USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT public.has_permission(v_old_grn.branch_id, 'procurement:grn_amend') THEN
+    RAISE EXCEPTION 'forbidden_source_branch' USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT public.has_permission(p_target_branch_id, 'procurement:grn_amend')
+     OR NOT public.has_permission(p_target_branch_id, 'procurement:grn_confirm') THEN
+    RAISE EXCEPTION 'forbidden_target_branch' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT il.id, il.branch_id, il.location_kind
+  INTO v_target_location
+  FROM public.inventory_locations il
+  WHERE il.id = p_target_location_id
+    AND il.tenant_id = v_tenant
+    AND il.branch_id = p_target_branch_id
+    AND il.is_active = TRUE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'target_location_invalid' USING ERRCODE = '23514';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.supplier_returns sr
+    WHERE sr.tenant_id = v_tenant
+      AND sr.grn_id = p_grn_id
+      AND sr.status <> 'cancelled'
+  )
+  OR EXISTS (
+    SELECT 1
+    FROM public.supplier_return_items sri
+    JOIN public.supplier_returns sr
+      ON sr.id = sri.return_id
+     AND sr.tenant_id = sri.tenant_id
+    JOIN public.grn_items gi
+      ON gi.id = sri.grn_item_id
+     AND gi.tenant_id = sri.tenant_id
+    WHERE sri.tenant_id = v_tenant
+      AND gi.grn_id = p_grn_id
+      AND sr.status <> 'cancelled'
+  ) THEN
+    RAISE EXCEPTION 'has_active_supplier_return' USING ERRCODE = '23514';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.supplier_invoices si
+    WHERE si.tenant_id = v_tenant
+      AND si.grn_id = p_grn_id
+      AND (
+        COALESCE(si.payment_status, 'unpaid') <> 'unpaid'
+        OR COALESCE(si.paid_amount, 0) > 0
+        OR COALESCE(si.credit_applied_amount, 0) > 0
+      )
+  ) THEN
+    RAISE EXCEPTION 'has_paid_invoice' USING ERRCODE = '23514';
+  END IF;
+
+  IF v_old_grn.po_id IS NOT NULL THEN
+    SELECT EXISTS (
+      SELECT 1
+      FROM public.audit_logs al
+      WHERE al.tenant_id = v_tenant
+        AND al.action = 'inventory.po.created_from_grn'
+        AND al.entity_type = 'purchase_order'
+        AND al.entity_id = v_old_grn.po_id
+        AND al.new_data ->> 'grn_id' = p_grn_id::text
+    ) INTO v_old_po_auto;
+
+    IF NOT v_old_po_auto THEN
+      RAISE EXCEPTION 'source_po_attached' USING ERRCODE = '23514';
+    END IF;
+
+    IF EXISTS (
+      SELECT 1
+      FROM public.goods_received_notes g
+      WHERE g.tenant_id = v_tenant
+        AND g.po_id = v_old_grn.po_id
+        AND g.id <> p_grn_id
+        AND g.status = 'confirmed'
+    ) THEN
+      RAISE EXCEPTION 'source_po_shared' USING ERRCODE = '23514';
+    END IF;
+  END IF;
+
+  IF v_old_grn.location_id IS NOT NULL THEN
+    SELECT il.id INTO v_old_location_id
+    FROM public.inventory_locations il
+    WHERE il.id = v_old_grn.location_id
+      AND il.tenant_id = v_tenant
+      AND il.branch_id = v_old_grn.branch_id
+      AND il.is_active = TRUE;
+  ELSE
+    SELECT il.id INTO v_old_location_id
+    FROM public.inventory_locations il
+    WHERE il.tenant_id = v_tenant
+      AND il.branch_id = v_old_grn.branch_id
+      AND il.is_default_receive = TRUE
+      AND il.is_active = TRUE
+    ORDER BY il.sort_order NULLS LAST, il.id
+    LIMIT 1;
+  END IF;
+
+  IF v_old_location_id IS NULL THEN
+    RAISE EXCEPTION 'source_location_missing' USING ERRCODE = '23502';
+  END IF;
+
+  FOR v_line IN
+    SELECT gi.*
+    FROM public.grn_items gi
+    WHERE gi.tenant_id = v_tenant
+      AND gi.grn_id = p_grn_id
+    ORDER BY gi.id
+    FOR UPDATE
+  LOOP
+    v_net_qty := v_line.received_quantity - COALESCE(v_line.rejected_quantity, 0);
+    v_net_base := public.inv_to_base(v_line.ingredient_id, v_line.entry_unit_id, v_net_qty);
+    v_cost_base := CASE
+      WHEN v_net_base <> 0 THEN ROUND((v_net_qty * v_line.unit_cost) / v_net_base, 2)
+      ELSE v_line.unit_cost
+    END;
+
+    IF abs(v_net_base) > c_numeric_15_3_max
+       OR abs(v_cost_base) > c_numeric_15_2_max THEN
+      RAISE EXCEPTION 'invalid_amount' USING ERRCODE = '22023';
+    END IF;
+
+    IF v_net_base <= 0 THEN
+      CONTINUE;
+    END IF;
+
+    INSERT INTO public.stock_levels (
+      tenant_id, branch_id, ingredient_id, location_id, current_quantity
+    ) VALUES (
+      v_tenant, p_target_branch_id, v_line.ingredient_id, p_target_location_id, 0
+    )
+    ON CONFLICT ON CONSTRAINT stock_levels_ingredient_branch_location_tenant_key
+    DO NOTHING;
+
+    PERFORM 1
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant
+      AND sl.ingredient_id = v_line.ingredient_id
+      AND (
+        (sl.branch_id = v_old_grn.branch_id AND sl.location_id = v_old_location_id)
+        OR (sl.branch_id = p_target_branch_id AND sl.location_id = p_target_location_id)
+      )
+    ORDER BY sl.branch_id, sl.location_id, sl.ingredient_id
+    FOR UPDATE;
+
+    SELECT sl.current_quantity
+    INTO v_old_current_qty
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant
+      AND sl.branch_id = v_old_grn.branch_id
+      AND sl.location_id = v_old_location_id
+      AND sl.ingredient_id = v_line.ingredient_id;
+
+    IF COALESCE(v_old_current_qty, 0) < v_net_base THEN
+      RAISE EXCEPTION 'insufficient_source_stock:%', v_line.ingredient_id USING ERRCODE = '23514';
+    END IF;
+  END LOOP;
+
+  LOOP
+    v_new_grn_number := v_old_grn.grn_number || '-COPY-' ||
+      substr(md5(clock_timestamp()::text || random()::text), 1, 6);
+    EXIT WHEN NOT EXISTS (
+      SELECT 1
+      FROM public.goods_received_notes g
+      WHERE g.tenant_id = v_tenant
+        AND g.grn_number = v_new_grn_number
+    );
+  END LOOP;
+
+  INSERT INTO public.goods_received_notes (
+    tenant_id, branch_id, location_id, supplier_id, po_id, grn_number,
+    received_date, received_by, status, notes, created_by
+  ) VALUES (
+    v_tenant, p_target_branch_id, p_target_location_id, v_old_grn.supplier_id,
+    NULL, v_new_grn_number, v_old_grn.received_date, v_uid, 'confirmed',
+    NULLIF(btrim(v_old_grn.notes), ''), v_uid
+  )
+  RETURNING id INTO v_new_grn_id;
+
+  INSERT INTO public.grn_items (
+    tenant_id, grn_id, ingredient_id, po_quantity, received_quantity,
+    entry_unit_id, unit_cost, total_cost, quality_status, rejected_quantity,
+    rejection_reason, expiry_date, batch_number, receiving_temperature,
+    po_unit_price, price_override_note, price_override_photo_url,
+    rejected_photo_url, requires_review, short_delivery_action
+  )
+  SELECT
+    tenant_id, v_new_grn_id, ingredient_id, po_quantity, received_quantity,
+    entry_unit_id, unit_cost, total_cost, quality_status, rejected_quantity,
+    rejection_reason, expiry_date, batch_number, receiving_temperature,
+    po_unit_price, price_override_note, price_override_photo_url,
+    rejected_photo_url, requires_review, short_delivery_action
+  FROM public.grn_items
+  WHERE tenant_id = v_tenant
+    AND grn_id = p_grn_id
+  ORDER BY id;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.grn_items gi
+    WHERE gi.tenant_id = v_tenant
+      AND gi.grn_id = v_new_grn_id
+      AND gi.quality_status <> 'rejected'
+      AND gi.received_quantity - COALESCE(gi.rejected_quantity, 0) > 0
+  ) THEN
+    v_new_po_display := public.next_po_display_id(v_tenant);
+
+    INSERT INTO public.purchase_orders (
+      tenant_id, branch_id, supplier_id, po_number, display_id, status, notes, created_by
+    ) VALUES (
+      v_tenant, p_target_branch_id, v_old_grn.supplier_id, v_new_po_display,
+      v_new_po_display, 'received', NULLIF(btrim(v_old_grn.notes), ''), v_uid
+    )
+    RETURNING id INTO v_new_po_id;
+
+    INSERT INTO public.purchase_order_items (
+      tenant_id, po_id, ingredient_id, quantity, entry_unit_id, unit_price_est, line_total
+    )
+    SELECT
+      v_tenant,
+      v_new_po_id,
+      gi.ingredient_id,
+      (gi.received_quantity - COALESCE(gi.rejected_quantity, 0))::numeric(15,3),
+      gi.entry_unit_id,
+      gi.unit_cost,
+      ROUND((gi.received_quantity - COALESCE(gi.rejected_quantity, 0)) * gi.unit_cost, 2)
+    FROM public.grn_items gi
+    WHERE gi.tenant_id = v_tenant
+      AND gi.grn_id = v_new_grn_id
+      AND gi.quality_status <> 'rejected'
+      AND gi.received_quantity - COALESCE(gi.rejected_quantity, 0) > 0;
+
+    GET DIAGNOSTICS v_auto_po_lines = ROW_COUNT;
+
+    UPDATE public.grn_items gi
+    SET po_quantity = gi.received_quantity - COALESCE(gi.rejected_quantity, 0),
+        po_unit_price = gi.unit_cost
+    WHERE gi.tenant_id = v_tenant
+      AND gi.grn_id = v_new_grn_id
+      AND gi.quality_status <> 'rejected'
+      AND gi.received_quantity - COALESCE(gi.rejected_quantity, 0) > 0;
+
+    UPDATE public.goods_received_notes
+    SET po_id = v_new_po_id, updated_at = now()
+    WHERE id = v_new_grn_id
+      AND tenant_id = v_tenant;
+
+    PERFORM public.log_audit(
+      'inventory.po.created_from_grn',
+      'purchase_order',
+      v_new_po_id,
+      NULL,
+      jsonb_build_object(
+        'grn_id', v_new_grn_id,
+        'lines', v_auto_po_lines,
+        'branch_id', p_target_branch_id
+      )
+    );
+  END IF;
+
+  FOR v_line IN
+    SELECT gi.*
+    FROM public.grn_items gi
+    WHERE gi.tenant_id = v_tenant
+      AND gi.grn_id = p_grn_id
+    ORDER BY gi.id
+  LOOP
+    v_net_qty := v_line.received_quantity - COALESCE(v_line.rejected_quantity, 0);
+    v_net_base := public.inv_to_base(v_line.ingredient_id, v_line.entry_unit_id, v_net_qty);
+    v_cost_base := CASE
+      WHEN v_net_base <> 0 THEN ROUND((v_net_qty * v_line.unit_cost) / v_net_base, 2)
+      ELSE v_line.unit_cost
+    END;
+
+    IF v_net_base <= 0 THEN
+      CONTINUE;
+    END IF;
+
+    SELECT sl.current_quantity, sl.avg_unit_cost
+    INTO v_target_current_qty, v_target_wac
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant
+      AND sl.branch_id = p_target_branch_id
+      AND sl.location_id = p_target_location_id
+      AND sl.ingredient_id = v_line.ingredient_id;
+
+    v_target_current_qty := COALESCE(v_target_current_qty, 0);
+
+    INSERT INTO public.stock_movements (
+      tenant_id, branch_id, ingredient_id, type, quantity_change,
+      reason, created_by, grn_id, unit_cost, location_id,
+      entry_unit_id, entry_quantity
+    ) VALUES (
+      v_tenant, v_old_grn.branch_id, v_line.ingredient_id, 'grn_amend',
+      -v_net_base,
+      'GRN ' || v_old_grn.grn_number || ' recreated at ' || v_new_grn_number ||
+        ': reverse source receipt - ' || trim(p_reason),
+      v_uid, p_grn_id, v_cost_base, v_old_location_id,
+      v_line.entry_unit_id, v_net_qty
+    );
+
+    INSERT INTO public.stock_movements (
+      tenant_id, branch_id, ingredient_id, type, quantity_change,
+      reason, created_by, grn_id, unit_cost, location_id,
+      entry_unit_id, entry_quantity
+    ) VALUES (
+      v_tenant, p_target_branch_id, v_line.ingredient_id, 'grn_receipt',
+      v_net_base,
+      'GRN ' || v_new_grn_number || ' recreated from ' || v_old_grn.grn_number ||
+        ': target receipt - ' || trim(p_reason),
+      v_uid, v_new_grn_id, v_cost_base, p_target_location_id,
+      v_line.entry_unit_id, v_net_qty
+    );
+
+    v_next_wac := CASE
+      WHEN v_target_current_qty + v_net_base > 0 THEN ROUND(
+        ((v_target_current_qty * COALESCE(v_target_wac, 0)) + (v_net_base * v_cost_base))
+        / (v_target_current_qty + v_net_base),
+        2
+      )
+      ELSE v_cost_base
+    END;
+
+    IF abs(v_next_wac) > c_numeric_15_2_max THEN
+      RAISE EXCEPTION 'invalid_amount' USING ERRCODE = '22023';
+    END IF;
+
+    UPDATE public.stock_levels sl
+    SET avg_unit_cost = v_next_wac,
+        updated_at = now()
+    WHERE sl.tenant_id = v_tenant
+      AND sl.branch_id = p_target_branch_id
+      AND sl.location_id = p_target_location_id
+      AND sl.ingredient_id = v_line.ingredient_id;
+
+    UPDATE public.ingredients i
+    SET unit_cost = v_cost_base,
+        updated_at = now()
+    WHERE i.tenant_id = v_tenant
+      AND i.id = v_line.ingredient_id;
+  END LOOP;
+
+  UPDATE public.goods_received_notes
+  SET status = 'cancelled', updated_at = now()
+  WHERE id = p_grn_id
+    AND tenant_id = v_tenant;
+
+  IF v_old_po_auto THEN
+    UPDATE public.purchase_orders
+    SET status = 'cancelled', updated_at = now()
+    WHERE id = v_old_grn.po_id
+      AND tenant_id = v_tenant
+      AND status IN ('sent', 'partially_received', 'received');
+  END IF;
+
+  UPDATE public.supplier_invoices
+  SET grn_id = v_new_grn_id,
+      po_id = v_new_po_id,
+      updated_at = now()
+  WHERE tenant_id = v_tenant
+    AND grn_id = p_grn_id
+    AND COALESCE(payment_status, 'unpaid') = 'unpaid'
+    AND COALESCE(paid_amount, 0) = 0
+    AND COALESCE(credit_applied_amount, 0) = 0;
+
+  FOR v_invoice_id IN
+    SELECT id
+    FROM public.supplier_invoices
+    WHERE tenant_id = v_tenant
+      AND grn_id = v_new_grn_id
+  LOOP
+    PERFORM public.recompute_supplier_invoice_matching(v_invoice_id);
+  END LOOP;
+
+  PERFORM public.log_audit(
+    'inventory.grn.recreated_receiving_site',
+    'goods_received_note',
+    p_grn_id,
+    jsonb_build_object(
+      'grn_id', p_grn_id,
+      'grn_number', v_old_grn.grn_number,
+      'branch_id', v_old_grn.branch_id,
+      'location_id', v_old_location_id,
+      'po_id', v_old_grn.po_id,
+      'status', 'confirmed'
+    ),
+    jsonb_build_object(
+      'new_grn_id', v_new_grn_id,
+      'new_grn_number', v_new_grn_number,
+      'branch_id', p_target_branch_id,
+      'location_id', p_target_location_id,
+      'po_id', v_new_po_id,
+      'old_auto_po_cancelled', v_old_po_auto,
+      'reason', trim(p_reason)
+    )
+  );
+
+  PERFORM public.log_audit(
+    'inventory.grn.recreated_from_source',
+    'goods_received_note',
+    v_new_grn_id,
+    NULL,
+    jsonb_build_object(
+      'source_grn_id', p_grn_id,
+      'source_grn_number', v_old_grn.grn_number,
+      'reason', trim(p_reason)
+    )
+  );
+
+  RETURN jsonb_build_object(
+    'old_grn_id', p_grn_id,
+    'old_grn_number', v_old_grn.grn_number,
+    'new_grn_id', v_new_grn_id,
+    'new_grn_number', v_new_grn_number,
+    'new_po_id', v_new_po_id,
+    'old_auto_po_cancelled', v_old_po_auto
+  );
+END;
+$$;
+
+
+--
+-- Name: FUNCTION recreate_grn_at_receiving_site(p_grn_id bigint, p_target_branch_id bigint, p_target_location_id bigint, p_reason text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.recreate_grn_at_receiving_site(p_grn_id bigint, p_target_branch_id bigint, p_target_location_id bigint, p_reason text) IS 'Owner-level correction for a confirmed GRN received at the wrong branch/site. Reverses source stock, creates a confirmed replacement GRN at the target location, and preserves audit history.';
+
+
+--
 -- Name: reduce_order_item_quantity(bigint, integer, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -19682,16 +23717,6 @@ BEGIN
     RAISE EXCEPTION 'permission denied: settings:tenant required' USING ERRCODE = '42501';
   END IF;
 
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_daily_revenue;
-  INSERT INTO public.mv_refresh_log(view_name, refreshed_at)
-    VALUES ('mv_daily_revenue', now())
-    ON CONFLICT (view_name) DO UPDATE SET refreshed_at = EXCLUDED.refreshed_at;
-
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_top_items;
-  INSERT INTO public.mv_refresh_log(view_name, refreshed_at)
-    VALUES ('mv_top_items', now())
-    ON CONFLICT (view_name) DO UPDATE SET refreshed_at = EXCLUDED.refreshed_at;
-
   REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_food_cost;
   INSERT INTO public.mv_refresh_log(view_name, refreshed_at)
     VALUES ('mv_food_cost', now())
@@ -19709,12 +23734,21 @@ CREATE FUNCTION public.refresh_inventory_dashboard() RETURNS timestamp with time
     SET search_path TO 'public'
     AS $$
 BEGIN
-  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000'; END IF;
-  IF NOT (public.has_permission(NULL, 'reports:view_branch') OR public.has_permission(NULL, 'reports:view_tenant')
-       OR public.has_permission(NULL, 'settings:branch') OR public.has_permission(NULL, 'settings:tenant')) THEN
-    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  -- Authenticated callers must hold appropriate permissions;
+  -- pg_cron runs with no JWT (auth.uid() IS NULL) and bypasses the check.
+  IF auth.uid() IS NOT NULL THEN
+    IF NOT (public.has_permission(NULL, 'reports:view_branch') OR public.has_permission(NULL, 'reports:view_tenant')
+         OR public.has_permission(NULL, 'settings:branch') OR public.has_permission(NULL, 'settings:tenant')) THEN
+      RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+    END IF;
   END IF;
+
   REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_inventory_stock_current;
+
+  INSERT INTO public.mv_refresh_log(view_name, refreshed_at)
+    VALUES ('mv_inventory_stock_current', now())
+    ON CONFLICT (view_name) DO UPDATE SET refreshed_at = EXCLUDED.refreshed_at;
+
   RETURN now();
 END; $$;
 
@@ -19826,22 +23860,6 @@ BEGIN
   LIMIT 1
   FOR UPDATE;
   IF FOUND THEN
-    -- Cross-period guard: a lodged invoice (already sent to the provider/CQT)
-    -- from a prior tax period is assumed to belong to an already-declared period
-    -- and must NOT be cancelled at POS; route to the accountant.
-    --
-    -- Lodged = status IN ('signing','submitted','issued') AND provider_ref IS
-    -- NOT NULL. Earlier this fired only for status='issued', so a prior-period
-    -- invoice still in signing/submitted (already dispatched, awaiting the CQT)
-    -- fell through to the unconditional cancel below. All three lodged states are
-    -- now covered.
-    --
-    -- The month boundary is evaluated in Asia/Ho_Chi_Minh (ICT), matching every
-    -- other date boundary in baseline.sql. The prod session TZ is UTC, so a raw
-    -- date_trunc('month', now()) is 7h off the ICT month edge. date_trunc on the
-    -- ICT calendar month is a CONSERVATIVE proxy — the accountant must confirm
-    -- the real declaration cutoff. The exact period-close hard-block is a
-    -- separate deferred item.
     IF v_invoice.status IN ('signing', 'submitted', 'issued')
        AND v_invoice.provider_ref IS NOT NULL
        AND v_invoice.issued_at IS NOT NULL
@@ -19850,11 +23868,6 @@ BEGIN
       RAISE EXCEPTION 'cross_period_invoice' USING ERRCODE = 'P0001';
     END IF;
 
-    -- DANGER: LOCAL state flip only. For an issued invoice this does NOT cancel
-    -- the HĐĐT at Viettel/CQT — the provider cancel cannot run in this
-    -- transaction. invoice_action='cancel_issued' is returned so the Phase-2
-    -- voidPaidOrder Server Action calls invoiceProvider.cancelInvoice after
-    -- commit. If that bridge is skipped the invoice stays live at the CQT.
     UPDATE public.tax_invoices
     SET status = 'cancelled',
         cancelled_at = now(),
@@ -19881,7 +23894,6 @@ BEGIN
   END IF;
 
   -- Money leg: a refund row only when there is money to return
-  -- (refunds_amount_check requires amount > 0; zero-total comp / staff meals have none).
   IF v_payment.amount > 0 THEN
     INSERT INTO public.refunds
       (tenant_id, branch_id, payment_id, order_id, amount, reason,
@@ -19893,33 +23905,14 @@ BEGIN
     RETURNING id INTO v_refund_id;
   END IF;
 
-  -- Always flip the payment, including a zero-total comp, so a voided order never
-  -- leaves a 'completed' payment on a 'cancelled' order (the reconciliation oracle
-  -- flags that as a desync). A zero-total void has no refund row by design.
   UPDATE public.payments
   SET status = 'refunded', updated_at = now()
   WHERE id = v_payment.id;
 
-  -- Order: cancel to drop from board + revenue. payment_status stays 'paid' (D020).
-  --
-  -- The status->'cancelled' update fires trg_orders_normalize_discount_totals
-  -- (pos_normalize_order_discount_totals), which on a cancelled order resets the
-  -- discount fields and sets total_amount = GREATEST(0, service_charge). This is
-  -- the SAME behavior every other cancel path triggers and is ACCEPTED here:
-  -- every revenue/report consumer filters status <> 'cancelled' (and
-  -- get_daily_revenue also requires payments.status = 'completed', which this RPC
-  -- has flipped to 'refunded'), so the rewritten total is never read for money.
   UPDATE public.orders
   SET status = 'cancelled', updated_at = now()
   WHERE id = p_order_id;
 
-  -- Cancelling order_items fires trg_decrement_branch_menu_daily_limit, which
-  -- rolls back sold_today. For a paid + already-consumed order that slot is spent
-  -- — freeing it would let a sold-out item be re-sold. Suppress the decrement via
-  -- the same session GUC split_order uses for its quota-neutral clone insert
-  -- (decrement_branch_menu_daily_limit itself has no skip guard, so we gate the
-  -- enforce/decrement pair through comtammatu.skip_quota_enforcement). This mirrors
-  -- the deliberately-gated stock restore: a post-paid void does NOT free quota.
   PERFORM set_config('comtammatu.skip_quota_enforcement', 'true', true);
   UPDATE public.order_items
   SET status = 'cancelled', updated_at = now()
@@ -19932,9 +23925,10 @@ BEGIN
   WHERE order_id = p_order_id
     AND status NOT IN ('cancelled', 'served');
 
-  -- Audit against the ORDER entity (stable for both money and zero-total comp
-  -- voids); the refund id (NULL for a comp void) goes in the payload. Never write
-  -- an order PK under entity_type='refund'.
+  -- Stock restore: post the inverse of this order's sale_consumption rows.
+  -- No-op when no consumption was posted (flag was OFF at sale time).
+  PERFORM public.post_pos_sale_refund_restore(p_order_id, v_actor);
+
   PERFORM public.log_audit(
     'refund.pos_void_after_paid',
     'order',
@@ -20206,7 +24200,7 @@ BEGIN
     ),
     'leave_request',
     p_request_id,
-    format('/br/%s/shift/schedule/leave', v_request.branch_id),
+    '/employee/leave',
     jsonb_build_object(
       'leave_request_id', p_request_id,
       'employee_id', v_request.employee_id,
@@ -20485,7 +24479,7 @@ BEGIN
        'agreement_ref', p_agreement_ref,
        'agreement_date', p_agreement_date
      ),
-     'HĐĐT replace: ' || p_reason,
+     'TT78 §7 replace: ' || p_reason,
      v_actor,
      v_old.tenant_id),
     (v_new_id, NULL, 'draft',
@@ -20506,7 +24500,7 @@ $$;
 -- Name: FUNCTION replace_tax_invoice(p_old_id bigint, p_reason text, p_agreement_ref text, p_agreement_date timestamp with time zone, p_buyer_name text, p_buyer_tax_code text, p_buyer_address text, p_subtotal numeric, p_vat_rate numeric, p_vat_amount numeric, p_total_amount numeric, p_provider text); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.replace_tax_invoice(p_old_id bigint, p_reason text, p_agreement_ref text, p_agreement_date timestamp with time zone, p_buyer_name text, p_buyer_tax_code text, p_buyer_address text, p_subtotal numeric, p_vat_rate numeric, p_vat_amount numeric, p_total_amount numeric, p_provider text) IS 'NĐ 254/2026 + TT 32/2025 atomic replacement RPC. Locks OLD invoice, flips to replaced, INSERTs NEW draft, links both via replaced_by/replaced_for, audits via tax_invoice_events — all in single tx. Caller then transitions NEW: draft → signing → call provider with adjustmentType=3 → issued|submitted|draft. Requires settings:tenant + same tenant. Chain depth capped at 3.';
+COMMENT ON FUNCTION public.replace_tax_invoice(p_old_id bigint, p_reason text, p_agreement_ref text, p_agreement_date timestamp with time zone, p_buyer_name text, p_buyer_tax_code text, p_buyer_address text, p_subtotal numeric, p_vat_rate numeric, p_vat_amount numeric, p_total_amount numeric, p_provider text) IS 'TT78 §7 atomic replacement RPC. Locks OLD invoice, flips to replaced, INSERTs NEW draft, links both via replaced_by/replaced_for, audits via tax_invoice_events — all in single tx. Caller then transitions NEW: draft → signing → call provider with adjustmentType=3 → issued|submitted|draft. Requires settings:tenant + same tenant. Chain depth capped at 3.';
 
 
 --
@@ -20589,7 +24583,7 @@ BEGIN
     COALESCE(format('Quản lý yêu cầu đếm lại: %s', v_note), 'Quản lý yêu cầu đếm lại phiếu đếm tồn của bạn.'),
     'inventory_count_slip',
     p_slip_id,
-    format('/br/%s/stock/count', v_slip.branch_id),
+    '/employee/count',
     jsonb_build_object(
       'slip_id', p_slip_id, 'employee_id', v_slip.employee_id,
       'branch_id', v_slip.branch_id, 'result', 'needs_changes'
@@ -21094,6 +25088,7 @@ DECLARE
   v_actor           UUID := auth.uid();
   v_tenant          BIGINT := public.auth_tenant_id();
   v_stock_count     INT := 0;
+  v_restore_result  jsonb;
 BEGIN
   IF v_actor IS NULL THEN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
@@ -21147,8 +25142,6 @@ BEGIN
       v_refund.amount, v_payment.amount USING ERRCODE = 'P0001';
   END IF;
 
-  -- Lock kept for serialization against concurrent payment/cancel flows even
-  -- though the order row is no longer mutated.
   SELECT id, tenant_id, branch_id, payment_status
   INTO v_order
   FROM public.orders
@@ -21170,6 +25163,12 @@ BEGIN
          approved_at = now(),
          updated_at  = now()
    WHERE id = v_refund.id;
+
+  -- Stock restore: inverse of this order's sale_consumption rows.
+  v_restore_result := public.post_pos_sale_refund_restore(v_refund.order_id, v_actor);
+  IF v_restore_result ? 'movements_created' THEN
+    v_stock_count := COALESCE((v_restore_result ->> 'movements_created')::int, 0);
+  END IF;
 
   PERFORM public.log_audit(
     'refund.approve',
@@ -21279,6 +25278,67 @@ BEGIN
   VALUES (p_branch_id, extensions.crypt(p_new_code, extensions.gen_salt('bf', 10)), now(), v_uid)
   ON CONFLICT (branch_id) DO UPDATE
     SET code_hash = EXCLUDED.code_hash, rotated_at = EXCLUDED.rotated_at, rotated_by = EXCLUDED.rotated_by;
+END;
+$$;
+
+
+--
+-- Name: rotate_table_self_order_qr(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.rotate_table_self_order_qr(p_table_id bigint) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant_id bigint := public.auth_tenant_id();
+  v_table record;
+  v_token text;
+  v_rotated_at timestamptz := now();
+BEGIN
+  IF v_uid IS NULL OR v_tenant_id IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(
+    hashtext('self-order-table'),
+    hashtext(p_table_id::text)
+  );
+
+  SELECT t.*
+  INTO v_table
+  FROM public.tables t
+  WHERE t.id = p_table_id
+    AND t.tenant_id = v_tenant_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'self_order_table_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF NOT public.has_permission(v_table.branch_id, 'settings:branch') THEN
+    RAISE EXCEPTION 'permission denied: settings:branch' USING ERRCODE = '42501';
+  END IF;
+
+  v_token := translate(
+    encode(extensions.gen_random_bytes(24), 'base64'),
+    '+/=',
+    '-_'
+  );
+
+  UPDATE public.tables
+  SET self_order_token = v_token,
+      self_order_enabled = true,
+      self_order_token_rotated_at = v_rotated_at
+  WHERE id = v_table.id
+    AND tenant_id = v_table.tenant_id;
+
+  RETURN jsonb_build_object(
+    'token', v_token,
+    'enabled', true,
+    'rotatedAt', v_rotated_at
+  );
 END;
 $$;
 
@@ -22019,14 +26079,13 @@ $$;
 
 CREATE FUNCTION public.scan_inventory_alerts() RETURNS TABLE(low_stock_count bigint, expiry_count bigint)
     LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'pg_temp'
+    SET search_path TO ''
     AS $$
 DECLARE
-  v_low BIGINT := 0;
-  v_exp BIGINT := 0;
-  v_today TEXT := to_char(now() AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD');
+  v_low bigint := 0;
+  v_exp bigint := 0;
+  v_today text := to_char(now() AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD');
 BEGIN
-  -- Low-stock alerts
   WITH inserted AS (
     INSERT INTO public.notifications (
       tenant_id, target_branch_id, target_roles,
@@ -22037,14 +26096,15 @@ BEGIN
     SELECT
       sl.tenant_id,
       sl.branch_id,
-      ARRAY['branch_manager', 'owner']::TEXT[],
+      ARRAY['branch_manager', 'owner']::text[],
       'inventory.stock_low',
       'warning',
       format('Tồn kho thấp: %s', ing.name),
-      format('Còn %s %s (ngưỡng đặt lại %s)',
+      format(
+        'Còn %s (ngưỡng đặt lại %s)',
         trim(trailing '.0' from sl.current_quantity::text),
-        ing.unit,
-        trim(trailing '.0' from ing.reorder_point::text)),
+        trim(trailing '.0' from ing.reorder_point::text)
+      ),
       'ingredient',
       ing.id,
       format('/inventory/stock?ingredient=%s&branch=%s', ing.id, sl.branch_id),
@@ -22054,10 +26114,11 @@ BEGIN
         'reorder_point', ing.reorder_point,
         'branch_id', sl.branch_id
       ),
-      (now() + interval '7 days')
+      now() + interval '7 days'
     FROM public.stock_levels sl
     JOIN public.ingredients ing
-      ON ing.id = sl.ingredient_id AND ing.tenant_id = sl.tenant_id
+      ON ing.id = sl.ingredient_id
+     AND ing.tenant_id = sl.tenant_id
     WHERE ing.reorder_point IS NOT NULL
       AND ing.reorder_point > 0
       AND sl.current_quantity <= ing.reorder_point
@@ -22069,59 +26130,9 @@ BEGIN
   )
   SELECT count(*) INTO v_low FROM inserted;
 
-  -- Expiry soon
-  WITH inserted AS (
-    INSERT INTO public.notifications (
-      tenant_id, target_branch_id, target_roles,
-      kind, severity, title, body,
-      entity_type, entity_id, action_url, dedup_key, meta,
-      expires_at
-    )
-    SELECT
-      gi.tenant_id,
-      g.branch_id,
-      ARRAY['branch_manager', 'owner']::TEXT[],
-      'inventory.expiry_soon',
-      CASE
-        WHEN gi.expiry_date <= (now()::date + interval '2 days') THEN 'critical'
-        ELSE 'warning'
-      END,
-      format('Sắp hết hạn: %s', ing.name),
-      format('Hạn %s — lô %s (còn %s %s)',
-        to_char(gi.expiry_date, 'DD/MM/YYYY'),
-        COALESCE(gi.batch_number, '—'),
-        trim(trailing '.0' from (gi.received_quantity - gi.rejected_quantity)::text),
-        ing.unit),
-      'grn_item',
-      gi.id,
-      format('/inventory/expiry?grn_item=%s', gi.id),
-      format('expiry_soon:grn_item:%s:%s', gi.id, v_today),
-      jsonb_build_object(
-        'expiry_date', gi.expiry_date,
-        'batch_number', gi.batch_number,
-        'remaining_quantity', gi.received_quantity - gi.rejected_quantity,
-        'grn_id', gi.grn_id,
-        'branch_id', g.branch_id
-      ),
-      (gi.expiry_date::timestamptz + interval '1 day')
-    FROM public.grn_items gi
-    JOIN public.goods_received_notes g
-      ON g.id = gi.grn_id AND g.tenant_id = gi.tenant_id
-    JOIN public.ingredients ing
-      ON ing.id = gi.ingredient_id AND ing.tenant_id = gi.tenant_id
-    WHERE gi.expiry_date IS NOT NULL
-      AND gi.expiry_date BETWEEN now()::date AND (now()::date + interval '7 days')
-      AND (gi.received_quantity - gi.rejected_quantity) > 0
-      AND g.status = 'confirmed'
-    ON CONFLICT (tenant_id, dedup_key)
-      WHERE dedup_key IS NOT NULL
-      DO NOTHING
-    RETURNING 1
-  )
-  SELECT count(*) INTO v_exp FROM inserted;
-
   DELETE FROM public.notifications
-  WHERE expires_at IS NOT NULL AND expires_at < now();
+  WHERE expires_at IS NOT NULL
+    AND expires_at < now();
 
   RETURN QUERY SELECT v_low, v_exp;
 END;
@@ -22133,6 +26144,2248 @@ $$;
 --
 
 COMMENT ON FUNCTION public.scan_inventory_alerts() IS 'Emit inventory.stock_low and inventory.expiry_soon notifications (idempotent per day via dedup_key). Wire to pg_cron.';
+
+
+--
+-- Name: self_order_accept_request(bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_accept_request(p_request_id bigint, p_target_order_id bigint DEFAULT NULL::bigint) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_request_ref public.self_order_requests%ROWTYPE;
+  v_request public.self_order_requests%ROWTYPE;
+  v_order public.orders%ROWTYPE;
+  v_open_order_count integer := 0;
+  v_order_id bigint;
+  v_pos_session_id bigint;
+  v_result jsonb;
+BEGIN
+  IF v_uid IS NULL OR v_tenant IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  SELECT r.*
+  INTO v_request_ref
+  FROM public.self_order_requests r
+  WHERE r.id = p_request_id
+    AND r.tenant_id = v_tenant;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'self_order_request_not_found' USING ERRCODE = 'P0002';
+  END IF;
+  IF NOT public.has_permission(v_request_ref.branch_id, 'pos:use') THEN
+    RAISE EXCEPTION 'permission denied: pos:use' USING ERRCODE = '42501';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(
+    hashtext('self-order-table'),
+    hashtext(v_request_ref.table_id::text)
+  );
+
+  SELECT r.*
+  INTO v_request
+  FROM public.self_order_requests r
+  WHERE r.id = v_request_ref.id
+    AND r.tenant_id = v_request_ref.tenant_id
+  FOR UPDATE;
+
+  IF v_request.status = 'accepted' THEN
+    RETURN jsonb_build_object(
+      'ok', true,
+      'idempotent', true,
+      'status', 'accepted',
+      'orderId', v_request.order_id
+    );
+  END IF;
+  IF v_request.status <> 'pending' THEN
+    RAISE EXCEPTION 'self_order_request_not_pending' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT ps.id
+  INTO v_pos_session_id
+  FROM public.pos_sessions ps
+  WHERE ps.tenant_id = v_request.tenant_id
+    AND ps.branch_id = v_request.branch_id
+    AND ps.status = 'open'
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'self_order_pos_session_closed' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_target_order_id IS NOT NULL THEN
+    v_order_id := p_target_order_id;
+  ELSE
+    SELECT count(*)::integer, min(o.id)
+    INTO v_open_order_count, v_order_id
+    FROM public.orders o
+    WHERE o.tenant_id = v_request.tenant_id
+      AND o.branch_id = v_request.branch_id
+      AND o.table_id = v_request.table_id
+      AND o.payment_status <> 'paid'
+      AND o.status NOT IN ('completed', 'cancelled')
+      AND o.merged_into_order_id IS NULL;
+
+    IF v_open_order_count <> 1 THEN
+      v_order_id := NULL;
+    END IF;
+  END IF;
+
+  IF v_order_id IS NULL THEN
+    v_result := public.create_order(
+      v_request.tenant_id,
+      v_request.branch_id,
+      v_uid,
+      v_request.cart_payload,
+      'dine_in',
+      v_request.table_id,
+      v_pos_session_id,
+      v_request.customer_note,
+      v_request.client_op_id
+    );
+    v_order_id := NULLIF(v_result ->> 'order_id', '')::bigint;
+  ELSE
+    SELECT o.*
+    INTO v_order
+    FROM public.orders o
+    WHERE o.id = v_order_id
+      AND o.tenant_id = v_request.tenant_id
+      AND o.branch_id = v_request.branch_id
+      AND o.table_id = v_request.table_id
+      AND o.payment_status <> 'paid'
+      AND o.status NOT IN ('completed', 'cancelled')
+      AND o.merged_into_order_id IS NULL
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'self_order_target_order_not_appendable' USING ERRCODE = '22023';
+    END IF;
+    IF public.self_order_active_payment_lock(v_order.id) IS NOT NULL THEN
+      RAISE EXCEPTION 'self_order_pending_payment_exists' USING ERRCODE = '55P03';
+    END IF;
+
+    v_result := public.append_order_items(
+      v_order.id,
+      v_request.cart_payload,
+      v_request.client_op_id
+    );
+  END IF;
+
+  UPDATE public.self_order_requests
+  SET status = 'accepted',
+      order_id = v_order_id,
+      decided_by = v_uid,
+      decided_at = now()
+  WHERE id = v_request.id
+    AND tenant_id = v_request.tenant_id
+    AND status = 'pending';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'self_order_request_not_pending' USING ERRCODE = '40001';
+  END IF;
+
+  RETURN COALESCE(v_result, '{}'::jsonb) || jsonb_build_object(
+    'ok', true,
+    'status', 'accepted',
+    'orderId', v_order_id
+  );
+END;
+$$;
+
+
+--
+-- Name: self_order_active_payment_lock(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_active_payment_lock(p_order_id bigint) RETURNS bigint
+    LANGUAGE sql
+    SET search_path TO ''
+    AS $$
+  SELECT candidate.lock_id
+  FROM (
+    SELECT COALESCE(pr.payment_id, pr.id) AS lock_id, pr.created_at
+    FROM public.self_order_payment_requests pr
+    WHERE pr.order_id = p_order_id
+      AND pr.status IN ('cash_call', 'vietqr_pending')
+
+    UNION ALL
+
+    SELECT p.id AS lock_id, p.created_at
+    FROM public.payments p
+    WHERE p.order_id = p_order_id
+      AND p.status = 'pending'
+  ) candidate
+  ORDER BY candidate.created_at DESC, candidate.lock_id DESC
+  LIMIT 1;
+$$;
+
+
+--
+-- Name: self_order_branch_has_open_pos_session(bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_branch_has_open_pos_session(p_tenant_id bigint, p_branch_id bigint) RETURNS boolean
+    LANGUAGE sql STABLE
+    SET search_path TO ''
+    AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.pos_sessions ps
+    WHERE ps.tenant_id = p_tenant_id
+      AND ps.branch_id = p_branch_id
+      AND ps.status = 'open'
+  );
+$$;
+
+
+--
+-- Name: self_order_cancel_payment_request(bigint, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_cancel_payment_request(p_request_id bigint, p_reason text DEFAULT NULL::text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_request_ref public.self_order_payment_requests%ROWTYPE;
+  v_request public.self_order_payment_requests%ROWTYPE;
+  v_order public.orders%ROWTYPE;
+  v_payment public.payments%ROWTYPE;
+  v_payment_found boolean := false;
+  v_reason text := NULLIF(btrim(COALESCE(p_reason, '')), '');
+BEGIN
+  IF v_uid IS NULL OR v_tenant IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  SELECT pr.*
+  INTO v_request_ref
+  FROM public.self_order_payment_requests pr
+  WHERE pr.id = p_request_id
+    AND pr.tenant_id = v_tenant;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'self_order_payment_request_not_found' USING ERRCODE = 'P0002';
+  END IF;
+  IF NOT public.has_permission(v_request_ref.branch_id, 'pos:use') THEN
+    RAISE EXCEPTION 'permission denied: pos:use' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT o.*
+  INTO v_order
+  FROM public.orders o
+  WHERE o.id = v_request_ref.order_id
+    AND o.tenant_id = v_request_ref.tenant_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'self_order_payment_order_missing' USING ERRCODE = '23503';
+  END IF;
+  IF NOT pg_try_advisory_xact_lock(v_order.id) THEN
+    RAISE EXCEPTION 'self_order_retry' USING ERRCODE = '40001';
+  END IF;
+
+  BEGIN
+    SELECT p.*
+    INTO v_payment
+    FROM public.payments p
+    WHERE p.tenant_id = v_request_ref.tenant_id
+      AND p.order_id = v_request_ref.order_id
+      AND (
+        p.id = v_request_ref.payment_id
+        OR (
+          p.status = 'completed'
+          AND (
+            (v_request_ref.method = 'cash_call' AND p.method = 'cash')
+            OR (v_request_ref.method = 'vietqr' AND p.method = 'vietqr')
+          )
+        )
+      )
+    ORDER BY
+      CASE WHEN p.status = 'completed' THEN 0 ELSE 1 END,
+      CASE WHEN p.id = v_request_ref.payment_id THEN 0 ELSE 1 END,
+      p.id DESC
+    LIMIT 1
+    FOR UPDATE NOWAIT;
+    v_payment_found := FOUND;
+  EXCEPTION WHEN lock_not_available THEN
+    RAISE EXCEPTION 'self_order_retry' USING ERRCODE = '40001';
+  END;
+
+  SELECT pr.*
+  INTO v_request
+  FROM public.self_order_payment_requests pr
+  WHERE pr.id = v_request_ref.id
+    AND pr.tenant_id = v_request_ref.tenant_id
+    AND pr.order_id = v_request_ref.order_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'self_order_payment_request_not_found' USING ERRCODE = 'P0002';
+  END IF;
+  IF v_request.status NOT IN ('cash_call', 'vietqr_pending') THEN
+    RETURN jsonb_build_object(
+      'ok', true,
+      'idempotent', true,
+      'paymentCompleted', (
+        v_request.status = 'completed'
+        OR COALESCE(v_order.payment_status, 'unpaid') = 'paid'
+        OR (v_payment_found AND v_payment.status = 'completed')
+      )
+    ) || public.self_order_payment_request_public_payload(v_request.id);
+  END IF;
+
+  IF COALESCE(v_order.payment_status, 'unpaid') = 'paid'
+     OR (v_payment_found AND v_payment.status = 'completed') THEN
+    UPDATE public.self_order_payment_requests
+    SET status = 'completed',
+        payment_id = COALESCE(
+          v_request.payment_id,
+          CASE WHEN v_payment_found THEN v_payment.id ELSE NULL END
+        ),
+        completed_at = COALESCE(
+          CASE WHEN v_payment_found THEN v_payment.paid_at ELSE NULL END,
+          now()
+        )
+    WHERE id = v_request.id;
+
+    RETURN jsonb_build_object('ok', true, 'paymentCompleted', true)
+      || public.self_order_payment_request_public_payload(v_request.id);
+  END IF;
+
+  UPDATE public.self_order_payment_requests
+  SET status = 'cancelled',
+      cancelled_at = now(),
+      cancel_reason = v_reason
+  WHERE id = v_request.id
+    AND status IN ('cash_call', 'vietqr_pending');
+
+  IF v_payment_found AND v_payment.status = 'pending' THEN
+    UPDATE public.payments
+    SET status = 'failed',
+        updated_at = now()
+    WHERE id = v_payment.id
+      AND tenant_id = v_request.tenant_id
+      AND status = 'pending';
+  END IF;
+
+  IF v_request.method = 'vietqr' THEN
+    UPDATE public.orders o
+    SET payment_status = 'unpaid',
+        payment_method = NULL,
+        updated_at = now()
+    WHERE o.id = v_request.order_id
+      AND o.tenant_id = v_request.tenant_id
+      AND COALESCE(o.payment_status, 'unpaid') <> 'paid'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.payments p
+        WHERE p.tenant_id = v_request.tenant_id
+          AND p.order_id = v_request.order_id
+          AND p.status IN ('pending', 'completed')
+      );
+  END IF;
+
+  RETURN jsonb_build_object('ok', true)
+    || public.self_order_payment_request_public_payload(v_request.id);
+END;
+$$;
+
+
+--
+-- Name: self_order_cancel_pending_payment_and_add(text, uuid, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_cancel_pending_payment_and_add(p_token text, p_client_op_id uuid, p_items jsonb, p_customer_note text DEFAULT NULL::text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
+  END IF;
+
+  RAISE EXCEPTION 'self_order_payment_cancel_staff_required'
+    USING ERRCODE = '42501';
+END;
+$$;
+
+
+--
+-- Name: self_order_canonicalize_cart(bigint, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_canonicalize_cart(p_tenant_id bigint, p_items jsonb) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_item jsonb;
+  v_menu record;
+  v_variant_id bigint;
+  v_variant_name text;
+  v_variant_price numeric(15,2);
+  v_modifier_ids bigint[];
+  v_modifiers jsonb;
+  v_result jsonb := '[]'::jsonb;
+  v_quantity int;
+BEGIN
+  IF p_items IS NULL OR jsonb_typeof(p_items) <> 'array' OR jsonb_array_length(p_items) = 0 THEN
+    RAISE EXCEPTION 'invalid_cart_payload' USING ERRCODE = '22023';
+  END IF;
+
+  FOR v_item IN SELECT value FROM jsonb_array_elements(p_items) AS value LOOP
+    v_quantity := (v_item ->> 'quantity')::int;
+    IF v_quantity IS NULL OR v_quantity < 1 OR v_quantity > 99 THEN
+      RAISE EXCEPTION 'invalid_quantity' USING ERRCODE = '22023';
+    END IF;
+
+    SELECT id, name, base_price
+    INTO v_menu
+    FROM public.menu_items
+    WHERE id = (v_item ->> 'menu_item_id')::bigint
+      AND tenant_id = p_tenant_id
+      AND is_active = true;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'menu_item_not_available' USING ERRCODE = 'P0002';
+    END IF;
+
+    v_variant_id := NULL;
+    v_variant_name := NULL;
+    v_variant_price := 0;
+    IF NULLIF(v_item ->> 'variant_id', '') IS NOT NULL THEN
+      SELECT id, name, price_adjustment
+      INTO v_variant_id, v_variant_name, v_variant_price
+      FROM public.menu_item_variants
+      WHERE id = (v_item ->> 'variant_id')::bigint
+        AND item_id = v_menu.id
+        AND tenant_id = p_tenant_id
+        AND is_active = true;
+      IF NOT FOUND THEN
+        RAISE EXCEPTION 'variant_not_available' USING ERRCODE = 'P0002';
+      END IF;
+    END IF;
+
+    SELECT COALESCE(array_agg(DISTINCT (m.value ->> 'modifier_id')::bigint), ARRAY[]::bigint[])
+    INTO v_modifier_ids
+    FROM jsonb_array_elements(COALESCE(v_item -> 'modifiers', '[]'::jsonb)) AS m(value);
+
+    IF COALESCE(array_length(v_modifier_ids, 1), 0) > 0 THEN
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'modifier_id', mm.id,
+          'name', mm.name,
+          'price', mm.price
+        )
+        ORDER BY mm.sort_order, mm.id
+      )
+      INTO v_modifiers
+      FROM public.menu_item_modifiers mm
+      WHERE mm.tenant_id = p_tenant_id
+        AND mm.item_id = v_menu.id
+        AND mm.is_active = true
+        AND mm.id = ANY(v_modifier_ids);
+
+      IF jsonb_array_length(COALESCE(v_modifiers, '[]'::jsonb)) <> array_length(v_modifier_ids, 1) THEN
+        RAISE EXCEPTION 'modifier_not_available' USING ERRCODE = 'P0002';
+      END IF;
+    ELSE
+      v_modifiers := '[]'::jsonb;
+    END IF;
+
+    v_result := v_result || jsonb_build_array(jsonb_strip_nulls(jsonb_build_object(
+      'key', COALESCE(NULLIF(v_item ->> 'key', ''), extensions.gen_random_uuid()::text),
+      'menu_item_id', v_menu.id,
+      'item_name', v_menu.name,
+      'variant_id', v_variant_id,
+      'variant_name', v_variant_name,
+      'quantity', v_quantity,
+      'unit_price', v_menu.base_price + COALESCE(v_variant_price, 0),
+      'modifiers', v_modifiers,
+      'sides', COALESCE(v_item -> 'sides', '[]'::jsonb),
+      'note', NULLIF(btrim(COALESCE(v_item ->> 'note', '')), '')
+    )));
+  END LOOP;
+
+  RETURN v_result;
+END;
+$$;
+
+
+--
+-- Name: self_order_consume_rate_limits(text, text, text, bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_consume_rate_limits(p_purpose text, p_token text, p_ip_hash text, p_tenant_id bigint, p_table_id bigint) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $_$
+DECLARE
+  v_token_hash text;
+  v_ip_scope_hash text;
+  v_token_limit integer;
+  v_ip_limit integer;
+  v_window_seconds integer := 600;
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
+  END IF;
+  IF p_purpose NOT IN ('batch', 'payment')
+     OR p_token IS NULL
+     OR p_token = ''
+     OR p_tenant_id IS NULL
+     OR p_table_id IS NULL
+     OR (p_ip_hash IS NOT NULL AND p_ip_hash !~ '^[0-9a-f]{64}$') THEN
+    RAISE EXCEPTION 'self_order_invalid_rate_identity' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_purpose = 'batch' THEN
+    v_token_limit := 20;
+    v_ip_limit := 30;
+  ELSE
+    v_token_limit := 10;
+    v_ip_limit := 15;
+  END IF;
+
+  v_token_hash := public.self_order_scope_hash(
+    p_tenant_id::text || ':' || p_table_id::text || ':' || p_token
+  );
+  v_ip_scope_hash := CASE
+    WHEN p_ip_hash IS NULL THEN NULL
+    ELSE public.self_order_scope_hash(v_token_hash || ':' || p_ip_hash)
+  END;
+
+  PERFORM public.self_order_take_rate_bucket(
+    p_purpose,
+    'token',
+    v_token_hash,
+    v_token_limit,
+    v_window_seconds
+  );
+  IF v_ip_scope_hash IS NOT NULL THEN
+    PERFORM public.self_order_take_rate_bucket(
+      p_purpose,
+      'ip',
+      v_ip_scope_hash,
+      v_ip_limit,
+      v_window_seconds
+    );
+  END IF;
+
+  RETURN jsonb_build_object('ok', true, 'windowSeconds', v_window_seconds);
+END;
+$_$;
+
+
+--
+-- Name: self_order_create_payment_request(text, uuid, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_create_payment_request(p_token text, p_client_op_id uuid, p_method text, p_invoice_payload jsonb DEFAULT '{}'::jsonb) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $_$
+DECLARE
+  v_table public.tables%ROWTYPE;
+  v_order public.orders%ROWTYPE;
+  v_existing public.self_order_payment_requests%ROWTYPE;
+  v_active public.self_order_payment_requests%ROWTYPE;
+  v_open_order_count integer := 0;
+  v_order_id bigint;
+  v_invoice_payload jsonb;
+  v_fingerprint text;
+  v_payment_id bigint;
+  v_bank_code text;
+  v_account_no text;
+  v_account_name text;
+  v_payment_code text;
+  v_qr_payload text;
+  v_config_snapshot jsonb := '{}'::jsonb;
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
+  END IF;
+  IF p_client_op_id IS NULL THEN
+    RAISE EXCEPTION 'self_order_missing_operation_id' USING ERRCODE = '22023';
+  END IF;
+  IF p_method NOT IN ('cash_call', 'vietqr') THEN
+    RAISE EXCEPTION 'invalid_payment_method' USING ERRCODE = '22023';
+  END IF;
+
+  v_invoice_payload := public.self_order_normalize_invoice_payload(
+    COALESCE(p_invoice_payload, '{}'::jsonb)
+  );
+  v_fingerprint := public.self_order_payment_request_fingerprint(
+    p_method,
+    v_invoice_payload
+  );
+
+  SELECT t.*
+  INTO v_table
+  FROM public.tables t
+  JOIN public.branches b
+    ON b.id = t.branch_id
+   AND b.tenant_id = t.tenant_id
+   AND b.is_active = true
+  WHERE t.self_order_token = p_token
+    AND t.self_order_enabled = true
+    AND t.status <> 'maintenance'
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'invalid_or_disabled_token');
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(
+    hashtext('self-order-table'),
+    hashtext(v_table.id::text)
+  );
+
+  SELECT pr.*
+  INTO v_existing
+  FROM public.self_order_payment_requests pr
+  WHERE pr.tenant_id = v_table.tenant_id
+    AND pr.client_op_id = p_client_op_id
+  ORDER BY pr.id DESC
+  LIMIT 1;
+
+  IF FOUND THEN
+    IF v_existing.table_id <> v_table.id
+       OR (
+         v_existing.request_fingerprint_version = 'payment:v1'
+         AND v_existing.request_fingerprint IS DISTINCT FROM v_fingerprint
+       ) THEN
+      RAISE EXCEPTION 'self_order_idempotency_conflict' USING ERRCODE = '22023';
+    END IF;
+    IF v_existing.status IN ('cash_call', 'vietqr_pending')
+       AND v_existing.expires_at <= now() THEN
+      PERFORM public.self_order_expire_payment_request(v_existing.id);
+      SELECT pr.* INTO v_existing
+      FROM public.self_order_payment_requests pr
+      WHERE pr.id = v_existing.id;
+    END IF;
+    RETURN jsonb_build_object('ok', true, 'idempotent', true)
+      || COALESCE(
+        public.self_order_payment_request_public_payload(v_existing.id),
+        '{}'::jsonb
+      );
+  END IF;
+
+  IF NOT public.self_order_branch_has_open_pos_session(
+    v_table.tenant_id,
+    v_table.branch_id
+  ) THEN
+    RAISE EXCEPTION 'self_order_pos_session_closed' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT count(*)::integer, min(o.id)
+  INTO v_open_order_count, v_order_id
+  FROM public.orders o
+  WHERE o.tenant_id = v_table.tenant_id
+    AND o.branch_id = v_table.branch_id
+    AND o.table_id = v_table.id
+    AND o.payment_status <> 'paid'
+    AND o.status NOT IN ('completed', 'cancelled')
+    AND o.merged_into_order_id IS NULL;
+
+  IF v_open_order_count <> 1 THEN
+    RAISE EXCEPTION 'self_order_order_ambiguous' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT o.*
+  INTO v_order
+  FROM public.orders o
+  WHERE o.id = v_order_id
+    AND o.tenant_id = v_table.tenant_id
+  FOR UPDATE;
+
+  IF NOT pg_try_advisory_xact_lock(v_order.id) THEN
+    RAISE EXCEPTION 'self_order_retry' USING ERRCODE = '40001';
+  END IF;
+  IF v_order.status NOT IN ('new', 'confirmed', 'preparing', 'ready', 'served')
+     OR COALESCE(v_order.payment_status, 'unpaid') = 'paid'
+     OR v_order.merged_into_order_id IS NOT NULL THEN
+    RAISE EXCEPTION 'self_order_order_not_payable' USING ERRCODE = '22023';
+  END IF;
+
+
+  SELECT pr.*
+  INTO v_active
+  FROM public.self_order_payment_requests pr
+  WHERE pr.tenant_id = v_order.tenant_id
+    AND pr.order_id = v_order.id
+    AND pr.status IN ('cash_call', 'vietqr_pending')
+  ORDER BY pr.id DESC
+  LIMIT 1;
+
+  IF FOUND AND v_active.expires_at <= now() THEN
+    PERFORM public.self_order_expire_payment_request(v_active.id);
+    SELECT pr.*
+    INTO v_active
+    FROM public.self_order_payment_requests pr
+    WHERE pr.tenant_id = v_order.tenant_id
+      AND pr.order_id = v_order.id
+      AND pr.status IN ('cash_call', 'vietqr_pending')
+    ORDER BY pr.id DESC
+    LIMIT 1;
+  END IF;
+
+  IF FOUND THEN
+    IF v_active.request_fingerprint_version = 'payment:v1'
+       AND v_active.request_fingerprint = v_fingerprint THEN
+      RETURN jsonb_build_object('ok', true, 'recovered', true)
+        || public.self_order_payment_request_public_payload(v_active.id);
+    END IF;
+    RAISE EXCEPTION 'self_order_pending_payment_exists' USING ERRCODE = '55P03';
+  END IF;
+
+  BEGIN
+    PERFORM 1
+    FROM public.payments p
+    WHERE p.tenant_id = v_order.tenant_id
+      AND p.order_id = v_order.id
+      AND p.status = 'pending'
+    ORDER BY p.id DESC
+    LIMIT 1
+    FOR UPDATE NOWAIT;
+  EXCEPTION WHEN lock_not_available THEN
+    RAISE EXCEPTION 'self_order_retry' USING ERRCODE = '40001';
+  END;
+
+  IF FOUND THEN
+    RAISE EXCEPTION 'self_order_pending_payment_exists' USING ERRCODE = '55P03';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM public.payments p
+    WHERE p.tenant_id = v_order.tenant_id
+      AND p.order_id = v_order.id
+      AND p.status = 'completed'
+  ) THEN
+    RAISE EXCEPTION 'self_order_payment_completed' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_method = 'cash_call' THEN
+    INSERT INTO public.self_order_payment_requests (
+      tenant_id,
+      branch_id,
+      table_id,
+      order_id,
+      client_op_id,
+      method,
+      status,
+      amount_snapshot,
+      invoice_payload,
+      request_fingerprint,
+      request_fingerprint_version,
+      expires_at
+    )
+    VALUES (
+      v_order.tenant_id,
+      v_order.branch_id,
+      v_order.table_id,
+      v_order.id,
+      p_client_op_id,
+      'cash_call',
+      'cash_call',
+      v_order.total_amount,
+      v_invoice_payload,
+      v_fingerprint,
+      'payment:v1',
+      now() + interval '15 minutes'
+    )
+    RETURNING * INTO v_existing;
+
+    RETURN jsonb_build_object('ok', true)
+      || public.self_order_payment_request_public_payload(v_existing.id);
+  END IF;
+
+  IF v_order.total_amount <= 0 THEN
+    RAISE EXCEPTION 'self_order_vietqr_requires_positive_amount' USING ERRCODE = '22023';
+  END IF;
+
+  v_payment_code := NULLIF(btrim(COALESCE(v_order.payment_code, '')), '');
+  IF v_payment_code IS NULL THEN
+    RAISE EXCEPTION 'self_order_vietqr_config_invalid' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT
+    max(NULLIF(btrim(ss.value), '')) FILTER (
+      WHERE ss.key = 'payment_vietqr_bank_code'
+    ),
+    max(NULLIF(btrim(ss.value), '')) FILTER (
+      WHERE ss.key = 'payment_vietqr_account_no'
+    ),
+    max(NULLIF(btrim(ss.value), '')) FILTER (
+      WHERE ss.key = 'payment_vietqr_account_name'
+    )
+  INTO v_bank_code, v_account_no, v_account_name
+  FROM public.system_settings ss
+  WHERE ss.tenant_id = v_order.tenant_id
+    AND ss.key IN (
+      'payment_vietqr_bank_code',
+      'payment_vietqr_account_no',
+      'payment_vietqr_account_name'
+    );
+
+  v_bank_code := upper(v_bank_code);
+  IF v_bank_code IS NULL OR v_account_no IS NULL THEN
+    RAISE EXCEPTION 'self_order_vietqr_config_missing' USING ERRCODE = '22023';
+  END IF;
+  IF public.print_vietqr_bank_bin(v_bank_code) !~ '^[0-9]{6}$'
+     OR char_length(v_account_no) > 50 THEN
+    RAISE EXCEPTION 'self_order_vietqr_config_invalid' USING ERRCODE = '22023';
+  END IF;
+
+  BEGIN
+    v_qr_payload := public.print_vietqr_emvco(
+      v_bank_code,
+      v_account_no,
+      v_account_name,
+      v_order.total_amount,
+      v_payment_code
+    );
+  EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'self_order_vietqr_config_invalid' USING ERRCODE = '22023';
+  END;
+
+  IF v_qr_payload IS NULL THEN
+    RAISE EXCEPTION 'self_order_vietqr_config_invalid' USING ERRCODE = '22023';
+  END IF;
+
+  v_config_snapshot := jsonb_strip_nulls(jsonb_build_object(
+    'bankCode', v_bank_code,
+    'accountNo', v_account_no,
+    'accountName', COALESCE(v_account_name, '')
+  ));
+
+  INSERT INTO public.payments (
+    tenant_id,
+    branch_id,
+    order_id,
+    method,
+    amount,
+    status,
+    provider_ref,
+    provider_data,
+    created_by
+  )
+  VALUES (
+    v_order.tenant_id,
+    v_order.branch_id,
+    v_order.id,
+    'vietqr',
+    v_order.total_amount,
+    'pending',
+    v_payment_code,
+    jsonb_build_object(
+      'source', 'qr_self_order',
+      'description', v_payment_code,
+      'invoicePayload', v_invoice_payload
+    ),
+    v_order.created_by
+  )
+  RETURNING id INTO v_payment_id;
+
+  UPDATE public.orders
+  SET payment_status = 'pending',
+      payment_method = 'vietqr',
+      updated_at = now()
+  WHERE id = v_order.id
+    AND tenant_id = v_order.tenant_id;
+
+  INSERT INTO public.self_order_payment_requests (
+    tenant_id,
+    branch_id,
+    table_id,
+    order_id,
+    payment_id,
+    client_op_id,
+    method,
+    status,
+    amount_snapshot,
+    invoice_payload,
+    request_fingerprint,
+    request_fingerprint_version,
+    payment_code_snapshot,
+    qr_payload_snapshot,
+    vietqr_config_snapshot,
+    expires_at
+  )
+  VALUES (
+    v_order.tenant_id,
+    v_order.branch_id,
+    v_order.table_id,
+    v_order.id,
+    v_payment_id,
+    p_client_op_id,
+    'vietqr',
+    'vietqr_pending',
+    v_order.total_amount,
+    v_invoice_payload,
+    v_fingerprint,
+    'payment:v1',
+    v_payment_code,
+    v_qr_payload,
+    v_config_snapshot,
+    now() + interval '30 minutes'
+  )
+  RETURNING * INTO v_existing;
+
+  RETURN jsonb_build_object('ok', true)
+    || public.self_order_payment_request_public_payload(v_existing.id);
+END;
+$_$;
+
+
+--
+-- Name: self_order_enforce_open_pos_session(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_enforce_open_pos_session() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_tenant_id bigint;
+  v_branch_id bigint;
+  v_should_check boolean := false;
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    v_tenant_id := NEW.tenant_id;
+    v_branch_id := NEW.branch_id;
+    v_should_check := true;
+  ELSIF TG_OP = 'UPDATE'
+        AND TG_TABLE_NAME = 'self_order_batches'
+        AND OLD.status IS DISTINCT FROM NEW.status
+        AND NEW.status IN ('accepted', 'auto_accepted') THEN
+    v_tenant_id := COALESCE(NEW.tenant_id, OLD.tenant_id);
+    v_branch_id := COALESCE(NEW.branch_id, OLD.branch_id);
+    v_should_check := true;
+  END IF;
+
+  IF v_should_check
+     AND NOT public.self_order_branch_has_open_pos_session(v_tenant_id, v_branch_id) THEN
+    RAISE EXCEPTION 'self_order_pos_session_closed' USING ERRCODE = 'P0002';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: self_order_enforce_payment_request_invariants(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_enforce_payment_request_invariants() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+BEGIN
+  IF OLD.tenant_id IS DISTINCT FROM NEW.tenant_id
+     OR OLD.branch_id IS DISTINCT FROM NEW.branch_id
+     OR OLD.table_id IS DISTINCT FROM NEW.table_id
+     OR OLD.order_id IS DISTINCT FROM NEW.order_id
+     OR OLD.client_op_id IS DISTINCT FROM NEW.client_op_id
+     OR OLD.method IS DISTINCT FROM NEW.method
+     OR OLD.amount_snapshot IS DISTINCT FROM NEW.amount_snapshot
+     OR OLD.invoice_payload IS DISTINCT FROM NEW.invoice_payload
+     OR OLD.request_fingerprint IS DISTINCT FROM NEW.request_fingerprint
+     OR OLD.request_fingerprint_version IS DISTINCT FROM NEW.request_fingerprint_version
+     OR OLD.payment_code_snapshot IS DISTINCT FROM NEW.payment_code_snapshot
+     OR OLD.qr_payload_snapshot IS DISTINCT FROM NEW.qr_payload_snapshot
+     OR OLD.vietqr_config_snapshot IS DISTINCT FROM NEW.vietqr_config_snapshot
+     OR OLD.expires_at IS DISTINCT FROM NEW.expires_at THEN
+    RAISE EXCEPTION 'self_order_payment_request_immutable' USING ERRCODE = '22023';
+  END IF;
+
+  IF OLD.payment_id IS DISTINCT FROM NEW.payment_id
+     AND NOT (
+       OLD.payment_id IS NULL
+       AND NEW.payment_id IS NOT NULL
+       AND OLD.status IN ('cash_call', 'vietqr_pending')
+       AND NEW.status = 'completed'
+     ) THEN
+    RAISE EXCEPTION 'self_order_payment_binding_immutable' USING ERRCODE = '22023';
+  END IF;
+
+  IF OLD.cancel_reason IS DISTINCT FROM NEW.cancel_reason
+     AND NOT (
+       OLD.cancel_reason IS NULL
+       AND NEW.cancel_reason IS NOT NULL
+       AND OLD.status IN ('cash_call', 'vietqr_pending')
+       AND NEW.status = 'cancelled'
+     ) THEN
+    RAISE EXCEPTION 'self_order_payment_cancel_reason_immutable' USING ERRCODE = '22023';
+  END IF;
+
+  IF OLD.status IS DISTINCT FROM NEW.status
+     AND NOT (
+       OLD.status IN ('cash_call', 'vietqr_pending')
+       AND NEW.status IN ('completed', 'cancelled', 'expired')
+     ) THEN
+    RAISE EXCEPTION 'self_order_invalid_payment_request_transition' USING ERRCODE = '22023';
+  END IF;
+
+  IF NEW.status = 'completed'
+     AND (NEW.completed_at IS NULL OR NEW.payment_id IS NULL) THEN
+    RAISE EXCEPTION 'self_order_completed_request_missing_payment_evidence' USING ERRCODE = '23514';
+  END IF;
+  IF NEW.status = 'cancelled' AND NEW.cancelled_at IS NULL THEN
+    RAISE EXCEPTION 'self_order_cancelled_request_missing_timestamp' USING ERRCODE = '23514';
+  END IF;
+  IF NEW.status = 'expired' AND NEW.expired_at IS NULL THEN
+    RAISE EXCEPTION 'self_order_expired_request_missing_timestamp' USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: self_order_expire_payment_request(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_expire_payment_request(p_request_id bigint) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_request_ref public.self_order_payment_requests%ROWTYPE;
+  v_request public.self_order_payment_requests%ROWTYPE;
+  v_order public.orders%ROWTYPE;
+  v_payment public.payments%ROWTYPE;
+  v_payment_found boolean := false;
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT pr.*
+  INTO v_request_ref
+  FROM public.self_order_payment_requests pr
+  WHERE pr.id = p_request_id;
+
+  IF NOT FOUND
+     OR v_request_ref.status NOT IN ('cash_call', 'vietqr_pending')
+     OR v_request_ref.expires_at > now() THEN
+    RETURN false;
+  END IF;
+
+  SELECT o.*
+  INTO v_order
+  FROM public.orders o
+  WHERE o.id = v_request_ref.order_id
+    AND o.tenant_id = v_request_ref.tenant_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'self_order_payment_order_missing' USING ERRCODE = '23503';
+  END IF;
+  IF NOT pg_try_advisory_xact_lock(v_order.id) THEN
+    RAISE EXCEPTION 'self_order_retry' USING ERRCODE = '40001';
+  END IF;
+
+  BEGIN
+    SELECT p.*
+    INTO v_payment
+    FROM public.payments p
+    WHERE p.tenant_id = v_request_ref.tenant_id
+      AND p.order_id = v_request_ref.order_id
+      AND (
+        p.id = v_request_ref.payment_id
+        OR (
+          v_request_ref.payment_id IS NULL
+          AND v_request_ref.method = 'cash_call'
+          AND p.method = 'cash'
+          AND p.status = 'completed'
+        )
+      )
+    ORDER BY
+      CASE WHEN p.id = v_request_ref.payment_id THEN 0 ELSE 1 END,
+      p.id DESC
+    LIMIT 1
+    FOR UPDATE NOWAIT;
+    v_payment_found := FOUND;
+  EXCEPTION WHEN lock_not_available THEN
+    RAISE EXCEPTION 'self_order_retry' USING ERRCODE = '40001';
+  END;
+
+  SELECT pr.*
+  INTO v_request
+  FROM public.self_order_payment_requests pr
+  WHERE pr.id = p_request_id
+    AND pr.tenant_id = v_request_ref.tenant_id
+    AND pr.order_id = v_request_ref.order_id
+  FOR UPDATE;
+
+  IF NOT FOUND
+     OR v_request.status NOT IN ('cash_call', 'vietqr_pending')
+     OR v_request.expires_at > now() THEN
+    RETURN false;
+  END IF;
+
+  IF COALESCE(v_order.payment_status, 'unpaid') = 'paid'
+     OR (v_payment_found AND v_payment.status = 'completed') THEN
+    UPDATE public.self_order_payment_requests
+    SET status = 'completed',
+        payment_id = COALESCE(
+          v_request.payment_id,
+          CASE WHEN v_payment_found THEN v_payment.id ELSE NULL END
+        ),
+        completed_at = COALESCE(
+          CASE WHEN v_payment_found THEN v_payment.paid_at ELSE NULL END,
+          now()
+        )
+    WHERE id = v_request.id
+      AND status IN ('cash_call', 'vietqr_pending');
+    RETURN false;
+  END IF;
+
+  UPDATE public.self_order_payment_requests
+  SET status = 'expired',
+      expired_at = now()
+  WHERE id = v_request.id
+    AND status IN ('cash_call', 'vietqr_pending');
+
+  IF v_payment_found AND v_payment.status = 'pending' THEN
+    UPDATE public.payments
+    SET status = 'failed',
+        updated_at = now()
+    WHERE id = v_payment.id
+      AND status = 'pending';
+  END IF;
+
+  IF v_request.method = 'vietqr' THEN
+    UPDATE public.orders o
+    SET payment_status = 'unpaid',
+        payment_method = NULL,
+        updated_at = now()
+    WHERE o.id = v_request.order_id
+      AND o.tenant_id = v_request.tenant_id
+      AND COALESCE(o.payment_status, 'unpaid') <> 'paid'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.payments p
+        WHERE p.tenant_id = v_request.tenant_id
+          AND p.order_id = v_request.order_id
+          AND p.status IN ('pending', 'completed')
+      );
+  END IF;
+
+  RETURN true;
+END;
+$$;
+
+
+--
+-- Name: self_order_fill_payment_request_fingerprint(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_fill_payment_request_fingerprint() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+BEGIN
+  IF NEW.request_fingerprint IS NULL THEN
+    NEW.request_fingerprint := public.self_order_payment_request_fingerprint(
+      NEW.method,
+      NEW.invoice_payload
+    );
+    NEW.request_fingerprint_version := 'legacy:v0';
+  ELSIF NEW.request_fingerprint_version IS NULL THEN
+    NEW.request_fingerprint_version := 'payment:v1';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: self_order_get_payment_request_status(text, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_get_payment_request_status(p_token text, p_client_op_id uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_table record;
+  v_status text;
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT t.id AS table_id, t.tenant_id
+  INTO v_table
+  FROM public.tables t
+  JOIN public.branches b
+    ON b.id = t.branch_id
+   AND b.tenant_id = t.tenant_id
+   AND b.is_active = true
+  WHERE t.self_order_token = p_token
+    AND t.self_order_enabled = true
+    AND t.status <> 'maintenance'
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'invalid_or_disabled_token');
+  END IF;
+
+  SELECT pr.status
+  INTO v_status
+  FROM public.self_order_payment_requests pr
+  WHERE pr.tenant_id = v_table.tenant_id
+    AND pr.table_id = v_table.table_id
+    AND pr.client_op_id = p_client_op_id
+  ORDER BY pr.id DESC
+  LIMIT 1;
+
+  RETURN jsonb_build_object('ok', true, 'status', v_status);
+END;
+$$;
+
+
+--
+-- Name: self_order_get_snapshot(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_get_snapshot(p_token text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
+  END IF;
+  RETURN public.self_order_get_snapshot(p_token, NULL::uuid);
+END;
+$$;
+
+
+--
+-- Name: self_order_get_snapshot(text, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_get_snapshot(p_token text, p_client_op_id uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_table record;
+  v_request public.self_order_requests%ROWTYPE;
+  v_request_found boolean := false;
+  v_open_order_count integer := 0;
+  v_order_id bigint;
+  v_order_payload jsonb := NULL;
+  v_rounds_payload jsonb := '[]'::jsonb;
+  v_payment_payload jsonb := NULL;
+  v_request_payload jsonb := NULL;
+  v_state text;
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT
+    t.id AS table_id,
+    t.tenant_id,
+    t.branch_id,
+    t.number AS table_number,
+    b.name AS branch_name
+  INTO v_table
+  FROM public.tables t
+  JOIN public.branches b
+    ON b.id = t.branch_id
+   AND b.tenant_id = t.tenant_id
+   AND b.is_active = true
+  WHERE t.self_order_token = p_token
+    AND t.self_order_enabled = true
+    AND t.status <> 'maintenance'
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'invalid_or_disabled_token');
+  END IF;
+
+  IF NOT public.self_order_branch_has_open_pos_session(
+    v_table.tenant_id,
+    v_table.branch_id
+  ) THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'pos_session_closed');
+  END IF;
+
+  SELECT r.*
+  INTO v_request
+  FROM public.self_order_requests r
+  WHERE r.tenant_id = v_table.tenant_id
+    AND r.table_id = v_table.table_id
+    AND r.status = 'pending'
+  ORDER BY r.id DESC
+  LIMIT 1;
+  v_request_found := FOUND;
+
+  IF NOT v_request_found AND p_client_op_id IS NOT NULL THEN
+    SELECT r.*
+    INTO v_request
+    FROM public.self_order_requests r
+    WHERE r.tenant_id = v_table.tenant_id
+      AND r.table_id = v_table.table_id
+      AND r.client_op_id = p_client_op_id
+      AND r.status = 'rejected'
+    ORDER BY r.id DESC
+    LIMIT 1;
+    v_request_found := FOUND;
+  END IF;
+
+  IF v_request_found THEN
+    v_request_payload := jsonb_build_object(
+      'id', v_request.id,
+      'clientOpId', v_request.client_op_id,
+      'status', v_request.status,
+      'items', v_request.cart_payload,
+      'customerNote', v_request.customer_note,
+      'orderId', v_request.order_id,
+      'createdAt', v_request.created_at,
+      'decidedAt', v_request.decided_at
+    );
+  END IF;
+
+  SELECT count(*)::integer, min(o.id)
+  INTO v_open_order_count, v_order_id
+  FROM public.orders o
+  WHERE o.tenant_id = v_table.tenant_id
+    AND o.branch_id = v_table.branch_id
+    AND o.table_id = v_table.table_id
+    AND o.payment_status <> 'paid'
+    AND o.status NOT IN ('completed', 'cancelled')
+    AND o.merged_into_order_id IS NULL;
+
+  IF v_open_order_count = 1 THEN
+    SELECT jsonb_build_object(
+      'id', o.id,
+      'orderNumber', o.order_number,
+      'status', o.status,
+      'paymentStatus', o.payment_status,
+      'paymentMethod', o.payment_method,
+      'subtotal', o.subtotal,
+      'serviceCharge', o.service_charge,
+      'discountAmount', o.discount_amount,
+      'totalAmount', o.total_amount,
+      'itemCount', (
+        SELECT COALESCE(sum(oi.quantity), 0)::integer
+        FROM public.order_items oi
+        WHERE oi.tenant_id = o.tenant_id
+          AND oi.order_id = o.id
+          AND oi.status <> 'cancelled'
+      ),
+      'items', (
+        SELECT COALESCE(jsonb_agg(
+          jsonb_build_object(
+            'id', oi.id,
+            'menuItemId', oi.menu_item_id,
+            'itemName', oi.item_name,
+            'variantId', oi.variant_id,
+            'variantName', oi.variant_name,
+            'quantity', oi.quantity,
+            'unitPrice', oi.unit_price,
+            'lineTotal', oi.subtotal,
+            'modifiers', COALESCE(oi.modifiers, '[]'::jsonb),
+            'sides', COALESCE(oi.sides, '[]'::jsonb),
+            'note', oi.note
+          ) ORDER BY oi.id
+        ), '[]'::jsonb)
+        FROM public.order_items oi
+        WHERE oi.tenant_id = o.tenant_id
+          AND oi.order_id = o.id
+          AND oi.status <> 'cancelled'
+      )
+    )
+    INTO v_order_payload
+    FROM public.orders o
+    WHERE o.id = v_order_id
+      AND o.tenant_id = v_table.tenant_id;
+
+    SELECT COALESCE(jsonb_agg(
+      jsonb_build_object(
+        'id', ksb.id,
+        'sendSeq', ksb.send_seq,
+        'kind', ksb.kind,
+        'ticketNumber', ksb.kitchen_ticket_number,
+        'createdAt', ksb.created_at,
+        'items', COALESCE((
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'id', lines.id,
+              'itemName', lines.item_name,
+              'variantName', lines.variant_name,
+              'quantity', lines.quantity,
+              'modifiers', lines.modifiers,
+              'sides', lines.sides,
+              'note', lines.note
+            ) ORDER BY lines.id
+          )
+          FROM (
+            SELECT DISTINCT ON (oi.id)
+              oi.id,
+              oi.item_name,
+              oi.variant_name,
+              oi.quantity,
+              COALESCE(oi.modifiers, '[]'::jsonb) AS modifiers,
+              COALESCE(oi.sides, '[]'::jsonb) AS sides,
+              oi.note
+            FROM public.kds_tickets kt
+            JOIN public.order_items oi
+              ON oi.id = kt.order_item_id
+             AND oi.tenant_id = kt.tenant_id
+            WHERE kt.tenant_id = v_table.tenant_id
+              AND kt.kitchen_send_batch_id = ksb.id
+            ORDER BY oi.id, kt.id
+          ) lines
+        ), '[]'::jsonb)
+      ) ORDER BY ksb.send_seq
+    ), '[]'::jsonb)
+    INTO v_rounds_payload
+    FROM public.kitchen_send_batches ksb
+    WHERE ksb.tenant_id = v_table.tenant_id
+      AND ksb.order_id = v_order_id;
+
+    SELECT public.self_order_payment_request_public_payload(pr.id)
+    INTO v_payment_payload
+    FROM public.self_order_payment_requests pr
+    WHERE pr.tenant_id = v_table.tenant_id
+      AND pr.order_id = v_order_id
+      AND pr.status IN ('cash_call', 'vietqr_pending')
+      AND pr.expires_at > now()
+    ORDER BY pr.id DESC
+    LIMIT 1;
+  END IF;
+
+  v_state := CASE
+    WHEN v_request_found AND v_request.status = 'pending'
+      THEN 'awaiting_confirmation'
+    WHEN v_open_order_count > 1
+      THEN 'multiple_open_orders'
+    WHEN v_open_order_count = 1 AND v_payment_payload IS NOT NULL
+      THEN 'payment_pending'
+    WHEN v_open_order_count = 1
+      THEN 'open'
+    WHEN v_request_found AND v_request.status = 'rejected'
+      THEN 'rejected'
+    ELSE 'unopened'
+  END;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'state', v_state,
+    'branch', jsonb_build_object('name', v_table.branch_name),
+    'table', jsonb_build_object(
+      'id', v_table.table_id,
+      'number', v_table.table_number
+    ),
+    'openOrderCount', v_open_order_count,
+    'order', CASE WHEN v_open_order_count = 1 THEN v_order_payload ELSE NULL END,
+    'rounds', CASE WHEN v_open_order_count = 1 THEN v_rounds_payload ELSE '[]'::jsonb END,
+    'request', v_request_payload,
+    'paymentRequest', CASE WHEN v_open_order_count = 1 THEN v_payment_payload ELSE NULL END,
+    'menu', public.self_order_menu_payload(v_table.tenant_id)
+  );
+END;
+$$;
+
+
+--
+-- Name: self_order_guard_table_token_rotation(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_guard_table_token_rotation() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+BEGIN
+  IF NOT pg_try_advisory_xact_lock(
+    hashtext('self-order-table'),
+    hashtext(OLD.id::text)
+  ) THEN
+    RAISE EXCEPTION 'self_order_operation_in_progress' USING ERRCODE = '55P03';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: self_order_menu_payload(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_menu_payload(p_tenant_id bigint) RETURNS jsonb
+    LANGUAGE sql STABLE
+    SET search_path TO ''
+    AS $$
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object(
+      'id', c.id,
+      'name', c.name,
+      'type', c.type,
+      'sort_order', c.sort_order,
+      'menu_items', COALESCE((
+        SELECT jsonb_agg(
+          jsonb_build_object(
+            'id', mi.id,
+            'name', mi.name,
+            'description', mi.description,
+            'base_price', mi.base_price,
+            'image_url', mi.image_url,
+            'sort_order', mi.sort_order,
+            'menu_item_variants', COALESCE((
+              SELECT jsonb_agg(
+                jsonb_build_object(
+                  'id', v.id,
+                  'name', v.name,
+                  'price_adjustment', v.price_adjustment,
+                  'sort_order', v.sort_order
+                )
+                ORDER BY v.sort_order, v.id
+              )
+              FROM public.menu_item_variants v
+              WHERE v.tenant_id = mi.tenant_id
+                AND v.item_id = mi.id
+                AND v.is_active = true
+            ), '[]'::jsonb),
+            'menu_item_modifiers', COALESCE((
+              SELECT jsonb_agg(
+                jsonb_build_object(
+                  'id', m.id,
+                  'name', m.name,
+                  'price', m.price,
+                  'sort_order', m.sort_order
+                )
+                ORDER BY m.sort_order, m.id
+              )
+              FROM public.menu_item_modifiers m
+              WHERE m.tenant_id = mi.tenant_id
+                AND m.item_id = mi.id
+                AND m.is_active = true
+            ), '[]'::jsonb),
+            'menu_item_available_sides', COALESCE((
+              SELECT jsonb_agg(
+                jsonb_build_object(
+                  'id', s.id,
+                  'is_default', s.is_default,
+                  'side_item', jsonb_build_object(
+                    'id', side_item.id,
+                    'name', side_item.name,
+                    'base_price', side_item.base_price
+                  )
+                )
+                ORDER BY side_item.sort_order, side_item.id
+              )
+              FROM public.menu_item_available_sides s
+              JOIN public.menu_items side_item
+                ON side_item.id = s.side_item_id
+               AND side_item.tenant_id = s.tenant_id
+               AND side_item.is_active = true
+              WHERE s.tenant_id = mi.tenant_id
+                AND s.main_item_id = mi.id
+            ), '[]'::jsonb)
+          )
+          ORDER BY mi.sort_order, mi.id
+        )
+        FROM public.menu_items mi
+        WHERE mi.tenant_id = c.tenant_id
+          AND mi.category_id = c.id
+          AND mi.is_active = true
+      ), '[]'::jsonb)
+    )
+    ORDER BY c.sort_order, c.id
+  ), '[]'::jsonb)
+  FROM public.menu_categories c
+  WHERE c.tenant_id = p_tenant_id
+    AND c.is_active = true;
+$$;
+
+
+--
+-- Name: self_order_normalize_invoice_payload(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_normalize_invoice_payload(p_payload jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_payload jsonb := COALESCE(p_payload, '{}'::jsonb);
+  v_buyer_name text := btrim(COALESCE(v_payload ->> 'buyerName', ''));
+  v_tax_code text := btrim(COALESCE(v_payload ->> 'buyerTaxCode', ''));
+  v_address text := btrim(COALESCE(v_payload ->> 'buyerAddress', ''));
+  v_email text := btrim(COALESCE(v_payload ->> 'buyerEmail', ''));
+  v_not_get boolean := COALESCE((v_payload ->> 'buyerNotGetInvoice')::boolean, false);
+BEGIN
+  IF v_not_get
+     OR (v_buyer_name = '' AND v_tax_code = '' AND v_address = '' AND v_email = '') THEN
+    RETURN jsonb_build_object(
+      'buyerName', 'Bán cho người tiêu dùng',
+      'buyerNotGetInvoice', true
+    );
+  END IF;
+
+  IF v_tax_code <> '' THEN
+    IF v_buyer_name = '' OR v_address = '' THEN
+      RAISE EXCEPTION 'invalid_invoice_payload' USING ERRCODE = '22023';
+    END IF;
+  END IF;
+
+  RETURN jsonb_strip_nulls(jsonb_build_object(
+    'buyerName', NULLIF(v_buyer_name, ''),
+    'buyerTaxCode', NULLIF(v_tax_code, ''),
+    'buyerAddress', NULLIF(v_address, ''),
+    'buyerEmail', NULLIF(v_email, ''),
+    'buyerNotGetInvoice', false
+  ));
+END;
+$$;
+
+
+--
+-- Name: self_order_payment_request_fingerprint(text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_payment_request_fingerprint(p_method text, p_invoice_payload jsonb) RETURNS text
+    LANGUAGE sql IMMUTABLE
+    SET search_path TO ''
+    AS $$
+  SELECT encode(
+    extensions.digest(
+      convert_to(
+        jsonb_build_object(
+          'version', 'payment:v1',
+          'method', p_method,
+          'invoice', COALESCE(p_invoice_payload, '{}'::jsonb)
+        )::text,
+        'UTF8'
+      ),
+      'sha256'
+    ),
+    'hex'
+  );
+$$;
+
+
+--
+-- Name: self_order_payment_request_public_payload(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_payment_request_public_payload(p_request_id bigint) RETURNS jsonb
+    LANGUAGE sql
+    SET search_path TO ''
+    AS $$
+  SELECT jsonb_strip_nulls(jsonb_build_object(
+    'id', pr.id,
+    'clientOpId', pr.client_op_id,
+    'status', pr.status,
+    'method', pr.method,
+    'amount', pr.amount_snapshot,
+    'paymentId', pr.payment_id,
+    'paymentCode', pr.payment_code_snapshot,
+    'qrData', pr.qr_payload_snapshot,
+    'bankCode', pr.vietqr_config_snapshot ->> 'bankCode',
+    'accountNo', pr.vietqr_config_snapshot ->> 'accountNo',
+    'accountName', pr.vietqr_config_snapshot ->> 'accountName',
+    'createdAt', pr.created_at,
+    'expiresAt', pr.expires_at
+  ))
+  FROM public.self_order_payment_requests pr
+  WHERE pr.id = p_request_id;
+$$;
+
+
+--
+-- Name: self_order_reconcile_expired_payment_requests(bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_reconcile_expired_payment_requests(p_tenant_id bigint, p_branch_id bigint) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_candidate record;
+  v_count integer := 0;
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
+  END IF;
+
+  FOR v_candidate IN
+    SELECT pr.id, pr.order_id
+    FROM public.self_order_payment_requests pr
+    WHERE pr.tenant_id = p_tenant_id
+      AND pr.branch_id = p_branch_id
+      AND pr.status IN ('cash_call', 'vietqr_pending')
+      AND pr.expires_at <= now()
+    ORDER BY pr.order_id, pr.id
+  LOOP
+    BEGIN
+      PERFORM 1
+      FROM public.orders o
+      WHERE o.id = v_candidate.order_id
+        AND o.tenant_id = p_tenant_id
+      FOR UPDATE SKIP LOCKED;
+
+      IF NOT FOUND THEN
+        CONTINUE;
+      END IF;
+      IF NOT pg_try_advisory_xact_lock(v_candidate.order_id) THEN
+        RAISE EXCEPTION 'self_order_retry' USING ERRCODE = '40001';
+      END IF;
+      IF public.self_order_expire_payment_request(v_candidate.id) THEN
+        v_count := v_count + 1;
+      END IF;
+    EXCEPTION WHEN serialization_failure THEN
+      RAISE NOTICE 'Skipped busy self-order payment request %', v_candidate.id;
+    END;
+  END LOOP;
+  RETURN v_count;
+END;
+$$;
+
+
+--
+-- Name: self_order_reject_request(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_reject_request(p_request_id bigint) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_request_ref public.self_order_requests%ROWTYPE;
+  v_request public.self_order_requests%ROWTYPE;
+BEGIN
+  IF v_uid IS NULL OR v_tenant IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  SELECT r.*
+  INTO v_request_ref
+  FROM public.self_order_requests r
+  WHERE r.id = p_request_id
+    AND r.tenant_id = v_tenant;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'self_order_request_not_found' USING ERRCODE = 'P0002';
+  END IF;
+  IF NOT public.has_permission(v_request_ref.branch_id, 'pos:use') THEN
+    RAISE EXCEPTION 'permission denied: pos:use' USING ERRCODE = '42501';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(
+    hashtext('self-order-table'),
+    hashtext(v_request_ref.table_id::text)
+  );
+
+  SELECT r.*
+  INTO v_request
+  FROM public.self_order_requests r
+  WHERE r.id = v_request_ref.id
+    AND r.tenant_id = v_request_ref.tenant_id
+  FOR UPDATE;
+
+  IF v_request.status = 'rejected' THEN
+    RETURN jsonb_build_object('ok', true, 'idempotent', true, 'status', 'rejected');
+  END IF;
+  IF v_request.status <> 'pending' THEN
+    RAISE EXCEPTION 'self_order_request_not_pending' USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE public.self_order_requests
+  SET status = 'rejected',
+      decided_by = v_uid,
+      decided_at = now()
+  WHERE id = v_request.id
+    AND tenant_id = v_request.tenant_id
+    AND status = 'pending';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'self_order_request_not_pending' USING ERRCODE = '40001';
+  END IF;
+
+  RETURN jsonb_build_object('ok', true, 'status', 'rejected');
+END;
+$$;
+
+
+--
+-- Name: self_order_scope_hash(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_scope_hash(p_value text) RETURNS text
+    LANGUAGE sql IMMUTABLE
+    SET search_path TO ''
+    AS $$
+  SELECT encode(
+    extensions.digest(convert_to(COALESCE(p_value, ''), 'UTF8'), 'sha256'),
+    'hex'
+  );
+$$;
+
+
+--
+-- Name: self_order_set_actor_claims(uuid, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_set_actor_claims(p_actor uuid, p_tenant_id bigint) RETURNS void
+    LANGUAGE plpgsql
+    SET search_path TO ''
+    AS $$
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', p_actor::text, true);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', p_actor::text,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object('tenant_id', p_tenant_id)
+    )::text,
+    true
+  );
+END;
+$$;
+
+
+--
+-- Name: self_order_submit(text, jsonb, text, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_submit(p_token text, p_items jsonb, p_customer_note text, p_client_op_id uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_table public.tables%ROWTYPE;
+  v_existing public.self_order_requests%ROWTYPE;
+  v_order public.orders%ROWTYPE;
+  v_active_request public.self_order_payment_requests%ROWTYPE;
+  v_items jsonb;
+  v_note text := NULLIF(btrim(COALESCE(p_customer_note, '')), '');
+  v_open_order_count integer := 0;
+  v_order_id bigint;
+  v_request_id bigint;
+  v_result jsonb;
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
+  END IF;
+  IF p_client_op_id IS NULL THEN
+    RAISE EXCEPTION 'self_order_missing_operation_id' USING ERRCODE = '22023';
+  END IF;
+  IF v_note IS NOT NULL AND char_length(v_note) > 500 THEN
+    RAISE EXCEPTION 'self_order_customer_note_too_long' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT t.*
+  INTO v_table
+  FROM public.tables t
+  JOIN public.branches b
+    ON b.id = t.branch_id
+   AND b.tenant_id = t.tenant_id
+   AND b.is_active = true
+  WHERE t.self_order_token = p_token
+    AND t.self_order_enabled = true
+    AND t.status <> 'maintenance'
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'invalid_or_disabled_token');
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(
+    hashtext('self-order-table'),
+    hashtext(v_table.id::text)
+  );
+
+  SELECT t.*
+  INTO v_table
+  FROM public.tables t
+  WHERE t.id = v_table.id
+    AND t.self_order_token = p_token
+    AND t.self_order_enabled = true
+    AND t.status <> 'maintenance';
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'invalid_or_disabled_token');
+  END IF;
+  IF NOT public.self_order_branch_has_open_pos_session(
+    v_table.tenant_id,
+    v_table.branch_id
+  ) THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'pos_session_closed');
+  END IF;
+
+  v_items := public.self_order_canonicalize_cart(v_table.tenant_id, p_items);
+
+  SELECT r.*
+  INTO v_existing
+  FROM public.self_order_requests r
+  WHERE r.tenant_id = v_table.tenant_id
+    AND r.client_op_id = p_client_op_id
+  FOR UPDATE;
+
+  IF FOUND THEN
+    IF v_existing.table_id <> v_table.id
+       OR (
+         SELECT jsonb_agg(item.value - 'key' ORDER BY item.ordinality)
+         FROM jsonb_array_elements(v_existing.cart_payload)
+           WITH ORDINALITY AS item(value, ordinality)
+       ) IS DISTINCT FROM (
+         SELECT jsonb_agg(item.value - 'key' ORDER BY item.ordinality)
+         FROM jsonb_array_elements(v_items)
+           WITH ORDINALITY AS item(value, ordinality)
+       )
+       OR v_existing.customer_note IS DISTINCT FROM v_note THEN
+      RAISE EXCEPTION 'self_order_idempotency_conflict' USING ERRCODE = '22023';
+    END IF;
+    RETURN jsonb_build_object(
+      'ok', true,
+      'idempotent', true,
+      'requestId', v_existing.id,
+      'status', v_existing.status,
+      'orderId', v_existing.order_id
+    );
+  END IF;
+
+  SELECT count(*)::integer, min(o.id)
+  INTO v_open_order_count, v_order_id
+  FROM public.orders o
+  WHERE o.tenant_id = v_table.tenant_id
+    AND o.branch_id = v_table.branch_id
+    AND o.table_id = v_table.id
+    AND o.payment_status <> 'paid'
+    AND o.status NOT IN ('completed', 'cancelled')
+    AND o.merged_into_order_id IS NULL;
+
+  IF v_open_order_count = 1 THEN
+    SELECT o.*
+    INTO v_order
+    FROM public.orders o
+    WHERE o.id = v_order_id
+      AND o.tenant_id = v_table.tenant_id
+    FOR UPDATE;
+
+    SELECT pr.*
+    INTO v_active_request
+    FROM public.self_order_payment_requests pr
+    WHERE pr.tenant_id = v_order.tenant_id
+      AND pr.order_id = v_order.id
+      AND pr.status IN ('cash_call', 'vietqr_pending')
+    ORDER BY pr.id DESC
+    LIMIT 1;
+
+    IF FOUND AND v_active_request.expires_at <= now() THEN
+      PERFORM public.self_order_expire_payment_request(v_active_request.id);
+    END IF;
+
+    IF public.self_order_active_payment_lock(v_order.id) IS NOT NULL THEN
+      RAISE EXCEPTION 'self_order_pending_payment_exists' USING ERRCODE = '55P03';
+    END IF;
+
+    PERFORM public.self_order_set_actor_claims(v_order.created_by, v_order.tenant_id);
+    v_result := public.append_order_items(v_order.id, v_items, p_client_op_id);
+
+    INSERT INTO public.self_order_requests (
+      tenant_id,
+      branch_id,
+      table_id,
+      cart_payload,
+      customer_note,
+      client_op_id,
+      status,
+      order_id,
+      decided_by,
+      decided_at
+    )
+    VALUES (
+      v_table.tenant_id,
+      v_table.branch_id,
+      v_table.id,
+      v_items,
+      v_note,
+      p_client_op_id,
+      'accepted',
+      v_order.id,
+      v_order.created_by,
+      now()
+    )
+    RETURNING id INTO v_request_id;
+
+    RETURN COALESCE(v_result, '{}'::jsonb) || jsonb_build_object(
+      'ok', true,
+      'requestId', v_request_id,
+      'status', 'accepted',
+      'orderId', v_order.id
+    );
+  END IF;
+
+  BEGIN
+    INSERT INTO public.self_order_requests (
+      tenant_id,
+      branch_id,
+      table_id,
+      cart_payload,
+      customer_note,
+      client_op_id,
+      status
+    )
+    VALUES (
+      v_table.tenant_id,
+      v_table.branch_id,
+      v_table.id,
+      v_items,
+      v_note,
+      p_client_op_id,
+      'pending'
+    )
+    RETURNING id INTO v_request_id;
+  EXCEPTION WHEN unique_violation THEN
+    RAISE EXCEPTION 'self_order_pending_request_exists' USING ERRCODE = '55P03';
+  END;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'requestId', v_request_id,
+    'status', 'pending',
+    'openOrderCount', v_open_order_count
+  );
+END;
+$$;
+
+
+--
+-- Name: self_order_sync_payment_request(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_sync_payment_request() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_status_changed boolean := false;
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    v_status_changed := true;
+  ELSIF TG_OP = 'UPDATE' THEN
+    v_status_changed := OLD.status IS DISTINCT FROM NEW.status;
+  END IF;
+
+  IF NEW.status = 'completed' AND v_status_changed THEN
+    UPDATE public.self_order_payment_requests pr
+    SET status = 'completed',
+        payment_id = COALESCE(pr.payment_id, NEW.id),
+        completed_at = COALESCE(NEW.paid_at, now())
+    WHERE pr.tenant_id = NEW.tenant_id
+      AND pr.order_id = NEW.order_id
+      AND pr.status IN ('cash_call', 'vietqr_pending')
+      AND (
+        pr.payment_id = NEW.id
+        OR (
+          pr.payment_id IS NULL
+          AND pr.method = 'cash_call'
+          AND NEW.method = 'cash'
+        )
+        OR (
+          pr.method = 'vietqr'
+          AND NEW.method = 'vietqr'
+        )
+      );
+  ELSIF NEW.status = 'failed' AND v_status_changed THEN
+    UPDATE public.self_order_payment_requests pr
+    SET status = 'cancelled',
+        cancelled_at = now(),
+        cancel_reason = COALESCE(pr.cancel_reason, 'payment_failed')
+    WHERE pr.tenant_id = NEW.tenant_id
+      AND pr.payment_id = NEW.id
+      AND pr.status IN ('cash_call', 'vietqr_pending');
+
+    IF FOUND THEN
+      UPDATE public.orders o
+      SET payment_status = 'unpaid',
+          payment_method = NULL,
+          updated_at = now()
+      WHERE o.id = NEW.order_id
+        AND o.tenant_id = NEW.tenant_id
+        AND COALESCE(o.payment_status, 'unpaid') <> 'paid'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM public.payments p
+          WHERE p.tenant_id = NEW.tenant_id
+            AND p.order_id = NEW.order_id
+            AND p.status IN ('pending', 'completed')
+        );
+    END IF;
+  END IF;
+
+  RETURN NULL;
+END;
+$$;
+
+
+--
+-- Name: self_order_sync_payment_request_from_order(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_sync_payment_request_from_order() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_reason text;
+  v_payment_id bigint;
+  v_payment_method text;
+  v_paid_at timestamptz;
+BEGIN
+  IF NEW.payment_status = 'paid' THEN
+    SELECT p.id, p.method, p.paid_at
+    INTO v_payment_id, v_payment_method, v_paid_at
+    FROM public.payments p
+    WHERE p.tenant_id = NEW.tenant_id
+      AND p.branch_id = NEW.branch_id
+      AND p.order_id = NEW.id
+      AND p.status = 'completed'
+    ORDER BY p.paid_at DESC NULLS LAST, p.id DESC
+    LIMIT 1;
+
+    IF v_payment_id IS NULL THEN
+      RETURN NULL;
+    END IF;
+
+    UPDATE public.self_order_payment_requests pr
+    SET status = 'completed',
+        payment_id = COALESCE(pr.payment_id, v_payment_id),
+        completed_at = COALESCE(v_paid_at, now())
+    WHERE pr.tenant_id = NEW.tenant_id
+      AND pr.branch_id = NEW.branch_id
+      AND pr.order_id = NEW.id
+      AND pr.status IN ('cash_call', 'vietqr_pending')
+      AND (
+        (pr.method = 'cash_call' AND v_payment_method = 'cash')
+        OR (pr.method = 'vietqr' AND v_payment_method = 'vietqr')
+      );
+
+    UPDATE public.self_order_payment_requests pr
+    SET status = 'cancelled',
+        cancelled_at = now(),
+        cancel_reason = COALESCE(pr.cancel_reason, 'order_paid_by_other_method')
+    WHERE pr.tenant_id = NEW.tenant_id
+      AND pr.branch_id = NEW.branch_id
+      AND pr.order_id = NEW.id
+      AND pr.status IN ('cash_call', 'vietqr_pending')
+      AND NOT (
+        (pr.method = 'cash_call' AND v_payment_method = 'cash')
+        OR (pr.method = 'vietqr' AND v_payment_method = 'vietqr')
+      );
+  ELSIF NEW.status IN ('completed', 'cancelled') THEN
+    v_reason := 'order_' || NEW.status;
+
+    UPDATE public.self_order_payment_requests pr
+    SET status = 'cancelled',
+        cancelled_at = now(),
+        cancel_reason = COALESCE(pr.cancel_reason, v_reason)
+    WHERE pr.tenant_id = NEW.tenant_id
+      AND pr.order_id = NEW.id
+      AND pr.status IN ('cash_call', 'vietqr_pending');
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+
+--
+-- Name: self_order_take_rate_bucket(text, text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.self_order_take_rate_bucket(p_purpose text, p_scope_type text, p_scope_hash text, p_limit integer, p_window_seconds integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $_$
+DECLARE
+  v_window_start timestamptz;
+  v_hits integer;
+  v_retry_after_seconds integer;
+BEGIN
+  IF p_purpose NOT IN ('batch', 'payment')
+     OR p_scope_type NOT IN ('token', 'ip')
+     OR p_scope_hash IS NULL
+     OR p_scope_hash !~ '^[0-9a-f]{64}$'
+     OR p_limit < 1
+     OR p_window_seconds < 1 THEN
+    RAISE EXCEPTION 'self_order_invalid_rate_limit_input' USING ERRCODE = '22023';
+  END IF;
+
+  v_window_start := to_timestamp(
+    floor(extract(epoch FROM now()) / p_window_seconds) * p_window_seconds
+  );
+
+  DELETE FROM public.self_order_rate_buckets r
+  WHERE r.ctid IN (
+    SELECT stale.ctid
+    FROM public.self_order_rate_buckets stale
+    WHERE stale.expires_at <= now()
+    ORDER BY stale.expires_at
+    LIMIT 100
+  );
+
+  INSERT INTO public.self_order_rate_buckets (
+    purpose,
+    scope_type,
+    scope_hash,
+    window_start,
+    hits,
+    expires_at
+  )
+  VALUES (
+    p_purpose,
+    p_scope_type,
+    p_scope_hash,
+    v_window_start,
+    1,
+    v_window_start + make_interval(secs => p_window_seconds * 2)
+  )
+  ON CONFLICT (purpose, scope_type, scope_hash, window_start)
+  DO UPDATE SET hits = self_order_rate_buckets.hits + 1
+  RETURNING hits INTO v_hits;
+
+  IF v_hits > p_limit THEN
+    v_retry_after_seconds := GREATEST(
+      1,
+      ceil(extract(epoch FROM (
+        v_window_start
+        + make_interval(secs => p_window_seconds)
+        - clock_timestamp()
+      )))::integer
+    );
+    RAISE EXCEPTION 'self_order_rate_limited'
+      USING ERRCODE = 'P0001',
+            DETAIL = jsonb_build_object(
+              'retryAfterSeconds', v_retry_after_seconds
+            )::text;
+  END IF;
+
+  RETURN v_hits;
+END;
+$_$;
 
 
 --
@@ -22333,10 +28586,10 @@ $$;
 
 
 --
--- Name: set_inventory_count_assignments(bigint, bigint, bigint, bigint[]); Type: FUNCTION; Schema: public; Owner: -
+-- Name: set_inventory_count_assignments(bigint, bigint, bigint, bigint[], bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[]) RETURNS jsonb
+CREATE FUNCTION public.set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[], p_shift_id bigint DEFAULT NULL::bigint) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public', 'pg_temp'
     AS $$
@@ -22344,6 +28597,10 @@ DECLARE
   v_tenant BIGINT := public.auth_tenant_id();
   v_uid    UUID   := auth.uid();
   v_ids    BIGINT[] := COALESCE(p_ingredient_ids, ARRAY[]::BIGINT[]);
+  v_shift_id BIGINT := p_shift_id;
+  v_location_id BIGINT := p_location_id;
+  v_branch_kind TEXT;
+  v_location_kind TEXT;
 BEGIN
   IF v_uid IS NULL OR v_tenant IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -22353,12 +28610,44 @@ BEGIN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM public.inventory_locations l
-    WHERE l.id = p_location_id AND l.branch_id = p_branch_id
-      AND l.tenant_id = v_tenant AND l.is_active
-  ) THEN
+  SELECT b.branch_kind, l.location_kind
+  INTO v_branch_kind, v_location_kind
+  FROM public.inventory_locations l
+  JOIN public.branches b
+    ON b.id = l.branch_id
+   AND b.tenant_id = l.tenant_id
+  WHERE l.id = p_location_id
+    AND l.branch_id = p_branch_id
+    AND l.tenant_id = v_tenant
+    AND l.is_active;
+
+  IF NOT FOUND THEN
     RAISE EXCEPTION 'location_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_branch_kind = 'branch' AND v_location_kind <> 'warehouse' THEN
+    SELECT l.id INTO v_location_id
+    FROM public.inventory_locations l
+    WHERE l.branch_id = p_branch_id
+      AND l.tenant_id = v_tenant
+      AND l.location_kind = 'warehouse'
+      AND l.is_active
+    ORDER BY l.is_default_consumption DESC, l.sort_order NULLS LAST, l.id
+    LIMIT 1;
+
+    IF v_location_id IS NULL THEN
+      RAISE EXCEPTION 'branch_warehouse_location_missing' USING ERRCODE = 'P0002';
+    END IF;
+  END IF;
+
+  IF v_shift_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.shifts s
+    WHERE s.id = v_shift_id
+      AND s.tenant_id = v_tenant
+      AND s.is_active
+      AND (s.branch_id IS NULL OR s.branch_id = p_branch_id)
+  ) THEN
+    RAISE EXCEPTION 'shift_not_found' USING ERRCODE = 'P0002';
   END IF;
 
   IF NOT EXISTS (
@@ -22381,24 +28670,33 @@ BEGIN
   UPDATE public.inventory_count_assignments a
   SET is_active = false, updated_at = now()
   WHERE a.tenant_id = v_tenant AND a.branch_id = p_branch_id
-    AND a.location_id = p_location_id
+    AND a.location_id = v_location_id
     AND a.ingredient_id = ANY (v_ids)
-    AND a.employee_id <> p_employee_id
-    AND a.is_active;
+    AND a.is_active
+    AND (a.employee_id <> p_employee_id OR a.shift_id IS DISTINCT FROM v_shift_id)
+    AND a.shift_id IS NOT DISTINCT FROM v_shift_id;
 
   UPDATE public.inventory_count_assignments a
   SET is_active = false, updated_at = now()
   WHERE a.tenant_id = v_tenant AND a.branch_id = p_branch_id
-    AND a.location_id = p_location_id
+    AND a.location_id = v_location_id
     AND a.employee_id = p_employee_id
+    AND a.shift_id IS NOT DISTINCT FROM v_shift_id
     AND a.is_active
     AND NOT (a.ingredient_id = ANY (v_ids));
 
   INSERT INTO public.inventory_count_assignments
-    (tenant_id, branch_id, location_id, employee_id, ingredient_id, is_active, assigned_by)
-  SELECT v_tenant, p_branch_id, p_location_id, p_employee_id, gid, true, v_uid
-  FROM unnest(v_ids) gid
-  ON CONFLICT (tenant_id, branch_id, location_id, employee_id, ingredient_id)
+    (tenant_id, branch_id, location_id, employee_id, ingredient_id, shift_id, is_active, assigned_by)
+  SELECT v_tenant, p_branch_id, v_location_id, p_employee_id, selected.gid, v_shift_id, true, v_uid
+  FROM (SELECT DISTINCT unnest(v_ids) AS gid) selected
+  ON CONFLICT (
+    tenant_id,
+    branch_id,
+    location_id,
+    employee_id,
+    ingredient_id,
+    (COALESCE(shift_id, 0::bigint))
+  )
   DO UPDATE SET is_active = true, assigned_by = v_uid, updated_at = now();
 
   PERFORM public.log_audit(
@@ -22406,19 +28704,31 @@ BEGIN
     'inventory_count_assignment'::TEXT,
     p_employee_id,
     NULL,
-    jsonb_build_object('branch_id', p_branch_id, 'location_id', p_location_id, 'ingredient_ids', v_ids)
+    jsonb_build_object(
+      'branch_id', p_branch_id,
+      'location_id', v_location_id,
+      'employee_id', p_employee_id,
+      'shift_id', v_shift_id,
+      'ingredient_ids', v_ids
+    )
   );
 
-  RETURN jsonb_build_object('success', true, 'employee_id', p_employee_id, 'count', COALESCE(array_length(v_ids, 1), 0));
+  RETURN jsonb_build_object(
+    'success', true,
+    'employee_id', p_employee_id,
+    'location_id', v_location_id,
+    'shift_id', v_shift_id,
+    'count', COALESCE(array_length(v_ids, 1), 0)
+  );
 END;
 $$;
 
 
 --
--- Name: FUNCTION set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[]); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[], p_shift_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[]) IS 'Manager sets the exact set of ingredients an employee counts at a location. Reassigns cells owned by other employees. Gated by inventory:count_assign.';
+COMMENT ON FUNCTION public.set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[], p_shift_id bigint) IS 'Manager sets employee count assignments. Branch sites normalize count slips to the branch kitchen location.';
 
 
 --
@@ -23169,6 +29479,52 @@ COMMENT ON FUNCTION public.split_order(p_source_order_id bigint, p_item_partials
 
 
 --
+-- Name: start_production_run(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.start_production_run(p_run_id bigint) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+    v_uid UUID := auth.uid();
+    v_tenant BIGINT := public.auth_tenant_id();
+    v_run RECORD;
+BEGIN
+    IF v_uid IS NULL THEN
+        RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+    END IF;
+
+    IF NOT public.is_inventory_production_operator() THEN
+        RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+    END IF;
+
+    IF NOT public.has_permission_any('inventory:production_confirm') THEN
+        RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+    END IF;
+
+    SELECT * INTO v_run FROM public.production_runs
+    WHERE id = p_run_id AND tenant_id = v_tenant FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'production_run_not_found' USING ERRCODE = 'P0002'; END IF;
+
+    IF NOT public.has_permission(v_run.branch_id, 'inventory:production_confirm') THEN
+        RAISE EXCEPTION 'branch_scope_violation' USING ERRCODE = '42501';
+    END IF;
+
+    IF v_run.status <> 'draft' THEN
+        RAISE EXCEPTION 'production_run_not_draft' USING ERRCODE = '22023';
+    END IF;
+
+    UPDATE public.production_runs
+    SET status = 'in_progress', started_at = now(), updated_at = now()
+    WHERE id = p_run_id AND tenant_id = v_tenant;
+
+    RETURN jsonb_build_object('production_run_id', p_run_id, 'status', 'in_progress');
+END;
+$$;
+
+
+--
 -- Name: start_stocktake(bigint, bigint, text, boolean, uuid, numeric, numeric); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -23176,33 +29532,136 @@ CREATE FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint 
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-DECLARE v_uid UUID := auth.uid(); v_tenant BIGINT; v_blind BOOLEAN;
-  v_session BIGINT; v_is_unaud BOOLEAN := false; v_rows INT := 0;
+DECLARE
+  v_uid UUID := auth.uid();
+  v_tenant BIGINT;
+  v_blind BOOLEAN;
+  v_session BIGINT;
+  v_is_unaud BOOLEAN := false;
+  v_rows INT := 0;
+  v_loc_id BIGINT := p_location_id;
+  v_branch_kind TEXT;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000'; END IF;
   IF NOT public.has_permission(p_branch_id, 'inventory:stocktake_create') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
   IF p_mode NOT IN ('daily','weekly','monthly','quarterly','spot') THEN RAISE EXCEPTION 'invalid mode' USING ERRCODE = '22023'; END IF;
-  SELECT tenant_id INTO v_tenant FROM public.branches WHERE id = p_branch_id;
+
+  SELECT tenant_id, branch_kind INTO v_tenant, v_branch_kind
+  FROM public.branches
+  WHERE id = p_branch_id;
   IF v_tenant IS NULL THEN RAISE EXCEPTION 'branch not found' USING ERRCODE = 'P0002'; END IF;
+
+  IF v_loc_id IS NOT NULL THEN
+    SELECT il.id INTO v_loc_id
+    FROM public.inventory_locations il
+    WHERE il.id = p_location_id
+      AND il.branch_id = p_branch_id
+      AND il.tenant_id = v_tenant
+      AND il.is_active = TRUE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'location_not_found_or_inactive' USING ERRCODE = 'P0002'; END IF;
+  END IF;
+
   v_blind := COALESCE(p_blind_mode, CASE p_mode
     WHEN 'daily' THEN false WHEN 'weekly' THEN false
     WHEN 'monthly' THEN true WHEN 'quarterly' THEN true WHEN 'spot' THEN true END);
   IF p_mode IN ('monthly','quarterly') AND p_auditor_id IS NULL THEN v_is_unaud := true; END IF;
-  INSERT INTO public.stocktake_sessions (tenant_id, branch_id, location_id, status, started_at, created_by,
+
+  IF v_loc_id IS NULL THEN
+    IF v_branch_kind = 'branch' THEN
+      SELECT il.id INTO v_loc_id
+      FROM public.inventory_locations il
+      WHERE il.branch_id = p_branch_id
+        AND il.tenant_id = v_tenant
+        AND il.location_kind = 'warehouse'
+        AND il.is_active = TRUE
+      ORDER BY il.is_default_consumption DESC, il.sort_order NULLS LAST, il.id
+      LIMIT 1;
+    ELSE
+      SELECT il.id INTO v_loc_id
+      FROM public.inventory_locations il
+      WHERE il.branch_id = p_branch_id
+        AND il.tenant_id = v_tenant
+        AND il.is_default_receive = TRUE
+        AND il.is_active = TRUE
+      ORDER BY il.sort_order NULLS LAST, il.id
+      LIMIT 1;
+    END IF;
+  END IF;
+
+  IF v_loc_id IS NULL THEN
+    RAISE EXCEPTION 'location_not_found_or_inactive' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant
+      AND sl.branch_id = p_branch_id
+      AND sl.location_id = v_loc_id
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.ingredient_units iu
+        JOIN public.units u
+          ON u.id = iu.unit_id
+         AND u.tenant_id = iu.tenant_id
+         AND u.is_active = TRUE
+        WHERE iu.tenant_id = v_tenant
+          AND iu.ingredient_id = sl.ingredient_id
+          AND iu.is_base = TRUE
+          AND iu.is_active = TRUE
+      )
+  ) THEN
+    RAISE EXCEPTION 'stocktake_entry_unit_missing' USING ERRCODE = '23503';
+  END IF;
+
+  INSERT INTO public.stocktake_sessions (
+    tenant_id, branch_id, location_id, status, started_at, created_by,
     mode, blind_mode, auditor_id, is_unaudited, variance_threshold_pct, variance_threshold_vnd,
-    abc_snapshot_at, current_round)
-  VALUES (v_tenant, p_branch_id, p_location_id, 'in_progress', now(), v_uid, p_mode, v_blind,
-    p_auditor_id, v_is_unaud, COALESCE(p_threshold_pct, 5.00), COALESCE(p_threshold_vnd, 200000), now(), 1)
+    abc_snapshot_at, current_round
+  )
+  VALUES (
+    v_tenant, p_branch_id, v_loc_id, 'in_progress', now(), v_uid, p_mode, v_blind,
+    p_auditor_id, v_is_unaud, COALESCE(p_threshold_pct, 5.00), COALESCE(p_threshold_vnd, 200000), now(), 1
+  )
   RETURNING id INTO v_session;
-  INSERT INTO public.stocktake_lines (tenant_id, session_id, ingredient_id, system_quantity, round_no, abc_class)
+
+  INSERT INTO public.stocktake_lines (
+    tenant_id, session_id, ingredient_id, system_quantity, round_no, abc_class, entry_unit_id
+  )
   SELECT v_tenant, v_session, sl.ingredient_id, COALESCE(sl.current_quantity, 0), 1,
-    public.get_ingredient_abc_class(p_branch_id, sl.ingredient_id)
-  FROM public.stock_levels sl JOIN public.ingredients ing ON ing.id = sl.ingredient_id
-  WHERE sl.branch_id = p_branch_id AND (p_location_id IS NULL OR sl.location_id = p_location_id) AND ing.is_active = true;
+         public.get_ingredient_abc_class(p_branch_id, sl.ingredient_id), bu.unit_id
+  FROM public.stock_levels sl
+  JOIN public.ingredients ing ON ing.id = sl.ingredient_id
+  JOIN LATERAL (
+    SELECT iu.unit_id
+    FROM public.ingredient_units iu
+    JOIN public.units u
+      ON u.id = iu.unit_id
+     AND u.tenant_id = iu.tenant_id
+     AND u.is_active = TRUE
+    WHERE iu.tenant_id = v_tenant
+      AND iu.ingredient_id = sl.ingredient_id
+      AND iu.is_base = TRUE
+      AND iu.is_active = TRUE
+    ORDER BY iu.sort_order ASC, iu.id ASC
+    LIMIT 1
+  ) bu ON TRUE
+  WHERE sl.branch_id = p_branch_id
+    AND sl.location_id = v_loc_id
+    AND ing.is_active = true;
+
   GET DIAGNOSTICS v_rows = ROW_COUNT;
   RETURN jsonb_build_object('session_id', v_session, 'mode', p_mode, 'blind_mode', v_blind,
     'is_unaudited', v_is_unaud, 'seeded_lines', v_rows, 'abc_snapshot_at', now());
-END; $$;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric) IS 'Start a stocktake session for a branch. If p_location_id is NULL, defaults to kitchen for branch sites, and default receive warehouse for others. Prevents duplicate stocktake lines by filtering by location_id.';
 
 
 --
@@ -23331,6 +29790,83 @@ BEGIN
   END IF;
   RETURN NEW;
 END; $$;
+
+
+--
+-- Name: stock_ledger_reconciliation(bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.stock_ledger_reconciliation(p_branch_id bigint, p_location_id bigint DEFAULT NULL::bigint) RETURNS TABLE(ingredient_id bigint, ingredient_name text, location_id bigint, ledger_sum numeric, stock_levels_qty numeric, drift numeric, drift_pct numeric)
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_tenant bigint := public.auth_tenant_id();
+BEGIN
+  IF v_tenant IS NULL THEN
+    RAISE EXCEPTION 'tenant_not_found' USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT public.has_permission(p_branch_id, 'inventory:read') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  RETURN QUERY
+  WITH ledger AS (
+    SELECT sm.ingredient_id,
+           sm.location_id,
+           COALESCE(SUM(sm.quantity_change), 0)::numeric AS ledger_sum
+    FROM public.stock_movements sm
+    WHERE sm.tenant_id = v_tenant
+      AND sm.branch_id = p_branch_id
+      AND (p_location_id IS NULL OR sm.location_id = p_location_id)
+    GROUP BY sm.ingredient_id, sm.location_id
+  ),
+  levels AS (
+    SELECT sl.ingredient_id,
+           sl.location_id,
+           sl.current_quantity::numeric AS stock_levels_qty
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant
+      AND sl.branch_id = p_branch_id
+      AND (p_location_id IS NULL OR sl.location_id = p_location_id)
+  ),
+  pairs AS (
+    SELECT
+      COALESCE(l.ingredient_id, lv.ingredient_id) AS ingredient_id,
+      COALESCE(l.location_id, lv.location_id) AS location_id,
+      COALESCE(l.ledger_sum, 0)::numeric AS ledger_sum,
+      COALESCE(lv.stock_levels_qty, 0)::numeric AS stock_levels_qty
+    FROM ledger l
+    FULL OUTER JOIN levels lv USING (ingredient_id, location_id)
+  )
+  SELECT
+    p.ingredient_id,
+    i.name AS ingredient_name,
+    p.location_id,
+    p.ledger_sum,
+    p.stock_levels_qty,
+    (p.stock_levels_qty - p.ledger_sum)::numeric AS drift,
+    CASE
+      WHEN abs(p.ledger_sum) > 0.001
+        THEN round(((p.stock_levels_qty - p.ledger_sum) / abs(p.ledger_sum)) * 100, 3)
+      ELSE NULL
+    END AS drift_pct
+  FROM pairs p
+  JOIN public.ingredients i
+    ON i.id = p.ingredient_id
+   AND i.tenant_id = v_tenant
+  WHERE abs(p.stock_levels_qty - p.ledger_sum) > 0.001
+  ORDER BY i.name, p.location_id;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION stock_ledger_reconciliation(p_branch_id bigint, p_location_id bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.stock_ledger_reconciliation(p_branch_id bigint, p_location_id bigint) IS 'Returns ingredient/location rows where the stock_movements ledger sum diverges from stock_levels.current_quantity beyond 0.001. Call with (branch_id) or (branch_id, location_id).';
 
 
 --
@@ -23691,6 +30227,7 @@ DECLARE
   v_tr           RECORD;
   v_line         RECORD;
   v_recv         NUMERIC(15,3);
+  v_recv_base    NUMERIC(15,3);
   v_note         TEXT;
   v_cost         NUMERIC(15,2);
   v_old_q        NUMERIC(15,3);
@@ -23698,7 +30235,7 @@ DECLARE
   v_new_q        NUMERIC(15,3);
   v_new_wac      NUMERIC(15,2);
   v_key          TEXT;
-  v_to_loc          RECORD;
+  v_to_loc       RECORD;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -23778,6 +30315,7 @@ BEGIN
       CONTINUE;
     END IF;
 
+    v_recv_base := public.inv_to_base(v_line.ingredient_id, v_line.entry_unit_id, v_recv)::NUMERIC(15,3);
     v_cost := COALESCE(v_line.unit_cost_at_ship, 0);
 
     SELECT sl.current_quantity, sl.avg_unit_cost
@@ -23796,17 +30334,19 @@ BEGIN
 
     INSERT INTO public.stock_movements (
       tenant_id, branch_id, ingredient_id, type, quantity_change,
-      reason, created_by, transfer_id, unit_cost, location_id
+      reason, created_by, transfer_id, unit_cost, location_id,
+      entry_unit_id, entry_quantity
     ) VALUES (
-      v_tenant, v_tr.to_branch_id, v_line.ingredient_id, 'transfer_in', v_recv,
+      v_tenant, v_tr.to_branch_id, v_line.ingredient_id, 'transfer_in', v_recv_base,
       'Transfer ' || v_tr.transfer_number, v_uid, p_transfer_id, v_cost,
-      v_tr.to_location_id
+      v_tr.to_location_id,
+      v_line.entry_unit_id, v_recv
     );
 
-    v_new_q := COALESCE(v_old_q, 0) + v_recv;
+    v_new_q := COALESCE(v_old_q, 0) + v_recv_base;
     IF v_new_q > 0 THEN
       v_new_wac := (
-        COALESCE(v_old_q, 0) * COALESCE(v_old_wac, 0) + v_recv * v_cost
+        COALESCE(v_old_q, 0) * COALESCE(v_old_wac, 0) + v_recv_base * v_cost
       ) / v_new_q;
     ELSE
       v_new_wac := v_cost;
@@ -23902,10 +30442,10 @@ END; $$;
 
 
 --
--- Name: submit_inventory_count_slip(bigint, bigint, jsonb); Type: FUNCTION; Schema: public; Owner: -
+-- Name: submit_inventory_count_slip(bigint, bigint, jsonb, bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb) RETURNS bigint
+CREATE FUNCTION public.submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb, p_shift_id bigint DEFAULT NULL::bigint) RETURNS bigint
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public', 'pg_temp'
     AS $$
@@ -23915,6 +30455,7 @@ DECLARE
   v_employee_id   BIGINT;
   v_employee_name TEXT;
   v_today         DATE := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
+  v_shift_id      BIGINT := p_shift_id;
   v_slip_id       BIGINT;
   v_status        TEXT;
   v_line          jsonb;
@@ -23922,6 +30463,9 @@ DECLARE
   v_counted       NUMERIC(15,3);
   v_assigned_count INT;
   v_line_count    INT;
+  v_location_id   BIGINT := p_location_id;
+  v_branch_kind   TEXT;
+  v_location_kind TEXT;
 BEGIN
   IF v_uid IS NULL OR v_tenant IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -23931,12 +30475,44 @@ BEGIN
     RAISE EXCEPTION 'empty_count' USING ERRCODE = '22023';
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM public.inventory_locations l
-    WHERE l.id = p_location_id AND l.branch_id = p_branch_id
-      AND l.tenant_id = v_tenant AND l.is_active
-  ) THEN
+  SELECT b.branch_kind, l.location_kind
+  INTO v_branch_kind, v_location_kind
+  FROM public.inventory_locations l
+  JOIN public.branches b
+    ON b.id = l.branch_id
+   AND b.tenant_id = l.tenant_id
+  WHERE l.id = p_location_id
+    AND l.branch_id = p_branch_id
+    AND l.tenant_id = v_tenant
+    AND l.is_active;
+
+  IF NOT FOUND THEN
     RAISE EXCEPTION 'location_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_branch_kind = 'branch' AND v_location_kind <> 'warehouse' THEN
+    SELECT l.id INTO v_location_id
+    FROM public.inventory_locations l
+    WHERE l.branch_id = p_branch_id
+      AND l.tenant_id = v_tenant
+      AND l.location_kind = 'warehouse'
+      AND l.is_active
+    ORDER BY l.is_default_consumption DESC, l.sort_order NULLS LAST, l.id
+    LIMIT 1;
+
+    IF v_location_id IS NULL THEN
+      RAISE EXCEPTION 'branch_warehouse_location_missing' USING ERRCODE = 'P0002';
+    END IF;
+  END IF;
+
+  IF v_shift_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.shifts s
+    WHERE s.id = v_shift_id
+      AND s.tenant_id = v_tenant
+      AND s.is_active
+      AND (s.branch_id IS NULL OR s.branch_id = p_branch_id)
+  ) THEN
+    RAISE EXCEPTION 'shift_not_found' USING ERRCODE = 'P0002';
   END IF;
 
   SELECT e.id, pr.full_name INTO v_employee_id, v_employee_name
@@ -23964,17 +30540,60 @@ BEGIN
     IF NOT EXISTS (
       SELECT 1 FROM public.inventory_count_assignments a
       WHERE a.tenant_id = v_tenant AND a.branch_id = p_branch_id
-        AND a.location_id = p_location_id AND a.employee_id = v_employee_id
+        AND a.location_id = v_location_id AND a.employee_id = v_employee_id
         AND a.ingredient_id = v_ingredient_id AND a.is_active
+        AND (
+          (v_shift_id IS NULL AND a.shift_id IS NULL)
+          OR (
+            v_shift_id IS NOT NULL
+            AND (
+              a.shift_id = v_shift_id
+              OR (
+                a.shift_id IS NULL
+                AND NOT EXISTS (
+                  SELECT 1 FROM public.inventory_count_assignments specific
+                  WHERE specific.tenant_id = v_tenant
+                    AND specific.branch_id = p_branch_id
+                    AND specific.location_id = v_location_id
+                    AND specific.ingredient_id = v_ingredient_id
+                    AND specific.shift_id = v_shift_id
+                    AND specific.is_active
+                )
+              )
+            )
+          )
+        )
     ) THEN
       RAISE EXCEPTION 'not_assigned' USING ERRCODE = '42501';
     END IF;
   END LOOP;
 
-  SELECT count(*) INTO v_assigned_count
+  SELECT count(DISTINCT a.ingredient_id) INTO v_assigned_count
   FROM public.inventory_count_assignments a
   WHERE a.tenant_id = v_tenant AND a.branch_id = p_branch_id
-    AND a.location_id = p_location_id AND a.employee_id = v_employee_id AND a.is_active;
+    AND a.location_id = v_location_id AND a.employee_id = v_employee_id
+    AND a.is_active
+    AND (
+      (v_shift_id IS NULL AND a.shift_id IS NULL)
+      OR (
+        v_shift_id IS NOT NULL
+        AND (
+          a.shift_id = v_shift_id
+          OR (
+            a.shift_id IS NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM public.inventory_count_assignments specific
+              WHERE specific.tenant_id = v_tenant
+                AND specific.branch_id = p_branch_id
+                AND specific.location_id = v_location_id
+                AND specific.ingredient_id = a.ingredient_id
+                AND specific.shift_id = v_shift_id
+                AND specific.is_active
+            )
+          )
+        )
+      )
+    );
 
   SELECT count(DISTINCT (l->>'ingredient_id')::BIGINT) INTO v_line_count
   FROM jsonb_array_elements(p_lines) l;
@@ -23985,8 +30604,9 @@ BEGIN
 
   SELECT id, status INTO v_slip_id, v_status
   FROM public.inventory_count_slips
-  WHERE tenant_id = v_tenant AND branch_id = p_branch_id AND location_id = p_location_id
+  WHERE tenant_id = v_tenant AND branch_id = p_branch_id AND location_id = v_location_id
     AND employee_id = v_employee_id AND count_date = v_today
+    AND shift_id IS NOT DISTINCT FROM v_shift_id
   FOR UPDATE;
 
   IF v_slip_id IS NOT NULL AND v_status = 'approved' THEN
@@ -23995,9 +30615,9 @@ BEGIN
 
   IF v_slip_id IS NULL THEN
     INSERT INTO public.inventory_count_slips
-      (tenant_id, branch_id, location_id, employee_id, count_date, status, submitted_by, submitted_at)
+      (tenant_id, branch_id, location_id, employee_id, count_date, shift_id, status, submitted_by, submitted_at)
     VALUES
-      (v_tenant, p_branch_id, p_location_id, v_employee_id, v_today, 'submitted', v_uid, now())
+      (v_tenant, p_branch_id, v_location_id, v_employee_id, v_today, v_shift_id, 'submitted', v_uid, now())
     RETURNING id INTO v_slip_id;
   ELSE
     UPDATE public.inventory_count_slips
@@ -24016,7 +30636,7 @@ BEGIN
     COALESCE((
       SELECT stl.current_quantity FROM public.stock_levels stl
       WHERE stl.tenant_id = v_tenant AND stl.branch_id = p_branch_id
-        AND stl.location_id = p_location_id AND stl.ingredient_id = (l->>'ingredient_id')::BIGINT
+        AND stl.location_id = v_location_id AND stl.ingredient_id = (l->>'ingredient_id')::BIGINT
     ), 0),
     (l->>'counted_quantity')::NUMERIC,
     NULLIF(l->>'entry_unit_id','')::BIGINT,
@@ -24039,8 +30659,12 @@ BEGIN
     v_slip_id,
     '/inventory/count-slips',
     jsonb_build_object(
-      'slip_id', v_slip_id, 'employee_id', v_employee_id,
-      'branch_id', p_branch_id, 'location_id', p_location_id, 'line_count', v_line_count
+      'slip_id', v_slip_id,
+      'employee_id', v_employee_id,
+      'branch_id', p_branch_id,
+      'location_id', v_location_id,
+      'shift_id', v_shift_id,
+      'line_count', v_line_count
     ),
     format('inventory.count_slip:%s:submitted', v_slip_id)
   )
@@ -24052,7 +30676,12 @@ BEGIN
     'inventory_count_slip'::TEXT,
     v_slip_id,
     NULL,
-    jsonb_build_object('branch_id', p_branch_id, 'location_id', p_location_id, 'line_count', v_line_count)
+    jsonb_build_object(
+      'branch_id', p_branch_id,
+      'location_id', v_location_id,
+      'shift_id', v_shift_id,
+      'line_count', v_line_count
+    )
   );
 
   RETURN v_slip_id;
@@ -24061,10 +30690,10 @@ $$;
 
 
 --
--- Name: FUNCTION submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb, p_shift_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb) IS 'Employee submits a blind count slip for their assigned ingredients at a location. Snapshots system_quantity, requires all assignments counted. Authorization = active employee at the branch + an active count assignment per line (no separate permission).';
+COMMENT ON FUNCTION public.submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb, p_shift_id bigint) IS 'Employee submits assigned count lines. Branch sites normalize count slips to the branch kitchen location.';
 
 
 --
@@ -25202,6 +31831,24 @@ CREATE FUNCTION public.trg_ensure_branch_inventory_location_defaults() RETURNS t
 BEGIN
   IF NEW.branch_kind = 'branch' THEN
     PERFORM public.ensure_branch_inventory_location_defaults(NEW.tenant_id, NEW.id);
+
+    INSERT INTO public.branch_feature_flags (
+      branch_id,
+      flag_key,
+      enabled,
+      enabled_at,
+      disabled_at,
+      updated_at
+    )
+    VALUES (
+      NEW.id,
+      'pos_stock_outcome_posting',
+      TRUE,
+      now(),
+      NULL,
+      now()
+    )
+    ON CONFLICT (branch_id, flag_key) DO NOTHING;
   END IF;
 
   RETURN NEW;
@@ -25716,16 +32363,45 @@ BEGIN
   IF NEW.status <> 'confirmed' THEN RETURN NEW; END IF;
   IF OLD.status = 'confirmed' THEN RETURN NEW; END IF;
   IF COALESCE(NEW.express_approved, false) THEN RETURN NEW; END IF;
-  INSERT INTO public.supplier_price_list (tenant_id, supplier_id, ingredient_id, uom, unit_price, source, effective_from, source_ref, created_by)
-  SELECT NEW.tenant_id, NEW.supplier_id, gi.ingredient_id, gi.unit, gi.unit_cost, 'grn_last', CURRENT_DATE,
-         jsonb_build_object('grn_id', NEW.id, 'grn_item_id', gi.id), NEW.created_by
+
+  INSERT INTO public.supplier_price_list (
+    tenant_id,
+    supplier_id,
+    ingredient_id,
+    uom,
+    unit_price,
+    source,
+    effective_from,
+    source_ref,
+    created_by
+  )
+  SELECT
+    NEW.tenant_id,
+    NEW.supplier_id,
+    gi.ingredient_id,
+    public.inventory_entry_unit_code(NEW.tenant_id, gi.ingredient_id, gi.entry_unit_id),
+    gi.unit_cost,
+    'grn_last',
+    CURRENT_DATE,
+    jsonb_build_object('grn_id', NEW.id, 'grn_item_id', gi.id),
+    NEW.created_by
   FROM public.grn_items gi
-  WHERE gi.grn_id = NEW.id AND gi.received_quantity > 0 AND gi.unit_cost IS NOT NULL AND gi.unit_cost > 0
-  ON CONFLICT (tenant_id, supplier_id, ingredient_id, uom) WHERE source = 'grn_last' AND effective_to IS NULL
-  DO UPDATE SET unit_price = EXCLUDED.unit_price, effective_from = EXCLUDED.effective_from,
-                source_ref = EXCLUDED.source_ref, created_at = now(), created_by = EXCLUDED.created_by;
+  WHERE gi.grn_id = NEW.id
+    AND gi.received_quantity > 0
+    AND gi.unit_cost IS NOT NULL
+    AND gi.unit_cost > 0
+  ON CONFLICT (tenant_id, supplier_id, ingredient_id, uom)
+    WHERE source = 'grn_last' AND effective_to IS NULL
+  DO UPDATE SET
+    unit_price = EXCLUDED.unit_price,
+    effective_from = EXCLUDED.effective_from,
+    source_ref = EXCLUDED.source_ref,
+    created_at = now(),
+    created_by = EXCLUDED.created_by;
+
   RETURN NEW;
-END; $$;
+END;
+$$;
 
 
 --
@@ -25977,19 +32653,20 @@ COMMENT ON FUNCTION public.update_my_dependents_count(p_count integer) IS 'Self-
 
 
 --
--- Name: update_my_profile(text, text, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: update_my_profile(text, text, text, date); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.update_my_profile(p_full_name text DEFAULT NULL::text, p_phone text DEFAULT NULL::text, p_avatar_url text DEFAULT NULL::text) RETURNS void
+CREATE FUNCTION public.update_my_profile(p_full_name text DEFAULT NULL::text, p_phone text DEFAULT NULL::text, p_avatar_url text DEFAULT NULL::text, p_birth_date date DEFAULT NULL::date) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO ''
     AS $$
 BEGIN
-  UPDATE public.profiles SET
-    full_name  = COALESCE(p_full_name, full_name),
-    phone      = COALESCE(p_phone, phone),
-    avatar_url = COALESCE(p_avatar_url, avatar_url),
-    updated_at = now()
+  UPDATE public.profiles
+  SET full_name = COALESCE(p_full_name, full_name),
+      phone = COALESCE(p_phone, phone),
+      avatar_url = COALESCE(p_avatar_url, avatar_url),
+      birth_date = COALESCE(p_birth_date, birth_date),
+      updated_at = now()
   WHERE id = auth.uid();
 END;
 $$;
@@ -26197,10 +32874,6 @@ DECLARE
   v_id           bigint := p_ingredient_id;
   v_base         jsonb;
   v_base_unit_id bigint;
-  v_secondary    jsonb;
-  v_purchase_unit text;
-  v_measure_unit  text;
-  v_factor     numeric;
   v_cat_name   text;
 BEGIN
   IF NOT public.has_permission_any('inventory:write') THEN
@@ -26251,48 +32924,21 @@ BEGIN
 
   v_base := (SELECT e FROM jsonb_array_elements(p_units) e WHERE (e->>'is_base')::boolean LIMIT 1);
   v_base_unit_id := (v_base->>'unit_id')::bigint;
-  v_secondary := (
-    SELECT e FROM jsonb_array_elements(p_units) e
-    WHERE NOT (e->>'is_base')::boolean
-    ORDER BY coalesce((e->>'sort_order')::int, 0), (e->>'unit_id')::bigint
-    LIMIT 1
-  );
-
-  SELECT code INTO v_purchase_unit
-  FROM public.units
-  WHERE id = v_base_unit_id
-    AND tenant_id = v_tenant
-    AND is_active;
-
-  IF v_secondary IS NOT NULL THEN
-    SELECT code INTO v_measure_unit
-    FROM public.units
-    WHERE id = (v_secondary->>'unit_id')::bigint
-      AND tenant_id = v_tenant
-      AND is_active;
-    v_factor := 1.0 / public.inv_catalog_unit_to_base(v_base_unit_id, v_secondary, p_units);
-  ELSE
-    v_measure_unit := v_purchase_unit;
-    v_factor := 1;
-  END IF;
 
   IF v_id IS NULL THEN
     INSERT INTO public.ingredients (
-      tenant_id, name, sku, category_id, category, unit,
-      purchase_unit, measure_unit, purchase_to_measure_factor,
+      tenant_id, name, sku, category_id, category,
       unit_cost, item_kind, storage_type,
       min_stock_level, max_stock_level, reorder_point, shelf_life_days
     ) VALUES (
-      v_tenant, p_name, p_sku, p_category_id, v_cat_name, v_measure_unit,
-      v_purchase_unit, v_measure_unit, v_factor,
+      v_tenant, p_name, p_sku, p_category_id, v_cat_name,
       p_unit_cost, coalesce(p_item_kind, 'raw_material'), coalesce(p_storage_type, 'ambient'),
       coalesce(p_min_stock_level, 0), p_max_stock_level, p_reorder_point, p_shelf_life_days
     ) RETURNING id INTO v_id;
   ELSE
     UPDATE public.ingredients SET
       name = p_name, sku = p_sku, category_id = p_category_id, category = v_cat_name,
-      unit = v_measure_unit, purchase_unit = v_purchase_unit, measure_unit = v_measure_unit,
-      purchase_to_measure_factor = v_factor, unit_cost = p_unit_cost,
+      unit_cost = p_unit_cost,
       item_kind = coalesce(p_item_kind, item_kind), storage_type = coalesce(p_storage_type, storage_type),
       min_stock_level = coalesce(p_min_stock_level, 0), max_stock_level = p_max_stock_level,
       reorder_point = p_reorder_point, shelf_life_days = p_shelf_life_days, updated_at = now()
@@ -26363,22 +33009,56 @@ BEGIN
     END IF;
   END IF;
 
-  DELETE FROM public.ingredient_units WHERE ingredient_id = v_id AND tenant_id = v_tenant;
+  IF EXISTS (
+    SELECT 1
+    FROM public.production_recipes pr
+    WHERE pr.tenant_id = v_tenant
+      AND pr.ingredient_id = v_id
+      AND pr.entry_unit_id IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(p_units) e
+        WHERE (e->>'unit_id')::bigint = pr.entry_unit_id
+      )
+  ) THEN
+    RAISE EXCEPTION 'ingredient_unit_in_use_by_production_recipe' USING ERRCODE = '23503';
+  END IF;
+
+  UPDATE public.ingredient_units
+  SET is_base = false
+  WHERE tenant_id = v_tenant
+    AND ingredient_id = v_id
+    AND is_base
+    AND unit_id IS DISTINCT FROM v_base_unit_id;
+
   INSERT INTO public.ingredient_units (
     tenant_id, ingredient_id, unit_id, to_base_factor, is_base,
-    anchor_unit_id, anchor_factor,
-    allow_purchase, allow_issue, allow_production, sort_order
+    anchor_unit_id, anchor_factor, sort_order
   )
   SELECT v_tenant, v_id, (e->>'unit_id')::bigint,
          public.inv_catalog_unit_to_base(v_base_unit_id, e, p_units),
          (e->>'is_base')::boolean,
          nullif(e->>'anchor_unit_id', '')::bigint,
          nullif(e->>'anchor_factor', '')::numeric,
-         coalesce((e->>'allow_purchase')::boolean, false),
-         coalesce((e->>'allow_issue')::boolean, false),
-         coalesce((e->>'allow_production')::boolean, false),
          coalesce((e->>'sort_order')::int, 0)
-  FROM jsonb_array_elements(p_units) e;
+  FROM jsonb_array_elements(p_units) e
+  ON CONFLICT ON CONSTRAINT ingredient_units_ing_unit_key
+  DO UPDATE SET
+    to_base_factor = EXCLUDED.to_base_factor,
+    is_base = EXCLUDED.is_base,
+    anchor_unit_id = EXCLUDED.anchor_unit_id,
+    anchor_factor = EXCLUDED.anchor_factor,
+    sort_order = EXCLUDED.sort_order,
+    is_active = true;
+
+  DELETE FROM public.ingredient_units iu
+  WHERE iu.tenant_id = v_tenant
+    AND iu.ingredient_id = v_id
+    AND NOT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(p_units) e
+      WHERE (e->>'unit_id')::bigint = iu.unit_id
+    );
 
   RETURN v_id;
 END $$;
@@ -26511,41 +33191,141 @@ CREATE FUNCTION public.upsert_position_shift_tasks(p_position_id bigint, p_tasks
 DECLARE
   v_tenant_id bigint := public.auth_tenant_id();
   v_tasks jsonb := COALESCE(p_tasks, '[]'::jsonb);
-  v_item jsonb; v_title text; v_kind text; v_appl text; v_phase text;
-  v_done text; v_req boolean; v_sort integer := 0;
+  v_item jsonb;
+  v_title text;
+  v_kind text;
+  v_appl text;
+  v_phase text;
+  v_done text;
+  v_req boolean;
+  v_sort integer := 0;
+  v_task_id bigint;
+  v_ingredient_ids jsonb;
+  v_ingredient_value text;
+  v_ingredient_id bigint;
+  v_ingredient_sort integer;
 BEGIN
   IF NOT (SELECT public.has_permission_any('staff:manage')) THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.positions WHERE id = p_position_id AND tenant_id = v_tenant_id) THEN
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.positions
+    WHERE id = p_position_id
+      AND tenant_id = v_tenant_id
+  ) THEN
     RAISE EXCEPTION 'position_not_found' USING ERRCODE = 'P0002';
   END IF;
-  IF jsonb_typeof(v_tasks) <> 'array' THEN RAISE EXCEPTION 'tasks_invalid' USING ERRCODE='23514'; END IF;
-  IF jsonb_array_length(v_tasks) > 40 THEN RAISE EXCEPTION 'too_many_tasks' USING ERRCODE='23514'; END IF;
 
-  DELETE FROM public.position_shift_tasks WHERE tenant_id = v_tenant_id AND position_id = p_position_id;
+  IF jsonb_typeof(v_tasks) <> 'array' THEN
+    RAISE EXCEPTION 'tasks_invalid' USING ERRCODE = '23514';
+  END IF;
+
+  IF jsonb_array_length(v_tasks) > 40 THEN
+    RAISE EXCEPTION 'too_many_tasks' USING ERRCODE = '23514';
+  END IF;
+
+  DELETE FROM public.position_shift_tasks
+  WHERE tenant_id = v_tenant_id
+    AND position_id = p_position_id;
 
   FOR v_item IN SELECT value FROM jsonb_array_elements(v_tasks) LOOP
-    v_title := btrim(COALESCE(v_item->>'title',''));
-    v_kind  := COALESCE(NULLIF(v_item->>'kind',''),'standard');
-    v_appl  := COALESCE(NULLIF(v_item->>'applicability',''),'every_shift');
-    v_phase := COALESCE(NULLIF(v_item->>'phase',''),'start_of_shift');
-    v_done  := btrim(COALESCE(v_item->>'doneDefinition',''));
-    v_req   := COALESCE(NULLIF(v_item->>'isRequired','')::boolean, true);
-    IF v_title = '' THEN CONTINUE; END IF;
-    IF char_length(v_title) > 120 THEN RAISE EXCEPTION 'task_title_too_long' USING ERRCODE='23514'; END IF;
-    IF v_kind  <> ALL (ARRAY['standard','consumption_report']::text[]) THEN RAISE EXCEPTION 'task_kind_invalid' USING ERRCODE='23514'; END IF;
-    IF v_appl  <> ALL (ARRAY['every_shift','opening','closing']::text[]) THEN RAISE EXCEPTION 'task_applicability_invalid' USING ERRCODE='23514'; END IF;
-    IF v_phase <> ALL (ARRAY['start_of_shift','end_of_shift']::text[]) THEN RAISE EXCEPTION 'task_phase_invalid' USING ERRCODE='23514'; END IF;
-    IF char_length(v_done) > 240 THEN RAISE EXCEPTION 'done_definition_too_long' USING ERRCODE='23514'; END IF;
+    v_title := btrim(COALESCE(v_item->>'title', ''));
+    v_kind := COALESCE(NULLIF(v_item->>'kind', ''), 'standard');
+    v_appl := COALESCE(NULLIF(v_item->>'applicability', ''), 'every_shift');
+    v_phase := COALESCE(NULLIF(v_item->>'phase', ''), 'start_of_shift');
+    v_done := btrim(COALESCE(v_item->>'doneDefinition', ''));
+    v_req := COALESCE(NULLIF(v_item->>'isRequired', '')::boolean, true);
+
+    IF v_title = '' THEN
+      CONTINUE;
+    END IF;
+
+    IF char_length(v_title) > 120 THEN
+      RAISE EXCEPTION 'task_title_too_long' USING ERRCODE = '23514';
+    END IF;
+    IF v_kind <> ALL (ARRAY['standard', 'consumption_report']::text[]) THEN
+      RAISE EXCEPTION 'task_kind_invalid' USING ERRCODE = '23514';
+    END IF;
+    IF v_appl <> ALL (ARRAY['every_shift', 'opening', 'closing']::text[]) THEN
+      RAISE EXCEPTION 'task_applicability_invalid' USING ERRCODE = '23514';
+    END IF;
+    IF v_phase <> ALL (ARRAY['start_of_shift', 'end_of_shift']::text[]) THEN
+      RAISE EXCEPTION 'task_phase_invalid' USING ERRCODE = '23514';
+    END IF;
+    IF char_length(v_done) > 240 THEN
+      RAISE EXCEPTION 'done_definition_too_long' USING ERRCODE = '23514';
+    END IF;
+
     v_sort := v_sort + 1;
-    INSERT INTO public.position_shift_tasks
-      (tenant_id, position_id, title, kind, applicability, phase, is_required, done_definition, sort_order)
-    VALUES (v_tenant_id, p_position_id, v_title, v_kind, v_appl, v_phase, v_req, v_done, v_sort);
+
+    INSERT INTO public.position_shift_tasks (
+      tenant_id,
+      position_id,
+      title,
+      kind,
+      applicability,
+      phase,
+      is_required,
+      done_definition,
+      sort_order
+    ) VALUES (
+      v_tenant_id,
+      p_position_id,
+      v_title,
+      v_kind,
+      v_appl,
+      v_phase,
+      v_req,
+      v_done,
+      v_sort
+    )
+    RETURNING id INTO v_task_id;
+
+    IF v_kind = 'consumption_report' THEN
+      v_ingredient_ids := COALESCE(v_item->'ingredientIds', '[]'::jsonb);
+      IF jsonb_typeof(v_ingredient_ids) <> 'array' THEN
+        RAISE EXCEPTION 'ingredients_invalid' USING ERRCODE = '23514';
+      END IF;
+      IF jsonb_array_length(v_ingredient_ids) > 80 THEN
+        RAISE EXCEPTION 'too_many_ingredients' USING ERRCODE = '23514';
+      END IF;
+
+      v_ingredient_sort := 0;
+      FOR v_ingredient_value IN SELECT value FROM jsonb_array_elements_text(v_ingredient_ids) LOOP
+        v_ingredient_id := v_ingredient_value::bigint;
+        IF NOT EXISTS (
+          SELECT 1
+          FROM public.ingredients
+          WHERE id = v_ingredient_id
+            AND tenant_id = v_tenant_id
+            AND is_active = true
+        ) THEN
+          RAISE EXCEPTION 'ingredient_not_found' USING ERRCODE = 'P0002';
+        END IF;
+
+        v_ingredient_sort := v_ingredient_sort + 1;
+        INSERT INTO public.shift_checklist_consumption_default_items (
+          tenant_id,
+          template_item_id,
+          position_task_id,
+          ingredient_id,
+          sort_order
+        ) VALUES (
+          v_tenant_id,
+          NULL,
+          v_task_id,
+          v_ingredient_id,
+          v_ingredient_sort
+        );
+      END LOOP;
+    END IF;
   END LOOP;
 
   RETURN p_position_id;
-END; $$;
+END;
+$$;
 
 
 --
@@ -26737,22 +33517,22 @@ COMMENT ON FUNCTION public.upsert_printer_with_routes(p_printer_id bigint, p_bra
 
 
 --
--- Name: upsert_production_recipe_lines(bigint, jsonb); Type: FUNCTION; Schema: public; Owner: -
+-- Name: upsert_production_recipe_lines(bigint, jsonb, bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb) RETURNS jsonb
+CREATE FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb, p_old_finished_good_id bigint DEFAULT NULL::bigint) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid           UUID   := auth.uid();
-  v_tenant        BIGINT := public.auth_tenant_id();
-  v_kept          BIGINT[] := ARRAY[]::BIGINT[];
-  v_line          JSONB;
-  v_ingredient_id BIGINT;
-  v_entry_unit_id BIGINT;
-  v_quantity      NUMERIC;
-  v_yield_factor  NUMERIC;
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_kept bigint[] := ARRAY[]::bigint[];
+  v_line jsonb;
+  v_ingredient_id bigint;
+  v_entry_unit_id bigint;
+  v_quantity numeric;
+  v_yield_factor numeric;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -26762,14 +33542,21 @@ BEGIN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF NOT public.has_permission_any('menu:write') THEN
+  IF NOT (
+    public.has_permission_any('inventory:production_create')
+    OR public.has_permission_any('inventory:production_confirm')
+    OR public.has_permission_any('menu:write')
+  ) THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1 FROM public.ingredients i
-    WHERE i.id = p_finished_good_id AND i.tenant_id = v_tenant
-      AND i.item_kind = 'finished_good' AND i.is_active = TRUE
+    SELECT 1
+    FROM public.ingredients i
+    WHERE i.id = p_finished_good_id
+      AND i.tenant_id = v_tenant
+      AND i.item_kind = 'finished_good'
+      AND i.is_active = true
   ) THEN
     RAISE EXCEPTION 'finished_good_not_found' USING ERRCODE = 'P0002';
   END IF;
@@ -26777,8 +33564,15 @@ BEGIN
   IF p_lines IS NULL OR jsonb_typeof(p_lines) <> 'array' THEN
     RAISE EXCEPTION 'lines_must_be_array' USING ERRCODE = '22023';
   END IF;
+
   IF jsonb_array_length(p_lines) = 0 THEN
     RAISE EXCEPTION 'lines_must_not_be_empty' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_old_finished_good_id IS NOT NULL AND p_old_finished_good_id <> p_finished_good_id THEN
+    DELETE FROM public.production_recipes pr
+    WHERE pr.tenant_id = v_tenant
+      AND pr.finished_good_id = p_old_finished_good_id;
   END IF;
 
   FOR v_line IN SELECT * FROM jsonb_array_elements(p_lines) LOOP
@@ -26786,10 +33580,10 @@ BEGIN
       RAISE EXCEPTION 'invalid_line_shape' USING ERRCODE = '22023';
     END IF;
 
-    v_ingredient_id := (v_line->>'ingredient_id')::BIGINT;
-    v_entry_unit_id := NULLIF(v_line->>'entry_unit_id', '')::BIGINT;
-    v_quantity := (v_line->>'quantity')::NUMERIC;
-    v_yield_factor := COALESCE(NULLIF(v_line->>'yield_factor', '')::NUMERIC, 1.000);
+    v_ingredient_id := (v_line->>'ingredient_id')::bigint;
+    v_entry_unit_id := NULLIF(v_line->>'entry_unit_id', '')::bigint;
+    v_quantity := (v_line->>'quantity')::numeric;
+    v_yield_factor := COALESCE(NULLIF(v_line->>'yield_factor', '')::numeric, 1.000);
 
     IF v_quantity <= 0 OR v_yield_factor <= 0 THEN
       RAISE EXCEPTION 'invalid_line_quantity' USING ERRCODE = '22023';
@@ -26800,29 +33594,40 @@ BEGIN
     END IF;
 
     IF NOT EXISTS (
-      SELECT 1 FROM public.ingredients i
-      WHERE i.id = v_ingredient_id AND i.tenant_id = v_tenant
-        AND i.item_kind = 'raw_material' AND i.is_active = TRUE
+      SELECT 1
+      FROM public.ingredients i
+      WHERE i.id = v_ingredient_id
+        AND i.tenant_id = v_tenant
+        AND i.item_kind IN ('raw_material', 'finished_good')
+        AND i.is_active = true
     ) THEN
       RAISE EXCEPTION 'ingredient_not_found' USING ERRCODE = 'P0002';
     END IF;
 
     INSERT INTO public.production_recipes (
-      tenant_id, finished_good_id, ingredient_id,
-      quantity, unit, entry_unit_id, note, yield_factor
+      tenant_id,
+      finished_good_id,
+      ingredient_id,
+      quantity,
+      entry_unit_id,
+      note,
+      yield_factor
     )
     VALUES (
-      v_tenant, p_finished_good_id, v_ingredient_id,
+      v_tenant,
+      p_finished_good_id,
+      v_ingredient_id,
       v_quantity,
-      public.inventory_entry_unit_code(v_tenant, v_ingredient_id, v_entry_unit_id),
       v_entry_unit_id,
-      NULLIF(v_line->>'note', ''), v_yield_factor
+      NULLIF(v_line->>'note', ''),
+      v_yield_factor
     )
     ON CONFLICT (finished_good_id, ingredient_id, tenant_id)
     DO UPDATE SET
-      quantity = EXCLUDED.quantity, unit = EXCLUDED.unit,
+      quantity = EXCLUDED.quantity,
       entry_unit_id = EXCLUDED.entry_unit_id,
-      note = EXCLUDED.note, yield_factor = EXCLUDED.yield_factor;
+      note = EXCLUDED.note,
+      yield_factor = EXCLUDED.yield_factor;
 
     v_kept := v_kept || v_ingredient_id;
   END LOOP;
@@ -26841,78 +33646,118 @@ $$;
 
 
 --
--- Name: FUNCTION upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb, p_old_finished_good_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb) IS 'Atomically replaces production BOM lines for one finished good.';
+COMMENT ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb, p_old_finished_good_id bigint) IS 'Atomically replaces production recipe lines using entry_unit_id as the unit source.';
 
 
 --
--- Name: upsert_recipe_lines(bigint, jsonb); Type: FUNCTION; Schema: public; Owner: -
+-- Name: upsert_recipe_lines(bigint, jsonb, bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb) RETURNS jsonb
+CREATE FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb, p_old_menu_item_id bigint DEFAULT NULL::bigint) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid    UUID   := auth.uid();
-  v_tenant BIGINT := public.auth_tenant_id();
-  v_kept   BIGINT[] := ARRAY[]::BIGINT[];
-  v_line   JSONB;
-  v_ingredient_id BIGINT;
-  v_entry_unit_id BIGINT;
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_kept bigint[] := ARRAY[]::bigint[];
+  v_line jsonb;
+  v_ingredient_id bigint;
+  v_entry_unit_id bigint;
 BEGIN
-  IF v_uid IS NULL THEN RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000'; END IF;
-  IF NOT public.has_permission_any('menu:write') THEN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF NOT (
+    public.has_permission_any('inventory:write')
+    OR public.has_permission_any('menu:write')
+  ) THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM public.menu_items mi WHERE mi.id = p_menu_item_id AND mi.tenant_id = v_tenant) THEN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.menu_items mi
+    WHERE mi.id = p_menu_item_id
+      AND mi.tenant_id = v_tenant
+  ) THEN
     RAISE EXCEPTION 'menu_item_not_found' USING ERRCODE = 'P0002';
   END IF;
-  IF jsonb_typeof(p_lines) <> 'array' THEN RAISE EXCEPTION 'lines_must_be_array' USING ERRCODE = '22023'; END IF;
+
+  IF p_lines IS NULL OR jsonb_typeof(p_lines) <> 'array' THEN
+    RAISE EXCEPTION 'lines_must_be_array' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_old_menu_item_id IS NOT NULL AND p_old_menu_item_id <> p_menu_item_id THEN
+    DELETE FROM public.recipes r
+    WHERE r.tenant_id = v_tenant
+      AND r.menu_item_id = p_old_menu_item_id;
+  END IF;
 
   FOR v_line IN SELECT * FROM jsonb_array_elements(p_lines) LOOP
     IF (v_line->>'ingredient_id') IS NULL OR (v_line->>'quantity') IS NULL THEN
       RAISE EXCEPTION 'invalid_line_shape' USING ERRCODE = '22023';
     END IF;
 
-    v_ingredient_id := (v_line->>'ingredient_id')::BIGINT;
-    v_entry_unit_id := NULLIF(v_line->>'entry_unit_id', '')::BIGINT;
+    v_ingredient_id := (v_line->>'ingredient_id')::bigint;
+    v_entry_unit_id := NULLIF(v_line->>'entry_unit_id', '')::bigint;
 
-    INSERT INTO public.recipes (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, note, yield_factor)
+    PERFORM public.inventory_entry_unit_code(
+      v_tenant,
+      v_ingredient_id,
+      v_entry_unit_id
+    );
+
+    INSERT INTO public.recipes (
+      tenant_id,
+      menu_item_id,
+      ingredient_id,
+      quantity,
+      entry_unit_id,
+      note,
+      yield_factor
+    )
     VALUES (
       v_tenant,
       p_menu_item_id,
       v_ingredient_id,
-      (v_line->>'quantity')::NUMERIC,
-      public.inventory_entry_unit_code(v_tenant, v_ingredient_id, v_entry_unit_id),
+      (v_line->>'quantity')::numeric,
       v_entry_unit_id,
-      NULLIF(v_line->>'note',''),
-      COALESCE(NULLIF(v_line->>'yield_factor', '')::NUMERIC, 1.000)
+      NULLIF(v_line->>'note', ''),
+      COALESCE(NULLIF(v_line->>'yield_factor', '')::numeric, 1.000)
     )
     ON CONFLICT (menu_item_id, ingredient_id, tenant_id)
-    DO UPDATE SET quantity = EXCLUDED.quantity, unit = EXCLUDED.unit,
-                  entry_unit_id = EXCLUDED.entry_unit_id,
-                  note = EXCLUDED.note, yield_factor = EXCLUDED.yield_factor;
+    DO UPDATE SET
+      quantity = EXCLUDED.quantity,
+      entry_unit_id = EXCLUDED.entry_unit_id,
+      note = EXCLUDED.note,
+      yield_factor = EXCLUDED.yield_factor;
+
     v_kept := v_kept || v_ingredient_id;
   END LOOP;
 
   DELETE FROM public.recipes r
-  WHERE r.tenant_id = v_tenant AND r.menu_item_id = p_menu_item_id
+  WHERE r.tenant_id = v_tenant
+    AND r.menu_item_id = p_menu_item_id
     AND NOT (r.ingredient_id = ANY(v_kept));
 
-  RETURN jsonb_build_object('menu_item_id', p_menu_item_id, 'kept_count', COALESCE(array_length(v_kept, 1), 0));
+  RETURN jsonb_build_object(
+    'menu_item_id', p_menu_item_id,
+    'kept_count', COALESCE(array_length(v_kept, 1), 0)
+  );
 END;
 $$;
 
 
 --
--- Name: FUNCTION upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb, p_old_menu_item_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb) IS 'Atomically replace the recipe lines of a menu item (finished product). Inserts/updates provided lines and deletes removed ones.';
+COMMENT ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb, p_old_menu_item_id bigint) IS 'Atomically replace the recipe lines of a menu item. Inserts or updates provided lines, clears old menu item recipe if changed, and deletes removed lines.';
 
 
 --
@@ -27446,108 +34291,6 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: _ing_backup_a2fix; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public._ing_backup_a2fix (
-    id bigint,
-    unit text,
-    purchase_unit text,
-    measure_unit text,
-    purchase_to_measure_factor numeric(15,6)
-);
-
-
---
--- Name: _ingcost_backup_a2fix; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public._ingcost_backup_a2fix (
-    id bigint,
-    unit_cost numeric(15,2)
-);
-
-
---
--- Name: _ingthr_backup_a2fix; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public._ingthr_backup_a2fix (
-    id bigint,
-    min_stock_level numeric(15,3),
-    max_stock_level numeric(15,3),
-    reorder_point numeric(15,3)
-);
-
-
---
--- Name: _iu_backup_a2fix; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public._iu_backup_a2fix (
-    id bigint,
-    tenant_id bigint,
-    ingredient_id bigint,
-    unit_id bigint,
-    to_base_factor numeric(18,12),
-    is_base boolean,
-    allow_purchase boolean,
-    allow_issue boolean,
-    allow_production boolean,
-    sort_order integer,
-    is_active boolean,
-    created_at timestamp with time zone,
-    updated_at timestamp with time zone,
-    anchor_unit_id bigint,
-    anchor_factor numeric(18,9)
-);
-
-
---
--- Name: _sl_backup_a2fix; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public._sl_backup_a2fix (
-    id bigint,
-    tenant_id bigint,
-    branch_id bigint,
-    ingredient_id bigint,
-    current_quantity numeric(15,3),
-    last_counted_at timestamp with time zone,
-    updated_at timestamp with time zone,
-    avg_unit_cost numeric(15,2),
-    location_id bigint
-);
-
-
---
--- Name: _sm_backup_a2fix; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public._sm_backup_a2fix (
-    id bigint,
-    tenant_id bigint,
-    branch_id bigint,
-    ingredient_id bigint,
-    type text,
-    quantity_change numeric(15,3),
-    reason text,
-    created_by uuid,
-    created_at timestamp with time zone,
-    grn_id bigint,
-    transfer_id bigint,
-    order_id bigint,
-    unit_cost numeric(15,2),
-    production_order_id bigint,
-    issue_id bigint,
-    location_id bigint,
-    movement_subtype text,
-    entry_unit_id bigint,
-    entry_quantity numeric(15,3)
-);
-
-
---
 -- Name: accounting_periods; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -27731,15 +34474,14 @@ CREATE TABLE public.attendance_consumption_report_lines (
     ingredient_id bigint NOT NULL,
     default_item_id bigint,
     quantity numeric(15,3) NOT NULL,
-    unit text NOT NULL,
     note text,
     sort_order integer DEFAULT 1 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    entry_unit_id bigint NOT NULL,
     CONSTRAINT attendance_consumption_report_lines_note_length CHECK (((note IS NULL) OR (char_length(note) <= 500))),
     CONSTRAINT attendance_consumption_report_lines_quantity_positive CHECK ((quantity > (0)::numeric)),
-    CONSTRAINT attendance_consumption_report_lines_sort_positive CHECK ((sort_order > 0)),
-    CONSTRAINT attendance_consumption_report_lines_unit_not_blank CHECK ((btrim(unit) <> ''::text))
+    CONSTRAINT attendance_consumption_report_lines_sort_positive CHECK ((sort_order > 0))
 );
 
 
@@ -27880,7 +34622,7 @@ COMMENT ON COLUMN public.attendance_records.checkout_requested_by_role IS 'Staff
 -- Name: COLUMN attendance_records.checkout_approval_target_roles; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.attendance_records.checkout_approval_target_roles IS 'Access buckets that should approve this checkout request. Branch staff target branch_manager; manager and non-branch staff target owner/office.';
+COMMENT ON COLUMN public.attendance_records.checkout_approval_target_roles IS 'Access buckets that should approve this checkout request. Branch staff target branch_manager; manager and non-branch staff target owner/super_manager.';
 
 
 --
@@ -27974,6 +34716,34 @@ CREATE SEQUENCE public.auto_journal_seq
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
+
+
+--
+-- Name: bank_transaction_expense_matches; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.bank_transaction_expense_matches (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    webhook_event_id bigint NOT NULL,
+    expense_id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_by uuid
+);
+
+
+--
+-- Name: bank_transaction_expense_matches_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.bank_transaction_expense_matches ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.bank_transaction_expense_matches_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
 
 
 --
@@ -28439,7 +35209,7 @@ CREATE TABLE public.expenses (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT expenses_amount_positive_check CHECK ((amount > (0)::numeric)),
-    CONSTRAINT expenses_category_check CHECK ((category = ANY (ARRAY['rent'::text, 'utilities'::text, 'gas_fuel'::text, 'salary'::text, 'cogs_manual'::text, 'supplies'::text, 'repair'::text, 'marketing'::text, 'fees_tax'::text, 'other'::text]))),
+    CONSTRAINT expenses_category_check CHECK ((category = ANY (ARRAY['rent'::text, 'utilities'::text, 'gas_fuel'::text, 'salary'::text, 'cogs_manual'::text, 'supplies'::text, 'repair'::text, 'marketing'::text, 'fees_tax'::text, 'bank_deposit'::text, 'other'::text]))),
     CONSTRAINT expenses_note_length_check CHECK (((note IS NULL) OR (char_length(note) <= 500))),
     CONSTRAINT expenses_paid_at_unpaid_check CHECK (((payment_method <> 'unpaid'::text) OR (paid_at IS NULL))),
     CONSTRAINT expenses_payment_method_check CHECK ((payment_method = ANY (ARRAY['cash'::text, 'transfer'::text, 'unpaid'::text]))),
@@ -28480,6 +35250,7 @@ CREATE TABLE public.goods_received_notes (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     express_approved boolean,
+    location_id bigint,
     CONSTRAINT goods_received_notes_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'confirmed'::text, 'cancelled'::text])))
 );
 
@@ -28612,7 +35383,6 @@ CREATE TABLE public.grn_items (
     ingredient_id bigint NOT NULL,
     po_quantity numeric(15,3),
     received_quantity numeric(15,3) NOT NULL,
-    unit text NOT NULL,
     unit_cost numeric(15,2) NOT NULL,
     total_cost numeric(15,2) NOT NULL,
     quality_status text DEFAULT 'accepted'::text NOT NULL,
@@ -28622,7 +35392,7 @@ CREATE TABLE public.grn_items (
     batch_number text,
     receiving_temperature numeric(5,1),
     po_unit_price numeric(15,2),
-    price_variance_pct numeric(7,3) GENERATED ALWAYS AS (
+    price_variance_pct numeric GENERATED ALWAYS AS (
 CASE
     WHEN ((po_unit_price IS NULL) OR (po_unit_price = (0)::numeric)) THEN NULL::numeric
     ELSE round((((unit_cost - po_unit_price) / po_unit_price) * (100)::numeric), 3)
@@ -28636,7 +35406,7 @@ END) STORED,
     baseline_source text,
     baseline_sample_n integer,
     is_hard_blocked boolean DEFAULT false NOT NULL,
-    baseline_variance_pct numeric(7,3),
+    baseline_variance_pct numeric,
     entry_unit_id bigint,
     CONSTRAINT grn_items_baseline_source_check CHECK ((baseline_source = ANY (ARRAY['same_supplier'::text, 'any_supplier'::text, 'none'::text, 'paused'::text]))),
     CONSTRAINT grn_items_quality_status_check CHECK ((quality_status = ANY (ARRAY['accepted'::text, 'rejected'::text, 'partial'::text]))),
@@ -28787,9 +35557,6 @@ CREATE TABLE public.ingredient_units (
     unit_id bigint NOT NULL,
     to_base_factor numeric(18,12) DEFAULT 1 NOT NULL,
     is_base boolean DEFAULT false NOT NULL,
-    allow_purchase boolean DEFAULT false NOT NULL,
-    allow_issue boolean DEFAULT false NOT NULL,
-    allow_production boolean DEFAULT false NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -28825,7 +35592,6 @@ CREATE TABLE public.ingredients (
     tenant_id bigint NOT NULL,
     name text NOT NULL,
     sku text,
-    unit text NOT NULL,
     unit_cost numeric(15,2),
     category text,
     min_stock_level numeric(15,3) DEFAULT 0 NOT NULL,
@@ -28837,22 +35603,11 @@ CREATE TABLE public.ingredients (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     item_kind text DEFAULT 'raw_material'::text NOT NULL,
-    purchase_unit text NOT NULL,
-    measure_unit text NOT NULL,
-    purchase_to_measure_factor numeric(15,6) DEFAULT 1 NOT NULL,
     review_override boolean,
     category_id bigint,
     CONSTRAINT ingredients_item_kind_check CHECK ((item_kind = ANY (ARRAY['raw_material'::text, 'finished_good'::text]))),
-    CONSTRAINT ingredients_purchase_to_measure_factor_positive CHECK ((purchase_to_measure_factor > (0)::numeric)),
     CONSTRAINT ingredients_storage_type_check CHECK ((storage_type = ANY (ARRAY['ambient'::text, 'refrigerated'::text, 'frozen'::text])))
 );
-
-
---
--- Name: COLUMN ingredients.purchase_to_measure_factor; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.ingredients.purchase_to_measure_factor IS 'Number of measure_unit units contained in one purchase_unit. Example: 1 bottle = 250 ml => factor 250.';
 
 
 --
@@ -28890,7 +35645,8 @@ CREATE TABLE public.inventory_count_assignments (
     is_active boolean DEFAULT true NOT NULL,
     assigned_by uuid NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    shift_id bigint
 );
 
 
@@ -28961,6 +35717,7 @@ CREATE TABLE public.inventory_count_slips (
     review_note text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    shift_id bigint,
     CONSTRAINT inventory_count_slips_note_len CHECK (((note IS NULL) OR (char_length(note) <= 1000))),
     CONSTRAINT inventory_count_slips_review_note_len CHECK (((review_note IS NULL) OR (char_length(review_note) <= 1000))),
     CONSTRAINT inventory_count_slips_status_check CHECK ((status = ANY (ARRAY['submitted'::text, 'needs_changes'::text, 'approved'::text])))
@@ -29570,7 +36327,7 @@ CREATE TABLE public.payments (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     stock_consumed_status text,
     CONSTRAINT payments_amount_check CHECK ((amount >= (0)::numeric)),
-    CONSTRAINT payments_method_check CHECK ((method = ANY (ARRAY['cash'::text, 'vietqr'::text, 'momo'::text]))),
+    CONSTRAINT payments_method_check CHECK ((method = ANY (ARRAY['cash'::text, 'vietqr'::text]))),
     CONSTRAINT payments_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'completed'::text, 'failed'::text, 'refunded'::text]))),
     CONSTRAINT payments_stock_consumed_status_check CHECK (((stock_consumed_status IS NULL) OR (stock_consumed_status = ANY (ARRAY['ok'::text, 'out_of_stock'::text, 'recipe_missing'::text, 'internal_error'::text]))))
 )
@@ -29598,24 +36355,73 @@ COMMENT ON CONSTRAINT payments_amount_check ON public.payments IS 'Allows amount
 --
 
 CREATE MATERIALIZED VIEW public.mv_daily_revenue AS
- SELECT ((p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh'::text))::date AS date,
-    o.branch_id,
-    o.tenant_id,
-    count(*) AS order_count,
-    COALESCE(sum(o.total_amount), (0)::numeric) AS total_revenue,
-    COALESCE(sum(o.tax_amount), (0)::numeric) AS total_tax,
-    COALESCE(sum(o.subtotal), (0)::numeric) AS subtotal_revenue,
-    COALESCE(sum(o.discount_amount), (0)::numeric) AS discount_amount,
-    COALESCE(sum(o.total_amount) FILTER (WHERE (o.payment_method = 'cash'::text)), (0)::numeric) AS cash_revenue,
-    COALESCE(sum(o.total_amount) FILTER (WHERE (o.payment_method = 'vietqr'::text)), (0)::numeric) AS vietqr_revenue,
-    COALESCE(sum(o.total_amount) FILTER (WHERE (o.payment_method = 'momo'::text)), (0)::numeric) AS momo_revenue,
-    COALESCE(sum(o.total_amount) FILTER (WHERE (o.order_type = 'dine_in'::text)), (0)::numeric) AS dine_in_revenue,
-    COALESCE(sum(o.total_amount) FILTER (WHERE (o.order_type = 'takeaway'::text)), (0)::numeric) AS takeaway_revenue,
-    COALESCE(count(o.id), (0)::bigint) AS total_covers
-   FROM (public.orders o
-     JOIN public.payments p ON (((p.order_id = o.id) AND (p.tenant_id = o.tenant_id) AND (p.status = 'completed'::text) AND (p.paid_at IS NOT NULL))))
-  WHERE ((o.status <> 'cancelled'::text) AND (o.payment_status = 'paid'::text))
-  GROUP BY (((p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh'::text))::date), o.branch_id, o.tenant_id
+ WITH paid_payments AS MATERIALIZED (
+         SELECT ((p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh'::text))::date AS date,
+            p.id AS payment_id,
+            p.order_id,
+            p.branch_id,
+            p.tenant_id,
+            p.method AS payment_method,
+            p.amount AS payment_amount,
+            p.paid_at,
+            o.total_amount,
+            o.tax_amount,
+            o.subtotal,
+            o.discount_amount,
+            o.order_type
+           FROM (public.payments p
+             JOIN public.orders o ON (((o.id = p.order_id) AND (o.tenant_id = p.tenant_id) AND (o.branch_id = p.branch_id))))
+          WHERE ((p.status = 'completed'::text) AND (p.paid_at IS NOT NULL) AND (o.status <> 'cancelled'::text) AND (o.payment_status = 'paid'::text))
+        ), payment_daily AS (
+         SELECT pp.date,
+            pp.branch_id,
+            pp.tenant_id,
+            COALESCE(sum(pp.payment_amount), (0)::numeric) AS total_revenue,
+            COALESCE(sum(pp.payment_amount) FILTER (WHERE (pp.payment_method = 'cash'::text)), (0)::numeric) AS cash_revenue,
+            COALESCE(sum(pp.payment_amount) FILTER (WHERE (pp.payment_method = 'vietqr'::text)), (0)::numeric) AS vietqr_revenue
+           FROM paid_payments pp
+          GROUP BY pp.date, pp.branch_id, pp.tenant_id
+        ), order_facts AS MATERIALIZED (
+         SELECT DISTINCT ON (pp.date, pp.branch_id, pp.tenant_id, pp.order_id) pp.date,
+            pp.branch_id,
+            pp.tenant_id,
+            pp.order_id,
+            pp.total_amount,
+            pp.tax_amount,
+            pp.subtotal,
+            pp.discount_amount,
+            pp.order_type
+           FROM paid_payments pp
+          ORDER BY pp.date, pp.branch_id, pp.tenant_id, pp.order_id, pp.paid_at, pp.payment_id
+        ), order_daily AS (
+         SELECT od_1.date,
+            od_1.branch_id,
+            od_1.tenant_id,
+            count(*) AS order_count,
+            COALESCE(sum(od_1.tax_amount), (0)::numeric) AS total_tax,
+            COALESCE(sum(od_1.subtotal), (0)::numeric) AS subtotal_revenue,
+            COALESCE(sum(od_1.discount_amount), (0)::numeric) AS discount_amount,
+            COALESCE(sum(od_1.total_amount) FILTER (WHERE (od_1.order_type = 'dine_in'::text)), (0)::numeric) AS dine_in_revenue,
+            COALESCE(sum(od_1.total_amount) FILTER (WHERE (od_1.order_type = 'takeaway'::text)), (0)::numeric) AS takeaway_revenue,
+            COALESCE(count(od_1.order_id), (0)::bigint) AS total_covers
+           FROM order_facts od_1
+          GROUP BY od_1.date, od_1.branch_id, od_1.tenant_id
+        )
+ SELECT pd.date,
+    pd.branch_id,
+    pd.tenant_id,
+    od.order_count,
+    pd.total_revenue,
+    od.total_tax,
+    od.subtotal_revenue,
+    od.discount_amount,
+    pd.cash_revenue,
+    pd.vietqr_revenue,
+    od.dine_in_revenue,
+    od.takeaway_revenue,
+    od.total_covers
+   FROM (payment_daily pd
+     JOIN order_daily od ON (((od.date = pd.date) AND (od.branch_id = pd.branch_id) AND (od.tenant_id = pd.tenant_id))))
   WITH NO DATA;
 
 
@@ -29736,7 +36542,6 @@ CREATE TABLE public.recipes (
     menu_item_id bigint NOT NULL,
     ingredient_id bigint NOT NULL,
     quantity numeric(15,3) NOT NULL,
-    unit text NOT NULL,
     note text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     yield_factor numeric(5,3) DEFAULT 1.000 NOT NULL,
@@ -29800,25 +36605,6 @@ CREATE MATERIALIZED VIEW public.mv_food_cost AS
      LEFT JOIN recipe_cost rc ON (((rc.menu_item_id = oi.menu_item_id) AND (rc.tenant_id = oi.tenant_id))))
   WHERE ((o.status <> 'cancelled'::text) AND (oi.status <> 'cancelled'::text))
   GROUP BY ((date_trunc('week'::text, o.created_at))::date), (((date_trunc('week'::text, o.created_at) + '6 days'::interval))::date), o.branch_id, o.tenant_id, oi.menu_item_id
-  WITH NO DATA;
-
-
---
--- Name: mv_grn_price_baseline; Type: MATERIALIZED VIEW; Schema: public; Owner: -
---
-
-CREATE MATERIALIZED VIEW public.mv_grn_price_baseline AS
- SELECT grn.tenant_id,
-    grn.supplier_id,
-    gi.ingredient_id,
-    gi.unit AS uom,
-    (avg(gi.unit_cost))::numeric(15,2) AS avg_30d,
-    (count(*))::integer AS sample_n,
-    (max(grn.received_date))::date AS last_seen_at
-   FROM (public.grn_items gi
-     JOIN public.goods_received_notes grn ON ((grn.id = gi.grn_id)))
-  WHERE ((grn.status = 'confirmed'::text) AND (grn.received_date >= (now() - '30 days'::interval)) AND (gi.received_quantity > (0)::numeric) AND (gi.unit_cost IS NOT NULL))
-  GROUP BY grn.tenant_id, grn.supplier_id, gi.ingredient_id, gi.unit
   WITH NO DATA;
 
 
@@ -29928,26 +36714,6 @@ CREATE TABLE public.mv_refresh_log (
 --
 
 COMMENT ON TABLE public.mv_refresh_log IS 'Last successful refresh time per finance MV. Updated by refresh_finance_views(). Read by /finance/revenue staleness banner.';
-
-
---
--- Name: mv_top_items; Type: MATERIALIZED VIEW; Schema: public; Owner: -
---
-
-CREATE MATERIALIZED VIEW public.mv_top_items AS
- SELECT (date_trunc('week'::text, o.created_at))::date AS period_start,
-    ((date_trunc('week'::text, o.created_at) + '6 days'::interval))::date AS period_end,
-    o.branch_id,
-    o.tenant_id,
-    oi.menu_item_id,
-    max(oi.item_name) AS item_name,
-    sum(oi.quantity) AS quantity_sold,
-    sum(oi.subtotal) AS revenue
-   FROM (public.order_items oi
-     JOIN public.orders o ON ((oi.order_id = o.id)))
-  WHERE ((o.status <> 'cancelled'::text) AND (oi.status <> 'cancelled'::text))
-  GROUP BY ((date_trunc('week'::text, o.created_at))::date), (((date_trunc('week'::text, o.created_at) + '6 days'::interval))::date), o.branch_id, o.tenant_id, oi.menu_item_id
-  WITH NO DATA;
 
 
 --
@@ -30812,12 +37578,19 @@ CREATE TABLE public.production_order_items (
     production_order_id bigint NOT NULL,
     finished_good_id bigint NOT NULL,
     quantity numeric(15,3) NOT NULL,
-    unit text NOT NULL,
     unit_cost_at_production numeric(15,2),
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     entry_unit_id bigint,
+    actual_quantity numeric(15,3),
     CONSTRAINT production_order_items_quantity_check CHECK ((quantity > (0)::numeric))
 );
+
+
+--
+-- Name: COLUMN production_order_items.actual_quantity; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.production_order_items.actual_quantity IS 'Actual received quantity (thực nhận) during production. If null, falls back to planned quantity. Ingredients are consumed based on planned quantity.';
 
 
 --
@@ -30877,12 +37650,11 @@ CREATE TABLE public.production_recipes (
     finished_good_id bigint NOT NULL,
     ingredient_id bigint NOT NULL,
     quantity numeric(15,3) NOT NULL,
-    unit text NOT NULL,
     yield_factor numeric(5,3) DEFAULT 1.000 NOT NULL,
     note text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    entry_unit_id bigint,
+    entry_unit_id bigint NOT NULL,
     CONSTRAINT production_recipes_quantity_check CHECK ((quantity > (0)::numeric)),
     CONSTRAINT production_recipes_yield_factor_check CHECK ((yield_factor > (0)::numeric))
 );
@@ -30910,6 +37682,50 @@ ALTER TABLE public.production_recipes ALTER COLUMN id ADD GENERATED ALWAYS AS ID
 
 
 --
+-- Name: production_runs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.production_runs (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    production_number text NOT NULL,
+    branch_id bigint NOT NULL,
+    finished_good_id bigint NOT NULL,
+    planned_quantity numeric(15,3) NOT NULL,
+    actual_quantity numeric(15,3),
+    entry_unit_id bigint NOT NULL,
+    status text DEFAULT 'draft'::text NOT NULL,
+    notes text,
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    target_branch_id bigint NOT NULL,
+    ingredients_override jsonb,
+    source_location_id bigint NOT NULL,
+    target_location_id bigint NOT NULL,
+    CONSTRAINT production_runs_actual_quantity_check CHECK (((actual_quantity IS NULL) OR (actual_quantity >= (0)::numeric))),
+    CONSTRAINT production_runs_planned_quantity_check CHECK ((planned_quantity > (0)::numeric)),
+    CONSTRAINT production_runs_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'in_progress'::text, 'completed'::text, 'cancelled'::text])))
+);
+
+
+--
+-- Name: production_runs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.production_runs ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.production_runs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: profiles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -30923,7 +37739,8 @@ CREATE TABLE public.profiles (
     is_active boolean DEFAULT true,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
-    position_id bigint NOT NULL
+    position_id bigint NOT NULL,
+    birth_date date
 );
 
 
@@ -30944,7 +37761,6 @@ CREATE TABLE public.purchase_order_items (
     po_id bigint NOT NULL,
     ingredient_id bigint NOT NULL,
     quantity numeric(15,3) NOT NULL,
-    unit text NOT NULL,
     unit_price_est numeric(15,2),
     line_total numeric(15,2),
     entry_unit_id bigint,
@@ -31154,6 +37970,121 @@ COMMENT ON TABLE public.role_templates IS 'Preset bundles for bulk-granting perm
 
 ALTER TABLE public.role_templates ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.role_templates_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: self_order_payment_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.self_order_payment_requests (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    branch_id bigint NOT NULL,
+    table_id bigint NOT NULL,
+    order_id bigint NOT NULL,
+    payment_id bigint,
+    client_op_id uuid NOT NULL,
+    method text NOT NULL,
+    status text NOT NULL,
+    amount_snapshot numeric(15,2) NOT NULL,
+    invoice_payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    cancelled_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    expires_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    request_fingerprint text NOT NULL,
+    request_fingerprint_version text NOT NULL,
+    payment_code_snapshot text,
+    qr_payload_snapshot text,
+    vietqr_config_snapshot jsonb DEFAULT '{}'::jsonb NOT NULL,
+    expired_at timestamp with time zone,
+    cancel_reason text,
+    CONSTRAINT self_order_payment_requests_active_expiry_required CHECK (((status <> ALL (ARRAY['cash_call'::text, 'vietqr_pending'::text])) OR (expires_at IS NOT NULL))),
+    CONSTRAINT self_order_payment_requests_active_vietqr_snapshot_check CHECK (((status <> 'vietqr_pending'::text) OR ((qr_payload_snapshot IS NOT NULL) AND (COALESCE((vietqr_config_snapshot ->> 'bankCode'::text), ''::text) <> ''::text) AND (COALESCE((vietqr_config_snapshot ->> 'accountNo'::text), ''::text) <> ''::text)))),
+    CONSTRAINT self_order_payment_requests_amount_check CHECK ((amount_snapshot >= (0)::numeric)),
+    CONSTRAINT self_order_payment_requests_cancel_reason_length CHECK (((cancel_reason IS NULL) OR (char_length(cancel_reason) <= 500))),
+    CONSTRAINT self_order_payment_requests_fingerprint_format CHECK ((request_fingerprint ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT self_order_payment_requests_fingerprint_version_check CHECK ((request_fingerprint_version = ANY (ARRAY['legacy:v0'::text, 'payment:v1'::text]))),
+    CONSTRAINT self_order_payment_requests_method_check CHECK ((method = ANY (ARRAY['cash_call'::text, 'vietqr'::text]))),
+    CONSTRAINT self_order_payment_requests_status_check CHECK ((status = ANY (ARRAY['cash_call'::text, 'vietqr_pending'::text, 'cancelled'::text, 'completed'::text, 'expired'::text]))),
+    CONSTRAINT self_order_payment_requests_status_method_check CHECK ((((method = 'cash_call'::text) AND (status = ANY (ARRAY['cash_call'::text, 'cancelled'::text, 'completed'::text, 'expired'::text]))) OR ((method = 'vietqr'::text) AND (status = ANY (ARRAY['vietqr_pending'::text, 'cancelled'::text, 'completed'::text, 'expired'::text]))))),
+    CONSTRAINT self_order_payment_requests_terminal_timestamp_check CHECK ((((status <> 'completed'::text) OR (completed_at IS NOT NULL)) AND ((status <> 'cancelled'::text) OR (cancelled_at IS NOT NULL)) AND ((status <> 'expired'::text) OR (expired_at IS NOT NULL)))),
+    CONSTRAINT self_order_payment_requests_vietqr_code_check CHECK (((method <> 'vietqr'::text) OR (payment_code_snapshot IS NOT NULL)))
+);
+
+
+--
+-- Name: self_order_payment_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.self_order_payment_requests ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.self_order_payment_requests_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: self_order_rate_buckets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.self_order_rate_buckets (
+    purpose text NOT NULL,
+    scope_type text NOT NULL,
+    scope_hash text NOT NULL,
+    window_start timestamp with time zone NOT NULL,
+    hits integer NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT self_order_rate_buckets_expiry_check CHECK ((expires_at > window_start)),
+    CONSTRAINT self_order_rate_buckets_hits_check CHECK ((hits > 0)),
+    CONSTRAINT self_order_rate_buckets_purpose_check CHECK ((purpose = ANY (ARRAY['batch'::text, 'payment'::text]))),
+    CONSTRAINT self_order_rate_buckets_scope_hash_format CHECK ((scope_hash ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT self_order_rate_buckets_scope_type_check CHECK ((scope_type = ANY (ARRAY['token'::text, 'ip'::text])))
+);
+
+
+--
+-- Name: self_order_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.self_order_requests (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    branch_id bigint NOT NULL,
+    table_id bigint NOT NULL,
+    cart_payload jsonb NOT NULL,
+    customer_note text,
+    client_op_id uuid NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    order_id bigint,
+    decided_by uuid,
+    decided_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT self_order_requests_cart_array_check CHECK (((jsonb_typeof(cart_payload) = 'array'::text) AND (jsonb_array_length(cart_payload) > 0))),
+    CONSTRAINT self_order_requests_customer_note_length CHECK (((customer_note IS NULL) OR (char_length(customer_note) <= 500))),
+    CONSTRAINT self_order_requests_decision_check CHECK ((((status = 'pending'::text) AND (decided_at IS NULL)) OR ((status = ANY (ARRAY['accepted'::text, 'rejected'::text])) AND (decided_at IS NOT NULL)))),
+    CONSTRAINT self_order_requests_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text])))
+);
+
+
+--
+-- Name: self_order_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.self_order_requests ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.self_order_requests_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -31401,7 +38332,6 @@ CREATE TABLE public.stock_issue_items (
     issue_id bigint NOT NULL,
     ingredient_id bigint NOT NULL,
     quantity numeric(15,3) NOT NULL,
-    unit text NOT NULL,
     unit_cost numeric(15,2) DEFAULT 0 NOT NULL,
     total_cost numeric(15,2) GENERATED ALWAYS AS ((quantity * unit_cost)) STORED,
     reason text,
@@ -31412,7 +38342,7 @@ CREATE TABLE public.stock_issue_items (
     waste_tier smallint,
     qty_ratio numeric(5,4),
     rolling_15min_sum numeric(15,2),
-    entry_unit_id bigint,
+    entry_unit_id bigint NOT NULL,
     CONSTRAINT stock_issue_items_quantity_check CHECK ((quantity > (0)::numeric)),
     CONSTRAINT stock_issue_items_reason_code_check CHECK (((reason_code IS NULL) OR (reason_code = ANY (ARRAY['spoiled'::text, 'expired'::text, 'dropped'::text, 'overcook'::text, 'burned'::text, 'contaminated'::text, 'quality_fail'::text, 'found_missing'::text, 'theft_suspected'::text, 'customer_return'::text, 'kds_cancel_mid_cook'::text, 'kds_cancel_after_cook'::text, 'other'::text])))),
     CONSTRAINT stock_issue_items_waste_tier_check CHECK (((waste_tier >= 0) AND (waste_tier <= 2)))
@@ -31535,9 +38465,11 @@ CREATE TABLE public.stock_movements (
     issue_id bigint,
     location_id bigint NOT NULL,
     movement_subtype text,
-    entry_unit_id bigint,
+    entry_unit_id bigint NOT NULL,
     entry_quantity numeric(15,3),
-    CONSTRAINT stock_movements_movement_subtype_check CHECK (((movement_subtype IS NULL) OR (movement_subtype = ANY (ARRAY['storage_loss'::text, 'sale_consumption'::text, 'cancelled_after_kds_ready'::text, 'writeoff'::text, 'other'::text])))),
+    production_run_id bigint,
+    CONSTRAINT stock_movements_movement_subtype_check CHECK (((movement_subtype IS NULL) OR (movement_subtype = ANY (ARRAY['storage_loss'::text, 'sale_consumption'::text, 'sale_consumption_restore'::text, 'cancelled_after_kds_ready'::text, 'writeoff'::text, 'other'::text])))),
+    CONSTRAINT stock_movements_quantity_sign_by_type_check CHECK ((((type = ANY (ARRAY['grn_receipt'::text, 'transfer_in'::text, 'production_output'::text, 'refund_restore'::text])) AND (quantity_change >= (0)::numeric)) OR ((type = ANY (ARRAY['consumption'::text, 'transfer_out'::text, 'supplier_return'::text, 'production_consumption'::text])) AND (quantity_change <= (0)::numeric)) OR (type = ANY (ARRAY['adjustment'::text, 'count_adjustment'::text, 'grn_amend'::text])))),
     CONSTRAINT stock_movements_type_check CHECK ((type = ANY (ARRAY['adjustment'::text, 'count_adjustment'::text, 'consumption'::text, 'grn_receipt'::text, 'grn_amend'::text, 'transfer_out'::text, 'transfer_in'::text, 'production_consumption'::text, 'production_output'::text, 'supplier_return'::text, 'refund_restore'::text])))
 );
 
@@ -31580,11 +38512,10 @@ CREATE TABLE public.stock_transfer_items (
     transfer_id bigint NOT NULL,
     ingredient_id bigint NOT NULL,
     quantity numeric(15,3) NOT NULL,
-    unit text NOT NULL,
     unit_cost_at_ship numeric(15,2),
     quantity_received numeric(15,3),
     receive_note text,
-    entry_unit_id bigint,
+    entry_unit_id bigint NOT NULL,
     CONSTRAINT stock_transfer_items_quantity_check CHECK ((quantity > (0)::numeric))
 );
 
@@ -31750,7 +38681,7 @@ CREATE TABLE public.stocktake_lines (
     abc_class character(1),
     client_op_id uuid,
     offline_created_at timestamp with time zone,
-    entry_unit_id bigint,
+    entry_unit_id bigint NOT NULL,
     CONSTRAINT stocktake_lines_abc_class_check CHECK ((abc_class = ANY (ARRAY['A'::bpchar, 'B'::bpchar, 'C'::bpchar]))),
     CONSTRAINT stocktake_lines_round_no_check CHECK (((round_no >= 1) AND (round_no <= 4)))
 );
@@ -32162,13 +39093,13 @@ CREATE TABLE public.supplier_return_items (
     return_id bigint NOT NULL,
     ingredient_id bigint NOT NULL,
     quantity numeric(15,3) NOT NULL,
-    unit text NOT NULL,
     unit_cost numeric(15,2) NOT NULL,
     total_cost numeric(15,2) NOT NULL,
     grn_item_id bigint,
     reason_detail text,
     photo_url text,
     stock_movement_id bigint,
+    entry_unit_id bigint NOT NULL,
     CONSTRAINT supplier_return_items_quantity_check CHECK ((quantity > (0)::numeric))
 );
 
@@ -32321,7 +39252,11 @@ CREATE TABLE public.tables (
     status text DEFAULT 'available'::text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    self_order_token text,
+    self_order_enabled boolean DEFAULT false NOT NULL,
+    self_order_token_rotated_at timestamp with time zone,
     CONSTRAINT tables_capacity_check CHECK ((capacity > 0)),
+    CONSTRAINT tables_self_order_token_format_check CHECK (((self_order_token IS NULL) OR (((char_length(self_order_token) >= 24) AND (char_length(self_order_token) <= 128)) AND (self_order_token ~ '^[A-Za-z0-9_-]+$'::text)))),
     CONSTRAINT tables_status_check CHECK ((status = ANY (ARRAY['available'::text, 'occupied'::text, 'reserved'::text, 'maintenance'::text])))
 );
 
@@ -32437,6 +39372,7 @@ CREATE TABLE public.tax_invoices (
     archive_attempts smallint DEFAULT 0 NOT NULL,
     archive_last_error text,
     replaced_for bigint,
+    buyer_email text,
     CONSTRAINT chk_invoice_kind_shape CHECK ((((invoice_kind = 'per_order'::text) AND (order_id IS NOT NULL) AND (summary_date IS NULL)) OR ((invoice_kind = 'daily_summary'::text) AND (order_id IS NULL) AND (summary_date IS NOT NULL) AND (summary_orders_count IS NOT NULL)))),
     CONSTRAINT tax_invoices_invoice_kind_check CHECK ((invoice_kind = ANY (ARRAY['per_order'::text, 'daily_summary'::text]))),
     CONSTRAINT tax_invoices_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'signing'::text, 'submitted'::text, 'issued'::text, 'cancelled'::text, 'replaced'::text, 'not_required'::text])))
@@ -32482,7 +39418,7 @@ COMMENT ON COLUMN public.tax_invoices.summary_orders_count IS 'NULL cho per_orde
 -- Name: COLUMN tax_invoices.invoice_kind; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.tax_invoices.invoice_kind IS 'per_order = HĐ B2B realtime cho 1 order. daily_summary = HĐ tổng hợp B2C theo ngày/chi nhánh per TT 32/2025 + NĐ 254/2026.';
+COMMENT ON COLUMN public.tax_invoices.invoice_kind IS 'per_order = HĐ B2B realtime cho 1 order. daily_summary = HĐ tổng hợp B2C theo ngày/chi nhánh per TT 78/2021 §11.4.';
 
 
 --
@@ -32545,7 +39481,7 @@ COMMENT ON COLUMN public.tax_invoices.archive_attempts IS 'Incremented every rec
 -- Name: COLUMN tax_invoices.replaced_for; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.tax_invoices.replaced_for IS 'NEW-row pointer to OLD row in an HĐĐT replace chain. NULL for originals. Balance to existing replaced_by (OLD→NEW); together they form a doubly-linked chain. ON DELETE RESTRICT ensures chain integrity (cannot hard-delete a row that other rows reference).';
+COMMENT ON COLUMN public.tax_invoices.replaced_for IS 'NEW-row pointer to OLD row in a TT78 §7 replace chain. NULL for originals. Balance to existing replaced_by (OLD→NEW); together they form a doubly-linked chain. ON DELETE RESTRICT ensures chain integrity (cannot hard-delete a row that other rows reference).';
 
 
 --
@@ -32604,7 +39540,7 @@ CREATE TABLE public.tenants (
 -- Name: COLUMN tenants.owner_user_id; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.tenants.owner_user_id IS 'Canonical auth identity of tenant owner — UUID FK to auth.users, ON DELETE RESTRICT. NOT NULL since H3b (2026-05-07). Distinct from `representative` (TEXT legal name) and `positions.code=''owner''` (HR label). has_permission() owner-bypass currently uses positions.code=''owner''; this column is data foundation for future ownership transfer RPC + UI. See regressions.md TENANT-OWNER-USER-ID-CANONICAL.';
+COMMENT ON COLUMN public.tenants.owner_user_id IS 'Canonical auth identity of tenant owner — UUID FK to auth.users, ON DELETE RESTRICT. NOT NULL since H3b (2026-05-07). Distinct from `representative` (TEXT legal name) and `positions.code=''owner''` (HR label). has_permission() owner-bypass currently uses positions.code=''owner''; this column is data foundation for future ownership transfer RPC + UI. See docs/plan/adr/0005-owner-identity-dual-source.md, regressions.md TENANT-OWNER-USER-ID-CANONICAL.';
 
 
 --
@@ -32721,8 +39657,10 @@ CREATE TABLE public.webhook_events (
     error_code text,
     processed_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    expense_id bigint,
+    order_id bigint,
     CONSTRAINT webhook_events_processing_status_check CHECK ((processing_status = ANY (ARRAY['received'::text, 'processed'::text, 'failed'::text, 'ignored'::text]))),
-    CONSTRAINT webhook_events_provider_check CHECK ((provider = ANY (ARRAY['momo'::text, 'vietqr'::text, 'vnpay'::text, 'sepay'::text])))
+    CONSTRAINT webhook_events_provider_check CHECK ((provider = ANY (ARRAY['vietqr'::text, 'vnpay'::text, 'sepay'::text])))
 );
 
 
@@ -32730,7 +39668,7 @@ CREATE TABLE public.webhook_events (
 -- Name: TABLE webhook_events; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.webhook_events IS 'M4 P1-A (2026-04-29): payment provider webhook idempotency log. UNIQUE(provider, request_id) blocks duplicate processing. Webhook routes MUST insert this row before calling complete_payment_and_consume_stock or any payment-state RPC. RLS allows owner+office SELECT (debugging/reconciliation); INSERT only via service_role webhook handlers (RLS bypassed).';
+COMMENT ON TABLE public.webhook_events IS 'M4 P1-A (2026-04-29): payment provider webhook idempotency log. UNIQUE(provider, request_id) blocks duplicate processing. Webhook routes MUST insert this row before calling complete_payment_and_consume_stock or any payment-state RPC. RLS allows owner+super_manager SELECT (debugging/reconciliation); INSERT only via service_role webhook handlers (RLS bypassed).';
 
 
 --
@@ -32825,6 +39763,22 @@ ALTER TABLE ONLY public.attendance_records
 
 ALTER TABLE ONLY public.audit_logs
     ADD CONSTRAINT audit_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: bank_transaction_expense_matches bank_transaction_expense_matches_event_expense_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bank_transaction_expense_matches
+    ADD CONSTRAINT bank_transaction_expense_matches_event_expense_key UNIQUE (tenant_id, webhook_event_id, expense_id);
+
+
+--
+-- Name: bank_transaction_expense_matches bank_transaction_expense_matches_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bank_transaction_expense_matches
+    ADD CONSTRAINT bank_transaction_expense_matches_pkey PRIMARY KEY (id);
 
 
 --
@@ -33724,6 +40678,22 @@ ALTER TABLE ONLY public.production_recipes
 
 
 --
+-- Name: production_runs production_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.production_runs
+    ADD CONSTRAINT production_runs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: production_runs production_runs_tenant_id_production_number_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.production_runs
+    ADD CONSTRAINT production_runs_tenant_id_production_number_key UNIQUE (tenant_id, production_number);
+
+
+--
 -- Name: profiles profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -33809,6 +40779,30 @@ ALTER TABLE ONLY public.role_templates
 
 ALTER TABLE ONLY public.role_templates
     ADD CONSTRAINT role_templates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: self_order_payment_requests self_order_payment_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_payment_requests
+    ADD CONSTRAINT self_order_payment_requests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: self_order_rate_buckets self_order_rate_buckets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_rate_buckets
+    ADD CONSTRAINT self_order_rate_buckets_pkey PRIMARY KEY (purpose, scope_type, scope_hash, window_start);
+
+
+--
+-- Name: self_order_requests self_order_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_requests
+    ADD CONSTRAINT self_order_requests_pkey PRIMARY KEY (id);
 
 
 --
@@ -33929,14 +40923,6 @@ ALTER TABLE ONLY public.stock_transfer_items
 
 ALTER TABLE ONLY public.stock_transfer_items
     ADD CONSTRAINT stock_transfer_items_transfer_id_ingredient_id_tenant_id_key UNIQUE (transfer_id, ingredient_id, tenant_id);
-
-
---
--- Name: stock_transfers stock_transfers_no_intra_branch_new; Type: CHECK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE public.stock_transfers
-    ADD CONSTRAINT stock_transfers_no_intra_branch_new CHECK ((from_branch_id <> to_branch_id)) NOT VALID;
 
 
 --
@@ -34244,27 +41230,11 @@ ALTER TABLE ONLY public.units
 
 
 --
--- Name: inventory_count_assignments uq_count_assignment; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.inventory_count_assignments
-    ADD CONSTRAINT uq_count_assignment UNIQUE (tenant_id, branch_id, location_id, employee_id, ingredient_id);
-
-
---
 -- Name: inventory_count_slip_lines uq_count_slip_line; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inventory_count_slip_lines
     ADD CONSTRAINT uq_count_slip_line UNIQUE (slip_id, ingredient_id);
-
-
---
--- Name: inventory_count_slips uq_count_slip_per_day; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.inventory_count_slips
-    ADD CONSTRAINT uq_count_slip_per_day UNIQUE (tenant_id, branch_id, location_id, employee_id, count_date);
 
 
 --
@@ -34297,6 +41267,20 @@ ALTER TABLE ONLY public.webhook_events
 
 ALTER TABLE ONLY public.webhook_events
     ADD CONSTRAINT webhook_events_provider_request_id_key UNIQUE (provider, request_id);
+
+
+--
+-- Name: bank_transaction_expense_matches_event_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX bank_transaction_expense_matches_event_idx ON public.bank_transaction_expense_matches USING btree (tenant_id, webhook_event_id);
+
+
+--
+-- Name: bank_transaction_expense_matches_expense_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX bank_transaction_expense_matches_expense_idx ON public.bank_transaction_expense_matches USING btree (tenant_id, expense_id);
 
 
 --
@@ -34594,10 +41578,24 @@ CREATE INDEX idx_count_assignments_employee ON public.inventory_count_assignment
 
 
 --
+-- Name: idx_count_assignments_employee_shift; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_count_assignments_employee_shift ON public.inventory_count_assignments USING btree (tenant_id, branch_id, employee_id, shift_id) WHERE is_active;
+
+
+--
 -- Name: idx_count_slip_lines_slip; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_count_slip_lines_slip ON public.inventory_count_slip_lines USING btree (slip_id);
+
+
+--
+-- Name: idx_count_slips_employee_shift_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_count_slips_employee_shift_date ON public.inventory_count_slips USING btree (tenant_id, branch_id, employee_id, count_date, shift_id);
 
 
 --
@@ -34647,6 +41645,13 @@ CREATE INDEX idx_expenses_tenant_category_date ON public.expenses USING btree (t
 --
 
 CREATE INDEX idx_expenses_tenant_date ON public.expenses USING btree (tenant_id, expense_date);
+
+
+--
+-- Name: idx_goods_received_notes_location; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_goods_received_notes_location ON public.goods_received_notes USING btree (tenant_id, location_id) WHERE (location_id IS NOT NULL);
 
 
 --
@@ -35018,13 +42023,6 @@ CREATE UNIQUE INDEX idx_mv_food_cost_pk ON public.mv_food_cost USING btree (peri
 --
 
 CREATE INDEX idx_mv_inv_stock_alerts ON public.mv_inventory_stock_current USING btree (branch_id, location_id) WHERE (reorder_point IS NOT NULL);
-
-
---
--- Name: idx_mv_top_items_pk; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_mv_top_items_pk ON public.mv_top_items USING btree (period_start, branch_id, tenant_id, menu_item_id);
 
 
 --
@@ -35588,6 +42586,34 @@ CREATE INDEX idx_production_recipes_tenant ON public.production_recipes USING bt
 
 
 --
+-- Name: idx_production_runs_source_location; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_production_runs_source_location ON public.production_runs USING btree (tenant_id, source_location_id);
+
+
+--
+-- Name: idx_production_runs_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_production_runs_status ON public.production_runs USING btree (status);
+
+
+--
+-- Name: idx_production_runs_target_location; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_production_runs_target_location ON public.production_runs USING btree (tenant_id, target_location_id);
+
+
+--
+-- Name: idx_production_runs_tenant_branch_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_production_runs_tenant_branch_status ON public.production_runs USING btree (tenant_id, branch_id, status);
+
+
+--
 -- Name: idx_profiles_position_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -35683,6 +42709,27 @@ CREATE INDEX idx_rrl_outcome ON public.reconcile_run_log USING btree (tenant_id,
 --
 
 CREATE INDEX idx_rrl_tenant_recent ON public.reconcile_run_log USING btree (tenant_id, created_at DESC);
+
+
+--
+-- Name: idx_self_order_payment_requests_branch_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_self_order_payment_requests_branch_status ON public.self_order_payment_requests USING btree (tenant_id, branch_id, status, created_at DESC);
+
+
+--
+-- Name: idx_self_order_rate_buckets_expiry; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_self_order_rate_buckets_expiry ON public.self_order_rate_buckets USING btree (expires_at);
+
+
+--
+-- Name: idx_self_order_requests_branch_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_self_order_requests_branch_status ON public.self_order_requests USING btree (tenant_id, branch_id, status, created_at DESC);
 
 
 --
@@ -35966,6 +43013,13 @@ CREATE UNIQUE INDEX idx_stock_movements_pos_outcome_idempotency ON public.stock_
 
 
 --
+-- Name: idx_stock_movements_pos_restore_idempotency; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_stock_movements_pos_restore_idempotency ON public.stock_movements USING btree (tenant_id, order_id, movement_subtype, ingredient_id, location_id) WHERE ((order_id IS NOT NULL) AND (movement_subtype = 'sale_consumption_restore'::text));
+
+
+--
 -- Name: idx_stock_movements_production_order; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -36204,6 +43258,13 @@ CREATE INDEX idx_tables_branch ON public.tables USING btree (branch_id);
 
 
 --
+-- Name: idx_tables_self_order_lookup; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_tables_self_order_lookup ON public.tables USING btree (self_order_token) WHERE ((self_order_enabled = true) AND (self_order_token IS NOT NULL));
+
+
+--
 -- Name: idx_tables_tenant; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -36344,6 +43405,13 @@ CREATE INDEX idx_webhook_events_finance_failed ON public.webhook_events USING bt
 
 
 --
+-- Name: idx_webhook_events_order_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_webhook_events_order_id ON public.webhook_events USING btree (tenant_id, order_id) WHERE (order_id IS NOT NULL);
+
+
+--
 -- Name: idx_webhook_events_payment; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -36477,6 +43545,48 @@ CREATE INDEX print_jobs_printer_id_idx ON public.print_jobs USING btree (printer
 
 
 --
+-- Name: self_order_payment_requests_client_op_id_uidx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX self_order_payment_requests_client_op_id_uidx ON public.self_order_payment_requests USING btree (tenant_id, client_op_id);
+
+
+--
+-- Name: self_order_payment_requests_one_active_per_order; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX self_order_payment_requests_one_active_per_order ON public.self_order_payment_requests USING btree (tenant_id, order_id) WHERE (status = ANY (ARRAY['cash_call'::text, 'vietqr_pending'::text]));
+
+
+--
+-- Name: self_order_payment_requests_one_pending_vietqr; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX self_order_payment_requests_one_pending_vietqr ON public.self_order_payment_requests USING btree (tenant_id, order_id) WHERE (status = 'vietqr_pending'::text);
+
+
+--
+-- Name: self_order_payment_requests_payment_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX self_order_payment_requests_payment_id_key ON public.self_order_payment_requests USING btree (tenant_id, payment_id) WHERE (payment_id IS NOT NULL);
+
+
+--
+-- Name: self_order_requests_client_op_id_uidx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX self_order_requests_client_op_id_uidx ON public.self_order_requests USING btree (tenant_id, client_op_id);
+
+
+--
+-- Name: self_order_requests_one_pending_per_table; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX self_order_requests_one_pending_per_table ON public.self_order_requests USING btree (table_id) WHERE (status = 'pending'::text);
+
+
+--
 -- Name: shifts_global_name_tenant_key; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -36495,6 +43605,13 @@ CREATE UNIQUE INDEX suppliers_tax_code_tenant_unique ON public.suppliers USING b
 --
 
 COMMENT ON INDEX public.suppliers_tax_code_tenant_unique IS 'Partial UNIQUE — blocks duplicate tax_code inside a tenant to stop supplier-swap gaming for Q3 baseline.';
+
+
+--
+-- Name: tables_tenant_self_order_token_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX tables_tenant_self_order_token_key ON public.tables USING btree (tenant_id, self_order_token) WHERE (self_order_token IS NOT NULL);
 
 
 --
@@ -36529,28 +43646,35 @@ CREATE UNIQUE INDEX uq_consumption_default_items_position_task_active ON public.
 -- Name: uq_count_assignment_active_cell; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX uq_count_assignment_active_cell ON public.inventory_count_assignments USING btree (tenant_id, branch_id, location_id, ingredient_id) WHERE is_active;
+CREATE UNIQUE INDEX uq_count_assignment_active_cell ON public.inventory_count_assignments USING btree (tenant_id, branch_id, location_id, ingredient_id, COALESCE(shift_id, (0)::bigint)) WHERE is_active;
 
 
 --
--- Name: uq_grn_active_draft_per_user_supplier; Type: INDEX; Schema: public; Owner: -
+-- Name: uq_count_assignment_scope; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX uq_grn_active_draft_per_user_supplier ON public.goods_received_notes USING btree (tenant_id, created_by, supplier_id) WHERE ((status = 'draft'::text) AND (created_by IS NOT NULL));
-
-
---
--- Name: INDEX uq_grn_active_draft_per_user_supplier; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON INDEX public.uq_grn_active_draft_per_user_supplier IS 'Partial UNIQUE: at most one in-flight draft GRN per (tenant, user, supplier). Enforces server-side draft semantics for /inventory/grn/new flow. Sprint 6 #3.';
+CREATE UNIQUE INDEX uq_count_assignment_scope ON public.inventory_count_assignments USING btree (tenant_id, branch_id, location_id, employee_id, ingredient_id, COALESCE(shift_id, (0)::bigint));
 
 
 --
--- Name: uq_mv_grn_price_baseline; Type: INDEX; Schema: public; Owner: -
+-- Name: uq_count_slip_per_day_shift_scope; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX uq_mv_grn_price_baseline ON public.mv_grn_price_baseline USING btree (tenant_id, supplier_id, ingredient_id, uom);
+CREATE UNIQUE INDEX uq_count_slip_per_day_shift_scope ON public.inventory_count_slips USING btree (tenant_id, branch_id, location_id, employee_id, count_date, COALESCE(shift_id, (0)::bigint));
+
+
+--
+-- Name: uq_grn_active_free_draft_per_user_supplier_branch; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_grn_active_free_draft_per_user_supplier_branch ON public.goods_received_notes USING btree (tenant_id, created_by, supplier_id, branch_id) WHERE ((status = 'draft'::text) AND (created_by IS NOT NULL) AND (po_id IS NULL));
+
+
+--
+-- Name: uq_grn_active_po_draft_per_user_po; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_grn_active_po_draft_per_user_po ON public.goods_received_notes USING btree (tenant_id, created_by, po_id) WHERE ((status = 'draft'::text) AND (created_by IS NOT NULL) AND (po_id IS NOT NULL));
 
 
 --
@@ -36624,6 +43748,13 @@ CREATE UNIQUE INDEX uq_stocktake_lines_round ON public.stocktake_lines USING btr
 
 
 --
+-- Name: uq_supplier_returns_active_grn; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_supplier_returns_active_grn ON public.supplier_returns USING btree (tenant_id, grn_id) WHERE ((grn_id IS NOT NULL) AND (status <> 'cancelled'::text));
+
+
+--
 -- Name: uq_tax_invoices_active_per_order; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -36684,6 +43815,55 @@ CREATE TRIGGER notify_stocktake_completed_after_update AFTER UPDATE OF status ON
 --
 
 CREATE TRIGGER notify_transfer_in_transit_after_update AFTER UPDATE OF status ON public.stock_transfers FOR EACH ROW EXECUTE FUNCTION public.trg_notify_transfer_in_transit();
+
+
+--
+-- Name: production_recipes production_recipes_entry_unit_guard; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER production_recipes_entry_unit_guard BEFORE INSERT OR UPDATE ON public.production_recipes FOR EACH ROW EXECUTE FUNCTION public.enforce_production_recipe_entry_unit();
+
+
+--
+-- Name: production_runs production_runs_recipe_unit_guard; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER production_runs_recipe_unit_guard BEFORE INSERT OR UPDATE OF tenant_id, finished_good_id ON public.production_runs FOR EACH ROW EXECUTE FUNCTION public.enforce_production_run_recipe_units();
+
+
+--
+-- Name: menu_categories tr_menu_categories_broadcast_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER tr_menu_categories_broadcast_ops AFTER INSERT OR DELETE OR UPDATE ON public.menu_categories FOR EACH ROW EXECUTE FUNCTION public.broadcast_menu_ops();
+
+
+--
+-- Name: menu_item_available_sides tr_menu_item_available_sides_broadcast_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER tr_menu_item_available_sides_broadcast_ops AFTER INSERT OR DELETE OR UPDATE ON public.menu_item_available_sides FOR EACH ROW EXECUTE FUNCTION public.broadcast_menu_ops();
+
+
+--
+-- Name: menu_item_modifiers tr_menu_item_modifiers_broadcast_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER tr_menu_item_modifiers_broadcast_ops AFTER INSERT OR DELETE OR UPDATE ON public.menu_item_modifiers FOR EACH ROW EXECUTE FUNCTION public.broadcast_menu_ops();
+
+
+--
+-- Name: menu_item_variants tr_menu_item_variants_broadcast_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER tr_menu_item_variants_broadcast_ops AFTER INSERT OR DELETE OR UPDATE ON public.menu_item_variants FOR EACH ROW EXECUTE FUNCTION public.broadcast_menu_ops();
+
+
+--
+-- Name: menu_items tr_menu_items_broadcast_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER tr_menu_items_broadcast_ops AFTER INSERT OR DELETE OR UPDATE ON public.menu_items FOR EACH ROW EXECUTE FUNCTION public.broadcast_menu_ops();
 
 
 --
@@ -36799,6 +43979,13 @@ CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON publ
 
 
 --
+-- Name: stock_levels trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.stock_levels FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
 -- Name: stock_transfers trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -36817,6 +44004,20 @@ CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON publ
 --
 
 CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.supplier_returns FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
+-- Name: attendance_records trg_broadcast_branch_ops_checkout; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops_checkout AFTER UPDATE OF checkout_requested_at, checkout_requested_by_role, checkout_approval_target_roles, checkout_approved_at, checkout_approved_by, checkout_approval_note, check_out ON public.attendance_records FOR EACH ROW WHEN (((old.checkout_requested_at IS DISTINCT FROM new.checkout_requested_at) OR (old.checkout_requested_by_role IS DISTINCT FROM new.checkout_requested_by_role) OR (old.checkout_approval_target_roles IS DISTINCT FROM new.checkout_approval_target_roles) OR (old.checkout_approved_at IS DISTINCT FROM new.checkout_approved_at) OR (old.checkout_approved_by IS DISTINCT FROM new.checkout_approved_by) OR (old.checkout_approval_note IS DISTINCT FROM new.checkout_approval_note) OR (old.check_out IS DISTINCT FROM new.check_out))) EXECUTE FUNCTION public.broadcast_branch_ops();
+
+
+--
+-- Name: leave_requests trg_broadcast_branch_ops_leave_requests; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_broadcast_branch_ops_leave_requests AFTER INSERT OR DELETE OR UPDATE ON public.leave_requests FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
 
 
 --
@@ -36873,13 +44074,6 @@ CREATE TRIGGER trg_enforce_stock_availability AFTER INSERT ON public.order_items
 --
 
 CREATE TRIGGER trg_expenses_updated_at BEFORE UPDATE ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
-
-
---
--- Name: grn_items trg_grn_items_compute_variance; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_grn_items_compute_variance BEFORE INSERT OR UPDATE OF unit_cost, unit, ingredient_id, grn_id ON public.grn_items FOR EACH ROW EXECUTE FUNCTION public.grn_items_compute_variance();
 
 
 --
@@ -37149,6 +44343,20 @@ CREATE TRIGGER trg_pp_updated_at BEFORE UPDATE ON public.payroll_periods FOR EAC
 
 
 --
+-- Name: ingredient_units trg_prevent_recipe_entry_unit_delete; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_prevent_recipe_entry_unit_delete BEFORE DELETE ON public.ingredient_units FOR EACH ROW EXECUTE FUNCTION public.prevent_recipe_entry_unit_invalidation();
+
+
+--
+-- Name: ingredient_units trg_prevent_recipe_entry_unit_update; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_prevent_recipe_entry_unit_update BEFORE UPDATE OF is_active, unit_id ON public.ingredient_units FOR EACH ROW EXECUTE FUNCTION public.prevent_recipe_entry_unit_invalidation();
+
+
+--
 -- Name: print_jobs trg_print_jobs_attach_document; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -37191,6 +44399,13 @@ CREATE TRIGGER trg_production_recipes_updated_at BEFORE UPDATE ON public.product
 
 
 --
+-- Name: production_runs trg_production_runs_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_production_runs_updated_at BEFORE UPDATE ON public.production_runs FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
 -- Name: profiles trg_profiles_branch_required; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -37216,6 +44431,69 @@ CREATE TRIGGER trg_purchase_orders_updated_at BEFORE UPDATE ON public.purchase_o
 --
 
 CREATE TRIGGER trg_refunds_updated_at BEFORE UPDATE ON public.refunds FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
+-- Name: self_order_payment_requests trg_self_order_enforce_payment_request_invariants; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_self_order_enforce_payment_request_invariants BEFORE UPDATE OF tenant_id, branch_id, table_id, order_id, payment_id, client_op_id, method, status, amount_snapshot, invoice_payload, request_fingerprint, request_fingerprint_version, payment_code_snapshot, qr_payload_snapshot, vietqr_config_snapshot, expires_at, completed_at, cancelled_at, expired_at, cancel_reason ON public.self_order_payment_requests FOR EACH ROW EXECUTE FUNCTION public.self_order_enforce_payment_request_invariants();
+
+
+--
+-- Name: self_order_payment_requests trg_self_order_fill_payment_request_fingerprint; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_self_order_fill_payment_request_fingerprint BEFORE INSERT ON public.self_order_payment_requests FOR EACH ROW EXECUTE FUNCTION public.self_order_fill_payment_request_fingerprint();
+
+
+--
+-- Name: tables trg_self_order_guard_table_token_rotation; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_self_order_guard_table_token_rotation BEFORE UPDATE OF self_order_token, self_order_token_rotated_at ON public.tables FOR EACH ROW EXECUTE FUNCTION public.self_order_guard_table_token_rotation();
+
+
+--
+-- Name: self_order_payment_requests trg_self_order_payment_requests_require_open_pos_session; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_self_order_payment_requests_require_open_pos_session BEFORE INSERT ON public.self_order_payment_requests FOR EACH ROW EXECUTE FUNCTION public.self_order_enforce_open_pos_session();
+
+
+--
+-- Name: self_order_payment_requests trg_self_order_payment_requests_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_self_order_payment_requests_updated_at BEFORE UPDATE ON public.self_order_payment_requests FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
+-- Name: self_order_rate_buckets trg_self_order_rate_buckets_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_self_order_rate_buckets_updated_at BEFORE UPDATE ON public.self_order_rate_buckets FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
+-- Name: orders trg_self_order_sync_payment_request_from_order; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_self_order_sync_payment_request_from_order AFTER UPDATE OF status, payment_status ON public.orders FOR EACH ROW WHEN (((old.status IS DISTINCT FROM new.status) OR (old.payment_status IS DISTINCT FROM new.payment_status))) EXECUTE FUNCTION public.self_order_sync_payment_request_from_order();
+
+
+--
+-- Name: payments trg_self_order_sync_payment_request_insert; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_self_order_sync_payment_request_insert AFTER INSERT ON public.payments FOR EACH ROW EXECUTE FUNCTION public.self_order_sync_payment_request();
+
+
+--
+-- Name: payments trg_self_order_sync_payment_request_update; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_self_order_sync_payment_request_update AFTER UPDATE OF status ON public.payments FOR EACH ROW WHEN ((old.status IS DISTINCT FROM new.status)) EXECUTE FUNCTION public.self_order_sync_payment_request();
 
 
 --
@@ -37279,13 +44557,6 @@ CREATE TRIGGER trg_stock_issues_updated_at BEFORE UPDATE ON public.stock_issues 
 --
 
 CREATE TRIGGER trg_stock_levels_updated_at BEFORE UPDATE ON public.stock_levels FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
-
-
---
--- Name: stock_levels trg_broadcast_branch_ops; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public.stock_levels FOR EACH ROW EXECUTE FUNCTION public.broadcast_branch_ops();
 
 
 --
@@ -37490,6 +44761,14 @@ ALTER TABLE ONLY public.attendance_consumption_report_lines
 
 
 --
+-- Name: attendance_consumption_report_lines attendance_consumption_report_lines_entry_unit_tenant_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_consumption_report_lines
+    ADD CONSTRAINT attendance_consumption_report_lines_entry_unit_tenant_fkey FOREIGN KEY (entry_unit_id, tenant_id) REFERENCES public.units(id, tenant_id) ON DELETE RESTRICT;
+
+
+--
 -- Name: attendance_consumption_report_lines attendance_consumption_report_lines_ingredient_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -37615,6 +44894,38 @@ ALTER TABLE ONLY public.audit_logs
 
 ALTER TABLE ONLY public.audit_logs
     ADD CONSTRAINT audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: bank_transaction_expense_matches bank_transaction_expense_matches_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bank_transaction_expense_matches
+    ADD CONSTRAINT bank_transaction_expense_matches_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: bank_transaction_expense_matches bank_transaction_expense_matches_expense_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bank_transaction_expense_matches
+    ADD CONSTRAINT bank_transaction_expense_matches_expense_id_fkey FOREIGN KEY (expense_id) REFERENCES public.expenses(id) ON DELETE CASCADE;
+
+
+--
+-- Name: bank_transaction_expense_matches bank_transaction_expense_matches_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bank_transaction_expense_matches
+    ADD CONSTRAINT bank_transaction_expense_matches_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: bank_transaction_expense_matches bank_transaction_expense_matches_webhook_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bank_transaction_expense_matches
+    ADD CONSTRAINT bank_transaction_expense_matches_webhook_event_id_fkey FOREIGN KEY (webhook_event_id) REFERENCES public.webhook_events(id) ON DELETE CASCADE;
 
 
 --
@@ -37903,6 +45214,14 @@ ALTER TABLE ONLY public.goods_received_notes
 
 ALTER TABLE ONLY public.goods_received_notes
     ADD CONSTRAINT goods_received_notes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id);
+
+
+--
+-- Name: goods_received_notes goods_received_notes_location_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.goods_received_notes
+    ADD CONSTRAINT goods_received_notes_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.inventory_locations(id) ON DELETE RESTRICT;
 
 
 --
@@ -38226,6 +45545,14 @@ ALTER TABLE ONLY public.inventory_count_assignments
 
 
 --
+-- Name: inventory_count_assignments inventory_count_assignments_shift_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventory_count_assignments
+    ADD CONSTRAINT inventory_count_assignments_shift_id_fkey FOREIGN KEY (shift_id) REFERENCES public.shifts(id) ON DELETE RESTRICT;
+
+
+--
 -- Name: inventory_count_assignments inventory_count_assignments_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -38295,6 +45622,14 @@ ALTER TABLE ONLY public.inventory_count_slips
 
 ALTER TABLE ONLY public.inventory_count_slips
     ADD CONSTRAINT inventory_count_slips_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: inventory_count_slips inventory_count_slips_shift_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventory_count_slips
+    ADD CONSTRAINT inventory_count_slips_shift_id_fkey FOREIGN KEY (shift_id) REFERENCES public.shifts(id) ON DELETE RESTRICT;
 
 
 --
@@ -39250,6 +46585,14 @@ ALTER TABLE ONLY public.production_recipes
 
 
 --
+-- Name: production_recipes production_recipes_ingredient_entry_unit_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.production_recipes
+    ADD CONSTRAINT production_recipes_ingredient_entry_unit_fkey FOREIGN KEY (ingredient_id, entry_unit_id, tenant_id) REFERENCES public.ingredient_units(ingredient_id, unit_id, tenant_id) ON DELETE RESTRICT;
+
+
+--
 -- Name: production_recipes production_recipes_ingredient_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -39263,6 +46606,70 @@ ALTER TABLE ONLY public.production_recipes
 
 ALTER TABLE ONLY public.production_recipes
     ADD CONSTRAINT production_recipes_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: production_runs production_runs_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.production_runs
+    ADD CONSTRAINT production_runs_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: production_runs production_runs_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.production_runs
+    ADD CONSTRAINT production_runs_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
+
+
+--
+-- Name: production_runs production_runs_entry_unit_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.production_runs
+    ADD CONSTRAINT production_runs_entry_unit_id_fkey FOREIGN KEY (entry_unit_id) REFERENCES public.units(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: production_runs production_runs_finished_good_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.production_runs
+    ADD CONSTRAINT production_runs_finished_good_id_fkey FOREIGN KEY (finished_good_id) REFERENCES public.ingredients(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: production_runs production_runs_source_location_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.production_runs
+    ADD CONSTRAINT production_runs_source_location_id_fkey FOREIGN KEY (source_location_id) REFERENCES public.inventory_locations(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: production_runs production_runs_target_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.production_runs
+    ADD CONSTRAINT production_runs_target_branch_id_fkey FOREIGN KEY (target_branch_id) REFERENCES public.branches(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: production_runs production_runs_target_location_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.production_runs
+    ADD CONSTRAINT production_runs_target_location_id_fkey FOREIGN KEY (target_location_id) REFERENCES public.inventory_locations(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: production_runs production_runs_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.production_runs
+    ADD CONSTRAINT production_runs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -39487,6 +46894,86 @@ ALTER TABLE ONLY public.refunds
 
 ALTER TABLE ONLY public.role_templates
     ADD CONSTRAINT role_templates_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: self_order_payment_requests self_order_payment_requests_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_payment_requests
+    ADD CONSTRAINT self_order_payment_requests_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE CASCADE;
+
+
+--
+-- Name: self_order_payment_requests self_order_payment_requests_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_payment_requests
+    ADD CONSTRAINT self_order_payment_requests_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE CASCADE;
+
+
+--
+-- Name: self_order_payment_requests self_order_payment_requests_payment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_payment_requests
+    ADD CONSTRAINT self_order_payment_requests_payment_id_fkey FOREIGN KEY (payment_id) REFERENCES public.payments(id) ON DELETE SET NULL;
+
+
+--
+-- Name: self_order_payment_requests self_order_payment_requests_table_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_payment_requests
+    ADD CONSTRAINT self_order_payment_requests_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id) ON DELETE CASCADE;
+
+
+--
+-- Name: self_order_payment_requests self_order_payment_requests_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_payment_requests
+    ADD CONSTRAINT self_order_payment_requests_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: self_order_requests self_order_requests_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_requests
+    ADD CONSTRAINT self_order_requests_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE CASCADE;
+
+
+--
+-- Name: self_order_requests self_order_requests_decided_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_requests
+    ADD CONSTRAINT self_order_requests_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
+
+
+--
+-- Name: self_order_requests self_order_requests_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_requests
+    ADD CONSTRAINT self_order_requests_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE SET NULL;
+
+
+--
+-- Name: self_order_requests self_order_requests_table_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_requests
+    ADD CONSTRAINT self_order_requests_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id) ON DELETE CASCADE;
+
+
+--
+-- Name: self_order_requests self_order_requests_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.self_order_requests
+    ADD CONSTRAINT self_order_requests_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -39799,6 +47286,14 @@ ALTER TABLE ONLY public.stock_movements
 
 ALTER TABLE ONLY public.stock_movements
     ADD CONSTRAINT stock_movements_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE SET NULL;
+
+
+--
+-- Name: stock_movements stock_movements_production_run_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements
+    ADD CONSTRAINT stock_movements_production_run_id_fkey FOREIGN KEY (production_run_id) REFERENCES public.production_runs(id) ON DELETE SET NULL;
 
 
 --
@@ -40274,6 +47769,14 @@ ALTER TABLE ONLY public.supplier_price_list
 
 
 --
+-- Name: supplier_return_items supplier_return_items_entry_unit_tenant_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.supplier_return_items
+    ADD CONSTRAINT supplier_return_items_entry_unit_tenant_fkey FOREIGN KEY (entry_unit_id, tenant_id) REFERENCES public.units(id, tenant_id) ON DELETE RESTRICT;
+
+
+--
 -- Name: supplier_return_items supplier_return_items_grn_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -40546,6 +48049,22 @@ ALTER TABLE ONLY public.user_trust_score
 
 
 --
+-- Name: webhook_events webhook_events_expense_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhook_events
+    ADD CONSTRAINT webhook_events_expense_id_fkey FOREIGN KEY (expense_id) REFERENCES public.expenses(id) ON DELETE SET NULL;
+
+
+--
+-- Name: webhook_events webhook_events_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhook_events
+    ADD CONSTRAINT webhook_events_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id);
+
+
+--
 -- Name: webhook_events webhook_events_payment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -40694,6 +48213,19 @@ ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY audit_logs_select ON public.audit_logs FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('staff:assign_permission'::text) AS has_permission_any))));
+
+
+--
+-- Name: bank_transaction_expense_matches; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.bank_transaction_expense_matches ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: bank_transaction_expense_matches bank_transaction_expense_matches_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY bank_transaction_expense_matches_select ON public.bank_transaction_expense_matches FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
 
 
 --
@@ -40919,14 +48451,37 @@ CREATE POLICY conflicts_rpc_only_write ON public.stocktake_conflicts TO authenti
 -- Name: employment_contracts contracts_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY contracts_select ON public.employment_contracts FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('hr:view_employee'::text) AS has_permission_any)));
+CREATE POLICY contracts_select ON public.employment_contracts FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM (public.profiles pr
+     JOIN public.positions po ON (((po.id = pr.position_id) AND (po.tenant_id = pr.tenant_id))))
+  WHERE ((pr.id = ( SELECT auth.uid() AS uid)) AND (pr.tenant_id = public.auth_tenant_id()) AND (po.code = 'owner'::text) AND (COALESCE(pr.is_active, true) = true))))));
+
+
+--
+-- Name: POLICY contracts_select ON employment_contracts; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON POLICY contracts_select ON public.employment_contracts IS 'Employment contract rows include compensation data and are owner-only at RLS.';
 
 
 --
 -- Name: employment_contracts contracts_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY contracts_write ON public.employment_contracts TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('hr:manage_employee'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('hr:manage_employee'::text)));
+CREATE POLICY contracts_write ON public.employment_contracts TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM (public.profiles pr
+     JOIN public.positions po ON (((po.id = pr.position_id) AND (po.tenant_id = pr.tenant_id))))
+  WHERE ((pr.id = ( SELECT auth.uid() AS uid)) AND (pr.tenant_id = public.auth_tenant_id()) AND (po.code = 'owner'::text) AND (COALESCE(pr.is_active, true) = true)))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM (public.profiles pr
+     JOIN public.positions po ON (((po.id = pr.position_id) AND (po.tenant_id = pr.tenant_id))))
+  WHERE ((pr.id = ( SELECT auth.uid() AS uid)) AND (pr.tenant_id = public.auth_tenant_id()) AND (po.code = 'owner'::text) AND (COALESCE(pr.is_active, true) = true))))));
+
+
+--
+-- Name: POLICY contracts_write ON employment_contracts; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON POLICY contracts_write ON public.employment_contracts IS 'Employment contract writes are owner-only at RLS.';
 
 
 --
@@ -40939,7 +48494,17 @@ ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
 -- Name: employees employees_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY employees_select ON public.employees FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('hr:view_employee'::text) AS has_permission_any)));
+CREATE POLICY employees_select ON public.employees FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM (public.profiles pr
+     JOIN public.positions po ON (((po.id = pr.position_id) AND (po.tenant_id = pr.tenant_id))))
+  WHERE ((pr.id = ( SELECT auth.uid() AS uid)) AND (pr.tenant_id = public.auth_tenant_id()) AND (po.code = 'owner'::text) AND (COALESCE(pr.is_active, true) = true))))));
+
+
+--
+-- Name: POLICY employees_select ON employees; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON POLICY employees_select ON public.employees IS 'Tenant-wide employee reads are owner-only. Non-owner self-row read stays in employees_select_self; branch-safe HR reads must go through Server Actions.';
 
 
 --
@@ -40953,14 +48518,27 @@ CREATE POLICY employees_select_self ON public.employees FOR SELECT TO authentica
 -- Name: POLICY employees_select_self ON employees; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON POLICY employees_select_self ON public.employees IS 'Self-read regression fix: every authenticated user can read their own employees row even without hr:view_employee. Required for branch staff runtime (clock, schedule, attendance, payslip, shift-register).';
+COMMENT ON POLICY employees_select_self ON public.employees IS 'Self-read regression fix: every authenticated user can read their own employees row even without hr:view_employee. Required for /employee/* portal (clock, schedule, attendance, payslip, shift-register).';
 
 
 --
 -- Name: employees employees_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY employees_write ON public.employees TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('hr:manage_employee'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('hr:manage_employee'::text) AS has_permission_any)));
+CREATE POLICY employees_write ON public.employees TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM (public.profiles pr
+     JOIN public.positions po ON (((po.id = pr.position_id) AND (po.tenant_id = pr.tenant_id))))
+  WHERE ((pr.id = ( SELECT auth.uid() AS uid)) AND (pr.tenant_id = public.auth_tenant_id()) AND (po.code = 'owner'::text) AND (COALESCE(pr.is_active, true) = true)))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM (public.profiles pr
+     JOIN public.positions po ON (((po.id = pr.position_id) AND (po.tenant_id = pr.tenant_id))))
+  WHERE ((pr.id = ( SELECT auth.uid() AS uid)) AND (pr.tenant_id = public.auth_tenant_id()) AND (po.code = 'owner'::text) AND (COALESCE(pr.is_active, true) = true))))));
+
+
+--
+-- Name: POLICY employees_write ON employees; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON POLICY employees_write ON public.employees IS 'Employee record writes are owner-only at RLS. Branch managers use read-only branch-safe Server Actions.';
 
 
 --
@@ -41098,31 +48676,55 @@ CREATE POLICY grn_insert ON public.goods_received_notes FOR INSERT TO authentica
 ALTER TABLE public.grn_items ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: grn_items grn_items_delete; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY grn_items_delete ON public.grn_items FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM public.goods_received_notes g
+  WHERE ((g.id = grn_items.grn_id) AND (g.tenant_id = grn_items.tenant_id) AND (g.status = 'draft'::text) AND public.has_permission(g.branch_id, 'procurement:grn_create'::text))))));
+
+
+--
+-- Name: grn_items grn_items_insert; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY grn_items_insert ON public.grn_items FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM public.goods_received_notes g
+  WHERE ((g.id = grn_items.grn_id) AND (g.tenant_id = grn_items.tenant_id) AND (g.status = 'draft'::text) AND public.has_permission(g.branch_id, 'procurement:grn_create'::text))))));
+
+
+--
 -- Name: grn_items grn_items_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY grn_items_select ON public.grn_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:read'::text) AS has_permission_any)));
+CREATE POLICY grn_items_select ON public.grn_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM public.goods_received_notes g
+  WHERE ((g.id = grn_items.grn_id) AND (g.tenant_id = grn_items.tenant_id) AND (public.has_permission(g.branch_id, 'procurement:read'::text) OR public.has_permission(g.branch_id, 'reports:view_branch'::text) OR public.has_permission(NULL::bigint, 'reports:view_tenant'::text)))))));
 
 
 --
--- Name: grn_items grn_items_write; Type: POLICY; Schema: public; Owner: -
+-- Name: grn_items grn_items_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY grn_items_write ON public.grn_items TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:grn_create'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:grn_create'::text) AS has_permission_any)));
+CREATE POLICY grn_items_update ON public.grn_items FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM public.goods_received_notes g
+  WHERE ((g.id = grn_items.grn_id) AND (g.tenant_id = grn_items.tenant_id) AND (g.status = 'draft'::text) AND public.has_permission(g.branch_id, 'procurement:grn_create'::text)))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM public.goods_received_notes g
+  WHERE ((g.id = grn_items.grn_id) AND (g.tenant_id = grn_items.tenant_id) AND (g.status = 'draft'::text) AND public.has_permission(g.branch_id, 'procurement:grn_create'::text))))));
 
 
 --
 -- Name: goods_received_notes grn_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY grn_select ON public.goods_received_notes FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:read'::text) AS has_permission_any)));
+CREATE POLICY grn_select ON public.goods_received_notes FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission(branch_id, 'procurement:read'::text) OR public.has_permission(branch_id, 'reports:view_branch'::text) OR public.has_permission(NULL::bigint, 'reports:view_tenant'::text))));
 
 
 --
 -- Name: goods_received_notes grn_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY grn_update ON public.goods_received_notes FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('procurement:grn_create'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('procurement:grn_confirm'::text) AS has_permission_any)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('procurement:grn_create'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('procurement:grn_confirm'::text) AS has_permission_any))));
+CREATE POLICY grn_update ON public.goods_received_notes FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (status = 'draft'::text) AND (public.has_permission(branch_id, 'procurement:grn_create'::text) OR public.has_permission(branch_id, 'procurement:grn_confirm'::text)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (status = ANY (ARRAY['draft'::text, 'cancelled'::text])) AND (public.has_permission(branch_id, 'procurement:grn_create'::text) OR public.has_permission(branch_id, 'procurement:grn_confirm'::text))));
 
 
 --
@@ -42299,14 +49901,34 @@ ALTER TABLE public.production_recipes ENABLE ROW LEVEL SECURITY;
 -- Name: production_recipes production_recipes_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY production_recipes_select ON public.production_recipes FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (( SELECT public.has_permission_any('menu:read'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any))));
+CREATE POLICY production_recipes_select ON public.production_recipes FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission_any('inventory:production_create'::text) OR public.has_permission_any('inventory:production_confirm'::text) OR public.has_permission_any('menu:read'::text) OR public.has_permission_any('menu:write'::text))));
 
 
 --
 -- Name: production_recipes production_recipes_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY production_recipes_write ON public.production_recipes TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
+CREATE POLICY production_recipes_write ON public.production_recipes TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission_any('inventory:production_create'::text) OR public.has_permission_any('inventory:production_confirm'::text) OR public.has_permission_any('menu:write'::text)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission_any('inventory:production_create'::text) OR public.has_permission_any('inventory:production_confirm'::text) OR public.has_permission_any('menu:write'::text))));
+
+
+--
+-- Name: production_runs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.production_runs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: production_runs production_runs_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY production_runs_select ON public.production_runs FOR SELECT TO authenticated USING ((tenant_id = public.auth_tenant_id()));
+
+
+--
+-- Name: production_runs production_runs_write; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY production_runs_write ON public.production_runs TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission(branch_id, 'inventory:production_create'::text) OR public.has_permission(branch_id, 'inventory:production_confirm'::text))));
 
 
 --
@@ -42393,7 +50015,7 @@ ALTER TABLE public.recipes ENABLE ROW LEVEL SECURITY;
 -- Name: recipes recipes_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY recipes_select ON public.recipes FOR SELECT TO authenticated USING ((tenant_id = public.auth_tenant_id()));
+CREATE POLICY recipes_select ON public.recipes FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('menu:read'::text) OR public.has_permission_any('menu:write'::text))));
 
 
 --
@@ -42454,6 +50076,38 @@ ALTER TABLE public.role_templates ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY role_templates_select ON public.role_templates FOR SELECT TO authenticated USING ((tenant_id = public.auth_tenant_id()));
+
+
+--
+-- Name: self_order_payment_requests; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.self_order_payment_requests ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: self_order_payment_requests self_order_payment_requests_staff_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY self_order_payment_requests_staff_select ON public.self_order_payment_requests FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'pos:use'::text)));
+
+
+--
+-- Name: self_order_rate_buckets; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.self_order_rate_buckets ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: self_order_requests; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.self_order_requests ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: self_order_requests self_order_requests_staff_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY self_order_requests_staff_select ON public.self_order_requests FOR SELECT TO authenticated USING (((tenant_id = ( SELECT public.auth_tenant_id() AS auth_tenant_id)) AND public.has_permission(branch_id, 'pos:use'::text)));
 
 
 --
@@ -42632,13 +50286,6 @@ CREATE POLICY stock_levels_update ON public.stock_levels FOR UPDATE TO authentic
 --
 
 ALTER TABLE public.stock_movements ENABLE ROW LEVEL SECURITY;
-
---
--- Name: stock_movements stock_movements_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY stock_movements_insert ON public.stock_movements FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'inventory:write'::text)));
-
 
 --
 -- Name: stock_movements stock_movements_select; Type: POLICY; Schema: public; Owner: -
@@ -43268,6 +50915,33 @@ GRANT ALL ON FUNCTION public.acquire_zone_lock(p_session_id bigint, p_zone_id te
 
 
 --
+-- Name: FUNCTION add_menu_item_kitchen_stock_exception(p_branch_id bigint, p_menu_item_id bigint, p_extra_portions integer, p_reason text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.add_menu_item_kitchen_stock_exception(p_branch_id bigint, p_menu_item_id bigint, p_extra_portions integer, p_reason text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.add_menu_item_kitchen_stock_exception(p_branch_id bigint, p_menu_item_id bigint, p_extra_portions integer, p_reason text) TO service_role;
+GRANT ALL ON FUNCTION public.add_menu_item_kitchen_stock_exception(p_branch_id bigint, p_menu_item_id bigint, p_extra_portions integer, p_reason text) TO authenticated;
+
+
+--
+-- Name: FUNCTION adjust_stock_exception(p_branch_id bigint, p_ingredient_id bigint, p_quantity_change numeric, p_reason text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.adjust_stock_exception(p_branch_id bigint, p_ingredient_id bigint, p_quantity_change numeric, p_reason text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.adjust_stock_exception(p_branch_id bigint, p_ingredient_id bigint, p_quantity_change numeric, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.adjust_stock_exception(p_branch_id bigint, p_ingredient_id bigint, p_quantity_change numeric, p_reason text) TO service_role;
+
+
+--
+-- Name: FUNCTION admin_force_close_attendance(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_approved_by uuid, p_note text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.admin_force_close_attendance(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_approved_by uuid, p_note text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.admin_force_close_attendance(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_approved_by uuid, p_note text) TO service_role;
+GRANT ALL ON FUNCTION public.admin_force_close_attendance(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_approved_by uuid, p_note text) TO authenticated;
+
+
+--
 -- Name: FUNCTION admin_update_profile(p_target_id uuid, p_full_name text, p_phone text, p_role text, p_branch_id bigint, p_is_active boolean); Type: ACL; Schema: public; Owner: -
 --
 
@@ -43477,6 +51151,14 @@ GRANT ALL ON FUNCTION public.branch_manager_approve_employee_clock_out(p_tenant_
 
 
 --
+-- Name: FUNCTION branch_manager_reject_employee_clock_out(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_rejected_by uuid, p_note text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.branch_manager_reject_employee_clock_out(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_rejected_by uuid, p_note text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.branch_manager_reject_employee_clock_out(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_rejected_by uuid, p_note text) TO service_role;
+
+
+--
 -- Name: FUNCTION branch_manager_request_consumption_adjustment(p_tenant_id bigint, p_report_id bigint, p_review_note text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -43499,6 +51181,14 @@ GRANT ALL ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, 
 
 REVOKE ALL ON FUNCTION public.broadcast_branch_ops() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.broadcast_branch_ops() TO service_role;
+
+
+--
+-- Name: FUNCTION broadcast_menu_ops(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.broadcast_menu_ops() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.broadcast_menu_ops() TO service_role;
 
 
 --
@@ -43574,11 +51264,28 @@ GRANT ALL ON FUNCTION public.cancel_production_order(p_order_id bigint) TO servi
 
 
 --
+-- Name: FUNCTION cancel_production_run(p_run_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.cancel_production_run(p_run_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.cancel_production_run(p_run_id bigint) TO service_role;
+GRANT ALL ON FUNCTION public.cancel_production_run(p_run_id bigint) TO authenticated;
+
+
+--
 -- Name: FUNCTION check_branch_required(); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.check_branch_required() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.check_branch_required() TO service_role;
+
+
+--
+-- Name: FUNCTION check_cron_jobs_health(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.check_cron_jobs_health() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.check_cron_jobs_health() TO service_role;
 
 
 --
@@ -43806,6 +51513,14 @@ GRANT ALL ON FUNCTION public.confirm_cash_payment(p_order_id bigint, p_cash_rece
 
 
 --
+-- Name: FUNCTION confirm_cash_payment_with_invoice_binding(p_order_id bigint, p_cash_received numeric); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.confirm_cash_payment_with_invoice_binding(p_order_id bigint, p_cash_received numeric) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.confirm_cash_payment_with_invoice_binding(p_order_id bigint, p_cash_received numeric) TO authenticated;
+
+
+--
 -- Name: FUNCTION confirm_goods_receipt_note(p_grn_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
@@ -43829,6 +51544,24 @@ GRANT ALL ON FUNCTION public.confirm_payment_and_post(p_payment_id bigint, p_ten
 REVOKE ALL ON FUNCTION public.confirm_production_order(p_order_id bigint) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.confirm_production_order(p_order_id bigint) TO authenticated;
 GRANT ALL ON FUNCTION public.confirm_production_order(p_order_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION confirm_production_run(p_run_id bigint, p_actual_quantity numeric); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.confirm_production_run(p_run_id bigint, p_actual_quantity numeric) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.confirm_production_run(p_run_id bigint, p_actual_quantity numeric) TO authenticated;
+GRANT ALL ON FUNCTION public.confirm_production_run(p_run_id bigint, p_actual_quantity numeric) TO service_role;
+
+
+--
+-- Name: FUNCTION confirm_production_run(p_run_id bigint, p_actual_quantity numeric, p_actual_ingredients jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.confirm_production_run(p_run_id bigint, p_actual_quantity numeric, p_actual_ingredients jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.confirm_production_run(p_run_id bigint, p_actual_quantity numeric, p_actual_ingredients jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.confirm_production_run(p_run_id bigint, p_actual_quantity numeric, p_actual_ingredients jsonb) TO service_role;
 
 
 --
@@ -43955,6 +51688,24 @@ GRANT ALL ON FUNCTION public.create_production_order(p_branch_id bigint, p_produ
 
 
 --
+-- Name: FUNCTION create_production_run(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_notes text, p_target_branch_id bigint, p_ingredients_override jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_production_run(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_notes text, p_target_branch_id bigint, p_ingredients_override jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_production_run(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_notes text, p_target_branch_id bigint, p_ingredients_override jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.create_production_run(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_notes text, p_target_branch_id bigint, p_ingredients_override jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION create_production_run_with_locations(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_notes text, p_target_branch_id bigint, p_ingredients_override jsonb, p_source_location_id bigint, p_target_location_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_production_run_with_locations(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_notes text, p_target_branch_id bigint, p_ingredients_override jsonb, p_source_location_id bigint, p_target_location_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_production_run_with_locations(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_notes text, p_target_branch_id bigint, p_ingredients_override jsonb, p_source_location_id bigint, p_target_location_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.create_production_run_with_locations(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_notes text, p_target_branch_id bigint, p_ingredients_override jsonb, p_source_location_id bigint, p_target_location_id bigint) TO service_role;
+
+
+--
 -- Name: FUNCTION create_purchase_order_with_lines(p_supplier_id bigint, p_branch_id bigint, p_notes text, p_lines jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -43986,8 +51737,8 @@ GRANT ALL ON FUNCTION public.create_stock_transfer_draft(p_from_branch_id bigint
 --
 
 REVOKE ALL ON FUNCTION public.create_stocktake_session(p_branch_id bigint, p_location_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_stocktake_session(p_branch_id bigint, p_location_id bigint) TO authenticated;
 GRANT ALL ON FUNCTION public.create_stocktake_session(p_branch_id bigint, p_location_id bigint) TO service_role;
+GRANT ALL ON FUNCTION public.create_stocktake_session(p_branch_id bigint, p_location_id bigint) TO authenticated;
 
 
 --
@@ -44149,6 +51900,22 @@ GRANT ALL ON FUNCTION public.enforce_period_close_stock_issues() TO service_role
 GRANT ALL ON FUNCTION public.enforce_po_grn_branch_is_procurement() TO anon;
 GRANT ALL ON FUNCTION public.enforce_po_grn_branch_is_procurement() TO authenticated;
 GRANT ALL ON FUNCTION public.enforce_po_grn_branch_is_procurement() TO service_role;
+
+
+--
+-- Name: FUNCTION enforce_production_recipe_entry_unit(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.enforce_production_recipe_entry_unit() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.enforce_production_recipe_entry_unit() TO service_role;
+
+
+--
+-- Name: FUNCTION enforce_production_run_recipe_units(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.enforce_production_run_recipe_units() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.enforce_production_run_recipe_units() TO service_role;
 
 
 --
@@ -44416,6 +52183,15 @@ GRANT ALL ON FUNCTION public.get_inventory_dashboard(p_branch_id bigint) TO serv
 
 
 --
+-- Name: FUNCTION get_menu_item_sales_agg(p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone, p_order_statuses text[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_menu_item_sales_agg(p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone, p_order_statuses text[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_menu_item_sales_agg(p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone, p_order_statuses text[]) TO authenticated;
+GRANT ALL ON FUNCTION public.get_menu_item_sales_agg(p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone, p_order_statuses text[]) TO service_role;
+
+
+--
 -- Name: FUNCTION get_my_count_slip(p_slip_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
@@ -44443,6 +52219,15 @@ GRANT ALL ON FUNCTION public.get_orders_paid_summary(p_status text, p_branch_id 
 
 
 --
+-- Name: FUNCTION get_orders_summary(p_status text, p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_orders_summary(p_status text, p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_orders_summary(p_status text, p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone) TO authenticated;
+GRANT ALL ON FUNCTION public.get_orders_summary(p_status text, p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone) TO service_role;
+
+
+--
 -- Name: FUNCTION get_pos_session_report(p_session_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
@@ -44450,6 +52235,24 @@ REVOKE ALL ON FUNCTION public.get_pos_session_report(p_session_id bigint) FROM P
 GRANT ALL ON FUNCTION public.get_pos_session_report(p_session_id bigint) TO anon;
 GRANT ALL ON FUNCTION public.get_pos_session_report(p_session_id bigint) TO authenticated;
 GRANT ALL ON FUNCTION public.get_pos_session_report(p_session_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION get_production_recipe_context(p_finished_good_id bigint, p_branch_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_production_recipe_context(p_finished_good_id bigint, p_branch_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_production_recipe_context(p_finished_good_id bigint, p_branch_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.get_production_recipe_context(p_finished_good_id bigint, p_branch_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION get_production_recipe_context_for_location(p_finished_good_id bigint, p_branch_id bigint, p_source_location_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_production_recipe_context_for_location(p_finished_good_id bigint, p_branch_id bigint, p_source_location_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_production_recipe_context_for_location(p_finished_good_id bigint, p_branch_id bigint, p_source_location_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.get_production_recipe_context_for_location(p_finished_good_id bigint, p_branch_id bigint, p_source_location_id bigint) TO service_role;
 
 
 --
@@ -44504,6 +52307,15 @@ GRANT ALL ON FUNCTION public.get_stock_movement_report(p_start_date date, p_end_
 REVOKE ALL ON FUNCTION public.get_stocktake_lines_blind(p_session_id bigint) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_stocktake_lines_blind(p_session_id bigint) TO authenticated;
 GRANT ALL ON FUNCTION public.get_stocktake_lines_blind(p_session_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION get_theoretical_consumption(p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone, p_order_statuses text[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_theoretical_consumption(p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone, p_order_statuses text[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_theoretical_consumption(p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone, p_order_statuses text[]) TO authenticated;
+GRANT ALL ON FUNCTION public.get_theoretical_consumption(p_branch_id bigint, p_from timestamp with time zone, p_to timestamp with time zone, p_order_statuses text[]) TO service_role;
 
 
 --
@@ -44671,6 +52483,15 @@ GRANT ALL ON FUNCTION public.is_inventory_production_operator() TO service_role;
 
 
 --
+-- Name: FUNCTION link_sepay_transaction_to_payment(p_event_id bigint, p_payment_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.link_sepay_transaction_to_payment(p_event_id bigint, p_payment_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.link_sepay_transaction_to_payment(p_event_id bigint, p_payment_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.link_sepay_transaction_to_payment(p_event_id bigint, p_payment_id bigint) TO service_role;
+
+
+--
 -- Name: FUNCTION list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date); Type: ACL; Schema: public; Owner: -
 --
 
@@ -44722,6 +52543,15 @@ GRANT ALL ON FUNCTION public.mark_kds_item_out_of_stock(p_ticket_id bigint, p_di
 REVOKE ALL ON FUNCTION public.mark_order_item_served(p_item_id bigint) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.mark_order_item_served(p_item_id bigint) TO authenticated;
 GRANT ALL ON FUNCTION public.mark_order_item_served(p_item_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION match_sepay_transaction_expenses(p_event_id bigint, p_expense_ids bigint[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.match_sepay_transaction_expenses(p_event_id bigint, p_expense_ids bigint[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.match_sepay_transaction_expenses(p_event_id bigint, p_expense_ids bigint[]) TO authenticated;
+GRANT ALL ON FUNCTION public.match_sepay_transaction_expenses(p_event_id bigint, p_expense_ids bigint[]) TO service_role;
 
 
 --
@@ -44867,11 +52697,27 @@ GRANT ALL ON FUNCTION public.post_pos_sale_consumption_if_ready(p_order_id bigin
 
 
 --
+-- Name: FUNCTION post_pos_sale_refund_restore(p_order_id bigint, p_actor_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.post_pos_sale_refund_restore(p_order_id bigint, p_actor_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.post_pos_sale_refund_restore(p_order_id bigint, p_actor_id uuid) TO service_role;
+
+
+--
 -- Name: FUNCTION prevent_order_amount_mutation_after_payment_code_exposed(); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.prevent_order_amount_mutation_after_payment_code_exposed() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.prevent_order_amount_mutation_after_payment_code_exposed() TO service_role;
+
+
+--
+-- Name: FUNCTION prevent_recipe_entry_unit_invalidation(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.prevent_recipe_entry_unit_invalidation() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.prevent_recipe_entry_unit_invalidation() TO service_role;
 
 
 --
@@ -45181,6 +53027,40 @@ GRANT ALL ON FUNCTION public.recompute_supplier_invoice_matching(p_invoice_id bi
 
 
 --
+-- Name: FUNCTION reconcile_sepay_order_evidence(p_event_id bigint, p_payment_code text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.reconcile_sepay_order_evidence(p_event_id bigint, p_payment_code text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.reconcile_sepay_order_evidence(p_event_id bigint, p_payment_code text) TO service_role;
+
+
+--
+-- Name: FUNCTION record_production_run(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_actual_quantity numeric, p_notes text, p_target_branch_id bigint, p_actual_ingredients jsonb, p_source_location_id bigint, p_target_location_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.record_production_run(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_actual_quantity numeric, p_notes text, p_target_branch_id bigint, p_actual_ingredients jsonb, p_source_location_id bigint, p_target_location_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.record_production_run(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_actual_quantity numeric, p_notes text, p_target_branch_id bigint, p_actual_ingredients jsonb, p_source_location_id bigint, p_target_location_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.record_production_run(p_branch_id bigint, p_finished_good_id bigint, p_planned_quantity numeric, p_entry_unit_id bigint, p_actual_quantity numeric, p_notes text, p_target_branch_id bigint, p_actual_ingredients jsonb, p_source_location_id bigint, p_target_location_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION record_sepay_cash_deposit_as_system(p_event_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.record_sepay_cash_deposit_as_system(p_event_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.record_sepay_cash_deposit_as_system(p_event_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION recreate_grn_at_receiving_site(p_grn_id bigint, p_target_branch_id bigint, p_target_location_id bigint, p_reason text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.recreate_grn_at_receiving_site(p_grn_id bigint, p_target_branch_id bigint, p_target_location_id bigint, p_reason text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.recreate_grn_at_receiving_site(p_grn_id bigint, p_target_branch_id bigint, p_target_location_id bigint, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.recreate_grn_at_receiving_site(p_grn_id bigint, p_target_branch_id bigint, p_target_location_id bigint, p_reason text) TO service_role;
+
+
+--
 -- Name: FUNCTION reduce_order_item_quantity(p_order_item_id bigint, p_new_quantity integer, p_reason text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -45391,6 +53271,15 @@ GRANT ALL ON FUNCTION public.rotate_branch_override_code(p_branch_id bigint, p_n
 
 
 --
+-- Name: FUNCTION rotate_table_self_order_qr(p_table_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.rotate_table_self_order_qr(p_table_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.rotate_table_self_order_qr(p_table_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.rotate_table_self_order_qr(p_table_id bigint) TO service_role;
+
+
+--
 -- Name: FUNCTION route_order_to_kds(p_order_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
@@ -45454,6 +53343,223 @@ GRANT ALL ON FUNCTION public.scan_inventory_alerts() TO service_role;
 
 
 --
+-- Name: FUNCTION self_order_accept_request(p_request_id bigint, p_target_order_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_accept_request(p_request_id bigint, p_target_order_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_accept_request(p_request_id bigint, p_target_order_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.self_order_accept_request(p_request_id bigint, p_target_order_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_active_payment_lock(p_order_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_active_payment_lock(p_order_id bigint) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION self_order_branch_has_open_pos_session(p_tenant_id bigint, p_branch_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_branch_has_open_pos_session(p_tenant_id bigint, p_branch_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_branch_has_open_pos_session(p_tenant_id bigint, p_branch_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_cancel_payment_request(p_request_id bigint, p_reason text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_cancel_payment_request(p_request_id bigint, p_reason text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_cancel_payment_request(p_request_id bigint, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.self_order_cancel_payment_request(p_request_id bigint, p_reason text) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_cancel_pending_payment_and_add(p_token text, p_client_op_id uuid, p_items jsonb, p_customer_note text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_cancel_pending_payment_and_add(p_token text, p_client_op_id uuid, p_items jsonb, p_customer_note text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_cancel_pending_payment_and_add(p_token text, p_client_op_id uuid, p_items jsonb, p_customer_note text) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_canonicalize_cart(p_tenant_id bigint, p_items jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_canonicalize_cart(p_tenant_id bigint, p_items jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_canonicalize_cart(p_tenant_id bigint, p_items jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_consume_rate_limits(p_purpose text, p_token text, p_ip_hash text, p_tenant_id bigint, p_table_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_consume_rate_limits(p_purpose text, p_token text, p_ip_hash text, p_tenant_id bigint, p_table_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_consume_rate_limits(p_purpose text, p_token text, p_ip_hash text, p_tenant_id bigint, p_table_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_create_payment_request(p_token text, p_client_op_id uuid, p_method text, p_invoice_payload jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_create_payment_request(p_token text, p_client_op_id uuid, p_method text, p_invoice_payload jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_create_payment_request(p_token text, p_client_op_id uuid, p_method text, p_invoice_payload jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_enforce_open_pos_session(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_enforce_open_pos_session() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_enforce_open_pos_session() TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_enforce_payment_request_invariants(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION self_order_expire_payment_request(p_request_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_expire_payment_request(p_request_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_expire_payment_request(p_request_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_fill_payment_request_fingerprint(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_fill_payment_request_fingerprint() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION self_order_get_payment_request_status(p_token text, p_client_op_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_get_payment_request_status(p_token text, p_client_op_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_get_payment_request_status(p_token text, p_client_op_id uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_get_snapshot(p_token text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_get_snapshot(p_token text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_get_snapshot(p_token text) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_get_snapshot(p_token text, p_client_op_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_get_snapshot(p_token text, p_client_op_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_get_snapshot(p_token text, p_client_op_id uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_guard_table_token_rotation(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_guard_table_token_rotation() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION self_order_menu_payload(p_tenant_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON FUNCTION public.self_order_menu_payload(p_tenant_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.self_order_menu_payload(p_tenant_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_normalize_invoice_payload(p_payload jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_normalize_invoice_payload(p_payload jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_normalize_invoice_payload(p_payload jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_payment_request_fingerprint(p_method text, p_invoice_payload jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_payment_request_fingerprint(p_method text, p_invoice_payload jsonb) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION self_order_payment_request_public_payload(p_request_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_payment_request_public_payload(p_request_id bigint) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION self_order_reconcile_expired_payment_requests(p_tenant_id bigint, p_branch_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_reconcile_expired_payment_requests(p_tenant_id bigint, p_branch_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_reconcile_expired_payment_requests(p_tenant_id bigint, p_branch_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_reject_request(p_request_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_reject_request(p_request_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_reject_request(p_request_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.self_order_reject_request(p_request_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_scope_hash(p_value text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_scope_hash(p_value text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION self_order_set_actor_claims(p_actor uuid, p_tenant_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_set_actor_claims(p_actor uuid, p_tenant_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_set_actor_claims(p_actor uuid, p_tenant_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_submit(p_token text, p_items jsonb, p_customer_note text, p_client_op_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_submit(p_token text, p_items jsonb, p_customer_note text, p_client_op_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.self_order_submit(p_token text, p_items jsonb, p_customer_note text, p_client_op_id uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION self_order_sync_payment_request(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_sync_payment_request() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION self_order_sync_payment_request_from_order(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_sync_payment_request_from_order() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION self_order_take_rate_bucket(p_purpose text, p_scope_type text, p_scope_hash text, p_limit integer, p_window_seconds integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.self_order_take_rate_bucket(p_purpose text, p_scope_type text, p_scope_hash text, p_limit integer, p_window_seconds integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION set_branch_kind(p_branch_id bigint, p_kind text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -45481,12 +53587,12 @@ GRANT ALL ON FUNCTION public.set_finance_cash_opening(p_cash_balance numeric, p_
 
 
 --
--- Name: FUNCTION set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[]); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[], p_shift_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[]) TO authenticated;
-GRANT ALL ON FUNCTION public.set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[]) TO service_role;
+REVOKE ALL ON FUNCTION public.set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[], p_shift_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[], p_shift_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.set_inventory_count_assignments(p_branch_id bigint, p_location_id bigint, p_employee_id bigint, p_ingredient_ids bigint[], p_shift_id bigint) TO service_role;
 
 
 --
@@ -45536,12 +53642,21 @@ GRANT ALL ON FUNCTION public.split_order(p_source_order_id bigint, p_item_partia
 
 
 --
+-- Name: FUNCTION start_production_run(p_run_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.start_production_run(p_run_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.start_production_run(p_run_id bigint) TO service_role;
+GRANT ALL ON FUNCTION public.start_production_run(p_run_id bigint) TO authenticated;
+
+
+--
 -- Name: FUNCTION start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric) TO authenticated;
 GRANT ALL ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric) TO service_role;
+GRANT ALL ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric) TO authenticated;
 
 
 --
@@ -45567,6 +53682,15 @@ GRANT ALL ON FUNCTION public.stock_issue_items_compute_waste_tier() TO service_r
 GRANT ALL ON FUNCTION public.stock_issue_items_reason_immutable() TO anon;
 GRANT ALL ON FUNCTION public.stock_issue_items_reason_immutable() TO authenticated;
 GRANT ALL ON FUNCTION public.stock_issue_items_reason_immutable() TO service_role;
+
+
+--
+-- Name: FUNCTION stock_ledger_reconciliation(p_branch_id bigint, p_location_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.stock_ledger_reconciliation(p_branch_id bigint, p_location_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.stock_ledger_reconciliation(p_branch_id bigint, p_location_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.stock_ledger_reconciliation(p_branch_id bigint, p_location_id bigint) TO service_role;
 
 
 --
@@ -45624,12 +53748,12 @@ GRANT ALL ON FUNCTION public.submit_count_round(p_session_id bigint, p_round_no 
 
 
 --
--- Name: FUNCTION submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb, p_shift_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb) TO authenticated;
-GRANT ALL ON FUNCTION public.submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb) TO service_role;
+REVOKE ALL ON FUNCTION public.submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb, p_shift_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb, p_shift_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.submit_inventory_count_slip(p_branch_id bigint, p_location_id bigint, p_lines jsonb, p_shift_id bigint) TO service_role;
 
 
 --
@@ -45893,12 +54017,12 @@ GRANT ALL ON FUNCTION public.update_my_dependents_count(p_count integer) TO serv
 
 
 --
--- Name: FUNCTION update_my_profile(p_full_name text, p_phone text, p_avatar_url text); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION update_my_profile(p_full_name text, p_phone text, p_avatar_url text, p_birth_date date); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.update_my_profile(p_full_name text, p_phone text, p_avatar_url text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.update_my_profile(p_full_name text, p_phone text, p_avatar_url text) TO authenticated;
-GRANT ALL ON FUNCTION public.update_my_profile(p_full_name text, p_phone text, p_avatar_url text) TO service_role;
+REVOKE ALL ON FUNCTION public.update_my_profile(p_full_name text, p_phone text, p_avatar_url text, p_birth_date date) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_my_profile(p_full_name text, p_phone text, p_avatar_url text, p_birth_date date) TO authenticated;
+GRANT ALL ON FUNCTION public.update_my_profile(p_full_name text, p_phone text, p_avatar_url text, p_birth_date date) TO service_role;
 
 
 --
@@ -45965,21 +54089,21 @@ GRANT ALL ON FUNCTION public.upsert_printer_with_routes(p_printer_id bigint, p_b
 
 
 --
--- Name: FUNCTION upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb, p_old_finished_good_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb) TO authenticated;
-GRANT ALL ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb) TO service_role;
+REVOKE ALL ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb, p_old_finished_good_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb, p_old_finished_good_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb, p_old_finished_good_id bigint) TO service_role;
 
 
 --
--- Name: FUNCTION upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb, p_old_menu_item_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb) TO authenticated;
-GRANT ALL ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb) TO service_role;
+REVOKE ALL ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb, p_old_menu_item_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb, p_old_menu_item_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb, p_old_menu_item_id bigint) TO service_role;
 
 
 --
@@ -46040,60 +54164,6 @@ GRANT ALL ON FUNCTION public.weekly_grn_override_report() TO service_role;
 
 REVOKE ALL ON FUNCTION public.weekly_waste_report() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.weekly_waste_report() TO service_role;
-
-
---
--- Name: TABLE _ing_backup_a2fix; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ing_backup_a2fix TO anon;
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ing_backup_a2fix TO authenticated;
-GRANT ALL ON TABLE public._ing_backup_a2fix TO service_role;
-
-
---
--- Name: TABLE _ingcost_backup_a2fix; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ingcost_backup_a2fix TO anon;
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ingcost_backup_a2fix TO authenticated;
-GRANT ALL ON TABLE public._ingcost_backup_a2fix TO service_role;
-
-
---
--- Name: TABLE _ingthr_backup_a2fix; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ingthr_backup_a2fix TO anon;
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._ingthr_backup_a2fix TO authenticated;
-GRANT ALL ON TABLE public._ingthr_backup_a2fix TO service_role;
-
-
---
--- Name: TABLE _iu_backup_a2fix; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._iu_backup_a2fix TO anon;
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._iu_backup_a2fix TO authenticated;
-GRANT ALL ON TABLE public._iu_backup_a2fix TO service_role;
-
-
---
--- Name: TABLE _sl_backup_a2fix; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._sl_backup_a2fix TO anon;
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._sl_backup_a2fix TO authenticated;
-GRANT ALL ON TABLE public._sl_backup_a2fix TO service_role;
-
-
---
--- Name: TABLE _sm_backup_a2fix; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._sm_backup_a2fix TO anon;
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public._sm_backup_a2fix TO authenticated;
-GRANT ALL ON TABLE public._sm_backup_a2fix TO service_role;
 
 
 --
@@ -46224,6 +54294,24 @@ GRANT ALL ON SEQUENCE public.audit_logs_id_seq TO service_role;
 GRANT ALL ON SEQUENCE public.auto_journal_seq TO anon;
 GRANT ALL ON SEQUENCE public.auto_journal_seq TO authenticated;
 GRANT ALL ON SEQUENCE public.auto_journal_seq TO service_role;
+
+
+--
+-- Name: TABLE bank_transaction_expense_matches; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.bank_transaction_expense_matches TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.bank_transaction_expense_matches TO authenticated;
+GRANT ALL ON TABLE public.bank_transaction_expense_matches TO service_role;
+
+
+--
+-- Name: SEQUENCE bank_transaction_expense_matches_id_seq; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON SEQUENCE public.bank_transaction_expense_matches_id_seq TO anon;
+GRANT ALL ON SEQUENCE public.bank_transaction_expense_matches_id_seq TO authenticated;
+GRANT ALL ON SEQUENCE public.bank_transaction_expense_matches_id_seq TO service_role;
 
 
 --
@@ -46900,8 +54988,6 @@ GRANT ALL ON TABLE public.payments TO service_role;
 -- Name: TABLE mv_daily_revenue; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_daily_revenue TO anon;
-GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_daily_revenue TO authenticated;
 GRANT ALL ON TABLE public.mv_daily_revenue TO service_role;
 
 
@@ -46930,13 +55016,6 @@ GRANT ALL ON TABLE public.recipes TO service_role;
 GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_food_cost TO anon;
 GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_food_cost TO authenticated;
 GRANT ALL ON TABLE public.mv_food_cost TO service_role;
-
-
---
--- Name: TABLE mv_grn_price_baseline; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.mv_grn_price_baseline TO service_role;
 
 
 --
@@ -46969,15 +55048,6 @@ GRANT ALL ON TABLE public.mv_inventory_value_ranking TO service_role;
 GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_refresh_log TO anon;
 GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_refresh_log TO authenticated;
 GRANT ALL ON TABLE public.mv_refresh_log TO service_role;
-
-
---
--- Name: TABLE mv_top_items; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_top_items TO anon;
-GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_top_items TO authenticated;
-GRANT ALL ON TABLE public.mv_top_items TO service_role;
 
 
 --
@@ -47406,6 +55476,24 @@ GRANT ALL ON SEQUENCE public.production_recipes_id_seq TO service_role;
 
 
 --
+-- Name: TABLE production_runs; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.production_runs TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.production_runs TO authenticated;
+GRANT ALL ON TABLE public.production_runs TO service_role;
+
+
+--
+-- Name: SEQUENCE production_runs_id_seq; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON SEQUENCE public.production_runs_id_seq TO anon;
+GRANT ALL ON SEQUENCE public.production_runs_id_seq TO authenticated;
+GRANT ALL ON SEQUENCE public.production_runs_id_seq TO service_role;
+
+
+--
 -- Name: TABLE profiles; Type: ACL; Schema: public; Owner: -
 --
 
@@ -47528,6 +55616,31 @@ GRANT ALL ON TABLE public.role_templates TO service_role;
 GRANT ALL ON SEQUENCE public.role_templates_id_seq TO anon;
 GRANT ALL ON SEQUENCE public.role_templates_id_seq TO authenticated;
 GRANT ALL ON SEQUENCE public.role_templates_id_seq TO service_role;
+
+
+--
+-- Name: TABLE self_order_payment_requests; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,MAINTAIN ON TABLE public.self_order_payment_requests TO authenticated;
+GRANT ALL ON TABLE public.self_order_payment_requests TO service_role;
+
+
+--
+-- Name: SEQUENCE self_order_payment_requests_id_seq; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON SEQUENCE public.self_order_payment_requests_id_seq TO anon;
+GRANT ALL ON SEQUENCE public.self_order_payment_requests_id_seq TO authenticated;
+GRANT ALL ON SEQUENCE public.self_order_payment_requests_id_seq TO service_role;
+
+
+--
+-- Name: TABLE self_order_requests; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.self_order_requests TO authenticated;
+GRANT SELECT ON TABLE public.self_order_requests TO service_role;
 
 
 --
@@ -47664,8 +55777,8 @@ GRANT ALL ON SEQUENCE public.stock_levels_id_seq TO service_role;
 -- Name: TABLE stock_movements; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_movements TO anon;
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_movements TO authenticated;
+GRANT SELECT,MAINTAIN ON TABLE public.stock_movements TO anon;
+GRANT SELECT,MAINTAIN ON TABLE public.stock_movements TO authenticated;
 GRANT ALL ON TABLE public.stock_movements TO service_role;
 
 
@@ -48167,4 +56280,4 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES 
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict kTOQ8m6uBrO4Uo3gfil0NTZ9Z1KcRGBJO6T8I4jYKTT4fIDp9yE4ZId1bracxW4
+-- \unrestrict AFMyG6S2T8dnMepEO8qWQaQ7kVhLfNQf8p9RVxu6xncIyOFd1Y0pghQNjWVP4qu

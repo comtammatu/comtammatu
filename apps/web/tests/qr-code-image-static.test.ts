@@ -18,10 +18,6 @@ function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-function readRepo(path: string): string {
-  return readFileSync(join(process.cwd(), "../..", path), "utf8");
-}
-
 test("public QR surfaces use the shared web QR renderer", () => {
   const sharedQr = readWeb("app/components/qr-code-image.tsx");
   const posQr = readWeb(
@@ -495,54 +491,4 @@ test("autofill bank app links keep the exact VietQR payment facts", () => {
     assert.equal(url.searchParams.get("tn"), "MATU ABC123");
     assert.equal(url.searchParams.get("bn"), "HO KINH DOANH COM TAM MA TU");
   }
-});
-
-test("self-order snapshot migration does not read unassigned records", () => {
-  const migration = readRepo(
-    "supabase/migrations/20260708124000_fix_self_order_snapshot_empty_session.sql",
-  );
-
-  assert.match(migration, /v_session_payload jsonb := NULL/);
-  assert.match(migration, /v_order_payload jsonb := NULL/);
-  assert.match(migration, /v_payment_request_payload jsonb := NULL/);
-  assert.match(migration, /'session', v_session_payload/);
-  assert.match(migration, /'order', v_order_payload/);
-  assert.match(migration, /'paymentRequest', v_payment_request_payload/);
-  assert.doesNotMatch(migration, /v_session\\.id IS NULL/);
-  assert.doesNotMatch(migration, /v_order\\.order_number IS NULL/);
-  assert.doesNotMatch(migration, /v_payment_request\\.status IS NULL/);
-});
-
-test("self-order requires an open POS session before customer writes", () => {
-  const migration = readRepo(
-    "supabase/migrations/20260708125500_self_order_require_open_pos_session.sql",
-  );
-  const server = readWeb("lib/self-order/server.ts");
-  const staffActions = readWeb(
-    "app/(protected)/br/[branchId]/pos/self-order-actions.ts",
-  );
-
-  assert.match(migration, /self_order_branch_has_open_pos_session/);
-  assert.match(migration, /FROM public\.pos_sessions ps/);
-  assert.match(migration, /ps\.status = 'open'/);
-  assert.match(migration, /'pos_session_closed'/);
-  assert.match(migration, /self_order_pos_session_closed/);
-  assert.match(
-    migration,
-    /CREATE OR REPLACE FUNCTION public\.self_order_approve_batch/,
-  );
-  assert.match(migration, /v_pos_session_id bigint/);
-  assert.match(migration, /ps\.id = p_pos_session_id/);
-  assert.match(migration, /v_order\.pos_session_id <> v_pos_session_id/);
-  assert.match(
-    migration,
-    /BEFORE INSERT OR UPDATE OF status ON public\.self_order_batches/,
-  );
-  assert.match(
-    migration,
-    /BEFORE INSERT ON public\.self_order_payment_requests/,
-  );
-  assert.match(server, /code: "pos_session_closed"/);
-  assert.match(server, /SELF_ORDER_VI\.posSessionClosed/);
-  assert.match(staffActions, /SELF_ORDER_VI\.staffPosSessionClosed/);
 });

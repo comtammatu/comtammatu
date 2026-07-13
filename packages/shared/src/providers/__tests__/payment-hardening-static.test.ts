@@ -1,22 +1,11 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const repoRoot = new URL("../../../../../", import.meta.url);
 
 function readRepoFile(path: string): string {
-  const candidate = new URL(path, repoRoot);
-  if (existsSync(candidate)) return readFileSync(candidate, "utf8");
-  if (path.startsWith("supabase/migrations/")) {
-    return readFileSync(
-      new URL(
-        path.replace("supabase/migrations/", "supabase/migration-archive/"),
-        repoRoot,
-      ),
-      "utf8",
-    );
-  }
-  return readFileSync(candidate, "utf8");
+  return readFileSync(new URL(path, repoRoot), "utf8");
 }
 
 test("SePay webhook verifies raw-body HMAC and returns SePay success JSON", () => {
@@ -123,21 +112,33 @@ test("SePay webhook prefers full transfer content code over truncated code field
 test("SePay evidence invokes the POS settlement service only after an exact match", () => {
   const route = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
   const migration = readRepoFile(
-    "supabase/migrations/20260711024758_sepay_webhook_order_evidence.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   );
+  const webhookEvents =
+    migration.match(/CREATE TABLE public\.webhook_events \([\s\S]*?\n\);/)?.[0] ??
+    "";
+  const reconcile =
+    migration.match(
+      /CREATE FUNCTION public\.reconcile_sepay_order_evidence\([\s\S]*?\n\$\$;/,
+    )?.[0] ?? "";
 
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS order_id/);
+  assert.notEqual(webhookEvents, "");
+  assert.notEqual(reconcile, "");
+  assert.match(webhookEvents, /\border_id bigint/);
   assert.match(
-    migration,
-    /CREATE OR REPLACE FUNCTION public\.reconcile_sepay_order_evidence/,
+    reconcile,
+    /CREATE FUNCTION public\.reconcile_sepay_order_evidence/,
   );
   assert.match(
-    migration,
+    reconcile,
     /lower\(COALESCE\(payment_code, ''\)\) = lower\(v_payment_code\)/,
   );
-  assert.match(migration, /public\.confirm_sepay_payment\(/);
-  assert.match(migration, /v_confirmation_status IS DISTINCT FROM 'completed'/);
-  assert.doesNotMatch(migration, /FOR v_event IN/);
+  assert.match(reconcile, /public\.confirm_sepay_payment\(/);
+  assert.match(
+    reconcile,
+    /v_confirmation_status IS DISTINCT FROM 'completed'/,
+  );
+  assert.doesNotMatch(reconcile, /FOR v_event IN/);
   assert.doesNotMatch(route, /confirm_sepay_payment/);
   assert.doesNotMatch(route, /issueTaxInvoiceForPaidOrder/);
 });
@@ -332,7 +333,7 @@ test("Printed provisional bills do not include payment QR", () => {
 
 test("SePay webhook retries receipt enqueue on already-completed settlements", () => {
   const migration = readRepoFile(
-    "supabase/migrations/20260703140015_sepay_webhook_receipt_already_completed.sql",
+    "supabase/migration-archive/20260703140015_sepay_webhook_receipt_already_completed.sql",
   );
   const baseline = readRepoFile(
     "supabase/migrations/00000000000000_baseline.sql",

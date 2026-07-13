@@ -22,7 +22,7 @@ test("supplier-return UI copy is retired while GRN rejection copy stays neutral"
 test("supplier-return history, RPCs, and GRN integrity gates remain", () => {
   const baseline = read("supabase/migrations/00000000000000_baseline.sql");
   const integrityMigration = read(
-    "supabase/migrations/20260708130500_inventory_supplier_integrity_gates.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   );
   const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
 
@@ -36,11 +36,11 @@ test("supplier-return history, RPCs, and GRN integrity gates remain", () => {
   assert.match(baseline, /CREATE FUNCTION public\.transition_supplier_return/);
   assert.match(
     integrityMigration,
-    /CREATE UNIQUE INDEX IF NOT EXISTS uq_supplier_returns_active_grn/,
+    /CREATE UNIQUE INDEX uq_supplier_returns_active_grn/,
   );
   assert.match(
     integrityMigration,
-    /CREATE OR REPLACE FUNCTION public\.create_supplier_return_from_grn/,
+    /CREATE FUNCTION public\.create_supplier_return_from_grn/,
   );
   assert.equal(grnActions.match(/has_active_supplier_return/g)?.length, 2);
 });

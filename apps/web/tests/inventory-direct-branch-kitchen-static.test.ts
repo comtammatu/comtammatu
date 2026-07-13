@@ -9,26 +9,40 @@ function readRepo(path: string): string {
   return readFileSync(resolve(repoRoot, path), "utf8");
 }
 
+function extractFunction(source: string, name: string): string {
+  const start = source.indexOf(`CREATE FUNCTION public.${name}`);
+  assert.notEqual(start, -1, `missing ${name}`);
+  const next = source.indexOf("\nCREATE FUNCTION ", start + 1);
+  return source.slice(start, next === -1 ? source.length : next);
+}
+
 const grnLocationMigration = readRepo(
-  "supabase/migrations/20260709031653_grn_direct_branch_kitchen_location.sql",
+  "supabase/migrations/00000000000000_baseline.sql",
 );
 const grnAmendLocationMigration = readRepo(
-  "supabase/migrations/20260709033912_fix_grn_amend_receipt_location.sql",
+  "supabase/migrations/00000000000000_baseline.sql",
 );
 const grnAmendNumericOverflowMigration = readRepo(
-  "supabase/migrations/20260709053036_guard_grn_amend_numeric_overflow.sql",
+  "supabase/migrations/00000000000000_baseline.sql",
 );
 const grnVarianceMigration = readRepo(
-  "supabase/migrations/20260709054044_widen_grn_variance_pct.sql",
+  "supabase/migrations/00000000000000_baseline.sql",
 );
 const grnAmendAuditMigration = readRepo(
-  "supabase/migrations/20260709125300_grn_amend_audit_history.sql",
+  "supabase/migrations/00000000000000_baseline.sql",
 );
 const grnAmendValueMigration = readRepo(
-  "supabase/migrations/20260709140543_fix_grn_cost_only_amend_value.sql",
+  "supabase/migrations/00000000000000_baseline.sql",
+);
+const grnAmendValueRepairMigration = readRepo(
+  "supabase/migration-archive/20260709140543_fix_grn_cost_only_amend_value.sql",
 );
 const grnRecreateMigration = readRepo(
-  "supabase/migrations/20260709125638_grn_recreate_receiving_site.sql",
+  "supabase/migrations/00000000000000_baseline.sql",
+);
+const grnRecreateBody = extractFunction(
+  grnRecreateMigration,
+  "recreate_grn_at_receiving_site",
 );
 const grnActions = readRepo(
   "apps/web/app/(protected)/inventory/grn-actions.ts",
@@ -55,7 +69,7 @@ const productionNewClient = readRepo(
 test("GRN confirmation writes stock into the selected receiving location", () => {
   assert.match(
     grnLocationMigration,
-    /ADD COLUMN IF NOT EXISTS location_id bigint REFERENCES public\.inventory_locations\(id\)/,
+    /CREATE TABLE public\.goods_received_notes \([\s\S]*location_id bigint[\s\S]*\);/,
   );
   assert.match(grnLocationMigration, /v_grn\.location_id IS NOT NULL/);
   assert.match(grnLocationMigration, /il\.id = v_grn\.location_id/);
@@ -147,11 +161,11 @@ test("GRN post-confirm amend guards numeric overflow inside the RPC", () => {
 test("GRN variance percentages do not overflow on large price corrections", () => {
   assert.match(
     grnVarianceMigration,
-    /ALTER COLUMN price_variance_pct TYPE numeric/,
+    /price_variance_pct numeric GENERATED ALWAYS AS/,
   );
   assert.match(
     grnVarianceMigration,
-    /ALTER COLUMN baseline_variance_pct TYPE numeric/,
+    /baseline_variance_pct numeric,/,
   );
   assert.match(
     grnVarianceMigration,
@@ -178,70 +192,76 @@ test("GRN amend revalues current stock on cost-only edits", () => {
     grnAmendValueMigration,
     /IF \(v_delta_base <> 0 OR v_delta_value <> 0\)[\s\S]*\+ v_delta_value[\s\S]*\/ \(v_current_qty \+ v_delta_base\)/,
   );
-  assert.match(grnAmendValueMigration, /WITH missed_value AS \(/);
-  assert.match(grnAmendValueMigration, /delta_base_quantity'\)::numeric > 0/);
-  assert.match(grnAmendValueMigration, /delta_base_quantity'\)::numeric < 0/);
+  assert.match(grnAmendValueRepairMigration, /WITH missed_value AS \(/);
   assert.match(
-    grnAmendValueMigration,
+    grnAmendValueRepairMigration,
+    /delta_base_quantity'\)::numeric > 0/,
+  );
+  assert.match(
+    grnAmendValueRepairMigration,
+    /delta_base_quantity'\)::numeric < 0/,
+  );
+  assert.match(
+    grnAmendValueRepairMigration,
     /REFRESH MATERIALIZED VIEW public\.mv_inventory_stock_current/,
   );
 });
 
 test("GRN receiving-site recreate reverses source stock and creates a replacement GRN", () => {
   assert.match(
-    grnRecreateMigration,
-    /CREATE OR REPLACE FUNCTION public\.recreate_grn_at_receiving_site/,
+    grnRecreateBody,
+    /CREATE FUNCTION public\.recreate_grn_at_receiving_site/,
   );
-  assert.match(grnRecreateMigration, /p_target_branch_id bigint/);
-  assert.match(grnRecreateMigration, /p_target_location_id bigint/);
-  assert.match(grnRecreateMigration, /source_location_missing/);
-  assert.match(grnRecreateMigration, /insufficient_source_stock/);
+  assert.match(grnRecreateBody, /p_target_branch_id bigint/);
+  assert.match(grnRecreateBody, /p_target_location_id bigint/);
+  assert.match(grnRecreateBody, /source_location_missing/);
+  assert.match(grnRecreateBody, /insufficient_source_stock/);
   assert.match(
-    grnRecreateMigration,
+    grnRecreateBody,
     /INSERT INTO public\.stock_levels[\s\S]*ON CONFLICT ON CONSTRAINT stock_levels_ingredient_branch_location_tenant_key/,
   );
   assert.match(
-    grnRecreateMigration,
+    grnRecreateBody,
     /INSERT INTO public\.goods_received_notes[\s\S]*'confirmed'/,
   );
   assert.match(
-    grnRecreateMigration,
+    grnRecreateBody,
     /'grn_amend'[\s\S]*-v_net_base[\s\S]*v_old_location_id/,
   );
   assert.match(
-    grnRecreateMigration,
+    grnRecreateBody,
     /'grn_receipt'[\s\S]*v_net_base[\s\S]*p_target_location_id/,
   );
-  assert.match(grnRecreateMigration, /SET status = 'cancelled'/);
+  assert.match(grnRecreateBody, /SET status = 'cancelled'/);
   assert.match(
-    grnRecreateMigration,
+    grnRecreateBody,
     /'inventory\.grn\.recreated_receiving_site'/,
   );
   assert.doesNotMatch(
-    grnRecreateMigration,
+    grnRecreateBody,
     /DELETE FROM public\.goods_received_notes/,
   );
   assert.doesNotMatch(
-    grnRecreateMigration,
+    grnRecreateBody,
     /INSERT INTO public\.stock_transfers/,
   );
 });
 
 test("GRN receiving-site recreate blocks real PO links but remakes auto PO links", () => {
-  assert.match(grnRecreateMigration, /'inventory\.po\.created_from_grn'/);
-  assert.match(grnRecreateMigration, /v_old_po_auto boolean := false/);
-  assert.match(grnRecreateMigration, /source_po_attached/);
-  assert.match(grnRecreateMigration, /source_po_shared/);
+  assert.match(grnRecreateBody, /'inventory\.po\.created_from_grn'/);
+  assert.match(grnRecreateBody, /v_old_po_auto boolean := false/);
+  assert.match(grnRecreateBody, /source_po_attached/);
+  assert.match(grnRecreateBody, /source_po_shared/);
   assert.match(
-    grnRecreateMigration,
+    grnRecreateBody,
     /INSERT INTO public\.purchase_orders[\s\S]*'received'/,
   );
   assert.match(
-    grnRecreateMigration,
+    grnRecreateBody,
     /UPDATE public\.purchase_orders[\s\S]*SET status = 'cancelled'/,
   );
   assert.match(
-    grnRecreateMigration,
+    grnRecreateBody,
     /UPDATE public\.supplier_invoices[\s\S]*SET grn_id = v_new_grn_id/,
   );
 });

@@ -4,10 +4,13 @@ import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
-const lockMigration =
-  "supabase/migrations/20260709074049_lock_inventory_adjustment_workflow.sql";
-const menuKitchenReplenishmentMigration =
-  "supabase/migrations/20260709162000_menu_limits_kitchen_replenishment.sql";
+const prodBaseline = read("supabase/migrations/00000000000000_baseline.sql");
+const historicalLedgerLockMigration = read(
+  "supabase/migration-archive/20260709074049_lock_inventory_adjustment_workflow.sql",
+);
+const warehouseStockExceptionMigration = read(
+  "supabase/migrations/20260713173142_rewire_menu_limit_stock_exception_to_warehouse.sql",
+);
 
 function read(path: string): string {
   return readFileSync(`${root}${path}`, "utf8");
@@ -21,18 +24,24 @@ function sliceBetween(source: string, startToken: string, endToken: string) {
   return source.slice(start, end);
 }
 
+function readPgDumpObject(source: string, createPrefix: string): string {
+  const start = source.indexOf(createPrefix);
+  assert.notEqual(start, -1, `missing pg_dump object: ${createPrefix}`);
+  const end = source.indexOf("\n\n--\n-- Name:", start + createPrefix.length);
+  assert.notEqual(end, -1, `unterminated pg_dump object: ${createPrefix}`);
+  return source.slice(start, end);
+}
+
 test("exception adjustment writes only through the guarded RPC and not direct ledger insert", () => {
-  const migration = read(lockMigration);
-  const adjustRpc = sliceBetween(
-    migration,
-    "CREATE OR REPLACE FUNCTION public.adjust_stock_exception",
-    "DROP POLICY IF EXISTS stock_movements_insert",
+  const adjustRpc = readPgDumpObject(
+    prodBaseline,
+    "CREATE FUNCTION public.adjust_stock_exception(",
   );
   const action = read("apps/web/app/(protected)/inventory/stock-actions.ts");
 
   assert.match(
     adjustRpc,
-    /CREATE OR REPLACE FUNCTION public\.adjust_stock_exception/,
+    /CREATE FUNCTION public\.adjust_stock_exception/,
   );
   assert.match(adjustRpc, /SECURITY DEFINER/);
   assert.match(adjustRpc, /auth\.uid\(\)/);
@@ -50,52 +59,84 @@ test("exception adjustment writes only through the guarded RPC and not direct le
 });
 
 test("stock_movements browser direct insert is closed while RPC writers remain callable", () => {
-  const migration = read(lockMigration);
-
   assert.match(
-    migration,
+    historicalLedgerLockMigration,
     /DROP POLICY IF EXISTS stock_movements_insert ON public\.stock_movements/,
   );
   assert.match(
-    migration,
+    historicalLedgerLockMigration,
     /REVOKE INSERT, UPDATE, DELETE ON TABLE public\.stock_movements FROM anon, authenticated/,
   );
+  assert.doesNotMatch(
+    prodBaseline,
+    /CREATE POLICY stock_movements_(?:insert|update|delete)\b/,
+  );
   assert.match(
-    migration,
-    /GRANT EXECUTE ON FUNCTION public\.adjust_stock_exception\(bigint, bigint, numeric, text\) TO authenticated/,
+    prodBaseline,
+    /GRANT SELECT,MAINTAIN ON TABLE public\.stock_movements TO authenticated;/,
+  );
+  assert.doesNotMatch(
+    prodBaseline,
+    /GRANT (?:ALL|INSERT|UPDATE|DELETE)[^;]* ON TABLE public\.stock_movements TO authenticated;/,
+  );
+  assert.match(
+    prodBaseline,
+    /GRANT ALL ON FUNCTION public\.adjust_stock_exception\(p_branch_id bigint, p_ingredient_id bigint, p_quantity_change numeric, p_reason text\) TO authenticated;/,
   );
 });
 
-test("menu-limit kitchen replenishment writes recipe adjustments through one RPC", () => {
-  const migration = read(menuKitchenReplenishmentMigration);
+test("menu-limit warehouse replenishment writes recipe adjustments through one compatible RPC", () => {
+  const rpc = sliceBetween(
+    warehouseStockExceptionMigration,
+    "CREATE OR REPLACE FUNCTION public.add_menu_item_kitchen_stock_exception",
+    "REVOKE ALL ON FUNCTION public.add_menu_item_kitchen_stock_exception",
+  );
   const actions = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/actions.ts",
   );
 
   assert.match(
-    migration,
+    rpc,
     /CREATE OR REPLACE FUNCTION public\.add_menu_item_kitchen_stock_exception/,
   );
+  assert.match(rpc, /p_extra_portions integer/);
   assert.match(
-    migration,
+    rpc,
     /p_extra_portions IS NULL OR p_extra_portions NOT IN \(1, 2\)/,
   );
   assert.match(
-    migration,
+    rpc,
     /public\.has_permission\(p_branch_id, 'inventory:write'\)/,
   );
-  assert.match(migration, /loc\.location_kind = 'kitchen'/);
-  assert.match(migration, /public\.inv_to_base_for_tenant/);
-  assert.match(migration, /INSERT INTO public\.stock_movements/);
-  assert.match(migration, /'adjustment'/);
-  assert.doesNotMatch(migration, /UPDATE public\.stock_levels/);
+  assert.match(rpc, /loc\.location_kind = 'warehouse'/);
+  assert.doesNotMatch(rpc, /location_kind = 'kitchen'/);
+  assert.match(rpc, /branch_warehouse_required/);
+  assert.match(rpc, /default_warehouse_location_required/);
+  assert.doesNotMatch(rpc, /branch_kitchen_required|default_kitchen_location_required/);
+  assert.match(rpc, /public\.inv_to_base_for_tenant/);
+  assert.match(rpc, /INSERT INTO public\.stock_movements/);
+  assert.match(rpc, /'adjustment'/);
+  assert.doesNotMatch(rpc, /UPDATE public\.stock_levels/);
 
   assert.match(actions, /\.rpc\(\s*"add_menu_item_kitchen_stock_exception"/);
+  assert.match(actions, /export async function replenishMenuItemWarehouseStock/);
+  assert.doesNotMatch(actions, /replenishMenuItemKitchenStock/);
   assert.doesNotMatch(actions, /\.from\("stock_movements"\)\s*\.insert/s);
+  assert.match(
+    warehouseStockExceptionMigration,
+    /REVOKE ALL ON FUNCTION public\.add_menu_item_kitchen_stock_exception\(bigint, bigint, integer, text\)\s+FROM PUBLIC, anon, authenticated;/,
+  );
+  assert.match(
+    warehouseStockExceptionMigration,
+    /GRANT EXECUTE ON FUNCTION public\.add_menu_item_kitchen_stock_exception\(bigint, bigint, integer, text\)\s+TO authenticated;/,
+  );
 });
 
 test("stocktake remains the only UI path to count_adjustment completion", () => {
-  const migration = read(lockMigration);
+  const completeStocktakeRpc = readPgDumpObject(
+    prodBaseline,
+    "CREATE FUNCTION public.complete_stocktake(",
+  );
   const action = read("apps/web/app/(protected)/inventory/actions.ts");
   const dialog = read(
     "apps/web/app/(protected)/inventory/stock/adjust-stock-dialog.tsx",
@@ -106,13 +147,13 @@ test("stocktake remains the only UI path to count_adjustment completion", () => 
   const copy = read("apps/web/lib/messages/inventory.ts");
 
   assert.match(
-    migration,
-    /CREATE OR REPLACE FUNCTION public\.complete_stocktake/,
+    completeStocktakeRpc,
+    /CREATE FUNCTION public\.complete_stocktake/,
   );
-  assert.match(migration, /counted_quantity IS NULL/);
-  assert.match(migration, /needs_recount = TRUE/);
-  assert.match(migration, /recount_lines_exist/);
-  assert.match(migration, /'count_adjustment'/);
+  assert.match(completeStocktakeRpc, /counted_quantity IS NULL/);
+  assert.match(completeStocktakeRpc, /needs_recount = TRUE/);
+  assert.match(completeStocktakeRpc, /recount_lines_exist/);
+  assert.match(completeStocktakeRpc, /'count_adjustment'/);
 
   assert.match(action, /\.rpc\("complete_stocktake"/);
   assert.doesNotMatch(action, /finalize_stocktake/);

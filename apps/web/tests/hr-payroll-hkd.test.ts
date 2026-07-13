@@ -12,26 +12,66 @@ const payrollMessagesSource = readFileSync(
   join(process.cwd(), "lib/messages/hr.ts"),
   "utf8",
 );
-const annualLeaveMigrationSource = readFileSync(
+const annualLeaveDataHistory = readFileSync(
   join(
     process.cwd(),
     "../../supabase/migration-archive/20260626102342_hr_payroll_annual_leave.sql",
   ),
   "utf8",
 );
-const contractInsuranceMigrationSource = readFileSync(
+const contractInsuranceDataHistory = readFileSync(
   join(
     process.cwd(),
     "../../supabase/migration-archive/20260626144240_hr_contracts_insurance_payroll.sql",
   ),
   "utf8",
 );
-const monthlyAnnualLeaveMigrationSource = readFileSync(
+const baseline = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260708050914_hr_leave_monthly_annual_policy.sql",
+    "../../supabase/migrations/00000000000000_baseline.sql",
   ),
   "utf8",
+);
+
+function pgDumpBlock(source: string, marker: string): string {
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `missing pg_dump block: ${marker}`);
+  const next = source.indexOf("\n\n--\n-- Name:", start + marker.length);
+  return source.slice(start, next === -1 ? source.length : next);
+}
+
+const annualLeaveTable = pgDumpBlock(
+  baseline,
+  "-- Name: annual_leave_entitlements; Type: TABLE;",
+);
+const annualLeaveUniqueConstraint = pgDumpBlock(
+  baseline,
+  "-- Name: annual_leave_entitlements annual_leave_entitlements_employee_year_key; Type: CONSTRAINT;",
+);
+const payrollEntriesTable = pgDumpBlock(
+  baseline,
+  "-- Name: payroll_entries; Type: TABLE;",
+);
+const payrollPeriodsTable = pgDumpBlock(
+  baseline,
+  "-- Name: payroll_periods; Type: TABLE;",
+);
+const upsertPayrollCalculationFunction = pgDumpBlock(
+  baseline,
+  "-- Name: upsert_payroll_calculation(bigint, jsonb); Type: FUNCTION;",
+);
+const approveLeaveRequestFunction = pgDumpBlock(
+  baseline,
+  "-- Name: approve_leave_request(bigint); Type: FUNCTION;",
+);
+const contractsWritePolicy = pgDumpBlock(
+  baseline,
+  "-- Name: employment_contracts contracts_write; Type: POLICY;",
+);
+const contractInsuranceTrigger = pgDumpBlock(
+  baseline,
+  "-- Name: employment_contracts trg_contract_sync_insurance; Type: TRIGGER;",
 );
 
 const payrollActionsCode = payrollActionsSource
@@ -137,57 +177,77 @@ test("HKD payroll: calculate reports employeeCount from the RPC result", () => {
   );
 });
 
-test("HKD payroll migration adds annual leave quota and payroll day snapshots", () => {
-  for (const expected of [
-    "CREATE TABLE public.annual_leave_entitlements",
-    "CONSTRAINT annual_leave_entitlements_employee_year_key UNIQUE",
-    "ADD COLUMN standard_days numeric(5,1)",
-    "ADD COLUMN paid_leave_days numeric(5,1)",
-    "ADD COLUMN unpaid_leave_days numeric(5,1)",
-    "ADD COLUMN payable_days numeric(5,1)",
-    "pg_advisory_xact_lock(v_request.employee_id)",
-    "annual leave quota exceeded",
-    "working_days, paid_leave_days, unpaid_leave_days, payable_days",
-    "paid_leave_days = EXCLUDED.paid_leave_days",
-    "unpaid_leave_days = EXCLUDED.unpaid_leave_days",
-    "payable_days = EXCLUDED.payable_days",
-  ]) {
-    assert.ok(
-      annualLeaveMigrationSource.includes(expected),
-      `expected annual leave migration to include ${expected}`,
+test("HKD payroll baseline retains annual leave and payroll day snapshots", () => {
+  assert.match(
+    annualLeaveTable,
+    /CREATE TABLE public\.annual_leave_entitlements/,
+  );
+  assert.match(
+    annualLeaveUniqueConstraint,
+    /ADD CONSTRAINT annual_leave_entitlements_employee_year_key UNIQUE \(tenant_id, employee_id, year\)/,
+  );
+  assert.match(payrollPeriodsTable, /standard_days numeric\(5,1\)/);
+  for (const column of ["paid_leave_days", "unpaid_leave_days", "payable_days"]) {
+    assert.match(
+      payrollEntriesTable,
+      new RegExp(`${column} numeric\\(5,1\\) DEFAULT 0 NOT NULL`),
     );
   }
+  assert.match(
+    upsertPayrollCalculationFunction,
+    /working_days, paid_leave_days, unpaid_leave_days, payable_days/,
+  );
+  for (const column of ["paid_leave_days", "unpaid_leave_days", "payable_days"]) {
+    assert.match(
+      upsertPayrollCalculationFunction,
+      new RegExp(`${column} = EXCLUDED\\.${column}`),
+    );
+  }
+  assert.match(
+    annualLeaveDataHistory,
+    /UPDATE public\.payroll_entries\s+SET payable_days = LEAST\(working_days, standard_days\)\s+WHERE payable_days = 0;/,
+    "the archived migration must retain the one-time payroll snapshot backfill",
+  );
+  assert.match(
+    annualLeaveDataHistory,
+    /INSERT INTO public\.annual_leave_entitlements \([\s\S]*?SELECT[\s\S]*?FROM public\.employees e/,
+    "the archived migration must retain the one-time entitlement seed",
+  );
 });
 
-test("HKD leave approval migration allows payroll to split unpaid overflow", () => {
+test("HKD leave approval allows payroll to split unpaid overflow", () => {
   assert.match(
-    monthlyAnnualLeaveMigrationSource,
-    /CREATE OR REPLACE FUNCTION public\.approve_leave_request/,
+    approveLeaveRequestFunction,
+    /CREATE FUNCTION public\.approve_leave_request/,
   );
   assert.match(
-    monthlyAnnualLeaveMigrationSource,
+    approveLeaveRequestFunction,
     /pg_advisory_xact_lock\(v_request\.employee_id\)/,
   );
-  assert.match(monthlyAnnualLeaveMigrationSource, /SET status = 'approved'/);
+  assert.match(approveLeaveRequestFunction, /SET status = 'approved'/);
   assert.doesNotMatch(
-    monthlyAnnualLeaveMigrationSource,
+    approveLeaveRequestFunction,
     /annual leave quota exceeded/,
   );
 });
 
-test("Contract insurance migration opens HĐLĐ writes and syncs BHXH cache", () => {
-  for (const expected of [
-    "CREATE POLICY contracts_write",
-    "hr:manage_employee",
-    "UPDATE OF status, gross_salary, insurance_base_salary, start_date, end_date",
-    "latest_active_contract",
-    "insurance_base_salary = latest_active_contract.insurance_base_salary",
-  ]) {
-    assert.ok(
-      contractInsuranceMigrationSource.includes(expected),
-      `expected contract insurance migration to include ${expected}`,
-    );
-  }
+test("HĐLĐ writes stay owner-only and contract changes sync the BHXH cache", () => {
+  assert.match(contractsWritePolicy, /CREATE POLICY contracts_write/);
+  assert.match(contractsWritePolicy, /po\.code = 'owner'::text/);
+  assert.doesNotMatch(contractsWritePolicy, /hr:manage_employee/);
+  assert.match(
+    contractInsuranceTrigger,
+    /AFTER INSERT OR UPDATE OF status, gross_salary, insurance_base_salary, start_date, end_date/,
+  );
+  assert.match(
+    contractInsuranceTrigger,
+    /EXECUTE FUNCTION public\.trg_sync_insurance_on_contract\(\)/,
+  );
+  assert.match(
+    contractInsuranceDataHistory,
+    /WITH latest_active_contract AS \([\s\S]*?UPDATE public\.employees e[\s\S]*?insurance_base_salary = latest_active_contract\.insurance_base_salary/,
+    "the archived migration must retain the one-time active-contract cache backfill",
+  );
 });
 
 // Regression: shared engine math under the HKD model (insuranceBaseSalary=0).

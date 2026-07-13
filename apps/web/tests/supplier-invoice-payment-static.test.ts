@@ -150,7 +150,7 @@ test("baseline keeps supplier payment ledger and invoice status together", () =>
 
 test("supplier payment RPC requires matched GRN evidence", () => {
   const migration = readRoot(
-    "supabase/migrations/20260708130500_inventory_supplier_integrity_gates.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   );
   const actionSource = readWeb(
     "app/(protected)/inventory/supplier-invoice-actions.ts",
@@ -166,11 +166,14 @@ test("supplier payment RPC requires matched GRN evidence", () => {
 
 test("supplier returns are unique per active GRN", () => {
   const migration = readRoot(
-    "supabase/migrations/20260708130500_inventory_supplier_integrity_gates.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   );
 
-  assert.match(migration, /CREATE UNIQUE INDEX IF NOT EXISTS uq_supplier_returns_active_grn/);
-  assert.match(migration, /ON public\.supplier_returns \(tenant_id, grn_id\)/);
+  assert.match(migration, /CREATE UNIQUE INDEX uq_supplier_returns_active_grn/);
+  assert.match(
+    migration,
+    /ON public\.supplier_returns USING btree \(tenant_id, grn_id\)/,
+  );
   assert.match(migration, /status <> 'cancelled'/);
   assert.match(migration, /supplier_return_duplicate_grn/);
 });
@@ -178,7 +181,7 @@ test("supplier returns are unique per active GRN", () => {
 test("supplier invoice matching requires linked GRN evidence", () => {
   const baseline = readRoot("supabase/migrations/00000000000000_baseline.sql");
   const migration = readRoot(
-    "supabase/migrations/20260708062218_supplier_invoice_missing_grn_pending.sql",
+    "supabase/migration-archive/20260708062218_supplier_invoice_missing_grn_pending.sql",
   );
   const mapper = readWeb(
     "app/(protected)/inventory/supplier-invoices/supplier-invoice-row.ts",

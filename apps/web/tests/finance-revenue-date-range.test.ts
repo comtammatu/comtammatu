@@ -190,7 +190,7 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
 
 test("Finance revenue money-collected fields use payment amount", () => {
   const migration = read(
-    "supabase/migrations/20260709050743_finance_revenue_payment_amount_contract.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   );
   const revenueClient = read(
     "apps/web/app/(protected)/finance/revenue/revenue-client.tsx",

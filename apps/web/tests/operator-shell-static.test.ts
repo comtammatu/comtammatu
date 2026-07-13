@@ -7,6 +7,13 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 const exists = (path: string) => existsSync(resolve(repoRoot, path));
 
+function pgDumpBlock(source: string, marker: string): string {
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `missing pg_dump block: ${marker}`);
+  const next = source.indexOf("\n\n--\n-- Name:", start + marker.length);
+  return source.slice(start, next === -1 ? source.length : next);
+}
+
 test("operator routes use a route group without wrapping station apps", () => {
   assert.equal(
     exists("apps/web/app/(protected)/br/[branchId]/layout.tsx"),
@@ -838,8 +845,18 @@ test("employee profile self-service update uses the scoped profile RPC", () => {
     "apps/web/lib/staff-runtime/profile/profile-avatar-upload.tsx",
   );
   const copy = read("apps/web/lib/messages/employee.ts");
-  const migration = read(
-    "supabase/migrations/20260707165303_add_profile_birth_date.sql",
+  const baseline = read("supabase/migrations/00000000000000_baseline.sql");
+  const profilesTable = pgDumpBlock(
+    baseline,
+    "-- Name: profiles; Type: TABLE;",
+  );
+  const updateMyProfileFunction = pgDumpBlock(
+    baseline,
+    "-- Name: update_my_profile(text, text, text, date); Type: FUNCTION;",
+  );
+  const updateMyProfileAcl = pgDumpBlock(
+    baseline,
+    "-- Name: FUNCTION update_my_profile(p_full_name text, p_phone text, p_avatar_url text, p_birth_date date); Type: ACL;",
   );
 
   assert.match(action, /z\.object/);
@@ -878,8 +895,20 @@ test("employee profile self-service update uses the scoped profile RPC", () => {
   assert.match(copy, /title: "Hồ sơ"/);
   assert.doesNotMatch(copy, /Hồ sơ cá nhân, ca hôm nay và công lương/);
   assert.doesNotMatch(copy, /URL ảnh đại diện/);
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS birth_date date/);
-  assert.match(migration, /p_birth_date date DEFAULT NULL::date/);
+  assert.match(profilesTable, /birth_date date/);
+  assert.match(
+    updateMyProfileFunction,
+    /p_birth_date date DEFAULT NULL::date/,
+  );
+  assert.match(
+    updateMyProfileFunction,
+    /birth_date = COALESCE\(p_birth_date, birth_date\)/,
+  );
+  assert.match(updateMyProfileFunction, /WHERE id = auth\.uid\(\)/);
+  assert.match(updateMyProfileAcl, /REVOKE ALL[\s\S]*FROM PUBLIC;/);
+  assert.match(updateMyProfileAcl, /GRANT ALL[\s\S]*TO authenticated;/);
+  assert.match(updateMyProfileAcl, /GRANT ALL[\s\S]*TO service_role;/);
+  assert.doesNotMatch(updateMyProfileAcl, / TO anon;/);
 });
 
 test("manager personal shift does not reload Team approval queues", () => {

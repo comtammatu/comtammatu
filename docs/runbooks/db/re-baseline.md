@@ -1,9 +1,10 @@
 # Runbook — Re-baseline the migration chain from current prod
 
-> **Owner-run, prod-touching (read-only dump).** Agents are SELECT-only on prod
-> and cannot `pg_dump` it; this is an owner action. The goal is a NEW
-> self-contained baseline that squashes the forward chain so a from-empty replay
-> matches current prod exactly.
+> **Owner-approved, prod-touching read-only dump.** The direct `pg_dump` helper
+> is schema-only, ref-allowlisted, and redacts connection details. It never
+> changes production or its migration ledger. The goal is a NEW self-contained
+> baseline that lets a data-less Supabase Preview start from current production
+> schema truth.
 
 ## Why this exists
 
@@ -26,9 +27,9 @@ now-squashed forward chain.
 
 ## Preconditions
 
-- A prod read connection string (owner-held). `pg_dump` is a read; the prod-DB
-  guard does not block `pg_dump` (only `pg_restore`, write `psql`, write MCP).
-- Docker running locally (`db:baseline:local-check` needs it).
+- Explicit owner approval for the guarded production schema dump.
+- A direct production read connection assembled by the allowlisted helper.
+- Budget approval for an on-demand Supabase Preview Branch.
 - A clean git worktree off `main`.
 
 ## Procedure
@@ -41,17 +42,15 @@ now-squashed forward chain.
    pnpm db:baseline:extract -- --schemas=public,private
    ```
 
-   It writes `public.schema.sql` + `private.schema.sql` under
-   `.baseline-artifacts/supabase-live-baseline-<ts>/`. Assemble the baseline —
-   `private` first, function-body checking off, managed default-privileges
-   stripped:
+   Without `--baseline-out`, it writes the per-schema dump files and a redacted
+   manifest under `.baseline-artifacts/`. Assemble and replace the baseline only
+   with the explicit output flag:
 
    ```bash
-   ART=.baseline-artifacts/supabase-live-baseline-<ts>
-   { echo "SET check_function_bodies = false;"; echo;
-     cat "$ART/private.schema.sql"; echo;
-     grep -v "^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin " "$ART/public.schema.sql";
-   } > supabase/migrations/00000000000000_baseline.sql
+   pnpm db:baseline:extract -- \
+     --schemas=public,private \
+     --engine=pg_dump \
+     --baseline-out=supabase/migrations/00000000000000_baseline.sql
    ```
 
    Notes:
@@ -84,15 +83,19 @@ now-squashed forward chain.
    remains active because `pg_dump --schema=public,private` omits extensions,
    storage buckets/policies, realtime publication membership, and cron jobs.
 
-3. **Prove a clean from-empty replay** (full chain now = baseline + only the
-   post-cutoff migrations):
+3. **Prove a clean from-empty replay** on a new data-less Supabase Preview
+   Branch associated with the exact Git branch:
 
    ```bash
-   pnpm db:baseline:local-check
+   supabase branches create <name> \
+     --project-ref iexwsuaqqenyjiskawoj \
+     --git-branch <git-branch>
    ```
 
-   It must exit 0. If a remaining post-cutoff migration still diverges, fix THAT
-   migration (it has not yet reached prod-stable squash) or move the cutoff later.
+   `Supabase Preview` and the fail-closed wrapper check must return literal
+   `success` on the exact head SHA. If a remaining post-cutoff migration still
+   diverges, fix that migration or move the cutoff later. Docker Local is not a
+   substitute for this proof.
 
 4. **Regenerate types** from the rebuilt schema and confirm no drift:
 
@@ -113,7 +116,8 @@ now-squashed forward chain.
 
 ## Acceptance
 
-- `pnpm db:baseline:local-check` exits 0 on a from-empty docker DB.
+- A fresh Supabase Preview Branch provisions from the exact Git SHA and its
+  Preview check returns literal `success`.
 - `pnpm db:types` produces no diff vs committed types.
 - The remaining forward chain is either strictly newer than the dump cutoff, not
   yet represented by prod, or the managed-surfaces fold migration, and the whole

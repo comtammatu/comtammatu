@@ -1,33 +1,18 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { test } from "node:test";
 
 const repoRoot = new URL("../../../../../", import.meta.url);
 
 function readRepoFile(path: string): string {
-  const candidate = new URL(path, repoRoot);
-  if (existsSync(candidate)) return readFileSync(candidate, "utf8");
-  if (path.startsWith("supabase/migrations/")) {
-    return readFileSync(
-      new URL(
-        path.replace("supabase/migrations/", "supabase/migration-archive/"),
-        repoRoot,
-      ),
-      "utf8",
-    );
-  }
-  return readFileSync(candidate, "utf8");
+  return readFileSync(new URL(path, repoRoot), "utf8");
 }
 
 function readForwardMigrations(): Array<{ path: string; source: string }> {
   const dir = new URL("supabase/migrations/", repoRoot);
   return readdirSync(dir)
     .filter((name) => name.endsWith(".sql"))
-    .filter(
-      (name) =>
-        name !== "00000000000000_baseline.sql" &&
-        name !== "20260706084248_realtime_pr5_cron_monitoring.sql",
-    )
+    .filter((name) => name !== "00000000000000_baseline.sql")
     .sort()
     .map((name) => {
       const path = `supabase/migrations/${name}`;

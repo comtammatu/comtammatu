@@ -1130,6 +1130,58 @@ and Preview provisioning requires the unpushed migration layout to reach GitHub.
 No admin surface exists for toggling `tables.self_order_enabled` or printing a
 table QR. It never did. Do not grow one inside this rebuild.
 
+## PR #284 Release Containment (2026-07-13)
+
+Skill plan: repo rules = engineering + skills + database + workflow +
+orchestration; external = Supabase; runtime = guarded production schema dump,
+read-only catalog/ledger inspection, static regression suites, full repo gates,
+and a fresh associated Supabase Preview Branch. Docker Local is not a release
+gate. Production writes remain excluded until a separate owner-gated apply.
+
+T3 agreement: current production schema is the baseline truth for data-less
+Preview environments. Historical migrations represented by that baseline stay
+in `supabase/migration-archive/` and never replay on production. Every desired
+schema delta after the cutoff remains a monotonic forward migration. Direct
+`supabase db push --linked` is forbidden while the production migration ledger
+does not record the baseline/fold versions.
+
+Containment record:
+
+- Cutoff: guarded schema-only dump from production ref
+  `iexwsuaqqenyjiskawoj` at `2026-07-13T14:25:07.781Z`; no table rows or customer
+  data were copied and no production object or ledger row was changed.
+- Baseline inventory: 381 functions, 122 tables, 1,464 columns; assembled
+  `public` + `private` baseline SHA-256
+  `e776b25321ee51729cdfe90b32a9185cfe36e3ab4471a25d3b1c864dfb59b945`.
+- Active chain at containment cutoff: baseline, managed-surface fold,
+  warehouse menu-limit repair, and unsafe two-argument production-run overload
+  retirement.
+- Deleted instead of archived: the unsafe production-order, lot/expiry, and
+  central/office retirement migrations. Self-Order V2 retirement remains
+  archived because its effects are already represented by the production
+  baseline.
+- GitHub Preview wrapper is syntax-ready only. It is not a blocking-live gate
+  until D047 prerequisites and `Deploy to production OFF` are verified on the
+  Supabase dashboard.
+- A fresh Preview costs approximately `$0.01344/hour` (`~$0.32/day`); creation
+  waits for explicit owner cost confirmation.
+- The containment worktree started from `origin/main`; its independent commit
+  must be rebased onto exact PR head `7c8608852acb7f3503cb2e54fe7c71e86e76e1ed`
+  before updating PR #284.
+
+- [x] **C0 — capture and assemble current production schema baseline.**
+- [x] **C1 — separate represented history and delete unsafe cleanup SQL.**
+- [x] **C2 — add forward-only warehouse and production-overload repairs.**
+- [ ] **C3 — commit containment and rebase it onto the exact PR head.**
+- [ ] **C4 — classify PR-head and concurrent-session migrations against the
+      cutoff baseline; retain only unrepresented desired deltas.**
+- [ ] **C5 — run money/ledger/SePay/inventory/auth and full repository gates.**
+- [ ] **C6 — create the associated Preview after cost confirmation; prove fresh
+      replay, schema/RPC/RLS/cron/realtime, generated types, and runtime smoke.**
+- [ ] **C7 — push the reviewed PR head and close CI/review blockers.**
+- [ ] **C8 — prepare a separate production ledger-repair/apply plan.** No
+      production write is included in C0-C7.
+
 ## Active Greenfield Gates
 
 - [ ] **G1 — verify the Greenfield environment.** Confirm the active project ref,

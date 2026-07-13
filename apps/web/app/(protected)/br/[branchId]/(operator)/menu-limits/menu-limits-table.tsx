@@ -52,7 +52,7 @@ import { useRealtimeRefresh } from "@/_hooks/use-realtime-refresh";
 import {
   type MenuLimitRow,
   clearBranchMenuDailyLimit,
-  replenishMenuItemKitchenStock,
+  replenishMenuItemWarehouseStock,
   setBranchMenuDailyLimit,
 } from "./actions";
 import { messages } from "@lib/messages";
@@ -322,16 +322,16 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
     });
   }
 
-  function handleReplenishKitchen(extraPortions: 1 | 2) {
+  function handleReplenishWarehouse(extraPortions: 1 | 2) {
     if (!drawerRow) return;
     const reason = replenishReason.trim();
     if (reason.length < 5) {
-      toast.error(messages.pos.menu.replenishKitchenReasonMin);
+      toast.error(messages.pos.menu.replenishWarehouseReasonMin);
       return;
     }
 
     startTransition(async () => {
-      const result = await replenishMenuItemKitchenStock({
+      const result = await replenishMenuItemWarehouseStock({
         branchId,
         menuItemId: drawerRow.menu_item_id,
         extraPortions,
@@ -339,12 +339,12 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
       });
 
       if (!result.success) {
-        toast.error(result.error ?? messages.pos.menu.replenishKitchenFailed);
+        toast.error(result.error ?? messages.pos.menu.replenishWarehouseFailed);
         return;
       }
 
       toast.success(
-        messages.pos.menu.replenishKitchenSuccess(
+        messages.pos.menu.replenishWarehouseSuccess(
           drawerRow.item_name,
           extraPortions,
         ),
@@ -439,12 +439,12 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                 <DrawerTitle>
                   {drawerMode === "limit"
                     ? drawerRow.item_name
-                    : messages.pos.menu.replenishKitchenTitle}
+                    : messages.pos.menu.replenishWarehouseTitle}
                 </DrawerTitle>
                 <DrawerDescription>
                   {drawerMode === "limit"
                     ? messages.pos.menu.availabilityRuleHint
-                    : `${drawerRow.item_name} · ${messages.pos.menu.replenishKitchenHint}`}
+                    : `${drawerRow.item_name} · ${messages.pos.menu.replenishWarehouseHint}`}
                 </DrawerDescription>
               </DrawerHeader>
               <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pb-2">
@@ -512,14 +512,14 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                       onClick={() => setDrawerMode("replenish")}
                     >
                       <CookingPot />
-                      {messages.pos.menu.replenishKitchenTitle}
+                      {messages.pos.menu.replenishWarehouseTitle}
                     </Button>
                   </>
                 ) : (
                   <div className="flex flex-col gap-3">
                     <Field>
                       <FieldLabel htmlFor="menu-limit-replenish-reason">
-                        {messages.pos.menu.replenishKitchenReasonLabel}
+                        {messages.pos.menu.replenishWarehouseReasonLabel}
                       </FieldLabel>
                       <Textarea
                         id="menu-limit-replenish-reason"
@@ -529,13 +529,13 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                           setReplenishReason(event.target.value)
                         }
                         placeholder={
-                          messages.pos.menu.replenishKitchenPlaceholder
+                          messages.pos.menu.replenishWarehousePlaceholder
                         }
                         disabled={isPending}
                         className="min-h-20 resize-none text-base"
                       />
                       <FieldDescription>
-                        {messages.pos.menu.replenishKitchenReasonHint}
+                        {messages.pos.menu.replenishWarehouseReasonHint}
                       </FieldDescription>
                     </Field>
                     <div className="grid grid-cols-2 gap-2">
@@ -544,7 +544,7 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                         variant="outline"
                         size="touch"
                         disabled={isPending}
-                        onClick={() => handleReplenishKitchen(1)}
+                        onClick={() => handleReplenishWarehouse(1)}
                       >
                         <CookingPot />
                         +1 suất
@@ -554,7 +554,7 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                         variant="outline"
                         size="touch"
                         disabled={isPending}
-                        onClick={() => handleReplenishKitchen(2)}
+                        onClick={() => handleReplenishWarehouse(2)}
                       >
                         <CookingPot />
                         +2 suất

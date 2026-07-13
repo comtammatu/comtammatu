@@ -1,15 +1,12 @@
 # Supabase migrations — baseline-first
 
-`00000000000000_baseline.sql` is the **canonical self-contained install** for a
-fresh environment: a `pg_dump` of the current production `public` + `private`
-schemas. `private` is emitted first so public triggers/policies that reference
-`private.*` resolve, and `check_function_bodies` is disabled at the top so the
-private SQL helpers that read public tables create before those tables exist. It
-replays clean from an empty database — the CI `baseline-replay` job
-(`pnpm db:baseline:local-check`) gates this on every change. The historical
-incremental chains could not replay from empty (squash-vs-history drop ordering
-plus migrations that self-assert production-only state), which is why this single
-squashed baseline exists.
+`00000000000000_baseline.sql` is the **canonical self-contained schema install**
+for a fresh environment: a direct, schema-only `pg_dump` of the current
+production `public` + `private` schemas. `private` is emitted first so public
+triggers and policies that reference `private.*` resolve, and
+`check_function_bodies` is disabled at the top so private SQL helpers that read
+public tables create before those tables exist. Every migration change is proven
+on a fresh Supabase Preview Branch; Docker Local is not a release gate.
 
 ## What's here
 
@@ -17,9 +14,9 @@ squashed baseline exists.
   functions, RLS policies, indexes, grants, materialized views, the auth hook
   (`custom_access_token_hook` + its grant), and the `private` schema helpers.
   Apply first on a fresh env. Self-contained — no separate bootstrap file.
-- `../migration-archive/` — historical incremental migrations retained for history: the
-  pre-baseline chain plus the forward chain squashed into the current baseline.
-  NOT the install path; NOT applied by a fresh `supabase db reset`.
+- `../migration-archive/` — historical incremental migrations represented by
+  the current baseline. NOT the install path and never discovered by Supabase
+  Branching.
 
 ## Managed surfaces (folded into the chain)
 
@@ -45,13 +42,10 @@ single source of truth for managed surfaces.
 
 ## Existing environments
 
-- **Production (`iexwsuaqqenyjiskawoj`) keeps its applied migration history.** It
-  is NOT reset to the baseline; the baseline is for fresh/dev envs only.
-- **Production still needs the 2026-05-30 fixes applied** (under `../migration-archive/`,
-  also in git history) — owner-gated:
-  - `20260602008000_payroll_entries_self_read_paid_only.sql`
-  - `20260602009000_attendance_writes_revoke_direct_insert.sql`
-  - `20260602010000_rls_policy_dedup.sql`
+Production (`iexwsuaqqenyjiskawoj`) keeps its applied migration history and is
+never reset to the baseline. The baseline is only the starting point for a new
+data-less environment. New production changes always use a new monotonic forward
+migration and the owner-gated apply path.
 
 ## Regenerating the baseline (re-baseline)
 
@@ -59,8 +53,8 @@ Full procedure: `docs/runbooks/db/re-baseline.md`. In short — owner dumps
 `public` + `private` from prod over a direct privileged libpq connection (never
 `supabase db dump --linked`, which silently drops RLS-restricted tables), then:
 
-- strip `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin …` (Supabase-managed
-  defaults the migration role cannot set),
-- prepend `SET check_function_bodies = false;` with `private` before `public`,
+- assemble with `--baseline-out`, which strips Supabase-managed default
+  privileges and emits `private` before `public`,
 - `git mv` the squashed forward chain into `supabase/migration-archive/`,
-- prove `pnpm db:baseline:local-check` exits 0 and `pnpm db:types` shows no diff.
+- prove the active chain and seeds on a fresh Supabase Preview Branch, then run
+  `pnpm db:types` against that verified type source.

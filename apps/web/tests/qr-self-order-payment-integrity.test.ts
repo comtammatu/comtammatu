@@ -3,11 +3,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
-const migration = readFileSync(
+const baseline = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260710011125_self_order_payment_intent_integrity.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   ),
   "utf8",
 );
@@ -16,147 +16,159 @@ function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-function functionBody(name: string, nextMarker: string): string {
-  const start = migration.indexOf(`CREATE OR REPLACE FUNCTION public.${name}`);
-  const end = migration.indexOf(nextMarker, start + 1);
-  assert.ok(start >= 0, `${name} must exist`);
-  assert.ok(end > start, `${name} must have a bounded body`);
-  return migration.slice(start, end);
+function baselineObject(marker: string): string {
+  const start = baseline.indexOf(marker);
+  assert.ok(start >= 0, marker + " must exist in the current baseline");
+  const end = baseline.indexOf("\n--\n-- Name:", start + marker.length);
+  assert.ok(end > start, marker + " must have a bounded definition");
+  return baseline.slice(start, end);
 }
 
-const createPayment = functionBody(
-  "self_order_create_payment_request",
-  "DROP TRIGGER IF EXISTS trg_self_order_fill_payment_request_fingerprint",
+function functionBody(name: string): string {
+  return baselineObject("CREATE FUNCTION public." + name + "(");
+}
+
+const paymentRequestTable = baselineObject(
+  "CREATE TABLE public.self_order_payment_requests (",
 );
-const expirePayment = functionBody(
-  "self_order_expire_payment_request",
-  "CREATE OR REPLACE FUNCTION public.self_order_reconcile_expired_payment_requests",
-);
-const appendBatch = functionBody(
-  "self_order_append_active_batch",
-  "CREATE OR REPLACE FUNCTION public.self_order_cancel_pending_payment_and_add",
-);
+const createPayment = functionBody("self_order_create_payment_request");
+const cancelPayment = functionBody("self_order_cancel_payment_request");
 const guestCancel = functionBody(
   "self_order_cancel_pending_payment_and_add",
-  "CREATE OR REPLACE FUNCTION public.self_order_cancel_payment_request",
 );
-const staffCancel = functionBody(
-  "self_order_cancel_payment_request",
-  "CREATE OR REPLACE FUNCTION public.self_order_sync_payment_request",
+const expirePayment = functionBody("self_order_expire_payment_request");
+const paymentInvariants = functionBody(
+  "self_order_enforce_payment_request_invariants",
 );
+const publicPayload = functionBody(
+  "self_order_payment_request_public_payload",
+);
+const submitOrder = functionBody("self_order_submit");
+const syncPayment = functionBody("self_order_sync_payment_request");
+const sepayEvidence = functionBody("reconcile_sepay_order_evidence");
 
-test("one active payment intent covers cash and VietQR with immutable recovery data", () => {
-  for (const column of [
-    "request_fingerprint",
-    "request_fingerprint_version",
-    "payment_code_snapshot",
-    "qr_payload_snapshot",
-    "vietqr_config_snapshot",
-    "expired_at",
-    "cancel_reason",
+test("current baseline owns payment requests by order with immutable recovery evidence", () => {
+  assert.match(paymentRequestTable, /\border_id bigint NOT NULL\b/);
+  assert.doesNotMatch(paymentRequestTable, /\bsession_id\b/);
+  assert.match(
+    paymentRequestTable,
+    /self_order_payment_requests_active_expiry_required/,
+  );
+  assert.match(
+    paymentRequestTable,
+    /self_order_payment_requests_active_vietqr_snapshot_check/,
+  );
+  assert.match(
+    paymentRequestTable,
+    /self_order_payment_requests_terminal_timestamp_check/,
+  );
+  assert.match(
+    baseline,
+    /CREATE UNIQUE INDEX self_order_payment_requests_client_op_id_uidx ON public\.self_order_payment_requests USING btree \(tenant_id, client_op_id\)/,
+  );
+  assert.match(
+    baseline,
+    /CREATE UNIQUE INDEX self_order_payment_requests_one_active_per_order ON public\.self_order_payment_requests USING btree \(tenant_id, order_id\) WHERE \(status = ANY \(ARRAY\['cash_call'::text, 'vietqr_pending'::text\]\)\)/,
+  );
+  assert.match(
+    baseline,
+    /CREATE UNIQUE INDEX self_order_payment_requests_payment_id_key ON public\.self_order_payment_requests USING btree \(tenant_id, payment_id\) WHERE \(payment_id IS NOT NULL\)/,
+  );
+
+  for (const immutableColumn of [
+    "OLD.tenant_id",
+    "OLD.branch_id",
+    "OLD.table_id",
+    "OLD.order_id",
+    "OLD.client_op_id",
+    "OLD.amount_snapshot",
+    "OLD.invoice_payload",
+    "OLD.request_fingerprint",
+    "OLD.payment_code_snapshot",
+    "OLD.qr_payload_snapshot",
+    "OLD.vietqr_config_snapshot",
+    "OLD.expires_at",
   ]) {
-    assert.match(migration, new RegExp(`ADD COLUMN IF NOT EXISTS ${column}`));
+    assert.match(paymentInvariants, new RegExp(immutableColumn.replace(".", "\\.")));
   }
-
   assert.match(
-    migration,
-    /CREATE UNIQUE INDEX IF NOT EXISTS self_order_payment_requests_one_active_per_session[\s\S]*WHERE status IN \('cash_call', 'vietqr_pending'\)/,
+    paymentInvariants,
+    /self_order_completed_request_missing_payment_evidence/,
   );
-  assert.match(
-    migration,
-    /CREATE UNIQUE INDEX IF NOT EXISTS self_order_payment_requests_payment_id_key/,
-  );
-  assert.match(migration, /self_order_active_vietqr_request_incomplete/);
-  assert.match(
-    migration,
-    /OLD\.qr_payload_snapshot IS DISTINCT FROM NEW\.qr_payload_snapshot/,
-  );
-  assert.match(
-    migration,
-    /OLD\.vietqr_config_snapshot IS DISTINCT FROM NEW\.vietqr_config_snapshot/,
-  );
+  assert.match(paymentInvariants, /self_order_invalid_payment_request_transition/);
 });
 
-test("payment creation validates and snapshots VietQR before any payment write", () => {
-  const orderLock = createPayment.indexOf("FROM public.orders o");
-  const orderForUpdate = createPayment.indexOf("FOR UPDATE", orderLock);
-  const advisory = createPayment.indexOf(
+test("payment creation locks one payable order and builds exact VietQR before writes", () => {
+  const tableLock = createPayment.indexOf("pg_advisory_xact_lock(");
+  const orderLookup = createPayment.indexOf(
+    "SELECT count(*)::integer, min(o.id)",
+  );
+  const orderLock = createPayment.indexOf("FOR UPDATE", orderLookup);
+  const orderAdvisory = createPayment.indexOf(
     "pg_try_advisory_xact_lock(v_order.id)",
   );
-  const sessionLock = createPayment.indexOf(
-    "FROM public.self_order_sessions s",
-    advisory,
-  );
-  const sessionForUpdate = createPayment.indexOf("FOR UPDATE", sessionLock);
-  const emvBuild = createPayment.indexOf("public.print_vietqr_emvco(");
+  const qrBuild = createPayment.indexOf("public.print_vietqr_emvco(");
   const paymentInsert = createPayment.indexOf("INSERT INTO public.payments");
 
-  assert.ok(orderLock >= 0 && orderForUpdate > orderLock);
-  assert.ok(advisory > orderForUpdate);
-  assert.ok(sessionLock > advisory && sessionForUpdate > sessionLock);
-  assert.ok(emvBuild > sessionForUpdate && paymentInsert > emvBuild);
-  assert.match(createPayment, /FOR UPDATE NOWAIT/);
+  assert.ok(tableLock >= 0);
+  assert.ok(orderLookup > tableLock && orderLock > orderLookup);
+  assert.ok(orderAdvisory > orderLock);
+  assert.ok(qrBuild > orderAdvisory && paymentInsert > qrBuild);
+  assert.match(createPayment, /v_open_order_count <> 1/);
+  assert.match(createPayment, /self_order_order_ambiguous/);
   assert.match(createPayment, /self_order_order_not_payable/);
-  assert.match(createPayment, /self_order_vietqr_config_missing/);
-  assert.match(createPayment, /self_order_vietqr_config_invalid/);
-  assert.match(createPayment, /request_fingerprint_version/);
+  assert.match(createPayment, /self_order_pending_payment_exists/);
+  assert.match(createPayment, /v_order\.total_amount/);
   assert.match(createPayment, /'payment:v1'/);
+  assert.match(createPayment, /payment_code_snapshot/);
   assert.match(createPayment, /qr_payload_snapshot/);
   assert.match(createPayment, /vietqr_config_snapshot/);
   assert.match(createPayment, /interval '15 minutes'/);
   assert.match(createPayment, /interval '30 minutes'/);
+  assert.doesNotMatch(createPayment, /self_order_sessions/);
 });
 
-test("committed payment operations recover before the active-session gate", () => {
-  const terminalRecovery = createPayment.indexOf(
-    "v_existing.status NOT IN ('cash_call', 'vietqr_pending')",
+test("expiry and cancellation preserve completed money before closing an active request", () => {
+  const expirePaidGuard = expirePayment.indexOf(
+    "COALESCE(v_order.payment_status, 'unpaid') = 'paid'",
   );
-  const activeSessionGate = createPayment.indexOf(
-    "RAISE EXCEPTION 'self_order_session_not_active'",
+  const expireRequest = expirePayment.indexOf("SET status = 'expired'");
+  const expireUnderlyingPayment = expirePayment.indexOf(
+    "SET status = 'failed'",
+  );
+  const cancelPaidGuard = cancelPayment.indexOf(
+    "COALESCE(v_order.payment_status, 'unpaid') = 'paid'",
+  );
+  const cancelRequest = cancelPayment.indexOf("SET status = 'cancelled'");
+  const cancelUnderlyingPayment = cancelPayment.indexOf(
+    "SET status = 'failed'",
   );
 
-  assert.ok(terminalRecovery >= 0);
-  assert.ok(activeSessionGate > terminalRecovery);
-  assert.match(
-    createPayment,
-    /pr\.table_id = v_table\.id[\s\S]*pr\.client_op_id = p_client_op_id/,
-  );
-  assert.match(
-    createPayment,
-    /v_existing\.request_fingerprint IS DISTINCT FROM v_fingerprint/,
-  );
-});
-
-test("expiry and cancellation resolve request before failing a pending payment", () => {
-  const expiryRequest = expirePayment.indexOf("SET status = 'expired'");
-  const expiryPayment = expirePayment.indexOf("SET status = 'failed'");
-  const cancelRequest = staffCancel.indexOf("SET status = 'cancelled'");
-  const cancelPayment = staffCancel.indexOf("SET status = 'failed'");
-
+  assert.ok(expirePaidGuard >= 0 && expireRequest > expirePaidGuard);
+  assert.ok(expireUnderlyingPayment > expireRequest);
+  assert.ok(cancelPaidGuard >= 0 && cancelRequest > cancelPaidGuard);
+  assert.ok(cancelUnderlyingPayment > cancelRequest);
   assert.match(expirePayment, /FOR UPDATE NOWAIT/);
-  assert.ok(expiryRequest >= 0 && expiryPayment > expiryRequest);
-  assert.match(staffCancel, /FOR UPDATE NOWAIT/);
-  assert.ok(cancelRequest >= 0 && cancelPayment > cancelRequest);
-  assert.match(staffCancel, /public\.has_permission\([\s\S]*'pos:use'/);
+  assert.match(cancelPayment, /FOR UPDATE NOWAIT/);
+  assert.match(cancelPayment, /public\.has_permission\([\s\S]*'pos:use'/);
+  assert.match(cancelPayment, /'paymentCompleted'/);
+});
+
+test("adding items to an order is blocked while either payment method is active", () => {
   assert.match(
-    staffCancel,
-    /v_request\.status NOT IN \('cash_call', 'vietqr_pending'\)[\s\S]*'paymentCompleted',[\s\S]*v_request\.status = 'completed'/,
+    submitOrder,
+    /pr\.status IN \('cash_call', 'vietqr_pending'\)/,
   );
+  assert.match(
+    submitOrder,
+    /public\.self_order_active_payment_lock\(v_order\.id\) IS NOT NULL/,
+  );
+  assert.match(submitOrder, /self_order_pending_payment_exists/);
 });
 
-test("add-more is blocked by both active request methods and any live payment", () => {
-  assert.match(appendBatch, /pr\.status IN \('cash_call', 'vietqr_pending'\)/);
-  assert.match(appendBatch, /p\.status IN \('pending', 'completed'\)/);
-  assert.match(appendBatch, /self_order_active_payment_intent/);
-});
-
-test("guest cancellation is fail-closed and staff cancellation is explicit", () => {
+test("guest payment cancellation is fail-closed and staff cancellation is explicit", () => {
   assert.match(guestCancel, /self_order_payment_cancel_staff_required/);
   assert.doesNotMatch(guestCancel, /INSERT INTO|UPDATE public\./);
-  assert.match(
-    migration,
-    /GRANT EXECUTE ON FUNCTION public\.self_order_cancel_payment_request\(bigint, text\)[\s\S]*TO authenticated, service_role/,
-  );
 
   const guest = readWeb("app/q/[token]/self-order-client.tsx");
   const staffActions = readWeb(
@@ -168,6 +180,7 @@ test("guest cancellation is fail-closed and staff cancellation is explicit", () 
   const staffBill = readWeb(
     "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
   );
+
   assert.doesNotMatch(guest, /cancel-pending-payment-and-add/);
   assert.match(staffActions, /self_order_cancel_payment_request/);
   assert.match(staffBill, /staffCancelPaymentTitle/);
@@ -176,32 +189,32 @@ test("guest cancellation is fail-closed and staff cancellation is explicit", () 
   assert.match(staffQueue, /variant: "destructive"/);
 });
 
-test("payment completion sync handles inserts and updates", () => {
+test("payment completion sync handles inserts, updates, and both payment methods", () => {
   assert.match(
-    migration,
-    /CREATE TRIGGER trg_self_order_sync_payment_request_insert[\s\S]*AFTER INSERT ON public\.payments/,
+    baseline,
+    /CREATE TRIGGER trg_self_order_sync_payment_request_insert AFTER INSERT ON public\.payments/,
   );
   assert.match(
-    migration,
-    /CREATE TRIGGER trg_self_order_sync_payment_request_update[\s\S]*AFTER UPDATE OF status ON public\.payments/,
+    baseline,
+    /CREATE TRIGGER trg_self_order_sync_payment_request_update AFTER UPDATE OF status ON public\.payments/,
   );
-  assert.match(
-    migration,
-    /pr\.method = 'cash_call'[\s\S]*NEW\.method = 'cash'/,
-  );
+  assert.match(syncPayment, /NEW\.status = 'completed'/);
+  assert.match(syncPayment, /pr\.method = 'cash_call'[\s\S]*NEW\.method = 'cash'/);
+  assert.match(syncPayment, /pr\.method = 'vietqr'[\s\S]*NEW\.method = 'vietqr'/);
 });
 
-test("snapshot recovery returns the stored QR without invoice PII", () => {
-  assert.match(
-    migration,
-    /ALTER FUNCTION public\.self_order_get_snapshot\(text\) SET SCHEMA private/,
-  );
-  assert.match(migration, /'qrData', pr\.qr_payload_snapshot/);
-  assert.match(migration, /'expiresAt', pr\.expires_at/);
-  const publicPayload = functionBody(
-    "self_order_payment_request_public_payload",
-    "CREATE OR REPLACE FUNCTION public.self_order_create_payment_request",
-  );
+test("public payment payload returns QR recovery facts without invoice PII", () => {
+  for (const key of [
+    "'paymentId'",
+    "'paymentCode'",
+    "'qrData'",
+    "'bankCode'",
+    "'accountNo'",
+    "'accountName'",
+    "'expiresAt'",
+  ]) {
+    assert.match(publicPayload, new RegExp(key));
+  }
   assert.doesNotMatch(publicPayload, /invoice_payload/);
 
   const sepayWebhook = readWeb("app/api/webhooks/sepay/route.ts");
@@ -209,64 +222,42 @@ test("snapshot recovery returns the stored QR without invoice PII", () => {
   assert.doesNotMatch(sepayWebhook, /issueTaxInvoiceForPaidOrder/);
 });
 
-test("Self-Order SePay evidence auto-confirms through the POS settlement service", () => {
-  const evidenceMigration = readFileSync(
-    join(
-      process.cwd(),
-      "../..",
-      "supabase/migrations/20260711024758_sepay_webhook_order_evidence.sql",
-    ),
-    "utf8",
+test("SePay evidence requires exact payment code and exact amount before canonical settlement", () => {
+  const codeMatch = sepayEvidence.indexOf(
+    "lower(COALESCE(payment_code, '')) = lower(v_payment_code)",
+  );
+  const amountMatch = sepayEvidence.indexOf(
+    "v_amount <> v_order.total_amount",
+  );
+  const settlement = sepayEvidence.indexOf(
+    "public.confirm_sepay_payment(",
   );
 
-  assert.match(evidenceMigration, /SELECT public\.confirm_sepay_payment\(/);
-  assert.match(
-    evidenceMigration,
-    /v_confirmation_status IS DISTINCT FROM 'completed'/,
-  );
-  assert.match(evidenceMigration, /payment_id = v_payment_id/);
-  assert.match(
-    evidenceMigration,
-    /CREATE OR REPLACE FUNCTION public\.confirm_vietqr_payment/,
-  );
-  assert.doesNotMatch(evidenceMigration, /issueTaxInvoiceForPaidOrder/);
+  assert.ok(codeMatch >= 0);
+  assert.ok(amountMatch > codeMatch);
+  assert.ok(settlement > amountMatch);
+  assert.match(sepayEvidence, /v_order_count > 1/);
+  assert.match(sepayEvidence, /ambiguous_payment_code/);
+  assert.match(sepayEvidence, /amount_mismatch/);
+  assert.match(sepayEvidence, /IS DISTINCT FROM 'completed'/);
+  assert.match(sepayEvidence, /IS DISTINCT FROM 'already_completed'/);
+  assert.match(sepayEvidence, /payment_id = v_payment_id/);
+  assert.doesNotMatch(sepayEvidence, /confirm_vietqr_payment/);
 });
 
-test("all internal SECURITY DEFINER helpers close default execute grants", () => {
-  for (const signature of [
-    "self_order_fill_payment_request_fingerprint\\(\\)",
-    "self_order_expire_payment_request\\(bigint\\)",
-    "self_order_reconcile_expired_payment_requests\\(bigint, bigint\\)",
-    "self_order_sync_payment_request\\(\\)",
-    "self_order_close_session_from_order\\(\\)",
-  ]) {
-    assert.match(
-      migration,
-      new RegExp(
-        `REVOKE ALL ON FUNCTION public\\.${signature}[\\s\\S]*?FROM PUBLIC, anon, authenticated, service_role`,
-      ),
-    );
-  }
-
-  assert.match(
-    migration,
-    /REVOKE ALL ON FUNCTION private\.self_order_get_snapshot_base\(text\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role/,
-  );
-  assert.match(
-    migration,
-    /REVOKE ALL ON FUNCTION private\.self_order_list_staff_queue_base\(bigint\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role/,
-  );
-});
-
-test("R0C does not redefine payment completion, table release, or KDS behavior", () => {
+test("current baseline has no retired Self-Order V2 session or batch contract", () => {
+  assert.doesNotMatch(baseline, /CREATE TABLE public\.self_order_sessions \(/);
+  assert.doesNotMatch(baseline, /CREATE TABLE public\.self_order_batches \(/);
   assert.doesNotMatch(
-    migration,
-    /CREATE OR REPLACE FUNCTION public\.finalize_paid_order/,
+    baseline,
+    /CREATE FUNCTION public\.self_order_append_active_batch\(/,
   );
   assert.doesNotMatch(
-    migration,
-    /CREATE OR REPLACE FUNCTION public\.complete_payment_and_consume_stock/,
+    baseline,
+    /CREATE FUNCTION public\.self_order_approve_batch\(/,
   );
-  assert.doesNotMatch(migration, /UPDATE public\.kds_tickets/);
-  assert.doesNotMatch(migration, /UPDATE public\.order_items/);
+  assert.doesNotMatch(
+    baseline,
+    /CREATE FUNCTION public\.self_order_submit_batch\(/,
+  );
 });

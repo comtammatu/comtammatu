@@ -14,6 +14,12 @@ const extractTemplateConst = (source: string, name: string) => {
   assert.ok(value, `expected ${name} template body`);
   return value;
 };
+const pgDumpBlock = (source: string, marker: string) => {
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `missing pg_dump block: ${marker}`);
+  const next = source.indexOf("\n\n--\n-- Name:", start + marker.length);
+  return source.slice(start, next === -1 ? source.length : next);
+};
 
 test("HR route ACL keeps staff and payroll owner-only", () => {
   assert.deepEqual(MODULE_ACL.staff.allowedRoles, ["owner"]);
@@ -342,42 +348,38 @@ test("HR imports the shared staff runtime, not the retired employee runtime", ()
 
 test("HR personnel admin RLS keeps HR grants off base-table policies", () => {
   const personnelRls = read(
-    "supabase/migrations/20260708090000_hr_owner_only_personnel_rls.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   );
 
-  assert.doesNotMatch(personnelRls, /CREATE OR REPLACE FUNCTION public\./);
-  assert.match(
-    personnelRls,
-    /DROP FUNCTION IF EXISTS public\.auth_is_current_owner\(\)/,
-  );
-  for (const policy of [
-    "employees_select",
-    "employees_write",
-    "contracts_select",
-    "contracts_write",
-  ]) {
-    assert.match(
-      personnelRls,
-      new RegExp(`DROP POLICY IF EXISTS ${policy} ON public\\.`),
-    );
-    assert.match(
-      personnelRls,
-      new RegExp(
-        `CREATE POLICY ${policy} ON public\\.[\\s\\S]*?po\\.code = 'owner'`,
-      ),
-    );
-  }
-  const policyBlocks =
-    personnelRls.match(
-      /CREATE POLICY (employees|contracts)_(select|write) ON public\.[\s\S]*?;\n/g,
-    ) ?? [];
-  assert.equal(policyBlocks.length, 4);
-  for (const block of policyBlocks) {
-    assert.doesNotMatch(block, /hr:(view|manage)_employee/);
-  }
   assert.doesNotMatch(
     personnelRls,
-    /DROP POLICY IF EXISTS employees_select_self/,
+    /CREATE FUNCTION public\.auth_is_current_owner\(/,
+  );
+  const policyBlocks = [
+    pgDumpBlock(
+      personnelRls,
+      "-- Name: employees employees_select; Type: POLICY;",
+    ),
+    pgDumpBlock(
+      personnelRls,
+      "-- Name: employees employees_write; Type: POLICY;",
+    ),
+    pgDumpBlock(
+      personnelRls,
+      "-- Name: employment_contracts contracts_select; Type: POLICY;",
+    ),
+    pgDumpBlock(
+      personnelRls,
+      "-- Name: employment_contracts contracts_write; Type: POLICY;",
+    ),
+  ];
+  for (const block of policyBlocks) {
+    assert.match(block, /po\.code = 'owner'::text/);
+    assert.doesNotMatch(block, /hr:(view|manage)_employee/);
+  }
+  assert.match(
+    personnelRls,
+    /CREATE POLICY employees_select_self ON public\.employees/,
   );
 });
 

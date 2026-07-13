@@ -9,6 +9,14 @@ function read(path: string): string {
   return readFileSync(`${root}${path}`, "utf8");
 }
 
+function readPgDumpObject(source: string, createPrefix: string): string {
+  const start = source.indexOf(createPrefix);
+  assert.notEqual(start, -1, `missing pg_dump object: ${createPrefix}`);
+  const end = source.indexOf("\n\n--\n-- Name:", start + createPrefix.length);
+  assert.notEqual(end, -1, `unterminated pg_dump object: ${createPrefix}`);
+  return source.slice(start, end);
+}
+
 test("waste form exposes photo upload for DB-enforced photo gates", () => {
   const client = read(
     "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx",
@@ -28,24 +36,33 @@ test("waste form exposes photo upload for DB-enforced photo gates", () => {
 });
 
 test("waste writeoff RPCs target the current stock_issue_items unit contract", () => {
-  const migration = read(
-    "supabase/migrations/20260709131500_fix_waste_writeoff_rpc_unit_drop.sql",
+  const prodBaseline = read(
+    "supabase/migrations/00000000000000_baseline.sql",
   );
+  const createWasteEntryRpc = readPgDumpObject(
+    prodBaseline,
+    "CREATE FUNCTION public.create_waste_entry(",
+  );
+  const createExpiryWriteoffRpc = readPgDumpObject(
+    prodBaseline,
+    "CREATE FUNCTION public.create_expiry_writeoff(",
+  );
+  const wasteWriteoffRpcs = `${createWasteEntryRpc}\n${createExpiryWriteoffRpc}`;
   const action = read("apps/web/app/(protected)/inventory/waste-actions.ts");
   const client = read(
     "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx",
   );
 
-  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.create_waste_entry/);
+  assert.match(createWasteEntryRpc, /CREATE FUNCTION public\.create_waste_entry/);
   assert.match(
-    migration,
-    /CREATE OR REPLACE FUNCTION public\.create_expiry_writeoff/,
+    createExpiryWriteoffRpc,
+    /CREATE FUNCTION public\.create_expiry_writeoff/,
   );
   assert.doesNotMatch(
-    migration,
+    wasteWriteoffRpcs,
     /INSERT INTO public\.stock_issue_items \([^;]*\bunit\b/s,
   );
-  assert.match(migration, /entry_unit_required/);
+  assert.match(wasteWriteoffRpcs, /entry_unit_required/);
   assert.match(action, /item\.entry_unit_id == null/);
   assert.match(client, /if \(!issueUnit\)/);
 });

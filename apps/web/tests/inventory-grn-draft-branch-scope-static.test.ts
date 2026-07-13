@@ -36,11 +36,14 @@ const grnSupplierPicker = readRepo(
 const grnCreateController = readRepo(
   "apps/web/lib/inventory/use-grn-create-controller.ts",
 );
-const migration = readRepo(
-  "supabase/migrations/20260708111916_fix_grn_draft_branch_scope.sql",
+const prodBaseline = readRepo(
+  "supabase/migrations/00000000000000_baseline.sql",
 );
-const poDraftMigration = readRepo(
-  "supabase/migrations/20260708130514_separate_free_and_po_grn_drafts.sql",
+const historicalBranchScopeRepair = readRepo(
+  "supabase/migration-archive/20260708111916_fix_grn_draft_branch_scope.sql",
+);
+const historicalFreeAndPoDraftRepair = readRepo(
+  "supabase/migration-archive/20260708130514_separate_free_and_po_grn_drafts.sql",
 );
 
 test("GRN supplier drafts are looked up in the selected receiving branch", () => {
@@ -66,22 +69,29 @@ test("GRN supplier drafts are looked up in the selected receiving branch", () =>
 
 test("GRN supplier draft uniqueness includes the receiving branch", () => {
   assert.match(
-    migration,
+    historicalBranchScopeRepair,
     /DROP INDEX IF EXISTS public\.uq_grn_active_draft_per_user_supplier;/,
   );
   assert.match(
-    migration,
+    historicalBranchScopeRepair,
     /DROP INDEX IF EXISTS public\.uq_grn_active_draft_per_user_supplier_branch;/,
   );
   assert.match(
-    migration,
-    /CREATE UNIQUE INDEX uq_grn_active_draft_per_user_supplier_branch/,
+    prodBaseline,
+    /CREATE UNIQUE INDEX uq_grn_active_free_draft_per_user_supplier_branch/,
   );
   assert.match(
-    migration,
-    /ON public\.goods_received_notes \(tenant_id, created_by, supplier_id, branch_id\)/,
+    prodBaseline,
+    /ON public\.goods_received_notes USING btree \(tenant_id, created_by, supplier_id, branch_id\)/,
   );
-  assert.match(migration, /WHERE status = 'draft' AND created_by IS NOT NULL;/);
+  assert.match(
+    prodBaseline,
+    /WHERE \(\(status = 'draft'::text\) AND \(created_by IS NOT NULL\) AND \(po_id IS NULL\)\);/,
+  );
+  assert.doesNotMatch(
+    prodBaseline,
+    /CREATE UNIQUE INDEX uq_grn_active_draft_per_user_supplier(?:_branch)?\b/,
+  );
 
   const createStart = grnActions.indexOf("export const createGrnDraft");
   assert.ok(createStart >= 0, "createGrnDraft not found");
@@ -98,32 +108,32 @@ test("GRN supplier draft uniqueness includes the receiving branch", () => {
 
 test("GRN free drafts and PO-linked drafts do not share the same unique slot", () => {
   assert.match(
-    poDraftMigration,
+    historicalFreeAndPoDraftRepair,
     /DROP INDEX IF EXISTS public\.uq_grn_active_draft_per_user_supplier_branch;/,
   );
   assert.match(
-    poDraftMigration,
+    prodBaseline,
     /CREATE UNIQUE INDEX uq_grn_active_free_draft_per_user_supplier_branch/,
   );
   assert.match(
-    poDraftMigration,
-    /ON public\.goods_received_notes \(tenant_id, created_by, supplier_id, branch_id\)/,
+    prodBaseline,
+    /ON public\.goods_received_notes USING btree \(tenant_id, created_by, supplier_id, branch_id\)/,
   );
   assert.match(
-    poDraftMigration,
-    /WHERE status = 'draft' AND created_by IS NOT NULL AND po_id IS NULL;/,
+    prodBaseline,
+    /WHERE \(\(status = 'draft'::text\) AND \(created_by IS NOT NULL\) AND \(po_id IS NULL\)\);/,
   );
   assert.match(
-    poDraftMigration,
+    prodBaseline,
     /CREATE UNIQUE INDEX uq_grn_active_po_draft_per_user_po/,
   );
   assert.match(
-    poDraftMigration,
-    /ON public\.goods_received_notes \(tenant_id, created_by, po_id\)/,
+    prodBaseline,
+    /ON public\.goods_received_notes USING btree \(tenant_id, created_by, po_id\)/,
   );
   assert.match(
-    poDraftMigration,
-    /WHERE status = 'draft' AND created_by IS NOT NULL AND po_id IS NOT NULL;/,
+    prodBaseline,
+    /WHERE \(\(status = 'draft'::text\) AND \(created_by IS NOT NULL\) AND \(po_id IS NOT NULL\)\);/,
   );
   assert.match(
     grnListClient,

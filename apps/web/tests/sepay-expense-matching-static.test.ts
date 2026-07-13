@@ -8,13 +8,13 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
 const migration = read(
-  "supabase/migrations/20260708055851_bank_transaction_expense_matches.sql",
+  "supabase/migrations/00000000000000_baseline.sql",
 );
 const manyToManyMigration = read(
-  "supabase/migrations/20260709050752_allow_expense_multiple_bank_transactions.sql",
+  "supabase/migrations/00000000000000_baseline.sql",
 );
 const serviceMatchMigration = read(
-  "supabase/migrations/20260709075048_sepay_service_expense_match.sql",
+  "supabase/migrations/00000000000000_baseline.sql",
 );
 const sepayWebhookRoute = read("apps/web/app/api/webhooks/sepay/route.ts");
 const actions = read("apps/web/app/(protected)/finance/expense-actions.ts");
@@ -32,14 +32,10 @@ test("SePay expense matching is a many-to-many relation", () => {
     /CREATE TABLE public\.bank_transaction_expense_matches/,
   );
   assert.match(migration, /UNIQUE \(tenant_id, webhook_event_id, expense_id\)/);
-  assert.match(
-    manyToManyMigration,
-    /DROP CONSTRAINT IF EXISTS bank_transaction_expense_matches_expense_key/,
-  );
   assert.doesNotMatch(manyToManyMigration, /expense_already_matched/);
   assert.match(
     manyToManyMigration,
-    /CREATE OR REPLACE FUNCTION public\.match_sepay_transaction_expenses/,
+    /CREATE FUNCTION public\.match_sepay_transaction_expenses/,
   );
   assert.match(serviceMatchMigration, /auth\.role\(\) = 'service_role'/);
   assert.match(
@@ -53,7 +49,7 @@ test("SePay expense matching is a many-to-many relation", () => {
   );
   assert.match(
     serviceMatchMigration,
-    /CREATE OR REPLACE FUNCTION public\.record_sepay_cash_deposit_as_system/,
+    /CREATE FUNCTION public\.record_sepay_cash_deposit_as_system/,
   );
   assert.match(serviceMatchMigration, /cash_deposit_amount_invalid/);
 });

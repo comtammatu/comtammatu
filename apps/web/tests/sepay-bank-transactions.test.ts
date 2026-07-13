@@ -568,7 +568,7 @@ test("SePay unmatched money-in classifier explains why no order is attached", ()
 
 test("SePay money-in manual link stays guarded by RPC", () => {
   const migration = read(
-    "supabase/migrations/20260709064834_link_sepay_transaction_to_payment.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   );
   const action = read(
     "apps/web/app/(protected)/finance/bank-webhook-review-actions.ts",
@@ -579,7 +579,7 @@ test("SePay money-in manual link stays guarded by RPC", () => {
 
   assert.match(
     migration,
-    /CREATE OR REPLACE FUNCTION public\.link_sepay_transaction_to_payment/,
+    /CREATE FUNCTION public\.link_sepay_transaction_to_payment/,
   );
   assert.match(migration, /SECURITY DEFINER/);
   assert.match(migration, /provider = 'sepay'/);

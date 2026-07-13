@@ -19,25 +19,17 @@ const recipeActionSource = readRepo(
   "apps/web/app/(protected)/inventory/recipe-actions.ts",
 );
 const recipeUpsertSql = readRepo(
-  "supabase/migrations/20260708112544_allow_inventory_recipe_upsert.sql",
+  "supabase/migrations/00000000000000_baseline.sql",
 );
 const shelfLifeExpandMigration =
   "20260710193275_expand_ingredient_catalog_without_shelf_life.sql";
-const shelfLifeContractMigration =
-  "20260710193300_retire_lot_expiry_columns.sql";
 const expiryAlertRetirementMigration =
   "20260713061000_retire_inventory_expiry_alert_contract.sql";
 const shelfLifeExpandSql = readRepo(
   `supabase/migrations/${shelfLifeExpandMigration}`,
 );
-const shelfLifeContractSql = readRepo(
-  `supabase/migrations/${shelfLifeContractMigration}`,
-);
 const expiryAlertRetirementSql = readRepo(
   `supabase/migrations/${expiryAlertRetirementMigration}`,
-);
-const productionOrderRetirementSql = readRepo(
-  "supabase/migrations/20260710193200_retire_production_orders.sql",
 );
 
 test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows", () => {
@@ -94,9 +86,8 @@ test("ingredient catalog actions do not retain the retired shelf-life field", ()
   );
 });
 
-test("ingredient shelf-life retirement uses an ordered expand-contract cutover", () => {
-  assert.ok(shelfLifeExpandMigration < shelfLifeContractMigration);
-  assert.ok(shelfLifeContractMigration < expiryAlertRetirementMigration);
+test("ingredient shelf-life API cutover is additive and fail-closed", () => {
+  assert.ok(shelfLifeExpandMigration < expiryAlertRetirementMigration);
   assert.match(shelfLifeExpandSql, /LANGUAGE plpgsql[\s\S]*SECURITY INVOKER/);
   assert.match(
     shelfLifeExpandSql,
@@ -119,18 +110,6 @@ test("ingredient shelf-life retirement uses an ordered expand-contract cutover",
     /GRANT EXECUTE ON FUNCTION public\.upsert_ingredient_catalog\([\s\S]*TO authenticated, service_role;/,
   );
 
-  const createElevenArg = shelfLifeContractSql.indexOf(
-    "CREATE OR REPLACE FUNCTION public.upsert_ingredient_catalog",
-  );
-  const dropTwelveArg = shelfLifeContractSql.indexOf(
-    "DROP FUNCTION public.upsert_ingredient_catalog(bigint, text, text, bigint, numeric, text, text, numeric, numeric, numeric, integer, jsonb)",
-  );
-  assert.ok(createElevenArg >= 0);
-  assert.ok(dropTwelveArg > createElevenArg);
-  assert.match(
-    shelfLifeContractSql,
-    /WHERE shelf_life_days IS NOT NULL[\s\S]*ALTER TABLE public\.ingredients DROP COLUMN IF EXISTS shelf_life_days;/,
-  );
   assert.match(
     expiryAlertRetirementSql,
     /DROP FUNCTION public\.scan_inventory_alerts\(\);[\s\S]*CREATE FUNCTION public\.scan_inventory_alerts\(\)\s+RETURNS TABLE\(low_stock_count bigint\)/,
@@ -141,47 +120,6 @@ test("ingredient shelf-life retirement uses an ordered expand-contract cutover",
   );
   assert.doesNotMatch(expiryAlertRetirementSql, /expiry_count/);
   assert.doesNotMatch(expiryAlertRetirementSql, /expiry_soon/);
-});
-
-test("production-order retirement fails closed around live rows and DDL locks", () => {
-  assert.match(productionOrderRetirementSql, /SET LOCAL lock_timeout = '5s'/);
-  assert.match(
-    productionOrderRetirementSql,
-    /SET LOCAL statement_timeout = '60s'/,
-  );
-  assert.match(
-    productionOrderRetirementSql,
-    /production_order_retirement_blocked_nonempty/,
-  );
-  assert.match(
-    productionOrderRetirementSql,
-    /FROM public\.production_orders[\s\S]*FROM public\.production_order_items/,
-  );
-  assert.doesNotMatch(productionOrderRetirementSql, /\bCASCADE\b/i);
-  const dependentTriggerDrop = productionOrderRetirementSql.indexOf(
-    "DROP TRIGGER IF EXISTS trg_production_orders_central_kitchen_only",
-  );
-  const triggerFunctionDrop = productionOrderRetirementSql.indexOf(
-    "DROP FUNCTION IF EXISTS public.ensure_production_order_central_kitchen()",
-  );
-  assert.ok(
-    dependentTriggerDrop >= 0 && dependentTriggerDrop < triggerFunctionDrop,
-    "Dependent trigger must be removed before its trigger function",
-  );
-  const publicationCleanup = productionOrderRetirementSql.indexOf(
-    "ALTER PUBLICATION supabase_realtime DROP TABLE",
-  );
-  const firstTableDrop = productionOrderRetirementSql.indexOf(
-    "DROP TABLE IF EXISTS public.production_order_items",
-  );
-  assert.ok(
-    publicationCleanup >= 0 && publicationCleanup < firstTableDrop,
-    "Realtime publication membership must be removed before table DDL",
-  );
-  assert.match(
-    productionOrderRetirementSql,
-    /DROP TABLE IF EXISTS public\.production_order_items;[\s\S]*DROP TABLE IF EXISTS public\.production_orders;/,
-  );
 });
 
 test("recipe line upsert accepts inventory catalog permissions", () => {
@@ -199,6 +137,10 @@ test("recipe line upsert accepts inventory catalog permissions", () => {
   );
   assert.match(
     recipeUpsertSql,
-    /GRANT EXECUTE ON FUNCTION public\.upsert_recipe_lines\(bigint, jsonb, bigint\) TO authenticated, service_role;/,
+    /GRANT ALL ON FUNCTION public\.upsert_recipe_lines\(p_menu_item_id bigint, p_lines jsonb, p_old_menu_item_id bigint\) TO authenticated;/,
+  );
+  assert.match(
+    recipeUpsertSql,
+    /GRANT ALL ON FUNCTION public\.upsert_recipe_lines\(p_menu_item_id bigint, p_lines jsonb, p_old_menu_item_id bigint\) TO service_role;/,
   );
 });

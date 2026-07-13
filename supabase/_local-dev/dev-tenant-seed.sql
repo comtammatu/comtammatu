@@ -100,6 +100,7 @@ CROSS JOIN (VALUES
   ('chef',              'Bếp',                   'Chef'),
   ('kitchen_helper',    'Phụ bếp',               'Kitchen Helper'),
   ('grill_counter',     'Quầy nướng',            'Grill Counter'),
+  ('guard',             'Bảo vệ',                'Guard'),
   ('cleaner',           'Tạp vụ',                'Cleaner'),
   ('cashier',           'Thu ngân (kiêm phục vụ)','Cashier / Service')
 ) AS v(code, label_vi, label_en)

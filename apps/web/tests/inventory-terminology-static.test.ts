@@ -81,7 +81,7 @@ test("operator-facing inventory copy does not reintroduce branch abbreviations",
   assert.match(dictionary, /branchKitchen: \{ short: "Bếp", long: "Bếp chi nhánh" \}/);
 
   const migration = readWorkspaceFile(
-    "../../supabase/migrations/20260710101500_normalize_inventory_location_display_names.sql",
+    "../../supabase/migration-archive/20260710101500_normalize_inventory_location_display_names.sql",
   );
   assert.match(migration, /SET name = 'Kho chi nhánh'/);
   assert.match(migration, /SET name = 'Bếp chi nhánh'/);

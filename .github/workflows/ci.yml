@@ -9,6 +9,10 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  checks: read
+  contents: read
+
 jobs:
   gates:
     runs-on: ubuntu-latest
@@ -52,16 +56,12 @@ jobs:
 
       - run: pnpm build
 
-  # PR-only path filter for the two docker jobs below (each stands up Supabase
-  # Local — the slow part of CI). Skip them when the diff can't affect what they
-  # cover. On push to main both always run, so a PR that skipped via shared code
-  # the filter couldn't see is still caught at merge.
+  # PR-only path filter for the fail-closed Supabase Preview gate.
   detect:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     outputs:
       db: ${{ steps.filter.outputs.db }}
-      code: ${{ steps.filter.outputs.code }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -70,74 +70,93 @@ jobs:
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
-          FILES=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          FILES=$(git diff --no-renames --name-only "origin/$BASE_REF...HEAD")
           echo "changed files:"; echo "$FILES"
-          db=false; code=false
+          db=false
           if echo "$FILES" | grep -qE '^supabase/'; then db=true; fi
-          if echo "$FILES" | grep -qE '^(apps/|packages/|supabase/|package\.json|pnpm-lock\.yaml|turbo\.json)'; then code=true; fi
           echo "db=$db" >> "$GITHUB_OUTPUT"
-          echo "code=$code" >> "$GITHUB_OUTPUT"
 
-  # Separate job (does not block the fast gates): replays the self-contained
-  # baseline (public + private) on a from-empty Supabase Local (docker) so a
-  # fresh-env regression — e.g. the baseline referencing a private.* object it
-  # never creates — fails CI. The forward chain is squashed into this baseline
-  # (see the re-baseline runbook).
-  baseline-replay:
+  supabase-preview-required:
     needs: detect
-    if: >-
-      always() &&
-      (github.event_name == 'push' || needs.detect.outputs.db == 'true')
+    if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm db:baseline:local-check -- --api-port=55441 --db-port=55442 --shadow-port=55440
-
-  # Separate job (does not block the fast gates): stands up a from-empty Supabase
-  # Local with the self-contained baseline + dev/QA seeds, starts the app, and runs
-  # the Playwright POS->payment->KDS smoke. This is the first automated end-to-end
-  # run of the order/payment hot path against a real (local) database + RPCs.
-  e2e-smoke:
-    needs: detect
-    if: >-
-      always() &&
-      (github.event_name == 'push' || needs.detect.outputs.code == 'true')
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      CI: "true"
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: node scripts/supabase-e2e-bringup.mjs
-      - run: pnpm --filter @comtammatu/web exec playwright install --with-deps chromium
-      # Production build so the heavy POS route is pre-compiled; `next dev`
-      # compiles it on-demand, which blows the smoke's timeout. The bring-up
-      # already wrote .env.local pointing at the local stack, so the build inlines
-      # the right NEXT_PUBLIC_SUPABASE_URL and `next start` serves against it.
-      - run: pnpm --filter @comtammatu/web build
-      # Scoped to the POS->payment->KDS core (payment-cash) — the deterministic
-      # hot-path smoke. The broader suite (guides/visual/inventory RBAC/realtime
-      # KDS) needs more seed/setup and is out of scope for a fast CI gate.
-      - run: pnpm --filter @comtammatu/web run test:e2e:smoke
+      - name: Require literal Supabase Preview success for database changes
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          E2E_WEB_COMMAND: pnpm start
-      - if: failure()
-        uses: actions/upload-artifact@v7
+          DATABASE_CHANGED: ${{ needs.detect.outputs.db }}
+          DETECT_RESULT: ${{ needs.detect.result }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SUPABASE_APP_ID: "330661"
+          SUPABASE_PROJECT_REF: iexwsuaqqenyjiskawoj
         with:
-          name: e2e-smoke-results
-          path: apps/web/test-results
-          retention-days: 3
-          if-no-files-found: ignore
+          retries: 3
+          script: |
+            if (process.env.DETECT_RESULT !== "success") {
+              core.setFailed(`detect job ended with ${process.env.DETECT_RESULT}`);
+              return;
+            }
+
+            if (process.env.DATABASE_CHANGED !== "true") {
+              core.info("No supabase/** changes; Preview gate is not required.");
+              return;
+            }
+
+            const deadline = Date.now() + 10 * 60 * 1000;
+            while (Date.now() < deadline) {
+              const { data } = await github.rest.checks.listForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: process.env.HEAD_SHA,
+                app_id: Number(process.env.SUPABASE_APP_ID),
+                filter: "latest",
+                per_page: 100,
+              });
+              const preview = data.check_runs
+                .filter((run) => {
+                  let detailsUrl;
+                  try {
+                    detailsUrl = new URL(run.details_url ?? "");
+                  } catch {
+                    return false;
+                  }
+                  const matchingPullRequest = run.pull_requests?.some(
+                    (pullRequest) =>
+                      pullRequest.number === Number(process.env.PR_NUMBER) &&
+                      pullRequest.head?.ref === process.env.HEAD_REF &&
+                      pullRequest.head?.sha === process.env.HEAD_SHA,
+                  );
+                  return (
+                    run.name === "Supabase Preview" &&
+                    run.app?.id === Number(process.env.SUPABASE_APP_ID) &&
+                    run.app?.slug === "supabase" &&
+                    run.head_sha === process.env.HEAD_SHA &&
+                    matchingPullRequest &&
+                    detailsUrl.hostname === "supabase.com" &&
+                    detailsUrl.pathname.startsWith(
+                      `/dashboard/project/${process.env.SUPABASE_PROJECT_REF}/branches`,
+                    )
+                  );
+                })
+                .sort((left, right) => right.id - left.id)[0];
+
+              if (preview?.status === "completed") {
+                if (preview.conclusion === "success") {
+                  core.info(`Supabase Preview succeeded on ${process.env.HEAD_SHA}.`);
+                  return;
+                }
+                core.setFailed(
+                  `Supabase Preview concluded ${preview.conclusion ?? "without a conclusion"} on ${process.env.HEAD_SHA}.`,
+                );
+                return;
+              }
+
+              await new Promise((resolve) => setTimeout(resolve, 15_000));
+            }
+
+            core.setFailed(
+              `Supabase Preview did not complete successfully on ${process.env.HEAD_SHA} within 10 minutes.`,
+            );

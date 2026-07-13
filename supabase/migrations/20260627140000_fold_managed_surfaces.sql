@@ -70,7 +70,7 @@ DECLARE
   v_tables text[] := ARRAY[
     'branch_menu_item_daily_limits', 'kds_tickets', 'notifications',
     'order_status_history', 'orders', 'payments', 'pos_sessions',
-    'print_jobs', 'tables'
+    'print_jobs', 'tables', 'webhook_events'
   ];
 BEGIN
   FOREACH v_table IN ARRAY v_tables LOOP
@@ -85,14 +85,32 @@ BEGIN
   END LOOP;
 END$$;
 
+DROP POLICY IF EXISTS "branch_ops_receive" ON realtime.messages;
+CREATE POLICY "branch_ops_receive" ON realtime.messages
+  FOR SELECT TO authenticated
+  USING (
+    realtime.topic() LIKE 'branch:%:ops'
+    AND public.can_read_branch_ops(
+      NULLIF(split_part(realtime.topic(), ':', 2), '')::bigint
+    )
+  );
+
 -- ── Section E: cron jobs (pg_cron; cron.schedule upserts by jobname) ──
+SELECT cron.unschedule('refresh_mv_grn_price_baseline')
+WHERE EXISTS (
+  SELECT 1 FROM cron.job WHERE jobname = 'refresh_mv_grn_price_baseline'
+);
+SELECT cron.unschedule('refresh-finance-views-daily')
+WHERE EXISTS (
+  SELECT 1 FROM cron.job WHERE jobname = 'refresh-finance-views-daily'
+);
+
 SELECT cron.schedule('auto_close_periods',                 '0 19 * * *',  'SELECT public.auto_close_periods();');
+SELECT cron.schedule('check_cron_jobs_health_job',         '*/30 * * * *', 'SELECT public.check_cron_jobs_health();');
 SELECT cron.schedule('cleanup-abandoned-payments',         '0 * * * *',   'SELECT public.cleanup_abandoned_payments()');
 SELECT cron.schedule('compute_branch_daily_waste_caps',    '30 17 * * *', 'SELECT public.compute_branch_daily_waste_caps();');
 SELECT cron.schedule('refresh_abc_classification',         '0 19 * * 6',  'SELECT public.refresh_abc_classification();');
-SELECT cron.schedule('refresh_mv_grn_price_baseline',      '5 * * * *',   'REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_grn_price_baseline;');
-SELECT cron.schedule('refresh_mv_inventory_stock_current', '*/15 * * * *', 'SET LOCAL statement_timeout = ''2min''; REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_inventory_stock_current;');
-SELECT cron.schedule('refresh-finance-views-daily',        '15 23 * * *', 'SET LOCAL statement_timeout = ''5min''; SELECT public.refresh_finance_views();');
+SELECT cron.schedule('refresh_mv_inventory_stock_current', '*/15 * * * *', 'SET LOCAL statement_timeout = ''2min''; SELECT public.refresh_inventory_dashboard();');
 SELECT cron.schedule('scan-inventory-alerts-daily',        '0 23 * * *',  'SELECT public.scan_inventory_alerts();');
 SELECT cron.schedule('weekly_grn_override_report',         '0 2 * * 5',   'SELECT public.weekly_grn_override_report();');
 SELECT cron.schedule('weekly_waste_report',                '0 2 * * 1',   'SELECT public.weekly_waste_report();');

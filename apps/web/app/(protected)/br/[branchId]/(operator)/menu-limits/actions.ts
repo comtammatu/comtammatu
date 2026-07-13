@@ -91,7 +91,7 @@ const setLimitSchema = z.object({
   isDisabled: z.boolean(),
 });
 
-const replenishKitchenSchema = z.object({
+const replenishWarehouseSchema = z.object({
   branchId: branchIdSchema,
   menuItemId: menuItemIdSchema,
   extraPortions: z.union([z.literal(1), z.literal(2)]),
@@ -226,8 +226,8 @@ export async function clearBranchMenuDailyLimit(
   return { success: true, data: row };
 }
 
-export async function replenishMenuItemKitchenStock(
-  input: z.input<typeof replenishKitchenSchema>,
+export async function replenishMenuItemWarehouseStock(
+  input: z.input<typeof replenishWarehouseSchema>,
 ): Promise<
   ActionResult<{
     portions_added: number;
@@ -235,7 +235,7 @@ export async function replenishMenuItemKitchenStock(
     stock_capacity: number | null;
   }>
 > {
-  const parsed = replenishKitchenSchema.safeParse(input);
+  const parsed = replenishWarehouseSchema.safeParse(input);
   if (!parsed.success) {
     return {
       success: false,
@@ -286,9 +286,7 @@ export async function replenishMenuItemKitchenStock(
     }
     if (
       msg.includes("branch_warehouse_required") ||
-      msg.includes("default_warehouse_location_required") ||
-      msg.includes("branch_kitchen_required") ||
-      msg.includes("default_kitchen_location_required")
+      msg.includes("default_warehouse_location_required")
     ) {
       return {
         success: false,
@@ -309,7 +307,7 @@ export async function replenishMenuItemKitchenStock(
     }
 
     console.error(
-      "[menu-limits:replenishMenuItemKitchenStock] [unmapped] rpc error:",
+      "[menu-limits:replenishMenuItemWarehouseStock] [unmapped] rpc error:",
       error,
     );
     return {

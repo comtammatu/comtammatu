@@ -1,23 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
-const read = (path: string) => {
-  const candidate = resolve(repoRoot, path);
-  if (existsSync(candidate)) return readFileSync(candidate, "utf8");
-  if (path.startsWith("supabase/migrations/")) {
-    return readFileSync(
-      resolve(
-        repoRoot,
-        path.replace("supabase/migrations/", "supabase/migration-archive/"),
-      ),
-      "utf8",
-    );
-  }
-  return readFileSync(candidate, "utf8");
-};
+const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const migrationPath =
   "supabase/migration-archive/20260602000000_kds_print_on_completion.sql";

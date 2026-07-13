@@ -6,12 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const readRepo = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-const forwardMigration = readRepo(
-  "supabase/migrations/20260710193250_upsert_ingredient_units_preserve_recipe_fk.sql",
-);
-const lotExpiryMigration = readRepo(
-  "supabase/migrations/20260710193300_retire_lot_expiry_columns.sql",
-);
+const baseline = readRepo("supabase/migrations/00000000000000_baseline.sql");
 const ingredientActions = readRepo(
   "apps/web/app/(protected)/inventory/ingredient-actions.ts",
 );
@@ -42,9 +37,13 @@ function extractUpsertBody(source: string): string {
 }
 
 function extractBulkImportBody(source: string): string {
-  const start = source.indexOf(
+  const replaceStart = source.indexOf(
     "CREATE OR REPLACE FUNCTION public.bulk_import_ingredients",
   );
+  const createStart = source.indexOf(
+    "CREATE FUNCTION public.bulk_import_ingredients",
+  );
+  const start = replaceStart !== -1 ? replaceStart : createStart;
   assert.notEqual(start, -1, "missing bulk_import_ingredients");
   const revoke = source.indexOf(
     "REVOKE ALL ON FUNCTION public.bulk_import_ingredients",
@@ -59,14 +58,8 @@ function extractBulkImportBody(source: string): string {
 const bareDeleteAll =
   /DELETE FROM public\.ingredient_units WHERE ingredient_id = v_id AND tenant_id = v_tenant\s*;/;
 
-test("forward migration syncs ingredient_units instead of delete-all", () => {
-  assert.ok(
-    "20260710193250_upsert_ingredient_units_preserve_recipe_fk.sql" <
-      "20260710193300_retire_lot_expiry_columns.sql",
-    "FK hotfix must sort before lot/expiry signature drop",
-  );
-
-  const upsertBody = extractUpsertBody(forwardMigration);
+test("current catalog RPCs sync ingredient_units instead of delete-all", () => {
+  const upsertBody = extractUpsertBody(baseline);
   assert.doesNotMatch(upsertBody, bareDeleteAll);
   assert.match(
     upsertBody,
@@ -78,7 +71,7 @@ test("forward migration syncs ingredient_units instead of delete-all", () => {
     /DELETE FROM public\.ingredient_units iu[\s\S]*NOT EXISTS/,
   );
 
-  const bulkBody = extractBulkImportBody(forwardMigration);
+  const bulkBody = extractBulkImportBody(baseline);
   assert.doesNotMatch(
     bulkBody,
     /DELETE FROM public\.ingredient_units ingredient_units/,
@@ -90,74 +83,42 @@ test("forward migration syncs ingredient_units instead of delete-all", () => {
   assert.match(bulkBody, /bulk_import_base_unit_change_forbidden/);
 
   assert.match(
-    forwardMigration,
-    /REVOKE ALL ON FUNCTION public\.upsert_ingredient_catalog\(bigint, text, text, bigint, numeric, text, text, numeric, numeric, numeric, integer, jsonb\) FROM PUBLIC/,
+    baseline,
+    /REVOKE ALL ON FUNCTION public\.upsert_ingredient_catalog\([^;]+\) FROM PUBLIC/,
   );
   assert.match(
-    forwardMigration,
-    /GRANT ALL ON FUNCTION public\.upsert_ingredient_catalog\(bigint, text, text, bigint, numeric, text, text, numeric, numeric, numeric, integer, jsonb\) TO authenticated/,
+    baseline,
+    /GRANT ALL ON FUNCTION public\.upsert_ingredient_catalog\([^;]+\) TO authenticated/,
   );
   assert.match(
-    forwardMigration,
-    /REVOKE ALL ON FUNCTION public\.bulk_import_ingredients\(p_rows jsonb\) FROM PUBLIC/,
+    baseline,
+    /REVOKE ALL ON FUNCTION public\.bulk_import_ingredients\([^;]+\) FROM PUBLIC/,
   );
   assert.match(
-    forwardMigration,
-    /GRANT ALL ON FUNCTION public\.bulk_import_ingredients\(p_rows jsonb\) TO authenticated/,
+    baseline,
+    /GRANT ALL ON FUNCTION public\.bulk_import_ingredients\([^;]+\) TO authenticated/,
   );
 });
 
-test("lot/expiry retirement migration keeps recipe-safe unit sync", () => {
-  const upsertBody = extractUpsertBody(lotExpiryMigration);
-  assert.doesNotMatch(upsertBody, bareDeleteAll);
+test("current schema retains the live lot and expiry contract", () => {
+  const grnItems =
+    baseline.match(/CREATE TABLE public\.grn_items \([\s\S]*?\n\);/)?.[0] ??
+    "";
+  const ingredients =
+    baseline.match(/CREATE TABLE public\.ingredients \([\s\S]*?\n\);/)?.[0] ??
+    "";
+  assert.notEqual(grnItems, "");
+  assert.notEqual(ingredients, "");
+  assert.match(grnItems, /\bexpiry_date date/);
+  assert.match(grnItems, /\bbatch_number text/);
+  assert.match(ingredients, /\bshelf_life_days integer/);
   assert.match(
-    upsertBody,
-    /ON CONFLICT ON CONSTRAINT ingredient_units_ing_unit_key/,
-  );
-  assert.match(upsertBody, /ingredient_unit_in_use_by_production_recipe/);
-
-  const bulkBody = extractBulkImportBody(lotExpiryMigration);
-  assert.doesNotMatch(
-    bulkBody,
-    /DELETE FROM public\.ingredient_units ingredient_units/,
-  );
-  assert.match(bulkBody, /bulk_import_base_unit_change_forbidden/);
-});
-
-test("lot/expiry retirement rebuilds materialized views in dependency order", () => {
-  const dropValueRanking = lotExpiryMigration.indexOf(
-    "DROP MATERIALIZED VIEW IF EXISTS public.mv_inventory_value_ranking;",
-  );
-  const dropStockCurrent = lotExpiryMigration.indexOf(
-    "DROP MATERIALIZED VIEW IF EXISTS public.mv_inventory_stock_current;",
-  );
-  const createStockCurrent = lotExpiryMigration.indexOf(
-    "CREATE MATERIALIZED VIEW public.mv_inventory_stock_current AS",
-  );
-  const createValueRanking = lotExpiryMigration.indexOf(
-    "CREATE MATERIALIZED VIEW public.mv_inventory_value_ranking AS",
-  );
-
-  assert.ok(dropValueRanking >= 0);
-  assert.ok(dropValueRanking < dropStockCurrent);
-  assert.ok(dropStockCurrent < createStockCurrent);
-  assert.ok(createStockCurrent < createValueRanking);
-  assert.equal(
-    [...lotExpiryMigration.matchAll(/CREATE MATERIALIZED VIEW public\.mv_inventory_value_ranking AS/g)]
-      .length,
-    1,
+    baseline,
+    /CREATE MATERIALIZED VIEW public\.mv_inventory_stock_current AS/,
   );
   assert.match(
-    lotExpiryMigration,
-    /CREATE UNIQUE INDEX uq_mv_inv_value_ranking\s+ON public\.mv_inventory_value_ranking/,
-  );
-  assert.match(
-    lotExpiryMigration,
-    /GRANT ALL ON TABLE public\.mv_inventory_value_ranking TO service_role/,
-  );
-  assert.match(
-    lotExpiryMigration,
-    /REFRESH MATERIALIZED VIEW public\.mv_inventory_value_ranking/,
+    baseline,
+    /CREATE MATERIALIZED VIEW public\.mv_inventory_value_ranking AS/,
   );
 });
 

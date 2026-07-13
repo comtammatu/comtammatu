@@ -16,11 +16,11 @@ const countAssignmentsPageSource = readWeb(
 const countAssignmentsActionsSource = readWeb(
   "app/(protected)/inventory/count-assignments/actions.ts",
 );
-const countAssignmentShiftMigrationSource = readWeb(
-  "../../supabase/migrations/20260708064356_inventory_count_assignment_shift_scope.sql",
+const countAssignmentBaselineSource = readWeb(
+  "../../supabase/migrations/00000000000000_baseline.sql",
 );
 const countAssignmentWarehouseRepairMigrationSource = readWeb(
-  "../../supabase/migrations/20260711125604_repair_count_assignment_warehouse_rpcs.sql",
+  "../../supabase/migration-archive/20260711125604_repair_count_assignment_warehouse_rpcs.sql",
 );
 
 test("count assignment checklist uses one labeled hit target", () => {
@@ -263,32 +263,40 @@ test("count assignment RPC repair targets both writers and fails closed", () => 
     /branch_warehouse_location_missing/,
     "warehouse-missing errors should describe the active model",
   );
+  assert.match(
+    countAssignmentBaselineSource,
+    /CREATE FUNCTION public\.set_inventory_count_assignments[\s\S]*v_branch_kind = 'branch' AND v_location_kind <> 'warehouse'[\s\S]*branch_warehouse_location_missing/,
+  );
+  assert.match(
+    countAssignmentBaselineSource,
+    /CREATE FUNCTION public\.submit_inventory_count_slip[\s\S]*v_branch_kind = 'branch' AND v_location_kind <> 'warehouse'[\s\S]*branch_warehouse_location_missing/,
+  );
 });
 
-test("count assignment migration stores assignment and slip shift scope", () => {
+test("count assignment baseline stores assignment and slip shift scope", () => {
   assert.match(
-    countAssignmentShiftMigrationSource,
-    /ALTER TABLE public\.inventory_count_assignments[\s\S]*ADD COLUMN IF NOT EXISTS shift_id bigint/,
+    countAssignmentBaselineSource,
+    /CREATE TABLE public\.inventory_count_assignments \([\s\S]*shift_id bigint[\s\S]*\);/,
     "assignment table should carry nullable shift_id",
   );
   assert.match(
-    countAssignmentShiftMigrationSource,
-    /ALTER TABLE public\.inventory_count_slips[\s\S]*ADD COLUMN IF NOT EXISTS shift_id bigint/,
+    countAssignmentBaselineSource,
+    /CREATE TABLE public\.inventory_count_slips \([\s\S]*shift_id bigint[\s\S]*\);/,
     "count slips should record the actual submitted shift",
   );
   assert.match(
-    countAssignmentShiftMigrationSource,
-    /CREATE UNIQUE INDEX uq_count_assignment_scope[\s\S]*COALESCE\(shift_id, 0::bigint\)/,
+    countAssignmentBaselineSource,
+    /CREATE UNIQUE INDEX uq_count_assignment_scope[\s\S]*COALESCE\(shift_id, \(0\)::bigint\)/,
     "assignment identity should include null-safe shift scope",
   );
   assert.match(
-    countAssignmentShiftMigrationSource,
+    countAssignmentBaselineSource,
     /a\.shift_id IS NOT DISTINCT FROM v_shift_id/,
     "assignment writer should only replace rows inside the selected scope",
   );
   assert.match(
-    countAssignmentShiftMigrationSource,
-    /p_shift_id bigint DEFAULT NULL[\s\S]*NOT EXISTS \([\s\S]*specific\.shift_id = v_shift_id[\s\S]*specific\.is_active/,
+    countAssignmentBaselineSource,
+    /p_shift_id bigint DEFAULT NULL::bigint[\s\S]*NOT EXISTS \([\s\S]*specific\.shift_id = v_shift_id[\s\S]*specific\.is_active/,
     "count submit RPC should let current-shift assignments override every-shift assignments for the same cell",
   );
 });

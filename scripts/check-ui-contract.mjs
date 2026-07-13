@@ -1473,9 +1473,23 @@ const legacyDocReferenceFiles = [
   ...walkFiles("supabase", [".sql"]),
 ].filter((file) => fs.existsSync(file));
 
+function docReferenceScanContent(relativePath, content) {
+  if (relativePath !== "supabase/migrations/00000000000000_baseline.sql") {
+    return content;
+  }
+
+  return content
+    .split("\n")
+    .filter((line) => !line.startsWith("COMMENT ON "))
+    .join("\n");
+}
+
 for (const file of legacyDocReferenceFiles) {
   const relativePath = toPosix(file);
-  const content = fs.readFileSync(file, "utf8");
+  const content = docReferenceScanContent(
+    relativePath,
+    fs.readFileSync(file, "utf8"),
+  );
   const matches = countMatches(content, legacyDocReferencePattern);
   if (matches > 0) {
     failures.push(
@@ -1489,7 +1503,10 @@ const docsPathPattern =
 
 for (const file of legacyDocReferenceFiles) {
   const relativePath = toPosix(file);
-  const content = fs.readFileSync(file, "utf8");
+  const content = docReferenceScanContent(
+    relativePath,
+    fs.readFileSync(file, "utf8"),
+  );
   for (const match of content.matchAll(docsPathPattern)) {
     const rawDocPath = match[0].split("#")[0];
     const decodedDocPath = decodeURIComponent(rawDocPath);

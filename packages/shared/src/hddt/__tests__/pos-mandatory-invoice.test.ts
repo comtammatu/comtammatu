@@ -162,7 +162,7 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
 test("SePay webhook uses the POS settlement service without direct HĐĐT issuance", () => {
   const src = read("apps/web/app/api/webhooks/sepay/route.ts");
   const migration = read(
-    "supabase/migrations/20260711024758_sepay_webhook_order_evidence.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   );
 
   assert.doesNotMatch(src, /issueTaxInvoiceForPaidOrder/);

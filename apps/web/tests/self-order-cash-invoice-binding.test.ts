@@ -6,7 +6,7 @@ import { test } from "node:test";
 const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
 const migration = read(
-  "../../supabase/migrations/20260710032423_self_order_cash_invoice_binding.sql",
+  "../../supabase/migrations/00000000000000_baseline.sql",
 );
 const cashHardeningMigration = read(
   "../../supabase/migrations/20260712071541_stabilize_cash_receipt_warning.sql",
@@ -23,7 +23,7 @@ const staffActions = read(
 
 function functionBlock(source: string, name: string): string {
   const block = new RegExp(
-    `CREATE OR REPLACE FUNCTION public\\.${name}\\([\\s\\S]*?\\n\\$\\$;`,
+    `CREATE(?: OR REPLACE)? FUNCTION public\\.${name}\\([\\s\\S]*?\\n\\$\\$;`,
   ).exec(source)?.[0];
   assert.ok(block, `expected SQL function ${name}`);
   return block;
@@ -177,11 +177,15 @@ test("successful payment binds the exact request id and replay resolves by exact
 test("only authenticated staff can execute the binding RPC", () => {
   assert.match(
     migration,
-    /REVOKE ALL ON FUNCTION public\.confirm_cash_payment_with_invoice_binding\(bigint, numeric\)[\s\S]*?FROM PUBLIC, anon, service_role/,
+    /REVOKE ALL ON FUNCTION public\.confirm_cash_payment_with_invoice_binding\([^;]+\) FROM PUBLIC/,
   );
   assert.match(
     migration,
-    /GRANT EXECUTE ON FUNCTION public\.confirm_cash_payment_with_invoice_binding\(bigint, numeric\)[\s\S]*?TO authenticated/,
+    /GRANT ALL ON FUNCTION public\.confirm_cash_payment_with_invoice_binding\([^;]+\) TO authenticated/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /GRANT .* ON FUNCTION public\.confirm_cash_payment_with_invoice_binding\([^;]+\) TO (?:anon|service_role)/,
   );
   assert.match(
     bindingRpc,

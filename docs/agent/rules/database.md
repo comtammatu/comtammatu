@@ -16,9 +16,9 @@ over older task notes, regressions, and memory.
 
 - No persistent dev/test Supabase project exists. Use an on-demand Preview
   Branch for non-production verification.
-- Agent-driven migration, schema, RLS, RPC, and write-smoke verification MUST
-  target an on-demand Supabase Preview Branch directly. Do not start, reuse, or
-  treat Docker-based Supabase Local as the project verification environment.
+- Agent-driven migration replay, seed, schema, RLS/RPC, generated-type, runtime,
+  and write-smoke verification MUST use an on-demand Supabase Preview Branch.
+  Docker Local is optional developer tooling, never a release or completion gate.
 - `.mcp.json`, org-scoped MCP servers, and the Supabase CLI are write-capable.
   Codex's repo MCP URL is separately pinned `read_only=true`.
 - `scripts/guard-prod-db.mjs` enforces this registry through registered adapters

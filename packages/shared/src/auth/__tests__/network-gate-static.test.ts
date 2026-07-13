@@ -1,22 +1,11 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const repoRoot = new URL("../../../../../", import.meta.url);
 
 function readRepoFile(path: string): string {
-  const candidate = new URL(path, repoRoot);
-  if (existsSync(candidate)) return readFileSync(candidate, "utf8");
-  if (path.startsWith("supabase/migrations/")) {
-    return readFileSync(
-      new URL(
-        path.replace("supabase/migrations/", "supabase/migration-archive/"),
-        repoRoot,
-      ),
-      "utf8",
-    );
-  }
-  return readFileSync(candidate, "utf8");
+  return readFileSync(new URL(path, repoRoot), "utf8");
 }
 
 const route = readRepoFile("apps/web/app/api/branch-presence/route.ts");

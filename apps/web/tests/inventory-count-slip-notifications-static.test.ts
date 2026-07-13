@@ -15,7 +15,7 @@ function around(source: string, needle: string) {
   return source.slice(Math.max(0, index - 900), index + 1_200);
 }
 
-test("count-slip RPCs emit durable notifications with review links", () => {
+test("count-slip RPCs emit durable notifications with role-appropriate links", () => {
   const baselineSql = readRepoFile(
     "supabase/migrations/00000000000000_baseline.sql",
   );
@@ -37,13 +37,13 @@ test("count-slip RPCs emit durable notifications with review links", () => {
   );
   assert.match(
     approvedBlock,
-    /'inventory\.count_slip_approved'[\s\S]*format\('\/br\/%s\/stock\/count', v_slip\.branch_id\)[\s\S]*format\('inventory\.count_slip:%s:approved', p_slip_id\)/,
-    "approved count slips must notify the Branch Hub count page",
+    /'inventory\.count_slip_approved'[\s\S]*'\/employee\/count'[\s\S]*format\('inventory\.count_slip:%s:approved', p_slip_id\)/,
+    "approved count slips must notify the employee count page",
   );
   assert.match(
     recountBlock,
-    /'inventory\.count_slip_recount'[\s\S]*format\('\/br\/%s\/stock\/count', v_slip\.branch_id\)[\s\S]*format\('inventory\.count_slip:%s:recount', p_slip_id\)/,
-    "recount requests must notify the Branch Hub count page",
+    /'inventory\.count_slip_recount'[\s\S]*'\/employee\/count'[\s\S]*format\('inventory\.count_slip:%s:recount', p_slip_id\)/,
+    "recount requests must notify the employee count page",
   );
 
   for (const kind of [

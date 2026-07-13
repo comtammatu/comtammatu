@@ -9,11 +9,23 @@ function read(path: string): string {
   return readFileSync(`${root}${path}`, "utf8");
 }
 
-const safetyMigration = read(
-  "supabase/migrations/20260710012355_production_unit_safety.sql",
+function readPgDumpObject(source: string, createPrefix: string): string {
+  const start = source.indexOf(createPrefix);
+  assert.notEqual(start, -1, `missing pg_dump object: ${createPrefix}`);
+  const end = source.indexOf("\n\n--\n-- Name:", start + createPrefix.length);
+  assert.notEqual(end, -1, `unterminated pg_dump object: ${createPrefix}`);
+  return source.slice(start, end);
+}
+
+const prodBaseline = read(
+  "supabase/migrations/00000000000000_baseline.sql",
 );
-const repairMigration = read(
-  "supabase/migrations/20260710012357_production_recipe_unit_repair.sql",
+const historicalRecipeUnitRepair = read(
+  "supabase/migration-archive/20260710012357_production_recipe_unit_repair.sql",
+);
+const confirmProductionRunRpc = readPgDumpObject(
+  prodBaseline,
+  "CREATE FUNCTION public.confirm_production_run(p_run_id bigint, p_actual_quantity numeric DEFAULT NULL::numeric, p_actual_ingredients jsonb DEFAULT NULL::jsonb)",
 );
 const runActions = read(
   "apps/web/app/(protected)/inventory/production-run-actions.ts",
@@ -30,36 +42,36 @@ const branchDetailPage = read(
 
 test("production confirmation converts the selected output unit before deriving BOM usage", () => {
   assert.match(
-    safetyMigration,
+    confirmProductionRunRpc,
     /v_planned_output_base := ROUND\(\s*public\.inv_to_base\(\s*v_run\.finished_good_id,\s*v_run\.entry_unit_id,\s*v_run\.planned_quantity/s,
   );
   assert.match(
-    safetyMigration,
+    confirmProductionRunRpc,
     /v_raw_need_measure :=\s*\(v_planned_output_base \* v_recipe\.quantity\)/s,
   );
   assert.doesNotMatch(
-    safetyMigration,
+    confirmProductionRunRpc,
     /v_raw_need_measure :=\s*\(v_run\.planned_quantity \* v_recipe\.quantity\)/s,
   );
 });
 
 test("production recipe unit mappings are fail-closed and repaired only from the standard g-to-kg relation", () => {
-  assert.match(safetyMigration, /production_recipes_entry_unit_guard/);
-  assert.match(safetyMigration, /production_recipe_unit_mapping_missing/);
-  assert.match(safetyMigration, /production_run_unit_mapping_review_required/);
-  assert.doesNotMatch(safetyMigration, /COALESCE\(to_base_factor, 1\.0\)/);
-  assert.match(repairMigration, /entry_u\.code <> 'g'/);
-  assert.match(repairMigration, /base_u\.code <> 'kg'/);
+  assert.match(prodBaseline, /CREATE TRIGGER production_recipes_entry_unit_guard/);
+  assert.match(confirmProductionRunRpc, /production_recipe_unit_mapping_missing/);
+  assert.match(confirmProductionRunRpc, /production_run_unit_mapping_review_required/);
+  assert.doesNotMatch(confirmProductionRunRpc, /COALESCE\(to_base_factor, 1\.0\)/);
+  assert.match(historicalRecipeUnitRepair, /entry_u\.code <> 'g'/);
+  assert.match(historicalRecipeUnitRepair, /base_u\.code <> 'kg'/);
   assert.match(
-    repairMigration,
+    historicalRecipeUnitRepair,
     /entry_u\.standard_factor \/ base_u\.standard_factor AS to_base_factor/,
   );
   assert.match(
-    repairMigration,
-    /FOREIGN KEY \(ingredient_id, entry_unit_id, tenant_id\)\s+REFERENCES public\.ingredient_units \(ingredient_id, unit_id, tenant_id\)/s,
+    prodBaseline,
+    /FOREIGN KEY \(ingredient_id, entry_unit_id, tenant_id\)\s+REFERENCES public\.ingredient_units\(ingredient_id, unit_id, tenant_id\)/s,
   );
   assert.doesNotMatch(
-    repairMigration,
+    historicalRecipeUnitRepair,
     /production_run_review_required_before_unit_repair/,
   );
 });

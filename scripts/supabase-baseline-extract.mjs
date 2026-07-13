@@ -32,6 +32,7 @@ function printHelp() {
 Options:
   --schemas=<list>          Comma-separated schemas to dump. Default: public,private
   --out-dir=<path>          Output directory. Default: .baseline-artifacts/supabase-live-baseline-<timestamp>
+  --baseline-out=<path>     Assemble private + public dumps into a replay baseline
   --project-ref=<ref>       Expected linked Supabase project ref. Default: ${EXPECTED_PROJECT_REF}
   --timeout-ms=<number>     Per-schema command timeout. Default: ${DEFAULT_TIMEOUT_MS}
   --engine=<name>           pg_dump (libpq, Docker-free; default) or cli (supabase CLI, needs Docker)
@@ -44,6 +45,7 @@ function parseArgs(argv) {
   const options = {
     dryRun: false,
     help: false,
+    baselineOut: null,
     outDir: null,
     projectRef: EXPECTED_PROJECT_REF,
     schemas: DEFAULT_SCHEMAS,
@@ -66,6 +68,8 @@ function parseArgs(argv) {
         .filter(Boolean);
     } else if (arg.startsWith("--out-dir=")) {
       options.outDir = arg.slice("--out-dir=".length);
+    } else if (arg.startsWith("--baseline-out=")) {
+      options.baselineOut = arg.slice("--baseline-out=".length);
     } else if (arg.startsWith("--project-ref=")) {
       options.projectRef = arg.slice("--project-ref=".length);
     } else if (arg.startsWith("--timeout-ms=")) {
@@ -87,6 +91,14 @@ function parseArgs(argv) {
 
   if (options.schemas.length === 0) {
     throw new Error("At least one schema is required");
+  }
+
+  if (
+    options.baselineOut &&
+    (!options.schemas.includes("public") ||
+      !options.schemas.includes("private"))
+  ) {
+    throw new Error("--baseline-out requires both public and private schemas");
   }
 
   return options;
@@ -112,7 +124,10 @@ function readLinkedProjectRef() {
     return readFileSync(tempRefPath, "utf8").trim();
   }
 
-  return process.env["SUPABASE_PROJECT_ID"]?.trim() ?? "";
+  return (
+    process.env["SUPABASE_PROJECT_ID"]?.trim() ??
+    readEnvLocalValue("SUPABASE_PROJECT_ID")
+  );
 }
 
 function readEnvLocalValue(key) {
@@ -161,16 +176,21 @@ function buildBaselineDbUrl(expectedRef) {
   //    .temp/pooler-url belongs to the linked project; both known targets are in
   //    the same region so the pooler host is identical — swap the ref segment.
   const poolerPath = join(process.cwd(), "supabase", ".temp", "pooler-url");
-  const password = readEnvLocalValue(target.passwordEnv);
+  const linkedRef = readLinkedProjectRef();
+  const password =
+    readEnvLocalValue(target.passwordEnv) ||
+    (linkedRef === expectedRef
+      ? readEnvLocalValue("SUPABASE_DB_PASSWORD")
+      : "");
   if (!existsSync(poolerPath) || !password) {
     throw new Error(
       `Privileged dump for ${expectedRef} requires ${target.explicitUrlEnv} (or ` +
-        `${target.passwordEnv} in .env.local plus supabase/.temp/pooler-url). The ` +
+        `${target.passwordEnv}, or SUPABASE_DB_PASSWORD when the linked ref matches, ` +
+        "in .env.local plus supabase/.temp/pooler-url). The " +
         "--linked temp-login dump is INCOMPLETE — it drops RLS-restricted tables.",
     );
   }
   let poolerUrl = readFileSync(poolerPath, "utf8").trim();
-  const linkedRef = readLinkedProjectRef();
   if (linkedRef && linkedRef !== expectedRef && poolerUrl.includes(linkedRef)) {
     poolerUrl = poolerUrl.split(linkedRef).join(expectedRef);
   }
@@ -272,7 +292,12 @@ function runPgDumpEngine({ dbUrl, schema, outputPath, dryRun, timeoutMs }) {
       "--dbname",
       dbUrl,
     ],
-    { cwd: process.cwd(), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs },
+    {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: timeoutMs,
+    },
   );
   if (result.error) throw result.error;
   if (result.status !== 0) {
@@ -283,12 +308,35 @@ function runPgDumpEngine({ dbUrl, schema, outputPath, dryRun, timeoutMs }) {
   }
   const fixed = readFileSync(outputPath, "utf8")
     .replace(/^\\(un)?restrict .*$/gm, (m) => `-- ${m}`)
-    .replace(/^CREATE SCHEMA public;$/gm, "CREATE SCHEMA IF NOT EXISTS public;");
+    .replace(
+      /^CREATE SCHEMA public;$/gm,
+      "CREATE SCHEMA IF NOT EXISTS public;",
+    );
   writeFileSync(outputPath, fixed);
 }
 
 function schemaFileName(schema) {
   return `${schema.replace(/[^a-zA-Z0-9_]/g, "_")}.schema.sql`;
+}
+
+function assembleBaseline(outDir, baselineOut) {
+  const privateSql = readFileSync(
+    join(outDir, schemaFileName("private")),
+    "utf8",
+  );
+  const publicSql = readFileSync(join(outDir, schemaFileName("public")), "utf8")
+    .split(/\r?\n/)
+    .filter(
+      (line) =>
+        !line.startsWith("ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin "),
+    )
+    .join("\n");
+  const outputPath = resolve(baselineOut);
+  writeFileSync(
+    outputPath,
+    `SET check_function_bodies = false;\n\n${privateSql.trimEnd()}\n\n${publicSql.trimEnd()}\n`,
+  );
+  return outputPath;
 }
 
 async function main() {
@@ -304,12 +352,23 @@ async function main() {
 
   if (options.dryRun) {
     for (const schema of options.schemas) {
-      process.stdout.write(`\n# Dry run (engine=${options.engine}) for schema: ${schema}\n`);
+      process.stdout.write(
+        `\n# Dry run (engine=${options.engine}) for schema: ${schema}\n`,
+      );
       if (options.engine === "pg_dump") {
         runPgDumpEngine({ dbUrl, schema, dryRun: true });
       } else {
         const { stdout, stderr } = runPnpmSupabase(
-          ["db", "dump", "--db-url", dbUrl, "--schema", schema, "--dry-run", "--yes"],
+          [
+            "db",
+            "dump",
+            "--db-url",
+            dbUrl,
+            "--schema",
+            schema,
+            "--dry-run",
+            "--yes",
+          ],
           options.timeoutMs,
         );
         if (stderr) process.stderr.write(`${stderr}\n`);
@@ -374,10 +433,23 @@ async function main() {
     });
   }
 
+  if (options.baselineOut) {
+    const baselinePath = assembleBaseline(outDir, options.baselineOut);
+    manifest.baseline = {
+      path: baselinePath,
+      bytes: statSync(baselinePath).size,
+    };
+  }
+
   const manifestPath = join(outDir, "manifest.json");
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   process.stdout.write(`Baseline schema artifacts written to ${outDir}\n`);
+  if (manifest.baseline) {
+    process.stdout.write(
+      `Replay baseline written to ${manifest.baseline.path}\n`,
+    );
+  }
   process.stdout.write(`Manifest written to ${manifestPath}\n`);
 }
 

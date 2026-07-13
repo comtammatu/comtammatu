@@ -27,6 +27,13 @@ const authTypes = readFileSync(
   "utf8",
 );
 
+function stripPgDumpMetadataComments(source: string): string {
+  return source
+    .split("\n")
+    .filter((line) => !line.startsWith("COMMENT ON "))
+    .join("\n");
+}
+
 function extractSqlFunction(source: string, name: string): string {
   const pattern = new RegExp(
     `CREATE\\s+OR\\s+REPLACE\\s+FUNCTION\\s+public\\.${name}\\b[\\s\\S]*?\\n\\$\\$;`,
@@ -81,7 +88,10 @@ test("active auth templates and target-role lists use canonical access names", (
   ];
 
   for (const file of checkedSources) {
-    const source = readFileSync(resolve(repoRoot, file), "utf8");
+    const rawSource = readFileSync(resolve(repoRoot, file), "utf8");
+    const source = file.endsWith("00000000000000_baseline.sql")
+      ? stripPgDumpMetadataComments(rawSource)
+      : rawSource;
     for (const retired of retiredNames) {
       assert.doesNotMatch(source, new RegExp(`\\b${retired}\\b`), `${file}: ${retired}`);
     }

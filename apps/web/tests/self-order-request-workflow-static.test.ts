@@ -7,7 +7,7 @@ const migration = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260710113746_self_order_request_workflow.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   ),
   "utf8",
 );
@@ -15,7 +15,7 @@ const rateLimitMigration = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260710191526_self_order_request_rate_limits.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
   ),
   "utf8",
 );
@@ -28,26 +28,17 @@ const baseline = readFileSync(
   "utf8",
 );
 
-function functionBody(signature: string, next: string): string {
-  const start = migration.indexOf(signature);
-  const end = migration.indexOf(next, start);
-  assert.notEqual(start, -1, `missing ${signature}`);
-  assert.notEqual(end, -1, `missing boundary ${next}`);
-  return migration.slice(start, end);
+function functionBody(name: string): string {
+  const block = new RegExp(
+    `CREATE(?: OR REPLACE)? FUNCTION public\\.${name}\\([\\s\\S]*?\\n\\$\\$;`,
+  ).exec(migration)?.[0];
+  assert.ok(block, `missing function ${name}`);
+  return block;
 }
 
-const submit = functionBody(
-  "CREATE OR REPLACE FUNCTION public.self_order_submit(",
-  "CREATE OR REPLACE FUNCTION public.self_order_accept_request(",
-);
-const payment = functionBody(
-  "CREATE OR REPLACE FUNCTION public.self_order_create_payment_request(",
-  "CREATE OR REPLACE FUNCTION public.self_order_cancel_payment_request(",
-);
-const accept = functionBody(
-  "CREATE OR REPLACE FUNCTION public.self_order_accept_request(",
-  "CREATE OR REPLACE FUNCTION public.self_order_reject_request(",
-);
+const submit = functionBody("self_order_submit");
+const payment = functionBody("self_order_create_payment_request");
+const accept = functionBody("self_order_accept_request");
 
 function baselineFunctionBody(signature: string, next: string): string {
   const start = baseline.indexOf(signature);
@@ -66,29 +57,29 @@ const createOrder = baselineFunctionBody(
   "CREATE FUNCTION public.create_order_with_daily_limit_hold(",
 );
 
-test("S1 creates one RPC-only request model and backfills pending batches", () => {
+test("current schema keeps one RPC-only request model", () => {
   assert.match(migration, /CREATE TABLE public\.self_order_requests/);
   assert.match(
     migration,
-    /CREATE UNIQUE INDEX self_order_requests_one_pending_per_table[\s\S]*ON public\.self_order_requests \(table_id\)[\s\S]*WHERE status = 'pending'/,
+    /CREATE UNIQUE INDEX self_order_requests_one_pending_per_table ON public\.self_order_requests USING btree \(table_id\) WHERE \(status = 'pending'/,
   );
   assert.match(
     migration,
     /CREATE UNIQUE INDEX self_order_requests_client_op_id_uidx[\s\S]*\(tenant_id, client_op_id\)/,
   );
+  assert.doesNotMatch(migration, /CREATE TABLE public\.self_order_batches/);
   assert.match(
     migration,
-    /FROM public\.self_order_batches b[\s\S]*WHERE b\.status = 'pending_approval'[\s\S]*INSERT INTO public\.self_order_requests/,
+    /GRANT SELECT ON TABLE public\.self_order_requests TO authenticated/,
   );
   assert.match(
     migration,
-    /REVOKE ALL PRIVILEGES ON TABLE public\.self_order_requests[\s\S]*FROM PUBLIC, anon, authenticated, service_role/,
+    /GRANT SELECT ON TABLE public\.self_order_requests TO service_role/,
   );
-  assert.match(
+  assert.doesNotMatch(
     migration,
-    /GRANT SELECT ON TABLE public\.self_order_requests TO authenticated, service_role/,
+    /GRANT (?:INSERT|UPDATE|DELETE|ALL).*TABLE public\.self_order_requests TO (?:anon|authenticated)/,
   );
-  assert.doesNotMatch(migration, /DROP (?:TABLE|FUNCTION|COLUMN)/i);
 });
 
 test("self_order_submit serializes by table and branches on the open-order count", () => {
@@ -141,19 +132,17 @@ test("snapshot and payment fail closed for multi-bill tables", () => {
   assert.doesNotMatch(payment, /self_order_sessions|v_session|session_id/);
 });
 
-test("payment intent integrity moves from session to order", () => {
+test("payment intent integrity is order-owned without session residue", () => {
   assert.match(
     migration,
-    /ALTER TABLE public\.self_order_payment_requests[\s\S]*ALTER COLUMN session_id DROP NOT NULL/,
+    /CREATE UNIQUE INDEX self_order_payment_requests_one_active_per_order[\s\S]*\(tenant_id, order_id\)[\s\S]*status = ANY \(ARRAY\['cash_call'::text, 'vietqr_pending'::text\]/,
   );
-  assert.match(
-    migration,
-    /CREATE UNIQUE INDEX self_order_payment_requests_one_active_per_order[\s\S]*\(tenant_id, order_id\)[\s\S]*WHERE status IN \('cash_call', 'vietqr_pending'\)/,
-  );
-  assert.match(
-    migration,
-    /CREATE UNIQUE INDEX self_order_payment_requests_sessionless_client_op_uidx[\s\S]*WHERE session_id IS NULL/,
-  );
+  const paymentRequests =
+    migration.match(
+      /CREATE TABLE public\.self_order_payment_requests \([\s\S]*?\n\);/,
+    )?.[0] ?? "";
+  assert.notEqual(paymentRequests, "");
+  assert.doesNotMatch(paymentRequests, /\bsession_id\b/);
   assert.match(
     payment,
     /INSERT INTO public\.self_order_payment_requests \([\s\S]*order_id,[\s\S]*client_op_id/,
@@ -168,27 +157,40 @@ test("public security-definer RPCs keep explicit checks and least privilege", ()
   }
   assert.match(
     migration,
-    /REVOKE ALL ON FUNCTION public\.self_order_submit\(text, jsonb, text, uuid\)[\s\S]*FROM PUBLIC, anon, authenticated/,
+    /REVOKE ALL ON FUNCTION public\.self_order_submit\([^;]+\) FROM PUBLIC/,
   );
   assert.match(
     migration,
-    /GRANT EXECUTE ON FUNCTION public\.self_order_accept_request\(bigint, bigint\)[\s\S]*TO authenticated, service_role/,
+    /GRANT ALL ON FUNCTION public\.self_order_accept_request\([^;]+\) TO authenticated/,
+  );
+  assert.match(
+    migration,
+    /GRANT ALL ON FUNCTION public\.self_order_accept_request\([^;]+\) TO service_role/,
   );
 });
 
 test("request rate limits keep only token and IP scopes", () => {
+  const rateLimitTable =
+    rateLimitMigration.match(
+      /CREATE TABLE public\.self_order_rate_buckets \([\s\S]*?\n\);/,
+    )?.[0] ?? "";
+  const rateLimitFunction = functionBody("self_order_consume_rate_limits");
+  assert.notEqual(rateLimitTable, "");
   assert.match(
-    rateLimitMigration,
-    /CHECK \(purpose IN \('batch', 'payment'\)\)/,
+    rateLimitTable,
+    /purpose = ANY \(ARRAY\['batch'::text, 'payment'::text\]\)/,
   );
-  assert.match(rateLimitMigration, /CHECK \(scope_type IN \('token', 'ip'\)\)/);
   assert.match(
-    rateLimitMigration,
+    rateLimitTable,
+    /scope_type = ANY \(ARRAY\['token'::text, 'ip'::text\]\)/,
+  );
+  assert.match(
+    rateLimitFunction,
     /self_order_consume_rate_limits\([\s\S]*p_token text,[\s\S]*p_ip_hash text/,
   );
-  assert.doesNotMatch(rateLimitMigration, /p_session_id|p_device_hash/);
-  assert.match(
+  assert.doesNotMatch(rateLimitFunction, /p_session_id|p_device_hash/);
+  assert.doesNotMatch(
     rateLimitMigration,
-    /REVOKE ALL PRIVILEGES ON TABLE public\.self_order_rate_buckets[\s\S]*FROM PUBLIC, anon, authenticated, service_role/,
+    /GRANT .* ON TABLE public\.self_order_rate_buckets TO (?:anon|authenticated)/,
   );
 });

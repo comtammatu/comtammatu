@@ -47,15 +47,6 @@ BEGIN
   WHERE tenant_id = v_tenant
     AND name IN ('Chi nhánh Đất Đỏ', 'Chi nhánh Phước Hải')
     AND branch_kind IS DISTINCT FROM 'branch';
-
-  INSERT INTO public.branches (tenant_id, name, branch_kind, is_active)
-  VALUES
-    (v_tenant, 'Kho Tổng', 'central_supply', true),
-    (v_tenant, 'Bếp Trung Tâm', 'central_kitchen', true)
-  ON CONFLICT (name, tenant_id) DO UPDATE
-  SET branch_kind = EXCLUDED.branch_kind,
-      is_active = true,
-      updated_at = now();
 END;
 $$;
 
