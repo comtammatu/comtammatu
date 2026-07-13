@@ -275,9 +275,7 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     assert.match(source, new RegExp(`id: "${id}"`));
   }
   assert.ok(
-    source.includes(
-      String.raw`from\s+["']@\/\(protected\)\/inventory\/`,
-    ),
+    source.includes(String.raw`from\s+["']@\/\(protected\)\/inventory\/`),
   );
   assert.ok(source.includes(String.raw`(?!_lib\/)`));
   assert.ok(source.includes(String.raw`actions(?:\.ts)?`));
@@ -349,15 +347,12 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     );
   }
 
-  assert.match(designSystem, /High-level primitive import governance/);
+  assert.match(designSystem, /High-level shared component import governance/);
   assert.match(
     designSystem,
     /shadcn-ui and Web Interface Guidelines are advisory checklists only/,
   );
-  assert.match(
-    designSystem,
-    /scripts\/check-ui-contract\.mjs/,
-  );
+  assert.match(designSystem, /scripts\/check-ui-contract\.mjs/);
   assert.match(designSystem, /scripts\/ui-component-registry\.mjs/);
   assert.match(uiModule, /scripts\/check-ui-contract\.mjs/);
   assert.match(uiModule, /scripts\/ui-component-registry\.mjs/);
@@ -806,14 +801,15 @@ test("UI baseline reporting separates debt from permanent exceptions", async () 
   assert.ok(liveReport.totals.permanent > 0);
 });
 
-test("UI component registry classifies every primitive and approved adapter", async () => {
+test("UI component registry classifies every shared component and approved adapter", async () => {
   const auditScript = read(UI_AUDIT);
   const uiContract = read(UI_CONTRACT);
   const registrySource = read(UI_COMPONENT_REGISTRY);
   const registryModule = (await import(
     pathToFileURL(resolve(repoRoot, UI_COMPONENT_REGISTRY)).href
   )) as {
-    buildPrimitiveComponentCoverage: (actualFiles: string[]) => {
+    hasNamedExport: (source: string, name: string) => boolean;
+    buildSharedComponentCoverage: (actualFiles: string[]) => {
       actual: string[];
       registered: string[];
       unclassified: string[];
@@ -822,7 +818,7 @@ test("UI component registry classifies every primitive and approved adapter", as
       total: number;
     };
     validateUiComponentRegistry: (root: string) => {
-      primitiveCoverage: {
+      sharedComponentCoverage: {
         actual: string[];
         registered: string[];
         unclassified: string[];
@@ -839,12 +835,12 @@ test("UI component registry classifies every primitive and approved adapter", as
   };
 
   for (const marker of [
-    "PRIMITIVE_COMPONENT_REGISTRY",
+    "SHARED_COMPONENT_REGISTRY",
     "APP_ADAPTER_REGISTRY",
     "DOMAIN_ADAPTER_FAMILIES",
     "adapter-only",
     "workflow-only",
-    "unclassified primitive files",
+    "unclassified shared component files",
     "BranchOperatorPage",
     "EmployeePage",
   ]) {
@@ -856,15 +852,44 @@ test("UI component registry classifies every primitive and approved adapter", as
 
   const report = registryModule.validateUiComponentRegistry(repoRoot);
   assert.deepEqual(report.errors, []);
-  assert.deepEqual(report.primitiveCoverage.unclassified, []);
-  assert.deepEqual(report.primitiveCoverage.stale, []);
+  assert.deepEqual(report.sharedComponentCoverage.unclassified, []);
+  assert.deepEqual(report.sharedComponentCoverage.stale, []);
   assert.deepEqual(
-    report.primitiveCoverage.actual,
-    report.primitiveCoverage.registered,
+    report.sharedComponentCoverage.actual,
+    report.sharedComponentCoverage.registered,
   );
   assert.ok(report.appAdapterCount > 0);
   assert.equal(report.domainFamilyCount, 2);
   assert.ok(report.domainExportCount > 0);
+  assert.equal(
+    registryModule.hasNamedExport("// export function AppPage() {}", "AppPage"),
+    false,
+  );
+  assert.equal(
+    registryModule.hasNamedExport(
+      'const note = "export function AppPage() {}";',
+      "AppPage",
+    ),
+    false,
+  );
+  assert.equal(
+    registryModule.hasNamedExport(
+      "export default function AppPage() {}",
+      "AppPage",
+    ),
+    false,
+  );
+  assert.equal(
+    registryModule.hasNamedExport("export { type AppPage };", "AppPage"),
+    false,
+  );
+  assert.equal(
+    registryModule.hasNamedExport(
+      "function LocalPage() {}\nexport { LocalPage as AppPage };",
+      "AppPage",
+    ),
+    true,
+  );
   for (const adapter of [
     "AppPage",
     "DataTable",
@@ -878,12 +903,15 @@ test("UI component registry classifies every primitive and approved adapter", as
     assert.ok(report.auditAdapterNames.includes(adapter));
   }
 
-  const fixtureReport = registryModule.buildPrimitiveComponentCoverage([
-    ...report.primitiveCoverage.actual,
+  const fixtureReport = registryModule.buildSharedComponentCoverage([
+    ...report.sharedComponentCoverage.actual,
     "fixture-agent-invented.tsx",
   ]);
   assert.deepEqual(fixtureReport.unclassified, ["fixture-agent-invented.tsx"]);
-  assert.match(fixtureReport.errors.join("\n"), /unclassified primitive files/);
+  assert.match(
+    fixtureReport.errors.join("\n"),
+    /unclassified shared component files/,
+  );
 });
 
 test("HR list surfaces use DataTable and shared status badge domains", () => {

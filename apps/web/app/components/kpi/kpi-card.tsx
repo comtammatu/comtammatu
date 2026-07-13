@@ -6,7 +6,12 @@ import { cn } from "@comtammatu/ui/lib/utils";
 import { CompareChip, type CompareDelta } from "./compare-chip";
 import { TrendSparkline, type TrendPoint } from "./trend-sparkline";
 
-type KpiTone = "neutral" | "primary" | "success" | "warning" | "destructive";
+export type KpiTone =
+  | "neutral"
+  | "primary"
+  | "success"
+  | "warning"
+  | "destructive";
 
 const VALUE_TONE: Record<KpiTone, string> = {
   neutral: "text-foreground",
@@ -24,7 +29,7 @@ const DOT_TONE: Record<KpiTone, string> = {
   destructive: "bg-destructive",
 };
 
-interface KpiCardProps {
+export interface KpiCardProps {
   label: string;
   value: ReactNode;
   /** Compare delta (built via buildCompareDelta) */

@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.15.0 | Updated: 2026-07-05 | Status: locked single source for UI agents
+> Version: 15.0.0 | Updated: 2026-07-13 | Status: locked single source for UI agents
 
 ## Mục lục / Decision Index
 
@@ -17,7 +17,7 @@
 
 This file is the single design-system contract for agents building or reviewing
 UI in this repo. It defines the Com Tam Ma Tu Custom Theme: Ma Tu Concept 01
-semantic tokens, typography, rhythm, brand usage, primitive roles, and app
+semantic tokens, typography, rhythm, brand usage, shared component roles, and app
 surface adapters. Runtime files prove whether the contract is implemented, but
 they do not authorize a second visual language.
 
@@ -28,7 +28,7 @@ back to the contract.
 
 This is intentionally **one source of truth**, not a source-of-truth bundle.
 `docs/modules/ui.md`, `docs/agent/rules/ui.md`, `tasks/regressions.md`,
-`globals.css`, primitives, and app adapters are supporting
+`globals.css`, shared components, and app adapters are supporting
 evidence or enforcement. They must point back to this contract. If they conflict
 with it, the conflict is a bug to resolve, not permission to choose whichever
 file is convenient.
@@ -36,18 +36,18 @@ file is convenient.
 ## Decision
 
 The design system is the Com Tam Ma Tu Custom Theme contract implemented by
-Má Tư Design System primitives in `@comtammatu/ui`. Radix, lucide, Tailwind, and
-class-variance-authority are implementation dependencies, not design-system
-authorities. External scaffold output is not part of the runtime contract and
-must never be used to overrule this file.
+Má Tư Design System shared components in `@comtammatu/ui`. Radix supplies their
+headless primitive behavior; lucide, Tailwind, and class-variance-authority are
+implementation dependencies, not design-system authorities. External scaffold
+output is not part of the runtime contract and must never overrule this file.
 
 shadcn-ui and Web Interface Guidelines are advisory checklists only. They can
 surface missing accessibility, interaction, or component-selection signals, but
-they cannot create a second preset, scaffold config, token source, or primitive
+they cannot create a second preset, scaffold config, token source, or component
 authority for this repo.
 
 Custom Theme means the locked Ma Tu Concept 01 semantic tokens, typography,
-spacing rhythm, component roles, brand primitives, and app surface adapters
+spacing rhythm, component roles, brand components, and app surface adapters
 documented here. It does not mean a route-local theme layer, a new component
 library outside `@comtammatu/ui`, or a parallel visual language.
 
@@ -55,8 +55,9 @@ Active runtime:
 
 - custom theme: Com Tam Ma Tu Custom Theme / Ma Tu Concept 01
 - token source: `packages/ui/src/styles/globals.css`
-- primitive source: `packages/ui/src/components/*`
-- primitive dependencies: Radix (`radix-ui`), lucide, Tailwind CSS 4, CVA
+- shared component source: `packages/ui/src/components/*`
+- headless primitive dependency: Radix (`radix-ui`)
+- styling dependencies: lucide, Tailwind CSS 4, CVA
 - brand assets: `/brand/logo-matu.png`, `/brand/logo-matu-seal.png`, `/brand/logo-matu-vertical.png`, `/brand/mascot/be-suon-tuoi-runner.png`, `/brand/mascot/cotlet.png`, `/brand/mascot/cotlet.spritesheet.webp`, `/brand/mascot/cotlet.pet.json`, `/brand/symbols/*.svg`
 - web brand primitive: `apps/web/app/components/brand.tsx`
 - web app surface adapters: `apps/web/app/components/surface.tsx`
@@ -69,14 +70,14 @@ When deciding how to build UI, use this order:
 
 1. Custom Theme contract: `docs/spec/design-system.md`
 2. Runtime token evidence that must conform to it: `packages/ui/src/styles/globals.css`, `apps/web/app/layout.tsx`
-3. Primitive implementation that must conform to it: `packages/ui/src/components/*`
+3. Shared component implementation that must conform to it: `packages/ui/src/components/*`
 4. App adapter implementation that must conform to it: `apps/web/app/components/surface.tsx`
 5. Implementation guide: `docs/modules/ui.md`
 6. Negative rules: `tasks/regressions.md`
 7. Product copy and terminology: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
 
 After this contract selects a pattern, build from the current Má Tư DS
-primitive layer. Update this file only for a real contract change.
+shared component layer. Update this file only for a real contract change.
 
 ## Product UX Thesis
 
@@ -415,7 +416,6 @@ The system is **border-first**: resting surfaces are separated by `--border`, no
 
 | Rung           | Utility                            | Locked role                                                                                                                                                                                  |
 | -------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rest           | `shadow-effect-card-resting`       | Base `Card` carries a light resting shadow. Page sections, table rows, resting tiles are border-only.                                                                                        |
 | Hover          | `shadow-effect-card-hover`         | Interactive/clickable card adapters on hover only — data-table + inventory `interactive-card.tsx`, `AppLinkCard` + `OperationalBoardCard` (`surface.tsx`). Hairline ring + `0 1px 3px` drop. |
 | Overlay        | `shadow-effect-popover`            | Popover-family floating layers: `popover`, `dropdown-menu`, `select`. Bakes the `--effect-ring-border` hairline + soft drop (replaces the old `shadow-md ring-1 ring-foreground/10`).        |
 | Modal          | `shadow-effect-dialog`             | `dialog` content.                                                                                                                                                                            |
@@ -437,15 +437,45 @@ The system is **border-first**: resting surfaces are separated by `--border`, no
 
 ## Component Authority
 
-The only shared primitive layer is `packages/ui/src/components/*`.
+The Má Tư UI system has six ordered layers. A route consumes this stack from
+the highest existing layer that matches its job; it does not skip downward to
+rebuild a lower layer locally.
 
-App-level page, section, toolbar, empty-state, and link-card composition is centralized in `apps/web/app/components/surface.tsx`. These exports are adapters around the shared primitives, not a second primitive library.
+| Layer                 | Owner                                                            | Contract                                                                              |
+| --------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Foundations           | `packages/ui/src/styles/globals.css`                             | semantic color, type, spacing, radius, motion, and elevation tokens                   |
+| Headless primitives   | Radix internals inside `packages/ui`                             | behavior, focus, keyboard, and ARIA; never imported by route code                     |
+| Shared components     | `packages/ui/src/components/*`                                   | styled Má Tư controls and frames such as `Button`, `Card`, `Field`, and `Collapsible` |
+| App/workflow adapters | `apps/web/app/components/*`                                      | page, form, table, dialog, status, and operational composition                        |
+| Domain adapters       | `apps/web/lib/branch-operator/*`, `apps/web/lib/staff-runtime/*` | Branch and Employee vocabulary without creating another visual system                 |
+| Page archetypes       | `docs/spec/page-archetypes.md` + route composition               | approved page skeleton and plane-specific workflow                                    |
+
+`packages/ui/src/components/*` was historically called the shared “primitive
+layer” in this repository. It is the lowest public Má Tư layer, but its exports
+are styled components; Radix is the unstyled/headless primitive implementation.
+The machine-readable inventory therefore uses “shared component” terminology.
+
+Selection order is fixed: use an existing shared component, then compose shared
+components behind an app/workflow adapter, then use a domain adapter, then bind
+that composition to the route's archetype. Add a new shared component only when
+semantics, accessibility, or reusable behavior cannot be expressed by the
+existing set. A visual difference alone is not sufficient.
+
+App-level page, section, toolbar, empty-state, and link-card composition is centralized in `apps/web/app/components/surface.tsx`. These exports are adapters around the shared components, not a second component library.
+
+New or changed shared component DOM roots expose stable `data-slot` hooks.
+Shared surface adapters in `surface.tsx` expose stable `data-ui` roots and
+`data-ui-slot` regions; semantic state uses attributes such as `data-state`,
+`data-tone`, `data-size`, and `data-density`. These attributes are the contract
+for compound styling and targeted tests, not a second theming API. Public prop
+types use the `<ComponentName>Props` naming pattern, and controlled/uncontrolled
+behavior delegates to the headless primitive whenever one already exists.
 
 Tinted callout chrome routes through a primitive: any bordered / rounded `div` carrying a `bg-(warning|destructive|success|info)/N` tint MUST be an `Alert` (icon + message + action) or a `NoteCallout` (labeled note), never a hand-rolled tinted box. The canonical warning callout is `NoteCallout tone="warning"` (`bg-warning/15`, no border). See § Token Contract → Callout / tint chrome routing and Tint Opacity Scale.
 
-Shared layout primitives also exported from `surface.tsx`:
+Shared layout adapters also exported from `surface.tsx`:
 
-- `KpiRow` — responsive grid (1/2/3 columns) wrapping `KpiCard` metric tiles.
+- `KpiRow` — responsive grid (1/2/3/4 columns) wrapping `KpiCard` metric tiles.
 - `DescriptionList` — `<dl>` term/description pairs for detail-page metadata.
 - `LinkCardGrid` — responsive grid (1/2/3 columns) wrapping `AppLinkCard` entries.
 - `DocumentFormFrame` — page frame for document/line-form workflows (header +
@@ -487,7 +517,11 @@ Default primitive mapping:
 | table navigation                  | `Pagination`                                                                                                      |
 | split pane                        | `Resizable`                                                                                                       |
 | filter/action row                 | `Toolbar`                                                                                                         |
-| metric block                      | `Stat` in primitive demos; app metric cards use `KpiCard` only for numeric/stat values                            |
+| metric block                      | `KpiCard` for numeric/stat values                                                                                 |
+
+`Toolbar` is a wrapping layout component, not an ARIA composite widget. It must
+not emit `role="toolbar"` unless the implementation also owns roving focus and
+ArrowLeft/ArrowRight keyboard navigation.
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
 
@@ -586,14 +620,14 @@ Forbidden wrappers:
 - Helpers named like `app-*` surface classes.
 - Route-local app surface replacements.
 
-### High-level primitive import governance
+### High-level shared component import governance
 
-`Card`, `Table`, `Dialog`, and `AlertDialog` are high-level composition
-primitives. Route code must pick the owning adapter first. Direct app imports
+`Card`, `Table`, `Dialog`, and `AlertDialog` are high-level shared components.
+Route code must pick the owning adapter first. Direct app imports
 are blocked except for the exact registered adapter implementations that own
 the corresponding composition contract:
 
-| Primitive import                         | Default route for new app code                                                                                                               |
+| Shared component import                  | Default route for new app code                                                                                                               |
 | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@comtammatu/ui/components/card`         | App card role: `AppSection`, `AppLinkCard`, `KpiCard` for metrics only, `InteractiveCard`, `OperationalBoardCard`, or a route-scoped adapter |
 | `@comtammatu/ui/components/table`        | `DataTable`, `TableEmptyStateRow`, or a documented document/line-sheet adapter                                                               |

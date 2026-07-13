@@ -3,7 +3,7 @@
 ## Overview
 
 UI của repo là Com Tam Ma Tu Custom Theme (Ma Tu Concept 01) chạy trên
-Má Tư Design System primitives trong `@comtammatu/ui`. Radix, lucide, Tailwind,
+Má Tư Design System shared components trong `@comtammatu/ui`. Radix, lucide, Tailwind,
 và CVA là implementation dependencies, không phải source of truth cao hơn
 contract.
 Không còn helper layer hay theme system riêng theo route/surface.
@@ -66,15 +66,15 @@ Read order cho agent khi làm UI:
 5. `tasks/regressions.md`
 6. Domain docs liên quan đến route đang sửa
 
-## Primitive Baseline Contract
+## Shared Component Baseline Contract
 
-Baseline hiện tại: Má Tư DS primitives trong `packages/ui/src/components/*` cho
-monorepo `apps/web` + `packages/ui`. Đây là primitive implementation baseline;
+Baseline hiện tại: Má Tư DS shared components trong `packages/ui/src/components/*` cho
+monorepo `apps/web` + `packages/ui`. Đây là component implementation baseline;
 semantic token values và rhythm phải theo `docs/spec/design-system.md`.
 
 Điều này có nghĩa:
 
-- primitive structure phải theo file trong `packages/ui/src/components/*`
+- shared component structure phải theo file trong `packages/ui/src/components/*`
 - semantic token values phải theo `docs/spec/design-system.md`
 - brand color/typography phải đi qua semantic token và font variables chung
 - page/shell chỉ được compose từ primitives có sẵn và app surface adapters
@@ -82,9 +82,9 @@ semantic token values và rhythm phải theo `docs/spec/design-system.md`.
   `BrandLockup` / `BrandSymbol` / `BrandMascot`
 - không được giữ `app-*` helper classes hoặc custom background/theme chrome ở root
 
-## Primitive Layer
+## Shared Component Layer
 
-Primitive source vẫn sống tại `packages/ui/src/components/*`, và app code dùng các primitive này qua `@comtammatu/ui`:
+Shared component source vẫn sống tại `packages/ui/src/components/*`, và app code dùng các component này qua `@comtammatu/ui`. Radix là headless primitive layer nội bộ; route code không import Radix trực tiếp:
 
 - `button`
 - `accordion`
@@ -107,10 +107,9 @@ Primitive source vẫn sống tại `packages/ui/src/components/*`, và app code
 - `empty` — tất cả empty-state UI (no-data, no-results, error, inline)
 - `field` + `field-group` — form field composition (label, control, error, description)
 - `item` + `item-group` — list rows with media/title/description/actions
-- `stat` — primitive-level DS parity; app dashboard metrics vẫn đi qua `KpiCard`
 - `spinner` — loading indicator (thay cho `Loader2 + animate-spin`)
 
-Không fork primitive theo surface.
+Không fork shared component theo surface.
 
 `CardContent` table/list exceptions phải đi qua named primitive props:
 `flush` cho table-edge/list-edge alignment và `scroll` cho horizontal table

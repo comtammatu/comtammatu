@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import {
+import React, {
   createContext,
   useContext,
-  useState,
   type ComponentProps,
   type ReactNode,
 } from "react";
@@ -13,7 +12,7 @@ import {
   ArrowRight as IconArrowRight,
   ChevronDown as IconChevronDown,
 } from "lucide-react";
-import { ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -27,6 +26,11 @@ import {
   CardTitle,
 } from "@comtammatu/ui/components/card";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@comtammatu/ui/components/collapsible";
+import {
   Empty,
   EmptyContent,
   EmptyDescription,
@@ -38,8 +42,13 @@ import { Separator } from "@comtammatu/ui/components/separator";
 import { Toolbar, ToolbarGroup } from "@comtammatu/ui/components/toolbar";
 import { BrandSymbol, type BrandSymbolVariant } from "@/components/brand";
 
-type SurfaceWidth = "narrow" | "default" | "wide" | "xwide" | "full";
-type SurfaceTone = "primary" | "success" | "warning" | "info" | "secondary";
+export type SurfaceWidth = "narrow" | "default" | "wide" | "xwide" | "full";
+export type SurfaceTone =
+  | "primary"
+  | "success"
+  | "warning"
+  | "info"
+  | "secondary";
 
 // `xwide` is the one named exception to the arbitrary-dimension ban
 // (design-system.md § Rhythm Contract / app-arbitrary-sizing gate): a single
@@ -131,6 +140,11 @@ export function AppPage({
     <SurfaceNestingContext.Provider value={SURFACE_NESTING_PAGE}>
       <Root
         id={id}
+        data-ui="app-page"
+        data-width={width}
+        data-density={density}
+        data-scroll={scroll ? "true" : undefined}
+        data-mobile={mobile ? "true" : undefined}
         className={cn(
           "min-h-0 flex-1",
           scroll ? "no-scrollbar overflow-auto" : "overflow-visible",
@@ -140,6 +154,7 @@ export function AppPage({
         )}
       >
         <div
+          data-ui-slot="content"
           className={cn(
             "mx-auto flex w-full flex-col",
             isCompact ? "gap-3" : "gap-4",
@@ -191,10 +206,16 @@ export function AppPageHeader({
   const Heading = headingLevel;
 
   return (
-    <header className={cn("flex flex-col gap-2", className)}>
-      {breadcrumb ? <div>{breadcrumb}</div> : null}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
+    <header
+      data-ui="app-page-header"
+      className={cn("flex flex-col gap-2", className)}
+    >
+      {breadcrumb ? <div data-ui-slot="breadcrumb">{breadcrumb}</div> : null}
+      <div
+        data-ui-slot="layout"
+        className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+      >
+        <div data-ui-slot="heading" className="flex min-w-0 flex-col gap-1">
           {eyebrow ? (
             <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {eyebrow}
@@ -202,6 +223,7 @@ export function AppPageHeader({
           ) : null}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Heading
+              data-ui-slot="title"
               className={cn(
                 "font-heading min-w-0 text-xl font-semibold tracking-tight sm:text-2xl",
                 titleClassName,
@@ -216,21 +238,29 @@ export function AppPageHeader({
             ) : null}
           </div>
           {description ? (
-            <div className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            <div
+              data-ui-slot="description"
+              className="max-w-3xl text-sm leading-6 text-muted-foreground"
+            >
               {description}
             </div>
           ) : null}
           {meta ? (
-            <div className="text-xs text-muted-foreground">{meta}</div>
+            <div data-ui-slot="meta" className="text-xs text-muted-foreground">
+              {meta}
+            </div>
           ) : null}
         </div>
         {actions ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div
+            data-ui-slot="actions"
+            className="flex shrink-0 flex-wrap items-center gap-2"
+          >
             {actions}
           </div>
         ) : null}
       </div>
-      {tabs ? <div>{tabs}</div> : null}
+      {tabs ? <div data-ui-slot="tabs">{tabs}</div> : null}
     </header>
   );
 }
@@ -257,6 +287,7 @@ export function AppBackLink({
   return (
     <Link
       href={href}
+      data-ui="app-back-link"
       className={cn(
         "inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline",
         className,
@@ -317,6 +348,8 @@ export type AppSectionProps = {
   tone?: AppSectionTone;
   collapsible?: boolean;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   footer?: ReactNode;
 };
 
@@ -337,9 +370,10 @@ export function AppSection({
   tone = "default",
   collapsible = false,
   defaultOpen = true,
+  open,
+  onOpenChange,
   footer,
 }: AppSectionProps) {
-  const [open, setOpen] = useState(defaultOpen);
   const hasHeader = Boolean(
     title ||
     description ||
@@ -350,89 +384,111 @@ export function AppSection({
     collapsible,
   );
   const chevronAction = collapsible ? (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      onClick={() => setOpen((v) => !v)}
-      className="text-muted-foreground hover:text-foreground transition-colors"
-      aria-expanded={open}
-      aria-label={open ? "Thu gọn" : "Mở rộng"}
-    >
-      <IconChevronDown
-        className={cn(
-          "size-4 transition-transform",
-          open ? "rotate-0" : "-rotate-90",
-        )}
-      />
-    </Button>
+    <CollapsibleTrigger asChild>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        data-ui="app-section-toggle"
+        className="text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <IconChevronDown className="size-4 transition-transform group-data-[state=closed]/button:-rotate-90" />
+        <span className="sr-only group-data-[state=open]/button:hidden">
+          {typeof title === "string" ? `${title}: ` : null}
+          {ACTIONS_VI.showMore}
+        </span>
+        <span className="sr-only group-data-[state=closed]/button:hidden">
+          {typeof title === "string" ? `${title}: ` : null}
+          {ACTIONS_VI.showLess}
+        </span>
+      </Button>
+    </CollapsibleTrigger>
   ) : null;
 
   return (
-    <Card size={size} className={cn(SECTION_TONE_CLASSNAME[tone], className)}>
-      {hasHeader ? (
-        <CardHeader className="has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
-          <CardTitle
-            className={cn(
-              "flex min-w-0 items-center gap-2",
-              headerHint && "flex-col items-start sm:flex-row sm:items-center",
-            )}
-          >
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              {icon ? (
-                <span
-                  className={cn(
-                    "inline-flex shrink-0 [&_svg]:size-5",
-                    SECTION_TONE_ICON_CLASSNAME[tone],
-                    iconClassName,
-                  )}
-                >
-                  {icon}
+    <Collapsible
+      asChild
+      open={collapsible ? open : true}
+      defaultOpen={collapsible ? defaultOpen : undefined}
+      onOpenChange={collapsible ? onOpenChange : undefined}
+    >
+      <Card
+        size={size}
+        data-ui="app-section"
+        data-tone={tone}
+        data-collapsible={collapsible ? "true" : undefined}
+        className={cn(SECTION_TONE_CLASSNAME[tone], className)}
+      >
+        {hasHeader ? (
+          <CardHeader className="has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
+            <CardTitle
+              className={cn(
+                "flex min-w-0 items-center gap-2",
+                headerHint &&
+                  "flex-col items-start sm:flex-row sm:items-center",
+              )}
+            >
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                {icon ? (
+                  <span
+                    className={cn(
+                      "inline-flex shrink-0 [&_svg]:size-5",
+                      SECTION_TONE_ICON_CLASSNAME[tone],
+                      iconClassName,
+                    )}
+                  >
+                    {icon}
+                  </span>
+                ) : null}
+                <span className="min-w-0 break-words leading-snug">
+                  {title}
+                </span>
+              </span>
+              {headerHint ? (
+                <span className="shrink-0 text-xs font-medium text-muted-foreground sm:text-right">
+                  {headerHint}
                 </span>
               ) : null}
-              <span className="min-w-0 break-words leading-snug">{title}</span>
-            </span>
-            {headerHint ? (
-              <span className="shrink-0 text-xs font-medium text-muted-foreground sm:text-right">
-                {headerHint}
-              </span>
+            </CardTitle>
+            {description ? (
+              <CardDescription>{description}</CardDescription>
             ) : null}
-          </CardTitle>
-          {description ? (
-            <CardDescription>{description}</CardDescription>
-          ) : null}
-          {badge || action || chevronAction ? (
-            <CardAction className="col-start-1 row-span-1 row-start-auto justify-self-start flex flex-wrap items-center justify-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end sm:justify-end">
-              {badge ? (
-                <Badge variant={badge.variant ?? "secondary"}>
-                  {badge.children}
-                </Badge>
-              ) : null}
-              {action}
-              {chevronAction}
-            </CardAction>
-          ) : null}
-        </CardHeader>
-      ) : null}
-      {open ? (
-        <CardContent
-          flush={contentFlush}
-          scroll={contentScroll}
-          className={cn(
-            "flex min-w-0 flex-col gap-3",
-            !hasHeader && "pt-0",
-            contentClassName,
-          )}
+            {badge || action || chevronAction ? (
+              <CardAction className="col-start-1 row-span-1 row-start-auto flex flex-wrap items-center justify-start gap-2 justify-self-start sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-end sm:justify-self-end">
+                {badge ? (
+                  <Badge variant={badge.variant ?? "secondary"}>
+                    {badge.children}
+                  </Badge>
+                ) : null}
+                {action}
+                {chevronAction}
+              </CardAction>
+            ) : null}
+          </CardHeader>
+        ) : null}
+        <CollapsibleContent
+          data-ui-slot="content"
+          className={cn("flex flex-col", size === "sm" ? "gap-3" : "gap-4")}
         >
-          {children}
-        </CardContent>
-      ) : null}
-      {open && footer ? (
-        <CardFooter className="flex items-center justify-end gap-2 border-t">
-          {footer}
-        </CardFooter>
-      ) : null}
-    </Card>
+          <CardContent
+            flush={contentFlush}
+            scroll={contentScroll}
+            className={cn(
+              "flex min-w-0 flex-col gap-3",
+              !hasHeader && "pt-0",
+              contentClassName,
+            )}
+          >
+            {children}
+          </CardContent>
+          {footer ? (
+            <CardFooter className="flex items-center justify-end gap-2 border-t">
+              {footer}
+            </CardFooter>
+          ) : null}
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
 
@@ -494,14 +550,17 @@ export function AppToolbar({
 
   if (variant === "inline") {
     return (
-      <Toolbar className={cn("gap-3 border-b bg-muted/30 p-3", className)}>
+      <Toolbar
+        data-ui="app-toolbar"
+        className={cn("gap-3 border-b bg-muted/30 p-3", className)}
+      >
         {content}
       </Toolbar>
     );
   }
 
   return (
-    <Card size="sm">
+    <Card size="sm" data-ui="app-toolbar">
       <CardContent>
         <Toolbar className={cn("gap-3", className)}>{content}</Toolbar>
       </CardContent>
@@ -547,7 +606,10 @@ export function DocumentFormFrame({
       contentClassName={contentClassName}
     >
       {header}
-      <div className={cn("flex min-w-0 flex-col gap-4", bodyClassName)}>
+      <div
+        data-ui="document-form-body"
+        className={cn("flex min-w-0 flex-col gap-4", bodyClassName)}
+      >
         {children}
       </div>
       {footer}
@@ -572,17 +634,27 @@ export type OperationalTileProps = ComponentProps<typeof Button> & {
 };
 
 export function OperationalTile({
-  selected = false,
+  selected,
   tone = "default",
   variant,
   className,
+  "aria-pressed": ariaPressed,
   ...props
 }: OperationalTileProps) {
+  const isSelected = selected === true;
+  const hasSelectionState = selected !== undefined;
+
   return (
     <Button
-      variant={variant ?? (selected ? "default" : "outline")}
+      data-ui="operational-tile"
+      data-state={
+        hasSelectionState ? (isSelected ? "selected" : "unselected") : "idle"
+      }
+      data-tone={tone}
+      aria-pressed={ariaPressed ?? (hasSelectionState ? isSelected : undefined)}
+      variant={variant ?? (isSelected ? "default" : "outline")}
       className={cn(
-        selected
+        isSelected
           ? "border-primary/20 ring-2 ring-primary/20"
           : OPERATIONAL_TILE_TONE_CLASSNAME[tone],
         className,
@@ -615,6 +687,10 @@ export function OperationalBoardCard({
 }: OperationalBoardCardProps) {
   return (
     <Card
+      data-ui="operational-board-card"
+      data-state={current ? "current" : "idle"}
+      data-tone={currentTone}
+      data-interactive={interactive ? "true" : undefined}
       className={cn(
         "transition",
         interactive && "hover:shadow-effect-card-hover",
@@ -680,6 +756,10 @@ export function AppEmptyState({
 }: AppEmptyStateProps) {
   return (
     <Empty
+      data-ui="app-empty-state"
+      data-mode={mode}
+      data-density={compact ? "compact" : "comfortable"}
+      data-align={align}
       className={cn(
         "border bg-card",
         compact ? "py-6" : "py-12",
@@ -811,6 +891,9 @@ export function AppLinkCard({
 
   return (
     <Card
+      data-ui="app-link-card"
+      data-state={disabled ? "disabled" : "enabled"}
+      data-tone={tone}
       className={cn(
         "h-full transition",
         disabled
@@ -847,6 +930,8 @@ export function KpiRow({
   const isCompact = density === "compact";
   return (
     <div
+      data-ui="kpi-row"
+      data-density={density}
       className={cn(
         "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
         isCompact ? "gap-2" : "gap-3",
@@ -877,7 +962,10 @@ export function DescriptionList({
   descriptionClassName,
 }: DescriptionListProps) {
   return (
-    <dl className={cn("flex flex-col gap-3", className)}>
+    <dl
+      data-ui="description-list"
+      className={cn("flex flex-col gap-3", className)}
+    >
       {items.map((item, index) => (
         <div key={index} className="flex flex-col gap-1">
           <dt
@@ -905,6 +993,7 @@ export type LinkCardGridProps = {
 export function LinkCardGrid({ children, className }: LinkCardGridProps) {
   return (
     <div
+      data-ui="link-card-grid"
       className={cn(
         "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
         className,
@@ -937,6 +1026,8 @@ export function AppDetailFooter({
 
   return (
     <footer
+      data-ui="app-detail-footer"
+      data-sticky={sticky ? "true" : undefined}
       className={cn(
         "flex border-t border-border",
         mobileReverse ? "flex-col-reverse" : "flex-col",

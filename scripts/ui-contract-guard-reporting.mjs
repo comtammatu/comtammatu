@@ -65,6 +65,7 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
       "print-format-ssot",
       "radius-scale",
       "raw-percent-output-ssot",
+      "retired-card-resting-effect",
       "resting-shadow-rung",
       "root-viewport-allows-zoom",
       "operator-no-stat-metric",

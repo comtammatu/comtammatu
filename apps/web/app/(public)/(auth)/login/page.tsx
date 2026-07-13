@@ -13,7 +13,7 @@ export default function LoginPage() {
       <div className="relative z-10 flex flex-col items-center gap-3 px-6 pt-10 pb-4 lg:justify-between lg:p-12 lg:bg-primary/10">
         <span aria-hidden="true" className="hidden lg:block" />
         <div className="flex flex-col items-center gap-6 lg:flex-1 lg:justify-center">
-          <div className="rounded-lg border border-border/20 bg-card/90 p-3 shadow-effect-card-resting">
+          <div className="rounded-lg border border-border/20 bg-card/90 p-3">
             <BrandLockup decorative size="md" priority className="lg:h-28" />
           </div>
           <div className="flex flex-col items-center text-center gap-2">
@@ -37,12 +37,16 @@ export default function LoginPage() {
       <section className="relative z-10 flex flex-1 items-center justify-center p-6 sm:p-8">
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center justify-center h-20 w-20 mb-4 lg:hidden">
-            <BrandMascot mood="waving" animated className="shrink-0 scale-[0.35]" />
+            <BrandMascot
+              mood="waving"
+              animated
+              className="shrink-0 scale-[0.35]"
+            />
           </div>
           <AppSection
             title={ACTIONS_VI.signIn}
             description="Nhập tài khoản nhân viên được cấp để tiếp tục."
-            className="bg-card/50 shadow-effect-card-resting backdrop-blur-md transition-[background-color,border-color] border-border/20 hover:border-border/30"
+            className="border-border/20 bg-card/50 backdrop-blur-md transition-[background-color,border-color] hover:border-border/30"
           >
             <LoginForm />
           </AppSection>

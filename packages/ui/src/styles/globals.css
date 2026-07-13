@@ -233,9 +233,6 @@
   --effect-drawer-blur: blur(2px);
   --effect-ring-hairline: inset 0 0 0 1px rgba(13, 27, 42, 0.1);
   --effect-ring-border: inset 0 0 0 1px var(--border);
-  --effect-card-resting:
-    var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.04),
-    0 2px 8px rgba(13, 27, 42, 0.02);
   --effect-card-hover:
     var(--effect-ring-hairline), 0 2px 8px rgba(13, 27, 42, 0.08),
     0 4px 16px rgba(13, 27, 42, 0.04);
@@ -255,9 +252,6 @@
   --effect-drawer-blur: blur(3px);
   --effect-ring-hairline: inset 0 0 0 1px rgba(245, 235, 217, 0.12);
   --effect-ring-border: inset 0 0 0 1px var(--border);
-  --effect-card-resting:
-    var(--effect-ring-hairline), 0 1px 3px rgba(0, 0, 0, 0.24),
-    0 2px 8px rgba(0, 0, 0, 0.16);
   --effect-card-hover:
     var(--effect-ring-hairline), 0 2px 8px rgba(0, 0, 0, 0.32),
     0 4px 16px rgba(0, 0, 0, 0.2);
@@ -629,9 +623,6 @@
 }
 @utility shadow-effect-tooltip {
   box-shadow: var(--effect-tooltip);
-}
-@utility shadow-effect-card-resting {
-  box-shadow: var(--effect-card-resting);
 }
 @utility shadow-effect-card-hover {
   box-shadow: var(--effect-card-hover);

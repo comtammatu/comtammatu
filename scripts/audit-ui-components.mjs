@@ -1118,13 +1118,13 @@ const baselineReportingRows = [
 ];
 
 const componentSelectionRows = [
-  ...Object.entries(componentRegistry.primitiveCoverage.accessCounts).map(
-    ([access, count]) => ["primitive", access, String(count)],
+  ...Object.entries(componentRegistry.sharedComponentCoverage.accessCounts).map(
+    ([access, count]) => ["shared-component", access, String(count)],
   ),
   [
-    "primitive",
+    "shared-component",
     "unclassified",
-    String(componentRegistry.primitiveCoverage.unclassified.length),
+    String(componentRegistry.sharedComponentCoverage.unclassified.length),
   ],
   ["app-adapter", "registered", String(componentRegistry.appAdapterCount)],
   ["domain-adapter", "families", String(componentRegistry.domainFamilyCount)],

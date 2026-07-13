@@ -1264,6 +1264,17 @@ const checks = [
     },
   },
   {
+    id: "retired-card-resting-effect",
+    description:
+      "Resting surfaces are border-first; the retired card-resting token and utility must stay absent from app and shared component source.",
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "packages/ui/src", extensions: [".tsx", ".css"] },
+    ],
+    pattern: /\b(?:shadow-)?effect-card-resting\b/g,
+    allowlist: {},
+  },
+  {
     id: "motion-color-duration",
     description:
       "Color/border feedback uses duration-150; duration-300 is the overlay enter/exit token. transition-colors paired with duration-300 is the wrong locked duration (design-system.md § Motion Contract).",
@@ -1534,8 +1545,10 @@ const textChecks = [
       "They must point back to this contract.",
       "the conflict is a bug to resolve",
       "The design system is the Com Tam Ma Tu Custom Theme contract implemented by",
-      "Má Tư Design System primitives in `@comtammatu/ui`",
-      "External scaffold output is not part of the runtime contract",
+      "Má Tư Design System shared components in `@comtammatu/ui`",
+      "Radix supplies their",
+      "External scaffold",
+      "must never overrule this file.",
     ],
   },
   {
@@ -1643,7 +1656,10 @@ const textChecks = [
   {
     id: "matu-ds-runtime-contract",
     file: "docs/spec/design-system.md",
-    includes: ["primitive source: `packages/ui/src/components/*`"],
+    includes: [
+      "shared component source: `packages/ui/src/components/*`",
+      "headless primitive dependency: Radix (`radix-ui`)",
+    ],
   },
   {
     id: "matu-ds-agent-rule",
@@ -1653,7 +1669,7 @@ const textChecks = [
   {
     id: "matu-ds-module-doc",
     file: "docs/modules/ui.md",
-    includes: ["Baseline hiện tại: Má Tư DS primitives"],
+    includes: ["Baseline hiện tại: Má Tư DS shared components"],
   },
   {
     id: "readme-ui-runtime-current",

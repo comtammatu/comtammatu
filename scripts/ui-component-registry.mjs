@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 
 const VALID_ACCESS = new Set([
   "direct",
@@ -17,7 +18,7 @@ const adapterOnly = (...args) => decision("adapter-only", ...args);
 const workflowOnly = (...args) => decision("workflow-only", ...args);
 const internal = (...args) => decision("internal", ...args);
 
-export const PRIMITIVE_COMPONENT_REGISTRY = {
+export const SHARED_COMPONENT_REGISTRY = {
   "accordion.tsx": direct(
     "multi-panel disclosure",
     "Accordion",
@@ -339,13 +340,6 @@ export const PRIMITIVE_COMPONENT_REGISTRY = {
     "Skeleton when preserving layout matters",
     "Loader icon plus animate-spin",
     "button and panel pending states",
-  ),
-  "stat.tsx": adapterOnly(
-    "primitive metric internals",
-    "KpiCard and KpiRow for app metrics",
-    "DescriptionList for non-metric values",
-    "route-local Stat or SummaryCard contract",
-    "shared metric adapter",
   ),
   "switch.tsx": direct(
     "immediate binary setting",
@@ -907,6 +901,69 @@ function uniqueSorted(values) {
   return [...new Set(values)].sort();
 }
 
+export function hasNamedExport(source, name) {
+  const sourceFile = ts.createSourceFile(
+    "component.tsx",
+    source,
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TSX,
+  );
+
+  for (const statement of sourceFile.statements) {
+    if (
+      ts.isExportDeclaration(statement) &&
+      !statement.isTypeOnly &&
+      statement.exportClause &&
+      ts.isNamedExports(statement.exportClause)
+    ) {
+      if (
+        statement.exportClause.elements.some(
+          (element) => !element.isTypeOnly && element.name.text === name,
+        )
+      ) {
+        return true;
+      }
+      continue;
+    }
+
+    const modifiers = ts.canHaveModifiers(statement)
+      ? (ts.getModifiers(statement) ?? [])
+      : [];
+    const isNamedRuntimeExport =
+      modifiers.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
+      ) &&
+      !modifiers.some(
+        (modifier) =>
+          modifier.kind === ts.SyntaxKind.DefaultKeyword ||
+          modifier.kind === ts.SyntaxKind.DeclareKeyword,
+      );
+    if (!isNamedRuntimeExport) continue;
+
+    if (
+      (ts.isFunctionDeclaration(statement) ||
+        ts.isClassDeclaration(statement) ||
+        ts.isEnumDeclaration(statement)) &&
+      statement.name?.text === name
+    ) {
+      return true;
+    }
+
+    if (
+      ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.some(
+        (declaration) =>
+          ts.isIdentifier(declaration.name) && declaration.name.text === name,
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function validateDecisionEntry(label, entry, errors) {
   if (!VALID_ACCESS.has(entry.access) && entry.access != null) {
     errors.push(`${label} has unknown access ${entry.access}`);
@@ -918,9 +975,9 @@ function validateDecisionEntry(label, entry, errors) {
   }
 }
 
-export function buildPrimitiveComponentCoverage(actualPrimitiveFiles) {
-  const actual = uniqueSorted(actualPrimitiveFiles);
-  const registered = Object.keys(PRIMITIVE_COMPONENT_REGISTRY).sort();
+export function buildSharedComponentCoverage(actualComponentFiles) {
+  const actual = uniqueSorted(actualComponentFiles);
+  const registered = Object.keys(SHARED_COMPONENT_REGISTRY).sort();
   const actualSet = new Set(actual);
   const registeredSet = new Set(registered);
   const unclassified = actual.filter((file) => !registeredSet.has(file));
@@ -928,17 +985,17 @@ export function buildPrimitiveComponentCoverage(actualPrimitiveFiles) {
   const errors = [];
   const accessCounts = {};
 
-  for (const [file, entry] of Object.entries(PRIMITIVE_COMPONENT_REGISTRY)) {
-    validateDecisionEntry(`primitive ${file}`, entry, errors);
+  for (const [file, entry] of Object.entries(SHARED_COMPONENT_REGISTRY)) {
+    validateDecisionEntry(`shared component ${file}`, entry, errors);
     accessCounts[entry.access] = (accessCounts[entry.access] ?? 0) + 1;
   }
   if (unclassified.length > 0) {
     errors.push(
-      `unclassified primitive files: ${unclassified.join(", ")}. Add a decision route before using or exporting the primitive.`,
+      `unclassified shared component files: ${unclassified.join(", ")}. Add a decision route before using or exporting the component.`,
     );
   }
   if (stale.length > 0) {
-    errors.push(`stale primitive registry files: ${stale.join(", ")}`);
+    errors.push(`stale shared component registry files: ${stale.join(", ")}`);
   }
 
   return {
@@ -961,14 +1018,14 @@ function exportedFunctions(source, prefix) {
 }
 
 export function validateUiComponentRegistry(repoRoot) {
-  const primitiveDir = path.join(repoRoot, "packages/ui/src/components");
-  const actualPrimitiveFiles = fs
-    .readdirSync(primitiveDir, { withFileTypes: true })
+  const componentDir = path.join(repoRoot, "packages/ui/src/components");
+  const actualComponentFiles = fs
+    .readdirSync(componentDir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith(".tsx"))
     .map((entry) => entry.name);
-  const primitiveCoverage =
-    buildPrimitiveComponentCoverage(actualPrimitiveFiles);
-  const errors = [...primitiveCoverage.errors];
+  const sharedComponentCoverage =
+    buildSharedComponentCoverage(actualComponentFiles);
+  const errors = [...sharedComponentCoverage.errors];
 
   for (const [name, entry] of Object.entries(APP_ADAPTER_REGISTRY)) {
     validateDecisionEntry(`app adapter ${name}`, entry, errors);
@@ -978,8 +1035,8 @@ export function validateUiComponentRegistry(repoRoot) {
       continue;
     }
     const source = fs.readFileSync(sourcePath, "utf8");
-    if (!new RegExp(`\\b${name}\\b`).test(source)) {
-      errors.push(`app adapter ${name} is not present in ${entry.source}`);
+    if (!hasNamedExport(source, name)) {
+      errors.push(`app adapter ${name} is not exported by ${entry.source}`);
     }
   }
 
@@ -1018,7 +1075,7 @@ export function validateUiComponentRegistry(repoRoot) {
   }
 
   return {
-    primitiveCoverage,
+    sharedComponentCoverage,
     appAdapterCount: Object.keys(APP_ADAPTER_REGISTRY).length,
     auditAdapterNames: Object.entries(APP_ADAPTER_REGISTRY)
       .filter(([, entry]) => entry.audit)

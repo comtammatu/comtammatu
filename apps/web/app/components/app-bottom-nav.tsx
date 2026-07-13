@@ -45,7 +45,7 @@ export function AppBottomNav({
     <nav
       data-app-bottom-nav
       className={cn(
-        "z-40 border-t border-border/20 bg-card/80 px-3 pt-2 pb-1 shadow-effect-card-resting chrome-safe-pb chrome-tap select-none backdrop-blur-md print:hidden",
+        "z-40 border-t border-border/20 bg-card/80 px-3 pt-2 pb-1 chrome-safe-pb chrome-tap select-none backdrop-blur-md print:hidden",
         position === "fixed" ? "fixed inset-x-0 bottom-0" : "static shrink-0",
         hideOnDesktop && "lg:hidden",
         className,

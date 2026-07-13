@@ -29,7 +29,7 @@ export type ComboboxOption = {
   keywords?: string[];
 };
 
-type ComboboxProps = Omit<
+export type ComboboxProps = Omit<
   React.ComponentProps<"button">,
   "children" | "onChange" | "value"
 > & {
@@ -66,6 +66,9 @@ function Combobox({
           type="button"
           role="combobox"
           aria-expanded={open}
+          data-slot="combobox-trigger"
+          data-combobox-slot="trigger"
+          data-size={size}
           data-placeholder={selected ? undefined : true}
           disabled={disabled}
           className={cn(
@@ -81,6 +84,7 @@ function Combobox({
         </button>
       </PopoverTrigger>
       <PopoverContent
+        data-combobox-slot="content"
         className={cn(
           "w-[var(--radix-popover-trigger-width)] p-0",
           contentClassName,
@@ -95,6 +99,8 @@ function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
+                  data-combobox-slot="option"
+                  data-option-value={option.value}
                   value={option.label}
                   keywords={[option.value, ...(option.keywords ?? [])]}
                   disabled={option.disabled}

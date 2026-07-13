@@ -46,9 +46,7 @@ test("GRN source and actions are supplier-first without PO creation", () => {
   const officeSource = read(
     "apps/web/app/(protected)/inventory/grn/new/page.tsx",
   );
-  const grnActions = read(
-    "apps/web/app/(protected)/inventory/grn-actions.ts",
-  );
+  const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
   const procurement = read(
     "apps/web/app/(protected)/inventory/procurement-actions.ts",
   );
@@ -86,14 +84,23 @@ test("historical PO references render as text and never reopen a retired route",
     "apps/web/app/(protected)/inventory/dashboard-client.tsx",
   );
 
-  assert.match(grnList, /<span className="font-mono">\{grn\.poCode\}<\/span>/);
-  assert.match(grnDetail, /<span className="font-mono">\{grn\.poCode\}<\/span>/);
+  assert.match(
+    grnList,
+    /<span className="font-mono">\s*\{grn\.poCode\}\s*<\/span>/,
+  );
+  assert.match(
+    grnDetail,
+    /<span className="font-mono">\s*\{grn\.poCode\}\s*<\/span>/,
+  );
   assert.match(
     supplierInvoices,
-    /<span className="font-mono">\{selectedInvoice\.poCode\}<\/span>/,
+    /<span className="font-mono">\s*\{selectedInvoice\.poCode\}\s*<\/span>/,
   );
   for (const source of [grnList, grnDetail, supplierInvoices, dashboard]) {
-    assert.doesNotMatch(source, /\/inventory\/purchase-orders|stock\/purchase-orders/);
+    assert.doesNotMatch(
+      source,
+      /\/inventory\/purchase-orders|stock\/purchase-orders/,
+    );
   }
 });
 

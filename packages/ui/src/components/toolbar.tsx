@@ -6,7 +6,6 @@ function Toolbar({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="toolbar"
-      role="toolbar"
       className={cn("flex flex-wrap items-center gap-2", className)}
       {...props}
     />
