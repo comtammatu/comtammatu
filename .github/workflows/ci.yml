@@ -148,10 +148,12 @@ jobs:
                   core.info(`Supabase Preview succeeded on ${process.env.HEAD_SHA}.`);
                   return;
                 }
-                core.setFailed(
-                  `Supabase Preview concluded ${preview.conclusion ?? "without a conclusion"} on ${process.env.HEAD_SHA}.`,
-                );
-                return;
+                if (!["skipped", "neutral"].includes(preview.conclusion ?? "")) {
+                  core.setFailed(
+                    `Supabase Preview concluded ${preview.conclusion ?? "without a conclusion"} on ${process.env.HEAD_SHA}.`,
+                  );
+                  return;
+                }
               }
 
               await new Promise((resolve) => setTimeout(resolve, 15_000));
