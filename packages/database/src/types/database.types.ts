@@ -7854,6 +7854,7 @@ export type Database = {
           payment_date: string
           payment_method: string
           reference_note: string | null
+          sepay_webhook_event_id: number | null
           supplier_invoice_id: number
           tenant_id: number
           updated_at: string
@@ -7866,6 +7867,7 @@ export type Database = {
           payment_date?: string
           payment_method: string
           reference_note?: string | null
+          sepay_webhook_event_id?: number | null
           supplier_invoice_id: number
           tenant_id: number
           updated_at?: string
@@ -7878,11 +7880,19 @@ export type Database = {
           payment_date?: string
           payment_method?: string
           reference_note?: string | null
+          sepay_webhook_event_id?: number | null
           supplier_invoice_id?: number
           tenant_id?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "supplier_payments_sepay_event_tenant_fkey"
+            columns: ["tenant_id", "sepay_webhook_event_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_events"
+            referencedColumns: ["tenant_id", "id"]
+          },
           {
             foreignKeyName: "supplier_payments_supplier_invoice_id_fkey"
             columns: ["supplier_invoice_id"]
@@ -11041,6 +11051,10 @@ export type Database = {
       }
       set_sepay_expense_allocations: {
         Args: { p_allocations: Json; p_event_id: number }
+        Returns: Json
+      }
+      set_sepay_supplier_payment_links: {
+        Args: { p_event_id: number; p_supplier_payment_ids: number[] }
         Returns: Json
       }
       split_order: {

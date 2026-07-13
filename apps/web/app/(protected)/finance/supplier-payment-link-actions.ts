@@ -24,19 +24,6 @@ type SupplierPaymentLinkRpcError = {
   message?: string;
 };
 
-type SupplierPaymentLinkRpcClient = {
-  rpc: (
-    fn: "set_sepay_supplier_payment_links",
-    args: {
-      p_event_id: number;
-      p_supplier_payment_ids: number[];
-    },
-  ) => PromiseLike<{
-    data: unknown;
-    error: SupplierPaymentLinkRpcError | null;
-  }>;
-};
-
 function mapSupplierPaymentLinkError(error: SupplierPaymentLinkRpcError): {
   error: string;
   errorCode: string;
@@ -114,12 +101,13 @@ export async function setSepaySupplierPaymentLinks(
   const supplierPaymentIds = [...parsed.data.supplierPaymentIds].sort(
     (left, right) => left - right,
   );
-  const { data, error } = await (
-    ctx.supabase as SupplierPaymentLinkRpcClient
-  ).rpc("set_sepay_supplier_payment_links", {
-    p_event_id: parsed.data.eventId,
-    p_supplier_payment_ids: supplierPaymentIds,
-  });
+  const { data, error } = await ctx.supabase.rpc(
+    "set_sepay_supplier_payment_links",
+    {
+      p_event_id: parsed.data.eventId,
+      p_supplier_payment_ids: supplierPaymentIds,
+    },
+  );
 
   if (error) {
     console.error(
