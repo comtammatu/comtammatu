@@ -15,6 +15,7 @@ import { buildSepayReconciliationSummary } from "../_lib/sepay-bank-transaction-
 import {
   fetchSepayBankTransactions,
   fetchSepayPaymentWebhookSummary,
+  fetchSepaySupplierPaymentCandidates,
 } from "../_lib/sepay-bank-transactions";
 import { FilterBar } from "../components/filter-bar";
 import {
@@ -47,12 +48,14 @@ export default async function BankTransactionsPage({
     authState,
     transactions,
     expenseOptionsRes,
+    supplierPaymentCandidates,
     paymentWebhookSummary,
     momoExceptions,
   ] = await Promise.all([
     loadAuthState(),
     fetchSepayBankTransactions(range),
     fetchExpenseMatchOptions(),
+    fetchSepaySupplierPaymentCandidates(range),
     fetchSepayPaymentWebhookSummary(range),
     fetchMomoPaymentExceptions(),
   ]);
@@ -174,6 +177,7 @@ export default async function BankTransactionsPage({
             paymentWebhookSummary.missingBankWebhookPayments
           }
           expenseOptions={expenseOptions}
+          supplierPaymentCandidates={supplierPaymentCandidates}
           canLinkPayments={canLinkPayments}
         />
       </AppSection>

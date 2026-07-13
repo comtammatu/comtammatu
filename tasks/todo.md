@@ -1820,8 +1820,16 @@ Implementation plan:
       preserve its reference, and never synthesize a webhook.
 - [x] P1.1a — require selected Chi Vận hành allocations to equal the full SePay
       transaction amount; allow an empty selection only to clear a manual match.
-- [ ] P1.1b — persist supplier-payment/refund relations instead of relying on a
-      date/reference/amount heuristic as final evidence.
+- [x] P1.1b — persist SePay supplier-payment relations and remove the
+      date/reference/amount heuristic as final evidence; require Owner authority,
+      exact amount conservation, mutual exclusion with expense allocation, and
+      atomic audit evidence.
+- [ ] P1.1c — persist refund-to-bank relations as authoritative evidence instead
+      of inferring them in reconciliation.
+- [ ] P1.1d — before activating real AP payment operations, make
+      `create_supplier_payment` retry-safe with a tenant-unique idempotency key
+      and replay semantics; re-evaluate branch scope before any non-Owner receives
+      `finance:ap_pay`.
 - [ ] P1.2 — close SePay-to-HĐĐT recovery around paid orders while preserving
       saved buyer payload.
 - [ ] P1.3 — reshape Finance into an Owner cockpit plus one reconciliation

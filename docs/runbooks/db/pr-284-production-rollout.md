@@ -50,7 +50,9 @@ the exact target and operation.
    evidence. Freeze ingredient/unit catalog create, update, and import before
    migration 3 until the exact-head runtime has fully drained the old runtime.
    Freeze Menu Limits replenishment before Stage B until migration 15 and its
-   warehouse-ledger smoke pass.
+   warehouse-ledger smoke pass. Keep supplier-payment creation and SePay
+   supplier-link editing disabled until migration 16 is committed, the old
+   runtime is drained, and the supplier-payment acceptance gates below pass.
 
 ## Selective forward manifest
 
@@ -71,8 +73,9 @@ the exact target and operation.
 |    13 | `20260713150807_harden_sepay_cash_deposit_boundary`             | Stage E                        |
 |    14 | `20260713151901_enforce_sepay_expense_allocation_amount`        | Stage E, isolated verification |
 |    15 | `20260713173142_rewire_menu_limit_stock_exception_to_warehouse` | Stage E                        |
-|    16 | `20260713210000_enforce_owner_only_refund_controls`             | Stage G                        |
-|    17 | `20260713221534_drop_legacy_confirm_production_run_overload`    | Stage G                        |
+|    16 | `20260714103000_persist_sepay_supplier_payment_links`           | Stage E, isolated verification |
+|    17 | `20260713210000_enforce_owner_only_refund_controls`             | Stage G                        |
+|    18 | `20260713221534_drop_legacy_confirm_production_run_overload`    | Stage G                        |
 
 ## Stage A — compatible database preparation
 
@@ -189,6 +192,35 @@ Apply migration 15 and verify the selected warehouse, stock movement, menu-limit
 increment, and audit row in one controlled smoke. Unfreeze Menu Limits
 replenishment only after that evidence is clean.
 
+Apply migration 16 alone after the exact-head runtime is serving and every old
+runtime instance has drained. Before production apply, the fresh Preview must
+prove all of the following:
+
+- only a signed, final, unclassified SePay money-out can be linked;
+- one event can link one or multiple bank-transfer supplier payments only when
+  their exact sum equals the bank amount;
+- replay, edit, and clear are deterministic and atomically audited;
+- duplicate IDs, missing payments, cash payments, cross-tenant rows, non-Owner
+  callers, in-flight events, and events already attached to an order or payment
+  are rejected;
+- supplier-payment and expense allocation are mutually exclusive in both call
+  orders and under real concurrent database sessions;
+- two real sessions competing for the same supplier payment serialize, one
+  wins, and the loser receives `supplier_payment_already_linked` without a
+  second attribution;
+- direct `authenticated` supplier-payment writes and sequence access are
+  absent, while the existing `create_supplier_payment` RPC remains callable;
+- deleting linked webhook evidence is restricted, generated database types
+  include the new column/RPC, and the UI renders only persisted links rather
+  than date/reference/amount inference.
+
+Do not enable real supplier-payment creation as part of this PR. Before the
+first AP payment pilot, add an idempotency key with tenant-unique replay
+semantics to `create_supplier_payment`; a lost response followed by retry can
+otherwise duplicate a valid partial payment. Also re-evaluate branch scope
+before granting `finance:ap_pay` to any non-Owner position. These are AP pilot
+gates, not permission to widen this rollout.
+
 ## Stage F — controlled MoMo admission
 
 With runtime readiness still on, verify cron/recovery returns a healthy empty or
@@ -204,8 +236,8 @@ reviewed.
 ## Stage G — owner refund and legacy overload contract
 
 After the payment canary and SePay allocation ledger are stable, apply migration
-16, prove Owner-only refund request/approve/reject and contention behavior, then
-apply migration 17 and prove the retained production-run signature. These two
+17, prove Owner-only refund request/approve/reject and contention behavior, then
+apply migration 18 and prove the retained production-run signature. These two
 migrations do not share the MoMo enable decision and must not be bundled into an
 earlier failed stage.
 

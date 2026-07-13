@@ -352,13 +352,6 @@ const matchSepayExpensesSchema = z.object({
     }),
 });
 
-type UntypedRpcClient = {
-  rpc: (
-    name: string,
-    args: Record<string, unknown>,
-  ) => Promise<{ error: { code?: string | null } | null }>;
-};
-
 function mapMatchExpenseError(code?: string | null): string {
   if (code === "P0002") return "Không tìm thấy giao dịch hoặc khoản chi.";
   if (code === "23505") return "Có dòng khớp bị trùng.";
@@ -394,16 +387,13 @@ export async function matchSepayTransactionWithExpenses(
   const { supabase } = ctx;
   const allocations = parsed.data.allocations;
 
-  const { error } = await (supabase as unknown as UntypedRpcClient).rpc(
-    "set_sepay_expense_allocations",
-    {
-      p_event_id: parsed.data.eventId,
-      p_allocations: allocations.map((allocation) => ({
-        expense_id: allocation.expenseId,
-        amount: allocation.amount,
-      })),
-    },
-  );
+  const { error } = await supabase.rpc("set_sepay_expense_allocations", {
+    p_event_id: parsed.data.eventId,
+    p_allocations: allocations.map((allocation) => ({
+      expense_id: allocation.expenseId,
+      amount: allocation.amount,
+    })),
+  });
 
   if (error) {
     if (!isExpenseMatchSchemaMissing(error.code)) {

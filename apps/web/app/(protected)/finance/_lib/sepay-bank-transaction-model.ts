@@ -29,6 +29,11 @@ export interface SepaySupplierPaymentMatch {
   supplierName: string | null;
 }
 
+export interface SepaySupplierPaymentLink {
+  eventId: number;
+  payment: SepaySupplierPaymentMatch;
+}
+
 export interface SepayExpenseAllocation {
   expenseId: number;
   amount: number | null;
@@ -371,15 +376,6 @@ export function mapSepayWebhookRow(
   };
 }
 
-function moneyEqual(left: number, right: number): boolean {
-  return left === right;
-}
-
-function normalizeRef(value: string | null): string | null {
-  const normalized = value?.trim().toLowerCase().replace(/\s+/g, " ");
-  return normalized && normalized.length >= 4 ? normalized : null;
-}
-
 function isUnclassifiedMoneyOutStatus(
   transaction: Pick<
     SepayBankTransaction,
@@ -393,72 +389,25 @@ function isUnclassifiedMoneyOutStatus(
   );
 }
 
-function supplierPaymentMatchesTransaction(
-  payment: Pick<SepaySupplierPaymentMatch, "referenceNote">,
-  transaction: Pick<SepayBankTransaction, "code" | "content" | "referenceCode">,
-): boolean {
-  const note = normalizeRef(payment.referenceNote);
-  if (!note) return false;
-
-  const txRefs = [
-    normalizeRef(transaction.referenceCode),
-    normalizeRef(transaction.code),
-    normalizeRef(transaction.content),
-  ].filter((ref): ref is string => ref != null);
-
-  return txRefs.some((ref) => ref.includes(note) || note.includes(ref));
-}
-
-export function attachSupplierPaymentMatches(
+export function attachPersistedSupplierPaymentMatches(
   transactions: SepayBankTransaction[],
-  payments: SepaySupplierPaymentMatch[],
+  links: SepaySupplierPaymentLink[],
 ): SepayBankTransaction[] {
-  const usedPaymentIds = new Set<number>();
-
-  return transactions.map((transaction) => {
-    if (
-      transaction.transferType !== "out" ||
-      transaction.expenseIds.length > 0 ||
-      transaction.processingStatus === "failed" ||
-      (transaction.errorCode != null &&
-        !isUnclassifiedMoneyOutStatus(transaction))
-    ) {
-      return transaction;
+  const paymentsByEventId = new Map<number, SepaySupplierPaymentMatch[]>();
+  for (const link of links) {
+    const matches = paymentsByEventId.get(link.eventId) ?? [];
+    if (!matches.some((payment) => payment.id === link.payment.id)) {
+      matches.push(link.payment);
+      paymentsByEventId.set(link.eventId, matches);
     }
+  }
 
-    const businessDate = sepayTransactionBusinessDate(transaction);
-    const candidates = payments.filter(
-      (payment) =>
-        !usedPaymentIds.has(payment.id) &&
-        getVNDateString(payment.paymentDate) === businessDate &&
-        supplierPaymentMatchesTransaction(payment, transaction),
-    );
-    if (candidates.length === 0) return transaction;
-
-    const totalAmount = candidates.reduce(
-      (sum, payment) => sum + payment.amount,
-      0,
-    );
-    const matches = moneyEqual(totalAmount, transaction.amount)
-      ? candidates
-      : candidates.filter((payment) =>
-          moneyEqual(payment.amount, transaction.amount),
-        );
-
-    if (
-      matches.length === 0 ||
-      (!moneyEqual(totalAmount, transaction.amount) && matches.length !== 1)
-    ) {
-      return transaction;
-    }
-
-    for (const match of matches) usedPaymentIds.add(match.id);
-
-    return {
-      ...transaction,
-      supplierPaymentMatches: matches,
-    };
-  });
+  return transactions.map((transaction) => ({
+    ...transaction,
+    supplierPaymentMatches: [
+      ...(paymentsByEventId.get(transaction.eventId) ?? []),
+    ].sort((left, right) => left.id - right.id),
+  }));
 }
 
 export function sumSepayBankMovementSince(

@@ -20,7 +20,6 @@ import { messages } from "@lib/messages";
 import {
   isSepayExpenseAllocationBalanced,
   type SepayExpenseAllocation,
-  type SepaySupplierPaymentMatch,
 } from "../_lib/sepay-bank-transaction-model";
 import type { ExpenseMatchOption } from "../expense-actions";
 import { matchSepayTransactionWithExpenses } from "../expense-actions";
@@ -34,7 +33,6 @@ interface MatchExpenseCellProps {
   expenseIds: number[];
   expenseAllocations: SepayExpenseAllocation[];
   allocationReady: boolean;
-  supplierPaymentMatches: SepaySupplierPaymentMatch[];
   transferType: "in" | "out";
   expenseOptions: ExpenseMatchOption[];
 }
@@ -68,10 +66,6 @@ function buildAllocationDrafts(
   );
 }
 
-function supplierInvoiceHref(invoiceId: number): string {
-  return `/finance/supplier-invoices?invoiceId=${invoiceId}`;
-}
-
 export function MatchExpenseCell({
   eventId,
   amount,
@@ -79,7 +73,6 @@ export function MatchExpenseCell({
   expenseIds,
   expenseAllocations,
   allocationReady,
-  supplierPaymentMatches,
   transferType,
   expenseOptions,
 }: MatchExpenseCellProps) {
@@ -105,31 +98,6 @@ export function MatchExpenseCell({
       <Badge variant="outline" className="text-success font-normal">
         {copy.matchedOrder(paymentId)}
       </Badge>
-    );
-  }
-
-  if (supplierPaymentMatches.length > 0) {
-    return (
-      <div className="flex flex-col gap-1">
-        {supplierPaymentMatches.map((match) => (
-          <Badge
-            key={match.id}
-            asChild
-            variant="outline"
-            className="w-fit text-success font-normal"
-          >
-            <Link href={supplierInvoiceHref(match.invoiceId)}>
-              {copy.matchedSupplierPayment(match.id)}
-            </Link>
-          </Badge>
-        ))}
-        <span className="truncate text-xs text-muted-foreground">
-          {copy.matchedSupplierPaymentDetail(
-            supplierPaymentMatches[0]?.supplierName ?? "—",
-            supplierPaymentMatches[0]?.invoiceNumber ?? "—",
-          )}
-        </span>
-      </div>
     );
   }
 

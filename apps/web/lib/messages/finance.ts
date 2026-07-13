@@ -622,6 +622,35 @@ export const finance = {
     matchedSupplierPayment: (id: number | string) => `Trả NCC #${id}`,
     matchedSupplierPaymentDetail: (supplier: string, invoice: string) =>
       `${supplier} · ${invoice}`,
+    supplierPaymentLink: {
+      addAction: "Gắn trả NCC",
+      editAction: "Sửa gắn NCC",
+      title: "Gắn khoản trả NCC",
+      description:
+        "Chọn một hoặc nhiều khoản trả NCC có tổng tiền bằng sao kê.",
+      bankAmount: "Sao kê",
+      selectedAmount: "Đã chọn",
+      delta: "Còn lệch",
+      paymentDate: "Ngày trả",
+      noReference: "Không có mã",
+      noCandidates: "Không có khoản trả NCC chưa gắn trong kỳ này.",
+      amountMismatch: "Tổng đã chọn phải bằng số tiền trên sao kê.",
+      saveAction: "Lưu gắn",
+      clearAction: "Bỏ gắn NCC",
+      savePending: "Đang lưu",
+      saveSuccess: "Đã cập nhật khoản trả NCC của giao dịch.",
+      clearSuccess: "Đã bỏ gắn khoản trả NCC.",
+      errors: {
+        forbidden: "Chỉ chủ cửa hàng có quyền gắn khoản trả NCC.",
+        notReady: "Chức năng gắn khoản trả NCC chưa sẵn sàng.",
+        evidenceChanged:
+          "Giao dịch hoặc khoản trả NCC đã thay đổi. Hãy làm mới trang.",
+        amountMismatch: "Tổng khoản trả NCC phải bằng số tiền trên sao kê.",
+        eventUnavailable:
+          "Giao dịch này không còn đủ điều kiện gắn khoản trả NCC.",
+        actionError: "Không thể cập nhật khoản trả NCC.",
+      },
+    },
     matchExpensePlaceholder: "Gán chi phí",
     matchExpenseTitle: "Gán chi phí cho giao dịch",
     matchedExpenseCount: (count: string) => `Đã gán ${count} chi phí`,

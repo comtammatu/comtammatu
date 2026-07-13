@@ -36,6 +36,7 @@ import {
   type SepayBankTransaction,
   type SepayMissingBankWebhookPayment,
   type SepayReconciliationState,
+  type SepaySupplierPaymentMatch,
   type SepayUnmatchedMoneyInReason,
 } from "../_lib/sepay-bank-transaction-model";
 import {
@@ -45,6 +46,7 @@ import {
 } from "../bank-webhook-review-actions";
 import type { ExpenseMatchOption } from "../expense-actions";
 import { MatchExpenseCell } from "./match-expense-cell";
+import { MatchSupplierPaymentCell } from "./match-supplier-payment-cell";
 
 const copy = messages.finance.bankTransactions;
 const REVIEW_PENDING_VALUE = "pending";
@@ -78,6 +80,7 @@ interface BankTransactionsTableProps {
   transactions: SepayBankTransaction[];
   missingBankWebhookPayments: SepayMissingBankWebhookPayment[];
   expenseOptions: ExpenseMatchOption[];
+  supplierPaymentCandidates: SepaySupplierPaymentMatch[];
   canLinkPayments: boolean;
 }
 
@@ -320,7 +323,6 @@ function MatchCell({
       expenseIds={tx.expenseIds}
       expenseAllocations={tx.expenseAllocations}
       allocationReady={tx.expenseAllocationReady === true}
-      supplierPaymentMatches={tx.supplierPaymentMatches}
       transferType={tx.transferType}
       expenseOptions={expenseOptions}
     />
@@ -494,10 +496,12 @@ function ReviewStatusSelect({
 function ReconciliationActionCell({
   tx,
   expenseOptions,
+  supplierPaymentCandidates,
   canLinkPayments,
 }: {
   tx: SepayBankTransaction;
   expenseOptions: ExpenseMatchOption[];
+  supplierPaymentCandidates: SepaySupplierPaymentMatch[];
   canLinkPayments: boolean;
 }) {
   const state = classifySepayReconciliationState(tx);
@@ -530,6 +534,23 @@ function ReconciliationActionCell({
 
   if (tx.transferType === "in" && state !== "matched") {
     return <LinkPaymentCell tx={tx} canLinkPayments={canLinkPayments} />;
+  }
+
+  if (tx.transferType === "out") {
+    return (
+      <div className="flex min-w-0 flex-col items-end gap-1.5">
+        <MatchSupplierPaymentCell
+          eventId={tx.eventId}
+          amount={tx.amount}
+          matches={tx.supplierPaymentMatches}
+          candidates={supplierPaymentCandidates}
+          canEdit={canLinkPayments && tx.expenseIds.length === 0}
+        />
+        {tx.supplierPaymentMatches.length === 0 ? (
+          <MatchCell tx={tx} expenseOptions={expenseOptions} />
+        ) : null}
+      </div>
+    );
   }
 
   return <MatchCell tx={tx} expenseOptions={expenseOptions} />;
@@ -571,6 +592,7 @@ export function BankTransactionsTable({
   transactions,
   missingBankWebhookPayments,
   expenseOptions,
+  supplierPaymentCandidates,
   canLinkPayments,
 }: BankTransactionsTableProps) {
   const [filter, setFilter] = React.useState<BankReconciliationFilter>("all");
@@ -642,6 +664,7 @@ export function BankTransactionsTable({
           <ReconciliationActionCell
             tx={row.tx}
             expenseOptions={expenseOptions}
+            supplierPaymentCandidates={supplierPaymentCandidates}
             canLinkPayments={canLinkPayments}
           />
         ) : (
@@ -706,6 +729,7 @@ export function BankTransactionsTable({
                 <ReconciliationActionCell
                   tx={row.tx}
                   expenseOptions={expenseOptions}
+                  supplierPaymentCandidates={supplierPaymentCandidates}
                   canLinkPayments={canLinkPayments}
                 />
               ) : (

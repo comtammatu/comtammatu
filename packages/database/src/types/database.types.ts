@@ -639,6 +639,7 @@ export type Database = {
       }
       bank_transaction_expense_matches: {
         Row: {
+          allocated_amount: number
           created_at: string
           created_by: string | null
           expense_id: number
@@ -647,6 +648,7 @@ export type Database = {
           webhook_event_id: number
         }
         Insert: {
+          allocated_amount: number
           created_at?: string
           created_by?: string | null
           expense_id: number
@@ -655,6 +657,7 @@ export type Database = {
           webhook_event_id: number
         }
         Update: {
+          allocated_amount?: number
           created_at?: string
           created_by?: string | null
           expense_id?: number
@@ -1466,6 +1469,7 @@ export type Database = {
           id: number
           note: string | null
           paid_at: string | null
+          paid_by_bank_allocation: boolean | null
           payment_method: string
           tenant_id: number
           updated_at: string
@@ -1481,6 +1485,7 @@ export type Database = {
           id?: never
           note?: string | null
           paid_at?: string | null
+          paid_by_bank_allocation?: boolean | null
           payment_method?: string
           tenant_id: number
           updated_at?: string
@@ -1496,6 +1501,7 @@ export type Database = {
           id?: never
           note?: string | null
           paid_at?: string | null
+          paid_by_bank_allocation?: boolean | null
           payment_method?: string
           tenant_id?: number
           updated_at?: string
@@ -11031,6 +11037,10 @@ export type Database = {
       }
       set_pos_order_priority: {
         Args: { p_is_priority: boolean; p_note?: string; p_order_id: number }
+        Returns: Json
+      }
+      set_sepay_expense_allocations: {
+        Args: { p_allocations: Json; p_event_id: number }
         Returns: Json
       }
       split_order: {

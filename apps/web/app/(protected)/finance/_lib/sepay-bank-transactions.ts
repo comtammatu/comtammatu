@@ -1,7 +1,7 @@
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import {
-  attachSupplierPaymentMatches,
+  attachPersistedSupplierPaymentMatches,
   buildSepayPaymentWebhookSummary,
   isSepayBusinessDateInRange,
   isSepayTransactionInDateRange,
@@ -14,6 +14,7 @@ import {
   type SepayPaymentWebhookCheck,
   type SepayPaymentWebhookSummary,
   type SepaySupplierPaymentMatch,
+  type SepaySupplierPaymentLink,
   type SepayWebhookRow,
 } from "./sepay-bank-transaction-model";
 
@@ -45,6 +46,7 @@ interface SupplierPaymentRow {
   amount: number;
   payment_date: string;
   reference_note: string | null;
+  sepay_webhook_event_id: number | null;
   supplier_invoices?:
     | {
         invoice_number?: string | null;
@@ -65,21 +67,40 @@ interface SupplierPaymentRow {
 
 const SEPAY_WEBHOOK_SELECT =
   "id, request_id, created_at, processing_status, error_code, order_id, payment_id, expense_id, payload" as const;
+const SEPAY_SUPPLIER_PAYMENT_SELECT =
+  "id, supplier_invoice_id, amount, payment_date, reference_note, sepay_webhook_event_id, supplier_invoices ( invoice_number, suppliers ( name ) )" as const;
 
 const SEPAY_BALANCE_PAGE_SIZE = 1000;
 const SEPAY_TRANSACTION_LIST_LIMIT = 100;
 const SEPAY_PAYMENT_WEBHOOK_CHECK_LIMIT = 100;
+const SEPAY_SUPPLIER_PAYMENT_CANDIDATE_LIMIT = 200;
 
 function isExpenseMatchSchemaMissing(code?: string | null): boolean {
   return code === "PGRST205" || code === "42P01";
 }
 
-function isExpenseAllocationColumnMissing(code?: string | null): boolean {
+function isPostgrestColumnMissing(code?: string | null): boolean {
   return code === "PGRST204" || code === "42703";
 }
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
+
+function mapSupplierPaymentRow(
+  row: SupplierPaymentRow,
+): SepaySupplierPaymentMatch {
+  const invoice = firstRelation(row.supplier_invoices);
+  const supplier = firstRelation(invoice?.suppliers);
+  return {
+    id: row.id,
+    invoiceId: row.supplier_invoice_id,
+    amount: Number(row.amount),
+    paymentDate: row.payment_date,
+    referenceNote: row.reference_note,
+    invoiceNumber: invoice?.invoice_number ?? null,
+    supplierName: supplier?.name ?? null,
+  };
 }
 
 async function fetchSepayWebhookRows(
@@ -175,7 +196,7 @@ async function fetchSepayExpenseMatches(
   let error = allocationResult.error;
   let allocationReady = true;
 
-  if (error && isExpenseAllocationColumnMissing(error.code)) {
+  if (error && isPostgrestColumnMissing(error.code)) {
     allocationReady = false;
     const legacyResult = await supabase
       .from("bank_transaction_expense_matches")
@@ -216,25 +237,20 @@ async function fetchSepayExpenseMatches(
 async function fetchSupplierPaymentMatches(
   supabase: SupabaseClient,
   tenantId: number,
-  range?: SepayDateRange,
-): Promise<SepaySupplierPaymentMatch[]> {
-  const query = supabase
+  eventIds: number[],
+): Promise<SepaySupplierPaymentLink[]> {
+  if (eventIds.length === 0) return [];
+
+  const { data, error } = await supabase
     .from("supplier_payments")
-    .select(
-      "id, supplier_invoice_id, amount, payment_date, reference_note, supplier_invoices ( invoice_number, suppliers ( name ) )",
-    )
+    .select(SEPAY_SUPPLIER_PAYMENT_SELECT)
     .eq("tenant_id", tenantId)
-    .eq("payment_method", "bank_transfer");
-  const rangedQuery = range
-    ? query
-        .gte("payment_date", getVNDayUtcRange(range.start).startIso)
-        .lt("payment_date", getVNDayUtcRange(range.end).endIso)
-    : query;
-  const { data, error } = await rangedQuery
-    .order("payment_date", { ascending: false })
-    .limit(SEPAY_TRANSACTION_LIST_LIMIT);
+    .eq("payment_method", "bank_transfer")
+    .in("sepay_webhook_event_id", eventIds)
+    .order("id", { ascending: true });
 
   if (error) {
+    if (isPostgrestColumnMissing(error.code)) return [];
     console.error(
       "[finance:sepay-bank] failed to load supplier_payments",
       error.code,
@@ -242,19 +258,48 @@ async function fetchSupplierPaymentMatches(
     throw new Error("Unable to load supplier payment evidence");
   }
 
-  return ((data ?? []) as SupplierPaymentRow[]).map((row) => {
-    const invoice = firstRelation(row.supplier_invoices);
-    const supplier = firstRelation(invoice?.suppliers);
-    return {
-      id: row.id,
-      invoiceId: row.supplier_invoice_id,
-      amount: Number(row.amount),
-      paymentDate: row.payment_date,
-      referenceNote: row.reference_note,
-      invoiceNumber: invoice?.invoice_number ?? null,
-      supplierName: supplier?.name ?? null,
-    };
+  return ((data ?? []) as unknown as SupplierPaymentRow[]).flatMap((row) => {
+    if (row.sepay_webhook_event_id == null) return [];
+    return [
+      {
+        eventId: row.sepay_webhook_event_id,
+        payment: mapSupplierPaymentRow(row),
+      },
+    ];
   });
+}
+
+export async function fetchSepaySupplierPaymentCandidates(
+  range?: SepayDateRange,
+): Promise<SepaySupplierPaymentMatch[]> {
+  const { supabase, claims } = await loadAuthState();
+  const query = supabase
+    .from("supplier_payments")
+    .select(SEPAY_SUPPLIER_PAYMENT_SELECT)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("payment_method", "bank_transfer")
+    .is("sepay_webhook_event_id", null);
+  const rangedQuery = range
+    ? query
+        .gte("payment_date", getVNDayUtcRange(range.start).startIso)
+        .lt("payment_date", getVNDayUtcRange(range.end).endIso)
+    : query;
+  const { data, error } = await rangedQuery
+    .order("payment_date", { ascending: false })
+    .limit(SEPAY_SUPPLIER_PAYMENT_CANDIDATE_LIMIT);
+
+  if (error) {
+    if (isPostgrestColumnMissing(error.code)) return [];
+    console.error(
+      "[finance:sepay-bank] failed to load supplier payment candidates",
+      error.code,
+    );
+    throw new Error("Unable to load supplier payment candidates");
+  }
+
+  return ((data ?? []) as unknown as SupplierPaymentRow[]).map(
+    mapSupplierPaymentRow,
+  );
 }
 
 async function fetchCompletedVietqrPayments(
@@ -379,7 +424,7 @@ export async function fetchSepayBankTransactions(
   const supplierPaymentMatches = await fetchSupplierPaymentMatches(
     supabase,
     claims.tenant_id,
-    range,
+    scopedTransactions.map((tx) => tx.eventId),
   );
 
   const transactionsWithExpenseMatches = scopedTransactions.map((tx) => {
@@ -410,7 +455,7 @@ export async function fetchSepayBankTransactions(
       expenseAllocationReady: allocationReady,
     }));
 
-  return attachSupplierPaymentMatches(
+  return attachPersistedSupplierPaymentMatches(
     transactionsWithAllocationReadiness,
     supplierPaymentMatches,
   );

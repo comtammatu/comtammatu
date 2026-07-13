@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
-  attachSupplierPaymentMatches,
+  attachPersistedSupplierPaymentMatches,
   classifySepayReconciliationState,
   type SepayBankTransaction,
   type SepaySupplierPaymentMatch,
@@ -48,7 +48,7 @@ function supplierPayment(): SepaySupplierPaymentMatch {
   };
 }
 
-test("unclassified money-out remains reviewable across existing webhook rows", () => {
+test("unclassified money-out is matched only by a persisted supplier-payment link", () => {
   const legacyTransaction = unclassifiedMoneyOut();
 
   assert.equal(
@@ -56,9 +56,9 @@ test("unclassified money-out remains reviewable across existing webhook rows", (
     "needs_review",
   );
 
-  const [matchedTransaction] = attachSupplierPaymentMatches(
+  const [matchedTransaction] = attachPersistedSupplierPaymentMatches(
     [legacyTransaction],
-    [supplierPayment()],
+    [{ eventId: legacyTransaction.eventId, payment: supplierPayment() }],
   );
 
   assert.deepEqual(
@@ -71,11 +71,10 @@ test("unclassified money-out remains reviewable across existing webhook rows", (
   );
 });
 
-test("supplier payment inference requires the exact outgoing amount", () => {
+test("similar supplier-payment evidence never becomes an authoritative match", () => {
   const transaction = unclassifiedMoneyOut();
-  const nearMatch = { ...supplierPayment(), amount: transaction.amount - 1 };
 
-  const [result] = attachSupplierPaymentMatches([transaction], [nearMatch]);
+  const [result] = attachPersistedSupplierPaymentMatches([transaction], []);
 
   assert.deepEqual(result?.supplierPaymentMatches, []);
 });

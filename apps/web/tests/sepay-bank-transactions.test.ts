@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
-  attachSupplierPaymentMatches,
+  attachPersistedSupplierPaymentMatches,
   buildSepayPaymentWebhookSummary,
   buildSepayReconciliationSummary,
   classifySepayPaymentConflict,
@@ -484,7 +484,10 @@ test("SePay duplicate-transfer guard quarantines the second event before payment
     "active grandfathered DH payment codes must remain settleable",
   );
   assert.match(migration, /\^\[0-9\]\+\(\[\.\]\[0-9\]\+\)\?\$/);
-  assert.doesNotMatch(migration, /abs\(\(v_event\.payload ->> 'transferAmount'\)::numeric\)/);
+  assert.doesNotMatch(
+    migration,
+    /abs\(\(v_event\.payload ->> 'transferAmount'\)::numeric\)/,
+  );
   assert.match(route, /"overpayment_needs_review"/);
   assert.match(route, /"payment_method_conflict_needs_review"/);
   assert.match(route, /"payment_state_conflict_needs_review"/);
@@ -495,44 +498,56 @@ test("SePay duplicate-transfer guard quarantines the second event before payment
   assert.match(table, /AdjudicatePaymentConflictCell/);
 });
 
-test("SePay outgoing transactions can match supplier AP payments by reference", () => {
-  const matched = attachSupplierPaymentMatches(
-    [
-      tx(
-        row(1, {
-          transactionDate: "2026-07-01 09:05:00",
-          transferType: "out",
-          transferAmount: 60000,
-          referenceCode: "FT-SUP-1",
-        }),
+test("persisted supplier-payment attribution is stable across event ordering", () => {
+  const first = tx(
+    row(1, {
+      transactionDate: "2026-07-01 09:05:00",
+      transferType: "out",
+      transferAmount: 60000,
+      referenceCode: "FT-SUP-SAME",
+    }),
+  );
+  const second = tx(
+    row(2, {
+      transactionDate: "2026-07-01 09:10:00",
+      transferType: "out",
+      transferAmount: 60000,
+      referenceCode: "FT-SUP-SAME",
+    }),
+  );
+  const links = [
+    {
+      eventId: second.eventId,
+      payment: supplierPayment(501, 60000, "FT-SUP-SAME"),
+    },
+  ];
+
+  for (const transactions of [
+    [first, second],
+    [second, first],
+  ]) {
+    const matched = attachPersistedSupplierPaymentMatches(transactions, links);
+    const matchedByEventId = new Map(
+      matched.map((transaction) => [
+        transaction.eventId,
+        transaction.supplierPaymentMatches.map((payment) => payment.id),
+      ]),
+    );
+    assert.deepEqual(matchedByEventId.get(first.eventId), []);
+    assert.deepEqual(matchedByEventId.get(second.eventId), [501]);
+    assert.equal(
+      classifySepayReconciliationState(
+        matched.find((transaction) => transaction.eventId === first.eventId)!,
       ),
-    ],
-    [supplierPayment(501, 60000, "FT-SUP-1")],
-  );
-
-  assert.deepEqual(
-    matched[0]?.supplierPaymentMatches.map((payment) => payment.id),
-    [501],
-  );
-
-  const ambiguous = attachSupplierPaymentMatches(
-    [
-      tx(
-        row(2, {
-          transactionDate: "2026-07-01 09:10:00",
-          transferType: "out",
-          transferAmount: 60000,
-          referenceCode: "FT-SUP-2",
-        }),
+      "needs_review",
+    );
+    assert.equal(
+      classifySepayReconciliationState(
+        matched.find((transaction) => transaction.eventId === second.eventId)!,
       ),
-    ],
-    [
-      supplierPayment(502, 60000, "FT-SUP-2"),
-      supplierPayment(503, 60000, "FT-SUP-2"),
-    ],
-  );
-
-  assert.deepEqual(ambiguous[0]?.supplierPaymentMatches, []);
+      "matched",
+    );
+  }
 });
 
 test("SePay unmatched money-in classifier explains why no order is attached", () => {
@@ -573,9 +588,7 @@ test("SePay unmatched money-in classifier explains why no order is attached", ()
 });
 
 test("SePay money-in manual link stays guarded by RPC", () => {
-  const migration = read(
-    "supabase/migrations/00000000000000_baseline.sql",
-  );
+  const migration = read("supabase/migrations/00000000000000_baseline.sql");
   const action = read(
     "apps/web/app/(protected)/finance/bank-webhook-review-actions.ts",
   );
@@ -599,24 +612,64 @@ test("SePay money-in manual link stays guarded by RPC", () => {
   assert.match(table, /linkSepayTransactionToPayment/);
 });
 
-test("SePay bank reconciliation reads supplier AP payments without turning them into expenses", () => {
+test("SePay bank reconciliation persists supplier AP links and keeps unmatched correction available", () => {
   const loader = read(
     "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
+  );
+  const model = read(
+    "apps/web/app/(protected)/finance/_lib/sepay-bank-transaction-model.ts",
+  );
+  const page = read(
+    "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
   );
   const table = read(
     "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
   );
-  const cell = read(
+  const expenseCell = read(
     "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
+  );
+  const supplierCell = read(
+    "apps/web/app/(protected)/finance/bank-transactions/match-supplier-payment-cell.tsx",
+  );
+  const action = read(
+    "apps/web/app/(protected)/finance/supplier-payment-link-actions.ts",
   );
 
   assert.match(loader, /\.from\("supplier_payments"\)/);
   assert.match(loader, /supplier_invoice_id/);
-  assert.match(loader, /attachSupplierPaymentMatches/);
-  assert.match(table, /supplierPaymentMatches=\{tx\.supplierPaymentMatches\}/);
-  assert.match(cell, /supplierInvoiceHref/);
-  assert.match(cell, /\/finance\/supplier-invoices\?invoiceId=/);
-  assert.match(cell, /matchedSupplierPayment/);
+  assert.match(loader, /sepay_webhook_event_id/);
+  assert.match(loader, /attachPersistedSupplierPaymentMatches/);
+  assert.match(loader, /fetchSepaySupplierPaymentCandidates/);
+  assert.match(loader, /\.is\("sepay_webhook_event_id", null\)/);
+  assert.doesNotMatch(model, /supplierPaymentMatchesTransaction/);
+  assert.doesNotMatch(model, /usedPaymentIds/);
+  assert.match(page, /supplierPaymentCandidates=\{supplierPaymentCandidates\}/);
+  assert.match(table, /matches=\{tx\.supplierPaymentMatches\}/);
+  assert.match(table, /candidates=\{supplierPaymentCandidates\}/);
+  assert.match(
+    table,
+    /canEdit=\{canLinkPayments && tx\.expenseIds\.length === 0\}/,
+  );
+  assert.match(
+    table,
+    /tx\.supplierPaymentMatches\.length === 0 \? \([\s\S]*?<MatchCell/,
+  );
+  assert.match(expenseCell, /matchSepayTransactionWithExpenses/);
+  assert.doesNotMatch(expenseCell, /supplierPaymentMatches\.length\s*>\s*0/);
+  assert.match(supplierCell, /supplierInvoiceHref/);
+  assert.match(supplierCell, /\/finance\/supplier-invoices\?invoiceId=/);
+  assert.match(supplierCell, /setSepaySupplierPaymentLinks/);
+  assert.match(supplierCell, /<Checkbox/);
+  assert.match(supplierCell, /selectedTotal/);
+  assert.match(supplierCell, /hasExactTotal/);
+  assert.doesNotMatch(supplierCell, /<Input/);
+  assert.match(action, /setSepaySupplierPaymentLinksSchema\.safeParse/);
+  assert.match(action, /PERMISSION_KEYS\.FINANCE_AP_PAY/);
+  assert.match(action, /"set_sepay_supplier_payment_links"/);
+  assert.match(action, /webhook_event_matches_expense/);
+  assert.match(action, /webhook_event_not_final_unclassified/);
+  assert.match(action, /supplier_payment_already_linked/);
+  assert.doesNotMatch(action, /error:\s*error\.message/);
 });
 
 test("SePay bank page uses one filtered reconciliation table", () => {
