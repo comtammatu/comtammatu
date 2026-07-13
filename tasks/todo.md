@@ -1211,9 +1211,9 @@ Containment record:
   exact memo plus amount settlement, two-event expense contention, and refund
   approve/reject contention. Generated database types match the Preview schema.
 - Supabase dashboard verification confirms `Deploy to production` is off and
-  automatic branching is on. PR SHA `67b876302` has successful `gates`,
-  `Supabase Preview`, and fail-closed `supabase-preview-required` checks without
-  a production write; the final closeout SHA still requires fresh proof.
+  automatic branching is on. Release-content SHA `59139160d` has successful
+  `gates`, `Supabase Preview`, fail-closed `supabase-preview-required`, and
+  Vercel checks without a production write.
 
 - [x] **C0 — capture and assemble current production schema baseline.**
 - [x] **C1 — separate represented history and delete unsafe cleanup SQL.**
@@ -1224,7 +1224,7 @@ Containment record:
 - [x] **C5 — run money/ledger/SePay/inventory/auth and full repository gates.**
 - [x] **C6 — create the associated Preview after cost confirmation; prove fresh
       replay, schema/RPC/RLS/cron/realtime, generated types, and runtime smoke.**
-- [ ] **C7 — push the reviewed PR head and close CI/review blockers.**
+- [x] **C7 — push the reviewed PR head and close CI/review blockers.**
 - [ ] **C8 — prepare a separate production ledger-repair/apply plan.** No
       production write is included in C0-C7.
 
