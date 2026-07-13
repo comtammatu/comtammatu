@@ -112,10 +112,10 @@ jobs:
                 repo: context.repo.repo,
                 ref: process.env.HEAD_SHA,
                 app_id: Number(process.env.SUPABASE_APP_ID),
-                filter: "latest",
+                filter: "all",
                 per_page: 100,
               });
-              const preview = data.check_runs
+              const previews = data.check_runs
                 .filter((run) => {
                   let detailsUrl;
                   try {
@@ -135,13 +135,26 @@ jobs:
                     run.app?.slug === "supabase" &&
                     run.head_sha === process.env.HEAD_SHA &&
                     matchingPullRequest &&
-                    detailsUrl.hostname === "supabase.com" &&
-                    detailsUrl.pathname.startsWith(
-                      `/dashboard/project/${process.env.SUPABASE_PROJECT_REF}/branches`,
-                    )
+                    detailsUrl.hostname === "supabase.com"
                   );
+                });
+              const coordinator = previews
+                .filter((run) => {
+                  try {
+                    return (
+                      new URL(run.details_url ?? "").pathname ===
+                      `/dashboard/project/${process.env.SUPABASE_PROJECT_REF}/branches`
+                    );
+                  } catch {
+                    return false;
+                  }
                 })
                 .sort((left, right) => right.id - left.id)[0];
+              const preview = coordinator
+                ? previews
+                    .filter((run) => run.check_suite?.id === coordinator.check_suite?.id)
+                    .sort((left, right) => right.id - left.id)[0]
+                : undefined;
 
               if (preview?.status === "completed") {
                 if (preview.conclusion === "success") {
