@@ -94,9 +94,10 @@ multi-bill table shows the safe empty bill state; payment remains unavailable.
 Body: category pills (sticky under the header, one scrollable row). The
 default selected pill is the named `Cơm` category when present; otherwise the
 first non-empty category that is not `Khác`. Category pills list named
-categories first; `Tất cả` is last. Items
-render as horizontal rows — image on the left, dish title + price on the
-right (no per-item category eyebrow). Sold-out / disabled items reuse the same
+categories first; `Tất cả` is last. Items render as horizontal rows — image on
+the left, dish title + price on the right — in one column on phones and two
+columns from tablet portrait within the existing guest frame. There is no per-item category eyebrow.
+Sold-out / disabled items reuse the same
 POS availability source (`branch_menu_limit_availability`) and render as
 non-selectable with a destructive `Hết suất` badge on the image; finite
 remaining quota shows `Còn N phần`. Curated image badges: `Sườn Cốt Lết` →

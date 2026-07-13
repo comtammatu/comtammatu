@@ -28,22 +28,9 @@ const leaveRequestActionsSource = readFileSync(
   "utf8",
 );
 
-test("HR attendance is a manager read surface for clock in and clock out", () => {
-  assert.match(
-    hrPageSource,
-    /isBranchManager=\{isBranchManager\}/,
-    "HR page should pass the role flag to the client that owns the page header",
-  );
-  assert.match(
-    hrClientSource,
-    /isBranchManager[\s\S]{0,40}branchManagerTitle[\s\S]{0,40}ownerTitle/,
-    "HR client should read its role-specific title from the HR message dictionary",
-  );
-  assert.match(
-    hrMessagesSource,
-    /branchManagerTitle:\s*"Ngày công"/,
-    "Branch Manager HR page should read as workday management",
-  );
+test("HR attendance is an Owner-only Admin Dashboard read surface", () => {
+  assert.doesNotMatch(hrPageSource, /isBranchManager/);
+  assert.doesNotMatch(hrClientSource, /isBranchManager|branchManagerTitle/);
   assert.match(
     hrMessagesSource,
     /ownerTitle:\s*"Nhân sự"/,
@@ -91,8 +78,8 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
   );
   assert.match(
     hrActionsSource,
-    /claims\.user_role === "branch_manager"[\s\S]*claims\.branch_id == null[\s\S]*query = query\.eq\("branch_id", claims\.branch_id\)/,
-    "Branch managers must only mint photo URLs for their assigned branch",
+    /getAttendancePhotoUrl = withAction\(\s*\{\s*roles: HR_ROLES,/,
+    "Only Owner may mint a signed attendance-photo URL",
   );
   assert.match(
     hrActionsSource,
@@ -161,30 +148,24 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
   }
 });
 
-test("branch manager HR reads survive owner-only personnel RLS", () => {
-  assert.match(
+test("Owner HR history stays separate from Branch attendance actions", () => {
+  assert.doesNotMatch(
     hrActionsSource,
     /const attendanceClient =\s*claims\.user_role === "branch_manager" \? createServiceClient\(\) : supabase;/,
-    "Branch manager attendance reads should use a service client after action-level branch authorization",
   );
   assert.match(
     hrActionsSource,
-    /await attendanceClient\s*\.from\("attendance_records"\)[\s\S]*employees \(/,
-    "Attendance reads embed employees through the branch-gated service client",
+    /fetchAttendance = withAction\(\s*\{\s*roles: HR_ROLES,/,
+    "Attendance history should be Owner-only",
   );
   assert.match(
     leaveRequestActionsSource,
-    /import \{ createServiceClient \} from "@comtammatu\/database\/supabase\/service";/,
-    "Leave review actions should have an explicit service client for branch-manager reads",
+    /fetchApprovedLeaveMonth = withAction\(\s*\{\s*roles: OWNER_REVIEW_ROLES,/,
+    "The Admin Dashboard monthly leave summary should be Owner-only",
   );
   assert.match(
     leaveRequestActionsSource,
-    /const leaveClient =\s*claims\.user_role === "branch_manager" \? createServiceClient\(\) : supabase;/,
-    "Branch manager leave reads should use a service client after action-level branch authorization",
-  );
-  assert.match(
-    leaveRequestActionsSource,
-    /await leaveClient\s*\.from\("leave_requests"\)[\s\S]*employees \(/,
-    "Leave review reads embed employees through the branch-gated service client",
+    /fetchLeaveRequests = withAction\(\s*\{\s*roles: REVIEW_ROLES,[\s\S]*?claims\.user_role === "branch_manager" &&[\s\S]*?claims\.branch_id !== data\.branchId/,
+    "Branch leave approval should retain Branch Manager scope",
   );
 });

@@ -95,7 +95,7 @@ test("Branch count slip review owns a touch queue and Branch revalidation", () =
   );
 });
 
-test("Office count management keeps desktop-responsive presenters", () => {
+test("Admin Dashboard count management keeps desktop-responsive presenters", () => {
   const assignments = read(
     "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
   );

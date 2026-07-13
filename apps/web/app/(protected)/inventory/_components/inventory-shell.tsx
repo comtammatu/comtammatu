@@ -8,7 +8,7 @@ import {
   resolveInventoryNav,
   withInventoryBranchNavScope,
 } from "../_lib/inventory-nav";
-import { resolveOfficePrimaryTabs } from "@/lib/office-nav";
+import { resolveAdminDashboardPrimaryTabs } from "@/lib/admin-dashboard-nav";
 import type { InventoryBranchOption } from "../_lib/inventory-scope";
 import { InventoryBranchFilter } from "./inventory-branch-filter";
 
@@ -53,7 +53,7 @@ export function InventoryShell({
   // Primary tabs use the home branch, so they must not rebuild on URL branch
   // changes — keyed on userRole/defaultBranchId only.
   const tier1 = useMemo(
-    () => resolveOfficePrimaryTabs(userRole, defaultBranchId),
+    () => resolveAdminDashboardPrimaryTabs(userRole, defaultBranchId),
     [userRole, defaultBranchId],
   );
   const currentBranchId = useMemo(() => {

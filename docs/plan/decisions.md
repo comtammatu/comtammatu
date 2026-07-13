@@ -262,7 +262,7 @@ Canonical route/ACL: bảng generated trong `docs/spec/role-route-matrix.md`.
 
 **Decision (owner, net):**
 
-1. **Hai mặt phẳng = 2 họ chrome D019:** Operator plane (mobile/tablet, gốc `/br/[branchId]/*`) + Office plane (`AppShell` desktop: `/admin` + domain workspaces + `/branches`).
+1. **Hai mặt phẳng = 2 họ chrome D019:** Operator plane (mobile/tablet, gốc `/br/[branchId]/*`) + Admin Dashboard plane (`AppShell` desktop: `/admin` + domain workspaces + `/branches`).
 2. **Mọi route operator-facing dồn về `/br/[branchId]/*`** (đã move: `/employee/*` → `/br/[id]/shift/*`; sàn Kho → `/br/[id]/stock/*`). branchId trên URL = SSoT; staff pin thì Branch Hub tự điền.
 3. Branch dashboard + control + setup (tables/pos/kds/printers) + `pos-sessions` thuộc Operator plane (amend D019 §1 + D017).
 4. **Branch-context = 1 provider** `resolveBranchContext()` thay 3 cơ chế scope cũ; proxy + RLS + `MODULE_ACL` + `has_permission` giữ nguyên làm cổng gác — context chỉ là lớp đọc.
@@ -270,7 +270,7 @@ Canonical route/ACL: bảng generated trong `docs/spec/role-route-matrix.md`.
 6. **Phone bottom-nav operator = `Hôm nay · Ca · Lịch · Tôi`** (ratify D058 §2) + capability tiles từ `nav-config.ts`/`MODULE_ACL`, gate server-side.
 7. Không viết lại POS/KDS/Runner — chỉ re-root lên context + Hub.
 
-Scope: Office-side People/Branch IA thuộc D048; "Việc trong ca" thuộc D052. Đảo điểm nào phải sửa bản ghi này + D019 trước.
+Scope: Admin Dashboard-side People/Branch IA thuộc D048; "Việc trong ca" thuộc D052. Đảo điểm nào phải sửa bản ghi này + D019 trước.
 
 ## D052: "Việc trong ca" — gom & cấu hình theo vị trí (2026-06-29)
 
@@ -321,7 +321,7 @@ Scope: Office-side People/Branch IA thuộc D048; "Việc trong ca" thuộc D052
 **Decision (net sau D059/D061/D076/D077):** Branch runtime là touch-first dưới
 `/br/[branchId]/*`; Management workspaces giữ dense desktop-responsive
 presentation. Hai plane dùng chung data loader/model/Server Action/RPC/permission
-khi phù hợp nhưng không dùng Office chrome trong Branch. Mỗi role chỉ được quảng
+khi phù hợp nhưng không dùng Admin Dashboard chrome trong Branch. Mỗi role chỉ được quảng
 bá một cửa cho cùng job; compatibility route phải redirect.
 
 Page archetype sống ở `docs/spec/page-archetypes.md`; component ownership/query
@@ -330,7 +330,7 @@ sống trong machine registry. Mọi surface đổi phải QA phone, tablet và 
 ## D059: Branch-complete native workflow (2026-07-03)
 
 **Decision (net):** Mỗi active branch-pinned role phải làm được job được cấp
-quyền trong Branch runtime mà không đi qua Office bridge. Branch Hub là home;
+quyền trong Branch runtime mà không đi qua Admin Dashboard bridge. Branch Hub là home;
 management workspace chỉ còn shortcut có kiểm quyền cho owner/Branch Manager.
 Branch presenter touch-native có thể chia sẻ loader/model/action với Management,
 nhưng không chia sẻ chrome hoặc desktop-first presenter.
@@ -414,8 +414,8 @@ GRN bắt đầu từ NCC, không từ PO.
 
 1. **Site 16 tắt hẳn:** chuyển toàn bộ tồn về Phước Hải (site 3) qua luồng transfer sẵn có (`central_kitchen → branch` hợp lệ theo transfer matrix D000) rồi `is_active = false`. Nhân sự bucket `production_manager` — **sửa bởi D076:** không sắp xếp lại role, tài khoản bị xoá cùng lượt retire bucket (không auto-remap). DB enum `branch_kind` GIỮ nguyên (lịch sử data); chỉ vận hành và UI hết fork.
 2. **Một kind vận hành duy nhất `branch`.** Mọi nâng cấp stock đã chuẩn bị cho đợt Bếp (mockup GRN 3 bước · Ghi mẻ một màn · Tồn 44px, đã owner-duyệt) áp cho `/br/[branchId]/(operator)/stock/*` kind `branch`. Plan sống ở `tasks/todo.md` § Branch Stock Cutover.
-3. **Công thức = Office-only:** operator dùng công thức để prefill định mức khi ghi mẻ, không sửa; tile `production/recipes` rời operator, quản trị công thức về `/inventory` (owner/quản lý).
-4. **Chỉ "Danh mục" mở cho chi nhánh; PO và Trả hàng NCC NGHỈ HẲN cả hai plane** (owner siết lại cùng ngày): GRN đã NCC-first (`po_id` nullable) nên không cần PO; hàng lỗi xử qua Báo hao hụt (ảnh + lý do) thay Trả NCC. Bảng + lịch sử DB giữ nguyên; gỡ tile/route/action khỏi operator lẫn Office. Catalog mở cho `branch` KHÔNG cần grant mới — categories/units/ingredients gate bằng RLS/module, suppliers dùng `supplier_manage` đã cấp ở D068 §4.
+3. **Công thức = Admin Dashboard-only:** operator dùng công thức để prefill định mức khi ghi mẻ, không sửa; tile `production/recipes` rời operator, quản trị công thức về `/inventory` (owner/quản lý).
+4. **Chỉ "Danh mục" mở cho chi nhánh; PO và Trả hàng NCC NGHỈ HẲN cả hai plane** (owner siết lại cùng ngày): GRN đã NCC-first (`po_id` nullable) nên không cần PO; hàng lỗi xử qua Báo hao hụt (ảnh + lý do) thay Trả NCC. Bảng + lịch sử DB giữ nguyên; gỡ tile/route/action khỏi operator lẫn Admin Dashboard. Catalog mở cho `branch` KHÔNG cần grant mới — categories/units/ingredients gate bằng RLS/module, suppliers dùng `supplier_manage` đã cấp ở D068 §4.
 5. **Mô hình tồn kho tối giản — (sửa bởi D078) 1 chi nhánh · 1 location (Kho):** bỏ lô/HSD (cột + plumbing RPC, slice riêng trong tracker). Kho↔Bếp và `commit_intra_branch_transfer` nghỉ hẳn; vòng Yêu cầu → Gửi → Nhận / transfer cross-branch operator cũng nghỉ sau khi chuyển tồn site 16 → 3 xong.
 6. **Sau khi site 16 tắt, gỡ fork central khỏi operator UI** — `CENTRAL_HOME_TILE_SUFFIXES`, CTA home central, các nhánh `isCentralKitchen`/`isCentralSupply` trong loader hub, entries `kinds` central trong nav-config, archetype exceptions #19–#23, mục central trong `docs/ref/screen-context-map.md` §2.5 — xóa sạch, không tombstone.
 
@@ -464,7 +464,7 @@ GRN bắt đầu từ NCC, không từ PO.
 3. **HR position code giữ, chỉ soft-retire:** `office, accountant, marketing, technician, design_construction, warehouse_manager, central_supply_manager, production_manager, central_kitchen_manager, head_chef` → `positions.is_active = false`, không hard-delete (giữ lịch sử chấm công/lương cũ resolvable). `role_templates` của các code này bị xoá.
 4. **`branch_kind` enum GIỮ nguyên** (`central_supply`, `central_kitchen` vẫn tồn tại trên enum cho dữ liệu lịch sử) — chỉ 2 role bucket từng soft-route vào đó bị retire, không phải khái niệm site.
 5. **Central-site soft-routing xoá sạch khỏi app layer:** `centralSiteBranchKindForRole`, `resolveCentralSiteHomeBranchId`, `homeBranchId` trên `BranchHubContext`/`resolvePostLoginRedirect` — proxy + scope engine chỉ còn so khớp `claims.branch_id === routeBranchId` (owner vẫn cross-branch không đổi).
-6. **Office ACL của `branch_manager` giữ nguyên như trước** — quyết định này không đụng tới quyền branch_manager đã có trên inventory/hr/menu/orders.
+6. **Admin Dashboard ACL của `branch_manager` giữ nguyên như trước** — quyết định này không đụng tới quyền branch_manager đã có trên inventory/hr/menu/orders.
 
 **Consequences:** D055 §1 hết hiệu lực (sửa tại chỗ). D073 §1 "owner sắp xếp lại role production_manager" sửa thành xoá tài khoản. Canonical: `packages/shared/src/auth/types.ts` (`ACCESS_BUCKETS`), bảng generated trong `docs/spec/role-route-matrix.md`.
 
@@ -491,9 +491,9 @@ của Owner. Production có thể còn row site trung tâm chưa deactive đồn
 4. **Branch Hub có hai nhóm quản trị có kiểm quyền:** Owner/Branch Manager mở
    Menu + Cài đặt chi nhánh; chỉ Owner mở Finance + HR + Payroll + Thiết lập hệ
    thống. Đây là shortcut quản trị, không cho phép operator workflow import hay
-   render Office chrome.
+   render Admin Dashboard chrome.
 5. **Workspace Owner giữ nguyên route kỹ thuật trong lát này.** Không move
-   `/finance`, `/hr`, `/menu`, `/admin/settings`; việc bỏ Office shell là lát
+   `/finance`, `/hr`, `/menu`, `/admin/settings`; việc bỏ Admin Dashboard shell là lát
    riêng sau khi Hub entry ổn định.
 
 **Consequences:** D050 §1 và D058 §1/§5 hết hiệu lực ở phần home mặc định của
@@ -581,3 +581,56 @@ Mode `voice`-only vẫn đọc ngay.
 
 **Consequences:** Câu đọc rõ hơn mà không tăng gain giả hoặc đọc lặp. Âm lượng
 thực tế tối đa vẫn phụ thuộc media volume và loa của thiết bị.
+
+## D082: Hai plane xác thực — Admin Dashboard Owner-only, Branch là nơi làm việc hằng ngày (2026-07-13)
+
+**Context:** D076 giữ ACL Admin Dashboard cũ cho `branch_manager`, còn D077 đặt
+Branch Hub làm cửa vào mặc định cho mọi role và vẫn để shortcut sang các
+workspace top-level. Owner chốt lại ranh giới sản phẩm: các capability dùng chung
+không đồng nghĩa mọi role được vào cùng một plane; Owner cần một cockpit riêng để
+theo dõi toàn hệ thống, còn Branch Manager và Staff cần một nơi làm việc theo chi
+nhánh, không bị lẫn quản trị tenant.
+
+**Decision (owner 2026-07-13):**
+
+1. **Chỉ có hai plane đã đăng nhập:** `Admin Dashboard` và `Branch`. Public/auth,
+   Self-Order và public Runner display là boundary bên ngoài, không phải plane thứ
+   ba.
+2. **Admin Dashboard là Owner-only.** Các route top-level `/admin/*`,
+   `/finance/*`, `/branches/*`, `/menu/*`, `/orders/*`, `/inventory/*`, `/hr/*`
+   dành cho KPI cross-branch, kiểm soát, master data và thiết lập tenant. Giữ URL
+   hiện tại; không tạo thêm `/admin/dashboard`.
+3. **Branch là plane làm việc hằng ngày duy nhất cho Branch Manager và Staff,**
+   đồng thời cho Owner vào quan sát/hỗ trợ theo chi nhánh. POS/KDS và mọi station
+   control đã xác thực là mode trong Branch; public Runner display vẫn là boundary.
+   `/notifications` là utility của Branch cho mọi staff role; action URL top-level
+   cũ được chuẩn hoá sang route Branch ở read boundary.
+4. **Audience của route tách khỏi capability dùng chung.** `route-map.ts` và
+   `canAccessRouteSurface()` sở hữu ranh giới plane; `module-acl.ts`, permission,
+   Server Action/RPC và RLS tiếp tục sở hữu capability/action/data. Proxy,
+   `resolvePostLoginRedirect()` và app discovery phải áp dụng cả surface audience
+   lẫn capability. Không siết các key thật sự dùng chung như `inventory`, `orders`,
+   `hr` thành Owner-only để mô phỏng ranh giới plane. `menu` toàn cục là capability
+   quản trị catalog riêng của Owner; Branch dùng key/action `branch_menu_limits`
+   cho giới hạn món và bổ sung trong ngày.
+5. **HR top-level là Owner oversight.** `/hr/*`, payroll, lịch sử chấm công và ảnh
+   check-in tạm thời chỉ Owner xem. Branch giữ `Hôm nay`, `Đội ngũ`, hồ sơ/công
+   việc cá nhân và phê duyệt nghỉ theo branch scope; không mang trường lương, định
+   danh, ngân hàng hay ảnh/lịch sử oversight vào presenter của Branch.
+6. **Refund là Owner control.** Queue, tạo và duyệt hoàn tiền nằm trong Admin
+   Dashboard. Branch Orders chỉ giữ đơn đang chạy, đơn gần đây và chi tiết đơn;
+   không quảng bá refund queue hoặc quyền duyệt hoàn tiền cho Branch Manager/Staff.
+   Ba key `orders:refund`, `orders:refund_approve` và `pos:void_paid_order`, cùng
+   RLS bảng `refunds`, phải kiểm tra Owner identity trực tiếp thay vì chấp nhận
+   grant của non-Owner. Full void-after-paid tại POS vẫn tồn tại cho Owner khi
+   vào Branch để hỗ trợ; Branch Manager/Staff không được gọi action hoặc RPC này.
+7. **Owner luôn thấy plane picker ở `/`,** kể cả khi chỉ có một branch vận hành.
+   Branch-pinned non-Owner vẫn được chuyển thẳng vào Branch của mình. Việc tách
+   plane là route/presentation policy; riêng việc khoá mọi đường tạo/duyệt refund
+   cần forward migration ở helper permission và RLS.
+
+**Consequences:** D082 thay thế D076 §6, D077 §1/§3/§4 và mọi phần mâu thuẫn của
+D019 về audience; §6 cũng thay thế quyền `branch_manager` trong D049 §1/§4.
+D077 §2 và chủ trương giữ ổn định URL top-level vẫn còn hiệu lực. Canonical
+runtime: `route-map.ts`, `scope.ts`, `app-discovery.ts`, `proxy.ts`; canonical
+matrix: `docs/spec/role-route-matrix.md`.

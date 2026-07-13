@@ -26,7 +26,7 @@ test("count assignments keep manager follow-up links inside their own plane", ()
   assert.doesNotMatch(
     source,
     /`\/br\/\$\{/,
-    "office count assignment client should not hardcode branch operator shell paths",
+    "Admin Dashboard count assignment client should not hardcode branch operator shell paths",
   );
   assert.doesNotMatch(
     source,

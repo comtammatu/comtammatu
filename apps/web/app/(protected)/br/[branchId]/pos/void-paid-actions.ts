@@ -1,10 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import {
-  getInvoiceProvider,
-} from "@comtammatu/shared/providers";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { getAuthContextWithPermission } from "../../_lib/auth";
@@ -38,7 +36,7 @@ export interface VoidPaidOrderData extends RefundRpcResult {
   providerWarning?: string;
 }
 
-const POS_ROLES = MODULE_ACL.pos.allowedRoles;
+const VOID_PAID_ROLES = ["owner"] as const;
 
 export async function voidPaidOrder(
   orderId: number,
@@ -53,7 +51,7 @@ export async function voidPaidOrder(
   }
 
   const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
+    VOID_PAID_ROLES,
     PERMISSION_KEYS.POS_VOID_PAID_ORDER,
   );
   if (!ctx) {
@@ -86,7 +84,10 @@ export async function voidPaidOrder(
   // at the provider/CQT post-commit. Any cancel_issued path that cannot
   // auto-cancel MUST surface a warning, never silently skip, or a live CQT
   // invoice goes unnoticed.
-  if (result.invoice_action === "cancel_issued" && result.invoice_provider_ref) {
+  if (
+    result.invoice_action === "cancel_issued" &&
+    result.invoice_provider_ref
+  ) {
     if (result.invoice_provider === "viettel") {
       ensureInvoiceProviderRegistered();
       const invoiceProvider = getInvoiceProvider();

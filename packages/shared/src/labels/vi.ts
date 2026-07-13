@@ -60,13 +60,16 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
 export const NAV_GROUP_LABELS_VI = {
   operations: "Điều hành",
   foundation: "Quản lý",
-  workspaces: "Công việc",
+  adminDashboard: "Admin Dashboard",
   branchManagement: "Quản lý chi nhánh",
-  branchOperations: "Theo chi nhánh",
+  branchOperations: "Vận hành chi nhánh",
 } as const;
 
 export const APP_COPY_VI = {
-  adminSurface: "Quản trị",
+  adminDashboard: "Admin Dashboard",
+  adminDashboardDescription:
+    "Chỉ số toàn hệ thống, điều khiển và thiết lập dành cho Chủ quán",
+  adminDashboardCta: "Xem tổng quan",
   storeManagement: "Quản lý cửa hàng",
   reportsLabel: "Báo cáo",
   ownerHome: "Điều hành hôm nay",
@@ -80,21 +83,17 @@ export const APP_COPY_VI = {
   hrWorkspaceSubtitle: "Nhân viên, ca làm, ngày công",
   branchOperationsKds: "Bếp (KDS)",
   branchOperationsRunner: "Màn gọi số",
-  branchCommand: "Điều hành chi nhánh",
   operatorHome: "Nay",
   operatorRuntimeActions: "Vận hành chi nhánh",
-  operatorOpsActions: "Cấu hình chi nhánh",
+  operatorOpsActions: "Quản lý chi nhánh",
   operatorShift: "Ca",
   operatorManagement: "Quản lý",
   operations: "Điều hành",
-  operatorAriaLabel: "Điều hướng hôm nay",
+  operatorAriaLabel: "Điều hướng chi nhánh",
   loading: "Đang tải…",
   refresh: "Làm mới",
   noAreaData: "Không có dữ liệu khu vực",
   noScopedBranches: "Không có nơi làm việc trong phạm vi",
-  officePlaneTitle: "Văn phòng",
-  officePlaneDescription: "Tài chính và công việc bàn giấy",
-  officePlaneCta: "Mở Văn phòng",
 } as const;
 
 const SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
@@ -406,7 +405,7 @@ export const PAYMENT_METHOD_LABELS_FULL_VI = {
   unknown: "Khác",
 } as const;
 
-/** orders.status (DB orders_status_check) — full back-office vocabulary.
+/** orders.status (DB orders_status_check) — full Admin Dashboard vocabulary.
  * POS cashier view intentionally collapses these states
  * (apps/web pos/_lib/order-status-display.ts). */
 export const ORDER_STATUS_LABELS_VI = {

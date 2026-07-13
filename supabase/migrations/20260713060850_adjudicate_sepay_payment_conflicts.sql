@@ -70,11 +70,11 @@ BEGIN
   END IF;
 
   IF btrim(COALESCE(v_event.payload ->> 'transferAmount', ''))
-       !~ '^-?[0-9]+([.][0-9]+)?$' THEN
+       !~ '^[0-9]+([.][0-9]+)?$' THEN
     RAISE EXCEPTION 'sepay_conflict_amount_invalid' USING ERRCODE = '22023';
   END IF;
 
-  v_amount := abs((v_event.payload ->> 'transferAmount')::numeric);
+  v_amount := (v_event.payload ->> 'transferAmount')::numeric;
   IF v_amount <> p_expected_amount THEN
     RAISE EXCEPTION 'sepay_conflict_amount_changed' USING ERRCODE = '23514';
   END IF;

@@ -5,7 +5,7 @@ import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
-const OFFICE_ROUTE_PREFIXES = [
+const ADMIN_DASHBOARD_ROUTE_PREFIXES = [
   "/admin",
   "/branch-settings",
   "/branches",
@@ -71,35 +71,35 @@ test("Branch command and secondary routes stay in the operator touch plane", () 
   for (const contract of [
     {
       id: "operator-home",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]",
       moduleKey: "operator_home",
       primaryNav: "operator-bottom-nav",
     },
     {
       id: "branch-dashboard",
-      surface: "branch_management",
+      surface: "branch",
       entryPath: "/br/[branchId]/dashboard",
       moduleKey: "branch_dashboard",
       primaryNav: "operator-bottom-nav",
     },
     {
       id: "branch-settings",
-      surface: "branch_management",
+      surface: "branch",
       entryPath: "/br/[branchId]/settings",
       moduleKey: "branch_settings",
       primaryNav: "operator-bottom-nav",
     },
     {
       id: "branch-menu-limits",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]/menu-limits",
       moduleKey: "branch_menu_limits",
       primaryNav: "operator-bottom-nav",
     },
     {
       id: "branch-pos-sessions",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]/pos-sessions",
       moduleKey: "branch_pos_sessions",
       primaryNav: "operator-bottom-nav",
@@ -167,21 +167,21 @@ test("POS, KDS, and Runner stay standalone station apps", () => {
   for (const contract of [
     {
       id: "pos",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]/pos",
       moduleKey: "pos",
       primaryNav: "operational-chrome",
     },
     {
       id: "kds",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]/kds",
       moduleKey: "kds",
       primaryNav: "operational-chrome",
     },
     {
       id: "runner",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]/runner",
       moduleKey: "runner",
       primaryNav: "operational-chrome",
@@ -217,11 +217,14 @@ test("POS, KDS, and Runner stay standalone station apps", () => {
     assert.match(layout, /<main/);
     assert.match(layout, /h-dvh/);
     assert.match(layout, /touch-manipulation/);
-    assert.doesNotMatch(layout, /<AppPage|OperatorBottomNav|OfficeModuleShell/);
+    assert.doesNotMatch(
+      layout,
+      /<AppPage|OperatorBottomNav|AdminDashboardModuleShell/,
+    );
   }
 });
 
-test("Branch operator routes do not link, redirect, or revalidate Office routes", () => {
+test("Branch operator routes do not link, redirect, or revalidate Admin Dashboard routes", () => {
   for (const dir of [
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard",
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings",
@@ -234,7 +237,7 @@ test("Branch operator routes do not link, redirect, or revalidate Office routes"
     if (!existsSync(resolve(repoRoot, dir))) continue;
     for (const file of listSourceFiles(dir)) {
       const source = read(file);
-      for (const prefix of OFFICE_ROUTE_PREFIXES) {
+      for (const prefix of ADMIN_DASHBOARD_ROUTE_PREFIXES) {
         const route = `${escapeRegExp(prefix)}${ROUTE_LITERAL_END}`;
         for (const [label, pattern] of [
           ["href prop", new RegExp(`href\\s*=\\s*(?:{\\s*)?["'\`]${route}`)],
@@ -263,7 +266,7 @@ test("Branch operator routes do not link, redirect, or revalidate Office routes"
 test("Branch operator routes do not import management shell chrome", () => {
   const forbiddenShells = [
     ["BranchManagementShell", /\bBranchManagementShell\b/],
-    ["OfficeModuleShell", /\bOfficeModuleShell\b/],
+    ["AdminDashboardModuleShell", /\bAdminDashboardModuleShell\b/],
     ["InventoryShell", /\bInventoryShell\b/],
     ["FinanceShell", /\bFinanceShell\b/],
     ["ManagementShell", /\bManagementShell\b/],
@@ -287,6 +290,86 @@ test("Branch operator routes do not import management shell chrome", () => {
         );
       }
     }
+  }
+});
+
+test("Branch routes do not import the Owner-only global menu capability or actions", () => {
+  for (const dir of [
+    "apps/web/app/(protected)/br/[branchId]/pos",
+    "apps/web/app/(protected)/br/[branchId]/kds",
+    "apps/web/app/(protected)/br/[branchId]/runner",
+    "apps/web/app/(protected)/br/[branchId]/(operator)",
+  ]) {
+    if (!existsSync(resolve(repoRoot, dir))) continue;
+    for (const file of listSourceFiles(dir)) {
+      const source = read(file);
+      assert.doesNotMatch(source, /MODULE_ACL\.menu\b/, file);
+      assert.doesNotMatch(source, /\(protected\)\/menu\/actions/, file);
+    }
+  }
+
+  const moduleAcl = read("packages/shared/src/auth/module-acl.ts");
+  const menuActions = read("apps/web/app/(protected)/menu/actions.ts");
+  const branchMenuActions = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/actions.ts",
+  );
+
+  assert.match(moduleAcl, /menu:\s*\{[\s\S]*?allowedRoles:\s*\["owner"\]/);
+  assert.match(menuActions, /MODULE_ACL\.menu\.allowedRoles/);
+  assert.match(
+    branchMenuActions,
+    /MODULE_ACL\.branch_menu_limits\.allowedRoles/,
+  );
+});
+
+test("refund review and control stay Owner-only through the database boundary", () => {
+  const migration = read(
+    "supabase/migrations/20260713210000_enforce_owner_only_refund_controls.sql",
+  );
+  const paidRefundMigration = read(
+    "supabase/migration-archive/20260708123500_pos_sale_refund_restore.sql",
+  );
+  const refundActions = read(
+    "apps/web/app/(protected)/orders/refund-actions.ts",
+  );
+  const voidPaidAction = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/void-paid-actions.ts",
+  );
+  const orderReads = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/order-reads.ts",
+  );
+
+  assert.match(refundActions, /const FETCH_ROLES: StaffRole\[\] = \["owner"\]/);
+  assert.match(
+    refundActions,
+    /const APPROVE_ROLES: StaffRole\[\] = \["owner"\]/,
+  );
+  assert.match(
+    migration,
+    /ARRAY\[\s*'orders:refund',\s*'orders:refund_approve',\s*'pos:void_paid_order'\s*\]::text\[\]/,
+  );
+  assert.match(voidPaidAction, /const VOID_PAID_ROLES = \["owner"\] as const/);
+  assert.match(orderReads, /canVoidPaidOrder: claims\.user_role === "owner"/);
+  assert.match(
+    refundActions,
+    /\.eq\("status", "pending"\)[\s\S]*?\.select\("id"\)[\s\S]*?\.maybeSingle\(\)/,
+    "refund rejection must lose safely when approval already changed the pending row",
+  );
+  assert.match(
+    paidRefundMigration,
+    /IF NOT public\.has_permission\(v_order\.branch_id, 'pos:void_paid_order'\) THEN[\s\S]*?RAISE EXCEPTION 'forbidden'/,
+  );
+  assert.match(
+    paidRefundMigration,
+    /GRANT EXECUTE ON FUNCTION public\.refund_paid_order\(bigint, text\) TO authenticated, service_role/,
+  );
+  for (const policy of ["refunds_select", "refunds_insert", "refunds_update"]) {
+    assert.match(
+      migration,
+      new RegExp(
+        `CREATE POLICY ${policy}[\\s\\S]*?public\\.auth_is_owner\\(auth\\.uid\\(\\)\\)`,
+      ),
+    );
   }
 });
 
@@ -462,7 +545,7 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
   ]) {
     for (const file of listSourceFiles(dir)) {
       const source = read(file);
-      for (const prefix of OFFICE_ROUTE_PREFIXES) {
+      for (const prefix of ADMIN_DASHBOARD_ROUTE_PREFIXES) {
         const route = `${escapeRegExp(prefix)}${ROUTE_LITERAL_END}`;
         for (const [label, pattern] of [
           ["href prop", new RegExp(`href\\s*=\\s*(?:{\\s*)?["'\`]${route}`)],
@@ -500,7 +583,7 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
 test("Branch-scoped operational routes do not use management shell", () => {
   const forbiddenShells = [
     ["BranchManagementShell", /BranchManagementShell/],
-    ["OfficeModuleShell", /OfficeModuleShell/],
+    ["AdminDashboardModuleShell", /AdminDashboardModuleShell/],
     ["InventoryShell", /InventoryShell/],
     ["FinanceShell", /FinanceShell/],
     ["ManagementShell", /ManagementShell/],

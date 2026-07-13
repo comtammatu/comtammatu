@@ -17,23 +17,24 @@ import {
 import type { ElementType } from "react";
 import {
   canAccess,
+  canAccessRouteSurface,
   MODULE_ACL,
   resolveAdminNavGroups,
-  resolveWorkspaceItems,
+  resolveAdminDashboardItems,
   type ResolvedNavLink,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI, MODULE_LABELS_VI } from "@comtammatu/shared/labels";
-import type { OfficeModuleId } from "./office-module-contract";
+import type { AdminDashboardModuleId } from "./admin-dashboard-module-contract";
 import type { ShellNavGroup, ShellNavItem } from "./shell-primitives";
 import { messages } from "@lib/messages";
 
-// Unified office sidebar. Every Management route renders the same
-// role/scope-filtered office nav: admin-scoped settings plus domain workspaces.
+// Unified Admin Dashboard sidebar. Every management route renders the same
+// Owner-only navigation: tenant settings plus cross-system domain modules.
 // Module-specific deep nav is appended by the module shell. Built on the shared
 // resolvers so access filtering stays single-sourced in MODULE_ACL.
 
-const OFFICE_ICON_MAP: Record<string, ElementType> = {
+const ADMIN_DASHBOARD_ICON_MAP: Record<string, ElementType> = {
   LayoutDashboard: IconLayoutDashboard,
   BarChart3: IconBarChart3,
   Users: IconUsers,
@@ -51,7 +52,7 @@ function mapItem(item: ResolvedNavLink): ShellNavItem {
   return {
     href: item.href,
     label: item.label,
-    icon: OFFICE_ICON_MAP[item.icon] ?? IconLayoutDashboard,
+    icon: ADMIN_DASHBOARD_ICON_MAP[item.icon] ?? IconLayoutDashboard,
   };
 }
 
@@ -66,9 +67,8 @@ function dedupeByHref(items: ShellNavItem[]): ShellNavItem[] {
   return result;
 }
 
-// Primary sidebar tabs. Admin dashboard is not a workspace; admin-scoped
-// settings render as a normal office tab beside the domain modules.
-export function resolveOfficePrimaryTabs(
+// Tenant settings and role-filtered domain modules share one primary sidebar.
+export function resolveAdminDashboardPrimaryTabs(
   role: StaffRole,
   _branchId?: number | null,
 ): ShellNavItem[] {
@@ -78,7 +78,7 @@ export function resolveOfficePrimaryTabs(
 
   return dedupeByHref([
     ...adminItems,
-    ...resolveWorkspaceItems(role).map(mapItem),
+    ...resolveAdminDashboardItems(role).map(mapItem),
   ]);
 }
 
@@ -154,17 +154,21 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
   return groups;
 }
 
-// Sub-nav for office modules. Settings renders foundation sub-pages; HR renders
+// Sub-nav for Admin Dashboard modules. Settings renders foundation sub-pages; HR renders
 // the People + account-administration groups; menu/orders/branches are flat
 // single-page modules with no sub-routes — their own primary tab already
 // links to the module, so no deep-nav group is emitted (a group titled after
 // its only child duplicated the tab and rendered nothing new, since the
 // sidebar already filters out a sub-item whose href equals its parent tab).
-export function resolveOfficeDeepNav(
+export function resolveAdminDashboardDeepNav(
   role: StaffRole,
-  module: OfficeModuleId,
+  module: AdminDashboardModuleId,
   _branchId?: number | null,
 ): ShellNavGroup[] {
+  if (!canAccessRouteSurface(role, "admin_dashboard")) {
+    return [];
+  }
+
   if (module === "admin") {
     return resolveAdminDeepNav(role);
   }

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
@@ -10,6 +9,7 @@ import { fetchLeaveRequestRows } from "@lib/hr/leave-request-data";
 import { withAction } from "@/_lib/with-action";
 
 const REVIEW_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
+const OWNER_REVIEW_ROLES: readonly StaffRole[] = ["owner"];
 const leaveCopy = messages.hr.leave;
 
 const fetchSchema = z.object({
@@ -26,28 +26,18 @@ const fetchMonthSchema = z.object({
 // Approved leave ranges overlapping the viewed month (attendance tab).
 export const fetchApprovedLeaveMonth = withAction(
   {
-    roles: REVIEW_ROLES,
+    roles: OWNER_REVIEW_ROLES,
     schema: fetchMonthSchema,
     permission: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
-    if (
-      claims.user_role === "branch_manager" &&
-      claims.branch_id !== data.branchId
-    ) {
-      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-    }
-
     const [year, mon] = data.month.split("-").map(Number);
     const startDate = `${data.month}-01`;
     const endDate = getVNMonthEndDateString(year!, mon!);
 
-    const leaveClient =
-      claims.user_role === "branch_manager" ? createServiceClient() : supabase;
-
-    const { data: result, error } = await leaveClient
+    const { data: result, error } = await supabase
       .from("leave_requests")
       .select(
         `

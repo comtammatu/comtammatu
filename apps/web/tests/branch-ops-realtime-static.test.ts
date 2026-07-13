@@ -177,6 +177,7 @@ test("branch ops authorization follows active profile branch scope", () => {
 });
 
 test("runtime control-plane hardening fixes cron dedup and MV grants", () => {
+  assert.match(hardeningMigration, /SET LOCAL lock_timeout = '5s'/);
   assert.match(hardeningMigration, /FROM cron\.job j[\s\S]*WHERE j\.active/);
   assert.match(
     hardeningMigration,
@@ -203,6 +204,10 @@ test("runtime control-plane hardening fixes cron dedup and MV grants", () => {
   assert.match(
     hardeningMigration,
     /REVOKE ALL ON public\.mv_inventory_stock_current FROM anon, authenticated/,
+  );
+  assert.match(
+    hardeningMigration,
+    /ALTER TABLE public\.webhook_events REPLICA IDENTITY FULL/,
   );
   assert.match(runtimeControlPlaneTest, /cron\.schedule\(/);
   assert.doesNotMatch(runtimeControlPlaneTest, /INSERT INTO cron\.job\s*\(/);

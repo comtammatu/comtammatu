@@ -3,40 +3,37 @@ import { test } from "node:test";
 
 import {
   canAccess,
-  DOMAIN_WORKSPACE_ITEMS,
+  ADMIN_DASHBOARD_MODULE_ITEMS,
   MODULE_ACL,
   type ModuleKey,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 
 import {
-  resolveOfficePrimaryTabs,
-  resolveOfficeDeepNav,
-} from "../app/lib/office-nav";
+  resolveAdminDashboardPrimaryTabs,
+  resolveAdminDashboardDeepNav,
+} from "../app/lib/admin-dashboard-nav";
 import {
   findActivePrimaryNavItem,
   type ShellNavGroup,
   type ShellNavItem,
 } from "../app/lib/shell-primitives";
 import {
-  FLAT_OFFICE_MODULE_IDS,
-  OFFICE_MODULE_IDS,
-} from "../app/lib/office-module-contract";
+  FLAT_ADMIN_DASHBOARD_MODULE_IDS,
+  ADMIN_DASHBOARD_MODULE_IDS,
+} from "../app/lib/admin-dashboard-module-contract";
 
-// Regression floor for the office navigation resolvers. Expectations are driven
+// Regression floor for the Admin Dashboard navigation resolvers. Expectations are driven
 // from MODULE_ACL membership so the primary sidebar tabs stay single-sourced.
 
-// Candidate modules the office sidebar can surface, in composition order:
-// one settings tab + cross-workspace modules. Branch-scoped routes live in the operator plane.
+// Candidate modules the Admin Dashboard sidebar can surface, in composition order:
+// one settings tab + cross-system modules. Branch-scoped routes live in the Branch plane.
 const SETTINGS_TAB_MODULE: ModuleKey = "settings";
-const WORKSPACE_TAB_MODULES: ModuleKey[] = DOMAIN_WORKSPACE_ITEMS.map(
+const WORKSPACE_TAB_MODULES: ModuleKey[] = ADMIN_DASHBOARD_MODULE_ITEMS.map(
   (item) => item.moduleKey,
 );
 
-const RESTRICTED_ROLES: StaffRole[] = [
-  "cashier",
-  "branch_manager",
-];
+const RESTRICTED_ROLES: StaffRole[] = ["cashier", "branch_manager"];
 
 const BRANCH_ID = 7;
 
@@ -71,7 +68,7 @@ function assertUniqueTabs(items: ShellNavItem[], label: string): void {
   );
 }
 
-// Expected hrefs for the non-branch (admin + workspace) primary tabs.
+// Expected hrefs for the Owner-only Admin Dashboard primary tabs.
 function expectedTenantHrefs(role: StaffRole): string[] {
   return [SETTINGS_TAB_MODULE, ...WORKSPACE_TAB_MODULES]
     .filter((key) => canAccess(role, key))
@@ -79,7 +76,7 @@ function expectedTenantHrefs(role: StaffRole): string[] {
 }
 
 test("owner sidebar tabs include settings + all tenant workspaces", () => {
-  const items = resolveOfficePrimaryTabs("owner", BRANCH_ID);
+  const items = resolveAdminDashboardPrimaryTabs("owner", BRANCH_ID);
   const hrefs = hrefSet(items);
 
   for (const key of [SETTINGS_TAB_MODULE, ...WORKSPACE_TAB_MODULES]) {
@@ -93,7 +90,7 @@ test("owner sidebar tabs include settings + all tenant workspaces", () => {
   assert.equal(
     hrefs.has("/admin/dashboard"),
     false,
-    "admin dashboard must not surface as an office primary tab",
+    "the retired /admin/dashboard route must not surface as a primary tab",
   );
 
   // `staff` now lives under the HR workspace (D048) — its /hr/staff path must
@@ -108,7 +105,7 @@ test("owner sidebar tabs include settings + all tenant workspaces", () => {
   assert.deepEqual(
     branchTabs,
     [],
-    "branch-scoped tabs must stay out of the office sidebar",
+    "branch-scoped tabs must stay out of the Admin Dashboard sidebar",
   );
 
   const branchWorkspace = items.find(
@@ -123,7 +120,7 @@ test("owner sidebar tabs include settings + all tenant workspaces", () => {
 });
 
 test("owner sidebar tabs omit branch-scoped entries without a branchId", () => {
-  const items = resolveOfficePrimaryTabs("owner");
+  const items = resolveAdminDashboardPrimaryTabs("owner");
   const branchHrefs = items.filter((item) => item.href.startsWith("/br/"));
   assert.deepEqual(branchHrefs, []);
 
@@ -135,63 +132,50 @@ test("owner sidebar tabs omit branch-scoped entries without a branchId", () => {
 });
 
 for (const role of RESTRICTED_ROLES) {
-  test(`${role} sidebar tabs expose only MODULE_ACL-allowed tenant entries`, () => {
-    const items = resolveOfficePrimaryTabs(role);
-    const hrefs = hrefList(items).filter((href) => !href.startsWith("/br/"));
-
-    const expected = expectedTenantHrefs(role);
-    assert.deepEqual(
-      [...hrefs].sort(),
-      [...expected].sort(),
-      `${role} sidebar tab tenant entries must equal its ACL-allowed subset`,
-    );
-
-    // A restricted role must never see an admin-only module it cannot access.
-    for (const key of [SETTINGS_TAB_MODULE, ...WORKSPACE_TAB_MODULES]) {
-      if (!canAccess(role, key)) {
-        assert.equal(
-          hrefs.includes(MODULE_ACL[key].path),
-          false,
-          `${role} must not see ${key}`,
-        );
-      }
+  test(`${role} receives no Admin Dashboard primary or deep navigation`, () => {
+    const items = resolveAdminDashboardPrimaryTabs(role);
+    assert.deepEqual(items, []);
+    for (const moduleId of ADMIN_DASHBOARD_MODULE_IDS) {
+      assert.deepEqual(resolveAdminDashboardDeepNav(role, moduleId), []);
     }
   });
 }
 
 test("primary tab hrefs and labels are deduplicated", () => {
   for (const role of ["owner", ...RESTRICTED_ROLES] as StaffRole[]) {
-    const items = resolveOfficePrimaryTabs(role, BRANCH_ID);
+    const items = resolveAdminDashboardPrimaryTabs(role, BRANCH_ID);
     assertUniqueTabs(items, `${role} primary tabs`);
   }
 });
 
 test("deep-nav hrefs and labels are deduplicated", () => {
-  for (const officeModule of OFFICE_MODULE_IDS) {
+  for (const adminDashboardModule of ADMIN_DASHBOARD_MODULE_IDS) {
     assertUniqueTabs(
-      flattenGroups(resolveOfficeDeepNav("owner", officeModule)),
-      `${officeModule} sub-tabs`,
+      flattenGroups(
+        resolveAdminDashboardDeepNav("owner", adminDashboardModule),
+      ),
+      `${adminDashboardModule} sub-tabs`,
     );
   }
 });
 
 test("findActivePrimaryNavItem matches the primary tab for the current path", () => {
-  const items = resolveOfficePrimaryTabs("owner", BRANCH_ID);
+  const items = resolveAdminDashboardPrimaryTabs("owner", BRANCH_ID);
   const active = findActivePrimaryNavItem(items, "/admin/settings/payments");
   assert.ok(active, "an active sidebar tab must be found for settings");
   assert.equal(active?.href, MODULE_ACL.settings.path);
 });
 
 test("findActivePrimaryNavItem returns undefined for an unmatched path", () => {
-  const items = resolveOfficePrimaryTabs("owner", BRANCH_ID);
+  const items = resolveAdminDashboardPrimaryTabs("owner", BRANCH_ID);
   assert.equal(
     findActivePrimaryNavItem(items, "/totally/unknown/path"),
     undefined,
   );
 });
 
-test("resolveOfficeDeepNav returns settings sub-pages for the admin surface", () => {
-  const groups = resolveOfficeDeepNav("owner", "admin");
+test("resolveAdminDashboardDeepNav returns settings sub-pages for the admin surface", () => {
+  const groups = resolveAdminDashboardDeepNav("owner", "admin");
   assert.ok(Array.isArray(groups));
   const hrefs = hrefList(flattenGroups(groups));
   assert.deepEqual(hrefs, [
@@ -201,12 +185,12 @@ test("resolveOfficeDeepNav returns settings sub-pages for the admin surface", ()
   ]);
 });
 
-for (const surface of FLAT_OFFICE_MODULE_IDS) {
-  test(`resolveOfficeDeepNav returns no deep-nav group for the flat ${surface} module`, () => {
+for (const surface of FLAT_ADMIN_DASHBOARD_MODULE_IDS) {
+  test(`resolveAdminDashboardDeepNav returns no deep-nav group for the flat ${surface} module`, () => {
     // menu/orders/branches are flat single-page modules: their own primary
     // tab already links to the module, so no group duplicating that same
     // leaf under itself is emitted (W2, D063).
-    const groups = resolveOfficeDeepNav("owner", surface);
+    const groups = resolveAdminDashboardDeepNav("owner", surface);
     assert.deepEqual(
       groups,
       [],
@@ -215,10 +199,10 @@ for (const surface of FLAT_OFFICE_MODULE_IDS) {
   });
 }
 
-test("resolveOfficeDeepNav surfaces People + gated account groups for HR", () => {
-  // Owner sees both the People landing group and the owner-only account
-  // administration group (staff roster + audit) folded under /hr (D048).
-  const ownerGroups = resolveOfficeDeepNav("owner", "hr");
+test("resolveAdminDashboardDeepNav surfaces Owner People and account groups for HR", () => {
+  // Owner sees both the People landing group and account administration
+  // (staff roster + audit) folded under /hr (D048).
+  const ownerGroups = resolveAdminDashboardDeepNav("owner", "hr");
   const ownerHrefs = hrefList(flattenGroups(ownerGroups));
   assert.ok(
     ownerHrefs.includes(MODULE_ACL.hr.path),
@@ -231,18 +215,5 @@ test("resolveOfficeDeepNav surfaces People + gated account groups for HR", () =>
   assert.ok(
     ownerHrefs.includes(`${MODULE_ACL.staff.path}/audit`),
     "owner HR deep nav must include the permission audit",
-  );
-
-  // branch_manager reaches HR but not the staff-only account surface.
-  const managerGroups = resolveOfficeDeepNav("branch_manager", "hr");
-  const managerHrefs = hrefList(flattenGroups(managerGroups));
-  assert.ok(
-    managerHrefs.includes(MODULE_ACL.hr.path),
-    "branch_manager HR deep nav must include the People landing",
-  );
-  assert.equal(
-    managerHrefs.includes(MODULE_ACL.staff.path),
-    false,
-    "branch_manager must not see the owner-only staff roster",
   );
 });

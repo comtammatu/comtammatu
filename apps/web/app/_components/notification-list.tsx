@@ -62,7 +62,7 @@ const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
     body: "Sườn cốt lết cần kiểm tra tồn kho.",
     entity_type: "ingredient",
     entity_id: 2,
-    action_url: "/inventory/stock",
+    action_url: "/br/1/stock/on-hand/2",
     meta: {},
     created_at: new Date(2026, 0, 5, 8, 10).toISOString(),
     expires_at: null,

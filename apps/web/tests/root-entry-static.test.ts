@@ -24,5 +24,8 @@ test("root route renders the work location picker", () => {
   );
   assert.match(pickerPage, /AppLinkCard/);
   assert.match(pickerPage, /href=\{`\/br\/\$\{site\.id\}`\}/);
+  assert.match(pickerPage, /showAdminDashboardCard/);
+  assert.match(pickerPage, /APP_COPY_VI\.adminDashboard/);
+  assert.match(pickerPage, /href=\{MODULE_ACL\.finance\.path\}/);
   assert.doesNotMatch(rootPage, /messages\.appEntry/);
 });

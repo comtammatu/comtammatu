@@ -14,7 +14,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/admin/settings/printers/templates/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx":
-    "DASHBOARD",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx": "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx": "HUB",
   "apps/web/app/(protected)/br/[branchId]/(operator)/profile/page.tsx":

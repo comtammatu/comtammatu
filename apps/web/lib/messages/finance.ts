@@ -385,14 +385,6 @@ export const finance = {
     openingDateLabel: "Ngày đếm đủ hai số dư",
     openingSubmit: "Lưu tồn quỹ",
     openingSuccess: "Đã lưu tồn quỹ đầu kỳ",
-    transferTitle: "Chuyển tiền mặt vào ngân hàng",
-    transferAction: "Chuyển tiền",
-    transferDescription:
-      "Rút bớt tiền mặt trong quỹ để nộp vào tài khoản ngân hàng. Nếu có mã tham chiếu giao dịch (đã nộp), tiền trong ngân hàng sẽ không được cộng thêm lần nữa.",
-    transferAmountLabel: "Số tiền mặt nộp (VNĐ)",
-    transferRefLabel: "Mã tham chiếu SePay (không bắt buộc)",
-    transferSubmit: "Lưu chuyển tiền",
-    transferSuccess: "Đã chuyển tiền mặt vào ngân hàng",
   },
   bankTransactions: {
     eyebrow: "Tài chính",
@@ -625,6 +617,7 @@ export const finance = {
       received: "Đã nhận",
     },
     matchedOrder: (id: number | string) => `Khớp đơn hàng #${id}`,
+    matchedCashDeposit: "Đã khớp chuyển quỹ",
     matchedExpense: (id: number | string) => `Khớp chi phí #${id}`,
     matchedSupplierPayment: (id: number | string) => `Trả NCC #${id}`,
     matchedSupplierPaymentDetail: (supplier: string, invoice: string) =>
@@ -635,6 +628,8 @@ export const finance = {
     bankTransactionAmount: "Sao kê",
     selectedExpenseAmount: "Chi phí chọn",
     expenseMatchDelta: "Lệch",
+    expenseAllocationMismatch:
+      "Tổng chi đã chọn phải bằng số tiền trên sao kê.",
     noUnmatchedExpenses: "Không có chi chuyển khoản chưa khớp",
     openExpenses: "Mở chi phí",
     clearExpenseMatch: "Bỏ khớp",

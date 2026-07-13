@@ -70,7 +70,7 @@ BEGIN
     );
   END IF;
 
-  IF btrim(COALESCE(v_event.payload ->> 'transferAmount', '')) !~ '^-?[0-9]+([.][0-9]+)?$' THEN
+  IF btrim(COALESCE(v_event.payload ->> 'transferAmount', '')) !~ '^[0-9]+([.][0-9]+)?$' THEN
     UPDATE public.webhook_events
     SET processing_status = 'failed',
         http_status = 200,
@@ -80,7 +80,7 @@ BEGIN
     RETURN jsonb_build_object('status', 'invalid_amount');
   END IF;
 
-  v_amount := abs((v_event.payload ->> 'transferAmount')::numeric);
+  v_amount := (v_event.payload ->> 'transferAmount')::numeric;
   IF v_amount <= 0 THEN
     UPDATE public.webhook_events
     SET processing_status = 'failed',
@@ -110,8 +110,11 @@ BEGIN
       AND status <> 'cancelled'
       AND payment_code IS NOT NULL
       AND btrim(payment_code) <> ''
-      AND regexp_replace(payment_code, '[^A-Za-z0-9]+', '', 'g')
-        ~ '^[A-Za-z][A-Za-z0-9]{15,49}$'
+      AND (
+        regexp_replace(payment_code, '[^A-Za-z0-9]+', '', 'g')
+          ~ '^[A-Za-z][A-Za-z0-9]{15,49}$'
+        OR btrim(payment_code) ~* '^DH[A-Z0-9]{3,12}$'
+      )
       AND position(
         ' ' || upper(regexp_replace(
           payment_code,

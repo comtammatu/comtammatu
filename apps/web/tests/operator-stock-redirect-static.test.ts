@@ -121,7 +121,7 @@ test("operator stock receive owns the native queue and keeps compatibility redir
   );
 
   // D067 §2: the receive detail route forks to a mobile-native receive
-  // client over the SHARED transfer loader — no office
+  // client over the SHARED transfer loader — no Admin Dashboard
   // TransferDetailPageContent embed (that stepper/summary chrome is exactly
   // what the native screen removes).
   assert.match(receiveDetailRoute, /TransferReceiveContent/);
@@ -241,7 +241,7 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(stockClientSource, /if \(coreDataLoadFailed\)/);
   assert.match(
     stockClientSource,
-    /return \(\s*<AppPage[\s\S]*width=\{isCompactLayout \? "narrow" : "xwide"\}[\s\S]*scroll[\s\S]*>\s*\{content\}\s*<\/AppPage>\s*\);/,
+    /return \(\s*<AppPage width="xwide" density="compact" scroll>\s*\{content\}\s*<\/AppPage>\s*\);/,
   );
   assert.doesNotMatch(stockClientSource, /InventoryPageContent/);
 });
@@ -298,7 +298,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/waste/);
   assert.doesNotMatch(
     branchDetailSource,
-    /formatVND|DataTable|AppPageHeader|StockIngredientDetailPageContent|OfficeStockIngredientDetail|embedded/,
+    /formatVND|DataTable|AppPageHeader|StockIngredientDetailPageContent|AdminDashboardStockIngredientDetail|embedded/,
   );
   assert.doesNotMatch(branchDetailSource, /\$\{stockBasePath\}\/receive/);
   assert.match(stockPageSource, /loadStockOnHandPageData/);
@@ -309,7 +309,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   );
   assert.match(stockDataSource, /scope\.outOfScope/);
   assert.match(stockDetailPageSource, /loadStockIngredientDetailData/);
-  assert.match(stockDetailPageSource, /OfficeStockIngredientDetail/);
+  assert.match(stockDetailPageSource, /AdminDashboardStockIngredientDetail/);
   assert.match(stockDetailPageSource, /formatVND/);
   assert.doesNotMatch(
     stockDetailPageSource,
@@ -373,7 +373,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   );
 });
 
-test("office stock workbench keeps manager action affordances after the plane split", () => {
+test("Admin Dashboard stock workbench keeps manager action affordances after the plane split", () => {
   const stockClientSource = read(
     "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
   );
@@ -1429,8 +1429,8 @@ test("operator production renders branch-native inside the production operator s
 
   assert.match(route, /params: Promise<\{ branchId: string \}>/);
   // D067 §1: the operator route forks presentation to a mobile-native client
-  // over the SAME data loader — no office ProductionPageContent embed, no
-  // redirect to the office plane.
+  // over the SAME data loader — no Admin Dashboard ProductionPageContent embed, no
+  // redirect to the Admin Dashboard plane.
   assert.match(route, /ProductionOperatorClient/);
   assert.match(
     route,
@@ -1532,8 +1532,6 @@ test("operator production renders branch-native inside the production operator s
   );
   assert.match(operatorClientSource, /title="Việc cần làm"/);
 
-  // The office_bridge "Sản xuất" tile is retired now that the native
-  // surface has landed (D059 §2 shrink-to-zero).
   assert.doesNotMatch(navConfig, /hrefTemplate: "\/inventory\/production"/);
 
   assert.doesNotMatch(navConfig, /stock\/purchase-orders|Đơn đặt hàng/);

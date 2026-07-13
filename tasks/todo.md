@@ -9,6 +9,32 @@
 > checkout with `git status` and re-check production state for any migration or
 > runtime claim.
 
+## Two Authenticated Product Planes (D082, 2026-07-13)
+
+T3 contract: Admin Dashboard is the Owner-only cockpit for cross-system KPIs,
+controls, master data, HR oversight, and tenant settings. Branch is the sole
+daily-work plane for Branch Manager and Staff, with explicit Owner oversight.
+POS/KDS/Runner are Branch chrome modes; Self-Order/public display remain outside
+the authenticated product boundary. Existing top-level Admin Dashboard URLs stay
+stable.
+
+- [x] Gate direct navigation, `returnTo`, and app discovery through the shared
+      route-surface audience policy without owner-locking Branch-shared Orders,
+      Inventory, or HR capabilities.
+- [x] Keep Branch-native menu limits, orders, stock, team, and approvals; remove
+      the global `/menu` leak and lock global menu/refund actions to Owner,
+      including direct `refund_paid_order` calls through `pos:void_paid_order`.
+- [x] Normalize legacy notification action URLs to the authorized Branch route
+      at read time; no database migration or production write in this slice.
+- [x] Record the two-plane Design System, route matrix, screen-context, auth, and
+      product-decision contracts; treat `/br/[branchId]/dashboard` as a redirect
+      shim and `/finance` as the Owner dashboard exemplar.
+- [x] Close with regenerated contracts, refreshed CodeGraph, targeted tests,
+      full typecheck/lint/build, and runtime smoke where the local environment
+      permits. Full ephemeral baseline replay passed, including the Owner-only
+      refund migration. Authenticated browser smoke was unavailable because no
+      local web server or non-production Supabase target was running.
+
 ## Má Tư Design System Visual Renovation (2026-07-12)
 
 Skill plan: repo rules = engineering + skills + workflow + UI; external skill =
@@ -17,7 +43,7 @@ authenticated browser smoke. No production write.
 
 UI Advisor Gate
 
-- Surfaces: all Branch, Office, Station, and Public route families; change =
+- Surfaces: all Branch, Admin Dashboard, Station, and Public route families; change =
   visual system + presentation contracts, delivered in bounded waves.
 - Actors/jobs: staff completes daily work; manager/Owner scans, reviews, and
   decides; guest scans, orders, requests help, and tracks the latest status.
@@ -28,13 +54,13 @@ UI Advisor Gate
   focus, reduced motion, loading, empty, error, permission, and recovery states.
 
 T3 debate verdict: one visual language, four presentation grammars. Branch is a
-touch-first daily-work plane; Office is a desktop-responsive management plane;
+touch-first daily-work plane; Admin Dashboard is a desktop-responsive management plane;
 POS/KDS/Runner are independent station tools sharing handoff vocabulary rather
-than layout; Self-Order is a guest hot path and must not expose Office/POS state
+than layout; Self-Order is a guest hot path and must not expose Admin Dashboard/POS state
 language. Fix plane, state ownership, and information order before visual polish.
 
 - [x] **W0 — census, runtime baseline, debate, and P0 stabilization.** Classify
-      132/132 pages; inspect representative Branch/Office/Station/Public screens;
+      132/132 pages; inspect representative Branch/Admin Dashboard/Station/Public screens;
       restore Branch mobile workflow-title contract; use the canonical action
       hover elevation; remove the stale deleted-file guard exception. UI ratchet
       is 83/83. Web tests pass with 0 failures; typecheck, lint, build,
@@ -99,11 +125,11 @@ language. Fix plane, state ownership, and information order before visual polish
         evidence, and no print job. The archived receipt shows both cash lines.
         The shift closed at 25,000 VND and all smoke fixtures were deactivated
         through the UI. No production DDL, deploy, commit, or push was performed.
-- [ ] **W3 — Office Inventory and Finance.** Start with the proven 1440px
+- [ ] **W3 — Admin Dashboard Inventory and Finance.** Start with the proven 1440px
       `/inventory/stock` toolbar overlap. Fix composition at the owner layer,
       reduce card mosaics, and standardize scan/filter/review/document density at
       1024x768 and 1440px.
-- [ ] **W4 — Office Admin, HR, Menu, and Orders.** Apply the same Office grammar
+- [ ] **W4 — Admin Dashboard Admin, HR, Menu, and Orders.** Apply the same Admin Dashboard grammar
       without copying KPI dashboards or toolbar layouts across jobs.
 - [ ] **W5 — active Self-Order.** Add an explicit guest screen-context contract
       and a valid local QR/session fixture; verify QR → menu/cart → staff approval
@@ -114,7 +140,7 @@ language. Fix plane, state ownership, and information order before visual polish
       diff, four-lens review, tests, UI ratchet, typecheck, lint, and build.
 
 Known W0 limits: no active Self-Order fixture; no committed PNG visual baseline;
-root dev startup and local Supabase env ports drift; Office stock toolbar remains
+root dev startup and local Supabase env ports drift; Admin Dashboard stock toolbar remains
 open for W3. No palette/font/radius/primitive rewrite was authorized in W0.
 
 ## POS Item Customizer Mobile Scroll (2026-07-11)
@@ -169,7 +195,7 @@ pinned to the viewport.
 Skill plan: repo rules = engineering + skills + workflow + UI; external skills
 = Supabase for production truth; runtime tools = refreshed CodeGraph, read-only
 production SQL, focused Node tests, full repo gates, and browser verification.
-Skipped = schema changes, production writes, Office-shell deletion, and moving
+Skipped = schema changes, production writes, Admin Dashboard-shell deletion, and moving
 Owner workspace routes.
 
 - **PM:** Make Branch Hub the promoted home for every active role while keeping
@@ -234,7 +260,7 @@ Workspace; actor = owner/branch manager; job = open the correct stock workflow
 without scanning duplicate entries. Journey = Branch bottom nav -> choose one
 job -> open its native workflow -> return to Stock Hub. Information order = four
 daily stock actions first, then lookup/production/counting/consumption/catalog;
-exclude = Office metrics and repeated queue facets. Pattern = Branch touch HUB;
+exclude = Admin Dashboard metrics and repeated queue facets. Pattern = Branch touch HUB;
 components = `BranchOperatorPage` + `BranchOperatorActionSection`; states =
 permission-filtered links or existing empty state. Responsive = same two groups
 on phone/tablet with two-column touch tiles; verification = authenticated
@@ -1122,8 +1148,8 @@ Dev: approach = move the historical tree outside `supabase/migrations`, update e
 QA: tests = migration discovery excludes the archive, baseline replay, focused static test, and Preview provisioning; regressions to recheck = migration list has no archived versions.
 
 Attestation: the source layout matches this T2 contract. Focused static tests,
-typecheck, lint, and build pass; baseline replay is blocked by unavailable Docker,
-and Preview provisioning requires the unpushed migration layout to reach GitHub.
+typecheck, lint, and build pass. Docker Local is not a release gate; fresh Preview
+provisioning waits for the final pushed SHA and explicit branch-cost confirmation.
 
 ### Known gap, out of scope
 
@@ -1153,9 +1179,11 @@ Containment record:
 - Baseline inventory: 381 functions, 122 tables, 1,464 columns; assembled
   `public` + `private` baseline SHA-256
   `e776b25321ee51729cdfe90b32a9185cfe36e3ab4471a25d3b1c864dfb59b945`.
-- Active chain at containment cutoff: baseline, managed-surface fold,
-  warehouse menu-limit repair, and unsafe two-argument production-run overload
-  retirement.
+- Active chain after session reconciliation: baseline, managed-surface fold,
+  reviewed forward compatibility/payment/runtime migrations, warehouse menu-limit
+  repair, Owner-only refund control, and unsafe two-argument production-run
+  overload retirement. The already-applied Cành khổ qua row repair moved to
+  history; the unwired supplier-payment persistence draft was removed.
 - Deleted instead of archived: the unsafe production-order, lot/expiry, and
   central/office retirement migrations. Self-Order V2 retirement remains
   archived because its effects are already represented by the production
@@ -1165,17 +1193,21 @@ Containment record:
   Supabase dashboard.
 - A fresh Preview costs approximately `$0.01344/hour` (`~$0.32/day`); creation
   waits for explicit owner cost confirmation.
-- The containment worktree started from `origin/main`; its independent commit
-  must be rebased onto exact PR head `7c8608852acb7f3503cb2e54fe7c71e86e76e1ed`
-  before updating PR #284.
+- Containment commit `40a786348` is rebased directly onto exact PR head
+  `7c8608852acb7f3503cb2e54fe7c71e86e76e1ed`; concurrent session work has been
+  reconciled and reviewed on top in the isolated containment worktree.
+- Local closeout proof is green: focused money/ledger/SePay/auth/migration tests,
+  the complete repository test suite, `typecheck`, `lint`, `build`, `verify`, and
+  Turborepo boundaries all pass. Independent second-pass reviews report no
+  remaining P0/P1 defects in the reviewed source state.
 
 - [x] **C0 — capture and assemble current production schema baseline.**
 - [x] **C1 — separate represented history and delete unsafe cleanup SQL.**
 - [x] **C2 — add forward-only warehouse and production-overload repairs.**
-- [ ] **C3 — commit containment and rebase it onto the exact PR head.**
-- [ ] **C4 — classify PR-head and concurrent-session migrations against the
+- [x] **C3 — commit containment and rebase it onto the exact PR head.**
+- [x] **C4 — classify PR-head and concurrent-session migrations against the
       cutoff baseline; retain only unrepresented desired deltas.**
-- [ ] **C5 — run money/ledger/SePay/inventory/auth and full repository gates.**
+- [x] **C5 — run money/ledger/SePay/inventory/auth and full repository gates.**
 - [ ] **C6 — create the associated Preview after cost confirmation; prove fresh
       replay, schema/RPC/RLS/cron/realtime, generated types, and runtime smoke.**
 - [ ] **C7 — push the reviewed PR head and close CI/review blockers.**
@@ -1207,12 +1239,12 @@ Containment record:
       bypasses into approved chrome primitives after the primitive/guard cleanup
       is green.
 - [x] **Branch Hub touch-plane cutover.** Core Branch stock and leave-review
-      workflows own touch-native presenters; Office keeps separate responsive
+      workflows own touch-native presenters; Admin Dashboard keeps separate responsive
       management presenters. Supplier returns retired through S12; PO retired
       through S13. Cross-branch transfer retirement remains independently
       sequenced in S11.
   - [x] Consumption now separates posted ledger sources from manual documents,
-        with a Branch-native list and typed detail; no Office presenter reuse.
+        with a Branch-native list and typed detail; no Admin Dashboard presenter reuse.
   - [x] Count assignment/review now owns the correct manager destinations and
         no longer opens the signed-in manager's personal count surface.
   - [x] Reconcile stocktake role documentation with current permission seeds:
@@ -1220,8 +1252,8 @@ Containment record:
         `role_templates` rows are retired (D076); stocktake create/complete
         is `owner`/`branch_manager` only now.
   - [x] Run runtime QA across phone `390x844`, tablet portrait `768x1024`,
-        tablet landscape `1024x768`, and Office desktop `1440x900`, in both
-        Branch/Office shells with local Supabase E2E auth. The theme contrast
+        tablet landscape `1024x768`, and Admin Dashboard desktop `1440x900`, in both
+        Branch/Admin Dashboard shells with local Supabase E2E auth. The theme contrast
         contract remains covered by the design-system guard suite.
 
 ## Single-warehouse cutover (D078)
@@ -1351,8 +1383,8 @@ catalog and stock levels, then verifies the next real POS order.
       passing, 33 skipped, and 0 failing tests; the earlier nine-failure wave is
       no longer present in the current tree.
 
-- [x] **S1 — extend the operator/Office import boundary guard before converting
-      anything.** Widen `operator-office-shell-boundary` in
+- [x] **S1 — extend the operator/Admin Dashboard import boundary guard before converting
+      anything.** Widen `operator-admin-dashboard-shell-boundary` in
       `scripts/check-ui-contract.mjs` so `(operator)/**` may not import
       `@/(protected)/inventory/**` except `*-actions.ts`; allowlist `_lib/**`
       until S7 lands. Freeze current offenders as the baseline and burn one line
@@ -1409,7 +1441,7 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [ ] **S5 — fork the GRN line sheet out of the shared component tree.**
       `GrnLineEditSheet` (`apps/web/app/components/inventory/grn-line-editor.tsx`)
-      is imported by both the operator create flow and Office
+      is imported by both the operator create flow and Admin Dashboard
       `inventory/grn/new/[supplierId]`. It is presentation, and D067 §1 requires
       presentation to fork.
   - Build `(operator)/stock/grn/_components/grn-line-sheet.tsx` as the single
@@ -1436,7 +1468,7 @@ v_out_base`. Do not rescale consumption by actual output.
   - Hide the GRN receiving-location card when `branchLocations.length <= 1` and
     resolve the location server-side.
 
-- [ ] **S7 — relocate shared pure logic out of the Office route tree.** Move
+- [ ] **S7 — relocate shared pure logic out of the Admin Dashboard route tree.** Move
       `_lib/format`, `_lib/purchase-units`, `_lib/reference-cost`, `_lib/grn-draft`,
       and `_lib/types` to `apps/web/lib/inventory/` and import from there on both
       planes. This is a move, not a fork: the sharing was correct and the location
@@ -1444,11 +1476,11 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [ ] **S8 — retire the recipes tile (D073 §3/§4).** Branch stock no longer owns
       a duplicate master-catalog subtree; categories, units, ingredients,
-      thresholds, and suppliers remain tenant-wide Office Inventory setup. Remove
+      thresholds, and suppliers remain tenant-wide Admin Dashboard Inventory setup. Remove
       the operator recipe surface entirely — the tile AND the
       `stock/production/recipes/**` route family (list, editor, new — the
       clients still expose create/edit/delete today); recipe administration
-      stays in Office `/inventory` (D073 §3). Guard entries for the removed
+      stays in Admin Dashboard `/inventory` (D073 §3). Guard entries for the removed
       routes: `scripts/page-archetypes.mjs` + the route-manifest arrays in
       `scripts/check-ui-contract.mjs`.
 
@@ -1467,8 +1499,7 @@ v_out_base`. Do not rescale consumption by actual output.
       standard draft→ship→transit→confirm→receive RPC chain (29 `transfer_out` + 29 `transfer_in` movements, WAC preserved, site 16 now 0 rows / 0
       value, Phước Hải 97→109 rows), and `branches.is_active = false` for 16.
       `production_manager` staff accounts are deleted, not reassigned (D076 —
-      no auto-remap; see migration
-      `20260710201500_retire_central_and_office_buckets.sql`). Remaining:
+      no auto-remap). Remaining:
       (3) delete the central forks; also retire the matu-platform import
       toolchain (`import:*` scripts in root `package.json`,
       `scripts/inventory-matu-platform-*.mjs`) — its referent sites are gone.
@@ -1498,10 +1529,10 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [x] **S12 — retire supplier returns end-to-end (D073 §4).** Delete the
       operator routes (`stock/supplier-returns/**`, 3 pages + 3 clients), the
-      Office routes (`/inventory/supplier-returns/**`, 3 pages + 4 clients),
+      Admin Dashboard routes (`/inventory/supplier-returns/**`, 3 pages + 4 clients),
       the shared loaders/model (`branch-supplier-return-data.ts`,
       `supplier-return-model.ts`), the actions file
-      (`supplier-return-actions.ts`), the nav tile and Office nav item, and the
+      (`supplier-return-actions.ts`), the nav tile and Admin Dashboard nav item, and the
       copy catalog. Keep the DB tables, RPCs, and the
       `has_active_supplier_return` GRN integrity gates — history stays, and the
       gate is inert without new returns. Rejected GRN goods route through Báo
@@ -1513,11 +1544,11 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [x] **S13 — retire purchase orders from daily use (D073 §4).** Delete the
       operator wrappers (`stock/purchase-orders/**`, 3 files) and the PO nav
-      tile; remove the Office PO nav entry and routes from daily navigation;
+      tile; remove the Admin Dashboard PO nav entry and routes from daily navigation;
       remove the PO door from the GRN source picker
       (`fetchOpenPurchaseOrdersForReceiving` / `openPurchaseOrders` in
       `apps/web/lib/inventory/grn-source-data.ts`) and the
-      `openPurchaseOrders` hub-queue count. Delete the Office PO routes and the PO server actions
+      `openPurchaseOrders` hub-queue count. Delete the Admin Dashboard PO routes and the PO server actions
       (`purchase-order-actions.ts` mutators) with the navigation — D073 §4
       retires both planes, not nav alone. Guard entries: PO rows in
       `scripts/page-archetypes.mjs` and the PO arrays in
@@ -1540,8 +1571,9 @@ uses production_runs; lot/expiry never populated → drop.
 Dev: guard WRITE_SQL + fixtures; 4 SQL files 193000–193300; correction +
 stock-on-hand + types + cleanup scripts.
 QA: guard-sync 29 fixtures; stock-on-hand-detail-model tests; no tsc errors in
-touched files; PROD apply is owner-gated (migration-before-deploy for
-destructive lot/expiry + production_orders drops).
+touched files; PROD apply is owner-gated. Apply the expand migrations before
+deploy, then apply the destructive lot/expiry and `production_orders` contract
+only after the cutover app is deployed and the live preflight is repeated.
 
 - [x] **The operator hub counts the wrong table.** Fixed: the hub queue counts
       `production_runs` in `draft`/`in_progress`, matching the production page's
@@ -1568,11 +1600,10 @@ destructive lot/expiry + production_orders drops).
       `request_inventory_count_recount` from baseline `/br/...` links and
       backfills historical `/employee/*` notification rows (incl. checkout).
 
-- [x] **Retire the dead `production_orders` entity.** Correction source
-      repointed to `production_runs` in `document-correction-actions.ts`;
-      stock-on-hand detail reads `production_run_id`. Migration ready (not
-      applied): `20260710193200_retire_production_orders.sql` drops RPCs,
-      `stock_movements.production_order_id`, and both tables.
+- [ ] **Retire the dead `production_orders` entity physically.** Runtime sources
+      now use `production_runs` and `production_run_id`. Database object removal
+      is parked outside the active chain until a new monotonic contract migration
+      passes deployed-caller and live-data preflights under separate authorization.
 
 - [x] **`confirm_production_run` overwrites a tenant-wide cost column.**
       Migration ready (not applied):
@@ -1583,15 +1614,11 @@ destructive lot/expiry + production_orders drops).
       `ingredients.unit_cost` (Codex review 2026-07-10). WAC stays on
       `stock_levels.avg_unit_cost` only.
 
-- [x] **Retire the dead lot/expiry columns — owner-confirmed (D073 §5).**
-      Migration ready (not applied):
-      `20260710193300_retire_lot_expiry_columns.sql` rewrites write-off / GRN
-      recreate / upsert / bulk_import / scan_inventory_alerts (also fixes
-      stale `ing.unit` in low-stock alerts), rebuilds
-      `mv_inventory_stock_current`, drops the three columns. App +
-      `database.types.ts` updated. Upsert/bulk_import bodies patched
-      2026-07-11 to sync `ingredient_units` (no delete-all) so
-      `production_recipes` FK does not block catalog saves.
+- [ ] **Retire the dead lot/expiry columns physically (D073 §5).** Runtime
+      writers/readers have moved toward the reduced contract, but column and
+      materialized-view removal is parked until a new monotonic contract
+      migration passes deployed-caller, dependency, and live-data preflights.
+      Catalog unit sync must continue preserving `production_recipes` FK identity.
 
 - [x] **Catalog save blocked by `production_recipes` FK (misleading
       "Đơn vị tồn chuẩn không hợp lệ").** The production ledger contains this
@@ -1604,26 +1631,16 @@ destructive lot/expiry + production_orders drops).
 
 ### Production expand-contract gate
 
-Never use `supabase db push --include-all` for this production sequence. Build
-an owner-approved ordered manifest against the production Environment Registry
-ref and record the source-to-ledger version mapping for each apply.
+This older lane is superseded by PR #284 Release Containment. The deleted
+`20260710193200`, `20260710193300`, and `20260710201500` files are not deployable
+artifacts and no file under `supabase/migration-archive/` may be applied. Current
+production receives only a separately reviewed, source-to-ledger mapped forward
+manifest after exact-SHA Preview proof and fresh owner authorization.
 
-1. Confirm mapped hotfix `193250` remains applied, then apply additive `193275`
-   while the current app still uses the 12-arg RPC. Verify both 11-arg and
-   12-arg overloads, auth boundaries, and grants.
-2. Deploy the cutover app. Prove runtime has no `production_orders`,
-   `production_order_id`, `p_shelf_life_days`, or 12-arg catalog calls.
-3. Re-run production preflight: both production-order tables are empty,
-   retired shelf-life columns contain no values, and dependency scans are clean.
-4. Apply the reviewed contract manifest in order: `193000` → `193100` →
-   `193200` → `193300`. Each step must use its recorded production-ledger
-   mapping and stop on any guard or lock timeout.
-5. Apply `20260713061000_retire_inventory_expiry_alert_contract.sql` only after
-   `193300`, regenerate database types from the applied schema, deploy, and run
-   payment/inventory smoke checks.
-
-The app deploy intentionally separates the additive and contract phases; do not
-describe this release as one atomic database chain.
+Physical retirement of `production_orders`, lot/expiry fields, or auth buckets is
+a future contract lane. It requires deployed replacement readers/writers, a fresh
+non-zero dependency/data preflight, short lock budgets, backup readiness, and new
+monotonic migrations; historical filenames are evidence only.
 
 ### Owner decisions still open
 
@@ -1739,47 +1756,73 @@ T3 review — MoMo Self-Order checkout
 
 ### Payment/runtime production release gate
 
-Status from the 2026-07-13 read-only production audit: the project is
-`ACTIVE_HEALTHY` on PG17 and its migration ledger ends at
-`20260712180020 repair_canh_kho_qua_location_ledger_drift_20260712`. None of
-the payment/runtime or destructive inventory migrations below are applied.
-This branch is safe to review and merge, but it is not safe to deploy until the
-DB-first phase is applied and smoke-proven.
+The 2026-07-13 read-only audit found production `ACTIVE_HEALTHY` on PG17 with
+ledger tail `20260712180020`. That fact does not authorize a production apply and
+does not make source history replayable. Direct linked `db push`, archive replay,
+ledger repair, and implicit production deployment remain forbidden for this PR.
 
-Never run this release through `supabase db push --include-all`. Apply an
-owner-approved manifest to the production Environment Registry ref, record the
-source-to-ledger version mapping for every step, and stop on the first failed
-guard or smoke check.
+Release proof uses one fresh Supabase Preview associated with the exact final SHA.
+It must replay baseline plus every active forward migration, regenerate database
+types, and pass behavioral smoke for SePay exact memo/amount, duplicate-transfer
+quarantine, cash-deposit evidence, expense allocation uniqueness, Owner-only
+refunds, MoMo create/IPN/reconcile, Cron, Realtime, inventory, and auth. Any
+function-body guard mismatch, lock timeout, skipped check, or P0/P1 stops merge.
 
-1. Apply the additive payment/runtime chain in this exact order:
-   `20260712032325_canonicalize_payment_method_rpc_residue.sql` →
-   `20260712061358_persist_cash_evidence_before_receipt.sql` →
-   `20260712071541_stabilize_cash_receipt_warning.sql` →
-   `20260712161526_quarantine_duplicate_sepay_transfers.sql` →
-   `20260712174500_allow_self_order_pending_add_more.sql` →
-   `20260712201500_add_momo_self_order_checkout.sql` →
-   `20260713032254_harden_runtime_control_plane.sql` →
-   `20260713060850_adjudicate_sepay_payment_conflicts.sql`.
-   Do not skip a prerequisite unless its live function bodies are proven
-   equivalent and the source-to-ledger mapping decision is recorded. In
-   particular, applying a pre-MoMo function replacement after the MoMo
-   migration can overwrite its payment locks and guards.
-2. Apply additive inventory migration
-   `20260710193275_expand_ingredient_catalog_without_shelf_life.sql`.
-3. Verify the new MoMo and SePay RPC signatures, grants, columns, and generated
-   types; then deploy the cutover/runtime application.
-4. Smoke the MoMo create/query/IPN/reconcile/review paths, SePay exact
-   code-plus-amount and conflict adjudication, Finance reconciliation, and the
-   ingredient catalog before any destructive inventory migration.
-5. Re-run the inventory preflight. Require zero rows in `production_orders`
-   and `production_order_items`, zero non-null
-   `stock_movements.production_order_id`, zero GRN lot/expiry values, and zero
-   ingredient shelf-life values.
-6. Apply the destructive inventory chain in this exact order:
-   `20260710193000_retire_branch_production_planning.sql` →
-   `20260710193100_retire_production_batch_contract.sql` →
-   `20260710193200_retire_production_orders.sql` →
-   `20260710193300_retire_lot_expiry_columns.sql` →
-   `20260713061000_retire_inventory_expiry_alert_contract.sql`.
-7. Regenerate production-backed database types, deploy the final runtime, and
-   repeat payment, inventory, cron, webhook, Realtime, and Finance smoke gates.
+Production rollout is C8, a separate owner-gated operation. It starts from the
+live schema/ledger, maps only reviewed forward deltas, applies database-compatible
+expansions before runtime deploy, and never includes the deleted destructive
+inventory/auth migrations. Physical contract deletion requires its own later
+preflight and authorization.
+
+## Finance Operating Ledger stabilization (2026-07-13)
+
+Goal: every real bank movement is counted once and links to its business
+purpose: order/payment, HĐĐT, Chi Vận hành, supplier payment, cash transfer, or
+refund. SePay webhook rows are the bank-balance evidence; business documents
+explain that movement and never move the balance a second time.
+
+T3 synthesis:
+
+- PM: restore balance trust before visual redesign.
+- BA: separate bank evidence from business purpose; cash transfer changes the
+  cash/bank composition but not total funds.
+- Senior Dev: fix shared money contracts and remove duplicate queries before
+  adding UI or schema.
+- QA: require behavioral money tests, amount-conservation tests, and explicit
+  failure states; never render a failed or truncated source as a trusted zero.
+
+Implementation plan:
+
+- [x] P0.1 — calculate running bank balance from signed SePay movements only;
+      keep cash expenses and cash supplier payments in the cash calculation.
+- [x] P0.2 — treat ordinary unmatched money-out as `needs_review`, not a
+      webhook error; preserve review and supplier matching for existing rows
+      carrying `transfer_type_out`.
+- [x] P0.3 — keep cash-to-bank transfer behind one atomic, idempotent
+      `record_sepay_cash_deposit_as_system` RPC; require a signed SePay event,
+      preserve its reference, and never synthesize a webhook.
+- [x] P1.1a — require selected Chi Vận hành allocations to equal the full SePay
+      transaction amount; allow an empty selection only to clear a manual match.
+- [ ] P1.1b — persist supplier-payment/refund relations instead of relying on a
+      date/reference/amount heuristic as final evidence.
+- [ ] P1.2 — close SePay-to-HĐĐT recovery around paid orders while preserving
+      saved buyer payload.
+- [ ] P1.3 — reshape Finance into an Owner cockpit plus one reconciliation
+      workbench; Branch Manager handles branch operations and close only, while
+      Staff retains assigned collection/print actions.
+
+Current verification: 29 targeted Finance/SePay web tests and 19 shared payment
+hardening tests pass; full `typecheck`, `lint`, and `build` are green. P0 Preview
+ref `kmmncsbgnnghcrrbzlcf` proved `recorded` then `already_recorded` against the
+same event/expense and rejected an invalid signature with SQLSTATE `23514`. P1
+Preview ref `yhldjasylatfkqjozifp` accepted an exact 1,000,000 allocation,
+rejected a 900,000 allocation for the same bank amount with SQLSTATE `23514`,
+and left the rejected expense unpaid and unlinked. The authenticated
+`SECURITY DEFINER` advisor warning is intentional here: the function grants
+authenticated execution but enforces `finance:expense_create`, tenant scope,
+signature validity, direction, payment exclusion, and amount conservation
+inside the locked RPC. Both Preview branches were deleted after proof. The
+chronological Preview replay still fails at the pre-existing lineage boundary
+after `20260630130342`; do not describe the full migration chain as green. No
+production apply occurred, and production remains owner-delegated in the current
+session.

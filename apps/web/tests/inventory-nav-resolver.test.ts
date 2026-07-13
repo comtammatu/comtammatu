@@ -39,7 +39,7 @@ const qcSettingsSource = readFileSync(
   "utf8",
 );
 const workspaceBottomNavSource = readFileSync(
-  "app/components/workspace-bottom-nav.tsx",
+  "app/components/admin-dashboard-bottom-nav.tsx",
   "utf8",
 );
 
@@ -179,7 +179,7 @@ test("owner inventory nav excludes /inventory/drafts (folded into GRN list draft
   );
 });
 
-test("office inventory nav keeps transfer routes under Quản lý tồn kho", () => {
+test("Admin Dashboard inventory nav keeps transfer routes under Quản lý tồn kho", () => {
   const groups = resolveInventoryNav({
     userRole: "owner",
     showProcurement: true,
@@ -199,7 +199,7 @@ test("office inventory nav keeps transfer routes under Quản lý tồn kho", ()
     assert.equal(
       visible.has(href),
       true,
-      `office inventory nav must advertise ${href} as an oversight entry — additive to the branch operator door at /br/[id]/stock/*`,
+      `Admin Dashboard inventory nav must advertise ${href} as an oversight entry — additive to the branch operator door at /br/[id]/stock/*`,
     );
   }
 

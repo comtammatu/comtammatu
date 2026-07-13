@@ -194,19 +194,19 @@ test("parseBranchIdParam -> parses a single numeric value, rejects malformed/non
   assert.equal(parseBranchIdParam("1.5"), null);
 });
 
-test("resolveListScope -> routeBranchId (embedded) and queryBranchId (office) requesting the same branch resolve identically", () => {
+test("resolveListScope -> routeBranchId and Admin Dashboard queryBranchId resolve identically", () => {
   const tenantWideRoles: readonly JwtClaims["user_role"][] = ["owner"];
 
   const embedded = resolveListScope({}, claims("owner", 1), BRANCHES, {
     routeBranchId: 2,
     tenantWideRoles,
   });
-  const office = resolveListScope({}, claims("owner", 1), BRANCHES, {
+  const adminDashboard = resolveListScope({}, claims("owner", 1), BRANCHES, {
     queryBranchId: "2",
     tenantWideRoles,
   });
 
-  return Promise.all([embedded, office]).then(
+  return Promise.all([embedded, adminDashboard]).then(
     ([embeddedScope, officeScope]) => {
       assert.equal(embeddedScope.selectedBranchId, 2);
       assert.equal(officeScope.selectedBranchId, 2);
@@ -216,7 +216,7 @@ test("resolveListScope -> routeBranchId (embedded) and queryBranchId (office) re
       );
       assert.equal(embeddedScope.canSelectAll, officeScope.canSelectAll);
       assert.equal(embeddedScope.defaultBranchId, officeScope.defaultBranchId);
-      // outOfScope is embedded-only semantics — office callers never notFound().
+      // outOfScope is embedded-only semantics — Admin Dashboard callers never notFound().
       assert.equal(embeddedScope.outOfScope, false);
       assert.equal(officeScope.outOfScope, false);
     },
@@ -233,12 +233,12 @@ test("resolveListScope -> routeBranchId outside the allowed set flags outOfScope
   assert.equal(embedded.selectedBranchId, 2);
   assert.equal(embedded.outOfScope, true);
 
-  const office = await resolveListScope({}, claims("cashier", 2), BRANCHES, {
+  const adminDashboard = await resolveListScope({}, claims("cashier", 2), BRANCHES, {
     queryBranchId: "1",
     tenantWideRoles,
   });
-  assert.equal(office.selectedBranchId, 2);
-  assert.equal(office.outOfScope, false);
+  assert.equal(adminDashboard.selectedBranchId, 2);
+  assert.equal(adminDashboard.outOfScope, false);
 });
 
 test("resolveListScope -> routeBranchId always wins over a simultaneously-present queryBranchId", async () => {

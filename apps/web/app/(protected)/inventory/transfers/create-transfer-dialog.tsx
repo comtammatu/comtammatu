@@ -86,7 +86,7 @@ export function CreateTransferForm({
               ]}
             />
             <FormField
-              controlId="office-transfer-source"
+              controlId="transfer-source"
               label={copy.sendingWarehouseRequired}
               required
             >
@@ -95,7 +95,7 @@ export function CreateTransferForm({
                 onValueChange={controller.handleInboundSourceChange}
               >
                 <SelectTrigger
-                  id="office-transfer-source"
+                  id="transfer-source"
                   size="field"
                   className="w-full"
                   aria-required
@@ -139,7 +139,7 @@ export function CreateTransferForm({
             {controller.outboundSourceLocationOptions.length > 1 &&
             sourceBranch ? (
               <FormField
-                controlId="office-transfer-source-location"
+                controlId="transfer-source-location"
                 label={copy.sourceLocationRequired}
                 required
               >
@@ -148,7 +148,7 @@ export function CreateTransferForm({
                   onValueChange={controller.handleOutboundSourceLocationChange}
                 >
                   <SelectTrigger
-                    id="office-transfer-source-location"
+                    id="transfer-source-location"
                     size="field"
                     className="w-full"
                     aria-required
@@ -176,7 +176,7 @@ export function CreateTransferForm({
               </FormField>
             ) : null}
             <FormField
-              controlId="office-transfer-target"
+              controlId="transfer-target"
               label={copy.receivingWarehouseRequired}
               required
             >
@@ -185,7 +185,7 @@ export function CreateTransferForm({
                 onValueChange={controller.setOutboundToBranchId}
               >
                 <SelectTrigger
-                  id="office-transfer-target"
+                  id="transfer-target"
                   size="field"
                   className="w-full"
                   aria-required
@@ -222,7 +222,7 @@ export function CreateTransferForm({
                 onValueChange={controller.setPickerIngredientId}
               >
                 <SelectTrigger
-                  id="office-transfer-ingredient"
+                  id="transfer-ingredient"
                   size="sm"
                   className="w-full"
                   aria-label={copy.createNative.ingredientLabel}
@@ -373,16 +373,16 @@ export function CreateTransferForm({
       </AppSection>
 
       <AppSection title={FORM_VI.notes}>
-        <FormField controlId="office-transfer-vehicle" label={copy.vehicleInfo}>
+        <FormField controlId="transfer-vehicle" label={copy.vehicleInfo}>
           <Input
-            id="office-transfer-vehicle"
+            id="transfer-vehicle"
             name="vehicleInfo"
             className="h-10"
           />
         </FormField>
-        <FormField controlId="office-transfer-notes" label={FORM_VI.notes}>
+        <FormField controlId="transfer-notes" label={FORM_VI.notes}>
           <Textarea
-            id="office-transfer-notes"
+            id="transfer-notes"
             name="notes"
             rows={3}
             placeholder={copy.notesPlaceholder}

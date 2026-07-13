@@ -8,11 +8,7 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 
 /* ─── Allowed roles ─── */
 
-const FETCH_ROLES: StaffRole[] = [
-  "owner",
-  "branch_manager",
-  "cashier",
-];
+const FETCH_ROLES: StaffRole[] = ["owner"];
 
 const APPROVE_ROLES: StaffRole[] = ["owner"];
 
@@ -146,14 +142,20 @@ export async function approveRefund(input: {
     return { success: true };
   }
 
-  const { error: updateErr } = await supabase
+  const { data: rejectedRefund, error: updateErr } = await supabase
     .from("refunds")
     .update({ status: "rejected", approved_by: user.id })
     .eq("id", refundId)
-    .eq("tenant_id", claims.tenant_id);
+    .eq("tenant_id", claims.tenant_id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
 
   if (updateErr) {
     return { success: false, error: "Không thể cập nhật yêu cầu hoàn tiền" };
+  }
+  if (!rejectedRefund) {
+    return { success: false, error: "Yêu cầu hoàn tiền đã được xử lý" };
   }
 
   return { success: true };
@@ -175,11 +177,7 @@ export async function fetchRefunds(
 
   const { supabase, claims } = ctx;
 
-  // branch_manager and cashier: auto-scoped to their branch
-  const effectiveBranchId =
-    claims.user_role === "branch_manager" || claims.user_role === "cashier"
-      ? (claims.branch_id ?? undefined)
-      : parsed.data.branchId;
+  const effectiveBranchId = parsed.data.branchId;
 
   let query = supabase
     .from("refunds")

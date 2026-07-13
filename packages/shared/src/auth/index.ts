@@ -52,7 +52,7 @@ export {
 export type {
   NavItemConfig,
   NavGroupConfig,
-  WorkspaceNavItemConfig,
+  AdminDashboardNavItemConfig,
   BranchScopedNavItemConfig,
   BranchManagementNavItemConfig,
   BranchOperationNavItemConfig,
@@ -62,7 +62,7 @@ export type {
 export {
   ADMIN_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
-  DOMAIN_WORKSPACE_ITEMS,
+  ADMIN_DASHBOARD_MODULE_ITEMS,
   BRANCH_OPERATION_ITEMS,
   OPERATOR_TILE_GROUP_ORDER,
   OPERATOR_TILE_GROUP_TITLES,
@@ -83,7 +83,7 @@ export {
   resolveBranchManagementItems,
   resolveNavLink,
   resolveRoleHomeLink,
-  resolveWorkspaceItems,
+  resolveAdminDashboardItems,
 } from "./nav-resolution";
 export type {
   AppDiscoveryBlockedReason,
@@ -98,7 +98,7 @@ export {
   resolveBranchOperationDiscoveryGroup,
   resolveDiscoveredAppGroups,
   resolveDiscoveredApps,
-  resolveWorkspaceDiscoveryGroup,
+  resolveAdminDashboardDiscoveryGroup,
 } from "./app-discovery";
 export type {
   OperatorTab,
@@ -108,6 +108,7 @@ export type {
   RouteSurface,
 } from "./route-map";
 export {
+  canAccessRouteSurface,
   ROUTE_FAMILY_CONTRACTS,
   resolveOperatorTab,
   resolveRouteFamilyContract,

@@ -46,6 +46,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@next/eslint-plugin-next": "^16.2.9",
     "@playwright/test": "^1.60.0",
     "@serwist/cli": "^9.5.11",
@@ -58,8 +59,10 @@
     "@types/react-dom": "^19.2.3",
     "dotenv-cli": "^11.0.0",
     "eslint": "^10.6.0",
+    "globals": "^17.6.0",
     "serwist": "^9.5.11",
     "tsx": "^4.22.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.4"
   }
 }

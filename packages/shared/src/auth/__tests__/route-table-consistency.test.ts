@@ -8,13 +8,13 @@ import { resolveModuleFromPath } from "../route-resolution";
 import {
   ADMIN_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
-  DOMAIN_WORKSPACE_ITEMS,
+  ADMIN_DASHBOARD_MODULE_ITEMS,
   OPERATOR_TILE_ITEMS,
 } from "../nav-config";
 import {
   resolveAdminNavGroups,
   resolveBranchManagementItems,
-  resolveWorkspaceItems,
+  resolveAdminDashboardItems,
 } from "../nav-resolution";
 
 // Guards the route-table contract (D058 W0): every path a route family
@@ -138,19 +138,19 @@ test("resolveAdminNavGroups hrefs resolve to a module reachable by an admin-audi
   assert.equal(failures.length, 0, failures.join("\n"));
 });
 
-test("resolveWorkspaceItems hrefs resolve to a module reachable by an audience role", () => {
+test("resolveAdminDashboardItems hrefs resolve to a module reachable by an audience role", () => {
   const failures: string[] = [];
 
-  for (const item of DOMAIN_WORKSPACE_ITEMS) {
+  for (const item of ADMIN_DASHBOARD_MODULE_ITEMS) {
     const audienceRoles = STAFF_ROLES.filter((role) =>
-      resolveWorkspaceItems(role).some(
+      resolveAdminDashboardItems(role).some(
         (link) => link.moduleKey === item.moduleKey,
       ),
     );
     if (audienceRoles.length === 0) continue;
 
     const sampleRole = audienceRoles[0]!;
-    const link = resolveWorkspaceItems(sampleRole).find(
+    const link = resolveAdminDashboardItems(sampleRole).find(
       (navLink) => navLink.moduleKey === item.moduleKey,
     );
     assert.ok(link, `expected a resolved link for ${item.moduleKey}`);

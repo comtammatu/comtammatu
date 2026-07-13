@@ -25,6 +25,11 @@ test("SePay conflict adjudication stays owner-only and preserves MoMo precedence
     /v_event\.payload ->> 'id' IS DISTINCT FROM v_event\.request_id/,
   );
   assert.match(migration, /v_order\.total_amount <> v_amount/);
+  assert.match(migration, /\^\[0-9\]\+\(\[\.\]\[0-9\]\+\)\?\$/);
+  assert.doesNotMatch(
+    migration,
+    /abs\(\(v_event\.payload ->> 'transferAmount'\)::numeric\)/,
+  );
   assert.match(migration, /sepay_conflict_payment_code_evidence_mismatch/);
   assert.match(migration, /p\.method = 'momo'[\s\S]*p\.status = 'pending'/);
   assert.match(migration, /pr\.status = 'momo_pending'/);

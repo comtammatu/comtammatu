@@ -1,5 +1,6 @@
 BEGIN;
 
+SET LOCAL lock_timeout = '5s';
 SET search_path TO '';
 
 CREATE TABLE private.cron_health_observations (
@@ -236,5 +237,7 @@ GRANT EXECUTE ON FUNCTION public.check_cron_jobs_health()
 
 REVOKE ALL ON public.mv_inventory_stock_current FROM anon, authenticated;
 GRANT ALL ON public.mv_inventory_stock_current TO service_role;
+
+ALTER TABLE public.webhook_events REPLICA IDENTITY FULL;
 
 COMMIT;

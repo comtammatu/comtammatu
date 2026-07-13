@@ -16,6 +16,7 @@ test("root route delegates single-branch entry to the work location resolver", (
   assert.doesNotMatch(rootPage, /redirect\(getDefaultRedirect\(claims\)\)/);
   assert.match(picker, /notFound, redirect/);
   assert.match(picker, /orderedSites\.length === 1/);
+  assert.match(picker, /!showAdminDashboardCard/);
   assert.match(picker, /redirect\(`\/br\/\$\{soleBranch\.id\}`\)/);
 });
 
@@ -27,12 +28,17 @@ test("Branch Hub keeps branch tools local and owner workspaces out of the hot pa
     "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
   );
 
-  assert.match(hub, /MODULE_ACL\.menu\.path/);
+  assert.match(hub, /`\/br\/\$\{context\.branchId\}\/menu-limits`/);
+  assert.match(hub, /MODULE_ACL\.branch_menu_limits\.label/);
+  assert.doesNotMatch(hub, /MODULE_ACL\.menu\.path/);
   assert.match(hub, /APP_COPY_VI\.operatorOpsActions/);
   assert.doesNotMatch(hub, /MODULE_ACL\.finance\.path/);
   assert.doesNotMatch(hub, /MODULE_ACL\.hr_payroll\.path/);
   assert.doesNotMatch(hub, /ownerWorkspaceLinks|owner-workspaces/);
-  assert.match(layout, /canUseBranchPicker && context\.canSwitchBranch/);
+  assert.match(
+    layout,
+    /canUseBranchPicker &&[\s\S]*context\.canSwitchBranch \|\| claims\.user_role === "owner"/,
+  );
 });
 
 test("proxy passes device context into post-login redirect", () => {
@@ -44,6 +50,20 @@ test("proxy passes device context into post-login redirect", () => {
     /resolvePostLoginRedirect\(claims, null, branchHubContext\)/,
   );
   assert.doesNotMatch(proxy, /searchParams\.set\(\s*"returnTo"/);
+});
+
+test("proxy enforces the Owner-only Admin Dashboard surface before module ACL", () => {
+  const proxy = read("apps/web/proxy.ts");
+
+  assert.match(proxy, /resolveRouteFamilyContract\(pathname\)/);
+  assert.match(
+    proxy,
+    /!canAccessRouteSurface\(claims\.user_role, routeFamily\.surface\)/,
+  );
+  assert.ok(
+    proxy.indexOf("canAccessRouteSurface(claims.user_role") <
+      proxy.indexOf("canAccess(claims.user_role, moduleKey)"),
+  );
 });
 
 test("login action passes device context into post-login redirect", () => {
@@ -93,7 +113,7 @@ test("branch shift route keeps floor-staff daily work visible", () => {
   assert.doesNotMatch(shiftPage, /mode="manager-dashboard"/);
 });
 
-test("branch orders route owns operator UI instead of wrapping Office orders", () => {
+test("branch orders route owns operator UI instead of wrapping Admin Dashboard orders", () => {
   const ordersPage = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx",
   );
@@ -102,6 +122,9 @@ test("branch orders route owns operator UI instead of wrapping Office orders", (
   );
   const orderDetailSheet = read(
     "apps/web/app/(protected)/orders/order-detail-sheet.tsx",
+  );
+  const refundActions = read(
+    "apps/web/app/(protected)/orders/refund-actions.ts",
   );
 
   assert.match(ordersPage, /BranchOperatorPage/);
@@ -121,6 +144,11 @@ test("branch orders route owns operator UI instead of wrapping Office orders", (
   assert.doesNotMatch(ordersClient, /OrdersPageBody|DataTable|AppPageHeader/);
   assert.match(orderDetailSheet, /SheetDescription/);
   assert.match(orderDetailSheet, /<SheetDescription className="sr-only">/);
+  assert.match(refundActions, /const FETCH_ROLES: StaffRole\[\] = \["owner"\]/);
+  assert.match(
+    refundActions,
+    /const APPROVE_ROLES: StaffRole\[\] = \["owner"\]/,
+  );
 });
 
 test("native branch hub pages use the Branch operator interface contract", () => {

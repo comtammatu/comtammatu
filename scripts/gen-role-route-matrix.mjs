@@ -252,8 +252,8 @@ function parseNavAdvertisementSources(source) {
   }
 
   const namedArrays = [
-    { name: "ADMIN_NAV_GROUPS", label: "Admin sidebar" },
-    { name: "DOMAIN_WORKSPACE_ITEMS", label: "Workspace nav" },
+    { name: "ADMIN_NAV_GROUPS", label: "Admin Dashboard foundation nav" },
+    { name: "ADMIN_DASHBOARD_MODULE_ITEMS", label: "Admin Dashboard module nav" },
     { name: "BRANCH_MANAGEMENT_ITEMS", label: "Branch management nav" },
     { name: "BRANCH_OPERATION_ITEMS", label: "Branch operation nav" },
   ];
@@ -321,9 +321,9 @@ function derivePostLoginHomes(accessBuckets) {
     if (role === "owner") {
       rows.push({
         role,
-        desktop: "/ (auto-opens the sole operating branch)",
-        phone: "/ (auto-opens the sole operating branch)",
-        note: "D077: only branch-kind sites are operable; multiple operating branches retain the picker. Owner-only workspaces remain permission-gated shortcuts from Branch Hub.",
+        desktop: "/ (Branch / Admin Dashboard plane picker)",
+        phone: "/ (Branch / Admin Dashboard plane picker)",
+        note: "Owner keeps the picker even with one operating branch so both authenticated planes remain discoverable.",
       });
       continue;
     }
@@ -344,8 +344,8 @@ function derivePostLoginHomes(accessBuckets) {
 
 function renderModuleAclTable(moduleAcl, roleLabels, navSources) {
   const header =
-    "| Module key | Route path | Allowed roles | Nav/tile advertisement source |\n" +
-    "| ---------- | ---------- | ------------- | ------------------------------ |";
+    "| Module key | Default path | Capability roles | Nav/tile advertisement source |\n" +
+    "| ---------- | ------------ | ---------------- | ------------------------------ |";
   const rows = moduleAcl.map((entry) => {
     const roles =
       entry.allowedRoles.length > 0
@@ -373,8 +373,8 @@ function renderRouteFamilyTable(families) {
 
 function renderPostLoginHomeTable(rows, roleLabels) {
   const header =
-    "| Role | Desktop / office context | Phone / station context | Notes |\n" +
-    "| ---- | ------------------------- | ------------------------ | ----- |";
+    "| Role | Desktop context | Phone / station context | Notes |\n" +
+    "| ---- | --------------- | ----------------------- | ----- |";
   const body = rows.map(
     (r) =>
       `| ${roleLabels[r.role] ?? r.role} (\`${r.role}\`) | ${r.desktop} | ${r.phone} | ${r.note || "—"} |`,
@@ -384,8 +384,8 @@ function renderPostLoginHomeTable(rows, roleLabels) {
 
 function renderActionGateTable(moduleAcl, families, permissionsByNamespace) {
   const header =
-    "| Route family | Route prefix(es) | Required route bucket | Action gate keys (from `permissions.ts`) |\n" +
-    "| ------------ | ------------------ | ----------------------- | ------------------------------------------ |";
+    "| Route family | Route prefix(es) | Effective route audience | Action gate keys (from `permissions.ts`) |\n" +
+    "| ------------ | ------------------ | ------------------------ | ------------------------------------------ |";
   const moduleAclByKey = Object.fromEntries(
     moduleAcl.map((entry) => [entry.key, entry]),
   );
@@ -396,6 +396,11 @@ function renderActionGateTable(moduleAcl, families, permissionsByNamespace) {
       for (const moduleKey of f.moduleKeys) {
         for (const role of moduleAclByKey[moduleKey]?.allowedRoles ?? []) {
           roleSet.add(role);
+        }
+      }
+      if (f.surface === "admin_dashboard") {
+        for (const role of [...roleSet]) {
+          if (role !== "owner") roleSet.delete(role);
         }
       }
       // Namespace candidates: the moduleKey(s) and the family id verbatim
@@ -451,7 +456,10 @@ function buildGeneratedBody({
     "",
     "## Module ACL (generated)",
     "",
-    'Single source: `packages/shared/src/auth/module-acl.ts`. "Nav/tile',
+    "Single source: `packages/shared/src/auth/module-acl.ts`. These are reusable",
+    "module capabilities, not the final audience of every route using that key.",
+    "Admin Dashboard route families apply the Owner-only surface policy in",
+    "`route-map.ts` on top of this table. \"Nav/tile",
     'advertisement source" lists every nav array in `nav-config.ts` that',
     "surfaces the module to a role; a module with no source is reachable only",
     "by direct URL or as a redirect target.",
@@ -479,11 +487,12 @@ function buildGeneratedBody({
     "",
     "## Permission Boundary (generated)",
     "",
-    "Route family -> required route bucket (module ACL union) -> the action-gate",
+    "Route family -> effective route audience (module ACL union plus the",
+    "Owner-only Admin Dashboard surface policy) -> the action-gate",
     "permission keys in that family's namespace(s), read from",
     "`PERMISSION_KEYS` in `permissions.ts`. This is the full set in-namespace,",
     "not a hand-picked sample — route access and action authorization stay",
-    "separate gates (route bucket here, permission key at the mutation site).",
+    "separate gates (route audience here, permission key at the mutation site).",
     "",
     renderActionGateTable(moduleAcl, families, permissionsByNamespace),
     "",

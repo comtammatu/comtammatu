@@ -112,6 +112,16 @@ test("active auth templates and target-role lists use canonical access names", (
   }
   assert.match(canonicalTemplateMigration, /public\.split_order\(bigint,jsonb,uuid\)/);
   assert.match(canonicalTemplateMigration, /weekly_grn_override_report/);
+  assert.match(
+    canonicalTemplateMigration,
+    /format\('ARRAY\[''owner'',''%s''\]::TEXT\[\]', v_region_role\)/,
+    "migration should canonicalize the original region-manager target list",
+  );
+  assert.match(
+    canonicalTemplateMigration,
+    /v_super_role[\s\S]*v_area_role[\s\S]*v_region_role[\s\S]*v_branch_role/,
+    "migration should reject every retired access bucket after rewriting the function",
+  );
   assert.match(canonicalTemplateMigration, /ARRAY\['owner','branch_manager'\]::TEXT\[\]/);
 });
 

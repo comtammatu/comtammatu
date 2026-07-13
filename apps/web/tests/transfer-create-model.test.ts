@@ -217,7 +217,7 @@ test("target parser rejects malformed route values", () => {
     kind: "kitchen",
   });
   assert.equal(parseTransferTargetValue("0:warehouse"), null);
-  assert.equal(parseTransferTargetValue("40:office"), null);
+  assert.equal(parseTransferTargetValue("40:invalid"), null);
   assert.equal(parseTransferTargetValue("branch:kitchen"), null);
 });
 

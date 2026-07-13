@@ -337,7 +337,6 @@ test("operator hub owns branch workflow entry tiles", () => {
   assert.match(navConfig, /approvals: "Duyệt"/);
   assert.match(navConfig, /sales_kitchen: "Bán hàng"/);
   assert.match(navConfig, /stock: "Kho hàng"/);
-  assert.doesNotMatch(navConfig, /office_bridge/);
   assert.match(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/shift\/clock"/,
@@ -587,7 +586,7 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
     );
     assert.doesNotMatch(
       source,
-      /<AppPage\b|AppPageHeader|BranchManagementShell|OfficeModuleShell|ManagementShell|KpiCard/,
+      /<AppPage\b|AppPageHeader|BranchManagementShell|AdminDashboardModuleShell|ManagementShell|KpiCard/,
       path,
     );
   }

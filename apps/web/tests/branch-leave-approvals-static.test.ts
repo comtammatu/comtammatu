@@ -48,10 +48,12 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
   );
 });
 
-test("leave data is neutral while Office keeps its desktop presenter", () => {
+test("leave data is neutral while Admin Dashboard keeps its desktop presenter", () => {
   const action = read("apps/web/app/(protected)/hr/leave-request-actions.ts");
   const service = read("apps/web/lib/hr/leave-request-data.ts");
-  const office = read("apps/web/app/(protected)/hr/leave-requests-table.tsx");
+  const adminDashboard = read(
+    "apps/web/app/(protected)/hr/leave-requests-table.tsx",
+  );
 
   assert.match(action, /fetchLeaveRequestRows/);
   assert.match(
@@ -60,8 +62,8 @@ test("leave data is neutral while Office keeps its desktop presenter", () => {
   );
   assert.match(service, /fetchLeaveRequestRows/);
   assert.match(service, /annual_leave_balance/);
-  assert.match(office, /DataTable/);
-  assert.match(office, /@lib\/hr\/leave-request-model/);
+  assert.match(adminDashboard, /DataTable/);
+  assert.match(adminDashboard, /@lib\/hr\/leave-request-model/);
   assert.equal(
     existsSync(
       resolve(

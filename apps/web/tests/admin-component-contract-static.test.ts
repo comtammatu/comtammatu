@@ -216,7 +216,7 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     "admin-finance-branch-raw-table-import",
     "admin-finance-branch-raw-card-import",
     "admin-finance-branch-toolbar-fixed-control",
-    "operator-office-route-boundary",
+    "operator-admin-dashboard-route-boundary",
     "focus-ring-contrast",
     "radius-scale",
     "radius-tier-baseline",
@@ -240,7 +240,7 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     "use-is-mobile-budget",
     "shell-registry-bespoke-main",
     "nav-shell-inline-literal",
-    "operator-office-shell-boundary",
+    "operator-admin-dashboard-shell-boundary",
     "heading-scale",
     "icon-size",
     "uppercase-label-scale",
@@ -343,7 +343,7 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     assert.doesNotMatch(
       registry,
       /apps\/web\/app\/\(protected\)\/inventory\/stock\/stock-client\.tsx/,
-      "Office-only stock client must not be classified as an embedded operator adapter",
+      "Admin Dashboard-only stock client must not be classified as an embedded operator adapter",
     );
   }
 

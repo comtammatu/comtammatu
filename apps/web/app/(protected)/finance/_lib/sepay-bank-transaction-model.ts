@@ -55,6 +55,23 @@ export interface SepayBankMovement {
   outAmount: number;
 }
 
+export function calculateSepayBankBalance(
+  openingBalance: number,
+  movement: SepayBankMovement,
+): number {
+  return openingBalance + movement.inAmount - movement.outAmount;
+}
+
+export function isSepayExpenseAllocationBalanced(
+  transactionAmount: number,
+  selectedExpenseAmount: number,
+  selectedExpenseCount: number,
+): boolean {
+  return (
+    selectedExpenseCount === 0 || selectedExpenseAmount === transactionAmount
+  );
+}
+
 export type SepayUnmatchedMoneyInReason =
   | "overpayment"
   | "payment_code_conflict"
@@ -205,13 +222,15 @@ export function classifySepayReconciliationState(
 
   if (
     transaction.processingStatus === "failed" ||
-    transaction.errorCode != null
+    (transaction.errorCode != null &&
+      !isUnclassifiedMoneyOutStatus(transaction))
   ) {
     return "webhook_error";
   }
 
   if (
-    (transaction.transferType === "in" && transaction.paymentId != null) ||
+    (transaction.transferType === "in" &&
+      (transaction.paymentId != null || transaction.expenseIds.length > 0)) ||
     (transaction.transferType === "out" &&
       (transaction.expenseIds.length > 0 ||
         transaction.supplierPaymentMatches.length > 0))
@@ -341,12 +360,25 @@ export function mapSepayWebhookRow(
 }
 
 function moneyEqual(left: number, right: number): boolean {
-  return Math.abs(left - right) <= 1;
+  return left === right;
 }
 
 function normalizeRef(value: string | null): string | null {
   const normalized = value?.trim().toLowerCase().replace(/\s+/g, " ");
   return normalized && normalized.length >= 4 ? normalized : null;
+}
+
+function isUnclassifiedMoneyOutStatus(
+  transaction: Pick<
+    SepayBankTransaction,
+    "errorCode" | "processingStatus" | "transferType"
+  >,
+): boolean {
+  return (
+    transaction.transferType === "out" &&
+    transaction.processingStatus === "ignored" &&
+    transaction.errorCode === "transfer_type_out"
+  );
 }
 
 function supplierPaymentMatchesTransaction(
@@ -376,7 +408,8 @@ export function attachSupplierPaymentMatches(
       transaction.transferType !== "out" ||
       transaction.expenseIds.length > 0 ||
       transaction.processingStatus === "failed" ||
-      transaction.errorCode != null
+      (transaction.errorCode != null &&
+        !isUnclassifiedMoneyOutStatus(transaction))
     ) {
       return transaction;
     }

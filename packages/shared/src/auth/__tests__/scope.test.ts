@@ -13,7 +13,10 @@ import {
   resolveDiscoveredApps,
 } from "../app-discovery";
 import { resolveRoleHomeLink } from "../nav-resolution";
-import { resolveRouteFamilyContract } from "../route-map";
+import {
+  canAccessRouteSurface,
+  resolveRouteFamilyContract,
+} from "../route-map";
 import {
   isPublicAppPath,
   resolveModuleFromPath,
@@ -91,7 +94,7 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/runner/history")?.surface,
-    "branch_operation",
+    "branch",
   );
   assert.equal(
     resolveRouteFamilyContract("/admin/settings/tables")?.id,
@@ -103,23 +106,20 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/dashboard")?.surface,
-    "branch_management",
+    "branch",
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/dashboard")?.primaryNav,
     "operator-bottom-nav",
   );
-  assert.equal(
-    resolveRouteFamilyContract("/br/3/settings")?.surface,
-    "branch_management",
-  );
+  assert.equal(resolveRouteFamilyContract("/br/3/settings")?.surface, "branch");
   assert.equal(
     resolveRouteFamilyContract("/br/3/settings/printers")?.primaryNav,
     "operator-bottom-nav",
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/menu-limits")?.surface,
-    "branch_operation",
+    "branch",
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/menu-limits")?.primaryNav,
@@ -132,7 +132,7 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/pos-sessions")?.surface,
-    "branch_operation",
+    "branch",
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/pos-sessions")?.primaryNav,
@@ -148,8 +148,26 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
 
   const posFamily = resolveRouteFamilyContract("/br/3/pos");
   assert.equal(posFamily?.id, "pos");
-  assert.equal(posFamily?.surface, "branch_operation");
+  assert.equal(posFamily?.surface, "branch");
   assert.equal(posFamily?.requiresBranchId, true);
+  assert.equal(
+    resolveRouteFamilyContract("/finance")?.surface,
+    "admin_dashboard",
+  );
+  assert.equal(resolveRouteFamilyContract("/notifications")?.surface, "branch");
+});
+
+test("canAccessRouteSurface → Admin Dashboard is owner-only while Branch stays role-neutral", () => {
+  assert.equal(canAccessRouteSurface("owner", "admin_dashboard"), true);
+  for (const role of [
+    "branch_manager",
+    "cashier",
+    "chef",
+    "branch_staff",
+  ] as const) {
+    assert.equal(canAccessRouteSurface(role, "admin_dashboard"), false);
+    assert.equal(canAccessRouteSurface(role, "branch"), true);
+  }
 });
 
 test("unknown inventory paths are not active route contracts", () => {
@@ -294,13 +312,13 @@ test("resolvePostLoginRedirect → external URL is rejected", () => {
   );
 });
 
-test("resolvePostLoginRedirect → branch_manager accessing inventory suppliers → allowed", () => {
+test("resolvePostLoginRedirect → branch_manager cannot keep Admin Dashboard procurement returnTo", () => {
   assert.equal(
     resolvePostLoginRedirect(
       makeClaims("branch_manager", 3),
       "/inventory/suppliers",
     ),
-    "/inventory/suppliers",
+    "/br/3",
   );
 });
 
@@ -362,10 +380,10 @@ test("resolvePostLoginRedirect → owner cover-ca POS/KDS/Runner returnTo resolv
   }
 });
 
-test("resolvePostLoginRedirect → branch_manager can enter HR shifts but not payroll", () => {
+test("resolvePostLoginRedirect → branch_manager cannot keep Admin Dashboard HR returnTo", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/hr"),
-    "/hr",
+    "/br/3",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/hr/payroll"),
@@ -374,6 +392,44 @@ test("resolvePostLoginRedirect → branch_manager can enter HR shifts but not pa
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/hr/payroll"),
     "/hr/payroll",
+  );
+});
+
+test("resolvePostLoginRedirect → non-owner Admin Dashboard deep links fail closed", () => {
+  for (const path of [
+    "/menu",
+    "/orders/history",
+    "/inventory/stock",
+    "/inventory/grn",
+    "/hr/shifts",
+    "/finance",
+    "/branches",
+    "/admin/settings",
+  ]) {
+    assert.equal(
+      resolvePostLoginRedirect(makeClaims("branch_manager", 3), path),
+      "/br/3",
+    );
+  }
+
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/orders"),
+    "/br/3",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/notifications"),
+    "/notifications",
+  );
+});
+
+test("resolvePostLoginRedirect → Branch-native daily work stays reachable", () => {
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/br/3/stock"),
+    "/br/3/stock",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/orders"),
+    "/br/3/orders",
   );
 });
 
@@ -507,7 +563,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
 });
 
 test("canAccess → only owner can access tenant admin modules", () => {
-  const adminModules = ["staff", "settings"] as const;
+  const adminModules = ["menu", "staff", "settings"] as const;
   for (const moduleKey of adminModules) {
     assert.equal(canAccess("owner", moduleKey), true);
     for (const role of ["branch_manager", "cashier", "chef"] as const) {
@@ -569,7 +625,7 @@ test("canAccess → owner can cover-ca POS/KDS/Runner; floor roles unchanged", (
   for (const role of ["cashier"] as const) {
     assert.equal(canAccess(role, "kds"), false);
   }
-  // No back-office role gained POS/KDS access.
+  // No non-station Branch role gained POS/KDS access.
   for (const role of ["branch_staff"] as const) {
     assert.equal(canAccess(role, "pos"), false);
     assert.equal(canAccess(role, "kds"), false);
@@ -610,34 +666,24 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
 
   const branchManagerApps = resolveDiscoveredApps("branch_manager", 3);
   const branchManagerGroups = resolveDiscoveredAppGroups("branch_manager", 3);
-  const branchManagementGroup = branchManagerGroups.find(
-    (group) => group.surface === "branch_management",
-  );
-  const branchOperationGroup = branchManagerGroups.find(
-    (group) => group.surface === "branch_operation",
+  const branchGroups = branchManagerGroups.filter(
+    (group) => group.surface === "branch",
   );
   assert.deepEqual(
-    branchManagementGroup?.items.map((app) => app.moduleKey),
-    ["branch_dashboard", "branch_settings"],
-  );
-  assert.deepEqual(
-    branchOperationGroup?.items.map((app) => app.moduleKey),
-    ["pos", "kds", "branch_menu_limits", "branch_pos_sessions", "runner"],
+    branchGroups.map((group) => group.items.map((app) => app.moduleKey)),
+    [
+      ["branch_settings"],
+      ["pos", "kds", "branch_menu_limits", "branch_pos_sessions", "runner"],
+    ],
   );
   assert.equal(
     branchManagerApps.some((app) => app.moduleKey === "settings"),
     false,
   );
-  assert.ok(
-    branchManagerApps.some(
-      (app) =>
-        app.moduleKey === "branch_dashboard" && app.href === "/br/3/dashboard",
-    ),
-  );
   assert.equal(
-    branchManagerApps.find((app) => app.moduleKey === "branch_dashboard")
-      ?.surface,
-    "branch_management",
+    branchManagerApps.some((app) => app.moduleKey === "branch_dashboard"),
+    false,
+    "the dashboard redirect route must not be advertised as a Branch destination",
   );
   assert.ok(
     branchManagerApps.some(
@@ -655,7 +701,7 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   assert.equal(
     branchManagerApps.find((app) => app.moduleKey === "branch_menu_limits")
       ?.surface,
-    "branch_operation",
+    "branch",
   );
   assert.ok(
     branchManagerApps.some(
@@ -667,27 +713,17 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   assert.equal(
     branchManagerApps.find((app) => app.moduleKey === "branch_pos_sessions")
       ?.surface,
-    "branch_operation",
+    "branch",
   );
-  assert.ok(
-    branchManagerApps.some(
-      (app) => app.moduleKey === "menu" && app.href === "/menu",
-    ),
-  );
-  assert.ok(
-    branchManagerApps.some(
-      (app) => app.moduleKey === "orders" && app.href === "/orders",
-    ),
-  );
-  assert.ok(
-    branchManagerApps.some(
-      (app) => app.moduleKey === "inventory" && app.href === "/inventory",
-    ),
-  );
-  assert.ok(
-    branchManagerApps.some(
-      (app) => app.moduleKey === "hr" && app.href === "/hr",
-    ),
+  for (const moduleKey of ["menu", "orders", "inventory", "hr"] as const) {
+    assert.equal(
+      branchManagerApps.some((app) => app.moduleKey === moduleKey),
+      false,
+    );
+  }
+  assert.equal(
+    branchManagerGroups.some((group) => group.surface === "admin_dashboard"),
+    false,
   );
 
   const cashierApps = resolveDiscoveredApps("cashier", 3);

@@ -25,8 +25,27 @@ test("inventory stock status and category filters have one control source", () =
   assert.match(stockClientSource, /header: stockCopy\.table\.stock/);
   assert.match(
     stockClientSource,
-    /bulk=\{\s*!isCompactLayout \? \(\s*<div[^>]*>\s*\{filterControls\}\s*\{workSignalCluster\}/s,
+    /const STOCK_COMPACT_QUERY = "\(max-width: 1279px\)"/,
   );
+  assert.match(
+    stockClientSource,
+    /meta=\{!isCompactLayout \? workSignalCluster : undefined\}/,
+  );
+  assert.match(
+    stockClientSource,
+    /filters=\{!isCompactLayout \? filterControls : undefined\}/,
+  );
+  assert.doesNotMatch(stockClientSource, /\bbulk=\{/);
+  assert.equal(
+    (stockClientSource.match(/<AppPage width="xwide" density="compact" scroll>/g) ?? [])
+      .length,
+    2,
+  );
+  assert.match(
+    stockClientSource,
+    /\) : isCompactLayout \? \(\s*<div className="grid gap-2 md:grid-cols-2">/s,
+  );
+  assert.match(stockClientSource, /className="col-span-full"\s+compact/);
   assert.doesNotMatch(
     stockClientSource,
     /aria-pressed=\{stockFilter === "low"\}/,
@@ -53,6 +72,14 @@ test("branch stock facets share one model and stay touch-native", () => {
     (branchStockClientSource.match(/<SelectTrigger\s+size="touch"/g) ?? [])
       .length,
     3,
+  );
+  assert.match(
+    branchStockClientSource,
+    /<ItemGroup className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">/,
+  );
+  assert.equal(
+    (branchStockClientSource.match(/size="icon-touch"/g) ?? []).length,
+    2,
   );
   assert.doesNotMatch(branchStockClientSource, /StockMobileGrid|DataTable/);
   assert.doesNotMatch(branchStockClientSource, /overflow-x-auto/);

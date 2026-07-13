@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { loadAuthState } from "@/_lib/auth";
-import { OfficeModuleShell } from "@/components/office-module-shell";
+import { AdminDashboardModuleShell } from "@/components/admin-dashboard-module-shell";
 
 export default async function HRLayout({ children }: { children: ReactNode }) {
   const { user, claims } = await loadAuthState();
 
   return (
-    <OfficeModuleShell
+    <AdminDashboardModuleShell
       module="hr"
       user={{
         name:
@@ -16,6 +16,6 @@ export default async function HRLayout({ children }: { children: ReactNode }) {
       branchId={claims.branch_id}
     >
       {children}
-    </OfficeModuleShell>
+    </AdminDashboardModuleShell>
   );
 }

@@ -13,7 +13,7 @@ const TABLET_PORTRAIT = { width: 768, height: 1024 };
 const TABLET_LANDSCAPE = { width: 1024, height: 768 };
 const DESKTOP = { width: 1440, height: 900 };
 
-const OFFICE_PREFIXES = [
+const ADMIN_DASHBOARD_PREFIXES = [
   "/admin",
   "/branch-settings",
   "/branches",
@@ -82,7 +82,7 @@ async function expectHealthyRoute(
       ),
       isAdminSurface: /Tổng quan quản trị|Điều hướng quản trị/.test(text),
     };
-  }, OFFICE_PREFIXES);
+  }, ADMIN_DASHBOARD_PREFIXES);
 
   expect(state.pathname).toBe(path);
   expect(state.overflowX).toBeLessThanOrEqual(2);
@@ -271,7 +271,7 @@ test.describe("branch route shell ownership", () => {
     expect(health.serverErrors).toEqual([]);
   });
 
-  test("Office count management keeps desktop tables", async ({ page }) => {
+  test("Admin Dashboard count management keeps desktop tables", async ({ page }) => {
     test.setTimeout(90_000);
     const { branchId } = await getCashierProfile();
     const health = watchPageHealth(page);

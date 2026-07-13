@@ -478,7 +478,13 @@ test("SePay duplicate-transfer guard quarantines the second event before payment
     /REVOKE ALL ON FUNCTION public\.confirm_sepay_payment\([\s\S]*?FROM PUBLIC, anon, authenticated, service_role/,
   );
   assert.match(migration, /prior_event\.processing_status <> 'failed'/);
-  assert.match(migration, /\^-\?\[0-9\]\+\(\[\.\]\[0-9\]\+\)\?\$/);
+  assert.match(
+    migration,
+    /btrim\(payment_code\) ~\* '\^DH\[A-Z0-9\]\{3,12\}\$'/,
+    "active grandfathered DH payment codes must remain settleable",
+  );
+  assert.match(migration, /\^\[0-9\]\+\(\[\.\]\[0-9\]\+\)\?\$/);
+  assert.doesNotMatch(migration, /abs\(\(v_event\.payload ->> 'transferAmount'\)::numeric\)/);
   assert.match(route, /"overpayment_needs_review"/);
   assert.match(route, /"payment_method_conflict_needs_review"/);
   assert.match(route, /"payment_state_conflict_needs_review"/);

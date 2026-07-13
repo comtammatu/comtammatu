@@ -89,6 +89,45 @@ BEGIN
 END;
 $$;
 
+DO $$
+DECLARE
+  v_definition text;
+  v_method_match_count integer;
+  v_method_match text := $needle$
+        (pr.method = 'cash_call' AND v_payment_method = 'cash')
+        OR (pr.method = 'vietqr' AND v_payment_method = 'vietqr')
+$needle$;
+  v_method_match_with_momo text := $replacement$
+        (pr.method = 'cash_call' AND v_payment_method = 'cash')
+        OR (pr.method = 'vietqr' AND v_payment_method = 'vietqr')
+        OR (pr.method = 'momo' AND v_payment_method = 'momo')
+$replacement$;
+BEGIN
+  SELECT pg_get_functiondef(
+    'public.self_order_sync_payment_request_from_order()'::regprocedure
+  )
+  INTO v_definition;
+
+  v_method_match_count := (
+    length(v_definition) - length(replace(v_definition, v_method_match, ''))
+  ) / length(v_method_match);
+
+  IF v_method_match_count <> 2
+     OR position(
+       '(pr.method = ''momo'' AND v_payment_method = ''momo'')'
+       IN v_definition
+     ) > 0 THEN
+    RAISE EXCEPTION 'self_order_momo_order_sync_contract_changed';
+  END IF;
+
+  EXECUTE replace(
+    v_definition,
+    v_method_match,
+    v_method_match_with_momo
+  );
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.self_order_enforce_payment_request_invariants()
 RETURNS trigger
 LANGUAGE plpgsql

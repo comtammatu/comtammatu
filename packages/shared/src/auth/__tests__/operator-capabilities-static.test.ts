@@ -126,25 +126,20 @@ test("resolveOperatorTiles -> retired supplier returns stay out of the branch ti
   );
 });
 
-test("resolveOperatorTiles -> operator hub does not duplicate office workspace links", () => {
+test("resolveOperatorTiles -> operator hub does not duplicate Admin Dashboard workspace links", () => {
   const groups = resolveOperatorTiles("owner", 3);
-  const groupIds = groups.map((group) => String(group.id));
   const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));
 
-  assert.equal(groupIds.includes("office_bridge"), false);
   assert.equal(hrefs.includes("/menu"), false);
   assert.equal(hrefs.includes("/hr"), false);
   assert.equal(hrefs.includes("/inventory"), false);
   assert.equal(hrefs.includes("/inventory/production"), false);
 });
 
-test("resolveOperatorTiles -> production tile is native under stock at branch, not office_bridge (D068)", () => {
+test("resolveOperatorTiles -> production tile is native under Branch stock (D068)", () => {
   for (const role of ["owner", "branch_manager"] as const) {
     const groups = resolveOperatorTiles(role, 3, "branch");
-    const groupIds = groups.map((group) => String(group.id));
     const stock = groups.find((group) => group.id === "stock");
-
-    assert.equal(groupIds.includes("office_bridge"), false, role);
 
     const productionTile = stock?.tiles.find(
       (tile) => tile.href === "/br/3/stock/production",
@@ -171,13 +166,6 @@ test("resolveOperatorTiles -> branch stock group renders the branch tile set", (
   );
 });
 
-test("resolveOperatorTiles -> office_bridge group is retired", () => {
-  const branchGroupIds = resolveOperatorTiles("owner", 3, "branch").map(
-    (group) => String(group.id),
-  );
-  assert.equal(branchGroupIds.includes("office_bridge"), false);
-});
-
 test("resolveOperatorTiles -> branch kitchen transfer tile is retired", () => {
   const groups = resolveOperatorTiles("branch_manager", 3, "branch");
   const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));
@@ -190,13 +178,9 @@ test("resolveOperatorTiles -> branch kitchen transfer tile is retired", () => {
   );
 });
 
-
-test("resolveOperatorTiles -> orders tile is branch-native under sales_kitchen, not office_bridge", () => {
+test("resolveOperatorTiles -> orders tile is Branch-native under sales_kitchen", () => {
   const groups = resolveOperatorTiles("owner", 3);
-  const groupIds = groups.map((group) => String(group.id));
   const salesKitchen = groups.find((group) => group.id === "sales_kitchen");
-
-  assert.equal(groupIds.includes("office_bridge"), false);
 
   const ordersTile = salesKitchen?.tiles.find(
     (tile) => tile.moduleKey === "orders",

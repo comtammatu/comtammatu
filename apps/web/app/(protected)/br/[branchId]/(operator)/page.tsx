@@ -104,10 +104,10 @@ export default async function OperatorHomePage({
   const branchManagementLinks = isBranchManagerOrOwner
     ? [
         {
-          key: "branch-menu",
-          href: MODULE_ACL.menu.path,
+          key: "branch-menu-limits",
+          href: `/br/${context.branchId}/menu-limits`,
           icon: resolveOperatorTileIcon("Utensils"),
-          title: MODULE_ACL.menu.label,
+          title: MODULE_ACL.branch_menu_limits.label,
         },
         {
           key: "branch-settings",

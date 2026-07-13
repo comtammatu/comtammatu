@@ -77,7 +77,7 @@ test("sale and production recipes use distinct operator names and purposes", () 
   );
 });
 
-test("office stock quick issue stays on consumption while Branch lookup stays read-only", () => {
+test("Admin Dashboard stock quick issue stays on consumption while Branch lookup stays read-only", () => {
   const stock = read("app/(protected)/inventory/stock/stock-client.tsx");
   const branchStock = read(
     "app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
@@ -175,7 +175,7 @@ test("operations tabs use the same sectioned list chrome", () => {
     );
   }
 
-  assert.match(grn, /actions=\{withinOfficeTabs \? desktopActions : null\}/);
+  assert.match(grn, /actions=\{withinAdminDashboardTabs \? desktopActions : null\}/);
   assert.match(grn, /const listTable = grnsLoadFailed \? \(/);
   assert.match(grn, /title=\{messages\.inventory\.grn\.loadFailed\}/);
   assert.match(grn, /const draftsContent = draftsLoadFailed \? \(/);
@@ -188,7 +188,7 @@ test("operations tabs use the same sectioned list chrome", () => {
   assert.doesNotMatch(transfers, /variant="card"/);
 });
 
-test("operations embedded lists keep office density instead of touch sizing", () => {
+test("operations embedded lists keep Admin Dashboard density instead of touch sizing", () => {
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
   const transfers = read(

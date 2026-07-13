@@ -16,7 +16,10 @@ import {
 import { formatCount, formatVND } from "@comtammatu/shared/format";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
-import type { SepaySupplierPaymentMatch } from "../_lib/sepay-bank-transaction-model";
+import {
+  isSepayExpenseAllocationBalanced,
+  type SepaySupplierPaymentMatch,
+} from "../_lib/sepay-bank-transaction-model";
 import type { ExpenseMatchOption } from "../expense-actions";
 import { matchSepayTransactionWithExpenses } from "../expense-actions";
 
@@ -101,6 +104,14 @@ export function MatchExpenseCell({
     );
   }
 
+  if (transferType === "in" && expenseIds.length > 0) {
+    return (
+      <Badge variant="outline" className="text-success font-normal">
+        {copy.matchedCashDeposit}
+      </Badge>
+    );
+  }
+
   if (transferType === "in") {
     return <span className="text-muted-foreground">—</span>;
   }
@@ -119,6 +130,11 @@ export function MatchExpenseCell({
   );
   const delta = selectedTotal - amount;
   const hasChanges = !sameIds(selectedIds, expenseIds);
+  const allocationBalanced = isSepayExpenseAllocationBalanced(
+    amount,
+    selectedTotal,
+    selectedIds.length,
+  );
 
   const triggerLabel =
     selectedIds.length > 0
@@ -201,6 +217,11 @@ export function MatchExpenseCell({
             </span>
           </span>
         </div>
+        {!allocationBalanced ? (
+          <p className="text-xs text-warning">
+            {copy.expenseAllocationMismatch}
+          </p>
+        ) : null}
         <div className="max-h-72 overflow-x-hidden overflow-y-auto">
           <div className="flex flex-col gap-1 pr-1">
             {availableExpenses.map((exp) => {
@@ -255,7 +276,7 @@ export function MatchExpenseCell({
             type="button"
             size="sm"
             onClick={handleSave}
-            disabled={isPending || !hasChanges}
+            disabled={isPending || !hasChanges || !allocationBalanced}
           >
             {copy.saveExpenseMatch}
           </Button>

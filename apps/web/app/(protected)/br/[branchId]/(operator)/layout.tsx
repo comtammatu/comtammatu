@@ -58,6 +58,9 @@ export default async function OperatorLayout({
     canAccess(claims.user_role, "branch_settings") ||
     canAccess(claims.user_role, "branch_pos_sessions");
   const canUseBranchPicker = canAccess(claims.user_role, "branch_picker");
+  const showLocationPickerAction =
+    canUseBranchPicker &&
+    (context.canSwitchBranch || claims.user_role === "owner");
   const unreadResult = await unreadPromise;
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
   const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
@@ -84,7 +87,7 @@ export default async function OperatorLayout({
           wide
           actions={
             <>
-              {canUseBranchPicker && context.canSwitchBranch ? (
+              {showLocationPickerAction ? (
                 <Button
                   asChild
                   variant="outline"

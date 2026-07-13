@@ -9,7 +9,7 @@ const notificationMigration = read(
   "supabase/migrations/20260712010647_canonicalize_po_notification_action_url.sql",
 );
 
-test("purchase orders have no Branch or Office daily-use surface", () => {
+test("purchase orders have no Branch or Admin Dashboard daily-use surface", () => {
   const operations = read(
     "apps/web/app/(protected)/inventory/operations/page.tsx",
   );

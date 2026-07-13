@@ -59,8 +59,7 @@ interface SupplierPaymentRow {
 const SEPAY_WEBHOOK_SELECT =
   "id, request_id, created_at, processing_status, error_code, order_id, payment_id, expense_id, payload" as const;
 
-// ponytail: scan existing webhook ledger; add a bank_transactions table if this pilot account outgrows 5000 retained SePay rows.
-const SEPAY_BALANCE_SCAN_LIMIT = 5000;
+const SEPAY_BALANCE_PAGE_SIZE = 1000;
 const SEPAY_TRANSACTION_LIST_LIMIT = 100;
 const SEPAY_PAYMENT_WEBHOOK_CHECK_LIMIT = 100;
 
@@ -102,6 +101,49 @@ async function fetchSepayWebhookRows(
   }
 
   return (data ?? []) as unknown as SepayWebhookRow[];
+}
+
+async function fetchAllSepayWebhookRowsSince(
+  supabase: SupabaseClient,
+  tenantId: number,
+  sinceDate: string,
+): Promise<SepayWebhookRow[]> {
+  const rows: SepayWebhookRow[] = [];
+  const createdAfter = getVNDayUtcRange(sinceDate).startIso;
+  let lastId = 0;
+
+  for (;;) {
+    const { data, error } = await supabase
+      .from("webhook_events")
+      .select(SEPAY_WEBHOOK_SELECT)
+      .eq("tenant_id", tenantId)
+      .in("provider", ["sepay", "manual"])
+      .eq("signature_valid", true)
+      .gte("created_at", createdAfter)
+      .gt("id", lastId)
+      .order("id", { ascending: true })
+      .limit(SEPAY_BALANCE_PAGE_SIZE);
+
+    if (error) {
+      console.error(
+        "[finance:sepay-bank] failed to load complete bank movement",
+        error.code,
+      );
+      throw new Error("Unable to load signed bank movement");
+    }
+
+    const page = (data ?? []) as unknown as SepayWebhookRow[];
+    rows.push(...page);
+    if (page.length < SEPAY_BALANCE_PAGE_SIZE) break;
+
+    const nextId = page.at(-1)?.id;
+    if (nextId == null || nextId <= lastId) {
+      throw new Error("Unable to paginate signed bank movement");
+    }
+    lastId = nextId;
+  }
+
+  return rows;
 }
 
 async function fetchSepayExpenseMatches(
@@ -269,10 +311,10 @@ export async function fetchSepayBankMovementSince(
   tenantId: number,
   sinceDate: string,
 ) {
-  const rows = await fetchSepayWebhookRows(
+  const rows = await fetchAllSepayWebhookRowsSince(
     supabase,
     tenantId,
-    SEPAY_BALANCE_SCAN_LIMIT,
+    sinceDate,
   );
   return sumSepayBankMovementSince(rows, sinceDate);
 }

@@ -5,8 +5,8 @@ import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
 /**
  * Sidebar navigation configuration — derived from MODULE_ACL.
  * Icon names reference Lucide React (resolved in the UI layer).
- * This is the SINGLE source of nav structure — the Management shells project
- * from here via `resolveOfficePrimaryTabs` plus deep-nav resolvers.
+ * This is the SINGLE source of nav structure — the Admin Dashboard shell projects
+ * from here via `resolveAdminDashboardPrimaryTabs` plus deep-nav resolvers.
  */
 
 export interface NavItemConfig {
@@ -20,7 +20,7 @@ export interface NavGroupConfig {
   items: NavItemConfig[];
 }
 
-export interface WorkspaceNavItemConfig extends NavItemConfig {
+export interface AdminDashboardNavItemConfig extends NavItemConfig {
   label?: string;
 }
 
@@ -46,7 +46,7 @@ export interface OperatorTileConfig extends BranchScopedNavItemConfig {
   kinds?: readonly BranchKind[];
 }
 
-/** Admin-scoped settings. Domain work lives in the workspace modules below. */
+/** Tenant settings shown inside Admin Dashboard. */
 export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
   {
     title: NAV_GROUP_LABELS_VI.foundation,
@@ -60,8 +60,8 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
   },
 ];
 
-/** Adjacent product surfaces accessible from the admin workspace */
-export const DOMAIN_WORKSPACE_ITEMS: WorkspaceNavItemConfig[] = [
+/** Owner-only domain modules available inside Admin Dashboard. */
+export const ADMIN_DASHBOARD_MODULE_ITEMS: AdminDashboardNavItemConfig[] = [
   { moduleKey: "menu", icon: "Utensils", label: "Thực đơn" },
   { moduleKey: "orders", icon: "ClipboardList", label: "Đơn hàng" },
   { moduleKey: "inventory", icon: "Package", label: "Kho hàng" },
@@ -72,12 +72,6 @@ export const DOMAIN_WORKSPACE_ITEMS: WorkspaceNavItemConfig[] = [
 
 /** Branch-scoped management entry points */
 export const BRANCH_MANAGEMENT_ITEMS: BranchManagementNavItemConfig[] = [
-  {
-    moduleKey: "branch_dashboard",
-    icon: "LayoutDashboard",
-    hrefTemplate: "/br/{branchId}/dashboard",
-    label: APP_COPY_VI.branchCommand,
-  },
   {
     moduleKey: "branch_settings",
     icon: "Settings",

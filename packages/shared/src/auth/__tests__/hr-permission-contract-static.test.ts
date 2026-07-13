@@ -128,29 +128,30 @@ test("HR Server Action gates match the route contract", () => {
     hrActions,
     /fetchShifts\(\): Promise<ActionResult> \{\s*const ctx = await getAuthContext\(HR_ROLES\);/,
   );
-  assert.match(hrPage, /const canManagePositionTasks = canManageEmployees;/);
+  assert.match(hrPage, /fetchPositionTasksData\(\)/);
+  assert.doesNotMatch(hrPage, /isBranchManager|canManagePositionTasks/);
   assert.match(
     hrActions,
-    /forceCloseStaleAttendance = withAction\(\s*\{\s*roles: HR_EMPLOYEE_VIEW_ROLES,\s*schema: forceCloseStaleAttendanceSchema,\s*permission: PERMISSION_KEYS\.HR_APPROVE_CHECKOUT,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
+    /forceCloseStaleAttendance = withAction\(\s*\{\s*roles: BRANCH_ATTENDANCE_REVIEW_ROLES,\s*schema: forceCloseStaleAttendanceSchema,\s*permission: PERMISSION_KEYS\.HR_APPROVE_CHECKOUT,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
   );
   assert.match(
     hrActions,
-    /fetchAttendance = withAction\(\s*\{\s*roles: SHIFT_ROLES,\s*schema: fetchAttendanceSchema,\s*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
+    /fetchAttendance = withAction\(\s*\{\s*roles: HR_ROLES,\s*schema: fetchAttendanceSchema,\s*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
   );
   assert.match(
     hrActions,
-    /getAttendancePhotoUrl = withAction\(\s*\{\s*roles: SHIFT_ROLES,\s*schema: attendancePhotoSchema,\s*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
+    /getAttendancePhotoUrl = withAction\(\s*\{\s*roles: HR_ROLES,\s*schema: attendancePhotoSchema,\s*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
   );
   assert.match(
     hrActions,
-    /fetchAttendanceSummary = withAction\(\s*\{\s*roles: SHIFT_ROLES,\s*schema: fetchAttendanceSummarySchema,\s*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
+    /fetchAttendanceSummary = withAction\(\s*\{\s*roles: HR_ROLES,\s*schema: fetchAttendanceSummarySchema,\s*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
   );
 
   assert.match(leaveActions, /permissionBranchId: \(data\) => data\.branchId/);
   assert.match(leaveActions, /requireBranchScope: true/);
   assert.match(
     leaveActions,
-    /fetchApprovedLeaveMonth = withAction\([\s\S]*?permissionBranchId: \(data\) => data\.branchId,[\s\S]*?requireBranchScope: true,[\s\S]*?claims\.user_role === "branch_manager" &&[\s\S]*?claims\.branch_id !== data\.branchId/,
+    /fetchApprovedLeaveMonth = withAction\(\s*\{\s*roles: OWNER_REVIEW_ROLES,[\s\S]*?permissionBranchId: \(data\) => data\.branchId,[\s\S]*?requireBranchScope: true/,
   );
   assert.match(
     leaveActions,
@@ -190,37 +191,24 @@ test("HR Server Action gates match the route contract", () => {
   }
 });
 
-test("HR client surface keeps owner setup separate from branch oversight", () => {
+test("HR Admin Dashboard client has no Branch Manager presentation fork", () => {
   const hrPage = read("apps/web/app/(protected)/hr/page.tsx");
   const hrClient = read("apps/web/app/(protected)/hr/hr-client.tsx");
 
-  assert.match(
-    hrPage,
-    /const canManageEmployees = claims\.user_role === "owner"/,
+  assert.doesNotMatch(hrPage, /isBranchManager|canViewEmployees/);
+  assert.doesNotMatch(
+    hrClient,
+    /isBranchManager|branchManagerTitle|canViewEmployees|canManageEmployees/,
   );
-  assert.match(
-    hrPage,
-    /const canViewEmployees = canManageEmployees \|\| isBranchManager/,
-  );
-  assert.match(hrPage, /canManageEmployees=\{canManageEmployees\}/);
+  assert.match(hrClient, /title=\{workspaceCopy\.ownerTitle\}/);
   assert.match(
     hrClient,
-    /if \(!canManageEmployees \|\| shiftsLoaded\) return;/,
+    /\{ value: "employees", label: copy\.tabs\.employees \}/,
   );
-  assert.match(
-    hrClient,
-    /\.\.\.\(canManageEmployees\s*\?\s*\[\s*\{ value: "payroll", label: copy\.tabs\.payroll \},\s*\{ value: "setup", label: copy\.tabs\.setup \},\s*\]\s*:\s*\[\]\s*\),/,
-  );
-  assert.match(
-    hrClient,
-    /\{canManageEmployees \? \(\s*<TabsContent value="setup"/,
-  );
-  assert.match(
-    hrClient,
-    /const activeEmployees = canManageEmployees\s*\?\s*employees\.filter\(\(employee\) => employee\.is_active\)\s*:\s*\[\];/,
-  );
-  assert.match(hrClient, /canManage=\{canManageEmployees\}/);
-  assert.match(hrClient, /\{canManageEmployees \? \(\s*<EmployeeFormDialog/);
+  assert.match(hrClient, /\{ value: "payroll", label: copy\.tabs\.payroll \}/);
+  assert.match(hrClient, /<TabsContent value="setup"/);
+  assert.match(hrClient, /const activeEmployees = employees\.filter/);
+  assert.match(hrClient, /<EmployeeFormDialog/);
 });
 
 test("HR employee payroll and contract controls stay owner-only", () => {
@@ -256,13 +244,9 @@ test("HR employee payroll and contract controls stay owner-only", () => {
   );
 });
 
-test("HR branch-manager employee payload stays branch-safe", () => {
+test("HR Admin Dashboard employee payload is Owner-only", () => {
   const hrActions = read("apps/web/app/(protected)/hr/actions.ts");
   const ownerSelect = extractTemplateConst(hrActions, "EMPLOYEE_SELECT_OWNER");
-  const branchManagerSelect = extractTemplateConst(
-    hrActions,
-    "EMPLOYEE_SELECT_BRANCH_MANAGER",
-  );
 
   for (const field of [
     "base_salary",
@@ -280,11 +264,12 @@ test("HR branch-manager employee payload stays branch-safe", () => {
     "gross_salary",
   ]) {
     assert.match(ownerSelect, new RegExp(`\\b${field}\\b`));
-    assert.doesNotMatch(branchManagerSelect, new RegExp(`\\b${field}\\b`));
   }
-  assert.match(
+  assert.match(hrActions, /getAuthContext\(HR_ROLES\)/);
+  assert.match(hrActions, /\.select\(EMPLOYEE_SELECT_OWNER\)/);
+  assert.doesNotMatch(
     hrActions,
-    /isBranchManager \? EMPLOYEE_SELECT_BRANCH_MANAGER : EMPLOYEE_SELECT_OWNER/,
+    /EMPLOYEE_SELECT_BRANCH_MANAGER|isBranchManager/,
   );
 });
 
@@ -393,8 +378,9 @@ test("auth docs define the HR permission contract layers", () => {
     "Permission grant/revoke/template",
     "Employee record, salary, HĐLĐ",
     "Global shift and position-task setup",
+    "Attendance history and check-in photo",
+    "Today, team, and leave approvals",
     "Payroll",
-    "Branch manager only gets branch-safe attendance/leave oversight",
   ]) {
     assert.ok(
       authDoc.includes(expected) || routeMatrix.includes(expected),

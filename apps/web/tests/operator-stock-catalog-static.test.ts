@@ -22,7 +22,7 @@ test("Branch stock does not duplicate tenant-wide catalog ownership", () => {
   assert.equal(existsWeb("lib/messages/catalog.ts"), false);
 });
 
-test("tenant-wide inventory catalog stays on canonical Office routes", () => {
+test("tenant-wide inventory catalog stays on canonical Admin Dashboard routes", () => {
   for (const path of [
     "app/(protected)/inventory/ingredients/page.tsx",
     "app/(protected)/inventory/settings/categories/page.tsx",

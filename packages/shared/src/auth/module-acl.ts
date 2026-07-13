@@ -2,8 +2,8 @@ import { STAFF_ROLES, type StaffRole } from "./types";
 import { getModuleLabelVi } from "../labels";
 
 /**
- * Module ACL — SINGLE source of truth for route access control.
- * Used by middleware (proxy.ts) and sidebar navigation.
+ * Reusable module capabilities. Route-family audience is enforced separately
+ * by `canAccessRouteSurface` before this capability check.
  */
 
 export type ModuleKey =
@@ -40,7 +40,7 @@ interface ModuleAcl {
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   menu: {
     path: "/menu",
-    allowedRoles: ["owner", "branch_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("menu"),
   },
   inventory: {

@@ -13,40 +13,17 @@ const EMPTY_POSITION_TASKS_DATA: PositionTasksData = {
 
 export default async function HrPage() {
   const { supabase, claims } = await loadAuthState();
-  const canManageEmployees = claims.user_role === "owner";
-  const isBranchManager = claims.user_role === "branch_manager";
-  const canViewEmployees = canManageEmployees || isBranchManager;
-  const canManagePositionTasks = canManageEmployees;
-
-  const branchesPromise =
-    isBranchManager && claims.branch_id == null
-      ? Promise.resolve({ data: [] as BranchOption[] })
-      : (() => {
-          let query = supabase
-            .from("branches")
-            .select("id, name, branch_kind")
-            .eq("tenant_id", claims.tenant_id)
-            .eq("is_active", true)
-            .order("name");
-
-          if (isBranchManager && claims.branch_id != null) {
-            query = query.eq("id", claims.branch_id);
-          }
-
-          return query;
-        })();
+  const branchesPromise = supabase
+    .from("branches")
+    .select("id, name, branch_kind")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("is_active", true)
+    .order("name");
 
   const [employeesResult, positionTasksResult, { data: branches }] =
     await Promise.all([
-      canViewEmployees
-        ? fetchEmployees()
-        : Promise.resolve({ success: true, data: [] }),
-      canManagePositionTasks
-        ? fetchPositionTasksData()
-        : Promise.resolve({
-            success: true as const,
-            data: EMPTY_POSITION_TASKS_DATA,
-          }),
+      fetchEmployees(),
+      fetchPositionTasksData(),
       branchesPromise,
     ]);
 
@@ -63,10 +40,6 @@ export default async function HrPage() {
     <HrClient
       employees={employees}
       branches={branchOptions}
-      isBranchManager={isBranchManager}
-      canManageEmployees={canManageEmployees}
-      canViewEmployees={canViewEmployees}
-      canManagePositionTasks={canManagePositionTasks}
       positionTasksData={positionTasksData}
     />
   );

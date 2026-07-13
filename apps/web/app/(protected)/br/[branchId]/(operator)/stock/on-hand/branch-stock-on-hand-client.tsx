@@ -325,8 +325,8 @@ export function BranchStockOnHandClient({
             <Button
               type="button"
               variant="outline"
-              size="icon"
-              className="relative size-12 shrink-0"
+              size="icon-touch"
+              className="relative shrink-0"
               aria-label={ACTIONS_VI.filter}
               aria-controls="branch-stock-on-hand-filters"
               aria-expanded={filtersOpen}
@@ -350,8 +350,8 @@ export function BranchStockOnHandClient({
                   <Button
                     type="button"
                     variant="outline"
-                    size="icon"
-                    className="size-12 shrink-0"
+                    size="icon-touch"
+                    className="shrink-0"
                   >
                     <IconDots />
                     <span className="sr-only">
@@ -546,7 +546,7 @@ export function BranchStockOnHandClient({
               description={stockCopy.empty.searchDescription}
             />
           ) : (
-            <ItemGroup className="gap-2">
+            <ItemGroup className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
               {filtered.map((item) => (
                 <StockTouchRow
                   key={item.id}

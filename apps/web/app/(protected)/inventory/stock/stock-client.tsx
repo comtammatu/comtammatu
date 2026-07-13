@@ -134,7 +134,7 @@ function StockQtyCell({
   );
 }
 
-const STOCK_COMPACT_QUERY = "(max-width: 1023px)";
+const STOCK_COMPACT_QUERY = "(max-width: 1279px)";
 
 function subscribeStockCompactLayout(callback: () => void) {
   const media = window.matchMedia(STOCK_COMPACT_QUERY);
@@ -276,11 +276,7 @@ export function StockClient({
 
   if (coreDataLoadFailed) {
     return (
-      <AppPage
-        width={isCompactLayout ? "narrow" : "xwide"}
-        density="compact"
-        scroll
-      >
+      <AppPage width="xwide" density="compact" scroll>
         <AppPageHeader
           eyebrow={messages.inventory.shell.moduleName}
           title={stockCopy.title}
@@ -828,12 +824,14 @@ export function StockClient({
       <AppPageHeader
         eyebrow={messages.inventory.shell.moduleName}
         title={stockCopy.title}
+        meta={!isCompactLayout ? workSignalCluster : undefined}
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="hidden sm:inline-flex">
               {liveLabel}
             </Badge>
             <Badge variant="success">Live</Badge>
+            {!isCompactLayout ? primaryReceiveAction : null}
           </div>
         }
       />
@@ -861,23 +859,11 @@ export function StockClient({
       <AppToolbar
         variant="card"
         search={searchControl}
-        bulk={
-          !isCompactLayout ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {filterControls}
-              {workSignalCluster}
-            </div>
-          ) : undefined
-        }
+        filters={!isCompactLayout ? filterControls : undefined}
         actions={
-          isCompactLayout ? (
-            primaryReceiveAction
-          ) : (
-            <>
-              {primaryReceiveAction}
-              {desktopSecondaryActionsDropdown}
-            </>
-          )
+          isCompactLayout
+            ? primaryReceiveAction
+            : desktopSecondaryActionsDropdown
         }
         reset={resultCountBadge}
       />
@@ -916,9 +902,10 @@ export function StockClient({
           ) : null}
         </AppEmptyState>
       ) : isCompactLayout ? (
-        <div className="flex flex-col gap-2">
+        <div className="grid gap-2 md:grid-cols-2">
           {filtered.length === 0 ? (
             <AppEmptyState
+              className="col-span-full"
               compact
               title={
                 searchQuery.trim()
@@ -998,11 +985,7 @@ export function StockClient({
   );
 
   return (
-    <AppPage
-      width={isCompactLayout ? "narrow" : "xwide"}
-      density="compact"
-      scroll
-    >
+    <AppPage width="xwide" density="compact" scroll>
       {content}
     </AppPage>
   );

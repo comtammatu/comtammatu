@@ -301,7 +301,7 @@ export const SHARED_COMPONENT_REGISTRY = {
   ),
   "sidebar.tsx": adapterOnly(
     "management navigation chrome internals",
-    "AppShell or OfficeModuleShell",
+    "AppShell or AdminDashboardModuleShell",
     "AppBottomNav for operator navigation",
     "route-local SidebarProvider or third shell",
     "management shell",

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { loadAuthState } from "@/_lib/auth";
-import { OfficeModuleShell } from "@/components/office-module-shell";
+import { AdminDashboardModuleShell } from "@/components/admin-dashboard-module-shell";
 
 export default async function OrdersLayout({
   children,
@@ -10,7 +10,7 @@ export default async function OrdersLayout({
   const { user, claims } = await loadAuthState();
 
   return (
-    <OfficeModuleShell
+    <AdminDashboardModuleShell
       module="orders"
       user={{
         name:
@@ -20,6 +20,6 @@ export default async function OrdersLayout({
       branchId={claims.branch_id}
     >
       {children}
-    </OfficeModuleShell>
+    </AdminDashboardModuleShell>
   );
 }

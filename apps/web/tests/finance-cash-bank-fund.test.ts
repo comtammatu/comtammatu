@@ -2,14 +2,84 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import {
+  calculateSepayBankBalance,
+} from "../app/(protected)/finance/_lib/sepay-bank-transaction-model";
+import { fetchSepayBankMovementSince } from "../app/(protected)/finance/_lib/sepay-bank-transactions";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+
+test("bank balance counts each signed SePay movement once", () => {
+  assert.equal(
+    calculateSepayBankBalance(10_000_000, {
+      inAmount: 2_000_000,
+      outAmount: 1_000_000,
+    }),
+    11_000_000,
+  );
+});
+
+test("bank movement paginates past the first thousand signed events", async () => {
+  const rows = Array.from({ length: 1_505 }, (_, index) => ({
+    id: index + 1,
+    request_id: `sepay-${index + 1}`,
+    created_at: "2026-07-13T01:00:00.000Z",
+    processing_status: "processed",
+    error_code: null,
+    order_id: null,
+    payment_id: null,
+    expense_id: null,
+    payload: {
+      transactionDate: "2026-07-13 08:00:00",
+      transferType: "in",
+      transferAmount: 1,
+    },
+  }));
+  const pageStarts: number[] = [];
+  const supabase = {
+    from: () => {
+      let lastId = 0;
+      const query = {
+        select: () => query,
+        eq: () => query,
+        in: () => query,
+        gte: () => query,
+        gt: (_column: string, value: number) => {
+          lastId = value;
+          return query;
+        },
+        order: () => query,
+        limit: async (limit: number) => {
+          pageStarts.push(lastId);
+          return {
+            data: rows.filter((row) => row.id > lastId).slice(0, limit),
+            error: null,
+          };
+        },
+      };
+      return query;
+    },
+  };
+
+  assert.deepEqual(
+    await fetchSepayBankMovementSince(
+      supabase as never,
+      1,
+      "2026-07-13",
+    ),
+    { inAmount: 1_505, outAmount: 0 },
+  );
+  assert.deepEqual(pageStarts, [0, 1_000]);
+});
 
 // The bank fund follows the signed SePay account ledger; the cash fund still
 // follows POS cash and cash expenses only.
 test("bank fund pulls SePay in and out with the right sign", () => {
   const cockpit = read("apps/web/app/(protected)/finance/_lib/cash-cockpit.ts");
+  const bankTransactions = read(
+    "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
+  );
 
   assert.match(
     cockpit,
@@ -43,13 +113,13 @@ test("bank fund pulls SePay in and out with the right sign", () => {
   );
   assert.match(
     cockpit,
-    /cashOutSince\s*=\s*expensesSince\.cash\s*\+\s*supplierPaymentsSince\.cash/,
+    /cashOutSince\s*=\s*cashExpensesSince\s*\+\s*supplierPaymentsSince\.cash/,
     "cash supplier payments must reduce running cash on hand",
   );
-  assert.match(
+  assert.doesNotMatch(
     cockpit,
-    /bankMovement\.outAmount\s*\+\s*expensesSince\.unmatchedTransfer\s*\+\s*supplierPaymentsSince\.bankTransfer/,
-    "bank-transfer supplier payments must reduce running bank balance",
+    /unmatchedTransfer|supplierPaymentsSince\.bankTransfer/,
+    "expense and AP records must not move the signed bank balance again",
   );
   assert.match(
     cockpit,
@@ -58,9 +128,13 @@ test("bank fund pulls SePay in and out with the right sign", () => {
   );
   assert.match(
     cockpit,
-    /bankOnHand:\s*bankOpeningBalance\s*\+\s*bankInSince\s*-\s*bankOutSince/,
-    "bank on hand = opening + in - out",
+    /bankOnHand:\s*calculateSepayBankBalance\(bankOpeningBalance,\s*bankMovement\)/,
+    "bank on hand must use the tested signed-movement model",
   );
+  assert.match(bankTransactions, /fetchAllSepayWebhookRowsSince/);
+  assert.match(bankTransactions, /\.gt\("id", lastId\)/);
+  assert.match(bankTransactions, /page\.length < SEPAY_BALANCE_PAGE_SIZE/);
+  assert.doesNotMatch(bankTransactions, /SEPAY_BALANCE_SCAN_LIMIT|5000 retained/);
 });
 
 test("cash opening writes cash, bank, and date through one RPC", () => {

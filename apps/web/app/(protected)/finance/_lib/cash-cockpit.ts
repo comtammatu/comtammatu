@@ -3,6 +3,7 @@ import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchRevenueKpis } from "../actions";
 import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
+import { calculateSepayBankBalance } from "./sepay-bank-transaction-model";
 import { fetchSepayBankMovementSince } from "./sepay-bank-transactions";
 
 /**
@@ -18,10 +19,6 @@ import { fetchSepayBankMovementSince } from "./sepay-bank-transactions";
  */
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
-
-interface ExpenseMatchRow {
-  expense_id: number;
-}
 
 interface SupplierPaymentRow {
   amount: number | string | null;
@@ -101,53 +98,19 @@ const EMPTY_OPENING = {
   bankOnHand: 0,
 } as const;
 
-async function sumExpensesSinceByMethod(
+async function sumCashExpensesSince(
   supabase: SupabaseClient,
   tenantId: number,
   sinceDate: string,
-): Promise<{ cash: number; unmatchedTransfer: number }> {
-  const matchedExpenseIds = new Set<number>();
-
-  const { data: matchedRows } = await supabase
-    .from("bank_transaction_expense_matches")
-    .select("expense_id")
-    .eq("tenant_id", tenantId);
-
-  for (const row of (matchedRows ?? []) as ExpenseMatchRow[]) {
-    matchedExpenseIds.add(row.expense_id);
-  }
-
-  const { data: matchedEvents } = await supabase
-    .from("webhook_events")
-    .select("expense_id")
-    .eq("tenant_id", tenantId)
-    .not("expense_id", "is", null);
-
-  for (const row of matchedEvents ?? []) {
-    if (row.expense_id != null) matchedExpenseIds.add(row.expense_id);
-  }
-
+): Promise<number> {
   const { data } = await supabase
     .from("expenses")
-    .select("id, amount, payment_method")
+    .select("amount")
     .eq("tenant_id", tenantId)
-    .in("payment_method", ["cash", "transfer"])
+    .eq("payment_method", "cash")
     .gte("expense_date", sinceDate);
 
-  let cash = 0;
-  let unmatchedTransfer = 0;
-  for (const row of data ?? []) {
-    const amount = toNumber(row.amount);
-    if (row.payment_method === "cash") {
-      cash += amount;
-    } else if (
-      row.payment_method === "transfer" &&
-      !matchedExpenseIds.has(row.id)
-    ) {
-      unmatchedTransfer += amount;
-    }
-  }
-  return { cash, unmatchedTransfer };
+  return (data ?? []).reduce((sum, row) => sum + toNumber(row.amount), 0);
 }
 
 async function sumSupplierPaymentsByMethod(
@@ -257,13 +220,13 @@ export async function fetchCashSummary(
   }
 
   // Running balances are tenant-wide from the anchor date: cash uses POS cash,
-  // bank uses signed SePay account movement plus recorded transfer spend.
+  // bank uses signed SePay account movement.
   const today = getVNDateString();
   const openingStart = getVNDayUtcRange(openingDate).startIso;
-  const [revRes, expensesSince, supplierPaymentsSince, bankMovement] =
+  const [revRes, cashExpensesSince, supplierPaymentsSince, bankMovement] =
     await Promise.all([
       fetchRevenueKpis(null, openingDate, today),
-      sumExpensesSinceByMethod(supabase, tenantId, openingDate),
+      sumCashExpensesSince(supabase, tenantId, openingDate),
       sumSupplierPaymentsByMethod(supabase, tenantId, openingStart),
       fetchSepayBankMovementSince(supabase, tenantId, openingDate),
     ]);
@@ -273,12 +236,9 @@ export async function fetchCashSummary(
       } | null)
     : null;
   const cashInSince = toNumber(revData?.cash_revenue);
-  const cashOutSince = expensesSince.cash + supplierPaymentsSince.cash;
+  const cashOutSince = cashExpensesSince + supplierPaymentsSince.cash;
   const bankInSince = bankMovement.inAmount;
-  const bankOutSince =
-    bankMovement.outAmount +
-    expensesSince.unmatchedTransfer +
-    supplierPaymentsSince.bankTransfer;
+  const bankOutSince = bankMovement.outAmount;
 
   const bankSettingRaw = settingMap.get(
     SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE,
@@ -297,7 +257,7 @@ export async function fetchCashSummary(
     bankOpeningBalance,
     bankInSince,
     bankOutSince,
-    bankOnHand: bankOpeningBalance + bankInSince - bankOutSince,
+    bankOnHand: calculateSepayBankBalance(bankOpeningBalance, bankMovement),
     expensesPaidPeriod,
     supplierPaymentsPaidPeriod,
     cashOutPaidPeriod,

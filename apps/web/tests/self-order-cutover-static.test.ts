@@ -111,7 +111,8 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   assert.match(menu, /from "\.\/menu-display"/);
   assert.match(menu, /menuPromptTitle/);
   assert.doesNotMatch(menu, /bg-gradient-to-t from-black/);
-  assert.doesNotMatch(menu, /featuredMainDishes|MenuPhotoButton|grid-cols-2/);
+  assert.doesNotMatch(menu, /featuredMainDishes|MenuPhotoButton/);
+  assert.match(menu, /grid grid-cols-1 gap-3 md:grid-cols-2/);
   assert.doesNotMatch(menu, /category\.type !== "main_dish"/);
   assert.match(menu, /items-stretch justify-start gap-4 p-3/);
   assert.match(menu, /active:scale-95/);

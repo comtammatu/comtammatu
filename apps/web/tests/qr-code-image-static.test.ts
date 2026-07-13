@@ -18,6 +18,10 @@ function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
+function readRepo(path: string): string {
+  return readFileSync(join(process.cwd(), "../..", path), "utf8");
+}
+
 test("public QR surfaces use the shared web QR renderer", () => {
   const sharedQr = readWeb("app/components/qr-code-image.tsx");
   const posQr = readWeb(
@@ -386,6 +390,14 @@ test("MoMo Self-Order uses signed checkout, IPN, and a return route", () => {
   }
   assert.doesNotMatch(activeStatePatch, /self_order_cancel_payment_request/);
   assert.doesNotMatch(activeStatePatch, /self_order_expire_payment_request/);
+  assert.match(
+    activeStatePatch,
+    /v_method_match_count <> 2[\s\S]*self_order_momo_order_sync_contract_changed/,
+  );
+  assert.match(
+    activeStatePatch,
+    /pr\.method = 'momo' AND v_payment_method = 'momo'/,
+  );
   assert.doesNotMatch(migration, /FROM pg_proc/);
   assert.match(migration, /assert_no_pending_momo_payment/);
   assert.match(migration, /momo_payment_pending/);

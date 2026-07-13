@@ -3,12 +3,14 @@ import { updateSession } from "@comtammatu/database/supabase/middleware";
 import {
   buildAccessDeniedPath,
   canAccess,
+  canAccessRouteSurface,
   extractClaimsFromAccessToken,
   isAdminRoutePath,
   isPublicAppPath,
   PERMISSION_KEYS,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
+  resolveRouteFamilyContract,
   type BlockedStateReasonCode,
   type JwtClaims,
   type ModuleKey,
@@ -178,10 +180,10 @@ export async function proxy(request: NextRequest) {
     return redirectWithCookies(url, response);
   }
 
-  // Authenticated — verify claims + module ACL. Blocked operational routes go
-  // to `/access-denied`; disallowed Admin routes go to the role's default
-  // landing page. Proxy is the single gate: layouts and pages downstream MUST
-  // NOT re-check these invariants.
+  // Authenticated — verify claims, route-surface audience, and reusable module
+  // capability. Blocked operational routes go to `/access-denied`; disallowed
+  // Admin Dashboard routes go to the role's default landing page. Proxy is the
+  // single route gate: layouts and pages downstream MUST NOT re-check it.
   //
   // Claims were decoded above from the JWT access_token, NOT from
   // `user.app_metadata`. Supabase-js reads `user.app_metadata` from the
@@ -191,12 +193,20 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  // Module ACL: each route resolves to a ModuleKey, and the user's role
-  // must be in that module's allowedRoles. Admin routes that fail ACL
-  // redirect to the role's default landing page; non-admin routes redirect
-  // to /access-denied.
+  // Surface policy decides whether the role may enter the product plane; the
+  // module ACL then checks the capability reused by that route. Admin Dashboard
+  // failures return to the role's default landing; Branch capability failures
+  // render /access-denied.
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
+    const routeFamily = resolveRouteFamilyContract(pathname);
+    if (
+      !routeFamily ||
+      !canAccessRouteSurface(claims.user_role, routeFamily.surface)
+    ) {
+      return redirectToDefaultLanding(request, response, claims);
+    }
+
     if (!canAccess(claims.user_role, moduleKey)) {
       if (isAdminRoutePath(pathname)) {
         return redirectToDefaultLanding(request, response, claims);

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { loadAuthState } from "@/_lib/auth";
+import { resolveNotificationActionUrl } from "@lib/notifications/action-url";
 import { messages } from "@lib/messages";
 
 export interface NotificationItem {
@@ -50,7 +51,7 @@ export async function listNotifications(
     };
   }
   const { limit, before, unreadOnly } = parsed.data;
-  const { supabase } = await loadAuthState();
+  const { supabase, claims } = await loadAuthState();
 
   const { data, error } = await supabase.rpc("list_notifications", {
     p_limit: limit,
@@ -73,7 +74,12 @@ export async function listNotifications(
       body: row.body,
       entity_type: row.entity_type,
       entity_id: row.entity_id,
-      action_url: row.action_url,
+      action_url: resolveNotificationActionUrl(claims, {
+        actionUrl: row.action_url,
+        entityId: row.entity_id,
+        kind: row.kind,
+        targetBranchId: row.target_branch_id,
+      }),
       meta: (row.meta ?? {}) as Record<string, unknown>,
       created_at: row.created_at,
       expires_at: row.expires_at,

@@ -10,11 +10,8 @@ const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 const migration = read(
   "supabase/migrations/00000000000000_baseline.sql",
 );
-const manyToManyMigration = read(
-  "supabase/migrations/00000000000000_baseline.sql",
-);
-const serviceMatchMigration = read(
-  "supabase/migrations/00000000000000_baseline.sql",
+const expenseAllocationMigration = read(
+  "supabase/migrations/20260713151901_enforce_sepay_expense_allocation_amount.sql",
 );
 const sepayWebhookRoute = read("apps/web/app/api/webhooks/sepay/route.ts");
 const actions = read("apps/web/app/(protected)/finance/expense-actions.ts");
@@ -26,32 +23,36 @@ const loader = read(
   "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
 );
 
-test("SePay expense matching is a many-to-many relation", () => {
+test("SePay expense matching allocates many expenses to one bank transaction", () => {
   assert.match(
     migration,
     /CREATE TABLE public\.bank_transaction_expense_matches/,
   );
   assert.match(migration, /UNIQUE \(tenant_id, webhook_event_id, expense_id\)/);
-  assert.doesNotMatch(manyToManyMigration, /expense_already_matched/);
   assert.match(
-    manyToManyMigration,
-    /CREATE FUNCTION public\.match_sepay_transaction_expenses/,
+    expenseAllocationMigration,
+    /CREATE UNIQUE INDEX bank_tx_expense_matches_tenant_expense_uidx/,
   );
-  assert.match(serviceMatchMigration, /auth\.role\(\) = 'service_role'/);
+  assert.match(expenseAllocationMigration, /expense_already_matched/);
   assert.match(
-    serviceMatchMigration,
+    expenseAllocationMigration,
+    /CREATE OR REPLACE FUNCTION public\.match_sepay_transaction_expenses/,
+  );
+  assert.match(expenseAllocationMigration, /auth\.role\(\) = 'service_role'/);
+  assert.match(
+    expenseAllocationMigration,
     /payment_method IN \('transfer', 'unpaid'\)/,
   );
-  assert.match(serviceMatchMigration, /expense_amount_mismatch/);
+  assert.match(expenseAllocationMigration, /expense_amount_mismatch/);
   assert.match(
-    serviceMatchMigration,
+    expenseAllocationMigration,
     /UPDATE public\.expenses[\s\S]*payment_method = 'transfer'/,
   );
   assert.match(
-    serviceMatchMigration,
+    migration,
     /CREATE FUNCTION public\.record_sepay_cash_deposit_as_system/,
   );
-  assert.match(serviceMatchMigration, /cash_deposit_amount_invalid/);
+  assert.match(migration, /cash_deposit_amount_invalid/);
 });
 
 test("SePay expense matching UI and actions use the plural RPC path", () => {

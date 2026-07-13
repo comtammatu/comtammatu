@@ -8,6 +8,10 @@ import {
   isRunnerPublicDisplayPath,
   resolveModuleFromPath,
 } from "./route-resolution";
+import {
+  canAccessRouteSurface,
+  resolveRouteFamilyContract,
+} from "./route-map";
 import type { JwtClaims, StaffRole } from "./types";
 import { ADMIN_ROLES } from "./types";
 
@@ -176,6 +180,14 @@ export function resolvePostLoginRedirect(
 
   if (isRunnerPublicDisplayPath(targetUrl.pathname)) {
     return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
+  }
+
+  const routeFamily = resolveRouteFamilyContract(targetUrl.pathname);
+  if (
+    !routeFamily ||
+    !canAccessRouteSurface(claims.user_role, routeFamily.surface)
+  ) {
+    return fallback;
   }
 
   const moduleKey = resolveModuleFromPath(targetUrl.pathname);

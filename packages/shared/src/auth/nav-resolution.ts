@@ -3,7 +3,7 @@ import { canAccess, type ModuleKey, MODULE_ACL } from "./module-acl";
 import {
   resolveAdminDiscoveryGroups,
   resolveBranchManagementDiscoveryGroup,
-  resolveWorkspaceDiscoveryGroup,
+  resolveAdminDashboardDiscoveryGroup,
 } from "./app-discovery";
 import { APP_COPY_VI } from "../labels";
 
@@ -75,8 +75,8 @@ export function resolveAdminNavGroups(role: StaffRole): ResolvedNavGroup[] {
   }));
 }
 
-export function resolveWorkspaceItems(role: StaffRole): ResolvedNavLink[] {
-  const group = resolveWorkspaceDiscoveryGroup(role);
+export function resolveAdminDashboardItems(role: StaffRole): ResolvedNavLink[] {
+  const group = resolveAdminDashboardDiscoveryGroup(role);
 
   if (!group) {
     return [];

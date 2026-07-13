@@ -3,8 +3,8 @@
  * These are compatibility auth buckets, not mutable HR position labels.
  *
  * D076: `office`, `warehouse_manager`, and `production_manager` are retired.
- * Office plane workspaces stay owner (+ branch_manager where MODULE_ACL already
- * admits them). Central-site soft-routing is gone; `BranchKind` enum values
+ * Admin Dashboard modules stay role-filtered by MODULE_ACL. Central-site
+ * soft-routing is gone; `BranchKind` enum values
  * remain for historical inventory rows only.
  */
 export const ACCESS_BUCKETS = [

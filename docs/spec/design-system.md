@@ -83,10 +83,21 @@ shared component layer. Update this file only for a real contract change.
 
 Com Tam Ma Tu is an operational restaurant system. The UI should feel calm, fast, touch-safe, and business-specific.
 
-- POS and KDS are frontline tools. The first viewport must expose the next safe action or live queue.
-- Admin surfaces are dense management workspaces. They should prioritize tables, filters, forms, and review states over decorative summary chrome.
+- The authenticated product has exactly two planes. `Admin Dashboard` is
+  Owner-only for cross-system KPIs, controls, master data, and tenant settings.
+  `Branch` is the daily-work plane for Branch Manager and Staff; Owner may enter
+  it for oversight or cover.
+- POS, KDS, and Runner are full-screen chrome modes inside Branch, not separate
+  product planes. Their first viewport must expose the next safe action or live
+  queue.
+- Admin Dashboard is a dense management workspace. It should prioritize tables,
+  filters, forms, review states, and actionable summaries over decorative
+  chrome.
 - Inventory surfaces are workflow-first. The user should see pending tasks, required documents, and exception states before secondary analytics.
-- Employee surfaces are lightweight task portals. Keep them narrow, direct, and consistent with the shared shell.
+- Staff workflows stay inside Branch. Keep them narrow, direct, and consistent
+  with the shared system.
+- `/notifications` is a Branch utility. Public and self-order routes are an
+  external boundary, not another authenticated plane.
 
 The visual tone is rice-cream foundation, terracotta primary action, deep navy text, warm rice-yellow accents, restrained borders, semantic status colors, and strong spacing discipline.
 
@@ -477,7 +488,8 @@ Shared layout adapters also exported from `surface.tsx`:
 
 - `KpiRow` — responsive grid (1/2/3/4 columns) wrapping `KpiCard` metric tiles.
 - `DescriptionList` — `<dl>` term/description pairs for detail-page metadata.
-- `LinkCardGrid` — responsive grid (1/2/3 columns) wrapping `AppLinkCard` entries.
+- `LinkCardGrid` — responsive grid (1/2/3/4 columns) wrapping `AppLinkCard`
+  entries.
 - `DocumentFormFrame` — page frame for document/line-form workflows (header +
   scrollable body + footer) composing `AppPage`; a page-section adapter, not a
   chrome shell.
@@ -538,10 +550,10 @@ and actions for the same row. Route-local data-table suites are not allowed.
 
 Branch runtime has one explicit presentation-plane exception: a declared
 Branch-native touch `LIST` under `/br/[branchId]/*` may use `Item`/`ItemGroup`
-at every supported phone/tablet width when the corresponding Office route owns
+at every supported phone/tablet width when the corresponding Admin Dashboard route owns
 the dense `DataTable`. The two planes MUST share the server loader, pure model,
 status vocabulary, and mutation authority; Branch MUST NOT maintain separate
-mobile/tablet JSX trees or switch to the Office table at tablet landscape.
+mobile/tablet JSX trees or switch to the Admin Dashboard table at tablet landscape.
 Each exception is named in `docs/spec/page-archetypes.md` § Named Exceptions.
 
 Inline-edit document sheets (PO/transfer/issue lines) use the same adapter:
@@ -668,9 +680,9 @@ allowlist, so audit coverage and lint enforcement stay in lockstep.
 - Use semantic state tokens; operational mode colors must still come from shared tokens.
 - Bump/complete actions need large touch targets and clear focus states.
 
-### Admin
+### Admin Dashboard
 
-- Use the shared admin shell, sidebar, breadcrumb, page heading rhythm, table/list/detail forms, and empty states.
+- Owner only. Use the shared Admin Dashboard shell, sidebar, breadcrumb, page heading rhythm, table/list/detail forms, and empty states.
 - Prefer filters plus table/list views over dashboard-card mosaics.
 - Page summaries are allowed only when they help decide the next management action.
 - CRUD dialogs use shared form helpers and Zod 4 schemas.
@@ -741,48 +753,40 @@ tracked by the machine-owned enforcement scripts below.
 ### A. Chrome Archetypes (approved families)
 
 Every route mounts exactly one approved chrome family. A new chrome family is a
-contract change; route-local chrome outside this list is drift.
+contract change; route-local chrome outside this list is drift. Chrome families
+implement the two authenticated planes and the external boundary; they do not
+create more planes.
 
-1. Management chrome — the shared `AppShell`
-   (`apps/web/app/components/app-shell.tsx`) with a role/scope-aware multi-group
-   sidebar and one top header. Covers tenant Admin (`/admin/*`), the domain
-   workspaces (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`). One
-   shell, one sidebar, one header — sidebar groups differ by role/scope, the
-   chrome does not. The single Management sidebar renders primary module tabs
-   first and nests the active module's deep nav as sub-tabs under that active
-   primary tab. Admin command pages collapse under one "Quản trị" primary tab;
-   Management bottom nav shows on phone and tablet portrait (`<lg`); only
-   desktop (`≥lg`) uses the fixed sidebar. Tablet portrait therefore gets the
-   bottom nav + `Mô-đun` drawer instead of a desktop sidebar crammed onto a
-   narrow width — the same compact chrome the Branch runtime plane uses at that
-   width, so the two planes no longer diverge at 768–1023px (D068 §3). The
-   sidebar's drawer-vs-fixed cutover is driven by `useIsMobile(1024)` in
-   `app-shell.tsx`; the phone breakpoint (`useIsMobile()` = 768) that governs
-   DataTable/toaster/POS is unchanged.
-2. Branch runtime chrome — the branch-scoped operator layout
+1. Admin Dashboard chrome — the shared `AppShell`
+   (`apps/web/app/components/app-shell.tsx`) with one module sidebar and one top
+   header. It is Owner-only and covers tenant controls (`/admin/*`) plus the
+   cross-system modules (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`,
+   `/branches`). The sidebar renders primary module tabs first and nests the
+   active module's deep nav beneath the active primary tab. Admin Dashboard
+   bottom nav shows below `lg`; the fixed sidebar shows at `lg` and above.
+   Tablet portrait therefore gets the bottom nav + `Mô-đun` drawer instead of
+   a fixed sidebar. The drawer-vs-fixed cutover is `1024px`; the `768px`
+   breakpoint governing DataTable/toaster/POS remains unchanged.
+2. Branch standard chrome — the branch-scoped operator layout
    (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
-   branch hub, staff daily work under `/br/[branchId]/shift/*`, stock action
-   entry points under `/br/[branchId]/stock/*`, and branch management
-   (`/br/[branchId]/dashboard`, `/br/[branchId]/settings/*`) when reached from
-   the branch runtime. It uses the shared brand primitives, compact `AppPage`,
-   and `AppBottomNav`; `branch_management` is a route family inside this chrome,
-   not a reason to return to office Management chrome or add another shell.
-3. Operations chrome — purpose-built, full-screen, single-job surfaces that
-   legitimately cannot wear the management sidebar: POS (`/br/[branchId]/pos`),
-   KDS and Runner (`/br/[branchId]/{kds,runner}`). These keep bespoke layout,
-   but consume the same tokens,
-   typography, status vocabulary, header lockup, and bottom-nav primitives as
-   Management — a different layout, never a second visual language.
-4. Standalone chrome-less surfaces — a named, closed exception, not a fourth
-   general-purpose shell: `/notifications` and `/br` (the branch picker). Both
-   are reachable from more than one plane (`/notifications` from Management,
-   Branch runtime, and Operations via `?returnTo=`; `/br` is reached before any
-   branch context — and therefore any Branch runtime chrome — exists) so they
-   deliberately mount no sidebar, header lockup, or bottom nav; they render
-   `AppPage`/`AppPageHeader` only and rely on an explicit in-page back link
-   (`returnTo` / role-home) instead of persistent chrome. Adding a fourth
-   general-purpose chrome family for cross-plane utility pages remains drift —
-   new candidates for this exception need an owner decision and a name here.
+   canonical hub `/br/[branchId]`, staff daily work, Branch Manager workflows,
+   stock actions, and Branch settings. Owner may enter the same plane for
+   oversight. `/br/[branchId]/dashboard` is a compatibility redirect to the
+   hub, not a second Branch home. The plane uses shared brand primitives,
+   compact `AppPage`, and `AppBottomNav`.
+3. Branch station chrome modes — purpose-built, full-screen, single-job modes
+   inside the Branch plane: POS (`/br/[branchId]/pos`), KDS, and Runner
+   (`/br/[branchId]/{kds,runner}`). They keep bespoke layouts but consume the
+   same tokens, typography, status vocabulary, header lockup, and navigation
+   primitives. A different chrome mode is not a different plane or visual
+   language.
+4. Chrome-less utilities and boundaries — a named, closed exception, not a
+   third authenticated plane: `/notifications` is a Branch utility; `/br` is
+   the pre-context branch picker; public and self-order routes are outside the
+   authenticated product boundary. These surfaces deliberately mount no
+   sidebar, header lockup, or bottom nav. They render `AppPage` /
+   `AppPageHeader` only and use an explicit in-page back link where applicable.
+   New candidates need an owner decision and a name here.
 
 A surface that is neither is drift: a route may not invent another chrome (a
 hand-rolled `<main>` + back-button container, a per-page header lockup, or a
@@ -793,25 +797,25 @@ second sidebar idiom).
 "Shell" means a component that owns chrome (sidebar, header, full-screen frame,
 or outer padding). It is governed by an allowlist, not by the `-shell` filename.
 
-- The only chrome shells permitted are: `app-shell.tsx` (canonical Management
-  chrome); `office-module-shell.tsx`, the generic Management wrapper that
-  projects the shared office nav for modules with no shell-scoped client state
+- The only chrome shells permitted are: `app-shell.tsx` (canonical Owner-only
+  Admin Dashboard chrome); `admin-dashboard-module-shell.tsx`, the generic
+  Admin Dashboard wrapper that projects shared navigation for modules with no shell-scoped client state
   (admin/hr/menu/orders, keyed by a serializable module id); the two domain
   wrappers `finance-shell.tsx` / `inventory-shell.tsx`, which keep a wrapper
   only because they own shell-scoped client state `AppShell` cannot absorb
   (finance: a lifted realtime channel; inventory: branch-reactive nav plus the
   branch-filter / mobile-top-bar header chrome) — this is the end state, not a
   transitional split; the approved Branch runtime chrome under
-  `(protected)/br/[branchId]/(operator)/layout.tsx`; and the approved Operations
-  chrome (the POS desktop shell, the operational PWA toolbar, the employee
-  header + bottom-nav). The baseline only shrinks.
+  `(protected)/br/[branchId]/(operator)/layout.tsx`; and the approved Branch
+  station chrome (the POS desktop shell and operational PWA toolbar). The
+  baseline only shrinks.
 - The canonical standalone header lockup and bottom-nav MUST be exported
   primitives (`AppHeader`, `AppBottomNav`) that approved non-sidebar chrome
   families consume, not re-implemented per surface. `AppShell` keeps its own
   sidebar utility bar.
-- Branch runtime, Operations, and employee-lib surfaces MUST NOT import or render
-  Management/Office chrome (`AppShell`, `ManagementShell`, `OfficeModuleShell`,
-  `resolveOffice*`, `office-nav`, `finance-shell`, `inventory-shell`). They must
+- Branch runtime, Branch station modes, and employee-lib surfaces MUST NOT
+  import or render Admin Dashboard chrome (`AppShell`, `ManagementShell`, `AdminDashboardModuleShell`,
+  `resolveAdminDashboard*`, `admin-dashboard-nav`, `finance-shell`, `inventory-shell`). They must
   use the approved operator/operations chrome, shared `AppHeader` /
   `AppBottomNav`, `EmployeePage`, or an `embedded` branch of the canonical
   `PageContent`.
@@ -821,7 +825,7 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
 - Gate (Stage 0): a `shell-registry` ratchet freezes the current chrome-shell
   set as baseline; a new `*-shell` file or new bespoke chrome
   (`SidebarProvider` / page-owned `<main>`) outside the allowlist fails CI. The
-  baseline only decreases. Management navigation stays inside the one
+  baseline only decreases. Admin Dashboard navigation stays inside the one
   allowlisted `app-shell.tsx` with one `SidebarProvider` and one `Sidebar`;
   module-level sub-nav must not spread into a second shell family or route-local
   chrome.
@@ -850,9 +854,12 @@ recipe:
 
 1. **Current work state** — the employee's current shift state and only the
    next safe action when one exists.
-2. **Live queue rows** — only work with a count greater than zero.
-3. **Tools menu** — POS/KDS/Runner, orders, settings and management workspaces
-   live in one permission-scoped header menu, never as stacked body sections.
+2. **Actionable queues and exceptions** — only work with a count greater than
+   zero; manager-only signals render only for authorized roles and link to the
+   owning Branch workflow.
+3. **Tools menu** — POS/KDS/Runner, orders, Branch settings, and manager-only
+   Branch workflows live in one permission-scoped header menu, never as stacked
+   body sections.
 
 The recipe varies only in which slots and data populate it, never in the
 structure. Numbers appear as badges on their actionable rows. There are no KPI
@@ -864,18 +871,19 @@ shortcut sections.
 
 ### D. Navigation Single-Source
 
-- Navigation is data, not per-shell code. Every Management route renders the
-  same role/scope-filtered primary tabs from `resolveOfficePrimaryTabs`
-  (`apps/web/app/lib/office-nav.ts`, projected from
+- Navigation is data, not per-shell code. Every Admin Dashboard route renders
+  the same Owner-authorized primary tabs from `resolveAdminDashboardPrimaryTabs`
+  (`apps/web/app/lib/admin-dashboard-nav.ts`, projected from
   `packages/shared/src/auth/nav-config.ts` via the shared `resolveAdminNavGroups`
-  / `resolveBranchManagementItems` / `resolveWorkspaceItems` resolvers). Deep nav
-  comes from `resolveOfficeDeepNav`, `resolveBranchDeepNav`, or module-local
+  / `resolveAdminDashboardItems` resolvers).
+  `resolveBranchManagementItems` is a Branch capability group, not another
+  plane. Deep nav
+  comes from `resolveAdminDashboardDeepNav`, `resolveBranchDeepNav`, or module-local
   resolvers (`finance/components/finance-nav.ts`, `inventory/_lib/inventory-nav.ts`).
   Inline `ShellNavGroup[]` literals inside a shell are forbidden (gate
   `nav-shell-inline-literal`, baseline 0).
-- Tablet/desktop sidebar and mobile bottom-nav render from the same resolved
-  model for a role; they may differ in density and item count, never in
-  membership source.
+- Within each plane, sidebar/drawer and bottom-nav render from the same resolved
+  model; they may differ in density and item count, never in membership source.
 - Active-state matching uses the single `isNavItemActive` helper
   (`apps/web/app/lib/shell-primitives.ts`); per-surface `startsWith` / `isActive`
   reimplementations are forbidden.
@@ -889,12 +897,12 @@ shortcut sections.
 - Outer page padding is applied exactly once and never compounds. `AppPage`
   (`apps/web/app/components/surface.tsx`) owns the page-padding scale (`p-4`,
   `p-3` compact — per the Rhythm Contract above) and is nesting-aware.
-- The Management frame padding is applied once by `AppShell` `<main>`;
+- The Admin Dashboard frame padding is applied once by `AppShell` `<main>`;
   `AppPage` defers to it through `AppShellPaddingBoundary`. An `AppPage` mounted
   inside `AppShell` main drops its own padding while keeping its centered
   max-width; an `AppPage` mounted inside another `AppPage` drops both padding and
-  max-width; a standalone `AppPage` (operations, employee, public) applies both
-  itself. Surfaces therefore never double-pad.
+  max-width; a standalone `AppPage` (Branch station, Branch utility, public)
+  applies both itself. Surfaces therefore never double-pad.
 - Leaf pages MUST NOT set ad-hoc root padding (`p-*` / `px-*` / `py-*` on the
   page root); route spacing through `AppPage` density.
 - Gate (Stage 0): a page-padding ratchet baselines the current ad-hoc

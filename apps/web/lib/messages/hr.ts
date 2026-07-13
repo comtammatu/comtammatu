@@ -5,11 +5,8 @@ export const hr = {
   workspace: {
     eyebrow: "Nhân sự",
     ownerTitle: "Nhân sự",
-    branchManagerTitle: "Ngày công",
     ownerDescription:
       "Tách hồ sơ nhân sự, chấm công/ngày công, checklist theo vị trí và lương cho mô hình Hộ kinh doanh.",
-    branchManagerDescription:
-      "Theo dõi ca, ngày công, kết ca và nghỉ phép của chi nhánh được gán.",
   },
   actions: {
     fetchEmployeesFailed: "Không thể tải danh sách nhân viên.",
@@ -75,7 +72,9 @@ export const hr = {
         "Nhân viên vẫn có thể thêm dòng ngoài danh sách khi báo cáo ca.",
       addIngredients: "Chọn nguyên liệu",
       addIngredientsConfirm: (count: number) =>
-        count > 0 ? `Thêm ${formatCount(count)} nguyên liệu` : "Thêm nguyên liệu",
+        count > 0
+          ? `Thêm ${formatCount(count)} nguyên liệu`
+          : "Thêm nguyên liệu",
       ingredientSearch: "Tìm nguyên liệu...",
       removeIngredient: "Bỏ nguyên liệu",
       empty: "Chưa có việc nào cho vị trí này.",
@@ -216,8 +215,7 @@ export const hr = {
           "Không thể tải hợp đồng lao động. Tính lương bị hủy.",
         attendanceLoadFailed:
           "Không thể tải dữ liệu chấm công. Tính lương bị hủy.",
-        leaveLoadFailed:
-          "Không thể tải dữ liệu nghỉ phép. Tính lương bị hủy.",
+        leaveLoadFailed: "Không thể tải dữ liệu nghỉ phép. Tính lương bị hủy.",
       },
       entriesLoadFailed: "Không thể tải bảng lương.",
       approveFailed: "Không thể duyệt bảng lương.",

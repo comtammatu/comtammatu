@@ -218,7 +218,7 @@ const MenuItemGrid = memo(function MenuItemGrid({
       className={cn(
         "grid grid-cols-2 gap-3",
         sparseMenu
-          ? "md:grid-cols-1"
+          ? "md:grid-cols-2"
           : "sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4",
       )}
     >

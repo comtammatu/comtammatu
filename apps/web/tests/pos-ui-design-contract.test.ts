@@ -18,6 +18,10 @@ const posDesktopInnerSource = readFileSync(
   "utf8",
 );
 const posDesktopSource = `${posShellSource}\n${posDesktopInnerSource}`;
+const posMenuGridSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx"),
+  "utf8",
+);
 
 const appendDraftSource = readFileSync(
   join(
@@ -131,6 +135,15 @@ test("POS service mode uses ToggleGroup primitive state instead of route-local s
   assert.doesNotMatch(serviceModeSelector, /!rounded-none/);
   assert.doesNotMatch(serviceModeSelector, /border-r border-border/);
   assert.doesNotMatch(serviceModeSelector, /className="h-full/);
+});
+
+test("POS sparse categories keep two touch columns from tablet widths", () => {
+  assert.match(
+    posMenuGridSource,
+    /const sparseMenu = !isAllMenuActive && visibleItems\.length <= 2/,
+  );
+  assert.match(posMenuGridSource, /sparseMenu\s*\? "md:grid-cols-2"/);
+  assert.doesNotMatch(posMenuGridSource, /sparseMenu\s*\? "md:grid-cols-1"/);
 });
 
 test("POS append draft item rows stay on Item composition instead of Button height overrides", () => {

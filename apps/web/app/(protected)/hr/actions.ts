@@ -22,11 +22,10 @@ import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/_lib/audit";
 
 const HR_ROLES: readonly StaffRole[] = ["owner"];
-const HR_EMPLOYEE_VIEW_ROLES: readonly StaffRole[] = [
+const BRANCH_ATTENDANCE_REVIEW_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
 ];
-const SHIFT_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
 const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";
 const ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS = 300;
 const CONTRACT_TYPES = ["probation", "fixed_term", "indefinite"] as const;
@@ -202,67 +201,27 @@ const EMPLOYEE_SELECT_OWNER = `
       )
     `;
 
-const EMPLOYEE_SELECT_BRANCH_MANAGER = `
-      id, employee_code, is_active,
-      profiles!inner (
-        full_name, branch_id,
-        positions ( code, label_vi ),
-        branches ( name )
-      )
-    `;
-
 export async function fetchEmployees(): Promise<ActionResult> {
-  const baseCtx = await getAuthContext(HR_EMPLOYEE_VIEW_ROLES);
+  const baseCtx = await getAuthContext(HR_ROLES);
   if (!baseCtx) return { success: false, error: "Không có quyền" };
 
-  const { claims, user } = baseCtx;
-  const isBranchManager = claims.user_role === "branch_manager";
-  const canViewEmployeesWithPermission =
-    isBranchManager ||
-    (
-      await Promise.all([
-        probePermission(baseCtx, PERMISSION_KEYS.STAFF_MANAGE),
-        probePermission(baseCtx, PERMISSION_KEYS.HR_VIEW_EMPLOYEE),
-      ])
-    ).some(Boolean);
+  const { claims } = baseCtx;
+  const canViewEmployeesWithPermission = (
+    await Promise.all([
+      probePermission(baseCtx, PERMISSION_KEYS.STAFF_MANAGE),
+      probePermission(baseCtx, PERMISSION_KEYS.HR_VIEW_EMPLOYEE),
+    ])
+  ).some(Boolean);
   if (!canViewEmployeesWithPermission) {
     return { success: false, error: "Không có quyền" };
   }
 
-  let branchManagerBranchId = claims.branch_id;
-  if (isBranchManager && branchManagerBranchId == null) {
-    const { data: profileBranch } = await baseCtx.supabase
-      .from("profiles")
-      .select("branch_id")
-      .eq("id", user.id)
-      .eq("tenant_id", claims.tenant_id)
-      .maybeSingle();
-    branchManagerBranchId = profileBranch?.branch_id ?? null;
-  }
-
-  // Branch manager read path is intentionally service-role backed:
-  // 1) supports older role-template states where `hr:view_employee`
-  //    has not been backfilled yet,
-  // 2) keeps tenant/branch scoping enforced in code for explicit safety.
-  const employeeClient = isBranchManager
-    ? createServiceClient()
-    : baseCtx.supabase;
-
-  let query = employeeClient
+  const query = baseCtx.supabase
     .from("employees")
-    .select(
-      isBranchManager ? EMPLOYEE_SELECT_BRANCH_MANAGER : EMPLOYEE_SELECT_OWNER,
-    )
+    .select(EMPLOYEE_SELECT_OWNER)
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false })
     .limit(200);
-
-  if (isBranchManager) {
-    if (branchManagerBranchId == null) {
-      return { success: true, data: [] };
-    }
-    query = query.eq("profiles.branch_id", branchManagerBranchId);
-  }
 
   const { data, error } = await query;
 
@@ -926,28 +885,18 @@ const attendancePhotoSchema = z.object({
 
 export const fetchAttendance = withAction(
   {
-    roles: SHIFT_ROLES,
+    roles: HR_ROLES,
     schema: fetchAttendanceSchema,
     permission: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
-    if (
-      claims.user_role === "branch_manager" &&
-      claims.branch_id !== data.branchId
-    ) {
-      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-    }
-
     const startDate = `${data.month}-01`;
     const [year, mon] = data.month.split("-").map(Number);
     const endDate = getVNMonthEndDateString(year!, mon!);
 
-    const attendanceClient =
-      claims.user_role === "branch_manager" ? createServiceClient() : supabase;
-
-    const { data: result, error } = await attendanceClient
+    const { data: result, error } = await supabase
       .from("attendance_records")
       .select(
         `
@@ -986,26 +935,19 @@ export const fetchAttendance = withAction(
 
 export const getAttendancePhotoUrl = withAction(
   {
-    roles: SHIFT_ROLES,
+    roles: HR_ROLES,
     schema: attendancePhotoSchema,
     permission: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
-    let query = supabase
+    const query = supabase
       .from("attendance_records")
       .select("id, branch_id, check_in_photo_path")
       .eq("id", data.attendanceId)
       .eq("branch_id", data.branchId)
       .eq("tenant_id", claims.tenant_id);
-
-    if (claims.user_role === "branch_manager") {
-      if (claims.branch_id == null) {
-        return { success: false, error: "Tài khoản chưa được gán chi nhánh." };
-      }
-      query = query.eq("branch_id", claims.branch_id);
-    }
 
     const { data: record, error } = await query.maybeSingle();
 
@@ -1070,7 +1012,7 @@ function mapForceCloseAttendanceError(message: string | undefined): string {
 
 export const forceCloseStaleAttendance = withAction(
   {
-    roles: HR_EMPLOYEE_VIEW_ROLES,
+    roles: BRANCH_ATTENDANCE_REVIEW_ROLES,
     schema: forceCloseStaleAttendanceSchema,
     permission: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
     permissionBranchId: (data) => data.branchId,
@@ -1137,28 +1079,18 @@ const fetchAttendanceSummarySchema = z.object({
 
 export const fetchAttendanceSummary = withAction(
   {
-    roles: SHIFT_ROLES,
+    roles: HR_ROLES,
     schema: fetchAttendanceSummarySchema,
     permission: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
-    if (
-      claims.user_role === "branch_manager" &&
-      claims.branch_id !== data.branchId
-    ) {
-      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-    }
-
     const startDate = `${data.month}-01`;
     const [year, mon] = data.month.split("-").map(Number);
     const endDate = getVNMonthEndDateString(year!, mon!);
 
-    const attendanceClient =
-      claims.user_role === "branch_manager" ? createServiceClient() : supabase;
-
-    const { data: result, error } = await attendanceClient
+    const { data: result, error } = await supabase
       .from("attendance_records")
       .select(
         `

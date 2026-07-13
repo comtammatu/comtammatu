@@ -197,9 +197,10 @@ const sepayOrderEvidenceRpcResultSchema = z
 
 const cashDepositRpcResultSchema = z
   .object({
-    expense_id: z.number().nullable().optional(),
+    status: z.enum(["recorded", "already_recorded"]),
+    expense_id: z.number().int().positive(),
   })
-  .passthrough();
+  .strict();
 
 type SepayPayload = z.infer<typeof sepayPayloadSchema>;
 type ServiceClient = ReturnType<typeof createServiceClient>;
@@ -595,7 +596,7 @@ export async function POST(request: Request) {
       http_status: 200,
       error_code: bankCommand
         ? "bank_content_wrong_transfer_type"
-        : "transfer_type_out",
+        : null,
     });
     return sepayAcceptedResponse();
   }
@@ -629,13 +630,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false }, { status: 500 });
     }
 
-    const parsedCashDepositData =
-      cashDepositRpcResultSchema.safeParse(rawCashDepositData);
-    const expenseId = parsedCashDepositData.success
-      ? (parsedCashDepositData.data.expense_id ?? null)
-      : null;
+    const parsedCashDepositData = cashDepositRpcResultSchema.safeParse(
+      rawCashDepositData,
+    );
+    if (!parsedCashDepositData.success) {
+      console.error("[sepay-webhook] invalid bank_deposit RPC result");
+      await markWebhookEvent(supabase, webhookEventId, {
+        processing_status: "failed",
+        http_status: 500,
+        error_code: "bank_deposit_result_invalid",
+      });
+      return NextResponse.json({ success: false }, { status: 500 });
+    }
+
     await markWebhookEvent(supabase, webhookEventId, {
-      expense_id: expenseId,
+      expense_id: parsedCashDepositData.data.expense_id,
       processing_status: "processed",
       http_status: 200,
     });

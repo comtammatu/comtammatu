@@ -33,13 +33,25 @@ test("historical migrations stay outside the Preview migration input", () => {
       "20260712161526_quarantine_duplicate_sepay_transfers.sql",
       "20260712174500_allow_self_order_pending_add_more.sql",
       "20260712201500_add_momo_self_order_checkout.sql",
-      "20260712210000_repair_canh_kho_qua_location_ledger_drift.sql",
       "20260713032254_harden_runtime_control_plane.sql",
       "20260713060850_adjudicate_sepay_payment_conflicts.sql",
       "20260713061000_retire_inventory_expiry_alert_contract.sql",
+      "20260713150807_harden_sepay_cash_deposit_boundary.sql",
+      "20260713151901_enforce_sepay_expense_allocation_amount.sql",
       "20260713173142_rewire_menu_limit_stock_exception_to_warehouse.sql",
+      "20260713210000_enforce_owner_only_refund_controls.sql",
       "20260713221534_drop_legacy_confirm_production_run_overload.sql",
     ],
+  );
+  assert.ok(
+    existsSync(
+      resolve(
+        repoRoot,
+        "supabase/migration-archive",
+        "20260712210000_repair_canh_kho_qua_location_ledger_drift.sql",
+      ),
+    ),
+    "the already-applied one-off ledger repair belongs in history, not fresh Preview replay",
   );
 
   for (const unsafe of [
@@ -48,6 +60,7 @@ test("historical migrations stay outside the Preview migration input", () => {
     "20260710201500_retire_central_and_office_buckets.sql",
     "20260712021050_canonicalize_payment_methods.sql",
     "20260712061358_persist_cash_evidence_before_receipt.sql",
+    "20260713153523_persist_sepay_supplier_payment_match.sql",
   ]) {
     assert.equal(existsSync(resolve(migrationsDir, unsafe)), false);
     assert.equal(
