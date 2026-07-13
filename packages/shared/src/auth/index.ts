@@ -33,6 +33,7 @@ export {
 } from "./permissions";
 export {
   extractClaimsFromAccessToken,
+  extractClaimsFromJwtPayload,
   getDefaultRedirect,
   getSafeInternalReturnTo,
   isAdminRole,

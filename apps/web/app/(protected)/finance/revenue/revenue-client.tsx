@@ -18,6 +18,7 @@ import {
   formatPercent,
   formatVND,
 } from "@comtammatu/shared/format";
+import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
 import {
   AppEmptyState,
   AppPage,
@@ -76,6 +77,7 @@ import type {
   KpiBundle,
   RollupRow,
 } from "./_lib/finance-types-revenue";
+import { paymentMethodRevenueBreakdown } from "./_lib/payment-method-breakdown";
 
 const filterCopy = messages.finance.filterBar;
 const revCopy = messages.finance.revenue;
@@ -115,6 +117,7 @@ interface PeriodAggregateRow {
   total_tax: number;
   cash_revenue: number;
   vietqr_revenue: number;
+  momo_revenue: number;
   branch_ids: number[];
 }
 
@@ -131,6 +134,11 @@ function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
       existing.total_tax += r.total_tax ?? 0;
       existing.cash_revenue += r.cash_revenue ?? 0;
       existing.vietqr_revenue += r.vietqr_revenue ?? 0;
+      existing.momo_revenue += paymentMethodRevenueBreakdown({
+        totalRevenue: r.total_revenue ?? 0,
+        cashRevenue: r.cash_revenue ?? 0,
+        vietqrRevenue: r.vietqr_revenue ?? 0,
+      }).momo;
       if (!existing.branch_ids.includes(r.branch_id)) {
         existing.branch_ids.push(r.branch_id);
       }
@@ -146,6 +154,11 @@ function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
         total_tax: r.total_tax ?? 0,
         cash_revenue: r.cash_revenue ?? 0,
         vietqr_revenue: r.vietqr_revenue ?? 0,
+        momo_revenue: paymentMethodRevenueBreakdown({
+          totalRevenue: r.total_revenue ?? 0,
+          cashRevenue: r.cash_revenue ?? 0,
+          vietqrRevenue: r.vietqr_revenue ?? 0,
+        }).momo,
         branch_ids: [r.branch_id],
       });
     }
@@ -304,18 +317,27 @@ export function RevenueClient({
   }));
 
   // ─── Payment donut data ────────────────────────────────────
-  const paymentTotal =
-    (kpis?.cash_revenue ?? 0) + (kpis?.vietqr_revenue ?? 0);
+  const paymentBreakdown = paymentMethodRevenueBreakdown({
+    totalRevenue: kpis?.net_revenue ?? 0,
+    cashRevenue: kpis?.cash_revenue ?? 0,
+    vietqrRevenue: kpis?.vietqr_revenue ?? 0,
+  });
+  const paymentTotal = paymentBreakdown.total;
   const paymentData = [
     {
       key: "cash",
-      label: filterCopy.paymentCash.replace("Chỉ ", ""),
-      value: kpis?.cash_revenue ?? 0,
+      label: PAYMENT_METHOD_LABELS_VI.cash,
+      value: paymentBreakdown.cash,
     },
     {
       key: "vietqr",
       label: "VietQR",
-      value: kpis?.vietqr_revenue ?? 0,
+      value: paymentBreakdown.vietqr,
+    },
+    {
+      key: "momo",
+      label: "MoMo",
+      value: paymentBreakdown.momo,
     },
   ];
 
@@ -341,6 +363,7 @@ export function RevenueClient({
         revCopy.csvHeaders.colNetRevenue,
         revCopy.csvHeaders.colCash,
         revCopy.csvHeaders.colVietqr,
+        revCopy.csvHeaders.colMomo,
         revCopy.csvHeaders.colVat,
       ],
       rows: periodRows.map((r) => [
@@ -349,6 +372,7 @@ export function RevenueClient({
         Math.round(netRevenuePreVatFor(r)),
         Math.round(r.cash_revenue),
         Math.round(r.vietqr_revenue),
+        Math.round(r.momo_revenue),
         Math.round(r.total_tax),
       ]),
       footer: kpis
@@ -358,6 +382,7 @@ export function RevenueClient({
             Math.round(netRevenuePreVat),
             Math.round(kpis.cash_revenue),
             Math.round(kpis.vietqr_revenue),
+            Math.round(paymentBreakdown.momo),
             Math.round(kpis.total_tax),
           ]
         : undefined,
@@ -442,6 +467,12 @@ export function RevenueClient({
       render: (row) => formatVND(row.vietqr_revenue),
     },
     {
+      key: "momo",
+      header: "MoMo",
+      className: "text-right font-mono tabular-nums text-muted-foreground",
+      render: (row) => formatVND(row.momo_revenue),
+    },
+    {
       key: "vat",
       header: revCopy.periodTable.colVat,
       className: "text-right font-mono tabular-nums text-muted-foreground",
@@ -477,6 +508,11 @@ export function RevenueClient({
         {
           key: "vietqr",
           content: formatVND(kpis?.vietqr_revenue ?? 0),
+          className: "text-right font-mono tabular-nums",
+        },
+        {
+          key: "momo",
+          content: formatVND(paymentBreakdown.momo),
           className: "text-right font-mono tabular-nums",
         },
         {
@@ -567,7 +603,6 @@ export function RevenueClient({
         params={params}
         branches={branches}
         basePath="/finance/revenue"
-        hide={["payment"]}
       />
 
       <MvStalenessBanner

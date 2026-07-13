@@ -15,6 +15,7 @@ import {
   type TemplateBlock,
 } from "../template-content";
 import { extractOrderSequence, formatOrderHeaderLabel } from "../order-display";
+import { PAYMENT_LABEL, PAYMENT_LABEL_FULL } from "../labels";
 
 type TextBlock = Extract<PrintDocumentBlock, { type: "text" }>;
 type RowBlock = Extract<PrintDocumentBlock, { type: "row" }>;
@@ -147,6 +148,11 @@ test("order display helpers", () => {
     }),
     "Tại bàn #087",
   );
+});
+
+test("payment labels cover MoMo in receipts and accounting reports", () => {
+  assert.equal(PAYMENT_LABEL.momo, "MoMo");
+  assert.equal(PAYMENT_LABEL_FULL.momo, "MoMo");
 });
 
 test("receipt fallback materializes default layout", () => {

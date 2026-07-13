@@ -57,6 +57,9 @@ export interface SepayBankMovement {
 
 export type SepayUnmatchedMoneyInReason =
   | "overpayment"
+  | "payment_code_conflict"
+  | "payment_method_conflict"
+  | "payment_state_conflict"
   | "webhook_error"
   | "missing_reference"
   | "unmatched_reference";
@@ -160,6 +163,9 @@ export function classifySepayUnmatchedMoneyIn(
 ): SepayUnmatchedMoneyInReason {
   if (isSepayOverpayment(transaction)) return "overpayment";
 
+  const paymentConflict = classifySepayPaymentConflict(transaction);
+  if (paymentConflict) return paymentConflict;
+
   if (
     transaction.processingStatus === "failed" ||
     transaction.errorCode != null
@@ -190,7 +196,12 @@ export function classifySepayReconciliationState(
     | "transferType"
   >,
 ): SepayReconciliationState {
-  if (isSepayOverpayment(transaction)) return "needs_review";
+  if (
+    isSepayOverpayment(transaction) ||
+    classifySepayPaymentConflict(transaction) != null
+  ) {
+    return "needs_review";
+  }
 
   if (
     transaction.processingStatus === "failed" ||
@@ -218,6 +229,26 @@ export function isSepayOverpayment(
     transaction.transferType === "in" &&
     transaction.errorCode === "overpayment_needs_review"
   );
+}
+
+export function classifySepayPaymentConflict(
+  transaction: Pick<SepayBankTransaction, "errorCode" | "transferType">,
+):
+  | "payment_code_conflict"
+  | "payment_method_conflict"
+  | "payment_state_conflict"
+  | null {
+  if (transaction.transferType !== "in") return null;
+  if (transaction.errorCode === "payment_code_conflict_needs_review") {
+    return "payment_code_conflict";
+  }
+  if (transaction.errorCode === "payment_method_conflict_needs_review") {
+    return "payment_method_conflict";
+  }
+  if (transaction.errorCode === "payment_state_conflict_needs_review") {
+    return "payment_state_conflict";
+  }
+  return null;
 }
 
 function readString(

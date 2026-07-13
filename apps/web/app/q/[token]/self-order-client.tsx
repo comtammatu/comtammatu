@@ -152,6 +152,7 @@ function normalizePaymentRequest(
     bankCode: readOptionalString(record, "bankCode"),
     accountNo: readOptionalString(record, "accountNo"),
     accountName: readOptionalString(record, "accountName"),
+    redirectUrl: readOptionalString(record, "redirectUrl"),
     createdAt: readOptionalString(record, "createdAt"),
     expiresAt: readOptionalString(record, "expiresAt"),
   };
@@ -330,14 +331,26 @@ export function SelfOrderClient({
     const currentPaymentClientOpId = paymentStatusClientOpId;
 
     const controller = new AbortController();
+    let paymentStatusInFlight = false;
     async function refreshPaymentStatus() {
+      if (paymentStatusInFlight) return;
+      paymentStatusInFlight = true;
       try {
         const query = new URLSearchParams({
           clientOpId: currentPaymentClientOpId,
         });
         const response = await fetch(
           `/api/self-order/${encodeURIComponent(token)}/payment-status?${query.toString()}`,
-          { cache: "no-store", signal: controller.signal },
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-self-order-request": "1",
+            },
+            body: "{}",
+            cache: "no-store",
+            signal: controller.signal,
+          },
         );
         const payload = (await response.json().catch(() => null)) as {
           status?: unknown;
@@ -352,9 +365,12 @@ export function SelfOrderClient({
           setLocalPaymentRequest(null);
           ignoredPaymentStatusClientOpIdRef.current = currentPaymentClientOpId;
           setPaymentStatusClientOpId(null);
+          void refreshSnapshot();
         }
       } catch {
         return;
+      } finally {
+        paymentStatusInFlight = false;
       }
     }
 
@@ -364,7 +380,7 @@ export function SelfOrderClient({
       controller.abort();
       window.clearInterval(timer);
     };
-  }, [paymentCompleted, paymentStatusClientOpId, token]);
+  }, [paymentCompleted, paymentStatusClientOpId, refreshSnapshot, token]);
 
   useEffect(() => {
     if (!refreshError) {
@@ -569,8 +585,14 @@ export function SelfOrderClient({
   }
 
   function requestPayment(method: "cash_call" | "vietqr" | "momo") {
-    if (!order || activePaymentRequest) return;
-    const fieldErrors = validateInvoice();
+    const recoverMomo =
+      method === "momo" &&
+      activePaymentRequest?.method === "momo" &&
+      activePaymentRequest.status === "momo_pending" &&
+      !activePaymentRequest.redirectUrl &&
+      Boolean(activePaymentRequest.clientOpId);
+    if (!order || (activePaymentRequest && !recoverMomo)) return;
+    const fieldErrors = recoverMomo ? {} : validateInvoice();
     setInvoiceFieldErrors(fieldErrors);
     const firstError = (
       ["buyerName", "buyerTaxCode", "buyerAddress", "buyerEmail"] as const
@@ -584,31 +606,50 @@ export function SelfOrderClient({
       return;
     }
 
-    const intent = resolveClientIntent(
-      paymentIntentRef.current,
-      buildPaymentIntentKey({
-        method,
-        invoice: invoicePayload,
-        orderNumber: order.orderNumber,
-        totalAmount: order.totalAmount,
-      }),
-      () => crypto.randomUUID(),
-    );
-    paymentIntentRef.current = intent;
+    const intent = recoverMomo
+      ? null
+      : resolveClientIntent(
+          paymentIntentRef.current,
+          buildPaymentIntentKey({
+            method,
+            invoice: invoicePayload,
+            orderNumber: order.orderNumber,
+            totalAmount: order.totalAmount,
+          }),
+          () => crypto.randomUUID(),
+        );
+    if (intent) paymentIntentRef.current = intent;
+    const requestClientOpId = recoverMomo
+      ? (activePaymentRequest?.clientOpId ?? "")
+      : (intent?.clientOpId ?? "");
     setPaymentError(null);
     setPaymentCompleted(false);
     setPendingPaymentMethod(method);
     startPayment(async () => {
       const response = await postSelfOrderJson(
         `/api/self-order/${encodeURIComponent(token)}/payment`,
-        { clientOpId: intent.clientOpId, method, invoice: invoicePayload },
+        recoverMomo
+          ? { clientOpId: requestClientOpId, method, recover: true }
+          : {
+              clientOpId: requestClientOpId,
+              method,
+              invoice: invoicePayload,
+            },
       );
       const result = await readApiResponse(response);
       setPendingPaymentMethod(null);
       if (!result.ok) {
         setPaymentError(result.error.message ?? SELF_ORDER_VI.paymentFailed);
+        if (result.error.code === "momo_checkout_retry_required") {
+          paymentIntentRef.current = clearClientIntent(
+            paymentIntentRef.current,
+            requestClientOpId,
+          );
+          void refreshSnapshot();
+        }
         if (
           result.error.code === "active_payment_intent" ||
+          result.error.code === "momo_checkout_in_progress" ||
           result.error.code === "payment_intent_expired" ||
           result.error.code === "payment_completed"
         ) {
@@ -624,7 +665,7 @@ export function SelfOrderClient({
       setLocalPaymentRequest(paymentRequest);
       paymentIntentRef.current = clearClientIntent(
         paymentIntentRef.current,
-        intent.clientOpId,
+        requestClientOpId,
       );
       setBillView("payment");
       setBillOpen(true);

@@ -10,6 +10,7 @@ import { isPosBranchInScope } from "./_lib/auth";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const positiveIdSchema = z.coerce.number().int().positive();
+const paymentRequestMethodSchema = z.enum(["cash_call", "vietqr", "momo"]);
 const storedCartSchema = z
   .array(
     selfOrderCartItemSchema.extend({
@@ -32,6 +33,7 @@ export interface SelfOrderPendingRequest {
 export interface SelfOrderPendingPaymentRequest {
   id: number;
   orderId: number;
+  method: z.infer<typeof paymentRequestMethodSchema>;
 }
 
 export interface SelfOrderPosState {
@@ -43,6 +45,9 @@ function mapSelfOrderActionError(error: { message?: string }) {
   const message = String(error.message ?? "").toLowerCase();
   if (message.includes("self_order_pending_payment_exists")) {
     return SELF_ORDER_VI.pendingPaymentBlocked;
+  }
+  if (message.includes("momo_payment_pending")) {
+    return SELF_ORDER_VI.momoPendingStaffBlocked;
   }
   if (
     message.includes("self_order_retry") ||
@@ -89,10 +94,10 @@ export async function fetchSelfOrderPosState(
       .order("created_at", { ascending: true }),
     ctx.supabase
       .from("self_order_payment_requests")
-      .select("id, order_id")
+      .select("id, order_id, method")
       .eq("tenant_id", ctx.claims.tenant_id)
       .eq("branch_id", parsedBranchId.data)
-      .in("status", ["cash_call", "vietqr_pending"])
+      .in("status", ["cash_call", "vietqr_pending", "momo_pending"])
       .order("created_at", { ascending: false }),
   ]);
 
@@ -120,14 +125,25 @@ export async function fetchSelfOrderPosState(
     });
   }
 
+  const paymentRequests: SelfOrderPendingPaymentRequest[] = [];
+  for (const row of paymentRequestsResult.data ?? []) {
+    const method = paymentRequestMethodSchema.safeParse(row.method);
+    if (!method.success) {
+      console.error("[self-order] invalid payment request method", row.id);
+      return { success: false, error: SELF_ORDER_VI.staffLoadFailed };
+    }
+    paymentRequests.push({
+      id: row.id,
+      orderId: row.order_id,
+      method: method.data,
+    });
+  }
+
   return {
     success: true,
     data: {
       requests,
-      paymentRequests: (paymentRequestsResult.data ?? []).map((row) => ({
-        id: row.id,
-        orderId: row.order_id,
-      })),
+      paymentRequests,
     },
   };
 }

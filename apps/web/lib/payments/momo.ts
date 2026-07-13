@@ -2,10 +2,18 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { loadMomoConfig, type MomoConfig } from "./momo-config";
+import { normalizeMomoCheckoutUrl } from "./momo-url";
+import { buildMomoCreateResponseSignatureSource } from "./momo-signature";
 
-const MOMO_TEST_BASE_URL = "https://test-payment.momo.vn";
 const MOMO_CREATE_PATH = "/v2/gateway/api/create";
 const MOMO_REQUEST_TYPE = "captureWallet";
+const momoTransactionIdSchema = z
+  .union([
+    z.string().regex(/^[1-9]\d*$/),
+    z.number().int().positive().safe(),
+  ])
+  .transform(String);
 
 const momoResultSchema = z
   .object({
@@ -15,7 +23,7 @@ const momoResultSchema = z
     amount: z.coerce.number().finite().nonnegative(),
     orderInfo: z.string(),
     orderType: z.string(),
-    transId: z.coerce.number().int().nonnegative(),
+    transId: momoTransactionIdSchema,
     resultCode: z.coerce.number().int(),
     message: z.string(),
     payType: z.string(),
@@ -30,11 +38,14 @@ const momoCreateResponseSchema = z
     partnerCode: z.string().min(1),
     orderId: z.string().min(1),
     requestId: z.string().min(1),
+    amount: z.coerce.number().int().positive().safe(),
+    responseTime: z.coerce.number().int().nonnegative().safe(),
     resultCode: z.coerce.number().int(),
     message: z.string(),
     payUrl: z.string().url().optional(),
     deeplink: z.string().url().optional(),
-    qrCodeUrl: z.string().url().optional(),
+    qrCodeUrl: z.string().optional(),
+    signature: z.string().min(1),
   })
   .passthrough();
 
@@ -53,47 +64,39 @@ const momoCallbackContextSchema = z
   })
   .strict();
 
-type MomoConfig = {
-  partnerCode: string;
-  accessKey: string;
-  secretKey: string;
-  baseUrl: string;
-};
-
 export type MomoCallbackContext = z.infer<typeof momoCallbackContextSchema>;
 export type MomoResult = z.infer<typeof momoResultSchema>;
 
-export class MomoConfigurationError extends Error {
-  constructor() {
-    super("momo_configuration_invalid");
-  }
+export { MomoConfigurationError, type MomoConfig } from "./momo-config";
+
+export interface MomoTerminalCreateFailure {
+  orderId: string;
+  requestId: string;
+  amount: number;
+  resultCode: number;
+  responseTime: number;
+  message: string;
 }
 
 export class MomoCheckoutError extends Error {
-  constructor() {
+  constructor(
+    readonly terminalFailure: MomoTerminalCreateFailure | null = null,
+  ) {
     super("momo_checkout_failed");
+    this.name = "MomoCheckoutError";
   }
 }
 
 function readConfig(): MomoConfig {
-  const partnerCode = process.env.MOMO_PARTNER_CODE?.trim();
-  const accessKey = process.env.MOMO_ACCESS_KEY?.trim();
-  const secretKey = process.env.MOMO_SECRET_KEY?.trim();
-  const configuredBaseUrl = process.env.MOMO_BASE_URL?.trim();
-  const baseUrl = configuredBaseUrl || MOMO_TEST_BASE_URL;
+  return loadMomoConfig(process.env);
+}
 
-  if (!partnerCode || !accessKey || !secretKey) {
-    throw new MomoConfigurationError();
-  }
+export function assertMomoConfigured(): void {
+  readConfig();
+}
 
-  try {
-    const parsedUrl = new URL(baseUrl);
-    if (parsedUrl.protocol !== "https:") throw new Error("invalid_protocol");
-  } catch {
-    throw new MomoConfigurationError();
-  }
-
-  return { partnerCode, accessKey, secretKey, baseUrl };
+export function getMomoConfig(): MomoConfig {
+  return readConfig();
 }
 
 function sign(secretKey: string, rawSignature: string): string {
@@ -224,17 +227,47 @@ export async function createMomoCheckout(input: {
   const payload = momoCreateResponseSchema.safeParse(
     await response.json().catch(() => null),
   );
+  const payUrl = payload.success
+    ? normalizeMomoCheckoutUrl(payload.data.payUrl)
+    : null;
+  const responseSignatureValid = payload.success
+    ? signaturesEqual(
+        payload.data.signature,
+        sign(
+          config.secretKey,
+          buildMomoCreateResponseSignatureSource(
+            payload.data,
+            config.accessKey,
+          ),
+        ),
+      )
+    : false;
+  const responseIdentityValid =
+    payload.success &&
+    responseSignatureValid &&
+    payload.data.partnerCode === config.partnerCode &&
+    payload.data.orderId === input.orderId &&
+    payload.data.requestId === requestId &&
+    payload.data.amount === input.amount;
+  if (responseIdentityValid && payload.data.resultCode !== 0) {
+    throw new MomoCheckoutError({
+      orderId: payload.data.orderId,
+      requestId: payload.data.requestId,
+      amount: payload.data.amount,
+      resultCode: payload.data.resultCode,
+      responseTime: payload.data.responseTime,
+      message: payload.data.message,
+    });
+  }
   if (
     !response.ok ||
     !payload.success ||
-    payload.data.partnerCode !== config.partnerCode ||
-    payload.data.orderId !== input.orderId ||
-    payload.data.requestId !== requestId ||
+    !responseIdentityValid ||
     payload.data.resultCode !== 0 ||
-    !payload.data.payUrl
+    !payUrl
   ) {
     throw new MomoCheckoutError();
   }
 
-  return { payUrl: payload.data.payUrl, requestId };
+  return { payUrl, requestId };
 }

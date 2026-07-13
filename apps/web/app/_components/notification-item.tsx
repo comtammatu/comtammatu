@@ -41,7 +41,6 @@ function iconFor(kind: string) {
     case "inventory.count_slip_recount":
       return IconAlertTriangle;
     case "inventory.stock_low":
-    case "inventory.expiry_soon":
     case "pos.kds_out_of_stock":
     case "pos.payment_stock_failed":
     case "pos.shift_variance":

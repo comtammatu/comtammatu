@@ -146,7 +146,6 @@ export const finance = {
     expenseTitle: "Chi vận hành",
     expenseDescription:
       "Chi vận hành đã ghi nhận trong kỳ, không gồm giá vốn món.",
-    stageTitle: "Mức báo cáo đang dùng",
     inventoryTitle: "Tiền đang nằm trong kho",
     inventoryDescription:
       "Top nguyên liệu giữ nhiều vốn nhất theo tồn kho hiện tại và giá vốn đang có.",
@@ -157,8 +156,6 @@ export const finance = {
     branchDescription:
       "Chỉ hiện khi bạn có nhiều chi nhánh. Công thức vẫn giống màn hình cơ bản của chủ quán.",
     grossMarginLine: (margin: string) => `${margin} biên gộp`,
-    stageBranchControl: "Theo dõi nhiều chi nhánh",
-    stageCompanyReporting: "Hỗ trợ kế toán để riêng",
     exceptionsTitle: "Điểm cần kiểm tra",
     exceptionsDescription:
       "Chỉ đưa ra ngoại lệ vận hành: lệch quỹ, thiếu giá vốn, HĐĐT kẹt, công nợ NCC hoặc chi vận hành chưa ghi nhận.",
@@ -263,7 +260,7 @@ export const finance = {
       inventoryValue: "Tồn kho",
       grossProfit: "Lãi gộp",
       revenue: "Doanh thu ròng",
-      bankTransactions: "Giao dịch ngân hàng",
+      bankTransactions: "Đối soát thanh toán",
       expenses: "Chi vận hành",
       supplierPayables: "Phải trả NCC",
       invoices: "Hóa đơn điện tử",
@@ -399,17 +396,100 @@ export const finance = {
   },
   bankTransactions: {
     eyebrow: "Tài chính",
-    title: "Giao dịch ngân hàng",
-    description: "Danh sách giao dịch SePay gửi về trong khoảng đang xem.",
+    title: "Đối soát thanh toán",
+    description:
+      "Kiểm tra ngoại lệ MoMo và giao dịch SePay/VietQR trong cùng một luồng đối soát.",
+    momoExceptions: {
+      title: "Ngoại lệ thanh toán MoMo",
+      description:
+        "Các kết quả MoMo thành công nhưng chưa thể chốt tự động. Ghi nhận hoàn tiền tại đây chỉ đóng đối soát sau khi tiền đã được hoàn trên MoMo; hệ thống không tự thực hiện hoàn tiền.",
+      loadFailedTitle: "Không tải được ngoại lệ MoMo",
+      loadFailedDescription:
+        "Dữ liệu đối soát MoMo chưa tải được. Làm mới trang trước khi kết luận không có ngoại lệ.",
+      filters: {
+        active: "Đang mở",
+        open: "Chưa xử lý",
+        reviewing: "Đang xử lý",
+        refunded: "Đã hoàn",
+        all: "Tất cả",
+      },
+      visibleRows: (visible: number, total: number) => `${visible}/${total}`,
+      table: {
+        payment: "Thanh toán",
+        amount: "Số tiền",
+        evidence: "Bằng chứng",
+        status: "Đối soát",
+        action: "Xử lý",
+      },
+      evidenceLabels: {
+        late_success: "MoMo báo thành công muộn",
+        reconciliation_success: "Query xác nhận thành công",
+        retained: "Bằng chứng đã được đóng",
+      },
+      paymentLabel: (id: number) => `Payment #${id}`,
+      orderLabel: (id: number) => `Đơn #${id}`,
+      transactionId: "Mã giao dịch MoMo",
+      providerReference: "Mã tham chiếu",
+      updatedAt: "Cập nhật",
+      reviewedAt: "Đối soát lúc",
+      reviewedBy: "Người đối soát",
+      resolutionReference: "Mã hoàn tiền",
+      missingTransactionId:
+        "Thiếu mã giao dịch MoMo hợp lệ; chưa thể đóng đối soát.",
+      ownerOnly: "Chỉ chủ cửa hàng được cập nhật.",
+      markReviewing: "Ghi nhận đang xử lý",
+      markReviewingPending: "Đang ghi nhận",
+      refundReferenceLabel: "Mã xác nhận hoàn tiền trên MoMo",
+      refundReferencePlaceholder: "Nhập mã hoàn tiền",
+      refundReferenceHint:
+        "Tối thiểu 3 ký tự. Chỉ nhập sau khi đã hoàn tiền bên MoMo.",
+      refundReferenceRequired: "Nhập mã hoàn tiền từ MoMo (3–160 ký tự).",
+      markRefunded: "Ghi nhận đã hoàn",
+      markRefundedPending: "Đang ghi nhận",
+      confirmRefund: {
+        title: "Ghi nhận đã hoàn tiền?",
+        description:
+          "Hành động này chỉ ghi nhận kết quả đã hoàn tại MoMo và đóng ngoại lệ; hệ thống không tự chuyển hay hoàn tiền.",
+        confirmText: "Ghi nhận đã hoàn",
+        cancelText: "Kiểm tra lại",
+        amount: "Số tiền",
+        transactionId: "Mã giao dịch MoMo",
+        reference: "Mã hoàn tiền",
+      },
+      success: {
+        reviewing: "Đã ghi nhận ngoại lệ đang được xử lý.",
+        refunded: "Đã ghi nhận hoàn tiền và đóng ngoại lệ.",
+      },
+      errors: {
+        forbidden: "Chỉ chủ cửa hàng được cập nhật ngoại lệ MoMo.",
+        notReady: "Chức năng đóng ngoại lệ MoMo chưa sẵn sàng.",
+        refundReferenceRequired:
+          "Mã hoàn tiền không hợp lệ; cần từ 3 đến 160 ký tự.",
+        evidenceChanged:
+          "Bằng chứng MoMo đã thay đổi hoặc ngoại lệ đã được người khác xử lý. Hãy làm mới trang.",
+        actionError: "Không thể cập nhật ngoại lệ MoMo.",
+      },
+      emptyActiveTitle: "Không còn ngoại lệ MoMo đang mở",
+      emptyActiveDescription:
+        "Không có payment MoMo nào đang chờ hoặc đang được đối soát.",
+      emptyAllTitle: "Chưa có ngoại lệ MoMo",
+      emptyAllDescription:
+        "Các payment có bằng chứng thành công muộn hoặc cần đóng thủ công sẽ hiện tại đây.",
+      filteredEmptyTitle: "Không có ngoại lệ theo bộ lọc",
+      filteredEmptyDescription: "Chọn nhóm đối soát khác để tiếp tục.",
+    },
     reconciliation: {
       matched: "Đã khớp",
       matchedHint: "Đã nối vào đơn hàng, khoản chi, hoặc khoản trả NCC.",
       needsReview: "Cần rà soát",
       needsReviewHint: (
-        amount: string,
+        bankAmount: string,
+        momoAmount: string,
         bankCount: string,
         paymentCount: string,
-      ) => `${amount} · ${bankCount} giao dịch NH + ${paymentCount} thanh toán`,
+        momoCount: string,
+      ) =>
+        `${bankAmount} NH/VietQR · ${momoAmount} MoMo · ${bankCount} giao dịch NH + ${paymentCount} VietQR + ${momoCount} MoMo`,
       unmatchedMoneyIn: "Tiền vào chưa gắn đơn",
       unmatchedMoneyInHint: (count: string) => `${count} giao dịch chưa khớp`,
       missingBankWebhook: "VietQR thiếu webhook",
@@ -455,6 +535,9 @@ export const finance = {
       action: "Xử lý",
       reasonLabels: {
         overpayment: "Thu trùng",
+        payment_code_conflict: "Lệch mã thanh toán",
+        payment_method_conflict: "Xung đột phương thức",
+        payment_state_conflict: "Lệch trạng thái thanh toán",
         webhook_error: "Lỗi webhook",
         missing_reference: "Thiếu mã",
         unmatched_reference: "Không khớp đơn",
@@ -475,6 +558,28 @@ export const finance = {
       order: "Đơn",
       detail: "Đơn đã có một giao dịch SePay hợp lệ.",
       linkUnavailable: "Không gắn lại",
+    },
+    paymentConflict: {
+      codeDetail:
+        "Mã thanh toán trên đơn đã đổi hoặc không còn khớp nội dung chuyển khoản sau khi hệ thống khóa đơn.",
+      methodDetail: "Đơn đang chờ một phương thức thanh toán khác.",
+      stateDetail:
+        "Payment và trạng thái đơn không đồng nhất; cần đối soát trước khi gắn.",
+      linkUnavailable: "Cần đối soát",
+      action: "Xác nhận SePay",
+      actionPending: "Đang xác nhận",
+      actionSuccess: "Đã xác nhận giao dịch SePay và cập nhật thanh toán.",
+      actionError: "Không thể xác nhận giao dịch SePay.",
+      forbidden: "Chỉ chủ cửa hàng được xác nhận giao dịch này.",
+      notReady: "Chức năng xác nhận đối soát chưa sẵn sàng.",
+      evidenceChanged:
+        "Bằng chứng giao dịch đã thay đổi hoặc không còn khớp chính xác.",
+      momoPending:
+        "MoMo vẫn đang chờ xác nhận. Chưa thể chuyển giao dịch này sang SePay.",
+      momoSettled:
+        "MoMo đã có bằng chứng thanh toán thành công. Không thể ghi nhận thêm SePay.",
+      unresolved:
+        "Trạng thái hiện tại chưa đủ điều kiện xác nhận; dữ liệu chưa bị thay đổi.",
     },
     missingWebhookListTitle: "Thanh toán VietQR thiếu webhook NH",
     missingWebhookListDescription:
@@ -611,10 +716,6 @@ export const finance = {
     comparePrevWeek: "So với tuần trước",
     comparePrevMonth: "So với tháng trước",
     comparePrevYear: "So với năm trước",
-    payment: "Phương thức",
-    paymentAll: "Tất cả phương thức",
-    paymentCash: "Chỉ tiền mặt",
-    paymentVietqr: "Chỉ VietQR",
     rangeToday: "Nay",
     rangeYesterday: "Hôm qua",
     range7d: "7 ngày",
@@ -763,6 +864,7 @@ export const finance = {
       colNetRevenue: "Doanh thu ròng",
       colCash: "Tiền mặt",
       colVietqr: "VietQR",
+      colMomo: "MoMo",
       colVat: "Thuế tạm tính",
       colCashier: "Thu ngân",
       colQr: "VietQR",

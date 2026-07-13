@@ -1,20 +1,10 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": [".env.local", "apps/web/.env.local"],
   "ui": "tui",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        "!.next/dev/**",
-        "dist/**",
-        "public/sw.js",
-        "public/sw.js.map",
-        "public/swe-worker-*.js",
-        "public/workbox-*.js"
-      ]
+      "outputs": ["dist/**"]
     },
     "@comtammatu/web#build": {
       "dependsOn": ["^build"],
@@ -34,11 +24,20 @@
         "SINVOICE_SANDBOX",
         "CRON_SECRET",
         "SEPAY_WEBHOOK_SECRET",
+        "MOMO_PARTNER_CODE",
+        "MOMO_ACCESS_KEY",
+        "MOMO_SECRET_KEY",
+        "MOMO_BASE_URL",
         "DISABLE_LOGIN_RATE_LIMIT",
         "ENABLE_DEBUG_CLAIMS",
         "HDDT_ARCHIVE_ENABLED",
         "HDDT_DAILY_SUMMARY_ENABLED",
         "HDDT_RECONCILE_ENABLED"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.env.local",
+        "$TURBO_ROOT$/apps/web/.env.local"
       ],
       "outputs": [
         ".next/**",
@@ -57,7 +56,8 @@
     },
     "typecheck": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.base.json"]
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.base.json"],
+      "outputs": ["*.tsbuildinfo"]
     },
     "test": {
       "dependsOn": ["^build"],
@@ -79,8 +79,9 @@
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/supabase/migrations/**",
-        "$TURBO_ROOT$/scripts/**"
+        "$TURBO_ROOT$/supabase/**",
+        "$TURBO_ROOT$/scripts/**",
+        "$TURBO_ROOT$/docs/**"
       ],
       "outputs": []
     },

@@ -98,8 +98,6 @@ const VI_DICTIONARY: InventoryDictionary = {
     unpaid: { short: "Chưa trả", long: "Chưa thanh toán" },
     partial: { short: "Trả một phần", long: "Thanh toán một phần" },
     paid: { long: "Đã thanh toán" },
-    expired: { short: "Hết hạn", long: "Đã hết hạn" },
-    critical: { short: "Sắp hết hạn", long: "Sắp hết hạn" },
     warning: { long: "Theo dõi" },
     // kitchen_use is not a valid stock-issue reason; sale usage posts as consumption.
     write_off: { short: "Ghi giảm", long: "Ghi giảm" },

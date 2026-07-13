@@ -20,12 +20,12 @@ export interface EmployeeContext {
  */
 export async function getEmployeeContext(): Promise<EmployeeContext | null> {
   const state = await loadAuthState();
-  const { supabase, claims, session } = state;
+  const { supabase, claims, user } = state;
 
   const { data: employee } = await supabase
     .from("employees")
     .select("id, start_date")
-    .eq("profile_id", session.user.id)
+    .eq("profile_id", user.id)
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
 

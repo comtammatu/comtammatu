@@ -107,6 +107,7 @@ interface BillReceiptProps {
   initialHeaderSeed?: SessionOrder | null;
   /** Active guest payment request tied to this exact order, if any. */
   selfOrderPaymentRequestId?: number | null;
+  selfOrderPaymentRequestMethod?: "cash_call" | "vietqr" | "momo" | null;
   onOrderUpdated?: () => void | Promise<void>;
   onClose: () => void;
 }
@@ -410,6 +411,7 @@ export function BillReceipt({
   initialPaymentMethods,
   initialHeaderSeed,
   selfOrderPaymentRequestId = null,
+  selfOrderPaymentRequestMethod = null,
   onOrderUpdated,
   onClose,
 }: BillReceiptProps) {
@@ -442,6 +444,7 @@ export function BillReceipt({
   const [paymentCreateError, setPaymentCreateError] = useState<string | null>(
     null,
   );
+  const momoPaymentLocked = selfOrderPaymentRequestMethod === "momo";
   const isOnline = useIsOnline();
   // When the cashier taps a non-cash method while offline, remember the
   // intent so we can auto-restore it on reconnect. Without this, every
@@ -941,6 +944,10 @@ export function BillReceipt({
   const handleCancelPendingPayment = useCallback(async () => {
     const paymentId = pendingExtras?.payment_id;
     if (!paymentId && !selfOrderPaymentRequestId) return;
+    if (momoPaymentLocked) {
+      toast.error(SELF_ORDER_VI.momoPendingStaffBlocked);
+      return;
+    }
 
     if (selfOrderPaymentRequestId) {
       const confirmed = await confirm({
@@ -995,6 +1002,7 @@ export function BillReceipt({
     orderId,
     pendingExtras?.payment_id,
     selfOrderPaymentRequestId,
+    momoPaymentLocked,
   ]);
 
   const handlePrintProvisional = useCallback(() => {
@@ -1143,22 +1151,28 @@ export function BillReceipt({
                   <Alert>
                     <IconAlertTriangle />
                     <AlertTitle>
-                      {SELF_ORDER_VI.staffPaymentWaitingTitle}
+                      {momoPaymentLocked
+                        ? SELF_ORDER_VI.momoPendingStaffTitle
+                        : SELF_ORDER_VI.staffPaymentWaitingTitle}
                     </AlertTitle>
                     <AlertDescription>
-                      {SELF_ORDER_VI.staffPaymentWaitingDescription}
+                      {momoPaymentLocked
+                        ? SELF_ORDER_VI.momoPendingStaffDescription
+                        : SELF_ORDER_VI.staffPaymentWaitingDescription}
                     </AlertDescription>
-                    <div className="col-start-2 mt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void handleCancelPendingPayment()}
-                        disabled={actionPending || methodPending}
-                      >
-                        {SELF_ORDER_VI.staffCancelPayment}
-                      </Button>
-                    </div>
+                    {!momoPaymentLocked ? (
+                      <div className="col-start-2 mt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void handleCancelPendingPayment()}
+                          disabled={actionPending || methodPending}
+                        >
+                          {SELF_ORDER_VI.staffCancelPayment}
+                        </Button>
+                      </div>
+                    ) : null}
                   </Alert>
                 ) : null}
                 <div className="grid grid-cols-2 gap-2">
@@ -1179,7 +1193,9 @@ export function BillReceipt({
                         size="touch-lg"
                         className="flex-col gap-2"
                         onClick={() => handleSelectMethod(method)}
-                        disabled={actionPending || methodPending}
+                        disabled={
+                          actionPending || methodPending || momoPaymentLocked
+                        }
                       >
                         <Icon data-icon="inline-start" />
                         {meta.label}
@@ -1404,7 +1420,11 @@ export function BillReceipt({
               size="touch-lg"
               onClick={() => void handleConfirmPaid()}
               disabled={
-                isPending || methodPending || actionPending || !canConfirmPaid
+                isPending ||
+                methodPending ||
+                actionPending ||
+                momoPaymentLocked ||
+                !canConfirmPaid
               }
               title={disabledReason ?? undefined}
             >

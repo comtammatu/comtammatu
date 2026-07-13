@@ -42,6 +42,29 @@ function extractClaims(appMetadata: Record<string, unknown>): JwtClaims | null {
 }
 
 /**
+ * Normalize application scope from a decoded JWT payload.
+ * Callers that receive an untrusted token must verify it before using this helper.
+ */
+export function extractClaimsFromJwtPayload(
+  payload: unknown,
+): JwtClaims | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+
+  const appMetadata = (payload as { app_metadata?: unknown }).app_metadata;
+  if (
+    !appMetadata ||
+    typeof appMetadata !== "object" ||
+    Array.isArray(appMetadata)
+  ) {
+    return null;
+  }
+
+  return extractClaims(appMetadata as Record<string, unknown>);
+}
+
+/**
  * Decode the `app_metadata` section of a Supabase access-token JWT.
  *
  * `session.user.app_metadata` (supabase-js) reads from the `auth.users` row and
@@ -98,7 +121,7 @@ export function extractClaimsFromAccessToken(
 ): JwtClaims | null {
   const appMetadata = decodeJwtAppMetadata(accessToken);
   if (!appMetadata) return null;
-  return extractClaims(appMetadata);
+  return extractClaimsFromJwtPayload({ app_metadata: appMetadata });
 }
 
 /** Validate and normalize an internal return path. */

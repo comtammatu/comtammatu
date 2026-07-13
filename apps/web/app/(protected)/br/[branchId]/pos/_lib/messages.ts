@@ -484,6 +484,12 @@ export const enqueuePartialCancelTicketPrintHook: AfterSuccessHook<
  */
 export const cancelRpcMappings: readonly RpcErrorMapping[] = [
   {
+    match: includesAny("momo_payment_pending"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "MoMo vẫn đang xác minh giao dịch. Không thể hủy đơn hoặc đổi phương thức thanh toán.",
+  },
+  {
     match: includesAny("forbidden"),
     errorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
     userMessage: "Cần quyền hủy đơn POS để hủy đơn.",

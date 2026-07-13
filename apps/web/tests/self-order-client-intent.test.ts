@@ -115,7 +115,7 @@ test("self-order client sends a stable intent without guest payment cancellation
   );
 });
 
-test("active cash and VietQR intents recover from snapshot and lock guest writes", () => {
+test("active payment intents lock guest writes except MoMo checkout recovery", () => {
   const client = readFileSync(
     new URL("../app/q/[token]/self-order-client.tsx", import.meta.url),
     "utf8",
@@ -135,7 +135,25 @@ test("active cash and VietQR intents recover from snapshot and lock guest writes
 
   assert.match(client, /normalizePaymentRequest\(\s*available\.paymentRequest/);
   assert.match(client, /snapshotPaymentRequest \?\? localPaymentRequest/);
-  assert.match(client, /if \(!order \|\| activePaymentRequest\) return/);
+  assert.match(client, /const recoverMomo =/);
+  assert.match(client, /activePaymentRequest && !recoverMomo/);
+  assert.match(client, /recover: true/);
+  assert.match(
+    client,
+    /let paymentStatusInFlight = false[\s\S]*if \(paymentStatusInFlight\) return[\s\S]*finally \{[\s\S]*paymentStatusInFlight = false/,
+  );
+  assert.match(
+    client,
+    /payload\?\.status === "cancelled"[\s\S]*setPaymentStatusClientOpId\(null\)[\s\S]*refreshSnapshot\(\)/,
+  );
+  assert.match(
+    client,
+    /momo_checkout_retry_required[\s\S]*clearClientIntent\([\s\S]*requestClientOpId[\s\S]*refreshSnapshot/,
+  );
+  assert.match(
+    client,
+    /setLocalPaymentRequest\(paymentRequest\)[\s\S]*clearClientIntent\([\s\S]*requestClientOpId/,
+  );
   assert.match(menu, /disabled=\{disabled\}/);
   assert.match(payment, /activePaymentRequest\.qrData/);
   assert.doesNotMatch(payment, /<NoteCallout|vietQrPendingDescription/);

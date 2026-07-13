@@ -356,14 +356,14 @@ export async function StaffWorkdayPageContent({
       ? BRANCH_WORKDAY_PRIMITIVES
       : EMPLOYEE_WORKDAY_PRIMITIVES;
   const { PageShell, Panel, InlineState, ControlBar, StatusStrip } = primitives;
-  const { claims, session } = authState ?? (await loadAuthState());
+  const { claims, user } = authState ?? (await loadAuthState());
   const state = await getTodayWorkState();
 
   // Surface the count-slip task only when this employee actually has active
   // assignments — RLS + the inner-join on profile_id keep it to their own rows
   // (a manager who can read branch-wide assignments still only sees their own).
   let countAssignmentCount = 0;
-  if (session?.user?.id) {
+  if (user.id) {
     const service = createServiceClient();
     const currentShiftId =
       state.todayShifts.find((shift) => shift.isCurrent)?.shiftId ?? null;
@@ -375,7 +375,7 @@ export async function StaffWorkdayPageContent({
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
-      .eq("employees.profile_id", session.user.id);
+      .eq("employees.profile_id", user.id);
     if (countBranchId !== null) {
       countAssignmentQuery = countAssignmentQuery.eq(
         "branch_id",

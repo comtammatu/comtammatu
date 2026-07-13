@@ -2,9 +2,46 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import {
+  parseFinanceParams,
+  serializeFinanceParams,
+} from "../app/(protected)/finance/_lib/finance-params";
+import { paymentMethodRevenueBreakdown } from "../app/(protected)/finance/revenue/_lib/payment-method-breakdown";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+
+test("Finance payment breakdown reconciles MoMo into collected revenue", () => {
+  assert.deepEqual(
+    paymentMethodRevenueBreakdown({
+      totalRevenue: 300_000,
+      cashRevenue: 100_000,
+      vietqrRevenue: 50_000,
+    }),
+    {
+      cash: 100_000,
+      vietqr: 50_000,
+      momo: 150_000,
+      total: 300_000,
+    },
+  );
+});
+
+test("Finance ignores the retired URL-only payment filter", () => {
+  const params = parseFinanceParams({ range: "7d", payment: "momo" });
+
+  assert.equal(params.range, "7d");
+  assert.equal("payment" in params, false);
+  assert.equal(serializeFinanceParams(params).has("payment"), false);
+
+  const filterBar = read(
+    "apps/web/app/(protected)/finance/components/filter-bar.tsx",
+  );
+  assert.doesNotMatch(
+    filterBar,
+    /FinancePayment|PAYMENT_LABEL|params\.payment/,
+  );
+});
 
 test("Finance Revenue top items follows the selected date range", () => {
   const revenueLoader = read(
@@ -303,11 +340,6 @@ test("Finance live copy stays HKD operating-first without two-mode labels", () =
     financeTypes,
     /FinanceLayoutMode|"simple"|"advanced"/,
     "Finance must not keep the retired simple/advanced layout mode type",
-  );
-  assert.match(
-    financeMessages,
-    /stageCompanyReporting: "Hỗ trợ kế toán để riêng"/,
-    "support accounting should be framed as a separate helper area",
   );
   assert.match(
     financeMessages,

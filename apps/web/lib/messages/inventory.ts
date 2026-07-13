@@ -98,8 +98,6 @@ export const inventory = {
     reorderStatus: (current: number, unit: string, reorder: number) =>
       `Tồn ${formatQuantity(current)}${unit} / Ngưỡng ${formatQuantity(reorder)}${unit}`,
     reorder: "Tái đặt",
-    expiredDays: (days: number) => `Quá hạn ${Math.abs(days)} ngày`,
-    remainingDays: (days: number) => `Còn ${days} ngày`,
     noAlerts: "Không có cảnh báo nào.",
     transferTrackingTitle: "Theo dõi điều chuyển",
     activeTransfers: (count: number) =>

@@ -285,7 +285,7 @@ export function ExpensesClient({
         params={params}
         branches={branches}
         basePath="/finance/expenses"
-        hide={["compare", "payment", "granularity"]}
+        hide={["compare", "granularity"]}
       />
 
       {canManageExpenses ? (

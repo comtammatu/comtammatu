@@ -27,6 +27,7 @@ import {
 import { messages } from "@lib/messages";
 import {
   SEPAY_BANK_WEBHOOK_REVIEW_VALUES,
+  classifySepayPaymentConflict,
   classifySepayReconciliationState,
   classifySepayUnmatchedMoneyIn,
   isSepayOverpayment,
@@ -38,6 +39,7 @@ import {
   type SepayUnmatchedMoneyInReason,
 } from "../_lib/sepay-bank-transaction-model";
 import {
+  adjudicateSepayPaymentConflict,
   linkSepayTransactionToPayment,
   reviewMissingBankWebhookPayment,
 } from "../bank-webhook-review-actions";
@@ -164,6 +166,16 @@ function reasonLabel(reason: SepayUnmatchedMoneyInReason): string {
 
 function reasonDetail(tx: SepayBankTransaction): string {
   if (isSepayOverpayment(tx)) return copy.overpayment.detail;
+  const paymentConflict = classifySepayPaymentConflict(tx);
+  if (paymentConflict === "payment_code_conflict") {
+    return copy.paymentConflict.codeDetail;
+  }
+  if (paymentConflict === "payment_method_conflict") {
+    return copy.paymentConflict.methodDetail;
+  }
+  if (paymentConflict === "payment_state_conflict") {
+    return copy.paymentConflict.stateDetail;
+  }
   if (tx.errorCode) return tx.errorCode;
   if (tx.processingStatus === "failed") return tx.processingStatus;
   return optionalReferenceCode(tx);
@@ -379,6 +391,56 @@ function LinkPaymentCell({
   );
 }
 
+function AdjudicatePaymentConflictCell({
+  tx,
+  canLinkPayments,
+}: {
+  tx: SepayBankTransaction;
+  canLinkPayments: boolean;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = React.useTransition();
+  const conflict = classifySepayPaymentConflict(tx);
+  const table = copy.paymentConflict;
+  const orderId = tx.orderId;
+
+  if (
+    !canLinkPayments ||
+    orderId == null ||
+    conflict == null ||
+    conflict === "payment_state_conflict"
+  ) {
+    return (
+      <span className="text-muted-foreground">{table.linkUnavailable}</span>
+    );
+  }
+
+  const handleClick = () => {
+    startTransition(async () => {
+      const res = await adjudicateSepayPaymentConflict({
+        eventId: tx.eventId,
+        orderId,
+        requestId: tx.requestId,
+        amount: tx.amount,
+      });
+
+      if (!res.success) {
+        toast.error(res.error ?? table.actionError);
+        return;
+      }
+
+      toast.success(table.actionSuccess);
+      router.refresh();
+    });
+  };
+
+  return (
+    <Button type="button" size="sm" onClick={handleClick} disabled={isPending}>
+      {isPending ? table.actionPending : table.action}
+    </Button>
+  );
+}
+
 function ReviewStatusSelect({
   payment,
 }: {
@@ -437,12 +499,22 @@ function ReconciliationActionCell({
   canLinkPayments: boolean;
 }) {
   const state = classifySepayReconciliationState(tx);
+  const paymentConflict = classifySepayPaymentConflict(tx);
 
   if (isSepayOverpayment(tx)) {
     return (
       <span className="text-muted-foreground">
         {copy.overpayment.linkUnavailable}
       </span>
+    );
+  }
+
+  if (paymentConflict != null) {
+    return (
+      <AdjudicatePaymentConflictCell
+        tx={tx}
+        canLinkPayments={canLinkPayments}
+      />
     );
   }
 

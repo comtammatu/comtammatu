@@ -738,6 +738,7 @@ export async function createSelfOrderPaymentRequest(input: {
     bankCode: payload.bankCode ?? payload.bank_code,
     accountNo: payload.accountNo ?? payload.account_no,
     accountName: payload.accountName ?? payload.account_name,
+    redirectUrl: payload.redirectUrl ?? payload.redirect_url,
     createdAt: payload.createdAt ?? payload.created_at,
     expiresAt: payload.expiresAt ?? payload.expires_at,
     idempotent: payload.idempotent,

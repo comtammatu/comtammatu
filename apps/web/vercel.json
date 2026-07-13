@@ -15,6 +15,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/momo-reconcile",
+      "schedule": "*/2 * * * *"
+    },
+    {
       "path": "/api/cron/hddt-archive",
       "schedule": "*/15 * * * *"
     },

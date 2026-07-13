@@ -134,6 +134,12 @@ function mapCatalogRpcError(
   ) {
     return "Nhóm nguyên liệu không hợp lệ";
   }
+  if (
+    message?.includes("ingredient not found") ||
+    message?.includes("ingredient_not_found")
+  ) {
+    return "Nguyên liệu không tồn tại.";
+  }
 
   switch (code) {
     case PG_ERR.INSUFFICIENT_PRIVILEGE:
@@ -169,7 +175,6 @@ type UpsertCatalogArgs =
 function rpcCatalogArgs(
   ingredientId: number | null,
   data: IngredientInput,
-  shelfLifeDays: number | null = null,
 ): UpsertCatalogArgs {
   return {
     p_ingredient_id: ingredientId as never,
@@ -182,7 +187,6 @@ function rpcCatalogArgs(
     p_min_stock_level: data.min_stock_level,
     p_max_stock_level: (data.max_stock_level ?? null) as never,
     p_reorder_point: (data.reorder_point ?? null) as never,
-    p_shelf_life_days: shelfLifeDays as never,
     p_units: buildRpcUnits(data.units) as never,
   };
 }
@@ -437,32 +441,11 @@ export async function updateIngredient(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
-
-  const { data: existing, error: existingError } = await supabase
-    .from("ingredients")
-    .select("shelf_life_days")
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .maybeSingle();
-
-  if (existingError) {
-    return {
-      success: false,
-      error: messages.inventory.ingredients.list.loadFailed,
-    };
-  }
-  if (!existing) {
-    return { success: false, error: "Nguyên liệu không tồn tại." };
-  }
+  const { supabase } = ctx;
 
   const { error } = await supabase.rpc(
     "upsert_ingredient_catalog",
-    rpcCatalogArgs(
-      parsedId.data,
-      parsedInput.data,
-      existing.shelf_life_days,
-    ),
+    rpcCatalogArgs(parsedId.data, parsedInput.data),
   );
 
   if (error) {

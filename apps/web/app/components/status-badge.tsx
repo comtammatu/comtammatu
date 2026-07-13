@@ -11,6 +11,7 @@ import {
   ORDER_STATUS_LABELS_VI,
   PAYROLL_PERIOD_STATUS_LABELS_VI,
   PAYMENT_RECORD_STATUS_LABELS_VI,
+  MOMO_PAYMENT_REVIEW_STATUS_LABELS_VI,
   PRINT_JOB_STATUS_LABELS_VI,
   REFUND_STATUS_LABELS_VI,
   SUMMARY_RUN_STATUS_LABELS_VI,
@@ -73,6 +74,14 @@ const STATUS_DOMAINS = {
       pending: "warning",
       completed: "success",
       failed: "destructive",
+      refunded: "secondary",
+    },
+  },
+  "momo-payment-review": {
+    labels: MOMO_PAYMENT_REVIEW_STATUS_LABELS_VI,
+    variants: {
+      open: "warning",
+      reviewing: "info",
       refunded: "secondary",
     },
   },
@@ -213,8 +222,6 @@ const STATUS_DOMAINS = {
       unpaid: "warning",
       partial: "info",
       paid: "success",
-      expired: "destructive",
-      critical: "warning",
       warning: "warning",
       write_off: "destructive",
       consumption: "success",
@@ -226,14 +233,6 @@ const STATUS_DOMAINS = {
       over: "warning",
       active: "success",
       suspended: "secondary",
-    },
-  },
-  "expiry-urgency": {
-    labels: INVENTORY_STATUS_LABELS_VI,
-    variants: {
-      expired: "destructive",
-      critical: "destructive",
-      warning: "warning",
     },
   },
 } satisfies Record<string, DomainConfig>;

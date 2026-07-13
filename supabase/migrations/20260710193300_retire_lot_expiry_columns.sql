@@ -1,10 +1,8 @@
--- Owner-confirmed D073 §5: retire lot/expiry tracking on grn_items and the
--- shelf-life field on ingredients (never populated by any live workflow).
--- Rewrites every writer/reader that touched these columns, then drops them.
-
 BEGIN;
 
--- 1. create_expiry_writeoff — stop reading/echoing batch_number/expiry_date.
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
+
 CREATE OR REPLACE FUNCTION public.create_expiry_writeoff(
   p_branch_id bigint,
   p_location_id bigint,
@@ -102,8 +100,6 @@ REVOKE ALL ON FUNCTION public.create_expiry_writeoff(bigint, bigint, bigint, num
 GRANT ALL ON FUNCTION public.create_expiry_writeoff(bigint, bigint, bigint, numeric, bigint, text, text[]) TO authenticated;
 GRANT ALL ON FUNCTION public.create_expiry_writeoff(bigint, bigint, bigint, numeric, bigint, text, text[]) TO service_role;
 
--- 2. recreate_grn_at_receiving_site — stop copying expiry_date/batch_number
---    into the replacement grn_items rows.
 CREATE OR REPLACE FUNCTION public.recreate_grn_at_receiving_site(
   p_grn_id bigint,
   p_target_branch_id bigint,
@@ -618,10 +614,7 @@ GRANT EXECUTE ON FUNCTION public.recreate_grn_at_receiving_site(
   text
 ) TO service_role;
 
--- 3. upsert_ingredient_catalog — drop p_shelf_life_days from the signature.
-DROP FUNCTION public.upsert_ingredient_catalog(bigint, text, text, bigint, numeric, text, text, numeric, numeric, numeric, integer, jsonb);
-
-CREATE FUNCTION public.upsert_ingredient_catalog(p_ingredient_id bigint, p_name text, p_sku text, p_category_id bigint, p_unit_cost numeric, p_item_kind text, p_storage_type text, p_min_stock_level numeric, p_max_stock_level numeric, p_reorder_point numeric, p_units jsonb) RETURNS bigint
+CREATE OR REPLACE FUNCTION public.upsert_ingredient_catalog(p_ingredient_id bigint, p_name text, p_sku text, p_category_id bigint, p_unit_cost numeric, p_item_kind text, p_storage_type text, p_min_stock_level numeric, p_max_stock_level numeric, p_reorder_point numeric, p_units jsonb) RETURNS bigint
     LANGUAGE plpgsql
     SET search_path TO ''
     AS $$
@@ -823,7 +816,8 @@ REVOKE ALL ON FUNCTION public.upsert_ingredient_catalog(bigint, text, text, bigi
 GRANT ALL ON FUNCTION public.upsert_ingredient_catalog(bigint, text, text, bigint, numeric, text, text, numeric, numeric, numeric, jsonb) TO service_role;
 GRANT ALL ON FUNCTION public.upsert_ingredient_catalog(bigint, text, text, bigint, numeric, text, text, numeric, numeric, numeric, jsonb) TO authenticated;
 
--- 4. bulk_import_ingredients — drop shelf_life_days from the import pipeline.
+DROP FUNCTION public.upsert_ingredient_catalog(bigint, text, text, bigint, numeric, text, text, numeric, numeric, numeric, integer, jsonb);
+
 CREATE OR REPLACE FUNCTION public.bulk_import_ingredients(p_rows jsonb) RETURNS jsonb
     LANGUAGE plpgsql
     SET search_path TO ''
@@ -1020,9 +1014,6 @@ REVOKE ALL ON FUNCTION public.bulk_import_ingredients(p_rows jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.bulk_import_ingredients(p_rows jsonb) TO service_role;
 GRANT ALL ON FUNCTION public.bulk_import_ingredients(p_rows jsonb) TO authenticated;
 
--- 5. scan_inventory_alerts — expiry tracking is retired; keep stock_low only.
---    Also fixes a stale ingredient unit reference (the dropped column was
---    dropped by 20260707002300_inventory_unit_system_phase_c.sql).
 CREATE OR REPLACE FUNCTION public.scan_inventory_alerts() RETURNS TABLE(low_stock_count bigint, expiry_count bigint)
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public', 'pg_temp'
@@ -1032,7 +1023,6 @@ DECLARE
   v_exp BIGINT := 0;
   v_today TEXT := to_char(now() AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD');
 BEGIN
-  -- Low-stock alerts
   WITH inserted AS (
     INSERT INTO public.notifications (
       tenant_id, target_branch_id, target_roles,
@@ -1074,8 +1064,6 @@ BEGIN
   )
   SELECT count(*) INTO v_low FROM inserted;
 
-  v_exp := 0;
-
   DELETE FROM public.notifications
   WHERE expires_at IS NOT NULL AND expires_at < now();
 
@@ -1088,11 +1076,9 @@ COMMENT ON FUNCTION public.scan_inventory_alerts() IS 'Emit inventory.stock_low 
 REVOKE ALL ON FUNCTION public.scan_inventory_alerts() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.scan_inventory_alerts() TO service_role;
 
--- 6. Drop the now-unused expiry index ahead of the column drop.
 DROP INDEX IF EXISTS public.idx_grn_items_expiry;
 
--- mv_inventory_stock_current selects ingredients.shelf_life_days; rebuild it
--- without that column before the column drop below.
+-- PostgreSQL requires rebuilding the materialized views before their dependent column can be dropped.
 DROP MATERIALIZED VIEW IF EXISTS public.mv_inventory_value_ranking;
 DROP MATERIALIZED VIEW IF EXISTS public.mv_inventory_stock_current;
 
@@ -1147,7 +1133,23 @@ GRANT ALL ON TABLE public.mv_inventory_value_ranking TO service_role;
 REFRESH MATERIALIZED VIEW public.mv_inventory_stock_current;
 REFRESH MATERIALIZED VIEW public.mv_inventory_value_ranking;
 
--- 7. Drop the retired columns.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.grn_items
+    WHERE batch_number IS NOT NULL
+       OR expiry_date IS NOT NULL
+  ) OR EXISTS (
+    SELECT 1
+    FROM public.ingredients
+    WHERE shelf_life_days IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'lot_expiry_retirement_blocked';
+  END IF;
+END;
+$$;
+
 ALTER TABLE public.grn_items
   DROP COLUMN IF EXISTS batch_number,
   DROP COLUMN IF EXISTS expiry_date;

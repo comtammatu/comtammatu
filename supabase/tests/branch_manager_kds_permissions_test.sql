@@ -9,6 +9,7 @@
 
 \set ON_ERROR_STOP on
 BEGIN;
+SET LOCAL search_path = public, extensions;
 
 SELECT plan(1);
 

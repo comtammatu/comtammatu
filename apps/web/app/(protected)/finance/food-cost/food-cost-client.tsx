@@ -127,7 +127,7 @@ export function FoodCostClient({
         params={params}
         branches={branches}
         basePath="/finance/food-cost"
-        hide={["compare", "payment", "granularity"]}
+        hide={["compare", "granularity"]}
       />
 
       <KpiRow>

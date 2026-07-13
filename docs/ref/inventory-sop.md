@@ -31,8 +31,7 @@ Không sửa tồn trực tiếp để bù một GRN lỗi.
 
 ## 3. Sản xuất và tiêu hao
 
-- Sản xuất diễn ra tại chi nhánh và phải dùng workflow/RPC đang có; không tái lập
-  `production_orders` đã nghỉ.
+- Sản xuất diễn ra tại chi nhánh và phải dùng workflow/RPC đang có.
 - Tiêu hao thực tế chỉ post khi nguồn nghiệp vụ hợp lệ được duyệt hoặc khi POS
   sale-consumption đủ điều kiện theo contract hiện hành.
 - Hao hụt/write-off phải có lý do và actor; không dùng transfer giả để giảm tồn.

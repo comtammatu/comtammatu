@@ -82,7 +82,7 @@ export async function updateMyProfile(
 export async function uploadMyAvatar(
   formData: FormData,
 ): Promise<ActionResult<{ avatarUrl: string }>> {
-  const { session, claims, supabase } = await loadAuthState();
+  const { user, claims, supabase } = await loadAuthState();
   const branchId = z.coerce
     .number()
     .int()
@@ -107,7 +107,7 @@ export async function uploadMyAvatar(
   }
 
   const ext = AVATAR_MIME_TO_EXT[avatar.type];
-  const path = `${claims.tenant_id}/avatars/${session.user.id}/${randomUUID()}.${ext}`;
+  const path = `${claims.tenant_id}/avatars/${user.id}/${randomUUID()}.${ext}`;
   const bytes = Buffer.from(await avatar.arrayBuffer());
   const service = createServiceClient();
   const { error: uploadError } = await service.storage

@@ -142,7 +142,12 @@ test("only the current payment request can unlock the Self-Order completion scre
   assert.match(paymentStatusMigration, /TO service_role/);
   assert.match(paymentStatusRoute, /selfOrderClientOpIdSchema\.safeParse/);
   assert.match(paymentStatusRoute, /applySelfOrderPrivateHeaders/);
+  assert.match(paymentStatusRoute, /validateSelfOrderMutationRequest/);
+  assert.match(paymentStatusRoute, /executeSelfOrderMomoReconciliation/);
+  assert.match(paymentStatusRoute, /result\.data\.status === "momo_pending"/);
   assert.match(client, /payment-status\?\$\{query\.toString\(\)\}/);
+  assert.match(client, /method: "POST"/);
+  assert.match(client, /"x-self-order-request": "1"/);
   assert.match(
     client,
     /setPaymentStatusClientOpId\(observedPaymentStatusClientOpId\)/,
@@ -151,10 +156,7 @@ test("only the current payment request can unlock the Self-Order completion scre
     client,
     /currentPaymentStatusClientOpId ===[\s\S]*ignoredPaymentStatusClientOpIdRef\.current[\s\S]*\? null/,
   );
-  assert.doesNotMatch(
-    client,
-    /const paymentStatusClientOpId = snapshot\.ok/,
-  );
+  assert.doesNotMatch(client, /const paymentStatusClientOpId = snapshot\.ok/);
   assert.match(client, /payload\?\.status === "completed"/);
   assert.match(client, /<PaymentCompletedState/);
   assert.match(client, /mood="waving"/);

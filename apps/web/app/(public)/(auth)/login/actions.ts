@@ -91,7 +91,7 @@ export async function login(
 
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -100,10 +100,7 @@ export async function login(
     return { error: GENERIC_LOGIN_ERROR };
   }
 
-  // Fetch fresh session to get the access token with hook-injected claims
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const session = data.session;
 
   if (!session) {
     // signInWithPassword reported success but session is missing — cookie write
@@ -124,7 +121,7 @@ export async function login(
     // (proxy reads claims=null → /access-denied?reason=missing-auth-context).
     // Generic copy to user (no enumeration); user_id logged for ops debug.
     console.error("auth.login.claims_missing", {
-      user_id: session.user.id,
+      user_id: data.user?.id ?? null,
       ts: new Date().toISOString(),
     });
     await supabase.auth.signOut();

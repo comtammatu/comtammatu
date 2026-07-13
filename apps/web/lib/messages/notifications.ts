@@ -32,7 +32,6 @@ export const notifications = {
     "inventory.count_slip_approved": "Phiếu đếm tồn đã duyệt",
     "inventory.count_slip_recount": "Phiếu đếm tồn cần đếm lại",
     "inventory.stock_low": "Tồn kho thấp",
-    "inventory.expiry_soon": "Sắp hết hạn",
     "system.test": "Thông báo thử",
     "system.cron_failed": "Lỗi tác vụ tự động (Cron)",
   } as Record<string, string>,

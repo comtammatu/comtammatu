@@ -180,8 +180,6 @@ export const INVENTORY_STATUS_LABELS_VI = {
   unpaid: "Chưa trả",
   partial: "Trả một phần",
   paid: "Đã thanh toán",
-  expired: "Hết hạn",
-  critical: "Sắp hết hạn",
   warning: "Theo dõi",
   write_off: "Ghi giảm",
   consumption: "Tiêu hao",
@@ -434,6 +432,13 @@ export const PAYMENT_RECORD_STATUS_LABELS_VI = {
   completed: "Đã thanh toán",
   failed: "Thất bại",
   refunded: "Hoàn tiền",
+} as const;
+
+/** Owner review state for MoMo settlement exceptions. */
+export const MOMO_PAYMENT_REVIEW_STATUS_LABELS_VI = {
+  open: "Chưa xử lý",
+  reviewing: "Đang xử lý",
+  refunded: "Đã hoàn",
 } as const;
 
 /** Derived payment reconciliation state for operating expenses. */

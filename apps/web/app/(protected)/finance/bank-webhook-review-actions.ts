@@ -2,6 +2,7 @@
 
 import type { Json } from "@comtammatu/database";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { z } from "zod";
 import { logAudit } from "@/_lib/audit";
@@ -27,6 +28,13 @@ const linkSepayTransactionToPaymentSchema = z.object({
   paymentId: z.coerce.number().int().positive(),
 });
 
+const adjudicateSepayPaymentConflictSchema = z.object({
+  eventId: z.coerce.number().int().positive(),
+  orderId: z.coerce.number().int().positive(),
+  requestId: z.string().trim().min(1).max(128),
+  amount: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+});
+
 interface ReviewablePaymentRow {
   id: number;
   branch_id: number;
@@ -42,6 +50,18 @@ type LinkPaymentRpcClient = {
   rpc: (
     fn: "link_sepay_transaction_to_payment",
     args: { p_event_id: number; p_payment_id: number },
+  ) => PromiseLike<{ data: unknown; error: LinkPaymentRpcError | null }>;
+};
+
+type AdjudicatePaymentConflictRpcClient = {
+  rpc: (
+    fn: "adjudicate_sepay_payment_conflict",
+    args: {
+      p_event_id: number;
+      p_expected_order_id: number;
+      p_expected_request_id: string;
+      p_expected_amount: number;
+    },
   ) => PromiseLike<{ data: unknown; error: LinkPaymentRpcError | null }>;
 };
 
@@ -99,12 +119,91 @@ function mapLinkPaymentError(error: LinkPaymentRpcError): string {
   return "Không thể gắn giao dịch với payment.";
 }
 
+function mapAdjudicationError(error: LinkPaymentRpcError): string {
+  const normalized = error.message?.toLowerCase() ?? "";
+  const copy = messages.finance.bankTransactions.paymentConflict;
+
+  if (error.code === "42501" || normalized.includes("forbidden_owner_only")) {
+    return copy.forbidden;
+  }
+  if (
+    error.code === "PGRST202" ||
+    normalized.includes("adjudicate_sepay_payment_conflict")
+  ) {
+    return copy.notReady;
+  }
+  if (normalized.includes("momo_payment_pending")) {
+    return copy.momoPending;
+  }
+  if (normalized.includes("momo_authoritative_success")) {
+    return copy.momoSettled;
+  }
+  if (
+    normalized.includes("sepay_conflict_evidence_changed") ||
+    normalized.includes("sepay_conflict_amount") ||
+    normalized.includes("sepay_conflict_order") ||
+    normalized.includes("sepay_conflict_payment_code_evidence_mismatch")
+  ) {
+    return copy.evidenceChanged;
+  }
+  if (normalized.includes("sepay_conflict_not_resolved")) {
+    return copy.unresolved;
+  }
+
+  console.error(
+    "[finance:bank-webhook-review] unmapped adjudication rpc error",
+    error.code,
+    error.message,
+  );
+  return copy.actionError;
+}
+
+export async function adjudicateSepayPaymentConflict(
+  input: z.infer<typeof adjudicateSepayPaymentConflictSchema>,
+): Promise<ActionResult> {
+  const parsed = adjudicateSepayPaymentConflictSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: ERRORS_VI.validationFailed };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) {
+    return {
+      success: false,
+      error: messages.finance.bankTransactions.paymentConflict.forbidden,
+    };
+  }
+
+  const { data, error } = await (
+    ctx.supabase as AdjudicatePaymentConflictRpcClient
+  ).rpc("adjudicate_sepay_payment_conflict", {
+    p_event_id: parsed.data.eventId,
+    p_expected_order_id: parsed.data.orderId,
+    p_expected_request_id: parsed.data.requestId,
+    p_expected_amount: parsed.data.amount,
+  });
+
+  if (error) {
+    console.error(
+      "[finance:bank-webhook-review] failed to adjudicate payment conflict",
+      error.code,
+    );
+    return { success: false, error: mapAdjudicationError(error) };
+  }
+
+  revalidateSurfacePath("/finance/bank-transactions");
+  return { success: true, data };
+}
+
 export async function linkSepayTransactionToPayment(
   input: z.infer<typeof linkSepayTransactionToPaymentSchema>,
 ): Promise<ActionResult> {
   const parsed = linkSepayTransactionToPaymentSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: "Dữ liệu không hợp lệ" };
+    return { success: false, error: ERRORS_VI.validationFailed };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -141,7 +240,7 @@ export async function reviewMissingBankWebhookPayment(
 ): Promise<ActionResult> {
   const parsed = reviewMissingBankWebhookPaymentSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: "Dữ liệu không hợp lệ" };
+    return { success: false, error: ERRORS_VI.validationFailed };
   }
 
   const ctx = await getAuthContextWithPermission(

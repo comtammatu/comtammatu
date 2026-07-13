@@ -1542,27 +1542,36 @@ destructive lot/expiry + production_orders drops).
       `production_recipes` FK does not block catalog saves.
 
 - [x] **Catalog save blocked by `production_recipes` FK (misleading
-      "Đơn vị tồn chuẩn không hợp lệ").** Forward migration ready (not
-      applied): `20260710193250_upsert_ingredient_units_preserve_recipe_fk.sql`
+      "Đơn vị tồn chuẩn không hợp lệ").** The production ledger contains this
+      hotfix under mapped version `20260710233508`; source migration
+      `20260710193250_upsert_ingredient_units_preserve_recipe_fk.sql`
       (sorts before `193300`) replaces live 12-arg `upsert_ingredient_catalog` + `bulk_import_ingredients` with identity-preserving unit sync +
-      explicit REVOKE/GRANT; app error map distinguishes recipe-in-use /
-      unit / category. Apply this hotfix alone on PROD (12-arg still live);
-      do NOT apply `193300` until app/types drop `p_shelf_life_days`.
+      explicit REVOKE/GRANT; app error map distinguishes recipe-in-use / unit /
+      category. The 12-arg RPC remains live until the cutover completes.
       `193300` already carries the same sync body for the future 11-arg RPC.
 
-### Apply sequencing (Codex review 2026-07-10 — do not half-apply)
+### Production expand-contract gate
 
-PROD deploy `ca865e69` still reads `production_orders` /
-`production_order_id` / `p_shelf_life_days`. Applying `193200`/`193300`
-before the cutover code is live breaks that deploy.
+Never use `supabase db push --include-all` for this production sequence. Build
+an owner-approved ordered manifest against the production Environment Registry
+ref and record the source-to-ledger version mapping for each apply.
 
-1. Deploy the cutover app code first (no more those reads).
-2. Re-run precheck (retired tables/columns still 0 non-null).
-3. Apply in order: `193000` → `193100` → `193200` → `193300`.
-   Keep the chain atomic — do not apply `193000` alone and leave the rest.
+1. Confirm mapped hotfix `193250` remains applied, then apply additive `193275`
+   while the current app still uses the 12-arg RPC. Verify both 11-arg and
+   12-arg overloads, auth boundaries, and grants.
+2. Deploy the cutover app. Prove runtime has no `production_orders`,
+   `production_order_id`, `p_shelf_life_days`, or 12-arg catalog calls.
+3. Re-run production preflight: both production-order tables are empty,
+   retired shelf-life columns contain no values, and dependency scans are clean.
+4. Apply the reviewed contract manifest in order: `193000` → `193100` →
+   `193200` → `193300`. Each step must use its recorded production-ledger
+   mapping and stop on any guard or lock timeout.
+5. Apply `20260713061000_retire_inventory_expiry_alert_contract.sql` only after
+   `193300`, regenerate database types from the applied schema, deploy, and run
+   payment/inventory smoke checks.
 
-`193000`/`193100` are safer alone, but owner/Codex chose full-chain apply
-after code deploy to avoid a half-applied ledger.
+The app deploy intentionally separates the additive and contract phases; do not
+describe this release as one atomic database chain.
 
 ### Owner decisions still open
 
@@ -1675,3 +1684,50 @@ T3 review — MoMo Self-Order checkout
   server-to-server IPN completion, and a small return route that only restores
   the guest journey. Migration is written but not applied without explicit
   production delegation.
+
+### Payment/runtime production release gate
+
+Status from the 2026-07-13 read-only production audit: the project is
+`ACTIVE_HEALTHY` on PG17 and its migration ledger ends at
+`20260712180020 repair_canh_kho_qua_location_ledger_drift_20260712`. None of
+the payment/runtime or destructive inventory migrations below are applied.
+This branch is safe to review and merge, but it is not safe to deploy until the
+DB-first phase is applied and smoke-proven.
+
+Never run this release through `supabase db push --include-all`. Apply an
+owner-approved manifest to the production Environment Registry ref, record the
+source-to-ledger version mapping for every step, and stop on the first failed
+guard or smoke check.
+
+1. Apply the additive payment/runtime chain in this exact order:
+   `20260712032325_canonicalize_payment_method_rpc_residue.sql` →
+   `20260712061358_persist_cash_evidence_before_receipt.sql` →
+   `20260712071541_stabilize_cash_receipt_warning.sql` →
+   `20260712161526_quarantine_duplicate_sepay_transfers.sql` →
+   `20260712174500_allow_self_order_pending_add_more.sql` →
+   `20260712201500_add_momo_self_order_checkout.sql` →
+   `20260713032254_harden_runtime_control_plane.sql` →
+   `20260713060850_adjudicate_sepay_payment_conflicts.sql`.
+   Do not skip a prerequisite unless its live function bodies are proven
+   equivalent and the source-to-ledger mapping decision is recorded. In
+   particular, applying a pre-MoMo function replacement after the MoMo
+   migration can overwrite its payment locks and guards.
+2. Apply additive inventory migration
+   `20260710193275_expand_ingredient_catalog_without_shelf_life.sql`.
+3. Verify the new MoMo and SePay RPC signatures, grants, columns, and generated
+   types; then deploy the cutover/runtime application.
+4. Smoke the MoMo create/query/IPN/reconcile/review paths, SePay exact
+   code-plus-amount and conflict adjudication, Finance reconciliation, and the
+   ingredient catalog before any destructive inventory migration.
+5. Re-run the inventory preflight. Require zero rows in `production_orders`
+   and `production_order_items`, zero non-null
+   `stock_movements.production_order_id`, zero GRN lot/expiry values, and zero
+   ingredient shelf-life values.
+6. Apply the destructive inventory chain in this exact order:
+   `20260710193000_retire_branch_production_planning.sql` →
+   `20260710193100_retire_production_batch_contract.sql` →
+   `20260710193200_retire_production_orders.sql` →
+   `20260710193300_retire_lot_expiry_columns.sql` →
+   `20260713061000_retire_inventory_expiry_alert_contract.sql`.
+7. Regenerate production-backed database types, deploy the final runtime, and
+   repeat payment, inventory, cron, webhook, Realtime, and Finance smoke gates.

@@ -52,6 +52,7 @@ export interface GuestPaymentRequestState {
   bankCode?: string | null;
   accountNo?: string | null;
   accountName?: string | null;
+  redirectUrl?: string | null;
   createdAt?: string | null;
   expiresAt?: string | null;
 }
@@ -516,6 +517,26 @@ export function PaymentPanel({
                   <p className="text-sm text-muted-foreground">
                     {SELF_ORDER_VI.momoPendingDescription}
                   </p>
+                  {activePaymentRequest.redirectUrl ? (
+                    <Button asChild size="touch" className="w-full">
+                      <a href={activePaymentRequest.redirectUrl}>
+                        {SELF_ORDER_VI.momoResume}
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="touch"
+                      className="w-full"
+                      disabled={isPending}
+                      onClick={() => onRequestPayment("momo")}
+                    >
+                      {isPending && pendingMethod === "momo" ? (
+                        <Spinner className="size-4" />
+                      ) : null}
+                      {SELF_ORDER_VI.momoRecover}
+                    </Button>
+                  )}
                 </div>
               ) : null}
             </div>

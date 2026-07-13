@@ -21,7 +21,6 @@ import {
   type FinanceCompareMode,
   type FinanceGranularity,
   type FinanceParams,
-  type FinancePayment,
   type FinanceRange,
   getPresetRange,
   serializeFinanceParams,
@@ -55,12 +54,7 @@ interface FilterBarProps {
   className?: string;
 }
 
-type FilterBarControl =
-  | "branch"
-  | "range"
-  | "granularity"
-  | "compare"
-  | "payment";
+type FilterBarControl = "branch" | "range" | "granularity" | "compare";
 
 const ALL_BRANCHES_VALUE = "all";
 
@@ -84,12 +78,6 @@ const COMPARE_LABEL: Record<FinanceCompareMode, string> = {
   prev_week: filterCopy.comparePrevWeek,
   prev_month: filterCopy.comparePrevMonth,
   prev_year: filterCopy.comparePrevYear,
-};
-
-const PAYMENT_LABEL: Record<FinancePayment, string> = {
-  all: filterCopy.paymentAll,
-  cash: filterCopy.paymentCash,
-  vietqr: filterCopy.paymentVietqr,
 };
 
 const GRANULARITY_LABEL: Record<FinanceGranularity, string> = {
@@ -171,7 +159,6 @@ export function FilterBar({
   const showRange = !hide.includes("range");
   const showGranularity = !hide.includes("granularity");
   const showCompare = !hide.includes("compare");
-  const showPayment = !hide.includes("payment");
   const rangeSummary = (
     <>
       {filterCopy.rangeSummary}{" "}
@@ -180,9 +167,6 @@ export function FilterBar({
       </span>
       {showCompare && params.compare !== "none" ? (
         <span> · {COMPARE_LABEL[params.compare]}</span>
-      ) : null}
-      {showPayment && params.payment !== "all" ? (
-        <span> · {PAYMENT_LABEL[params.payment]}</span>
       ) : null}
     </>
   );
@@ -347,29 +331,6 @@ export function FilterBar({
             </div>
           )}
 
-          {showPayment && (
-            <div className="grid gap-1.5">
-              <Label className="text-xs">{filterCopy.payment}</Label>
-              <Select
-                value={params.payment}
-                onValueChange={(v) =>
-                  pushParams({ payment: v as FinancePayment })
-                }
-                disabled={isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(PAYMENT_LABEL) as FinancePayment[]).map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {PAYMENT_LABEL[p]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
         </div>
 
         {showRange && params.range === "custom" ? (

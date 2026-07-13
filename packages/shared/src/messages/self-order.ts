@@ -139,6 +139,14 @@ export const SELF_ORDER_VI = {
   momoPendingTitle: "Đang chờ MoMo xác nhận",
   momoPendingDescription:
     "Sau khi hoàn tất trong MoMo, bạn sẽ được quay lại đây tự động.",
+  momoResume: "Mở lại MoMo",
+  momoRecover: "Thử lại MoMo",
+  momoCheckoutInProgress: "MoMo đang khởi tạo thanh toán. Vui lòng thử lại sau.",
+  momoPendingStaffTitle: "MoMo đang chờ xác nhận",
+  momoPendingStaffDescription:
+    "Không hủy đơn hoặc đổi sang phương thức khác cho đến khi MoMo trả kết quả cuối cùng.",
+  momoPendingStaffBlocked:
+    "MoMo vẫn đang xác minh giao dịch. Không thể hủy hoặc đổi phương thức thanh toán.",
   cashCallOk: "Đã gọi nhân viên thu tiền mặt.",
   vietQrPendingTitle: "Mã QR thanh toán",
   openBankApp: "Mở ứng dụng",

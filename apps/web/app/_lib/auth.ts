@@ -1,12 +1,11 @@
 import { cache } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
+import { extractClaimsFromJwtPayload } from "@comtammatu/shared/auth";
 import type {
   JwtClaims,
   PermissionKey,
   StaffRole,
 } from "@comtammatu/shared/auth";
-import type { Session } from "@supabase/supabase-js";
 
 /**
  * Get authenticated user context with role authorization.
@@ -17,7 +16,7 @@ import type { Session } from "@supabase/supabase-js";
  * Wrapped in React `cache()` so within ONE RSC render, parallel actions
  * sharing the same `allowedRoles` ref (e.g. `MODULE_ACL.pos.allowedRoles`
  * imported from a single module) dedupe to one `getUser()` HTTP roundtrip
- * + one `getSession()` cookie read. POS reload calls 7 actions that all
+ * + one verified `getClaims()` read. POS reload calls 7 actions that all
  * pass `POS_ROLES` — without this cache the page paid 7× ~150-300ms to
  * Supabase Auth. Cache scope is per-request; production safety unchanged.
  */
@@ -26,26 +25,19 @@ export const getAuthContext = cache(async function getAuthContext(
 ) {
   const supabase = await createClient();
 
-  // Server Actions use getUser() — it validates the JWT against Supabase Auth
-  // server, ensuring banned/deleted users are rejected immediately.
-  // Pages/layouts can use getSession() (middleware already verified), but
-  // mutations must re-verify for defense in depth.
-  //
-  // Parallelize the two reads: getUser() makes an HTTP roundtrip to the Auth
-  // server while getSession() decodes the cookie locally. They have no
-  // dependency, so sequencing them only added latency. If getUser() rejects
-  // a banned user we still return null — the parallel session read is
-  // discarded harmlessly (no permission RPC has fired yet).
-  const [userRes, sessionRes] = await Promise.all([
+  // getUser() rejects banned/deleted users immediately. getClaims() verifies
+  // the JWT before exposing hook-injected scope claims. Keep both checks and
+  // require the identities to match before any permission RPC can run.
+  const [userRes, claimsRes] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.auth.getSession(),
+    supabase.auth.getClaims(),
   ]);
 
   const user = userRes.data.user;
-  if (!user) return null;
+  const jwtClaims = claimsRes.data?.claims;
+  if (!user || !jwtClaims || user.id !== jwtClaims.sub) return null;
 
-  const session = sessionRes.data.session;
-  const claims = extractClaimsFromAccessToken(session?.access_token);
+  const claims = extractClaimsFromJwtPayload(jwtClaims);
   if (!claims) return null;
 
   if (!allowedRoles.includes(claims.user_role)) return null;
@@ -159,7 +151,12 @@ export async function getAuthContextWithPermissions(
 
 type LoadedAuthState = {
   supabase: Awaited<ReturnType<typeof createClient>>;
-  session: Session;
+  user: {
+    id: string;
+    email: string | null;
+    displayName: string | null;
+    fullName: string | null;
+  };
   claims: JwtClaims;
 };
 
@@ -174,29 +171,47 @@ type LoadedAuthState = {
  * Returns the Supabase client so callers can avoid creating a second one.
  *
  * Wrapped in React `cache()` so repeated calls within ONE RSC render share
- * the same `{supabase, session, claims}` snapshot — eliminates duplicate
- * `getSession()` cookie parses when both a layout and its page (or multiple
+ * the same `{supabase, user, claims}` snapshot — eliminates duplicate
+ * verified claim reads when both a layout and its page (or multiple
  * helpers like `getEmployeeContext`) read auth state. Cache scope is
  * per-request; production safety unchanged.
  */
 export const loadAuthState = cache(async (): Promise<LoadedAuthState> => {
   const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const { data, error } = await supabase.auth.getClaims();
+  const jwtClaims = data?.claims;
 
-  if (!session?.user) {
+  if (error || !jwtClaims || typeof jwtClaims.sub !== "string") {
     throw new Error(
-      "loadAuthState: session missing — proxy (apps/web/proxy.ts) should have redirected to /login before reaching this layout.",
+      "loadAuthState: verified auth claims missing — proxy (apps/web/proxy.ts) should have redirected to /login before reaching this layout.",
     );
   }
 
-  const claims = extractClaimsFromAccessToken(session.access_token);
+  const claims = extractClaimsFromJwtPayload(jwtClaims);
   if (!claims) {
     throw new Error(
       "loadAuthState: claims missing — proxy should have redirected to /access-denied (missing-auth-context).",
     );
   }
 
-  return { supabase, session, claims };
+  const userMetadata =
+    jwtClaims.user_metadata &&
+    typeof jwtClaims.user_metadata === "object" &&
+    !Array.isArray(jwtClaims.user_metadata)
+      ? (jwtClaims.user_metadata as Record<string, unknown>)
+      : {};
+  const user = {
+    id: jwtClaims.sub,
+    email: typeof jwtClaims.email === "string" ? jwtClaims.email : null,
+    displayName:
+      typeof userMetadata["display_name"] === "string"
+        ? userMetadata["display_name"]
+        : null,
+    fullName:
+      typeof userMetadata["full_name"] === "string"
+        ? userMetadata["full_name"]
+        : null,
+  };
+
+  return { supabase, user, claims };
 });

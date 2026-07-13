@@ -10,6 +10,7 @@ import {
 } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
+import { fetchMomoPaymentExceptions } from "../_lib/momo-payment-exceptions";
 import { buildSepayReconciliationSummary } from "../_lib/sepay-bank-transaction-model";
 import {
   fetchSepayBankTransactions,
@@ -23,6 +24,7 @@ import {
 } from "../_lib/finance-params";
 import { fetchExpenseMatchOptions } from "../expense-actions";
 import { BankTransactionsTable } from "./bank-transactions-table";
+import { MomoPaymentExceptionsTable } from "./momo-payment-exceptions-table";
 
 const copy = messages.finance.bankTransactions;
 
@@ -37,28 +39,41 @@ export default async function BankTransactionsPage({
     branch: null,
     gran: "day",
     compare: "prev_month",
-    payment: "all",
     cashier: null,
   };
   const resolved = resolveFinanceRange(params);
   const range = { start: resolved.start, end: resolved.end };
-  const [authState, transactions, expenseOptionsRes, paymentWebhookSummary] =
-    await Promise.all([
-      loadAuthState(),
-      fetchSepayBankTransactions(range),
-      fetchExpenseMatchOptions(),
-      fetchSepayPaymentWebhookSummary(range),
-    ]);
+  const [
+    authState,
+    transactions,
+    expenseOptionsRes,
+    paymentWebhookSummary,
+    momoExceptions,
+  ] = await Promise.all([
+    loadAuthState(),
+    fetchSepayBankTransactions(range),
+    fetchExpenseMatchOptions(),
+    fetchSepayPaymentWebhookSummary(range),
+    fetchMomoPaymentExceptions(),
+  ]);
 
   const expenseOptions =
     expenseOptionsRes.success && expenseOptionsRes.data
       ? expenseOptionsRes.data
       : [];
   const summary = buildSepayReconciliationSummary(transactions);
+  const activeMomoExceptions = momoExceptions.items.filter(
+    (item) => item.reviewStatus !== "refunded",
+  );
+  const activeMomoAmount = activeMomoExceptions.reduce(
+    (sum, item) => sum + item.amount,
+    0,
+  );
   const needsReviewCount =
     summary.needsReviewCount +
-    paymentWebhookSummary.openMissingBankWebhookCount;
-  const needsReviewAmount =
+    paymentWebhookSummary.openMissingBankWebhookCount +
+    activeMomoExceptions.length;
+  const bankNeedsReviewAmount =
     summary.needsReviewAmount +
     paymentWebhookSummary.openMissingBankWebhookAmount;
   const canLinkPayments = authState.claims.user_role === "owner";
@@ -80,7 +95,7 @@ export default async function BankTransactionsPage({
         params={params}
         branches={[]}
         basePath="/finance/bank-transactions"
-        hide={["branch", "granularity", "compare", "payment"]}
+        hide={["branch", "granularity", "compare"]}
         compact
       />
 
@@ -96,9 +111,11 @@ export default async function BankTransactionsPage({
           label={copy.reconciliation.needsReview}
           value={formatCount(needsReviewCount)}
           hint={copy.reconciliation.needsReviewHint(
-            formatVND(needsReviewAmount),
+            formatVND(bankNeedsReviewAmount),
+            formatVND(activeMomoAmount),
             formatCount(summary.needsReviewCount),
             formatCount(paymentWebhookSummary.openMissingBankWebhookCount),
+            formatCount(activeMomoExceptions.length),
           )}
           tone={needsReviewCount > 0 ? "warning" : "success"}
           density="compact"
@@ -137,6 +154,18 @@ export default async function BankTransactionsPage({
           density="compact"
         />
       </KpiRow>
+
+      <AppSection
+        size="sm"
+        title={copy.momoExceptions.title}
+        description={copy.momoExceptions.description}
+      >
+        <MomoPaymentExceptionsTable
+          exceptions={momoExceptions.items}
+          canReview={canLinkPayments}
+          loadFailed={momoExceptions.failed}
+        />
+      </AppSection>
 
       <AppSection size="sm" title={copy.listTitle}>
         <BankTransactionsTable

@@ -7,10 +7,12 @@
  * Deletes active KDS queue tickets only. This intentionally does not mutate
  * POS orders, order_items, payment rows, kitchen batches, or daily counters.
  */
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { getCronSecret } from "@comtammatu/shared/runtime";
+import {
+  getCronSecret,
+  timingSafeSecretEquals,
+} from "@comtammatu/shared/runtime";
 import {
   getKdsCleanupCutoffIso,
   getKdsResetBeforeLocalDate,
@@ -19,16 +21,6 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
-
-function timingSafeEquals(a: string, b: string): boolean {
-  const MAX = 256;
-  const ba = Buffer.alloc(MAX);
-  const bb = Buffer.alloc(MAX);
-  ba.write(a.slice(0, MAX), "utf8");
-  bb.write(b.slice(0, MAX), "utf8");
-  const eq = timingSafeEqual(ba, bb);
-  return eq && a.length === b.length;
-}
 
 function unauthorized() {
   return NextResponse.json(
@@ -51,7 +43,7 @@ export async function POST(request: Request) {
   const provided = authHeader?.startsWith("Bearer ")
     ? authHeader.slice("Bearer ".length).trim()
     : null;
-  if (!provided || !timingSafeEquals(provided, expected)) {
+  if (!provided || !timingSafeSecretEquals(provided, expected)) {
     return unauthorized();
   }
 

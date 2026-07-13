@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeMomoCheckoutUrl } from "@lib/payments/momo-url";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 
 export const selfOrderTokenSchema = z
@@ -93,8 +94,18 @@ export const selfOrderPaymentRequestSchema = z
     clientOpId: selfOrderClientOpIdSchema,
     method: z.enum(["cash_call", "vietqr", "momo"]),
     invoice: invoiceBuyerSchema.optional(),
+    recover: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    if (data.recover && data.method !== "momo") {
+      ctx.addIssue({
+        code: "custom",
+        message: "Recovery is only available for MoMo checkout.",
+        path: ["recover"],
+      });
+    }
+  });
 
 export const selfOrderRequestStatusSchema = z.enum([
   "pending",
@@ -140,6 +151,11 @@ const publicSelfOrderPaymentRequestSchema = z
     bankCode: z.string().min(1).nullable().optional(),
     accountNo: z.string().min(1).nullable().optional(),
     accountName: z.string().nullable().optional(),
+    redirectUrl: z
+      .url()
+      .refine((value) => normalizeMomoCheckoutUrl(value) !== null)
+      .nullable()
+      .optional(),
     createdAt: z.string().datetime({ offset: true }),
     expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
   })

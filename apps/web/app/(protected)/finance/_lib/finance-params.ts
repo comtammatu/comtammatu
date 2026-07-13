@@ -3,7 +3,7 @@ import { getVNDateParts } from "@comtammatu/shared/time";
 
 // ─── URL param schema — single source of truth ──────────────────
 //
-// Per Architect §1: 8 params govern the entire Finance surface. Defaults
+// Seven params govern the entire Finance surface. Defaults
 // are stripped from the URL (omit semantics) — we serialize only what
 // differs from default so links stay readable and bookmarks decay
 // gracefully when a future default changes.
@@ -37,9 +37,6 @@ const FINANCE_COMPARE_MODES = [
 ] as const;
 export type FinanceCompareMode = (typeof FINANCE_COMPARE_MODES)[number];
 
-const FINANCE_PAYMENTS = ["all", "cash", "vietqr"] as const;
-export type FinancePayment = (typeof FINANCE_PAYMENTS)[number];
-
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 const branchSchema = z
@@ -55,7 +52,6 @@ const FINANCE_DEFAULTS = {
   range: "mtd" as FinanceRange,
   granularity: "day" as FinanceGranularity,
   compare: "prev_month" as FinanceCompareMode,
-  payment: "all" as FinancePayment,
 } as const;
 
 const financeParamsSchema = z.object({
@@ -65,7 +61,6 @@ const financeParamsSchema = z.object({
   to: isoDate.optional(),
   gran: z.enum(FINANCE_GRANULARITIES).default(FINANCE_DEFAULTS.granularity),
   compare: z.enum(FINANCE_COMPARE_MODES).default(FINANCE_DEFAULTS.compare),
-  payment: z.enum(FINANCE_PAYMENTS).default(FINANCE_DEFAULTS.payment),
   cashier: z
     .string()
     .optional()
@@ -81,7 +76,6 @@ export interface FinanceParams {
   to: string | null;
   gran: FinanceGranularity;
   compare: FinanceCompareMode;
-  payment: FinancePayment;
   cashier: string | null;
 }
 
@@ -100,7 +94,6 @@ export function parseFinanceParams(input: FinanceParamsInput): FinanceParams {
     to: pickFirst(input.to),
     gran: pickFirst(input.gran),
     compare: pickFirst(input.compare),
-    payment: pickFirst(input.payment),
     cashier: pickFirst(input.cashier),
   };
   const parsed = financeParamsSchema.safeParse(flat);
@@ -112,7 +105,6 @@ export function parseFinanceParams(input: FinanceParamsInput): FinanceParams {
       to: null,
       gran: FINANCE_DEFAULTS.granularity,
       compare: FINANCE_DEFAULTS.compare,
-      payment: FINANCE_DEFAULTS.payment,
       cashier: null,
     };
   }
@@ -123,7 +115,6 @@ export function parseFinanceParams(input: FinanceParamsInput): FinanceParams {
     to: parsed.data.to ?? null,
     gran: parsed.data.gran,
     compare: parsed.data.compare,
-    payment: parsed.data.payment,
     cashier: parsed.data.cashier,
   };
 }
@@ -141,7 +132,6 @@ export function serializeFinanceParams(p: FinanceParams): URLSearchParams {
   }
   if (p.gran !== FINANCE_DEFAULTS.granularity) usp.set("gran", p.gran);
   if (p.compare !== FINANCE_DEFAULTS.compare) usp.set("compare", p.compare);
-  if (p.payment !== FINANCE_DEFAULTS.payment) usp.set("payment", p.payment);
   if (p.cashier) usp.set("cashier", p.cashier);
   return usp;
 }

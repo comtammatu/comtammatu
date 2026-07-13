@@ -574,7 +574,7 @@ export function PosDesktopInner({
       new Map(
         selfOrderPosState.paymentRequests.map((request) => [
           request.orderId,
-          request.id,
+          request,
         ]),
       ),
     [selfOrderPosState.paymentRequests],
@@ -1886,7 +1886,12 @@ export function PosDesktopInner({
         selfOrderPaymentRequestId={
           billOrderId === null
             ? null
-            : (selfOrderPaymentRequestByOrder.get(billOrderId) ?? null)
+            : (selfOrderPaymentRequestByOrder.get(billOrderId)?.id ?? null)
+        }
+        selfOrderPaymentRequestMethod={
+          billOrderId === null
+            ? null
+            : (selfOrderPaymentRequestByOrder.get(billOrderId)?.method ?? null)
         }
         onOrderUpdated={() => void refreshSelfOrderWorkflow()}
         onClose={closeBill}

@@ -5,6 +5,11 @@ import {
   confirmCashPaymentRpcFallback,
   confirmCashPaymentRpcMappings,
 } from "../app/(protected)/br/[branchId]/pos/_lib/payment-messages";
+import { METHOD_LABELS } from "../app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-types";
+
+test("POS bill receipt labels completed MoMo payments", () => {
+  assert.equal(METHOD_LABELS.momo, "MoMo");
+});
 
 test("missing cash-payment RPC does not masquerade as under-payment", () => {
   const result = mapRpcError(

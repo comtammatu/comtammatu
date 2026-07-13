@@ -212,7 +212,7 @@ export default async function FinancePage({
         branches={cockpit.branches}
         basePath="/finance"
         ranges={HKD_RANGES}
-        hide={["granularity", "compare", "payment"]}
+        hide={["granularity", "compare"]}
         compact
       />
 

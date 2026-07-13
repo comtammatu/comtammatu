@@ -105,10 +105,10 @@ export async function markNotificationRead(
   if (!parsed.success) {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
-  const { supabase, session } = await loadAuthState();
+  const { supabase, user } = await loadAuthState();
   const { error } = await supabase
     .from("notification_reads")
-    .insert({ notification_id: parsed.data.id, user_id: session.user.id });
+    .insert({ notification_id: parsed.data.id, user_id: user.id });
   // 23505 = unique_violation → already read, treat as success
   if (error && error.code !== "23505") {
     return { success: false, error: "Không thể đánh dấu đã đọc" };

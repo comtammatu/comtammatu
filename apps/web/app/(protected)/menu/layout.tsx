@@ -7,16 +7,14 @@ export default async function MenuLayout({
 }: {
   children: ReactNode;
 }) {
-  const { session, claims } = await loadAuthState();
+  const { user, claims } = await loadAuthState();
 
   return (
     <OfficeModuleShell
       module="menu"
       user={{
         name:
-          session.user.user_metadata?.["display_name"] ??
-          session.user.email ??
-          "",
+          user.displayName ?? user.email ?? "",
       }}
       role={claims.user_role}
       branchId={claims.branch_id}

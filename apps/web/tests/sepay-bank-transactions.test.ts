@@ -7,6 +7,7 @@ import {
   attachSupplierPaymentMatches,
   buildSepayPaymentWebhookSummary,
   buildSepayReconciliationSummary,
+  classifySepayPaymentConflict,
   classifySepayReconciliationState,
   classifySepayUnmatchedMoneyIn,
   isSepayOverpayment,
@@ -352,6 +353,63 @@ test("SePay second distinct transfer stays in review without becoming webhook er
   assert.equal(summary.unmatchedMoneyInAmount, 50000);
 });
 
+test("SePay payment conflicts stay in review and cannot look like webhook failures", () => {
+  const methodConflict = tx(
+    row(
+      32,
+      { transferType: "in", transferAmount: 70000 },
+      undefined,
+      null,
+      null,
+      "processed",
+      "payment_method_conflict_needs_review",
+      932,
+    ),
+  );
+  const stateConflict = tx(
+    row(
+      33,
+      { transferType: "in", transferAmount: 80000 },
+      undefined,
+      null,
+      null,
+      "processed",
+      "payment_state_conflict_needs_review",
+      933,
+    ),
+  );
+
+  assert.equal(
+    classifySepayPaymentConflict(methodConflict),
+    "payment_method_conflict",
+  );
+  assert.equal(
+    classifySepayPaymentConflict(stateConflict),
+    "payment_state_conflict",
+  );
+  assert.equal(
+    classifySepayReconciliationState(methodConflict),
+    "needs_review",
+  );
+  assert.equal(classifySepayReconciliationState(stateConflict), "needs_review");
+  assert.equal(
+    classifySepayUnmatchedMoneyIn(methodConflict),
+    "payment_method_conflict",
+  );
+  assert.equal(
+    classifySepayUnmatchedMoneyIn(stateConflict),
+    "payment_state_conflict",
+  );
+
+  const summary = buildSepayReconciliationSummary([
+    methodConflict,
+    stateConflict,
+  ]);
+  assert.equal(summary.needsReviewCount, 2);
+  assert.equal(summary.failedCount, 0);
+  assert.equal(summary.unmatchedMoneyInCount, 2);
+});
+
 test("SePay duplicate-transfer guard quarantines the second event before payment completion", () => {
   const migration = read(
     "supabase/migrations/20260712161526_quarantine_duplicate_sepay_transfers.sql",
@@ -369,17 +427,66 @@ test("SePay duplicate-transfer guard quarantines the second event before payment
   assert.match(migration, /error_code = 'overpayment_needs_review'/);
   assert.match(migration, /payment_id = NULL/);
   assert.match(migration, /'status', 'overpayment_needs_review'/);
-  assert.match(migration, /position\([\s\S]*payment_code[\s\S]*IN v_event_memo/);
+  assert.match(
+    migration,
+    /position\([\s\S]*payment_code[\s\S]*IN v_event_memo/,
+  );
   assert.match(migration, /btrim\(payment_code\) <> ''/);
   assert.match(migration, /\[A-Za-z0-9\]\{15,49\}/);
-  assert.match(migration, /IF v_order_count = 0 THEN[\s\S]*regexp_replace\(/);
-  assert.match(migration, /ORDER BY id[\s\S]*FOR UPDATE/);
+  assert.doesNotMatch(migration, /IF v_order_count = 0 THEN\s+FOR v_order IN/);
+  const memoOrderScan = migration.indexOf("FOR v_order IN");
+  const noMatchResult = migration.indexOf(
+    "IF v_order_count = 0",
+    memoOrderScan,
+  );
+  const ambiguousResult = migration.indexOf(
+    "IF v_order_count > 1",
+    noMatchResult,
+  );
+  assert.ok(
+    memoOrderScan >= 0 &&
+      noMatchResult > memoOrderScan &&
+      ambiguousResult > noMatchResult,
+    "all memo payment codes must be counted before selecting an order",
+  );
+  const advisoryLock = migration.indexOf("pg_advisory_xact_lock(v_order_id)");
+  const lockedOrder = migration.indexOf("INTO v_order", advisoryLock);
+  const selectedCodeCheck = migration.indexOf(
+    "v_requested_payment_code <> ''",
+    lockedOrder,
+  );
+  assert.ok(
+    advisoryLock > ambiguousResult &&
+      lockedOrder > advisoryLock &&
+      selectedCodeCheck > lockedOrder,
+    "the optional route-selected code must be checked only after one memo match remains",
+  );
+  const stateMatrixStart = migration.indexOf("IF v_payment_count > 1");
+  const stateMatrix = migration.slice(
+    stateMatrixStart,
+    migration.indexOf("IF v_payment_found", stateMatrixStart + 1),
+  );
+  assert.match(
+    stateMatrix,
+    /v_payment\.status = 'pending'[\s\S]*v_payment\.method = 'vietqr'[\s\S]*v_order\.payment_status IN \('unpaid', 'pending'\)[\s\S]*v_order\.payment_method = 'vietqr'/,
+  );
+  assert.match(stateMatrix, /payment_method_conflict_needs_review/);
+  assert.match(stateMatrix, /payment_state_conflict_needs_review/);
+  assert.match(stateMatrix, /overpayment_needs_review/);
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.confirm_sepay_payment\([\s\S]*?FROM PUBLIC, anon, authenticated, service_role/,
+  );
   assert.match(migration, /prior_event\.processing_status <> 'failed'/);
   assert.match(migration, /\^-\?\[0-9\]\+\(\[\.\]\[0-9\]\+\)\?\$/);
   assert.match(route, /"overpayment_needs_review"/);
+  assert.match(route, /"payment_method_conflict_needs_review"/);
+  assert.match(route, /"payment_state_conflict_needs_review"/);
   assert.match(route, /p_payment_code: paymentCode \?\? ""/);
   assert.match(table, /isSepayOverpayment\(tx\)/);
   assert.match(table, /copy\.overpayment\.linkUnavailable/);
+  assert.match(table, /paymentConflict != null/);
+  assert.match(table, /AdjudicatePaymentConflictCell/);
 });
 
 test("SePay outgoing transactions can match supplier AP payments by reference", () => {

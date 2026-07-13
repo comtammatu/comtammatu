@@ -111,6 +111,10 @@ export interface PendingRemotePaymentForBillData {
 function mapPaymentRpcError(message: string): string | null {
   const normalized = message.toLowerCase();
 
+  if (normalized.includes("momo_payment_pending")) {
+    return "MoMo vẫn đang xác minh giao dịch. Không thể đổi phương thức thanh toán.";
+  }
+
   if (
     normalized.includes("default_consumption_location_missing") ||
     normalized.includes("consumption_location_missing") ||
@@ -894,6 +898,13 @@ export const cancelPendingPayment = withActionPositional(
 
     if (error) {
       const message = String(error.message ?? "").toLowerCase();
+      if (message.includes("momo_payment_pending")) {
+        return {
+          success: false,
+          error:
+            "MoMo vẫn đang xác minh giao dịch. Không thể hủy phiên thanh toán.",
+        };
+      }
       if (message.includes("payment_not_pending")) {
         return {
           success: false,

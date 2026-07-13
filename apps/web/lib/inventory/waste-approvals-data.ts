@@ -17,7 +17,7 @@ export async function loadWasteApprovalsData({
   routeBranchId,
   queryBranchId,
 }: LoadWasteApprovalsOptions = {}) {
-  const { supabase, claims, session } = await loadAuthState();
+  const { supabase, claims, user } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
     queryBranchId,
@@ -176,7 +176,7 @@ export async function loadWasteApprovalsData({
       sourceType: issue.source_type ?? "manual",
       createdBy: creatorId,
       createdByName: creatorMap.get(creatorId) ?? creatorId,
-      isSelfCreated: creatorId === session.user.id,
+      isSelfCreated: creatorId === user.id,
       totalValue,
       notes: issue.notes ?? null,
       items: items.map((item) => {

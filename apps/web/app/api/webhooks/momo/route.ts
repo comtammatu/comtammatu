@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
+import { classifyMomoResultCode } from "@lib/payments/momo-result";
 import {
   decodeMomoCallbackContext,
   verifyMomoResult,
@@ -20,13 +21,15 @@ type UntypedRpcClient = {
 };
 
 function accepted() {
-  return NextResponse.json({ success: true });
+  return new NextResponse(null, { status: 204 });
 }
 
-function providerData(result: MomoResult): Json {
+function providerData(result: MomoResult, paymentRequestId: number): Json {
   return {
     orderId: result.orderId,
     requestId: result.requestId,
+    paymentRequestId,
+    amount: result.amount,
     transactionId: result.transId,
     resultCode: result.resultCode,
     responseTime: result.responseTime,
@@ -59,6 +62,7 @@ async function claimWebhookEvent(
   const { data: existing, error: existingError } = await supabase
     .from("webhook_events")
     .select("id, processing_status, http_status")
+    .eq("tenant_id", input.tenantId)
     .eq("provider", "momo")
     .eq("request_id", input.requestId)
     .maybeSingle();
@@ -77,6 +81,20 @@ async function claimWebhookEvent(
   ) {
     return { status: "already_final" };
   }
+  const { error: updateError } = await supabase
+    .from("webhook_events")
+    .update({
+      payload: input.payload,
+      processing_status: "received",
+      http_status: null,
+      error_code: null,
+      processed_at: null,
+    })
+    .eq("id", existing.id);
+  if (updateError) {
+    console.error("[momo-webhook] duplicate event update failed", updateError.code);
+    return { status: "error" };
+  }
   return { status: "claimed", id: existing.id };
 }
 
@@ -85,7 +103,7 @@ async function markWebhookEvent(
   eventId: number,
   input: {
     paymentId?: number | null;
-    processingStatus: "processed" | "failed" | "ignored";
+    processingStatus: "received" | "processed" | "failed" | "ignored";
     httpStatus: number;
     errorCode?: string | null;
   },
@@ -97,7 +115,10 @@ async function markWebhookEvent(
       processing_status: input.processingStatus,
       http_status: input.httpStatus,
       error_code: input.errorCode ?? null,
-      processed_at: new Date().toISOString(),
+      processed_at:
+        input.processingStatus === "received"
+          ? null
+          : new Date().toISOString(),
     })
     .eq("id", eventId);
   if (error) console.error("[momo-webhook] event update failed", error.code);
@@ -110,12 +131,16 @@ export async function POST(request: Request) {
 
   const context = decodeMomoCallbackContext(result.extraData);
   if (!context) return NextResponse.json({ success: false }, { status: 400 });
+  if (result.requestId !== result.orderId) {
+    return NextResponse.json({ success: false }, { status: 400 });
+  }
 
   const supabase = createServiceClient();
+  const data = providerData(result, context.paymentRequestId);
   const claim = await claimWebhookEvent(supabase, {
     tenantId: context.tenantId,
     requestId: result.requestId,
-    payload: providerData(result),
+    payload: data,
   });
   if (claim.status === "already_final") return accepted();
   if (claim.status === "error") {
@@ -123,14 +148,28 @@ export async function POST(request: Request) {
   }
 
   const rpc = supabase as unknown as UntypedRpcClient;
-  const data = providerData(result);
-  if (result.resultCode !== 0) {
-    const { error } = await rpc.rpc("fail_momo_payment", {
+  const disposition = classifyMomoResultCode(result.resultCode);
+  if (disposition === "pending") {
+    await markWebhookEvent(supabase, claim.id, {
+      paymentId: context.paymentId,
+      processingStatus: "received",
+      httpStatus: 204,
+      errorCode: `momo_${result.resultCode}_pending`,
+    });
+    return accepted();
+  }
+
+  if (disposition === "failure") {
+    const { data: failure, error } = await rpc.rpc<Record<string, unknown>>(
+      "fail_momo_payment",
+      {
       p_tenant_id: context.tenantId,
       p_payment_id: context.paymentId,
       p_provider_ref: result.orderId,
       p_provider_data: data,
-    });
+      },
+    );
+    const status = typeof failure?.status === "string" ? failure.status : "";
     if (error) {
       console.error("[momo-webhook] failure settlement failed", error.code);
       await markWebhookEvent(supabase, claim.id, {
@@ -140,10 +179,19 @@ export async function POST(request: Request) {
       });
       return NextResponse.json({ success: false }, { status: 500 });
     }
+    if (status !== "failed" && status !== "already_completed") {
+      await markWebhookEvent(supabase, claim.id, {
+        paymentId: context.paymentId,
+        processingStatus: "failed",
+        httpStatus: 204,
+        errorCode: status || "failure_rejected",
+      });
+      return accepted();
+    }
     await markWebhookEvent(supabase, claim.id, {
       paymentId: context.paymentId,
       processingStatus: "ignored",
-      httpStatus: 200,
+      httpStatus: 204,
       errorCode: `momo_${result.resultCode}`,
     });
     return accepted();
@@ -171,7 +219,7 @@ export async function POST(request: Request) {
     await markWebhookEvent(supabase, claim.id, {
       paymentId: context.paymentId,
       processingStatus: "failed",
-      httpStatus: error ? 500 : 200,
+      httpStatus: error ? 500 : 204,
       errorCode: error
         ? "completion_rpc_failed"
         : status || "completion_rejected",
@@ -184,7 +232,7 @@ export async function POST(request: Request) {
   await markWebhookEvent(supabase, claim.id, {
     paymentId: context.paymentId,
     processingStatus: "processed",
-    httpStatus: 200,
+    httpStatus: 204,
   });
   return accepted();
 }

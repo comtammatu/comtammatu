@@ -14,10 +14,12 @@
  * stay `status='issued'` regardless of archive outcome.
  */
 
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { getCronSecret } from "@comtammatu/shared/runtime";
+import {
+  getCronSecret,
+  timingSafeSecretEquals,
+} from "@comtammatu/shared/runtime";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { executeArchiveRunForBranch } from "@lib/hddt-archive";
@@ -25,16 +27,6 @@ import { executeArchiveRunForBranch } from "@lib/hddt-archive";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
-
-function timingSafeEquals(a: string, b: string): boolean {
-  const MAX = 256;
-  const ba = Buffer.alloc(MAX);
-  const bb = Buffer.alloc(MAX);
-  ba.write(a.slice(0, MAX), "utf8");
-  bb.write(b.slice(0, MAX), "utf8");
-  const eq = timingSafeEqual(ba, bb);
-  return eq && a.length === b.length;
-}
 
 function unauthorized() {
   return NextResponse.json(
@@ -49,7 +41,7 @@ export async function POST(request: Request) {
   const provided = authHeader?.startsWith("Bearer ")
     ? authHeader.slice("Bearer ".length).trim()
     : null;
-  if (!expected || !provided || !timingSafeEquals(provided, expected)) {
+  if (!expected || !provided || !timingSafeSecretEquals(provided, expected)) {
     return unauthorized();
   }
 

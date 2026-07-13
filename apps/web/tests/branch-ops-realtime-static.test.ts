@@ -64,6 +64,22 @@ const migration = readFileSync(
   "utf8",
 );
 
+const hardeningMigration = readFileSync(
+  new URL(
+    "../../../supabase/migrations/20260713032254_harden_runtime_control_plane.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
+const runtimeControlPlaneTest = readFileSync(
+  new URL(
+    "../../../supabase/tests/runtime_control_plane_test.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
 const stockLevelsMigration = readFileSync(
   new URL(
     "../../../supabase/migrations/20260706193000_stock_levels_branch_ops_refresh.sql",
@@ -148,6 +164,48 @@ test("DB trigger broadcasts to the matching topic/event on a private channel", (
 test("realtime.messages receive policy is scoped to branch ops topics", () => {
   assert.match(migration, /realtime\.topic\(\)\s+LIKE\s+'branch:%:ops'/);
   assert.match(migration, /can_read_branch_ops/);
+});
+
+test("branch ops authorization follows active profile branch scope", () => {
+  assert.match(hardeningMigration, /pr\.branch_id = p_branch_id/);
+  assert.match(hardeningMigration, /public\.auth_is_owner\(pr\.id\)/);
+  assert.match(hardeningMigration, /pr\.is_active IS TRUE/);
+  assert.doesNotMatch(
+    hardeningMigration,
+    /sp\.branch_id = p_branch_id OR sp\.branch_id IS NULL/,
+  );
+});
+
+test("runtime control-plane hardening fixes cron dedup and MV grants", () => {
+  assert.match(hardeningMigration, /FROM cron\.job j[\s\S]*WHERE j\.active/);
+  assert.match(
+    hardeningMigration,
+    /ORDER BY d\.runid DESC/,
+  );
+  assert.match(
+    hardeningMigration,
+    /v_status IN \('starting', 'connecting', 'sending'\)/,
+  );
+  assert.match(hardeningMigration, /private\.cron_health_observations/);
+  assert.match(hardeningMigration, /v_first_observed_at < now\(\) - v_max_age/);
+  assert.match(
+    hardeningMigration,
+    /WHEN 'refresh_mv_inventory_stock_current' THEN interval '45 minutes'/,
+  );
+  assert.match(
+    hardeningMigration,
+    /ON CONFLICT \(tenant_id, dedup_key\)[\s\S]*WHERE dedup_key IS NOT NULL/,
+  );
+  assert.match(
+    hardeningMigration,
+    /kind,[\s\S]*title,[\s\S]*body,[\s\S]*dedup_key/,
+  );
+  assert.match(
+    hardeningMigration,
+    /REVOKE ALL ON public\.mv_inventory_stock_current FROM anon, authenticated/,
+  );
+  assert.match(runtimeControlPlaneTest, /cron\.schedule\(/);
+  assert.doesNotMatch(runtimeControlPlaneTest, /INSERT INTO cron\.job\s*\(/);
 });
 
 test("POS menu sync owns branch ops refresh without a layout duplicate", () => {
