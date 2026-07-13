@@ -91,6 +91,7 @@ const STATUS_DOMAINS = {
       unpaid: "warning",
       cash_paid: "secondary",
       transfer_matched: "success",
+      transfer_partially_matched: "warning",
       transfer_needs_match: "warning",
     },
   },

@@ -35,8 +35,20 @@ test("expense payment state separates paid, unpaid, and bank-matched transfer ro
       payment_method: "transfer",
       paid_at: "2026-07-09T01:00:00.000Z",
       matchedEventIds: [123],
+      amount: 100_000,
+      allocatedAmount: 100_000,
     }),
     "transfer_matched",
+  );
+  assert.equal(
+    classifyExpensePaymentState({
+      payment_method: "unpaid",
+      paid_at: null,
+      matchedEventIds: [123],
+      amount: 100_000,
+      allocatedAmount: 40_000,
+    }),
+    "transfer_partially_matched",
   );
 });
 

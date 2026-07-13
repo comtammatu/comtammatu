@@ -18,6 +18,9 @@ DECLARE
   v_mismatch_event bigint;
   v_single_event_a bigint;
   v_single_event_b bigint;
+  v_single_event_c bigint;
+  v_legacy_expense bigint;
+  v_legacy_event bigint;
   v_cash_event bigint;
   v_dh_order bigint;
   v_dh_payment bigint;
@@ -101,7 +104,7 @@ BEGIN
     tenant_id, branch_id, expense_date, category, amount, payment_method,
     note, created_by
   ) VALUES (
-    v_tenant, v_branch, current_date, 'other', 50000, 'unpaid',
+    v_tenant, v_branch, current_date, 'other', 6903739, 'unpaid',
     'PR284 single allocation', v_owner
   ) RETURNING id INTO v_single_expense;
 
@@ -124,15 +127,47 @@ BEGIN
     tenant_id, provider, request_id, signature_valid, payload, processing_status
   ) VALUES (
     v_tenant, 'sepay', 'pr284-single-a-' || gen_random_uuid()::text, true,
-    jsonb_build_object('transferType', 'out', 'transferAmount', 50000), 'received'
+    jsonb_build_object('transferType', 'out', 'transferAmount', 1317021), 'received'
   ) RETURNING id INTO v_single_event_a;
 
   INSERT INTO public.webhook_events (
     tenant_id, provider, request_id, signature_valid, payload, processing_status
   ) VALUES (
     v_tenant, 'sepay', 'pr284-single-b-' || gen_random_uuid()::text, true,
-    jsonb_build_object('transferType', 'out', 'transferAmount', 50000), 'received'
+    jsonb_build_object('transferType', 'out', 'transferAmount', 5586718), 'received'
   ) RETURNING id INTO v_single_event_b;
+
+  INSERT INTO public.webhook_events (
+    tenant_id, provider, request_id, signature_valid, payload, processing_status
+  ) VALUES (
+    v_tenant, 'sepay', 'pr284-single-c-' || gen_random_uuid()::text, true,
+    jsonb_build_object('transferType', 'out', 'transferAmount', 1), 'received'
+  ) RETURNING id INTO v_single_event_c;
+
+  INSERT INTO public.expenses (
+    tenant_id, branch_id, expense_date, category, amount, payment_method,
+    paid_at, paid_by_bank_allocation, note, created_by
+  ) VALUES (
+    v_tenant, v_branch, current_date, 'other', 80000, 'transfer',
+    now(), NULL, 'PR284 legacy paid provenance', v_owner
+  ) RETURNING id INTO v_legacy_expense;
+
+  INSERT INTO public.webhook_events (
+    tenant_id, provider, request_id, signature_valid, payload, processing_status
+  ) VALUES (
+    v_tenant, 'sepay', 'pr284-legacy-' || gen_random_uuid()::text, true,
+    jsonb_build_object('transferType', 'out', 'transferAmount', 80000), 'received'
+  ) RETURNING id INTO v_legacy_event;
+
+  INSERT INTO public.bank_transaction_expense_matches (
+    tenant_id, webhook_event_id, expense_id, allocated_amount, created_by
+  ) VALUES (
+    v_tenant, v_legacy_event, v_legacy_expense, 80000, v_owner
+  );
+
+  UPDATE public.webhook_events
+  SET expense_id = v_legacy_expense
+  WHERE id = v_legacy_event;
 
   INSERT INTO public.webhook_events (
     tenant_id, provider, request_id, signature_valid, payload, processing_status
@@ -207,6 +242,9 @@ BEGIN
   PERFORM set_config('test.pr284_mismatch_event', v_mismatch_event::text, true);
   PERFORM set_config('test.pr284_single_event_a', v_single_event_a::text, true);
   PERFORM set_config('test.pr284_single_event_b', v_single_event_b::text, true);
+  PERFORM set_config('test.pr284_single_event_c', v_single_event_c::text, true);
+  PERFORM set_config('test.pr284_legacy_expense', v_legacy_expense::text, true);
+  PERFORM set_config('test.pr284_legacy_event', v_legacy_event::text, true);
   PERFORM set_config('test.pr284_cash_event', v_cash_event::text, true);
   PERFORM set_config('test.pr284_cash_note', v_cash_note, true);
   PERFORM set_config('test.pr284_dh_order', v_dh_order::text, true);
@@ -267,14 +305,97 @@ BEGIN
     current_setting('test.pr284_single_event_a')::bigint,
     ARRAY[current_setting('test.pr284_single_expense')::bigint]
   );
+  PERFORM public.match_sepay_transaction_expenses(
+    current_setting('test.pr284_single_event_b')::bigint,
+    ARRAY[current_setting('test.pr284_single_expense')::bigint]
+  );
   BEGIN
     PERFORM public.match_sepay_transaction_expenses(
-      current_setting('test.pr284_single_event_b')::bigint,
+      current_setting('test.pr284_single_event_c')::bigint,
       ARRAY[current_setting('test.pr284_single_expense')::bigint]
     );
-    RAISE EXCEPTION 'Expense was matched to two bank events';
-  EXCEPTION WHEN SQLSTATE '23505' THEN
-    IF SQLERRM <> 'expense_already_matched' THEN RAISE; END IF;
+    RAISE EXCEPTION 'Expense over-allocation was accepted';
+  EXCEPTION WHEN SQLSTATE '23514' THEN
+    IF SQLERRM <> 'expense_allocation_exceeds_expense' THEN RAISE; END IF;
+  END;
+
+  PERFORM public.set_sepay_expense_allocations(
+    current_setting('test.pr284_single_event_b')::bigint,
+    '[]'::jsonb
+  );
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.expenses
+    WHERE id = current_setting('test.pr284_single_expense')::bigint
+      AND payment_method = 'unpaid'
+      AND paid_at IS NULL
+      AND paid_by_bank_allocation IS false
+  ) THEN
+    RAISE EXCEPTION 'Partial allocation did not reverse derived paid state';
+  END IF;
+
+  PERFORM public.set_sepay_expense_allocations(
+    current_setting('test.pr284_single_event_b')::bigint,
+    jsonb_build_array(jsonb_build_object(
+      'expense_id', current_setting('test.pr284_single_expense')::bigint,
+      'amount', 5586718
+    ))
+  );
+
+  BEGIN
+    DELETE FROM public.expenses
+    WHERE id = current_setting('test.pr284_single_expense')::bigint;
+    RAISE EXCEPTION 'Matched expense deletion was accepted';
+  EXCEPTION WHEN SQLSTATE '23503' THEN
+    NULL;
+  END;
+
+  PERFORM public.set_sepay_expense_allocations(
+    current_setting('test.pr284_legacy_event')::bigint,
+    jsonb_build_array(jsonb_build_object(
+      'expense_id', current_setting('test.pr284_legacy_expense')::bigint,
+      'amount', 80000
+    ))
+  );
+
+  BEGIN
+    PERFORM public.set_sepay_expense_allocations(
+      current_setting('test.pr284_legacy_event')::bigint,
+      '[]'::jsonb
+    );
+    RAISE EXCEPTION 'Unknown legacy paid provenance was changed';
+  EXCEPTION WHEN SQLSTATE '23514' THEN
+    IF SQLERRM <> 'expense_paid_provenance_unknown' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    UPDATE public.expenses
+    SET paid_by_bank_allocation = true
+    WHERE id = current_setting('test.pr284_legacy_expense')::bigint;
+    RAISE EXCEPTION 'Authenticated direct expense update was accepted';
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    NULL;
+  END;
+
+  BEGIN
+    INSERT INTO public.expenses (
+      tenant_id, branch_id, expense_date, category, amount, payment_method,
+      paid_at, paid_by_bank_allocation, note, created_by
+    ) VALUES (
+      current_setting('test.pr284_tenant')::bigint,
+      NULL,
+      current_date,
+      'other',
+      1,
+      'transfer',
+      now(),
+      true,
+      'PR284 forged paid provenance',
+      current_setting('test.pr284_owner')::uuid
+    );
+    RAISE EXCEPTION 'Authenticated paid-provenance insert was accepted';
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    NULL;
   END;
 END;
 $$;
@@ -385,7 +506,29 @@ BEGIN
      ) <> 1
      OR (SELECT count(*) FROM public.bank_transaction_expense_matches
          WHERE tenant_id = current_setting('test.pr284_tenant')::bigint
-           AND expense_id = current_setting('test.pr284_single_expense')::bigint) <> 1
+           AND expense_id = current_setting('test.pr284_single_expense')::bigint) <> 2
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.bank_transaction_expense_matches
+       WHERE webhook_event_id = current_setting('test.pr284_single_event_a')::bigint
+         AND expense_id = current_setting('test.pr284_single_expense')::bigint
+         AND allocated_amount = 1317021
+     )
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.bank_transaction_expense_matches
+       WHERE webhook_event_id = current_setting('test.pr284_single_event_b')::bigint
+         AND expense_id = current_setting('test.pr284_single_expense')::bigint
+         AND allocated_amount = 5586718
+     )
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.expenses
+       WHERE id = current_setting('test.pr284_single_expense')::bigint
+         AND payment_method = 'transfer'
+         AND paid_at IS NOT NULL
+         AND paid_by_bank_allocation IS true
+     )
      OR (SELECT count(*) FROM public.bank_transaction_expense_matches
          WHERE tenant_id = current_setting('test.pr284_tenant')::bigint
            AND webhook_event_id = current_setting('test.pr284_single_event_a')::bigint
@@ -396,17 +539,51 @@ BEGIN
        WHERE id = current_setting('test.pr284_single_event_a')::bigint
          AND expense_id = current_setting('test.pr284_single_expense')::bigint
      )
+     OR NOT EXISTS (
+      SELECT 1
+      FROM public.bank_transaction_expense_matches
+      WHERE tenant_id = current_setting('test.pr284_tenant')::bigint
+        AND webhook_event_id = current_setting('test.pr284_single_event_b')::bigint
+        AND expense_id = current_setting('test.pr284_single_expense')::bigint
+     )
+     OR NOT EXISTS (
+      SELECT 1
+      FROM public.webhook_events
+      WHERE id = current_setting('test.pr284_single_event_b')::bigint
+        AND expense_id = current_setting('test.pr284_single_expense')::bigint
+     )
      OR EXISTS (
        SELECT 1
        FROM public.bank_transaction_expense_matches
        WHERE tenant_id = current_setting('test.pr284_tenant')::bigint
-         AND webhook_event_id = current_setting('test.pr284_single_event_b')::bigint
+         AND webhook_event_id = current_setting('test.pr284_single_event_c')::bigint
      )
      OR EXISTS (
        SELECT 1
        FROM public.webhook_events
-       WHERE id = current_setting('test.pr284_single_event_b')::bigint
+       WHERE id = current_setting('test.pr284_single_event_c')::bigint
          AND expense_id IS NOT NULL
+     )
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.expenses
+       WHERE id = current_setting('test.pr284_legacy_expense')::bigint
+         AND payment_method = 'transfer'
+         AND paid_at IS NOT NULL
+         AND paid_by_bank_allocation IS NULL
+     )
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.bank_transaction_expense_matches
+       WHERE webhook_event_id = current_setting('test.pr284_legacy_event')::bigint
+         AND expense_id = current_setting('test.pr284_legacy_expense')::bigint
+         AND allocated_amount = 80000
+     )
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.webhook_events
+       WHERE id = current_setting('test.pr284_legacy_event')::bigint
+         AND expense_id = current_setting('test.pr284_legacy_expense')::bigint
      )
      OR EXISTS (
        SELECT 1 FROM public.bank_transaction_expense_matches

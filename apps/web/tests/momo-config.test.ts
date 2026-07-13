@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  isMomoCheckoutAvailable,
+  isMomoEnabled,
+  isMomoRuntimeReady,
   loadMomoConfig,
   MomoConfigurationError,
 } from "../lib/payments/momo-config";
@@ -10,6 +13,26 @@ const credentials = {
   MOMO_ACCESS_KEY: " access-key ",
   MOMO_SECRET_KEY: " secret-key ",
 };
+
+test("MoMo stays disabled unless the deployment flag is explicitly true", () => {
+  assert.equal(isMomoEnabled({}), false);
+  assert.equal(isMomoEnabled({ MOMO_ENABLED: "false" }), false);
+  assert.equal(isMomoEnabled({ MOMO_ENABLED: "1" }), false);
+  assert.equal(isMomoEnabled({ MOMO_ENABLED: " TRUE " }), true);
+  assert.equal(isMomoRuntimeReady({}), false);
+  assert.equal(isMomoRuntimeReady({ MOMO_RUNTIME_READY: " TRUE " }), true);
+  assert.equal(isMomoCheckoutAvailable(credentials), false);
+  assert.equal(
+    isMomoCheckoutAvailable({
+      NODE_ENV: "production",
+      MOMO_ENABLED: "true",
+      MOMO_RUNTIME_READY: "true",
+      MOMO_BASE_URL: "https://payment.momo.vn",
+      ...credentials,
+    }),
+    true,
+  );
+});
 
 test("MoMo config defaults to sandbox only outside production", () => {
   assert.deepEqual(loadMomoConfig({ NODE_ENV: "test", ...credentials }), {

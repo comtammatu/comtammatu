@@ -445,6 +445,7 @@ export const EXPENSE_PAYMENT_STATE_LABELS_VI = {
   unpaid: "Chưa trả",
   cash_paid: "Đã chi TM",
   transfer_matched: "Đã khớp NH",
+  transfer_partially_matched: "Khớp NH một phần",
   transfer_needs_match: "Cần khớp NH",
 } as const;
 

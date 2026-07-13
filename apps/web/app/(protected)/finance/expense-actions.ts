@@ -37,6 +37,7 @@ export interface ExpenseRow {
   note: string | null;
   created_at: string;
   matchedEventIds: number[];
+  allocatedAmount: number | null;
 }
 
 export type ExpenseMatchOption = ExpenseRow;
@@ -44,6 +45,12 @@ export type ExpenseMatchOption = ExpenseRow;
 interface ExpenseMatchRow {
   webhook_event_id: number;
   expense_id: number;
+  allocated_amount?: number | string | null;
+}
+
+interface ExpenseMatchAggregate {
+  matchedEventIds: number[];
+  allocatedAmount: number | null;
 }
 
 interface WebhookExpenseMatchRow {
@@ -165,6 +172,12 @@ export async function deleteExpense(
     .eq("id", parsed.data.expenseId);
 
   if (error) {
+    if (error.code === "23503") {
+      return {
+        success: false,
+        error: "Chi phí đã gắn bằng chứng ngân hàng; không thể xóa trực tiếp.",
+      };
+    }
     return { success: false, error: "Không thể xóa chi phí." };
   }
 
@@ -228,13 +241,20 @@ export async function fetchExpenses(params: {
     claims.tenant_id,
     rows.map((r) => r.id),
   );
+  if (matchedByExpense == null) {
+    return { success: false, error: "Không tải được dữ liệu khớp chi phí." };
+  }
 
   return {
     success: true,
-    data: rows.map((row) => ({
-      ...row,
-      matchedEventIds: matchedByExpense.get(row.id) ?? [],
-    })),
+    data: rows.map((row) => {
+      const match = matchedByExpense.get(row.id);
+      return {
+        ...row,
+        matchedEventIds: match?.matchedEventIds ?? [],
+        allocatedAmount: match ? match.allocatedAmount : 0,
+      };
+    }),
   };
 }
 
@@ -309,10 +329,37 @@ export async function fetchActualFoodCostSummary(params: {
 
 const matchSepayExpensesSchema = z.object({
   eventId: z.coerce.number().int().positive(),
-  expenseIds: z.array(z.coerce.number().int().positive()).max(20),
+  allocations: z
+    .array(
+      z.object({
+        expenseId: z.coerce.number().int().positive(),
+        amount: z.coerce.number().int().positive().max(10_000_000_000),
+      }),
+    )
+    .max(20)
+    .superRefine((allocations, ctx) => {
+      const seen = new Set<number>();
+      allocations.forEach((allocation, index) => {
+        if (seen.has(allocation.expenseId)) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Duplicate expense allocation",
+            path: [index, "expenseId"],
+          });
+        }
+        seen.add(allocation.expenseId);
+      });
+    }),
 });
 
-function mapMatchExpenseError(code?: string): string {
+type UntypedRpcClient = {
+  rpc: (
+    name: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ error: { code?: string | null } | null }>;
+};
+
+function mapMatchExpenseError(code?: string | null): string {
   if (code === "P0002") return "Không tìm thấy giao dịch hoặc khoản chi.";
   if (code === "23505") return "Có dòng khớp bị trùng.";
   if (code === "23514") return "Giao dịch này không thể khớp khoản chi.";
@@ -322,8 +369,12 @@ function mapMatchExpenseError(code?: string): string {
   return "Không thể khớp giao dịch.";
 }
 
-function isExpenseMatchSchemaMissing(code?: string): boolean {
+function isExpenseMatchSchemaMissing(code?: string | null): boolean {
   return code === "PGRST202" || code === "PGRST205" || code === "42P01";
+}
+
+function isExpenseAllocationColumnMissing(code?: string | null): boolean {
+  return code === "PGRST204" || code === "42703";
 }
 
 export async function matchSepayTransactionWithExpenses(
@@ -341,12 +392,18 @@ export async function matchSepayTransactionWithExpenses(
   if (!ctx) return { success: false, error: "Không có quyền sửa chi phí." };
 
   const { supabase } = ctx;
-  const expenseIds = Array.from(new Set(parsed.data.expenseIds));
+  const allocations = parsed.data.allocations;
 
-  const { error } = await supabase.rpc("match_sepay_transaction_expenses", {
-    p_event_id: parsed.data.eventId,
-    p_expense_ids: expenseIds,
-  });
+  const { error } = await (supabase as unknown as UntypedRpcClient).rpc(
+    "set_sepay_expense_allocations",
+    {
+      p_event_id: parsed.data.eventId,
+      p_allocations: allocations.map((allocation) => ({
+        expense_id: allocation.expenseId,
+        amount: allocation.amount,
+      })),
+    },
+  );
 
   if (error) {
     if (!isExpenseMatchSchemaMissing(error.code)) {
@@ -362,7 +419,7 @@ export async function matchSepayTransactionWithExpenses(
     action: "update",
     entityType: "webhook_event",
     entityId: parsed.data.eventId,
-    newData: { expense_ids: expenseIds },
+    newData: { expense_allocations: allocations },
   });
 
   return { success: true };
@@ -374,39 +431,81 @@ async function fetchExpenseMatchMap(
   >["supabase"],
   tenantId: number,
   expenseIds?: readonly number[],
-): Promise<Map<number, number[]>> {
-  const matchedByExpense = new Map<number, Set<number>>();
-  const addMatch = (expenseId: number, eventId: number) => {
-    const current = matchedByExpense.get(expenseId) ?? new Set<number>();
-    current.add(eventId);
+): Promise<Map<number, ExpenseMatchAggregate> | null> {
+  const matchedByExpense = new Map<number, Map<number, number | null>>();
+  const addMatch = (
+    expenseId: number,
+    eventId: number,
+    allocatedAmount: number | null,
+  ) => {
+    const current =
+      matchedByExpense.get(expenseId) ?? new Map<number, number | null>();
+    const existing = current.get(eventId);
+    if (
+      !current.has(eventId) ||
+      (existing == null && allocatedAmount != null)
+    ) {
+      current.set(eventId, allocatedAmount);
+    }
     matchedByExpense.set(expenseId, current);
   };
-  const toEventIdMap = () =>
+  const toAggregateMap = () =>
     new Map(
-      Array.from(matchedByExpense, ([expenseId, eventIds]) => [
-        expenseId,
-        Array.from(eventIds),
-      ]),
+      Array.from(matchedByExpense, ([expenseId, eventAllocations]) => {
+        const amounts = Array.from(eventAllocations.values());
+        return [
+          expenseId,
+          {
+            matchedEventIds: Array.from(eventAllocations.keys()),
+            allocatedAmount: amounts.every((amount) => amount != null)
+              ? amounts.reduce((sum, amount) => sum + (amount ?? 0), 0)
+              : null,
+          },
+        ];
+      }),
     );
 
   let matchQuery = supabase
     .from("bank_transaction_expense_matches")
-    .select("webhook_event_id, expense_id")
+    .select("webhook_event_id, expense_id, allocated_amount")
     .eq("tenant_id", tenantId);
   if (expenseIds != null) {
     if (expenseIds.length === 0) return new Map();
     matchQuery = matchQuery.in("expense_id", [...expenseIds]);
   }
-  const { data: matchRows, error: matchErr } = await matchQuery;
+  const allocationResult = await matchQuery;
+  let matchRows: unknown = allocationResult.data;
+  let matchErr = allocationResult.error;
+
+  if (matchErr && isExpenseAllocationColumnMissing(matchErr.code)) {
+    let legacyQuery = supabase
+      .from("bank_transaction_expense_matches")
+      .select("webhook_event_id, expense_id")
+      .eq("tenant_id", tenantId);
+    if (expenseIds != null) {
+      legacyQuery = legacyQuery.in("expense_id", [...expenseIds]);
+    }
+    const legacyResult = await legacyQuery;
+    matchRows = legacyResult.data as unknown;
+    matchErr = legacyResult.error;
+  }
 
   if (matchErr && !isExpenseMatchSchemaMissing(matchErr.code)) {
     console.error(
       "[finance:expense-match] failed to load bank_transaction_expense_matches",
       matchErr.code,
     );
+    return null;
   } else if (!matchErr) {
     for (const row of (matchRows ?? []) as ExpenseMatchRow[]) {
-      addMatch(row.expense_id, row.webhook_event_id);
+      const numericAmount = Number(row.allocated_amount);
+      addMatch(
+        row.expense_id,
+        row.webhook_event_id,
+        row.allocated_amount != null && Number.isFinite(numericAmount)
+          ? numericAmount
+          : null,
+      );
     }
   }
 
@@ -426,16 +525,16 @@ async function fetchExpenseMatchMap(
       "[finance:expense-match] failed to load webhook_event expense matches",
       webhookErr.code,
     );
-    return toEventIdMap();
+    return null;
   }
 
   for (const row of (webhookRows ?? []) as WebhookExpenseMatchRow[]) {
     if (row.expense_id != null) {
-      addMatch(row.expense_id, row.id);
+      addMatch(row.expense_id, row.id, null);
     }
   }
 
-  return toEventIdMap();
+  return toAggregateMap();
 }
 
 export async function fetchExpenseMatchOptions(): Promise<
@@ -452,6 +551,9 @@ export async function fetchExpenseMatchOptions(): Promise<
     supabase,
     claims.tenant_id,
   );
+  if (matchedByExpense == null) {
+    return { success: false, error: "Không tải được dữ liệu khớp chi phí." };
+  }
 
   const { data, error } = await supabase
     .from("expenses")
@@ -459,7 +561,7 @@ export async function fetchExpenseMatchOptions(): Promise<
       "id, branch_id, expense_date, category, amount, payment_method, paid_at, vendor_name, note, created_at",
     )
     .eq("tenant_id", claims.tenant_id)
-    .eq("payment_method", "transfer")
+    .in("payment_method", ["transfer", "unpaid"])
     .order("expense_date", { ascending: false })
     .order("id", { ascending: false })
     .limit(150);
@@ -470,18 +572,22 @@ export async function fetchExpenseMatchOptions(): Promise<
 
   return {
     success: true,
-    data: (data ?? []).map((r) => ({
-      id: r.id,
-      branch_id: r.branch_id,
-      expense_date: r.expense_date,
-      category: r.category,
-      amount: Number(r.amount),
-      payment_method: r.payment_method,
-      paid_at: r.paid_at,
-      vendor_name: r.vendor_name,
-      note: r.note,
-      created_at: r.created_at,
-      matchedEventIds: matchedByExpense.get(r.id) ?? [],
-    })),
+    data: (data ?? []).map((r) => {
+      const match = matchedByExpense.get(r.id);
+      return {
+        id: r.id,
+        branch_id: r.branch_id,
+        expense_date: r.expense_date,
+        category: r.category,
+        amount: Number(r.amount),
+        payment_method: r.payment_method,
+        paid_at: r.paid_at,
+        vendor_name: r.vendor_name,
+        note: r.note,
+        created_at: r.created_at,
+        matchedEventIds: match?.matchedEventIds ?? [],
+        allocatedAmount: match ? match.allocatedAmount : 0,
+      };
+    }),
   };
 }

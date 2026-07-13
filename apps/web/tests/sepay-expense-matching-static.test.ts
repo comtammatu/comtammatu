@@ -7,9 +7,7 @@ import { fileURLToPath } from "node:url";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
-const migration = read(
-  "supabase/migrations/00000000000000_baseline.sql",
-);
+const migration = read("supabase/migrations/00000000000000_baseline.sql");
 const expenseAllocationMigration = read(
   "supabase/migrations/20260713151901_enforce_sepay_expense_allocation_amount.sql",
 );
@@ -31,12 +29,19 @@ test("SePay expense matching allocates many expenses to one bank transaction", (
   assert.match(migration, /UNIQUE \(tenant_id, webhook_event_id, expense_id\)/);
   assert.match(
     expenseAllocationMigration,
-    /CREATE UNIQUE INDEX bank_tx_expense_matches_tenant_expense_uidx/,
+    /ADD COLUMN allocated_amount numeric\(15, 2\)/,
   );
-  assert.match(expenseAllocationMigration, /expense_already_matched/);
+  assert.doesNotMatch(
+    expenseAllocationMigration,
+    /bank_tx_expense_matches_tenant_expense_uidx/,
+  );
   assert.match(
     expenseAllocationMigration,
     /CREATE OR REPLACE FUNCTION public\.match_sepay_transaction_expenses/,
+  );
+  assert.match(
+    expenseAllocationMigration,
+    /CREATE OR REPLACE FUNCTION public\.set_sepay_expense_allocations/,
   );
   assert.match(expenseAllocationMigration, /auth\.role\(\) = 'service_role'/);
   assert.match(
@@ -46,7 +51,7 @@ test("SePay expense matching allocates many expenses to one bank transaction", (
   assert.match(expenseAllocationMigration, /expense_amount_mismatch/);
   assert.match(
     expenseAllocationMigration,
-    /UPDATE public\.expenses[\s\S]*payment_method = 'transfer'/,
+    /UPDATE public\.expenses[\s\S]*paid_by_bank_allocation/,
   );
   assert.match(
     migration,
@@ -63,7 +68,7 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
     "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
   );
 
-  assert.match(actions, /\.rpc\("match_sepay_transaction_expenses"/);
+  assert.match(actions, /"set_sepay_expense_allocations"/);
   assert.match(
     sepayWebhookRoute,
     /\.rpc\(\s*"match_sepay_transaction_expenses"/,
@@ -82,7 +87,9 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(actions, /matchedEventIds/);
   assert.match(loader, /bank_transaction_expense_matches/);
   assert.match(table, /amount=\{tx\.amount\}/);
-  assert.match(cell, /Math\.abs\(left\.amount - amount\)/);
+  assert.match(cell, /Math\.abs\(availableAmount\(left\) - amount\)/);
+  assert.match(cell, /MoneyVndInput/);
+  assert.match(cell, /allocations: selectedAllocations/);
   assert.match(table, /type BankReconciliationRow/);
   assert.match(table, /variant=\{filter === value \? "default" : "outline"\}/);
   assert.match(table, /missingBankWebhookPayments/);
@@ -94,5 +101,11 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
 test("SePay expense matching handles unapplied migration schema errors", () => {
   assert.match(actions, /PGRST205/);
   assert.match(actions, /isExpenseMatchSchemaMissing\(matchErr\.code\)/);
+  assert.match(actions, /return null/);
   assert.match(loader, /PGRST205/);
+  assert.match(
+    loader,
+    /throw new Error\("Unable to load expense allocation evidence"\)/,
+  );
+  assert.match(loader, /eventAllocations\.length === 1/);
 });

@@ -10,6 +10,7 @@ import {
   sumSepayBankMovementSince,
   type SepayBankTransaction,
   type SepayDateRange,
+  type SepayExpenseAllocation,
   type SepayPaymentWebhookCheck,
   type SepayPaymentWebhookSummary,
   type SepaySupplierPaymentMatch,
@@ -21,6 +22,12 @@ type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 interface SepayExpenseMatchRow {
   webhook_event_id: number;
   expense_id: number;
+  allocated_amount?: number | string | null;
+}
+
+interface SepayExpenseMatchResult {
+  matches: Map<number, SepayExpenseAllocation[]>;
+  allocationReady: boolean;
 }
 
 interface SepayPaymentRow {
@@ -63,8 +70,12 @@ const SEPAY_BALANCE_PAGE_SIZE = 1000;
 const SEPAY_TRANSACTION_LIST_LIMIT = 100;
 const SEPAY_PAYMENT_WEBHOOK_CHECK_LIMIT = 100;
 
-function isExpenseMatchSchemaMissing(code?: string): boolean {
+function isExpenseMatchSchemaMissing(code?: string | null): boolean {
   return code === "PGRST205" || code === "42P01";
+}
+
+function isExpenseAllocationColumnMissing(code?: string | null): boolean {
+  return code === "PGRST204" || code === "42703";
 }
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
@@ -97,7 +108,7 @@ async function fetchSepayWebhookRows(
       "[finance:sepay-bank] failed to load webhook_events",
       error.code,
     );
-    return [];
+    throw new Error("Unable to load signed bank transactions");
   }
 
   return (data ?? []) as unknown as SepayWebhookRow[];
@@ -150,31 +161,56 @@ async function fetchSepayExpenseMatches(
   supabase: SupabaseClient,
   tenantId: number,
   eventIds: number[],
-): Promise<Map<number, number[]>> {
-  if (eventIds.length === 0) return new Map();
+): Promise<SepayExpenseMatchResult> {
+  if (eventIds.length === 0) {
+    return { matches: new Map(), allocationReady: true };
+  }
 
-  const { data, error } = await supabase
+  const allocationResult = await supabase
     .from("bank_transaction_expense_matches")
-    .select("webhook_event_id, expense_id")
+    .select("webhook_event_id, expense_id, allocated_amount")
     .eq("tenant_id", tenantId)
     .in("webhook_event_id", eventIds);
+  let data: unknown = allocationResult.data;
+  let error = allocationResult.error;
+  let allocationReady = true;
+
+  if (error && isExpenseAllocationColumnMissing(error.code)) {
+    allocationReady = false;
+    const legacyResult = await supabase
+      .from("bank_transaction_expense_matches")
+      .select("webhook_event_id, expense_id")
+      .eq("tenant_id", tenantId)
+      .in("webhook_event_id", eventIds);
+    data = legacyResult.data as unknown;
+    error = legacyResult.error;
+  }
 
   if (error) {
-    if (isExpenseMatchSchemaMissing(error.code)) return new Map();
+    if (isExpenseMatchSchemaMissing(error.code)) {
+      return { matches: new Map(), allocationReady: false };
+    }
     console.error(
       "[finance:sepay-bank] failed to load bank_transaction_expense_matches",
       error.code,
     );
-    return new Map();
+    throw new Error("Unable to load expense allocation evidence");
   }
 
-  const matches = new Map<number, number[]>();
+  const matches = new Map<number, SepayExpenseAllocation[]>();
   for (const row of (data ?? []) as SepayExpenseMatchRow[]) {
-    const ids = matches.get(row.webhook_event_id) ?? [];
-    ids.push(row.expense_id);
-    matches.set(row.webhook_event_id, ids);
+    const allocations = matches.get(row.webhook_event_id) ?? [];
+    const numericAmount = Number(row.allocated_amount);
+    allocations.push({
+      expenseId: row.expense_id,
+      amount:
+        row.allocated_amount != null && Number.isFinite(numericAmount)
+          ? numericAmount
+          : null,
+    });
+    matches.set(row.webhook_event_id, allocations);
   }
-  return matches;
+  return { matches, allocationReady };
 }
 
 async function fetchSupplierPaymentMatches(
@@ -203,7 +239,7 @@ async function fetchSupplierPaymentMatches(
       "[finance:sepay-bank] failed to load supplier_payments",
       error.code,
     );
-    return [];
+    throw new Error("Unable to load supplier payment evidence");
   }
 
   return ((data ?? []) as SupplierPaymentRow[]).map((row) => {
@@ -244,7 +280,7 @@ async function fetchCompletedVietqrPayments(
 
   if (error) {
     console.error("[finance:sepay-bank] failed to load payments", error.code);
-    return [];
+    throw new Error("Unable to load completed VietQR payments");
   }
 
   const payments = ((data ?? []) as SepayPaymentRow[]).map((payment) => {
@@ -288,7 +324,7 @@ async function fetchIncomingWebhookPaymentIds(
       "[finance:sepay-bank] failed to load payment webhook_events",
       error.code,
     );
-    return new Set();
+    throw new Error("Unable to load payment webhook evidence");
   }
 
   return new Set(
@@ -335,7 +371,7 @@ export async function fetchSepayBankTransactions(
   const scopedTransactions = range
     ? transactions.filter((tx) => isSepayTransactionInDateRange(tx, range))
     : transactions;
-  const matches = await fetchSepayExpenseMatches(
+  const { matches, allocationReady } = await fetchSepayExpenseMatches(
     supabase,
     claims.tenant_id,
     scopedTransactions.map((tx) => tx.eventId),
@@ -347,17 +383,35 @@ export async function fetchSepayBankTransactions(
   );
 
   const transactionsWithExpenseMatches = scopedTransactions.map((tx) => {
-    const expenseIds = matches.get(tx.eventId);
-    if (!expenseIds?.length) return tx;
+    const eventAllocations = matches.get(tx.eventId);
+    const expenseAllocations = eventAllocations?.map((allocation) => ({
+      ...allocation,
+      amount:
+        allocation.amount == null && eventAllocations.length === 1
+          ? tx.amount
+          : allocation.amount,
+    }));
+    if (!expenseAllocations?.length) return tx;
+    const expenseIds = expenseAllocations.map(
+      (allocation) => allocation.expenseId,
+    );
     return {
       ...tx,
       expenseId: expenseIds[0] ?? tx.expenseId,
       expenseIds,
+      expenseAllocations,
+      expenseAllocationReady: allocationReady,
     };
   });
 
+  const transactionsWithAllocationReadiness =
+    transactionsWithExpenseMatches.map((transaction) => ({
+      ...transaction,
+      expenseAllocationReady: allocationReady,
+    }));
+
   return attachSupplierPaymentMatches(
-    transactionsWithExpenseMatches,
+    transactionsWithAllocationReadiness,
     supplierPaymentMatches,
   );
 }

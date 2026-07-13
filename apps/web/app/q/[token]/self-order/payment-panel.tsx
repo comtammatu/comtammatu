@@ -68,6 +68,7 @@ export interface InvoiceErrorFocusRequest {
 
 export interface PaymentPanelProps {
   disabled: boolean;
+  momoEnabled: boolean;
   activeOrder: PublicSelfOrderAvailableSnapshot["order"];
   activePaymentRequest: GuestPaymentRequestState | null;
   buyerNotGetInvoice: boolean;
@@ -224,6 +225,7 @@ function BankAppLauncher({
 
 export function PaymentPanel({
   disabled,
+  momoEnabled,
   activeOrder,
   activePaymentRequest,
   buyerNotGetInvoice,
@@ -569,26 +571,28 @@ export function PaymentPanel({
                 )}
                 {SELF_ORDER_VI.vietQrCreate}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                disabled={disabled || isPending}
-                onClick={() => onRequestPayment("momo")}
-              >
-                {pendingMethod === "momo" ? (
-                  <Spinner className="size-4" />
-                ) : (
-                  <Avatar aria-hidden="true" className="size-5">
-                    <AvatarImage
-                      src="https://play-lh.googleusercontent.com/cQzoiahn_EveryMo_uF6tm3AEV7HzNPesJEOegmpflSeorbI4LfKOq5fK1sX3cnpwH98cjxK5C1PAQMB7UzsAg"
-                      alt=""
-                    />
-                    <AvatarFallback>Mo</AvatarFallback>
-                  </Avatar>
-                )}
-                {SELF_ORDER_VI.momoPay}
-              </Button>
+              {momoEnabled ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  disabled={disabled || isPending}
+                  onClick={() => onRequestPayment("momo")}
+                >
+                  {pendingMethod === "momo" ? (
+                    <Spinner className="size-4" />
+                  ) : (
+                    <Avatar aria-hidden="true" className="size-5">
+                      <AvatarImage
+                        src="https://play-lh.googleusercontent.com/cQzoiahn_EveryMo_uF6tm3AEV7HzNPesJEOegmpflSeorbI4LfKOq5fK1sX3cnpwH98cjxK5C1PAQMB7UzsAg"
+                        alt=""
+                      />
+                      <AvatarFallback>Mo</AvatarFallback>
+                    </Avatar>
+                  )}
+                  {SELF_ORDER_VI.momoPay}
+                </Button>
+              ) : null}
             </div>
           )}
         </>

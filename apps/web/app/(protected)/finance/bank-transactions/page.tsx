@@ -57,10 +57,10 @@ export default async function BankTransactionsPage({
     fetchMomoPaymentExceptions(),
   ]);
 
-  const expenseOptions =
-    expenseOptionsRes.success && expenseOptionsRes.data
-      ? expenseOptionsRes.data
-      : [];
+  if (!expenseOptionsRes.success || !expenseOptionsRes.data) {
+    throw new Error("Unable to load expense allocation options");
+  }
+  const expenseOptions = expenseOptionsRes.data;
   const summary = buildSepayReconciliationSummary(transactions);
   const activeMomoExceptions = momoExceptions.items.filter(
     (item) => item.reviewStatus !== "refunded",

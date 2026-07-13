@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { getSelfOrderSnapshot } from "@lib/self-order/server";
 import { selfOrderTokenSchema } from "@lib/self-order/contracts";
+import { isMomoCheckoutAvailable } from "@lib/payments/momo-config";
 import { AppPage } from "@/components/surface";
 import { BrandMascot } from "@/components/brand";
 import {
@@ -58,6 +59,10 @@ export default async function SelfOrderPage({
   }
 
   return (
-    <SelfOrderClient token={parsedToken.data} initialSnapshot={snapshot.data} />
+    <SelfOrderClient
+      token={parsedToken.data}
+      initialSnapshot={snapshot.data}
+      momoEnabled={isMomoCheckoutAvailable(process.env)}
+    />
   );
 }

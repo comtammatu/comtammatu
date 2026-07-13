@@ -8,6 +8,7 @@ import {
   type MomoCallbackContext,
   MomoCheckoutError,
 } from "@lib/payments/momo";
+import { isMomoEnabled, isMomoRuntimeReady } from "@lib/payments/momo-config";
 import { normalizeMomoCheckoutUrl } from "@lib/payments/momo-url";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
@@ -137,10 +138,7 @@ async function persistMomoCheckout(
   });
   const state = readMomoCheckoutRpcState(data, error);
   if (state.status === "rpc_failed") {
-    console.error(
-      "[self-order] MoMo checkout persistence failed",
-      error?.code,
-    );
+    console.error("[self-order] MoMo checkout persistence failed", error?.code);
   }
   return state;
 }
@@ -199,7 +197,10 @@ async function failMomoCheckoutCreation(
   });
   const state = readMomoCheckoutRpcState(data, error);
   if (state.status === "rpc_failed") {
-    console.error("[self-order] MoMo checkout failure settlement failed", error?.code);
+    console.error(
+      "[self-order] MoMo checkout failure settlement failed",
+      error?.code,
+    );
   }
   return state;
 }
@@ -242,6 +243,20 @@ export async function POST(
   const parsed = selfOrderPaymentRequestSchema.safeParse(body);
   if (!parsed.success) {
     return jsonError(422, "invalid_body", SELF_ORDER_VI.paymentFailed);
+  }
+  if (
+    parsed.data.method === "momo" &&
+    !parsed.data.recover &&
+    !isMomoEnabled(process.env)
+  ) {
+    return jsonError(409, "momo_disabled", SELF_ORDER_VI.paymentFailed);
+  }
+  if (parsed.data.method === "momo" && !isMomoRuntimeReady(process.env)) {
+    return jsonError(
+      409,
+      "momo_runtime_not_ready",
+      SELF_ORDER_VI.paymentFailed,
+    );
   }
   if (
     parsed.data.method === "momo" &&
@@ -358,10 +373,7 @@ export async function POST(
       claimId,
     });
     if (claimState.status !== "claimed") {
-      return momoCheckoutStateResponse(
-        paymentRequest,
-        claimState,
-      );
+      return momoCheckoutStateResponse(paymentRequest, claimState);
     }
 
     const origin = request.nextUrl.origin;
@@ -395,10 +407,7 @@ export async function POST(
           persistState.status === "already_completed" ||
           persistState.status === "in_progress"
         ) {
-          return momoCheckoutStateResponse(
-            paymentRequest,
-            persistState,
-          );
+          return momoCheckoutStateResponse(paymentRequest, persistState);
         }
         const releaseState = await releaseMomoCheckoutClaim(serviceClient, {
           tenantId: payment.tenant_id,
@@ -407,15 +416,9 @@ export async function POST(
           providerRef,
           claimId,
         });
-        return momoCheckoutStateResponse(
-          paymentRequest,
-          releaseState,
-        );
+        return momoCheckoutStateResponse(paymentRequest, releaseState);
       }
-      return momoCheckoutStateResponse(
-        paymentRequest,
-        persistState,
-      );
+      return momoCheckoutStateResponse(paymentRequest, persistState);
     } catch (error) {
       if (error instanceof MomoCheckoutError && error.terminalFailure) {
         const failureState = await failMomoCheckoutCreation(serviceClient, {
@@ -442,10 +445,7 @@ export async function POST(
       if (!(error instanceof MomoCheckoutError)) {
         console.error("[self-order] MoMo checkout failed", error);
       }
-      return momoCheckoutStateResponse(
-        paymentRequest,
-        releaseState,
-      );
+      return momoCheckoutStateResponse(paymentRequest, releaseState);
     }
   }
 

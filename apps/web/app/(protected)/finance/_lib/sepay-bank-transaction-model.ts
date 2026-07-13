@@ -29,6 +29,11 @@ export interface SepaySupplierPaymentMatch {
   supplierName: string | null;
 }
 
+export interface SepayExpenseAllocation {
+  expenseId: number;
+  amount: number | null;
+}
+
 export interface SepayBankTransaction {
   eventId: number;
   requestId: string;
@@ -39,6 +44,8 @@ export interface SepayBankTransaction {
   paymentId: number | null;
   expenseId: number | null;
   expenseIds: number[];
+  expenseAllocations: SepayExpenseAllocation[];
+  expenseAllocationReady?: boolean;
   supplierPaymentMatches: SepaySupplierPaymentMatch[];
   transactionDate: string | null;
   accountNumber: string | null;
@@ -347,6 +354,11 @@ export function mapSepayWebhookRow(
     paymentId: row.payment_id,
     expenseId: row.expense_id,
     expenseIds: row.expense_id != null ? [row.expense_id] : [],
+    expenseAllocations:
+      row.expense_id != null
+        ? [{ expenseId: row.expense_id, amount: null }]
+        : [],
+    expenseAllocationReady: false,
     supplierPaymentMatches: [],
     transactionDate: readString(payload, "transactionDate"),
     accountNumber: readString(payload, "accountNumber"),

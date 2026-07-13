@@ -630,6 +630,9 @@ export const finance = {
     expenseMatchDelta: "Lệch",
     expenseAllocationMismatch:
       "Tổng chi đã chọn phải bằng số tiền trên sao kê.",
+    expenseAllocationInvalid: "Số tiền vượt số dư chi phí hoặc chưa hợp lệ.",
+    expenseAllocationUnavailable:
+      "Chưa thể sửa phân bổ khi dữ liệu đối soát chưa sẵn sàng.",
     noUnmatchedExpenses: "Không có chi chuyển khoản chưa khớp",
     openExpenses: "Mở chi phí",
     clearExpenseMatch: "Bỏ khớp",

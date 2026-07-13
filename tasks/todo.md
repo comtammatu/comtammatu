@@ -1196,20 +1196,19 @@ Containment record:
 - Containment commit `40a786348` is rebased directly onto exact PR head
   `7c8608852acb7f3503cb2e54fe7c71e86e76e1ed`; concurrent session work has been
   reconciled and reviewed on top in the isolated containment worktree.
-- Local closeout proof is green: focused money/ledger/SePay/auth/migration tests,
-  the complete repository test suite, `typecheck`, `lint`, `build`, `verify`, and
-  Turborepo boundaries all pass. Independent second-pass reviews report no
-  remaining P0/P1 defects in the reviewed source state.
-- Fresh Preview `mbbfhrvlteoktbrddnus` is data-less, associated with
-  `codex/branch-hub-native-redesign`, and replays all 19 active migrations.
+- Release-content SHA `59139160d` previously passed focused and full repository
+  gates. The current allocation-provenance and MoMo-readiness rewrite invalidates
+  that source proof; all gates must be rerun on the next exact final SHA.
+- Deleted Preview `mbbfhrvlteoktbrddnus` was data-less, associated with
+  `codex/branch-hub-native-redesign`, and replayed the former 19-migration body.
   Catalog proof confirms the expected RPC signatures/grants, Owner-only refund
   RLS, nine active Cron jobs, ten Realtime publication tables, and sixteen
-  enabled Broadcast triggers. Security and performance advisors report no
-  errors; inherited warnings remain baseline debt.
-- Preview acceptance passes the Self-order/MoMo and SePay adjudication SQL
-  suites, exact/mismatched expense allocation, cash-deposit replay, legacy `DH`
-  exact memo plus amount settlement, two-event expense contention, and refund
-  approve/reject contention. Generated database types match the Preview schema.
+  enabled Broadcast triggers. This is historical evidence, not proof of the
+  rewritten migration 14 or current generated types.
+- A fresh exact-SHA Preview must now prove allocation amount persistence,
+  split-settlement conservation, edit/clear/reassign, paid-state provenance,
+  deletion restriction, overlap concurrency, MoMo admission/runtime flag
+  separation, and regenerated types before production planning can close.
 - Supabase dashboard verification confirms `Deploy to production` is off and
   automatic branching is on. Release-content SHA `59139160d` has successful
   `gates`, `Supabase Preview`, fail-closed `supabase-preview-required`, and
@@ -1225,8 +1224,12 @@ Containment record:
 - [x] **C6 — create the associated Preview after cost confirmation; prove fresh
       replay, schema/RPC/RLS/cron/realtime, generated types, and runtime smoke.**
 - [x] **C7 — push the reviewed PR head and close CI/review blockers.**
-- [ ] **C8 — prepare a separate production ledger-repair/apply plan.** No
-      production write is included in C0-C7.
+- [ ] **C8 — close the separate production rollout plan.** The selective
+      delta-only manifest and staged runtime boundaries are written in
+      `docs/runbooks/db/pr-284-production-rollout.md`. Remaining gates are fresh
+      exact-SHA Preview replay, generated types without an untyped RPC adapter,
+      full source gates, final production read-only preflight, and new explicit
+      owner authorization. No production write is included in C0-C8 planning.
 
 ## Active Greenfield Gates
 
@@ -1778,7 +1781,7 @@ ledger repair, and implicit production deployment remain forbidden for this PR.
 Release proof uses one fresh Supabase Preview associated with the exact final SHA.
 It must replay baseline plus every active forward migration, regenerate database
 types, and pass behavioral smoke for SePay exact memo/amount, duplicate-transfer
-quarantine, cash-deposit evidence, expense allocation uniqueness, Owner-only
+quarantine, cash-deposit evidence, expense allocation conservation, Owner-only
 refunds, MoMo create/IPN/reconcile, Cron, Realtime, inventory, and auth. Any
 function-body guard mismatch, lock timeout, skipped check, or P0/P1 stops merge.
 
@@ -1825,18 +1828,11 @@ Implementation plan:
       workbench; Branch Manager handles branch operations and close only, while
       Staff retains assigned collection/print actions.
 
-Current verification: 29 targeted Finance/SePay web tests and 19 shared payment
-hardening tests pass; full `typecheck`, `lint`, and `build` are green. P0 Preview
-ref `kmmncsbgnnghcrrbzlcf` proved `recorded` then `already_recorded` against the
-same event/expense and rejected an invalid signature with SQLSTATE `23514`. P1
-Preview ref `yhldjasylatfkqjozifp` accepted an exact 1,000,000 allocation,
-rejected a 900,000 allocation for the same bank amount with SQLSTATE `23514`,
-and left the rejected expense unpaid and unlinked. The authenticated
-`SECURITY DEFINER` advisor warning is intentional here: the function grants
-authenticated execution but enforces `finance:expense_create`, tenant scope,
-signature validity, direction, payment exclusion, and amount conservation
-inside the locked RPC. Both Preview branches were deleted after proof. The
-chronological Preview replay still fails at the pre-existing lineage boundary
-after `20260630130342`; do not describe the full migration chain as green. No
-production apply occurred, and production remains owner-delegated in the current
-session.
+Historical Preview refs `kmmncsbgnnghcrrbzlcf` and `yhldjasylatfkqjozifp`
+proved the earlier cash-deposit and exact-allocation contracts and were deleted.
+They do not prove the current split-allocation rewrite. Current closure requires
+a fresh exact-SHA Preview with the production split shape, partial-to-full and
+full-to-partial paid-state transitions, edit/clear/reassign, matched-expense
+delete rejection, over-allocation, replay, overlapping-event concurrency,
+grants, and regenerated database types. No production apply occurred in this
+lane.

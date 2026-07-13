@@ -81,6 +81,7 @@ export const EXPENSE_PAYMENT_STATES = [
   "unpaid",
   "cash_paid",
   "transfer_matched",
+  "transfer_partially_matched",
   "transfer_needs_match",
 ] as const;
 
@@ -90,12 +91,24 @@ export function classifyExpensePaymentState(expense: {
   payment_method: string;
   paid_at: string | null;
   matchedEventIds?: readonly number[];
+  amount?: number;
+  allocatedAmount?: number | null;
 }): ExpensePaymentState {
+  const amount = expense.amount;
+  const allocatedAmount = expense.allocatedAmount;
+  const hasKnownAllocation = amount != null && allocatedAmount != null;
+  if (hasKnownAllocation && allocatedAmount > 0 && allocatedAmount < amount) {
+    return "transfer_partially_matched";
+  }
+
   if (expense.payment_method === "unpaid" || expense.paid_at == null) {
     return "unpaid";
   }
 
   if (expense.payment_method === "transfer") {
+    if (hasKnownAllocation && amount > 0 && allocatedAmount === amount) {
+      return "transfer_matched";
+    }
     return (expense.matchedEventIds?.length ?? 0) > 0
       ? "transfer_matched"
       : "transfer_needs_match";

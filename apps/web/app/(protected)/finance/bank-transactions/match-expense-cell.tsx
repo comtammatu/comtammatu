@@ -15,9 +15,11 @@ import {
 } from "@comtammatu/ui/components/popover";
 import { formatCount, formatVND } from "@comtammatu/shared/format";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
+import { MoneyVndInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import {
   isSepayExpenseAllocationBalanced,
+  type SepayExpenseAllocation,
   type SepaySupplierPaymentMatch,
 } from "../_lib/sepay-bank-transaction-model";
 import type { ExpenseMatchOption } from "../expense-actions";
@@ -30,6 +32,8 @@ interface MatchExpenseCellProps {
   amount: number;
   paymentId: number | null;
   expenseIds: number[];
+  expenseAllocations: SepayExpenseAllocation[];
+  allocationReady: boolean;
   supplierPaymentMatches: SepaySupplierPaymentMatch[];
   transferType: "in" | "out";
   expenseOptions: ExpenseMatchOption[];
@@ -49,6 +53,21 @@ function sameIds(a: number[], b: number[]): boolean {
   return b.every((id) => left.has(id));
 }
 
+function buildAllocationDrafts(
+  expenseIds: number[],
+  allocations: SepayExpenseAllocation[],
+): Record<number, string> {
+  const allocationByExpense = new Map(
+    allocations.map((allocation) => [allocation.expenseId, allocation.amount]),
+  );
+  return Object.fromEntries(
+    expenseIds.map((expenseId) => {
+      const allocation = allocationByExpense.get(expenseId);
+      return [expenseId, allocation == null ? "" : String(allocation)];
+    }),
+  );
+}
+
 function supplierInvoiceHref(invoiceId: number): string {
   return `/finance/supplier-invoices?invoiceId=${invoiceId}`;
 }
@@ -58,6 +77,8 @@ export function MatchExpenseCell({
   amount,
   paymentId,
   expenseIds,
+  expenseAllocations,
+  allocationReady,
   supplierPaymentMatches,
   transferType,
   expenseOptions,
@@ -66,10 +87,18 @@ export function MatchExpenseCell({
   const [isPending, startTransition] = React.useTransition();
   const [open, setOpen] = React.useState(false);
   const [selectedIds, setSelectedIds] = React.useState<number[]>(expenseIds);
+  const [allocationDrafts, setAllocationDrafts] = React.useState<
+    Record<number, string>
+  >(() => buildAllocationDrafts(expenseIds, expenseAllocations));
+  const [invalidDraftIds, setInvalidDraftIds] = React.useState<Set<number>>(
+    () => new Set(),
+  );
 
   React.useEffect(() => {
     setSelectedIds(expenseIds);
-  }, [expenseIds]);
+    setAllocationDrafts(buildAllocationDrafts(expenseIds, expenseAllocations));
+    setInvalidDraftIds(new Set());
+  }, [expenseAllocations, expenseIds]);
 
   if (paymentId != null) {
     return (
@@ -117,45 +146,121 @@ export function MatchExpenseCell({
   }
 
   const selectedSet = new Set(selectedIds);
-  const availableExpenses = [...expenseOptions].sort(
-    (left, right) =>
-      Math.abs(left.amount - amount) - Math.abs(right.amount - amount),
+  const currentAllocationByExpense = new Map(
+    expenseAllocations.map((allocation) => [
+      allocation.expenseId,
+      allocation.amount,
+    ]),
   );
+  const availableAmount = (expense: ExpenseMatchOption) => {
+    const currentAllocation = currentAllocationByExpense.get(expense.id);
+    if (expense.allocatedAmount == null) return expense.amount;
+    const allocatedByOtherEvents =
+      expense.allocatedAmount - (currentAllocation ?? 0);
+    return Math.max(0, expense.amount - allocatedByOtherEvents);
+  };
+  const availableExpenses = expenseOptions
+    .filter(
+      (expense) =>
+        availableAmount(expense) > 0 ||
+        currentAllocationByExpense.has(expense.id),
+    )
+    .sort(
+      (left, right) =>
+        Math.abs(availableAmount(left) - amount) -
+        Math.abs(availableAmount(right) - amount),
+    );
   const selectedExpenses = expenseOptions.filter((exp) =>
     selectedSet.has(exp.id),
   );
-  const selectedTotal = selectedExpenses.reduce(
-    (sum, exp) => sum + exp.amount,
+  const selectedAllocations = selectedIds.map((expenseId) => ({
+    expenseId,
+    amount: Number(allocationDrafts[expenseId] ?? 0),
+  }));
+  const selectedTotal = selectedAllocations.reduce(
+    (sum, allocation) => sum + allocation.amount,
     0,
   );
   const delta = selectedTotal - amount;
-  const hasChanges = !sameIds(selectedIds, expenseIds);
-  const allocationBalanced = isSepayExpenseAllocationBalanced(
+  const allocationUnavailable =
+    !allocationReady ||
+    (expenseIds.length > 0 &&
+      expenseAllocations.some((allocation) => allocation.amount == null));
+  const hasValidAllocations = selectedAllocations.every((allocation) => {
+    const expense = expenseOptions.find(
+      (option) => option.id === allocation.expenseId,
+    );
+    return (
+      Number.isSafeInteger(allocation.amount) &&
+      allocation.amount > 0 &&
+      !invalidDraftIds.has(allocation.expenseId) &&
+      expense != null &&
+      allocation.amount <= availableAmount(expense)
+    );
+  });
+  const hasAllocationChanges = selectedAllocations.some((allocation) => {
+    const current = currentAllocationByExpense.get(allocation.expenseId);
+    const fallback = expenseOptions.find(
+      (option) => option.id === allocation.expenseId,
+    )?.amount;
+    return allocation.amount !== (current ?? fallback ?? 0);
+  });
+  const hasChanges = !sameIds(selectedIds, expenseIds) || hasAllocationChanges;
+  const totalBalanced = isSepayExpenseAllocationBalanced(
     amount,
     selectedTotal,
     selectedIds.length,
   );
+  const allocationBalanced =
+    totalBalanced && hasValidAllocations && !allocationUnavailable;
 
   const triggerLabel =
     selectedIds.length > 0
       ? `${copy.matchedExpenseCount(formatCount(selectedIds.length))}${
-          selectedExpenses.length > 0 ? ` · -${formatVND(selectedTotal)}` : ""
+          selectedExpenses.length > 0 && !allocationUnavailable
+            ? ` · -${formatVND(selectedTotal)}`
+            : ""
         }`
       : copy.matchExpensePlaceholder;
 
   const toggleExpense = (id: number) => {
-    setSelectedIds((current) =>
-      current.includes(id)
-        ? current.filter((selectedId) => selectedId !== id)
-        : [...current, id],
+    if (selectedIds.includes(id)) {
+      setSelectedIds((current) =>
+        current.filter((selectedId) => selectedId !== id),
+      );
+      setInvalidDraftIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+      setAllocationDrafts((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      return;
+    }
+
+    const expense = expenseOptions.find((option) => option.id === id);
+    if (!expense) return;
+    const remainingTransactionAmount = Math.max(0, amount - selectedTotal);
+    const maximumAllocation = availableAmount(expense);
+    const suggestedAllocation = Math.min(
+      maximumAllocation,
+      remainingTransactionAmount || maximumAllocation,
     );
+    setSelectedIds((current) => [...current, id]);
+    setAllocationDrafts((current) => ({
+      ...current,
+      [id]: String(suggestedAllocation),
+    }));
   };
 
   const handleSave = () => {
     startTransition(async () => {
       const res = await matchSepayTransactionWithExpenses({
         eventId,
-        expenseIds: selectedIds,
+        allocations: selectedAllocations,
       });
 
       if (!res.success) {
@@ -184,11 +289,13 @@ export function MatchExpenseCell({
         <div className="flex items-center justify-between gap-2">
           <span className="font-medium">{copy.matchExpenseTitle}</span>
           <span className="font-mono text-warning">
-            {selectedExpenses.length > 0
-              ? `-${formatVND(selectedTotal)}`
-              : selectedIds.length > 0
-                ? `${formatCount(selectedIds.length)} chi`
-                : "—"}
+            {allocationUnavailable && selectedIds.length > 0
+              ? `${formatCount(selectedIds.length)} chi`
+              : selectedExpenses.length > 0
+                ? `-${formatVND(selectedTotal)}`
+                : selectedIds.length > 0
+                  ? `${formatCount(selectedIds.length)} chi`
+                  : "—"}
           </span>
         </div>
         <div className="grid grid-cols-3 gap-2 text-xs">
@@ -205,7 +312,7 @@ export function MatchExpenseCell({
               {copy.selectedExpenseAmount}
             </span>
             <span className="font-mono font-medium text-warning">
-              -{formatVND(selectedTotal)}
+              {allocationUnavailable ? "—" : `-${formatVND(selectedTotal)}`}
             </span>
           </span>
           <span className="flex flex-col gap-1">
@@ -213,11 +320,19 @@ export function MatchExpenseCell({
               {copy.expenseMatchDelta}
             </span>
             <span className="font-mono font-medium">
-              {delta === 0 ? formatVND(0) : formatVND(Math.abs(delta))}
+              {allocationUnavailable
+                ? "—"
+                : delta === 0
+                  ? formatVND(0)
+                  : formatVND(Math.abs(delta))}
             </span>
           </span>
         </div>
-        {!allocationBalanced ? (
+        {allocationUnavailable ? (
+          <p className="text-xs text-warning" aria-live="polite">
+            {copy.expenseAllocationUnavailable}
+          </p>
+        ) : !totalBalanced ? (
           <p className="text-xs text-warning">
             {copy.expenseAllocationMismatch}
           </p>
@@ -226,28 +341,76 @@ export function MatchExpenseCell({
           <div className="flex flex-col gap-1 pr-1">
             {availableExpenses.map((exp) => {
               const checked = selectedSet.has(exp.id);
+              const inputId = `expense-allocation-${eventId}-${exp.id}`;
+              const errorId = `${inputId}-error`;
+              const draftAmount = Number(allocationDrafts[exp.id] ?? 0);
+              const maximumAllocation = availableAmount(exp);
+              const invalidDraft =
+                invalidDraftIds.has(exp.id) ||
+                !Number.isSafeInteger(draftAmount) ||
+                draftAmount <= 0 ||
+                draftAmount > maximumAllocation;
               return (
-                <label
+                <div
                   key={exp.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-md hover:bg-muted/30"
+                  className="flex items-center gap-2 rounded-md hover:bg-muted/30"
                 >
                   <Checkbox
+                    id={inputId}
                     checked={checked}
                     onCheckedChange={() => toggleExpense(exp.id)}
-                    disabled={isPending}
+                    disabled={isPending || allocationUnavailable}
                   />
-                  <span className="min-w-0 flex-1">
+                  <label htmlFor={inputId} className="min-w-0 flex-1">
                     <span className="block truncate text-sm">
                       {expenseDetail(exp)}
                     </span>
                     <span className="block text-xs text-muted-foreground">
                       {formatDate(exp.expense_date)}
                     </span>
-                  </span>
-                  <span className="font-mono text-xs font-medium text-warning">
-                    -{formatVND(exp.amount)}
-                  </span>
-                </label>
+                  </label>
+                  {checked ? (
+                    <span className="flex w-32 flex-col items-end gap-1">
+                      <MoneyVndInput
+                        aria-label={`${copy.selectedExpenseAmount}: ${expenseDetail(exp)}`}
+                        aria-describedby={invalidDraft ? errorId : undefined}
+                        value={allocationDrafts[exp.id] ?? ""}
+                        onValueChange={(value) =>
+                          setAllocationDrafts((current) => ({
+                            ...current,
+                            [exp.id]: value,
+                          }))
+                        }
+                        onDraftStateChange={(state) =>
+                          setInvalidDraftIds((current) => {
+                            const next = new Set(current);
+                            if (state === "invalid" || state === "incomplete") {
+                              next.add(exp.id);
+                            } else {
+                              next.delete(exp.id);
+                            }
+                            return next;
+                          })
+                        }
+                        disabled={isPending || allocationUnavailable}
+                        aria-invalid={invalidDraft}
+                        className="h-10 w-full text-right font-mono"
+                      />
+                      {invalidDraft ? (
+                        <span
+                          id={errorId}
+                          className="text-right text-xs text-destructive"
+                        >
+                          {copy.expenseAllocationInvalid}
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : (
+                    <span className="font-mono text-xs font-medium text-warning">
+                      -{formatVND(maximumAllocation)}
+                    </span>
+                  )}
+                </div>
               );
             })}
             {availableExpenses.length === 0 ? (
@@ -266,8 +429,14 @@ export function MatchExpenseCell({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setSelectedIds([])}
-              disabled={isPending || selectedIds.length === 0}
+              onClick={() => {
+                setSelectedIds([]);
+                setAllocationDrafts({});
+                setInvalidDraftIds(new Set());
+              }}
+              disabled={
+                isPending || allocationUnavailable || selectedIds.length === 0
+              }
             >
               {copy.clearExpenseMatch}
             </Button>

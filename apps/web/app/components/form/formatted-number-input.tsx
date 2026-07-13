@@ -20,6 +20,7 @@ type FormattedNumberInputProps = Omit<
     value: string,
     event: React.FocusEvent<HTMLInputElement>,
   ) => void;
+  onDraftStateChange?: (state: NumericInputParseResult["state"]) => void;
   allowNegative?: boolean;
   maxFractionDigits?: number;
 };
@@ -50,6 +51,7 @@ export const FormattedNumberInput = React.forwardRef<
     defaultValue,
     onValueChange,
     onValueBlur,
+    onDraftStateChange,
     allowNegative = false,
     maxFractionDigits = 2,
     inputMode,
@@ -103,6 +105,7 @@ export const FormattedNumberInput = React.forwardRef<
           maxFractionDigits,
         });
         setDraft(nextDraft);
+        onDraftStateChange?.(nextDraft.state);
 
         if (nextDraft.state === "valid" || nextDraft.state === "empty") {
           if (!isControlled) {
@@ -113,12 +116,15 @@ export const FormattedNumberInput = React.forwardRef<
       }}
       onFocus={(event) => {
         setIsFocused(true);
-        setDraft(
-          parseVietnameseNumericInput(formatNumericInputDraft(rawValue), {
+        const nextDraft = parseVietnameseNumericInput(
+          formatNumericInputDraft(rawValue),
+          {
             allowNegative,
             maxFractionDigits,
-          }),
+          },
         );
+        setDraft(nextDraft);
+        onDraftStateChange?.(nextDraft.state);
         onFocus?.(event);
       }}
       onBlur={(event) => {
@@ -128,6 +134,7 @@ export const FormattedNumberInput = React.forwardRef<
             ? draft.canonical
             : rawValue;
         setDraft(null);
+        onDraftStateChange?.(rawValue ? "valid" : "empty");
         onValueBlur?.(blurValue, event);
         onBlur?.(event);
       }}

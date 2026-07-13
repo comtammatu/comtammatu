@@ -20,6 +20,7 @@ Checklist vận hành và readiness gates.
 
 - [../spec/database-schema.md](../spec/database-schema.md): source ladder, migration status vocabulary, and baseline-first layout
 - [../../supabase/migrations/README.md](../../supabase/migrations/README.md): fresh-env install order for the public baseline and managed surfaces
+- [db/pr-284-production-rollout.md](db/pr-284-production-rollout.md): manifest delta-only, ranh giới deploy và gate tiền thật cho PR #284
 
 ## Cách dùng
 

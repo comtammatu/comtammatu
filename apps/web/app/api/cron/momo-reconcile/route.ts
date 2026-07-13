@@ -4,6 +4,7 @@ import {
   getCronSecret,
   timingSafeSecretEquals,
 } from "@comtammatu/shared/runtime";
+import { isMomoRuntimeReady } from "@lib/payments/momo-config";
 import { executeMomoReconciliationBatch } from "@lib/payments/momo-reconcile";
 
 export const runtime = "nodejs";
@@ -21,6 +22,10 @@ export async function POST(request: Request) {
       { ok: false, error: "unauthorized" },
       { status: 401 },
     );
+  }
+
+  if (!isMomoRuntimeReady(process.env)) {
+    return NextResponse.json({ ok: true, skipped: "momo_runtime_not_ready" });
   }
 
   const supabase = createServiceClient();

@@ -201,8 +201,10 @@ test("MoMo callback result codes preserve pending callbacks and settle terminal 
 
 test("MoMo Self-Order uses signed checkout, IPN, and a return route", () => {
   const env = readRepo(".env.example");
+  const turbo = readRepo("turbo.json");
   const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
   const selfOrderClient = readWeb("app/q/[token]/self-order-client.tsx");
+  const selfOrderPage = readWeb("app/q/[token]/page.tsx");
   const paymentRoute = readWeb("app/api/self-order/[token]/payment/route.ts");
   const bankAppLink = readWeb("lib/self-order/bank-app-link.ts");
   const momo = readWeb("lib/payments/momo.ts");
@@ -216,9 +218,13 @@ test("MoMo Self-Order uses signed checkout, IPN, and a return route", () => {
     "supabase/migrations/20260712201500_add_momo_self_order_checkout.sql",
   );
 
+  assert.match(env, /MOMO_ENABLED=false/);
+  assert.match(env, /MOMO_RUNTIME_READY=false/);
   assert.match(env, /MOMO_PARTNER_CODE=/);
   assert.match(env, /MOMO_ACCESS_KEY=/);
   assert.match(env, /MOMO_SECRET_KEY=/);
+  assert.match(turbo, /"MOMO_ENABLED"/);
+  assert.match(turbo, /"MOMO_RUNTIME_READY"/);
   assert.equal(
     existsSync(join(process.cwd(), "app/api/webhooks/momo/route.ts")),
     true,
@@ -233,6 +239,21 @@ test("MoMo Self-Order uses signed checkout, IPN, and a return route", () => {
   assert.match(momo, /createHmac\("sha256"/);
   assert.match(momo, /timingSafeEqual/);
   assert.match(momo, /buildMomoCreateResponseSignatureSource/);
+  assert.match(
+    selfOrderPage,
+    /momoEnabled=\{isMomoCheckoutAvailable\(process\.env\)\}/,
+  );
+  assert.match(paymentPanel, /\{momoEnabled \? \(/);
+  assert.match(
+    selfOrderClient,
+    /method === "momo" && !momoEnabled && !recoverMomo/,
+  );
+  assert.match(
+    paymentRoute,
+    /!parsed\.data\.recover &&[\s\S]*!isMomoEnabled\(process\.env\)/,
+  );
+  assert.match(cronRoute, /skipped: "momo_runtime_not_ready"/);
+  assert.match(cronRoute, /export const GET = POST/);
   assert.match(momo, /responseSignatureValid/);
   assert.match(momo, /responseIdentityValid/);
   assert.match(momo, /terminalFailure/);
@@ -257,14 +278,13 @@ test("MoMo Self-Order uses signed checkout, IPN, and a return route", () => {
       webhook.indexOf("createServiceClient()"),
     "MoMo IPN correlation must fail before any database write",
   );
-  assert.match(
-    webhook,
-    /providerData\(result, context\.paymentRequestId\)/,
+  assert.ok(
+    paymentRoute.indexOf("isMomoRuntimeReady(process.env)") <
+      paymentRoute.indexOf("recoverMomoPaymentRequest({"),
+    "pre-schema MoMo recovery must stop before its RPC",
   );
-  assert.match(
-    webhook,
-    /paymentRequestId[\s\S]*amount: result\.amount/,
-  );
+  assert.match(webhook, /providerData\(result, context\.paymentRequestId\)/);
+  assert.match(webhook, /paymentRequestId[\s\S]*amount: result\.amount/);
   assert.match(
     webhook,
     /disposition === "pending"[\s\S]*processingStatus: "received"/,
@@ -279,6 +299,13 @@ test("MoMo Self-Order uses signed checkout, IPN, and a return route", () => {
   assert.match(webhook, /new NextResponse\(null, \{ status: 204 \}\)/);
   assert.match(returnRoute, /verifyMomoResult/);
   assert.match(returnRoute, /\/q\/\$\{encodeURIComponent\(context\.token\)\}/);
+  assert.ok(
+    paymentRoute.indexOf("isMomoEnabled(process.env)") <
+      paymentRoute.indexOf("isMomoRuntimeReady(process.env)") &&
+      paymentRoute.indexOf("isMomoRuntimeReady(process.env)") <
+        paymentRoute.indexOf('protocol !== "https:"'),
+    "MoMo admission and runtime preflights must run before HTTPS and database work",
+  );
   assert.ok(
     paymentRoute.indexOf('protocol !== "https:"') <
       paymentRoute.indexOf("createSelfOrderPaymentRequest({"),
@@ -345,9 +372,7 @@ test("MoMo Self-Order uses signed checkout, IPN, and a return route", () => {
     migration.indexOf(
       "CREATE OR REPLACE FUNCTION public.release_momo_reconciliation_claim",
     ),
-    migration.indexOf(
-      "REVOKE ALL ON FUNCTION public.confirm_momo_payment",
-    ),
+    migration.indexOf("REVOKE ALL ON FUNCTION public.confirm_momo_payment"),
   );
   const reconciliationAdvisoryLock = releaseReconciliationClaim.indexOf(
     "pg_advisory_xact_lock",
@@ -386,7 +411,10 @@ test("MoMo Self-Order uses signed checkout, IPN, and a return route", () => {
     "self_order_sync_payment_request()",
     "self_order_sync_payment_request_from_order()",
   ]) {
-    assert.match(activeStatePatch, new RegExp(signature.replace(/[()]/g, "\\$&")));
+    assert.match(
+      activeStatePatch,
+      new RegExp(signature.replace(/[()]/g, "\\$&")),
+    );
   }
   assert.doesNotMatch(activeStatePatch, /self_order_cancel_payment_request/);
   assert.doesNotMatch(activeStatePatch, /self_order_expire_payment_request/);
@@ -409,9 +437,7 @@ test("MoMo Self-Order uses signed checkout, IPN, and a return route", () => {
     migration.indexOf(
       "CREATE OR REPLACE FUNCTION public.cleanup_abandoned_payments",
     ),
-    migration.indexOf(
-      "COMMENT ON FUNCTION public.cleanup_abandoned_payments",
-    ),
+    migration.indexOf("COMMENT ON FUNCTION public.cleanup_abandoned_payments"),
   );
   const janitorOrder = paymentJanitor.indexOf("ORDER BY p.order_id, p.id");
   const janitorAdvisory = paymentJanitor.indexOf(
@@ -439,9 +465,7 @@ test("MoMo Self-Order uses signed checkout, IPN, and a return route", () => {
     migration.indexOf(
       "CREATE OR REPLACE FUNCTION public.release_momo_checkout_claim",
     ),
-    migration.indexOf(
-      "REVOKE ALL ON FUNCTION public.confirm_momo_payment",
-    ),
+    migration.indexOf("REVOKE ALL ON FUNCTION public.confirm_momo_payment"),
   );
   assert.match(releaseClaim, /'status', 'released'/);
   assert.doesNotMatch(releaseClaim, /public\.fail_momo_payment/);

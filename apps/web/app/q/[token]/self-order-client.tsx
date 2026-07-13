@@ -55,6 +55,7 @@ import {
 interface SelfOrderClientProps {
   token: string;
   initialSnapshot: PublicSelfOrderAvailableSnapshot;
+  momoEnabled: boolean;
 }
 
 const TAX_CODE_PATTERN = /^\d{10}(-\d{3})?$/;
@@ -240,6 +241,7 @@ function PaymentCompletedState({ onClose }: { onClose: () => void }) {
 export function SelfOrderClient({
   token,
   initialSnapshot,
+  momoEnabled,
 }: SelfOrderClientProps) {
   const [cartItems, setCartItems] = useState<SelfOrderCartItem[]>([]);
   const [customerNote, setCustomerNote] = useState("");
@@ -591,6 +593,7 @@ export function SelfOrderClient({
       activePaymentRequest.status === "momo_pending" &&
       !activePaymentRequest.redirectUrl &&
       Boolean(activePaymentRequest.clientOpId);
+    if (method === "momo" && !momoEnabled && !recoverMomo) return;
     if (!order || (activePaymentRequest && !recoverMomo)) return;
     const fieldErrors = recoverMomo ? {} : validateInvoice();
     setInvoiceFieldErrors(fieldErrors);
@@ -779,6 +782,7 @@ export function SelfOrderClient({
         {!ambiguous && order ? (
           <PaymentPanel
             disabled={awaiting || paymentPending}
+            momoEnabled={momoEnabled}
             activeOrder={order}
             activePaymentRequest={activePaymentRequest}
             buyerNotGetInvoice={buyerNotGetInvoice}

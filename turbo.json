@@ -24,6 +24,8 @@
         "SINVOICE_SANDBOX",
         "CRON_SECRET",
         "SEPAY_WEBHOOK_SECRET",
+        "MOMO_ENABLED",
+        "MOMO_RUNTIME_READY",
         "MOMO_PARTNER_CODE",
         "MOMO_ACCESS_KEY",
         "MOMO_SECRET_KEY",

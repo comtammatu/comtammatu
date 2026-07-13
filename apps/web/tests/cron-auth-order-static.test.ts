@@ -66,6 +66,7 @@ test("MoMo reconcile cron authenticates before creating a service client", () =>
   const serviceClientIndex = source.indexOf(
     "const supabase = createServiceClient();",
   );
+  const flagIndex = source.indexOf("isMomoRuntimeReady(process.env)");
   const executorIndex = source.indexOf(
     "await executeMomoReconciliationBatch(supabase)",
   );
@@ -73,11 +74,20 @@ test("MoMo reconcile cron authenticates before creating a service client", () =>
   assert.ok(authIndex >= 0, "MoMo cron must load CRON_SECRET");
   assert.ok(forbiddenIndex >= 0, "MoMo cron must reject bad Bearer auth");
   assert.ok(serviceClientIndex >= 0, "MoMo cron must create a service client");
+  assert.ok(flagIndex >= 0, "MoMo cron must read its feature flag");
   assert.ok(executorIndex >= 0, "MoMo cron must execute reconciliation");
   assert.ok(authIndex < serviceClientIndex, "MoMo cron auth must run first");
   assert.ok(
     forbiddenIndex < serviceClientIndex,
     "MoMo cron rejection must precede the service client",
+  );
+  assert.ok(
+    forbiddenIndex < flagIndex,
+    "MoMo cron rejection must precede the feature flag",
+  );
+  assert.ok(
+    flagIndex < serviceClientIndex,
+    "MoMo cron must skip before creating the service client",
   );
   assert.ok(
     serviceClientIndex < executorIndex,
@@ -104,6 +114,9 @@ test("secret comparison rejects values that only differ after 256 bytes", () => 
   const sharedPrefix = "a".repeat(256);
 
   assert.equal(timingSafeSecretEquals("bí mật", "bí mật"), true);
-  assert.equal(timingSafeSecretEquals(`${sharedPrefix}x`, `${sharedPrefix}y`), false);
+  assert.equal(
+    timingSafeSecretEquals(`${sharedPrefix}x`, `${sharedPrefix}y`),
+    false,
+  );
   assert.equal(timingSafeSecretEquals("bí mật", "bi mat"), false);
 });

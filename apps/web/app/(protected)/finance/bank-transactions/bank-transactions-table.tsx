@@ -318,6 +318,8 @@ function MatchCell({
       amount={tx.amount}
       paymentId={tx.paymentId}
       expenseIds={tx.expenseIds}
+      expenseAllocations={tx.expenseAllocations}
+      allocationReady={tx.expenseAllocationReady === true}
       supplierPaymentMatches={tx.supplierPaymentMatches}
       transferType={tx.transferType}
       expenseOptions={expenseOptions}
