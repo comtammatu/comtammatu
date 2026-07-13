@@ -1854,7 +1854,9 @@ export type Database = {
           baseline_sample_n: number | null
           baseline_source: string | null
           baseline_variance_pct: number | null
+          batch_number: string | null
           entry_unit_id: number | null
+          expiry_date: string | null
           grn_id: number
           id: number
           ingredient_id: number
@@ -1881,7 +1883,9 @@ export type Database = {
           baseline_sample_n?: number | null
           baseline_source?: string | null
           baseline_variance_pct?: number | null
+          batch_number?: string | null
           entry_unit_id?: number | null
+          expiry_date?: string | null
           grn_id: number
           id?: never
           ingredient_id: number
@@ -1908,7 +1912,9 @@ export type Database = {
           baseline_sample_n?: number | null
           baseline_source?: string | null
           baseline_variance_pct?: number | null
+          batch_number?: string | null
           entry_unit_id?: number | null
+          expiry_date?: string | null
           grn_id?: number
           id?: never
           ingredient_id?: number
@@ -2202,6 +2208,7 @@ export type Database = {
           name: string
           reorder_point: number | null
           review_override: boolean | null
+          shelf_life_days: number | null
           sku: string | null
           storage_type: string
           tenant_id: number
@@ -2220,6 +2227,7 @@ export type Database = {
           name: string
           reorder_point?: number | null
           review_override?: boolean | null
+          shelf_life_days?: number | null
           sku?: string | null
           storage_type?: string
           tenant_id: number
@@ -2238,6 +2246,7 @@ export type Database = {
           name?: string
           reorder_point?: number | null
           review_override?: boolean | null
+          shelf_life_days?: number | null
           sku?: string | null
           storage_type?: string
           tenant_id?: number
@@ -5048,6 +5057,139 @@ export type Database = {
           },
         ]
       }
+      production_order_items: {
+        Row: {
+          actual_quantity: number | null
+          created_at: string
+          entry_unit_id: number | null
+          finished_good_id: number
+          id: number
+          production_order_id: number
+          quantity: number
+          tenant_id: number
+          unit_cost_at_production: number | null
+        }
+        Insert: {
+          actual_quantity?: number | null
+          created_at?: string
+          entry_unit_id?: number | null
+          finished_good_id: number
+          id?: never
+          production_order_id: number
+          quantity: number
+          tenant_id: number
+          unit_cost_at_production?: number | null
+        }
+        Update: {
+          actual_quantity?: number | null
+          created_at?: string
+          entry_unit_id?: number | null
+          finished_good_id?: number
+          id?: never
+          production_order_id?: number
+          quantity?: number
+          tenant_id?: number
+          unit_cost_at_production?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_order_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_order_items_finished_good_id_fkey"
+            columns: ["finished_good_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_order_items_production_order_id_fkey"
+            columns: ["production_order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_order_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_orders: {
+        Row: {
+          branch_id: number
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: number
+          notes: string | null
+          production_number: string
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          notes?: string | null
+          production_number: string
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          notes?: string | null
+          production_number?: string
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "production_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_recipes: {
         Row: {
           created_at: string
@@ -6656,6 +6798,7 @@ export type Database = {
           location_id: number
           movement_subtype: string | null
           order_id: number | null
+          production_order_id: number | null
           production_run_id: number | null
           quantity_change: number
           reason: string | null
@@ -6677,6 +6820,7 @@ export type Database = {
           location_id: number
           movement_subtype?: string | null
           order_id?: number | null
+          production_order_id?: number | null
           production_run_id?: number | null
           quantity_change: number
           reason?: string | null
@@ -6698,6 +6842,7 @@ export type Database = {
           location_id?: number
           movement_subtype?: string | null
           order_id?: number | null
+          production_order_id?: number | null
           production_run_id?: number | null
           quantity_change?: number
           reason?: string | null
@@ -6768,6 +6913,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_production_order_id_fkey"
+            columns: ["production_order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
             referencedColumns: ["id"]
           },
           {
@@ -8829,6 +8981,7 @@ export type Database = {
           max_stock_level: number | null
           min_stock_level: number | null
           reorder_point: number | null
+          shelf_life_days: number | null
           stock_value: number | null
           tenant_id: number | null
           updated_at: string | null
@@ -9244,6 +9397,7 @@ export type Database = {
         Args: { p_branch_id: number; p_payment_id: number; p_tenant_id: number }
         Returns: undefined
       }
+      cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
       cancel_production_run: { Args: { p_run_id: number }; Returns: Json }
       check_cron_jobs_health: { Args: never; Returns: undefined }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
@@ -9413,6 +9567,7 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_production_order: { Args: { p_order_id: number }; Returns: Json }
       confirm_production_run: {
         Args: {
           p_actual_ingredients?: Json
@@ -9507,6 +9662,15 @@ export type Database = {
           p_provider_ref?: string
           p_status?: string
           p_tenant_id: number
+        }
+        Returns: Json
+      }
+      create_production_order: {
+        Args: {
+          p_branch_id: number
+          p_items?: Json
+          p_notes?: string
+          p_production_number: string
         }
         Returns: Json
       }
@@ -9938,6 +10102,18 @@ export type Database = {
           subtotal: number
           tax_amount: number
           total_amount: number
+        }[]
+      }
+      get_orders_paid_summary: {
+        Args: {
+          p_branch_id?: number
+          p_date_from?: string
+          p_date_to?: string
+          p_status?: string
+        }
+        Returns: {
+          paid_count: number
+          paid_revenue: number
         }[]
       }
       get_orders_summary: {
@@ -10723,29 +10899,16 @@ export type Database = {
         Args: { p_items: Json; p_tenant_id: number }
         Returns: Json
       }
-      self_order_consume_rate_limits:
-        | {
-            Args: {
-              p_ip_hash: string
-              p_purpose: string
-              p_table_id: number
-              p_tenant_id: number
-              p_token: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_device_hash: string
-              p_ip_hash: string
-              p_purpose: string
-              p_session_id: number
-              p_table_id: number
-              p_tenant_id: number
-              p_token: string
-            }
-            Returns: Json
-          }
+      self_order_consume_rate_limits: {
+        Args: {
+          p_ip_hash: string
+          p_purpose: string
+          p_table_id: number
+          p_tenant_id: number
+          p_token: string
+        }
+        Returns: Json
+      }
       self_order_create_payment_request: {
         Args: {
           p_client_op_id: string
@@ -11044,22 +11207,40 @@ export type Database = {
         }
         Returns: undefined
       }
-      upsert_ingredient_catalog: {
-        Args: {
-          p_category_id: number
-          p_ingredient_id: number
-          p_item_kind: string
-          p_max_stock_level: number
-          p_min_stock_level: number
-          p_name: string
-          p_reorder_point: number
-          p_sku: string
-          p_storage_type: string
-          p_unit_cost: number
-          p_units: Json
-        }
-        Returns: number
-      }
+      upsert_ingredient_catalog:
+        | {
+            Args: {
+              p_category_id: number
+              p_ingredient_id: number
+              p_item_kind: string
+              p_max_stock_level: number
+              p_min_stock_level: number
+              p_name: string
+              p_reorder_point: number
+              p_shelf_life_days: number
+              p_sku: string
+              p_storage_type: string
+              p_unit_cost: number
+              p_units: Json
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_category_id: number
+              p_ingredient_id: number
+              p_item_kind: string
+              p_max_stock_level: number
+              p_min_stock_level: number
+              p_name: string
+              p_reorder_point: number
+              p_sku: string
+              p_storage_type: string
+              p_unit_cost: number
+              p_units: Json
+            }
+            Returns: number
+          }
       upsert_payroll_calculation: {
         Args: { p_entries: Json; p_period_id: number }
         Returns: Json

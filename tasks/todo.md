@@ -1200,6 +1200,20 @@ Containment record:
   the complete repository test suite, `typecheck`, `lint`, `build`, `verify`, and
   Turborepo boundaries all pass. Independent second-pass reviews report no
   remaining P0/P1 defects in the reviewed source state.
+- Fresh Preview `mbbfhrvlteoktbrddnus` is data-less, associated with
+  `codex/branch-hub-native-redesign`, and replays all 19 active migrations.
+  Catalog proof confirms the expected RPC signatures/grants, Owner-only refund
+  RLS, nine active Cron jobs, ten Realtime publication tables, and sixteen
+  enabled Broadcast triggers. Security and performance advisors report no
+  errors; inherited warnings remain baseline debt.
+- Preview acceptance passes the Self-order/MoMo and SePay adjudication SQL
+  suites, exact/mismatched expense allocation, cash-deposit replay, legacy `DH`
+  exact memo plus amount settlement, two-event expense contention, and refund
+  approve/reject contention. Generated database types match the Preview schema.
+- Supabase dashboard verification confirms `Deploy to production` is off and
+  automatic branching is on. PR SHA `67b876302` has successful `gates`,
+  `Supabase Preview`, and fail-closed `supabase-preview-required` checks without
+  a production write; the final closeout SHA still requires fresh proof.
 
 - [x] **C0 — capture and assemble current production schema baseline.**
 - [x] **C1 — separate represented history and delete unsafe cleanup SQL.**
@@ -1208,7 +1222,7 @@ Containment record:
 - [x] **C4 — classify PR-head and concurrent-session migrations against the
       cutoff baseline; retain only unrepresented desired deltas.**
 - [x] **C5 — run money/ledger/SePay/inventory/auth and full repository gates.**
-- [ ] **C6 — create the associated Preview after cost confirmation; prove fresh
+- [x] **C6 — create the associated Preview after cost confirmation; prove fresh
       replay, schema/RPC/RLS/cron/realtime, generated types, and runtime smoke.**
 - [ ] **C7 — push the reviewed PR head and close CI/review blockers.**
 - [ ] **C8 — prepare a separate production ledger-repair/apply plan.** No
