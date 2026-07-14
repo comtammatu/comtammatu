@@ -97,6 +97,37 @@ test("refund ledger migration enforces the smallest safe v1 contract", () => {
   assert.doesNotMatch(migration, /payout_method IN \([^)]*'momo'/);
 });
 
+test("refund RLS reuses the browser-callable Owner permission boundary", () => {
+  const migration = read(
+    "supabase/migrations/20260714144849_fix_refund_owner_policy_execution.sql",
+  );
+
+  assert.match(
+    migration,
+    /ALTER POLICY refunds_select[^;]*has_permission\(branch_id, 'orders:refund_approve'\)[^;]*;/,
+  );
+  assert.match(
+    migration,
+    /ALTER POLICY refunds_insert[^;]*has_permission\(branch_id, 'orders:refund'\)[^;]*;/,
+  );
+  assert.match(
+    migration,
+    /ALTER POLICY refunds_update[^;]*has_permission\(branch_id, 'orders:refund_approve'\)[^;]*has_permission\(branch_id, 'orders:refund_approve'\)[^;]*;/,
+  );
+});
+
+test("owner predicate remains service-only", () => {
+  const migration = read(
+    "supabase/migrations/20260714155721_lock_owner_predicate_function_acl.sql",
+  );
+
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.auth_is_owner\(uuid\)\s+FROM PUBLIC, anon, authenticated;/,
+  );
+  assert.doesNotMatch(migration, /GRANT\s+EXECUTE/i);
+});
+
 test("Owner workbench exposes persistent refund matching and evidence", () => {
   const loader = read(
     "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
