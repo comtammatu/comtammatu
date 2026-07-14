@@ -9,7 +9,6 @@ import {
   Landmark as IconBank,
   Settings2 as IconSettings,
   Wallet as IconWallet,
-  ArrowRightLeft as IconTransfer,
 } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -20,11 +19,9 @@ import {
   BusinessDateField,
   FormDialog,
   MoneyVndField,
-  TextField,
 } from "@/components/form";
 import { messages } from "@lib/messages";
 import { setCashOpening } from "../cash-actions";
-import { transferCashToBank } from "../cash-transfer-actions";
 
 const copy = messages.finance.cash;
 
@@ -39,7 +36,9 @@ interface Props {
   bankOpeningBalance: number;
   bankInSince: number;
   bankOutSince: number;
-  cashDeltaAfterPaidOut: number;
+  cashCollectedPeriod: number;
+  cashOutPeriod: number;
+  cashNetMovementPeriod: number;
   todayBusinessDate: string;
   canManageCashOpening: boolean;
 }
@@ -58,16 +57,6 @@ const cashOpeningSchema = z.object({
 
 type CashOpeningValues = z.infer<typeof cashOpeningSchema>;
 
-const transferSchema = z.object({
-  amount: z
-    .string()
-    .min(1, { error: "Nhập số tiền" })
-    .refine((v) => Number(v) >= 1000, { error: "Số tiền tối thiểu 1.000 VNĐ" }),
-  referenceCode: z.string().optional(),
-});
-
-type TransferValues = z.infer<typeof transferSchema>;
-
 export function CashPanel({
   cashOnHand,
   openingBalance,
@@ -79,13 +68,14 @@ export function CashPanel({
   bankOpeningBalance,
   bankInSince,
   bankOutSince,
-  cashDeltaAfterPaidOut,
+  cashCollectedPeriod,
+  cashOutPeriod,
+  cashNetMovementPeriod,
   todayBusinessDate,
   canManageCashOpening,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [transferOpen, setTransferOpen] = useState(false);
   const needsFullOpeningRefresh = openingDate != null && !hasBankOpening;
 
   const defaultValues: CashOpeningValues = {
@@ -108,17 +98,6 @@ export function CashPanel({
     return result;
   }
 
-  async function onTransferSubmit(values: TransferValues): Promise<ActionResult> {
-    const result = await transferCashToBank({
-      amount: Number(values.amount),
-      referenceCode: values.referenceCode,
-    });
-    if (result.success) {
-      router.refresh();
-    }
-    return result;
-  }
-
   return (
     <div className="grid gap-4 xl:grid-cols-2">
       <AppSection
@@ -127,20 +106,12 @@ export function CashPanel({
         title={copy.onHandTitle}
         icon={<IconWallet />}
         action={
-          <div className="flex items-center gap-2">
-            {canManageCashOpening && (
-              <Button variant="outline" size="sm" onClick={() => setTransferOpen(true)}>
-                <IconTransfer data-icon="inline-start" />
-                {copy.transferAction}
-              </Button>
-            )}
-            {canManageCashOpening && (
-              <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-                <IconSettings data-icon="inline-start" />
-                {openingDate ? copy.editOpening : copy.setOpening}
-              </Button>
-            )}
-          </div>
+          canManageCashOpening ? (
+            <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+              <IconSettings data-icon="inline-start" />
+              {openingDate ? copy.editOpening : copy.setOpening}
+            </Button>
+          ) : null
         }
       >
         {cashOnHand == null ? (
@@ -198,86 +169,60 @@ export function CashPanel({
       <AppSection
         size="sm"
         className="min-w-0"
-        title={copy.cashDeltaTitle}
+        title={copy.cashMovementTitle}
         icon={<IconWallet />}
       >
         <p
           className={cn(
             "truncate font-mono text-2xl font-semibold tabular-nums",
-            cashDeltaAfterPaidOut >= 0 ? "text-success" : "text-warning",
+            cashNetMovementPeriod >= 0 ? "text-success" : "text-warning",
           )}
         >
-          {formatVND(cashDeltaAfterPaidOut)}
+          {formatVND(cashNetMovementPeriod)}
         </p>
-        <p className="text-xs text-muted-foreground">{copy.cashDeltaHint}</p>
+        <p className="text-xs text-muted-foreground">
+          {copy.cashMovementBreakdown(
+            formatVND(cashCollectedPeriod),
+            formatVND(cashOutPeriod),
+          )}
+        </p>
       </AppSection>
 
       {canManageCashOpening ? (
-        <>
-          <FormDialog
-            open={open}
-            onOpenChange={setOpen}
-            title={copy.openingTitle}
-            description={copy.openingDescription}
-            schema={cashOpeningSchema}
-            defaultValues={defaultValues}
-            onSubmit={onSubmit}
-            successMessage={copy.openingSuccess}
-            submitLabel={copy.openingSubmit}
-          >
-            {(form) => (
-              <>
-                <MoneyVndField
-                  control={form.control}
-                  name="balance"
-                  label={copy.openingBalanceLabel}
-                  required
-                />
-                <MoneyVndField
-                  control={form.control}
-                  name="bankBalance"
-                  label={copy.openingBankLabel}
-                  required
-                />
-                <BusinessDateField
-                  control={form.control}
-                  name="date"
-                  label={copy.openingDateLabel}
-                  required
-                />
-              </>
-            )}
-          </FormDialog>
-          
-          <FormDialog
-            open={transferOpen}
-            onOpenChange={setTransferOpen}
-            title={copy.transferTitle}
-            description={copy.transferDescription}
-            schema={transferSchema}
-            defaultValues={{ amount: "", referenceCode: "" }}
-            onSubmit={onTransferSubmit}
-            successMessage={copy.transferSuccess}
-            submitLabel={copy.transferSubmit}
-          >
-            {(form) => (
-              <>
-                <MoneyVndField
-                  control={form.control}
-                  name="amount"
-                  label={copy.transferAmountLabel}
-                  required
-                />
-                <TextField
-                  control={form.control}
-                  name="referenceCode"
-                  label={copy.transferRefLabel}
-                  placeholder="SePay Webhook Ref"
-                />
-              </>
-            )}
-          </FormDialog>
-        </>
+        <FormDialog
+          open={open}
+          onOpenChange={setOpen}
+          title={copy.openingTitle}
+          description={copy.openingDescription}
+          schema={cashOpeningSchema}
+          defaultValues={defaultValues}
+          onSubmit={onSubmit}
+          successMessage={copy.openingSuccess}
+          submitLabel={copy.openingSubmit}
+        >
+          {(form) => (
+            <>
+              <MoneyVndField
+                control={form.control}
+                name="balance"
+                label={copy.openingBalanceLabel}
+                required
+              />
+              <MoneyVndField
+                control={form.control}
+                name="bankBalance"
+                label={copy.openingBankLabel}
+                required
+              />
+              <BusinessDateField
+                control={form.control}
+                name="date"
+                label={copy.openingDateLabel}
+                required
+              />
+            </>
+          )}
+        </FormDialog>
       ) : null}
     </div>
   );

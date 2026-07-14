@@ -11,7 +11,6 @@ import {
   FileX as IconFileX,
   Receipt as IconReceipt,
   RefreshCw as IconRefreshCw,
-  Undo2 as IconUndo,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -21,7 +20,6 @@ import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-di
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "@comtammatu/shared/format";
 import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
-import type { PaymentMethod } from "@comtammatu/shared/providers";
 import {
   cancelTaxInvoice,
   createTaxInvoice,
@@ -33,7 +31,6 @@ import type { TaxInvoiceCursor } from "./actions";
 import { forceResyncTaxInvoice } from "./reconcile-invoice-actions";
 import { getArchiveDownloadUrl } from "./archive-actions";
 import { replaceTaxInvoice } from "./replace-invoice-actions";
-import { refundOrderPayment } from "./refund-actions";
 import { correctPaymentMethod } from "./payment-method-actions";
 import { ManualIssueInvoiceDialog } from "./manual-issue-invoice-dialog";
 import type { InvoiceRow } from "./_lib/finance-types";
@@ -85,7 +82,9 @@ const CANCEL_REASON_MIN = 20;
 const CANCEL_REASON_MAX = 500;
 const REFUND_REASON_MIN = 5;
 const REFUND_REASON_MAX = 500;
-const METHOD_OPTIONS: PaymentMethod[] = ["cash", "vietqr", "momo"];
+type CorrectablePaymentMethod = "cash" | "vietqr";
+
+const METHOD_OPTIONS: CorrectablePaymentMethod[] = ["cash", "vietqr"];
 const REPLACE_REASON_MIN = 20;
 const REPLACE_REASON_MAX = 255;
 const REPLACE_AGREEMENT_MAX = 225;
@@ -161,18 +160,18 @@ export function InvoiceList({
   const [loadingMore, setLoadingMore] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<InvoiceRow | null>(null);
   const [cancelReason, setCancelReason] = useState("");
-  const [refundTarget, setRefundTarget] = useState<InvoiceRow | null>(null);
-  const [refundReason, setRefundReason] = useState("");
   const [methodFixTarget, setMethodFixTarget] = useState<InvoiceRow | null>(
     null,
   );
-  const [methodFixMethod, setMethodFixMethod] = useState<PaymentMethod | null>(
-    null,
-  );
+  const [methodFixMethod, setMethodFixMethod] =
+    useState<CorrectablePaymentMethod | null>(null);
   const [methodFixReason, setMethodFixReason] = useState("");
   const [isPending, startTransition] = useTransition();
   const [resyncingId, setResyncingId] = useState<number | null>(null);
   const [reissuingId, setReissuingId] = useState<number | null>(null);
+  const [sepayRecoveryAfterEventId, setSepayRecoveryAfterEventId] = useState<
+    number | null
+  >(null);
   const [replaceTarget, setReplaceTarget] = useState<InvoiceRow | null>(null);
   const replaceDefaultValues = useMemo<ReplaceInvoiceFormValues>(
     () => ({
@@ -257,37 +256,6 @@ export function InvoiceList({
         ),
       );
       resetCancelDialog();
-    });
-  }
-
-  const trimmedRefundReason = refundReason.trim();
-  const refundReasonValid =
-    trimmedRefundReason.length >= REFUND_REASON_MIN &&
-    trimmedRefundReason.length <= REFUND_REASON_MAX;
-
-  function resetRefundDialog() {
-    setRefundTarget(null);
-    setRefundReason("");
-  }
-
-  function handleRefund() {
-    if (!refundTarget || !refundReasonValid) return;
-    const orderId = refundTarget.order_id;
-    if (!orderId) {
-      toast.error(messages.finance.invoiceList.refundFailed);
-      return;
-    }
-    startTransition(async () => {
-      const result = await refundOrderPayment({
-        orderId,
-        reason: trimmedRefundReason,
-      });
-      if (!result.success) {
-        toast.error(result.error ?? messages.finance.invoiceList.refundFailed);
-        return;
-      }
-      toast.success(messages.finance.invoiceList.refundSuccess);
-      resetRefundDialog();
     });
   }
 
@@ -392,7 +360,9 @@ export function InvoiceList({
           buyerTaxCode: inv.buyer_tax_code ?? undefined,
         });
         if (!result.success) {
-          toast.error(result.error ?? messages.finance.invoiceList.reissueFailed);
+          toast.error(
+            result.error ?? messages.finance.invoiceList.reissueFailed,
+          );
           return;
         }
         const issued = result.data as {
@@ -406,8 +376,7 @@ export function InvoiceList({
               ? {
                   ...row,
                   status: issued?.status ?? row.status,
-                  invoice_number:
-                    issued?.invoice_number ?? row.invoice_number,
+                  invoice_number: issued?.invoice_number ?? row.invoice_number,
                 }
               : row,
           ),
@@ -483,7 +452,8 @@ export function InvoiceList({
   async function handleConfirmReissueAll() {
     const ok = await confirm({
       title: messages.finance.invoiceList.reissueAllTitle,
-      description: messages.finance.invoiceList.reissueAllDescription(draftCount),
+      description:
+        messages.finance.invoiceList.reissueAllDescription(draftCount),
       cancelText: messages.finance.invoiceList.reissueAllCancel,
       confirmText: messages.finance.invoiceList.reissueAllConfirm,
     });
@@ -494,21 +464,28 @@ export function InvoiceList({
   function handleIssueMissingSepay() {
     startTransition(async () => {
       try {
-        const result = await issueMissingSepayInvoices();
+        const result = await issueMissingSepayInvoices({
+          afterEventId: sepayRecoveryAfterEventId,
+        });
         if (!result.success) {
           toast.error(messages.finance.invoiceList.sepayMissingError);
           return;
         }
         const d = result.data;
+        setSepayRecoveryAfterEventId(
+          d?.hasMore ? (d.nextAfterEventId ?? null) : null,
+        );
         toast.success(
           messages.finance.invoiceList.sepayMissingResult(
             d?.issued ?? 0,
             d?.failed ?? 0,
             d?.skipped ?? 0,
-            d?.remainingInScan ?? 0,
+            d?.hasMore ?? false,
           ),
         );
-        setTimeout(() => window.location.reload(), 1500);
+        if (!d?.hasMore && (d?.issued ?? 0) > 0) {
+          setTimeout(() => window.location.reload(), 1500);
+        }
       } catch {
         toast.error(messages.finance.invoiceList.sepayMissingError);
       }
@@ -547,7 +524,11 @@ export function InvoiceList({
               title={FINANCE_VI.downloadPdf}
             >
               <IconDownload className="size-4" />
-              {dense ? <span className="sr-only">{FINANCE_VI.downloadPdf}</span> : "PDF"}
+              {dense ? (
+                <span className="sr-only">{FINANCE_VI.downloadPdf}</span>
+              ) : (
+                "PDF"
+              )}
             </Button>
             <Button
               variant="ghost"
@@ -557,7 +538,11 @@ export function InvoiceList({
               title={FINANCE_VI.downloadXml}
             >
               <IconDownload className="size-4" />
-              {dense ? <span className="sr-only">{FINANCE_VI.downloadXml}</span> : "XML"}
+              {dense ? (
+                <span className="sr-only">{FINANCE_VI.downloadXml}</span>
+              ) : (
+                "XML"
+              )}
             </Button>
           </>
         ) : null}
@@ -592,7 +577,11 @@ export function InvoiceList({
             ) : (
               <IconRefreshCw className="size-4" />
             )}
-            {dense ? <span className="sr-only">{FINANCE_VI.resync}</span> : FINANCE_VI.sync}
+            {dense ? (
+              <span className="sr-only">{FINANCE_VI.resync}</span>
+            ) : (
+              FINANCE_VI.sync
+            )}
           </Button>
         ) : null}
         {canManageInvoices && inv.status === "issued" ? (
@@ -608,21 +597,6 @@ export function InvoiceList({
                 <span className="sr-only">{FINANCE_VI.replaceInvoice}</span>
               ) : (
                 FINANCE_VI.replace
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size={size}
-              onClick={() => setRefundTarget(inv)}
-              title={messages.finance.invoiceList.refundTitle}
-            >
-              <IconUndo className="size-4" />
-              {dense ? (
-                <span className="sr-only">
-                  {messages.finance.invoiceList.refund}
-                </span>
-              ) : (
-                messages.finance.invoiceList.refund
               )}
             </Button>
             <Button
@@ -743,7 +717,9 @@ export function InvoiceList({
                 disabled={isPending}
               >
                 <IconRefreshCw className="size-4" />
-                {messages.finance.invoiceList.sepayMissing}
+                {sepayRecoveryAfterEventId === null
+                  ? messages.finance.invoiceList.sepayMissing
+                  : messages.finance.invoiceList.sepayMissingContinue}
               </Button>
             ) : null}
             {canManageInvoices && draftCount > 0 ? (
@@ -823,9 +799,7 @@ export function InvoiceList({
               onClick={handleLoadMore}
               disabled={loadingMore}
             >
-              {loadingMore ? (
-                <Spinner className="size-4" />
-              ) : null}
+              {loadingMore ? <Spinner className="size-4" /> : null}
               {messages.finance.invoiceList.loadMore}
             </Button>
           </div>
@@ -870,42 +844,6 @@ export function InvoiceList({
           </Label>
           <span className="text-muted-foreground">
             {trimmedReason.length}/{CANCEL_REASON_MAX}
-          </span>
-        </div>
-      </ReasonConfirmDialog>
-
-      <ReasonConfirmDialog
-        open={!!refundTarget}
-        onOpenChange={(open) => !open && resetRefundDialog()}
-        title={messages.finance.invoiceList.refundDialogTitle}
-        description={messages.finance.invoiceList.refundWarning}
-        reasonId="invoice-refund-reason"
-        reason={refundReason}
-        onReasonChange={setRefundReason}
-        reasonLabel={messages.finance.invoiceList.refundReasonLabel(
-          REFUND_REASON_MIN,
-        )}
-        reasonPlaceholder={messages.finance.invoiceList.refundReasonPlaceholder}
-        reasonMinLength={REFUND_REASON_MIN}
-        reasonTextareaProps={{
-          rows: 3,
-          maxLength: REFUND_REASON_MAX,
-          disabled: isPending,
-        }}
-        cancelLabel={messages.finance.invoiceList.refundCancel}
-        cancelDisabled={isPending}
-        confirmLabel={messages.finance.invoiceList.refundConfirm}
-        confirmVariant="destructive"
-        canConfirm={refundReasonValid}
-        isPending={isPending}
-        onConfirm={handleRefund}
-      >
-        <div className="flex items-center justify-between gap-3 text-xs">
-          <Label htmlFor="invoice-refund-reason">
-            {messages.finance.invoiceList.refundReasonLabel(REFUND_REASON_MIN)}
-          </Label>
-          <span className="text-muted-foreground">
-            {trimmedRefundReason.length}/{REFUND_REASON_MAX}
           </span>
         </div>
       </ReasonConfirmDialog>

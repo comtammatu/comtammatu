@@ -36,6 +36,7 @@ export const finance = {
           : `Đã phát hành ${issued} hóa đơn.`,
     reissueAllError: "Không thể phát hành lại hàng loạt.",
     sepayMissing: "Khôi phục HĐĐT SePay thiếu",
+    sepayMissingContinue: "Tiếp tục quét HĐĐT SePay",
     sepayMissingTitle: "Khôi phục HĐĐT cho đơn SePay đã thanh toán",
     sepayMissingDescription:
       "Tìm các webhook SePay đã xử lý, thanh toán đã hoàn tất nhưng chưa có HĐĐT/summary, rồi xuất tối đa 20 hóa đơn trong lượt này. Tiếp tục?",
@@ -44,10 +45,10 @@ export const finance = {
       issued: number,
       failed: number,
       skipped: number,
-      remaining: number,
+      hasMore: boolean,
     ) =>
-      remaining > 0
-        ? `Đã xuất ${issued}, bỏ qua ${skipped}, lỗi ${failed}, còn ${remaining} trong lượt quét — bấm lại để tiếp tục.`
+      hasMore
+        ? `Đã xuất ${issued}, bỏ qua ${skipped}, lỗi ${failed}. Vẫn còn giao dịch chưa quét — bấm tiếp tục.`
         : failed > 0
           ? `Đã xuất ${issued}, bỏ qua ${skipped}, còn ${failed} đơn lỗi.`
           : `Đã xuất ${issued}, bỏ qua ${skipped}.`,
@@ -381,6 +382,9 @@ export const finance = {
     ) => `Tồn ${date}: ${opening} + thu CK ${bankIn} − chi CK ${bankOut}`,
     cashDeltaTitle: "Dòng tiền trong kỳ",
     cashDeltaHint: "Theo kỳ/chi nhánh đang lọc: tiền đã thu trừ chi đã trả.",
+    cashMovementTitle: "Dòng tiền vận hành bằng tiền mặt",
+    cashMovementBreakdown: (cashIn: string, cashOut: string) =>
+      `Theo kỳ/chi nhánh: thu bán hàng ${cashIn} − hoàn tiền, chi vận hành và trả NCC ${cashOut}. Không gồm nộp tiền vào NH.`,
     openingTitle: "Tồn quỹ đầu kỳ",
     openingDescription:
       "Đếm tiền mặt thực tế và số dư tài khoản ngân hàng cùng một ngày làm mốc. Hệ cộng tiền thu và trừ tiền chi từ ngày này để ra số dư hiện tại.",
@@ -404,7 +408,8 @@ export const finance = {
     description: "Danh sách giao dịch SePay gửi về trong khoảng đang xem.",
     reconciliation: {
       matched: "Đã khớp",
-      matchedHint: "Đã nối vào đơn hàng, khoản chi, hoặc khoản trả NCC.",
+      matchedHint:
+        "Đã nối vào đơn hàng, khoản chi, khoản trả NCC hoặc hoàn tiền.",
       needsReview: "Cần rà soát",
       needsReviewHint: (
         amount: string,
@@ -514,16 +519,48 @@ export const finance = {
       received: "Đã nhận",
     },
     matchedOrder: (id: number | string) => `Khớp đơn hàng #${id}`,
+    matchedCashDeposit: "Đã khớp chuyển quỹ",
     matchedExpense: (id: number | string) => `Khớp chi phí #${id}`,
     matchedSupplierPayment: (id: number | string) => `Trả NCC #${id}`,
     matchedSupplierPaymentDetail: (supplier: string, invoice: string) =>
       `${supplier} · ${invoice}`,
+    matchedRefund: (order: string) => `Hoàn đơn ${order}`,
+    refundMatchTitle: "Gắn khoản hoàn tiền",
+    refundMatchHint:
+      "Chỉ chọn khoản đã hoàn qua ngân hàng; tổng phải bằng sao kê tiền ra.",
+    selectedRefundAmount: "Hoàn tiền chọn",
+    refundSearchPlaceholder: "Nhập mã đơn…",
+    refundSearchAction: "Tìm",
+    refundLoadingAction: "Đang tải…",
+    refundLoadMore: "Tải thêm",
+    refundLoading: "Đang tải khoản hoàn tiền…",
+    refundLoadError: "Không tải được khoản hoàn tiền.",
+    noUnmatchedRefunds: "Không có khoản hoàn qua ngân hàng chưa khớp",
+    clearRefundMatch: "Bỏ khớp hoàn tiền",
+    saveRefundMatch: "Lưu khớp hoàn tiền",
+    refundAllocationMismatch:
+      "Tổng hoàn tiền đã chọn phải bằng số tiền trên sao kê.",
+    refundMatchSuccess: "Đã khớp khoản hoàn tiền",
+    refundMatchCleared: "Đã bỏ khớp khoản hoàn tiền",
+    refundMatchError: "Không thể khớp khoản hoàn tiền",
+    supplierPaymentSuggestion: "Gợi ý khoản trả NCC",
+    matchPurposeTitle: "Giao dịch này dùng để",
+    refundPurpose: "Hoàn tiền",
+    expensePurpose: "Chi vận hành",
+    supplierPurpose: "Trả NCC",
+    confirmSupplierPaymentMatch: "Xác nhận",
+    clearSupplierPaymentMatch: "Bỏ khớp",
+    supplierPaymentMatchSuccess: "Đã khớp khoản trả NCC",
+    supplierPaymentMatchCleared: "Đã bỏ khớp khoản trả NCC",
+    supplierPaymentMatchError: "Không thể khớp khoản trả NCC",
     matchExpensePlaceholder: "Gán chi phí",
     matchExpenseTitle: "Gán chi phí cho giao dịch",
     matchedExpenseCount: (count: string) => `Đã gán ${count} chi phí`,
     bankTransactionAmount: "Sao kê",
     selectedExpenseAmount: "Chi phí chọn",
     expenseMatchDelta: "Lệch",
+    expenseAllocationMismatch:
+      "Tổng chi đã chọn phải bằng số tiền trên sao kê.",
     noUnmatchedExpenses: "Không có chi chuyển khoản chưa khớp",
     openExpenses: "Mở chi phí",
     clearExpenseMatch: "Bỏ khớp",

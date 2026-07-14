@@ -5769,11 +5769,13 @@ export type Database = {
           id: number
           order_id: number
           payment_id: number
+          payout_method: string | null
           reason: string
           status: string
           tax_invoice_id: number | null
           tenant_id: number
           updated_at: string
+          webhook_event_id: number | null
         }
         Insert: {
           amount: number
@@ -5785,11 +5787,13 @@ export type Database = {
           id?: never
           order_id: number
           payment_id: number
+          payout_method?: string | null
           reason: string
           status?: string
           tax_invoice_id?: number | null
           tenant_id: number
           updated_at?: string
+          webhook_event_id?: number | null
         }
         Update: {
           amount?: number
@@ -5801,11 +5805,13 @@ export type Database = {
           id?: never
           order_id?: number
           payment_id?: number
+          payout_method?: string | null
           reason?: string
           status?: string
           tax_invoice_id?: number | null
           tenant_id?: number
           updated_at?: string
+          webhook_event_id?: number | null
         }
         Relationships: [
           {
@@ -5848,6 +5854,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_webhook_event_id_fkey"
+            columns: ["webhook_event_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_events"
             referencedColumns: ["id"]
           },
         ]
@@ -8005,6 +8018,7 @@ export type Database = {
           supplier_invoice_id: number
           tenant_id: number
           updated_at: string
+          webhook_event_id: number | null
         }
         Insert: {
           amount: number
@@ -8017,6 +8031,7 @@ export type Database = {
           supplier_invoice_id: number
           tenant_id: number
           updated_at?: string
+          webhook_event_id?: number | null
         }
         Update: {
           amount?: number
@@ -8029,6 +8044,7 @@ export type Database = {
           supplier_invoice_id?: number
           tenant_id?: number
           updated_at?: string
+          webhook_event_id?: number | null
         }
         Relationships: [
           {
@@ -8043,6 +8059,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_webhook_event_id_fkey"
+            columns: ["webhook_event_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_events"
             referencedColumns: ["id"]
           },
         ]
@@ -9439,6 +9462,18 @@ export type Database = {
         Args: { p_decision: string; p_issue_id: number; p_note?: string }
         Returns: undefined
       }
+      assert_bank_deposit_evidence: {
+        Args: { p_expense_id: number; p_tenant_id: number }
+        Returns: undefined
+      }
+      assert_refund_webhook_allocation: {
+        Args: { p_event_id: number }
+        Returns: undefined
+      }
+      assert_sepay_expense_match_evidence: {
+        Args: { p_event_id: number; p_tenant_id: number }
+        Returns: undefined
+      }
       assign_auditor: {
         Args: {
           p_auditor_branch_id?: number
@@ -9815,6 +9850,15 @@ export type Database = {
         Args: { p_amount: number; p_payment_id: number; p_reason: string }
         Returns: Json
       }
+      create_refund_with_payout: {
+        Args: {
+          p_amount: number
+          p_payment_id: number
+          p_payout_method: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       create_stock_transfer_draft: {
         Args: {
           p_from_branch_id: number
@@ -10046,6 +10090,10 @@ export type Database = {
           total_outstanding: number
         }[]
       }
+      get_bank_ledger_movement_since: {
+        Args: { p_since: string }
+        Returns: Json
+      }
       get_branch_menu_daily_limits_for_pos: {
         Args: { p_branch_id: number; p_exclude_hold_tokens?: string[] }
         Returns: {
@@ -10065,6 +10113,10 @@ export type Database = {
           menu_item_id: number
           stock_capacity: number
         }[]
+      }
+      get_cash_ledger_movement_since: {
+        Args: { p_since: string }
+        Returns: Json
       }
       get_cash_variance_summary: {
         Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
@@ -10177,6 +10229,10 @@ export type Database = {
           ingredient_id: number
           note: string
         }[]
+      }
+      get_operating_cash_movement_for_period: {
+        Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
+        Returns: Json
       }
       get_orders_for_day: {
         Args: { p_branch_id: number; p_date: string }
@@ -10534,6 +10590,14 @@ export type Database = {
         Args: { p_event_id: number; p_expense_ids: number[] }
         Returns: Json
       }
+      match_sepay_transaction_refunds: {
+        Args: { p_event_id: number; p_refund_ids: number[] }
+        Returns: Json
+      }
+      match_sepay_transaction_supplier_payments: {
+        Args: { p_event_id: number; p_supplier_payment_ids: number[] }
+        Returns: Json
+      }
       materialize_print_document: {
         Args: {
           p_content: Json
@@ -10771,6 +10835,10 @@ export type Database = {
         Args: { p_order_id: number; p_reason: string }
         Returns: Json
       }
+      refund_paid_order_with_payout: {
+        Args: { p_order_id: number; p_payout_method: string; p_reason: string }
+        Returns: Json
+      }
       register_branch_presence: {
         Args: {
           p_agent_id: string
@@ -10790,6 +10858,7 @@ export type Database = {
         Args: { p_reason?: string; p_request_id: number }
         Returns: undefined
       }
+      reject_refund: { Args: { p_refund_id: number }; Returns: Json }
       release_branch_menu_daily_holds: {
         Args: { p_branch_id: number; p_hold_token: string }
         Returns: Json

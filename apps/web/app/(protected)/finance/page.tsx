@@ -196,8 +196,6 @@ export default async function FinancePage({
     fetchCashSummary(params, resolved),
     currentUserHasPermissionAny(PERMISSION_KEYS.SETTINGS_TENANT),
   ]);
-  const cashDeltaAfterPaidOut =
-    cockpit.kpis.totalCollected - cash.cashOutPaidPeriod;
   const todayBusinessDate = getVNDateString();
 
   return (
@@ -212,7 +210,7 @@ export default async function FinancePage({
         branches={cockpit.branches}
         basePath="/finance"
         ranges={HKD_RANGES}
-        hide={["granularity", "compare", "payment"]}
+        hide={["granularity", "compare"]}
         compact
       />
 
@@ -306,7 +304,9 @@ export default async function FinancePage({
         bankOpeningBalance={cash.bankOpeningBalance}
         bankInSince={cash.bankInSince}
         bankOutSince={cash.bankOutSince}
-        cashDeltaAfterPaidOut={cashDeltaAfterPaidOut}
+        cashCollectedPeriod={cash.cashCollectedPeriod}
+        cashOutPeriod={cash.cashOutPeriod}
+        cashNetMovementPeriod={cash.cashNetMovementPeriod}
         todayBusinessDate={todayBusinessDate}
         canManageCashOpening={canManageCashOpening}
       />

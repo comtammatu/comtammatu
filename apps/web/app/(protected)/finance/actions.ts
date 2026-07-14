@@ -20,12 +20,11 @@ import {
 import type { ManualInvoiceOrderPreview } from "./_lib/finance-types";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
-const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
+const POS_INVOICE_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
   "cashier",
 ];
-const REPORT_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
 
 /* ─── HĐĐT: Create Invoice ─── */
 
@@ -49,8 +48,8 @@ export async function resolveExistingInvoiceForOrder(orderId: number): Promise<
   }
 
   const ctx = await getAuthContextWithPermission(
-    INVOICE_CREATE_ROLES,
-    PERMISSION_KEYS.ORDERS_WRITE,
+    POS_INVOICE_ROLES,
+    PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -82,7 +81,7 @@ export async function createTaxInvoice(
   }
 
   const ctx = await getAuthContextWithPermission(
-    INVOICE_CREATE_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.ORDERS_WRITE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -118,6 +117,14 @@ const REISSUE_ALL_CAP = 20;
 const REISSUE_ALL_BUDGET_MS = 40_000;
 const SEPAY_MISSING_SCAN_CAP = 200;
 const financeActionErrors = messages.finance.actionErrors;
+
+const sepayMissingInvoiceInputSchema = z.object({
+  afterEventId: z.coerce.number().int().positive().nullable().optional(),
+});
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
 
 /**
  * Bulk-reissue draft invoices (status='draft' with no invoice_number — i.e.
@@ -188,14 +195,20 @@ export async function reissueAllDraftInvoices(): Promise<ActionResult> {
   };
 }
 
-export async function issueMissingSepayInvoices(): Promise<
+export async function issueMissingSepayInvoices(input: unknown = {}): Promise<
   ActionResult<{
     issued: number;
     failed: number;
     skipped: number;
-    remainingInScan: number;
+    hasMore: boolean;
+    nextAfterEventId: number | null;
   }>
 > {
+  const parsedInput = sepayMissingInvoiceInputSchema.safeParse(input);
+  if (!parsedInput.success) {
+    return { success: false, errorCode: "invalid_input" };
+  }
+
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
     PERMISSION_KEYS.SETTINGS_TENANT,
@@ -204,7 +217,7 @@ export async function issueMissingSepayInvoices(): Promise<
 
   const { supabase, claims, user } = ctx;
 
-  const { data: webhookRows, error: webhookErr } = await supabase
+  let webhookQuery = supabase
     .from("webhook_events")
     .select("id, payment_id")
     .eq("tenant_id", claims.tenant_id)
@@ -212,8 +225,15 @@ export async function issueMissingSepayInvoices(): Promise<
     .eq("processing_status", "processed")
     .or("error_code.is.null,error_code.neq.invoice_binding_manual_review")
     .not("payment_id", "is", null)
-    .order("created_at", { ascending: true })
-    .limit(SEPAY_MISSING_SCAN_CAP);
+    .order("id", { ascending: true })
+    .limit(SEPAY_MISSING_SCAN_CAP + 1);
+
+  const afterEventId = parsedInput.data.afterEventId ?? null;
+  if (afterEventId !== null) {
+    webhookQuery = webhookQuery.gt("id", afterEventId);
+  }
+
+  const { data: webhookWindow, error: webhookErr } = await webhookQuery;
 
   if (webhookErr) {
     console.error(
@@ -222,6 +242,28 @@ export async function issueMissingSepayInvoices(): Promise<
     );
     return { success: false, errorCode: "load_failed" };
   }
+
+  const webhookRows = (webhookWindow ?? []).slice(0, SEPAY_MISSING_SCAN_CAP);
+  const hasMoreEvents = (webhookWindow?.length ?? 0) > SEPAY_MISSING_SCAN_CAP;
+  const pageEndEventId = webhookRows.at(-1)?.id ?? null;
+
+  const pageResult = (
+    overrides: Partial<{
+      issued: number;
+      failed: number;
+      skipped: number;
+      hasMore: boolean;
+      nextAfterEventId: number | null;
+    }> = {},
+  ) => ({
+    issued: 0,
+    failed: 0,
+    skipped: 0,
+    hasMore: hasMoreEvents,
+    nextAfterEventId:
+      hasMoreEvents && pageEndEventId !== null ? pageEndEventId : null,
+    ...overrides,
+  });
 
   const candidatePaymentIds = Array.from(
     new Set(
@@ -233,7 +275,7 @@ export async function issueMissingSepayInvoices(): Promise<
   if (candidatePaymentIds.length === 0) {
     return {
       success: true,
-      data: { issued: 0, failed: 0, skipped: 0, remainingInScan: 0 },
+      data: pageResult(),
     };
   }
 
@@ -265,7 +307,7 @@ export async function issueMissingSepayInvoices(): Promise<
   if (paymentIds.length === 0) {
     return {
       success: true,
-      data: { issued: 0, failed: 0, skipped: 0, remainingInScan: 0 },
+      data: pageResult(),
     };
   }
 
@@ -289,23 +331,50 @@ export async function issueMissingSepayInvoices(): Promise<
   if (orderIds.length === 0) {
     return {
       success: true,
-      data: { issued: 0, failed: 0, skipped: 0, remainingInScan: 0 },
+      data: pageResult(),
     };
   }
 
-  const [{ data: activeInvoices }, { data: summaryLinks }] = await Promise.all([
-    supabase
-      .from("tax_invoices")
-      .select("order_id")
-      .eq("tenant_id", claims.tenant_id)
-      .in("order_id", orderIds)
-      .not("status", "in", '("cancelled","replaced","not_required")'),
-    supabase
-      .from("tax_invoice_orders")
-      .select("order_id, tax_invoices(status)")
-      .eq("tenant_id", claims.tenant_id)
-      .in("order_id", orderIds),
-  ]);
+  const [activeInvoiceResult, summaryLinkResult, invoiceRequestResult] =
+    await Promise.all([
+      supabase
+        .from("tax_invoices")
+        .select("order_id")
+        .eq("tenant_id", claims.tenant_id)
+        .in("order_id", orderIds)
+        .not("status", "in", '("cancelled","replaced","not_required")'),
+      supabase
+        .from("tax_invoice_orders")
+        .select("order_id, tax_invoices(status)")
+        .eq("tenant_id", claims.tenant_id)
+        .in("order_id", orderIds),
+      supabase
+        .from("self_order_payment_requests")
+        .select("id, payment_id, order_id, invoice_payload")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("method", "vietqr")
+        .eq("status", "completed")
+        .in("order_id", orderIds),
+    ]);
+
+  if (
+    activeInvoiceResult.error ||
+    summaryLinkResult.error ||
+    invoiceRequestResult.error
+  ) {
+    console.error(
+      "[finance/actions:issueMissingSepayInvoices] Candidate guard lookup failed:",
+      {
+        activeInvoiceCode: activeInvoiceResult.error?.code,
+        summaryLinkCode: summaryLinkResult.error?.code,
+        invoiceRequestCode: invoiceRequestResult.error?.code,
+      },
+    );
+    return { success: false, errorCode: "load_failed" };
+  }
+
+  const activeInvoices = activeInvoiceResult.data;
+  const summaryLinks = summaryLinkResult.data;
 
   const invoicedOrderIds = new Set(
     (activeInvoices ?? [])
@@ -328,21 +397,95 @@ export async function issueMissingSepayInvoices(): Promise<
       .map((link) => link.order_id as number),
   );
 
-  const missingOrderIds = orderIds.filter(
-    (orderId) =>
-      !invoicedOrderIds.has(orderId) && !summaryOrderIds.has(orderId),
-  );
+  const paymentsById = new Map((payments ?? []).map((row) => [row.id, row]));
+  const orderedPayments = paymentIds
+    .map((paymentId) => paymentsById.get(paymentId))
+    .filter((row): row is NonNullable<typeof row> => row != null);
+  const seenOrderIds = new Set<number>();
+  const missingPayments = orderedPayments.filter((payment) => {
+    if (seenOrderIds.has(payment.order_id)) return false;
+    seenOrderIds.add(payment.order_id);
+    return (
+      !invoicedOrderIds.has(payment.order_id) &&
+      !summaryOrderIds.has(payment.order_id)
+    );
+  });
+
+  const invoiceRequestsByOrderId = new Map<
+    number,
+    NonNullable<typeof invoiceRequestResult.data>[number][]
+  >();
+  for (const row of invoiceRequestResult.data ?? []) {
+    const rows = invoiceRequestsByOrderId.get(row.order_id) ?? [];
+    rows.push(row);
+    invoiceRequestsByOrderId.set(row.order_id, rows);
+  }
+
+  const attemptRows = missingPayments.slice(0, REISSUE_ALL_CAP);
 
   let issued = 0;
   let failed = 0;
   let skipped = 0;
   const startedAt = Date.now();
-  for (const orderId of missingOrderIds.slice(0, REISSUE_ALL_CAP)) {
+  let attempted = 0;
+  for (const payment of attemptRows) {
     if (Date.now() - startedAt > REISSUE_ALL_BUDGET_MS) break;
+    attempted += 1;
+    const matchingInvoiceRequests =
+      invoiceRequestsByOrderId.get(payment.order_id) ?? [];
+    if (matchingInvoiceRequests.length > 1) {
+      console.error(
+        "[finance/actions:issueMissingSepayInvoices] Ambiguous invoice request binding:",
+        { orderId: payment.order_id, paymentId: payment.id },
+      );
+      failed += 1;
+      continue;
+    }
+    const invoiceRequest = matchingInvoiceRequests[0];
+    let invoiceInput: z.infer<typeof createInvoiceSchema>;
+    if (invoiceRequest) {
+      if (
+        invoiceRequest.order_id !== payment.order_id ||
+        invoiceRequest.payment_id !== payment.id ||
+        !isRecord(invoiceRequest.invoice_payload)
+      ) {
+        console.error(
+          "[finance/actions:issueMissingSepayInvoices] Invalid invoice request binding:",
+          { requestId: invoiceRequest.id, paymentId: payment.id },
+        );
+        failed += 1;
+        continue;
+      }
+      const parsedInvoiceInput = createInvoiceSchema.safeParse({
+        ...invoiceRequest.invoice_payload,
+        orderId: payment.order_id,
+      });
+      if (!parsedInvoiceInput.success) {
+        console.error(
+          "[finance/actions:issueMissingSepayInvoices] Invalid stored invoice payload:",
+          {
+            requestId: invoiceRequest.id,
+            issues: parsedInvoiceInput.error.issues.map((issue) => ({
+              code: issue.code,
+              path: issue.path.join("."),
+            })),
+          },
+        );
+        failed += 1;
+        continue;
+      }
+      invoiceInput = parsedInvoiceInput.data;
+    } else {
+      invoiceInput = {
+        orderId: payment.order_id,
+        buyerNotGetInvoice: true,
+      };
+    }
+
     const result = await issueTaxInvoiceForPaidOrder({
       supabase,
       tenantId: claims.tenant_id,
-      input: { orderId, buyerNotGetInvoice: true },
+      input: invoiceInput,
       actorId: user.id,
       canAccessBranch: (branchId) =>
         canAccessBranch(supabase, claims, branchId),
@@ -360,14 +503,29 @@ export async function issueMissingSepayInvoices(): Promise<
     }
   }
 
+  const hasUnattemptedInPage = missingPayments.length > attempted;
+  const lastAttemptedPaymentId = attemptRows.at(Math.max(0, attempted - 1))?.id;
+  const lastAttemptedEventId =
+    lastAttemptedPaymentId == null
+      ? null
+      : (webhookRows.find((row) => row.payment_id === lastAttemptedPaymentId)
+          ?.id ?? null);
+  const hasMore = hasUnattemptedInPage || hasMoreEvents;
+  const nextAfterEventId = hasUnattemptedInPage
+    ? lastAttemptedEventId
+    : hasMoreEvents
+      ? pageEndEventId
+      : null;
+
   return {
     success: true,
-    data: {
+    data: pageResult({
       issued,
       failed,
       skipped,
-      remainingInScan: Math.max(0, missingOrderIds.length - issued - skipped),
-    },
+      hasMore,
+      nextAfterEventId,
+    }),
   };
 }
 
@@ -403,7 +561,7 @@ export async function resolveOrderForManualInvoice(
   }
 
   const ctx = await getAuthContextWithPermission(
-    INVOICE_CREATE_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.ORDERS_WRITE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -500,15 +658,15 @@ export async function resolveOrderForManualInvoice(
 
 /**
  * Whether the current user can complete the manual-issue flow end-to-end — the
- * SAME predicate createTaxInvoice enforces (INVOICE_CREATE_ROLES +
- * orders:write). The /finance/invoices "issue for a past order" button gates on
+ * SAME Owner + orders:write predicate createTaxInvoice enforces. The
+ * /finance/invoices "issue for a past order" button gates on
  * THIS, not on canManageInvoices (settings:tenant || orders:refund_approve):
  * those axes differ, so gating on the wrong one shows the button to users the
  * action then rejects, or hides it from users who can legitimately issue.
  */
 export async function canIssueManualInvoice(): Promise<boolean> {
   const ctx = await getAuthContextWithPermission(
-    INVOICE_CREATE_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.ORDERS_WRITE,
   );
   return ctx != null;
@@ -830,7 +988,7 @@ export async function fetchRevenueRollup(
   }
 
   const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -885,7 +1043,7 @@ export async function fetchRevenueKpis(
   }
 
   const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -984,7 +1142,7 @@ export async function fetchOrdersForDay(
   }
 
   const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -1029,7 +1187,7 @@ export async function fetchCashVarianceSummary(
   }
 
   const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -1081,7 +1239,7 @@ export async function fetchRevenueByHour(
   }
 
   const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -1129,7 +1287,7 @@ export async function fetchRevenueByCashier(
   }
 
   const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -1154,60 +1312,31 @@ export async function fetchRevenueByCashier(
   return { success: true, data: data ?? [] };
 }
 
-/* ─── fetchAccessibleBranches — branches with finance:view ─ */
-// Branch picker source. Owner: all active operational branches.
-// Branch-scoped users only see their own branch. Filter by
-// `branch_kind='branch'` to drop non-operational rows with no revenue.
+/* ─── fetchAccessibleBranches — Owner finance branch picker ─ */
 export async function fetchAccessibleBranches(): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
 
-  // Tenant-wide roles see all operational branches.
-  if (claims.user_role === "owner") {
-    const { data, error } = await supabase
-      .from("branches")
-      .select("id, name")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_kind", "branch")
-      .eq("is_active", true)
-      .order("name");
-    if (error) {
-      console.error(
-        "[finance/actions:fetchAccessibleBranches] Fetch branches error (owner):",
-        error,
-      );
-      return { success: false, error: financeActionErrors.loadBranchesFailed };
-    }
-    return { success: true, data: data ?? [] };
+  const { data, error } = await supabase
+    .from("branches")
+    .select("id, name")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_kind", "branch")
+    .eq("is_active", true)
+    .order("name");
+  if (error) {
+    console.error(
+      "[finance/actions:fetchAccessibleBranches] Fetch branches error:",
+      error,
+    );
+    return { success: false, error: financeActionErrors.loadBranchesFailed };
   }
-
-  // branch_manager / cashier scope: only their own branch.
-  if (claims.branch_id != null) {
-    const { data, error } = await supabase
-      .from("branches")
-      .select("id, name")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("id", claims.branch_id)
-      .eq("is_active", true)
-      .maybeSingle();
-    if (error || !data) {
-      if (error) {
-        console.error(
-          "[finance/actions:fetchAccessibleBranches] Fetch branch error (branch_user):",
-          error,
-        );
-      }
-      return { success: true, data: [] };
-    }
-    return { success: true, data: [data] };
-  }
-
-  return { success: true, data: [] };
+  return { success: true, data: data ?? [] };
 }
 
 export async function fetchTopItems(
@@ -1239,7 +1368,7 @@ export async function fetchTopItems(
   }
 
   const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };

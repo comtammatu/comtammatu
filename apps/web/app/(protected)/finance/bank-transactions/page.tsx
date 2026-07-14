@@ -50,10 +50,10 @@ export default async function BankTransactionsPage({
       fetchSepayPaymentWebhookSummary(range),
     ]);
 
-  const expenseOptions =
-    expenseOptionsRes.success && expenseOptionsRes.data
-      ? expenseOptionsRes.data
-      : [];
+  if (!expenseOptionsRes.success || !expenseOptionsRes.data) {
+    throw new Error("Unable to load expense match options");
+  }
+  const expenseOptions = expenseOptionsRes.data;
   const summary = buildSepayReconciliationSummary(transactions);
   const needsReviewCount =
     summary.needsReviewCount +

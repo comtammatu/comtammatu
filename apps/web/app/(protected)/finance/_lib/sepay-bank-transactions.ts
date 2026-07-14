@@ -1,17 +1,18 @@
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import {
+  attachRefundMatches,
   attachSupplierPaymentMatches,
   buildSepayPaymentWebhookSummary,
   isSepayBusinessDateInRange,
   isSepayTransactionInDateRange,
   mapSepayWebhookRow,
   readSepayBankWebhookReview,
-  sumSepayBankMovementSince,
   type SepayBankTransaction,
   type SepayDateRange,
   type SepayPaymentWebhookCheck,
   type SepayPaymentWebhookSummary,
+  type SepayRefundMatchOption,
   type SepaySupplierPaymentMatch,
   type SepayWebhookRow,
 } from "./sepay-bank-transaction-model";
@@ -38,6 +39,7 @@ interface SupplierPaymentRow {
   amount: number;
   payment_date: string;
   reference_note: string | null;
+  webhook_event_id: number | null;
   supplier_invoices?:
     | {
         invoice_number?: string | null;
@@ -56,11 +58,39 @@ interface SupplierPaymentRow {
     | null;
 }
 
+interface RefundMatchRow {
+  id: number;
+  amount: number;
+  approved_at: string;
+  order_id: number;
+  webhook_event_id: number | null;
+  orders?:
+    | { order_number?: string | null }
+    | Array<{ order_number?: string | null }>
+    | null;
+}
+
+type RefundMatchQueryResult = {
+  data: unknown[] | null;
+  error: { code: string } | null;
+};
+
+type ConfirmedRefundMatchQuery = {
+  eq: (
+    column: "payout_method",
+    value: "bank_transfer",
+  ) => {
+    in: (
+      column: "webhook_event_id",
+      values: number[],
+    ) => PromiseLike<RefundMatchQueryResult>;
+  };
+};
+
 const SEPAY_WEBHOOK_SELECT =
   "id, request_id, created_at, processing_status, error_code, order_id, payment_id, expense_id, payload" as const;
 
 // ponytail: scan existing webhook ledger; add a bank_transactions table if this pilot account outgrows 5000 retained SePay rows.
-const SEPAY_BALANCE_SCAN_LIMIT = 5000;
 const SEPAY_TRANSACTION_LIST_LIMIT = 100;
 const SEPAY_PAYMENT_WEBHOOK_CHECK_LIMIT = 100;
 
@@ -98,7 +128,7 @@ async function fetchSepayWebhookRows(
       "[finance:sepay-bank] failed to load webhook_events",
       error.code,
     );
-    return [];
+    throw new Error("Unable to load SePay webhook events");
   }
 
   return (data ?? []) as unknown as SepayWebhookRow[];
@@ -123,7 +153,7 @@ async function fetchSepayExpenseMatches(
       "[finance:sepay-bank] failed to load bank_transaction_expense_matches",
       error.code,
     );
-    return new Map();
+    throw new Error("Unable to load SePay expense matches");
   }
 
   const matches = new Map<number, number[]>();
@@ -143,7 +173,7 @@ async function fetchSupplierPaymentMatches(
   const query = supabase
     .from("supplier_payments")
     .select(
-      "id, supplier_invoice_id, amount, payment_date, reference_note, supplier_invoices ( invoice_number, suppliers ( name ) )",
+      "id, supplier_invoice_id, amount, payment_date, reference_note, webhook_event_id, supplier_invoices ( invoice_number, suppliers ( name ) )",
     )
     .eq("tenant_id", tenantId)
     .eq("payment_method", "bank_transfer");
@@ -161,10 +191,10 @@ async function fetchSupplierPaymentMatches(
       "[finance:sepay-bank] failed to load supplier_payments",
       error.code,
     );
-    return [];
+    throw new Error("Unable to load SePay supplier payment matches");
   }
 
-  return ((data ?? []) as SupplierPaymentRow[]).map((row) => {
+  return ((data ?? []) as unknown as SupplierPaymentRow[]).map((row) => {
     const invoice = firstRelation(row.supplier_invoices);
     const supplier = firstRelation(invoice?.suppliers);
     return {
@@ -173,10 +203,51 @@ async function fetchSupplierPaymentMatches(
       amount: Number(row.amount),
       paymentDate: row.payment_date,
       referenceNote: row.reference_note,
+      webhookEventId: row.webhook_event_id,
       invoiceNumber: invoice?.invoice_number ?? null,
       supplierName: supplier?.name ?? null,
     };
   });
+}
+
+function mapRefundMatches(rows: RefundMatchRow[]): SepayRefundMatchOption[] {
+  return rows.map((row) => ({
+    id: row.id,
+    amount: Number(row.amount),
+    approvedAt: row.approved_at,
+    orderId: row.order_id,
+    orderNumber: firstRelation(row.orders)?.order_number ?? `#${row.order_id}`,
+    webhookEventId: row.webhook_event_id,
+  }));
+}
+
+async function fetchConfirmedRefundMatches(
+  supabase: SupabaseClient,
+  tenantId: number,
+  eventIds: number[],
+): Promise<SepayRefundMatchOption[]> {
+  if (eventIds.length === 0) return [];
+
+  const query = supabase
+    .from("refunds")
+    .select(
+      "id, amount, approved_at, order_id, webhook_event_id, orders ( order_number )",
+    )
+    .eq("tenant_id", tenantId)
+    .eq("status", "approved") as unknown as ConfirmedRefundMatchQuery;
+  const { data, error } = await query
+    .eq("payout_method", "bank_transfer")
+    .in("webhook_event_id", eventIds);
+
+  if (error) {
+    console.error(
+      "[finance:sepay-bank] failed to load matched refunds",
+      error.code,
+    );
+    throw new Error("Unable to load matched refunds");
+  }
+
+  return mapRefundMatches((data ?? []) as unknown as RefundMatchRow[]);
 }
 
 async function fetchCompletedVietqrPayments(
@@ -202,7 +273,7 @@ async function fetchCompletedVietqrPayments(
 
   if (error) {
     console.error("[finance:sepay-bank] failed to load payments", error.code);
-    return [];
+    throw new Error("Unable to load VietQR payments");
   }
 
   const payments = ((data ?? []) as SepayPaymentRow[]).map((payment) => {
@@ -246,7 +317,7 @@ async function fetchIncomingWebhookPaymentIds(
       "[finance:sepay-bank] failed to load payment webhook_events",
       error.code,
     );
-    return new Set();
+    throw new Error("Unable to load SePay payment evidence");
   }
 
   return new Set(
@@ -266,15 +337,37 @@ async function fetchIncomingWebhookPaymentIds(
 
 export async function fetchSepayBankMovementSince(
   supabase: SupabaseClient,
-  tenantId: number,
-  sinceDate: string,
+  sinceIso: string,
 ) {
-  const rows = await fetchSepayWebhookRows(
-    supabase,
-    tenantId,
-    SEPAY_BALANCE_SCAN_LIMIT,
+  const bankLedgerClient = supabase as unknown as {
+    rpc: (
+      fn: "get_bank_ledger_movement_since",
+      args: { p_since: string },
+    ) => PromiseLike<{
+      data: { bank_in?: number; bank_out?: number } | null;
+      error: { code?: string } | null;
+    }>;
+  };
+  const { data, error } = await bankLedgerClient.rpc(
+    "get_bank_ledger_movement_since",
+    { p_since: sinceIso },
   );
-  return sumSepayBankMovementSince(rows, sinceDate);
+
+  if (error) {
+    console.error(
+      "[finance:sepay-bank] failed to load bank movement",
+      error.code,
+    );
+    throw new Error("Unable to load bank movement");
+  }
+
+  const inAmount = Number(data?.bank_in ?? 0);
+  const outAmount = Number(data?.bank_out ?? 0);
+  if (!Number.isFinite(inAmount) || !Number.isFinite(outAmount)) {
+    throw new Error("Invalid bank movement response");
+  }
+
+  return { inAmount, outAmount };
 }
 
 export async function fetchSepayBankTransactions(
@@ -293,16 +386,12 @@ export async function fetchSepayBankTransactions(
   const scopedTransactions = range
     ? transactions.filter((tx) => isSepayTransactionInDateRange(tx, range))
     : transactions;
-  const matches = await fetchSepayExpenseMatches(
-    supabase,
-    claims.tenant_id,
-    scopedTransactions.map((tx) => tx.eventId),
-  );
-  const supplierPaymentMatches = await fetchSupplierPaymentMatches(
-    supabase,
-    claims.tenant_id,
-    range,
-  );
+  const eventIds = scopedTransactions.map((tx) => tx.eventId);
+  const [matches, supplierPaymentMatches, refundMatches] = await Promise.all([
+    fetchSepayExpenseMatches(supabase, claims.tenant_id, eventIds),
+    fetchSupplierPaymentMatches(supabase, claims.tenant_id, range),
+    fetchConfirmedRefundMatches(supabase, claims.tenant_id, eventIds),
+  ]);
 
   const transactionsWithExpenseMatches = scopedTransactions.map((tx) => {
     const expenseIds = matches.get(tx.eventId);
@@ -314,9 +403,12 @@ export async function fetchSepayBankTransactions(
     };
   });
 
-  return attachSupplierPaymentMatches(
-    transactionsWithExpenseMatches,
-    supplierPaymentMatches,
+  return attachRefundMatches(
+    attachSupplierPaymentMatches(
+      transactionsWithExpenseMatches,
+      supplierPaymentMatches,
+    ),
+    refundMatches,
   );
 }
 

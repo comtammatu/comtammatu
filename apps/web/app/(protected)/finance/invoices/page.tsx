@@ -35,18 +35,16 @@ export default async function InvoicesPage({
   const [res, canManageInvoices, canIssueInvoices, branchesRes] =
     await Promise.all([
       fetchTaxInvoicesPage({ branchId, queue }),
-      currentUserHasAnyPermissionAny([
-        PERMISSION_KEYS.SETTINGS_TENANT,
-        PERMISSION_KEYS.ORDERS_REFUND_APPROVE,
-      ]),
+      currentUserHasAnyPermissionAny([PERMISSION_KEYS.SETTINGS_TENANT]),
       // Same predicate createTaxInvoice enforces — gates the "issue for a past
       // order" button so button-visible ⊆ action-authorized (no click-then-403).
       canIssueManualInvoice(),
       fetchAccessibleBranches(),
     ]);
-  const branches = (
-    branchesRes.success ? (branchesRes.data ?? []) : []
-  ) as { id: number; name: string }[];
+  const branches = (branchesRes.success ? (branchesRes.data ?? []) : []) as {
+    id: number;
+    name: string;
+  }[];
 
   return (
     <AppPage>

@@ -35,5 +35,8 @@ export {
   resolveBankBin,
 } from "./impl/vietqr";
 export { MoMoProvider, createMoMoProviderFromEnv } from "./impl/momo";
-export { ViettelSinvoiceProvider } from "./impl/viettel-sinvoice";
+export {
+  ViettelSinvoiceProvider,
+  buildSinvoiceTransactionUuid,
+} from "./impl/viettel-sinvoice";
 export type { ViettelSinvoiceConfig } from "./impl/viettel-sinvoice";

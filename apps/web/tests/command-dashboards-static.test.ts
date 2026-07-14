@@ -48,8 +48,8 @@ test("finance basic landing only promotes direct-contract KPI cards", () => {
   assert.doesNotMatch(page, /cockpit\.kpis\.netProfit/);
   assert.doesNotMatch(page, /IconPiggyBank/);
   assert.doesNotMatch(page, /xl:grid-cols-5/);
-  assert.match(page, /cashDeltaAfterPaidOut/);
-  assert.match(cashPanel, /cashDeltaAfterPaidOut/);
+  assert.match(page, /cashNetMovementPeriod/);
+  assert.match(cashPanel, /cashNetMovementPeriod/);
   assert.doesNotMatch(cashPanel, /\bnetProfit\b/);
   assert.match(
     page,
