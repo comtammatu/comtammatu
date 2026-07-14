@@ -32,7 +32,7 @@ workflows and keep POS/KDS/Runner as separate station apps.
 
 - [x] Apply the current-main-compatible Branch shell/home subset.
 - [x] Pass focused tests, UI contract lint, typecheck, lint, build, and review-tier.
-- [ ] Commit, push, and open the first replacement PR without closing PR #284.
+- [x] Commit, push, and open the first replacement PR without closing PR #284.
 
 ## POS Item Customizer Mobile Scroll (2026-07-11)
 
