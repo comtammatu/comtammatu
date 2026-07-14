@@ -8,6 +8,9 @@ ALTER TABLE public.supplier_payments
   ADD CONSTRAINT supplier_payments_tenant_idempotency_key_key
     UNIQUE (tenant_id, idempotency_key);
 
+COMMENT ON COLUMN public.supplier_payments.idempotency_key IS
+  'Tenant-scoped payment intent key; NULL is retained only for historical rows.';
+
 DROP FUNCTION public.create_supplier_payment(
   bigint,
   bigint,
