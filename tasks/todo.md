@@ -149,7 +149,8 @@ owns the legacy MoMo runtime; this lane deliberately keeps all four
       `momo_revenue` compatibility fields for PR #284.
 - [x] **TS3 — verification.** Run focused tests, baseline replay, full gates,
       and independent review with no Production mutation.
-- [ ] **TS4 — delivery.** Publish the dedicated pre-PR #284 pull request.
+- [x] **TS4 — delivery.** Publish the dedicated pre-PR #284 pull request as
+      PR #289.
 
 ## Branch Hub Single-Branch Entry (D077)
 
