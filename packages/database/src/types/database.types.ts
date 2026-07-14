@@ -7851,6 +7851,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: number
+          idempotency_key: string | null
           payment_date: string
           payment_method: string
           reference_note: string | null
@@ -7864,6 +7865,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
+          idempotency_key?: string | null
           payment_date?: string
           payment_method: string
           reference_note?: string | null
@@ -7877,6 +7879,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
+          idempotency_key?: string | null
           payment_date?: string
           payment_method?: string
           reference_note?: string | null
@@ -9749,6 +9752,7 @@ export type Database = {
       create_supplier_payment: {
         Args: {
           p_amount: number
+          p_idempotency_key: string
           p_payment_method: string
           p_reference_note?: string
           p_supplier_invoice_id: number

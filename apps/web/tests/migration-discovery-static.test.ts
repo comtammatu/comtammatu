@@ -42,6 +42,7 @@ test("historical migrations stay outside the Preview migration input", () => {
       "20260713210000_enforce_owner_only_refund_controls.sql",
       "20260713221534_drop_legacy_confirm_production_run_overload.sql",
       "20260714103000_persist_sepay_supplier_payment_links.sql",
+      "20260714113000_harden_supplier_payment_idempotency.sql",
     ],
   );
   assert.ok(

@@ -41,6 +41,7 @@ const invoiceSchema = z
 
 const supplierPaymentSchema = z.object({
   invoiceId: z.coerce.number().int().positive(),
+  idempotencyKey: z.string().uuid(),
   amount: z.coerce
     .number()
     .positive({ error: "Số tiền thanh toán phải lớn hơn 0." }),
@@ -133,6 +134,7 @@ export const recordSupplierPayment = withAction(
         p_supplier_invoice_id: data.invoiceId,
         p_amount: data.amount,
         p_payment_method: data.paymentMethod,
+        p_idempotency_key: data.idempotencyKey,
         p_reference_note: data.referenceNote?.trim() || undefined,
       },
     );
@@ -147,6 +149,13 @@ export const recordSupplierPayment = withAction(
       }
       if (message.includes("invoice_already_paid")) {
         return { success: false, error: "Hóa đơn đã thanh toán đủ." };
+      }
+      if (message.includes("supplier_payment_idempotency_conflict")) {
+        return {
+          success: false,
+          error:
+            "Yêu cầu thanh toán đã được ghi nhận với dữ liệu khác. Hãy tải lại hóa đơn.",
+        };
       }
       if (message.includes("payment_exceeds_invoice_total")) {
         return {

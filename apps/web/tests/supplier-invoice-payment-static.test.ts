@@ -86,6 +86,10 @@ test("supplier invoice payment action uses the canonical AP RPC", () => {
   assert.match(source, /recordSupplierPayment/);
   assert.match(source, /PERMISSION_KEYS\.FINANCE_AP_PAY/);
   assert.match(source, /\.rpc\(\s*"create_supplier_payment"/);
+  assert.match(source, /idempotencyKey:\s*z\.string\(\)\.uuid\(\)/);
+  assert.match(source, /p_idempotency_key:\s*data\.idempotencyKey/);
+  assert.match(source, /supplier_payment_idempotency_conflict/);
+  assert.doesNotMatch(source, /error:\s*error\.message/);
 });
 
 test("supplier invoice client exposes payment only behind server permission", () => {
@@ -95,9 +99,46 @@ test("supplier invoice client exposes payment only behind server permission", ()
 
   assert.match(source, /canPaySupplier/);
   assert.match(source, /recordSupplierPayment/);
-  assert.match(source, /setPaymentOpen\(true\)/);
+  assert.match(source, /handlePaymentOpenChange\(true\)/);
+  assert.match(source, /useRef\(new Map<number, string>\(\)\)/);
+  assert.match(source, /crypto\.randomUUID\(\)/);
+  assert.match(source, /paymentIdempotencyKeys\.current\.delete/);
+  assert.match(source, /if \(!again\.success \|\| !again\.data\) return false/);
+  assert.match(
+    source,
+    /const reloaded = await reloadInvoices\(selectedInvoice\.id\);\s*if \(reloaded\) \{\s*paymentIdempotencyKeys\.current\.delete/,
+  );
   assert.match(source, /formatVNDate/);
   assert.doesNotMatch(source, /formatVNBusinessDate/);
+});
+
+test("supplier payment migration enforces tenant-unique exact replay", () => {
+  const migration = readRoot(
+    "supabase/migrations/20260714113000_harden_supplier_payment_idempotency.sql",
+  );
+
+  assert.match(migration, /ADD COLUMN idempotency_key uuid/);
+  assert.match(migration, /UNIQUE \(tenant_id, idempotency_key\)/);
+  assert.match(
+    migration,
+    /DROP FUNCTION public\.create_supplier_payment\(\s*bigint,\s*bigint,\s*numeric,\s*text,\s*text\s*\)/,
+  );
+  assert.match(migration, /p_idempotency_key uuid/);
+  assert.match(migration, /pg_advisory_xact_lock/);
+  assert.match(migration, /round\(p_amount, 2\)/);
+  assert.match(migration, /supplier_payment_idempotency_conflict/);
+  assert.match(migration, /'replayed', true/);
+  assert.match(migration, /created_by IS DISTINCT FROM v_uid/);
+});
+
+test("form dialog keeps ambiguous submissions open and retryable", () => {
+  const source = readWeb("app/components/form/form-dialog.tsx");
+
+  assert.match(source, /catch \{\s*setServerError\(ERRORS_VI\.networkError\)/);
+  assert.ok(source.indexOf("result = await onSubmit(values)") < source.indexOf("catch {"));
+  assert.ok(source.indexOf("catch {") < source.indexOf("if (!result.success)"));
+  assert.match(source, /if \(!nextOpen && isPending\) return/);
+  assert.match(source, /showCloseButton=\{!isPending\}/);
 });
 
 test("supplier invoice client groups payable review by supplier and PO", () => {

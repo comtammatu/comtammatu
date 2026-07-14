@@ -1830,6 +1830,24 @@ Implementation plan:
       `create_supplier_payment` retry-safe with a tenant-unique idempotency key
       and replay semantics; re-evaluate branch scope before any non-Owner receives
       `finance:ap_pay`.
+
+P1.1d T3 review:
+
+- **PM:** Keep supplier-payment activation closed; acceptance is retry safety for
+  the existing Owner flow, with no new role or UI workflow.
+- **BA:** One tenant/key identifies one immutable payment intent. Exact replay
+  returns the original payment; changed invoice, amount, method, note, or actor
+  is a conflict. Distinct keys remain distinct partial payments.
+- **Senior Dev:** Enforce the contract in `create_supplier_payment` with a
+  tenant-unique database constraint and one client-minted UUID per dialog
+  operation. Historical rows remain nullable; new RPC writes require a key.
+- **QA/QC:** Preview must prove sequential replay, changed-payload rejection,
+  two-session same-key serialization, distinct-key partial payments, grants,
+  generated types, and fail-closed legacy calls before AP activation.
+- **Synthesis:** Add one forward migration, pass the key through the existing
+  form/action/RPC boundary, and extend the focused SQL/static tests. Production
+  remains unchanged in this slice.
+
 - [ ] P1.2 — close SePay-to-HĐĐT recovery around paid orders while preserving
       saved buyer payload.
 - [ ] P1.3 — reshape Finance into an Owner cockpit plus one reconciliation

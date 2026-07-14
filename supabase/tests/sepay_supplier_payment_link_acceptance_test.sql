@@ -594,12 +594,18 @@ BEGIN
     END IF;
   END LOOP;
 
+  IF to_regprocedure(
+    'public.create_supplier_payment(bigint,bigint,numeric,text,text)'
+  ) IS NOT NULL THEN
+    RAISE EXCEPTION 'Legacy create_supplier_payment RPC remains callable';
+  END IF;
+
   IF NOT has_function_privilege(
     'authenticated',
-    'public.create_supplier_payment(bigint,bigint,numeric,text,text)',
+    'public.create_supplier_payment(bigint,bigint,numeric,text,uuid,text)',
     'EXECUTE'
   ) THEN
-    RAISE EXCEPTION 'Existing create_supplier_payment RPC is not executable';
+    RAISE EXCEPTION 'Idempotent create_supplier_payment RPC is not executable';
   END IF;
 
   IF NOT has_function_privilege(

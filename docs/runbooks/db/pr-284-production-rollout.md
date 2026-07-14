@@ -51,8 +51,9 @@ the exact target and operation.
    migration 3 until the exact-head runtime has fully drained the old runtime.
    Freeze Menu Limits replenishment before Stage B until migration 15 and its
    warehouse-ledger smoke pass. Keep supplier-payment creation and SePay
-   supplier-link editing disabled until migration 16 is committed, the old
-   runtime is drained, and the supplier-payment acceptance gates below pass.
+   supplier-link editing disabled until migration 16 is committed. Keep
+   supplier-payment creation disabled until migration 17 is committed, the old
+   runtime is drained, and both supplier-payment acceptance gates below pass.
 
 ## Selective forward manifest
 
@@ -74,8 +75,9 @@ the exact target and operation.
 |    14 | `20260713151901_enforce_sepay_expense_allocation_amount`        | Stage E, isolated verification |
 |    15 | `20260713173142_rewire_menu_limit_stock_exception_to_warehouse` | Stage E                        |
 |    16 | `20260714103000_persist_sepay_supplier_payment_links`           | Stage E, isolated verification |
-|    17 | `20260713210000_enforce_owner_only_refund_controls`             | Stage G                        |
-|    18 | `20260713221534_drop_legacy_confirm_production_run_overload`    | Stage G                        |
+|    17 | `20260714113000_harden_supplier_payment_idempotency`            | Stage E, isolated verification |
+|    18 | `20260713210000_enforce_owner_only_refund_controls`             | Stage G                        |
+|    19 | `20260713221534_drop_legacy_confirm_production_run_overload`    | Stage G                        |
 
 ## Stage A — compatible database preparation
 
@@ -209,17 +211,31 @@ prove all of the following:
   wins, and the loser receives `supplier_payment_already_linked` without a
   second attribution;
 - direct `authenticated` supplier-payment writes and sequence access are
-  absent, while the existing `create_supplier_payment` RPC remains callable;
+  absent, while the existing five-argument `create_supplier_payment` RPC remains
+  callable through this migration only;
 - deleting linked webhook evidence is restricted, generated database types
   include the new column/RPC, and the UI renders only persisted links rather
   than date/reference/amount inference.
 
-Do not enable real supplier-payment creation as part of this PR. Before the
-first AP payment pilot, add an idempotency key with tenant-unique replay
-semantics to `create_supplier_payment`; a lost response followed by retry can
-otherwise duplicate a valid partial payment. Also re-evaluate branch scope
-before granting `finance:ap_pay` to any non-Owner position. These are AP pilot
-gates, not permission to widen this rollout.
+Keep supplier-payment creation frozen while the exact-head runtime, which always
+sends an idempotency key, is deployed and every old runtime instance drains. Its
+calls intentionally fail closed against the old five-argument RPC. Then apply
+migration 17 alone and prove:
+
+- the five-argument RPC is absent and only the required-key signature is
+  executable by `authenticated` and `service_role`, never `anon` or `PUBLIC`;
+- exact sequential replay and two-session concurrent replay return the original
+  payment ID, create one ledger row, and advance `paid_amount` once;
+- changed invoice, amount, method, normalized note, or actor conflicts without a
+  second row or invoice mutation;
+- distinct keys create distinct valid partial payments, historical rows may
+  retain a null key, and generated types require the RPC key;
+- production has no active `finance:ap_pay` grant for a non-Owner.
+
+Do not enable real supplier-payment creation as part of this PR. The first AP
+pilot remains a separate Owner decision. Re-evaluate branch scope before
+granting `finance:ap_pay` to any non-Owner position; this migration does not
+widen access.
 
 ## Stage F — controlled MoMo admission
 
@@ -236,8 +252,8 @@ reviewed.
 ## Stage G — owner refund and legacy overload contract
 
 After the payment canary and SePay allocation ledger are stable, apply migration
-17, prove Owner-only refund request/approve/reject and contention behavior, then
-apply migration 18 and prove the retained production-run signature. These two
+18, prove Owner-only refund request/approve/reject and contention behavior, then
+apply migration 19 and prove the retained production-run signature. These two
 migrations do not share the MoMo enable decision and must not be bundled into an
 earlier failed stage.
 

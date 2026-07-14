@@ -143,7 +143,13 @@ export function FormDialog<TValues extends FieldValues>({
   function handleValid(values: TValues) {
     startTransition(async () => {
       setServerError(null);
-      const result = await onSubmit(values);
+      let result: ActionResult;
+      try {
+        result = await onSubmit(values);
+      } catch {
+        setServerError(ERRORS_VI.networkError);
+        return;
+      }
       if (!result.success) {
         setServerError(result.error ?? ERRORS_VI.fallback);
         return;
@@ -157,11 +163,17 @@ export function FormDialog<TValues extends FieldValues>({
     });
   }
 
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen && isPending) return;
+    onOpenChange(nextOpen);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className={cn("sm:max-w-lg", contentClassName)}
         key={entityKey ?? "new"}
+        showCloseButton={!isPending}
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
