@@ -1,76 +1,5 @@
 BEGIN;
 
-DO $$
-DECLARE
-  v_has_rows boolean;
-BEGIN
-  IF to_regclass('public.self_order_sessions') IS NOT NULL THEN
-    EXECUTE 'SELECT EXISTS (SELECT 1 FROM public.self_order_sessions)'
-      INTO v_has_rows;
-    IF v_has_rows THEN
-      RAISE EXCEPTION 'self_order_v2_sessions_not_empty';
-    END IF;
-  END IF;
-
-  IF to_regclass('public.self_order_batches') IS NOT NULL THEN
-    EXECUTE 'SELECT EXISTS (SELECT 1 FROM public.self_order_batches)'
-      INTO v_has_rows;
-    IF v_has_rows THEN
-      RAISE EXCEPTION 'self_order_v2_batches_not_empty';
-    END IF;
-  END IF;
-
-  IF to_regclass('public.self_order_session_devices') IS NOT NULL THEN
-    EXECUTE 'SELECT EXISTS (SELECT 1 FROM public.self_order_session_devices)'
-      INTO v_has_rows;
-    IF v_has_rows THEN
-      RAISE EXCEPTION 'self_order_v2_devices_not_empty';
-    END IF;
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'self_order_payment_requests'
-      AND column_name = 'session_id'
-  ) THEN
-    EXECUTE 'SELECT EXISTS (
-      SELECT 1
-      FROM public.self_order_payment_requests
-      WHERE session_id IS NOT NULL
-    )' INTO v_has_rows;
-    IF v_has_rows THEN
-      RAISE EXCEPTION 'self_order_v2_payment_sessions_not_empty';
-    END IF;
-  END IF;
-END;
-$$;
-
-DO $$
-BEGIN
-  IF to_regclass('public.tables') IS NOT NULL THEN
-    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_fill_realtime_topic_token ON public.tables';
-    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_guard_capability_version ON public.tables';
-    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_guard_capability_version_change ON public.tables';
-  END IF;
-
-  IF to_regclass('public.self_order_payment_requests') IS NOT NULL THEN
-    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_payment_requests_broadcast ON public.self_order_payment_requests';
-    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_request_invariants ON public.self_order_payment_requests';
-    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_device_binding_insert ON public.self_order_payment_requests';
-    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_device_binding_update ON public.self_order_payment_requests';
-  END IF;
-
-  IF to_regclass('public.orders') IS NOT NULL THEN
-    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_close_session_from_order ON public.orders';
-    EXECUTE 'DROP TRIGGER IF EXISTS trg_self_order_close_session_on_order_transfer ON public.orders';
-  END IF;
-END;
-$$;
-
-DROP POLICY IF EXISTS self_order_public_broadcast_select ON realtime.messages;
-
 CREATE OR REPLACE FUNCTION public.self_order_enforce_payment_request_invariants()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -138,33 +67,8 @@ BEGIN
 END;
 $$;
 
-CREATE TRIGGER trg_self_order_enforce_payment_request_invariants
-  BEFORE UPDATE OF
-    tenant_id,
-    branch_id,
-    table_id,
-    order_id,
-    payment_id,
-    client_op_id,
-    method,
-    status,
-    amount_snapshot,
-    invoice_payload,
-    request_fingerprint,
-    request_fingerprint_version,
-    payment_code_snapshot,
-    qr_payload_snapshot,
-    vietqr_config_snapshot,
-    expires_at,
-    completed_at,
-    cancelled_at,
-    expired_at,
-    cancel_reason
-  ON public.self_order_payment_requests
-  FOR EACH ROW EXECUTE FUNCTION public.self_order_enforce_payment_request_invariants();
-
-REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants() FROM anon, authenticated;
+REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants()
+  FROM PUBLIC, anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.self_order_sync_payment_request_from_order()
 RETURNS trigger
@@ -233,6 +137,9 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.self_order_sync_payment_request_from_order()
+  FROM PUBLIC, anon, authenticated, service_role;
+
 DROP TRIGGER IF EXISTS trg_self_order_sync_payment_request_from_order
   ON public.orders;
 CREATE TRIGGER trg_self_order_sync_payment_request_from_order
@@ -242,9 +149,6 @@ CREATE TRIGGER trg_self_order_sync_payment_request_from_order
     OLD.status IS DISTINCT FROM NEW.status
     OR OLD.payment_status IS DISTINCT FROM NEW.payment_status
   ) EXECUTE FUNCTION public.self_order_sync_payment_request_from_order();
-
-REVOKE ALL ON FUNCTION public.self_order_sync_payment_request_from_order()
-  FROM PUBLIC, anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.self_order_guard_table_token_rotation()
 RETURNS trigger
@@ -338,61 +242,5 @@ GRANT EXECUTE ON FUNCTION public.rotate_table_self_order_qr(bigint)
 
 CREATE UNIQUE INDEX IF NOT EXISTS self_order_payment_requests_client_op_id_uidx
   ON public.self_order_payment_requests (tenant_id, client_op_id);
-
-ALTER TABLE public.self_order_payment_requests DROP COLUMN IF EXISTS session_id;
-
-ALTER TABLE IF EXISTS public.self_order_payment_requests
-  DROP CONSTRAINT IF EXISTS self_order_payment_requests_session_device_id_fkey,
-  DROP COLUMN IF EXISTS session_device_id;
-ALTER TABLE IF EXISTS public.self_order_batches
-  DROP CONSTRAINT IF EXISTS self_order_batches_session_device_id_fkey;
-ALTER TABLE IF EXISTS public.self_order_session_devices
-  DROP CONSTRAINT IF EXISTS self_order_session_devices_request_batch_id_fkey;
-
-DROP TABLE IF EXISTS public.self_order_batches;
-DROP TABLE IF EXISTS public.self_order_session_devices;
-DROP TABLE IF EXISTS public.self_order_sessions;
-ALTER TABLE public.tables DROP COLUMN IF EXISTS self_order_capability_version;
-ALTER TABLE public.tables DROP COLUMN IF EXISTS realtime_topic_token;
-
-DROP FUNCTION IF EXISTS private.self_order_get_snapshot_base(text);
-DROP FUNCTION IF EXISTS private.self_order_list_staff_queue_base(bigint);
-DROP FUNCTION IF EXISTS public.self_order_append_active_batch(bigint, bigint, uuid, jsonb);
-DROP FUNCTION IF EXISTS public.self_order_approve_batch(bigint, bigint, bigint, uuid);
-DROP FUNCTION IF EXISTS public.self_order_list_staff_queue(bigint);
-DROP FUNCTION IF EXISTS public.self_order_reject_batch(bigint, text);
-DROP FUNCTION IF EXISTS public.self_order_submit_batch(text, uuid, jsonb, text);
-DROP FUNCTION IF EXISTS public.self_order_broadcast_session_changed();
-DROP FUNCTION IF EXISTS public.self_order_close_session_from_order();
-DROP FUNCTION IF EXISTS public.self_order_batch_request_fingerprint(jsonb, text);
-DROP FUNCTION IF EXISTS public.self_order_fill_batch_request_fingerprint();
-DROP FUNCTION IF EXISTS public.self_order_enforce_session_invariants();
-DROP FUNCTION IF EXISTS public.self_order_enforce_batch_transition();
-
-DROP FUNCTION IF EXISTS public.self_order_get_public_context_v2(text);
-DROP FUNCTION IF EXISTS public.self_order_get_snapshot_v2(text, text);
-DROP FUNCTION IF EXISTS public.self_order_submit_batch_v2(text, text, text, uuid, jsonb, text);
-DROP FUNCTION IF EXISTS public.self_order_request_device_join_v2(text, text, text);
-DROP FUNCTION IF EXISTS public.self_order_refresh_pairing_code_v2(text, text, text);
-DROP FUNCTION IF EXISTS public.self_order_create_payment_request_v2(text, text, text, uuid, text, jsonb);
-DROP FUNCTION IF EXISTS public.set_table_self_order_capability_version(bigint, smallint);
-DROP FUNCTION IF EXISTS public.self_order_approve_batch_v2(bigint, text, bigint, bigint, uuid);
-DROP FUNCTION IF EXISTS public.self_order_approve_device_join_v2(bigint, text);
-DROP FUNCTION IF EXISTS public.self_order_reject_batch_v2(bigint, text);
-DROP FUNCTION IF EXISTS public.self_order_reject_device_join_v2(bigint, text);
-DROP FUNCTION IF EXISTS public.self_order_revoke_session_device_v2(bigint, text);
-DROP FUNCTION IF EXISTS public.self_order_list_staff_queue_v2(bigint);
-DROP FUNCTION IF EXISTS public.self_order_random_token(integer);
-DROP FUNCTION IF EXISTS public.self_order_fill_realtime_topic_token();
-DROP FUNCTION IF EXISTS public.self_order_pairing_code_hash(text, text);
-DROP FUNCTION IF EXISTS public.self_order_new_pairing_code();
-DROP FUNCTION IF EXISTS public.self_order_enforce_session_device_invariants();
-DROP FUNCTION IF EXISTS public.self_order_enforce_batch_device_binding();
-DROP FUNCTION IF EXISTS public.self_order_enforce_payment_device_binding();
-DROP FUNCTION IF EXISTS public.self_order_create_pending_device(bigint, text, text);
-DROP FUNCTION IF EXISTS public.self_order_refresh_pairing_code(bigint);
-DROP FUNCTION IF EXISTS public.self_order_guard_capability_version_change();
-DROP FUNCTION IF EXISTS public.self_order_terminalize_session_devices();
-DROP FUNCTION IF EXISTS public.self_order_close_session_on_order_transfer();
 
 COMMIT;
