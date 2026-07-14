@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Bell as IconBell,
   Building2 as IconBuilding2,
-  LayoutDashboard as IconLayoutDashboard,
   User as IconUser,
 } from "lucide-react";
 import { canAccess, MODULE_ACL, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
@@ -56,7 +55,6 @@ export default async function OperatorLayout({
     (canAccess(claims.user_role, "operator_home") ||
       canAccess(claims.user_role, "employee_checkout_approvals"));
   const canManageBranch =
-    canAccess(claims.user_role, "branch_dashboard") ||
     canAccess(claims.user_role, "branch_settings") ||
     canAccess(claims.user_role, "branch_pos_sessions");
   const canUseBranchPicker = canAccess(claims.user_role, "branch_picker");
@@ -79,7 +77,8 @@ export default async function OperatorLayout({
           homeAriaLabel={APP_COPY_VI.operatorHome}
           actions={
             <>
-              {canUseBranchPicker && context.canSwitchBranch ? (
+              {canUseBranchPicker &&
+              (claims.user_role === "owner" || context.canSwitchBranch) ? (
                 <Button
                   asChild
                   variant="outline"
@@ -93,19 +92,6 @@ export default async function OperatorLayout({
                     <span className="hidden sm:inline">
                       {MODULE_ACL.branch_picker.label}
                     </span>
-                  </Link>
-                </Button>
-              ) : null}
-              {canManageBranch ? (
-                <Button
-                  asChild
-                  variant="outline"
-                  size="icon-touch"
-                  aria-label={APP_COPY_VI.branchCommand}
-                  title={APP_COPY_VI.branchCommand}
-                >
-                  <Link href={`/br/${context.branchId}/dashboard`}>
-                    <IconLayoutDashboard />
                   </Link>
                 </Button>
               ) : null}

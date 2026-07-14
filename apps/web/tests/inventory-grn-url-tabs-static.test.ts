@@ -17,15 +17,18 @@ test("operations GRN list embeds drafts without nested URL tabs", () => {
     /<AppPageTabs items=\{tabsList\} defaultValue=\{activeTab\}>/,
   );
 
-  const officeBodySource = grnListClientSource.slice(
-    grnListClientSource.indexOf("const officeBody"),
+  const adminDashboardBodySource = grnListClientSource.slice(
+    grnListClientSource.indexOf("const adminDashboardBody"),
     grnListClientSource.indexOf(
-      "if (withinOfficeTabs)",
-      grnListClientSource.indexOf("const officeBody"),
+      "if (withinAdminDashboardTabs)",
+      grnListClientSource.indexOf("const adminDashboardBody"),
     ),
   );
 
-  assert.match(officeBodySource, /draftSectionWithinOfficeTabs/);
-  assert.match(officeBodySource, /listBody/);
-  assert.doesNotMatch(officeBodySource, /paramKey=/);
+  assert.match(
+    adminDashboardBodySource,
+    /draftSectionWithinAdminDashboardTabs/,
+  );
+  assert.match(adminDashboardBodySource, /listBody/);
+  assert.doesNotMatch(adminDashboardBodySource, /paramKey=/);
 });

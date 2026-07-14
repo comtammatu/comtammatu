@@ -3,12 +3,14 @@ import { updateSession } from "@comtammatu/database/supabase/middleware";
 import {
   buildAccessDeniedPath,
   canAccess,
+  canAccessRouteSurface,
   extractClaimsFromAccessToken,
   isAdminRoutePath,
   isPublicAppPath,
   PERMISSION_KEYS,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
+  resolveRouteFamilyContract,
   type BlockedStateReasonCode,
   type JwtClaims,
   type ModuleKey,
@@ -105,9 +107,7 @@ function redirectToDefaultLanding(
   sessionResponse: NextResponse,
   claims: JwtClaims,
 ): NextResponse {
-  const branchHubContext = resolveBranchHubContextFromHeaders(
-    request.headers,
-  );
+  const branchHubContext = resolveBranchHubContextFromHeaders(request.headers);
   const url = new URL(
     resolvePostLoginRedirect(claims, null, branchHubContext),
     request.nextUrl.origin,
@@ -189,6 +189,17 @@ export async function proxy(request: NextRequest) {
   // `user_role` or `position`.
   if (!claims) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
+  }
+
+  // Product-plane audience is checked before reusable module capability.
+  // Branch routes intentionally reuse inventory/orders/HR capabilities, so
+  // module ACL alone cannot protect tenant-wide Admin Dashboard URLs.
+  const routeFamily = resolveRouteFamilyContract(pathname);
+  if (
+    routeFamily &&
+    !canAccessRouteSurface(claims.user_role, routeFamily.surface)
+  ) {
+    return redirectToDefaultLanding(request, response, claims);
   }
 
   // Module ACL: each route resolves to a ModuleKey, and the user's role

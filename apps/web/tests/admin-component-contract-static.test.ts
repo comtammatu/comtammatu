@@ -216,7 +216,7 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     "admin-finance-branch-raw-table-import",
     "admin-finance-branch-raw-card-import",
     "admin-finance-branch-toolbar-fixed-control",
-    "operator-office-route-boundary",
+    "operator-admin-dashboard-route-boundary",
     "focus-ring-contrast",
     "radius-scale",
     "radius-tier-baseline",
@@ -240,7 +240,7 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     "use-is-mobile-budget",
     "shell-registry-bespoke-main",
     "nav-shell-inline-literal",
-    "operator-office-shell-boundary",
+    "operator-admin-dashboard-shell-boundary",
     "heading-scale",
     "icon-size",
     "uppercase-label-scale",
@@ -275,9 +275,7 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     assert.match(source, new RegExp(`id: "${id}"`));
   }
   assert.ok(
-    source.includes(
-      String.raw`from\s+["']@\/\(protected\)\/inventory\/`,
-    ),
+    source.includes(String.raw`from\s+["']@\/\(protected\)\/inventory\/`),
   );
   assert.ok(source.includes(String.raw`(?!_lib\/)`));
   assert.ok(source.includes(String.raw`actions(?:\.ts)?`));
@@ -345,7 +343,7 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     assert.doesNotMatch(
       registry,
       /apps\/web\/app\/\(protected\)\/inventory\/stock\/stock-client\.tsx/,
-      "Office-only stock client must not be classified as an embedded operator adapter",
+      "Admin Dashboard stock client must not be classified as an embedded operator adapter",
     );
   }
 
@@ -354,10 +352,7 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     designSystem,
     /shadcn-ui and Web Interface Guidelines are advisory checklists only/,
   );
-  assert.match(
-    designSystem,
-    /scripts\/check-ui-contract\.mjs/,
-  );
+  assert.match(designSystem, /scripts\/check-ui-contract\.mjs/);
   assert.match(designSystem, /scripts\/ui-component-registry\.mjs/);
   assert.match(uiModule, /scripts\/check-ui-contract\.mjs/);
   assert.match(uiModule, /scripts\/ui-component-registry\.mjs/);

@@ -1,19 +1,19 @@
-import type { StaffRole } from "./types";
-import { canAccess, MODULE_ACL, type ModuleKey } from "./module-acl";
+import { NAV_GROUP_LABELS_VI } from "../labels";
 import {
-  ADMIN_NAV_GROUPS,
+  canAccess,
+  canAccessRouteSurface,
+  MODULE_ACL,
+  type ModuleKey,
+} from "./module-acl";
+import {
+  ADMIN_DASHBOARD_ITEMS,
   BRANCH_MANAGEMENT_ITEMS,
   BRANCH_OPERATION_ITEMS,
-  DOMAIN_WORKSPACE_ITEMS,
   type BranchScopedNavItemConfig,
 } from "./nav-config";
-import { NAV_GROUP_LABELS_VI } from "../labels";
+import type { StaffRole } from "./types";
 
-export type AppDiscoverySurface =
-  | "admin"
-  | "workspace"
-  | "branch_management"
-  | "branch_operation";
+export type AppDiscoverySurface = "admin_dashboard" | "branch";
 
 export type AppDiscoveryStatus = "available" | "blocked";
 
@@ -65,7 +65,6 @@ function resolveBlockedLink(
     icon: string;
     label?: string;
   },
-  surface: AppDiscoverySurface,
   reason: AppDiscoveryBlockedReason,
 ): DiscoveredAppLink {
   return {
@@ -73,33 +72,27 @@ function resolveBlockedLink(
     href: null,
     icon: item.icon,
     moduleKey: item.moduleKey,
-    surface,
+    surface: "branch",
     status: "blocked",
     blockedReason: reason,
   };
 }
 
-export function resolveAdminDiscoveryGroups(
-  role: StaffRole,
-): DiscoveredAppGroup[] {
-  return ADMIN_NAV_GROUPS.map((group) => ({
-    title: group.title,
-    surface: "admin" as const,
-    items: group.items
-      .filter((item) => canAccess(role, item.moduleKey))
-      .map((item) =>
-        resolveAvailableLink(item, "admin", MODULE_ACL[item.moduleKey].path),
-      ),
-  })).filter((group) => group.items.length > 0);
-}
-
-export function resolveWorkspaceDiscoveryGroup(
+export function resolveAdminDashboardDiscoveryGroup(
   role: StaffRole,
 ): DiscoveredAppGroup | null {
-  const items = DOMAIN_WORKSPACE_ITEMS.filter((item) =>
+  if (!canAccessRouteSurface(role, "admin_dashboard")) {
+    return null;
+  }
+
+  const items = ADMIN_DASHBOARD_ITEMS.filter((item) =>
     canAccess(role, item.moduleKey),
   ).map((item) =>
-    resolveAvailableLink(item, "workspace", MODULE_ACL[item.moduleKey].path),
+    resolveAvailableLink(
+      item,
+      "admin_dashboard",
+      MODULE_ACL[item.moduleKey].path,
+    ),
   );
 
   if (items.length === 0) {
@@ -107,8 +100,8 @@ export function resolveWorkspaceDiscoveryGroup(
   }
 
   return {
-    title: NAV_GROUP_LABELS_VI.workspaces,
-    surface: "workspace",
+    title: NAV_GROUP_LABELS_VI.adminDashboard,
+    surface: "admin_dashboard",
     items,
   };
 }
@@ -117,34 +110,25 @@ function resolveBranchScopedDiscoveryGroup(
   role: StaffRole,
   itemsConfig: readonly BranchScopedNavItemConfig[],
   title: string,
-  surface: Extract<
-    AppDiscoverySurface,
-    "branch_management" | "branch_operation"
-  >,
   branchId?: number | null,
   options?: {
     includeBlocked?: boolean;
   },
 ): DiscoveredAppGroup | null {
-  const items = itemsConfig.filter((item) =>
-    canAccess(role, item.moduleKey),
-  )
+  const items = itemsConfig
+    .filter((item) => canAccess(role, item.moduleKey))
     .map((item) => {
       if (branchId == null) {
         if (!options?.includeBlocked) {
           return null;
         }
 
-        return resolveBlockedLink(
-          item,
-          surface,
-          "missing-branch-context",
-        );
+        return resolveBlockedLink(item, "missing-branch-context");
       }
 
       return resolveAvailableLink(
         item,
-        surface,
+        "branch",
         item.hrefTemplate.replace("{branchId}", String(branchId)),
       );
     })
@@ -156,7 +140,7 @@ function resolveBranchScopedDiscoveryGroup(
 
   return {
     title,
-    surface,
+    surface: "branch",
     items,
   };
 }
@@ -172,7 +156,6 @@ export function resolveBranchManagementDiscoveryGroup(
     role,
     BRANCH_MANAGEMENT_ITEMS,
     NAV_GROUP_LABELS_VI.branchManagement,
-    "branch_management",
     branchId,
     options,
   );
@@ -189,7 +172,6 @@ export function resolveBranchOperationDiscoveryGroup(
     role,
     BRANCH_OPERATION_ITEMS,
     NAV_GROUP_LABELS_VI.branchOperations,
-    "branch_operation",
     branchId,
     options,
   );
@@ -202,7 +184,7 @@ export function resolveDiscoveredAppGroups(
     includeBlocked?: boolean;
   },
 ): DiscoveredAppGroup[] {
-  const workspaceGroup = resolveWorkspaceDiscoveryGroup(role);
+  const adminDashboardGroup = resolveAdminDashboardDiscoveryGroup(role);
   const branchManagementGroup = resolveBranchManagementDiscoveryGroup(
     role,
     branchId,
@@ -215,8 +197,7 @@ export function resolveDiscoveredAppGroups(
   );
 
   return [
-    ...resolveAdminDiscoveryGroups(role),
-    workspaceGroup,
+    adminDashboardGroup,
     branchManagementGroup,
     branchOperationGroup,
   ].filter((group): group is DiscoveredAppGroup => group != null);

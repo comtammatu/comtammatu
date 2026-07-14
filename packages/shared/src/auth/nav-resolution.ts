@@ -1,10 +1,9 @@
 import type { StaffRole } from "./types";
 import { canAccess, type ModuleKey, MODULE_ACL } from "./module-acl";
 import {
-  resolveAdminDiscoveryGroups,
+  resolveAdminDashboardDiscoveryGroup,
   resolveBranchManagementDiscoveryGroup,
   resolveBranchOperationDiscoveryGroup,
-  resolveWorkspaceDiscoveryGroup,
 } from "./app-discovery";
 import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
 
@@ -72,17 +71,24 @@ export function resolveNavLink(
   };
 }
 
-export function resolveAdminNavGroups(role: StaffRole): ResolvedNavGroup[] {
-  return resolveAdminDiscoveryGroups(role).map((group) => ({
-    title: group.title,
-    items: group.items.map((item) =>
-      resolveNavLink(item, item.href ?? undefined),
-    ),
-  }));
+export function resolveAdminDashboardNavGroups(
+  role: StaffRole,
+): ResolvedNavGroup[] {
+  const group = resolveAdminDashboardDiscoveryGroup(role);
+  return group
+    ? [
+        {
+          title: group.title,
+          items: group.items.map((item) =>
+            resolveNavLink(item, item.href ?? undefined),
+          ),
+        },
+      ]
+    : [];
 }
 
-export function resolveWorkspaceItems(role: StaffRole): ResolvedNavLink[] {
-  const group = resolveWorkspaceDiscoveryGroup(role);
+export function resolveAdminDashboardItems(role: StaffRole): ResolvedNavLink[] {
+  const group = resolveAdminDashboardDiscoveryGroup(role);
 
   if (!group) {
     return [];
@@ -127,12 +133,15 @@ export function resolveQuickLaunchGroups(
   role: StaffRole,
   branchId?: number | null,
 ): QuickLaunchGroup[] {
-  const workspaceItems = resolveWorkspaceItems(role);
+  const adminDashboardItems = resolveAdminDashboardItems(role);
   const branchManagementItems = resolveBranchManagementItems(role, branchId);
   const branchOperationItems = resolveBranchOperationItems(role, branchId);
 
   return [
-    { title: NAV_GROUP_LABELS_VI.workspaces, items: workspaceItems },
+    {
+      title: NAV_GROUP_LABELS_VI.adminDashboard,
+      items: adminDashboardItems,
+    },
     {
       title: NAV_GROUP_LABELS_VI.branchManagement,
       items: branchManagementItems,

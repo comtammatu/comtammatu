@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("purchase orders have no Branch or Office daily-use surface", () => {
+test("purchase orders have no Branch or Admin Dashboard daily-use surface", () => {
   const operations = read(
     "apps/web/app/(protected)/inventory/operations/page.tsx",
   );
@@ -40,17 +40,15 @@ test("GRN source and actions are supplier-first without PO creation", () => {
   const branchSource = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/branch-grn-source-picker-client.tsx",
   );
-  const officeSource = read(
+  const adminDashboardSource = read(
     "apps/web/app/(protected)/inventory/grn/new/page.tsx",
   );
-  const grnActions = read(
-    "apps/web/app/(protected)/inventory/grn-actions.ts",
-  );
+  const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
   const procurement = read(
     "apps/web/app/(protected)/inventory/procurement-actions.ts",
   );
 
-  for (const source of [sourceData, branchSource, officeSource]) {
+  for (const source of [sourceData, branchSource, adminDashboardSource]) {
     assert.doesNotMatch(
       source,
       /openPurchaseOrders|fetchOpenPurchaseOrdersForReceiving|createGrnFromPo/,
@@ -84,12 +82,18 @@ test("historical PO references render as text and never reopen a retired route",
   );
 
   assert.match(grnList, /<span className="font-mono">\{grn\.poCode\}<\/span>/);
-  assert.match(grnDetail, /<span className="font-mono">\{grn\.poCode\}<\/span>/);
+  assert.match(
+    grnDetail,
+    /<span className="font-mono">\{grn\.poCode\}<\/span>/,
+  );
   assert.match(
     supplierInvoices,
     /<span className="font-mono">\{selectedInvoice\.poCode\}<\/span>/,
   );
   for (const source of [grnList, grnDetail, supplierInvoices, dashboard]) {
-    assert.doesNotMatch(source, /\/inventory\/purchase-orders|stock\/purchase-orders/);
+    assert.doesNotMatch(
+      source,
+      /\/inventory\/purchase-orders|stock\/purchase-orders/,
+    );
   }
 });

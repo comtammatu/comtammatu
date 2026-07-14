@@ -5,7 +5,7 @@ import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
-const OFFICE_ROUTE_PREFIXES = [
+const ADMIN_DASHBOARD_ROUTE_PREFIXES = [
   "/admin",
   "/branch-settings",
   "/branches",
@@ -71,35 +71,35 @@ test("Branch command and secondary routes stay in the operator touch plane", () 
   for (const contract of [
     {
       id: "operator-home",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]",
       moduleKey: "operator_home",
       primaryNav: "operator-bottom-nav",
     },
     {
       id: "branch-dashboard",
-      surface: "branch_management",
+      surface: "branch",
       entryPath: "/br/[branchId]/dashboard",
       moduleKey: "branch_dashboard",
       primaryNav: "operator-bottom-nav",
     },
     {
       id: "branch-settings",
-      surface: "branch_management",
+      surface: "branch",
       entryPath: "/br/[branchId]/settings",
       moduleKey: "branch_settings",
       primaryNav: "operator-bottom-nav",
     },
     {
       id: "branch-menu-limits",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]/menu-limits",
       moduleKey: "branch_menu_limits",
       primaryNav: "operator-bottom-nav",
     },
     {
       id: "branch-pos-sessions",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]/pos-sessions",
       moduleKey: "branch_pos_sessions",
       primaryNav: "operator-bottom-nav",
@@ -166,21 +166,21 @@ test("POS, KDS, and Runner stay standalone station apps", () => {
   for (const contract of [
     {
       id: "pos",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]/pos",
       moduleKey: "pos",
       primaryNav: "operational-chrome",
     },
     {
       id: "kds",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]/kds",
       moduleKey: "kds",
       primaryNav: "operational-chrome",
     },
     {
       id: "runner",
-      surface: "branch_operation",
+      surface: "branch",
       entryPath: "/br/[branchId]/runner",
       moduleKey: "runner",
       primaryNav: "operational-chrome",
@@ -216,11 +216,14 @@ test("POS, KDS, and Runner stay standalone station apps", () => {
     assert.match(layout, /<main/);
     assert.match(layout, /h-dvh/);
     assert.match(layout, /touch-manipulation/);
-    assert.doesNotMatch(layout, /<AppPage|OperatorBottomNav|OfficeModuleShell/);
+    assert.doesNotMatch(
+      layout,
+      /<AppPage|OperatorBottomNav|AdminDashboardModuleShell/,
+    );
   }
 });
 
-test("Branch operator routes do not link, redirect, or revalidate Office routes", () => {
+test("Branch operator routes do not link, redirect, or revalidate Admin Dashboard routes", () => {
   for (const dir of [
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard",
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings",
@@ -233,7 +236,7 @@ test("Branch operator routes do not link, redirect, or revalidate Office routes"
     if (!existsSync(resolve(repoRoot, dir))) continue;
     for (const file of listSourceFiles(dir)) {
       const source = read(file);
-      for (const prefix of OFFICE_ROUTE_PREFIXES) {
+      for (const prefix of ADMIN_DASHBOARD_ROUTE_PREFIXES) {
         const route = `${escapeRegExp(prefix)}${ROUTE_LITERAL_END}`;
         for (const [label, pattern] of [
           ["href prop", new RegExp(`href\\s*=\\s*(?:{\\s*)?["'\`]${route}`)],
@@ -262,7 +265,7 @@ test("Branch operator routes do not link, redirect, or revalidate Office routes"
 test("Branch operator routes do not import management shell chrome", () => {
   const forbiddenShells = [
     ["BranchManagementShell", /\bBranchManagementShell\b/],
-    ["OfficeModuleShell", /\bOfficeModuleShell\b/],
+    ["AdminDashboardModuleShell", /\bAdminDashboardModuleShell\b/],
     ["InventoryShell", /\bInventoryShell\b/],
     ["FinanceShell", /\bFinanceShell\b/],
     ["ManagementShell", /\bManagementShell\b/],
@@ -289,107 +292,32 @@ test("Branch operator routes do not import management shell chrome", () => {
   }
 });
 
-test("Branch command dashboard is a branch-native command surface", () => {
+test("Branch dashboard compatibility route redirects to the canonical Hub", () => {
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
-  const commandConfig = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
-  );
-  const commandSections = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_components/command-sections.tsx",
-  );
-  const actionItem = read(
-    "apps/web/app/(protected)/br/[branchId]/_components/branch-action-item.tsx",
-  );
-  const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
-  assert.match(dashboard, /<BranchOperatorPage/);
-  assert.match(dashboard, /branch\.branch_kind !== "branch"/);
-  assert.doesNotMatch(dashboard, /<AppPage|<AppLinkCard|<LinkCardGrid|<KpiRow/);
-
-  for (const expected of [
-    "liveOperationsTitle",
-    "readinessTitle",
-    "endDayTitle",
-    "drilldownTitle",
-  ]) {
-    assert.ok(dashboard.includes(expected), `expected ${expected}`);
-  }
-
-  for (const expected of [
-    "/br/${branchId}/pos",
-    "/br/${branchId}/kds",
-    "/br/${branchId}/runner",
-    "/br/${branchId}/menu-limits",
-    "/br/${branchId}/orders",
-    "/br/${branchId}/pos-sessions",
-    "/br/${branchId}/stock",
-  ]) {
-    assert.ok(commandConfig.includes(expected), `expected ${expected}`);
-  }
-
-  assert.match(
-    commandSections,
-    /<BranchActionItem/,
-    "Branch Command lanes should render mobile-first action rows",
+  assert.match(dashboard, /parseOperatorBranchId/);
+  assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
+  assert.doesNotMatch(dashboard, /BranchOperatorPage|fetchBranchDayStatus/);
+  assert.equal(
+    existsSync(
+      resolve(
+        repoRoot,
+        "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
+      ),
+    ),
+    false,
   );
-  assert.match(
-    commandSections,
-    /<ItemGroup className="gap-2"/,
-    "Branch Command lanes should group action rows consistently",
+  assert.equal(
+    existsSync(
+      resolve(
+        repoRoot,
+        "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_components/command-sections.tsx",
+      ),
+    ),
+    false,
   );
-  assert.doesNotMatch(
-    commandSections,
-    /<AppLinkCard|<LinkCardGrid/,
-    "Branch Command lanes must not reintroduce card-grid navigation",
-  );
-  assert.match(
-    dashboard,
-    /<BranchReadinessList/,
-    "Branch Command page should mount the readiness lane",
-  );
-  assert.match(
-    dashboard,
-    /const floorHref =[\s\S]*day\.tablesTotal <= 0[\s\S]*day\.setupActiveTerminals <= 0/,
-    "Bàn & máy POS readiness CTA must route to the missing setup part",
-  );
-  assert.match(
-    dashboard,
-    /<BranchCommandTileGrid/,
-    "Branch Command page should mount the nav-lane tile grids",
-  );
-  assert.match(
-    actionItem,
-    /line-clamp-none/,
-    "Branch Command must not clamp critical readiness/action descriptions",
-  );
-  assert.match(actionItem, /size="touch"/);
-  assert.match(actionItem, /className="w-full sm:w-auto"/);
-  assert.match(
-    settingsMessages,
-    /commandPosSessionsTitle: "Đối soát ca POS"/,
-    "Branch Command reconciliation tile should not duplicate the readiness Ca POS label",
-  );
-  assert.doesNotMatch(
-    settingsMessages,
-    /setupLaneTitle|commandBranchSetup/,
-    "Branch Command must not keep a Settings doorway lane; Settings is already the setup hub",
-  );
-  assert.doesNotMatch(
-    commandConfig,
-    /href:\s*`\/br\/\$\{branchId\}\/settings`/,
-  );
-  assert.doesNotMatch(commandConfig, /IconSettings/);
-  assert.match(
-    settingsMessages,
-    /readinessMenuTitle: "Giới hạn bán"/,
-    "Branch Command readiness row links to menu-limits, not the menu catalog",
-  );
-  assert.match(settingsMessages, /drilldownTitle: "Kho chi nhánh"/);
-  assert.match(settingsMessages, /readinessMenuCta: "Mở giới hạn bán"/);
-  assert.doesNotMatch(settingsMessages, /Thực đơn bán|Mở thực đơn/);
-  assert.doesNotMatch(settingsMessages, /Chưa có món active/);
 });
 
 test("Branch settings hub exposes setup controls only", () => {
@@ -558,7 +486,7 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
   ]) {
     for (const file of listSourceFiles(dir)) {
       const source = read(file);
-      for (const prefix of OFFICE_ROUTE_PREFIXES) {
+      for (const prefix of ADMIN_DASHBOARD_ROUTE_PREFIXES) {
         const route = `${escapeRegExp(prefix)}${ROUTE_LITERAL_END}`;
         for (const [label, pattern] of [
           ["href prop", new RegExp(`href\\s*=\\s*(?:{\\s*)?["'\`]${route}`)],
@@ -601,7 +529,7 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
 test("Branch-scoped operational routes do not use management shell", () => {
   const forbiddenShells = [
     ["BranchManagementShell", /BranchManagementShell/],
-    ["OfficeModuleShell", /OfficeModuleShell/],
+    ["AdminDashboardModuleShell", /AdminDashboardModuleShell/],
     ["InventoryShell", /InventoryShell/],
     ["FinanceShell", /FinanceShell/],
     ["ManagementShell", /ManagementShell/],

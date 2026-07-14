@@ -3,8 +3,8 @@
  * These are compatibility auth buckets, not mutable HR position labels.
  *
  * D076: `office`, `warehouse_manager`, and `production_manager` are retired.
- * Office plane workspaces stay owner (+ branch_manager where MODULE_ACL already
- * admits them). Central-site soft-routing is gone; `BranchKind` enum values
+ * Admin Dashboard stays Owner-only. Central-site soft-routing is gone;
+ * `BranchKind` enum values
  * remain for historical inventory rows only.
  */
 export const ACCESS_BUCKETS = [
@@ -25,10 +25,7 @@ export type StaffRole = AccessBucket;
 export const ADMIN_ROLES: readonly StaffRole[] = ["owner"] as const;
 
 /** Roles that operate at branch level (POS/KDS) */
-export const BRANCH_ROLES: readonly StaffRole[] = [
-  "cashier",
-  "chef",
-] as const;
+export const BRANCH_ROLES: readonly StaffRole[] = ["cashier", "chef"] as const;
 
 /** Roles that do not require branch scope */
 export const TENANT_LEVEL_ROLES: readonly StaffRole[] = ["owner"] as const;

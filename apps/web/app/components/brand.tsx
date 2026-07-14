@@ -149,7 +149,7 @@ const BRAND_LOGO_BOX_TONE: Record<BrandLogoBoxTone, string> = {
 /**
  * Canonical header brand-lockup logo box: the size-10 rounded-md container that
  * holds a `BrandMark` (or a fallback icon) in app chrome headers. Single-sourced
- * here so the Management sidebar header and the Operations (employee/PWA) header
+ * here so the Admin Dashboard sidebar and the Branch (employee/PWA) header
  * stop hand-rolling the same box (design-system.md § B header lockup).
  */
 export function BrandLogoBox({

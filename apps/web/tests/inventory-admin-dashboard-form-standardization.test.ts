@@ -25,7 +25,7 @@ test("shared ComboboxField owns RHF label and error wiring", () => {
   assert.match(barrel, /export \{ FormField \} from "\.\/form-field"/);
 });
 
-test("Office Inventory entry surfaces use the shared field contract", () => {
+test("Admin Dashboard Inventory entry surfaces use the shared field contract", () => {
   const grnCreate = readWorkspaceFile(
     "app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
   );
@@ -57,7 +57,7 @@ test("Office Inventory entry surfaces use the shared field contract", () => {
   assert.match(recipeDialog, /<SelectField[\s\S]*?id="recipe-menu-item"/);
   assert.match(
     transferDialog,
-    /<FormField[\s\S]*?controlId="office-transfer-source"/,
+    /<FormField[\s\S]*?controlId="admin-dashboard-transfer-source"/,
   );
-  assert.match(transferDialog, /controlId="office-transfer-notes"/);
+  assert.match(transferDialog, /controlId="admin-dashboard-transfer-notes"/);
 });

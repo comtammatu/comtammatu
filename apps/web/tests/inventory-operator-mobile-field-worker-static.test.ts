@@ -86,7 +86,7 @@ test("stocktake list uses styled confirm dialog instead of browser confirm", () 
   assert.doesNotMatch(stocktakeListSource, /confirm\("/);
 });
 
-test("Office count assignment dialog has a searchable ingredient list", () => {
+test("Admin Dashboard count assignment dialog has a searchable ingredient list", () => {
   assert.match(countAssignmentsSource, /Search as IconSearch/);
   assert.match(
     countAssignmentsSource,

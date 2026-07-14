@@ -392,7 +392,7 @@ test("auth docs define the HR permission contract layers", () => {
     "Employee record, salary, HĐLĐ",
     "Global shift and position-task setup",
     "Payroll",
-    "Branch manager only gets branch-safe attendance/leave oversight",
+    "Branch Manager does not enter `/hr`",
   ]) {
     assert.ok(
       authDoc.includes(expected) || routeMatrix.includes(expected),

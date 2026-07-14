@@ -61,22 +61,23 @@ pinned to the viewport.
 Skill plan: repo rules = engineering + skills + workflow + UI; external skills
 = Supabase for production truth; runtime tools = refreshed CodeGraph, read-only
 production SQL, focused Node tests, full repo gates, and browser verification.
-Skipped = schema changes, production writes, Office-shell deletion, and moving
-Owner workspace routes.
+Skipped = schema changes, production writes, and moving Admin Dashboard route roots.
 
-- **PM:** Make Branch Hub the promoted home for every active role while keeping
-  Owner-only workspaces reachable. Acceptance is one operable-branch entry,
-  no central-site advertisement, and no duplicate new shell.
-- **BA:** Only `branch_kind = branch` is operable. One allowed branch opens
-  directly; multiple allowed branches retain the picker. Owner can cross into
-  Finance/HR/Payroll/Settings, but those shortcuts do not widen action ACL.
+- **PM:** Make Branch Hub the promoted home for Branch roles while keeping the
+  Owner-only Admin Dashboard as a separate plane. Acceptance is one Branch home,
+  no central-site advertisement, no Admin Dashboard shortcuts in Branch, and no
+  duplicate shell.
+- **BA:** Only `branch_kind = branch` is operable. A Branch-pinned role with one
+  allowed Branch opens it directly; Owner always retains the plane picker even
+  with one Branch. Finance/HR/Payroll/Settings remain in Admin Dashboard.
 - **Senior Dev:** Reuse `selectOperatorBranchScope`, `resolveBranchContext`,
   `MODULE_ACL`, and existing Branch action sections. Resolve from DB, never
   hardcode branch 3, and return null for a requested branch outside the allowed
   set instead of silently substituting another branch.
-- **QA/QC:** Unit-test owner fallback, owner home links, branch-kind filtering,
-  and wrong-route rejection. Static-test sole-branch redirect, picker gating,
-  the management/Owner Hub groups, and route-boundary compliance; then run
+- **QA/QC:** Unit-test Owner picker retention, surface audience, branch-kind
+  filtering, and wrong-route rejection. Static-test Branch-role sole-branch
+  redirect, picker gating, zero Admin Dashboard Hub links, and route-boundary
+  compliance; then run
   typecheck, lint, build, tests, and desktop/mobile Hub smoke.
 
 Agreement: this slice changes entry and presentation only. It does not mutate
@@ -126,7 +127,7 @@ Workspace; actor = owner/branch manager; job = open the correct stock workflow
 without scanning duplicate entries. Journey = Branch bottom nav -> choose one
 job -> open its native workflow -> return to Stock Hub. Information order = four
 daily stock actions first, then lookup/production/counting/consumption/catalog;
-exclude = Office metrics and repeated queue facets. Pattern = Branch touch HUB;
+exclude = Admin Dashboard metrics and repeated queue facets. Pattern = Branch touch HUB;
 components = `BranchOperatorPage` + `BranchOperatorActionSection`; states =
 permission-filtered links or existing empty state. Responsive = same two groups
 on phone/tablet with two-column touch tiles; verification = authenticated
@@ -966,12 +967,12 @@ table QR. It never did. Do not grow one inside this rebuild.
       bypasses into approved chrome primitives after the primitive/guard cleanup
       is green.
 - [x] **Branch Hub touch-plane cutover.** Core Branch stock and leave-review
-      workflows own touch-native presenters; Office keeps separate responsive
+      workflows own touch-native presenters; Admin Dashboard keeps separate responsive
       management presenters. Supplier returns retired through S12; PO retired
       through S13. Cross-branch transfer retirement remains independently
       sequenced in S11.
   - [x] Consumption now separates posted ledger sources from manual documents,
-        with a Branch-native list and typed detail; no Office presenter reuse.
+        with a Branch-native list and typed detail; no Admin Dashboard presenter reuse.
   - [x] Count assignment/review now owns the correct manager destinations and
         no longer opens the signed-in manager's personal count surface.
   - [x] Reconcile stocktake role documentation with current permission seeds:
@@ -979,8 +980,8 @@ table QR. It never did. Do not grow one inside this rebuild.
         `role_templates` rows are retired (D076); stocktake create/complete
         is `owner`/`branch_manager` only now.
   - [x] Run runtime QA across phone `390x844`, tablet portrait `768x1024`,
-        tablet landscape `1024x768`, and Office desktop `1440x900`, in both
-        Branch/Office shells with local Supabase E2E auth. The theme contrast
+        tablet landscape `1024x768`, and Admin Dashboard desktop `1440x900`, in
+        both Branch/Admin Dashboard shells with local Supabase E2E auth. The theme contrast
         contract remains covered by the design-system guard suite.
 
 ## Single-warehouse cutover (D078)
@@ -1110,8 +1111,8 @@ catalog and stock levels, then verifies the next real POS order.
       passing, 33 skipped, and 0 failing tests; the earlier nine-failure wave is
       no longer present in the current tree.
 
-- [x] **S1 — extend the operator/Office import boundary guard before converting
-      anything.** Widen `operator-office-shell-boundary` in
+- [x] **S1 — extend the Branch/Admin Dashboard import boundary guard before converting
+      anything.** Widen `operator-admin-dashboard-shell-boundary` in
       `scripts/check-ui-contract.mjs` so `(operator)/**` may not import
       `@/(protected)/inventory/**` except `*-actions.ts`; allowlist `_lib/**`
       until S7 lands. Freeze current offenders as the baseline and burn one line
@@ -1168,7 +1169,7 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [ ] **S5 — fork the GRN line sheet out of the shared component tree.**
       `GrnLineEditSheet` (`apps/web/app/components/inventory/grn-line-editor.tsx`)
-      is imported by both the operator create flow and Office
+      is imported by both the operator create flow and Admin Dashboard
       `inventory/grn/new/[supplierId]`. It is presentation, and D067 §1 requires
       presentation to fork.
   - Build `(operator)/stock/grn/_components/grn-line-sheet.tsx` as the single
@@ -1195,7 +1196,7 @@ v_out_base`. Do not rescale consumption by actual output.
   - Hide the GRN receiving-location card when `branchLocations.length <= 1` and
     resolve the location server-side.
 
-- [ ] **S7 — relocate shared pure logic out of the Office route tree.** Move
+- [ ] **S7 — relocate shared pure logic out of the Admin Dashboard route tree.** Move
       `_lib/format`, `_lib/purchase-units`, `_lib/reference-cost`, `_lib/grn-draft`,
       and `_lib/types` to `apps/web/lib/inventory/` and import from there on both
       planes. This is a move, not a fork: the sharing was correct and the location
@@ -1210,7 +1211,7 @@ v_out_base`. Do not rescale consumption by actual output.
       since D068 §4. Remove the operator recipe surface entirely — the tile AND the
       `stock/production/recipes/**` route family (list, editor, new — the
       clients still expose create/edit/delete today); recipe administration
-      stays in Office `/inventory` (D073 §3). Guard entries for the removed
+      stays in Admin Dashboard `/inventory` (D073 §3). Guard entries for the removed
       routes: `scripts/page-archetypes.mjs` + the route-manifest arrays in
       `scripts/check-ui-contract.mjs`.
 
@@ -1260,10 +1261,10 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [x] **S12 — retire supplier returns end-to-end (D073 §4).** Delete the
       operator routes (`stock/supplier-returns/**`, 3 pages + 3 clients), the
-      Office routes (`/inventory/supplier-returns/**`, 3 pages + 4 clients),
+      Admin Dashboard routes (`/inventory/supplier-returns/**`, 3 pages + 4 clients),
       the shared loaders/model (`branch-supplier-return-data.ts`,
       `supplier-return-model.ts`), the actions file
-      (`supplier-return-actions.ts`), the nav tile and Office nav item, and the
+      (`supplier-return-actions.ts`), the nav tile and Admin Dashboard nav item, and the
       copy catalog. Keep the DB tables, RPCs, and the
       `has_active_supplier_return` GRN integrity gates — history stays, and the
       gate is inert without new returns. Rejected GRN goods route through Báo
@@ -1275,11 +1276,11 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [x] **S13 — retire purchase orders from daily use (D073 §4).** Delete the
       operator wrappers (`stock/purchase-orders/**`, 3 files) and the PO nav
-      tile; remove the Office PO nav entry and routes from daily navigation;
+      tile; remove the Admin Dashboard PO nav entry and routes from daily navigation;
       remove the PO door from the GRN source picker
       (`fetchOpenPurchaseOrdersForReceiving` / `openPurchaseOrders` in
       `apps/web/lib/inventory/grn-source-data.ts`) and the
-      `openPurchaseOrders` hub-queue count. Delete the Office PO routes and the PO server actions
+      `openPurchaseOrders` hub-queue count. Delete the Admin Dashboard PO routes and the PO server actions
       (`purchase-order-actions.ts` mutators) with the navigation — D073 §4
       retires both planes, not nav alone. Guard entries: PO rows in
       `scripts/page-archetypes.mjs` and the PO arrays in

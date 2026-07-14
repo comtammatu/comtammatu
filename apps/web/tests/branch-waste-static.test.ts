@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("Branch waste is a native touch document workflow with an isolated Office form", () => {
+test("Branch waste is a native touch document workflow isolated from the Admin Dashboard form", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx",
   );
@@ -18,10 +18,10 @@ test("Branch waste is a native touch document workflow with an isolated Office f
   const photoUpload = read(
     "apps/web/app/(protected)/inventory/_components/photo-upload-input.tsx",
   );
-  const officePage = read(
+  const adminDashboardPage = read(
     "apps/web/app/(protected)/inventory/waste/new/page.tsx",
   );
-  const officeClient = read(
+  const adminDashboardClient = read(
     "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx",
   );
 
@@ -56,11 +56,11 @@ test("Branch waste is a native touch document workflow with an isolated Office f
   assert.match(model, /WASTE_ALWAYS_TIER_2_REASONS/);
   assert.match(photoUpload, /id\?: string/);
   assert.match(photoUpload, /<input[\s\S]*id=\{id\}/);
-  assert.match(officePage, /export async function WasteNewPageContent/);
-  assert.match(officeClient, /<DocumentFormFrame/);
+  assert.match(adminDashboardPage, /export async function WasteNewPageContent/);
+  assert.match(adminDashboardClient, /<DocumentFormFrame/);
   assert.doesNotMatch(
-    officePage,
+    adminDashboardPage,
     /routeBranchId|embedded|successHref|cancelHref/,
   );
-  assert.doesNotMatch(officeClient, /embedded|successHref|cancelHref/);
+  assert.doesNotMatch(adminDashboardClient, /embedded|successHref|cancelHref/);
 });

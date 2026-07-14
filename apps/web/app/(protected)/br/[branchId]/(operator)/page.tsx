@@ -98,9 +98,15 @@ export default async function OperatorHomePage({
     ? [
         {
           key: "branch-menu",
-          href: MODULE_ACL.menu.path,
+          href: `/br/${context.branchId}/menu-limits`,
           icon: resolveOperatorTileIcon("Utensils"),
-          title: MODULE_ACL.menu.label,
+          title: MODULE_ACL.branch_menu_limits.label,
+        },
+        {
+          key: "branch-pos-sessions",
+          href: `/br/${context.branchId}/pos-sessions`,
+          icon: resolveOperatorTileIcon("ReceiptText"),
+          title: MODULE_ACL.branch_pos_sessions.label,
         },
         {
           key: "branch-settings",
@@ -110,36 +116,6 @@ export default async function OperatorHomePage({
         },
       ]
     : [];
-
-  const ownerWorkspaceLinks =
-    claims.user_role === "owner"
-      ? [
-          {
-            key: "owner-finance",
-            href: MODULE_ACL.finance.path,
-            icon: resolveOperatorTileIcon("ChartBar"),
-            title: MODULE_ACL.finance.label,
-          },
-          {
-            key: "owner-hr",
-            href: MODULE_ACL.hr.path,
-            icon: resolveOperatorTileIcon("Users"),
-            title: MODULE_ACL.hr.label,
-          },
-          {
-            key: "owner-payroll",
-            href: MODULE_ACL.hr_payroll.path,
-            icon: resolveOperatorTileIcon("Briefcase"),
-            title: MODULE_ACL.hr_payroll.label,
-          },
-          {
-            key: "owner-settings",
-            href: MODULE_ACL.settings.path,
-            icon: resolveOperatorTileIcon("Settings"),
-            title: MODULE_ACL.settings.label,
-          },
-        ]
-      : [];
 
   const clockGateSection =
     isFloorRole && beforeClockIn ? (
@@ -186,14 +162,6 @@ export default async function OperatorHomePage({
       <BranchOperatorActionSection
         title={APP_COPY_VI.operatorOpsActions}
         links={branchManagementLinks}
-        columns={2}
-        mobileColumns={2}
-        wideColumns
-      />
-
-      <BranchOperatorActionSection
-        title={APP_COPY_VI.storeManagement}
-        links={ownerWorkspaceLinks}
         columns={2}
         mobileColumns={2}
         wideColumns

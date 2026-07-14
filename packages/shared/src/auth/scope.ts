@@ -1,4 +1,4 @@
-import { canAccess } from "./module-acl";
+import { canAccess, canAccessRouteSurface } from "./module-acl";
 import {
   getDefaultRedirect,
   resolveBranchHubDestination,
@@ -8,6 +8,7 @@ import {
   isRunnerPublicDisplayPath,
   resolveModuleFromPath,
 } from "./route-resolution";
+import { resolveRouteFamilyContract } from "./route-map";
 import type { JwtClaims, StaffRole } from "./types";
 import { ADMIN_ROLES } from "./types";
 
@@ -156,9 +157,15 @@ export function resolvePostLoginRedirect(
   }
 
   const moduleKey = resolveModuleFromPath(targetUrl.pathname);
+  const routeFamily = resolveRouteFamilyContract(targetUrl.pathname);
 
-  // Non-module paths fall back to the role's default landing page.
-  if (!moduleKey) {
+  // Unknown paths and routes outside the role's product plane fall back before
+  // reusable module capabilities are evaluated.
+  if (
+    !moduleKey ||
+    !routeFamily ||
+    !canAccessRouteSurface(claims.user_role, routeFamily.surface)
+  ) {
     return fallback;
   }
 

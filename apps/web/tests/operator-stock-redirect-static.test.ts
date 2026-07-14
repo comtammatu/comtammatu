@@ -104,7 +104,7 @@ test("operator stock receive merges into the native transfer queue and keeps nat
   );
 
   // D067 §2: the receive detail route forks to a mobile-native receive
-  // client over the SHARED transfer loader — no office
+  // client over the SHARED transfer loader — no Admin Dashboard
   // TransferDetailPageContent embed (that stepper/summary chrome is exactly
   // what the native screen removes).
   assert.match(receiveDetailRoute, /TransferReceiveContent/);
@@ -199,7 +199,7 @@ test("operator count-slip approvals render inside the branch operator shell", ()
   assert.doesNotMatch(clientSource, /embedded|branchScoped/);
 });
 
-test("operator stock landing is a branch-native hub, not the office stock page wrapper", () => {
+test("operator stock landing is a Branch-native hub, not the Admin Dashboard stock wrapper", () => {
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
   );
@@ -356,7 +356,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/waste/);
   assert.doesNotMatch(
     branchDetailSource,
-    /formatVND|DataTable|AppPageHeader|StockIngredientDetailPageContent|OfficeStockIngredientDetail|embedded/,
+    /formatVND|DataTable|AppPageHeader|StockIngredientDetailPageContent|AdminDashboardStockIngredientDetail|embedded/,
   );
   assert.doesNotMatch(branchDetailSource, /\$\{stockBasePath\}\/receive/);
   assert.match(stockPageSource, /loadStockOnHandPageData/);
@@ -367,7 +367,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   );
   assert.match(stockDataSource, /scope\.outOfScope/);
   assert.match(stockDetailPageSource, /loadStockIngredientDetailData/);
-  assert.match(stockDetailPageSource, /OfficeStockIngredientDetail/);
+  assert.match(stockDetailPageSource, /AdminDashboardStockIngredientDetail/);
   assert.match(stockDetailPageSource, /formatVND/);
   assert.doesNotMatch(
     stockDetailPageSource,
@@ -427,7 +427,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   );
 });
 
-test("office stock workbench keeps manager action affordances after the plane split", () => {
+test("Admin Dashboard stock workbench keeps management actions after the plane split", () => {
   const stockClientSource = read(
     "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
   );
@@ -982,7 +982,7 @@ test("operator waste approvals own a native Branch review queue", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx",
   );
-  const officePage = read(
+  const adminDashboardPage = read(
     "apps/web/app/(protected)/inventory/waste/approvals/page.tsx",
   );
   const client = read(
@@ -1019,9 +1019,9 @@ test("operator waste approvals own a native Branch review queue", () => {
     /\bWasteApprovalsClient\b|DataTable|embedded/,
   );
 
-  assert.match(officePage, /loadWasteApprovalsData/);
+  assert.match(adminDashboardPage, /loadWasteApprovalsData/);
   assert.match(client, /<AppPage/);
-  assert.doesNotMatch(officePage, /routeBranchId|embedded/);
+  assert.doesNotMatch(adminDashboardPage, /routeBranchId|embedded/);
   assert.doesNotMatch(client, /embedded/);
 
   assert.match(operatorQueue, /href: `\$\{basePath\}\/stock\/waste-approvals`/);
@@ -1423,7 +1423,7 @@ test("operator count assignments render branch-native inside the branch operator
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx",
   );
-  const officePage = read(
+  const adminDashboardPage = read(
     "apps/web/app/(protected)/inventory/count-assignments/page.tsx",
   );
   const client = read(
@@ -1450,8 +1450,11 @@ test("operator count assignments render branch-native inside the branch operator
   assert.match(branchData, /resolveInventoryListScope/);
   assert.match(branchData, /PERMISSION_KEYS\.INVENTORY_COUNT_ASSIGN/);
 
-  assert.match(officePage, /export async function CountAssignmentsPageContent/);
-  assert.doesNotMatch(officePage, /routeBranchId|embedded/);
+  assert.match(
+    adminDashboardPage,
+    /export async function CountAssignmentsPageContent/,
+  );
+  assert.doesNotMatch(adminDashboardPage, /routeBranchId|embedded/);
   assert.doesNotMatch(client, /embedded/);
   assert.match(client, /<AppPage width="xwide"/);
   assert.match(client, /<DataTable/);
@@ -1474,7 +1477,7 @@ test("operator production renders branch-native inside the production operator s
   const detailRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx",
   );
-  const officePage = read(
+  const adminDashboardPage = read(
     "apps/web/app/(protected)/inventory/production/page.tsx",
   );
   const dataSource = read(
@@ -1496,8 +1499,8 @@ test("operator production renders branch-native inside the production operator s
 
   assert.match(route, /params: Promise<\{ branchId: string \}>/);
   // D067 §1: the operator route forks presentation to a mobile-native client
-  // over the SAME data loader — no office ProductionPageContent embed, no
-  // redirect to the office plane.
+  // over the SAME data loader — no Admin Dashboard ProductionPageContent
+  // embed and no redirect to the Admin Dashboard plane.
   assert.match(route, /ProductionOperatorClient/);
   assert.match(
     route,
@@ -1506,10 +1509,13 @@ test("operator production renders branch-native inside the production operator s
   assert.doesNotMatch(route, /ProductionPageContent/);
   assert.doesNotMatch(route, /redirect\(`\/inventory\/production/);
 
-  assert.match(officePage, /export async function ProductionPageContent/);
-  assert.match(officePage, /routeBranchId\?: number/);
-  assert.match(officePage, /embedded\?: boolean/);
-  assert.match(officePage, /embedded=\{embedded\}/);
+  assert.match(
+    adminDashboardPage,
+    /export async function ProductionPageContent/,
+  );
+  assert.match(adminDashboardPage, /routeBranchId\?: number/);
+  assert.match(adminDashboardPage, /embedded\?: boolean/);
+  assert.match(adminDashboardPage, /embedded=\{embedded\}/);
   assert.match(
     newRoute,
     /<BranchProductionNewClient[\s\S]*basePath=\{`\/br\/\$\{branchId\}\/stock\/production`\}/,

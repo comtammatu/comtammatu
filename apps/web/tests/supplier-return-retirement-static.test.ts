@@ -25,13 +25,13 @@ const retiredPaths = [
   "apps/web/lib/inventory/supplier-return-model.ts",
 ];
 
-test("supplier returns have no Branch or Office daily-use surface", () => {
+test("supplier returns have no Branch or Admin Dashboard daily-use surface", () => {
   for (const path of retiredPaths) {
     assert.equal(existsSync(resolve(repoRoot, path)), false, path);
   }
 
   const operatorNav = read("packages/shared/src/auth/nav-config.ts");
-  const officeNav = read(
+  const adminDashboardNav = read(
     "apps/web/app/(protected)/inventory/_lib/inventory-nav.ts",
   );
   const routeResolution = read("packages/shared/src/auth/route-resolution.ts");
@@ -44,7 +44,7 @@ test("supplier returns have no Branch or Office daily-use surface", () => {
 
   for (const source of [
     operatorNav,
-    officeNav,
+    adminDashboardNav,
     routeResolution,
     stockHub,
     dictionary,

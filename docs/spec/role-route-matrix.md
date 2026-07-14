@@ -1,7 +1,8 @@
 # Role, Scope, And Route Matrix
 
-This spec is the source of truth for separating tenant-level management,
-branch-level management, domain workspaces, and staff day runtime.
+This spec is the source of truth for separating the two authenticated product
+planes: Owner-only Admin Dashboard and branch-scoped Branch runtime. Public and
+external routes sit outside those planes.
 
 ## Product Frame
 
@@ -17,54 +18,51 @@ reference framing.
 - Role decides the starting surface; permission decides the action.
 - `positions.code` is the HR source; `user_role` / access bucket is only the
   compatibility route bucket.
-- Route-level ACL is a fast gate in `packages/shared/src/auth/module-acl.ts`.
-  Mutations and row access still go through permission keys, RLS, and RPC guards.
+- Route admission is ordered: classify the URL with `route-map.ts`, enforce its
+  audience with `canAccessRouteSurface`, enforce reusable capability with
+  `canAccess`, then enforce branch scope and action permissions. Mutations and
+  row access still go through permission keys, RLS, and RPC guards.
 - Tenant scope is L0. Branch scope is L1. Scope must come from JWT claims and
   URL params, not localStorage or React Context.
-- Admin is not a catch-all application menu. Admin is the tenant command and
-  foundation surface.
-- Branch Manager is not an Admin user with fewer tabs. Branch Manager owns a
-  branch command surface under `/br/[branchId]/*`.
-- Domain workspaces (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`) are
-  not Admin sub-pages. They are workflow surfaces filtered by role, branch, and
-  permission.
+- Admin Dashboard is the Owner-only tenant command, cross-branch visibility,
+  and control plane.
+- Branch Manager is not an Admin user with fewer tabs. Branch Manager and Staff
+  work under `/br/[branchId]/*`; Owner may enter Branch for oversight.
+- `/inventory`, `/orders`, `/hr`, `/finance`, `/menu`, `/branches`, and
+  `/admin` are modules inside Admin Dashboard, not independent product planes.
+  Branch equivalents must use Branch-native routes.
 
 ## Scope Layers
 
-| Layer         | Meaning                                                                                | Primary routes                                                           | Primary owners                                |
-| ------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------- |
-| L0 Tenant     | Chain identity, branch network, roles, permissions, executive reports, tenant settings | `/admin/*`, tenant-wide workspace views                                  | `owner`                                       |
-| L1 Branch     | Store floor, POS/KDS setup, branch staff day flow, menu limits, local operations       | `/br/[branchId]/*`, branch-scoped workspace views                        | `branch_manager`, with owner oversight        |
-| Domain        | Procurement, inventory, orders, HR, finance, menu/catalog workflows                    | `/inventory/*`, `/orders/*`, `/hr/*`, `/finance/*`, `/menu/*`            | Role-specific operators                       |
-| Staff Runtime | Profile, attendance, leave request, payslip, notifications                             | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`, `/notifications/*` | Branch-pinned roles                            |
+| Layer                       | Meaning                                                                                                  | Primary routes                                                                           | Primary audience                   |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------- |
+| L0 Tenant / Admin Dashboard | Chain identity, branch network, permissions, Owner metrics, cross-branch modules, tenant settings        | `/admin/*`, `/inventory/*`, `/orders/*`, `/hr/*`, `/finance/*`, `/menu/*`, `/branches/*` | `owner` only                       |
+| L1 Branch                   | Store floor, Branch Hub, local setup, inventory/orders/team workflows, staff day runtime, POS/KDS/Runner | `/br/[branchId]/*`                                                                       | Branch roles, with Owner oversight |
 
 ## Canonical Surfaces
 
-| Surface             | Route family                                                                                      | Scope             | Default audience                                             | Contract                                                                                                                                                                                                                                                                                                               |
-| ------------------- | ------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tenant Setup        | `/admin/settings/general`, `/admin/settings/branches`, `/hr/staff/*`                              | L0                | `owner`                                                      | Configure HKD identity, branch network, positions, permission templates, and staff access. Includes the read-only permission audit log (`/hr/staff/audit`).                                                                                                                                                            |
-| Branch Command      | `/br/[branchId]/dashboard`                                                                        | L1                | `branch_manager`, owner oversight                            | Deep branch management surface for one branch: today status, POS/KDS health, staff day flow, pending local tasks, and links to branch setup.                                                                                                                                                                           |
-| Branch Setup        | `/br/[branchId]/settings/*`                                                                       | L1                | `branch_manager`, owner oversight                            | Configure tables, POS terminals, KDS stations, printers, POS sessions, and branch-local operating settings.                                                                                                                                                                                                            |
-| Branch Operations   | `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]/menu-limits`, `/br/[branchId]/runner` | L1                | Store operators and branch manager, owner cover-ca           | Run service. Never require the operator to understand Admin. Branch Hub is the promoted home for every active role; Owner workspaces remain permission-gated shortcuts.                                                                                                                                                |
-| Inventory Workspace | `/inventory/*`                                                                                    | L0/L1/domain site | owner, branch_manager | Stock, GRN, stocktake, production, consumption, waste and reports by branch. Actions remain permission- and branch-scoped. |
-| Orders Workspace    | `/orders/*`                                                                                       | L0/L1             | owner, branch_manager, cashier                               | Cross-branch or branch-filtered order management depending on role and scope.                                                                                                                                                                                                                                          |
-| HR Workspace        | `/hr/*`                                                                                           | L0/L1             | owner, branch_manager                                        | HR control workspace: owner manages staff records, staff account handoff, employment profile, global shift setup, position-to-workday setup, payroll, and labor-contract fields. Branch manager only gets branch-safe attendance/leave oversight. Branch daily clock/work execution stays in `/br/[branchId]/shift/*`. |
-| Finance Workspace   | `/finance/*`                                                                                      | L0                | owner                 | HKD operating finance, revenue, expenses, cash summary, inventory value handoff, food-cost signal, and tax-support exports. Includes the HĐĐT register (`/finance/invoices`) and the B2C daily-summary trigger (`/finance/summary`); actions remain permission-gated. |
-| Ca của tôi / Hồ sơ  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                              | L1/self           | branch-pinned roles   | Personal day-flow and profile surfaces: clock, workday tasks, schedule, leave request, payslip. Not an HR admin substitute. |
+| Surface                    | Route family                                                                                               | Scope                               | Default audience                    | Contract                                                                                                                                                                      |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Admin Dashboard            | `/admin/*`, `/inventory/*`, `/orders/*`, `/hr/*`, `/finance/*`, `/menu/*`, `/branches/*`                   | L0 / cross-branch                   | `owner` only                        | Tenant setup, staff access, Finance, cross-branch Inventory/Orders/HR/Menu, reports, and Owner controls. Route surface audience is checked before reusable module capability. |
+| Branch Hub                 | `/br/[branchId]`                                                                                           | L1                                  | Branch roles; Owner oversight       | Sole Branch home: live work queues and curated job entries, without Owner-only links or KPI-card dashboard chrome.                                                            |
+| Dashboard alias            | `/br/[branchId]/dashboard`                                                                                 | L1                                  | `branch_manager`; Owner oversight   | Compatibility redirect to Branch Hub. It owns no data, navigation entry, or independent presentation.                                                                         |
+| Branch setup and workflows | `/br/[branchId]/settings/*`, `/team/*`, `/shift/*`, `/stock/*`, `/orders`, `/menu-limits`, `/pos-sessions` | L1                                  | Capability- and branch-scoped roles | Daily Branch management and staff work. The URL owns Branch scope; actions remain permission-gated.                                                                           |
+| Branch station modes       | `/br/[branchId]/pos`, `/kds`, `/runner`                                                                    | L1/public exact display             | Role-specific operators             | Full-screen Branch chrome modes, not separate product planes.                                                                                                                 |
+| Root / notifications       | `/`, `/notifications`                                                                                      | pre-context / authenticated utility | authenticated roles                 | Owner uses `/` to choose Admin Dashboard or Branch even with one Branch; Branch roles may resolve directly to their assigned Branch.                                          |
 
 ## HR Workspace Semantics
 
-`/hr` is a workspace, not the whole authorization model and not the daily staff
-app. Its meaning is narrow:
+`/hr` is an Owner-only Admin Dashboard module, not the daily staff app. Branch
+Manager and Staff people workflows remain in Branch:
 
-| Operation                             | Owning surface                                                                                      | Meaning                                                                                                                                            |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Add/update/deactivate staff access    | `/hr/staff/*`                                                                                       | Owner-only auth/profile/position/branch assignment. Route bucket `staff`; actions gate on `staff:*` permissions.                                   |
-| Employee record, salary profile, HĐLĐ | `/hr` employees tab                                                                                 | `employees` + active `employment_contracts`. Owner writes employee/compensation/contract fields; branch manager only reads the branch-safe subset. |
-| Assignment / position work            | `/hr` setup tab and `/br/[branchId]/team/*`                                                         | Owner defines global position-to-workday rules. Branch team surfaces show or arrange daily branch people work.                                     |
-| Ca làm                                | `/hr` setup tab                                                                                     | Owner manages the global shift catalog and open/close flags. Actual clock-in/out and checklist execution happen under `/br/[branchId]/shift/*`.    |
-| Phép nghỉ                             | `/br/[branchId]/shift/schedule/leave`, `/br/[branchId]/shift/leave-approvals`, `/hr` attendance tab | Staff requests leave from branch runtime; branch manager/owner approve in branch runtime; HR workspace reads the oversight list.                   |
-| Lương                                 | `/hr/payroll/*`                                                                                     | Owner-only payroll calculation/export. Payroll reads attendance, paid leave, and active contracts; it is not a branch shift UI.                    |
+| Operation                             | Owning surface                                                                                      | Meaning                                                                                                                                         |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Add/update/deactivate staff access    | `/hr/staff/*`                                                                                       | Owner-only auth/profile/position/branch assignment. Route bucket `staff`; actions gate on `staff:*` permissions.                                |
+| Employee record, salary profile, HĐLĐ | `/hr` employees tab                                                                                 | `employees` + active `employment_contracts`; Owner reads/writes the management record. Branch Manager does not enter `/hr`.                     |
+| Assignment / position work            | `/hr` setup tab and `/br/[branchId]/team/*`                                                         | Owner defines global position-to-workday rules. Branch team surfaces show or arrange daily branch people work.                                  |
+| Ca làm                                | `/hr` setup tab                                                                                     | Owner manages the global shift catalog and open/close flags. Actual clock-in/out and checklist execution happen under `/br/[branchId]/shift/*`. |
+| Phép nghỉ                             | `/br/[branchId]/shift/schedule/leave`, `/br/[branchId]/shift/leave-approvals`, `/hr` attendance tab | Staff requests and Branch Manager/Owner approves in Branch; Owner reviews cross-branch oversight in Admin Dashboard.                            |
+| Lương                                 | `/hr/payroll/*`                                                                                     | Owner-only payroll calculation/export. Payroll reads attendance, paid leave, and active contracts; it is not a branch shift UI.                 |
 
 ## Role Boundaries
 
@@ -74,13 +72,13 @@ per-device destination derived from `scope.ts`/`branch-hub.ts`. This table
 states the durable "can manage / must not become" boundary, which the code
 does not fully encode and stays hand-authored.
 
-| Role bucket          | Can manage                                                                                            | Must not become                 |
-| -------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `owner`              | Tenant governance, branch network, permission grants, finance/reports, emergency oversight in domains | Daily floor operator by default |
-| `branch_manager`     | One branch: POS/KDS/floor settings, branch day flow, branch inventory tasks, branch staff approvals   | Partial Admin user              |
-| `cashier`            | POS orders, payments, receipts according to grants                                                    | Branch settings owner           |
-| `chef`               | KDS ready/recall and kitchen status according to grants                                               | Inventory production manager    |
-| `branch_staff`       | Shift/profile day runtime according to branch assignment                                              | POS/KDS or tenant admin by label |
+| Role bucket      | Can manage                                                                                            | Must not become                  |
+| ---------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `owner`          | Tenant governance, branch network, permission grants, finance/reports, emergency oversight in domains | Daily floor operator by default  |
+| `branch_manager` | One branch: POS/KDS/floor settings, branch day flow, branch inventory tasks, branch staff approvals   | Partial Admin user               |
+| `cashier`        | POS orders, payments, receipts according to grants                                                    | Branch settings owner            |
+| `chef`           | KDS ready/recall and kitchen status according to grants                                               | Inventory production manager     |
+| `branch_staff`   | Shift/profile day runtime according to branch assignment                                              | POS/KDS or tenant admin by label |
 
 ## Permission Boundary
 
@@ -106,29 +104,31 @@ current fact.
 
 ## Module ACL (generated)
 
-Single source: `packages/shared/src/auth/module-acl.ts`. "Nav/tile
-advertisement source" lists every nav array in `nav-config.ts` that
-surfaces the module to a role; a module with no source is reachable only
-by direct URL or as a redirect target.
+Single source: `packages/shared/src/auth/module-acl.ts`. Capability roles
+describe reusable module access, not final URL admission. The route
+surface audience is applied separately; every `admin_dashboard` family is
+Owner-only even when its module capability is reused inside Branch. "Nav/tile
+advertisement source" lists every nav array that surfaces the module; a
+module with no source is reachable only by direct URL or as a redirect target.
 
-| Module key | Route path | Allowed roles | Nav/tile advertisement source |
-| ---------- | ---------- | ------------- | ------------------------------ |
-| `menu` | `/menu` | Chủ sở hữu, Quản lý chi nhánh | Workspace nav |
-| `inventory` | `/inventory` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals); Operator tile (stock); Workspace nav |
+| Module key | Default path | Capability roles | Nav/tile advertisement source |
+| ---------- | ------------ | ---------------- | ------------------------------ |
+| `menu` | `/menu` | Chủ sở hữu | Admin Dashboard nav |
+| `inventory` | `/inventory` | Chủ sở hữu, Quản lý chi nhánh | Admin Dashboard nav; Operator tile (approvals); Operator tile (stock) |
 | `inventory_procurement` | `/inventory/suppliers` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (stock) |
-| `orders` | `/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | Operator tile (sales_kitchen); Workspace nav |
+| `orders` | `/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | Admin Dashboard nav; Operator tile (sales_kitchen) |
 | `staff` | `/hr/staff` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
-| `hr` | `/hr` | Chủ sở hữu, Quản lý chi nhánh | Workspace nav |
+| `hr` | `/hr` | Chủ sở hữu, Quản lý chi nhánh | Admin Dashboard nav |
 | `hr_payroll` | `/hr/payroll` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
-| `finance` | `/finance` | Chủ sở hữu | Workspace nav |
-| `branches` | `/branches` | Chủ sở hữu | Workspace nav |
+| `finance` | `/finance` | Chủ sở hữu | Admin Dashboard nav |
+| `branches` | `/branches` | Chủ sở hữu | Admin Dashboard nav |
 | `branch_picker` | `/` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
-| `settings` | `/admin/settings` | Chủ sở hữu | Admin sidebar |
+| `settings` | `/admin/settings` | Chủ sở hữu | Admin Dashboard nav |
 | `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `kds` | `/br/*/kds` | Chủ sở hữu, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `runner` | `/br/*/runner` | Chủ sở hữu, Thu ngân, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `operator_home` | `/br/*` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | Operator tile (my_shift) |
-| `branch_dashboard` | `/br/*/dashboard` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
+| `branch_dashboard` | `/br/*/dashboard` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 | `branch_settings` | `/br/*/settings` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `branch_menu_limits` | `/br/*/menu-limits` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `branch_pos_sessions` | `/br/*/pos-sessions` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav |
@@ -148,41 +148,41 @@ declared before their broader siblings.
 | Family id | Surface | Entry path | Match prefixes | Module keys | Requires branchId |
 | --------- | ------- | ---------- | --------------- | ----------- | ------------------ |
 | `public` | public | `/login` | `/login`, `/access-denied`, `/payment/momo`, `/api/health`, `/api/webhooks`, `/manifest.webmanifest`, `/sw.js` | — | no |
-| `admin` | admin | `/admin/settings` | `/admin` | `settings` | no |
-| `menu` | workspace | `/menu` | `/menu` | `menu` | no |
-| `orders` | workspace | `/orders` | `/orders` | `orders` | no |
-| `inventory` | workspace | `/inventory` | `/inventory` | `inventory`, `inventory_procurement` | no |
-| `finance` | workspace | `/finance` | `/finance` | `finance` | no |
-| `branches` | workspace | `/branches` | `/branches` | `branches` | no |
-| `hr` | workspace | `/hr` | `/hr` | `hr`, `hr_payroll`, `staff` | no |
-| `notifications` | workspace | `/notifications` | `/notifications` | `notifications` | no |
-| `branch-picker` | branch_operation | `/` | `/`, `/br` | `branch_picker` | no |
-| `operator-home` | branch_operation | `/br/[branchId]` | `/br/[branchId]` | `operator_home` | yes |
-| `operator-shift-checkout-approvals` | branch_operation | `/br/[branchId]/shift/checkout-approvals` | `/br/[branchId]/shift/checkout-approvals` | `employee_checkout_approvals` | yes |
-| `operator-shift-leave-approvals` | branch_operation | `/br/[branchId]/shift/leave-approvals` | `/br/[branchId]/shift/leave-approvals` | `employee_leave_approvals` | yes |
-| `operator-shift` | branch_operation | `/br/[branchId]/shift` | `/br/[branchId]/shift` | `operator_home` | yes |
-| `operator-profile` | branch_operation | `/br/[branchId]/profile` | `/br/[branchId]/profile` | `operator_home` | yes |
-| `operator-stock` | branch_operation | `/br/[branchId]/stock` | `/br/[branchId]/stock` | `inventory` | yes |
-| `operator-orders` | branch_operation | `/br/[branchId]/orders` | `/br/[branchId]/orders` | `orders` | yes |
-| `branch-menu-limits` | branch_operation | `/br/[branchId]/menu-limits` | `/br/[branchId]/menu-limits` | `branch_menu_limits` | yes |
-| `branch-pos-sessions` | branch_operation | `/br/[branchId]/pos-sessions` | `/br/[branchId]/pos-sessions` | `branch_pos_sessions` | yes |
-| `branch-settings` | branch_management | `/br/[branchId]/settings` | `/br/[branchId]/settings` | `branch_settings` | yes |
-| `branch-dashboard` | branch_management | `/br/[branchId]/dashboard` | `/br/[branchId]/dashboard` | `branch_dashboard` | yes |
-| `branch-team` | branch_management | `/br/[branchId]/team` | `/br/[branchId]/team` | `branch_team` | yes |
-| `pos` | branch_operation | `/br/[branchId]/pos` | `/br/[branchId]/pos` | `pos` | yes |
-| `kds` | branch_operation | `/br/[branchId]/kds` | `/br/[branchId]/kds` | `kds` | yes |
-| `runner` | branch_operation | `/br/[branchId]/runner` | `/br/[branchId]/runner` | `runner` | yes |
+| `admin` | admin_dashboard | `/admin/settings` | `/admin` | `settings` | no |
+| `menu` | admin_dashboard | `/menu` | `/menu` | `menu` | no |
+| `orders` | admin_dashboard | `/orders` | `/orders` | `orders` | no |
+| `inventory` | admin_dashboard | `/inventory` | `/inventory` | `inventory`, `inventory_procurement` | no |
+| `finance` | admin_dashboard | `/finance` | `/finance` | `finance` | no |
+| `branches` | admin_dashboard | `/branches` | `/branches` | `branches` | no |
+| `hr` | admin_dashboard | `/hr` | `/hr` | `hr`, `hr_payroll`, `staff` | no |
+| `notifications` | branch | `/notifications` | `/notifications` | `notifications` | no |
+| `branch-picker` | branch | `/` | `/`, `/br` | `branch_picker` | no |
+| `operator-home` | branch | `/br/[branchId]` | `/br/[branchId]` | `operator_home` | yes |
+| `operator-shift-checkout-approvals` | branch | `/br/[branchId]/shift/checkout-approvals` | `/br/[branchId]/shift/checkout-approvals` | `employee_checkout_approvals` | yes |
+| `operator-shift-leave-approvals` | branch | `/br/[branchId]/shift/leave-approvals` | `/br/[branchId]/shift/leave-approvals` | `employee_leave_approvals` | yes |
+| `operator-shift` | branch | `/br/[branchId]/shift` | `/br/[branchId]/shift` | `operator_home` | yes |
+| `operator-profile` | branch | `/br/[branchId]/profile` | `/br/[branchId]/profile` | `operator_home` | yes |
+| `operator-stock` | branch | `/br/[branchId]/stock` | `/br/[branchId]/stock` | `inventory` | yes |
+| `operator-orders` | branch | `/br/[branchId]/orders` | `/br/[branchId]/orders` | `orders` | yes |
+| `branch-menu-limits` | branch | `/br/[branchId]/menu-limits` | `/br/[branchId]/menu-limits` | `branch_menu_limits` | yes |
+| `branch-pos-sessions` | branch | `/br/[branchId]/pos-sessions` | `/br/[branchId]/pos-sessions` | `branch_pos_sessions` | yes |
+| `branch-settings` | branch | `/br/[branchId]/settings` | `/br/[branchId]/settings` | `branch_settings` | yes |
+| `branch-dashboard` | branch | `/br/[branchId]/dashboard` | `/br/[branchId]/dashboard` | `branch_dashboard` | yes |
+| `branch-team` | branch | `/br/[branchId]/team` | `/br/[branchId]/team` | `branch_team` | yes |
+| `pos` | branch | `/br/[branchId]/pos` | `/br/[branchId]/pos` | `pos` | yes |
+| `kds` | branch | `/br/[branchId]/kds` | `/br/[branchId]/kds` | `kds` | yes |
+| `runner` | branch | `/br/[branchId]/runner` | `/br/[branchId]/runner` | `runner` | yes |
 
 ## Post-Login Home By Role (generated)
 
 Derived from `resolvePostLoginRedirect` (`scope.ts`) falling through to
 `resolveBranchHubDestination` (`branch-hub.ts`) for the no-`returnTo`,
 no-standalone-station case — i.e. where a fresh login actually lands.
-D077 promotes Branch Hub for every active access bucket and excludes central-kind sites.
+Owner retains the plane picker; Branch-pinned roles land in Branch Hub. Central-kind sites are excluded.
 
-| Role | Desktop / office context | Phone / station context | Notes |
-| ---- | ------------------------- | ------------------------ | ----- |
-| Chủ sở hữu (`owner`) | / (auto-opens the sole operating branch) | / (auto-opens the sole operating branch) | D077: only branch-kind sites are operable; multiple operating branches retain the picker. Owner-only workspaces remain permission-gated shortcuts from Branch Hub. |
+| Role | Desktop / standard context | Phone / station context | Notes |
+| ---- | -------------------------- | ----------------------- | ----- |
+| Chủ sở hữu (`owner`) | / (Admin Dashboard / Branch picker) | / (Admin Dashboard / Branch picker) | Owner always chooses the product plane, even with one operating Branch. Admin Dashboard links are not embedded in Branch Hub. |
 | Quản lý chi nhánh (`branch_manager`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | Branch-pinned roles land in the Branch Hub for their JWT branch_id. |
 | Thu ngân (`cashier`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | Branch-pinned roles land in the Branch Hub for their JWT branch_id. |
 | Bếp (`chef`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | Branch-pinned roles land in the Branch Hub for their JWT branch_id. |
@@ -190,21 +190,22 @@ D077 promotes Branch Hub for every active access bucket and excludes central-kin
 
 ## Permission Boundary (generated)
 
-Route family -> required route bucket (module ACL union) -> the action-gate
-permission keys in that family's namespace(s), read from
+Route family -> route-surface audience overlaid on the module capability
+union -> the action-gate permission keys in that family's namespace(s),
+read from
 `PERMISSION_KEYS` in `permissions.ts`. This is the full set in-namespace,
 not a hand-picked sample — route access and action authorization stay
-separate gates (route bucket here, permission key at the mutation site).
+separate gates (effective route audience here, permission key at the mutation site).
 
-| Route family | Route prefix(es) | Required route bucket | Action gate keys (from `permissions.ts`) |
-| ------------ | ------------------ | ----------------------- | ------------------------------------------ |
+| Route family | Route prefix(es) | Effective route audience | Action gate keys (from `permissions.ts`) |
+| ------------ | ------------------ | ------------------------ | ------------------------------------------ |
 | admin | `/admin` | owner | `settings:branch`, `settings:branch_network`, `settings:integrations`, `settings:tenant` |
-| menu | `/menu` | branch_manager/owner | `menu:manage_category`, `menu:publish`, `menu:read`, `menu:write` |
-| orders | `/orders` | branch_manager/cashier/owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |
-| inventory | `/inventory` | branch_manager/owner | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:units_master`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
+| menu | `/menu` | owner | `menu:manage_category`, `menu:publish`, `menu:read`, `menu:write` |
+| orders | `/orders` | owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |
+| inventory | `/inventory` | owner | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:units_master`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
 | finance | `/finance` | owner | `finance:ap_pay`, `finance:expense_approve`, `finance:expense_create`, `finance:payroll_approve`, `finance:payroll_calculate`, `finance:view` |
 | branches | `/branches` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
-| hr | `/hr` | branch_manager/owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
+| hr | `/hr` | owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
 | notifications | `/notifications` | branch_manager/branch_staff/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-picker | `/`, `/br` | branch_manager/branch_staff/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-home | `/br/[branchId]` | branch_manager/branch_staff/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
@@ -241,13 +242,12 @@ Branch manager needs a branch flow that answers:
 - What branch tasks need action now?
 - Where do I correct branch setup without entering tenant Admin?
 
-Root entry (`/`) resolves active `branch`-kind rows and opens the branch
-directly when there is exactly one. Branch-pinned roles still land directly at
-`/br/{branchId}`. Owner enters through `/`, not Finance, and sees the same
-Branch Hub plus permission-gated management shortcuts. A central-kind or
-otherwise out-of-scope `/br/[branchId]` fails closed instead of substituting a
-different branch. Branch Command remains a branch-scoped management surface
-from the Operator hub, not a new top-level hub.
+Root entry (`/`) resolves active `branch`-kind rows. Owner always remains on the
+picker and chooses Admin Dashboard or a Branch, even when only one Branch is
+active. Branch-pinned roles may land directly at `/br/{branchId}`. Branch Hub
+contains no Admin Dashboard shortcuts; Owner changes plane through the picker.
+A central-kind or otherwise out-of-scope Branch URL fails closed instead of
+substituting another branch. `/br/{branchId}/dashboard` only redirects to Hub.
 
 ## Change Checklist
 
@@ -260,7 +260,11 @@ Any PR that changes role/surface behavior must update these together:
 - `packages/shared/src/auth/app-discovery.ts`
 - `packages/shared/src/auth/scope.ts`
 - `packages/shared/src/auth/branch-hub.ts`
+- `apps/web/proxy.ts`
+- `apps/web/app/_components/work-location-picker-page.tsx`
 - Auth/navigation tests in `packages/shared/src/auth/__tests__/`
+- Static and browser tests proving non-Owner Admin Dashboard denial while
+  Branch-native capability routes remain reachable.
 - This spec's hand-authored product boundaries only when the rule itself changes.
 
 The `## Module ACL`, `## Route Family Contracts`, `## Post-Login Home By

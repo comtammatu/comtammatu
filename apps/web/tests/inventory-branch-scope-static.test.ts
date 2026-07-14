@@ -228,17 +228,17 @@ test("adapter -> query error degrades to empty scope, canSelectAll intact", asyn
 
 /* ─── resolveInventoryListScope (D058 W3b — one engine for both scope-read paths) ─── */
 
-test("list scope -> embedded routeBranchId and office ?branchId= resolve through the identical selectBranchScope call", async () => {
+test("list scope -> embedded routeBranchId and Admin Dashboard ?branchId= share one selectBranchScope call", async () => {
   // Same owner claims requesting the same branch (2) two ways: as a
   // validated URL segment (embedded/br runtime) and as a raw ?branchId=
-  // query string (office plane). Both must land on the exact same
+  // query string (Admin Dashboard plane). Both must land on the exact same
   // selection — proving there is one engine, not two parallel readers.
   const embedded = await resolveInventoryListScope(
     fakeSupabase(BRANCHES, null).supabase,
     claims("owner", 1),
     { routeBranchId: 2 },
   );
-  const office = await resolveInventoryListScope(
+  const adminDashboard = await resolveInventoryListScope(
     fakeSupabase(BRANCHES, null).supabase,
     claims("owner", 1),
     { queryBranchId: "2" },
@@ -246,11 +246,11 @@ test("list scope -> embedded routeBranchId and office ?branchId= resolve through
 
   assert.deepEqual(
     { ...embedded, outOfScope: undefined },
-    { ...office, outOfScope: undefined },
+    { ...adminDashboard, outOfScope: undefined },
   );
   assert.equal(embedded.selectedBranchId, 2);
   assert.equal(embedded.outOfScope, false);
-  assert.equal(office.outOfScope, false);
+  assert.equal(adminDashboard.outOfScope, false);
 });
 
 test("list scope -> routeBranchId always wins over a conflicting query value", () => {
@@ -275,7 +275,7 @@ test("list scope -> embedded branch outside the caller's allowed set flags outOf
   assert.equal(scope.outOfScope, true);
 });
 
-test("list scope -> office ?branchId= never triggers outOfScope, only clamps the selection", async () => {
+test("list scope -> Admin Dashboard ?branchId= only clamps selection and never triggers outOfScope", async () => {
   const scope = await resolveInventoryListScope(
     fakeSupabase(BRANCHES, null).supabase,
     claims("cashier", 2),

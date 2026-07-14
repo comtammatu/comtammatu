@@ -125,7 +125,7 @@ test("resolveOperatorTiles -> retired supplier returns stay out of the branch ti
   );
 });
 
-test("resolveOperatorTiles -> operator hub does not duplicate office workspace links", () => {
+test("resolveOperatorTiles -> operator hub does not duplicate Admin Dashboard links", () => {
   const groups = resolveOperatorTiles("owner", 3);
   const groupIds = groups.map((group) => String(group.id));
   const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));
@@ -162,7 +162,7 @@ test("resolveOperatorTiles -> branch stock group renders the branch tile set", (
     [
       "Sản xuất",
       "Tồn kho",
-            "Kiểm kê",
+      "Kiểm kê",
       "Giao đếm",
       "Hao hụt",
       "Tiêu hao",
@@ -190,7 +190,6 @@ test("resolveOperatorTiles -> branch kitchen transfer tile is retired", () => {
     false,
   );
 });
-
 
 test("resolveOperatorTiles -> orders tile is branch-native under sales_kitchen, not office_bridge", () => {
   const groups = resolveOperatorTiles("owner", 3);

@@ -85,7 +85,7 @@ const SurfaceNestingContext =
   createContext<SurfaceNesting>(SURFACE_NESTING_NONE);
 
 /**
- * Marks the AppShell main region as the owner of the Management frame padding so
+ * Marks the AppShell main region as the owner of Admin Dashboard frame padding so
  * a nested AppPage drops its own padding (keeping its centered max-width). Keeps
  * page padding from compounding into the double-padding the audit flagged.
  */

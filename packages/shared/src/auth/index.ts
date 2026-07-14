@@ -21,8 +21,8 @@ export {
   requiredBranchKindForPositionCode,
   staffRoleFromPositionCode,
 } from "./types";
-export type { ModuleKey } from "./module-acl";
-export { MODULE_ACL, canAccess } from "./module-acl";
+export type { ModuleKey, RouteAccessSurface } from "./module-acl";
+export { MODULE_ACL, canAccess, canAccessRouteSurface } from "./module-acl";
 export type { BranchHubContext, StationKind } from "./branch-hub";
 export { resolveBranchHubDestination } from "./branch-hub";
 export type { PermissionKey } from "./permissions";
@@ -52,8 +52,7 @@ export {
 } from "./inventory-roles";
 export type {
   NavItemConfig,
-  NavGroupConfig,
-  WorkspaceNavItemConfig,
+  AdminDashboardNavItemConfig,
   BranchScopedNavItemConfig,
   BranchManagementNavItemConfig,
   BranchOperationNavItemConfig,
@@ -61,9 +60,8 @@ export type {
   OperatorTileGroupId,
 } from "./nav-config";
 export {
-  ADMIN_NAV_GROUPS,
+  ADMIN_DASHBOARD_ITEMS,
   BRANCH_MANAGEMENT_ITEMS,
-  DOMAIN_WORKSPACE_ITEMS,
   BRANCH_OPERATION_ITEMS,
   OPERATOR_TILE_GROUP_ORDER,
   OPERATOR_TILE_GROUP_TITLES,
@@ -81,13 +79,13 @@ export type {
   ResolvedNavLink,
 } from "./nav-resolution";
 export {
-  resolveAdminNavGroups,
+  resolveAdminDashboardItems,
+  resolveAdminDashboardNavGroups,
   resolveBranchManagementItems,
   resolveBranchOperationItems,
   resolveNavLink,
   resolveQuickLaunchGroups,
   resolveRoleHomeLink,
-  resolveWorkspaceItems,
 } from "./nav-resolution";
 export type {
   AppDiscoveryBlockedReason,
@@ -97,12 +95,11 @@ export type {
   DiscoveredAppLink,
 } from "./app-discovery";
 export {
-  resolveAdminDiscoveryGroups,
+  resolveAdminDashboardDiscoveryGroup,
   resolveBranchManagementDiscoveryGroup,
   resolveBranchOperationDiscoveryGroup,
   resolveDiscoveredAppGroups,
   resolveDiscoveredApps,
-  resolveWorkspaceDiscoveryGroup,
 } from "./app-discovery";
 export type {
   RouteBackBehavior,

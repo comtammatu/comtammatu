@@ -17,7 +17,7 @@ test("Branch count assignment owns a keyboard and touch native presenter", () =>
   const team = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/team/assignments/assignments-content.tsx",
   );
-  const officeClient = read(
+  const adminDashboardClient = read(
     "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
   );
 
@@ -37,7 +37,10 @@ test("Branch count assignment owns a keyboard and touch native presenter", () =>
   );
   assert.match(team, /BranchCountAssignmentsClient/);
   assert.doesNotMatch(team, /CountAssignmentsPageContent/);
-  assert.doesNotMatch(officeClient, /buildBranchCountHref|openCountScreen/);
+  assert.doesNotMatch(
+    adminDashboardClient,
+    /buildBranchCountHref|openCountScreen/,
+  );
 });
 
 test("Branch count slip review owns a touch queue and Branch revalidation", () => {
@@ -82,7 +85,7 @@ test("Branch count slip review owns a touch queue and Branch revalidation", () =
   );
 });
 
-test("Office count management keeps desktop-responsive presenters", () => {
+test("Admin Dashboard count management keeps desktop-responsive presenters", () => {
   const assignments = read(
     "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
   );
@@ -90,11 +93,11 @@ test("Office count management keeps desktop-responsive presenters", () => {
     "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
   );
 
-  for (const officeClient of [assignments, slips]) {
-    assert.match(officeClient, /<DataTable/);
-    assert.match(officeClient, /<AppDialog/);
+  for (const adminDashboardClient of [assignments, slips]) {
+    assert.match(adminDashboardClient, /<DataTable/);
+    assert.match(adminDashboardClient, /<AppDialog/);
     assert.doesNotMatch(
-      officeClient,
+      adminDashboardClient,
       /useSwipeReveal|useLongPress|<Drawer|<SheetContent/,
     );
   }

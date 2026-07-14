@@ -84,9 +84,11 @@ test("operator header keeps profile and notifications in chrome", () => {
   assert.match(appHeader, /homeHref\?: string/);
   assert.match(appHeader, /<Link[\s\S]*href=\{href\}/);
   assert.match(appHeader, /"min-h-11 min-w-11 shrink-0 justify-center"/);
-  assert.match(layout, /IconLayoutDashboard/);
-  assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/dashboard`\}/);
-  assert.match(layout, /aria-label=\{APP_COPY_VI\.branchCommand\}/);
+  assert.doesNotMatch(layout, /IconLayoutDashboard|\/dashboard/);
+  assert.match(
+    layout,
+    /claims\.user_role === "owner" \|\| context\.canSwitchBranch/,
+  );
   assert.match(layout, /IconUser/);
   assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/profile`\}/);
   assert.match(layout, /aria-label=\{messages\.operator\.nav\.profileShort\}/);
@@ -326,7 +328,6 @@ test("branch management roots use Branch operator shell adapters", () => {
   );
 
   for (const path of [
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/team/page.tsx",
@@ -374,34 +375,29 @@ test("operator home keeps KPI overview out of the Hub", () => {
   assert.doesNotMatch(home, /KpiCard|HubOverview|fetchBranchDayStatus/);
 });
 
-test("branch dashboard renders command lanes instead of Office-style KPI summary", () => {
+test("Branch dashboard compatibility route redirects to the canonical Branch Hub", () => {
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
-  const commandConfig = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
-  );
 
-  assert.match(dashboard, /tileGroups\.liveOperations/);
-  assert.ok(
-    dashboard.indexOf("tileGroups.liveOperations") <
-      dashboard.indexOf("copy.readinessTitle"),
-    "Live operation lane should render before readiness status",
-  );
+  assert.match(dashboard, /parseOperatorBranchId/);
+  assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
   assert.doesNotMatch(
     dashboard,
-    /KpiRow|KpiCard|formatVND|dayRevenueLabel|dayPaidOrdersLabel|dayTablesLabel|dayKitchenLabel/,
+    /fetchBranchDayStatus|BranchOperatorPage|KpiCard/,
   );
-  assert.match(commandConfig, /liveOperations:/);
-  for (const moduleKey of [
-    "pos",
-    "kds",
-    "runner",
-    "branch_menu_limits",
-    "orders",
-  ]) {
-    assert.match(commandConfig, new RegExp(`moduleKey: "${moduleKey}"`));
-  }
+  assert.equal(
+    exists(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
+    ),
+    false,
+  );
+  assert.equal(
+    exists(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_components/command-sections.tsx",
+    ),
+    false,
+  );
 });
 
 test("branch settings hub stays a setup-only Branch operator surface", () => {
@@ -467,7 +463,7 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
     assert.match(source, /redirect\(`\/br\/\$\{branchId\}\/settings`\)/);
     assert.doesNotMatch(
       source,
-      /<AppPage\b|AppPageHeader|BranchManagementShell|OfficeModuleShell|ManagementShell|KpiCard/,
+      /<AppPage\b|AppPageHeader|BranchManagementShell|AdminDashboardModuleShell|ManagementShell|KpiCard/,
       path,
     );
   }

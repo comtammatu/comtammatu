@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut as IconLogout } from "lucide-react";
 import { ROLE_LABEL_VI, type StaffRole } from "@comtammatu/shared/auth";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { cn } from "@comtammatu/ui";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Button } from "@comtammatu/ui/components/button";
@@ -34,7 +35,7 @@ import {
 } from "@/lib/shell-primitives";
 import { AppShellPaddingBoundary } from "@/components/surface";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
-import { WorkspaceBottomNav } from "@/components/workspace-bottom-nav";
+import { AdminDashboardBottomNav } from "@/components/admin-dashboard-bottom-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { messages } from "@lib/messages";
@@ -43,14 +44,14 @@ export interface AppShellHeaderConfig {
   actions?: ReactNode;
   /** Renders in the shell utility bar, left of actions. */
   headerExtras?: ReactNode;
-  /** Renders below the utility bar on screens < md, full-width sticky band. */
+  /** Renders below the utility bar on screens < lg, full-width sticky band. */
   mobileTopBar?: ReactNode;
 }
 
 export interface AppShellProps {
   children: ReactNode;
   user: { name: string };
-  /** Current user's role — drives the sidebar eyebrow label. */
+  /** Current user's role — shown in the account footer. */
   role: StaffRole;
   /** Primary module tabs for the single sidebar. */
   tier1: ShellNavItem[];
@@ -58,8 +59,8 @@ export interface AppShellProps {
   tier2: ShellNavGroup[];
   shellHeader?: AppShellHeaderConfig;
   /**
-   * Mobile-only workspace bottom navbar (same nav model as the sidebar +
-   * drawer trigger). Default true for all back-office shells.
+   * Compact Admin Dashboard bottom navbar below `lg`, using the same resolved
+   * navigation model as the fixed sidebar.
    */
   bottomNav?: boolean;
 }
@@ -107,7 +108,7 @@ export function AppShell({
             </BrandLogoBox>
             <div className="min-w-0 flex flex-1 flex-col gap-1">
               <SectionLabel className="text-sidebar-foreground/60">
-                {ROLE_LABEL_VI[role]}
+                {APP_COPY_VI.adminDashboard}
               </SectionLabel>
               <p className="truncate font-heading text-base font-semibold leading-tight">
                 {copy.brandName}
@@ -197,9 +198,12 @@ export function AppShell({
             <Avatar size="sm">
               <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
             </Avatar>
-            <span className="min-w-0 flex-1 truncate text-xs font-medium">
-              {user.name}
-            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium">{user.name}</p>
+              <p className="truncate text-2xs text-sidebar-foreground/60">
+                {ROLE_LABEL_VI[role]}
+              </p>
+            </div>
             <form action="/api/auth/signout" method="post">
               <Button
                 type="submit"
@@ -240,7 +244,9 @@ export function AppShell({
           </AppShellPaddingBoundary>
         </div>
       </SidebarInset>
-      {bottomNav ? <WorkspaceBottomNav tier1={tier1} tier2={tier2} /> : null}
+      {bottomNav ? (
+        <AdminDashboardBottomNav tier1={tier1} tier2={tier2} />
+      ) : null}
     </SidebarProvider>
   );
 }

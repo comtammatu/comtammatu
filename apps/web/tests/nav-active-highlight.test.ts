@@ -70,13 +70,15 @@ test("finance deep-nav landing is wired exact, mirroring inventory", () => {
   );
 });
 
-test("mobile workspace bottom nav reuses the shell nav model", () => {
+test("mobile Admin Dashboard bottom nav reuses the shell nav model", () => {
   const appShell = read("apps/web/app/components/app-shell.tsx");
-  const bottomNav = read("apps/web/app/components/workspace-bottom-nav.tsx");
+  const bottomNav = read(
+    "apps/web/app/components/admin-dashboard-bottom-nav.tsx",
+  );
 
   assert.match(
     appShell,
-    /<WorkspaceBottomNav tier1=\{tier1\} tier2=\{tier2\}/,
+    /<AdminDashboardBottomNav tier1=\{tier1\} tier2=\{tier2\}/,
     "AppShell must pass the shared nav model to the mobile bottom nav",
   );
   assert.match(bottomNav, /tier2: ShellNavGroup\[\]/);
@@ -119,27 +121,27 @@ test("management shell renders one sidebar with nested active-tab sub-nav", () =
   assert.match(
     appShell,
     /<SidebarProvider open=\{true\}>/,
-    "office sidebar must default open and remain controlled open",
+    "Admin Dashboard sidebar must default open and remain controlled open",
   );
   assert.match(
     appShell,
     /collapsible="offcanvas"/,
-    "desktop office sidebar must not use collapsed icon mode",
+    "desktop Admin Dashboard sidebar must not use collapsed icon mode",
   );
   assert.doesNotMatch(
     appShell,
     /<SidebarRail|collapsible="icon"/,
-    "office sidebar must not expose the desktop collapsed rail mode",
+    "Admin Dashboard sidebar must not expose the desktop collapsed rail mode",
   );
   assert.doesNotMatch(
     appShell,
     /BranchSwitcher|branchOptions|showBackLink|resolveRoleHomeLink|brand\./,
-    "office sidebar chrome must stay fixed and must not accept module branch/back/brand state",
+    "Admin Dashboard sidebar chrome must stay fixed and must not accept module branch/back/brand state",
   );
   assert.match(
     appShell,
     /<BrandMark\s+variant="seal"/,
-    "office sidebar brand must render the fixed tenant seal",
+    "Admin Dashboard sidebar brand must render the fixed tenant seal",
   );
   assert.match(
     appShell,

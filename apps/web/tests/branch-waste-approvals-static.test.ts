@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("Branch waste approvals preserve touch review and Office isolation", () => {
+test("Branch waste approvals preserve touch review and Admin Dashboard isolation", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx",
   );
@@ -15,10 +15,10 @@ test("Branch waste approvals preserve touch review and Office isolation", () => 
   );
   const data = read("apps/web/lib/inventory/waste-approvals-data.ts");
   const model = read("apps/web/lib/inventory/waste-approval-model.ts");
-  const officePage = read(
+  const adminDashboardPage = read(
     "apps/web/app/(protected)/inventory/waste/approvals/page.tsx",
   );
-  const officeClient = read(
+  const adminDashboardClient = read(
     "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx",
   );
 
@@ -48,8 +48,8 @@ test("Branch waste approvals preserve touch review and Office isolation", () => 
     /\bWasteApprovalsClient\b|DocumentFormFrame|DataTable|embedded/,
   );
 
-  assert.match(officePage, /loadWasteApprovalsData/);
-  assert.match(officeClient, /<AppPage/);
-  assert.doesNotMatch(officePage, /routeBranchId|embedded/);
-  assert.doesNotMatch(officeClient, /embedded/);
+  assert.match(adminDashboardPage, /loadWasteApprovalsData/);
+  assert.match(adminDashboardClient, /<AppPage/);
+  assert.doesNotMatch(adminDashboardPage, /routeBranchId|embedded/);
+  assert.doesNotMatch(adminDashboardClient, /embedded/);
 });

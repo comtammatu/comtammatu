@@ -15,10 +15,10 @@ test("Branch stock reports use a native per-unit touch presentation", () => {
   );
   const data = read("apps/web/lib/inventory/branch-stock-report-data.ts");
   const model = read("apps/web/lib/inventory/branch-stock-report-model.ts");
-  const officePage = read(
+  const adminDashboardPage = read(
     "apps/web/app/(protected)/inventory/reports/page.tsx",
   );
-  const officeClient = read(
+  const adminDashboardClient = read(
     "apps/web/app/(protected)/inventory/reports/reports-client.tsx",
   );
 
@@ -45,16 +45,19 @@ test("Branch stock reports use a native per-unit touch presentation", () => {
   assert.match(model, /getBranchStockMovementHighlights/);
   assert.doesNotMatch(model, /totalQuantity|movementTotals/);
 
-  assert.match(officePage, /export async function ReportsPageContent\(\)/);
-  assert.match(officePage, /fetchApAging\(\)/);
+  assert.match(
+    adminDashboardPage,
+    /export async function ReportsPageContent\(\)/,
+  );
+  assert.match(adminDashboardPage, /fetchApAging\(\)/);
   assert.doesNotMatch(
-    officePage,
+    adminDashboardPage,
     /routeBranchId|resolveInventoryBranchScope|embedded/,
   );
-  assert.match(officeClient, /<AppPageHeader/);
+  assert.match(adminDashboardClient, /<AppPageHeader/);
   assert.match(
-    officeClient,
+    adminDashboardClient,
     /<AppPage width="xwide" density="compact" scroll>/,
   );
-  assert.doesNotMatch(officeClient, /supplierInvoicesHref|embedded/);
+  assert.doesNotMatch(adminDashboardClient, /supplierInvoicesHref|embedded/);
 });

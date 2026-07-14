@@ -1,20 +1,25 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { canAccess, type ModuleKey } from "../module-acl";
+import {
+  canAccess,
+  canAccessRouteSurface,
+  type ModuleKey,
+} from "../module-acl";
 import { STAFF_ROLES } from "../types";
-import { ROUTE_FAMILY_CONTRACTS } from "../route-map";
+import {
+  resolveRouteFamilyContract,
+  ROUTE_FAMILY_CONTRACTS,
+} from "../route-map";
 import { resolveModuleFromPath } from "../route-resolution";
 import {
-  ADMIN_NAV_GROUPS,
+  ADMIN_DASHBOARD_ITEMS,
   BRANCH_MANAGEMENT_ITEMS,
-  DOMAIN_WORKSPACE_ITEMS,
   OPERATOR_TILE_ITEMS,
 } from "../nav-config";
 import {
-  resolveAdminNavGroups,
+  resolveAdminDashboardItems,
   resolveBranchManagementItems,
-  resolveWorkspaceItems,
 } from "../nav-resolution";
 
 // Guards the route-table contract (D058 W0): every path a route family
@@ -93,6 +98,26 @@ test("every ROUTE_FAMILY_CONTRACTS entry's concrete paths resolve to a declared 
   );
 });
 
+test("every top-level Admin Dashboard family is classified Owner-only", () => {
+  const paths = [
+    "/admin/settings",
+    "/menu",
+    "/orders",
+    "/inventory/suppliers",
+    "/finance",
+    "/branches",
+    "/hr",
+  ] as const;
+
+  for (const path of paths) {
+    assert.equal(resolveRouteFamilyContract(path)?.surface, "admin_dashboard");
+  }
+  assert.equal(canAccessRouteSurface("owner", "admin_dashboard"), true);
+  for (const role of STAFF_ROLES.filter((role) => role !== "owner")) {
+    assert.equal(canAccessRouteSurface(role, "admin_dashboard"), false, role);
+  }
+});
+
 function assertHrefResolvesForAudience(
   href: string,
   audienceRoles: readonly string[],
@@ -114,47 +139,24 @@ function assertHrefResolvesForAudience(
   }
 }
 
-test("resolveAdminNavGroups hrefs resolve to a module reachable by an admin-audience role", () => {
+test("Admin Dashboard hrefs resolve to Owner-reachable modules", () => {
   const failures: string[] = [];
 
-  for (const group of ADMIN_NAV_GROUPS) {
-    for (const item of group.items) {
-      const audienceRoles = STAFF_ROLES.filter((role) =>
-        resolveAdminNavGroups(role).some((resolvedGroup) =>
-          resolvedGroup.items.some((link) => link.moduleKey === item.moduleKey),
-        ),
-      );
-      if (audienceRoles.length === 0) continue;
-
-      const sampleRole = audienceRoles[0]!;
-      const link = resolveAdminNavGroups(sampleRole)
-        .flatMap((resolvedGroup) => resolvedGroup.items)
-        .find((navLink) => navLink.moduleKey === item.moduleKey);
-      assert.ok(link, `expected a resolved link for ${item.moduleKey}`);
-      assertHrefResolvesForAudience(link.href, audienceRoles, failures);
-    }
-  }
-
-  assert.equal(failures.length, 0, failures.join("\n"));
-});
-
-test("resolveWorkspaceItems hrefs resolve to a module reachable by an audience role", () => {
-  const failures: string[] = [];
-
-  for (const item of DOMAIN_WORKSPACE_ITEMS) {
-    const audienceRoles = STAFF_ROLES.filter((role) =>
-      resolveWorkspaceItems(role).some(
-        (link) => link.moduleKey === item.moduleKey,
-      ),
-    );
-    if (audienceRoles.length === 0) continue;
-
-    const sampleRole = audienceRoles[0]!;
-    const link = resolveWorkspaceItems(sampleRole).find(
+  for (const item of ADMIN_DASHBOARD_ITEMS) {
+    const link = resolveAdminDashboardItems("owner").find(
       (navLink) => navLink.moduleKey === item.moduleKey,
     );
     assert.ok(link, `expected a resolved link for ${item.moduleKey}`);
-    assertHrefResolvesForAudience(link.href, audienceRoles, failures);
+    assertHrefResolvesForAudience(link.href, ["owner"], failures);
+
+    for (const role of STAFF_ROLES.filter((role) => role !== "owner")) {
+      assert.equal(
+        resolveAdminDashboardItems(role).some(
+          (navItem) => navItem.moduleKey === item.moduleKey,
+        ),
+        false,
+      );
+    }
   }
 
   assert.equal(failures.length, 0, failures.join("\n"));

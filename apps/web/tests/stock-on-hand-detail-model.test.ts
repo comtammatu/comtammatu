@@ -65,7 +65,7 @@ test("ingredient detail movement links stay in the selected Branch stock plane",
   );
 });
 
-test("Office movement links retain the management detail route", () => {
+test("Admin Dashboard movement links retain the management detail route", () => {
   assert.equal(
     stockMovementReferenceHref({
       movement: makeMovement({ grnId: 44 }),

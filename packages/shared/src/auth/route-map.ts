@@ -1,18 +1,15 @@
 import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
-import { MODULE_ACL, type ModuleKey } from "./module-acl";
+import {
+  MODULE_ACL,
+  type ModuleKey,
+  type RouteAccessSurface,
+} from "./module-acl";
 import { isPublicAppPath, resolveModuleFromPath } from "./route-resolution";
 
-export type RouteSurface =
-  | "admin"
-  | "workspace"
-  | "branch_management"
-  | "branch_operation"
-  | "public";
+export type RouteSurface = RouteAccessSurface;
 
 export type RoutePrimaryNav =
-  | "admin-sidebar"
-  | "workspace-sidebar"
-  | "management-sidebar"
+  | "admin-dashboard-sidebar"
   | "operator-bottom-nav"
   | "operational-chrome"
   | "none";
@@ -56,11 +53,11 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "admin",
     label: APP_COPY_VI.settingsLabel,
-    surface: "admin",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.settings.path,
     matchPrefixes: ["/admin"],
     moduleKeys: ["settings"],
-    primaryNav: "admin-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "none",
     breadcrumbRoot: APP_COPY_VI.settingsLabel,
     requiresBranchId: false,
@@ -68,94 +65,94 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "menu",
     label: MODULE_ACL.menu.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.menu.path,
     matchPrefixes: [MODULE_ACL.menu.path],
     moduleKeys: ["menu"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.adminDashboard,
     requiresBranchId: false,
   },
   {
     id: "orders",
     label: MODULE_ACL.orders.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.orders.path,
     matchPrefixes: [MODULE_ACL.orders.path],
     moduleKeys: ["orders"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.adminDashboard,
     requiresBranchId: false,
   },
   {
     id: "inventory",
     label: MODULE_ACL.inventory.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.inventory.path,
     // MODULE_ACL.inventory.path ("/inventory") prefix-matches every
     // /inventory/* sub-route already; the INVENTORY_ROUTE_PREFIXES spread
     // here was fully redundant (D058 W3).
     matchPrefixes: [MODULE_ACL.inventory.path],
     moduleKeys: ["inventory", "inventory_procurement"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.adminDashboard,
     requiresBranchId: false,
   },
   {
     id: "finance",
     label: MODULE_ACL.finance.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.finance.path,
     matchPrefixes: [MODULE_ACL.finance.path],
     moduleKeys: ["finance"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.adminDashboard,
     requiresBranchId: false,
   },
   {
     id: "branches",
     label: MODULE_ACL.branches.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.branches.path,
     matchPrefixes: [MODULE_ACL.branches.path],
     moduleKeys: ["branches"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.adminDashboard,
     requiresBranchId: false,
   },
   {
     id: "hr",
     label: MODULE_ACL.hr.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.hr.path,
     matchPrefixes: [MODULE_ACL.hr.path],
     moduleKeys: ["hr", "hr_payroll", "staff"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.adminDashboard,
     requiresBranchId: false,
   },
   {
     id: "notifications",
     label: MODULE_ACL.notifications.label,
-    surface: "workspace",
+    surface: "branch",
     entryPath: MODULE_ACL.notifications.path,
     matchPrefixes: [MODULE_ACL.notifications.path],
     moduleKeys: ["notifications"],
-    primaryNav: "workspace-sidebar",
-    backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    primaryNav: "none",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: false,
   },
   {
     id: "branch-picker",
     label: MODULE_ACL.branch_picker.label,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: MODULE_ACL.branch_picker.path,
     matchPrefixes: ["/", "/br"],
     moduleKeys: ["branch_picker"],
@@ -167,7 +164,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "operator-home",
     label: MODULE_ACL.operator_home.label,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]",
     matchPrefixes: ["/br/[branchId]"],
     moduleKeys: ["operator_home"],
@@ -182,7 +179,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     // less-specific prefix wins.
     id: "operator-shift-checkout-approvals",
     label: MODULE_ACL.employee_checkout_approvals.label,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]/shift/checkout-approvals",
     matchPrefixes: ["/br/[branchId]/shift/checkout-approvals"],
     moduleKeys: ["employee_checkout_approvals"],
@@ -197,7 +194,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     // less-specific prefix wins.
     id: "operator-shift-leave-approvals",
     label: MODULE_ACL.employee_leave_approvals.label,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]/shift/leave-approvals",
     matchPrefixes: ["/br/[branchId]/shift/leave-approvals"],
     moduleKeys: ["employee_leave_approvals"],
@@ -209,7 +206,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "operator-shift",
     label: APP_COPY_VI.employeePortal,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]/shift",
     matchPrefixes: ["/br/[branchId]/shift"],
     moduleKeys: ["operator_home"],
@@ -221,7 +218,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "operator-profile",
     label: APP_COPY_VI.employeePortal,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]/profile",
     matchPrefixes: ["/br/[branchId]/profile"],
     moduleKeys: ["operator_home"],
@@ -233,7 +230,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "operator-stock",
     label: MODULE_ACL.inventory.label,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]/stock",
     matchPrefixes: ["/br/[branchId]/stock"],
     moduleKeys: ["inventory"],
@@ -245,7 +242,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "operator-orders",
     label: MODULE_ACL.orders.label,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]/orders",
     matchPrefixes: ["/br/[branchId]/orders"],
     moduleKeys: ["orders"],
@@ -257,7 +254,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "branch-menu-limits",
     label: MODULE_ACL.branch_menu_limits.label,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]/menu-limits",
     matchPrefixes: ["/br/[branchId]/menu-limits"],
     moduleKeys: ["branch_menu_limits"],
@@ -269,7 +266,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "branch-pos-sessions",
     label: MODULE_ACL.branch_pos_sessions.label,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]/pos-sessions",
     matchPrefixes: ["/br/[branchId]/pos-sessions"],
     moduleKeys: ["branch_pos_sessions"],
@@ -281,7 +278,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "branch-settings",
     label: MODULE_ACL.branch_settings.label,
-    surface: "branch_management",
+    surface: "branch",
     entryPath: "/br/[branchId]/settings",
     matchPrefixes: ["/br/[branchId]/settings"],
     moduleKeys: ["branch_settings"],
@@ -293,7 +290,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "branch-dashboard",
     label: MODULE_ACL.branch_dashboard.label,
-    surface: "branch_management",
+    surface: "branch",
     entryPath: "/br/[branchId]/dashboard",
     matchPrefixes: ["/br/[branchId]/dashboard"],
     moduleKeys: ["branch_dashboard"],
@@ -305,7 +302,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "branch-team",
     label: MODULE_ACL.branch_team.label,
-    surface: "branch_management",
+    surface: "branch",
     entryPath: "/br/[branchId]/team",
     matchPrefixes: ["/br/[branchId]/team"],
     moduleKeys: ["branch_team"],
@@ -317,7 +314,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "pos",
     label: MODULE_ACL.pos.label,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]/pos",
     matchPrefixes: ["/br/[branchId]/pos"],
     moduleKeys: ["pos"],
@@ -329,7 +326,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "kds",
     label: MODULE_ACL.kds.label,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]/kds",
     matchPrefixes: ["/br/[branchId]/kds"],
     moduleKeys: ["kds"],
@@ -341,7 +338,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "runner",
     label: MODULE_ACL.runner.label,
-    surface: "branch_operation",
+    surface: "branch",
     entryPath: "/br/[branchId]/runner",
     matchPrefixes: ["/br/[branchId]/runner"],
     moduleKeys: ["runner"],

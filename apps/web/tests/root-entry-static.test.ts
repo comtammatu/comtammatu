@@ -24,5 +24,12 @@ test("root route renders the work location picker", () => {
   );
   assert.match(pickerPage, /AppLinkCard/);
   assert.match(pickerPage, /href=\{`\/br\/\$\{site\.id\}`\}/);
+  assert.match(pickerPage, /showAdminDashboardCard/);
+  assert.match(pickerPage, /APP_COPY_VI\.adminDashboard/);
+  assert.match(
+    pickerPage,
+    /orderedSites\.length === 1 && !showAdminDashboardCard/,
+  );
+  assert.doesNotMatch(pickerPage, /officePlane|Văn phòng/);
   assert.doesNotMatch(rootPage, /messages\.appEntry/);
 });

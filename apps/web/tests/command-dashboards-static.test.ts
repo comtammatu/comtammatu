@@ -18,8 +18,6 @@ const PRINT_JOBS_CLIENT =
   "apps/web/app/(protected)/admin/settings/printers/jobs/print-jobs-client.tsx";
 const BRANCH_PAGE =
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx";
-const BRANCH_COMMAND_CONFIG =
-  "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx";
 const BRANCH_DATA =
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts";
 const BACKTICK = "`";
@@ -180,41 +178,25 @@ test("print job monitor keeps the owner recovery filter", () => {
   );
 });
 
-test("branch command landing surfaces operations and readiness", () => {
+test("Branch dashboard compatibility route resolves to the canonical Hub", () => {
   const page = read(BRANCH_PAGE);
-  // Per-row readiness config (buildReadinessItems) is extracted into the
-  // co-located command-config; assert readiness keys against both sources.
-  const surface = page + read(BRANCH_COMMAND_CONFIG);
 
-  assert.doesNotMatch(page, /\bKpi(?:Row|Card)\b/);
-  assert.match(page, /fetchBranchDayStatus/);
-  assert.match(page, /readinessTitle/);
-  assert.match(surface, /readinessPosTitle/);
-  assert.match(surface, /readinessPrinterTitle/);
-  assert.match(surface, /readinessCheckoutTitle/);
-  assert.match(surface, /checkoutApprovalsHref/);
-  assert.match(page, /branch\.branch_kind !== "branch"/);
-  assert.match(page, /const floorHref =[\s\S]*day\.tablesTotal <= 0/);
-  assert.match(page, /day\.setupActiveTerminals <= 0/);
-  assert.match(page, /\/br\/\$\{branchId\}\/shift\/checkout-approvals/);
-  assert.doesNotMatch(surface, /\/employee\/checkout-approvals/);
+  assert.match(page, /parseOperatorBranchId/);
+  assert.match(page, /redirect\(`\/br\/\$\{branchId\}`\)/);
+  assert.doesNotMatch(page, /fetchBranchDayStatus|KpiRow|KpiCard/);
 });
 
-test("branch day status service-client reads carry explicit tenant+branch filters", () => {
+test("Branch Hub queue service reads carry explicit tenant and branch filters", () => {
   const data = read(BRANCH_DATA);
 
-  assert.match(data, /supabase\.rpc\("list_branch_menu_daily_limits"/);
-  assert.match(data, /menuLimitAvailableItems/);
-  assert.match(data, /available_to_sell/);
-  assert.doesNotMatch(data, /setupActiveMenuItems/);
-  assert.doesNotMatch(data, /\.from\("menu_items"\)/);
-  assert.match(
-    data,
-    /service\s*\.from\("pos_sessions"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
-  );
+  assert.doesNotMatch(data, /fetchBranchDayStatus|todayRevenue|paidOrders/);
+  assert.doesNotMatch(data, /\.from\("payments"\)|\.from\("tables"\)/);
   assert.match(
     data,
     /service\s*\.from\("attendance_records"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
   );
-  assert.match(data, /fail-soft/i);
+  assert.match(
+    data,
+    /\.from\("stock_transfers"\)[\s\S]{0,220}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("to_branch_id", branchId\)/,
+  );
 });

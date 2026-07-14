@@ -1,7 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { getCashierProfile } from "./helpers/supabase";
 import {
+  E2E_AUTH_STORAGE,
   E2E_AUTH_STORAGE_MANAGER,
   E2E_AUTH_STORAGE_OWNER,
 } from "../playwright.config";
@@ -13,9 +15,8 @@ const TABLET_PORTRAIT = { width: 768, height: 1024 };
 const TABLET_LANDSCAPE = { width: 1024, height: 768 };
 const DESKTOP = { width: 1440, height: 900 };
 
-const OFFICE_PREFIXES = [
+const ADMIN_DASHBOARD_PREFIXES = [
   "/admin",
-  "/branch-settings",
   "/branches",
   "/finance",
   "/hr",
@@ -27,6 +28,62 @@ const KNOWN_CONSOLE_NOISE = [
   /https:\/\/va\.vercel-scripts\.com\/v1\/.*violates the following Content Security Policy directive/,
   /violates the following Content Security Policy directive.*https:\/\/va\.vercel-scripts\.com\/v1\//,
 ];
+function parseLoopbackUrl(value: string | undefined): URL | null {
+  try {
+    const url = new URL(value ?? "");
+    return url.hostname === "localhost" || url.hostname === "127.0.0.1"
+      ? url
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+const LOCAL_E2E_BASE_URL = parseLoopbackUrl(process.env.E2E_BASE_URL);
+const LOCAL_SUPABASE_URL = parseLoopbackUrl(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+);
+const ALLOW_LOCAL_NEXT_START_NOISE =
+  process.env.E2E_LOCAL_NEXT_START === "true" &&
+  LOCAL_E2E_BASE_URL !== null;
+const ALLOW_LOCAL_SUPABASE_REALTIME_NOISE =
+  ALLOW_LOCAL_NEXT_START_NOISE && LOCAL_SUPABASE_URL !== null;
+const LOCAL_VERCEL_SCRIPT_URLS = LOCAL_E2E_BASE_URL
+  ? new Set([
+      `${LOCAL_E2E_BASE_URL.origin}/_vercel/speed-insights/script.js`,
+      `${LOCAL_E2E_BASE_URL.origin}/_vercel/insights/script.js`,
+    ])
+  : new Set<string>();
+const LOCAL_SUPABASE_WEBSOCKET_ORIGIN = LOCAL_SUPABASE_URL
+  ? `${LOCAL_SUPABASE_URL.protocol === "https:" ? "wss:" : "ws:"}//${LOCAL_SUPABASE_URL.host}`
+  : null;
+
+function isKnownConsoleNoise(message: ConsoleMessage): boolean {
+  const text = message.text();
+  if (!ALLOW_LOCAL_NEXT_START_NOISE) return false;
+  if (
+    KNOWN_CONSOLE_NOISE.some((pattern) => pattern.test(text))
+  ) {
+    return true;
+  }
+
+  const locationUrl = message.location().url;
+  if (LOCAL_VERCEL_SCRIPT_URLS.has(locationUrl)) {
+    return true;
+  }
+
+  return (
+    [...LOCAL_VERCEL_SCRIPT_URLS].some((scriptUrl) =>
+      text.startsWith(`Refused to execute script from '${scriptUrl}'`),
+    ) ||
+    (ALLOW_LOCAL_SUPABASE_REALTIME_NOISE &&
+      LOCAL_SUPABASE_WEBSOCKET_ORIGIN !== null &&
+      text.startsWith(
+        `Connecting to '${LOCAL_SUPABASE_WEBSOCKET_ORIGIN}/realtime/v1/websocket?`,
+      ) &&
+      text.includes("violates the following Content Security Policy directive"))
+  );
+}
 
 function watchPageHealth(page: Page) {
   const consoleErrors: string[] = [];
@@ -34,10 +91,9 @@ function watchPageHealth(page: Page) {
   const serverErrors: Array<{ status: number; url: string }> = [];
 
   page.on("console", (msg) => {
-    const text = msg.text();
     if (msg.type() !== "error") return;
-    if (KNOWN_CONSOLE_NOISE.some((pattern) => pattern.test(text))) return;
-    consoleErrors.push(text);
+    if (isKnownConsoleNoise(msg)) return;
+    consoleErrors.push(msg.text());
   });
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("response", (response) => {
@@ -49,16 +105,12 @@ function watchPageHealth(page: Page) {
   return { consoleErrors, pageErrors, serverErrors };
 }
 
-async function expectHealthyRoute(
-  page: Page,
-  path: string,
-  options: { allowWorkspaceLinks?: boolean } = {},
-) {
+async function expectHealthyRoute(page: Page, path: string) {
   await page.goto(path, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("load");
   await page.waitForTimeout(800);
 
-  const state = await page.evaluate((officePrefixes) => {
+  const state = await page.evaluate((adminDashboardPrefixes) => {
     const links = Array.from(document.querySelectorAll("a[href]")).map(
       (link) => link.getAttribute("href") ?? "",
     );
@@ -70,25 +122,22 @@ async function expectHealthyRoute(
           document.documentElement.scrollWidth,
           document.body.scrollWidth,
         ) - window.innerWidth,
-      officeLinkCount: links.filter((href) =>
-        officePrefixes.some((prefix) => href.startsWith(prefix)),
+      adminDashboardLinkCount: links.filter((href) =>
+        adminDashboardPrefixes.some((prefix) => href.startsWith(prefix)),
       ).length,
       isLoginSurface: /Đăng nhập|Log in to Vercel|Continue with Email/.test(
         text,
       ),
-      isAdminSurface: /Tổng quan quản trị|Điều hướng quản trị/.test(text),
+      hasAdminDashboardShell:
+        document.querySelector('[data-slot="sidebar-wrapper"]') !== null,
     };
-  }, OFFICE_PREFIXES);
+  }, ADMIN_DASHBOARD_PREFIXES);
 
   expect(state.pathname).toBe(path);
   expect(state.overflowX).toBeLessThanOrEqual(2);
-  if (options.allowWorkspaceLinks) {
-    expect(state.officeLinkCount).toBeGreaterThan(0);
-  } else {
-    expect(state.officeLinkCount).toBe(0);
-  }
+  expect(state.adminDashboardLinkCount).toBe(0);
   expect(state.isLoginSurface).toBe(false);
-  expect(state.isAdminSurface).toBe(false);
+  expect(state.hasAdminDashboardShell).toBe(false);
 }
 
 function expectedOwnerBottomNavCurrentCount(path: string, branchId: number) {
@@ -103,6 +152,7 @@ test.describe("branch route shell ownership", () => {
   test("manager opens its Branch Hub on mobile and desktop", async ({
     browser,
   }) => {
+    test.setTimeout(120_000);
     const context = await browser.newContext({
       storageState: E2E_AUTH_STORAGE_MANAGER,
     });
@@ -115,10 +165,22 @@ test.describe("branch route shell ownership", () => {
     const hubPath = new URL(page.url()).pathname;
     expect(hubPath).toMatch(/^\/br\/\d+$/);
 
-    for (const viewport of [MOBILE, DESKTOP]) {
+    for (const viewport of [
+      MOBILE,
+      TABLET_PORTRAIT,
+      TABLET_LANDSCAPE,
+      DESKTOP,
+    ]) {
       await page.setViewportSize(viewport);
-      await expectHealthyRoute(page, hubPath, { allowWorkspaceLinks: true });
+      await expectHealthyRoute(page, hubPath);
     }
+
+    await page.goto("/inventory/suppliers", {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page).toHaveURL(hubPath);
+    await page.goto(`${hubPath}/stock`, { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(`${hubPath}/stock`);
 
     expect(health.consoleErrors).toEqual([]);
     expect(health.pageErrors).toEqual([]);
@@ -146,16 +208,20 @@ test.describe("branch route shell ownership", () => {
     expect(health.serverErrors).toEqual([]);
   });
 
-  test("dashboard, settings and stock stay inside the branch operator shell on mobile", async ({
+  test("dashboard alias redirects while settings and stock stay inside the branch operator shell on mobile", async ({
     page,
   }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
     await page.setViewportSize(MOBILE);
     const { branchId } = await getCashierProfile();
     const health = watchPageHealth(page);
 
+    await page.goto(`/br/${branchId}/dashboard`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page).toHaveURL(`/br/${branchId}`);
+
     for (const path of [
-      `/br/${branchId}/dashboard`,
       `/br/${branchId}/settings`,
       `/br/${branchId}/settings/tables`,
       `/br/${branchId}/settings/pos`,
@@ -209,16 +275,15 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}/shift/clock`,
       `/br/${branchId}/shift/checkout-approvals`,
     ]) {
-      await expectHealthyRoute(page, path, {
-        allowWorkspaceLinks: path === `/br/${branchId}`,
-      });
+      await expectHealthyRoute(page, path);
       if (path === `/br/${branchId}`) {
         await expect(page.getByText("Cần xử lý")).toBeVisible();
         await expect(page.getByText("Bán hàng")).toBeVisible();
-        await expect(page.getByText("Quản lý cửa hàng")).toBeVisible();
-        await expect(page.getByText("Tài chính")).toBeVisible();
-        await expect(page.getByText("Nhân sự")).toBeVisible();
-        await expect(page.getByText("Lương")).toBeVisible();
+        await expect(page.getByText("Tài chính", { exact: true })).toHaveCount(
+          0,
+        );
+        await expect(page.getByText("Nhân sự", { exact: true })).toHaveCount(0);
+        await expect(page.getByText("Lương", { exact: true })).toHaveCount(0);
       }
       const operatorNav = page.getByRole("navigation", {
         name: APP_COPY_VI.operatorAriaLabel,
@@ -269,7 +334,9 @@ test.describe("branch route shell ownership", () => {
     expect(health.serverErrors).toEqual([]);
   });
 
-  test("Office count management keeps desktop tables", async ({ page }) => {
+  test("Admin Dashboard count management renders the correct desktop list state", async ({
+    page,
+  }) => {
     test.setTimeout(90_000);
     const { branchId } = await getCashierProfile();
     const health = watchPageHealth(page);
@@ -282,7 +349,18 @@ test.describe("branch route shell ownership", () => {
       await page.goto(path, { waitUntil: "domcontentloaded" });
       await page.waitForLoadState("load");
       await page.waitForTimeout(800);
-      await expect(page.locator("table").first()).toBeVisible();
+      const table = page.getByRole("table").first();
+      if (path.startsWith("/inventory/count-assignments")) {
+        await expect(
+          table.or(
+            page.getByText(INVENTORY_VI.countAssignNoWarehouseTitle, {
+              exact: true,
+            }),
+          ),
+        ).toBeVisible();
+      } else {
+        await expect(table).toBeVisible();
+      }
       const overflowX = await page.evaluate(
         () =>
           Math.max(
@@ -296,5 +374,108 @@ test.describe("branch route shell ownership", () => {
     expect(health.consoleErrors).toEqual([]);
     expect(health.pageErrors).toEqual([]);
     expect(health.serverErrors).toEqual([]);
+  });
+
+  test("Owner keeps the plane picker and cashier cannot enter Admin Dashboard", async ({
+    browser,
+  }) => {
+    const ownerContext = await browser.newContext({
+      storageState: E2E_AUTH_STORAGE_OWNER,
+    });
+    const ownerPage = await ownerContext.newPage();
+    await ownerPage.setViewportSize(MOBILE);
+    await ownerPage.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(ownerPage).toHaveURL("/");
+    await expect(
+      ownerPage.getByText(APP_COPY_VI.adminDashboard, { exact: true }),
+    ).toBeVisible();
+    await ownerContext.close();
+
+    const cashierContext = await browser.newContext({
+      storageState: E2E_AUTH_STORAGE,
+    });
+    const cashierPage = await cashierContext.newPage();
+    const { branchId } = await getCashierProfile();
+    await cashierPage.goto("/orders", { waitUntil: "domcontentloaded" });
+    await expect(cashierPage).toHaveURL(`/br/${branchId}`);
+    await cashierPage.goto(`/br/${branchId}/orders`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(cashierPage).toHaveURL(`/br/${branchId}/orders`);
+    await cashierContext.close();
+  });
+
+  test("Owner Admin Dashboard switches chrome at the exact lg breakpoint", async ({
+    browser,
+  }) => {
+    test.setTimeout(120_000);
+    const context = await browser.newContext({
+      storageState: E2E_AUTH_STORAGE_OWNER,
+    });
+    const page = await context.newPage();
+    const health = watchPageHealth(page);
+
+    for (const viewport of [
+      MOBILE,
+      TABLET_PORTRAIT,
+      TABLET_LANDSCAPE,
+      DESKTOP,
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto("/admin/settings/general", {
+        waitUntil: "domcontentloaded",
+      });
+      await page.waitForLoadState("load");
+      await page.waitForTimeout(800);
+
+      await expect(page).toHaveURL("/admin/settings/general");
+      await expect(page.locator('[data-slot="sidebar-wrapper"]')).toBeVisible();
+      await expect(page.locator('a[href^="/br/"]')).toHaveCount(0);
+
+      const overflowX = await page.evaluate(
+        () =>
+          Math.max(
+            document.documentElement.scrollWidth,
+            document.body.scrollWidth,
+          ) - window.innerWidth,
+      );
+      expect(overflowX).toBeLessThanOrEqual(2);
+
+      const bottomNav = page.getByRole("navigation", {
+        name: "Điều hướng quản trị",
+      });
+      const sidebarTrigger = page.locator('[data-slot="sidebar-trigger"]');
+      const desktopSidebar = page.locator('[data-slot="sidebar-container"]');
+
+      if (viewport.width < TABLET_LANDSCAPE.width) {
+        await expect(bottomNav).toBeVisible();
+        await expect(sidebarTrigger).toBeVisible();
+        await expect(desktopSidebar).toHaveCount(0);
+
+        if (viewport.width === MOBILE.width) {
+          await page.getByRole("button", { name: "Mô-đun" }).click();
+          const mobileSidebar = page.locator(
+            '[data-slot="sidebar"][data-mobile="true"]',
+          );
+          await expect(mobileSidebar).toBeVisible();
+          await expect(
+            mobileSidebar.getByText(APP_COPY_VI.adminDashboard, {
+              exact: true,
+            }),
+          ).toBeVisible();
+          await page.keyboard.press("Escape");
+          await expect(mobileSidebar).toBeHidden();
+        }
+      } else {
+        await expect(bottomNav).toBeHidden();
+        await expect(sidebarTrigger).toBeHidden();
+        await expect(desktopSidebar).toBeVisible();
+      }
+    }
+
+    expect(health.consoleErrors).toEqual([]);
+    expect(health.pageErrors).toEqual([]);
+    expect(health.serverErrors).toEqual([]);
+    await context.close();
   });
 });

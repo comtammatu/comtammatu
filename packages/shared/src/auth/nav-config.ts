@@ -1,12 +1,12 @@
 import type { ModuleKey } from "./module-acl";
 import type { BranchKind } from "./types";
-import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
+import { APP_COPY_VI } from "../labels";
 
 /**
  * Sidebar navigation configuration — derived from MODULE_ACL.
  * Icon names reference Lucide React (resolved in the UI layer).
- * This is the SINGLE source of nav structure — the Management shells project
- * from here via `resolveOfficePrimaryTabs` plus deep-nav resolvers.
+ * This is the SINGLE source of nav structure — the Admin Dashboard shell
+ * projects from here via shared, role-filtered resolvers.
  */
 
 export interface NavItemConfig {
@@ -15,12 +15,7 @@ export interface NavItemConfig {
   label?: string;
 }
 
-export interface NavGroupConfig {
-  title: string;
-  items: NavItemConfig[];
-}
-
-export interface WorkspaceNavItemConfig extends NavItemConfig {
+export interface AdminDashboardNavItemConfig extends NavItemConfig {
   label?: string;
 }
 
@@ -47,22 +42,13 @@ export interface OperatorTileConfig extends BranchScopedNavItemConfig {
   kinds?: readonly BranchKind[];
 }
 
-/** Admin-scoped settings. Domain work lives in the workspace modules below. */
-export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
+/** Owner-only Admin Dashboard destinations, including tenant setup. */
+export const ADMIN_DASHBOARD_ITEMS: AdminDashboardNavItemConfig[] = [
   {
-    title: NAV_GROUP_LABELS_VI.foundation,
-    items: [
-      {
-        moduleKey: "settings",
-        icon: "Settings",
-        label: APP_COPY_VI.settingsLabel,
-      },
-    ],
+    moduleKey: "settings",
+    icon: "Settings",
+    label: APP_COPY_VI.settingsLabel,
   },
-];
-
-/** Adjacent product surfaces accessible from the admin workspace */
-export const DOMAIN_WORKSPACE_ITEMS: WorkspaceNavItemConfig[] = [
   { moduleKey: "menu", icon: "Utensils", label: "Thực đơn" },
   { moduleKey: "orders", icon: "ClipboardList", label: "Đơn hàng" },
   { moduleKey: "inventory", icon: "Package", label: "Kho hàng" },
@@ -73,12 +59,6 @@ export const DOMAIN_WORKSPACE_ITEMS: WorkspaceNavItemConfig[] = [
 
 /** Branch-scoped management entry points */
 export const BRANCH_MANAGEMENT_ITEMS: BranchManagementNavItemConfig[] = [
-  {
-    moduleKey: "branch_dashboard",
-    icon: "LayoutDashboard",
-    hrefTemplate: "/br/{branchId}/dashboard",
-    label: APP_COPY_VI.branchCommand,
-  },
   {
     moduleKey: "branch_settings",
     icon: "Settings",

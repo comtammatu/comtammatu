@@ -796,7 +796,7 @@ const checks = [
   {
     id: "operator-no-stat-metric",
     description:
-      "Operator surfaces are job-first, not dashboards: numbers appear as badges on tiles/sections ONLY (design-system.md § Structural C -> Canonical operator-home skeleton). AppLinkCard's `metric` slot renders a mono stat readout and belongs to Office surfaces; under /br/ route the count through the `badge` slot.",
+      "Operator surfaces are job-first, not dashboards: numbers appear as badges on tiles/sections ONLY (design-system.md § Structural C -> Canonical operator-home skeleton). AppLinkCard's `metric` slot renders a mono stat readout and belongs to Admin Dashboard surfaces; under /br/ route the count through the `badge` slot.",
     roots: [{ dir: "apps/web/app/(protected)/br", extensions: [".tsx"] }],
     pattern: /\bmetric=\{/g,
     allowlist: {},
@@ -1196,9 +1196,9 @@ const checks = [
     allowlist: {},
   },
   {
-    id: "operator-office-shell-boundary",
+    id: "operator-admin-dashboard-shell-boundary",
     description:
-      "Branch runtime, Operations, and employee-lib surfaces must not import or render Management/Office chrome. Use the operator layout, AppHeader/AppBottomNav, EmployeePage, or embedded PageContent branches instead.",
+      "Branch runtime, Operations, and employee-lib surfaces must not import or render Admin Dashboard chrome. Use the operator layout, AppHeader/AppBottomNav, EmployeePage, or embedded PageContent branches instead.",
     roots: [
       {
         dir: "apps/web/app/(protected)/br/[branchId]",
@@ -1207,7 +1207,7 @@ const checks = [
       { dir: "apps/web/lib/staff-runtime", extensions: [".ts", ".tsx"] },
     ],
     pattern:
-      /\b(?:OfficeModuleShell|ManagementShell|AppShell|FinanceShell|InventoryShell|resolveOffice(?:PrimaryTabs|DeepNav))\b|["'][^"']*(?:office-module-shell|management-chrome|app-shell|office-nav|finance-shell|inventory-shell)["']|from\s+["']@\/\(protected\)\/inventory\/(?!_lib\/)(?!(?:[^"']*\/)?[^/"']*actions(?:\.ts)?["'])[^"']+["']/g,
+      /\b(?:AdminDashboardModuleShell|ManagementShell|AppShell|FinanceShell|InventoryShell|resolveAdminDashboard(?:PrimaryTabs|DeepNav))\b|["'][^"']*(?:admin-dashboard-module-shell|management-chrome|app-shell|admin-dashboard-nav|finance-shell|inventory-shell)["']|from\s+["']@\/\(protected\)\/inventory\/(?!_lib\/)(?!(?:[^"']*\/)?[^/"']*actions(?:\.ts)?["'])[^"']+["']/g,
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/ingredients/catalog-ingredients-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/suppliers/catalog-suppliers-client.tsx": 1,
@@ -1227,9 +1227,9 @@ const checks = [
     },
   },
   {
-    id: "operator-office-route-boundary",
+    id: "operator-admin-dashboard-route-boundary",
     description:
-      "Branch operator routes must not link or redirect into Office route roots; keep work inside /br/[branchId] or a shared non-office surface.",
+      "Branch operator routes must not link or redirect into Admin Dashboard route roots; keep work inside /br/[branchId] or a shared Branch surface.",
     roots: [
       {
         dir: "apps/web/app/(protected)/br/[branchId]/(operator)",
@@ -1305,7 +1305,7 @@ const checks = [
 // the two chrome families.
 const SHELL_REGISTRY_BASELINE = new Set([
   "apps/web/app/components/app-shell.tsx",
-  "apps/web/app/components/office-module-shell.tsx",
+  "apps/web/app/components/admin-dashboard-module-shell.tsx",
   "apps/web/app/(protected)/finance/components/finance-shell.tsx",
   "apps/web/app/(protected)/inventory/_components/inventory-shell.tsx",
   "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",
@@ -2082,6 +2082,7 @@ const ACL_PATHS = [
 const ROUTE_MANIFEST_SHIM_ROUTES = new Set([
   "/admin",
   "/br",
+  "/br/*/dashboard",
   "/inventory/drafts",
 ]);
 // ACL family roots without a landing page still resolve through shared ACL.
@@ -2298,7 +2299,7 @@ for (const file of allPageFiles) {
     !DOC_WORKFLOW_FRAME_BASELINE.has(file)
   ) {
     failures.push(
-      `page-archetype: ${file} is a DOC-WORKFLOW page without an approved frame in the page or its direct client owner. Office uses DocumentFormFrame; Branch touch uses BranchOperatorPage + BranchOperatorPanel + AppDetailFooter (docs/spec/page-archetypes.md § DOC-WORKFLOW).`,
+      `page-archetype: ${file} is a DOC-WORKFLOW page without an approved frame in the page or its direct client owner. Admin Dashboard uses DocumentFormFrame; Branch touch uses BranchOperatorPage + BranchOperatorPanel + AppDetailFooter (docs/spec/page-archetypes.md § DOC-WORKFLOW).`,
     );
   }
 }
@@ -2348,7 +2349,7 @@ const LIST_WIDTH_TIER_PINNED_PAGES = [
 // Read the width tier declared on the non-embedded page shell for a LIST page.
 // The shell (AppPage / InventoryPageContent) lives in a client co-located in the
 // page's own directory; the `embedded` return path is a bare <div>, so any shell
-// opening tag in that directory is the office-plane LIST shell. Returns the set
+// opening tag in that directory is the Admin Dashboard LIST shell. Returns the set
 // of tiers seen ("(default)" for a shell with no explicit width prop) so the
 // gate can flag any tier that is not exactly `xwide`.
 function readListShellWidthTiers(pageFile) {
@@ -2494,13 +2495,13 @@ for (const filePath of walkUiRuntimeFiles([".tsx"])) {
 }
 
 // operator-embedded-button-density (page-archetypes.md § Operator Embedded
-// Presentation Contract R3): office-density `size="sm"`/`size="xs"` on
+// Presentation Contract R3): Admin Dashboard density `size="sm"`/`size="xs"` on
 // `<Button>` inside a client component that is re-mounted embedded under
 // Branch runtime chrome (page-archetypes.md § EMBED-WRAPPER). A static gate
 // cannot see which JSX branch runs when `embedded` is true (the same
-// `content` block is often shared with the office plane), so this ratchets
+// `content` block is often shared with Admin Dashboard), so this ratchets
 // the raw per-file count instead of trying to attribute a hit to a specific
-// branch — shrink-only, so office-density buttons in these files can only
+// Branch — shrink-only, so Admin Dashboard density buttons in these files can only
 // decrease as they migrate to `size={embedded ? "touch" : "sm"}`. Scoped to
 // the embedded-mounted client files named in D058/D059, not every
 // EMBED-WRAPPER target — widen the file list only with a contract reason.
@@ -2531,14 +2532,14 @@ for (const relPath of OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES) {
   const allowed = OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE[relPath] ?? 0;
   if (count > allowed) {
     failures.push(
-      `operator-embedded-button-density: ${relPath} has ${count} office-density Button(s) (size="sm"/"xs"), allowed ${allowed}. Operator-plane primary actions use size={embedded ? "touch" : "sm"} (page-archetypes.md § Operator Embedded Presentation Contract R3).`,
+      `operator-embedded-button-density: ${relPath} has ${count} Admin Dashboard density Button(s) (size="sm"/"xs"), allowed ${allowed}. Operator-plane primary actions use size={embedded ? "touch" : "sm"} (page-archetypes.md § Operator Embedded Presentation Contract R3).`,
     );
   }
 }
 
 // operator-embedded-page-header-boundary (page-archetypes.md § Operator
 // Embedded Presentation Contract R1): an embedded Branch runtime screen must not
-// receive a nested `AppPageHeader` through shared canonical `content`. Office
+// receive a nested `AppPageHeader` through shared canonical `content`. Admin Dashboard
 // headers remain valid when explicitly gated by `embedded ? … : <AppPageHeader>`
 // or `!embedded ? <AppPageHeader> : …`.
 const OPERATOR_EMBEDDED_PAGE_HEADER_FILES = [
@@ -2580,7 +2581,7 @@ for (const relPath of OPERATOR_EMBEDDED_PAGE_HEADER_FILES) {
   const count = countOperatorEmbeddedPageHeaderLeaks(content);
   if (count > 0) {
     failures.push(
-      `operator-embedded-page-header-boundary: ${relPath} has ${count} shared content AppPageHeader leak(s). Gate Office headers on !embedded or split AppPageTabs/content out of AppPageHeader (page-archetypes.md § Operator Embedded Presentation Contract R1).`,
+      `operator-embedded-page-header-boundary: ${relPath} has ${count} shared content AppPageHeader leak(s). Gate Admin Dashboard headers on !embedded or split AppPageTabs/content out of AppPageHeader (page-archetypes.md § Operator Embedded Presentation Contract R1).`,
     );
   }
 }

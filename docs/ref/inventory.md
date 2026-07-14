@@ -15,18 +15,18 @@ kho không map được vào contract hiện có, cập nhật contract trước
 
 ## Current Contract
 
-| Nội dung                        | Current contract                                                                                                                                                                                                | Boundary                                               |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ GRN, tồn kho, production và recipe                                                                                                                                                | Không mở item master ERP nhiều lớp                     |
-| Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo giá vốn BQ khi có dữ liệu, fallback giá nhập tham chiếu khi cần hiển thị                                                                                | Không chuyển sang FIFO engine                          |
-| Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*`                                                                                             | Không mở lot-first ledger / batch accounting           |
+| Nội dung                        | Current contract                                                                                                                                                                                                             | Boundary                                               |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ GRN, tồn kho, production và recipe                                                                                                                                                           | Không mở item master ERP nhiều lớp                     |
+| Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo giá vốn BQ khi có dữ liệu, fallback giá nhập tham chiếu khi cần hiển thị                                                                                             | Không chuyển sang FIFO engine                          |
+| Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*`                                                                                                          | Không mở lot-first ledger / batch accounting           |
 | Mô hình site                    | `branches.branch_kind` enum giữ lịch sử; site active là chi nhánh (`branch`) với **một** location stock-bearing `warehouse` (Kho chi nhánh). `location_kind='kitchen'` (Bếp CN) và site `central_*` đã nghỉ vận hành (D078). | V1 không tạo bảng `inventory_sites`                    |
-| GRN / NCC                       | Nhập supplier-first qua GRN + RPC `confirm_goods_receipt_note`; PO chỉ còn dữ liệu lịch sử                                                                                                                        | Không mở PR/PO workflow nhiều bước                     |
-| Luân chuyển nội bộ              | Operator không mở Kho↔Bếp hay cross-branch mới (D078). `stock_transfers` lịch sử giữ trong DB/Office read-only.                                                                                                   | Không dùng `stock_transfer` cho tiêu hao/xuất hủy thật |
-| HĐ NCC                          | `supplier_invoices` và đối soát với hàng thực nhận là Finance handoff                                                                                                                                            | Không mở payment proposal engine trong Inventory       |
-| `recipes` + xuất kho theo order | `recipes` + RPC tiêu hao theo order                                                                                                                                                                             | Không mở multi-level BOM                               |
-| Thành phẩm + production hub     | `item_kind`, `production_recipes`, `production_runs`, route production tại chi nhánh (`branch`, D068)                                                                                                           | Không mở labor / overhead / WIP accounting đầy đủ      |
-| Hao hụt / sự cố                 | Waste/write-off + approvals và issue log; supplier return không còn daily surface                                                                                                                                | Không mở claim/insurance workflow                      |
+| GRN / NCC                       | Nhập supplier-first qua GRN + RPC `confirm_goods_receipt_note`; PO chỉ còn dữ liệu lịch sử                                                                                                                                   | Không mở PR/PO workflow nhiều bước                     |
+| Luân chuyển nội bộ              | Operator không mở Kho↔Bếp hay cross-branch mới (D078). `stock_transfers` lịch sử giữ trong DB/Admin Dashboard read-only.                                                                                                     | Không dùng `stock_transfer` cho tiêu hao/xuất hủy thật |
+| HĐ NCC                          | `supplier_invoices` và đối soát với hàng thực nhận là Finance handoff                                                                                                                                                        | Không mở payment proposal engine trong Inventory       |
+| `recipes` + xuất kho theo order | `recipes` + RPC tiêu hao theo order                                                                                                                                                                                          | Không mở multi-level BOM                               |
+| Thành phẩm + production hub     | `item_kind`, `production_recipes`, `production_runs`, route production tại chi nhánh (`branch`, D068)                                                                                                                        | Không mở labor / overhead / WIP accounting đầy đủ      |
+| Hao hụt / sự cố                 | Waste/write-off + approvals và issue log; supplier return không còn daily surface                                                                                                                                            | Không mở claim/insurance workflow                      |
 
 ## Scope Boundary
 
@@ -60,7 +60,6 @@ Kho CN → [phiếu xuất/tiêu hao] → `stock_movements.consumption`
 ```
 
 ### 1b. Luân chuyển lịch sử
-
 
 `stock_transfers` và movement `transfer_*` được giữ để đọc lịch sử. Operator
 không tạo same-branch Kho↔Bếp hoặc cross-branch transfer mới; phiếu
@@ -262,10 +261,10 @@ Trong current operation:
 Đây là Finance handoff. Inventory vẫn đóng ngày được nếu GRN/WAC/stock ledger
 đã đúng nhưng supplier invoice/payment/AP chưa hoàn tất.
 
-| Bước     | Kiểm tra         | Boundary             |
-| -------- | ---------------- | -------------------- |
-| GRN ↔ HĐ | SL HĐ / SL GRN   | HĐ không > thực nhận |
-| GRN ↔ HĐ | Đơn giá          | Lệch cần review rõ   |
+| Bước     | Kiểm tra       | Boundary             |
+| -------- | -------------- | -------------------- |
+| GRN ↔ HĐ | SL HĐ / SL GRN | HĐ không > thực nhận |
+| GRN ↔ HĐ | Đơn giá        | Lệch cần review rõ   |
 
 `matching_status`: `pending` | `matched` | `discrepancy` | `approved` (ngoại lệ có duyệt).
 

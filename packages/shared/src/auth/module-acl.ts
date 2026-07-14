@@ -31,6 +31,9 @@ export type ModuleKey =
   | "employee_leave_approvals"
   | "notifications";
 
+/** Product-plane audience policy, separate from reusable module capability. */
+export type RouteAccessSurface = "admin_dashboard" | "branch" | "public";
+
 interface ModuleAcl {
   path: string;
   allowedRoles: readonly StaffRole[];
@@ -40,7 +43,7 @@ interface ModuleAcl {
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   menu: {
     path: "/menu",
-    allowedRoles: ["owner", "branch_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("menu"),
   },
   inventory: {
@@ -192,4 +195,12 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
 export function canAccess(role: StaffRole, moduleKey: ModuleKey): boolean {
   if (role === "owner") return true;
   return MODULE_ACL[moduleKey].allowedRoles.includes(role);
+}
+
+/** Admin Dashboard is tenant-wide and exclusively owned by the Owner role. */
+export function canAccessRouteSurface(
+  role: StaffRole,
+  surface: RouteAccessSurface,
+): boolean {
+  return surface !== "admin_dashboard" || role === "owner";
 }
