@@ -58,6 +58,7 @@ export function OrdersPageBody({
         <RefundsClient
           initialRefunds={refunds}
           canApprove={canApproveRefund}
+          branches={branches}
         />
       </TabsContent>
     </AppPageTabs>

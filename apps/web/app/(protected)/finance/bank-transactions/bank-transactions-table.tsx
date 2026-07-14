@@ -299,6 +299,9 @@ function MatchCell({
       paymentId={tx.paymentId}
       expenseIds={tx.expenseIds}
       supplierPaymentMatches={tx.supplierPaymentMatches}
+      supplierPaymentMatchConfirmed={tx.supplierPaymentMatchConfirmed}
+      refundMatches={tx.refundMatches}
+      refundMatchConfirmed={tx.refundMatchConfirmed}
       transferType={tx.transferType}
       expenseOptions={expenseOptions}
     />

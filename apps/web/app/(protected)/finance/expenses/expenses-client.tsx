@@ -87,7 +87,7 @@ const expenseFormSchema = z.object({
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
 const EXPENSE_FORM_CATEGORY_GROUPS = EXPENSE_CATEGORY_GROUPS.filter(
-  (group) => group !== "materials",
+  (group) => group !== "materials" && group !== "transfer",
 );
 
 const CATEGORY_GROUPS = EXPENSE_FORM_CATEGORY_GROUPS.map((group) => ({
@@ -105,6 +105,10 @@ const METHOD_OPTIONS = EXPENSE_PAYMENT_METHODS.map((value) => ({
 
 function expenseDetail(row: ExpenseRow): string {
   return [row.vendor_name, row.note].filter(Boolean).join(" · ");
+}
+
+function canDeleteExpense(row: ExpenseRow): boolean {
+  return row.category !== "bank_deposit" && row.matchedEventIds.length === 0;
 }
 
 export function ExpensesClient({
@@ -263,17 +267,18 @@ export function ExpensesClient({
             key: "actions",
             header: "",
             className: "w-12",
-            render: (row: ExpenseRow) => (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onDelete(row)}
-                disabled={isDeleting}
-                aria-label={copy.table.delete}
-              >
-                <IconTrash className="size-4 text-destructive" />
-              </Button>
-            ),
+            render: (row: ExpenseRow) =>
+              canDeleteExpense(row) ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDelete(row)}
+                  disabled={isDeleting}
+                  aria-label={copy.table.delete}
+                >
+                  <IconTrash className="size-4 text-destructive" />
+                </Button>
+              ) : null,
           } satisfies DataTableColumn<ExpenseRow>,
         ]
       : []),
@@ -285,7 +290,7 @@ export function ExpensesClient({
         params={params}
         branches={branches}
         basePath="/finance/expenses"
-        hide={["compare", "payment", "granularity"]}
+        hide={["compare", "granularity"]}
       />
 
       {canManageExpenses ? (
@@ -338,7 +343,7 @@ export function ExpensesClient({
                       {branchLabel(row.branch_id)}
                     </ItemDescription>
                   </ItemContent>
-                  {canManageExpenses ? (
+                  {canManageExpenses && canDeleteExpense(row) ? (
                     <ItemActions>
                       <Button
                         variant="ghost"

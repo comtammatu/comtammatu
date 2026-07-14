@@ -1,8 +1,8 @@
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
-import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
+import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
-import { fetchRevenueKpis } from "../actions";
 import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
+import { calculateSepayBankBalance } from "./sepay-bank-transaction-model";
 import { fetchSepayBankMovementSince } from "./sepay-bank-transactions";
 
 /**
@@ -13,53 +13,32 @@ import { fetchSepayBankMovementSince } from "./sepay-bank-transactions";
  *    opening balance + date in system_settings; from there we add cash collected
  *    and subtract cash spent. Only meaningful once anchored — without an
  *    opening, summing all-time cash would assume zero withdrawals.
- *  - Period cash figures: respect the cockpit branch/date filter; feed the
- *    cash-basis profit (tiền thực thu − chi đã trả) computed in the page.
+ *  - Period operating cash signal: respects the cockpit branch/date filter and
+ *    excludes internal cash-to-bank transfers and manual materials cost.
  */
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
-
-interface ExpenseMatchRow {
-  expense_id: number;
-}
-
-interface SupplierPaymentRow {
-  amount: number | string | null;
-  payment_method: string | null;
-  supplier_invoices?:
-    | {
-        goods_received_notes?:
-          | {
-              branch_id: number | string | null;
-            }
-          | Array<{ branch_id: number | string | null }>
-          | null;
-      }
-    | Array<{
-        goods_received_notes?:
-          | {
-              branch_id: number | string | null;
-            }
-          | Array<{ branch_id: number | string | null }>
-          | null;
-      }>
-    | null;
-}
 
 function toNumber(value: number | string | null | undefined): number {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function firstRelation<T>(value: T | T[] | null | undefined): T | null {
-  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
-}
+function requireLedgerNumber(
+  value: number | string | null | undefined,
+  field: string,
+): number {
+  if (value == null || value === "") {
+    console.error("[finance:cash] ledger field missing", field);
+    throw new Error("Unable to load cash movement");
+  }
 
-function getSupplierPaymentBranchId(row: SupplierPaymentRow): number | null {
-  const invoice = firstRelation(row.supplier_invoices);
-  const grn = firstRelation(invoice?.goods_received_notes);
-  const branchId = grn?.branch_id;
-  return branchId == null ? null : toNumber(branchId);
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    console.error("[finance:cash] ledger field invalid", field);
+    throw new Error("Unable to load cash movement");
+  }
+  return parsed;
 }
 
 export interface CashSummary {
@@ -77,14 +56,18 @@ export interface CashSummary {
   /** SePay outgoing transfers since openingDate. */
   bankOutSince: number;
   bankOnHand: number;
-  /** Period expenses actually paid out (cash + transfer, excludes 'unpaid'). */
-  expensesPaidPeriod: number;
-  /** Period supplier AP payments actually paid out. */
-  supplierPaymentsPaidPeriod: number;
-  /** Period cash out: expenses paid + supplier AP payments paid. */
-  cashOutPaidPeriod: number;
-  /** Period cash-only expenses. */
+  /** Actual cash collected in the selected branch/date period. */
+  cashCollectedPeriod: number;
+  /** Approved cash refunds in the selected period. */
+  cashRefundPeriod: number;
+  /** Cash-only operating expenses in the selected period. */
   cashExpensePeriod: number;
+  /** Cash-only supplier payments in the selected period. */
+  cashSupplierPaymentPeriod: number;
+  /** Cash refunds + expenses + supplier payments in the selected period. */
+  cashOutPeriod: number;
+  /** Cash collected minus cash out in the selected period. */
+  cashNetMovementPeriod: number;
 }
 
 const EMPTY_OPENING = {
@@ -101,91 +84,110 @@ const EMPTY_OPENING = {
   bankOnHand: 0,
 } as const;
 
-async function sumExpensesSinceByMethod(
+type CashLedgerMovementRpcClient = {
+  rpc: (
+    fn: "get_cash_ledger_movement_since",
+    args: { p_since: string },
+  ) => PromiseLike<{
+    data: {
+      cash_collections?: number;
+      cash_refunds?: number;
+      cash_expenses?: number;
+      cash_supplier_payments?: number;
+    } | null;
+    error: { code?: string } | null;
+  }>;
+};
+
+type PeriodOperatingCashMovementRpcClient = {
+  rpc: (
+    fn: "get_operating_cash_movement_for_period",
+    args: {
+      p_start_date: string;
+      p_end_date: string;
+      p_branch_id: number | null;
+    },
+  ) => PromiseLike<{
+    data: {
+      cash_collections?: number;
+      cash_refunds?: number;
+      cash_expenses?: number;
+      cash_supplier_payments?: number;
+      cash_out?: number;
+      net_cash_movement?: number;
+    } | null;
+    error: { code?: string } | null;
+  }>;
+};
+
+async function fetchCashLedgerMovementSince(
   supabase: SupabaseClient,
-  tenantId: number,
-  sinceDate: string,
-): Promise<{ cash: number; unmatchedTransfer: number }> {
-  const matchedExpenseIds = new Set<number>();
+  startIso: string,
+): Promise<{
+  collections: number;
+  refunds: number;
+  expenses: number;
+  supplierPayments: number;
+}> {
+  const { data, error } = await (
+    supabase as unknown as CashLedgerMovementRpcClient
+  ).rpc("get_cash_ledger_movement_since", { p_since: startIso });
 
-  const { data: matchedRows } = await supabase
-    .from("bank_transaction_expense_matches")
-    .select("expense_id")
-    .eq("tenant_id", tenantId);
-
-  for (const row of (matchedRows ?? []) as ExpenseMatchRow[]) {
-    matchedExpenseIds.add(row.expense_id);
+  if (error) {
+    console.error("[finance:cash] failed to load cash movement", error.code);
+    throw new Error("Unable to load cash movement");
   }
 
-  const { data: matchedEvents } = await supabase
-    .from("webhook_events")
-    .select("expense_id")
-    .eq("tenant_id", tenantId)
-    .not("expense_id", "is", null);
-
-  for (const row of matchedEvents ?? []) {
-    if (row.expense_id != null) matchedExpenseIds.add(row.expense_id);
-  }
-
-  const { data } = await supabase
-    .from("expenses")
-    .select("id, amount, payment_method")
-    .eq("tenant_id", tenantId)
-    .in("payment_method", ["cash", "transfer"])
-    .gte("expense_date", sinceDate);
-
-  let cash = 0;
-  let unmatchedTransfer = 0;
-  for (const row of data ?? []) {
-    const amount = toNumber(row.amount);
-    if (row.payment_method === "cash") {
-      cash += amount;
-    } else if (
-      row.payment_method === "transfer" &&
-      !matchedExpenseIds.has(row.id)
-    ) {
-      unmatchedTransfer += amount;
-    }
-  }
-  return { cash, unmatchedTransfer };
+  return {
+    collections: requireLedgerNumber(
+      data?.cash_collections,
+      "cash_collections",
+    ),
+    refunds: requireLedgerNumber(data?.cash_refunds, "cash_refunds"),
+    expenses: requireLedgerNumber(data?.cash_expenses, "cash_expenses"),
+    supplierPayments: requireLedgerNumber(
+      data?.cash_supplier_payments,
+      "cash_supplier_payments",
+    ),
+  };
 }
 
-async function sumSupplierPaymentsByMethod(
+async function fetchPeriodOperatingCashMovement(
   supabase: SupabaseClient,
-  tenantId: number,
-  startIso: string,
-  endIso?: string,
-  branchId?: number | null,
-): Promise<{ cash: number; bankTransfer: number }> {
-  let query = supabase
-    .from("supplier_payments")
-    .select(
-      "amount, payment_method, supplier_invoices ( goods_received_notes ( branch_id ) )",
-    )
-    .eq("tenant_id", tenantId)
-    .gte("payment_date", startIso);
+  startDate: string,
+  endDate: string,
+  branchId: number | null,
+) {
+  const { data, error } = await (
+    supabase as unknown as PeriodOperatingCashMovementRpcClient
+  ).rpc("get_operating_cash_movement_for_period", {
+    p_start_date: startDate,
+    p_end_date: endDate,
+    p_branch_id: branchId,
+  });
 
-  if (endIso) {
-    query = query.lt("payment_date", endIso);
-  }
-
-  const { data, error } = await query;
   if (error) {
-    console.error("[finance:cash] failed to load supplier_payments", error.code);
-    return { cash: 0, bankTransfer: 0 };
+    console.error("[finance:cash] failed to load period movement", error.code);
+    throw new Error("Unable to load period cash movement");
   }
 
-  let cash = 0;
-  let bankTransfer = 0;
-  for (const row of (data ?? []) as SupplierPaymentRow[]) {
-    if (branchId != null && getSupplierPaymentBranchId(row) !== branchId) {
-      continue;
-    }
-    const amount = toNumber(row.amount);
-    if (row.payment_method === "cash") cash += amount;
-    if (row.payment_method === "bank_transfer") bankTransfer += amount;
-  }
-  return { cash, bankTransfer };
+  return {
+    collections: requireLedgerNumber(
+      data?.cash_collections,
+      "cash_collections",
+    ),
+    refunds: requireLedgerNumber(data?.cash_refunds, "cash_refunds"),
+    expenses: requireLedgerNumber(data?.cash_expenses, "cash_expenses"),
+    supplierPayments: requireLedgerNumber(
+      data?.cash_supplier_payments,
+      "cash_supplier_payments",
+    ),
+    cashOut: requireLedgerNumber(data?.cash_out, "cash_out"),
+    netMovement: requireLedgerNumber(
+      data?.net_cash_movement,
+      "net_cash_movement",
+    ),
+  };
 }
 
 export async function fetchCashSummary(
@@ -194,38 +196,12 @@ export async function fetchCashSummary(
 ): Promise<CashSummary> {
   const { supabase, claims } = await loadAuthState();
   const tenantId = claims.tenant_id;
-
-  // Period expense breakdown (respects branch filter).
-  let periodQuery = supabase
-    .from("expenses")
-    .select("amount, payment_method")
-    .eq("tenant_id", tenantId)
-    .neq("category", "bank_deposit")
-    .gte("expense_date", resolved.start)
-    .lte("expense_date", resolved.end);
-  if (params.branch != null) {
-    periodQuery = periodQuery.eq("branch_id", params.branch);
-  }
-  const { data: periodRows } = await periodQuery;
-  let expensesPaidPeriod = 0;
-  let cashExpensePeriod = 0;
-  for (const row of periodRows ?? []) {
-    const amount = toNumber(row.amount);
-    if (row.payment_method !== "unpaid") expensesPaidPeriod += amount;
-    if (row.payment_method === "cash") cashExpensePeriod += amount;
-  }
-  const periodStart = getVNDayUtcRange(resolved.start).startIso;
-  const periodEnd = getVNDayUtcRange(resolved.end).endIso;
-  const supplierPaymentsPeriod = await sumSupplierPaymentsByMethod(
+  const periodMovement = await fetchPeriodOperatingCashMovement(
     supabase,
-    tenantId,
-    periodStart,
-    periodEnd,
+    resolved.start,
+    resolved.end,
     params.branch,
   );
-  const supplierPaymentsPaidPeriod =
-    supplierPaymentsPeriod.cash + supplierPaymentsPeriod.bankTransfer;
-  const cashOutPaidPeriod = expensesPaidPeriod + supplierPaymentsPaidPeriod;
 
   // Opening anchor (tenant-level).
   const { data: settingRows } = await supabase
@@ -249,36 +225,30 @@ export async function fetchCashSummary(
   if (!openingDate) {
     return {
       ...EMPTY_OPENING,
-      expensesPaidPeriod,
-      supplierPaymentsPaidPeriod,
-      cashOutPaidPeriod,
-      cashExpensePeriod,
+      cashCollectedPeriod: periodMovement.collections,
+      cashRefundPeriod: periodMovement.refunds,
+      cashExpensePeriod: periodMovement.expenses,
+      cashSupplierPaymentPeriod: periodMovement.supplierPayments,
+      cashOutPeriod: periodMovement.cashOut,
+      cashNetMovementPeriod: periodMovement.netMovement,
     };
   }
 
-  // Running balances are tenant-wide from the anchor date: cash uses POS cash,
-  // bank uses signed SePay account movement plus recorded transfer spend.
-  const today = getVNDateString();
+  // Running balances are tenant-wide from the anchor date. A refunded cash
+  // payment remains an actual collection, while its approved payout is a
+  // separate cash outflow. Bank balance uses signed SePay movement only.
   const openingStart = getVNDayUtcRange(openingDate).startIso;
-  const [revRes, expensesSince, supplierPaymentsSince, bankMovement] =
-    await Promise.all([
-      fetchRevenueKpis(null, openingDate, today),
-      sumExpensesSinceByMethod(supabase, tenantId, openingDate),
-      sumSupplierPaymentsByMethod(supabase, tenantId, openingStart),
-      fetchSepayBankMovementSince(supabase, tenantId, openingDate),
-    ]);
-  const revData = revRes.success
-    ? (revRes.data as {
-        cash_revenue?: number;
-      } | null)
-    : null;
-  const cashInSince = toNumber(revData?.cash_revenue);
-  const cashOutSince = expensesSince.cash + supplierPaymentsSince.cash;
+  const [cashMovement, bankMovement] = await Promise.all([
+    fetchCashLedgerMovementSince(supabase, openingStart),
+    fetchSepayBankMovementSince(supabase, openingStart),
+  ]);
+  const cashInSince = cashMovement.collections;
+  const cashOutSince =
+    cashMovement.expenses +
+    cashMovement.supplierPayments +
+    cashMovement.refunds;
   const bankInSince = bankMovement.inAmount;
-  const bankOutSince =
-    bankMovement.outAmount +
-    expensesSince.unmatchedTransfer +
-    supplierPaymentsSince.bankTransfer;
+  const bankOutSince = bankMovement.outAmount;
 
   const bankSettingRaw = settingMap.get(
     SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE,
@@ -297,10 +267,12 @@ export async function fetchCashSummary(
     bankOpeningBalance,
     bankInSince,
     bankOutSince,
-    bankOnHand: bankOpeningBalance + bankInSince - bankOutSince,
-    expensesPaidPeriod,
-    supplierPaymentsPaidPeriod,
-    cashOutPaidPeriod,
-    cashExpensePeriod,
+    bankOnHand: calculateSepayBankBalance(bankOpeningBalance, bankMovement),
+    cashCollectedPeriod: periodMovement.collections,
+    cashRefundPeriod: periodMovement.refunds,
+    cashExpensePeriod: periodMovement.expenses,
+    cashSupplierPaymentPeriod: periodMovement.supplierPayments,
+    cashOutPeriod: periodMovement.cashOut,
+    cashNetMovementPeriod: periodMovement.netMovement,
   };
 }

@@ -73,6 +73,7 @@ function supplierPayment(
   id: number,
   amount: number,
   referenceNote: string | null,
+  webhookEventId: number | null = null,
 ): SepaySupplierPaymentMatch {
   return {
     id,
@@ -80,6 +81,7 @@ function supplierPayment(
     amount,
     paymentDate: "2026-07-01T02:05:00.000Z",
     referenceNote,
+    webhookEventId,
     invoiceNumber: `INV-${id}`,
     supplierName: "NCC Rau",
   };
@@ -231,7 +233,8 @@ test("SePay reconciliation summary separates matched and review buckets", () => 
           referenceCode: "FT-SUP-1",
         }),
       ),
-      supplierPaymentMatches: [supplierPayment(501, 60000, "FT-SUP-1")],
+      supplierPaymentMatches: [supplierPayment(501, 60000, "FT-SUP-1", 6)],
+      supplierPaymentMatchConfirmed: true,
     },
     tx(
       row(
@@ -280,7 +283,8 @@ test("SePay reconciliation state follows actual source link", () => {
   assert.equal(
     classifySepayReconciliationState({
       ...tx(row(5, { transferType: "out", transferAmount: 60000 })),
-      supplierPaymentMatches: [supplierPayment(501, 60000, "FT-SUP-1")],
+      supplierPaymentMatches: [supplierPayment(501, 60000, "FT-SUP-1", 5)],
+      supplierPaymentMatchConfirmed: true,
     }),
     "matched",
   );
@@ -343,6 +347,29 @@ test("SePay outgoing transactions can match supplier AP payments by reference", 
   assert.deepEqual(
     matched[0]?.supplierPaymentMatches.map((payment) => payment.id),
     [501],
+  );
+  assert.equal(matched[0]?.supplierPaymentMatchConfirmed, false);
+  assert.equal(
+    matched[0] && classifySepayReconciliationState(matched[0]),
+    "needs_review",
+  );
+
+  const confirmed = attachSupplierPaymentMatches(
+    [
+      tx(
+        row(1, {
+          transactionDate: "2026-07-01 09:05:00",
+          transferType: "out",
+          transferAmount: 60000,
+        }),
+      ),
+    ],
+    [supplierPayment(501, 60000, null, 1)],
+  );
+  assert.equal(confirmed[0]?.supplierPaymentMatchConfirmed, true);
+  assert.equal(
+    confirmed[0] && classifySepayReconciliationState(confirmed[0]),
+    "matched",
   );
 
   const ambiguous = attachSupplierPaymentMatches(
@@ -439,14 +466,30 @@ test("SePay bank reconciliation reads supplier AP payments without turning them 
   const cell = read(
     "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
   );
+  const action = read("apps/web/app/(protected)/finance/expense-actions.ts");
+  const migration = read(
+    "supabase/migrations/20260714031025_20260713153523_persist_sepay_supplier_payment_match.sql",
+  );
 
   assert.match(loader, /\.from\("supplier_payments"\)/);
   assert.match(loader, /supplier_invoice_id/);
+  assert.match(loader, /webhook_event_id/);
   assert.match(loader, /attachSupplierPaymentMatches/);
   assert.match(table, /supplierPaymentMatches=\{tx\.supplierPaymentMatches\}/);
+  assert.match(table, /supplierPaymentMatchConfirmed=/);
   assert.match(cell, /supplierInvoiceHref/);
   assert.match(cell, /\/finance\/supplier-invoices\?invoiceId=/);
   assert.match(cell, /matchedSupplierPayment/);
+  assert.match(cell, /matchSepayTransactionWithSupplierPayments/);
+  assert.match(action, /match_sepay_transaction_supplier_payments/);
+  assert.match(migration, /ADD COLUMN webhook_event_id bigint/);
+  assert.match(migration, /public\.auth_is_owner\(v_user_id\)/);
+  assert.match(migration, /supplier_payment_amount_mismatch/);
+  assert.match(
+    migration,
+    /REVOKE INSERT, UPDATE, DELETE ON public\.supplier_payments/,
+  );
+  assert.match(migration, /guard_expense_match_without_supplier_payment/);
 });
 
 test("SePay bank page uses one filtered reconciliation table", () => {

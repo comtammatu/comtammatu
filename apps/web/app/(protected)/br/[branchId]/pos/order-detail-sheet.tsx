@@ -106,6 +106,7 @@ const MergeOrdersSheet = dynamic(
 import { OrderTotalsSummary } from "./_components/order-totals-summary";
 import type { OrderData } from "./_components/bill/bill-receipt-types";
 import type { SessionOrder } from "./order-history";
+import type { RefundPayoutMethod } from "@lib/refund-payout";
 
 // Superset of bill's OrderData: same top-level fields, but order_items
 // carry extra UI-only fields (status, menu_item_id) used by the detail
@@ -371,6 +372,8 @@ export function OrderDetailSheet({
   const [cancelReason, setCancelReason] = useState("");
   const [showVoidPaid, setShowVoidPaid] = useState(false);
   const [voidPaidReason, setVoidPaidReason] = useState("");
+  const [refundPayoutMethod, setRefundPayoutMethod] =
+    useState<RefundPayoutMethod | null>(null);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTableId, setTransferTableId] = useState<string>("");
   const [showDiscount, setShowDiscount] = useState(false);
@@ -670,14 +673,14 @@ export function OrderDetailSheet({
   };
 
   const handleVoidPaid = () => {
-    if (orderId === null) return;
+    if (orderId === null || refundPayoutMethod === null) return;
     const reason = voidPaidReason.trim();
     if (reason.length < 20) {
       notify.error(messages.pos.order.voidPaidReasonMin);
       return;
     }
     startMutation(async () => {
-      const r = await voidPaidOrder(orderId, reason);
+      const r = await voidPaidOrder(orderId, reason, refundPayoutMethod);
       if (r.success) {
         if (r.data?.providerWarning) {
           notify.warning(r.data.providerWarning);
@@ -685,6 +688,7 @@ export function OrderDetailSheet({
         notify.success(messages.pos.order.voidPaidSuccess);
         setShowVoidPaid(false);
         setVoidPaidReason("");
+        setRefundPayoutMethod(null);
         await onOrderUpdated?.();
         onClose();
       } else {
@@ -1508,7 +1512,10 @@ export function OrderDetailSheet({
                                   <DropdownMenuItem
                                     variant="destructive"
                                     disabled={isMutating}
-                                    onClick={() => setShowVoidPaid(true)}
+                                    onClick={() => {
+                                      setRefundPayoutMethod(null);
+                                      setShowVoidPaid(true);
+                                    }}
                                   >
                                     <IconTrash />
                                     {messages.pos.order.voidPaidAction}
@@ -1584,6 +1591,8 @@ export function OrderDetailSheet({
         onOpenChange={setShowVoidPaid}
         reason={voidPaidReason}
         onReasonChange={setVoidPaidReason}
+        payoutMethod={refundPayoutMethod}
+        onPayoutMethodChange={setRefundPayoutMethod}
         onConfirm={handleVoidPaid}
         orderNumber={data?.order_number ?? orderNumber}
         isPending={isMutating}

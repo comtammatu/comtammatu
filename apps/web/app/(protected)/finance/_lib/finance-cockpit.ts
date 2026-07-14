@@ -615,7 +615,7 @@ function buildExceptions({
       hint: copy.exceptions.supplierInvoiceHint(
         formatCount(unpaidSupplierInvoices.count),
       ),
-      href: "/inventory/supplier-invoices",
+      href: "/finance/supplier-invoices",
       tone: unpaidSupplierInvoices.count > 0 ? "warning" : "neutral",
     },
     {

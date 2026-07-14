@@ -1,10 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import {
-  getInvoiceProvider,
-} from "@comtammatu/shared/providers";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { getAuthContextWithPermission } from "../../_lib/auth";
@@ -13,9 +11,14 @@ import {
   REFUND_PAID_ORDER_MAPPINGS,
   REFUND_PAID_ORDER_FALLBACK,
 } from "./_lib/void-paid-messages";
+import {
+  REFUND_PAYOUT_METHODS,
+  type RefundPayoutMethod,
+} from "@lib/refund-payout";
 
 const voidPaidOrderSchema = z.object({
   orderId: z.coerce.number().int().positive(),
+  payoutMethod: z.enum(REFUND_PAYOUT_METHODS),
   reason: z
     .string()
     .trim()
@@ -28,6 +31,7 @@ type RefundRpcResult = {
   refund_id: number;
   amount: number;
   method: string;
+  payout_method: RefundPayoutMethod;
   invoice_id: number | null;
   invoice_action: "none" | "cancel_predispatch" | "cancel_issued";
   invoice_provider_ref: string | null;
@@ -38,13 +42,18 @@ export interface VoidPaidOrderData extends RefundRpcResult {
   providerWarning?: string;
 }
 
-const POS_ROLES = MODULE_ACL.pos.allowedRoles;
+const VOID_PAID_ROLES = ["owner"] as const;
 
 export async function voidPaidOrder(
   orderId: number,
   reason: string,
+  payoutMethod: RefundPayoutMethod,
 ): Promise<ActionResult<VoidPaidOrderData>> {
-  const parsed = voidPaidOrderSchema.safeParse({ orderId, reason });
+  const parsed = voidPaidOrderSchema.safeParse({
+    orderId,
+    reason,
+    payoutMethod,
+  });
   if (!parsed.success) {
     return {
       success: false,
@@ -53,7 +62,7 @@ export async function voidPaidOrder(
   }
 
   const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
+    VOID_PAID_ROLES,
     PERMISSION_KEYS.POS_VOID_PAID_ORDER,
   );
   if (!ctx) {
@@ -65,10 +74,22 @@ export async function voidPaidOrder(
 
   const { supabase } = ctx;
 
-  const { data, error } = await supabase.rpc("refund_paid_order", {
-    p_order_id: parsed.data.orderId,
-    p_reason: parsed.data.reason,
-  });
+  const refundPaidOrderRpc = supabase.rpc as unknown as (
+    fn: "refund_paid_order_with_payout",
+    args: {
+      p_order_id: number;
+      p_reason: string;
+      p_payout_method: RefundPayoutMethod;
+    },
+  ) => ReturnType<typeof supabase.rpc>;
+  const { data, error } = await refundPaidOrderRpc(
+    "refund_paid_order_with_payout",
+    {
+      p_order_id: parsed.data.orderId,
+      p_reason: parsed.data.reason,
+      p_payout_method: parsed.data.payoutMethod,
+    },
+  );
 
   if (error) {
     return mapRpcError<VoidPaidOrderData>(
@@ -86,7 +107,10 @@ export async function voidPaidOrder(
   // at the provider/CQT post-commit. Any cancel_issued path that cannot
   // auto-cancel MUST surface a warning, never silently skip, or a live CQT
   // invoice goes unnoticed.
-  if (result.invoice_action === "cancel_issued" && result.invoice_provider_ref) {
+  if (
+    result.invoice_action === "cancel_issued" &&
+    result.invoice_provider_ref
+  ) {
     if (result.invoice_provider === "viettel") {
       ensureInvoiceProviderRegistered();
       const invoiceProvider = getInvoiceProvider();

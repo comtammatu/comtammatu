@@ -3,7 +3,9 @@ import type { Database } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   BUYER_NOT_GET_INVOICE_NAME,
+  buildSinvoiceTransactionUuid,
   getInvoiceProvider,
+  type InvoiceResult,
 } from "@comtammatu/shared/providers";
 import {
   applyInvoiceLineDiscount,
@@ -32,7 +34,21 @@ export const createInvoiceSchema = z
   .refine((v) => !v.buyerTaxCode || (v.buyerName && v.buyerName.length > 0), {
     error: "Có MST thì phải nhập tên người mua",
     path: ["buyerName"],
-  });
+  })
+  .refine(
+    (v) =>
+      v.buyerNotGetInvoice !== false ||
+      Boolean(
+        v.buyerName?.trim() ||
+        v.buyerTaxCode?.trim() ||
+        v.buyerAddress?.trim() ||
+        v.buyerEmail?.trim(),
+      ),
+    {
+      error: "Cần ít nhất một thông tin người mua",
+      path: ["buyerName"],
+    },
+  );
 
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 
@@ -116,13 +132,24 @@ export async function issueTaxInvoiceForPaidOrder({
     };
   }
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingErr } = await supabase
     .from("tax_invoices")
-    .select("id, status, invoice_number")
+    .select(
+      "id, status, invoice_number, buyer_name, buyer_tax_code, buyer_address, buyer_email",
+    )
     .eq("order_id", parsed.data.orderId)
     .eq("tenant_id", tenantId)
     .not("status", "in", '("cancelled","replaced","not_required")')
     .maybeSingle();
+
+  if (existingErr) {
+    console.error(`[${logPrefix}] Fetch active invoice error:`, existingErr);
+    return {
+      success: false,
+      error: "Không thể kiểm tra hóa đơn hiện có.",
+      errorCode: "invoice_guard_failed",
+    };
+  }
 
   const retryDraftInvoiceId =
     existing?.status === "draft" && !existing.invoice_number
@@ -137,11 +164,23 @@ export async function issueTaxInvoiceForPaidOrder({
     };
   }
 
-  const { data: summaryLinks } = await supabase
+  const { data: summaryLinks, error: summaryLinksErr } = await supabase
     .from("tax_invoice_orders")
     .select("tax_invoices(summary_date, status)")
     .eq("order_id", parsed.data.orderId)
     .eq("tenant_id", tenantId);
+
+  if (summaryLinksErr) {
+    console.error(
+      `[${logPrefix}] Fetch summary invoice links error:`,
+      summaryLinksErr,
+    );
+    return {
+      success: false,
+      error: "Không thể kiểm tra hóa đơn tổng hợp.",
+      errorCode: "invoice_guard_failed",
+    };
+  }
 
   const summaryInvoice = ((summaryLinks ?? []) as SummaryInvoiceLink[])
     .map((link) => link.tax_invoices)
@@ -168,13 +207,31 @@ export async function issueTaxInvoiceForPaidOrder({
   const vatRate: number = 0;
   const vatAmount: number = 0;
 
-  const buyerTaxCode = parsed.data.buyerTaxCode?.trim() || undefined;
-  const buyerAddress = parsed.data.buyerAddress?.trim() || undefined;
-  const buyerEmail = parsed.data.buyerEmail?.trim() || undefined;
+  const buyerTaxCode = (
+    retryDraftInvoiceId
+      ? existing?.buyer_tax_code
+      : parsed.data.buyerTaxCode
+  )?.trim() || undefined;
+  const buyerAddress = (
+    retryDraftInvoiceId ? existing?.buyer_address : parsed.data.buyerAddress
+  )?.trim() || undefined;
+  const buyerEmail = (
+    retryDraftInvoiceId ? existing?.buyer_email : parsed.data.buyerEmail
+  )?.trim() || undefined;
+  const buyerNameInput = (
+    retryDraftInvoiceId ? existing?.buyer_name : parsed.data.buyerName
+  )?.trim();
+  const buyerNotGetInvoiceInput = retryDraftInvoiceId
+    ? undefined
+    : parsed.data.buyerNotGetInvoice;
   const buyerNotGetInvoice =
-    parsed.data.buyerNotGetInvoice === true ||
-    (!buyerTaxCode && !parsed.data.buyerName?.trim() && !buyerEmail);
-  const buyerName = parsed.data.buyerName?.trim() || BUYER_NOT_GET_INVOICE_NAME;
+    buyerNotGetInvoiceInput === true ||
+    (buyerNotGetInvoiceInput !== false &&
+      !buyerTaxCode &&
+      (!buyerNameInput || buyerNameInput === BUYER_NOT_GET_INVOICE_NAME) &&
+      !buyerAddress &&
+      !buyerEmail);
+  const buyerName = buyerNameInput || BUYER_NOT_GET_INVOICE_NAME;
 
   ensureInvoiceProviderRegistered();
   const invoiceProvider = getInvoiceProvider();
@@ -198,28 +255,123 @@ export async function issueTaxInvoiceForPaidOrder({
     Number(order.order_discount_amount ?? order.discount_amount ?? 0),
   );
 
+  const roundedSubtotal = Math.round(subtotal * 100) / 100;
+  const roundedVatAmount = Math.round(vatAmount * 100) / 100;
+  const claimTimestamp = new Date().toISOString();
+  const reservationProviderRef =
+    invoiceProvider?.name === "viettel"
+      ? buildSinvoiceTransactionUuid(parsed.data.orderId)
+      : null;
+  const reservationWrite = {
+    tenant_id: tenantId,
+    branch_id: order.branch_id,
+    order_id: parsed.data.orderId,
+    buyer_name: buyerName,
+    buyer_tax_code: buyerTaxCode ?? null,
+    buyer_address: buyerAddress ?? null,
+    buyer_email: buyerEmail ?? null,
+    subtotal: roundedSubtotal,
+    vat_rate: vatRate,
+    vat_amount: roundedVatAmount,
+    total_amount: Number(order.total_amount),
+    provider: invoiceProvider?.name ?? "viettel",
+    ...(reservationProviderRef ? { provider_ref: reservationProviderRef } : {}),
+  };
+
+  const reservationMutation = retryDraftInvoiceId
+    ? supabase
+        .from("tax_invoices")
+        .update({
+          ...reservationWrite,
+          status: "signing",
+          signing_started_at: claimTimestamp,
+        })
+        .eq("id", retryDraftInvoiceId)
+        .eq("tenant_id", tenantId)
+        .eq("status", "draft")
+    : supabase.from("tax_invoices").insert({
+        ...reservationWrite,
+        invoice_number: null,
+        status: "signing",
+        provider_ref: reservationProviderRef,
+        provider_data: null,
+        cqt_code: null,
+        signing_started_at: claimTimestamp,
+        issued_at: null,
+        created_by: actorId ?? order.created_by ?? null,
+      });
+
+  const { data: reservedInvoice, error: reservationErr } =
+    await reservationMutation.select("id").single();
+
+  if (reservationErr || !reservedInvoice) {
+    if (reservationErr) {
+      console.error(`[${logPrefix}] Reserve invoice error:`, reservationErr);
+    }
+    if (reservationErr?.code === "23505") {
+      const summaryConflict = reservationErr.message.includes(
+        "active daily summary",
+      );
+      return {
+        success: false,
+        error: summaryConflict
+          ? "Đơn này đã nằm trong hóa đơn tổng hợp."
+          : "Đơn hàng đã có hóa đơn.",
+        errorCode: summaryConflict
+          ? "summary_invoice_exists"
+          : "invoice_exists",
+      };
+    }
+    return {
+      success: false,
+      error: "Không thể giữ chỗ phát hành hóa đơn.",
+      errorCode: "invoice_write_failed",
+    };
+  }
+
   if (invoiceProvider) {
-    const result = await invoiceProvider.createInvoice({
-      orderId: parsed.data.orderId,
-      orderNumber: `ORD-${parsed.data.orderId}`,
-      sellerName: "",
-      sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
-      sellerAddress: "",
-      buyerName,
-      buyerTaxCode,
-      buyerAddress,
-      buyerEmail,
-      buyerNotGetInvoice,
-      items: invoiceItems,
-      subtotal: Math.round(subtotal * 100) / 100,
-      vatRate,
-      vatAmount: Math.round(vatAmount * 100) / 100,
-      totalAmount: Number(order.total_amount),
-    });
+    let result: InvoiceResult;
+    try {
+      result = await invoiceProvider.createInvoice({
+        orderId: parsed.data.orderId,
+        orderNumber: `ORD-${parsed.data.orderId}`,
+        sellerName: "",
+        sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
+        sellerAddress: "",
+        buyerName,
+        buyerTaxCode,
+        buyerAddress,
+        buyerEmail,
+        buyerNotGetInvoice,
+        items: invoiceItems,
+        subtotal: roundedSubtotal,
+        vatRate,
+        vatAmount: roundedVatAmount,
+        totalAmount: Number(order.total_amount),
+      });
+    } catch (error) {
+      console.error(`[${logPrefix}] Invoice provider error:`, error);
+      return {
+        success: false,
+        error:
+          "Chưa xác định nhà cung cấp HĐĐT đã nhận hóa đơn hay chưa. Lệnh được giữ để đối soát, không tự gửi lại.",
+        errorCode: "invoice_provider_failed",
+      };
+    }
     invoiceNumber = result.invoiceNumber;
     providerRef = result.providerRef;
-    invoiceStatus = result.status === "failed" ? "draft" : result.status;
     providerData = result.providerData;
+    const providerErrorCode = providerData?.["errorCode"];
+    const providerOutcomeUnknown =
+      result.status === "failed" &&
+      (providerErrorCode === "exception" ||
+        providerErrorCode === "TRANSACTION_IS_BEING_PROCESSED");
+    invoiceStatus =
+      result.status === "failed"
+        ? providerOutcomeUnknown
+          ? "signing"
+          : "draft"
+        : result.status;
     cqtCode =
       typeof result.codeOfTax === "string" && result.codeOfTax.trim().length > 0
         ? result.codeOfTax
@@ -238,18 +390,15 @@ export async function issueTaxInvoiceForPaidOrder({
     invoiceStatus === "issued";
 
   const invoiceWrite = {
-    tenant_id: tenantId,
-    branch_id: order.branch_id,
-    order_id: parsed.data.orderId,
     invoice_number: invoiceNumber,
     status: invoiceStatus,
     buyer_name: buyerName,
     buyer_tax_code: buyerTaxCode ?? null,
     buyer_address: buyerAddress ?? null,
     buyer_email: buyerEmail ?? null,
-    subtotal: Math.round(subtotal * 100) / 100,
+    subtotal: roundedSubtotal,
     vat_rate: vatRate,
-    vat_amount: Math.round(vatAmount * 100) / 100,
+    vat_amount: roundedVatAmount,
     total_amount: Number(order.total_amount),
     provider: invoiceProvider?.name ?? "viettel",
     provider_ref: providerRef,
@@ -261,34 +410,21 @@ export async function issueTaxInvoiceForPaidOrder({
     issued_at: invoiceStatus === "issued" ? stateTimestamp : null,
   };
 
-  const invoiceMutation = retryDraftInvoiceId
-    ? supabase
-        .from("tax_invoices")
-        .update(invoiceWrite)
-        .eq("id", retryDraftInvoiceId)
-        .eq("tenant_id", tenantId)
-        .eq("status", "draft")
-    : supabase.from("tax_invoices").insert({
-        ...invoiceWrite,
-        created_by: actorId ?? order.created_by ?? null,
-      });
-
-  const { data: invoice, error: insertErr } = await invoiceMutation
+  const { data: invoice, error: insertErr } = await supabase
+    .from("tax_invoices")
+    .update(invoiceWrite)
+    .eq("id", reservedInvoice.id)
+    .eq("tenant_id", tenantId)
+    .eq("status", "signing")
     .select("id, invoice_number, status")
     .single();
 
   if (insertErr) {
     console.error(`[${logPrefix}] Insert/update invoice error:`, insertErr);
-    if (insertErr.code === "23505") {
-      return {
-        success: false,
-        error: "Đơn hàng đã có hóa đơn.",
-        errorCode: "invoice_exists",
-      };
-    }
     return {
       success: false,
-      error: "Không thể tạo hóa đơn.",
+      error:
+        "Hóa đơn đã được gửi nhưng chưa lưu đủ trạng thái. Hệ thống đã giữ lệnh để đối soát.",
       errorCode: "invoice_write_failed",
     };
   }

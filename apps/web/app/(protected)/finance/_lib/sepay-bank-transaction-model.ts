@@ -25,8 +25,18 @@ export interface SepaySupplierPaymentMatch {
   amount: number;
   paymentDate: string;
   referenceNote: string | null;
+  webhookEventId: number | null;
   invoiceNumber: string | null;
   supplierName: string | null;
+}
+
+export interface SepayRefundMatchOption {
+  id: number;
+  amount: number;
+  approvedAt: string;
+  orderId: number;
+  orderNumber: string;
+  webhookEventId: number | null;
 }
 
 export interface SepayBankTransaction {
@@ -40,6 +50,9 @@ export interface SepayBankTransaction {
   expenseId: number | null;
   expenseIds: number[];
   supplierPaymentMatches: SepaySupplierPaymentMatch[];
+  supplierPaymentMatchConfirmed: boolean;
+  refundMatches: SepayRefundMatchOption[];
+  refundMatchConfirmed: boolean;
   transactionDate: string | null;
   accountNumber: string | null;
   code: string | null;
@@ -53,6 +66,33 @@ export interface SepayBankTransaction {
 export interface SepayBankMovement {
   inAmount: number;
   outAmount: number;
+}
+
+export function calculateSepayBankBalance(
+  openingBalance: number,
+  movement: SepayBankMovement,
+): number {
+  return openingBalance + movement.inAmount - movement.outAmount;
+}
+
+export function isSepayExpenseAllocationBalanced(
+  transactionAmount: number,
+  selectedExpenseAmount: number,
+  selectedExpenseCount: number,
+): boolean {
+  return (
+    selectedExpenseCount === 0 || selectedExpenseAmount === transactionAmount
+  );
+}
+
+export function isSepayRefundAllocationBalanced(
+  transactionAmount: number,
+  selectedRefundAmount: number,
+  selectedRefundCount: number,
+): boolean {
+  return (
+    selectedRefundCount === 0 || selectedRefundAmount === transactionAmount
+  );
 }
 
 export type SepayUnmatchedMoneyInReason =
@@ -149,7 +189,11 @@ export function readSepayBankWebhookReview(
 export function classifySepayUnmatchedMoneyIn(
   transaction: Pick<
     SepayBankTransaction,
-    "code" | "content" | "errorCode" | "processingStatus" | "referenceCode"
+    | "code"
+    | "content"
+    | "errorCode"
+    | "processingStatus"
+    | "referenceCode"
   >,
 ): SepayUnmatchedMoneyInReason {
   if (
@@ -178,22 +222,27 @@ export function classifySepayReconciliationState(
     | "orderId"
     | "paymentId"
     | "processingStatus"
+    | "refundMatchConfirmed"
+    | "supplierPaymentMatchConfirmed"
     | "supplierPaymentMatches"
     | "transferType"
   >,
 ): SepayReconciliationState {
   if (
     transaction.processingStatus === "failed" ||
-    transaction.errorCode != null
+    (transaction.errorCode != null &&
+      !isUnclassifiedMoneyOutStatus(transaction))
   ) {
     return "webhook_error";
   }
 
   if (
-    (transaction.transferType === "in" && transaction.paymentId != null) ||
+    (transaction.transferType === "in" &&
+      (transaction.paymentId != null || transaction.expenseIds.length > 0)) ||
     (transaction.transferType === "out" &&
       (transaction.expenseIds.length > 0 ||
-        transaction.supplierPaymentMatches.length > 0))
+        transaction.supplierPaymentMatchConfirmed ||
+        transaction.refundMatchConfirmed))
   ) {
     return "matched";
   }
@@ -279,6 +328,9 @@ export function mapSepayWebhookRow(
     expenseId: row.expense_id,
     expenseIds: row.expense_id != null ? [row.expense_id] : [],
     supplierPaymentMatches: [],
+    supplierPaymentMatchConfirmed: false,
+    refundMatches: [],
+    refundMatchConfirmed: false,
     transactionDate: readString(payload, "transactionDate"),
     accountNumber: readString(payload, "accountNumber"),
     code: readString(payload, "code"),
@@ -297,6 +349,19 @@ function moneyEqual(left: number, right: number): boolean {
 function normalizeRef(value: string | null): string | null {
   const normalized = value?.trim().toLowerCase().replace(/\s+/g, " ");
   return normalized && normalized.length >= 4 ? normalized : null;
+}
+
+function isUnclassifiedMoneyOutStatus(
+  transaction: Pick<
+    SepayBankTransaction,
+    "errorCode" | "processingStatus" | "transferType"
+  >,
+): boolean {
+  return (
+    transaction.transferType === "out" &&
+    transaction.processingStatus === "ignored" &&
+    transaction.errorCode === "transfer_type_out"
+  );
 }
 
 function supplierPaymentMatchesTransaction(
@@ -322,11 +387,24 @@ export function attachSupplierPaymentMatches(
   const usedPaymentIds = new Set<number>();
 
   return transactions.map((transaction) => {
+    const confirmedMatches = payments.filter(
+      (payment) => payment.webhookEventId === transaction.eventId,
+    );
+    if (confirmedMatches.length > 0) {
+      for (const match of confirmedMatches) usedPaymentIds.add(match.id);
+      return {
+        ...transaction,
+        supplierPaymentMatches: confirmedMatches,
+        supplierPaymentMatchConfirmed: true,
+      };
+    }
+
     if (
       transaction.transferType !== "out" ||
       transaction.expenseIds.length > 0 ||
       transaction.processingStatus === "failed" ||
-      transaction.errorCode != null
+      (transaction.errorCode != null &&
+        !isUnclassifiedMoneyOutStatus(transaction))
     ) {
       return transaction;
     }
@@ -335,6 +413,7 @@ export function attachSupplierPaymentMatches(
     const candidates = payments.filter(
       (payment) =>
         !usedPaymentIds.has(payment.id) &&
+        payment.webhookEventId == null &&
         getVNDateString(payment.paymentDate) === businessDate &&
         supplierPaymentMatchesTransaction(payment, transaction),
     );
@@ -362,7 +441,26 @@ export function attachSupplierPaymentMatches(
     return {
       ...transaction,
       supplierPaymentMatches: matches,
+      supplierPaymentMatchConfirmed: false,
     };
+  });
+}
+
+export function attachRefundMatches(
+  transactions: SepayBankTransaction[],
+  refunds: SepayRefundMatchOption[],
+): SepayBankTransaction[] {
+  return transactions.map((transaction) => {
+    const confirmedMatches = refunds.filter(
+      (refund) => refund.webhookEventId === transaction.eventId,
+    );
+    return confirmedMatches.length > 0
+      ? {
+          ...transaction,
+          refundMatches: confirmedMatches,
+          refundMatchConfirmed: true,
+        }
+      : transaction;
   });
 }
 
