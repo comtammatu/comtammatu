@@ -77,10 +77,7 @@ test("SePay expense matching preserves exact whole-document allocation", () => {
     /FROM public\.expenses e[\s\S]*ORDER BY e\.id[\s\S]*FOR UPDATE/,
   );
   assert.match(hardeningMigration, /expense_already_matched/);
-  assert.match(
-    hardeningMigration,
-    /historical_expense_match_graph_ambiguous/,
-  );
+  assert.match(hardeningMigration, /historical_expense_match_graph_ambiguous/);
   assert.match(hardeningMigration, /historical_split_match_immutable/);
   assert.match(hardeningMigration, /sepay_expense_match_evidence_invalid/);
   assert.match(hardeningMigration, /sepay_expense_match_shape_invalid/);
@@ -93,10 +90,7 @@ test("SePay expense matching preserves exact whole-document allocation", () => {
     /we\.processing_status IS DISTINCT FROM 'failed'/,
   );
   assert.match(hardeningMigration, /we\.payment_id IS NULL/);
-  assert.match(
-    hardeningMigration,
-    /historical_bank_deposit_evidence_missing/,
-  );
+  assert.match(hardeningMigration, /historical_bank_deposit_evidence_missing/);
   assert.match(
     hardeningMigration,
     /historical_bank_deposit_adjudication_ambiguous/,
@@ -119,10 +113,7 @@ test("SePay expense matching preserves exact whole-document allocation", () => {
   );
   assert.match(adjudication, /INTO STRICT v_event[\s\S]*FOR UPDATE/);
   assert.match(adjudication, /INTO STRICT v_expense[\s\S]*FOR UPDATE/);
-  assert.match(
-    adjudication,
-    /historical_bank_deposit_adjudication_incomplete/,
-  );
+  assert.match(adjudication, /historical_bank_deposit_adjudication_incomplete/);
   assert.match(
     adjudication,
     /v_event\.processing_status = 'processed'[\s\S]*v_event\.error_code IS NULL[\s\S]*v_expense\.paid_at IS NOT DISTINCT FROM v_event\.processed_at/,
@@ -139,11 +130,11 @@ test("SePay expense matching preserves exact whole-document allocation", () => {
     /SET expense_id = v_expense\.id,[\s\S]*processing_status = 'processed',[\s\S]*error_code = NULL/,
   );
   assert.match(hardeningMigration, /SET paid_at = v_event_time/);
+  assert.match(hardeningMigration, /e\.payment_method IS DISTINCT FROM 'cash'/);
   assert.match(
     hardeningMigration,
-    /e\.payment_method IS DISTINCT FROM 'cash'/,
+    /bank_deposit_requires_verified_sepay_event/,
   );
-  assert.match(hardeningMigration, /bank_deposit_requires_verified_sepay_event/);
   assert.match(
     hardeningMigration,
     /CREATE CONSTRAINT TRIGGER trg_expenses_require_bank_deposit_evidence[\s\S]*DEFERRABLE INITIALLY DEFERRED/,
@@ -209,8 +200,8 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(cell, /copy\.selectedExpenseAmount/);
   assert.match(cell, /copy\.expenseMatchDelta/);
   assert.match(cell, /href="\/finance\/expenses"/);
-  assert.match(financeMessages, /matchExpensePlaceholder: "Gán chi phí"/);
-  assert.match(financeMessages, /openExpenses: "Mở chi phí"/);
+  assert.match(financeMessages, /matchExpensePlaceholder: "Gắn Chi vận hành"/);
+  assert.match(financeMessages, /openExpenses: "Mở Chi vận hành"/);
   assert.match(financeMessages, /matchedExpenseCount/);
   assert.doesNotMatch(cell, /matchedEventId/);
   assert.match(actions, /matchedEventIds/);
@@ -218,17 +209,12 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(table, /amount=\{tx\.amount\}/);
   assert.match(cell, /Math\.abs\(left\.amount - amount\)/);
   assert.match(table, /type BankReconciliationRow/);
-  assert.match(table, /variant=\{filter === value \? "default" : "outline"\}/);
+  assert.match(table, /filters=\{\[/);
+  assert.match(table, /filterValues=\{\{ reconciliation: filter \}\}/);
   assert.match(table, /missingBankWebhookPayments/);
   assert.match(table, /ReviewStatusSelect/);
-  assert.match(
-    actions,
-    /parsed\.data\.category === "bank_deposit"/,
-  );
-  assert.match(
-    expenseClient,
-    /group !== "materials" && group !== "transfer"/,
-  );
+  assert.match(actions, /parsed\.data\.category === "bank_deposit"/);
+  assert.match(expenseClient, /group !== "materials" && group !== "transfer"/);
   assert.match(
     expenseClient,
     /row\.category !== "bank_deposit" && row\.matchedEventIds\.length === 0/,
