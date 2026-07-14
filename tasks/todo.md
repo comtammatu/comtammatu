@@ -84,14 +84,14 @@ Agreement: this slice changes entry and presentation only. It does not mutate
 production rows or remove Owner workspaces. Route visibility remains separate
 from Server Action/RLS authorization.
 
-- [x] **B1 — single-branch entry contract.** Owner falls back to `/`; the root
-      resolver auto-opens one allowed operating branch and retains the picker
-      only for real multi-branch scope.
+- [x] **B1 — single-branch entry contract.** Owner always retains the `/`
+      plane picker; a non-Owner with one allowed operating Branch auto-opens it,
+      while real multi-branch scope retains the Branch picker.
 - [x] **B2 — fail-closed Branch scope.** Central kinds are excluded for every
       role and a mismatched `/br/[branchId]` does not render another branch.
-- [x] **B3 — self-operating Hub presentation.** Add Branch management and
-      Owner-only workspace shortcuts with existing ACL labels/primitives; hide
-      the branch switcher when `canSwitchBranch` is false.
+- [x] **B3 — self-operating Hub presentation.** Keep daily manager/staff jobs in
+      Branch, remove Admin Dashboard shortcuts from the Hub, and hide the branch
+      switcher when `canSwitchBranch` is false.
 - [x] **B4 — automated verification.** Focused auth/Hub tests and the full repo
       typecheck, lint, build, and test gates are green.
 - [x] **B5 — authenticated visual smoke.** Cashier, Manager, and Owner auth plus
