@@ -110,6 +110,48 @@ dashboard-created Preview stopped before this delta at the parent historical
 without applying the refund change. The source Preview proof does not claim a
 green Production-history replay. Production remains untouched.
 
+## Self-Order Type-Source Reconciliation
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + database + workflow; external
+skill = Supabase; runtime tools = Production catalog and ledger reads, generated
+types, focused static tests, baseline replay, and full repo gates. Skipped =
+Production writes, payment-method canonicalization, Finance UI changes, merging
+PR #284, and changing the Self-Order product workflow.
+
+- **PM:** Make the Self-Order source chain and generated database contract
+  describe the current request workflow before PR #284. Done means no retired
+  V2 session/batch types while current request/payment RPCs remain available.
+- **BA:** Retired `self_order_sessions`, `self_order_batches`, their payment
+  session FK, and five legacy batch RPCs stay absent. Payment completion requires
+  both `completed_at` and a bound `payment_id`; table QR rotation is sessionless.
+- **Senior Dev:** Repair the existing retirement migration for fresh replay, add
+  the exact forward hardening payload for already-retired schemas, and scope the
+  generated-type delta to Self-Order only. Do not import payment canonicalization
+  or the surrounding PR #284.
+- **QA/QC:** Prove Production catalog-to-file mapping, generated-type shape,
+  sessionless function bodies, focused Self-Order regressions, baseline replay,
+  and the full TypeScript/lint/build gates. Production remains read-only.
+
+Synthesis: the Self-Order retirement source on `main` is weaker than the payload
+already applied to Production. Repair that immutable file for fresh replay and
+restore the forward hardening migration for already-retired schemas. Production
+also contains payment canonicalization from PR #284, but current `main` still
+owns the legacy MoMo runtime; this lane deliberately keeps all four
+`momo_revenue` type fields and defers that separate product migration to #284.
+
+- [x] **TS1 — source repair.** Restore the Production-equivalent
+      `20260711140000_retire_self_order_v2.sql` payload and the exact
+      `20260712071537_harden_self_order_payment_evidence.sql` forward repair.
+- [x] **TS2 — type/runtime alignment.** Remove only retired Self-Order types,
+      add the current QR-rotation/payment-status RPCs, and retain all four
+      `momo_revenue` compatibility fields for PR #284.
+- [x] **TS3 — verification.** Run focused tests, baseline replay, full gates,
+      and independent review with no Production mutation.
+- [x] **TS4 — delivery.** Publish the dedicated pre-PR #284 pull request as
+      PR #289.
+
 ## Branch Hub Single-Branch Entry (D077)
 
 ### T3 contract
