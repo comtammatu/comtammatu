@@ -477,6 +477,7 @@ interface BranchOperatorActionListProps {
   mobileColumns?: 1 | 2;
   wideColumns?: boolean;
   presentation?: "panel" | "plain" | "stations";
+  itemCount?: number;
   className?: string;
 }
 
@@ -486,13 +487,16 @@ function BranchOperatorActionList({
   mobileColumns = 1,
   wideColumns = false,
   presentation = "panel",
+  itemCount = 0,
   className,
 }: BranchOperatorActionListProps) {
   return (
     <ItemGroup
       className={cn(
         "gap-2",
-        presentation === "stations" && "grid grid-cols-1 sm:grid-cols-3",
+        presentation === "stations" && "grid grid-cols-1",
+        presentation === "stations" && itemCount === 2 && "sm:grid-cols-2",
+        presentation === "stations" && itemCount >= 3 && "sm:grid-cols-3",
         presentation !== "stations" &&
           columns === 2 &&
           (mobileColumns === 2
@@ -663,6 +667,7 @@ export function BranchOperatorActionSection({
       mobileColumns={mobileColumns}
       wideColumns={wideColumns}
       presentation={presentation}
+      itemCount={links.length}
     >
       {links.map((link) => (
         <BranchOperatorActionItem

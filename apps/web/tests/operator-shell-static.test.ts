@@ -189,6 +189,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /presentation="stations"/);
   assert.match(home, /presentation="plain"/);
   assert.match(home, /stationDescriptions/);
+  assert.match(home, /claims\.user_role === "owner"/);
   assert.match(home, /resolveOperatorTileIcon/);
   assert.match(home, /getBranchPrimaryHomeGroup/);
   assert.doesNotMatch(home, /BranchOperatorControlBar|LayoutDashboard/);
@@ -350,7 +351,11 @@ test("branch management roots use Branch operator shell adapters", () => {
   assert.match(branchOperatorPage, /"xl:grid-cols-3 2xl:grid-cols-4"/);
   assert.match(
     branchOperatorPage,
-    /presentation === "stations" && "grid grid-cols-1 sm:grid-cols-3"/,
+    /presentation === "stations" && itemCount === 2 && "sm:grid-cols-2"/,
+  );
+  assert.match(
+    branchOperatorPage,
+    /presentation === "stations" && itemCount >= 3 && "sm:grid-cols-3"/,
   );
   assert.match(branchOperatorPage, /active:scale-\[0\.97\]/);
   assert.match(branchOperatorPage, /"min-h-14 lg:items-center"/);
