@@ -1826,7 +1826,7 @@ Implementation plan:
       atomic audit evidence.
 - [ ] P1.1c — persist refund-to-bank relations as authoritative evidence instead
       of inferring them in reconciliation.
-- [ ] P1.1d — before activating real AP payment operations, make
+- [x] P1.1d — before activating real AP payment operations, make
       `create_supplier_payment` retry-safe with a tenant-unique idempotency key
       and replay semantics; re-evaluate branch scope before any non-Owner receives
       `finance:ap_pay`.
@@ -1847,6 +1847,12 @@ P1.1d T3 review:
 - **Synthesis:** Add one forward migration, pass the key through the existing
   form/action/RPC boundary, and extend the focused SQL/static tests. Production
   remains unchanged in this slice.
+- **Verification:** A Git-linked data-less Preview replayed exactly the 21 active
+  migrations and passed both supplier-payment SQL suites. A real two-backend
+  race observed one granted and one waiting advisory lock; both jobs succeeded,
+  with one payment row and one `paid_amount` increment. Generated types had no
+  diff, temporary fixtures and cron rows were removed, full T3 verification
+  passed, and the Production catalog remained unchanged.
 
 - [ ] P1.2 — close SePay-to-HĐĐT recovery around paid orders while preserving
       saved buyer payload.
