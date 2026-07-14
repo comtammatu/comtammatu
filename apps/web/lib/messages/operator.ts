@@ -19,6 +19,15 @@ export const operator = {
     managerAttendanceTitle: "Đang trong ca quản lý",
     clockIn: "Chấm công vào",
   },
+  home: {
+    stationsTitle: "Trạm vận hành",
+    stationsDescription: "Mở đúng màn cho công việc đang làm.",
+    posDescription: "Nhận món và thanh toán",
+    kdsDescription: "Làm món theo hàng chờ",
+    runnerDescription: "Gọi số và giao món",
+    shiftControlTitle: "Theo dõi trong ca",
+    shiftControlDescription: "Đơn hàng và giới hạn bán hôm nay.",
+  },
   shift: {
     title: "Ca hôm nay",
     description: "Chấm công, việc trong ca và kết ca.",

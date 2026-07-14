@@ -214,7 +214,7 @@ test.describe("branch route shell ownership", () => {
       });
       if (path === `/br/${branchId}`) {
         await expect(page.getByText("Cần xử lý")).toBeVisible();
-        await expect(page.getByText("Bán hàng")).toBeVisible();
+        await expect(page.getByText("Trạm vận hành")).toBeVisible();
         await expect(page.getByText("Quản lý cửa hàng")).toBeVisible();
         await expect(page.getByText("Tài chính")).toBeVisible();
         await expect(page.getByText("Nhân sự")).toBeVisible();

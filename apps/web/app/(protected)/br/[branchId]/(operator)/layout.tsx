@@ -63,6 +63,7 @@ export default async function OperatorLayout({
   const unreadResult = await unreadPromise;
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
   const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
+  const compactBranchName = context.branch.name.replace(/^Chi nhánh\s+/, "");
 
   return (
     <PwaRuntimeProvider>
@@ -72,11 +73,17 @@ export default async function OperatorLayout({
       />
       <div className="flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
         <AppHeader
-          title={context.branch.name}
+          title={
+            <>
+              <span className="sm:hidden">{compactBranchName}</span>
+              <span className="hidden sm:inline">{context.branch.name}</span>
+            </>
+          }
           subtitle={ROLE_LABEL_VI[claims.user_role]}
-          showBrandText={false}
+          subtitleHiddenOnMobile
           homeHref={`/br/${context.branchId}`}
           homeAriaLabel={APP_COPY_VI.operatorHome}
+          wide
           actions={
             <>
               {canUseBranchPicker && context.canSwitchBranch ? (

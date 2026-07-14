@@ -350,7 +350,7 @@ export function PwaToolbar({
                 variant="ghost"
                 size="touch"
                 className="shrink-0 px-3 text-muted-foreground"
-                onClick={() => setInstallDismissed(true)}
+                onClick={handleDismiss}
                 aria-label={copy.dismissLabel}
               >
                 <IconX data-icon="inline-start" />
