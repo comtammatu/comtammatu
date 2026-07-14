@@ -54,6 +54,62 @@ pinned to the viewport.
 - Active work must be one of the gates below or a fresh owner-confirmed blocker.
   Everything else belongs in code, canonical docs, tests, runbooks, or nowhere.
 
+## Owner Predicate RLS Repair
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + database + workflow +
+orchestration; external skills = Supabase + Supabase Postgres RLS guidance;
+runtime tools = catalog-only production reads, an isolated source Preview Branch,
+targeted tests, and full repo gates. Skipped = production apply, a new auth
+helper, broader refund access, and authenticated execution of
+`public.auth_is_owner(uuid)`.
+
+- **PM:** Restore the Owner refund evidence path blocked by SQLSTATE `42501`;
+  add no new role, permission, route, or Finance behavior.
+- **BA:** The active tenant Owner can read and operate on refund rows. Every
+  non-Owner remains denied, and the service-only owner predicate remains hidden
+  from browser roles.
+- **Senior Dev:** Recreate the three `refunds_*` policies with the existing
+  `has_permission(branch_id, key)` boundary and semantic refund keys. Restore
+  the existing service-only ACL on `auth_is_owner`; do not grant browser
+  execution or add another helper.
+- **QA/QC:** Prove policy definitions, function privileges, Owner access, and
+  non-Owner denial on a source Preview Branch. Inspect advisors for a
+  refund-boundary regression and report unrelated project-wide findings
+  separately. Publishing this draft is only a verification trigger, never a
+  production apply.
+
+Synthesis: the direct RLS call crossed an invoker privilege boundary. Reusing
+the existing browser-callable permission helper fixes that boundary while
+preserving the Owner-only contract and least privilege.
+
+- [x] **R1 — forward policy repair.** Add ordered migrations that restore the
+      semantic refund permission gates and the service-only owner-predicate ACL.
+- [x] **R2 — verification.** Targeted regression, full repo gates, source
+      Preview migration execution, and Owner/non-Owner smoke are green. Advisors
+      contain no `auth_is_owner` finding; unrelated project-wide findings are
+      recorded in the attestation.
+- [x] **R3 — delivery.** Commit and publish the DB-first draft without applying
+      or merging it to production.
+
+Attestation: the forward migrations and static regression are written, and
+`REVIEW_TIER=T3 corepack pnpm verify` is green. Source Preview
+`yxbejsfflgcliuxfkhin` reached `FUNCTIONS_DEPLOYED` with both forward versions
+in its ledger. The first source run exposed bootstrap grants that made
+`auth_is_owner` browser-callable; an immutable follow-up delta removed them,
+leaving only `service_role` executable. Synthetic, rolled-back smoke proved
+Owner create/read/reject RPCs, denied Owner direct refund DML, and denied a
+Branch Manager (including one stale refund grant) access to the predicate,
+rows, and both RPCs with SQLSTATE `42501`. Security and performance advisors
+contain 434 and 512 project-wide findings respectively, but no
+`auth_is_owner` finding; refund executor and index notices are reported by the
+existing advisor inventory and are outside this policy/ACL-only diff. A
+dashboard-created Preview stopped before this delta at the parent historical
+`20260630130407_canonicalize_branch_manager_template` replay, so it was deleted
+without applying the refund change. The source Preview proof does not claim a
+green Production-history replay. Production remains untouched.
+
 ## Branch Hub Single-Branch Entry (D077)
 
 ### T3 contract
