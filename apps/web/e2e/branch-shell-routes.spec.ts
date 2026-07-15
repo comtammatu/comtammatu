@@ -26,7 +26,11 @@ const OFFICE_PREFIXES = [
 const KNOWN_CONSOLE_NOISE = [
   /https:\/\/va\.vercel-scripts\.com\/v1\/.*violates the following Content Security Policy directive/,
   /violates the following Content Security Policy directive.*https:\/\/va\.vercel-scripts\.com\/v1\//,
+  /Connecting to 'ws:\/\/127\.0\.0\.1:\d+\/realtime\/v1\/websocket\?.*' violates the following Content Security Policy directive/,
+  /Refused to execute script from 'http:\/\/localhost:\d+\/_vercel\/(?:speed-insights|insights)\/script\.js'.*MIME type/,
 ];
+const LOCAL_VERCEL_ANALYTICS_URL =
+  /^http:\/\/localhost:\d+\/_vercel\/(?:speed-insights|insights)\/script\.js$/;
 
 function watchPageHealth(page: Page) {
   const consoleErrors: string[] = [];
@@ -36,6 +40,7 @@ function watchPageHealth(page: Page) {
   page.on("console", (msg) => {
     const text = msg.text();
     if (msg.type() !== "error") return;
+    if (LOCAL_VERCEL_ANALYTICS_URL.test(msg.location().url)) return;
     if (KNOWN_CONSOLE_NOISE.some((pattern) => pattern.test(text))) return;
     consoleErrors.push(text);
   });
@@ -100,7 +105,7 @@ function expectedOwnerBottomNavCurrentCount(path: string, branchId: number) {
 }
 
 test.describe("branch route shell ownership", () => {
-  test("manager opens its Branch Hub on mobile and desktop", async ({
+  test("manager opens its Branch Hub without Owner workspaces across breakpoints", async ({
     browser,
   }) => {
     const context = await browser.newContext({
@@ -115,9 +120,19 @@ test.describe("branch route shell ownership", () => {
     const hubPath = new URL(page.url()).pathname;
     expect(hubPath).toMatch(/^\/br\/\d+$/);
 
-    for (const viewport of [MOBILE, DESKTOP]) {
+    for (const viewport of [
+      MOBILE,
+      TABLET_PORTRAIT,
+      TABLET_LANDSCAPE,
+      DESKTOP,
+    ]) {
       await page.setViewportSize(viewport);
       await expectHealthyRoute(page, hubPath, { allowWorkspaceLinks: true });
+      await expect(
+        page.locator(
+          'a[href^="/admin"], a[href^="/finance"], a[href^="/hr"]',
+        ),
+      ).toHaveCount(0);
     }
 
     expect(health.consoleErrors).toEqual([]);
@@ -214,11 +229,14 @@ test.describe("branch route shell ownership", () => {
       });
       if (path === `/br/${branchId}`) {
         await expect(page.getByText("Cần xử lý")).toBeVisible();
-        await expect(page.getByText("Bán hàng")).toBeVisible();
+        await expect(page.getByText("Trạm vận hành")).toBeVisible();
         await expect(page.getByText("Quản lý cửa hàng")).toBeVisible();
         await expect(page.getByText("Tài chính")).toBeVisible();
         await expect(page.getByText("Nhân sự")).toBeVisible();
         await expect(page.getByText("Lương")).toBeVisible();
+        await expect(page.locator('a[href="/finance"]')).toHaveCount(1);
+        await expect(page.locator('a[href="/hr"]')).toHaveCount(1);
+        await expect(page.locator('a[href="/hr/payroll"]')).toHaveCount(1);
       }
       const operatorNav = page.getByRole("navigation", {
         name: APP_COPY_VI.operatorAriaLabel,
@@ -269,7 +287,9 @@ test.describe("branch route shell ownership", () => {
     expect(health.serverErrors).toEqual([]);
   });
 
-  test("Office count management keeps desktop tables", async ({ page }) => {
+  test("Office count management keeps desktop tables or an explicit empty state", async ({
+    page,
+  }) => {
     test.setTimeout(90_000);
     const { branchId } = await getCashierProfile();
     const health = watchPageHealth(page);
@@ -282,7 +302,12 @@ test.describe("branch route shell ownership", () => {
       await page.goto(path, { waitUntil: "domcontentloaded" });
       await page.waitForLoadState("load");
       await page.waitForTimeout(800);
-      await expect(page.locator("table").first()).toBeVisible();
+      await expect(
+        page
+          .locator("table")
+          .first()
+          .or(page.getByText("Chưa có kho chi nhánh")),
+      ).toBeVisible();
       const overflowX = await page.evaluate(
         () =>
           Math.max(

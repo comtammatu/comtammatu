@@ -9,6 +9,7 @@ export function OperatorPwaToolbar() {
   return (
     <PwaToolbar
       layout="contained"
+      dismissStorageKey="matu-operator-install-dismissed"
       copy={{
         regionLabel: copy.regionLabel,
         offline: copy.offline,

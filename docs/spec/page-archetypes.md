@@ -343,12 +343,13 @@ badge}`).
 
 **Exemplar:** `apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx`.
 
-- Skeleton: `BranchOperatorPage` → `KpiRow` of `KpiCard` (`{label, value,
-delta, hint, icon, href}` — `href` drill-down is mandatory per the owner
-  Q-spec) → `BranchOperatorPanel size="sm"` secondary panels.
-- Every metric value binds to a key in
-  `docs/ref/operational-data-contract.md`; do not add a metric card without a
-  contract key.
+- Skeleton: `BranchOperatorPage` → unresolved command/readiness lanes →
+  `BranchOperatorPanel size="sm"` for live operations, end-of-day work, and
+  explicit drill-down actions.
+- This Branch command surface is task-first, not an executive dashboard. It
+  MUST NOT render `KpiRow`, `KpiCard`, charts, financial aggregation, or a
+  dashboard-card mosaic. Quantitative signals belong inside the actionable row
+  they qualify and link directly to the owning workflow.
 - Status/money/date: per § 1.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 

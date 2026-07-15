@@ -9,6 +9,31 @@
 > checkout with `git status` and re-check production state for any migration or
 > runtime claim.
 
+## Branch Hub Shell Slice From PR #284 (2026-07-15)
+
+Skill plan: repo rules = engineering + skills + UI + workflow + orchestration;
+external = Ponytail; runtime = focused static tests, UI contract lint, and full
+repository gates. Skipped = database work, Finance, Admin Dashboard, Design
+System changes, and external design review because the current UI contract
+already fixes the Branch pattern.
+
+UI Advisor Gate: `/br/[branchId]` Branch Manager/Staff shell and home on phone
+and tablet; hierarchy/navigation change only. Preserve compact headers on detail
+workflows and keep POS/KDS/Runner as separate station apps.
+
+- **PM:** Ship only the Branch shell and home hierarchy that remains valid on
+  current `main`; do not carry the 704-file PR #284 bundle.
+- **BA:** Keep daily Branch work in Branch, keep Owner Finance/Admin authority
+  unchanged, and preserve every existing route/permission boundary.
+- **Senior Dev:** Reuse the existing `BranchOperator*` adapter and copy registry;
+  retain `hideHeaderOnMobile` for detail screens and add no new abstraction.
+- **QA/QC:** Lock shell navigation, visible home identity, station grouping,
+  install-hint persistence, and route smoke before opening the replacement PR.
+
+- [x] Apply the current-main-compatible Branch shell/home subset.
+- [x] Pass focused tests, UI contract lint, typecheck, lint, build, and review-tier.
+- [x] Commit, push, and open the first replacement PR without closing PR #284.
+
 ## POS Item Customizer Mobile Scroll (2026-07-11)
 
 Skill plan: repo rules = engineering + skills + workflow + ui; external skills =

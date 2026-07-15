@@ -71,7 +71,7 @@ test("operator bottom nav stays limited to daily jobs", () => {
   assert.match(layout, /showEmployeeLinks=\{canUseShiftTab\}/);
 });
 
-test("operator header keeps profile and notifications in chrome", () => {
+test("operator header shows branch context and keeps profile and notifications", () => {
   const layout = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
   );
@@ -80,6 +80,12 @@ test("operator header keeps profile and notifications in chrome", () => {
   assert.match(layout, /homeHref=\{`\/br\/\$\{context\.branchId\}`\}/);
   assert.match(layout, /homeAriaLabel=\{APP_COPY_VI\.operatorHome\}/);
   assert.match(layout, /subtitle=\{ROLE_LABEL_VI\[claims\.user_role\]\}/);
+  assert.match(layout, /subtitleHiddenOnMobile/);
+  assert.match(layout, /\swide\s/);
+  assert.doesNotMatch(layout, /showBrandText=\{false\}/);
+  assert.match(layout, /context\.branch\.name\.replace\(\/\^Chi nhánh\\s\+\//);
+  assert.match(layout, /className="sm:hidden"/);
+  assert.match(layout, /className="hidden sm:inline"/);
   assert.doesNotMatch(layout, /Hub \$\{hubLabel\}/);
   assert.match(appHeader, /homeHref\?: string/);
   assert.match(appHeader, /<Link[\s\S]*href=\{href\}/);
@@ -108,6 +114,22 @@ test("operator header keeps profile and notifications in chrome", () => {
   assert.doesNotMatch(layout, /shift\/profile/);
 });
 
+test("operator install hint dismissal persists across navigation", () => {
+  const operatorToolbar = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/operator-pwa-toolbar.tsx",
+  );
+  const sharedToolbar = read("apps/web/app/components/pwa-toolbar.tsx");
+  const containedLayout = sharedToolbar.slice(
+    sharedToolbar.indexOf("// Contained (Employee)."),
+  );
+
+  assert.match(
+    operatorToolbar,
+    /dismissStorageKey="matu-operator-install-dismissed"/,
+  );
+  assert.match(containedLayout, /onClick=\{handleDismiss\}/);
+});
+
 test("notifications page provides a safe branch return path", () => {
   const page = read("apps/web/app/(protected)/notifications/page.tsx");
 
@@ -123,6 +145,24 @@ test("operator home label is today, not an old branch title", () => {
   assert.match(labels, /operator_home: "Nay"/);
   assert.doesNotMatch(labels, /operatorHome: "Branch Hub"/);
   assert.doesNotMatch(labels, /Branch Runtime|Branch Ops/);
+});
+
+test("operator home keeps visible mobile identity while detail pages may compact", () => {
+  const adapter = read(
+    "apps/web/lib/branch-operator/components/branch-operator-page.tsx",
+  );
+  const home = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+  );
+  const stock = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
+  );
+
+  assert.match(adapter, /hideHeaderOnMobile\?: boolean/);
+  assert.match(adapter, /sr-only sm:not-sr-only/);
+  assert.match(adapter, /data-slot="branch-operator-page"/);
+  assert.doesNotMatch(home, /hideHeaderOnMobile/);
+  assert.match(stock, /hideHeaderOnMobile/);
 });
 
 test("operator home renders MODULE_ACL-backed capability tiles", () => {
@@ -146,6 +186,10 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.doesNotMatch(todaySource, /messages\.employee\.home/);
   assert.match(home, /groups\.map/);
   assert.match(home, /BranchOperatorActionSection/);
+  assert.match(home, /presentation="stations"/);
+  assert.match(home, /presentation="plain"/);
+  assert.match(home, /stationDescriptions/);
+  assert.match(home, /claims\.user_role === "owner"/);
   assert.match(home, /resolveOperatorTileIcon/);
   assert.match(home, /getBranchPrimaryHomeGroup/);
   assert.doesNotMatch(home, /BranchOperatorControlBar|LayoutDashboard/);
@@ -167,6 +211,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.doesNotMatch(home, /EmployeeStatusStrip/);
   assert.doesNotMatch(home, /operatorShortcutsStatus/);
   assert.doesNotMatch(home, /OPERATION_HANDOFFS/);
+  assert.doesNotMatch(home, /NoteCallout/);
 });
 
 test("operator shift route renders the Branch workday plane", () => {
@@ -302,11 +347,18 @@ test("branch management roots use Branch operator shell adapters", () => {
   assert.match(branchOperatorPage, /data-branch-operator-frame/);
   assert.match(branchOperatorPage, /"flex flex-col gap-2 lg:flex-row"/);
   assert.match(branchOperatorPage, /align === "end" && "lg:justify-end"/);
+  assert.match(branchOperatorPage, /wideColumns &&/);
+  assert.match(branchOperatorPage, /"xl:grid-cols-3 2xl:grid-cols-4"/);
   assert.match(
     branchOperatorPage,
-    /columns === 2 && wideColumns && "xl:grid-cols-3 2xl:grid-cols-4"/,
+    /presentation === "stations" && itemCount === 2 && "sm:grid-cols-2"/,
   );
-  assert.match(branchOperatorPage, /active:scale-\[0\.97\] lg:items-center/);
+  assert.match(
+    branchOperatorPage,
+    /presentation === "stations" && itemCount >= 3 && "sm:grid-cols-3"/,
+  );
+  assert.match(branchOperatorPage, /active:scale-\[0\.97\]/);
+  assert.match(branchOperatorPage, /"min-h-14 lg:items-center"/);
   assert.doesNotMatch(branchOperatorPage, /"flex flex-col gap-2 sm:flex-row"/);
   assert.doesNotMatch(
     branchOperatorPage,
