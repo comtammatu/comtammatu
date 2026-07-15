@@ -26,9 +26,8 @@ export const cashConfirmSchema = z.object({
 /**
  * Schema for `createPayment(branchId, orderId, method, amount)`.
  *
- * Aggregates all 4 positional args. `method` enum is
- * `["cash", "vietqr", "momo"]`; remote methods create a pending payment row
- * before customer transfer so provider/webhook settlement can match it.
+ * Aggregates all 4 positional args. Only VietQR and MoMo create a pending
+ * intent here; cash uses the confirmation RPC and cash-drawer gate.
  *
  * Field order matters: branchId is validated first, then the remaining
  * three, so the first-issue message stays identical when multiple fields
@@ -43,7 +42,7 @@ export const createPaymentSchema = z.object({
     .int()
     .positive({ error: "Branch ID không hợp lệ" }),
   orderId: z.coerce.number().int().positive(),
-  method: z.enum(["cash", "vietqr", "momo"]),
+  method: z.enum(["vietqr", "momo"]),
   amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
 });
 

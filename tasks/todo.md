@@ -34,6 +34,63 @@ workflows and keep POS/KDS/Runner as separate station apps.
 - [x] Pass focused tests, UI contract lint, typecheck, lint, build, and review-tier.
 - [x] Commit, push, and open the first replacement PR without closing PR #284.
 
+## Payment Provider RPC Ledger (2026-07-15)
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + database + workflow +
+orchestration; external skills = Supabase + Ponytail; runtime tools = isolated
+local Supabase, SQL acceptance, two-session race harness, focused static tests,
+and full repository gates. Skipped = Production DDL, Production data repair,
+merge, and Preview creation until the Owner confirms the exact hourly cost.
+
+- **PM:** Remove every path that can leave an order stuck behind a partial MoMo
+  intent or let a retry overwrite terminal provider evidence. Keep cash,
+  VietQR, MoMo, SePay, invoice, and stock ownership boundaries explicit.
+- **BA:** A remote intent is pending only after its displayable provider
+  metadata commits. A signed provider result owns settlement; a terminal result
+  is immutable; cash cannot replace pending MoMo; a final MoMo failure releases
+  the order for another payment.
+- **Senior Dev:** Make `create_payment` service-only and atomic, serialize MoMo
+  webhook writes in event -> order advisory -> payment order, keep exact signed
+  payload evidence, remove the split metadata RPC, and retain RPC-only payment
+  mutation from the web app.
+- **QA/QC:** Prove stale signatures and browser grants absent, actor/branch ACL,
+  amount recomputation, incomplete metadata rollback, idempotent canonical
+  replay, pending/success/failure category defense, no terminal downgrade, no
+  deadlock, and complete fixture/session cleanup.
+
+- [x] **P0-D1a — atomic provider intent.** Store provider reference and metadata
+      in the same service-only transaction after rechecking the active POS actor
+      and branch permission; fail closed on incomplete MoMo QR evidence.
+- [x] **P0-D1b — serialized MoMo settlement.** Commit exact pending, success, or
+      failure payloads under the webhook-event lock and order advisory lock;
+      completed/refunded payments cannot be downgraded.
+- [x] **P0-D1c — local acceptance.** Targeted SQL, static provider tests, and the
+      eight-scenario concurrency harness are green with zero residual fixtures.
+- [x] **P0-D1d — closure gates.** Complete T3 lint, build, full tests, independent
+      review, and diff hygiene.
+- [x] **P1-D1e — pending MoMo/cash containment.** Reject cash before it can
+      rewrite a pending MoMo row; prove signed MoMo success wins the two-session
+      race with exact event evidence and no deadlock.
+- [ ] **P0-D1f — Preview proof.** Create and meter a Preview only after the Owner
+      confirms the quoted `$0.01344/hour`; run migration preflight, deploy, and
+      phone/tablet/payment smoke there.
+- [ ] **P0-D2 — direct-DML revoke.** Land as a separate migration/PR after D1
+      Preview proof so grant revocation is isolated and independently reversible.
+
+Attestation: the service-only payment-intent and MoMo settlement RPCs are
+written and applied only to the isolated local Supabase stack. Targeted SQL,
+focused provider/static tests, the eight-scenario concurrency harness, typecheck,
+T3 lint, build, full tests, and diff hygiene are green. The harness proves both
+same-event and separate-event pending/success/failure races, order-first lock
+inversion, pending-MoMo versus cash containment, atomic metadata, and zero
+residual fixtures. Independent review found the pending-MoMo cash-conversion P1;
+the canonical cash RPC now fails closed while the signed settlement remains
+authoritative. Stale signatures and browser grants remain absent from the live
+local catalog. Preview and Production remain untouched; merge is outside this
+slice.
+
 ## POS Item Customizer Mobile Scroll (2026-07-11)
 
 Skill plan: repo rules = engineering + skills + workflow + ui; external skills =

@@ -29,6 +29,12 @@ import { POS_ERROR_CODES } from "../_utils/error-codes";
 export const confirmCashPaymentRpcMappings: readonly RpcErrorMapping[] = [
   // Cash-specific sentinels first.
   {
+    match: includesAny("pending_momo_payment_requires_provider_resolution"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Đơn đang chờ MoMo xác nhận. Hãy kiểm tra giao dịch MoMo trước khi thu tiền mặt.",
+  },
+  {
     match: includesAny("self_order_payment_cancel_staff_required"),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,
     userMessage:
@@ -134,6 +140,12 @@ export const confirmCashPaymentRpcFallback: RpcErrorFallback = {
  * fits the `RpcErrorMapping` shape.
  */
 export const createPaymentRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: (_message, code) => code === "55P03",
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Đơn hàng đang được xử lý bởi một giao dịch khác. Vui lòng tải lại sau vài giây.",
+  },
   {
     match: includesAny("already_paid"),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,
