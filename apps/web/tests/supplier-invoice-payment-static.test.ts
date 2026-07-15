@@ -272,7 +272,7 @@ test("supplier payment migration enforces exact replay, credit-aware cap, and Ow
   );
   assert.match(
     migration,
-    /CREATE OR REPLACE FUNCTION public\.create_supplier_payment[\s\S]*RETURN public\.record_supplier_payment/,
+    /CREATE OR REPLACE FUNCTION public\.create_supplier_payment[\s\S]*SECURITY INVOKER[\s\S]*RETURN public\.record_supplier_payment/,
   );
   assert.match(
     migration,
