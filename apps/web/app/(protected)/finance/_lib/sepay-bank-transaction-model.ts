@@ -1,5 +1,9 @@
 import { getVNDateString } from "@comtammatu/shared/time";
 
+const SEPAY_LOCAL_DATE_TIME_PATTERN =
+  /^(\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))[ T]((?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?)$/;
+const EXPLICIT_TIME_ZONE_PATTERN = /(?:Z|[+-]\d{2}:\d{2})$/i;
+
 export type SepayTransferType = "in" | "out";
 
 export interface SepayDateRange {
@@ -189,11 +193,7 @@ export function readSepayBankWebhookReview(
 export function classifySepayUnmatchedMoneyIn(
   transaction: Pick<
     SepayBankTransaction,
-    | "code"
-    | "content"
-    | "errorCode"
-    | "processingStatus"
-    | "referenceCode"
+    "code" | "content" | "errorCode" | "processingStatus" | "referenceCode"
   >,
 ): SepayUnmatchedMoneyInReason {
   if (
@@ -282,11 +282,25 @@ function readTransferType(
 export function sepayTransactionBusinessDate(
   transaction: Pick<SepayBankTransaction, "createdAt" | "transactionDate">,
 ): string {
-  if (transaction.transactionDate) {
-    const match = transaction.transactionDate.match(/^\d{4}-\d{2}-\d{2}/);
-    if (match?.[0]) return match[0];
+  return getVNDateString(resolveSepayTransactionInstant(transaction));
+}
+
+export function resolveSepayTransactionInstant(
+  transaction: Pick<SepayBankTransaction, "createdAt" | "transactionDate">,
+): string {
+  const transactionDate = transaction.transactionDate?.trim();
+  const localMatch = transactionDate?.match(SEPAY_LOCAL_DATE_TIME_PATTERN);
+  if (localMatch?.[1] && localMatch[2]) {
+    return `${localMatch[1]}T${localMatch[2]}+07:00`;
   }
-  return getVNDateString(transaction.createdAt);
+  if (
+    transactionDate &&
+    EXPLICIT_TIME_ZONE_PATTERN.test(transactionDate) &&
+    !Number.isNaN(Date.parse(transactionDate))
+  ) {
+    return transactionDate;
+  }
+  return transaction.createdAt;
 }
 
 export function isSepayBusinessDateInRange(
