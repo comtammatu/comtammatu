@@ -223,7 +223,7 @@ CREATE OR REPLACE FUNCTION public.create_supplier_payment(
   p_reference_note text DEFAULT NULL::text
 ) RETURNS jsonb
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path TO ''
 AS $$
 BEGIN
