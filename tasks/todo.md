@@ -341,6 +341,59 @@ from Server Action/RLS authorization.
       local Supabase. Manager setup now resolves an active `branch` and the
       `branch_manager` position instead of pinning a retired central site.
 
+## Finance Reconciliation Workbench v1
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + database + UI + workflow;
+external skills = Playwright + Supabase; outside review = Gemini, while Cursor
+Agent was unavailable; runtime tools = focused tests, full repo gates, and local
+browser verification. Skipped = schema/RPC changes, production writes, new
+reconciliation states, and enterprise accounting.
+
+UI Advisor Gate
+
+- Surface: `/finance/bank-transactions`; route family: `finance`; product plane:
+  Admin Dashboard; Branch chrome mode: n/a; change: visual + flow only.
+- Context: Finance § 2.9; actor: Owner; job: find unlinked bank evidence and
+  attach the correct existing payment, Chi vận hành, NCC payment, or refund.
+- Journey: open review queue -> inspect evidence -> choose one matching action
+  -> save -> row moves to matched history; recovery: close without saving or
+  retry the existing safe error path.
+- Information order: 1) review queue/filter 2) evidence row + amount/status 3)
+  matched history; exclude: cross-source money totals and new accounting data.
+- Pattern: `LIST`; exemplar: Inventory GRN list; data display: `DataTable`.
+- States: loading, empty queue, no filter results, pending mutation, safe error,
+  matched, webhook error, and permission denial.
+- Components: `AppPage`, `FilterBar`, `DataTable`, `Select`, `Badge`, `Sheet`,
+  and existing Finance actions/models; fallback: none.
+- Responsive/accessibility: same IA at 390/768/1440; mixed touch/keyboard;
+  preserve labels, focus trap, visible focus, and touch-safe actions.
+- Verification: static reconciliation tests, typecheck, lint, build, test, and
+  authenticated local browser smoke at the target viewports.
+
+- **PM:** Ship one queue-first Owner workbench; remove five summary cards and
+  make `Cần rà` the default without adding a new route or metric.
+- **BA:** Never sum unmatched bank events with missing-webhook payments because
+  both can represent one transfer. Preserve exact-total and one-evidence rules.
+- **Senior Dev:** Reuse the current union rows, classifiers, actions, `DataTable`,
+  and `Sheet`; change presentation only.
+- **QA/QC:** Prove default queue filtering, closed-webhook exclusion, action
+  parity, no heterogeneous total, and mobile/desktop focus behavior.
+
+- [x] **F1 — queue-first list.** Remove KPI cards, default to `needs_review`,
+      and replace the seven-button rail with one filter and a safe work count.
+- [x] **F2 — focused evidence matching.** Move the existing multi-source match
+      controls from `Popover` to `Sheet` without changing actions or payloads.
+- [x] **F3 — verification.** Focused tests, repo gates, and responsive browser
+      smoke are green.
+
+Attestation: the diff matches the T3 contract. The Owner exact-match journey
+moved one 240,000 VND outgoing SePay row from the review queue to matched
+history through the existing RPC. The page has no horizontal overflow at
+390/768/1440, and a Branch Manager navigating directly to the route is returned
+to `/br/1`. `corepack pnpm verify` is green (web: 1,005 passed, 33 skipped).
+
 ## Branch Stock Hub Viewport
 
 ### T2 contract

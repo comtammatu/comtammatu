@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import {
   attachSupplierPaymentMatches,
   buildSepayPaymentWebhookSummary,
@@ -10,9 +11,11 @@ import {
   canManuallyLinkSepayPayment,
   classifySepayReconciliationState,
   classifySepayUnmatchedMoneyIn,
+  isOpenSepayBankWebhookReview,
   isSepayTransactionInDateRange,
   mapSepayWebhookRow,
   readSepayBankWebhookReview,
+  resolveSepayTransactionInstant,
   sepayTransactionBusinessDate,
   sumSepayBankMovementSince,
   type SepayBankTransaction,
@@ -220,6 +223,40 @@ test("SePay bank transaction date range uses transaction date then VN created da
       ),
     ),
     "2026-07-02",
+  );
+});
+
+test("SePay provider-local timestamps resolve to an explicit Vietnam instant", () => {
+  const createdAt = "2026-07-01T01:30:00.000Z";
+  const localInstant = resolveSepayTransactionInstant({
+    transactionDate: "2026-07-01 08:30:00",
+    createdAt,
+  });
+
+  assert.equal(localInstant, "2026-07-01T08:30:00+07:00");
+  assert.equal(formatVNDateTime(localInstant), "08:30 01/07/2026");
+  assert.equal(
+    resolveSepayTransactionInstant({
+      transactionDate: "invalid",
+      createdAt,
+    }),
+    createdAt,
+  );
+  assert.equal(
+    resolveSepayTransactionInstant({
+      transactionDate: "2026-07-01T08:30:00+07:00",
+      createdAt,
+    }),
+    "2026-07-01T08:30:00+07:00",
+  );
+  const utcCrossover = {
+    transactionDate: "2026-07-01T18:30:00Z",
+    createdAt,
+  };
+  assert.equal(sepayTransactionBusinessDate(utcCrossover), "2026-07-02");
+  assert.equal(
+    formatVNDateTime(resolveSepayTransactionInstant(utcCrossover)),
+    "01:30 02/07/2026",
   );
 });
 
@@ -643,12 +680,54 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   const messages = read("apps/web/lib/messages/finance.ts");
 
   assert.match(page, /<BankTransactionsTable/);
+  assert.match(page, /<AppPage width="xwide"/);
+  assert.doesNotMatch(
+    page,
+    /KpiCard|KpiRow|needsReviewAmount|buildSepayReconciliationSummary/,
+  );
   assert.match(table, /type BankReconciliationRow/);
   assert.match(table, /rowMatchesFilter/);
+  assert.match(table, /useState<BankReconciliationFilter>\("needs_review"\)/);
+  assert.match(table, /filters=\{/);
+  assert.match(table, /queueCount\(formatCount\(openQueueCount\)\)/);
+  assert.match(table, /const hasRows = rows\.length > 0/);
+  assert.match(table, /const isQueueView = filter === "needs_review"/);
+  assert.match(table, /copy\.queueEmptyTitle/);
+  assert.match(table, /emptyMode=\{hasRows \? "no-results" : "no-data"\}/);
+  assert.match(table, /mobileBreakpoint=\{1024\}/);
+  assert.match(table, /formatVNDateTime/);
+  assert.match(table, /resolveSepayTransactionInstant/);
+  assert.doesNotMatch(table, /\.replace\("T", " "\)\.slice/);
+  assert.match(table, /return state === "needs_review"/);
+  assert.match(table, /evidence=\{\{/);
   assert.match(table, /money_out_review/);
   assert.match(table, /missing_webhook/);
   assert.doesNotMatch(page, /outgoingMoneyReviewTransactions/);
   assert.match(messages, /Lọc đối soát/);
+  assert.match(messages, /Đối soát ngân hàng/);
+  assert.match(messages, /Thanh toán #\$\{id\}/);
+
+  const matchCell = read(
+    "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
+  );
+  assert.match(matchCell, /<Sheet open=\{open\}/);
+  assert.match(matchCell, /<SheetDescription>/);
+  assert.doesNotMatch(matchCell, /Popover(Content|Trigger)?/);
+  assert.doesNotMatch(matchCell, /max-h-(48|72).*overflow-y-auto/);
+  assert.match(matchCell, /htmlFor=\{checkboxId\}/);
+  assert.match(matchCell, /formatVNDateTime/);
+  assert.match(matchCell, /formatVNBusinessDate/);
+  assert.match(messages, /Hoàn tiền \$\{order\}/);
+  assert.match(messages, /Chưa có bằng chứng ngân hàng/);
+  assert.match(messages, /Nộp tiền mặt vào tài khoản/);
+  assert.match(messages, /Không còn việc đối soát cần xử lý/);
+});
+
+test("SePay default review queue keeps only open webhook evidence", () => {
+  assert.equal(isOpenSepayBankWebhookReview(null), true);
+  assert.equal(isOpenSepayBankWebhookReview("reviewing"), true);
+  assert.equal(isOpenSepayBankWebhookReview("resolved"), false);
+  assert.equal(isOpenSepayBankWebhookReview("ignored"), false);
 });
 
 test("SePay payment webhook summary finds paid VietQR payments without bank evidence", () => {
