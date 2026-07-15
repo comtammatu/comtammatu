@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { UseFormReturn } from "react-hook-form";
@@ -67,6 +67,7 @@ import type { SupplierInvoiceCursor } from "../procurement-actions";
 import {
   getSupplierInvoiceOutstandingAmount,
   mapSupplierInvoiceRow,
+  resolveSupplierPaymentIntentKey,
   type SupplierInvoiceRow,
 } from "./supplier-invoice-row";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
@@ -212,7 +213,7 @@ function sortSupplierInvoices(
 }
 
 function isInvoiceOverdue(invoice: SupplierInvoiceRow) {
-  if (!invoice.dueDate || invoice.paymentStatus === "paid") {
+  if (!invoice.dueDate || getSupplierInvoiceOutstandingAmount(invoice) <= 0) {
     return false;
   }
 
@@ -492,6 +493,7 @@ export function SupplierInvoicesClient({
     preselectGrnId != null && preselectInvoiceId == null,
   );
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const paymentIntentKeyRef = useRef<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const copy = messages.inventory.supplierInvoices;
   const createDefaultValues = useMemo(
@@ -746,18 +748,44 @@ export function SupplierInvoicesClient({
       return { success: false, error: copy.paymentTooLarge };
     }
 
-    const res = await recordSupplierPayment({
-      invoiceId: selectedInvoice.id,
-      amount,
-      paymentMethod: values.paymentMethod,
-      referenceNote: values.referenceNote?.trim() || undefined,
-    });
+    const idempotencyKey = resolveSupplierPaymentIntentKey(
+      paymentIntentKeyRef.current,
+      () => crypto.randomUUID(),
+    );
+    paymentIntentKeyRef.current = idempotencyKey;
 
-    if (res.success) {
-      await reloadInvoices(selectedInvoice.id);
+    try {
+      const res = await recordSupplierPayment({
+        invoiceId: selectedInvoice.id,
+        idempotencyKey,
+        amount,
+        paymentMethod: values.paymentMethod,
+        referenceNote: values.referenceNote?.trim() || undefined,
+      });
+
+      if (res.success) {
+        await reloadInvoices(selectedInvoice.id);
+      }
+
+      return res;
+    } catch {
+      return { success: false, error: copy.paymentRetrySameIntent };
     }
+  }
 
-    return res;
+  function openSupplierPaymentDialog() {
+    paymentIntentKeyRef.current = crypto.randomUUID();
+    setPaymentOpen(true);
+  }
+
+  function handlePaymentOpenChange(open: boolean) {
+    if (open && paymentIntentKeyRef.current == null) {
+      paymentIntentKeyRef.current = crypto.randomUUID();
+    }
+    if (!open) {
+      paymentIntentKeyRef.current = null;
+    }
+    setPaymentOpen(open);
   }
 
   function handleRecomputeMatching() {
@@ -1199,7 +1227,7 @@ export function SupplierInvoicesClient({
                   <Button
                     type="button"
                     size="sm"
-                    onClick={() => setPaymentOpen(true)}
+                    onClick={openSupplierPaymentDialog}
                     disabled={isPending}
                   >
                     {copy.payAction}
@@ -1286,6 +1314,9 @@ export function SupplierInvoicesClient({
                       ),
                       messages.inventory.common.currencyCompact(
                         formatVND(selectedInvoice.paidAmount),
+                      ),
+                      messages.inventory.common.currencyCompact(
+                        formatVND(selectedInvoice.creditAppliedAmount),
                       ),
                     ),
                   },
@@ -1414,7 +1445,7 @@ export function SupplierInvoicesClient({
 
       <FormDialog
         open={paymentOpen}
-        onOpenChange={setPaymentOpen}
+        onOpenChange={handlePaymentOpenChange}
         schema={supplierPaymentSchema}
         defaultValues={paymentDefaultValues}
         entityKey={selectedInvoice?.id ?? "supplier-payment"}

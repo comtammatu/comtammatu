@@ -1,4 +1,5 @@
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import {
   fetchGrnIdsForDropdown,
@@ -19,12 +20,16 @@ export default async function SupplierInvoicesPage({
   const branchFilter =
     (await resolveRequestedBranchId(params.branchId)) ?? undefined;
 
-  const [res, suppliersRes, grnsRes, canPaySupplier] = await Promise.all([
-    fetchSupplierInvoicesPage({ branchId: branchFilter }),
-    fetchSuppliers(),
-    fetchGrnIdsForDropdown(branchFilter),
-    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_AP_PAY),
-  ]);
+  const [res, suppliersRes, grnsRes, authState, hasPayPermission] =
+    await Promise.all([
+      fetchSupplierInvoicesPage({ branchId: branchFilter }),
+      fetchSuppliers(),
+      fetchGrnIdsForDropdown(branchFilter),
+      loadAuthState(),
+      currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_AP_PAY),
+    ]);
+  const canPaySupplier =
+    authState.claims.user_role === "owner" && hasPayPermission;
   const page = res.success
     ? res.data
     : { items: [], hasMore: false, nextCursor: null };

@@ -1560,3 +1560,66 @@ Rewritten 2026-07-10 after Codex Outside Voice rejected the prior 7-item Phase 1
 `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` **plus**
 browser smoke: KDS multi-ticket / reconnect / filter / reduced-motion; POS cart
 one-shot enter; operator skeleton on bottom-nav.
+
+## Supplier payment correctness and idempotency (P0-B, T3)
+
+Status: additive implementation is local-green and T3 review-clean on
+`codex/supplier-payment-idempotency`. Production was read-only checked on
+2026-07-15: zero supplier invoices, supplier payments, supplier credit notes,
+over-settled invoices, or zero-balance invoices with an open status. No
+Production write or migration apply is authorized in this slice.
+
+Skill plan: repository authority = engineering + database + workflow + Finance
+and operational data contracts + orchestration; external aid = Supabase's
+official database-function guidance. Verification layers = source trace,
+transactional rollback SQL, full local gates, then an on-demand Supabase Preview
+Branch and two-session race rehearsal after cost approval. No UI redesign, new
+ledger table, or Production mutation belongs in this slice.
+
+### T3 synthesis
+
+- **PM:** prevent a retried partial supplier payment from creating a second
+  money fact; prevent payment above the effective payable balance; keep AP
+  payment under the Owner-only control-room boundary. The canonical outcome is
+  one payment intent → at most one `supplier_payments` row and one invoice
+  increment.
+- **BA:** effective payable balance is
+  `total_amount - paid_amount - credit_applied_amount`. An exact replay means
+  the same tenant, Owner actor, invoice, amount, method, and normalized business
+  reference under the same UUID. Reusing the UUID with any changed fact is a
+  conflict, not a new payment. `reference_note` remains business/bank evidence
+  and never stores the technical key.
+- **Senior Dev:** add nullable `supplier_payments.idempotency_key` plus a partial
+  unique index on `(tenant_id, idempotency_key)`. Add the uniquely named,
+  required-key RPC `record_supplier_payment` with safe empty `search_path`,
+  explicit Owner + permission + tenant checks, invoice row locking,
+  credit-aware cap, conflict-safe insert, and explicit grants. Replace the
+  five-argument `create_supplier_payment` body with a temporary compatibility
+  wrapper so the additive DB-first migration does not break the currently
+  deployed caller; Supabase's Data API does not support overloaded function
+  names. The client mints one UUID when a payment dialog opens and reuses it for
+  every retry of that intent. No helper table or generic idempotency framework.
+- **QA:** prove first write, exact replay, changed-payload conflict, two distinct
+  legitimate partial payments, credit-aware final payment and overpayment
+  rejection, Owner/tenant denial, rollback atomicity, direct-DML revocation,
+  unique-index presence, and legacy/new function grants. Preview additionally
+  runs the same-key retry through the real PostgREST/Server Action transport,
+  generated-type regeneration, security and performance advisors, and direct
+  UI smoke. PostgreSQL lock semantics are already local-proven.
+
+### Rollout and closure gates
+
+- [x] Additive migration + application changes + local rollback acceptance are
+      green. A real two-session local race returned one payment ID and one
+      ledger row; 1,050 web tests, typecheck, lint, build, and three independent
+      re-reviews are green. The legacy wrapper is explicitly transitional, not
+      the end state.
+- [ ] Apply only to an approved Preview Branch; regenerate database types from
+      that applied schema and run full gates.
+- [ ] Deploy/prove the required-key runtime before any destructive signature
+      cleanup.
+- [ ] Land a separate cleanup migration that drops the legacy
+      `create_supplier_payment` function; verify it is absent and
+      `record_supplier_payment` requires the UUID key.
+- [ ] Production apply and merge remain owner-delegated operations, with source,
+      migration ledger, deployed runtime, and smoke evidence closed together.

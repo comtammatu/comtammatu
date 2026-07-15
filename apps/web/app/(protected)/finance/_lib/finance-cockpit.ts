@@ -249,8 +249,8 @@ async function fetchUnpaidSupplierInvoiceRisk({
 }): Promise<{ count: number; amount: number }> {
   const select =
     branchId != null
-      ? "total_amount, paid_amount, payment_status, goods_received_notes!inner(branch_id)"
-      : "total_amount, paid_amount, payment_status";
+      ? "total_amount, paid_amount, credit_applied_amount, payment_status, goods_received_notes!inner(branch_id)"
+      : "total_amount, paid_amount, credit_applied_amount, payment_status";
 
   let query = supabase
     .from("supplier_invoices")
@@ -269,15 +269,20 @@ async function fetchUnpaidSupplierInvoiceRisk({
   const rows = (data ?? []) as unknown as Array<{
     total_amount: number | string | null;
     paid_amount: number | string | null;
+    credit_applied_amount: number | string | null;
   }>;
 
   return rows.reduce(
     (acc, row) => {
-      acc.count += 1;
-      acc.amount += Math.max(
+      const outstanding = Math.max(
         0,
-        toNumber(row.total_amount) - toNumber(row.paid_amount),
+        toNumber(row.total_amount) -
+          toNumber(row.paid_amount) -
+          toNumber(row.credit_applied_amount),
       );
+      if (outstanding <= 0) return acc;
+      acc.count += 1;
+      acc.amount += outstanding;
       return acc;
     },
     { count: 0, amount: 0 },
