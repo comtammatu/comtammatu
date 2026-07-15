@@ -184,7 +184,8 @@ test("MoMo webhook attempts HĐĐT after successful webhook payment", () => {
     "HĐĐT attempt must run for both fresh and idempotent MoMo paid outcomes",
   );
   assert.ok(
-    src.includes("error_code: invoiceErrorCode"),
+    src.includes("annotateInvoiceAttemptFailure") &&
+      src.includes('error_code: "invoice_attempt_failed"'),
     "MoMo webhook event should record invoice attempt failure without failing payment",
   );
 });

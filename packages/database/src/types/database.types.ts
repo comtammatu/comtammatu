@@ -9581,8 +9581,8 @@ export type Database = {
           p_created_by: string
           p_method: string
           p_order_id: number
-          p_provider_ref?: string
-          p_status?: string
+          p_provider_data: Json
+          p_provider_ref: string
           p_tenant_id: number
         }
         Returns: Json
@@ -9835,6 +9835,14 @@ export type Database = {
       extend_express_window: {
         Args: { p_branch_id: number; p_minutes: number; p_note: string }
         Returns: string
+      }
+      finalize_momo_failed_payment: {
+        Args: { p_event_id: number; p_payload: Json; p_payment_id: number }
+        Returns: Json
+      }
+      finalize_momo_successful_payment: {
+        Args: { p_event_id: number; p_payload: Json; p_payment_id: number }
+        Returns: Json
       }
       finalize_paid_order: {
         Args: { p_actor_id?: string; p_order_id: number }
@@ -10577,6 +10585,10 @@ export type Database = {
         Args: { p_event_id: number; p_payment_code: string }
         Returns: Json
       }
+      record_momo_pending_result: {
+        Args: { p_event_id: number; p_payload: Json; p_payment_id: number }
+        Returns: Json
+      }
       record_production_run: {
         Args: {
           p_actual_ingredients?: Json
@@ -10750,6 +10762,10 @@ export type Database = {
       }
       retry_print_job: { Args: { p_job_id: number }; Returns: boolean }
       reverse_payment_and_post: { Args: { p_refund_id: number }; Returns: Json }
+      review_completed_vietqr_bank_webhook: {
+        Args: { p_payment_id: number; p_status: string }
+        Returns: Json
+      }
       revoke_permission: {
         Args: {
           p_branch_id: number

@@ -7,6 +7,7 @@ const REPO = process.cwd();
 const TESTS_DIR = join(REPO, "supabase", "tests");
 const DB_PORT = process.env["E2E_DB_PORT"] || "55432";
 const RELATIVE_INCLUDE = /^\s*\\ir\s+(.+?)\s*$/;
+const REQUESTED_TESTS = process.argv.slice(2);
 
 function expandRelativeIncludes(filePath, stack = []) {
   const resolvedFile = resolve(filePath);
@@ -74,7 +75,20 @@ function run() {
 
   let files;
   try {
-    files = readdirSync(TESTS_DIR).filter(f => f.endsWith(".sql")).sort();
+    const discovered = readdirSync(TESTS_DIR)
+      .filter((file) => file.endsWith(".sql"))
+      .sort();
+    if (REQUESTED_TESTS.length === 0) {
+      files = discovered;
+    } else {
+      const invalid = REQUESTED_TESTS.filter(
+        (file) => !/^[a-z0-9_.-]+\.sql$/i.test(file) || !discovered.includes(file),
+      );
+      if (invalid.length > 0) {
+        throw new Error(`Unknown SQL test file(s): ${invalid.join(", ")}`);
+      }
+      files = [...new Set(REQUESTED_TESTS)];
+    }
   } catch (err) {
     process.stderr.write(`Failed to read tests directory: ${err.message}\n`);
     process.exit(1);

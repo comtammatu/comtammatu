@@ -1,21 +1,13 @@
 "use server";
 
-import type { Json } from "@comtammatu/database";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { z } from "zod";
-import { logAudit } from "@/_lib/audit";
 import { getAuthContextWithPermission } from "@/_lib/auth";
-import { canAccessBranch } from "@/_lib/branch-scope";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
-import { messages } from "@lib/messages";
-import {
-  readSepayBankWebhookReview,
-  SEPAY_BANK_WEBHOOK_REVIEW_VALUES,
-} from "./_lib/sepay-bank-transaction-model";
+import { SEPAY_BANK_WEBHOOK_REVIEW_VALUES } from "./_lib/sepay-bank-transaction-model";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
-const financeActionErrors = messages.finance.actionErrors;
 
 const reviewMissingBankWebhookPaymentSchema = z.object({
   paymentId: z.coerce.number().int().positive(),
@@ -26,12 +18,6 @@ const linkSepayTransactionToPaymentSchema = z.object({
   eventId: z.coerce.number().int().positive(),
   paymentId: z.coerce.number().int().positive(),
 });
-
-interface ReviewablePaymentRow {
-  id: number;
-  branch_id: number;
-  provider_data: unknown;
-}
 
 type LinkPaymentRpcError = {
   code?: string;
@@ -44,12 +30,6 @@ type LinkPaymentRpcClient = {
     args: { p_event_id: number; p_payment_id: number },
   ) => PromiseLike<{ data: unknown; error: LinkPaymentRpcError | null }>;
 };
-
-function asJsonObject(value: unknown): Record<string, Json> {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, Json>)
-    : {};
-}
 
 function mapLinkPaymentError(error: LinkPaymentRpcError): string {
   const normalized = error.message?.toLowerCase() ?? "";
@@ -152,77 +132,28 @@ export async function reviewMissingBankWebhookPayment(
     return { success: false, error: "Không có quyền đối soát thanh toán." };
   }
 
-  const { supabase, claims, user } = ctx;
-  const { data: payment, error: paymentError } = await supabase
-    .from("payments")
-    .select("id, branch_id, provider_data")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("id", parsed.data.paymentId)
-    .eq("method", "vietqr")
-    .eq("status", "completed")
-    .maybeSingle();
+  const { supabase } = ctx;
+  const { error } = await supabase.rpc(
+    "review_completed_vietqr_bank_webhook",
+    {
+      p_payment_id: parsed.data.paymentId,
+      p_status: parsed.data.status,
+    },
+  );
 
-  if (paymentError) {
+  if (error) {
     console.error(
-      "[finance:bank-webhook-review] failed to load payment",
-      paymentError.code,
+      "[finance:bank-webhook-review] failed to review payment",
+      error.code,
     );
-    return { success: false, error: financeActionErrors.loadPaymentFailed };
-  }
-
-  if (!payment) {
     return {
       success: false,
-      error: "Không tìm thấy thanh toán VietQR đã thu.",
+      error:
+        error.code === "P0002"
+          ? "Không tìm thấy thanh toán VietQR đã thu."
+          : "Không thể cập nhật trạng thái.",
     };
   }
-
-  const row = payment as ReviewablePaymentRow;
-  if (!(await canAccessBranch(supabase, claims, row.branch_id))) {
-    return { success: false, error: "Không có quyền cho chi nhánh này." };
-  }
-
-  const reviewedAt = new Date().toISOString();
-  const previousReview = readSepayBankWebhookReview(row.provider_data);
-  const nextReview = {
-    status: parsed.data.status,
-    reviewedAt,
-    reviewedBy: user.id,
-  } satisfies Record<string, Json>;
-
-  // ponytail: store the pilot review marker beside provider data; split to a reconciliation table when assignment/history is required.
-  const nextProviderData = {
-    ...asJsonObject(row.provider_data),
-    bankWebhookReview: nextReview,
-  } satisfies Record<string, Json>;
-
-  const { data: updatedPayment, error: updateError } = await supabase
-    .from("payments")
-    .update({ provider_data: nextProviderData })
-    .eq("tenant_id", claims.tenant_id)
-    .eq("id", row.id)
-    .eq("method", "vietqr")
-    .eq("status", "completed")
-    .select("id")
-    .maybeSingle();
-
-  if (updateError || !updatedPayment) {
-    if (updateError) {
-      console.error(
-        "[finance:bank-webhook-review] failed to update payment",
-        updateError.code,
-      );
-    }
-    return { success: false, error: "Không thể cập nhật trạng thái." };
-  }
-
-  await logAudit(supabase, {
-    action: "update_bank_webhook_review",
-    entityType: "payment",
-    entityId: row.id,
-    oldData: { bankWebhookReview: previousReview },
-    newData: { bankWebhookReview: nextReview },
-  });
 
   revalidateSurfacePath("/finance/bank-transactions");
   return { success: true };

@@ -10,6 +10,7 @@ const MOMO_SECRET_KEY = process.env.MOMO_SECRET_KEY ?? "";
 
 const momoAcceptedResponse = () => new NextResponse(null, { status: 204 });
 const MOMO_SUCCESS_RESULT_CODES = new Set([0, 9000]);
+const MOMO_PENDING_RESULT_CODES = new Set([1000, 7000, 7002]);
 
 interface MomoIPN {
   partnerCode: string;
@@ -111,30 +112,29 @@ function payloadToJson(payload: MomoIPN): Json {
   return JSON.parse(JSON.stringify(payload)) as Json;
 }
 
-async function markWebhookEvent(
+async function annotateInvoiceAttemptFailure(
   supabase: ServiceClient,
   eventId: number,
-  values: {
-    payment_id?: number | null;
-    processing_status: "processed" | "failed" | "ignored";
-    http_status: number;
-    error_code?: string | null;
-  },
+  paymentId: number,
 ) {
-  const { error } = await supabase
+  const result = await supabase
     .from("webhook_events")
-    .update({
-      payment_id: values.payment_id ?? null,
-      processing_status: values.processing_status,
-      http_status: values.http_status,
-      error_code: values.error_code ?? null,
-      processed_at: new Date().toISOString(),
-    })
-    .eq("id", eventId);
+    .update({ error_code: "invoice_attempt_failed" })
+    .eq("id", eventId)
+    .eq("payment_id", paymentId)
+    .eq("processing_status", "processed")
+    .select("id")
+    .maybeSingle();
 
-  if (error) {
-    console.error("[momo-webhook] failed to update webhook_events", error.code);
+  if (result.error || !result.data) {
+    console.error(
+      "[momo-webhook] failed to annotate invoice attempt",
+      result.error?.code ?? "terminal_event_not_found",
+    );
+    return false;
   }
+
+  return true;
 }
 
 async function notifyStockConsumptionFailure(
@@ -176,11 +176,11 @@ async function notifyStockConsumptionFailure(
   }
 }
 
-
 async function claimWebhookEvent(
   supabase: ServiceClient,
   input: {
     tenantId: number;
+    orderId: number;
     requestId: string;
     payload: Json;
   },
@@ -189,6 +189,7 @@ async function claimWebhookEvent(
     .from("webhook_events")
     .insert({
       tenant_id: input.tenantId,
+      order_id: input.orderId,
       provider: "momo",
       request_id: input.requestId,
       signature_valid: true,
@@ -212,7 +213,7 @@ async function claimWebhookEvent(
 
   const { data: existingEvent, error: existingErr } = await supabase
     .from("webhook_events")
-    .select("id, processing_status, http_status")
+    .select("id, tenant_id, order_id, processing_status, http_status")
     .eq("provider", "momo")
     .eq("request_id", input.requestId)
     .maybeSingle();
@@ -226,11 +227,23 @@ async function claimWebhookEvent(
   }
 
   const existingHttpStatus = existingEvent.http_status ?? 204;
-  if (
+  const alreadyFinal =
     existingEvent.processing_status === "processed" ||
     existingEvent.processing_status === "ignored" ||
-    (existingEvent.processing_status === "failed" && existingHttpStatus < 500)
+    (existingEvent.processing_status === "failed" && existingHttpStatus < 500);
+
+  if (
+    existingEvent.tenant_id !== input.tenantId ||
+    (existingEvent.order_id !== null &&
+      existingEvent.order_id !== input.orderId)
   ) {
+    console.error("[momo-webhook] duplicate request scope conflict", {
+      eventId: existingEvent.id,
+    });
+    return alreadyFinal ? { status: "already_final" } : { status: "error" };
+  }
+
+  if (alreadyFinal) {
     return { status: "already_final" };
   }
 
@@ -282,6 +295,7 @@ export async function POST(request: Request) {
 
   const webhookClaim = await claimWebhookEvent(supabase, {
     tenantId: extra.tenantId,
+    orderId: extra.orderId,
     requestId: payload.requestId,
     payload: payloadJson,
   });
@@ -296,7 +310,7 @@ export async function POST(request: Request) {
 
   // Resolve payment from the signed extraData scope and MoMo orderId.
   // Status is unconstrained so duplicate successful IPNs hit the idempotent RPC.
-  const { data: pendingPayment } = await supabase
+  const { data: pendingPayment, error: paymentLookupError } = await supabase
     .from("payments")
     .select("id, tenant_id, branch_id, order_id")
     .eq("tenant_id", extra.tenantId)
@@ -305,73 +319,94 @@ export async function POST(request: Request) {
     .eq("method", "momo")
     .maybeSingle();
 
+  if (paymentLookupError) {
+    console.error(
+      "[momo-webhook] payment lookup failed",
+      paymentLookupError.code,
+    );
+    return NextResponse.json({ error: "processing_failed" }, { status: 500 });
+  }
+
   if (!pendingPayment) {
-    await markWebhookEvent(supabase, webhookEventId, {
-      processing_status: "ignored",
-      http_status: 204,
-      error_code: "payment_not_found",
-    });
+    console.error(
+      "[momo-webhook] payment not found; retaining retryable event",
+      {
+        eventId: webhookEventId,
+        orderId: extra.orderId,
+      },
+    );
+    return NextResponse.json({ error: "processing_failed" }, { status: 500 });
+  }
+
+  if (MOMO_PENDING_RESULT_CODES.has(payload.resultCode)) {
+    const { error: pendingError } = await supabase.rpc(
+      "record_momo_pending_result",
+      {
+        p_event_id: webhookEventId,
+        p_payment_id: pendingPayment.id,
+        p_payload: payloadJson,
+      },
+    );
+    if (pendingError) {
+      console.error(
+        `[momo-webhook] pending result persistence failed: payment=${pendingPayment.id}`,
+        pendingError.code,
+      );
+      return NextResponse.json({ error: "processing_failed" }, { status: 500 });
+    }
     return momoAcceptedResponse();
   }
 
   // resultCode 0 is success. MoMo result code docs state 9000 can also be
   // treated as successful for one-step payments when autoCapture=true.
   if (!MOMO_SUCCESS_RESULT_CODES.has(payload.resultCode)) {
-    await supabase
-      .from("payments")
-      .update({
-        status: "failed",
-        provider_data: payloadJson,
-      })
-      .eq("tenant_id", extra.tenantId)
-      .eq("order_id", extra.orderId)
-      .eq("provider_ref", payload.orderId)
-      .eq("method", "momo")
-      .eq("status", "pending");
+    const { error: failureError } = await supabase.rpc(
+      "finalize_momo_failed_payment",
+      {
+        p_event_id: webhookEventId,
+        p_payment_id: pendingPayment.id,
+        p_payload: payloadJson,
+      },
+    );
 
-    await markWebhookEvent(supabase, webhookEventId, {
-      payment_id: pendingPayment.id,
-      processing_status: "processed",
-      http_status: 204,
-      error_code: "provider_result_failed",
-    });
+    if (failureError) {
+      console.error(
+        `[momo-webhook] failure finalization failed: payment=${pendingPayment.id}`,
+        failureError.code,
+      );
+      return NextResponse.json({ error: "processing_failed" }, { status: 500 });
+    }
 
     return momoAcceptedResponse();
   }
 
-  // Atomic RPC: flip payment→completed, order→paid, consume stock, all in one
-  // transaction. Idempotent for already-completed payments.
+  // The event row, payment transition, order transition, and exact terminal
+  // payload are serialized in one database transaction.
   const { data: rpcData, error: rpcErr } = await supabase.rpc(
-    "complete_payment_and_consume_stock",
+    "finalize_momo_successful_payment",
     {
+      p_event_id: webhookEventId,
       p_payment_id: pendingPayment.id,
-      p_expected_amount: payload.amount,
-      p_provider_data: payloadJson,
-      p_actor_id: undefined,
+      p_payload: payloadJson,
     },
   );
 
   if (rpcErr) {
-    // Stock consumption or other non-recoverable error — transaction rolled back.
-    // Return 500 so MoMo retries the webhook.
     console.error(
       `[momo-webhook] atomic RPC failed: payment=${pendingPayment.id}`,
-      rpcErr.message,
+      rpcErr.code,
     );
-    await markWebhookEvent(supabase, webhookEventId, {
-      payment_id: pendingPayment.id,
-      processing_status: "failed",
-      http_status: 500,
-      error_code: "rpc_failed",
-    });
     return NextResponse.json({ error: "processing_failed" }, { status: 500 });
   }
 
-  const result = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-  const status = (result?.status ?? "") as string;
-  const detail = (result?.detail ?? "") as string;
+  const rawResult = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+  const result = isRecord(rawResult) ? rawResult : {};
+  const status = typeof result.status === "string" ? result.status : "";
+  const detail = typeof result.detail === "string" ? result.detail : "";
 
   switch (status) {
+    case "already_final":
+      return momoAcceptedResponse();
     // Payments never consume stock (D016): completed is accepted
     // unconditionally.
     case "completed":
@@ -396,12 +431,13 @@ export async function POST(request: Request) {
         });
       }
 
-      await markWebhookEvent(supabase, webhookEventId, {
-        payment_id: pendingPayment.id,
-        processing_status: "processed",
-        http_status: 204,
-        error_code: invoiceErrorCode,
-      });
+      if (invoiceErrorCode) {
+        await annotateInvoiceAttemptFailure(
+          supabase,
+          webhookEventId,
+          pendingPayment.id,
+        );
+      }
       return momoAcceptedResponse();
     }
     // Defensive: only reachable while the pre-20260611001000 RPC (which
@@ -414,41 +450,25 @@ export async function POST(request: Request) {
         orderId: pendingPayment.order_id,
         stockStatus: detail,
       });
-      await markWebhookEvent(supabase, webhookEventId, {
-        payment_id: pendingPayment.id,
-        processing_status: "failed",
-        http_status: 500,
-        error_code: "stock_consumption_failed",
-      });
       console.error(
         `[momo-webhook] stock consumption blocked: payment=${pendingPayment.id} ${detail}`,
       );
       return NextResponse.json({ error: "processing_failed" }, { status: 500 });
     case "amount_mismatch":
-    case "amount_mismatch_recomputed":
-      await markWebhookEvent(supabase, webhookEventId, {
-        payment_id: pendingPayment.id,
-        processing_status: "failed",
-        http_status: 204,
-        error_code: "amount_mismatch",
-      });
+    case "amount_mismatch_recomputed": {
       console.error(
         `[momo-webhook] amount mismatch: payment=${pendingPayment.id} ${detail}`,
       );
       return momoAcceptedResponse();
+    }
     case "not_found":
     case "failed":
-    default:
+    default: {
       // Unexpected — log and 204 so MoMo stops retrying (reconciliation page will surface).
       console.error(
         `[momo-webhook] unexpected status: ${status} payment=${pendingPayment.id} ${detail}`,
       );
-      await markWebhookEvent(supabase, webhookEventId, {
-        payment_id: pendingPayment.id,
-        processing_status: "failed",
-        http_status: 204,
-        error_code: status || "unexpected_status",
-      });
       return momoAcceptedResponse();
+    }
   }
 }

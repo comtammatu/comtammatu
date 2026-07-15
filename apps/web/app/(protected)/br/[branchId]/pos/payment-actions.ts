@@ -54,6 +54,7 @@ import { POS_ERROR_CODES } from "./_utils/error-codes";
 type PosSupabase = NonNullable<
   Awaited<ReturnType<typeof getAuthContextWithPermission>>
 >["supabase"];
+type RemotePaymentMethod = Exclude<PaymentMethod, "cash">;
 
 type RpcCaller = {
   rpc: <T>(
@@ -333,31 +334,6 @@ async function ensureOrderPaymentCode(
   return { success: true, data: paymentCode };
 }
 
-async function persistPendingProviderData(
-  supabase: PosSupabase,
-  input: {
-    paymentId: number;
-    tenantId: number;
-    branchId: number;
-    providerResult: PaymentResult;
-  },
-) {
-  const { error } = await supabase
-    .from("payments")
-    .update({
-      provider_ref: input.providerResult.providerRef,
-      provider_data: buildStoredProviderData(input.providerResult),
-    })
-    .eq("id", input.paymentId)
-    .eq("tenant_id", input.tenantId)
-    .eq("branch_id", input.branchId)
-    .eq("status", "pending");
-
-  if (error) {
-    console.error("[createPayment] provider_data persist failed:", error.code);
-  }
-}
-
 function amountToProviderString(
   amount: number | string | null | undefined,
 ): string | undefined {
@@ -404,6 +380,67 @@ function buildPendingRemotePaymentForBillData(
     ...(qrData ? { qr_data: qrData } : {}),
     ...(redirectUrl ? { redirect_url: redirectUrl } : {}),
     ...(qrInfo ? { qr_info: qrInfo } : {}),
+  };
+}
+
+async function loadPendingRemotePaymentForBillData(
+  supabase: PosSupabase,
+  input: { tenantId: number; branchId: number; orderId: number },
+): Promise<ActionResult<PendingRemotePaymentForBillData | null>> {
+  const { data: payment, error } = await supabase
+    .from("payments")
+    .select("id, method, status, amount, provider_ref, provider_data")
+    .eq("order_id", input.orderId)
+    .eq("tenant_id", input.tenantId)
+    .eq("branch_id", input.branchId)
+    .neq("status", "failed")
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      success: false,
+      error: messages.pos.payment.pendingSessionLoadFailed,
+    };
+  }
+
+  if (!payment || payment.status !== "pending") {
+    return { success: true, data: null };
+  }
+
+  const vietQrSettings =
+    payment.method === "vietqr"
+      ? await readVietQrSettings(supabase, input.tenantId)
+      : undefined;
+
+  return {
+    success: true,
+    data: buildPendingRemotePaymentForBillData(payment, vietQrSettings),
+  };
+}
+
+function resumePendingPayment(
+  pending: PendingRemotePaymentForBillData,
+): ActionResult<CreatePaymentSuccessData> {
+  if (pending.method === "momo" && !pending.qr_data) {
+    return {
+      success: false,
+      error:
+        "Phiên MoMo đang chờ nhưng thiếu dữ liệu QR. Vui lòng liên hệ quản lý để đối soát trước khi thử lại.",
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      payment_id: pending.payment_id,
+      status: "pending",
+      ...(pending.provider_ref ? { provider_ref: pending.provider_ref } : {}),
+      ...(pending.qr_data ? { qr_data: pending.qr_data } : {}),
+      ...(pending.redirect_url ? { redirect_url: pending.redirect_url } : {}),
+      ...(pending.qr_info ? { qr_info: pending.qr_info } : {}),
+    },
   };
 }
 
@@ -564,10 +601,8 @@ export const fetchPaymentMethodsForPos = withActionPositional(
 /* ─── createPayment ─── */
 
 /**
- * Create a payment record for an order. Cash payments are immediately
- * completed (status=completed) inside the RPC; MoMo / VietQR start as
- * pending and complete via webhook + a separate `confirmVietQrPayment`
- * call.
+ * Create a pending MoMo or VietQR intent. Cash uses the separate
+ * `confirmCashPayment` path and never enters this action.
  *
  * Auth is `posUseAuth` (POS_USE — any POS operator) — looser than
  * `confirmCashPayment`'s `posConfirmPaymentAuth` (POS_CONFIRM_PAYMENT,
@@ -584,16 +619,14 @@ export const fetchPaymentMethodsForPos = withActionPositional(
  *   - `resolvePaymentProviderForMethod` + `provider.createPayment` (wrapped
  *     by `describeProviderException` / `describeProviderCreateFailure`) is
  *     the source of QR/redirect data.
- *   - 23505 unique-violation retry stays handler-only: it queries the
- *     `payments` table for an existing pending row and either reuses it
- *     (idempotent replay — returns success with the existing payment_id and
- *     a freshly persisted provider blob) or surfaces "Đơn hàng đang có
- *     thanh toán chờ xử lý." Neither outcome fits the `RpcErrorMapping`
- *     shape, so it lives outside the mapping table.
- *   - `persistPendingProviderData` fires for remote payments AFTER RPC
- *     success AND inside the 23505-retry branch, so an idempotent replay
- *     overwrites the stored provider blob with the fresh QR.
- *   - Cash does NOT consume stock under D016.
+ *   - A canonical pending payment is resumed before creating a new provider
+ *     session. The 23505 fallback covers the remaining concurrent-insert
+ *     window by reloading that canonical row.
+ *   - The RPC returns its canonical provider reference. If another request
+ *     won the race, this action resumes the stored session and never exposes
+ *     the newly-created orphan provider session.
+ *   - The service-only RPC atomically stores the pending intent and trusted
+ *     provider metadata after rechecking the POS actor and branch permission.
  *   - `createPaymentRpcMappings` ordering matters:
  *     `amount_mismatch_recomputed` must shadow `amount_mismatch`.
  *
@@ -605,7 +638,7 @@ export const createPayment = withActionPositional(
     argsToInput: (
       branchId: number,
       orderId: number,
-      method: PaymentMethod,
+      method: RemotePaymentMethod,
       amount: number,
     ) => ({ branchId, orderId, method, amount }),
     schema: createPaymentSchema,
@@ -658,6 +691,28 @@ export const createPayment = withActionPositional(
         success: false,
         error: "Phương thức thanh toán không được phép hoặc chưa cấu hình.",
       };
+    }
+
+    const pendingBeforeProvider = await loadPendingRemotePaymentForBillData(
+      supabase,
+      {
+        tenantId: claims.tenant_id,
+        branchId,
+        orderId,
+      },
+    );
+    if (!pendingBeforeProvider.success) {
+      return { success: false, error: pendingBeforeProvider.error };
+    }
+    if (pendingBeforeProvider.data) {
+      if (pendingBeforeProvider.data.method !== method) {
+        return {
+          success: false,
+          error:
+            "Đơn hàng đang có thanh toán chờ xử lý. Vui lòng hủy phiên hiện tại trước khi đổi phương thức.",
+        };
+      }
+      return resumePendingPayment(pendingBeforeProvider.data);
     }
 
     const provider = await resolvePaymentProviderForMethod(
@@ -718,8 +773,7 @@ export const createPayment = withActionPositional(
       };
     }
 
-    const isRemotePayment = method !== "cash";
-    if (isRemotePayment && providerResult.status === "failed") {
+    if (providerResult.status === "failed") {
       console.error("[createPayment] provider failed:", {
         method,
         providerRef: providerResult.providerRef,
@@ -735,7 +789,6 @@ export const createPayment = withActionPositional(
     }
 
     if (
-      isRemotePayment &&
       providerResult.status === "pending" &&
       !providerResult.qrData &&
       !providerResult.redirectUrl
@@ -749,18 +802,29 @@ export const createPayment = withActionPositional(
       };
     }
 
-    // Atomic RPC: insert payment + update order in one transaction.
-    // Prevents race condition where payment exists but order status is stale.
-    const { data, error: rpcError } = await supabase.rpc("create_payment", {
-      p_tenant_id: claims.tenant_id,
-      p_branch_id: branchId,
-      p_order_id: orderId,
-      p_method: method,
-      p_amount: amount,
-      p_created_by: user.id,
-      p_provider_ref: providerResult.providerRef ?? undefined,
-      p_status: providerResult.status,
-    });
+    const providerRef = providerResult.providerRef?.trim();
+    if (!providerRef) {
+      return {
+        success: false,
+        error: "Nhà cung cấp không trả về mã tham chiếu thanh toán.",
+      };
+    }
+
+    // Create only a pending remote intent; provider-specific settlement remains
+    // the sole boundary allowed to complete the payment and order.
+    const { data, error: rpcError } = await createServiceClient().rpc(
+      "create_payment",
+      {
+        p_tenant_id: claims.tenant_id,
+        p_branch_id: branchId,
+        p_order_id: orderId,
+        p_method: method,
+        p_amount: amount,
+        p_created_by: user.id,
+        p_provider_ref: providerRef,
+        p_provider_data: buildStoredProviderData(providerResult),
+      },
+    );
 
     if (rpcError) {
       // 23505 unique-violation: another `createPayment` call for the same
@@ -769,48 +833,19 @@ export const createPayment = withActionPositional(
       // the payments table for an existing pending row and either reuse
       // it OR surface a typed "đang chờ xử lý" message.
       if (rpcError.code === "23505") {
-        const { data: existingPayment, error: existingError } = await supabase
-          .from("payments")
-          .select("id, status, provider_ref, method")
-          .eq("order_id", orderId)
-          .eq("tenant_id", claims.tenant_id)
-          .eq("branch_id", branchId)
-          .neq("status", "failed")
-          .maybeSingle();
-
-        if (
-          !existingError &&
-          existingPayment &&
-          existingPayment.status === "pending" &&
-          existingPayment.method === method
-        ) {
-          await persistPendingProviderData(supabase, {
-            paymentId: existingPayment.id,
+        const existingPayment = await loadPendingRemotePaymentForBillData(
+          supabase,
+          {
             tenantId: claims.tenant_id,
             branchId,
-            providerResult,
-          });
-          const qrInfo = pickVietQrInfo(providerResult.providerData);
-          const providerRef =
-            providerResult.providerRef ??
-            existingPayment.provider_ref ??
-            undefined;
-
-          return {
-            success: true,
-            data: {
-              payment_id: existingPayment.id,
-              status: existingPayment.status,
-              ...(providerRef ? { provider_ref: providerRef } : {}),
-              ...(providerResult.qrData
-                ? { qr_data: providerResult.qrData }
-                : {}),
-              ...(providerResult.redirectUrl
-                ? { redirect_url: providerResult.redirectUrl }
-                : {}),
-              ...(qrInfo ? { qr_info: qrInfo } : {}),
-            },
-          };
+            orderId,
+          },
+        );
+        if (!existingPayment.success) {
+          return { success: false, error: existingPayment.error };
+        }
+        if (existingPayment.data?.method === method) {
+          return resumePendingPayment(existingPayment.data);
         }
 
         return {
@@ -835,18 +870,32 @@ export const createPayment = withActionPositional(
       payment_id: number;
       status: string;
       idempotent?: boolean;
+      provider_ref?: string;
     } | null;
     if (!result) {
       return { success: false, error: "Không thể tạo thanh toán." };
     }
 
-    if (isRemotePayment) {
-      await persistPendingProviderData(supabase, {
-        paymentId: result.payment_id,
-        tenantId: claims.tenant_id,
-        branchId,
-        providerResult,
-      });
+    if (result.idempotent === true || result.provider_ref !== providerRef) {
+      const canonicalPayment = await loadPendingRemotePaymentForBillData(
+        supabase,
+        {
+          tenantId: claims.tenant_id,
+          branchId,
+          orderId,
+        },
+      );
+      if (!canonicalPayment.success) {
+        return { success: false, error: canonicalPayment.error };
+      }
+      if (canonicalPayment.data?.method === method) {
+        return resumePendingPayment(canonicalPayment.data);
+      }
+      return {
+        success: false,
+        error:
+          "Phiên thanh toán đã được tạo ở thao tác khác. Vui lòng tải lại hóa đơn.",
+      };
     }
 
     // No stock deduction under D016.
@@ -898,37 +947,11 @@ export const fetchPendingRemotePaymentForBill = withActionPositional(
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
-    const { data: payment, error } = await supabase
-      .from("payments")
-      .select("id, method, status, amount, provider_ref, provider_data")
-      .eq("order_id", orderId)
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .neq("status", "failed")
-      .order("id", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      return {
-        success: false,
-        error: messages.pos.payment.pendingSessionLoadFailed,
-      };
-    }
-
-    if (!payment || payment.status !== "pending") {
-      return { success: true, data: null };
-    }
-
-    const vietQrSettings =
-      payment.method === "vietqr"
-        ? await readVietQrSettings(supabase, claims.tenant_id)
-        : undefined;
-
-    return {
-      success: true,
-      data: buildPendingRemotePaymentForBillData(payment, vietQrSettings),
-    };
+    return loadPendingRemotePaymentForBillData(supabase, {
+      tenantId: claims.tenant_id,
+      branchId,
+      orderId,
+    });
   },
 );
 
@@ -957,6 +980,29 @@ export const cancelPendingPayment = withActionPositional(
 
     if (error) {
       const message = String(error.message ?? "").toLowerCase();
+      if (message.includes("self_order_payment_owned")) {
+        return {
+          success: false,
+          error:
+            "Phiên này thuộc yêu cầu QR tự gọi món. Hãy xử lý tại hàng chờ thanh toán.",
+        };
+      }
+      if (
+        message.includes("momo_cancellation_requires_provider_confirmation")
+      ) {
+        return {
+          success: false,
+          error:
+            "Không thể hủy phiên MoMo khi nhà cung cấp chưa xác nhận kết quả cuối.",
+        };
+      }
+      if (error.code === "55P03") {
+        return {
+          success: false,
+          error:
+            "Đơn hàng đang được xử lý bởi một giao dịch khác. Vui lòng tải lại sau vài giây.",
+        };
+      }
       if (message.includes("payment_not_pending")) {
         return {
           success: false,

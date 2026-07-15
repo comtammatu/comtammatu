@@ -71,7 +71,7 @@ export class MoMoProvider implements PaymentProvider {
   }
 
   async createPayment(request: PaymentRequest): Promise<PaymentResult> {
-    const requestId = `${this.partnerCode}-${Date.now()}`;
+    const requestId = `${this.partnerCode}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     const orderId = `MOMO-${request.orderId}-${crypto.randomUUID().slice(0, 8)}`;
     const amount = Math.round(request.amount);
     const orderInfo =
@@ -156,6 +156,7 @@ export class MoMoProvider implements PaymentProvider {
         deeplinkMiniApp?: string;
         qrCodeUrl?: string;
         orderId?: string;
+        requestId?: string;
       };
 
       if (data.resultCode !== 0) {
@@ -165,6 +166,19 @@ export class MoMoProvider implements PaymentProvider {
           providerData: {
             resultCode: data.resultCode,
             message: data.message,
+          },
+        };
+      }
+
+      if (data.orderId !== orderId || data.requestId !== requestId) {
+        return {
+          status: "failed",
+          providerRef: orderId,
+          providerData: {
+            resultCode: data.resultCode,
+            message: "MoMo response identifiers do not match the request.",
+            orderIdMatched: data.orderId === orderId,
+            requestIdMatched: data.requestId === requestId,
           },
         };
       }
@@ -193,7 +207,7 @@ export class MoMoProvider implements PaymentProvider {
         providerRef: orderId,
         qrData: qrCodeUrl,
         providerData: {
-          momoOrderId: data.orderId,
+          momoOrderId: orderId,
           requestId,
           qrSource: "qrCodeUrl",
           qrCodeUrl,
