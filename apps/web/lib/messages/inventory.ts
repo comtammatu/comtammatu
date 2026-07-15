@@ -1283,6 +1283,7 @@ export const inventory = {
     totalInvoice: "Tổng hóa đơn",
     outstandingPayable: "Còn phải trả",
     paidAmount: "Đã thanh toán",
+    supplierCredit: "Bù trừ NCC",
     aging: "Tuổi nợ",
     noOpenDueDate: "Chưa có hạn",
     agingPaid: "Đã tất toán",

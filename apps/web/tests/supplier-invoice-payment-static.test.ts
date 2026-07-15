@@ -201,7 +201,22 @@ test("supplier invoice client groups payable review by supplier and PO", () => {
   assert.match(client, /invoiceGroups/);
   assert.match(client, /outstandingAmount/);
   assert.match(client, /overdueAmount/);
+  assert.match(client, /creditAppliedAmount: number/);
+  assert.match(client, /creditAppliedAmount: 0/);
+  assert.match(
+    client,
+    /group\.creditAppliedAmount \+= invoice\.creditAppliedAmount/,
+  );
+  assert.equal(client.match(/group\.creditAppliedAmount > 0/g)?.length, 2);
+  assert.equal(
+    client.match(/formatVND\(group\.creditAppliedAmount\)/g)?.length,
+    2,
+  );
+  assert.equal(client.match(/copy\.supplierCredit/g)?.length, 2);
   assert.match(client, /lastPaymentSummary/);
+
+  const inventoryMessages = readWeb("lib/messages/inventory.ts");
+  assert.match(inventoryMessages, /supplierCredit: "Bù trừ NCC"/);
 });
 
 test("supplier invoice desktop layout does not squeeze the detail pane", () => {

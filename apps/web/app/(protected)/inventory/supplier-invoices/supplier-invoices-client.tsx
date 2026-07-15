@@ -104,6 +104,7 @@ type SupplierInvoiceGroup = {
   invoiceCount: number;
   totalAmount: number;
   paidAmount: number;
+  creditAppliedAmount: number;
   outstandingAmount: number;
   overdueAmount: number;
   overdueCount: number;
@@ -590,6 +591,7 @@ export function SupplierInvoicesClient({
           invoiceCount: 0,
           totalAmount: 0,
           paidAmount: 0,
+          creditAppliedAmount: 0,
           outstandingAmount: 0,
           overdueAmount: 0,
           overdueCount: 0,
@@ -603,6 +605,7 @@ export function SupplierInvoicesClient({
       group.invoiceCount += 1;
       group.totalAmount += invoice.amount;
       group.paidAmount += invoice.paidAmount;
+      group.creditAppliedAmount += invoice.creditAppliedAmount;
       group.outstandingAmount += outstandingAmount;
       if (outstandingAmount > 0 && invoice.dueDate) {
         group.nextDueDate =
@@ -883,6 +886,18 @@ export function SupplierInvoicesClient({
                 )}
               </span>
             </div>
+            {group.creditAppliedAmount > 0 ? (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">
+                  {copy.supplierCredit}
+                </span>
+                <span className="font-mono">
+                  {messages.inventory.common.currencyCompact(
+                    formatVND(group.creditAppliedAmount),
+                  )}
+                </span>
+              </div>
+            ) : null}
           </div>
 
           <span className="mt-4 text-sm font-medium text-primary">
@@ -968,11 +983,23 @@ export function SupplierInvoicesClient({
       header: copy.paidAmount,
       className: "min-w-36 text-right",
       render: (group) => (
-        <span className="font-mono text-sm tabular-nums">
-          {messages.inventory.common.currencyCompact(
-            formatVND(group.paidAmount),
-          )}
-        </span>
+        <div className="flex flex-col items-end gap-1 text-right">
+          <span className="font-mono text-sm tabular-nums">
+            {messages.inventory.common.currencyCompact(
+              formatVND(group.paidAmount),
+            )}
+          </span>
+          {group.creditAppliedAmount > 0 ? (
+            <span className="text-xs text-muted-foreground">
+              {copy.supplierCredit}:{" "}
+              <span className="font-mono tabular-nums">
+                {messages.inventory.common.currencyCompact(
+                  formatVND(group.creditAppliedAmount),
+                )}
+              </span>
+            </span>
+          ) : null}
+        </div>
       ),
     },
     {
