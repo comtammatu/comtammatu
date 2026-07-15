@@ -19,6 +19,9 @@ const serviceMatchMigration = read(
 const hardeningMigration = read(
   "supabase/migrations/20260714031036_20260714163000_harden_finance_expense_reconciliation.sql",
 );
+const transferIntentMigration = read(
+  "supabase/migrations/20260715123314_expense_transfer_intent_lifecycle.sql",
+);
 const adjudicationStart = hardeningMigration.indexOf("DO $$");
 const adjudicationEnd = hardeningMigration.indexOf(
   "DO $$",
@@ -221,6 +224,62 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   );
   assert.doesNotMatch(page, /UnmatchedMoneyInTable/);
   assert.doesNotMatch(page, /MissingBankWebhookPaymentsTable/);
+});
+
+test("persisted expense transfer intents resolve before mutable memo settings", () => {
+  assert.match(
+    transferIntentMigration,
+    /CREATE OR REPLACE FUNCTION public\.match_sepay_transfer_intent_event/,
+  );
+  assert.match(
+    transferIntentMigration,
+    /auth\.role\(\) IS DISTINCT FROM 'service_role'/,
+  );
+  assert.match(
+    transferIntentMigration,
+    /private\.sepay_payload_contains_transfer_content\(\s*v_event\.payload,\s*expense\.transfer_content/,
+  );
+  assert.match(
+    transferIntentMigration,
+    /SET CONSTRAINTS[\s\S]*trg_expense_matches_require_transfer_content_evidence[\s\S]*DEFERRED/,
+  );
+  assert.match(
+    transferIntentMigration,
+    /CREATE POLICY expenses_transfer_content_insert_via_rpc[\s\S]*AS RESTRICTIVE/,
+  );
+  assert.match(
+    transferIntentMigration,
+    /match_sepay_transaction_expenses\([\s\S]*UPDATE public\.webhook_events[\s\S]*processing_status = 'processed'/,
+  );
+
+  const persistedIntentResolver = sepayWebhookRoute.indexOf(
+    '"match_sepay_transfer_intent_event"',
+  );
+  const mutableSettingsFallback = sepayWebhookRoute.indexOf(
+    'if (bankCommand?.kind === "expense")',
+  );
+  assert.ok(persistedIntentResolver >= 0);
+  assert.ok(mutableSettingsFallback > persistedIntentResolver);
+  assert.match(
+    sepayWebhookRoute,
+    /missingTransferIntentResolverCodes = new Set\(\["PGRST202", "42883"\]\)/,
+  );
+  assert.match(
+    sepayWebhookRoute,
+    /terminalTransferIntentResolverCodes = new Set\(\["23505", "23514"\]\)/,
+  );
+  assert.match(
+    sepayWebhookRoute,
+    /missingTransferIntentResolverCodes\.has\(errorCode\)[\s\S]*using configured memo matching/,
+  );
+  assert.match(
+    sepayWebhookRoute,
+    /terminalTransferIntentResolverCodes\.has\(errorCode\)[\s\S]*processing_status: "failed"[\s\S]*http_status: 200/,
+  );
+  assert.match(
+    sepayWebhookRoute,
+    /transfer intent match failed[\s\S]*return NextResponse\.json\(\{ success: false \}, \{ status: 500 \}\)/,
+  );
 });
 
 test("SePay expense matching handles unapplied migration schema errors", () => {

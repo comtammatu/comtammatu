@@ -74,7 +74,7 @@ jobs:
           echo "changed files:"; echo "$FILES"
           db=false; code=false
           if echo "$FILES" | grep -qE '^supabase/'; then db=true; fi
-          if echo "$FILES" | grep -qE '^(apps/|packages/|supabase/|scripts/(supabase-e2e-bringup|run-db-tests|run-payment-provider-race)\.mjs|\.github/workflows/ci\.yml|package\.json|pnpm-lock\.yaml|turbo\.json)'; then code=true; fi
+          if echo "$FILES" | grep -qE '^(apps/|packages/|scripts/|supabase/|\.github/workflows/|package\.json$|pnpm-lock\.yaml$|turbo\.json$)'; then code=true; fi
           echo "db=$db" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
 
@@ -122,11 +122,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: node scripts/supabase-e2e-bringup.mjs
-      - run: node scripts/run-db-tests.mjs payment_guarded_write_rpcs_test.sql
+      - run: node scripts/run-db-tests.mjs payment_guarded_write_rpcs_test.sql finance_transfer_intent_test.sql
       - run: pnpm test:db:payment-race
         timeout-minutes: 5
         env:
           E2E_DB_PORT: "55432"
+      - run: node scripts/finance-transfer-intent-race-test.mjs
+        timeout-minutes: 5
       - run: pnpm --filter @comtammatu/web exec playwright install --with-deps chromium
       # Production build so the heavy POS route is pre-compiled; `next dev`
       # compiles it on-demand, which blows the smoke's timeout. The bring-up

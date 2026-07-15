@@ -197,6 +197,19 @@ const cashDepositRpcResultSchema = z
   })
   .passthrough();
 
+const transferIntentRpcResultSchema = z.discriminatedUnion("matched", [
+  z.object({ matched: z.literal(false) }).passthrough(),
+  z
+    .object({
+      matched: z.literal(true),
+      expense_id: z.number().int().positive(),
+    })
+    .passthrough(),
+]);
+
+const missingTransferIntentResolverCodes = new Set(["PGRST202", "42883"]);
+const terminalTransferIntentResolverCodes = new Set(["23505", "23514"]);
+
 type SepayPayload = z.infer<typeof sepayPayloadSchema>;
 type ServiceClient = ReturnType<typeof createServiceClient>;
 type WebhookEventClaim =
@@ -546,6 +559,47 @@ export async function POST(request: Request) {
   const bankCommand = extractBankContentCommand(payload, bankContentSettings);
 
   if (payload.transferType === "out") {
+    const untyped = supabase as unknown as UntypedRpcClient;
+    const { data: rawTransferIntentData, error: transferIntentError } =
+      await untyped.rpc<unknown>("match_sepay_transfer_intent_event", {
+        p_event_id: webhookEventId,
+      });
+
+    if (transferIntentError) {
+      const errorCode = transferIntentError.code ?? "";
+      if (missingTransferIntentResolverCodes.has(errorCode)) {
+        console.warn(
+          "[sepay-webhook] transfer intent resolver unavailable; using configured memo matching",
+          errorCode,
+        );
+      } else {
+        console.error(
+          "[sepay-webhook] transfer intent match failed",
+          errorCode,
+        );
+        if (terminalTransferIntentResolverCodes.has(errorCode)) {
+          await markWebhookEvent(supabase, webhookEventId, {
+            processing_status: "failed",
+            http_status: 200,
+            error_code: errorCode,
+          });
+          return sepayAcceptedResponse();
+        }
+        return NextResponse.json({ success: false }, { status: 500 });
+      }
+    } else {
+      const transferIntentData = transferIntentRpcResultSchema.safeParse(
+        rawTransferIntentData,
+      );
+      if (!transferIntentData.success) {
+        return NextResponse.json({ success: false }, { status: 500 });
+      }
+
+      if (transferIntentData.data.matched) {
+        return sepayAcceptedResponse();
+      }
+    }
+
     if (bankCommand?.kind === "expense") {
       const expenseId = parseExpenseCommandId(bankCommand.value);
       if (!expenseId) {
